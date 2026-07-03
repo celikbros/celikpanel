@@ -299,9 +299,12 @@ func parseCronLine(line string) []string {
 }
 
 func generateCronID(line string) string {
-	// Simple hash based on line content
+	// Simple content hash over bytes; iterating bytes keeps the uint32
+	// conversion in range (a rune could exceed it in theory).
+	// Baytlar üzerinden basit içerik özeti; baytları dolaşmak uint32
+	// dönüşümünü aralıkta tutar (bir rune teoride bunu aşabilir).
 	var hash uint32
-	for _, c := range line {
+	for _, c := range []byte(line) {
 		hash = hash*31 + uint32(c)
 	}
 	return fmt.Sprintf("%08x", hash)

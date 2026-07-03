@@ -68,7 +68,7 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		return false, err
 	}
 
-	other := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(key)))
+	other := argon2.IDKey([]byte(password), salt, time, memory, threads, uint32(len(key))) //nosec G115 -- len(key) bounded to [1,1024] in decodeHash
 	if subtle.ConstantTimeCompare(key, other) == 1 {
 		return true, nil
 	}
@@ -99,6 +99,13 @@ func decodeHash(encodedHash string) (memory, time uint32, threads uint8, salt, k
 	}
 	key, err = base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
+		return 0, 0, 0, nil, nil, ErrInvalidHash
+	}
+	// Bound the key length: real argon2id keys are small, and this makes
+	// the later uint32(len(key)) conversion provably in range.
+	// Anahtar uzunluğunu sınırla: gerçek argon2id anahtarları küçüktür ve
+	// bu, sonraki uint32(len(key)) dönüşümünün aralıkta olduğunu kanıtlar.
+	if len(key) == 0 || len(key) > 1024 {
 		return 0, 0, 0, nil, nil, ErrInvalidHash
 	}
 

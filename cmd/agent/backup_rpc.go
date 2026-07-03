@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -185,8 +186,15 @@ func (a *Agent) createFilesBackup(domainName, backupPath string) error {
 			return nil
 		}
 
-		// Copy file content
-		f, err := os.Open(path)
+		// Copy file content. O_NOFOLLOW closes the TOCTOU gap between the
+		// Walk's lstat and this open: if the entry was swapped for a
+		// symlink after the IsRegular check above, the open fails instead
+		// of following it out of the backup root.
+		// Dosya içeriğini kopyala. O_NOFOLLOW, Walk'ın lstat'ı ile bu açış
+		// arasındaki TOCTOU boşluğunu kapatır: yukarıdaki IsRegular
+		// kontrolünden sonra giriş bir symlink'le değiştirildiyse, açış onu
+		// izlemek yerine başarısız olur.
+		f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0) //nosec G122 -- O_NOFOLLOW prevents the symlink TOCTOU on the final component
 		if err != nil {
 			return err
 		}
@@ -355,9 +363,15 @@ func (a *Agent) restoreFilesBackup(domainName, backupPath string) error {
 			continue
 		}
 
+		// Keep only the permission bits from the archive; masking also
+		// makes the int64→FileMode conversion safe from overflow.
+		// Arşivden yalnızca izin bitlerini al; maskeleme ayrıca
+		// int64→FileMode dönüşümünü taşmadan korur.
+		mode := os.FileMode(header.Mode & 0o7777)
+
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
+			if err := os.MkdirAll(targetPath, mode); err != nil {
 				return err
 			}
 		case tar.TypeReg:
@@ -378,7 +392,7 @@ func (a *Agent) restoreFilesBackup(domainName, backupPath string) error {
 			outFile.Close()
 
 			// Set permissions
-			if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
+			if err := os.Chmod(targetPath, mode); err != nil {
 				return err
 			}
 		}

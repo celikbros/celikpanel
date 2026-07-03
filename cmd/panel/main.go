@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -287,14 +289,20 @@ func main() {
 			return
 		}
 		
-		// Check if the requested file exists
-		filePath := "./web/dist" + r.URL.Path
-		if _, err := os.Stat(filePath); err == nil {
+		// Clean the request path before touching the filesystem. Rooting
+		// it at "/" collapses any ".." so a crafted URL cannot escape the
+		// dist directory.
+		// Dosya sistemine dokunmadan önce istek yolunu temizle. "/" ile
+		// köklemek her ".."yi eritir; böylece hazırlanmış bir URL dist
+		// dizininden dışarı çıkamaz.
+		cleanPath := path.Clean("/" + strings.TrimPrefix(r.URL.Path, "/"))
+		filePath := filepath.Join("./web/dist", cleanPath)
+		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
 			// File exists, serve it
 			fs.ServeHTTP(w, r)
 			return
 		}
-		
+
 		// File doesn't exist, serve index.html for SPA routing
 		http.ServeFile(w, r, "./web/dist/index.html")
 	})

@@ -35,6 +35,9 @@ type MySQLSettings struct {
 
 // GetPHPSettings reads current PHP settings from php.ini
 func (cm *ConfigManager) GetPHPSettings(phpVersion string) (*PHPSettings, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	file, err := os.Open(phpIni)
@@ -80,6 +83,9 @@ func (cm *ConfigManager) GetPHPSettings(phpVersion string) (*PHPSettings, error)
 
 // UpdatePHPSettings updates PHP configuration
 func (cm *ConfigManager) UpdatePHPSettings(phpVersion string, settings *PHPSettings) error {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	// Read current content
@@ -97,7 +103,7 @@ func (cm *ConfigManager) UpdatePHPSettings(phpVersion string, settings *PHPSetti
 	updated = cm.updateOrAddSetting(updated, "max_input_vars", fmt.Sprintf("%d", settings.MaxInputVars))
 	
 	// Write back
-	return os.WriteFile(phpIni, []byte(updated), 0644)
+	return os.WriteFile(phpIni, []byte(updated), 0644) //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
 }
 
 // GetMySQLSettings reads current MySQL settings from my.cnf
@@ -158,7 +164,7 @@ func (cm *ConfigManager) UpdateMySQLSettings(settings *MySQLSettings) error {
 	updated = cm.updateOrAddSetting(updated, "max_allowed_packet", settings.MaxAllowedPacket)
 	
 	// Write back
-	return os.WriteFile(myCnf, []byte(updated), 0644)
+	return os.WriteFile(myCnf, []byte(updated), 0644) //nosec G703 -- myCnf is a fixed constant path
 }
 
 // extractValue extracts value from "key = value" or "key value" format

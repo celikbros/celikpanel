@@ -222,7 +222,7 @@ func removeLineFromFile(path, prefix string) error {
 		}
 	}
 
-	return os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644)
+	return os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644) //nosec G703 -- callers pass fixed system map-file paths (postfix/dovecot)
 }
 
 func generateDovecotHash(password string) (string, error) {

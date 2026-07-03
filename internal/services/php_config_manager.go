@@ -18,6 +18,9 @@ func NewPHPConfigManager() *PHPConfigManager {
 
 // GetExtendedConfig reads comprehensive PHP configuration
 func (cm *PHPConfigManager) GetExtendedConfig(phpVersion string) (*core.ExtendedPHPConfig, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	file, err := os.Open(phpIni)
@@ -102,6 +105,9 @@ func (cm *PHPConfigManager) GetExtendedConfig(phpVersion string) (*core.Extended
 
 // UpdateExtendedConfig updates comprehensive PHP configuration
 func (cm *PHPConfigManager) UpdateExtendedConfig(phpVersion string, config *core.ExtendedPHPConfig) error {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	content, err := os.ReadFile(phpIni)
@@ -138,7 +144,7 @@ func (cm *PHPConfigManager) UpdateExtendedConfig(phpVersion string, config *core
 		updated += config.AdditionalDirectives + "\n"
 	}
 
-	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil {
+	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil { //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
 		return fmt.Errorf("failed to write php.ini: %v", err)
 	}
 

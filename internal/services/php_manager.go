@@ -55,6 +55,9 @@ type PoolData struct {
 
 // CreatePool creates a PHP-FPM pool for a site
 func (pm *PHPFPMManager) CreatePool(siteID int, username string, phpVersion string) (string, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return "", err
+	}
 	// Socket path
 	socket := fmt.Sprintf("/var/run/php/php%s-fpm-site%d.sock", phpVersion, siteID)
 
@@ -89,6 +92,9 @@ func (pm *PHPFPMManager) CreatePool(siteID int, username string, phpVersion stri
 
 // DeletePool removes a PHP-FPM pool
 func (pm *PHPFPMManager) DeletePool(siteID int, phpVersion string) error {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return err
+	}
 	filename := fmt.Sprintf("/etc/php/%s/fpm/pool.d/site%d.conf", phpVersion, siteID)
 	os.Remove(filename)
 
@@ -97,6 +103,9 @@ func (pm *PHPFPMManager) DeletePool(siteID int, phpVersion string) error {
 
 // ListPools lists all PHP-FPM pools for a given version
 func (pm *PHPFPMManager) ListPools(phpVersion string) ([]core.PHPPool, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
 	poolDir := fmt.Sprintf("/etc/php/%s/fpm/pool.d", phpVersion)
 	
 	files, err := os.ReadDir(poolDir)
@@ -180,6 +189,9 @@ func (pm *PHPFPMManager) parsePoolFile(path string) (core.PHPPool, error) {
 
 // ListExtensions lists all available PHP extensions and their status
 func (pm *PHPFPMManager) ListExtensions(phpVersion string) ([]core.PHPExtension, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
 	// Get list of available modules
 	modsAvailableDir := fmt.Sprintf("/etc/php/%s/mods-available", phpVersion)
 	modsEnabledDir := fmt.Sprintf("/etc/php/%s/fpm/conf.d", phpVersion)
@@ -251,6 +263,9 @@ func (pm *PHPFPMManager) DisableExtension(phpVersion, extension string) error {
 
 // GetConfig reads PHP configuration from php.ini
 func (pm *PHPFPMManager) GetConfig(phpVersion string) (*core.PHPConfig, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	file, err := os.Open(phpIni)
@@ -303,6 +318,9 @@ func (pm *PHPFPMManager) GetConfig(phpVersion string) (*core.PHPConfig, error) {
 
 // UpdateConfig updates PHP configuration in php.ini
 func (pm *PHPFPMManager) UpdateConfig(phpVersion string, config *core.PHPConfig) error {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return err
+	}
 	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
 	
 	// Read current content
@@ -320,7 +338,7 @@ func (pm *PHPFPMManager) UpdateConfig(phpVersion string, config *core.PHPConfig)
 	updated = updateOrAddSetting(updated, "display_errors", config.DisplayErrors)
 
 	// Write back
-	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil {
+	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil { //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
 		return fmt.Errorf("failed to write php.ini: %v", err)
 	}
 
