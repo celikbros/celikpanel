@@ -1,8 +1,10 @@
-import { Globe, Plus, Trash2, Search, Shield, ExternalLink, Settings, HardDrive, Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Globe, Plus, Trash2, ExternalLink, Settings, Lock } from 'lucide-react';
 import { AddDomainModal } from './AddDomainModal';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import { PageHeader, Button, SearchInput, EmptyState, StatusDot } from './ui';
 
 interface Domain {
     id: number;
@@ -17,14 +19,21 @@ interface Domain {
 
 const API_BASE = '/api/v1';
 
+// Plesk-style list page: breadcrumb + title, a toolbar (primary add +
+// contextual remove) with search, an item count, a clean data table with
+// per-row actions, and a paging footer.
+//
+// Plesk tarzı liste sayfası: breadcrumb + başlık, araç çubuğu (birincil
+// ekle + bağlamsal kaldır) ve arama, öğe sayısı, satır-başı aksiyonlu temiz
+// bir veri tablosu ve sayfalama alt bilgisi.
 export function Domains() {
     const navigate = useNavigate();
+    const { t } = useI18n();
     const [domains, setDomains] = useState<Domain[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedDomains, setSelectedDomains] = useState<number[]>([]);
+    const [query, setQuery] = useState('');
+    const [selected, setSelected] = useState<number[]>([]);
 
     useEffect(() => {
         loadDomains();
@@ -32,281 +41,191 @@ export function Domains() {
 
     const loadDomains = async () => {
         setLoading(true);
-        setError(null);
         try {
             const res = await fetch(`${API_BASE}/domains`);
-            if (!res.ok) throw new Error('Failed to load domains');
-            const data = await res.json();
-            setDomains(data || []);
-        } catch (err: any) {
-            setError(err.message);
-            showToast('error', 'Failed to load domains');
+            if (!res.ok) throw new Error();
+            setDomains((await res.json()) || []);
+        } catch {
+            showToast('error', t('domains.loadFailed'));
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDelete = async (id: number, domain: string) => {
-        if (!confirm(`Are you sure you want to delete ${domain}?`)) return;
-
+    const handleDelete = async (id: number, name: string) => {
+        if (!confirm(t('domains.confirmDelete', { name }))) return;
         try {
             const res = await fetch(`${API_BASE}/domains/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete domain');
-            showToast('success', `Domain ${domain} deleted successfully`);
+            if (!res.ok) throw new Error();
+            showToast('success', t('domains.deleted', { name }));
+            setSelected((s) => s.filter((x) => x !== id));
             loadDomains();
-        } catch (err: any) {
-            showToast('error', err.message);
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
-    const toggleSelectAll = () => {
-        if (selectedDomains.length === filteredDomains.length) {
-            setSelectedDomains([]);
-        } else {
-            setSelectedDomains(filteredDomains.map(d => d.id));
-        }
-    };
-
-    const toggleSelect = (id: number) => {
-        if (selectedDomains.includes(id)) {
-            setSelectedDomains(selectedDomains.filter(d => d !== id));
-        } else {
-            setSelectedDomains([...selectedDomains, id]);
-        }
-    };
-
-    const filteredDomains = domains.filter(d =>
-        d.domain_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const formatBytes = (bytes: number = 0) => {
-        if (bytes === 0) return '0 MB';
-        const mb = bytes / (1024 * 1024);
-        if (mb < 1024) return `${mb.toFixed(1)} MB`;
-        return `${(mb / 1024).toFixed(2)} GB`;
-    };
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center p-12 text-fg-muted">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                <p>Loading domains...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return <div className="text-danger">Error: {error}</div>;
-    }
+    const filtered = domains.filter((d) => d.domain_name.toLowerCase().includes(query.toLowerCase()));
+    const allSelected = filtered.length > 0 && selected.length === filtered.length;
 
     return (
-        <>
-            <div className="space-y-4">
-                {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-2xl font-bold text-fg">Domains</h2>
-                        <p className="text-sm text-fg-muted mt-1">
-                            {domains.length} domain{domains.length !== 1 ? 's' : ''} registered
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg transition-colors font-medium"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Domain
-                    </button>
+        <div className="p-6 md:p-8">
+            <PageHeader
+                title={t('nav.domains')}
+                subtitle={t('domains.subtitle')}
+                breadcrumb={[t('common.home'), t('nav.domains')]}
+                actions={
+                    <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
+                        {t('domains.add')}
+                    </Button>
+                }
+            />
+
+            {loading ? (
+                <div className="flex items-center justify-center py-16">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
-
-                {domains.length === 0 ? (
-                    <div className="bg-surface border border-border rounded-xl p-12 text-center">
-                        <Globe className="w-16 h-16 text-fg-subtle mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-fg-muted mb-2">No domains yet</h3>
-                        <p className="text-fg-subtle mb-6">Get started by adding your first domain</p>
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg transition-colors font-medium"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Add Domain
-                        </button>
-                    </div>
-                ) : (
-                    <div className="bg-surface border border-border rounded-xl overflow-hidden">
-                        {/* Toolbar */}
-                        <div className="p-4 border-b border-border flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded text-sm font-medium flex items-center gap-1"
+            ) : domains.length === 0 ? (
+                <EmptyState
+                    icon={Globe}
+                    title={t('domains.empty')}
+                    hint={t('domains.emptyHint')}
+                    action={
+                        <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
+                            {t('domains.add')}
+                        </Button>
+                    }
+                />
+            ) : (
+                <div className="rounded-xl border border-border bg-surface shadow-card">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
+                        <div className="flex items-center gap-2">
+                            <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
+                                {t('domains.add')}
+                            </Button>
+                            {selected.length > 0 && (
+                                <Button
+                                    variant="danger"
+                                    icon={Trash2}
+                                    onClick={() => {
+                                        const names = filtered.filter((d) => selected.includes(d.id));
+                                        if (confirm(t('domains.confirmDelete', { name: `${selected.length}` }))) {
+                                            names.forEach((d) => handleDelete(d.id, d.domain_name));
+                                        }
+                                    }}
                                 >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    Add Domain
-                                </button>
-                                {selectedDomains.length > 0 && (
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`Delete ${selectedDomains.length} selected domains?`)) {
-                                                // Delete selected domains
-                                            }
-                                        }}
-                                        className="px-3 py-1.5 bg-danger/50 hover:bg-danger/15 text-danger rounded text-sm font-medium flex items-center gap-1"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        Remove ({selectedDomains.length})
-                                    </button>
-                                )}
-                            </div>
-                            <div className="relative">
-                                <Search className="w-4 h-4 text-fg-subtle absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input
-                                    type="text"
-                                    placeholder="Search domains..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 pr-4 py-1.5 bg-surface-2 border border-border rounded text-sm text-fg placeholder-gray-500 focus:border-primary focus:outline-none w-64"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Table */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-surface-2/50">
-                                    <tr>
-                                        <th className="w-10 px-4 py-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedDomains.length === filteredDomains.length && filteredDomains.length > 0}
-                                                onChange={toggleSelectAll}
-                                                className="w-4 h-4 bg-surface-3 border-border-strong rounded"
-                                            />
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            Domain Name
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            PHP
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            <div className="flex items-center gap-1">
-                                                <HardDrive className="w-3.5 h-3.5" />
-                                                Disk
-                                            </div>
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            <div className="flex items-center gap-1">
-                                                <Activity className="w-3.5 h-3.5" />
-                                                Traffic
-                                            </div>
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            Status
-                                        </th>
-                                        <th className="text-right px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {filteredDomains.map(domain => (
-                                        <tr
-                                            key={domain.id}
-                                            className="hover:bg-surface-2/30 transition-colors group"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedDomains.includes(domain.id)}
-                                                    onChange={() => toggleSelect(domain.id)}
-                                                    className="w-4 h-4 bg-surface-3 border-border-strong rounded"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-2">
-                                                        {domain.ssl_enabled ? (
-                                                            <Shield className="w-4 h-4 text-success" />
-                                                        ) : (
-                                                            <Globe className="w-4 h-4 text-fg-subtle" />
-                                                        )}
-                                                        <button
-                                                            onClick={() => navigate(`/domains/${encodeURIComponent(domain.domain_name)}`)}
-                                                            className="text-primary hover:text-primary font-medium text-left"
-                                                        >
-                                                            {domain.domain_name}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-fg-muted text-sm">{domain.php_version}</span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-fg-muted text-sm">{formatBytes(domain.disk_usage)}</span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-fg-muted text-sm">{formatBytes(domain.bandwidth)}/mo</span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${domain.status === 'active'
-                                                    ? 'bg-success/30 text-success'
-                                                    : 'bg-surface-2 text-fg-muted'
-                                                    }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${domain.status === 'active' ? 'bg-success' : 'bg-surface-3'
-                                                        }`}></span>
-                                                    {domain.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <a
-                                                        href={`https://${domain.domain_name}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-1.5 text-fg-muted hover:text-fg hover:bg-surface-3 rounded"
-                                                        title="Visit Site"
-                                                    >
-                                                        <ExternalLink className="w-4 h-4" />
-                                                    </a>
-                                                    <button
-                                                        onClick={() => navigate(`/domains/${encodeURIComponent(domain.domain_name)}`)}
-                                                        className="p-1.5 text-fg-muted hover:text-primary hover:bg-surface-3 rounded"
-                                                        title="Settings"
-                                                    >
-                                                        <Settings className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(domain.id, domain.domain_name)}
-                                                        className="p-1.5 text-fg-muted hover:text-danger hover:bg-surface-3 rounded"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-4 py-3 border-t border-border flex items-center justify-between text-sm text-fg-muted">
-                            <span>{filteredDomains.length} of {domains.length} domains</span>
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="text-primary hover:text-primary"
-                                >
-                                    Clear search
-                                </button>
+                                    {t('common.remove')} ({selected.length})
+                                </Button>
                             )}
                         </div>
+                        <SearchInput value={query} onChange={setQuery} placeholder={t('domains.search')} />
                     </div>
-                )}
-            </div>
+
+                    <p className="px-4 pt-3 text-xs text-fg-subtle">
+                        {t('common.itemsTotal', { n: filtered.length })}
+                    </p>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                    <th className="w-10 px-4 py-2.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={allSelected}
+                                            onChange={() =>
+                                                setSelected(allSelected ? [] : filtered.map((d) => d.id))
+                                            }
+                                            className="h-4 w-4 accent-primary"
+                                        />
+                                    </th>
+                                    <th className="px-4 py-2.5">{t('domains.col.name')}</th>
+                                    <th className="px-4 py-2.5">{t('domains.col.php')}</th>
+                                    <th className="px-4 py-2.5 text-right">{t('domains.col.disk')}</th>
+                                    <th className="px-4 py-2.5 text-right">{t('domains.col.traffic')}</th>
+                                    <th className="px-4 py-2.5">{t('domains.col.status')}</th>
+                                    <th className="px-4 py-2.5" />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((d) => (
+                                    <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                        <td className="px-4 py-2.5">
+                                            <input
+                                                type="checkbox"
+                                                checked={selected.includes(d.id)}
+                                                onChange={() =>
+                                                    setSelected((s) =>
+                                                        s.includes(d.id) ? s.filter((x) => x !== d.id) : [...s, d.id],
+                                                    )
+                                                }
+                                                className="h-4 w-4 accent-primary"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                {d.ssl_enabled ? (
+                                                    <Lock className="h-4 w-4 shrink-0 text-success" />
+                                                ) : (
+                                                    <Globe className="h-4 w-4 shrink-0 text-fg-subtle" />
+                                                )}
+                                                <button
+                                                    onClick={() =>
+                                                        navigate(`/domains/${encodeURIComponent(d.domain_name)}`)
+                                                    }
+                                                    className="font-medium text-primary hover:underline"
+                                                >
+                                                    {d.domain_name}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-fg-muted">{d.php_version || '—'}</td>
+                                        <td className="px-4 py-2.5 text-right text-fg-muted">{fmtMB(d.disk_usage)}</td>
+                                        <td className="px-4 py-2.5 text-right text-fg-muted">
+                                            {fmtMB(d.bandwidth)}/mo
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <span className="inline-flex items-center gap-1.5 text-fg-muted">
+                                                <StatusDot ok={d.status === 'active'} />
+                                                {d.status === 'active' ? t('domains.status.active') : d.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <div className="flex items-center justify-end gap-0.5">
+                                                <IconAction
+                                                    href={`https://${d.domain_name}`}
+                                                    title={t('domains.action.visit')}
+                                                >
+                                                    <ExternalLink className="h-4 w-4" />
+                                                </IconAction>
+                                                <IconAction
+                                                    onClick={() =>
+                                                        navigate(`/domains/${encodeURIComponent(d.domain_name)}`)
+                                                    }
+                                                    title={t('domains.action.manage')}
+                                                >
+                                                    <Settings className="h-4 w-4" />
+                                                </IconAction>
+                                                <IconAction
+                                                    onClick={() => handleDelete(d.id, d.domain_name)}
+                                                    title={t('domains.action.delete')}
+                                                    danger
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </IconAction>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="border-t border-border px-4 py-2.5 text-xs text-fg-subtle">
+                        {t('common.itemsTotal', { n: filtered.length })}
+                    </div>
+                </div>
+            )}
 
             {showAddModal && (
                 <AddDomainModal
@@ -317,6 +236,42 @@ export function Domains() {
                     }}
                 />
             )}
-        </>
+        </div>
     );
+}
+
+function IconAction({
+    children,
+    title,
+    href,
+    onClick,
+    danger,
+}: {
+    children: React.ReactNode;
+    title: string;
+    href?: string;
+    onClick?: () => void;
+    danger?: boolean;
+}) {
+    const cls = `rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 ${
+        danger ? 'hover:text-danger' : 'hover:text-primary'
+    }`;
+    if (href) {
+        return (
+            <a href={href} target="_blank" rel="noopener noreferrer" title={title} className={cls}>
+                {children}
+            </a>
+        );
+    }
+    return (
+        <button onClick={onClick} title={title} className={cls}>
+            {children}
+        </button>
+    );
+}
+
+function fmtMB(bytes: number = 0): string {
+    if (!bytes) return '0 MB';
+    const mb = bytes / (1024 * 1024);
+    return mb < 1024 ? `${mb.toFixed(1)} MB` : `${(mb / 1024).toFixed(2)} GB`;
 }
