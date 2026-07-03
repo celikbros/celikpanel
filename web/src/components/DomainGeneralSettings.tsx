@@ -299,7 +299,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                                 </div>
                                 <button
                                     onClick={() => handleDeleteAlias(alias)}
-                                    className="p-2 text-danger hover:bg-danger/15/30 rounded transition-colors"
+                                    className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>

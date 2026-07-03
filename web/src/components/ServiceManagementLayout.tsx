@@ -79,7 +79,7 @@ export function ServiceManagementLayout({
                         </div>
 
                         {/* Context Info Box */}
-                        <div className="mt-6 bg-primary/15/10 border border-primary/30/30 rounded-xl p-4">
+                        <div className="mt-6 bg-primary/10 border border-primary/30 rounded-xl p-4">
                             <div className="flex items-start gap-3">
                                 <div className="mt-1">
                                     <Activity className="w-4 h-4 text-primary" />

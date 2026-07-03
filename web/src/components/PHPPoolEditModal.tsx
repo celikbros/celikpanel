@@ -228,7 +228,7 @@ export function PHPPoolEditModal({ version, poolName, onClose, onSave }: PHPPool
                 <div className="p-4 border-t border-border flex justify-between bg-surface-2/50">
                     <button
                         onClick={handleDelete}
-                        className="px-4 py-2 bg-danger/15/30 text-danger rounded hover:bg-danger/15/50 text-sm font-medium flex items-center gap-2"
+                        className="px-4 py-2 bg-danger/30 text-danger rounded hover:bg-danger/50 text-sm font-medium flex items-center gap-2"
                     >
                         <Trash2 className="w-4 h-4" /> Delete Pool
                     </button>

@@ -164,7 +164,7 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
 
                 {/* Show warning when version change is pending */}
                 {selectedVersion !== currentVersion ? (
-                    <div className="bg-warning/15/20 border border-warning/50 rounded-lg p-4 text-center">
+                    <div className="bg-warning/20 border border-warning/50 rounded-lg p-4 text-center">
                         <p className="text-warning text-sm">
                             ⚠️ PHP version değişikliğini önce uygulayın
                         </p>

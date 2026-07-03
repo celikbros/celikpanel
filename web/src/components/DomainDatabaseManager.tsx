@@ -250,7 +250,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                                 <Database className="w-4 h-4 text-primary" />
                                                 <h5 className="font-mono text-fg font-semibold">{db.name}</h5>
                                                 <span className={`text-xs px-2 py-0.5 rounded ${db.type === 'mysql'
-                                                        ? 'bg-primary/15/50 text-primary'
+                                                        ? 'bg-primary/50 text-primary'
                                                         : 'bg-purple-900/50 text-purple-300'
                                                     }`}>
                                                     {db.type.toUpperCase()}
@@ -274,14 +274,14 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                                 href={db.type === 'mysql' ? getPhpMyAdminUrl() : getPgAdminUrl()}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="p-2 text-primary hover:bg-primary/15/30 rounded transition-colors"
+                                                className="p-2 text-primary hover:bg-primary/30 rounded transition-colors"
                                                 title={db.type === 'mysql' ? 'Open phpMyAdmin' : 'Open pgAdmin'}
                                             >
                                                 <ExternalLink className="w-4 h-4" />
                                             </a>
                                             <button
                                                 onClick={() => handleDeleteDatabase(db)}
-                                                className="p-2 text-danger hover:bg-danger/15/30 rounded transition-colors"
+                                                className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
                                                 title="Delete database"
                                             >
                                                 <Trash2 className="w-4 h-4" />

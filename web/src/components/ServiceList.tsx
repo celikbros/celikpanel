@@ -77,13 +77,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // Unified Service Card Component
     const ServiceCard = ({ service }: { service: ManagedService }) => {
         const categoryColors: Record<string, string> = {
-            web: 'bg-primary/15/40 text-primary border-primary/30/50',
+            web: 'bg-primary/40 text-primary border-primary/50',
             database: 'bg-purple-900/40 text-purple-400 border-purple-900/50',
             email: 'bg-orange-900/40 text-orange-400 border-orange-900/50',
-            security: 'bg-danger/15/40 text-danger border-danger/30/50',
+            security: 'bg-danger/40 text-danger border-danger/50',
             dns: 'bg-cyan-900/40 text-cyan-400 border-cyan-900/50',
-            ftp: 'bg-primary/15/40 text-primary border-primary/30/50',
-            cache: 'bg-warning/15/40 text-warning border-warning/30/50',
+            ftp: 'bg-primary/40 text-primary border-primary/50',
+            cache: 'bg-warning/40 text-warning border-warning/50',
         };
         const badgeClass = categoryColors[service.category] || 'bg-surface-2 text-fg-muted';
 
@@ -126,19 +126,19 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         <div className="flex gap-1">
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'start')}
-                                className="px-3 py-1.5 bg-success/15/30 text-success rounded hover:bg-success/15/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-success/30 text-success rounded hover:bg-success/50 transition-colors text-xs"
                             >
                                 Start
                             </button>
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'stop')}
-                                className="px-3 py-1.5 bg-danger/15/30 text-danger rounded hover:bg-danger/15/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-danger/30 text-danger rounded hover:bg-danger/50 transition-colors text-xs"
                             >
                                 Stop
                             </button>
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'restart')}
-                                className="px-3 py-1.5 bg-warning/15/30 text-warning rounded hover:bg-warning/15/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-warning/30 text-warning rounded hover:bg-warning/50 transition-colors text-xs"
                             >
                                 Restart
                             </button>
@@ -194,15 +194,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-primary font-mono font-semibold">{version}</span>
                     {versionStatus && (
-                        <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/15/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
                             {versionStatus.active ? 'Running' : 'Stopped'}
                         </span>
                     )}
                 </div>
                 <div className="flex gap-1">
-                    <button onClick={() => handleAction(service.id, version, 'start')} className="px-2 py-1 bg-success/15/30 text-success rounded hover:bg-success/15/50 transition-colors text-xs">Start</button>
-                    <button onClick={() => handleAction(service.id, version, 'stop')} className="px-2 py-1 bg-danger/15/30 text-danger rounded hover:bg-danger/15/50 transition-colors text-xs">Stop</button>
-                    <button onClick={() => handleAction(service.id, version, 'restart')} className="px-2 py-1 bg-warning/15/30 text-warning rounded hover:bg-warning/15/50 transition-colors text-xs">Restart</button>
+                    <button onClick={() => handleAction(service.id, version, 'start')} className="px-2 py-1 bg-success/30 text-success rounded hover:bg-success/50 transition-colors text-xs">Start</button>
+                    <button onClick={() => handleAction(service.id, version, 'stop')} className="px-2 py-1 bg-danger/30 text-danger rounded hover:bg-danger/50 transition-colors text-xs">Stop</button>
+                    <button onClick={() => handleAction(service.id, version, 'restart')} className="px-2 py-1 bg-warning/30 text-warning rounded hover:bg-warning/50 transition-colors text-xs">Restart</button>
                 </div>
             </div>
         )
@@ -245,7 +245,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         return (
             <div className="flex items-center gap-2 p-2 bg-surface-2/30 rounded">
                 <span className="text-xs text-fg-muted">Status:</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/15/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
                     {versionStatus.active ? 'Running' : 'Stopped'}
                 </span>
             </div>

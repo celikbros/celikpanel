@@ -151,7 +151,7 @@ export function Domains() {
                                                 // Delete selected domains
                                             }
                                         }}
-                                        className="px-3 py-1.5 bg-danger/15/50 hover:bg-danger/15 text-danger rounded text-sm font-medium flex items-center gap-1"
+                                        className="px-3 py-1.5 bg-danger/50 hover:bg-danger/15 text-danger rounded text-sm font-medium flex items-center gap-1"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                         Remove ({selectedDomains.length})
@@ -251,7 +251,7 @@ export function Domains() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${domain.status === 'active'
-                                                    ? 'bg-success/15/30 text-success'
+                                                    ? 'bg-success/30 text-success'
                                                     : 'bg-surface-2 text-fg-muted'
                                                     }`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${domain.status === 'active' ? 'bg-success' : 'bg-surface-3'

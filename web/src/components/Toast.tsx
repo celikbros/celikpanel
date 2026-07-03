@@ -53,10 +53,10 @@ export function ToastContainer() {
 
     const getStyles = (type: ToastType) => {
         switch (type) {
-            case 'success': return 'bg-success/15/90 border-success text-success';
-            case 'error': return 'bg-danger/15/90 border-danger text-danger';
-            case 'warning': return 'bg-warning/15/90 border-warning text-warning';
-            case 'info': return 'bg-primary/15/90 border-primary text-primary';
+            case 'success': return 'bg-success/90 border-success text-success';
+            case 'error': return 'bg-danger/90 border-danger text-danger';
+            case 'warning': return 'bg-warning/90 border-warning text-warning';
+            case 'info': return 'bg-primary/90 border-primary text-primary';
         }
     };
 

@@ -143,7 +143,7 @@ export function PowerDNSManagement({ initialVersion, onBack }: PowerDNSManagemen
 
                 {/* Repair Section - Distinct UI */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-gradient-to-br from-primary/10 to-transparent border border-primary/30/30 rounded-xl p-8 relative overflow-hidden group">
+                    <div className="lg:col-span-2 bg-gradient-to-br from-primary/10 to-transparent border border-primary/30 rounded-xl p-8 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-32 bg-primary/5 blur-[100px] rounded-full group-hover:bg-primary/10 transition-all duration-700"></div>
 
                         <div className="relative z-10">
