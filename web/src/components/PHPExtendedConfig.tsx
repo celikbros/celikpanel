@@ -89,7 +89,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -98,24 +98,24 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
 
     const renderInput = (label: string, key: keyof ExtendedPHPConfig, placeholder?: string) => (
         <div>
-            <label className="block text-xs text-gray-400 mb-1 font-mono">{label}</label>
+            <label className="block text-xs text-fg-muted mb-1 font-mono">{label}</label>
             <input
                 type="text"
                 value={config[key]}
                 onChange={e => setConfig({ ...config, [key]: e.target.value })}
                 placeholder={placeholder}
-                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm font-mono focus:border-blue-500 focus:outline-none"
+                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary focus:outline-none"
             />
         </div>
     );
 
     const renderSelect = (label: string, key: keyof ExtendedPHPConfig, options: string[]) => (
         <div>
-            <label className="block text-xs text-gray-400 mb-1 font-mono">{label}</label>
+            <label className="block text-xs text-fg-muted mb-1 font-mono">{label}</label>
             <select
                 value={config[key]}
                 onChange={e => setConfig({ ...config, [key]: e.target.value })}
-                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm font-mono focus:border-blue-500 focus:outline-none"
+                className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm font-mono focus:border-primary focus:outline-none"
             >
                 {options.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -127,12 +127,12 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
     return (
         <div className="space-y-6">
             {/* Section Tabs */}
-            <div className="flex border-b border-gray-700">
+            <div className="flex border-b border-border">
                 <button
                     onClick={() => setActiveSection('performance')}
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeSection === 'performance'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-gray-400 hover:text-white'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-fg-muted hover:text-fg'
                         }`}
                 >
                     Performance & Security
@@ -140,8 +140,8 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
                 <button
                     onClick={() => setActiveSection('common')}
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeSection === 'common'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-gray-400 hover:text-white'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-fg-muted hover:text-fg'
                         }`}
                 >
                     Common Settings
@@ -149,15 +149,15 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
                 <button
                     onClick={() => setActiveSection('advanced')}
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeSection === 'advanced'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-gray-400 hover:text-white'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-fg-muted hover:text-fg'
                         }`}
                 >
                     Additional Directives
                 </button>
             </div>
 
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                 {activeSection === 'performance' && (
                     <div className="grid grid-cols-2 gap-6">
                         {renderSelect('memory_limit', 'memory_limit', ['64M', '128M', '256M', '512M', '1G', '2G'])}
@@ -189,30 +189,30 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
 
                 {activeSection === 'advanced' && (
                     <div className="space-y-4">
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-fg-muted">
                             Add custom php.ini directives here. One directive per line.
-                            Example: <code className="bg-gray-900 px-1 rounded">date.timezone = UTC</code>
+                            Example: <code className="bg-surface px-1 rounded">date.timezone = UTC</code>
                         </p>
                         <textarea
                             value={config.additional_directives}
                             onChange={e => setConfig({ ...config, additional_directives: e.target.value })}
-                            className="w-full h-64 bg-gray-900 border border-gray-700 rounded p-4 text-white font-mono text-sm focus:border-blue-500 focus:outline-none"
+                            className="w-full h-64 bg-surface border border-border rounded p-4 text-fg font-mono text-sm focus:border-primary focus:outline-none"
                             placeholder="; Custom directives"
                         />
                     </div>
                 )}
 
-                <div className="mt-8 pt-6 border-t border-gray-700 flex justify-end gap-3">
+                <div className="mt-8 pt-6 border-t border-border flex justify-end gap-3">
                     <button
                         onClick={fetchConfig}
-                        className="px-4 py-2 text-gray-400 hover:text-white text-sm font-medium flex items-center gap-2"
+                        className="px-4 py-2 text-fg-muted hover:text-fg text-sm font-medium flex items-center gap-2"
                     >
                         <RefreshCw className="w-4 h-4" /> Reset
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover text-sm font-medium flex items-center gap-2 disabled:opacity-50"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save Configuration'}

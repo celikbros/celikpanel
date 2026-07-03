@@ -148,20 +148,20 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     if (!settings) {
-        return <div className="text-red-400">Failed to load settings</div>;
+        return <div className="text-danger">Failed to load settings</div>;
     }
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-2">General Settings</h3>
-                <p className="text-sm text-gray-400">
+                <h3 className="text-lg font-bold text-fg mb-2">General Settings</h3>
+                <p className="text-sm text-fg-muted">
                     Configure basic domain settings for {domainName}
                 </p>
             </div>
@@ -169,28 +169,28 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
             {/* Main Settings Form */}
             <form onSubmit={handleSaveSettings} className="space-y-6">
                 {/* Document Root */}
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                    <h4 className="text-md font-semibold text-gray-200 mb-4">Document Root</h4>
+                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                    <h4 className="text-md font-semibold text-fg mb-4">Document Root</h4>
                     <input
                         type="text"
                         name="document_root"
                         defaultValue={settings.document_root}
-                        className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none font-mono text-sm"
+                        className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none font-mono text-sm"
                         placeholder="/var/www/html"
                     />
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-fg-muted mt-2">
                         The directory where your website files are located
                     </p>
                 </div>
 
                 {/* Web Server */}
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                    <h4 className="text-md font-semibold text-gray-200 mb-4">Web Server</h4>
+                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                    <h4 className="text-md font-semibold text-fg mb-4">Web Server</h4>
                     {availableWebServers.length > 1 ? (
                         <select
                             name="web_server"
                             defaultValue={settings.web_server}
-                            className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                            className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                         >
                             {availableWebServers.map(server => (
                                 <option key={server} value={server}>
@@ -199,12 +199,12 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                             ))}
                         </select>
                     ) : (
-                        <div className="text-white">
+                        <div className="text-fg">
                             {availableWebServers[0]?.charAt(0).toUpperCase() + availableWebServers[0]?.slice(1) || 'nginx'}
                             <input type="hidden" name="web_server" value={availableWebServers[0] || 'nginx'} />
                         </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-fg-muted mt-2">
                         {availableWebServers.length > 1
                             ? 'Select the web server for this domain'
                             : 'Only one web server is installed'}
@@ -212,19 +212,19 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                 </div>
 
                 {/* Redirects */}
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                    <h4 className="text-md font-semibold text-gray-200 mb-4">Redirects</h4>
+                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                    <h4 className="text-md font-semibold text-fg mb-4">Redirects</h4>
                     <div className="space-y-3">
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 name="redirect_www"
                                 defaultChecked={settings.redirect_www}
-                                className="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                                className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
                             />
                             <div>
-                                <div className="text-white text-sm">Redirect to www</div>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-fg text-sm">Redirect to www</div>
+                                <div className="text-xs text-fg-muted">
                                     Redirect {domainName} → www.{domainName}
                                 </div>
                             </div>
@@ -234,11 +234,11 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                                 type="checkbox"
                                 name="redirect_https"
                                 defaultChecked={settings.redirect_https}
-                                className="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                                className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
                             />
                             <div>
-                                <div className="text-white text-sm">Force HTTPS</div>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-fg text-sm">Force HTTPS</div>
+                                <div className="text-xs text-fg-muted">
                                     Redirect HTTP → HTTPS
                                 </div>
                             </div>
@@ -251,7 +251,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                     <button
                         type="submit"
                         disabled={saving}
-                        className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                        className="px-6 py-2 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 flex items-center gap-2"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save Settings'}
@@ -260,9 +260,9 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
             </form>
 
             {/* Domain Aliases */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                <h4 className="text-md font-semibold text-gray-200 mb-4">Domain Aliases</h4>
-                <p className="text-sm text-gray-400 mb-4">
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                <h4 className="text-md font-semibold text-fg mb-4">Domain Aliases</h4>
+                <p className="text-sm text-fg-muted mb-4">
                     Additional domains that point to this website
                 </p>
 
@@ -274,11 +274,11 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                         onChange={(e) => setNewAlias(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleAddAlias()}
                         placeholder="alias.example.com"
-                        className="flex-1 bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                        className="flex-1 bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                     />
                     <button
                         onClick={handleAddAlias}
-                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
+                        className="px-4 py-2 bg-success text-white rounded hover:bg-success flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -291,15 +291,15 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                         {settings.aliases.map((alias) => (
                             <div
                                 key={alias}
-                                className="flex items-center justify-between bg-gray-900 border border-gray-700 rounded px-4 py-3"
+                                className="flex items-center justify-between bg-surface border border-border rounded px-4 py-3"
                             >
                                 <div className="flex items-center gap-2">
-                                    <Globe className="w-4 h-4 text-blue-400" />
-                                    <span className="text-white font-mono text-sm">{alias}</span>
+                                    <Globe className="w-4 h-4 text-primary" />
+                                    <span className="text-fg font-mono text-sm">{alias}</span>
                                 </div>
                                 <button
                                     onClick={() => handleDeleteAlias(alias)}
-                                    className="p-2 text-red-400 hover:bg-red-900/30 rounded transition-colors"
+                                    className="p-2 text-danger hover:bg-danger/15/30 rounded transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -307,7 +307,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">
+                    <p className="text-sm text-fg-subtle text-center py-4">
                         No aliases configured
                     </p>
                 )}

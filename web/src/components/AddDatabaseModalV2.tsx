@@ -97,32 +97,32 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md">
+            <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-2">
-                        <Database className="w-5 h-5 text-blue-400" />
-                        <h3 className="text-xl font-bold text-gray-100">Add Database</h3>
+                        <Database className="w-5 h-5 text-primary" />
+                        <h3 className="text-xl font-bold text-fg">Add Database</h3>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-300">
+                    <button onClick={onClose} className="text-fg-muted hover:text-fg-muted">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="mb-4 p-3 bg-gray-800/50 rounded-lg">
-                    <p className="text-sm text-gray-400">Server: <span className="text-gray-200">{serverName}</span></p>
+                <div className="mb-4 p-3 bg-surface-2/50 rounded-lg">
+                    <p className="text-sm text-fg-muted">Server: <span className="text-fg">{serverName}</span></p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Database Name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
                             Database Name
                         </label>
                         <input
                             type="text"
                             value={databaseName}
                             onChange={(e) => setDatabaseName(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                             placeholder="myapp_db"
                             required
                             pattern="[a-zA-Z0-9_]+"
@@ -132,27 +132,27 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
 
                     {/* Related Site (Optional) */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Related Site <span className="text-gray-500 text-xs">(Optional)</span>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
+                            Related Site <span className="text-fg-subtle text-xs">(Optional)</span>
                         </label>
                         <select
                             value={domainId || ''}
                             onChange={(e) => setDomainId(e.target.value ? Number(e.target.value) : null)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                         >
                             <option value="">No site (standalone database)</option>
                             {domains.map(domain => (
                                 <option key={domain.id} value={domain.id}>{domain.domain_name}</option>
                             ))}
                         </select>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-fg-subtle mt-1">
                             💡 If site is deleted, this database will also be deleted
                         </p>
                     </div>
 
                     {/* User Selection */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
                             Database User
                         </label>
                         <div className="flex gap-2 mb-3">
@@ -160,8 +160,8 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                 type="button"
                                 onClick={() => setUserMode('new')}
                                 className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'new'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
                                     }`}
                             >
                                 Create New User
@@ -170,8 +170,8 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                 type="button"
                                 onClick={() => setUserMode('existing')}
                                 className={`flex-1 px-4 py-2 rounded-lg transition-colors ${userMode === 'existing'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
                                     }`}
                                 disabled={existingUsers.length === 0}
                             >
@@ -183,7 +183,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                             <select
                                 value={selectedUserId}
                                 onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                                 required
                             >
                                 <option value={0}>Select a user...</option>
@@ -198,7 +198,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                         type="text"
                                         value={newUsername}
                                         onChange={(e) => setNewUsername(e.target.value)}
-                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                                        className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                                         placeholder="Username"
                                         required={userMode === 'new'}
                                         pattern="[a-zA-Z0-9_]+"
@@ -209,14 +209,14 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                                         type="text"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                                        className="flex-1 bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                                         placeholder="Password"
                                         required={userMode === 'new'}
                                     />
                                     <button
                                         type="button"
                                         onClick={generatePassword}
-                                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                                        className="px-4 py-2 bg-surface-3 hover:bg-surface-3 text-fg rounded-lg transition-colors"
                                         title="Generate password"
                                     >
                                         <Key className="w-4 h-4" />
@@ -228,13 +228,13 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
 
                     {/* Privileges */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-fg-muted mb-2">
                             Privileges
                         </label>
                         <select
                             value={privileges}
                             onChange={(e) => setPrivileges(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2 text-fg focus:outline-none focus:border-primary"
                         >
                             <option value="ALL">ALL (Full Access)</option>
                             <option value="SELECT">SELECT (Read Only)</option>
@@ -248,14 +248,14 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+                            className="flex-1 px-4 py-2 bg-surface-2 hover:bg-surface-3 text-fg-muted rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                            className="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors disabled:opacity-50"
                         >
                             {loading ? 'Creating...' : 'Create Database'}
                         </button>

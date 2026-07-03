@@ -194,10 +194,10 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     };
 
     const getCertificateStatusIcon = (cert?: SSLCertificate) => {
-        if (!cert) return <XCircle className="w-6 h-6 text-gray-500" />;
-        if (cert.days_until_expiry < 0) return <XCircle className="w-6 h-6 text-red-500" />;
-        if (cert.days_until_expiry < 30) return <AlertTriangle className="w-6 h-6 text-yellow-500" />;
-        return <CheckCircle className="w-6 h-6 text-green-500" />;
+        if (!cert) return <XCircle className="w-6 h-6 text-fg-subtle" />;
+        if (cert.days_until_expiry < 0) return <XCircle className="w-6 h-6 text-danger" />;
+        if (cert.days_until_expiry < 30) return <AlertTriangle className="w-6 h-6 text-warning" />;
+        return <CheckCircle className="w-6 h-6 text-success" />;
     };
 
     const getCertificateStatusText = (cert?: SSLCertificate) => {
@@ -210,32 +210,32 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     if (!data) {
-        return <div className="text-red-400">Failed to load SSL data</div>;
+        return <div className="text-danger">Failed to load SSL data</div>;
     }
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-2">SSL/TLS Certificate</h3>
-                <p className="text-sm text-gray-400">
+                <h3 className="text-lg font-bold text-fg mb-2">SSL/TLS Certificate</h3>
+                <p className="text-sm text-fg-muted">
                     Manage SSL certificates and HTTPS settings for {domainName}
                 </p>
             </div>
 
             {/* Certificate Status */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                 <div className="flex items-start gap-4">
                     <div className="mt-1">
                         {getCertificateStatusIcon(data.certificate)}
                     </div>
                     <div className="flex-1">
-                        <h4 className="text-md font-semibold text-gray-200 mb-2">
+                        <h4 className="text-md font-semibold text-fg mb-2">
                             Certificate Status: {getCertificateStatusText(data.certificate)}
                         </h4>
 
@@ -243,26 +243,26 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                             <div className="space-y-2">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <span className="text-gray-400">Type:</span>
-                                        <span className="ml-2 text-white">{data.certificate.type === 'letsencrypt' ? "Let's Encrypt" : 'Custom'}</span>
+                                        <span className="text-fg-muted">Type:</span>
+                                        <span className="ml-2 text-fg">{data.certificate.type === 'letsencrypt' ? "Let's Encrypt" : 'Custom'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-400">Issuer:</span>
-                                        <span className="ml-2 text-white">{data.certificate.issuer}</span>
+                                        <span className="text-fg-muted">Issuer:</span>
+                                        <span className="ml-2 text-fg">{data.certificate.issuer}</span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-400">Expires:</span>
-                                        <span className="ml-2 text-white">
+                                        <span className="text-fg-muted">Expires:</span>
+                                        <span className="ml-2 text-fg">
                                             {new Date(data.certificate.expires_at).toLocaleDateString()}
-                                            <span className={`ml-2 ${data.certificate.days_until_expiry < 30 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                            <span className={`ml-2 ${data.certificate.days_until_expiry < 30 ? 'text-warning' : 'text-success'}`}>
                                                 ({data.certificate.days_until_expiry} days)
                                             </span>
                                         </span>
                                     </div>
                                     {data.certificate.type === 'letsencrypt' && (
                                         <div>
-                                            <span className="text-gray-400">Auto-renew:</span>
-                                            <span className="ml-2 text-white">
+                                            <span className="text-fg-muted">Auto-renew:</span>
+                                            <span className="ml-2 text-fg">
                                                 {data.certificate.auto_renew ? '✅ Enabled' : '❌ Disabled'}
                                             </span>
                                         </div>
@@ -270,13 +270,13 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                                 </div>
                                 <button
                                     onClick={handleDeleteCertificate}
-                                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                    className="mt-4 px-4 py-2 bg-danger text-white rounded hover:bg-danger text-sm"
                                 >
                                     Remove Certificate
                                 </button>
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-400">
+                            <p className="text-sm text-fg-muted">
                                 No SSL certificate installed. Issue a free Let's Encrypt certificate or upload your own.
                             </p>
                         )}
@@ -286,14 +286,14 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
 
             {/* Let's Encrypt Section */}
             {!data.has_certificate && (
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                     {/* Tab Selection */}
-                    <div className="flex border-b border-gray-700 mb-6">
+                    <div className="flex border-b border-border mb-6">
                         <button
                             onClick={() => setCertSource('letsencrypt')}
                             className={`px-4 py-2 text-sm font-medium transition-colors ${certSource === 'letsencrypt'
-                                ? 'text-blue-400 border-b-2 border-blue-400'
-                                : 'text-gray-400 hover:text-gray-300'
+                                ? 'text-primary border-b-2 border-primary'
+                                : 'text-fg-muted hover:text-fg-muted'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
@@ -304,8 +304,8 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                         <button
                             onClick={() => setCertSource('custom')}
                             className={`px-4 py-2 text-sm font-medium transition-colors ${certSource === 'custom'
-                                ? 'text-blue-400 border-b-2 border-blue-400'
-                                : 'text-gray-400 hover:text-gray-300'
+                                ? 'text-primary border-b-2 border-primary'
+                                : 'text-fg-muted hover:text-fg-muted'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
@@ -319,23 +319,23 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                     {certSource === 'letsencrypt' && (
                         <>
                             <div className="flex items-center gap-2 mb-4">
-                                <Shield className="w-5 h-5 text-green-400" />
-                                <h4 className="text-md font-semibold text-gray-200">Let's Encrypt Certificate</h4>
+                                <Shield className="w-5 h-5 text-success" />
+                                <h4 className="text-md font-semibold text-fg">Let's Encrypt Certificate</h4>
                             </div>
-                            <p className="text-sm text-gray-400 mb-4">
+                            <p className="text-sm text-fg-muted mb-4">
                                 Ücretsiz SSL sertifikası alın. Otomatik yenileme ile 90 günlük sertifika.
                             </p>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">Email Address</label>
+                                    <label className="block text-sm text-fg-muted mb-2">Email Address</label>
                                     <input
                                         type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="admin@example.com"
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-fg-subtle mt-1">
                                         Yenileme bildirimleri ve hesap kurtarma için kullanılır
                                     </p>
                                 </div>
@@ -344,14 +344,14 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                                         type="checkbox"
                                         checked={autoRenew}
                                         onChange={(e) => setAutoRenew(e.target.checked)}
-                                        className="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                                        className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
                                     />
-                                    <span className="text-sm text-white">Otomatik yenileme aktif</span>
+                                    <span className="text-sm text-fg">Otomatik yenileme aktif</span>
                                 </label>
                                 <button
                                     onClick={handleIssueLetsEncrypt}
                                     disabled={issuing || !email}
-                                    className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 >
                                     <Lock className="w-4 h-4" />
                                     {issuing ? 'Sertifika alınıyor...' : 'Sertifika Al'}
@@ -364,53 +364,53 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                     {certSource === 'custom' && (
                         <>
                             <div className="flex items-center gap-2 mb-4">
-                                <Upload className="w-5 h-5 text-blue-400" />
-                                <h4 className="text-md font-semibold text-gray-200">Custom Certificate Upload</h4>
+                                <Upload className="w-5 h-5 text-primary" />
+                                <h4 className="text-md font-semibold text-fg">Custom Certificate Upload</h4>
                             </div>
-                            <p className="text-sm text-gray-400 mb-4">
+                            <p className="text-sm text-fg-muted mb-4">
                                 Başka bir sağlayıcıdan (Comodo, DigiCert, vb.) aldığınız sertifikayı yükleyin.
                             </p>
                             <form onSubmit={handleUploadCertificate} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
-                                        Certificate (PEM format) <span className="text-red-400">*</span>
+                                    <label className="block text-sm text-fg-muted mb-2">
+                                        Certificate (PEM format) <span className="text-danger">*</span>
                                     </label>
                                     <input
                                         type="file"
                                         accept=".pem,.crt,.cer"
                                         onChange={(e) => setCertFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer"
+                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white file:cursor-pointer"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
-                                        Private Key (PEM format) <span className="text-red-400">*</span>
+                                    <label className="block text-sm text-fg-muted mb-2">
+                                        Private Key (PEM format) <span className="text-danger">*</span>
                                     </label>
                                     <input
                                         type="file"
                                         accept=".pem,.key"
                                         onChange={(e) => setKeyFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer"
+                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white file:cursor-pointer"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
+                                    <label className="block text-sm text-fg-muted mb-2">
                                         CA Bundle / Chain (opsiyonel)
                                     </label>
                                     <input
                                         type="file"
                                         accept=".pem,.crt,.cer"
                                         onChange={(e) => setChainFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-gray-600 file:text-white file:cursor-pointer"
+                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-fg file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-surface-3 file:text-fg file:cursor-pointer"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-fg-subtle mt-1">
                                         Intermediate sertifikaları içerir
                                     </p>
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={uploading || !certFile || !keyFile}
-                                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="px-6 py-2 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 >
                                     <Upload className="w-4 h-4" />
                                     {uploading ? 'Yükleniyor...' : 'Sertifika Yükle'}
@@ -422,10 +422,10 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
             )}
 
             {/* SSL Settings */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                 <div className="flex items-center gap-2 mb-4">
-                    <SettingsIcon className="w-5 h-5 text-blue-400" />
-                    <h4 className="text-md font-semibold text-gray-200">HTTPS Settings</h4>
+                    <SettingsIcon className="w-5 h-5 text-primary" />
+                    <h4 className="text-md font-semibold text-fg">HTTPS Settings</h4>
                 </div>
                 <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -433,11 +433,11 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                             type="checkbox"
                             checked={data.settings.force_https}
                             onChange={(e) => handleUpdateSettings({ force_https: e.target.checked })}
-                            className="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                            className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
                         />
                         <div>
-                            <div className="text-white text-sm">Force HTTPS</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-fg text-sm">Force HTTPS</div>
+                            <div className="text-xs text-fg-muted">
                                 Redirect all HTTP requests to HTTPS
                             </div>
                         </div>
@@ -447,11 +447,11 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                             type="checkbox"
                             checked={data.settings.hsts_enabled}
                             onChange={(e) => handleUpdateSettings({ hsts_enabled: e.target.checked })}
-                            className="w-4 h-4 bg-gray-900 border-gray-700 rounded focus:ring-blue-500"
+                            className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
                         />
                         <div>
-                            <div className="text-white text-sm">Enable HSTS</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-fg text-sm">Enable HSTS</div>
+                            <div className="text-xs text-fg-muted">
                                 HTTP Strict Transport Security (recommended)
                             </div>
                         </div>

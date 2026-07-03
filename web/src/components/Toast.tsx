@@ -53,10 +53,10 @@ export function ToastContainer() {
 
     const getStyles = (type: ToastType) => {
         switch (type) {
-            case 'success': return 'bg-green-900/90 border-green-700 text-green-100';
-            case 'error': return 'bg-red-900/90 border-red-700 text-red-100';
-            case 'warning': return 'bg-yellow-900/90 border-yellow-700 text-yellow-100';
-            case 'info': return 'bg-blue-900/90 border-blue-700 text-blue-100';
+            case 'success': return 'bg-success/15/90 border-success text-success';
+            case 'error': return 'bg-danger/15/90 border-danger text-danger';
+            case 'warning': return 'bg-warning/15/90 border-warning text-warning';
+            case 'info': return 'bg-primary/15/90 border-primary text-primary';
         }
     };
 
@@ -71,7 +71,7 @@ export function ToastContainer() {
                     <p className="flex-1 text-sm font-medium">{toast.message}</p>
                     <button
                         onClick={() => removeToast(toast.id)}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        className="p-1 hover:bg-surface/10 rounded transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>

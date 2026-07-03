@@ -92,24 +92,24 @@ export function PowerDNSManagement({ initialVersion, onBack }: PowerDNSManagemen
             <div className="w-full space-y-8">
                 {/* Header Section */}
                 <div>
-                    <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                        <Activity className="w-6 h-6 text-blue-400" />
+                    <h2 className="text-2xl font-bold text-fg mb-2 flex items-center gap-2">
+                        <Activity className="w-6 h-6 text-primary" />
                         Service Status & Control
                     </h2>
-                    <p className="text-gray-400">Manage the PowerDNS service state and configuration.</p>
+                    <p className="text-fg-muted">Manage the PowerDNS service state and configuration.</p>
                 </div>
 
                 {/* Status Card - Full Width */}
-                <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="bg-surface-2/40 border border-border rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${serviceStatus?.active ? 'bg-green-500/10 text-green-500 shadow-green-500/20' : 'bg-red-500/10 text-red-500 shadow-red-500/20'}`}>
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${serviceStatus?.active ? 'bg-success/10 text-success shadow-green-500/20' : 'bg-danger/10 text-danger shadow-red-500/20'}`}>
                             <Activity className={`w-8 h-8 ${actionLoading ? 'animate-pulse' : ''}`} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-100">PowerDNS Service</h3>
+                            <h3 className="text-lg font-bold text-fg">PowerDNS Service</h3>
                             <div className="flex items-center gap-2 mt-1">
-                                <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${serviceStatus?.active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                <span className={`text-sm font-medium transition-colors duration-300 ${serviceStatus?.active ? 'text-green-400' : 'text-red-400'}`}>
+                                <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${serviceStatus?.active ? 'bg-success animate-pulse' : 'bg-danger'}`} />
+                                <span className={`text-sm font-medium transition-colors duration-300 ${serviceStatus?.active ? 'text-success' : 'text-danger'}`}>
                                     {actionLoading ? 'Processing...' : (serviceStatus?.active ? 'Active & Running' : 'Stopped / Failed')}
                                 </span>
                             </div>
@@ -120,41 +120,41 @@ export function PowerDNSManagement({ initialVersion, onBack }: PowerDNSManagemen
                         <button
                             onClick={() => handleServiceAction('start')}
                             disabled={actionLoading || repairLoading || serviceStatus?.active}
-                            className="flex-1 md:flex-none px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 md:flex-none px-6 py-3 bg-surface-2 hover:bg-surface-3 text-fg rounded-lg border border-border-strong transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Play className="w-4 h-4 text-green-400" /> Start
+                            <Play className="w-4 h-4 text-success" /> Start
                         </button>
                         <button
                             onClick={() => handleServiceAction('stop')}
                             disabled={actionLoading || repairLoading || !serviceStatus?.active}
-                            className="flex-1 md:flex-none px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 md:flex-none px-6 py-3 bg-surface-2 hover:bg-surface-3 text-fg rounded-lg border border-border-strong transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Square className="w-4 h-4 text-red-400" /> Stop
+                            <Square className="w-4 h-4 text-danger" /> Stop
                         </button>
                         <button
                             onClick={() => handleServiceAction('restart')}
                             disabled={actionLoading || repairLoading}
-                            className="flex-1 md:flex-none px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 md:flex-none px-6 py-3 bg-surface-2 hover:bg-surface-3 text-fg rounded-lg border border-border-strong transition-all font-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <RotateCw className={`w-4 h-4 text-yellow-400 ${actionLoading ? 'animate-spin' : ''}`} /> Restart
+                            <RotateCw className={`w-4 h-4 text-warning ${actionLoading ? 'animate-spin' : ''}`} /> Restart
                         </button>
                     </div>
                 </div>
 
                 {/* Repair Section - Distinct UI */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-gradient-to-br from-blue-900/10 to-transparent border border-blue-900/30 rounded-xl p-8 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-32 bg-blue-500/5 blur-[100px] rounded-full group-hover:bg-blue-500/10 transition-all duration-700"></div>
+                    <div className="lg:col-span-2 bg-gradient-to-br from-primary/10 to-transparent border border-primary/30/30 rounded-xl p-8 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-32 bg-primary/5 blur-[100px] rounded-full group-hover:bg-primary/10 transition-all duration-700"></div>
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-blue-500/10 rounded-lg">
-                                    <Settings className="w-6 h-6 text-blue-400" />
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                    <Settings className="w-6 h-6 text-primary" />
                                 </div>
-                                <h3 className="text-xl font-bold text-white">One-Click Configuration Repair</h3>
+                                <h3 className="text-xl font-bold text-fg">One-Click Configuration Repair</h3>
                             </div>
 
-                            <p className="text-gray-300 leading-relaxed mb-8 max-w-2xl">
+                            <p className="text-fg-muted leading-relaxed mb-8 max-w-2xl">
                                 Automatically resolve common issues by reconfiguring the database connection,
                                 fixing port conflicts (systemd-resolved), and removing conflicting backends.
                             </p>
@@ -162,16 +162,16 @@ export function PowerDNSManagement({ initialVersion, onBack }: PowerDNSManagemen
                             <button
                                 onClick={handleRepairConfig}
                                 disabled={repairLoading || actionLoading}
-                                className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+                                className="px-8 py-4 bg-primary hover:bg-primary text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
                             >
-                                {repairLoading ? <RotateCw className="w-5 h-5 animate-spin" /> : <div className="bg-white/20 p-1 rounded-full"><RotateCw className="w-4 h-4" /></div>}
+                                {repairLoading ? <RotateCw className="w-5 h-5 animate-spin" /> : <div className="bg-surface/20 p-1 rounded-full"><RotateCw className="w-4 h-4" /></div>}
                                 {repairLoading ? 'Repairing System...' : 'Run Auto-Repair Tool'}
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                        <h4 className="font-bold text-gray-200 mb-4 flex items-center gap-2">
+                    <div className="bg-surface border border-border rounded-xl p-6">
+                        <h4 className="font-bold text-fg mb-4 flex items-center gap-2">
                             Repair Actions
                         </h4>
                         <ul className="space-y-4">
@@ -181,8 +181,8 @@ export function PowerDNSManagement({ initialVersion, onBack }: PowerDNSManagemen
                                 "Fix Port 53 (Stub Listener)",
                                 "Restart Service"
                             ].map((item, i) => (
-                                <li key={i} className="flex items-center gap-3 text-sm text-gray-400">
-                                    <CheckCircle className="w-4 h-4 text-gray-600 group-hover:text-green-500 transition-colors" />
+                                <li key={i} className="flex items-center gap-3 text-sm text-fg-muted">
+                                    <CheckCircle className="w-4 h-4 text-fg-subtle group-hover:text-success transition-colors" />
                                     {item}
                                 </li>
                             ))}

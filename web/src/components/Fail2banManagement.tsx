@@ -148,30 +148,30 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
         >
             {loading && !status ? (
                 <div className="flex items-center justify-center py-20">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
             ) : (
                 <div className="w-full space-y-8">
                     {/* Service Status & Control Card */}
-                    <div className="bg-gradient-to-br from-slate-900 to-slate-900/50 rounded-2xl border border-slate-800 p-8 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                    <div className="bg-gradient-to-br from-surface to-surface/50 rounded-2xl border border-border p-8 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
 
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
                             <div className="flex items-center gap-6">
                                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${status?.active
-                                        ? 'bg-green-500/10 text-green-400 shadow-green-500/20 border border-green-500/20'
-                                        : 'bg-red-500/10 text-red-500 shadow-red-500/20 border border-red-500/20'
+                                        ? 'bg-success/10 text-success shadow-green-500/20 border border-success/20'
+                                        : 'bg-danger/10 text-danger shadow-red-500/20 border border-danger/20'
                                     }`}>
                                     <Shield className={`w-8 h-8 ${status?.active ? 'animate-pulse' : ''}`} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-white mb-1">Fail2ban Intrusion Prevention</h2>
+                                    <h2 className="text-xl font-bold text-fg mb-1">Fail2ban Intrusion Prevention</h2>
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${status?.active ? 'bg-green-400' : 'bg-red-500'}`}></div>
-                                        <span className={`text-sm font-medium ${status?.active ? 'text-green-400' : 'text-red-400'}`}>
+                                        <div className={`w-2 h-2 rounded-full ${status?.active ? 'bg-success' : 'bg-danger'}`}></div>
+                                        <span className={`text-sm font-medium ${status?.active ? 'text-success' : 'text-danger'}`}>
                                             {status?.active ? 'Active & Running' : 'Stopped'}
                                         </span>
-                                        {status?.pid && <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full ml-2">PID: {status.pid}</span>}
+                                        {status?.pid && <span className="text-xs text-fg-subtle bg-surface-2 px-2 py-0.5 rounded-full ml-2">PID: {status.pid}</span>}
                                     </div>
                                 </div>
                             </div>
@@ -180,20 +180,20 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                                 <button
                                     onClick={() => handleServiceAction('start')}
                                     disabled={status?.active}
-                                    className="px-6 py-2.5 bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-600/20 hover:border-green-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                    className="px-6 py-2.5 bg-success/10 hover:bg-success/20 text-success border border-success/20 hover:border-success/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                                 >
                                     <Play className="w-4 h-4 group-hover:fill-green-400/20" /> Start
                                 </button>
                                 <button
                                     onClick={() => handleServiceAction('stop')}
                                     disabled={!status?.active}
-                                    className="px-6 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 hover:border-red-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                    className="px-6 py-2.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 hover:border-danger/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                                 >
                                     <Square className="w-4 h-4 group-hover:fill-red-400/20" /> Stop
                                 </button>
                                 <button
                                     onClick={() => handleServiceAction('restart')}
-                                    className="px-6 py-2.5 bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-400 border border-yellow-600/20 hover:border-yellow-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                    className="px-6 py-2.5 bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 hover:border-warning/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                                 >
                                     <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" /> Restart
                                 </button>
@@ -202,14 +202,14 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div className="flex items-center gap-4 border-b border-slate-800 pb-1">
+                    <div className="flex items-center gap-4 border-b border-border pb-1">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors flex items-center gap-2 ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                                        : 'border-transparent text-gray-400 hover:text-white hover:bg-slate-800/50'
+                                        ? 'border-primary text-primary bg-primary/5'
+                                        : 'border-transparent text-fg-muted hover:text-fg hover:bg-surface-2/50'
                                     }`}
                             >
                                 {tab.icon}
@@ -223,17 +223,17 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                         {activeTab === 'jails' && (
                             <div className="grid gap-4 md:grid-cols-2">
                                 {jails.map(jail => (
-                                    <div key={jail.name} className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 flex justify-between items-center group hover:border-blue-500/30 transition-all">
+                                    <div key={jail.name} className="bg-surface/50 p-6 rounded-xl border border-border flex justify-between items-center group hover:border-primary/30 transition-all">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-xl ${jail.active ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/30 text-slate-500'}`}>
+                                            <div className={`p-3 rounded-xl ${jail.active ? 'bg-success/20 text-success' : 'bg-surface-3/30 text-fg-subtle'}`}>
                                                 <Lock className="w-6 h-6" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white text-lg">{jail.name}</h4>
-                                                <p className="text-sm text-slate-400 flex items-center gap-2">
-                                                    Status: <span className={`font-medium ${jail.active ? 'text-green-400' : 'text-slate-500'}`}>{jail.active ? 'Active' : 'Inactive'}</span>
-                                                    <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                                                    Banned: <span className="text-red-400 font-bold">{jail.banned}</span>
+                                                <h4 className="font-bold text-fg text-lg">{jail.name}</h4>
+                                                <p className="text-sm text-fg-muted flex items-center gap-2">
+                                                    Status: <span className={`font-medium ${jail.active ? 'text-success' : 'text-fg-subtle'}`}>{jail.active ? 'Active' : 'Inactive'}</span>
+                                                    <span className="w-1 h-1 bg-surface-3 rounded-full"></span>
+                                                    Banned: <span className="text-danger font-bold">{jail.banned}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -245,7 +245,7 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                                                     checked={jail.enabled}
                                                     onChange={(e) => handleToggleJail(jail.name, e.target.checked)}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 border border-slate-600"></div>
+                                                <div className="w-11 h-6 bg-surface-3 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary border border-border-strong"></div>
                                             </label>
                                         </div>
                                     </div>
@@ -254,9 +254,9 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                         )}
 
                         {activeTab === 'banned' && (
-                            <div className="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
-                                <table className="w-full text-left text-sm text-gray-400">
-                                    <thead className="bg-slate-950 text-slate-300 uppercase text-xs font-bold tracking-wider">
+                            <div className="bg-surface/50 rounded-xl border border-border overflow-hidden">
+                                <table className="w-full text-left text-sm text-fg-muted">
+                                    <thead className="bg-bg text-fg-muted uppercase text-xs font-bold tracking-wider">
                                         <tr>
                                             <th className="px-6 py-4">IP Address</th>
                                             <th className="px-6 py-4">Jail</th>
@@ -265,17 +265,17 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                                             <th className="px-6 py-4 text-right">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-800">
+                                    <tbody className="divide-y divide-border">
                                         {bannedIPs.map((ip, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
-                                                <td className="px-6 py-4 font-mono text-white font-medium">{ip.ip}</td>
-                                                <td className="px-6 py-4 text-blue-400 bg-blue-500/5 rounded lg:bg-transparent">{ip.jail}</td>
+                                            <tr key={idx} className="hover:bg-surface-2/50 transition-colors">
+                                                <td className="px-6 py-4 font-mono text-fg font-medium">{ip.ip}</td>
+                                                <td className="px-6 py-4 text-primary bg-primary/5 rounded lg:bg-transparent">{ip.jail}</td>
                                                 <td className="px-6 py-4">{ip.time}</td>
                                                 <td className="px-6 py-4">{ip.country}</td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button
                                                         onClick={() => handleUnbanIP(ip.ip, ip.jail)}
-                                                        className="text-red-400 hover:text-red-300 font-medium text-xs border border-red-500/20 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all shadow-sm shadow-red-500/5"
+                                                        className="text-danger hover:text-danger font-medium text-xs border border-danger/20 bg-danger/10 px-3 py-1.5 rounded-lg hover:bg-danger/20 transition-all shadow-sm shadow-red-500/5"
                                                     >
                                                         Unban
                                                     </button>
@@ -284,9 +284,9 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                                         ))}
                                         {bannedIPs.length === 0 && (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                                <td colSpan={5} className="px-6 py-12 text-center text-fg-subtle">
                                                     <div className="flex flex-col items-center gap-3">
-                                                        <Shield className="w-12 h-12 text-slate-700" />
+                                                        <Shield className="w-12 h-12 text-fg-subtle" />
                                                         <p>No banned IPs found. System is clean.</p>
                                                     </div>
                                                 </td>
@@ -300,49 +300,49 @@ export function Fail2banManagement({ initialVersion, onBack }: Fail2banManagemen
                         {activeTab === 'config' && config && (
                             <div className="space-y-8 max-w-4xl mx-auto">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Ban Time</label>
+                                    <div className="bg-surface/50 p-6 rounded-xl border border-border">
+                                        <label className="block text-sm font-medium text-fg-muted mb-2">Ban Time</label>
                                         <input
                                             type="text"
                                             value={config.ban_time}
                                             readOnly
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white font-mono focus:border-blue-500 focus:outline-none"
+                                            className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-fg font-mono focus:border-primary focus:outline-none"
                                         />
-                                        <p className="text-xs text-slate-500 mt-2">Duration of ban (e.g. 10m, 1h)</p>
+                                        <p className="text-xs text-fg-subtle mt-2">Duration of ban (e.g. 10m, 1h)</p>
                                     </div>
-                                    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Find Time</label>
+                                    <div className="bg-surface/50 p-6 rounded-xl border border-border">
+                                        <label className="block text-sm font-medium text-fg-muted mb-2">Find Time</label>
                                         <input
                                             type="text"
                                             value={config.find_time}
                                             readOnly
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white font-mono focus:border-blue-500 focus:outline-none"
+                                            className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-fg font-mono focus:border-primary focus:outline-none"
                                         />
-                                        <p className="text-xs text-slate-500 mt-2">Window to count failures</p>
+                                        <p className="text-xs text-fg-subtle mt-2">Window to count failures</p>
                                     </div>
-                                    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Max Retry</label>
+                                    <div className="bg-surface/50 p-6 rounded-xl border border-border">
+                                        <label className="block text-sm font-medium text-fg-muted mb-2">Max Retry</label>
                                         <input
                                             type="number"
                                             value={config.max_retry}
                                             readOnly
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white font-mono focus:border-blue-500 focus:outline-none"
+                                            className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-fg font-mono focus:border-primary focus:outline-none"
                                         />
-                                        <p className="text-xs text-slate-500 mt-2">Failures before ban</p>
+                                        <p className="text-xs text-fg-subtle mt-2">Failures before ban</p>
                                     </div>
                                 </div>
-                                <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
-                                    <label className="block text-sm font-medium text-slate-400 mb-2">Whitelisted IPs (Ignore IP)</label>
+                                <div className="bg-surface/50 p-6 rounded-xl border border-border">
+                                    <label className="block text-sm font-medium text-fg-muted mb-2">Whitelisted IPs (Ignore IP)</label>
                                     <textarea
                                         value={config.ignore_ip.join('\n')}
                                         readOnly
                                         rows={6}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none font-mono text-sm leading-relaxed"
+                                        className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-fg focus:border-primary focus:outline-none font-mono text-sm leading-relaxed"
                                     />
-                                    <p className="text-xs text-slate-500 mt-2">One IP or CIDR per line. These IPs will never be banned.</p>
+                                    <p className="text-xs text-fg-subtle mt-2">One IP or CIDR per line. These IPs will never be banned.</p>
                                 </div>
                                 <div className="flex justify-end pt-4">
-                                    <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/20 transition-all hover:scale-105">Save Configuration</button>
+                                    <button className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-hover font-medium shadow-lg shadow-blue-500/20 transition-all hover:scale-105">Save Configuration</button>
                                 </div>
                             </div>
                         )}

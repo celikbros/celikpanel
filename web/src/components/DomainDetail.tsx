@@ -46,8 +46,8 @@ function QuickAction({
     onClick?: () => void;
 }) {
     const colorClasses: { [key: string]: string } = {
-        blue: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50 text-blue-400',
-        green: 'from-green-500/20 to-green-600/10 border-green-500/30 hover:border-green-400/50 text-green-400',
+        blue: 'from-primary/20 to-primary/10 border-primary/30 hover:border-primary/50 text-primary',
+        green: 'from-success/20 to-success/10 border-success/30 hover:border-success/50 text-success',
         purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30 hover:border-purple-400/50 text-purple-400',
         orange: 'from-orange-500/20 to-orange-600/10 border-orange-500/30 hover:border-orange-400/50 text-orange-400',
         cyan: 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 hover:border-cyan-400/50 text-cyan-400',
@@ -64,8 +64,8 @@ function QuickAction({
                     <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white text-sm">{label}</h4>
-                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{description}</p>
+                    <h4 className="font-semibold text-fg text-sm">{label}</h4>
+                    <p className="text-xs text-fg-muted mt-0.5 line-clamp-1">{description}</p>
                 </div>
             </div>
         </button>
@@ -87,10 +87,10 @@ function StatusCard({
     subtext?: string;
 }) {
     const statusColors = {
-        success: 'text-green-400 bg-green-500/10 border-green-500/30',
-        warning: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-        error: 'text-red-400 bg-red-500/10 border-red-500/30',
-        info: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+        success: 'text-success bg-success/10 border-success/30',
+        warning: 'text-warning bg-warning/10 border-warning/30',
+        error: 'text-danger bg-danger/10 border-danger/30',
+        info: 'text-primary bg-primary/10 border-primary/30',
     };
 
     return (
@@ -98,9 +98,9 @@ function StatusCard({
             <div className="flex items-center gap-3">
                 <Icon className="w-5 h-5" />
                 <div className="flex-1">
-                    <p className="text-xs text-gray-400">{label}</p>
-                    <p className="font-semibold text-white">{value}</p>
-                    {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
+                    <p className="text-xs text-fg-muted">{label}</p>
+                    <p className="font-semibold text-fg">{value}</p>
+                    {subtext && <p className="text-xs text-fg-subtle">{subtext}</p>}
                 </div>
             </div>
         </div>
@@ -147,10 +147,10 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             <div className="h-full flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <div className="relative">
-                        <div className="w-12 h-12 border-4 border-blue-500/30 rounded-full"></div>
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+                        <div className="w-12 h-12 border-4 border-primary/30 rounded-full"></div>
+                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0"></div>
                     </div>
-                    <p className="text-gray-400 text-sm">Loading domain...</p>
+                    <p className="text-fg-muted text-sm">Loading domain...</p>
                 </div>
             </div>
         );
@@ -160,9 +160,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         return (
             <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                    <Globe className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400">Domain not found</p>
-                    <button onClick={onBack} className="mt-4 px-4 py-2 bg-blue-600 rounded-lg text-white">
+                    <Globe className="w-16 h-16 text-fg-subtle mx-auto mb-4" />
+                    <p className="text-fg-muted">Domain not found</p>
+                    <button onClick={onBack} className="mt-4 px-4 py-2 bg-primary rounded-lg text-white">
                         Go Back
                     </button>
                 </div>
@@ -178,18 +178,18 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 <div className="flex items-center gap-4 mb-6">
                     <button
                         onClick={() => setActiveSection(null)}
-                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-gray-400" />
+                        <ArrowLeft className="w-5 h-5 text-fg-muted" />
                     </button>
                     <div>
-                        <h2 className="text-xl font-bold text-white">{domain.domain_name}</h2>
-                        <p className="text-sm text-gray-400 capitalize">{activeSection.replace('-', ' ')}</p>
+                        <h2 className="text-xl font-bold text-fg">{domain.domain_name}</h2>
+                        <p className="text-sm text-fg-muted capitalize">{activeSection.replace('-', ' ')}</p>
                     </div>
                 </div>
 
                 {/* Section Content */}
-                <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-6">
+                <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6">
                     {activeSection === 'general' && (
                         <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} />
                     )}
@@ -232,9 +232,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
 
     // Main Dashboard View
     return (
-        <div className="h-full overflow-auto relative bg-slate-950">
+        <div className="h-full overflow-auto relative bg-bg">
             {/* Background Pattern - relative to content area only */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-surface to-surface pointer-events-none"></div>
 
             <div className="relative p-6 space-y-6">
                 {/* Header */}
@@ -242,22 +242,22 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={onBack}
-                            className="p-2.5 hover:bg-slate-800/80 rounded-xl transition-all duration-200 border border-transparent hover:border-slate-700"
+                            className="p-2.5 hover:bg-surface-2/80 rounded-xl transition-all duration-200 border border-transparent hover:border-border"
                         >
-                            <ArrowLeft className="w-5 h-5 text-gray-400" />
+                            <ArrowLeft className="w-5 h-5 text-fg-muted" />
                         </button>
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-white">{domain.domain_name}</h1>
+                                <h1 className="text-2xl font-bold text-fg">{domain.domain_name}</h1>
                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${domain.status === 'active'
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                    : 'bg-gray-800 text-gray-400'
+                                    ? 'bg-success/20 text-success border border-success/30'
+                                    : 'bg-surface-2 text-fg-muted'
                                     }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${domain.status === 'active' ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${domain.status === 'active' ? 'bg-success' : 'bg-surface-3'}`}></span>
                                     {domain.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-400 mt-1">Domain Dashboard</p>
+                            <p className="text-sm text-fg-muted mt-1">Domain Dashboard</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -265,17 +265,17 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                             href={`https://${domain.domain_name}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors border border-slate-700 text-sm text-gray-300"
+                            className="flex items-center gap-2 px-4 py-2 bg-surface-2/80 hover:bg-surface-3 rounded-xl transition-colors border border-border text-sm text-fg-muted"
                         >
                             <ExternalLink className="w-4 h-4" />
                             Visit Site
                         </a>
                         <button
                             onClick={loadDomain}
-                            className="p-2.5 hover:bg-slate-800/80 rounded-xl transition-colors border border-slate-700"
+                            className="p-2.5 hover:bg-surface-2/80 rounded-xl transition-colors border border-border"
                             title="Refresh"
                         >
-                            <RefreshCw className="w-4 h-4 text-gray-400" />
+                            <RefreshCw className="w-4 h-4 text-fg-muted" />
                         </button>
                     </div>
                 </div>
@@ -310,7 +310,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
 
                 {/* Quick Actions Grid */}
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Quick Actions</h3>
+                    <h3 className="text-sm font-semibold text-fg-muted uppercase tracking-wider mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         <QuickAction
                             icon={Settings}
@@ -388,21 +388,21 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 {/* Site Preview & Info */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Site Preview */}
-                    <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-6">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Site Preview</h3>
-                        <div className="relative aspect-video bg-slate-800 rounded-xl overflow-hidden border border-slate-700">
+                    <div className="lg:col-span-2 bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6">
+                        <h3 className="text-sm font-semibold text-fg-muted uppercase tracking-wider mb-4">Site Preview</h3>
+                        <div className="relative aspect-video bg-surface-2 rounded-xl overflow-hidden border border-border">
                             <iframe
                                 src={`https://${domain.domain_name}`}
                                 className="w-full h-full"
                                 style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '200%' }}
                                 sandbox="allow-same-origin"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent pointer-events-none"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-surface/80 to-transparent pointer-events-none"></div>
                             <a
                                 href={`https://${domain.domain_name}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white transition-colors"
+                                className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded-lg text-sm text-white transition-colors"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 Open in New Tab
@@ -411,16 +411,16 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     </div>
 
                     {/* Domain Info */}
-                    <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-6">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Domain Info</h3>
+                    <div className="bg-surface/50 backdrop-blur-sm border border-border rounded-2xl p-6">
+                        <h3 className="text-sm font-semibold text-fg-muted uppercase tracking-wider mb-4">Domain Info</h3>
                         <div className="space-y-4">
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Domain Name</p>
-                                <p className="text-white font-mono text-sm">{domain.domain_name}</p>
+                                <p className="text-xs text-fg-subtle mb-1">Domain Name</p>
+                                <p className="text-fg font-mono text-sm">{domain.domain_name}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Created</p>
-                                <p className="text-white text-sm">
+                                <p className="text-xs text-fg-subtle mb-1">Created</p>
+                                <p className="text-fg text-sm">
                                     {new Date(domain.created_at).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'long',
@@ -429,29 +429,29 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">PHP Version</p>
-                                <p className="text-white text-sm">PHP {domain.php_version}</p>
+                                <p className="text-xs text-fg-subtle mb-1">PHP Version</p>
+                                <p className="text-fg text-sm">PHP {domain.php_version}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">SSL Status</p>
+                                <p className="text-xs text-fg-subtle mb-1">SSL Status</p>
                                 <div className="flex items-center gap-2">
                                     {domain.ssl_enabled ? (
                                         <>
-                                            <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                                            <span className="text-green-400 text-sm">Secure (HTTPS)</span>
+                                            <span className="w-2 h-2 rounded-full bg-success"></span>
+                                            <span className="text-success text-sm">Secure (HTTPS)</span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                                            <span className="text-yellow-400 text-sm">Not Installed</span>
+                                            <span className="w-2 h-2 rounded-full bg-warning"></span>
+                                            <span className="text-warning text-sm">Not Installed</span>
                                         </>
                                     )}
                                 </div>
                             </div>
-                            <div className="pt-4 border-t border-slate-700">
+                            <div className="pt-4 border-t border-border">
                                 <button
                                     onClick={() => setActiveSection('general')}
-                                    className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                    className="w-full px-4 py-2.5 bg-primary hover:bg-primary-hover rounded-xl text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Settings className="w-4 h-4" />
                                     Manage Domain

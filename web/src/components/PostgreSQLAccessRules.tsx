@@ -153,18 +153,18 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-slate-500">Loading access rules...</div>;
+    if (loading) return <div className="p-8 text-center text-fg-subtle">Loading access rules...</div>;
 
     return (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+        <div className="bg-surface/50 border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-green-400" />
+                <h3 className="text-lg font-bold text-fg flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-success" />
                     Access Rules (pg_hba.conf)
                 </h3>
                 <button
                     onClick={handleAddRule}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-lg text-sm font-bold transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-surface-2 hover:bg-surface-3 text-primary rounded-lg text-sm font-bold transition-colors"
                 >
                     <Plus size={16} /> Add Rule
                 </button>
@@ -173,7 +173,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                        <tr className="text-xs font-bold text-fg-subtle uppercase tracking-wider border-b border-border">
                             <th className="pb-3 pl-2">Type</th>
                             <th className="pb-3">Database</th>
                             <th className="pb-3">User</th>
@@ -184,16 +184,16 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                     </thead>
                     <tbody className="text-sm">
                         {rules.map((rule) => (
-                            <tr key={rule.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group">
+                            <tr key={rule.id} className="border-b border-border/50 hover:bg-surface-2/30 transition-colors group">
                                 <td className="py-2 pl-2">
                                     <select
                                         value={rule.type}
                                         onChange={(e) => handleUpdateRule(rule.id, 'type', e.target.value)}
-                                        className="bg-transparent text-white focus:outline-none focus:text-blue-400 font-mono w-20 cursor-pointer"
+                                        className="bg-transparent text-fg focus:outline-none focus:text-primary font-mono w-20 cursor-pointer"
                                     >
-                                        <option value="local" className="bg-slate-900">local</option>
-                                        <option value="host" className="bg-slate-900">host</option>
-                                        <option value="hostssl" className="bg-slate-900">hostssl</option>
+                                        <option value="local" className="bg-surface">local</option>
+                                        <option value="host" className="bg-surface">host</option>
+                                        <option value="hostssl" className="bg-surface">hostssl</option>
                                     </select>
                                 </td>
                                 <td className="py-2">
@@ -201,7 +201,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                         type="text"
                                         value={rule.database}
                                         onChange={(e) => handleUpdateRule(rule.id, 'database', e.target.value)}
-                                        className="bg-transparent text-gray-300 focus:outline-none focus:text-blue-400 font-mono w-full"
+                                        className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-full"
                                     />
                                 </td>
                                 <td className="py-2">
@@ -209,7 +209,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                         type="text"
                                         value={rule.user}
                                         onChange={(e) => handleUpdateRule(rule.id, 'user', e.target.value)}
-                                        className="bg-transparent text-gray-300 focus:outline-none focus:text-blue-400 font-mono w-full"
+                                        className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-full"
                                     />
                                 </td>
                                 <td className="py-2">
@@ -218,28 +218,28 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                                             type="text"
                                             value={rule.address}
                                             onChange={(e) => handleUpdateRule(rule.id, 'address', e.target.value)}
-                                            className="bg-transparent text-gray-300 focus:outline-none focus:text-blue-400 font-mono w-32"
+                                            className="bg-transparent text-fg-muted focus:outline-none focus:text-primary font-mono w-32"
                                         />
-                                    ) : <span className="text-slate-600">-</span>}
+                                    ) : <span className="text-fg-subtle">-</span>}
                                 </td>
                                 <td className="py-2">
                                     <select
                                         value={rule.method}
                                         onChange={(e) => handleUpdateRule(rule.id, 'method', e.target.value)}
-                                        className="bg-transparent text-yellow-400 focus:outline-none focus:text-yellow-300 font-mono w-24 cursor-pointer"
+                                        className="bg-transparent text-warning focus:outline-none focus:text-warning font-mono w-24 cursor-pointer"
                                     >
-                                        <option value="md5" className="bg-slate-900">md5</option>
-                                        <option value="scram-sha-256" className="bg-slate-900">scram-sha-256</option>
-                                        <option value="peer" className="bg-slate-900">peer</option>
-                                        <option value="ident" className="bg-slate-900">ident</option>
-                                        <option value="trust" className="bg-slate-900 text-red-400">trust</option>
-                                        <option value="reject" className="bg-slate-900 text-red-400">reject</option>
+                                        <option value="md5" className="bg-surface">md5</option>
+                                        <option value="scram-sha-256" className="bg-surface">scram-sha-256</option>
+                                        <option value="peer" className="bg-surface">peer</option>
+                                        <option value="ident" className="bg-surface">ident</option>
+                                        <option value="trust" className="bg-surface text-danger">trust</option>
+                                        <option value="reject" className="bg-surface text-danger">reject</option>
                                     </select>
                                 </td>
                                 <td className="py-2 text-right pr-2">
                                     <button
                                         onClick={() => handleDeleteRule(rule.id)}
-                                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        className="p-1.5 text-fg-subtle hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -248,7 +248,7 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
                         ))}
                         {rules.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="py-8 text-center text-slate-500 italic">
+                                <td colSpan={6} className="py-8 text-center text-fg-subtle italic">
                                     No access rules found. Add one to allow connections.
                                 </td>
                             </tr>
@@ -258,14 +258,14 @@ export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-                <div className="text-xs text-slate-500 flex items-center gap-1">
+                <div className="text-xs text-fg-subtle flex items-center gap-1">
                     <AlertCircle size={14} />
                     <span>Order matters! First matching rule is used.</span>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg font-bold transition-all disabled:opacity-50"
                 >
                     <Save size={18} />
                     {saving ? 'Saving...' : 'Save Rules'}

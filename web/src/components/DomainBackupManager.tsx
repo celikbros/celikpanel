@@ -133,10 +133,10 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case 'files': return <HardDrive className="w-4 h-4 text-blue-400" />;
-            case 'database': return <Database className="w-4 h-4 text-green-400" />;
+            case 'files': return <HardDrive className="w-4 h-4 text-primary" />;
+            case 'database': return <Database className="w-4 h-4 text-success" />;
             case 'full': return <Archive className="w-4 h-4 text-purple-400" />;
-            default: return <Archive className="w-4 h-4 text-gray-400" />;
+            default: return <Archive className="w-4 h-4 text-fg-muted" />;
         }
     };
 
@@ -152,48 +152,48 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     return (
         <div className="space-y-6">
             {/* Create Backup Section */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Create New Backup</h3>
+            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-fg mb-4">Create New Backup</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                         onClick={() => createBackup('files')}
                         disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
                     >
-                        <HardDrive className="w-8 h-8 text-blue-400" />
+                        <HardDrive className="w-8 h-8 text-primary" />
                         <div className="text-left">
-                            <p className="font-medium text-white">Files Backup</p>
-                            <p className="text-xs text-gray-400">Backup website files only</p>
+                            <p className="font-medium text-fg">Files Backup</p>
+                            <p className="text-xs text-fg-muted">Backup website files only</p>
                         </div>
                     </button>
 
                     <button
                         onClick={() => createBackup('database')}
                         disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
                     >
-                        <Database className="w-8 h-8 text-green-400" />
+                        <Database className="w-8 h-8 text-success" />
                         <div className="text-left">
-                            <p className="font-medium text-white">Database Backup</p>
-                            <p className="text-xs text-gray-400">Backup databases</p>
+                            <p className="font-medium text-fg">Database Backup</p>
+                            <p className="text-xs text-fg-muted">Backup databases</p>
                         </div>
                     </button>
 
                     <button
                         onClick={() => createBackup('full')}
                         disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
                     >
                         <Archive className="w-8 h-8 text-purple-400" />
                         <div className="text-left">
-                            <p className="font-medium text-white">Full Backup</p>
-                            <p className="text-xs text-gray-400">Files + Database</p>
+                            <p className="font-medium text-fg">Full Backup</p>
+                            <p className="text-xs text-fg-muted">Files + Database</p>
                         </div>
                     </button>
                 </div>
 
                 {creating && (
-                    <div className="mt-4 flex items-center gap-2 text-blue-400">
+                    <div className="mt-4 flex items-center gap-2 text-primary">
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Creating backup...</span>
                     </div>
@@ -201,12 +201,12 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
             </div>
 
             {/* Backup List */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">Existing Backups</h3>
+                    <h3 className="text-lg font-semibold text-fg">Existing Backups</h3>
                     <button
                         onClick={loadBackups}
-                        className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white"
+                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
                         title="Refresh"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -215,10 +215,10 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : backups.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-fg-subtle">
                         <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>No backups found</p>
                         <p className="text-sm mt-1">Create your first backup above</p>
@@ -228,19 +228,19 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                         {backups.map((backup) => (
                             <div
                                 key={backup.name}
-                                className="flex items-center justify-between p-4 bg-slate-700/30 border border-slate-700 rounded-lg"
+                                className="flex items-center justify-between p-4 bg-surface-3/30 border border-border rounded-lg"
                             >
                                 <div className="flex items-center gap-4">
                                     {getTypeIcon(backup.type)}
                                     <div>
-                                        <p className="text-white font-medium">{backup.name}</p>
-                                        <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
+                                        <p className="text-fg font-medium">{backup.name}</p>
+                                        <div className="flex items-center gap-4 text-xs text-fg-muted mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
                                                 {formatDate(backup.created_at)}
                                             </span>
                                             <span>{formatSize(backup.size)}</span>
-                                            <span className="px-2 py-0.5 bg-slate-600 rounded text-gray-300">
+                                            <span className="px-2 py-0.5 bg-surface-3 rounded text-fg-muted">
                                                 {getTypeLabel(backup.type)}
                                             </span>
                                         </div>
@@ -251,7 +251,7 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                                     <button
                                         onClick={() => restoreBackup(backup.name)}
                                         disabled={restoring === backup.name}
-                                        className="p-2 hover:bg-slate-600 rounded text-gray-400 hover:text-green-400 disabled:opacity-50"
+                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-success disabled:opacity-50"
                                         title="Restore"
                                     >
                                         {restoring === backup.name ? (
@@ -262,14 +262,14 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                                     </button>
                                     <a
                                         href={`/api/v1/domains/${domainId}/files/download?path=${encodeURIComponent(backup.path.replace('/var/backups/celikpanel/' + domainName, ''))}`}
-                                        className="p-2 hover:bg-slate-600 rounded text-gray-400 hover:text-blue-400"
+                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-primary"
                                         title="Download"
                                     >
                                         <Download className="w-4 h-4" />
                                     </a>
                                     <button
                                         onClick={() => deleteBackup(backup.name)}
-                                        className="p-2 hover:bg-slate-600 rounded text-gray-400 hover:text-red-400"
+                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
                                         title="Delete"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -282,11 +282,11 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
             </div>
 
             {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-gray-300">
-                    <p className="font-medium text-blue-400">Backup Storage</p>
-                    <p className="mt-1">Backups are stored in <code className="text-blue-300">/var/backups/celikpanel/{domainName}/</code></p>
+            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-fg-muted">
+                    <p className="font-medium text-primary">Backup Storage</p>
+                    <p className="mt-1">Backups are stored in <code className="text-primary">/var/backups/celikpanel/{domainName}/</code></p>
                 </div>
             </div>
         </div>

@@ -32,18 +32,18 @@ export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
         }
     };
 
-    if (loading) return <div className="text-gray-400">Yükleniyor...</div>;
-    if (error) return <div className="text-red-400">Hata: {error}</div>;
+    if (loading) return <div className="text-fg-muted">Yükleniyor...</div>;
+    if (error) return <div className="text-danger">Hata: {error}</div>;
 
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900/50">
+        <div className="bg-surface border border-border rounded-xl overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface/50">
                 <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
-                        <ArrowLeft size={20} className="text-gray-400" />
+                    <button onClick={onBack} className="p-2 hover:bg-surface-2 rounded-lg transition-colors">
+                        <ArrowLeft size={20} className="text-fg-muted" />
                     </button>
-                    <div className="flex items-center gap-2 text-gray-200">
-                        <FileCode size={20} className="text-blue-400" />
+                    <div className="flex items-center gap-2 text-fg">
+                        <FileCode size={20} className="text-primary" />
                         <span className="font-mono text-sm">{path}</span>
                     </div>
                 </div>
@@ -51,7 +51,7 @@ export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                     <Save size={18} />
                     {saving ? 'Kaydediliyor...' : 'Kaydet'}
@@ -62,7 +62,7 @@ export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
                 <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
-                    className="w-full h-full bg-gray-950 text-gray-300 font-mono text-sm p-6 resize-none focus:outline-none"
+                    className="w-full h-full bg-bg text-fg-muted font-mono text-sm p-6 resize-none focus:outline-none"
                     spellCheck={false}
                 />
             </div>

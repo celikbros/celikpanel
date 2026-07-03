@@ -93,25 +93,25 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
         >
             <div className="w-full space-y-8">
                 {/* Status Card */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-900/50 rounded-2xl border border-slate-800 p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="bg-gradient-to-br from-surface to-surface/50 rounded-2xl border border-border p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
 
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
                         <div className="flex items-center gap-6">
                             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${status?.active
-                                ? 'bg-green-500/10 text-green-400 shadow-green-500/20 border border-green-500/20'
-                                : 'bg-red-500/10 text-red-500 shadow-red-500/20 border border-red-500/20'
+                                ? 'bg-success/10 text-success shadow-green-500/20 border border-success/20'
+                                : 'bg-danger/10 text-danger shadow-red-500/20 border border-danger/20'
                                 }`}>
                                 <Activity className={`w-8 h-8 ${status?.active ? 'animate-pulse' : ''}`} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-1">PostgreSQL Service</h2>
+                                <h2 className="text-xl font-bold text-fg mb-1">PostgreSQL Service</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${status?.active ? 'bg-green-400' : 'bg-red-500'}`}></div>
-                                    <span className={`text-sm font-medium ${status?.active ? 'text-green-400' : 'text-red-400'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${status?.active ? 'bg-success' : 'bg-danger'}`}></div>
+                                    <span className={`text-sm font-medium ${status?.active ? 'text-success' : 'text-danger'}`}>
                                         {status?.active ? 'Active & Running' : 'Stopped'}
                                     </span>
-                                    {status?.pid && <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full ml-2">PID: {status.pid}</span>}
+                                    {status?.pid && <span className="text-xs text-fg-subtle bg-surface-2 px-2 py-0.5 rounded-full ml-2">PID: {status.pid}</span>}
                                 </div>
                             </div>
                         </div>
@@ -120,21 +120,21 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
                             <button
                                 onClick={() => handleServiceAction('start')}
                                 disabled={loading || status?.active}
-                                className="px-6 py-2.5 bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-600/20 hover:border-green-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="px-6 py-2.5 bg-success/10 hover:bg-success/20 text-success border border-success/20 hover:border-success/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                             >
                                 <Play className="w-4 h-4 group-hover:fill-green-400/20" /> Start
                             </button>
                             <button
                                 onClick={() => handleServiceAction('stop')}
                                 disabled={loading || !status?.active}
-                                className="px-6 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/20 hover:border-red-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="px-6 py-2.5 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 hover:border-danger/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                             >
                                 <Square className="w-4 h-4 group-hover:fill-red-400/20" /> Stop
                             </button>
                             <button
                                 onClick={() => handleServiceAction('restart')}
                                 disabled={loading}
-                                className="px-6 py-2.5 bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-400 border border-yellow-600/20 hover:border-yellow-600/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="px-6 py-2.5 bg-warning/10 hover:bg-warning/20 text-warning border border-warning/20 hover:border-warning/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
                             >
                                 <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" /> Restart
                             </button>
@@ -144,23 +144,23 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
 
                 {/* Configuration Section */}
                 <div>
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-gray-400" />
+                    <h3 className="text-lg font-bold text-fg mb-4 flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-fg-muted" />
                         Configuration
                     </h3>
 
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden mb-6">
+                    <div className="bg-surface border border-border rounded-xl overflow-hidden mb-6">
                         {/* Tab Switcher for Config Mode */}
-                        <div className="flex border-b border-slate-800">
+                        <div className="flex border-b border-border">
                             <button
                                 onClick={() => setConfigMode('visual')}
-                                className={`px-6 py-3 text-sm font-medium transition-colors ${configMode === 'visual' ? 'text-blue-400 border-b-2 border-blue-500 bg-slate-800/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                                className={`px-6 py-3 text-sm font-medium transition-colors ${configMode === 'visual' ? 'text-primary border-b-2 border-primary bg-surface-2/50' : 'text-fg-muted hover:text-fg hover:bg-surface-2'}`}
                             >
                                 Visual Settings
                             </button>
                             <button
                                 onClick={() => setConfigMode('access')}
-                                className={`px-6 py-3 text-sm font-medium transition-colors ${configMode === 'access' ? 'text-blue-400 border-b-2 border-blue-500 bg-slate-800/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                                className={`px-6 py-3 text-sm font-medium transition-colors ${configMode === 'access' ? 'text-primary border-b-2 border-primary bg-surface-2/50' : 'text-fg-muted hover:text-fg hover:bg-surface-2'}`}
                             >
                                 Access Rules (pg_hba)
                             </button>
@@ -171,7 +171,7 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
                                 configFiles.find(f => f.path.endsWith('postgresql.conf')) ? (
                                     <PostgreSQLSettings configPath={configFiles.find(f => f.path.endsWith('postgresql.conf')).path} />
                                 ) : (
-                                    <div className="text-center text-slate-500 py-8">
+                                    <div className="text-center text-fg-subtle py-8">
                                         postgresql.conf not found.
                                     </div>
                                 )
@@ -179,7 +179,7 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
                                 configFiles.find(f => f.path.endsWith('pg_hba.conf')) ? (
                                     <PostgreSQLAccessRules configPath={configFiles.find(f => f.path.endsWith('pg_hba.conf')).path} />
                                 ) : (
-                                    <div className="text-center text-slate-500 py-8">
+                                    <div className="text-center text-fg-subtle py-8">
                                         pg_hba.conf not found.
                                     </div>
                                 )
@@ -188,16 +188,16 @@ export function PostgreSQLManagement({ initialVersion, onBack }: PostgreSQLManag
                     </div>
 
                     <div className="opacity-50 hover:opacity-100 transition-opacity">
-                        <h4 className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Advanced: Raw Files</h4>
+                        <h4 className="text-xs font-bold text-fg-subtle mb-2 uppercase tracking-wider">Advanced: Raw Files</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {configFiles.map((file) => (
                                 <button
                                     key={file.path}
                                     onClick={() => setSelectedConfigFile(file.path)}
-                                    className="flex items-center gap-3 p-3 bg-slate-900/50 border border-slate-800 rounded-lg hover:border-slate-600 transition-all text-left"
+                                    className="flex items-center gap-3 p-3 bg-surface/50 border border-border rounded-lg hover:border-border-strong transition-all text-left"
                                 >
-                                    <FileCode className="w-4 h-4 text-slate-500" />
-                                    <span className="font-mono text-xs text-slate-400">{file.path.split('/').pop()}</span>
+                                    <FileCode className="w-4 h-4 text-fg-subtle" />
+                                    <span className="font-mono text-xs text-fg-muted">{file.path.split('/').pop()}</span>
                                 </button>
                             ))}
                         </div>

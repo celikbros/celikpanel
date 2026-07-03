@@ -28,14 +28,14 @@ export function ServiceManagementLayout({
     hideSidebar = false
 }: ServiceManagementLayoutProps & { hideSidebar?: boolean }) {
     return (
-        <div className="min-h-screen bg-gray-950 text-gray-100 font-sans">
+        <div className="min-h-screen bg-bg text-fg font-sans">
             {/* Header */}
-            <div className="bg-gray-900 border-b border-gray-800 p-4">
+            <div className="bg-surface border-b border-border p-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={onBack}
-                            className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+                            className="p-2 hover:bg-surface-2 rounded-lg transition-colors text-fg-muted hover:text-fg"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </button>
@@ -43,7 +43,7 @@ export function ServiceManagementLayout({
                             <span className="text-2xl">{serviceIcon}</span>
                             <div>
                                 <h1 className="text-xl font-bold">{serviceName} Management</h1>
-                                <p className="text-xs text-gray-500">Core Service</p>
+                                <p className="text-xs text-fg-subtle">Core Service</p>
                             </div>
                         </div>
                     </div>
@@ -55,9 +55,9 @@ export function ServiceManagementLayout({
                 {/* Sidebar Navigation - Conditionally Rendered */}
                 {!hideSidebar && (
                     <div className="w-64 flex-shrink-0">
-                        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-                            <div className="p-4 border-b border-gray-800 bg-gray-800/30">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+                            <div className="p-4 border-b border-border bg-surface-2/30">
+                                <p className="text-xs font-bold text-fg-subtle uppercase tracking-wider">
                                     {serviceName} {activeVersion}
                                 </p>
                             </div>
@@ -67,8 +67,8 @@ export function ServiceManagementLayout({
                                         key={tab.id}
                                         onClick={() => onTabChange?.(tab.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === tab.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                            ? 'bg-primary text-white'
+                                            : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
                                             }`}
                                     >
                                         {tab.icon || <Activity className="w-4 h-4" />}
@@ -79,16 +79,16 @@ export function ServiceManagementLayout({
                         </div>
 
                         {/* Context Info Box */}
-                        <div className="mt-6 bg-blue-900/10 border border-blue-900/30 rounded-xl p-4">
+                        <div className="mt-6 bg-primary/15/10 border border-primary/30/30 rounded-xl p-4">
                             <div className="flex items-start gap-3">
                                 <div className="mt-1">
-                                    <Activity className="w-4 h-4 text-blue-400" />
+                                    <Activity className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-bold text-blue-400">Context Aware</h4>
-                                    <p className="text-xs text-blue-300/70 mt-1">
+                                    <h4 className="text-sm font-bold text-primary">Context Aware</h4>
+                                    <p className="text-xs text-primary/70 mt-1">
                                         All actions performed here will only affect
-                                        <span className="font-bold text-white mx-1">{serviceName} {activeVersion}</span>.
+                                        <span className="font-bold text-fg mx-1">{serviceName} {activeVersion}</span>.
                                         Other versions are safe.
                                     </p>
                                 </div>
@@ -99,27 +99,27 @@ export function ServiceManagementLayout({
 
                 {/* Main Content Area */}
                 <div className="flex-1">
-                    <div className={hideSidebar ? "" : "bg-gray-900 rounded-xl border border-gray-800 min-h-[600px] p-6"}>
+                    <div className={hideSidebar ? "" : "bg-surface rounded-xl border border-border min-h-[600px] p-6"}>
                         {/* Breadcrumb / Header for Content - Optional if sidebar hidden but good for context */}
                         {!hideSidebar && (
-                            <div className="mb-6 pb-4 border-b border-gray-800 flex justify-between items-center">
+                            <div className="mb-6 pb-4 border-b border-border flex justify-between items-center">
                                 <div>
-                                    <h2 className="text-xl font-bold text-white">
+                                    <h2 className="text-xl font-bold text-fg">
                                         {tabs?.find(t => t.id === activeTab)?.label}
                                     </h2>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        Configuring {serviceName} <span className="text-blue-400 font-mono font-bold">{activeVersion}</span>
+                                    <p className="text-sm text-fg-subtle mt-1">
+                                        Configuring {serviceName} <span className="text-primary font-mono font-bold">{activeVersion}</span>
                                     </p>
                                 </div>
 
                                 {/* VERSION SELECTOR */}
                                 {versions.length > 1 && (
-                                    <div className="flex items-center gap-2 bg-gray-800 px-3 py-2 rounded-lg border border-gray-700">
-                                        <span className="text-xs text-gray-400 font-medium">Version:</span>
+                                    <div className="flex items-center gap-2 bg-surface-2 px-3 py-2 rounded-lg border border-border">
+                                        <span className="text-xs text-fg-muted font-medium">Version:</span>
                                         <select
                                             value={activeVersion}
                                             onChange={(e) => onVersionChange(e.target.value)}
-                                            className="bg-gray-900 text-white border border-blue-500/50 rounded px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="bg-surface text-fg border border-primary/50 rounded px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
                                         >
                                             {versions.map(v => (
                                                 <option key={v} value={v}>{v}</option>

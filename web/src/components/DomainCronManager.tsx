@@ -211,25 +211,25 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
         <div className="space-y-6">
             {/* Add/Edit Form */}
             {showAddForm && (
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                <div className="bg-surface-2/50 border border-border rounded-xl p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">
+                        <h3 className="text-lg font-semibold text-fg">
                             {editingJob ? 'Edit Cron Job' : 'Add New Cron Job'}
                         </h3>
-                        <button onClick={resetForm} className="p-1 hover:bg-slate-700 rounded">
-                            <X className="w-5 h-5 text-gray-400" />
+                        <button onClick={resetForm} className="p-1 hover:bg-surface-3 rounded">
+                            <X className="w-5 h-5 text-fg-muted" />
                         </button>
                     </div>
 
                     <div className="space-y-4">
                         {/* Schedule */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Schedule</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-2">Schedule</label>
                             <div className="flex gap-2">
                                 <select
                                     value={SCHEDULE_PRESETS.find(p => p.value === schedule)?.value || ''}
                                     onChange={(e) => e.target.value && setSchedule(e.target.value)}
-                                    className="px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                    className="px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                                 >
                                     <option value="">Custom...</option>
                                     {SCHEDULE_PRESETS.map(p => (
@@ -241,33 +241,33 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                                     value={schedule}
                                     onChange={(e) => setSchedule(e.target.value)}
                                     placeholder="* * * * *"
-                                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white font-mono text-sm"
+                                    className="flex-1 px-3 py-2 bg-surface border border-border-strong rounded text-fg font-mono text-sm"
                                 />
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">Format: minute hour day-of-month month day-of-week</p>
+                            <p className="text-xs text-fg-subtle mt-1">Format: minute hour day-of-month month day-of-week</p>
                         </div>
 
                         {/* Command */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Command</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-2">Command</label>
                             <input
                                 type="text"
                                 value={command}
                                 onChange={(e) => setCommand(e.target.value)}
                                 placeholder="/usr/bin/php /var/www/example.com/cron.php"
-                                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white font-mono text-sm"
+                                className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg font-mono text-sm"
                             />
                         </div>
 
                         {/* Comment */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Description (optional)</label>
+                            <label className="block text-sm font-medium text-fg-muted mb-2">Description (optional)</label>
                             <input
                                 type="text"
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
                                 placeholder="Daily cleanup task"
-                                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                             />
                         </div>
 
@@ -275,14 +275,14 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                         <div className="flex justify-end gap-2 pt-2">
                             <button
                                 onClick={resetForm}
-                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm"
+                                className="px-4 py-2 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={editingJob ? updateJob : addJob}
                                 disabled={saving || !command.trim()}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm disabled:opacity-50"
+                                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover rounded text-white text-sm disabled:opacity-50"
                             >
                                 <Save className="w-4 h-4" />
                                 {saving ? 'Saving...' : (editingJob ? 'Update' : 'Add Job')}
@@ -293,14 +293,14 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
             )}
 
             {/* Jobs List */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">Scheduled Tasks</h3>
+                    <h3 className="text-lg font-semibold text-fg">Scheduled Tasks</h3>
                     <div className="flex items-center gap-2">
                         {!showAddForm && (
                             <button
                                 onClick={() => setShowAddForm(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add Job
@@ -308,7 +308,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                         )}
                         <button
                             onClick={loadJobs}
-                            className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white"
+                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>
@@ -317,10 +317,10 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : jobs.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-fg-subtle">
                         <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>No cron jobs configured</p>
                         <p className="text-sm mt-1">Add a scheduled task to automate recurring commands</p>
@@ -331,24 +331,24 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                             <div
                                 key={job.id}
                                 className={`p-4 border rounded-lg ${job.enabled
-                                        ? 'bg-slate-700/30 border-slate-700'
-                                        : 'bg-slate-800/50 border-slate-700/50 opacity-60'
+                                        ? 'bg-surface-3/30 border-border'
+                                        : 'bg-surface-2/50 border-border/50 opacity-60'
                                     }`}
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
                                         {job.comment && (
-                                            <p className="text-sm text-gray-400 mb-1">{job.comment}</p>
+                                            <p className="text-sm text-fg-muted mb-1">{job.comment}</p>
                                         )}
-                                        <p className="text-white font-mono text-sm truncate">{job.command}</p>
-                                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                                        <p className="text-fg font-mono text-sm truncate">{job.command}</p>
+                                        <div className="flex items-center gap-3 mt-2 text-xs text-fg-muted">
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
                                                 {describeSchedule(job.schedule)}
                                             </span>
-                                            <code className="px-1.5 py-0.5 bg-slate-800 rounded">{job.schedule}</code>
+                                            <code className="px-1.5 py-0.5 bg-surface-2 rounded">{job.schedule}</code>
                                             {!job.enabled && (
-                                                <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Disabled</span>
+                                                <span className="px-1.5 py-0.5 bg-warning/20 text-warning rounded">Disabled</span>
                                             )}
                                         </div>
                                     </div>
@@ -357,8 +357,8 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                                         <button
                                             onClick={() => toggleJob(job)}
                                             className={`p-2 rounded ${job.enabled
-                                                    ? 'hover:bg-slate-600 text-green-400'
-                                                    : 'hover:bg-slate-600 text-gray-400'
+                                                    ? 'hover:bg-surface-3 text-success'
+                                                    : 'hover:bg-surface-3 text-fg-muted'
                                                 }`}
                                             title={job.enabled ? 'Disable' : 'Enable'}
                                         >
@@ -366,14 +366,14 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                                         </button>
                                         <button
                                             onClick={() => startEdit(job)}
-                                            className="p-2 hover:bg-slate-600 rounded text-gray-400 hover:text-white"
+                                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
                                             title="Edit"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => deleteJob(job)}
-                                            className="p-2 hover:bg-slate-600 rounded text-gray-400 hover:text-red-400"
+                                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
                                             title="Delete"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -387,12 +387,12 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
             </div>
 
             {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-gray-300">
-                    <p className="font-medium text-blue-400">Cron Format</p>
+            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-fg-muted">
+                    <p className="font-medium text-primary">Cron Format</p>
                     <p className="mt-1 font-mono text-xs">minute(0-59) hour(0-23) day(1-31) month(1-12) weekday(0-6)</p>
-                    <p className="mt-1">Use <code className="text-blue-300">*</code> for "every", <code className="text-blue-300">*/5</code> for "every 5"</p>
+                    <p className="mt-1">Use <code className="text-primary">*</code> for "every", <code className="text-primary">*/5</code> for "every 5"</p>
                 </div>
             </div>
         </div>

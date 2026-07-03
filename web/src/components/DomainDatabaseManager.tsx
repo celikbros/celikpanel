@@ -120,8 +120,8 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-2">Database Management</h3>
-                <p className="text-sm text-gray-400">
+                <h3 className="text-lg font-bold text-fg mb-2">Database Management</h3>
+                <p className="text-sm text-fg-muted">
                     Manage databases for {domainName}
                 </p>
             </div>
@@ -130,7 +130,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
             {!showCreateForm && (
                 <button
                     onClick={() => setShowCreateForm(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
                     Create Database
@@ -139,30 +139,30 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
 
             {/* Create Database Form */}
             {showCreateForm && (
-                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                    <h4 className="text-md font-semibold text-gray-200 mb-4">Create New Database</h4>
+                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                    <h4 className="text-md font-semibold text-fg mb-4">Create New Database</h4>
                     <form onSubmit={handleCreateDatabase} className="space-y-4">
                         <div>
-                            <label className="block text-sm text-gray-400 mb-2">Database Name</label>
+                            <label className="block text-sm text-fg-muted mb-2">Database Name</label>
                             <input
                                 type="text"
                                 value={dbName}
                                 onChange={(e) => setDbName(e.target.value)}
                                 placeholder="myapp"
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-fg-subtle mt-1">
                                 Will be prefixed with domain name: {domainName.replace(/\./g, '_')}_{dbName}
                             </p>
                         </div>
 
                         <div>
-                            <label className="block text-sm text-gray-400 mb-2">Database Type</label>
+                            <label className="block text-sm text-fg-muted mb-2">Database Type</label>
                             <select
                                 value={dbType}
                                 onChange={(e) => setDbType(e.target.value as 'mysql' | 'postgresql')}
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                             >
                                 <option value="mysql">MySQL</option>
                                 <option value="postgresql">PostgreSQL</option>
@@ -170,13 +170,13 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                         </div>
 
                         <div>
-                            <label className="block text-sm text-gray-400 mb-2">Password</label>
+                            <label className="block text-sm text-fg-muted mb-2">Password</label>
                             <input
                                 type="password"
                                 value={dbPassword}
                                 onChange={(e) => setDbPassword(e.target.value)}
                                 placeholder="Enter a strong password"
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                                className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                                 required
                             />
                         </div>
@@ -185,7 +185,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                             <button
                                 type="submit"
                                 disabled={creating}
-                                className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                                className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 flex items-center gap-2"
                             >
                                 <Database className="w-4 h-4" />
                                 {creating ? 'Creating...' : 'Create Database'}
@@ -197,7 +197,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                     setDbName('');
                                     setDbPassword('');
                                 }}
-                                className="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
+                                className="px-6 py-2 bg-surface-3 text-fg rounded hover:bg-surface-3"
                             >
                                 Cancel
                             </button>
@@ -207,19 +207,19 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
             )}
 
             {/* Database List */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700">
-                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            <div className="bg-surface-2/50 rounded-lg border border-border">
+                <div className="flex items-center justify-between p-4 border-b border-border">
                     <div className="flex items-center gap-2">
-                        <Database className="w-5 h-5 text-blue-400" />
-                        <h4 className="text-md font-semibold text-gray-200">Databases</h4>
-                        <span className="text-sm text-gray-400">
+                        <Database className="w-5 h-5 text-primary" />
+                        <h4 className="text-md font-semibold text-fg">Databases</h4>
+                        <span className="text-sm text-fg-muted">
                             ({databases.length})
                         </span>
                     </div>
                     <button
                         onClick={loadDatabases}
                         disabled={loading}
-                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 text-fg-muted hover:text-fg transition-colors"
                         title="Refresh"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -229,10 +229,10 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                 <div className="p-4">
                     {loading ? (
                         <div className="flex items-center justify-center h-32">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                     ) : databases.length === 0 ? (
-                        <div className="text-center text-gray-500 py-12">
+                        <div className="text-center text-fg-subtle py-12">
                             <Database className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <p>No databases created yet</p>
                             <p className="text-sm mt-1">Click "Create Database" to get started</p>
@@ -242,15 +242,15 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                             {databases.map((db) => (
                                 <div
                                     key={db.id}
-                                    className="bg-gray-900 border border-gray-700 rounded p-4 hover:border-gray-600 transition-colors"
+                                    className="bg-surface border border-border rounded p-4 hover:border-border-strong transition-colors"
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <Database className="w-4 h-4 text-blue-400" />
-                                                <h5 className="font-mono text-white font-semibold">{db.name}</h5>
+                                                <Database className="w-4 h-4 text-primary" />
+                                                <h5 className="font-mono text-fg font-semibold">{db.name}</h5>
                                                 <span className={`text-xs px-2 py-0.5 rounded ${db.type === 'mysql'
-                                                        ? 'bg-blue-900/50 text-blue-300'
+                                                        ? 'bg-primary/15/50 text-primary'
                                                         : 'bg-purple-900/50 text-purple-300'
                                                     }`}>
                                                     {db.type.toUpperCase()}
@@ -258,12 +258,12 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                             </div>
                                             <div className="grid grid-cols-2 gap-2 text-sm">
                                                 <div>
-                                                    <span className="text-gray-400">User:</span>
-                                                    <span className="ml-2 text-white font-mono">{db.user}</span>
+                                                    <span className="text-fg-muted">User:</span>
+                                                    <span className="ml-2 text-fg font-mono">{db.user}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-gray-400">Created:</span>
-                                                    <span className="ml-2 text-white">
+                                                    <span className="text-fg-muted">Created:</span>
+                                                    <span className="ml-2 text-fg">
                                                         {new Date(db.created_at).toLocaleDateString()}
                                                     </span>
                                                 </div>
@@ -274,14 +274,14 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                                 href={db.type === 'mysql' ? getPhpMyAdminUrl() : getPgAdminUrl()}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="p-2 text-blue-400 hover:bg-blue-900/30 rounded transition-colors"
+                                                className="p-2 text-primary hover:bg-primary/15/30 rounded transition-colors"
                                                 title={db.type === 'mysql' ? 'Open phpMyAdmin' : 'Open pgAdmin'}
                                             >
                                                 <ExternalLink className="w-4 h-4" />
                                             </a>
                                             <button
                                                 onClick={() => handleDeleteDatabase(db)}
-                                                className="p-2 text-red-400 hover:bg-red-900/30 rounded transition-colors"
+                                                className="p-2 text-danger hover:bg-danger/15/30 rounded transition-colors"
                                                 title="Delete database"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -296,14 +296,14 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
             </div>
 
             {/* Quick Links */}
-            <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-200 mb-3">Database Tools</h4>
+            <div className="bg-surface-2/50 rounded-lg p-4 border border-border">
+                <h4 className="text-sm font-semibold text-fg mb-3">Database Tools</h4>
                 <div className="flex gap-3">
                     <a
                         href={getPhpMyAdminUrl()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 text-sm"
+                        className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2 text-sm"
                     >
                         <ExternalLink className="w-4 h-4" />
                         phpMyAdmin
@@ -312,7 +312,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                         href={getPgAdminUrl()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center gap-2 text-sm"
+                        className="px-4 py-2 bg-purple-600 text-fg rounded hover:bg-purple-700 flex items-center gap-2 text-sm"
                     >
                         <ExternalLink className="w-4 h-4" />
                         pgAdmin

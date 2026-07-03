@@ -106,32 +106,32 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     if (!settings) {
-        return <div className="text-red-400">Failed to load PHP settings</div>;
+        return <div className="text-danger">Failed to load PHP settings</div>;
     }
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-bold text-gray-100 mb-4">PHP Configuration</h3>
-                <p className="text-sm text-gray-400 mb-6">
+                <h3 className="text-lg font-bold text-fg mb-4">PHP Configuration</h3>
+                <p className="text-sm text-fg-muted mb-6">
                     Manage PHP version and FPM pool settings for {domainName}
                 </p>
             </div>
 
             {/* PHP Version Selector */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                <h4 className="text-md font-semibold text-gray-200 mb-4">PHP Version</h4>
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
+                <h4 className="text-md font-semibold text-fg mb-4">PHP Version</h4>
                 <div className="flex items-center gap-4">
                     <select
                         value={selectedVersion}
                         onChange={(e) => setSelectedVersion(e.target.value)}
-                        className="flex-1 bg-gray-900 border border-gray-700 rounded px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                        className="flex-1 bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                     >
                         {availableVersions.map(version => (
                             <option key={version} value={version}>PHP {version}</option>
@@ -140,35 +140,35 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
                     <button
                         onClick={handleVersionChange}
                         disabled={saving || selectedVersion === currentVersion}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Apply'}
                     </button>
                 </div>
                 {selectedVersion !== currentVersion && (
-                    <p className="text-sm text-yellow-400 mt-2">
+                    <p className="text-sm text-warning mt-2">
                         ⚠️ Changing PHP version will reload PHP-FPM service
                     </p>
                 )}
             </div>
 
             {/* Pool Configuration */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                 <div className="mb-4">
-                    <h4 className="text-md font-semibold text-gray-200">FPM Pool Configuration</h4>
-                    <p className="text-sm text-gray-400 mt-1">
-                        Pool: <span className="font-mono text-blue-400">{settings.pool_name}</span>
+                    <h4 className="text-md font-semibold text-fg">FPM Pool Configuration</h4>
+                    <p className="text-sm text-fg-muted mt-1">
+                        Pool: <span className="font-mono text-primary">{settings.pool_name}</span>
                     </p>
                 </div>
 
                 {/* Show warning when version change is pending */}
                 {selectedVersion !== currentVersion ? (
-                    <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4 text-center">
-                        <p className="text-yellow-400 text-sm">
+                    <div className="bg-warning/15/20 border border-warning/50 rounded-lg p-4 text-center">
+                        <p className="text-warning text-sm">
                             ⚠️ PHP version değişikliğini önce uygulayın
                         </p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-fg-muted text-xs mt-1">
                             Pool configuration, version değişikliği uygulandıktan sonra görünecek
                         </p>
                     </div>
@@ -209,11 +209,11 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
                     }} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">PM Mode</label>
+                                <label className="block text-xs text-fg-muted mb-1">PM Mode</label>
                                 <select
                                     name="pm"
                                     defaultValue={settings.pool_config.pm || 'dynamic'}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 >
                                     <option value="dynamic">dynamic</option>
                                     <option value="static">static</option>
@@ -221,64 +221,64 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Max Children</label>
+                                <label className="block text-xs text-fg-muted mb-1">Max Children</label>
                                 <input
                                     type="number"
                                     name="pm_max_children"
                                     defaultValue={settings.pool_config.pm_max_children || 5}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Start Servers</label>
+                                <label className="block text-xs text-fg-muted mb-1">Start Servers</label>
                                 <input
                                     type="number"
                                     name="pm_start_servers"
                                     defaultValue={settings.pool_config.pm_start_servers || 2}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Min Spare Servers</label>
+                                <label className="block text-xs text-fg-muted mb-1">Min Spare Servers</label>
                                 <input
                                     type="number"
                                     name="pm_min_spare_servers"
                                     defaultValue={settings.pool_config.pm_min_spare_servers || 1}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Max Spare Servers</label>
+                                <label className="block text-xs text-fg-muted mb-1">Max Spare Servers</label>
                                 <input
                                     type="number"
                                     name="pm_max_spare_servers"
                                     defaultValue={settings.pool_config.pm_max_spare_servers || 3}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">User</label>
+                                <label className="block text-xs text-fg-muted mb-1">User</label>
                                 <input
                                     type="text"
                                     name="user"
                                     defaultValue={settings.pool_config.user || 'www-data'}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Group</label>
+                                <label className="block text-xs text-fg-muted mb-1">Group</label>
                                 <input
                                     type="text"
                                     name="group"
                                     defaultValue={settings.pool_config.group || 'www-data'}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+                                    className="w-full bg-surface border border-border rounded px-3 py-2 text-fg text-sm focus:border-primary focus:outline-none"
                                 />
                             </div>
                         </div>
-                        <div className="flex justify-end pt-4 border-t border-gray-700">
+                        <div className="flex justify-end pt-4 border-t border-border">
                             <button
                                 type="submit"
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+                                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2"
                             >
                                 <Save className="w-4 h-4" />
                                 Save Pool Configuration
@@ -286,7 +286,7 @@ export function DomainPHPSettings({ domainId, domainName, currentVersion, onVers
                         </div>
                     </form>
                 ) : (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-fg-muted">
                         Pool configuration not available.
                     </p>
                 )}

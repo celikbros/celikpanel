@@ -67,34 +67,34 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center p-12 text-gray-400">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+        <div className="flex flex-col items-center justify-center p-12 text-fg-muted">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
             <p>Loading services...</p>
         </div>
     );
-    if (error) return <div className="text-red-400">Error: {error}</div>;
+    if (error) return <div className="text-danger">Error: {error}</div>;
 
     // Unified Service Card Component
     const ServiceCard = ({ service }: { service: ManagedService }) => {
         const categoryColors: Record<string, string> = {
-            web: 'bg-blue-900/40 text-blue-400 border-blue-900/50',
+            web: 'bg-primary/15/40 text-primary border-primary/30/50',
             database: 'bg-purple-900/40 text-purple-400 border-purple-900/50',
             email: 'bg-orange-900/40 text-orange-400 border-orange-900/50',
-            security: 'bg-red-900/40 text-red-400 border-red-900/50',
+            security: 'bg-danger/15/40 text-danger border-danger/30/50',
             dns: 'bg-cyan-900/40 text-cyan-400 border-cyan-900/50',
-            ftp: 'bg-indigo-900/40 text-indigo-400 border-indigo-900/50',
-            cache: 'bg-yellow-900/40 text-yellow-400 border-yellow-900/50',
+            ftp: 'bg-primary/15/40 text-primary border-primary/30/50',
+            cache: 'bg-warning/15/40 text-warning border-warning/30/50',
         };
-        const badgeClass = categoryColors[service.category] || 'bg-gray-800 text-gray-400';
+        const badgeClass = categoryColors[service.category] || 'bg-surface-2 text-fg-muted';
 
         return (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors group flex flex-col h-full">
+            <div className="bg-surface border border-border rounded-xl p-6 hover:border-border transition-colors group flex flex-col h-full">
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                         <div className="text-3xl">{service.icon}</div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-100">{service.name}</h3>
-                            <p className="text-sm text-gray-500 line-clamp-2">{service.description}</p>
+                            <h3 className="text-lg font-bold text-fg">{service.name}</h3>
+                            <p className="text-sm text-fg-subtle line-clamp-2">{service.description}</p>
                         </div>
                     </div>
                     <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
@@ -104,8 +104,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
                 <div className="flex-1">
                     {service.versions.length > 1 && (
-                        <div className="mb-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                            <p className="text-xs text-gray-400 mb-2 font-semibold">Installed Versions:</p>
+                        <div className="mb-3 p-3 bg-surface-2/50 rounded-lg border border-border">
+                            <p className="text-xs text-fg-muted mb-2 font-semibold">Installed Versions:</p>
                             <div className="space-y-2">
                                 {service.versions.map(version => (
                                     <ServiceVersionRow key={version} service={service} version={version} handleAction={handleAction} />
@@ -121,24 +121,24 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     )}
                 </div>
 
-                <div className="flex gap-2 items-center mt-auto pt-4 border-t border-gray-800">
+                <div className="flex gap-2 items-center mt-auto pt-4 border-t border-border">
                     {service.versions.length === 1 && (
                         <div className="flex gap-1">
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'start')}
-                                className="px-3 py-1.5 bg-green-900/30 text-green-400 rounded hover:bg-green-900/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-success/15/30 text-success rounded hover:bg-success/15/50 transition-colors text-xs"
                             >
                                 Start
                             </button>
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'stop')}
-                                className="px-3 py-1.5 bg-red-900/30 text-red-400 rounded hover:bg-red-900/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-danger/15/30 text-danger rounded hover:bg-danger/15/50 transition-colors text-xs"
                             >
                                 Stop
                             </button>
                             <button
                                 onClick={() => handleAction(service.id, service.versions[0], 'restart')}
-                                className="px-3 py-1.5 bg-yellow-900/30 text-yellow-400 rounded hover:bg-yellow-900/50 transition-colors text-xs"
+                                className="px-3 py-1.5 bg-warning/15/30 text-warning rounded hover:bg-warning/15/50 transition-colors text-xs"
                             >
                                 Restart
                             </button>
@@ -146,7 +146,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     )}
                     <button
                         onClick={() => onManageService?.(service.id, service.versions)}
-                        className="ml-auto px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
+                        className="ml-auto px-4 py-1.5 bg-primary text-white rounded hover:bg-primary-hover transition-colors flex items-center gap-2 text-sm"
                     >
                         <Settings className="w-4 h-4" />
                         Manage
@@ -190,19 +190,19 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
 
         return (
-            <div className="flex items-center justify-between p-2 bg-gray-900/50 rounded">
+            <div className="flex items-center justify-between p-2 bg-surface/50 rounded">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-400 font-mono font-semibold">{version}</span>
+                    <span className="text-sm text-primary font-mono font-semibold">{version}</span>
                     {versionStatus && (
-                        <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/15/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
                             {versionStatus.active ? 'Running' : 'Stopped'}
                         </span>
                     )}
                 </div>
                 <div className="flex gap-1">
-                    <button onClick={() => handleAction(service.id, version, 'start')} className="px-2 py-1 bg-green-900/30 text-green-400 rounded hover:bg-green-900/50 transition-colors text-xs">Start</button>
-                    <button onClick={() => handleAction(service.id, version, 'stop')} className="px-2 py-1 bg-red-900/30 text-red-400 rounded hover:bg-red-900/50 transition-colors text-xs">Stop</button>
-                    <button onClick={() => handleAction(service.id, version, 'restart')} className="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded hover:bg-yellow-900/50 transition-colors text-xs">Restart</button>
+                    <button onClick={() => handleAction(service.id, version, 'start')} className="px-2 py-1 bg-success/15/30 text-success rounded hover:bg-success/15/50 transition-colors text-xs">Start</button>
+                    <button onClick={() => handleAction(service.id, version, 'stop')} className="px-2 py-1 bg-danger/15/30 text-danger rounded hover:bg-danger/15/50 transition-colors text-xs">Stop</button>
+                    <button onClick={() => handleAction(service.id, version, 'restart')} className="px-2 py-1 bg-warning/15/30 text-warning rounded hover:bg-warning/15/50 transition-colors text-xs">Restart</button>
                 </div>
             </div>
         )
@@ -243,9 +243,9 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         if (!versionStatus) return null;
 
         return (
-            <div className="flex items-center gap-2 p-2 bg-gray-800/30 rounded">
-                <span className="text-xs text-gray-400">Status:</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
+            <div className="flex items-center gap-2 p-2 bg-surface-2/30 rounded">
+                <span className="text-xs text-fg-muted">Status:</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/15/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
                     {versionStatus.active ? 'Running' : 'Stopped'}
                 </span>
             </div>
@@ -255,8 +255,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     return (
         <div className="p-6 space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-100">Services</h1>
-                <p className="text-sm text-gray-400 mt-1">
+                <h1 className="text-2xl font-bold text-fg">Services</h1>
+                <p className="text-sm text-fg-muted mt-1">
                     Manage core system services
                 </p>
             </div>

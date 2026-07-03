@@ -239,20 +239,20 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
         const fileName = editingFile.split('/').pop();
         return (
             <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                <div className="flex items-center justify-between p-4 border-b border-border">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setEditingFile(null)} className="p-2 hover:bg-slate-700 rounded">
-                            <X className="w-4 h-4 text-gray-400" />
+                        <button onClick={() => setEditingFile(null)} className="p-2 hover:bg-surface-3 rounded">
+                            <X className="w-4 h-4 text-fg-muted" />
                         </button>
                         <div>
-                            <h3 className="text-white font-medium">{fileName}</h3>
-                            <p className="text-xs text-gray-500">{editingFile}</p>
+                            <h3 className="text-fg font-medium">{fileName}</h3>
+                            <p className="text-xs text-fg-subtle">{editingFile}</p>
                         </div>
                     </div>
                     <button
                         onClick={saveFile}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success rounded text-white text-sm disabled:opacity-50"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save'}
@@ -261,7 +261,7 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
                 <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="flex-1 w-full p-4 bg-slate-900 text-gray-100 font-mono text-sm resize-none focus:outline-none"
+                    className="flex-1 w-full p-4 bg-surface text-fg font-mono text-sm resize-none focus:outline-none"
                     spellCheck={false}
                 />
             </div>
@@ -270,33 +270,33 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                    <button onClick={goUp} disabled={currentPath === '/'} className="p-2 hover:bg-slate-700 rounded disabled:opacity-50" title="Go up">
-                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                    <button onClick={goUp} disabled={currentPath === '/'} className="p-2 hover:bg-surface-3 rounded disabled:opacity-50" title="Go up">
+                        <ChevronUp className="w-4 h-4 text-fg-muted" />
                     </button>
-                    <div className="flex items-center text-sm text-gray-400">
-                        <span className="text-blue-400">~</span>
+                    <div className="flex items-center text-sm text-fg-muted">
+                        <span className="text-primary">~</span>
                         {currentPath.split('/').filter(Boolean).map((part, i, arr) => (
                             <span key={i} className="flex items-center">
                                 <ChevronRight className="w-4 h-4 mx-1" />
-                                <button onClick={() => navigateTo('/' + arr.slice(0, i + 1).join('/'))} className="hover:text-white">{part}</button>
+                                <button onClick={() => navigateTo('/' + arr.slice(0, i + 1).join('/'))} className="hover:text-fg">{part}</button>
                             </span>
                         ))}
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => { setCreateType('folder'); setShowCreateDialog(true); }} className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white" title="New folder">
+                    <button onClick={() => { setCreateType('folder'); setShowCreateDialog(true); }} className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg" title="New folder">
                         <FolderPlus className="w-4 h-4" />
                     </button>
-                    <button onClick={() => { setCreateType('file'); setShowCreateDialog(true); }} className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white" title="New file">
+                    <button onClick={() => { setCreateType('file'); setShowCreateDialog(true); }} className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg" title="New file">
                         <FilePlus className="w-4 h-4" />
                     </button>
-                    <label className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white cursor-pointer" title="Upload">
+                    <label className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg cursor-pointer" title="Upload">
                         <Upload className="w-4 h-4" />
                         <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
                     </label>
-                    <button onClick={loadFiles} className="p-2 hover:bg-slate-700 rounded text-gray-400 hover:text-white" title="Refresh">
+                    <button onClick={loadFiles} className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg" title="Refresh">
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
@@ -305,16 +305,16 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
             <div className="flex-1 overflow-auto">
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : files.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-fg-subtle">
                         <Folder className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>Empty folder</p>
                     </div>
                 ) : (
                     <table className="w-full">
-                        <thead className="bg-slate-800/50 text-xs text-gray-500 uppercase">
+                        <thead className="bg-surface-2/50 text-xs text-fg-subtle uppercase">
                             <tr>
                                 <th className="text-left px-4 py-2">Name</th>
                                 <th className="text-left px-4 py-2 w-24">Size</th>
@@ -323,36 +323,36 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
                                 <th className="text-right px-4 py-2 w-24">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-border">
                             {files.map((file) => (
                                 <tr
                                     key={file.path}
-                                    className={`hover:bg-slate-800/30 cursor-pointer ${selectedFile?.path === file.path ? 'bg-slate-800/50' : ''}`}
+                                    className={`hover:bg-surface-2/30 cursor-pointer ${selectedFile?.path === file.path ? 'bg-surface-2/50' : ''}`}
                                     onClick={() => setSelectedFile(file)}
                                     onDoubleClick={() => openFile(file)}
                                 >
                                     <td className="px-4 py-2">
                                         <div className="flex items-center gap-2">
-                                            {file.is_dir ? <Folder className="w-4 h-4 text-blue-400" /> : <File className="w-4 h-4 text-gray-400" />}
-                                            <span className="text-white text-sm">{file.name}</span>
+                                            {file.is_dir ? <Folder className="w-4 h-4 text-primary" /> : <File className="w-4 h-4 text-fg-muted" />}
+                                            <span className="text-fg text-sm">{file.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2 text-sm text-gray-400">{file.is_dir ? '-' : formatSize(file.size)}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-400 font-mono">{file.permissions}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-400">{formatDate(file.mod_time)}</td>
+                                    <td className="px-4 py-2 text-sm text-fg-muted">{file.is_dir ? '-' : formatSize(file.size)}</td>
+                                    <td className="px-4 py-2 text-sm text-fg-muted font-mono">{file.permissions}</td>
+                                    <td className="px-4 py-2 text-sm text-fg-muted">{formatDate(file.mod_time)}</td>
                                     <td className="px-4 py-2">
                                         <div className="flex items-center justify-end gap-1">
                                             {!file.is_dir && (
                                                 <>
-                                                    <button onClick={(e) => { e.stopPropagation(); openFile(file); }} className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-white" title="Edit">
+                                                    <button onClick={(e) => { e.stopPropagation(); openFile(file); }} className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-fg" title="Edit">
                                                         <Edit className="w-3.5 h-3.5" />
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); downloadFile(file); }} className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-white" title="Download">
+                                                    <button onClick={(e) => { e.stopPropagation(); downloadFile(file); }} className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-fg" title="Download">
                                                         <Download className="w-3.5 h-3.5" />
                                                     </button>
                                                 </>
                                             )}
-                                            <button onClick={(e) => { e.stopPropagation(); deleteItem(file); }} className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-red-400" title="Delete">
+                                            <button onClick={(e) => { e.stopPropagation(); deleteItem(file); }} className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-danger" title="Delete">
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
@@ -366,20 +366,20 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
 
             {showCreateDialog && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 rounded-xl p-6 w-96 border border-slate-700">
-                        <h3 className="text-lg font-semibold text-white mb-4">Create New {createType === 'folder' ? 'Folder' : 'File'}</h3>
+                    <div className="bg-surface-2 rounded-xl p-6 w-96 border border-border">
+                        <h3 className="text-lg font-semibold text-fg mb-4">Create New {createType === 'folder' ? 'Folder' : 'File'}</h3>
                         <input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder={createType === 'folder' ? 'folder-name' : 'filename.txt'}
-                            className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded text-white mb-4 focus:border-blue-500 focus:outline-none"
+                            className="w-full px-4 py-2 bg-surface border border-border-strong rounded text-fg mb-4 focus:border-primary focus:outline-none"
                             autoFocus
                             onKeyDown={(e) => e.key === 'Enter' && createItem()}
                         />
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => { setShowCreateDialog(false); setNewName(''); }} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-white">Cancel</button>
-                            <button onClick={createItem} disabled={!newName.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white disabled:opacity-50">Create</button>
+                            <button onClick={() => { setShowCreateDialog(false); setNewName(''); }} className="px-4 py-2 bg-surface-3 hover:bg-surface-3 rounded text-fg">Cancel</button>
+                            <button onClick={createItem} disabled={!newName.trim()} className="px-4 py-2 bg-primary hover:bg-primary-hover rounded text-white disabled:opacity-50">Create</button>
                         </div>
                     </div>
                 </div>

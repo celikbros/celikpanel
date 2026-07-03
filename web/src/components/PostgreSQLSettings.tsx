@@ -216,69 +216,69 @@ export function PostgreSQLSettings({ configPath }: PostgreSQLSettingsProps) {
         })).filter(sec => sec.items.length > 0);
     }, [sections, searchTerm]);
 
-    if (loading) return <div className="p-8 text-center text-slate-500">Loading full configuration...</div>;
+    if (loading) return <div className="p-8 text-center text-fg-subtle">Loading full configuration...</div>;
 
     return (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+        <div className="bg-surface/50 border border-border rounded-xl p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-bold text-fg flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-primary" />
                     Full Configuration
                 </h3>
 
                 <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-fg-subtle" />
                     <input
                         type="text"
                         placeholder="Search settings..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 text-sm"
+                        className="w-full bg-surface border border-border rounded-lg py-2 pl-10 pr-4 text-fg focus:outline-none focus:border-primary text-sm"
                     />
                 </div>
             </div>
 
             <div className="space-y-4">
                 {filteredSections.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8 text-fg-subtle">
                         No settings found matching "{searchTerm}"
                     </div>
                 ) : (
                     filteredSections.map((section) => (
-                        <div key={section.title} className="border border-slate-800 rounded-lg overflow-hidden bg-slate-900/20">
+                        <div key={section.title} className="border border-border rounded-lg overflow-hidden bg-surface/20">
                             <button
                                 onClick={() => toggleSection(section.title)}
-                                className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                                className="w-full flex items-center justify-between p-4 hover:bg-surface-2/50 transition-colors"
                             >
-                                <span className="font-bold text-sm text-slate-300 uppercase tracking-wide">{section.title} <span className="text-slate-600 text-xs ml-2">({section.items.length})</span></span>
-                                {expandedSections[section.title] || searchTerm ? <ChevronDown size={18} className="text-slate-500" /> : <ChevronRight size={18} className="text-slate-500" />}
+                                <span className="font-bold text-sm text-fg-muted uppercase tracking-wide">{section.title} <span className="text-fg-subtle text-xs ml-2">({section.items.length})</span></span>
+                                {expandedSections[section.title] || searchTerm ? <ChevronDown size={18} className="text-fg-subtle" /> : <ChevronRight size={18} className="text-fg-subtle" />}
                             </button>
 
                             {(expandedSections[section.title] || searchTerm) && (
-                                <div className="p-4 border-t border-slate-800 grid grid-cols-1 gap-4">
+                                <div className="p-4 border-t border-border grid grid-cols-1 gap-4">
                                     {section.items.map((item) => (
-                                        <div key={item.key} className={`group flex flex-col sm:flex-row sm:items-start gap-4 p-3 rounded-lg border ${item.enabled ? 'border-slate-800 bg-slate-900/40' : 'border-dashed border-slate-800/50 opacity-60'}`}>
+                                        <div key={item.key} className={`group flex flex-col sm:flex-row sm:items-start gap-4 p-3 rounded-lg border ${item.enabled ? 'border-border bg-surface/40' : 'border-dashed border-border/50 opacity-60'}`}>
                                             <div className="pt-2">
                                                 <input
                                                     type="checkbox"
                                                     checked={item.enabled}
                                                     onChange={e => updateItem(sections.findIndex(s => s.title === section.title), sections[sections.findIndex(s => s.title === section.title)].items.indexOf(item), 'enabled', e.target.checked)}
-                                                    className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-0"
+                                                    className="rounded border-border-strong bg-surface-2 text-primary focus:ring-0"
                                                 />
                                             </div>
                                             <div className="flex-1 space-y-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                                    <label className="font-mono text-sm text-blue-400 font-bold">{item.key}</label>
-                                                    {!item.enabled && <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">Disabled</span>}
+                                                    <label className="font-mono text-sm text-primary font-bold">{item.key}</label>
+                                                    {!item.enabled && <span className="text-[10px] bg-surface-2 text-fg-subtle px-1.5 py-0.5 rounded">Disabled</span>}
                                                 </div>
                                                 <input
                                                     type="text"
                                                     value={item.value}
                                                     onChange={e => updateItem(sections.findIndex(s => s.title === section.title), sections[sections.findIndex(s => s.title === section.title)].items.indexOf(item), 'value', e.target.value)}
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-sm text-gray-300 focus:border-blue-500 focus:outline-none"
+                                                    className="w-full bg-bg border border-border rounded px-2 py-1 text-sm text-fg-muted focus:border-primary focus:outline-none"
                                                     disabled={!item.enabled}
                                                 />
-                                                {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
+                                                {item.description && <p className="text-xs text-fg-subtle">{item.description}</p>}
                                             </div>
                                         </div>
                                     ))}
@@ -290,11 +290,11 @@ export function PostgreSQLSettings({ configPath }: PostgreSQLSettingsProps) {
             </div>
 
             <div className="mt-8 flex justify-end sticky bottom-4">
-                <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-2 rounded-xl shadow-2xl">
+                <div className="bg-surface/90 backdrop-blur border border-border p-2 rounded-xl shadow-2xl">
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg font-bold transition-all disabled:opacity-50"
                     >
                         <Save size={18} />
                         {saving ? 'Saving...' : 'Save All Changes'}
@@ -302,7 +302,7 @@ export function PostgreSQLSettings({ configPath }: PostgreSQLSettingsProps) {
                 </div>
             </div>
 
-            <div className="mt-4 text-xs text-slate-500 flex items-center gap-2">
+            <div className="mt-4 text-xs text-fg-subtle flex items-center gap-2">
                 <AlertCircle size={14} />
                 <p>Advanced Mode: Showing all parsed settings from configuration file.</p>
             </div>

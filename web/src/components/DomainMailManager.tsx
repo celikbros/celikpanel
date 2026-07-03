@@ -71,7 +71,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     if (loading && accounts.length === 0 && forwardings.length === 0) {
-        return <div className="p-8 text-center text-gray-400">Loading mail configuration...</div>;
+        return <div className="p-8 text-center text-fg-muted">Loading mail configuration...</div>;
     }
 
     const createAccount = async () => {
@@ -170,12 +170,12 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     return (
         <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-slate-700">
+            <div className="flex gap-4 border-b border-border">
                 <button
                     onClick={() => setActiveTab('accounts')}
                     className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'accounts'
-                        ? 'text-blue-400 border-b-2 border-blue-400'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-fg-muted hover:text-fg'
                         }`}
                 >
                     Email Accounts
@@ -183,8 +183,8 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                 <button
                     onClick={() => setActiveTab('forwarding')}
                     className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'forwarding'
-                        ? 'text-blue-400 border-b-2 border-blue-400'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-fg-muted hover:text-fg'
                         }`}
                 >
                     Forwarding
@@ -195,10 +195,10 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             {activeTab === 'accounts' ? (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-white">Email Accounts</h3>
+                        <h3 className="text-lg font-semibold text-fg">Email Accounts</h3>
                         <button
                             onClick={() => setShowAddAccount(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
                         >
                             <Plus className="w-4 h-4" />
                             Create Account
@@ -206,54 +206,54 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                     </div>
 
                     {showAddAccount && (
-                        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
-                            <h4 className="text-white font-medium mb-3">New Email Account</h4>
+                        <div className="bg-surface-2/50 border border-border rounded-lg p-4 mb-4">
+                            <h4 className="text-fg font-medium mb-3">New Email Account</h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                 <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Username</label>
+                                    <label className="text-xs text-fg-muted block mb-1">Username</label>
                                     <div className="flex">
                                         <input
                                             type="text"
                                             value={newAccountUser}
                                             onChange={e => setNewAccountUser(e.target.value)}
-                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-l text-white text-sm"
+                                            className="w-full px-3 py-2 bg-surface border border-border-strong rounded-l text-fg text-sm"
                                             placeholder="info"
                                         />
-                                        <span className="px-3 py-2 bg-slate-700 border border-slate-600 border-l-0 rounded-r text-gray-300 text-sm">
+                                        <span className="px-3 py-2 bg-surface-3 border border-border-strong border-l-0 rounded-r text-fg-muted text-sm">
                                             @{domainName}
                                         </span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Password</label>
+                                    <label className="text-xs text-fg-muted block mb-1">Password</label>
                                     <input
                                         type="password"
                                         value={newAccountPass}
                                         onChange={e => setNewAccountPass(e.target.value)}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                                         placeholder="••••••••"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Quota (MB)</label>
+                                    <label className="text-xs text-fg-muted block mb-1">Quota (MB)</label>
                                     <input
                                         type="number"
                                         value={newAccountQuota}
                                         onChange={e => setNewAccountQuota(parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                                     />
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => setShowAddAccount(false)}
-                                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm"
+                                    className="px-3 py-1.5 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={createAccount}
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
                                 >
                                     Create
                                 </button>
@@ -261,15 +261,15 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                         </div>
                     )}
 
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+                    <div className="bg-surface-2/50 border border-border rounded-lg overflow-hidden">
                         {accounts.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
+                            <div className="p-8 text-center text-fg-subtle">
                                 <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                 <p>No email accounts found</p>
                             </div>
                         ) : (
-                            <table className="w-full text-left text-sm text-gray-400">
-                                <thead className="bg-slate-900/50 uppercase text-xs font-semibold">
+                            <table className="w-full text-left text-sm text-fg-muted">
+                                <thead className="bg-surface/50 uppercase text-xs font-semibold">
                                     <tr>
                                         <th className="px-4 py-3">Address</th>
                                         <th className="px-4 py-3">Quota</th>
@@ -277,16 +277,16 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                                         <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-700">
+                                <tbody className="divide-y divide-border">
                                     {accounts.map(acc => (
-                                        <tr key={acc.id} className="hover:bg-slate-700/30">
-                                            <td className="px-4 py-3 text-white font-medium">{acc.address}</td>
+                                        <tr key={acc.id} className="hover:bg-surface-3/30">
+                                            <td className="px-4 py-3 text-fg font-medium">{acc.address}</td>
                                             <td className="px-4 py-3">{acc.quota_mb} MB</td>
                                             <td className="px-4 py-3">{new Date(acc.created_at).toLocaleDateString()}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <button
                                                     onClick={() => deleteAccount(acc.id)}
-                                                    className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-red-400"
+                                                    className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -301,10 +301,10 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             ) : (
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-white">Email Forwarding</h3>
+                        <h3 className="text-lg font-semibold text-fg">Email Forwarding</h3>
                         <button
                             onClick={() => setShowAddForwarding(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
                         >
                             <Plus className="w-4 h-4" />
                             Add Forwarder
@@ -312,26 +312,26 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                     </div>
 
                     {showAddForwarding && (
-                        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
-                            <h4 className="text-white font-medium mb-3">New Forwarder</h4>
+                        <div className="bg-surface-2/50 border border-border rounded-lg p-4 mb-4">
+                            <h4 className="text-fg font-medium mb-3">New Forwarder</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Source Email</label>
+                                    <label className="text-xs text-fg-muted block mb-1">Source Email</label>
                                     <input
                                         type="text"
                                         value={fwdSource}
                                         onChange={e => setFwdSource(e.target.value)}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                                         placeholder={`info@${domainName}`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Destination Email</label>
+                                    <label className="text-xs text-fg-muted block mb-1">Destination Email</label>
                                     <input
                                         type="email"
                                         value={fwdDest}
                                         onChange={e => setFwdDest(e.target.value)}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
                                         placeholder="personal@gmail.com"
                                     />
                                 </div>
@@ -339,13 +339,13 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                             <div className="flex justify-end gap-2">
                                 <button
                                     onClick={() => setShowAddForwarding(false)}
-                                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm"
+                                    className="px-3 py-1.5 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={createForwarding}
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
                                 >
                                     Add
                                 </button>
@@ -353,30 +353,30 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                         </div>
                     )}
 
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+                    <div className="bg-surface-2/50 border border-border rounded-lg overflow-hidden">
                         {forwardings.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
+                            <div className="p-8 text-center text-fg-subtle">
                                 <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                 <p>No forwarders found</p>
                             </div>
                         ) : (
-                            <table className="w-full text-left text-sm text-gray-400">
-                                <thead className="bg-slate-900/50 uppercase text-xs font-semibold">
+                            <table className="w-full text-left text-sm text-fg-muted">
+                                <thead className="bg-surface/50 uppercase text-xs font-semibold">
                                     <tr>
                                         <th className="px-4 py-3">Source</th>
                                         <th className="px-4 py-3">Destination</th>
                                         <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-700">
+                                <tbody className="divide-y divide-border">
                                     {forwardings.map(fwd => (
-                                        <tr key={fwd.id} className="hover:bg-slate-700/30">
-                                            <td className="px-4 py-3 text-white font-medium">{fwd.source}</td>
+                                        <tr key={fwd.id} className="hover:bg-surface-3/30">
+                                            <td className="px-4 py-3 text-fg font-medium">{fwd.source}</td>
                                             <td className="px-4 py-3">{fwd.destination}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <button
                                                     onClick={() => deleteForwarding(fwd.id)}
-                                                    className="p-1 hover:bg-slate-700 rounded text-gray-400 hover:text-red-400"
+                                                    className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -391,12 +391,12 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             )}
 
             {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-gray-300">
-                    <p className="font-medium text-blue-400">Mail Configuration</p>
+            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-fg-muted">
+                    <p className="font-medium text-primary">Mail Configuration</p>
                     <p className="mt-1">
-                        IMAP/SMTP Server: <code className="text-blue-300">mail.{domainName}</code> (or server IP)<br />
+                        IMAP/SMTP Server: <code className="text-primary">mail.{domainName}</code> (or server IP)<br />
                         Username: Full email address<br />
                         Ports: IMAP 143/993, SMTP 25/465/587
                     </p>

@@ -88,15 +88,15 @@ export function Domains() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center p-12 text-gray-400">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+            <div className="flex flex-col items-center justify-center p-12 text-fg-muted">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
                 <p>Loading domains...</p>
             </div>
         );
     }
 
     if (error) {
-        return <div className="text-red-400">Error: {error}</div>;
+        return <div className="text-danger">Error: {error}</div>;
     }
 
     return (
@@ -105,14 +105,14 @@ export function Domains() {
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-100">Domains</h2>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <h2 className="text-2xl font-bold text-fg">Domains</h2>
+                        <p className="text-sm text-fg-muted mt-1">
                             {domains.length} domain{domains.length !== 1 ? 's' : ''} registered
                         </p>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition-colors font-medium"
+                        className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg transition-colors font-medium"
                     >
                         <Plus className="w-4 h-4" />
                         Add Domain
@@ -120,26 +120,26 @@ export function Domains() {
                 </div>
 
                 {domains.length === 0 ? (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-                        <Globe className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-300 mb-2">No domains yet</h3>
-                        <p className="text-gray-500 mb-6">Get started by adding your first domain</p>
+                    <div className="bg-surface border border-border rounded-xl p-12 text-center">
+                        <Globe className="w-16 h-16 text-fg-subtle mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-fg-muted mb-2">No domains yet</h3>
+                        <p className="text-fg-subtle mb-6">Get started by adding your first domain</p>
                         <button
                             onClick={() => setShowAddModal(true)}
-                            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg transition-colors font-medium"
                         >
                             <Plus className="w-5 h-5" />
                             Add Domain
                         </button>
                     </div>
                 ) : (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                    <div className="bg-surface border border-border rounded-xl overflow-hidden">
                         {/* Toolbar */}
-                        <div className="p-4 border-b border-gray-800 flex items-center justify-between gap-4">
+                        <div className="p-4 border-b border-border flex items-center justify-between gap-4">
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setShowAddModal(true)}
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium flex items-center gap-1"
+                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded text-sm font-medium flex items-center gap-1"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     Add Domain
@@ -151,7 +151,7 @@ export function Domains() {
                                                 // Delete selected domains
                                             }
                                         }}
-                                        className="px-3 py-1.5 bg-red-900/50 hover:bg-red-900 text-red-400 rounded text-sm font-medium flex items-center gap-1"
+                                        className="px-3 py-1.5 bg-danger/15/50 hover:bg-danger/15 text-danger rounded text-sm font-medium flex items-center gap-1"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                         Remove ({selectedDomains.length})
@@ -159,13 +159,13 @@ export function Domains() {
                                 )}
                             </div>
                             <div className="relative">
-                                <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <Search className="w-4 h-4 text-fg-subtle absolute left-3 top-1/2 -translate-y-1/2" />
                                 <input
                                     type="text"
                                     placeholder="Search domains..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 pr-4 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none w-64"
+                                    className="pl-9 pr-4 py-1.5 bg-surface-2 border border-border rounded text-sm text-fg placeholder-gray-500 focus:border-primary focus:outline-none w-64"
                                 />
                             </div>
                         </div>
@@ -173,67 +173,67 @@ export function Domains() {
                         {/* Table */}
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-800/50">
+                                <thead className="bg-surface-2/50">
                                     <tr>
                                         <th className="w-10 px-4 py-3">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedDomains.length === filteredDomains.length && filteredDomains.length > 0}
                                                 onChange={toggleSelectAll}
-                                                className="w-4 h-4 bg-gray-700 border-gray-600 rounded"
+                                                className="w-4 h-4 bg-surface-3 border-border-strong rounded"
                                             />
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             Domain Name
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             PHP
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             <div className="flex items-center gap-1">
                                                 <HardDrive className="w-3.5 h-3.5" />
                                                 Disk
                                             </div>
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             <div className="flex items-center gap-1">
                                                 <Activity className="w-3.5 h-3.5" />
                                                 Traffic
                                             </div>
                                         </th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             Status
                                         </th>
-                                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-fg-muted uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-800">
+                                <tbody className="divide-y divide-border">
                                     {filteredDomains.map(domain => (
                                         <tr
                                             key={domain.id}
-                                            className="hover:bg-gray-800/30 transition-colors group"
+                                            className="hover:bg-surface-2/30 transition-colors group"
                                         >
                                             <td className="px-4 py-3">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedDomains.includes(domain.id)}
                                                     onChange={() => toggleSelect(domain.id)}
-                                                    className="w-4 h-4 bg-gray-700 border-gray-600 rounded"
+                                                    className="w-4 h-4 bg-surface-3 border-border-strong rounded"
                                                 />
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
                                                     <div className="flex items-center gap-2">
                                                         {domain.ssl_enabled ? (
-                                                            <Shield className="w-4 h-4 text-green-400" />
+                                                            <Shield className="w-4 h-4 text-success" />
                                                         ) : (
-                                                            <Globe className="w-4 h-4 text-gray-500" />
+                                                            <Globe className="w-4 h-4 text-fg-subtle" />
                                                         )}
                                                         <button
                                                             onClick={() => navigate(`/domains/${encodeURIComponent(domain.domain_name)}`)}
-                                                            className="text-blue-400 hover:text-blue-300 font-medium text-left"
+                                                            className="text-primary hover:text-primary font-medium text-left"
                                                         >
                                                             {domain.domain_name}
                                                         </button>
@@ -241,20 +241,20 @@ export function Domains() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-gray-300 text-sm">{domain.php_version}</span>
+                                                <span className="text-fg-muted text-sm">{domain.php_version}</span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-gray-400 text-sm">{formatBytes(domain.disk_usage)}</span>
+                                                <span className="text-fg-muted text-sm">{formatBytes(domain.disk_usage)}</span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-gray-400 text-sm">{formatBytes(domain.bandwidth)}/mo</span>
+                                                <span className="text-fg-muted text-sm">{formatBytes(domain.bandwidth)}/mo</span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${domain.status === 'active'
-                                                    ? 'bg-green-900/30 text-green-400'
-                                                    : 'bg-gray-800 text-gray-400'
+                                                    ? 'bg-success/15/30 text-success'
+                                                    : 'bg-surface-2 text-fg-muted'
                                                     }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${domain.status === 'active' ? 'bg-green-400' : 'bg-gray-500'
+                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${domain.status === 'active' ? 'bg-success' : 'bg-surface-3'
                                                         }`}></span>
                                                     {domain.status}
                                                 </span>
@@ -265,21 +265,21 @@ export function Domains() {
                                                         href={`https://${domain.domain_name}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                                                        className="p-1.5 text-fg-muted hover:text-fg hover:bg-surface-3 rounded"
                                                         title="Visit Site"
                                                     >
                                                         <ExternalLink className="w-4 h-4" />
                                                     </a>
                                                     <button
                                                         onClick={() => navigate(`/domains/${encodeURIComponent(domain.domain_name)}`)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded"
+                                                        className="p-1.5 text-fg-muted hover:text-primary hover:bg-surface-3 rounded"
                                                         title="Settings"
                                                     >
                                                         <Settings className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(domain.id, domain.domain_name)}
-                                                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+                                                        className="p-1.5 text-fg-muted hover:text-danger hover:bg-surface-3 rounded"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -293,12 +293,12 @@ export function Domains() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-4 py-3 border-t border-gray-800 flex items-center justify-between text-sm text-gray-400">
+                        <div className="px-4 py-3 border-t border-border flex items-center justify-between text-sm text-fg-muted">
                             <span>{filteredDomains.length} of {domains.length} domains</span>
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery('')}
-                                    className="text-blue-400 hover:text-blue-300"
+                                    className="text-primary hover:text-primary"
                                 >
                                     Clear search
                                 </button>

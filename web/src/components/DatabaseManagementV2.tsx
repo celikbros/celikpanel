@@ -133,22 +133,22 @@ export function DatabaseManagementV2() {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-100">Databases</h2>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <h2 className="text-2xl font-bold text-fg">Databases</h2>
+                    <p className="text-sm text-fg-muted mt-1">
                         Manage PostgreSQL and MariaDB servers, databases, and users
                     </p>
                 </div>
             </div>
 
             {/* Server Tabs */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="bg-surface border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-4">
-                    <Server className="w-5 h-5 text-blue-400" />
-                    <h3 className="text-lg font-bold text-gray-100">Database Servers</h3>
+                    <Server className="w-5 h-5 text-primary" />
+                    <h3 className="text-lg font-bold text-fg">Database Servers</h3>
                 </div>
 
                 {servers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-fg-subtle">
                         No database servers configured
                     </div>
                 ) : (
@@ -158,8 +158,8 @@ export function DatabaseManagementV2() {
                                 key={server.id}
                                 onClick={() => setSelectedServer(server)}
                                 className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${selectedServer?.id === server.id
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                    ? 'bg-primary text-white'
+                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
                                     }`}
                             >
                                 <span>{server.type_icon}</span>
@@ -173,32 +173,32 @@ export function DatabaseManagementV2() {
 
             {/* Content Area */}
             {selectedServer && (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <div className="bg-surface border border-border rounded-xl p-6">
                     {/* Tabs */}
-                    <div className="flex gap-4 mb-6 border-b border-gray-800">
+                    <div className="flex gap-4 mb-6 border-b border-border">
                         <button
                             onClick={() => setActiveTab('databases')}
                             className={`pb-3 px-2 flex items-center gap-2 transition-colors ${activeTab === 'databases'
-                                ? 'border-b-2 border-blue-500 text-blue-400'
-                                : 'text-gray-400 hover:text-gray-300'
+                                ? 'border-b-2 border-primary text-primary'
+                                : 'text-fg-muted hover:text-fg-muted'
                                 }`}
                         >
                             <Database className="w-4 h-4" />
                             <span className="font-medium">Databases</span>
-                            <span className="text-xs bg-gray-800 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-surface-2 px-2 py-0.5 rounded">
                                 {databases.length}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('users')}
                             className={`pb-3 px-2 flex items-center gap-2 transition-colors ${activeTab === 'users'
-                                ? 'border-b-2 border-blue-500 text-blue-400'
-                                : 'text-gray-400 hover:text-gray-300'
+                                ? 'border-b-2 border-primary text-primary'
+                                : 'text-fg-muted hover:text-fg-muted'
                                 }`}
                         >
                             <Users className="w-4 h-4" />
                             <span className="font-medium">Users</span>
-                            <span className="text-xs bg-gray-800 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-surface-2 px-2 py-0.5 rounded">
                                 {users.length}
                             </span>
                         </button>
@@ -208,10 +208,10 @@ export function DatabaseManagementV2() {
                     {activeTab === 'databases' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-gray-100">Databases</h3>
+                                <h3 className="text-lg font-bold text-fg">Databases</h3>
                                 <button
                                     onClick={() => setShowAddDatabase(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Add Database
@@ -219,37 +219,37 @@ export function DatabaseManagementV2() {
                             </div>
 
                             {loading ? (
-                                <div className="text-center py-8 text-gray-500">Loading...</div>
+                                <div className="text-center py-8 text-fg-subtle">Loading...</div>
                             ) : databases.length === 0 ? (
-                                <div className="text-center py-12 bg-gray-800/50 rounded-lg">
-                                    <Database className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                                    <p className="text-gray-400">No databases yet</p>
-                                    <p className="text-sm text-gray-500 mt-1">Create your first database</p>
+                                <div className="text-center py-12 bg-surface-2/50 rounded-lg">
+                                    <Database className="w-12 h-12 text-fg-subtle mx-auto mb-3" />
+                                    <p className="text-fg-muted">No databases yet</p>
+                                    <p className="text-sm text-fg-subtle mt-1">Create your first database</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
                                     {databases.map(db => (
                                         <div
                                             key={db.id}
-                                            className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                                            className="bg-surface-2/50 border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
-                                                    <h4 className="text-lg font-bold text-gray-100">{db.name}</h4>
+                                                    <h4 className="text-lg font-bold text-fg">{db.name}</h4>
                                                     <div className="flex items-center gap-2 mt-2">
-                                                        <Users className="w-4 h-4 text-gray-500" />
-                                                        <span className="text-sm text-gray-400">
+                                                        <Users className="w-4 h-4 text-fg-subtle" />
+                                                        <span className="text-sm text-fg-muted">
                                                             {db.users.length} user{db.users.length !== 1 ? 's' : ''}: {db.users.join(', ')}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-2">
+                                                    <p className="text-xs text-fg-subtle mt-2">
                                                         Created: {new Date(db.created_at).toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => handleDeleteDatabase(db.id)}
-                                                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                        className="p-2 text-danger hover:bg-danger/10 rounded-lg transition-colors"
                                                         title="Delete database"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -267,10 +267,10 @@ export function DatabaseManagementV2() {
                     {activeTab === 'users' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-gray-100">Users</h3>
+                                <h3 className="text-lg font-bold text-fg">Users</h3>
                                 <button
                                     onClick={() => setShowAddUser(true)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Add User
@@ -278,38 +278,38 @@ export function DatabaseManagementV2() {
                             </div>
 
                             {loading ? (
-                                <div className="text-center py-8 text-gray-500">Loading...</div>
+                                <div className="text-center py-8 text-fg-subtle">Loading...</div>
                             ) : users.length === 0 ? (
-                                <div className="text-center py-12 bg-gray-800/50 rounded-lg">
-                                    <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                                    <p className="text-gray-400">No users yet</p>
-                                    <p className="text-sm text-gray-500 mt-1">Create your first user</p>
+                                <div className="text-center py-12 bg-surface-2/50 rounded-lg">
+                                    <Users className="w-12 h-12 text-fg-subtle mx-auto mb-3" />
+                                    <p className="text-fg-muted">No users yet</p>
+                                    <p className="text-sm text-fg-subtle mt-1">Create your first user</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
                                     {users.map(user => (
                                         <div
                                             key={user.id}
-                                            className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+                                            className="bg-surface-2/50 border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <h4 className="text-lg font-bold text-gray-100">{user.username}</h4>
+                                                        <h4 className="text-lg font-bold text-fg">{user.username}</h4>
                                                         {user.databases.length > 0 && (
-                                                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded border border-yellow-500/30">
+                                                            <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded border border-warning/30">
                                                                 In Use
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-2">
-                                                        <Key className="w-4 h-4 text-gray-500" />
-                                                        <span className="text-sm text-gray-400">
+                                                        <Key className="w-4 h-4 text-fg-subtle" />
+                                                        <span className="text-sm text-fg-muted">
                                                             Access to {user.databases.length} database{user.databases.length !== 1 ? 's' : ''}
                                                             {user.databases.length > 0 && `: ${user.databases.join(', ')}`}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-2">
+                                                    <p className="text-xs text-fg-subtle mt-2">
                                                         Created: {new Date(user.created_at).toLocaleString()}
                                                     </p>
                                                 </div>
@@ -317,8 +317,8 @@ export function DatabaseManagementV2() {
                                                     <button
                                                         onClick={() => handleDeleteUser(user.id)}
                                                         className={`p-2 rounded-lg transition-colors ${user.databases.length > 0
-                                                            ? 'text-gray-600 cursor-not-allowed opacity-50'
-                                                            : 'text-red-400 hover:bg-red-500/10'
+                                                            ? 'text-fg-subtle cursor-not-allowed opacity-50'
+                                                            : 'text-danger hover:bg-danger/10'
                                                             }`}
                                                         title={
                                                             user.databases.length > 0
