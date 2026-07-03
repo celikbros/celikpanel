@@ -77,6 +77,7 @@ cd web && npm install && npm run build   # çıktı: web/dist, panel binary'si t
 
 - [Yol Haritası](ROADMAP.tr.md) — neredeyiz, nereye gidiyoruz ve bilinçli olarak neleri yapmayacağız
 - [Kullanıcı Rolleri ve Yetkiler](docs/ROLES.tr.md) — Yönetici / Bayi / Müşteri / Ek Kullanıcı modeli
+- [Kurallar](docs/CONVENTIONS.tr.md) — dil ve isimlendirme: İngilizce isimler, iki dilli içerik (TR + EN)
 
 ## Lisans
 

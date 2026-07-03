@@ -71,6 +71,7 @@ Every phase has a measurable exit criterion; the next phase does not start until
 - Every operation lands in the audit log (who, when, what)
 - Dashboard with real data: CPU, RAM, disk, service states — at a glance, plain
 - The empty Settings page either gets content or leaves the menu (simplicity rule)
+- UI internationalization (i18n): Turkish + English primary, multilingual-capable — see [Conventions](docs/CONVENTIONS.md)
 
 **Exit criteria:** On a clean server, "domain → live site" runs 100 times back-to-back without failure · Integration test suite green in CI.
 

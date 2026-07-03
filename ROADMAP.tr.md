@@ -72,6 +72,7 @@ Her fazın sonunda ölçülebilir çıkış kriteri vardır; kriter sağlanmadan
 - Her işlem audit log'a yazılır (kim, ne zaman, ne yaptı)
 - Dashboard gerçek verilerle: CPU, RAM, disk, servis durumu — tek bakışta, sade
 - Boş Settings sayfası ya doldurulur ya menüden kaldırılır (sadelik kuralı)
+- UI uluslararasılaştırma (i18n): Türkçe + İngilizce öncelikli, çok dilli — bkz. [Kurallar](docs/CONVENTIONS.tr.md)
 
 **Çıkış kriteri:** Temiz sunucuda "domain → yayında site" akışı arka arkaya 100 kez hatasız · Entegrasyon test paketi CI'da yeşil.
 
