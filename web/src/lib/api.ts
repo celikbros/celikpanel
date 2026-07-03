@@ -24,7 +24,41 @@ export interface ConfigResponse {
 
 const API_BASE = '/api/v1';
 
+export interface CurrentUser {
+    username: string;
+    role: string;
+    email?: string;
+}
+
 class API {
+    // me returns the current user, or null when unauthenticated (401).
+    // me, mevcut kullanıcıyı döndürür; kimlik doğrulanmamışsa (401) null.
+    async me(): Promise<CurrentUser | null> {
+        const res = await fetch(`${API_BASE}/auth/me`);
+        if (res.status === 401) return null;
+        if (!res.ok) throw new Error('Failed to fetch current user');
+        return res.json();
+    }
+
+    // login authenticates and, on success, the server sets the session
+    // cookie. Returns the user on success, throws on failure.
+    // login kimlik doğrular; başarılıysa sunucu oturum çerezini ayarlar.
+    async login(username: string, password: string): Promise<CurrentUser> {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        });
+        if (!res.ok) {
+            throw new Error(res.status === 401 ? 'invalid_credentials' : 'login_failed');
+        }
+        return res.json();
+    }
+
+    async logout(): Promise<void> {
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    }
+
     async getServices(): Promise<Service[]> {
         const res = await fetch(`${API_BASE}/managed-services`);
         if (!res.ok) throw new Error('Failed to fetch services');

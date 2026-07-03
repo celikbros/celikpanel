@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Login } from './components/Login';
+import { api, type CurrentUser } from './lib/api';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { Domains } from './components/Domains';
@@ -223,7 +225,7 @@ function PageWithLayout({ children }: { children: React.ReactNode }) {
   return <MainLayout currentPath={currentPath}>{children}</MainLayout>;
 }
 
-function App() {
+function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
@@ -249,6 +251,57 @@ function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+// AuthGate is the front door: it resolves the current session before any
+// page renders, shows the login screen when there is none, and drops back
+// to login if a session expires mid-use (any API 401).
+//
+// AuthGate ön kapıdır: herhangi bir sayfa render edilmeden önce mevcut
+// oturumu çözer, oturum yoksa giriş ekranını gösterir ve kullanım
+// sırasında oturum düşerse (herhangi bir API 401) girişe geri döner.
+function AuthGate() {
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
+  }, []);
+
+  // Watch every API response; a 401 means the session is gone, so return
+  // to the login screen instead of showing broken pages.
+  // Her API yanıtını izle; bir 401 oturumun gittiği anlamına gelir, bozuk
+  // sayfalar göstermek yerine giriş ekranına dön.
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await originalFetch(...args);
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
+      if (res.status === 401 && url.includes('/api/') && !url.includes('/auth/login')) {
+        setUser(null);
+      }
+      return res;
+    };
+    return () => { window.fetch = originalFetch; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login onSuccess={setUser} />;
+  }
+
+  return <AppRoutes />;
+}
+
+function App() {
+  return <AuthGate />;
 }
 
 export default App;
