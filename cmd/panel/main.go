@@ -26,6 +26,7 @@ type Panel struct {
 	sessions      *auth.SessionStore
 	users         repositories.UserRepository
 	secureCookies bool
+	loginLimiter  *rateLimiter
 }
 
 func main() {
@@ -71,6 +72,11 @@ func main() {
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
 		secureCookies: !*insecureCookies,
+		// 10 login attempts per IP per 5 minutes slows brute force while
+		// staying invisible to a legitimate user.
+		// IP başına 5 dakikada 10 giriş denemesi; kaba kuvveti yavaşlatır,
+		// meşru kullanıcıya görünmez kalır.
+		loginLimiter: newRateLimiter(10, 5*time.Minute),
 	}
 
 	// Refuse to start wide open: if no user exists yet, the operator must
@@ -293,10 +299,13 @@ func main() {
 		http.ServeFile(w, r, "./web/dist/index.html")
 	})
 
-	// Every request passes through the auth gate before reaching any
-	// handler. Kimlik doğrulama kapısı, her istek bir işleyiciye ulaşmadan
-	// önce devreye girer.
-	handler := panel.requireAuth(http.DefaultServeMux)
+	// Middleware chain, outermost first: security headers on everything →
+	// CSRF block on cross-origin writes → auth gate → handlers.
+	// Ara katman zinciri, en dıştan içe: her şeyde güvenlik başlıkları →
+	// köken-dışı yazmalarda CSRF engeli → kimlik doğrulama kapısı → işleyici.
+	handler := securityHeaders(panel.secureCookies,
+		csrfProtect(
+			panel.requireAuth(http.DefaultServeMux)))
 
 	log.Println("Panel listening on :1983 (HTTP)")
 	log.Fatal(http.ListenAndServe(":1983", handler))
@@ -312,7 +321,6 @@ func (p *Panel) countUsers() (int, error) {
 
 func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*") // For dev
 
 	// Call RPC
 	var services []core.Service
@@ -342,9 +350,6 @@ func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
 
 func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	if r.Method == "OPTIONS" {
 		return
@@ -399,9 +404,6 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 
 func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	if r.Method == "OPTIONS" {
 		return

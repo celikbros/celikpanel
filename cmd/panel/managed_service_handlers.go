@@ -25,7 +25,6 @@ type ManagedServiceResponse struct {
 // handleManagedServices returns curated list of managed services
 func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// Get all system services from agent
 	var allServices []core.Service

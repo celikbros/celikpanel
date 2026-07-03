@@ -23,7 +23,6 @@ type DomainResponse struct {
 // handleDomains lists all domains
 func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if r.Method != "GET" {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -69,9 +68,6 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 // handleCreateDomain creates a new domain with site
 func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	if r.Method == "OPTIONS" {
 		return
@@ -120,7 +116,6 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 // handleDeleteDomain deletes a domain
 func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if r.Method != "DELETE" {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

@@ -30,6 +30,13 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Throttle credential guessing before doing any work.
+	// Herhangi bir iş yapmadan önce kimlik bilgisi tahminini kısıtla.
+	if !p.loginLimiter.allow(clientIP(r)) {
+		writeClientError(w, http.StatusTooManyRequests, "too many attempts, try again later")
+		return
+	}
+
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeClientError(w, http.StatusBadRequest, "invalid request body")
