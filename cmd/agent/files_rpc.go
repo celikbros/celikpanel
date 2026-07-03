@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -122,8 +123,8 @@ func (a *Agent) ListFiles(req *ListFilesRequest, resp *ListFilesResponse) error 
 
 		// Get owner/group on Linux
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			fileInfo.Owner = string(stat.Uid)
-			fileInfo.Group = string(stat.Gid)
+			fileInfo.Owner = strconv.FormatUint(uint64(stat.Uid), 10)
+			fileInfo.Group = strconv.FormatUint(uint64(stat.Gid), 10)
 		}
 
 		resp.Files = append(resp.Files, fileInfo)

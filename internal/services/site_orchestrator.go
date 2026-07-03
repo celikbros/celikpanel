@@ -2,13 +2,13 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/rpc"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
@@ -162,11 +162,25 @@ func (so *SiteOrchestrator) generateUsername(domain string) string {
 }
 
 func (so *SiteOrchestrator) generatePassword() string {
-	rand.Seed(time.Now().UnixNano())
+	// Credentials must come from a CSPRNG; math/rand seeded with the clock
+	// is predictable. rand.Int rejection-samples, so no charset bias.
+	// Kimlik bilgileri CSPRNG'den gelmelidir; saatle tohumlanan math/rand
+	// tahmin edilebilirdir. rand.Int reddederek örnekler, bu yüzden
+	// karakter seti önyargısı oluşmaz.
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%"
-	password := make([]byte, 16)
+	password := make([]byte, 20)
+	max := big.NewInt(int64(len(charset)))
 	for i := range password {
-		password[i] = charset[rand.Intn(len(charset))]
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			// crypto/rand failing means the OS entropy source is broken;
+			// weak credentials are worse than stopping.
+			// crypto/rand'ın çalışmaması, işletim sistemi entropi
+			// kaynağının bozulması demektir; zayıf kimlik bilgisi
+			// üretmek durmaktan daha kötüdür.
+			panic(fmt.Sprintf("crypto/rand unavailable: %v", err))
+		}
+		password[i] = charset[n.Int64()]
 	}
 	return string(password)
 }
