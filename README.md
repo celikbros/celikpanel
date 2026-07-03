@@ -77,6 +77,7 @@ cd web && npm install && npm run build   # output: web/dist, served by the panel
 
 - [Roadmap](ROADMAP.md) — where we are, where we're going, and what we deliberately won't do
 - [User Roles & Permissions](docs/ROLES.md) — Administrator / Reseller / Customer / Additional User model
+- [Frontend Architecture](docs/UI_ARCHITECTURE.md) — one inherited shell, capability-driven per role
 - [Conventions](docs/CONVENTIONS.md) — language & naming: English identifiers, bilingual content (TR + EN)
 
 ## License
