@@ -32,6 +32,17 @@
     --warning-fg: 2 6 23;
     --danger: 220 38 38;        /* red-600 */
     --danger-fg: 255 255 255;
+
+    /* Sidebar is dark slate in both themes (Plesk-style: dark rail, light
+       content). Kenar çubuğu iki temada da koyu slate (Plesk tarzı). */
+    --sidebar-bg: 30 41 59;         /* slate-800 */
+    --sidebar-fg: 226 232 240;      /* slate-200 */
+    --sidebar-fg-muted: 148 163 184;/* slate-400 */
+    --sidebar-heading: 100 116 139; /* slate-500 */
+    --sidebar-hover: 51 65 85;      /* slate-700 */
+    --sidebar-active: 37 99 235;    /* blue-600 */
+    --sidebar-active-fg: 255 255 255;
+    --sidebar-border: 51 65 85;     /* slate-700 */
 }
 
 .dark {
@@ -53,6 +64,15 @@
     --warning-fg: 2 6 23;
     --danger: 239 68 68;       /* red-500 */
     --danger-fg: 255 255 255;
+
+    --sidebar-bg: 15 23 42;         /* slate-900 */
+    --sidebar-fg: 226 232 240;
+    --sidebar-fg-muted: 148 163 184;
+    --sidebar-heading: 100 116 139;
+    --sidebar-hover: 30 41 59;      /* slate-800 */
+    --sidebar-active: 37 99 235;
+    --sidebar-active-fg: 255 255 255;
+    --sidebar-border: 30 41 59;
 }
 
 html, body, #root {

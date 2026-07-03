@@ -112,6 +112,9 @@ func main() {
 	// System Check
 	http.HandleFunc("/api/v1/system/check", panel.handleSystemCheck)
 
+	// System Stats (dashboard metrics: CPU, RAM, disk, uptime, load)
+	http.HandleFunc("/api/v1/system/stats", panel.handleSystemStats)
+
 	// PHP Management
 	http.HandleFunc("/api/v1/php/pools", panel.handlePHPPools)
 	http.HandleFunc("/api/v1/php/pool-config", panel.handlePHPPoolConfig)

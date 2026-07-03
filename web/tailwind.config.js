@@ -43,6 +43,16 @@ export default {
                 success: { DEFAULT: token('--success'), fg: token('--success-fg') },
                 warning: { DEFAULT: token('--warning'), fg: token('--warning-fg') },
                 danger: { DEFAULT: token('--danger'), fg: token('--danger-fg') },
+                sidebar: {
+                    DEFAULT: token('--sidebar-bg'),
+                    fg: token('--sidebar-fg'),
+                    muted: token('--sidebar-fg-muted'),
+                    heading: token('--sidebar-heading'),
+                    hover: token('--sidebar-hover'),
+                    active: token('--sidebar-active'),
+                    'active-fg': token('--sidebar-active-fg'),
+                    border: token('--sidebar-border'),
+                },
             },
             fontFamily: {
                 sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],

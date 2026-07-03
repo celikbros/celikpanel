@@ -30,6 +30,19 @@ export interface CurrentUser {
     email?: string;
 }
 
+export interface SystemStats {
+    hostname: string;
+    os: string;
+    uptime_seconds: number;
+    cpu_percent: number;
+    cpu_cores: number;
+    load_avg: number[];
+    mem_used_bytes: number;
+    mem_total_bytes: number;
+    disk_used_bytes: number;
+    disk_total_bytes: number;
+}
+
 class API {
     // me returns the current user, or null when unauthenticated (401).
     // me, mevcut kullanıcıyı döndürür; kimlik doğrulanmamışsa (401) null.
@@ -66,6 +79,12 @@ class API {
         if (!res.ok) throw new Error('Failed to fetch services');
         const data = await res.json();
         return data || [];
+    }
+
+    async getSystemStats(): Promise<SystemStats> {
+        const res = await fetch(`${API_BASE}/system/stats`);
+        if (!res.ok) throw new Error('Failed to fetch system stats');
+        return res.json();
     }
 
     async getConfig(path: string): Promise<ConfigResponse> {
