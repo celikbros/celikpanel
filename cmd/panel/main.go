@@ -1,26 +1,38 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"flag"
 	"log"
 	"net/http"
 	"net/rpc"
 	"os"
 	"strings"
-	
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/db"
+	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type Panel struct {
-	agentClient  *rpc.Client
-	db           *db.SQLiteDB
-	orchestrator *services.SiteOrchestrator
+	agentClient   *rpc.Client
+	db            *db.SQLiteDB
+	orchestrator  *services.SiteOrchestrator
+	sessions      *auth.SessionStore
+	users         repositories.UserRepository
+	secureCookies bool
 }
 
 func main() {
+	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
+	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
+	flag.Parse()
+
 	log.Println("Starting CelikPanel Backend...")
 
 	// Initialize SQLite Database
@@ -30,6 +42,15 @@ func main() {
 		log.Fatalf("Failed to initialize SQLite: %v", err)
 	}
 	defer database.Close()
+
+	// Admin bootstrap runs without needing the agent, then exits.
+	// Yönetici önyüklemesi agent'a ihtiyaç duymadan çalışır, sonra çıkar.
+	if *createAdmin {
+		if err := runCreateAdmin(database); err != nil {
+			log.Fatalf("create-admin failed: %v", err)
+		}
+		return
+	}
 
 	// Connect to Agent
 	client, err := transport.ConnectAgent()
@@ -41,11 +62,41 @@ func main() {
 	// Initialize Site Orchestrator
 	orchestrator := services.NewSiteOrchestrator(database.GetDB(), client)
 
+	sessions := auth.NewSessionStore(database.GetDB())
+
 	panel := &Panel{
-		agentClient:  client,
-		db:           database,
-		orchestrator: orchestrator,
+		agentClient:   client,
+		db:            database,
+		orchestrator:  orchestrator,
+		sessions:      sessions,
+		users:         repositories.NewPostgresUserRepository(database.GetDB()),
+		secureCookies: !*insecureCookies,
 	}
+
+	// Refuse to start wide open: if no user exists yet, the operator must
+	// bootstrap an admin first.
+	// Ardına kadar açık başlamayı reddet: henüz hiç kullanıcı yoksa, önce
+	// bir yönetici önyüklenmelidir.
+	if n, err := panel.countUsers(); err != nil {
+		log.Fatalf("Failed to check users: %v", err)
+	} else if n == 0 {
+		log.Fatal("No users exist. Create the first admin with:  ./bin/panel --create-admin")
+	}
+
+	// Purge expired sessions on startup and then hourly.
+	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.
+	_ = sessions.DeleteExpired(context.Background())
+	go func() {
+		for range time.Tick(time.Hour) {
+			_ = sessions.DeleteExpired(context.Background())
+		}
+	}()
+
+	// Authentication routes (login is public; logout/me require a session).
+	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
+	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
+	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
+	http.HandleFunc("/api/v1/auth/me", panel.handleMe)
 
 	// Managed Services
 	http.HandleFunc("/api/v1/managed-services", panel.handleManagedServices)
@@ -242,8 +293,21 @@ func main() {
 		http.ServeFile(w, r, "./web/dist/index.html")
 	})
 
+	// Every request passes through the auth gate before reaching any
+	// handler. Kimlik doğrulama kapısı, her istek bir işleyiciye ulaşmadan
+	// önce devreye girer.
+	handler := panel.requireAuth(http.DefaultServeMux)
+
 	log.Println("Panel listening on :1983 (HTTP)")
-	log.Fatal(http.ListenAndServe(":1983", nil))
+	log.Fatal(http.ListenAndServe(":1983", handler))
+}
+
+// countUsers reports how many users exist, to gate startup.
+// countUsers, başlangıcı kısıtlamak için kaç kullanıcı olduğunu bildirir.
+func (p *Panel) countUsers() (int, error) {
+	var n int
+	err := p.db.GetDB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users").Scan(&n)
+	return n, err
 }
 
 func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {

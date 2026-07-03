@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
@@ -14,6 +15,44 @@ type PostgresUserRepository struct {
 
 func NewPostgresUserRepository(db *sql.DB) *PostgresUserRepository {
 	return &PostgresUserRepository{db: db}
+}
+
+// parseDBTime tolerates the timestamp formats that end up in SQLite. The
+// modernc driver returns TEXT columns as strings, and database/sql will
+// not assign a string to time.Time, so we parse it ourselves rather than
+// scanning directly. Unparseable or NULL values become the zero time.
+//
+// parseDBTime, SQLite'da oluşan zaman damgası biçimlerini hoş görür.
+// modernc sürücüsü TEXT sütunlarını string olarak döndürür ve database/sql
+// bir string'i time.Time'a atamaz; bu yüzden doğrudan taramak yerine
+// kendimiz çözeriz. Çözülemeyen ya da NULL değerler sıfır zaman olur.
+func parseDBTime(s sql.NullString) time.Time {
+	if !s.Valid || s.String == "" {
+		return time.Time{}
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, s.String); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
+// scanUser scans a user row, parsing the two timestamp columns leniently.
+// scanUser, bir kullanıcı satırını tarar ve iki zaman damgası sütununu
+// hoşgörüyle çözer.
+func scanUser(row interface{ Scan(...any) error }, user *core.User) error {
+	var createdAt, updatedAt sql.NullString
+	err := row.Scan(
+		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
+		&createdAt, &updatedAt,
+	)
+	if err != nil {
+		return err
+	}
+	user.CreatedAt = parseDBTime(createdAt)
+	user.UpdatedAt = parseDBTime(updatedAt)
+	return nil
 }
 
 func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) error {
@@ -30,9 +69,15 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) er
 	if err != nil {
 		return err
 	}
-	
-	return r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM users WHERE id = ?", id).
-		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+
+	var createdAt, updatedAt sql.NullString
+	if err := r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM users WHERE id = ?", id).
+		Scan(&user.ID, &createdAt, &updatedAt); err != nil {
+		return err
+	}
+	user.CreatedAt = parseDBTime(createdAt)
+	user.UpdatedAt = parseDBTime(updatedAt)
+	return nil
 }
 
 func (r *PostgresUserRepository) GetByID(ctx context.Context, id int) (*core.User, error) {
@@ -41,10 +86,7 @@ func (r *PostgresUserRepository) GetByID(ctx context.Context, id int) (*core.Use
 		SELECT id, username, password_hash, email, role, created_at, updated_at
 		FROM users WHERE id = ?
 	`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	err := scanUser(r.db.QueryRowContext(ctx, query, id), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -60,10 +102,7 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 		SELECT id, username, password_hash, email, role, created_at, updated_at
 		FROM users WHERE username = ?
 	`
-	err := r.db.QueryRowContext(ctx, query, username).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	err := scanUser(r.db.QueryRowContext(ctx, query, username), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -79,10 +118,7 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 		SELECT id, username, password_hash, email, role, created_at, updated_at
 		FROM users WHERE email = ?
 	`
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	err := scanUser(r.db.QueryRowContext(ctx, query, email), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -122,9 +158,7 @@ func (r *PostgresUserRepository) List(ctx context.Context) ([]*core.User, error)
 	var users []*core.User
 	for rows.Next() {
 		user := &core.User{}
-		err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-			&user.CreatedAt, &user.UpdatedAt)
-		if err != nil {
+		if err := scanUser(rows, user); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
