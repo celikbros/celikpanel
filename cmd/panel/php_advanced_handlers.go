@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -35,7 +34,7 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 		
 		err := p.agentClient.Call("Agent.GetPHPPoolConfig", req, &config)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get pool config: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -44,14 +43,14 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		var req core.PHPPoolConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		
 		var resp struct{}
 		err := p.agentClient.Call("Agent.UpdatePHPPoolConfig", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update pool: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -71,7 +70,7 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 		var resp struct{}
 		err := p.agentClient.Call("Agent.DeletePHPPool", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to delete pool: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -95,7 +94,7 @@ func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) 
 		
 		err := p.agentClient.Call("Agent.GetExtendedPHPConfig", req, &config)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get config: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -106,7 +105,7 @@ func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) 
 	if r.Method == "POST" {
 		var req core.ExtendedPHPConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		
@@ -119,7 +118,7 @@ func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) 
 		var resp struct{}
 		err := p.agentClient.Call("Agent.UpdateExtendedPHPConfig", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update config: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		

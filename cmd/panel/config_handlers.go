@@ -20,7 +20,7 @@ func (p *Panel) handleGetPHPConfig(w http.ResponseWriter, r *http.Request) {
 
 	var resp transport.GetPHPConfigResponse
 	if err := p.agentClient.Call("Agent.GetPHPConfig", req, &resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -32,13 +32,13 @@ func (p *Panel) handleGetPHPConfig(w http.ResponseWriter, r *http.Request) {
 func (p *Panel) handleUpdatePHPConfig(w http.ResponseWriter, r *http.Request) {
 	var req transport.UpdatePHPConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	var resp struct{}
 	if err := p.agentClient.Call("Agent.UpdatePHPConfig", req, &resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (p *Panel) handleGetMySQLConfig(w http.ResponseWriter, r *http.Request) {
 	var resp transport.GetMySQLConfigResponse
 
 	if err := p.agentClient.Call("Agent.GetMySQLConfig", req, &resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -64,13 +64,13 @@ func (p *Panel) handleGetMySQLConfig(w http.ResponseWriter, r *http.Request) {
 func (p *Panel) handleUpdateMySQLConfig(w http.ResponseWriter, r *http.Request) {
 	var req transport.UpdateMySQLConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	var resp struct{}
 	if err := p.agentClient.Call("Agent.UpdateMySQLConfig", req, &resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

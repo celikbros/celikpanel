@@ -27,7 +27,7 @@ func (p *Panel) handleFail2banJails(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.Fail2banJailRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -55,7 +55,7 @@ func (p *Panel) handleFail2banBannedIPs(w http.ResponseWriter, r *http.Request) 
 	if r.Method == "POST" {
 		var req core.Fail2banUnbanRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -85,7 +85,7 @@ func (p *Panel) handleFail2banConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.Fail2banConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 

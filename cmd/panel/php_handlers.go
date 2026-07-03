@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -24,7 +23,7 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 		
 		err := p.agentClient.Call("Agent.GetPHPPools", req, &pools)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get pools: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -35,7 +34,7 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.PHPPoolRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		
@@ -62,7 +61,7 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 		
 		err := p.agentClient.Call("Agent.GetPHPExtensions", req, &extensions)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get extensions: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -73,7 +72,7 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.PHPExtensionRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		
@@ -86,7 +85,7 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 		var resp struct{}
 		err := p.agentClient.Call("Agent.TogglePHPExtension", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to toggle extension: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -111,7 +110,7 @@ func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 		
 		err := p.agentClient.Call("Agent.GetPHPConfiguration", req, &config)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get configuration: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -122,14 +121,14 @@ func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.PHPConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		
 		var resp struct{}
 		err := p.agentClient.Call("Agent.UpdatePHPConfiguration", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update configuration: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		

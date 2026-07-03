@@ -82,7 +82,7 @@ func (p *Panel) handleListBackups(w http.ResponseWriter, domainName string) {
 
 	err := p.agentClient.Call("Agent.ListBackups", &struct{ DomainName string }{DomainName: domainName}, &resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (p *Panel) handleCreateBackup(w http.ResponseWriter, r *http.Request, domai
 	}, &resp)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (p *Panel) handleDeleteBackup(w http.ResponseWriter, r *http.Request, domai
 	}, &success)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -228,7 +228,7 @@ func (p *Panel) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}, &resp)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

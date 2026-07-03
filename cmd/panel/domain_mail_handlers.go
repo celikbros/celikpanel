@@ -78,7 +78,7 @@ func (p *Panel) handleListEmailAccounts(w http.ResponseWriter, domainID int) {
 	rows, err := pool.QueryContext(context.Background(), 
 		"SELECT id, address, quota_mb, created_at FROM email_accounts WHERE domain_id = ?", domainID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -157,7 +157,7 @@ func (p *Panel) handleAddEmailAccount(w http.ResponseWriter, r *http.Request, do
 		domainID, req.Address, "managed-by-agent", req.QuotaMB)
 	
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (p *Panel) handleAddEmailAccount(w http.ResponseWriter, r *http.Request, do
 	if err != nil {
 		// Rollback DB
 		pool.ExecContext(context.Background(), "DELETE FROM email_accounts WHERE id = ?", newID)
-		http.Error(w, "Agent error: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (p *Panel) handleDeleteEmailAccount(w http.ResponseWriter, r *http.Request,
 	var success bool
 	err = p.agentClient.Call("Agent.DeleteMailAccount", &struct{ Email string }{Email: address}, &success)
 	if err != nil {
-		http.Error(w, "Agent error: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (p *Panel) handleAddEmailForwarding(w http.ResponseWriter, r *http.Request,
 		"INSERT INTO email_forwardings (domain_id, source, destination) VALUES (?, ?, ?)",
 		domainID, req.Source, req.Destination)
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

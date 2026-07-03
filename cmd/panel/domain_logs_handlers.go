@@ -121,11 +121,7 @@ func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID i
 
 	err = p.agentClient.Call(rpcMethod, agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
-		errorMsg := "Failed to retrieve logs"
-		if agentResp.Error != "" {
-			errorMsg = agentResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 
@@ -179,11 +175,7 @@ func (p *Panel) handleClearLogs(w http.ResponseWriter, r *http.Request, domainID
 
 	err = p.agentClient.Call("Agent.ClearLogs", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
-		errorMsg := "Failed to clear logs"
-		if agentResp.Error != "" {
-			errorMsg = agentResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 

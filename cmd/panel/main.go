@@ -254,7 +254,7 @@ func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
 	var services []core.Service
 	err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &services)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -297,7 +297,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		Action      string `json:"action"` // start, stop, restart, reload
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
@@ -326,7 +326,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -349,7 +349,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			Content string `json:"content"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -360,7 +360,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}, &reply)
 		
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		
@@ -378,7 +378,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 	var reply transport.ConfigResponse
 	err := p.agentClient.Call("Agent.GetConfig", &transport.GetConfigArgs{Path: path}, &reply)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

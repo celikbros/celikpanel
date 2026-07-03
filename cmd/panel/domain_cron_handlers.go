@@ -87,7 +87,7 @@ func (p *Panel) handleListCronJobs(w http.ResponseWriter, username string) {
 
 	err := p.agentClient.Call("Agent.ListCronJobs", &struct{ Username string }{Username: username}, &resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, usernam
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
 		return
 	}
 
@@ -159,7 +159,7 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, user
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
 		return
 	}
 
@@ -183,7 +183,7 @@ func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, user
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
 		return
 	}
 

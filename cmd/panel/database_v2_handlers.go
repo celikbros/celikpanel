@@ -54,7 +54,7 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	servers, err := serverRepo.ListBySubscription(ctx, subscriptionID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to list servers: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	if err := serverRepo.Create(ctx, server); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create server: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (p *Panel) handleDeleteDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	if err := serverRepo.Delete(ctx, serverID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete server: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -184,7 +184,7 @@ func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
 	dbRepo := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
 	databases, err := dbRepo.ListByServer(ctx, serverID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to list databases: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -258,7 +258,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	server, err := serverRepo.GetByID(ctx, serverID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("server not found: %v", err), http.StatusNotFound)
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -278,7 +278,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		Type:         dbType,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to create driver: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -287,7 +287,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	// Create database on server
 	if err := driver.CreateDatabase(dbName); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create database: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -301,7 +301,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := dbRepo.Create(ctx, database); err != nil {
-		http.Error(w, fmt.Sprintf("failed to store database: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -322,7 +322,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 		// Create user on server
 		if err := driver.CreateUser(username, password); err != nil {
-			http.Error(w, fmt.Sprintf("failed to create user: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 
@@ -335,7 +335,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := userRepo.Create(ctx, user); err != nil {
-			http.Error(w, fmt.Sprintf("failed to store user: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 
@@ -359,7 +359,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := grantRepo.Grant(ctx, grant); err != nil {
-		http.Error(w, fmt.Sprintf("failed to grant privileges: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -369,7 +369,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	// Grant on actual database server
 	if user != nil {
 		if err := driver.GrantPrivileges(dbName, user.Username, privileges); err != nil {
-			http.Error(w, fmt.Sprintf("failed to grant on server: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 	}
@@ -426,19 +426,19 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		Type:         dbType,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to create driver: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
 	// Delete from server
 	if err := driver.DeleteDatabase(database.Name); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete database: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
 	// Delete from PostgreSQL (cascade deletes grants)
 	if err := dbRepo.Delete(ctx, databaseID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete from storage: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -461,7 +461,7 @@ func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) 
 	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
 	users, err := userRepo.ListByServer(ctx, serverID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to list users: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -550,7 +550,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		Type:         dbType,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to create driver: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -563,7 +563,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 	// Create user on server
 	if err := driver.CreateUser(username, password); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create user: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -577,7 +577,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := userRepo.Create(ctx, user); err != nil {
-		http.Error(w, fmt.Sprintf("failed to store user: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -640,19 +640,19 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		Type:         dbType,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to create driver: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
 	// Delete from server
 	if err := driver.DeleteUser(user.Username); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete user: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
 	// Delete from PostgreSQL
 	if err := userRepo.Delete(ctx, userID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete from storage: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -675,7 +675,7 @@ func (p *Panel) handleListDatabaseGrants(w http.ResponseWriter, r *http.Request)
 	grantRepo := repositories.NewPostgresDatabaseGrantRepository(p.db.GetDB())
 	grants, err := grantRepo.ListByDatabase(ctx, databaseID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to list grants: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -786,13 +786,13 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 		Type:         dbType,
 	})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to create driver: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
 	// Grant on server
 	if err := driver.GrantPrivileges(database.Name, user.Username, privileges); err != nil {
-		http.Error(w, fmt.Sprintf("failed to grant privileges: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -805,7 +805,7 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := grantRepo.Grant(ctx, grant); err != nil {
-		http.Error(w, fmt.Sprintf("failed to store grant: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -875,7 +875,7 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 
 	// Delete grant
 	if err := grantRepo.Delete(ctx, grantID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to revoke grant: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

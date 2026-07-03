@@ -139,7 +139,7 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 	if r.Method == "POST" {
 		var req UpdateDomainPHPRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -165,7 +165,7 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 			var migrateResp struct{}
 			err = p.agentClient.Call("Agent.MigratePHPPool", migrateReq, &migrateResp)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Failed to migrate pool: %v", err), http.StatusInternalServerError)
+				writeServerError(w, err)
 				return
 			}
 
@@ -180,7 +180,7 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 		}
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update PHP version: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 
@@ -226,7 +226,7 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 
 		err = p.agentClient.Call("Agent.GetPHPPoolConfig", req, &poolConfig)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get pool config: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 
@@ -237,7 +237,7 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.PHPPoolConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -248,7 +248,7 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 		var resp struct{}
 		err = p.agentClient.Call("Agent.UpdatePHPPoolConfig", req, &resp)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to update pool: %v", err), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 

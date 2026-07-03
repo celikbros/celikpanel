@@ -125,7 +125,7 @@ func (p *Panel) handleConfigurePowerDNS(w http.ResponseWriter, r *http.Request) 
 	var success bool
 	err := p.agentClient.Call("Agent.ConfigurePowerDNS", req, &success)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -158,7 +158,7 @@ func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, domainName string) {
 	result, err := pool.ExecContext(context.Background(), 
 		"INSERT INTO pdns_domains (name, type) VALUES (?, 'NATIVE')", domainName)
 	if err != nil {
-		http.Error(w, "Failed to create zone: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 	id64, _ := result.LastInsertId()
@@ -199,7 +199,7 @@ func (p *Panel) handleListDNSRecords(w http.ResponseWriter, domainName string) {
 	rows, err := pool.QueryContext(context.Background(), 
 		"SELECT id, domain_id, name, type, content, ttl, prio, disabled FROM pdns_records WHERE domain_id = ? ORDER BY type, name", zoneID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -262,7 +262,7 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 		zoneID, finalName, req.Type, req.Content, req.TTL, prioPtr)
 	
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -290,7 +290,7 @@ func (p *Panel) handleDeleteDNSRecord(w http.ResponseWriter, r *http.Request, do
 
 	_, err := pool.ExecContext(context.Background(), "DELETE FROM pdns_records WHERE id = ?", id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -323,7 +323,7 @@ func (p *Panel) handleUpdateDNSRecord(w http.ResponseWriter, r *http.Request, do
 		req.Content, req.TTL, req.Prio, req.Disabled, req.ID)
 	
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 	

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -238,11 +237,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 
 	err = p.agentClient.Call("Agent.IssueLetsEncryptCertificate", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
-		errorMsg := fmt.Sprintf("Failed to issue certificate: %v", err)
-		if agentResp.Error != "" {
-			errorMsg = agentResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 
@@ -256,7 +251,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		domain.Name, agentResp.ExpiresAt, req.AutoRenew)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to store certificate: %v", err), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -396,11 +391,7 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 
 	err = p.agentClient.Call("Agent.InstallCustomCertificate", installReq, &installResp)
 	if err != nil || !installResp.Success {
-		errorMsg := "Failed to install certificate"
-		if installResp.Error != "" {
-			errorMsg = installResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, installResp.Error)
 		return
 	}
 

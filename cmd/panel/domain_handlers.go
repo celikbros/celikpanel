@@ -34,7 +34,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
 	domains, err := domainRepo.List(context.Background())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 
 	var req services.CreateSiteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
@@ -110,7 +110,7 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 
 	result, err := p.orchestrator.CreateSite(context.Background(), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 
 	// Delete domain (cascades to sites via foreign key)
 	if err := domainRepo.Delete(context.Background(), domainID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 

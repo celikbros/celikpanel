@@ -158,11 +158,7 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 	rpcMethod := "Agent.CreateDatabase"
 	err = p.agentClient.Call(rpcMethod, agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
-		errorMsg := "Failed to create database"
-		if agentResp.Error != "" {
-			errorMsg = agentResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 
@@ -244,11 +240,7 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 
 	err = p.agentClient.Call("Agent.DeleteDatabase", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
-		errorMsg := "Failed to delete database"
-		if agentResp.Error != "" {
-			errorMsg = agentResp.Error
-		}
-		http.Error(w, errorMsg, http.StatusInternalServerError)
+		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 

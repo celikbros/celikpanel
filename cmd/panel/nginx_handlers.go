@@ -28,7 +28,7 @@ func (p *Panel) handleNginxGlobalConfig(w http.ResponseWriter, r *http.Request) 
 	if r.Method == "POST" {
 		var req core.NginxGlobalConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
@@ -57,7 +57,7 @@ func (p *Panel) handleNginxSSLConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var req core.NginxSSLConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 

@@ -116,7 +116,7 @@ func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, do
 
 	err := p.agentClient.Call("Agent.ListFiles", &struct{ Path string }{Path: path}, &resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -179,7 +179,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 		}
 		err := p.agentClient.Call("Agent.ReadFile", &struct{ Path string }{Path: path}, &resp)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(resp)
@@ -191,7 +191,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 			Content string
 		}{Path: path, Content: req.Content}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -203,7 +203,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 			IsDir bool
 		}{Path: path, IsDir: req.IsDir}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -212,7 +212,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 		var success bool
 		err := p.agentClient.Call("Agent.DeleteFileOrDir", &struct{ Path string }{Path: path}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -229,7 +229,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 			NewPath string
 		}{OldPath: path, NewPath: newFullPath}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -241,7 +241,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 			Permissions string
 		}{Path: path, Permissions: req.Permissions}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -254,7 +254,7 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 			Content string
 		}{Path: path, Name: req.FileName, Content: req.Content}, &success)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": success})
@@ -319,7 +319,7 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 
 	err = p.agentClient.Call("Agent.ReadFile", &struct{ Path string }{Path: fullPath}, &resp)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
@@ -330,7 +330,7 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 	if resp.IsBinary {
 		decoded, err := base64.StdEncoding.DecodeString(resp.Content)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeServerError(w, err)
 			return
 		}
 		w.Write(decoded)

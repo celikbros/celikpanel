@@ -31,7 +31,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	var allServices []core.Service
 	err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &allServices)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerError(w, err)
 		return
 	}
 
