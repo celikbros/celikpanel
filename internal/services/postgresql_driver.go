@@ -3,7 +3,6 @@ package services
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -54,12 +53,12 @@ func (d *PostgreSQLDriver) CreateDatabase(name string) error {
 	}
 	defer db.Close()
 
-	// Sanitize name (basic check)
-	if strings.Contains(name, "\"") || strings.Contains(name, ";") {
-		return fmt.Errorf("invalid database name")
+	ident, err := QuotePGIdentifier(name)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE \"%s\" WITH ENCODING='UTF8';", name))
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s WITH ENCODING='UTF8';", ident))
 	if err != nil {
 		return fmt.Errorf("failed to create database: %v", err)
 	}
@@ -74,20 +73,22 @@ func (d *PostgreSQLDriver) DeleteDatabase(name string) error {
 	}
 	defer db.Close()
 
-	// Sanitize name
-	if strings.Contains(name, "\"") || strings.Contains(name, ";") {
-		return fmt.Errorf("invalid database name")
+	ident, err := QuotePGIdentifier(name)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
 	}
 
-	// Terminate connections first
-	killQuery := fmt.Sprintf(`
-		SELECT pg_terminate_backend(pid) 
-		FROM pg_stat_activity 
-		WHERE datname = '%s' AND pid <> pg_backend_pid()
+	// Terminate connections first. The name here is a value comparison, so
+	// a bound parameter is the right tool.
+	// Önce bağlantıları sonlandır. Buradaki ad bir değer karşılaştırmasıdır,
+	// bu yüzden bağlı parametre doğru araçtır.
+	_, _ = db.Exec(`
+		SELECT pg_terminate_backend(pid)
+		FROM pg_stat_activity
+		WHERE datname = $1 AND pid <> pg_backend_pid()
 	`, name)
-	_, _ = db.Exec(killQuery)
 
-	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS \"%s\";", name))
+	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s;", ident))
 	if err != nil {
 		return fmt.Errorf("failed to drop database: %v", err)
 	}
@@ -127,9 +128,13 @@ func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 	}
 	defer db.Close()
 
-	// Sanitize
-	if strings.Contains(username, "\"") || strings.Contains(username, ";") {
-		return fmt.Errorf("invalid username")
+	ident, err := QuotePGIdentifier(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	pwLiteral, err := QuotePGStringLiteral(password)
+	if err != nil {
+		return fmt.Errorf("invalid password: %w", err)
 	}
 
 	// Check if user exists
@@ -143,7 +148,7 @@ func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 		return nil // Idempotent
 	}
 
-	_, err = db.Exec(fmt.Sprintf("CREATE USER \"%s\" WITH PASSWORD '%s';", username, password))
+	_, err = db.Exec(fmt.Sprintf("CREATE USER %s WITH PASSWORD %s;", ident, pwLiteral))
 	if err != nil {
 		return fmt.Errorf("failed to create user: %v", err)
 	}
@@ -158,11 +163,12 @@ func (d *PostgreSQLDriver) DeleteUser(username string) error {
 	}
 	defer db.Close()
 
-	if strings.Contains(username, "\"") || strings.Contains(username, ";") {
-		return fmt.Errorf("invalid username")
+	ident, err := QuotePGIdentifier(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf("DROP USER IF EXISTS \"%s\";", username))
+	_, err = db.Exec(fmt.Sprintf("DROP USER IF EXISTS %s;", ident))
 	if err != nil {
 		return fmt.Errorf("failed to drop user: %v", err)
 	}
@@ -177,11 +183,16 @@ func (d *PostgreSQLDriver) ChangePassword(username, newPassword string) error {
 	}
 	defer db.Close()
 
-	if strings.Contains(username, "\"") || strings.Contains(username, ";") {
-		return fmt.Errorf("invalid username")
+	ident, err := QuotePGIdentifier(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	pwLiteral, err := QuotePGStringLiteral(newPassword)
+	if err != nil {
+		return fmt.Errorf("invalid password: %w", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf("ALTER USER \"%s\" WITH PASSWORD '%s';", username, newPassword))
+	_, err = db.Exec(fmt.Sprintf("ALTER USER %s WITH PASSWORD %s;", ident, pwLiteral))
 	if err != nil {
 		return fmt.Errorf("failed to change password: %v", err)
 	}
@@ -221,12 +232,17 @@ func (d *PostgreSQLDriver) GrantPrivileges(database, user, privileges string) er
 	}
 	defer db.Close()
 
-	if strings.Contains(database, "\"") || strings.Contains(user, "\"") {
-		return fmt.Errorf("invalid input")
+	dbIdent, err := QuotePGIdentifier(database)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
+	}
+	userIdent, err := QuotePGIdentifier(user)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
 	}
 
 	// Grant connect on database
-	_, err = db.Exec(fmt.Sprintf("GRANT CONNECT ON DATABASE \"%s\" TO \"%s\";", database, user))
+	_, err = db.Exec(fmt.Sprintf("GRANT CONNECT ON DATABASE %s TO %s;", dbIdent, userIdent))
 	if err != nil {
 		return fmt.Errorf("failed to grant connect: %v", err)
 	}
@@ -240,23 +256,26 @@ func (d *PostgreSQLDriver) GrantPrivileges(database, user, privileges string) er
 
 	if privileges == "ALL" {
 		// Grant schema usage
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL ON SCHEMA public TO \"%s\";", user))
+		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL ON SCHEMA public TO %s;", userIdent))
 		if err != nil {
 			return fmt.Errorf("failed to grant schema usage: %v", err)
 		}
 		// Grant all tables
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"%s\";", user))
+		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %s;", userIdent))
 		if err != nil {
 			return fmt.Errorf("failed to grant table privileges: %v", err)
 		}
 		// Default privileges for future tables
-		_, err = dbSpecific.Exec(fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"%s\";", user))
+		_, err = dbSpecific.Exec(fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO %s;", userIdent))
 		if err != nil {
 			return fmt.Errorf("failed to alter default privileges: %v", err)
 		}
 	} else {
-		// Simplified for now
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT %s ON ALL TABLES IN SCHEMA public TO \"%s\";", privileges, user))
+		privList, err := ValidatePrivileges(privileges)
+		if err != nil {
+			return fmt.Errorf("invalid privileges: %w", err)
+		}
+		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT %s ON ALL TABLES IN SCHEMA public TO %s;", privList, userIdent))
 		if err != nil {
 			return fmt.Errorf("failed to grant privileges: %v", err)
 		}
@@ -273,15 +292,20 @@ func (d *PostgreSQLDriver) RevokePrivileges(database, user string) error {
 	}
 	defer db.Close()
 
-	if strings.Contains(database, "\"") || strings.Contains(user, "\"") {
-		return fmt.Errorf("invalid input")
+	dbIdent, err := QuotePGIdentifier(database)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
+	}
+	userIdent, err := QuotePGIdentifier(user)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON DATABASE \"%s\" FROM \"%s\";", database, user))
+	_, err = db.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON DATABASE %s FROM %s;", dbIdent, userIdent))
 	if err != nil {
 		return fmt.Errorf("failed to revoke privileges: %v", err)
 	}
-	
+
 	// Also revoke on tables
 	dbSpecific, err := d.getDB(database)
 	if err != nil {
@@ -289,8 +313,8 @@ func (d *PostgreSQLDriver) RevokePrivileges(database, user string) error {
 		return nil
 	}
 	defer dbSpecific.Close()
-	
-	_, _ = dbSpecific.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"%s\";", user))
+
+	_, _ = dbSpecific.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;", userIdent))
 
 	return nil
 }

@@ -33,13 +33,21 @@ func (d *MariaDBDriver) TestConnection() error {
 
 // CreateDatabase creates a MariaDB database
 func (d *MariaDBDriver) CreateDatabase(name string) error {
-	sql := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", name)
+	ident, err := QuoteMySQLIdentifier(name)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
+	}
+	sql := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", ident)
 	return d.executeSQL(sql)
 }
 
 // DeleteDatabase drops a MariaDB database
 func (d *MariaDBDriver) DeleteDatabase(name string) error {
-	sql := fmt.Sprintf("DROP DATABASE IF EXISTS `%s`;", name)
+	ident, err := QuoteMySQLIdentifier(name)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
+	}
+	sql := fmt.Sprintf("DROP DATABASE IF EXISTS %s;", ident)
 	return d.executeSQL(sql)
 }
 
@@ -67,7 +75,24 @@ func (d *MariaDBDriver) ListDatabases() ([]string, error) {
 
 // CreateUser creates a MariaDB user (localhost only)
 func (d *MariaDBDriver) CreateUser(username, password string) error {
-	sql := fmt.Sprintf("CREATE USER IF NOT EXISTS '%s'@'localhost' IDENTIFIED BY '%s';", username, password)
+	// The user name is a MySQL account name literal here, not a backtick
+	// identifier, so it is validated as an identifier and then quoted as a
+	// string literal.
+	// Kullanıcı adı burada ters tırnaklı tanımlayıcı değil, MySQL hesap adı
+	// literalidir; bu yüzden tanımlayıcı olarak doğrulanıp string literali
+	// olarak tırnaklanır.
+	if err := ValidateSQLIdentifier(username); err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	userLiteral, err := QuoteMySQLStringLiteral(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	pwLiteral, err := QuoteMySQLStringLiteral(password)
+	if err != nil {
+		return fmt.Errorf("invalid password: %w", err)
+	}
+	sql := fmt.Sprintf("CREATE USER IF NOT EXISTS %s@'localhost' IDENTIFIED BY %s;", userLiteral, pwLiteral)
 	if err := d.executeSQL(sql); err != nil {
 		return err
 	}
@@ -76,7 +101,14 @@ func (d *MariaDBDriver) CreateUser(username, password string) error {
 
 // DeleteUser drops a MariaDB user
 func (d *MariaDBDriver) DeleteUser(username string) error {
-	sql := fmt.Sprintf("DROP USER IF EXISTS '%s'@'localhost';", username)
+	if err := ValidateSQLIdentifier(username); err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	userLiteral, err := QuoteMySQLStringLiteral(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	sql := fmt.Sprintf("DROP USER IF EXISTS %s@'localhost';", userLiteral)
 	if err := d.executeSQL(sql); err != nil {
 		return err
 	}
@@ -85,7 +117,18 @@ func (d *MariaDBDriver) DeleteUser(username string) error {
 
 // ChangePassword changes a MariaDB user's password
 func (d *MariaDBDriver) ChangePassword(username, newPassword string) error {
-	sql := fmt.Sprintf("ALTER USER '%s'@'localhost' IDENTIFIED BY '%s';", username, newPassword)
+	if err := ValidateSQLIdentifier(username); err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	userLiteral, err := QuoteMySQLStringLiteral(username)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	pwLiteral, err := QuoteMySQLStringLiteral(newPassword)
+	if err != nil {
+		return fmt.Errorf("invalid password: %w", err)
+	}
+	sql := fmt.Sprintf("ALTER USER %s@'localhost' IDENTIFIED BY %s;", userLiteral, pwLiteral)
 	if err := d.executeSQL(sql); err != nil {
 		return err
 	}
@@ -116,12 +159,26 @@ func (d *MariaDBDriver) ListUsers() ([]string, error) {
 
 // GrantPrivileges grants privileges to a user on a database
 func (d *MariaDBDriver) GrantPrivileges(database, user, privileges string) error {
-	var sql string
-	if privileges == "ALL" {
-		sql = fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'localhost';", database, user)
-	} else {
-		sql = fmt.Sprintf("GRANT %s ON `%s`.* TO '%s'@'localhost';", privileges, database, user)
+	dbIdent, err := QuoteMySQLIdentifier(database)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
 	}
+	if err := ValidateSQLIdentifier(user); err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	userLiteral, err := QuoteMySQLStringLiteral(user)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+
+	privClause := "ALL PRIVILEGES"
+	if privileges != "ALL" {
+		privClause, err = ValidatePrivileges(privileges)
+		if err != nil {
+			return fmt.Errorf("invalid privileges: %w", err)
+		}
+	}
+	sql := fmt.Sprintf("GRANT %s ON %s.* TO %s@'localhost';", privClause, dbIdent, userLiteral)
 	if err := d.executeSQL(sql); err != nil {
 		return err
 	}
@@ -130,7 +187,18 @@ func (d *MariaDBDriver) GrantPrivileges(database, user, privileges string) error
 
 // RevokePrivileges revokes privileges from a user on a database
 func (d *MariaDBDriver) RevokePrivileges(database, user string) error {
-	sql := fmt.Sprintf("REVOKE ALL PRIVILEGES ON `%s`.* FROM '%s'@'localhost';", database, user)
+	dbIdent, err := QuoteMySQLIdentifier(database)
+	if err != nil {
+		return fmt.Errorf("invalid database name: %w", err)
+	}
+	if err := ValidateSQLIdentifier(user); err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	userLiteral, err := QuoteMySQLStringLiteral(user)
+	if err != nil {
+		return fmt.Errorf("invalid username: %w", err)
+	}
+	sql := fmt.Sprintf("REVOKE ALL PRIVILEGES ON %s.* FROM %s@'localhost';", dbIdent, userLiteral)
 	if err := d.executeSQL(sql); err != nil {
 		return err
 	}
