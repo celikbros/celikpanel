@@ -106,14 +106,20 @@ func (p *Panel) handleConfigurePowerDNS(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Hardcoded credentials matching main.go
-	// In production, these should come from config
-	req := &ConfigurePowerDNSRequest{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "celikpanel_user",
-		Password: "celikpanel_secure_2025",
-		DBName:   "celikpanel",
+	// Connection settings come from the request; secrets never live in
+	// source code.
+	// Bağlantı ayarları istekten gelir; sırlar asla kaynak kodda durmaz.
+	req := &ConfigurePowerDNSRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Host == "" || req.User == "" || req.Password == "" || req.DBName == "" {
+		http.Error(w, "host, user, password and dbname are required", http.StatusBadRequest)
+		return
+	}
+	if req.Port == 0 {
+		req.Port = 5432
 	}
 
 	var success bool
