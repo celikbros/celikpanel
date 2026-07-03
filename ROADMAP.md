@@ -1,135 +1,134 @@
-# CelikPanel Yol Haritası
+# CelikPanel Roadmap
 
-*Son güncelleme: 3 Temmuz 2026*
-
----
-
-## Anayasa — Her Kararın Süzgeci
-
-Her özellik, her commit, her tasarım kararı şu dört süzgeçten geçer.
-Birine takılan iş yapılmaz, ertelenir ya da basitleştirilir.
-
-### 1. Güvenlik varsayılandır
-- Hiçbir özellik kimlik doğrulamasız yayınlanmaz.
-- Varsayılan yapılandırma her zaman en güvenli olandır (localhost bind, token, en az yetki).
-- Parola/token üretimi yalnızca `crypto/rand`. SQL yalnızca parametrize.
-- Root yetkili Agent'a yalnızca Panel erişebilir — başka hiçbir şey.
-
-### 2. Sadelik (Google ilkesi)
-AltaVista portal olmaya çalışırken Google tek arama kutusuyla kazandı.
-cPanel/Plesk bugünün AltaVista'sı: kalabalık, yavaş, korkutucu.
-- Her işin **tek bariz yolu** olur. İki yol varsa biri silinir.
-- Yeni özellik eklerken önce sorulur: *"Bunu eklemezsek ne kaybederiz?"*
-  Cevap net değilse eklenmez.
-- Kurulu olmayan servis arayüzde **görünmez**. Boş ekran, pasif menü olmaz.
-- Akıllı varsayılanlar: kullanıcıya soru sormadan doğru olanı yap;
-  ayar isteyen %5 için "gelişmiş" bölümü yeterli.
-
-### 3. Hız
-- Panel API yanıtı hedefi: < 100 ms. Arayüz etkileşimi: anlık.
-- Kurulum hedefi: **60 saniye** (aşağıda Faz 2).
-- Tek statik binary; harici bağımlılık eklemek yasak (bu bir özellik, koruyacağız).
-
-### 4. Esneklik
-- Her şey önce API'dir; arayüz yalnızca API'nin bir tüketicisidir.
-- Servisler modülerdir: müşteri istediğini kurar, istediği sürümü seçer.
-- Veri rehin alınmaz: yedekler standart formatta (tar.gz, SQL dump), dışa aktarım her zaman mümkün.
-
-### Dürüstlük kuralı
-Önceki dönemin hatası tekrarlanmaz: **"çalışıyor" ≠ "tamamlandı"**.
-Bir iş ancak şu üçü varsa tamamlanmıştır: test + güvenlik gözden geçirmesi + belge.
-Her fazın sonunda ölçülebilir çıkış kriteri vardır; kriter sağlanmadan sonraki faza geçilmez.
+*Last updated: July 3, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
-## Faz 0 — Güvenlik Sprinti 🔴 *(şimdi buradayız)*
+## The Constitution — Every Decision's Filter
 
-> Temel çürükse üstüne kat çıkılmaz. Yeni hiçbir özellik, bu faz bitmeden yazılmaz.
+Every feature, every commit, every design decision passes these four filters.
+Work that fails one is not done, is postponed, or is simplified.
 
-| # | İş | Detay |
-|---|----|-------|
-| 0.1 | Agent'ı kilitle | TCP `:1977` → Unix socket (0700 izin) + paylaşımlı token doğrulama |
-| 0.2 | Panel'e kimlik doğrulama | Session tabanlı login, argon2id parola özeti, güvenli çerez (HttpOnly, SameSite) |
-| 0.3 | SQL injection temizliği | `postgresql_driver.go` ve `database_rpc.go`: parametrize sorgu + kimlik doğrulamalı identifier quoting |
-| 0.4 | Zayıf rastgelelik | `site_orchestrator.go`: `math/rand` → `crypto/rand` (FTP parolaları) |
-| 0.5 | Hata sızıntısı | İç hata mesajları kullanıcıya gitmez; log'a tam, kullanıcıya genel mesaj |
-| 0.6 | HTTP sertleştirme | Güvenlik başlıkları, CSRF koruması, API rate limiting |
-| 0.7 | Bilinen hatalar | `files_rpc.go` uid/gid dönüşüm hatası; `go vet` sıfır uyarı |
-| 0.8 | Sızıntı parolası | `celikpanel_secure_2025` PostgreSQL parolasının değiştirilmesi (sunucu tarafı) |
+### 1. Security is the default
+- No feature ships without authentication.
+- The default configuration is always the most secure one (localhost bind, token, least privilege).
+- Passwords/tokens come from `crypto/rand` only. SQL is parameterized only.
+- Only the Panel may reach the root-privileged Agent — nothing else.
 
-**Çıkış kriteri:** Oturum açmadan hiçbir API endpoint'i yanıt vermez · Agent'a Panel dışından erişilemez · `gosec` taraması kritik bulgu vermez · `go vet` temiz.
+### 2. Simplicity (the Google principle)
+While AltaVista tried to become a portal, Google won with a single search box.
+cPanel/Plesk are today's AltaVista: crowded, slow, intimidating.
+- Every task gets **one obvious way**. If there are two, one gets deleted.
+- Before adding a feature, ask: *"What do we lose if we don't add it?"*
+  If the answer isn't clear, it isn't added.
+- Services that aren't installed are **invisible** in the UI. No empty screens, no disabled menus.
+- Smart defaults: do the right thing without asking; an "advanced" section covers the 5% who want knobs.
+
+### 3. Speed
+- Panel API response target: < 100 ms. UI interactions: instant.
+- Installation target: **60 seconds** (Phase 2 below).
+- One static binary; adding external dependencies is forbidden (this is a feature — we protect it).
+
+### 4. Flexibility
+- Everything is an API first; the UI is just one consumer of it.
+- Services are modular: customers install what they want, at the version they want.
+- Data is never held hostage: backups in standard formats (tar.gz, SQL dump), export always possible.
+
+### The honesty rule
+The previous era's mistake will not be repeated: **"it runs" ≠ "it's done."**
+Work counts as done only with all three: tests + security review + documentation.
+Every phase has a measurable exit criterion; the next phase does not start until it is met.
 
 ---
 
-## Faz 1 — Altın Yol: Çekirdeği Üretim Kalitesine Getir
+## Phase 0 — Security Sprint 🔴 *(we are here)*
 
-> Dar ve derin. 14 servisi yüzeysel yönetmek yerine, tek akışı kusursuz yapmak:
-> **domain ekle → site oluştur → PHP hazır → SSL otomatik → site yayında.**
+> You don't build floors on a rotten foundation. No new feature gets written before this phase ends.
 
-- Bu akışın uçtan uca entegrasyon testleri (temiz Ubuntu 24.04 üzerinde)
-- Idempotency: aynı işlem iki kez çalışırsa sistem bozulmaz
-- Rollback: akışın herhangi bir adımı başarısız olursa iz bırakmadan geri alınır
-- Her işlem audit log'a yazılır (kim, ne zaman, ne yaptı)
-- Dashboard gerçek verilerle: CPU, RAM, disk, servis durumu — tek bakışta, sade
-- Boş Settings sayfası ya doldurulur ya menüden kaldırılır (sadelik kuralı)
+| # | Task | Detail |
+|---|------|--------|
+| 0.1 | Lock down the Agent | TCP `:1977` → Unix socket (0700 perms) + shared-token authentication |
+| 0.2 | Panel authentication | Session-based login, argon2id password hashing, secure cookies (HttpOnly, SameSite) |
+| 0.3 | SQL injection cleanup | `postgresql_driver.go` and `database_rpc.go`: parameterized queries + validated identifier quoting |
+| 0.4 | Weak randomness | `site_orchestrator.go`: `math/rand` → `crypto/rand` (FTP passwords) |
+| 0.5 | Error leakage | Internal error messages never reach the user; full detail to logs, generic message to client |
+| 0.6 | HTTP hardening | Security headers, CSRF protection, API rate limiting |
+| 0.7 | Known bugs | `files_rpc.go` uid/gid conversion bug; zero `go vet` warnings |
+| 0.8 | Leaked password | Rotate the `celikpanel_secure_2025` PostgreSQL password — **deferred** (server not internet-facing yet); mandatory before going public, see Phase 2 exit criteria |
 
-**Çıkış kriteri:** Temiz sunucuda "domain → yayında site" akışı arka arkaya 100 kez hatasız · Entegrasyon test paketi CI'da yeşil.
+**Exit criteria:** No API endpoint responds without a session · The Agent is unreachable from outside the Panel · `gosec` scan shows no critical findings · `go vet` is clean.
 
 ---
 
-## Faz 2 — 60 Saniye: Kurulum Deneyimi (Google Anı)
+## Phase 1 — The Golden Path: Production-Grade Core
 
-> İlk izlenim tek şansımız. cPanel kurulumu saatler sürüyor;
-> bizimki bir kahve karıştırma süresinde bitecek.
+> Narrow and deep. Instead of managing 14 services superficially, make one flow flawless:
+> **add domain → create site → PHP ready → SSL automatic → site live.**
 
-- `install.sh`: tek komut → 60 saniyede login ekranı
+- End-to-end integration tests for this flow (on clean Ubuntu 24.04)
+- Idempotency: running the same operation twice never corrupts the system
+- Rollback: any failed step in the flow is undone without leaving traces
+- Every operation lands in the audit log (who, when, what)
+- Dashboard with real data: CPU, RAM, disk, service states — at a glance, plain
+- The empty Settings page either gets content or leaves the menu (simplicity rule)
+
+**Exit criteria:** On a clean server, "domain → live site" runs 100 times back-to-back without failure · Integration test suite green in CI.
+
+---
+
+## Phase 2 — 60 Seconds: The Install Experience (the Google Moment)
+
+> The first impression is our only shot. cPanel takes hours to install;
+> ours will finish before the coffee is stirred.
+
+- `install.sh`: one command → login screen in 60 seconds
   (`curl -fsSL https://get.celikpanel.com | bash`)
-- systemd unit dosyaları (panel + agent), otomatik başlatma, çökme kurtarma
-- İlk açılış sihirbazı: admin parolası + hostname + panel SSL — üç soru, fazlası değil
-- Self-update mekanizması (tek binary olmanın meyvesi)
+- systemd units (panel + agent), autostart, crash recovery
+- First-run wizard: admin password + hostname + panel SSL — three questions, not one more
+- Self-update mechanism (the fruit of being a single binary)
 
-**Çıkış kriteri:** Temiz Ubuntu 24.04 VPS'te komuttan login ekranına ≤ 60 saniye · Yeniden başlatmada her şey kendiliğinden ayağa kalkar.
+**Exit criteria:** Clean Ubuntu 24.04 VPS, command to login screen in ≤ 60 seconds · Everything comes back up by itself after reboot · All secrets rotated before any public exposure (incl. 0.8).
 
 ---
 
-## Faz 3 — Kazandıran İki Özellik
+## Phase 3 — The Two Winning Features
 
-> "İyi bir alternatif" ile "cPanel'den geçilen panel" arasındaki fark bu ikisi.
+> These two are the difference between "a nice alternative" and "the panel people actually leave cPanel for."
 
 ### 3A. WordPress Toolkit v1
-Pazarın ~%40'ı WordPress. Plesk'in en değerli özelliği WP Toolkit.
-- Tek tuş WP kurulumu (en güncel sürüm, doğru dosya izinleri, hazır DB)
-- Güncelleme yönetimi, temel sağlamlaştırma (dosya izinleri, xmlrpc, login koruması)
+~40% of the market is WordPress. Plesk's most valuable feature is WP Toolkit.
+- One-click WP install (latest version, correct permissions, database ready)
+- Update management, basic hardening (file permissions, xmlrpc, login protection)
 
 ### 3B. cPanel Importer v1
-Hedef müşteri şu an cPanel'de. Tek tuşla taşınamıyorsa fiyat ne olursa olsun gelmez.
-- cPanel hesap arşivinden (cpmove/backup) içe aktarım: site dosyaları + MySQL + e-posta hesapları + DNS kayıtları
+Our target customers are on cPanel today. If they can't migrate with one click, they won't come at any price.
+- Import from cPanel account archives (cpmove/backup): site files + MySQL + mail accounts + DNS records
 
-### 3C. Mail'i ciddiye alma başlangıcı
-Mail, panel işinin en zor ve en çok müşteri kaçıran parçası.
-- DKIM/SPF/DMARC kayıtlarının otomatik üretimi ve doğrulanması
-- Kota yönetimi, temel spam koruması (rspamd değerlendirmesi)
+### 3C. Taking mail seriously — the start
+Mail is the hardest part of the panel business and the biggest churn driver.
+- Automatic generation and validation of DKIM/SPF/DMARC records
+- Quota management, basic spam protection (rspamd evaluation)
 
-**Çıkış kriteri:** Gerçek bir cPanel hesabı arşivden taşınıp DNS dahil çalışır durumda açılır · WP kurulumu tek tıkla ≤ 30 saniye · Kurulan mail hesabı Gmail'e spam'e düşmeden mail atar.
-
----
-
-## Faz 4 — Genişleme *(ancak Faz 3'ten sonra)*
-
-- Reseller paneli ve kota/limit uygulaması
-- API dokümantasyonu (OpenAPI) — API-first sözünün belgesi
-- Lisans/iş modeli kararı (öneri: open core) ve buna göre repo görünürlüğü
-- Monitoring/uyarılar, WebSocket bildirimleri
-- Multi-server ancak gerçek müşteri talebi doğarsa
+**Exit criteria:** A real cPanel account restores from archive and works, DNS included · One-click WP install in ≤ 30 seconds · A freshly created mailbox reaches Gmail without landing in spam.
 
 ---
 
-## Bilinçli Olarak Yapılmayacaklar
+## Phase 4 — Expansion *(only after Phase 3)*
 
-Sadelik, hayır diyebilmektir. Şunlar **bilerek** yok:
+- Reseller panel and quota/limit enforcement
+- API documentation (OpenAPI) — proof of the API-first promise
+- License/business model decision (suggestion: open core) and repo visibility accordingly
+- Monitoring/alerts, WebSocket notifications
+- Multi-server only if real customer demand emerges
 
-- ❌ Docker/konteyner katmanı — hedef kitle klasik hosting; native doğru.
-- ❌ Her servise ayrı yönetim ekranı kalabalığı — kurulu olmayan görünmez.
-- ❌ Tema/görünüm marketi, portal vitrini — AltaVista hatası.
-- ❌ Multi-server / cluster (şimdilik) — tek sunucuyu kusursuz yapmadan dağıtık sistem hayali kurulmaz.
-- ❌ Panelin kendisine harici bağımlılık (Redis, harici DB, message queue) — tek binary + SQLite kalır.
+---
+
+## Deliberate Non-Goals
+
+Simplicity is the ability to say no. These are **intentionally** absent:
+
+- ❌ Docker/container layer — the target market is classic hosting; native is right.
+- ❌ A management screen for every conceivable service — what isn't installed is invisible.
+- ❌ Theme/appearance marketplaces, portal showcases — the AltaVista mistake.
+- ❌ Multi-server / clustering (for now) — no distributed-system dreams before one server is flawless.
+- ❌ External dependencies for the panel itself (Redis, external DB, message queue) — one binary + SQLite it stays.
