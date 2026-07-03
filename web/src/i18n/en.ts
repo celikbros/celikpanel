@@ -94,6 +94,19 @@ export const en = {
     'domains.confirmDelete': 'Delete {name}? This cannot be undone.',
     'domains.loadFailed': 'Failed to load domains',
     'domains.deleted': 'Domain {name} deleted',
+
+    'services.subtitle': 'Manage core system services',
+    'services.col.service': 'Service',
+    'services.col.category': 'Category',
+    'services.col.version': 'Version',
+    'services.col.status': 'Status',
+    'services.running': 'Running',
+    'services.stopped': 'Stopped',
+    'services.start': 'Start',
+    'services.stop': 'Stop',
+    'services.restart': 'Restart',
+    'services.manage': 'Manage',
+    'services.actionFailed': 'Service action failed',
 } as const;
 
 export type TranslationKey = keyof typeof en;

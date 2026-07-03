@@ -93,4 +93,17 @@ export const tr: Record<TranslationKey, string> = {
     'domains.confirmDelete': '{name} silinsin mi? Bu geri alınamaz.',
     'domains.loadFailed': 'Alan adları yüklenemedi',
     'domains.deleted': '{name} silindi',
+
+    'services.subtitle': 'Temel sistem servislerini yönetin',
+    'services.col.service': 'Servis',
+    'services.col.category': 'Kategori',
+    'services.col.version': 'Sürüm',
+    'services.col.status': 'Durum',
+    'services.running': 'Çalışıyor',
+    'services.stopped': 'Durdu',
+    'services.start': 'Başlat',
+    'services.stop': 'Durdur',
+    'services.restart': 'Yeniden başlat',
+    'services.manage': 'Yönet',
+    'services.actionFailed': 'Servis işlemi başarısız',
 };

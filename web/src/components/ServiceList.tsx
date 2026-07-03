@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings, Play, Square, RotateCw } from 'lucide-react';
+import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import { PageHeader, StatusDot } from './ui';
 
 interface ManagedService {
     id: string;
@@ -17,10 +20,30 @@ interface ServiceListProps {
     onManageService?: (serviceId: string, versions: string[]) => void;
 }
 
+// Category pills: categorical colors that stay readable in both themes.
+// Kategori etiketleri: iki temada da okunur kalan kategorik renkler.
+const categoryStyle: Record<string, string> = {
+    web: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+    database: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+    email: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+    security: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+    dns: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
+    ftp: 'bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300',
+    cache: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+};
+
+// Services as a Plesk-style data table. Status comes straight from
+// managed-services (the reliable source: "active (running)" vs
+// "inactive (dead)"), not the wrapper-unit endpoint that misreports.
+//
+// Servisler Plesk tarzı bir veri tablosu olarak. Durum doğrudan
+// managed-services'ten gelir (güvenilir kaynak), yanlış raporlayan
+// wrapper-unit uç noktasından değil.
 export function ServiceList({ onManageService }: ServiceListProps) {
+    const { t } = useI18n();
     const [services, setServices] = useState<ManagedService[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState<string | null>(null);
 
     useEffect(() => {
         loadServices();
@@ -29,243 +52,183 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const loadServices = () => {
         setLoading(true);
         fetch('/api/v1/managed-services')
-            .then(res => res.json())
-            .then(setServices)
-            .catch(err => setError(err.message))
+            .then((res) => res.json())
+            .then((data) => setServices(data || []))
+            .catch(() => showToast('error', t('common.error')))
             .finally(() => setLoading(false));
     };
 
-    const handleAction = async (serviceId: string, version: string, action: 'start' | 'stop' | 'restart') => {
-        try {
-            let serviceName: string;
-            if (serviceId === 'php-fpm') {
-                serviceName = version !== 'default' ? `php${version}-fpm` : 'php-fpm';
-            } else if (serviceId === 'postgresql' || serviceId === 'mariadb') {
-                serviceName = serviceId === 'mariadb' ? 'mariadb' : 'postgresql';
-            } else {
-                serviceName = serviceId;
-            }
+    const resolveUnit = (serviceId: string, version?: string) => {
+        if (serviceId === 'php-fpm') return version && version !== 'default' ? `php${version}-fpm` : 'php-fpm';
+        return serviceId;
+    };
 
-            const response = await fetch('/api/v1/service/action', {
+    const handleAction = async (service: ManagedService, action: 'start' | 'stop' | 'restart') => {
+        setBusy(service.id);
+        try {
+            const res = await fetch('/api/v1/service/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: serviceName, action }),
+                body: JSON.stringify({ name: resolveUnit(service.id, service.versions[0]), action }),
             });
-
-            if (!response.ok) {
-                throw new Error('Service action failed');
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            window.dispatchEvent(new CustomEvent('service-status-changed', {
-                detail: { serviceName, serviceId, version }
-            }));
-        } catch (err: any) {
-            alert(`Error: ${err.message}`);
+            if (!res.ok) throw new Error();
+            await new Promise((r) => setTimeout(r, 1000));
+            loadServices();
+        } catch {
+            showToast('error', t('services.actionFailed'));
+        } finally {
+            setBusy(null);
         }
     };
 
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center p-12 text-fg-muted">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-            <p>Loading services...</p>
-        </div>
-    );
-    if (error) return <div className="text-danger">Error: {error}</div>;
-
-    // Unified Service Card Component
-    const ServiceCard = ({ service }: { service: ManagedService }) => {
-        const categoryColors: Record<string, string> = {
-            web: 'bg-primary/40 text-primary border-primary/50',
-            database: 'bg-purple-900/40 text-purple-400 border-purple-900/50',
-            email: 'bg-orange-900/40 text-orange-400 border-orange-900/50',
-            security: 'bg-danger/40 text-danger border-danger/50',
-            dns: 'bg-cyan-900/40 text-cyan-400 border-cyan-900/50',
-            ftp: 'bg-primary/40 text-primary border-primary/50',
-            cache: 'bg-warning/40 text-warning border-warning/50',
-        };
-        const badgeClass = categoryColors[service.category] || 'bg-surface-2 text-fg-muted';
-
-        return (
-            <div className="bg-surface border border-border rounded-xl p-6 hover:border-border transition-colors group flex flex-col h-full">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="text-3xl">{service.icon}</div>
-                        <div>
-                            <h3 className="text-lg font-bold text-fg">{service.name}</h3>
-                            <p className="text-sm text-fg-subtle line-clamp-2">{service.description}</p>
-                        </div>
-                    </div>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
-                        {service.category}
-                    </span>
-                </div>
-
-                <div className="flex-1">
-                    {service.versions.length > 1 && (
-                        <div className="mb-3 p-3 bg-surface-2/50 rounded-lg border border-border">
-                            <p className="text-xs text-fg-muted mb-2 font-semibold">Installed Versions:</p>
-                            <div className="space-y-2">
-                                {service.versions.map(version => (
-                                    <ServiceVersionRow key={version} service={service} version={version} handleAction={handleAction} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {service.versions.length === 1 && (
-                        <div className="mb-4">
-                            <SingleVersionStatus serviceId={service.id} version={service.versions[0]} />
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex gap-2 items-center mt-auto pt-4 border-t border-border">
-                    {service.versions.length === 1 && (
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => handleAction(service.id, service.versions[0], 'start')}
-                                className="px-3 py-1.5 bg-success/30 text-success rounded hover:bg-success/50 transition-colors text-xs"
-                            >
-                                Start
-                            </button>
-                            <button
-                                onClick={() => handleAction(service.id, service.versions[0], 'stop')}
-                                className="px-3 py-1.5 bg-danger/30 text-danger rounded hover:bg-danger/50 transition-colors text-xs"
-                            >
-                                Stop
-                            </button>
-                            <button
-                                onClick={() => handleAction(service.id, service.versions[0], 'restart')}
-                                className="px-3 py-1.5 bg-warning/30 text-warning rounded hover:bg-warning/50 transition-colors text-xs"
-                            >
-                                Restart
-                            </button>
-                        </div>
-                    )}
-                    <button
-                        onClick={() => onManageService?.(service.id, service.versions)}
-                        className="ml-auto px-4 py-1.5 bg-primary text-white rounded hover:bg-primary-hover transition-colors flex items-center gap-2 text-sm"
-                    >
-                        <Settings className="w-4 h-4" />
-                        Manage
-                    </button>
-                </div>
-            </div>
-        );
-    };
-
-    const ServiceVersionRow = ({ service, version, handleAction }: any) => {
-        const [versionStatus, setVersionStatus] = React.useState<{ active: boolean } | null>(null);
-
-        React.useEffect(() => {
-            let serviceName: string;
-            if (service.id === 'php-fpm') {
-                serviceName = version !== 'default' ? `php${version}-fpm` : 'php-fpm';
-            } else if (service.id === 'postgresql' || service.id === 'mariadb') {
-                serviceName = service.id === 'mariadb' ? 'mariadb' : 'postgresql';
-            } else {
-                serviceName = service.id;
-            }
-
-            fetch(`/api/v1/service/status?name=${serviceName}`)
-                .then(r => r.ok ? r.json() : null)
-                .then(data => setVersionStatus(data))
-                .catch(() => setVersionStatus(null));
-
-            const handleStatusChange = (event: Event) => {
-                const customEvent = event as CustomEvent;
-                const { serviceId: changedServiceId, version: changedVersion } = customEvent.detail;
-                if (changedServiceId === service.id && changedVersion === version) {
-                    fetch(`/api/v1/service/status?name=${serviceName}`)
-                        .then(r => r.ok ? r.json() : null)
-                        .then(data => setVersionStatus(data));
-                }
-            };
-            window.addEventListener('service-status-changed', handleStatusChange);
-            return () => window.removeEventListener('service-status-changed', handleStatusChange);
-
-        }, [service.id, version]);
-
-
-        return (
-            <div className="flex items-center justify-between p-2 bg-surface/50 rounded">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-primary font-mono font-semibold">{version}</span>
-                    {versionStatus && (
-                        <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
-                            {versionStatus.active ? 'Running' : 'Stopped'}
-                        </span>
-                    )}
-                </div>
-                <div className="flex gap-1">
-                    <button onClick={() => handleAction(service.id, version, 'start')} className="px-2 py-1 bg-success/30 text-success rounded hover:bg-success/50 transition-colors text-xs">Start</button>
-                    <button onClick={() => handleAction(service.id, version, 'stop')} className="px-2 py-1 bg-danger/30 text-danger rounded hover:bg-danger/50 transition-colors text-xs">Stop</button>
-                    <button onClick={() => handleAction(service.id, version, 'restart')} className="px-2 py-1 bg-warning/30 text-warning rounded hover:bg-warning/50 transition-colors text-xs">Restart</button>
-                </div>
-            </div>
-        )
-    }
-
-    const SingleVersionStatus = ({ serviceId, version }: { serviceId: string; version: string }) => {
-        const [versionStatus, setVersionStatus] = React.useState<{ active: boolean } | null>(null);
-        const [refreshTrigger, setRefreshTrigger] = React.useState(0);
-
-        React.useEffect(() => {
-            let serviceName: string;
-            if (serviceId === 'php-fpm') {
-                serviceName = version !== 'default' ? `php${version}-fpm` : 'php-fpm';
-            } else if (serviceId === 'postgresql' || serviceId === 'mariadb') {
-                serviceName = serviceId === 'mariadb' ? 'mariadb' : 'postgresql';
-            } else {
-                serviceName = serviceId;
-            }
-
-            fetch(`/api/v1/service/status?name=${serviceName}`)
-                .then(r => r.ok ? r.json() : null)
-                .then(data => setVersionStatus(data))
-                .catch(() => setVersionStatus(null));
-        }, [serviceId, version, refreshTrigger]);
-
-        React.useEffect(() => {
-            const handleStatusChange = (event: Event) => {
-                const customEvent = event as CustomEvent;
-                const { serviceId: changedServiceId, version: changedVersion } = customEvent.detail;
-                if (changedServiceId === serviceId && changedVersion === version) {
-                    setRefreshTrigger(prev => prev + 1);
-                }
-            };
-            window.addEventListener('service-status-changed', handleStatusChange);
-            return () => window.removeEventListener('service-status-changed', handleStatusChange);
-        }, [serviceId, version]);
-
-        if (!versionStatus) return null;
-
-        return (
-            <div className="flex items-center gap-2 p-2 bg-surface-2/30 rounded">
-                <span className="text-xs text-fg-muted">Status:</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${versionStatus.active ? 'bg-success/30 text-success' : 'bg-surface-3 text-fg-muted'}`}>
-                    {versionStatus.active ? 'Running' : 'Stopped'}
-                </span>
-            </div>
-        );
-    };
+    const isRunning = (s: ManagedService) => s.status?.toLowerCase().includes('running');
 
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-fg">Services</h1>
-                <p className="text-sm text-fg-muted mt-1">
-                    Manage core system services
-                </p>
-            </div>
+        <div className="p-6 md:p-8">
+            <PageHeader
+                title={t('nav.services')}
+                subtitle={t('services.subtitle')}
+                breadcrumb={[t('common.home'), t('nav.services')]}
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
-                {services.map(service => (
-                    <ServiceCard key={service.id} service={service} />
-                ))}
-            </div>
+            {loading ? (
+                <div className="flex items-center justify-center py-16">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                </div>
+            ) : (
+                <div className="rounded-xl border border-border bg-surface shadow-card">
+                    <p className="px-4 pt-3 text-xs text-fg-subtle">{t('common.itemsTotal', { n: services.length })}</p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                    <th className="px-4 py-2.5">{t('services.col.service')}</th>
+                                    <th className="px-4 py-2.5">{t('services.col.category')}</th>
+                                    <th className="px-4 py-2.5">{t('services.col.version')}</th>
+                                    <th className="px-4 py-2.5">{t('services.col.status')}</th>
+                                    <th className="px-4 py-2.5 text-right">{''}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {services.map((s) => {
+                                    const running = isRunning(s);
+                                    return (
+                                        <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xl leading-none">{s.icon}</span>
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium text-fg">{s.name}</div>
+                                                        <div className="truncate text-xs text-fg-subtle">{s.description}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span
+                                                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                                                        categoryStyle[s.category] ?? 'bg-surface-2 text-fg-muted'
+                                                    }`}
+                                                >
+                                                    {s.category}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {s.versions.length > 1 ? (
+                                                        s.versions.map((v) => (
+                                                            <span
+                                                                key={v}
+                                                                className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-fg-muted"
+                                                            >
+                                                                {v}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="font-mono text-xs text-fg-muted">
+                                                            {s.versions[0] === 'default' ? '—' : s.versions[0]}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1.5 text-fg-muted">
+                                                    <StatusDot ok={running} />
+                                                    {running ? t('services.running') : t('services.stopped')}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <ActionIcon
+                                                        title={t('services.start')}
+                                                        onClick={() => handleAction(s, 'start')}
+                                                        disabled={busy === s.id}
+                                                        tone="success"
+                                                    >
+                                                        <Play className="h-4 w-4" />
+                                                    </ActionIcon>
+                                                    <ActionIcon
+                                                        title={t('services.stop')}
+                                                        onClick={() => handleAction(s, 'stop')}
+                                                        disabled={busy === s.id}
+                                                        tone="danger"
+                                                    >
+                                                        <Square className="h-4 w-4" />
+                                                    </ActionIcon>
+                                                    <ActionIcon
+                                                        title={t('services.restart')}
+                                                        onClick={() => handleAction(s, 'restart')}
+                                                        disabled={busy === s.id}
+                                                        tone="warning"
+                                                    >
+                                                        <RotateCw className="h-4 w-4" />
+                                                    </ActionIcon>
+                                                    <button
+                                                        onClick={() => onManageService?.(s.id, s.versions)}
+                                                        className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
+                                                    >
+                                                        <Settings className="h-3.5 w-3.5" />
+                                                        {t('services.manage')}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+
+function ActionIcon({
+    children,
+    title,
+    onClick,
+    disabled,
+    tone,
+}: {
+    children: React.ReactNode;
+    title: string;
+    onClick: () => void;
+    disabled?: boolean;
+    tone: 'success' | 'danger' | 'warning';
+}) {
+    const hover = {
+        success: 'hover:text-success',
+        danger: 'hover:text-danger',
+        warning: 'hover:text-warning',
+    }[tone];
+    return (
+        <button
+            title={title}
+            onClick={onClick}
+            disabled={disabled}
+            className={`rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 disabled:opacity-40 ${hover}`}
+        >
+            {children}
+        </button>
     );
 }
