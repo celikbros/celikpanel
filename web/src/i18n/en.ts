@@ -107,6 +107,25 @@ export const en = {
     'services.restart': 'Restart',
     'services.manage': 'Manage',
     'services.actionFailed': 'Service action failed',
+
+    'databases.subtitle': 'Databases and users on your detected servers',
+    'databases.default': 'Default',
+    'databases.tab.databases': 'Databases',
+    'databases.tab.users': 'Users',
+    'databases.addDatabase': 'Create database',
+    'databases.addUser': 'Create user',
+    'databases.col.name': 'Name',
+    'databases.col.users': 'Users',
+    'databases.col.databases': 'Databases',
+    'databases.col.username': 'Username',
+    'databases.empty.databases': 'No databases yet',
+    'databases.empty.databasesHint': 'Create your first database on this server',
+    'databases.empty.users': 'No database users yet',
+    'databases.empty.usersHint': 'Create a user to grant access to databases',
+    'databases.confirmDeleteDb': 'Delete database {name}? This cannot be undone.',
+    'databases.confirmDeleteUser': 'Delete user {name}? This cannot be undone.',
+    'databases.dbDeleted': 'Database deleted',
+    'databases.userDeleted': 'User deleted',
 } as const;
 
 export type TranslationKey = keyof typeof en;

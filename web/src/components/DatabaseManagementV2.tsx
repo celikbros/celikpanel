@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Database, Server, Plus, Trash2, Users, Key } from 'lucide-react';
+import { Database, Plus, Trash2, Users } from 'lucide-react';
 import { showToast } from './Toast';
 import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
+import { useI18n } from '../i18n';
+import { PageHeader, Button, EmptyState, StatusDot } from './ui';
 
 const API_BASE = '/api/v2';
 
@@ -34,7 +36,15 @@ interface DatabaseUser {
     created_at: string;
 }
 
+// Databases page. Servers are auto-discovered (no "add server" friction),
+// shown as a selector; each server has Databases and Users tables in our
+// dense, modern language.
+//
+// Veritabanları sayfası. Sunucular otomatik keşfedilir ("sunucu ekle"
+// sürtünmesi yok), seçici olarak gösterilir; her sunucunun yoğun, modern
+// dilimizde Veritabanları ve Kullanıcılar tabloları vardır.
 export function DatabaseManagementV2() {
+    const { t } = useI18n();
     const [servers, setServers] = useState<DatabaseServer[]>([]);
     const [selectedServer, setSelectedServer] = useState<DatabaseServer | null>(null);
     const [activeTab, setActiveTab] = useState<'databases' | 'users'>('databases');
@@ -44,12 +54,10 @@ export function DatabaseManagementV2() {
     const [showAddDatabase, setShowAddDatabase] = useState(false);
     const [showAddUser, setShowAddUser] = useState(false);
 
-    // Load servers on mount
     useEffect(() => {
         loadServers();
     }, []);
 
-    // Load databases and users when server changes
     useEffect(() => {
         if (selectedServer) {
             loadDatabases(selectedServer.id);
@@ -60,14 +68,12 @@ export function DatabaseManagementV2() {
     const loadServers = async () => {
         try {
             const res = await fetch(`${API_BASE}/database-servers`);
-            if (!res.ok) throw new Error('Failed to load servers');
-            const data = await res.json();
-            setServers(data);
-            if (data.length > 0 && !selectedServer) {
-                setSelectedServer(data[0]);
-            }
-        } catch (err: any) {
-            showToast('error', err.message);
+            if (!res.ok) throw new Error();
+            const data: DatabaseServer[] = await res.json();
+            setServers(data || []);
+            setSelectedServer((cur) => cur ?? (data && data.length > 0 ? data[0] : null));
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
@@ -75,298 +81,286 @@ export function DatabaseManagementV2() {
         setLoading(true);
         try {
             const res = await fetch(`${API_BASE}/database-servers/${serverId}/databases`);
-            if (!res.ok) throw new Error('Failed to load databases');
-            const data = await res.json();
-            setDatabases(data);
-        } catch (err: any) {
-            showToast('error', err.message);
+            setDatabases(res.ok ? (await res.json()) || [] : []);
         } finally {
             setLoading(false);
         }
     };
 
     const loadUsers = async (serverId: number) => {
-        setLoading(true);
         try {
             const res = await fetch(`${API_BASE}/database-servers/${serverId}/users`);
-            if (!res.ok) throw new Error('Failed to load users');
-            const data = await res.json();
-            setUsers(data);
-        } catch (err: any) {
-            showToast('error', err.message);
-        } finally {
-            setLoading(false);
+            setUsers(res.ok ? (await res.json()) || [] : []);
+        } catch {
+            /* silent */
         }
     };
 
-    const handleDeleteDatabase = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this database?')) return;
-
+    const handleDeleteDatabase = async (id: number, name: string) => {
+        if (!confirm(t('databases.confirmDeleteDb', { name }))) return;
         try {
             const res = await fetch(`${API_BASE}/databases/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete database');
-            showToast('success', 'Database deleted successfully');
+            if (!res.ok) throw new Error();
+            showToast('success', t('databases.dbDeleted'));
             if (selectedServer) loadDatabases(selectedServer.id);
-        } catch (err: any) {
-            showToast('error', err.message);
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
-    const handleDeleteUser = async (id: number) => {
-        if (!confirm('Are you sure you want to delete this user?')) return;
-
+    const handleDeleteUser = async (id: number, name: string) => {
+        if (!confirm(t('databases.confirmDeleteUser', { name }))) return;
         try {
             const res = await fetch(`${API_BASE}/database-users/${id}`, { method: 'DELETE' });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Failed to delete user');
-            }
-            showToast('success', 'User deleted successfully');
+            if (!res.ok) throw new Error();
+            showToast('success', t('databases.userDeleted'));
             if (selectedServer) loadUsers(selectedServer.id);
-        } catch (err: any) {
-            showToast('error', err.message);
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold text-fg">Databases</h2>
-                    <p className="text-sm text-fg-muted mt-1">
-                        Manage PostgreSQL and MariaDB servers, databases, and users
-                    </p>
-                </div>
+        <div className="p-6 md:p-8">
+            <PageHeader
+                title={t('nav.databases')}
+                subtitle={t('databases.subtitle')}
+                breadcrumb={[t('common.home'), t('nav.databases')]}
+            />
+
+            {/* Server selector — auto-discovered engines */}
+            <div className="mb-4 flex flex-wrap gap-2">
+                {servers.map((s) => {
+                    const active = selectedServer?.id === s.id;
+                    return (
+                        <button
+                            key={s.id}
+                            onClick={() => setSelectedServer(s)}
+                            className={`flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-left transition-colors ${
+                                active
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border bg-surface hover:bg-surface-2'
+                            }`}
+                        >
+                            <span className="text-xl leading-none">{s.type_icon}</span>
+                            <span>
+                                <span className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                    {s.name}
+                                    {s.is_default && (
+                                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                                            {t('databases.default')}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs text-fg-subtle">
+                                    <StatusDot ok={s.status === 'active'} />
+                                    {s.host}:{s.port} · {s.version}
+                                </span>
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Server Tabs */}
-            <div className="bg-surface border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                    <Server className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold text-fg">Database Servers</h3>
-                </div>
-
-                {servers.length === 0 ? (
-                    <div className="text-center py-8 text-fg-subtle">
-                        No database servers configured
-                    </div>
-                ) : (
-                    <div className="flex gap-2 flex-wrap">
-                        {servers.map(server => (
-                            <button
-                                key={server.id}
-                                onClick={() => setSelectedServer(server)}
-                                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${selectedServer?.id === server.id
-                                    ? 'bg-primary text-white'
-                                    : 'bg-surface-2 text-fg-muted hover:bg-surface-3'
-                                    }`}
-                            >
-                                <span>{server.type_icon}</span>
-                                <span className="font-medium">{server.name}</span>
-                                <span className="text-xs opacity-75">{server.host}:{server.port}</span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Content Area */}
             {selectedServer && (
-                <div className="bg-surface border border-border rounded-xl p-6">
+                <div className="rounded-xl border border-border bg-surface shadow-card">
                     {/* Tabs */}
-                    <div className="flex gap-4 mb-6 border-b border-border">
-                        <button
+                    <div className="flex items-center gap-1 border-b border-border px-3 pt-2">
+                        <TabButton
+                            active={activeTab === 'databases'}
                             onClick={() => setActiveTab('databases')}
-                            className={`pb-3 px-2 flex items-center gap-2 transition-colors ${activeTab === 'databases'
-                                ? 'border-b-2 border-primary text-primary'
-                                : 'text-fg-muted hover:text-fg-muted'
-                                }`}
-                        >
-                            <Database className="w-4 h-4" />
-                            <span className="font-medium">Databases</span>
-                            <span className="text-xs bg-surface-2 px-2 py-0.5 rounded">
-                                {databases.length}
-                            </span>
-                        </button>
-                        <button
+                            icon={Database}
+                            label={t('databases.tab.databases')}
+                            count={databases.length}
+                        />
+                        <TabButton
+                            active={activeTab === 'users'}
                             onClick={() => setActiveTab('users')}
-                            className={`pb-3 px-2 flex items-center gap-2 transition-colors ${activeTab === 'users'
-                                ? 'border-b-2 border-primary text-primary'
-                                : 'text-fg-muted hover:text-fg-muted'
-                                }`}
-                        >
-                            <Users className="w-4 h-4" />
-                            <span className="font-medium">Users</span>
-                            <span className="text-xs bg-surface-2 px-2 py-0.5 rounded">
-                                {users.length}
-                            </span>
-                        </button>
+                            icon={Users}
+                            label={t('databases.tab.users')}
+                            count={users.length}
+                        />
                     </div>
 
-                    {/* Databases Tab */}
-                    {activeTab === 'databases' && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-fg">Databases</h3>
-                                <button
-                                    onClick={() => setShowAddDatabase(true)}
-                                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Add Database
-                                </button>
-                            </div>
+                    <div className="flex items-center justify-between p-3">
+                        {activeTab === 'databases' ? (
+                            <Button variant="primary" icon={Plus} onClick={() => setShowAddDatabase(true)}>
+                                {t('databases.addDatabase')}
+                            </Button>
+                        ) : (
+                            <Button variant="primary" icon={Plus} onClick={() => setShowAddUser(true)}>
+                                {t('databases.addUser')}
+                            </Button>
+                        )}
+                        <span className="text-xs text-fg-subtle">
+                            {t('common.itemsTotal', { n: activeTab === 'databases' ? databases.length : users.length })}
+                        </span>
+                    </div>
 
-                            {loading ? (
-                                <div className="text-center py-8 text-fg-subtle">Loading...</div>
-                            ) : databases.length === 0 ? (
-                                <div className="text-center py-12 bg-surface-2/50 rounded-lg">
-                                    <Database className="w-12 h-12 text-fg-subtle mx-auto mb-3" />
-                                    <p className="text-fg-muted">No databases yet</p>
-                                    <p className="text-sm text-fg-subtle mt-1">Create your first database</p>
-                                </div>
-                            ) : (
-                                <div className="grid gap-4">
-                                    {databases.map(db => (
-                                        <div
-                                            key={db.id}
-                                            className="bg-surface-2/50 border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <h4 className="text-lg font-bold text-fg">{db.name}</h4>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Users className="w-4 h-4 text-fg-subtle" />
-                                                        <span className="text-sm text-fg-muted">
-                                                            {db.users.length} user{db.users.length !== 1 ? 's' : ''}: {db.users.join(', ')}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-fg-subtle mt-2">
-                                                        Created: {new Date(db.created_at).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleDeleteDatabase(db.id)}
-                                                        className="p-2 text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                                                        title="Delete database"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
                         </div>
-                    )}
-
-                    {/* Users Tab */}
-                    {activeTab === 'users' && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-fg">Users</h3>
-                                <button
-                                    onClick={() => setShowAddUser(true)}
-                                    className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Add User
-                                </button>
-                            </div>
-
-                            {loading ? (
-                                <div className="text-center py-8 text-fg-subtle">Loading...</div>
-                            ) : users.length === 0 ? (
-                                <div className="text-center py-12 bg-surface-2/50 rounded-lg">
-                                    <Users className="w-12 h-12 text-fg-subtle mx-auto mb-3" />
-                                    <p className="text-fg-muted">No users yet</p>
-                                    <p className="text-sm text-fg-subtle mt-1">Create your first user</p>
-                                </div>
-                            ) : (
-                                <div className="grid gap-4">
-                                    {users.map(user => (
-                                        <div
-                                            key={user.id}
-                                            className="bg-surface-2/50 border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <h4 className="text-lg font-bold text-fg">{user.username}</h4>
-                                                        {user.databases.length > 0 && (
-                                                            <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded border border-warning/30">
-                                                                In Use
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Key className="w-4 h-4 text-fg-subtle" />
-                                                        <span className="text-sm text-fg-muted">
-                                                            Access to {user.databases.length} database{user.databases.length !== 1 ? 's' : ''}
-                                                            {user.databases.length > 0 && `: ${user.databases.join(', ')}`}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-fg-subtle mt-2">
-                                                        Created: {new Date(user.created_at).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                        className={`p-2 rounded-lg transition-colors ${user.databases.length > 0
-                                                            ? 'text-fg-subtle cursor-not-allowed opacity-50'
-                                                            : 'text-danger hover:bg-danger/10'
-                                                            }`}
-                                                        title={
-                                                            user.databases.length > 0
-                                                                ? 'Cannot delete user with database access. Revoke access first.'
-                                                                : 'Delete user'
-                                                        }
-                                                        disabled={user.databases.length > 0}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    ) : activeTab === 'databases' ? (
+                        databases.length === 0 ? (
+                            <EmptyStateInline
+                                icon={Database}
+                                title={t('databases.empty.databases')}
+                                hint={t('databases.empty.databasesHint')}
+                            />
+                        ) : (
+                            <Table
+                                columns={[t('databases.col.name'), t('databases.col.users'), '']}
+                                rows={databases.map((d) => (
+                                    <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                        <td className="px-4 py-2.5">
+                                            <span className="flex items-center gap-2 font-medium text-fg">
+                                                <Database className="h-4 w-4 text-fg-subtle" />
+                                                {d.name}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <Chips items={d.users} />
+                                        </td>
+                                        <td className="px-4 py-2.5 text-right">
+                                            <DeleteBtn onClick={() => handleDeleteDatabase(d.id, d.name)} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            />
+                        )
+                    ) : users.length === 0 ? (
+                        <EmptyStateInline
+                            icon={Users}
+                            title={t('databases.empty.users')}
+                            hint={t('databases.empty.usersHint')}
+                        />
+                    ) : (
+                        <Table
+                            columns={[t('databases.col.username'), t('databases.col.databases'), '']}
+                            rows={users.map((u) => (
+                                <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                    <td className="px-4 py-2.5">
+                                        <span className="flex items-center gap-2 font-medium text-fg">
+                                            <Users className="h-4 w-4 text-fg-subtle" />
+                                            {u.username}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-2.5">
+                                        <Chips items={u.databases} />
+                                    </td>
+                                    <td className="px-4 py-2.5 text-right">
+                                        <DeleteBtn onClick={() => handleDeleteUser(u.id, u.username)} />
+                                    </td>
+                                </tr>
+                            ))}
+                        />
                     )}
                 </div>
             )}
 
-            {/* Modals */}
             {showAddDatabase && selectedServer && (
                 <AddDatabaseModalV2
                     serverId={selectedServer.id}
                     serverName={selectedServer.name}
-                    existingUsers={users.map(u => ({ id: u.id, username: u.username }))}
+                    existingUsers={users.map((u) => ({ id: u.id, username: u.username }))}
                     onClose={() => setShowAddDatabase(false)}
                     onSuccess={() => {
-                        if (selectedServer) {
-                            loadDatabases(selectedServer.id);
-                            // Delay to allow backend to finalize user creation
-                            setTimeout(() => loadUsers(selectedServer.id), 500);
-                        }
+                        setShowAddDatabase(false);
+                        loadDatabases(selectedServer.id);
+                        loadUsers(selectedServer.id);
                     }}
                 />
             )}
-
             {showAddUser && selectedServer && (
                 <AddUserModalV2
                     serverId={selectedServer.id}
                     serverName={selectedServer.name}
                     onClose={() => setShowAddUser(false)}
                     onSuccess={() => {
-                        if (selectedServer) loadUsers(selectedServer.id);
+                        setShowAddUser(false);
+                        loadUsers(selectedServer.id);
                     }}
                 />
             )}
+        </div>
+    );
+}
+
+function TabButton({
+    active,
+    onClick,
+    icon: Icon,
+    label,
+    count,
+}: {
+    active: boolean;
+    onClick: () => void;
+    icon: typeof Database;
+    label: string;
+    count: number;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={`flex items-center gap-2 border-b-2 px-3 pb-2.5 pt-1.5 text-sm font-medium transition-colors ${
+                active ? 'border-primary text-primary' : 'border-transparent text-fg-muted hover:text-fg'
+            }`}
+        >
+            <Icon className="h-4 w-4" />
+            {label}
+            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+        </button>
+    );
+}
+
+function Table({ columns, rows }: { columns: string[]; rows: React.ReactNode }) {
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                        {columns.map((c, i) => (
+                            <th key={i} className={`px-4 py-2.5 ${i === columns.length - 1 ? 'text-right' : ''}`}>
+                                {c}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>{rows}</tbody>
+            </table>
+        </div>
+    );
+}
+
+function Chips({ items }: { items: string[] }) {
+    if (!items || items.length === 0) return <span className="text-fg-subtle">—</span>;
+    return (
+        <div className="flex flex-wrap gap-1">
+            {items.map((i) => (
+                <span key={i} className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-fg-muted">
+                    {i}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function DeleteBtn({ onClick }: { onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger"
+        >
+            <Trash2 className="h-4 w-4" />
+        </button>
+    );
+}
+
+function EmptyStateInline({ icon, title, hint }: { icon: typeof Database; title: string; hint: string }) {
+    return (
+        <div className="px-4 pb-4">
+            <EmptyState icon={icon} title={title} hint={hint} />
         </div>
     );
 }

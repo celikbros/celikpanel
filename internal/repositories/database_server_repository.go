@@ -58,7 +58,7 @@ func (r *PostgresDatabaseServerRepository) Create(ctx context.Context, server *c
 	}
 
 	return r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM database_servers WHERE id = ?", id).
-		Scan(&server.ID, &server.CreatedAt, &server.UpdatedAt)
+		Scan(&server.ID, scanTime(&server.CreatedAt), scanTime(&server.UpdatedAt))
 }
 
 // GetByID retrieves a database server by ID
@@ -85,8 +85,8 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 		&rootPassword,
 		&paramsJSON,
 		&server.Status,
-		&server.CreatedAt,
-		&server.UpdatedAt,
+		scanTime(&server.CreatedAt),
+		scanTime(&server.UpdatedAt),
 	)
 
 	if err != nil {
@@ -145,8 +145,8 @@ func (r *PostgresDatabaseServerRepository) ListBySubscription(ctx context.Contex
 			&rootPassword,
 			&paramsJSON,
 			&server.Status,
-			&server.CreatedAt,
-			&server.UpdatedAt,
+			scanTime(&server.CreatedAt),
+			scanTime(&server.UpdatedAt),
 		)
 
 		if err != nil {
@@ -203,8 +203,8 @@ func (r *PostgresDatabaseServerRepository) ListByType(ctx context.Context, subsc
 			&rootPassword,
 			&paramsJSON,
 			&server.Status,
-			&server.CreatedAt,
-			&server.UpdatedAt,
+			scanTime(&server.CreatedAt),
+			scanTime(&server.UpdatedAt),
 		)
 
 		if err != nil {

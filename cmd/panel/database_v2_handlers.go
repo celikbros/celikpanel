@@ -51,6 +51,12 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 	ctx := context.Background()
 	subscriptionID := 1 // TODO: Get from auth
 
+	// Auto-register installed engines so the list is never empty when
+	// MariaDB/PostgreSQL are running.
+	// Kurulu motorları otomatik kaydet; böylece MariaDB/PostgreSQL çalışırken
+	// liste asla boş kalmaz.
+	p.ensureInstalledDBServers(ctx, subscriptionID)
+
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	servers, err := serverRepo.ListBySubscription(ctx, subscriptionID)
 	if err != nil {
