@@ -72,8 +72,12 @@ Four parallel layouts (AdminLayout, ResellerLayout, CustomerLayout, UserLayout) 
 
 ---
 
+## Theming (decided)
+
+The panel supports **both light and dark themes**, user-switchable via a theme toggle. The default follows the operating system preference (`prefers-color-scheme`), falling back to light. Mechanically: the existing `web/src/theme.ts` tokens are wired to CSS custom properties, and both themes are two value sets of the *same* variables — components reference the variables, never hardcoded colors. This is skin over the shell; it changes no structure.
+
 ## Scope boundary
 
-This document is about **structure** (the bones): one shell, capability-driven rendering. It is deliberately silent on **visual design** (the skin): color, typography, spacing, light/dark. Those are chosen separately and layered on top of this architecture without changing it — a redesign repaints the shell, it does not re-architect it.
+This document is about **structure** (the bones): one shell, capability-driven rendering. Beyond the theming decision above, it stays silent on the finer **visual design** (typography scale, spacing rhythm, component styling). Those are chosen when the redesign work begins and layer on top of this architecture without changing it — a redesign repaints the shell, it does not re-architect it.
 
 The current code does **not** yet follow this: navigation is hardcoded in `Layout.tsx` and is identical for everyone. Adopting this architecture is the frontend half of realizing [ROLES.md](ROLES.md), and is scheduled alongside the authorization/ownership work.

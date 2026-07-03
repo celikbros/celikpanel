@@ -72,8 +72,12 @@ Dört paralel yerleşim (AdminLayout, ResellerLayout, CustomerLayout, UserLayout
 
 ---
 
+## Tema (karar verildi)
+
+Panel **hem açık hem koyu temayı** destekler; kullanıcı bir tema değiştiriciyle seçer. Varsayılan, işletim sistemi tercihini (`prefers-color-scheme`) izler, yoksa açık temaya düşer. Mekanik olarak: mevcut `web/src/theme.ts` token'ları CSS özel değişkenlerine bağlanır ve iki tema, *aynı* değişkenlerin iki değer kümesidir — bileşenler değişkenlere başvurur, asla sabit renklere değil. Bu, kabuğun üstündeki dış görünümdür; hiçbir yapıyı değiştirmez.
+
 ## Kapsam sınırı
 
-Bu belge **yapı** (iskelet) hakkındadır: tek kabuk, yetkiye göre render. **Görsel tasarım** (dış görünüm) konusunda bilinçli olarak sessizdir: renk, tipografi, boşluk, açık/koyu. Bunlar ayrıca seçilir ve bu mimariyi değiştirmeden üzerine giydirilir — bir yeniden tasarım kabuğu yeniden boyar, yeniden mimarileştirmez.
+Bu belge **yapı** (iskelet) hakkındadır: tek kabuk, yetkiye göre render. Yukarıdaki tema kararının ötesinde, daha ince **görsel tasarım** (tipografi ölçeği, boşluk ritmi, bileşen stili) konusunda sessiz kalır. Bunlar yeniden tasarım işi başladığında seçilir ve bu mimariyi değiştirmeden üzerine giydirilir — bir yeniden tasarım kabuğu yeniden boyar, yeniden mimarileştirmez.
 
 Mevcut kod bunu **henüz** izlemiyor: navigasyon `Layout.tsx` içinde sabit kodlanmış ve herkes için aynı. Bu mimariyi benimsemek, [ROLES.tr.md](ROLES.tr.md)'yi hayata geçirmenin frontend yarısıdır ve yetkilendirme/sahiplik işiyle birlikte planlanmıştır.
