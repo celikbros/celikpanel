@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLoca
 import { useState, useEffect } from 'react';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { navItems, navItemsForRole, canAccessPath } from './nav';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { Domains } from './components/Domains';
@@ -54,7 +56,7 @@ function DomainDetailPage() {
     return (
       <PageWithLayout>
         <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </PageWithLayout>
     );
@@ -105,8 +107,8 @@ function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
       return (
         <div className="p-8 text-center">
           <h2 className="text-xl font-bold mb-4">Management UI for {serviceId}</h2>
-          <p className="text-gray-400 mb-4">Coming soon...</p>
-          <button onClick={onBack} className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700">
+          <p className="text-fg-muted mb-4">Coming soon...</p>
+          <button onClick={onBack} className="px-4 py-2 bg-surface-2 rounded-lg hover:bg-surface-3">
             Go Back
           </button>
         </div>
@@ -148,7 +150,7 @@ function ServiceManagementPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -179,41 +181,36 @@ function ServicesPage() {
   );
 }
 
-// Main Layout with navigation
+// Main Layout with navigation. The active nav id and navigation targets
+// both come from the shared nav registry, and access is guarded by role.
+// Aktif nav kimliği ve navigasyon hedefleri paylaşılan nav kaydından gelir
+// ve erişim role göre korunur.
 function MainLayout({ children, currentPath }: { children: React.ReactNode; currentPath: string }) {
   const navigate = useNavigate();
+  const { role } = useAuth();
 
-  const getPageFromPath = (path: string) => {
-    if (path === '/') return 'dashboard';
-    if (path.startsWith('/domains')) return 'domains';
-    if (path.startsWith('/databases')) return 'databases';
-    if (path.startsWith('/services')) return 'services';
-    if (path.startsWith('/settings')) return 'settings';
-    return 'dashboard';
+  // Longest matching path wins so "/domains/x" resolves to the domains item.
+  // En uzun eşleşen yol kazanır; böylece "/domains/x" domains öğesine çözülür.
+  const activeId =
+    [...navItems]
+      .sort((a, b) => b.path.length - a.path.length)
+      .find((item) => (item.path === '/' ? currentPath === '/' : currentPath.startsWith(item.path)))?.id ?? 'dashboard';
+
+  const handlePageChange = (id: string) => {
+    const target = navItems.find((item) => item.id === id);
+    if (target) navigate(target.path);
   };
 
-  const handlePageChange = (page: string) => {
-    switch (page) {
-      case 'dashboard':
-        navigate('/');
-        break;
-      case 'domains':
-        navigate('/domains');
-        break;
-      case 'databases':
-        navigate('/databases');
-        break;
-      case 'services':
-        navigate('/services');
-        break;
-      case 'settings':
-        navigate('/settings');
-        break;
-    }
-  };
+  // A role that cannot see this section is bounced home. The API would
+  // reject the calls anyway; this keeps the UI honest.
+  // Bu bölümü göremeyen bir rol eve geri gönderilir. API zaten çağrıları
+  // reddederdi; bu, arayüzü dürüst tutar.
+  if (!canAccessPath(role, currentPath) && !navItemsForRole(role).some((i) => currentPath.startsWith(i.path) && i.path !== '/')) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
-    <Layout currentPage={getPageFromPath(currentPath)} onPageChange={handlePageChange}>
+    <Layout currentPage={activeId} onPageChange={handlePageChange}>
       {children}
     </Layout>
   );
@@ -287,8 +284,8 @@ function AuthGate() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -297,7 +294,11 @@ function AuthGate() {
     return <Login onSuccess={setUser} />;
   }
 
-  return <AppRoutes />;
+  return (
+    <AuthProvider user={user} onLogout={() => setUser(null)}>
+      <AppRoutes />
+    </AuthProvider>
+  );
 }
 
 function App() {

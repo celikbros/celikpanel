@@ -50,7 +50,9 @@ class API {
             body: JSON.stringify({ username, password }),
         });
         if (!res.ok) {
-            throw new Error(res.status === 401 ? 'invalid_credentials' : 'login_failed');
+            if (res.status === 401) throw new Error('invalid_credentials');
+            if (res.status === 429) throw new Error('too_many');
+            throw new Error('login_failed');
         }
         return res.json();
     }

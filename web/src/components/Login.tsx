@@ -1,114 +1,110 @@
 import { useState } from 'react';
+import { Server } from 'lucide-react';
 import { api, type CurrentUser } from '../lib/api';
+import { useI18n } from '../i18n';
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
-// Bilingual strings live here until the Phase 1 i18n system lands; this
-// small dictionary previews that pattern (see docs/CONVENTIONS.md).
-// İki dilli metinler, Faz 1 i18n sistemi gelene kadar burada; bu küçük
-// sözlük o deseni önizler (bkz. docs/CONVENTIONS.md).
-const strings = {
-  tr: {
-    subtitle: 'Kontrol Paneli',
-    username: 'Kullanıcı adı',
-    password: 'Parola',
-    signIn: 'Giriş yap',
-    signingIn: 'Giriş yapılıyor…',
-    invalid: 'Kullanıcı adı ya da parola hatalı.',
-    failed: 'Giriş başarısız. Lütfen tekrar deneyin.',
-  },
-  en: {
-    subtitle: 'Control Panel',
-    username: 'Username',
-    password: 'Password',
-    signIn: 'Sign in',
-    signingIn: 'Signing in…',
-    invalid: 'Invalid username or password.',
-    failed: 'Login failed. Please try again.',
-  },
-};
-
-type Lang = keyof typeof strings;
-
+// The front door. Theme- and language-aware, it uses the shared i18n and
+// theme systems so it looks like the rest of the panel from the first
+// screen the user ever sees.
+//
+// Ön kapı. Tema- ve dil-farkında; paylaşılan i18n ve tema sistemlerini
+// kullanır; böylece kullanıcının gördüğü ilk ekrandan itibaren panelin geri
+// kalanı gibi görünür.
 export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
-  const [lang, setLang] = useState<Lang>('tr');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+    const { t } = useI18n();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
-  const t = strings[lang];
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            const user = await api.login(username, password);
+            onSuccess(user);
+        } catch (err) {
+            const code = (err as Error).message;
+            setError(
+                code === 'invalid_credentials'
+                    ? t('login.invalid')
+                    : code === 'too_many'
+                      ? t('login.tooMany')
+                      : t('login.failed'),
+            );
+            setSubmitting(false);
+        }
+    };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const user = await api.login(username, password);
-      onSuccess(user);
-    } catch (err) {
-      setError((err as Error).message === 'invalid_credentials' ? t.invalid : t.failed);
-      setSubmitting(false);
-    }
-  };
+    return (
+        <div className="relative flex min-h-screen items-center justify-center bg-bg px-4 text-fg">
+            <div className="absolute right-4 top-4 flex items-center gap-2">
+                <LanguageSwitcher />
+                <ThemeSwitcher />
+            </div>
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-100 px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex justify-end mb-4">
-          <button
-            type="button"
-            onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
-            className="text-xs text-gray-400 hover:text-gray-200 border border-gray-700 rounded px-2 py-1"
-          >
-            {lang === 'tr' ? 'EN' : 'TR'}
-          </button>
+            <div className="w-full max-w-sm">
+                <div className="mb-8 flex flex-col items-center text-center">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-fg shadow-lg">
+                        <Server className="h-7 w-7" />
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-tight">{t('app.name')}</h1>
+                    <p className="mt-1 text-sm text-fg-muted">{t('login.subtitle')}</p>
+                </div>
+
+                <form
+                    onSubmit={handleSubmit}
+                    className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                >
+                    <div>
+                        <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-fg-muted">
+                            {t('login.username')}
+                        </label>
+                        <input
+                            id="username"
+                            type="text"
+                            autoFocus
+                            autoComplete="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-fg-muted">
+                            {t('login.password')}
+                        </label>
+                        <input
+                            id="password"
+                            type="password"
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                            required
+                        />
+                    </div>
+
+                    {error && (
+                        <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                            {error}
+                        </p>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full rounded-lg bg-primary px-3 py-2.5 font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {submitting ? t('login.signingIn') : t('login.signIn')}
+                    </button>
+                </form>
+            </div>
         </div>
-
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">CelikPanel</h1>
-          <p className="text-gray-400 mt-1">{t.subtitle}</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t.username}</label>
-            <input
-              type="text"
-              autoFocus
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t.password}</label>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg px-3 py-2 font-medium transition-colors"
-          >
-            {submitting ? t.signingIn : t.signIn}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    );
 }
