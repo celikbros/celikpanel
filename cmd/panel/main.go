@@ -32,7 +32,7 @@ func main() {
 	defer database.Close()
 
 	// Connect to Agent
-	client, err := rpc.Dial("tcp", "localhost:1977")
+	client, err := transport.ConnectAgent()
 	if err != nil {
 		log.Fatalf("Failed to connect to Agent: %v", err)
 	}

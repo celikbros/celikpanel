@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"net"
 	"net/rpc"
 	"os"
 	"strings"
@@ -164,13 +163,20 @@ func main() {
 
 	// Register RPC
 	rpc.Register(agent)
-	listener, err := net.Listen("tcp", ":1977")
+
+	token, err := transport.LoadOrCreateToken(transport.AgentTokenPath())
+	if err != nil {
+		log.Fatalf("Failed to load agent token: %v", err)
+	}
+
+	socketPath := transport.AgentSocketPath()
+	listener, err := transport.ListenAgent(socketPath)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 	defer listener.Close()
-	log.Println("Agent listening on :1977")
-	
+	log.Printf("Agent listening on unix socket %s", socketPath)
+
 	// Watcher Event Loop (for debugging)
 	go func() {
 		for event := range w.Events {
@@ -178,5 +184,11 @@ func main() {
 		}
 	}()
 
-	rpc.Accept(listener)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatalf("Accept failed: %v", err)
+		}
+		go transport.ServeAgentConn(rpc.DefaultServer, conn, token)
+	}
 }
