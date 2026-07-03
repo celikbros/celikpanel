@@ -1,0 +1,419 @@
+package main
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+)
+
+// BackupInfo represents a backup file
+type BackupInfo struct {
+	Name      string    `json:"name"`
+	Path      string    `json:"path"`
+	Size      int64     `json:"size"`
+	Type      string    `json:"type"` // "full", "files", "database"
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// BackupRequest for creating backups
+type BackupRequest struct {
+	DomainName   string `json:"domain_name"`
+	Type         string `json:"type"` // "full", "files", "database"
+	DatabaseName string `json:"database_name,omitempty"`
+	DatabaseType string `json:"database_type,omitempty"` // "mysql", "postgresql"
+}
+
+// BackupResponse contains backup result
+type BackupResponse struct {
+	Success  bool       `json:"success"`
+	Backup   BackupInfo `json:"backup,omitempty"`
+	Error    string     `json:"error,omitempty"`
+}
+
+// ListBackupsRequest for listing backups
+type ListBackupsRequest struct {
+	DomainName string `json:"domain_name"`
+}
+
+// ListBackupsResponse contains backup list
+type ListBackupsResponse struct {
+	Backups []BackupInfo `json:"backups"`
+}
+
+// RestoreRequest for restoring backups
+type RestoreRequest struct {
+	DomainName string `json:"domain_name"`
+	BackupName string `json:"backup_name"`
+}
+
+// DeleteBackupRequest for deleting a backup
+type DeleteBackupRequest struct {
+	DomainName string `json:"domain_name"`
+	BackupName string `json:"backup_name"`
+}
+
+const backupBaseDir = "/var/backups/celikpanel"
+
+// CreateBackup creates a backup of domain files or database
+func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
+	// Ensure backup directory exists
+	backupDir := filepath.Join(backupBaseDir, req.DomainName)
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		resp.Success = false
+		resp.Error = fmt.Sprintf("Failed to create backup directory: %v", err)
+		return nil
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	var backupPath string
+	var backupType string
+
+	switch req.Type {
+	case "files":
+		backupPath = filepath.Join(backupDir, fmt.Sprintf("files_%s.tar.gz", timestamp))
+		backupType = "files"
+		if err := a.createFilesBackup(req.DomainName, backupPath); err != nil {
+			resp.Success = false
+			resp.Error = fmt.Sprintf("Failed to create files backup: %v", err)
+			return nil
+		}
+
+	case "database":
+		if req.DatabaseName == "" {
+			resp.Success = false
+			resp.Error = "Database name is required"
+			return nil
+		}
+		backupPath = filepath.Join(backupDir, fmt.Sprintf("db_%s_%s.sql.gz", req.DatabaseName, timestamp))
+		backupType = "database"
+		if err := a.createDatabaseBackup(req.DatabaseName, req.DatabaseType, backupPath); err != nil {
+			resp.Success = false
+			resp.Error = fmt.Sprintf("Failed to create database backup: %v", err)
+			return nil
+		}
+
+	case "full":
+		backupPath = filepath.Join(backupDir, fmt.Sprintf("full_%s.tar.gz", timestamp))
+		backupType = "full"
+		if err := a.createFullBackup(req.DomainName, backupPath); err != nil {
+			resp.Success = false
+			resp.Error = fmt.Sprintf("Failed to create full backup: %v", err)
+			return nil
+		}
+
+	default:
+		resp.Success = false
+		resp.Error = "Invalid backup type"
+		return nil
+	}
+
+	// Get backup info
+	info, err := os.Stat(backupPath)
+	if err != nil {
+		resp.Success = false
+		resp.Error = fmt.Sprintf("Failed to get backup info: %v", err)
+		return nil
+	}
+
+	resp.Success = true
+	resp.Backup = BackupInfo{
+		Name:      filepath.Base(backupPath),
+		Path:      backupPath,
+		Size:      info.Size(),
+		Type:      backupType,
+		CreatedAt: time.Now(),
+	}
+
+	return nil
+}
+
+// createFilesBackup creates a tar.gz of domain files
+func (a *Agent) createFilesBackup(domainName, backupPath string) error {
+	sourceDir := filepath.Join("/var/www", domainName)
+	
+	// Check if source exists
+	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
+		return fmt.Errorf("domain directory not found: %s", sourceDir)
+	}
+
+	// Create backup file
+	file, err := os.Create(backupPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gzWriter := gzip.NewWriter(file)
+	defer gzWriter.Close()
+
+	tarWriter := tar.NewWriter(gzWriter)
+	defer tarWriter.Close()
+
+	// Walk directory and add files
+	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Create header
+		header, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+
+		// Update name to be relative
+		relPath, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return err
+		}
+		header.Name = relPath
+
+		// Write header
+		if err := tarWriter.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// If not a regular file, skip content
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+
+		// Copy file content
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(tarWriter, f)
+		return err
+	})
+}
+
+// createDatabaseBackup creates a database dump
+func (a *Agent) createDatabaseBackup(dbName, dbType, backupPath string) error {
+	var cmd *exec.Cmd
+
+	switch dbType {
+	case "mysql", "":
+		// mysqldump with compression
+		cmd = exec.Command("bash", "-c", 
+			fmt.Sprintf("mysqldump --single-transaction --routines --triggers %s | gzip > %s", dbName, backupPath))
+	case "postgresql":
+		cmd = exec.Command("bash", "-c",
+			fmt.Sprintf("pg_dump %s | gzip > %s", dbName, backupPath))
+	default:
+		return fmt.Errorf("unsupported database type: %s", dbType)
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("backup failed: %v, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// createFullBackup creates a backup of both files and databases
+func (a *Agent) createFullBackup(domainName, backupPath string) error {
+	// For now, just backup files (database would need to be specified separately)
+	return a.createFilesBackup(domainName, backupPath)
+}
+
+// ListBackups lists all backups for a domain
+func (a *Agent) ListBackups(req *ListBackupsRequest, resp *ListBackupsResponse) error {
+	backupDir := filepath.Join(backupBaseDir, req.DomainName)
+	
+	resp.Backups = make([]BackupInfo, 0)
+
+	// Check if backup directory exists
+	if _, err := os.Stat(backupDir); os.IsNotExist(err) {
+		return nil // No backups yet
+	}
+
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		// Determine backup type from filename
+		backupType := "unknown"
+		name := entry.Name()
+		if strings.HasPrefix(name, "files_") {
+			backupType = "files"
+		} else if strings.HasPrefix(name, "db_") {
+			backupType = "database"
+		} else if strings.HasPrefix(name, "full_") {
+			backupType = "full"
+		}
+
+		resp.Backups = append(resp.Backups, BackupInfo{
+			Name:      name,
+			Path:      filepath.Join(backupDir, name),
+			Size:      info.Size(),
+			Type:      backupType,
+			CreatedAt: info.ModTime(),
+		})
+	}
+
+	// Sort by date descending (newest first)
+	sort.Slice(resp.Backups, func(i, j int) bool {
+		return resp.Backups[i].CreatedAt.After(resp.Backups[j].CreatedAt)
+	})
+
+	return nil
+}
+
+// RestoreBackup restores a backup
+func (a *Agent) RestoreBackup(req *RestoreRequest, resp *BackupResponse) error {
+	backupPath := filepath.Join(backupBaseDir, req.DomainName, req.BackupName)
+
+	// Check if backup exists
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		resp.Success = false
+		resp.Error = "Backup not found"
+		return nil
+	}
+
+	// Determine backup type and restore
+	if strings.HasPrefix(req.BackupName, "files_") || strings.HasPrefix(req.BackupName, "full_") {
+		if err := a.restoreFilesBackup(req.DomainName, backupPath); err != nil {
+			resp.Success = false
+			resp.Error = fmt.Sprintf("Failed to restore: %v", err)
+			return nil
+		}
+	} else if strings.HasPrefix(req.BackupName, "db_") {
+		// Extract database name from backup filename (db_DBNAME_timestamp.sql.gz)
+		parts := strings.Split(strings.TrimPrefix(req.BackupName, "db_"), "_")
+		if len(parts) < 2 {
+			resp.Success = false
+			resp.Error = "Invalid database backup filename"
+			return nil
+		}
+		dbName := parts[0]
+		if err := a.restoreDatabaseBackup(dbName, backupPath); err != nil {
+			resp.Success = false
+			resp.Error = fmt.Sprintf("Failed to restore database: %v", err)
+			return nil
+		}
+	}
+
+	resp.Success = true
+	return nil
+}
+
+// restoreFilesBackup extracts a tar.gz backup
+func (a *Agent) restoreFilesBackup(domainName, backupPath string) error {
+	targetDir := filepath.Join("/var/www", domainName)
+
+	// Open backup file
+	file, err := os.Open(backupPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gzReader, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gzReader.Close()
+
+	tarReader := tar.NewReader(gzReader)
+
+	// Extract files
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		targetPath := filepath.Join(targetDir, header.Name)
+
+		// Security check
+		if !strings.HasPrefix(targetPath, targetDir) {
+			continue
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			// Ensure parent directory exists
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+				return err
+			}
+
+			outFile, err := os.Create(targetPath)
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(outFile, tarReader); err != nil {
+				outFile.Close()
+				return err
+			}
+			outFile.Close()
+
+			// Set permissions
+			if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// restoreDatabaseBackup restores a database from backup
+func (a *Agent) restoreDatabaseBackup(dbName, backupPath string) error {
+	// Decompress and restore
+	cmd := exec.Command("bash", "-c",
+		fmt.Sprintf("gunzip -c %s | mysql %s", backupPath, dbName))
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("restore failed: %v, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// DeleteBackup deletes a backup file
+func (a *Agent) DeleteBackup(req *DeleteBackupRequest, resp *bool) error {
+	backupPath := filepath.Join(backupBaseDir, req.DomainName, req.BackupName)
+
+	// Security check
+	if !strings.HasPrefix(backupPath, backupBaseDir) {
+		return os.ErrPermission
+	}
+
+	if err := os.Remove(backupPath); err != nil {
+		return err
+	}
+
+	*resp = true
+	return nil
+}

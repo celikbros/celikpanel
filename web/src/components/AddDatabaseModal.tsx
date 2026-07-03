@@ -1,0 +1,215 @@
+import { useState } from 'react';
+import { Database, X, RefreshCw } from 'lucide-react';
+import { showToast } from './Toast';
+
+interface AddDatabaseModalProps {
+    onClose: () => void;
+    onSuccess: () => void;
+}
+
+const API_BASE = '/api/v1';
+
+export function AddDatabaseModal({ onClose, onSuccess }: AddDatabaseModalProps) {
+    const [databaseName, setDatabaseName] = useState('');
+    const [databaseType, setDatabaseType] = useState('postgresql'); // Default to PostgreSQL
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const generatePassword = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 16; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        setPassword(password);
+        setShowPassword(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const res = await fetch(`${API_BASE}/databases/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    database_name: databaseName,
+                    database_type: databaseType,
+                    username: username,
+                    password: password || undefined,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                let errorMessage = 'Failed to create database';
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.error || errorData.message || errorText;
+                } catch {
+                    errorMessage = errorText || 'Failed to create database';
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await res.json();
+            showToast('success', `Database ${databaseName} created successfully!`);
+
+            // Show credentials
+            const credentials = `Database: ${data.database_name}\nUser: ${data.db_user}\nPassword: ${data.db_password}\nHost: ${data.host}:${data.port}`;
+            navigator.clipboard.writeText(credentials);
+            showToast('info', 'Credentials copied to clipboard!');
+
+            onSuccess();
+        } catch (err: any) {
+            setError(err.message);
+            showToast('error', err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 rounded-lg">
+                            <Database className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-100">Add Database</h2>
+                            <p className="text-sm text-gray-500">Create a new database (PostgreSQL or MariaDB)</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                        <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Database Name
+                        </label>
+                        <input
+                            type="text"
+                            value={databaseName}
+                            onChange={(e) => setDatabaseName(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:border-blue-500"
+                            placeholder="myapp_db"
+                            required
+                            maxLength={32}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Alphanumeric and underscore only (max 32 chars)</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Database Type
+                        </label>
+                        <select
+                            value={databaseType}
+                            onChange={(e) => setDatabaseType(e.target.value)}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:border-blue-500"
+                        >
+                            <option value="postgresql">PostgreSQL (Default)</option>
+                            <option value="mariadb">MariaDB</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {databaseType === 'postgresql' ? '🐘 Port 5432' : '🐬 Port 3306'}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Username
+                        </label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value.replace(/[^a-z0-9_]/gi, ''))}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:border-blue-500"
+                            placeholder="myapp_user"
+                            required
+                            maxLength={32}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Alphanumeric and underscore only (max 32 chars)</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Password
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:border-blue-500 font-mono"
+                                placeholder="Leave empty to auto-generate"
+                            />
+                            <button
+                                type="button"
+                                onClick={generatePassword}
+                                className="px-4 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 rounded-lg transition-colors flex items-center gap-2"
+                                title="Generate password"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                Generate
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <input
+                                type="checkbox"
+                                id="showPassword"
+                                checked={showPassword}
+                                onChange={(e) => setShowPassword(e.target.checked)}
+                            />
+                            <label htmlFor="showPassword" className="text-xs text-gray-500 cursor-pointer">
+                                Show password
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                        <p className="text-sm text-blue-400">
+                            💡 <strong>Tip:</strong> Credentials will be copied to clipboard after creation
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                        >
+                            {loading ? 'Creating...' : 'Create Database'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}

@@ -1,0 +1,182 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"os/exec"
+	"net"
+	"net/rpc"
+	"os"
+	"strings"
+	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/fs"
+	"github.com/alicelik/celikpanel/internal/parser"
+	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/systemd"
+	"github.com/alicelik/celikpanel/internal/transport"
+)
+
+type Agent struct {
+	watcher       *fs.Watcher
+	parser        *parser.NginxParser
+	systemdMgr    *systemd.Manager
+	nginxGen      *services.NginxGenerator
+	phpManager    *services.PHPFPMManager
+	userManager   *services.UserManager
+}
+
+// RPC Methods Implementation
+
+func (a *Agent) GetServices(args *transport.Empty, reply *[]core.Service) error {
+	services, err := a.systemdMgr.ListServices()
+	if err != nil {
+		return err
+	}
+	*reply = services
+	return nil
+}
+
+func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.ConfigResponse) error {
+	content, err := os.ReadFile(args.Path)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %v", err)
+	}
+	
+	reply.Content = string(content)
+	
+	// Try to parse if it's an Nginx file
+	if strings.Contains(args.Path, "nginx") {
+		parsed, _ := a.parser.Parse(string(content))
+		reply.Parsed = fmt.Sprintf("%v", parsed)
+	}
+	
+	return nil
+}
+
+func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) error {
+	log.Printf("Updating config %s", args.Path)
+	
+	// Security check: Ensure path is valid (basic check)
+	if !strings.HasPrefix(args.Path, "/etc/") && !strings.HasPrefix(args.Path, "/var/www/") {
+		return fmt.Errorf("access denied to path: %s", args.Path)
+	}
+
+	// Write to file
+	// 0644 is standard for config files
+	if err := os.WriteFile(args.Path, []byte(args.Content), 0644); err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+
+	// Reload service if needed
+	if strings.Contains(args.Path, "nginx") {
+		// Validate first
+		if err := exec.Command("nginx", "-t").Run(); err != nil {
+			// Revert? For now just return error
+			return fmt.Errorf("nginx config validation failed: %v", err)
+		}
+		a.systemdMgr.Reload("nginx")
+	}
+
+	*reply = true
+	return nil
+}
+
+func (a *Agent) ReloadService(args *transport.ServiceArgs, reply *bool) error {
+	log.Printf("Reloading service %s", args.ServiceName)
+	if err := a.systemdMgr.Reload(args.ServiceName); err != nil {
+		return err
+	}
+	*reply = true
+	return nil
+}
+
+func (a *Agent) StartService(args *transport.ServiceArgs, reply *bool) error {
+	log.Printf("Starting service %s", args.ServiceName)
+	if err := a.systemdMgr.Start(args.ServiceName); err != nil {
+		log.Printf("ERROR starting service %s: %v", args.ServiceName, err)
+		return err
+	}
+	log.Printf("Successfully started service %s", args.ServiceName)
+	*reply = true
+	return nil
+}
+
+func (a *Agent) StopService(args *transport.ServiceArgs, reply *bool) error {
+	log.Printf("Stopping service %s", args.ServiceName)
+	if err := a.systemdMgr.Stop(args.ServiceName); err != nil {
+		log.Printf("ERROR stopping service %s: %v", args.ServiceName, err)
+		return err
+	}
+	log.Printf("Successfully stopped service %s", args.ServiceName)
+	*reply = true
+	return nil
+}
+
+func (a *Agent) RestartService(args *transport.ServiceArgs, reply *bool) error {
+	log.Printf("Restarting service %s", args.ServiceName)
+	if err := a.systemdMgr.Restart(args.ServiceName); err != nil {
+		log.Printf("ERROR restarting service %s: %v", args.ServiceName, err)
+		return err
+	}
+	log.Printf("Successfully restarted service %s", args.ServiceName)
+	*reply = true
+	return nil
+}
+
+func main() {
+	log.Println("Starting CelikPanel Agent...")
+
+	// Initialize Watcher
+	w, err := fs.NewWatcher()
+	if err != nil {
+		log.Fatalf("Failed to create watcher: %v", err)
+	}
+	go w.Start()
+	defer w.Close()
+
+	// Initialize Systemd Manager
+	sysMgr := systemd.NewManager()
+
+	// Initialize Nginx Generator
+	nginxGen, err := services.NewNginxGenerator()
+	if err != nil {
+		log.Fatalf("Failed to create nginx generator: %v", err)
+	}
+
+	// Initialize PHP-FPM Manager
+	phpMgr, err := services.NewPHPFPMManager()
+	if err != nil {
+		log.Fatalf("Failed to create PHP-FPM manager: %v", err)
+	}
+
+	// Initialize User Manager
+	userMgr := services.NewUserManager()
+
+	// Initialize Agent
+	agent := &Agent{
+		watcher:     w,
+		parser:      parser.NewNginxParser(),
+		systemdMgr:  sysMgr,
+		nginxGen:    nginxGen,
+		phpManager:  phpMgr,
+		userManager: userMgr,
+	}
+
+	// Register RPC
+	rpc.Register(agent)
+	listener, err := net.Listen("tcp", ":1977")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	defer listener.Close()
+	log.Println("Agent listening on :1977")
+	
+	// Watcher Event Loop (for debugging)
+	go func() {
+		for event := range w.Events {
+			log.Printf("FS Event: %s", event)
+		}
+	}()
+
+	rpc.Accept(listener)
+}

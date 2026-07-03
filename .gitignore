@@ -1,0 +1,35 @@
+# Derlenmiş binary'ler ve gömülü araç zincirleri
+/bin/
+/.bin/
+
+# Çalışma zamanı verileri
+/data/
+*.log
+*.pid
+
+# TLS sertifikaları ve özel anahtarlar — ASLA commit edilmez
+/certs/
+
+# Frontend
+node_modules/
+web/dist/
+
+# Geçici / kalıntı dosyalar
+*.old
+*.bak
+*.backup
+__pycache__/
+
+# Migration sürecinden kalan tek seferlik yardımcılar
+/cmd/panel/fix_handlers.py
+/cmd/panel/fix_context.py
+/test_rpc.go
+/migrate_export.sh
+/migrate_import.sh
+
+# Makineye özel ayarlar
+.claude/settings.local.json
+
+# Ortam dosyaları
+.env
+.env.*
