@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Shield, CheckCircle, AlertTriangle, XCircle, Settings as SettingsIcon, Lock, Upload } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, XCircle, Lock, Upload, Trash2 } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import { FormSection, Field, FormActions, Button, inputClass } from './ui';
+import type { TranslationKey } from '../i18n/en';
 
 interface DomainSSLSettingsProps {
     domainId: number;
@@ -35,13 +38,12 @@ interface SSLData {
 }
 
 export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsProps) {
+    const { t } = useI18n();
     const [data, setData] = useState<SSLData | null>(null);
     const [loading, setLoading] = useState(true);
     const [issuing, setIssuing] = useState(false);
     const [email, setEmail] = useState('');
     const [autoRenew, setAutoRenew] = useState(true);
-
-    // Custom certificate states
     const [certSource, setCertSource] = useState<'letsencrypt' | 'custom'>('letsencrypt');
     const [certFile, setCertFile] = useState<File | null>(null);
     const [keyFile, setKeyFile] = useState<File | null>(null);
@@ -56,92 +58,54 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
         setLoading(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl`);
-            if (res.ok) {
-                const sslData = await res.json();
-                setData(sslData);
-            } else {
-                showToast('error', 'Failed to load SSL data');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to load SSL data');
+            if (!res.ok) throw new Error();
+            setData(await res.json());
+        } catch {
+            showToast('error', t('ssl.loadFailed'));
         } finally {
             setLoading(false);
         }
     };
 
-    const handleIssueLetsEncrypt = async () => {
-        if (!email) {
-            showToast('error', 'Please enter an email address');
-            return;
-        }
-
-        if (!confirm(`Issue Let's Encrypt certificate for ${domainName}?\n\nThis will:\n- Validate domain ownership\n- Issue a free SSL certificate\n- Configure HTTPS\n\nContinue?`)) {
-            return;
-        }
-
+    const handleIssue = async () => {
+        if (!email) return showToast('error', t('ssl.emailRequired'));
+        if (!confirm(t('ssl.issueConfirm', { name: domainName }))) return;
         setIssuing(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, auto_renew: autoRenew })
+                body: JSON.stringify({ email, auto_renew: autoRenew }),
             });
-
-            if (res.ok) {
-                showToast('success', 'SSL certificate issued successfully!');
-                loadSSLData();
-            } else {
-                const error = await res.text();
-                showToast('error', `Failed to issue certificate: ${error}`);
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to issue certificate');
+            if (!res.ok) throw new Error();
+            showToast('success', t('ssl.issued'));
+            loadSSLData();
+        } catch {
+            showToast('error', t('ssl.issueFailed'));
         } finally {
             setIssuing(false);
         }
     };
 
-    const handleUploadCertificate = async (e: React.FormEvent) => {
+    const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!certFile || !keyFile) {
-            showToast('error', 'Certificate and private key are required');
-            return;
-        }
-
-        if (!confirm(`Upload custom SSL certificate for ${domainName}?`)) {
-            return;
-        }
-
+        if (!certFile || !keyFile) return showToast('error', t('ssl.certKeyRequired'));
+        if (!confirm(t('ssl.uploadConfirm', { name: domainName }))) return;
         setUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('certificate', certFile);
-            formData.append('private_key', keyFile);
-            if (chainFile) {
-                formData.append('chain', chainFile);
-            }
-
-            const res = await fetch(`/api/v1/domains/${domainId}/ssl/upload`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (res.ok) {
-                showToast('success', 'SSL certificate installed successfully!');
-                setCertFile(null);
-                setKeyFile(null);
-                setChainFile(null);
-                loadSSLData();
-            } else {
-                const error = await res.text();
-                showToast('error', `Failed to upload certificate: ${error}`);
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to upload certificate');
+            const fd = new FormData();
+            fd.append('certificate', certFile);
+            fd.append('private_key', keyFile);
+            if (chainFile) fd.append('chain', chainFile);
+            const res = await fetch(`/api/v1/domains/${domainId}/ssl/upload`, { method: 'POST', body: fd });
+            if (!res.ok) throw new Error();
+            showToast('success', t('ssl.uploaded'));
+            setCertFile(null);
+            setKeyFile(null);
+            setChainFile(null);
+            loadSSLData();
+        } catch {
+            showToast('error', t('ssl.uploadFailed'));
         } finally {
             setUploading(false);
         }
@@ -149,315 +113,204 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
 
     const handleUpdateSettings = async (updates: Partial<SSLSettings>) => {
         if (!data) return;
-
-        const newSettings = { ...data.settings, ...updates };
-
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newSettings)
+                body: JSON.stringify({ ...data.settings, ...updates }),
             });
-
-            if (res.ok) {
-                showToast('success', 'SSL settings updated');
-                loadSSLData();
-            } else {
-                showToast('error', 'Failed to update settings');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to update settings');
+            if (!res.ok) throw new Error();
+            showToast('success', t('ssl.settingsSaved'));
+            loadSSLData();
+        } catch {
+            showToast('error', t('ssl.settingsFailed'));
         }
     };
 
-    const handleDeleteCertificate = async () => {
-        if (!confirm(`Remove SSL certificate from ${domainName}?\n\nThis will disable HTTPS for this domain.`)) {
-            return;
-        }
-
+    const handleDelete = async () => {
+        if (!confirm(t('ssl.confirmRemove', { name: domainName }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/ssl`, {
-                method: 'DELETE'
-            });
-
-            if (res.ok) {
-                showToast('success', 'SSL certificate removed');
-                loadSSLData();
-            } else {
-                showToast('error', 'Failed to remove certificate');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to remove certificate');
+            const res = await fetch(`/api/v1/domains/${domainId}/ssl`, { method: 'DELETE' });
+            if (!res.ok) throw new Error();
+            showToast('success', t('ssl.removed'));
+            loadSSLData();
+        } catch {
+            showToast('error', t('common.error'));
         }
-    };
-
-    const getCertificateStatusIcon = (cert?: SSLCertificate) => {
-        if (!cert) return <XCircle className="w-6 h-6 text-fg-subtle" />;
-        if (cert.days_until_expiry < 0) return <XCircle className="w-6 h-6 text-danger" />;
-        if (cert.days_until_expiry < 30) return <AlertTriangle className="w-6 h-6 text-warning" />;
-        return <CheckCircle className="w-6 h-6 text-success" />;
-    };
-
-    const getCertificateStatusText = (cert?: SSLCertificate) => {
-        if (!cert) return 'No Certificate';
-        if (cert.days_until_expiry < 0) return 'Expired';
-        if (cert.days_until_expiry < 30) return 'Expiring Soon';
-        return 'Valid';
     };
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
             </div>
         );
     }
+    if (!data) return <p className="text-danger">{t('ssl.loadFailed')}</p>;
 
-    if (!data) {
-        return <div className="text-danger">Failed to load SSL data</div>;
-    }
+    const cert = data.certificate;
+    // Status tier drives icon + color, echoing Plesk's date pills but tokened.
+    // Durum kademesi ikon+rengi belirler; Plesk'in tarih rozetlerini token'lı yansıtır.
+    const tier = !cert
+        ? { icon: XCircle, color: 'text-fg-subtle', label: 'ssl.status.none' as TranslationKey }
+        : cert.days_until_expiry < 0
+          ? { icon: XCircle, color: 'text-danger', label: 'ssl.status.expired' as TranslationKey }
+          : cert.days_until_expiry < 30
+            ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.expiring' as TranslationKey }
+            : { icon: CheckCircle, color: 'text-success', label: 'ssl.status.valid' as TranslationKey };
+    const TierIcon = tier.icon;
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-lg font-bold text-fg mb-2">SSL/TLS Certificate</h3>
-                <p className="text-sm text-fg-muted">
-                    Manage SSL certificates and HTTPS settings for {domainName}
-                </p>
-            </div>
-
-            {/* Certificate Status */}
-            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
-                <div className="flex items-start gap-4">
-                    <div className="mt-1">
-                        {getCertificateStatusIcon(data.certificate)}
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="text-md font-semibold text-fg mb-2">
-                            Certificate Status: {getCertificateStatusText(data.certificate)}
-                        </h4>
-
-                        {data.has_certificate && data.certificate ? (
-                            <div className="space-y-2">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-fg-muted">Type:</span>
-                                        <span className="ml-2 text-fg">{data.certificate.type === 'letsencrypt' ? "Let's Encrypt" : 'Custom'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-fg-muted">Issuer:</span>
-                                        <span className="ml-2 text-fg">{data.certificate.issuer}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-fg-muted">Expires:</span>
-                                        <span className="ml-2 text-fg">
-                                            {new Date(data.certificate.expires_at).toLocaleDateString()}
-                                            <span className={`ml-2 ${data.certificate.days_until_expiry < 30 ? 'text-warning' : 'text-success'}`}>
-                                                ({data.certificate.days_until_expiry} days)
+        <div>
+            {/* Certificate status */}
+            <FormSection title="SSL/TLS">
+                <div className="flex items-start gap-3">
+                    <TierIcon className={`mt-0.5 h-6 w-6 shrink-0 ${tier.color}`} />
+                    <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-fg">{t(tier.label)}</p>
+                        {data.has_certificate && cert ? (
+                            <>
+                                <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+                                    <Detail label={t('ssl.type')} value={cert.type === 'letsencrypt' ? "Let's Encrypt" : 'Custom'} />
+                                    <Detail label={t('ssl.issuer')} value={cert.issuer} />
+                                    <Detail
+                                        label={t('ssl.expires')}
+                                        value={
+                                            <span>
+                                                {new Date(cert.expires_at).toLocaleDateString()}{' '}
+                                                <span className={cert.days_until_expiry < 30 ? 'text-warning' : 'text-fg-subtle'}>
+                                                    ({t('ssl.days', { n: cert.days_until_expiry })})
+                                                </span>
                                             </span>
-                                        </span>
-                                    </div>
-                                    {data.certificate.type === 'letsencrypt' && (
-                                        <div>
-                                            <span className="text-fg-muted">Auto-renew:</span>
-                                            <span className="ml-2 text-fg">
-                                                {data.certificate.auto_renew ? '✅ Enabled' : '❌ Disabled'}
-                                            </span>
-                                        </div>
+                                        }
+                                    />
+                                    {cert.type === 'letsencrypt' && (
+                                        <Detail
+                                            label={t('ssl.autoRenew')}
+                                            value={
+                                                <span className={cert.auto_renew ? 'text-success' : 'text-fg-subtle'}>
+                                                    {cert.auto_renew ? t('domain.info.on') : t('domain.info.off')}
+                                                </span>
+                                            }
+                                        />
                                     )}
+                                </dl>
+                                <div className="mt-3">
+                                    <Button variant="danger" icon={Trash2} onClick={handleDelete}>
+                                        {t('ssl.remove')}
+                                    </Button>
                                 </div>
-                                <button
-                                    onClick={handleDeleteCertificate}
-                                    className="mt-4 px-4 py-2 bg-danger text-white rounded hover:bg-danger text-sm"
-                                >
-                                    Remove Certificate
-                                </button>
-                            </div>
+                            </>
                         ) : (
-                            <p className="text-sm text-fg-muted">
-                                No SSL certificate installed. Issue a free Let's Encrypt certificate or upload your own.
-                            </p>
+                            <p className="mt-1 text-sm text-fg-muted">{t('ssl.noCert')}</p>
                         )}
                     </div>
                 </div>
-            </div>
+            </FormSection>
 
-            {/* Let's Encrypt Section */}
+            {/* Issue / upload (only when no cert) */}
             {!data.has_certificate && (
-                <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
-                    {/* Tab Selection */}
-                    <div className="flex border-b border-border mb-6">
-                        <button
-                            onClick={() => setCertSource('letsencrypt')}
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${certSource === 'letsencrypt'
-                                ? 'text-primary border-b-2 border-primary'
-                                : 'text-fg-muted hover:text-fg-muted'
-                                }`}
-                        >
-                            <div className="flex items-center gap-2">
-                                <Shield className="w-4 h-4" />
-                                Let's Encrypt (Ücretsiz)
-                            </div>
-                        </button>
-                        <button
-                            onClick={() => setCertSource('custom')}
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${certSource === 'custom'
-                                ? 'text-primary border-b-2 border-primary'
-                                : 'text-fg-muted hover:text-fg-muted'
-                                }`}
-                        >
-                            <div className="flex items-center gap-2">
-                                <Upload className="w-4 h-4" />
-                                Custom Certificate
-                            </div>
-                        </button>
+                <FormSection title={t('domain.sub.ssl')}>
+                    <div className="mb-4 flex gap-1 border-b border-border">
+                        <TabBtn active={certSource === 'letsencrypt'} onClick={() => setCertSource('letsencrypt')} icon={Shield} label={t('ssl.tab.letsencrypt')} />
+                        <TabBtn active={certSource === 'custom'} onClick={() => setCertSource('custom')} icon={Upload} label={t('ssl.tab.custom')} />
                     </div>
 
-                    {/* Let's Encrypt Form */}
-                    {certSource === 'letsencrypt' && (
-                        <>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Shield className="w-5 h-5 text-success" />
-                                <h4 className="text-md font-semibold text-fg">Let's Encrypt Certificate</h4>
-                            </div>
-                            <p className="text-sm text-fg-muted mb-4">
-                                Ücretsiz SSL sertifikası alın. Otomatik yenileme ile 90 günlük sertifika.
-                            </p>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm text-fg-muted mb-2">Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="admin@example.com"
-                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
-                                    />
-                                    <p className="text-xs text-fg-subtle mt-1">
-                                        Yenileme bildirimleri ve hesap kurtarma için kullanılır
-                                    </p>
-                                </div>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={autoRenew}
-                                        onChange={(e) => setAutoRenew(e.target.checked)}
-                                        className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
-                                    />
-                                    <span className="text-sm text-fg">Otomatik yenileme aktif</span>
-                                </label>
-                                <button
-                                    onClick={handleIssueLetsEncrypt}
-                                    disabled={issuing || !email}
-                                    className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    <Lock className="w-4 h-4" />
-                                    {issuing ? 'Sertifika alınıyor...' : 'Sertifika Al'}
-                                </button>
-                            </div>
-                        </>
+                    {certSource === 'letsencrypt' ? (
+                        <div className="space-y-3">
+                            <p className="text-sm text-fg-muted">{t('ssl.letsencryptDesc')}</p>
+                            <Field label={t('ssl.email')} hint={t('ssl.emailHint')}>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="admin@example.com"
+                                    className={inputClass}
+                                />
+                            </Field>
+                            <label className="flex cursor-pointer items-center gap-2">
+                                <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 accent-primary" />
+                                <span className="text-sm text-fg">{t('ssl.autoRenewOn')}</span>
+                            </label>
+                            <Button variant="primary" icon={Lock} onClick={handleIssue} disabled={issuing || !email}>
+                                {issuing ? t('ssl.issuing') : t('ssl.issue')}
+                            </Button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleUpload} className="space-y-3">
+                            <p className="text-sm text-fg-muted">{t('ssl.customDesc')}</p>
+                            <Field label={`${t('ssl.cert')} *`}>
+                                <input type="file" accept=".pem,.crt,.cer" onChange={(e) => setCertFile(e.target.files?.[0] || null)} className={fileClass} />
+                            </Field>
+                            <Field label={`${t('ssl.key')} *`}>
+                                <input type="file" accept=".pem,.key" onChange={(e) => setKeyFile(e.target.files?.[0] || null)} className={fileClass} />
+                            </Field>
+                            <Field label={t('ssl.chain')} hint={t('ssl.chainHint')}>
+                                <input type="file" accept=".pem,.crt,.cer" onChange={(e) => setChainFile(e.target.files?.[0] || null)} className={fileClass} />
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" variant="primary" icon={Upload} disabled={uploading || !certFile || !keyFile}>
+                                    {uploading ? t('ssl.uploading') : t('ssl.upload')}
+                                </Button>
+                            </FormActions>
+                        </form>
                     )}
-
-                    {/* Custom Certificate Form */}
-                    {certSource === 'custom' && (
-                        <>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Upload className="w-5 h-5 text-primary" />
-                                <h4 className="text-md font-semibold text-fg">Custom Certificate Upload</h4>
-                            </div>
-                            <p className="text-sm text-fg-muted mb-4">
-                                Başka bir sağlayıcıdan (Comodo, DigiCert, vb.) aldığınız sertifikayı yükleyin.
-                            </p>
-                            <form onSubmit={handleUploadCertificate} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm text-fg-muted mb-2">
-                                        Certificate (PEM format) <span className="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept=".pem,.crt,.cer"
-                                        onChange={(e) => setCertFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white file:cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-fg-muted mb-2">
-                                        Private Key (PEM format) <span className="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept=".pem,.key"
-                                        onChange={(e) => setKeyFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-white file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white file:cursor-pointer"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-fg-muted mb-2">
-                                        CA Bundle / Chain (opsiyonel)
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept=".pem,.crt,.cer"
-                                        onChange={(e) => setChainFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-surface border border-border rounded px-4 py-2 text-fg file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:bg-surface-3 file:text-fg file:cursor-pointer"
-                                    />
-                                    <p className="text-xs text-fg-subtle mt-1">
-                                        Intermediate sertifikaları içerir
-                                    </p>
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={uploading || !certFile || !keyFile}
-                                    className="px-6 py-2 bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    <Upload className="w-4 h-4" />
-                                    {uploading ? 'Yükleniyor...' : 'Sertifika Yükle'}
-                                </button>
-                            </form>
-                        </>
-                    )}
-                </div>
+                </FormSection>
             )}
 
-            {/* SSL Settings */}
-            <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
-                <div className="flex items-center gap-2 mb-4">
-                    <SettingsIcon className="w-5 h-5 text-primary" />
-                    <h4 className="text-md font-semibold text-fg">HTTPS Settings</h4>
-                </div>
-                <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={data.settings.force_https}
-                            onChange={(e) => handleUpdateSettings({ force_https: e.target.checked })}
-                            className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
-                        />
-                        <div>
-                            <div className="text-fg text-sm">Force HTTPS</div>
-                            <div className="text-xs text-fg-muted">
-                                Redirect all HTTP requests to HTTPS
-                            </div>
-                        </div>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={data.settings.hsts_enabled}
-                            onChange={(e) => handleUpdateSettings({ hsts_enabled: e.target.checked })}
-                            className="w-4 h-4 bg-surface border-border rounded focus:ring-primary"
-                        />
-                        <div>
-                            <div className="text-fg text-sm">Enable HSTS</div>
-                            <div className="text-xs text-fg-muted">
-                                HTTP Strict Transport Security (recommended)
-                            </div>
-                        </div>
-                    </label>
-                </div>
-            </div>
+            {/* HTTPS settings */}
+            <FormSection title={t('ssl.httpsSettings')}>
+                <ControlledToggle
+                    checked={data.settings.force_https}
+                    onChange={(v) => handleUpdateSettings({ force_https: v })}
+                    label={t('ssl.forceHttps')}
+                    hint={t('ssl.forceHttpsHint')}
+                />
+                <ControlledToggle
+                    checked={data.settings.hsts_enabled}
+                    onChange={(v) => handleUpdateSettings({ hsts_enabled: v })}
+                    label={t('ssl.hsts')}
+                    hint={t('ssl.hstsHint')}
+                />
+            </FormSection>
         </div>
+    );
+}
+
+const fileClass =
+    'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-fg hover:file:bg-surface-3';
+
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div className="flex gap-2">
+            <dt className="text-fg-subtle">{label}:</dt>
+            <dd className="font-medium text-fg">{value}</dd>
+        </div>
+    );
+}
+
+function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Shield; label: string }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                active ? 'border-primary text-primary' : 'border-transparent text-fg-muted hover:text-fg'
+            }`}
+        >
+            <Icon className="h-4 w-4" />
+            {label}
+        </button>
+    );
+}
+
+function ControlledToggle({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string }) {
+    return (
+        <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-primary" />
+            <span>
+                <span className="block text-sm text-fg">{label}</span>
+                {hint && <span className="block text-xs text-fg-subtle">{hint}</span>}
+            </span>
+        </label>
     );
 }
