@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import {
-    Mail, Plus, Trash2, ArrowRight, AlertCircle
-} from 'lucide-react';
+import { Mail, Plus, Trash2, ArrowRight, AtSign } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import { Button, EmptyState, inputClass } from './ui';
 
 interface EmailAccount {
     id: number;
@@ -24,26 +24,22 @@ interface DomainMailManagerProps {
 }
 
 export function DomainMailManager({ domainId, domainName }: DomainMailManagerProps) {
+    const { t } = useI18n();
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
     const [forwardings, setForwardings] = useState<Forwarding[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding'>('accounts');
+    const [showForm, setShowForm] = useState(false);
 
-    // Forms
-    const [showAddAccount, setShowAddAccount] = useState(false);
-    const [showAddForwarding, setShowAddForwarding] = useState(false);
-
-    // Account Form
-    const [newAccountUser, setNewAccountUser] = useState('');
-    const [newAccountPass, setNewAccountPass] = useState('');
-    const [newAccountQuota, setNewAccountQuota] = useState(1024);
-
-    // Forwarding Form
+    const [user, setUser] = useState('');
+    const [pass, setPass] = useState('');
+    const [quota, setQuota] = useState(1024);
     const [fwdSource, setFwdSource] = useState('');
     const [fwdDest, setFwdDest] = useState('');
 
     useEffect(() => {
         loadData();
+        setShowForm(false);
     }, [domainId, activeTab]);
 
     const loadData = async () => {
@@ -51,357 +47,231 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
         try {
             if (activeTab === 'accounts') {
                 const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setAccounts(data.accounts || []);
-                }
+                if (res.ok) setAccounts((await res.json()).accounts || []);
             } else {
                 const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setForwardings(data.forwardings || []);
-                }
+                if (res.ok) setForwardings((await res.json()).forwardings || []);
             }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to load mail data');
+        } catch {
+            showToast('error', t('mail.loadFailed'));
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading && accounts.length === 0 && forwardings.length === 0) {
-        return <div className="p-8 text-center text-fg-muted">Loading mail configuration...</div>;
-    }
-
     const createAccount = async () => {
-        if (!newAccountUser || !newAccountPass) return;
-
+        if (!user || !pass) return;
         try {
-            const fullAddress = `${newAccountUser}@${domainName}`;
             const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    address: fullAddress,
-                    password: newAccountPass,
-                    quota_mb: newAccountQuota
-                })
+                body: JSON.stringify({ address: `${user}@${domainName}`, password: pass, quota_mb: quota }),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Email account created');
-                setShowAddAccount(false);
-                setNewAccountUser('');
-                setNewAccountPass('');
-                loadData();
-            } else {
-                showToast('error', data.error || 'Failed to create account');
-            }
-        } catch (err) {
-            showToast('error', 'Failed to create account');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', t('mail.accountCreated'));
+            setShowForm(false);
+            setUser('');
+            setPass('');
+            loadData();
+        } catch {
+            showToast('error', t('mail.createFailed'));
         }
     };
 
-    const deleteAccount = async (id: number) => {
-        if (!confirm('Delete this email account?')) return;
-
+    const deleteAccount = async (id: number, address: string) => {
+        if (!confirm(t('mail.confirmDeleteAccount', { name: address }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts?id=${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                showToast('success', 'Account deleted');
-                loadData();
-            }
-        } catch (err) {
-            showToast('error', 'Failed to delete account');
+            const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error();
+            showToast('success', t('mail.accountDeleted'));
+            loadData();
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
     const createForwarding = async () => {
         if (!fwdSource || !fwdDest) return;
-
         try {
-            // Auto append domain if missing
             const source = fwdSource.includes('@') ? fwdSource : `${fwdSource}@${domainName}`;
-
             const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    source: source,
-                    destination: fwdDest
-                })
+                body: JSON.stringify({ source, destination: fwdDest }),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Forwarder created');
-                setShowAddForwarding(false);
-                setFwdSource('');
-                setFwdDest('');
-                loadData();
-            } else {
-                showToast('error', data.error || 'Failed to create forwarder');
-            }
-        } catch (err) {
-            showToast('error', 'Failed to create forwarder');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', t('mail.forwarderCreated'));
+            setShowForm(false);
+            setFwdSource('');
+            setFwdDest('');
+            loadData();
+        } catch {
+            showToast('error', t('mail.forwarderFailed'));
         }
     };
 
-    const deleteForwarding = async (id: number) => {
-        if (!confirm('Delete this fowarder?')) return;
-
+    const deleteForwarding = async (id: number, source: string) => {
+        if (!confirm(t('mail.confirmDeleteForwarder', { name: source }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings?id=${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                showToast('success', 'Forwarder deleted');
-                loadData();
-            }
-        } catch (err) {
-            showToast('error', 'Failed to delete forwarder');
+            const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error();
+            showToast('success', t('mail.forwarderDeleted'));
+            loadData();
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
+
+    const count = activeTab === 'accounts' ? accounts.length : forwardings.length;
 
     return (
-        <div className="space-y-6">
-            {/* Tabs */}
-            <div className="flex gap-4 border-b border-border">
-                <button
-                    onClick={() => setActiveTab('accounts')}
-                    className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'accounts'
-                        ? 'text-primary border-b-2 border-primary'
-                        : 'text-fg-muted hover:text-fg'
-                        }`}
-                >
-                    Email Accounts
-                </button>
-                <button
-                    onClick={() => setActiveTab('forwarding')}
-                    className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'forwarding'
-                        ? 'text-primary border-b-2 border-primary'
-                        : 'text-fg-muted hover:text-fg'
-                        }`}
-                >
-                    Forwarding
-                </button>
+        <div>
+            <div className="mb-4 flex items-center gap-1 border-b border-border">
+                <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={accounts.length} />
+                <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={forwardings.length} />
             </div>
 
-            {/* Content */}
-            {activeTab === 'accounts' ? (
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-fg">Email Accounts</h3>
-                        <button
-                            onClick={() => setShowAddAccount(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Create Account
-                        </button>
-                    </div>
+            <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: count })}</span>
+                <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
+                    {activeTab === 'accounts' ? t('mail.addAccount') : t('mail.addForwarder')}
+                </Button>
+            </div>
 
-                    {showAddAccount && (
-                        <div className="bg-surface-2/50 border border-border rounded-lg p-4 mb-4">
-                            <h4 className="text-fg font-medium mb-3">New Email Account</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                                <div>
-                                    <label className="text-xs text-fg-muted block mb-1">Username</label>
-                                    <div className="flex">
-                                        <input
-                                            type="text"
-                                            value={newAccountUser}
-                                            onChange={e => setNewAccountUser(e.target.value)}
-                                            className="w-full px-3 py-2 bg-surface border border-border-strong rounded-l text-fg text-sm"
-                                            placeholder="info"
-                                        />
-                                        <span className="px-3 py-2 bg-surface-3 border border-border-strong border-l-0 rounded-r text-fg-muted text-sm">
-                                            @{domainName}
-                                        </span>
-                                    </div>
+            {showForm && (
+                <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
+                    {activeTab === 'accounts' ? (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <label>
+                                <span className="mb-1 block text-xs text-fg-muted">{t('mail.username')}</span>
+                                <div className="flex items-center rounded-lg border border-border bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
+                                    <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="info" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-fg outline-none" />
+                                    <span className="whitespace-nowrap px-2 text-sm text-fg-subtle">@{domainName}</span>
                                 </div>
-                                <div>
-                                    <label className="text-xs text-fg-muted block mb-1">Password</label>
-                                    <input
-                                        type="password"
-                                        value={newAccountPass}
-                                        onChange={e => setNewAccountPass(e.target.value)}
-                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-fg-muted block mb-1">Quota (MB)</label>
-                                    <input
-                                        type="number"
-                                        value={newAccountQuota}
-                                        onChange={e => setNewAccountQuota(parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    onClick={() => setShowAddAccount(false)}
-                                    className="px-3 py-1.5 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={createAccount}
-                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
-                                >
-                                    Create
-                                </button>
-                            </div>
+                            </label>
+                            <label>
+                                <span className="mb-1 block text-xs text-fg-muted">{t('mail.password')}</span>
+                                <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••••" className={inputClass} />
+                            </label>
+                            <label>
+                                <span className="mb-1 block text-xs text-fg-muted">{t('mail.quota')}</span>
+                                <input type="number" value={quota} onChange={(e) => setQuota(parseInt(e.target.value))} className={inputClass} />
+                            </label>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label>
+                                <span className="mb-1 block text-xs text-fg-muted">{t('mail.source')}</span>
+                                <input value={fwdSource} onChange={(e) => setFwdSource(e.target.value)} placeholder={`info@${domainName}`} className={inputClass} />
+                            </label>
+                            <label>
+                                <span className="mb-1 block text-xs text-fg-muted">{t('mail.destination')}</span>
+                                <input value={fwdDest} onChange={(e) => setFwdDest(e.target.value)} placeholder="personal@gmail.com" className={inputClass} />
+                            </label>
                         </div>
                     )}
-
-                    <div className="bg-surface-2/50 border border-border rounded-lg overflow-hidden">
-                        {accounts.length === 0 ? (
-                            <div className="p-8 text-center text-fg-subtle">
-                                <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p>No email accounts found</p>
-                            </div>
-                        ) : (
-                            <table className="w-full text-left text-sm text-fg-muted">
-                                <thead className="bg-surface/50 uppercase text-xs font-semibold">
-                                    <tr>
-                                        <th className="px-4 py-3">Address</th>
-                                        <th className="px-4 py-3">Quota</th>
-                                        <th className="px-4 py-3">Created</th>
-                                        <th className="px-4 py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {accounts.map(acc => (
-                                        <tr key={acc.id} className="hover:bg-surface-3/30">
-                                            <td className="px-4 py-3 text-fg font-medium">{acc.address}</td>
-                                            <td className="px-4 py-3">{acc.quota_mb} MB</td>
-                                            <td className="px-4 py-3">{new Date(acc.created_at).toLocaleDateString()}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => deleteAccount(acc.id)}
-                                                    className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-fg">Email Forwarding</h3>
-                        <button
-                            onClick={() => setShowAddForwarding(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Add Forwarder
-                        </button>
-                    </div>
-
-                    {showAddForwarding && (
-                        <div className="bg-surface-2/50 border border-border rounded-lg p-4 mb-4">
-                            <h4 className="text-fg font-medium mb-3">New Forwarder</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                <div>
-                                    <label className="text-xs text-fg-muted block mb-1">Source Email</label>
-                                    <input
-                                        type="text"
-                                        value={fwdSource}
-                                        onChange={e => setFwdSource(e.target.value)}
-                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
-                                        placeholder={`info@${domainName}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-fg-muted block mb-1">Destination Email</label>
-                                    <input
-                                        type="email"
-                                        value={fwdDest}
-                                        onChange={e => setFwdDest(e.target.value)}
-                                        className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
-                                        placeholder="personal@gmail.com"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    onClick={() => setShowAddForwarding(false)}
-                                    className="px-3 py-1.5 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={createForwarding}
-                                    className="px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
-                                >
-                                    Add
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="bg-surface-2/50 border border-border rounded-lg overflow-hidden">
-                        {forwardings.length === 0 ? (
-                            <div className="p-8 text-center text-fg-subtle">
-                                <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p>No forwarders found</p>
-                            </div>
-                        ) : (
-                            <table className="w-full text-left text-sm text-fg-muted">
-                                <thead className="bg-surface/50 uppercase text-xs font-semibold">
-                                    <tr>
-                                        <th className="px-4 py-3">Source</th>
-                                        <th className="px-4 py-3">Destination</th>
-                                        <th className="px-4 py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {forwardings.map(fwd => (
-                                        <tr key={fwd.id} className="hover:bg-surface-3/30">
-                                            <td className="px-4 py-3 text-fg font-medium">{fwd.source}</td>
-                                            <td className="px-4 py-3">{fwd.destination}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => deleteForwarding(fwd.id)}
-                                                    className="p-1 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
+                    <div className="mt-3 flex justify-end gap-2">
+                        <Button variant="secondary" onClick={() => setShowForm(false)}>
+                            {t('mail.cancel')}
+                        </Button>
+                        <Button variant="primary" icon={Plus} onClick={activeTab === 'accounts' ? createAccount : createForwarding}>
+                            {t('mail.create')}
+                        </Button>
                     </div>
                 </div>
             )}
 
-            {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-fg-muted">
-                    <p className="font-medium text-primary">Mail Configuration</p>
-                    <p className="mt-1">
-                        IMAP/SMTP Server: <code className="text-primary">mail.{domainName}</code> (or server IP)<br />
-                        Username: Full email address<br />
-                        Ports: IMAP 143/993, SMTP 25/465/587
-                    </p>
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
-            </div>
+            ) : activeTab === 'accounts' ? (
+                accounts.length === 0 ? (
+                    <EmptyState icon={Mail} title={t('mail.emptyAccounts')} />
+                ) : (
+                    <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                    <th className="px-4 py-2.5">{t('mail.col.address')}</th>
+                                    <th className="px-4 py-2.5">{t('mail.col.quota')}</th>
+                                    <th className="px-4 py-2.5" />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {accounts.map((a) => (
+                                    <tr key={a.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                        <td className="px-4 py-2.5">
+                                            <span className="flex items-center gap-2 font-medium text-fg">
+                                                <AtSign className="h-4 w-4 text-fg-subtle" />
+                                                {a.address}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-fg-muted">{a.quota_mb} MB</td>
+                                        <td className="px-4 py-2.5 text-right">
+                                            <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )
+            ) : forwardings.length === 0 ? (
+                <EmptyState icon={ArrowRight} title={t('mail.emptyForwarders')} />
+            ) : (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                <th className="px-4 py-2.5">{t('mail.source')}</th>
+                                <th className="px-4 py-2.5">{t('mail.col.forwardsTo')}</th>
+                                <th className="px-4 py-2.5" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {forwardings.map((f) => (
+                                <tr key={f.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                    <td className="px-4 py-2.5 font-medium text-fg">{f.source}</td>
+                                    <td className="px-4 py-2.5">
+                                        <span className="flex items-center gap-2 text-fg-muted">
+                                            <ArrowRight className="h-4 w-4 text-fg-subtle" />
+                                            {f.destination}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-2.5 text-right">
+                                        <DeleteBtn onClick={() => deleteForwarding(f.id, f.source)} />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
+    );
+}
+
+function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                active ? 'border-primary text-primary' : 'border-transparent text-fg-muted hover:text-fg'
+            }`}
+        >
+            {label}
+            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+        </button>
+    );
+}
+
+function DeleteBtn({ onClick }: { onClick: () => void }) {
+    return (
+        <button onClick={onClick} className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger">
+            <Trash2 className="h-4 w-4" />
+        </button>
     );
 }
