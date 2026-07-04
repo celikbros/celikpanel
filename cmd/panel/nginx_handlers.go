@@ -5,80 +5,67 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// handleNginxGlobalConfig handles GET and POST requests for Nginx global config
+// nginxInspect fetches the real, agent-parsed nginx configuration.
+// nginxInspect, agent'ın ayrıştırdığı gerçek nginx yapılandırmasını getirir.
+func (p *Panel) nginxInspect() (*core.NginxInspectResult, error) {
+	var result core.NginxInspectResult
+	if err := p.agentClient.Call("Agent.NginxInspect", &transport.Empty{}, &result); err != nil {
+		return nil, err
+	}
+	if result.RateLimits == nil {
+		result.RateLimits = []core.NginxRateLimit{}
+	}
+	return &result, nil
+}
+
+// handleNginxGlobalConfig serves the real global directives from `nginx -T`.
+// Editing is not implemented yet, so POST is honest about that.
+// handleNginxGlobalConfig, `nginx -T`'den gerçek global direktifleri sunar.
+// Düzenleme henüz yapılmadı; POST bunu dürüstçe söyler.
 func (p *Panel) handleNginxGlobalConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data - would parse /etc/nginx/nginx.conf
-		config := core.NginxGlobalConfig{
-			WorkerProcesses:     "auto",
-			WorkerConnections:   "1024",
-			KeepaliveTimeout:    "65",
-			ClientMaxBodySize:   "64m",
-			ServerTokens:        "off",
-			Gzip:                "on",
-		}
-		json.NewEncoder(w).Encode(config)
+	if r.Method == http.MethodPost {
+		writeClientError(w, http.StatusNotImplemented, "editing nginx config is not supported yet")
 		return
 	}
-
-	if r.Method == "POST" {
-		var req core.NginxGlobalConfigRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-
-		// Call agent to update nginx.conf
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Nginx configuration saved"})
+	result, err := p.nginxInspect()
+	if err != nil {
+		writeServerError(w, err)
+		return
 	}
+	json.NewEncoder(w).Encode(result.Global)
 }
 
-// handleNginxSSLConfig handles GET and POST requests for Nginx SSL config
+// handleNginxSSLConfig serves the real SSL directives from `nginx -T`.
+// handleNginxSSLConfig, `nginx -T`'den gerçek SSL direktiflerini sunar.
 func (p *Panel) handleNginxSSLConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data
-		config := core.NginxSSLConfig{
-			SSLProtocols:           "TLSv1.2 TLSv1.3",
-			SSLCiphers:             "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
-			SSLPreferServerCiphers: "off",
-		}
-		json.NewEncoder(w).Encode(config)
+	if r.Method == http.MethodPost {
+		writeClientError(w, http.StatusNotImplemented, "editing nginx config is not supported yet")
 		return
 	}
-
-	if r.Method == "POST" {
-		var req core.NginxSSLConfigRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-
-		// Call agent to update ssl settings
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "SSL configuration saved"})
+	result, err := p.nginxInspect()
+	if err != nil {
+		writeServerError(w, err)
+		return
 	}
+	json.NewEncoder(w).Encode(result.SSL)
 }
 
-// handleNginxRateLimits handles GET requests for rate limits
+// handleNginxRateLimits serves the real rate-limit zones from `nginx -T`.
+// handleNginxRateLimits, `nginx -T`'den gerçek rate-limit bölgelerini sunar.
 func (p *Panel) handleNginxRateLimits(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data
-		limits := []core.NginxRateLimit{
-			{Name: "limit_req_zone", Zone: "$binary_remote_addr", Size: "10m", Rate: "10r/s"},
-			{Name: "limit_conn_zone", Zone: "$binary_remote_addr", Size: "10m", Rate: ""},
-		}
-		json.NewEncoder(w).Encode(limits)
+	result, err := p.nginxInspect()
+	if err != nil {
+		writeServerError(w, err)
 		return
 	}
+	json.NewEncoder(w).Encode(result.RateLimits)
 }

@@ -34,3 +34,14 @@ type NginxGlobalConfigRequest struct {
 type NginxSSLConfigRequest struct {
 	Config NginxSSLConfig `json:"config"`
 }
+
+// NginxInspectResult is the real, agent-sourced nginx configuration read
+// from `nginx -T`. Installed is false when nginx is absent.
+// NginxInspectResult, agent'ın `nginx -T` ile okuduğu gerçek nginx
+// yapılandırmasıdır. nginx yoksa Installed false olur.
+type NginxInspectResult struct {
+	Installed  bool             `json:"installed"`
+	Global     NginxGlobalConfig `json:"global"`
+	SSL        NginxSSLConfig    `json:"ssl"`
+	RateLimits []NginxRateLimit  `json:"rate_limits"`
+}

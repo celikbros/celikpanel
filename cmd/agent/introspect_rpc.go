@@ -284,6 +284,89 @@ func (a *Agent) Fail2banConfig(args *transport.Empty, resp *core.Fail2banConfig)
 	return nil
 }
 
+// NginxInspect reads the real, effective nginx configuration via `nginx -T`
+// (which dumps every included file). Directives that aren't set stay empty
+// rather than being filled with plausible defaults.
+//
+// NginxInspect, gerçek, etkin nginx yapılandırmasını `nginx -T` ile okur
+// (dahil edilen her dosyayı döker). Ayarlanmamış direktifler makul
+// varsayılanlarla doldurulmak yerine boş kalır.
+func (a *Agent) NginxInspect(args *transport.Empty, resp *core.NginxInspectResult) error {
+	resp.RateLimits = []core.NginxRateLimit{}
+	// `nginx -T` prints config to stdout; needs root (the agent has it).
+	// `nginx -T` config'i stdout'a yazar; root ister (agent'ta var).
+	out, err := exec.Command("nginx", "-T").CombinedOutput()
+	if err != nil {
+		resp.Installed = false
+		return nil
+	}
+	resp.Installed = true
+	text := string(out)
+
+	resp.Global = core.NginxGlobalConfig{
+		WorkerProcesses:   nginxDirective(text, "worker_processes"),
+		WorkerConnections: nginxDirective(text, "worker_connections"),
+		KeepaliveTimeout:  nginxDirective(text, "keepalive_timeout"),
+		ClientMaxBodySize: nginxDirective(text, "client_max_body_size"),
+		ServerTokens:      nginxDirective(text, "server_tokens"),
+		Gzip:              nginxDirective(text, "gzip"),
+	}
+	resp.SSL = core.NginxSSLConfig{
+		SSLProtocols:           nginxDirective(text, "ssl_protocols"),
+		SSLCiphers:             nginxDirective(text, "ssl_ciphers"),
+		SSLPreferServerCiphers: nginxDirective(text, "ssl_prefer_server_ciphers"),
+	}
+
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(line), ";"))
+		if strings.HasPrefix(line, "limit_req_zone ") || strings.HasPrefix(line, "limit_conn_zone ") {
+			resp.RateLimits = append(resp.RateLimits, parseRateLimit(line))
+		}
+	}
+	return nil
+}
+
+// nginxDirective returns the value of the first `<name> <value>;` directive
+// found in the config dump.
+// nginxDirective, config dökümünde bulunan ilk `<name> <value>;`
+// direktifinin değerini döndürür.
+func nginxDirective(text, name string) string {
+	for _, raw := range strings.Split(text, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == name {
+			val := strings.TrimSpace(strings.TrimSuffix(strings.Join(fields[1:], " "), ";"))
+			return val
+		}
+	}
+	return ""
+}
+
+// parseRateLimit turns a limit_*_zone directive line into a structured entry.
+// parseRateLimit, bir limit_*_zone direktif satırını yapılandırılmış bir
+// girdiye dönüştürür.
+func parseRateLimit(line string) core.NginxRateLimit {
+	fields := strings.Fields(line)
+	rl := core.NginxRateLimit{Name: fields[0]}
+	if len(fields) >= 2 {
+		rl.Zone = fields[1]
+	}
+	for _, f := range fields[1:] {
+		if strings.HasPrefix(f, "zone=") {
+			if _, sz, ok := strings.Cut(strings.TrimPrefix(f, "zone="), ":"); ok {
+				rl.Size = sz
+			}
+		}
+		if strings.HasPrefix(f, "rate=") {
+			rl.Rate = strings.TrimPrefix(f, "rate=")
+		}
+	}
+	return rl
+}
+
 // humanSize renders a byte count compactly.
 // humanSize bir bayt sayısını derli toplu gösterir.
 func humanSize(b int64) string {
