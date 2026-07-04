@@ -5,93 +5,95 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// handleFail2banJails handles GET and POST requests for jails
+// handleFail2banJails serves the real jail list (GET) and toggles a jail at
+// runtime (POST), both via the agent — no fabricated jails.
+// handleFail2banJails, gerçek jail listesini (GET) sunar ve bir jail'i
+// çalışma zamanında açar/kapatır (POST); ikisi de agent'tan — uydurma jail yok.
 func (p *Panel) handleFail2banJails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data - would call `fail2ban-client status`
-		jails := []core.Fail2banJail{
-			{Name: "sshd", Enabled: true, Active: true, Banned: 2},
-			{Name: "nginx-http-auth", Enabled: true, Active: true, Banned: 0},
-			{Name: "postfix", Enabled: true, Active: true, Banned: 5},
-			{Name: "dovecot", Enabled: true, Active: true, Banned: 1},
-			{Name: "recidive", Enabled: false, Active: false, Banned: 0},
-		}
-		json.NewEncoder(w).Encode(jails)
-		return
-	}
-
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		var req core.Fail2banJailRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-
-		// Call agent to enable/disable jail
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Jail updated"})
-	}
-}
-
-// handleFail2banBannedIPs handles GET and POST (unban) requests
-func (p *Panel) handleFail2banBannedIPs(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method == "GET" {
-		// Mock data - would call `fail2ban-client status <jail>` for each jail
-		ips := []core.Fail2banBannedIP{
-			{IP: "192.168.1.50", Jail: "sshd", Time: "2023-10-27 10:00:00", Country: "Unknown"},
-			{IP: "10.0.0.5", Jail: "postfix", Time: "2023-10-27 11:30:00", Country: "Unknown"},
+		var ok bool
+		if err := p.agentClient.Call("Agent.Fail2banToggleJail", &req, &ok); err != nil {
+			writeServerError(w, err)
+			return
 		}
-		json.NewEncoder(w).Encode(ips)
+		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
 		return
 	}
 
-	if r.Method == "POST" {
+	var result core.Fail2banStatusResult
+	if err := p.agentClient.Call("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if result.Jails == nil {
+		result.Jails = []core.Fail2banJail{}
+	}
+	json.NewEncoder(w).Encode(result.Jails)
+}
+
+// handleFail2banBannedIPs serves the real banned IPs (GET) and unbans one
+// (POST) via the agent.
+// handleFail2banBannedIPs, gerçek banlı IP'leri (GET) sunar ve birini yasağını
+// kaldırır (POST); agent üzerinden.
+func (p *Panel) handleFail2banBannedIPs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodPost {
 		var req core.Fail2banUnbanRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-
-		// Call agent to unban IP: fail2ban-client set <jail> unbanip <ip>
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "IP unbanned"})
-	}
-}
-
-// handleFail2banConfig handles GET and POST requests for global config
-func (p *Panel) handleFail2banConfig(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method == "GET" {
-		// Mock data - would parse /etc/fail2ban/jail.local
-		config := core.Fail2banConfig{
-			BanTime:  "10m",
-			FindTime: "10m",
-			MaxRetry: 5,
-			IgnoreIP: []string{"127.0.0.1/8", "::1"},
+		var ok bool
+		if err := p.agentClient.Call("Agent.Fail2banUnban", &req, &ok); err != nil {
+			writeServerError(w, err)
+			return
 		}
-		json.NewEncoder(w).Encode(config)
+		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
 		return
 	}
 
-	if r.Method == "POST" {
-		var req core.Fail2banConfigRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-
-		// Call agent to update config
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Configuration saved"})
+	var result core.Fail2banStatusResult
+	if err := p.agentClient.Call("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
+		writeServerError(w, err)
+		return
 	}
+	if result.Banned == nil {
+		result.Banned = []core.Fail2banBannedIP{}
+	}
+	json.NewEncoder(w).Encode(result.Banned)
+}
+
+// handleFail2banConfig serves the real global defaults parsed from the
+// fail2ban config file.
+// handleFail2banConfig, fail2ban config dosyasından ayrıştırılan gerçek
+// global varsayılanları sunar.
+func (p *Panel) handleFail2banConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodPost {
+		// Editing the fail2ban config is not implemented yet; be honest
+		// rather than pretend it saved.
+		// fail2ban config'ini düzenleme henüz uygulanmadı; kaydettik gibi
+		// yapmak yerine dürüst ol.
+		writeClientError(w, http.StatusNotImplemented, "editing fail2ban config is not supported yet")
+		return
+	}
+
+	var config core.Fail2banConfig
+	if err := p.agentClient.Call("Agent.Fail2banConfig", &transport.Empty{}, &config); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	json.NewEncoder(w).Encode(config)
 }

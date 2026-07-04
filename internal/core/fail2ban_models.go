@@ -40,3 +40,13 @@ type Fail2banUnbanRequest struct {
 type Fail2banConfigRequest struct {
 	Config Fail2banConfig `json:"config"`
 }
+
+// Fail2banStatusResult is the real, agent-sourced fail2ban state. Installed
+// is false when fail2ban-client is absent.
+// Fail2banStatusResult, agent'tan gelen gerçek fail2ban durumudur.
+// fail2ban-client yoksa Installed false olur.
+type Fail2banStatusResult struct {
+	Installed bool               `json:"installed"`
+	Jails     []Fail2banJail     `json:"jails"`
+	Banned    []Fail2banBannedIP `json:"banned"`
+}
