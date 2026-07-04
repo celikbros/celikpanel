@@ -157,6 +157,90 @@ function SearchIcon() {
     );
 }
 
+// Form primitives — a sectioned form (heading + fields separated by
+// dividers, no card-in-card nesting), a labelled field with hint, a toggle
+// row, and a right-aligned action bar. These give every settings screen the
+// same clean, dense layout.
+//
+// Form ilkelleri — bölümlü form (başlık + bölücülerle ayrılmış alanlar,
+// kart-içinde-kart yok), ipuçlu etiketli alan, anahtar satırı ve sağa
+// hizalı eylem çubuğu.
+export function FormSection({
+    title,
+    description,
+    children,
+}: {
+    title: string;
+    description?: string;
+    children: ReactNode;
+}) {
+    return (
+        <section className="border-b border-border py-5 first:pt-0 last:border-0 last:pb-0">
+            <h3 className="text-sm font-semibold text-fg">{title}</h3>
+            {description && <p className="mt-0.5 text-xs text-fg-muted">{description}</p>}
+            <div className="mt-3 space-y-3">{children}</div>
+        </section>
+    );
+}
+
+export function Field({
+    label,
+    hint,
+    htmlFor,
+    children,
+}: {
+    label: string;
+    hint?: string;
+    htmlFor?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-fg-muted">
+                {label}
+            </label>
+            {children}
+            {hint && <p className="mt-1 text-xs text-fg-subtle">{hint}</p>}
+        </div>
+    );
+}
+
+// inputClass is the shared text-input styling; spread onto <input>/<select>.
+// inputClass paylaşılan metin-girdi stilidir; <input>/<select> üzerine geçir.
+export const inputClass =
+    'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30';
+
+export function ToggleRow({
+    label,
+    hint,
+    name,
+    defaultChecked,
+}: {
+    label: string;
+    hint?: string;
+    name: string;
+    defaultChecked?: boolean;
+}) {
+    return (
+        <label className="flex cursor-pointer items-start gap-3">
+            <input
+                type="checkbox"
+                name={name}
+                defaultChecked={defaultChecked}
+                className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span>
+                <span className="block text-sm text-fg">{label}</span>
+                {hint && <span className="block text-xs text-fg-subtle">{hint}</span>}
+            </span>
+        </label>
+    );
+}
+
+export function FormActions({ children }: { children: ReactNode }) {
+    return <div className="flex justify-end gap-2 pt-5">{children}</div>;
+}
+
 export function EmptyState({
     icon: Icon,
     title,
