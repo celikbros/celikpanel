@@ -5,67 +5,61 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// handlePostfixQueue handles GET and POST requests for Postfix queue
+// handlePostfixQueue serves the real Postfix queue (GET) and queue actions
+// (POST), both sourced from the agent — no fabricated data.
+// handlePostfixQueue, gerçek Postfix kuyruğunu (GET) ve kuyruk eylemlerini
+// (POST) sunar; ikisi de agent'tan gelir — uydurma veri yok.
 func (p *Panel) handlePostfixQueue(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data - would call `postqueue -p`
-		queue := []core.PostfixQueueItem{
-			{ID: "3A4B5C6D7E", Size: "4096", Sender: "mailer-daemon@example.com", Arrival: "Fri Dec 2 10:00:00", Status: "deferred"},
-			{ID: "1F2E3D4C5B", Size: "1024", Sender: "newsletter@example.com", Arrival: "Fri Dec 2 10:05:00", Status: "active"},
-		}
-		json.NewEncoder(w).Encode(queue)
-		return
-	}
-
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		var req core.PostfixActionRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-
-		// Call agent to perform queue action (postsuper -d, postqueue -f)
-		
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Queue action executed"})
+		var ok bool
+		if err := p.agentClient.Call("Agent.PostfixQueueAction", &req, &ok); err != nil {
+			writeServerError(w, err)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
+		return
 	}
+
+	var result core.PostfixQueueResult
+	if err := p.agentClient.Call("Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	json.NewEncoder(w).Encode(result.Items)
 }
 
-// handlePostfixSummary handles GET requests for queue summary
+// handlePostfixSummary returns the real queue counts by status.
+// handlePostfixSummary, duruma göre gerçek kuyruk sayılarını döndürür.
 func (p *Panel) handlePostfixSummary(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data
-		summary := core.PostfixSummary{
-			Active:   12,
-			Deferred: 45,
-			Hold:     0,
-			Corrupt:  0,
-		}
-		json.NewEncoder(w).Encode(summary)
+	var result core.PostfixQueueResult
+	if err := p.agentClient.Call("Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
+		writeServerError(w, err)
 		return
 	}
+	json.NewEncoder(w).Encode(result.Summary)
 }
 
-// handleDovecotStats handles GET requests for Dovecot statistics
+// handleDovecotStats returns the measurable Dovecot state from the agent.
+// handleDovecotStats, agent'tan ölçülebilir Dovecot durumunu döndürür.
 func (p *Panel) handleDovecotStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "GET" {
-		// Mock data - would call `doveadm stats dump`
-		stats := core.DovecotStats{
-			Uptime:      "2 days, 4 hours",
-			Connections: 150,
-			Logins:      1250,
-			AuthSuccess: 1240,
-			AuthFail:    10,
-		}
-		json.NewEncoder(w).Encode(stats)
+	var result core.DovecotStatsResult
+	if err := p.agentClient.Call("Agent.DovecotStats", &transport.Empty{}, &result); err != nil {
+		writeServerError(w, err)
 		return
 	}
+	json.NewEncoder(w).Encode(result.Stats)
 }
