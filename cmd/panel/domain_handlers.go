@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -160,6 +161,18 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DNS zone with the full default record set. Best-effort: the site
+	// itself is already created, and the zone can always be (re)created from
+	// the domain's DNS page. Imported domains never pass through here —
+	// their records come from the archive.
+	// Tam varsayılan kayıt setiyle DNS zone. En-iyi-çaba: sitenin kendisi
+	// zaten oluştu ve zone, domain'in DNS sayfasından her zaman (yeniden)
+	// oluşturulabilir. İçe aktarılan domain'ler buradan geçmez — kayıtları
+	// arşivden gelir.
+	if _, _, err := p.createZoneWithTemplate(r.Context(), req.Domain); err != nil {
+		log.Printf("dns zone template for %s: %v", req.Domain, err)
+	}
+
 	json.NewEncoder(w).Encode(result)
 }
 
@@ -192,6 +205,17 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	if err := domainRepo.Delete(context.Background(), domainID); err != nil {
 		writeServerError(w, err)
 		return
+	}
+
+	// Drop the DNS zone too — a zone that keeps answering for a deleted
+	// domain is stale, publicly visible state. Records first: the pdns
+	// tables are not covered by SQLite's FK pragma guarantees here.
+	// DNS zone'u da düşür — silinmiş bir domain için cevap vermeye devam
+	// eden zone, bayat ve kamuya görünür durumdur. Önce kayıtlar: pdns
+	// tabloları burada SQLite FK pragma garantisi altında değil.
+	if _, err := p.db.GetDB().ExecContext(context.Background(),
+		`DELETE FROM pdns_records WHERE domain_id IN (SELECT id FROM pdns_domains WHERE name = ?)`, domain.Name); err == nil {
+		p.db.GetDB().ExecContext(context.Background(), `DELETE FROM pdns_domains WHERE name = ?`, domain.Name)
 	}
 
 	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC

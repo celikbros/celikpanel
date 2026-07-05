@@ -31,7 +31,7 @@ type DNSZone struct {
 
 func (p *Panel) handleDomainDNS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// Extract domain ID from URL /api/v1/domains/:id/dns...
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) < 5 {
@@ -142,52 +142,21 @@ type ConfigurePowerDNSRequest struct {
 }
 
 func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, domainName string) {
-	pool := p.db.GetDB()
-	
-	// Check if exists
-	var exists bool
-	pool.QueryRowContext(context.Background(), "SELECT EXISTS(SELECT 1 FROM pdns_domains WHERE name=?)", domainName).Scan(&exists)
-	if exists {
-		http.Error(w, "Zone already exists", http.StatusConflict)
-		return
-	}
-
-	// Create Zone
-	// type=NATIVE for postgres backend usually
-	var zoneID int
-	result, err := pool.ExecContext(context.Background(), 
-		"INSERT INTO pdns_domains (name, type) VALUES (?, 'NATIVE')", domainName)
+	zoneID, created, err := p.createZoneWithTemplate(context.Background(), domainName)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	id64, _ := result.LastInsertId()
-	zoneID = int(id64)
-
-	// Add default records? (SOA, NS)
-	// SOA is critical for PowerDNS to serve the zone.
-	soaContent := "ns1." + domainName + " hostmaster." + domainName + " 2023010101 10800 3600 604800 3600"
-	pool.ExecContext(context.Background(),
-		"INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'SOA', ?, 3600)",
-		zoneID, domainName, soaContent)
-	
-	// NS
-	pool.ExecContext(context.Background(),
-		"INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'NS', ?, 3600)",
-		zoneID, domainName, "ns1."+domainName)
-	pool.ExecContext(context.Background(),
-		"INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'NS', ?, 3600)",
-		zoneID, domainName, "ns2."+domainName)
-
-	// A record for ns1, ns2 pointing to server IP? 
-	// Need checking IPs. For now we assume user adds A records.
-	
+	if !created {
+		http.Error(w, "Zone already exists", http.StatusConflict)
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "id": zoneID})
 }
 
 func (p *Panel) handleListDNSRecords(w http.ResponseWriter, domainName string) {
 	pool := p.db.GetDB()
-	
+
 	// Get Zone ID
 	var zoneID int
 	err := pool.QueryRowContext(context.Background(), "SELECT id FROM pdns_domains WHERE name = ?", domainName).Scan(&zoneID)
@@ -196,7 +165,7 @@ func (p *Panel) handleListDNSRecords(w http.ResponseWriter, domainName string) {
 		return
 	}
 
-	rows, err := pool.QueryContext(context.Background(), 
+	rows, err := pool.QueryContext(context.Background(),
 		"SELECT id, domain_id, name, type, content, ttl, prio, disabled FROM pdns_records WHERE domain_id = ? ORDER BY type, name", zoneID)
 	if err != nil {
 		writeServerError(w, err)
@@ -228,7 +197,7 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 	}
 
 	pool := p.db.GetDB()
-	
+
 	// Get Zone ID
 	var zoneID int
 	err := pool.QueryRowContext(context.Background(), "SELECT id FROM pdns_domains WHERE name = ?", domainName).Scan(&zoneID)
@@ -241,16 +210,16 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 	// Normalize name: if @ use domainName, if not fully qualified, append domainName?
 	// PowerDNS expects fully qualified names usually?
 	// If name == "@", replace with domainName
-	// If name doesn't end with dot, append domainName? 
+	// If name doesn't end with dot, append domainName?
 	// Usually users type "www", we store "www.domain.com"
-	
+
 	finalName := req.Name
 	if finalName == "@" {
 		finalName = domainName
 	} else if !strings.HasSuffix(finalName, domainName) {
 		finalName = finalName + "." + domainName
 	}
-	
+
 	// Priorty is for MX/SRV
 	var prioPtr *int
 	if req.Type == "MX" || req.Type == "SRV" {
@@ -260,7 +229,7 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 	_, err = pool.ExecContext(context.Background(),
 		"INSERT INTO pdns_records (domain_id, name, type, content, ttl, prio) VALUES (?, ?, ?, ?, ?, ?)",
 		zoneID, finalName, req.Type, req.Content, req.TTL, prioPtr)
-	
+
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -268,7 +237,7 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 
 	// Notify PDNS to reload zone? Not needed with Postgres backend usually, unless caching
 	// We can execute `pdns_control purge zone` via Agent if needed.
-	
+
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
@@ -279,10 +248,10 @@ func (p *Panel) handleDeleteDNSRecord(w http.ResponseWriter, r *http.Request, do
 	pool := p.db.GetDB()
 	// Ensure record belongs to domain
 	var count int
-	pool.QueryRowContext(context.Background(), 
+	pool.QueryRowContext(context.Background(),
 		"SELECT count(*) FROM pdns_records r JOIN pdns_domains d ON r.domain_id = d.id WHERE r.id = ? AND d.name = ?",
 		id, domainName).Scan(&count)
-	
+
 	if count == 0 {
 		http.Error(w, "Record not found or access denied", http.StatusForbidden)
 		return
@@ -304,11 +273,11 @@ func (p *Panel) handleUpdateDNSRecord(w http.ResponseWriter, r *http.Request, do
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
-	
+
 	pool := p.db.GetDB()
 	// Check ownership
 	var count int
-	pool.QueryRowContext(context.Background(), 
+	pool.QueryRowContext(context.Background(),
 		"SELECT count(*) FROM pdns_records r JOIN pdns_domains d ON r.domain_id = d.id WHERE r.id = ? AND d.name = ?",
 		req.ID, domainName).Scan(&count)
 
@@ -321,11 +290,11 @@ func (p *Panel) handleUpdateDNSRecord(w http.ResponseWriter, r *http.Request, do
 	_, err := pool.ExecContext(context.Background(),
 		"UPDATE pdns_records SET content=?, ttl=?, prio=?, disabled=? WHERE id=?",
 		req.Content, req.TTL, req.Prio, req.Disabled, req.ID)
-	
+
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	
+
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
