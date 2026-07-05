@@ -42,8 +42,26 @@ type User struct {
 	PasswordHash string
 	Email        string
 	Role         string // admin, reseller, customer
+	ParentID     *int   // who created/owns this user (reseller→customer edge)
+	Status       string // active, suspended
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// ServicePlan is a reusable quota template subscriptions can be created from.
+// ServicePlan, aboneliklerin türetilebileceği yeniden kullanılabilir bir kota
+// şablonudur.
+type ServicePlan struct {
+	ID               int
+	OwnerID          *int // nil = global (admin) plan
+	Name             string
+	MaxDomains       int
+	MaxDatabases     int
+	MaxEmailAccounts int
+	DiskQuotaMB      int
+	BandwidthQuotaMB int
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // Subscription represents a resource package

@@ -240,6 +240,13 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Quota: one more database must fit in the subscription.
+	// Kota: aboneliğe bir veritabanı daha sığmalı.
+	if err := p.checkSubscriptionQuota(r.Context(), subscriptionID, quotaDBs); err != nil {
+		writeClientError(w, http.StatusConflict, err.Error())
+		return
+	}
+
 	var req struct {
 		DatabaseName string `json:"database_name"`
 		DomainID     *int   `json:"domain_id,omitempty"`      // Optional: Related site/domain

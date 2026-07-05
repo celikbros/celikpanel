@@ -123,6 +123,15 @@ func main() {
 	// Demo kimlik bilgileri (herkese açık, ama --demo yoksa boş).
 	http.HandleFunc("/api/v1/auth/demo", panel.handleDemoAccounts)
 
+	// Account management (admin + reseller; role rules inside handlers).
+	// Hesap yönetimi (admin + bayi; rol kuralları işleyicilerin içinde).
+	http.HandleFunc("/api/v1/users", panel.handleUsers)
+	http.HandleFunc("/api/v1/users/", panel.handleUserByID)
+	http.HandleFunc("/api/v1/plans", panel.handlePlans)
+	http.HandleFunc("/api/v1/plans/", panel.handlePlanByID)
+	http.HandleFunc("/api/v1/auth/password", panel.handleChangeOwnPassword)
+	http.HandleFunc("/api/v1/auth/unimpersonate", panel.handleUnimpersonate)
+
 	// Managed Services
 	http.HandleFunc("/api/v1/managed-services", panel.handleManagedServices)
 	

@@ -33,3 +33,4 @@ __pycache__/
 # Ortam dosyaları
 .env
 .env.*
+.claude/worktrees/

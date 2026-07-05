@@ -41,10 +41,17 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		}
 
 		// Attach the caller (id + role) so handlers can enforce ownership.
+		// Suspended accounts are cut off immediately, whatever session they
+		// still hold.
 		// Çağıranı (kimlik + rol) iliştir; böylece işleyiciler sahipliği
-		// uygulayabilir.
+		// uygulayabilir. Askıya alınmış hesaplar, ellerinde hangi oturum
+		// olursa olsun anında kesilir.
 		c := &Caller{ID: userID}
 		if u, err := p.users.GetByID(r.Context(), userID); err == nil {
+			if u.Status == "suspended" {
+				writeClientError(w, http.StatusForbidden, "account suspended")
+				return
+			}
 			c.Role = u.Role
 		}
 

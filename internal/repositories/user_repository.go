@@ -38,17 +38,26 @@ func parseDBTime(s sql.NullString) time.Time {
 	return time.Time{}
 }
 
+// userColumns is the canonical select list; scanUser must match it.
+// userColumns standart seçim listesidir; scanUser onunla eşleşmelidir.
+const userColumns = `id, username, password_hash, email, role, parent_id, COALESCE(status,'active'), created_at, updated_at`
+
 // scanUser scans a user row, parsing the two timestamp columns leniently.
 // scanUser, bir kullanıcı satırını tarar ve iki zaman damgası sütununu
 // hoşgörüyle çözer.
 func scanUser(row interface{ Scan(...any) error }, user *core.User) error {
 	var createdAt, updatedAt sql.NullString
+	var parentID sql.NullInt64
 	err := row.Scan(
 		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-		&createdAt, &updatedAt,
+		&parentID, &user.Status, &createdAt, &updatedAt,
 	)
 	if err != nil {
 		return err
+	}
+	if parentID.Valid {
+		v := int(parentID.Int64)
+		user.ParentID = &v
 	}
 	user.CreatedAt = parseDBTime(createdAt)
 	user.UpdatedAt = parseDBTime(updatedAt)
@@ -56,11 +65,18 @@ func scanUser(row interface{ Scan(...any) error }, user *core.User) error {
 }
 
 func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) error {
+	if user.Status == "" {
+		user.Status = "active"
+	}
 	query := `
-		INSERT INTO users (username, password_hash, email, role)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO users (username, password_hash, email, role, parent_id, status)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	result, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role)
+	var parent any
+	if user.ParentID != nil {
+		parent = *user.ParentID
+	}
+	result, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, parent, user.Status)
 	if err != nil {
 		return err
 	}
@@ -82,10 +98,7 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) er
 
 func (r *PostgresUserRepository) GetByID(ctx context.Context, id int) (*core.User, error) {
 	user := &core.User{}
-	query := `
-		SELECT id, username, password_hash, email, role, created_at, updated_at
-		FROM users WHERE id = ?
-	`
+	query := `SELECT ` + userColumns + ` FROM users WHERE id = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, id), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -98,10 +111,7 @@ func (r *PostgresUserRepository) GetByID(ctx context.Context, id int) (*core.Use
 
 func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username string) (*core.User, error) {
 	user := &core.User{}
-	query := `
-		SELECT id, username, password_hash, email, role, created_at, updated_at
-		FROM users WHERE username = ?
-	`
+	query := `SELECT ` + userColumns + ` FROM users WHERE username = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, username), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -114,10 +124,7 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 
 func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (*core.User, error) {
 	user := &core.User{}
-	query := `
-		SELECT id, username, password_hash, email, role, created_at, updated_at
-		FROM users WHERE email = ?
-	`
+	query := `SELECT ` + userColumns + ` FROM users WHERE email = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, email), user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -129,12 +136,15 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 }
 
 func (r *PostgresUserRepository) Update(ctx context.Context, user *core.User) error {
+	if user.Status == "" {
+		user.Status = "active"
+	}
 	query := `
 		UPDATE users
-		SET username = ?, password_hash = ?, email = ?, role = ?, updated_at = datetime('now')
+		SET username = ?, password_hash = ?, email = ?, role = ?, status = ?, updated_at = datetime('now')
 		WHERE id = ?
 	`
-	_, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, user.ID)
+	_, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, user.Status, user.ID)
 	return err
 }
 
@@ -145,10 +155,7 @@ func (r *PostgresUserRepository) Delete(ctx context.Context, id int) error {
 }
 
 func (r *PostgresUserRepository) List(ctx context.Context) ([]*core.User, error) {
-	query := `
-		SELECT id, username, password_hash, email, role, created_at, updated_at
-		FROM users ORDER BY created_at DESC
-	`
+	query := `SELECT ` + userColumns + ` FROM users ORDER BY created_at DESC`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

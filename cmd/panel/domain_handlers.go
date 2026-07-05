@@ -12,12 +12,12 @@ import (
 
 // DomainResponse is the API response for domain listing
 type DomainResponse struct {
-	ID          int    `json:"id"`
-	DomainName  string `json:"domain_name"`
-	PHPVersion  string `json:"php_version"`
-	SSLEnabled  bool   `json:"ssl_enabled"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"created_at"`
+	ID         int    `json:"id"`
+	DomainName string `json:"domain_name"`
+	PHPVersion string `json:"php_version"`
+	SSLEnabled bool   `json:"ssl_enabled"`
+	Status     string `json:"status"`
+	CreatedAt  string `json:"created_at"`
 }
 
 // handleDomains lists all domains
@@ -57,7 +57,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 		// Query site info from database directly
 		var phpVersion string
 		var sslType string
-		
+
 		query := `SELECT php_version, ssl_type FROM sites WHERE domain_id = ? LIMIT 1`
 		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).Scan(&phpVersion, &sslType)
 		if err != nil {
@@ -106,14 +106,35 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	// oluşturduğu aboneliğin sahibi olmalıdır.
 	caller := currentCaller(r)
 	isAdmin := caller != nil && caller.Role == roleAdmin
-	if req.SubscriptionID == 0 && isAdmin {
-		req.SubscriptionID = 1
+	if req.SubscriptionID == 0 {
+		if isAdmin {
+			req.SubscriptionID = 1
+		} else if caller != nil {
+			// Smart default: fall back to the caller's own subscription so a
+			// customer never has to know subscription IDs.
+			// Akıllı varsayılan: çağıranın kendi aboneliğine düş; müşteri
+			// abonelik kimliği bilmek zorunda kalmasın.
+			err := p.db.GetDB().QueryRowContext(r.Context(),
+				`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`,
+				caller.ID).Scan(&req.SubscriptionID)
+			if err != nil {
+				writeClientError(w, http.StatusConflict, "no subscription on this account; ask your provider to assign a plan")
+				return
+			}
+		}
 	}
 	if !isAdmin {
 		if err := p.canAccessSubscription(r.Context(), caller, req.SubscriptionID); err != nil {
 			writeClientError(w, http.StatusForbidden, "subscription not found or not permitted")
 			return
 		}
+	}
+
+	// Quota: one more domain must fit in the subscription.
+	// Kota: aboneliğe bir domain daha sığmalı.
+	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDomains); err != nil {
+		writeClientError(w, http.StatusConflict, err.Error())
+		return
 	}
 
 	// Default PHP version
@@ -173,7 +194,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC
 	// For now, just delete the database record
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "deleted",

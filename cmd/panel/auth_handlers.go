@@ -62,6 +62,10 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusUnauthorized, "invalid username or password")
 		return
 	}
+	if user.Status == "suspended" {
+		writeClientError(w, http.StatusForbidden, "account suspended")
+		return
+	}
 
 	token, err := p.sessions.Create(r.Context(), user.ID)
 	if err != nil {
@@ -100,11 +104,21 @@ func (p *Panel) handleMe(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
+	// Tell the SPA when this session is an impersonation so it can show the
+	// "return to my account" banner.
+	// Bu oturum bir taklit oturumuysa SPA'ya söyle; "hesabıma dön" şeridini
+	// gösterebilsin.
+	impersonating := false
+	if _, err := r.Cookie(impersonatorCookieName); err == nil {
+		impersonating = true
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"username": user.Username,
-		"role":     user.Role,
-		"email":    user.Email,
+		"username":      user.Username,
+		"role":          user.Role,
+		"email":         user.Email,
+		"impersonating": impersonating,
 	})
 }
 

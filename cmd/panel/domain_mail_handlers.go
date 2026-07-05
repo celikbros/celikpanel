@@ -135,6 +135,10 @@ func (p *Panel) handleAddEmailAccount(w http.ResponseWriter, r *http.Request, do
 		return
 	}
 
+	if !p.enforceDomainQuota(w, r, domainID, quotaMail) {
+		return
+	}
+
 	// Make sure address contains domain
 	if !strings.Contains(req.Address, "@") {
 		// Get domain name

@@ -31,23 +31,23 @@ func NewSiteOrchestrator(db *sql.DB, agentClient *transport.ReconnectingClient) 
 }
 
 type CreateSiteRequest struct {
-	SubscriptionID  int
-	Domain          string
-	UseTemporary    bool
-	PHPVersion      string
-	SSLType         string // letsencrypt, custom, none
-	AccessMethod    string // ftp, sftp, both
+	SubscriptionID int    `json:"subscription_id"`
+	Domain         string `json:"domain"`
+	UseTemporary   bool   `json:"use_temporary"`
+	PHPVersion     string `json:"php_version"`
+	SSLType        string `json:"ssl_type"`      // letsencrypt, custom, none
+	AccessMethod   string `json:"access_method"` // ftp, sftp, both
 }
 
 type CreateSiteResponse struct {
-	DomainID       int
-	SiteID         int
-	Domain         string
-	TempDomain     string
-	DocumentRoot   string
-	FTPUser        string
-	FTPPassword    string
-	PHPVersion     string
+	DomainID     int
+	SiteID       int
+	Domain       string
+	TempDomain   string
+	DocumentRoot string
+	FTPUser      string
+	FTPPassword  string
+	PHPVersion   string
 }
 
 // CreateSite orchestrates site creation via Agent RPC
@@ -66,10 +66,10 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	// 2. Generate necessary data
 	username := so.generateUsername(req.Domain)
 	password := so.generatePassword()
-	
+
 	siteDir := filepath.Join(so.basePath, "subscriptions", fmt.Sprintf("%d", req.SubscriptionID), "sites", fmt.Sprintf("%d", domain.ID))
 	documentRoot := filepath.Join(siteDir, "public_html")
-	
+
 	tempDomain := ""
 	if req.UseTemporary {
 		tempDomain = fmt.Sprintf("%s.celik.panel", strings.ReplaceAll(req.Domain, ".", "-"))
@@ -83,7 +83,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		SSLEnabled:   req.SSLType != "none",
 		Status:       "active",
 	}
-	
+
 	siteID, err := so.createSiteRecord(ctx, site)
 	if err != nil {
 		so.domainRepo.Delete(ctx, domain.ID)
@@ -145,7 +145,7 @@ func (so *SiteOrchestrator) createSiteRecord(ctx context.Context, site *core.Sit
 	if err != nil {
 		return 0, err
 	}
-	
+
 	id, err := result.LastInsertId()
 	return int(id), err
 }
