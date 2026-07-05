@@ -195,7 +195,11 @@ func main() {
 		}
 
 		// Route to appropriate handler based on path
-		if strings.Contains(r.URL.Path, "/php/pool") {
+		if strings.Contains(r.URL.Path, "/hosting") {
+			panel.handleDomainHosting(w, r, domainID)
+		} else if strings.Contains(r.URL.Path, "/app/") || strings.HasSuffix(r.URL.Path, "/app") {
+			panel.handleDomainApp(w, r, domainID)
+		} else if strings.Contains(r.URL.Path, "/php/pool") {
 			panel.handleDomainPHPPool(w, r)
 		} else if strings.Contains(r.URL.Path, "/php") {
 			panel.handleDomainPHPSettings(w, r)
@@ -251,6 +255,10 @@ func main() {
 
 	// PowerDNS Configuration
 	http.HandleFunc("/api/v1/pdns/configure", panel.handleConfigurePowerDNS)
+
+	// Node runtime management (admin-only via isAdminOnlyPath)
+	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)
+	http.HandleFunc("/api/v1/runtimes/node", panel.handleNodeRuntimes)
 
 	// Database Management v2 - Server Management
 	http.HandleFunc("/api/v2/database-servers", panel.handleListDatabaseServers)
