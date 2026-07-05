@@ -1,25 +1,34 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // Domain Database Management Handlers
+//
+// These endpoints keep the v1 URL and payload shape the domain-detail page
+// uses, but store metadata in the same tables as the v2 flow (databases_v2 +
+// database_users + database_user_grants) so both screens see one truth.
+// Engine-side work stays on the privileged agent RPC.
+//
+// Bu uç noktalar domain-detay sayfasının kullandığı v1 URL ve gövde biçimini
+// korur; ama meta veriyi v2 akışıyla aynı tablolara yazar (databases_v2 +
+// database_users + database_user_grants), böylece iki ekran tek gerçeği
+// görür. Motor tarafı işler yetkili agent RPC'sinde kalır.
 
 // DatabaseInfo represents a database associated with a domain
 type DatabaseInfo struct {
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	Type         string `json:"type"` // mysql or postgresql
-	User         string `json:"user"`
-	CreatedAt    string `json:"created_at"`
-	Size         string `json:"size,omitempty"`
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Type      string `json:"type"` // mysql or postgresql
+	User      string `json:"user"`
+	CreatedAt string `json:"created_at"`
+	Size      string `json:"size,omitempty"`
 }
 
 // CreateDatabaseRequest represents a request to create a database
@@ -27,6 +36,26 @@ type CreateDatabaseRequest struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"` // mysql or postgresql
 	Password string `json:"password"`
+}
+
+// serverTypeNameFor maps the API's database type to the
+// database_server_types.name the v2 tables use.
+// serverTypeNameFor, API'nin veritabanı tipini v2 tablolarının kullandığı
+// database_server_types.name değerine eşler.
+func serverTypeNameFor(apiType string) string {
+	if apiType == "mysql" {
+		return "mariadb"
+	}
+	return apiType
+}
+
+// apiTypeNameFor is the reverse mapping, for responses and agent calls.
+// apiTypeNameFor, yanıtlar ve agent çağrıları için ters eşlemedir.
+func apiTypeNameFor(serverType string) string {
+	if serverType == "mariadb" {
+		return "mysql"
+	}
+	return serverType
 }
 
 // handleDomainDatabases handles GET/POST for domain databases
@@ -50,7 +79,7 @@ func (p *Panel) handleDomainDatabases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request, domainID int) {
-	ctx := context.Background()
+	ctx := r.Context()
 	pool := p.db.GetDB()
 
 	// Get domain info
@@ -61,12 +90,23 @@ func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// Get databases for this domain
+	// The first granted user is the one this endpoint auto-created with the
+	// database, so it matches what create returned.
+	// İlk yetkilendirilen kullanıcı bu ucun veritabanıyla birlikte otomatik
+	// oluşturduğudur; create'in döndürdüğüyle eşleşir.
 	rows, err := pool.QueryContext(ctx, `
-		SELECT id, name, type, db_user, created_at
-		FROM databases
-		WHERE domain_id = ?
-		ORDER BY created_at DESC
+		SELECT d.id, d.name, dst.name,
+		       COALESCE((SELECT u.username
+		                 FROM database_user_grants g
+		                 JOIN database_users u ON u.id = g.user_id
+		                 WHERE g.database_id = d.id
+		                 ORDER BY g.id LIMIT 1), ''),
+		       d.created_at
+		FROM databases_v2 d
+		JOIN database_servers ds ON ds.id = d.server_id
+		JOIN database_server_types dst ON dst.id = ds.type_id
+		WHERE d.domain_id = ?
+		ORDER BY d.created_at DESC, d.id DESC
 	`, domainID)
 	if err != nil {
 		http.Error(w, "Failed to load databases", http.StatusInternalServerError)
@@ -74,12 +114,14 @@ func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request,
 	}
 	defer rows.Close()
 
-	var databases []DatabaseInfo
+	databases := make([]DatabaseInfo, 0)
 	for rows.Next() {
 		var db DatabaseInfo
-		if err := rows.Scan(&db.ID, &db.Name, &db.Type, &db.User, &db.CreatedAt); err != nil {
+		var serverType string
+		if err := rows.Scan(&db.ID, &db.Name, &serverType, &db.User, &db.CreatedAt); err != nil {
 			continue
 		}
+		db.Type = apiTypeNameFor(serverType)
 		databases = append(databases, db)
 	}
 
@@ -110,7 +152,7 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 	pool := p.db.GetDB()
 
 	// Get domain info
@@ -125,9 +167,36 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 	dbName := fmt.Sprintf("%s_%s", sanitizeName(domain.Name), req.Name)
 	dbUser := dbName + "_user"
 
-	// Check if database already exists
+	// Databases live on the subscription's registered engine of the requested
+	// type; auto-registration keeps this working without manual server setup.
+	// Veritabanları aboneliğin istenen tipteki kayıtlı motorunda yaşar;
+	// otomatik kayıt, elle sunucu eklemeye gerek bırakmaz.
+	p.ensureInstalledDBServers(ctx, domain.SubscriptionID)
+
+	var serverID int
+	err = pool.QueryRowContext(ctx, `
+		SELECT ds.id
+		FROM database_servers ds
+		JOIN database_server_types dst ON dst.id = ds.type_id
+		WHERE ds.subscription_id = ? AND dst.name = ?
+		ORDER BY ds.is_default DESC, ds.id
+		LIMIT 1
+	`, domain.SubscriptionID, serverTypeNameFor(req.Type)).Scan(&serverID)
+	if err == sql.ErrNoRows {
+		writeClientError(w, http.StatusServiceUnavailable,
+			fmt.Sprintf("no %s server is installed on this host", req.Type))
+		return
+	}
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
+	// Check if database already exists on that server
 	var exists bool
-	err = pool.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM databases WHERE name = ?)", dbName).Scan(&exists)
+	err = pool.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM databases_v2 WHERE server_id = ? AND name = ?)",
+		serverID, dbName).Scan(&exists)
 	if err != nil {
 		http.Error(w, "Failed to check database existence", http.StatusInternalServerError)
 		return
@@ -155,29 +224,77 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 		Password: req.Password,
 	}
 
-	rpcMethod := "Agent.CreateDatabase"
-	err = p.agentClient.Call(rpcMethod, agentReq, &agentResp)
+	err = p.agentClient.Call("Agent.CreateDatabase", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		writeAgentError(w, err, agentResp.Error)
 		return
 	}
 
-	// Store in panel database
-	_, err = pool.ExecContext(ctx, `
-		INSERT INTO databases (domain_id, name, type, db_user, db_password_hash)
-		VALUES (?, ?, ?, ?, ?)
-	`, domainID, dbName, req.Type, dbUser, req.Password) // TODO: Hash password
+	// Record metadata in one transaction so the three v2 rows stay consistent.
+	// Meta veriyi tek işlemde kaydet; üç v2 satırı tutarlı kalsın.
+	tx, err := pool.BeginTx(ctx, nil)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer tx.Rollback()
 
+	res, err := tx.ExecContext(ctx, `
+		INSERT INTO databases_v2 (server_id, subscription_id, domain_id, name)
+		VALUES (?, ?, ?, ?)
+	`, serverID, domain.SubscriptionID, domainID, dbName)
 	if err != nil {
 		http.Error(w, "Failed to store database info", http.StatusInternalServerError)
 		return
 	}
+	dbID, err := res.LastInsertId()
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
+	// Reuse the metadata row if this user already exists on the server
+	// (UNIQUE(server_id, username)); the agent create is idempotent too.
+	// Kullanıcı sunucuda zaten kayıtlıysa meta veri satırını yeniden kullan
+	// (UNIQUE(server_id, username)); agent tarafı da idempotenttir.
+	var userID int64
+	err = tx.QueryRowContext(ctx,
+		"SELECT id FROM database_users WHERE server_id = ? AND username = ?",
+		serverID, dbUser).Scan(&userID)
+	if err == sql.ErrNoRows {
+		res, err = tx.ExecContext(ctx, `
+			INSERT INTO database_users (server_id, subscription_id, username, password)
+			VALUES (?, ?, ?, ?)
+		`, serverID, domain.SubscriptionID, dbUser, req.Password)
+		if err == nil {
+			userID, err = res.LastInsertId()
+		}
+	}
+	if err != nil {
+		http.Error(w, "Failed to store database user", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO database_user_grants (database_id, user_id, privileges)
+		VALUES (?, ?, 'ALL')
+	`, dbID, userID)
+	if err != nil {
+		http.Error(w, "Failed to store database grant", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":   "success",
-		"name":     dbName,
-		"user":     dbUser,
-		"type":     req.Type,
+		"status": "success",
+		"id":     dbID,
+		"name":   dbName,
+		"user":   dbUser,
+		"type":   req.Type,
 	})
 }
 
@@ -198,27 +315,46 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract database ID from end of path
-	pathParts := splitPath(r.URL.Path)
-	if len(pathParts) < 7 {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+	dbID, err := getIDFromPath(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid database ID", http.StatusBadRequest)
 		return
 	}
-	dbID := pathParts[6]
 
-	ctx := context.Background()
+	ctx := r.Context()
 	pool := p.db.GetDB()
 
-	// Get database info
-	var dbName, dbType, dbUser string
+	// Scope by domain so a database can only be deleted through its own
+	// domain (the dispatcher already verified the caller owns that domain).
+	// Domain'e göre süz; bir veritabanı yalnızca kendi domain'i üzerinden
+	// silinebilsin (yönlendirici, çağıranın o domain'in sahibi olduğunu
+	// zaten doğruladı).
+	var dbName, serverType string
 	err = pool.QueryRowContext(ctx, `
-		SELECT name, type, db_user
-		FROM databases
-		WHERE id = ? AND domain_id = ?
-	`, dbID, domainID).Scan(&dbName, &dbType, &dbUser)
-
+		SELECT d.name, dst.name
+		FROM databases_v2 d
+		JOIN database_servers ds ON ds.id = d.server_id
+		JOIN database_server_types dst ON dst.id = ds.type_id
+		WHERE d.id = ? AND d.domain_id = ?
+	`, dbID, domainID).Scan(&dbName, &serverType)
 	if err != nil {
 		http.Error(w, "Database not found", http.StatusNotFound)
+		return
+	}
+
+	// The auto-created user rides along with the database.
+	// Otomatik oluşturulan kullanıcı veritabanıyla birlikte gider.
+	var userID int
+	var dbUser string
+	err = pool.QueryRowContext(ctx, `
+		SELECT u.id, u.username
+		FROM database_user_grants g
+		JOIN database_users u ON u.id = g.user_id
+		WHERE g.database_id = ?
+		ORDER BY g.id LIMIT 1
+	`, dbID).Scan(&userID, &dbUser)
+	if err != nil && err != sql.ErrNoRows {
+		writeServerError(w, err)
 		return
 	}
 
@@ -233,7 +369,7 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 		User string `json:"user"`
 	}{
-		Type: dbType,
+		Type: apiTypeNameFor(serverType),
 		Name: dbName,
 		User: dbUser,
 	}
@@ -244,10 +380,36 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Remove from panel database
-	_, err = pool.ExecContext(ctx, "DELETE FROM databases WHERE id = ?", dbID)
+	tx, err := pool.BeginTx(ctx, nil)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	// Deleting the database cascades its grants.
+	// Veritabanını silmek yetkilerini de beraberinde siler.
+	_, err = tx.ExecContext(ctx, "DELETE FROM databases_v2 WHERE id = ?", dbID)
 	if err != nil {
 		http.Error(w, "Failed to remove database record", http.StatusInternalServerError)
+		return
+	}
+
+	if userID != 0 {
+		// Drop the user record only when nothing else references it.
+		// Kullanıcı kaydını yalnızca başka hiçbir yetki ona başvurmuyorken sil.
+		_, err = tx.ExecContext(ctx, `
+			DELETE FROM database_users
+			WHERE id = ? AND NOT EXISTS (SELECT 1 FROM database_user_grants WHERE user_id = ?)
+		`, userID, userID)
+		if err != nil {
+			http.Error(w, "Failed to remove database user record", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeServerError(w, err)
 		return
 	}
 
@@ -266,15 +428,4 @@ func sanitizeName(name string) string {
 		}
 	}
 	return result
-}
-
-// Helper function to split path
-func splitPath(path string) []string {
-	parts := []string{}
-	for _, part := range strings.Split(path, "/") {
-		if part != "" {
-			parts = append(parts, part)
-		}
-	}
-	return parts
 }
