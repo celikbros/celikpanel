@@ -7,6 +7,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
@@ -120,23 +122,54 @@ func (p *Panel) seedDemoData() {
 	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (1, 'admin-site.local', 'active')`)
 	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (?, 'customer-site.local', 'active')`, subID)
 
-	// A minimal site row per domain so the detail pages have something real to
-	// show (document root, web server). Idempotent via NOT EXISTS.
-	// Her domain için minimal bir site satırı; böylece detay sayfalarının
-	// gösterecek gerçek bir şeyi olur (belge kökü, web sunucusu).
+	// A site row per domain with a document root that actually exists, so the
+	// file manager and backups browse a real directory. The production
+	// convention (/var/www/celikpanel) is preferred; on dev boxes where the
+	// panel user cannot write there, fall back to the user's home. Idempotent:
+	// re-running updates the docroot and leaves existing files alone.
+	//
+	// Her domain için, belge kökü gerçekten var olan bir site satırı; böylece
+	// dosya yöneticisi ve yedekler gerçek bir dizinde gezinir. Üretim geleneği
+	// (/var/www/celikpanel) tercih edilir; panel kullanıcısının oraya
+	// yazamadığı geliştirme makinelerinde kullanıcının ev dizinine düşülür.
+	// Bağımsızdır: yeniden çalıştırma belge kökünü günceller, dosyalara dokunmaz.
+	demoRoot := "/var/www/celikpanel/demo"
+	if err := os.MkdirAll(demoRoot, 0o755); err != nil {
+		home, herr := os.UserHomeDir()
+		if herr != nil {
+			log.Printf("demo: no writable docroot location: %v / %v", err, herr)
+			return
+		}
+		demoRoot = filepath.Join(home, "celikpanel-demo")
+		if err := os.MkdirAll(demoRoot, 0o755); err != nil {
+			log.Printf("demo: cannot create demo docroot %s: %v", demoRoot, err)
+			return
+		}
+	}
+
 	for _, name := range []string{"admin-site.local", "customer-site.local"} {
 		var domID int
 		if err := db.QueryRowContext(ctx, `SELECT id FROM domains WHERE name = ?`, name).Scan(&domID); err != nil {
 			continue
 		}
+		docroot := filepath.Join(demoRoot, name)
+		if err := os.MkdirAll(docroot, 0o755); err != nil {
+			log.Printf("demo: mkdir %s: %v", docroot, err)
+			continue
+		}
+		indexPath := filepath.Join(docroot, "index.html")
+		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+			_ = os.WriteFile(indexPath, []byte("<!doctype html>\n<title>"+name+"</title>\n<h1>"+name+"</h1>\n<p>CelikPanel demo site.</p>\n"), 0o644)
+		}
 		_, _ = db.ExecContext(ctx, `
 			INSERT INTO sites (domain_id, document_root, web_server, php_version)
 			SELECT ?, ?, 'nginx', '8.3'
 			WHERE NOT EXISTS (SELECT 1 FROM sites WHERE domain_id = ?)`,
-			domID, "/var/www/"+name, domID)
+			domID, docroot, domID)
+		_, _ = db.ExecContext(ctx, `UPDATE sites SET document_root = ? WHERE domain_id = ?`, docroot, domID)
 	}
 
-	log.Printf("demo: seeded ownership hierarchy (customer→reseller, 1 customer subscription, 2 sample domains + sites)")
+	log.Printf("demo: seeded ownership hierarchy (customer→reseller, subscription, 2 domains + real docroots under %s)", demoRoot)
 }
 
 // handleDemoAccounts lists the demo credentials — but only in demo mode.

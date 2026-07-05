@@ -23,12 +23,18 @@ type BackupInfo struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// BackupRequest for creating backups
+// BackupRequest for creating backups. SourceDir is the site's real document
+// root (the agent has no database access, so the panel resolves and passes
+// it); when empty the legacy /var/www/<domain> convention is used.
+// BackupRequest, yedek oluşturmak içindir. SourceDir sitenin gerçek belge
+// köküdür (agent'ın veritabanı erişimi yoktur; panel çözer ve geçirir); boşsa
+// eski /var/www/<domain> geleneği kullanılır.
 type BackupRequest struct {
 	DomainName   string `json:"domain_name"`
 	Type         string `json:"type"` // "full", "files", "database"
 	DatabaseName string `json:"database_name,omitempty"`
 	DatabaseType string `json:"database_type,omitempty"` // "mysql", "postgresql"
+	SourceDir    string `json:"source_dir,omitempty"`
 }
 
 // BackupResponse contains backup result
@@ -48,10 +54,15 @@ type ListBackupsResponse struct {
 	Backups []BackupInfo `json:"backups"`
 }
 
-// RestoreRequest for restoring backups
+// RestoreRequest for restoring backups. TargetDir mirrors
+// BackupRequest.SourceDir: the panel passes the site's real document root.
+// RestoreRequest, yedek geri yüklemek içindir. TargetDir,
+// BackupRequest.SourceDir'in karşılığıdır: panel sitenin gerçek belge kökünü
+// geçirir.
 type RestoreRequest struct {
 	DomainName string `json:"domain_name"`
 	BackupName string `json:"backup_name"`
+	TargetDir  string `json:"target_dir,omitempty"`
 }
 
 // DeleteBackupRequest for deleting a backup
@@ -60,7 +71,19 @@ type DeleteBackupRequest struct {
 	BackupName string `json:"backup_name"`
 }
 
-const backupBaseDir = "/var/backups/celikpanel"
+// backupBaseDir is where backup archives live. Production default is
+// /var/backups/celikpanel (root agent); CELIKPANEL_BACKUP_DIR overrides it so
+// a non-root development agent can exercise real backups too.
+// backupBaseDir, yedek arşivlerinin yaşadığı yerdir. Üretim varsayılanı
+// /var/backups/celikpanel'dir (root agent); CELIKPANEL_BACKUP_DIR bunu
+// geçersiz kılar; böylece root olmayan bir geliştirme agent'ı da gerçek
+// yedekleri çalıştırabilir.
+var backupBaseDir = func() string {
+	if d := os.Getenv("CELIKPANEL_BACKUP_DIR"); d != "" {
+		return d
+	}
+	return "/var/backups/celikpanel"
+}()
 
 // CreateBackup creates a backup of domain files or database
 func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
@@ -76,11 +99,16 @@ func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
 	var backupPath string
 	var backupType string
 
+	sourceDir := req.SourceDir
+	if sourceDir == "" {
+		sourceDir = filepath.Join("/var/www", req.DomainName)
+	}
+
 	switch req.Type {
 	case "files":
 		backupPath = filepath.Join(backupDir, fmt.Sprintf("files_%s.tar.gz", timestamp))
 		backupType = "files"
-		if err := a.createFilesBackup(req.DomainName, backupPath); err != nil {
+		if err := a.createFilesBackup(sourceDir, backupPath); err != nil {
 			resp.Success = false
 			resp.Error = fmt.Sprintf("Failed to create files backup: %v", err)
 			return nil
@@ -103,7 +131,7 @@ func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
 	case "full":
 		backupPath = filepath.Join(backupDir, fmt.Sprintf("full_%s.tar.gz", timestamp))
 		backupType = "full"
-		if err := a.createFullBackup(req.DomainName, backupPath); err != nil {
+		if err := a.createFullBackup(sourceDir, backupPath); err != nil {
 			resp.Success = false
 			resp.Error = fmt.Sprintf("Failed to create full backup: %v", err)
 			return nil
@@ -135,10 +163,9 @@ func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
 	return nil
 }
 
-// createFilesBackup creates a tar.gz of domain files
-func (a *Agent) createFilesBackup(domainName, backupPath string) error {
-	sourceDir := filepath.Join("/var/www", domainName)
-	
+// createFilesBackup creates a tar.gz of the given document root.
+// createFilesBackup, verilen belge kökünün tar.gz'sini oluşturur.
+func (a *Agent) createFilesBackup(sourceDir, backupPath string) error {
 	// Check if source exists
 	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
 		return fmt.Errorf("domain directory not found: %s", sourceDir)
@@ -230,9 +257,9 @@ func (a *Agent) createDatabaseBackup(dbName, dbType, backupPath string) error {
 }
 
 // createFullBackup creates a backup of both files and databases
-func (a *Agent) createFullBackup(domainName, backupPath string) error {
+func (a *Agent) createFullBackup(sourceDir, backupPath string) error {
 	// For now, just backup files (database would need to be specified separately)
-	return a.createFilesBackup(domainName, backupPath)
+	return a.createFilesBackup(sourceDir, backupPath)
 }
 
 // ListBackups lists all backups for a domain
@@ -300,9 +327,14 @@ func (a *Agent) RestoreBackup(req *RestoreRequest, resp *BackupResponse) error {
 		return nil
 	}
 
+	targetDir := req.TargetDir
+	if targetDir == "" {
+		targetDir = filepath.Join("/var/www", req.DomainName)
+	}
+
 	// Determine backup type and restore
 	if strings.HasPrefix(req.BackupName, "files_") || strings.HasPrefix(req.BackupName, "full_") {
-		if err := a.restoreFilesBackup(req.DomainName, backupPath); err != nil {
+		if err := a.restoreFilesBackup(targetDir, backupPath); err != nil {
 			resp.Success = false
 			resp.Error = fmt.Sprintf("Failed to restore: %v", err)
 			return nil
@@ -327,10 +359,9 @@ func (a *Agent) RestoreBackup(req *RestoreRequest, resp *BackupResponse) error {
 	return nil
 }
 
-// restoreFilesBackup extracts a tar.gz backup
-func (a *Agent) restoreFilesBackup(domainName, backupPath string) error {
-	targetDir := filepath.Join("/var/www", domainName)
-
+// restoreFilesBackup extracts a tar.gz backup into the given document root.
+// restoreFilesBackup, bir tar.gz yedeğini verilen belge köküne açar.
+func (a *Agent) restoreFilesBackup(targetDir, backupPath string) error {
 	// Open backup file
 	file, err := os.Open(backupPath)
 	if err != nil {

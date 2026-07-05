@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
     Archive, RefreshCw, Download, Trash2, RotateCcw,
-    HardDrive, Database, Clock, AlertCircle
+    HardDrive, Database, Clock, Info, type LucideIcon,
 } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import type { TranslationKey } from '../i18n/en';
+import { EmptyState } from './ui';
 
 interface BackupItem {
     name: string;
@@ -18,7 +21,28 @@ interface DomainBackupManagerProps {
     domainName: string;
 }
 
+type BackupType = 'files' | 'database' | 'full';
+
+// The three backup flavours, with categorical colours readable in both themes.
+// Üç yedek türü; iki temada da okunur kategorik renklerle.
+const backupTypes: { type: BackupType; icon: LucideIcon; labelKey: TranslationKey; descKey: TranslationKey; tone: string }[] = [
+    { type: 'files', icon: HardDrive, labelKey: 'backup.files', descKey: 'backup.filesDesc', tone: 'text-primary bg-primary/10' },
+    { type: 'database', icon: Database, labelKey: 'backup.database', descKey: 'backup.databaseDesc', tone: 'text-success bg-success/10' },
+    { type: 'full', icon: Archive, labelKey: 'backup.full', descKey: 'backup.fullDesc', tone: 'text-warning bg-warning/15' },
+];
+
+const typeLabelKey: Record<string, TranslationKey> = {
+    files: 'backup.type.files',
+    database: 'backup.type.database',
+    full: 'backup.type.full',
+};
+
+// Real backups via the agent (tar/dump under /var/backups/celikpanel).
+// Create, restore, download, delete — no invented rows.
+// Agent üzerinden gerçek yedekler (/var/backups/celikpanel altında tar/dump).
+// Oluştur, geri yükle, indir, sil — uydurma satır yok.
 export function DomainBackupManager({ domainId, domainName }: DomainBackupManagerProps) {
+    const { t } = useI18n();
     const [backups, setBackups] = useState<BackupItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -32,263 +56,202 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
         setLoading(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/backups`);
-            if (res.ok) {
-                const data = await res.json();
-                setBackups(data.backups || []);
-            } else {
-                showToast('error', 'Failed to load backups');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to load backups');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            setBackups(data.backups || []);
+        } catch {
+            showToast('error', t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    const createBackup = async (type: 'files' | 'database' | 'full') => {
+    const createBackup = async (type: BackupType) => {
         setCreating(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/backups`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type })
+                body: JSON.stringify({ type }),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Backup created successfully');
-                loadBackups();
-            } else {
-                showToast('error', data.error || 'Failed to create backup');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to create backup');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', t('backup.created'));
+            loadBackups();
+        } catch {
+            showToast('error', t('common.error'));
         } finally {
             setCreating(false);
         }
     };
 
-    const restoreBackup = async (backupName: string) => {
-        if (!confirm(`Restore backup "${backupName}"? This will overwrite current files.`)) return;
-
-        setRestoring(backupName);
+    const restoreBackup = async (name: string) => {
+        if (!confirm(t('backup.restoreConfirm', { name }))) return;
+        setRestoring(name);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/backups/restore`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ backup_name: backupName })
+                body: JSON.stringify({ backup_name: name }),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Backup restored successfully');
-            } else {
-                showToast('error', data.error || 'Failed to restore backup');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to restore backup');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', t('backup.restored'));
+        } catch {
+            showToast('error', t('common.error'));
         } finally {
             setRestoring(null);
         }
     };
 
-    const deleteBackup = async (backupName: string) => {
-        if (!confirm(`Delete backup "${backupName}"?`)) return;
-
+    const deleteBackup = async (name: string) => {
+        if (!confirm(t('backup.deleteConfirm', { name }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/backups?name=${encodeURIComponent(backupName)}`, {
-                method: 'DELETE'
+            const res = await fetch(`/api/v1/domains/${domainId}/backups?name=${encodeURIComponent(name)}`, {
+                method: 'DELETE',
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Backup deleted');
-                loadBackups();
-            } else {
-                showToast('error', 'Failed to delete backup');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to delete backup');
-        }
-    };
-
-    const formatSize = (bytes: number) => {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-        return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-    };
-
-    const formatDate = (dateStr: string) => {
-        try {
-            return new Date(dateStr).toLocaleString();
+            if (!data.success) throw new Error();
+            showToast('success', t('backup.deleted'));
+            loadBackups();
         } catch {
-            return dateStr;
-        }
-    };
-
-    const getTypeIcon = (type: string) => {
-        switch (type) {
-            case 'files': return <HardDrive className="w-4 h-4 text-primary" />;
-            case 'database': return <Database className="w-4 h-4 text-success" />;
-            case 'full': return <Archive className="w-4 h-4 text-purple-400" />;
-            default: return <Archive className="w-4 h-4 text-fg-muted" />;
-        }
-    };
-
-    const getTypeLabel = (type: string) => {
-        switch (type) {
-            case 'files': return 'Files';
-            case 'database': return 'Database';
-            case 'full': return 'Full';
-            default: return type;
+            showToast('error', t('common.error'));
         }
     };
 
     return (
-        <div className="space-y-6">
-            {/* Create Backup Section */}
-            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-fg mb-4">Create New Backup</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                        onClick={() => createBackup('files')}
-                        disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <HardDrive className="w-8 h-8 text-primary" />
-                        <div className="text-left">
-                            <p className="font-medium text-fg">Files Backup</p>
-                            <p className="text-xs text-fg-muted">Backup website files only</p>
-                        </div>
-                    </button>
-
-                    <button
-                        onClick={() => createBackup('database')}
-                        disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <Database className="w-8 h-8 text-success" />
-                        <div className="text-left">
-                            <p className="font-medium text-fg">Database Backup</p>
-                            <p className="text-xs text-fg-muted">Backup databases</p>
-                        </div>
-                    </button>
-
-                    <button
-                        onClick={() => createBackup('full')}
-                        disabled={creating}
-                        className="flex items-center gap-3 p-4 bg-surface-3/50 hover:bg-surface-3 border border-border-strong rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <Archive className="w-8 h-8 text-purple-400" />
-                        <div className="text-left">
-                            <p className="font-medium text-fg">Full Backup</p>
-                            <p className="text-xs text-fg-muted">Files + Database</p>
-                        </div>
-                    </button>
+        <div className="space-y-5">
+            {/* Create */}
+            <section>
+                <h3 className="mb-3 text-sm font-semibold text-fg">{t('backup.createTitle')}</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {backupTypes.map(({ type, icon: Icon, labelKey, descKey, tone }) => (
+                        <button
+                            key={type}
+                            onClick={() => createBackup(type)}
+                            disabled={creating}
+                            className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+                                <Icon className="h-5 w-5" />
+                            </span>
+                            <span>
+                                <span className="block text-sm font-semibold text-fg">{t(labelKey)}</span>
+                                <span className="block text-xs text-fg-muted">{t(descKey)}</span>
+                            </span>
+                        </button>
+                    ))}
                 </div>
-
                 {creating && (
-                    <div className="mt-4 flex items-center gap-2 text-primary">
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Creating backup...</span>
-                    </div>
+                    <p className="mt-3 flex items-center gap-2 text-sm text-primary">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        {t('backup.creating')}
+                    </p>
                 )}
-            </div>
+            </section>
 
-            {/* Backup List */}
-            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-fg">Existing Backups</h3>
+            {/* List */}
+            <section>
+                <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-fg">{t('backup.existing')}</h3>
                     <button
                         onClick={loadBackups}
-                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
-                        title="Refresh"
+                        title={t('files.refresh')}
+                        className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
                     >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                     </div>
                 ) : backups.length === 0 ? (
-                    <div className="text-center py-12 text-fg-subtle">
-                        <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No backups found</p>
-                        <p className="text-sm mt-1">Create your first backup above</p>
-                    </div>
+                    <EmptyState icon={Archive} title={t('backup.empty')} hint={t('backup.emptyHint')} />
                 ) : (
-                    <div className="space-y-3">
-                        {backups.map((backup) => (
-                            <div
-                                key={backup.name}
-                                className="flex items-center justify-between p-4 bg-surface-3/30 border border-border rounded-lg"
-                            >
-                                <div className="flex items-center gap-4">
-                                    {getTypeIcon(backup.type)}
-                                    <div>
-                                        <p className="text-fg font-medium">{backup.name}</p>
-                                        <div className="flex items-center gap-4 text-xs text-fg-muted mt-1">
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                {formatDate(backup.created_at)}
-                                            </span>
-                                            <span>{formatSize(backup.size)}</span>
-                                            <span className="px-2 py-0.5 bg-surface-3 rounded text-fg-muted">
-                                                {getTypeLabel(backup.type)}
-                                            </span>
+                    <div className="space-y-2">
+                        {backups.map((backup) => {
+                            const typeDef = backupTypes.find((b) => b.type === backup.type);
+                            const Icon = typeDef?.icon ?? Archive;
+                            return (
+                                <div
+                                    key={backup.name}
+                                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${typeDef?.tone ?? 'bg-surface-2 text-fg-muted'}`}>
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-fg">{backup.name}</p>
+                                            <div className="mt-0.5 flex flex-wrap items-center gap-3 text-xs text-fg-muted">
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" />
+                                                    {fmtDate(backup.created_at)}
+                                                </span>
+                                                <span>{fmtSize(backup.size)}</span>
+                                                <span className="rounded bg-surface-2 px-1.5 py-0.5">
+                                                    {t(typeLabelKey[backup.type] ?? 'backup.type.full')}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => restoreBackup(backup.name)}
-                                        disabled={restoring === backup.name}
-                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-success disabled:opacity-50"
-                                        title="Restore"
-                                    >
-                                        {restoring === backup.name ? (
-                                            <RefreshCw className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <RotateCcw className="w-4 h-4" />
-                                        )}
-                                    </button>
-                                    <a
-                                        href={`/api/v1/domains/${domainId}/files/download?path=${encodeURIComponent(backup.path.replace('/var/backups/celikpanel/' + domainName, ''))}`}
-                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-primary"
-                                        title="Download"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                    </a>
-                                    <button
-                                        onClick={() => deleteBackup(backup.name)}
-                                        className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
-                                        title="Delete"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-0.5">
+                                        <button
+                                            onClick={() => restoreBackup(backup.name)}
+                                            disabled={restoring === backup.name}
+                                            title={t('backup.restore')}
+                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-success disabled:opacity-50"
+                                        >
+                                            {restoring === backup.name ? (
+                                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <RotateCcw className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                        <a
+                                            href={`/api/v1/domains/${domainId}/backups/download?name=${encodeURIComponent(backup.name)}`}
+                                            title={t('backup.download')}
+                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-primary"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </a>
+                                        <button
+                                            onClick={() => deleteBackup(backup.name)}
+                                            title={t('backup.delete')}
+                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
-            </div>
+            </section>
 
-            {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-fg-muted">
-                    <p className="font-medium text-primary">Backup Storage</p>
-                    <p className="mt-1">Backups are stored in <code className="text-primary">/var/backups/celikpanel/{domainName}/</code></p>
-                </div>
-            </div>
+            <p className="flex items-start gap-2 text-xs text-fg-subtle">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {t('backup.storageNote', { path: `/var/backups/celikpanel/${domainName}/` })}
+            </p>
         </div>
     );
+}
+
+function fmtSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function fmtDate(dateStr: string): string {
+    try {
+        return new Date(dateStr).toLocaleString();
+    } catch {
+        return dateStr;
+    }
 }

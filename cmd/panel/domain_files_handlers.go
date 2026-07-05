@@ -8,11 +8,47 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/alicelik/celikpanel/internal/repositories"
+	"time"
 )
 
 // File Manager API Handlers
+
+// siteDocroot resolves the browsing root for a domain from the site's real
+// document_root. The orchestrator places sites under
+// /var/www/celikpanel/subscriptions/..., so guessing /var/www/<name> (the old
+// behaviour) pointed the file manager at a directory that never existed; the
+// legacy path remains only as a fallback for domains without a site row.
+//
+// siteDocroot, bir domain'in gezinme kökünü sitenin gerçek document_root'undan
+// çözer. Orchestrator siteleri /var/www/celikpanel/subscriptions/... altına
+// koyar; bu yüzden /var/www/<ad> tahmini (eski davranış) dosya yöneticisini
+// hiç var olmamış bir dizine yöneltiyordu; eski yol yalnızca site kaydı
+// olmayan domain'ler için yedek olarak kalır.
+func (p *Panel) siteDocroot(ctx context.Context, domainID int) (string, error) {
+	var docroot string
+	err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT document_root FROM sites WHERE domain_id = ? LIMIT 1`, domainID).Scan(&docroot)
+	if err == nil && docroot != "" {
+		return filepath.Clean(docroot), nil
+	}
+
+	var name string
+	if err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT name FROM domains WHERE id = ?`, domainID).Scan(&name); err != nil {
+		return "", err
+	}
+	return filepath.Join("/var/www", name), nil
+}
+
+// withinRoot guards against path traversal: the resolved path must be the
+// root itself or live under it (plain prefix matching would let
+// /var/www/foo leak into /var/www/foobar).
+// withinRoot, yol kaçışına karşı korur: çözülen yol kökün kendisi olmalı ya
+// da altında yaşamalıdır (düz önek eşleşmesi /var/www/foo'nun
+// /var/www/foobar'a sızmasına izin verirdi).
+func withinRoot(fullPath, root string) bool {
+	return fullPath == root || strings.HasPrefix(fullPath, root+string(filepath.Separator))
+}
 
 func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -35,29 +71,11 @@ func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get domain using repository pattern
-	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-	domains, err := domainRepo.List(context.Background())
+	domainRoot, err := p.siteDocroot(r.Context(), domainID)
 	if err != nil {
-		http.Error(w, "Failed to get domains", http.StatusInternalServerError)
-		return
-	}
-
-	var domainName string
-	for _, d := range domains {
-		if d.ID == domainID {
-			domainName = d.Name
-			break
-		}
-	}
-
-	if domainName == "" {
 		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
 	}
-
-	// Domain root path (typically /var/www/domain.com)
-	domainRoot := filepath.Join("/var/www", domainName)
 
 	// Get requested path from query
 	reqPath := r.URL.Query().Get("path")
@@ -67,7 +85,7 @@ func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 
 	// Construct full path and validate it's within domain root
 	fullPath := filepath.Clean(filepath.Join(domainRoot, reqPath))
-	if !strings.HasPrefix(fullPath, domainRoot) {
+	if !withinRoot(fullPath, domainRoot) {
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
@@ -83,13 +101,18 @@ func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, domainRoot string) {
+	// ModTime must be time.Time to match the agent's FileInfo over gob; a
+	// string field poisons the RPC stream (same class as BackupInfo.CreatedAt).
+	// ModTime, gob üzerinden agent'ın FileInfo'suyla eşleşmek için time.Time
+	// olmalıdır; string alan RPC akışını zehirler (BackupInfo.CreatedAt ile
+	// aynı sınıf).
 	type FileInfo struct {
-		Name        string `json:"name"`
-		Path        string `json:"path"`
-		IsDir       bool   `json:"is_dir"`
-		Size        int64  `json:"size"`
-		Permissions string `json:"permissions"`
-		ModTime     string `json:"mod_time"`
+		Name        string    `json:"name"`
+		Path        string    `json:"path"`
+		IsDir       bool      `json:"is_dir"`
+		Size        int64     `json:"size"`
+		Permissions string    `json:"permissions"`
+		ModTime     time.Time `json:"mod_time"`
 	}
 
 	type ListResponse struct {
@@ -102,12 +125,12 @@ func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, do
 	var resp struct {
 		Path  string `json:"path"`
 		Files []struct {
-			Name        string `json:"name"`
-			Path        string `json:"path"`
-			IsDir       bool   `json:"is_dir"`
-			Size        int64  `json:"size"`
-			Permissions string `json:"permissions"`
-			ModTime     string `json:"mod_time"`
+			Name        string    `json:"name"`
+			Path        string    `json:"path"`
+			IsDir       bool      `json:"is_dir"`
+			Size        int64     `json:"size"`
+			Permissions string    `json:"permissions"`
+			ModTime     time.Time `json:"mod_time"`
 		} `json:"files"`
 	}
 
@@ -274,22 +297,8 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-	domains, err := domainRepo.List(context.Background())
+	domainRoot, err := p.siteDocroot(r.Context(), domainID)
 	if err != nil {
-		http.Error(w, "Failed to get domains", http.StatusInternalServerError)
-		return
-	}
-
-	var domainName string
-	for _, d := range domains {
-		if d.ID == domainID {
-			domainName = d.Name
-			break
-		}
-	}
-
-	if domainName == "" {
 		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
 	}
@@ -300,9 +309,8 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	domainRoot := filepath.Join("/var/www", domainName)
 	fullPath := filepath.Clean(filepath.Join(domainRoot, reqPath))
-	if !strings.HasPrefix(fullPath, domainRoot) {
+	if !withinRoot(fullPath, domainRoot) {
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}

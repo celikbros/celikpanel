@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
@@ -121,6 +122,18 @@ func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID i
 
 	err = p.agentClient.Call(rpcMethod, agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
+		// A missing log file is not a server error: a fresh domain simply has
+		// no traffic yet. Report it as an honest empty log.
+		// Eksik bir günlük dosyası sunucu hatası değildir: yeni bir domain'in
+		// henüz trafiği yoktur. Bunu dürüst bir boş günlük olarak bildir.
+		msg := agentResp.Error
+		if err != nil {
+			msg = err.Error()
+		}
+		if strings.Contains(msg, "log file not found") || strings.Contains(msg, "no such file") {
+			json.NewEncoder(w).Encode(LogsResponse{Success: true, Lines: []string{}, Total: 0, LogPath: logPath})
+			return
+		}
 		writeAgentError(w, err, agentResp.Error)
 		return
 	}

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"net/rpc"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,7 +22,7 @@ import (
 )
 
 type Panel struct {
-	agentClient   *rpc.Client
+	agentClient   *transport.ReconnectingClient
 	db            *db.SQLiteDB
 	orchestrator  *services.SiteOrchestrator
 	sessions      *auth.SessionStore
@@ -58,11 +57,15 @@ func main() {
 		return
 	}
 
-	// Connect to Agent
-	client, err := transport.ConnectAgent()
+	// Connect to Agent. The reconnecting wrapper survives agent restarts and
+	// poisoned RPC streams without needing a panel restart.
+	// Agent'a bağlan. Yeniden bağlanan sarmalayıcı, panel yeniden başlatılmadan
+	// agent yeniden başlamalarını ve bozulmuş RPC akışlarını atlatır.
+	rawClient, err := transport.ConnectAgent()
 	if err != nil {
 		log.Fatalf("Failed to connect to Agent: %v", err)
 	}
+	client := transport.NewReconnectingClient(rawClient)
 	log.Println("Connected to Agent RPC")
 
 	// Initialize Site Orchestrator
@@ -211,6 +214,8 @@ func main() {
 			panel.handleDomainFiles(w, r)
 		} else if strings.Contains(r.URL.Path, "/backups/restore") {
 			panel.handleRestoreBackup(w, r)
+		} else if strings.Contains(r.URL.Path, "/backups/download") {
+			panel.handleDownloadBackup(w, r)
 		} else if strings.Contains(r.URL.Path, "/backups") {
 			panel.handleDomainBackups(w, r)
 		} else if strings.Contains(r.URL.Path, "/cron") {

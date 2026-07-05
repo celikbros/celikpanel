@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
     Clock, Plus, Trash2, Edit2, RefreshCw,
-    Play, Pause, Save, X, AlertCircle
+    Play, Pause, Save, X, Info,
 } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
+import type { TranslationKey } from '../i18n/en';
+import { Button, EmptyState, inputClass } from './ui';
 
 interface CronJob {
     id: string;
@@ -18,25 +21,31 @@ interface DomainCronManagerProps {
     domainName: string;
 }
 
-const SCHEDULE_PRESETS = [
-    { label: 'Every minute', value: '* * * * *' },
-    { label: 'Every 5 minutes', value: '*/5 * * * *' },
-    { label: 'Every 15 minutes', value: '*/15 * * * *' },
-    { label: 'Every hour', value: '0 * * * *' },
-    { label: 'Every 6 hours', value: '0 */6 * * *' },
-    { label: 'Daily at midnight', value: '0 0 * * *' },
-    { label: 'Daily at noon', value: '0 12 * * *' },
-    { label: 'Weekly (Sunday)', value: '0 0 * * 0' },
-    { label: 'Monthly (1st)', value: '0 0 1 * *' },
+const schedulePresets: { labelKey: TranslationKey; value: string }[] = [
+    { labelKey: 'cron.preset.everyMinute', value: '* * * * *' },
+    { labelKey: 'cron.preset.every5', value: '*/5 * * * *' },
+    { labelKey: 'cron.preset.every15', value: '*/15 * * * *' },
+    { labelKey: 'cron.preset.hourly', value: '0 * * * *' },
+    { labelKey: 'cron.preset.every6h', value: '0 */6 * * *' },
+    { labelKey: 'cron.preset.dailyMidnight', value: '0 0 * * *' },
+    { labelKey: 'cron.preset.dailyNoon', value: '0 12 * * *' },
+    { labelKey: 'cron.preset.weekly', value: '0 0 * * 0' },
+    { labelKey: 'cron.preset.monthly', value: '0 0 1 * *' },
 ];
 
+// Real crontab management through the agent: add, edit, enable/disable and
+// delete the domain user's scheduled tasks, with human-readable presets.
+//
+// Agent üzerinden gerçek crontab yönetimi: domain kullanıcısının zamanlanmış
+// görevlerini ekle, düzenle, etkinleştir/devre dışı bırak ve sil; insan-okur
+// hazır kalıplarla.
 export function DomainCronManager({ domainId }: DomainCronManagerProps) {
+    const { t } = useI18n();
     const [jobs, setJobs] = useState<CronJob[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showAddForm, setShowAddForm] = useState(false);
+    const [showForm, setShowForm] = useState(false);
     const [editingJob, setEditingJob] = useState<CronJob | null>(null);
 
-    // Form state
     const [schedule, setSchedule] = useState('0 * * * *');
     const [command, setCommand] = useState('');
     const [comment, setComment] = useState('');
@@ -50,15 +59,11 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
         setLoading(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron`);
-            if (res.ok) {
-                const data = await res.json();
-                setJobs(data.jobs || []);
-            } else {
-                showToast('error', 'Failed to load cron jobs');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to load cron jobs');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            setJobs(data.jobs || []);
+        } catch {
+            showToast('error', t('common.error'));
         } finally {
             setLoading(false);
         }
@@ -69,67 +74,32 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
         setCommand('');
         setComment('');
         setEditingJob(null);
-        setShowAddForm(false);
+        setShowForm(false);
     };
 
-    const addJob = async () => {
+    const submitForm = async () => {
         if (!command.trim()) {
-            showToast('error', 'Command is required');
+            showToast('error', t('cron.commandRequired'));
             return;
         }
-
         setSaving(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron`, {
-                method: 'POST',
+                method: editingJob ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schedule, command, comment })
+                body: JSON.stringify(
+                    editingJob
+                        ? { id: editingJob.id, schedule, command, enabled: editingJob.enabled, comment }
+                        : { schedule, command, comment },
+                ),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Cron job added');
-                resetForm();
-                loadJobs();
-            } else {
-                showToast('error', data.error || 'Failed to add cron job');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to add cron job');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const updateJob = async () => {
-        if (!editingJob || !command.trim()) return;
-
-        setSaving(true);
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/cron`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: editingJob.id,
-                    schedule,
-                    command,
-                    enabled: editingJob.enabled,
-                    comment
-                })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Cron job updated');
-                resetForm();
-                loadJobs();
-            } else {
-                showToast('error', data.error || 'Failed to update cron job');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to update cron job');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', editingJob ? t('cron.updated') : t('cron.added'));
+            resetForm();
+            loadJobs();
+        } catch {
+            showToast('error', t('common.error'));
         } finally {
             setSaving(false);
         }
@@ -140,46 +110,29 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
             const res = await fetch(`/api/v1/domains/${domainId}/cron`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: job.id,
-                    schedule: job.schedule,
-                    command: job.command,
-                    enabled: !job.enabled,
-                    comment: job.comment
-                })
+                body: JSON.stringify({ ...job, enabled: !job.enabled }),
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', job.enabled ? 'Job disabled' : 'Job enabled');
-                loadJobs();
-            } else {
-                showToast('error', data.error || 'Failed to toggle job');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to toggle job');
+            if (!data.success) throw new Error(data.error);
+            showToast('success', job.enabled ? t('cron.disabledMsg') : t('cron.enabledMsg'));
+            loadJobs();
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
     const deleteJob = async (job: CronJob) => {
-        if (!confirm(`Delete cron job?\n${job.command}`)) return;
-
+        if (!confirm(`${t('cron.deleteConfirm')}\n${job.command}`)) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron?id=${encodeURIComponent(job.id)}`, {
-                method: 'DELETE'
+                method: 'DELETE',
             });
-
             const data = await res.json();
-            if (data.success) {
-                showToast('success', 'Cron job deleted');
-                loadJobs();
-            } else {
-                showToast('error', data.error || 'Failed to delete job');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to delete job');
+            if (!data.success) throw new Error();
+            showToast('success', t('cron.deleted'));
+            loadJobs();
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
@@ -188,52 +141,46 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
         setSchedule(job.schedule);
         setCommand(job.command);
         setComment(job.comment || '');
-        setShowAddForm(true);
+        setShowForm(true);
     };
 
-    const describeSchedule = (schedule: string) => {
-        const preset = SCHEDULE_PRESETS.find(p => p.value === schedule);
-        if (preset) return preset.label;
-
-        const [min, hour, dom, month, dow] = schedule.split(' ');
-        let desc = '';
-
-        if (min === '*' && hour === '*') desc = 'Every minute';
-        else if (min.startsWith('*/')) desc = `Every ${min.slice(2)} minutes`;
-        else if (hour === '*') desc = `At minute ${min}`;
-        else if (dom === '*' && month === '*' && dow === '*') desc = `Daily at ${hour}:${min.padStart(2, '0')}`;
-        else desc = schedule;
-
-        return desc;
+    // Prefer the preset label when the expression matches one; otherwise show
+    // the raw cron expression.
+    // İfade bir kalıpla eşleşiyorsa kalıp etiketini, yoksa ham cron ifadesini
+    // göster.
+    const describeSchedule = (expr: string) => {
+        const preset = schedulePresets.find((p) => p.value === expr);
+        return preset ? t(preset.labelKey) : expr;
     };
 
     return (
-        <div className="space-y-6">
-            {/* Add/Edit Form */}
-            {showAddForm && (
-                <div className="bg-surface-2/50 border border-border rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-fg">
-                            {editingJob ? 'Edit Cron Job' : 'Add New Cron Job'}
+        <div className="space-y-5">
+            {/* Add / edit form */}
+            {showForm && (
+                <div className="rounded-xl border border-border bg-surface-2/50 p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-fg">
+                            {editingJob ? t('cron.editTitle') : t('cron.addTitle')}
                         </h3>
-                        <button onClick={resetForm} className="p-1 hover:bg-surface-3 rounded">
-                            <X className="w-5 h-5 text-fg-muted" />
+                        <button onClick={resetForm} className="rounded-md p-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                            <X className="h-4 w-4" />
                         </button>
                     </div>
 
                     <div className="space-y-4">
-                        {/* Schedule */}
                         <div>
-                            <label className="block text-sm font-medium text-fg-muted mb-2">Schedule</label>
-                            <div className="flex gap-2">
+                            <label className="mb-1.5 block text-sm font-medium text-fg-muted">{t('cron.schedule')}</label>
+                            <div className="flex flex-wrap gap-2">
                                 <select
-                                    value={SCHEDULE_PRESETS.find(p => p.value === schedule)?.value || ''}
+                                    value={schedulePresets.find((p) => p.value === schedule)?.value ?? ''}
                                     onChange={(e) => e.target.value && setSchedule(e.target.value)}
-                                    className="px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
+                                    className={`${inputClass} w-auto`}
                                 >
-                                    <option value="">Custom...</option>
-                                    {SCHEDULE_PRESETS.map(p => (
-                                        <option key={p.value} value={p.value}>{p.label}</option>
+                                    <option value="">{t('cron.custom')}</option>
+                                    {schedulePresets.map((p) => (
+                                        <option key={p.value} value={p.value}>
+                                            {t(p.labelKey)}
+                                        </option>
                                     ))}
                                 </select>
                                 <input
@@ -241,142 +188,115 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                                     value={schedule}
                                     onChange={(e) => setSchedule(e.target.value)}
                                     placeholder="* * * * *"
-                                    className="flex-1 px-3 py-2 bg-surface border border-border-strong rounded text-fg font-mono text-sm"
+                                    className={`${inputClass} flex-1 font-mono`}
                                 />
                             </div>
-                            <p className="text-xs text-fg-subtle mt-1">Format: minute hour day-of-month month day-of-week</p>
+                            <p className="mt-1 text-xs text-fg-subtle">{t('cron.scheduleFormat')}</p>
                         </div>
 
-                        {/* Command */}
                         <div>
-                            <label className="block text-sm font-medium text-fg-muted mb-2">Command</label>
+                            <label className="mb-1.5 block text-sm font-medium text-fg-muted">{t('cron.command')}</label>
                             <input
                                 type="text"
                                 value={command}
                                 onChange={(e) => setCommand(e.target.value)}
                                 placeholder="/usr/bin/php /var/www/example.com/cron.php"
-                                className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg font-mono text-sm"
+                                className={`${inputClass} font-mono`}
                             />
                         </div>
 
-                        {/* Comment */}
                         <div>
-                            <label className="block text-sm font-medium text-fg-muted mb-2">Description (optional)</label>
+                            <label className="mb-1.5 block text-sm font-medium text-fg-muted">{t('cron.comment')}</label>
                             <input
                                 type="text"
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
-                                placeholder="Daily cleanup task"
-                                className="w-full px-3 py-2 bg-surface border border-border-strong rounded text-fg text-sm"
+                                className={inputClass}
                             />
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button
-                                onClick={resetForm}
-                                className="px-4 py-2 bg-surface-3 hover:bg-surface-3 rounded text-fg text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={editingJob ? updateJob : addJob}
-                                disabled={saving || !command.trim()}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover rounded text-white text-sm disabled:opacity-50"
-                            >
-                                <Save className="w-4 h-4" />
-                                {saving ? 'Saving...' : (editingJob ? 'Update' : 'Add Job')}
-                            </button>
+                        <div className="flex justify-end gap-2">
+                            <Button onClick={resetForm}>{t('cron.cancel')}</Button>
+                            <Button variant="primary" icon={Save} onClick={submitForm} disabled={saving || !command.trim()}>
+                                {saving ? t('cron.saving') : editingJob ? t('cron.update') : t('cron.save')}
+                            </Button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Jobs List */}
-            <div className="bg-surface-2/50 border border-border rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-fg">Scheduled Tasks</h3>
+            {/* Job list */}
+            <section>
+                <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-fg">{t('cron.title')}</h3>
                     <div className="flex items-center gap-2">
-                        {!showAddForm && (
-                            <button
-                                onClick={() => setShowAddForm(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary-hover rounded text-white text-sm"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Job
-                            </button>
+                        {!showForm && (
+                            <Button variant="primary" icon={Plus} onClick={() => setShowForm(true)}>
+                                {t('cron.add')}
+                            </Button>
                         )}
                         <button
                             onClick={loadJobs}
-                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
+                            title={t('files.refresh')}
+                            className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
                 </div>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                     </div>
                 ) : jobs.length === 0 ? (
-                    <div className="text-center py-12 text-fg-subtle">
-                        <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No cron jobs configured</p>
-                        <p className="text-sm mt-1">Add a scheduled task to automate recurring commands</p>
-                    </div>
+                    <EmptyState icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {jobs.map((job) => (
                             <div
                                 key={job.id}
-                                className={`p-4 border rounded-lg ${job.enabled
-                                        ? 'bg-surface-3/30 border-border'
-                                        : 'bg-surface-2/50 border-border/50 opacity-60'
-                                    }`}
+                                className={`rounded-xl border border-border bg-surface p-4 ${job.enabled ? '' : 'opacity-60'}`}
                             >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                        {job.comment && (
-                                            <p className="text-sm text-fg-muted mb-1">{job.comment}</p>
-                                        )}
-                                        <p className="text-fg font-mono text-sm truncate">{job.command}</p>
-                                        <div className="flex items-center gap-3 mt-2 text-xs text-fg-muted">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        {job.comment && <p className="mb-1 text-sm text-fg-muted">{job.comment}</p>}
+                                        <p className="truncate font-mono text-sm text-fg">{job.command}</p>
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
                                             <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
+                                                <Clock className="h-3 w-3" />
                                                 {describeSchedule(job.schedule)}
                                             </span>
-                                            <code className="px-1.5 py-0.5 bg-surface-2 rounded">{job.schedule}</code>
+                                            <code className="rounded bg-surface-2 px-1.5 py-0.5">{job.schedule}</code>
                                             {!job.enabled && (
-                                                <span className="px-1.5 py-0.5 bg-warning/20 text-warning rounded">Disabled</span>
+                                                <span className="rounded bg-warning/15 px-1.5 py-0.5 text-warning">
+                                                    {t('cron.disabledBadge')}
+                                                </span>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1 ml-4">
+                                    <div className="flex items-center gap-0.5">
                                         <button
                                             onClick={() => toggleJob(job)}
-                                            className={`p-2 rounded ${job.enabled
-                                                    ? 'hover:bg-surface-3 text-success'
-                                                    : 'hover:bg-surface-3 text-fg-muted'
-                                                }`}
-                                            title={job.enabled ? 'Disable' : 'Enable'}
+                                            title={job.enabled ? t('cron.disable') : t('cron.enable')}
+                                            className={`rounded-md p-2 hover:bg-surface-2 ${job.enabled ? 'text-success' : 'text-fg-muted hover:text-fg'}`}
                                         >
-                                            {job.enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                                            {job.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                                         </button>
                                         <button
                                             onClick={() => startEdit(job)}
-                                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-fg"
-                                            title="Edit"
+                                            title={t('cron.edit')}
+                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-fg"
                                         >
-                                            <Edit2 className="w-4 h-4" />
+                                            <Edit2 className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={() => deleteJob(job)}
-                                            className="p-2 hover:bg-surface-3 rounded text-fg-muted hover:text-danger"
-                                            title="Delete"
+                                            title={t('cron.delete')}
+                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
@@ -384,17 +304,12 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                         ))}
                     </div>
                 )}
-            </div>
+            </section>
 
-            {/* Info */}
-            <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-fg-muted">
-                    <p className="font-medium text-primary">Cron Format</p>
-                    <p className="mt-1 font-mono text-xs">minute(0-59) hour(0-23) day(1-31) month(1-12) weekday(0-6)</p>
-                    <p className="mt-1">Use <code className="text-primary">*</code> for "every", <code className="text-primary">*/5</code> for "every 5"</p>
-                </div>
-            </div>
+            <p className="flex items-start gap-2 text-xs text-fg-subtle">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {t('cron.formatNote')}
+            </p>
         </div>
     );
 }

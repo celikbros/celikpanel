@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
-	"net/rpc"
 	"path/filepath"
 	"strings"
 
@@ -18,11 +17,11 @@ import (
 type SiteOrchestrator struct {
 	db          *sql.DB
 	domainRepo  repositories.DomainRepository
-	agentClient *rpc.Client
+	agentClient *transport.ReconnectingClient
 	basePath    string
 }
 
-func NewSiteOrchestrator(db *sql.DB, agentClient *rpc.Client) *SiteOrchestrator {
+func NewSiteOrchestrator(db *sql.DB, agentClient *transport.ReconnectingClient) *SiteOrchestrator {
 	return &SiteOrchestrator{
 		db:          db,
 		domainRepo:  repositories.NewPostgresDomainRepository(db),
