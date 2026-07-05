@@ -92,14 +92,17 @@ Every phase has a measurable exit criterion; the next phase does not start until
 
 ---
 
-## Phase 3 — The Two Winning Features
+## Phase 3 — The Winning Features
 
-> These two are the difference between "a nice alternative" and "the panel people actually leave cPanel for."
+> The difference between "a nice alternative" and "the panel people actually leave cPanel for."
+> *(Reordered July 5, 2026: runtimes come first — app installers like WordPress build on top of a solid runtime foundation, not the other way around.)*
 
-### 3A. WordPress Toolkit v1
-~40% of the market is WordPress. Plesk's most valuable feature is WP Toolkit.
-- One-click WP install (latest version, correct permissions, database ready)
-- Update management, basic hardening (file permissions, xmlrpc, login protection)
+### 3A. Runtimes done right — PHP depth + Node.js projects
+Classic hosting is PHP, but the market increasingly ships Node apps too. A site is not just "a PHP vhost": it has a **project type**.
+- Project types on a site: `php` (FPM, per-site version), `static`, `node` (long-running app behind nginx reverse proxy), `proxy`
+- Node.js runtime management: install official versions side by side, pick per project
+- Node project = directory + start command + port; supervised (systemd unit), start/stop/logs in the panel
+- PHP depth: per-site version switching and pool settings stay first-class (already live), composer presence honest-reported
 
 ### 3B. cPanel Importer v1
 Our target customers are on cPanel today. If they can't migrate with one click, they won't come at any price.
@@ -107,10 +110,16 @@ Our target customers are on cPanel today. If they can't migrate with one click, 
 
 ### 3C. Taking mail seriously — the start
 Mail is the hardest part of the panel business and the biggest churn driver.
-- Automatic generation and validation of DKIM/SPF/DMARC records
-- Quota management, basic spam protection (rspamd evaluation)
+- ✅ Automatic generation and validation of DKIM/SPF/DMARC records *(done July 5, 2026)*
+- ✅ Quota management with live usage and honest enforcement status *(done July 5, 2026)*
+- Remaining: DKIM signing filter integration (opendkim/rspamd) — needs package install
 
-**Exit criteria:** A real cPanel account restores from archive and works, DNS included · One-click WP install in ≤ 30 seconds · A freshly created mailbox reaches Gmail without landing in spam.
+### 3D. WordPress Toolkit v1 *(deliberately last in this phase)*
+~40% of the market is WordPress; it lands on top of 3A's foundation (one-click install = create PHP site + DB + fetch WP, which 3A makes trivial).
+- One-click WP install (latest version, correct permissions, database ready)
+- Update management, basic hardening (file permissions, xmlrpc, login protection)
+
+**Exit criteria:** A Node app deploys from the panel and survives a reboot · A real cPanel account restores from archive and works, DNS included · A freshly created mailbox reaches Gmail without landing in spam · One-click WP install in ≤ 30 seconds.
 
 ---
 

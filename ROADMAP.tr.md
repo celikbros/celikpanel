@@ -93,14 +93,17 @@ Her fazın sonunda ölçülebilir çıkış kriteri vardır; kriter sağlanmadan
 
 ---
 
-## Faz 3 — Kazandıran İki Özellik
+## Faz 3 — Kazandıran Özellikler
 
-> "İyi bir alternatif" ile "cPanel'den geçilen panel" arasındaki fark bu ikisi.
+> "İyi bir alternatif" ile "cPanel'den geçilen panel" arasındaki fark.
+> *(5 Temmuz 2026'da yeniden sıralandı: önce runtime'lar — WordPress gibi uygulama kurucular sağlam bir runtime temelinin ÜSTÜNE oturur, tersi değil.)*
 
-### 3A. WordPress Toolkit v1
-Pazarın ~%40'ı WordPress. Plesk'in en değerli özelliği WP Toolkit.
-- Tek tuş WP kurulumu (en güncel sürüm, doğru dosya izinleri, hazır DB)
-- Güncelleme yönetimi, temel sağlamlaştırma (dosya izinleri, xmlrpc, login koruması)
+### 3A. Runtime'ları doğru yapmak — PHP derinliği + Node.js projeleri
+Klasik hosting PHP'dir, ama pazar giderek Node uygulamaları da barındırıyor. Bir site yalnızca "PHP vhost" değildir: bir **proje tipi** vardır.
+- Sitede proje tipleri: `php` (FPM, site başına sürüm), `static`, `node` (nginx reverse proxy arkasında uzun ömürlü uygulama), `proxy`
+- Node.js runtime yönetimi: resmi sürümler yan yana kurulur, proje başına seçilir
+- Node projesi = dizin + başlatma komutu + port; gözetimli (systemd unit), panelden başlat/durdur/log
+- PHP derinliği: site başına sürüm değiştirme ve pool ayarları birinci sınıf kalır (zaten canlı), composer varlığı dürüstçe raporlanır
 
 ### 3B. cPanel Importer v1
 Hedef müşteri şu an cPanel'de. Tek tuşla taşınamıyorsa fiyat ne olursa olsun gelmez.
@@ -108,10 +111,16 @@ Hedef müşteri şu an cPanel'de. Tek tuşla taşınamıyorsa fiyat ne olursa ol
 
 ### 3C. Mail'i ciddiye alma başlangıcı
 Mail, panel işinin en zor ve en çok müşteri kaçıran parçası.
-- DKIM/SPF/DMARC kayıtlarının otomatik üretimi ve doğrulanması
-- Kota yönetimi, temel spam koruması (rspamd değerlendirmesi)
+- ✅ DKIM/SPF/DMARC kayıtlarının otomatik üretimi ve doğrulanması *(5 Temmuz 2026'da bitti)*
+- ✅ Kota yönetimi: canlı kullanım + dürüst uygulanma durumu *(5 Temmuz 2026'da bitti)*
+- Kalan: DKIM imzalama filtresi entegrasyonu (opendkim/rspamd) — paket kurulumu ister
 
-**Çıkış kriteri:** Gerçek bir cPanel hesabı arşivden taşınıp DNS dahil çalışır durumda açılır · WP kurulumu tek tıkla ≤ 30 saniye · Kurulan mail hesabı Gmail'e spam'e düşmeden mail atar.
+### 3D. WordPress Toolkit v1 *(bu fazda bilinçli olarak en sona)*
+Pazarın ~%40'ı WordPress; 3A'nın temelinin üstüne oturur (tek tuş kurulum = PHP site + DB + WP indir; 3A bunu bedavaya getirir).
+- Tek tuş WP kurulumu (en güncel sürüm, doğru dosya izinleri, hazır DB)
+- Güncelleme yönetimi, temel sağlamlaştırma (dosya izinleri, xmlrpc, login koruması)
+
+**Çıkış kriteri:** Bir Node uygulaması panelden yayına alınır ve yeniden başlatmadan sağ çıkar · Gerçek bir cPanel hesabı arşivden taşınıp DNS dahil çalışır durumda açılır · Kurulan mail hesabı Gmail'e spam'e düşmeden mail atar · WP kurulumu tek tıkla ≤ 30 saniye.
 
 ---
 
