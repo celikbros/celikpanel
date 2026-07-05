@@ -34,7 +34,7 @@ func (r *PostgresDomainRepository) Create(ctx context.Context, domain *core.Doma
 	
 	// Fetch back to populate defaults (created_at)
 	return r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM domains WHERE id = ?", id).
-		Scan(&domain.ID, &domain.CreatedAt, &domain.UpdatedAt)
+		Scan(&domain.ID, scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt))
 }
 
 func (r *PostgresDomainRepository) GetByID(ctx context.Context, id int) (*core.Domain, error) {
@@ -46,7 +46,7 @@ func (r *PostgresDomainRepository) GetByID(ctx context.Context, id int) (*core.D
 	`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.DNSZoneID, &domain.Status,
-		&domain.CreatedAt, &domain.UpdatedAt, &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
+		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("domain not found: %v", err)
@@ -63,7 +63,7 @@ func (r *PostgresDomainRepository) GetByName(ctx context.Context, name string) (
 	`
 	err := r.db.QueryRowContext(ctx, query, name).Scan(
 		&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.DNSZoneID, &domain.Status,
-		&domain.CreatedAt, &domain.UpdatedAt, &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
+		scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("domain not found: %v", err)
@@ -87,7 +87,7 @@ func (r *PostgresDomainRepository) GetBySubscriptionID(ctx context.Context, subI
 	for rows.Next() {
 		domain := &core.Domain{}
 		err := rows.Scan(&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.DNSZoneID, &domain.Status,
-			&domain.CreatedAt, &domain.UpdatedAt, &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
+			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func (r *PostgresDomainRepository) List(ctx context.Context) ([]*core.Domain, er
 	for rows.Next() {
 		domain := &core.Domain{}
 		err := rows.Scan(&domain.ID, &domain.SubscriptionID, &domain.Name, &domain.DNSZoneID, &domain.Status,
-			&domain.CreatedAt, &domain.UpdatedAt, &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
+			scanTime(&domain.CreatedAt), scanTime(&domain.UpdatedAt), &domain.IPAddressID, &domain.IsTemporary, &domain.TemporarySuffix)
 		if err != nil {
 			return nil, err
 		}

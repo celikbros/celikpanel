@@ -37,9 +37,23 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Filter to the domains the caller owns (admins see all).
+	// Çağıranın sahip olduğu domain'lere filtrele (yöneticiler hepsini görür).
+	visible, all, err := p.visibleOwnerIDs(r.Context(), currentCaller(r))
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
 	// Build response with proper field names for frontend
 	response := make([]DomainResponse, 0, len(domains))
 	for _, domain := range domains {
+		if !all {
+			ownerID, err := p.domainOwnerID(r.Context(), domain.ID)
+			if err != nil || !visible[ownerID] {
+				continue
+			}
+		}
 		// Query site info from database directly
 		var phpVersion string
 		var sslType string
@@ -84,9 +98,22 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default to admin subscription if not specified
-	if req.SubscriptionID == 0 {
+	// Resolve the target subscription and enforce ownership. Admins may
+	// create under any subscription (default 1); everyone else must own the
+	// subscription they create under.
+	// Hedef aboneliği çöz ve sahipliği uygula. Yöneticiler herhangi bir
+	// abonelik altında oluşturabilir (varsayılan 1); diğer herkes altında
+	// oluşturduğu aboneliğin sahibi olmalıdır.
+	caller := currentCaller(r)
+	isAdmin := caller != nil && caller.Role == roleAdmin
+	if req.SubscriptionID == 0 && isAdmin {
 		req.SubscriptionID = 1
+	}
+	if !isAdmin {
+		if err := p.canAccessSubscription(r.Context(), caller, req.SubscriptionID); err != nil {
+			writeClientError(w, http.StatusForbidden, "subscription not found or not permitted")
+			return
+		}
 	}
 
 	// Default PHP version

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,6 +162,26 @@ func main() {
 	
 	// Domain-specific routes (PHP, general, aliases, SSL, logs, databases, delete, etc.)
 	http.HandleFunc("/api/v1/domains/", func(w http.ResponseWriter, r *http.Request) {
+		// Single ownership chokepoint: every /domains/{id}/... sub-resource
+		// flows through here, so one guard covers them all. The first path
+		// segment after the prefix is the domain ID.
+		// Tek sahiplik kapısı: her /domains/{id}/... alt kaynağı buradan geçer,
+		// bu yüzden tek koruma hepsini kapsar. Önekten sonraki ilk yol parçası
+		// domain kimliğidir.
+		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/domains/")
+		idStr := rest
+		if i := strings.IndexByte(rest, '/'); i >= 0 {
+			idStr = rest[:i]
+		}
+		domainID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if !panel.authorizeDomain(w, r, domainID) {
+			return
+		}
+
 		// Route to appropriate handler based on path
 		if strings.Contains(r.URL.Path, "/php/pool") {
 			panel.handleDomainPHPPool(w, r)

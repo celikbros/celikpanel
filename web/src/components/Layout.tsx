@@ -37,10 +37,14 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             .then((r) => (r.ok ? r.json() : []))
             .then((d) => setCounts((c) => ({ ...c, domains: Array.isArray(d) ? d.length : 0 })))
             .catch(() => {});
-        api.getServices()
-            .then((s) => setCounts((c) => ({ ...c, services: s.length })))
-            .catch(() => {});
-    }, []);
+        // Services are an admin-only view; only the admin sidebar shows the badge.
+        // Servisler yalnızca yönetici görünümüdür; rozeti yalnızca yönetici çubuğu gösterir.
+        if (role === 'admin') {
+            api.getServices()
+                .then((s) => setCounts((c) => ({ ...c, services: s.length })))
+                .catch(() => {});
+        }
+    }, [role]);
 
     return (
         <div className="flex h-screen bg-bg text-fg">

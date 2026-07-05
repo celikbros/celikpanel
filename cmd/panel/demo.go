@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -65,6 +67,76 @@ func (p *Panel) seedDemoAccounts() {
 		})
 	}
 	log.Printf("demo: seeded %d demo accounts (password %q)", len(demoAccounts), demoPassword)
+
+	p.seedDemoData()
+}
+
+// seedDemoData wires a realistic ownership hierarchy so the role model is
+// visible in demo mode: the customer belongs to the reseller, the customer
+// owns a subscription, and each of admin/customer gets one sample domain. It
+// is idempotent — safe to run on every --demo start. All inserts are raw
+// rows (no orchestration), enough to exercise ownership filtering in the UI.
+//
+// seedDemoData, rol modelinin demo modunda görünür olması için gerçekçi bir
+// sahiplik hiyerarşisi kurar: müşteri bayiye bağlıdır, müşterinin bir aboneliği
+// vardır ve admin/müşteriden her biri birer örnek domain alır. Bağımsızdır —
+// her --demo başlangıcında güvenle çalışır.
+func (p *Panel) seedDemoData() {
+	ctx := context.Background()
+	db := p.db.GetDB()
+
+	reseller, err1 := p.users.GetByUsername(ctx, "reseller")
+	customer, err2 := p.users.GetByUsername(ctx, "customer")
+	if err1 != nil || err2 != nil {
+		return
+	}
+
+	// Customer belongs to the reseller (the hierarchy edge).
+	// Müşteri bayiye bağlıdır (hiyerarşi kenarı).
+	if _, err := db.ExecContext(ctx, `UPDATE users SET parent_id = ? WHERE id = ?`, reseller.ID, customer.ID); err != nil {
+		log.Printf("demo: parent link failed: %v", err)
+	}
+
+	// Ensure the customer owns a subscription.
+	// Müşterinin bir aboneliği olduğundan emin ol.
+	var subID int
+	err := db.QueryRowContext(ctx, `SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`, customer.ID).Scan(&subID)
+	if errors.Is(err, sql.ErrNoRows) {
+		res, err := db.ExecContext(ctx,
+			`INSERT INTO subscriptions (owner_id, name, max_domains, max_databases, status) VALUES (?, 'Demo Customer Plan', 25, 25, 'active')`,
+			customer.ID)
+		if err != nil {
+			log.Printf("demo: subscription seed failed: %v", err)
+			return
+		}
+		id, _ := res.LastInsertId()
+		subID = int(id)
+	}
+
+	// One domain under admin (subscription 1) and one under the customer, so
+	// each role sees a different slice. Idempotent via the UNIQUE name.
+	// Admin (abonelik 1) altında bir, müşteri altında bir domain; böylece her
+	// rol farklı bir dilim görür. UNIQUE ad sayesinde bağımsızdır.
+	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (1, 'admin-site.local', 'active')`)
+	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (?, 'customer-site.local', 'active')`, subID)
+
+	// A minimal site row per domain so the detail pages have something real to
+	// show (document root, web server). Idempotent via NOT EXISTS.
+	// Her domain için minimal bir site satırı; böylece detay sayfalarının
+	// gösterecek gerçek bir şeyi olur (belge kökü, web sunucusu).
+	for _, name := range []string{"admin-site.local", "customer-site.local"} {
+		var domID int
+		if err := db.QueryRowContext(ctx, `SELECT id FROM domains WHERE name = ?`, name).Scan(&domID); err != nil {
+			continue
+		}
+		_, _ = db.ExecContext(ctx, `
+			INSERT INTO sites (domain_id, document_root, web_server, php_version)
+			SELECT ?, ?, 'nginx', '8.3'
+			WHERE NOT EXISTS (SELECT 1 FROM sites WHERE domain_id = ?)`,
+			domID, "/var/www/"+name, domID)
+	}
+
+	log.Printf("demo: seeded ownership hierarchy (customer→reseller, 1 customer subscription, 2 sample domains + sites)")
 }
 
 // handleDemoAccounts lists the demo credentials — but only in demo mode.

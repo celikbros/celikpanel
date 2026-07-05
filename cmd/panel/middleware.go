@@ -12,7 +12,7 @@ const sessionCookieName = "celikpanel_session"
 
 type contextKey string
 
-const userIDKey contextKey = "userID"
+const callerKey contextKey = "caller"
 
 // requireAuth wraps the whole mux. Everything under /api requires a valid
 // session except the login endpoint; static assets and SPA routes are
@@ -40,7 +40,27 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
+		// Attach the caller (id + role) so handlers can enforce ownership.
+		// Çağıranı (kimlik + rol) iliştir; böylece işleyiciler sahipliği
+		// uygulayabilir.
+		c := &Caller{ID: userID}
+		if u, err := p.users.GetByID(r.Context(), userID); err == nil {
+			c.Role = u.Role
+		}
+
+		// Server/OS-layer endpoints are administrator-only (ROLES.md: only the
+		// admin touches services, config files, and infrastructure). Tenant
+		// data (domains) is instead ownership-filtered inside its handlers.
+		// Sunucu/OS-katmanı uç noktaları yalnızca yöneticiye açıktır (ROLES.md:
+		// servisler, config dosyaları ve altyapıya yalnızca yönetici dokunur).
+		// Kiracı verisi (domain'ler) ise kendi işleyicilerinde sahiplik
+		// süzgecinden geçer.
+		if isAdminOnlyPath(r.URL.Path) && c.Role != roleAdmin {
+			writeClientError(w, http.StatusForbidden, "administrator access required")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), callerKey, c)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -72,12 +92,51 @@ func isPublicPath(r *http.Request) bool {
 	return false
 }
 
+// isAdminOnlyPath matches the server/OS-layer and infrastructure endpoints
+// that only administrators may call. Read-only dashboard health
+// (/api/v1/system/stats), auth, and the ownership-filtered domain routes are
+// intentionally not listed.
+// isAdminOnlyPath, yalnızca yöneticilerin çağırabileceği sunucu/OS-katmanı ve
+// altyapı uç noktalarını eşler. Salt-okunur panel sağlığı
+// (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
+// rotaları bilerek listelenmemiştir.
+func isAdminOnlyPath(path string) bool {
+	adminPrefixes := []string{
+		"/api/v1/config",
+		"/api/v1/dovecot/",
+		"/api/v1/fail2ban/",
+		"/api/v1/managed-services",
+		"/api/v1/nginx/",
+		"/api/v1/pdns/",
+		"/api/v1/php/",
+		"/api/v1/postfix/",
+		"/api/v1/service/",
+		"/api/v1/system/check",
+		"/api/v2/",
+	}
+	for _, prefix := range adminPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// currentCaller returns the authenticated caller, or nil if none.
+// currentCaller, kimliği doğrulanmış çağıranı, yoksa nil döndürür.
+func currentCaller(r *http.Request) *Caller {
+	if c, ok := r.Context().Value(callerKey).(*Caller); ok {
+		return c
+	}
+	return nil
+}
+
 // currentUserID returns the authenticated user's ID, or 0 if none.
 // currentUserID, kimliği doğrulanmış kullanıcının kimliğini, yoksa 0
 // döndürür.
 func currentUserID(r *http.Request) int {
-	if id, ok := r.Context().Value(userIDKey).(int); ok {
-		return id
+	if c := currentCaller(r); c != nil {
+		return c.ID
 	}
 	return 0
 }

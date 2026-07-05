@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity } from 'lucide-react';
 import { api, type Service, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
+import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
 import { Card, PageHeader, UsageBar, StatusDot } from './ui';
 
@@ -15,18 +16,26 @@ import { Card, PageHeader, UsageBar, StatusDot } from './ui';
 // ve servis sağlığı. Placeholder yok; her sayı gerçek.
 export function Dashboard() {
     const { t } = useI18n();
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
     const [stats, setStats] = useState<SystemStats | null>(null);
     const [services, setServices] = useState<Service[] | null>(null);
 
     useEffect(() => {
         const load = () => api.getSystemStats().then(setStats).catch(() => {});
         load();
-        api.getServices().then(setServices).catch(() => setServices([]));
+        // Service health is a server-layer (admin-only) view; the API rejects
+        // it for other roles, so we only ask for it as an admin.
+        // Servis sağlığı sunucu-katmanı (yalnızca yönetici) görünümüdür; API
+        // bunu diğer rollere reddeder, bu yüzden yalnızca yönetici olarak isteriz.
+        if (isAdmin) {
+            api.getServices().then(setServices).catch(() => setServices([]));
+        }
         // Refresh CPU/RAM live every 5s for a real-time feel.
         // Gerçek zamanlı his için CPU/RAM'i 5 sn'de bir yenile.
         const timer = setInterval(load, 5000);
         return () => clearInterval(timer);
-    }, []);
+    }, [isAdmin]);
 
     const running = services?.filter((s) => s.status?.includes('running')).length ?? 0;
     const total = services?.length ?? 0;
@@ -86,36 +95,38 @@ export function Dashboard() {
                     </dl>
                 </Card>
 
-                <Card
-                    title={t('dashboard.services')}
-                    icon={Activity}
-                    className="lg:col-span-2"
-                    action={
-                        <span className="text-xs font-medium text-fg-muted">
-                            {services ? `${running}/${total} ${t('dashboard.running')}` : ''}
-                        </span>
-                    }
-                >
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-2 sm:grid-cols-2">
-                        {services?.map((s) => {
-                            const ok = s.status?.includes('running');
-                            return (
-                                <div
-                                    key={s.id}
-                                    className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-surface-2"
-                                >
-                                    <span className="flex items-center gap-2 text-sm text-fg">
-                                        <StatusDot ok={!!ok} />
-                                        {s.name}
-                                    </span>
-                                    <span className={`text-xs ${ok ? 'text-success' : 'text-fg-subtle'}`}>
-                                        {ok ? t('dashboard.running') : t('dashboard.stopped')}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Card>
+                {isAdmin && (
+                    <Card
+                        title={t('dashboard.services')}
+                        icon={Activity}
+                        className="lg:col-span-2"
+                        action={
+                            <span className="text-xs font-medium text-fg-muted">
+                                {services ? `${running}/${total} ${t('dashboard.running')}` : ''}
+                            </span>
+                        }
+                    >
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-2 sm:grid-cols-2">
+                            {services?.map((s) => {
+                                const ok = s.status?.includes('running');
+                                return (
+                                    <div
+                                        key={s.id}
+                                        className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-surface-2"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm text-fg">
+                                            <StatusDot ok={!!ok} />
+                                            {s.name}
+                                        </span>
+                                        <span className={`text-xs ${ok ? 'text-success' : 'text-fg-subtle'}`}>
+                                            {ok ? t('dashboard.running') : t('dashboard.stopped')}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                )}
             </div>
 
             <section className="mt-6">
@@ -124,7 +135,7 @@ export function Dashboard() {
                 </h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <QuickAction icon={Globe} labelKey="dashboard.addDomain" to="/domains" />
-                    <QuickAction icon={Server} labelKey="dashboard.manageServices" to="/services" />
+                    {isAdmin && <QuickAction icon={Server} labelKey="dashboard.manageServices" to="/services" />}
                     <QuickAction icon={Database} labelKey="dashboard.viewDatabases" to="/databases" />
                 </div>
             </section>
