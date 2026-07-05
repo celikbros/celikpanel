@@ -77,9 +77,9 @@ func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *bool) error {
 		domain, user := parts[1], parts[0]
 		vmailboxLines = append(vmailboxLines, fmt.Sprintf("%s %s/%s/", acc.Email, domain, user))
 	}
-	
+
 	// Also add domains to vmailbox? specific configuration dependent.
-	// Usually `virtual_mailbox_domains` in main.cf handles domains, 
+	// Usually `virtual_mailbox_domains` in main.cf handles domains,
 	// or we add `domain.com dummy` in vmailbox if using `virtual_mailbox_domains = hash:/etc/postfix/vmailbox`
 
 	if err := updateMapFile(postfixVBoxPath, vmailboxLines); err != nil {
@@ -89,7 +89,7 @@ func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *bool) error {
 	// 2. Update /etc/postfix/virtual (Forwardings)
 	// Format: source destination
 	var virtualLines []string
-	// Include accounts as self-aliases? Usually vmailbox takes precedence, 
+	// Include accounts as self-aliases? Usually vmailbox takes precedence,
 	// but some setups need user@domain user@domain mapping in virtual.
 	// We'll stick to just forwardings for now.
 	for _, fwd := range req.Forwardings {
@@ -105,10 +105,10 @@ func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *bool) error {
 	// We need to read existing file to preserve passwords if not provided?
 	// The sync request should probably contain HASHED passwords from DB if we want to sync fully.
 	// OR: RPC just adds/removes individual users. Syncing ALL passwords is unsafe if we don't have them in plaintext (we shouldn't).
-	
+
 	// REVISION: "Sync" approach is bad for passwords.
 	// We should use Add/Delete/UpdatePassword methods.
-	
+
 	return nil
 }
 
@@ -137,7 +137,7 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *bool) error {
 	if err := appendToFile(postfixVBoxPath, vboxLine); err != nil {
 		return err
 	}
-	
+
 	// Rebuild map
 	exec.Command("postmap", postfixVBoxPath).Run()
 
@@ -170,7 +170,7 @@ func (a *Agent) DeleteMailAccount(req *struct{ Email string }, resp *bool) error
 	}
 	exec.Command("postmap", postfixVBoxPath).Run()
 
-	// Optional: Delete mail data? 
+	// Optional: Delete mail data?
 	// Usually safer to keep data or move to trash?
 	// We'll leave data for now implementation-wise.
 
@@ -195,6 +195,53 @@ func (a *Agent) UpdateMailForwarding(req *struct {
 	}
 
 	exec.Command("postmap", postfixVirtualPath).Run()
+	*resp = true
+	return nil
+}
+
+// ImportMailAccount adds an account with an ALREADY-HASHED password (cPanel
+// migration: shadow files carry crypt hashes, dovecot verifies them via the
+// {CRYPT} scheme — users keep their passwords across the migration).
+// ImportMailAccount, parolası ZATEN ÖZETLENMİŞ bir hesap ekler (cPanel göçü:
+// shadow dosyaları crypt özetleri taşır, dovecot bunları {CRYPT} şemasıyla
+// doğrular — kullanıcılar göçte parolalarını korur).
+func (a *Agent) ImportMailAccount(req *struct {
+	Email     string `json:"email"`
+	CryptHash string `json:"crypt_hash"`
+	QuotaMB   int    `json:"quota_mb"`
+}, resp *bool) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+
+	parts := strings.Split(req.Email, "@")
+	if len(parts) != 2 || req.CryptHash == "" || strings.ContainsAny(req.CryptHash, ":\n") {
+		return fmt.Errorf("invalid email or hash")
+	}
+
+	// Re-importing the same account replaces its line (idempotent import).
+	// Aynı hesabı yeniden içe almak satırını değiştirir (bağımsız içe aktarım).
+	_ = removeLineFromFile(dovecotUsersPath, req.Email+":")
+	quota := req.QuotaMB
+	if quota <= 0 {
+		quota = 1024
+	}
+	line := fmt.Sprintf("%s:{CRYPT}%s::::::userdb_quota_rule=*:storage=%dM", req.Email, req.CryptHash, quota)
+	if err := appendToFile(dovecotUsersPath, line); err != nil {
+		return err
+	}
+
+	domain, user := parts[1], parts[0]
+	_ = removeLineFromFile(postfixVBoxPath, req.Email+" ")
+	if err := appendToFile(postfixVBoxPath, fmt.Sprintf("%s %s/%s/", req.Email, domain, user)); err != nil {
+		return err
+	}
+	exec.Command("postmap", postfixVBoxPath).Run()
+
+	maildir := filepath.Join(mailRootDir, domain, user)
+	if err := os.MkdirAll(maildir, 0700); err != nil {
+		return err
+	}
+
 	*resp = true
 	return nil
 }

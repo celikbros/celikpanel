@@ -260,6 +260,11 @@ func main() {
 	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)
 	http.HandleFunc("/api/v1/runtimes/node", panel.handleNodeRuntimes)
 
+	// cPanel importer (admin-only via isAdminOnlyPath)
+	// cPanel içe aktarıcı (isAdminOnlyPath ile yalnızca admin)
+	http.HandleFunc("/api/v1/import/cpanel/inspect", panel.handleImportInspect)
+	http.HandleFunc("/api/v1/import/cpanel/apply", panel.handleImportApply)
+
 	// Database Management v2 - Server Management
 	http.HandleFunc("/api/v2/database-servers", panel.handleListDatabaseServers)
 	http.HandleFunc("/api/v2/database-servers/create", panel.handleCreateDatabaseV2Server)
