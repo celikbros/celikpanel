@@ -13,6 +13,7 @@ import { DomainBackupManager } from './DomainBackupManager';
 import { DomainCronManager } from './DomainCronManager';
 import { DomainMailManager } from './DomainMailManager';
 import { DomainDNSManager } from './DomainDNSManager';
+import { HostingTypePanel } from './HostingTypePanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { StatusDot } from './ui';
@@ -77,6 +78,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             id: 'hosting', labelKey: 'domain.tab.hosting', icon: Server,
             subs: [
                 { id: 'general', labelKey: 'domain.sub.general', render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> },
+                { id: 'type', labelKey: 'domain.sub.hostingType', render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> },
                 { id: 'php', labelKey: 'domain.sub.php', render: () => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} /> },
                 { id: 'ssl', labelKey: 'domain.sub.ssl', render: () => <DomainSSLSettings domainId={domain.id} domainName={domain.domain_name} /> },
             ],

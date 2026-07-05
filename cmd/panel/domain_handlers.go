@@ -12,12 +12,13 @@ import (
 
 // DomainResponse is the API response for domain listing
 type DomainResponse struct {
-	ID         int    `json:"id"`
-	DomainName string `json:"domain_name"`
-	PHPVersion string `json:"php_version"`
-	SSLEnabled bool   `json:"ssl_enabled"`
-	Status     string `json:"status"`
-	CreatedAt  string `json:"created_at"`
+	ID          int    `json:"id"`
+	DomainName  string `json:"domain_name"`
+	PHPVersion  string `json:"php_version"`
+	SSLEnabled  bool   `json:"ssl_enabled"`
+	Status      string `json:"status"`
+	ProjectType string `json:"project_type"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // handleDomains lists all domains
@@ -55,24 +56,25 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Query site info from database directly
-		var phpVersion string
-		var sslType string
+		var phpVersion, sslType, projectType string
 
-		query := `SELECT php_version, ssl_type FROM sites WHERE domain_id = ? LIMIT 1`
-		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).Scan(&phpVersion, &sslType)
+		query := `SELECT php_version, ssl_type, COALESCE(project_type,'php') FROM sites WHERE domain_id = ? LIMIT 1`
+		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).Scan(&phpVersion, &sslType, &projectType)
 		if err != nil {
 			// Default values if site not found
 			phpVersion = "8.3"
 			sslType = "none"
+			projectType = "php"
 		}
 
 		response = append(response, DomainResponse{
-			ID:         domain.ID,
-			DomainName: domain.Name,
-			PHPVersion: phpVersion,
-			SSLEnabled: sslType != "none",
-			Status:     domain.Status,
-			CreatedAt:  domain.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			ID:          domain.ID,
+			DomainName:  domain.Name,
+			PHPVersion:  phpVersion,
+			SSLEnabled:  sslType != "none",
+			Status:      domain.Status,
+			ProjectType: projectType,
+			CreatedAt:   domain.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
 	}
 

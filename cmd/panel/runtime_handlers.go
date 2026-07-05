@@ -27,6 +27,14 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(resp)
 
 	case http.MethodPost:
+		// Listing versions is open to any signed-in user (projects pick from
+		// them); installing runtimes stays an administrator action.
+		// Sürümleri listelemek oturumdaki herkese açıktır (projeler onlardan
+		// seçer); runtime kurmak yönetici işidir.
+		if c := currentCaller(r); c == nil || c.Role != roleAdmin {
+			writeClientError(w, http.StatusForbidden, "administrator access required")
+			return
+		}
 		var req struct {
 			Version string `json:"version"`
 		}

@@ -6,12 +6,23 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, Button, SearchInput, EmptyState, StatusDot } from './ui';
 
+// Type badge colours: categorical, readable in both themes.
+// Tip rozeti renkleri: kategorik, iki temada da okunur.
+const typeBadge: Record<string, string> = {
+    php: 'bg-primary/10 text-primary',
+    static: 'bg-surface-2 text-fg-muted',
+    node: 'bg-success/10 text-success',
+    proxy: 'bg-warning/15 text-warning',
+    forwarding: 'bg-warning/15 text-warning',
+};
+
 interface Domain {
     id: number;
     domain_name: string;
     php_version: string;
     ssl_enabled: boolean;
     status: string;
+    project_type?: string;
     created_at: string;
     disk_usage?: number;
     bandwidth?: number;
@@ -179,7 +190,14 @@ export function Domains() {
                                                 </button>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-2.5 text-fg-muted">{d.php_version || '—'}</td>
+                                        <td className="px-4 py-2.5">
+                                            <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${typeBadge[d.project_type || 'php'] ?? 'bg-surface-2 text-fg-muted'}`}>
+                                                {d.project_type || 'php'}
+                                            </span>
+                                            {(d.project_type || 'php') === 'php' && d.php_version && (
+                                                <span className="ml-1.5 text-xs text-fg-subtle">{d.php_version}</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-2.5 text-right text-fg-muted">{fmtMB(d.disk_usage)}</td>
                                         <td className="px-4 py-2.5 text-right text-fg-muted">
                                             {fmtMB(d.bandwidth)}/mo
