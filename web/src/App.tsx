@@ -12,6 +12,7 @@ import { DatabaseManagementV2 } from './components/DatabaseManagementV2';
 import { ServiceList } from './components/ServiceList';
 import { ConfigEditor } from './components/ConfigEditor';
 import { Settings } from './components/Settings';
+import { UsersPage } from './components/UsersPage';
 import { PHPManagement } from './components/PHPManagement';
 import { NginxManagement } from './components/NginxManagement';
 import { Fail2banManagement } from './components/Fail2banManagement';
@@ -239,6 +240,9 @@ function AppRoutes() {
         {/* Services */}
         <Route path="/services" element={<PageWithLayout><ServicesPage /></PageWithLayout>} />
         <Route path="/services/:serviceId" element={<PageWithLayout><ServiceManagementPage /></PageWithLayout>} />
+
+        {/* Users (admin + reseller) */}
+        <Route path="/users" element={<PageWithLayout><UsersPage /></PageWithLayout>} />
 
         {/* Settings */}
         <Route path="/settings" element={<PageWithLayout><Settings /></PageWithLayout>} />

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Server, LogOut, ChevronDown, Menu } from 'lucide-react';
+import { Server, LogOut, ChevronDown, Menu, KeyRound, UserCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { navItemsForRole, navGroups, type NavItem } from '../nav';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ChangePasswordModal } from './ChangePasswordModal';
 import type { TranslationKey } from '../i18n/en';
 
 // The single inherited shell: a dark navigation rail (grouped, with live
@@ -61,6 +62,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             />
 
             <div className="flex min-w-0 flex-1 flex-col">
+                <ImpersonationBanner />
                 <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5 md:px-6">
                     <button
                         className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-2 md:hidden"
@@ -194,12 +196,38 @@ function SidebarItem({
     );
 }
 
+// ImpersonationBanner: a loud, always-visible band while an operator browses
+// as another account, with the way back one click away.
+// ImpersonationBanner: bir operatör başka bir hesap olarak gezinirken hep
+// görünen belirgin bir şerit; dönüş yolu tek tık uzakta.
+function ImpersonationBanner() {
+    const { user } = useAuth();
+    const { t } = useI18n();
+    if (!user.impersonating) return null;
+
+    const exit = async () => {
+        await fetch('/api/v1/auth/unimpersonate', { method: 'POST' });
+        window.location.assign('/');
+    };
+
+    return (
+        <div className="flex flex-wrap items-center justify-center gap-2 bg-warning px-4 py-1.5 text-sm font-medium text-warning-fg">
+            <UserCheck className="h-4 w-4" />
+            {t('imp.banner', { name: user.username })}
+            <button onClick={exit} className="rounded-md bg-black/15 px-2.5 py-0.5 font-semibold hover:bg-black/25">
+                {t('imp.return')}
+            </button>
+        </div>
+    );
+}
+
 // UserMenu shows the current user and role with a dropdown to sign out.
 // UserMenu, mevcut kullanıcıyı ve rolü, çıkış için bir açılır menüyle gösterir.
 function UserMenu() {
     const { user, role } = useAuth();
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const roleKey = `role.${role}` as TranslationKey;
 
@@ -235,6 +263,16 @@ function UserMenu() {
                         <LanguageSwitcher />
                     </div>
                     <button
+                        onClick={() => {
+                            setOpen(false);
+                            setShowPassword(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                    >
+                        <KeyRound className="h-4 w-4" />
+                        {t('profile.changePassword')}
+                    </button>
+                    <button
                         onClick={async () => {
                             await api.logout();
                             window.location.reload();
@@ -246,6 +284,8 @@ function UserMenu() {
                     </button>
                 </div>
             )}
+
+            {showPassword && <ChangePasswordModal onClose={() => setShowPassword(false)} />}
         </div>
     );
 }

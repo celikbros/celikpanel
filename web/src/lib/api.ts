@@ -28,6 +28,31 @@ export interface CurrentUser {
     username: string;
     role: string;
     email?: string;
+    impersonating?: boolean;
+}
+
+export interface PanelUser {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+    status: string;
+    parent_id?: number;
+    parent_name?: string;
+    subscriptions: number;
+    domains: number;
+    created_at: string;
+}
+
+export interface ServicePlan {
+    id: number;
+    name: string;
+    max_domains: number;
+    max_databases: number;
+    max_email_accounts: number;
+    disk_quota_mb: number;
+    bandwidth_quota_mb: number;
+    subscribers?: number;
 }
 
 export interface DemoAccount {
