@@ -57,10 +57,48 @@ fi
 ok "$SVC_USER:$SVC_GROUP"
 
 # 3. Build if artifacts are missing ------------------------------------------
+# A prebuilt release tarball already contains bin/ and web/dist, so this whole
+# step is skipped there. From a bare git checkout we build from source,
+# bootstrapping the Go and Node toolchains if the system lacks them — so
+# "git clone && sudo ./install.sh" works on a stock Ubuntu with nothing else.
+#
+# Önceden derlenmiş bir release tarball zaten bin/ ve web/dist içerir; orada bu
+# adım tümüyle atlanır. Çıplak bir git checkout'tan kaynaktan derleriz;
+# sistemde yoksa Go ve Node araç zincirlerini indiririz — böylece stok bir
+# Ubuntu'da başka hiçbir şey olmadan "git clone && sudo ./install.sh" çalışır.
+GO_VERSION=1.25.0
+NODE_VERSION=24.18.0
+TOOLCHAIN=/opt/celikpanel/.toolchain
+
+bootstrap_go() {
+    command -v go >/dev/null && { echo go; return; }
+    [ -x "$TOOLCHAIN/go/bin/go" ] && { echo "$TOOLCHAIN/go/bin/go"; return; }
+    c '33' "    Go $GO_VERSION indiriliyor…" >&2
+    mkdir -p "$TOOLCHAIN"
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(dpkg --print-architecture).tar.gz" \
+        | tar -xz -C "$TOOLCHAIN" || die "Go indirilemedi"
+    echo "$TOOLCHAIN/go/bin/go"
+}
+
+bootstrap_node() {
+    command -v npm >/dev/null && { echo "$(command -v node | xargs dirname)"; return; }
+    [ -x "$TOOLCHAIN/node/bin/npm" ] && { echo "$TOOLCHAIN/node/bin"; return; }
+    c '33' "    Node $NODE_VERSION indiriliyor…" >&2
+    local arch; arch=$(dpkg --print-architecture); [ "$arch" = "amd64" ] && arch=x64
+    mkdir -p "$TOOLCHAIN/node"
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz" \
+        | tar -xJ -C "$TOOLCHAIN/node" --strip-components=1 || die "Node indirilemedi"
+    echo "$TOOLCHAIN/node/bin"
+}
+
 if [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] || [ ! -f "$SRC/web/dist/index.html" ]; then
-    step "Derleme (bin/panel, bin/agent, web/dist)"
-    command -v make >/dev/null || die "make gerekli (ya da önce 'make build' çalıştırın)"
-    make -C "$SRC" build >/dev/null || die "derleme başarısız — 'make build' çıktısını inceleyin"
+    step "Kaynaktan derleme (bin/panel, bin/agent, web/dist)"
+    GO_BIN=$(bootstrap_go)
+    NODE_BIN=$(bootstrap_node)
+    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
+    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
+    ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm ci --no-audit --no-fund >/dev/null 2>&1 || PATH="$NODE_BIN:$PATH" npm install --no-audit --no-fund >/dev/null 2>&1 ) || die "npm kurulumu başarısız"
+    ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm run build >/dev/null ) || die "frontend derlenemedi"
     ok "derlendi"
 else
     ok "Mevcut derleme kullanılıyor (bin/ + web/dist)"

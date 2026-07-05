@@ -8,7 +8,10 @@ NPM     ?= $(shell [ -x .bin/node/bin/npm ] && echo $(PWD)/.bin/node/bin/npm || 
 NODEDIR := $(PWD)/.bin/node/bin
 LDFLAGS := -s -w
 
-.PHONY: all build panel agent web clean
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+DIST    := celikpanel-$(VERSION)
+
+.PHONY: all build panel agent web clean dist
 
 all: build
 
@@ -24,5 +27,20 @@ web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund 2>/dev/null || (cd web && PATH="$(NODEDIR):$$PATH" $(NPM) install --no-audit --no-fund)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
+dist: build ## Assemble a self-contained release tarball (no toolchain needed on target)
+	# Mirror the repo layout (bin/, web/dist/, deploy/systemd/) so install.sh
+	# runs identically from a checkout or from an extracted release.
+	# install.sh'nin bir checkout'tan da açılmış release'ten de aynı çalışması
+	# için depo düzenini (bin/, web/dist/, deploy/systemd/) yansıt.
+	rm -rf dist/$(DIST)
+	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy
+	cp bin/panel bin/agent dist/$(DIST)/bin/
+	cp -r web/dist/. dist/$(DIST)/web/dist/
+	cp -r deploy/systemd dist/$(DIST)/deploy/
+	cp install.sh Makefile dist/$(DIST)/
+	tar -czf dist/$(DIST).tar.gz -C dist $(DIST)
+	rm -rf dist/$(DIST)
+	@echo "→ dist/$(DIST).tar.gz"
+
 clean: ## Remove build outputs
-	rm -rf bin web/dist
+	rm -rf bin web/dist dist
