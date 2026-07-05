@@ -33,6 +33,13 @@ Everything a human reads for understanding exists in both languages:
 
 Git commit messages are the one practical exception: they are written in a single language (Turkish, the team's working language) to keep history readable, and never carry AI co-author trailers.
 
+Every commit credits the team with exactly these co-author trailers:
+
+```
+Co-Authored-By: Mehmet Ömer Efe Çelik <293130995+momerefe@users.noreply.github.com>
+Co-Authored-By: Alperen Çelik <89036584+celikalperen@users.noreply.github.com>
+```
+
 ## 3. The product → multilingual, TR + EN primary
 
 The panel UI is fully internationalized:

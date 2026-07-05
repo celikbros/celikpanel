@@ -33,6 +33,13 @@ Bir insanın anlamak için okuduğu her şey iki dilde de bulunur:
 
 Git commit mesajları tek pratik istisnadır: geçmişi okunur tutmak için tek dilde (ekibin çalışma dili Türkçe) yazılır ve asla yapay zekâ ortak-yazar imzası taşımaz.
 
+Her commit, ekibi tam olarak şu ortak-yazar imzalarıyla anar:
+
+```
+Co-Authored-By: Mehmet Ömer Efe Çelik <293130995+momerefe@users.noreply.github.com>
+Co-Authored-By: Alperen Çelik <89036584+celikalperen@users.noreply.github.com>
+```
+
 ## 3. Ürün → çok dilli, TR + EN öncelikli
 
 Panel arayüzü tümüyle uluslararasılaştırılır (i18n):
