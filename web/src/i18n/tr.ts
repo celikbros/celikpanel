@@ -25,6 +25,8 @@ export const tr: Record<TranslationKey, string> = {
     'login.invalid': 'Kullanıcı adı ya da parola hatalı.',
     'login.failed': 'Giriş başarısız. Lütfen tekrar deneyin.',
     'login.tooMany': 'Çok fazla deneme. Lütfen biraz bekleyip tekrar deneyin.',
+    'login.demoTitle': 'Demo hesapları',
+    'login.demoHint': 'Geliştirme modu — formu doldurmak için bir role tıklayın.',
 
     'theme.label': 'Tema',
     'theme.light': 'Açık',

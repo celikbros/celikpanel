@@ -54,9 +54,12 @@ func isPublicPath(r *http.Request) bool {
 	if !strings.HasPrefix(r.URL.Path, "/api") {
 		return true
 	}
-	// The login endpoint is the only public API route.
-	// Giriş uç noktası, herkese açık tek API rotasıdır.
-	if r.URL.Path == "/api/v1/auth/login" {
+	// The login and demo-credentials endpoints are public. Demo returns
+	// nothing unless the server was started with --demo, so this is safe.
+	// Giriş ve demo kimlik bilgileri uç noktaları herkese açıktır. Demo,
+	// sunucu --demo ile başlatılmadıkça hiçbir şey döndürmez; bu yüzden
+	// güvenlidir.
+	if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/demo" {
 		return true
 	}
 	// Same-origin CORS preflight carries no credentials; let it through so

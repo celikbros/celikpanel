@@ -30,6 +30,12 @@ export interface CurrentUser {
     email?: string;
 }
 
+export interface DemoAccount {
+    username: string;
+    password: string;
+    role: string;
+}
+
 export interface SystemStats {
     hostname: string;
     os: string;
@@ -72,6 +78,20 @@ class API {
 
     async logout(): Promise<void> {
         await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    }
+
+    // demoAccounts returns the dev quick-login credentials. The list is empty
+    // unless the server was started with --demo, so it is safe to always call.
+    // demoAccounts, geliştirme hızlı-giriş bilgilerini döndürür. Sunucu --demo
+    // ile başlatılmadıkça liste boştur; bu yüzden her zaman çağrılması güvenlidir.
+    async demoAccounts(): Promise<DemoAccount[]> {
+        try {
+            const res = await fetch(`${API_BASE}/auth/demo`);
+            if (!res.ok) return [];
+            return (await res.json()) || [];
+        } catch {
+            return [];
+        }
     }
 
     async getServices(): Promise<Service[]> {

@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { Server } from 'lucide-react';
-import { api, type CurrentUser } from '../lib/api';
+import { useState, useEffect } from 'react';
+import { Server, ShieldCheck, Users, User } from 'lucide-react';
+import { api, type CurrentUser, type DemoAccount } from '../lib/api';
 import { useI18n } from '../i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
+
+const roleIcon: Record<string, typeof User> = {
+    admin: ShieldCheck,
+    reseller: Users,
+    customer: User,
+};
 
 // The front door. Theme- and language-aware, it uses the shared i18n and
 // theme systems so it looks like the rest of the panel from the first
@@ -18,6 +24,21 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [demo, setDemo] = useState<DemoAccount[]>([]);
+
+    // Demo accounts only come back when the server runs with --demo, so this
+    // panel simply never appears in production.
+    // Demo hesapları yalnızca sunucu --demo ile çalışırken döner; bu yüzden
+    // bu panel üretimde asla görünmez.
+    useEffect(() => {
+        api.demoAccounts().then(setDemo).catch(() => {});
+    }, []);
+
+    const fillDemo = (acc: DemoAccount) => {
+        setUsername(acc.username);
+        setPassword(acc.password);
+        setError('');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,6 +125,39 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                         {submitting ? t('login.signingIn') : t('login.signIn')}
                     </button>
                 </form>
+
+                {demo.length > 0 && (
+                    <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/60 p-4">
+                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
+                            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-warning" />
+                            {t('login.demoTitle')}
+                        </div>
+                        <p className="mb-3 text-xs text-fg-muted">{t('login.demoHint')}</p>
+                        <div className="space-y-2">
+                            {demo.map((acc) => {
+                                const Icon = roleIcon[acc.role] ?? User;
+                                return (
+                                    <button
+                                        key={acc.username}
+                                        type="button"
+                                        onClick={() => fillDemo(acc)}
+                                        className="flex w-full items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-left transition-colors hover:border-primary hover:bg-surface"
+                                    >
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-sm font-medium capitalize text-fg">{acc.role}</span>
+                                            <span className="block truncate font-mono text-xs text-fg-muted">
+                                                {acc.username} · {acc.password}
+                                            </span>
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

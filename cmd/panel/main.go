@@ -29,11 +29,13 @@ type Panel struct {
 	users         repositories.UserRepository
 	secureCookies bool
 	loginLimiter  *rateLimiter
+	demoMode      bool
 }
 
 func main() {
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
+	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
 	flag.Parse()
 
 	log.Println("Starting CelikPanel Backend...")
@@ -79,6 +81,13 @@ func main() {
 		// IP başına 5 dakikada 10 giriş denemesi; kaba kuvveti yavaşlatır,
 		// meşru kullanıcıya görünmez kalır.
 		loginLimiter: newRateLimiter(10, 5*time.Minute),
+		demoMode:     *demo,
+	}
+
+	// Development demo accounts (gated behind --demo).
+	// Geliştirme demo hesapları (--demo bayrağının arkasında).
+	if *demo {
+		panel.seedDemoAccounts()
 	}
 
 	// Refuse to start wide open: if no user exists yet, the operator must
@@ -105,6 +114,10 @@ func main() {
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
 	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
 	http.HandleFunc("/api/v1/auth/me", panel.handleMe)
+
+	// Demo credentials (public, but empty unless --demo is set).
+	// Demo kimlik bilgileri (herkese açık, ama --demo yoksa boş).
+	http.HandleFunc("/api/v1/auth/demo", panel.handleDemoAccounts)
 
 	// Managed Services
 	http.HandleFunc("/api/v1/managed-services", panel.handleManagedServices)

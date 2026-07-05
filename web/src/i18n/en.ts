@@ -26,6 +26,8 @@ export const en = {
     'login.invalid': 'Invalid username or password.',
     'login.failed': 'Sign-in failed. Please try again.',
     'login.tooMany': 'Too many attempts. Please wait a moment and try again.',
+    'login.demoTitle': 'Demo accounts',
+    'login.demoHint': 'Development mode — click a role to fill the form.',
 
     'theme.label': 'Theme',
     'theme.light': 'Light',
