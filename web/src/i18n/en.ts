@@ -317,6 +317,28 @@ export const en = {
     'postfix.confirmDelete': 'Delete message {id}?',
     'postfix.logsSoon': 'The mail log viewer is coming soon.',
     'postfix.done': 'Queue action completed',
+
+    'f2b.tab.jails': 'Jails',
+    'f2b.tab.banned': 'Banned IPs',
+    'f2b.tab.config': 'Configuration',
+    'f2b.col.jail': 'Jail',
+    'f2b.col.banned': 'Banned',
+    'f2b.col.ip': 'IP address',
+    'f2b.enabled': 'Enabled',
+    'f2b.unban': 'Unban',
+    'f2b.confirmUnban': 'Unban {ip} from {jail}?',
+    'f2b.unbanned': 'IP unbanned',
+    'f2b.emptyJails': 'No jails active',
+    'f2b.emptyBanned': 'No banned IPs',
+    'f2b.banTime': 'Ban time',
+    'f2b.findTime': 'Find time',
+    'f2b.maxRetry': 'Max retries',
+    'f2b.ignoreIp': 'Ignored IPs (whitelist)',
+    'f2b.configReadonly': 'Read-only. Editing the fail2ban configuration is not supported yet.',
+
+    'dovecot.uptime': 'Uptime',
+    'dovecot.connections': 'Active connections',
+    'dovecot.statsNote': 'Uptime and connection count are read live. Detailed login and authentication metrics need the Dovecot stats plugin.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
