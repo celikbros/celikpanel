@@ -339,6 +339,24 @@ export const en = {
     'dovecot.uptime': 'Uptime',
     'dovecot.connections': 'Active connections',
     'dovecot.statsNote': 'Uptime and connection count are read live. Detailed login and authentication metrics need the Dovecot stats plugin.',
+
+    'nginx.tab.global': 'Global',
+    'nginx.tab.ssl': 'SSL/TLS',
+    'nginx.tab.rateLimits': 'Rate limits',
+    'nginx.workerProcesses': 'Worker processes',
+    'nginx.workerConnections': 'Worker connections',
+    'nginx.keepalive': 'Keepalive timeout',
+    'nginx.maxBodySize': 'Client max body size',
+    'nginx.serverTokens': 'Server tokens',
+    'nginx.gzip': 'Gzip',
+    'nginx.sslProtocols': 'SSL protocols',
+    'nginx.sslCiphers': 'SSL ciphers',
+    'nginx.preferServerCiphers': 'Prefer server ciphers',
+    'nginx.rl.zone': 'Zone key',
+    'nginx.rl.size': 'Size',
+    'nginx.rl.rate': 'Rate',
+    'nginx.emptyRateLimits': 'No rate-limit zones defined',
+    'nginx.readonly': 'Read-only, parsed live from nginx -T. In-panel editing is not supported yet.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
