@@ -522,4 +522,10 @@ export const tr: Record<TranslationKey, string> = {
     'mailauth.policy.reject': 'reject — doğrudan reddet',
     'mailauth.signingMissing': 'DKIM imzalama filtresi (opendkim/rspamd) kurulu değil. Anahtar ve DNS kaydı hazır; bir filtre kurulduğunda giden posta imzalanacak.',
     'mailauth.unresolvedNote': 'Canlı DNS denetlenemedi (ad bu sunucudan çözülmüyor). Durum yalnızca zone\'u yansıtır.',
+
+    'mail.col.usage': 'Kullanım',
+    'mail.quotaNotEnforced': 'Bu sunucuda Dovecot quota eklentisi etkin değil — kayıtlı kotalar henüz uygulanmıyor.',
+    'mail.editQuota': 'Kotayı düzenle',
+    'mail.quotaUpdated': 'Kota güncellendi.',
+    'mail.saveQuota': 'Kaydet',
 };

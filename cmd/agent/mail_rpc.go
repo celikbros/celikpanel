@@ -16,12 +16,28 @@ import (
 // /etc/postfix/virtual (aliases and forwardings)
 // /etc/dovecot/users (authentication)
 
-const (
-	postfixVBoxPath  = "/etc/postfix/vmailbox"
+// Production paths are the real Postfix/Dovecot map files (root agent).
+// CELIKPANEL_MAIL_DIR redirects all four to one directory so a non-root
+// development agent can exercise the full account flow.
+// Üretim yolları gerçek Postfix/Dovecot map dosyalarıdır (root agent).
+// CELIKPANEL_MAIL_DIR dördünü tek dizine yönlendirir; böylece root olmayan
+// bir geliştirme agent'ı tam hesap akışını çalıştırabilir.
+var (
+	postfixVBoxPath    = "/etc/postfix/vmailbox"
 	postfixVirtualPath = "/etc/postfix/virtual"
-	dovecotUsersPath = "/etc/dovecot/users"
-	mailRootDir      = "/var/mail/vhosts"
+	dovecotUsersPath   = "/etc/dovecot/users"
+	mailRootDir        = "/var/mail/vhosts"
 )
+
+func init() {
+	if d := os.Getenv("CELIKPANEL_MAIL_DIR"); d != "" {
+		postfixVBoxPath = filepath.Join(d, "vmailbox")
+		postfixVirtualPath = filepath.Join(d, "virtual")
+		dovecotUsersPath = filepath.Join(d, "dovecot-users")
+		mailRootDir = filepath.Join(d, "vhosts")
+		_ = os.MkdirAll(d, 0o700)
+	}
+}
 
 var mailMutex sync.Mutex
 
@@ -180,6 +196,109 @@ func (a *Agent) UpdateMailForwarding(req *struct {
 
 	exec.Command("postmap", postfixVirtualPath).Run()
 	*resp = true
+	return nil
+}
+
+// UpdateMailQuota rewrites the quota rule on an existing dovecot users line.
+// UpdateMailQuota, mevcut bir dovecot kullanıcı satırındaki kota kuralını
+// yeniden yazar.
+func (a *Agent) UpdateMailQuota(req *struct {
+	Email   string `json:"email"`
+	QuotaMB int    `json:"quota_mb"`
+}, resp *bool) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+
+	content, err := os.ReadFile(dovecotUsersPath)
+	if err != nil {
+		return fmt.Errorf("cannot read dovecot users: %w", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	found := false
+	for i, line := range lines {
+		if !strings.HasPrefix(line, req.Email+":") {
+			continue
+		}
+		found = true
+		// The quota rule is the extra-fields tail; replace it wholesale so a
+		// hand-edited line cannot leave two conflicting rules behind.
+		// Kota kuralı ek-alanlar kuyruğudur; elle düzenlenmiş bir satır iki
+		// çelişen kural bırakamasın diye tümüyle değiştirilir.
+		if idx := strings.Index(line, "userdb_quota_rule="); idx >= 0 {
+			lines[i] = line[:idx] + fmt.Sprintf("userdb_quota_rule=*:storage=%dM", req.QuotaMB)
+		} else {
+			lines[i] = line + fmt.Sprintf(":userdb_quota_rule=*:storage=%dM", req.QuotaMB)
+		}
+	}
+	if !found {
+		return fmt.Errorf("mail account not found")
+	}
+
+	if err := os.WriteFile(dovecotUsersPath, []byte(strings.Join(lines, "\n")), 0644); err != nil { //nosec G703 -- fixed dovecot users path
+		return err
+	}
+	*resp = true
+	return nil
+}
+
+// MailQuotaUsage is one account's live quota state from doveadm.
+// MailQuotaUsage, doveadm'den bir hesabın canlı kota durumudur.
+type MailQuotaUsage struct {
+	Email     string `json:"email"`
+	UsedKB    int64  `json:"used_kb"`
+	LimitKB   int64  `json:"limit_kb"` // 0 = unlimited / kural yok
+	Available bool   `json:"available"`
+}
+
+type MailQuotaStatusRequest struct {
+	Emails []string `json:"emails"`
+}
+
+type MailQuotaStatusResponse struct {
+	PluginEnabled bool             `json:"plugin_enabled"`
+	Usages        []MailQuotaUsage `json:"usages"`
+}
+
+// GetMailQuotaStatus reports whether dovecot's quota plugin is active and,
+// per account, the live usage from `doveadm quota get`. Honesty first: when
+// the plugin is off, the panel must say quotas are NOT being enforced instead
+// of showing stored numbers as if they were.
+//
+// GetMailQuotaStatus, dovecot'un quota eklentisinin etkin olup olmadığını ve
+// hesap başına `doveadm quota get` canlı kullanımını bildirir. Önce dürüstlük:
+// eklenti kapalıyken panel, saklanan sayıları uygulanıyormuş gibi göstermek
+// yerine kotaların uygulanMAdığını söylemelidir.
+func (a *Agent) GetMailQuotaStatus(req *MailQuotaStatusRequest, resp *MailQuotaStatusResponse) error {
+	if out, err := exec.Command("doveconf", "-h", "mail_plugins").Output(); err == nil {
+		resp.PluginEnabled = strings.Contains(string(out), "quota")
+	}
+
+	resp.Usages = make([]MailQuotaUsage, 0, len(req.Emails))
+	if !resp.PluginEnabled {
+		return nil
+	}
+
+	for _, email := range req.Emails {
+		u := MailQuotaUsage{Email: email}
+		out, err := exec.Command("doveadm", "quota", "get", "-u", email).Output()
+		if err == nil {
+			// Output columns: Quota name / Type / Value(KB) / Limit / %
+			// Çıktı sütunları: kota adı / tür / değer(KB) / sınır / %
+			for _, line := range strings.Split(string(out), "\n") {
+				fields := strings.Fields(line)
+				if len(fields) < 5 || fields[len(fields)-4] != "STORAGE" {
+					continue
+				}
+				fmt.Sscanf(fields[len(fields)-3], "%d", &u.UsedKB)
+				if fields[len(fields)-2] != "-" {
+					fmt.Sscanf(fields[len(fields)-2], "%d", &u.LimitKB)
+				}
+				u.Available = true
+			}
+		}
+		resp.Usages = append(resp.Usages, u)
+	}
 	return nil
 }
 

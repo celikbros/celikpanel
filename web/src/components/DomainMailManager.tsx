@@ -1,22 +1,32 @@
 import { useState, useEffect } from 'react';
-import { Mail, Plus, Trash2, ArrowRight, AtSign } from 'lucide-react';
+import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, EmptyState, inputClass } from './ui';
+import { Button, EmptyState, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
 
 interface EmailAccount {
     id: number;
     address: string;
     quota_mb: number;
-    created_at: string;
+}
+
+interface QuotaUsage {
+    email: string;
+    used_kb: number;
+    limit_kb: number;
+    available: boolean;
+}
+
+interface QuotaStatus {
+    plugin_enabled: boolean;
+    usages: QuotaUsage[];
 }
 
 interface Forwarding {
     id: number;
     source: string;
     destination: string;
-    created_at: string;
 }
 
 interface DomainMailManagerProps {
@@ -38,6 +48,14 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     const [fwdSource, setFwdSource] = useState('');
     const [fwdDest, setFwdDest] = useState('');
 
+    // Live quota usage arrives separately from the (fast) account list; the
+    // doveadm calls behind it can be slow with many mailboxes.
+    // Canlı kota kullanımı (hızlı) hesap listesinden ayrı gelir; arkasındaki
+    // doveadm çağrıları çok kutuda yavaş olabilir.
+    const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
+    const [editingQuota, setEditingQuota] = useState<number | null>(null);
+    const [quotaDraft, setQuotaDraft] = useState(1024);
+
     useEffect(() => {
         loadData();
         setShowForm(false);
@@ -55,6 +73,10 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             if (activeTab === 'accounts') {
                 const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`);
                 if (res.ok) setAccounts((await res.json()).accounts || []);
+                fetch(`/api/v1/domains/${domainId}/mail/quota`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then(setQuotaStatus)
+                    .catch(() => {});
             } else {
                 const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings`);
                 if (res.ok) setForwardings((await res.json()).forwardings || []);
@@ -83,6 +105,23 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             loadData();
         } catch {
             showToast('error', t('mail.createFailed'));
+        }
+    };
+
+    const saveQuota = async (id: number) => {
+        if (quotaDraft <= 0) return;
+        try {
+            const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, quota_mb: quotaDraft }),
+            });
+            if (!res.ok) throw new Error();
+            showToast('success', t('mail.quotaUpdated'));
+            setEditingQuota(null);
+            loadData();
+        } catch {
+            showToast('error', t('common.error'));
         }
     };
 
@@ -203,33 +242,92 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                 accounts.length === 0 ? (
                     <EmptyState icon={Mail} title={t('mail.emptyAccounts')} />
                 ) : (
-                    <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                    <th className="px-4 py-2.5">{t('mail.col.address')}</th>
-                                    <th className="px-4 py-2.5">{t('mail.col.quota')}</th>
-                                    <th className="px-4 py-2.5" />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {accounts.map((a) => (
-                                    <tr key={a.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                        <td className="px-4 py-2.5">
-                                            <span className="flex items-center gap-2 font-medium text-fg">
-                                                <AtSign className="h-4 w-4 text-fg-subtle" />
-                                                {a.address}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-fg-muted">{a.quota_mb} MB</td>
-                                        <td className="px-4 py-2.5 text-right">
-                                            <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
-                                        </td>
+                    <>
+                        {quotaStatus && !quotaStatus.plugin_enabled && (
+                            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                                {t('mail.quotaNotEnforced')}
+                            </p>
+                        )}
+                        <div className="overflow-x-auto rounded-lg border border-border">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                        <th className="px-4 py-2.5">{t('mail.col.address')}</th>
+                                        <th className="px-4 py-2.5">{t('mail.col.quota')}</th>
+                                        <th className="w-44 px-4 py-2.5">{t('mail.col.usage')}</th>
+                                        <th className="px-4 py-2.5" />
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {accounts.map((a) => {
+                                        const usage = quotaStatus?.usages.find((u) => u.email === a.address);
+                                        const usedMB = usage?.available ? usage.used_kb / 1024 : null;
+                                        return (
+                                            <tr key={a.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                                <td className="px-4 py-2.5">
+                                                    <span className="flex items-center gap-2 font-medium text-fg">
+                                                        <AtSign className="h-4 w-4 text-fg-subtle" />
+                                                        {a.address}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2.5 text-fg-muted">
+                                                    {editingQuota === a.id ? (
+                                                        <span className="flex items-center gap-2">
+                                                            <input
+                                                                type="number"
+                                                                value={quotaDraft}
+                                                                onChange={(e) => setQuotaDraft(parseInt(e.target.value))}
+                                                                onKeyDown={(e) => e.key === 'Enter' && saveQuota(a.id)}
+                                                                className={`${inputClass} w-24 py-1`}
+                                                                autoFocus
+                                                            />
+                                                            <span className="text-xs">MB</span>
+                                                            <Button variant="primary" onClick={() => saveQuota(a.id)}>
+                                                                {t('mail.saveQuota')}
+                                                            </Button>
+                                                            <Button onClick={() => setEditingQuota(null)}>{t('mail.cancel')}</Button>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1.5">
+                                                            {a.quota_mb} MB
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingQuota(a.id);
+                                                                    setQuotaDraft(a.quota_mb);
+                                                                }}
+                                                                title={t('mail.editQuota')}
+                                                                className="rounded p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    {usedMB !== null ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-20">
+                                                                <UsageBar percent={a.quota_mb > 0 ? (usedMB / a.quota_mb) * 100 : 0} />
+                                                            </div>
+                                                            <span className="whitespace-nowrap text-xs text-fg-muted">
+                                                                {usedMB < 1 ? '<1' : Math.round(usedMB)} / {a.quota_mb} MB
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-fg-subtle">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-right">
+                                                    <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )
             ) : forwardings.length === 0 ? (
                 <EmptyState icon={ArrowRight} title={t('mail.emptyForwarders')} />

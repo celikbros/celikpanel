@@ -6,24 +6,21 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // List emails response
 type EmailAccount struct {
-	ID        int       `json:"id"`
-	Address   string    `json:"address"`
-	QuotaMB   int       `json:"quota_mb"`
-	CreatedAt time.Time `json:"created_at"`
+	ID      int    `json:"id"`
+	Address string `json:"address"`
+	QuotaMB int    `json:"quota_mb"`
 }
 
 type EmailForwarding struct {
-	ID          int       `json:"id"`
-	Source      string    `json:"source"`
-	Destination string    `json:"destination"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          int    `json:"id"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
 }
 
 // Mail API Handlers
@@ -51,11 +48,15 @@ func (p *Panel) handleDomainMail(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.Contains(r.URL.Path, "/mail/auth"):
 		p.handleMailAuth(w, r, domainID)
+	case strings.HasSuffix(r.URL.Path, "/quota"):
+		p.handleMailQuotaStatus(w, r, domainID)
 	case strings.HasSuffix(r.URL.Path, "/accounts"):
 		if r.Method == "GET" {
 			p.handleListEmailAccounts(w, domainID)
 		} else if r.Method == "POST" {
 			p.handleAddEmailAccount(w, r, domainID)
+		} else if r.Method == "PUT" {
+			p.handleUpdateEmailQuota(w, r, domainID)
 		} else if r.Method == "DELETE" {
 			p.handleDeleteEmailAccount(w, r, domainID)
 		}
@@ -72,20 +73,26 @@ func (p *Panel) handleDomainMail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// created_at is deliberately not selected: SQLite hands TEXT timestamps back
+// as strings, which fail a time.Time scan and silently dropped every row —
+// the account list always came back empty. The UI does not show the date.
+// created_at bilerek seçilmez: SQLite, TEXT zaman damgalarını string döndürür;
+// time.Time taraması başarısız olur ve her satırı sessizce düşürüyordu —
+// hesap listesi hep boş dönüyordu. Arayüz tarihi göstermiyor.
 func (p *Panel) handleListEmailAccounts(w http.ResponseWriter, domainID int) {
 	pool := p.db.GetDB()
-	rows, err := pool.QueryContext(context.Background(), 
-		"SELECT id, address, quota_mb, created_at FROM email_accounts WHERE domain_id = ?", domainID)
+	rows, err := pool.QueryContext(context.Background(),
+		"SELECT id, address, quota_mb FROM email_accounts WHERE domain_id = ?", domainID)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
 	defer rows.Close()
 
-	var accounts []EmailAccount
+	accounts := make([]EmailAccount, 0)
 	for rows.Next() {
 		var a EmailAccount
-		if err := rows.Scan(&a.ID, &a.Address, &a.QuotaMB, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.Address, &a.QuotaMB); err != nil {
 			continue
 		}
 		accounts = append(accounts, a)
@@ -96,8 +103,8 @@ func (p *Panel) handleListEmailAccounts(w http.ResponseWriter, domainID int) {
 
 func (p *Panel) handleListEmailForwardings(w http.ResponseWriter, domainID int) {
 	pool := p.db.GetDB()
-	rows, err := pool.QueryContext(context.Background(), 
-		"SELECT id, source, destination, created_at FROM email_forwardings WHERE domain_id = ?", domainID)
+	rows, err := pool.QueryContext(context.Background(),
+		"SELECT id, source, destination FROM email_forwardings WHERE domain_id = ?", domainID)
 	if err != nil {
 		// Table might not exist yet if migration failed, handle gracefully
 		json.NewEncoder(w).Encode(map[string]interface{}{"forwardings": []EmailForwarding{}})
@@ -105,10 +112,10 @@ func (p *Panel) handleListEmailForwardings(w http.ResponseWriter, domainID int) 
 	}
 	defer rows.Close()
 
-	var forwardings []EmailForwarding
+	forwardings := make([]EmailForwarding, 0)
 	for rows.Next() {
 		var f EmailForwarding
-		if err := rows.Scan(&f.ID, &f.Source, &f.Destination, &f.CreatedAt); err != nil {
+		if err := rows.Scan(&f.ID, &f.Source, &f.Destination); err != nil {
 			continue
 		}
 		forwardings = append(forwardings, f)
@@ -213,6 +220,102 @@ func (p *Panel) handleDeleteEmailAccount(w http.ResponseWriter, r *http.Request,
 	}
 
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// handleUpdateEmailQuota changes an account's quota in the DB and pushes the
+// new rule into the dovecot users file through the agent.
+// handleUpdateEmailQuota, bir hesabın kotasını DB'de değiştirir ve yeni kuralı
+// agent üzerinden dovecot kullanıcı dosyasına iletir.
+func (p *Panel) handleUpdateEmailQuota(w http.ResponseWriter, r *http.Request, domainID int) {
+	var req struct {
+		ID      int `json:"id"`
+		QuotaMB int `json:"quota_mb"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.QuotaMB <= 0 {
+		writeClientError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var address string
+	pool := p.db.GetDB()
+	if err := pool.QueryRowContext(r.Context(),
+		`SELECT address FROM email_accounts WHERE id = ? AND domain_id = ?`, req.ID, domainID).Scan(&address); err != nil {
+		http.Error(w, "Account not found", http.StatusNotFound)
+		return
+	}
+
+	var success bool
+	err := p.agentClient.Call("Agent.UpdateMailQuota", &struct {
+		Email   string `json:"email"`
+		QuotaMB int    `json:"quota_mb"`
+	}{Email: address, QuotaMB: req.QuotaMB}, &success)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
+	if _, err := pool.ExecContext(r.Context(),
+		`UPDATE email_accounts SET quota_mb = ? WHERE id = ?`, req.QuotaMB, req.ID); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// handleMailQuotaStatus returns live per-account quota usage plus whether
+// dovecot actually enforces quotas (plugin on/off) — the UI must not present
+// stored limits as enforced when they are not.
+// handleMailQuotaStatus, hesap başına canlı kota kullanımını ve dovecot'un
+// kotaları gerçekten uygulayıp uygulamadığını (eklenti açık/kapalı) döndürür —
+// arayüz, uygulanmayan sınırları uygulanıyormuş gibi sunmamalıdır.
+func (p *Panel) handleMailQuotaStatus(w http.ResponseWriter, r *http.Request, domainID int) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	pool := p.db.GetDB()
+	rows, err := pool.QueryContext(r.Context(),
+		`SELECT address FROM email_accounts WHERE domain_id = ?`, domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer rows.Close()
+
+	var emails []string
+	for rows.Next() {
+		var a string
+		if rows.Scan(&a) == nil {
+			emails = append(emails, a)
+		}
+	}
+
+	var resp struct {
+		PluginEnabled bool `json:"plugin_enabled"`
+		Usages        []struct {
+			Email     string `json:"email"`
+			UsedKB    int64  `json:"used_kb"`
+			LimitKB   int64  `json:"limit_kb"`
+			Available bool   `json:"available"`
+		} `json:"usages"`
+	}
+	if err := p.agentClient.Call("Agent.GetMailQuotaStatus",
+		&struct {
+			Emails []string `json:"emails"`
+		}{Emails: emails}, &resp); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if resp.Usages == nil {
+		resp.Usages = []struct {
+			Email     string `json:"email"`
+			UsedKB    int64  `json:"used_kb"`
+			LimitKB   int64  `json:"limit_kb"`
+			Available bool   `json:"available"`
+		}{}
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (p *Panel) handleAddEmailForwarding(w http.ResponseWriter, r *http.Request, domainID int) {

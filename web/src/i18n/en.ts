@@ -522,6 +522,12 @@ export const en = {
     'mailauth.policy.reject': 'reject — refuse outright',
     'mailauth.signingMissing': 'No DKIM signing filter (opendkim/rspamd) is installed. The key and DNS record are ready; outgoing mail will be signed once a filter is installed.',
     'mailauth.unresolvedNote': 'Live DNS could not be checked (the name does not resolve from this server). The status reflects the zone only.',
+
+    'mail.col.usage': 'Usage',
+    'mail.quotaNotEnforced': 'The Dovecot quota plugin is not enabled on this server — stored quotas are not being enforced yet.',
+    'mail.editQuota': 'Edit quota',
+    'mail.quotaUpdated': 'Quota updated.',
+    'mail.saveQuota': 'Save',
 } as const;
 
 export type TranslationKey = keyof typeof en;
