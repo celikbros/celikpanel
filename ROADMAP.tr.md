@@ -83,13 +83,14 @@ Her fazın sonunda ölçülebilir çıkış kriteri vardır; kriter sağlanmadan
 > İlk izlenim tek şansımız. cPanel kurulumu saatler sürüyor;
 > bizimki bir kahve karıştırma süresinde bitecek.
 
-- `install.sh`: tek komut → 60 saniyede login ekranı
-  (`curl -fsSL https://get.celikpanel.com | bash`)
-- systemd unit dosyaları (panel + agent), otomatik başlatma, çökme kurtarma
-- İlk açılış sihirbazı: admin parolası + hostname + panel SSL — üç soru, fazlası değil
-- Self-update mekanizması (tek binary olmanın meyvesi)
+- ✅ `install.sh`: tek komut → login ekranı. Kendi kendine yeter (Go/Node yoksa indirir, kaynaktan derler) ya da hazır `make dist` release tarball'ı kullanır. *(5 Temmuz 2026'da yazıldı)*
+- ✅ systemd unit'leri (panel düşük-yetki + agent root), otomatik başlatma, çökme kurtarma, reboot sonrası ayağa kalkma *(yazıldı)*
+- ✅ İlk açılış: ilk yöneticiyi oluşturur (`--create-admin`) *(yazıldı)*. Kalan: hostname + panel SSL (panelin kendini HTTPS'te sunması).
+- Self-update mekanizması — sonra.
 
-**Çıkış kriteri:** Temiz Ubuntu 24.04 VPS'te komuttan login ekranına ≤ 60 saniye · Yeniden başlatmada her şey kendiliğinden ayağa kalkar · Dışa açılmadan önce tüm sırlar yenilenmiş olmalı (0.8 dahil).
+**Çıkış kriteri (HENÜZ SAĞLANMADI — gerçek temiz sunucu çalıştırması ister):** Temiz Ubuntu 24.04 VPS'te komuttan login ekranına · Yeniden başlatmada her şey kendiliğinden ayağa kalkar · Golden path (domain→PHP→SSL→DB→yayın) gerçekten çalışır · Dışa açılmadan önce tüm sırlar yenilenmiş olmalı (0.8 dahil).
+
+> **Gerçeklik kontrolü (5 Temmuz 2026):** kurulum iskeleti yazıldı ve çevrimdışı doğrulandı (bash -n, systemd-analyze, taze-DB önyükleme), ama **gerçek bir temiz makinede çalıştırılmadı**. Faz 1'in golden path'i hâlâ doğrulanmamış — geliştirme makinesinde agent root değil, o yüzden domain/SSL/DB oluşturma başarısız. Sıradaki gerçek dönüm noktası: makineyi sıfırla → `install.sh` → uçtan uca canlı site aç.
 
 ---
 

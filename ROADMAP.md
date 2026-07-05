@@ -82,13 +82,14 @@ Every phase has a measurable exit criterion; the next phase does not start until
 > The first impression is our only shot. cPanel takes hours to install;
 > ours will finish before the coffee is stirred.
 
-- `install.sh`: one command → login screen in 60 seconds
-  (`curl -fsSL https://get.celikpanel.com | bash`)
-- systemd units (panel + agent), autostart, crash recovery
-- First-run wizard: admin password + hostname + panel SSL — three questions, not one more
-- Self-update mechanism (the fruit of being a single binary)
+- ✅ `install.sh`: one command → login screen. Self-bootstrapping (downloads Go/Node if absent, builds from source), or uses a prebuilt `make dist` release tarball. *(built July 5, 2026)*
+- ✅ systemd units (panel low-priv + agent root), autostart, crash recovery, reboot survival *(built)*
+- ✅ First-run: creates the first administrator (`--create-admin`) *(built)*. Remaining: hostname + panel SSL (serving the panel itself over HTTPS).
+- Self-update mechanism — later.
 
-**Exit criteria:** Clean Ubuntu 24.04 VPS, command to login screen in ≤ 60 seconds · Everything comes back up by itself after reboot · All secrets rotated before any public exposure (incl. 0.8).
+**Exit criteria (NOT yet met — needs a real clean-server run):** Clean Ubuntu 24.04 VPS, command to login screen · Everything comes back up by itself after reboot · Golden path (domain→PHP→SSL→DB→live) actually works · All secrets rotated before any public exposure (incl. 0.8).
+
+> **Reality check (July 5, 2026):** the install scaffolding is written and validated offline (bash -n, systemd-analyze, fresh-DB bootstrap), but it has **not** been run on a real fresh machine. Faz 1's golden path is still unverified — on the dev box the agent is non-root, so domain/SSL/DB creation fails. The next real milestone is: wipe a machine → `install.sh` → create a live site end to end.
 
 ---
 
