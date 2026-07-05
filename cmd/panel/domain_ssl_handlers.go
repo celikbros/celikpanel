@@ -14,21 +14,21 @@ import (
 
 // SSLCertificate represents a domain's SSL certificate
 type SSLCertificate struct {
-	ID                  int       `json:"id"`
-	DomainID            int       `json:"domain_id"`
-	Type                string    `json:"type"`
-	CertPath            string    `json:"cert_path"`
-	KeyPath             string    `json:"key_path"`
-	ChainPath           string    `json:"chain_path,omitempty"`
-	Issuer              string    `json:"issuer"`
-	Subject             string    `json:"subject"`
-	IssuedAt            time.Time `json:"issued_at"`
-	ExpiresAt           time.Time `json:"expires_at"`
-	DaysUntilExpiry     int       `json:"days_until_expiry"`
-	AutoRenew           bool      `json:"auto_renew"`
-	LastRenewalAttempt  *time.Time `json:"last_renewal_attempt,omitempty"`
-	RenewalStatus       string    `json:"renewal_status,omitempty"`
-	Status              string    `json:"status"`
+	ID                 int        `json:"id"`
+	DomainID           int        `json:"domain_id"`
+	Type               string     `json:"type"`
+	CertPath           string     `json:"cert_path"`
+	KeyPath            string     `json:"key_path"`
+	ChainPath          string     `json:"chain_path,omitempty"`
+	Issuer             string     `json:"issuer"`
+	Subject            string     `json:"subject"`
+	IssuedAt           time.Time  `json:"issued_at"`
+	ExpiresAt          time.Time  `json:"expires_at"`
+	DaysUntilExpiry    int        `json:"days_until_expiry"`
+	AutoRenew          bool       `json:"auto_renew"`
+	LastRenewalAttempt *time.Time `json:"last_renewal_attempt,omitempty"`
+	RenewalStatus      string     `json:"renewal_status,omitempty"`
+	Status             string     `json:"status"`
 }
 
 // SSLSettings represents SSL settings for a domain
@@ -40,11 +40,11 @@ type SSLSettings struct {
 
 // DomainSSLResponse represents the complete SSL status for a domain
 type DomainSSLResponse struct {
-	DomainID       int              `json:"domain_id"`
-	DomainName     string           `json:"domain_name"`
-	HasCertificate bool             `json:"has_certificate"`
-	Certificate    *SSLCertificate  `json:"certificate,omitempty"`
-	Settings       SSLSettings      `json:"settings"`
+	DomainID       int             `json:"domain_id"`
+	DomainName     string          `json:"domain_name"`
+	HasCertificate bool            `json:"has_certificate"`
+	Certificate    *SSLCertificate `json:"certificate,omitempty"`
+	Settings       SSLSettings     `json:"settings"`
 }
 
 // IssueLetsEncryptRequest represents a request to issue Let's Encrypt certificate
@@ -116,7 +116,7 @@ func (p *Panel) handleGetDomainSSL(w http.ResponseWriter, r *http.Request, domai
 		       COALESCE(hsts_max_age, 31536000)
 		FROM sites WHERE domain_id = ?
 	`, domainID).Scan(&settings.ForceHTTPS, &settings.HSTSEnabled, &settings.HSTSMaxAge)
-	
+
 	if err != nil {
 		// Site not found, use defaults
 		settings = SSLSettings{
@@ -257,9 +257,10 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 
 	// Update site SSL status
 	_, err = pool.ExecContext(ctx, `
-		UPDATE sites 
-		SET ssl_enabled = true, 
-		    ssl_cert_path = ?, 
+		UPDATE sites
+		SET ssl_enabled = true,
+		    ssl_type = 'letsencrypt',
+		    ssl_cert_path = ?,
 		    ssl_key_path = ?,
 		    updated_at = datetime('now')
 		WHERE domain_id = ?
@@ -270,7 +271,14 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Regenerate nginx config with SSL
+	// The certificate only matters once nginx serves it: regenerate the
+	// vhost (adds the 443 block) and reload.
+	// Sertifika ancak nginx sunduğunda işe yarar: vhost'u yeniden üret (443
+	// bloğu eklenir) ve yeniden yükle.
+	if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+		writeClientError(w, http.StatusConflict, "certificate issued but enabling it in nginx failed: "+err.Error())
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "success",
@@ -411,13 +419,29 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 
 	// Update site
 	_, err = pool.ExecContext(ctx, `
-		UPDATE sites 
+		UPDATE sites
 		SET ssl_enabled = true,
+		    ssl_type = 'custom',
 		    ssl_cert_path = ?,
 		    ssl_key_path = ?,
 		    updated_at = datetime('now')
 		WHERE domain_id = ?
 	`, installResp.CertPath, installResp.KeyPath, domainID)
+	if err != nil {
+		http.Error(w, "Failed to update site", http.StatusInternalServerError)
+		return
+	}
+
+	// The certificate only matters once nginx serves it: regenerate the
+	// vhost (adds the 443 block) and reload. Without this the cert sat on
+	// disk while the site stayed HTTP-only.
+	// Sertifika ancak nginx sunduğunda işe yarar: vhost'u yeniden üret (443
+	// bloğu eklenir) ve yeniden yükle. Bu olmadan sertifika diskte dururken
+	// site yalnız HTTP kalıyordu.
+	if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+		writeClientError(w, http.StatusConflict, "certificate installed but enabling it in nginx failed: "+err.Error())
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }

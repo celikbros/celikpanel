@@ -10,7 +10,7 @@
 #   sudo ./install.sh
 #
 # Environment knobs / Ortam ayarları:
-#   SKIP_DEPS=1     do not apt-install nginx/php/mariadb/certbot
+#   SKIP_DEPS=1     do not apt-install the tiny prerequisites (tar, xz, curl)
 #   SKIP_ADMIN=1    do not prompt to create the first administrator
 #   LISTEN=:1983    panel bind address
 
@@ -49,7 +49,11 @@ command -v apt-get >/dev/null || die "bu kurulum apt tabanlı dağıtımlar içi
 if [ "${SKIP_DEPS:-0}" != "1" ]; then
     step "Küçük ön gereksinimler (curl, tar, xz)"
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
+    # A broken third-party repo must not abort the install; the packages we
+    # need come from the base archives and may already be cached.
+    # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
+    # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
+    apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
     apt-get install -y -qq tar xz-utils curl ca-certificates >/dev/null
     ok "hazır"
 else

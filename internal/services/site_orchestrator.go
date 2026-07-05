@@ -151,7 +151,16 @@ func (so *SiteOrchestrator) createSiteRecord(ctx context.Context, site *core.Sit
 }
 
 func (so *SiteOrchestrator) generateUsername(domain string) string {
-	// Convert domain to valid username: example.com -> example_com
+	return SiteUsername(domain)
+}
+
+// SiteUsername derives the deterministic system username for a domain
+// (example.com -> example_com). Exported because deletion recomputes it —
+// the sites table stores no username column.
+// SiteUsername, bir domain'in belirlenimci sistem kullanıcı adını türetir
+// (example.com -> example_com). Dışa açık; çünkü silme yeniden hesaplar —
+// sites tablosunda kullanıcı adı sütunu yoktur.
+func SiteUsername(domain string) string {
 	username := strings.ReplaceAll(domain, ".", "_")
 	username = strings.ReplaceAll(username, "-", "_")
 	if len(username) > 32 {

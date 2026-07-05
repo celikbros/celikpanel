@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
@@ -199,6 +200,47 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "domain not found", http.StatusNotFound)
 		return
+	}
+
+	// Tear down the system side first — vhost, PHP pool, app unit, system
+	// user, files. If that fails the ledger row stays, the honest error goes
+	// out, and the delete can be retried; a row deleted while the site still
+	// serves would hide real state.
+	// Önce sistem tarafını sök — vhost, PHP havuzu, uygulama unit'i, sistem
+	// kullanıcısı, dosyalar. Başarısız olursa defter kaydı kalır, dürüst hata
+	// gider ve silme yeniden denenebilir; site sunulmaya devam ederken
+	// silinen bir kayıt gerçek durumu gizlerdi.
+	var siteID int
+	var docroot, phpVersion string
+	err = p.db.GetDB().QueryRowContext(context.Background(),
+		`SELECT id, document_root, COALESCE(php_version,'') FROM sites WHERE domain_id = ?`,
+		domainID).Scan(&siteID, &docroot, &phpVersion)
+	if err == nil {
+		var agentResp struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error,omitempty"`
+		}
+		agentReq := struct {
+			SiteID     int    `json:"site_id"`
+			Domain     string `json:"domain"`
+			Username   string `json:"username"`
+			PHPVersion string `json:"php_version"`
+			SiteHome   string `json:"site_home"`
+		}{
+			SiteID:     siteID,
+			Domain:     domain.Name,
+			Username:   services.SiteUsername(domain.Name),
+			PHPVersion: phpVersion,
+			SiteHome:   filepath.Dir(docroot),
+		}
+		if err := p.agentClient.Call("Agent.DeleteSite", &agentReq, &agentResp); err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if !agentResp.Success {
+			writeClientError(w, http.StatusConflict, "site cleanup failed: "+agentResp.Error)
+			return
+		}
 	}
 
 	// Delete domain (cascades to sites via foreign key)
