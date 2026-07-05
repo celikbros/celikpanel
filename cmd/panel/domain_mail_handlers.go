@@ -49,6 +49,8 @@ func (p *Panel) handleDomainMail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
+	case strings.Contains(r.URL.Path, "/mail/auth"):
+		p.handleMailAuth(w, r, domainID)
 	case strings.HasSuffix(r.URL.Path, "/accounts"):
 		if r.Method == "GET" {
 			p.handleListEmailAccounts(w, domainID)

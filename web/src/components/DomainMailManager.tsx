@@ -3,6 +3,7 @@ import { Mail, Plus, Trash2, ArrowRight, AtSign } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, EmptyState, inputClass } from './ui';
+import { MailAuthPanel } from './MailAuthPanel';
 
 interface EmailAccount {
     id: number;
@@ -28,7 +29,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
     const [forwardings, setForwardings] = useState<Forwarding[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding'>('accounts');
+    const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding' | 'auth'>('accounts');
     const [showForm, setShowForm] = useState(false);
 
     const [user, setUser] = useState('');
@@ -43,6 +44,12 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     }, [domainId, activeTab]);
 
     const loadData = async () => {
+        // The auth tab owns its own data loading (MailAuthPanel).
+        // Auth sekmesi kendi veri yüklemesine sahiptir (MailAuthPanel).
+        if (activeTab === 'auth') {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             if (activeTab === 'accounts') {
@@ -131,8 +138,13 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             <div className="mb-4 flex items-center gap-1 border-b border-border">
                 <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={accounts.length} />
                 <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={forwardings.length} />
+                <Tab active={activeTab === 'auth'} onClick={() => setActiveTab('auth')} label={t('mailauth.tab')} />
             </div>
 
+            {activeTab === 'auth' ? (
+                <MailAuthPanel domainId={domainId} />
+            ) : (
+                <>
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: count })}</span>
                 <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
@@ -250,11 +262,13 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                     </table>
                 </div>
             )}
+                </>
+            )}
         </div>
     );
 }
 
-function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
     return (
         <button
             onClick={onClick}
@@ -263,7 +277,9 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
             }`}
         >
             {label}
-            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+            {count !== undefined && (
+                <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-fg-muted">{count}</span>
+            )}
         </button>
     );
 }
