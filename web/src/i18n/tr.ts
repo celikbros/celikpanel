@@ -300,6 +300,9 @@ export const tr: Record<TranslationKey, string> = {
     'svc.confirmStop': '{name} durdurulsun mu?',
     'svc.confirmRestart': '{name} yeniden başlatılsın mı?',
     'svc.actionFailed': 'İşlem tamamlanamadı.',
+    'svc.install': '{name} kur',
+    'svc.installing': 'Kuruluyor… bir dakika sürebilir',
+    'svc.installed': '{name} kuruldu ve başlatıldı.',
 
     'postfix.tab.queue': 'Mail kuyruğu',
     'postfix.tab.logs': 'Mail logları',

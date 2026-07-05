@@ -184,6 +184,7 @@ func main() {
 	http.HandleFunc("/api/v1/config", panel.handleConfig)
 	http.HandleFunc("/api/v1/service/action", panel.handleServiceAction)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
+	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
 	
 	// Domain Management
 	http.HandleFunc("/api/v1/domains", panel.handleDomains)

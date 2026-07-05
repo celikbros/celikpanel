@@ -300,6 +300,9 @@ export const en = {
     'svc.confirmStop': 'Stop {name}?',
     'svc.confirmRestart': 'Restart {name}?',
     'svc.actionFailed': 'The action could not be completed.',
+    'svc.install': 'Install {name}',
+    'svc.installing': 'Installing… this can take a minute',
+    'svc.installed': '{name} installed and started.',
 
     'postfix.tab.queue': 'Mail queue',
     'postfix.tab.logs': 'Mail logs',

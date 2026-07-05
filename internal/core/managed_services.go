@@ -8,6 +8,22 @@ type ManagedService struct {
 	Icon        string   // Emoji or icon identifier
 	Category    string   // "web", "database", "email", "security", "dns", "cache"
 	SystemNames []string // Systemd service names to check
+	// Packages maps a package-manager family ("apt", "dnf", "pacman") to the
+	// distro packages that install this service. The panel installs nothing at
+	// setup time (the constitution: what isn't installed is invisible); the
+	// admin installs a service on demand and the agent installs exactly these
+	// packages — a fixed whitelist, never an arbitrary name. Only "apt"
+	// (Ubuntu/Debian) is filled and tested today; other families return an
+	// honest "not supported on this distro yet" instead of guessing names.
+	//
+	// Packages, bir paket-yöneticisi ailesini ("apt", "dnf", "pacman") bu
+	// servisi kuran dağıtım paketlerine eşler. Panel kurulum anında hiçbir şey
+	// kurmaz (anayasa: kurulu olmayan görünmez); yönetici servisi talep
+	// üzerine kurar ve agent tam olarak bu paketleri kurar — sabit whitelist,
+	// asla keyfi ad değil. Bugün yalnız "apt" (Ubuntu/Debian) dolu ve test
+	// edilmiştir; diğer aileler ad tahmin etmek yerine dürüst "bu dağıtımda
+	// henüz desteklenmiyor" döndürür.
+	Packages map[string][]string
 }
 
 // ManagedServices is the list of services CelikPanel manages
@@ -19,6 +35,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐘",
 		Category:    "web",
 		SystemNames: []string{"php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm"},
+		Packages:    map[string][]string{"apt": {"php-fpm"}},
 	},
 	{
 		ID:          "nginx",
@@ -27,6 +44,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🔄",
 		Category:    "web",
 		SystemNames: []string{"nginx"},
+		Packages:    map[string][]string{"apt": {"nginx"}},
 	},
 	{
 		ID:          "apache",
@@ -35,6 +53,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🪶",
 		Category:    "web",
 		SystemNames: []string{"apache2"},
+		Packages:    map[string][]string{"apt": {"apache2"}},
 	},
 	{
 		ID:          "postgresql",
@@ -43,6 +62,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐘",
 		Category:    "database",
 		SystemNames: []string{"postgresql"},
+		Packages:    map[string][]string{"apt": {"postgresql"}},
 	},
 	{
 		ID:          "mariadb",
@@ -51,6 +71,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🦭",
 		Category:    "database",
 		SystemNames: []string{"mariadb", "mysql"},
+		Packages:    map[string][]string{"apt": {"mariadb-server"}},
 	},
 	{
 		ID:          "postfix",
@@ -59,6 +80,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "📧",
 		Category:    "email",
 		SystemNames: []string{"postfix"},
+		Packages:    map[string][]string{"apt": {"postfix"}},
 	},
 	{
 		ID:          "dovecot",
@@ -67,6 +89,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "📬",
 		Category:    "email",
 		SystemNames: []string{"dovecot"},
+		Packages:    map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}},
 	},
 	{
 		ID:          "spamassassin",
@@ -75,6 +98,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🛡️",
 		Category:    "email",
 		SystemNames: []string{"spamassassin"},
+		Packages:    map[string][]string{"apt": {"spamassassin"}},
 	},
 	{
 		ID:          "fail2ban",
@@ -83,6 +107,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🚫",
 		Category:    "security",
 		SystemNames: []string{"fail2ban"},
+		Packages:    map[string][]string{"apt": {"fail2ban"}},
 	},
 	{
 		ID:          "bind",
@@ -91,6 +116,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🌐",
 		Category:    "dns",
 		SystemNames: []string{"bind9", "named"},
+		Packages:    map[string][]string{"apt": {"bind9"}},
 	},
 	{
 		ID:          "pdns",
@@ -99,6 +125,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "⚡",
 		Category:    "dns",
 		SystemNames: []string{"pdns"},
+		Packages:    map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}},
 	},
 	{
 		ID:          "vsftpd",
@@ -107,6 +134,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "📂",
 		Category:    "ftp",
 		SystemNames: []string{"vsftpd"},
+		Packages:    map[string][]string{"apt": {"vsftpd"}},
 	},
 	{
 		ID:          "redis",
@@ -115,6 +143,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "⚡",
 		Category:    "cache",
 		SystemNames: []string{"redis-server", "redis"},
+		Packages:    map[string][]string{"apt": {"redis-server"}},
 	},
 	{
 		ID:          "memcached",
@@ -123,6 +152,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "💾",
 		Category:    "cache",
 		SystemNames: []string{"memcached"},
+		Packages:    map[string][]string{"apt": {"memcached"}},
 	},
 }
 

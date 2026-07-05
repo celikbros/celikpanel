@@ -34,17 +34,26 @@ die() { c '1;31' "HATA: $1" >&2; exit 1; }
 command -v systemctl >/dev/null || die "systemd gerekli (Ubuntu/Debian)"
 command -v apt-get >/dev/null || die "bu kurulum apt tabanlı dağıtımlar içindir"
 
-# 1. System dependencies -----------------------------------------------------
+# 1. Minimal prerequisites ---------------------------------------------------
+# The panel and agent are self-contained (static Go binaries + embedded
+# SQLite); we install NOTHING for hosting here. nginx / php / mariadb /
+# postgresql / mail are added later from the panel, on demand, so the operator
+# runs only what they actually want (constitution: what isn't installed is
+# invisible). We ensure only the few tiny tools the agent itself uses.
+#
+# Panel ve agent kendi kendine yeter (statik Go binary + gömülü SQLite);
+# barındırma için burada HİÇBİR ŞEY kurmayız. nginx / php / mariadb /
+# postgresql / mail sonradan panelden, talep üzerine eklenir; böylece operatör
+# yalnız gerçekten istediğini çalıştırır. Yalnız agent'ın kendi kullandığı
+# birkaç küçük aracı sağlarız.
 if [ "${SKIP_DEPS:-0}" != "1" ]; then
-    step "Sistem bağımlılıkları kuruluyor (nginx, php-fpm, mariadb, certbot)"
+    step "Küçük ön gereksinimler (curl, tar, xz)"
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
-    apt-get install -y -qq \
-        nginx php-fpm mariadb-server certbot \
-        tar xz-utils curl ca-certificates >/dev/null
-    ok "bağımlılıklar hazır"
+    apt-get install -y -qq tar xz-utils curl ca-certificates >/dev/null
+    ok "hazır"
 else
-    step "Bağımlılık kurulumu atlandı (SKIP_DEPS=1)"
+    step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
 fi
 
 # 2. Service user & group ----------------------------------------------------

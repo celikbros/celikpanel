@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Play, Square, RotateCw, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Play, Square, RotateCw, Download, type LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { useAuth } from '../auth/AuthContext';
 import { EmptyState, StatusDot } from './ui';
 
 interface ManagedService {
@@ -36,9 +37,11 @@ export function ServiceShell({
     children: ReactNode;
 }) {
     const { t } = useI18n();
+    const { role } = useAuth();
     const [svc, setSvc] = useState<ManagedService | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    const [installing, setInstalling] = useState(false);
 
     const load = () =>
         fetch('/api/v1/managed-services')
@@ -53,6 +56,33 @@ export function ServiceShell({
 
     const running = svc?.status?.includes('running') ?? false;
     const installed = svc?.is_installed ?? false;
+
+    // One-click install of an absent service (admin only). The panel ships
+    // with nothing installed; the agent apt-installs the whitelisted packages
+    // for this host and starts the unit. Honest failures (non-root, distro
+    // unsupported) surface as the real error.
+    // Eksik bir servisi tek tıkla kur (yalnız admin). Panel hiçbir şey kurulu
+    // gelmez; agent bu makine için whitelist'teki paketleri kurar ve unit'i
+    // başlatır. Dürüst hatalar (root değil, dağıtım desteklenmiyor) gerçek
+    // hata olarak görünür.
+    const install = async () => {
+        setInstalling(true);
+        try {
+            const r = await fetch('/api/v1/service/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: serviceId }),
+            });
+            if (!r.ok) {
+                showToast('error', (await r.text()).trim() || t('svc.actionFailed'));
+                return;
+            }
+            showToast('success', t('svc.installed', { name }));
+            await load();
+        } finally {
+            setInstalling(false);
+        }
+    };
 
     const act = async (action: 'start' | 'stop' | 'restart') => {
         const key = action === 'start' ? 'svc.confirmStart' : action === 'stop' ? 'svc.confirmStop' : 'svc.confirmRestart';
@@ -118,7 +148,22 @@ export function ServiceShell({
                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
             ) : !installed ? (
-                <EmptyState icon={Icon} title={t('svc.notInstalled')} hint={t('svc.notInstalledHint', { name })} />
+                <EmptyState
+                    icon={Icon}
+                    title={t('svc.notInstalled')}
+                    hint={t('svc.notInstalledHint', { name })}
+                    action={
+                        role === 'admin' ? (
+                            <CtrlButton
+                                icon={Download}
+                                label={installing ? t('svc.installing') : t('svc.install', { name })}
+                                tone="success"
+                                disabled={installing}
+                                onClick={install}
+                            />
+                        ) : undefined
+                    }
+                />
             ) : (
                 children
             )}
