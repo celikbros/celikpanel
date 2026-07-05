@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -36,20 +37,35 @@ func main() {
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
+	countUsersFlag := flag.Bool("count-users", false, "Print the number of users and exit (used by install.sh) / Kullanıcı sayısını yazıp çık (install.sh kullanır)")
 	flag.Parse()
 
 	log.Println("Starting CelikPanel Backend...")
 
-	// Initialize SQLite Database
-	databasePath := "./data/celikpanel.db"
-	database, err := db.NewSQLiteDB(databasePath)
+	// Initialize SQLite Database. The data directory is created if missing so
+	// a fresh install boots without a manual mkdir.
+	// SQLite veritabanını başlat. Veri dizini yoksa oluşturulur; böylece taze
+	// bir kurulum elle mkdir olmadan açılır.
+	if err := os.MkdirAll(dataDir(), 0o750); err != nil {
+		log.Fatalf("Failed to create data directory: %v", err)
+	}
+	database, err := db.NewSQLiteDB(databaseFile())
 	if err != nil {
 		log.Fatalf("Failed to initialize SQLite: %v", err)
 	}
 	defer database.Close()
 
-	// Admin bootstrap runs without needing the agent, then exits.
-	// Yönetici önyüklemesi agent'a ihtiyaç duymadan çalışır, sonra çıkar.
+	// These bootstrap modes only touch the database, then exit — no agent.
+	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+	if *countUsersFlag {
+		p := &Panel{db: database}
+		n, err := p.countUsers()
+		if err != nil {
+			log.Fatalf("count-users failed: %v", err)
+		}
+		fmt.Println(n)
+		return
+	}
 	if *createAdmin {
 		if err := runCreateAdmin(database); err != nil {
 			log.Fatalf("create-admin failed: %v", err)
@@ -346,14 +362,15 @@ func main() {
 
 	// Serve Frontend (Vite Build) with SPA fallback for React Router
 	// All non-API routes serve index.html for client-side routing
-	fs := http.FileServer(http.Dir("./web/dist"))
+	webRoot := webDir()
+	fs := http.FileServer(http.Dir(webRoot))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// If it's an API request, don't handle here (handled by specific handlers)
 		if strings.HasPrefix(r.URL.Path, "/api") {
 			http.NotFound(w, r)
 			return
 		}
-		
+
 		// Clean the request path before touching the filesystem. Rooting
 		// it at "/" collapses any ".." so a crafted URL cannot escape the
 		// dist directory.
@@ -361,7 +378,7 @@ func main() {
 		// köklemek her ".."yi eritir; böylece hazırlanmış bir URL dist
 		// dizininden dışarı çıkamaz.
 		cleanPath := path.Clean("/" + strings.TrimPrefix(r.URL.Path, "/"))
-		filePath := filepath.Join("./web/dist", cleanPath)
+		filePath := filepath.Join(webRoot, cleanPath)
 		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
 			// File exists, serve it
 			fs.ServeHTTP(w, r)
@@ -369,7 +386,7 @@ func main() {
 		}
 
 		// File doesn't exist, serve index.html for SPA routing
-		http.ServeFile(w, r, "./web/dist/index.html")
+		http.ServeFile(w, r, filepath.Join(webRoot, "index.html"))
 	})
 
 	// Middleware chain, outermost first: security headers on everything →
@@ -380,8 +397,9 @@ func main() {
 		csrfProtect(
 			panel.requireAuth(http.DefaultServeMux)))
 
-	log.Println("Panel listening on :1983 (HTTP)")
-	log.Fatal(http.ListenAndServe(":1983", handler))
+	addr := listenAddr()
+	log.Printf("Panel listening on %s (HTTP)", addr)
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
 
 // countUsers reports how many users exist, to gate startup.

@@ -1,0 +1,42 @@
+[Unit]
+# CelikPanel privileged agent. Runs as root because it manages nginx, PHP-FPM,
+# system users, certbot and databases; the panel never has root and reaches it
+# only through the authenticated Unix socket this unit creates.
+# CelikPanel ayrıcalıklı agent'ı. nginx, PHP-FPM, sistem kullanıcıları,
+# certbot ve veritabanlarını yönettiği için root çalışır; panel asla root
+# olmaz ve ona yalnızca bu unit'in oluşturduğu kimlik-doğrulamalı Unix
+# socket üzerinden ulaşır.
+Description=CelikPanel privileged agent
+After=network.target
+Before=celikpanel-panel.service
+
+[Service]
+Type=simple
+User=root
+# The celikpanel group bridges the root agent and the low-privilege panel:
+# the token (0640) and socket (0660) are group-readable, nothing wider.
+# celikpanel grubu root agent ile düşük yetkili paneli köprüler: token (0640)
+# ve socket (0660) grup-okunur, daha geniş değil.
+Group=celikpanel
+UMask=0027
+
+# /run/celikpanel (socket) and /etc/celikpanel (token, DKIM keys), created
+# root:celikpanel by systemd on every start.
+# /run/celikpanel (socket) ve /etc/celikpanel (token, DKIM anahtarları),
+# systemd tarafından her başlangıçta root:celikpanel oluşturulur.
+RuntimeDirectory=celikpanel
+RuntimeDirectoryMode=0750
+ConfigurationDirectory=celikpanel
+ConfigurationDirectoryMode=0750
+
+Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
+Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
+Environment=CELIKPANEL_DKIM_DIR=/etc/celikpanel/dkim
+Environment=CELIKPANEL_RUNTIMES_DIR=/opt/celikpanel/runtimes
+
+ExecStart=/opt/celikpanel/bin/agent
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

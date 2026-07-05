@@ -65,12 +65,19 @@ func AgentTokenPath() string {
 	return "./data/agent.token"
 }
 
-// LoadOrCreateToken returns the shared token, generating a fresh random
-// one on first run. The file is created 0600: the installer is
-// responsible for granting the panel user read access in production.
+// LoadOrCreateToken returns the shared token, generating a fresh random one
+// on first run. The file is 0640 inside a 0750 directory: only the owner
+// (root agent) may write it, and only the owning group may read it. In
+// production the installer runs the agent with Group=celikpanel and puts
+// the panel user in that group, so the low-privilege panel — and nothing
+// else — can read the token. In dev, agent and panel share one user, so
+// owner read suffices either way.
+//
 // LoadOrCreateToken paylaşımlı token'ı döndürür; ilk çalıştırmada yeni bir
-// rastgele token üretir. Dosya 0600 oluşturulur: üretimde panel
-// kullanıcısına okuma izni vermek kurulum aracının sorumluluğudur.
+// rastgele token üretir. Dosya, 0750 bir dizin içinde 0640'tır: yalnızca
+// sahibi (root agent) yazar, yalnızca sahip grup okur. Üretimde kurulum
+// agent'ı Group=celikpanel ile çalıştırır ve panel kullanıcısını o gruba
+// koyar; böylece yalnızca düşük yetkili panel token'ı okuyabilir.
 func LoadOrCreateToken(path string) (string, error) {
 	if token, err := ReadToken(path); err == nil {
 		return token, nil
@@ -85,7 +92,7 @@ func LoadOrCreateToken(path string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return "", fmt.Errorf("failed to create token directory: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(token+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(token+"\n"), 0o640); err != nil {
 		return "", fmt.Errorf("failed to write token file: %w", err)
 	}
 	return token, nil
