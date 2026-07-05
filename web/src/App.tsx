@@ -86,23 +86,23 @@ function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
 
   switch (serviceId) {
     case 'php-fpm':
-      return <PHPManagement initialVersion={versions[0]} availableVersions={versions} onBack={onBack} />;
+      return <PHPManagement versions={versions} onBack={onBack} />;
     case 'nginx':
-      return <NginxManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <NginxManagement onBack={onBack} />;
     case 'fail2ban':
-      return <Fail2banManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <Fail2banManagement onBack={onBack} />;
     case 'postfix':
-      return <PostfixManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <PostfixManagement onBack={onBack} />;
     case 'dovecot':
-      return <DovecotManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <DovecotManagement onBack={onBack} />;
     case 'pdns':
-      return <PowerDNSManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <PowerDNSManagement onBack={onBack} />;
     case 'vsftpd':
-      return <VsftpdManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <VsftpdManagement onBack={onBack} />;
     case 'postgresql':
-      return <PostgreSQLManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <PostgreSQLManagement onBack={onBack} />;
     case 'mariadb':
-      return <MariaDBManagement initialVersion={versions[0]} onBack={onBack} />;
+      return <MariaDBManagement onBack={onBack} />;
     default:
       return (
         <div className="p-8 text-center">

@@ -6,7 +6,6 @@ import { useI18n } from '../i18n';
 import { Button, EmptyState, StatusDot } from './ui';
 
 interface Fail2banManagementProps {
-    initialVersion: string;
     onBack: () => void;
 }
 

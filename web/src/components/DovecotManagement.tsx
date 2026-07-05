@@ -4,7 +4,6 @@ import { ServiceShell } from './ServiceShell';
 import { useI18n } from '../i18n';
 
 interface DovecotManagementProps {
-    initialVersion: string;
     onBack: () => void;
 }
 

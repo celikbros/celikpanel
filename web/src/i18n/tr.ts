@@ -359,4 +359,37 @@ export const tr: Record<TranslationKey, string> = {
     'nginx.rl.rate': 'Hız',
     'nginx.emptyRateLimits': 'Tanımlı hız-limit bölgesi yok',
     'nginx.readonly': 'Salt okunur, nginx -T\'den canlı ayrıştırılır. Panel içi düzenleme henüz desteklenmiyor.',
+
+    'pdns.repairTitle': 'Tek tıkla yapılandırma onarımı',
+    'pdns.repairDesc': 'Veritabanı arka ucunu, 53 numaralı port çakışmalarını (systemd-resolved) ve çakışan arka uçları otomatik düzeltir.',
+    'pdns.repairRun': 'Otomatik onarımı çalıştır',
+    'pdns.repairing': 'Onarılıyor…',
+    'pdns.repairConfirm': 'Bu, PowerDNS yapılandırmasının üzerine yazar. Devam edilsin mi?',
+    'pdns.repairDone': 'PowerDNS yapılandırması onarıldı.',
+    'pdns.repairFailed': 'Yapılandırma onarımı başarısız oldu.',
+    'pdns.repairSteps': 'Onarım adımları',
+    'pdns.step.backend': 'PostgreSQL arka ucunu yapılandır',
+    'pdns.step.conflict': 'Bind arka uç çakışmasını kaldır',
+    'pdns.step.port': '53 numaralı portu boşalt (stub dinleyici)',
+    'pdns.step.restart': 'Servisi yeniden başlat',
+
+    'db.tab.visual': 'Görsel ayarlar',
+    'db.tab.access': 'Erişim kuralları',
+    'db.rawFiles': 'Gelişmiş: ham dosyalar',
+    'db.selectConfigFile': 'Yapılandırma dosyası',
+    'db.fileNotFound': '{file} bulunamadı.',
+
+    'mariadb.tips': 'MariaDB ipuçları',
+    'mariadb.tip.bind': 'Uzaktan bağlantılara izin vermek için bind-address = 0.0.0.0 kullanın.',
+    'mariadb.tip.buffer': 'Performans için innodb_buffer_pool_size değerini ayarlayın (yaklaşık RAM\'in %70\'i).',
+    'mariadb.tip.logs': 'Servis başlamazsa hata günlüklerini kontrol edin.',
+
+    'vsftpd.configTitle': 'FTP yapılandırması',
+    'vsftpd.configSoon': 'Panel içi FTP yapılandırması yakında geliyor.',
+
+    'php.tab.extensions': 'Eklentiler',
+    'php.tab.config': 'Yapılandırma',
+    'php.installedExtensions': 'Kurulu eklentiler',
+    'php.emptyExtensions': 'Eklenti bulunamadı',
+    'php.toggleFailed': 'Eklenti değiştirilemedi.',
 };

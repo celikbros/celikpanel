@@ -359,6 +359,39 @@ export const en = {
     'nginx.rl.rate': 'Rate',
     'nginx.emptyRateLimits': 'No rate-limit zones defined',
     'nginx.readonly': 'Read-only, parsed live from nginx -T. In-panel editing is not supported yet.',
+
+    'pdns.repairTitle': 'One-click configuration repair',
+    'pdns.repairDesc': 'Automatically fix the database backend, port 53 conflicts (systemd-resolved), and conflicting backends.',
+    'pdns.repairRun': 'Run auto-repair',
+    'pdns.repairing': 'Repairing…',
+    'pdns.repairConfirm': 'This overwrites the PowerDNS configuration. Continue?',
+    'pdns.repairDone': 'PowerDNS configuration repaired.',
+    'pdns.repairFailed': 'Configuration repair failed.',
+    'pdns.repairSteps': 'Repair actions',
+    'pdns.step.backend': 'Configure PostgreSQL backend',
+    'pdns.step.conflict': 'Remove Bind backend conflict',
+    'pdns.step.port': 'Free port 53 (stub listener)',
+    'pdns.step.restart': 'Restart service',
+
+    'db.tab.visual': 'Visual settings',
+    'db.tab.access': 'Access rules',
+    'db.rawFiles': 'Advanced: raw files',
+    'db.selectConfigFile': 'Configuration file',
+    'db.fileNotFound': '{file} not found.',
+
+    'mariadb.tips': 'MariaDB tips',
+    'mariadb.tip.bind': 'Use bind-address = 0.0.0.0 to allow remote connections.',
+    'mariadb.tip.buffer': 'Tune innodb_buffer_pool_size (roughly 70% of RAM) for performance.',
+    'mariadb.tip.logs': 'Check the error logs if the service fails to start.',
+
+    'vsftpd.configTitle': 'FTP configuration',
+    'vsftpd.configSoon': 'In-panel FTP configuration is coming soon.',
+
+    'php.tab.extensions': 'Extensions',
+    'php.tab.config': 'Configuration',
+    'php.installedExtensions': 'Installed extensions',
+    'php.emptyExtensions': 'No extensions found',
+    'php.toggleFailed': 'Could not toggle the extension.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

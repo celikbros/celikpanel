@@ -7,7 +7,6 @@ import { Button, StatusDot } from './ui';
 import type { TranslationKey } from '../i18n/en';
 
 interface PostfixManagementProps {
-    initialVersion: string;
     onBack: () => void;
 }
 

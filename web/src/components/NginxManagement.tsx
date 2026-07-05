@@ -5,7 +5,6 @@ import { useI18n } from '../i18n';
 import { EmptyState } from './ui';
 
 interface NginxManagementProps {
-    initialVersion: string;
     onBack: () => void;
 }
 

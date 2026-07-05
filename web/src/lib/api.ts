@@ -130,12 +130,6 @@ class API {
         });
         if (!res.ok) throw new Error(`Failed to ${action} service`);
     }
-
-    async getServiceStatus(name: string): Promise<{ name: string; active: boolean; pid: string }> {
-        const res = await fetch(`${API_BASE}/service/status?name=${encodeURIComponent(name)}`);
-        if (!res.ok) throw new Error('Failed to fetch service status');
-        return res.json();
-    }
 }
 
 export const api = new API();
