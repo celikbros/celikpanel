@@ -65,6 +65,51 @@ func canManageUser(c *Caller, target *core.User) bool {
 	return target.ParentID != nil && *target.ParentID == c.ID
 }
 
+// handleSubscriptions lists subscriptions visible to the caller, with their
+// owner — used by the import wizard and future subscription pickers.
+// handleSubscriptions, çağıranın görebildiği abonelikleri sahipleriyle
+// listeler — içe aktarım sihirbazı ve gelecekteki abonelik seçicileri için.
+func (p *Panel) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	c := p.requireManager(w, r)
+	if c == nil {
+		return
+	}
+
+	query := `
+		SELECT s.id, s.name, u.username
+		FROM subscriptions s JOIN users u ON s.owner_id = u.id`
+	args := []any{}
+	if c.Role != roleAdmin {
+		// Own subscriptions plus those of the reseller's customers.
+		// Kendi abonelikleri artı bayinin müşterilerinin abonelikleri.
+		query += ` WHERE s.owner_id = ? OR s.owner_id IN (SELECT id FROM users WHERE parent_id = ?)`
+		args = append(args, c.ID, c.ID)
+	}
+	query += ` ORDER BY u.username, s.name`
+
+	rows, err := p.db.GetDB().QueryContext(r.Context(), query, args...)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type sub struct {
+		ID    int    `json:"id"`
+		Name  string `json:"name"`
+		Owner string `json:"owner"`
+	}
+	subs := []sub{}
+	for rows.Next() {
+		var s sub
+		if rows.Scan(&s.ID, &s.Name, &s.Owner) == nil {
+			subs = append(subs, s)
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]any{"subscriptions": subs})
+}
+
 func (p *Panel) handleUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	c := p.requireManager(w, r)

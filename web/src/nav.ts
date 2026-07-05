@@ -1,4 +1,4 @@
-import { LayoutDashboard, Globe, Database, Server, Users, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Globe, Database, Server, Users, Settings, DownloadCloud, type LucideIcon } from 'lucide-react';
 import type { TranslationKey } from './i18n/en';
 import type { Role } from './auth/AuthContext';
 
@@ -32,6 +32,7 @@ export const navItems: NavItem[] = [
     { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ALL, group: 'hosting', countKey: 'databases' },
     { id: 'users', path: '/users', labelKey: 'nav.users', icon: Users, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'services', path: '/services', labelKey: 'nav.services', icon: Server, roles: ['admin'], group: 'server', countKey: 'services' },
+    { id: 'import', path: '/import', labelKey: 'nav.import', icon: DownloadCloud, roles: ['admin'], group: 'server' },
     { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings, roles: ALL, group: 'server' },
 ];
 

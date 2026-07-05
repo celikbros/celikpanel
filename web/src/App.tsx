@@ -13,6 +13,7 @@ import { ServiceList } from './components/ServiceList';
 import { ConfigEditor } from './components/ConfigEditor';
 import { Settings } from './components/Settings';
 import { UsersPage } from './components/UsersPage';
+import { ImportPage } from './components/ImportPage';
 import { PHPManagement } from './components/PHPManagement';
 import { NginxManagement } from './components/NginxManagement';
 import { Fail2banManagement } from './components/Fail2banManagement';
@@ -243,6 +244,9 @@ function AppRoutes() {
 
         {/* Users (admin + reseller) */}
         <Route path="/users" element={<PageWithLayout><UsersPage /></PageWithLayout>} />
+
+        {/* Import (admin) */}
+        <Route path="/import" element={<PageWithLayout><ImportPage /></PageWithLayout>} />
 
         {/* Settings */}
         <Route path="/settings" element={<PageWithLayout><Settings /></PageWithLayout>} />

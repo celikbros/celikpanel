@@ -129,6 +129,7 @@ func main() {
 	http.HandleFunc("/api/v1/users/", panel.handleUserByID)
 	http.HandleFunc("/api/v1/plans", panel.handlePlans)
 	http.HandleFunc("/api/v1/plans/", panel.handlePlanByID)
+	http.HandleFunc("/api/v1/subscriptions", panel.handleSubscriptions)
 	http.HandleFunc("/api/v1/auth/password", panel.handleChangeOwnPassword)
 	http.HandleFunc("/api/v1/auth/unimpersonate", panel.handleUnimpersonate)
 
