@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/services"
 )
 
 // Cron Jobs API Handlers
@@ -54,8 +55,15 @@ func (p *Panel) handleDomainCronJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use www-data as default, could be domain-specific user
-	username := "www-data"
+	// Cron runs as the site's own system user, not www-data — the same
+	// identity that owns the site files, so a job can read and write them
+	// (Plesk/cPanel do the same). www-data would run every site's jobs as
+	// one shared user with no access to the site's private files.
+	// Cron, www-data değil sitenin kendi sistem kullanıcısı olarak çalışır —
+	// site dosyalarının sahibi olan kimlik; böylece bir iş onları okuyup
+	// yazabilir (Plesk/cPanel de böyle yapar). www-data her sitenin işini
+	// tek paylaşımlı kullanıcıyla çalıştırırdı.
+	username := services.SiteUsername(domainName)
 
 	switch r.Method {
 	case "GET":

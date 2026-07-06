@@ -150,7 +150,7 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 			} else {
 				newLine = req.Schedule + " " + req.Command
 			}
-			
+
 			// Add comment if provided
 			if req.Comment != "" && (i == 0 || !strings.HasPrefix(strings.TrimSpace(lines[i-1]), "#")) {
 				newLines = append(newLines, "# "+req.Comment)
@@ -337,7 +337,17 @@ func getCrontab(username string) string {
 }
 
 func setCrontab(username, content string) error {
+	// Report a missing cron package honestly instead of a bare "operation
+	// failed" — scheduled tasks need the cron service installed first.
+	// Eksik cron paketini "operation failed" yerine dürüstçe bildir —
+	// zamanlanmış görevler önce cron servisinin kurulmasını ister.
+	if _, err := exec.LookPath("crontab"); err != nil {
+		return fmt.Errorf("cron is not installed on this server")
+	}
 	cmd := exec.Command("crontab", "-u", username, "-")
 	cmd.Stdin = strings.NewReader(content)
-	return cmd.Run()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("crontab: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
 }
