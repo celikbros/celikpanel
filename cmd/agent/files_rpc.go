@@ -201,8 +201,31 @@ func (a *Agent) WriteFile(req *WriteFileRequest, resp *bool) error {
 		return err
 	}
 
+	chownToParent(path)
 	*resp = true
 	return nil
+}
+
+// chownToParent makes a freshly created path belong to the same owner as the
+// directory it lives in. The root agent writes files as root; without this a
+// site owner cannot edit, over SFTP or SSH, a file the panel's file manager
+// created — the same ownership split that broke maildirs. Best-effort: a dev
+// (non-root) agent cannot chown and fails harmlessly.
+// chownToParent, yeni oluşturulan bir yolu, içinde bulunduğu dizinle aynı
+// sahibe verir. Root agent dosyaları root olarak yazar; bu olmadan site
+// sahibi, panelin dosya yöneticisinin oluşturduğu bir dosyayı SFTP ya da SSH
+// ile düzenleyemez. En-iyi-çaba: dev (root olmayan) agent chown yapamaz,
+// zararsızca başarısız olur.
+func chownToParent(path string) {
+	info, err := os.Stat(filepath.Dir(path))
+	if err != nil {
+		return
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return
+	}
+	_ = os.Lchown(path, int(st.Uid), int(st.Gid))
 }
 
 // CreateFileOrDir creates a file or directory
@@ -232,6 +255,7 @@ func (a *Agent) CreateFileOrDir(req *CreateRequest, resp *bool) error {
 		return err
 	}
 
+	chownToParent(path)
 	*resp = true
 	return nil
 }
@@ -324,6 +348,7 @@ func (a *Agent) UploadFile(req *UploadFileRequest, resp *bool) error {
 		return err
 	}
 
+	chownToParent(path)
 	*resp = true
 	return nil
 }
