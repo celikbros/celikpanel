@@ -39,9 +39,9 @@ type BackupRequest struct {
 
 // BackupResponse contains backup result
 type BackupResponse struct {
-	Success  bool       `json:"success"`
-	Backup   BackupInfo `json:"backup,omitempty"`
-	Error    string     `json:"error,omitempty"`
+	Success bool       `json:"success"`
+	Backup  BackupInfo `json:"backup,omitempty"`
+	Error   string     `json:"error,omitempty"`
 }
 
 // ListBackupsRequest for listing backups
@@ -163,6 +163,31 @@ func (a *Agent) CreateBackup(req *BackupRequest, resp *BackupResponse) error {
 	return nil
 }
 
+// chownTreeToDirOwner sets every entry under dir (and dir itself) to dir's
+// current owner. After a root-run tar extract this returns the restored
+// files to the site user. Best-effort: a dev (non-root) agent cannot chown.
+// chownTreeToDirOwner, dir altındaki her girdiyi (ve dir'in kendisini) dir'in
+// mevcut sahibine ayarlar. Root ile açılan tar sonrası geri yüklenen
+// dosyaları site kullanıcısına döndürür. En-iyi-çaba.
+func chownTreeToDirOwner(dir string) {
+	info, err := os.Stat(dir)
+	if err != nil {
+		return
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return
+	}
+	uid, gid := int(st.Uid), int(st.Gid)
+	_ = filepath.Walk(dir, func(p string, _ os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		_ = os.Lchown(p, uid, gid)
+		return nil
+	})
+}
+
 // createFilesBackup creates a tar.gz of the given document root.
 // createFilesBackup, verilen belge kökünün tar.gz'sini oluşturur.
 func (a *Agent) createFilesBackup(sourceDir, backupPath string) error {
@@ -239,7 +264,7 @@ func (a *Agent) createDatabaseBackup(dbName, dbType, backupPath string) error {
 	switch dbType {
 	case "mysql", "":
 		// mysqldump with compression
-		cmd = exec.Command("bash", "-c", 
+		cmd = exec.Command("bash", "-c",
 			fmt.Sprintf("mysqldump --single-transaction --routines --triggers %s | gzip > %s", dbName, backupPath))
 	case "postgresql":
 		cmd = exec.Command("bash", "-c",
@@ -265,7 +290,7 @@ func (a *Agent) createFullBackup(sourceDir, backupPath string) error {
 // ListBackups lists all backups for a domain
 func (a *Agent) ListBackups(req *ListBackupsRequest, resp *ListBackupsResponse) error {
 	backupDir := filepath.Join(backupBaseDir, req.DomainName)
-	
+
 	resp.Backups = make([]BackupInfo, 0)
 
 	// Check if backup directory exists
@@ -339,6 +364,13 @@ func (a *Agent) RestoreBackup(req *RestoreRequest, resp *BackupResponse) error {
 			resp.Error = fmt.Sprintf("Failed to restore: %v", err)
 			return nil
 		}
+		// tar extracts as root; hand the restored tree back to the site's
+		// user (the docroot's own owner) so the customer can edit their files
+		// over SFTP/SSH — the same ownership rule the file manager follows.
+		// tar root olarak açar; geri yüklenen ağacı sitenin kullanıcısına
+		// (docroot'un kendi sahibine) ver ki müşteri dosyalarını SFTP/SSH ile
+		// düzenleyebilsin — dosya yöneticisiyle aynı sahiplik kuralı.
+		chownTreeToDirOwner(targetDir)
 	} else if strings.HasPrefix(req.BackupName, "db_") {
 		// Extract database name from backup filename (db_DBNAME_timestamp.sql.gz)
 		parts := strings.Split(strings.TrimPrefix(req.BackupName, "db_"), "_")
