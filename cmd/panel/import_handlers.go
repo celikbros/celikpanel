@@ -335,23 +335,43 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 // pushForwardingsToAgent, tam yönlendirme haritasını postfix'e eşitler (map
 // dosyası globaldir; agent tam listeyi ister).
 func (p *Panel) pushForwardingsToAgent(ctx context.Context) {
-	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT source, destination FROM email_forwardings`)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
 	type fwd struct {
 		Source      string `json:"source"`
 		Destination string `json:"destination"`
 	}
 	var all []fwd
+
+	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT source, destination FROM email_forwardings`)
+	if err != nil {
+		return
+	}
 	for rows.Next() {
 		var f fwd
 		if rows.Scan(&f.Source, &f.Destination) == nil {
 			all = append(all, f)
 		}
 	}
+	rows.Close()
+
+	// Catch-all rides the same virtual-alias map with an "@domain" source.
+	// postfix matches the most specific key first, so explicit addresses and
+	// forwardings still win; the catch-all only fires for the unmatched.
+	// Catch-all, "@domain" kaynağıyla aynı sanal-takma-ad haritasını kullanır.
+	// postfix önce en özgül anahtarı eşler; açık adresler ve yönlendirmeler
+	// yine kazanır, catch-all yalnız eşleşmeyen için devreye girer.
+	caRows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT '@' || d.name, c.destination
+		FROM mail_catch_all c JOIN domains d ON d.id = c.domain_id`)
+	if err == nil {
+		for caRows.Next() {
+			var f fwd
+			if caRows.Scan(&f.Source, &f.Destination) == nil {
+				all = append(all, f)
+			}
+		}
+		caRows.Close()
+	}
+
 	var done bool
 	_ = p.agentClient.Call("Agent.UpdateMailForwarding", &struct {
 		Forwardings []fwd `json:"forwardings"`

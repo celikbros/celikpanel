@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, EmptyState, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
+import { MailSettingsPanel } from './MailSettingsPanel';
 
 interface EmailAccount {
     id: number;
@@ -39,7 +40,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
     const [forwardings, setForwardings] = useState<Forwarding[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding' | 'auth'>('accounts');
+    const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding' | 'auth' | 'settings'>('accounts');
     const [showForm, setShowForm] = useState(false);
 
     const [user, setUser] = useState('');
@@ -64,7 +65,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     const loadData = async () => {
         // The auth tab owns its own data loading (MailAuthPanel).
         // Auth sekmesi kendi veri yüklemesine sahiptir (MailAuthPanel).
-        if (activeTab === 'auth') {
+        if (activeTab === 'auth' || activeTab === 'settings') {
             setLoading(false);
             return;
         }
@@ -178,10 +179,13 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                 <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={accounts.length} />
                 <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={forwardings.length} />
                 <Tab active={activeTab === 'auth'} onClick={() => setActiveTab('auth')} label={t('mailauth.tab')} />
+                <Tab active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label={t('mail.tab.settings')} />
             </div>
 
             {activeTab === 'auth' ? (
                 <MailAuthPanel domainId={domainId} />
+            ) : activeTab === 'settings' ? (
+                <MailSettingsPanel domainId={domainId} domainName={domainName} />
             ) : (
                 <>
             <div className="mb-3 flex items-center justify-between">

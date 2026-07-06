@@ -48,6 +48,12 @@ func (p *Panel) handleDomainMail(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.Contains(r.URL.Path, "/mail/auth"):
 		p.handleMailAuth(w, r, domainID)
+	case strings.HasSuffix(r.URL.Path, "/mail/rbl"):
+		p.handleMailRBL(w, r)
+	case strings.HasSuffix(r.URL.Path, "/mail/setup"):
+		p.handleMailClientSetup(w, p.domainNameByID(r.Context(), domainID))
+	case strings.HasSuffix(r.URL.Path, "/mail/catch-all"):
+		p.handleMailCatchAll(w, r, domainID)
 	case strings.HasSuffix(r.URL.Path, "/quota"):
 		p.handleMailQuotaStatus(w, r, domainID)
 	case strings.HasSuffix(r.URL.Path, "/accounts"):
