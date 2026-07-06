@@ -26,6 +26,7 @@ interface Domain {
     created_at: string;
     disk_usage?: number;
     bandwidth?: number;
+    parent_id?: number | null;
 }
 
 const API_BASE = '/api/v1';
@@ -189,6 +190,11 @@ export function Domains() {
                                                 >
                                                     {d.domain_name}
                                                 </button>
+                                                {d.parent_id ? (
+                                                    <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-fg-subtle">
+                                                        {t('domains.subdomain')}
+                                                    </span>
+                                                ) : null}
                                             </div>
                                         </td>
                                         <td className="px-4 py-2.5">

@@ -79,6 +79,7 @@ export const tr: Record<TranslationKey, string> = {
     'common.remove': 'Kaldır',
     'common.home': 'Ana sayfa',
 
+    'domains.subdomain': 'alt alan',
     'domains.subtitle': 'Bu sunucuda barındırılan alan adlarını yönetin',
     'quota.unlimited': 'Sınırsız disk',
     'quota.diskOf': '{total} diskin {used} kadarı',

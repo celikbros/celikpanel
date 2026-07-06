@@ -80,6 +80,7 @@ export const en = {
     'common.remove': 'Remove',
     'common.home': 'Home',
 
+    'domains.subdomain': 'subdomain',
     'domains.subtitle': 'Manage the domains hosted on this server',
     'quota.unlimited': 'Unlimited disk',
     'quota.diskOf': '{used} of {total} disk',

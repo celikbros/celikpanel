@@ -23,6 +23,7 @@ type DomainResponse struct {
 	CreatedAt   string `json:"created_at"`
 	DiskUsage   int64  `json:"disk_usage"`
 	Bandwidth   int64  `json:"bandwidth"`
+	ParentID    *int   `json:"parent_id,omitempty"`
 }
 
 // handleDomains lists all domains
@@ -78,6 +79,10 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			projectType = "php"
 		}
 
+		var parentID *int
+		p.db.GetDB().QueryRowContext(context.Background(),
+			`SELECT parent_domain_id FROM domains WHERE id = ?`, domain.ID).Scan(&parentID)
+
 		response = append(response, DomainResponse{
 			ID:          domain.ID,
 			DomainName:  domain.Name,
@@ -88,6 +93,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:   domain.CreatedAt.Format("2006-01-02T15:04:05Z"),
 			DiskUsage:   diskUsage,
 			Bandwidth:   bandwidth,
+			ParentID:    parentID,
 		})
 	}
 
@@ -177,24 +183,43 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		req.AccessMethod = "sftp"
 	}
 
+	// Is this a subdomain of an existing domain in the same subscription? If
+	// so it shares the site machinery but not the DNS: no new zone, just a
+	// record in the parent's zone. Detected before site creation so we can
+	// record the parent link.
+	// Bu, aynı abonelikteki var olan bir domain'in subdomain'i mi? Öyleyse
+	// site makinesini paylaşır ama DNS'i paylaşmaz: yeni zone yok, yalnız ana
+	// domain'in zone'una bir kayıt. Ana domain bağını kaydedebilmek için site
+	// oluşturmadan önce tespit edilir.
+	parentID, parentName, isSubdomain := p.resolveParentDomain(r.Context(), req.SubscriptionID, req.Domain)
+
 	result, err := p.orchestrator.CreateSite(context.Background(), &req)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
 
-	// DNS zone with the full default record set. Best-effort: the site
-	// itself is already created, and the zone can always be (re)created from
-	// the domain's DNS page. Imported domains never pass through here —
-	// their records come from the archive.
-	// Tam varsayılan kayıt setiyle DNS zone. En-iyi-çaba: sitenin kendisi
-	// zaten oluştu ve zone, domain'in DNS sayfasından her zaman (yeniden)
-	// oluşturulabilir. İçe aktarılan domain'ler buradan geçmez — kayıtları
-	// arşivden gelir.
-	if _, _, err := p.createZoneWithTemplate(r.Context(), req.Domain); err != nil {
-		log.Printf("dns zone template for %s: %v", req.Domain, err)
+	if isSubdomain {
+		// Link the child to its parent and add its address record to the
+		// parent's zone — no separate zone for a subdomain.
+		// Çocuğu ana domain'e bağla ve adres kaydını ana domain'in zone'una
+		// ekle — subdomain için ayrı zone yok.
+		p.db.GetDB().ExecContext(r.Context(),
+			`UPDATE domains SET parent_domain_id = ? WHERE id = ?`, parentID, result.DomainID)
+		p.addSubdomainToParentZone(r.Context(), parentName, req.Domain)
 	} else {
-		p.syncZoneToDNS(r.Context(), req.Domain, false)
+		// DNS zone with the full default record set. Best-effort: the site
+		// itself is already created, and the zone can always be (re)created
+		// from the domain's DNS page. Imported domains never pass through
+		// here — their records come from the archive.
+		// Tam varsayılan kayıt setiyle DNS zone. En-iyi-çaba: sitenin kendisi
+		// zaten oluştu ve zone, domain'in DNS sayfasından her zaman (yeniden)
+		// oluşturulabilir. İçe aktarılan domain'ler buradan geçmez.
+		if _, _, err := p.createZoneWithTemplate(r.Context(), req.Domain); err != nil {
+			log.Printf("dns zone template for %s: %v", req.Domain, err)
+		} else {
+			p.syncZoneToDNS(r.Context(), req.Domain, false)
+		}
 	}
 
 	json.NewEncoder(w).Encode(result)
@@ -223,6 +248,19 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "domain not found", http.StatusNotFound)
 		return
+	}
+
+	// A subdomain's DNS lives in its parent's zone, not a zone of its own —
+	// resolve the parent so we remove the right record on delete.
+	// Bir subdomain'in DNS'i kendi zone'unda değil ana domain'inin
+	// zone'undadır — silmede doğru kaydı kaldırmak için ana domain'i çöz.
+	var parentDomainID *int
+	var parentDomainName string
+	p.db.GetDB().QueryRowContext(context.Background(),
+		`SELECT parent_domain_id FROM domains WHERE id = ?`, domainID).Scan(&parentDomainID)
+	if parentDomainID != nil {
+		p.db.GetDB().QueryRowContext(context.Background(),
+			`SELECT name FROM domains WHERE id = ?`, *parentDomainID).Scan(&parentDomainName)
 	}
 
 	// Tear down the system side first — vhost, PHP pool, app unit, system
@@ -272,17 +310,24 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Drop the DNS zone too — a zone that keeps answering for a deleted
-	// domain is stale, publicly visible state. Records first: the pdns
-	// tables are not covered by SQLite's FK pragma guarantees here.
-	// DNS zone'u da düşür — silinmiş bir domain için cevap vermeye devam
-	// eden zone, bayat ve kamuya görünür durumdur. Önce kayıtlar: pdns
-	// tabloları burada SQLite FK pragma garantisi altında değil.
-	if _, err := p.db.GetDB().ExecContext(context.Background(),
-		`DELETE FROM pdns_records WHERE domain_id IN (SELECT id FROM pdns_domains WHERE name = ?)`, domain.Name); err == nil {
-		p.db.GetDB().ExecContext(context.Background(), `DELETE FROM pdns_domains WHERE name = ?`, domain.Name)
+	if parentDomainName != "" {
+		// Subdomain: pull its record out of the parent's zone; the parent
+		// zone itself stays (it serves the parent and any siblings).
+		// Subdomain: kaydını ana domain'in zone'undan çıkar; ana zone
+		// (kendisine ve kardeşlerine hizmet ettiği için) kalır.
+		p.removeSubdomainFromParentZone(context.Background(), parentDomainName, domain.Name)
+	} else {
+		// Top-level domain: drop its whole zone — a zone that keeps answering
+		// for a deleted domain is stale, publicly visible state. Records
+		// first: the pdns tables are not covered by SQLite's FK pragma here.
+		// Tepe-seviye domain: tüm zone'unu düşür — silinmiş bir domain için
+		// cevap vermeye devam eden zone bayat, kamuya görünür durumdur.
+		if _, err := p.db.GetDB().ExecContext(context.Background(),
+			`DELETE FROM pdns_records WHERE domain_id IN (SELECT id FROM pdns_domains WHERE name = ?)`, domain.Name); err == nil {
+			p.db.GetDB().ExecContext(context.Background(), `DELETE FROM pdns_domains WHERE name = ?`, domain.Name)
+		}
+		p.syncZoneToDNS(context.Background(), domain.Name, true)
 	}
-	p.syncZoneToDNS(context.Background(), domain.Name, true)
 
 	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC
 	// For now, just delete the database record
