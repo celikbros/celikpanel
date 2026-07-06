@@ -33,6 +33,7 @@ export const en = {
     'theme.light': 'Light',
     'theme.dark': 'Dark',
     'theme.system': 'System',
+    'theme.skin': 'Style',
 
     'lang.label': 'Language',
 

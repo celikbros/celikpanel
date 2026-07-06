@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { navItemsForRole, navGroups, type NavItem } from '../nav';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import type { TranslationKey } from '../i18n/en';
@@ -75,6 +76,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                         <div className="hidden sm:block">
                             <LanguageSwitcher />
                         </div>
+                        <SkinSwitcher />
                         <ThemeSwitcher />
                         <UserMenu />
                     </div>

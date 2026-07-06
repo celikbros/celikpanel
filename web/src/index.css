@@ -75,6 +75,97 @@
     --sidebar-border: 30 41 59;
 }
 
+/*
+  Skins: alternative palettes on top of the light/dark axis. Each block only
+  overrides what differs from the default (Celik) palette; everything else
+  cascades from :root / .dark. The :not(.dark) guard keeps light and dark
+  variants from fighting over specificity.
+
+  Skin'ler: açık/koyu ekseninin üstünde alternatif paletler. Her blok yalnız
+  varsayılan (Celik) paletinden farklı olanı geçersiz kılar; kalanı :root /
+  .dark'tan miras alır. :not(.dark) koruması, açık ve koyu varyantların
+  özgüllük kavgasını önler.
+*/
+
+/* Plesk-style: sky blue actions, deep navy rail. / Plesk tarzı: gök mavisi
+   eylemler, koyu lacivert kenar çubuğu. */
+[data-theme='plesk']:not(.dark) {
+    --bg: 245 247 250;
+    --primary: 2 132 199;        /* sky-600 */
+    --primary-hover: 3 105 161;  /* sky-700 */
+    --sidebar-bg: 26 34 51;
+    --sidebar-hover: 38 48 68;
+    --sidebar-border: 38 48 68;
+    --sidebar-active: 2 132 199;
+}
+.dark[data-theme='plesk'] {
+    --bg: 8 13 22;
+    --surface: 17 24 38;
+    --surface-2: 28 37 56;
+    --surface-3: 42 53 76;
+    --border: 28 37 56;
+    --border-strong: 42 53 76;
+    --primary: 14 165 233;       /* sky-500 */
+    --primary-hover: 56 189 248; /* sky-400 */
+    --sidebar-bg: 13 19 30;
+    --sidebar-hover: 28 37 56;
+    --sidebar-border: 28 37 56;
+    --sidebar-active: 2 132 199;
+}
+
+/* aaPanel-style: green actions, blue-grey rail. / aaPanel tarzı: yeşil
+   eylemler, mavi-gri kenar çubuğu. */
+[data-theme='aapanel']:not(.dark) {
+    --bg: 244 246 244;
+    --primary: 32 165 58;
+    --primary-hover: 22 130 44;
+    --success: 32 165 58;
+    --sidebar-bg: 44 62 80;
+    --sidebar-hover: 58 78 98;
+    --sidebar-border: 58 78 98;
+    --sidebar-active: 32 165 58;
+}
+.dark[data-theme='aapanel'] {
+    --bg: 8 14 10;
+    --surface: 16 24 18;
+    --surface-2: 26 36 28;
+    --surface-3: 40 52 42;
+    --border: 26 36 28;
+    --border-strong: 40 52 42;
+    --primary: 34 197 94;        /* green-500 */
+    --primary-hover: 74 222 128; /* green-400 */
+    --sidebar-bg: 12 20 16;
+    --sidebar-hover: 26 36 28;
+    --sidebar-border: 26 36 28;
+    --sidebar-active: 32 165 58;
+}
+
+/* cPanel-style: orange actions, near-black blue rail. / cPanel tarzı:
+   turuncu eylemler, siyaha yakın mavi kenar çubuğu. */
+[data-theme='cpanel']:not(.dark) {
+    --bg: 247 246 244;
+    --primary: 234 88 12;        /* orange-600 */
+    --primary-hover: 194 65 12;  /* orange-700 */
+    --sidebar-bg: 24 36 48;
+    --sidebar-hover: 36 50 64;
+    --sidebar-border: 36 50 64;
+    --sidebar-active: 234 88 12;
+}
+.dark[data-theme='cpanel'] {
+    --bg: 15 12 8;
+    --surface: 26 21 15;
+    --surface-2: 39 32 24;
+    --surface-3: 56 47 36;
+    --border: 39 32 24;
+    --border-strong: 56 47 36;
+    --primary: 249 115 22;       /* orange-500 */
+    --primary-hover: 251 146 60; /* orange-400 */
+    --sidebar-bg: 17 26 34;
+    --sidebar-hover: 30 42 52;
+    --sidebar-border: 30 42 52;
+    --sidebar-active: 234 88 12;
+}
+
 html, body, #root {
     height: 100%;
 }

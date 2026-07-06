@@ -11,12 +11,32 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 export type ThemePreference = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
 
+// Skins are full palettes on top of the light/dark axis: every component
+// reads semantic tokens, so a skin is nothing but a CSS-variable set (see
+// index.css [data-theme=…] blocks). The two axes compose — any skin works
+// in light and dark.
+// Skin'ler açık/koyu ekseninin üstünde tam paletlerdir: her bileşen semantik
+// token okuduğundan bir skin yalnızca bir CSS-değişken setidir (index.css
+// [data-theme=…] blokları). İki eksen bileşir — her skin açıkta da koyuda da
+// çalışır.
+export type SkinId = 'celik' | 'plesk' | 'aapanel' | 'cpanel';
+
+export const SKINS: { id: SkinId; name: string; swatch: string }[] = [
+    { id: 'celik', name: 'Celik', swatch: 'rgb(37 99 235)' },
+    { id: 'plesk', name: 'Plesk', swatch: 'rgb(2 132 199)' },
+    { id: 'aapanel', name: 'aaPanel', swatch: 'rgb(32 165 58)' },
+    { id: 'cpanel', name: 'cPanel', swatch: 'rgb(234 88 12)' },
+];
+
 const STORAGE_KEY = 'celikpanel.theme';
+const SKIN_STORAGE_KEY = 'celikpanel.skin';
 
 interface ThemeContextValue {
     preference: ThemePreference;
     resolved: ResolvedTheme;
     setPreference: (p: ThemePreference) => void;
+    skin: SkinId;
+    setSkin: (s: SkinId) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -28,6 +48,11 @@ function systemPrefersDark(): boolean {
 function readStoredPreference(): ThemePreference {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+}
+
+function readStoredSkin(): SkinId {
+    const stored = localStorage.getItem(SKIN_STORAGE_KEY);
+    return SKINS.some((sk) => sk.id === stored) ? (stored as SkinId) : 'celik';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -61,8 +86,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setPreferenceState(p);
     };
 
+    const [skin, setSkinState] = useState<SkinId>(readStoredSkin);
+    useEffect(() => {
+        // 'celik' is the bare default palette — no attribute needed.
+        // 'celik' çıplak varsayılan palettir — attribute gerekmez.
+        if (skin === 'celik') delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = skin;
+    }, [skin]);
+    const setSkin = (sk: SkinId) => {
+        localStorage.setItem(SKIN_STORAGE_KEY, sk);
+        setSkinState(sk);
+    };
+
     return (
-        <ThemeContext.Provider value={{ preference, resolved, setPreference }}>
+        <ThemeContext.Provider value={{ preference, resolved, setPreference, skin, setSkin }}>
             {children}
         </ThemeContext.Provider>
     );

@@ -32,6 +32,7 @@ export const tr: Record<TranslationKey, string> = {
     'theme.light': 'Açık',
     'theme.dark': 'Koyu',
     'theme.system': 'Sistem',
+    'theme.skin': 'Stil',
 
     'lang.label': 'Dil',
 

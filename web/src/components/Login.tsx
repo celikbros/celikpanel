@@ -3,6 +3,7 @@ import { Server, ShieldCheck, Users, User } from 'lucide-react';
 import { api, type CurrentUser, type DemoAccount } from '../lib/api';
 import { useI18n } from '../i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 const roleIcon: Record<string, typeof User> = {
@@ -64,7 +65,8 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
         <div className="relative flex min-h-screen items-center justify-center bg-bg px-4 text-fg">
             <div className="absolute right-4 top-4 flex items-center gap-2">
                 <LanguageSwitcher />
-                <ThemeSwitcher />
+                <SkinSwitcher />
+                        <ThemeSwitcher />
             </div>
 
             <div className="w-full max-w-sm">
