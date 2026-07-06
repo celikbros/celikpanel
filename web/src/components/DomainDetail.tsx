@@ -34,14 +34,19 @@ interface DomainDetailProps {
     onBack: () => void;
 }
 
-// Domain detail hub. Task-grouped horizontal tabs (not a tile dump) beside a
-// persistent info card. Related tools nest under one tab (Hosting →
-// General/PHP/SSL; Advanced → Backups/Cron/Logs) so the top bar stays short.
+// Domain detail hub. A quiet one-line fact strip under the title (PHP, SSL,
+// disk, traffic) and full-width task-grouped tabs. The facts used to live in
+// a 260px side card that wasted a column and misaligned the tabs — the page
+// belongs to the content, not to a summary. Related tools nest under one tab
+// (Hosting → General/PHP/SSL; Advanced → Backups/Cron/Logs) so the top bar
+// stays short.
 //
-// Alan adı detay hub'ı. Görev-gruplu yatay sekmeler (kutucuk çöplüğü değil)
-// ve yanında sabit bir bilgi kartı. İlgili araçlar tek sekme altında toplanır
-// (Barındırma → Genel/PHP/SSL; Gelişmiş → Yedekler/Cron/Loglar); böylece üst
-// çubuk kısa kalır.
+// Alan adı detay hub'ı. Başlığın altında tek satırlık sessiz bir bilgi
+// şeridi (PHP, SSL, disk, trafik) ve tam genişlikte görev-gruplu sekmeler.
+// Bu bilgiler eskiden bir sütunu israf eden ve sekmeleri hizadan kaydıran
+// 260px'lik yan karttaydı — sayfa özete değil içeriğe aittir. İlgili araçlar
+// tek sekme altında toplanır (Barındırma → Genel/PHP/SSL; Gelişmiş →
+// Yedekler/Cron/Loglar); böylece üst çubuk kısa kalır.
 export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const { t } = useI18n();
     const [domain, setDomain] = useState<Domain | null>(null);
@@ -127,33 +132,26 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         {t('domain.openSite')}
                     </a>
                 </div>
+
+                {/* Fact strip — status already lives next to the title, so
+                    only the facts that add something. / Bilgi şeridi — durum
+                    zaten başlığın yanında; yalnız bir şey katan bilgiler. */}
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                    <Fact label={t('domain.info.php')}>{domain.php_version || '—'}</Fact>
+                    <FactDivider />
+                    <Fact label={t('domain.info.ssl')}>
+                        <span className={domain.ssl_enabled ? 'text-success' : 'text-fg-subtle'}>
+                            {domain.ssl_enabled ? t('domain.info.on') : t('domain.info.off')}
+                        </span>
+                    </Fact>
+                    <FactDivider />
+                    <Fact label={t('domain.info.disk')}>{fmtMB(domain.disk_usage)}</Fact>
+                    <FactDivider />
+                    <Fact label={t('domain.info.traffic')}>{fmtMB(domain.bandwidth)}/mo</Fact>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
-                {/* Left info card */}
-                <aside className="lg:sticky lg:top-6 lg:self-start">
-                    <div className="rounded-xl border border-border bg-surface p-4 shadow-card">
-                        <dl className="divide-y divide-border text-sm">
-                            <InfoRow label={t('domain.info.status')}>
-                                <span className="inline-flex items-center gap-1.5">
-                                    <StatusDot ok={domain.status === 'active'} />
-                                    {domain.status === 'active' ? t('domains.status.active') : domain.status}
-                                </span>
-                            </InfoRow>
-                            <InfoRow label={t('domain.info.php')}>{domain.php_version || '—'}</InfoRow>
-                            <InfoRow label={t('domain.info.ssl')}>
-                                <span className={domain.ssl_enabled ? 'text-success' : 'text-fg-subtle'}>
-                                    {domain.ssl_enabled ? t('domain.info.on') : t('domain.info.off')}
-                                </span>
-                            </InfoRow>
-                            <InfoRow label={t('domain.info.disk')}>{fmtMB(domain.disk_usage)}</InfoRow>
-                            <InfoRow label={t('domain.info.traffic')}>{fmtMB(domain.bandwidth)}/mo</InfoRow>
-                        </dl>
-                    </div>
-                </aside>
-
-                {/* Right: tabs + panel */}
-                <div className="min-w-0">
+            <div className="min-w-0">
                     <div className="mb-4 flex flex-wrap gap-1 border-b border-border">
                         {tabs.map((tb) => {
                             const Icon = tb.icon;
@@ -202,7 +200,6 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                             current.render!()
                         )}
                     </div>
-                </div>
             </div>
         </div>
     );
@@ -252,13 +249,17 @@ function Overview({ tabs, onGo }: { tabs: TabDef[]; onGo: (id: string) => void }
     );
 }
 
-function InfoRow({ label, children }: { label: string; children: ReactNode }) {
+function Fact({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-            <dt className="text-fg-subtle">{label}</dt>
-            <dd className="font-medium text-fg">{children}</dd>
-        </div>
+        <span className="inline-flex items-baseline gap-1.5">
+            <span className="text-fg-subtle">{label}</span>
+            <span className="font-medium text-fg">{children}</span>
+        </span>
     );
+}
+
+function FactDivider() {
+    return <span aria-hidden className="h-3.5 w-px self-center bg-border-strong" />;
 }
 
 function fmtMB(bytes: number = 0): string {
