@@ -54,8 +54,19 @@ export default {
                     border: token('--sidebar-border'),
                 },
             },
+            // Font and corner radius come from CSS variables too, so a skin
+            // can reshape typography and roundness, not just colors.
+            // Yazı tipi ve köşe yuvarlaklığı da CSS değişkenlerinden gelir;
+            // bir skin yalnız renkleri değil tipografiyi ve yuvarlaklığı da
+            // biçimlendirebilir.
             fontFamily: {
-                sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+                sans: ['var(--font-sans)'],
+            },
+            borderRadius: {
+                md: 'var(--radius-md)',
+                lg: 'var(--radius-lg)',
+                xl: 'var(--radius-xl)',
+                '2xl': 'var(--radius-2xl)',
             },
             boxShadow: {
                 card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
