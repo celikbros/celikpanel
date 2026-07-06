@@ -13,6 +13,11 @@
 #   SKIP_DEPS=1     do not apt-install the tiny prerequisites (tar, xz, curl)
 #   SKIP_ADMIN=1    do not prompt to create the first administrator
 #   LISTEN=:1983    panel bind address
+#   DEMO=1          R&D mode: quick-login accounts on the login screen
+#                   (admin/reseller/customer @ demo1234) and cookies that
+#                   work over plain HTTP. NEVER on an internet-facing server.
+#                   AR-GE modu: giriş ekranında hızlı-giriş hesapları ve düz
+#                   HTTP'de çalışan çerezler. İnternete açık sunucuda ASLA.
 
 set -euo pipefail
 
@@ -140,16 +145,29 @@ ok "hazır"
 # 6. systemd units -----------------------------------------------------------
 step "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
-# The panel bind address is the one install-time override we bake in.
-# Panel bağlanma adresi, kuruluma gömdüğümüz tek üst-geçersiz kılmadır.
-sed "s|^Environment=CELIKPANEL_LISTEN=.*|Environment=CELIKPANEL_LISTEN=$LISTEN|" \
+# Install-time overrides baked into the unit: bind address, and in R&D mode
+# the demo flags (quick-login accounts + cookies usable over plain HTTP).
+# Kuruluma gömülen üst-geçersiz kılmalar: bağlanma adresi ve AR-GE modunda
+# demo bayrakları (hızlı-giriş hesapları + düz HTTP'de kullanılabilir çerez).
+PANEL_ARGS=""
+if [ "${DEMO:-0}" = "1" ]; then
+    PANEL_ARGS=" --insecure-cookies --demo"
+    c '33' "    AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
+fi
+sed -e "s|^Environment=CELIKPANEL_LISTEN=.*|Environment=CELIKPANEL_LISTEN=$LISTEN|" \
+    -e "s|^ExecStart=/opt/celikpanel/bin/panel.*|ExecStart=/opt/celikpanel/bin/panel$PANEL_ARGS|" \
     "$SRC/deploy/systemd/celikpanel-panel.service" > /etc/systemd/system/celikpanel-panel.service
 systemctl daemon-reload
 ok "kuruldu"
 
 # 7. Start the agent (generates the shared token on first run) ---------------
+# restart, not enable --now: an upgrade must actually load the new binary;
+# --now is a no-op when the service is already running.
+# enable --now değil restart: yükseltme yeni binary'yi gerçekten yüklemeli;
+# servis zaten çalışıyorsa --now hiçbir şey yapmaz.
 step "Agent başlatılıyor"
-systemctl enable --now celikpanel-agent.service >/dev/null 2>&1 || true
+systemctl enable celikpanel-agent.service >/dev/null 2>&1 || true
+systemctl restart celikpanel-agent.service || true
 for _ in $(seq 1 20); do
     [ -S /run/celikpanel/agent.sock ] && break
     sleep 0.3
@@ -171,7 +189,8 @@ fi
 
 # 9. Start the panel ---------------------------------------------------------
 step "Panel başlatılıyor"
-systemctl enable --now celikpanel-panel.service >/dev/null 2>&1 || true
+systemctl enable celikpanel-panel.service >/dev/null 2>&1 || true
+systemctl restart celikpanel-panel.service || true
 sleep 1
 systemctl is-active --quiet celikpanel-panel.service || \
     die "panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
