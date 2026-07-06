@@ -66,17 +66,17 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 
 	// Build response with type information
 	type ServerResponse struct {
-		ID           int                    `json:"id"`
-		TypeID       int                    `json:"type_id"`
-		TypeName     string                 `json:"type_name"`
-		TypeIcon     string                 `json:"type_icon"`
-		Name         string                 `json:"name"`
-		Version      string                 `json:"version"`
-		Host         string                 `json:"host"`
-		Port         int                    `json:"port"`
-		IsDefault    bool                   `json:"is_default"`
-		Status       string                 `json:"status"`
-		CreatedAt    string                 `json:"created_at"`
+		ID        int    `json:"id"`
+		TypeID    int    `json:"type_id"`
+		TypeName  string `json:"type_name"`
+		TypeIcon  string `json:"type_icon"`
+		Name      string `json:"name"`
+		Version   string `json:"version"`
+		Host      string `json:"host"`
+		Port      int    `json:"port"`
+		IsDefault bool   `json:"is_default"`
+		Status    string `json:"status"`
+		CreatedAt string `json:"created_at"`
 	}
 
 	response := make([]ServerResponse, 0)
@@ -106,12 +106,12 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 	subscriptionID := 1 // TODO: Get from auth
 
 	var req struct {
-		TypeID      int    `json:"type_id"`
-		Name        string `json:"name"`
-		Version     string `json:"version"`
-		Host        string `json:"host"`
-		Port        int    `json:"port"`
-		IsDefault   bool   `json:"is_default"`
+		TypeID       int    `json:"type_id"`
+		Name         string `json:"name"`
+		Version      string `json:"version"`
+		Host         string `json:"host"`
+		Port         int    `json:"port"`
+		IsDefault    bool   `json:"is_default"`
 		RootPassword string `json:"root_password"`
 	}
 
@@ -249,11 +249,11 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		DatabaseName string `json:"database_name"`
-		DomainID     *int   `json:"domain_id,omitempty"`      // Optional: Related site/domain
-		UserID       int    `json:"user_id,omitempty"`        // Existing user
-		NewUsername  string `json:"new_username,omitempty"`   // Or create new user
+		DomainID     *int   `json:"domain_id,omitempty"`    // Optional: Related site/domain
+		UserID       int    `json:"user_id,omitempty"`      // Existing user
+		NewUsername  string `json:"new_username,omitempty"` // Or create new user
 		NewPassword  string `json:"new_password,omitempty"`
-		Privileges   string `json:"privileges,omitempty"`     // Default: ALL
+		Privileges   string `json:"privileges,omitempty"` // Default: ALL
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

@@ -45,8 +45,8 @@ export function ServiceShell({
 
     const load = () =>
         fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((list: ManagedService[]) => setSvc(list.find((s) => s.id === serviceId) ?? null))
+            .then((r) => (r.ok ? r.json() : { services: [] }))
+            .then((data: { services: ManagedService[] }) => setSvc((data.services || []).find((s) => s.id === serviceId) ?? null))
             .catch(() => {})
             .finally(() => setLoading(false));
 

@@ -12,13 +12,13 @@ import (
 
 // Domain general settings structures
 type DomainGeneralSettings struct {
-	DomainID         int      `json:"domain_id"`
-	DomainName       string   `json:"domain_name"`
-	DocumentRoot     string   `json:"document_root"`
-	WebServer        string   `json:"web_server"`
-	RedirectWWW      bool     `json:"redirect_www"`
-	RedirectHTTPS    bool     `json:"redirect_https"`
-	Aliases          []string `json:"aliases"`
+	DomainID      int      `json:"domain_id"`
+	DomainName    string   `json:"domain_name"`
+	DocumentRoot  string   `json:"document_root"`
+	WebServer     string   `json:"web_server"`
+	RedirectWWW   bool     `json:"redirect_www"`
+	RedirectHTTPS bool     `json:"redirect_https"`
+	Aliases       []string `json:"aliases"`
 }
 
 type UpdateGeneralSettingsRequest struct {
@@ -85,7 +85,7 @@ func (p *Panel) handleGetGeneralSettings(w http.ResponseWriter, r *http.Request,
 		       COALESCE(redirect_https, false) as redirect_https
 		FROM sites WHERE domain_id = ?
 	`, domainID).Scan(&site.DocumentRoot, &site.WebServer, &site.RedirectWWW, &site.RedirectHTTPS)
-	
+
 	if err != nil {
 		http.Error(w, "Site not found", http.StatusNotFound)
 		return

@@ -36,7 +36,7 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
         try {
             const res = await fetch('/api/v1/managed-services');
             if (!res.ok) return;
-            const services = await res.json();
+            const services = (await res.json())?.services || [];
             const php = services.find((s: any) => s.id === 'php-fpm');
             if (php?.versions?.length) setVersions(php.versions);
         } catch {

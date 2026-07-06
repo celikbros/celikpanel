@@ -26,9 +26,9 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
 
     useEffect(() => {
         fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((list) => {
-                const cfgs: ConfigFile[] = list?.find((s: { id: string }) => s.id === 'mariadb')?.config_files ?? [];
+            .then((r) => (r.ok ? r.json() : { services: [] }))
+            .then((data) => {
+                const cfgs: ConfigFile[] = data?.services?.find((s: { id: string }) => s.id === 'mariadb')?.config_files ?? [];
                 setFiles(cfgs);
                 const preferred =
                     cfgs.find((f) => f.path.endsWith('50-server.cnf')) ??

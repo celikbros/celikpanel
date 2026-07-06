@@ -39,7 +39,7 @@ func (p *Panel) handleServiceStatus(w http.ResponseWriter, r *http.Request) {
 	var found bool
 	var isActive bool
 	var pid string
-	
+
 	log.Printf("DEBUG: Checking status for service '%s'", name)
 
 	for _, svc := range services {
@@ -53,17 +53,17 @@ func (p *Panel) handleServiceStatus(w http.ResponseWriter, r *http.Request) {
 		if svc.Name == name || svc.Name == name+".service" {
 			found = true
 			log.Printf("DEBUG: Match found for '%s' -> '%s'", name, svc.Name)
-			
+
 			// Check if status contains "running" or "active" - this is the reliable indicator
 			// Avoid false positives from "inactive" containing "active"
 			statusLower := strings.ToLower(svc.Status)
 			// Service is active if it contains "active" but NOT "inactive" or "dead"
 			// This handles both "running" and "active (exited)" states
-			isActive = (strings.Contains(statusLower, "running") || strings.Contains(statusLower, "active")) && 
-			           !strings.Contains(statusLower, "inactive") && 
-			           !strings.Contains(statusLower, "dead")
-            
-            log.Printf("DEBUG: Status check: Raw='%s', Active=%v", svc.Status, isActive)
+			isActive = (strings.Contains(statusLower, "running") || strings.Contains(statusLower, "active")) &&
+				!strings.Contains(statusLower, "inactive") &&
+				!strings.Contains(statusLower, "dead")
+
+			log.Printf("DEBUG: Status check: Raw='%s', Active=%v", svc.Status, isActive)
 
 			// Extract PID from status if available
 			if isActive {

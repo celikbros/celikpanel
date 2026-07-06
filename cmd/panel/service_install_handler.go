@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -47,6 +48,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 	if resp.Error != "" {
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
+	}
+
+	// A new service exists now; refresh the cached scan so every page keeps
+	// reading from cache instead of probing.
+	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar
+	// yoklama yapmak yerine önbellekten okumaya devam etsin.
+	if _, err := p.scanManagedServices(r.Context()); err != nil {
+		log.Printf("service scan after install %s: %v", req.ServiceID, err)
 	}
 
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "installed": resp.Installed, "detail": resp.Detail})

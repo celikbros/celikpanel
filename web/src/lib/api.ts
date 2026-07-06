@@ -5,6 +5,11 @@ export interface ConfigFile {
     Parsed?: string;
 }
 
+export interface ServicesScan {
+    scanned_at: string | null;
+    services: Service[];
+}
+
 export interface Service {
     id: string;
     name: string;
@@ -119,11 +124,27 @@ class API {
         }
     }
 
+    // getServices reads the CACHED scan (instant — never probes the system).
+    // A fresh probe is an explicit user action: scanServices().
+    // getServices ÖNBELLEKTEKİ taramayı okur (anlık — sistemi asla yoklamaz).
+    // Taze yoklama açık bir kullanıcı eylemidir: scanServices().
     async getServices(): Promise<Service[]> {
+        const data = await this.getServicesScan();
+        return data.services;
+    }
+
+    async getServicesScan(): Promise<ServicesScan> {
         const res = await fetch(`${API_BASE}/managed-services`);
         if (!res.ok) throw new Error('Failed to fetch services');
         const data = await res.json();
-        return data || [];
+        return { scanned_at: data?.scanned_at ?? null, services: data?.services || [] };
+    }
+
+    async scanServices(): Promise<ServicesScan> {
+        const res = await fetch(`${API_BASE}/managed-services/scan`, { method: 'POST' });
+        if (!res.ok) throw new Error('Service scan failed');
+        const data = await res.json();
+        return { scanned_at: data?.scanned_at ?? null, services: data?.services || [] };
     }
 
     async getSystemStats(): Promise<SystemStats> {

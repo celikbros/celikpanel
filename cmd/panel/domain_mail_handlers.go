@@ -160,12 +160,12 @@ func (p *Panel) handleAddEmailAccount(w http.ResponseWriter, r *http.Request, do
 	// We should store hashed password in DB for consistency if we use DB auth later.
 	// For now we just need the record.
 	// Note: migrations 001 defines password_hash.
-	
+
 	pool := p.db.GetDB()
 	result, err := pool.ExecContext(context.Background(),
 		"INSERT INTO email_accounts (domain_id, address, password_hash, quota_mb) VALUES (?, ?, ?, ?)",
 		domainID, req.Address, "managed-by-agent", req.QuotaMB)
-	
+
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -324,12 +324,12 @@ func (p *Panel) handleMailQuotaStatus(w http.ResponseWriter, r *http.Request, do
 
 func (p *Panel) handleAddEmailForwarding(w http.ResponseWriter, r *http.Request, domainID int) {
 	// ... Implement forwarding logic similar to account ...
-	// Since Agent needs FULL LIST of forwardings to rebuild file, 
+	// Since Agent needs FULL LIST of forwardings to rebuild file,
 	// or we implement AddForwarding RPC. Agent has "UpdateMailForwarding" taking full list?
 	// No, I should implement AddForwarder RPC in Agent or just stick to "UpdateMailForwarding".
-	// My agent impl has UpdateMailForwarding taking a list. 
+	// My agent impl has UpdateMailForwarding taking a list.
 	// So: Add to DB -> Fetch All -> Send All to Agent.
-	
+
 	var req struct {
 		Source      string `json:"source"`
 		Destination string `json:"destination"`
@@ -370,11 +370,11 @@ func (p *Panel) syncForwardings(w http.ResponseWriter, domainID int) {
 	// Fetch all forwardings for ALL domains (since postfix virtual file is global)
 	// OR just append? Postfix virtual file IS global.
 	// So agent needs ALL forwardings.
-	
+
 	// WARNING: If we only send domain forwardings, we wipe others in Agent if Agent "Updates" file by overwriting.
 	// My Agent implementation `UpdateMailForwarding` uses `updateMapFile` which overwrites.
 	// So I need to fetch ALL forwardings from DB.
-	
+
 	pool := p.db.GetDB()
 	rows, err := pool.QueryContext(context.Background(), "SELECT source, destination FROM email_forwardings")
 	if err != nil {
@@ -402,6 +402,6 @@ func (p *Panel) syncForwardings(w http.ResponseWriter, domainID int) {
 			Destination string `json:"destination"`
 		} `json:"forwardings"`
 	}{Forwardings: forwardings}, &success)
-	
+
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

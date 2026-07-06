@@ -135,7 +135,8 @@ function ServiceManagementPage() {
       setLoading(true);
       fetch('/api/v1/managed-services')
         .then(res => res.json())
-        .then((services: any[]) => {
+        .then((data: any) => {
+          const services: any[] = data?.services || [];
           const service = services.find(s => s.id === serviceId);
           if (service) {
             setVersions(service.versions);

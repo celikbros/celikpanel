@@ -30,8 +30,8 @@ export function PostgreSQLManagement({ onBack }: PostgreSQLManagementProps) {
 
     useEffect(() => {
         fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((list) => setFiles(list?.find((s: { id: string }) => s.id === 'postgresql')?.config_files ?? []))
+            .then((r) => (r.ok ? r.json() : { services: [] }))
+            .then((data) => setFiles(data?.services?.find((s: { id: string }) => s.id === 'postgresql')?.config_files ?? []))
             .catch(() => {});
     }, []);
 

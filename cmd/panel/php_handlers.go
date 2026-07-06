@@ -10,7 +10,7 @@ import (
 // handlePHPPools handles GET and POST requests for PHP pools
 func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	version := r.URL.Query().Get("version")
 	if version == "" {
 		http.Error(w, "Version parameter is required", http.StatusBadRequest)
@@ -20,13 +20,13 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		var pools []core.PHPPool
 		req := core.PHPVersionRequest{Version: version}
-		
+
 		err := p.agentClient.Call("Agent.GetPHPPools", req, &pools)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(pools)
 		return
 	}
@@ -37,7 +37,7 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-		
+
 		// TODO: Implement SavePHPPool RPC method
 		// For now, return success
 		w.WriteHeader(http.StatusOK)
@@ -48,47 +48,47 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 // handlePHPExtensions handles GET and POST requests for PHP extensions
 func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	if r.Method == "GET" {
 		version := r.URL.Query().Get("version")
 		if version == "" {
 			http.Error(w, "Version parameter is required", http.StatusBadRequest)
 			return
 		}
-		
+
 		var extensions []core.PHPExtension
 		req := core.PHPVersionRequest{Version: version}
-		
+
 		err := p.agentClient.Call("Agent.GetPHPExtensions", req, &extensions)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(extensions)
 		return
 	}
-	
+
 	if r.Method == "POST" {
 		var req core.PHPExtensionRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-		
+
 		// Validate required fields
 		if req.Version == "" || req.Extension == "" {
 			http.Error(w, "Version and extension are required", http.StatusBadRequest)
 			return
 		}
-		
+
 		var resp struct{}
 		err := p.agentClient.Call("Agent.TogglePHPExtension", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Extension updated"})
 	}
@@ -97,7 +97,7 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 // handlePHPConfig handles GET and POST requests for php.ini
 func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	version := r.URL.Query().Get("version")
 	if version == "" {
 		http.Error(w, "Version parameter is required", http.StatusBadRequest)
@@ -107,31 +107,31 @@ func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		var config core.PHPConfig
 		req := core.PHPVersionRequest{Version: version}
-		
+
 		err := p.agentClient.Call("Agent.GetPHPConfiguration", req, &config)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(config)
 		return
 	}
-	
+
 	if r.Method == "POST" {
 		var req core.PHPConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-		
+
 		var resp struct{}
 		err := p.agentClient.Call("Agent.UpdatePHPConfiguration", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Configuration saved"})
 	}

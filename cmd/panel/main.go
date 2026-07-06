@@ -151,7 +151,8 @@ func main() {
 
 	// Managed Services
 	http.HandleFunc("/api/v1/managed-services", panel.handleManagedServices)
-	
+	http.HandleFunc("/api/v1/managed-services/scan", panel.handleManagedServicesScan)
+
 	// System Check
 	http.HandleFunc("/api/v1/system/check", panel.handleSystemCheck)
 
@@ -164,7 +165,6 @@ func main() {
 	http.HandleFunc("/api/v1/php/extensions", panel.handlePHPExtensions)
 	http.HandleFunc("/api/v1/php/config", panel.handlePHPConfig)
 	http.HandleFunc("/api/v1/php/extended-config", panel.handlePHPExtendedConfig)
-
 
 	// Nginx Management
 	http.HandleFunc("/api/v1/nginx/global", panel.handleNginxGlobalConfig)
@@ -185,11 +185,11 @@ func main() {
 	http.HandleFunc("/api/v1/service/action", panel.handleServiceAction)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
-	
+
 	// Domain Management
 	http.HandleFunc("/api/v1/domains", panel.handleDomains)
 	http.HandleFunc("/api/v1/domains/create", panel.handleCreateDomain)
-	
+
 	// Domain-specific routes (PHP, general, aliases, SSL, logs, databases, delete, etc.)
 	http.HandleFunc("/api/v1/domains/", func(w http.ResponseWriter, r *http.Request) {
 		// Single ownership chokepoint: every /domains/{id}/... sub-resource
@@ -286,17 +286,17 @@ func main() {
 	// Database Management v2 - Server Management
 	http.HandleFunc("/api/v2/database-servers", panel.handleListDatabaseServers)
 	http.HandleFunc("/api/v2/database-servers/create", panel.handleCreateDatabaseV2Server)
-	
+
 	// Combined handler for /api/v2/database-servers/{id}/* routes
 	http.HandleFunc("/api/v2/database-servers/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		
+
 		// DELETE /api/v2/database-servers/{id}
 		if r.Method == http.MethodDelete && !strings.Contains(path, "/databases") && !strings.Contains(path, "/users") {
 			panel.handleDeleteDatabaseV2Server(w, r)
 			return
 		}
-		
+
 		// GET/POST /api/v2/database-servers/{id}/databases
 		if strings.Contains(path, "/databases") {
 			if r.Method == http.MethodGet {
@@ -306,7 +306,7 @@ func main() {
 			}
 			return
 		}
-		
+
 		// GET/POST /api/v2/database-servers/{id}/users
 		if strings.Contains(path, "/users") {
 			if r.Method == http.MethodGet {
@@ -316,7 +316,7 @@ func main() {
 			}
 			return
 		}
-		
+
 		http.Error(w, "not found", http.StatusNotFound)
 	})
 
@@ -326,7 +326,7 @@ func main() {
 			panel.handleDeleteDatabaseV2(w, r)
 			return
 		}
-		
+
 		// GET/POST /api/v2/databases/{id}/grants
 		if strings.Contains(r.URL.Path, "/grants") {
 			if r.Method == http.MethodGet {
@@ -336,7 +336,7 @@ func main() {
 			}
 			return
 		}
-		
+
 		http.Error(w, "not found", http.StatusNotFound)
 	})
 
@@ -346,7 +346,7 @@ func main() {
 			panel.handleDeleteDatabaseV2User(w, r)
 		}
 	})
-	
+
 	http.HandleFunc("/api/v2/database-grants/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
 			panel.handleRevokeDatabaseAccess(w, r)
@@ -454,7 +454,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		ServiceName string `json:"service_name"`
-		Name        string `json:"name"` // Support 'name' from frontend
+		Name        string `json:"name"`   // Support 'name' from frontend
 		Action      string `json:"action"` // start, stop, restart, reload
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -491,6 +491,16 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The action changed real state, so the cached scan is stale; refresh it
+	// here — one deliberate action, one scan — so pages keep loading from
+	// cache without ever probing on their own.
+	// Eylem gerçek durumu değiştirdi; önbellekteki tarama bayatladı. Burada
+	// tazele — bir bilinçli eylem, bir tarama — sayfalar kendi başına
+	// yoklama yapmadan önbellekten yüklenmeye devam etsin.
+	if _, err := p.scanManagedServices(r.Context()); err != nil {
+		log.Printf("service scan after %s %s: %v", req.Action, serviceName, err)
+	}
+
 	json.NewEncoder(w).Encode(map[string]bool{"success": reply})
 }
 
@@ -516,12 +526,12 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			Path:    req.Path,
 			Content: req.Content,
 		}, &reply)
-		
+
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		
+
 		json.NewEncoder(w).Encode(map[string]bool{"success": reply})
 		return
 	}

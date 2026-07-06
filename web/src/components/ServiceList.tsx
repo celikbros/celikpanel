@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, StatusDot } from './ui';
+import { PageHeader, StatusDot, EmptyState } from './ui';
 
 interface ManagedService {
     id: string;
@@ -42,20 +42,44 @@ const categoryStyle: Record<string, string> = {
 export function ServiceList({ onManageService }: ServiceListProps) {
     const { t } = useI18n();
     const [services, setServices] = useState<ManagedService[]>([]);
+    const [scannedAt, setScannedAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
 
     useEffect(() => {
         loadServices();
     }, []);
 
+    // Reads the CACHED scan — instant, never probes the system. A fresh
+    // probe is the explicit user action below (scan).
+    // ÖNBELLEKTEKİ taramayı okur — anlık, sistemi asla yoklamaz. Taze
+    // yoklama aşağıdaki açık kullanıcı eylemidir (scan).
     const loadServices = () => {
         setLoading(true);
         fetch('/api/v1/managed-services')
             .then((res) => res.json())
-            .then((data) => setServices(data || []))
+            .then((data) => {
+                setServices(data?.services || []);
+                setScannedAt(data?.scanned_at ?? null);
+            })
             .catch(() => showToast('error', t('common.error')))
             .finally(() => setLoading(false));
+    };
+
+    const scan = async () => {
+        setScanning(true);
+        try {
+            const res = await fetch('/api/v1/managed-services/scan', { method: 'POST' });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            setServices(data?.services || []);
+            setScannedAt(data?.scanned_at ?? null);
+        } catch {
+            showToast('error', t('services.scanFailed'));
+        } finally {
+            setScanning(false);
+        }
     };
 
     const resolveUnit = (serviceId: string, version?: string) => {
@@ -91,10 +115,32 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 breadcrumb={[t('common.home'), t('nav.services')]}
             />
 
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+                <button
+                    onClick={scan}
+                    disabled={scanning}
+                    className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
+                >
+                    <RefreshCw className={`h-4 w-4 ${scanning ? 'animate-spin' : ''}`} />
+                    {scanning ? t('services.scanning') : scannedAt ? t('services.rescan') : t('services.scanNow')}
+                </button>
+                <span className="text-xs text-fg-subtle">
+                    {scannedAt
+                        ? t('services.lastScan', { time: new Date(scannedAt).toLocaleString() })
+                        : t('services.neverScannedShort')}
+                </span>
+            </div>
+
             {loading ? (
                 <div className="flex items-center justify-center py-16">
                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
+            ) : !scannedAt && services.length === 0 ? (
+                <EmptyState
+                    icon={ScanSearch}
+                    title={t('services.neverScanned')}
+                    hint={t('services.neverScannedHint')}
+                />
             ) : (
                 <div className="rounded-xl border border-border bg-surface shadow-card">
                     <p className="px-4 pt-3 text-xs text-fg-subtle">{t('common.itemsTotal', { n: services.length })}</p>

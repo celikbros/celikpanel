@@ -14,11 +14,11 @@ import (
 
 // DomainPHPSettingsResponse represents PHP settings for a domain
 type DomainPHPSettingsResponse struct {
-	DomainID    int    `json:"domain_id"`
-	DomainName  string `json:"domain_name"`
-	PHPVersion  string `json:"php_version"`
-	PoolName    string `json:"pool_name"`
-	PoolConfig  *core.PHPPoolConfig `json:"pool_config,omitempty"`
+	DomainID   int                 `json:"domain_id"`
+	DomainName string              `json:"domain_name"`
+	PHPVersion string              `json:"php_version"`
+	PoolName   string              `json:"pool_name"`
+	PoolConfig *core.PHPPoolConfig `json:"pool_config,omitempty"`
 }
 
 // UpdateDomainPHPRequest represents a request to update domain PHP settings
@@ -29,7 +29,7 @@ type UpdateDomainPHPRequest struct {
 // handleDomainPHPSettings handles GET/POST for domain PHP settings
 func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// Extract domain ID from URL
 	domainID, err := extractDomainID(r.URL.Path, "/api/v1/domains/", "/php")
 	if err != nil {
@@ -82,19 +82,19 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			// Pool config not found - try to create a default one
 			defaultConfig := core.PHPPoolConfig{
-				Name:             poolName,
-				User:             domain.Name,
-				Group:            domain.Name,
-				Listen:           fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName),
-				ListenOwner:      "www-data",
-				ListenGroup:      "www-data",
-				ListenMode:       "0660",
-				PM:               "dynamic",
-				PMMaxChildren:    5,
-				PMStartServers:   2,
+				Name:              poolName,
+				User:              domain.Name,
+				Group:             domain.Name,
+				Listen:            fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName),
+				ListenOwner:       "www-data",
+				ListenGroup:       "www-data",
+				ListenMode:        "0660",
+				PM:                "dynamic",
+				PMMaxChildren:     5,
+				PMStartServers:    2,
 				PMMinSpareServers: 1,
 				PMMaxSpareServers: 3,
-				PMMaxRequests:    500,
+				PMMaxRequests:     500,
 			}
 
 			// Try to create the pool
@@ -194,7 +194,7 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 // handleDomainPHPPool handles GET/POST for domain-specific pool configuration
 func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// Extract domain ID from URL
 	domainID, err := extractDomainID(r.URL.Path, "/api/v1/domains/", "/php/pool")
 	if err != nil {
@@ -265,12 +265,12 @@ func extractDomainID(path, prefix, suffix string) (int, error) {
 	// Remove prefix and suffix
 	path = strings.TrimPrefix(path, prefix)
 	path = strings.TrimSuffix(path, suffix)
-	
+
 	// Extract ID
 	parts := strings.Split(path, "/")
 	if len(parts) == 0 {
 		return 0, fmt.Errorf("invalid path")
 	}
-	
+
 	return strconv.Atoi(parts[0])
 }
