@@ -253,6 +253,8 @@ func main() {
 			panel.handleDomainCronJobs(w, r)
 		} else if strings.Contains(r.URL.Path, "/mail") {
 			panel.handleDomainMail(w, r)
+		} else if strings.Contains(r.URL.Path, "/apps/install") {
+			panel.handleAppInstall(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/usage") {
 			panel.handleDomainUsage(w, r)
 		} else if strings.Contains(r.URL.Path, "/dns") {
@@ -276,6 +278,7 @@ func main() {
 	// PowerDNS Configuration
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
 	http.HandleFunc("/api/v1/mail/configure", panel.handleMailConfigure)
+	http.HandleFunc("/api/v1/apps", panel.handleAppCatalog)
 
 	// Node runtime management (admin-only via isAdminOnlyPath)
 	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)
