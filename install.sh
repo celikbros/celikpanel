@@ -149,13 +149,21 @@ install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/syst
 # the demo flags (quick-login accounts + cookies usable over plain HTTP).
 # Kuruluma gömülen üst-geçersiz kılmalar: bağlanma adresi ve AR-GE modunda
 # demo bayrakları (hızlı-giriş hesapları + düz HTTP'de kullanılabilir çerez).
+# A normal install serves HTTPS (self-signed) so credentials never cross the
+# wire in the clear. R&D mode (DEMO=1) stays on plain HTTP with insecure
+# cookies + demo accounts. TLS and demo are opposite ends of the same switch.
+# Normal kurulum HTTPS sunar (kendinden-imzalı); kimlik bilgileri asla açık
+# geçmez. AR-GE modu (DEMO=1) güvensiz çerez + demo hesaplarla düz HTTP'de
+# kalır. TLS ve demo aynı anahtarın iki ucudur.
 PANEL_ARGS=""
+TLS_ENV="Environment=CELIKPANEL_TLS=1"
 if [ "${DEMO:-0}" = "1" ]; then
     PANEL_ARGS=" --insecure-cookies --demo"
+    TLS_ENV=""
     c '33' "    AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
 fi
 sed -e "s|^Environment=CELIKPANEL_LISTEN=.*|Environment=CELIKPANEL_LISTEN=$LISTEN|" \
-    -e "s|^ExecStart=/opt/celikpanel/bin/panel.*|ExecStart=/opt/celikpanel/bin/panel$PANEL_ARGS|" \
+    -e "s|^ExecStart=/opt/celikpanel/bin/panel.*|${TLS_ENV:+$TLS_ENV\n}ExecStart=/opt/celikpanel/bin/panel$PANEL_ARGS|" \
     "$SRC/deploy/systemd/celikpanel-panel.service" > /etc/systemd/system/celikpanel-panel.service
 systemctl daemon-reload
 ok "kuruldu"

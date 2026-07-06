@@ -401,6 +401,27 @@ func main() {
 			panel.requireAuth(http.DefaultServeMux)))
 
 	addr := listenAddr()
+
+	// Serve HTTPS when a certificate is configured (or self-sign one on
+	// request); fall back to plain HTTP for development.
+	// Sertifika yapılandırıldığında (ya da talep üzerine kendinden-imzalı
+	// üretilince) HTTPS sun; geliştirme için düz HTTP'ye düş.
+	tlsOn, certPath, keyPath, err := tlsSettings()
+	if err != nil {
+		log.Fatalf("TLS setup failed: %v", err)
+	}
+	if tlsOn {
+		log.Printf("Panel listening on %s (HTTPS)", addr)
+		log.Fatal(http.ListenAndServeTLS(addr, certPath, keyPath, handler))
+	}
+
+	// Plain HTTP with Secure cookies would hand the browser a cookie it
+	// silently drops — refuse the footgun unless --insecure-cookies is set.
+	// Secure çerezli düz HTTP, tarayıcıya sessizce düşürdüğü bir çerez verir
+	// — --insecure-cookies verilmedikçe bu tuzağı reddet.
+	if panel.secureCookies {
+		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
+	}
 	log.Printf("Panel listening on %s (HTTP)", addr)
 	log.Fatal(http.ListenAndServe(addr, handler))
 }

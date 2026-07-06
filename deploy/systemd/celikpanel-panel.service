@@ -26,6 +26,14 @@ Environment=CELIKPANEL_WEB_DIR=/opt/celikpanel/web
 Environment=CELIKPANEL_LISTEN=:1983
 Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
 Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
+# HTTPS: a normal install adds CELIKPANEL_TLS=1 here (self-signed cert, so
+# the panel never serves credentials over plain HTTP). To use a real
+# certificate — e.g. the panel hostname's Let's Encrypt files — set instead:
+#   Environment=CELIKPANEL_TLS_CERT=/etc/letsencrypt/live/<host>/fullchain.pem
+#   Environment=CELIKPANEL_TLS_KEY=/etc/letsencrypt/live/<host>/privkey.pem
+# HTTPS: normal kurulum buraya CELIKPANEL_TLS=1 ekler (kendinden-imzalı; panel
+# kimlik bilgilerini düz HTTP'de sunmaz). Gerçek sertifika için yukarıdaki
+# CELIKPANEL_TLS_CERT / CELIKPANEL_TLS_KEY satırlarını kullanın.
 
 ExecStart=/opt/celikpanel/bin/panel
 Restart=on-failure
