@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
-    LayoutGrid, Server, Network, Mail, Database, Folder, Wrench,
+    LayoutGrid, Server, Network, Mail, Database, Folder, Wrench, AppWindow,
 } from 'lucide-react';
 import { DomainPHPSettings } from './DomainPHPSettings';
 import { DomainGeneralSettings } from './DomainGeneralSettings';
@@ -14,6 +14,7 @@ import { DomainCronManager } from './DomainCronManager';
 import { DomainMailManager } from './DomainMailManager';
 import { DomainDNSManager } from './DomainDNSManager';
 import { HostingTypePanel } from './HostingTypePanel';
+import { DomainAppsPanel } from './DomainAppsPanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { StatusDot } from './ui';
@@ -108,6 +109,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         { id: 'dns', labelKey: 'domain.tab.dns', icon: Network, render: () => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} /> },
         { id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, render: () => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} /> },
         { id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> },
+        { id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> },
         { id: 'files', labelKey: 'domain.tab.files', icon: Folder, render: () => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} /> },
         {
             id: 'advanced', labelKey: 'domain.tab.advanced', icon: Wrench,
