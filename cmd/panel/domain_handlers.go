@@ -145,9 +145,19 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Quota: one more domain must fit in the subscription.
-	// Kota: aboneliğe bir domain daha sığmalı.
+	// Quota: one more domain must fit, and the subscription must not already
+	// be over its disk quota. Disk is a soft gate at creation — it refuses a
+	// new site under an already-full account; it does not (yet) hard-stop a
+	// running script from filling the disk (that needs OS filesystem quotas).
+	// Kota: bir domain daha sığmalı ve abonelik disk kotasını çoktan aşmış
+	// olmamalı. Disk, oluşturmada yumuşak bir kapıdır — zaten dolu bir hesap
+	// altında yeni siteyi reddeder; çalışan bir betiğin diski doldurmasını
+	// (henüz) sertçe durdurmaz (o, OS dosya sistemi kotası ister).
 	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDomains); err != nil {
+		writeClientError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDisk); err != nil {
 		writeClientError(w, http.StatusConflict, err.Error())
 		return
 	}

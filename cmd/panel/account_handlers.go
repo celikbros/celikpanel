@@ -96,15 +96,26 @@ func (p *Panel) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type sub struct {
-		ID    int    `json:"id"`
-		Name  string `json:"name"`
-		Owner string `json:"owner"`
+		ID    int                `json:"id"`
+		Name  string             `json:"name"`
+		Owner string             `json:"owner"`
+		Usage *subscriptionUsage `json:"usage,omitempty"`
 	}
 	subs := []sub{}
 	for rows.Next() {
 		var s sub
 		if rows.Scan(&s.ID, &s.Name, &s.Owner) == nil {
 			subs = append(subs, s)
+		}
+	}
+	// Attach the real usage picture per subscription (measured disk + counts
+	// vs the plan limits). The list is short (a customer has one or a few),
+	// and the numbers are cached reads — no probing.
+	// Her aboneliğe gerçek kullanım tablosunu ekle (ölçülen disk + sayılar vs
+	// plan limitleri). Liste kısadır ve sayılar önbellekli okumadır.
+	for i := range subs {
+		if u, err := p.subscriptionUsageFor(r.Context(), subs[i].ID); err == nil {
+			subs[i].Usage = u
 		}
 	}
 	json.NewEncoder(w).Encode(map[string]any{"subscriptions": subs})

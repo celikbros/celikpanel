@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Plus, Trash2, ExternalLink, Settings, Lock } from 'lucide-react';
+import { Globe, Plus, Trash2, ExternalLink, Settings, Lock, HardDrive } from 'lucide-react';
 import { AddDomainModal } from './AddDomainModal';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, Button, SearchInput, EmptyState, StatusDot } from './ui';
+import { PageHeader, Button, SearchInput, EmptyState, StatusDot, UsageBar } from './ui';
 
 // Type badge colours: categorical, readable in both themes.
 // Tip rozeti renkleri: kategorik, iki temada da okunur.
@@ -81,6 +81,7 @@ export function Domains() {
 
     return (
         <div className="p-6 md:p-8">
+            <SubscriptionUsage />
             <PageHeader
                 title={t('nav.domains')}
                 subtitle={t('domains.subtitle')}
@@ -299,4 +300,78 @@ function fmtBytes(bytes: number = 0): string {
     const mb = kb / 1024;
     if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
     return `${(mb / 1024).toFixed(2)} GB`;
+}
+
+
+// A compact usage strip: the caller's subscription(s) with measured disk
+// against the plan limit and resource counts. Real numbers straight from
+// the quota system that gates creation — what you see is what's enforced.
+// Kompakt kullanım şeridi: çağıranın aboneliği/leri, plan limitine karşı
+// ölçülen disk ve kaynak sayıları. Oluşturmayı kapılayan kota sisteminden
+// gelen gerçek sayılar — gördüğün, uygulanandır.
+interface SubUsage {
+    disk_used_bytes: number;
+    disk_limit_bytes: number;
+    domains: number;
+    domains_limit: number;
+    databases: number;
+    databases_limit: number;
+    mail_accounts: number;
+    mail_limit: number;
+}
+interface SubRow {
+    id: number;
+    name: string;
+    owner: string;
+    usage?: SubUsage;
+}
+
+function SubscriptionUsage() {
+    const { t } = useI18n();
+    const [subs, setSubs] = useState<SubRow[]>([]);
+
+    useEffect(() => {
+        fetch('/api/v1/subscriptions')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => setSubs(d?.subscriptions || []))
+            .catch(() => {});
+    }, []);
+
+    const withUsage = subs.filter((s) => s.usage);
+    if (withUsage.length === 0) return null;
+
+    return (
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {withUsage.map((s) => {
+                const u = s.usage!;
+                const unlimited = u.disk_limit_bytes <= 0;
+                const pct = unlimited ? 0 : Math.min(100, (u.disk_used_bytes / u.disk_limit_bytes) * 100);
+                return (
+                    <div key={s.id} className="rounded-xl border border-border bg-surface p-4 shadow-card">
+                        <div className="mb-2 flex items-center gap-2">
+                            <HardDrive className="h-4 w-4 text-primary" />
+                            <span className="truncate text-sm font-semibold text-fg">{s.name}</span>
+                        </div>
+                        {unlimited ? (
+                            <p className="text-sm text-fg-muted">
+                                {fmtBytes(u.disk_used_bytes)} · {t('quota.unlimited')}
+                            </p>
+                        ) : (
+                            <>
+                                <UsageBar percent={pct} />
+                                <p className="mt-1.5 text-xs text-fg-muted">
+                                    {t('quota.diskOf', { used: fmtBytes(u.disk_used_bytes), total: fmtBytes(u.disk_limit_bytes) })}
+                                </p>
+                            </>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-fg-subtle">
+                            <span>{t('quota.domains', { n: u.domains, max: u.domains_limit })}</span>
+                            <span>{t('quota.databases', { n: u.databases, max: u.databases_limit })}</span>
+                            <span>{t('quota.mail', { n: u.mail_accounts, max: u.mail_limit })}</span>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }

@@ -81,6 +81,11 @@ export const en = {
     'common.home': 'Home',
 
     'domains.subtitle': 'Manage the domains hosted on this server',
+    'quota.unlimited': 'Unlimited disk',
+    'quota.diskOf': '{used} of {total} disk',
+    'quota.domains': 'Domains {n}/{max}',
+    'quota.databases': 'Databases {n}/{max}',
+    'quota.mail': 'Mail {n}/{max}',
     'domains.add': 'Add domain',
     'domains.search': 'Search domains…',
     'domains.col.name': 'Domain name',

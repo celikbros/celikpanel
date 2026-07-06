@@ -80,6 +80,11 @@ export const tr: Record<TranslationKey, string> = {
     'common.home': 'Ana sayfa',
 
     'domains.subtitle': 'Bu sunucuda barındırılan alan adlarını yönetin',
+    'quota.unlimited': 'Sınırsız disk',
+    'quota.diskOf': '{total} diskin {used} kadarı',
+    'quota.domains': 'Alan adı {n}/{max}',
+    'quota.databases': 'Veritabanı {n}/{max}',
+    'quota.mail': 'E-posta {n}/{max}',
     'domains.add': 'Alan adı ekle',
     'domains.search': 'Alan adı ara…',
     'domains.col.name': 'Alan adı',
