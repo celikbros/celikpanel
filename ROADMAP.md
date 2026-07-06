@@ -54,7 +54,7 @@ Every phase has a measurable exit criterion; the next phase does not start until
 | 0.5 | Error leakage | Internal error messages never reach the user; full detail to logs, generic message to client |
 | 0.6 | HTTP hardening | Security headers, CSRF protection, API rate limiting |
 | 0.7 | Known bugs | `files_rpc.go` uid/gid conversion bug; zero `go vet` warnings |
-| 0.8 | Leaked password | Rotate the `celikpanel_secure_2025` PostgreSQL password — **deferred** (server not internet-facing yet); mandatory before going public, see Phase 2 exit criteria |
+| 0.8 | Leaked password | ✅ Resolved (Jul 6, 2026). The secret was already removed from code in 9aeb7cb; the live credential was the real risk — the `celikpanel_user` PostgreSQL role still accepted `celikpanel_secure_2025`. That role is an orphan from the PostgreSQL-era panel backend (the panel now runs on SQLite, PowerDNS on SQLite — 0 active connections), so it was rotated to a fresh random password **and** set `NOLOGIN`. Verified: neither the leaked nor the new password can authenticate. Residual: the string remains in private-repo git history — a rewrite is deferred as low-value since the credential is dead. |
 
 **Exit criteria:** No API endpoint responds without a session · The Agent is unreachable from outside the Panel · `gosec` scan shows no critical findings · `go vet` is clean.
 

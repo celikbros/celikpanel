@@ -55,7 +55,7 @@ Her fazın sonunda ölçülebilir çıkış kriteri vardır; kriter sağlanmadan
 | 0.5 | Hata sızıntısı | İç hata mesajları kullanıcıya gitmez; log'a tam, kullanıcıya genel mesaj |
 | 0.6 | HTTP sertleştirme | Güvenlik başlıkları, CSRF koruması, API rate limiting |
 | 0.7 | Bilinen hatalar | `files_rpc.go` uid/gid dönüşüm hatası; `go vet` sıfır uyarı |
-| 0.8 | Sızıntı parolası | `celikpanel_secure_2025` PostgreSQL parolasının değiştirilmesi — **ertelendi** (sunucu henüz dışa açık değil); dışa açılmadan önce zorunlu, bkz. Faz 2 çıkış kriteri |
+| 0.8 | Sızıntı parolası | ✅ Çözüldü (6 Tem 2026). Sır zaten 9aeb7cb'de koddan kaldırılmıştı; asıl risk canlı kimlik bilgisiydi — `celikpanel_user` PostgreSQL rolü hâlâ `celikpanel_secure_2025`'i kabul ediyordu. Bu rol, PostgreSQL-dönemi panel arka ucundan kalma bir yetim (panel artık SQLite'ta, PowerDNS SQLite'ta — 0 aktif bağlantı); taze rastgele parolaya döndürüldü **ve** `NOLOGIN` yapıldı. Doğrulandı: ne sızmış ne yeni parola giriş yapabiliyor. Kalıntı: dize özel-depo git geçmişinde duruyor — kimlik bilgisi öldüğü için geçmiş yeniden yazımı düşük değerli sayılıp ertelendi. |
 
 **Çıkış kriteri:** Oturum açmadan hiçbir API endpoint'i yanıt vermez · Agent'a Panel dışından erişilemez · `gosec` taraması kritik bulgu vermez · `go vet` temiz.
 
