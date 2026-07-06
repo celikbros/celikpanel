@@ -35,3 +35,7 @@ __pycache__/
 .env.*
 .claude/worktrees/
 /dist/
+
+# Compiled binaries never enter the repo / Derlenmis binaryler repoya girmez
+/panel
+/agent
