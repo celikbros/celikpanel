@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // List emails response
@@ -145,21 +143,24 @@ func (p *Panel) handleAddEmailAccount(w http.ResponseWriter, r *http.Request, do
 		return
 	}
 
-	// Make sure address contains domain
+	// Accept either a bare local part ("info") or a full address; complete it
+	// with the domain when needed. An empty or malformed local part must be
+	// rejected — "" would become "@domain", a broken mailbox that poisons the
+	// postfix/dovecot maps.
+	// Ya salt yerel kısım ("info") ya da tam adres kabul et; gerekince domain
+	// ile tamamla. Boş ya da bozuk yerel kısım reddedilmeli — "" "@domain"
+	// olur; postfix/dovecot haritalarını bozan hatalı bir posta kutusu.
+	req.Address = strings.TrimSpace(req.Address)
+	local := req.Address
+	if i := strings.IndexByte(req.Address, '@'); i >= 0 {
+		local = req.Address[:i]
+	}
+	if !validMailLocalPart(local) {
+		writeClientError(w, http.StatusBadRequest, "invalid mailbox name")
+		return
+	}
 	if !strings.Contains(req.Address, "@") {
-		// Get domain name
-		repo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-		domains, _ := repo.List(context.Background())
-		var domainName string
-		for _, d := range domains {
-			if d.ID == domainID {
-				domainName = d.Name
-				break
-			}
-		}
-		if domainName != "" {
-			req.Address = req.Address + "@" + domainName
-		}
+		req.Address = req.Address + "@" + p.domainNameByID(context.Background(), domainID)
 	}
 
 	// 1. Create in DB (store password plain temporarily or hashed? Agent hashes it too)

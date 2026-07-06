@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -138,20 +139,45 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *bool) error {
 		return err
 	}
 
-	// Rebuild map
-	exec.Command("postmap", postfixVBoxPath).Run()
+	// Postfix needs the domain registered as a virtual mailbox domain,
+	// separately from the mailbox map, or it rejects mail for it.
+	// Postfix, domain'i posta kutusu haritasından ayrı olarak sanal posta
+	// kutusu domain'i diye kayıtlı ister; yoksa o domain'e postayı reddeder.
+	ensurePostfixDomain(domain)
 
-	// 4. Create directory structure
-	maildir := filepath.Join(mailRootDir, domain, user)
-	if err := os.MkdirAll(maildir, 0700); err != nil {
-		return err
+	// Rebuild map
+	postmapReadable(postfixVBoxPath)
+
+	// 4. Create the maildir owned by vmail (uid/gid 5000), the user postfix
+	// delivers as. A dev agent has no vmail/maildir and skips this.
+	// 4. vmail (uid/gid 5000) sahipliğinde maildir oluştur; postfix bu
+	// kullanıcı olarak teslim eder. Dev agent'ın vmail/maildir'i yok, atlar.
+	if os.Getenv("CELIKPANEL_MAIL_DIR") == "" {
+		maildir := filepath.Join(mailRootDir, domain, user)
+		if err := os.MkdirAll(maildir, 0o700); err != nil {
+			return err
+		}
+		if uid, err := strconv.Atoi(vmailUID); err == nil {
+			gid, _ := strconv.Atoi(vmailGID)
+			_ = chownRecursive(filepath.Join(mailRootDir, domain), uid, gid)
+		}
 	}
-	// Chown to vmail user (usually 5000:5000 or similar)
-	// For now we assume agent runs as root, checking vmail uid/gid
-	// exec.Command("chown", "-R", "vmail:vmail", maildir).Run() // TODO: Determine correct user
 
 	*resp = true
 	return nil
+}
+
+// chownRecursive chowns a path and everything under it — the maildir plus its
+// parent domain directory must belong to vmail for postfix to deliver.
+// chownRecursive, bir yolu ve altındaki her şeyi chown eder — maildir ve üst
+// domain dizini, postfix teslim edebilsin diye vmail'e ait olmalı.
+func chownRecursive(root string, uid, gid int) error {
+	return filepath.Walk(root, func(p string, _ os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chown(p, uid, gid)
+	})
 }
 
 // DeleteMailAccount removes a mail account
@@ -168,7 +194,7 @@ func (a *Agent) DeleteMailAccount(req *struct{ Email string }, resp *bool) error
 	if err := removeLineFromFile(postfixVBoxPath, req.Email+" "); err != nil {
 		return err
 	}
-	exec.Command("postmap", postfixVBoxPath).Run()
+	postmapReadable(postfixVBoxPath)
 
 	// Optional: Delete mail data?
 	// Usually safer to keep data or move to trash?
@@ -194,7 +220,7 @@ func (a *Agent) UpdateMailForwarding(req *struct {
 		return err
 	}
 
-	exec.Command("postmap", postfixVirtualPath).Run()
+	postmapReadable(postfixVirtualPath)
 	*resp = true
 	return nil
 }
@@ -235,7 +261,7 @@ func (a *Agent) ImportMailAccount(req *struct {
 	if err := appendToFile(postfixVBoxPath, fmt.Sprintf("%s %s/%s/", req.Email, domain, user)); err != nil {
 		return err
 	}
-	exec.Command("postmap", postfixVBoxPath).Run()
+	postmapReadable(postfixVBoxPath)
 
 	maildir := filepath.Join(mailRootDir, domain, user)
 	if err := os.MkdirAll(maildir, 0700); err != nil {

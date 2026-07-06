@@ -136,3 +136,49 @@ func (p *Panel) domainNameByID(ctx context.Context, domainID int) string {
 	_ = p.db.GetDB().QueryRowContext(ctx, `SELECT name FROM domains WHERE id = ?`, domainID).Scan(&name)
 	return name
 }
+
+// handleMailConfigure wires Postfix + Dovecot to the panel's virtual
+// mailboxes — the one-shot "start delivering mail" action, mail's counterpart
+// to /api/v1/pdns/enable. Admin-only via the /api/v1/mail/ prefix.
+// handleMailConfigure, Postfix + Dovecot'u panelin sanal posta kutularına
+// bağlar — tek seferlik "posta teslimine başla" eylemi; /api/v1/pdns/enable'ın
+// mail karşılığı. /api/v1/mail/ öneki üzerinden yalnız admin.
+func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var resp struct {
+		Configured bool   `json:"configured"`
+		Detail     string `json:"detail,omitempty"`
+		Error      string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.ConfigureMailStack", &struct{}{}, &resp); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if resp.Error != "" {
+		writeClientError(w, http.StatusConflict, resp.Error)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail})
+}
+
+// validMailLocalPart guards the local part of an email address: non-empty,
+// reasonable length, and the conservative charset real mailbox names use.
+// validMailLocalPart, bir e-posta adresinin yerel kısmını korur: boş değil,
+// makul uzunlukta ve gerçek posta kutusu adlarının kullandığı muhafazakâr
+// karakter seti.
+func validMailLocalPart(s string) bool {
+	if len(s) == 0 || len(s) > 64 {
+		return false
+	}
+	for _, r := range s {
+		alnum := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+		if !alnum && r != '.' && r != '_' && r != '-' && r != '+' {
+			return false
+		}
+	}
+	return true
+}

@@ -67,6 +67,20 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Installing the mail stack is likewise only half done until postfix and
+	// dovecot are wired to the panel's virtual mailboxes.
+	// Mail yığınını kurmak da, postfix ve dovecot panelin sanal posta
+	// kutularına bağlanana dek yarım kalır.
+	if req.ServiceID == "postfix" || req.ServiceID == "dovecot" {
+		var mailResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureMailStack", &struct{}{}, &mailResp); err != nil || mailResp.Error != "" {
+			log.Printf("mail stack configure after install: %v %s", err, mailResp.Error)
+		}
+	}
+
 	// A new service exists now; refresh the cached scan so every page keeps
 	// reading from cache instead of probing.
 	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar
