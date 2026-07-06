@@ -198,9 +198,9 @@ export function Domains() {
                                                 <span className="ml-1.5 text-xs text-fg-subtle">{d.php_version}</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5 text-right text-fg-muted">{fmtMB(d.disk_usage)}</td>
+                                        <td className="px-4 py-2.5 text-right text-fg-muted">{fmtBytes(d.disk_usage)}</td>
                                         <td className="px-4 py-2.5 text-right text-fg-muted">
-                                            {fmtMB(d.bandwidth)}/mo
+                                            {fmtBytes(d.bandwidth)}/mo
                                         </td>
                                         <td className="px-4 py-2.5">
                                             <span className="inline-flex items-center gap-1.5 text-fg-muted">
@@ -288,8 +288,15 @@ function IconAction({
     );
 }
 
-function fmtMB(bytes: number = 0): string {
-    if (!bytes) return '0 MB';
-    const mb = bytes / (1024 * 1024);
-    return mb < 1024 ? `${mb.toFixed(1)} MB` : `${(mb / 1024).toFixed(2)} GB`;
+function fmtBytes(bytes: number = 0): string {
+    // Honest sizes: a 627-byte site reads "627 B", never a fake-looking
+    // "0.0 MB". / Dürüst boyutlar: 627 baytlık site "627 B" okunur, sahte
+    // görünen "0.0 MB" asla.
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
+    const mb = kb / 1024;
+    if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+    return `${(mb / 1024).toFixed(2)} GB`;
 }

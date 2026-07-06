@@ -21,6 +21,8 @@ type DomainResponse struct {
 	Status      string `json:"status"`
 	ProjectType string `json:"project_type"`
 	CreatedAt   string `json:"created_at"`
+	DiskUsage   int64  `json:"disk_usage"`
+	Bandwidth   int64  `json:"bandwidth"`
 }
 
 // handleDomains lists all domains
@@ -57,11 +59,18 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		}
-		// Query site info from database directly
+		// Query site info from database directly. Usage numbers are the
+		// cached measurements — lists never probe the filesystem.
+		// Site bilgisini doğrudan veritabanından sorgula. Kullanım sayıları
+		// önbellekli ölçümlerdir — listeler asla dosya sistemini yoklamaz.
 		var phpVersion, sslType, projectType string
+		var diskUsage, bandwidth int64
 
-		query := `SELECT php_version, ssl_type, COALESCE(project_type,'php') FROM sites WHERE domain_id = ? LIMIT 1`
-		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).Scan(&phpVersion, &sslType, &projectType)
+		query := `SELECT php_version, ssl_type, COALESCE(project_type,'php'),
+			COALESCE(disk_usage_bytes,0), COALESCE(traffic_month_bytes,0)
+			FROM sites WHERE domain_id = ? LIMIT 1`
+		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).
+			Scan(&phpVersion, &sslType, &projectType, &diskUsage, &bandwidth)
 		if err != nil {
 			// Default values if site not found
 			phpVersion = "8.3"
@@ -77,6 +86,8 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			Status:      domain.Status,
 			ProjectType: projectType,
 			CreatedAt:   domain.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			DiskUsage:   diskUsage,
+			Bandwidth:   bandwidth,
 		})
 	}
 

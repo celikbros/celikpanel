@@ -66,6 +66,23 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             .finally(() => setLoading(false));
     }, [domainId]);
 
+    // Refresh the real usage numbers in the background after render: one
+    // domain, one measurement. The page shows cached values instantly and
+    // updates when the fresh ones land — it never blocks on a probe.
+    // Render'dan sonra gerçek kullanım sayılarını arka planda tazele: bir
+    // domain, bir ölçüm. Sayfa önbellekli değerleri anında gösterir, tazeler
+    // gelince güncellenir — asla bir yoklamayı beklemez.
+    const domainLoaded = domain !== null;
+    useEffect(() => {
+        if (!domainLoaded) return;
+        fetch(`/api/v1/domains/${domainId}/usage`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((u) => {
+                if (u) setDomain((d) => (d ? { ...d, disk_usage: u.disk_usage, bandwidth: u.bandwidth } : d));
+            })
+            .catch(() => {});
+    }, [domainId, domainLoaded]);
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -145,9 +162,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         </span>
                     </Fact>
                     <FactDivider />
-                    <Fact label={t('domain.info.disk')}>{fmtMB(domain.disk_usage)}</Fact>
+                    <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>
                     <FactDivider />
-                    <Fact label={t('domain.info.traffic')}>{fmtMB(domain.bandwidth)}/mo</Fact>
+                    <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>
                 </div>
             </div>
 
@@ -262,8 +279,15 @@ function FactDivider() {
     return <span aria-hidden className="h-3.5 w-px self-center bg-border-strong" />;
 }
 
-function fmtMB(bytes: number = 0): string {
-    if (!bytes) return '0 MB';
-    const mb = bytes / (1024 * 1024);
-    return mb < 1024 ? `${mb.toFixed(1)} MB` : `${(mb / 1024).toFixed(2)} GB`;
+function fmtBytes(bytes: number = 0): string {
+    // Honest sizes: a 627-byte site reads "627 B", never a fake-looking
+    // "0.0 MB". / Dürüst boyutlar: 627 baytlık site "627 B" okunur, sahte
+    // görünen "0.0 MB" asla.
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
+    const mb = kb / 1024;
+    if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+    return `${(mb / 1024).toFixed(2)} GB`;
 }
