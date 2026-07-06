@@ -97,50 +97,6 @@ func (p *Panel) handleGetDNSZone(w http.ResponseWriter, domainName string) {
 	json.NewEncoder(w).Encode(zone)
 }
 
-// handleConfigurePowerDNS configures PowerDNS with PostgreSQL backend
-func (p *Panel) handleConfigurePowerDNS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method != "POST" {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Connection settings come from the request; secrets never live in
-	// source code.
-	// Bağlantı ayarları istekten gelir; sırlar asla kaynak kodda durmaz.
-	req := &ConfigurePowerDNSRequest{}
-	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-	if req.Host == "" || req.User == "" || req.Password == "" || req.DBName == "" {
-		http.Error(w, "host, user, password and dbname are required", http.StatusBadRequest)
-		return
-	}
-	if req.Port == 0 {
-		req.Port = 5432
-	}
-
-	var success bool
-	err := p.agentClient.Call("Agent.ConfigurePowerDNS", req, &success)
-	if err != nil {
-		writeServerError(w, err)
-		return
-	}
-
-	json.NewEncoder(w).Encode(map[string]bool{"success": success})
-}
-
-// ConfigurePowerDNSRequest matches Agent RPC structure
-type ConfigurePowerDNSRequest struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	DBName   string `json:"dbname"`
-}
-
 func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, domainName string) {
 	zoneID, created, err := p.createZoneWithTemplate(context.Background(), domainName)
 	if err != nil {
@@ -151,6 +107,7 @@ func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, domainName string) {
 		http.Error(w, "Zone already exists", http.StatusConflict)
 		return
 	}
+	p.syncZoneToDNS(context.Background(), domainName, false)
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "id": zoneID})
 }
 
@@ -235,9 +192,7 @@ func (p *Panel) handleAddDNSRecord(w http.ResponseWriter, r *http.Request, domai
 		return
 	}
 
-	// Notify PDNS to reload zone? Not needed with Postgres backend usually, unless caching
-	// We can execute `pdns_control purge zone` via Agent if needed.
-
+	p.syncZoneToDNS(context.Background(), domainName, false)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
@@ -263,6 +218,7 @@ func (p *Panel) handleDeleteDNSRecord(w http.ResponseWriter, r *http.Request, do
 		return
 	}
 
+	p.syncZoneToDNS(context.Background(), domainName, false)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
@@ -296,5 +252,6 @@ func (p *Panel) handleUpdateDNSRecord(w http.ResponseWriter, r *http.Request, do
 		return
 	}
 
+	p.syncZoneToDNS(context.Background(), domainName, false)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

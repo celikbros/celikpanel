@@ -367,5 +367,6 @@ func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, doma
 		return
 	}
 
+	p.syncZoneToDNS(r.Context(), domain, false)
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "name": name, "value": value})
 }

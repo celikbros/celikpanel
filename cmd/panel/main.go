@@ -274,7 +274,7 @@ func main() {
 	})
 
 	// PowerDNS Configuration
-	http.HandleFunc("/api/v1/pdns/configure", panel.handleConfigurePowerDNS)
+	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
 
 	// Node runtime management (admin-only via isAdminOnlyPath)
 	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)

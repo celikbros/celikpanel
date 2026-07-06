@@ -183,6 +183,8 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	// arşivden gelir.
 	if _, _, err := p.createZoneWithTemplate(r.Context(), req.Domain); err != nil {
 		log.Printf("dns zone template for %s: %v", req.Domain, err)
+	} else {
+		p.syncZoneToDNS(r.Context(), req.Domain, false)
 	}
 
 	json.NewEncoder(w).Encode(result)
@@ -270,6 +272,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		`DELETE FROM pdns_records WHERE domain_id IN (SELECT id FROM pdns_domains WHERE name = ?)`, domain.Name); err == nil {
 		p.db.GetDB().ExecContext(context.Background(), `DELETE FROM pdns_domains WHERE name = ?`, domain.Name)
 	}
+	p.syncZoneToDNS(context.Background(), domain.Name, true)
 
 	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC
 	// For now, just delete the database record

@@ -50,6 +50,23 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Installing the DNS server is only half the job: point it at our
+	// dedicated database and push the existing zones so it answers
+	// immediately.
+	// DNS sunucusunu kurmak işin yarısıdır: onu bize ayrılmış veritabanına
+	// yönlendir ve hemen cevap versin diye mevcut zone'ları it.
+	if req.ServiceID == "pdns" {
+		var dnsResp struct {
+			Synced bool   `json:"synced"`
+			Error  string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigurePowerDNSSQLite", &struct{}{}, &dnsResp); err != nil || dnsResp.Error != "" {
+			log.Printf("pdns configure after install: %v %s", err, dnsResp.Error)
+		} else {
+			p.syncAllZones(r.Context())
+		}
+	}
+
 	// A new service exists now; refresh the cached scan so every page keeps
 	// reading from cache instead of probing.
 	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar

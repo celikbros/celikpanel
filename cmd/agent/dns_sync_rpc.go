@@ -1,0 +1,270 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	_ "modernc.org/sqlite"
+)
+
+// PowerDNS integration. The panel's ledger is never exposed to pdns —
+// password hashes live there. Instead pdns gets its own standard gsqlite3
+// database and the panel pushes full zones into it through this RPC on
+// every change. Full-zone rewrite is idempotent: a missed sync is repaired
+// by the next one.
+//
+// PowerDNS entegrasyonu. Panelin defteri pdns'e asla açılmaz — parola
+// hash'leri orada yaşar. Bunun yerine pdns kendi standart gsqlite3
+// veritabanını alır ve panel her değişiklikte tam zone'u bu RPC ile oraya
+// iter. Tam-zone yazımı idempotenttir: kaçan bir senkron, sonrakiyle onarılır.
+
+func pdnsDBPath() string {
+	if p := os.Getenv("CELIKPANEL_PDNS_DB"); p != "" {
+		return p
+	}
+	return "/var/lib/powerdns/pdns.sqlite3"
+}
+
+type ZoneRecord struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Content  string `json:"content"`
+	TTL      int    `json:"ttl"`
+	Prio     int    `json:"prio"`
+	Disabled bool   `json:"disabled"`
+}
+
+type SyncDNSZoneRequest struct {
+	Domain  string       `json:"domain"`
+	Delete  bool         `json:"delete"`
+	Records []ZoneRecord `json:"records"`
+}
+
+type SyncDNSZoneResponse struct {
+	Synced bool   `json:"synced"`
+	Error  string `json:"error,omitempty"`
+}
+
+// SyncDNSZone replaces one zone in the pdns database with the given record
+// set (or removes it entirely when Delete is set), then flushes the pdns
+// cache for that name so answers change immediately.
+// SyncDNSZone, pdns veritabanındaki bir zone'u verilen kayıt setiyle
+// değiştirir (Delete işaretliyse tümüyle kaldırır), sonra cevaplar hemen
+// değişsin diye o adın pdns önbelleğini boşaltır.
+func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
+	if req.Domain == "" {
+		resp.Error = "domain is required"
+		return nil
+	}
+
+	db, err := openPdnsDB()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM records WHERE domain_id IN (SELECT id FROM domains WHERE name = ?)`, req.Domain); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if _, err := tx.Exec(`DELETE FROM domains WHERE name = ?`, req.Domain); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	if !req.Delete {
+		res, err := tx.Exec(`INSERT INTO domains (name, type) VALUES (?, 'NATIVE')`, req.Domain)
+		if err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+		zoneID, _ := res.LastInsertId()
+		for _, rec := range req.Records {
+			disabled := 0
+			if rec.Disabled {
+				disabled = 1
+			}
+			if _, err := tx.Exec(
+				`INSERT INTO records (domain_id, name, type, content, ttl, prio, disabled, auth) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+				zoneID, rec.Name, rec.Type, rec.Content, rec.TTL, rec.Prio, disabled); err != nil {
+				resp.Error = fmt.Sprintf("insert %s %s: %v", rec.Type, rec.Name, err)
+				return nil
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	// Cache flush is best-effort: without it changes appear after TTL.
+	// Önbellek boşaltma en-iyi-çabadır: onsuz değişiklikler TTL sonrası görünür.
+	_ = exec.Command("pdns_control", "purge", req.Domain+"$").Run()
+
+	resp.Synced = true
+	return nil
+}
+
+// ConfigurePowerDNSSQLite points pdns at our dedicated sqlite database and
+// restarts it. Replaces the retired PostgreSQL-era configuration path.
+// ConfigurePowerDNSSQLite, pdns'i bize ayrılmış sqlite veritabanına
+// yönlendirir ve yeniden başlatır. Emekli PostgreSQL-dönemi yapılandırma
+// yolunun yerini alır.
+func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) error {
+	dbPath := pdnsDBPath()
+
+	// Create the database with the pdns schema before pdns first reads it.
+	// pdns ilk okumadan önce veritabanını pdns şemasıyla oluştur.
+	db, err := openPdnsDB()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	db.Close()
+
+	// pdns (user pdns) must read and write its own database.
+	// pdns (pdns kullanıcısı) kendi veritabanını okuyup yazabilmeli.
+	_ = exec.Command("chown", "-R", "pdns:pdns", filepath.Dir(dbPath)).Run()
+
+	// zone-cache-refresh-interval=0: pdns caches the zone LIST for 300s by
+	// default, so a zone created after startup would be REFUSED for up to
+	// five minutes. The panel pushes changes instantly; answers must follow
+	// instantly. The per-query cost is irrelevant at panel scale.
+	// zone-cache-refresh-interval=0: pdns zone LİSTESİNİ varsayılan 300 sn
+	// önbellekler; başlangıçtan sonra oluşturulan zone beş dakikaya dek
+	// REFUSED olurdu. Panel değişiklikleri anında iter; cevaplar da anında
+	// izlemeli. Sorgu başına maliyet panel ölçeğinde önemsiz.
+	config := fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
+launch=gsqlite3
+gsqlite3-database=%s
+zone-cache-refresh-interval=0
+webserver=no
+api=no
+`, dbPath)
+	confPath := "/etc/powerdns/pdns.d/celikpanel.conf"
+	if err := os.WriteFile(confPath, []byte(config), 0o644); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	if out, err := exec.Command("systemctl", "restart", "pdns").CombinedOutput(); err != nil {
+		resp.Error = fmt.Sprintf("pdns restart: %s", string(out))
+		return nil
+	}
+
+	resp.Synced = true
+	return nil
+}
+
+// openPdnsDB opens (creating if needed) the dedicated pdns database and
+// makes sure the official gsqlite3 schema exists.
+// openPdnsDB, ayrılmış pdns veritabanını açar (gerekirse oluşturur) ve resmi
+// gsqlite3 şemasının var olduğundan emin olur.
+func openPdnsDB() (*sql.DB, error) {
+	path := pdnsDBPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("sqlite", "file:"+path+"?_busy_timeout=5000")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec(pdnsSchema); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("pdns schema: %w", err)
+	}
+	return db, nil
+}
+
+// The official PowerDNS 4.x gsqlite3 schema (DNSSEC tables included — the
+// backend queries domainmetadata even with DNSSEC off).
+// Resmi PowerDNS 4.x gsqlite3 şeması (DNSSEC tabloları dahil — backend,
+// DNSSEC kapalıyken bile domainmetadata'yı sorgular).
+const pdnsSchema = `
+CREATE TABLE IF NOT EXISTS domains (
+  id INTEGER PRIMARY KEY,
+  name VARCHAR(255) NOT NULL COLLATE NOCASE,
+  master VARCHAR(128) DEFAULT NULL,
+  last_check INTEGER DEFAULT NULL,
+  type VARCHAR(8) NOT NULL,
+  notified_serial INTEGER DEFAULT NULL,
+  account VARCHAR(40) DEFAULT NULL,
+  options VARCHAR(65535) DEFAULT NULL,
+  catalog VARCHAR(255) DEFAULT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS name_index ON domains(name);
+CREATE INDEX IF NOT EXISTS catalog_idx ON domains(catalog);
+
+CREATE TABLE IF NOT EXISTS records (
+  id INTEGER PRIMARY KEY,
+  domain_id INTEGER DEFAULT NULL,
+  name VARCHAR(255) DEFAULT NULL,
+  type VARCHAR(10) DEFAULT NULL,
+  content VARCHAR(65535) DEFAULT NULL,
+  ttl INTEGER DEFAULT NULL,
+  prio INTEGER DEFAULT NULL,
+  disabled BOOLEAN DEFAULT 0,
+  ordername VARCHAR(255),
+  auth BOOL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS records_lookup_idx ON records(name, type);
+CREATE INDEX IF NOT EXISTS records_lookup_id_idx ON records(domain_id, name, type);
+CREATE INDEX IF NOT EXISTS records_order_idx ON records(domain_id, ordername);
+
+CREATE TABLE IF NOT EXISTS supermasters (
+  ip VARCHAR(64) NOT NULL,
+  nameserver VARCHAR(255) NOT NULL COLLATE NOCASE,
+  account VARCHAR(40) NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ip_nameserver_pk ON supermasters(ip, nameserver);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY,
+  domain_id INTEGER NOT NULL,
+  name VARCHAR(255) NOT NULL COLLATE NOCASE,
+  type VARCHAR(10) NOT NULL,
+  modified_at INT NOT NULL,
+  account VARCHAR(40) DEFAULT NULL,
+  comment VARCHAR(65535) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comments_idx ON comments(domain_id, name, type);
+CREATE INDEX IF NOT EXISTS comments_order_idx ON comments(domain_id, modified_at);
+
+CREATE TABLE IF NOT EXISTS domainmetadata (
+  id INTEGER PRIMARY KEY,
+  domain_id INT NOT NULL,
+  kind VARCHAR(32) COLLATE NOCASE,
+  content TEXT
+);
+CREATE INDEX IF NOT EXISTS domainmetadata_idx ON domainmetadata(domain_id);
+
+CREATE TABLE IF NOT EXISTS cryptokeys (
+  id INTEGER PRIMARY KEY,
+  domain_id INT NOT NULL,
+  flags INT NOT NULL,
+  active BOOL,
+  published BOOL DEFAULT 1,
+  content TEXT
+);
+CREATE INDEX IF NOT EXISTS domainidindex ON cryptokeys(domain_id);
+
+CREATE TABLE IF NOT EXISTS tsigkeys (
+  id INTEGER PRIMARY KEY,
+  name VARCHAR(255) COLLATE NOCASE,
+  algorithm VARCHAR(50) COLLATE NOCASE,
+  secret VARCHAR(255)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS namealgoindex ON tsigkeys(name, algorithm);
+`
