@@ -162,7 +162,23 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail})
+	// Receiving without sending is half a mail server: wire submission too.
+	// Göndermesiz almak yarım posta sunucusudur: gönderimi de bağla.
+	var sub struct {
+		Configured bool   `json:"configured"`
+		Detail     string `json:"detail,omitempty"`
+		Error      string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.ConfigureMailSubmission", &struct{}{}, &sub); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if sub.Error != "" {
+		writeClientError(w, http.StatusConflict, sub.Error)
+		return
+	}
+	p.audit(r, "mail.configure", "", 0)
+	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail + "; " + sub.Detail})
 }
 
 // validMailLocalPart guards the local part of an email address: non-empty,
