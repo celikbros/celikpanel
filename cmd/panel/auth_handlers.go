@@ -67,6 +67,21 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Second factor: if the account has 2FA on, the password alone does not
+	// grant a session. Hand back a short-lived pending token; the session is
+	// issued by /auth/login/totp once a valid code arrives.
+	// İkinci faktör: hesabın 2FA'sı açıksa parola tek başına oturum vermez.
+	// Kısa ömürlü bir bekleme jetonu döndür; oturum, geçerli bir kod gelince
+	// /auth/login/totp tarafından verilir.
+	if _, enabled := p.userTOTP(r.Context(), user.ID); enabled {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"totp_required": true,
+			"pending_token": newPendingToken(user.ID),
+		})
+		return
+	}
+
 	token, err := p.sessions.Create(r.Context(), user.ID)
 	if err != nil {
 		writeServerError(w, err)

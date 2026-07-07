@@ -1,0 +1,136 @@
+package auth
+
+import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha1"
+	"crypto/subtle"
+	"encoding/binary"
+	"fmt"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// TOTP (RFC 6238) implemented in the standard library only — no third-party
+// dependency for a security primitive. 30-second steps, 6 digits, SHA-1 (what
+// every authenticator app defaults to). Verification checks the neighbouring
+// windows so a slightly skewed clock still succeeds.
+//
+// TOTP (RFC 6238) yalnız standart kütüphaneyle — bir güvenlik ilkeli için
+// üçüncü parti bağımlılık yok. 30 saniyelik adımlar, 6 hane, SHA-1 (her
+// authenticator uygulamasının varsayılanı). Doğrulama, hafif kaymış bir saat
+// yine de geçsin diye komşu pencereleri de denetler.
+
+const (
+	totpStep    = 30
+	totpDigits  = 6
+	totpSkew    = 1 // accept the previous and next window / önceki ve sonraki pencere
+	base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+)
+
+// GenerateTOTPSecret returns a fresh 160-bit secret encoded as base32 without
+// padding — the form authenticator apps expect.
+// GenerateTOTPSecret, dolgusuz base32 kodlanmış taze 160-bit bir gizli anahtar
+// döndürür — authenticator uygulamalarının beklediği biçim.
+func GenerateTOTPSecret() (string, error) {
+	raw := make([]byte, 20)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return base32Encode(raw), nil
+}
+
+// TOTPURI builds the otpauth:// URI a QR code encodes, tying the secret to an
+// account label and an issuer the app shows.
+// TOTPURI, bir QR kodunun kodladığı otpauth:// URI'sini kurar; anahtarı bir
+// hesap etiketine ve uygulamanın gösterdiği bir yayıncıya bağlar.
+func TOTPURI(secret, account, issuer string) string {
+	label := url.PathEscape(issuer + ":" + account)
+	q := url.Values{}
+	q.Set("secret", secret)
+	q.Set("issuer", issuer)
+	q.Set("algorithm", "SHA1")
+	q.Set("digits", fmt.Sprintf("%d", totpDigits))
+	q.Set("period", fmt.Sprintf("%d", totpStep))
+	return "otpauth://totp/" + label + "?" + q.Encode()
+}
+
+// ValidateTOTP reports whether code is valid for secret at the current time,
+// tolerating one step of clock skew either way. Constant-time compared.
+// ValidateTOTP, code'un secret için şu anda geçerli olup olmadığını bildirir;
+// her iki yönde bir adım saat kayması hoş görülür. Sabit zamanlı karşılaştırma.
+func ValidateTOTP(secret, code string) bool {
+	code = strings.TrimSpace(code)
+	if len(code) != totpDigits {
+		return false
+	}
+	key, err := base32Decode(secret)
+	if err != nil {
+		return false
+	}
+	counter := time.Now().Unix() / totpStep
+	for offset := -totpSkew; offset <= totpSkew; offset++ {
+		if subtle.ConstantTimeCompare([]byte(hotp(key, uint64(counter+int64(offset)))), []byte(code)) == 1 {
+			return true
+		}
+	}
+	return false
+}
+
+// hotp computes the HMAC-based one-time value for a counter (RFC 4226).
+// hotp, bir sayaç için HMAC tabanlı tek-kullanımlık değeri hesaplar.
+func hotp(key []byte, counter uint64) string {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], counter)
+	mac := hmac.New(sha1.New, key)
+	mac.Write(buf[:])
+	sum := mac.Sum(nil)
+	offset := sum[len(sum)-1] & 0x0f
+	value := (uint32(sum[offset]&0x7f) << 24) |
+		(uint32(sum[offset+1]) << 16) |
+		(uint32(sum[offset+2]) << 8) |
+		uint32(sum[offset+3])
+	return fmt.Sprintf("%0*d", totpDigits, value%1000000)
+}
+
+// base32Encode encodes bytes with the RFC 4648 alphabet, no padding.
+// base32Encode, baytları RFC 4648 alfabesiyle, dolgusuz kodlar.
+func base32Encode(data []byte) string {
+	var b strings.Builder
+	var bits, value uint32
+	for _, c := range data {
+		value = (value << 8) | uint32(c)
+		bits += 8
+		for bits >= 5 {
+			bits -= 5
+			b.WriteByte(base32Chars[(value>>bits)&0x1f])
+		}
+	}
+	if bits > 0 {
+		b.WriteByte(base32Chars[(value<<(5-bits))&0x1f])
+	}
+	return b.String()
+}
+
+// base32Decode reverses base32Encode, ignoring case and padding.
+// base32Decode, base32Encode'u tersine çevirir; büyük/küçük harf ve dolguyu
+// yok sayar.
+func base32Decode(s string) ([]byte, error) {
+	s = strings.ToUpper(strings.TrimRight(strings.TrimSpace(s), "="))
+	var out []byte
+	var bits, value uint32
+	for _, c := range s {
+		idx := strings.IndexRune(base32Chars, c)
+		if idx < 0 {
+			return nil, fmt.Errorf("invalid base32 character")
+		}
+		value = (value << 5) | uint32(idx)
+		bits += 5
+		if bits >= 8 {
+			bits -= 8
+			out = append(out, byte((value>>bits)&0xff))
+		}
+	}
+	return out, nil
+}

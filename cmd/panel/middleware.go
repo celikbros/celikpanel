@@ -86,7 +86,11 @@ func isPublicPath(r *http.Request) bool {
 	// Giriş ve demo kimlik bilgileri uç noktaları herkese açıktır. Demo,
 	// sunucu --demo ile başlatılmadıkça hiçbir şey döndürmez; bu yüzden
 	// güvenlidir.
-	if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/demo" {
+	// login/totp is the second step of an unauthenticated sign-in — it carries
+	// the pending token, not a session, so it too must be public.
+	// login/totp, kimlik-doğrulamasız girişin ikinci adımıdır — oturum değil
+	// bekleme jetonu taşır; o da herkese açık olmalıdır.
+	if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/demo" || r.URL.Path == "/api/v1/auth/login/totp" {
 		return true
 	}
 	// Same-origin CORS preflight carries no credentials; let it through so
