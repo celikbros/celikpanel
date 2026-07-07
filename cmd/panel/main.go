@@ -306,6 +306,7 @@ func main() {
 	http.HandleFunc("/api/v1/vpn/peers/", panel.handleVPNPeerByID)
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
 	http.HandleFunc("/api/v1/mail/configure", panel.handleMailConfigure)
+	http.HandleFunc("/api/v1/mail/policy", panel.handleMailPolicy)
 	http.HandleFunc("/api/v1/apps", panel.handleAppCatalog)
 
 	// Node runtime management (admin-only via isAdminOnlyPath)

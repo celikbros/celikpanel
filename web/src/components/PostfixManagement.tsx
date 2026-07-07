@@ -3,7 +3,7 @@ import { Mail, Activity, Trash2, RefreshCw, RotateCw } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, StatusDot } from './ui';
+import { Button, StatusDot, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
 
 interface PostfixManagementProps {
@@ -147,6 +147,7 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
                     )}
                 </div>
             )}
+            <MailPolicySection />
         </ServiceShell>
     );
 }
@@ -173,5 +174,84 @@ function Stat({ labelKey, value, accent, danger }: { labelKey: TranslationKey; v
             <p className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{t(labelKey)}</p>
             <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
         </div>
+    );
+}
+
+
+// Server-wide mail policy (Plesk "server-wide mail settings" core): the
+// message size limit and DNSBL protection for incoming mail. Admin-only.
+// Sunucu geneli posta politikası: mesaj boyutu sınırı ve gelen posta için
+// DNSBL koruması. Yalnız yönetici.
+function MailPolicySection() {
+    const { t } = useI18n();
+    const [sizeMB, setSizeMB] = useState(25);
+    const [dnsblOn, setDnsblOn] = useState(false);
+    const [zones, setZones] = useState('zen.spamhaus.org');
+    const [busy, setBusy] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/v1/mail/policy')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (d) {
+                    if (d.message_size_mb > 0) setSizeMB(d.message_size_mb);
+                    const z = d.dnsbl_zones || [];
+                    setDnsblOn(z.length > 0);
+                    if (z.length > 0) setZones(z.join(', '));
+                }
+            })
+            .catch(() => {})
+            .finally(() => setLoaded(true));
+    }, []);
+
+    const save = async () => {
+        setBusy(true);
+        try {
+            const r = await fetch('/api/v1/mail/policy', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message_size_mb: sizeMB,
+                    dnsbl_zones: dnsblOn ? zones.split(',').map((z) => z.trim()).filter(Boolean) : [],
+                }),
+            });
+            if (!r.ok) throw new Error();
+            showToast('success', t('mailpolicy.saved'));
+        } catch {
+            showToast('error', t('common.error'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (!loaded) return null;
+
+    return (
+        <section className="mt-5 rounded-xl border border-border bg-surface p-5">
+            <h3 className="mb-1 text-sm font-semibold text-fg">{t('mailpolicy.title')}</h3>
+            <p className="mb-4 text-sm text-fg-muted">{t('mailpolicy.desc')}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('mailpolicy.maxSize')}</span>
+                    <input type="number" min={1} max={200} value={sizeMB}
+                        onChange={(e) => setSizeMB(Math.max(1, Math.min(200, parseInt(e.target.value) || 25)))}
+                        className={inputClass} />
+                </label>
+                <label className="text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('mailpolicy.zones')}</span>
+                    <input value={zones} onChange={(e) => setZones(e.target.value)}
+                        disabled={!dnsblOn} className={inputClass} placeholder="zen.spamhaus.org" />
+                </label>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-sm text-fg">
+                <input type="checkbox" checked={dnsblOn} onChange={(e) => setDnsblOn(e.target.checked)} className="h-4 w-4" />
+                {t('mailpolicy.dnsbl')}
+            </label>
+            <p className="mt-1 text-xs text-fg-subtle">{t('mailpolicy.dnsblHint')}</p>
+            <div className="mt-3">
+                <Button variant="primary" disabled={busy} onClick={save}>{t('mailpolicy.save')}</Button>
+            </div>
+        </section>
     );
 }
