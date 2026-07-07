@@ -183,7 +183,10 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             </div>
 
             {activeTab === 'auth' ? (
-                <MailAuthPanel domainId={domainId} />
+                <>
+                    <DeliverabilityCard domainId={domainId} />
+                    <MailAuthPanel domainId={domainId} />
+                </>
             ) : activeTab === 'settings' ? (
                 <MailSettingsPanel domainId={domainId} domainName={domainName} />
             ) : (
@@ -391,5 +394,58 @@ function DeleteBtn({ onClick }: { onClick: () => void }) {
         <button onClick={onClick} className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger">
             <Trash2 className="h-4 w-4" />
         </button>
+    );
+}
+
+
+// One traffic-light card for "will it land in the inbox": PTR, HELO, TLS,
+// port 25, SPF/DKIM/DMARC, blacklists, mail certificate, DNSSEC. PTR cannot
+// be fixed here — the card spells out what to enter at the hosting provider.
+// "Gelen kutusuna düşer mi" için tek trafik-ışığı kartı. PTR buradan
+// düzeltilemez — kart, barındırma sağlayıcısında ne girileceğini yazar.
+function DeliverabilityCard({ domainId }: { domainId: number }) {
+    const { t } = useI18n();
+    const [data, setData] = useState<{
+        overall: string;
+        server_ip: string;
+        expected_ptr: string;
+        checks: { id: string; status: string; detail?: string }[];
+    } | null>(null);
+
+    useEffect(() => {
+        fetch(`/api/v1/domains/${domainId}/mail/health`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then(setData)
+            .catch(() => {});
+    }, [domainId]);
+
+    if (!data) return null;
+
+    const tone: Record<string, string> = {
+        ok: 'bg-success', warn: 'bg-warning', fail: 'bg-danger', unknown: 'bg-fg-subtle',
+    };
+    const ptr = data.checks.find((c) => c.id === 'ptr');
+
+    return (
+        <section className="mb-5 rounded-xl border border-border bg-surface p-5">
+            <div className="mb-3 flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${tone[data.overall]}`} />
+                <h3 className="text-sm font-semibold text-fg">{t('mail.health.title')}</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+                {data.checks.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2 text-sm">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${tone[c.status] ?? 'bg-fg-subtle'}`} />
+                        <span className="text-fg">{t(`mail.health.${c.id}` as Parameters<typeof t>[0])}</span>
+                        {c.detail && <span className="truncate text-xs text-fg-subtle">{c.detail}</span>}
+                    </div>
+                ))}
+            </div>
+            {ptr && ptr.status !== 'ok' && (
+                <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                    {t('mail.health.ptrFix', { ip: data.server_ip, host: data.expected_ptr })}
+                </p>
+            )}
+        </section>
     );
 }

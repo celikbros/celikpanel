@@ -273,6 +273,8 @@ func main() {
 			panel.handleDomainBackups(w, r)
 		} else if strings.Contains(r.URL.Path, "/cron") {
 			panel.handleDomainCronJobs(w, r)
+		} else if strings.Contains(r.URL.Path, "/mail/health") {
+			panel.handleMailHealth(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/mail") {
 			panel.handleDomainMail(w, r)
 		} else if strings.Contains(r.URL.Path, "/apps/install") {
