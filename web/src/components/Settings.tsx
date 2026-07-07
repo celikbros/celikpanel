@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { ShieldCheck, ShieldOff, Copy, Check } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -24,6 +25,19 @@ function TwoFactorPanel() {
     const { t } = useI18n();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
+    const [qr, setQr] = useState<string>('');
+
+    // The otpauth:// URI as a QR code — scanning beats typing a 32-char
+    // secret. Generated locally in the browser; the secret never leaves.
+    // otpauth:// URI'si QR olarak — taramak 32 karakterlik anahtarı yazmayı
+    // döver. Tarayıcıda yerel üretilir; anahtar dışarı çıkmaz.
+    useEffect(() => {
+        if (setup?.uri) {
+            QRCode.toDataURL(setup.uri, { width: 192, margin: 1 }).then(setQr).catch(() => setQr(''));
+        } else {
+            setQr('');
+        }
+    }, [setup]);
     const [code, setCode] = useState('');
     const [disablePw, setDisablePw] = useState('');
     const [disableCode, setDisableCode] = useState('');
@@ -133,6 +147,11 @@ function TwoFactorPanel() {
                         <li>{t('settings.2fa.step1')}</li>
                         <li>{t('settings.2fa.step2')}</li>
                     </ol>
+                    {qr && (
+                        <div className="flex justify-center">
+                            <img src={qr} alt="TOTP QR" className="rounded-lg border border-border bg-white p-1" width={192} height={192} />
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/50 p-3">
                         <code className="min-w-0 flex-1 break-all font-mono text-sm text-fg">{setup.secret}</code>
                         <button onClick={copySecret} title={t('common.copy')} className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-fg">
