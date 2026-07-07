@@ -106,6 +106,9 @@ func (p *Panel) handleDomainSSLMail(w http.ResponseWriter, r *http.Request, doma
 			writeServerError(w, err)
 			return
 		}
+		// DANE follows the toggle: publish TLSA when securing, drop when not.
+		// DANE anahtarı izler: korurken TLSA yayımla, korumuyorken düşür.
+		_ = p.refreshTLSARecords(r.Context(), domainID)
 		action := "ssl.mail.off"
 		if req.SecureMail {
 			action = "ssl.mail.on"

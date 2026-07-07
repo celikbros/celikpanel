@@ -97,19 +97,19 @@ func (a *Agent) getLogs(req GetLogsRequest, resp *GetLogsResponse) error {
 	// Read lines
 	var lines []string
 	scanner := bufio.NewScanner(file)
-	
+
 	// If lines limit is set, use tail-like behavior
 	if req.Lines > 0 {
 		// Read all lines first
 		var allLines []string
 		for scanner.Scan() {
 			line := scanner.Text()
-			
+
 			// Apply filter if specified
 			if req.Filter != "" && !strings.Contains(strings.ToLower(line), strings.ToLower(req.Filter)) {
 				continue
 			}
-			
+
 			// Apply time filter if specified
 			if req.StartTime != "" || req.EndTime != "" {
 				// Parse log timestamp (nginx format: [01/Jan/2024:12:00:00 +0000])
@@ -118,10 +118,10 @@ func (a *Agent) getLogs(req GetLogsRequest, resp *GetLogsResponse) error {
 					continue
 				}
 			}
-			
+
 			allLines = append(allLines, line)
 		}
-		
+
 		// Get last N lines
 		start := 0
 		if len(allLines) > req.Lines {
@@ -132,11 +132,11 @@ func (a *Agent) getLogs(req GetLogsRequest, resp *GetLogsResponse) error {
 		// Read all lines
 		for scanner.Scan() {
 			line := scanner.Text()
-			
+
 			if req.Filter != "" && !strings.Contains(strings.ToLower(line), strings.ToLower(req.Filter)) {
 				continue
 			}
-			
+
 			lines = append(lines, line)
 		}
 	}
@@ -199,7 +199,7 @@ func (a *Agent) GetDomainLogPaths(domain string, resp *struct {
 	resp.AccessLog = filepath.Join("/var/log/nginx", domain+"-access.log")
 	resp.ErrorLog = filepath.Join("/var/log/nginx", domain+"-error.log")
 	resp.PHPLog = filepath.Join("/var/log/php", domain+"-error.log")
-	
+
 	return nil
 }
 

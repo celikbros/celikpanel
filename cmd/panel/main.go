@@ -241,6 +241,8 @@ func main() {
 			panel.handleDomainGeneralSettings(w, r)
 		} else if strings.Contains(r.URL.Path, "/aliases") {
 			panel.handleDomainAliases(w, r)
+		} else if strings.Contains(r.URL.Path, "/dnssec") {
+			panel.handleDomainDNSSEC(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/ssl/mail") {
 			panel.handleDomainSSLMail(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/ssl/letsencrypt") {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2 } from 'lucide-react';
+import { Globe, Plus, Trash2, ShieldCheck, Copy } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, EmptyState, inputClass } from './ui';
@@ -144,6 +144,8 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 
     return (
         <div>
+            <DNSSECSection domainId={domainId} domainName={domainName} />
+
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: records.length })}</span>
                 <Button variant="primary" icon={Plus} onClick={() => setShowAddForm((s) => !s)}>
@@ -237,5 +239,93 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                 </div>
             )}
         </div>
+    );
+}
+
+
+// DNSSEC: sign the zone in one click and hand the operator the DS records to
+// enter at the registrar. Without that DS, validators treat the zone (and
+// its DANE/TLSA records) as insecure — so both live together here.
+// DNSSEC: zone'u tek tıkla imzala ve operatöre registrar'a girilecek DS
+// kayıtlarını ver. O DS olmadan doğrulayıcılar zone'u (ve DANE/TLSA
+// kayıtlarını) güvensiz sayar — o yüzden ikisi burada birlikte yaşar.
+function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
+    const { t } = useI18n();
+    const [secured, setSecured] = useState(false);
+    const [ds, setDs] = useState<string[]>([]);
+    const [busy, setBusy] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        fetch(`/api/v1/domains/${domainId}/dnssec`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (d) {
+                    setSecured(d.secured === true);
+                    setDs(d.ds || []);
+                }
+            })
+            .catch(() => {})
+            .finally(() => setLoaded(true));
+    }, [domainId]);
+
+    const sign = async () => {
+        setBusy(true);
+        try {
+            const r = await fetch(`/api/v1/domains/${domainId}/dnssec`, { method: 'POST' });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error);
+            setSecured(true);
+            setDs(d.ds || []);
+            showToast('success', t('dnssec.signed'));
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (!loaded) return null;
+
+    return (
+        <section className="mb-5 rounded-xl border border-border bg-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+                <ShieldCheck className={`h-4 w-4 ${secured ? 'text-success' : 'text-fg-muted'}`} />
+                <h3 className="text-sm font-semibold text-fg">DNSSEC</h3>
+                {secured && (
+                    <span className="rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                        {t('dnssec.on')}
+                    </span>
+                )}
+            </div>
+            {secured ? (
+                <>
+                    <p className="mb-3 text-sm text-fg-muted">{t('dnssec.dsHint')}</p>
+                    <div className="space-y-2">
+                        {ds.map((rec) => (
+                            <div key={rec} className="flex items-center gap-2">
+                                <code className="min-w-0 flex-1 overflow-x-auto rounded-lg bg-surface-2 px-3 py-2 text-xs text-fg">
+                                    {rec}
+                                </code>
+                                <button
+                                    onClick={() => navigator.clipboard.writeText(rec).then(() => showToast('success', t('vpn.copied')))}
+                                    title={t('vpn.copy')}
+                                    className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-fg-muted">{t('dnssec.offHint')}</p>
+                    <Button variant="primary" disabled={busy} onClick={sign}>
+                        {t('dnssec.sign')}
+                    </Button>
+                </div>
+            )}
+        </section>
     );
 }

@@ -113,6 +113,14 @@ func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 	// Önbellek boşaltma en-iyi-çabadır: onsuz değişiklikler TTL sonrası görünür.
 	_ = exec.Command("pdns_control", "purge", req.Domain+"$").Run()
 
+	// A full-zone rewrite clears the ordername/auth columns DNSSEC relies
+	// on; rectify restores them on signed zones.
+	// Tam-zone yazımı, DNSSEC'in dayandığı ordername/auth kolonlarını siler;
+	// rectify imzalı zone'larda onları geri kurar.
+	if zoneSecured(req.Domain) {
+		_ = exec.Command("pdnsutil", "rectify-zone", req.Domain).Run()
+	}
+
 	resp.Synced = true
 	return nil
 }
@@ -148,6 +156,7 @@ func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) 
 	// izlemeli. Sorgu başına maliyet panel ölçeğinde önemsiz.
 	config := fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
 launch=gsqlite3
+gsqlite3-dnssec=yes
 gsqlite3-database=%s
 zone-cache-refresh-interval=0
 webserver=no

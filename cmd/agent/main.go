@@ -2,26 +2,26 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os/exec"
-	"net/rpc"
-	"os"
-	"strings"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/fs"
 	"github.com/alicelik/celikpanel/internal/parser"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/systemd"
 	"github.com/alicelik/celikpanel/internal/transport"
+	"log"
+	"net/rpc"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 type Agent struct {
-	watcher       *fs.Watcher
-	parser        *parser.NginxParser
-	systemdMgr    *systemd.Manager
-	nginxGen      *services.NginxGenerator
-	phpManager    *services.PHPFPMManager
-	userManager   *services.UserManager
+	watcher     *fs.Watcher
+	parser      *parser.NginxParser
+	systemdMgr  *systemd.Manager
+	nginxGen    *services.NginxGenerator
+	phpManager  *services.PHPFPMManager
+	userManager *services.UserManager
 }
 
 // RPC Methods Implementation
@@ -40,21 +40,21 @@ func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.Config
 	if err != nil {
 		return fmt.Errorf("failed to read file: %v", err)
 	}
-	
+
 	reply.Content = string(content)
-	
+
 	// Try to parse if it's an Nginx file
 	if strings.Contains(args.Path, "nginx") {
 		parsed, _ := a.parser.Parse(string(content))
 		reply.Parsed = fmt.Sprintf("%v", parsed)
 	}
-	
+
 	return nil
 }
 
 func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) error {
 	log.Printf("Updating config %s", args.Path)
-	
+
 	// Security check: Ensure path is valid (basic check)
 	if !strings.HasPrefix(args.Path, "/etc/") && !strings.HasPrefix(args.Path, "/var/www/") {
 		return fmt.Errorf("access denied to path: %s", args.Path)

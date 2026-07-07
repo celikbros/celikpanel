@@ -12,7 +12,7 @@ import (
 
 // CreateDatabaseRequest represents a request to create a database
 type CreateDatabaseRequest struct {
-	Type     string `json:"type"`     // mysql or postgresql
+	Type     string `json:"type"` // mysql or postgresql
 	Name     string `json:"name"`
 	User     string `json:"user"`
 	Password string `json:"password"`

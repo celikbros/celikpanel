@@ -118,5 +118,8 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 		log.Printf("cert renewal %s: vhost apply: %v", domainName, err)
 	}
 	_ = p.resyncMailTLS(ctx)
+	// A new certificate means a new TLSA hash.
+	// Yeni sertifika, yeni TLSA özeti demektir.
+	_ = p.refreshTLSARecords(ctx, domainID)
 	log.Printf("cert renewal %s: renewed until %s", domainName, resp.ExpiresAt.Format("2006-01-02"))
 }
