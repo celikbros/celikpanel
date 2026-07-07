@@ -198,6 +198,7 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err)
 		return
 	}
+	p.audit(r, "domain.create", "domain", result.DomainID)
 
 	if isSubdomain {
 		// Link the child to its parent and add its address record to the
@@ -332,6 +333,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC
 	// For now, just delete the database record
 
+	p.audit(r, "domain.delete:"+domain.Name, "domain", domainID)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "deleted",

@@ -89,5 +89,6 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		log.Printf("service scan after install %s: %v", req.ServiceID, err)
 	}
 
+	p.audit(r, "service.install:"+req.ServiceID, "service", 0)
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "installed": resp.Installed, "detail": resp.Detail})
 }

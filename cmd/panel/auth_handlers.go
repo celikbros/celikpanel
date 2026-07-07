@@ -75,6 +75,12 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, p.sessionCookie(token, time.Now().Add(auth.SessionDuration)))
 
+	// Record the sign-in against the user (the session is fresh, so the
+	// caller-based audit cannot resolve them yet).
+	// Girişi kullanıcıya kaydet (oturum yeni; çağıran-tabanlı denetim onu
+	// henüz çözemez).
+	p.auditAs(r, user.ID, "auth.login", "", 0)
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"username": user.Username,

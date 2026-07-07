@@ -291,6 +291,7 @@ func (p *Panel) handleCreateUser(w http.ResponseWriter, r *http.Request, c *Call
 	}
 
 	log.Printf("[audit] user %d (%s) created user %d (%s, role=%s)", c.ID, c.Role, user.ID, user.Username, user.Role)
+	p.audit(r, "user.create:"+user.Username+"/"+user.Role, "user", user.ID)
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "id": user.ID})
 }
 
@@ -368,6 +369,7 @@ func (p *Panel) handleDeleteUser(w http.ResponseWriter, r *http.Request, target 
 	_, _ = p.db.GetDB().ExecContext(r.Context(), `DELETE FROM sessions WHERE user_id = ?`, target.ID)
 
 	log.Printf("[audit] deleted user %d (%s, role=%s)", target.ID, target.Username, target.Role)
+	p.audit(r, "user.delete:"+target.Username, "user", target.ID)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 

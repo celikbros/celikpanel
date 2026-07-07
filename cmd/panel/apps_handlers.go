@@ -156,6 +156,7 @@ func (p *Panel) handleAppInstall(w http.ResponseWriter, r *http.Request, domainI
 		return
 	}
 
+	p.audit(r, "app.install:"+req.App, "domain", domainID)
 	json.NewEncoder(w).Encode(map[string]any{
 		"success":   true,
 		"detail":    wpResp.Detail,

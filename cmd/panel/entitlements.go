@@ -230,6 +230,7 @@ func (p *Panel) grantEntitlement(w http.ResponseWriter, r *http.Request, subID i
 		writeServerError(w, err)
 		return
 	}
+	p.audit(r, "entitlement.grant:"+req.ProductID, "subscription", subID)
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
 
@@ -240,5 +241,6 @@ func (p *Panel) revokeEntitlement(w http.ResponseWriter, r *http.Request, subID 
 		writeServerError(w, err)
 		return
 	}
+	p.audit(r, "entitlement.revoke:"+productID, "subscription", subID)
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
