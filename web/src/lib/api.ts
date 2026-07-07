@@ -92,7 +92,11 @@ class API {
     // login authenticates and, on success, the server sets the session
     // cookie. Returns the user on success, throws on failure.
     // login kimlik doğrular; başarılıysa sunucu oturum çerezini ayarlar.
-    async login(username: string, password: string): Promise<CurrentUser> {
+    // login returns either the signed-in user, or a two-factor challenge
+    // (the account has 2FA on) — the caller then finishes with loginTOTP.
+    // login ya oturum açan kullanıcıyı ya da iki-faktör istemini döndürür
+    // (hesabın 2FA'sı açık) — çağıran loginTOTP ile tamamlar.
+    async login(username: string, password: string): Promise<CurrentUser | { totp_required: true; pending_token: string }> {
         const res = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -100,6 +104,20 @@ class API {
         });
         if (!res.ok) {
             if (res.status === 401) throw new Error('invalid_credentials');
+            if (res.status === 429) throw new Error('too_many');
+            throw new Error('login_failed');
+        }
+        return res.json();
+    }
+
+    async loginTOTP(pendingToken: string, code: string): Promise<CurrentUser> {
+        const res = await fetch(`${API_BASE}/auth/login/totp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pending_token: pendingToken, code }),
+        });
+        if (!res.ok) {
+            if (res.status === 401) throw new Error('invalid_code');
             if (res.status === 429) throw new Error('too_many');
             throw new Error('login_failed');
         }

@@ -25,6 +25,8 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [pendingToken, setPendingToken] = useState('');
+    const [totpCode, setTotpCode] = useState('');
     const [demo, setDemo] = useState<DemoAccount[]>([]);
 
     // Demo accounts only come back when the server runs with --demo, so this
@@ -46,8 +48,13 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
         setError('');
         setSubmitting(true);
         try {
-            const user = await api.login(username, password);
-            onSuccess(user);
+            const res = await api.login(username, password);
+            if ('totp_required' in res) {
+                setPendingToken(res.pending_token);
+                setSubmitting(false);
+                return;
+            }
+            onSuccess(res);
         } catch (err) {
             const code = (err as Error).message;
             setError(
@@ -57,6 +64,20 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                       ? t('login.tooMany')
                       : t('login.failed'),
             );
+            setSubmitting(false);
+        }
+    };
+
+    const handleTotp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            const user = await api.loginTOTP(pendingToken, totpCode.trim());
+            onSuccess(user);
+        } catch (err) {
+            const code = (err as Error).message;
+            setError(code === 'invalid_code' ? t('login.invalidCode') : code === 'too_many' ? t('login.tooMany') : t('login.failed'));
             setSubmitting(false);
         }
     };
@@ -78,6 +99,45 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                     <p className="mt-1 text-sm text-fg-muted">{t('login.subtitle')}</p>
                 </div>
 
+                {pendingToken ? (
+                    <form
+                        onSubmit={handleTotp}
+                        className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
+                    >
+                        <div>
+                            <label htmlFor="totp" className="mb-1.5 block text-sm font-medium text-fg-muted">
+                                {t('login.totpLabel')}
+                            </label>
+                            <input
+                                id="totp"
+                                type="text"
+                                autoFocus
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                value={totpCode}
+                                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="000000"
+                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-center font-mono text-lg tracking-[0.4em] text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                                required
+                            />
+                            <p className="mt-1.5 text-xs text-fg-subtle">{t('login.totpHint')}</p>
+                        </div>
+
+                        {error && (
+                            <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                                {error}
+                            </p>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={submitting || totpCode.length < 6}
+                            className="w-full rounded-lg bg-primary px-3 py-2.5 font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {submitting ? t('login.signingIn') : t('login.verify')}
+                        </button>
+                    </form>
+                ) : (
                 <form
                     onSubmit={handleSubmit}
                     className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-card"
@@ -127,6 +187,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                         {submitting ? t('login.signingIn') : t('login.signIn')}
                     </button>
                 </form>
+                )}
 
                 {demo.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/60 p-4">
