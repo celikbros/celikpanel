@@ -74,6 +74,20 @@ func (p *Panel) handleAppInstall(w http.ResponseWriter, r *http.Request, domainI
 		return
 	}
 
+	// The app installer is a sellable add-on: the domain's subscription must
+	// hold the "app_installer" entitlement (admins bypass). This is the one
+	// real enforcement point that proves the product layer is not theater —
+	// grant it and installs work, revoke it and they are blocked with 402.
+	// Uygulama kurucu satılabilir bir eklentidir: domain'in aboneliği
+	// "app_installer" hakkını tutmalı (yöneticiler atlar). Bu, ürün
+	// katmanının tiyatro olmadığını kanıtlayan tek gerçek uygulama noktası —
+	// ver, kurulumlar çalışır; geri al, 402 ile engellenir.
+	if subID, err := p.domainSubscriptionID(r.Context(), domainID); err == nil {
+		if !p.requireEntitlement(w, r, subID, "app_installer") {
+			return
+		}
+	}
+
 	docroot, err := p.siteDocroot(r.Context(), domainID)
 	if err != nil {
 		writeClientError(w, http.StatusNotFound, "site not found")
