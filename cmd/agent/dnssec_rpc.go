@@ -85,9 +85,12 @@ func zoneSecured(zone string) bool {
 	if err != nil {
 		return false
 	}
+	// pdnsutil 4.8 prints one line per key: "ID = 1 (CSK), … tag = 36586, …"
+	// and a "DS = " line per digest. Either proves the zone is signed.
+	// pdnsutil 4.8 anahtar başına bir satır basar; "DS = " satırı da özet
+	// başına gelir. İkisi de bölgenin imzalı olduğunu kanıtlar.
 	s := string(out)
-	return strings.Contains(s, "Zone is actively secured") ||
-		strings.Contains(s, "keys, tag")
+	return strings.Contains(s, "DS = ") || strings.Contains(s, "tag = ")
 }
 
 // zoneDSRecords extracts the DS lines from pdnsutil show-zone. They look
