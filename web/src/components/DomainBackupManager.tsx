@@ -6,7 +6,7 @@ import {
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { EmptyState } from './ui';
+import { EmptyState, Button, inputClass } from './ui';
 
 interface BackupItem {
     name: string;
@@ -150,6 +150,8 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                 )}
             </section>
 
+            <AutoBackupSection domainId={domainId} />
+
             {/* List */}
             <section>
                 <div className="mb-3 flex items-center justify-between">
@@ -254,4 +256,121 @@ function fmtDate(dateStr: string): string {
     } catch {
         return dateStr;
     }
+}
+
+// Automatic backups: turn a daily/weekly schedule on for this domain and pick
+// how many copies to keep. The panel runs it in the background; older copies
+// beyond the retention are pruned. Reads and writes the schedule endpoint.
+// Otomatik yedekler: bu domain için günlük/haftalık zamanlamayı aç ve kaç
+// kopya tutulacağını seç. Panel arka planda koşar; saklamayı aşan eski
+// kopyalar budanır.
+function AutoBackupSection({ domainId }: { domainId: number }) {
+    const { t } = useI18n();
+    const [enabled, setEnabled] = useState(false);
+    const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
+    const [backupType, setBackupType] = useState<'files' | 'full'>('files');
+    const [retention, setRetention] = useState(7);
+    const [lastRun, setLastRun] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        fetch(`/api/v1/domains/${domainId}/backups/schedule`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (d && d.enabled) {
+                    setEnabled(true);
+                    setFrequency(d.frequency);
+                    setBackupType(d.backup_type);
+                    setRetention(d.retention);
+                    setLastRun(d.last_run);
+                }
+            })
+            .catch(() => {});
+    }, [domainId]);
+
+    const save = async () => {
+        setBusy(true);
+        try {
+            const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ frequency, backup_type: backupType, retention }),
+            });
+            if (!r.ok) throw new Error();
+            setEnabled(true);
+            showToast('success', t('backup.auto.saved'));
+        } catch {
+            showToast('error', t('common.error'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const turnOff = async () => {
+        setBusy(true);
+        try {
+            const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, { method: 'DELETE' });
+            if (!r.ok) throw new Error();
+            setEnabled(false);
+            setLastRun(null);
+            showToast('success', t('backup.auto.off'));
+        } catch {
+            showToast('error', t('common.error'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <section className="rounded-xl border border-border bg-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-fg">{t('backup.auto.title')}</h3>
+                {enabled && (
+                    <span className="ml-auto rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                        {t('backup.auto.on')}
+                    </span>
+                )}
+            </div>
+            <p className="mb-4 text-sm text-fg-muted">{t('backup.auto.desc')}</p>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.frequency')}</span>
+                    <select value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')} className={inputClass}>
+                        <option value="daily">{t('backup.auto.daily')}</option>
+                        <option value="weekly">{t('backup.auto.weekly')}</option>
+                    </select>
+                </label>
+                <label className="text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.type')}</span>
+                    <select value={backupType} onChange={(e) => setBackupType(e.target.value as 'files' | 'full')} className={inputClass}>
+                        <option value="files">{t('backup.type.files')}</option>
+                        <option value="full">{t('backup.type.full')}</option>
+                    </select>
+                </label>
+                <label className="text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.retention')}</span>
+                    <input type="number" min={1} max={60} value={retention} onChange={(e) => setRetention(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))} className={inputClass} />
+                </label>
+            </div>
+
+            {enabled && lastRun && (
+                <p className="mt-2 text-xs text-fg-subtle">
+                    {t('backup.auto.lastRun', { time: new Date(lastRun.replace(' ', 'T')).toLocaleString() })}
+                </p>
+            )}
+
+            <div className="mt-3 flex gap-2">
+                <Button variant="primary" disabled={busy} onClick={save}>
+                    {enabled ? t('backup.auto.update') : t('backup.auto.enable')}
+                </Button>
+                {enabled && (
+                    <Button variant="secondary" disabled={busy} onClick={turnOff}>
+                        {t('backup.auto.turnOff')}
+                    </Button>
+                )}
+            </div>
+        </section>
+    );
 }

@@ -129,6 +129,10 @@ func main() {
 		}
 	}()
 
+	// Run scheduled backups in the background from here on.
+	// Buradan itibaren zamanlanmış yedekleri arka planda koştur.
+	panel.startBackupScheduler()
+
 	// Authentication routes (login is public; logout/me require a session).
 	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
@@ -251,6 +255,8 @@ func main() {
 			panel.handleDomainFileDownload(w, r)
 		} else if strings.Contains(r.URL.Path, "/files") {
 			panel.handleDomainFiles(w, r)
+		} else if strings.Contains(r.URL.Path, "/backups/schedule") {
+			panel.handleBackupSchedule(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/backups/restore") {
 			panel.handleRestoreBackup(w, r)
 		} else if strings.Contains(r.URL.Path, "/backups/download") {
