@@ -133,6 +133,10 @@ func main() {
 	// Buradan itibaren zamanlanmış yedekleri arka planda koştur.
 	panel.startBackupScheduler()
 
+	// Renew expiring certificates automatically.
+	// Süresi yaklaşan sertifikaları otomatik yenile.
+	panel.startCertRenewalScheduler()
+
 	// Authentication routes (login is public; logout/me require a session).
 	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)

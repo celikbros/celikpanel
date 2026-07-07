@@ -127,8 +127,15 @@ func (p *Panel) handleGetDomainSSL(w http.ResponseWriter, r *http.Request, domai
 	}
 	response.Settings = settings
 
-	// Get certificate info
+	// Get certificate info. The sqlite driver hands TEXT columns back as
+	// strings and refuses to scan them into time.Time, so timestamps go
+	// through strings + flexible parsing.
+	// Sertifika bilgisini al. sqlite sürücüsü TEXT kolonları string döndürür
+	// ve time.Time'a taramayı reddeder; bu yüzden zaman damgaları string +
+	// esnek ayrıştırmadan geçer.
 	var cert SSLCertificate
+	var issuedAtStr, expiresAtStr string
+	var lastRenewalStr *string
 	err = pool.QueryRowContext(ctx, `
 		SELECT id, domain_id, type, cert_path, key_path, 
 		       COALESCE(chain_path, ''), COALESCE(issuer, ''), COALESCE(subject, ''),
@@ -140,12 +147,17 @@ func (p *Panel) handleGetDomainSSL(w http.ResponseWriter, r *http.Request, domai
 	`, domainID).Scan(
 		&cert.ID, &cert.DomainID, &cert.Type, &cert.CertPath, &cert.KeyPath,
 		&cert.ChainPath, &cert.Issuer, &cert.Subject,
-		&cert.IssuedAt, &cert.ExpiresAt, &cert.AutoRenew,
-		&cert.LastRenewalAttempt, &cert.RenewalStatus, &cert.Status,
+		&issuedAtStr, &expiresAtStr, &cert.AutoRenew,
+		&lastRenewalStr, &cert.RenewalStatus, &cert.Status,
 	)
 
 	if err == nil {
-		// Calculate days until expiry
+		cert.IssuedAt = parseDBTime(issuedAtStr)
+		cert.ExpiresAt = parseDBTime(expiresAtStr)
+		if lastRenewalStr != nil {
+			t := parseDBTime(*lastRenewalStr)
+			cert.LastRenewalAttempt = &t
+		}
 		cert.DaysUntilExpiry = int(time.Until(cert.ExpiresAt).Hours() / 24)
 		response.HasCertificate = true
 		response.Certificate = &cert
@@ -248,7 +260,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 			issuer, subject, expires_at, auto_renew, status
 		) VALUES (?, 'letsencrypt', ?, ?, ?, 'Let''s Encrypt', ?, ?, ?, 'active')
 	`, domainID, agentResp.CertPath, agentResp.KeyPath, agentResp.ChainPath,
-		domain.Name, agentResp.ExpiresAt, req.AutoRenew)
+		domain.Name, agentResp.ExpiresAt.UTC().Format(time.RFC3339), req.AutoRenew)
 
 	if err != nil {
 		writeServerError(w, err)
@@ -414,7 +426,8 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 			issuer, subject, issued_at, expires_at, auto_renew, status
 		) VALUES (?, 'custom', ?, ?, ?, ?, ?, ?, ?, false, 'active')
 	`, domainID, installResp.CertPath, installResp.KeyPath, installResp.ChainPath,
-		validateResp.Issuer, validateResp.Subject, validateResp.IssuedAt, validateResp.ExpiresAt)
+		validateResp.Issuer, validateResp.Subject,
+		validateResp.IssuedAt.UTC().Format(time.RFC3339), validateResp.ExpiresAt.UTC().Format(time.RFC3339))
 
 	if err != nil {
 		http.Error(w, "Failed to store certificate", http.StatusInternalServerError)
@@ -534,4 +547,24 @@ func (p *Panel) handleDeleteSSL(w http.ResponseWriter, r *http.Request, domainID
 	// Kaldırılan sertifika posta SNI map'lerinden de düşmelidir.
 	_ = p.resyncMailTLS(r.Context())
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+// parseDBTime accepts every timestamp format that has ever landed in the
+// ssl_certificates table: RFC3339 (what we write now), SQLite's datetime()
+// output, and Go's time.Time default String (written by an older bug).
+// parseDBTime, ssl_certificates tablosuna bugüne dek düşmüş her zaman-damgası
+// biçimini kabul eder: RFC3339 (şimdi yazdığımız), SQLite datetime() çıktısı
+// ve Go time.Time varsayılan String'i (eski bir hatanın yazdığı).
+func parseDBTime(s string) time.Time {
+	for _, layout := range []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04:05 -0700 MST",
+		"2006-01-02 15:04:05.999999999 -0700 MST",
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
 }

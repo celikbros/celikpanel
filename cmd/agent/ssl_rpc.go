@@ -63,9 +63,9 @@ type ValidateCertResponse struct {
 
 // InstallCertRequest represents a request to install a custom certificate
 type InstallCertRequest struct {
-	Domain      string `json:"domain"`
-	CertContent string `json:"cert_content"`
-	KeyContent  string `json:"key_content"`
+	Domain       string `json:"domain"`
+	CertContent  string `json:"cert_content"`
+	KeyContent   string `json:"key_content"`
 	ChainContent string `json:"chain_content,omitempty"`
 }
 
@@ -145,7 +145,11 @@ func (a *Agent) IssueLetsEncryptCertificate(req IssueLetsEncryptRequest, resp *I
 // RenewLetsEncryptCertificate renews an existing Let's Encrypt certificate
 func (a *Agent) RenewLetsEncryptCertificate(req RenewCertRequest, resp *RenewCertResponse) error {
 	// Execute certbot renew for specific domain
-	cmd := exec.Command("certbot", "renew", "--cert-name", req.Domain, "--force-renewal")
+	// No --force-renewal: certbot only renews near expiry, which respects
+	// Let's Encrypt rate limits even if this is called too often.
+	// --force-renewal yok: certbot yalnız bitime yakın yeniler; bu, çok sık
+	// çağrılsa bile Let's Encrypt hız sınırlarına saygı gösterir.
+	cmd := exec.Command("certbot", "renew", "--cert-name", req.Domain)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false

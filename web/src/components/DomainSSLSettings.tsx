@@ -197,6 +197,20 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                                             }
                                         />
                                     )}
+                                    {cert.renewal_status !== '' && (
+                                        <Detail
+                                            label={t('ssl.renewalStatus')}
+                                            value={
+                                                <span className={cert.renewal_status === 'renewed' ? 'text-success' : 'text-warning'}>
+                                                    {cert.renewal_status === 'renewed'
+                                                        ? t('ssl.renewed')
+                                                        : cert.renewal_status === 'expiring'
+                                                            ? t('ssl.expiringSoon')
+                                                            : cert.renewal_status}
+                                                </span>
+                                            }
+                                        />
+                                    )}
                                 </dl>
                                 <div className="mt-3">
                                     <Button variant="danger" icon={Trash2} onClick={handleDelete}>
