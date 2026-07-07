@@ -280,6 +280,10 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Keep mail SNI in step with the new certificate if mail is secured.
+	// Posta korunuyorsa posta SNI'ını yeni sertifikayla adımda tut.
+	_ = p.resyncMailTLS(ctx)
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "success",
 		"expires_at": agentResp.ExpiresAt,
@@ -443,6 +447,7 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	_ = p.resyncMailTLS(ctx)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
@@ -525,5 +530,8 @@ func (p *Panel) handleDeleteSSL(w http.ResponseWriter, r *http.Request, domainID
 
 	// TODO: Regenerate nginx config
 
+	// A removed certificate must drop out of the mail SNI maps too.
+	// Kaldırılan sertifika posta SNI map'lerinden de düşmelidir.
+	_ = p.resyncMailTLS(r.Context())
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }

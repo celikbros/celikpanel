@@ -49,6 +49,7 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     const [keyFile, setKeyFile] = useState<File | null>(null);
     const [chainFile, setChainFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [secureMail, setSecureMail] = useState(false);
 
     useEffect(() => {
         loadSSLData();
@@ -60,6 +61,8 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
             const res = await fetch(`/api/v1/domains/${domainId}/ssl`);
             if (!res.ok) throw new Error();
             setData(await res.json());
+            const mailRes = await fetch(`/api/v1/domains/${domainId}/ssl/mail`);
+            if (mailRes.ok) setSecureMail((await mailRes.json()).secure_mail === true);
         } catch {
             showToast('error', t('ssl.loadFailed'));
         } finally {
@@ -272,6 +275,27 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                     label={t('ssl.hsts')}
                     hint={t('ssl.hstsHint')}
                 />
+                {data.has_certificate && (
+                    <ControlledToggle
+                        checked={secureMail}
+                        onChange={async (v) => {
+                            try {
+                                const r = await fetch(`/api/v1/domains/${domainId}/ssl/mail`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ secure_mail: v }),
+                                });
+                                if (!r.ok) throw new Error();
+                                setSecureMail(v);
+                                showToast('success', v ? t('ssl.mailSecured') : t('ssl.mailUnsecured'));
+                            } catch {
+                                showToast('error', t('common.error'));
+                            }
+                        }}
+                        label={t('ssl.secureMail')}
+                        hint={t('ssl.secureMailHint')}
+                    />
+                )}
             </FormSection>
         </div>
     );
