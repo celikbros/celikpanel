@@ -1,0 +1,199 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// DKIM signing — the missing half of DKIM. The panel has long generated keys
+// and published the DNS records, but nothing ever SIGNED outgoing mail, so
+// receivers saw a key in DNS and no signature on the message: a fail, not a
+// pass. OpenDKIM runs as a milter on localhost; its key and signing tables
+// are generated from the panel's key directory, so every domain that has a
+// key signs automatically. milter_default_action=accept means a dead filter
+// degrades to unsigned mail, never to lost mail.
+//
+// DKIM imzalama — DKIM'in eksik yarısı. Panel uzun süredir anahtar üretiyor
+// ve DNS kayıtlarını yayımlıyordu ama giden postayı hiçbir şey İMZALAMIYORDU;
+// alıcılar DNS'te anahtar görüp iletide imza bulamıyordu: geçer değil, kalır.
+// OpenDKIM, localhost'ta milter olarak koşar; anahtar ve imzalama tabloları
+// panelin anahtar dizininden üretilir; anahtarı olan her domain otomatik
+// imzalar. milter_default_action=accept: ölü filtre imzasız postaya düşer,
+// asla kayıp postaya değil.
+
+const signingSelector = "celik"
+
+const (
+	opendkimConfPath  = "/etc/opendkim.conf"
+	opendkimTablesDir = "/etc/celikpanel/dkim-tables"
+	opendkimSocket    = "inet:8891@localhost"
+	opendkimMilter    = "inet:localhost:8891"
+)
+
+type ConfigureDKIMSigningResponse struct {
+	Configured bool   `json:"configured"`
+	Domains    int    `json:"domains"`
+	Detail     string `json:"detail,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+// ConfigureDKIMSigning installs OpenDKIM if needed, regenerates the tables
+// from the key directory and wires the milter into Postfix. Idempotent —
+// also the resync path whenever a new domain key is created.
+// ConfigureDKIMSigning, gerekirse OpenDKIM'i kurar, tabloları anahtar
+// dizininden yeniden üretir ve milter'ı Postfix'e bağlar. Idempotent —
+// yeni bir domain anahtarı üretildiğinde de aynı yol yeniden senkronlar.
+func (a *Agent) ConfigureDKIMSigning(_ *struct{}, resp *ConfigureDKIMSigningResponse) error {
+	// CELIKPANEL_MAIL_DIR marks a non-root dev agent (CELIKPANEL_DKIM_DIR
+	// alone does not: installed units set it to the production default).
+	// CELIKPANEL_MAIL_DIR root olmayan dev agent'ı işaretler (tek başına
+	// CELIKPANEL_DKIM_DIR etmez: kurulu unit'ler onu üretim varsayılanına
+	// ayarlar).
+	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" {
+		resp.Error = "DKIM signing is a production action; not available with CELIKPANEL_MAIL_DIR set"
+		return nil
+	}
+	if _, err := exec.LookPath("postconf"); err != nil {
+		resp.Error = "postfix is not installed"
+		return nil
+	}
+	if _, err := exec.LookPath("opendkim"); err != nil {
+		family := detectPkgFamily()
+		if family != "apt" {
+			resp.Error = "opendkim cannot be installed automatically on this distro yet"
+			return nil
+		}
+		if _, err := installPackages(family, []string{"opendkim", "opendkim-tools"}); err != nil {
+			resp.Error = fmt.Sprintf("opendkim install: %v", err)
+			return nil
+		}
+	}
+
+	domains, err := dkimSignedDomains()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if err := writeDKIMTables(domains); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	conf := fmt.Sprintf(`# Managed by CelikPanel — DKIM signing for hosted domains. Do not edit by hand.
+Syslog			yes
+UMask			007
+Mode			sv
+Canonicalization	relaxed/simple
+OversignHeaders		From
+Socket			%s
+PidFile			/run/opendkim/opendkim.pid
+UserID			opendkim
+KeyTable		%s/keytable
+SigningTable		refile:%s/signingtable
+InternalHosts		%s/trustedhosts
+TrustAnchorFile		/usr/share/dns/root.key
+`, opendkimSocket, opendkimTablesDir, opendkimTablesDir, opendkimTablesDir)
+	if err := os.WriteFile(opendkimConfPath, []byte(conf), 0o644); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	if out, err := exec.Command("systemctl", "enable", "--now", "opendkim").CombinedOutput(); err != nil {
+		resp.Error = fmt.Sprintf("opendkim start: %s", firstLine(string(out)))
+		return nil
+	}
+	_ = exec.Command("systemctl", "restart", "opendkim").Run()
+
+	// Postfix: sign everything that leaves — smtpd (25/587/465) and local
+	// pickup alike. A dead milter must not eat mail.
+	// Postfix: çıkan her şeyi imzala — smtpd (25/587/465) ve yerel pickup.
+	// Ölü milter posta yutmamalı.
+	for _, kv := range [][2]string{
+		{"smtpd_milters", opendkimMilter},
+		{"non_smtpd_milters", opendkimMilter},
+		{"milter_default_action", "accept"},
+		{"milter_protocol", "6"},
+	} {
+		if out, err := exec.Command("postconf", "-e", kv[0]+"="+kv[1]).CombinedOutput(); err != nil {
+			resp.Error = fmt.Sprintf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
+			return nil
+		}
+	}
+	_ = exec.Command("systemctl", "reload-or-restart", "postfix").Run()
+
+	resp.Configured = true
+	resp.Domains = len(domains)
+	resp.Detail = fmt.Sprintf("DKIM signing active for %d domain(s)", len(domains))
+	return nil
+}
+
+// dkimSignedDomains lists the domains that have a private key on disk.
+// dkimSignedDomains, diskte özel anahtarı olan domain'leri listeler.
+func dkimSignedDomains() ([]string, error) {
+	base := dkimBaseDir
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var domains []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		key := filepath.Join(base, e.Name(), signingSelector+".private")
+		if st, err := os.Stat(key); err == nil && st.Mode().IsRegular() {
+			domains = append(domains, e.Name())
+		}
+	}
+	sort.Strings(domains)
+	return domains, nil
+}
+
+// writeDKIMTables generates the OpenDKIM key/signing/trust tables and makes
+// the private keys readable by the opendkim group (root keeps ownership).
+// writeDKIMTables, OpenDKIM anahtar/imzalama/güven tablolarını üretir ve
+// özel anahtarları opendkim grubunca okunur yapar (sahiplik root'ta kalır).
+func writeDKIMTables(domains []string) error {
+	if err := os.MkdirAll(opendkimTablesDir, 0o755); err != nil {
+		return err
+	}
+	// The whole directory chain must be traversable by opendkim, not just
+	// the key file — a 0700 parent blocks the key silently. /etc/celikpanel
+	// itself is root:celikpanel 0750, so opendkim joins that group instead
+	// of us loosening the token directory.
+	// Tüm dizin zinciri opendkim'ce geçilebilir olmalı, yalnız anahtar
+	// dosyası değil — 0700 bir üst dizin anahtarı sessizce keser.
+	// /etc/celikpanel'in kendisi root:celikpanel 0750; token dizinini
+	// gevşetmek yerine opendkim o gruba katılır.
+	_ = exec.Command("usermod", "-aG", "celikpanel", "opendkim").Run()
+	base := dkimBaseDir
+	_ = exec.Command("chgrp", "opendkim", base).Run()
+	_ = os.Chmod(base, 0o750)
+	var kt, st strings.Builder
+	for _, d := range domains {
+		key := filepath.Join(base, d, signingSelector+".private")
+		fmt.Fprintf(&kt, "%s._domainkey.%s %s:%s:%s\n", signingSelector, d, d, signingSelector, key)
+		fmt.Fprintf(&st, "*@%s %s._domainkey.%s\n", d, signingSelector, d)
+		// OpenDKIM drops to its own user; give the group read access.
+		// OpenDKIM kendi kullanıcısına düşer; gruba okuma izni ver.
+		_ = exec.Command("chgrp", "opendkim", key).Run()
+		_ = os.Chmod(key, 0o640)
+		_ = exec.Command("chgrp", "opendkim", filepath.Join(base, d)).Run()
+		_ = os.Chmod(filepath.Join(base, d), 0o750)
+	}
+	trusted := "127.0.0.1\n::1\nlocalhost\n"
+	if err := os.WriteFile(filepath.Join(opendkimTablesDir, "keytable"), []byte(kt.String()), 0o644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(opendkimTablesDir, "signingtable"), []byte(st.String()), 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(opendkimTablesDir, "trustedhosts"), []byte(trusted), 0o644)
+}

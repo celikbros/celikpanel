@@ -177,8 +177,24 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusConflict, sub.Error)
 		return
 	}
+	// Sign what leaves: DKIM records without signatures fail at receivers.
+	// Çıkanı imzala: imzasız DKIM kaydı alıcıda "kalır" demektir.
+	var sign struct {
+		Configured bool   `json:"configured"`
+		Domains    int    `json:"domains"`
+		Detail     string `json:"detail,omitempty"`
+		Error      string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.ConfigureDKIMSigning", &struct{}{}, &sign); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if sign.Error != "" {
+		writeClientError(w, http.StatusConflict, sign.Error)
+		return
+	}
 	p.audit(r, "mail.configure", "", 0)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail + "; " + sub.Detail})
+	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail + "; " + sub.Detail + "; " + sign.Detail})
 }
 
 // validMailLocalPart guards the local part of an email address: non-empty,

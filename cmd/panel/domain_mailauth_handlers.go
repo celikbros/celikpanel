@@ -260,9 +260,18 @@ func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domai
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
+	// A new key must reach the signing tables, or the record passes and the
+	// signature never appears.
+	// Yeni anahtar imzalama tablolarına ulaşmalı; yoksa kayıt var, imza yok.
+	var sign struct {
+		Configured bool   `json:"configured"`
+		Error      string `json:"error,omitempty"`
+	}
+	_ = p.agentClient.Call("Agent.ConfigureDKIMSigning", &struct{}{}, &sign)
 	json.NewEncoder(w).Encode(map[string]any{
 		"success":     true,
 		"created":     resp.Created,
+		"signing":     sign.Configured,
 		"recommended": dkimRecommended(resp.PublicKeyB64),
 	})
 }
