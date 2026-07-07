@@ -20,14 +20,14 @@ func NewManager() *Manager {
 // ListServices scans for known services
 func (m *Manager) ListServices() ([]core.Service, error) {
 	// We are looking for specific services
-	targets := []string{"nginx", "php", "postgresql", "mysql", "mariadb", "apache2", "caddy", 
-		"certbot", "vsftpd", "fail2ban", "postfix", "dovecot", "spamassassin", "pdns"}
-	
+	targets := []string{"nginx", "php", "postgresql", "mysql", "mariadb", "apache2", "caddy",
+		"certbot", "vsftpd", "fail2ban", "postfix", "dovecot", "spamassassin", "pdns", "wg-quick"}
+
 	services := make([]core.Service, 0)
 
 	// Patterns to match
 	patterns := []string{"nginx*", "php*", "postgresql*", "mysql*", "mariadb*", "apache2*", "caddy*",
-		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "pdns*"}
+		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "pdns*", "wg-quick*"}
 
 	// Get specific active and inactive units
 	args := []string{"list-units", "--type=service", "--all", "--no-legend", "--no-pager"}
@@ -47,13 +47,13 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 			continue
 		}
 
-		unitName := fields[0] // e.g., nginx.service
+		unitName := fields[0]    // e.g., nginx.service
 		activeState := fields[2] // active
 		subState := fields[3]    // running
 
 		// Check if this unit matches one of our targets
 		name := strings.TrimSuffix(unitName, ".service")
-		
+
 		var serviceType core.ServiceType
 		matched := false
 
@@ -79,13 +79,13 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 		if matched {
 			// Get version
 			version := m.getServiceVersion(name, string(serviceType))
-			
+
 			// Get config files
 			configFiles := m.getConfigFiles(name, string(serviceType))
-			
+
 			// Determine if this is a primary service (not a helper)
 			isPrimary := m.isPrimaryService(name)
-			
+
 			s := core.Service{
 				ID:          name,
 				Name:        name,
@@ -121,7 +121,7 @@ func (m *Manager) getConfigFiles(name string, serviceType string) []core.ConfigF
 		// Fallback to empty if scan fails
 		return []core.ConfigFile{}
 	}
-	
+
 	return configs
 }
 
@@ -131,13 +131,13 @@ func (m *Manager) isPrimaryService(name string) bool {
 		"phpsessionclean",
 		"postgresql", // Generic postgresql (we want postgresql@VERSION)
 	}
-	
+
 	for _, helper := range helpers {
 		if name == helper {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -168,12 +168,12 @@ func (m *Manager) Start(serviceName string) error {
 func (m *Manager) Stop(serviceName string) error {
 	cmd := exec.Command("systemctl", "stop", serviceName)
 	out, err := cmd.CombinedOutput()
-	
+
 	// Log the output regardless of error
 	if len(out) > 0 {
 		fmt.Printf("systemctl stop %s output: %s\n", serviceName, string(out))
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("systemctl stop failed: %v, output: %s", err, string(out))
 	}

@@ -44,6 +44,7 @@ var productCatalog = []product{
 	{ID: "app_installer", Name: "Application installer", Description: "One-click installs for WordPress and other apps.", Category: "apps", MonthlyPriceCents: 0},
 	{ID: "firewall", Name: "Managed firewall", Description: "Per-site firewall rules and brute-force protection.", Category: "security", MonthlyPriceCents: 500},
 	{ID: "business_email", Name: "Business email", Description: "Larger mailboxes, priority delivery and archiving.", Category: "email", MonthlyPriceCents: 300},
+	{ID: "vpn", Name: "VPN access", Description: "Private WireGuard VPN peers for secure remote access.", Category: "network", MonthlyPriceCents: 400},
 	{ID: "extra_ip", Name: "Dedicated IP", Description: "A dedicated IPv4 address for this account.", Category: "network", MonthlyPriceCents: 200},
 }
 

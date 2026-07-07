@@ -101,6 +101,15 @@ var ManagedServices = []ManagedService{
 		Packages:    map[string][]string{"apt": {"spamassassin"}},
 	},
 	{
+		ID:          "wireguard",
+		Name:        "WireGuard VPN",
+		Description: "Built-in VPN server",
+		Icon:        "\U0001F510",
+		Category:    "security",
+		SystemNames: []string{"wg-quick@wg0"},
+		Packages:    map[string][]string{"apt": {"wireguard"}},
+	},
+	{
 		ID:          "fail2ban",
 		Name:        "Fail2ban",
 		Description: "Intrusion Prevention",

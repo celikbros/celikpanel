@@ -290,6 +290,10 @@ func main() {
 	})
 
 	// PowerDNS Configuration
+	http.HandleFunc("/api/v1/vpn/status", panel.handleVPNStatus)
+	http.HandleFunc("/api/v1/vpn/setup", panel.handleVPNSetup)
+	http.HandleFunc("/api/v1/vpn/peers", panel.handleVPNPeers)
+	http.HandleFunc("/api/v1/vpn/peers/", panel.handleVPNPeerByID)
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
 	http.HandleFunc("/api/v1/mail/configure", panel.handleMailConfigure)
 	http.HandleFunc("/api/v1/apps", panel.handleAppCatalog)

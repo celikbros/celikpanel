@@ -115,10 +115,12 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 					configFiles = append(configFiles, svc.ConfigFiles...)
 				}
 
+				// "active (running)" for daemons; oneshot units like
+				// wg-quick@wg0 report "active (exited)" — both are up.
+				// Daemon'larda "active (running)"; wg-quick@wg0 gibi oneshot
+				// unit'ler "active (exited)" bildirir — ikisi de ayaktadır.
 				statusLower := strings.ToLower(svc.Status)
-				if strings.Contains(statusLower, "running") &&
-					!strings.Contains(statusLower, "inactive") &&
-					!strings.Contains(statusLower, "dead") {
+				if strings.HasPrefix(statusLower, "active") {
 					anyRunning = true
 				}
 			}

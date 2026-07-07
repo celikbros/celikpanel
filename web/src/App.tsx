@@ -16,6 +16,7 @@ import { UsersPage } from './components/UsersPage';
 import { ImportPage } from './components/ImportPage';
 import { AuditLogPage } from './components/AuditLogPage';
 import { AddonsPage } from './components/AddonsPage';
+import { VPNPage } from './components/VPNPage';
 import { PHPManagement } from './components/PHPManagement';
 import { NginxManagement } from './components/NginxManagement';
 import { Fail2banManagement } from './components/Fail2banManagement';
@@ -252,6 +253,7 @@ function AppRoutes() {
         <Route path="/import" element={<PageWithLayout><ImportPage /></PageWithLayout>} />
         <Route path="/audit" element={<PageWithLayout><AuditLogPage /></PageWithLayout>} />
         <Route path="/addons" element={<PageWithLayout><AddonsPage /></PageWithLayout>} />
+        <Route path="/vpn" element={<PageWithLayout><VPNPage /></PageWithLayout>} />
 
         {/* Settings */}
         <Route path="/settings" element={<PageWithLayout><Settings /></PageWithLayout>} />

@@ -76,7 +76,15 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 // tanıdığı ilkini döndürür, hiçbiri kurulu değilse "".
 func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
 	for _, unit := range svc.SystemNames {
-		out, err := exec.Command("systemctl", "list-unit-files", unit+".service", "--no-legend").Output()
+		// Instances of template units ("wg-quick@wg0") never appear in
+		// list-unit-files — look their template ("wg-quick@") up instead.
+		// Şablon unit örnekleri ("wg-quick@wg0") list-unit-files'ta hiç
+		// görünmez — onun yerine şablonunu ("wg-quick@") ara.
+		lookup := unit
+		if at := strings.IndexByte(unit, '@'); at >= 0 {
+			lookup = unit[:at+1]
+		}
+		out, err := exec.Command("systemctl", "list-unit-files", lookup+".service", "--no-legend").Output()
 		if err == nil && strings.TrimSpace(string(out)) != "" {
 			return unit
 		}
