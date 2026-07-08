@@ -1,0 +1,133 @@
+# Stratejik Kararlar
+
+*Proje kaydı · [English](DECISIONS.md)*
+
+Büyük yön kararlarının **neden**inin kalıcı kaydı — soru her yeniden
+gündeme geldiğinde sıfırdan türetmek istemediğimiz gerekçeler. Kod kararları
+git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
+
+---
+
+## D-004 · İşletim sistemi: önce Ubuntu LTS, BSD seçeneği korunur (asla fork)
+
+*8 Temmuz 2026*
+
+**Karar.** Ubuntu 24.04 LTS birinci sınıf, yalnızca test edilen hedeftir. BSD
+**şimdilik** bilinçli bir hedef-dışıdır — ama ileride desteklemek seçeneği
+mimariyle korunur ve **asla** ayrı bir ürün olmaz.
+
+**Neden Ubuntu, BSD değil.**
+- Ürünün tamamı Linux'a özgü parçaların üstünde: systemd (agent'ın kalbi —
+  servisler, `celikapp-*`, `wg-quick@`), apt + paket whitelist'leri, nftables
+  (VPN NAT) ve postfix/dovecot/opendkim'in Ubuntu yerleşimi. OS değiştirmek =
+  agent'ın "ellerini" yeniden yazmak, kullanıcıya sıfır fark için aylarca iş.
+- Kullanıcının beğendiği kararlılık ("versiyonlar kilitli, kararlı") zaten
+  **Ubuntu LTS'nin kendisi**: 5 yıl yalnız güvenlik yaması. BSD, elimizde
+  olmayan bir kararlılık katmaz.
+- Pazar gerçeği: hiçbir rakip BSD'de değil (cPanel = RHEL ailesi, Plesk =
+  Linux+Windows, aaPanel = Linux). VPS imajları, müşteri alışkanlıkları,
+  WordPress/PHP ekosistemi, Let's Encrypt araçları hep Linux-öncelikli.
+  Müşteri "WordPress'im çalışıyor mu, mailim spam'e düşüyor mu?" diye sorar —
+  "BSD'de misiniz?" diye değil.
+
+**Seçeneği ucuz tutan şey — ve neden fork DEĞİL.**
+- Panel↔agent RPC ayrımı (güvenlik için kuruldu) aynı zamanda OS
+  bağımsızlığıdır. **Panel** (HTTP, SQLite, UI, iş mantığı) taşınabilir Go;
+  OS'e dokunan tek katman **agent**. Panel *ne* yapılacağını der ("site kur");
+  *nasıl*ını yalnız agent bilir (systemctl/apt/nftables).
+- İddia değil kanıt: bu tarih itibarıyla `GOOS=freebsd go build` **hem** paneli
+  hem agent'ı derliyor. Tek bir taşınabilirlik düzeltmesi gerekti (Statfs_t
+  alan tipleri Linux ile BSD'de farklı — `cmd/panel/system_stats.go`'da açık
+  `uint64` dönüşümleri) ve yapıldı. Kod tabanının tamamı bugün FreeBSD'ye
+  çapraz derleniyor.
+- İki CelikPanel, kullanıcının korktuğu hantallığın ta kendisi olurdu: her
+  özellik iki kez, her hata iki kez, iki vasat ürün. Bunun yerine olası bir
+  BSD geleceği = aynı RPC yüzeyinin arkasına bir **BSD agent arka ucu** (rc.d,
+  pkg, pf). Tahmin: yıllar değil haftalar — tüm yığın (nginx, postfix,
+  dovecot, opendkim, PowerDNS, MariaDB, WireGuard) FreeBSD ports'ta var;
+  yalnız "eller" değişir. Panel, UI, DB, iş mantığı: sıfır değişiklik.
+
+**Bugün ne yapıyoruz.** Neredeyse hiçbir şey — ve asıl nokta bu. Tek bedel
+disiplin: yeni agent özellikleri *ne*yi (RPC yüzeyi) *nasıl*dan (exec
+çağrıları) ayrı tutar, ki kod zaten böyle yazılıyor. Spekülatif soyutlama
+katmanı yok, "belki lazım olur" kodu yok. Karar, gerçek talep doğduğunda
+verilir (örn. Linux'ta bir güven/güvenlik krizi barındırıcıları BSD'ye
+iterse).
+
+**Diğer dağıtımlar.** `detectPkgFamily` apt / dnf / pacman tanır. Bugün yalnız
+apt (Ubuntu/Debian) tam destekli ve test edilmiş; dnf/pacman tanınır ama
+kurulum tahmin etmek yerine dürüstçe "bu dağıtımda henüz otomatik kurulamıyor"
+der. Not: dnf module stream'leri (`postgresql:16` vs `:18`) orada gerçek bir
+sürüm seçiciyi anlamlı kılar — dnf desteği eklersek UI buna hazır.
+
+---
+
+## D-003 · Servis kataloğu: her şeyi göster, çakışmayla engelle — "yönetilmiyor" ile değil
+
+*8 Temmuz 2026*
+
+**Karar.** Servisler sayfası (yalnız admin) tüm kataloğu listeler, kurulu olsun
+olmasın, tek tıkla Kur ile. Derinlemesine yönetmediğimiz servisleri
+**gizlemeyiz** ve "yönetilmiyor" etiketleriyle **karmaşıklaştırmayız**. Bir
+kurulumu engelleyen tek şey **gerçek bir çakışma**dır.
+
+**Neden.** Kullanıcının sezgisi: "yönetiyor muyuz?" üzerinden kapılamak
+gereksiz karmaşıklık. Asıl kısıt, iki servisin yan yana çalışıp
+çalışamayacağıdır.
+- **Çakışma grupları** (katalogda `ConflictGroup`): aynı rol/portu tutanlar
+  karşılıklı dışlar — :80'de web sunucusu (Nginx ↔ Apache), :53'te DNS (BIND ↔
+  PowerDNS). Biri kuruluysa diğerinin Kur düğmesi "X ile çakışır" olur.
+- **Grup yoksa = yan yana**: MariaDB + PostgreSQL birlikte koşar (farklı
+  portlar), ikisi de kurulabilir. Redis + Memcached de öyle.
+
+**Sonuç.** Her kurulum admin'in açık, tek-tıklık onayıdır ("yalnız izinle kur"
+ilkesine uygun). Katalog kategoriye göre akordiyonla gruplu (tümünü aç/kapat);
+düzinelerce servise doğru büyüdükçe taranabilir kalır.
+
+---
+
+## D-002 · Servis sürümleri: dürüst tek sürüm, gerçek çoklu-sürüm yalnız var olan yerde
+
+*8 Temmuz 2026*
+
+**Karar.** Kurulum modalı apt'ın kuracağı **gerçek** sürümü gösterir (canlı
+`apt-cache policy` ile okunur), sürüm *seçici* değil. Seçici yalnız birden
+fazla sürümün gerçekten var olduğu yerde sunulur.
+
+**Neden.** Bir Debian/Ubuntu sürümü her paketin tam olarak tek sürümünü verir
+ve dondurur (yalnız güvenlik yaması) — kararlılık modeli bu, bilerek. Tek
+seçenekli bir açılır liste, kullanıcıyı yanıltan bir yalandır. Dolayısıyla:
+- **Tek-sürümlü servisler** (PostgreSQL, MariaDB, nginx…): ne ineceğini göster
+  ("Kurulacak sürüm: 16"), seçici yok.
+- **Gerçekten çoklu-sürüm, hosting-kritik** → dağıtımdan bağımsız, gerçek
+  seçiciyle:
+  - **PHP** — yan yana paketler (`php8.1-fpm`…`php8.4-fpm`), site başına
+    seçilir. ✅ yapıldı.
+  - **Node.js** — dağıtımdan bağımsız resmi tarball'lar, proje başına seçilir.
+    ✅ yapıldı.
+- **Gelecek seçeneği**: Ubuntu 24.04'te örn. PostgreSQL 18 isteyen müşteri,
+  üreticinin kendi apt deposunu (PGDG) bilinçli bir özellik olarak eklemek
+  demektir — gerçek depo yönetimi, asla sahte seçici. Backlog'da, yapılmadı.
+
+Desen: **dağıtımın tek sürümü = güvenli taban; gerçek çoklu-sürüm (PHP, Node)
+kendi mekanizmamızla, dağıtımdan bağımsız.** cPanel/Plesk gibi (PHP'yi
+kendileri derler, gerisini dağıtıma bırakır).
+
+---
+
+## D-001 · Güncelleme ve geri alma: sunucuyu asla sıfırdan kurma
+
+*8 Temmuz 2026*
+
+**Karar.** Üretim güncellemeleri `sudo ./update.sh` (git pull + idempotent
+`install.sh`), asla sil-baştan-kur değil. Her güncelleme önce bir geri-alma
+anlık görüntüsü alır; `sudo ./rollback.sh` önceki çalışan duruma döner.
+
+**Neden.** Kutuda müşteri olması, verinin her güncellemeden sağ çıkması
+gerektiği anlamına gelir. Müşteri verisi (SQLite DB, site dosyaları, posta,
+DNS, sertifikalar, DKIM anahtarları) değişen yolların (`bin/`, `web/`) dışında
+yaşar; migration'lar panel açılışında uygulanır. Anlık görüntü (panel DB +
+binary'ler + unit dosyaları + kaynak commit'i) "bir güncelleme işleri bozdu"yu
+felaket değil, kurtarılabilir bir olay yapar. Düzeltme akışı: dev kutusunda
+(VPS'in aynası) yeniden üret → kanıtla → push → VPS'te `update.sh` → gerekirse
+`rollback.sh`. Bkz. [update.sh](../update.sh), [rollback.sh](../rollback.sh).
