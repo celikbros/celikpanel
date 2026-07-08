@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button } from './ui';
@@ -63,10 +63,21 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
+    const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadServices();
     }, []);
+
+    const toggleGroup = (cat: string) =>
+        setCollapsed((prev) => {
+            const next = new Set(prev);
+            next.has(cat) ? next.delete(cat) : next.add(cat);
+            return next;
+        });
+    const visibleCats = () => categoryOrder.filter(({ id }) => services.some((s) => s.category === id));
+    const collapseAll = () => setCollapsed(new Set(visibleCats().map((c) => c.id)));
+    const expandAll = () => setCollapsed(new Set());
 
     // Reads the CACHED scan — instant, never probes the system. A fresh
     // probe is the explicit user action below (scan).
@@ -175,6 +186,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         ? t('services.lastScan', { time: new Date(scannedAt).toLocaleString() })
                         : t('services.neverScannedShort')}
                 </span>
+                {scannedAt && services.length > 0 && (
+                    <div className="ml-auto flex gap-1 text-xs">
+                        <button onClick={expandAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                            {t('services.expandAll')}
+                        </button>
+                        <button onClick={collapseAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                            {t('services.collapseAll')}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {loading ? (
@@ -206,14 +227,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                     const group = services.filter((s) => s.category === cat);
                                     if (group.length === 0) return [];
                                     const installedCount = group.filter((s) => s.is_installed).length;
+                                    const isOpen = !collapsed.has(cat);
                                     return [
-                                        <tr key={`h-${cat}`} className="bg-surface-2/40">
+                                        <tr key={`h-${cat}`} className="cursor-pointer bg-surface-2/40 hover:bg-surface-2/70" onClick={() => toggleGroup(cat)}>
                                             <td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                                                {t(labelKey as Parameters<typeof t>[0])}
-                                                <span className="ml-2 font-normal text-fg-subtle">{installedCount}/{group.length}</span>
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                                    {t(labelKey as Parameters<typeof t>[0])}
+                                                    <span className="font-normal text-fg-subtle">{installedCount}/{group.length}</span>
+                                                </span>
                                             </td>
                                         </tr>,
-                                        ...group.map((s) => {
+                                        ...(isOpen ? group : []).map((s) => {
                                     const running = isRunning(s);
                                     return (
                                         <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
@@ -359,6 +384,22 @@ function InstallServiceDialog({
     onConfirm: () => void;
 }) {
     const { t } = useI18n();
+    const [version, setVersion] = useState<string | null>(null);
+    const [verLoading, setVerLoading] = useState(true);
+
+    // Ask the server what apt would actually install right now — honest
+    // "what will land", not a made-up version picker (the distro offers one).
+    // Sunucuya apt'ın şu an gerçekten ne kuracağını sor — uydurma bir sürüm
+    // seçici değil, dürüst "ne inecek" (dağıtım tek sürüm sunar).
+    useEffect(() => {
+        setVerLoading(true);
+        fetch(`/api/v1/service/candidate?id=${encodeURIComponent(service.id)}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => setVersion(d?.version || ''))
+            .catch(() => setVersion(''))
+            .finally(() => setVerLoading(false));
+    }, [service.id]);
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
             <div
@@ -374,6 +415,12 @@ function InstallServiceDialog({
                 </div>
 
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-medium text-fg-subtle">{t('services.versionToInstall')}</span>
+                        <span className="font-mono text-sm font-semibold text-fg">
+                            {verLoading ? '…' : version ? version : t('services.versionDefault')}
+                        </span>
+                    </div>
                     <p className="mb-1 text-xs font-medium text-fg-subtle">{t('services.willInstall')}</p>
                     <div className="flex flex-wrap gap-1.5">
                         {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (

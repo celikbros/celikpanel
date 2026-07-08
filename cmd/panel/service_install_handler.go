@@ -92,3 +92,22 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 	p.audit(r, "service.install:"+req.ServiceID, "service", 0)
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "installed": resp.Installed, "detail": resp.Detail})
 }
+
+// handleServiceCandidate returns the version apt would install for a service
+// (admin-only), so the install modal can show "what will land" honestly.
+// handleServiceCandidate, apt'ın bir servis için kuracağı sürümü döndürür
+// (yalnız admin); kurulum modalı "ne inecek"i dürüstçe gösterebilsin diye.
+func (p *Panel) handleServiceCandidate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeClientError(w, http.StatusBadRequest, "id is required")
+		return
+	}
+	var version string
+	_ = p.agentClient.Call("Agent.ServiceCandidateVersion",
+		&struct {
+			ID string `json:"id"`
+		}{ID: id}, &version)
+	json.NewEncoder(w).Encode(map[string]string{"version": version})
+}
