@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -154,16 +155,41 @@ func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) 
 	// önbellekler; başlangıçtan sonra oluşturulan zone beş dakikaya dek
 	// REFUSED olurdu. Panel değişiklikleri anında iter; cevaplar da anında
 	// izlemeli. Sorgu başına maliyet panel ölçeğinde önemsiz.
+	// Bind only to the machine's public addresses, NOT 0.0.0.0. On Ubuntu
+	// systemd-resolved already holds 127.0.0.53:53; a wildcard bind collides
+	// with it and pdns fails to start. Serving on the public IPs leaves the
+	// stub resolver (and the server's own name resolution) untouched.
+	// Yalnız makinenin genel adreslerine bağlan, 0.0.0.0'a DEĞİL. Ubuntu'da
+	// systemd-resolved zaten 127.0.0.53:53'ü tutar; joker bağlanma onunla
+	// çakışır ve pdns başlayamaz. Genel IP'lerde sunmak, stub çözümleyiciyi
+	// (ve sunucunun kendi ad çözümlemesini) bozmadan bırakır.
+	listen := publicListenAddresses()
+	if listen == "" {
+		listen = "0.0.0.0" // no public IP detected; fall back (dev/NAT)
+	}
 	config := fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
 launch=gsqlite3
 gsqlite3-dnssec=yes
 gsqlite3-database=%s
+local-address=%s
 zone-cache-refresh-interval=0
 webserver=no
 api=no
-`, dbPath)
+`, dbPath, listen)
 	confPath := "/etc/powerdns/pdns.d/celikpanel.conf"
 	if err := os.WriteFile(confPath, []byte(config), 0o644); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	// The agent's systemd unit sets UMask=0027 (hardening), which strips the
+	// "other" read bit WriteFile asked for, leaving 0640 — unreadable by the
+	// pdns user (not in the file's group). An explicit chmod bypasses umask
+	// entirely. The file holds no secret (paths, listen addresses only), so
+	// world-readable is the right call.
+	// Agent'ın systemd unit'i UMask=0027 ayarlar (sertleştirme); bu,
+	// WriteFile'ın istediği "other" okuma bitini siler, 0640 kalır — dosyanın
+	// grubunda olmayan pdns kullanıcısı okuyamaz. Açık chmod umask'i atlar.
+	if err := os.Chmod(confPath, 0o644); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -277,3 +303,36 @@ CREATE TABLE IF NOT EXISTS tsigkeys (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS namealgoindex ON tsigkeys(name, algorithm);
 `
+
+// publicListenAddresses returns the machine's global (non-loopback, non-
+// link-local) unicast IPs as a comma-separated list — where an authoritative
+// DNS server should listen so it never fights the local stub resolver.
+// publicListenAddresses, makinenin genel (loopback ve link-local olmayan)
+// tekil IP'lerini virgülle ayrılmış liste olarak döndürür — yetkili bir DNS
+// sunucusunun, yerel stub çözümleyiciyle çakışmadan dinlemesi gereken yer.
+func publicListenAddresses() string {
+	out, err := exec.Command("ip", "-o", "addr", "show", "scope", "global").Output()
+	if err != nil {
+		return ""
+	}
+	var addrs []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(string(out), "\n") {
+		f := strings.Fields(line)
+		for i := range f {
+			if f[i] == "inet" || f[i] == "inet6" {
+				if i+1 < len(f) {
+					ip := f[i+1]
+					if s := strings.IndexByte(ip, '/'); s >= 0 {
+						ip = ip[:s]
+					}
+					if ip != "" && !seen[ip] {
+						seen[ip] = true
+						addrs = append(addrs, ip)
+					}
+				}
+			}
+		}
+	}
+	return strings.Join(addrs, ",")
+}
