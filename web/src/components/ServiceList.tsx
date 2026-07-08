@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState } from './ui';
@@ -85,6 +85,31 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const resolveUnit = (serviceId: string, version?: string) => {
         if (serviceId === 'php-fpm') return version && version !== 'default' ? `php${version}-fpm` : 'php-fpm';
         return serviceId;
+    };
+
+    // Install a not-yet-installed catalogue service on demand. The agent
+    // installs exactly the whitelisted packages for this id, then enables the
+    // unit. This is the one-click install the VPN page (and others) point to.
+    // Kurulu-olmayan bir katalog servisini talep üzerine kur. Agent bu id
+    // için yalnız beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
+    const handleInstall = async (service: ManagedService) => {
+        if (!confirm(t('services.installConfirm', { name: service.name }))) return;
+        setBusy(service.id);
+        try {
+            const res = await fetch('/api/v1/service/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: service.id }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error || 'install failed');
+            showToast('success', t('services.installed', { name: service.name }));
+            scan();
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setBusy(null);
+        }
     };
 
     const handleAction = async (service: ManagedService, action: 'start' | 'stop' | 'restart') => {
@@ -204,6 +229,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    {!s.is_installed ? (
+                                                        <button
+                                                            onClick={() => handleInstall(s)}
+                                                            disabled={busy === s.id}
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                                        >
+                                                            <DownloadCloud className="h-3.5 w-3.5" />
+                                                            {busy === s.id ? t('services.installing') : t('services.install')}
+                                                        </button>
+                                                    ) : (
+                                                    <>
                                                     <ActionIcon
                                                         title={t('services.start')}
                                                         onClick={() => handleAction(s, 'start')}
@@ -235,6 +271,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Settings className="h-3.5 w-3.5" />
                                                         {t('services.manage')}
                                                     </button>
+                                                    </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

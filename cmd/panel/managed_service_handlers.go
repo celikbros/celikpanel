@@ -132,12 +132,15 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			status = "inactive (dead)"
 		}
 
-		// Skip if not installed (optional services)
+		// Not-installed catalogue services are included too, so the panel
+		// can offer a one-click install. They carry status "not_installed";
+		// the UI shows an Install button instead of start/stop/manage.
+		// Kurulu-olmayan katalog servisleri de dahildir ki panel tek-tık
+		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
+		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
 		if !isInstalled {
-			continue
-		}
-
-		if len(versions) == 0 {
+			status = "not_installed"
+		} else if len(versions) == 0 {
 			versions = append(versions, "default")
 		}
 
