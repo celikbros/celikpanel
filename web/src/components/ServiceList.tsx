@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, StatusDot, EmptyState } from './ui';
+import { PageHeader, StatusDot, EmptyState, Button } from './ui';
 
 interface ManagedService {
     id: string;
@@ -13,7 +13,23 @@ interface ManagedService {
     versions: string[];
     status: string;
     is_installed: boolean;
+    conflict_with?: string;
+    packages?: string[];
 }
+
+// Category display order + label key. Services render grouped under these
+// headings so the list stays scannable as the catalogue grows.
+// Kategori gösterim sırası + etiket anahtarı. Servisler bu başlıklar altında
+// gruplu görünür; katalog büyüdükçe liste taranabilir kalır.
+const categoryOrder: { id: string; labelKey: string }[] = [
+    { id: 'web', labelKey: 'services.cat.web' },
+    { id: 'database', labelKey: 'services.cat.database' },
+    { id: 'email', labelKey: 'services.cat.email' },
+    { id: 'dns', labelKey: 'services.cat.dns' },
+    { id: 'security', labelKey: 'services.cat.security' },
+    { id: 'cache', labelKey: 'services.cat.cache' },
+    { id: 'ftp', labelKey: 'services.cat.ftp' },
+];
 
 interface ServiceListProps {
     onSelectConfig: (path: string) => void;
@@ -46,6 +62,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
+    const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
 
     useEffect(() => {
         loadServices();
@@ -92,8 +109,12 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // unit. This is the one-click install the VPN page (and others) point to.
     // Kurulu-olmayan bir katalog servisini talep üzerine kur. Agent bu id
     // için yalnız beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
-    const handleInstall = async (service: ManagedService) => {
-        if (!confirm(t('services.installConfirm', { name: service.name }))) return;
+    // Actual install, run after the confirmation modal. The agent installs
+    // exactly the whitelisted packages for this id, then enables the unit.
+    // Gerçek kurulum, onay modalından sonra koşar. Agent bu id için yalnız
+    // beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
+    const doInstall = async (service: ManagedService) => {
+        setInstallTarget(null);
         setBusy(service.id);
         try {
             const res = await fetch('/api/v1/service/install', {
@@ -181,7 +202,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {services.map((s) => {
+                                {categoryOrder.flatMap(({ id: cat, labelKey }) => {
+                                    const group = services.filter((s) => s.category === cat);
+                                    if (group.length === 0) return [];
+                                    const installedCount = group.filter((s) => s.is_installed).length;
+                                    return [
+                                        <tr key={`h-${cat}`} className="bg-surface-2/40">
+                                            <td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                                                {t(labelKey as Parameters<typeof t>[0])}
+                                                <span className="ml-2 font-normal text-fg-subtle">{installedCount}/{group.length}</span>
+                                            </td>
+                                        </tr>,
+                                        ...group.map((s) => {
                                     const running = isRunning(s);
                                     return (
                                         <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
@@ -230,14 +262,23 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1">
                                                     {!s.is_installed ? (
+                                                        s.conflict_with ? (
+                                                            <span
+                                                                title={t('services.conflictHint', { name: s.conflict_with })}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
+                                                            >
+                                                                {t('services.conflictWith', { name: s.conflict_with })}
+                                                            </span>
+                                                        ) : (
                                                         <button
-                                                            onClick={() => handleInstall(s)}
+                                                            onClick={() => setInstallTarget(s)}
                                                             disabled={busy === s.id}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
                                                         >
                                                             <DownloadCloud className="h-3.5 w-3.5" />
                                                             {busy === s.id ? t('services.installing') : t('services.install')}
                                                         </button>
+                                                        )
                                                     ) : (
                                                     <>
                                                     <ActionIcon
@@ -277,12 +318,80 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             </td>
                                         </tr>
                                     );
+                                        }),
+                                    ];
                                 })}
                             </tbody>
                         </table>
                     </div>
                 </div>
             )}
+
+            {installTarget && (
+                <InstallServiceDialog
+                    service={installTarget}
+                    busy={busy === installTarget.id}
+                    onCancel={() => setInstallTarget(null)}
+                    onConfirm={() => doInstall(installTarget)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Themed install confirmation — replaces the browser's native confirm().
+// Shows exactly what will land on the server (the distro packages) so an
+// install is never a blind "yallah". PHP notes that the distro default
+// version is installed; extra versions are managed per-site elsewhere.
+// Temalı kurulum onayı — tarayıcının native confirm()'ünün yerine. Sunucuya
+// tam olarak ne ineceğini (dağıtım paketleri) gösterir; kurulum asla kör bir
+// "yallah" değildir. PHP için dağıtım varsayılan sürümünün kurulacağı,
+// ek sürümlerin site başına başka yerde yönetildiği belirtilir.
+function InstallServiceDialog({
+    service,
+    busy,
+    onCancel,
+    onConfirm,
+}: {
+    service: ManagedService;
+    busy: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+            <div
+                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="mb-4 flex items-start gap-3">
+                    <span className="text-3xl leading-none">{service.icon}</span>
+                    <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-fg">{t('services.installTitle', { name: service.name })}</h3>
+                        <p className="text-sm text-fg-muted">{service.description}</p>
+                    </div>
+                </div>
+
+                <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
+                    <p className="mb-1 text-xs font-medium text-fg-subtle">{t('services.willInstall')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (
+                            <span key={pkg} className="rounded bg-surface-3 px-2 py-0.5 font-mono text-xs text-fg">{pkg}</span>
+                        ))}
+                    </div>
+                    {service.id === 'php-fpm' && (
+                        <p className="mt-2 text-xs text-fg-subtle">{t('services.phpVersionNote')}</p>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                    <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
+                    <Button variant="primary" onClick={onConfirm} disabled={busy} icon={DownloadCloud}>
+                        {busy ? t('services.installing') : t('services.install')}
+                    </Button>
+                </div>
+            </div>
         </div>
     );
 }

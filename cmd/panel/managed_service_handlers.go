@@ -13,15 +13,17 @@ import (
 
 // ManagedServiceResponse represents a managed service with runtime status
 type ManagedServiceResponse struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Icon        string            `json:"icon"`
-	Category    string            `json:"category"`
-	Versions    []string          `json:"versions"` // Detected versions
-	Status      string            `json:"status"`   // Overall status
-	IsInstalled bool              `json:"is_installed"`
-	ConfigFiles []core.ConfigFile `json:"config_files"` // Detected config files
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description"`
+	Icon         string            `json:"icon"`
+	Category     string            `json:"category"`
+	Versions     []string          `json:"versions"` // Detected versions
+	Status       string            `json:"status"`   // Overall status
+	IsInstalled  bool              `json:"is_installed"`
+	ConflictWith string            `json:"conflict_with,omitempty"` // installed member of the same conflict group
+	Packages     []string          `json:"packages,omitempty"`      // distro packages (apt) shown before install
+	ConfigFiles  []core.ConfigFile `json:"config_files"`            // Detected config files
 }
 
 // managedServicesPayload is what both endpoints return: the cached scan and
@@ -91,6 +93,24 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		return nil, err
 	}
 
+	// Which catalogue packages are present (installed but maybe not running).
+	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
+	var installedIDs []string
+	_ = p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs)
+	installedSet := map[string]bool{}
+	for _, id := range installedIDs {
+		installedSet[id] = true
+	}
+	// Conflict groups: which group already has an installed member, and who.
+	// Çakışma grupları: hangi grupta zaten kurulu üye var ve kim.
+	groupOwner := map[string]string{}
+	for i := range core.ManagedServices {
+		m := &core.ManagedServices[i]
+		if m.ConflictGroup != "" && installedSet[m.ID] {
+			groupOwner[m.ConflictGroup] = m.Name
+		}
+	}
+
 	response := make([]ManagedServiceResponse, 0)
 	for _, managed := range core.ManagedServices {
 		versions := []string{}
@@ -138,22 +158,40 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		// Kurulu-olmayan katalog servisleri de dahildir ki panel tek-tık
 		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
 		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
+		// A present package counts as installed even if no unit is running
+		// yet (WireGuard before its first config, a stopped service…).
+		// Paket varsa, henüz çalışan unit olmasa da kurulu sayılır.
+		if !isInstalled && installedSet[managed.ID] {
+			isInstalled = true
+			status = "inactive (dead)"
+		}
+
+		conflictWith := ""
 		if !isInstalled {
 			status = "not_installed"
+			// Blocked only if the group's installed member is someone else.
+			// Yalnız grubun kurulu üyesi bir başkasıysa engellenir.
+			if managed.ConflictGroup != "" {
+				if owner, ok := groupOwner[managed.ConflictGroup]; ok && owner != managed.Name {
+					conflictWith = owner
+				}
+			}
 		} else if len(versions) == 0 {
 			versions = append(versions, "default")
 		}
 
 		response = append(response, ManagedServiceResponse{
-			ID:          managed.ID,
-			Name:        managed.Name,
-			Description: managed.Description,
-			Icon:        managed.Icon,
-			Category:    managed.Category,
-			Versions:    versions,
-			Status:      status,
-			IsInstalled: isInstalled,
-			ConfigFiles: configFiles,
+			ID:           managed.ID,
+			Name:         managed.Name,
+			Description:  managed.Description,
+			Icon:         managed.Icon,
+			Category:     managed.Category,
+			Versions:     versions,
+			Status:       status,
+			IsInstalled:  isInstalled,
+			ConflictWith: conflictWith,
+			Packages:     managed.Packages["apt"],
+			ConfigFiles:  configFiles,
 		})
 	}
 
