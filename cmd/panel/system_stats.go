@@ -148,9 +148,15 @@ func readDisk(path string) (used, total uint64) {
 	if err := syscall.Statfs(path, &st); err != nil {
 		return 0, 0
 	}
+	// Explicit casts: Statfs_t field types differ across OSes (Linux uses
+	// uint64, FreeBSD int64/uint32 mixes) — this line is what keeps the
+	// panel cross-compiling to BSD, per the roadmap's preserved option.
+	// Açık dönüşümler: Statfs_t alan tipleri OS'lere göre değişir (Linux
+	// uint64, FreeBSD int64/uint32 karışık) — panelin BSD'ye çapraz
+	// derlenmesini koruyan satır budur.
 	bs := uint64(st.Bsize)
-	total = st.Blocks * bs
-	free := st.Bavail * bs
+	total = uint64(st.Blocks) * bs
+	free := uint64(st.Bavail) * bs
 	if free > total {
 		free = total
 	}
