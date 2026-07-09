@@ -322,7 +322,11 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             <td className="px-4 py-3">
                                                 <span className="inline-flex items-center gap-1.5 text-fg-muted">
                                                     <StatusDot ok={running} />
-                                                    {running ? t('services.running') : t('services.stopped')}
+                                                    {!s.is_installed
+                                                        ? t('services.notInstalled')
+                                                        : running
+                                                          ? t('services.running')
+                                                          : t('services.stopped')}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">

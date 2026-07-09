@@ -150,6 +150,7 @@ export const tr: Record<TranslationKey, string> = {
     'services.col.status': 'Durum',
     'services.running': 'Çalışıyor',
     'services.stopped': 'Durdu',
+    'services.notInstalled': 'Kurulu değil',
     'services.start': 'Başlat',
     'services.stop': 'Durdur',
     'services.restart': 'Yeniden başlat',

@@ -151,6 +151,7 @@ export const en = {
     'services.col.status': 'Status',
     'services.running': 'Running',
     'services.stopped': 'Stopped',
+    'services.notInstalled': 'Not installed',
     'services.start': 'Start',
     'services.stop': 'Stop',
     'services.restart': 'Restart',
