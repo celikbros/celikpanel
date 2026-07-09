@@ -55,8 +55,15 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
             .catch(() => setCaps(null));
     }, []);
 
-    const phpAvailable = !!caps && caps.web_server !== '' && caps.php_versions.length > 0;
-    const staticAvailable = !!caps && caps.web_server !== '';
+    // Product rule (D-009): this server serves its domains' DNS itself — with
+    // no DNS server installed, no domain of any type can be added. One clear
+    // blocker instead of a confusing "install one OR manage DNS elsewhere".
+    // Ürün kuralı (D-009): bu sunucu, domain'lerinin DNS'ini kendisi sunar —
+    // DNS sunucusu kurulu değilken hiçbir tipte domain eklenemez. Kafa
+    // karıştıran "ya kur ya dışarıda yönet" yerine tek ve net engel.
+    const dnsMissing = !!caps && caps.dns_server === '';
+    const phpAvailable = !!caps && !dnsMissing && caps.web_server !== '' && caps.php_versions.length > 0;
+    const staticAvailable = !!caps && !dnsMissing && caps.web_server !== '';
 
     const typeOptions: {
         id: ProjectType;
@@ -64,9 +71,9 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
         available: boolean;
         requirement: string | null;
     }[] = [
-        { id: 'php', icon: FileCode2, available: phpAvailable, requirement: !caps ? null : caps.web_server === '' ? t('domains.add.needsWebServer') : caps.php_versions.length === 0 ? t('domains.add.needsPhp') : null },
-        { id: 'static', icon: Server, available: staticAvailable, requirement: !caps || staticAvailable ? null : t('domains.add.needsWebServer') },
-        { id: 'dnsonly', icon: Network, available: true, requirement: null },
+        { id: 'php', icon: FileCode2, available: phpAvailable, requirement: !caps || dnsMissing ? null : caps.web_server === '' ? t('domains.add.needsWebServer') : caps.php_versions.length === 0 ? t('domains.add.needsPhp') : null },
+        { id: 'static', icon: Server, available: staticAvailable, requirement: !caps || dnsMissing || staticAvailable ? null : t('domains.add.needsWebServer') },
+        { id: 'dnsonly', icon: Network, available: !dnsMissing, requirement: null },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -125,6 +132,12 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                 {error && (
                     <div className="mb-6 p-4 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
                         {error}
+                    </div>
+                )}
+
+                {dnsMissing && (
+                    <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg text-sm text-fg">
+                        {t('domains.add.needsDns')}
                     </div>
                 )}
 
@@ -215,16 +228,16 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                         </div>
                     )}
 
-                    <p className="text-xs text-fg-subtle">
-                        {caps && caps.dns_server !== ''
-                            ? t('domains.add.dnsServed', { server: caps.dns_server })
-                            : t('domains.add.dnsNotServed')}
-                    </p>
+                    {caps && caps.dns_server !== '' && (
+                        <p className="text-xs text-fg-subtle">
+                            {t('domains.add.dnsServed', { server: caps.dns_server })}
+                        </p>
+                    )}
 
                     <div className="flex gap-3 pt-4">
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || dnsMissing}
                             className="flex-1 bg-primary hover:bg-primary-hover disabled:bg-surface-3 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                         >
                             {loading ? t('domains.add.creating') : t('domains.add.create')}

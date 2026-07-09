@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/alicelik/celikpanel/internal/core"
 )
 
 // handleServiceInstall installs a managed service on demand (admin-only via
@@ -151,6 +154,24 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "service_id is required")
 		return
 	}
+
+	// The mirror of "no DNS server, no domains" (D-009): while domains exist,
+	// the DNS server that serves their zones cannot be removed — otherwise
+	// every domain silently goes dark, the exact trap the rule exists to
+	// prevent.
+	// "DNS sunucusu yoksa domain de yok"un aynası (D-009): domain'ler varken
+	// zone'larını sunan DNS sunucusu kaldırılamaz — yoksa her domain sessizce
+	// kararır; kuralın önlediği tuzağın ta kendisi.
+	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "dns-server" {
+		var n int
+		_ = p.db.GetDB().QueryRowContext(r.Context(), `SELECT COUNT(*) FROM domains`).Scan(&n)
+		if n > 0 {
+			writeClientError(w, http.StatusConflict, fmt.Sprintf(
+				"%d domain(s) are served by this DNS server — a domain cannot exist without DNS. Delete the domains first.", n))
+			return
+		}
+	}
+
 	var resp struct {
 		Removed bool   `json:"removed"`
 		Detail  string `json:"detail,omitempty"`

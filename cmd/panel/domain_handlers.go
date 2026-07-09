@@ -211,8 +211,19 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "project_type must be php, static or dnsonly")
 		return
 	}
+	caps := p.hostingCaps()
+	// Product rule (operator decision, D-009): every domain on this server is
+	// served by this server's own DNS — no DNS server, no domains. One mental
+	// model instead of a confusing "install one OR manage DNS elsewhere".
+	// Ürün kuralı (operatör kararı, D-009): bu sunucudaki her domain'in
+	// DNS'ini bu sunucunun kendisi sunar — DNS sunucusu yoksa domain de yok.
+	// Kafa karıştıran "ya kur ya dışarıda yönet" yerine tek zihinsel model.
+	if caps.DNSServer == "" {
+		writeClientError(w, http.StatusConflict,
+			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served")
+		return
+	}
 	if req.ProjectType == "php" || req.ProjectType == "static" {
-		caps := p.hostingCaps()
 		if caps.WebServer == "" {
 			writeClientError(w, http.StatusConflict,
 				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type")

@@ -8,6 +8,32 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-009 · No DNS server, no domains: the panel is authoritative for its domains
+
+*July 9, 2026*
+
+**Decision.** A domain can only be added when a DNS server (PowerDNS/BIND) is
+installed, and the DNS server cannot be uninstalled while domains exist. Every
+domain on a CelikPanel server is served by that server's own DNS — there is no
+"or manage DNS at your external provider" branch.
+
+**Why.** The operator's verdict after living with the either/or messaging:
+"dns yoksa domain de olmamalı — kafa karıştırıyor." A record list that nothing
+serves is a trap dressed as a feature; two valid-but-different mental models in
+one dialog is one too many. One rule reads instantly: install DNS first, then
+domains. This consciously supersedes the earlier "DNS can be external" stance
+in D-008's first-day notes — external DNS can return later as an explicit
+advanced mode if a real user needs it; the alpha optimises for coherence.
+
+**How it holds up.** Preflight blocks creation of every domain type with an
+actionable 409 (and the dialog disables all choices with one clear banner);
+the mirror guard refuses uninstalling the dns-server group member while any
+domain exists — otherwise every domain would silently go dark, the exact trap
+the rule prevents. All "or manage externally" copy removed. Proven live:
+creation without DNS → 409.
+
+---
+
 ## D-008 · Alpha: the operator drives the panel; every gap becomes a product feature
 
 *July 9, 2026*

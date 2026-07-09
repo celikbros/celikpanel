@@ -8,6 +8,32 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-009 · DNS sunucusu yoksa domain de yok: panel, domain'lerinin otoritesidir
+
+*9 Temmuz 2026*
+
+**Karar.** Bir domain ancak DNS sunucusu (PowerDNS/BIND) kuruluyken
+eklenebilir ve domain'ler varken DNS sunucusu kaldırılamaz. CelikPanel
+sunucusundaki her domain'in DNS'ini o sunucunun kendisi sunar — "ya da DNS'i
+dış sağlayıcıda yönet" dalı yoktur.
+
+**Neden.** Operatörün ya/ya-da mesajlarıyla yaşadıktan sonraki hükmü: "dns
+yoksa domain de olmamalı — kafa karıştırıyor." Hiçbir şeyin sunmadığı bir
+kayıt listesi, özellik kılığında bir tuzaktır; tek pencerede iki ayrı zihinsel
+model, bir fazladır. Tek kural anında okunur: önce DNS kur, sonra domain. Bu,
+D-008'in ilk-gün notlarındaki "DNS dışarıda da olabilir" duruşunu bilinçli
+olarak geçersiz kılar — dış DNS, gerçek bir kullanıcı isterse ileride açık bir
+gelişmiş mod olarak dönebilir; alfa tutarlılık için eniyilenir.
+
+**Nasıl duruyor.** Ön-denetim her domain tipinin oluşturulmasını eyleme dönük
+bir 409 ile engeller (pencere de tüm seçenekleri tek ve net bir bantla
+kapatır); ayna koruması, herhangi bir domain varken dns-server grubu üyesinin
+kaldırılmasını reddeder — yoksa her domain sessizce kararırdı; kuralın
+önlediği tuzağın ta kendisi. Tüm "ya da dışarıda yönet" metinleri kaldırıldı.
+Canlı kanıt: DNS'siz oluşturma → 409.
+
+---
+
 ## D-008 · Alfa: paneli operatör sürer; her boşluk bir ürün özelliğine dönüşür
 
 *9 Temmuz 2026*
