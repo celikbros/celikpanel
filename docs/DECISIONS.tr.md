@@ -8,6 +8,42 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-008 · Alfa: paneli operatör sürer; her boşluk bir ürün özelliğine dönüşür
+
+*9 Temmuz 2026*
+
+**Karar.** Debian 13 yeniden kurulumundan itibaren operatör, CelikPanel'i
+gerçek bir müşteri gibi kullanır: her kurulum, her ayar, her domain panelden
+ve kendi eliyle geçer. Geliştirici sunucuyu asla yapılandırmaz — izinle bile.
+Operatör bir duvara çarptığında suç ürünündür: eksik yetenek panele eklenir
+(ya da bozuk olan düzeltilir) ve ürün güncellemesi olarak yayınlanır. SSH ile
+teşhis salt-okunur kalır.
+
+**Neden.** Sunucuyu SSH ile elle onarmak, ürünü olduğundan bitmiş gösterir —
+boşluk üründen değil görüş alanından kaybolur. Bu, D-005 ile (hiçbir şey
+kurma) başlayıp "sormadan asla kurma" ile keskinleşen çizginin son
+basamağıdır: geliştirici artık *hiçbir şey* kurmaz ve ayarlamaz. Alfa
+kalitesi duvarlara bilerek yürümekten gelir.
+
+**İlk günde nasıl işledi.** Bir öğleden sonralık gerçek operatör kullanımı
+sırayla şunları çıkardı ve düzelttirdi: domain'in yanlışlıkla PHP zorunlu
+sayması (oluşturma yolu tip sisteminden eskiydi) → php/statik/**yalnız-DNS**
+tipli, canlı önkoşul denetimli rol-farkında Alan Adı Ekle (Plesk'in "no web
+hosting" karşılığı); kurulu olmayan servislerin hayalet ayar sayfaları → her
+sekme, motor listesi ve sürüm açılır kutusu artık sunucunun gerçek yetenek
+kümesini okur (tek uç nokta: `/api/v1/hosting/capabilities`); ölü
+phpMyAdmin/pgAdmin bağlantıları → genel bir `Requires` katalog kavramı
+(çakışma gruplarının tersi): bağımlı araçlar üst servisleri kurulana dek
+kilitlidir, kurulunca yalnız-loopback'te, admin-kapılı panel vekilinin
+arkasında sunulur; panele gerçek sertifika almanın yolu yoktu → Ayarlar'da
+tek tık Let's Encrypt + otomatik yenileme; ve en sessiz, en büyüğü — panel
+`index.html`'i önbellek başlıksız veriyordu; tarayıcılar her güncellemeden
+sonra ESKİ arayüzü göstermeye devam etti. Operatör, çoktan düzeltilmiş
+hayaletleri gördü; artık giriş noktası `no-cache`, parmak izli asset'ler
+immutable.
+
+---
+
 ## D-007 · Sürüm seçimi, dağıtımı fork'lamadan yönetilen vendor depolarıyla
 
 *9 Temmuz 2026*

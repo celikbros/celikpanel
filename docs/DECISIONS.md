@@ -8,6 +8,41 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-008 · Alpha: the operator drives the panel; every gap becomes a product feature
+
+*July 9, 2026*
+
+**Decision.** From the Debian 13 reinstall onward, the operator uses CelikPanel
+exactly like a real customer: every install, every setting, every domain goes
+through the panel, by their hand. The developer never configures the server —
+not even with permission. When the operator hits a wall, the wall is the
+product's fault: the missing capability is built into the panel (or the broken
+one fixed) and shipped as a product update. Diagnosis over SSH stays read-only.
+
+**Why.** Hand-fixing a server over SSH makes the product look more finished
+than it is — the gap disappears from view instead of from the product. This is
+the final escalation of a line that started with D-005 (install nothing) and
+sharpened through "never install unasked": now the developer installs and
+configures *nothing at all*. Alpha quality comes from walking into the walls.
+
+**How it held up on day one.** One afternoon of real operator use surfaced and
+fixed, in order: a domain wrongly requiring PHP (creation predated the type
+system) → role-aware Add Domain with php/static/**DNS-only** types (Plesk's
+"no web hosting" equivalent) and live prerequisite checks; ghost settings
+pages for services that are not installed → every tab, engine list and version
+dropdown now reads the server's real capability set (one endpoint,
+`/api/v1/hosting/capabilities`); dead phpMyAdmin/pgAdmin links → a general
+`Requires` catalogue concept (the inverse of conflict groups): dependent tools
+are locked until their parent service exists, and once installed are served
+loopback-only behind an admin-gated panel proxy; no way to get the panel a
+real certificate → one-click Let's Encrypt in Settings with automatic renewal;
+and the quietest, biggest one — the panel served `index.html` with no cache
+headers, so browsers kept showing the OLD interface after every update. The
+operator saw ghosts that had already been fixed; now the entry point is
+`no-cache` and fingerprinted assets are immutable.
+
+---
+
 ## D-007 · Version choice via managed vendor repositories, not a fork of the distro
 
 *July 9, 2026*
