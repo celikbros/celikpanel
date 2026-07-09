@@ -24,10 +24,11 @@ import (
 // değil.
 
 type hostingCapabilities struct {
-	WebServer   string   `json:"web_server"`   // "nginx", "apache" or "" when none
-	PHPVersions []string `json:"php_versions"` // installed FPM versions, newest first
-	DNSServer   string   `json:"dns_server"`   // "pdns", "bind" or ""
-	MailServer  bool     `json:"mail_server"`  // postfix present
+	WebServer      string   `json:"web_server"`      // "nginx", "apache" or "" when none
+	PHPVersions    []string `json:"php_versions"`    // installed FPM versions, newest first
+	DNSServer      string   `json:"dns_server"`      // "pdns", "bind" or ""
+	MailServer     bool     `json:"mail_server"`     // postfix present
+	DatabaseServer string   `json:"database_server"` // "mariadb", "postgresql" or ""
 }
 
 // hostingCaps computes the current capability set from installed services
@@ -51,6 +52,10 @@ func (p *Panel) hostingCaps() hostingCapabilities {
 			}
 		case "postfix":
 			caps.MailServer = true
+		case "mariadb", "postgresql":
+			if caps.DatabaseServer == "" {
+				caps.DatabaseServer = id
+			}
 		}
 	}
 	return caps

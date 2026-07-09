@@ -23,11 +23,24 @@ interface Domain {
     id: number;
     domain_name: string;
     php_version: string;
+    project_type?: string;
     ssl_enabled: boolean;
     status: string;
     created_at: string;
     disk_usage?: number;
     bandwidth?: number;
+}
+
+// What the server can actually do — tabs for services that are not installed
+// would be settings pages for ghosts. Fetched once per visit.
+// Sunucunun gerçekten yapabildiği — kurulu olmayan servislerin sekmeleri,
+// hayaletlerin ayar sayfaları olurdu. Ziyaret başına bir kez çekilir.
+interface Caps {
+    web_server: string;
+    php_versions: string[];
+    dns_server: string;
+    mail_server: boolean;
+    database_server: string;
 }
 
 interface DomainDetailProps {
@@ -84,6 +97,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             .catch(() => {});
     }, [domainId, domainLoaded]);
 
+    const [caps, setCaps] = useState<Caps | null>(null);
+    useEffect(() => {
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then(setCaps)
+            .catch(() => setCaps(null));
+    }, []);
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -93,35 +114,49 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     }
     if (!domain) return null;
 
-    // Tab tree. Panels reuse the existing managers unchanged.
-    // Sekme ağacı. Paneller mevcut yöneticileri değiştirmeden kullanır.
+    // Tab tree — honest to the domain's role and the server's capabilities.
+    // A DNS-only domain has no files, no PHP, no vhost: showing those tabs
+    // would be settings pages for ghosts. Likewise Mail/Databases only exist
+    // when the matching server is actually installed (caps=null while loading
+    // keeps them visible rather than flashing tabs in and out).
+    // Sekme ağacı — domain'in rolüne ve sunucunun yeteneklerine dürüst.
+    // Yalnız-DNS domain'in dosyası, PHP'si, vhost'u yok: o sekmeleri
+    // göstermek hayaletlere ayar sayfası olurdu. Mail/Veritabanı da ancak
+    // ilgili sunucu gerçekten kuruluyken vardır (caps yüklenirken null →
+    // sekmeler girip çıkarak titremesin diye görünür kalırlar).
+    const projectType = domain.project_type || 'php';
+    const isDnsOnly = projectType === 'dnsonly';
     const tabs: TabDef[] = [
         { id: 'overview', labelKey: 'domain.tab.overview', icon: LayoutGrid },
-        {
+        ...(!isDnsOnly ? [{
             id: 'hosting', labelKey: 'domain.tab.hosting', icon: Server,
             subs: [
                 { id: 'general', labelKey: 'domain.sub.general', render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> },
                 { id: 'type', labelKey: 'domain.sub.hostingType', render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> },
-                { id: 'php', labelKey: 'domain.sub.php', render: () => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} /> },
+                ...(projectType === 'php' ? [{ id: 'php', labelKey: 'domain.sub.php', render: () => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} /> } satisfies SubDef] : []),
                 { id: 'ssl', labelKey: 'domain.sub.ssl', render: () => <DomainSSLSettings domainId={domain.id} domainName={domain.domain_name} /> },
             ],
-        },
+        } satisfies TabDef] : []),
         { id: 'dns', labelKey: 'domain.tab.dns', icon: Network, render: () => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} /> },
-        { id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, render: () => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} /> },
-        { id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> },
-        { id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> },
-        { id: 'files', labelKey: 'domain.tab.files', icon: Folder, render: () => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} /> },
-        {
+        ...(!caps || caps.mail_server ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, render: () => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(!caps || caps.database_server !== '' ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(projectType === 'php' ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(!isDnsOnly ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, render: () => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(!isDnsOnly ? [{
             id: 'advanced', labelKey: 'domain.tab.advanced', icon: Wrench,
             subs: [
                 { id: 'backups', labelKey: 'domain.sub.backups', render: () => <DomainBackupManager domainId={domain.id} domainName={domain.domain_name} /> },
                 { id: 'cron', labelKey: 'domain.sub.cron', render: () => <DomainCronManager domainId={domain.id} domainName={domain.domain_name} /> },
                 { id: 'logs', labelKey: 'domain.sub.logs', render: () => <DomainLogsViewer domainId={domain.id} domainName={domain.domain_name} /> },
             ],
-        },
+        } satisfies TabDef] : []),
     ];
 
-    const current = tabs.find((tb) => tb.id === activeTab)!;
+    // A tab can disappear when capabilities load (or the type changes) —
+    // never crash on a stale selection, fall back to the overview.
+    // Yetenekler yüklenince (ya da tip değişince) bir sekme kaybolabilir —
+    // bayat seçimde asla çökme, genel bakışa düş.
+    const current = tabs.find((tb) => tb.id === activeTab) ?? tabs[0];
     const subId = current.subs ? activeSub[current.id] ?? current.subs[0].id : undefined;
 
     return (
@@ -141,32 +176,44 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         <StatusDot ok={domain.status === 'active'} />
                         {domain.status === 'active' ? t('domains.status.active') : domain.status}
                     </span>
-                    <a
-                        href={`https://${domain.domain_name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2"
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                        {t('domain.openSite')}
-                    </a>
+                    {!isDnsOnly && (
+                        <a
+                            href={`https://${domain.domain_name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2"
+                        >
+                            <ExternalLink className="h-4 w-4" />
+                            {t('domain.openSite')}
+                        </a>
+                    )}
                 </div>
 
                 {/* Fact strip — status already lives next to the title, so
                     only the facts that add something. / Bilgi şeridi — durum
                     zaten başlığın yanında; yalnız bir şey katan bilgiler. */}
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                    <Fact label={t('domain.info.php')}>{domain.php_version || '—'}</Fact>
-                    <FactDivider />
-                    <Fact label={t('domain.info.ssl')}>
-                        <span className={domain.ssl_enabled ? 'text-success' : 'text-fg-subtle'}>
-                            {domain.ssl_enabled ? t('domain.info.on') : t('domain.info.off')}
-                        </span>
-                    </Fact>
-                    <FactDivider />
-                    <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>
-                    <FactDivider />
-                    <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>
+                    <Fact label={t('domain.info.type')}>{projectType}</Fact>
+                    {projectType === 'php' && (
+                        <>
+                            <FactDivider />
+                            <Fact label={t('domain.info.php')}>{domain.php_version || '—'}</Fact>
+                        </>
+                    )}
+                    {!isDnsOnly && (
+                        <>
+                            <FactDivider />
+                            <Fact label={t('domain.info.ssl')}>
+                                <span className={domain.ssl_enabled ? 'text-success' : 'text-fg-subtle'}>
+                                    {domain.ssl_enabled ? t('domain.info.on') : t('domain.info.off')}
+                                </span>
+                            </Fact>
+                            <FactDivider />
+                            <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>
+                            <FactDivider />
+                            <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>
+                        </>
+                    )}
                 </div>
             </div>
 
