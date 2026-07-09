@@ -187,6 +187,7 @@ export const tr: Record<TranslationKey, string> = {
     'services.installedLabel': 'Kurulu',
     'services.requiresLabel': '{names} gerekir',
     'services.requiresHint': 'Önce {names} kurun, sonra bu kullanılabilir olur.',
+    'dns.notServed': 'Bu kayıtlar kaydedildi ama henüz YAYINLANMIYOR: bu sunucuda DNS sunucusu kurulu değil. Yayınlamak için Servisler sayfasından PowerDNS veya BIND kurun — ya da DNS yönetimini dış sağlayıcıda sürdürün.',
     'dbtools.title': 'Veritabanı web araçları',
     'dbtools.hint': 'Veritabanlarını tarayıcıda yönetin. Panel üzerinden, yalnız yönetici — ağa asla açılmaz.',
     'dbtools.open': '{name} aç',

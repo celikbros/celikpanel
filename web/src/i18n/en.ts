@@ -188,6 +188,7 @@ export const en = {
     'services.installedLabel': 'Installed',
     'services.requiresLabel': 'Needs {names}',
     'services.requiresHint': 'Install {names} first, then this becomes available.',
+    'dns.notServed': 'These records are saved but NOT being served yet: no DNS server is installed on this server. Install PowerDNS or BIND from Services to publish them — or manage DNS at your external provider and keep this list as reference.',
     'dbtools.title': 'Database web tools',
     'dbtools.hint': 'Manage databases in the browser. Opened through the panel, admin-only — never exposed to the network.',
     'dbtools.open': 'Open {name}',

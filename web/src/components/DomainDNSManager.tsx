@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, ShieldCheck, Copy } from 'lucide-react';
+import { Globe, Plus, Trash2, ShieldCheck, Copy, AlertTriangle } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, EmptyState, inputClass } from './ui';
@@ -45,8 +45,20 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     const [newTTL, setNewTTL] = useState(3600);
     const [newPrio, setNewPrio] = useState(0);
 
+    // Whether anything actually serves this zone: '' = no DNS server installed
+    // (records are saved but not published), otherwise "pdns"/"bind". null
+    // while loading — the banner only appears once we know for sure.
+    // Bu zone'u fiilen bir şeyin sunup sunmadığı: '' = DNS sunucusu kurulu
+    // değil (kayıtlar kayıtlı ama yayınlanmıyor), aksi halde "pdns"/"bind".
+    // Yüklenirken null — bant ancak kesin bilince görünür.
+    const [dnsServer, setDnsServer] = useState<string | null>(null);
+
     useEffect(() => {
         checkZone();
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c) => setDnsServer(c ? (c.dns_server ?? '') : null))
+            .catch(() => setDnsServer(null));
     }, [domainId]);
 
     const checkZone = async () => {
@@ -144,7 +156,23 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 
     return (
         <div>
-            <DNSSECSection domainId={domainId} domainName={domainName} />
+            {/* Honesty first: the records below are real, editable panel data,
+                but with no DNS server installed NOTHING serves them — say so
+                loudly instead of letting 13 rows look live. DNSSEC signing
+                needs the DNS server's tooling, so that card only exists when
+                one is installed.
+                Önce dürüstlük: aşağıdaki kayıtlar gerçek, düzenlenebilir panel
+                verisidir ama DNS sunucusu kurulu değilken onları HİÇBİR ŞEY
+                yayınlamaz — 13 satırı canlı gibi bırakmak yerine bunu açıkça
+                söyle. DNSSEC imzalama DNS sunucusunun aracını ister; o kart
+                yalnız biri kuruluyken var olur. */}
+            {dnsServer === '' && (
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                    <span>{t('dns.notServed')}</span>
+                </div>
+            )}
+            {dnsServer !== '' && <DNSSECSection domainId={domainId} domainName={domainName} />}
 
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: records.length })}</span>
