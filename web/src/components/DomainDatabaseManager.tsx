@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Database, Plus, Trash2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Database, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 
 interface DomainDatabaseManagerProps {
@@ -20,6 +20,27 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
+
+    // Only engines that are actually installed may be offered — a dropdown
+    // with MySQL and PostgreSQL on a server that runs neither is a settings
+    // page for ghosts. The engine ids map to the panel's db types.
+    // Yalnız gerçekten kurulu motorlar sunulabilir — ikisi de koşmayan bir
+    // sunucuda MySQL+PostgreSQL açılır listesi, hayaletlere ayar sayfasıdır.
+    const [engines, setEngines] = useState<{ value: 'mysql' | 'postgresql'; label: string }[]>([]);
+    useEffect(() => {
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c: { database_servers?: string[] } | null) => {
+                const list: { value: 'mysql' | 'postgresql'; label: string }[] = [];
+                for (const id of c?.database_servers ?? []) {
+                    if (id === 'mariadb') list.push({ value: 'mysql', label: 'MySQL / MariaDB' });
+                    if (id === 'postgresql') list.push({ value: 'postgresql', label: 'PostgreSQL' });
+                }
+                setEngines(list);
+                if (list.length > 0) setDbType(list[0].value);
+            })
+            .catch(() => setEngines([]));
+    }, []);
 
     // Form state
     const [dbName, setDbName] = useState('');
@@ -109,14 +130,6 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
         }
     };
 
-    const getPhpMyAdminUrl = () => {
-        return '/phpmyadmin'; // Adjust based on your setup
-    };
-
-    const getPgAdminUrl = () => {
-        return '/pgadmin'; // Adjust based on your setup
-    };
-
     return (
         <div className="space-y-6">
             <div>
@@ -164,8 +177,9 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                 onChange={(e) => setDbType(e.target.value as 'mysql' | 'postgresql')}
                                 className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                             >
-                                <option value="mysql">MySQL</option>
-                                <option value="postgresql">PostgreSQL</option>
+                                {engines.map((eng) => (
+                                    <option key={eng.value} value={eng.value}>{eng.label}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -270,15 +284,6 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            <a
-                                                href={db.type === 'mysql' ? getPhpMyAdminUrl() : getPgAdminUrl()}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="p-2 text-primary hover:bg-primary/30 rounded transition-colors"
-                                                title={db.type === 'mysql' ? 'Open phpMyAdmin' : 'Open pgAdmin'}
-                                            >
-                                                <ExternalLink className="w-4 h-4" />
-                                            </a>
                                             <button
                                                 onClick={() => handleDeleteDatabase(db)}
                                                 className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
@@ -292,31 +297,6 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                             ))}
                         </div>
                     )}
-                </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="bg-surface-2/50 rounded-lg p-4 border border-border">
-                <h4 className="text-sm font-semibold text-fg mb-3">Database Tools</h4>
-                <div className="flex gap-3">
-                    <a
-                        href={getPhpMyAdminUrl()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2 text-sm"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        phpMyAdmin
-                    </a>
-                    <a
-                        href={getPgAdminUrl()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-purple-600 text-fg rounded hover:bg-purple-700 flex items-center gap-2 text-sm"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        pgAdmin
-                    </a>
                 </div>
             </div>
         </div>

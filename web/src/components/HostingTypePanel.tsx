@@ -42,6 +42,20 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
     const [versions, setVersions] = useState<string[]>([]);
     const [systemVersion, setSystemVersion] = useState('');
 
+    // A type whose requirement is missing on this server must say so instead
+    // of failing at Apply: switching to PHP needs PHP-FPM installed.
+    // Gereksinimi bu sunucuda eksik olan bir tip, Uygula'da patlamak yerine
+    // bunu söylemeli: PHP'ye geçmek kurulu PHP-FPM ister.
+    const [phpInstalled, setPhpInstalled] = useState(true);
+    useEffect(() => {
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c: { php_versions?: string[] } | null) => {
+                if (c) setPhpInstalled((c.php_versions?.length ?? 0) > 0);
+            })
+            .catch(() => {});
+    }, []);
+
     const load = useCallback(async () => {
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/hosting`);
@@ -97,19 +111,24 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
                     {typeDefs.map(({ id, icon: Icon, labelKey, descKey }) => {
                         const active = state.project_type === id;
+                        const unavailable = id === 'php' && !phpInstalled;
                         return (
                             <button
                                 key={id}
                                 onClick={() => setState({ ...state, project_type: id })}
-                                title={t(descKey)}
+                                disabled={unavailable}
+                                title={unavailable ? t('hosting.phpMissing') : t(descKey)}
                                 className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-colors ${
                                     active
                                         ? 'border-primary bg-primary/10'
                                         : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-2'
-                                }`}
+                                } ${unavailable ? 'cursor-not-allowed opacity-50' : ''}`}
                             >
                                 <Icon className={`h-5 w-5 ${active ? 'text-primary' : 'text-fg-muted'}`} />
                                 <span className={`text-sm font-semibold ${active ? 'text-primary' : 'text-fg'}`}>{t(labelKey)}</span>
+                                {unavailable && (
+                                    <span className="text-[11px] font-medium text-warning">{t('hosting.phpMissing')}</span>
+                                )}
                             </button>
                         );
                     })}

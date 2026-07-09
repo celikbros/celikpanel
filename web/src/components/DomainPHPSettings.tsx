@@ -25,7 +25,13 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState(currentVersion);
-    const [versions, setVersions] = useState<string[]>(['8.3']);
+    // Only versions that actually exist on this host — a hard-coded "8.3" on
+    // a server without PHP was a settings page for a ghost. The current
+    // version stays selectable even if its tree vanished (honest state).
+    // Yalnız bu makinede gerçekten var olan sürümler — PHP'siz sunucuda sabit
+    // "8.3", hayalete ayar sayfasıydı. Mevcut sürüm, ağacı kaybolsa bile
+    // seçilebilir kalır (dürüst durum).
+    const [versions, setVersions] = useState<string[]>(currentVersion ? [currentVersion] : []);
 
     useEffect(() => {
         loadSettings();
@@ -34,11 +40,10 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
 
     const loadVersions = async () => {
         try {
-            const res = await fetch('/api/v1/managed-services');
+            const res = await fetch('/api/v1/hosting/capabilities');
             if (!res.ok) return;
-            const services = (await res.json())?.services || [];
-            const php = services.find((s: any) => s.id === 'php-fpm');
-            if (php?.versions?.length) setVersions(php.versions);
+            const caps = await res.json();
+            if (caps?.php_versions?.length) setVersions(caps.php_versions);
         } catch {
             /* keep default */
         }

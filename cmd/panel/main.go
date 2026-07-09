@@ -422,12 +422,28 @@ func main() {
 		cleanPath := path.Clean("/" + strings.TrimPrefix(r.URL.Path, "/"))
 		filePath := filepath.Join(webRoot, cleanPath)
 		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
-			// File exists, serve it
+			// Vite fingerprints everything under /assets/ (index-Ab12Cd.js), so
+			// those may be cached forever; a product update changes the name.
+			// Vite, /assets/ altındaki her şeye parmak izi verir; sonsuza dek
+			// önbelleklenebilir — ürün güncellemesi adı değiştirir.
+			if strings.HasPrefix(cleanPath, "/assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
 			fs.ServeHTTP(w, r)
 			return
 		}
 
-		// File doesn't exist, serve index.html for SPA routing
+		// File doesn't exist, serve index.html for SPA routing. The entry
+		// point must never be cached: a stale index.html keeps loading the
+		// OLD bundle and users keep seeing the previous UI after an update —
+		// observed live in the alpha.
+		// Dosya yoksa SPA yönlendirmesi için index.html. Giriş noktası asla
+		// önbelleklenmemeli: bayat bir index.html ESKİ paketi yüklemeye devam
+		// eder ve kullanıcı güncellemeden sonra önceki arayüzü görür — alfada
+		// canlı görüldü.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, filepath.Join(webRoot, "index.html"))
 	})
 

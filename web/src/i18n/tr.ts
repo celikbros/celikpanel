@@ -845,6 +845,7 @@ export const tr: Record<TranslationKey, string> = {
 
     'domain.sub.hostingType': 'Barındırma tipi',
     'hosting.typeLabel': 'Proje tipi',
+    'hosting.phpMissing': 'PHP-FPM kurulu değil — Servisler sayfasından kurun.',
     'hosting.type.php': 'PHP',
     'hosting.type.static': 'Statik',
     'hosting.type.node': 'Node.js',

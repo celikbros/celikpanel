@@ -28,7 +28,11 @@ type hostingCapabilities struct {
 	PHPVersions    []string `json:"php_versions"`    // installed FPM versions, newest first
 	DNSServer      string   `json:"dns_server"`      // "pdns", "bind" or ""
 	MailServer     bool     `json:"mail_server"`     // postfix present
-	DatabaseServer string   `json:"database_server"` // "mariadb", "postgresql" or ""
+	// All installed database engines — a server can legitimately run both
+	// MariaDB and PostgreSQL side by side (no conflict group).
+	// Kurulu tüm veritabanı motorları — bir sunucu MariaDB ve PostgreSQL'i
+	// yan yana meşru biçimde koşturabilir (çakışma grubu yok).
+	DatabaseServers []string `json:"database_servers"`
 }
 
 // hostingCaps computes the current capability set from installed services
@@ -53,9 +57,7 @@ func (p *Panel) hostingCaps() hostingCapabilities {
 		case "postfix":
 			caps.MailServer = true
 		case "mariadb", "postgresql":
-			if caps.DatabaseServer == "" {
-				caps.DatabaseServer = id
-			}
+			caps.DatabaseServers = append(caps.DatabaseServers, id)
 		}
 	}
 	return caps

@@ -845,6 +845,7 @@ export const en = {
 
     'domain.sub.hostingType': 'Hosting type',
     'hosting.typeLabel': 'Project type',
+    'hosting.phpMissing': 'PHP-FPM is not installed — install it from Services.',
     'hosting.type.php': 'PHP',
     'hosting.type.static': 'Static',
     'hosting.type.node': 'Node.js',

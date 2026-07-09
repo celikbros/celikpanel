@@ -40,7 +40,7 @@ interface Caps {
     php_versions: string[];
     dns_server: string;
     mail_server: boolean;
-    database_server: string;
+    database_servers: string[] | null;
 }
 
 interface DomainDetailProps {
@@ -139,7 +139,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         } satisfies TabDef] : []),
         { id: 'dns', labelKey: 'domain.tab.dns', icon: Network, render: () => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} /> },
         ...(!caps || caps.mail_server ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, render: () => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
-        ...(!caps || caps.database_server !== '' ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(!caps || (caps.database_servers?.length ?? 0) > 0 ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
         ...(projectType === 'php' ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
         ...(!isDnsOnly ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, render: () => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
         ...(!isDnsOnly ? [{
