@@ -164,11 +164,18 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 	return paths
 }
 
-// extractPHPVersion extracts version from service name (e.g., php8.3-fpm -> 8.3)
+// extractPHPVersion extracts version from service name (e.g., php8.3-fpm -> 8.3).
+// A bare "php-fpm" name carries no version, so fall back to what is actually
+// installed on this host rather than a constant.
+// extractPHPVersion, sürümü servis adından çıkarır (php8.3-fpm → 8.3). Yalın
+// "php-fpm" adı sürüm taşımaz; sabit yerine makinede gerçekten kurulu olana düş.
 func (s *ServiceScanner) extractPHPVersion(serviceName string) string {
 	parts := strings.Split(serviceName, "-")
-	if len(parts) > 0 && strings.HasPrefix(parts[0], "php") {
+	if len(parts) > 0 && strings.HasPrefix(parts[0], "php") && parts[0] != "php" {
 		return strings.TrimPrefix(parts[0], "php")
+	}
+	if v := DetectInstalledPHPVersion(); v != "" {
+		return v
 	}
 	return "8.3" // default
 }

@@ -45,6 +45,12 @@ func (a *Agent) ConfigureMailSubmission(_ *struct{}, resp *ConfigureMailSubmissi
 
 	// Dovecot: auth socket reachable from Postfix's chroot.
 	// Dovecot: Postfix chroot'undan erişilebilir kimlik soketi.
+	// service auth / unix_listener syntax is identical in Dovecot 2.3 and 2.4;
+	// still validated via applyDovecotConf so a broken combination with the
+	// other drop-ins surfaces here rather than as a dead service.
+	// service auth / unix_listener sözdizimi Dovecot 2.3 ve 2.4'te aynıdır;
+	// yine de applyDovecotConf ile doğrulanır ki diğer eklerle bozuk bir
+	// bileşim ölü servis yerine burada yüzeye çıksın.
 	dovecotConf := `# Managed by CelikPanel — SASL for Postfix submission. Do not edit by hand.
 service auth {
   unix_listener /var/spool/postfix/private/auth {
@@ -54,7 +60,7 @@ service auth {
   }
 }
 `
-	if err := os.WriteFile(dovecotSubmissionConf, []byte(dovecotConf), 0o644); err != nil {
+	if err := applyDovecotConf(dovecotSubmissionConf, dovecotConf); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}

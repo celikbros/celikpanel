@@ -151,22 +151,11 @@ func configurePostfixVirtual() error {
 // son (99-) yüklenir; böylece dağıtımın varsayılan mail_location ve sistem
 // auth'una üstün gelir.
 func configureDovecotVirtual() error {
-	conf := fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
-mail_location = maildir:%s/%%d/%%n
-mail_uid = %s
-mail_gid = %s
-first_valid_uid = %s
-passdb {
-  driver = passwd-file
-  args = scheme=CRYPT username_format=%%u %s
-}
-userdb {
-  driver = passwd-file
-  args = username_format=%%u %s
-  default_fields = uid=%s gid=%s home=%s/%%d/%%n
-}
-`, mailRootDir, vmailUID, vmailGID, vmailUID,
-		dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, mailRootDir)
+	// The dialect follows the installed Dovecot: 2.3 (mail_location) vs 2.4
+	// (mail_driver/mail_path) — see dovecot_dialect.go for the why.
+	// Lehçe kurulu Dovecot'u izler: 2.3 (mail_location) vs 2.4
+	// (mail_driver/mail_path) — nedeni için dovecot_dialect.go.
+	conf := buildDovecotVirtualConf(dovecotIs24())
 
 	confDir := "/etc/dovecot/conf.d"
 	if !fileExistsAgent(confDir) {
@@ -190,7 +179,12 @@ userdb {
 		}
 	}
 	_ = os.Chmod(dovecotUsersPath, 0o640)
-	if err := os.WriteFile(confDir+"/99-celikpanel.conf", []byte(conf), 0o644); err != nil {
+	// Validate with dovecot's own parser before the service is restarted; a
+	// dialect mistake must surface here as an error, not as a dead service.
+	// Servis yeniden başlatılmadan önce dovecot'un kendi ayrıştırıcısıyla
+	// doğrula; bir lehçe hatası ölü servis olarak değil burada hata olarak
+	// yüzeye çıkmalı.
+	if err := applyDovecotConf(confDir+"/99-celikpanel.conf", conf); err != nil {
 		return err
 	}
 

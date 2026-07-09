@@ -235,23 +235,12 @@ func configureDovecotTLS(sni []MailSNIEntry) error {
 	if err := os.MkdirAll(filepath.Dir(dovecotTLSConf), 0o755); err != nil {
 		return err
 	}
-	var b strings.Builder
-	b.WriteString("# Managed by CelikPanel — mail TLS. Do not edit by hand.\n")
-	b.WriteString("ssl = yes\n")
-	b.WriteString("ssl_min_protocol = TLSv1.2\n")
-	fmt.Fprintf(&b, "ssl_cert = <%s\n", defaultMailCert)
-	fmt.Fprintf(&b, "ssl_key = <%s\n", defaultMailKey)
-	for _, e := range sni {
-		for _, name := range e.Names {
-			name = strings.ToLower(strings.TrimSpace(name))
-			if name == "" {
-				continue
-			}
-			fmt.Fprintf(&b, "\nlocal_name %s {\n  ssl_cert = <%s\n  ssl_key = <%s\n}\n",
-				name, e.CertPath, e.KeyPath)
-		}
-	}
-	return os.WriteFile(dovecotTLSConf, []byte(b.String()), 0o644)
+	// Dialect-aware (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=), and
+	// validated by dovecot's parser before any restart — see dovecot_dialect.go.
+	// Lehçe-farkında (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=) ve yeniden
+	// başlatmadan önce dovecot ayrıştırıcısıyla doğrulanır.
+	conf := buildDovecotTLSConf(dovecotIs24(), defaultMailCert, defaultMailKey, sni)
+	return applyDovecotConf(dovecotTLSConf, conf)
 }
 
 func fileExists(p string) bool {

@@ -57,6 +57,15 @@ func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) er
 		}
 	}
 	_ = exec.Command("pdnsutil", "rectify-zone", zone).Run()
+	// pdns caches packets and DNSSEC keys; without a purge a freshly signed
+	// zone can keep answering unsigned for a while (seen live: RRSIG appeared
+	// only after a restart). Purging the zone's cache entries makes the
+	// signatures visible immediately; harmless if pdns_control is absent.
+	// pdns paketleri ve DNSSEC anahtarlarını önbellekler; purge olmadan yeni
+	// imzalanan zone bir süre imzasız cevap verebilir (canlı görüldü: RRSIG
+	// ancak restart sonrası göründü). Zone önbelleğini boşaltmak imzaları
+	// hemen görünür kılar; pdns_control yoksa zararsız.
+	_ = exec.Command("pdns_control", "purge", zone+"$").Run()
 	resp.Secured = true
 	resp.DS = zoneDSRecords(zone)
 	return nil

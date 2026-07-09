@@ -129,7 +129,32 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	isAdmin := caller != nil && caller.Role == roleAdmin
 	if req.SubscriptionID == 0 {
 		if isAdmin {
-			req.SubscriptionID = 1
+			// Admin default: the admin's own subscription — created on first
+			// use. A fresh install has NO subscriptions at all (the placeholder
+			// admin and its seed subscription are dropped by migration 006), so
+			// the old hard-coded "1" made the very first "add my domain" fail
+			// with "subscription not found" — caught live on the Debian 13
+			// golden path.
+			// Admin varsayılanı: admin'in kendi aboneliği — ilk kullanımda
+			// oluşturulur. Taze kurulumda HİÇ abonelik yoktur (yer-tutucu admin
+			// ve seed aboneliği migration 006 ile silinir); eski sabit "1",
+			// ilk "domain'imi ekle"yi "subscription not found" ile bozuyordu —
+			// Debian 13 golden path'inde canlı yakalandı.
+			err := p.db.GetDB().QueryRowContext(r.Context(),
+				`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`,
+				caller.ID).Scan(&req.SubscriptionID)
+			if err != nil {
+				res, ierr := p.db.GetDB().ExecContext(r.Context(),
+					`INSERT INTO subscriptions (owner_id, name, max_domains, max_databases, status)
+					 VALUES (?, 'Admin Subscription', 999, 999, 'active')`, caller.ID)
+				if ierr != nil {
+					writeServerError(w, ierr)
+					return
+				}
+				id, _ := res.LastInsertId()
+				req.SubscriptionID = int(id)
+				p.audit(r, "subscription.bootstrap", "subscription", int(id))
+			}
 		} else if caller != nil {
 			// Smart default: fall back to the caller's own subscription so a
 			// customer never has to know subscription IDs.
@@ -168,9 +193,16 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default PHP version
+	// Default PHP version: whatever is actually installed on this host — each
+	// distro ships a different one (Ubuntu 24.04 → 8.3, Debian 13 → 8.4), so a
+	// constant here pointed pool files at a non-existent /etc/php/<ver> tree.
+	// Varsayılan PHP sürümü: bu makinede gerçekten kurulu olan — her dağıtım
+	// farklısını taşır (Ubuntu 24.04 → 8.3, Debian 13 → 8.4); buradaki sabit,
+	// havuz dosyalarını var olmayan /etc/php/<ver> ağacına yöneltiyordu.
 	if req.PHPVersion == "" {
-		req.PHPVersion = "8.3"
+		if req.PHPVersion = services.DetectInstalledPHPVersion(); req.PHPVersion == "" {
+			req.PHPVersion = "8.3"
+		}
 	}
 
 	// Default SSL type

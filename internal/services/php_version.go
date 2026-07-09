@@ -2,7 +2,10 @@ package services
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 // phpVersionPattern matches a PHP version like "8.3". Anything else is
@@ -26,4 +29,52 @@ func ValidatePHPVersion(version string) error {
 		return fmt.Errorf("invalid PHP version %q", version)
 	}
 	return nil
+}
+
+// DetectInstalledPHPVersion returns the newest PHP version with an FPM tree
+// actually present on this host (/etc/php/<ver>/fpm), or "" when none. Each
+// distro release ships a different PHP (Ubuntu 24.04 → 8.3, Debian 13 → 8.4),
+// so a hard-coded default silently points pool files at a directory that does
+// not exist — caught live on Debian 13. The host, not a constant, is the
+// source of truth.
+// DetectInstalledPHPVersion, bu makinede FPM ağacı gerçekten var olan en yeni
+// PHP sürümünü döndürür (/etc/php/<ver>/fpm), yoksa "". Her dağıtım sürümü
+// farklı bir PHP taşır (Ubuntu 24.04 → 8.3, Debian 13 → 8.4); sabit bir
+// varsayılan, havuz dosyalarını sessizce var olmayan bir dizine yöneltir —
+// Debian 13'te canlı yakalandı. Gerçeğin kaynağı sabit değil, makinedir.
+func DetectInstalledPHPVersion() string {
+	entries, err := os.ReadDir("/etc/php")
+	if err != nil {
+		return ""
+	}
+	best := ""
+	for _, e := range entries {
+		v := e.Name()
+		if !phpVersionPattern.MatchString(v) {
+			continue
+		}
+		if _, err := os.Stat("/etc/php/" + v + "/fpm"); err != nil {
+			continue
+		}
+		if best == "" || phpVersionLess(best, v) {
+			best = v
+		}
+	}
+	return best
+}
+
+// phpVersionLess compares two validated "major.minor" versions numerically
+// (so "8.10" > "8.9", which a string compare would get wrong).
+// phpVersionLess, doğrulanmış iki "major.minor" sürümünü sayısal karşılaştırır
+// ("8.10" > "8.9"; dizgi karşılaştırması bunu yanlış yapardı).
+func phpVersionLess(a, b string) bool {
+	pa, pb := strings.SplitN(a, ".", 2), strings.SplitN(b, ".", 2)
+	amaj, _ := strconv.Atoi(pa[0])
+	bmaj, _ := strconv.Atoi(pb[0])
+	if amaj != bmaj {
+		return amaj < bmaj
+	}
+	amin, _ := strconv.Atoi(pa[1])
+	bmin, _ := strconv.Atoi(pb[1])
+	return amin < bmin
 }
