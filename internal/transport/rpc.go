@@ -89,10 +89,18 @@ type CreateSiteRequest struct {
 	Domain         string
 	TempDomain     string
 	DocumentRoot   string
-	PHPVersion     string
-	SSLType        string
-	Username       string
-	Password       string
+	// ProjectType decides what the agent actually builds: "php" (FPM pool +
+	// index.php) or "static" (no PHP at all). Empty means "php" for backward
+	// compatibility. "dnsonly" never reaches the agent — there is nothing to
+	// build for it.
+	// ProjectType, agent'ın gerçekte ne kuracağına karar verir: "php" (FPM
+	// havuzu + index.php) ya da "static" (hiç PHP yok). Boş, geriye uyumluluk
+	// için "php" demektir. "dnsonly" agent'a hiç ulaşmaz — kurulacak şey yok.
+	ProjectType string
+	PHPVersion  string
+	SSLType     string
+	Username    string
+	Password    string
 }
 
 // CreateSiteResponse contains results of site creation

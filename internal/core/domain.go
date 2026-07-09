@@ -101,6 +101,11 @@ type Site struct {
 	DocumentRoot string
 	WebServer    string  // nginx, apache, litespeed
 	NginxConfig  *string
+	// ProjectType mirrors sites.project_type: php, static, node, proxy,
+	// forwarding, dnsonly. Empty is treated as "php" (pre-3A rows).
+	// ProjectType, sites.project_type karşılığıdır: php, static, node, proxy,
+	// forwarding, dnsonly. Boş "php" sayılır (3A öncesi satırlar).
+	ProjectType  string
 	PHPVersion   string
 	PHPFPMSocket *string
 	SSLEnabled   bool

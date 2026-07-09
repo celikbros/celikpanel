@@ -34,9 +34,20 @@ type CreateSiteRequest struct {
 	SubscriptionID int    `json:"subscription_id"`
 	Domain         string `json:"domain"`
 	UseTemporary   bool   `json:"use_temporary"`
-	PHPVersion     string `json:"php_version"`
-	SSLType        string `json:"ssl_type"`      // letsencrypt, custom, none
-	AccessMethod   string `json:"access_method"` // ftp, sftp, both
+	// ProjectType selects what this domain does on this server: "php" or
+	// "static" (a website — needs a web server) or "dnsonly" (no web hosting
+	// at all: just the domain and its DNS zone — Plesk's "no web hosting").
+	// The requirement follows the ROLE: a domain does not inherently need
+	// PHP, nor even a web server. Empty means "php" (backward compatible).
+	// ProjectType, bu domain'in bu sunucuda ne yapacağını seçer: "php" ya da
+	// "static" (bir web sitesi — web sunucusu ister) veya "dnsonly" (hiç web
+	// barındırma yok: yalnız domain + DNS zone'u — Plesk'in "no web
+	// hosting"i). Gereksinim ROLÜ izler: bir domain doğası gereği PHP'ye,
+	// hatta web sunucusuna bile muhtaç değildir. Boş, "php" demektir.
+	ProjectType  string `json:"project_type"`
+	PHPVersion   string `json:"php_version"`
+	SSLType      string `json:"ssl_type"`      // letsencrypt, custom, none
+	AccessMethod string `json:"access_method"` // ftp, sftp, both
 }
 
 type CreateSiteResponse struct {
@@ -45,13 +56,31 @@ type CreateSiteResponse struct {
 	Domain       string
 	TempDomain   string
 	DocumentRoot string
+	ProjectType  string
 	FTPUser      string
 	FTPPassword  string
 	PHPVersion   string
 }
 
+// CreationProjectTypes are the types selectable at domain creation. node,
+// proxy and forwarding exist as types but are configured on the domain's
+// hosting page after creation (they need extra inputs: port, target URL).
+// CreationProjectTypes, domain oluşturmada seçilebilen tiplerdir. node, proxy
+// ve forwarding tip olarak vardır ama ek girdi istedikleri (port, hedef URL)
+// için oluşturma sonrası domain'in barındırma sayfasından yapılandırılır.
+var CreationProjectTypes = map[string]bool{"php": true, "static": true, "dnsonly": true}
+
 // CreateSite orchestrates site creation via Agent RPC
 func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteRequest) (*CreateSiteResponse, error) {
+	// Normalise the project type once; everything below branches on it.
+	// Proje tipini bir kez normalize et; aşağıdaki her şey ona göre dallanır.
+	if req.ProjectType == "" {
+		req.ProjectType = "php"
+	}
+	if !CreationProjectTypes[req.ProjectType] {
+		return nil, fmt.Errorf("unsupported project type %q (php, static, dnsonly)", req.ProjectType)
+	}
+
 	// 1. Create domain record
 	domain := &core.Domain{
 		SubscriptionID: req.SubscriptionID,
@@ -61,6 +90,33 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	err := so.domainRepo.Create(ctx, domain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create domain: %v", err)
+	}
+
+	// DNS-only: the domain exists to be served by DNS (and later mail), not
+	// hosted as a website. No system user, no docroot, no vhost, no FTP —
+	// nothing to build on the OS, so the agent is never called. The DNS zone
+	// itself is created by the caller (handleCreateDomain), same as web types.
+	// Yalnız-DNS: domain, web sitesi olarak barındırılmak için değil, DNS'te
+	// (ve ileride postada) sunulmak için var. Sistem kullanıcısı, docroot,
+	// vhost, FTP yok — OS'ta kurulacak bir şey yok; agent hiç çağrılmaz. DNS
+	// zone'unu, web tiplerinde olduğu gibi çağıran (handleCreateDomain) kurar.
+	if req.ProjectType == "dnsonly" {
+		site := &core.Site{
+			DomainID:    domain.ID,
+			ProjectType: "dnsonly",
+			Status:      "active",
+		}
+		siteID, err := so.createSiteRecord(ctx, site)
+		if err != nil {
+			so.domainRepo.Delete(ctx, domain.ID)
+			return nil, fmt.Errorf("failed to create site record: %v", err)
+		}
+		return &CreateSiteResponse{
+			DomainID:    domain.ID,
+			SiteID:      siteID,
+			Domain:      req.Domain,
+			ProjectType: "dnsonly",
+		}, nil
 	}
 
 	// 2. Generate necessary data
@@ -79,6 +135,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	site := &core.Site{
 		DomainID:     domain.ID,
 		DocumentRoot: documentRoot,
+		ProjectType:  req.ProjectType,
 		PHPVersion:   req.PHPVersion,
 		SSLEnabled:   req.SSLType != "none",
 		Status:       "active",
@@ -98,6 +155,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		Domain:         req.Domain,
 		TempDomain:     tempDomain,
 		DocumentRoot:   documentRoot,
+		ProjectType:    req.ProjectType,
 		PHPVersion:     req.PHPVersion,
 		SSLType:        req.SSLType,
 		Username:       username,
@@ -129,6 +187,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		Domain:       req.Domain,
 		TempDomain:   tempDomain,
 		DocumentRoot: documentRoot,
+		ProjectType:  req.ProjectType,
 		FTPUser:      username,
 		FTPPassword:  password,
 		PHPVersion:   req.PHPVersion,
@@ -136,12 +195,15 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 }
 
 func (so *SiteOrchestrator) createSiteRecord(ctx context.Context, site *core.Site) (int, error) {
+	if site.ProjectType == "" {
+		site.ProjectType = "php"
+	}
 	query := `
-		INSERT INTO sites (domain_id, document_root, php_version, php_fpm_socket, ssl_enabled, status)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO sites (domain_id, document_root, project_type, php_version, php_fpm_socket, ssl_enabled, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 	result, err := so.db.ExecContext(ctx, query,
-		site.DomainID, site.DocumentRoot, site.PHPVersion, site.PHPFPMSocket, site.SSLEnabled, site.Status)
+		site.DomainID, site.DocumentRoot, site.ProjectType, site.PHPVersion, site.PHPFPMSocket, site.SSLEnabled, site.Status)
 	if err != nil {
 		return 0, err
 	}

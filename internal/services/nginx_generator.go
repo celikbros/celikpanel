@@ -96,6 +96,7 @@ func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, te
 		Domain:          domain.Name,
 		TempDomain:      tempDomain,
 		DocumentRoot:    site.DocumentRoot,
+		ProjectType:     site.ProjectType, // empty → Render defaults to php
 		SSLType:         sslType,
 		SSLAutoRedirect: site.SSLEnabled,
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -43,11 +44,22 @@ func ValidatePHPVersion(version string) error {
 // varsayılan, havuz dosyalarını sessizce var olmayan bir dizine yöneltir —
 // Debian 13'te canlı yakalandı. Gerçeğin kaynağı sabit değil, makinedir.
 func DetectInstalledPHPVersion() string {
+	if all := DetectInstalledPHPVersions(); len(all) > 0 {
+		return all[0]
+	}
+	return ""
+}
+
+// DetectInstalledPHPVersions lists every PHP version with an FPM tree on this
+// host, newest first — the honest source for a version picker.
+// DetectInstalledPHPVersions, bu makinede FPM ağacı olan her PHP sürümünü, en
+// yenisi önde listeler — bir sürüm seçicinin dürüst kaynağı.
+func DetectInstalledPHPVersions() []string {
 	entries, err := os.ReadDir("/etc/php")
 	if err != nil {
-		return ""
+		return nil
 	}
-	best := ""
+	var found []string
 	for _, e := range entries {
 		v := e.Name()
 		if !phpVersionPattern.MatchString(v) {
@@ -56,11 +68,10 @@ func DetectInstalledPHPVersion() string {
 		if _, err := os.Stat("/etc/php/" + v + "/fpm"); err != nil {
 			continue
 		}
-		if best == "" || phpVersionLess(best, v) {
-			best = v
-		}
+		found = append(found, v)
 	}
-	return best
+	sort.Slice(found, func(i, j int) bool { return phpVersionLess(found[j], found[i]) })
+	return found
 }
 
 // phpVersionLess compares two validated "major.minor" versions numerically

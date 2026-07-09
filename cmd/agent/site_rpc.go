@@ -17,6 +17,16 @@ import (
 
 // CreateSite handles site creation with all privileged operations
 func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.CreateSiteResponse) error {
+	// The project type decides what actually gets built. A domain does not
+	// inherently need PHP — only a php-type site does. (dnsonly never reaches
+	// the agent at all; the panel short-circuits it.)
+	// Neyin kurulacağına proje tipi karar verir. Bir domain doğası gereği
+	// PHP'ye muhtaç değildir — yalnız php tipindeki site öyledir. (dnsonly
+	// agent'a hiç ulaşmaz; panel onu kısa devre eder.)
+	if req.ProjectType == "" {
+		req.ProjectType = "php"
+	}
+
 	// 1. Create directory structure
 	err := os.MkdirAll(req.DocumentRoot, 0755)
 	if err != nil {
@@ -39,23 +49,40 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 		log.Printf("CreateSite %s: ownership: %v", req.Domain, err)
 	}
 
-	// 4. Create PHP-FPM pool
-	socket, err := a.phpManager.CreatePool(req.SiteID, req.Username, req.PHPVersion)
-	if err != nil {
-		a.userManager.DeleteUser(req.Username) // Rollback
-		os.RemoveAll(filepath.Dir(req.DocumentRoot))
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to create PHP-FPM pool: %v", err)
-		return nil
+	// 4. Create PHP-FPM pool — php sites only. The error is actionable: on a
+	// minimal server PHP may simply not be installed, and the operator must
+	// hear "install it or pick another type", not a bare path error.
+	// 4. PHP-FPM havuzu — yalnız php siteleri. Hata eyleme dönüktür: minimal
+	// bir sunucuda PHP hiç kurulu olmayabilir; operatör çıplak bir yol hatası
+	// değil "kur ya da başka tip seç" duymalı.
+	socket := ""
+	if req.ProjectType == "php" {
+		socket, err = a.phpManager.CreatePool(req.SiteID, req.Username, req.PHPVersion)
+		if err != nil {
+			a.userManager.DeleteUser(req.Username) // Rollback
+			os.RemoveAll(filepath.Dir(req.DocumentRoot))
+			reply.Success = false
+			reply.ErrorMessage = fmt.Sprintf(
+				"failed to create PHP-FPM pool (is PHP-FPM installed? install it from Services, or choose the static or DNS-only type): %v", err)
+			return nil
+		}
 	}
 	reply.PHPSocket = socket
 
 	// 5. Create the placeholder page. Deliberately NOT phpinfo(): that leaks
-	// paths, modules and settings to anyone who finds the fresh site. The
-	// tiny PHP expression still proves PHP execution end-to-end.
+	// paths, modules and settings to anyone who finds the fresh site. For php
+	// sites the tiny PHP expression still proves PHP execution end-to-end;
+	// static sites get plain HTML (no PHP anywhere in their path).
 	// 5. Yer tutucu sayfayı oluştur. Bilerek phpinfo() DEĞİL: o, taze siteyi
-	// bulan herkese yolları, modülleri ve ayarları sızdırır. Küçük PHP
-	// ifadesi yine de PHP'nin uçtan uca çalıştığını kanıtlar.
+	// bulan herkese yolları, modülleri ve ayarları sızdırır. php sitelerinde
+	// küçük PHP ifadesi PHP'nin uçtan uca çalıştığını yine de kanıtlar; statik
+	// siteler düz HTML alır (yollarında hiç PHP yok).
+	placeholderBody := `  <p>CelikPanel</p>`
+	placeholderName := "index.html"
+	if req.ProjectType == "php" {
+		placeholderBody = `  <p>CelikPanel · PHP <?php echo htmlspecialchars(PHP_VERSION); ?> · <?php echo date('Y'); ?></p>`
+		placeholderName = "index.php"
+	}
 	indexContent := fmt.Sprintf(`<!doctype html>
 <html lang="tr">
 <head>
@@ -73,13 +100,13 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 <main>
   <h1>%s</h1>
   <p>Bu site hazırlanıyor. / This site is being prepared.</p>
-  <p>CelikPanel · PHP <?php echo htmlspecialchars(PHP_VERSION); ?> · <?php echo date('Y'); ?></p>
+%s
 </main>
 </body>
 </html>
-`, req.Domain, req.Domain)
-	os.WriteFile(filepath.Join(req.DocumentRoot, "index.php"), []byte(indexContent), 0644)
-	a.userManager.SetOwnership(filepath.Join(req.DocumentRoot, "index.php"), req.Username)
+`, req.Domain, req.Domain, placeholderBody)
+	os.WriteFile(filepath.Join(req.DocumentRoot, placeholderName), []byte(indexContent), 0644)
+	a.userManager.SetOwnership(filepath.Join(req.DocumentRoot, placeholderName), req.Username)
 
 	// 5b. Hosting permission layout: web-server group access, setgid
 	// docroot, traverse-only parents — after the placeholder exists so file
@@ -100,6 +127,7 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 		ID:           req.SiteID,
 		DomainID:     0, // Not needed for template
 		DocumentRoot: req.DocumentRoot,
+		ProjectType:  req.ProjectType,
 		PHPVersion:   req.PHPVersion,
 		PHPFPMSocket: &socket,
 		SSLEnabled:   req.SSLType != "none",

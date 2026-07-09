@@ -14,6 +14,7 @@ const typeBadge: Record<string, string> = {
     node: 'bg-success/10 text-success',
     proxy: 'bg-warning/15 text-warning',
     forwarding: 'bg-warning/15 text-warning',
+    dnsonly: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
 };
 
 interface Domain {

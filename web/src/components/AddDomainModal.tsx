@@ -1,21 +1,73 @@
-import { useState } from 'react';
-import { Globe, X, Lock } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Globe, X, Lock, Server, FileCode2, Network } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
 
 interface AddDomainModalProps {
     onClose: () => void;
     onSuccess: () => void;
 }
 
+// What this server can host right now — drives which choices the dialog
+// offers. A php site needs a web server + PHP-FPM, a static site needs a web
+// server, a DNS-only domain needs nothing. The requirement follows the ROLE
+// the domain will play, not a fixed service list.
+// Bu sunucunun şu anda neyi barındırabildiği — pencerenin hangi seçenekleri
+// sunacağını belirler. php sitesi web sunucusu + PHP-FPM ister, statik site
+// web sunucusu ister, yalnız-DNS domain hiçbir şey istemez. Gereksinim,
+// domain'in üstleneceği ROLÜ izler; sabit bir servis listesini değil.
+interface HostingCapabilities {
+    web_server: string;
+    php_versions: string[];
+    dns_server: string;
+    mail_server: boolean;
+}
+
+type ProjectType = 'php' | 'static' | 'dnsonly';
+
 const API_BASE = '/api/v1';
 
 export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
+    const { t } = useI18n();
     const [domainName, setDomainName] = useState('');
-    const [phpVersion, setPHPVersion] = useState('8.3');
+    const [caps, setCaps] = useState<HostingCapabilities | null>(null);
+    const [projectType, setProjectType] = useState<ProjectType>('php');
+    const [phpVersion, setPHPVersion] = useState('');
     const [sslEnabled, setSSLEnabled] = useState(false);
-    const [tempDomain, setTempDomain] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Load capabilities once, then default to the best type that can actually
+    // work here: php if possible, else static, else DNS-only.
+    // Yetenekleri bir kez yükle, sonra burada gerçekten çalışabilecek en iyi
+    // tipe varsayılan yap: mümkünse php, değilse statik, değilse yalnız-DNS.
+    useEffect(() => {
+        fetch(`${API_BASE}/hosting/capabilities`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c: HostingCapabilities | null) => {
+                if (!c) return;
+                setCaps(c);
+                setPHPVersion(c.php_versions[0] ?? '');
+                if (c.web_server && c.php_versions.length > 0) setProjectType('php');
+                else if (c.web_server) setProjectType('static');
+                else setProjectType('dnsonly');
+            })
+            .catch(() => setCaps(null));
+    }, []);
+
+    const phpAvailable = !!caps && caps.web_server !== '' && caps.php_versions.length > 0;
+    const staticAvailable = !!caps && caps.web_server !== '';
+
+    const typeOptions: {
+        id: ProjectType;
+        icon: typeof Globe;
+        available: boolean;
+        requirement: string | null;
+    }[] = [
+        { id: 'php', icon: FileCode2, available: phpAvailable, requirement: !caps ? null : caps.web_server === '' ? t('domains.add.needsWebServer') : caps.php_versions.length === 0 ? t('domains.add.needsPhp') : null },
+        { id: 'static', icon: Server, available: staticAvailable, requirement: !caps || staticAvailable ? null : t('domains.add.needsWebServer') },
+        { id: 'dnsonly', icon: Network, available: true, requirement: null },
+    ];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,49 +75,49 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
         setError(null);
 
         try {
+            const body: Record<string, unknown> = {
+                domain: domainName,
+                project_type: projectType,
+                ssl_type: projectType !== 'dnsonly' && sslEnabled ? 'letsencrypt' : 'none',
+            };
+            if (projectType === 'php' && phpVersion) body.php_version = phpVersion;
+
             const res = await fetch(`${API_BASE}/domains/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    domain: domainName,
-                    php_version: phpVersion,
-                    ssl_enabled: sslEnabled,
-                    temp_domain: tempDomain,
-                }),
+                body: JSON.stringify(body),
             });
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to create domain');
+                throw new Error(errorData.error || t('domains.add.failed'));
             }
 
-            showToast('success', `Domain ${domainName} created successfully!`);
+            showToast('success', t('domains.add.created', { name: domainName }));
             onSuccess();
-        } catch (err: any) {
-            setError(err.message);
-            showToast('error', err.message);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : t('domains.add.failed');
+            setError(msg);
+            showToast('error', msg);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-surface border border-border rounded-xl p-8 max-w-2xl w-full mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface border border-border rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
                             <Globe className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-fg">Add Domain</h2>
-                            <p className="text-sm text-fg-subtle">Create a new hosted domain</p>
+                            <h2 className="text-xl font-bold text-fg">{t('domains.add.title')}</h2>
+                            <p className="text-sm text-fg-subtle">{t('domains.add.subtitle')}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
-                    >
+                    <button onClick={onClose} className="p-2 hover:bg-surface-2 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-fg-muted" />
                     </button>
                 </div>
@@ -79,7 +131,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-fg-muted mb-2">
-                            Domain Name
+                            {t('domains.add.domainName')}
                         </label>
                         <input
                             type="text"
@@ -89,59 +141,85 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                             placeholder="example.com"
                             required
                         />
-                        <p className="text-xs text-fg-subtle mt-1">Enter the domain name without www</p>
+                        <p className="text-xs text-fg-subtle mt-1">{t('domains.add.domainHint')}</p>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-fg-muted mb-2">
-                            PHP Version
+                            {t('domains.add.hostingType')}
                         </label>
-                        <select
-                            value={phpVersion}
-                            onChange={(e) => setPHPVersion(e.target.value)}
-                            className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
-                        >
-                            <option value="8.3">PHP 8.3</option>
-                            <option value="8.4">PHP 8.4</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
-                        <input
-                            type="checkbox"
-                            id="ssl"
-                            checked={sslEnabled}
-                            onChange={(e) => setSSLEnabled(e.target.checked)}
-                            className="mt-1"
-                        />
-                        <div className="flex-1">
-                            <label htmlFor="ssl" className="flex items-center gap-2 text-sm font-medium text-fg-muted cursor-pointer">
-                                <Lock className="w-4 h-4" />
-                                Enable SSL (Let's Encrypt)
-                            </label>
-                            <p className="text-xs text-fg-subtle mt-1">
-                                Automatically provision and renew SSL certificate
-                            </p>
+                        <div className="grid gap-2">
+                            {typeOptions.map(({ id, icon: Icon, available, requirement }) => (
+                                <label
+                                    key={id}
+                                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                                        projectType === id
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-border bg-surface-2/50'
+                                    } ${available ? 'cursor-pointer hover:border-primary/50' : 'opacity-60'}`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="projectType"
+                                        checked={projectType === id}
+                                        disabled={!available}
+                                        onChange={() => setProjectType(id)}
+                                        className="mt-1"
+                                    />
+                                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-medium text-fg">{t(`domains.add.type.${id}`)}</div>
+                                        <p className="text-xs text-fg-subtle">{t(`domains.add.type.${id}.desc`)}</p>
+                                        {requirement && (
+                                            <p className="mt-1 text-xs font-medium text-warning">{requirement}</p>
+                                        )}
+                                    </div>
+                                </label>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
-                        <input
-                            type="checkbox"
-                            id="temp"
-                            checked={tempDomain}
-                            onChange={(e) => setTempDomain(e.target.checked)}
-                            className="mt-1"
-                        />
-                        <div className="flex-1">
-                            <label htmlFor="temp" className="text-sm font-medium text-fg-muted cursor-pointer">
-                                Temporary Domain
+                    {projectType === 'php' && caps && caps.php_versions.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-fg-muted mb-2">
+                                {t('domains.add.phpVersion')}
                             </label>
-                            <p className="text-xs text-fg-subtle mt-1">
-                                Add a temporary subdomain for testing before DNS propagation
-                            </p>
+                            <select
+                                value={phpVersion}
+                                onChange={(e) => setPHPVersion(e.target.value)}
+                                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
+                            >
+                                {caps.php_versions.map((v) => (
+                                    <option key={v} value={v}>PHP {v}</option>
+                                ))}
+                            </select>
                         </div>
-                    </div>
+                    )}
+
+                    {projectType !== 'dnsonly' && (
+                        <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
+                            <input
+                                type="checkbox"
+                                id="ssl"
+                                checked={sslEnabled}
+                                onChange={(e) => setSSLEnabled(e.target.checked)}
+                                className="mt-1"
+                            />
+                            <div className="flex-1">
+                                <label htmlFor="ssl" className="flex items-center gap-2 text-sm font-medium text-fg-muted cursor-pointer">
+                                    <Lock className="w-4 h-4" />
+                                    {t('domains.add.ssl')}
+                                </label>
+                                <p className="text-xs text-fg-subtle mt-1">{t('domains.add.sslHint')}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <p className="text-xs text-fg-subtle">
+                        {caps && caps.dns_server !== ''
+                            ? t('domains.add.dnsServed', { server: caps.dns_server })
+                            : t('domains.add.dnsNotServed')}
+                    </p>
 
                     <div className="flex gap-3 pt-4">
                         <button
@@ -149,14 +227,14 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                             disabled={loading}
                             className="flex-1 bg-primary hover:bg-primary-hover disabled:bg-surface-3 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                         >
-                            {loading ? 'Creating...' : 'Create Domain'}
+                            {loading ? t('domains.add.creating') : t('domains.add.create')}
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
                             className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-fg-muted rounded-lg transition-colors"
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </button>
                     </div>
                 </form>

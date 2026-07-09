@@ -193,16 +193,51 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Requirement preflight: what a domain needs depends on the ROLE it will
+	// play on this server. A php site needs a web server and PHP-FPM; a static
+	// site needs a web server; a DNS-only domain needs nothing installed (its
+	// zone is served once a DNS server runs — or DNS stays external). Failing
+	// here yields an actionable message instead of a half-created site.
+	// Gereksinim ön-denetimi: bir domain'in neye ihtiyacı olduğu, bu sunucuda
+	// üstleneceği ROLE bağlıdır. php sitesi web sunucusu ve PHP-FPM ister;
+	// statik site web sunucusu ister; yalnız-DNS domain kurulu hiçbir şey
+	// istemez (zone'u bir DNS sunucusu koşunca sunulur — ya da DNS dışarıda
+	// kalır). Burada durmak, yarım oluşmuş bir site yerine eyleme dönük bir
+	// mesaj üretir.
+	if req.ProjectType == "" {
+		req.ProjectType = "php"
+	}
+	if !services.CreationProjectTypes[req.ProjectType] {
+		writeClientError(w, http.StatusBadRequest, "project_type must be php, static or dnsonly")
+		return
+	}
+	if req.ProjectType == "php" || req.ProjectType == "static" {
+		caps := p.hostingCaps()
+		if caps.WebServer == "" {
+			writeClientError(w, http.StatusConflict,
+				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type")
+			return
+		}
+		if req.ProjectType == "php" && len(caps.PHPVersions) == 0 {
+			writeClientError(w, http.StatusConflict,
+				"PHP-FPM is not installed — install it from Services, or choose the static or DNS-only type")
+			return
+		}
+	}
+
 	// Default PHP version: whatever is actually installed on this host — each
 	// distro ships a different one (Ubuntu 24.04 → 8.3, Debian 13 → 8.4), so a
 	// constant here pointed pool files at a non-existent /etc/php/<ver> tree.
 	// Varsayılan PHP sürümü: bu makinede gerçekten kurulu olan — her dağıtım
 	// farklısını taşır (Ubuntu 24.04 → 8.3, Debian 13 → 8.4); buradaki sabit,
 	// havuz dosyalarını var olmayan /etc/php/<ver> ağacına yöneltiyordu.
-	if req.PHPVersion == "" {
+	if req.ProjectType == "php" && req.PHPVersion == "" {
 		if req.PHPVersion = services.DetectInstalledPHPVersion(); req.PHPVersion == "" {
 			req.PHPVersion = "8.3"
 		}
+	}
+	if req.ProjectType != "php" {
+		req.PHPVersion = ""
 	}
 
 	// Default SSL type
@@ -305,11 +340,17 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	// gider ve silme yeniden denenebilir; site sunulmaya devam ederken
 	// silinen bir kayıt gerçek durumu gizlerdi.
 	var siteID int
-	var docroot, phpVersion string
+	var docroot, phpVersion, projectType string
 	err = p.db.GetDB().QueryRowContext(context.Background(),
-		`SELECT id, document_root, COALESCE(php_version,'') FROM sites WHERE domain_id = ?`,
-		domainID).Scan(&siteID, &docroot, &phpVersion)
-	if err == nil {
+		`SELECT id, document_root, COALESCE(php_version,''), COALESCE(project_type,'php') FROM sites WHERE domain_id = ?`,
+		domainID).Scan(&siteID, &docroot, &phpVersion, &projectType)
+	// DNS-only domains have nothing on the OS (no user, no files, no vhost) —
+	// there is nothing for the agent to tear down, and its path guard would
+	// rightly refuse the empty docroot.
+	// Yalnız-DNS domain'lerin OS'ta hiçbir şeyi yok (kullanıcı, dosya, vhost
+	// yok) — agent'ın sökeceği bir şey yok; yol koruması boş docroot'u zaten
+	// haklı olarak reddederdi.
+	if err == nil && projectType != "dnsonly" {
 		var agentResp struct {
 			Success bool   `json:"success"`
 			Error   string `json:"error,omitempty"`
