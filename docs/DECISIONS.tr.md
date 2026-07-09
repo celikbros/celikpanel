@@ -8,6 +8,33 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-005 · Kurulum panelden başka hiçbir şey kurmaz; sunucu yalnız-panel olabilir
+
+*8 Temmuz 2026*
+
+**Karar.** `install.sh` yalnız panel + agent'ı (kendine yeten Go binary'leri +
+SQLite) ve dört minik indirme aracını (tar, xz, curl, ca-certificates) kurar —
+barındırma için **hiçbir şey**. nginx, PHP, MariaDB, Postfix, PowerDNS, posta:
+hepsi sonradan, panelden, talep üzerine eklenir. Bir sunucu yalnız-panel
+kalabilir (örn. sadece yerleşik VPN isteyen biri) ve hiç domain olmadan IP
+üzerinden yönetilebilir.
+
+**Neden.** Anayasa: "kurulu olmayan görünmez." Taze kurulmuş bir sunucu, panel
+dışında sıfır saldırı yüzeyi ve sıfır fazlalık taşır. Operatör tam istediği
+sunucuyu kurar — tam bir barındırma kutusu, ya da sadece VPN ucu, ya da sadece
+DNS. İstenmeyen hiçbir şey asla bulunmaz.
+
+**Nasıl korunuyor.**
+- Doğrulandı: `install.sh` yalnız `apt-get install tar xz-utils curl
+  ca-certificates` koşar. Üretim VPS'inde nginx/PHP/vb. yalnız golden path'i
+  kanıtlamak için *panelden* kurulduğu için var — çıplak kurulumda hiçbiri yok.
+- Domainsiz erişim tasarım gereği çalışır: panelin self-signed sertifikası
+  makinenin IP'lerini SAN'a koyar (`tmpl.IPAddresses = hostIPs()`), böylece IP
+  erişimi eşleşen bir sertifika sunar (yalnız self-signed uyarısı, asla isim
+  uyuşmazlığı). Domain + Let's Encrypt bir yükseltmedir, asla zorunluluk değil.
+
+---
+
 ## D-004 · İşletim sistemi: önce Ubuntu LTS, BSD seçeneği korunur (asla fork)
 
 *8 Temmuz 2026*

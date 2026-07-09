@@ -8,6 +8,34 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-005 · Install installs nothing but the panel; a server can be panel-only
+
+*July 8, 2026*
+
+**Decision.** `install.sh` installs only the panel + agent (self-contained Go
+binaries + SQLite) and four tiny fetch tools (tar, xz, curl, ca-certificates)
+— **nothing** for hosting. nginx, PHP, MariaDB, Postfix, PowerDNS, mail: every
+one is added later from the panel, on demand. A server may stay panel-only
+(e.g. someone who wants only the built-in VPN) and be managed over its IP with
+no domain at all.
+
+**Why.** The constitution: "what isn't installed is invisible." A freshly
+installed server carries zero attack surface and zero cruft beyond the panel.
+The operator composes exactly the server they want — a full hosting box, or
+just a VPN endpoint, or just DNS. Nothing unwanted is ever present.
+
+**How it holds up.**
+- Verified: `install.sh` runs only `apt-get install tar xz-utils curl
+  ca-certificates`. On the production VPS, nginx/PHP/etc. exist only because
+  they were installed *from the panel* to prove the golden path — a bare
+  install has none.
+- Domain-less access works by design: the panel's self-signed certificate puts
+  the machine's IPs in its SAN (`tmpl.IPAddresses = hostIPs()`), so IP access
+  presents a matching cert (self-signed warning only, never a name mismatch).
+  A domain + Let's Encrypt is an upgrade, never a requirement.
+
+---
+
 ## D-004 · Operating system: Ubuntu LTS first, BSD option preserved (never a fork)
 
 *July 8, 2026*
