@@ -121,8 +121,13 @@ func TestLoadOrCreateToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat token file: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Fatalf("token file permissions = %o, want 600", perm)
+	// 0640: the token is group-readable (root:celikpanel) so the low-privilege
+	// panel, which runs in the celikpanel group, can read it to reach the agent
+	// socket. LoadOrCreateToken writes 0640 to match; the directory is 0750.
+	// 0640: token grup-okunur (root:celikpanel); böylece celikpanel grubunda
+	// koşan düşük-yetkili panel, agent socket'ine ulaşmak için onu okuyabilir.
+	if perm := info.Mode().Perm(); perm != 0o640 {
+		t.Fatalf("token file permissions = %o, want 640", perm)
 	}
 
 	loaded, err := LoadOrCreateToken(path)
