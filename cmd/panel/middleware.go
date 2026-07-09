@@ -75,6 +75,13 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 // isPublicPath decides which requests skip authentication.
 // isPublicPath, hangi isteklerin kimlik doğrulamayı atlayacağına karar verir.
 func isPublicPath(r *http.Request) bool {
+	// The database-tool proxy is NOT public: it fronts loopback-only web
+	// apps and demands an authenticated admin session.
+	// Veritabanı-aracı vekili herkese açık DEĞİLDİR: yalnız-loopback web
+	// uygulamalarının önündedir ve kimlik doğrulamalı yönetici oturumu ister.
+	if strings.HasPrefix(r.URL.Path, "/dbtool/") {
+		return false
+	}
 	// Non-API paths are static files or SPA routes and must stay public.
 	// API dışı yollar statik dosyalar ya da SPA rotalarıdır ve herkese
 	// açık kalmalıdır.
@@ -115,6 +122,7 @@ func isAdminOnlyPath(path string) bool {
 	adminPrefixes := []string{
 		"/api/v1/config",
 		"/api/v1/dovecot/",
+		"/dbtool/",
 		"/api/v1/fail2ban/",
 		"/api/v1/firewall",
 		"/api/v1/import/",

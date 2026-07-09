@@ -19,7 +19,11 @@ func (a *Agent) InstalledServiceIDs(_ *struct{}, reply *[]string) error {
 	var ids []string
 	for i := range core.ManagedServices {
 		svc := &core.ManagedServices[i]
-		if a.firstPresentUnit(svc) != "" {
+		// serviceInstalled also covers daemonless tools (no unit, package
+		// presence decides) — phpMyAdmin and friends.
+		// serviceInstalled, daemon'suz araçları da kapsar (unit yok, paket
+		// varlığı belirler) — phpMyAdmin ve benzerleri.
+		if a.serviceInstalled(svc) {
 			ids = append(ids, svc.ID)
 		}
 	}

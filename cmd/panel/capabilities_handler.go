@@ -33,6 +33,11 @@ type hostingCapabilities struct {
 	// Kurulu tüm veritabanı motorları — bir sunucu MariaDB ve PostgreSQL'i
 	// yan yana meşru biçimde koşturabilir (çakışma grubu yok).
 	DatabaseServers []string `json:"database_servers"`
+	// Installed database web tools (phpmyadmin, phppgadmin) — the Databases
+	// pages show a launch button for each, reverse-proxied at /dbtool/<id>/.
+	// Kurulu veritabanı web araçları (phpmyadmin, phppgadmin) — Veritabanı
+	// sayfaları her biri için /dbtool/<id>/ üzerinden bir açma düğmesi gösterir.
+	DBTools []string `json:"db_tools"`
 }
 
 // hostingCaps computes the current capability set from installed services
@@ -58,6 +63,8 @@ func (p *Panel) hostingCaps() hostingCapabilities {
 			caps.MailServer = true
 		case "mariadb", "postgresql":
 			caps.DatabaseServers = append(caps.DatabaseServers, id)
+		case "phpmyadmin", "phppgadmin":
+			caps.DBTools = append(caps.DBTools, id)
 		}
 	}
 	return caps

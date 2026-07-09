@@ -22,8 +22,18 @@ type ManagedServiceResponse struct {
 	Status       string            `json:"status"`   // Overall status
 	IsInstalled  bool              `json:"is_installed"`
 	ConflictWith string            `json:"conflict_with,omitempty"` // installed member of the same conflict group
-	Packages     []string          `json:"packages,omitempty"`      // distro packages (apt) shown before install
-	ConfigFiles  []core.ConfigFile `json:"config_files"`            // Detected config files
+	// RequiresMissing: unmet requirements blocking install (service ids or
+	// group names) — the UI disables Install and says what to install first.
+	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
+	// id'leri ya da grup adları) — UI Kur'u kapatır ve önce neyin kurulacağını söyler.
+	RequiresMissing []string `json:"requires_missing,omitempty"`
+	// Daemonless: no systemd unit (web tools like phpMyAdmin) — there is no
+	// running/stopped state and no start/stop actions.
+	// Daemonless: systemd unit'i yok (phpMyAdmin gibi web araçları) —
+	// çalışıyor/durdu durumu ve başlat/durdur eylemleri yoktur.
+	Daemonless  bool              `json:"daemonless,omitempty"`
+	Packages    []string          `json:"packages,omitempty"` // distro packages (apt) shown before install
+	ConfigFiles []core.ConfigFile `json:"config_files"`       // Detected config files
 }
 
 // managedServicesPayload is what both endpoints return: the cached scan and
@@ -180,18 +190,24 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			versions = append(versions, "default")
 		}
 
+		var requiresMissing []string
+		if !isInstalled {
+			requiresMissing = core.RequirementsMissing(&managed, installedSet)
+		}
 		response = append(response, ManagedServiceResponse{
-			ID:           managed.ID,
-			Name:         managed.Name,
-			Description:  managed.Description,
-			Icon:         managed.Icon,
-			Category:     managed.Category,
-			Versions:     versions,
-			Status:       status,
-			IsInstalled:  isInstalled,
-			ConflictWith: conflictWith,
-			Packages:     managed.Packages["apt"],
-			ConfigFiles:  configFiles,
+			ID:              managed.ID,
+			Name:            managed.Name,
+			Description:     managed.Description,
+			Icon:            managed.Icon,
+			Category:        managed.Category,
+			Versions:        versions,
+			Status:          status,
+			IsInstalled:     isInstalled,
+			ConflictWith:    conflictWith,
+			RequiresMissing: requiresMissing,
+			Daemonless:      len(managed.SystemNames) == 0,
+			Packages:        managed.Packages["apt"],
+			ConfigFiles:     configFiles,
 		})
 	}
 

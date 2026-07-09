@@ -55,9 +55,21 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		return nil
 	}
 
-	if a.firstPresentUnit(svc) != "" {
+	if a.serviceInstalled(svc) {
 		resp.Installed = false
 		resp.Detail = svc.Name + " is already installed"
+		return nil
+	}
+
+	// Requirements first: a dependent tool without its parent service would
+	// install broken (phpMyAdmin with no MariaDB, no web server, no PHP). The
+	// UI blocks this too; the agent is the enforcement that cannot be skipped.
+	// Önce gereksinimler: üst servisi olmayan bağımlı araç bozuk kurulur
+	// (MariaDB'siz, web sunucususuz, PHP'siz phpMyAdmin). UI da engeller;
+	// atlatılamayan uygulayıcı agent'tır.
+	if missing := core.RequirementsMissing(svc, a.installedServiceSet()); len(missing) > 0 {
+		resp.Error = fmt.Sprintf("%s requires %s — install that first from Services",
+			svc.Name, strings.Join(missing, ", "))
 		return nil
 	}
 
@@ -145,6 +157,38 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	resp.Removed = true
 	resp.Detail = fmt.Sprintf("removed %s", strings.Join(pkgs, ", "))
 	return nil
+}
+
+// serviceInstalled reports whether a catalogue service is present: by its
+// systemd unit when it has one, by its package otherwise (daemonless tools
+// like phpMyAdmin are files, not units).
+// serviceInstalled, bir katalog servisinin var olup olmadığını bildirir:
+// unit'i varsa unit'inden, yoksa paketinden (phpMyAdmin gibi daemon'suz
+// araçlar unit değil dosyadır).
+func (a *Agent) serviceInstalled(svc *core.ManagedService) bool {
+	if len(svc.SystemNames) > 0 {
+		return a.firstPresentUnit(svc) != ""
+	}
+	for _, pkg := range svc.Packages[detectPkgFamily()] {
+		if packageInstalled(pkg) {
+			return true
+		}
+	}
+	return false
+}
+
+// installedServiceSet is the catalogue-wide installed map, for requirement
+// and conflict decisions.
+// installedServiceSet, gereksinim ve çakışma kararları için katalog çapında
+// kurulu haritasıdır.
+func (a *Agent) installedServiceSet() map[string]bool {
+	set := map[string]bool{}
+	for i := range core.ManagedServices {
+		if a.serviceInstalled(&core.ManagedServices[i]) {
+			set[core.ManagedServices[i].ID] = true
+		}
+	}
+	return set
 }
 
 // firstPresentUnit returns the first of a service's candidate systemd unit

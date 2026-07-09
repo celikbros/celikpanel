@@ -14,6 +14,8 @@ interface ManagedService {
     status: string;
     is_installed: boolean;
     conflict_with?: string;
+    requires_missing?: string[];
+    daemonless?: boolean;
     packages?: string[];
 }
 
@@ -321,12 +323,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className="inline-flex items-center gap-1.5 text-fg-muted">
-                                                    <StatusDot ok={running} />
+                                                    <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
                                                     {!s.is_installed
                                                         ? t('services.notInstalled')
-                                                        : running
-                                                          ? t('services.running')
-                                                          : t('services.stopped')}
+                                                        : s.daemonless
+                                                          ? t('services.installedLabel')
+                                                          : running
+                                                            ? t('services.running')
+                                                            : t('services.stopped')}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
@@ -339,6 +343,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             >
                                                                 {t('services.conflictWith', { name: s.conflict_with })}
                                                             </span>
+                                                        ) : s.requires_missing && s.requires_missing.length > 0 ? (
+                                                            <span
+                                                                title={t('services.requiresHint', { names: s.requires_missing.join(', ') })}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
+                                                            >
+                                                                {t('services.requiresLabel', { names: s.requires_missing.join(', ') })}
+                                                            </span>
                                                         ) : (
                                                         <button
                                                             onClick={() => setInstallTarget(s)}
@@ -350,6 +361,11 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         </button>
                                                         )
                                                     ) : (
+                                                    <>
+                                                    {/* Daemonless tools (phpMyAdmin) have no unit to start/stop —
+                                                        only manage/uninstall. / Daemon'suz araçların (phpMyAdmin)
+                                                        başlatılacak unit'i yok — yalnız yönet/kaldır. */}
+                                                    {!s.daemonless && (
                                                     <>
                                                     <ActionIcon
                                                         title={t('services.start')}
@@ -382,6 +398,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Settings className="h-3.5 w-3.5" />
                                                         {t('services.manage')}
                                                     </button>
+                                                    </>
+                                                    )}
                                                     <button
                                                         onClick={() => setUninstallTarget(s)}
                                                         title={t('services.uninstall')}

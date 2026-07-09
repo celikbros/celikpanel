@@ -115,6 +115,45 @@ type ManagedService struct {
 	// isteğe bağlı vendor deposudur (bkz. ManagedRepo). nil ise servis yalnız
 	// dağıtımdan kurulur — yaygın ve en muhafazakâr durum.
 	Repo *ManagedRepo
+	// Requires: services that must already be installed before this one may be
+	// (the inverse of ConflictGroup: "needs" instead of "cannot coexist"). An
+	// entry is either a service ID ("mariadb") or a conflict-group name
+	// ("web-server" = any installed member satisfies it). Dependent tools like
+	// phpMyAdmin only make sense on top of their parent service: the UI hides
+	// or disables them until the requirement is met, and the agent enforces it.
+	// Requires: bundan önce kurulu olması gereken servisler (ConflictGroup'un
+	// tersi: "birlikte olamaz" değil "şuna muhtaç"). Bir girdi ya servis ID'si
+	// ("mariadb") ya da çakışma-grubu adıdır ("web-server" = kurulu herhangi
+	// bir üye yeter). phpMyAdmin gibi bağımlı araçlar ancak üst servisin
+	// üzerinde anlamlıdır: UI, gereksinim karşılanana dek gizler/kapatır;
+	// agent da uygular.
+	Requires []string
+}
+
+// RequirementsMissing returns which of a service's requirements are not met by
+// the given installed-service ID set (group entries are satisfied by any
+// installed member of that conflict group). Empty means installable.
+// RequirementsMissing, bir servisin gereksinimlerinden hangilerinin verilen
+// kurulu-servis kümesince karşılanmadığını döndürür (grup girdilerini o
+// çakışma grubunun kurulu herhangi bir üyesi karşılar). Boş = kurulabilir.
+func RequirementsMissing(svc *ManagedService, installed map[string]bool) []string {
+	var missing []string
+	for _, req := range svc.Requires {
+		if installed[req] {
+			continue
+		}
+		satisfied := false
+		for i := range ManagedServices {
+			if ManagedServices[i].ConflictGroup == req && installed[ManagedServices[i].ID] {
+				satisfied = true
+				break
+			}
+		}
+		if !satisfied {
+			missing = append(missing, req)
+		}
+	}
+	return missing
 }
 
 // ManagedServices is the list of services CelikPanel manages
@@ -180,6 +219,34 @@ var ManagedServices = []ManagedService{
 		Category:    "database",
 		SystemNames: []string{"mariadb", "mysql"},
 		Packages:    map[string][]string{"apt": {"mariadb-server"}},
+	},
+	// Web admin tools for the database servers. Daemonless (no systemd unit —
+	// just PHP files served by the web server), and only meaningful on top of
+	// their parent: Requires hides/blocks them until the parent, a web server
+	// and PHP are installed. Served locally and reverse-proxied by the panel.
+	// Veritabanı sunucularının web yönetim araçları. Unit'siz (systemd servisi
+	// yok — web sunucusunun sunduğu PHP dosyaları) ve ancak üst servisin
+	// üzerinde anlamlı: Requires, üst servis + web sunucusu + PHP kurulana dek
+	// gizler/engeller. Yerelde sunulur, panel ters-vekiller.
+	{
+		ID:          "phpmyadmin",
+		Name:        "phpMyAdmin",
+		Description: "MariaDB/MySQL web admin tool",
+		Icon:        "🐬",
+		Category:    "database",
+		SystemNames: []string{},
+		Packages:    map[string][]string{"apt": {"phpmyadmin"}},
+		Requires:    []string{"mariadb", "web-server", "php-fpm"},
+	},
+	{
+		ID:          "phppgadmin",
+		Name:        "phpPgAdmin",
+		Description: "PostgreSQL web admin tool",
+		Icon:        "🐘",
+		Category:    "database",
+		SystemNames: []string{},
+		Packages:    map[string][]string{"apt": {"phppgadmin"}},
+		Requires:    []string{"postgresql", "web-server", "php-fpm"},
 	},
 	{
 		ID:            "postfix",

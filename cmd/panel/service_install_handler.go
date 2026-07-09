@@ -83,6 +83,20 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Database web tools are files, not daemons: after (un)install the agent
+	// must (re)generate the loopback nginx server that actually serves them.
+	// Veritabanı web araçları daemon değil dosyadır: kur/kaldır sonrası agent,
+	// onları fiilen sunan yalnız-loopback nginx sunucusunu yeniden üretmeli.
+	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
+		var dbtResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
+			log.Printf("db tools configure after install: %v %s", err, dbtResp.Error)
+		}
+	}
+
 	// A new service exists now; refresh the cached scan so every page keeps
 	// reading from cache instead of probing.
 	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar
@@ -152,6 +166,15 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	if resp.Error != "" {
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
+	}
+	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
+		var dbtResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
+			log.Printf("db tools configure after uninstall: %v %s", err, dbtResp.Error)
+		}
 	}
 	// Removed service's ports should close; re-sync the firewall.
 	// Kaldırılan servisin portları kapanmalı; güvenlik duvarını yeniden senkronla.

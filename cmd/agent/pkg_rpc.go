@@ -125,6 +125,20 @@ func removePackages(family string, packages []string) (string, error) {
 	}
 }
 
+// packageInstalled reports whether a package is actually installed — the
+// presence test for catalogue entries with no systemd unit (phpMyAdmin and
+// friends are just files served by the web server, not daemons).
+// packageInstalled, bir paketin gerçekten kurulu olup olmadığını bildirir —
+// systemd unit'i olmayan katalog girdileri için varlık testi (phpMyAdmin ve
+// benzerleri daemon değil, web sunucusunun sunduğu dosyalardır).
+func packageInstalled(pkg string) bool {
+	if !validPackageName(pkg) {
+		return false
+	}
+	out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pkg).Output()
+	return err == nil && strings.Contains(string(out), "install ok installed")
+}
+
 // validPackageName allows the conservative charset real Debian/RPM/Arch
 // package names use: letters, digits and . _ + - (must start alphanumeric).
 // validPackageName, gerçek paket adlarının kullandığı muhafazakâr karakter

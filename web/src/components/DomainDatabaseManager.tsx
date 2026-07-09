@@ -1,10 +1,71 @@
 import { useState, useEffect } from 'react';
-import { Database, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Database, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { showToast } from './Toast';
+import { useI18n } from '../i18n';
 
 interface DomainDatabaseManagerProps {
     domainId: number;
     domainName: string;
+}
+
+// The database web tools (phpMyAdmin / phpPgAdmin). Installed → a launch
+// button opening the panel-proxied tool. Parent engine present but the tool
+// not → a hint pointing to Services. Neither → nothing (the parent-engine
+// requirement means this whole page would be hidden anyway).
+// Veritabanı web araçları (phpMyAdmin / phpPgAdmin). Kurulu → panel-vekilli
+// aracı açan bir düğme. Üst motor var ama araç yok → Servisler'e yönlendiren
+// bir ipucu. Hiçbiri → hiçbir şey.
+function DBToolsCard() {
+    const { t } = useI18n();
+    const [caps, setCaps] = useState<{ database_servers?: string[]; db_tools?: string[] } | null>(null);
+    useEffect(() => {
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then(setCaps)
+            .catch(() => setCaps(null));
+    }, []);
+    if (!caps) return null;
+
+    const tools = [
+        { id: 'phpmyadmin', label: 'phpMyAdmin', engine: 'mariadb' },
+        { id: 'phppgadmin', label: 'phpPgAdmin', engine: 'postgresql' },
+    ];
+    const installed = new Set(caps.db_tools ?? []);
+    const engines = new Set(caps.database_servers ?? []);
+    // Only tools whose parent engine is installed are relevant here.
+    // Yalnız üst motoru kurulu olan araçlar burada anlamlıdır.
+    const relevant = tools.filter((tl) => engines.has(tl.engine));
+    if (relevant.length === 0) return null;
+
+    return (
+        <div className="rounded-lg border border-border bg-surface-2/50 p-4">
+            <h4 className="mb-1 text-sm font-semibold text-fg">{t('dbtools.title')}</h4>
+            <p className="mb-3 text-xs text-fg-subtle">{t('dbtools.hint')}</p>
+            <div className="flex flex-wrap gap-2">
+                {relevant.map((tl) =>
+                    installed.has(tl.id) ? (
+                        <a
+                            key={tl.id}
+                            href={`/dbtool/${tl.id}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90"
+                        >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            {t('dbtools.open', { name: tl.label })}
+                        </a>
+                    ) : (
+                        <span
+                            key={tl.id}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-fg-subtle"
+                        >
+                            {t('dbtools.install', { name: tl.label })}
+                        </span>
+                    ),
+                )}
+            </div>
+        </div>
+    );
 }
 
 interface DatabaseInfo {
@@ -299,6 +360,8 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                     )}
                 </div>
             </div>
+
+            <DBToolsCard />
         </div>
     );
 }
