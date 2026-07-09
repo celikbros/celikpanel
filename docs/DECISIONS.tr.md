@@ -36,9 +36,10 @@ aynası var.
 - Üretim VPS'inde kanıtlı: SpamAssassin kuruldu (dpkg var) sonra kaldırıldı
   (dpkg yok, unit gitti) — yüzey ölçülebilir şekilde küçüldü.
 
-**Bu hattaki kalanlar** (backlog → sürüyor): otomatik güvenlik güncellemeleri
-(`unattended-upgrades`), kurulu paketler yamalı kalsın; kurulu servislerin
-ihtiyaç duyduğu yalnız portları açan bir güvenlik duvarı.
+**Bu hattın ilerlemesi:** geri alınabilir kurulumlar ✅ · otomatik güvenlik
+güncellemeleri ✅ (`unattended-upgrades`, yalnız güvenlik kaynağı, kurulum
+anında etkin — kurulu paketler kimse hatırlamadan yamalı kalır) · kurulu
+servislerin ihtiyaç duyduğu yalnız portları açan güvenlik duvarı (sırada).
 
 ---
 

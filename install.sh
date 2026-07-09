@@ -65,6 +65,36 @@ else
     step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
 fi
 
+# 1b. Automatic security patches --------------------------------------------
+# Every package the operator later installs from the panel (nginx, postfix,
+# PowerDNS…) is attack surface; unattended-upgrades keeps that surface patched
+# without anyone remembering to. Security origin only — never feature upgrades,
+# so a hosting box is never surprised by a behaviour change, only by a fix.
+# SKIP_SECURITY_UPDATES=1 opts out.
+#
+# 1b. Otomatik güvenlik yamaları. Operatörün panelden kurduğu her paket
+# (nginx, postfix, PowerDNS…) saldırı yüzeyidir; unattended-upgrades bu yüzeyi
+# kimse hatırlamak zorunda kalmadan yamalı tutar. Yalnız güvenlik kaynağı —
+# asla özellik yükseltmesi; barındırma kutusu davranış değişikliğiyle
+# şaşırmaz, yalnız düzeltmeyle. SKIP_SECURITY_UPDATES=1 devre dışı bırakır.
+if [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ]; then
+    step "Otomatik güvenlik yamaları (unattended-upgrades)"
+    export DEBIAN_FRONTEND=noninteractive
+    if apt-get install -y -qq unattended-upgrades >/dev/null 2>&1; then
+        # Enable the periodic timer: update lists + apply security upgrades daily.
+        # Periyodik zamanlayıcıyı aç: listeleri güncelle + günlük güvenlik yaması.
+        cat > /etc/apt/apt.conf.d/20celikpanel-auto-upgrades <<'AUTOCONF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+AUTOCONF
+        systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
+        ok "güvenlik yamaları etkin"
+    else
+        c '33' "    unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
+    fi
+fi
+
 # 2. Service user & group ----------------------------------------------------
 step "Servis kullanıcısı ve grubu"
 getent group "$SVC_GROUP" >/dev/null || groupadd --system "$SVC_GROUP"

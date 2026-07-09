@@ -34,9 +34,10 @@ a mistaken or outgrown install is permanent risk. So install has a mirror.
 - Proven on the production VPS: SpamAssassin installed (dpkg present) then
   uninstalled (dpkg absent, unit gone) — the surface measurably shrank.
 
-**Remaining in this line** (backlog → in progress): auto security updates
-(`unattended-upgrades`) so the packages that *are* installed stay patched; a
-firewall that opens only the ports installed services need.
+**This line's progress:** reversible installs ✅ · auto security updates ✅
+(`unattended-upgrades`, security origin only, enabled at install time — the
+packages that *are* installed stay patched without anyone remembering) ·
+firewall that opens only the ports installed services need (next).
 
 ---
 
