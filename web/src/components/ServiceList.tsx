@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button } from './ui';
@@ -63,6 +63,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
+    const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
     useEffect(() => {
@@ -136,6 +137,30 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             const data = await res.json();
             if (!res.ok || data.error) throw new Error(data.error || 'install failed');
             showToast('success', t('services.installed', { name: service.name }));
+            scan();
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    // Remove an installed service: stop + disable + purge via the agent, then
+    // rescan. Shrinks the attack surface back down — the mirror of install.
+    // Kurulu bir servisi kaldır: agent ile durdur + devre dışı + purge, sonra
+    // yeniden tara. Saldırı yüzeyini geri küçültür — kurulumun aynası.
+    const doUninstall = async (service: ManagedService) => {
+        setUninstallTarget(null);
+        setBusy(service.id);
+        try {
+            const res = await fetch('/api/v1/service/uninstall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: service.id }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error || 'uninstall failed');
+            showToast('success', t('services.uninstalled', { name: service.name }));
             scan();
         } catch (e) {
             showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
@@ -337,6 +362,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Settings className="h-3.5 w-3.5" />
                                                         {t('services.manage')}
                                                     </button>
+                                                    <button
+                                                        onClick={() => setUninstallTarget(s)}
+                                                        title={t('services.uninstall')}
+                                                        className="inline-flex items-center rounded-lg border border-border-strong bg-surface p-1.5 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
                                                     </>
                                                     )}
                                                 </div>
@@ -358,6 +390,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     busy={busy === installTarget.id}
                     onCancel={() => setInstallTarget(null)}
                     onConfirm={() => doInstall(installTarget)}
+                />
+            )}
+            {uninstallTarget && (
+                <UninstallServiceDialog
+                    service={uninstallTarget}
+                    busy={busy === uninstallTarget.id}
+                    onCancel={() => setUninstallTarget(null)}
+                    onConfirm={() => doUninstall(uninstallTarget)}
                 />
             )}
         </div>
@@ -470,5 +510,55 @@ function ActionIcon({
         >
             {children}
         </button>
+    );
+}
+
+
+// Themed uninstall confirmation — a destructive action, so it states plainly
+// what will be purged and that dependent sites/mail may break. Removing a
+// service is how the operator shrinks the attack surface back down.
+// Temalı kaldırma onayı — yıkıcı bir eylem; ne purge edileceğini ve bağımlı
+// site/postanın çalışmayabileceğini açıkça söyler. Bir servisi kaldırmak,
+// operatörün saldırı yüzeyini geri küçültme yoludur.
+function UninstallServiceDialog({
+    service,
+    busy,
+    onCancel,
+    onConfirm,
+}: {
+    service: ManagedService;
+    busy: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+            <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-4 flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                        <Trash2 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-fg">{t('services.uninstallTitle', { name: service.name })}</h3>
+                        <p className="text-sm text-fg-muted">{service.description}</p>
+                    </div>
+                </div>
+                <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-fg-muted">
+                    <p className="mb-2">{t('services.uninstallWarn')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (
+                            <span key={pkg} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg">{pkg}</span>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                    <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
+                    <Button variant="danger" onClick={onConfirm} disabled={busy} icon={Trash2}>
+                        {busy ? t('services.uninstalling') : t('services.uninstall')}
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }

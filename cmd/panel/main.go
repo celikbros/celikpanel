@@ -202,6 +202,7 @@ func main() {
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
+	http.HandleFunc("/api/v1/service/uninstall", panel.handleServiceUninstall)
 
 	// Domain Management
 	http.HandleFunc("/api/v1/domains", panel.handleDomains)

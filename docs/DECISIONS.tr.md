@@ -8,6 +8,40 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-006 · Saldırı yüzeyi yönetimi: her kurulum geri alınabilir
+
+*8 Temmuz 2026*
+
+**Karar.** Panel neyi kurabiliyorsa, onu kaldırabilir de. Servis kaldırma
+(durdur + devre dışı + `apt purge --auto-remove`) kurulumun yanında birinci
+sınıf bir eylemdir, elle SSH işi değil. Bu, üç parçalı "saldırı yüzeyi"
+hattının ilkidir: **geri alınabilir kurulumlar**, otomatik güvenlik yaması ve
+yalnız kullanılan portları açan bir güvenlik duvarı.
+
+**Neden.** Operatörün ilkesi, açıkça: *kurulu her servis ya da paket bir
+güvenlik riskidir — bekleyen bir CVE, açık bir port.* Minimalizm derli
+topluluk değil, daha küçük saldırı yüzeyidir. Ama minimalizm ancak yüzey hem
+büyüyüp hem küçülebiliyorsa gerçektir: nginx ekleyip asla kaldıramıyorsan,
+yanlış ya da artık gereksiz bir kurulum kalıcı risktir. O yüzden kurulumun bir
+aynası var.
+
+**Nasıl korunuyor.**
+- `Agent.UninstallService`: her unit'i durdurur + devre dışı bırakır, sonra
+  `removePackages` purge eder (config gider, `--auto-remove` öksüz bağımlılığı
+  düşürür). `InstallService`'in aynası; aynı whitelist, aynı dürüst "bu
+  dağıtımda henüz yok".
+- Panel `POST /service/uninstall` (yalnız admin, audit'li); UI tam paket
+  listesini ve bağımlı site/postanın duracağı uyarısını içeren yıkıcı-onay
+  modalı gösterir.
+- Üretim VPS'inde kanıtlı: SpamAssassin kuruldu (dpkg var) sonra kaldırıldı
+  (dpkg yok, unit gitti) — yüzey ölçülebilir şekilde küçüldü.
+
+**Bu hattaki kalanlar** (backlog → sürüyor): otomatik güvenlik güncellemeleri
+(`unattended-upgrades`), kurulu paketler yamalı kalsın; kurulu servislerin
+ihtiyaç duyduğu yalnız portları açan bir güvenlik duvarı.
+
+---
+
 ## D-005 · Kurulum panelden başka hiçbir şey kurmaz; sunucu yalnız-panel olabilir
 
 *8 Temmuz 2026*

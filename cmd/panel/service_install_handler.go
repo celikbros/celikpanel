@@ -111,3 +111,43 @@ func (p *Panel) handleServiceCandidate(w http.ResponseWriter, r *http.Request) {
 		}{ID: id}, &version)
 	json.NewEncoder(w).Encode(map[string]string{"version": version})
 }
+
+// handleServiceUninstall removes a managed service on demand (admin-only via
+// isAdminOnlyPath) — the mirror of install, for shrinking the attack surface.
+// Every installed service is exploitable code; taking one back off is a
+// first-class action, not a manual SSH chore.
+// handleServiceUninstall, yönetilen bir servisi talep üzerine kaldırır
+// (isAdminOnlyPath ile yalnız admin) — kurulumun aynası, saldırı yüzeyini
+// küçültmek için.
+func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ServiceID string `json:"service_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
+		writeClientError(w, http.StatusBadRequest, "service_id is required")
+		return
+	}
+	var resp struct {
+		Removed bool   `json:"removed"`
+		Detail  string `json:"detail,omitempty"`
+		Error   string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.UninstallService",
+		&struct {
+			ID string `json:"id"`
+		}{ID: req.ServiceID}, &resp); err != nil {
+		writeAgentError(w, err, "service uninstall")
+		return
+	}
+	if resp.Error != "" {
+		writeClientError(w, http.StatusConflict, resp.Error)
+		return
+	}
+	p.audit(r, "service.uninstall:"+req.ServiceID, "service", 0)
+	json.NewEncoder(w).Encode(map[string]any{"removed": resp.Removed, "detail": resp.Detail, "success": true})
+}

@@ -90,6 +90,41 @@ func installPackages(family string, packages []string) (string, error) {
 	}
 }
 
+// removePackages purges the given packages with the host's package manager,
+// non-interactively — the mirror of installPackages, for shrinking the attack
+// surface back down. "purge" (not "remove") also drops config, so an
+// uninstalled service leaves nothing behind. autoremove clears now-orphaned
+// dependencies for the same reason.
+// removePackages, verilen paketleri makinenin paket yöneticisiyle etkileşimsiz
+// kaldırır (purge) — installPackages'in aynası, saldırı yüzeyini geri
+// küçültmek için. "purge" config'i de siler; autoremove artık öksüz kalan
+// bağımlılıkları temizler.
+func removePackages(family string, packages []string) (string, error) {
+	if len(packages) == 0 {
+		return "", fmt.Errorf("no packages to remove")
+	}
+	for _, p := range packages {
+		if !validPackageName(p) {
+			return "", fmt.Errorf("invalid package name: %q", p)
+		}
+	}
+	switch family {
+	case "apt":
+		args := append([]string{"purge", "-y", "--auto-remove"}, packages...)
+		cmd := exec.Command("apt-get", args...)
+		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		}
+		return string(out), nil
+	case "dnf", "pacman":
+		return "", fmt.Errorf("automatic removal on this distro (%s) is not supported yet; remove %s manually", family, strings.Join(packages, ", "))
+	default:
+		return "", fmt.Errorf("unrecognised distribution; remove %s manually", strings.Join(packages, ", "))
+	}
+}
+
 // validPackageName allows the conservative charset real Debian/RPM/Arch
 // package names use: letters, digits and . _ + - (must start alphanumeric).
 // validPackageName, gerçek paket adlarının kullandığı muhafazakâr karakter

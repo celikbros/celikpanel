@@ -8,6 +8,38 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-006 · Attack-surface management: every install is reversible
+
+*July 8, 2026*
+
+**Decision.** Whatever the panel can install, it can uninstall. Service
+removal (stop + disable + `apt purge --auto-remove`) is a first-class action
+next to install, not a manual SSH chore. This is the first of a three-part
+"attack-surface" line: **reversible installs**, automatic security patching,
+and a firewall that only opens ports in use.
+
+**Why.** The operator's principle, stated plainly: *every installed service or
+package is a security risk — a CVE waiting, a port open.* Minimalism is not
+tidiness, it is a smaller attack surface. But minimalism is only real if the
+surface can shrink as well as grow: if you can add nginx but never remove it,
+a mistaken or outgrown install is permanent risk. So install has a mirror.
+
+**How it holds up.**
+- `Agent.UninstallService`: stops + disables every unit, then `removePackages`
+  purges (config gone, `--auto-remove` drops orphaned deps). Mirror of
+  `InstallService`; same whitelist, same honest "not on this distro yet".
+- Panel `POST /service/uninstall` (admin-only, audited); UI shows a
+  destructive-confirm dialog listing the exact packages and warning that
+  dependent sites/mail will stop.
+- Proven on the production VPS: SpamAssassin installed (dpkg present) then
+  uninstalled (dpkg absent, unit gone) — the surface measurably shrank.
+
+**Remaining in this line** (backlog → in progress): auto security updates
+(`unattended-upgrades`) so the packages that *are* installed stay patched; a
+firewall that opens only the ports installed services need.
+
+---
+
 ## D-005 · Install installs nothing but the panel; a server can be panel-only
 
 *July 8, 2026*

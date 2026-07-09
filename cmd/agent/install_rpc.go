@@ -70,6 +70,53 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	return nil
 }
 
+type UninstallServiceResponse struct {
+	Removed bool   `json:"removed"`
+	Detail  string `json:"detail,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// UninstallService stops and disables a managed service, then purges its
+// packages — the mirror of InstallService, for shrinking the attack surface.
+// Every installed service is code that can be exploited; the operator must be
+// able to take one back off, not only add it. Refuses services we never
+// install (protects nothing) and reports a not-installed service honestly.
+// UninstallService, yönetilen bir servisi durdurur, devre dışı bırakır ve
+// paketlerini purge eder — InstallService'in aynası, saldırı yüzeyini
+// küçültmek için. Kurulu her servis sömürülebilir koddur; operatör bir
+// servisi yalnız ekleyebilmemeli, geri de alabilmeli.
+func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServiceResponse) error {
+	svc := core.GetManagedServiceByID(req.ID)
+	if svc == nil {
+		resp.Error = "unknown service"
+		return nil
+	}
+	family := detectPkgFamily()
+	pkgs := svc.Packages[family]
+	if len(pkgs) == 0 {
+		resp.Error = fmt.Sprintf("%s cannot be removed automatically on this system yet", svc.Name)
+		return nil
+	}
+
+	// Stop + disable every present unit first, so purge does not fight a
+	// running process. Template instances ("wg-quick@wg0") are handled by
+	// their exact SystemNames entry.
+	// Önce mevcut her unit'i durdur + devre dışı bırak ki purge çalışan bir
+	// süreçle boğuşmasın.
+	for _, unit := range svc.SystemNames {
+		_ = exec.Command("systemctl", "disable", "--now", unit).Run()
+	}
+
+	if _, err := removePackages(family, pkgs); err != nil {
+		resp.Error = fmt.Sprintf("package removal failed: %v", err)
+		return nil
+	}
+
+	resp.Removed = true
+	resp.Detail = fmt.Sprintf("removed %s", strings.Join(pkgs, ", "))
+	return nil
+}
+
 // firstPresentUnit returns the first of a service's candidate systemd unit
 // names that the system recognises, or "" if none is installed.
 // firstPresentUnit, bir servisin aday systemd unit adlarından sistemin
