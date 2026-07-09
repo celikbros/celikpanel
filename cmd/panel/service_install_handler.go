@@ -24,6 +24,7 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		ServiceID string `json:"service_id"`
+		Package   string `json:"package,omitempty"` // optional version pick from a managed repo
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
 		writeClientError(w, http.StatusBadRequest, "service_id is required")
@@ -40,8 +41,9 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		Error     string `json:"error,omitempty"`
 	}
 	if err := p.agentClient.Call("Agent.InstallService", &struct {
-		ID string `json:"id"`
-	}{ID: req.ServiceID}, &resp); err != nil {
+		ID      string `json:"id"`
+		Package string `json:"package,omitempty"`
+	}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
 		writeServerError(w, err)
 		return
 	}

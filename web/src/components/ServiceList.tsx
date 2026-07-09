@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button } from './ui';
@@ -34,6 +34,20 @@ const categoryOrder: { id: string; labelKey: string }[] = [
 interface ServiceListProps {
     onSelectConfig: (path: string) => void;
     onManageService?: (serviceId: string, versions: string[]) => void;
+}
+
+// A service's optional managed vendor repository (e.g. PGDG for PostgreSQL).
+// When available+enabled, the install dialog offers a specific major version.
+// Bir servisin isteğe bağlı yönetilen vendor deposu (örn. PostgreSQL için PGDG).
+// Mevcut+etkinse, kurulum modalı belirli bir major sürüm sunar.
+interface RepoInfo {
+    available: boolean;
+    enabled: boolean;
+    id?: string;
+    name?: string;
+    detail?: string;
+    packages?: string[];
+    error?: string;
 }
 
 // Category pills: categorical colors that stay readable in both themes.
@@ -125,14 +139,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // exactly the whitelisted packages for this id, then enables the unit.
     // Gerçek kurulum, onay modalından sonra koşar. Agent bu id için yalnız
     // beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
-    const doInstall = async (service: ManagedService) => {
+    const doInstall = async (service: ManagedService, pkg?: string) => {
         setInstallTarget(null);
         setBusy(service.id);
         try {
             const res = await fetch('/api/v1/service/install', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ service_id: service.id }),
+                body: JSON.stringify({ service_id: service.id, ...(pkg ? { package: pkg } : {}) }),
             });
             const data = await res.json();
             if (!res.ok || data.error) throw new Error(data.error || 'install failed');
@@ -391,7 +405,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     service={installTarget}
                     busy={busy === installTarget.id}
                     onCancel={() => setInstallTarget(null)}
-                    onConfirm={() => doInstall(installTarget)}
+                    onConfirm={(pkg) => doInstall(installTarget, pkg)}
                 />
             )}
             {uninstallTarget && (
@@ -423,11 +437,23 @@ function InstallServiceDialog({
     service: ManagedService;
     busy: boolean;
     onCancel: () => void;
-    onConfirm: () => void;
+    onConfirm: (pkg?: string) => void;
 }) {
     const { t } = useI18n();
     const [version, setVersion] = useState<string | null>(null);
     const [verLoading, setVerLoading] = useState(true);
+
+    // Managed vendor repo (e.g. PGDG): most services have none, so this whole
+    // section simply does not render. When present, the admin can enable it and
+    // pick a specific major version instead of the single one the distro froze.
+    // selectedPkg === '' means "distro default" (install from the OS repo).
+    // Yönetilen vendor deposu (örn. PGDG): çoğu servisin yok, o durumda bu bölüm
+    // hiç render edilmez. Varsa, yönetici açıp dağıtımın dondurduğu tek sürüm
+    // yerine belirli bir major seçebilir. selectedPkg === '' → "dağıtım
+    // varsayılanı" (OS deposundan kur).
+    const [repo, setRepo] = useState<RepoInfo | null>(null);
+    const [repoBusy, setRepoBusy] = useState(false);
+    const [selectedPkg, setSelectedPkg] = useState<string>('');
 
     // Ask the server what apt would actually install right now — honest
     // "what will land", not a made-up version picker (the distro offers one).
@@ -440,7 +466,40 @@ function InstallServiceDialog({
             .then((d) => setVersion(d?.version || ''))
             .catch(() => setVersion(''))
             .finally(() => setVerLoading(false));
+        fetch(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d: RepoInfo | null) => setRepo(d && d.available ? d : null))
+            .catch(() => setRepo(null));
     }, [service.id]);
+
+    // Enable/disable the vendor repo, then reflect the new state (and the
+    // versions it now exposes) straight from the server's reply.
+    // Vendor deposunu aç/kapat, sonra yeni durumu (ve açtığı sürümleri) doğrudan
+    // sunucunun yanıtından yansıt.
+    const toggleRepo = async (action: 'enable' | 'disable') => {
+        setRepoBusy(true);
+        try {
+            const res = await fetch('/api/v1/repo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: service.id, action }),
+            });
+            const data: RepoInfo = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error || 'repo failed');
+            setRepo(data.available ? data : null);
+            if (action === 'disable') setSelectedPkg('');
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setRepoBusy(false);
+        }
+    };
+
+    const willInstall = selectedPkg
+        ? [selectedPkg]
+        : service.packages && service.packages.length > 0
+          ? service.packages
+          : [service.id];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
@@ -460,12 +519,12 @@ function InstallServiceDialog({
                     <div className="mb-2 flex items-center justify-between">
                         <span className="text-xs font-medium text-fg-subtle">{t('services.versionToInstall')}</span>
                         <span className="font-mono text-sm font-semibold text-fg">
-                            {verLoading ? '…' : version ? version : t('services.versionDefault')}
+                            {selectedPkg ? selectedPkg : verLoading ? '…' : version ? version : t('services.versionDefault')}
                         </span>
                     </div>
                     <p className="mb-1 text-xs font-medium text-fg-subtle">{t('services.willInstall')}</p>
                     <div className="flex flex-wrap gap-1.5">
-                        {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (
+                        {willInstall.map((pkg) => (
                             <span key={pkg} className="rounded bg-surface-3 px-2 py-0.5 font-mono text-xs text-fg">{pkg}</span>
                         ))}
                     </div>
@@ -474,9 +533,72 @@ function InstallServiceDialog({
                     )}
                 </div>
 
+                {repo && (
+                    <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
+                        <div className="mb-2 flex items-start gap-2">
+                            <Layers className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                            <div className="min-w-0">
+                                <p className="text-sm font-medium text-fg">{repo.name}</p>
+                                <p className="text-xs text-fg-subtle">{repo.detail}</p>
+                            </div>
+                        </div>
+
+                        {!repo.enabled ? (
+                            <>
+                                <p className="mb-2 text-xs text-fg-subtle">{t('services.repo.note')}</p>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => toggleRepo('enable')}
+                                    disabled={repoBusy || busy}
+                                    icon={Layers}
+                                >
+                                    {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="mb-1.5 text-xs font-medium text-fg-subtle">{t('services.repo.chooseVersion')}</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    <button
+                                        onClick={() => setSelectedPkg('')}
+                                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                            selectedPkg === ''
+                                                ? 'bg-primary text-primary-fg'
+                                                : 'bg-surface-3 text-fg-muted hover:text-fg'
+                                        }`}
+                                    >
+                                        {t('services.repo.distroDefault')}
+                                        {version ? ` (${version})` : ''}
+                                    </button>
+                                    {(repo.packages || []).map((pkg) => (
+                                        <button
+                                            key={pkg}
+                                            onClick={() => setSelectedPkg(pkg)}
+                                            className={`rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
+                                                selectedPkg === pkg
+                                                    ? 'bg-primary text-primary-fg'
+                                                    : 'bg-surface-3 text-fg-muted hover:text-fg'
+                                            }`}
+                                        >
+                                            {pkg}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => toggleRepo('disable')}
+                                    disabled={repoBusy || busy}
+                                    className="mt-2 text-xs text-fg-subtle underline decoration-dotted underline-offset-2 hover:text-fg disabled:opacity-40"
+                                >
+                                    {repoBusy ? '…' : t('services.repo.disable')}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
-                    <Button variant="primary" onClick={onConfirm} disabled={busy} icon={DownloadCloud}>
+                    <Button variant="primary" onClick={() => onConfirm(selectedPkg || undefined)} disabled={busy} icon={DownloadCloud}>
                         {busy ? t('services.installing') : t('services.install')}
                     </Button>
                 </div>

@@ -8,6 +8,50 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-007 · Version choice via managed vendor repositories, not a fork of the distro
+
+*July 9, 2026*
+
+**Decision.** A service may declare an official upstream repository (PostgreSQL
+→ PGDG). Enabling it is a first-class panel action that unlocks a version pick
+at install time: instead of the single major the distro froze, the admin
+chooses from every current major the vendor ships. It is opt-in, curated,
+signed and reversible — never on by default.
+
+**Why.** A distro release pins one major of each database/runtime (Ubuntu noble
+ships only PostgreSQL 16; Debian bookworm only 15). Customers need to land on a
+specific version and stay there — this was the operator's open worry ("PG has
+many versions; which one does install pick, and does it lock us to one?"). The
+two bad answers are *fork the distro* (own the whole package tree forever) or
+*let the OS decide* (no choice at all). The industry-standard middle path is the
+vendor's own signed apt repo, which carries all current majors side by side.
+
+**Why it stays consistent with minimal-install (D-005/D-006).** A third-party
+repo widens the trust boundary, so it gets the same discipline as installing a
+service: only catalog-declared repos can be enabled (the UI never passes a URL);
+the signing key is pinned per-repo with apt's `signed-by=` (no global `apt-key`
+trust); and disabling removes the source + key cleanly. The armoured key is used
+directly, so **no `gpg` is pulled in** — the minimal footprint holds. A version
+pick is bounded by the repo's package pattern, so it can never become an
+arbitrary package install.
+
+**How it holds up.**
+- Catalog: `ManagedRepo` (id, name, key URL, source template with `{codename}`,
+  package pattern); `postgresql` carries PGDG. Agent `EnableRepo`/`DisableRepo`/
+  `RepoStatus`/`RepoPackages`; the repo — not our code — is the source of truth
+  for which versions exist (discovered via `apt-cache`, newest major first).
+- Panel `GET/POST /api/v1/repo` (admin-only, audited); the allowlist lives here
+  (resolve repo from catalog by service id). Install accepts a version package
+  only when it matches that service's repo pattern.
+- Proven on the production VPS: baseline offered **only `postgresql-16`**;
+  enabling PGDG unlocked **9 majors (10–18)**, and picking `postgresql-17`
+  resolved to `17.10-1.pgdg24.04+1` from PGDG; disabling returned to baseline.
+- Bug caught in testing: the agent runs with `UMask=0027`, so a `0644` keyring
+  landed as `0640 root:celikpanel` — unreadable by apt's unprivileged `_apt`
+  verifier, failing as "not signed". Fixed by `chmod 0644` after write.
+
+---
+
 ## D-006 · Attack-surface management: every install is reversible
 
 *July 8, 2026*

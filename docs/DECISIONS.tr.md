@@ -8,6 +8,50 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-007 · Sürüm seçimi, dağıtımı fork'lamadan yönetilen vendor depolarıyla
+
+*9 Temmuz 2026*
+
+**Karar.** Bir servis resmi bir yukarı-akış deposu bildirebilir (PostgreSQL →
+PGDG). Onu açmak, kurulumda sürüm seçimini açan birinci-sınıf bir panel
+eylemidir: dağıtımın dondurduğu tek major yerine, yönetici vendor'ın sunduğu
+tüm güncel major'lardan seçer. Opt-in, seçilmiş, imzalı ve geri alınabilirdir —
+asla varsayılan açık değil.
+
+**Neden.** Bir dağıtım sürümü her veritabanı/çalışma zamanının tek major'unu
+sabitler (Ubuntu noble yalnız PostgreSQL 16; Debian bookworm yalnız 15).
+Müşteriler belirli bir sürüme inip orada kalmak ister — bu, operatörün açık
+kaygısıydı ("PG'nin bir sürü sürümü var; install hangisini kurar, bizi tek
+sürüme kilitler mi?"). İki kötü yanıt: *dağıtımı fork'la* (tüm paket ağacına
+sonsuza dek sahip ol) ya da *OS karar versin* (hiç seçim yok). Sektör-standardı
+orta yol, tüm güncel major'ları yan yana taşıyan vendor'ın kendi imzalı apt
+deposudur.
+
+**Minimal kurulumla (D-005/D-006) neden tutarlı.** Üçüncü-parti depo güven
+sınırını genişletir; bu yüzden servis kurmakla aynı disipline tabidir: yalnız
+katalogda tanımlı depolar açılabilir (UI asla URL geçirmez); imza anahtarı depo
+başına apt `signed-by=` ile sabitlenir (küresel `apt-key` güveni yok); kapatmak
+kaynağı + anahtarı temizce kaldırır. Zırhlı anahtar doğrudan kullanılır, böylece
+**`gpg` çekilmez** — minimal ayak izi korunur. Sürüm seçimi deponun paket
+desenine bağlıdır; asla keyfi paket kurulumuna dönüşemez.
+
+**Nasıl doğrulandı.**
+- Katalog: `ManagedRepo` (id, ad, anahtar URL'si, `{codename}` yer tutuculu
+  kaynak şablonu, paket deseni); `postgresql` PGDG taşır. Agent `EnableRepo`/
+  `DisableRepo`/`RepoStatus`/`RepoPackages`; hangi sürümlerin var olduğunun
+  kaynağı kodumuz değil depodur (`apt-cache` ile keşfedilir, en yeni major önce).
+- Panel `GET/POST /api/v1/repo` (yalnız admin, audit'li); izin listesi burada
+  (depoyu katalogdan servis id'siyle çöz). Kurulum, bir sürüm paketini yalnız o
+  servisin depo desenine uyuyorsa kabul eder.
+- Üretim VPS'te kanıtlandı: baseline **yalnız `postgresql-16`** sunuyordu; PGDG
+  açılınca **9 major (10–18)** açıldı ve `postgresql-17` seçimi PGDG'den
+  `17.10-1.pgdg24.04+1`'e çözüldü; kapatmak baseline'a döndürdü.
+- Testte yakalanan hata: agent `UMask=0027` ile koşar; `0644` keyring
+  `0640 root:celikpanel` olarak indi — apt'ın yetkisiz `_apt` doğrulayıcısı
+  okuyamadı, "imzasız" hatası verdi. Yazdıktan sonra `chmod 0644` ile düzeltildi.
+
+---
+
 ## D-006 · Saldırı yüzeyi yönetimi: her kurulum geri alınabilir
 
 *8 Temmuz 2026*

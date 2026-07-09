@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -21,6 +22,17 @@ import (
 
 type InstallServiceRequest struct {
 	ID string `json:"id"` // managed service id, e.g. "postgresql"
+	// Package, when set, is a specific version package chosen from the service's
+	// managed repo (e.g. "postgresql-17") to install instead of the distro
+	// default. It is accepted only if the service has a Repo and the name
+	// matches that repo's PackagePattern — so a version pick can never turn into
+	// an arbitrary package install.
+	// Package, ayarlıysa, servisin yönetilen deposundan seçilmiş belirli bir
+	// sürüm paketidir (örn. "postgresql-17"); dağıtım varsayılanı yerine kurulur.
+	// Yalnız servisin bir Repo'su varsa ve ad o deponun PackagePattern'ına
+	// uyuyorsa kabul edilir — böylece sürüm seçimi asla keyfi paket kurulumuna
+	// dönüşemez.
+	Package string `json:"package,omitempty"`
 }
 
 type InstallServiceResponse struct {
@@ -54,6 +66,24 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	if len(pkgs) == 0 {
 		resp.Error = fmt.Sprintf("%s cannot be installed automatically on this system yet", svc.Name)
 		return nil
+	}
+
+	// A version pick from the service's managed repo replaces the distro
+	// default — but only if the service actually has a repo and the requested
+	// name matches its pattern, so this can never install an arbitrary package.
+	// Servisin yönetilen deposundan bir sürüm seçimi dağıtım varsayılanının
+	// yerini alır — ama yalnız servisin gerçekten bir deposu varsa ve istenen ad
+	// desenine uyuyorsa; böylece bu asla keyfi bir paket kuramaz.
+	if req.Package != "" {
+		if svc.Repo == nil {
+			resp.Error = "this service does not offer version selection"
+			return nil
+		}
+		if ok, _ := regexp.MatchString(svc.Repo.PackagePattern, req.Package); !ok {
+			resp.Error = fmt.Sprintf("%q is not a valid version package for %s", req.Package, svc.Name)
+			return nil
+		}
+		pkgs = []string{req.Package}
 	}
 
 	if _, err := installPackages(family, pkgs); err != nil {

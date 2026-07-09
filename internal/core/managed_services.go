@@ -7,6 +7,61 @@ type FirewallPort struct {
 	Proto string // "tcp" or "udp"
 }
 
+// ManagedRepo is an official upstream package repository a service can offer as
+// an alternative to the distro's. A distro freezes one major version of a
+// database/runtime per release (Debian bookworm ships exactly one PostgreSQL);
+// the vendor's own repo carries every current major at once, so the operator
+// picks the version they need instead of whatever the OS happened to ship.
+//
+// Enabling a repo is opt-in, curated and reversible — the same attack-surface
+// discipline as installing a service. Only repos declared here (vendor-official,
+// pinned to a signing key) can ever be enabled; the UI can never point the agent
+// at an arbitrary URL. The key is pinned per-repo with apt's signed-by= (no
+// global apt-key trust), and DisableRepo removes the source + key cleanly.
+//
+// ManagedRepo, bir servisin dağıtımınkine alternatif olarak sunabileceği resmi
+// yukarı-akış paket deposudur. Dağıtım her sürümde bir veritabanı/çalışma
+// zamanının tek major'unu dondurur (Debian bookworm tek bir PostgreSQL taşır);
+// vendor'ın kendi deposu tüm güncel major'ları aynı anda taşır, böylece operatör
+// OS'un getirdiğiyle yetinmek yerine ihtiyacı olan sürümü seçer.
+//
+// Depo açmak opt-in, seçilmiş ve geri alınabilirdir — servis kurmakla aynı
+// saldırı-yüzeyi disiplini. Yalnız burada tanımlı depolar (vendor-resmi, imza
+// anahtarına sabitli) açılabilir; UI agent'ı asla keyfi bir URL'ye
+// yönlendiremez. Anahtar depo başına apt signed-by= ile sabitlenir (küresel
+// apt-key güveni yok) ve DisableRepo kaynağı + anahtarı temizce kaldırır.
+type ManagedRepo struct {
+	ID          string // stable id used in filenames, e.g. "pgdg" ([a-z0-9-]+)
+	Name        string // "PostgreSQL Global Development Group (PGDG)"
+	Description string // one line, shown in the install dialog
+	// KeyURL is the vendor's ASCII-armoured signing key (https). The agent
+	// fetches it and pins the source to it with signed-by= — the armoured file
+	// is used directly (apt ≥ 1.4), so no gpg dependency is pulled in, which
+	// keeps the minimal-install promise.
+	// KeyURL, vendor'ın ASCII-zırhlı imza anahtarıdır (https). Agent onu indirir
+	// ve kaynağı signed-by= ile ona sabitler — zırhlı dosya doğrudan kullanılır
+	// (apt ≥ 1.4), böylece gpg bağımlılığı çekilmez; minimal kurulum sözü korunur.
+	KeyURL string
+	// SourceTemplate is the apt source line with a {codename} placeholder the
+	// agent fills from /etc/os-release (bookworm, noble…). The agent inserts the
+	// signed-by= option automatically.
+	// SourceTemplate, agent'ın /etc/os-release'ten doldurduğu {codename} yer
+	// tutuculu apt kaynak satırıdır. signed-by= seçeneğini agent otomatik ekler.
+	SourceTemplate string
+	// PackagePattern is a regexp matching the versioned packages this repo
+	// provides. The repo — not this catalog — is the source of truth for which
+	// versions exist today, so the agent discovers them by matching this against
+	// apt-cache. It also bounds what a version-pick install may install: the
+	// agent refuses any package that does not match, so the UI can never install
+	// an arbitrary name. e.g. `^postgresql-[0-9]+$`.
+	// PackagePattern, bu deponun sağladığı sürümlü paketleri eşleyen bir
+	// regexp'tir. Hangi sürümlerin bugün var olduğunun kaynağı bu katalog değil
+	// depodur; agent bunu apt-cache ile eşleyerek keşfeder. Ayrıca sürüm-seçmeli
+	// kurulumun neyi kurabileceğini sınırlar: agent eşleşmeyen paketi reddeder,
+	// böylece UI asla keyfi ad kuramaz.
+	PackagePattern string
+}
+
 // ManagedService represents a service that CelikPanel can manage
 type ManagedService struct {
 	ID          string   // Unique identifier (e.g., "php-fpm", "nginx")
@@ -53,6 +108,13 @@ type ManagedService struct {
 	// edilmiştir; diğer aileler ad tahmin etmek yerine dürüst "bu dağıtımda
 	// henüz desteklenmiyor" döndürür.
 	Packages map[string][]string
+	// Repo, when set, is the optional vendor repository this service can enable
+	// to unlock version choice (see ManagedRepo). nil means the service is only
+	// ever installed from the distro — the common, most conservative case.
+	// Repo, ayarlıysa, bu servisin sürüm seçimini açmak için etkinleştirebileceği
+	// isteğe bağlı vendor deposudur (bkz. ManagedRepo). nil ise servis yalnız
+	// dağıtımdan kurulur — yaygın ve en muhafazakâr durum.
+	Repo *ManagedRepo
 }
 
 // ManagedServices is the list of services CelikPanel manages
@@ -96,6 +158,19 @@ var ManagedServices = []ManagedService{
 		Category:    "database",
 		SystemNames: []string{"postgresql"},
 		Packages:    map[string][]string{"apt": {"postgresql"}},
+		// The distro ships one PostgreSQL major; PGDG carries every current
+		// major, so an admin who needs 17 (or must stay on 16) can pick it.
+		// Dağıtım tek bir PostgreSQL major'u getirir; PGDG tüm güncel major'ları
+		// taşır, böylece 17'ye ihtiyacı olan (ya da 16'da kalması gereken)
+		// yönetici onu seçebilir.
+		Repo: &ManagedRepo{
+			ID:             "pgdg",
+			Name:           "PostgreSQL Global Development Group (PGDG)",
+			Description:    "Official PostgreSQL repository — every current major version, kept up to date.",
+			KeyURL:         "https://www.postgresql.org/media/keys/ACCC4CF8.asc",
+			SourceTemplate: "deb https://apt.postgresql.org/pub/repos/apt {codename}-pgdg main",
+			PackagePattern: "^postgresql-[0-9]+$",
+		},
 	},
 	{
 		ID:          "mariadb",
