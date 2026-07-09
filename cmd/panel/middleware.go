@@ -122,6 +122,7 @@ func isAdminOnlyPath(path string) bool {
 		"/api/v1/audit-logs",
 		"/api/v1/managed-services",
 		"/api/v1/nginx/",
+		"/api/v1/panel/",
 		"/api/v1/pdns/",
 		"/api/v1/php/",
 		"/api/v1/postfix/",
