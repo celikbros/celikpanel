@@ -89,6 +89,9 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		log.Printf("service scan after install %s: %v", req.ServiceID, err)
 	}
 
+	// New service may expose new ports; if the firewall is on, open them.
+	// Yeni servis yeni port açabilir; güvenlik duvarı açıksa onları aç.
+	p.syncFirewall()
 	p.audit(r, "service.install:"+req.ServiceID, "service", 0)
 	json.NewEncoder(w).Encode(map[string]any{"success": true, "installed": resp.Installed, "detail": resp.Detail})
 }
@@ -148,6 +151,9 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
+	// Removed service's ports should close; re-sync the firewall.
+	// Kaldırılan servisin portları kapanmalı; güvenlik duvarını yeniden senkronla.
+	p.syncFirewall()
 	p.audit(r, "service.uninstall:"+req.ServiceID, "service", 0)
 	json.NewEncoder(w).Encode(map[string]any{"removed": resp.Removed, "detail": resp.Detail, "success": true})
 }

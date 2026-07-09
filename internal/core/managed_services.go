@@ -1,5 +1,12 @@
 package core
 
+// FirewallPort is one inbound port a service needs open, with its protocol.
+// FirewallPort, bir servisin açık olmasını istediği bir gelen port ve protokolü.
+type FirewallPort struct {
+	Port  int    // e.g. 443
+	Proto string // "tcp" or "udp"
+}
+
 // ManagedService represents a service that CelikPanel can manage
 type ManagedService struct {
 	ID          string   // Unique identifier (e.g., "php-fpm", "nginx")
@@ -18,6 +25,18 @@ type ManagedService struct {
 	// ise çakışma yok (her şeyle yan yana). Panel, grubunda zaten kurulu üye
 	// olan bir servisin kurulumunu engeller. Veritabanı/önbelleğin grubu yok.
 	ConflictGroup string
+	// FirewallPorts: the inbound ports this service must expose to the world.
+	// The panel opens exactly these when the service is installed and closes
+	// them when it is removed — the firewall follows the installed set, so a
+	// server only ever exposes what it actually runs. Empty = local-only
+	// service (php-fpm, mariadb, redis…): nothing to open, and that is the
+	// safest default.
+	// FirewallPorts: bu servisin dünyaya açması gereken gelen portlar. Panel
+	// servis kurulunca tam bunları açar, kaldırılınca kapatır — güvenlik
+	// duvarı kurulu seti izler; sunucu yalnız gerçekten koşturduğunu açar.
+	// Boş = yalnız-yerel servis (php-fpm, mariadb, redis…): açılacak port yok,
+	// en güvenli varsayılan.
+	FirewallPorts []FirewallPort
 	// Packages maps a package-manager family ("apt", "dnf", "pacman") to the
 	// distro packages that install this service. The panel installs nothing at
 	// setup time (the constitution: what isn't installed is invisible); the
@@ -56,6 +75,7 @@ var ManagedServices = []ManagedService{
 		SystemNames:   []string{"nginx"},
 		ConflictGroup: "web-server",
 		Packages:      map[string][]string{"apt": {"nginx"}},
+		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
 		ID:            "apache",
@@ -66,6 +86,7 @@ var ManagedServices = []ManagedService{
 		SystemNames:   []string{"apache2"},
 		ConflictGroup: "web-server",
 		Packages:      map[string][]string{"apt": {"apache2"}},
+		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
 		ID:          "postgresql",
@@ -86,22 +107,24 @@ var ManagedServices = []ManagedService{
 		Packages:    map[string][]string{"apt": {"mariadb-server"}},
 	},
 	{
-		ID:          "postfix",
-		Name:        "Postfix",
-		Description: "SMTP Server",
-		Icon:        "📧",
-		Category:    "email",
-		SystemNames: []string{"postfix"},
-		Packages:    map[string][]string{"apt": {"postfix"}},
+		ID:            "postfix",
+		Name:          "Postfix",
+		Description:   "SMTP Server",
+		Icon:          "📧",
+		Category:      "email",
+		SystemNames:   []string{"postfix"},
+		Packages:      map[string][]string{"apt": {"postfix"}},
+		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
 	},
 	{
-		ID:          "dovecot",
-		Name:        "Dovecot",
-		Description: "IMAP/POP3 Server",
-		Icon:        "📬",
-		Category:    "email",
-		SystemNames: []string{"dovecot"},
-		Packages:    map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}},
+		ID:            "dovecot",
+		Name:          "Dovecot",
+		Description:   "IMAP/POP3 Server",
+		Icon:          "📬",
+		Category:      "email",
+		SystemNames:   []string{"dovecot"},
+		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}},
+		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
 	},
 	{
 		ID:          "spamassassin",
@@ -113,13 +136,14 @@ var ManagedServices = []ManagedService{
 		Packages:    map[string][]string{"apt": {"spamassassin"}},
 	},
 	{
-		ID:          "wireguard",
-		Name:        "WireGuard VPN",
-		Description: "Built-in VPN server",
-		Icon:        "\U0001F510",
-		Category:    "security",
-		SystemNames: []string{"wg-quick@wg0"},
-		Packages:    map[string][]string{"apt": {"wireguard"}},
+		ID:            "wireguard",
+		Name:          "WireGuard VPN",
+		Description:   "Built-in VPN server",
+		Icon:          "\U0001F510",
+		Category:      "security",
+		SystemNames:   []string{"wg-quick@wg0"},
+		Packages:      map[string][]string{"apt": {"wireguard"}},
+		FirewallPorts: []FirewallPort{{51820, "udp"}},
 	},
 	{
 		ID:          "fail2ban",
@@ -139,6 +163,7 @@ var ManagedServices = []ManagedService{
 		SystemNames:   []string{"bind9", "named"},
 		ConflictGroup: "dns-server",
 		Packages:      map[string][]string{"apt": {"bind9"}},
+		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
 		ID:            "pdns",
@@ -149,15 +174,17 @@ var ManagedServices = []ManagedService{
 		SystemNames:   []string{"pdns"},
 		ConflictGroup: "dns-server",
 		Packages:      map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}},
+		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
-		ID:          "vsftpd",
-		Name:        "vsftpd",
-		Description: "FTP Server",
-		Icon:        "📂",
-		Category:    "ftp",
-		SystemNames: []string{"vsftpd"},
-		Packages:    map[string][]string{"apt": {"vsftpd"}},
+		ID:            "vsftpd",
+		Name:          "vsftpd",
+		Description:   "FTP Server",
+		Icon:          "📂",
+		Category:      "ftp",
+		SystemNames:   []string{"vsftpd"},
+		Packages:      map[string][]string{"apt": {"vsftpd"}},
+		FirewallPorts: []FirewallPort{{21, "tcp"}},
 	},
 	{
 		ID:          "redis",

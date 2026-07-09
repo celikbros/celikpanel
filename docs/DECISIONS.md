@@ -34,10 +34,14 @@ a mistaken or outgrown install is permanent risk. So install has a mirror.
 - Proven on the production VPS: SpamAssassin installed (dpkg present) then
   uninstalled (dpkg absent, unit gone) — the surface measurably shrank.
 
-**This line's progress:** reversible installs ✅ · auto security updates ✅
-(`unattended-upgrades`, security origin only, enabled at install time — the
-packages that *are* installed stay patched without anyone remembering) ·
-firewall that opens only the ports installed services need (next).
+**This line's progress (complete):** reversible installs ✅ · auto security
+updates ✅ · firewall ✅. The firewall is default-deny inbound; the panel
+opens exactly the panel port + each installed service's declared ports, and
+the agent always keeps SSH (auto-detected from live listeners) + loopback +
+established open, so a rule can never lock the operator out. Install/uninstall
+re-syncs it, so the open-port set always equals the running-service set.
+Proven on the VPS: enabling it left SSH, panel, web and DNS reachable while
+the policy dropped everything else.
 
 ---
 

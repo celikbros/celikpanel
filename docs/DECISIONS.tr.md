@@ -36,10 +36,14 @@ aynası var.
 - Üretim VPS'inde kanıtlı: SpamAssassin kuruldu (dpkg var) sonra kaldırıldı
   (dpkg yok, unit gitti) — yüzey ölçülebilir şekilde küçüldü.
 
-**Bu hattın ilerlemesi:** geri alınabilir kurulumlar ✅ · otomatik güvenlik
-güncellemeleri ✅ (`unattended-upgrades`, yalnız güvenlik kaynağı, kurulum
-anında etkin — kurulu paketler kimse hatırlamadan yamalı kalır) · kurulu
-servislerin ihtiyaç duyduğu yalnız portları açan güvenlik duvarı (sırada).
+**Bu hattın ilerlemesi (tamam):** geri alınabilir kurulumlar ✅ · otomatik
+güvenlik güncellemeleri ✅ · güvenlik duvarı ✅. Duvar varsayılan-reddet
+gelen; panel tam olarak panel portu + kurulu her servisin bildirdiği portları
+açar, agent ise SSH'ı (canlı dinleyicilerden tespit) + loopback + kurulu
+bağlantıları daima açık tutar; bir kural operatörü asla kilitleyemez.
+Kurulum/kaldırma yeniden senkronlar; açık-port kümesi daima koşan-servis
+kümesine eşittir. VPS'te kanıtlı: açınca SSH, panel, web ve DNS erişilebilir
+kaldı, politika gerisini düşürdü.
 
 ---
 

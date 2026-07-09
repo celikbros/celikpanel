@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button } from './ui';
@@ -196,6 +196,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 subtitle={t('services.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.services')]}
             />
+
+            <FirewallBar />
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <button
@@ -560,5 +562,91 @@ function UninstallServiceDialog({
                 </div>
             </div>
         </div>
+    );
+}
+
+
+// Firewall status + toggle. Default-deny inbound: only the panel port, SSH
+// (auto-detected, never closable) and installed services' ports are open. The
+// open set tracks the running services, so the box exposes only what it runs.
+// Güvenlik duvarı durumu + anahtar. Varsayılan-reddet gelen: yalnız panel
+// portu, SSH (otomatik tespit, asla kapatılamaz) ve kurulu servis portları
+// açık. Açık küme koşan servisleri izler; kutu yalnız koşturduğunu açar.
+function FirewallBar() {
+    const { t } = useI18n();
+    const [st, setSt] = useState<{ enabled: boolean; tcp_ports?: number[]; udp_ports?: number[]; ssh_ports?: number[] } | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const load = () => {
+        fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setSt).catch(() => {});
+    };
+    useEffect(load, []);
+
+    const toggle = async () => {
+        if (!st) return;
+        const turningOff = st.enabled;
+        if (turningOff && !confirm(t('firewall.offConfirm'))) return;
+        setBusy(true);
+        try {
+            const r = await fetch('/api/v1/firewall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: !st.enabled }),
+            });
+            const d = await r.json();
+            if (!r.ok || d.error) throw new Error(d.error);
+            setSt(d);
+            showToast('success', d.enabled ? t('firewall.onDone') : t('firewall.offDone'));
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (!st) return null;
+    const openTcp = st.tcp_ports || [];
+    const openUdp = st.udp_ports || [];
+
+    return (
+        <section className="mb-4 rounded-xl border border-border bg-surface p-4">
+            <div className="flex flex-wrap items-center gap-3">
+                {st.enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-fg-subtle" />}
+                <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-fg">
+                        {t('firewall.title')}{' '}
+                        <span className={st.enabled ? 'text-success' : 'text-fg-subtle'}>
+                            {st.enabled ? t('firewall.on') : t('firewall.off')}
+                        </span>
+                    </div>
+                    <p className="text-xs text-fg-muted">
+                        {st.enabled ? t('firewall.onHint') : t('firewall.offHint')}
+                    </p>
+                </div>
+                <button
+                    onClick={toggle}
+                    disabled={busy}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        st.enabled
+                            ? 'border border-border-strong bg-surface text-fg hover:bg-surface-2'
+                            : 'bg-primary text-primary-fg hover:bg-primary/90'
+                    }`}
+                >
+                    {st.enabled ? t('firewall.turnOff') : t('firewall.turnOn')}
+                </button>
+            </div>
+            {st.enabled && (openTcp.length > 0 || openUdp.length > 0) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                    {openTcp.map((p) => (
+                        <span key={`t${p}`} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg-muted">
+                            {p}/tcp{st.ssh_ports?.includes(p) ? ' (SSH)' : ''}
+                        </span>
+                    ))}
+                    {openUdp.map((p) => (
+                        <span key={`u${p}`} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg-muted">{p}/udp</span>
+                    ))}
+                </div>
+            )}
+        </section>
     );
 }
