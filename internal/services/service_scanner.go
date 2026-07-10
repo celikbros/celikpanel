@@ -140,6 +140,17 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 			"/etc/letsencrypt/cli.ini",
 			"/etc/letsencrypt/renewal",
 		}
+	} else if strings.Contains(serviceName, "pdns") {
+		// The panel writes its backend config as a drop-in; list both the
+		// distro main file and our drop-in so the manage page shows what
+		// is actually in effect.
+		// Panel arka uç yapılandırmasını drop-in olarak yazar; yönetim
+		// sayfası fiilen geçerli olanı gösterebilsin diye hem dağıtımın
+		// ana dosyası hem bizim drop-in listelenir.
+		paths = []string{
+			"/etc/powerdns/pdns.conf",
+			"/etc/powerdns/pdns.d/celikpanel.conf",
+		}
 	} else if strings.Contains(serviceName, "vsftpd") {
 		paths = []string{
 			"/etc/vsftpd.conf",
