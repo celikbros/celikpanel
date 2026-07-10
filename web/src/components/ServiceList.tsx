@@ -295,12 +295,12 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(cat)}
-                                    className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
+                                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-2/60"
                                 >
-                                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${tint}`}>
-                                        <CatIcon className="h-4 w-4" />
+                                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+                                        <CatIcon className="h-5 w-5" />
                                     </span>
-                                    <span className="text-base font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
+                                    <span className="text-lg font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
                                     <span className="text-sm text-fg-subtle">{installedCount}/{group.length}</span>
                                     <span className="ml-auto text-fg-subtle">
                                         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -311,17 +311,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                         {group.map((s) => {
                                             const running = isRunning(s);
                                             return (
-                                                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/40">
+                                                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3.5 last:border-0 hover:bg-surface-2/40">
                                                     <div className={`flex min-w-0 flex-1 basis-52 items-center gap-3 ${s.is_installed ? '' : 'opacity-55'}`}>
-                                                        <span className="text-xl leading-none">{s.icon}</span>
+                                                        <span className="text-2xl leading-none">{s.icon}</span>
                                                         <div className="min-w-0">
-                                                            <div className="text-sm font-medium text-fg">{s.name}</div>
+                                                            <div className="text-base font-medium text-fg">{s.name}</div>
                                                             <div className="truncate text-xs text-fg-subtle">{s.description}</div>
                                                         </div>
                                                     </div>
-                                                    <div className={`hidden w-24 shrink-0 sm:block ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                    <div className={`hidden w-28 shrink-0 sm:block ${s.is_installed ? '' : 'opacity-55'}`}>
                                                         {!s.is_installed ? (
-                                                            <span className="font-mono text-xs text-fg-muted">—</span>
+                                                            <span className="font-mono text-sm text-fg-muted">—</span>
                                                         ) : s.versions.length > 1 ? (
                                                             <div className="flex flex-wrap gap-1">
                                                                 {s.versions.map((v) => (
@@ -329,13 +329,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                 ))}
                                                             </div>
                                                         ) : (
-                                                            <span className="font-mono text-xs text-fg-muted">
+                                                            <span className="font-mono text-sm text-fg-muted">
                                                                 {s.versions[0] === 'default' ? '—' : s.versions[0]}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className={`w-28 shrink-0 ${s.is_installed ? '' : 'opacity-55'}`}>
-                                                        <span className="inline-flex items-center gap-1.5 text-xs text-fg-muted">
+                                                    <div className={`w-32 shrink-0 ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                        <span className="inline-flex items-center gap-1.5 text-sm text-fg-muted">
                                                             <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
                                                             {!s.is_installed
                                                                 ? t('services.notInstalled')
