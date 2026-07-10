@@ -676,14 +676,16 @@ function ActionIcon({
     disabled?: boolean;
     tone: 'success' | 'danger' | 'warning';
 }) {
-    // Filled tone chips (user feedback: outline glyphs read as 'empty') —
-    // matches the filled controls on the service detail page.
-    // Dolu ton yongaları (kullanıcı geri bildirimi: kontur ikonlar 'boş'
-    // okunuyor) — servis detay sayfasındaki dolu kontrollerle eşleşir.
+    // Quiet ghost buttons in the row, but tone-colored at rest and with the
+    // GLYPH solid — the icon reads 'full' without turning the row into a
+    // color block (user feedback, twice refined).
+    // Satırda sessiz hayalet düğmeler ama duruşta ton renkli ve GLİF dolu —
+    // ikon 'dolu' okunur, satır renk bloğuna dönüşmez (iki kez rafine
+    // edilen kullanıcı geri bildirimi).
     const toneCls = {
-        success: 'bg-success text-success-fg hover:bg-success/90',
-        danger: 'bg-danger text-danger-fg hover:bg-danger/90',
-        warning: 'bg-warning text-warning-fg hover:bg-warning/90',
+        success: 'text-success hover:bg-success/10',
+        danger: 'text-danger hover:bg-danger/10',
+        warning: 'text-warning hover:bg-warning/10',
     }[tone];
     return (
         <button

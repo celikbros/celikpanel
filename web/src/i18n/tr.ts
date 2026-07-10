@@ -553,6 +553,11 @@ export const tr: Record<TranslationKey, string> = {
     'pdns.step.conflict': 'Panel bölgelerini PowerDNS ile yeniden eşitle',
     'pdns.step.port': '53 numaralı portu boşalt (stub dinleyici)',
     'pdns.step.restart': 'Servisi yeniden başlat',
+    'pdns.zones': 'Sunulan bölgeler',
+    'pdns.zonesHint': 'Paneldeki her üst-seviye domain burada otoriter bölge olarak sunulur.',
+    'pdns.noZones': 'Henüz bölge yok',
+    'pdns.noZonesHint': 'İlk domaini ekleyin; bölgesi burada kendiliğinden görünür.',
+    'pdns.manageRecords': 'Kayıtları yönet',
 
     'db.tab.visual': 'Görsel ayarlar',
     'db.tab.access': 'Erişim kuralları',

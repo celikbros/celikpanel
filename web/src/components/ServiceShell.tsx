@@ -136,8 +136,8 @@ export function ServiceShell({
 
                 {installed && (
                     <div className="ml-auto flex items-center gap-2">
-                        <CtrlButton icon={Play} label={t('services.start')} tone="success" disabled={busy || running} onClick={() => act('start')} />
-                        <CtrlButton icon={Square} label={t('services.stop')} tone="danger" disabled={busy || !running} onClick={() => act('stop')} />
+                        <CtrlButton icon={Play} label={t('services.start')} tone="success" solid disabled={busy || running} onClick={() => act('start')} />
+                        <CtrlButton icon={Square} label={t('services.stop')} tone="danger" solid disabled={busy || !running} onClick={() => act('stop')} />
                         <CtrlButton icon={RotateCw} label={t('services.restart')} tone="warning" disabled={busy} onClick={() => act('restart')} />
                     </div>
                 )}
@@ -177,29 +177,31 @@ function CtrlButton({
     tone,
     disabled,
     onClick,
+    solid,
 }: {
     icon: LucideIcon;
     label: string;
     tone: 'success' | 'danger' | 'warning';
     disabled?: boolean;
     onClick: () => void;
+    solid?: boolean;
 }) {
-    // Filled, not outline: the detail page is where a deliberate control
-    // action happens, so the buttons carry their color with confidence.
-    // Kontur değil dolu: detay sayfası bilinçli kontrol eyleminin yeridir,
-    // düğmeler rengini özgüvenle taşır.
+    // The original outline elegance; only the GLYPH is solid (user feedback:
+    // 'the old buttons were classier — just fill the icon').
+    // Orijinal kontur zarafeti; yalnız GLİF dolu (kullanıcı geri bildirimi:
+    // 'eski düğmeler daha şıktı — sadece ikonun içi dolsun').
     const tones = {
-        success: 'bg-success text-success-fg hover:bg-success/90',
-        danger: 'bg-danger text-danger-fg hover:bg-danger/90',
-        warning: 'bg-warning text-warning-fg hover:bg-warning/90',
+        success: 'text-success border-success/30 hover:bg-success/10',
+        danger: 'text-danger border-danger/30 hover:bg-danger/10',
+        warning: 'text-warning border-warning/30 hover:bg-warning/10',
     }[tone];
     return (
         <button
             onClick={onClick}
             disabled={disabled}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tones}`}
+            className={`inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tones}`}
         >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4" {...(solid ? { fill: 'currentColor' } : {})} />
             {label}
         </button>
     );

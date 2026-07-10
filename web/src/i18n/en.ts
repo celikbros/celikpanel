@@ -553,6 +553,11 @@ export const en = {
     'pdns.step.conflict': 'Re-sync panel zones into PowerDNS',
     'pdns.step.port': 'Free port 53 (stub listener)',
     'pdns.step.restart': 'Restart service',
+    'pdns.zones': 'Served zones',
+    'pdns.zonesHint': 'Every top-level panel domain is served here as an authoritative zone.',
+    'pdns.noZones': 'No zones yet',
+    'pdns.noZonesHint': 'Add your first domain and its zone appears here automatically.',
+    'pdns.manageRecords': 'Manage records',
 
     'db.tab.visual': 'Visual settings',
     'db.tab.access': 'Access rules',
