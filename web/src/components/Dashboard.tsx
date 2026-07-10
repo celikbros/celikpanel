@@ -73,7 +73,11 @@ function AdminDashboard() {
     const [audit, setAudit] = useState<AuditLite[]>([]);
     const [usersCount, setUsersCount] = useState(0);
     const [dnsServer, setDnsServer] = useState('');
-    const [mailServer, setMailServer] = useState('');
+    // capabilities.mail_server is a BOOL in the API (dns_server is a string) —
+    // treating it like a string silently marks the step done when it is false.
+    // capabilities.mail_server API'de BOOL'dur (dns_server metindir) — metin
+    // gibi ele almak false iken adımı sessizce 'tamamlandı' işaretler.
+    const [mailInstalled, setMailInstalled] = useState(false);
     const [extras, setExtras] = useState<Extras | null>(null);
 
     useEffect(() => {
@@ -88,7 +92,7 @@ function AdminDashboard() {
         fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
         fetch('/api/v1/hosting/capabilities')
             .then((r) => (r.ok ? r.json() : null))
-            .then((c) => { setDnsServer(c?.dns_server ?? ''); setMailServer(c?.mail_server ?? ''); })
+            .then((c) => { setDnsServer(c?.dns_server ?? ''); setMailInstalled(Boolean(c?.mail_server)); })
             .catch(() => {});
         fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
 
@@ -141,7 +145,7 @@ function AdminDashboard() {
         { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
         { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains' },
         { key: 'dashboard.step.ssl', done: domains.some((d) => d.ssl_enabled), to: '/domains' },
-        { key: 'dashboard.step.mail', done: mailServer !== '', to: '/services' },
+        { key: 'dashboard.step.mail', done: mailInstalled, to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
     const journeyOpen = doneCount < steps.length;
