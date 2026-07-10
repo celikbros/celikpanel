@@ -20,18 +20,20 @@ interface ManagedService {
     packages?: string[];
 }
 
-// Category display order + label key + section icon. Each category renders
-// as its own card so the page stays scannable as the catalogue grows.
-// Kategori gösterim sırası + etiket anahtarı + bölüm ikonu. Her kategori
-// kendi kartı olarak çizilir; katalog büyüdükçe sayfa taranabilir kalır.
-const categoryOrder: { id: string; labelKey: string; icon: LucideIcon }[] = [
-    { id: 'web', labelKey: 'services.cat.web', icon: Globe },
-    { id: 'database', labelKey: 'services.cat.database', icon: Database },
-    { id: 'email', labelKey: 'services.cat.email', icon: Mail },
-    { id: 'dns', labelKey: 'services.cat.dns', icon: Network },
-    { id: 'security', labelKey: 'services.cat.security', icon: Shield },
-    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap },
-    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp },
+// Category display order + label key + section icon + icon tint. Each
+// category renders as its own card; the colored icon chip is what makes the
+// sections scannable at a glance in both themes.
+// Kategori gösterim sırası + etiket anahtarı + bölüm ikonu + ikon rengi.
+// Her kategori kendi kartı; renkli ikon rozeti bölümleri iki temada da tek
+// bakışta taranabilir kılan şeydir.
+const categoryOrder: { id: string; labelKey: string; icon: LucideIcon; tint: string }[] = [
+    { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
+    { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
+    { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-teal-500/10 text-teal-600 dark:text-teal-400' },
+    { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-red-500/10 text-red-600 dark:text-red-400' },
+    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
+    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' },
 ];
 
 interface ServiceListProps {
@@ -283,7 +285,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     </div>
                 ) : (
                 <div className="space-y-4">
-                    {categoryOrder.map(({ id: cat, labelKey, icon: CatIcon }) => {
+                    {categoryOrder.map(({ id: cat, labelKey, icon: CatIcon, tint }) => {
                         const group = filtered.filter((s) => s.category === cat);
                         if (group.length === 0) return null;
                         const installedCount = group.filter((s) => s.is_installed).length;
@@ -293,11 +295,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(cat)}
-                                    className="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
+                                    className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
                                 >
-                                    <CatIcon className="h-4 w-4 text-fg-muted" />
-                                    <span className="text-sm font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
-                                    <span className="text-xs text-fg-subtle">{installedCount}/{group.length}</span>
+                                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+                                        <CatIcon className="h-4 w-4" />
+                                    </span>
+                                    <span className="text-base font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
+                                    <span className="text-sm text-fg-subtle">{installedCount}/{group.length}</span>
                                     <span className="ml-auto text-fg-subtle">
                                         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     </span>
