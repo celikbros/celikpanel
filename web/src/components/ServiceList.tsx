@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, StatusDot, EmptyState, Button } from './ui';
+import { PageHeader, StatusDot, EmptyState, Button, SearchInput } from './ui';
 
 interface ManagedService {
     id: string;
@@ -19,18 +20,18 @@ interface ManagedService {
     packages?: string[];
 }
 
-// Category display order + label key. Services render grouped under these
-// headings so the list stays scannable as the catalogue grows.
-// Kategori gösterim sırası + etiket anahtarı. Servisler bu başlıklar altında
-// gruplu görünür; katalog büyüdükçe liste taranabilir kalır.
-const categoryOrder: { id: string; labelKey: string }[] = [
-    { id: 'web', labelKey: 'services.cat.web' },
-    { id: 'database', labelKey: 'services.cat.database' },
-    { id: 'email', labelKey: 'services.cat.email' },
-    { id: 'dns', labelKey: 'services.cat.dns' },
-    { id: 'security', labelKey: 'services.cat.security' },
-    { id: 'cache', labelKey: 'services.cat.cache' },
-    { id: 'ftp', labelKey: 'services.cat.ftp' },
+// Category display order + label key + section icon. Each category renders
+// as its own card so the page stays scannable as the catalogue grows.
+// Kategori gösterim sırası + etiket anahtarı + bölüm ikonu. Her kategori
+// kendi kartı olarak çizilir; katalog büyüdükçe sayfa taranabilir kalır.
+const categoryOrder: { id: string; labelKey: string; icon: LucideIcon }[] = [
+    { id: 'web', labelKey: 'services.cat.web', icon: Globe },
+    { id: 'database', labelKey: 'services.cat.database', icon: Database },
+    { id: 'email', labelKey: 'services.cat.email', icon: Mail },
+    { id: 'dns', labelKey: 'services.cat.dns', icon: Network },
+    { id: 'security', labelKey: 'services.cat.security', icon: Shield },
+    { id: 'cache', labelKey: 'services.cat.cache', icon: Zap },
+    { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp },
 ];
 
 interface ServiceListProps {
@@ -52,23 +53,12 @@ interface RepoInfo {
     error?: string;
 }
 
-// Category pills: categorical colors that stay readable in both themes.
-// Kategori etiketleri: iki temada da okunur kalan kategorik renkler.
-const categoryStyle: Record<string, string> = {
-    web: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-    database: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
-    email: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-    security: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
-    dns: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
-    ftp: 'bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300',
-    cache: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-};
-
-// Services as a Plesk-style data table. Status comes straight from
-// managed-services (the reliable source: "active (running)" vs
-// "inactive (dead)"), not the wrapper-unit endpoint that misreports.
+// Services grouped into per-category cards (Claude Design'dan uyarlandı).
+// Status comes straight from managed-services (the reliable source:
+// "active (running)" vs "inactive (dead)"), not the wrapper-unit endpoint
+// that misreports.
 //
-// Servisler Plesk tarzı bir veri tablosu olarak. Durum doğrudan
+// Servisler kategori başına kartlar halinde. Durum doğrudan
 // managed-services'ten gelir (güvenilir kaynak), yanlış raporlayan
 // wrapper-unit uç noktasından değil.
 export function ServiceList({ onManageService }: ServiceListProps) {
@@ -81,10 +71,25 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+    const [query, setQuery] = useState('');
+    const [hideNotInstalled, setHideNotInstalled] = useState(false);
 
     useEffect(() => {
         loadServices();
     }, []);
+
+    // Client-side filter: text search over name/description/id plus the
+    // "hide not installed" switch. A live search overrides collapse so
+    // matches are never hidden inside a folded group.
+    // İstemci tarafı filtre: ad/açıklama/id üzerinde arama + "kurulu
+    // olmayanları gizle" anahtarı. Aktif arama katlamayı geçersiz kılar;
+    // eşleşme katlanmış grup içinde saklı kalmaz.
+    const q = query.trim().toLowerCase();
+    const filtered = services.filter(
+        (s) =>
+            (!hideNotInstalled || s.is_installed) &&
+            (q === '' || `${s.name} ${s.description} ${s.id}`.toLowerCase().includes(q)),
+    );
 
     const toggleGroup = (cat: string) =>
         setCollapsed((prev) => {
@@ -92,7 +97,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             next.has(cat) ? next.delete(cat) : next.add(cat);
             return next;
         });
-    const visibleCats = () => categoryOrder.filter(({ id }) => services.some((s) => s.category === id));
+    const visibleCats = () => categoryOrder.filter(({ id }) => filtered.some((s) => s.category === id));
     const collapseAll = () => setCollapsed(new Set(visibleCats().map((c) => c.id)));
     const expandAll = () => setCollapsed(new Set());
 
@@ -230,13 +235,27 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         : t('services.neverScannedShort')}
                 </span>
                 {scannedAt && services.length > 0 && (
-                    <div className="ml-auto flex gap-1 text-xs">
-                        <button onClick={expandAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                            {t('services.expandAll')}
-                        </button>
-                        <button onClick={collapseAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                            {t('services.collapseAll')}
-                        </button>
+                    <div className="ml-auto flex flex-wrap items-center gap-3">
+                        <div className="w-52">
+                            <SearchInput value={query} onChange={setQuery} placeholder={t('services.search')} />
+                        </div>
+                        <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-fg-muted">
+                            <input
+                                type="checkbox"
+                                checked={hideNotInstalled}
+                                onChange={(e) => setHideNotInstalled(e.target.checked)}
+                                className="h-3.5 w-3.5 rounded border-border-strong accent-primary"
+                            />
+                            {t('services.hideNotInstalled')}
+                        </label>
+                        <div className="flex gap-1 text-xs">
+                            <button onClick={expandAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                                {t('services.expandAll')}
+                            </button>
+                            <button onClick={collapseAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                                {t('services.collapseAll')}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -252,89 +271,78 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     hint={t('services.neverScannedHint')}
                 />
             ) : (
-                <div className="rounded-xl border border-border bg-surface shadow-card">
-                    <p className="px-4 pt-3 text-xs text-fg-subtle">{t('common.itemsTotal', { n: services.length })}</p>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                    <th className="px-4 py-2.5">{t('services.col.service')}</th>
-                                    <th className="px-4 py-2.5">{t('services.col.category')}</th>
-                                    <th className="px-4 py-2.5">{t('services.col.version')}</th>
-                                    <th className="px-4 py-2.5">{t('services.col.status')}</th>
-                                    <th className="px-4 py-2.5 text-right">{''}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categoryOrder.flatMap(({ id: cat, labelKey }) => {
-                                    const group = services.filter((s) => s.category === cat);
-                                    if (group.length === 0) return [];
-                                    const installedCount = group.filter((s) => s.is_installed).length;
-                                    const isOpen = !collapsed.has(cat);
-                                    return [
-                                        <tr key={`h-${cat}`} className="cursor-pointer bg-surface-2/40 hover:bg-surface-2/70" onClick={() => toggleGroup(cat)}>
-                                            <td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                                                <span className="inline-flex items-center gap-1.5">
-                                                    {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                                                    {t(labelKey as Parameters<typeof t>[0])}
-                                                    <span className="font-normal text-fg-subtle">{installedCount}/{group.length}</span>
-                                                </span>
-                                            </td>
-                                        </tr>,
-                                        ...(isOpen ? group : []).map((s) => {
-                                    const running = isRunning(s);
-                                    return (
-                                        <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xl leading-none">{s.icon}</span>
-                                                    <div className="min-w-0">
-                                                        <div className="font-medium text-fg">{s.name}</div>
-                                                        <div className="truncate text-xs text-fg-subtle">{s.description}</div>
+                <>
+                <p className="mb-2 text-xs text-fg-subtle">
+                    {filtered.length === services.length
+                        ? t('common.itemsTotal', { n: services.length })
+                        : t('services.matchCount', { shown: filtered.length, total: services.length })}
+                </p>
+                {filtered.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted shadow-card">
+                        {t('services.noMatches')}
+                    </div>
+                ) : (
+                <div className="space-y-4">
+                    {categoryOrder.map(({ id: cat, labelKey, icon: CatIcon }) => {
+                        const group = filtered.filter((s) => s.category === cat);
+                        if (group.length === 0) return null;
+                        const installedCount = group.filter((s) => s.is_installed).length;
+                        const isOpen = q !== '' || !collapsed.has(cat);
+                        return (
+                            <section key={cat} className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup(cat)}
+                                    className="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
+                                >
+                                    <CatIcon className="h-4 w-4 text-fg-muted" />
+                                    <span className="text-sm font-semibold text-fg">{t(labelKey as Parameters<typeof t>[0])}</span>
+                                    <span className="text-xs text-fg-subtle">{installedCount}/{group.length}</span>
+                                    <span className="ml-auto text-fg-subtle">
+                                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    </span>
+                                </button>
+                                {isOpen && (
+                                    <ul className="border-t border-border">
+                                        {group.map((s) => {
+                                            const running = isRunning(s);
+                                            return (
+                                                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/40">
+                                                    <div className={`flex min-w-0 flex-1 basis-52 items-center gap-3 ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                        <span className="text-xl leading-none">{s.icon}</span>
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-medium text-fg">{s.name}</div>
+                                                            <div className="truncate text-xs text-fg-subtle">{s.description}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span
-                                                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                                                        categoryStyle[s.category] ?? 'bg-surface-2 text-fg-muted'
-                                                    }`}
-                                                >
-                                                    {s.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {s.versions.length > 1 ? (
-                                                        s.versions.map((v) => (
-                                                            <span
-                                                                key={v}
-                                                                className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-fg-muted"
-                                                            >
-                                                                {v}
+                                                    <div className={`hidden w-24 shrink-0 sm:block ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                        {!s.is_installed ? (
+                                                            <span className="font-mono text-xs text-fg-muted">—</span>
+                                                        ) : s.versions.length > 1 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {s.versions.map((v) => (
+                                                                    <span key={v} className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-fg-muted">{v}</span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="font-mono text-xs text-fg-muted">
+                                                                {s.versions[0] === 'default' ? '—' : s.versions[0]}
                                                             </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="font-mono text-xs text-fg-muted">
-                                                            {s.versions[0] === 'default' ? '—' : s.versions[0]}
+                                                        )}
+                                                    </div>
+                                                    <div className={`w-28 shrink-0 ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                        <span className="inline-flex items-center gap-1.5 text-xs text-fg-muted">
+                                                            <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
+                                                            {!s.is_installed
+                                                                ? t('services.notInstalled')
+                                                                : s.daemonless
+                                                                  ? t('services.installedLabel')
+                                                                  : running
+                                                                    ? t('services.running')
+                                                                    : t('services.stopped')}
                                                         </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="inline-flex items-center gap-1.5 text-fg-muted">
-                                                    <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
-                                                    {!s.is_installed
-                                                        ? t('services.notInstalled')
-                                                        : s.daemonless
-                                                          ? t('services.installedLabel')
-                                                          : running
-                                                            ? t('services.running')
-                                                            : t('services.stopped')}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-1">
+                                                    </div>
+                                                    <div className="ml-auto flex items-center justify-end gap-1">
                                                     {!s.is_installed ? (
                                                         s.conflict_with ? (
                                                             <span
@@ -365,15 +373,21 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     {/* Daemonless tools (phpMyAdmin) have no unit to start/stop —
                                                         only manage/uninstall. / Daemon'suz araçların (phpMyAdmin)
                                                         başlatılacak unit'i yok — yalnız yönet/kaldır. */}
+                                                    {/* Contextual: only actions that make sense for the current
+                                                        state — no Stop on a stopped service, no Start on a running
+                                                        one. / Bağlama duyarlı: yalnız mevcut duruma anlamlı gelen
+                                                        eylemler — durmuşta Durdur, çalışanda Başlat gösterilmez. */}
                                                     {!s.daemonless && (
                                                     <>
+                                                    {running ? (
+                                                    <>
                                                     <ActionIcon
-                                                        title={t('services.start')}
-                                                        onClick={() => handleAction(s, 'start')}
+                                                        title={t('services.restart')}
+                                                        onClick={() => handleAction(s, 'restart')}
                                                         disabled={busy === s.id}
-                                                        tone="success"
+                                                        tone="warning"
                                                     >
-                                                        <Play className="h-4 w-4" />
+                                                        <RotateCw className="h-4 w-4" />
                                                     </ActionIcon>
                                                     <ActionIcon
                                                         title={t('services.stop')}
@@ -383,14 +397,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     >
                                                         <Square className="h-4 w-4" />
                                                     </ActionIcon>
+                                                    </>
+                                                    ) : (
                                                     <ActionIcon
-                                                        title={t('services.restart')}
-                                                        onClick={() => handleAction(s, 'restart')}
+                                                        title={t('services.start')}
+                                                        onClick={() => handleAction(s, 'start')}
                                                         disabled={busy === s.id}
-                                                        tone="warning"
+                                                        tone="success"
                                                     >
-                                                        <RotateCw className="h-4 w-4" />
+                                                        <Play className="h-4 w-4" />
                                                     </ActionIcon>
+                                                    )}
                                                     <button
                                                         onClick={() => onManageService?.(s.id, s.versions)}
                                                         className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
@@ -409,17 +426,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     </button>
                                                     </>
                                                     )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                        }),
-                                    ];
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </section>
+                        );
+                    })}
                 </div>
+                )}
+                </>
             )}
 
             {installTarget && (
@@ -752,14 +770,22 @@ function FirewallBar() {
     const openTcp = st.tcp_ports || [];
     const openUdp = st.udp_ports || [];
 
+    // Off is the state that must not look calm: every port is exposed, so the
+    // whole banner turns amber. On earns a quiet green tint.
+    // Kapalı hal sakin GÖRÜNMEMESİ gereken haldir: tüm portlar açıktır, bu
+    // yüzden bandın tamamı ambere döner. Açık hal sessiz yeşil tondadır.
     return (
-        <section className="mb-4 rounded-xl border border-border bg-surface p-4">
+        <section
+            className={`mb-4 rounded-xl border p-4 ${
+                st.enabled ? 'border-success/30 bg-success/5' : 'border-warning/50 bg-warning/10'
+            }`}
+        >
             <div className="flex flex-wrap items-center gap-3">
-                {st.enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-fg-subtle" />}
+                {st.enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-warning" />}
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-fg">
                         {t('firewall.title')}{' '}
-                        <span className={st.enabled ? 'text-success' : 'text-fg-subtle'}>
+                        <span className={st.enabled ? 'text-success' : 'text-warning'}>
                             {st.enabled ? t('firewall.on') : t('firewall.off')}
                         </span>
                     </div>
