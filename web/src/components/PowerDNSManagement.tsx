@@ -1,56 +1,67 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Network, Wrench, RotateCw, CheckCircle2, Globe, ArrowRight, Plus } from 'lucide-react';
+import { Network, Wrench, RotateCw, CheckCircle2, Globe, FileText, ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, EmptyState } from './ui';
+import { api } from '../lib/api';
+import { Button } from './ui';
 
 interface PowerDNSManagementProps {
     onBack: () => void;
 }
 
-interface ZoneRow {
-    id: number;
-    domain_name: string;
-    parent_id?: number | null;
-}
-
-// PowerDNS on the shared ServiceShell. The page shows what this service is
-// actually FOR: the authoritative zones it serves (every top-level panel
-// domain is one), each linking to the domain's DNS records. The config
-// repair is maintenance, so it sits below the real content.
+// PowerDNS management, honest version: this service has NO hand-edited
+// settings by design — the panel owns pdns.conf (SQLite backend, port 53,
+// DNSSEC) and the real DNS work (records) lives per domain. So the page
+// says exactly that, shows the actual config file read-only for
+// transparency, and keeps the one real action: config repair.
 //
-// PowerDNS ortak ServiceShell üzerinde. Sayfa bu servisin gerçekte NE İÇİN
-// olduğunu gösterir: sunduğu otoriter bölgeler (paneldeki her üst-seviye
-// domain bir bölgedir), her biri domainin DNS kayıtlarına bağlanır.
-// Yapılandırma onarımı bakımdır; gerçek içeriğin altında durur.
+// PowerDNS yönetimi, dürüst sürüm: bu serviste elle düzenlenecek ayar
+// bilinçli olarak yok — pdns.conf'un sahibi panel (SQLite arka ucu, port
+// 53, DNSSEC) ve asıl DNS işi (kayıtlar) domain başına yaşar. Sayfa da tam
+// bunu söyler, şeffaflık için gerçek config dosyasını salt-okur gösterir
+// ve tek gerçek eylemi tutar: yapılandırma onarımı.
 export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
     const { t } = useI18n();
     const navigate = useNavigate();
     const [repairing, setRepairing] = useState(false);
-    const [zones, setZones] = useState<ZoneRow[]>([]);
-    const [zonesLoaded, setZonesLoaded] = useState(false);
+    const [configFiles, setConfigFiles] = useState<string[]>([]);
+    const [openFile, setOpenFile] = useState<string | null>(null);
+    const [fileContent, setFileContent] = useState<string>('');
 
     useEffect(() => {
-        fetch('/api/v1/domains')
-            .then((r) => (r.ok ? r.json() : []))
-            // Subdomains live inside the parent zone — only top-level
-            // domains ARE zones. / Alt alanlar ana bölgenin içindedir —
-            // yalnız üst-seviye domainler bölgedir.
-            .then((d: ZoneRow[]) => setZones((d || []).filter((z) => !z.parent_id)))
-            .catch(() => {})
-            .finally(() => setZonesLoaded(true));
+        fetch('/api/v1/managed-services')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                const svc = (d?.services || []).find((s: { id: string }) => s.id === 'pdns');
+                setConfigFiles((svc?.config_files || []).map((f: { path: string }) => f.path));
+            })
+            .catch(() => {});
     }, []);
+
+    const toggleFile = async (path: string) => {
+        if (openFile === path) {
+            setOpenFile(null);
+            return;
+        }
+        try {
+            const cfg = await api.getConfig(path);
+            setFileContent(cfg.Content || '');
+            setOpenFile(path);
+        } catch {
+            showToast('error', t('common.error'));
+        }
+    };
 
     const handleRepair = async () => {
         if (!confirm(t('pdns.repairConfirm'))) return;
         setRepairing(true);
         try {
-            // The panel's real endpoint is /pdns/enable — it reconfigures the
-            // gsqlite3 backend AND re-syncs every panel zone into PowerDNS.
-            // Panelin gerçek ucu /pdns/enable — gsqlite3 arka ucunu yeniden
-            // yapılandırır VE tüm panel bölgelerini PowerDNS'e eşitler.
+            // /pdns/enable reconfigures the gsqlite3 backend AND re-syncs
+            // every panel zone into PowerDNS.
+            // /pdns/enable gsqlite3 arka ucunu yeniden yapılandırır VE tüm
+            // panel bölgelerini PowerDNS'e eşitler.
             const res = await fetch('/api/v1/pdns/enable', { method: 'POST' });
             if (!res.ok) throw new Error();
             showToast('success', t('pdns.repairDone'));
@@ -65,51 +76,53 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
 
     return (
         <ServiceShell serviceId="pdns" name="PowerDNS" icon={Network} onBack={onBack}>
-            {/* Served zones — the service's real content / Sunulan bölgeler —
-                servisin gerçek içeriği */}
-            <section className="mb-5">
-                <div className="mb-3 flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                        <Globe className="h-5 w-5" />
+            {/* The honest answer to 'where are the settings?' / 'Ayarlar
+                nerede?' sorusunun dürüst cevabı */}
+            <section className="mb-5 rounded-xl border border-border bg-surface p-5 shadow-card">
+                <div className="flex flex-wrap items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Info className="h-5 w-5" />
                     </span>
-                    <div>
-                        <h3 className="text-lg font-semibold text-fg">{t('pdns.zones')}</h3>
-                        <p className="text-xs text-fg-muted">{t('pdns.zonesHint')}</p>
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-semibold text-fg">{t('pdns.managed')}</h3>
+                        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-fg-muted">{t('pdns.managedDesc')}</p>
                     </div>
-                    {zones.length > 0 && (
-                        <span className="ml-auto text-sm text-fg-subtle">{t('common.itemsTotal', { n: zones.length })}</span>
-                    )}
+                    <Button variant="secondary" icon={Globe} onClick={() => navigate('/domains')}>
+                        {t('pdns.goDomainRecords')}
+                    </Button>
                 </div>
-                {!zonesLoaded ? null : zones.length === 0 ? (
-                    <EmptyState
-                        icon={Globe}
-                        title={t('pdns.noZones')}
-                        hint={t('pdns.noZonesHint')}
-                        action={
-                            <Button variant="primary" icon={Plus} onClick={() => navigate('/domains')}>
-                                {t('dashboard.addDomain')}
-                            </Button>
-                        }
-                    />
-                ) : (
-                    <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-                        {zones.map((z) => (
-                            <li key={z.id} className="border-b border-border last:border-0">
-                                <button
-                                    onClick={() => navigate(`/domains/${encodeURIComponent(z.domain_name)}`)}
-                                    className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
-                                >
-                                    <Globe className="h-4 w-4 shrink-0 text-fg-subtle" />
-                                    <span className="min-w-0 flex-1 text-base font-medium text-fg">{z.domain_name}</span>
-                                    <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                                        {t('pdns.manageRecords')} <ArrowRight className="h-3.5 w-3.5" />
-                                    </span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
             </section>
+
+            {/* Actual configuration, read-only / Gerçek yapılandırma, salt-okur */}
+            {configFiles.length > 0 && (
+                <section className="mb-5 overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                    {configFiles.map((path) => (
+                        <div key={path} className="border-b border-border last:border-0">
+                            <button
+                                onClick={() => toggleFile(path)}
+                                className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
+                            >
+                                <FileText className="h-4 w-4 shrink-0 text-fg-subtle" />
+                                <span className="min-w-0 flex-1 font-mono text-sm text-fg">{path}</span>
+                                <span className="text-xs text-fg-subtle">{t('pdns.readOnly')}</span>
+                                {openFile === path ? (
+                                    <ChevronDown className="h-4 w-4 text-fg-subtle" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 text-fg-subtle" />
+                                )}
+                            </button>
+                            {openFile === path && (
+                                <div className="border-t border-border bg-surface-2/40 px-4 py-3">
+                                    <p className="mb-2 text-xs text-fg-subtle">{t('pdns.readOnlyNote')}</p>
+                                    <pre className="max-h-80 overflow-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg">
+                                        {fileContent || '—'}
+                                    </pre>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </section>
+            )}
 
             {/* Maintenance / Bakım */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
