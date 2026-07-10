@@ -296,6 +296,27 @@ var ManagedServices = []ManagedService{
 		SystemNames: []string{"fail2ban"},
 		Packages:    map[string][]string{"apt": {"fail2ban"}},
 	},
+	// Antivirus / malware scanner. A daemon plus its signature-updater
+	// (freshclam) — both must be present to count as installed. Local scanner:
+	// it opens no inbound port, which is exactly the safest shape (D-006). The
+	// operator's "first things on a server: firewall, antivirus, spam" — the
+	// firewall is a panel feature, spam is SpamAssassin (Email group), and this
+	// is the missing third.
+	// Antivirüs / kötücül yazılım tarayıcısı. Bir daemon artı imza-güncelleyici
+	// (freshclam) — kurulu sayılmak için ikisi de var olmalı. Yerel tarayıcı:
+	// hiçbir gelen port açmaz; en güvenli biçim tam da budur (D-006).
+	// Operatörün "bir sunucuya ilk kurulacaklar: firewall, antivirüs, spam" —
+	// firewall panel özelliği, spam SpamAssassin (E-posta grubu), bu da eksik
+	// üçüncü.
+	{
+		ID:          "clamav",
+		Name:        "ClamAV",
+		Description: "Antivirus / malware scanner",
+		Icon:        "🦠",
+		Category:    "security",
+		SystemNames: []string{"clamav-daemon", "clamav-freshclam"},
+		Packages:    map[string][]string{"apt": {"clamav", "clamav-daemon"}},
+	},
 	{
 		ID:            "bind",
 		Name:          "BIND",
