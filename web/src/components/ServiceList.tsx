@@ -312,14 +312,20 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                             const running = isRunning(s);
                                             return (
                                                 <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3.5 last:border-0 hover:bg-surface-2/40">
-                                                    <div className={`flex min-w-0 flex-1 basis-52 items-center gap-3 ${s.is_installed ? '' : 'opacity-55'}`}>
-                                                        <span className="text-2xl leading-none">{s.icon}</span>
+                                                    {/* Selective dimming, not block opacity: the name stays
+                                                        readable in the light theme; state is carried by the
+                                                        muted tone + status text + Install button.
+                                                        / Blok saydamlık değil seçici soldurma: ad açık temada
+                                                        da okunur kalır; durumu soluk ton + durum yazısı +
+                                                        Kur düğmesi anlatır. */}
+                                                    <div className="flex min-w-0 flex-1 basis-52 items-center gap-3">
+                                                        <span className={`text-2xl leading-none ${s.is_installed ? '' : 'opacity-60 grayscale'}`}>{s.icon}</span>
                                                         <div className="min-w-0">
-                                                            <div className="text-base font-medium text-fg">{s.name}</div>
+                                                            <div className={`text-base font-medium ${s.is_installed ? 'text-fg' : 'text-fg-muted'}`}>{s.name}</div>
                                                             <div className="truncate text-xs text-fg-subtle">{s.description}</div>
                                                         </div>
                                                     </div>
-                                                    <div className={`hidden w-28 shrink-0 sm:block ${s.is_installed ? '' : 'opacity-55'}`}>
+                                                    <div className="hidden w-28 shrink-0 sm:block">
                                                         {!s.is_installed ? (
                                                             <span className="font-mono text-sm text-fg-muted">—</span>
                                                         ) : s.versions.length > 1 ? (
@@ -334,8 +340,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className={`w-32 shrink-0 ${s.is_installed ? '' : 'opacity-55'}`}>
-                                                        <span className="inline-flex items-center gap-1.5 text-sm text-fg-muted">
+                                                    <div className="w-32 shrink-0">
+                                                        <span className={`inline-flex items-center gap-1.5 text-sm ${s.is_installed ? 'text-fg-muted' : 'text-fg-subtle'}`}>
                                                             <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
                                                             {!s.is_installed
                                                                 ? t('services.notInstalled')
