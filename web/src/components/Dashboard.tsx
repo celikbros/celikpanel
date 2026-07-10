@@ -1,44 +1,433 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity } from 'lucide-react';
-import { api, type Service, type SystemStats } from '../lib/api';
+import {
+    Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
+    ShieldCheck, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
+    DownloadCloud, UserPlus, Plus, Lock,
+} from 'lucide-react';
+import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
-import { Card, PageHeader, UsageBar, StatusDot } from './ui';
+import { PageHeader, UsageBar, StatusDot, Card } from './ui';
 
-// Plesk-style dashboard: a dense grid of real-data widgets — CPU/RAM/disk
-// gauges from the live system-stats endpoint, server facts, and service
-// health. No placeholders; every number is real.
+// Admin dashboard (Claude Design'dan uyarlandı): one glance answers "is my
+// server healthy?" and "does anything need me?". Every number is real — the
+// health strip polls system-stats, the rest reads the same endpoints the
+// dedicated pages use, plus /api/v1/dashboard for the few aggregates.
+// The setup journey renders from live state until all steps are done: a
+// fresh server shows a guided path instead of empty widgets.
 //
-// Plesk tarzı pano: gerçek-veri widget'larından yoğun bir ızgara — canlı
-// system-stats uç noktasından CPU/RAM/disk göstergeleri, sunucu bilgileri
-// ve servis sağlığı. Placeholder yok; her sayı gerçek.
+// Yönetici panosu: tek bakış "sunucum sağlıklı mı?" ve "bana ihtiyaç duyan
+// bir şey var mı?" sorularını yanıtlar. Her sayı gerçek — sağlık şeridi
+// system-stats'ı yoklar, kalanı özel sayfaların kullandığı uçları okur,
+// birkaç toplam için /api/v1/dashboard eklenir. Kurulum yolculuğu tüm
+// adımlar bitene dek canlı durumdan çizilir: taze sunucu boş widget yerine
+// yol gösteren bir liste görür.
+
+interface SvcLite {
+    id: string;
+    name: string;
+    status: string;
+    is_installed: boolean;
+    daemonless?: boolean;
+}
+interface FwState {
+    enabled: boolean;
+    tcp_ports?: number[];
+    udp_ports?: number[];
+}
+interface DomainLite {
+    id: number;
+    domain_name: string;
+    ssl_enabled: boolean;
+    project_type?: string;
+    php_version?: string;
+    created_at: string;
+}
+interface AuditLite {
+    id: number;
+    username: string;
+    action: string;
+    ip_address?: string;
+    created_at: string;
+}
+interface Extras {
+    databases: number;
+    mail_accounts: number;
+    expiring_certs: { domain_name: string; days_left: number }[];
+}
+
 export function Dashboard() {
-    const { t } = useI18n();
     const { role } = useAuth();
-    const isAdmin = role === 'admin';
+    return role === 'admin' ? <AdminDashboard /> : <CustomerDashboard />;
+}
+
+function AdminDashboard() {
+    const { t } = useI18n();
+    const navigate = useNavigate();
     const [stats, setStats] = useState<SystemStats | null>(null);
-    const [services, setServices] = useState<Service[] | null>(null);
+    const [services, setServices] = useState<SvcLite[]>([]);
+    const [fw, setFw] = useState<FwState | null>(null);
+    const [domains, setDomains] = useState<DomainLite[]>([]);
+    const [audit, setAudit] = useState<AuditLite[]>([]);
+    const [usersCount, setUsersCount] = useState(0);
+    const [dnsServer, setDnsServer] = useState('');
+    const [mailServer, setMailServer] = useState('');
+    const [extras, setExtras] = useState<Extras | null>(null);
+
+    useEffect(() => {
+        const loadStats = () => api.getSystemStats().then(setStats).catch(() => {});
+        loadStats();
+        const timer = setInterval(loadStats, 5000);
+
+        fetch('/api/v1/managed-services').then((r) => r.json()).then((d) => setServices(d?.services || [])).catch(() => {});
+        fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
+        fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
+        fetch('/api/v1/audit-logs?limit=7').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
+        fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
+        fetch('/api/v1/hosting/capabilities')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c) => { setDnsServer(c?.dns_server ?? ''); setMailServer(c?.mail_server ?? ''); })
+            .catch(() => {});
+        fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
+
+        return () => clearInterval(timer);
+    }, []);
+
+    const installed = services.filter((s) => s.is_installed);
+    const running = installed.filter((s) => s.daemonless || s.status?.toLowerCase().includes('running'));
+    const stoppedSvcs = installed.filter((s) => !s.daemonless && !s.status?.toLowerCase().includes('running'));
+
+    // Attention items: real, actionable problems only. / İlgi kalemleri:
+    // yalnız gerçek ve eyleme dönüştürülebilir sorunlar.
+    const attention: { key: string; icon: typeof Cpu; text: string; action: string; to: string; danger?: boolean }[] = [];
+    for (const c of extras?.expiring_certs || []) {
+        attention.push({
+            key: `cert-${c.domain_name}`,
+            icon: Lock,
+            text: c.days_left <= 0
+                ? t('dashboard.certExpired', { domain: c.domain_name })
+                : t('dashboard.certExpires', { domain: c.domain_name, days: c.days_left }),
+            action: t('dashboard.renew'),
+            to: `/domains/${encodeURIComponent(c.domain_name)}`,
+            danger: c.days_left <= 7,
+        });
+    }
+    for (const s of stoppedSvcs) {
+        attention.push({
+            key: `svc-${s.id}`,
+            icon: Activity,
+            text: t('dashboard.svcStoppedItem', { name: s.name }),
+            action: t('dashboard.goServices'),
+            to: '/services',
+        });
+    }
+    if (fw && !fw.enabled) {
+        attention.push({
+            key: 'fw-off',
+            icon: ShieldOff,
+            text: t('dashboard.fwOffItem'),
+            action: t('firewall.turnOn'),
+            to: '/services',
+            danger: true,
+        });
+    }
+
+    // Setup journey — live completion; the card disappears when all done.
+    // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
+    const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string }[] = [
+        { key: 'dashboard.step.panel', done: true, to: '/' },
+        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
+        { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains' },
+        { key: 'dashboard.step.ssl', done: domains.some((d) => d.ssl_enabled), to: '/domains' },
+        { key: 'dashboard.step.mail', done: mailServer !== '', to: '/services' },
+    ];
+    const doneCount = steps.filter((s) => s.done).length;
+    const journeyOpen = doneCount < steps.length;
+    const nextIdx = steps.findIndex((s) => !s.done);
+    const hasContent = installed.length > 0 || domains.length > 0;
+
+    const recentDomains = [...domains]
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+        .slice(0, 4);
+
+    const openPorts = (fw?.tcp_ports?.length ?? 0) + (fw?.udp_ports?.length ?? 0);
+
+    return (
+        <div className="p-6 md:p-8">
+            <PageHeader
+                title={t('dashboard.title')}
+                subtitle={stats ? `${stats.hostname} · ${t('dashboard.uptimeFor', { time: fmtUptime(stats.uptime_seconds, t) })}` : undefined}
+            />
+
+            {/* Health strip / Sağlık şeridi */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <GaugeCard
+                    icon={Cpu}
+                    label={t('dashboard.cpuUsage')}
+                    percent={stats?.cpu_percent ?? 0}
+                    value={stats ? `%${Math.round(stats.cpu_percent)}` : '—'}
+                    hint={stats ? `${t('dashboard.cores', { n: stats.cpu_cores })} · ${stats.load_avg[0]?.toFixed(2) ?? ''}` : ''}
+                />
+                <GaugeCard
+                    icon={MemoryStick}
+                    label={t('dashboard.memoryUsage')}
+                    percent={pct(stats?.mem_used_bytes, stats?.mem_total_bytes)}
+                    value={stats ? `%${Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes))}` : '—'}
+                    hint={stats ? `${fmtBytes(stats.mem_used_bytes)} / ${fmtBytes(stats.mem_total_bytes)}` : ''}
+                />
+                <GaugeCard
+                    icon={HardDrive}
+                    label={t('dashboard.diskUsage')}
+                    percent={pct(stats?.disk_used_bytes, stats?.disk_total_bytes)}
+                    value={stats ? `%${Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes))}` : '—'}
+                    hint={stats ? `${fmtBytes(stats.disk_used_bytes)} / ${fmtBytes(stats.disk_total_bytes)}` : ''}
+                />
+                <button
+                    onClick={() => navigate('/services')}
+                    className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-fg-muted">{t('dashboard.services')}</span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Activity className="h-4 w-4" />
+                        </span>
+                    </div>
+                    <p className="mt-2 text-3xl font-bold tracking-tight text-fg">
+                        {installed.length > 0 ? `${running.length} / ${installed.length}` : '0 / 0'}
+                    </p>
+                    {stoppedSvcs.length > 0 ? (
+                        <p className="mt-2 text-xs font-medium text-warning">{t('dashboard.svcStopped', { n: stoppedSvcs.length })}</p>
+                    ) : (
+                        <p className="mt-2 text-xs text-fg-subtle">
+                            {installed.length > 0 ? t('dashboard.svcRunningHint') : t('dashboard.svcNone')}
+                        </p>
+                    )}
+                    {installed.length === 0 && <p className="mt-1 text-xs text-fg-subtle">{t('dashboard.svcReady')}</p>}
+                </button>
+                <button
+                    onClick={() => navigate('/services')}
+                    className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                >
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-fg-muted">{t('firewall.title')}</span>
+                        {fw?.enabled ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                                <ShieldCheck className="h-3.5 w-3.5" /> {t('firewall.on')}
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+                                <ShieldOff className="h-3.5 w-3.5" /> {t('firewall.off')}
+                            </span>
+                        )}
+                    </div>
+                    <p className="mt-3 text-sm text-fg">{fw?.enabled ? t('dashboard.fwOnHint') : t('dashboard.fwOffHint')}</p>
+                    <p className="mt-1.5 text-xs text-fg-subtle">
+                        {fw?.enabled ? t('dashboard.fwPorts', { n: openPorts }) : ''}
+                    </p>
+                </button>
+            </div>
+
+            {/* Setup journey / Kurulum yolculuğu */}
+            {journeyOpen && (
+                <section className="mt-6">
+                    <SectionTitle
+                        icon={Rocket}
+                        tint="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                        title={t('dashboard.journey')}
+                        right={
+                            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-fg-muted">
+                                {t('dashboard.journeyProgress', { done: doneCount, total: steps.length })}
+                            </span>
+                        }
+                    />
+                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                        <ul>
+                            {steps.map((s, i) => (
+                                <li
+                                    key={s.key}
+                                    className={`flex flex-wrap items-center gap-3 border-b border-border px-4 py-3.5 last:border-0 ${
+                                        i === nextIdx ? 'bg-primary/5' : ''
+                                    }`}
+                                >
+                                    {s.done ? (
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                                            <Check className="h-4 w-4" />
+                                        </span>
+                                    ) : (
+                                        <span
+                                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                                                i === nextIdx ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-fg-subtle'
+                                            }`}
+                                        >
+                                            {i + 1}
+                                        </span>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <div className={`text-base font-medium ${s.done || i === nextIdx ? 'text-fg' : 'text-fg-muted'}`}>
+                                            {t(s.key)}
+                                        </div>
+                                        {i === nextIdx && s.hint && (
+                                            <div className="text-xs text-fg-subtle">{t(s.hint)}</div>
+                                        )}
+                                    </div>
+                                    {s.done ? (
+                                        <span className="text-sm text-fg-subtle">{t('dashboard.stepDone')}</span>
+                                    ) : i === nextIdx ? (
+                                        <button
+                                            onClick={() => navigate(s.to)}
+                                            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90"
+                                        >
+                                            {t('dashboard.goServices')}
+                                        </button>
+                                    ) : (
+                                        <span className="text-sm text-fg-subtle">{i === nextIdx + 1 ? t('dashboard.stepNext') : ''}</span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </section>
+            )}
+
+            {/* Needs attention / İlgi istiyor */}
+            {hasContent && (
+                <section className="mt-6">
+                    <SectionTitle
+                        icon={Bell}
+                        tint="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        title={t('dashboard.attention')}
+                        right={
+                            attention.length > 0 ? (
+                                <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
+                                    {t('dashboard.warnCount', { n: attention.length })}
+                                </span>
+                            ) : undefined
+                        }
+                    />
+                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                        {attention.length === 0 ? (
+                            <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-fg-muted">
+                                <StatusDot ok /> {t('dashboard.allGood')}
+                            </div>
+                        ) : (
+                            <ul>
+                                {attention.map((a) => (
+                                    <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
+                                        <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
+                                        <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
+                                        <button
+                                            onClick={() => navigate(a.to)}
+                                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                                        >
+                                            {a.action} <ArrowRight className="h-3.5 w-3.5" />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </section>
+            )}
+
+            {/* Hosting + activity / Barındırma + etkinlik */}
+            {hasContent && (
+                <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <section>
+                        <SectionTitle icon={Globe} tint="bg-teal-500/10 text-teal-600 dark:text-teal-400" title={t('dashboard.hosting')} />
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <CountCard icon={Globe} n={domains.length} label={t('dashboard.domains')} to="/domains" />
+                            <CountCard icon={Database} n={extras?.databases ?? 0} label={t('dashboard.databases')} to="/databases" />
+                            <CountCard icon={Users} n={usersCount} label={t('nav.users')} to="/users" />
+                            <CountCard icon={Mail} n={extras?.mail_accounts ?? 0} label={t('dashboard.mailAccounts')} to="/domains" />
+                        </div>
+                        {recentDomains.length > 0 && (
+                            <>
+                                <h3 className="mb-2 mt-4 text-sm font-semibold text-fg-muted">{t('dashboard.recentDomains')}</h3>
+                                <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                                    {recentDomains.map((d) => (
+                                        <li key={d.id} className="border-b border-border last:border-0">
+                                            <button
+                                                onClick={() => navigate(`/domains/${encodeURIComponent(d.domain_name)}`)}
+                                                className="flex w-full flex-wrap items-center gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface-2/60"
+                                            >
+                                                {d.ssl_enabled ? (
+                                                    <Lock className="h-4 w-4 shrink-0 text-success" />
+                                                ) : (
+                                                    <Globe className="h-4 w-4 shrink-0 text-fg-subtle" />
+                                                )}
+                                                <span className="text-base font-medium text-fg">{d.domain_name}</span>
+                                                <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-fg-muted">
+                                                    {(d.project_type || 'php') === 'php' && d.php_version
+                                                        ? `PHP ${d.php_version}`
+                                                        : d.project_type || 'php'}
+                                                </span>
+                                                {!d.ssl_enabled && (
+                                                    <span className="text-xs font-medium text-warning">{t('dashboard.noSsl')}</span>
+                                                )}
+                                                <span className="ml-auto text-xs text-fg-subtle">{fmtRelative(d.created_at, t)}</span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </>
+                        )}
+                    </section>
+
+                    <section>
+                        <SectionTitle icon={Activity} tint="bg-violet-500/10 text-violet-600 dark:text-violet-400" title={t('dashboard.activity')} />
+                        {audit.length === 0 ? (
+                            <Card><p className="p-4 text-sm text-fg-subtle">—</p></Card>
+                        ) : (
+                            <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                                {audit.map((e) => (
+                                    <li key={e.id} className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold uppercase text-fg-muted">
+                                            {e.username.slice(0, 1) || '?'}
+                                        </span>
+                                        <span className="min-w-0 flex-1 text-sm text-fg">
+                                            <span className="font-semibold">{e.username}</span>{' '}
+                                            <span className="font-mono text-xs text-fg-muted">{e.action}</span>
+                                        </span>
+                                        {e.ip_address && <span className="font-mono text-xs text-fg-subtle">{e.ip_address}</span>}
+                                        <span className="text-xs text-fg-subtle">{fmtRelative(e.created_at, t)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                </div>
+            )}
+
+            {/* Quick actions / Hızlı eylemler */}
+            <section className="mt-6">
+                <SectionTitle icon={Plus} tint="bg-primary/10 text-primary" title={t('dashboard.quickActions')} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <QuickAction icon={Globe} labelKey="dashboard.addDomain" to="/domains" />
+                    <QuickAction icon={Server} labelKey="dashboard.installService" to="/services" />
+                    <QuickAction icon={UserPlus} labelKey="dashboard.addUser" to="/users" />
+                    <QuickAction icon={DownloadCloud} labelKey="nav.import" to="/import" />
+                </div>
+            </section>
+        </div>
+    );
+}
+
+// Non-admin view: server gauges + facts + quick actions (unchanged scope —
+// tenants have no server-layer data to act on).
+// Yönetici olmayan görünüm: sunucu göstergeleri + bilgiler + hızlı eylemler
+// (kapsam değişmedi — kiracının aksiyon alacağı sunucu-katmanı verisi yok).
+function CustomerDashboard() {
+    const { t } = useI18n();
+    const [stats, setStats] = useState<SystemStats | null>(null);
 
     useEffect(() => {
         const load = () => api.getSystemStats().then(setStats).catch(() => {});
         load();
-        // Service health is a server-layer (admin-only) view; the API rejects
-        // it for other roles, so we only ask for it as an admin.
-        // Servis sağlığı sunucu-katmanı (yalnızca yönetici) görünümüdür; API
-        // bunu diğer rollere reddeder, bu yüzden yalnızca yönetici olarak isteriz.
-        if (isAdmin) {
-            api.getServices().then(setServices).catch(() => setServices([]));
-        }
-        // Refresh CPU/RAM live every 5s for a real-time feel.
-        // Gerçek zamanlı his için CPU/RAM'i 5 sn'de bir yenile.
         const timer = setInterval(load, 5000);
         return () => clearInterval(timer);
-    }, [isAdmin]);
-
-    const running = services?.filter((s) => s.status?.includes('running')).length ?? 0;
-    const total = services?.length ?? 0;
+    }, []);
 
     return (
         <div className="p-6 md:p-8">
@@ -49,96 +438,64 @@ export function Dashboard() {
                     icon={Cpu}
                     label={t('dashboard.cpuUsage')}
                     percent={stats?.cpu_percent ?? 0}
-                    value={stats ? `${stats.cpu_percent}%` : '—'}
+                    value={stats ? `%${Math.round(stats.cpu_percent)}` : '—'}
                     hint={stats ? t('dashboard.cores', { n: stats.cpu_cores }) : ''}
                 />
                 <GaugeCard
                     icon={MemoryStick}
                     label={t('dashboard.memoryUsage')}
                     percent={pct(stats?.mem_used_bytes, stats?.mem_total_bytes)}
-                    value={stats ? `${Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes))}%` : '—'}
-                    hint={
-                        stats
-                            ? t('dashboard.usedOfTotal', {
-                                  used: fmtBytes(stats.mem_used_bytes),
-                                  total: fmtBytes(stats.mem_total_bytes),
-                              })
-                            : ''
-                    }
+                    value={stats ? `%${Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes))}` : '—'}
+                    hint={stats ? t('dashboard.usedOfTotal', { used: fmtBytes(stats.mem_used_bytes), total: fmtBytes(stats.mem_total_bytes) }) : ''}
                 />
                 <GaugeCard
                     icon={HardDrive}
                     label={t('dashboard.diskUsage')}
                     percent={pct(stats?.disk_used_bytes, stats?.disk_total_bytes)}
-                    value={stats ? `${Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes))}%` : '—'}
-                    hint={
-                        stats
-                            ? t('dashboard.usedOfTotal', {
-                                  used: fmtBytes(stats.disk_used_bytes),
-                                  total: fmtBytes(stats.disk_total_bytes),
-                              })
-                            : ''
-                    }
+                    value={stats ? `%${Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes))}` : '—'}
+                    hint={stats ? t('dashboard.usedOfTotal', { used: fmtBytes(stats.disk_used_bytes), total: fmtBytes(stats.disk_total_bytes) }) : ''}
                 />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <Card title={t('dashboard.serverInfo')} icon={Server} className="lg:col-span-1">
+            <div className="mt-4">
+                <Card title={t('dashboard.serverInfo')} icon={Server}>
                     <dl className="divide-y divide-border text-sm">
                         <InfoRow label={t('dashboard.hostname')} value={stats?.hostname ?? '—'} />
                         <InfoRow label={t('dashboard.os')} value={stats?.os ?? '—'} />
                         <InfoRow label={t('dashboard.uptime')} value={stats ? fmtUptime(stats.uptime_seconds, t) : '—'} />
-                        <InfoRow
-                            label={t('dashboard.loadAverage')}
-                            value={stats ? stats.load_avg.map((n) => n.toFixed(2)).join('  ') : '—'}
-                        />
                     </dl>
                 </Card>
-
-                {isAdmin && (
-                    <Card
-                        title={t('dashboard.services')}
-                        icon={Activity}
-                        className="lg:col-span-2"
-                        action={
-                            <span className="text-xs font-medium text-fg-muted">
-                                {services ? `${running}/${total} ${t('dashboard.running')}` : ''}
-                            </span>
-                        }
-                    >
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-2 sm:grid-cols-2">
-                            {services?.map((s) => {
-                                const ok = s.status?.includes('running');
-                                return (
-                                    <div
-                                        key={s.id}
-                                        className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-surface-2"
-                                    >
-                                        <span className="flex items-center gap-2 text-sm text-fg">
-                                            <StatusDot ok={!!ok} />
-                                            {s.name}
-                                        </span>
-                                        <span className={`text-xs ${ok ? 'text-success' : 'text-fg-subtle'}`}>
-                                            {ok ? t('dashboard.running') : t('dashboard.stopped')}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Card>
-                )}
             </div>
 
             <section className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-fg-subtle">
-                    {t('dashboard.quickActions')}
-                </h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <SectionTitle icon={Plus} tint="bg-primary/10 text-primary" title={t('dashboard.quickActions')} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <QuickAction icon={Globe} labelKey="dashboard.addDomain" to="/domains" />
-                    {isAdmin && <QuickAction icon={Server} labelKey="dashboard.manageServices" to="/services" />}
                     <QuickAction icon={Database} labelKey="dashboard.viewDatabases" to="/databases" />
                 </div>
             </section>
+        </div>
+    );
+}
+
+function SectionTitle({
+    icon: Icon,
+    tint,
+    title,
+    right,
+}: {
+    icon: typeof Cpu;
+    tint: string;
+    title: string;
+    right?: React.ReactNode;
+}) {
+    return (
+        <div className="mb-3 flex items-center gap-3">
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+                <Icon className="h-5 w-5" />
+            </span>
+            <h2 className="text-lg font-semibold text-fg">{title}</h2>
+            {right && <span className="ml-auto">{right}</span>}
         </div>
     );
 }
@@ -164,12 +521,28 @@ function GaugeCard({
                     <Icon className="h-4 w-4" />
                 </span>
             </div>
-            <p className="mt-2 text-3xl font-bold tracking-tight">{value}</p>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-fg">{value}</p>
             <div className="mt-3">
                 <UsageBar percent={percent} />
             </div>
             {hint && <p className="mt-2 text-xs text-fg-subtle">{hint}</p>}
         </div>
+    );
+}
+
+function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; label: string; to: string }) {
+    const navigate = useNavigate();
+    return (
+        <button
+            onClick={() => navigate(to)}
+            className="rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-colors hover:border-primary/40 hover:bg-surface-2/60"
+        >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" />
+            </span>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-fg">{n}</p>
+            <p className="text-xs text-fg-muted">{label}</p>
+        </button>
     );
 }
 
@@ -193,7 +566,7 @@ function QuickAction({ icon: Icon, labelKey, to }: { icon: typeof Server; labelK
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-2 text-fg-muted transition-colors group-hover:bg-primary group-hover:text-primary-fg">
                 <Icon className="h-5 w-5" />
             </span>
-            <span className="flex-1 text-sm font-medium">{t(labelKey)}</span>
+            <span className="flex-1 text-base font-medium text-fg">{t(labelKey)}</span>
         </button>
     );
 }
@@ -217,4 +590,18 @@ function fmtUptime(seconds: number, t: (k: TranslationKey, v?: Record<string, st
     if (d > 0) return `${d}${t('common.days')} ${h}${t('common.hours')}`;
     if (h > 0) return `${h}${t('common.hours')} ${m}${t('common.minutes')}`;
     return `${m}${t('common.minutes')}`;
+}
+
+// SQLite TEXT timestamps arrive as "YYYY-MM-DD HH:MM:SS" (UTC) or RFC3339.
+// SQLite TEXT zaman damgaları "YYYY-AA-GG SS:DD:SS" (UTC) ya da RFC3339 gelir.
+function fmtRelative(ts: string, t: (k: TranslationKey, v?: Record<string, string | number>) => string): string {
+    const iso = ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return ts;
+    const mins = Math.floor((Date.now() - then) / 60000);
+    if (mins < 1) return t('time.justNow');
+    if (mins < 60) return t('time.minAgo', { n: mins });
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return t('time.hoursAgo', { n: hours });
+    return t('time.daysAgo', { n: Math.floor(hours / 24) });
 }
