@@ -70,19 +70,19 @@ export function AuditLogPage() {
                                 const [verb, detail] = splitAction(e.action);
                                 return (
                                     <tr key={e.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                        <td className="whitespace-nowrap px-4 py-2.5 text-fg-muted">
+                                        <td className="whitespace-nowrap px-4 py-3 text-fg-muted">
                                             {new Date(e.created_at.replace(' ', 'T') + 'Z').toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-2.5 font-medium text-fg">{e.username}</td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3 text-base font-medium text-fg">{e.username}</td>
+                                        <td className="px-4 py-3">
                                             <span className="rounded-md bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg-muted">
                                                 {verb}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5 text-fg-muted">
+                                        <td className="px-4 py-3 text-fg-muted">
                                             {detail || (e.resource_type ? `${e.resource_type} #${e.resource_id ?? ''}` : '—')}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-fg-subtle">
+                                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-fg-subtle">
                                             {e.ip_address || '—'}
                                         </td>
                                     </tr>

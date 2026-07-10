@@ -146,7 +146,7 @@ export function AddonsPage() {
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-fg">{prod.name}</span>
+                                            <span className="text-base font-semibold text-fg">{prod.name}</span>
                                             {prod.monthly_price_cents > 0 && (
                                                 <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">
                                                     {t('addons.perMonth', { price: (prod.monthly_price_cents / 100).toFixed(2) })}

@@ -167,7 +167,7 @@ export function VPNPage() {
                         <Shield className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+                        <div className="flex items-center gap-2 text-base font-semibold text-fg">
                             <StatusDot ok={!!status?.running} />
                             {status?.running
                                 ? t('vpn.serverRunning', { endpoint: `${status.endpoint}:${status.port}` })
@@ -198,7 +198,7 @@ export function VPNPage() {
             {/* One-time client config after issuing a peer */}
             {issued && (
                 <section className="rounded-xl border border-warning/40 bg-warning/5 p-5">
-                    <h3 className="mb-1 text-sm font-semibold text-fg">{t('vpn.configTitle', { name: issued.name })}</h3>
+                    <h3 className="mb-1 text-base font-semibold text-fg">{t('vpn.configTitle', { name: issued.name })}</h3>
                     <p className="mb-3 text-xs text-warning">{t('vpn.configOnce')}</p>
                     <pre className="mb-3 overflow-x-auto rounded-lg bg-surface-2 p-3 text-xs text-fg">{issued.config}</pre>
                     <div className="flex gap-2">
@@ -218,7 +218,7 @@ export function VPNPage() {
             {/* Add peer */}
             {status?.running && (
                 <section className="rounded-xl border border-border bg-surface p-5">
-                    <h3 className="mb-3 text-sm font-semibold text-fg">{t('vpn.addPeer')}</h3>
+                    <h3 className="mb-3 text-base font-semibold text-fg">{t('vpn.addPeer')}</h3>
                     <div className="flex flex-wrap gap-2">
                         <input
                             value={newName}
@@ -238,7 +238,7 @@ export function VPNPage() {
 
             {/* Peers */}
             <section>
-                <h3 className="mb-3 text-sm font-semibold text-fg">{t('vpn.peers')}</h3>
+                <h3 className="mb-3 text-base font-semibold text-fg">{t('vpn.peers')}</h3>
                 {peers.length === 0 ? (
                     <EmptyState icon={Laptop} title={t('vpn.noPeers')} hint={t('vpn.noPeersHint')} />
                 ) : (
@@ -256,14 +256,14 @@ export function VPNPage() {
                             <tbody>
                                 {peers.map((p) => (
                                     <tr key={p.id} className="border-b border-border last:border-0">
-                                        <td className="px-4 py-2.5">
-                                            <span className="font-medium text-fg">{p.name}</span>
+                                        <td className="px-4 py-3">
+                                            <span className="text-base font-medium text-fg">{p.name}</span>
                                             {p.subscription && (
                                                 <span className="ml-2 text-xs text-fg-subtle">{p.subscription}</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{p.ip}</td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3 font-mono text-xs text-fg-muted">{p.ip}</td>
+                                        <td className="px-4 py-3">
                                             <span className="flex items-center gap-1.5 text-xs">
                                                 <StatusDot ok={isOnline(p)} />
                                                 {isOnline(p)
@@ -273,10 +273,10 @@ export function VPNPage() {
                                                         : t('vpn.neverConnected')}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5 text-xs text-fg-muted">
+                                        <td className="px-4 py-3 text-xs text-fg-muted">
                                             ↓ {fmtBytes(p.rx_bytes)} · ↑ {fmtBytes(p.tx_bytes)}
                                         </td>
-                                        <td className="px-4 py-2.5 text-right">
+                                        <td className="px-4 py-3 text-right">
                                             <button
                                                 onClick={() => removePeer(p)}
                                                 title={t('common.remove')}

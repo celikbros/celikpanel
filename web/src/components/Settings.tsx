@@ -225,7 +225,7 @@ function TwoFactorPanel() {
         <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
             <div className="mb-1 flex items-center gap-2">
                 {enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-fg-subtle" />}
-                <h3 className="font-semibold text-fg">{t('settings.2fa.title')}</h3>
+                <h3 className="text-base font-semibold text-fg">{t('settings.2fa.title')}</h3>
                 {enabled && (
                     <span className="ml-auto rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                         {t('settings.2fa.on')}
