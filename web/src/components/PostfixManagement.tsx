@@ -187,6 +187,12 @@ function MailPolicySection() {
     const [sizeMB, setSizeMB] = useState(25);
     const [dnsblOn, setDnsblOn] = useState(false);
     const [zones, setZones] = useState('zen.spamhaus.org');
+    // Outbound rate limit: messages per minute per sending client. 0 = off.
+    // Guards against becoming a spam source (a compromised customer account).
+    // Giden hız sınırı: gönderen istemci başına dakikadaki mesaj. 0 = kapalı.
+    // Spam kaynağı olmaya (ele geçirilmiş müşteri hesabı) karşı koruma.
+    const [rateOn, setRateOn] = useState(false);
+    const [rate, setRate] = useState(30);
     const [busy, setBusy] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
@@ -199,6 +205,10 @@ function MailPolicySection() {
                     const z = d.dnsbl_zones || [];
                     setDnsblOn(z.length > 0);
                     if (z.length > 0) setZones(z.join(', '));
+                    if (d.outbound_rate_limit > 0) {
+                        setRateOn(true);
+                        setRate(d.outbound_rate_limit);
+                    }
                 }
             })
             .catch(() => {})
@@ -214,6 +224,7 @@ function MailPolicySection() {
                 body: JSON.stringify({
                     message_size_mb: sizeMB,
                     dnsbl_zones: dnsblOn ? zones.split(',').map((z) => z.trim()).filter(Boolean) : [],
+                    outbound_rate_limit: rateOn ? rate : 0,
                 }),
             });
             if (!r.ok) throw new Error();
@@ -249,7 +260,22 @@ function MailPolicySection() {
                 {t('mailpolicy.dnsbl')}
             </label>
             <p className="mt-1 text-xs text-fg-subtle">{t('mailpolicy.dnsblHint')}</p>
-            <div className="mt-3">
+
+            <label className="mt-4 flex items-center gap-2 text-sm text-fg">
+                <input type="checkbox" checked={rateOn} onChange={(e) => setRateOn(e.target.checked)} className="h-4 w-4" />
+                {t('mailpolicy.rate')}
+            </label>
+            <p className="mt-1 text-xs text-fg-subtle">{t('mailpolicy.rateHint')}</p>
+            {rateOn && (
+                <label className="mt-2 block max-w-xs text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('mailpolicy.rateLabel')}</span>
+                    <input type="number" min={1} max={10000} value={rate}
+                        onChange={(e) => setRate(Math.max(1, Math.min(10000, parseInt(e.target.value) || 30)))}
+                        className={inputClass} />
+                </label>
+            )}
+
+            <div className="mt-4">
                 <Button variant="primary" disabled={busy} onClick={save}>{t('mailpolicy.save')}</Button>
             </div>
         </section>

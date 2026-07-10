@@ -17,8 +17,9 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		var resp struct {
 			Policy struct {
-				MessageSizeMB int      `json:"message_size_mb"`
-				DNSBLZones    []string `json:"dnsbl_zones"`
+				MessageSizeMB     int      `json:"message_size_mb"`
+				DNSBLZones        []string `json:"dnsbl_zones"`
+				OutboundRateLimit int      `json:"outbound_rate_limit"`
 			} `json:"policy"`
 			Error string `json:"error,omitempty"`
 		}
@@ -34,8 +35,9 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPut:
 		var req struct {
-			MessageSizeMB int      `json:"message_size_mb"`
-			DNSBLZones    []string `json:"dnsbl_zones"`
+			MessageSizeMB     int      `json:"message_size_mb"`
+			DNSBLZones        []string `json:"dnsbl_zones"`
+			OutboundRateLimit int      `json:"outbound_rate_limit"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
@@ -43,8 +45,9 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 		}
 		var resp struct {
 			Policy struct {
-				MessageSizeMB int      `json:"message_size_mb"`
-				DNSBLZones    []string `json:"dnsbl_zones"`
+				MessageSizeMB     int      `json:"message_size_mb"`
+				DNSBLZones        []string `json:"dnsbl_zones"`
+				OutboundRateLimit int      `json:"outbound_rate_limit"`
 			} `json:"policy"`
 			Error string `json:"error,omitempty"`
 		}
