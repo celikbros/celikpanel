@@ -411,7 +411,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         disabled={busy === s.id}
                                                         tone="danger"
                                                     >
-                                                        <Square className="h-4 w-4" />
+                                                        <Square className="h-4 w-4" fill="currentColor" />
                                                     </ActionIcon>
                                                     </>
                                                     ) : (
@@ -421,7 +421,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         disabled={busy === s.id}
                                                         tone="success"
                                                     >
-                                                        <Play className="h-4 w-4" />
+                                                        <Play className="h-4 w-4" fill="currentColor" />
                                                     </ActionIcon>
                                                     )}
                                                     <button
@@ -676,17 +676,21 @@ function ActionIcon({
     disabled?: boolean;
     tone: 'success' | 'danger' | 'warning';
 }) {
-    const hover = {
-        success: 'hover:text-success',
-        danger: 'hover:text-danger',
-        warning: 'hover:text-warning',
+    // Filled tone chips (user feedback: outline glyphs read as 'empty') —
+    // matches the filled controls on the service detail page.
+    // Dolu ton yongaları (kullanıcı geri bildirimi: kontur ikonlar 'boş'
+    // okunuyor) — servis detay sayfasındaki dolu kontrollerle eşleşir.
+    const toneCls = {
+        success: 'bg-success text-success-fg hover:bg-success/90',
+        danger: 'bg-danger text-danger-fg hover:bg-danger/90',
+        warning: 'bg-warning text-warning-fg hover:bg-warning/90',
     }[tone];
     return (
         <button
             title={title}
             onClick={onClick}
             disabled={disabled}
-            className={`rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 disabled:opacity-40 ${hover}`}
+            className={`rounded-md p-1.5 transition-colors disabled:opacity-40 ${toneCls}`}
         >
             {children}
         </button>
