@@ -45,7 +45,30 @@ type hostingCapabilities struct {
 // hostingCaps, mevcut yetenek kümesini kurulu servislerden (agent üzerinden
 // paket varlığı) ve diskteki gerçek PHP ağaçlarından hesaplar.
 func (p *Panel) hostingCaps() hostingCapabilities {
-	caps := hostingCapabilities{PHPVersions: services.DetectInstalledPHPVersions()}
+	// Slice fields start non-nil (empty, not nil) so the JSON contract is
+	// always `[]`, never `null` — a nil Go slice marshals to `null`, and a
+	// consumer doing `arr[0]` or `arr.length` on that throws. Caught live: on
+	// a fresh server (nothing installed) the Add Domain dialog's capability
+	// fetch crashed on `php_versions[0]`, and its catch handler silently reset
+	// the whole capability state to null — which made every requirement check
+	// evaluate as "unknown" and, for the DNS-only type, fail open. A list is
+	// either populated or empty; it is never absent.
+	// Dizi alanları boş-ama-nil-olmayan başlar; JSON sözleşmesi her zaman
+	// `[]`dir, asla `null` değil — nil bir Go dilimi `null`a dönüşür ve bunun
+	// üzerinde `arr[0]` ya da `arr.length` yapan bir tüketici çöker. Canlıda
+	// yakalandı: taze bir sunucuda (hiçbir şey kurulu değilken) Add Domain
+	// penceresinin yetenek çekimi `php_versions[0]`da çöktü ve catch bloğu
+	// tüm yetenek durumunu sessizce null'a sıfırladı — bu da her gereksinim
+	// denetimini "bilinmiyor"a çevirdi ve yalnız-DNS tipinde açık-kalmaya
+	// (fail open) yol açtı. Bir liste ya doludur ya boştur; asla yok değildir.
+	caps := hostingCapabilities{
+		PHPVersions:     services.DetectInstalledPHPVersions(),
+		DatabaseServers: []string{},
+		DBTools:         []string{},
+	}
+	if caps.PHPVersions == nil {
+		caps.PHPVersions = []string{}
+	}
 
 	var installed []string
 	_ = p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installed)

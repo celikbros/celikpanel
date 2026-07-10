@@ -39,13 +39,32 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
 
     // Load capabilities once, then default to the best type that can actually
     // work here: php if possible, else static, else DNS-only.
+    //
+    // Defensive against a null list field (php_versions etc): the backend now
+    // always sends [], but trusting that from the frontend is how this broke
+    // once already — a null[0] access threw inside this .then(), which the
+    // trailing .catch() silently turned into "reset caps to null", making
+    // every requirement check read as "unknown" and the DNS-only type fail
+    // open. `?? []` here means a bad payload degrades to "nothing available"
+    // (safe default) instead of a crash that erases the whole capability read.
+    //
     // Yetenekleri bir kez yükle, sonra burada gerçekten çalışabilecek en iyi
     // tipe varsayılan yap: mümkünse php, değilse statik, değilse yalnız-DNS.
+    //
+    // Null bir liste alanına (php_versions vb.) karşı savunmacı: backend artık
+    // her zaman [] gönderiyor, ama bunu frontend'den varsaymak bir kez tam
+    // buradan bozulmasına yol açtı — bu .then() içinde bir null[0] erişimi
+    // fırlattı, ardındaki .catch() bunu sessizce "caps'i null'a sıfırla"ya
+    // çevirdi; bu da her gereksinim denetimini "bilinmiyor" yaptı ve
+    // yalnız-DNS tipini açık bıraktı (fail open). Buradaki `?? []`, bozuk bir
+    // yükün tüm yetenek okumasını silen bir çökme yerine "hiçbir şey uygun
+    // değil"e (güvenli varsayılan) düşmesini sağlar.
     useEffect(() => {
         fetch(`${API_BASE}/hosting/capabilities`)
             .then((r) => (r.ok ? r.json() : null))
-            .then((c: HostingCapabilities | null) => {
-                if (!c) return;
+            .then((raw: HostingCapabilities | null) => {
+                if (!raw) return;
+                const c: HostingCapabilities = { ...raw, php_versions: raw.php_versions ?? [] };
                 setCaps(c);
                 setPHPVersion(c.php_versions[0] ?? '');
                 if (c.web_server && c.php_versions.length > 0) setProjectType('php');
@@ -58,10 +77,14 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     // Product rule (D-009): this server serves its domains' DNS itself — with
     // no DNS server installed, no domain of any type can be added. One clear
     // blocker instead of a confusing "install one OR manage DNS elsewhere".
+    // caps === null covers both "still loading" and "fetch failed": either
+    // way, nothing is known to be available yet, so nothing is offered.
     // Ürün kuralı (D-009): bu sunucu, domain'lerinin DNS'ini kendisi sunar —
-    // DNS sunucusu kurulu değilken hiçbir tipte domain eklenemez. Kafa
-    // karıştıran "ya kur ya dışarıda yönet" yerine tek ve net engel.
-    const dnsMissing = !!caps && caps.dns_server === '';
+    // DNS sunucusu kurulu değilken hiçbir tipte domain eklenemez. caps ===
+    // null hem "hâlâ yükleniyor" hem "çekme başarısız oldu"yu kapsar: her iki
+    // durumda da hiçbir şeyin uygun olduğu bilinmiyordur, o yüzden hiçbiri
+    // sunulmaz.
+    const dnsMissing = !caps || caps.dns_server === '';
     const phpAvailable = !!caps && !dnsMissing && caps.web_server !== '' && caps.php_versions.length > 0;
     const staticAvailable = !!caps && !dnsMissing && caps.web_server !== '';
 
