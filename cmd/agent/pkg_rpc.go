@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // Package-manager abstraction so service installation is not hard-wired to
@@ -53,6 +54,61 @@ func detectPkgFamily() string {
 	return ""
 }
 
+// aptListsDir is where apt keeps downloaded package lists; their newest mtime
+// is when `apt-get update` last succeeded. Variable for tests.
+// aptListsDir, apt'ın indirilmiş paket listelerini tuttuğu yerdir; en yeni
+// mtime'ları `apt-get update`in en son ne zaman başarıldığıdır. Test için değişken.
+var aptListsDir = "/var/lib/apt/lists"
+
+// aptListsAge returns how long ago the package lists were refreshed; ok=false
+// when that cannot be determined (no lists yet → treat as stale).
+// aptListsAge, paket listelerinin en son ne kadar önce tazelendiğini döndürür;
+// belirlenemiyorsa ok=false (hiç liste yok → bayat say).
+func aptListsAge() (time.Duration, bool) {
+	entries, err := os.ReadDir(aptListsDir)
+	if err != nil {
+		return 0, false
+	}
+	var newest time.Time
+	for _, e := range entries {
+		if e.IsDir() { // partial/, auxfiles/
+			continue
+		}
+		if info, err := e.Info(); err == nil && info.ModTime().After(newest) {
+			newest = info.ModTime()
+		}
+	}
+	if newest.IsZero() {
+		return 0, false
+	}
+	return time.Since(newest), true
+}
+
+// refreshAptListsIfStale runs `apt-get update` when the lists are older than
+// maxAge (operator suggestion). Stale lists are the classic install killer:
+// mirrors delete a package file the moment a newer version replaces it, so an
+// old list requests a file that is gone (404) — and the "version to install"
+// we showed the operator may no longer be the truth. Fresh-enough lists skip
+// the cost, so a burst of installs refreshes only once. Best-effort: a broken
+// third-party repo must not veto an install the base archives can satisfy.
+// refreshAptListsIfStale, listeler maxAge'den eskiyse `apt-get update` koşar
+// (operatör önerisi). Bayat liste kurulumların klasik katilidir: aynalar,
+// paketin yenisi gelince eski dosyayı siler; eski liste artık var olmayan
+// dosyayı ister (404) — ve operatöre gösterdiğimiz "kurulacak sürüm" de artık
+// gerçek olmayabilir. Yeterince taze listeler maliyeti atlar; art arda
+// kurulumlar yalnız bir kez tazeler. En-iyi-çaba: bozuk bir üçüncü parti depo,
+// ana arşivlerin karşılayabileceği bir kurulumu veto etmemeli.
+func refreshAptListsIfStale(maxAge time.Duration) {
+	if age, ok := aptListsAge(); ok && age <= maxAge {
+		return
+	}
+	cmd := exec.Command("apt-get", "update")
+	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("apt-get update before install failed (continuing): %s\n", firstLine(string(out)))
+	}
+}
+
 // installPackages installs the given packages with the host's package
 // manager, non-interactively. Unknown or not-yet-supported families return a
 // clear error rather than a blind command.
@@ -75,14 +131,27 @@ func installPackages(family string, packages []string) (string, error) {
 
 	switch family {
 	case "apt":
-		args := append([]string{"install", "-y", "--no-install-recommends"}, packages...)
-		cmd := exec.Command("apt-get", args...)
-		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		refreshAptListsIfStale(time.Hour)
+		run := func() (string, error) {
+			args := append([]string{"install", "-y", "--no-install-recommends"}, packages...)
+			cmd := exec.Command("apt-get", args...)
+			cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+			out, err := cmd.CombinedOutput()
+			return string(out), err
 		}
-		return string(out), nil
+		out, err := run()
+		// Mirror rotated inside our freshness window: the lists said the file
+		// exists, the mirror says 404. Refresh unconditionally and retry once.
+		// Ayna, tazelik penceremizin içinde döndü: listeler dosya var dedi,
+		// ayna 404 diyor. Koşulsuz tazele ve bir kez yeniden dene.
+		if err != nil && strings.Contains(out, "404") {
+			refreshAptListsIfStale(0)
+			out, err = run()
+		}
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(out))
+		}
+		return out, nil
 	case "dnf", "pacman":
 		return "", fmt.Errorf("automatic install on this distro (%s) is not supported yet; install %s manually", family, strings.Join(packages, ", "))
 	default:
