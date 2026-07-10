@@ -1,0 +1,22 @@
+{
+  "projectId": "6b1f90d3-1381-4ecc-b604-eb3bc3a04151",
+  "shape": "package",
+  "pkg": "celikpanel-web",
+  "globalName": "CelikPanelUI",
+  "cssEntry": "dist/assets/index-BZ0Sot4H.css",
+  "tsconfig": "tsconfig.json",
+  "componentSrcMap": {
+    "PageHeader": "src/components/ui.tsx",
+    "Card": "src/components/ui.tsx",
+    "UsageBar": "src/components/ui.tsx",
+    "StatusDot": "src/components/ui.tsx",
+    "Button": "src/components/ui.tsx",
+    "SearchInput": "src/components/ui.tsx",
+    "FormSection": "src/components/ui.tsx",
+    "Field": "src/components/ui.tsx",
+    "ToggleRow": "src/components/ui.tsx",
+    "FormActions": "src/components/ui.tsx",
+    "EmptyState": "src/components/ui.tsx"
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

@@ -39,3 +39,8 @@ __pycache__/
 # Compiled binaries never enter the repo / Derlenmis binaryler repoya girmez
 /panel
 /agent
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
