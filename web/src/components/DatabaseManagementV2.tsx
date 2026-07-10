@@ -142,9 +142,9 @@ export function DatabaseManagementV2() {
                                     : 'border-border bg-surface hover:bg-surface-2'
                             }`}
                         >
-                            <span className="text-xl leading-none">{s.type_icon}</span>
+                            <span className="text-2xl leading-none">{s.type_icon}</span>
                             <span>
-                                <span className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                <span className="flex items-center gap-2 text-base font-semibold text-fg">
                                     {s.name}
                                     {s.is_default && (
                                         <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary">
@@ -213,16 +213,16 @@ export function DatabaseManagementV2() {
                                 columns={[t('databases.col.name'), t('databases.col.users'), '']}
                                 rows={databases.map((d) => (
                                     <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                        <td className="px-4 py-2.5">
-                                            <span className="flex items-center gap-2 font-medium text-fg">
+                                        <td className="px-4 py-3">
+                                            <span className="flex items-center gap-2 text-base font-medium text-fg">
                                                 <Database className="h-4 w-4 text-fg-subtle" />
                                                 {d.name}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <Chips items={d.users} />
                                         </td>
-                                        <td className="px-4 py-2.5 text-right">
+                                        <td className="px-4 py-3 text-right">
                                             <DeleteBtn onClick={() => handleDeleteDatabase(d.id, d.name)} />
                                         </td>
                                     </tr>
@@ -240,16 +240,16 @@ export function DatabaseManagementV2() {
                             columns={[t('databases.col.username'), t('databases.col.databases'), '']}
                             rows={users.map((u) => (
                                 <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                    <td className="px-4 py-2.5">
-                                        <span className="flex items-center gap-2 font-medium text-fg">
+                                    <td className="px-4 py-3">
+                                        <span className="flex items-center gap-2 text-base font-medium text-fg">
                                             <Users className="h-4 w-4 text-fg-subtle" />
                                             {u.username}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-3">
                                         <Chips items={u.databases} />
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
+                                    <td className="px-4 py-3 text-right">
                                         <DeleteBtn onClick={() => handleDeleteUser(u.id, u.username)} />
                                     </td>
                                 </tr>

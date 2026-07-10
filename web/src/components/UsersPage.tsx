@@ -229,11 +229,11 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
                         <tbody>
                             {users.map((u) => (
                                 <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                    <td className="px-4 py-2.5">
-                                        <div className="font-medium text-fg">{u.username}</div>
+                                    <td className="px-4 py-3">
+                                        <div className="text-base font-medium text-fg">{u.username}</div>
                                         <div className="text-xs text-fg-subtle">{u.email}</div>
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-3">
                                         <span
                                             className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                                                 u.role === 'admin'
@@ -246,17 +246,17 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
                                             {t(roleKey(u.role))}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-3">
                                         <span className="inline-flex items-center gap-1.5 text-fg-muted">
                                             <StatusDot ok={u.status === 'active'} />
                                             {u.status === 'active' ? t('users.status.active') : t('users.status.suspended')}
                                         </span>
                                     </td>
-                                    {isAdmin && <td className="px-4 py-2.5 text-fg-muted">{u.parent_name || '—'}</td>}
-                                    <td className="px-4 py-2.5 text-fg-muted">
+                                    {isAdmin && <td className="px-4 py-3 text-fg-muted">{u.parent_name || '—'}</td>}
+                                    <td className="px-4 py-3 text-fg-muted">
                                         {u.subscriptions} / {u.domains}
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-3">
                                         {u.role !== 'admin' && (
                                             <div className="flex items-center justify-end gap-0.5">
                                                 <RowBtn title={t('users.loginAs')} onClick={() => impersonate(u)}>
@@ -399,14 +399,14 @@ function PlansTab() {
                         <tbody>
                             {plans.map((p) => (
                                 <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                    <td className="px-4 py-2.5 font-medium text-fg">{p.name}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{p.max_domains}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{p.max_databases}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{p.max_email_accounts}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{fmtGB(p.disk_quota_mb)}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{fmtGB(p.bandwidth_quota_mb)}</td>
-                                    <td className="px-4 py-2.5 text-fg-muted">{p.subscribers ?? 0}</td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-3 text-base font-medium text-fg">{p.name}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{p.max_domains}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{p.max_databases}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{p.max_email_accounts}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{fmtGB(p.disk_quota_mb)}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{fmtGB(p.bandwidth_quota_mb)}</td>
+                                    <td className="px-4 py-3 text-fg-muted">{p.subscribers ?? 0}</td>
+                                    <td className="px-4 py-3">
                                         <div className="flex items-center justify-end gap-0.5">
                                             <RowBtn title={t('plans.edit')} onClick={() => setEditing({ ...p })}>
                                                 <Pencil className="h-4 w-4" />

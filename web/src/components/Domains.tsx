@@ -197,7 +197,7 @@ export function Domains() {
                             <tbody>
                                 {filtered.map((d) => (
                                     <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <input
                                                 type="checkbox"
                                                 checked={selected.includes(d.id)}
@@ -209,7 +209,7 @@ export function Domains() {
                                                 className="h-4 w-4 accent-primary"
                                             />
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 {d.ssl_enabled ? (
                                                     <Lock className="h-4 w-4 shrink-0 text-success" />
@@ -220,7 +220,7 @@ export function Domains() {
                                                     onClick={() =>
                                                         navigate(`/domains/${encodeURIComponent(d.domain_name)}`)
                                                     }
-                                                    className="font-medium text-primary hover:underline"
+                                                    className="text-base font-medium text-primary hover:underline"
                                                 >
                                                     {d.domain_name}
                                                 </button>
@@ -231,7 +231,7 @@ export function Domains() {
                                                 ) : null}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${typeBadge[d.project_type || 'php'] ?? 'bg-surface-2 text-fg-muted'}`}>
                                                 {d.project_type || 'php'}
                                             </span>
@@ -239,17 +239,17 @@ export function Domains() {
                                                 <span className="ml-1.5 text-xs text-fg-subtle">{d.php_version}</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5 text-right text-fg-muted">{fmtBytes(d.disk_usage)}</td>
-                                        <td className="px-4 py-2.5 text-right text-fg-muted">
+                                        <td className="px-4 py-3 text-right text-fg-muted">{fmtBytes(d.disk_usage)}</td>
+                                        <td className="px-4 py-3 text-right text-fg-muted">
                                             {fmtBytes(d.bandwidth)}/mo
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <span className="inline-flex items-center gap-1.5 text-fg-muted">
                                                 <StatusDot ok={d.status === 'active'} />
                                                 {d.status === 'active' ? t('domains.status.active') : d.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center justify-end gap-0.5">
                                                 <IconAction
                                                     href={`https://${d.domain_name}`}
@@ -390,7 +390,7 @@ function SubscriptionUsage() {
                     <div key={s.id} className="rounded-xl border border-border bg-surface p-4 shadow-card">
                         <div className="mb-2 flex items-center gap-2">
                             <HardDrive className="h-4 w-4 text-primary" />
-                            <span className="truncate text-sm font-semibold text-fg">{s.name}</span>
+                            <span className="truncate text-base font-semibold text-fg">{s.name}</span>
                         </div>
                         {unlimited ? (
                             <p className="text-sm text-fg-muted">
