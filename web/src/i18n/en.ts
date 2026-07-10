@@ -156,6 +156,7 @@ export const en = {
     'domains.add.ssl': 'Enable SSL (Let’s Encrypt)',
     'domains.add.sslHint': 'Automatically provision and renew the certificate. The domain must already resolve to this server.',
     'domains.add.dnsServed': 'The DNS zone will be served from this server ({server}).',
+    'domains.goServices': 'Go to Services',
     'domains.add.needsDns': 'A DNS server is required before adding domains — install PowerDNS or BIND from Services. On this panel, every domain is served by this server itself.',
     'domains.add.create': 'Create domain',
     'domains.add.creating': 'Creating…',

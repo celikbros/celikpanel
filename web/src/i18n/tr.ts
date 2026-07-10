@@ -155,6 +155,7 @@ export const tr: Record<TranslationKey, string> = {
     'domains.add.ssl': 'SSL etkinleştir (Let’s Encrypt)',
     'domains.add.sslHint': 'Sertifika otomatik alınır ve yenilenir. Alan adı bu sunucuya çözülüyor olmalı.',
     'domains.add.dnsServed': 'DNS bölgesi bu sunucudan yayınlanacak ({server}).',
+    'domains.goServices': 'Servisler sayfasına git',
     'domains.add.needsDns': 'Alan adı eklemeden önce DNS sunucusu gerekli — Servisler sayfasından PowerDNS veya BIND kurun. Bu panelde her alan adının DNS yayınını bu sunucunun kendisi yapar.',
     'domains.add.create': 'Alan adı oluştur',
     'domains.add.creating': 'Oluşturuluyor…',

@@ -48,6 +48,25 @@ export function Domains() {
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<number[]>([]);
 
+    // D-009 on the page itself, not only inside the dialog: with no DNS
+    // server installed, the Add buttons are disabled and the empty state
+    // guides to Services — a button that only leads to a wall is a small
+    // ghost. null = still loading (buttons stay enabled; the dialog and the
+    // backend both guard anyway, so nothing can slip through).
+    // D-009 yalnız pencerede değil sayfanın kendisinde: DNS sunucusu kurulu
+    // değilken Ekle düğmeleri pasiftir ve boş durum Servisler'e yönlendirir —
+    // yalnızca duvara götüren düğme küçük bir hayalettir. null = hâlâ
+    // yükleniyor (düğmeler açık kalır; pencere ve backend zaten koruyor,
+    // hiçbir şey sızamaz).
+    const [dnsServer, setDnsServer] = useState<string | null>(null);
+    useEffect(() => {
+        fetch(`${API_BASE}/hosting/capabilities`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((c) => setDnsServer(c ? (c.dns_server ?? '') : null))
+            .catch(() => setDnsServer(null));
+    }, []);
+    const dnsMissing = dnsServer === '';
+
     useEffect(() => {
         loadDomains();
     }, []);
@@ -89,9 +108,11 @@ export function Domains() {
                 subtitle={t('domains.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.domains')]}
                 actions={
-                    <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
-                        {t('domains.add')}
-                    </Button>
+                    <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
+                        <Button variant="primary" icon={Plus} disabled={dnsMissing} onClick={() => setShowAddModal(true)}>
+                            {t('domains.add')}
+                        </Button>
+                    </span>
                 }
             />
 
@@ -103,20 +124,32 @@ export function Domains() {
                 <EmptyState
                     icon={Globe}
                     title={t('domains.empty')}
-                    hint={t('domains.emptyHint')}
+                    hint={dnsMissing ? t('domains.add.needsDns') : t('domains.emptyHint')}
                     action={
-                        <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
-                            {t('domains.add')}
-                        </Button>
+                        dnsMissing ? (
+                            // The honest next step is not a dead Add button but
+                            // the page where the requirement is met.
+                            // Dürüst sonraki adım ölü bir Ekle düğmesi değil,
+                            // gereksinimin karşılandığı sayfadır.
+                            <Button variant="primary" icon={Settings} onClick={() => navigate('/services')}>
+                                {t('domains.goServices')}
+                            </Button>
+                        ) : (
+                            <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
+                                {t('domains.add')}
+                            </Button>
+                        )
                     }
                 />
             ) : (
                 <div className="rounded-xl border border-border bg-surface shadow-card">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
                         <div className="flex items-center gap-2">
-                            <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>
-                                {t('domains.add')}
-                            </Button>
+                            <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
+                                <Button variant="primary" icon={Plus} disabled={dnsMissing} onClick={() => setShowAddModal(true)}>
+                                    {t('domains.add')}
+                                </Button>
+                            </span>
                             {selected.length > 0 && (
                                 <Button
                                     variant="danger"
