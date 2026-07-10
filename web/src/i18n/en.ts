@@ -542,15 +542,15 @@ export const en = {
     'nginx.readonly': 'Read-only, parsed live from nginx -T. In-panel editing is not supported yet.',
 
     'pdns.repairTitle': 'One-click configuration repair',
-    'pdns.repairDesc': 'Automatically fix the database backend, port 53 conflicts (systemd-resolved), and conflicting backends.',
+    'pdns.repairDesc': 'Configures the SQLite (gsqlite3) backend, frees port 53 from the systemd-resolved stub listener, re-syncs panel zones into PowerDNS and restarts the service.',
     'pdns.repairRun': 'Run auto-repair',
     'pdns.repairing': 'Repairing…',
     'pdns.repairConfirm': 'This overwrites the PowerDNS configuration. Continue?',
     'pdns.repairDone': 'PowerDNS configuration repaired.',
     'pdns.repairFailed': 'Configuration repair failed.',
     'pdns.repairSteps': 'Repair actions',
-    'pdns.step.backend': 'Configure PostgreSQL backend',
-    'pdns.step.conflict': 'Remove Bind backend conflict',
+    'pdns.step.backend': 'Configure SQLite backend (gsqlite3, DNSSEC-ready)',
+    'pdns.step.conflict': 'Re-sync panel zones into PowerDNS',
     'pdns.step.port': 'Free port 53 (stub listener)',
     'pdns.step.restart': 'Restart service',
 

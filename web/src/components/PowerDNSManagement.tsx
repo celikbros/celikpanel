@@ -23,7 +23,11 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
         if (!confirm(t('pdns.repairConfirm'))) return;
         setRepairing(true);
         try {
-            const res = await fetch('/api/v1/pdns/configure', { method: 'POST' });
+            // The panel's real endpoint is /pdns/enable — it reconfigures the
+            // gsqlite3 backend AND re-syncs every panel zone into PowerDNS.
+            // Panelin gerçek ucu /pdns/enable — gsqlite3 arka ucunu yeniden
+            // yapılandırır VE tüm panel bölgelerini PowerDNS'e eşitler.
+            const res = await fetch('/api/v1/pdns/enable', { method: 'POST' });
             if (!res.ok) throw new Error();
             showToast('success', t('pdns.repairDone'));
         } catch {

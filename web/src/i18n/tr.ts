@@ -542,15 +542,15 @@ export const tr: Record<TranslationKey, string> = {
     'nginx.readonly': 'Salt okunur, nginx -T\'den canlı ayrıştırılır. Panel içi düzenleme henüz desteklenmiyor.',
 
     'pdns.repairTitle': 'Tek tıkla yapılandırma onarımı',
-    'pdns.repairDesc': 'Veritabanı arka ucunu, 53 numaralı port çakışmalarını (systemd-resolved) ve çakışan arka uçları otomatik düzeltir.',
+    'pdns.repairDesc': 'SQLite (gsqlite3) arka ucunu yapılandırır, 53 numaralı portu systemd-resolved stub dinleyicisinden kurtarır, panel bölgelerini PowerDNS ile yeniden eşitler ve servisi yeniden başlatır.',
     'pdns.repairRun': 'Otomatik onarımı çalıştır',
     'pdns.repairing': 'Onarılıyor…',
     'pdns.repairConfirm': 'Bu, PowerDNS yapılandırmasının üzerine yazar. Devam edilsin mi?',
     'pdns.repairDone': 'PowerDNS yapılandırması onarıldı.',
     'pdns.repairFailed': 'Yapılandırma onarımı başarısız oldu.',
     'pdns.repairSteps': 'Onarım adımları',
-    'pdns.step.backend': 'PostgreSQL arka ucunu yapılandır',
-    'pdns.step.conflict': 'Bind arka uç çakışmasını kaldır',
+    'pdns.step.backend': 'SQLite arka ucunu yapılandır (gsqlite3, DNSSEC hazır)',
+    'pdns.step.conflict': 'Panel bölgelerini PowerDNS ile yeniden eşitle',
     'pdns.step.port': '53 numaralı portu boşalt (stub dinleyici)',
     'pdns.step.restart': 'Servisi yeniden başlat',
 
