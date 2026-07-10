@@ -3,7 +3,7 @@
   "shape": "package",
   "pkg": "celikpanel-web",
   "globalName": "CelikPanelUI",
-  "cssEntry": "dist/assets/index-BZ0Sot4H.css",
+  "cssEntry": "dist/assets/index-CoLzr1Si.css",
   "tsconfig": "tsconfig.json",
   "componentSrcMap": {
     "PageHeader": "src/components/ui.tsx",

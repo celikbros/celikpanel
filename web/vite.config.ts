@@ -10,4 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  experimental: {
+    // CSS-referenced assets (fonts) resolve relative to the CSS file, not the
+    // site root — the stylesheet then works wherever it is served from.
+    // / CSS içinden başvurulan varlıklar (fontlar) site köküne değil CSS
+    // dosyasına göre çözülür — stylesheet nereden sunulursa sunulsun çalışır.
+    renderBuiltUrl(_filename, { hostType }) {
+      if (hostType === 'css') return { relative: true }
+    },
+  },
 })
