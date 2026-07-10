@@ -119,6 +119,47 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Requirement preflight FIRST — before anything is created. What a domain
+	// needs depends on the ROLE it plays here: a php site needs a web server +
+	// PHP-FPM; a static site a web server; and (D-009) every domain needs a DNS
+	// server, because this panel serves its own domains' DNS. Doing this before
+	// resolving the subscription matters: a rejected request must leave NOTHING
+	// behind — the admin-subscription bootstrap below used to run first, so a
+	// blocked "add domain" still created a stray subscription (caught in alpha).
+	// Gereksinim ön-denetimi İLK — hiçbir şey oluşturulmadan önce. Bir domain'in
+	// neye ihtiyacı olduğu buradaki ROLE bağlıdır: php sitesi web sunucusu +
+	// PHP-FPM; statik site web sunucusu; ve (D-009) her domain bir DNS sunucusu
+	// ister; çünkü bu panel kendi domain'lerinin DNS'ini sunar. Bunu aboneliği
+	// çözmeden ÖNCE yapmak önemli: reddedilen istek arkasında HİÇBİR ŞEY
+	// bırakmamalı — aşağıdaki admin-abonelik bootstrap'i önce koşuyordu, bu
+	// yüzden engellenen "domain ekle" yine de öksüz bir abonelik oluşturuyordu
+	// (alfada yakalandı).
+	if req.ProjectType == "" {
+		req.ProjectType = "php"
+	}
+	if !services.CreationProjectTypes[req.ProjectType] {
+		writeClientError(w, http.StatusBadRequest, "project_type must be php, static or dnsonly")
+		return
+	}
+	caps := p.hostingCaps()
+	if caps.DNSServer == "" {
+		writeClientError(w, http.StatusConflict,
+			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served")
+		return
+	}
+	if req.ProjectType == "php" || req.ProjectType == "static" {
+		if caps.WebServer == "" {
+			writeClientError(w, http.StatusConflict,
+				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type")
+			return
+		}
+		if req.ProjectType == "php" && len(caps.PHPVersions) == 0 {
+			writeClientError(w, http.StatusConflict,
+				"PHP-FPM is not installed — install it from Services, or choose the static or DNS-only type")
+			return
+		}
+	}
+
 	// Resolve the target subscription and enforce ownership. Admins may
 	// create under any subscription (default 1); everyone else must own the
 	// subscription they create under.
@@ -191,49 +232,6 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDisk); err != nil {
 		writeClientError(w, http.StatusConflict, err.Error())
 		return
-	}
-
-	// Requirement preflight: what a domain needs depends on the ROLE it will
-	// play on this server. A php site needs a web server and PHP-FPM; a static
-	// site needs a web server; a DNS-only domain needs nothing installed (its
-	// zone is served once a DNS server runs — or DNS stays external). Failing
-	// here yields an actionable message instead of a half-created site.
-	// Gereksinim ön-denetimi: bir domain'in neye ihtiyacı olduğu, bu sunucuda
-	// üstleneceği ROLE bağlıdır. php sitesi web sunucusu ve PHP-FPM ister;
-	// statik site web sunucusu ister; yalnız-DNS domain kurulu hiçbir şey
-	// istemez (zone'u bir DNS sunucusu koşunca sunulur — ya da DNS dışarıda
-	// kalır). Burada durmak, yarım oluşmuş bir site yerine eyleme dönük bir
-	// mesaj üretir.
-	if req.ProjectType == "" {
-		req.ProjectType = "php"
-	}
-	if !services.CreationProjectTypes[req.ProjectType] {
-		writeClientError(w, http.StatusBadRequest, "project_type must be php, static or dnsonly")
-		return
-	}
-	caps := p.hostingCaps()
-	// Product rule (operator decision, D-009): every domain on this server is
-	// served by this server's own DNS — no DNS server, no domains. One mental
-	// model instead of a confusing "install one OR manage DNS elsewhere".
-	// Ürün kuralı (operatör kararı, D-009): bu sunucudaki her domain'in
-	// DNS'ini bu sunucunun kendisi sunar — DNS sunucusu yoksa domain de yok.
-	// Kafa karıştıran "ya kur ya dışarıda yönet" yerine tek zihinsel model.
-	if caps.DNSServer == "" {
-		writeClientError(w, http.StatusConflict,
-			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served")
-		return
-	}
-	if req.ProjectType == "php" || req.ProjectType == "static" {
-		if caps.WebServer == "" {
-			writeClientError(w, http.StatusConflict,
-				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type")
-			return
-		}
-		if req.ProjectType == "php" && len(caps.PHPVersions) == 0 {
-			writeClientError(w, http.StatusConflict,
-				"PHP-FPM is not installed — install it from Services, or choose the static or DNS-only type")
-			return
-		}
 	}
 
 	// Default PHP version: whatever is actually installed on this host — each
