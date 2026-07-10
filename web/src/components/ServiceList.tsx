@@ -26,11 +26,17 @@ interface ManagedService {
 // Kategori gösterim sırası + etiket anahtarı + bölüm ikonu + ikon rengi.
 // Her kategori kendi kartı; renkli ikon rozeti bölümleri iki temada da tek
 // bakışta taranabilir kılan şeydir.
+// Ordered by necessity, not alphabet: the panel is authoritative DNS for its
+// domains (D-009 — no DNS server, no domains), so DNS leads; then the hosting
+// core (web, database, email), then hardening and extras.
+// Alfabetik değil gereklilik sırası: panel domain'lerinin DNS otoritesidir
+// (D-009 — DNS yoksa domain yok), bu yüzden DNS başta; sonra barındırma
+// çekirdeği (web, veritabanı, e-posta), sonra sertleştirme ve ekstralar.
 const categoryOrder: { id: string; labelKey: string; icon: LucideIcon; tint: string }[] = [
+    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-teal-500/10 text-teal-600 dark:text-teal-400' },
     { id: 'web', labelKey: 'services.cat.web', icon: Globe, tint: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
     { id: 'database', labelKey: 'services.cat.database', icon: Database, tint: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
     { id: 'email', labelKey: 'services.cat.email', icon: Mail, tint: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-    { id: 'dns', labelKey: 'services.cat.dns', icon: Network, tint: 'bg-teal-500/10 text-teal-600 dark:text-teal-400' },
     { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-red-500/10 text-red-600 dark:text-red-400' },
     { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
     { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' },
