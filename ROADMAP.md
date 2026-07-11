@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: July 3, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: July 11, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -26,7 +26,7 @@ cPanel/Plesk are today's AltaVista: crowded, slow, intimidating.
 
 ### 3. Speed
 - Panel API response target: < 100 ms. UI interactions: instant.
-- Installation target: **60 seconds** (Phase 2 below).
+- Installation target: **60 seconds** (v0.1 delivered `install.sh`; the target is held).
 - One static binary; adding external dependencies is forbidden (this is a feature — we protect it).
 
 ### 4. Flexibility
@@ -37,100 +37,104 @@ cPanel/Plesk are today's AltaVista: crowded, slow, intimidating.
 ### The honesty rule
 The previous era's mistake will not be repeated: **"it runs" ≠ "it's done."**
 Work counts as done only with all three: tests + security review + documentation.
-Every phase has a measurable exit criterion; the next phase does not start until it is met.
+Every version has a measurable exit criterion; the next does not start until it is met.
 
 ---
 
-## Phase 0 — Security Sprint 🔴 *(we are here)*
+## The Version Ladder
 
-> You don't build floors on a rotten foundation. No new feature gets written before this phase ends.
+The destination: **v1.0 — a panel a stranger can install on a clean VPS in minutes,
+run a real hosting business on, and trust.** Everything below is the road there.
 
-| # | Task | Detail |
-|---|------|--------|
-| 0.1 | Lock down the Agent | TCP `:1977` → Unix socket (0700 perms) + shared-token authentication |
-| 0.2 | Panel authentication | Session-based login, argon2id password hashing, secure cookies (HttpOnly, SameSite) |
-| 0.3 | SQL injection cleanup | `postgresql_driver.go` and `database_rpc.go`: parameterized queries + validated identifier quoting |
-| 0.4 | Weak randomness | `site_orchestrator.go`: `math/rand` → `crypto/rand` (FTP passwords) |
-| 0.5 | Error leakage | Internal error messages never reach the user; full detail to logs, generic message to client |
-| 0.6 | HTTP hardening | Security headers, CSRF protection, API rate limiting |
-| 0.7 | Known bugs | `files_rpc.go` uid/gid conversion bug; zero `go vet` warnings |
-| 0.8 | Leaked password | ✅ Resolved (Jul 6, 2026). The secret was already removed from code in 9aeb7cb; the live credential was the real risk — the `celikpanel_user` PostgreSQL role still accepted `celikpanel_secure_2025`. That role is an orphan from the PostgreSQL-era panel backend (the panel now runs on SQLite, PowerDNS on SQLite — 0 active connections), so it was rotated to a fresh random password **and** set `NOLOGIN`. Verified: neither the leaked nor the new password can authenticate. Residual: the string remains in private-repo git history — a rewrite is deferred as low-value since the credential is dead. |
+### ✅ v0.0 — The Inheritance *(July 3, 2026)*
+~23k lines taken over: solid architecture (Panel + root Agent, SQLite), but insecure
+(open TCP agent, SQL injection, no auth) and a mock-data UI. Decision made: continue, don't rewrite.
 
-**Exit criteria:** No API endpoint responds without a session · The Agent is unreachable from outside the Panel · `gosec` scan shows no critical findings · `go vet` is clean.
+### ✅ v0.1 — Secure Core + Proven Golden Path *(July 3–10, 2026 — the current release, v0.1.0)*
+Eight days, four fronts, all pushed:
+- **Security (Phase 0):** agent behind Unix socket + token · session auth (argon2id) + 2FA/TOTP ·
+  SQL injection cleanup · CSRF/headers/rate limits · gosec highs closed · leaked credential neutralized.
+- **Hosting core (Phases 1–3):** domain types (php/static/node/proxy/forwarding) + subdomains ·
+  SSL with real auto-renewal · authoritative DNS (PowerDNS/SQLite sync, DNSSEC, DANE) ·
+  the full mail stack (TLS+SNI, authenticated submission 587/465, DKIM signing, server policy,
+  deliverability health screen) · databases v2 · one-click WordPress · cPanel importer v1 ·
+  accounts (admin/reseller/customer, plans, quotas, impersonation) · entitlements + WireGuard VPN ·
+  scheduled backups with retention · audit log · firewall (default-deny) · service uninstall ·
+  unattended-upgrades · managed vendor repos (PGDG version choice).
+- **Operations (Phase 2):** `install.sh` (one command → login) · `update.sh` with snapshots · `rollback.sh` ·
+  systemd units · **golden path proven end-to-end on Ubuntu**: clean install → domain → HTTPS →
+  own DNS answering the world → DKIM-signed mail in Gmail's INBOX.
+- **Product & design:** Plesk-density UI, light/dark, TR+EN i18n · design system exported to
+  claude.ai/design (the design loop: describe → agent drafts with real components → refine → ship) ·
+  self-hosted brand fonts · new type scale across all pages · live dashboard with setup journey.
+- **The alpha working model (D-008):** the operator drives the panel like a real customer;
+  every wall hit becomes a product fix. ~20 real bugs found and shipped this way in two days.
+
+**Exit criterion met:** golden path proven E2E (Ubuntu) · panel self-hosts its updates · alpha model running.
+
+### 🔶 v0.2 — Alpha Complete: Debian Re-Proof *(← WE ARE HERE, in progress)*
+The same golden path, re-proven on the production VPS (Debian 13) **entirely through panel clicks**:
+- ✅ Panel-only install (zero extra packages) · ✅ PowerDNS installed from the panel ·
+  ✅ manage page honest (config visibility, working repair)
+- ⏳ Next clicks: auto-repair → first domain → panel Let's Encrypt cert → DS record at registrar →
+  web server + site live → mail stack → **Gmail INBOX from Debian**
+- Remaining alpha items as they surface + `autodiscover` (mail client autoconfig)
+- External unblarker: the registrar-side domain suspension (operator's task)
+
+**Exit criterion:** a visitor can open `https://celikpanel.cloud`, and mail from it lands in Gmail's INBOX —
+with every configuring click made in the panel, none on a shell.
+
+### v0.3 — Multi-Tenant Reality
+Selling to more than one tenant without embarrassment:
+- Reseller pooled quotas · `additional_user` role · OS-level disk/traffic enforcement (ROLES.md deferrals)
+- cPanel importer proven with a **real** customer archive (incl. DB users)
+- WordPress Toolkit depth: updates, hardening, clone/staging
+- FTP (vsftpd) wired end-to-end · file manager polish
+
+**Exit criterion:** one reseller + two customers operate self-service for a week; a real cPanel account migrates in one click.
+
+### v0.4 — Operational Trust
+What an operator needs at 3 a.m.:
+- Monitoring + alerting (service down, disk full, cert failure → mail/webhook) · log viewer in panel
+- Remote backup targets (S3/FTP) + restore drills as a product feature
+- One-click panel self-update in the UI (update.sh's front end) · WebSocket live notifications
+
+**Exit criterion:** a killed service alerts within a minute; a full restore from remote backup succeeds on a fresh VPS.
+
+### v0.5 — Security Depth
+- WAF decision (ModSecurity or honest alternative) · fail2ban deep integration · ClamAV scheduled site scans
+- 2FA secret encryption at rest · external security audit · dedicated IP plumbing (sellable `extra_ip`)
+
+**Exit criterion:** an external audit finds no high-severity issue; a customer buys and uses a dedicated IP from the panel.
+
+### v0.6 – v0.9 — Beta Program
+- OpenAPI documentation (proof of the API-first promise) · admin & user guides TR+EN
+- Real outside beta users; their walls become fixes (the alpha model, scaled)
+- Performance targets measured and enforced (<100 ms API) · license/business model decision
+  (suggestion: open core) → repo visibility accordingly
+
+**Exit criterion:** ≥3 external operators run real sites for ≥1 month; documentation answers their questions before we do.
+
+### 🎯 v1.0 — Public Release
+- Clean VPS → running panel in minutes, documented, self-updating
+- "Domain → live site" 100 times back-to-back without failure (the Phase 1 promise, now in CI)
+- Migration from cPanel proven repeatedly · pricing/licensing live
+
+### Beyond 1.0 — the horizon *(demand-driven, never speculative)*
+Multi-server, BSD agent backend, billing integrations (WHMCS et al.) — each only when real
+demand exists, per the non-goals below. Marketplaces never (the AltaVista mistake).
 
 ---
 
-## Phase 1 — The Golden Path: Production-Grade Core
+## Where We Are — July 11, 2026
 
-> Narrow and deep. Instead of managing 14 services superficially, make one flow flawless:
-> **add domain → create site → PHP ready → SSL automatic → site live.**
-
-- End-to-end integration tests for this flow (on clean Ubuntu 24.04)
-- Idempotency: running the same operation twice never corrupts the system
-- Rollback: any failed step in the flow is undone without leaving traces
-- Every operation lands in the audit log (who, when, what)
-- Dashboard with real data: CPU, RAM, disk, service states — at a glance, plain
-- The empty Settings page either gets content or leaves the menu (simplicity rule)
-- UI internationalization (i18n): Turkish + English primary, multilingual-capable — see [Conventions](docs/CONVENTIONS.md)
-
-**Exit criteria:** On a clean server, "domain → live site" runs 100 times back-to-back without failure · Integration test suite green in CI.
-
----
-
-## Phase 2 — 60 Seconds: The Install Experience (the Google Moment)
-
-> The first impression is our only shot. cPanel takes hours to install;
-> ours will finish before the coffee is stirred.
-
-- ✅ `install.sh`: one command → login screen. Self-bootstrapping (downloads Go/Node if absent, builds from source), or uses a prebuilt `make dist` release tarball. *(built July 5, 2026)*
-- ✅ systemd units (panel low-priv + agent root), autostart, crash recovery, reboot survival *(built)*
-- ✅ First-run: creates the first administrator (`--create-admin`) *(built)*. Remaining: hostname + panel SSL (serving the panel itself over HTTPS).
-- Self-update mechanism — later.
-
-**Exit criteria (NOT yet met — needs a real clean-server run):** Clean Ubuntu 24.04 VPS, command to login screen · Everything comes back up by itself after reboot · Golden path (domain→PHP→SSL→DB→live) actually works · All secrets rotated before any public exposure (incl. 0.8).
-
-> **Reality check (July 5, 2026, night):** `install.sh` **actually ran as root on this dev machine** and the golden path is **verified end to end**: install → root agent + low-privilege panel under systemd → plan → customer → domain (system user, permission layout, nginx vhost, PHP-FPM pool) → live PHP page → working HTTPS with a custom certificate → real database in MariaDB (connect+write) → IMAP/FTP logins → DNS zone template → full system cleanup on delete → idempotent re-install (upgrade). Real bugs found and fixed: apt-get update was fatal to the installer, www-data could not enter site directories (permission layout written), SSL certificates landed on disk but were never wired into nginx, DeleteSite was an empty stub. **Proofs that still require a VPS:** clean-Ubuntu first install (services were preinstalled on this machine), Let's Encrypt (needs public DNS + port 80), PowerDNS actually answering our records on :53, real mail delivery (Postfix/Dovecot end to end), and panel-driven service install performing a real apt install.
-
----
-
-## Phase 3 — The Winning Features
-
-> The difference between "a nice alternative" and "the panel people actually leave cPanel for."
-> *(Reordered July 5, 2026: runtimes come first — app installers like WordPress build on top of a solid runtime foundation, not the other way around.)*
-
-### 3A. Runtimes done right — PHP depth + Node.js projects
-Classic hosting is PHP, but the market increasingly ships Node apps too. A site is not just "a PHP vhost": it has a **project type**.
-- Project types on a site: `php` (FPM, per-site version), `static`, `node` (long-running app behind nginx reverse proxy), `proxy`
-- Node.js runtime management: install official versions side by side, pick per project
-- Node project = directory + start command + port; supervised (systemd unit), start/stop/logs in the panel
-- PHP depth: per-site version switching and pool settings stay first-class (already live), composer presence honest-reported
-
-### 3B. cPanel Importer v1
-Our target customers are on cPanel today. If they can't migrate with one click, they won't come at any price.
-- Import from cPanel account archives (cpmove/backup): site files + MySQL + mail accounts + DNS records
-
-### 3C. Taking mail seriously — the start
-Mail is the hardest part of the panel business and the biggest churn driver.
-- ✅ Automatic generation and validation of DKIM/SPF/DMARC records *(done July 5, 2026)*
-- ✅ Quota management with live usage and honest enforcement status *(done July 5, 2026)*
-- Remaining: DKIM signing filter integration (opendkim/rspamd) — needs package install
-
-### 3D. WordPress Toolkit v1 *(deliberately last in this phase)*
-~40% of the market is WordPress; it lands on top of 3A's foundation (one-click install = create PHP site + DB + fetch WP, which 3A makes trivial).
-- One-click WP install (latest version, correct permissions, database ready)
-- Update management, basic hardening (file permissions, xmlrpc, login protection)
-
-**Exit criteria:** A Node app deploys from the panel and survives a reboot · A real cPanel account restores from archive and works, DNS included · A freshly created mailbox reaches Gmail without landing in spam · One-click WP install in ≤ 30 seconds.
-
----
-
-## Phase 4 — Expansion *(only after Phase 3)*
-
-- Reseller panel and quota/limit enforcement
-- API documentation (OpenAPI) — proof of the API-first promise
-- License/business model decision (suggestion: open core) and repo visibility accordingly
-- Monitoring/alerts, WebSocket notifications
-- Multi-server only if real customer demand emerges
+**Release:** v0.1.0 alpha, live on the production VPS (Debian 13, panel-only install).
+**Position on the ladder:** early v0.2 — the Debian re-proof is running as an alpha play-through:
+PowerDNS is installed and managed from the panel; the next click is its auto-repair, then the first domain.
+**Scorecard:** feature code ≈ v1.0-scope 70% · proofs ≈ 45% (Ubuntu full, Debian partial) ·
+polish/design ≈ 80% (all pages on the new system) · docs ≈ 60% · external validation ≈ 0% (starts at v0.6).
+**The system today:** ~29k lines Go (151 files, 72 HTTP endpoints, 38 agent RPC files, 15 migrations,
+19-service catalog) + ~16.5k lines TypeScript (54 components, TR+EN).
 
 ---
 
