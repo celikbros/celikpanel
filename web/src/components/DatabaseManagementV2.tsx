@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Database, Plus, Trash2, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Database, Plus, Trash2, Users, Server } from 'lucide-react';
 import { showToast } from './Toast';
 import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
@@ -45,12 +46,14 @@ interface DatabaseUser {
 // dilimizde Veritabanları ve Kullanıcılar tabloları vardır.
 export function DatabaseManagementV2() {
     const { t } = useI18n();
+    const navigate = useNavigate();
     const [servers, setServers] = useState<DatabaseServer[]>([]);
     const [selectedServer, setSelectedServer] = useState<DatabaseServer | null>(null);
     const [activeTab, setActiveTab] = useState<'databases' | 'users'>('databases');
     const [databases, setDatabases] = useState<DatabaseItem[]>([]);
     const [users, setUsers] = useState<DatabaseUser[]>([]);
     const [loading, setLoading] = useState(false);
+    const [serversLoaded, setServersLoaded] = useState(false);
     const [showAddDatabase, setShowAddDatabase] = useState(false);
     const [showAddUser, setShowAddUser] = useState(false);
 
@@ -74,6 +77,8 @@ export function DatabaseManagementV2() {
             setSelectedServer((cur) => cur ?? (data && data.length > 0 ? data[0] : null));
         } catch {
             showToast('error', t('common.error'));
+        } finally {
+            setServersLoaded(true);
         }
     };
 
@@ -127,6 +132,25 @@ export function DatabaseManagementV2() {
                 subtitle={t('databases.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.databases')]}
             />
+
+            {/* No engine installed → the honest guidance, not a blank page.
+                Databases are served by MariaDB/PostgreSQL; with neither
+                installed there is nothing to manage yet.
+                / Motor yoksa boş sayfa değil dürüst yönlendirme. Veritabanları
+                MariaDB/PostgreSQL tarafından sunulur; ikisi de kurulu değilken
+                henüz yönetilecek bir şey yoktur. */}
+            {serversLoaded && servers.length === 0 && (
+                <EmptyState
+                    icon={Database}
+                    title={t('databases.noServers')}
+                    hint={t('databases.noServersHint')}
+                    action={
+                        <Button variant="primary" icon={Server} onClick={() => navigate('/services')}>
+                            {t('domains.goServices')}
+                        </Button>
+                    }
+                />
+            )}
 
             {/* Server selector — auto-discovered engines */}
             <div className="mb-4 flex flex-wrap gap-2">

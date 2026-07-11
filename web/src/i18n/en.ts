@@ -247,6 +247,8 @@ export const en = {
     'services.neverScannedHint': 'Scanning checks which services are installed and running on this server. It runs only when you ask, so the panel stays fast.',
 
     'databases.subtitle': 'Databases and users on your detected servers',
+    'databases.noServers': 'No database engine installed',
+    'databases.noServersHint': 'Databases are served by MariaDB or PostgreSQL. Install one from Services, then it appears here automatically.',
     'databases.default': 'Default',
     'databases.tab.databases': 'Databases',
     'databases.tab.users': 'Users',

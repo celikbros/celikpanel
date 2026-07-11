@@ -246,6 +246,8 @@ export const tr: Record<TranslationKey, string> = {
     'services.neverScannedHint': 'Tarama, bu sunucuda hangi servislerin kurulu ve çalışır olduğunu denetler. Yalnız siz isteyince çalışır; panel böylece hızlı kalır.',
 
     'databases.subtitle': 'Tespit edilen sunucularınızdaki veritabanları ve kullanıcılar',
+    'databases.noServers': 'Kurulu veritabanı motoru yok',
+    'databases.noServersHint': 'Veritabanları MariaDB veya PostgreSQL tarafından sunulur. Servisler\'den birini kurun; sonra burada kendiliğinden görünür.',
     'databases.default': 'Varsayılan',
     'databases.tab.databases': 'Veritabanları',
     'databases.tab.users': 'Kullanıcılar',
