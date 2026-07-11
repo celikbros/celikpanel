@@ -84,6 +84,15 @@ Aynı golden path, üretim VPS'inde (Debian 13) **tamamen panel tıklamalarıyla
 **Çıkış ölçütü:** bir ziyaretçi `https://celikpanel.cloud`'u açabiliyor ve oradan atılan posta Gmail
 INBOX'ına düşüyor — yapılandıran her tıklama panelde, hiçbiri kabukta değil.
 
+### 🩺 v0.2.5 — Borç Ödeme (Otopsi reçetesi)
+11 Tem 2026 adli denetimi ([AUTOPSY](docs/AUTOPSY.tr.md)) canlı kırıklar ve yapısal borç çıkardı;
+karar: **refaktör, rewrite değil.** B0 (kanamayı durdur: ölü TypeID sabitleri, admin-olmayana kırık
+Databases sayfası, ölü kod) aynı gün kapandı. Kalanı sırayla: **B1** tek API (v2→v1, kiracı kapsamı
+auth'tan, OpenAPI + üretilen istemci) · **B2** route+authz tablosu · **B3** servis bilgisinin tek
+sahibi katalog · **B4** UI disiplini (tek Button/fmtBytes/modal) · **B5** golden-path smoke CI.
+
+**Çıkış ölçütü:** AUTOPSY B1–B5 kapalı. **Sert kısıt: v0.3, B1 bitmeden başlayamaz.**
+
 ### v0.3 — Çok Kiracılı Gerçeklik
 Birden fazla kiracıya utanmadan satabilmek:
 - Bayi havuz kotaları · `additional_user` rolü · OS seviyesinde disk/trafik uygulaması (ROLES.md ertelenenleri)

@@ -84,6 +84,16 @@ The same golden path, re-proven on the production VPS (Debian 13) **entirely thr
 **Exit criterion:** a visitor can open `https://celikpanel.cloud`, and mail from it lands in Gmail's INBOX —
 with every configuring click made in the panel, none on a shell.
 
+### 🩺 v0.2.5 — Debt Payment (the Autopsy prescription)
+The Jul 11, 2026 forensic audit ([AUTOPSY](docs/AUTOPSY.md)) surfaced live breakages and structural
+debt; verdict: **refactor, not rewrite.** B0 (stop the bleeding: dead TypeID constants, the
+broken-for-non-admins Databases page, dead code) closed the same day. The rest, in order:
+**B1** one API (v2→v1, tenant scope from auth, OpenAPI + generated client) · **B2** route+authz
+table · **B3** the catalog as sole owner of service knowledge · **B4** UI discipline (one
+Button/fmtBytes/modal) · **B5** golden-path smoke CI.
+
+**Exit criterion:** AUTOPSY B1–B5 closed. **Hard constraint: v0.3 must not start before B1 is done.**
+
 ### v0.3 — Multi-Tenant Reality
 Selling to more than one tenant without embarrassment:
 - Reseller pooled quotas · `additional_user` role · OS-level disk/traffic enforcement (ROLES.md deferrals)
