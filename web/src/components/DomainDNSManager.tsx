@@ -271,6 +271,62 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 }
 
 
+// A DS record is "KeyTag Algorithm DigestType Digest ; ( comment )". Registrars
+// almost always want those four as separate form fields, so we split them.
+// DS kaydı "KeyTag Algorithm DigestType Digest ; ( yorum )" biçimindedir. Kayıt
+// operatörleri neredeyse her zaman bu dördünü ayrı alan olarak ister; ayırırız.
+function parseDS(rec: string): { keyTag: string; algo: string; digestType: string; digest: string } {
+    const main = rec.split(';')[0].trim();
+    const parts = main.split(/\s+/);
+    return {
+        keyTag: parts[0] ?? '',
+        algo: parts[1] ?? '',
+        digestType: parts[2] ?? '',
+        digest: parts.slice(3).join(''),
+    };
+}
+
+// Human-readable names for the numeric codes, so the operator recognises the
+// dropdown option at the registrar.
+// Sayısal kodların insan-okur adları; operatör kayıt operatöründeki açılır
+// seçeneği tanısın diye.
+const algoLabel: Record<string, string> = {
+    '8': 'RSA/SHA-256 (8)',
+    '10': 'RSA/SHA-512 (10)',
+    '13': 'ECDSA P-256/SHA-256 (13)',
+    '14': 'ECDSA P-384/SHA-384 (14)',
+    '15': 'Ed25519 (15)',
+};
+const digestLabel: Record<string, string> = {
+    '1': 'SHA-1 (1)',
+    '2': 'SHA-256 (2)',
+    '4': 'SHA-384 (4)',
+};
+
+// One labelled, individually-copyable DS field.
+// Etiketli, tek tek kopyalanabilir bir DS alanı.
+function DSField({ label, value, note, mono }: { label: string; value: string; note?: string; mono?: boolean }) {
+    const { t } = useI18n();
+    return (
+        <div className="min-w-0">
+            <div className="mb-0.5 text-xs font-medium text-fg-subtle">{label}</div>
+            <div className="flex items-center gap-1.5">
+                <span className={`min-w-0 flex-1 truncate rounded bg-surface px-2 py-1 text-sm text-fg ${mono ? 'font-mono text-xs' : ''}`} title={value}>
+                    {value}
+                </span>
+                <button
+                    onClick={() => navigator.clipboard.writeText(value).then(() => showToast('success', t('vpn.copied')))}
+                    title={t('vpn.copy')}
+                    className="shrink-0 rounded-md p-1 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                >
+                    <Copy className="h-3.5 w-3.5" />
+                </button>
+            </div>
+            {note && <div className="mt-0.5 text-[11px] text-fg-subtle">{note}</div>}
+        </div>
+    );
+}
+
 // DNSSEC: sign the zone in one click and hand the operator the DS records to
 // enter at the registrar. Without that DS, validators treat the zone (and
 // its DANE/TLSA records) as insecure — so both live together here.
@@ -329,21 +385,40 @@ function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
             {secured ? (
                 <>
                     <p className="mb-3 text-sm text-fg-muted">{t('dnssec.dsHint')}</p>
-                    <div className="space-y-2">
-                        {ds.map((rec) => (
-                            <div key={rec} className="flex items-center gap-2">
-                                <code className="min-w-0 flex-1 overflow-x-auto rounded-lg bg-surface-2 px-3 py-2 text-xs text-fg">
-                                    {rec}
-                                </code>
-                                <button
-                                    onClick={() => navigator.clipboard.writeText(rec).then(() => showToast('success', t('vpn.copied')))}
-                                    title={t('vpn.copy')}
-                                    className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ))}
+                    {/* Field-by-field: most registrars (Hostinger et al.) ask for
+                        Key Tag / Algorithm / Digest Type / Digest separately, not
+                        the raw line. Show both — the fields to fill the form, the
+                        raw line for registrars that take one string.
+                        / Alan-alan: çoğu kayıt operatörü (Hostinger vb.) Key Tag /
+                        Algorithm / Digest Type / Digest'i ayrı ayrı ister, ham
+                        satırı değil. İkisini de göster. */}
+                    <div className="space-y-3">
+                        {ds.map((rec) => {
+                            const f = parseDS(rec);
+                            return (
+                                <div key={rec} className="rounded-lg border border-border bg-surface-2/40 p-3">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        <DSField label={t('dnssec.keyTag')} value={f.keyTag} />
+                                        <DSField label={t('dnssec.algorithm')} value={f.algo} note={algoLabel[f.algo]} />
+                                        <DSField label={t('dnssec.digestType')} value={f.digestType} note={digestLabel[f.digestType]} />
+                                        <DSField label={t('dnssec.digest')} value={f.digest} mono />
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2 border-t border-border pt-2">
+                                        <span className="shrink-0 text-xs text-fg-subtle">{t('dnssec.rawRecord')}</span>
+                                        <code className="min-w-0 flex-1 overflow-x-auto rounded bg-surface-2 px-2 py-1 font-mono text-xs text-fg-muted">
+                                            {rec}
+                                        </code>
+                                        <button
+                                            onClick={() => navigator.clipboard.writeText(rec).then(() => showToast('success', t('vpn.copied')))}
+                                            title={t('vpn.copy')}
+                                            className="shrink-0 rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </>
             ) : (
