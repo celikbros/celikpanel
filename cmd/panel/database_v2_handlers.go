@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -697,11 +696,23 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 // handleListDatabaseGrants lists all grants for a database
 func (p *Panel) handleListDatabaseGrants(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	databaseID, err := getDatabaseIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid database ID", http.StatusBadRequest)
+		return
+	}
+	// Ownership: the database's server must belong to the caller.
+	// Sahiplik: veritabanının sunucusu çağırana ait olmalı.
+	dbRepo0 := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
+	db0, err := dbRepo0.GetByID(ctx, databaseID)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), db0.ServerID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -746,7 +757,7 @@ func (p *Panel) handleListDatabaseGrants(w http.ResponseWriter, r *http.Request)
 
 // handleGrantDatabaseAccess grants a user access to a database
 func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	databaseID, err := getDatabaseIDFromPath(r.URL.Path)
 	if err != nil {
@@ -779,6 +790,15 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 	database, err := dbRepo.GetByID(ctx, databaseID)
 	if err != nil {
 		http.Error(w, "database not found", http.StatusNotFound)
+		return
+	}
+	// Ownership: without this, a caller could grant a user access to ANOTHER
+	// tenant's database. The same-server check below is not an ownership check.
+	// Sahiplik: bu olmadan çağıran, bir kullanıcıya BAŞKA kiracının
+	// veritabanına erişim verebilir. Aşağıdaki aynı-sunucu kontrolü sahiplik
+	// kontrolü değildir.
+	if err := p.canAccessDBServer(ctx, currentCaller(r), database.ServerID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -848,7 +868,7 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 
 // handleRevokeDatabaseAccess revokes a user's access to a database
 func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	grantID, err := getIDFromPath(r.URL.Path)
 	if err != nil {
@@ -867,6 +887,16 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 	// Get database and user info
 	dbRepo := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
 	database, _ := dbRepo.GetByID(ctx, grant.DatabaseID)
+	// Ownership: the grant's database must belong to the caller.
+	// Sahiplik: grant'ın veritabanı çağırana ait olmalı.
+	if database == nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), database.ServerID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 
 	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
 	user, _ := userRepo.GetByID(ctx, grant.UserID)
