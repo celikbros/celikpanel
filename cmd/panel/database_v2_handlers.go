@@ -275,13 +275,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine database type
-	var dbType string
-	if server.TypeID == 23 {
-		dbType = "postgresql"
-	} else if server.TypeID == 24 {
-		dbType = "mariadb"
-	}
+	dbType := dbDriverTypeFor(server)
 
 	// Create database driver
 	driver, err := services.NewDatabaseDriver(services.DriverConfig{
@@ -423,13 +417,7 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine database type
-	var dbType string
-	if server.TypeID == 23 {
-		dbType = "postgresql"
-	} else if server.TypeID == 24 {
-		dbType = "mariadb"
-	}
+	dbType := dbDriverTypeFor(server)
 
 	// Create driver
 	driver, err := services.NewDatabaseDriver(services.DriverConfig{
@@ -547,13 +535,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Determine database type
-	var dbType string
-	if server.TypeID == 23 {
-		dbType = "postgresql"
-	} else if server.TypeID == 24 {
-		dbType = "mariadb"
-	}
+	dbType := dbDriverTypeFor(server)
 
 	// Create driver
 	driver, err := services.NewDatabaseDriver(services.DriverConfig{
@@ -637,13 +619,7 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Determine database type
-	var dbType string
-	if server.TypeID == 23 {
-		dbType = "postgresql"
-	} else if server.TypeID == 24 {
-		dbType = "mariadb"
-	}
+	dbType := dbDriverTypeFor(server)
 
 	// Create driver
 	driver, err := services.NewDatabaseDriver(services.DriverConfig{
@@ -783,13 +759,7 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Determine database type
-	var dbType string
-	if server.TypeID == 23 {
-		dbType = "postgresql"
-	} else if server.TypeID == 24 {
-		dbType = "mariadb"
-	}
+	dbType := dbDriverTypeFor(server)
 
 	// Create driver
 	driver, err := services.NewDatabaseDriver(services.DriverConfig{
@@ -894,4 +864,22 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "revoked"})
+}
+
+// dbDriverTypeFor maps the catalog's canonical engine name to the driver
+// type. The removed TypeID==23/24 constants came from a pre-migration
+// schema and matched NOTHING in the shipped seed (1=postgresql, 2=mariadb):
+// both branches were dead and the driver received an empty type.
+// dbDriverTypeFor, kataloğun kanonik motor adını sürücü tipine eşler.
+// Kaldırılan TypeID==23/24 sabitleri migration-öncesi bir şemadan kalmaydı
+// ve dağıtılan tohumla (1=postgresql, 2=mariadb) HİÇ eşleşmiyordu: iki dal
+// da ölüydü, sürücüye boş tip gidiyordu.
+func dbDriverTypeFor(server *core.DatabaseServer) string {
+	switch strings.ToLower(server.TypeName) {
+	case "postgresql", "postgres":
+		return "postgresql"
+	case "mariadb", "mysql":
+		return "mariadb"
+	}
+	return strings.ToLower(server.TypeName)
 }

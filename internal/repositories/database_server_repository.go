@@ -63,10 +63,17 @@ func (r *PostgresDatabaseServerRepository) Create(ctx context.Context, server *c
 
 // GetByID retrieves a database server by ID
 func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) (*core.DatabaseServer, error) {
+	// TypeName here carries the CANONICAL engine name (dst.name:
+	// "postgresql"/"mariadb") — it is what the driver layer consumes.
+	// List* methods fill the human display_name instead; do not mix them.
+	// TypeName burada KANONİK motor adını taşır (dst.name) — sürücü
+	// katmanının tükettiği değer budur. List* metotları insan-yüzlü
+	// display_name doldurur; ikisini karıştırmayın.
 	query := `
-		SELECT id, subscription_id, type_id, name, version, host, port, is_default, root_password_encrypted, connection_params, status, created_at, updated_at
-		FROM database_servers
-		WHERE id = ?
+		SELECT ds.id, ds.subscription_id, ds.type_id, dst.name, ds.name, ds.version, ds.host, ds.port, ds.is_default, ds.root_password_encrypted, ds.connection_params, ds.status, ds.created_at, ds.updated_at
+		FROM database_servers ds
+		JOIN database_server_types dst ON dst.id = ds.type_id
+		WHERE ds.id = ?
 	`
 
 	server := &core.DatabaseServer{}
@@ -77,6 +84,7 @@ func (r *PostgresDatabaseServerRepository) GetByID(ctx context.Context, id int) 
 		&server.ID,
 		&server.SubscriptionID,
 		&server.TypeID,
+		&server.TypeName,
 		&server.Name,
 		&server.Version,
 		&server.Host,

@@ -29,7 +29,14 @@ const ALL: Role[] = ['admin', 'reseller', 'customer', 'additional_user'];
 export const navItems: NavItem[] = [
     { id: 'dashboard', path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, roles: ALL, group: 'main' },
     { id: 'domains', path: '/domains', labelKey: 'nav.domains', icon: Globe, roles: ALL, group: 'hosting', countKey: 'domains' },
-    { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ALL, group: 'hosting', countKey: 'databases' },
+    // Admin-only UNTIL the v2 DB API is tenant-scoped: the backend hardcodes
+    // subscription 1 (database_v2_handlers.go "TODO: Get from auth") and the
+    // whole /api/v2/ prefix is admin-gated — non-admins only ever saw a
+    // broken page here. Tenants manage their DBs on the domain detail tab.
+    // v2 DB API'si kiracı-kapsamlı olana dek yalnız admin: backend abonelik
+    // 1'i sabitliyor ve /api/v2/ tümüyle admin kilidinde — admin olmayanlar
+    // burada hep kırık sayfa gördü. Kiracılar DB'lerini domain detayında yönetir.
+    { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ['admin'], group: 'hosting', countKey: 'databases' },
     { id: 'users', path: '/users', labelKey: 'nav.users', icon: Users, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'addons', path: '/addons', labelKey: 'nav.addons', icon: Package, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'vpn', path: '/vpn', labelKey: 'nav.vpn', icon: Shield, roles: ALL, group: 'hosting' },
