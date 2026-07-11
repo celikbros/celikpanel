@@ -99,6 +99,8 @@ Birden fazla kiracıya utanmadan satabilmek:
 - cPanel içe aktarıcının **gerçek** müşteri arşiviyle kanıtı (DB kullanıcıları dahil)
 - WordPress Toolkit derinliği: güncelleme, sertleştirme, klon/staging
 - FTP (vsftpd) uçtan uca bağlı · dosya yöneticisi cilası
+- **Webmail (Roundcube)** — posta yığını var ama müşterinin tarayıcıdan postasına
+  bakacağı yer yoktu; cPanel'den gelen herkesin ilk arayacağı şey (11 Tem eklendi)
 
 **Çıkış ölçütü:** bir bayi + iki müşteri bir hafta self-servis işliyor; gerçek bir cPanel hesabı tek tıkla taşınıyor.
 
@@ -106,6 +108,8 @@ Birden fazla kiracıya utanmadan satabilmek:
 Operatörün gece 3'te ihtiyaç duyduğu şeyler:
 - İzleme + uyarı (servis düştü, disk doldu, sertifika hatası → posta/webhook) · panelde log görüntüleyici
 - Uzak yedek hedefleri (S3/FTP) + ürün özelliği olarak geri yükleme tatbikatı
+- **İkincil DNS gerçeği:** bugün ns1/ns2 aynı makineyi gösteriyor (tek nokta arızası);
+  ikinci ucuz VPS'e secondary PowerDNS (AXFR) ya da dürüst belgeleme (11 Tem eklendi)
 - Arayüzden tek tık panel güncellemesi (update.sh'ın ön yüzü) · WebSocket canlı bildirimler
 
 **Çıkış ölçütü:** öldürülen servis bir dakikada uyarı üretiyor; uzak yedekten tam geri yükleme temiz VPS'te başarılı.

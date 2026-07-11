@@ -100,6 +100,8 @@ Selling to more than one tenant without embarrassment:
 - cPanel importer proven with a **real** customer archive (incl. DB users)
 - WordPress Toolkit depth: updates, hardening, clone/staging
 - FTP (vsftpd) wired end-to-end · file manager polish
+- **Webmail (Roundcube)** — the mail stack exists but customers had nowhere to READ
+  mail in a browser; the first thing anyone migrating from cPanel looks for (added Jul 11)
 
 **Exit criterion:** one reseller + two customers operate self-service for a week; a real cPanel account migrates in one click.
 
@@ -107,6 +109,8 @@ Selling to more than one tenant without embarrassment:
 What an operator needs at 3 a.m.:
 - Monitoring + alerting (service down, disk full, cert failure → mail/webhook) · log viewer in panel
 - Remote backup targets (S3/FTP) + restore drills as a product feature
+- **Secondary-DNS truth:** today ns1/ns2 point at the same machine (a single point of
+  failure); a secondary PowerDNS (AXFR) on a cheap second VPS, or honest documentation (added Jul 11)
 - One-click panel self-update in the UI (update.sh's front end) · WebSocket live notifications
 
 **Exit criterion:** a killed service alerts within a minute; a full restore from remote backup succeeds on a fresh VPS.
