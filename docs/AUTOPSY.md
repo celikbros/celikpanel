@@ -21,8 +21,8 @@ behavior (the Netscape mistake).
 |---|---|---|---|
 | A1 | v2 DB handlers expected `TypeID==23/24`; the seed is 1=postgresql, 2=mariadb — both branches dead, the driver received an empty type | `database_v2_handlers.go` (old 280/428), seed `001_full_schema.sql:205` | ✅ Closed (Jul 11): `GetByID` now JOINs the canonical type name; handlers use `dbDriverTypeFor()` |
 | A2 | Customers/resellers saw the Databases page (nav ALL) while the whole `/api/v2/` prefix is admin-gated → permanently broken page for non-admins | `nav.ts:32` ↔ `middleware.go:141` | ✅ Stopgap closed (Jul 11): nav is admin-only. **Permanent fix depends on B1** |
-| A3 | v2 endpoints are not tenant-safe: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235` | ⬜ OPEN — this is WHY the `/api/v2/` admin gate cannot be lifted; resolved by B1 |
-| A4 | DB server root password stored in plain text: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ⬜ OPEN |
+| A3 | v2 endpoints are not tenant-safe: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Closed (Jul 11): 6 hardcodes removed → `callerSubscriptionID`; 6 server-scoped ops (list/create/delete × db+user) verify ownership via `canAccessDBServer` (`database_v2_authz.go`). **Admin gate STILL stands** — lifting it needs role-splitting `handleCreateDatabaseV2Server` (registering an arbitrary host/port/root-password is not a customer action); that belongs to the v0.3 tenant work |
+| A4 | DB server root password stored in plain text: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ⬜ OPEN — needs a key-management decision (where is the key stored?); a separate focused commit, the remaining slice of B1 |
 | A5 | `capabilities.mail_server` is BOOL while `dns_server` is a string — the type inconsistency produced a real product bug (dashboard claimed mail was installed) | `capabilities_handler.go:30` | ⬜ OPEN (frontend fixed; API consistency lands with B1) |
 
 ## B. Structural debt (the prescription — paid in order)
@@ -30,7 +30,7 @@ behavior (the Netscape mistake).
 | # | Work | Why | Estimate | Status |
 |---|---|---|---|---|
 | B0 | **Stop the bleeding**: A1+A2 fixes, bury dead code | The first customer must not meet a broken page | 1-2 days | ✅ Jul 11 |
-| B1 | **One API**: fold v2 into v1; tenant scope from auth; generate OpenAPI; frontend types from the generated client | Kills the A3+A5 class at compile time; collapses 74 raw `fetch(` calls into one layer; makes "API-first" true | 3-5 days | ⬜ |
+| B1 | **One API**: fold v2 into v1; tenant scope from auth; generate OpenAPI; frontend types from the generated client | Kills the A3+A5 class at compile time; collapses 74 raw `fetch(` calls into one layer; makes "API-first" true | 3-5 days | 🔶 Partial (Jul 11): A3 tenant scoping DONE. Remaining sub-slices: A4 password encryption · server-registration role split + lift the admin gate · v2→v1 path merge · OpenAPI + generated client |
 | B2 | **Route+authz table**: one `{path, handler, roles}` structure | 72 hand `HandleFunc` lines in `main.go` + the hand list at `middleware.go:117-141` = a forgotten line is a silent authz hole | 1 day | ⬜ |
 | B3 | **Knowledge in one place**: the service catalog owns config paths/ports/packages; the scanner reads the catalog | The `managed_services.go` ↔ `service_scanner.go:93` duplication provably missed (pdns config, Jul 10) | 1 day | ⬜ |
 | B4 | **UI discipline**: one Button (CtrlButton/ActionIcon die), shared `fmtBytes` (5+ copies), `confirm()` → themed modal (8+ sites), one Service type (the `api.ts:13` / `ServiceList.tsx:8` / `Dashboard.tsx:28` triplets) | Inconsistency leaks to users; copies rot independently | 2 days | ⬜ |

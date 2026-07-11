@@ -48,8 +48,12 @@ func getDatabaseIDFromPath(path string) (int, error) {
 
 // handleListDatabaseServers lists all database servers for a subscription
 func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	subscriptionID := 1 // TODO: Get from auth
+	ctx := r.Context()
+	subscriptionID, err := p.callerSubscriptionID(r)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 
 	// Auto-register installed engines so the list is never empty when
 	// MariaDB/PostgreSQL are running.
@@ -102,8 +106,12 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 
 // handleCreateDatabaseServer creates a new database server
 func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	subscriptionID := 1 // TODO: Get from auth
+	ctx := r.Context()
+	subscriptionID, err := p.callerSubscriptionID(r)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 
 	var req struct {
 		TypeID       int    `json:"type_id"`
@@ -157,11 +165,15 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 
 // handleDeleteDatabaseServer deletes a database server
 func (p *Panel) handleDeleteDatabaseV2Server(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	serverID, err := getIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid server ID", http.StatusBadRequest)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), serverID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -179,11 +191,15 @@ func (p *Panel) handleDeleteDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 
 // handleListDatabases lists all databases for a server
 func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid server ID", http.StatusBadRequest)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), serverID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -231,12 +247,20 @@ func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateDatabase creates a new database
 func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	subscriptionID := 1 // TODO: Get from auth
+	ctx := r.Context()
+	subscriptionID, err := p.callerSubscriptionID(r)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid server ID", http.StatusBadRequest)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), serverID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -393,7 +417,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteDatabase deletes a database
 func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	databaseID, err := getIDFromPath(r.URL.Path)
 	if err != nil {
@@ -406,6 +430,10 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	database, err := dbRepo.GetByID(ctx, databaseID)
 	if err != nil {
 		http.Error(w, "database not found", http.StatusNotFound)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), database.ServerID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -451,11 +479,15 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 // handleListDatabaseUsers lists all users for a server
 func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid server ID", http.StatusBadRequest)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), serverID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -503,12 +535,20 @@ func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) 
 
 // handleCreateDatabaseUser creates a new database user
 func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	subscriptionID := 1 // TODO: Get from auth
+	ctx := r.Context()
+	subscriptionID, err := p.callerSubscriptionID(r)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
 		http.Error(w, "invalid server ID", http.StatusBadRequest)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), serverID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
@@ -587,7 +627,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 // handleDeleteDatabaseUser deletes a database user
 func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	// Extract ID from path
 	userID, err := getIDFromPath(r.URL.Path)
 	if err != nil {
@@ -600,6 +640,10 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	user, err := userRepo.GetByID(ctx, userID)
 	if err != nil {
 		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	if err := p.canAccessDBServer(ctx, currentCaller(r), user.ServerID); err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
