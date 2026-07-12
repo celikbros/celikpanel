@@ -90,12 +90,23 @@ type applyFirewallReq struct {
 	UDPPorts []int `json:"udp_ports"`
 }
 
+// Must mirror the agent's FirewallStatusResponse field-for-field: net/rpc
+// (gob) transfers by exported field NAME, so a field missing here is silently
+// dropped in transit. EngineAvailable was added to the agent but not here —
+// that is why the panel never saw "nftables not installed" and the UI kept
+// offering "Turn on" against a missing engine.
+// Agent'ın FirewallStatusResponse'unu alan alan yansıtmalı: net/rpc (gob)
+// dışa açık alan ADIYLA taşır; burada eksik bir alan sessizce yolda düşer.
+// EngineAvailable agent'a eklenmiş ama buraya eklenmemişti — panelin
+// 'nftables kurulu değil'i asla görmemesinin ve motor yokken 'Turn on'
+// sunmaya devam etmesinin nedeni buydu.
 type FirewallStatusResp struct {
-	Enabled  bool   `json:"enabled"`
-	TCPPorts []int  `json:"tcp_ports"`
-	UDPPorts []int  `json:"udp_ports"`
-	SSHPorts []int  `json:"ssh_ports"`
-	Error    string `json:"error,omitempty"`
+	Enabled         bool   `json:"enabled"`
+	EngineAvailable bool   `json:"engine_available"`
+	TCPPorts        []int  `json:"tcp_ports"`
+	UDPPorts        []int  `json:"udp_ports"`
+	SSHPorts        []int  `json:"ssh_ports"`
+	Error           string `json:"error,omitempty"`
 }
 
 // handleFirewall: GET status, POST {enabled} to turn on/off (admin-only).
