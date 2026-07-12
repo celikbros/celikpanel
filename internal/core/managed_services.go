@@ -296,6 +296,30 @@ var ManagedServices = []ManagedService{
 		SystemNames: []string{"fail2ban"},
 		Packages:    map[string][]string{"apt": {"fail2ban"}},
 	},
+	// The firewall ENGINE the panel drives. Not a daemon we manage (we push our
+	// own nftables table via `nft -f` and never touch nftables.service), so it
+	// is daemonless: empty SystemNames → "installed" is a package check. It is
+	// a deliberate CHOICE, not a forced default — the panel never auto-installs
+	// it. An operator who wants the panel's firewall installs it here; one using
+	// ufw/firewalld/a cloud firewall simply never does, and the panel firewall
+	// stays off (honest). Turning the firewall on requires this to be present.
+	//
+	// Panelin kullandığı güvenlik duvarı MOTORU. Yönettiğimiz bir daemon değil
+	// (kendi nftables tablomuzu `nft -f` ile iteriz, nftables.service'e hiç
+	// dokunmayız), o yüzden daemonless: boş SystemNames → "kurulu" bir paket
+	// denetimidir. Bilinçli bir SEÇİMDİR, dayatılan varsayılan değil — panel
+	// asla oto-kurmaz. Panelin duvarını isteyen operatör buradan kurar;
+	// ufw/firewalld/bulut duvarı kullanan hiç kurmaz, panel duvarı kapalı kalır
+	// (dürüst). Güvenlik duvarını açmak bunun var olmasını gerektirir.
+	{
+		ID:          "nftables",
+		Name:        "Firewall engine",
+		Description: "nftables — the panel firewall's packet-filtering engine",
+		Icon:        "🧱",
+		Category:    "security",
+		SystemNames: []string{},
+		Packages:    map[string][]string{"apt": {"nftables"}},
+	},
 	// Antivirus / malware scanner. A daemon plus its signature-updater
 	// (freshclam) — both must be present to count as installed. Local scanner:
 	// it opens no inbound port, which is exactly the safest shape (D-006). The

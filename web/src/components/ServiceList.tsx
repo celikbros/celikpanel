@@ -758,7 +758,7 @@ function UninstallServiceDialog({
 // açık. Açık küme koşan servisleri izler; kutu yalnız koşturduğunu açar.
 function FirewallBar() {
     const { t } = useI18n();
-    const [st, setSt] = useState<{ enabled: boolean; tcp_ports?: number[]; udp_ports?: number[]; ssh_ports?: number[] } | null>(null);
+    const [st, setSt] = useState<{ enabled: boolean; engine_available?: boolean; tcp_ports?: number[]; udp_ports?: number[]; ssh_ports?: number[] } | null>(null);
     const [busy, setBusy] = useState(false);
 
     const load = () => {
@@ -791,6 +791,28 @@ function FirewallBar() {
     if (!st) return null;
     const openTcp = st.tcp_ports || [];
     const openUdp = st.udp_ports || [];
+
+    // No engine → the box is exposed (no firewall) AND "Turn on" cannot work.
+    // Route the operator to install the engine (it's the nftables card in the
+    // Security section on this very page) rather than fail an opaque toggle.
+    // Motor yok → kutu açık (duvar yok) VE "Turn on" çalışamaz. Anlamsız bir
+    // hata yerine operatörü motoru kurmaya yönlendir (bu sayfadaki Güvenlik
+    // bölümündeki nftables kartı).
+    if (st.engine_available === false) {
+        return (
+            <section className="mb-4 rounded-xl border border-warning/50 bg-warning/10 p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                    <ShieldOff className="h-5 w-5 shrink-0 text-warning" />
+                    <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-fg">
+                            {t('firewall.title')} <span className="text-warning">{t('firewall.noEngine')}</span>
+                        </div>
+                        <p className="text-xs text-fg-muted">{t('firewall.noEngineHint')}</p>
+                    </div>
+                </div>
+            </section>
+        );
+    }
 
     // Off is the state that must not look calm: every port is exposed, so the
     // whole banner turns amber. On earns a quiet green tint.

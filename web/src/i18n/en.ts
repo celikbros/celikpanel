@@ -719,6 +719,8 @@ export const en = {
     'firewall.off': 'Off',
     'firewall.onHint': 'Only these ports are reachable; everything else is blocked.',
     'firewall.offHint': 'All ports are open (distribution default). Turn on to expose only what runs.',
+    'firewall.noEngine': 'engine not installed',
+    'firewall.noEngineHint': 'The panel firewall needs its engine (nftables) — install “Firewall engine” from the Security section below. Using ufw / a cloud firewall instead? Leave this off.',
     'firewall.turnOn': 'Turn on',
     'firewall.turnOff': 'Turn off',
     'firewall.onDone': 'Firewall on — only required ports are open.',

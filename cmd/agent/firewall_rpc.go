@@ -37,11 +37,18 @@ type ApplyFirewallRequest struct {
 }
 
 type FirewallStatusResponse struct {
-	Enabled  bool   `json:"enabled"`
-	TCPPorts []int  `json:"tcp_ports"`
-	UDPPorts []int  `json:"udp_ports"`
-	SSHPorts []int  `json:"ssh_ports"`
-	Error    string `json:"error,omitempty"`
+	Enabled bool `json:"enabled"`
+	// EngineAvailable: whether nftables (the engine the panel drives) is
+	// installed. When false the panel routes the operator to Services to
+	// install it, instead of failing an opaque "Turn on".
+	// EngineAvailable: panelin kullandığı motor nftables kurulu mu. False ise
+	// panel operatörü, anlamsız bir "Turn on" hatası yerine motoru kurmak için
+	// Servisler'e yönlendirir.
+	EngineAvailable bool   `json:"engine_available"`
+	TCPPorts        []int  `json:"tcp_ports"`
+	UDPPorts        []int  `json:"udp_ports"`
+	SSHPorts        []int  `json:"ssh_ports"`
+	Error           string `json:"error,omitempty"`
 }
 
 // ApplyFirewall installs (or tears down) our nftables table. Enabled=false
@@ -51,9 +58,15 @@ type FirewallStatusResponse struct {
 // ApplyFirewall, nftables tablomuzu kurar (ya da kaldırır).
 func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
 	if _, err := exec.LookPath("nft"); err != nil {
-		resp.Error = "nftables (nft) is not available on this system"
+		// The panel gates "Turn on" on EngineAvailable, so this is a belt-and-
+		// suspenders guard — it never auto-installs (D-008: install is the
+		// operator's explicit act, done from Services).
+		// Panel "Turn on"u EngineAvailable'a kapılar; bu ek bir emniyet — asla
+		// oto-kurmaz (D-008: kurulum operatörün açık eylemi, Servisler'den).
+		resp.Error = "firewall engine (nftables) is not installed — install it from Services first"
 		return nil
 	}
+	resp.EngineAvailable = true
 
 	// Always tear down our old table first so re-apply is idempotent and a
 	// disable is a clean removal.
@@ -109,8 +122,9 @@ func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusRes
 // FirewallStatus, tablomuzun var olup olmadığını ve neyi kabul ettiğini bildirir.
 func (a *Agent) FirewallStatus(_ *struct{}, resp *FirewallStatusResponse) error {
 	if _, err := exec.LookPath("nft"); err != nil {
-		return nil
+		return nil // engine absent → EngineAvailable stays false, firewall off
 	}
+	resp.EngineAvailable = true
 	resp.SSHPorts = detectSSHPorts()
 	out, err := exec.Command("nft", "list", "table", "inet", fwTable).Output()
 	if err != nil {

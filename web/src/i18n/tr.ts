@@ -719,6 +719,8 @@ export const tr: Record<TranslationKey, string> = {
     'firewall.off': 'Kapalı',
     'firewall.onHint': 'Yalnız bu portlara erişilebilir; gerisi engelli.',
     'firewall.offHint': 'Tüm portlar açık (dağıtım varsayılanı). Yalnız koşanı açmak için etkinleştir.',
+    'firewall.noEngine': 'motoru kurulu değil',
+    'firewall.noEngineHint': 'Panel güvenlik duvarının motoru (nftables) gerekli — aşağıdaki Güvenlik bölümünden “Firewall engine”i kur. Kendi çözümünü (ufw / bulut duvarı) mü kullanıyorsun? Bunu kapalı bırak.',
     'firewall.turnOn': 'Aç',
     'firewall.turnOff': 'Kapat',
     'firewall.onDone': 'Güvenlik duvarı açık — yalnız gereken portlar açık.',
