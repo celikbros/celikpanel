@@ -34,7 +34,7 @@ behavior (the Netscape mistake).
 | B2 | **Route+authz table**: one `{path, handler, roles}` structure | 72 hand `HandleFunc` lines in `main.go` + the hand list at `middleware.go:117-141` = a forgotten line is a silent authz hole | 1 day | ⬜ |
 | B3 | **Knowledge in one place**: the service catalog owns config paths/ports/packages; the scanner reads the catalog | The `managed_services.go` ↔ `service_scanner.go:93` duplication provably missed (pdns config, Jul 10) | 1 day | ⬜ |
 | B4 | **UI discipline**: one Button (CtrlButton/ActionIcon die), shared `fmtBytes` (5+ copies), `confirm()` → themed modal (8+ sites), one Service type (the `api.ts:13` / `ServiceList.tsx:8` / `Dashboard.tsx:28` triplets) | Inconsistency leaks to users; copies rot independently | 2 days | ⬜ |
-| B5 | **The honesty debt**: golden-path smoke CI (build + stub screenshots + critical endpoints) | 9 test files against 29k lines, NO CI; the constitution's own rule is in violation | 1 day to start, then continuous | ⬜ |
+| B5 | **The honesty debt**: golden-path smoke CI (build + stub screenshots + critical endpoints) | 9 test files against 29k lines, NO CI; the constitution's own rule is in violation | 1 day to start, then continuous | 🔶 Floor laid (Jul 11): `.github/workflows/ci.yml` — every push/PR runs go build+vet+test + web tsc+build. First seed test `database_v2_driver_test.go` (A1 regression guard). Remaining: stub render + critical-endpoint smoke + <100ms measurement |
 
 **Hard ordering constraint:** v0.3 (first real tenants) MUST NOT start before B1 is done.
 
@@ -44,6 +44,7 @@ behavior (the Netscape mistake).
 - ⬜ Smell: `cmd/panel` is one flat 66-file package (13,658 lines) — it splits naturally during B1/B2; do NOT run a separate "great repackaging" (churn outweighs gain).
 - ⬜ Smell: `docs/CelikPanel Pano.html`, an 813KB blob — kept deliberately as design reference; move to LFS/link if it grows.
 - ⬜ Smell: `en.ts` with 900+ keys in one file, and **an apostrophe in a string breaks the build** — a contributor trap; at minimum a documented lint during B4.
+- ⬜ Smell: `cmd/debug_mariadb/main.go` — a debug binary referenced from nowhere (`go build ./...` still compiles it). Dead; a burial candidate (found in the Jul 11 sweep).
 - ⬜ Smell: 128 `exec.Command` calls and 0 interfaces in the agent — the ROADMAP's BSD note ("the code is already written that way") is optimistic; the portability claim holds only at the RPC surface. If you write a new RPC: gather execs at the end of the function and actually practice the what/how split.
 
 ## D. Philosophy violations (constitution vs. code)

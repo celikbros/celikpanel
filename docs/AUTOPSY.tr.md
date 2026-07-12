@@ -32,7 +32,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 | B2 | **Route+authz tablosu**: `{yol, handler, roller}` tek veri yapısı | `main.go`'daki 72 `HandleFunc` + `middleware.go:117-141` elle listesi = unutulan satır sessiz authz deliği | 1 gün | ⬜ |
 | B3 | **Bilgi tek yerde**: servis kataloğu config/port/paketin TEK sahibi; scanner kataloğu okur | `managed_services.go` ↔ `service_scanner.go:93` çifti kanıtlı ıskaladı (pdns config, 10 Tem) | 1 gün | ⬜ |
 | B4 | **UI disiplini**: tek Button (CtrlButton/ActionIcon ölür), paylaşılan `fmtBytes` (5+ kopya), `confirm()` → temalı modal (8+ yer), tek Service tipi (`api.ts:13` / `ServiceList.tsx:8` / `Dashboard.tsx:28` üçüzü) | Tutarsızlık kullanıcıya sızıyor; kopyalar ayrı ayrı çürüyor | 2 gün | ⬜ |
-| B5 | **Dürüstlük borcu**: golden-path smoke CI (build + stub ekran + kritik uçlar) | 29k satıra 9 test dosyası, CI YOK; anayasanın kendi kuralı ihlalde | başlangıç 1 gün, sonra sürekli | ⬜ |
+| B5 | **Dürüstlük borcu**: golden-path smoke CI (build + stub ekran + kritik uçlar) | 29k satıra 9 test dosyası, CI YOK; anayasanın kendi kuralı ihlalde | başlangıç 1 gün, sonra sürekli | 🔶 Taban kondu (11 Tem): `.github/workflows/ci.yml` — her push/PR go build+vet+test + web tsc+build. İlk seed test `database_v2_driver_test.go` (A1 regresyon muhafızı). Kalan: stub render + kritik-uç smoke + <100ms ölçüm |
 
 **Sıralama zorunlu kısıtı:** v0.3 (ilk gerçek kiracılar) B1 bitmeden BAŞLAYAMAZ.
 
@@ -42,6 +42,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 - ⬜ Koku: `cmd/panel` 66 dosyalık tek düz paket (13.658 satır) — B1/B2 sırasında doğal bölünür; ayrı bir "büyük yeniden paketleme" YAPMAYIN (churn riski kazancından büyük).
 - ⬜ Koku: `docs/CelikPanel Pano.html` 813KB blob — tasarım referansı; bilinçli tutuluyor, büyürse LFS/link.
 - ⬜ Koku: `en.ts` 900+ anahtar tek dosya + **dizgide kesme işareti derlemeyi bozar** — katkı tuzağı; B4 sırasında en azından belgeli lint.
+- ⬜ Koku: `cmd/debug_mariadb/main.go` — hiçbir yerden referanssız debug binary'si (`go build ./...` yine de derliyor). Ölü; gömülecek adaylardan (11 Tem taramasında bulundu).
 - ⬜ Koku: agent'ta 128 `exec.Command`, 0 interface — ROADMAP'teki BSD notunun "kod zaten böyle yazılıyor" cümlesi iyimser; taşınabilirlik iddiası RPC yüzeyiyle sınırlı. Yeni RPC yazan: exec'leri fonksiyon sonuna toplayın, "ne/nasıl" ayrımını gerçekten uygulayın.
 
 ## D. Felsefe ihlalleri (anayasa vs. kod)
