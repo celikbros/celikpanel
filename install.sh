@@ -59,7 +59,11 @@ if [ "${SKIP_DEPS:-0}" != "1" ]; then
     # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
     # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
     apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
-    apt-get install -y -qq tar xz-utils curl ca-certificates >/dev/null
+    # nftables is the firewall engine the panel drives — a base dependency, not
+    # an optional service, so it ships with every install (minimal Debian omits
+    # it). / nftables panelin kullandığı güvenlik duvarı motoru — opsiyonel
+    # servis değil temel bağımlılık; her kurulumla gelir (minimal Debian atlar).
+    apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
     ok "hazır"
 else
     step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
