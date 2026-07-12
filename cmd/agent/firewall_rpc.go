@@ -50,27 +50,9 @@ type FirewallStatusResponse struct {
 // service ports.
 // ApplyFirewall, nftables tablomuzu kurar (ya da kaldırır).
 func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
-	// nftables IS the firewall engine — turning the firewall on means having
-	// it. A minimal Debian ships without it, so install it on demand: the user
-	// pressing "Turn on" is the consent (same alpha model as installing a
-	// service). Only needed when actually enabling; a disable never installs.
-	// nftables güvenlik duvarı MOTORUDUR — duvarı açmak onun var olması demek.
-	// Minimal Debian onsuz gelir; talep üzerine kur: kullanıcının "Aç" demesi
-	// onaydır (servis kurmakla aynı alfa modeli). Yalnız gerçekten açarken
-	// gerekir; kapatma asla kurmaz.
 	if _, err := exec.LookPath("nft"); err != nil {
-		if !req.Enabled {
-			resp.Enabled = false
-			return nil
-		}
-		if out, ierr := installPackages("apt", []string{"nftables"}); ierr != nil {
-			resp.Error = fmt.Sprintf("nftables could not be installed: %s", strings.TrimSpace(out))
-			return nil
-		}
-		if _, err := exec.LookPath("nft"); err != nil {
-			resp.Error = "nftables was installed but nft is still not on PATH"
-			return nil
-		}
+		resp.Error = "nftables (nft) is not available on this system"
+		return nil
 	}
 
 	// Always tear down our old table first so re-apply is idempotent and a
