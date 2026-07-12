@@ -164,6 +164,7 @@ export const tr: Record<TranslationKey, string> = {
 
     'common.loading': 'Yükleniyor…',
     'common.error': 'Bir şeyler ters gitti.',
+    'common.buildHint': 'Bu arayüzün derlendiği git revizyonu. Dağıtım + sert yenileme sonrası yeni build canlıysa bu değişir.',
     'common.retry': 'Tekrar dene',
     'common.cancel': 'İptal',
     'common.back': 'Geri',

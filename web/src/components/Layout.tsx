@@ -143,7 +143,7 @@ function Sidebar({
             </nav>
 
             <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted">
-                {t('app.name')} · v0.1.0
+                {t('app.name')} · v0.1.0 · <span className="font-mono" title={t('common.buildHint')}>build {__BUILD__}</span>
             </div>
         </div>
     );

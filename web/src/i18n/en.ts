@@ -165,6 +165,7 @@ export const en = {
 
     'common.loading': 'Loading…',
     'common.error': 'Something went wrong.',
+    'common.buildHint': 'The git revision this UI was built from. After a deploy + hard refresh, this changes if the new build is live.',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
     'common.back': 'Back',
