@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
-    ShieldCheck, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
+    Shield, ShieldCheck, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
     DownloadCloud, UserPlus, Plus, Lock,
 } from 'lucide-react';
 import { api, type SystemStats } from '../lib/api';
@@ -78,6 +78,11 @@ function AdminDashboard() {
     // capabilities.mail_server API'de BOOL'dur (dns_server metindir) — metin
     // gibi ele almak false iken adımı sessizce 'tamamlandı' işaretler.
     const [mailInstalled, setMailInstalled] = useState(false);
+    // A real CA cert on the panel (self_signed === false) counts as "got an
+    // SSL certificate" — the operator did obtain one, even if no site has one.
+    // Panelde gerçek CA sertifikası (self_signed === false) "SSL aldın"
+    // sayılır — operatör gerçekten bir sertifika aldı, hiçbir sitede olmasa da.
+    const [panelSecured, setPanelSecured] = useState(false);
     const [extras, setExtras] = useState<Extras | null>(null);
 
     useEffect(() => {
@@ -95,6 +100,7 @@ function AdminDashboard() {
             .then((c) => { setDnsServer(c?.dns_server ?? ''); setMailInstalled(Boolean(c?.mail_server)); })
             .catch(() => {});
         fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
+        fetch('/api/v1/panel/certificate').then((r) => (r.ok ? r.json() : null)).then((c) => setPanelSecured(c ? c.self_signed === false : false)).catch(() => {});
 
         return () => clearInterval(timer);
     }, []);
@@ -137,6 +143,32 @@ function AdminDashboard() {
             danger: true,
         });
     }
+    // Security posture suggestions — surfaced only when they actually apply,
+    // so they guide rather than nag: antivirus once there is content to scan,
+    // spam filtering once mail is running.
+    // Güvenlik duruşu önerileri — yalnız gerçekten geçerliyken çıkar, böylece
+    // dırdır değil yol gösterir: taranacak içerik varken antivirüs, posta
+    // çalışırken spam filtresi.
+    const hasClamAV = services.some((s) => s.id === 'clamav' && s.is_installed);
+    const hasSpam = services.some((s) => s.id === 'spamassassin' && s.is_installed);
+    if (domains.length > 0 && !hasClamAV) {
+        attention.push({
+            key: 'no-av',
+            icon: Shield,
+            text: t('dashboard.avItem'),
+            action: t('dashboard.installService'),
+            to: '/services',
+        });
+    }
+    if (mailInstalled && !hasSpam) {
+        attention.push({
+            key: 'no-spam',
+            icon: Mail,
+            text: t('dashboard.spamItem'),
+            action: t('dashboard.installService'),
+            to: '/services',
+        });
+    }
 
     // Setup journey — live completion; the card disappears when all done.
     // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
@@ -144,7 +176,8 @@ function AdminDashboard() {
         { key: 'dashboard.step.panel', done: true, to: '/' },
         { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
         { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains' },
-        { key: 'dashboard.step.ssl', done: domains.some((d) => d.ssl_enabled), to: '/domains' },
+        { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings' },
+        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services' },
         { key: 'dashboard.step.mail', done: mailInstalled, to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
