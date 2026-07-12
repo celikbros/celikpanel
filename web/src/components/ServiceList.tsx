@@ -243,26 +243,30 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         : t('services.neverScannedShort')}
                 </span>
                 {scannedAt && services.length > 0 && (
-                    <div className="ml-auto flex flex-wrap items-center gap-3">
-                        <div className="w-52">
+                    <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-x-5 gap-y-2 sm:w-auto">
+                        <div className="w-full sm:w-56">
                             <SearchInput value={query} onChange={setQuery} placeholder={t('services.search')} />
                         </div>
-                        <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-fg-muted">
-                            <input
-                                type="checkbox"
-                                checked={hideNotInstalled}
-                                onChange={(e) => setHideNotInstalled(e.target.checked)}
-                                className="h-3.5 w-3.5 rounded border-border-strong accent-primary"
-                            />
-                            {t('services.hideNotInstalled')}
-                        </label>
-                        <div className="flex gap-1 text-xs">
-                            <button onClick={expandAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                                {t('services.expandAll')}
-                            </button>
-                            <button onClick={collapseAll} className="rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                                {t('services.collapseAll')}
-                            </button>
+                        {/* View controls kept as one tight cluster, clearly
+                            separated from the search by the larger gap-x-5. */}
+                        <div className="flex items-center gap-4">
+                            <label className="flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap text-xs text-fg-muted">
+                                <input
+                                    type="checkbox"
+                                    checked={hideNotInstalled}
+                                    onChange={(e) => setHideNotInstalled(e.target.checked)}
+                                    className="h-3.5 w-3.5 rounded border-border-strong accent-primary"
+                                />
+                                {t('services.hideNotInstalled')}
+                            </label>
+                            <div className="flex gap-1 text-xs">
+                                <button onClick={expandAll} className="whitespace-nowrap rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                                    {t('services.expandAll')}
+                                </button>
+                                <button onClick={collapseAll} className="whitespace-nowrap rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                                    {t('services.collapseAll')}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
