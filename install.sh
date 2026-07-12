@@ -46,20 +46,39 @@ command -v apt-get >/dev/null || die "bu kurulum apt tabanlı dağıtımlar içi
 # runs only what they actually want (constitution: what isn't installed is
 # invisible). We ensure only the few tiny tools the agent itself uses.
 #
+# nftables belongs in this list, not in the on-demand catalog. It is the tool
+# the agent shells out to for the firewall — plumbing, exactly like curl. The
+# kernel packet filter (netfilter) is always present; only this userspace `nft`
+# binary can be missing on a minimal image. Installing it changes nothing:
+# it writes no rules and closes no ports until the operator hits "Turn on", and
+# it never conflicts with ufw / firewalld / a cloud firewall (those drive the
+# same nftables underneath). Having the tool ≠ enabling the firewall — so the
+# firewall stays a clean on/off switch and this respects "never turn on a
+# firewall by surprise."
+#
 # Panel ve agent kendi kendine yeter (statik Go binary + gömülü SQLite);
 # barındırma için burada HİÇBİR ŞEY kurmayız. nginx / php / mariadb /
 # postgresql / mail sonradan panelden, talep üzerine eklenir; böylece operatör
 # yalnız gerçekten istediğini çalıştırır. Yalnız agent'ın kendi kullandığı
 # birkaç küçük aracı sağlarız.
+#
+# nftables bu listede olmalı, talep-üzerine katalogda değil. Agent'ın firewall
+# için çağırdığı araç budur — tıpkı curl gibi tesisat. Çekirdek paket süzgeci
+# (netfilter) hep vardır; minimal imajda eksik olabilen yalnız bu kullanıcı-
+# alanı `nft` ikilisidir. Kurmak hiçbir şeyi değiştirmez: operatör "Turn on"
+# demeden tek kural yazmaz, tek port kapatmaz ve ufw / firewalld / bulut
+# firewall ile ASLA çakışmaz (hepsi altta aynı nftables'ı sürer). Aracı kurmak
+# ≠ firewall'u açmak — böylece firewall temiz bir aç/kapa düğmesi kalır ve bu,
+# "firewall'u sürprizle açma" kuralına uyar.
 if [ "${SKIP_DEPS:-0}" != "1" ]; then
-    step "Küçük ön gereksinimler (curl, tar, xz)"
+    step "Küçük ön gereksinimler (curl, tar, xz, nftables)"
     export DEBIAN_FRONTEND=noninteractive
     # A broken third-party repo must not abort the install; the packages we
     # need come from the base archives and may already be cached.
     # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
     # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
     apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
-    apt-get install -y -qq tar xz-utils curl ca-certificates >/dev/null
+    apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
     ok "hazır"
 else
     step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
