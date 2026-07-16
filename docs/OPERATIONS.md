@@ -14,7 +14,7 @@ in [DECISIONS](DECISIONS.md); this is purely "how it is operated".
 | Field | Value |
 |---|---|
 | Domain / IP | `celikpanel.cloud` → `2.25.80.4` (Hostinger KVM2, 2 vCPU / 8 GB) |
-| OS | Debian 13 (trixie), hostname `server.celikpanel.cloud` |
+| OS | Debian 13 (trixie), hostname `sunucu2.celikhost.com` (Jul 16: both machines under one roof — celikpanel.cloud is suspended at the registrar, so machine identities moved to celikhost.com) |
 | Access | `ssh root@2.25.80.4` — **key only** (no password logins; authorized keys held by the operator) |
 | Panel | `https://2.25.80.4:2083` (self-signed until LE; while the domain does not resolve, test with `curl --resolve`) |
 | External blocker (Jul 2026) | Domain suspended at the registrar (Hostinger) — the operator is handling it |

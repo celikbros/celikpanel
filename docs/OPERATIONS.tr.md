@@ -14,7 +14,7 @@ taşır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
 | Alan | Değer |
 |---|---|
 | Alan adı / IP | `celikpanel.cloud` → `2.25.80.4` (Hostinger KVM2, 2 vCPU / 8 GB) |
-| İşletim sistemi | Debian 13 (trixie), hostname `server.celikpanel.cloud` |
+| İşletim sistemi | Debian 13 (trixie), hostname `sunucu2.celikhost.com` (16 Tem: iki makine tek çatı altında — celikpanel.cloud kayıt firmasında askıda olduğundan makine kimlikleri celikhost.com'a taşındı) |
 | Erişim | `ssh root@2.25.80.4` — **yalnız anahtar** (parola girişi kullanılmaz; yetkili anahtarlar operatörde) |
 | Panel | `https://2.25.80.4:2083` (LE kurulana dek self-signed; alan adı çözülmüyorsa `curl --resolve` ile test) |
 | Dış engel (Tem 2026) | Alan adı kayıt operatöründe (Hostinger) askıda — çözümü operatör yürütüyor |
