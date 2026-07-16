@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -76,13 +77,39 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	// Adres kayıtları yalnız bu makinenin adresini gerçekten bildiğimizde —
 	// IP tahmin etmek yanlış DNS sunmaktır; kullanıcının dolduracağı boş
 	// kayıttan kötüdür. MX hedefi ve NS glue A/AAAA olmalı, asla CNAME değil.
+	// The panel's own name: when this machine's FQDN lives inside the zone
+	// being created (sunucu1.example.com under example.com), seed its address
+	// record too. The panel knows its own name and address; asking the
+	// operator to type them back in would be absurd — caught live: the
+	// panel-certificate flow stalled because the panel's name had no record.
+	// Panelin kendi adı: bu makinenin FQDN'i oluşturulan zone'un içinde
+	// yaşıyorsa (example.com altında sunucu1.example.com), adres kaydını da
+	// tohumla. Panel kendi adını ve adresini bilir; operatörden geri yazmasını
+	// istemek absürt olurdu — canlıda yakalandı: panel-sertifika akışı, panelin
+	// adının kaydı olmadığı için tıkandı.
+	panelHost := ""
+	if h, err := os.Hostname(); err == nil {
+		h = strings.ToLower(strings.TrimSuffix(h, "."))
+		if h != domain && strings.HasSuffix(h, "."+domain) {
+			panelHost = h
+		}
+	}
+
 	if ip4 := serverPrimaryIP(); ip4 != "" {
-		for _, host := range []string{domain, "mail." + domain, "ns1." + domain, "ns2." + domain} {
+		hosts := []string{domain, "mail." + domain, "ns1." + domain, "ns2." + domain}
+		if panelHost != "" {
+			hosts = append(hosts, panelHost)
+		}
+		for _, host := range hosts {
 			records = append(records, record{host, "A", ip4, nil})
 		}
 	}
 	if ip6 := serverPrimaryIPv6(); ip6 != "" {
-		for _, host := range []string{domain, "mail." + domain} {
+		hosts := []string{domain, "mail." + domain}
+		if panelHost != "" {
+			hosts = append(hosts, panelHost)
+		}
+		for _, host := range hosts {
 			records = append(records, record{host, "AAAA", ip6, nil})
 		}
 	}
