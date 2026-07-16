@@ -447,6 +447,23 @@ function AdminDashboard() {
                     <QuickAction icon={DownloadCloud} labelKey="nav.import" to="/import" />
                 </div>
             </section>
+
+            {/* Server identity: the facts an operator pastes into tickets and
+                DNS records — usage numbers stay in the gauges above.
+                Sunucu kimliği: operatörün destek kaydına ve DNS kayıtlarına
+                yapıştırdığı bilgiler — kullanım sayıları üstteki göstergelerde. */}
+            <div className="mt-6">
+                <Card title={t('dashboard.serverInfo')} icon={Server}>
+                    <dl className="divide-y divide-border text-sm">
+                        <InfoRow label={t('dashboard.hostname')} value={stats?.hostname || '—'} />
+                        <InfoRow label={t('dashboard.ipv4')} value={stats?.ipv4 || '—'} />
+                        <InfoRow label={t('dashboard.os')} value={stats?.os || '—'} />
+                        <InfoRow label={t('dashboard.kernel')} value={stats?.kernel || '—'} />
+                        <InfoRow label={t('dashboard.arch')} value={stats?.arch || '—'} />
+                        <InfoRow label={t('dashboard.uptime')} value={stats ? fmtUptime(stats.uptime_seconds, t) : '—'} />
+                    </dl>
+                </Card>
+            </div>
         </div>
     );
 }

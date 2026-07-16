@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -21,6 +23,9 @@ import (
 type SystemStats struct {
 	Hostname       string    `json:"hostname"`
 	OS             string    `json:"os"`
+	Kernel         string    `json:"kernel"`
+	Arch           string    `json:"arch"`
+	IPv4           string    `json:"ipv4"`
 	UptimeSeconds  int64     `json:"uptime_seconds"`
 	CPUPercent     float64   `json:"cpu_percent"`
 	CPUCores       int       `json:"cpu_cores"`
@@ -35,6 +40,9 @@ func (p *Panel) handleSystemStats(w http.ResponseWriter, r *http.Request) {
 	stats := SystemStats{
 		Hostname: hostnameOrEmpty(),
 		OS:       prettyOSName(),
+		Kernel:   kernelVersion(),
+		Arch:     runtime.GOARCH,
+		IPv4:     primaryIPv4(),
 		CPUCores: numCPU(),
 	}
 	stats.UptimeSeconds = readUptime()
@@ -70,6 +78,34 @@ func prettyOSName() string {
 		if strings.HasPrefix(line, "PRETTY_NAME=") {
 			return strings.Trim(strings.TrimPrefix(line, "PRETTY_NAME="), `"`)
 		}
+	}
+	return ""
+}
+
+// kernelVersion reads the running kernel release. Linux-shaped path; on
+// other OSes the file is simply absent and the field stays empty.
+// kernelVersion, çalışan çekirdek sürümünü okur. Linux'a özgü yol; diğer
+// OS'lerde dosya yoktur ve alan boş kalır.
+func kernelVersion() string {
+	data, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// primaryIPv4 returns the address the default route would use. The UDP
+// "dial" resolves routing locally — no packet ever leaves the machine.
+// primaryIPv4, varsayılan rotanın kullanacağı adresi döndürür. UDP "dial"
+// yönlendirmeyi yerelde çözer — makineden tek paket bile çıkmaz.
+func primaryIPv4() string {
+	conn, err := net.Dial("udp4", "1.1.1.1:53")
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+	if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+		return addr.IP.String()
 	}
 	return ""
 }

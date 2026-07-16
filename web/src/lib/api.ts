@@ -69,6 +69,9 @@ export interface DemoAccount {
 export interface SystemStats {
     hostname: string;
     os: string;
+    kernel: string;
+    arch: string;
+    ipv4: string;
     uptime_seconds: number;
     cpu_percent: number;
     cpu_cores: number;
