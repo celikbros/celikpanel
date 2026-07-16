@@ -13,7 +13,7 @@
 # Environment knobs / Ortam ayarları:
 #   SKIP_DEPS=1     do not apt-install the tiny prerequisites (tar, xz, curl)
 #   SKIP_ADMIN=1    do not prompt to create the first administrator
-#   LISTEN=:1983    panel bind address
+#   LISTEN=:2083    panel bind address
 #   DEMO=1          R&D mode: quick-login accounts on the login screen
 #                   (admin/reseller/customer @ demo1234) and cookies that
 #                   work over plain HTTP. NEVER on an internet-facing server.
@@ -27,7 +27,7 @@ DATA_DIR=/var/lib/celikpanel
 CONF_DIR=/etc/celikpanel
 SVC_USER=celikpanel
 SVC_GROUP=celikpanel
-LISTEN="${LISTEN:-:1983}"
+LISTEN="${LISTEN:-:2083}"
 
 SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 

@@ -32,6 +32,7 @@ statik arayüz `/opt/celikpanel/web/`, systemd unit'leri `celikpanel-agent` (roo
 |---|---|
 | Alan adı / IP | `sunucu1.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
 | İşletim sistemi | Arch Linux (bilinçli — bkz. D-004 eki: geliştirme-test hedefi) |
+| Panel | `https://72.62.38.15:2083` (16 Tem: tüm sunucular ve varsayılan tek portta — 2083) |
 | Erişim | `ssh root@72.62.38.15` — yalnız anahtar |
 | Rol | Her değişiklik İKİ sunucuda da test edilir (16 Tem operatör kararı). Arch'ta beklenen fark: servis kataloğu "otomatik kurulamıyor" der (apt'ye özgü) — bu hata değil, dürüst davranıştır |
 

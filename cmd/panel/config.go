@@ -35,12 +35,13 @@ func webDir() string {
 	return "./web/dist"
 }
 
-// listenAddr is the HTTP bind address (CELIKPANEL_LISTEN, e.g. ":1983" or
-// "127.0.0.1:1983").
-// listenAddr, HTTP bağlanma adresidir (CELIKPANEL_LISTEN).
+// listenAddr is the HTTP bind address (CELIKPANEL_LISTEN, e.g. ":2083" or
+// "127.0.0.1:2083"). 2083 is the port hosting users already know from cPanel.
+// listenAddr, HTTP bağlanma adresidir (CELIKPANEL_LISTEN). 2083, barındırma
+// kullanıcılarının cPanel'den zaten tanıdığı porttur.
 func listenAddr() string {
 	if a := os.Getenv("CELIKPANEL_LISTEN"); a != "" {
 		return a
 	}
-	return ":1983"
+	return ":2083"
 }

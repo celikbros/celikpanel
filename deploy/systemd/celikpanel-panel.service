@@ -23,7 +23,7 @@ StateDirectoryMode=0750
 
 Environment=CELIKPANEL_DATA_DIR=/var/lib/celikpanel
 Environment=CELIKPANEL_WEB_DIR=/opt/celikpanel/web
-Environment=CELIKPANEL_LISTEN=:1983
+Environment=CELIKPANEL_LISTEN=:2083
 Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
 Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
 # HTTPS: a normal install adds CELIKPANEL_TLS=1 here (self-signed cert, so

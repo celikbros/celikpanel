@@ -35,7 +35,7 @@ func panelPort() int {
 			return n
 		}
 	}
-	return 1983
+	return 2083
 }
 
 // desiredFirewallPorts computes the ports that must be open: the panel port

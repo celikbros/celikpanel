@@ -41,7 +41,7 @@ Her özellik, her commit, her tasarım kararı şu dört süzgeçten sırayla ge
 Tarayıcı — React SPA
    │  HTTPS
    ▼
-Panel — Go HTTP sunucusu (port 1983), düşük yetkili kullanıcı, SQLite
+Panel — Go HTTP sunucusu (port 2083), düşük yetkili kullanıcı, SQLite
    │  yerel RPC (Faz 0'da Unix socket + token'a geçiyor)
    ▼
 Agent — root daemon; işletim sistemine dokunabilen tek bileşen

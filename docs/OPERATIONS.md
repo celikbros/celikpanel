@@ -32,6 +32,7 @@ static UI at `/opt/celikpanel/web/`, systemd units `celikpanel-agent` (root) + `
 |---|---|
 | Domain / IP | `sunucu1.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
 | OS | Arch Linux (deliberate — see the D-004 amendment: dev-test target) |
+| Panel | `https://72.62.38.15:2083` (Jul 16: every server and the default now share one port — 2083) |
 | Access | `ssh root@72.62.38.15` — key only |
 | Role | Every change is tested on BOTH servers (Jul 16 operator decision). Expected difference on Arch: the service catalog says "not automatable" (apt-specific) — that is honesty, not a bug |
 
