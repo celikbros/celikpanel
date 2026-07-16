@@ -43,6 +43,25 @@ func getDatabaseIDFromPath(path string) (int, error) {
 	return 0, fmt.Errorf("database ID not found in path")
 }
 
+// dbDriverFor builds the driver for a stored server, opening the sealed root
+// password on the way. Every handler that talks to an engine goes through
+// here so decryption cannot be forgotten at any one call site.
+// dbDriverFor, kayıtlı bir sunucu için sürücüyü kurar ve yol üstünde mühürlü
+// root parolasını açar. Motorla konuşan her handler buradan geçer; böylece
+// çözme işlemi tek bir çağrı yerinde bile unutulamaz.
+func (p *Panel) dbDriverFor(server *core.DatabaseServer) (services.DatabaseDriver, error) {
+	rootPassword, err := p.secrets.Decrypt(server.RootPasswordEncrypted)
+	if err != nil {
+		return nil, fmt.Errorf("database server %d root password: %w", server.ID, err)
+	}
+	return services.NewDatabaseDriver(services.DriverConfig{
+		Host:         server.Host,
+		Port:         server.Port,
+		RootPassword: rootPassword,
+		Type:         dbDriverTypeFor(server),
+	})
+}
+
 // Database Server Management Endpoints
 
 // handleListDatabaseServers lists all database servers for a subscription
@@ -133,6 +152,16 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Seal the root password before it touches the database (A4: no plaintext
+	// credentials at rest).
+	// Root parolasını veritabanına değmeden mühürle (A4: bekleyen veride düz
+	// metin kimlik bilgisi yok).
+	sealedPassword, err := p.secrets.Encrypt(req.RootPassword)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
 	// Create server
 	server := &core.DatabaseServer{
 		SubscriptionID:        subscriptionID,
@@ -142,7 +171,7 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 		Host:                  req.Host,
 		Port:                  req.Port,
 		IsDefault:             req.IsDefault,
-		RootPasswordEncrypted: req.RootPassword, // TODO: Encrypt
+		RootPasswordEncrypted: sealedPassword,
 		Status:                "active",
 	}
 
@@ -298,15 +327,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbType := dbDriverTypeFor(server)
-
-	// Create database driver
-	driver, err := services.NewDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: server.RootPasswordEncrypted, // TODO: Decrypt
-		Type:         dbType,
-	})
+	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -444,15 +465,7 @@ func (p *Panel) handleDeleteDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbType := dbDriverTypeFor(server)
-
-	// Create driver
-	driver, err := services.NewDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: server.RootPasswordEncrypted,
-		Type:         dbType,
-	})
+	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -574,15 +587,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	dbType := dbDriverTypeFor(server)
-
-	// Create driver
-	driver, err := services.NewDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: server.RootPasswordEncrypted,
-		Type:         dbType,
-	})
+	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -662,15 +667,7 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	dbType := dbDriverTypeFor(server)
-
-	// Create driver
-	driver, err := services.NewDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: server.RootPasswordEncrypted,
-		Type:         dbType,
-	})
+	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -823,15 +820,7 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	dbType := dbDriverTypeFor(server)
-
-	// Create driver
-	driver, err := services.NewDatabaseDriver(services.DriverConfig{
-		Host:         server.Host,
-		Port:         server.Port,
-		RootPassword: server.RootPasswordEncrypted,
-		Type:         dbType,
-	})
+	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -907,24 +896,8 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 		server, _ := serverRepo.GetByID(ctx, database.ServerID)
 
 		if server != nil {
-			// Determine database type
-			var dbType string
-			if server.TypeID == 23 {
-				dbType = "postgresql"
-			} else if server.TypeID == 24 {
-				dbType = "mariadb"
-			}
-
-			// Create driver
-			driver, _ := services.NewDatabaseDriver(services.DriverConfig{
-				Host:         server.Host,
-				Port:         server.Port,
-				RootPassword: server.RootPasswordEncrypted,
-				Type:         dbType,
-			})
-
 			// Revoke on server
-			if driver != nil {
+			if driver, err := p.dbDriverFor(server); err == nil {
 				driver.RevokePrivileges(database.Name, user.Username)
 			}
 		}

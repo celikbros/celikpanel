@@ -18,6 +18,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/db"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -28,6 +29,7 @@ type Panel struct {
 	orchestrator  *services.SiteOrchestrator
 	sessions      *auth.SessionStore
 	users         repositories.UserRepository
+	secrets       *secrets.Box
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
@@ -89,12 +91,26 @@ func main() {
 
 	sessions := auth.NewSessionStore(database.GetDB())
 
+	// Load (or on first boot, create) the key that seals stored credentials
+	// such as database root passwords. It lives next to the SQLite file: the
+	// data dir is already the panel's private state, and a lost data dir loses
+	// the ciphertexts along with the key that opened them.
+	// Saklanan kimlik bilgilerini (örn. veritabanı root parolaları) mühürleyen
+	// anahtarı yükle (ilk açılışta oluştur). SQLite dosyasının yanında yaşar:
+	// veri dizini zaten panelin özel durumu; kaybolan veri dizini, şifreli
+	// metinleri onları açan anahtarla birlikte kaybeder.
+	secretBox, err := secrets.LoadOrCreate(filepath.Join(dataDir(), "secret.key"))
+	if err != nil {
+		log.Fatalf("Failed to load secret key: %v", err)
+	}
+
 	panel := &Panel{
 		agentClient:   client,
 		db:            database,
 		orchestrator:  orchestrator,
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
+		secrets:       secretBox,
 		secureCookies: !*insecureCookies,
 		// 10 login attempts per IP per 5 minutes slows brute force while
 		// staying invisible to a legitimate user.
@@ -118,6 +134,16 @@ func main() {
 		log.Fatalf("Failed to check users: %v", err)
 	} else if n == 0 {
 		log.Fatal("No users exist. Create the first admin with:  ./bin/panel --create-admin")
+	}
+
+	// One-time repair of pre-A4 rows: seal any database root password that
+	// was stored as plaintext. Fatal on failure — booting with credentials
+	// half plaintext, half sealed hides the very problem A4 closes.
+	// A4 öncesi satırların tek seferlik onarımı: düz metin saklanmış her
+	// veritabanı root parolasını mühürle. Hata ölümcül — kimlik bilgileri
+	// yarı düz metin, yarı mühürlü açılmak, A4'ün kapattığı sorunu gizler.
+	if err := panel.encryptLegacyDBPasswords(context.Background()); err != nil {
+		log.Fatalf("Failed to encrypt legacy database passwords: %v", err)
 	}
 
 	// Purge expired sessions on startup and then hourly.
