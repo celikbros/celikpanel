@@ -96,17 +96,20 @@ type ManagedService struct {
 	// distro packages that install this service. The panel installs nothing at
 	// setup time (the constitution: what isn't installed is invisible); the
 	// admin installs a service on demand and the agent installs exactly these
-	// packages — a fixed whitelist, never an arbitrary name. Only "apt"
-	// (Ubuntu/Debian) is filled and tested today; other families return an
-	// honest "not supported on this distro yet" instead of guessing names.
+	// packages — a fixed whitelist, never an arbitrary name. "apt"
+	// (Ubuntu/Debian) is first-class and tested; "pacman" (Arch, dev-test
+	// target per the D-004 amendment) is filled only where the mapping is
+	// certain AND the package works without a distro-specific init step — a
+	// missing entry keeps the honest "not supported on this distro yet".
 	//
 	// Packages, bir paket-yöneticisi ailesini ("apt", "dnf", "pacman") bu
 	// servisi kuran dağıtım paketlerine eşler. Panel kurulum anında hiçbir şey
 	// kurmaz (anayasa: kurulu olmayan görünmez); yönetici servisi talep
 	// üzerine kurar ve agent tam olarak bu paketleri kurar — sabit whitelist,
-	// asla keyfi ad değil. Bugün yalnız "apt" (Ubuntu/Debian) dolu ve test
-	// edilmiştir; diğer aileler ad tahmin etmek yerine dürüst "bu dağıtımda
-	// henüz desteklenmiyor" döndürür.
+	// asla keyfi ad değil. "apt" (Ubuntu/Debian) birinci sınıf ve test edilmiş;
+	// "pacman" (Arch, D-004 ekiyle geliştirme-test hedefi) yalnız eşlemenin
+	// kesin olduğu VE paketin dağıtıma özgü init adımı istemediği yerde dolu —
+	// boş girdi, dürüst "bu dağıtımda henüz desteklenmiyor"u korur.
 	Packages map[string][]string
 	// Repo, when set, is the optional vendor repository this service can enable
 	// to unlock version choice (see ManagedRepo). nil means the service is only
@@ -164,8 +167,8 @@ var ManagedServices = []ManagedService{
 		Description: "PHP FastCGI Process Manager",
 		Icon:        "🐘",
 		Category:    "web",
-		SystemNames: []string{"php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm"},
-		Packages:    map[string][]string{"apt": {"php-fpm"}},
+		SystemNames: []string{"php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm", "php-fpm"},
+		Packages:    map[string][]string{"apt": {"php-fpm"}, "pacman": {"php-fpm"}},
 	},
 	{
 		ID:            "nginx",
@@ -175,7 +178,7 @@ var ManagedServices = []ManagedService{
 		Category:      "web",
 		SystemNames:   []string{"nginx"},
 		ConflictGroup: "web-server",
-		Packages:      map[string][]string{"apt": {"nginx"}},
+		Packages:      map[string][]string{"apt": {"nginx"}, "pacman": {"nginx"}},
 		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
@@ -184,9 +187,9 @@ var ManagedServices = []ManagedService{
 		Description:   "Web Server",
 		Icon:          "🪶",
 		Category:      "web",
-		SystemNames:   []string{"apache2"},
+		SystemNames:   []string{"apache2", "httpd"},
 		ConflictGroup: "web-server",
-		Packages:      map[string][]string{"apt": {"apache2"}},
+		Packages:      map[string][]string{"apt": {"apache2"}, "pacman": {"apache"}},
 		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
@@ -196,7 +199,13 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐘",
 		Category:    "database",
 		SystemNames: []string{"postgresql"},
-		Packages:    map[string][]string{"apt": {"postgresql"}},
+		// pacman deliberately absent: on Arch the cluster needs a manual
+		// initdb before first start — mapping the package alone would install
+		// a server that cannot start. Same for MariaDB below.
+		// pacman bilerek yok: Arch'ta küme ilk başlatmadan önce elle initdb
+		// ister — yalnız paketi eşlemek, başlayamayan bir sunucu kurardı.
+		// Aşağıdaki MariaDB için de aynısı geçerli.
+		Packages: map[string][]string{"apt": {"postgresql"}},
 		// The distro ships one PostgreSQL major; PGDG carries every current
 		// major, so an admin who needs 17 (or must stay on 16) can pick it.
 		// Dağıtım tek bir PostgreSQL major'u getirir; PGDG tüm güncel major'ları
@@ -235,7 +244,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐬",
 		Category:    "database",
 		SystemNames: []string{},
-		Packages:    map[string][]string{"apt": {"phpmyadmin"}},
+		Packages:    map[string][]string{"apt": {"phpmyadmin"}, "pacman": {"phpmyadmin"}},
 		Requires:    []string{"mariadb", "web-server", "php-fpm"},
 	},
 	{
@@ -245,8 +254,12 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐘",
 		Category:    "database",
 		SystemNames: []string{},
-		Packages:    map[string][]string{"apt": {"phppgadmin"}},
-		Requires:    []string{"postgresql", "web-server", "php-fpm"},
+		// pacman absent: phpPgAdmin is AUR-only on Arch; the whitelist only
+		// carries official-repo packages.
+		// pacman yok: phpPgAdmin Arch'ta yalnız AUR'da; whitelist yalnız resmi
+		// depo paketlerini taşır.
+		Packages: map[string][]string{"apt": {"phppgadmin"}},
+		Requires: []string{"postgresql", "web-server", "php-fpm"},
 	},
 	{
 		ID:            "postfix",
@@ -255,7 +268,7 @@ var ManagedServices = []ManagedService{
 		Icon:          "📧",
 		Category:      "email",
 		SystemNames:   []string{"postfix"},
-		Packages:      map[string][]string{"apt": {"postfix"}},
+		Packages:      map[string][]string{"apt": {"postfix"}, "pacman": {"postfix"}},
 		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
 	},
 	{
@@ -265,7 +278,7 @@ var ManagedServices = []ManagedService{
 		Icon:          "📬",
 		Category:      "email",
 		SystemNames:   []string{"dovecot"},
-		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}},
+		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}, "pacman": {"dovecot"}},
 		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
 	},
 	{
@@ -275,7 +288,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🛡️",
 		Category:    "email",
 		SystemNames: []string{"spamassassin"},
-		Packages:    map[string][]string{"apt": {"spamassassin"}},
+		Packages:    map[string][]string{"apt": {"spamassassin"}, "pacman": {"spamassassin"}},
 	},
 	{
 		ID:            "wireguard",
@@ -284,7 +297,7 @@ var ManagedServices = []ManagedService{
 		Icon:          "\U0001F510",
 		Category:      "security",
 		SystemNames:   []string{"wg-quick@wg0"},
-		Packages:      map[string][]string{"apt": {"wireguard"}},
+		Packages:      map[string][]string{"apt": {"wireguard"}, "pacman": {"wireguard-tools"}},
 		FirewallPorts: []FirewallPort{{51820, "udp"}},
 	},
 	{
@@ -294,7 +307,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🚫",
 		Category:    "security",
 		SystemNames: []string{"fail2ban"},
-		Packages:    map[string][]string{"apt": {"fail2ban"}},
+		Packages:    map[string][]string{"apt": {"fail2ban"}, "pacman": {"fail2ban"}},
 	},
 	// The firewall ENGINE the panel drives. Not a daemon we manage (we push our
 	// own nftables table via `nft -f` and never touch nftables.service), so it
@@ -318,7 +331,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🧱",
 		Category:    "security",
 		SystemNames: []string{},
-		Packages:    map[string][]string{"apt": {"nftables"}},
+		Packages:    map[string][]string{"apt": {"nftables"}, "pacman": {"nftables"}},
 	},
 	// Antivirus / malware scanner. A daemon plus its signature-updater
 	// (freshclam) — both must be present to count as installed. Local scanner:
@@ -339,7 +352,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "🦠",
 		Category:    "security",
 		SystemNames: []string{"clamav-daemon", "clamav-freshclam"},
-		Packages:    map[string][]string{"apt": {"clamav", "clamav-daemon"}},
+		Packages:    map[string][]string{"apt": {"clamav", "clamav-daemon"}, "pacman": {"clamav"}},
 	},
 	{
 		ID:            "bind",
@@ -349,7 +362,7 @@ var ManagedServices = []ManagedService{
 		Category:      "dns",
 		SystemNames:   []string{"bind9", "named"},
 		ConflictGroup: "dns-server",
-		Packages:      map[string][]string{"apt": {"bind9"}},
+		Packages:      map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
 		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
@@ -360,7 +373,11 @@ var ManagedServices = []ManagedService{
 		Category:      "dns",
 		SystemNames:   []string{"pdns"},
 		ConflictGroup: "dns-server",
-		Packages:      map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}},
+		// Arch's powerdns ships the sqlite3 backend inside the main package —
+		// no separate backend package exists there.
+		// Arch'ın powerdns'i sqlite3 arka ucunu ana pakette taşır — orada ayrı
+		// backend paketi yoktur.
+		Packages: map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}, "pacman": {"powerdns"}},
 		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
@@ -370,7 +387,7 @@ var ManagedServices = []ManagedService{
 		Icon:          "📂",
 		Category:      "ftp",
 		SystemNames:   []string{"vsftpd"},
-		Packages:      map[string][]string{"apt": {"vsftpd"}},
+		Packages:      map[string][]string{"apt": {"vsftpd"}, "pacman": {"vsftpd"}},
 		FirewallPorts: []FirewallPort{{21, "tcp"}},
 	},
 	{
@@ -380,7 +397,13 @@ var ManagedServices = []ManagedService{
 		Icon:        "⚡",
 		Category:    "cache",
 		SystemNames: []string{"redis-server", "redis"},
-		Packages:    map[string][]string{"apt": {"redis-server"}},
+		// pacman absent: Arch replaced Redis with the Valkey fork; silently
+		// installing a fork under the name "Redis" would be a product decision
+		// disguised as a package alias.
+		// pacman yok: Arch, Redis'i Valkey çatalıyla değiştirdi; "Redis" adı
+		// altında sessizce çatal kurmak, paket takma adı kılığında bir ürün
+		// kararı olurdu.
+		Packages: map[string][]string{"apt": {"redis-server"}},
 	},
 	{
 		ID:          "memcached",
@@ -389,7 +412,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "💾",
 		Category:    "cache",
 		SystemNames: []string{"memcached"},
-		Packages:    map[string][]string{"apt": {"memcached"}},
+		Packages:    map[string][]string{"apt": {"memcached"}, "pacman": {"memcached"}},
 	},
 }
 

@@ -235,9 +235,17 @@ sürüm seçiciyi anlamlı kılar — dnf desteği eklersek UI buna hazır.
 *Ek (16 Tem, operatör kararı):* Arch artık bir **geliştirme-test hedefi** —
 taşınabilirlik sözünü dürüst tutmak için ikinci test sunucusu bilerek Arch'ta.
 `install.sh` pacman'i destekler (ön gereksinimler, araç zinciri mimarisi
-`uname -m` ile, dürüst "güvenlik-yalnız kanal yok" notu). Kapsam bilinçli:
-panel çekirdeği Arch'ta kurulur ve çalışır; **servis kataloğu** (panelden
-nginx, posta, DNS, DB motorları) apt'ye özgü kalır ve bunu UI'da söyler.
+`uname -m` ile, dürüst "güvenlik-yalnız kanal yok" notu).
+
+*Ek 2 (16 Tem, aynı gün genişletildi):* Operatör iki sunucuda aktif test
+yaparken "apt'ye özgü katalog" duvarına üç kez çarptı (certbot kurulumu, bind
+kaldırma, paket adı `bind9` gösteren onay penceresi). Karar: **agent'ın paket
+katmanı pacman'i de sürer** (kur `-S --needed`, kaldır `-Rns`, varlık `-Q`;
+asla `-Syu` — sürpriz sistem yükseltmesi yok). Katalogda pacman paket adları
+yalnız eşlemenin kesin olduğu VE dağıtıma özgü init adımı istemeyen servisler
+için dolu; MariaDB/PostgreSQL (initdb ister), phpPgAdmin (AUR-only) ve Redis
+(Arch'ta Valkey çatalı) bilerek boş — dürüst "henüz desteklenmiyor" derler.
+UI, paket adlarını agent'ın bildirdiği aileden gösterir (`Agent.PkgFamily`).
 
 ---
 

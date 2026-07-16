@@ -111,6 +111,18 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	for _, id := range installedIDs {
 		installedSet[id] = true
 	}
+	// Package names shown in the UI must match this host's package manager —
+	// the agent owns that fact. Fall back to apt when the call fails, which
+	// preserves the pre-RPC behaviour.
+	// UI'da gösterilen paket adları bu makinenin paket yöneticisiyle uyuşmalı —
+	// bu bilginin sahibi agent'tır. Çağrı başarısızsa apt'ye düş; bu, RPC
+	// öncesi davranışı korur.
+	pkgFamily := "apt"
+	_ = p.agentClient.Call("Agent.PkgFamily", &transport.Empty{}, &pkgFamily)
+	if pkgFamily == "" {
+		pkgFamily = "apt"
+	}
+
 	// Conflict groups: which group already has an installed member, and who.
 	// Çakışma grupları: hangi grupta zaten kurulu üye var ve kim.
 	groupOwner := map[string]string{}
@@ -206,7 +218,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			ConflictWith:    conflictWith,
 			RequiresMissing: requiresMissing,
 			Daemonless:      len(managed.SystemNames) == 0,
-			Packages:        managed.Packages["apt"],
+			Packages:        managed.Packages[pkgFamily],
 			ConfigFiles:     configFiles,
 		})
 	}

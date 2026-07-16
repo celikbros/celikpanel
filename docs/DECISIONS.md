@@ -231,9 +231,18 @@ version picker meaningful there — the UI is ready for it if we add dnf support
 *Amendment (Jul 16, operator decision):* Arch is now a **dev-test target** —
 we keep a second test server on Arch precisely to keep the portability promise
 honest. `install.sh` supports pacman (prerequisites, toolchain arch via
-`uname -m`, honest "no security-only channel" note). Scope is deliberate: the
-panel core installs and runs on Arch; the **service catalog** (nginx, mail,
-DNS, DB engines from the panel) remains apt-only and says so in the UI.
+`uname -m`, honest "no security-only channel" note).
+
+*Amendment 2 (Jul 16, widened the same day):* Testing actively on both servers,
+the operator hit the "apt-only catalog" wall three times (certbot install, bind
+removal, a confirm dialog showing the package name `bind9`). Decision: **the
+agent's package layer now drives pacman too** (install `-S --needed`, remove
+`-Rns`, presence `-Q`; never `-Syu` — no surprise system upgrade). Catalog
+pacman package names are filled only where the mapping is certain AND no
+distro-specific init step is needed; MariaDB/PostgreSQL (need initdb),
+phpPgAdmin (AUR-only) and Redis (Valkey fork on Arch) stay deliberately empty —
+they keep saying an honest "not supported yet". The UI shows package names for
+the family the agent reports (`Agent.PkgFamily`).
 
 ---
 

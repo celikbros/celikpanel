@@ -11,18 +11,20 @@ import (
 // Package-manager abstraction so service installation is not hard-wired to
 // one distro. We detect the family from the package-manager binary present
 // (with an /etc/os-release fallback); each family knows how to install a set
-// of packages non-interactively. Only apt (Ubuntu/Debian) is exercised and
-// tested today — dnf/pacman are recognised so we return an honest "not
-// supported yet" instead of guessing, and so adding real support later is one
-// tested adapter, not a rewrite. We never claim a distro we haven't run on.
+// of packages non-interactively. apt (Ubuntu/Debian) is the first-class
+// tested family; pacman (Arch) is supported as the dev-test target the
+// operator keeps a second server on (D-004 amendment) — for services whose
+// catalog entry carries pacman package names. dnf is recognised and returns
+// an honest "not supported yet". We never claim a distro we haven't run on.
 //
 // Paket-yöneticisi soyutlaması; servis kurulumu tek dağıtıma gömülü değildir.
 // Aileyi var olan paket-yöneticisi ikilisinden tespit ederiz (os-release
-// yedeğiyle); her aile bir paket kümesini etkileşimsiz kurmayı bilir. Bugün
-// yalnız apt (Ubuntu/Debian) çalıştırılıp test edilmiştir — dnf/pacman tanınır
-// ki tahmin yerine dürüst "henüz desteklenmiyor" dönelim ve ileride gerçek
-// destek yeniden yazım değil tek test edilmiş adaptör olsun. Üzerinde
-// çalışmadığımız bir dağıtımı asla iddia etmeyiz.
+// yedeğiyle); her aile bir paket kümesini etkileşimsiz kurmayı bilir. apt
+// (Ubuntu/Debian) birinci sınıf test edilmiş ailedir; pacman (Arch),
+// operatörün ikinci sunucuyu üzerinde tuttuğu geliştirme-test hedefi olarak
+// desteklenir (D-004 eki) — katalog girdisi pacman paket adı taşıyan
+// servisler için. dnf tanınır ve dürüst "henüz desteklenmiyor" döndürür.
+// Üzerinde çalışmadığımız bir dağıtımı asla iddia etmeyiz.
 
 // detectPkgFamily reports which package-manager family this host uses
 // ("apt", "dnf", "pacman", or "" when unrecognised).
@@ -152,7 +154,25 @@ func installPackages(family string, packages []string) (string, error) {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(out))
 		}
 		return out, nil
-	case "dnf", "pacman":
+	case "pacman":
+		// Refresh the index first (pacman's apt-get update); a failure must
+		// not veto an install the cached index can satisfy. --needed skips
+		// what is present; deliberately NOT -Syu — a service install must
+		// never surprise-upgrade the whole system.
+		// Önce dizini tazele (pacman'in apt-get update'i); hata, önbellekli
+		// dizinin karşılayabileceği kurulumu veto etmemeli. --needed mevcut
+		// olanı atlar; bilerek -Syu DEĞİL — servis kurulumu tüm sistemi
+		// sürprizle yükseltmemeli.
+		if out, err := exec.Command("pacman", "-Sy", "--noconfirm").CombinedOutput(); err != nil {
+			fmt.Printf("pacman -Sy before install failed (continuing): %s\n", firstLine(string(out)))
+		}
+		args := append([]string{"-S", "--noconfirm", "--needed"}, packages...)
+		out, err := exec.Command("pacman", args...).CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		}
+		return string(out), nil
+	case "dnf":
 		return "", fmt.Errorf("automatic install on this distro (%s) is not supported yet; install %s manually", family, strings.Join(packages, ", "))
 	default:
 		return "", fmt.Errorf("unrecognised distribution; install %s manually", strings.Join(packages, ", "))
@@ -187,7 +207,18 @@ func removePackages(family string, packages []string) (string, error) {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
 		return string(out), nil
-	case "dnf", "pacman":
+	case "pacman":
+		// -Rns = purge: the package, its now-unneeded dependencies (-s) and
+		// its config files (-n) — mirrors apt's purge --auto-remove.
+		// -Rns = purge: paket, artık gereksiz bağımlılıkları (-s) ve config
+		// dosyaları (-n) — apt'ın purge --auto-remove'unun aynası.
+		args := append([]string{"-Rns", "--noconfirm"}, packages...)
+		out, err := exec.Command("pacman", args...).CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+		}
+		return string(out), nil
+	case "dnf":
 		return "", fmt.Errorf("automatic removal on this distro (%s) is not supported yet; remove %s manually", family, strings.Join(packages, ", "))
 	default:
 		return "", fmt.Errorf("unrecognised distribution; remove %s manually", strings.Join(packages, ", "))
@@ -204,8 +235,24 @@ func packageInstalled(pkg string) bool {
 	if !validPackageName(pkg) {
 		return false
 	}
-	out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pkg).Output()
-	return err == nil && strings.Contains(string(out), "install ok installed")
+	switch detectPkgFamily() {
+	case "pacman":
+		return exec.Command("pacman", "-Q", pkg).Run() == nil
+	default:
+		out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pkg).Output()
+		return err == nil && strings.Contains(string(out), "install ok installed")
+	}
+}
+
+// PkgFamily exposes the host's package-manager family to the panel, which
+// needs it to show family-correct package names in install/uninstall dialogs
+// (the catalog keys Packages by family; the panel must not assume apt).
+// PkgFamily, makinenin paket-yöneticisi ailesini panele açar; panel kur/kaldır
+// pencerelerinde aileye doğru paket adlarını göstermek için buna muhtaçtır
+// (katalog Packages'ı aileyle anahtarlar; panel apt varsayamaz).
+func (a *Agent) PkgFamily(_ *struct{}, reply *string) error {
+	*reply = detectPkgFamily()
+	return nil
 }
 
 // validPackageName allows the conservative charset real Debian/RPM/Arch
