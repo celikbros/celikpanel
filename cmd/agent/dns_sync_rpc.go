@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -27,6 +28,19 @@ func pdnsDBPath() string {
 		return p
 	}
 	return "/var/lib/powerdns/pdns.sqlite3"
+}
+
+// pdnsUser returns the account PowerDNS runs as on this host: Debian ships
+// "pdns", Arch "powerdns". The database must be owned by whichever exists.
+// pdnsUser, PowerDNS'in bu makinede hangi hesapla koştuğunu döndürür: Debian
+// "pdns", Arch "powerdns" getirir. Veritabanının sahibi var olan olmalı.
+func pdnsUser() string {
+	for _, name := range []string{"pdns", "powerdns"} {
+		if _, err := user.Lookup(name); err == nil {
+			return name
+		}
+	}
+	return "pdns"
 }
 
 type ZoneRecord struct {
@@ -143,9 +157,12 @@ func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) 
 	}
 	db.Close()
 
-	// pdns (user pdns) must read and write its own database.
-	// pdns (pdns kullanıcısı) kendi veritabanını okuyup yazabilmeli.
-	_ = exec.Command("chown", "-R", "pdns:pdns", filepath.Dir(dbPath)).Run()
+	// pdns must read and write its own database; the account name differs per
+	// distro (Debian "pdns", Arch "powerdns").
+	// pdns kendi veritabanını okuyup yazabilmeli; hesap adı dağıtıma göre
+	// değişir (Debian "pdns", Arch "powerdns").
+	owner := pdnsUser()
+	_ = exec.Command("chown", "-R", owner+":"+owner, filepath.Dir(dbPath)).Run()
 
 	// zone-cache-refresh-interval=0: pdns caches the zone LIST for 300s by
 	// default, so a zone created after startup would be REFUSED for up to
@@ -176,7 +193,39 @@ zone-cache-refresh-interval=0
 webserver=no
 api=no
 `, dbPath, listen)
-	confPath := "/etc/powerdns/pdns.d/celikpanel.conf"
+	// The drop-in directory is a Debian convention; Arch ships neither the
+	// directory nor an active include-dir line in the stock pdns.conf. Create
+	// the one and switch on the other, so the same managed drop-in works on
+	// both — caught live on Arch: the write failed with "no such file or
+	// directory" and pdns crash-looped on its backendless stock config.
+	// Drop-in dizini bir Debian geleneğidir; Arch ne dizini ne de stok
+	// pdns.conf'ta etkin bir include-dir satırı getirir. Birini oluştur,
+	// diğerini aç — Arch'ta canlıda yakalandı: yazma "no such file or
+	// directory" ile düştü ve pdns backend'siz stok config'le çevrimde kaldı.
+	confDir := "/etc/powerdns/pdns.d"
+	if err := os.MkdirAll(confDir, 0o755); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	mainConf := "/etc/powerdns/pdns.conf"
+	if data, err := os.ReadFile(mainConf); err == nil {
+		hasInclude := false
+		for _, line := range strings.Split(string(data), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "include-dir=") {
+				hasInclude = true
+				break
+			}
+		}
+		if !hasInclude {
+			addition := "\n# Managed by CelikPanel / CelikPanel yönetir\ninclude-dir=" + confDir + "\n"
+			if err := os.WriteFile(mainConf, append(data, []byte(addition)...), 0o644); err != nil {
+				resp.Error = err.Error()
+				return nil
+			}
+		}
+	}
+
+	confPath := filepath.Join(confDir, "celikpanel.conf")
 	if err := os.WriteFile(confPath, []byte(config), 0o644); err != nil {
 		resp.Error = err.Error()
 		return nil
