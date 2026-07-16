@@ -71,6 +71,8 @@ export const en = {
     'login.subtitle': 'Sign in to your control panel',
     'login.username': 'Username',
     'login.password': 'Password',
+    'login.showPassword': 'Show password',
+    'login.hidePassword': 'Hide password',
     'login.signIn': 'Sign in',
     'login.signingIn': 'Signing in…',
     'login.invalid': 'Invalid username or password.',

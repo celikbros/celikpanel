@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Server, ShieldCheck, Users, User } from 'lucide-react';
+import { Server, ShieldCheck, Users, User, Eye, EyeOff } from 'lucide-react';
 import { api, type CurrentUser, type DemoAccount } from '../lib/api';
 import { useI18n } from '../i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -23,6 +23,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
     const { t } = useI18n();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [pendingToken, setPendingToken] = useState('');
@@ -162,15 +163,31 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                         <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-fg-muted">
                             {t('login.password')}
                         </label>
-                        <input
-                            id="password"
-                            type="password"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
-                            required
-                        />
+                        <div className="relative">
+                            <input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 pr-10 text-fg outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/30"
+                                required
+                            />
+                            {/* tabIndex -1: the eye must not steal Tab order
+                                between password and submit.
+                                tabIndex -1: göz, parola ile gönder arasındaki
+                                Tab sırasını çalmamalı. */}
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => setShowPassword((v) => !v)}
+                                aria-label={t(showPassword ? 'login.hidePassword' : 'login.showPassword')}
+                                title={t(showPassword ? 'login.hidePassword' : 'login.showPassword')}
+                                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
                     </div>
 
                     {error && (

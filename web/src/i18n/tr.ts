@@ -70,6 +70,8 @@ export const tr: Record<TranslationKey, string> = {
     'login.subtitle': 'Kontrol panelinize giriş yapın',
     'login.username': 'Kullanıcı adı',
     'login.password': 'Parola',
+    'login.showPassword': 'Parolayı göster',
+    'login.hidePassword': 'Parolayı gizle',
     'login.signIn': 'Giriş yap',
     'login.signingIn': 'Giriş yapılıyor…',
     'login.invalid': 'Kullanıcı adı ya da parola hatalı.',
