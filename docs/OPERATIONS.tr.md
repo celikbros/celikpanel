@@ -14,7 +14,7 @@ taşır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
 | Alan | Değer |
 |---|---|
 | Alan adı / IP | `celikpanel.cloud` → `2.25.80.4` (Hostinger KVM2, 2 vCPU / 8 GB) |
-| İşletim sistemi | Debian 13 (trixie), hostname `sunucu2.celikhost.com` (16 Tem: iki makine tek çatı altında — celikpanel.cloud kayıt firmasında askıda olduğundan makine kimlikleri celikhost.com'a taşındı) |
+| İşletim sistemi | Debian 13 (trixie), hostname `boston.celikhost.com` (16 Tem: makine kimlikleri celikhost.com çatısında, konuma göre adlandırıldı — celikpanel.cloud kayıt firmasında askıda) |
 | Erişim | `ssh root@2.25.80.4` — **yalnız anahtar** (parola girişi kullanılmaz; yetkili anahtarlar operatörde) |
 | Panel | `https://2.25.80.4:2083` (LE kurulana dek self-signed; alan adı çözülmüyorsa `curl --resolve` ile test) |
 | Dış engel (Tem 2026) | Alan adı kayıt operatöründe (Hostinger) askıda — çözümü operatör yürütüyor |
@@ -30,7 +30,7 @@ statik arayüz `/opt/celikpanel/web/`, systemd unit'leri `celikpanel-agent` (roo
 
 | Alan | Değer |
 |---|---|
-| Alan adı / IP | `sunucu1.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
+| Alan adı / IP | `frankfurt.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
 | İşletim sistemi | Arch Linux (bilinçli — bkz. D-004 eki: geliştirme-test hedefi) |
 | Panel | `https://72.62.38.15:2083` (16 Tem: tüm sunucular ve varsayılan tek portta — 2083) |
 | Erişim | `ssh root@72.62.38.15` — yalnız anahtar |

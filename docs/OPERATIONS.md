@@ -14,7 +14,7 @@ in [DECISIONS](DECISIONS.md); this is purely "how it is operated".
 | Field | Value |
 |---|---|
 | Domain / IP | `celikpanel.cloud` → `2.25.80.4` (Hostinger KVM2, 2 vCPU / 8 GB) |
-| OS | Debian 13 (trixie), hostname `sunucu2.celikhost.com` (Jul 16: both machines under one roof — celikpanel.cloud is suspended at the registrar, so machine identities moved to celikhost.com) |
+| OS | Debian 13 (trixie), hostname `boston.celikhost.com` (Jul 16: machine identities live under celikhost.com, named by location — celikpanel.cloud is suspended at the registrar) |
 | Access | `ssh root@2.25.80.4` — **key only** (no password logins; authorized keys held by the operator) |
 | Panel | `https://2.25.80.4:2083` (self-signed until LE; while the domain does not resolve, test with `curl --resolve`) |
 | External blocker (Jul 2026) | Domain suspended at the registrar (Hostinger) — the operator is handling it |
@@ -30,7 +30,7 @@ static UI at `/opt/celikpanel/web/`, systemd units `celikpanel-agent` (root) + `
 
 | Field | Value |
 |---|---|
-| Domain / IP | `sunucu1.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
+| Domain / IP | `frankfurt.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
 | OS | Arch Linux (deliberate — see the D-004 amendment: dev-test target) |
 | Panel | `https://72.62.38.15:2083` (Jul 16: every server and the default now share one port — 2083) |
 | Access | `ssh root@72.62.38.15` — key only |
