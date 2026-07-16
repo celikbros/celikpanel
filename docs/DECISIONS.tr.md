@@ -232,6 +232,13 @@ kurulum tahmin etmek yerine dürüstçe "bu dağıtımda henüz otomatik kurulam
 der. Not: dnf module stream'leri (`postgresql:16` vs `:18`) orada gerçek bir
 sürüm seçiciyi anlamlı kılar — dnf desteği eklersek UI buna hazır.
 
+*Ek (16 Tem, operatör kararı):* Arch artık bir **geliştirme-test hedefi** —
+taşınabilirlik sözünü dürüst tutmak için ikinci test sunucusu bilerek Arch'ta.
+`install.sh` pacman'i destekler (ön gereksinimler, araç zinciri mimarisi
+`uname -m` ile, dürüst "güvenlik-yalnız kanal yok" notu). Kapsam bilinçli:
+panel çekirdeği Arch'ta kurulur ve çalışır; **servis kataloğu** (panelden
+nginx, posta, DNS, DB motorları) apt'ye özgü kalır ve bunu UI'da söyler.
+
 ---
 
 ## D-003 · Servis kataloğu: her şeyi göster, çakışmayla engelle — "yönetilmiyor" ile değil

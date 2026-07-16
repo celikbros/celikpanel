@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# CelikPanel installer — one command from a fresh Ubuntu 24.04 to a login
-# screen. Idempotent: safe to re-run to upgrade an existing install.
+# CelikPanel installer — one command from a fresh Ubuntu 24.04 (first-class
+# target) or Arch Linux (dev-test target) to a login screen. Idempotent: safe
+# to re-run to upgrade an existing install.
 #
-# CelikPanel kurulumu — temiz bir Ubuntu 24.04'ten giriş ekranına tek komut.
-# Bağımsızdır: mevcut bir kurulumu yükseltmek için yeniden çalıştırmak
-# güvenlidir.
+# CelikPanel kurulumu — temiz bir Ubuntu 24.04'ten (birinci sınıf hedef) ya da
+# Arch Linux'tan (geliştirme-test hedefi) giriş ekranına tek komut. Bağımsızdır:
+# mevcut bir kurulumu yükseltmek için yeniden çalıştırmak güvenlidir.
 #
 #   sudo ./install.sh
 #
@@ -36,8 +37,21 @@ ok() { c '32' "    ✓ $1"; }
 die() { c '1;31' "HATA: $1" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
-command -v systemctl >/dev/null || die "systemd gerekli (Ubuntu/Debian)"
-command -v apt-get >/dev/null || die "bu kurulum apt tabanlı dağıtımlar içindir"
+command -v systemctl >/dev/null || die "systemd gerekli"
+
+# Package manager: apt (Ubuntu/Debian, the first-class tested target) and
+# pacman (Arch, dev-test target since Jul 16) are supported. Anything else
+# fails honestly instead of guessing.
+# Paket yöneticisi: apt (Ubuntu/Debian, birinci sınıf test hedefi) ve pacman
+# (Arch, 16 Tem'den beri geliştirme-test hedefi) desteklenir. Gerisi tahmin
+# etmek yerine dürüstçe durur.
+if command -v apt-get >/dev/null; then
+    PKG_FAMILY=apt
+elif command -v pacman >/dev/null; then
+    PKG_FAMILY=pacman
+else
+    die "desteklenen paket yöneticisi yok (apt veya pacman gerekli)"
+fi
 
 # 1. Minimal prerequisites ---------------------------------------------------
 # The panel and agent are self-contained (static Go binaries + embedded
@@ -72,13 +86,27 @@ command -v apt-get >/dev/null || die "bu kurulum apt tabanlı dağıtımlar içi
 # "firewall'u sürprizle açma" kuralına uyar.
 if [ "${SKIP_DEPS:-0}" != "1" ]; then
     step "Küçük ön gereksinimler (curl, tar, xz, nftables)"
-    export DEBIAN_FRONTEND=noninteractive
-    # A broken third-party repo must not abort the install; the packages we
-    # need come from the base archives and may already be cached.
-    # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
-    # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
-    apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
-    apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
+    case "$PKG_FAMILY" in
+    apt)
+        export DEBIAN_FRONTEND=noninteractive
+        # A broken third-party repo must not abort the install; the packages we
+        # need come from the base archives and may already be cached.
+        # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
+        # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
+        apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
+        apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
+        ;;
+    pacman)
+        # --needed skips what's already installed; we refresh the package
+        # index but deliberately do NOT -Syu the whole system — a panel
+        # installer upgrading every package would be exactly the kind of
+        # surprise the constitution forbids.
+        # --needed kuruluyu atlar; paket dizinini tazeleriz ama bilerek tüm
+        # sistemi -Syu ile YÜKSELTMEYİZ — her paketi yükselten bir panel
+        # kurucusu, anayasanın yasakladığı türden bir sürpriz olurdu.
+        pacman -Sy --noconfirm --needed tar xz curl ca-certificates nftables >/dev/null
+        ;;
+    esac
     ok "hazır"
 else
     step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
@@ -96,7 +124,7 @@ fi
 # kimse hatırlamak zorunda kalmadan yamalı tutar. Yalnız güvenlik kaynağı —
 # asla özellik yükseltmesi; barındırma kutusu davranış değişikliğiyle
 # şaşırmaz, yalnız düzeltmeyle. SKIP_SECURITY_UPDATES=1 devre dışı bırakır.
-if [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ]; then
+if [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "apt" ]; then
     step "Otomatik güvenlik yamaları (unattended-upgrades)"
     export DEBIAN_FRONTEND=noninteractive
     if apt-get install -y -qq unattended-upgrades >/dev/null 2>&1; then
@@ -112,6 +140,13 @@ AUTOCONF
     else
         c '33' "    unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
     fi
+elif [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "pacman" ]; then
+    # Arch is rolling release: there is no security-only patch channel to
+    # subscribe to, so we say so instead of pretending.
+    # Arch yuvarlanan sürümdür: abone olunacak güvenlik-yalnız yama kanalı
+    # yoktur; öyleymiş gibi yapmak yerine bunu söyleriz.
+    step "Otomatik güvenlik yamaları"
+    c '33' "    Arch'ta güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun"
 fi
 
 # 2. Service user & group ----------------------------------------------------
@@ -137,12 +172,24 @@ GO_VERSION=1.25.0
 NODE_VERSION=24.18.0
 TOOLCHAIN=/opt/celikpanel/.toolchain
 
+# Toolchain download architecture, in Go/Node naming (amd64/arm64). uname -m
+# instead of dpkg so this works on every distro.
+# Araç zinciri indirme mimarisi, Go/Node adlandırmasıyla (amd64/arm64).
+# dpkg yerine uname -m — böylece her dağıtımda çalışır.
+dl_arch() {
+    case "$(uname -m)" in
+        x86_64)  echo amd64 ;;
+        aarch64) echo arm64 ;;
+        *) die "desteklenmeyen mimari: $(uname -m)" ;;
+    esac
+}
+
 bootstrap_go() {
     command -v go >/dev/null && { echo go; return; }
     [ -x "$TOOLCHAIN/go/bin/go" ] && { echo "$TOOLCHAIN/go/bin/go"; return; }
     c '33' "    Go $GO_VERSION indiriliyor…" >&2
     mkdir -p "$TOOLCHAIN"
-    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(dpkg --print-architecture).tar.gz" \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(dl_arch).tar.gz" \
         | tar -xz -C "$TOOLCHAIN" || die "Go indirilemedi"
     echo "$TOOLCHAIN/go/bin/go"
 }
@@ -151,7 +198,7 @@ bootstrap_node() {
     command -v npm >/dev/null && { echo "$(command -v node | xargs dirname)"; return; }
     [ -x "$TOOLCHAIN/node/bin/npm" ] && { echo "$TOOLCHAIN/node/bin"; return; }
     c '33' "    Node $NODE_VERSION indiriliyor…" >&2
-    local arch; arch=$(dpkg --print-architecture); [ "$arch" = "amd64" ] && arch=x64
+    local arch; arch=$(dl_arch); [ "$arch" = "amd64" ] && arch=x64
     mkdir -p "$TOOLCHAIN/node"
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz" \
         | tar -xJ -C "$TOOLCHAIN/node" --strip-components=1 || die "Node indirilemedi"

@@ -26,6 +26,15 @@ statik arayüz `/opt/celikpanel/web/`, systemd unit'leri `celikpanel-agent` (roo
 **⚠️ Bir numaralı tuzak:** `celikpanel-agent`'ı durdurmak/yeniden başlatmak paneli de düşürür
 (unit bağımlılığı). Agent'a dokunan her dağıtımın SONUNDA `systemctl start celikpanel-panel` çalıştırın.
 
+## 1b. İkinci test sunucusu (Arch — taşınabilirlik muhafızı)
+
+| Alan | Değer |
+|---|---|
+| Alan adı / IP | `sunucu1.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
+| İşletim sistemi | Arch Linux (bilinçli — bkz. D-004 eki: geliştirme-test hedefi) |
+| Erişim | `ssh root@72.62.38.15` — yalnız anahtar |
+| Rol | Her değişiklik İKİ sunucuda da test edilir (16 Tem operatör kararı). Arch'ta beklenen fark: servis kataloğu "otomatik kurulamıyor" der (apt'ye özgü) — bu hata değil, dürüst davranıştır |
+
 ## 2. Dağıtım reçeteleri
 
 Üç değişiklik türü, üç reçete. Hepsi dev makinede derlenir; sunucuya yalnız ürün kopyalanır

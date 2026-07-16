@@ -228,6 +228,13 @@ but installs honestly say "not automatable on this distro yet" rather than
 guess. Note: dnf module streams (`postgresql:16` vs `:18`) would make a real
 version picker meaningful there — the UI is ready for it if we add dnf support.
 
+*Amendment (Jul 16, operator decision):* Arch is now a **dev-test target** —
+we keep a second test server on Arch precisely to keep the portability promise
+honest. `install.sh` supports pacman (prerequisites, toolchain arch via
+`uname -m`, honest "no security-only channel" note). Scope is deliberate: the
+panel core installs and runs on Arch; the **service catalog** (nginx, mail,
+DNS, DB engines from the panel) remains apt-only and says so in the UI.
+
 ---
 
 ## D-003 · Service catalogue: show everything, block by conflict — not by "unmanaged"
