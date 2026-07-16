@@ -112,6 +112,11 @@ What an operator needs at 3 a.m.:
 - **Secondary-DNS truth:** today ns1/ns2 point at the same machine (a single point of
   failure); a secondary PowerDNS (AXFR) on a cheap second VPS, or honest documentation (added Jul 11)
 - One-click panel self-update in the UI (update.sh's front end) · WebSocket live notifications
+- **Clean start:** the panel marks catalog services it did not install itself as "foreign"
+  (any catalog service with no `service.install` audit-log entry) and offers removal with the
+  operator's consent — adopt or evict, the mirror of the Import philosophy. Field proof (Jul 16):
+  Hostinger's Arch image shipped a dormant bind; the setup journey counted "DNS installed: Done".
+  Builds naturally on B3.
 
 **Exit criterion:** a killed service alerts within a minute; a full restore from remote backup succeeds on a fresh VPS.
 

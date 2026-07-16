@@ -111,6 +111,10 @@ Operatörün gece 3'te ihtiyaç duyduğu şeyler:
 - **İkincil DNS gerçeği:** bugün ns1/ns2 aynı makineyi gösteriyor (tek nokta arızası);
   ikinci ucuz VPS'e secondary PowerDNS (AXFR) ya da dürüst belgeleme (11 Tem eklendi)
 - Arayüzden tek tık panel güncellemesi (update.sh'ın ön yüzü) · WebSocket canlı bildirimler
+- **Temiz başlangıç:** panel, kendisinin kurmadığı katalog servislerini "yabancı" diye işaretler
+  (audit log'da `service.install` kaydı olmayan her katalog servisi) ve operatör onayıyla kaldırmayı
+  önerir — sahiplen ya da tahliye et, Import felsefesinin aynası. Saha kanıtı (16 Tem): Hostinger
+  Arch imajı uyuyan bir bind ile geldi; kurulum yolculuğu "DNS kuruldu: Done" saydı. B3 üstüne oturur.
 
 **Çıkış ölçütü:** öldürülen servis bir dakikada uyarı üretiyor; uzak yedekten tam geri yükleme temiz VPS'te başarılı.
 
