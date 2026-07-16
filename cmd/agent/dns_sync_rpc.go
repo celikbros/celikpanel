@@ -207,6 +207,18 @@ api=no
 		resp.Error = err.Error()
 		return nil
 	}
+	// The agent's UMask=0027 turns the 0755 above into 0750, and the pdns
+	// user (not in root's group) cannot even traverse the directory — pdns
+	// died with "pdns.d is not accessible". Explicit chmod bypasses umask,
+	// same as for the drop-in file below.
+	// Agent'ın UMask=0027'si yukarıdaki 0755'i 0750'ye çevirir; root'un
+	// grubunda olmayan pdns kullanıcısı dizinden geçemez bile — pdns "pdns.d
+	// is not accessible" ile öldü. Açık chmod, aşağıdaki drop-in dosyasında
+	// olduğu gibi umask'i atlar.
+	if err := os.Chmod(confDir, 0o755); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 	mainConf := "/etc/powerdns/pdns.conf"
 	if data, err := os.ReadFile(mainConf); err == nil {
 		hasInclude := false
