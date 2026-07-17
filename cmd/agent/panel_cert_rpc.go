@@ -120,6 +120,21 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// başlatır — yenileme kimsenin bir şey hatırlamasını gerektirmez.
 	writePanelCertDeployHook(domain, req.TLSDir)
 
+	// "certbot's own timer" must actually exist and run: Debian's package
+	// enables certbot.timer by itself, Arch ships certbot-renew.timer
+	// DISABLED. Enable whichever this distro has — a certificate that
+	// silently dies in 90 days is a trap, not a feature. Caught live on Arch.
+	// "certbot'un kendi zamanlayıcısı" gerçekten var olmalı ve koşmalı:
+	// Debian'ın paketi certbot.timer'ı kendisi etkinleştirir, Arch
+	// certbot-renew.timer'ı KAPALI getirir. Bu dağıtımda hangisi varsa aç —
+	// 90 günde sessizce ölen sertifika özellik değil tuzaktır. Arch'ta
+	// canlıda yakalandı.
+	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
+		if exec.Command("systemctl", "enable", "--now", timer).Run() == nil {
+			break
+		}
+	}
+
 	resp.Issued = true
 	resp.ExpiresAt = panelCertExpiry(filepath.Join(req.TLSDir, "panel.crt"))
 	if installedCertbot {
