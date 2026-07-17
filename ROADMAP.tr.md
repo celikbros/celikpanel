@@ -289,6 +289,12 @@ kırmızı ve sahibinin INBOX'ında.
 ### v0.4 — İşletim Güveni
 Operatörün gece 3'te ihtiyaç duyduğu şeyler:
 - İzleme + uyarı (servis düştü, disk doldu, sertifika hatası → posta/webhook) · panelde log görüntüleyici
+- **Metrik tarihi (Plesk kıyasından, 17 Tem):** bugünkü kartlar anlık değer gösterir, hikâye göstermez.
+  Agent'ta hafif örnekleyici — CPU/RAM/disk/trafik N saniyede bir SQLite halkalı tabloya, eski veri
+  otomatik seyreltilir (dış bağımlılık YOK: Prometheus/Grafana değil, anayasa korunur). Pano kartlarına
+  sparkline (kart sade kalır); karta tıklayınca 24 saat / 7 gün detay grafiği. Uyarı eşikleri aynı
+  veriyi okur — grafik ve alarm tek altyapının iki yüzü. Çok-lokasyonlu dış uptime izleme bilinçli
+  hedef-dışı: dürüst cevap heartbeat + "UptimeRobot/360 kullanın".
 - **Uyarı kanalının kendi sağlığı:** uyarılar posta VE webhook'tan bağımsız iki kanaldan gider (posta
   kuyruğa giremezse webhook'a düşer) + dışa dönük heartbeat — panel N dakikada bir operatörün seçtiği
   dış uca ping atar, kesilince alarm DIŞARIDAN çalar. En olası arıza, uyarıyı taşıyacak kanalın ölmesidir.

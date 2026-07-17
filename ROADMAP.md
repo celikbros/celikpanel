@@ -307,6 +307,13 @@ deliberately exiting 1 shows red in the list and lands in its owner's INBOX.
 ### v0.4 — Operational Trust
 What the operator needs at 3 a.m.:
 - Monitoring + alerts (service down, disk full, certificate error → mail/webhook) · log viewer in the panel
+- **Metric history (from the Plesk comparison, Jul 17):** today's cards show an instant value, not a
+  story. A lightweight sampler in the agent — CPU/RAM/disk/traffic every N seconds into a SQLite ring
+  table, old data auto-downsampled (NO external dependency: no Prometheus/Grafana, the constitution
+  holds). Sparklines on the dashboard cards (cards stay quiet); clicking a card opens a 24-hour / 7-day
+  detail chart. Alert thresholds read the same data — charts and alarms are two faces of one substrate.
+  Multi-location external uptime monitoring is deliberately out of scope: the honest answer is the
+  heartbeat + "use UptimeRobot/360".
 - **The alert channel's own health:** alerts go via two independent channels, mail AND webhook (if mail
   can't enter the queue it falls to webhook) + an outward heartbeat — the panel pings an external
   endpoint the operator chose every N minutes; when it stops, the alarm rings FROM OUTSIDE. The most
