@@ -6,6 +6,7 @@ import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import { type PanelUser, type ServicePlan } from '../lib/api';
 import { PageHeader, Button, EmptyState, StatusDot, inputClass } from './ui';
+import { readApiError, apiErrorText } from '../lib/apiError';
 
 // Account management: the admin/reseller view over the role hierarchy.
 // Everything here mirrors what the API enforces — role options, visibility
@@ -72,12 +73,13 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     }, []);
 
     // Conflict answers (quota, children, duplicates) carry real reasons from
-    // the API; show them as-is instead of a vague "something went wrong".
+    // the API; the coded contract picks a localized text when the refusal
+    // has a code, else the server message — never a vague generic.
     // Çakışma yanıtları (kota, alt hesap, mükerrer) API'den gerçek nedenlerle
-    // gelir; belirsiz bir hata yerine olduğu gibi göster.
+    // gelir; kodlu sözleşme, ret kodluysa yerelleştirilmiş metni, değilse
+    // sunucu mesajını seçer — asla belirsiz bir genel değil.
     const apiError = async (res: Response) => {
-        const text = (await res.text()).trim();
-        showToast('error', res.status === 409 || res.status === 400 ? text : t('common.error'));
+        showToast('error', apiErrorText(await readApiError(res), t));
     };
 
     const createUser = async () => {
@@ -323,7 +325,7 @@ function PlansTab() {
             body: JSON.stringify(editing),
         });
         if (!res.ok) {
-            showToast('error', (await res.text()).trim() || t('common.error'));
+            showToast('error', apiErrorText(await readApiError(res), t));
             return;
         }
         showToast('success', isNew ? t('plans.created') : t('plans.updated'));
@@ -335,7 +337,7 @@ function PlansTab() {
         if (!confirm(`${p.name}?`)) return;
         const res = await fetch(`/api/v1/plans/${p.id}`, { method: 'DELETE' });
         if (!res.ok) {
-            showToast('error', (await res.text()).trim() || t('common.error'));
+            showToast('error', apiErrorText(await readApiError(res), t));
             return;
         }
         showToast('success', t('plans.deleted'));

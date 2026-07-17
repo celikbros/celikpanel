@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../i18n';
+import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
 
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
@@ -258,6 +261,37 @@ export function EmptyState({
             <h3 className="text-lg font-semibold text-fg">{title}</h3>
             {hint && <p className="mt-1 text-sm text-fg-muted">{hint}</p>}
             {action && <div className="mt-5">{action}</div>}
+        </div>
+    );
+}
+
+// ErrorBanner: the ONE renderer of the API error contract. Shows the
+// localized text of a coded refusal and, when the refusal carries an
+// in-panel fix path, a button that goes there. Every new error display
+// uses this — hand-rolled red divs are legacy.
+// ErrorBanner: API hata sözleşmesinin TEK çizicisi. Kodlu reddin
+// yerelleştirilmiş metnini ve ret panel-içi çözüm yolu taşıyorsa oraya
+// giden düğmeyi gösterir. Her yeni hata gösterimi bunu kullanır — elle
+// yazılmış kırmızı div'ler eskidir.
+export function ErrorBanner({ error, className }: { error: ApiError | null; className?: string }) {
+    const { t } = useI18n();
+    const navigate = useNavigate();
+    if (!error) return null;
+    const actionLabel = apiErrorActionLabel(error, t);
+    return (
+        <div
+            className={`flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger ${className ?? ''}`}
+        >
+            <span className="min-w-0 flex-1">{apiErrorText(error, t)}</span>
+            {error.action && (
+                <button
+                    type="button"
+                    onClick={() => navigate(error.action!)}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90"
+                >
+                    {actionLabel}
+                </button>
+            )}
         </div>
     );
 }

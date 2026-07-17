@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import { Button, StatusDot, inputClass } from './ui';
+import { readApiError, apiErrorText } from '../lib/apiError';
 
 // Hosting type for a domain (roadmap 3A): pick what the site IS, fill the
 // type-specific fields, apply. For node projects the live application panel
@@ -85,7 +86,7 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                 body: JSON.stringify(state),
             });
             if (!res.ok) {
-                showToast('error', (await res.text()).trim() || t('common.error'));
+                showToast('error', apiErrorText(await readApiError(res), t));
                 return;
             }
             showToast('success', t('hosting.saved'));
@@ -254,7 +255,7 @@ function AppPanel({ domainId }: { domainId: number }) {
         setBusy(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/app/${action}`, { method: 'POST' });
-            if (!res.ok) showToast('error', (await res.text()).trim() || t('common.error'));
+            if (!res.ok) showToast('error', apiErrorText(await readApiError(res), t));
             await new Promise((r) => setTimeout(r, 800));
             refresh();
         } finally {
@@ -329,7 +330,7 @@ function AdminNodeInstall({ onInstalled }: { onInstalled: () => void }) {
                 body: JSON.stringify({ version }),
             });
             if (!res.ok) {
-                showToast('error', (await res.text()).trim() || t('common.error'));
+                showToast('error', apiErrorText(await readApiError(res), t));
                 return;
             }
             showToast('success', t('hosting.installed'));

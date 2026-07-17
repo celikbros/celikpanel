@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, User, Key } from 'lucide-react';
 import { showToast } from './Toast';
+import { readApiError } from '../lib/apiError';
 
 interface AddUserModalV2Props {
     serverId: number;
@@ -37,8 +38,7 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
             });
 
             if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Failed to create user');
+                throw new Error((await readApiError(res)).message || 'Failed to create user');
             }
 
             const data = await res.json();

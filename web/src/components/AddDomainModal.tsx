@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Globe, X, Lock, Server, FileCode2, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { ErrorBanner } from './ui';
+import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 
 interface AddDomainModalProps {
     onClose: () => void;
@@ -35,7 +37,11 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     const [phpVersion, setPHPVersion] = useState('');
     const [sslEnabled, setSSLEnabled] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    // The full contract object, not just text: a coded refusal may carry an
+    // in-panel fix path that ErrorBanner turns into a button.
+    // Yalnız metin değil sözleşme nesnesi: kodlu ret, ErrorBanner'ın düğmeye
+    // çevirdiği panel-içi çözüm yolu taşıyabilir.
+    const [error, setError] = useState<ApiError | null>(null);
 
     // Load capabilities once, then default to the best type that can actually
     // work here: php if possible, else static, else DNS-only.
@@ -119,16 +125,19 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
             });
 
             if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || t('domains.add.failed'));
+                const apiErr = await readApiError(res);
+                if (!apiErr.message && !apiErr.code) apiErr.message = t('domains.add.failed');
+                setError(apiErr);
+                showToast('error', apiErrorText(apiErr, t, 'domains.add.failed'));
+                return;
             }
 
             showToast('success', t('domains.add.created', { name: domainName }));
             onSuccess();
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : t('domains.add.failed');
-            setError(msg);
-            showToast('error', msg);
+        } catch {
+            const apiErr: ApiError = { message: t('domains.add.failed') };
+            setError(apiErr);
+            showToast('error', apiErr.message);
         } finally {
             setLoading(false);
         }
@@ -152,11 +161,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                     </button>
                 </div>
 
-                {error && (
-                    <div className="mb-6 p-4 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
-                        {error}
-                    </div>
-                )}
+                <ErrorBanner error={error} className="mb-6" />
 
                 {dnsMissing && (
                     <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg text-sm text-fg">

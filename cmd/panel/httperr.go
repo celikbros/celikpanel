@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 )
@@ -15,13 +16,59 @@ import (
 // taşır; bunlar yalnızca saldırganın işine yarar. Tam hata log'a gider;
 // istemci, duruma uygun genel bir mesaj alır.
 
+// The API error contract (B1, Jul 18): every error body is ONE JSON shape.
+// `error` is the developer-authored human message (always present); `code`
+// is a STABLE machine-readable constant for deliberate refusals — the
+// frontend translates it via i18n (`err.<CODE>`) and, when `action` names an
+// in-panel path, renders a "go fix it" button. A refusal without a code is
+// legacy; new deliberate refusals must ship with one.
+//
+// API hata sözleşmesi (B1, 18 Tem): her hata gövdesi TEK JSON biçimidir.
+// `error` geliştirici yazımı insan-okur mesajdır (her zaman var); `code`
+// bilinçli retler için SABİT makine-okur sabittir — ön yüz i18n ile çevirir
+// (`err.<CODE>`) ve `action` panel-içi bir yol adlandırıyorsa "düzeltmeye
+// git" düğmesi çizer. Kodsuz ret eskidir; yeni bilinçli ret kodla doğar.
+
+type apiErrorBody struct {
+	Error  string `json:"error"`
+	Code   string `json:"code,omitempty"`
+	Action string `json:"action,omitempty"`
+}
+
+// Stable refusal codes. Renaming one is an API break — don't.
+// Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
+const (
+	errCodeInternal          = "INTERNAL"
+	errCodeAuthRequired      = "AUTH_REQUIRED"
+	errCodeAdminOnly         = "ADMIN_ONLY"
+	errCodeAccountSuspended  = "ACCOUNT_SUSPENDED"
+	errCodeDNSServerRequired = "DNS_SERVER_REQUIRED"
+	errCodeWebServerRequired = "WEB_SERVER_REQUIRED"
+	errCodePHPRequired       = "PHP_REQUIRED"
+	errCodeNoSubscription    = "NO_SUBSCRIPTION"
+	errCodeQuotaDomains      = "QUOTA_DOMAINS_EXCEEDED"
+	errCodeQuotaDisk         = "QUOTA_DISK_EXCEEDED"
+	errCodeEntitlement       = "ENTITLEMENT_REQUIRED"
+	errCodeFirewallNoEngine  = "FIREWALL_ENGINE_MISSING"
+)
+
+// writeCodedError is the single writer of the contract. action, when
+// non-empty, is an in-panel path that fixes the refusal (e.g. "/services").
+// writeCodedError, sözleşmenin tek yazıcısıdır. action boş değilse reti
+// düzelten panel-içi yoldur (örn. "/services").
+func writeCodedError(w http.ResponseWriter, status int, code, message, action string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action})
+}
+
 // writeServerError logs the internal error and returns a generic 500.
 // writeServerError iç hatayı log'lar ve genel bir 500 döndürür.
 func writeServerError(w http.ResponseWriter, err error) {
 	if err != nil {
 		log.Printf("[500] %v", err)
 	}
-	http.Error(w, "internal server error", http.StatusInternalServerError)
+	writeCodedError(w, http.StatusInternalServerError, errCodeInternal, "internal server error", "")
 }
 
 // writeClientError returns a 4xx with a safe, explicit message. The
@@ -31,7 +78,7 @@ func writeServerError(w http.ResponseWriter, err error) {
 // geliştirici tarafından yazılmalı, asla bir iç hata değerinden
 // türetilmemelidir.
 func writeClientError(w http.ResponseWriter, status int, message string) {
-	http.Error(w, message, status)
+	writeCodedError(w, status, "", message, "")
 }
 
 // writeAgentError handles a failed agent RPC. The agent's error string may

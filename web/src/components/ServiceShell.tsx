@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { EmptyState, StatusDot } from './ui';
+import { readApiError, apiErrorText } from '../lib/apiError';
 
 interface ManagedService {
     id: string;
@@ -74,7 +75,7 @@ export function ServiceShell({
                 body: JSON.stringify({ service_id: serviceId }),
             });
             if (!r.ok) {
-                showToast('error', (await r.text()).trim() || t('svc.actionFailed'));
+                showToast('error', apiErrorText(await readApiError(r), t, 'svc.actionFailed'));
                 return;
             }
             showToast('success', t('svc.installed', { name }));

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Database, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { readApiError } from '../lib/apiError';
 
 interface DomainDatabaseManagerProps {
     domainId: number;
@@ -158,8 +159,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                 setDbPassword('');
                 loadDatabases();
             } else {
-                const error = await res.text();
-                showToast('error', error || 'Failed to create database');
+                showToast('error', (await readApiError(res)).message || 'Failed to create database');
             }
         } catch (err) {
             console.error(err);

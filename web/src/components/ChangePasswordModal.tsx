@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { KeyRound, X } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { readApiError, apiErrorText } from '../lib/apiError';
 import { Button, inputClass } from './ui';
 
 // Self-service password change for the signed-in user; the current password
@@ -32,7 +33,7 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
                 return;
             }
             if (!res.ok) {
-                showToast('error', (await res.text()).trim() || t('common.error'));
+                showToast('error', apiErrorText(await readApiError(res), t));
                 return;
             }
             showToast('success', t('profile.changed'));

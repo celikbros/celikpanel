@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Database, Key } from 'lucide-react';
 import { showToast } from './Toast';
+import { readApiError } from '../lib/apiError';
 
 interface AddDatabaseModalV2Props {
     serverId: number;
@@ -75,8 +76,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
             });
 
             if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Failed to create database');
+                throw new Error((await readApiError(res)).message || 'Failed to create database');
             }
 
             const data = await res.json();

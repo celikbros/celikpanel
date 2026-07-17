@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Network, Database, FileText, CheckCircle2, XCircle, Info } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { readApiError, apiErrorText } from '../lib/apiError';
 import type { TranslationKey } from '../i18n/en';
 import { PageHeader, Button, inputClass } from './ui';
 
@@ -68,7 +69,7 @@ export function ImportPage() {
                 body: JSON.stringify({ path }),
             });
             if (!res.ok) {
-                showToast('error', (await res.text()).trim() || t('common.error'));
+                showToast('error', apiErrorText(await readApiError(res), t));
                 return;
             }
             const p: Preview = await res.json();
@@ -97,7 +98,7 @@ export function ImportPage() {
                 }),
             });
             if (!res.ok) {
-                showToast('error', (await res.text()).trim() || t('common.error'));
+                showToast('error', apiErrorText(await readApiError(res), t));
                 return;
             }
             const data = await res.json();

@@ -30,13 +30,13 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 
 		cookie, err := r.Cookie(sessionCookieName)
 		if err != nil {
-			writeClientError(w, http.StatusUnauthorized, "authentication required")
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
 			return
 		}
 
 		userID, err := p.sessions.Validate(r.Context(), cookie.Value)
 		if err != nil {
-			writeClientError(w, http.StatusUnauthorized, "authentication required")
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
 			return
 		}
 
@@ -53,11 +53,11 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// ilerlemez — okunamayan kullanıcı, rolsüz değil geçersiz oturumdur.
 		u, err := p.users.GetByID(r.Context(), userID)
 		if err != nil {
-			writeClientError(w, http.StatusUnauthorized, "authentication required")
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
 			return
 		}
 		if u.Status == "suspended" {
-			writeClientError(w, http.StatusForbidden, "account suspended")
+			writeCodedError(w, http.StatusForbidden, errCodeAccountSuspended, "account suspended", "")
 			return
 		}
 		c := &Caller{ID: userID, Role: u.Role}
@@ -70,7 +70,7 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// Kiracı verisi (domain'ler) ise kendi işleyicilerinde sahiplik
 		// süzgecinden geçer.
 		if isAdminOnlyPath(r.URL.Path) && c.Role != roleAdmin {
-			writeClientError(w, http.StatusForbidden, "administrator access required")
+			writeCodedError(w, http.StatusForbidden, errCodeAdminOnly, "administrator access required", "")
 			return
 		}
 

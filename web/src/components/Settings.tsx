@@ -5,6 +5,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, inputClass } from './ui';
+import { readApiError } from '../lib/apiError';
 
 // Account settings. Today it hosts two-factor authentication; admins also
 // manage the panel's own certificate here.
@@ -181,7 +182,7 @@ function TwoFactorPanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: code.trim() }),
             });
-            if (!r.ok) throw new Error((await r.text()).trim());
+            if (!r.ok) throw new Error((await readApiError(r)).message);
             showToast('success', t('settings.2fa.enabled'));
             setSetup(null);
             setCode('');

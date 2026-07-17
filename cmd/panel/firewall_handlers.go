@@ -147,6 +147,18 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
+		// Coded pre-check: turning on without the engine is a deliberate,
+		// explainable refusal — the fix lives on the Services page.
+		// Kodlu ön-denetim: motor yokken açmak bilinçli, açıklanabilir bir
+		// rettir — çözümü Services sayfasındadır.
+		if req.Enabled {
+			var cur FirewallStatusResp
+			if err := p.agentClient.Call("Agent.FirewallStatus", &struct{}{}, &cur); err == nil && !cur.EngineAvailable {
+				writeCodedError(w, http.StatusConflict, errCodeFirewallNoEngine,
+					"the firewall engine (nftables) is not installed — install it from Services first", "/services")
+				return
+			}
+		}
 		call := applyFirewallReq{Enabled: req.Enabled}
 		if req.Enabled {
 			call.TCPPorts, call.UDPPorts = p.desiredFirewallPorts()

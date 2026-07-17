@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Database, X, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
+import { readApiError } from '../lib/apiError';
 
 interface AddDatabaseModalProps {
     onClose: () => void;
@@ -46,15 +47,7 @@ export function AddDatabaseModal({ onClose, onSuccess }: AddDatabaseModalProps) 
             });
 
             if (!res.ok) {
-                const errorText = await res.text();
-                let errorMessage = 'Failed to create database';
-                try {
-                    const errorData = JSON.parse(errorText);
-                    errorMessage = errorData.error || errorData.message || errorText;
-                } catch {
-                    errorMessage = errorText || 'Failed to create database';
-                }
-                throw new Error(errorMessage);
+                throw new Error((await readApiError(res)).message || 'Failed to create database');
             }
 
             const data = await res.json();

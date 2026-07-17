@@ -143,19 +143,22 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	caps := p.hostingCaps()
 	if caps.DNSServer == "" {
-		writeClientError(w, http.StatusConflict,
-			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served")
+		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
+			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served",
+			"/services")
 		return
 	}
 	if req.ProjectType == "php" || req.ProjectType == "static" {
 		if caps.WebServer == "" {
-			writeClientError(w, http.StatusConflict,
-				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type")
+			writeCodedError(w, http.StatusConflict, errCodeWebServerRequired,
+				"no web server is installed — install Nginx or Apache from Services, or choose the DNS-only type",
+				"/services")
 			return
 		}
 		if req.ProjectType == "php" && len(caps.PHPVersions) == 0 {
-			writeClientError(w, http.StatusConflict,
-				"PHP-FPM is not installed — install it from Services, or choose the static or DNS-only type")
+			writeCodedError(w, http.StatusConflict, errCodePHPRequired,
+				"PHP-FPM is not installed — install it from Services, or choose the static or DNS-only type",
+				"/services")
 			return
 		}
 	}
@@ -205,7 +208,8 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 				`SELECT id FROM subscriptions WHERE owner_id = ? ORDER BY id LIMIT 1`,
 				caller.ID).Scan(&req.SubscriptionID)
 			if err != nil {
-				writeClientError(w, http.StatusConflict, "no subscription on this account; ask your provider to assign a plan")
+				writeCodedError(w, http.StatusConflict, errCodeNoSubscription,
+					"no subscription on this account; ask your provider to assign a plan", "")
 				return
 			}
 		}
@@ -226,11 +230,11 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	// altında yeni siteyi reddeder; çalışan bir betiğin diski doldurmasını
 	// (henüz) sertçe durdurmaz (o, OS dosya sistemi kotası ister).
 	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDomains); err != nil {
-		writeClientError(w, http.StatusConflict, err.Error())
+		writeCodedError(w, http.StatusConflict, errCodeQuotaDomains, err.Error(), "")
 		return
 	}
 	if err := p.checkSubscriptionQuota(r.Context(), req.SubscriptionID, quotaDisk); err != nil {
-		writeClientError(w, http.StatusConflict, err.Error())
+		writeCodedError(w, http.StatusConflict, errCodeQuotaDisk, err.Error(), "")
 		return
 	}
 

@@ -171,6 +171,27 @@ export const en = {
 
     'common.loading': 'Loading…',
     'common.error': 'Something went wrong.',
+    'common.goFix': 'Fix it',
+    // The API error contract (B1): localized texts for coded refusals.
+    // err.<CODE> overrides the server message; err.<CODE>.action labels the
+    // fix-it button when the refusal carries an in-panel path.
+    'err.AUTH_REQUIRED': 'Your session has expired — sign in again.',
+    'err.ADMIN_ONLY': 'This action requires an administrator.',
+    'err.ACCOUNT_SUSPENDED': 'This account is suspended.',
+    'err.INTERNAL': 'The server hit an internal error. Try again; if it persists, check the panel logs.',
+    'err.DNS_SERVER_REQUIRED': 'No DNS server is installed. A domain cannot exist here without its zone being served — install PowerDNS from Services first.',
+    'err.DNS_SERVER_REQUIRED.action': 'Install a DNS server',
+    'err.WEB_SERVER_REQUIRED': 'No web server is installed. Install Nginx or Apache from Services, or choose the DNS-only type.',
+    'err.WEB_SERVER_REQUIRED.action': 'Install a web server',
+    'err.PHP_REQUIRED': 'PHP-FPM is not installed. Install it from Services, or choose the static or DNS-only type.',
+    'err.PHP_REQUIRED.action': 'Install PHP-FPM',
+    'err.NO_SUBSCRIPTION': 'This account has no subscription yet — ask your provider to assign a plan.',
+    'err.QUOTA_DOMAINS_EXCEEDED': 'Your plan’s domain limit is reached. Remove a domain or upgrade your plan.',
+    'err.QUOTA_DISK_EXCEEDED': 'Your plan’s disk quota is full. Free some space or upgrade your plan.',
+    'err.ENTITLEMENT_REQUIRED': 'This feature requires an add-on your subscription does not include.',
+    'err.ENTITLEMENT_REQUIRED.action': 'View add-ons',
+    'err.FIREWALL_ENGINE_MISSING': 'The firewall engine (nftables) is not installed — install it from Services first.',
+    'err.FIREWALL_ENGINE_MISSING.action': 'Go to Services',
     'common.buildHint': 'The git revision this UI was built from. After a deploy + hard refresh, this changes if the new build is live.',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',

@@ -98,7 +98,8 @@ func (p *Panel) requireEntitlement(w http.ResponseWriter, r *http.Request, subsc
 	if prod != nil {
 		name = prod.Name
 	}
-	writeClientError(w, http.StatusPaymentRequired, "this feature requires the \""+name+"\" add-on")
+	writeCodedError(w, http.StatusPaymentRequired, errCodeEntitlement,
+		"this feature requires the \""+name+"\" add-on", "/addons")
 	return false
 }
 
