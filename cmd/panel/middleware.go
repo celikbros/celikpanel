@@ -46,14 +46,21 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// Çağıranı (kimlik + rol) iliştir; böylece işleyiciler sahipliği
 		// uygulayabilir. Askıya alınmış hesaplar, ellerinde hangi oturum
 		// olursa olsun anında kesilir.
-		c := &Caller{ID: userID}
-		if u, err := p.users.GetByID(r.Context(), userID); err == nil {
-			if u.Status == "suspended" {
-				writeClientError(w, http.StatusForbidden, "account suspended")
-				return
-			}
-			c.Role = u.Role
+		// Fail closed: a request whose user record cannot be read never
+		// proceeds with an empty role — an unreadable user is treated as an
+		// invalid session, not as a roleless one.
+		// Kapalı-varsayılan: kullanıcı kaydı okunamayan istek boş rolle asla
+		// ilerlemez — okunamayan kullanıcı, rolsüz değil geçersiz oturumdur.
+		u, err := p.users.GetByID(r.Context(), userID)
+		if err != nil {
+			writeClientError(w, http.StatusUnauthorized, "authentication required")
+			return
 		}
+		if u.Status == "suspended" {
+			writeClientError(w, http.StatusForbidden, "account suspended")
+			return
+		}
+		c := &Caller{ID: userID, Role: u.Role}
 
 		// Server/OS-layer endpoints are administrator-only (ROLES.md: only the
 		// admin touches services, config files, and infrastructure). Tenant
@@ -119,10 +126,23 @@ func isPublicPath(r *http.Request) bool {
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
 // rotaları bilerek listelenmemiştir.
 func isAdminOnlyPath(path string) bool {
+	// /api/v2/ is deliberately NOT here anymore (B1 role split, Jul 17):
+	// its DB/user/grant endpoints are tenant-scoped inside their handlers
+	// (callerSubscriptionID + canAccessDBServer); only SERVER REGISTRATION
+	// stays admin, enforced in its own handlers — registering an arbitrary
+	// host/port/root-password is infrastructure, not tenant self-service.
+	// /dbtool/ likewise: any authenticated session may reach the proxy; the
+	// tools' own database-credential login is the real authorization layer.
+	// /api/v2/ artık bilerek burada DEĞİL (B1 rol ayrımı, 17 Tem): DB/
+	// kullanıcı/grant uçları kendi handler'larında kiracı-kapsamlı
+	// (callerSubscriptionID + canAccessDBServer); yalnız SUNUCU KAYDI admin
+	// kalır ve kendi handler'ında uygulanır — keyfi host/port/root-parola
+	// kaydı kiracı self-servisi değil altyapıdır. /dbtool/ de öyle: vekile
+	// kimlikli her oturum ulaşabilir; gerçek yetki katmanı araçların kendi
+	// veritabanı-kimlik girişidir.
 	adminPrefixes := []string{
 		"/api/v1/config",
 		"/api/v1/dovecot/",
-		"/dbtool/",
 		"/api/v1/fail2ban/",
 		"/api/v1/firewall",
 		"/api/v1/import/",
@@ -138,7 +158,6 @@ func isAdminOnlyPath(path string) bool {
 		"/api/v1/repo",
 		"/api/v1/service/",
 		"/api/v1/system/check",
-		"/api/v2/",
 	}
 	for _, prefix := range adminPrefixes {
 		if strings.HasPrefix(path, prefix) {

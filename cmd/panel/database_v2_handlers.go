@@ -125,6 +125,16 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 // handleCreateDatabaseServer creates a new database server
 func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// Server REGISTRATION is infrastructure, not tenant self-service:
+	// an arbitrary host/port/root-password record is an admin's business
+	// (B1 role split — the reason /api/v2/ left the blanket admin gate).
+	// Sunucu KAYDI kiracı self-servisi değil altyapıdır: keyfi host/port/
+	// root-parola kaydı yönetici işidir (B1 rol ayrımı — /api/v2/'nin
+	// battaniye admin kilidinden çıkmasının nedeni).
+	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
+		writeClientError(w, http.StatusForbidden, "administrator access required")
+		return
+	}
 	subscriptionID, err := p.callerSubscriptionID(r)
 	if err != nil {
 		writeClientError(w, http.StatusNotFound, "invalid request")
@@ -194,6 +204,15 @@ func (p *Panel) handleCreateDatabaseV2Server(w http.ResponseWriter, r *http.Requ
 // handleDeleteDatabaseServer deletes a database server
 func (p *Panel) handleDeleteDatabaseV2Server(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// The mirror of registration: unregistering a server is admin work too
+	// (B1 role split). Ownership is still verified below — an admin's own
+	// scope rules stay intact.
+	// Kaydın aynası: sunucu kaydını silmek de yönetici işidir (B1 rol
+	// ayrımı). Sahiplik aşağıda yine doğrulanır.
+	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
+		writeClientError(w, http.StatusForbidden, "administrator access required")
+		return
+	}
 	// Extract ID from path
 	serverID, err := getIDFromPath(r.URL.Path)
 	if err != nil {

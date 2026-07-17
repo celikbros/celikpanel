@@ -33,10 +33,14 @@ export const navItems: NavItem[] = [
     // subscription 1 (database_v2_handlers.go "TODO: Get from auth") and the
     // whole /api/v2/ prefix is admin-gated — non-admins only ever saw a
     // broken page here. Tenants manage their DBs on the domain detail tab.
-    // v2 DB API'si kiracı-kapsamlı olana dek yalnız admin: backend abonelik
-    // 1'i sabitliyor ve /api/v2/ tümüyle admin kilidinde — admin olmayanlar
-    // burada hep kırık sayfa gördü. Kiracılar DB'lerini domain detayında yönetir.
-    { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ['admin'], group: 'hosting', countKey: 'databases' },
+    // B1 role split (Jul 17): the v2 DB API is tenant-scoped and the blanket
+    // admin gate is gone — Databases is self-service again. Server
+    // REGISTRATION stays admin-only in the backend; this page has no
+    // register button anyway (servers are auto-discovered).
+    // B1 rol ayrımı (17 Tem): v2 DB API'si kiracı-kapsamlı, battaniye admin
+    // kilidi kalktı — Databases yeniden self-servis. Sunucu KAYDI arka uçta
+    // admin'de kalır; bu sayfada zaten kayıt düğmesi yok (oto-keşif).
+    { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ['admin', 'reseller', 'customer'], group: 'hosting', countKey: 'databases' },
     { id: 'users', path: '/users', labelKey: 'nav.users', icon: Users, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'addons', path: '/addons', labelKey: 'nav.addons', icon: Package, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'vpn', path: '/vpn', labelKey: 'nav.vpn', icon: Shield, roles: ALL, group: 'hosting' },
