@@ -208,10 +208,14 @@ function AdminDashboard() {
     // Setup journey — live completion; the card disappears when all done.
     // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
     const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string; cta?: TranslationKey; onAct?: () => void }[] = [
+        // Every CTA says what it actually does — "Go to services" on a button
+        // that opens the Domains page was a lie the operator caught (Jul 17).
+        // Her düğme gerçekten yaptığını söyler — Domains sayfasını açan
+        // düğmede "Go to services" yazması operatörün yakaladığı bir yalandı.
         { key: 'dashboard.step.panel', done: true, to: '/' },
         { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
-        { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains' },
-        { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings' },
+        { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains', cta: 'dashboard.addDomain' },
+        { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings', cta: 'dashboard.goSettings' },
         // The firewall step acts in place: the engine ships with install.sh,
         // so "turn on" is one honest click, not a scavenger hunt.
         // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
@@ -282,9 +286,15 @@ function AdminDashboard() {
                     )}
                     {installed.length === 0 && <p className="mt-1 text-xs text-fg-subtle">{t('dashboard.svcReady')}</p>}
                 </button>
-                <button
+                {/* The most visible surface must carry the action itself:
+                    this card announced "all ports are open" with no button,
+                    and the operator could not find the switch (Jul 17).
+                    En görünür yüzey eylemi kendisi taşımalı: bu kart "tüm
+                    portlar açık" diyor ama düğme taşımıyordu ve operatör
+                    anahtarı bulamadı (17 Tem). */}
+                <div
                     onClick={() => navigate('/services')}
-                    className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                    className="cursor-pointer rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
                 >
                     <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium text-fg-muted">{t('firewall.title')}</span>
@@ -299,11 +309,83 @@ function AdminDashboard() {
                         )}
                     </div>
                     <p className="mt-3 text-sm text-fg">{fw?.enabled ? t('dashboard.fwOnHint') : t('dashboard.fwOffHint')}</p>
-                    <p className="mt-1.5 text-xs text-fg-subtle">
-                        {fw?.enabled ? t('dashboard.fwPorts', { n: openPorts }) : ''}
-                    </p>
-                </button>
+                    {fw?.enabled ? (
+                        <p className="mt-1.5 text-xs text-fg-subtle">{t('dashboard.fwPorts', { n: openPorts })}</p>
+                    ) : (
+                        fw && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    turnOnFirewall();
+                                }}
+                                disabled={fwBusy}
+                                className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                            >
+                                {t('firewall.turnOn')}
+                            </button>
+                        )
+                    )}
+                </div>
             </div>
+
+            {/* Needs attention BEFORE the journey: an active problem outranks
+                guidance. Operator feedback (Jul 17): the alert list lived below
+                the fold while the top of the page stayed calm.
+                Needs attention yolculuktan ÖNCE: aktif sorun, rehberlikten
+                önce gelir. Operatör geri bildirimi (17 Tem): uyarı listesi
+                sayfanın altında kalırken üst taraf sakin görünüyordu. */}
+            {hasContent && (
+                <section className="mt-6">
+                    <SectionTitle
+                        icon={Bell}
+                        tint="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        title={t('dashboard.attention')}
+                        right={
+                            attention.length > 0 ? (
+                                <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
+                                    {t('dashboard.warnCount', { n: attention.length })}
+                                </span>
+                            ) : undefined
+                        }
+                    />
+                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+                        {attention.length === 0 ? (
+                            <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-fg-muted">
+                                <StatusDot ok /> {t('dashboard.allGood')}
+                            </div>
+                        ) : (
+                            <ul>
+                                {attention.map((a) => (
+                                    <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
+                                        <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
+                                        <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
+                                        {/* An item with a direct action gets a REAL button — a quiet
+                                            text link is how the operator missed the firewall switch.
+                                            Doğrudan eylemi olan kalem GERÇEK düğme alır — operatörün
+                                            firewall anahtarını kaçırmasının sebebi sessiz metin bağıydı. */}
+                                        {a.onAct ? (
+                                            <button
+                                                onClick={a.onAct}
+                                                disabled={fwBusy}
+                                                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                            >
+                                                {a.action}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => navigate(a.to)}
+                                                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                                            >
+                                                {a.action} <ArrowRight className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </section>
+            )}
 
             {/* Setup journey / Kurulum yolculuğu */}
             {journeyOpen && (
@@ -364,60 +446,6 @@ function AdminDashboard() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
-                </section>
-            )}
-
-            {/* Needs attention / İlgi istiyor */}
-            {hasContent && (
-                <section className="mt-6">
-                    <SectionTitle
-                        icon={Bell}
-                        tint="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        title={t('dashboard.attention')}
-                        right={
-                            attention.length > 0 ? (
-                                <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
-                                    {t('dashboard.warnCount', { n: attention.length })}
-                                </span>
-                            ) : undefined
-                        }
-                    />
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-                        {attention.length === 0 ? (
-                            <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-fg-muted">
-                                <StatusDot ok /> {t('dashboard.allGood')}
-                            </div>
-                        ) : (
-                            <ul>
-                                {attention.map((a) => (
-                                    <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
-                                        <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
-                                        <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
-                                        {/* An item with a direct action gets a REAL button — a quiet
-                                            text link is how the operator missed the firewall switch.
-                                            Doğrudan eylemi olan kalem GERÇEK düğme alır — operatörün
-                                            firewall anahtarını kaçırmasının sebebi sessiz metin bağıydı. */}
-                                        {a.onAct ? (
-                                            <button
-                                                onClick={a.onAct}
-                                                disabled={fwBusy}
-                                                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                            >
-                                                {a.action}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => navigate(a.to)}
-                                                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                                            >
-                                                {a.action} <ArrowRight className="h-3.5 w-3.5" />
-                                            </button>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
                     </div>
                 </section>
             )}

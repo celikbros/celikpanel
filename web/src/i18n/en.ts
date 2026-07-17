@@ -137,6 +137,7 @@ export const en = {
     'dashboard.renew': 'Renew',
     'dashboard.svcStoppedItem': '{name} service is stopped',
     'dashboard.goServices': 'Go to services',
+    'dashboard.goSettings': 'Go to settings',
     'dashboard.fwOffItem': 'Firewall is off — all ports are open',
     'dashboard.hosting': 'Hosting',
     'dashboard.recentDomains': 'Recently added domains',

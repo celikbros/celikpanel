@@ -136,6 +136,7 @@ export const tr: Record<TranslationKey, string> = {
     'dashboard.renew': 'Yenile',
     'dashboard.svcStoppedItem': '{name} servisi durdu',
     'dashboard.goServices': 'Servislere git',
+    'dashboard.goSettings': 'Ayarlara git',
     'dashboard.fwOffItem': 'Güvenlik duvarı kapalı — tüm portlar açık',
     'dashboard.hosting': 'Barındırma',
     'dashboard.recentDomains': 'Son eklenen domainler',
