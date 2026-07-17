@@ -46,6 +46,18 @@ func panelPort() int {
 func (p *Panel) desiredFirewallPorts() (tcp []int, udp []int) {
 	tcp = append(tcp, panelPort())
 
+	// Let's Encrypt renewal answers HTTP-01 on :80. A panel carrying a real
+	// CA certificate with the firewall blocking 80 renews nothing — the
+	// certificate dies silently in 90 days. Caught live (Jul 17): issuance
+	// worked only because the firewall was still off that day.
+	// Let's Encrypt yenilemesi HTTP-01'i :80'de cevaplar. Gerçek CA
+	// sertifikası taşıyan bir panelde firewall 80'i keserse hiçbir şey
+	// yenilenmez — sertifika 90 günde sessizce ölür. Canlıda yakalandı
+	// (17 Tem): sertifika alınabildi çünkü o gün firewall henüz kapalıydı.
+	if cert := currentPanelCert(); cert.HTTPSEnabled && !cert.SelfSigned {
+		tcp = append(tcp, 80)
+	}
+
 	var installed []string
 	_ = p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installed)
 	installedSet := map[string]bool{}

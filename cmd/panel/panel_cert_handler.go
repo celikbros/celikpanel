@@ -82,6 +82,12 @@ func (p *Panel) handlePanelCertificate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		p.audit(r, "panel.certificate:"+req.Domain, "panel", 0)
+
+		// The firewall's desired set just changed: a real certificate needs
+		// :80 open for HTTP-01 renewal. Resync now (no-op when disabled).
+		// Güvenlik duvarının istenen kümesi az önce değişti: gerçek sertifika,
+		// HTTP-01 yenilemesi için :80 ister. Şimdi senkronla (kapalıysa no-op).
+		p.syncFirewall()
 		json.NewEncoder(w).Encode(map[string]any{
 			"issued": true, "expires_at": resp.ExpiresAt, "detail": resp.Detail, "restarting": true,
 		})
