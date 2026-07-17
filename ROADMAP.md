@@ -117,6 +117,16 @@ What an operator needs at 3 a.m.:
   operator's consent — adopt or evict, the mirror of the Import philosophy. Field proof (Jul 16):
   Hostinger's Arch image shipped a dormant bind; the setup journey counted "DNS installed: Done".
   Builds naturally on B3.
+- **Dashboard SSL/TLS summary** (from the Plesk comparison, Jul 17): expiring-soon / valid /
+  no-certificate counts in one card — the "certificate silently dies in 90 days" class becomes
+  visible on the panel's face
+- **Dashboard Mail Queue card** (from the Plesk comparison, Jul 17): Total/Deferred/Held plus
+  one-click queue clear — the first place an operator looks at 3 a.m.
+- **Self-diagnosis:** the operator's Jul 17 question is the design bar — "will YOU solve every
+  user's problem?" The panel must check by itself the classes we diagnosed by hand today: does
+  the DNS delegation actually point at this server, does the certificate renewal timer actually
+  run, can the service config actually start the engine. A finding = a "Needs attention" row +
+  one-click repair (the honest counterpart of Plesk's Repair Kit)
 
 **Exit criterion:** a killed service alerts within a minute; a full restore from remote backup succeeds on a fresh VPS.
 

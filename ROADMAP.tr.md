@@ -115,6 +115,15 @@ Operatörün gece 3'te ihtiyaç duyduğu şeyler:
   (audit log'da `service.install` kaydı olmayan her katalog servisi) ve operatör onayıyla kaldırmayı
   önerir — sahiplen ya da tahliye et, Import felsefesinin aynası. Saha kanıtı (16 Tem): Hostinger
   Arch imajı uyuyan bir bind ile geldi; kurulum yolculuğu "DNS kuruldu: Done" saydı. B3 üstüne oturur.
+- **Pano SSL/TLS özeti** (Plesk kıyasından, 17 Tem): yakında dolacak / geçerli / sertifikasız site
+  sayıları tek kartta — "90 günde sessizce ölen sertifika" sınıfı, panelin yüzünde görünür olur
+- **Pano Mail Queue kartı** (Plesk kıyasından, 17 Tem): Total/Deferred/Held + tek tık kuyruk
+  temizleme — operatörün gece 3'te ilk baktığı yer
+- **Kendi kendine teşhis:** operatörün 17 Tem'de sorduğu soru tasarım ölçütü — "her kullanıcının
+  sorununu sen mi çözeceksin?" Panel, bugün elle teşhis edilen sınıfları kendisi denetlemeli:
+  DNS delegasyonu bu sunucuya bakıyor mu, sertifika yenileme zamanlayıcısı gerçekten koşuyor mu,
+  servis config'i motoru gerçekten başlatabiliyor mu. Bulgu = "Needs attention" satırı + tek tık
+  onarım (Plesk'in Repair Kit'inin dürüst karşılığı)
 
 **Çıkış ölçütü:** öldürülen servis bir dakikada uyarı üretiyor; uzak yedekten tam geri yükleme temiz VPS'te başarılı.
 
