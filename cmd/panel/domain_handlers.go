@@ -412,8 +412,26 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		p.syncZoneToDNS(context.Background(), domain.Name, true)
 	}
 
-	// TODO: Clean up nginx configs, PHP pools, etc. via Agent RPC
-	// For now, just delete the database record
+	// The domain's Let's Encrypt lineage must not outlive the domain: a
+	// renewal config for a dead name fails on EVERY certbot run and poisons
+	// the whole renewal report. Caught live (Jul 17): deleted
+	// celikpanel.cloud's leftover config turned the renewal dry-run into
+	// "1 failure". Best-effort — a cert cleanup hiccup must not block the
+	// delete that already happened.
+	// Domain'in Let's Encrypt soyu domain'den uzun yaşamamalı: ölü bir ad
+	// için duran yenileme yapılandırması HER certbot koşusunda başarısız olur
+	// ve tüm yenileme raporunu zehirler. Canlıda yakalandı (17 Tem): silinen
+	// celikpanel.cloud'un kalıntısı yenileme provasını "1 failure" yaptı.
+	// Elden-geldiğince — sertifika temizliği aksaması, olmuş silmeyi engellemez.
+	var certResp struct {
+		Deleted bool   `json:"deleted"`
+		Error   string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.DeleteCertLineage", &struct {
+		Domain string `json:"domain"`
+	}{Domain: domain.Name}, &certResp); err != nil || certResp.Error != "" {
+		log.Printf("cert lineage cleanup for %s: %v %s", domain.Name, err, certResp.Error)
+	}
 
 	p.audit(r, "domain.delete:"+domain.Name, "domain", domainID)
 	w.WriteHeader(http.StatusOK)

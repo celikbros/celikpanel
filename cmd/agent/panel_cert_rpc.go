@@ -200,6 +200,45 @@ fi
 	_ = os.WriteFile(filepath.Join(hookDir, "celikpanel-panel-cert"), []byte(script), 0o755)
 }
 
+type DeleteCertLineageRequest struct {
+	Domain string `json:"domain"`
+}
+
+type DeleteCertLineageResponse struct {
+	Deleted bool   `json:"deleted"`
+	Error   string `json:"error,omitempty"`
+}
+
+// DeleteCertLineage removes a deleted domain's Let's Encrypt material
+// (certificate, key, renewal config) via certbot's own delete. Without this,
+// the dead name's renewal config fails on every certbot run forever. No-op
+// when no lineage exists.
+// DeleteCertLineage, silinmiş bir domain'in Let's Encrypt malzemesini
+// (sertifika, anahtar, yenileme yapılandırması) certbot'un kendi delete'iyle
+// kaldırır. Bu olmadan ölü adın yenileme yapılandırması her certbot koşusunda
+// sonsuza dek başarısız olur. Soy yoksa no-op.
+func (a *Agent) DeleteCertLineage(req *DeleteCertLineageRequest, resp *DeleteCertLineageResponse) error {
+	domain := strings.ToLower(strings.TrimSpace(req.Domain))
+	if !validPanelCertDomain.MatchString(domain) {
+		resp.Error = "invalid domain name"
+		return nil
+	}
+	if _, err := os.Stat(filepath.Join("/etc/letsencrypt/renewal", domain+".conf")); err != nil {
+		return nil // no lineage — nothing to clean / soy yok — temizlenecek şey yok
+	}
+	if _, err := exec.LookPath("certbot"); err != nil {
+		resp.Error = "renewal config exists but certbot is missing"
+		return nil
+	}
+	out, err := exec.Command("certbot", "delete", "--cert-name", domain, "--non-interactive").CombinedOutput()
+	if err != nil {
+		resp.Error = certbotFirstError(string(out))
+		return nil
+	}
+	resp.Deleted = true
+	return nil
+}
+
 // RestartPanelSoon restarts the panel a moment from now, detached via
 // systemd-run so the RPC (and the HTTP response that triggered it) completes
 // first — activating a new certificate must not kill the reply in flight.
