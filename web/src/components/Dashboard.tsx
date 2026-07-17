@@ -10,6 +10,7 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
 import { PageHeader, UsageBar, StatusDot, Card } from './ui';
+import { showToast } from './Toast';
 
 // Admin dashboard (Claude Design'dan uyarlandı): one glance answers "is my
 // server healthy?" and "does anything need me?". Every number is real — the
@@ -109,9 +110,37 @@ function AdminDashboard() {
     const running = installed.filter((s) => s.daemonless || s.status?.toLowerCase().includes('running'));
     const stoppedSvcs = installed.filter((s) => !s.daemonless && !s.status?.toLowerCase().includes('running'));
 
+    // Turn the firewall on right where the operator reads about it. Field
+    // finding (Jul 17): the journey said "turn on the firewall" but its button
+    // navigated away, and the operator never found the switch — an action this
+    // important acts in place, it does not give directions.
+    // Güvenlik duvarını, operatörün onu okuduğu yerde aç. Saha bulgusu
+    // (17 Tem): yolculuk "firewall'u aç" diyordu ama düğmesi başka sayfaya
+    // götürüyordu ve operatör anahtarı hiç bulamadı — bu önemde bir eylem
+    // yerinde yapılır, adres tarif etmez.
+    const [fwBusy, setFwBusy] = useState(false);
+    const turnOnFirewall = async () => {
+        setFwBusy(true);
+        try {
+            const r = await fetch('/api/v1/firewall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: true }),
+            });
+            const d = await r.json();
+            if (!r.ok || d.error) throw new Error(d.error);
+            setFw(d);
+            showToast('success', t('firewall.onDone'));
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
+        } finally {
+            setFwBusy(false);
+        }
+    };
+
     // Attention items: real, actionable problems only. / İlgi kalemleri:
     // yalnız gerçek ve eyleme dönüştürülebilir sorunlar.
-    const attention: { key: string; icon: typeof Cpu; text: string; action: string; to: string; danger?: boolean }[] = [];
+    const attention: { key: string; icon: typeof Cpu; text: string; action: string; to: string; danger?: boolean; onAct?: () => void }[] = [];
     for (const c of extras?.expiring_certs || []) {
         attention.push({
             key: `cert-${c.domain_name}`,
@@ -141,6 +170,7 @@ function AdminDashboard() {
             action: t('firewall.turnOn'),
             to: '/services',
             danger: true,
+            onAct: turnOnFirewall,
         });
     }
     // Security posture suggestions — surfaced only when they actually apply,
@@ -177,12 +207,16 @@ function AdminDashboard() {
 
     // Setup journey — live completion; the card disappears when all done.
     // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
-    const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string }[] = [
+    const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string; cta?: TranslationKey; onAct?: () => void }[] = [
         { key: 'dashboard.step.panel', done: true, to: '/' },
         { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
         { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains' },
         { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings' },
-        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services' },
+        // The firewall step acts in place: the engine ships with install.sh,
+        // so "turn on" is one honest click, not a scavenger hunt.
+        // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
+        // dürüst tıktır, define avı değil.
+        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services', cta: 'firewall.turnOn', onAct: turnOnFirewall },
         { key: 'dashboard.step.mail', done: mailInstalled, to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
@@ -318,10 +352,11 @@ function AdminDashboard() {
                                         <span className="text-sm text-fg-subtle">{t('dashboard.stepDone')}</span>
                                     ) : i === nextIdx ? (
                                         <button
-                                            onClick={() => navigate(s.to)}
-                                            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90"
+                                            onClick={() => (s.onAct ? s.onAct() : navigate(s.to))}
+                                            disabled={s.onAct ? fwBusy : false}
+                                            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
                                         >
-                                            {t('dashboard.goServices')}
+                                            {t(s.cta ?? 'dashboard.goServices')}
                                         </button>
                                     ) : (
                                         <span className="text-sm text-fg-subtle">{i === nextIdx + 1 ? t('dashboard.stepNext') : ''}</span>
@@ -359,12 +394,26 @@ function AdminDashboard() {
                                     <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
                                         <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
                                         <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
-                                        <button
-                                            onClick={() => navigate(a.to)}
-                                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                                        >
-                                            {a.action} <ArrowRight className="h-3.5 w-3.5" />
-                                        </button>
+                                        {/* An item with a direct action gets a REAL button — a quiet
+                                            text link is how the operator missed the firewall switch.
+                                            Doğrudan eylemi olan kalem GERÇEK düğme alır — operatörün
+                                            firewall anahtarını kaçırmasının sebebi sessiz metin bağıydı. */}
+                                        {a.onAct ? (
+                                            <button
+                                                onClick={a.onAct}
+                                                disabled={fwBusy}
+                                                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                            >
+                                                {a.action}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => navigate(a.to)}
+                                                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                                            >
+                                                {a.action} <ArrowRight className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
