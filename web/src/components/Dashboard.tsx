@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
-    Shield, ShieldCheck, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
+    Shield, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
     DownloadCloud, UserPlus, Plus, Lock,
 } from 'lucide-react';
 import { api, type SystemStats } from '../lib/api';
@@ -232,7 +232,6 @@ function AdminDashboard() {
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
         .slice(0, 4);
 
-    const openPorts = (fw?.tcp_ports?.length ?? 0) + (fw?.udp_ports?.length ?? 0);
 
     return (
         <div className="p-6 md:p-8">
@@ -241,8 +240,13 @@ function AdminDashboard() {
                 subtitle={stats ? `${stats.hostname} · ${t('dashboard.uptimeFor', { time: fmtUptime(stats.uptime_seconds, t) })}` : undefined}
             />
 
-            {/* Health strip / Sağlık şeridi */}
-            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${fw?.enabled ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
+            {/* Health strip: only living numbers. Firewall state earned no
+                card (operator call, Jul 17): OFF is an alert with a button,
+                ON is a config fact — the Services page owns the detail.
+                Sağlık şeridi: yalnız yaşayan sayılar. Firewall durumu kart hak
+                etmedi (operatör kararı, 17 Tem): KAPALI düğmesiyle bir uyarıdır,
+                AÇIK bir yapılandırma gerçeğidir — ayrıntının sahibi Services. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <GaugeCard
                     icon={Cpu}
                     label={t('dashboard.cpuUsage')}
@@ -286,33 +290,6 @@ function AdminDashboard() {
                     )}
                     {installed.length === 0 && <p className="mt-1 text-xs text-fg-subtle">{t('dashboard.svcReady')}</p>}
                 </button>
-                {/* One firewall message per state, one owner (operator call,
-                    Jul 17): OFF is a problem, and problems belong to the
-                    Needs-attention list right below — a card saying the same
-                    thing above it was duplication. ON is healthy status, the
-                    alert disappears, and this quiet green tile becomes the one
-                    at-a-glance place for "firewall up, N ports open".
-                    Her duruma tek mesaj, tek sahip (operatör kararı, 17 Tem):
-                    KAPALI bir sorundur ve sorunlar hemen alttaki Needs-
-                    attention listesine aittir — üstünde aynı cümleyi söyleyen
-                    kart tekrardı. AÇIK sağlıklı durumdur, uyarı kaybolur ve bu
-                    sessiz yeşil kart "duvar açık, N port açık" bilgisinin tek
-                    bakışlık yeri olur. */}
-                {fw?.enabled && (
-                    <div
-                        onClick={() => navigate('/services')}
-                        className="cursor-pointer rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
-                    >
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium text-fg-muted">{t('firewall.title')}</span>
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
-                                <ShieldCheck className="h-3.5 w-3.5" /> {t('firewall.on')}
-                            </span>
-                        </div>
-                        <p className="mt-3 text-sm text-fg">{t('dashboard.fwOnHint')}</p>
-                        <p className="mt-1.5 text-xs text-fg-subtle">{t('dashboard.fwPorts', { n: openPorts })}</p>
-                    </div>
-                )}
             </div>
 
             {/* Needs attention BEFORE the journey: an active problem outranks
