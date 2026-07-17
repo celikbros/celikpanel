@@ -69,7 +69,17 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	subscriptionID, err := p.callerSubscriptionID(r)
 	if err != nil {
-		writeClientError(w, http.StatusNotFound, "invalid request")
+		// A legitimate customer with no subscription yet (nothing created)
+		// sees an EMPTY list, not an error — caught live (Jul 17): the
+		// role-split opened this page to customers and the first fresh
+		// customer got a 404 instead of an empty state. Read-only, so no
+		// subscription is auto-created here; the domain-create flow does that.
+		// Henüz aboneliği olmayan meşru müşteri hata değil BOŞ liste görür —
+		// canlıda yakalandı (17 Tem): rol ayrımı sayfayı müşteriye açınca ilk
+		// taze müşteri boş durum yerine 404 aldı. Salt-okunur olduğundan
+		// burada abonelik oto-yaratılmaz; onu domain oluşturma akışı yapar.
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]struct{}{})
 		return
 	}
 
