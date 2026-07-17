@@ -30,7 +30,7 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
         setLoading(true);
 
         try {
-            const res = await fetch(`/api/v2/database-servers/${serverId}/users`, {
+            const res = await fetch(`/api/v1/database-servers/${serverId}/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),

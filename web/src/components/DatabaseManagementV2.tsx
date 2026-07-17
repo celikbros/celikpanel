@@ -7,7 +7,9 @@ import { AddUserModalV2 } from './AddUserModalV2';
 import { useI18n } from '../i18n';
 import { PageHeader, Button, EmptyState, StatusDot } from './ui';
 
-const API_BASE = '/api/v2';
+// One API surface (B1, Jul 18): the former /api/v2 lives under /api/v1 now.
+// Tek API yüzeyi (B1, 18 Tem): eski /api/v2 artık /api/v1 altında.
+const API_BASE = '/api/v1';
 
 interface DatabaseServer {
     id: number;

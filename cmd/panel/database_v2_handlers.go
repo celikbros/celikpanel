@@ -23,20 +23,20 @@ func getIDFromPath(path string) (int, error) {
 	return strconv.Atoi(idStr)
 }
 
-// Helper function to extract server_id from path like /api/v2/database-servers/123/databases
+// Helper function to extract server_id from path like /api/v1/database-servers/123/databases
 func getServerIDFromPath(path string) (int, error) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	// Path: api/v2/database-servers/{id}/databases
+	// Path: api/v1/database-servers/{id}/databases
 	if len(parts) >= 4 && parts[2] == "database-servers" {
 		return strconv.Atoi(parts[3])
 	}
 	return 0, fmt.Errorf("server ID not found in path")
 }
 
-// Helper function to extract database_id from path like /api/v2/databases/123/grants
+// Helper function to extract database_id from path like /api/v1/databases/123/grants
 func getDatabaseIDFromPath(path string) (int, error) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	// Path: api/v2/databases/{id}/grants
+	// Path: api/v1/databases/{id}/grants
 	if len(parts) >= 3 && parts[2] == "databases" {
 		return strconv.Atoi(parts[3])
 	}

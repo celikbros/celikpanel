@@ -352,21 +352,38 @@ func main() {
 	http.HandleFunc("/api/v1/import/cpanel/inspect", panel.handleImportInspect)
 	http.HandleFunc("/api/v1/import/cpanel/apply", panel.handleImportApply)
 
-	// Database Management v2 - Server Management
-	http.HandleFunc("/api/v2/database-servers", panel.handleListDatabaseServers)
-	http.HandleFunc("/api/v2/database-servers/create", panel.handleCreateDatabaseV2Server)
+	// Databases — ONE API surface (B1: v2 folded into v1, Jul 18). The
+	// handlers parse path segments by name, not by version, so the merge is
+	// routing-only. Creation is a plain POST on the collection — the old
+	// "/create" suffix was a wart with exactly one obvious spelling now.
+	// There is no /api/v2/ anymore; a stale client gets an honest 404.
+	// Veritabanları — TEK API yüzeyi (B1: v2, v1'e katlandı, 18 Tem).
+	// Handler'lar yol parçalarını sürümle değil adla çözer; birleştirme yalnız
+	// yönlendirmedir. Oluşturma koleksiyona düz POST — eski "/create" eki
+	// artık tek bariz yazımı olan bir pürüzdü. /api/v2/ artık yok; bayat
+	// istemci dürüst bir 404 alır.
+	http.HandleFunc("/api/v1/database-servers", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			panel.handleListDatabaseServers(w, r)
+		case http.MethodPost:
+			panel.handleCreateDatabaseV2Server(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
-	// Combined handler for /api/v2/database-servers/{id}/* routes
-	http.HandleFunc("/api/v2/database-servers/", func(w http.ResponseWriter, r *http.Request) {
+	// Combined handler for /api/v1/database-servers/{id}/* routes
+	http.HandleFunc("/api/v1/database-servers/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		// DELETE /api/v2/database-servers/{id}
+		// DELETE /api/v1/database-servers/{id}
 		if r.Method == http.MethodDelete && !strings.Contains(path, "/databases") && !strings.Contains(path, "/users") {
 			panel.handleDeleteDatabaseV2Server(w, r)
 			return
 		}
 
-		// GET/POST /api/v2/database-servers/{id}/databases
+		// GET/POST /api/v1/database-servers/{id}/databases
 		if strings.Contains(path, "/databases") {
 			if r.Method == http.MethodGet {
 				panel.handleListDatabasesV2(w, r)
@@ -376,7 +393,7 @@ func main() {
 			return
 		}
 
-		// GET/POST /api/v2/database-servers/{id}/users
+		// GET/POST /api/v1/database-servers/{id}/users
 		if strings.Contains(path, "/users") {
 			if r.Method == http.MethodGet {
 				panel.handleListDatabaseUsers(w, r)
@@ -389,14 +406,14 @@ func main() {
 		http.Error(w, "not found", http.StatusNotFound)
 	})
 
-	// Database Management v2 - Database operations
-	http.HandleFunc("/api/v2/databases/", func(w http.ResponseWriter, r *http.Request) {
+	// Database operations
+	http.HandleFunc("/api/v1/databases/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete && !strings.Contains(r.URL.Path, "/grants") {
 			panel.handleDeleteDatabaseV2(w, r)
 			return
 		}
 
-		// GET/POST /api/v2/databases/{id}/grants
+		// GET/POST /api/v1/databases/{id}/grants
 		if strings.Contains(r.URL.Path, "/grants") {
 			if r.Method == http.MethodGet {
 				panel.handleListDatabaseGrants(w, r)
@@ -409,17 +426,21 @@ func main() {
 		http.Error(w, "not found", http.StatusNotFound)
 	})
 
-	// Database Management v2 - User/Grant deletions
-	http.HandleFunc("/api/v2/database-users/", func(w http.ResponseWriter, r *http.Request) {
+	// User/Grant deletions
+	http.HandleFunc("/api/v1/database-users/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
 			panel.handleDeleteDatabaseV2User(w, r)
+			return
 		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})
 
-	http.HandleFunc("/api/v2/database-grants/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/v1/database-grants/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
 			panel.handleRevokeDatabaseAccess(w, r)
+			return
 		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})
 
 	http.HandleFunc("/api/v1/config/mysql", func(w http.ResponseWriter, r *http.Request) {

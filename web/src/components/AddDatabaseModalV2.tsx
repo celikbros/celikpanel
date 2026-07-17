@@ -68,7 +68,7 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
                 body.new_password = newPassword;
             }
 
-            const res = await fetch(`/api/v2/database-servers/${serverId}/databases`, {
+            const res = await fetch(`/api/v1/database-servers/${serverId}/databases`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
