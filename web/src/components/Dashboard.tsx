@@ -151,7 +151,12 @@ function AdminDashboard() {
     // çalışırken spam filtresi.
     const hasClamAV = services.some((s) => s.id === 'clamav' && s.is_installed);
     const hasSpam = services.some((s) => s.id === 'spamassassin' && s.is_installed);
-    if (domains.length > 0 && !hasClamAV) {
+    // "Content to scan" means a hosted site — a DNS-only domain serves
+    // records, not files, so it must not trigger the antivirus nag.
+    // "Taranacak içerik" barındırılan site demektir — yalnız-DNS domain dosya
+    // değil kayıt sunar; antivirüs dırdırını tetiklememeli.
+    const hostsContent = domains.some((d) => d.project_type !== 'dnsonly');
+    if (hostsContent && !hasClamAV) {
         attention.push({
             key: 'no-av',
             icon: Shield,
@@ -400,7 +405,11 @@ function AdminDashboard() {
                                                         ? `PHP ${d.php_version}`
                                                         : d.project_type || 'php'}
                                                 </span>
-                                                {!d.ssl_enabled && (
+                                                {/* SSL warns only where a site exists to secure — a
+                                                    DNS-only domain has nothing to certify.
+                                                    SSL uyarısı ancak güvence altına alınacak site varsa —
+                                                    yalnız-DNS domain'in sertifikalanacak şeyi yok. */}
+                                                {d.project_type !== 'dnsonly' && !d.ssl_enabled && (
                                                     <span className="text-xs font-medium text-warning">{t('dashboard.noSsl')}</span>
                                                 )}
                                                 <span className="ml-auto text-xs text-fg-subtle">{fmtRelative(d.created_at, t)}</span>
