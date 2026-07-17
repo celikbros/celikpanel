@@ -242,7 +242,7 @@ function AdminDashboard() {
             />
 
             {/* Health strip / Sağlık şeridi */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${fw?.enabled ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
                 <GaugeCard
                     icon={Cpu}
                     label={t('dashboard.cpuUsage')}
@@ -286,46 +286,33 @@ function AdminDashboard() {
                     )}
                     {installed.length === 0 && <p className="mt-1 text-xs text-fg-subtle">{t('dashboard.svcReady')}</p>}
                 </button>
-                {/* The most visible surface must carry the action itself:
-                    this card announced "all ports are open" with no button,
-                    and the operator could not find the switch (Jul 17).
-                    En görünür yüzey eylemi kendisi taşımalı: bu kart "tüm
-                    portlar açık" diyor ama düğme taşımıyordu ve operatör
-                    anahtarı bulamadı (17 Tem). */}
-                <div
-                    onClick={() => navigate('/services')}
-                    className="cursor-pointer rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
-                >
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-fg-muted">{t('firewall.title')}</span>
-                        {fw?.enabled ? (
+                {/* One firewall message per state, one owner (operator call,
+                    Jul 17): OFF is a problem, and problems belong to the
+                    Needs-attention list right below — a card saying the same
+                    thing above it was duplication. ON is healthy status, the
+                    alert disappears, and this quiet green tile becomes the one
+                    at-a-glance place for "firewall up, N ports open".
+                    Her duruma tek mesaj, tek sahip (operatör kararı, 17 Tem):
+                    KAPALI bir sorundur ve sorunlar hemen alttaki Needs-
+                    attention listesine aittir — üstünde aynı cümleyi söyleyen
+                    kart tekrardı. AÇIK sağlıklı durumdur, uyarı kaybolur ve bu
+                    sessiz yeşil kart "duvar açık, N port açık" bilgisinin tek
+                    bakışlık yeri olur. */}
+                {fw?.enabled && (
+                    <div
+                        onClick={() => navigate('/services')}
+                        className="cursor-pointer rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
+                    >
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-fg-muted">{t('firewall.title')}</span>
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
                                 <ShieldCheck className="h-3.5 w-3.5" /> {t('firewall.on')}
                             </span>
-                        ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-                                <ShieldOff className="h-3.5 w-3.5" /> {t('firewall.off')}
-                            </span>
-                        )}
-                    </div>
-                    <p className="mt-3 text-sm text-fg">{fw?.enabled ? t('dashboard.fwOnHint') : t('dashboard.fwOffHint')}</p>
-                    {fw?.enabled ? (
+                        </div>
+                        <p className="mt-3 text-sm text-fg">{t('dashboard.fwOnHint')}</p>
                         <p className="mt-1.5 text-xs text-fg-subtle">{t('dashboard.fwPorts', { n: openPorts })}</p>
-                    ) : (
-                        fw && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    turnOnFirewall();
-                                }}
-                                disabled={fwBusy}
-                                className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
-                            >
-                                {t('firewall.turnOn')}
-                            </button>
-                        )
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Needs attention BEFORE the journey: an active problem outranks
