@@ -222,10 +222,22 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
 - OS seviyesinde disk uygulaması (ROLES ertelenenleri) · cPanel içe aktarıcının **gerçek** müşteri
   arşiviyle kanıtı (DB kullanıcıları dahil) · WordPress Toolkit derinliği (güncelleme, sertleştirme,
   klon/staging).
-- **Dış DNS kararı** — D-009'un vaat edilen yeniden tartımı, pazara açılmadan: "yalnız-hosting" domain
-  tipi (panel zone yazmaz; "şu kayıtları dış DNS'inize girin" listesi + mail-auth'taki canlı DNS doğrulama
-  altyapısının yeniden kullanımı) değerlendirilir. Karar "hayır" bile çıksa D-009'a gerekçeli ek yazılır —
-  Cloudflare kullanan aday kapıda açıklamasız çevrilmez.
+- **DNS sağlayıcı soyutlaması (D-009 yeniden tartımı + 18 Tem operatör kararı):** DNS bir SEÇİM olmalı,
+  dayatma değil. Panel bugün tam kayıt setini hesaplayıp tek yere (kendi PowerDNS'i) yazıyor; o "yazıcı"
+  takılabilir kılınır — üç arka uç, operatör seçer (domain başına da olabilir):
+  (1) **Kendi PowerDNS'i** (varsayılan, sıfır-bağımlılık: her şeyi tek kutuda isteyen için — panel
+  otoriter, ns1/ns2 bu sunucu);
+  (2) **Cloudflare-sınıfı yönetilen DNS** (operatör API token'ı verir — DNS-edit kapsamlı; panel AYNI kayıt
+  setini PowerDNS SQL yerine sağlayıcının API'sine yazar; zone yoksa oluşturur). **Güvenlik için önerilen
+  yol** ve operatörün 18 Tem gözlemi: :53 kutuda açık kalmaz, DDoS'u Cloudflare yutar, tek-nokta arıza
+  kalkar. Plesk'in "Cloudflare DNS Integration" eklentisinin dürüst çekirdek karşılığı;
+  (3) **Dış/elle** (panel hiçbir şey yazmaz; "şu kayıtları girin" listesi + mail-auth'taki canlı doğrulama).
+  Downstream'in tamamı (mail-auth kayıtları, HTTP-01 sertifikası, panel hostname'i) değişmeden çalışır —
+  çünkü değişen yalnız yazıcı, hesaplanan kayıt seti aynı. **Otomatikleştirilemeyen TEK adım dürüstçe
+  söylenir:** registrar'daki nameserver delegasyonu (celikhost.com'un NS'ini Cloudflare'e ya da bu sunucuya
+  yöneltmek) hiçbir sağlayıcı API'sinde yoktur; panel bunu gösterir + doğrular, o tek tıkı insan registrar'da
+  atar. Karar (hangi arka uçlar, hangisi varsayılan, öneri metni) DECISIONS'a; abstraction seam v0.3'te +
+  (1) ve (3) yolları; (2) Cloudflare arka ucu v0.4'te (bkz. yönetilen DNS backend'i).
 - **Panel kimliği — rehberli hostname + sertifika (18 Tem saha boşluğu):** bugün panelin kendi adının
   (örn. `boston.celikhost.com`) çözülür olması TASARLANMADI — operatör test sunucusunda bunu operatör-dışı
   el (başka sunucunun panelinden kayıt) çözdü; bu, D-008'in yasakladığı gizli elle adımdır. Panel, kendi
@@ -321,6 +333,14 @@ Operatörün gece 3'te ihtiyaç duyduğu şeyler:
   cevabı restore'dur; müşteri gece 3'te kendi bozduğunu kendi döner.
 - **İkincil DNS gerçeği:** bugün ns1/ns2 aynı makineyi gösteriyor (tek nokta arızası);
   ikinci ucuz VPS'e secondary PowerDNS (AXFR) ya da dürüst belgeleme (11 Tem eklendi)
+- **Yönetilen DNS backend'i (Cloudflare-sınıfı) — v0.3 soyutlamasının somut sağlayıcısı:** Settings'te
+  "DNS sağlayıcısı" seçimi; Cloudflare arka ucu = scoped API token + zone oto-oluşturma + `syncZoneToDNS`
+  seam'ine ikinci yazıcı (aynı kayıt seti, farklı hedef). İkincil-DNS tek-nokta sorununun en temiz
+  cevabı da budur: DNS'i tümüyle Cloudflare'e vermek, ikinci VPS'e AXFR kurmaktan basit ve daha güvenli.
+  Panel :53'ü hiç açmaz; "güvenlik varsayılandır" ilkesiyle bu yolu ÖNERİR ama dayatmaz (kendi PowerDNS'i
+  isteyen için sıfır-bağımlılık varsayılan kalır). Registrar NS delegasyonu dürüstçe elle adım olarak
+  gösterilir + doğrulanır. Bu, panelin kendisine dış bağımlılık DEĞİLDİR — operatörün seçtiği opsiyonel
+  arka uç (MariaDB↔PostgreSQL seçimi gibi); token operatörün, panel internetsiz de tam çalışır.
 - Arayüzden tek tık panel güncellemesi (update.sh'ın ön yüzü) · WebSocket canlı bildirimler
 - **Güncelleme zinciri sertleşir:** release-binary kanalı birincil olur — `update.sh` sürüm tarball'ını
   indirir, **imza doğrular** (minisign/cosign; açık anahtar install.sh'a gömülü, rotasyon planı yazılı),

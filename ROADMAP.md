@@ -237,10 +237,24 @@ place; production trust is done before the first real tenant.
   running an infinite PHP loop, the neighbor site opens in <1 s.
 - OS-level disk enforcement (the ROLES deferrals) · the cPanel importer proven with a **real** customer
   archive (DB users included) · WordPress Toolkit depth (updates, hardening, clone/staging).
-- **The external-DNS decision** — D-009's promised re-weighing, before going to market: a "hosting-only"
-  domain type (the panel writes no zone; a "enter these records at your external DNS" list + reuse of
-  the live DNS verification infrastructure from mail-auth) is evaluated. Even if the decision is "no", a
-  reasoned addendum goes to D-009 — a prospect on Cloudflare is not turned away at the door unexplained.
+- **DNS provider abstraction (D-009 re-weighing + Jul 18 operator decision):** DNS must be a CHOICE, not
+  an imposition. The panel already computes the full record set and writes it to one place (its own
+  PowerDNS); that "writer" becomes pluggable — three backends, operator's choice (possibly per domain):
+  (1) **Self-hosted PowerDNS** (default, zero-dependency: for those who want everything in one box — the
+  panel is authoritative, ns1/ns2 are this server);
+  (2) **Cloudflare-class managed DNS** (the operator provides a DNS-edit-scoped API token; the panel writes
+  the SAME record set to the provider's API instead of PowerDNS SQL; creates the zone if missing). **The
+  recommended path for security** and the operator's Jul 18 observation: :53 isn't exposed on the box,
+  Cloudflare absorbs DDoS, the single point of failure is gone. The honest core counterpart of Plesk's
+  "Cloudflare DNS Integration" extension;
+  (3) **External/manual** (the panel writes nothing; a "enter these records" list + the live verification
+  from mail-auth). Everything downstream (mail-auth records, HTTP-01 certs, the panel hostname) works
+  unchanged — only the writer differs, the computed record set is identical. **The ONE un-automatable step
+  is stated honestly:** the registrar's nameserver delegation (pointing celikhost.com's NS at Cloudflare
+  or at this server) exists in no provider API; the panel shows + verifies it, the human makes that one
+  click at the registrar. The decision (which backends, which default, the recommendation text) goes to
+  DECISIONS; the abstraction seam + paths (1) and (3) in v0.3; the (2) Cloudflare backend in v0.4 (see the
+  managed DNS backend).
 - **Panel identity — guided hostname + certificate (Jul 18 field gap):** making the panel's own name
   (e.g. `boston.celikhost.com`) resolve was NOT designed — on the test servers a non-operator hand (a
   record added from ANOTHER server's panel) closed it; that is the hidden manual step D-008 forbids. The
@@ -342,6 +356,16 @@ What the operator needs at 3 a.m.:
   every user's problem?" is restore; at 3 a.m. the customer reverts their own mistake themselves.
 - **The secondary-DNS truth:** today ns1/ns2 point at the same machine (a single point of failure); a
   secondary PowerDNS (AXFR) on a cheap second VPS, or honest documentation (added July 11)
+- **Managed DNS backend (Cloudflare-class) — the concrete provider for v0.3's abstraction:** a "DNS
+  provider" choice in Settings; the Cloudflare backend = a scoped API token + zone auto-creation + a
+  second writer on the `syncZoneToDNS` seam (same record set, different target). This is also the
+  cleanest answer to the secondary-DNS single-point problem: handing DNS wholly to Cloudflare is simpler
+  and safer than standing up AXFR on a second VPS. The panel never opens :53; by "security is the
+  default" it RECOMMENDS this path but does not impose it (self-hosted PowerDNS stays the zero-dependency
+  default for those who want it). The registrar NS delegation is shown honestly as a manual step +
+  verified. This is NOT an external dependency of the panel itself — it is an operator-chosen optional
+  backend (like the MariaDB↔PostgreSQL choice); the token is the operator's, and the panel runs fully
+  offline.
 - One-click panel self-update in the UI (update.sh's front end) · WebSocket live notifications
 - **The update chain hardens:** the release-binary channel becomes primary — `update.sh` downloads the
   release tarball, **verifies a signature** (minisign/cosign; public key baked into install.sh, rotation
