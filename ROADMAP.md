@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: July 17, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: July 18, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -241,6 +241,18 @@ place; production trust is done before the first real tenant.
   domain type (the panel writes no zone; a "enter these records at your external DNS" list + reuse of
   the live DNS verification infrastructure from mail-auth) is evaluated. Even if the decision is "no", a
   reasoned addendum goes to D-009 — a prospect on Cloudflare is not turned away at the door unexplained.
+- **Panel identity — guided hostname + certificate (Jul 18 field gap):** making the panel's own name
+  (e.g. `boston.celikhost.com`) resolve was NOT designed — on the test servers a non-operator hand (a
+  record added from ANOTHER server's panel) closed it; that is the hidden manual step D-008 forbids. The
+  panel must handle its own hostname with the same three honest paths as adding a domain: (a) **if this
+  panel serves the parent zone itself** → one-click write the A record into its own zone (single-server,
+  the generalization of the zone template seeding its own FQDN); (b) **DNS is external / on another
+  server** → show "add this A record: `<host>` → `<IP>`" and wait, via the live DNS check from mail-auth,
+  until it resolves, then offer the certificate; (c) **already resolves** → straight to the certificate.
+  The certificate flow (v0.2) sits on top of this pre-step — the "install.sh → login → real certificate"
+  chain no longer has a manual DNS gap. Cross-server auto-registration (registering a sibling's name in
+  the zone-authority server) belongs deliberately to the multi-server feature (post-1.0) — it needs an
+  inter-panel trust model; until then path (b) serves N servers honestly.
 
 **Production trust (required before the first tenant):**
 - Secret encryption pulled forward: A4's proven `enc:v1` mechanism extends to TOTP secrets and the
@@ -366,9 +378,11 @@ What the operator needs at 3 a.m.:
   queue clear — the first place an operator looks at 3 a.m.
 - **Self-diagnosis:** the operator's July 17 question is the design bar — "will YOU solve every user's
   problem?" The panel must check by itself the classes we diagnosed by hand: does the DNS delegation
-  actually point at this server, does the certificate renewal timer actually run, can the service config
-  actually start the engine. A finding = a "Needs attention" row + one-click repair (the honest
-  counterpart of Plesk's Repair Kit)
+  actually point at this server, **does the panel's own hostname resolve to THIS server** (Jul 18: the
+  boston.celikhost.com record lived in frankfurt's zone, boston had no idea — that coupling was
+  invisible), does the certificate renewal timer actually run, can the service config actually start the
+  engine. A finding = a "Needs attention" row + one-click repair (the honest counterpart of Plesk's
+  Repair Kit)
 
 **Exit criterion:** a killed service alerts within a minute; a server with its plug pulled produces an
 **external** alarm within 5 minutes · the restore drill's definition: on a clean VPS, `install.sh` +
@@ -479,7 +493,11 @@ the pricing/license page and the SUPPORT policy are published.
 
 ### Post-1.0 — horizon *(demand persists, fantasies don't)*
 Each only with real demand, in keeping with the deliberate non-goals:
-- Multi-server · a BSD agent backend · billing integrations (WHMCS etc.)
+- Multi-server (an inter-panel trust model + **sibling-server DNS auto-registration**: a new CelikPanel
+  server registers its own hostname A record with the other CelikPanel that is the zone authority for the
+  brand domain, using an operator-provided API token — the productized form of today's manual
+  boston.celikhost.com step; v0.3's path (b) external-DNS covers N servers until this lands) · a BSD
+  agent backend · billing integrations (WHMCS etc.)
 - **Plesk/DirectAdmin importers** — only once real demand exists (≥5 concrete migration requests); the
   cPanel importer's inspect→confirm→apply pattern is reused. Until then the honest answer is documented:
   "Coming from Plesk? A manual migration guide, for now."
@@ -531,7 +549,7 @@ product itself:
 
 ---
 
-## Where We Are — July 17, 2026
+## Where We Are — July 18, 2026
 
 **Version:** v0.1.0 alpha (untagged yet — bound to one source in v0.2.5), live on the production VPS
 (Debian 13, panel-only install). Two test servers: boston (Debian 13) + frankfurt (Arch — deliberate,

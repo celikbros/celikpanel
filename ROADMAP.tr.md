@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 17 Temmuz 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 18 Temmuz 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -226,6 +226,17 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
   tipi (panel zone yazmaz; "şu kayıtları dış DNS'inize girin" listesi + mail-auth'taki canlı DNS doğrulama
   altyapısının yeniden kullanımı) değerlendirilir. Karar "hayır" bile çıksa D-009'a gerekçeli ek yazılır —
   Cloudflare kullanan aday kapıda açıklamasız çevrilmez.
+- **Panel kimliği — rehberli hostname + sertifika (18 Tem saha boşluğu):** bugün panelin kendi adının
+  (örn. `boston.celikhost.com`) çözülür olması TASARLANMADI — operatör test sunucusunda bunu operatör-dışı
+  el (başka sunucunun panelinden kayıt) çözdü; bu, D-008'in yasakladığı gizli elle adımdır. Panel, kendi
+  hostname'ini domain kurmakla aynı dürüst üç yolla ele almalı: (a) **bu panel adının ana zone'unu kendisi
+  sunuyorsa** → tek tık A kaydını kendi zone'una yaz (tek-sunucu, zone şablonunun kendi-FQDN tohumlamasının
+  genellemesi); (b) **DNS dışarıda/başka sunucuda** → "şu A kaydını girin: `<host>` → `<IP>`" göster ve
+  mail-auth'taki canlı DNS doğrulamasıyla çözülene dek bekle, sonra sertifikayı sun; (c) **zaten çözülüyor**
+  → doğrudan sertifikaya geç. Sertifika akışı (v0.2) bu ön-adımın üstüne oturur — "install.sh → giriş →
+  gerçek sertifika" zincirinde artık elle DNS boşluğu kalmaz. Çok-sunucu oto-kaydı (kardeş sunucunun adını
+  zone-otoritesi sunucuya kaydettirme) bilinçli olarak çok-sunucu özelliğine (1.0-sonrası) ait — orada
+  panel-arası güven modeli gerekir; o güne dek (b) yolu N sunucuyu dürüstçe karşılar.
 
 **Üretim güveni (ilk kiracıdan önce şart):**
 - Sır şifrelemesi öne çekildi: A4'ün kanıtlı `enc:v1` mekanizması TOTP secret'larına ve panelin sakladığı
@@ -344,9 +355,10 @@ Operatörün gece 3'te ihtiyaç duyduğu şeyler:
   temizleme — operatörün gece 3'te ilk baktığı yer
 - **Kendi kendine teşhis:** operatörün 17 Tem'de sorduğu soru tasarım ölçütü — "her kullanıcının
   sorununu sen mi çözeceksin?" Panel, bugün elle teşhis edilen sınıfları kendisi denetlemeli:
-  DNS delegasyonu bu sunucuya bakıyor mu, sertifika yenileme zamanlayıcısı gerçekten koşuyor mu,
-  servis config'i motoru gerçekten başlatabiliyor mu. Bulgu = "Needs attention" satırı + tek tık
-  onarım (Plesk'in Repair Kit'inin dürüst karşılığı)
+  DNS delegasyonu bu sunucuya bakıyor mu, **panelin kendi hostname'i BU sunucuya çözülüyor mu** (18 Tem:
+  boston.celikhost.com kaydı frankfurt'un zone'unda yaşıyordu, boston'ın haberi yoktu — bu bağ görünmezdi),
+  sertifika yenileme zamanlayıcısı gerçekten koşuyor mu, servis config'i motoru gerçekten başlatabiliyor mu.
+  Bulgu = "Needs attention" satırı + tek tık onarım (Plesk'in Repair Kit'inin dürüst karşılığı)
 
 **Çıkış ölçütü:** öldürülen servis bir dakikada uyarı üretiyor; fişi çekilen sunucu 5 dakikada **dış**
 alarm üretiyor · geri yükleme tatbikatının tanımı: temiz VPS'te `install.sh` + panel-state restore +
@@ -448,7 +460,10 @@ ve SUPPORT politikası yayında.
 
 ### 1.0 Sonrası — ufuk *(talep sürer, hayal sürmez)*
 Her biri ancak gerçek talep varsa, bilinçli hedef-dışılara uygun biçimde:
-- Çoklu sunucu · BSD agent arka ucu · faturalama entegrasyonları (WHMCS vb.)
+- Çoklu sunucu (panel-arası güven modeli + **kardeş sunucu DNS oto-kaydı**: yeni bir CelikPanel sunucusu,
+  marka domain'inin zone-otoritesi olan diğer CelikPanel'e kendi hostname A kaydını, operatörün verdiği
+  API token'ıyla kaydettirir — bugün elle yapılan boston.celikhost.com adımının ürünleşmiş hali; v0.3'ün
+  (b) dış-DNS yolu bu gelene dek N sunucuyu karşılar) · BSD agent arka ucu · faturalama entegrasyonları (WHMCS vb.)
 - **Plesk/DirectAdmin içe aktarıcıları** — ancak gerçek talep (≥5 somut göç isteği) doğunca; cPanel
   içe aktarıcının inspect→onay→apply deseni yeniden kullanılır. O güne kadar dürüst cevap dokümante:
   "Plesk'ten geliyorsanız şimdilik elle taşıma kılavuzu."
@@ -493,7 +508,7 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 17 Temmuz 2026
+## Neredeyiz — 18 Temmuz 2026
 
 **Sürüm:** v0.1.0 alfa (henüz tag'siz — v0.2.5'te tek kaynağa bağlanacak), üretim VPS'inde canlı
 (Debian 13, yalnız-panel kurulum). İki test sunucusu: boston (Debian 13) + frankfurt (Arch — bilerek,
