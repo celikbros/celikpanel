@@ -261,6 +261,20 @@ place; production trust is done before the first real tenant.
 - Reseller-owned plans: the dead `service_plans.owner_id` comes alive — a reseller builds their own
   plans (quotas can't exceed their pool), sees global + own plans in the list, assigns only to their own
   customers; "apply to subscribers" copying respects owner scope.
+- **Licensed products and the resale chain (D-012, Jul 20 — third parties in scope from the start):** an
+  entitlement becomes a **pool** like disk; the `reseller_pools` pattern extends to products (admin quota →
+  reseller → customer; the admin may also sell directly to a customer). The product definition gains
+  `license_model {server|seat}` + `seat_unit {mailbox|site|subscription|server}` — under *seat*,
+  over-allocation is real money and a licence breach, so the pool is enforced hard (a coded refusal, not a
+  warning). The licence key is sealed with A4's `enc:v1`. A price stops being one number (vendor→admin,
+  admin→reseller, reseller→customer; the same shape as reseller-owned plans). Visibility follows
+  entitlement: if the reseller did not buy it, their customers never see it (a reseller may switch on a
+  "buy" prompt). An entitlement cannot be sold for a product that is not installed → coded refusal.
+  Revocation follows the SAME rule as subscription suspension (new allocations 403, existing usage lives to
+  the end of grace, no data deleted). **The honesty limit is stated in the UI and the docs:** the panel
+  enforces only its own allocation records; the vendor may count differently (a reconciliation view is
+  shown, but the invoice is the vendor's truth) and **the right to sublicense is between the operator and
+  the vendor** — the panel does not verify it and does not claim to.
 - The billing ledger: `plan.create/update/delete`, `subscription.plan_change`, `subscription.cancel`,
   `subscription.suspend/resume`, `quota.exceeded` audit events — "when and by whom did this quota
   change" is a dispute question; it is never unrecorded.

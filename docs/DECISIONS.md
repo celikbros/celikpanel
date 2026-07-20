@@ -8,6 +8,77 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-012 · Licensed products and the resale chain: an entitlement is a pool; compliance is between the operator and the vendor
+
+*July 20, 2026*
+
+**Decision.** The operator's model ("everything is an item; some free, some paid;
+the admin buys and sells to resellers or directly to customers") is met by the
+following — and **third-party commercial products are in scope from the start**
+(operator's decision):
+
+1. **"The thing" and "the right to use it" are separated.** The product itself is
+   installed once on the server (multiplication test = 1 → catalog item, D-011).
+   The **entitlement** is per subscription and flows down the tree. These are
+   independent axes: installation is a binary state, an entitlement is a countable
+   resource.
+2. **An entitlement is a pool, like disk/domains.** No new mechanism: v0.3's
+   `reseller_pools` pattern extends to products. The admin's quota → allocated to a
+   reseller → allocated to a customer; on overflow, a coded 409 + remaining pool.
+   The admin may also sell **directly to a customer** (the subscription ownership
+   tree already supports this).
+3. **The license model enters the product definition:** `license_model ∈ {server,
+   seat}`. *server* → one price, unlimited users; the admin's pool is infinite and
+   resale is pure margin. *seat* → the admin pays the vendor per unit, so
+   **over-allocation is real money and a licence breach** — the pool is enforced
+   hard (a refusal, not a warning).
+4. **`seat_unit` is mandatory** (`mailbox | site | subscription | server`). Vendors
+   count different things; without the unit we count the wrong one and the panel's
+   number will not match the vendor's invoice — the subtlest trap here.
+5. **The licence key is stored as a secret** — A4's `enc:v1` mechanism (sealed at
+   rest, opened at use). Most commercial products need the key at install time; an
+   install without it is half an install.
+6. **A price is not one number.** The chain has three: vendor→admin (cost),
+   admin→reseller, reseller→customer. Today's single `MonthlyPriceCents` is not
+   enough; the pattern matches v0.3's reseller-owned plans (`service_plans.owner_id`).
+7. **Visibility follows entitlement.** If a reseller has not bought the product,
+   their customers **never see it** ("what isn't installed is invisible", applied to
+   entitlements). Subtlety: a reseller may switch on a "buy" prompt — visibility is
+   the reseller's call, hidden by default.
+8. **A product that is not installed cannot be sold.** Selling an entitlement for a
+   product absent from the server sells the customer nothing → coded refusal.
+9. **Revocation follows the SAME rule as subscription suspension.** When a reseller
+   stops paying: new allocations in their tree are 403, existing usage lives until
+   the end of grace, no data is deleted. There are not two different "cut off"
+   behaviours.
+
+**Why this burden was accepted.** Opening the chain to third parties later would
+mean rewriting the allocation and pricing model; adding `license_model`/`seat_unit`
+up front costs two fields. The operator deliberately chose the harder path.
+
+**THE HONESTY LIMIT — what the panel does NOT guarantee.** The panel enforces only
+**its own allocation records**; it does **not** guarantee compliance with a
+vendor's licence terms:
+- The vendor may count differently (e.g. domains instead of mailboxes); the panel
+  shows a reconciliation view ("vendor: 50 · allocated: 47 · free: 3"), but **the
+  invoice is the vendor's truth**, not the panel's.
+- **The right to sublicense a third-party product (to a reseller or customer) is
+  between the operator and the vendor**; most vendors bind it to a partner
+  agreement. The panel cannot verify that right and does not claim to. This is
+  written plainly in the UI and the docs — otherwise we would ship a feature that
+  encourages licence violations.
+
+**Rejected alternatives.** Silent over-allocation (warn and continue — under the
+*seat* model it runs up a debt for the operator) · putting per-vendor API
+integrations in the core (each vendor is a separate integration, against the
+no-dependency rule and simplicity; we start with a **manual key + manual quota**,
+and automate only if real demand appears for one specific vendor) · burying
+entitlements inside plans (a plan change would silently drop rights; an entitlement
+is its own record, a plan only supplies defaults) · deferring third parties (the
+operator refused: opening the chain later means rewriting the allocation model).
+
+---
+
 ## D-011 · A framework is not a service: the multiplication test, a preset budget, and the limit of version ownership
 
 *July 20, 2026*

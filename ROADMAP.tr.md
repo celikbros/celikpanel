@@ -241,6 +241,18 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
 - Bayiye ait plan: ölü `service_plans.owner_id` canlanır — bayi kendi planını kurar (kotalar havuzunu
   aşamaz), listede global + kendi planlarını görür, yalnız kendi müşterisine atar; "apply to subscribers"
   kopyalaması owner kapsamına saygılıdır.
+- **Lisanslı ürünler ve satış zinciri (D-012, 20 Tem — üçüncü-taraf baştan kapsamda):** hak, disk gibi bir
+  **havuz** olur; `reseller_pools` deseni ürünlere genişler (admin kontenjanı → bayi → müşteri; admin
+  doğrudan müşteriye de satabilir). Ürün tanımına `license_model {server|seat}` + `seat_unit
+  {mailbox|site|subscription|server}` girer — *seat* modelinde fazla tahsis gerçek para ve lisans ihlali
+  olduğundan havuz sertçe uygulanır (kodlu ret, uyarı değil). Lisans anahtarı A4'ün `enc:v1` mekanizmasıyla
+  mühürlenir. Fiyat tek sayı olmaktan çıkar (satıcı→admin, admin→bayi, bayi→müşteri; bayiye-ait-plan
+  deseniyle aynı). Görünürlük hakkı izler: bayi almadıysa müşterisi ürünü hiç görmez (bayi isterse
+  "satın al" tanıtımını açar). Kurulu olmayan ürüne hak satılamaz → kodlu ret. Geri alma, abonelik
+  askısıyla AYNI kural (yeni tahsis 403, mevcut kullanım grace sonuna dek yaşar, veri silinmez).
+  **Dürüstlük sınırı UI'da ve dokümanda yazar:** panel yalnız kendi tahsis kaydını uygular; satıcı farklı
+  sayabilir (mutabakat ekranı gösterilir ama fatura satıcının gerçeğidir) ve **alt-lisanslama hakkı
+  operatörle satıcı arasındadır** — panel bunu doğrulamaz, doğruladığını iddia etmez.
 - Faturalama defteri: `plan.create/update/delete`, `subscription.plan_change`, `subscription.cancel`,
   `subscription.suspend/resume`, `quota.exceeded` audit olayları — "bu kota ne zaman, kim tarafından
   değişti" sorusu ihtilaf sorusudur, kayıtsız kalınmaz.

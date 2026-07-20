@@ -8,6 +8,69 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-012 · Lisanslı ürünler ve satış zinciri: hak bir havuzdur, uyum satıcıyla operatör arasındadır
+
+*20 Temmuz 2026*
+
+**Karar.** Operatörün modeli ("her şey bir kalem; bazıları bedava bazıları paralı;
+admin satın alır, bayiye ya da doğrudan müşteriye satar") şu yapıyla karşılanır —
+ve **üçüncü-taraf ticari ürünler baştan kapsam içindedir** (operatör kararı):
+
+1. **"Şey" ile "kullanma hakkı" ayrılır.** Ürünün kendisi sunucuya bir kez kurulur
+   (çoğalma testi = 1 → katalog kalemi, D-011). **Hak** ise abonelik başınadır ve
+   ağaçta aşağı akar. Bu ikisi bağımsız eksenlerdir: kurulum ikili bir durumdur,
+   hak sayılabilir bir kaynaktır.
+2. **Hak, disk/domain gibi bir havuzdur.** Yeni mekanizma yok: v0.3'ün
+   `reseller_pools` deseni ürünlere genişler. Admin'in kontenjanı → bayiye tahsis →
+   müşteriye tahsis; aşımda kodlu 409 + kalan-havuz. Admin **doğrudan müşteriye** de
+   satabilir (abonelik sahiplik ağacı bunu zaten taşır).
+3. **Lisans modeli ürün tanımına girer:** `license_model ∈ {server, seat}`.
+   *server* → tek fiyat, sınırsız kullanıcı; admin havuzu sonsuz, satış saf marj.
+   *seat* → admin satıcıya adet başına öder; **fazla tahsis gerçek paradır ve lisans
+   ihlalidir**, bu yüzden havuz sertçe uygulanır (uyarı değil, ret).
+4. **`seat_unit` zorunludur** (`mailbox | site | subscription | server`). Satıcılar
+   farklı şey sayar; birimi yazmazsak yanlış şeyi sayarız ve panelin sayısı
+   satıcının faturasını tutmaz — bu, en sinsi tuzaktır.
+5. **Lisans anahtarı sır olarak saklanır** — A4'ün `enc:v1` mekanizması (mühürle,
+   kullanım anında çöz). Ticari ürünlerin çoğu kurulumda anahtar ister; anahtarsız
+   kurulum yarım kurulumdur.
+6. **Fiyat tek sayı değildir.** Zincirde üç fiyat vardır: satıcı→admin (maliyet),
+   admin→bayi, bayi→müşteri. Bugünkü tek `MonthlyPriceCents` alanı yetmez; desen
+   v0.3'teki "bayiye ait plan" (`service_plans.owner_id`) ile aynıdır.
+7. **Görünürlük hakkı izler.** Bayi ürünü almadıysa müşterileri onu **hiç görmez**
+   ("kurulu olmayan görünmez"in haklara uygulanmış hâli). İnce nokta: bayi isterse
+   "satın al" tanıtımını açabilir — görünürlük bayinin kararıdır, varsayılan gizli.
+8. **Kurulu olmayan ürün satılamaz.** Sunucuda kurulu olmayan bir ürüne hak satmak
+   müşteriye hiçbir şey satmaktır → kodlu ret.
+9. **Geri alma, abonelik askısıyla AYNI kuraldır.** Bayi ödemeyi kestiğinde:
+   ağacında yeni tahsis 403, mevcut kullanım grace sonuna dek yaşar, veri silinmez.
+   İki farklı "kesildi" davranışı olmaz.
+
+**Neden bu yük kabul edildi.** Zinciri sonradan üçüncü-tarafa açmak, tahsis ve
+fiyat modelini yeniden yazmak demekti; `license_model`/`seat_unit` alanlarını
+baştan koymanın maliyeti iki alandır. Operatör bilinçli olarak zor yolu seçti.
+
+**DÜRÜSTLÜK SINIRI — panel neyi garanti ETMEZ.** Panel yalnız **kendi tahsis
+kayıtlarını** uygular; satıcının lisans şartlarına uyumu **garanti etmez**:
+- Satıcı farklı sayabilir (ör. kutu yerine alan adı); panel mutabakat ekranı
+  gösterir ("satıcı: 50 · tahsis: 47 · boşta: 3") ama **fatura satıcının
+  gerçeğidir**, panelin değil.
+- **Üçüncü-taraf ürünü alt-lisanslama (bayiye/müşteriye satma) hakkı operatörle
+  satıcı arasındadır**; çoğu satıcı bunu ortaklık sözleşmesine bağlar. Panel bu
+  hakkı doğrulayamaz ve doğruladığını iddia etmez. Ekranda ve dokümanda açıkça
+  yazar — aksi hâlde kullanıcıyı lisans ihlaline teşvik eden bir özellik yapmış
+  oluruz.
+
+**Reddedilen alternatifler.** Sessiz fazla-tahsiz (uyarıp geçmek — *seat* modelinde
+operatöre borç yazdırır) · satıcı başına API entegrasyonunu çekirdeğe koymak (her
+satıcı ayrı entegrasyon, dış bağımlılık yasağına ve sadeliğe aykırı; başlangıç
+**elle anahtar + elle kontenjan**, otomasyon ancak tek bir satıcıda gerçek talep
+doğarsa) · hakları plana gömmek (plan değişince hak kaybı sessiz olur; hak ayrı
+kayıttır, plan yalnız varsayılan verir) · üçüncü-tarafı sonraya bırakmak (operatör
+reddetti: zincir sonradan açılırsa tahsis modeli yeniden yazılır).
+
+---
+
 ## D-011 · Framework servis değildir: çoğalma testi, preset bütçesi ve sürüm sahipliğinin sınırı
 
 *20 Temmuz 2026*
