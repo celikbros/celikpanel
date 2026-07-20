@@ -24,6 +24,7 @@ behavior (the Netscape mistake).
 | A3 | v2 endpoints are not tenant-safe: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Closed (Jul 11): 6 hardcodes removed → `callerSubscriptionID`; 6 server-scoped ops (list/create/delete × db+user) verify ownership via `canAccessDBServer` (`database_v2_authz.go`). **Admin gate STILL stands** — lifting it needs role-splitting `handleCreateDatabaseV2Server` (registering an arbitrary host/port/root-password is not a customer action); that belongs to the v0.3 tenant work |
 | A4 | DB server root password stored in plain text: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Closed (Jul 16): `internal/secrets` — AES-256-GCM, key at `dataDir()/secret.key` (0600, generated on first boot). Sealed on create, opened via one helper (`dbDriverFor`) at driver time; legacy plaintext rows sealed by an idempotent startup migration. Format is `enc:v1:`-prefixed — self-describing |
 | A5 | `capabilities.mail_server` is BOOL while `dns_server` is a string — the type inconsistency produced a real product bug (dashboard claimed mail was installed) | `capabilities_handler.go:30` | ⬜ OPEN (frontend fixed; API consistency lands with B1) |
+| A6 | **The vhost dotfile rule was wrong in both branches**: the PHP branch blocked only `/\.ht` → `https://site/.env` served in plain text (a Laravel/Symfony DB password, APP_KEY, mail credentials) and `.git/` was readable; the static branch blocked ALL dotfiles → `.well-known/acme-challenge` was closed, so a static site's first certificate and every renewal 403'd | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Closed (Jul 20): both branches now use `location ~ /\.(?!well-known).*`; the regex was validated against live nginx (commit `0088c67`). The ACME break stayed invisible because the golden path was proven with a PHP site |
 
 ## B. Structural debt (the prescription — paid in order)
 
@@ -41,6 +42,7 @@ behavior (the Netscape mistake).
 ## C. Buried, and remaining smells
 
 - ✅ Buried (Jul 11): `internal/repositories/database_repository.go` (zero-reference dead code), root-level `KONUSMA-GECMISI.md` (chat dump; history lives in git), on-disk `ServiceList.tsx.backup`.
+- ⬜ Smell: **a template change does not reach existing vhosts** (config drift) — the A6 fix covers only NEWLY generated vhosts; existing sites keep the old rule. There is no "regenerate all vhosts" path, so every template change carrying a security fix leaves a silent hole.
 - ⬜ Smell: `cmd/panel` is one flat 66-file package (13,658 lines) — it splits naturally during B1/B2; do NOT run a separate "great repackaging" (churn outweighs gain).
 - ⬜ Smell: `docs/CelikPanel Pano.html`, an 813KB blob — kept deliberately as design reference; move to LFS/link if it grows.
 - ⬜ Smell: `en.ts` with 900+ keys in one file, and **an apostrophe in a string breaks the build** — a contributor trap; at minimum a documented lint during B4.

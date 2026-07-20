@@ -22,6 +22,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 | A3 | v2 uçları kiracı-güvenli değil: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Kapandı (11 Tem): 6 hardcode kalktı → `callerSubscriptionID`; 6 sunucu-kapsamlı işlem (liste/oluştur/sil × db+kullanıcı) `canAccessDBServer` ile sahiplik doğruluyor (`database_v2_authz.go`). **Admin kilidi HÂLÂ duruyor** — kalkması için `handleCreateDatabaseV2Server`'ın rol ayrımı gerekli (keyfi host/port/root-parola kaydı müşteri işi değil); o v0.3 kiracı işine ait |
 | A4 | DB sunucu root parolası düz metin: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Kapandı (16 Tem): `internal/secrets` — AES-256-GCM, anahtar `dataDir()/secret.key` (0600, ilk açılışta üretilir). Kayıtta mühürle, sürücüde tek yardımcıdan (`dbDriverFor`) çöz; açılışta eski düz-metin satırlar idempotent migrasyonla mühürlenir. Biçim `enc:v1:` önekli — kendini tanımlar |
 | A5 | `capabilities.mail_server` BOOL, `dns_server` string — tip tutarsızlığı üründe gerçek hata üretti (pano "posta kuruldu" dedi) | `capabilities_handler.go:30` | ⬜ AÇIK (ön yüz düzeltildi; API tutarlılığı B1'de) |
+| A6 | **vhost nokta-dosya kuralı iki dalda da yanlıştı**: PHP dalı yalnız `/\.ht` engelliyordu → `https://site/.env` düz metin (Laravel/Symfony DB parolası, APP_KEY, posta bilgileri) ve `.git/` açıktı; statik dal ise TÜM nokta dosyalarını engelliyordu → `.well-known/acme-challenge` kapalı, yani statik sitenin ilk sertifikası ve her yenilemesi 403 | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Kapandı (20 Tem): iki dal da `location ~ /\.(?!well-known).*`; regex canlı nginx'te doğrulandı (commit `0088c67`). Golden path PHP sitesiyle kanıtlandığı için ACME kırığı görünmez kalmıştı |
 
 ## B. Yapısal borç (reçete — sırayla ödenir)
 
@@ -39,6 +40,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 ## C. Gömülenler ve kalan kokular
 
 - ✅ Gömüldü (11 Tem): `internal/repositories/database_repository.go` (sıfır referanslı ölü), kökteki `KONUSMA-GECMISI.md` (sohbet dökümü; tarih git'te), diskteki `ServiceList.tsx.backup`.
+- ⬜ Koku: **şablon değişimi mevcut vhost'lara yansımıyor** (config drift) — A6 düzeltmesi yalnız YENİ üretilen vhost'ları kapsıyor; mevcut siteler eski kuralla kalıyor. "Tüm vhost'ları yeniden üret" yolu yok. Güvenlik düzeltmesi taşıyan her şablon değişikliğinde bu bir sessiz açık kalır.
 - ⬜ Koku: `cmd/panel` 66 dosyalık tek düz paket (13.658 satır) — B1/B2 sırasında doğal bölünür; ayrı bir "büyük yeniden paketleme" YAPMAYIN (churn riski kazancından büyük).
 - ⬜ Koku: `docs/CelikPanel Pano.html` 813KB blob — tasarım referansı; bilinçli tutuluyor, büyürse LFS/link.
 - ⬜ Koku: `en.ts` 900+ anahtar tek dosya + **dizgide kesme işareti derlemeyi bozar** — katkı tuzağı; B4 sırasında en azından belgeli lint.
