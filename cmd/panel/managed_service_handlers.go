@@ -51,6 +51,163 @@ type managedServicesPayload struct {
 	Services  []ManagedServiceResponse `json:"services"`
 }
 
+// serviceObservation is everything a scan can DISCOVER about this host: is the
+// package there, is the unit up, which versions exist, where are the configs.
+// Catalogue facts — name, description, icon, kind, package names — are
+// deliberately absent, because they are not properties of the host. They live
+// in code and are re-joined on every read.
+//
+// This split is the fix for a real bug: the cache used to store whole API
+// responses, catalogue fields included. Every catalogue edit then stayed
+// invisible until someone happened to press Scan — a service renamed in code
+// kept its old name on screen, and a newly added one did not appear at all.
+// The Kind field shipped empty on both live servers for exactly this reason.
+// Caching a fact that lives in code is how code and screen drift apart.
+//
+// serviceObservation, bir taramanın bu makine hakkında KEŞFEDEBİLECEĞİ her
+// şeydir: paket var mı, unit ayakta mı, hangi sürümler var, config'ler nerede.
+// Katalog gerçekleri — ad, açıklama, ikon, kind, paket adları — bilerek yoktur;
+// çünkü bunlar makinenin özellikleri değildir. Kodda yaşarlar ve her okumada
+// yeniden birleştirilirler.
+//
+// Bu ayrım gerçek bir hatanın düzeltmesidir: önbellek eskiden katalog alanları
+// dahil tüm API yanıtlarını saklıyordu. Böylece her katalog düzeltmesi, biri
+// Tara'ya basana dek görünmez kalıyordu — kodda adı değişen servis ekranda eski
+// adıyla duruyor, yeni eklenen hiç çıkmıyordu. Kind alanının iki canlı sunucuda
+// da boş yayınlanmasının sebebi tam buydu. Kodda yaşayan bir gerçeği
+// önbelleğe almak, kod ile ekranın birbirinden ayrı düşme biçimidir.
+type serviceObservation struct {
+	ID          string            `json:"id"`
+	IsInstalled bool              `json:"is_installed"`
+	Status      string            `json:"status"`
+	Versions    []string          `json:"versions,omitempty"`
+	ConfigFiles []core.ConfigFile `json:"config_files,omitempty"`
+}
+
+// scanCacheDoc is the persisted shape. An object (not a bare array) so the
+// legacy format is told apart by its first byte.
+// scanCacheDoc kalıcılaştırılan biçimdir. Eski biçimden ilk baytıyla ayrılsın
+// diye çıplak dizi değil nesnedir.
+type scanCacheDoc struct {
+	Observations []serviceObservation `json:"observations"`
+}
+
+// decodeScanCache reads both formats. A row written before the split is a
+// JSON array of full responses; its observed fields are still in there, so an
+// upgraded panel keeps showing the right state instead of blanking the page
+// until the operator reruns a scan.
+// decodeScanCache iki biçimi de okur. Ayrımdan önce yazılmış satır, tam
+// yanıtlardan oluşan bir JSON dizisidir; gözlem alanları hâlâ içindedir, bu
+// yüzden güncellenen panel, operatör yeniden tarama koşturana dek sayfayı
+// boşaltmak yerine doğru durumu göstermeyi sürdürür.
+func decodeScanCache(data string) []serviceObservation {
+	trimmed := strings.TrimSpace(data)
+	if strings.HasPrefix(trimmed, "[") {
+		var legacy []ManagedServiceResponse
+		if json.Unmarshal([]byte(trimmed), &legacy) != nil {
+			return nil
+		}
+		obs := make([]serviceObservation, 0, len(legacy))
+		for _, l := range legacy {
+			obs = append(obs, serviceObservation{
+				ID:          l.ID,
+				IsInstalled: l.IsInstalled,
+				Status:      l.Status,
+				Versions:    l.Versions,
+				ConfigFiles: l.ConfigFiles,
+			})
+		}
+		return obs
+	}
+	var doc scanCacheDoc
+	if json.Unmarshal([]byte(trimmed), &doc) != nil {
+		return nil
+	}
+	return doc.Observations
+}
+
+// catalogView joins observations onto the catalogue and derives what depends
+// on both: install-blocking conflicts and unmet requirements. It is the only
+// place a ManagedServiceResponse is built, so the cached read and a fresh scan
+// cannot answer differently.
+// catalogView, gözlemleri kataloğa birleştirir ve ikisine birden bağlı olanı
+// türetir: kurulumu engelleyen çakışmalar ve karşılanmamış gereksinimler.
+// ManagedServiceResponse'un kurulduğu tek yer burasıdır; böylece önbellekten
+// okuma ile taze tarama farklı yanıt veremez.
+func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceResponse {
+	byID := make(map[string]serviceObservation, len(obs))
+	installedSet := map[string]bool{}
+	for _, o := range obs {
+		byID[o.ID] = o
+		if o.IsInstalled {
+			installedSet[o.ID] = true
+		}
+	}
+
+	// Conflict groups: which group already has an installed member, and who.
+	// Çakışma grupları: hangi grupta zaten kurulu üye var ve kim.
+	groupOwner := map[string]string{}
+	for i := range core.ManagedServices {
+		m := &core.ManagedServices[i]
+		if m.ConflictGroup != "" && installedSet[m.ID] {
+			groupOwner[m.ConflictGroup] = m.Name
+		}
+	}
+
+	response := make([]ManagedServiceResponse, 0, len(core.ManagedServices))
+	for _, managed := range core.ManagedServices {
+		o := byID[managed.ID]
+		versions := o.Versions
+		if versions == nil {
+			versions = []string{}
+		}
+		configFiles := o.ConfigFiles
+		if configFiles == nil {
+			configFiles = []core.ConfigFile{}
+		}
+		status := o.Status
+		conflictWith := ""
+		var requiresMissing []string
+
+		// Not-installed catalogue services are listed too, so the panel can
+		// offer a one-click install. They carry status "not_installed"; the UI
+		// shows an Install button instead of start/stop/manage.
+		// Kurulu-olmayan katalog servisleri de listelenir ki panel tek-tık
+		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
+		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
+		if !o.IsInstalled {
+			status = "not_installed"
+			// Blocked only if the group's installed member is someone else.
+			// Yalnız grubun kurulu üyesi bir başkasıysa engellenir.
+			if managed.ConflictGroup != "" {
+				if owner, ok := groupOwner[managed.ConflictGroup]; ok && owner != managed.Name {
+					conflictWith = owner
+				}
+			}
+			requiresMissing = core.RequirementsMissing(&managed, installedSet)
+		} else if len(versions) == 0 {
+			versions = append(versions, "default")
+		}
+
+		response = append(response, ManagedServiceResponse{
+			ID:              managed.ID,
+			Name:            managed.Name,
+			Description:     managed.Description,
+			Icon:            managed.Icon,
+			Category:        managed.Category,
+			Versions:        versions,
+			Status:          status,
+			IsInstalled:     o.IsInstalled,
+			ConflictWith:    conflictWith,
+			RequiresMissing: requiresMissing,
+			Kind:            managed.Kind,
+			Packages:        managed.Packages[pkgFamily],
+			ConfigFiles:     configFiles,
+		})
+	}
+	return response
+}
+
 // handleManagedServices serves the CACHED scan only — opening a page must
 // never probe the whole system (a dozen units × version execs × config
 // scans made every navigation slow). A fresh probe is an explicit user
@@ -72,10 +229,42 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		if t, terr := time.Parse(time.RFC3339, scannedAt); terr == nil {
 			payload.ScannedAt = &t
 		}
-		_ = json.Unmarshal([]byte(data), &payload.Services)
+		// The catalogue is joined on at read time, so an upgraded panel tells
+		// the truth about its own catalogue immediately — no rescan needed to
+		// see a renamed service, a new one, or a corrected description.
+		// Katalog okuma anında birleştirilir; böylece güncellenen panel kendi
+		// kataloğu hakkında anında doğruyu söyler — adı değişen bir servisi,
+		// yenisini ya da düzeltilmiş bir açıklamayı görmek için tarama gerekmez.
+		payload.Services = catalogView(decodeScanCache(data), p.packageFamily())
 	}
 
 	json.NewEncoder(w).Encode(payload)
+}
+
+// packageFamily returns the host's package-manager family, asked from the
+// agent once and kept. This is the one cheap fact the cached GET may fetch:
+// it is a single RPC that reads the distro id, not the system-wide probe the
+// cache exists to avoid. A failed call answers "apt" without memoising it, so
+// a momentarily-down agent cannot freeze the wrong answer for the process's
+// lifetime.
+// packageFamily, makinenin paket-yöneticisi ailesini döndürür; agent'a bir kez
+// sorulup saklanır. Önbellekli GET'in çekmesine izin verilen tek ucuz gerçek
+// budur: dağıtım kimliğini okuyan tek bir RPC'dir, önbelleğin var olma sebebi
+// olan sistem geneli yoklama değil. Başarısız çağrı, belleğe yazmadan "apt"
+// yanıtlar; böylece anlık düşmüş bir agent yanlış yanıtı süreç boyunca
+// dondurmaz.
+func (p *Panel) packageFamily() string {
+	p.pkgFamilyMu.Lock()
+	defer p.pkgFamilyMu.Unlock()
+	if p.pkgFamilyVal != "" {
+		return p.pkgFamilyVal
+	}
+	var fam string
+	if err := p.agentClient.Call("Agent.PkgFamily", &transport.Empty{}, &fam); err == nil && fam != "" {
+		p.pkgFamilyVal = fam
+		return fam
+	}
+	return "apt"
 }
 
 // handleManagedServicesScan runs a fresh scan on user request, caches it and
@@ -117,29 +306,12 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	for _, id := range installedIDs {
 		installedSet[id] = true
 	}
-	// Package names shown in the UI must match this host's package manager —
-	// the agent owns that fact. Fall back to apt when the call fails, which
-	// preserves the pre-RPC behaviour.
-	// UI'da gösterilen paket adları bu makinenin paket yöneticisiyle uyuşmalı —
-	// bu bilginin sahibi agent'tır. Çağrı başarısızsa apt'ye düş; bu, RPC
-	// öncesi davranışı korur.
-	pkgFamily := "apt"
-	_ = p.agentClient.Call("Agent.PkgFamily", &transport.Empty{}, &pkgFamily)
-	if pkgFamily == "" {
-		pkgFamily = "apt"
-	}
-
-	// Conflict groups: which group already has an installed member, and who.
-	// Çakışma grupları: hangi grupta zaten kurulu üye var ve kim.
-	groupOwner := map[string]string{}
-	for i := range core.ManagedServices {
-		m := &core.ManagedServices[i]
-		if m.ConflictGroup != "" && installedSet[m.ID] {
-			groupOwner[m.ConflictGroup] = m.Name
-		}
-	}
-
-	response := make([]ManagedServiceResponse, 0)
+	// This loop observes the host and nothing else. What the catalogue says
+	// about each service is added later, on every read, by catalogView.
+	// Bu döngü yalnız makineyi gözler, başka bir şey değil. Kataloğun her
+	// servis hakkında söyledikleri sonradan, her okumada, catalogView tarafından
+	// eklenir.
+	observations := make([]serviceObservation, 0, len(core.ManagedServices))
 	for _, managed := range core.ManagedServices {
 		versions := []string{}
 		configFiles := []core.ConfigFile{}
@@ -180,12 +352,6 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			status = "inactive (dead)"
 		}
 
-		// Not-installed catalogue services are included too, so the panel
-		// can offer a one-click install. They carry status "not_installed";
-		// the UI shows an Install button instead of start/stop/manage.
-		// Kurulu-olmayan katalog servisleri de dahildir ki panel tek-tık
-		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
-		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
 		// A present package counts as installed even if no unit is running
 		// yet (WireGuard before its first config, a stopped service…).
 		// Paket varsa, henüz çalışan unit olmasa da kurulu sayılır.
@@ -194,42 +360,16 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			status = "inactive (dead)"
 		}
 
-		conflictWith := ""
-		if !isInstalled {
-			status = "not_installed"
-			// Blocked only if the group's installed member is someone else.
-			// Yalnız grubun kurulu üyesi bir başkasıysa engellenir.
-			if managed.ConflictGroup != "" {
-				if owner, ok := groupOwner[managed.ConflictGroup]; ok && owner != managed.Name {
-					conflictWith = owner
-				}
-			}
-		} else if len(versions) == 0 {
-			versions = append(versions, "default")
-		}
-
-		var requiresMissing []string
-		if !isInstalled {
-			requiresMissing = core.RequirementsMissing(&managed, installedSet)
-		}
-		response = append(response, ManagedServiceResponse{
-			ID:              managed.ID,
-			Name:            managed.Name,
-			Description:     managed.Description,
-			Icon:            managed.Icon,
-			Category:        managed.Category,
-			Versions:        versions,
-			Status:          status,
-			IsInstalled:     isInstalled,
-			ConflictWith:    conflictWith,
-			RequiresMissing: requiresMissing,
-			Kind:            managed.Kind,
-			Packages:        managed.Packages[pkgFamily],
-			ConfigFiles:     configFiles,
+		observations = append(observations, serviceObservation{
+			ID:          managed.ID,
+			IsInstalled: isInstalled,
+			Status:      status,
+			Versions:    versions,
+			ConfigFiles: configFiles,
 		})
 	}
 
-	data, err := json.Marshal(response)
+	data, err := json.Marshal(scanCacheDoc{Observations: observations})
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +380,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err != nil {
 		return nil, err
 	}
-	return response, nil
+	return catalogView(observations, p.packageFamily()), nil
 }
 
 // extractVersion extracts version number from service name

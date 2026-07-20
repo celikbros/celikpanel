@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/auth"
@@ -33,6 +34,16 @@ type Panel struct {
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
+	// pkgFamily caches the host's package-manager family ("apt", "pacman").
+	// It is a property of the machine and never changes while the panel runs,
+	// so it is asked once instead of being persisted with the service scan —
+	// scan data goes stale, a memoised host fact cannot.
+	// pkgFamily, makinenin paket-yöneticisi ailesini ("apt", "pacman")
+	// önbelleğe alır. Makinenin özelliğidir ve panel çalışırken hiç değişmez;
+	// bu yüzden servis taramasıyla birlikte kalıcılaştırılmak yerine bir kez
+	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
+	pkgFamilyMu  sync.Mutex
+	pkgFamilyVal string
 }
 
 func main() {
