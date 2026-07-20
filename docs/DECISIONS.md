@@ -8,6 +8,85 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-014 · The authority chain is a narrowing filter: admin installs, reseller offers, customer uses — and the unit is the version
+
+*July 21, 2026*
+
+**Decision.** Who gets a capability is settled by three separate decisions, and
+each layer can only **narrow**, never widen:
+
+    installed (admin)  ⊇  offered (reseller)  ⊇  used (customer)
+
+- **Admin** decides one thing only: does this service/extension **exist on the
+  server**. Having installed it does not mean having given it to anyone.
+- **Reseller** decides one thing only: which of the admin's installed items do I
+  **offer to my customers**.
+- **Customer** decides one thing only: which of the reseller's offered items do I
+  **use** — and that decision is per site, not per account.
+
+**The unit of the chain is the version, not the service.** "I offer PHP" means
+nothing; a reseller offers **PHP 8.3** or does not, and a customer picks a
+version per site. This does not contradict D-010; it adds a second axis to it:
+in the catalog the **display** unit is the runtime (one row, versions in a
+drawer), while the **entitlement** unit is the version itself.
+
+**Settings run through the same chain**, not just presence: the admin sets the
+server default and the ceiling, the reseller decides which knobs a customer may
+touch, and the customer adjusts within those bounds.
+
+**Why.** The operator's concrete case: the admin installed only PHP 8.4; a site
+owner may need 8.3 and will never touch 8.4. A single "is it installed" flag
+cannot answer those three different questions at once. Today the code has one
+grant layer (`hasEntitlement`: does the subscription hold the product); there is
+no admin→reseller vs reseller→customer distinction, so a reseller's right to say
+"I do not offer that" cannot be represented.
+
+**Where the layers live in code** (two of the three already exist):
+- Admin layer = the installed set (`InstalledServiceIDs` + catalog). ✅ exists
+- **Reseller layer = service plans** (`plan_handlers.go`, `004_accounts.sql`).
+  No new structure is needed: "I offer it" is the plan's content — *"this plan
+  includes PHP 8.2 and 8.3, not 8.4"*. Plesk does the same (Service Plans).
+  ⬜ this is the missing link
+- Customer layer = the per-site choice (`site.php_version`, `CreatePool(siteID,
+  username, phpVersion)`). ✅ exists
+
+**Consequences.**
+- **Removal is a chain-wide event.** If an admin wants to delete a version, the
+  plans offering it and the sites using it must block that. D-010's
+  `RUNTIME_IN_USE` refusal must not stop at "in use" — it must count *who*
+  blocks (how many plans, how many sites), or the admin decides without seeing
+  what they are about to break.
+- **Server-wide PHP settings are incompatible with this model.** Today's PHP-FPM
+  page keeps extension toggles and php.ini values server-wide:
+  `disable_functions` is a security control, so one customer's need becomes
+  everyone's policy; a server-wide `memory_limit` lets one heavy site set the
+  ceiling for all; `ffi` cannot be on for one customer and off for another. The
+  page should name itself the **server default**, and a per-site layer must
+  exist alongside it. The plumbing is ready: every site already gets its own FPM
+  pool, and a pool can carry its own `php_admin_value` directives.
+
+**Precondition (honesty note).** For PHP this model is currently **vacuous**:
+without the Sury repo the admin could not install a second version even if they
+wanted to (see the D-002 correction, D-010). Debating "who offers what" while
+there is only one thing to give is theory. So B3c (Sury + multi-version) moves
+to the front of the queue — not as polish, but as what makes the chain mean
+anything.
+
+**Rejected alternatives.**
+- **A separate "offering" table for the reseller layer**: plans already answer
+  exactly this question; a second structure would give the same fact two owners
+  (the very mistake B3 exists to close).
+- **Auto-offering everything the admin installs**: least code and wrong — it
+  erases the reseller's right to simplify (a reseller may deliberately offer
+  only 8.3 to cut their support load).
+- **Keeping the entitlement unit at service level** ("has PHP / has no PHP"):
+  solves none of the operator's case; it would tell a customer who needs 8.3
+  that they "have PHP" because 8.4 is installed.
+- **Treating server-wide settings as sufficient**: in a multi-tenant panel that
+  means imposing one customer's `disable_functions` need on everyone.
+
+---
+
 ## D-013 · Creating a domain is not picking a runtime: PHP is a site toggle, not an installation decision
 
 *July 21, 2026*

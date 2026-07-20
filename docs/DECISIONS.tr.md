@@ -8,6 +8,81 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-014 · Yetki zinciri daralan bir süzgeçtir: admin kurar, bayi sunar, müşteri kullanır — birim sürümdür
+
+*21 Temmuz 2026*
+
+**Karar.** Bir yeteneğin kime ulaşacağı üç ayrı kararla belirlenir ve her katman
+yalnızca **daraltır**, asla genişletemez:
+
+    kurulu (admin)  ⊇  sunulan (bayi)  ⊇  kullanılan (müşteri)
+
+- **Admin** yalnız şuna karar verir: bu servis/eklenti **sunucuda var mı**.
+  Kurmuş olması kimseye verdiği anlamına gelmez.
+- **Bayi** yalnız şuna karar verir: adminin kurduklarından hangilerini
+  **müşterilerime sunuyorum**.
+- **Müşteri** yalnız şuna karar verir: bayinin sunduklarından hangilerini
+  **kullanıyorum** — ve bu karar site başınadır, hesap başına değil.
+
+**Zincirin birimi servis değil, sürümdür.** "PHP sunuyorum" bir şey ifade etmez;
+bayi **PHP 8.3'ü** sunar ya da sunmaz, müşteri site başına sürüm seçer. Bu,
+D-010 ile çelişmez, ona ikinci bir eksen ekler: katalogda **görüntü** birimi
+runtime'dır (tek satır, sürümler çekmecede), **hak** birimi sürümün kendisidir.
+
+**Ayarlar da aynı zincirden geçer**, yalnız varlık değil: admin sunucu
+varsayılanını ve tavanını koyar, bayi hangi düğmeye dokunulabileceğine karar
+verir, müşteri o sınırlar içinde ayarlar.
+
+**Neden.** Operatörün somut vakası: admin yalnız PHP 8.4 kurdu; site sahibinin
+8.3'e ihtiyacı olabilir ve 8.4'ü hiç kullanmayacak. Tek bir "kurulu mu" bayrağı
+bu üç farklı soruyu aynı anda cevaplayamaz. Bugün kodda tek bağış katmanı var
+(`hasEntitlement`: abonelik ürünü tutuyor mu); admin→bayi ile bayi→müşteri
+ayrımı yok, yani bayinin "sunmuyorum" deme hakkı temsil edilemiyor.
+
+**Katmanların kodda yeri** (üçünden ikisi hazır):
+- Admin katmanı = kurulu set (`InstalledServiceIDs` + katalog). ✅ var
+- **Bayi katmanı = servis planları** (`plan_handlers.go`, `004_accounts.sql`).
+  Yeni bir yapı gerekmez: "sunuyorum" kararı planın içeriğidir — *"bu plan PHP
+  8.2 ve 8.3 içerir, 8.4 içermez"*. Plesk de aynısını yapar (Service Plans).
+  ⬜ eksik halka budur
+- Müşteri katmanı = site başına seçim (`site.php_version`, `CreatePool(siteID,
+  username, phpVersion)`). ✅ var
+
+**Sonuçlar.**
+- **Kaldırma zincir boyu bir olaydır.** Admin bir sürümü silmek isterse, onu
+  sunan planlar ve kullanan siteler engeller. D-010'daki `RUNTIME_IN_USE` reddi
+  "kullanımda" demekle yetinmemeli, *kimin* engellediğini saymalı (kaç plan, kaç
+  site) — aksi hâlde admin neyi kırdığını göremeden karar verir.
+- **Sunucu-geneli PHP ayarı bu modelle bağdaşmaz.** Bugünkü PHP-FPM sayfası
+  uzantı anahtarlarını ve php.ini değerlerini sunucu genelinde tutuyor:
+  `disable_functions` bir güvenlik denetimidir, bir müşterinin ihtiyacı herkesin
+  politikası olur; `memory_limit` sunucu genelindeyse tek bir ağır site herkesin
+  tavanını belirler; `ffi`yi bir müşteri isterken diğerinin istememesi mümkün
+  değildir. Sayfa kendini **sunucu varsayılanı** olarak adlandırmalı ve site
+  altlığı ayrıca var olmalıdır. Altyapı hazır: her site zaten kendi FPM havuzunu
+  alıyor, havuz kendi `php_admin_value` yönergelerini taşıyabilir.
+
+**Önkoşul (dürüstlük notu).** Bu model PHP için şu an **boştur**: Sury deposu
+olmadığı için admin ikinci bir sürümü isteseydi bile kuramaz (bkz. D-002
+düzeltmesi, D-010). Verecek tek şey varken "kimin neyi sunacağı" tartışması
+teoriktir. Bu yüzden B3c (Sury + çoklu sürüm) sıranın önüne alınır — süs değil,
+zinciri anlamlı kılan önkoşuldur.
+
+**Reddedilen alternatifler.**
+- **Bayi katmanı için ayrı bir "teklif" tablosu**: planlar zaten tam olarak bu
+  soruyu cevaplıyor; ikinci bir yapı, aynı bilginin iki sahibi olurdu (B3'ün
+  kapatmaya çalıştığı hatanın aynısı).
+- **Adminin kurduğu her şeyin otomatik sunulması**: en az koddur ve yanlıştır —
+  bayinin sadeleştirme hakkını yok eder (bir bayi bilerek yalnız 8.3 sunmak,
+  destek yükünü azaltmak isteyebilir).
+- **Hak birimini servis düzeyinde tutmak** ("PHP hakkı var/yok"): operatörün
+  vakasını hiç çözmez; 8.4 kurulu diye 8.3 gerektiren müşteriye "PHP'n var"
+  demek olurdu.
+- **Sunucu-geneli ayarları yeterli saymak**: çok kiracılı bir panelde bir
+  müşterinin `disable_functions` ihtiyacını herkese dayatmak demektir.
+
+---
+
 ## D-013 · Alan adı oluşturmak runtime seçmek değildir: PHP bir site anahtarıdır, kurulum kararı değil
 
 *21 Temmuz 2026*
