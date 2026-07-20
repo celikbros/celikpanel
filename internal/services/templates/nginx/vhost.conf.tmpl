@@ -18,7 +18,22 @@
         include fastcgi_params;
     }
 
-    location ~ /\.ht {
+    {{- /* Dotfiles are denied EXCEPT .well-known. Blocking only /\.ht (the
+        old rule) left .env and .git readable over HTTP — on a PHP site that
+        is the framework's database password, APP_KEY and mail credentials in
+        plain text (Laravel/Symfony and most modern PHP apps keep .env in the
+        project root). The .well-known exception is not cosmetic: site
+        certificates are issued with `certbot --webroot`, which serves the
+        challenge from .well-known/acme-challenge — a blanket dotfile deny
+        turns every issuance and renewal into a 403.
+        Nokta dosyaları .well-known DIŞINDA reddedilir. Yalnız /\.ht engellemek
+        (eski kural) .env ve .git'i HTTP'ye açık bırakıyordu — bir PHP sitesinde
+        bu, framework'ün veritabanı parolası, APP_KEY'i ve posta bilgileri demek
+        (Laravel/Symfony ve çoğu modern PHP uygulaması .env'i proje kökünde
+        tutar). .well-known istisnası süs değil: site sertifikaları
+        `certbot --webroot` ile alınır ve doğrulama .well-known/acme-challenge
+        üzerinden sunulur — battaniye ret her alma ve yenilemeyi 403 yapar. */}}
+    location ~ /\.(?!well-known).* {
         deny all;
     }
 {{- else if eq .ProjectType "static"}}
@@ -29,7 +44,16 @@
         try_files $uri $uri/ =404;
     }
 
-    location ~ /\. {
+    {{- /* Same rule as the PHP branch: the previous blanket /\. deny also
+        blocked .well-known/acme-challenge, so a static site could not pass
+        webroot validation — its first certificate and every renewal 403'd.
+        The golden path was proven with a PHP site, which is why this stayed
+        invisible.
+        PHP dalıyla aynı kural: önceki battaniye /\. reddi
+        .well-known/acme-challenge'ı da kapatıyordu; statik site webroot
+        doğrulamasını geçemiyordu — ilk sertifikası ve her yenilemesi 403.
+        Golden path PHP sitesiyle kanıtlandığı için bu görünmez kalmıştı. */}}
+    location ~ /\.(?!well-known).* {
         deny all;
     }
 {{- else}}
