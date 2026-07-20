@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 18 Temmuz 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 20 Temmuz 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -117,7 +117,7 @@ sahibi katalog · **B4** UI disiplini (tek Button/fmtBytes/modal) · **B5** gold
 - **B3'e ek — Setup Journey dürüstlüğü:** journey adımları paket varlığından değil, katalogdan gelen
   gerçek servis durumundan (kurulu + etkin + koşuyor) okunur. Saha kanıtı zaten var: Hostinger Arch
   imajındaki uyuyan bind "DNS kuruldu: Done" saydı (16 Tem). Bu senaryo B5 smoke'una regresyon olarak girer.
-- **B3'e ek — katalogda tür ayrımı + "kurulu-önce" varsayılan (18 Tem, D-010):** `ManagedService`'e
+- **B3'e ek — katalogda tür ayrımı + "kurulu-önce" varsayılan (20 Tem, D-010):** `ManagedService`'e
   `Kind` (service/runtime/tool) ve `Role` alanları girer; php-fpm ve yeni **node** kalemi `Kind=runtime`,
   phpMyAdmin/phpPgAdmin `Kind=tool` olur. Satır çizimi `Kind`'e dallanır ve `Daemonless = len(SystemNames)==0`
   sezgisi silinir (bugün üç ayrı şeyi işaretliyor). **Sürümler satır değil, satırın içinde** (sürüm
@@ -154,6 +154,10 @@ sahibi katalog · **B4** UI disiplini (tek Button/fmtBytes/modal) · **B5** gold
 - **B4'e ek — i18n disiplini:** JSX'te çıplak string yakalayan lint (App.tsx'teki "Coming soon..." gider;
   vsftpd yer tutucusu ya dürüst i18n'li EmptyState olur ya nav'dan düşer) · en.ts/tr.ts anahtar eşitliği
   kontrolü (`tools/check-i18n`) CI'da — eksik anahtar sessizce İngilizce'ye düşemez.
+- **B5'e ek — framework adı CI kapısı (D-011):** Go kaynaklarında
+  `laravel|symfony|django|nextjs|ghost` grep'i sıfır eşleşme vermeli (i18n dizeleri hariç). Kural
+  Markdown'da kalırsa iki yıl dayanmaz; enum sabiti/DB kolonu/API değeri/systemd unit adı bir kez
+  framework adı taşıdığında katalog örtük olarak doğar ve DB'de kalıcılaştığı için geri alınamaz.
 - **Sürüm tekliği + CHANGELOG:** annotated git tag (ilk aday v0.2.0) · sürüm `-ldflags` ile iki binary'ye
   gömülür, `/api/v1/panel/version`'dan servis edilir, Layout.tsx'teki sabit "v0.1.0" silinir · Keep-a-Changelog
   biçiminde CHANGELOG.md + CHANGELOG.tr.md başlar; `update.sh` çıkışında "değişiklikler: CHANGELOG.md" basılır.
@@ -259,6 +263,18 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
 - OS seviyesinde disk uygulaması (ROLES ertelenenleri) · cPanel içe aktarıcının **gerçek** müşteri
   arşiviyle kanıtı (DB kullanıcıları dahil) · WordPress Toolkit derinliği (güncelleme, sertleştirme,
   klon/staging).
+- **Framework barındırma ilkelleri (D-011, 20 Tem):** Laravel/Symfony/Django'yu katalogsuz barındırmanın
+  önündeki dört gerçek engel — hiçbiri framework'e özel değil, hepsi eksik *jenerik* yetenek:
+  (1) **docroot alt dizin seçimi** — bugün `public_html`'e sabit; açılır kutu framework adı değil YOL
+  değeri listeler (`(kök) | public | public_html`). (2) **Site kullanıcısı kimliğiyle komut ucu** —
+  `composer install`, `artisan migrate`, `npm ci` çalıştırabilmek (bugün kod tabanında `composer` sıfır
+  kez geçiyor; kullanıcı SSH'a itiliyor). Çıktı akışlı, zaman aşımlı, audit'li. (3) **Uzun süreli süreç
+  (queue worker)** — bugün üç bağımsız engel var: `RunAsUser: "www-data"` sabiti, `req.Port <= 0` reddi,
+  `project_type == "node"` kilidi; `celikapp-*` unit soyutlaması portsuz/site-kullanıcılı işçiyi de
+  taşımalı. (4) **Site cron'u** — scheduler ayrı bir kavram değil, sıradan bir crontab satırı.
+  Bunların üstüne **preset**: framework varsayılanlarını forma ÖN-DOLDURAN düğme (tip değil, kurucu
+  değil); D-011'in yapısal saflık şartına tabidir — tek yeni alan ya da tek `if framework ==` dalı
+  gerektiren preset reddedilir, preset sayısı 3'ü aşarsa strateji tartışması açılır.
 - **DNS sağlayıcı soyutlaması (D-009 yeniden tartımı + 18 Tem operatör kararı):** DNS bir SEÇİM olmalı,
   dayatma değil. Panel bugün tam kayıt setini hesaplayıp tek yere (kendi PowerDNS'i) yazıyor; o "yazıcı"
   takılabilir kılınır — üç arka uç, operatör seçer (domain başına da olabilir):
@@ -330,7 +346,11 @@ plan hali. Satılan planın her satırı gerçek olmadan ücretli katman "bitti"
   idempotent tam-durum-itme). `business_email` bu limiti yükseltir — ürünün ilk gerçek kapısı.
 - Ürün kapıları: Addons'ta listelenen her ürün ya en az bir `requireEntitlement` kapısına bağlı ya satın
   alınamaz. `extra_ip` tesisatı v0.5'e dek "yakında" işaretli; `firewall` müşteri-görünür bir özellik
-  doğana dek katalogdan çıkar. Satın alınmadan da çalışan "satılık" ürün kalmaz.
+  doğana dek katalogdan çıkar. Satın alınmadan da çalışan "satılık" ürün kalmaz. **`app_installer`
+  gerçekliğe indirilir (D-011):** bugünkü "WordPress *ve diğer uygulamalar*" ifadesi tek girişli bir
+  listeyi çoğul plan özelliği olarak satıyor — satış tarafına doldurulacak boş kova gösteriyor ve liste
+  plan özelliğine bağlandığı an giriş silmek sözleşme ihlaline dönüyor. Ürün adı "WordPress tek-tık
+  kurulumu" olur; çoğul ifade kaldırılır.
 - `additional_user` gerçek özellik olur: müşteri hesabına bağlı (`parent_id`), `user_permissions` ile
   kaynak-bazlı izin (domain listesi + dosya/mail alt izinleri), kendi girişi. (CHECK genişletme ve
   frontend'deki ölü rol dallarının dürüstlüğü v0.2.5/B2'de yapılır.)
@@ -565,7 +585,7 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 18 Temmuz 2026
+## Neredeyiz — 20 Temmuz 2026
 
 **Sürüm:** v0.1.0 alfa (henüz tag'siz — v0.2.5'te tek kaynağa bağlanacak), üretim VPS'inde canlı
 (Debian 13, yalnız-panel kurulum). İki test sunucusu: boston (Debian 13) + frankfurt (Arch — bilerek,

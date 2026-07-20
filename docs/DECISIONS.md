@@ -8,9 +8,124 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-011 · A framework is not a service: the multiplication test, a preset budget, and the limit of version ownership
+
+*July 20, 2026*
+
+**Decision.** Four linked decisions in one record:
+
+1. **The boundary rule becomes countable — the multiplication test.** One question
+   decides whether something is a catalog item or site-internal: *when N sites are
+   created on the server, does the number of copies of this thing on disk stay at
+   1, or become N?* 1 → catalog item (its version is managed by the distro/vendor
+   repo); N → site-internal (its version is managed by the customer's lock file or
+   the application's own updater). **The catalog = L1 (services) + L2 (multi-version
+   runtimes), nothing else.** Laravel, Symfony, Django and Next.js are **not in the
+   catalog and never will be**; Composer, Node and certbot are catalog items (a
+   single copy). The class is set by **deployment shape**, not by the software:
+   the very same phpMyAdmin, if copied into every customer's docroot, would become
+   N and fall out of the catalog. The test is not arguable because it is numeric.
+
+2. **The panel never owns the version of anything that exists N times.** The panel
+   does not **write** an updater; it **triggers** the application's own updater as
+   the site user. It does not pin versions, patch files, write `DISALLOW_FILE_MODS`
+   or display a "supported version". This binds the roadmap's "WordPress Toolkit
+   depth (updates, hardening)": no hardening preset may disable automatic updates
+   by default.
+
+3. **Framework support = site primitives (L3) + a preset; never a type, never an
+   installer.** The only thing the panel may own about Laravel is a *set of
+   defaults* (a `public` docroot suggestion, the cron line text, a queue command
+   builder) — not an installer. Provisioning contains not one `if type == laravel`
+   branch.
+
+4. **`appCatalog` is not a type axis but a reversible install action.** The site
+   type is PHP; WordPress is **not** an option in the domain-creation flow — it is
+   an action run afterwards and **removable**.
+
+**Why.** The operator asked: "Is Laravel a service, does it belong in the catalog —
+and if we open that door, does it go on forever?" Five competing panels' real
+record was examined:
+
+- **The engine of drift is not the catalog, it is presets.** A catalog entry is
+  expensive (package name, two distro families, a removal path, an init step); a
+  preset costs three strings and has no argument against it. "Symfony comes for
+  free" also holds for Django, Ghost and Strapi; by the eighth preset the screen is
+  a framework picker. **cPAddons, too, began as "just a configuration recipe", not
+  a one-click installer.**
+- **The second engine of drift is version ownership.** What killed cPAddons was not
+  installation: the panel took ownership of N-instance WordPress versions, patched
+  `update.php`, and users were stranded on WP 3.9. The same pattern repeated at
+  aaPanel (a one-click frozen on Laravel 5.4/PHP 7.4; their own staff say "delete
+  the files we generated") and Plesk (the skeleton generator broke on an upstream
+  change; the APS catalog was **removed entirely** in 18.0.77). The industry
+  retreated from this model.
+
+**Three mechanisms that make breaking the rule expensive** (a rule that lives only
+in Markdown will not survive two years — unlike D-003/D-010, this decision needs
+enforcement in code):
+
+- **The structural purity test.** A preset is accepted only if it can be expressed
+  as *pre-filled values of already existing generic fields*. If it needs one new
+  field or one `if framework ==` branch, the preset is **rejected**. Presets live
+  as pure data in one file; in the UI they are not a selectable "type" but a "fill
+  the form" button above the form. Passing 3 presets is not a code change but a
+  **strategy change**.
+- **A framework-name ban + a CI gate.** A framework name may not appear in any enum
+  constant, DB column, API field value or systemd unit name — only in i18n strings.
+  The docroot dropdown lists **path values**, not framework names
+  (`(root) | public | public_html`). `validProjectTypes`
+  (php/static/node/proxy/forwarding) defines the *transport shape*, not the
+  application — it is **considered locked**. In CI, grepping Go sources for
+  `laravel|symfony|django|nextjs|ghost` must return zero matches (i18n excluded).
+- **Every entry's exit is written first.** `appCatalog` entries carry a mandatory
+  decision-record ID, maintainer and source checksum — "adding an entry in three
+  lines" becomes impossible. Each admission is written together with its removal
+  path and the answer to "what happens to sites already installed" (always: **the
+  files belong to the customer; the panel only removes the button**).
+
+**Commercial pressure is closed too.** The `app_installer` entry today says
+"One-click installs for WordPress **and other apps**" — selling a one-entry list as
+a plural plan feature. Two harms: sales sees an empty bucket to fill (**the
+strongest engine of drift is a promise already sold**, not engineering), and once
+the list is bound to a plan feature, deleting an entry becomes a contract breach.
+The product is brought back to reality: "One-click WordPress install".
+
+**Positioning (sales and product use the same sentence).**
+*"CelikPanel does not install your application; it manages the server underneath
+it. Your code's version is yours — and we give you that not as a limit but as a
+guarantee."* For the technical buyer: *"Everything the panel owns exists exactly
+once on the server; we never touch the version of anything that sits in your site
+as N copies."* A competitor cannot make that promise honestly. **Note:** "we have
+one-click too, it's called `composer create-project`" may only be used once the
+run-as-site-user command endpoint **ships**; it does not exist today.
+
+**The real work is not in the catalog.** This decision fixes what we will not do;
+the gap is at L3 — today we cannot host Laravel even without a catalog entry:
+- the docroot is pinned to `public_html` in `site_orchestrator.go` (Laravel needs `public/`)
+- ~~the vhost served `.env` in plain text~~ → **closed** (commit `0088c67`, same day;
+  the same fix also repaired ACME for static sites)
+- `composer`/`artisan` appear zero times in the codebase (no endpoint runs a command as the site user)
+- a queue worker is impossible behind three independent blocks (the `RunAsUser: "www-data"`
+  constant, the `req.Port <= 0` rejection, the `project_type == "node"` lock)
+
+**Rejected alternatives.** A "Laravel" project type (once an enum carries a
+framework name the catalog is implicitly born, and it is irreversible because it
+persists in the DB) · a panel-generated skeleton/tarball (aaPanel frozen on an old
+version, Plesk broken by an upstream change) · a Softaculous-style "Frameworks"
+category (15 entries: Bootstrap is a CSS framework, Kohana dead since 2016,
+Symfony 2.3.42 EOL 2017 — still installable) · schematizing `.env` field by field
+(it silently corrupts the customer's file on multi-line values; Forge and Ploi both
+keep an opaque blob — the only legitimate "smartness" is to look at what is on
+disk: copy `.env.example` if it exists) · making the scheduler a first-class
+concept (it is an ordinary crontab line) · applying a preset automatically
+(consent belongs to the user; otherwise ghost crons/units appear).
+
+---
+
 ## D-010 · Catalog kinds (service/runtime/tool) + an "installed-first" default; real multi-PHP via Sury
 
-*July 18, 2026*
+*July 20, 2026*
 
 **Decision.** Three linked decisions in one record:
 
@@ -23,7 +138,7 @@ Code decisions live in git; this file is for strategy. Newest first.
    row** (a version drawer). No separate `/runtimes` or `/apps` page.
 2. **The Services page becomes "installed-first":** "hide not installed" defaults
    to ON. The catalog is the same list with the filter off (no second screen, no
-   second search box). *Implementation correction (Jul 18, same day): collapsing
+   second search box). *Implementation correction (Jul 20, same day): collapsing
    is not a fixed default, it follows the view* — categories are EXPANDED in the
    installed view (the list is already short; folding it meant three clicks to
    see three services) and COLLAPSED once the catalog is shown (a long list wants
@@ -370,7 +485,7 @@ A dropdown with one option is a lie that misleads the user. So:
 - **Genuinely multi-version, hosting-critical** → solved outside the distro,
   with a real picker:
   - **PHP** — side-by-side packages (`php8.1-fpm`…`php8.4-fpm`), chosen
-    per-site under runtimes. ⚠️ *Correction (Jul 18, see D-010): only HALF was
+    per-site under runtimes. ⚠️ *Correction (Jul 20, see D-010): only HALF was
     built.* Detection (`DetectInstalledPHPVersions`) and per-site selection
     work; but with no `Repo` defined for `php-fpm` in the catalog the panel
     **cannot install** multiple versions — it is limited to the distro's single

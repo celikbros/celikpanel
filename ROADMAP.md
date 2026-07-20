@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: July 18, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: July 20, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -121,7 +121,7 @@ natural extensions of B1–B5** (added later, they would all break a second time
   (installed + enabled + running), not package presence. Field proof already exists: the dormant bind in
   Hostinger's Arch image counted as "DNS installed: Done" (July 16). That scenario enters B5 smoke as a
   regression.
-- **B3 addendum — catalog kinds + an "installed-first" default (Jul 18, D-010):** `ManagedService` gains
+- **B3 addendum — catalog kinds + an "installed-first" default (Jul 20, D-010):** `ManagedService` gains
   `Kind` (service/runtime/tool) and `Role`; php-fpm and a new **node** entry become `Kind=runtime`,
   phpMyAdmin/phpPgAdmin become `Kind=tool`. Row rendering branches on `Kind` and the
   `Daemonless = len(SystemNames)==0` heuristic is deleted (it marks three different things today).
@@ -163,6 +163,10 @@ natural extensions of B1–B5** (added later, they would all break a second time
   App.tsx goes; the vsftpd placeholder either becomes an honest i18n'd EmptyState or drops from nav) ·
   an en.ts/tr.ts key-parity check (`tools/check-i18n`) in CI — a missing key can't silently fall back
   to English.
+- **B5 addendum — the framework-name CI gate (D-011):** grepping Go sources for
+  `laravel|symfony|django|nextjs|ghost` must return zero matches (i18n strings excluded). A rule living only
+  in Markdown will not survive two years; once an enum constant / DB column / API value / systemd unit name
+  carries a framework name, the catalog is implicitly born and becomes irreversible because it persists in the DB.
 - **Version singularity + CHANGELOG:** annotated git tag (first candidate v0.2.0) · the version is baked
   into both binaries via `-ldflags`, served from `/api/v1/panel/version`, and the hard-coded "v0.1.0" in
   Layout.tsx is deleted · CHANGELOG.md + CHANGELOG.tr.md start in Keep-a-Changelog format; `update.sh`
@@ -278,6 +282,18 @@ place; production trust is done before the first real tenant.
   running an infinite PHP loop, the neighbor site opens in <1 s.
 - OS-level disk enforcement (the ROLES deferrals) · the cPanel importer proven with a **real** customer
   archive (DB users included) · WordPress Toolkit depth (updates, hardening, clone/staging).
+- **Framework hosting primitives (D-011, Jul 20):** the four real blockers to hosting
+  Laravel/Symfony/Django without a catalog entry — none of them framework-specific, all of them missing
+  *generic* capabilities: (1) **docroot subdirectory selection** — pinned to `public_html` today; the
+  dropdown lists PATH values, not framework names (`(root) | public | public_html`). (2) **A run-as-site-user
+  command endpoint** — to run `composer install`, `artisan migrate`, `npm ci` (today `composer` appears zero
+  times in the codebase; the user is pushed to SSH). Streamed output, timeout, audited. (3) **Long-running
+  processes (queue workers)** — three independent blocks today: the `RunAsUser: "www-data"` constant, the
+  `req.Port <= 0` rejection, the `project_type == "node"` lock; the `celikapp-*` unit abstraction must also
+  carry a portless, site-user worker. (4) **Site cron** — the scheduler is not a separate concept, it is an
+  ordinary crontab line. On top of these, a **preset**: a button that PRE-FILLS the form with a framework's
+  defaults (not a type, not an installer); it is subject to D-011's structural purity test — a preset needing
+  one new field or one `if framework ==` branch is rejected, and passing 3 presets opens a strategy debate.
 - **DNS provider abstraction (D-009 re-weighing + Jul 18 operator decision):** DNS must be a CHOICE, not
   an imposition. The panel already computes the full record set and writes it to one place (its own
   PowerDNS); that "writer" becomes pluggable — three backends, operator's choice (possibly per domain):
@@ -356,6 +372,10 @@ deleted — the honesty rule's plan form. The paid tier isn't "done" until every
 - Product gates: every product listed in Addons is either wired to at least one `requireEntitlement`
   gate or cannot be purchased. `extra_ip` plumbing stays "coming soon" until v0.5; `firewall` leaves the
   catalog until a customer-visible feature exists. No "for sale" product that works without purchase remains.
+  **`app_installer` is brought back to reality (D-011):** today's "WordPress *and other apps*" sells a
+  one-entry list as a plural plan feature — it shows sales an empty bucket to fill, and once the list is bound
+  to a plan feature, deleting an entry becomes a contract breach. The product becomes "One-click WordPress
+  install"; the plural wording goes.
 - `additional_user` becomes a real feature: bound to a customer account (`parent_id`), resource-scoped
   permissions via `user_permissions` (domain list + file/mail sub-permissions), its own login. (The CHECK
   widening and the honesty of the dead role branches in the frontend happen in v0.2.5/B2.)
@@ -614,7 +634,7 @@ product itself:
 
 ---
 
-## Where We Are — July 18, 2026
+## Where We Are — July 20, 2026
 
 **Version:** v0.1.0 alpha (untagged yet — bound to one source in v0.2.5), live on the production VPS
 (Debian 13, panel-only install). Two test servers: boston (Debian 13) + frankfurt (Arch — deliberate,

@@ -8,9 +8,120 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-011 · Framework servis değildir: çoğalma testi, preset bütçesi ve sürüm sahipliğinin sınırı
+
+*20 Temmuz 2026*
+
+**Karar.** Dört bağlı karar, tek kayıtta:
+
+1. **Sınır kuralı sayısallaşır — çoğalma testi.** Bir şeyin katalog kalemi mi
+   site-içi mi olduğunu tek soru belirler: *sunucuda N site açıldığında bu şeyin
+   diskteki örnek sayısı 1'de mi kalır, N'e mi çıkar?* 1 → katalog kalemi (sürümü
+   dağıtım/vendor deposu yönetir); N → site-içi (sürümü müşterinin lock dosyası ya
+   da uygulamanın kendi güncelleyicisi yönetir). **Katalog = L1 (servisler) + L2
+   (çok-sürümlü runtime'lar), başka hiçbir şey.** Laravel, Symfony, Django,
+   Next.js katalogda **yoktur ve olmayacaktır**; Composer, Node ve certbot ise
+   katalog kalemidir (tek örnek). Sınıfı yazılım değil **konuşlandırma biçimi**
+   belirler: aynı phpMyAdmin her müşterinin docroot'una kopyalansaydı N olur ve
+   katalogdan düşerdi. Test tartışmaya kapalıdır çünkü sayısaldır.
+
+2. **Panel, N örnekli hiçbir şeyin sürümünü sahiplenmez.** Panel bir güncelleyici
+   **yazmaz**; uygulamanın kendi güncelleyicisini site kullanıcısı kimliğiyle
+   **tetikler**. Sürüm sabitlemez, dosya yamalamaz, `DISALLOW_FILE_MODS` yazmaz,
+   "desteklenen sürüm" göstermez. Bu, yol haritasındaki "WordPress Toolkit
+   derinliği (güncelleme, sertleştirme)" maddesini bağlayıcı olarak sınırlar:
+   sertleştirme presetlerinden otomatik güncellemeyi kapatan hiçbir madde
+   varsayılan açık olamaz.
+
+3. **Framework desteği = site ilkelleri (L3) + preset; asla tip, asla kurucu.**
+   Panelin Laravel'e dair sahip olabileceği tek şey bir *varsayılanlar seti*dir
+   (docroot `public` önerisi, cron satırı metni, queue komut derleyicisi) — bir
+   kurucu değil. Provizyonda tek bir `if type == laravel` dalı yoktur.
+
+4. **`appCatalog` bir tip ekseni değil, geri alınabilir kurulum eylemidir.** Site
+   tipi PHP'dir; WordPress domain oluşturma akışında bir seçenek **değildir**,
+   kurulduktan sonra çalıştırılan ve **kaldırılabilen** bir eylemdir.
+
+**Neden.** Operatörün sorusu: "Laravel servis mi, katalogda mı durmalı — ve bir
+kez açarsak bu böyle gider mi?" Beş rakip panelin gerçek kaydı incelendi:
+
+- **Kaymanın motoru katalog değil, preset'tir.** Katalog girişi pahalıdır (paket
+  adı, iki dağıtım ailesi, kaldırma yolu, init adımı); preset'in maliyeti üç
+  dizedir ve reddetmenin argümanı yoktur. "Symfony bedava gelir" cümlesi Django,
+  Ghost, Strapi için de kurulur; sekizinci preset'te ekran bir framework
+  seçicisidir. **cPAddons da "tek tık kurulum" değil, "yalnızca yapılandırma
+  reçetesi" olarak başladı.**
+- **Kaymanın ikinci motoru sürüm sahipliğidir.** cPAddons'ı öldüren kurulum
+  değildi: N örnekli WordPress'in sürümünü panel üstlendi, `update.php`'yi
+  yamaladı, kullanıcılar WP 3.9'da çakılı kaldı. Aynı desen aaPanel'de (Laravel
+  5.4/PHP 7.4'te donmuş one-click; kendi personeli "ürettiğimiz dosyaları silin"
+  diyor) ve Plesk'te (iskelet üreteci upstream değişiminde kırıldı; APS kataloğu
+  18.0.77'de **tamamen kaldırıldı**) tekrarlandı. Sektör bu modelden geri çekildi.
+
+**Kuralı ihlal etmeyi pahalı kılan üç mekanizma** (kural yalnız Markdown'da
+yaşarsa iki yıl dayanmaz — bu karar D-003/D-010'un aksine kodda zorlayıcı ister):
+
+- **Yapısal saflık şartı (preset testi).** Bir preset ancak *zaten var olan
+  jenerik alanların ön-doldurulmuş değerleri* olarak ifade edilebiliyorsa kabul
+  edilir. Tek bir yeni alan ya da tek bir `if framework ==` dalı gerekiyorsa
+  preset **reddedilir**. Preset'ler salt-veri tek dosyada yaşar; UI'da seçilebilir
+  bir "tip" değil, formun üstündeki "formu doldur" düğmesidir. Preset sayısı 3'ü
+  aşarsa bu bir kod değişikliği değil **strateji değişikliğidir**.
+- **Framework adı yasağı + CI kapısı.** Framework adı hiçbir enum sabitinde, DB
+  kolonunda, API alan değerinde veya systemd unit adında geçemez; yalnız i18n
+  dizelerinde geçer. Docroot açılır kutusu framework adı değil **yol değeri**
+  listeler (`(kök) | public | public_html`). `validProjectTypes`
+  (php/static/node/proxy/forwarding) *taşıma biçimini* tanımlar, uygulamayı değil —
+  **kilitli sayılır**. CI'da Go kaynaklarında `laravel|symfony|django|nextjs|ghost`
+  grep'i sıfır eşleşme vermeli (i18n hariç).
+- **Girişi olan her kalemin çıkışı baştan yazılır.** `appCatalog` girişleri zorunlu
+  karar-kaydı ID'si + bakımcı + kaynak sağlaması taşır — "üç satırda giriş eklemek"
+  imkânsızlaşır. Kabul kararına girişi kaldıran yol ve "kurulmuş siteler ne olur"
+  cevabı (her zaman: **dosyalar müşterinindir, panel yalnız düğmeyi kaldırır**)
+  birlikte yazılır.
+
+**Ticari basınç da kapatılır.** `app_installer` girişi bugün "One-click installs
+for WordPress **and other apps**" diyor — tek girişli bir listeyi çoğul bir plan
+özelliği olarak satıyor. İki zararı var: satış tarafı doldurulacak boş bir kova
+görür (kaymanın en güçlü motoru mühendislik değil **satılmış bir vaattir**), ve
+liste plan özelliğine bağlandığı an giriş silmek sözleşme ihlaline döner. Ürün
+gerçekliğe indirilir: "WordPress tek-tık kurulumu"; çoğul ifade kaldırılır.
+
+**Konumlandırma (satış ve ürün aynı cümleyi kullanır).**
+*"CelikPanel uygulamanızı kurmaz; uygulamanızın altındaki sunucuyu yönetir.
+Kodunuzun sürümü sizindir — ve bunu bir sınır olarak değil, bir garanti olarak
+veriyoruz."* Teknik alıcı için: *"Panelin sahiplendiği her şeyin sunucuda tek bir
+örneği vardır; sitenizde N kopya halinde duran hiçbir şeyin sürümüne karışmayız."*
+Rakibin veremeyeceği bir garantidir. **Not:** "bizde de tek tık var, adı
+`composer create-project`" cümlesi ancak site-kullanıcısı kimliğiyle çalışan komut
+ucu **yayınlandıktan sonra** kullanılabilir; bugün yoktur.
+
+**Asıl iş katalogda değil.** Bu karar neyi yapmayacağımızı sabitler; boşluk
+L3'tedir — bugün Laravel'i katalogsuz da barındıramıyoruz:
+- docroot `site_orchestrator.go`'da `public_html`'e sabit (Laravel `public/` ister)
+- ~~vhost `.env`'i düz metin sunuyor~~ → **kapatıldı** (commit `0088c67`, aynı gün;
+  ayrıca statik sitelerin ACME kırığı da bu düzeltmeyle giderildi)
+- `composer`/`artisan` kod tabanında sıfır kez geçiyor (site kullanıcısı kimliğiyle
+  komut çalıştıran uç yok)
+- queue worker üç bağımsız engelle imkânsız (`RunAsUser: "www-data"` sabiti,
+  `req.Port <= 0` reddi, `project_type == "node"` kilidi)
+
+**Reddedilen alternatifler.** "Laravel" proje tipi (enum bir kez framework adı
+taşıdığında katalog örtük doğar ve DB'de kalıcılaştığı için geri alınamaz) ·
+panelin ürettiği iskelet/tarball (aaPanel donmuş sürümde, Plesk upstream
+kırılmasında) · Softaculous tarzı "Frameworks" kategorisi (15 giriş: Bootstrap bir
+CSS framework'ü, Kohana 2016'dan beri ölü, Symfony 2.3.42 EOL 2017 — hâlâ
+kurulabiliyor) · `.env`'i alan alan şemalaştırmak (çok satırlı değerlerde
+müşterinin dosyasını sessizce tahrip eder; Forge da Ploi de opak blob tutar —
+meşru "akıllılık" diskteki gerçekliğe bakmaktır: `.env.example` varsa kopyala) ·
+scheduler'ı birinci sınıf kavram yapmak (sıradan bir crontab satırıdır) ·
+preset'i otomatik uygulamak (onay kullanıcıdadır; yoksa hayalet cron/unit doğar).
+
+---
+
 ## D-010 · Katalogda tür ayrımı (servis/runtime/araç) + "kurulu-önce" varsayılan; PHP çoklu-sürüm Sury ile gerçek olur
 
-*18 Temmuz 2026*
+*20 Temmuz 2026*
 
 **Karar.** Üç bağlı karar, tek kayıtta:
 
@@ -23,7 +134,7 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
    Ayrı `/runtimes` ya da `/apps` sayfası **açılmaz**.
 2. **Servisler sayfası "kurulu-önce" olur:** "kurulu olmayanı gizle" varsayılan
    AÇIK. Katalog = aynı listenin süzgeci kapalı hâli (ikinci ekran, ikinci arama
-   kutusu yok). *Uygulama düzeltmesi (18 Tem, aynı gün): katlama sabit varsayılan
+   kutusu yok). *Uygulama düzeltmesi (20 Tem, aynı gün): katlama sabit varsayılan
    değil, görünümü izler* — kurulu görünümde kategoriler AÇIK (liste zaten kısa;
    katlamak 3 servisi görmek için 3 tık demekti), katalog açılınca KATLI (liste
    uzun, yönetilmek ister). ✅ uygulandı: commit `312e378`.
@@ -366,7 +477,7 @@ seçenekli bir açılır liste, kullanıcıyı yanıltan bir yalandır. Dolayıs
 - **Gerçekten çoklu-sürüm, hosting-kritik** → dağıtımdan bağımsız, gerçek
   seçiciyle:
   - **PHP** — yan yana paketler (`php8.1-fpm`…`php8.4-fpm`), site başına
-    seçilir. ⚠️ *Düzeltme (18 Tem, bkz. D-010): yalnız YARISI yapılmış.* Tespit
+    seçilir. ⚠️ *Düzeltme (20 Tem, bkz. D-010): yalnız YARISI yapılmış.* Tespit
     (`DetectInstalledPHPVersions`) ve site başına seçim çalışıyor; ama katalogda
     `php-fpm` için `Repo` tanımlı olmadığından panel çoklu sürüm **kuramıyor** —
     dağıtımın tek sürümüyle sınırlı. Sury vendor deposu D-010 ile eklenir.
