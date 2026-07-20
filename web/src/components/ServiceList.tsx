@@ -78,9 +78,21 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
+    // Installed-first (D-010, Jul 18): the page shows what this server RUNS,
+    // not the whole catalog. Page length then tracks the installed count, not
+    // the catalog size — a clean server is 3-4 rows whether the catalog holds
+    // 19 items or 40. This is the constitution's "a service that isn't
+    // installed is invisible" as mechanics instead of a checkbox; the catalog
+    // is the same list with the filter off, not a second screen.
+    // Kurulu-önce (D-010, 18 Tem): sayfa, sunucunun ÇALIŞTIRDIĞINI gösterir,
+    // tüm kataloğu değil. Böylece sayfa uzunluğu katalog boyutunu değil kurulu
+    // kalem sayısını izler — temiz sunucu, katalog 19 da olsa 40 da olsa 3-4
+    // satırdır. Bu, anayasanın "kurulu olmayan görünmezdir" maddesinin onay
+    // kutusu değil mekanik hâli; katalog, aynı listenin süzgeci kapalı hâlidir,
+    // ikinci ekran değil.
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [query, setQuery] = useState('');
-    const [hideNotInstalled, setHideNotInstalled] = useState(false);
+    const [hideNotInstalled, setHideNotInstalled] = useState(true);
 
     useEffect(() => {
         loadServices();
@@ -254,7 +266,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                 <input
                                     type="checkbox"
                                     checked={hideNotInstalled}
-                                    onChange={(e) => setHideNotInstalled(e.target.checked)}
+                                    onChange={(e) => {
+                                        const hide = e.target.checked;
+                                        setHideNotInstalled(hide);
+                                        // Collapse follows the view, not a fixed default: the
+                                        // installed list is short and wants to be readable at a
+                                        // glance; the full catalog is long and wants folding.
+                                        // Katlama görünümü izler, sabit varsayılanı değil: kurulu
+                                        // liste kısadır ve tek bakışta okunmak ister; tam katalog
+                                        // uzundur ve katlanmak ister.
+                                        setCollapsed(hide ? new Set() : new Set(categoryOrder.map((c) => c.id)));
+                                    }}
                                     className="h-3.5 w-3.5 rounded border-border-strong accent-primary"
                                 />
                                 {t('services.hideNotInstalled')}
