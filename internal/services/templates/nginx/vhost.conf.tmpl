@@ -44,6 +44,28 @@
         try_files $uri $uri/ =404;
     }
 
+    {{- /* A static site has no PHP handler, so without this rule nginx would
+        serve a .php file as a plain file: `.php` is not in mime.types, so it
+        falls back to `default_type application/octet-stream` and the browser
+        DOWNLOADS THE SOURCE — database credentials and all. "PHP does not run
+        here" must not mean "PHP source is published here". This is the same
+        family as the .env leak (A6): a file in the webroot handed out as
+        source. 403 rather than 404 on purpose — it tells whoever uploaded the
+        file that it exists but is not being executed, which is the actual
+        diagnosis; a 404 would read as a failed upload.
+        Statik sitenin PHP işleyicisi yoktur; bu kural olmadan nginx .php
+        dosyasını düz dosya gibi sunar: `.php` mime.types içinde yoktur, bu
+        yüzden `default_type application/octet-stream`e düşer ve tarayıcı
+        KAYNAK KODU İNDİRİR — veritabanı bilgileriyle birlikte. "Burada PHP
+        çalışmaz", "burada PHP kaynağı yayınlanır" demek olmamalı. Bu, .env
+        sızıntısıyla (A6) aynı aile: web kökündeki dosyanın kaynak olarak
+        dağıtılması. 404 değil 403 bilinçli — dosyayı yükleyene, dosyanın var
+        olduğunu ama çalıştırılmadığını söyler; asıl teşhis budur. 404 ise
+        başarısız bir yükleme gibi okunurdu. */}}
+    location ~ \.(php|phtml|phps|php[0-9])$ {
+        deny all;
+    }
+
     {{- /* Same rule as the PHP branch: the previous blanket /\. deny also
         blocked .well-known/acme-challenge, so a static site could not pass
         webroot validation — its first certificate and every renewal 403'd.
