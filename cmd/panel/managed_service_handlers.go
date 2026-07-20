@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -241,6 +242,23 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(payload)
 }
 
+// unitBelongsTo reports whether a systemd unit is one of this catalogue
+// entry's: either an exact declared name, or — for a versioned runtime — a
+// match on its pattern. The pattern is what lets a PHP version nobody wrote
+// down still be seen.
+// unitBelongsTo, bir systemd unit'inin bu katalog kaleminin olup olmadığını
+// bildirir: ya açıkça bildirilmiş bir ad, ya da — sürümlü bir runtime için —
+// deseniyle eşleşme. Desen, kimsenin yazmadığı bir PHP sürümünün yine de
+// görülmesini sağlayan şeydir.
+func unitBelongsTo(unit string, names []string, pattern *regexp.Regexp) bool {
+	for _, n := range names {
+		if unit == n {
+			return true
+		}
+	}
+	return pattern != nil && pattern.MatchString(unit)
+}
+
 // packageFamily returns the host's package-manager family, asked from the
 // agent once and kept. This is the one cheap fact the cached GET may fetch:
 // it is a single RPC that reads the distro id, not the system-wide probe the
@@ -319,30 +337,40 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		status := "inactive"
 		anyRunning := false
 
+		// A versioned runtime matches by pattern as well as by name, so a PHP
+		// version this catalogue has never heard of is still observed. Without
+		// it, installing php8.5-fpm from Sury produced a unit that is running
+		// and serving sites while the panel reported PHP as not installed.
+		// Sürümlü bir runtime, ad kadar desenle de eşleşir; böylece bu kataloğun
+		// hiç duymadığı bir PHP sürümü yine de gözlenir. Bu olmadan Sury'den
+		// kurulan php8.5-fpm, çalışan ve site sunan bir unit üretirken panel
+		// PHP'yi kurulu değil diye bildiriyordu.
+		var namePattern *regexp.Regexp
+		if managed.SystemNamePattern != "" {
+			namePattern, _ = regexp.Compile(managed.SystemNamePattern)
+		}
 		for _, svc := range allServices {
-			for _, systemName := range managed.SystemNames {
-				if svc.Name != systemName {
-					continue
-				}
-				isInstalled = true
+			if !unitBelongsTo(svc.Name, managed.SystemNames, namePattern) {
+				continue
+			}
+			isInstalled = true
 
-				version := extractVersion(svc.Name, managed.ID)
-				if version != "" && !contains(versions, version) {
-					versions = append(versions, version)
-				}
+			version := extractVersion(svc.Name, managed.ID)
+			if version != "" && !contains(versions, version) {
+				versions = append(versions, version)
+			}
 
-				if len(svc.ConfigFiles) > 0 {
-					configFiles = append(configFiles, svc.ConfigFiles...)
-				}
+			if len(svc.ConfigFiles) > 0 {
+				configFiles = append(configFiles, svc.ConfigFiles...)
+			}
 
-				// "active (running)" for daemons; oneshot units like
-				// wg-quick@wg0 report "active (exited)" — both are up.
-				// Daemon'larda "active (running)"; wg-quick@wg0 gibi oneshot
-				// unit'ler "active (exited)" bildirir — ikisi de ayaktadır.
-				statusLower := strings.ToLower(svc.Status)
-				if strings.HasPrefix(statusLower, "active") {
-					anyRunning = true
-				}
+			// "active (running)" for daemons; oneshot units like
+			// wg-quick@wg0 report "active (exited)" — both are up.
+			// Daemon'larda "active (running)"; wg-quick@wg0 gibi oneshot
+			// unit'ler "active (exited)" bildirir — ikisi de ayaktadır.
+			statusLower := strings.ToLower(svc.Status)
+			if strings.HasPrefix(statusLower, "active") {
+				anyRunning = true
 			}
 		}
 

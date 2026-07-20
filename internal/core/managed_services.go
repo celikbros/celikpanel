@@ -59,7 +59,42 @@ type ManagedRepo struct {
 	// depodur; agent bunu apt-cache ile eşleyerek keşfeder. Ayrıca sürüm-seçmeli
 	// kurulumun neyi kurabileceğini sınırlar: agent eşleşmeyen paketi reddeder,
 	// böylece UI asla keyfi ad kuramaz.
+	//
+	// If the pattern has a capture group, group 1 is the version prefix that
+	// VersionCompanions is templated from — e.g. `^(php[0-9]+\.[0-9]+)-fpm$`
+	// captures "php8.3" out of "php8.3-fpm".
+	// Desende bir yakalama grubu varsa, 1. grup VersionCompanions'ın
+	// şablonlandığı sürüm önekidir — örn. `^(php[0-9]+\.[0-9]+)-fpm$`,
+	// "php8.3-fpm" içinden "php8.3"ü yakalar.
 	PackagePattern string
+	// VersionCompanions are installed alongside a picked version, with {v}
+	// replaced by the captured prefix. Without them a version pick installs the
+	// bare runtime: `php8.3-fpm` alone has no mysqli, mbstring, curl, xml, gd or
+	// zip, so neither WordPress nor Laravel survives its first request — the
+	// panel would report a successful install of something that cannot serve a
+	// site. The distro's `php-fpm` meta-package hides this by depending on a
+	// default set; picking an exact version from a vendor repo does not.
+	//
+	// Companions are best-effort by design: they are filtered to what apt
+	// actually offers for that version and anything missing is REPORTED, never
+	// skipped silently. A single absent package must not fail the install —
+	// Sury ships no `php8.5-opcache`, so a strict install would refuse PHP 8.5
+	// entirely over one optional extension.
+	//
+	// VersionCompanions, seçilen sürümün yanında kurulur; {v} yakalanan önekle
+	// değiştirilir. Onlarsız bir sürüm seçimi çıplak runtime kurar: tek başına
+	// `php8.3-fpm`in mysqli, mbstring, curl, xml, gd ve zip'i yoktur, yani ne
+	// WordPress ne Laravel ilk isteği geçer — panel, site sunamayacak bir şeyin
+	// kurulumunu başarılı bildirirdi. Dağıtımın `php-fpm` meta paketi bunu
+	// varsayılan bir sete bağımlı olarak gizler; vendor deposundan tam sürüm
+	// seçmek gizlemez.
+	//
+	// Companion'lar tasarım gereği en-iyi-çabadır: apt'ın o sürüm için gerçekten
+	// sunduklarına süzülür ve eksik olan RAPORLANIR, asla sessizce atlanmaz.
+	// Tek bir eksik paket kurulumu düşürmemeli — Sury `php8.5-opcache`
+	// yayınlamıyor; katı bir kurulum, tek bir isteğe bağlı uzantı yüzünden
+	// PHP 8.5'i tümüyle reddederdi.
+	VersionCompanions []string
 }
 
 // Kind answers "how is this row drawn and operated?" — the single question
@@ -106,6 +141,21 @@ type ManagedService struct {
 	Category    string      // "web", "database", "email", "security", "dns", "cache"
 	Kind        ServiceKind // service | runtime | tool — decides how the row is drawn (D-010)
 	SystemNames []string    // Systemd service names to check
+	// SystemNamePattern additionally matches units whose name carries a version,
+	// so the set of units does not have to be enumerated in code. A runtime with
+	// a vendor repo can install versions this file has never heard of: Sury
+	// serves PHP 5.6 through 8.6, and a hardcoded `php8.4-fpm … php8.0-fpm` list
+	// makes php8.5-fpm INVISIBLE — installed, running, serving sites, and absent
+	// from the panel. Enumerating versions in code is a list that rots by
+	// design; the pattern cannot.
+	// SystemNamePattern, adında sürüm taşıyan unit'leri de eşler; böylece unit
+	// kümesinin kodda sayılması gerekmez. Vendor deposu olan bir runtime, bu
+	// dosyanın hiç duymadığı sürümleri kurabilir: Sury PHP 5.6'dan 8.6'ya
+	// sunuyor ve elle yazılmış bir `php8.4-fpm … php8.0-fpm` listesi
+	// php8.5-fpm'i GÖRÜNMEZ yapar — kurulu, çalışıyor, site sunuyor ve panelde
+	// yok. Sürümleri kodda saymak tasarımı gereği bayatlayan bir listedir;
+	// desen bayatlayamaz.
+	SystemNamePattern string
 	// ConflictGroup: services sharing a group are mutually exclusive — they
 	// bind the same role/port (a web server on :80, a DNS server on :53) and
 	// cannot run together. Empty means no conflict (coexists with everything).
@@ -203,9 +253,44 @@ var ManagedServices = []ManagedService{
 		Description: "PHP FastCGI Process Manager",
 		Icon:        "🐘",
 		Category:    "web",
-		Kind:        KindRuntime,
-		SystemNames: []string{"php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm", "php-fpm"},
-		Packages:    map[string][]string{"apt": {"php-fpm"}, "pacman": {"php-fpm"}},
+		Kind: KindRuntime,
+		// The unversioned unit covers Arch (a single `php-fpm`); every versioned
+		// unit is matched by the pattern instead of being listed, so a version
+		// installed from Sury is never invisible to the panel.
+		// Sürümsüz unit Arch'ı kapsar (tek bir `php-fpm`); sürümlü unit'ler
+		// listelenmek yerine desenle eşlenir, böylece Sury'den kurulan bir
+		// sürüm panele asla görünmez kalmaz.
+		SystemNames:       []string{"php-fpm"},
+		SystemNamePattern: `^php[0-9]+\.[0-9]+-fpm$`,
+		Packages:          map[string][]string{"apt": {"php-fpm"}, "pacman": {"php-fpm"}},
+		// The distro freezes one PHP; Sury carries every maintained major-minor
+		// side by side, which is what makes "the customer needs 8.3 while the
+		// server runs 8.4" answerable at all (D-014: the entitlement unit is the
+		// version, and a chain with one thing to give is vacuous).
+		// Dağıtım tek bir PHP dondurur; Sury bakımdaki tüm major-minor'ları yan
+		// yana taşır — "sunucu 8.4 koşarken müşterinin 8.3'e ihtiyacı var"ı
+		// cevaplanabilir kılan şey budur (D-014: hak birimi sürümdür ve verecek
+		// tek şeyi olan bir zincir boştur).
+		Repo: &ManagedRepo{
+			ID:             "sury",
+			Name:           "Sury PHP (packages.sury.org)",
+			Description:    "Debian/Ubuntu's standard PHP repository — every maintained version, side by side.",
+			KeyURL:         "https://packages.sury.org/php/apt.gpg",
+			SourceTemplate: "deb https://packages.sury.org/php/ {codename} main",
+			PackagePattern: `^(php[0-9]+\.[0-9]+)-fpm$`,
+			// A bare php8.x-fpm runs no real site: no database driver, no
+			// mbstring, no curl. These are the extensions WordPress, Laravel and
+			// WooCommerce need before their first request.
+			// Çıplak bir php8.x-fpm gerçek site koşturmaz: veritabanı sürücüsü,
+			// mbstring, curl yok. Bunlar WordPress, Laravel ve WooCommerce'in
+			// ilk istekten önce ihtiyaç duyduğu uzantılardır.
+			VersionCompanions: []string{
+				"{v}-cli", "{v}-common", "{v}-opcache",
+				"{v}-mysql", "{v}-pgsql",
+				"{v}-mbstring", "{v}-xml", "{v}-curl",
+				"{v}-gd", "{v}-zip", "{v}-intl", "{v}-bcmath",
+			},
+		},
 	},
 	{
 		ID:            "nginx",

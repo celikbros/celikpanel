@@ -22,8 +22,9 @@ import (
 // a service: it is opt-in, the panel only ever passes catalog-declared repos
 // (the UI can never inject a URL), the signing key is pinned per-repo with apt's
 // signed-by= (no global apt-key trust), and DisableRepo removes the source and
-// key cleanly. The armoured key is used directly, so no gpg is pulled in — the
-// minimal-install promise holds.
+// key cleanly. The key is written in whichever form the vendor publishes —
+// armoured (.asc) or binary keyring (.gpg); apt reads both directly, so no gpg
+// is pulled in to convert between them and the minimal-install promise holds.
 //
 // Yönetilen vendor depoları. Dağıtım her sürümde bir veritabanı/çalışma
 // zamanının tek major'unu dondurur; vendor'ın kendi apt deposu (PostgreSQL için
@@ -35,8 +36,9 @@ import (
 // opt-in'dir, panel yalnız katalogda tanımlı depoları geçirir (UI asla URL
 // enjekte edemez), imza anahtarı depo başına apt signed-by= ile sabitlenir
 // (küresel apt-key güveni yok) ve DisableRepo kaynağı + anahtarı temizce
-// kaldırır. Zırhlı anahtar doğrudan kullanılır, böylece gpg çekilmez — minimal
-// kurulum sözü korunur.
+// kaldırır. Anahtar, vendor hangi biçimde yayınlıyorsa o biçimde yazılır —
+// zırhlı (.asc) ya da ikili keyring (.gpg); apt ikisini de doğrudan okur, bu
+// yüzden dönüştürmek için gpg çekilmez ve minimal kurulum sözü korunur.
 
 // validRepoID bounds the id to a filename-safe token, since it names the
 // keyring and source files under /etc and /usr/share.
@@ -44,7 +46,28 @@ import (
 // /usr/share altındaki keyring ve kaynak dosyalarını adlandırır.
 var validRepoID = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
 
-func repoKeyringPath(id string) string { return "/usr/share/keyrings/celikpanel-" + id + ".asc" }
+// A signing key ships either ASCII-armoured (.asc) or as a binary keyring
+// (.gpg) and apt's signed-by= accepts both — but only if the file is named for
+// what it actually contains. PGDG publishes armoured; Sury publishes binary, so
+// assuming one format silently locked out every vendor using the other.
+// İmza anahtarı ya ASCII-zırhlı (.asc) ya da ikili keyring (.gpg) olarak
+// yayınlanır ve apt'ın signed-by='ı ikisini de kabul eder — ama yalnız dosya
+// gerçekte içerdiği şeye göre adlandırılmışsa. PGDG zırhlı, Sury ikili yayınlar;
+// tek biçim varsaymak, diğerini kullanan her vendor'ı sessizce dışarıda bırakıyordu.
+func repoKeyringPath(id string, armored bool) string {
+	if armored {
+		return "/usr/share/keyrings/celikpanel-" + id + ".asc"
+	}
+	return "/usr/share/keyrings/celikpanel-" + id + ".gpg"
+}
+
+// repoKeyringCandidates lists both names so status and removal do not depend on
+// knowing which format was used when the repo was enabled.
+// repoKeyringCandidates iki adı da listeler; böylece durum ve kaldırma, depo
+// açılırken hangi biçimin kullanıldığını bilmeye bağlı kalmaz.
+func repoKeyringCandidates(id string) []string {
+	return []string{repoKeyringPath(id, true), repoKeyringPath(id, false)}
+}
 func repoSourcePath(id string) string  { return "/etc/apt/sources.list.d/celikpanel-" + id + ".list" }
 
 type EnableRepoRequest struct {
@@ -93,12 +116,26 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		resp.Error = "repo source must be a deb https:// line"
 		return nil
 	}
-	signed := "deb [signed-by=" + repoKeyringPath(req.RepoID) + "] " + strings.TrimPrefix(source, "deb ")
-
-	key, err := fetchArmoredKey(req.KeyURL)
+	// The key is fetched BEFORE the source line is built: its format decides
+	// the keyring filename, and signed-by= must point at the name we actually
+	// write. / Anahtar, kaynak satırından ÖNCE indirilir: biçimi keyring dosya
+	// adını belirler ve signed-by= gerçekten yazdığımız adı göstermelidir.
+	key, armored, err := fetchRepoKey(req.KeyURL)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
+	}
+	keyring := repoKeyringPath(req.RepoID, armored)
+	signed := "deb [signed-by=" + keyring + "] " + strings.TrimPrefix(source, "deb ")
+
+	// Re-enabling with a different key format must not leave the old file
+	// behind: apt would keep trusting a keyring nothing points at any more.
+	// Farklı bir anahtar biçimiyle yeniden açmak eski dosyayı bırakmamalı:
+	// apt, artık hiçbir kaynağın göstermediği bir keyring'e güvenmeyi sürdürürdü.
+	for _, stale := range repoKeyringCandidates(req.RepoID) {
+		if stale != keyring {
+			_ = os.Remove(stale)
+		}
 	}
 	// apt drops to the unprivileged _apt user to run gpgv, so it must be able to
 	// read the keyring. The agent runs with UMask=0027, which would turn a 0644
@@ -110,11 +147,11 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	// 0640 root:celikpanel'e çevirir — _apt okuyamaz ve doğrulama "imzasız"
 	// hatasıyla başarısız olur. Yazdıktan sonra chmod umask'ı ezer; apt'ın
 	// beklediği gibi her iki dosya da dünyaca-okunur olur.
-	if err := os.WriteFile(repoKeyringPath(req.RepoID), key, 0o644); err != nil {
+	if err := os.WriteFile(keyring, key, 0o644); err != nil {
 		resp.Error = fmt.Sprintf("write keyring: %v", err)
 		return nil
 	}
-	if err := os.Chmod(repoKeyringPath(req.RepoID), 0o644); err != nil {
+	if err := os.Chmod(keyring, 0o644); err != nil {
 		resp.Error = fmt.Sprintf("chmod keyring: %v", err)
 		return nil
 	}
@@ -142,7 +179,7 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		// Başarısız açma sonrası ileriki apt çalışmalarını bozan yarı-yapılandırılmış
 		// bir kaynak kalmasın diye dosyaları geri al.
 		_ = os.Remove(repoSourcePath(req.RepoID))
-		_ = os.Remove(repoKeyringPath(req.RepoID))
+		_ = os.Remove(keyring)
 		resp.Error = fmt.Sprintf("apt update for new repo failed: %s", strings.TrimSpace(string(out)))
 		return nil
 	}
@@ -164,7 +201,9 @@ func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) er
 		return nil
 	}
 	_ = os.Remove(repoSourcePath(req.RepoID))
-	_ = os.Remove(repoKeyringPath(req.RepoID))
+	for _, k := range repoKeyringCandidates(req.RepoID) {
+		_ = os.Remove(k)
+	}
 	cmd := exec.Command("apt-get", "update", "-o", "APT::Get::List-Cleanup=1")
 	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
 	_, _ = cmd.CombinedOutput()
@@ -230,22 +269,47 @@ func (a *Agent) RepoPackages(req *RepoPackagesRequest, resp *RepoPackagesRespons
 			pkgs = append(pkgs, name)
 		}
 	}
-	sort.Slice(pkgs, func(i, j int) bool { return majorOf(pkgs[i]) > majorOf(pkgs[j]) })
+	sort.Slice(pkgs, func(i, j int) bool {
+		ai, an := versionOf(pkgs[i])
+		bi, bn := versionOf(pkgs[j])
+		if ai != bi {
+			return ai > bi
+		}
+		return an > bn
+	})
 	resp.Packages = pkgs
 	return nil
 }
 
-// majorOf extracts the trailing integer of a versioned package name
-// ("postgresql-17" → 17) for newest-first ordering; 0 when there is none.
-// majorOf, sürümlü bir paket adının sondaki tam sayısını çıkarır
-// ("postgresql-17" → 17); yoksa 0.
-func majorOf(pkg string) int {
-	if i := strings.LastIndexByte(pkg, '-'); i >= 0 {
-		if n, err := strconv.Atoi(pkg[i+1:]); err == nil {
-			return n
-		}
+// versionOf reads the first version number in a package name as (major, minor),
+// so the newest offer sorts first: "postgresql-17" → (17,0), "php8.3-fpm" →
+// (8,3), "php5.6-fpm" → (5,6).
+//
+// The previous version read the TRAILING integer, which works for
+// postgresql-17 but returns 0 for every php8.x-fpm ("fpm" is not a number) —
+// so with PHP in the catalogue all versions tied at 0 and the drawer listed
+// them in whatever order apt-cache happened to emit.
+//
+// versionOf, bir paket adındaki ilk sürüm numarasını (major, minor) olarak
+// okur; böylece en yeni teklif başa sıralanır: "postgresql-17" → (17,0),
+// "php8.3-fpm" → (8,3), "php5.6-fpm" → (5,6).
+//
+// Önceki sürüm SONDAKİ tam sayıyı okuyordu; postgresql-17 için çalışır ama her
+// php8.x-fpm için 0 döner ("fpm" sayı değil) — yani katalogda PHP varken tüm
+// sürümler 0'da berabere kalıyor ve çekmece onları apt-cache ne sırayla
+// verdiyse o sırayla listeliyordu.
+var versionInName = regexp.MustCompile(`([0-9]+)(?:\.([0-9]+))?`)
+
+func versionOf(pkg string) (major, minor int) {
+	m := versionInName.FindStringSubmatch(pkg)
+	if m == nil {
+		return 0, 0
 	}
-	return 0
+	major, _ = strconv.Atoi(m[1])
+	if m[2] != "" {
+		minor, _ = strconv.Atoi(m[2])
+	}
+	return major, minor
 }
 
 // osCodename reads VERSION_CODENAME from /etc/os-release (bookworm, noble, …),
@@ -265,26 +329,76 @@ func osCodename() string {
 	return ""
 }
 
-// fetchArmoredKey downloads an ASCII-armoured signing key over https and
-// sanity-checks it before it is ever written as a trusted keyring.
-// fetchArmoredKey, ASCII-zırhlı imza anahtarını https üzerinden indirir ve
-// güvenilir keyring olarak yazılmadan önce doğruluğunu denetler.
-func fetchArmoredKey(url string) ([]byte, error) {
+// fetchRepoKey downloads a signing key over https and sanity-checks it before
+// it is ever written as a trusted keyring. It reports whether the key is
+// ASCII-armoured so the caller can name the file for what it holds.
+//
+// Both forms are accepted because vendors publish both and apt reads both: the
+// armoured form is used directly (apt ≥ 1.4) so no gpg dependency is pulled in,
+// and the binary form IS a keyring already. What is NOT accepted is anything
+// that is not an OpenPGP public key — an HTML error page saved as a trusted
+// keyring would leave a repo that apt refuses to verify, with a confusing
+// "not signed" error far from the real cause.
+//
+// fetchRepoKey, imza anahtarını https üzerinden indirir ve güvenilir keyring
+// olarak yazılmadan önce doğruluğunu denetler. Anahtarın ASCII-zırhlı olup
+// olmadığını da bildirir; böylece çağıran, dosyayı içeriğine göre adlandırır.
+//
+// İki biçim de kabul edilir çünkü vendor'lar ikisini de yayınlar ve apt ikisini
+// de okur: zırhlı biçim doğrudan kullanılır (apt ≥ 1.4), böylece gpg bağımlılığı
+// çekilmez; ikili biçim zaten bir keyring'dir. Kabul EDİLMEYEN, OpenPGP açık
+// anahtarı olmayan her şeydir — güvenilir keyring diye kaydedilmiş bir HTML
+// hata sayfası, apt'ın doğrulamayı reddettiği bir depo bırakır ve hata
+// ("imzasız") gerçek sebepten çok uzakta görünür.
+func fetchRepoKey(url string) (key []byte, armored bool, err error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	res, err := client.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("fetch repo key: %v", err)
+		return nil, false, fmt.Errorf("fetch repo key: %v", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetch repo key: HTTP %d", res.StatusCode)
+		return nil, false, fmt.Errorf("fetch repo key: HTTP %d", res.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20)) // 1 MiB is plenty for a key
 	if err != nil {
-		return nil, fmt.Errorf("read repo key: %v", err)
+		return nil, false, fmt.Errorf("read repo key: %v", err)
 	}
-	if !strings.Contains(string(body), "BEGIN PGP PUBLIC KEY BLOCK") {
-		return nil, fmt.Errorf("downloaded repo key is not an ASCII-armoured PGP public key")
+	if strings.Contains(string(body), "BEGIN PGP PUBLIC KEY BLOCK") {
+		return body, true, nil
 	}
-	return body, nil
+	if isBinaryPublicKey(body) {
+		return body, false, nil
+	}
+	return nil, false, fmt.Errorf("downloaded repo key is neither an ASCII-armoured nor a binary OpenPGP public key")
+}
+
+// isBinaryPublicKey reports whether the bytes begin with an OpenPGP Public-Key
+// packet (tag 6). Checking the tag — not merely "it is not text" — is what
+// stops an HTML error page or a truncated download from being installed as a
+// trusted keyring.
+//
+// The first byte is a packet header: bit 7 is always set. Bit 6 selects the
+// format: new-format packets carry the tag in the low 6 bits, old-format ones
+// in bits 2-5. RFC 4880 §4.2.
+//
+// isBinaryPublicKey, baytların bir OpenPGP Açık-Anahtar paketiyle (tag 6)
+// başlayıp başlamadığını bildirir. Yalnız "metin değil" demek yerine tag'i
+// denetlemek, bir HTML hata sayfasının ya da yarım inmiş bir dosyanın
+// güvenilir keyring olarak kurulmasını engelleyen şeydir.
+//
+// İlk bayt paket başlığıdır: 7. bit her zaman settir. 6. bit biçimi seçer:
+// yeni biçim paketler tag'i alttaki 6 bitte, eski biçim olanlar 2-5. bitlerde
+// taşır. RFC 4880 §4.2.
+func isBinaryPublicKey(b []byte) bool {
+	if len(b) == 0 || b[0]&0x80 == 0 {
+		return false
+	}
+	var tag byte
+	if b[0]&0x40 != 0 {
+		tag = b[0] & 0x3F // new format
+	} else {
+		tag = (b[0] >> 2) & 0x0F // old format
+	}
+	return tag == 6 // Public-Key Packet
 }

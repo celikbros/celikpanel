@@ -2,6 +2,8 @@ package core
 
 import (
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -57,6 +59,74 @@ func TestEveryServiceDeclaresKind(t *testing.T) {
 			t.Errorf("%s: Kind is empty — classify it as service, runtime or tool (D-010)", s.ID)
 		default:
 			t.Errorf("%s: unknown Kind %q", s.ID, s.Kind)
+		}
+	}
+}
+
+// A repo that declares VersionCompanions must capture the version prefix its
+// templates are expanded from, or every "{v}-mysql" stays literal, apt has
+// never heard of it, and the companions are silently dropped — leaving a
+// runtime the panel reported as installed but which cannot serve a site.
+//
+// VersionCompanions bildiren bir depo, şablonlarının genişletildiği sürüm
+// önekini yakalamalıdır; yoksa her "{v}-mysql" harfi harfine kalır, apt onu hiç
+// duymamıştır ve companion'lar sessizce düşer — panelin kurulu bildirdiği ama
+// site sunamayan bir runtime kalır.
+func TestRepoCompanionsHaveACaptureGroup(t *testing.T) {
+	for _, s := range ManagedServices {
+		if s.Repo == nil || len(s.Repo.VersionCompanions) == 0 {
+			continue
+		}
+		re, err := regexp.Compile(s.Repo.PackagePattern)
+		if err != nil {
+			t.Errorf("%s: PackagePattern does not compile: %v", s.ID, err)
+			continue
+		}
+		if re.NumSubexp() < 1 {
+			t.Errorf("%s: declares VersionCompanions but PackagePattern %q captures nothing",
+				s.ID, s.Repo.PackagePattern)
+		}
+		for _, c := range s.Repo.VersionCompanions {
+			if !strings.Contains(c, "{v}") {
+				t.Errorf("%s: companion %q has no {v} placeholder", s.ID, c)
+			}
+		}
+	}
+}
+
+// The repo's pattern must actually match the version packages it will be asked
+// to install, and must NOT match a neighbouring name. This is the whitelist
+// that stops a version pick from becoming an arbitrary package install, so a
+// pattern that is too loose is a security regression, not a typo.
+//
+// Deponun deseni, kurması istenecek sürüm paketlerini gerçekten eşlemeli ve
+// komşu bir adı eşlememelidir. Bu, sürüm seçiminin keyfi paket kurulumuna
+// dönüşmesini engelleyen beyaz listedir; fazla gevşek bir desen yazım hatası
+// değil, güvenlik regresyonudur.
+func TestPHPRepoPatternBoundsWhatCanBeInstalled(t *testing.T) {
+	php := GetManagedServiceByID("php-fpm")
+	if php == nil || php.Repo == nil {
+		t.Fatal("php-fpm has no managed repo — multi-version PHP is the point of D-014")
+	}
+	re := regexp.MustCompile(php.Repo.PackagePattern)
+
+	for _, ok := range []string{"php8.3-fpm", "php8.4-fpm", "php5.6-fpm", "php8.5-fpm"} {
+		m := re.FindStringSubmatch(ok)
+		if m == nil {
+			t.Errorf("%s should be installable", ok)
+			continue
+		}
+		if len(m) < 2 || m[1] != strings.TrimSuffix(ok, "-fpm") {
+			t.Errorf("%s: captured %q, want the version prefix", ok, m)
+		}
+	}
+	// Anything that is not "phpX.Y-fpm" must be refused — especially the CLI and
+	// dev packages, which are companions chosen by us, never by the caller.
+	// "phpX.Y-fpm" olmayan her şey reddedilmeli — özellikle CLI ve dev paketleri;
+	// onlar bizim seçtiğimiz companion'lardır, asla çağıranın değil.
+	for _, bad := range []string{"php8.3-cli", "php8.3-fpm-extra", "xphp8.3-fpm", "php-fpm", "php8.3", "nginx"} {
+		if re.MatchString(bad) {
+			t.Errorf("%s must not be accepted as a version package", bad)
 		}
 	}
 }

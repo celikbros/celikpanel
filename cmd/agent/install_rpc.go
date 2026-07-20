@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -55,7 +56,61 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		return nil
 	}
 
-	if a.serviceInstalled(svc) {
+	// A version pick is validated before anything else, because it changes what
+	// "already installed" even means.
+	// Sürüm seçimi her şeyden önce doğrulanır, çünkü "zaten kurulu"nun ne
+	// demek olduğunu değiştiren şey odur.
+	var versionPrefix string
+	if req.Package != "" {
+		if svc.Repo == nil {
+			resp.Error = "this service does not offer version selection"
+			return nil
+		}
+		// Version selection comes from a managed vendor repo, which is apt-only
+		// today. Without this the pick sails through validation and dies inside
+		// pacman as "target not found: php8.3-fpm" — a package-manager error
+		// shown to someone who asked the panel a product question.
+		// Sürüm seçimi yönetilen bir vendor deposundan gelir ve bugün yalnız
+		// apt'te vardır. Bu olmadan seçim doğrulamayı geçip pacman'in içinde
+		// "target not found: php8.3-fpm" diye ölür — panele ürün sorusu soran
+		// birine gösterilen bir paket-yöneticisi hatası.
+		if detectPkgFamily() != "apt" {
+			resp.Error = "choosing a version needs a managed repository, which is only supported on apt (Debian/Ubuntu) systems yet"
+			return nil
+		}
+		re, err := regexp.Compile(svc.Repo.PackagePattern)
+		if err != nil {
+			resp.Error = "invalid package pattern in catalogue"
+			return nil
+		}
+		m := re.FindStringSubmatch(req.Package)
+		if m == nil {
+			resp.Error = fmt.Sprintf("%q is not a valid version package for %s", req.Package, svc.Name)
+			return nil
+		}
+		if len(m) > 1 {
+			versionPrefix = m[1]
+		}
+	}
+
+	// For a plain install the question is "is this service here?"; for a version
+	// pick it is "is THIS VERSION here?". Asking the first question for both is
+	// what made a second PHP impossible: with 8.4 present, a request for 8.3 was
+	// answered "PHP-FPM is already installed" and refused — the admin could not
+	// give a customer the version they needed even with Sury enabled, which is
+	// the whole point of D-014's chain.
+	// Düz kurulumda soru "bu servis burada mı?"dır; sürüm seçiminde "BU SÜRÜM
+	// burada mı?". İkisi için de ilk soruyu sormak, ikinci bir PHP'yi imkânsız
+	// kılan şeydi: 8.4 varken 8.3 isteği "PHP-FPM zaten kurulu" diye
+	// reddediliyordu — Sury açık olsa bile admin, müşterinin ihtiyacı olan
+	// sürümü veremiyordu; D-014'ün zincirinin tüm amacı buydu.
+	if req.Package != "" {
+		if packageInstalled(req.Package) {
+			resp.Installed = false
+			resp.Detail = req.Package + " is already installed"
+			return nil
+		}
+	} else if a.serviceInstalled(svc) {
 		resp.Installed = false
 		resp.Detail = svc.Name + " is already installed"
 		return nil
@@ -86,16 +141,32 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// Servisin yönetilen deposundan bir sürüm seçimi dağıtım varsayılanının
 	// yerini alır — ama yalnız servisin gerçekten bir deposu varsa ve istenen ad
 	// desenine uyuyorsa; böylece bu asla keyfi bir paket kuramaz.
+	var skipped []string
 	if req.Package != "" {
-		if svc.Repo == nil {
-			resp.Error = "this service does not offer version selection"
-			return nil
-		}
-		if ok, _ := regexp.MatchString(svc.Repo.PackagePattern, req.Package); !ok {
-			resp.Error = fmt.Sprintf("%q is not a valid version package for %s", req.Package, svc.Name)
-			return nil
-		}
 		pkgs = []string{req.Package}
+
+		// A picked version installs bare without its companions — `php8.3-fpm`
+		// alone has no database driver, mbstring or curl, so the panel would
+		// report success for a runtime that cannot serve WordPress or Laravel.
+		// Companions are filtered to what apt actually offers for THIS version
+		// and the rest is reported: Sury publishes no php8.5-opcache, and a
+		// strict install would refuse PHP 8.5 entirely over one extension.
+		// Seçilen bir sürüm companion'ları olmadan çıplak kurulur — tek başına
+		// `php8.3-fpm`in veritabanı sürücüsü, mbstring'i, curl'ü yoktur; panel,
+		// WordPress ya da Laravel sunamayacak bir runtime için başarı
+		// bildirirdi. Companion'lar apt'ın BU sürüm için gerçekten sunduklarına
+		// süzülür, kalanı raporlanır: Sury php8.5-opcache yayınlamıyor ve katı
+		// bir kurulum tek bir uzantı yüzünden PHP 8.5'i tümüyle reddederdi.
+		if versionPrefix != "" && len(svc.Repo.VersionCompanions) > 0 {
+			for _, tpl := range svc.Repo.VersionCompanions {
+				name := strings.ReplaceAll(tpl, "{v}", versionPrefix)
+				if packageAvailable(name) {
+					pkgs = append(pkgs, name)
+				} else {
+					skipped = append(skipped, name)
+				}
+			}
+		}
 	}
 
 	if _, err := installPackages(family, pkgs); err != nil {
@@ -103,13 +174,64 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		return nil
 	}
 
-	if unit := a.firstPresentUnit(svc); unit != "" {
+	// After a version pick, enable the unit that version actually brought —
+	// firstPresentUnit returns the NEWEST present unit, which after installing
+	// 8.3 next to an existing 8.4 would start 8.4 and leave the version the
+	// operator just asked for stopped.
+	// Sürüm seçiminden sonra, o sürümün gerçekten getirdiği unit etkinleştirilir
+	// — firstPresentUnit mevcut EN YENİ unit'i döndürür; var olan 8.4'ün yanına
+	// 8.3 kurulduktan sonra bu, 8.4'ü başlatıp operatörün az önce istediği
+	// sürümü durmuş bırakırdı.
+	unit := ""
+	if req.Package != "" && unitExists(req.Package) {
+		unit = req.Package
+	} else {
+		unit = a.firstPresentUnit(svc)
+	}
+	if unit != "" {
 		_ = exec.Command("systemctl", "enable", "--now", unit).Run()
 	}
 
 	resp.Installed = true
 	resp.Detail = fmt.Sprintf("installed %s", strings.Join(pkgs, ", "))
+	if len(skipped) > 0 {
+		resp.Detail += fmt.Sprintf(" — not offered for this version: %s", strings.Join(skipped, ", "))
+	}
 	return nil
+}
+
+// packageAvailable reports whether apt knows a package name at all, so an
+// optional companion that a vendor does not publish for one version is skipped
+// instead of failing the whole install.
+// packageAvailable, apt'ın bir paket adını hiç tanıyıp tanımadığını bildirir;
+// böylece vendor'ın bir sürüm için yayınlamadığı isteğe bağlı bir companion,
+// tüm kurulumu düşürmek yerine atlanır.
+func packageAvailable(name string) bool {
+	out, err := exec.Command("apt-cache", "policy", name).Output()
+	if err != nil {
+		return false
+	}
+	// An unknown package prints nothing; a known one prints a stanza whose
+	// Candidate is a real version rather than "(none)".
+	// Bilinmeyen paket hiçbir şey basmaz; bilinen paket, Candidate'i "(none)"
+	// değil gerçek bir sürüm olan bir kayıt basar.
+	text := strings.TrimSpace(string(out))
+	if text == "" {
+		return false
+	}
+	for _, line := range strings.Split(text, "\n") {
+		if s := strings.TrimSpace(line); strings.HasPrefix(s, "Candidate:") {
+			return strings.TrimSpace(strings.TrimPrefix(s, "Candidate:")) != "(none)"
+		}
+	}
+	return false
+}
+
+// unitExists reports whether systemd knows a unit by exactly this name.
+// unitExists, systemd'nin tam bu adda bir unit tanıyıp tanımadığını bildirir.
+func unitExists(name string) bool {
+	out, err := exec.Command("systemctl", "list-unit-files", name+".service", "--no-legend").Output()
+	return err == nil && strings.TrimSpace(string(out)) != ""
 }
 
 type UninstallServiceResponse struct {
@@ -195,7 +317,55 @@ func (a *Agent) installedServiceSet() map[string]bool {
 // names that the system recognises, or "" if none is installed.
 // firstPresentUnit, bir servisin aday systemd unit adlarından sistemin
 // tanıdığı ilkini döndürür, hiçbiri kurulu değilse "".
+// unitsMatching returns the installed unit names matching a catalogue pattern,
+// newest version first. Listing the unit files and filtering here is what keeps
+// versioned runtimes out of the catalogue's hardcoded name list — the panel
+// learns which PHP versions exist from the machine, not from this file.
+// unitsMatching, bir katalog desenine uyan kurulu unit adlarını en yeni sürüm
+// başta döndürür. Unit dosyalarını listeleyip burada süzmek, sürümlü
+// runtime'ları katalogdaki elle yazılmış ad listesinden kurtaran şeydir —
+// panel hangi PHP sürümlerinin var olduğunu bu dosyadan değil makineden öğrenir.
+func unitsMatching(pattern string) []string {
+	if pattern == "" {
+		return nil
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil
+	}
+	out, err := exec.Command("systemctl", "list-unit-files", "--type=service", "--no-legend", "--no-pager").Output()
+	if err != nil {
+		return nil
+	}
+	var units []string
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := strings.TrimSuffix(fields[0], ".service")
+		if re.MatchString(name) {
+			units = append(units, name)
+		}
+	}
+	sort.Slice(units, func(i, j int) bool {
+		ai, an := versionOf(units[i])
+		bi, bn := versionOf(units[j])
+		if ai != bi {
+			return ai > bi
+		}
+		return an > bn
+	})
+	return units
+}
+
 func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
+	// Pattern matches are consulted after the explicit names but count just as
+	// much: with only php8.3-fpm installed there is no plain `php-fpm` unit, and
+	// without this the runtime would read as not installed at all.
+	// Desen eşleşmeleri açık adlardan sonra bakılır ama aynı ölçüde geçerlidir:
+	// yalnız php8.3-fpm kuruluyken düz bir `php-fpm` unit'i yoktur ve bu olmadan
+	// runtime hiç kurulu değilmiş gibi okunurdu.
 	for _, unit := range svc.SystemNames {
 		// Instances of template units ("wg-quick@wg0") never appear in
 		// list-unit-files — look their template ("wg-quick@") up instead.
@@ -209,6 +379,9 @@ func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
 		if err == nil && strings.TrimSpace(string(out)) != "" {
 			return unit
 		}
+	}
+	if units := unitsMatching(svc.SystemNamePattern); len(units) > 0 {
+		return units[0] // newest version present
 	}
 	return ""
 }
