@@ -8,6 +8,87 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-013 · Alan adı oluşturmak runtime seçmek değildir: PHP bir site anahtarıdır, kurulum kararı değil
+
+*21 Temmuz 2026*
+
+**Karar.** "Alan adı ekle" ekranı **"ne çalışacak?"** sorusunu sormayı bırakır.
+Sorduğu tek şey amaçtır: **web sitesi · yalnız posta · yalnız DNS**. Runtime
+(PHP açık/kapalı + sürüm, Node/proxy modu, port, başlangıç dosyası) oluşturmadan
+sonra **sitenin ayarı** olur — açılıp kapanabilen, geri alınabilir bir özellik.
+
+Bunun doğrudan sonucu: **`static` ile `php` ayrı proje tipi değildir.** İkisi
+aynı şeyin PHP anahtarı kapalı ve açık hâlidir; şablon farkı üç satırdır
+(`index.php` dizin sayılır mı · eşleşmeyen URL `/index.php`'ye mi düşer yoksa
+404 mü · `.php` fastcgi'ye gider mi). `node`/`proxy` ise gerçekten ayrı bir
+moddur — doküman kökü sunulmaz, her şey ters vekile gider.
+
+**PHP-FPM isteğe bağlı kalır** (operatör kararı, 21 Tem). Anayasanın "kurulum
+anında hiçbir şey kurulmaz, kurulu olmayan görünmez" maddesi PHP için de
+geçerlidir: yalnız-DNS ya da yalnız-Node sunan bir makine PHP taşımaz. PHP
+kurulu değilse site ayarındaki anahtar bunu dürüstçe söyler ve yöneticiye kurma
+yolunu gösterir — ama bunu **oluşturma ekranında** değil, kendi yerinde yapar.
+
+**Neden.** Operatörün sorusu şuydu: "PHP kullanmayacak birine neden PHP
+zorluyoruz, gereksiz ve kafa karıştırıcı değil mi? Herkes WordPress kurmak
+zorunda değil." Haklıydı ve teşhis şuydu: ekran, kurulu olmayan bir yeteneği
+turuncu bir çağrıyla reklam ediyordu — Servisler sayfasında daha yeni
+uyguladığımız "kurulu olmayan görünmez" kuralının tam tersi. Statik site kuracak
+birine sunucusu eksikmiş gibi hissettiriyordu; sunucu eksik değildi, o kişi PHP
+istemiyordu.
+
+Plesk'in gerçek akışı incelendi (operatörün 9 ekran görüntüsü, canlı kurulum) ve
+şu çıktı: **Plesk'in oluşturma diyaloğu bir runtime seçici değildir.** İlk ekran
+"içerik buraya nasıl gelecek" diye sorar (boş sayfa · dosya yükle · WordPress ·
+Git'ten çek · Node.js · yalnız posta). İkinci ekranda runtime hiç sorulmaz.
+Üçüncü ekranda "Configuring PHP" **koşulsuz** bir adımdır. PHP sonradan sitenin
+ayar sayfasında bir onay kutusudur (sürüm listesi + site başına php.ini).
+Kritik ayrıntı: **"Node.js" seçeneği oluşturmayı hiç değiştirmez** — form "Blank
+website" ile birebir aynıdır ve oluşturma bitince Node **hâlâ etkin değildir**,
+"Enable Node.js" düğmesine basmak gerekir. Yani Plesk'te bile o ilk ekran bir
+yönlendirme menüsüdür; gerçek karar sitenin ayarında verilir.
+
+**Plesk'ten şekli alıyoruz, paketlemeyi almıyoruz.** Plesk'te soru hiç doğmaz
+çünkü PHP'yi kendisi getirir (`/opt/plesk/php/8.3`); PHP asla "kurulu değil"
+olamaz. Bizde olabilir. Bu yüzden "her sitede PHP varsayılan açık" doğrudan
+kopyalanamaz — kopyalansaydı D-003 ve anayasa maddesi çiğnenirdi.
+
+**Yan bulgu (kapatıldı).** Bu tartışma gerçek bir açığı ortaya çıkardı: statik
+vhost'ta PHP işleyicisi yoktu ama `.php` için ret kuralı da yoktu, bu yüzden
+nginx dosyayı `application/octet-stream` olarak veriyor ve tarayıcı **kaynak
+kodu indiriyordu**. A6 ailesi. Canlı nginx'te ölçülüp kapatıldı (`b1a6aac`).
+Ders kayda geçsin: *"burada X çalışmaz", "burada X'in kaynağı yayınlanır"
+demek olmamalı.*
+
+**Reddedilen alternatifler.**
+- **PHP-FPM temel kurulumun parçası olsun** (Plesk modeli): soruyu kökten
+  bitirirdi ve pazar beklentisiyle birebir örtüşürdü, ama "kurulu olmayan
+  görünmez" ilkesinden PHP için feragat demekti. Operatör isteğe bağlıyı seçti.
+- **Kurulum sırasında operatöre sorulsun** ("bu sunucu PHP sunacak mı?"):
+  makine başına tek karar cazipti, ama install.sh'a kalıcı bir dallanma ekler ve
+  sonradan fikir değiştireni yarı-yolda bırakır.
+- **Dile göre seçenek çoğaltmak** ("Node.js sitesi", "Python sitesi", "Go
+  sitesi"): nginx'in ve panelin gözünde üçü de aynı şeydir —
+  `127.0.0.1:PORT`'a ters vekil + bir unit. D-010'un "Go satırı kavramsal hata
+  olurdu" gerekçesinin aynısı. Uygulama modu **tek** seçenektir, runtime onun
+  içinde bir alandır.
+- **Oluşturma ekranındaki turuncu uyarıyı yumuşatmak/kısaltmak**: semptomu
+  tedavi ederdi. Sorun uyarının tonu değil, sorunun oraya ait olmamasıydı.
+- **Uyuşmazlık tespitini tek başına yeterli saymak** (statik sitede `.php`
+  görünce uyar): iyi bir özellik ve yapılacak, ama yanlış soruyu sormaya devam
+  edip arkasından temizlik yapmak olurdu. Önce soru düzelir, tespit emniyet
+  ağıdır.
+
+**Uygulama sırası.** (1) ✅ statik `.php` sızıntısı kapandı — güvenlik, tasarım
+tartışmasından bağımsız · (2) Add Domain "ne için?" sorusuna iner, turuncu
+dayatma kalkar, metinler markadan davranışa çevrilir ("WordPress, Laravel…"
+gider) · (3) site ayarında PHP anahtarı + sürüm; `static`/`php` tek moda birleşir
+· (4) uyuşmazlık tespiti + tek tıkla düzelt · (5) Uygulama modu (Node/proxy)
+oluşturma sonrası ayarda görünür hâle gelir — arka uç (`hosting_handlers.go`,
+şablonun vekil dalı, `HostingTypePanel`) zaten hazırdır, eksik olan tek dil.
+
+---
+
 ## D-012 · Lisanslı ürünler ve satış zinciri: hak bir havuzdur, uyum satıcıyla operatör arasındadır
 
 *20 Temmuz 2026*

@@ -8,6 +8,88 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-013 · Creating a domain is not picking a runtime: PHP is a site toggle, not an installation decision
+
+*July 21, 2026*
+
+**Decision.** The "Add domain" screen stops asking **"what will run here?"**. It
+asks one thing — purpose: **website · mail only · DNS only**. The runtime (PHP
+on/off + version, Node/proxy mode, port, startup file) becomes a **setting on
+the site** after creation: a property that can be flipped and flipped back.
+
+A direct consequence: **`static` and `php` are not separate project types.**
+They are the same thing with PHP off and on; the template difference is three
+lines (does `index.php` count as an index · does an unmatched URL fall through
+to `/index.php` or 404 · does `.php` go to fastcgi). `node`/`proxy` genuinely is
+a separate mode — no document root is served, everything goes to the proxy.
+
+**PHP-FPM stays optional** (operator's call, Jul 21). The constitution's "nothing
+is installed at setup; what isn't installed is invisible" applies to PHP too: a
+DNS-only or Node-only machine carries no PHP. When PHP is absent the toggle on
+the site says so honestly and shows an admin the way to install it — but it does
+that in its own place, **not on the creation screen**.
+
+**Why.** The operator asked: "why are we forcing PHP on someone who will never
+use it — isn't that unnecessary and confusing? Not everyone has to install
+WordPress." They were right, and the diagnosis was: the screen advertised an
+uninstalled capability with an orange call to action — the exact opposite of the
+"not installed = invisible" rule we had just enforced on the Services page. It
+made someone building a static site feel their server was deficient. The server
+was not deficient; that person did not want PHP.
+
+Plesk's real flow was examined (9 operator screenshots of a live install) and it
+showed this: **Plesk's creation dialog is not a runtime picker.** Its first
+screen asks how the content will arrive (blank page · upload files · WordPress ·
+deploy from Git · Node.js · mail only). The second screen never mentions a
+runtime. The third runs "Configuring PHP" as an **unconditional** step. PHP is
+afterwards a checkbox on the site's settings page (version list + per-site
+php.ini). The telling detail: **the "Node.js" option does not change creation at
+all** — the form is identical to "Blank website", and when creation finishes Node
+is **still not enabled**; you must press "Enable Node.js". So even in Plesk that
+first screen is a routing menu; the real decision is made in the site's settings.
+
+**We take Plesk's shape, not its bundling.** In Plesk the question never arises
+because it ships PHP itself (`/opt/plesk/php/8.3`); PHP can never be "not
+installed". For us it can. So "PHP on by default for every site" cannot be
+copied directly — copying it would violate D-003 and the constitution.
+
+**Side finding (closed).** This discussion surfaced a real hole: the static vhost
+had no PHP handler but also no deny rule for `.php`, so nginx served the file as
+`application/octet-stream` and the browser **downloaded the source**. Same family
+as A6. Measured against live nginx and closed (`b1a6aac`). The lesson goes on
+record: *"X does not run here" must not mean "X's source is published here".*
+
+**Rejected alternatives.**
+- **Make PHP-FPM part of the base install** (the Plesk model): it would end the
+  question outright and match market expectation exactly, but it means giving up
+  "not installed = invisible" for PHP. The operator chose optional.
+- **Ask the operator at install time** ("will this server serve PHP?"): one
+  decision per machine was tempting, but it adds a permanent branch to
+  install.sh and strands anyone who changes their mind later.
+- **One option per language** ("Node.js site", "Python site", "Go site"): to
+  nginx and to the panel all three are the same thing — reverse proxy to
+  `127.0.0.1:PORT` + a unit. Same reasoning as D-010's "a Go row would be a
+  conceptual error". Application mode is **one** option; the runtime is a field
+  inside it.
+- **Soften or shorten the orange warning on the creation screen**: treats the
+  symptom. The problem was not the warning's tone but that the question did not
+  belong there.
+- **Treat mismatch detection as sufficient on its own** (warn when a static site
+  contains `.php`): a good feature and it will be built, but alone it would keep
+  asking the wrong question and clean up afterwards. The question gets fixed
+  first; detection is the safety net.
+
+**Implementation order.** (1) ✅ the static `.php` leak is closed — security,
+independent of the design debate · (2) Add Domain drops to "what is this for?",
+the orange nag goes, copy moves from brands to behaviour ("WordPress, Laravel…"
+goes) · (3) a PHP toggle + version on the site's settings; `static`/`php` merge
+into one mode · (4) mismatch detection + one-click fix · (5) Application mode
+(Node/proxy) becomes visible in post-creation settings — the backend
+(`hosting_handlers.go`, the template's proxy branch, `HostingTypePanel`) is
+already there; only the shared language is missing.
+
+---
+
 ## D-012 · Licensed products and the resale chain: an entitlement is a pool; compliance is between the operator and the vendor
 
 *July 20, 2026*
