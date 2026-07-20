@@ -117,6 +117,37 @@ sahibi katalog · **B4** UI disiplini (tek Button/fmtBytes/modal) · **B5** gold
 - **B3'e ek — Setup Journey dürüstlüğü:** journey adımları paket varlığından değil, katalogdan gelen
   gerçek servis durumundan (kurulu + etkin + koşuyor) okunur. Saha kanıtı zaten var: Hostinger Arch
   imajındaki uyuyan bind "DNS kuruldu: Done" saydı (16 Tem). Bu senaryo B5 smoke'una regresyon olarak girer.
+- **B3'e ek — katalogda tür ayrımı + "kurulu-önce" varsayılan (18 Tem, D-010):** `ManagedService`'e
+  `Kind` (service/runtime/tool) ve `Role` alanları girer; php-fpm ve yeni **node** kalemi `Kind=runtime`,
+  phpMyAdmin/phpPgAdmin `Kind=tool` olur. Satır çizimi `Kind`'e dallanır ve `Daemonless = len(SystemNames)==0`
+  sezgisi silinir (bugün üç ayrı şeyi işaretliyor). **Sürümler satır değil, satırın içinde** (sürüm
+  çekmecesi) — liste patlaması kaynağında kesilir. Servisler sayfası "kurulu-önce": "kurulu olmayanı gizle"
+  varsayılan AÇIK, kategoriler katlı, arama her zaman tüm katalogda ve ikisini de geçersiz kılar. Ayrı
+  `/runtimes` ya da `/apps` sayfası açılmaz.
+- **B3'e ek — sürüm birinci sınıf + Node katalogda ilan edilir:** tek agent sözleşmesi
+  `Agent.ListServiceInstances(id)` her örnek için Version/Unit/Path/Managed/SizeBytes döner
+  (`DetectInstalledPHPVersions` ve `ListNodeVersions` bunun ilk iki uygulaması); `extractVersion` switch'i
+  ve `"default"` sentinel'i gider. **Node.js yeteneği zaten kodda var** (`runtime_rpc.go`, `app_rpc.go`)
+  ama katalogda ilan edilmiyor — yeni kod değil, görünürlük işi. node kalemi web sunucusunu `Requires` ile
+  şart koşar (bugün hiçbir yerde ifade edilmeyen reverse-proxy gereksinimi deklaratif olur).
+- **B3'e ek — PHP çoklu-sürüm gerçek olur (Sury):** D-002 "✅ yapıldı" diyordu ama yalnız yarısı yapılmış —
+  tespit ve site başına seçim çalışıyor, çoklu sürüm KURULUMU yok (`php-fpm`'de `Repo` tanımlı değil,
+  kodda `sury` geçen tek satır yok). PGDG için var olan `ManagedRepo` mekanizması php-fpm'e uygulanır:
+  Debian/Ubuntu'da yan yana `php8.x-fpm` panelden kurulur; Arch'ta dürüstçe "tek dağıtım sürümü" denir.
+  "Seçici var, seçenek yok" hali biter.
+- **B3'e ek — runtime kurulumunun tek adresi + sahiplik defteri:** `AdminNodeInstall` (HostingTypePanel)
+  silinir; kur/kaldır yalnız Servisler'deki sürüm çekmecesinde (sürüm uçları parametreli — Hestia 5050'ye
+  düşülmez). Serbest semver kutusu kalkar, agent LTS listesini çeker (3-5 adlandırılmış seçenek).
+  "Sistem yorumlayıcısı" kaçağı kaldırılır — panel yalnız kendi kurduğuyla çalışır. `site_runtimes`
+  defteri + `RuntimeUsage`/`Dependents`: kullanımdaki sürüm/servis kaldırılamaz, B1 sözleşmesiyle kodlu
+  ret (`RUNTIME_IN_USE`, `SERVICE_HAS_DEPENDENTS`) + engelleyen site listesi döner (bugün 40 site
+  kullanırken php-fpm tek tıkla kaldırılabiliyor).
+- **B3'e ek — proje tipi tek kaynak + Node oluşturmada seçilebilir:** `CreationProjectTypes` (3 tip) ile
+  `validProjectTypes` (5 tip) tek `ProjectTypes` tablosundan türetilir. Add Domain'e "Node.js Uygulaması"
+  kartı gelir (alan adı + sürüm + başlangıç komutu; port otomatik). Ön-denetimler tablodan okunur; node
+  için de web sunucusu şartı **kaydetmeden önce** kodlu retle döner — bugünkü "PHP'de düğmeyi kapat,
+  Node'da kaydet ve agent'ta patlat" asimetrisi kod düzeyinde imkânsızlaşır. Çalışan uygulamalar Node
+  runtime satırının altında sayılır ("3 uygulama · 1 hatalı") ve domain'e link verir.
 - **B4'e ek — yardım katmanının atomu:** `ui.tsx`'e tek Tooltip/InfoTip bileşeni (HelpCircle + i18n'li
   açıklama, klavye erişilebilir); mevcut 6 Info callout ve ≥10 kritik "ne bu?" alanı (DNSSEC DS, DKIM,
   catch-all, SNI…) taşınır. Yeni ipucunun tek bariz yolu bu bileşendir.
@@ -130,7 +161,13 @@ sahibi katalog · **B4** UI disiplini (tek Button/fmtBytes/modal) · **B5** gold
 **Çıkış ölçütü:** AUTOPSY B1–B5 kapalı · rol×uç matrisi CI'da koşuyor ve hiçbir uç anonim/boş-rol için
 200 dönmez · tüm 4xx ön-denetimleri kodlu, ErrorBanner çeviriyor · `panel --version`, UI alt bilgisi ve
 git tag aynı diziyi söylüyor · web'de i18n dışı kullanıcıya görünür İngilizce string sayısı 0 (lint CI'da) ·
-müşteri rolüyle DB oluştur → phpMyAdmin'e gir → başkasının DB'sine erişim 404 (üçü de B5 smoke'unda).
+müşteri rolüyle DB oluştur → phpMyAdmin'e gir → başkasının DB'sine erişim 404 (üçü de B5 smoke'unda) ·
+**temiz sunucuda Servisler sayfası en çok 4 satır** (kurulu olmayan hiçbir kalem çizilmez) · Node sürümü
+kurmanın panelde tek yolu Servisler'dir (`AdminNodeInstall` kod tabanında yok) · Add Domain'den tek formda
+çalışan Node sitesi kuruluyor ("önce statik kur sonra tipi çevir" adımı yok) · Debian'da panelden ikinci bir
+PHP sürümü kurulup bir siteye atanıyor (Sury), Arch'ta aynı ekran dürüstçe "tek dağıtım sürümü" diyor ·
+kullanımdaki PHP sürümünü/servisi kaldırma denemesi kodlu retle dönüyor ve engelleyen site listesini
+gösteriyor · proje tipi listesi tek dosyada; her ölçüt iki test sunucusunda doğrulanmış.
 **Sert kısıt: v0.3, B1 bitmeden başlayamaz.**
 
 ### v0.3 — Çok Kiracılı Gerçeklik

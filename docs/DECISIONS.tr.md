@@ -8,6 +8,80 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-010 · Katalogda tür ayrımı (servis/runtime/araç) + "kurulu-önce" varsayılan; PHP çoklu-sürüm Sury ile gerçek olur
+
+*18 Temmuz 2026*
+
+**Karar.** Üç bağlı karar, tek kayıtta:
+
+1. **Katalog tek kalır, ama `ManagedService`'e `Kind` girer:** `service` (systemd
+   daemon'ı), `runtime` (sürümlü yorumlayıcı), `tool` (daemon'suz web aracı).
+   PHP-FPM ve Node.js aynı türün iki üyesi olur; phpMyAdmin/phpPgAdmin "servis"
+   olmaktan çıkar. Satır çizimi `Kind`'e dallanır ve bugünkü
+   `Daemonless = len(SystemNames)==0` sezgisi silinir — o bayrak bugün üç ayrı
+   şeyi işaretliyor. **Sürümler satır değil, satırın içindedir** (sürüm çekmecesi).
+   Ayrı `/runtimes` ya da `/apps` sayfası **açılmaz**.
+2. **Servisler sayfası "kurulu-önce" olur:** "kurulu olmayanı gizle" varsayılan
+   AÇIK, kategoriler varsayılan katlı. Katalog = aynı listenin süzgeci kapalı hâli
+   (ikinci ekran, ikinci arama kutusu yok).
+3. **PHP çoklu-sürüm Sury vendor deposuyla gerçek olur** (D-007'nin PHP'ye
+   uygulanması): Debian/Ubuntu'da yan yana `php8.x-fpm` paketleri panelden
+   kurulabilir. Arch'ta temiz yol yoktur (yalnız AUR) — orada dürüstçe "tek
+   dağıtım sürümü" denir (D-004: apt birinci sınıf, pacman geliştirme-test).
+
+**Neden.** Operatörün sorusu şuydu: "Node.js/Go gibi seçenekler yok; buraya mı
+eklenmeli, sayfa çok uzamaz mı?" Beş rakip panelin gerçek dokümantasyonu
+incelendi ve iki şey çıktı:
+
+- **Sayfa uzunluğu bir taksonomi sorunu değil, varsayılan sorunudur.** Sayfa
+  uzunluğu katalog boyutuyla değil **kurulu kalem sayısıyla** ölçülmeli; süzgeç
+  varsayılan açık olunca temiz sunucuda ekran 3-4 satırdır, katalog 19 da olsa
+  40 da olsa. Bu, anayasanın "kurulu olmayan servis arayüzde görünmezdir"
+  maddesini bir onay kutusu olmaktan çıkarıp ürün mekaniğine çevirir.
+- **Liste patlamasının kaynağı sürümleri satır yapmaktır.** Plesk'in "PHP
+  interpreter versions (2 of 12 selected)" ağacı bunun kanıtı. Dil başına tek
+  satır + içinde sürüm yöneticisi bu patlamayı kaynağında keser.
+
+Kaçındığımız somut hatalar: **cPanel**'in Service Manager / Application Manager
+ikiliği (kullanıcı hangi ekranın hangi soruyu cevapladığını ezberler);
+**Plesk**'in tutarsız runtime modeli (Node Linux'ta eklenti, Windows'ta bileşen;
+Ruby CLI'da; Python onay kutusu); **HestiaCP**'nin 5050 numaralı hatası (N sürüm
+satırının "Edit"i sürümsüz tek sayfaya gider — sürüm uçlarımız parametreli olur);
+**aaPanel**'in PM2 çiftlemesi (tek yetenek, iki giriş noktası — bizdeki karşılığı
+`AdminNodeInstall`'dır, silinir: runtime kurulumunun tek adresi Servisler'dir).
+
+**Go/Java runtime olarak hedef-dışıdır.** Go derlenip tek binary olur; kurulacak
+runtime yoktur, doğru destek zaten `proxy` proje tipi + systemd unit'tir.
+Katalogda "Go" satırı kavramsal hata olurdu. Java/Tomcat ayrıca WAR dağıtım
+modeliyle panelin geri kalanına uymaz. Ruby, PM2, Supervisor, Docker,
+Elasticsearch, MongoDB/RabbitMQ/Varnish de hedef-dışı kalır.
+
+**Bağlı üç alt karar** (aynı deseni 5 dilde tekrarlayacağımız için burada sabitlenir):
+- **"Sistem yorumlayıcısı" kaçağı kaldırılır:** panel yalnız kendi kurduğu
+  runtime'la çalışır (PHP'deki disiplinin aynısı). PATH'teki `node`u kurmadan,
+  güncellemeden, kaldıramadan çalıştırmayı kabul etmek görünmez bağımlılık üretir.
+- **Web sunucusuz Node projesi reddedilir** (php/static ile simetrik, B1 hata
+  sözleşmesiyle kodlu ret + eylem düğmesi): bugün unit kalkıyor ama reverse proxy
+  olmadığı için alan adı açılmıyor — kullanıcı yeşil durumla bozuk siteyi aynı
+  anda görüyor.
+- **Kullanımdaki sürüm/servis kaldırılamaz:** kodlu ret + engelleyen site listesi
+  (`RUNTIME_IN_USE`, `SERVICE_HAS_DEPENDENTS`). Toplu sürüm taşıma ayrı iştir (v0.3).
+
+**D-002 düzeltmesi.** D-002 "PHP — yan yana paketler, site başına seçilir ✅
+yapıldı" diyordu; kod bunu yalnız yarısıyla karşılıyor: **tespit ve site başına
+seçim yapıldı, çoklu sürüm KURULUMU yapılmadı** — `php-fpm` katalog girdisinde
+`Repo` yok, kod tabanında `sury`/`ondrej` geçen tek satır yok. Yani panel çoklu-PHP
+arayüzü taşıyor ama tek sürüm sunabiliyor: "seçici var, seçenek yok". Bu karar o
+boşluğu kapatır.
+
+**Reddedilen alternatifler.** Ayrı `/runtimes` sayfası (ikinci ekran = cPanel'in
+ikiliği) · ayrı `/apps` sayfası (Node satırının altındaki sayaç+liste yeterli;
+30 uygulamayı aşarsa yeniden tartılır) · sunucu rolü/profil UI'ı (`Role` alanı
+veri modeline şimdi girer ama filtre 25 kalemden sonra tartılır) · toplu onay
+planlayıcısı (bağımlılık zinciri 2 kalemden derinleşmedikçe yazılmaz).
+
+---
+
 ## D-009 · DNS sunucusu yoksa domain de yok: panel, domain'lerinin otoritesidir
 
 *9 Temmuz 2026*
@@ -289,7 +363,10 @@ seçenekli bir açılır liste, kullanıcıyı yanıltan bir yalandır. Dolayıs
 - **Gerçekten çoklu-sürüm, hosting-kritik** → dağıtımdan bağımsız, gerçek
   seçiciyle:
   - **PHP** — yan yana paketler (`php8.1-fpm`…`php8.4-fpm`), site başına
-    seçilir. ✅ yapıldı.
+    seçilir. ⚠️ *Düzeltme (18 Tem, bkz. D-010): yalnız YARISI yapılmış.* Tespit
+    (`DetectInstalledPHPVersions`) ve site başına seçim çalışıyor; ama katalogda
+    `php-fpm` için `Repo` tanımlı olmadığından panel çoklu sürüm **kuramıyor** —
+    dağıtımın tek sürümüyle sınırlı. Sury vendor deposu D-010 ile eklenir.
   - **Node.js** — dağıtımdan bağımsız resmi tarball'lar, proje başına seçilir.
     ✅ yapıldı.
 - **Gelecek seçeneği**: Ubuntu 24.04'te örn. PostgreSQL 18 isteyen müşteri,

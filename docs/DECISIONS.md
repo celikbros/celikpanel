@@ -8,6 +8,85 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-010 · Catalog kinds (service/runtime/tool) + an "installed-first" default; real multi-PHP via Sury
+
+*July 18, 2026*
+
+**Decision.** Three linked decisions in one record:
+
+1. **One catalog, but `ManagedService` gains a `Kind`:** `service` (a systemd
+   daemon), `runtime` (a versioned interpreter), `tool` (a daemonless web tool).
+   PHP-FPM and Node.js become two members of the same kind; phpMyAdmin/phpPgAdmin
+   stop being "services". Row rendering branches on `Kind`, and today's
+   `Daemonless = len(SystemNames)==0` heuristic is deleted — that one flag marks
+   three different things today. **Versions are not rows; they live inside the
+   row** (a version drawer). No separate `/runtimes` or `/apps` page.
+2. **The Services page becomes "installed-first":** "hide not installed" defaults
+   to ON, categories default to collapsed. The catalog is the same list with the
+   filter off (no second screen, no second search box).
+3. **Real multi-PHP via the Sury vendor repo** (applying D-007 to PHP): on
+   Debian/Ubuntu, side-by-side `php8.x-fpm` packages become installable from the
+   panel. Arch has no clean path (AUR only) — there we honestly say "the distro's
+   single version" (D-004: apt first-class, pacman dev-test).
+
+**Why.** The operator's question was: "there is no Node.js/Go option; should it
+go here, and won't the page get very long?" Five competing panels were studied
+from their real documentation, and two things came out:
+
+- **Page length is not a taxonomy problem, it is a default problem.** Length must
+  be measured by **installed count**, not catalog size; with the filter on by
+  default a clean server shows 3-4 rows whether the catalog holds 19 items or 40.
+  This turns the constitution's "a service that isn't installed is invisible" from
+  a checkbox into product mechanics.
+- **List explosion comes from making versions into rows.** Plesk's "PHP
+  interpreter versions (2 of 12 selected)" tree is the proof. One row per
+  language with a version manager inside cuts the explosion at its source.
+
+Concrete mistakes we avoid: **cPanel**'s Service Manager / Application Manager
+split (the user memorizes which screen answers which question); **Plesk**'s
+inconsistent runtime model (Node is an extension on Linux but a component on
+Windows; Ruby lives in the CLI; Python is a checkbox); **HestiaCP**'s bug #5050
+(the Edit of N version rows all lands on one version-less page — our version
+endpoints are parameterized); **aaPanel**'s PM2 duplication (one capability, two
+entry points — our equivalent is `AdminNodeInstall`, which is deleted: the single
+address for runtime installation is Services).
+
+**Go/Java are out of scope as runtimes.** Go compiles to a single binary; there is
+no runtime to install, and the correct support already exists as the `proxy`
+project type + a systemd unit. A "Go" row in the catalog would be a conceptual
+error. Java/Tomcat additionally clashes with the rest of the panel through its WAR
+deployment model. Ruby, PM2, Supervisor, Docker, Elasticsearch and
+MongoDB/RabbitMQ/Varnish also stay out of scope.
+
+**Three linked sub-decisions** (fixed here because the pattern will repeat across
+five languages):
+- **The "system interpreter" escape hatch is removed:** the panel runs only the
+  runtime it installed itself (the same discipline as PHP). Accepting the `node`
+  on PATH — which the panel neither installs, updates, nor removes — creates an
+  invisible dependency.
+- **A Node project without a web server is refused** (symmetric with php/static,
+  as a coded refusal + action button under the B1 contract): today the unit comes
+  up but the domain does not answer without a reverse proxy — the user sees a
+  green status and a broken site at the same time.
+- **A version/service in use cannot be removed:** a coded refusal + the list of
+  blocking sites (`RUNTIME_IN_USE`, `SERVICE_HAS_DEPENDENTS`). Bulk version
+  migration is separate work (v0.3).
+
+**Correction to D-002.** D-002 claimed "PHP — side-by-side packages, chosen
+per-site ✅ built"; the code delivers only half of that: **detection and per-site
+selection were built, multi-version INSTALLATION was not** — the `php-fpm` catalog
+entry has no `Repo`, and there is not one line mentioning `sury`/`ondrej` in the
+codebase. The panel carries a multi-PHP interface while being able to offer a
+single version: "a picker with nothing to pick". This decision closes that gap.
+
+**Rejected alternatives.** A separate `/runtimes` page (a second screen = cPanel's
+split) · a separate `/apps` page (the counter+list under the Node row suffices;
+revisit past 30 apps) · a server-role/profile UI (the `Role` field enters the data
+model now, but the filter is weighed only past 25 catalog items) · a batch-commit
+planner (not written until the dependency chain runs deeper than 2 items).
+
+---
+
 ## D-009 · No DNS server, no domains: the panel is authoritative for its domains
 
 *July 9, 2026*
@@ -287,7 +366,11 @@ A dropdown with one option is a lie that misleads the user. So:
 - **Genuinely multi-version, hosting-critical** → solved outside the distro,
   with a real picker:
   - **PHP** — side-by-side packages (`php8.1-fpm`…`php8.4-fpm`), chosen
-    per-site under runtimes. ✅ built.
+    per-site under runtimes. ⚠️ *Correction (Jul 18, see D-010): only HALF was
+    built.* Detection (`DetectInstalledPHPVersions`) and per-site selection
+    work; but with no `Repo` defined for `php-fpm` in the catalog the panel
+    **cannot install** multiple versions — it is limited to the distro's single
+    one. The Sury vendor repo is added by D-010.
   - **Node.js** — official tarballs independent of the distro, chosen
     per-project. ✅ built.
 - **Future option**: a customer wanting e.g. PostgreSQL 18 on Ubuntu 24.04

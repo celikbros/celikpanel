@@ -121,6 +121,40 @@ natural extensions of B1–B5** (added later, they would all break a second time
   (installed + enabled + running), not package presence. Field proof already exists: the dormant bind in
   Hostinger's Arch image counted as "DNS installed: Done" (July 16). That scenario enters B5 smoke as a
   regression.
+- **B3 addendum — catalog kinds + an "installed-first" default (Jul 18, D-010):** `ManagedService` gains
+  `Kind` (service/runtime/tool) and `Role`; php-fpm and a new **node** entry become `Kind=runtime`,
+  phpMyAdmin/phpPgAdmin become `Kind=tool`. Row rendering branches on `Kind` and the
+  `Daemonless = len(SystemNames)==0` heuristic is deleted (it marks three different things today).
+  **Versions are not rows; they live inside the row** (a version drawer) — list explosion is cut at its
+  source. The Services page becomes installed-first: "hide not installed" defaults ON, categories
+  collapsed, search always spans the whole catalog and overrides both. No separate `/runtimes` or
+  `/apps` page.
+- **B3 addendum — versions first-class + Node declared in the catalog:** one agent contract,
+  `Agent.ListServiceInstances(id)`, returns Version/Unit/Path/Managed/SizeBytes per instance
+  (`DetectInstalledPHPVersions` and `ListNodeVersions` are its first two implementations); the
+  `extractVersion` switch and the `"default"` sentinel go. **The Node.js capability already exists in the
+  code** (`runtime_rpc.go`, `app_rpc.go`) but is not declared in the catalog — this is visibility work,
+  not new code. The node entry declares its web-server need via `Requires` (the reverse-proxy requirement,
+  today expressible nowhere, becomes declarative).
+- **B3 addendum — real multi-PHP (Sury):** D-002 claimed "✅ built" but only half was — detection and
+  per-site selection work, multi-version INSTALLATION does not (`php-fpm` has no `Repo`, and no line in
+  the codebase mentions `sury`). The existing `ManagedRepo` mechanism (PGDG) is applied to php-fpm:
+  side-by-side `php8.x-fpm` becomes installable from the panel on Debian/Ubuntu; on Arch the panel
+  honestly says "the distro's single version". The "a picker with nothing to pick" state ends.
+- **B3 addendum — one address for runtime installs + an ownership ledger:** `AdminNodeInstall`
+  (HostingTypePanel) is deleted; install/remove lives only in the Services version drawer (version
+  endpoints parameterized — no Hestia 5050). The free-text semver box goes; the agent fetches the LTS
+  list (3-5 named choices). The "system interpreter" escape hatch is removed — the panel runs only what
+  it installed. A `site_runtimes` ledger + `RuntimeUsage`/`Dependents`: a version/service in use cannot
+  be removed, returning a coded refusal (`RUNTIME_IN_USE`, `SERVICE_HAS_DEPENDENTS`) with the blocking
+  site list (today php-fpm can be removed in one click while 40 sites use it).
+- **B3 addendum — one source for project types + Node selectable at creation:** `CreationProjectTypes`
+  (3 types) and `validProjectTypes` (5 types) derive from one `ProjectTypes` table. Add Domain gains a
+  "Node.js application" card (domain + version + start command; the port is automatic). Preflight checks
+  read from that table; the web-server requirement for node also returns a coded refusal **before
+  persisting** — today's asymmetry ("disable the button for PHP, but for Node save and blow up in the
+  agent") becomes impossible at code level. Running apps are counted under the Node runtime row
+  ("3 apps · 1 failing") and link to their domain.
 - **B4 addendum — the help layer's atom:** one Tooltip/InfoTip component in `ui.tsx` (HelpCircle +
   i18n'd explanation, keyboard accessible); the existing 6 Info callouts and ≥10 critical "what is
   this?" fields (DNSSEC DS, DKIM, catch-all, SNI…) migrate to it. The one obvious way to add a new tip
@@ -138,7 +172,14 @@ natural extensions of B1–B5** (added later, they would all break a second time
 200 for anonymous/empty-role · all deliberate 4xx checks are coded and ErrorBanner translates them ·
 `panel --version`, the UI footer and the git tag say the same string · user-visible non-i18n English
 strings in web: 0 (lint in CI) · as customer: create DB → open phpMyAdmin → accessing someone else's DB
-is 404 (all three in B5 smoke). **Hard constraint: v0.3 cannot start before B1 is done.**
+is 404 (all three in B5 smoke) · **on a clean server the Services page shows at most 4 rows** (nothing
+uninstalled is drawn) · the only way to install a Node version in the panel is Services
+(`AdminNodeInstall` is absent from the codebase) · Add Domain creates a working Node site in one form (no
+"create static first, then switch type" step) · on Debian a second PHP version installs from the panel and
+is assigned to a site (Sury), while on Arch the same screen honestly says "the distro's single version" ·
+attempting to remove an in-use PHP version/service returns a coded refusal listing the blocking sites ·
+the project-type list lives in one file; every criterion verified on both test servers.
+**Hard constraint: v0.3 cannot start before B1 is done.**
 
 ### v0.3 — Multi-Tenant Reality
 Selling to more than one tenant without embarrassment. Four legs: customer and reseller can live on
