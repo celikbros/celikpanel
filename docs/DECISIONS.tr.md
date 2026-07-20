@@ -251,11 +251,36 @@ seçim yapıldı, çoklu sürüm KURULUMU yapılmadı** — `php-fpm` katalog gi
 arayüzü taşıyor ama tek sürüm sunabiliyor: "seçici var, seçenek yok". Bu karar o
 boşluğu kapatır.
 
+**Uygulama düzeltmeleri (21 Tem).** Kodu yazmak kararın iki yerini
+inceltti; ikisi de kayda geçer:
+
+- **`Kind` durumu değil, DENETİMİ belirler.** "Satır çizimi Kind'e dallanır"
+  ilk okunuşta "runtime'ın da çalışıyor/durdu durumu yok" demeye geliyordu.
+  Yanlış: `php-fpm`'in gerçek unit'leri (`php8.3-fpm`…) vardır ve tarama onları
+  toplar. Ölü bir php-fpm her PHP sitesini kırar; panodan alarmı kaldırmak
+  körlük olurdu. Doğru ayrım ikilidir: **durumdan yalnız `tool` muaftır**
+  (bize ait daemon'ı yoktur); **satır içi başlat/durdur ise yalnız
+  `service`indir** — runtime'ın sürüm başına unit'i olduğu için tek bir
+  "Durdur" düğmesi "hangi PHP?" sorusuna yalan söylerdi; onun denetimi sürüm
+  çekmecesindedir. Saha kanıtı: `nftables` (tool) unit'i "inactive (dead)"
+  görünürken güvenlik duvarı iki sunucuda da açık ve 12 kural yüklüydü — eski
+  davranış çalışan bir firewall için "1 servis durdu" yanlış alarmı üretiyordu.
+- **Katalog gerçeği önbelleğe alınmaz** (A7). Tür ayrımı ilk denemede
+  `kind:""` olarak yayına gitti: `service_scan_cache` tüm API yanıtını, katalog
+  alanları dahil saklıyordu. Kural artık açıktır: **önbellek yalnız taramanın
+  keşfettiğini saklar** (kurulu mu / unit ayakta mı / sürümler / config'ler);
+  ad, açıklama, ikon, kategori, paket adları ve `Kind` her okumada koddan
+  birleştirilir. Bu, D-010'un "katalog tek kalır" cümlesinin çalışma-zamanı
+  karşılığıdır — tek sahiplik, saklanan bir kopyayla birlikte var olamaz.
+
 **Reddedilen alternatifler.** Ayrı `/runtimes` sayfası (ikinci ekran = cPanel'in
 ikiliği) · ayrı `/apps` sayfası (Node satırının altındaki sayaç+liste yeterli;
 30 uygulamayı aşarsa yeniden tartılır) · sunucu rolü/profil UI'ı (`Role` alanı
 veri modeline şimdi girer ama filtre 25 kalemden sonra tartılır) · toplu onay
-planlayıcısı (bağımlılık zinciri 2 kalemden derinleşmedikçe yazılmaz).
+planlayıcısı (bağımlılık zinciri 2 kalemden derinleşmedikçe yazılmaz) ·
+**"tür ayrımından sonra bir kez Tara'ya basılsın"** (A7'yi düzeltmek yerine
+üstünü örterdi: hata `kind`'e özgü değildi, her katalog düzeltmesinde geri
+gelirdi).
 
 ---
 

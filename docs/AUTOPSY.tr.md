@@ -22,6 +22,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 | A3 | v2 uçları kiracı-güvenli değil: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Kapandı (11 Tem): 6 hardcode kalktı → `callerSubscriptionID`; 6 sunucu-kapsamlı işlem (liste/oluştur/sil × db+kullanıcı) `canAccessDBServer` ile sahiplik doğruluyor (`database_v2_authz.go`). **Admin kilidi HÂLÂ duruyor** — kalkması için `handleCreateDatabaseV2Server`'ın rol ayrımı gerekli (keyfi host/port/root-parola kaydı müşteri işi değil); o v0.3 kiracı işine ait |
 | A4 | DB sunucu root parolası düz metin: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Kapandı (16 Tem): `internal/secrets` — AES-256-GCM, anahtar `dataDir()/secret.key` (0600, ilk açılışta üretilir). Kayıtta mühürle, sürücüde tek yardımcıdan (`dbDriverFor`) çöz; açılışta eski düz-metin satırlar idempotent migrasyonla mühürlenir. Biçim `enc:v1:` önekli — kendini tanımlar |
 | A5 | `capabilities.mail_server` BOOL, `dns_server` string — tip tutarsızlığı üründe gerçek hata üretti (pano "posta kuruldu" dedi) | `capabilities_handler.go:30` | ⬜ AÇIK (ön yüz düzeltildi; API tutarlılığı B1'de) |
+| A7 | **Tarama önbelleği katalog alanlarını saklıyordu**: `service_scan_cache` tüm API yanıtını (ad, açıklama, ikon, kategori, paket adları) tutuyordu → kodda değişen her katalog alanı, biri "Tara"ya basana dek ekranda eski hâliyle kalıyordu; katalogda YENİ eklenen servis hiç görünmüyordu. Kendi kodundaki gerçeği önbellekten okuyan bir panel | `managed_service_handlers.go` (eski 62-79, 232-243) | ✅ Kapandı (21 Tem): önbellek yalnız `serviceObservation` saklar (kurulu mu / unit ayakta mı / sürümler / config'ler); katalog her okumada `catalogView` ile birleşir — yanıtın kurulduğu TEK yer orası, önbellekli okuma ile taze tarama farklı yanıt veremez. Eski biçim okunmaya devam eder (tarama beklemeden doğru durum). 3 bekçi test. Bu, üründe `kind:""` olarak patladı — aşağıdaki E notu |
 | A6 | **vhost nokta-dosya kuralı iki dalda da yanlıştı**: PHP dalı yalnız `/\.ht` engelliyordu → `https://site/.env` düz metin (Laravel/Symfony DB parolası, APP_KEY, posta bilgileri) ve `.git/` açıktı; statik dal ise TÜM nokta dosyalarını engelliyordu → `.well-known/acme-challenge` kapalı, yani statik sitenin ilk sertifikası ve her yenilemesi 403 | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Kapandı (20 Tem): iki dal da `location ~ /\.(?!well-known).*`; regex canlı nginx'te doğrulandı (commit `0088c67`). Golden path PHP sitesiyle kanıtlandığı için ACME kırığı görünmez kalmıştı |
 
 ## B. Yapısal borç (reçete — sırayla ödenir)
@@ -31,7 +32,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 | B0 | **Kanamayı durdur**: A1+A2 düzeltmeleri, ölü kod gömme | İlk müşteri kırık sayfa görmesin | 1-2 gün | ✅ 11 Tem |
 | B1 | **Tek API**: v2'yi v1'e katla; kiracı kapsamı auth'tan; OpenAPI üret; ön yüz tipleri üretilen istemciden | A3+A5 sınıfı hatalar derlemede ölür; 74 ham `fetch(` tek katmana iner; "API-first" sözü gerçek olur | 3-5 gün | 🔶 Kısmi (18 Tem): A3 kiracı kapsamı + A4 parola şifreleme + rol ayrımı/admin kilidi + v2→v1 birleştirme + **hata sözleşmesi** KAPANDI. Sözleşme {error,code?,action?}: 11 kodlu ret, tek writeCodedError yazıcı; ön yüzde readApiError tek okuma yolu + ErrorBanner (action→panel-içi düğme), i18n err.* TR+EN, 13 dağınık res.text() tekleşti. Canlı: WEB_SERVER_REQUIRED/ADMIN_ONLY/AUTH_REQUIRED iki sunucuda doğru zarf+action. Kalan alt dilim: OpenAPI + üretilen istemci |
 | B2 | **Route+authz tablosu**: `{yol, handler, roller}` tek veri yapısı | `main.go`'daki 72 `HandleFunc` + `middleware.go:117-141` elle listesi = unutulan satır sessiz authz deliği | 1 gün | 🔶 Fail-closed rol öne çekilip kapandı (17 Tem: okunamayan kullanıcı = geçersiz oturum, boş rolle ilerleme yok). Tablo + rol×uç matris testi açık |
-| B3 | **Bilgi tek yerde**: servis kataloğu config/port/paketin TEK sahibi; scanner kataloğu okur | `managed_services.go` ↔ `service_scanner.go:93` çifti kanıtlı ıskaladı (pdns config, 10 Tem). İkinci kanıt (16 Tem, Arch): Hostinger Arch imajı devre dışı bir `named.service` ile geliyor → capabilities `dns_server: "bind"` diyor, kurulum yolculuğu "DNS kuruldu: Done" gösteriyor, ama Services sayfası 0/0 — iki tespit yolu (InstalledServiceIDs ↔ GetServices) aynı soruya farklı cevap veriyor; ayrıca "kurulu ama koşmuyor" bir DNS, zone sunamadığı hâlde Done sayılıyor | 1 gün | ⬜ |
+| B3 | **Bilgi tek yerde**: servis kataloğu config/port/paketin TEK sahibi; scanner kataloğu okur | `managed_services.go` ↔ `service_scanner.go:93` çifti kanıtlı ıskaladı (pdns config, 10 Tem). İkinci kanıt (16 Tem, Arch): Hostinger Arch imajı devre dışı bir `named.service` ile geliyor → capabilities `dns_server: "bind"` diyor, kurulum yolculuğu "DNS kuruldu: Done" gösteriyor, ama Services sayfası 0/0 — iki tespit yolu (InstalledServiceIDs ↔ GetServices) aynı soruya farklı cevap veriyor; ayrıca "kurulu ama koşmuyor" bir DNS, zone sunamadığı hâlde Done sayılıyor | 1 gün | 🔶 Kısmi (21 Tem): **tür ayrımı** kapandı — her katalog kalemi `Kind` bildirir (15 service / 3 tool / 1 runtime), `Daemonless = len(SystemNames)==0` sezgisi silindi, satır çizimi türe dallanır; 2 bekçi test. **Önbellek/katalog ayrımı** kapandı (A7): katalog tek sahiptir, önbellek yalnız gözlem saklar. Kalan: scanner'ın kataloğu okuması (iki tespit yolunun tekleşmesi), sürüm çekmecesi, Sury deposu, Node.js kataloğa |
 | B4 | **UI disiplini**: tek Button (CtrlButton/ActionIcon ölür), paylaşılan `fmtBytes` (5+ kopya), `confirm()` → temalı modal (8+ yer), tek Service tipi (`api.ts:13` / `ServiceList.tsx:8` / `Dashboard.tsx:28` üçüzü) | Tutarsızlık kullanıcıya sızıyor; kopyalar ayrı ayrı çürüyor | 2 gün | ⬜ |
 | B5 | **Dürüstlük borcu**: golden-path smoke CI (build + stub ekran + kritik uçlar) | 29k satıra 9 test dosyası, CI YOK; anayasanın kendi kuralı ihlalde | başlangıç 1 gün, sonra sürekli | 🔶 Taban kondu (11 Tem): `.github/workflows/ci.yml` — her push/PR go build+vet+test + web tsc+build. İlk seed test `database_v2_driver_test.go` (A1 regresyon muhafızı). Kalan: stub render + kritik-uç smoke + <100ms ölçüm |
 
@@ -61,3 +62,23 @@ Bu borcun bir kısmı taze ve denetimi yazan masadan çıktı (10 Tem tasarım t
 üç düğme sisteminin ikisi, Dashboard'daki 7 ham fetch ve bir hatayı maskeleyen
 sadakatsiz test stub'ı. Ders `tools/dev-preview/preview-server.py` başlığına
 gömüldü: *stub gerçek şemayı tipleriyle taklit eder.*
+
+**21 Tem — A7'yi ben ürettim ve neredeyse kapalı gözle geçiyordum.** B3'ün ilk
+diliminde katalogdaki 19 kaleme `Kind` ekledim; yerel testler geçti, derleme
+temizdi, iki sunucuya dağıttım. Canlıda API `kind:""` döndürdü — hepsinde.
+Yerelde doğru, üründe boş. Sebep eklediğim alan değil, alanın yanından geçtiği
+önbellekti.
+
+İki ders kayda geçsin:
+
+1. **"Testler geçti" ≠ "üründe çalışıyor".** Testlerim kataloğu doğrudan
+   okuyordu; ürün yolu ise DB'den geçiyordu. Aradaki katmanı hiçbir test
+   geçmiyordu. Canlı doğrulama olmasaydı bu, sessizce yanlış çizilen bir
+   arayüz olarak kalırdı — operatörün "1 ay sonra yok bunu unutmuşuz"
+   dediği tam bu sınıf.
+2. **Kolay cevap yanlış cevaptı.** "Bir kez Tara'ya basın, düzelir" doğru ve
+   yeterliydi — o an için. Ama hata `kind`'e özgü değildi: her katalog
+   düzeltmesinde geri gelecekti ve her seferinde aynı cümleyle geçiştirilecekti.
+   Kalıcı düzeltme, önbelleğin ne saklamaya HAKKI olduğunu sormaktı: yalnız
+   gözlem. Kodda yaşayan bir gerçeği önbelleğe almak, kod ile ekranın
+   birbirinden ayrı düşme biçimidir.

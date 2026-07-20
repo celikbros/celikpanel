@@ -269,11 +269,37 @@ entry has no `Repo`, and there is not one line mentioning `sury`/`ondrej` in the
 codebase. The panel carries a multi-PHP interface while being able to offer a
 single version: "a picker with nothing to pick". This decision closes that gap.
 
+**Implementation corrections (Jul 21).** Writing the code sharpened two points
+of this decision; both go on the record:
+
+- **`Kind` decides CONTROL, not status.** "Row rendering branches on Kind" read,
+  at first pass, as "a runtime has no running/stopped state either". Wrong:
+  `php-fpm` has real units (`php8.3-fpm`…) and the scan aggregates them. A dead
+  php-fpm breaks every PHP site; removing its alarm from the dashboard would be
+  blindness. The right split is twofold: **only a `tool` is exempt from status**
+  (it has no daemon of ours); **inline start/stop belongs to `service` alone** —
+  a runtime has one unit per version, so a single "Stop" button would lie about
+  "which PHP?"; its control lives in the version drawer. Field evidence:
+  `nftables` (a tool) reads "inactive (dead)" while the firewall is on with 12
+  rules loaded on both servers — the old behaviour raised a "1 service stopped"
+  false alarm about a working firewall.
+- **Catalog truth is never cached** (A7). The kind separation shipped as
+  `kind:""` on the first attempt: `service_scan_cache` stored whole API
+  responses, catalog fields included. The rule is now explicit: **the cache
+  stores only what the scan discovered** (installed / unit up / versions /
+  config files); name, description, icon, category, package names and `Kind` are
+  joined from code on every read. This is the runtime counterpart of D-010's
+  "the catalog stays single" — single ownership cannot coexist with a stored
+  copy.
+
 **Rejected alternatives.** A separate `/runtimes` page (a second screen = cPanel's
 split) · a separate `/apps` page (the counter+list under the Node row suffices;
 revisit past 30 apps) · a server-role/profile UI (the `Role` field enters the data
 model now, but the filter is weighed only past 25 catalog items) · a batch-commit
-planner (not written until the dependency chain runs deeper than 2 items).
+planner (not written until the dependency chain runs deeper than 2 items) ·
+**"just press Scan once after the kind separation"** (it would have papered over
+A7 instead of fixing it: the bug was not specific to `kind` and would return on
+every catalog edit).
 
 ---
 

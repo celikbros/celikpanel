@@ -24,6 +24,7 @@ behavior (the Netscape mistake).
 | A3 | v2 endpoints are not tenant-safe: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Closed (Jul 11): 6 hardcodes removed → `callerSubscriptionID`; 6 server-scoped ops (list/create/delete × db+user) verify ownership via `canAccessDBServer` (`database_v2_authz.go`). **Admin gate STILL stands** — lifting it needs role-splitting `handleCreateDatabaseV2Server` (registering an arbitrary host/port/root-password is not a customer action); that belongs to the v0.3 tenant work |
 | A4 | DB server root password stored in plain text: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Closed (Jul 16): `internal/secrets` — AES-256-GCM, key at `dataDir()/secret.key` (0600, generated on first boot). Sealed on create, opened via one helper (`dbDriverFor`) at driver time; legacy plaintext rows sealed by an idempotent startup migration. Format is `enc:v1:`-prefixed — self-describing |
 | A5 | `capabilities.mail_server` is BOOL while `dns_server` is a string — the type inconsistency produced a real product bug (dashboard claimed mail was installed) | `capabilities_handler.go:30` | ⬜ OPEN (frontend fixed; API consistency lands with B1) |
+| A7 | **The scan cache stored catalog fields**: `service_scan_cache` held whole API responses (name, description, icon, category, package names) → every catalog field changed in code kept its old value on screen until someone pressed Scan, and a NEWLY added catalog service never appeared at all. A panel reading the truth of its own code out of a cache | `managed_service_handlers.go` (old 62-79, 232-243) | ✅ Closed (Jul 21): the cache stores only `serviceObservation` (installed / unit up / versions / config files); the catalog is joined on every read by `catalogView` — the ONE place a response is built, so a cached read and a fresh scan cannot answer differently. The legacy format is still read (correct state without waiting for a rescan). 3 guard tests. This shipped to production as `kind:""` — see note E |
 | A6 | **The vhost dotfile rule was wrong in both branches**: the PHP branch blocked only `/\.ht` → `https://site/.env` served in plain text (a Laravel/Symfony DB password, APP_KEY, mail credentials) and `.git/` was readable; the static branch blocked ALL dotfiles → `.well-known/acme-challenge` was closed, so a static site's first certificate and every renewal 403'd | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Closed (Jul 20): both branches now use `location ~ /\.(?!well-known).*`; the regex was validated against live nginx (commit `0088c67`). The ACME break stayed invisible because the golden path was proven with a PHP site |
 
 ## B. Structural debt (the prescription — paid in order)
@@ -33,7 +34,7 @@ behavior (the Netscape mistake).
 | B0 | **Stop the bleeding**: A1+A2 fixes, bury dead code | The first customer must not meet a broken page | 1-2 days | ✅ Jul 11 |
 | B1 | **One API**: fold v2 into v1; tenant scope from auth; generate OpenAPI; frontend types from the generated client | Kills the A3+A5 class at compile time; collapses 74 raw `fetch(` calls into one layer; makes "API-first" true | 3-5 days | 🔶 Partial (Jul 18): A3 tenant scoping + A4 password encryption + role split/admin gate + v2→v1 merge + **the error contract** DONE. Contract {error,code?,action?}: 11 coded refusals, one writeCodedError writer; frontend readApiError as the one reader + ErrorBanner (action→in-panel button), i18n err.* TR+EN, 13 scattered res.text() unified. Live: WEB_SERVER_REQUIRED/ADMIN_ONLY/AUTH_REQUIRED with the right envelope+action on both servers. Remaining sub-slice: OpenAPI + generated client |
 | B2 | **Route+authz table**: one `{path, handler, roles}` structure | 72 hand `HandleFunc` lines in `main.go` + the hand list at `middleware.go:117-141` = a forgotten line is a silent authz hole | 1 day | 🔶 Fail-closed roles pulled forward and closed (Jul 17: unreadable user = invalid session, no proceeding with an empty role). The table + role×endpoint matrix test remain open |
-| B3 | **Knowledge in one place**: the service catalog owns config paths/ports/packages; the scanner reads the catalog | The `managed_services.go` ↔ `service_scanner.go:93` duplication provably missed (pdns config, Jul 10). Second proof (Jul 16, Arch): Hostinger's Arch image ships a disabled `named.service` → capabilities says `dns_server: "bind"`, the setup journey shows "Install a DNS server: Done", yet the Services page says 0/0 — two detection paths (InstalledServiceIDs ↔ GetServices) answer the same question differently; and an installed-but-stopped DNS counts as Done although it serves no zone | 1 day | ⬜ |
+| B3 | **Knowledge in one place**: the service catalog owns config paths/ports/packages; the scanner reads the catalog | The `managed_services.go` ↔ `service_scanner.go:93` duplication provably missed (pdns config, Jul 10). Second proof (Jul 16, Arch): Hostinger's Arch image ships a disabled `named.service` → capabilities says `dns_server: "bind"`, the setup journey shows "Install a DNS server: Done", yet the Services page says 0/0 — two detection paths (InstalledServiceIDs ↔ GetServices) answer the same question differently; and an installed-but-stopped DNS counts as Done although it serves no zone | 1 day | 🔶 Partial (Jul 21): **kind separation** closed — every catalog entry declares its `Kind` (15 service / 3 tool / 1 runtime), the `Daemonless = len(SystemNames)==0` heuristic is deleted, row rendering branches on kind; 2 guard tests. **Cache/catalog split** closed (A7): the catalog is the single owner, the cache stores observations only. Remaining: the scanner reading the catalog (unifying the two detection paths), the version drawer, the Sury repo, Node.js in the catalog |
 | B4 | **UI discipline**: one Button (CtrlButton/ActionIcon die), shared `fmtBytes` (5+ copies), `confirm()` → themed modal (8+ sites), one Service type (the `api.ts:13` / `ServiceList.tsx:8` / `Dashboard.tsx:28` triplets) | Inconsistency leaks to users; copies rot independently | 2 days | ⬜ |
 | B5 | **The honesty debt**: golden-path smoke CI (build + stub screenshots + critical endpoints) | 9 test files against 29k lines, NO CI; the constitution's own rule is in violation | 1 day to start, then continuous | 🔶 Floor laid (Jul 11): `.github/workflows/ci.yml` — every push/PR runs go build+vet+test + web tsc+build. First seed test `database_v2_driver_test.go` (A1 regression guard). Remaining: stub render + critical-endpoint smoke + <100ms measurement |
 
@@ -64,3 +65,23 @@ Part of this debt is fresh and came from the desk that wrote this audit
 in Dashboard, and an unfaithful test stub that masked a real bug. The lesson is
 baked into the header of `tools/dev-preview/preview-server.py`: *the stub
 mimics the real schema, types included.*
+
+**Jul 21 — I created A7 and nearly walked past it with my eyes shut.** In B3's
+first slice I added `Kind` to all 19 catalog entries; local tests passed, the
+build was clean, I deployed to both servers. Live, the API returned `kind:""` —
+for every one of them. Right locally, empty in production. The cause was not
+the field I added but the cache it happened to pass through.
+
+Two lessons for the record:
+
+1. **"Tests pass" ≠ "works in production".** My tests read the catalog
+   directly; the production path went through the DB. No test crossed the
+   layer in between. Without live verification this would have stayed a
+   silently mis-drawn UI — exactly the class the operator means by "a month
+   later, oh, we forgot this one".
+2. **The easy answer was the wrong answer.** "Press Scan once and it fixes
+   itself" was true and sufficient — for that moment. But the bug was not
+   specific to `kind`: it would return on every catalog edit, and be waved
+   away with the same sentence each time. The durable fix was to ask what the
+   cache has a RIGHT to store: observations only. Caching a fact that lives in
+   code is how code and screen drift apart.
