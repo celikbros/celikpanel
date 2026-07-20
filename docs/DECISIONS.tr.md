@@ -22,8 +22,11 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
    şeyi işaretliyor. **Sürümler satır değil, satırın içindedir** (sürüm çekmecesi).
    Ayrı `/runtimes` ya da `/apps` sayfası **açılmaz**.
 2. **Servisler sayfası "kurulu-önce" olur:** "kurulu olmayanı gizle" varsayılan
-   AÇIK, kategoriler varsayılan katlı. Katalog = aynı listenin süzgeci kapalı hâli
-   (ikinci ekran, ikinci arama kutusu yok).
+   AÇIK. Katalog = aynı listenin süzgeci kapalı hâli (ikinci ekran, ikinci arama
+   kutusu yok). *Uygulama düzeltmesi (18 Tem, aynı gün): katlama sabit varsayılan
+   değil, görünümü izler* — kurulu görünümde kategoriler AÇIK (liste zaten kısa;
+   katlamak 3 servisi görmek için 3 tık demekti), katalog açılınca KATLI (liste
+   uzun, yönetilmek ister). ✅ uygulandı: commit `312e378`.
 3. **PHP çoklu-sürüm Sury vendor deposuyla gerçek olur** (D-007'nin PHP'ye
    uygulanması): Debian/Ubuntu'da yan yana `php8.x-fpm` paketleri panelden
    kurulabilir. Arch'ta temiz yol yoktur (yalnız AUR) — orada dürüstçe "tek

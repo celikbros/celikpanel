@@ -22,8 +22,12 @@ Code decisions live in git; this file is for strategy. Newest first.
    three different things today. **Versions are not rows; they live inside the
    row** (a version drawer). No separate `/runtimes` or `/apps` page.
 2. **The Services page becomes "installed-first":** "hide not installed" defaults
-   to ON, categories default to collapsed. The catalog is the same list with the
-   filter off (no second screen, no second search box).
+   to ON. The catalog is the same list with the filter off (no second screen, no
+   second search box). *Implementation correction (Jul 18, same day): collapsing
+   is not a fixed default, it follows the view* — categories are EXPANDED in the
+   installed view (the list is already short; folding it meant three clicks to
+   see three services) and COLLAPSED once the catalog is shown (a long list wants
+   folding). ✅ shipped: commit `312e378`.
 3. **Real multi-PHP via the Sury vendor repo** (applying D-007 to PHP): on
    Debian/Ubuntu, side-by-side `php8.x-fpm` packages become installable from the
    panel. Arch has no clean path (AUR only) — there we honestly say "the distro's
