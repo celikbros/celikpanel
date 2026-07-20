@@ -62,14 +62,50 @@ type ManagedRepo struct {
 	PackagePattern string
 }
 
+// Kind answers "how is this row drawn and operated?" — the single question
+// that used to be guessed from `len(SystemNames) == 0`, a flag that marked
+// three unrelated things at once (a file install, a kernel-driven engine, a
+// tarball tree). See D-010.
+//
+// Kind, "bu satır nasıl çizilir ve işletilir?" sorusunu yanıtlar — eskiden
+// `len(SystemNames) == 0`'dan tahmin edilen ve üç ayrı şeyi (dosya kurulumu,
+// çekirdek-sürümlü motor, tarball ağacı) aynı anda işaretleyen bayrağın yerine.
+// Bkz. D-010.
+type ServiceKind string
+
+const (
+	// KindService: a long-running systemd daemon the panel starts/stops.
+	// KindService: panelin başlatıp durdurduğu, sürekli koşan systemd daemon'ı.
+	KindService ServiceKind = "service"
+	// KindRuntime: a versioned interpreter. Several versions coexist and a
+	// SITE picks one; the row shows version badges and a version drawer, never
+	// a start/stop button (an individual version's daemon, if any, is operated
+	// inside the drawer).
+	// KindRuntime: sürümlü yorumlayıcı. Birden çok sürüm yan yana yaşar ve
+	// SİTE birini seçer; satır sürüm rozetleri ve sürüm çekmecesi gösterir,
+	// asla başlat/durdur düğmesi değil.
+	KindRuntime ServiceKind = "runtime"
+	// KindTool: no daemon of our own to start or stop — either files served by
+	// a web server (phpMyAdmin) or a mechanism the panel drives on demand
+	// (nftables: we push our own table with `nft -f` and never touch
+	// nftables.service). Rendered as install/remove, plus Open when it has a
+	// URL. "Running" is meaningless here and is not drawn.
+	// KindTool: başlatıp durduracağımız kendi daemon'ı yok — ya web sunucusunun
+	// sunduğu dosyalar (phpMyAdmin) ya da panelin talep üzerine sürdüğü bir
+	// mekanizma (nftables: kendi tablomuzu `nft -f` ile iteriz). Kur/kaldır
+	// olarak çizilir, URL'i varsa Aç. "Çalışıyor" burada anlamsızdır.
+	KindTool ServiceKind = "tool"
+)
+
 // ManagedService represents a service that CelikPanel can manage
 type ManagedService struct {
-	ID          string   // Unique identifier (e.g., "php-fpm", "nginx")
-	Name        string   // Display name
-	Description string   // Short description
-	Icon        string   // Emoji or icon identifier
-	Category    string   // "web", "database", "email", "security", "dns", "cache"
-	SystemNames []string // Systemd service names to check
+	ID          string      // Unique identifier (e.g., "php-fpm", "nginx")
+	Name        string      // Display name
+	Description string      // Short description
+	Icon        string      // Emoji or icon identifier
+	Category    string      // "web", "database", "email", "security", "dns", "cache"
+	Kind        ServiceKind // service | runtime | tool — decides how the row is drawn (D-010)
+	SystemNames []string    // Systemd service names to check
 	// ConflictGroup: services sharing a group are mutually exclusive — they
 	// bind the same role/port (a web server on :80, a DNS server on :53) and
 	// cannot run together. Empty means no conflict (coexists with everything).
@@ -167,6 +203,7 @@ var ManagedServices = []ManagedService{
 		Description: "PHP FastCGI Process Manager",
 		Icon:        "🐘",
 		Category:    "web",
+		Kind:        KindRuntime,
 		SystemNames: []string{"php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm", "php-fpm"},
 		Packages:    map[string][]string{"apt": {"php-fpm"}, "pacman": {"php-fpm"}},
 	},
@@ -176,6 +213,7 @@ var ManagedServices = []ManagedService{
 		Description:   "Reverse Proxy Server",
 		Icon:          "🔄",
 		Category:      "web",
+		Kind:        KindService,
 		SystemNames:   []string{"nginx"},
 		ConflictGroup: "web-server",
 		Packages:      map[string][]string{"apt": {"nginx"}, "pacman": {"nginx"}},
@@ -187,6 +225,7 @@ var ManagedServices = []ManagedService{
 		Description:   "Web Server",
 		Icon:          "🪶",
 		Category:      "web",
+		Kind:        KindService,
 		SystemNames:   []string{"apache2", "httpd"},
 		ConflictGroup: "web-server",
 		Packages:      map[string][]string{"apt": {"apache2"}, "pacman": {"apache"}},
@@ -198,6 +237,7 @@ var ManagedServices = []ManagedService{
 		Description: "Database Server",
 		Icon:        "🐘",
 		Category:    "database",
+		Kind:        KindService,
 		SystemNames: []string{"postgresql"},
 		// pacman deliberately absent: on Arch the cluster needs a manual
 		// initdb before first start — mapping the package alone would install
@@ -226,6 +266,7 @@ var ManagedServices = []ManagedService{
 		Description: "Database Server",
 		Icon:        "🦭",
 		Category:    "database",
+		Kind:        KindService,
 		SystemNames: []string{"mariadb", "mysql"},
 		Packages:    map[string][]string{"apt": {"mariadb-server"}},
 	},
@@ -243,6 +284,7 @@ var ManagedServices = []ManagedService{
 		Description: "MariaDB/MySQL web admin tool",
 		Icon:        "🐬",
 		Category:    "database",
+		Kind:        KindTool,
 		SystemNames: []string{},
 		Packages:    map[string][]string{"apt": {"phpmyadmin"}, "pacman": {"phpmyadmin"}},
 		Requires:    []string{"mariadb", "web-server", "php-fpm"},
@@ -253,6 +295,7 @@ var ManagedServices = []ManagedService{
 		Description: "PostgreSQL web admin tool",
 		Icon:        "🐘",
 		Category:    "database",
+		Kind:        KindTool,
 		SystemNames: []string{},
 		// pacman absent: phpPgAdmin is AUR-only on Arch; the whitelist only
 		// carries official-repo packages.
@@ -267,6 +310,7 @@ var ManagedServices = []ManagedService{
 		Description:   "SMTP Server",
 		Icon:          "📧",
 		Category:      "email",
+		Kind:        KindService,
 		SystemNames:   []string{"postfix"},
 		Packages:      map[string][]string{"apt": {"postfix"}, "pacman": {"postfix"}},
 		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
@@ -277,6 +321,7 @@ var ManagedServices = []ManagedService{
 		Description:   "IMAP/POP3 Server",
 		Icon:          "📬",
 		Category:      "email",
+		Kind:        KindService,
 		SystemNames:   []string{"dovecot"},
 		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}, "pacman": {"dovecot"}},
 		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
@@ -287,6 +332,7 @@ var ManagedServices = []ManagedService{
 		Description: "Spam Filter",
 		Icon:        "🛡️",
 		Category:    "email",
+		Kind:        KindService,
 		SystemNames: []string{"spamassassin"},
 		Packages:    map[string][]string{"apt": {"spamassassin"}, "pacman": {"spamassassin"}},
 	},
@@ -296,6 +342,7 @@ var ManagedServices = []ManagedService{
 		Description:   "Built-in VPN server",
 		Icon:          "\U0001F510",
 		Category:      "security",
+		Kind:        KindService,
 		SystemNames:   []string{"wg-quick@wg0"},
 		Packages:      map[string][]string{"apt": {"wireguard"}, "pacman": {"wireguard-tools"}},
 		FirewallPorts: []FirewallPort{{51820, "udp"}},
@@ -306,6 +353,7 @@ var ManagedServices = []ManagedService{
 		Description: "Intrusion Prevention",
 		Icon:        "🚫",
 		Category:    "security",
+		Kind:        KindService,
 		SystemNames: []string{"fail2ban"},
 		Packages:    map[string][]string{"apt": {"fail2ban"}, "pacman": {"fail2ban"}},
 	},
@@ -330,6 +378,7 @@ var ManagedServices = []ManagedService{
 		Description: "nftables — the panel firewall's packet-filtering engine",
 		Icon:        "🧱",
 		Category:    "security",
+		Kind:        KindTool,
 		SystemNames: []string{},
 		Packages:    map[string][]string{"apt": {"nftables"}, "pacman": {"nftables"}},
 	},
@@ -351,6 +400,7 @@ var ManagedServices = []ManagedService{
 		Description: "Antivirus / malware scanner",
 		Icon:        "🦠",
 		Category:    "security",
+		Kind:        KindService,
 		SystemNames: []string{"clamav-daemon", "clamav-freshclam"},
 		Packages:    map[string][]string{"apt": {"clamav", "clamav-daemon"}, "pacman": {"clamav"}},
 	},
@@ -360,6 +410,7 @@ var ManagedServices = []ManagedService{
 		Description:   "DNS Server",
 		Icon:          "🌐",
 		Category:      "dns",
+		Kind:        KindService,
 		SystemNames:   []string{"bind9", "named"},
 		ConflictGroup: "dns-server",
 		Packages:      map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
@@ -371,6 +422,7 @@ var ManagedServices = []ManagedService{
 		Description:   "DNS Server",
 		Icon:          "⚡",
 		Category:      "dns",
+		Kind:        KindService,
 		SystemNames:   []string{"pdns"},
 		ConflictGroup: "dns-server",
 		// Arch's powerdns ships the sqlite3 backend inside the main package —
@@ -386,6 +438,7 @@ var ManagedServices = []ManagedService{
 		Description:   "FTP Server",
 		Icon:          "📂",
 		Category:      "ftp",
+		Kind:        KindService,
 		SystemNames:   []string{"vsftpd"},
 		Packages:      map[string][]string{"apt": {"vsftpd"}, "pacman": {"vsftpd"}},
 		FirewallPorts: []FirewallPort{{21, "tcp"}},
@@ -396,6 +449,7 @@ var ManagedServices = []ManagedService{
 		Description: "Cache Server",
 		Icon:        "⚡",
 		Category:    "cache",
+		Kind:        KindService,
 		SystemNames: []string{"redis-server", "redis"},
 		// pacman absent: Arch replaced Redis with the Valkey fork; silently
 		// installing a fork under the name "Redis" would be a product decision
@@ -411,6 +465,7 @@ var ManagedServices = []ManagedService{
 		Description: "Cache Server",
 		Icon:        "💾",
 		Category:    "cache",
+		Kind:        KindService,
 		SystemNames: []string{"memcached"},
 		Packages:    map[string][]string{"apt": {"memcached"}, "pacman": {"memcached"}},
 	},

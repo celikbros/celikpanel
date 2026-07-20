@@ -16,7 +16,7 @@ interface ManagedService {
     is_installed: boolean;
     conflict_with?: string;
     requires_missing?: string[];
-    daemonless?: boolean;
+    kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
 }
 
@@ -374,10 +374,24 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     </div>
                                                     <div className="w-32 shrink-0">
                                                         <span className={`inline-flex items-center gap-1.5 text-sm ${s.is_installed ? 'text-fg-muted' : 'text-fg-subtle'}`}>
-                                                            <StatusDot ok={s.is_installed && (running || !!s.daemonless)} />
+                                                            {/* Only a `tool` lacks a running state — it has no
+                                                                daemon of ours, so "installed" is the whole
+                                                                truth. A runtime DOES have units (php8.3-fpm…)
+                                                                and the scan aggregates them, so it keeps
+                                                                running/stopped: a dead php-fpm must still
+                                                                raise the alarm. What a runtime loses is the
+                                                                inline start/stop below, not its status (D-010).
+                                                                Yalnız `tool`un çalışma durumu yoktur — bize ait
+                                                                daemon'ı yok, "kurulu" tam gerçektir. Runtime'ın
+                                                                unit'leri VARDIR (php8.3-fpm…) ve tarama onları
+                                                                toplar, bu yüzden çalışıyor/durdu kalır: ölü bir
+                                                                php-fpm yine alarm vermelidir. Runtime'ın
+                                                                kaybettiği durum değil, aşağıdaki satır içi
+                                                                başlat/durdurdur (D-010). */}
+                                                            <StatusDot ok={s.is_installed && (running || s.kind === 'tool')} />
                                                             {!s.is_installed
                                                                 ? t('services.notInstalled')
-                                                                : s.daemonless
+                                                                : s.kind === 'tool'
                                                                   ? t('services.installedLabel')
                                                                   : running
                                                                     ? t('services.running')
@@ -412,16 +426,23 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         )
                                                     ) : (
                                                     <>
-                                                    {/* Daemonless tools (phpMyAdmin) have no unit to start/stop —
-                                                        only manage/uninstall. / Daemon'suz araçların (phpMyAdmin)
-                                                        başlatılacak unit'i yok — yalnız yönet/kaldır. */}
+                                                    {/* Inline start/stop belongs to `service` alone. A tool
+                                                        (phpMyAdmin) has no unit at all; a runtime has one unit
+                                                        PER VERSION, so a single Stop button would be a lie —
+                                                        stop which PHP? Its controls live in the version drawer,
+                                                        one row per version. Neither is a special case bolted on:
+                                                        it falls out of Kind (D-010).
+                                                        Satır içi başlat/durdur yalnız `service`indir. Tool'un
+                                                        (phpMyAdmin) hiç unit'i yoktur; runtime'ın SÜRÜM BAŞINA
+                                                        bir unit'i vardır, tek bir Durdur düğmesi yalan olurdu —
+                                                        hangi PHP durdurulacak? Onun denetimi sürüm çekmecesinde,
+                                                        sürüm başına bir satırdadır. İkisi de sonradan eklenmiş
+                                                        özel durum değil: Kind'den düşer (D-010). */}
                                                     {/* Contextual: only actions that make sense for the current
                                                         state — no Stop on a stopped service, no Start on a running
                                                         one. / Bağlama duyarlı: yalnız mevcut duruma anlamlı gelen
                                                         eylemler — durmuşta Durdur, çalışanda Başlat gösterilmez. */}
-                                                    {!s.daemonless && (
-                                                    <>
-                                                    {running ? (
+                                                    {s.kind === 'service' && (running ? (
                                                     <>
                                                     <ActionIcon
                                                         title={t('services.restart')}
@@ -449,7 +470,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     >
                                                         <Play className="h-4 w-4" fill="currentColor" />
                                                     </ActionIcon>
-                                                    )}
+                                                    ))}
+                                                    {/* Manage opens the version drawer, so a runtime needs it
+                                                        MOST — it is where per-version state and control live.
+                                                        Only a tool has nothing to manage.
+                                                        Yönet, sürüm çekmecesini açar; bu yüzden ona EN ÇOK
+                                                        runtime'ın ihtiyacı var — sürüm başına durum ve denetim
+                                                        oradadır. Yalnız tool'un yönetecek şeyi yoktur. */}
+                                                    {s.kind !== 'tool' && (
                                                     <button
                                                         onClick={() => onManageService?.(s.id, s.versions)}
                                                         className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
@@ -457,7 +485,6 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Settings className="h-3.5 w-3.5" />
                                                         {t('services.manage')}
                                                     </button>
-                                                    </>
                                                     )}
                                                     <button
                                                         onClick={() => setUninstallTarget(s)}

@@ -27,11 +27,17 @@ type ManagedServiceResponse struct {
 	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
 	// id'leri ya da grup adları) — UI Kur'u kapatır ve önce neyin kurulacağını söyler.
 	RequiresMissing []string `json:"requires_missing,omitempty"`
-	// Daemonless: no systemd unit (web tools like phpMyAdmin) — there is no
-	// running/stopped state and no start/stop actions.
-	// Daemonless: systemd unit'i yok (phpMyAdmin gibi web araçları) —
-	// çalışıyor/durdu durumu ve başlat/durdur eylemleri yoktur.
-	Daemonless  bool              `json:"daemonless,omitempty"`
+	// Kind decides how the row is drawn and operated (D-010): "service" has a
+	// daemon to start/stop, "runtime" is versioned and picked per site, "tool"
+	// has no daemon of ours at all. It replaces the old `daemonless` flag,
+	// which was inferred from an empty SystemNames list and therefore marked
+	// three unrelated things with one bit.
+	// Kind, satırın nasıl çizilip işletileceğini belirler (D-010): "service"
+	// başlatılıp durdurulan bir daemon'a sahiptir, "runtime" sürümlüdür ve site
+	// başına seçilir, "tool"un bize ait daemon'ı hiç yoktur. Boş SystemNames'ten
+	// çıkarılan ve üç ayrı şeyi tek bitle işaretleyen eski `daemonless`
+	// bayrağının yerine geçer.
+	Kind        core.ServiceKind  `json:"kind"`
 	Packages    []string          `json:"packages,omitempty"` // distro packages (apt) shown before install
 	ConfigFiles []core.ConfigFile `json:"config_files"`       // Detected config files
 }
@@ -217,7 +223,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			IsInstalled:     isInstalled,
 			ConflictWith:    conflictWith,
 			RequiresMissing: requiresMissing,
-			Daemonless:      len(managed.SystemNames) == 0,
+			Kind:            managed.Kind,
 			Packages:        managed.Packages[pkgFamily],
 			ConfigFiles:     configFiles,
 		})
