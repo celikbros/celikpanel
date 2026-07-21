@@ -50,6 +50,15 @@ const (
 	errCodeQuotaDisk         = "QUOTA_DISK_EXCEEDED"
 	errCodeEntitlement       = "ENTITLEMENT_REQUIRED"
 	errCodeFirewallNoEngine  = "FIREWALL_ENGINE_MISSING"
+	// POOL_IDENTITY_FIXED: the caller tried to set who an FPM pool runs as or
+	// which socket it answers on. Those are the panel's to decide — they are
+	// the boundary between tenants, not a setting — so the attempt is refused
+	// by name rather than quietly dropped.
+	// POOL_IDENTITY_FIXED: çağıran, bir FPM havuzunun kim olarak koşacağını ya
+	// da hangi sokete cevap vereceğini ayarlamaya çalıştı. Buna panel karar
+	// verir — bunlar bir ayar değil, kiracılar arasındaki sınırdır — bu yüzden
+	// deneme sessizce düşürülmek yerine adıyla reddedilir.
+	errCodePoolIdentityFixed = "POOL_IDENTITY_FIXED"
 )
 
 // writeCodedError is the single writer of the contract. action, when

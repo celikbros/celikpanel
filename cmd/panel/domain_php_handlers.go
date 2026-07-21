@@ -80,48 +80,31 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 
 		err = p.agentClient.Call("Agent.GetPHPPoolConfig", req, &poolConfig)
 		if err != nil {
-			// Pool config not found - try to create a default one
-			defaultConfig := core.PHPPoolConfig{
-				Name:              poolName,
-				User:              domain.Name,
-				Group:             domain.Name,
-				Listen:            fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName),
-				ListenOwner:       "www-data",
-				ListenGroup:       "www-data",
-				ListenMode:        "0660",
-				PM:                "dynamic",
-				PMMaxChildren:     5,
-				PMStartServers:    2,
-				PMMinSpareServers: 1,
-				PMMaxSpareServers: 3,
-				PMMaxRequests:     500,
-			}
-
-			// Try to create the pool
-			createReq := core.PHPPoolConfigRequest{
-				Version:    phpVersion,
-				PoolConfig: defaultConfig,
-			}
-			var createResp struct{}
-			createErr := p.agentClient.Call("Agent.UpdatePHPPoolConfig", createReq, &createResp)
-			if createErr != nil {
-				// Still failed, return basic info without pool config
-				json.NewEncoder(w).Encode(DomainPHPSettingsResponse{
-					DomainID:   domainID,
-					DomainName: domain.Name,
-					PHPVersion: phpVersion,
-					PoolName:   poolName,
-				})
-				return
-			}
-
-			// Pool created, return with config
+			// A read must not write. This branch used to build a default pool
+			// and POST it to the agent, so merely OPENING the PHP settings page
+			// rewrote a root-loaded file under /etc/php — and it wrote
+			// `user = <domain name>`, which is not a system user at all (the
+			// real pool is created with the site's system user). php-fpm's
+			// master refuses to start a pool whose user cannot be resolved, so
+			// a GET could take down every site on that PHP version at the next
+			// restart. Report the pool as absent instead; creating one is the
+			// site-creation path's job, not a page load's.
+			//
+			// Bir okuma yazmamalıdır. Bu dal eskiden varsayılan bir havuz kurup
+			// agent'a POST ediyordu; yani PHP ayarları sayfasını AÇMAK bile
+			// /etc/php altında root'un yüklediği bir dosyayı yeniden yazıyordu —
+			// üstelik `user = <alan adı>` yazıyordu ki bu hiçbir sistem
+			// kullanıcısı değildir (gerçek havuz sitenin sistem kullanıcısıyla
+			// oluşturulur). php-fpm master'ı, kullanıcısı çözülemeyen bir havuzu
+			// başlatmayı reddeder; yani bir GET, bir sonraki yeniden başlatmada
+			// o PHP sürümündeki tüm siteleri düşürebilirdi. Bunun yerine havuz
+			// yok diye bildirilir; havuz oluşturmak sayfa yüklemenin değil, site
+			// oluşturma yolunun işidir.
 			json.NewEncoder(w).Encode(DomainPHPSettingsResponse{
 				DomainID:   domainID,
 				DomainName: domain.Name,
 				PHPVersion: phpVersion,
 				PoolName:   poolName,
-				PoolConfig: &defaultConfig,
 			})
 			return
 		}
@@ -241,6 +224,26 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// The pool's identity is not the caller's to set, and saying so out loud
+		// beats ignoring it. The agent already refuses to take identity from a
+		// request (that is the layer which cannot be bypassed), but silently
+		// dropping these fields would answer "success" to someone who asked for
+		// something we did not do — the honesty rule forbids that, and it is
+		// also how an attempt goes unnoticed. Refuse explicitly instead.
+		//
+		// Havuzun kimliğini belirlemek çağıranın işi değildir ve bunu açıkça
+		// söylemek, yok saymaktan iyidir. Agent zaten kimliği istekten almayı
+		// reddediyor (atlatılamayan katman odur), ama bu alanları sessizce
+		// düşürmek, istediğini yapmadığımız birine "başarılı" demek olurdu —
+		// dürüstlük kuralı bunu yasaklar ve bir deneme de böyle fark edilmez
+		// kalır. Onun yerine açıkça reddet.
+		if bad := callerSetPoolIdentity(&req.PoolConfig); bad != "" {
+			writeCodedError(w, http.StatusBadRequest, errCodePoolIdentityFixed,
+				"a pool's "+bad+" is set by the panel and cannot be changed — only the process-manager settings are adjustable",
+				"")
+			return
+		}
+
 		// Ensure version and pool name match the domain's site
 		req.Version = phpVersion
 		req.PoolConfig.Name = poolName
@@ -273,4 +276,30 @@ func extractDomainID(path, prefix, suffix string) (int, error) {
 	}
 
 	return strconv.Atoi(parts[0])
+}
+
+// callerSetPoolIdentity names the first identity field a caller tried to set,
+// or "" when the request only carries tunables. These fields decide WHO the
+// pool runs as and WHICH socket it answers on — the two facts that make a pool
+// a security boundary between tenants rather than a performance knob.
+// callerSetPoolIdentity, çağıranın ayarlamaya çalıştığı ilk kimlik alanını
+// adlandırır; istek yalnız ayar taşıyorsa "" döner. Bu alanlar havuzun KİM
+// olarak koşacağına ve HANGİ sokete cevap vereceğine karar verir — bir havuzu
+// performans düğmesi değil, kiracılar arası bir güvenlik sınırı yapan iki gerçek.
+func callerSetPoolIdentity(c *core.PHPPoolConfig) string {
+	switch {
+	case c.User != "":
+		return "user"
+	case c.Group != "":
+		return "group"
+	case c.Listen != "":
+		return "listen socket"
+	case c.ListenOwner != "":
+		return "listen.owner"
+	case c.ListenGroup != "":
+		return "listen.group"
+	case c.ListenMode != "":
+		return "listen.mode"
+	}
+	return ""
 }
