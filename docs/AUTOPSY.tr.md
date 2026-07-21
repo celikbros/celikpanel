@@ -22,6 +22,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 | A3 | v2 uçları kiracı-güvenli değil: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Kapandı (11 Tem): 6 hardcode kalktı → `callerSubscriptionID`; 6 sunucu-kapsamlı işlem (liste/oluştur/sil × db+kullanıcı) `canAccessDBServer` ile sahiplik doğruluyor (`database_v2_authz.go`). **Admin kilidi HÂLÂ duruyor** — kalkması için `handleCreateDatabaseV2Server`'ın rol ayrımı gerekli (keyfi host/port/root-parola kaydı müşteri işi değil); o v0.3 kiracı işine ait |
 | A4 | DB sunucu root parolası düz metin: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Kapandı (16 Tem): `internal/secrets` — AES-256-GCM, anahtar `dataDir()/secret.key` (0600, ilk açılışta üretilir). Kayıtta mühürle, sürücüde tek yardımcıdan (`dbDriverFor`) çöz; açılışta eski düz-metin satırlar idempotent migrasyonla mühürlenir. Biçim `enc:v1:` önekli — kendini tanımlar |
 | A5 | `capabilities.mail_server` BOOL, `dns_server` string — tip tutarsızlığı üründe gerçek hata üretti (pano "posta kuruldu" dedi) | `capabilities_handler.go:30` | ⬜ AÇIK (ön yüz düzeltildi; API tutarlılığı B1'de) |
+| A8 | **Statik site PHP kaynağını indirtiyordu**: statik vhost'ta PHP işleyicisi yok — doğru; ama `.php` için ret kuralı da yoktu. nginx dosyayı bulur, uzantıyı tanımaz (`mime.types` içinde yok), `default_type application/octet-stream`e düşer ve tarayıcıya **kaynak kodu indirtir** — içinde veritabanı parolası varsa parola sunucudan çıkar. "Burada PHP çalışmaz", "burada PHP kaynağı yayınlanır" demek olmamalı | `internal/services/templates/nginx/vhost.conf.tmpl` (statik dal) | ✅ Kapandı (21 Tem): `\.(php\|phtml\|phps\|php[0-9])$` reddi; 404 değil 403 bilinçli (dosyanın var olduğunu ama çalıştırılmadığını söyler — asıl teşhis budur). Canlı nginx'te uçtan uca ölçüldü: `secret.php` 403 ve gövde nginx hata sayfası, `.well-known/acme-challenge` 200 (SSL yenileme sağlam), `.env` 403, olmayan dosya 404. 2 regresyon testi. A6 ile aynı aile — web kökündeki dosyanın kaynak olarak dağıtılması |
 | A7 | **Tarama önbelleği katalog alanlarını saklıyordu**: `service_scan_cache` tüm API yanıtını (ad, açıklama, ikon, kategori, paket adları) tutuyordu → kodda değişen her katalog alanı, biri "Tara"ya basana dek ekranda eski hâliyle kalıyordu; katalogda YENİ eklenen servis hiç görünmüyordu. Kendi kodundaki gerçeği önbellekten okuyan bir panel | `managed_service_handlers.go` (eski 62-79, 232-243) | ✅ Kapandı (21 Tem): önbellek yalnız `serviceObservation` saklar (kurulu mu / unit ayakta mı / sürümler / config'ler); katalog her okumada `catalogView` ile birleşir — yanıtın kurulduğu TEK yer orası, önbellekli okuma ile taze tarama farklı yanıt veremez. Eski biçim okunmaya devam eder (tarama beklemeden doğru durum). 3 bekçi test. Bu, üründe `kind:""` olarak patladı — aşağıdaki E notu |
 | A6 | **vhost nokta-dosya kuralı iki dalda da yanlıştı**: PHP dalı yalnız `/\.ht` engelliyordu → `https://site/.env` düz metin (Laravel/Symfony DB parolası, APP_KEY, posta bilgileri) ve `.git/` açıktı; statik dal ise TÜM nokta dosyalarını engelliyordu → `.well-known/acme-challenge` kapalı, yani statik sitenin ilk sertifikası ve her yenilemesi 403 | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Kapandı (20 Tem): iki dal da `location ~ /\.(?!well-known).*`; regex canlı nginx'te doğrulandı (commit `0088c67`). Golden path PHP sitesiyle kanıtlandığı için ACME kırığı görünmez kalmıştı |
 
@@ -82,3 +83,20 @@ Yerelde doğru, üründe boş. Sebep eklediğim alan değil, alanın yanından g
    Kalıcı düzeltme, önbelleğin ne saklamaya HAKKI olduğunu sormaktı: yalnız
    gözlem. Kodda yaşayan bir gerçeği önbelleğe almak, kod ile ekranın
    birbirinden ayrı düşme biçimidir.
+
+**Tekrar eden yöntem hatası: tek örnekle doğrulama.** Bu projede aynı şekil
+şimdiye dek üç kez çıktı ve üçünde de "çalışıyor" dedikten sonra kırıldı:
+
+| Ne tek örnekle doğrulandı | Ne görünmez kaldı |
+|---|---|
+| Golden path **PHP sitesiyle** kanıtlandı | Statik sitenin ACME doğrulaması hiç çalışmıyordu (A6) — ve statik dalın `.php` kaynağını sızdırdığı (A8) |
+| Vendor deposu **yalnız PGDG ile** kanıtlandı | Zırhlı-anahtar varsayımı, sondaki-sayı sıralaması, "zaten kurulu" duvarı, companion ihtiyacı — dördü de PHP'de kırıldı (D-007 düzeltmesi) |
+| Katalog alanları **hep var olan alanlarla** okundu | Yeni bir alan (`Kind`) eklenince önbellek onu boş yayınladı (A7) |
+
+Ders, "daha çok test yazın" değil — daha keskin: **bir mekanizmayı tek örnekle
+doğrulamak, o örneğe özgü olanı genel sanmaktır.** İkinci örnek gelene kadar
+hangi varsayımın taşıyıcı olduğu bilinemez. Pratik kural: *bir soyutlama
+(şablon dalı, vendor deposu, katalog alanı) ikinci somut örneğini almadan
+"kanıtlandı" sayılmaz*; ve ikinci örnek eklenirken ilkine göre yazılmış her
+cümle yeniden okunmalıdır — D-007'nin "zırhlı anahtar doğrudan kullanılır"
+cümlesi tam olarak böyle yanlışa döndü.

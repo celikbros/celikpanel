@@ -544,6 +544,38 @@ desenine bağlıdır; asla keyfi paket kurulumuna dönüşemez.
   `0640 root:celikpanel` olarak indi — apt'ın yetkisiz `_apt` doğrulayıcısı
   okuyamadı, "imzasız" hatası verdi. Yazdıktan sonra `chmod 0644` ile düzeltildi.
 
+**Düzeltme (21 Tem) — ikinci vendor, tek-vendor varsayımlarını ortaya çıkardı.**
+Bu karar tek bir depoyla (PGDG) yazıldı ve uygulandı; PHP için Sury eklenince
+üç varsayımın PGDG'ye özgü olduğu görüldü. Genel kural: *bir mekanizma tek
+örnekle doğrulandığında, örneğe özgü olanı genel sanır.*
+
+1. **"KeyURL zırhlı `.asc`'dir" yanlıştı.** Yukarıdaki metin bunu bir gerçek
+   gibi yazıyor ("Zırhlı anahtar doğrudan kullanılır"). PGDG zırhlı yayınlar,
+   **Sury ikili keyring yayınlar** (`0x99` = OpenPGP açık anahtar paketi;
+   sunucuda ölçüldü) ve `.asc` varyantı yok (418). `fetchArmoredKey` onu
+   reddederdi — yani karar, kendi kapsamındaki ikinci vendor'ı dışarıda
+   bırakıyordu. Artık iki biçim de kabul edilir ve dosya **içeriğine göre**
+   adlandırılır (`.asc`/`.gpg`); apt ikisini de doğrudan okur, gpg bağımlılığı
+   yine çekilmez. Kabul, paket tag'i (tag 6) denetlenerek sınırlıdır — bir HTML
+   hata sayfası güvenilir keyring olamaz.
+2. **Sürüm sıralaması sondaki tam sayıyı okuyordu.** `postgresql-17` için 17
+   verir; `php8.3-fpm` için 0 ("fpm" sayı değil). Tek vendor'da doğru görünen
+   kod, PHP'de tüm sürümleri berabere bırakıyordu — çekmece sırası apt-cache ne
+   bastıysa o oluyordu. Artık `(major, minor)` okunur.
+3. **"Zaten kurulu" duvarı.** Kurulum, sürüm seçimine bakmadan servisin kurulu
+   olup olmadığını soruyordu. PostgreSQL'de zararsızdı (tek küme); PHP'de
+   ölümcül: 8.4 varken 8.3 isteği "PHP-FPM zaten kurulu" diye reddediliyordu.
+   Düz kurulumda soru "bu servis burada mı", sürüm seçiminde "**bu sürüm**
+   burada mı" olmalıdır (D-014'ün zincirini fiilen engelleyen şey buydu).
+
+Ayrıca **`VersionCompanions`** eklendi: bir sürüm seçimi çıplak kurulur
+(`php8.3-fpm`in tek başına veritabanı sürücüsü, mbstring'i, curl'ü yoktur) ve
+panel, site sunamayacak bir runtime için başarı bildirirdi. PGDG'de bu ihtiyaç
+yoktu çünkü `postgresql-17` tek başına çalışır — tek-vendor körlüğünün dördüncü
+yüzü. Companion'lar en-iyi-çabadır ve atlanan **raporlanır** (Sury
+`php8.5-opcache` yayınlamıyor; katı kurulum tek uzantı yüzünden 8.5'i tümüyle
+reddederdi).
+
 ---
 
 ## D-006 · Saldırı yüzeyi yönetimi: her kurulum geri alınabilir

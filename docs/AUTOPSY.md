@@ -24,6 +24,7 @@ behavior (the Netscape mistake).
 | A3 | v2 endpoints are not tenant-safe: `subscriptionID := 1 // TODO: Get from auth` | `database_v2_handlers.go:52,106,235,507` | ✅ Closed (Jul 11): 6 hardcodes removed → `callerSubscriptionID`; 6 server-scoped ops (list/create/delete × db+user) verify ownership via `canAccessDBServer` (`database_v2_authz.go`). **Admin gate STILL stands** — lifting it needs role-splitting `handleCreateDatabaseV2Server` (registering an arbitrary host/port/root-password is not a customer action); that belongs to the v0.3 tenant work |
 | A4 | DB server root password stored in plain text: `// TODO: Encrypt` | `database_v2_handlers.go:138` | ✅ Closed (Jul 16): `internal/secrets` — AES-256-GCM, key at `dataDir()/secret.key` (0600, generated on first boot). Sealed on create, opened via one helper (`dbDriverFor`) at driver time; legacy plaintext rows sealed by an idempotent startup migration. Format is `enc:v1:`-prefixed — self-describing |
 | A5 | `capabilities.mail_server` is BOOL while `dns_server` is a string — the type inconsistency produced a real product bug (dashboard claimed mail was installed) | `capabilities_handler.go:30` | ⬜ OPEN (frontend fixed; API consistency lands with B1) |
+| A8 | **A static site served PHP source as a download**: the static vhost has no PHP handler — correct; but it had no deny rule for `.php` either. nginx finds the file, does not recognise the extension (not in `mime.types`), falls back to `default_type application/octet-stream` and makes the browser **download the source** — database password included. "PHP does not run here" must not mean "PHP source is published here" | `internal/services/templates/nginx/vhost.conf.tmpl` (static branch) | ✅ Closed (Jul 21): deny on `\.(php\|phtml\|phps\|php[0-9])$`; 403 rather than 404 on purpose (it says the file exists but is not executed — the actual diagnosis). Measured end to end against live nginx: `secret.php` 403 with nginx's error page as the body, `.well-known/acme-challenge` 200 (renewals intact), `.env` 403, missing file 404. 2 regression tests. Same family as A6 — a file in the webroot handed out as source |
 | A7 | **The scan cache stored catalog fields**: `service_scan_cache` held whole API responses (name, description, icon, category, package names) → every catalog field changed in code kept its old value on screen until someone pressed Scan, and a NEWLY added catalog service never appeared at all. A panel reading the truth of its own code out of a cache | `managed_service_handlers.go` (old 62-79, 232-243) | ✅ Closed (Jul 21): the cache stores only `serviceObservation` (installed / unit up / versions / config files); the catalog is joined on every read by `catalogView` — the ONE place a response is built, so a cached read and a fresh scan cannot answer differently. The legacy format is still read (correct state without waiting for a rescan). 3 guard tests. This shipped to production as `kind:""` — see note E |
 | A6 | **The vhost dotfile rule was wrong in both branches**: the PHP branch blocked only `/\.ht` → `https://site/.env` served in plain text (a Laravel/Symfony DB password, APP_KEY, mail credentials) and `.git/` was readable; the static branch blocked ALL dotfiles → `.well-known/acme-challenge` was closed, so a static site's first certificate and every renewal 403'd | `internal/services/templates/nginx/vhost.conf.tmpl` | ✅ Closed (Jul 20): both branches now use `location ~ /\.(?!well-known).*`; the regex was validated against live nginx (commit `0088c67`). The ACME break stayed invisible because the golden path was proven with a PHP site |
 
@@ -85,3 +86,21 @@ Two lessons for the record:
    away with the same sentence each time. The durable fix was to ask what the
    cache has a RIGHT to store: observations only. Caching a fact that lives in
    code is how code and screen drift apart.
+
+**The recurring methodological error: validating against a single example.** The
+same shape has now appeared three times, and each time it broke *after* we said
+it worked:
+
+| What was validated against one example | What stayed invisible |
+|---|---|
+| The golden path was proven with a **PHP site** | Static sites could never pass ACME validation (A6) — and the static branch leaked `.php` source (A8) |
+| Vendor repos were proven with **PGDG only** | The armoured-key assumption, trailing-integer ordering, the "already installed" wall, and the need for companions — all four broke on PHP (D-007 correction) |
+| Catalog fields were read with **fields that always existed** | Adding a new one (`Kind`) made the cache publish it empty (A7) |
+
+The lesson is not "write more tests" — it is sharper: **validating a mechanism
+against one example mistakes what is specific to that example for what is
+general.** Until the second example arrives, you cannot know which assumption was
+load-bearing. Working rule: *an abstraction (a template branch, a vendor repo, a
+catalog field) is not "proven" until it has a second concrete instance*; and when
+that second instance lands, every sentence written for the first must be re-read
+— D-007's "the armoured key is used directly" became false in exactly that way.

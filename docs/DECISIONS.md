@@ -567,6 +567,40 @@ arbitrary package install.
   landed as `0640 root:celikpanel` — unreadable by apt's unprivileged `_apt`
   verifier, failing as "not signed". Fixed by `chmod 0644` after write.
 
+**Correction (Jul 21) — the second vendor exposed the single-vendor assumptions.**
+This decision was written and implemented against exactly one repo (PGDG); when
+Sury was added for PHP, three of its assumptions turned out to be PGDG-specific.
+The general rule: *a mechanism validated against a single example mistakes what
+is specific to that example for what is general.*
+
+1. **"KeyURL is ASCII-armoured" was wrong.** The text above states it as fact
+   ("The armoured key is used directly"). PGDG publishes armoured; **Sury
+   publishes a binary keyring** (`0x99` = OpenPGP public-key packet, measured on
+   the server) and has no `.asc` variant (418). `fetchArmoredKey` would have
+   rejected it — the decision locked out the second vendor inside its own scope.
+   Both forms are now accepted and the file is named for **what it contains**
+   (`.asc`/`.gpg`); apt reads both directly, so no gpg dependency is pulled in.
+   Acceptance is bounded by checking the packet tag (tag 6) — an HTML error page
+   cannot become a trusted keyring.
+2. **Version ordering read the trailing integer.** That yields 17 for
+   `postgresql-17` and 0 for `php8.3-fpm` ("fpm" is not a number). Code that
+   looked correct against one vendor left every PHP version tied, so the drawer's
+   order was whatever apt-cache happened to print. It now reads `(major, minor)`.
+3. **The "already installed" wall.** Install asked whether the SERVICE was
+   present before looking at the version pick. Harmless for PostgreSQL (one
+   cluster); fatal for PHP: with 8.4 present, a request for 8.3 was refused with
+   "PHP-FPM is already installed". For a plain install the question is "is this
+   service here"; for a version pick it is "is **this version** here" — this was
+   what actually blocked D-014's chain.
+
+**`VersionCompanions`** was also added: a version pick installs bare
+(`php8.3-fpm` alone has no database driver, mbstring or curl), so the panel would
+report success for a runtime that cannot serve a site. PGDG never needed this
+because `postgresql-17` works alone — the fourth face of the same single-vendor
+blindness. Companions are best-effort and anything skipped is **reported** (Sury
+publishes no `php8.5-opcache`; a strict install would refuse PHP 8.5 entirely
+over one optional extension).
+
 ---
 
 ## D-006 · Attack-surface management: every install is reversible
