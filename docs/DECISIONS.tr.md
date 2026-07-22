@@ -8,6 +8,72 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-015 · Eklenti pakettir, cins doğadır: mağaza hak verir kurmaz, çekirdek kataloğun sınırı para değil sorumluluktur, cins listesi açıktır
+
+*23 Temmuz 2026*
+
+**Karar.** Operatörün araba benzetmesi (standart/opsiyonel donanım, motor değişimi)
+ve getirdiği danışman analizi (Plesk/cPanel eklenti dökümü) üzerine altı bağlı karar:
+
+1. **İki eksen kesindir ve karışmaz.** *Kalem/eklenti* = edinme-dağıtım birimi
+   (ücretsiz/paralı, 1./3. taraf — D-012'nin ekseni). *Cins* = kurulan şeyin
+   mekanik doğası (service/runtime/tool — D-010'un ekseni). Danışmanın özeti
+   modelin kendisidir: *"eklentiler çoğu zaman servisleri yönetir; kendileri
+   servis değildir."* Bir eklenti 0..N parça getirebilir (Plesk Email Security
+   tek eklenti → postfix+dovecot+clamav yönetir); her parça KENDİ cinsiyle
+   görünür, eklenti kendisi bir cins değildir.
+2. **Mağaza hak verir, kurmaz.** Satın alma / lisans anahtarı / koltuk havuzu
+   mağazada; edinilen kalem Servisler kataloğunda belirir ve oradan kurulur.
+   Kurulumun tek adresi katalogdur — ikinci Kur düğmesi, B3b'de silinen
+   AdminNodeInstall'ın (iki-adres hatası) tekrarı olurdu.
+3. **Çekirdek katalog ile mağazanın sınırı PARA değil SORUMLULUKTUR.**
+   Çekirdek katalog, panelin garanti verdiği küçük küratörlü kümedir (iki
+   dağıtımda paket adları, güvenlik duvarı portları, kaldırma, test —
+   hepsi bizim borcumuz). Nadir kullanılan ÜCRETSİZ kalemler (örn. niş bir
+   veritabanı) çekirdeğe şişkinlik ve veremeyeceğimiz garanti demektir —
+   onlar da mağazadan gelir. (Bu, 22 Tem'deki "ücretsiz kalem mağazaya
+   girmez" ifadesinin düzeltmesidir: ölçüt fiyat değil, garanti sınırı.)
+4. **Cins listesi açıktır ama cins, İLK kalemiyle doğar.** Bugün üç cins üç
+   gerçek kalem ailesini taşıyor. Danışman dökümündeki kalan biçimlerin
+   haritası hazırdır ve günü gelince açık cins olarak eklenir:
+   *modül* (host servisin içinde yaşar, kendi unit'i yok — ModSecurity,
+   Brotli; "hangi servisin içinde" alanı gerekir) · *görev/timer* (çalışır ve
+   biter — yedekleme, sertifika yenileme) · *entegrasyon* (sunucuya hiçbir
+   şey kurulmaz; durumu "bağlı mı", sırrı mühürlü API anahtarı — Cloudflare,
+   S3 yedek hedefi, UptimeRobot). *Agent* ayrı cins DEĞİLDİR: mekanikçe
+   servistir (Imunify/Acronis agent'ı başlatılır/durdurulur); farkı ticari.
+5. **Derlenen dil için kurulacak şey yoktur.** Go/Rust "desteği" katalog
+   kalemi olamaz çünkü çoğalma testi (D-011) N der: runtime, müşterinin
+   binary'sinin İÇİNDE gelir. Uygulama modu (ters vekil + unit) herhangi bir
+   binary'yi bugün zaten çalıştırır — Go/Rust desteği fiilen vardır, satır
+   gerekmez. Yorumlanan diller (Python, Ruby) Node ile aynı sınıftır: günü
+   gelince runtime kalemi olurlar. (İleride "Git'ten çek + sunucuda derle"
+   yapılırsa derleyici zinciri bir *tool* kalemi olur — o gün gelirse.)
+6. **İki sayfa iki sorudur.** Servisler (adı ileride "Bileşenler"
+   olabilir) = "sunucumda ne var, nasıl işliyor?" Mağaza = "ne edinebilirim,
+   kimden, hangi hakla?" Aynı ürün ikisinde de görünebilir; çelişki değil,
+   iki farklı an.
+
+**Neden.** Operatör üç somut soruyla modeli zorladı (nadir-ücretsiz kalem
+nereye; Go/Rust ne olacak; danışman dökümü 7 çalışma biçimi sayıyor) ve model
+üçüne de mevcut eksenlerle cevap verdi — yalnız çekirdek/mağaza sınırının
+gerekçesi yanlış ifade edilmişti (fiyat değil sorumluluk). Danışmanın
+"gerçek sunucuda kontrol" bölümü (list-unit-files, ss -lntup) taramanın
+bugün yaptığının aynısıdır — dış doğrulama olarak kayda geçer.
+
+**Reddedilen alternatifler.**
+- **Danışmanın 7 biçimini bugün 7 cins yapmak:** elimizde modül, timer ve
+  entegrasyon KALEMI yokken şema spekülatif olurdu; cins ilk kalemiyle
+  doğar, yoksa D-010'un çözdüğü sorunun tersine döner (boş kategoriler).
+- **Go/Rust için "destek satırı":** kavramsal hata — D-011'in "Go satırı"
+  reddiyle aynı; kurulacak şey olmayan yerde satır yalan söyler.
+- **Sınırı ücretsiz/ücretli çizmek:** nadir ücretsiz kalem çekirdekte
+  garanti yükü, mağazada doğal dağıtım bulur; para yanlış eksendir.
+- **Cins başına ayrı sayfa:** "kurulu olan tek listede" ilkesini yedi
+  sayfaya bölerdi; cins satırın çizimini değiştirir, adresini değil.
+
+---
+
 ## D-014 · Yetki zinciri daralan bir süzgeçtir: admin kurar, bayi sunar, müşteri kullanır — birim sürümdür
 
 *21 Temmuz 2026*

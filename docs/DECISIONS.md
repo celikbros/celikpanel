@@ -8,6 +8,80 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-015 · An extension is a package, a kind is a nature: the store grants but never installs, the core catalog's boundary is responsibility not price, and the kind list is open
+
+*July 23, 2026*
+
+**Decision.** Six linked decisions, prompted by the operator's car analogy
+(standard vs optional equipment, engine swap) and the consultant's breakdown
+of the Plesk/cPanel extension world:
+
+1. **The two axes are final and never mix.** An *item/extension* is the unit
+   of acquisition and distribution (free/paid, first/third party — D-012's
+   axis). A *kind* is the mechanical nature of what gets installed
+   (service/runtime/tool — D-010's axis). The consultant's summary IS the
+   model: *"extensions usually manage services; they are not services
+   themselves."* One extension may bring 0..N parts (Plesk Email Security:
+   one extension → manages postfix+dovecot+clamav); every part shows up
+   under ITS OWN kind — the extension itself is not a kind.
+2. **The store grants, it never installs.** Purchase / license key / seat
+   pool live in the store; an acquired item appears in the Services
+   catalogue and is installed from there. The catalogue is the single
+   install address — a second Install button would repeat the two-address
+   mistake B3b just deleted (AdminNodeInstall).
+3. **The core-catalogue/store boundary is RESPONSIBILITY, not price.** The
+   core catalogue is the small curated set the panel vouches for (package
+   names on both distro families, firewall ports, uninstall, tests — all
+   our debt). Rarely-used FREE items (a niche database, say) would mean
+   bloat plus a warranty we cannot honor — they come through the store
+   too. (This corrects the Jul 22 statement "free items never enter the
+   store": the criterion is the warranty boundary, not the price tag.)
+4. **The kind list is open, but a kind is born with its FIRST item.** Three
+   kinds carry three real item families today. The remaining shapes in the
+   consultant's breakdown map cleanly and join as explicit kinds when their
+   day comes: *module* (lives inside a host service, no unit of its own —
+   ModSecurity, Brotli; needs a "host service" field) · *task/timer* (runs
+   and exits — backups, certificate renewal) · *integration* (nothing
+   installed on the server; its state is "connected?", its secret a sealed
+   API key — Cloudflare, S3 backup targets, UptimeRobot). An *agent* is NOT
+   a separate kind: mechanically it is a service (you start/stop the
+   Imunify/Acronis agent); the difference is commercial.
+5. **A compiled language needs nothing installed.** Go/Rust "support"
+   cannot be a catalogue item because the multiplication test (D-011) says
+   N: the runtime ships INSIDE the customer's binary. App mode (reverse
+   proxy + unit) already runs any binary today — Go/Rust support exists in
+   fact, no row needed. Interpreted languages (Python, Ruby) are Node's
+   class: runtime items when their day comes. (If "pull from Git + build
+   on server" ever ships, the toolchain becomes a *tool* item — if.)
+6. **Two pages, two questions.** Services (possibly renamed "Components"
+   later) = "what is on my server and how is it doing?" Store = "what can
+   I acquire, from whom, under which right?" The same product may appear
+   on both; that is two moments, not a contradiction.
+
+**Why.** The operator stress-tested the model with three concrete questions
+(where do rare-free items go; what about Go/Rust; the consultant counts 7
+working shapes) and the model answered all three with its existing axes —
+only the core/store boundary had been justified wrongly (price instead of
+responsibility). The consultant's "verify on a real server" section
+(list-unit-files, ss -lntup) is exactly what the scan already does —
+recorded as external validation.
+
+**Rejected alternatives.**
+- **Making the consultant's 7 shapes 7 kinds today:** with zero module,
+  timer or integration ITEMS on hand the schema would be speculative; a
+  kind is born with its first item, otherwise we recreate the inverse of
+  the problem D-010 solved (empty categories).
+- **A "support row" for Go/Rust:** conceptual error — the same "a Go row
+  would be a category mistake" already rejected in D-011; where there is
+  nothing to install, a row lies.
+- **Drawing the boundary at free/paid:** a rare free item is a warranty
+  burden in the core but finds natural distribution in the store; price is
+  the wrong axis.
+- **A page per kind:** would split "everything installed, one list" across
+  seven pages; kind changes how a row is DRAWN, not where it lives.
+
+---
+
 ## D-014 · The authority chain is a narrowing filter: admin installs, reseller offers, customer uses — and the unit is the version
 
 *July 21, 2026*
