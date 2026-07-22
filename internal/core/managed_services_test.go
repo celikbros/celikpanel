@@ -131,25 +131,39 @@ func TestPHPRepoPatternBoundsWhatCanBeInstalled(t *testing.T) {
 	}
 }
 
-// A service/runtime is defined by having a daemon, and the panel reads its
-// state from SystemNames. Without one the row can never report "running", so
-// it would sit at "stopped" forever and raise a permanent false alarm on the
-// dashboard. (The reverse is deliberately NOT asserted: a tool is allowed to
-// grow a unit one day. Freezing that direction would restore the very
-// conflation D-010 deleted.)
+// A `service` is defined by having a daemon, and the panel reads its state
+// from SystemNames. Without one the row can never report "running", so it
+// would sit at "stopped" forever and raise a permanent false alarm on the
+// dashboard.
 //
-// service/runtime, daemon'a sahip olmakla tanımlanır ve panel durumunu
+// A `runtime` is deliberately exempt (B3b): its truth is the instance list
+// (Agent.ListServiceInstances), and a runtime may honestly have no unit at
+// all — a Node version is a tarball tree executed only by per-site app units.
+// The scan gives unit-less installed runtimes the status "installed", so the
+// false-alarm failure mode this guard exists for cannot occur there. A
+// runtime WITH units (php-fpm) still gets per-unit status from its instances.
+// (The tool direction is also not asserted: a tool may grow a unit one day;
+// freezing that would restore the very conflation D-010 deleted.)
+//
+// `service`, daemon'a sahip olmakla tanımlanır ve panel durumunu
 // SystemNames'ten okur. Biri yoksa satır asla "çalışıyor" diyemez, sonsuza dek
-// "durdu"da kalır ve panoda kalıcı yanlış alarm üretir. (Tersi bilerek
-// doğrulanmaz: bir tool ileride unit kazanabilir. O yönü dondurmak, D-010'un
-// sildiği karıştırmayı geri getirirdi.)
+// "durdu"da kalır ve panoda kalıcı yanlış alarm üretir.
+//
+// `runtime` bilerek muaftır (B3b): onun gerçeği instance listesidir
+// (Agent.ListServiceInstances) ve bir runtime dürüstçe hiç unit taşımayabilir —
+// bir Node sürümü, yalnız site başına app unit'lerinin çalıştırdığı bir tarball
+// ağacıdır. Tarama, unit'siz kurulu runtime'lara "installed" durumu verir; bu
+// bekçinin var olma sebebi olan yanlış-alarm orada oluşamaz. Unit'i OLAN
+// runtime (php-fpm) durumunu yine instance'larından, unit başına alır. (Tool
+// yönü de doğrulanmaz: bir tool ileride unit kazanabilir; o yönü dondurmak
+// D-010'un sildiği karıştırmayı geri getirirdi.)
 func TestDaemonKindsHaveUnits(t *testing.T) {
 	for _, s := range ManagedServices {
-		if s.Kind == KindTool {
+		if s.Kind != KindService {
 			continue
 		}
-		if len(s.SystemNames) == 0 {
-			t.Errorf("%s: Kind %q has no SystemNames — it could never report running", s.ID, s.Kind)
+		if len(s.SystemNames) == 0 && s.SystemNamePattern == "" {
+			t.Errorf("%s: Kind %q has no SystemNames/SystemNamePattern — it could never report running", s.ID, s.Kind)
 		}
 	}
 }

@@ -62,7 +62,7 @@ func (p *Panel) hostingCaps() hostingCapabilities {
 	// denetimini "bilinmiyor"a çevirdi ve yalnız-DNS tipinde açık-kalmaya
 	// (fail open) yol açtı. Bir liste ya doludur ya boştur; asla yok değildir.
 	caps := hostingCapabilities{
-		PHPVersions:     services.DetectInstalledPHPVersions(),
+		PHPVersions:     p.phpVersionsFromAgent(),
 		DatabaseServers: []string{},
 		DBTools:         []string{},
 	}
@@ -91,6 +91,40 @@ func (p *Panel) hostingCaps() hostingCapabilities {
 		}
 	}
 	return caps
+}
+
+// phpVersionsFromAgent asks the one per-version authority,
+// Agent.ListServiceInstances (B3b). The old source read /etc/php/<v>/fpm on
+// the PANEL process's own disk — a Debian-only layout, so an Arch server
+// running PHP reported php_versions: [] and Add Domain refused PHP sites with
+// PHP_REQUIRED while php-fpm was actively serving. The local read survives
+// only as a fallback for when the agent is unreachable.
+// phpVersionsFromAgent, sürüm-başına tek otoriteye, Agent.ListServiceInstances'a
+// sorar (B3b). Eski kaynak PANEL sürecinin kendi diskinden /etc/php/<v>/fpm
+// okuyordu — yalnız-Debian düzeni; PHP koşturan bir Arch sunucusu
+// php_versions: [] bildiriyor ve Add Domain, php-fpm fiilen site sunarken PHP
+// sitelerini PHP_REQUIRED ile geri çeviriyordu. Yerel okuma yalnız agent'a
+// ulaşılamadığı an için yedek olarak yaşar.
+func (p *Panel) phpVersionsFromAgent() []string {
+	var ir struct {
+		Instances []struct {
+			Version string `json:"version"`
+			Managed bool   `json:"managed"`
+		} `json:"instances"`
+	}
+	req := struct {
+		ID string `json:"id"`
+	}{ID: "php-fpm"}
+	if err := p.agentClient.Call("Agent.ListServiceInstances", &req, &ir); err != nil {
+		return services.DetectInstalledPHPVersions()
+	}
+	versions := []string{}
+	for _, in := range ir.Instances {
+		if in.Managed && in.Version != "" {
+			versions = append(versions, in.Version)
+		}
+	}
+	return versions
 }
 
 // handleHostingCapabilities: GET, any authenticated user — customers add

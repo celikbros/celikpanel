@@ -109,14 +109,19 @@ function AdminDashboard() {
     const installed = services.filter((s) => s.is_installed);
     // A `tool` can never be "stopped" — it has no daemon of ours, so counting
     // phpMyAdmin as a dead service was a false alarm the operator could not act
-    // on. A runtime still counts: php-fpm has real units and a dead one breaks
-    // every PHP site, so it must reach this list (D-010).
+    // on. Status "installed" is the same truth for a unit-less runtime (node:
+    // executed only by per-site apps). php-fpm still counts: it has real units
+    // and a dead one breaks every PHP site, so it must reach this list
+    // (D-010/B3b).
     // `tool` asla "durmuş" olamaz — bize ait daemon'ı yok; phpMyAdmin'i ölü
-    // servis saymak operatörün eyleme dökemeyeceği yanlış alarmdı. Runtime
-    // sayılmaya devam eder: php-fpm'in gerçek unit'leri var ve ölü olması her
-    // PHP sitesini kırar, bu listeye ulaşmalıdır (D-010).
-    const running = installed.filter((s) => s.kind === 'tool' || s.status?.toLowerCase().includes('running'));
-    const stoppedSvcs = installed.filter((s) => s.kind !== 'tool' && !s.status?.toLowerCase().includes('running'));
+    // servis saymak operatörün eyleme dökemeyeceği yanlış alarmdı. "installed"
+    // durumu, unit'siz runtime için aynı gerçektir (node: onu yalnız site
+    // başına uygulamalar çalıştırır). php-fpm sayılmaya devam eder: gerçek
+    // unit'leri var ve ölüsü her PHP sitesini kırar, bu listeye ulaşmalıdır
+    // (D-010/B3b).
+    const cannotStop = (s: SvcLite) => s.kind === 'tool' || s.status === 'installed';
+    const running = installed.filter((s) => cannotStop(s) || s.status?.toLowerCase().includes('running'));
+    const stoppedSvcs = installed.filter((s) => !cannotStop(s) && !s.status?.toLowerCase().includes('running'));
 
     // Turn the firewall on right where the operator reads about it. Field
     // finding (Jul 17): the journey said "turn on the firewall" but its button

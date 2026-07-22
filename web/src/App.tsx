@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useI18n } from './i18n';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
@@ -87,6 +88,7 @@ interface ServiceManagementProps {
 
 function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const onBack = () => navigate('/services');
 
   switch (serviceId) {
@@ -109,12 +111,17 @@ function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
     case 'mariadb':
       return <MariaDBManagement onBack={onBack} />;
     default:
+      // Honest and localized: some services (node — its versions live in the
+      // Services page drawer) have no dedicated page, and saying so beats an
+      // English-only "Coming soon" that promises nothing in particular.
+      // Dürüst ve yerelleştirilmiş: bazı servislerin (node — sürümleri
+      // Servisler sayfasındaki çekmecede) özel sayfası yok; bunu söylemek,
+      // belirsiz bir şey vadeden İngilizce "Coming soon"dan iyidir.
       return (
         <div className="p-8 text-center">
-          <h2 className="text-xl font-bold mb-4">Management UI for {serviceId}</h2>
-          <p className="text-fg-muted mb-4">Coming soon...</p>
+          <p className="mb-4 text-fg-muted">{t('services.noManagePage')}</p>
           <button onClick={onBack} className="px-4 py-2 bg-surface-2 rounded-lg hover:bg-surface-3">
-            Go Back
+            {t('common.back')}
           </button>
         </div>
       );
@@ -161,8 +168,12 @@ function ServiceManagementPage() {
     );
   }
 
-  if (!versions.length) return null;
-
+  // No empty-versions bailout: with the "default" sentinel dead (B3b), an
+  // installed nginx/postfix legitimately has versions: [] — bailing out here
+  // rendered a BLANK page behind every such Manage click.
+  // Boş-sürüm kaçışı yok: "default" sentinel'i öldüğünden (B3b) kurulu bir
+  // nginx/postfix meşru olarak versions: [] taşır — burada kaçmak, böyle her
+  // Yönet tıklamasının arkasında BOŞ sayfa çiziyordu.
   return <ServiceManagement serviceId={serviceId!} versions={versions} />;
 }
 

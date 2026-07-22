@@ -26,11 +26,18 @@ interface PHPExtension {
 // kurulumdan gelir.
 export function PHPManagement({ versions, onBack }: PHPManagementProps) {
     const { t } = useI18n();
-    const [version, setVersion] = useState(versions[0] ?? 'default');
+    // versions[] now carries only REAL versions (B3b: the "default" sentinel
+    // is dead — on Arch the single php-fpm reports its true version too).
+    // Empty means PHP is not installed; the shell's install button handles it.
+    // versions[] artık yalnız GERÇEK sürümler taşır (B3b: "default" sentinel'i
+    // öldü — Arch'ta tek php-fpm de gerçek sürümünü bildirir). Boşsa PHP
+    // kurulu değildir; kabuğun kurulum düğmesi bunu karşılar.
+    const [version, setVersion] = useState(versions[0] ?? '');
     const [tab, setTab] = useState<'extensions' | 'config'>('extensions');
     const [extensions, setExtensions] = useState<PHPExtension[]>([]);
 
     useEffect(() => {
+        if (!version) return;
         fetch(`/api/v1/php/extensions?version=${version}`)
             .then((r) => (r.ok ? r.json() : []))
             .then((data) => setExtensions(data || []))

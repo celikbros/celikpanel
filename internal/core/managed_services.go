@@ -293,6 +293,44 @@ var ManagedServices = []ManagedService{
 		},
 	},
 	{
+		// Node.js has been RUNNABLE for a while (runtime_rpc.go installs
+		// verified tarballs, app_rpc.go runs per-site units) but was never
+		// declared here — so the Services page, which promises to show what
+		// this server can run, said nothing about it. This entry is
+		// visibility work, not new capability (B3b).
+		// Node.js bir süredir ÇALIŞTIRILABİLİR (runtime_rpc.go doğrulanmış
+		// tarball kurar, app_rpc.go site başına unit koşturur) ama burada hiç
+		// ilan edilmedi — bu sunucunun ne koşturabildiğini göstermeye söz
+		// veren Servisler sayfası ondan hiç bahsetmiyordu. Bu kayıt yeni
+		// yetenek değil, görünürlük işidir (B3b).
+		ID:          "node",
+		Name:        "Node.js",
+		Description: "JavaScript Runtime",
+		Icon:        "🟩",
+		Category:    "web",
+		Kind:        KindRuntime,
+		// No SystemNames and no Packages, and both are the truth: a Node
+		// version is a checksum-verified tarball tree under
+		// /opt/celikpanel/runtimes/node/<semver>, not a distro package, and
+		// it has no daemon of its own — only per-site app units execute it.
+		// Discovery therefore goes through Agent.ListServiceInstances, the
+		// same contract PHP uses, instead of unit/package probing.
+		// SystemNames de Packages de yok ve ikisi de gerçeğin kendisi: bir
+		// Node sürümü /opt/celikpanel/runtimes/node/<semver> altında sağlama
+		// toplamı doğrulanmış bir tarball ağacıdır, dağıtım paketi değildir;
+		// kendine ait daemon'ı da yoktur — onu yalnız site başına app
+		// unit'leri çalıştırır. Keşif bu yüzden unit/paket yoklaması yerine
+		// PHP'nin de kullandığı sözleşmeden, Agent.ListServiceInstances'tan
+		// geçer.
+		// Requires makes the until-now unwritten rule declarative: a Node
+		// app is reached only through a reverse proxy, so a web server must
+		// exist first (any member of the group satisfies it).
+		// Requires, bugüne dek hiçbir yerde yazmayan kuralı bildirime çevirir:
+		// bir Node uygulamasına yalnız ters vekille ulaşılır, önce bir web
+		// sunucusu olmalıdır (grubun herhangi bir üyesi yeter).
+		Requires: []string{"web-server"},
+	},
+	{
 		ID:            "nginx",
 		Name:          "Nginx",
 		Description:   "Reverse Proxy Server",

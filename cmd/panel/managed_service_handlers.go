@@ -38,9 +38,16 @@ type ManagedServiceResponse struct {
 	// başına seçilir, "tool"un bize ait daemon'ı hiç yoktur. Boş SystemNames'ten
 	// çıkarılan ve üç ayrı şeyi tek bitle işaretleyen eski `daemonless`
 	// bayrağının yerine geçer.
-	Kind        core.ServiceKind  `json:"kind"`
-	Packages    []string          `json:"packages,omitempty"` // distro packages (apt) shown before install
-	ConfigFiles []core.ConfigFile `json:"config_files"`       // Detected config files
+	Kind core.ServiceKind `json:"kind"`
+	// Instances: the per-copy truth behind a runtime row (B3b) — one entry
+	// per installed version, with unit/status/path/size. The version drawer
+	// renders these; Versions above is just their version strings.
+	// Instances: runtime satırının arkasındaki kopya-başına gerçek (B3b) —
+	// kurulu sürüm başına bir kayıt: unit/durum/yol/boyut. Sürüm çekmecesi
+	// bunları çizer; yukarıdaki Versions yalnız sürüm dizeleridir.
+	Instances   []core.ServiceInstance `json:"instances"`
+	Packages    []string               `json:"packages,omitempty"` // distro packages (apt) shown before install
+	ConfigFiles []core.ConfigFile      `json:"config_files"`       // Detected config files
 }
 
 // managedServicesPayload is what both endpoints return: the cached scan and
@@ -81,8 +88,23 @@ type serviceObservation struct {
 	ID          string            `json:"id"`
 	IsInstalled bool              `json:"is_installed"`
 	Status      string            `json:"status"`
-	Versions    []string          `json:"versions,omitempty"`
 	ConfigFiles []core.ConfigFile `json:"config_files,omitempty"`
+	// Instances is the per-copy truth for runtimes (B3b), straight from
+	// Agent.ListServiceInstances: version, unit, path, managed, per-unit
+	// status. The scan no longer parses versions out of unit names.
+	// Instances, runtime'lar için kopya-başına gerçektir (B3b), doğrudan
+	// Agent.ListServiceInstances'tan gelir: sürüm, unit, yol, yönetilen,
+	// unit başına durum. Tarama artık unit adından sürüm ayrıştırmaz.
+	Instances []core.ServiceInstance `json:"instances,omitempty"`
+	// Versions is kept ONLY so cache rows written before B3b still decode —
+	// new scans never write it. When Instances is empty, catalogView falls
+	// back to it (minus the dead "default" sentinel) so an upgraded panel
+	// keeps showing versions until the next scan.
+	// Versions YALNIZ B3b öncesi yazılmış önbellek satırları çözülebilsin diye
+	// durur — yeni taramalar onu hiç yazmaz. Instances boşken catalogView ona
+	// düşer (ölü "default" sentinel'i hariç); güncellenen panel bir sonraki
+	// taramaya dek sürümleri göstermeyi sürdürür.
+	Versions []string `json:"versions,omitempty"`
 }
 
 // scanCacheDoc is the persisted shape. An object (not a bare array) so the
@@ -158,9 +180,38 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 	response := make([]ManagedServiceResponse, 0, len(core.ManagedServices))
 	for _, managed := range core.ManagedServices {
 		o := byID[managed.ID]
-		versions := o.Versions
-		if versions == nil {
-			versions = []string{}
+		instances := o.Instances
+		if instances == nil {
+			instances = []core.ServiceInstance{}
+		}
+		// Versions is derived, never stored: the managed instances' versions,
+		// newest-first as the agent reported them. The "default" sentinel is
+		// dead — an installed service with no known versions now says [] and
+		// the UI renders the honest "—". (It used to say ["default"], a word
+		// that leaked into router state, ?version= queries and even RPC
+		// calls, meaning three different things on the way.)
+		// Versions türetilir, saklanmaz: yönetilen kopyaların sürümleri,
+		// agent'ın bildirdiği gibi en yeni önce. "default" sentinel'i öldü —
+		// sürümü bilinmeyen kurulu servis artık [] der ve arayüz dürüst "—"
+		// çizer. (Eskiden ["default"] derdi; o kelime yönlendirici durumuna,
+		// ?version= sorgularına, hatta RPC çağrılarına sızıyor ve yol boyunca
+		// üç ayrı anlama geliyordu.)
+		versions := []string{}
+		for _, in := range instances {
+			if in.Managed && in.Version != "" && !contains(versions, in.Version) {
+				versions = append(versions, in.Version)
+			}
+		}
+		if len(versions) == 0 {
+			// Pre-B3b cache rows carry Versions instead of Instances; honor
+			// them (minus the sentinel) until the next scan replaces them.
+			// B3b öncesi önbellek satırları Instances yerine Versions taşır;
+			// bir sonraki tarama yenileyene dek (sentinel hariç) onlara uy.
+			for _, v := range o.Versions {
+				if v != "default" && !contains(versions, v) {
+					versions = append(versions, v)
+				}
+			}
 		}
 		configFiles := o.ConfigFiles
 		if configFiles == nil {
@@ -186,8 +237,6 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 				}
 			}
 			requiresMissing = core.RequirementsMissing(&managed, installedSet)
-		} else if len(versions) == 0 {
-			versions = append(versions, "default")
 		}
 
 		response = append(response, ManagedServiceResponse{
@@ -197,6 +246,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			Icon:            managed.Icon,
 			Category:        managed.Category,
 			Versions:        versions,
+			Instances:       instances,
 			Status:          status,
 			IsInstalled:     o.IsInstalled,
 			ConflictWith:    conflictWith,
@@ -331,7 +381,6 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	// eklenir.
 	observations := make([]serviceObservation, 0, len(core.ManagedServices))
 	for _, managed := range core.ManagedServices {
-		versions := []string{}
 		configFiles := []core.ConfigFile{}
 		isInstalled := false
 		status := "inactive"
@@ -354,11 +403,6 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 				continue
 			}
 			isInstalled = true
-
-			version := extractVersion(svc.Name, managed.ID)
-			if version != "" && !contains(versions, version) {
-				versions = append(versions, version)
-			}
 
 			if len(svc.ConfigFiles) > 0 {
 				configFiles = append(configFiles, svc.ConfigFiles...)
@@ -388,11 +432,69 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			status = "inactive (dead)"
 		}
 
+		// Runtimes are the per-copy exception: their truth is the instance
+		// list, not unit-name parsing (B3b — extractVersion is gone). A
+		// managed instance means installed even when nothing unit-based
+		// noticed (a Node tree has no unit and no package, so both probes
+		// above are blind to it).
+		// Runtime'lar kopya-başına istisnadır: gerçekleri unit adı ayrıştırma
+		// değil instance listesidir (B3b — extractVersion gitti). Yönetilen
+		// bir kopya, unit tabanlı hiçbir şey fark etmese bile kurulu demektir
+		// (Node ağacının unit'i de paketi de yok; yukarıdaki iki yoklama da
+		// onu göremez).
+		var instances []core.ServiceInstance
+		if managed.Kind == core.KindRuntime {
+			var ir struct {
+				Instances []core.ServiceInstance `json:"instances"`
+				Error     string                 `json:"error,omitempty"`
+			}
+			req := struct {
+				ID string `json:"id"`
+			}{ID: managed.ID}
+			if err := p.agentClient.Call("Agent.ListServiceInstances", &req, &ir); err == nil {
+				instances = ir.Instances
+			}
+
+			anyManaged, anyUnit, anyUnitActive := false, false, false
+			for _, in := range instances {
+				if in.Managed {
+					anyManaged = true
+				}
+				if in.Unit != "" {
+					anyUnit = true
+					if strings.HasPrefix(strings.ToLower(in.Status), "active") {
+						anyUnitActive = true
+					}
+				}
+			}
+			if anyManaged {
+				isInstalled = true
+			}
+			// Per-unit status beats the aggregate guess; and an installed
+			// runtime with NO unit at all (node) is "installed" — there is
+			// no daemon to be alive or dead, so running/stopped would be the
+			// same false alarm D-010 removed for tools.
+			// Unit başına durum, toplu tahmini yener; hiç unit'i olmayan
+			// kurulu runtime (node) ise "installed"dır — yaşayacak ya da
+			// ölecek daemon yok; çalışıyor/durdu demek, D-010'un tool'lar
+			// için kaldırdığı yanlış alarmın aynısı olurdu.
+			if isInstalled {
+				switch {
+				case anyUnitActive:
+					status = "active (running)"
+				case anyUnit:
+					status = "inactive (dead)"
+				default:
+					status = "installed"
+				}
+			}
+		}
+
 		observations = append(observations, serviceObservation{
 			ID:          managed.ID,
 			IsInstalled: isInstalled,
 			Status:      status,
-			Versions:    versions,
+			Instances:   instances,
 			ConfigFiles: configFiles,
 		})
 	}
@@ -409,24 +511,6 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		return nil, err
 	}
 	return catalogView(observations, p.packageFamily()), nil
-}
-
-// extractVersion extracts version number from service name
-func extractVersion(serviceName, serviceID string) string {
-	switch serviceID {
-	case "php-fpm":
-		// php8.4-fpm -> 8.4
-		if strings.HasPrefix(serviceName, "php") && strings.HasSuffix(serviceName, "-fpm") {
-			version := strings.TrimPrefix(serviceName, "php")
-			version = strings.TrimSuffix(version, "-fpm")
-			return version
-		}
-	case "postgresql":
-		// For postgresql, we might need to query version differently
-		// For now, return empty to use "default"
-		return ""
-	}
-	return ""
 }
 
 // contains checks if a string slice contains a value

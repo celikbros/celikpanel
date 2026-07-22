@@ -5,6 +5,21 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput } from './ui';
 
+// One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
+// tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
+// copy has no daemon of its own — no status, no start/stop for it.
+// Bir runtime'ın kurulu tek kopyası (B3b): php8.3-fpm bir kopyadır,
+// /opt/celikpanel/runtimes altındaki bir Node ağacı bir kopyadır. `unit` boşsa
+// kopyanın kendine ait daemon'ı yoktur — durumu da başlat/durduru da olmaz.
+interface ServiceInstance {
+    version: string;
+    unit?: string;
+    path?: string;
+    managed: boolean;
+    status?: string;
+    size_bytes?: number;
+}
+
 interface ManagedService {
     id: string;
     name: string;
@@ -12,6 +27,7 @@ interface ManagedService {
     icon: string;
     category: string;
     versions: string[];
+    instances?: ServiceInstance[];
     status: string;
     is_installed: boolean;
     conflict_with?: string;
@@ -19,6 +35,14 @@ interface ManagedService {
     kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
 }
+
+// A tarball runtime installs from upstream (nodejs.org), not from distro
+// packages — its install box lives in the version drawer, not the package
+// dialog. Data-driven: "runtime with no packages" is exactly that set.
+// Tarball runtime, dağıtım paketinden değil kaynağından (nodejs.org) kurulur —
+// kurulum kutusu paket modalında değil sürüm çekmecesindedir. Veriden türer:
+// "paketi olmayan runtime" tam olarak o kümedir.
+const isTarballRuntime = (s: ManagedService) => s.kind === 'runtime' && !(s.packages && s.packages.length > 0);
 
 // Category display order + label key + section icon + icon tint. Each
 // category renders as its own card; the colored icon chip is what makes the
@@ -152,10 +176,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         }
     };
 
-    const resolveUnit = (serviceId: string, version?: string) => {
-        if (serviceId === 'php-fpm') return version && version !== 'default' ? `php${version}-fpm` : 'php-fpm';
-        return serviceId;
-    };
+    // Version drawers open per runtime row (B3b). Independent of category
+    // collapse: a drawer is row detail, not a group.
+    // Sürüm çekmeceleri runtime satırı başına açılır (B3b). Kategori
+    // katlamasından bağımsız: çekmece grup değil, satır ayrıntısıdır.
+    const [openDrawers, setOpenDrawers] = useState<Set<string>>(new Set());
+    const toggleDrawer = (id: string) =>
+        setOpenDrawers((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
 
     // Install a not-yet-installed catalogue service on demand. The agent
     // installs exactly the whitelisted packages for this id, then enables the
@@ -210,13 +241,45 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         }
     };
 
+    // Inline actions are for `service` rows, whose one unit shares the
+    // catalogue id. Per-version units (php8.3-fpm) go through
+    // handleInstanceAction below — the "default"-sentinel unit guessing that
+    // used to live here is gone with B3b.
+    // Satır içi eylemler `service` satırları içindir; onların tek unit'i
+    // katalog id'siyle aynıdır. Sürüm başına unit'ler (php8.3-fpm) aşağıdaki
+    // handleInstanceAction'dan geçer — eskiden burada yaşayan "default"
+    // sentinel'li unit tahmini B3b ile gitti.
     const handleAction = async (service: ManagedService, action: 'start' | 'stop' | 'restart') => {
         setBusy(service.id);
         try {
             const res = await fetch('/api/v1/service/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: resolveUnit(service.id, service.versions[0]), action }),
+                body: JSON.stringify({ name: service.id, action }),
+            });
+            if (!res.ok) throw new Error();
+            await new Promise((r) => setTimeout(r, 1000));
+            loadServices();
+        } catch {
+            showToast('error', t('services.actionFailed'));
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    // Start/stop ONE version of a runtime by its own unit. The endpoint
+    // rescans server-side, so the follow-up load returns fresh per-instance
+    // status.
+    // Bir runtime'ın TEK sürümünü kendi unit'iyle başlat/durdur. Uç nokta
+    // sunucu tarafında yeniden tarar; ardından gelen yükleme kopya-başına
+    // taze durumu getirir.
+    const handleInstanceAction = async (serviceId: string, unit: string, action: 'start' | 'stop' | 'restart') => {
+        setBusy(`${serviceId}:${unit}`);
+        try {
+            const res = await fetch('/api/v1/service/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: unit, action }),
             });
             if (!res.ok) throw new Error();
             await new Promise((r) => setTimeout(r, 1000));
@@ -367,31 +430,37 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                 ))}
                                                             </div>
                                                         ) : (
+                                                            /* Empty means "version unknown" and renders as an
+                                                               honest dash. The "default" sentinel that used to
+                                                               stand here is dead (B3b).
+                                                               Boş, "sürüm bilinmiyor" demektir ve dürüst bir
+                                                               tireyle çizilir. Eskiden burada duran "default"
+                                                               sentinel'i öldü (B3b). */
                                                             <span className="font-mono text-sm text-fg-muted">
-                                                                {s.versions[0] === 'default' ? '—' : s.versions[0]}
+                                                                {s.versions[0] ?? '—'}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="w-32 shrink-0">
                                                         <span className={`inline-flex items-center gap-1.5 text-sm ${s.is_installed ? 'text-fg-muted' : 'text-fg-subtle'}`}>
-                                                            {/* Only a `tool` lacks a running state — it has no
-                                                                daemon of ours, so "installed" is the whole
-                                                                truth. A runtime DOES have units (php8.3-fpm…)
-                                                                and the scan aggregates them, so it keeps
+                                                            {/* A tool has no daemon of ours; a runtime whose
+                                                                copies have no units either (node — executed
+                                                                only by per-site apps) reports status
+                                                                "installed". For both, "installed" is the whole
+                                                                truth. php-fpm HAS units and keeps
                                                                 running/stopped: a dead php-fpm must still
-                                                                raise the alarm. What a runtime loses is the
-                                                                inline start/stop below, not its status (D-010).
-                                                                Yalnız `tool`un çalışma durumu yoktur — bize ait
-                                                                daemon'ı yok, "kurulu" tam gerçektir. Runtime'ın
-                                                                unit'leri VARDIR (php8.3-fpm…) ve tarama onları
-                                                                toplar, bu yüzden çalışıyor/durdu kalır: ölü bir
-                                                                php-fpm yine alarm vermelidir. Runtime'ın
-                                                                kaybettiği durum değil, aşağıdaki satır içi
-                                                                başlat/durdurdur (D-010). */}
-                                                            <StatusDot ok={s.is_installed && (running || s.kind === 'tool')} />
+                                                                raise the alarm (D-010/B3b).
+                                                                Tool'un bize ait daemon'ı yok; kopyalarının
+                                                                unit'i olmayan runtime da (node — onu yalnız
+                                                                site başına uygulamalar çalıştırır) "installed"
+                                                                durumu bildirir. İkisi için de "kurulu" tam
+                                                                gerçektir. php-fpm'in unit'leri VARDIR ve
+                                                                çalışıyor/durdu kalır: ölü php-fpm yine alarm
+                                                                vermelidir (D-010/B3b). */}
+                                                            <StatusDot ok={s.is_installed && (running || s.kind === 'tool' || s.status === 'installed')} />
                                                             {!s.is_installed
                                                                 ? t('services.notInstalled')
-                                                                : s.kind === 'tool'
+                                                                : s.kind === 'tool' || s.status === 'installed'
                                                                   ? t('services.installedLabel')
                                                                   : running
                                                                     ? t('services.running')
@@ -416,7 +485,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             </span>
                                                         ) : (
                                                         <button
-                                                            onClick={() => setInstallTarget(s)}
+                                                            /* A tarball runtime (node) is not an apt/pacman
+                                                               package — Install opens the version drawer,
+                                                               where versions come from upstream.
+                                                               Tarball runtime (node) apt/pacman paketi değil —
+                                                               Kur, sürüm çekmecesini açar; sürümler kaynaktan
+                                                               gelir. */
+                                                            onClick={() => (isTarballRuntime(s) ? toggleDrawer(s.id) : setInstallTarget(s))}
                                                             disabled={busy === s.id}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
                                                         >
@@ -471,12 +546,25 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Play className="h-4 w-4" fill="currentColor" />
                                                     </ActionIcon>
                                                     ))}
-                                                    {/* Manage opens the version drawer, so a runtime needs it
-                                                        MOST — it is where per-version state and control live.
-                                                        Only a tool has nothing to manage.
-                                                        Yönet, sürüm çekmecesini açar; bu yüzden ona EN ÇOK
-                                                        runtime'ın ihtiyacı var — sürüm başına durum ve denetim
-                                                        oradadır. Yalnız tool'un yönetecek şeyi yoktur. */}
+                                                    {/* The version drawer is where a runtime's per-version
+                                                        state and controls live (B3b) — and, for a tarball
+                                                        runtime, where installing a version lives too.
+                                                        Sürüm çekmecesi, runtime'ın sürüm başına durum ve
+                                                        denetiminin yaşadığı yerdir (B3b) — tarball runtime'da
+                                                        sürüm kurmak da orada yaşar. */}
+                                                    {s.kind === 'runtime' && (
+                                                    <button
+                                                        onClick={() => toggleDrawer(s.id)}
+                                                        className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
+                                                    >
+                                                        {openDrawers.has(s.id) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                                        {t('services.versionsToggle')}
+                                                        <span className="rounded bg-surface-2 px-1 font-mono text-[10px] text-fg-subtle">{(s.instances ?? []).filter((i) => i.managed).length}</span>
+                                                    </button>
+                                                    )}
+                                                    {/* Manage: extensions/config pages. A tool has nothing to
+                                                        manage. / Yönet: uzantı/ayar sayfaları. Tool'un
+                                                        yönetecek şeyi yoktur. */}
                                                     {s.kind !== 'tool' && (
                                                     <button
                                                         onClick={() => onManageService?.(s.id, s.versions)}
@@ -486,6 +574,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         {t('services.manage')}
                                                     </button>
                                                     )}
+                                                    {/* A tarball runtime has no whole-service package to
+                                                        purge; removal is per version and lands with the
+                                                        usage ledger (B3d) — no delete offered until it can
+                                                        refuse "in use by 3 sites".
+                                                        Tarball runtime'ın purge edilecek bütün-servis paketi
+                                                        yok; kaldırma sürüm başınadır ve kullanım defteriyle
+                                                        gelir (B3d) — "3 site kullanıyor" diye reddedemeyen
+                                                        silme sunulmaz. */}
+                                                    {!isTarballRuntime(s) && (
                                                     <button
                                                         onClick={() => setUninstallTarget(s)}
                                                         title={t('services.uninstall')}
@@ -493,9 +590,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     </button>
+                                                    )}
                                                     </>
                                                     )}
                                                     </div>
+                                                    {s.kind === 'runtime' && openDrawers.has(s.id) && (
+                                                        <VersionDrawer
+                                                            service={s}
+                                                            busy={busy}
+                                                            onInstanceAction={handleInstanceAction}
+                                                            onVersionInstalled={scan}
+                                                        />
+                                                    )}
                                                 </li>
                                             );
                                         })}
@@ -752,6 +858,190 @@ function ActionIcon({
     );
 }
 
+
+// Local until B4 unifies the 5+ copies across the app. / B4 uygulamadaki 5+
+// kopyayı tekleştirene dek yerel.
+function fmtBytes(n: number): string {
+    if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    if (n >= 1024 * 1024) return `${Math.round(n / (1024 * 1024))} MB`;
+    return `${Math.max(1, Math.round(n / 1024))} KB`;
+}
+
+// The version drawer (B3b): a runtime's versions live INSIDE the row, one
+// sub-row per installed copy — status and start/stop per unit-bearing copy
+// (php8.3-fpm), size for tarball trees (node), an honest "system" badge for
+// what the panel found but did not install. For a tarball runtime this is
+// also the ONLY place a version is installed from — versions never multiply
+// the main list (D-010), and the package dialog stays a package dialog.
+//
+// Sürüm çekmecesi (B3b): runtime'ın sürümleri satırın İÇİNDE yaşar, kurulu
+// kopya başına bir alt satır — unit taşıyan kopyada (php8.3-fpm) durum ve
+// başlat/durdur, tarball ağacında (node) boyut, panelin bulduğu ama kurmadığı
+// için dürüst "sistem" rozeti. Tarball runtime için sürüm kurmanın TEK adresi
+// de burasıdır — sürümler ana listeyi asla çoğaltmaz (D-010) ve paket modalı
+// paket modalı olarak kalır.
+function VersionDrawer({
+    service,
+    busy,
+    onInstanceAction,
+    onVersionInstalled,
+}: {
+    service: ManagedService;
+    busy: string | null;
+    onInstanceAction: (serviceId: string, unit: string, action: 'start' | 'stop' | 'restart') => void;
+    onVersionInstalled: () => void;
+}) {
+    const { t } = useI18n();
+    const instances = service.instances ?? [];
+    const tarball = isTarballRuntime(service);
+    const blocked = (service.requires_missing?.length ?? 0) > 0;
+    const [newVersion, setNewVersion] = useState('');
+    const [installing, setInstalling] = useState(false);
+
+    // Exact-semver gate mirrors the agent's validation; the endpoint verifies
+    // the tarball against nodejs.org's official checksums before extracting.
+    // Tam-semver denetimi agent'ın doğrulamasının aynasıdır; uç nokta
+    // tarball'ı açmadan önce nodejs.org'un resmi sağlamalarıyla doğrular.
+    const versionOK = /^\d+\.\d+\.\d+$/.test(newVersion.trim());
+    const installVersion = async () => {
+        if (!versionOK || installing) return;
+        setInstalling(true);
+        try {
+            const res = await fetch('/api/v1/runtimes/node', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ version: newVersion.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error);
+            showToast('success', t('services.versionInstalled', { version: newVersion.trim() }));
+            setNewVersion('');
+            onVersionInstalled();
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setInstalling(false);
+        }
+    };
+
+    return (
+        <div className="mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                {t('services.instancesTitle')}
+            </div>
+            {instances.length === 0 ? (
+                <div className="py-1 text-sm text-fg-subtle">{t('services.instancesEmpty')}</div>
+            ) : (
+                <ul className="divide-y divide-border/60">
+                    {instances.map((inst) => {
+                        const instRunning = (inst.status ?? '').toLowerCase().startsWith('active');
+                        const instBusy = busy === `${service.id}:${inst.unit}`;
+                        return (
+                            <li key={`${inst.version}:${inst.unit ?? inst.path ?? ''}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+                                <span className="w-16 shrink-0 font-mono text-sm font-medium text-fg">{inst.version || '—'}</span>
+                                {!inst.managed && (
+                                    <span
+                                        title={t('services.systemRuntimeHint')}
+                                        className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
+                                    >
+                                        {t('services.systemRuntime')}
+                                    </span>
+                                )}
+                                {inst.unit ? (
+                                    <span className="inline-flex w-28 items-center gap-1.5 text-sm text-fg-muted">
+                                        <StatusDot ok={instRunning} />
+                                        {instRunning ? t('services.running') : t('services.stopped')}
+                                    </span>
+                                ) : (
+                                    /* No unit → nothing to run; "installed" is the whole
+                                       truth. / Unit yok → koşacak şey yok; "kurulu" tam
+                                       gerçektir. */
+                                    <span className="w-28 text-sm text-fg-subtle">{t('services.installedLabel')}</span>
+                                )}
+                                {inst.unit && <span className="hidden font-mono text-xs text-fg-subtle md:inline">{inst.unit}</span>}
+                                {(inst.size_bytes ?? 0) > 0 && (
+                                    <span className="text-xs text-fg-subtle">{fmtBytes(inst.size_bytes as number)}</span>
+                                )}
+                                {inst.unit && inst.managed && (
+                                    <span className="ml-auto flex items-center gap-1">
+                                        {instRunning ? (
+                                            <>
+                                                <ActionIcon
+                                                    title={t('services.restart')}
+                                                    onClick={() => onInstanceAction(service.id, inst.unit as string, 'restart')}
+                                                    disabled={instBusy}
+                                                    tone="warning"
+                                                >
+                                                    <RotateCw className="h-4 w-4" />
+                                                </ActionIcon>
+                                                <ActionIcon
+                                                    title={t('services.stop')}
+                                                    onClick={() => onInstanceAction(service.id, inst.unit as string, 'stop')}
+                                                    disabled={instBusy}
+                                                    tone="danger"
+                                                >
+                                                    <Square className="h-4 w-4" fill="currentColor" />
+                                                </ActionIcon>
+                                            </>
+                                        ) : (
+                                            <ActionIcon
+                                                title={t('services.start')}
+                                                onClick={() => onInstanceAction(service.id, inst.unit as string, 'start')}
+                                                disabled={instBusy}
+                                                tone="success"
+                                            >
+                                                <Play className="h-4 w-4" fill="currentColor" />
+                                            </ActionIcon>
+                                        )}
+                                    </span>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+            {/* The install endpoint is node-specific today; when a second
+                tarball runtime arrives the endpoint generalizes and this id
+                check dissolves into it. Posting python versions to the node
+                endpoint is the bug this line prevents.
+                Kurulum ucu bugün node'a özgü; ikinci bir tarball runtime
+                gelince uç genelleşir ve bu id denetimi onun içinde erir.
+                Node ucuna python sürümü göndermek, bu satırın önlediği hatadır. */}
+            {tarball && service.id === 'node' && (
+                <div className="mt-2 border-t border-border/60 pt-3">
+                    {blocked ? (
+                        /* The same declarative gate as the row's Install button:
+                           requirements first. / Satırdaki Kur ile aynı bildirimsel
+                           kapı: önce gereksinimler. */
+                        <div className="text-sm text-fg-subtle">
+                            {t('services.requiresLabel', { names: (service.requires_missing ?? []).join(', ') })}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                    value={newVersion}
+                                    onChange={(e) => setNewVersion(e.target.value)}
+                                    placeholder="24.18.0"
+                                    className="w-32 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                <button
+                                    onClick={installVersion}
+                                    disabled={!versionOK || installing}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                >
+                                    <DownloadCloud className="h-3.5 w-3.5" />
+                                    {installing ? t('services.installing') : t('services.installVersion')}
+                                </button>
+                            </div>
+                            <div className="mt-1.5 text-xs text-fg-subtle">{t('services.nodeInstallHint')}</div>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 // Themed uninstall confirmation — a destructive action, so it states plainly
 // what will be purged and that dependent sites/mail may break. Removing a

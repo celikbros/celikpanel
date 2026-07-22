@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FileCode, Files, Hexagon, ArrowLeftRight, ExternalLink, Play, Square, RotateCw, Download, type LucideIcon } from 'lucide-react';
+import { FileCode, Files, Hexagon, ArrowLeftRight, ExternalLink, Play, Square, RotateCw, type LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { useAuth } from '../auth/AuthContext';
 import { Button, StatusDot, inputClass } from './ui';
 import { readApiError, apiErrorText } from '../lib/apiError';
 
@@ -212,7 +211,14 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
             </div>
 
             {state.project_type === 'node' && <AppPanel domainId={domainId} />}
-            <AdminNodeInstall onInstalled={load} />
+            {/* Installing a Node VERSION happens in one place: the Services
+                page's version drawer (B3b) — a runtime install is a server
+                decision, not a per-domain setting. This page only SELECTS
+                among what is already installed.
+                Node SÜRÜMÜ kurmak tek yerde olur: Servisler sayfasındaki
+                sürüm çekmecesi (B3b) — runtime kurulumu sunucu kararıdır,
+                domain başına ayar değil. Bu sayfa yalnız kurulu olanlar
+                arasından SEÇER. */}
         </div>
     );
 }
@@ -311,51 +317,11 @@ function AppPanel({ domainId }: { domainId: number }) {
     );
 }
 
-// AdminNodeInstall: install a new runtime version, admins only.
-// AdminNodeInstall: yeni bir runtime sürümü kur; yalnızca yöneticiler.
-function AdminNodeInstall({ onInstalled }: { onInstalled: () => void }) {
-    const { t } = useI18n();
-    const { role } = useAuth();
-    const [version, setVersion] = useState('');
-    const [installing, setInstalling] = useState(false);
-
-    if (role !== 'admin') return null;
-
-    const install = async () => {
-        setInstalling(true);
-        try {
-            const res = await fetch('/api/v1/runtimes/node', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ version }),
-            });
-            if (!res.ok) {
-                showToast('error', apiErrorText(await readApiError(res), t));
-                return;
-            }
-            showToast('success', t('hosting.installed'));
-            setVersion('');
-            onInstalled();
-        } finally {
-            setInstalling(false);
-        }
-    };
-
-    return (
-        <div className="rounded-xl border border-dashed border-border p-4">
-            <h4 className="mb-1 text-sm font-semibold text-fg">{t('hosting.installTitle')}</h4>
-            <p className="mb-3 text-xs text-fg-subtle">{t('hosting.installHint')}</p>
-            <div className="flex items-center gap-2">
-                <input
-                    value={version}
-                    onChange={(e) => setVersion(e.target.value)}
-                    placeholder="24.18.0"
-                    className={`${inputClass} max-w-[10rem] font-mono`}
-                />
-                <Button variant="primary" icon={Download} onClick={install} disabled={installing || !/^\d+\.\d+\.\d+$/.test(version)}>
-                    {installing ? t('hosting.installing') : t('hosting.install')}
-                </Button>
-            </div>
-        </div>
-    );
-}
+// AdminNodeInstall lived here until B3b. It was the second address for the
+// same decision — a hosting-settings tab quietly installing server-wide
+// runtimes — and it rendered on every tab regardless of project type. The
+// single address is now the Services page's version drawer.
+// AdminNodeInstall B3b'ye kadar buradaydı. Aynı kararın ikinci adresiydi —
+// bir barındırma-ayarları sekmesi sessizce sunucu-geneli runtime kuruyordu —
+// ve proje tipinden bağımsız her sekmede çiziliyordu. Tek adres artık
+// Servisler sayfasındaki sürüm çekmecesidir.

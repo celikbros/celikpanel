@@ -58,8 +58,76 @@ func TestCatalogViewIgnoresStaleCatalogueFields(t *testing.T) {
 	if !nginx.IsInstalled || nginx.Status != "active (running)" {
 		t.Errorf("observed state lost: installed=%v status=%q", nginx.IsInstalled, nginx.Status)
 	}
+	// Pre-B3b versions (minus the sentinel) also survive until the next scan.
+	// B3b öncesi sürümler de (sentinel hariç) bir sonraki taramaya dek yaşar.
+	if len(nginx.Versions) != 1 || nginx.Versions[0] != "1.0" {
+		t.Errorf("legacy versions lost: %v", nginx.Versions)
+	}
 	if pma := byID["phpmyadmin"]; pma.IsInstalled {
 		t.Error("phpmyadmin should still read as not installed")
+	}
+}
+
+// The "default" sentinel is dead (B3b): an installed service with no known
+// versions answers versions: [] — the UI's honest "—" — and never invents a
+// word that used to leak into router state, ?version= queries and RPC calls.
+// Versions now derive from the instance list; the legacy Versions field is
+// honored only when no instances exist (pre-upgrade cache rows).
+//
+// "default" sentinel'i öldü (B3b): sürümü bilinmeyen kurulu servis
+// versions: [] der — arayüzün dürüst "—"si — ve eskiden yönlendirici durumuna,
+// ?version= sorgularına ve RPC çağrılarına sızan o kelimeyi asla uydurmaz.
+// Versions artık instance listesinden türetilir; eski Versions alanına yalnız
+// hiç instance yokken uyulur (yükseltme öncesi önbellek satırları).
+func TestSentinelIsDeadAndInstancesDriveVersions(t *testing.T) {
+	obs := []serviceObservation{
+		// Installed, zero versions known — the case that used to say "default".
+		{ID: "nginx", IsInstalled: true, Status: "active (running)"},
+		// A legacy row that literally carries the sentinel: it must be dropped.
+		{ID: "mariadb", IsInstalled: true, Status: "inactive (dead)", Versions: []string{"default"}},
+		// A runtime with real instances: versions come from them, in order.
+		{ID: "php-fpm", IsInstalled: true, Status: "active (running)", Instances: []core.ServiceInstance{
+			{Version: "8.4", Unit: "php8.4-fpm", Managed: true, Status: "active (running)"},
+			{Version: "8.3", Unit: "php8.3-fpm", Managed: true, Status: "inactive (dead)"},
+		}},
+		// A runtime whose only instance is unmanaged (system PATH node):
+		// shown in the drawer, but it grants no versions and no installedness.
+		{ID: "node", IsInstalled: false, Status: "not_installed", Instances: []core.ServiceInstance{
+			{Version: "20.11.1", Path: "/usr/bin/node", Managed: false},
+		}},
+	}
+
+	byID := map[string]ManagedServiceResponse{}
+	for _, s := range catalogView(obs, "apt") {
+		byID[s.ID] = s
+	}
+
+	for _, id := range []string{"nginx", "mariadb"} {
+		if got := byID[id].Versions; len(got) != 0 {
+			t.Errorf("%s: versions = %v, want [] — the sentinel must stay dead", id, got)
+		}
+	}
+	php := byID["php-fpm"]
+	if len(php.Versions) != 2 || php.Versions[0] != "8.4" || php.Versions[1] != "8.3" {
+		t.Errorf("php versions = %v, want [8.4 8.3] from instances", php.Versions)
+	}
+	if len(php.Instances) != 2 || php.Instances[0].Unit != "php8.4-fpm" {
+		t.Errorf("php instances lost detail: %+v", php.Instances)
+	}
+	node := byID["node"]
+	if len(node.Versions) != 0 {
+		t.Errorf("node versions = %v — an unmanaged instance must not grant versions", node.Versions)
+	}
+	if node.IsInstalled {
+		t.Error("a system-PATH-only node must not read as installed")
+	}
+	if len(node.Instances) != 1 || node.Instances[0].Managed {
+		t.Errorf("the unmanaged instance must still be visible in the drawer: %+v", node.Instances)
+	}
+	// Instances is part of the response contract: always [], never null.
+	// Instances yanıt sözleşmesinin parçası: her zaman [], asla null.
+	if byID["nginx"].Instances == nil {
+		t.Error("instances must be non-nil for every row")
 	}
 }
 

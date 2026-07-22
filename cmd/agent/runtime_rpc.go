@@ -62,7 +62,15 @@ func (a *Agent) ListNodeVersions(_ *struct{}, resp *NodeVersionsResponse) error 
 			}
 		}
 	}
-	sort.Strings(resp.Installed)
+	// Numeric, newest first. sort.Strings was a real bug here: lexically
+	// "24.18.0" < "9.9.9", so the version pickers listed a two-digit major
+	// below a single-digit one.
+	// Sayısal, en yeni önce. sort.Strings burada gerçek bir hataydı: sözlükte
+	// "24.18.0" < "9.9.9" olduğundan sürüm seçiciler iki basamaklı major'ı
+	// tek basamaklının altında listeliyordu.
+	sort.SliceStable(resp.Installed, func(i, j int) bool {
+		return versionLess(resp.Installed[j], resp.Installed[i])
+	})
 
 	if out, err := exec.Command("node", "--version").Output(); err == nil {
 		resp.SystemVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "v")
