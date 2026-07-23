@@ -456,8 +456,31 @@ var ManagedServices = []ManagedService{
 		Icon:        "🛡️",
 		Category:    "email",
 		Kind:        KindService,
-		SystemNames: []string{"spamassassin"},
-		Packages:    map[string][]string{"apt": {"spamassassin"}, "pacman": {"spamassassin"}},
+		// Debian split SpamAssassin in two: `spamassassin` is rules and
+		// tools only, the daemon lives in the separate `spamd` package with
+		// a `spamd.service` unit. Installing just `spamassassin` LOOKS
+		// successful and leaves nothing to run — caught live (Boston,
+		// 23 Jul: "Installing…" flipped back to "Not installed" because the
+		// scan honestly found no unit). Arch still ships one package with a
+		// `spamassassin` unit, hence both names.
+		// Debian, SpamAssassin'i ikiye böldü: `spamassassin` yalnız kural ve
+		// araçlar; daemon, `spamd.service` unit'iyle ayrı `spamd`
+		// paketinde. Yalnız `spamassassin` kurmak BAŞARILI görünür ve ortada
+		// koşacak şey bırakmaz — canlıda yakalandı (Boston, 23 Tem:
+		// "Installing…" sonra "Not installed"e döndü; tarama dürüstçe unit
+		// bulamamıştı). Arch hâlâ tek paket + `spamassassin` unit'i taşır;
+		// iki adın sebebi bu.
+		SystemNames: []string{"spamd", "spamassassin"},
+		Packages:    map[string][]string{"apt": {"spamassassin", "spamd"}, "pacman": {"spamassassin"}},
+		// A spam filter without an SMTP server filters nothing: the operator
+		// asked "what should logically come first?" and the answer belongs
+		// in the catalog, not in documentation — the UI renders it as the
+		// same "Needs postfix" gate phpMyAdmin gets.
+		// SMTP sunucusuz spam süzgeci hiçbir şeyi süzmez: operatör "mantıken
+		// önce ne kurulmalı?" diye sordu ve cevabın yeri dokümantasyon değil
+		// katalogdur — arayüz bunu phpMyAdmin'in aldığı "Needs postfix"
+		// kapısıyla çizer.
+		Requires: []string{"postfix"},
 	},
 	{
 		ID:            "wireguard",

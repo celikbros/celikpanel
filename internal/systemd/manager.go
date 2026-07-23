@@ -27,7 +27,15 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 
 	// Patterns to match
 	patterns := []string{"nginx*", "php*", "postgresql*", "mysql*", "mariadb*", "apache2*", "caddy*",
-		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "pdns*", "wg-quick*"}
+		// spamd*: Debian 13's SpamAssassin daemon unit. Third proven miss of
+		// this hardcoded list (pdns config Jul 10, sleeping bind Jul 16,
+		// spamd Jul 23) — the B3 remainder replaces it with patterns derived
+		// from the catalog, the single owner of unit names.
+		// spamd*: Debian 13'ün SpamAssassin daemon unit'i. Bu elle yazılmış
+		// listenin kanıtlı ÜÇÜNCÜ kaçırması (pdns config 10 Tem, uyuyan bind
+		// 16 Tem, spamd 23 Tem) — B3 kalanı bu listeyi, unit adlarının tek
+		// sahibi olan katalogdan türetilen desenlerle değiştirecek.
+		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "spamd*", "pdns*", "wg-quick*"}
 
 	// Get specific active and inactive units
 	args := []string{"list-units", "--type=service", "--all", "--no-legend", "--no-pager"}
