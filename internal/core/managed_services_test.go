@@ -167,3 +167,25 @@ func TestDaemonKindsHaveUnits(t *testing.T) {
 		}
 	}
 }
+
+// The requirement names the ROLE, never the product (operator, 23 Jul:
+// "maybe I'll install a different SMTP server"): any member of the
+// smtp-server seat satisfies SpamAssassin, exactly like web-server for node.
+// Gereksinim ürünü değil ROLÜ adlandırır (operatör, 23 Tem: "belki başka bir
+// SMTP sunucusu kurarım"): smtp-server koltuğunun herhangi bir üyesi
+// SpamAssassin'i tatmin eder — node'un web-server kuralıyla birebir aynı.
+func TestRequirementsNameRolesNotProducts(t *testing.T) {
+	sa := GetManagedServiceByID("spamassassin")
+	if sa == nil {
+		t.Fatal("spamassassin missing from catalogue")
+	}
+	if got := RequirementsMissing(sa, map[string]bool{}); len(got) != 1 || got[0] != "smtp-server" {
+		t.Errorf("empty server: missing = %v, want [smtp-server]", got)
+	}
+	if got := RequirementsMissing(sa, map[string]bool{"postfix": true}); got != nil {
+		t.Errorf("postfix installed must satisfy the smtp-server seat, got %v", got)
+	}
+	if postfix := GetManagedServiceByID("postfix"); postfix.ConflictGroup != "smtp-server" {
+		t.Errorf("postfix must own the smtp-server seat, got %q", postfix.ConflictGroup)
+	}
+}

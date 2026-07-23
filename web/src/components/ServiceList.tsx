@@ -45,6 +45,16 @@ interface ManagedService {
 // "paketi olmayan runtime" tam olarak o kümedir.
 const isTarballRuntime = (s: ManagedService) => s.kind === 'runtime' && !(s.packages && s.packages.length > 0);
 
+// Requirement ROLE tokens (seat names — any member satisfies) and their
+// localized labels. Shared by the row badges and the version drawer.
+// Gereksinim ROL belirteçleri (koltuk adları — herhangi bir üye tatmin eder)
+// ve yerel etiketleri. Satır rozetleri ile sürüm çekmecesinin ortak malı.
+const REQ_ROLE_KEYS: Record<string, string> = {
+    'web-server': 'services.role.webServer',
+    'dns-server': 'services.role.dnsServer',
+    'smtp-server': 'services.role.smtpServer',
+};
+
 // Category display order + label key + section icon + icon tint. Each
 // category renders as its own card; the colored icon chip is what makes the
 // sections scannable at a glance in both themes.
@@ -334,6 +344,20 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
     const isRunning = (s: ManagedService) => s.status?.toLowerCase().includes('running');
 
+    // A requirement token is either a ROLE (seat name: any member satisfies
+    // it — "smtp-server" after the operator's "maybe I'll install a different
+    // SMTP server") or a component id. Roles localize, ids resolve to their
+    // catalog display name; the raw token never reaches the screen.
+    // Gereksinim belirteci ya bir ROLdür (koltuk adı: herhangi bir üye tatmin
+    // eder — operatörün "belki başka bir SMTP sunucusu kurarım"ı sonrası
+    // "smtp-server") ya da bileşen id'sidir. Roller yerelleşir, id'ler katalog
+    // görünen adına çözülür; ham belirteç ekrana hiç çıkmaz.
+    const reqLabel = (token: string) => {
+        if (REQ_ROLE_KEYS[token]) return t(REQ_ROLE_KEYS[token] as Parameters<typeof t>[0]);
+        return services.find((x) => x.id === token)?.name ?? token;
+    };
+    const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
+
     return (
         <div className="p-6 md:p-8">
             <PageHeader
@@ -542,10 +566,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             </span>
                                                         ) : s.requires_missing && s.requires_missing.length > 0 ? (
                                                             <span
-                                                                title={t('services.requiresHint', { names: s.requires_missing.join(', ') })}
+                                                                title={t('services.requiresHint', { names: reqNames(s.requires_missing) })}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
                                                             >
-                                                                {t('services.requiresLabel', { names: s.requires_missing.join(', ') })}
+                                                                {t('services.requiresLabel', { names: reqNames(s.requires_missing) })}
                                                             </span>
                                                         ) : (
                                                         <button
@@ -1267,7 +1291,11 @@ function VersionDrawer({
                            requirements first. / Satırdaki Kur ile aynı bildirimsel
                            kapı: önce gereksinimler. */
                         <div className="text-sm text-fg-subtle">
-                            {t('services.requiresLabel', { names: (service.requires_missing ?? []).join(', ') })}
+                            {t('services.requiresLabel', {
+                                names: (service.requires_missing ?? [])
+                                    .map((tok) => (REQ_ROLE_KEYS[tok] ? t(REQ_ROLE_KEYS[tok] as Parameters<typeof t>[0]) : tok))
+                                    .join(', '),
+                            })}
                         </div>
                     ) : (
                         <>

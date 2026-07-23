@@ -428,13 +428,26 @@ var ManagedServices = []ManagedService{
 		Requires: []string{"postgresql", "web-server", "php-fpm"},
 	},
 	{
-		ID:            "postfix",
-		Name:          "Postfix",
-		Description:   "SMTP Server",
-		Icon:          "📧",
-		Category:      "email",
+		ID:          "postfix",
+		Name:        "Postfix",
+		Description: "SMTP Server",
+		Icon:        "📧",
+		Category:    "email",
 		Kind:        KindService,
-		SystemNames:   []string{"postfix"},
+		SystemNames: []string{"postfix"},
+		// The SMTP seat: port 25 has one owner, like :53 and :80. The group
+		// does double duty — mutual exclusion AND role-requirements: anything
+		// that needs "an SMTP server" (SpamAssassin) names the ROLE, never
+		// this product (operator, 23 Jul: "maybe I'll install a professional
+		// mail solution instead"). A future commercial mail component joins
+		// this group and satisfies the same dependents (D-012/D-015).
+		// SMTP koltuğu: 25 portunun tek sahibi olur, :53 ve :80 gibi. Grup
+		// çifte iş görür — karşılıklı dışlama VE rol-gereksinimi: "bir SMTP
+		// sunucusu" isteyen her şey (SpamAssassin) ürünü değil ROLÜ adlandırır
+		// (operatör, 23 Tem: "belki profesyonel bir posta çözümü kurarım").
+		// İleride ticari bir posta bileşeni bu gruba katılır ve aynı
+		// bağımlıları tatmin eder (D-012/D-015).
+		ConflictGroup: "smtp-server",
 		Packages:      map[string][]string{"apt": {"postfix"}, "pacman": {"postfix"}},
 		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
 	},
@@ -472,15 +485,17 @@ var ManagedServices = []ManagedService{
 		// iki adın sebebi bu.
 		SystemNames: []string{"spamd", "spamassassin"},
 		Packages:    map[string][]string{"apt": {"spamassassin", "spamd"}, "pacman": {"spamassassin"}},
-		// A spam filter without an SMTP server filters nothing: the operator
-		// asked "what should logically come first?" and the answer belongs
-		// in the catalog, not in documentation — the UI renders it as the
-		// same "Needs postfix" gate phpMyAdmin gets.
-		// SMTP sunucusuz spam süzgeci hiçbir şeyi süzmez: operatör "mantıken
-		// önce ne kurulmalı?" diye sordu ve cevabın yeri dokümantasyon değil
-		// katalogdur — arayüz bunu phpMyAdmin'in aldığı "Needs postfix"
-		// kapısıyla çizer.
-		Requires: []string{"postfix"},
+		// A spam filter without an SMTP server filters nothing — and the
+		// requirement names the ROLE, not a product: any member of the
+		// smtp-server seat satisfies it (operator, 23 Jul: "maybe I'll
+		// install a different SMTP server, maybe a professional mail
+		// solution"). Same rule as node's web-server requirement.
+		// SMTP sunucusuz spam süzgeci hiçbir şeyi süzmez — ve gereksinim
+		// ürünü değil ROLÜ adlandırır: smtp-server koltuğunun herhangi bir
+		// üyesi tatmin eder (operatör, 23 Tem: "belki başka bir SMTP
+		// sunucusu, belki profesyonel bir posta çözümü kurarım"). Node'un
+		// web-server gereksinimiyle aynı kural.
+		Requires: []string{"smtp-server"},
 	},
 	{
 		ID:            "wireguard",
