@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -156,6 +157,24 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 			newSocket := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", req.PHPVersion, poolName)
 			updateQuery := `UPDATE sites SET php_version = ?, php_fpm_socket = ?, updated_at = datetime('now') WHERE domain_id = ?`
 			_, err = p.db.GetDB().ExecContext(context.Background(), updateQuery, req.PHPVersion, newSocket, domainID)
+
+			// The vhost must follow the socket. Caught live (23 Jul): the
+			// pool moved, the DB updated, and nginx kept proxying to the
+			// DELETED old socket — the site answered 502 while everything
+			// reported success. A failed regen is a failed request: the
+			// operator must know the site is dark, not read "updated".
+			// Vhost soketi izlemek zorundadır. Canlıda yakalandı (23 Tem):
+			// havuz taşındı, DB güncellendi ve nginx SİLİNEN eski sokete
+			// vekillik etmeye devam etti — her şey başarı bildirirken site
+			// 502 veriyordu. Başarısız regen başarısız istektir: operatör
+			// "güncellendi" değil, sitenin karanlık olduğunu okumalı.
+			if err == nil {
+				if verr := p.applySiteVhost(r.Context(), domainID); verr != nil {
+					log.Printf("vhost regen after php switch (domain %d): %v", domainID, verr)
+					writeServerError(w, verr)
+					return
+				}
+			}
 		} else {
 			// Just update version in DB (no migration needed)
 			updateQuery := `UPDATE sites SET php_version = ?, updated_at = datetime('now') WHERE domain_id = ?`
