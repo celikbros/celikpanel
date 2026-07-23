@@ -1,4 +1,4 @@
-import { LayoutDashboard, Globe, Database, Server, Users, Settings, DownloadCloud, ScrollText, Package, Shield, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Globe, Database, Server, Users, Settings, DownloadCloud, ScrollText, Package, Shield, Activity, type LucideIcon } from 'lucide-react';
 import type { TranslationKey } from './i18n/en';
 import type { Role } from './auth/AuthContext';
 
@@ -45,6 +45,7 @@ export const navItems: NavItem[] = [
     { id: 'addons', path: '/addons', labelKey: 'nav.addons', icon: Package, roles: ['admin', 'reseller'], group: 'hosting' },
     { id: 'vpn', path: '/vpn', labelKey: 'nav.vpn', icon: Shield, roles: ALL, group: 'hosting' },
     { id: 'services', path: '/services', labelKey: 'nav.services', icon: Server, roles: ['admin'], group: 'server', countKey: 'services' },
+    { id: 'monitoring', path: '/monitoring', labelKey: 'nav.monitoring', icon: Activity, roles: ['admin'], group: 'server' },
     { id: 'import', path: '/import', labelKey: 'nav.import', icon: DownloadCloud, roles: ['admin'], group: 'server' },
     { id: 'audit', path: '/audit', labelKey: 'nav.audit', icon: ScrollText, roles: ['admin'], group: 'server' },
     { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings, roles: ALL, group: 'server' },

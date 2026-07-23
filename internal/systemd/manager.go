@@ -35,7 +35,8 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 		// listenin kanıtlı ÜÇÜNCÜ kaçırması (pdns config 10 Tem, uyuyan bind
 		// 16 Tem, spamd 23 Tem) — B3 kalanı bu listeyi, unit adlarının tek
 		// sahibi olan katalogdan türetilen desenlerle değiştirecek.
-		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "spamd*", "pdns*", "wg-quick*"}
+		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "spamd*", "pdns*", "wg-quick*",
+		"exim*", "rspamd*", "netdata*"}
 
 	// Get specific active and inactive units
 	args := []string{"list-units", "--type=service", "--all", "--no-legend", "--no-pager"}

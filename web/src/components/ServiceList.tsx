@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp, Activity } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -75,6 +75,7 @@ const categoryOrder: { id: string; labelKey: string; icon: LucideIcon; tint: str
     { id: 'security', labelKey: 'services.cat.security', icon: Shield, tint: 'bg-red-500/10 text-red-600 dark:text-red-400' },
     { id: 'cache', labelKey: 'services.cat.cache', icon: Zap, tint: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
     { id: 'ftp', labelKey: 'services.cat.ftp', icon: FolderUp, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' },
+    { id: 'monitoring', labelKey: 'services.cat.monitoring', icon: Activity, tint: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
 ];
 
 interface ServiceListProps {

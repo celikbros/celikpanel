@@ -452,6 +452,45 @@ var ManagedServices = []ManagedService{
 		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
 	},
 	{
+		// The smtp-server seat's SECOND member — the reason the seat is a
+		// role and not a product name (operator, 23 Jul: "maybe I'll install
+		// a different SMTP server"). Installing Exim while Postfix sits in
+		// the seat is refused by the group, and everything that Requires
+		// "smtp-server" (rspamd, SpamAssassin) is satisfied by either.
+		// smtp-server koltuğunun İKİNCİ üyesi — koltuğun ürün adı değil rol
+		// olmasının sebebi (operatör, 23 Tem: "belki başka bir SMTP sunucusu
+		// kurarım"). Postfix koltuktayken Exim kurmak grupça reddedilir;
+		// "smtp-server" isteyen her şey (rspamd, SpamAssassin) ikisinden
+		// biriyle tatmin olur.
+		ID:            "exim",
+		Name:          "Exim",
+		Description:   "SMTP Server",
+		Icon:          "📮",
+		Category:      "email",
+		Kind:          KindService,
+		SystemNames:   []string{"exim4", "exim"}, // Debian unit exim4, Arch exim
+		ConflictGroup: "smtp-server",
+		Packages:      map[string][]string{"apt": {"exim4-daemon-light"}, "pacman": {"exim"}},
+		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
+	},
+	{
+		// The modern spam filter (operator, 23 Jul: "don't offer only
+		// SpamAssassin — free alternatives too"). Rspamd also signs DKIM,
+		// which SpamAssassin never will.
+		// Modern spam süzgeci (operatör, 23 Tem: "sadece SpamAssassin
+		// olmasın, ücretsiz alternatifler olsun"). Rspamd DKIM imzalamayı da
+		// yapar; SpamAssassin bunu hiç yapmayacak.
+		ID:          "rspamd",
+		Name:        "Rspamd",
+		Description: "Spam Filter & DKIM",
+		Icon:        "🧹",
+		Category:    "email",
+		Kind:        KindService,
+		SystemNames: []string{"rspamd"},
+		Packages:    map[string][]string{"apt": {"rspamd"}, "pacman": {"rspamd"}},
+		Requires:    []string{"smtp-server"},
+	},
+	{
 		ID:            "dovecot",
 		Name:          "Dovecot",
 		Description:   "IMAP/POP3 Server",
@@ -629,6 +668,30 @@ var ManagedServices = []ManagedService{
 		Kind:        KindService,
 		SystemNames: []string{"memcached"},
 		Packages:    map[string][]string{"apt": {"memcached"}, "pacman": {"memcached"}},
+	},
+	{
+		// Deep per-second metrics next to the panel's own Monitoring page
+		// (which owns the 48h history either way). No apt entry on purpose:
+		// Debian 13 does not carry netdata; the honest path there is
+		// Netdata's official vendor repo via the ManagedRepo mechanism —
+		// a follow-up, recorded, not faked with a package name that
+		// installs nothing. No firewall port either: the packaged default
+		// listens on localhost, and that is the right default.
+		// Panelin kendi İzleme sayfasının (48 saatlik geçmişin sahibi her
+		// hâlükârda orası) yanına saniyelik derin metrikler. apt kaydı
+		// bilerek yok: Debian 13 netdata taşımıyor; oradaki dürüst yol,
+		// ManagedRepo mekanizmasıyla Netdata'nın resmi deposu — kayıtlı bir
+		// devam işi, hiçbir şey kurmayan bir paket adıyla sahtelenmez.
+		// Güvenlik duvarı portu da yok: paket varsayılanı localhost dinler
+		// ve doğru varsayılan budur.
+		ID:          "netdata",
+		Name:        "Netdata",
+		Description: "Real-time metrics agent",
+		Icon:        "📈",
+		Category:    "monitoring",
+		Kind:        KindService,
+		SystemNames: []string{"netdata"},
+		Packages:    map[string][]string{"pacman": {"netdata"}},
 	},
 }
 

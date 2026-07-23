@@ -212,6 +212,10 @@ func main() {
 
 	// System Stats (dashboard metrics: CPU, RAM, disk, uptime, load)
 	http.HandleFunc("/api/v1/system/stats", panel.handleSystemStats)
+	http.HandleFunc("/api/v1/metrics/history", panel.handleMetricsHistory)
+	// History needs a historian: sample for as long as the panel lives.
+	// Geçmiş, tarihçi ister: panel yaşadıkça örnekle.
+	panel.startMetricsSampler()
 
 	// PHP Management
 	http.HandleFunc("/api/v1/php/pools", panel.handlePHPPools)
