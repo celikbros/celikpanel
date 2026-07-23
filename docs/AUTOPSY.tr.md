@@ -44,6 +44,7 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 ## C. Gömülenler ve kalan kokular
 
 - ✅ Gömüldü (11 Tem): `internal/repositories/database_repository.go` (sıfır referanslı ölü), kökteki `KONUSMA-GECMISI.md` (sohbet dökümü; tarih git'te), diskteki `ServiceList.tsx.backup`.
+- ⬜ **Kural (24 Tem, Buypass olayından): dış servise bağlanan her satır, göndermeden önce o servisin CANLI endpoint'ine karşı doğrulanmalı.** Buypass Go SSL'i "EAB'siz ücretsiz alternatif" diye SSL sağlayıcı kaydına ekledim; canlı curl 404 verdi, web araştırması Buypass ACME'nin 15 Nis 2026'da kapandığını kesinleştirdi (bugün 24 Tem). Menüde ölü CA = "kurulunca çalışmayan satır" tuzağının ağ sürümü. Paket adı nasıl iki dağıtımda `apt-cache/pacman` ile doğrulanıyorsa, ACME dizini / vendor deposu / webhook URL'si gibi her dış uç da bir kez gerçek isteğe karşı sınanmalı — URL de paket gibi bayatlar, hatta ölür. B5 smoke'una aday: katalog/registry'deki dış URL'lere periyodik erişilebilirlik kontrolü.
 - ⬜ Koku: **şablon değişimi mevcut vhost'lara yansımıyor** (config drift) — A6 düzeltmesi yalnız YENİ üretilen vhost'ları kapsıyor; mevcut siteler eski kuralla kalıyor. "Tüm vhost'ları yeniden üret" yolu yok. Güvenlik düzeltmesi taşıyan her şablon değişikliğinde bu bir sessiz açık kalır.
 - ⬜ Koku: `cmd/panel` 66 dosyalık tek düz paket (13.658 satır) — B1/B2 sırasında doğal bölünür; ayrı bir "büyük yeniden paketleme" YAPMAYIN (churn riski kazancından büyük).
 - ⬜ Koku: `docs/CelikPanel Pano.html` 813KB blob — tasarım referansı; bilinçli tutuluyor, büyürse LFS/link.
