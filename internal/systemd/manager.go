@@ -17,26 +17,41 @@ func NewManager() *Manager {
 	return &Manager{}
 }
 
+// serviceBases: the unit-name stems this scanner recognizes. ONE list — the
+// systemctl glob is `base+"*"` and the match is `Contains(name, base)`, so a
+// stem can never again be in the fetch list but missing from the match list.
+// That split shipped a live bug (23 Jul: rspamd/netdata were fetched by an
+// updated glob but dropped by a stale match list — the SECOND time a
+// two-list edit went half-done; spamd was the first). This still hardcodes
+// unit stems; the real cure is deriving them from the catalog (B3 remainder),
+// but until then there is one list to forget, not two.
+//
+// serviceBases: bu tarayıcının tanıdığı unit-adı kökleri. TEK liste —
+// systemctl glob'u `kök+"*"`, eşleşme `Contains(name, kök)`; böylece bir kök
+// bir daha çekme listesinde olup eşleşme listesinde eksik kalamaz. Bu ayrım
+// canlı bir hata gönderdi (23 Tem: rspamd/netdata güncellenen glob'la çekildi
+// ama bayat eşleşme listesince elendi — iki-listeli düzenlemenin yarım
+// kaldığı İKİNCİ sefer; ilki spamd'di). Bu hâlâ unit köklerini sabitliyor;
+// gerçek çare onları katalogdan türetmek (B3 kalanı), ama o gelene dek
+// unutulacak iki değil tek liste var.
+var serviceBases = []string{
+	"nginx", "php", "postgresql", "mysql", "mariadb", "apache2", "caddy",
+	"certbot", "vsftpd", "fail2ban", "postfix", "dovecot",
+	"spamassassin", "spamd", "pdns", "wg-quick", "exim", "rspamd", "netdata",
+}
+
 // ListServices scans for known services
 func (m *Manager) ListServices() ([]core.Service, error) {
-	// We are looking for specific services
-	targets := []string{"nginx", "php", "postgresql", "mysql", "mariadb", "apache2", "caddy",
-		"certbot", "vsftpd", "fail2ban", "postfix", "dovecot", "spamassassin", "pdns", "wg-quick"}
+	targets := serviceBases
 
 	services := make([]core.Service, 0)
 
-	// Patterns to match
-	patterns := []string{"nginx*", "php*", "postgresql*", "mysql*", "mariadb*", "apache2*", "caddy*",
-		// spamd*: Debian 13's SpamAssassin daemon unit. Third proven miss of
-		// this hardcoded list (pdns config Jul 10, sleeping bind Jul 16,
-		// spamd Jul 23) — the B3 remainder replaces it with patterns derived
-		// from the catalog, the single owner of unit names.
-		// spamd*: Debian 13'ün SpamAssassin daemon unit'i. Bu elle yazılmış
-		// listenin kanıtlı ÜÇÜNCÜ kaçırması (pdns config 10 Tem, uyuyan bind
-		// 16 Tem, spamd 23 Tem) — B3 kalanı bu listeyi, unit adlarının tek
-		// sahibi olan katalogdan türetilen desenlerle değiştirecek.
-		"certbot*", "vsftpd*", "fail2ban*", "postfix*", "dovecot*", "spamassassin*", "spamd*", "pdns*", "wg-quick*",
-		"exim*", "rspamd*", "netdata*"}
+	// The systemctl glob is derived from the same list — never maintained apart.
+	// systemctl glob'u aynı listeden türetilir — asla ayrı tutulmaz.
+	patterns := make([]string, len(serviceBases))
+	for i, b := range serviceBases {
+		patterns[i] = b + "*"
+	}
 
 	// Get specific active and inactive units
 	args := []string{"list-units", "--type=service", "--all", "--no-legend", "--no-pager"}
