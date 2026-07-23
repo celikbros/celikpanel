@@ -205,7 +205,26 @@ func (pm *PHPPoolManager) UpdatePoolConfig(phpVersion string, config *core.PHPPo
 	maxSpare := clamp(config.PMMaxSpareServers, minSpare, maxChildren, 3)
 	maxRequests := clamp(config.PMMaxRequests, 0, 100000, 500)
 
-	content := fmt.Sprintf(`[%s]
+	content := renderPool(config.Name, current.User, current.Group, current.Listen,
+		current.ListenOwner, current.ListenGroup, current.ListenMode,
+		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
+
+	if err := os.WriteFile(poolFile, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write pool file: %v", err)
+	}
+
+	return reloadPHPFPM(phpVersion)
+}
+
+// renderPool is the ONE producer of pool-file text. Both writers go through
+// it — the tenant-facing update above and the panel-internal migration below
+// — so the file format cannot fork between them.
+// renderPool, havuz dosyası metninin TEK üreticisidir. İki yazıcı da buradan
+// geçer — yukarıdaki kiracıya dönük güncelleme ve aşağıdaki panel-içi taşıma —
+// böylece dosya biçimi ikisi arasında çatallanamaz.
+func renderPool(name, user, group, listen, listenOwner, listenGroup, listenMode, pmMode string,
+	maxChildren, startServers, minSpare, maxSpare, maxRequests int) string {
+	return fmt.Sprintf(`[%s]
 user = %s
 group = %s
 listen = %s
@@ -220,26 +239,8 @@ pm.max_spare_servers = %d
 pm.max_requests = %d
 chdir = /
 `,
-		config.Name,
-		current.User,
-		current.Group,
-		current.Listen,
-		current.ListenOwner,
-		current.ListenGroup,
-		current.ListenMode,
-		pmMode,
-		maxChildren,
-		startServers,
-		minSpare,
-		maxSpare,
-		maxRequests,
-	)
-
-	if err := os.WriteFile(poolFile, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write pool file: %v", err)
-	}
-
-	return reloadPHPFPM(phpVersion)
+		name, user, group, listen, listenOwner, listenGroup, listenMode,
+		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
 }
 
 // DeletePoolByName deletes a pool by name
@@ -273,20 +274,58 @@ func (pm *PHPPoolManager) ListPoolNames(phpVersion string) ([]string, error) {
 	return names, nil
 }
 
-// MigratePool copies pool configuration from old PHP version to new PHP version
+// MigratePool moves a site's pool from one PHP version to another. It writes
+// the new file DIRECTLY instead of going through UpdatePoolConfig — that path
+// refuses to create pools by design (the identity-forgery gate from the
+// FPM-as-root fix), and the refusal is right: identity must never come from a
+// caller. Here it does not — every field is read from the OLD pool file,
+// which the panel itself wrote at site creation; only the socket path is
+// re-derived for the new version. This regressed live exactly once: the
+// hardening made version switching return 500 (caught 23 Jul on Boston,
+// b3d-test.celikhost.com 8.3→8.4), because two callers with two intents were
+// sharing one function.
+//
+// MigratePool, bir sitenin havuzunu bir PHP sürümünden diğerine taşır. Yeni
+// dosyayı UpdatePoolConfig'ten geçirmek yerine DOĞRUDAN yazar — o yol,
+// tasarım gereği havuz yaratmayı reddeder (FPM-root düzeltmesinin
+// kimlik-uydurma kapısı) ve ret haklıdır: kimlik asla çağırandan gelmemeli.
+// Burada gelmiyor — her alan, panelin site oluştururken kendi yazdığı ESKİ
+// havuz dosyasından okunur; yalnız soket yolu yeni sürüm için türetilir. Bu,
+// canlıda tam bir kez geriledi: sertleştirme, sürüm değiştirmeyi 500'e
+// çevirdi (23 Tem, Boston, b3d-test 8.3→8.4) — çünkü iki niyetli iki çağıran
+// tek fonksiyonu paylaşıyordu.
 func (pm *PHPPoolManager) MigratePool(oldVersion, newVersion, poolName string) error {
-	// Get pool config from old version
+	if err := ValidatePHPVersion(newVersion); err != nil {
+		return err
+	}
+	if !validPoolName.MatchString(poolName) {
+		return fmt.Errorf("invalid pool name %q", poolName)
+	}
 	oldConfig, err := pm.GetPoolConfig(oldVersion, poolName)
 	if err != nil {
 		return fmt.Errorf("failed to get pool config from PHP %s: %v", oldVersion, err)
 	}
 
-	// Update socket path for new version
-	oldConfig.Listen = fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", newVersion, poolName)
+	pmMode := oldConfig.PM
+	if !validPMModes[pmMode] {
+		pmMode = "dynamic"
+	}
+	maxChildren := clamp(oldConfig.PMMaxChildren, 1, 200, 5)
+	startServers := clamp(oldConfig.PMStartServers, 1, maxChildren, 2)
+	minSpare := clamp(oldConfig.PMMinSpareServers, 1, maxChildren, 1)
+	maxSpare := clamp(oldConfig.PMMaxSpareServers, minSpare, maxChildren, 3)
+	maxRequests := clamp(oldConfig.PMMaxRequests, 0, 100000, 500)
 
-	// Create pool in new version
-	if err := pm.UpdatePoolConfig(newVersion, oldConfig); err != nil {
-		return fmt.Errorf("failed to create pool in PHP %s: %v", newVersion, err)
+	content := renderPool(poolName, oldConfig.User, oldConfig.Group,
+		fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", newVersion, poolName),
+		oldConfig.ListenOwner, oldConfig.ListenGroup, oldConfig.ListenMode,
+		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
+
+	if err := os.WriteFile(poolFilePath(newVersion, poolName), []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write pool for PHP %s: %v", newVersion, err)
+	}
+	if err := reloadPHPFPM(newVersion); err != nil {
+		return fmt.Errorf("failed to reload PHP %s: %v", newVersion, err)
 	}
 
 	// Delete pool from old version

@@ -196,3 +196,57 @@ func TestUpdatePoolConfigRefusesWhenThePoolIsAbsent(t *testing.T) {
 		t.Error("a pool file was invented for a site that has none")
 	}
 }
+
+// Migration must WRITE the new version's pool even though UpdatePoolConfig
+// refuses to create pools. The regression this pins: the identity-forgery
+// gate (FPM-as-root fix) made 8.3→8.4 switching return 500 in production,
+// because migration rode through the tenant-facing writer. Identity must
+// come from the OLD pool file; only the socket path may change.
+// Taşıma, UpdatePoolConfig havuz yaratmayı reddettiği hâlde yeni sürümün
+// havuzunu YAZMALIDIR. Sabitlenen gerileme: kimlik-uydurma kapısı (FPM-root
+// düzeltmesi) 8.3→8.4 geçişini canlıda 500'e çevirdi; çünkü taşıma, kiracıya
+// dönük yazıcının üstünden geçiyordu. Kimlik ESKİ havuz dosyasından gelmeli;
+// yalnız soket yolu değişebilir.
+func TestMigratePoolWritesNewVersionDirectly(t *testing.T) {
+	oldPath := withPoolTree(t, "8.3", "site42", seededPool)
+	if err := os.MkdirAll(filepath.Join(phpEtcDir, "8.4", "fpm", "pool.d"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	oldReload := reloadPHPFPM
+	reloaded := []string{}
+	reloadPHPFPM = func(v string) error { reloaded = append(reloaded, v); return nil }
+	t.Cleanup(func() { reloadPHPFPM = oldReload })
+
+	pm := NewPHPPoolManager()
+	if err := pm.MigratePool("8.3", "8.4", "site42"); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	newBody, err := os.ReadFile(filepath.Join(phpEtcDir, "8.4", "fpm", "pool.d", "site42.conf"))
+	if err != nil {
+		t.Fatalf("new pool not written: %v", err)
+	}
+	s := string(newBody)
+	for _, want := range []string{
+		"user = celik_site42", // identity preserved from the OLD pool
+		"listen = /var/run/php/php8.4-fpm-site42.sock", // socket re-derived
+		"listen.owner = www-data",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("new pool missing %q\n%s", want, s)
+		}
+	}
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Error("old pool file must be gone after migration")
+	}
+	if len(reloaded) != 2 || reloaded[0] != "8.4" || reloaded[1] != "8.3" {
+		t.Errorf("reload order = %v, want [8.4 8.3] (new first, then old after delete)", reloaded)
+	}
+
+	// The gate itself must still hold: updating a pool that does not exist
+	// stays refused. / Kapı yerinde durmalı: olmayan havuzu güncellemek
+	// reddedilmeye devam eder.
+	if err := pm.UpdatePoolConfig("8.5", &core.PHPPoolConfig{Name: "site42"}); err == nil {
+		t.Error("UpdatePoolConfig must still refuse to invent pools")
+	}
+}
