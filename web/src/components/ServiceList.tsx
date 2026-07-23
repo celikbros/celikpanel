@@ -115,9 +115,39 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // satırdır. Bu, anayasanın "kurulu olmayan görünmezdir" maddesinin onay
     // kutusu değil mekanik hâli; katalog, aynı listenin süzgeci kapalı hâlidir,
     // ikinci ekran değil.
+    // …with one correction from the field (operator, Jul 23: "hide not
+    // installed keeps coming back checked"): installed-first is the right
+    // FIRST impression, not a standing rule. The choice is now remembered,
+    // and the catalog is reachable by a labelled button instead of a
+    // checkbox — a filter that hides the only path to installing is not a
+    // filter, it is a hidden step.
+    // …sahadan gelen bir düzeltmeyle (operatör, 23 Tem: "hide not installed
+    // sürekli seçili geliyor"): kurulu-önce doğru İLK izlenimdir, kalıcı bir
+    // kural değil. Seçim artık hatırlanıyor ve kataloğa onay kutusu yerine
+    // adı yazan bir düğmeyle ulaşılıyor — kurulumun tek yolunu gizleyen bir
+    // süzgeç, süzgeç değil gizli bir adımdır.
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [query, setQuery] = useState('');
-    const [hideNotInstalled, setHideNotInstalled] = useState(true);
+    const viewKey = 'celikpanel.components.view';
+    const [hideNotInstalled, setHideNotInstalled] = useState(
+        () => (typeof localStorage === 'undefined' ? true : localStorage.getItem(viewKey) !== 'catalog'),
+    );
+
+    // Collapse follows the view, not a fixed default: the installed list is
+    // short and wants to be readable at a glance; the full catalog is long
+    // and wants folding (D-010 correction, learned from implementing it).
+    // Katlama görünümü izler, sabit varsayılanı değil: kurulu liste kısadır ve
+    // tek bakışta okunmak ister; tam katalog uzundur ve katlanmak ister
+    // (D-010 düzeltmesi, uygulamadan öğrenildi).
+    const setView = (installedOnly: boolean) => {
+        setHideNotInstalled(installedOnly);
+        try {
+            localStorage.setItem(viewKey, installedOnly ? 'installed' : 'catalog');
+        } catch {
+            /* private mode / kısıtlı depolama — görünüm yine değişir */
+        }
+        setCollapsed(installedOnly ? new Set() : new Set(categoryOrder.map((c) => c.id)));
+    };
 
     useEffect(() => {
         loadServices();
@@ -336,25 +366,32 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         {/* View controls kept as one tight cluster, clearly
                             separated from the search by the larger gap-x-5. */}
                         <div className="flex items-center gap-4">
-                            <label className="flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap text-xs text-fg-muted">
-                                <input
-                                    type="checkbox"
-                                    checked={hideNotInstalled}
-                                    onChange={(e) => {
-                                        const hide = e.target.checked;
-                                        setHideNotInstalled(hide);
-                                        // Collapse follows the view, not a fixed default: the
-                                        // installed list is short and wants to be readable at a
-                                        // glance; the full catalog is long and wants folding.
-                                        // Katlama görünümü izler, sabit varsayılanı değil: kurulu
-                                        // liste kısadır ve tek bakışta okunmak ister; tam katalog
-                                        // uzundur ve katlanmak ister.
-                                        setCollapsed(hide ? new Set() : new Set(categoryOrder.map((c) => c.id)));
-                                    }}
-                                    className="h-3.5 w-3.5 rounded border-border-strong accent-primary"
-                                />
-                                {t('services.hideNotInstalled')}
-                            </label>
+                            {/* Two named views instead of one checkbox: each
+                                says what it shows and how many, so "where do I
+                                install from?" is answered by reading, not by
+                                discovering a filter.
+                                Tek onay kutusu yerine adı yazan iki görünüm:
+                                her biri neyi kaç kalemle gösterdiğini söyler;
+                                "nereden kurarım?" sorusu süzgeç keşfederek
+                                değil okuyarak cevaplanır. */}
+                            <div className="inline-flex overflow-hidden rounded-lg border border-border-strong">
+                                <button
+                                    onClick={() => setView(true)}
+                                    className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        hideNotInstalled ? 'bg-primary text-primary-fg' : 'bg-surface text-fg-muted hover:bg-surface-2'
+                                    }`}
+                                >
+                                    {t('services.viewInstalled', { n: services.filter((s) => s.is_installed).length })}
+                                </button>
+                                <button
+                                    onClick={() => setView(false)}
+                                    className={`whitespace-nowrap border-l border-border-strong px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        hideNotInstalled ? 'bg-surface text-fg-muted hover:bg-surface-2' : 'bg-primary text-primary-fg'
+                                    }`}
+                                >
+                                    {t('services.viewCatalog', { n: services.length })}
+                                </button>
+                            </div>
                             <div className="flex gap-1 text-xs">
                                 <button onClick={expandAll} className="whitespace-nowrap rounded-md px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg">
                                     {t('services.expandAll')}
@@ -387,7 +424,23 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 </p>
                 {filtered.length === 0 ? (
                     <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-fg-muted shadow-card">
-                        {t('services.noMatches')}
+                        {/* A fresh server's installed view is legitimately
+                            empty — that is a starting point, not a failed
+                            search, so it offers the next step instead of
+                            reporting nothing.
+                            Taze sunucunun kurulu görünümü meşru olarak boştur —
+                            bu başarısız arama değil başlangıç noktasıdır; hiçlik
+                            bildirmek yerine sonraki adımı sunar. */}
+                        {hideNotInstalled && q === '' ? (
+                            <div className="flex flex-col items-center gap-3">
+                                <span>{t('services.noneInstalledYet')}</span>
+                                <Button variant="primary" icon={DownloadCloud} onClick={() => setView(false)}>
+                                    {t('services.browseCatalog')}
+                                </Button>
+                            </div>
+                        ) : (
+                            t('services.noMatches')
+                        )}
                     </div>
                 ) : (
                 <div className="space-y-4">
