@@ -418,6 +418,7 @@ export const en = {
     'ssl.tab.letsencrypt': "Let's Encrypt",
     'ssl.tab.custom': 'Custom certificate',
     'ssl.letsencryptDesc': 'Free 90-day certificate with automatic renewal.',
+    'ssl.provider': 'Certificate authority',
     'ssl.email': 'Email address',
     'ssl.emailHint': 'Used for renewal notices and account recovery',
     'ssl.autoRenewOn': 'Enable automatic renewal',

@@ -227,6 +227,7 @@ func main() {
 	// Nginx Management
 	http.HandleFunc("/api/v1/nginx/global", panel.handleNginxGlobalConfig)
 	http.HandleFunc("/api/v1/nginx/ssl", panel.handleNginxSSLConfig)
+	http.HandleFunc("/api/v1/ssl/providers", panel.handleACMEProviders)
 	http.HandleFunc("/api/v1/nginx/ratelimits", panel.handleNginxRateLimits)
 
 	// Fail2ban Management

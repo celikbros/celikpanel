@@ -7,8 +7,24 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
+
+// handleACMEProviders: GET /api/v1/ssl/providers — the CA list the SSL
+// dialog's provider dropdown reads. Any signed-in user issuing a cert needs
+// it, so it is not admin-gated.
+// handleACMEProviders: GET /api/v1/ssl/providers — SSL penceresinin sağlayıcı
+// menüsünün okuduğu CA listesi. Sertifika alan her oturumlu kullanıcıya
+// gerektiğinden admin-kilitli değildir.
+func (p *Panel) handleACMEProviders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"providers": core.ACMEProviders})
+}
 
 // SSL Certificate Management Handlers
 
@@ -47,10 +63,16 @@ type DomainSSLResponse struct {
 	Settings       SSLSettings     `json:"settings"`
 }
 
-// IssueLetsEncryptRequest represents a request to issue Let's Encrypt certificate
+// IssueLetsEncryptRequest represents a request to issue an ACME certificate.
+// Provider selects the CA (empty = Let's Encrypt); the name is kept for
+// compatibility even though it now issues from any registered ACME provider.
+// IssueLetsEncryptRequest bir ACME sertifikası isteğidir. Provider CA'yı
+// seçer (boş = Let's Encrypt); ad, artık kayıtlı herhangi bir ACME
+// sağlayıcısından verse de uyumluluk için korunur.
 type IssueLetsEncryptRequest struct {
 	Email     string `json:"email"`
 	AutoRenew bool   `json:"auto_renew"`
+	Provider  string `json:"provider,omitempty"`
 }
 
 // UploadCertificateRequest represents a request to upload custom certificate
@@ -233,18 +255,31 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		Error     string    `json:"error"`
 	}
 
+	// Resolve the chosen CA. Unknown/empty falls to Let's Encrypt — the
+	// registry is the only authority, so a client cannot smuggle an arbitrary
+	// --server URL through this field.
+	// Seçilen CA'yı çöz. Bilinmeyen/boş, Let's Encrypt'e düşer — tek otorite
+	// kayıt defteridir; böylece istemci bu alandan keyfi bir --server URL'si
+	// kaçıramaz.
+	provider := core.ACMEProviderByID(req.Provider)
+	if provider == nil {
+		provider = core.ACMEProviderByID("letsencrypt")
+	}
+
 	agentReq := struct {
-		Domain    string   `json:"domain"`
-		Aliases   []string `json:"aliases"`
-		Email     string   `json:"email"`
-		Webroot   string   `json:"webroot"`
-		AutoRenew bool     `json:"auto_renew"`
+		Domain     string   `json:"domain"`
+		Aliases    []string `json:"aliases"`
+		Email      string   `json:"email"`
+		Webroot    string   `json:"webroot"`
+		AutoRenew  bool     `json:"auto_renew"`
+		ACMEServer string   `json:"acme_server,omitempty"`
 	}{
-		Domain:    domain.Name,
-		Aliases:   aliases,
-		Email:     req.Email,
-		Webroot:   documentRoot,
-		AutoRenew: req.AutoRenew,
+		Domain:     domain.Name,
+		Aliases:    aliases,
+		Email:      req.Email,
+		Webroot:    documentRoot,
+		AutoRenew:  req.AutoRenew,
+		ACMEServer: provider.Directory,
 	}
 
 	err = p.agentClient.Call("Agent.IssueLetsEncryptCertificate", agentReq, &agentResp)
@@ -253,14 +288,17 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store certificate in database
+	// Store certificate in database. issuer is the chosen CA's display name so
+	// the SSL page shows who signed it, not a hardcoded "Let's Encrypt".
+	// Sertifikayı veritabanına yaz. issuer, seçilen CA'nın görünen adıdır;
+	// böylece SSL sayfası sabit "Let's Encrypt" değil, imzalayanı gösterir.
 	_, err = pool.ExecContext(ctx, `
 		INSERT INTO ssl_certificates (
 			domain_id, type, cert_path, key_path, chain_path,
 			issuer, subject, expires_at, auto_renew, status
-		) VALUES (?, 'letsencrypt', ?, ?, ?, 'Let''s Encrypt', ?, ?, ?, 'active')
+		) VALUES (?, 'letsencrypt', ?, ?, ?, ?, ?, ?, ?, 'active')
 	`, domainID, agentResp.CertPath, agentResp.KeyPath, agentResp.ChainPath,
-		domain.Name, agentResp.ExpiresAt.UTC().Format(time.RFC3339), req.AutoRenew)
+		provider.Name, domain.Name, agentResp.ExpiresAt.UTC().Format(time.RFC3339), req.AutoRenew)
 
 	if err != nil {
 		writeServerError(w, err)

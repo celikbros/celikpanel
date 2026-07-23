@@ -20,6 +20,15 @@ type IssueLetsEncryptRequest struct {
 	Email     string   `json:"email"`
 	Webroot   string   `json:"webroot"`
 	AutoRenew bool     `json:"auto_renew"`
+	// ACMEServer is the CA directory URL (empty = Let's Encrypt default). The
+	// panel resolves the chosen provider to this; the agent only relays it to
+	// certbot. certbot writes it into the renewal config, so renewals keep
+	// using the same CA without the panel re-specifying it.
+	// ACMEServer, CA dizin URL'sidir (boş = Let's Encrypt varsayılanı). Panel
+	// seçilen sağlayıcıyı buna çözer; agent yalnız certbot'a aktarır. certbot
+	// bunu yenileme yapılandırmasına yazar, böylece yenilemeler panel yeniden
+	// belirtmeden aynı CA'yı kullanmaya devam eder.
+	ACMEServer string `json:"acme_server,omitempty"`
 }
 
 // IssueLetsEncryptResponse represents the response from issuing a certificate
@@ -93,6 +102,16 @@ func (a *Agent) IssueLetsEncryptCertificate(req IssueLetsEncryptRequest, resp *I
 		"--agree-tos",
 		"--non-interactive",
 		"--force-renewal", // Force renewal for testing, remove in production
+	}
+
+	// A non-default CA is selected by its ACME directory URL. certbot records
+	// it in the cert's renewal config, so RenewLetsEncryptCertificate needs no
+	// change — it renews from whichever CA first issued.
+	// Varsayılan olmayan CA, ACME dizin URL'siyle seçilir. certbot bunu
+	// sertifikanın yenileme yapılandırmasına kaydeder; bu yüzden
+	// RenewLetsEncryptCertificate değişmez — ilk hangi CA verdiyse ondan yeniler.
+	if req.ACMEServer != "" {
+		args = append(args, "--server", req.ACMEServer)
 	}
 
 	// Add domains

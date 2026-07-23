@@ -45,6 +45,12 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     const [email, setEmail] = useState('');
     const [autoRenew, setAutoRenew] = useState(true);
     const [certSource, setCertSource] = useState<'letsencrypt' | 'custom'>('letsencrypt');
+    // The CA the cert is issued from (operator, 23 Jul: "a few kinds of SSL").
+    // The list comes from the server registry — the UI never hardcodes a CA.
+    // Sertifikanın alındığı CA (operatör, 23 Tem: "birkaç çeşit SSL"). Liste
+    // sunucu kayıt defterinden gelir — UI asla bir CA'yı sabitlemez.
+    const [providers, setProviders] = useState<{ id: string; name: string; note: string }[]>([]);
+    const [provider, setProvider] = useState('letsencrypt');
     const [certFile, setCertFile] = useState<File | null>(null);
     const [keyFile, setKeyFile] = useState<File | null>(null);
     const [chainFile, setChainFile] = useState<File | null>(null);
@@ -54,6 +60,13 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     useEffect(() => {
         loadSSLData();
     }, [domainId]);
+
+    useEffect(() => {
+        fetch('/api/v1/ssl/providers')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => setProviders(d?.providers ?? []))
+            .catch(() => {});
+    }, []);
 
     const loadSSLData = async () => {
         setLoading(true);
@@ -78,7 +91,7 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, auto_renew: autoRenew }),
+                body: JSON.stringify({ email, auto_renew: autoRenew, provider }),
             });
             if (!res.ok) throw new Error();
             showToast('success', t('ssl.issued'));
@@ -236,6 +249,15 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                     {certSource === 'letsencrypt' ? (
                         <div className="space-y-3">
                             <p className="text-sm text-fg-muted">{t('ssl.letsencryptDesc')}</p>
+                            {providers.length > 1 && (
+                                <Field label={t('ssl.provider')} hint={providers.find((p) => p.id === provider)?.note}>
+                                    <select value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass}>
+                                        {providers.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </Field>
+                            )}
                             <Field label={t('ssl.email')} hint={t('ssl.emailHint')}>
                                 <input
                                     type="email"

@@ -408,6 +408,7 @@ export const tr: Record<TranslationKey, string> = {
     'ssl.tab.letsencrypt': "Let's Encrypt",
     'ssl.tab.custom': 'Özel sertifika',
     'ssl.letsencryptDesc': 'Otomatik yenilemeli, ücretsiz 90 günlük sertifika.',
+    'ssl.provider': 'Sertifika sağlayıcısı',
     'ssl.email': 'E-posta adresi',
     'ssl.emailHint': 'Yenileme bildirimleri ve hesap kurtarma için kullanılır',
     'ssl.autoRenewOn': 'Otomatik yenilemeyi aç',
