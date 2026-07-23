@@ -29,6 +29,16 @@ type IssueLetsEncryptRequest struct {
 	// bunu yenileme yapılandırmasına yazar, böylece yenilemeler panel yeniden
 	// belirtmeden aynı CA'yı kullanmaya devam eder.
 	ACMEServer string `json:"acme_server,omitempty"`
+	// EABKeyID / EABHMACKey: external account binding, required by ZeroSSL and
+	// Google. Only sent for those CAs. Not persisted anywhere — certbot binds
+	// the account once at first issuance and renewals reuse it, so the HMAC
+	// secret never needs to live in our database.
+	// EABKeyID / EABHMACKey: dış hesap bağlaması; ZeroSSL ve Google ister.
+	// Yalnız o CA'lar için gönderilir. Hiçbir yerde saklanmaz — certbot hesabı
+	// ilk vermede bir kez bağlar ve yenilemeler onu yeniden kullanır; böylece
+	// HMAC sırrı veritabanımızda yaşamak zorunda kalmaz.
+	EABKeyID   string `json:"eab_key_id,omitempty"`
+	EABHMACKey string `json:"eab_hmac_key,omitempty"`
 }
 
 // IssueLetsEncryptResponse represents the response from issuing a certificate
@@ -112,6 +122,15 @@ func (a *Agent) IssueLetsEncryptCertificate(req IssueLetsEncryptRequest, resp *I
 	// RenewLetsEncryptCertificate değişmez — ilk hangi CA verdiyse ondan yeniler.
 	if req.ACMEServer != "" {
 		args = append(args, "--server", req.ACMEServer)
+	}
+	// EAB binds this issuance to the operator's account at the chosen CA.
+	// certbot records the bound account in the renewal config, so this is
+	// needed only at first issuance, never at renewal.
+	// EAB, bu vermeyi seçilen CA'daki operatör hesabına bağlar. certbot
+	// bağlanan hesabı yenileme yapılandırmasına yazar; bu yüzden yalnız ilk
+	// vermede gerekir, yenilemede asla.
+	if req.EABKeyID != "" && req.EABHMACKey != "" {
+		args = append(args, "--eab-kid", req.EABKeyID, "--eab-hmac-key", req.EABHMACKey)
 	}
 
 	// Add domains

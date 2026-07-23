@@ -49,8 +49,10 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
     // The list comes from the server registry — the UI never hardcodes a CA.
     // Sertifikanın alındığı CA (operatör, 23 Tem: "birkaç çeşit SSL"). Liste
     // sunucu kayıt defterinden gelir — UI asla bir CA'yı sabitlemez.
-    const [providers, setProviders] = useState<{ id: string; name: string; note: string }[]>([]);
+    const [providers, setProviders] = useState<{ id: string; name: string; note: string; needs_eab: boolean }[]>([]);
     const [provider, setProvider] = useState('letsencrypt');
+    const [eabKid, setEabKid] = useState('');
+    const [eabHmac, setEabHmac] = useState('');
     const [certFile, setCertFile] = useState<File | null>(null);
     const [keyFile, setKeyFile] = useState<File | null>(null);
     const [chainFile, setChainFile] = useState<File | null>(null);
@@ -91,7 +93,7 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, auto_renew: autoRenew, provider }),
+                body: JSON.stringify({ email, auto_renew: autoRenew, provider, eab_key_id: eabKid, eab_hmac_key: eabHmac }),
             });
             if (!res.ok) throw new Error();
             showToast('success', t('ssl.issued'));
@@ -257,6 +259,24 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
                                         ))}
                                     </select>
                                 </Field>
+                            )}
+                            {/* EAB fields appear only for a CA that requires them
+                                (ZeroSSL, Google) — the panel refuses issuance
+                                without them, so asking here is honest, not
+                                optional decoration.
+                                EAB alanları yalnız gerektiren CA'da görünür
+                                (ZeroSSL, Google) — panel bunlarsız vermeyi
+                                reddeder; burada sormak dürüsttür, isteğe bağlı
+                                süs değil. */}
+                            {providers.find((p) => p.id === provider)?.needs_eab && (
+                                <>
+                                    <Field label={t('ssl.eabKid')} hint={t('ssl.eabHint')}>
+                                        <input value={eabKid} onChange={(e) => setEabKid(e.target.value)} className={inputClass} autoComplete="off" />
+                                    </Field>
+                                    <Field label={t('ssl.eabHmac')}>
+                                        <input value={eabHmac} onChange={(e) => setEabHmac(e.target.value)} className={inputClass} autoComplete="off" />
+                                    </Field>
+                                </>
                             )}
                             <Field label={t('ssl.email')} hint={t('ssl.emailHint')}>
                                 <input

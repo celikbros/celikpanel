@@ -70,9 +70,11 @@ type DomainSSLResponse struct {
 // seçer (boş = Let's Encrypt); ad, artık kayıtlı herhangi bir ACME
 // sağlayıcısından verse de uyumluluk için korunur.
 type IssueLetsEncryptRequest struct {
-	Email     string `json:"email"`
-	AutoRenew bool   `json:"auto_renew"`
-	Provider  string `json:"provider,omitempty"`
+	Email      string `json:"email"`
+	AutoRenew  bool   `json:"auto_renew"`
+	Provider   string `json:"provider,omitempty"`
+	EABKeyID   string `json:"eab_key_id,omitempty"`
+	EABHMACKey string `json:"eab_hmac_key,omitempty"`
 }
 
 // UploadCertificateRequest represents a request to upload custom certificate
@@ -266,6 +268,16 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		provider = core.ACMEProviderByID("letsencrypt")
 	}
 
+	// A CA that requires EAB cannot issue without credentials — refuse here
+	// with a clear message instead of letting certbot fail cryptically.
+	// EAB isteyen bir CA, bilgiler olmadan veremez — certbot'un anlaşılmaz
+	// biçimde patlamasına izin vermek yerine burada net mesajla reddet.
+	if provider.NeedsEAB && (req.EABKeyID == "" || req.EABHMACKey == "") {
+		writeClientError(w, http.StatusBadRequest,
+			provider.Name+" needs EAB credentials — enter the key ID and HMAC key from your "+provider.Name+" account.")
+		return
+	}
+
 	agentReq := struct {
 		Domain     string   `json:"domain"`
 		Aliases    []string `json:"aliases"`
@@ -273,6 +285,8 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		Webroot    string   `json:"webroot"`
 		AutoRenew  bool     `json:"auto_renew"`
 		ACMEServer string   `json:"acme_server,omitempty"`
+		EABKeyID   string   `json:"eab_key_id,omitempty"`
+		EABHMACKey string   `json:"eab_hmac_key,omitempty"`
 	}{
 		Domain:     domain.Name,
 		Aliases:    aliases,
@@ -280,6 +294,8 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		Webroot:    documentRoot,
 		AutoRenew:  req.AutoRenew,
 		ACMEServer: provider.Directory,
+		EABKeyID:   req.EABKeyID,
+		EABHMACKey: req.EABHMACKey,
 	}
 
 	err = p.agentClient.Call("Agent.IssueLetsEncryptCertificate", agentReq, &agentResp)

@@ -409,6 +409,10 @@ export const tr: Record<TranslationKey, string> = {
     'ssl.tab.custom': 'Özel sertifika',
     'ssl.letsencryptDesc': 'Otomatik yenilemeli, ücretsiz 90 günlük sertifika.',
     'ssl.provider': 'Sertifika sağlayıcısı',
+    'ssl.eabKid': 'EAB anahtar kimliği',
+    'ssl.eabHmac': 'EAB HMAC anahtarı',
+    'ssl.eabHint': 'CA hesabınızda ACME / EAB bilgileri altından.',
+
     'ssl.email': 'E-posta adresi',
     'ssl.emailHint': 'Yenileme bildirimleri ve hesap kurtarma için kullanılır',
     'ssl.autoRenewOn': 'Otomatik yenilemeyi aç',
