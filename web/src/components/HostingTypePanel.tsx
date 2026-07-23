@@ -40,7 +40,6 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
     const [state, setState] = useState<HostingState | null>(null);
     const [saving, setSaving] = useState(false);
     const [versions, setVersions] = useState<string[]>([]);
-    const [systemVersion, setSystemVersion] = useState('');
 
     // A type whose requirement is missing on this server must say so instead
     // of failing at Apply: switching to PHP needs PHP-FPM installed.
@@ -64,7 +63,6 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
             if (vr.ok) {
                 const d = await vr.json();
                 setVersions(d.installed || []);
-                setSystemVersion(d.system_version || '');
             }
         } catch {
             showToast('error', t('common.error'));
@@ -152,15 +150,29 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                     </label>
                     <label>
                         <span className="mb-1 block text-xs text-fg-muted">{t('hosting.nodeVersion')}</span>
+                        {/* The "system default" option is gone (B3d): the panel
+                            only operates what it installed — an unnamed
+                            interpreter can't be listed, sized or protected
+                            from deletion. A legacy save with '' still renders
+                            (disabled placeholder) so the select never lies
+                            about the stored value; the server refuses new
+                            saves without a version (RUNTIME_VERSION_REQUIRED).
+                            "Sistem varsayılanı" seçeneği gitti (B3d): panel
+                            yalnız kendi kurduğunu işletir — adsız yorumlayıcı
+                            listelenemez, ölçülemez, silinmekten korunamaz.
+                            '' ile kayıtlı eski site yine çizilir (pasif yer
+                            tutucu); select saklanan değer hakkında yalan
+                            söylemez, sunucu sürümsüz yeni kaydı reddeder. */}
                         <select
                             value={state.runtime_version || ''}
                             onChange={(e) => setState({ ...state, runtime_version: e.target.value })}
                             className={inputClass}
                         >
-                            <option value="">
-                                {t('hosting.systemDefault')}
-                                {systemVersion ? ` (${systemVersion})` : ''}
-                            </option>
+                            {!state.runtime_version && (
+                                <option value="" disabled>
+                                    {t('hosting.pickVersion')}
+                                </option>
+                            )}
                             {versions.map((v) => (
                                 <option key={v} value={v}>
                                     {v}

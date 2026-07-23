@@ -130,3 +130,74 @@ func TestNodeInstancesFromDisk(t *testing.T) {
 		t.Errorf("managed versions = %v, want %v", managed, want)
 	}
 }
+
+// parseNodeLTS: lts is false OR a codename (mixed-type JSON); one newest
+// build per LTS line, capped at 4, current lines never buried by old ones.
+// parseNodeLTS: lts ya false ya kod adıdır (karışık tipli JSON); LTS hattı
+// başına bir en-yeni yapım, 4 sınırı, güncel hatlar eskilerin altında kalmaz.
+func TestParseNodeLTS(t *testing.T) {
+	body := `[
+		{"version":"v25.1.0","lts":false},
+		{"version":"v24.18.0","lts":"Krypton"},
+		{"version":"v24.17.0","lts":"Krypton"},
+		{"version":"v22.20.1","lts":"Jod"},
+		{"version":"v20.9.9","lts":"Iron"},
+		{"version":"v18.1.1","lts":"Hydrogen"},
+		{"version":"v16.0.0","lts":"Gallium"}]`
+	rel, err := parseNodeLTS([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []NodeLTSRelease{
+		{Version: "24.18.0", Name: "Krypton"},
+		{Version: "22.20.1", Name: "Jod"},
+		{Version: "20.9.9", Name: "Iron"},
+		{Version: "18.1.1", Name: "Hydrogen"},
+	}
+	if len(rel) != len(want) {
+		t.Fatalf("releases = %v, want %v", rel, want)
+	}
+	for i := range want {
+		if rel[i] != want[i] {
+			t.Errorf("release[%d] = %v, want %v", i, rel[i], want[i])
+		}
+	}
+	if _, err := parseNodeLTS([]byte("not json")); err == nil {
+		t.Error("garbage index must error, not return an empty offer list")
+	}
+}
+
+// RemoveNodeVersion: the semver gate + fixed base mean only managed trees
+// are reachable; absent versions remove idempotently.
+// RemoveNodeVersion: semver kapısı + sabit taban yalnız yönetilen ağaçlara
+// ulaştırır; olmayan sürüm idempotent kaldırılır.
+func TestRemoveNodeVersion(t *testing.T) {
+	oldBase := runtimesBaseDir
+	runtimesBaseDir = t.TempDir()
+	defer func() { runtimesBaseDir = oldBase }()
+
+	dir := filepath.Join(runtimesBaseDir, "node", "24.18.0", "bin")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "node"), []byte("#!"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	a := &Agent{}
+	var resp NodeRemoveResponse
+	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "../../../etc"}, &resp); err != nil || resp.Error == "" {
+		t.Error("a path-shaped version must be refused by the semver gate")
+	}
+	resp = NodeRemoveResponse{}
+	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
+		t.Fatalf("remove failed: %v %+v", err, resp)
+	}
+	if _, err := os.Stat(filepath.Join(runtimesBaseDir, "node", "24.18.0")); !os.IsNotExist(err) {
+		t.Error("tree still on disk after removal")
+	}
+	resp = NodeRemoveResponse{}
+	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
+		t.Error("removing an absent version must be idempotent success")
+	}
+}

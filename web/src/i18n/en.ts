@@ -12,7 +12,14 @@ export const en = {
     'nav.dashboard': 'Dashboard',
     'nav.domains': 'Domains',
     'nav.databases': 'Databases',
-    'nav.services': 'Services',
+    // "Components": the page holds every installed piece of server software
+    // typed by kind (service/runtime/tool) — naming it Services became false the
+    // day PHP, phpMyAdmin and nftables joined the list (D-016; consultant panel
+    // 23 Jul). "Service" lives on as a kind, so support language keeps working.
+    // "Bileşenler": sayfa, kurulu her sunucu yazılımını cinsiyle tutar —
+    // PHP, phpMyAdmin ve nftables listeye girdiği gün Services adı yalanlaştı
+    // (D-016). "Servis" bir cins olarak yaşıyor; destek dili bozulmaz.
+    'nav.services': 'Components',
     'nav.users': 'Users',
     'nav.audit': 'Audit log',
     'audit.title': 'Audit log',
@@ -172,6 +179,7 @@ export const en = {
     'common.loading': 'Loading…',
     'common.error': 'Something went wrong.',
     'common.goFix': 'Fix it',
+    'common.andMore': '+{n} more',
     // The API error contract (B1): localized texts for coded refusals.
     // err.<CODE> overrides the server message; err.<CODE>.action labels the
     // fix-it button when the refusal carries an in-panel path.
@@ -192,6 +200,10 @@ export const en = {
     'err.ENTITLEMENT_REQUIRED.action': 'View add-ons',
     'err.FIREWALL_ENGINE_MISSING': 'The firewall engine (nftables) is not installed — install it from Services first.',
     'err.FIREWALL_ENGINE_MISSING.action': 'Go to Services',
+    'err.RUNTIME_IN_USE': 'Sites still run on this version. Switch them to another version first.',
+    'err.SERVICE_HAS_DEPENDENTS': 'Things on this server still depend on this component. Remove or move them first.',
+    'err.RUNTIME_VERSION_REQUIRED': 'Pick a Node.js version installed by the panel.',
+    'err.RUNTIME_VERSION_REQUIRED.action': 'Install a version',
     'common.buildHint': 'The git revision this UI was built from. After a deploy + hard refresh, this changes if the new build is live.',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
@@ -249,7 +261,7 @@ export const en = {
     'domains.loadFailed': 'Failed to load domains',
     'domains.deleted': 'Domain {name} deleted',
 
-    'services.subtitle': 'Manage core system services',
+    'services.subtitle': 'Everything installed on this server — services, runtimes and tools',
     'services.col.service': 'Service',
     'services.col.category': 'Category',
     'services.col.version': 'Version',
@@ -738,6 +750,14 @@ export const en = {
     'services.systemRuntimeHint': 'Found on the server, not installed by the panel. The panel only operates what it installed.',
     'services.installVersion': 'Install version',
     'services.versionInstalled': 'Version {version} installed.',
+    'services.removeVersion': 'Remove version',
+    'services.removeVersionTitle': 'Remove {name} {version}?',
+    'services.removeVersionWarn': 'Removes this version and its companion packages from the server. If any site still runs on it, the panel refuses and lists them.',
+    'services.versionRemoved': 'Version {version} removed.',
+    'services.ltsLoading': 'Fetching the release list from nodejs.org…',
+    'services.ltsFailed': 'Could not fetch the release list.',
+    'services.ltsRetry': 'Retry',
+    'services.ltsInstalled': 'Node {major} installed',
     'services.nodeInstallHint': 'Downloaded from nodejs.org and verified against the official checksums.',
     'services.noManagePage': 'This service has no dedicated management page yet — its versions and controls live on the Services page.',
     'services.repo.note': 'This adds the vendor repository, pinned to its signing key. You can turn it back off.',
@@ -968,7 +988,7 @@ export const en = {
     'hosting.desc.forwarding': 'Redirect visitors to another URL.',
     'hosting.startCommand': 'Start command',
     'hosting.nodeVersion': 'Node.js version',
-    'hosting.systemDefault': 'System default',
+    'hosting.pickVersion': 'Pick a version',
     'hosting.portNote': 'The app receives its port in the PORT environment variable; the panel assigns it automatically.',
     'hosting.assignedPort': 'Assigned port',
     'hosting.forwardTo': 'Target URL',

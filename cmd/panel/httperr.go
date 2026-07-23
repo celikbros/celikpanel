@@ -33,6 +33,15 @@ type apiErrorBody struct {
 	Error  string `json:"error"`
 	Code   string `json:"code,omitempty"`
 	Action string `json:"action,omitempty"`
+	// Details: the refusal's evidence, one line per item — for
+	// RUNTIME_IN_USE the blocking sites ("example.com (ali)"), capped and
+	// suffixed with "+N more" by the producer. Optional and additive: old
+	// clients ignore it, so it is not a contract break (B3d).
+	// Details: retin kanıtı, kalem başına bir satır — RUNTIME_IN_USE'ta
+	// engelleyen siteler ("example.com (ali)"); üretici sınırlar ve "+N
+	// tane daha" ekler. İsteğe bağlı ve eklemelidir: eski istemci yok
+	// sayar, sözleşme kırılmaz (B3d).
+	Details []string `json:"details,omitempty"`
 }
 
 // Stable refusal codes. Renaming one is an API break — don't.
@@ -59,6 +68,27 @@ const (
 	// verir — bunlar bir ayar değil, kiracılar arasındaki sınırdır — bu yüzden
 	// deneme sessizce düşürülmek yerine adıyla reddedilir.
 	errCodePoolIdentityFixed = "POOL_IDENTITY_FIXED"
+	// RUNTIME_IN_USE: removing ONE version of a runtime while sites run on
+	// it. SERVICE_HAS_DEPENDENTS: uninstalling a whole component while
+	// things that need it exist (PHP sites, domains for DNS, mailboxes for
+	// mail, databases for a DB engine). Both are D-014's rule made code —
+	// removal is an event along the whole chain, and the refusal must say
+	// WHO blocks, not just "in use"; Details carries the list.
+	// RUNTIME_IN_USE: siteler üstünde koşarken bir runtime'ın TEK sürümünü
+	// kaldırmak. SERVICE_HAS_DEPENDENTS: ona muhtaç şeyler varken (PHP
+	// siteleri, DNS için domain'ler, posta için kutular, motor için
+	// veritabanları) bileşeni bütünüyle kaldırmak. İkisi de D-014 kuralının
+	// kod hâli — kaldırma zincir boyu bir olaydır ve ret yalnız
+	// "kullanımda" değil KİMİN engellediğini söylemelidir; liste Details'ta.
+	errCodeRuntimeInUse         = "RUNTIME_IN_USE"
+	errCodeServiceHasDependents = "SERVICE_HAS_DEPENDENTS"
+	// RUNTIME_VERSION_REQUIRED: a node site must name a panel-installed
+	// version — the "system interpreter" escape is closed (B3d): the panel
+	// only operates what it installed.
+	// RUNTIME_VERSION_REQUIRED: node sitesi panelin kurduğu bir sürümü
+	// adlandırmalı — "sistem yorumlayıcısı" kaçağı kapandı (B3d): panel
+	// yalnız kendi kurduğunu işletir.
+	errCodeRuntimeVersionRequired = "RUNTIME_VERSION_REQUIRED"
 )
 
 // writeCodedError is the single writer of the contract. action, when
@@ -66,9 +96,15 @@ const (
 // writeCodedError, sözleşmenin tek yazıcısıdır. action boş değilse reti
 // düzelten panel-içi yoldur (örn. "/services").
 func writeCodedError(w http.ResponseWriter, status int, code, message, action string) {
+	writeCodedErrorDetails(w, status, code, message, action, nil)
+}
+
+// writeCodedErrorDetails: the same contract plus the refusal's evidence list.
+// writeCodedErrorDetails: aynı sözleşme + retin kanıt listesi.
+func writeCodedErrorDetails(w http.ResponseWriter, status int, code, message, action string, details []string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action})
+	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action, Details: details})
 }
 
 // writeServerError logs the internal error and returns a generic 500.

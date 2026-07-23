@@ -256,6 +256,61 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 		return nil
 	}
 	family := detectPkgFamily()
+
+	// Version pick (B3d): remove ONE version of a runtime, the mirror of the
+	// install pick. Same gates as install: the service must have a Repo, the
+	// package must match its PackagePattern, apt only. Companions go with it
+	// ({v}-cli, {v}-mysql… — orphaned config-only leftovers are what made
+	// "did I really remove 8.3?" unanswerable on classic panels).
+	// Sürüm seçimi (B3d): bir runtime'ın TEK sürümünü kaldır — kurulum
+	// seçiminin aynası. Kapılar aynı: serviste Repo olmalı, paket
+	// PackagePattern'e uymalı, yalnız apt. Yol arkadaşları da gider
+	// ({v}-cli, {v}-mysql… — öksüz kalıntılar, klasik panellerde "8.3'ü
+	// gerçekten kaldırdım mı?" sorusunu cevapsız bırakan şeydi).
+	if req.Package != "" {
+		if svc.Repo == nil {
+			resp.Error = fmt.Sprintf("%s has no per-version packages", svc.Name)
+			return nil
+		}
+		if family != "apt" {
+			resp.Error = "per-version removal is only supported on apt-based systems"
+			return nil
+		}
+		re, err := regexp.Compile(svc.Repo.PackagePattern)
+		if err != nil || !re.MatchString(req.Package) {
+			resp.Error = "package does not belong to this service"
+			return nil
+		}
+		if !packageInstalled(req.Package) {
+			resp.Removed = true
+			resp.Detail = fmt.Sprintf("%s is not installed", req.Package)
+			return nil
+		}
+		versionPrefix := ""
+		if m := re.FindStringSubmatch(req.Package); len(m) > 1 {
+			versionPrefix = m[1]
+		}
+		pkgs := []string{req.Package}
+		for _, tpl := range svc.Repo.VersionCompanions {
+			name := strings.ReplaceAll(tpl, "{v}", versionPrefix)
+			if packageInstalled(name) {
+				pkgs = append(pkgs, name)
+			}
+		}
+		// Unit name == package name for version-pick installs (php8.3-fpm).
+		// Sürüm-seçimli kurulumda unit adı == paket adı (php8.3-fpm).
+		if unitExists(req.Package) {
+			_ = exec.Command("systemctl", "disable", "--now", req.Package).Run()
+		}
+		if _, err := removePackages(family, pkgs); err != nil {
+			resp.Error = fmt.Sprintf("package removal failed: %v", err)
+			return nil
+		}
+		resp.Removed = true
+		resp.Detail = fmt.Sprintf("removed %s", strings.Join(pkgs, ", "))
+		return nil
+	}
+
 	pkgs := svc.Packages[family]
 	if len(pkgs) == 0 {
 		resp.Error = fmt.Sprintf("%s cannot be removed automatically on this system yet", svc.Name)
@@ -264,11 +319,37 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 
 	// Stop + disable every present unit first, so purge does not fight a
 	// running process. Template instances ("wg-quick@wg0") are handled by
-	// their exact SystemNames entry.
+	// their exact SystemNames entry; pattern-matched units (php8.3-fpm from
+	// Sury) are stopped AND their packages added to the purge — before B3d,
+	// uninstalling php-fpm removed only the meta package and left every
+	// versioned daemon installed, running and serving.
 	// Önce mevcut her unit'i durdur + devre dışı bırak ki purge çalışan bir
-	// süreçle boğuşmasın.
+	// süreçle boğuşmasın. Desenle eşleşen unit'ler (Sury'den php8.3-fpm) de
+	// durdurulur VE paketleri purge listesine eklenir — B3d'den önce php-fpm'i
+	// kaldırmak yalnız meta paketi söküyor, sürümlü daemon'ların hepsini
+	// kurulu, çalışır ve sunar hâlde bırakıyordu.
 	for _, unit := range svc.SystemNames {
 		_ = exec.Command("systemctl", "disable", "--now", unit).Run()
+	}
+	if svc.SystemNamePattern != "" {
+		for _, unit := range unitsMatching(svc.SystemNamePattern) {
+			_ = exec.Command("systemctl", "disable", "--now", unit).Run()
+			if family == "apt" && packageInstalled(unit) {
+				pkgs = append(pkgs, unit)
+				if svc.Repo != nil {
+					if re, err := regexp.Compile(svc.Repo.PackagePattern); err == nil {
+						if m := re.FindStringSubmatch(unit); len(m) > 1 {
+							for _, tpl := range svc.Repo.VersionCompanions {
+								name := strings.ReplaceAll(tpl, "{v}", m[1])
+								if packageInstalled(name) {
+									pkgs = append(pkgs, name)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	if _, err := removePackages(family, pkgs); err != nil {

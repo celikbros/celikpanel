@@ -16,6 +16,13 @@ export interface ApiError {
     message: string;
     code?: string;
     action?: string;
+    // details: the refusal's evidence, one display line per item — e.g. the
+    // sites that block removing a runtime version (B3d). Additive: absent on
+    // older responses, safely ignored by older screens.
+    // details: retin kanıtı, kalem başına bir görüntü satırı — örn. bir
+    // runtime sürümünün kaldırılmasını engelleyen siteler (B3d). Eklemeli:
+    // eski cevaplarda yok, eski ekranlar güvenle yok sayar.
+    details?: string[];
 }
 
 // readApiError tolerates all three generations of error bodies: the coded
@@ -31,7 +38,12 @@ export async function readApiError(res: Response): Promise<ApiError> {
         try {
             const d = JSON.parse(text);
             if (d && typeof d === 'object' && ('error' in d || 'code' in d)) {
-                return { message: d.error || '', code: d.code, action: d.action };
+                return {
+                    message: d.error || '',
+                    code: d.code,
+                    action: d.action,
+                    details: Array.isArray(d.details) ? d.details : undefined,
+                };
             }
         } catch {
             /* legacy plain text / eski düz metin */

@@ -8,6 +8,51 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-016 · Sayfanın adı Bileşenler'dir; sözlük sabitlenir; servis tanımı incelir
+
+*23 Temmuz 2026 — 5 danışmanlı panel (pazar, TR-UX, bilgi mimarisi, şeytanın avukatı, küresel/yerelleştirme) + hakem sentezi; operatör onayı*
+
+**Karar.**
+1. **Sayfa ŞİMDİ yeniden adlandırılır:** EN **Components** · TR **Bileşenler**.
+   Rota `/services` kalır. Beş danışmandan dördü bağımsız aynı sonuca vardı:
+   ad bugün zaten yanlış (sektörde Services = daemon; sayfada PHP, phpMyAdmin,
+   nftables var) ve değiştirme maliyeti kullanıcı/doküman biriktikçe büyür.
+2. **Sözlük** (mağaza bu kelimelere doğar; şemsiye yeniden tartışılmaz):
+   şemsiye **component/bileşen** · cinsler: **Service/Servis** ·
+   **Runtime/Çalışma Ortamı** (rozetlerde kısa biçim: "Ortam") · **Tool/Araç** ·
+   gelecekte **Module/Modül**, **Task/Görev**, **Integration/Entegrasyon** ·
+   mağaza: EN **Store**, TR **Mağaza** (sayfa başlığı "Bileşen Mağazası").
+   "Servis" varsayılan cins-filtresi olarak yaşar — destek dili ("servisi
+   yeniden başlat") bozulmaz.
+3. **Servis tanımı incelir** (operatörün "start/stop yapılan = servis" testi
+   yön olarak doğru, harfiyen değil): *servis, kendi yerleşik süreci olan ve
+   o sürecin çökmesi başlı başına bir olay sayılan bileşendir.* İki karşı
+   örnek kataloğun kendisinden: nftables oneshot unit'iyle start/stop kabul
+   eder ama yerleşik süreç bırakmaz (doğru sınıfı araç; oneshot'a
+   "uygulandı/uygulanmadı" durumu yakışır, koşuyor noktası asla) ve php-fpm
+   gerçek daemon'lar taşır ama runtime'dır çünkü birincil işi site-başına
+   sürüm seçimi. "Denetlenebilir unit'i var" ise cins değil DİK bir
+   yetenektir: başlat/durdur düğmeleri her satırda — sürüm çekmecesi dahil —
+   o yetenekten çizilir.
+4. **Kayda geçen karşı görüş** (küresel danışman, dürüst haliyle): hiçbir
+   büyük panel nav'ında "Components" kullanmıyor (cPanel şemsiyesi
+   "Software", aaPanel "App Store"); Components, ESL-ağır büyüme pazarları
+   için en soyut aday ve Joomla'nın Components/Modules/Plugins üçlüsüyle
+   çakışıyor. Alternatifi "Software/Yazılımlar"dı. Hakem reddetti çünkü
+   "Software", entegrasyon cinsi (sunucuda yazılım olmayan Cloudflare
+   bağlantısı) doğduğu gün planlı tarihte yalanlaşır — "Servisler"i bugün
+   yanlış yapan hastalığın aynısı — ve satır/doküman için sayılabilir birim
+   adı vermez. Bulunabilirlik ya da destek-dili sorunu ÇIKARSA geri dönüş
+   adayı Software'dir; bu cümle o gün için yazıldı.
+
+**Neden şimdi.** Kalem sayısı yalnız artacak (modül/görev/entegrasyon yolda,
+mağaza yolda); yanlış adın üstüne alışkanlık ve doküman biriktirmek, düzeltme
+gününü pahalılaştırmaktan başka işe yaramaz. Şeytanın avukatının kendi çöküş
+koşulu da buydu: "servis olmayan satırlar çoğaldığında teslim olurum" — yol
+haritası tam bunu vaat ediyor.
+
+---
+
 ## D-015 · Eklenti pakettir, cins doğadır: mağaza hak verir kurmaz, çekirdek kataloğun sınırı para değil sorumluluktur, cins listesi açıktır
 
 *23 Temmuz 2026*

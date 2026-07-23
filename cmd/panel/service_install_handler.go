@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
@@ -149,25 +150,50 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		ServiceID string `json:"service_id"`
+		// Package: remove ONE version of a runtime (php8.3-fpm) instead of
+		// the whole component — the drawer's per-version Kaldır (B3d).
+		// Package: bileşenin bütünü yerine bir runtime'ın TEK sürümünü
+		// kaldır (php8.3-fpm) — çekmecenin sürüm başına Kaldır'ı (B3d).
+		Package string `json:"package,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
 		writeClientError(w, http.StatusBadRequest, "service_id is required")
 		return
 	}
 
-	// The mirror of "no DNS server, no domains" (D-009): while domains exist,
-	// the DNS server that serves their zones cannot be removed — otherwise
-	// every domain silently goes dark, the exact trap the rule exists to
-	// prevent.
-	// "DNS sunucusu yoksa domain de yok"un aynası (D-009): domain'ler varken
-	// zone'larını sunan DNS sunucusu kaldırılamaz — yoksa her domain sessizce
-	// kararır; kuralın önlediği tuzağın ta kendisi.
-	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "dns-server" {
-		var n int
-		_ = p.db.GetDB().QueryRowContext(r.Context(), `SELECT COUNT(*) FROM domains`).Scan(&n)
-		if n > 0 {
-			writeClientError(w, http.StatusConflict, fmt.Sprintf(
-				"%d domain(s) are served by this DNS server — a domain cannot exist without DNS. Delete the domains first.", n))
+	// Deletion protection (B3d): nothing is removed while something the
+	// panel knows about depends on it. The refusal names WHO blocks (D-014)
+	// — an admin must see what a click would break before deciding.
+	// Silme koruması (B3d): panelin bildiği bir şey ona muhtaçken hiçbir şey
+	// kaldırılmaz. Ret, KİMİN engellediğini adlandırır (D-014) — admin,
+	// tıklamanın neyi kıracağını görmeden karar vermemeli.
+	if req.Package != "" {
+		version := versionFromPackage(core.GetManagedServiceByID(req.ServiceID), req.Package)
+		if version == "" {
+			writeClientError(w, http.StatusBadRequest, "package does not name a removable version of this service")
+			return
+		}
+		count, blockers, err := runtimeVersionBlockers(r.Context(), p.db.GetDB(), req.ServiceID, version)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if count > 0 {
+			writeCodedErrorDetails(w, http.StatusConflict, errCodeRuntimeInUse,
+				fmt.Sprintf("%d site(s) run on version %s — switch them to another version first.", count, version),
+				"", blockers)
+			return
+		}
+	} else {
+		count, blockers, err := serviceDependents(r.Context(), p.db.GetDB(), req.ServiceID)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if count > 0 {
+			writeCodedErrorDetails(w, http.StatusConflict, errCodeServiceHasDependents,
+				fmt.Sprintf("%d thing(s) on this server depend on %s — remove or move them first.", count, req.ServiceID),
+				"", blockers)
 			return
 		}
 	}
@@ -179,8 +205,9 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := p.agentClient.Call("Agent.UninstallService",
 		&struct {
-			ID string `json:"id"`
-		}{ID: req.ServiceID}, &resp); err != nil {
+			ID      string `json:"id"`
+			Package string `json:"package,omitempty"`
+		}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
 		writeAgentError(w, err, "service uninstall")
 		return
 	}
@@ -200,6 +227,52 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// Removed service's ports should close; re-sync the firewall.
 	// Kaldırılan servisin portları kapanmalı; güvenlik duvarını yeniden senkronla.
 	p.syncFirewall()
-	p.audit(r, "service.uninstall:"+req.ServiceID, "service", 0)
+	// Refresh the scan cache so the page tells the truth immediately — the
+	// install path always did this; uninstall silently skipped it and the
+	// removed service kept its old row until someone pressed Scan.
+	// Tarama önbelleğini tazele ki sayfa hemen doğruyu söylesin — kurulum
+	// yolu bunu hep yapıyordu; kaldırma sessizce atlıyordu ve kaldırılan
+	// servis biri Tara'ya basana dek eski satırıyla kalıyordu.
+	if _, err := p.scanManagedServices(r.Context()); err != nil {
+		log.Printf("rescan after uninstall: %v", err)
+	}
+	p.audit(r, "service.uninstall:"+req.ServiceID+pkgSuffix(req.Package), "service", 0)
 	json.NewEncoder(w).Encode(map[string]any{"removed": resp.Removed, "detail": resp.Detail, "success": true})
+}
+
+// versionFromPackage maps a version-pick package back to the version sites
+// record: "php8.3-fpm" → "8.3". The service's own PackagePattern is the
+// gatekeeper — an arbitrary package name never reaches the agent.
+// versionFromPackage, sürüm-seçimli paketi sitelerin kaydettiği sürüme geri
+// eşler: "php8.3-fpm" → "8.3". Kapı bekçisi servisin kendi PackagePattern'i —
+// keyfi paket adı agent'a hiç ulaşmaz.
+func versionFromPackage(svc *core.ManagedService, pkg string) string {
+	if svc == nil || svc.Repo == nil || svc.Repo.PackagePattern == "" {
+		return ""
+	}
+	re, err := regexp.Compile(svc.Repo.PackagePattern)
+	if err != nil {
+		return ""
+	}
+	m := re.FindStringSubmatch(pkg)
+	if len(m) < 2 {
+		return ""
+	}
+	// Capture 1 is the version-bearing prefix ("php8.3"); the version is its
+	// digit tail. / 1. yakalama sürüm taşıyan önektir ("php8.3"); sürüm onun
+	// rakamla başlayan kuyruğudur.
+	prefix := m[1]
+	for i, r := range prefix {
+		if r >= '0' && r <= '9' {
+			return prefix[i:]
+		}
+	}
+	return ""
+}
+
+func pkgSuffix(pkg string) string {
+	if pkg == "" {
+		return ""
+	}
+	return ":" + pkg
 }

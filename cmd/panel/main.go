@@ -357,6 +357,7 @@ func main() {
 	// Node runtime management (admin-only via isAdminOnlyPath)
 	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)
 	http.HandleFunc("/api/v1/runtimes/node", panel.handleNodeRuntimes)
+	http.HandleFunc("/api/v1/runtimes/node/", panel.handleNodeRuntimeSub)
 
 	// cPanel importer (admin-only via isAdminOnlyPath)
 	// cPanel içe aktarıcı (isAdminOnlyPath ile yalnızca admin)

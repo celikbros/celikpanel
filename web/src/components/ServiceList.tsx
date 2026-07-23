@@ -3,7 +3,8 @@ import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud,
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, StatusDot, EmptyState, Button, SearchInput } from './ui';
+import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
+import { readApiError, type ApiError } from '../lib/apiError';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -219,23 +220,33 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 
     // Remove an installed service: stop + disable + purge via the agent, then
     // rescan. Shrinks the attack surface back down — the mirror of install.
+    // The dialog stays OPEN through the request (B3d): a refusal renders its
+    // evidence — who blocks — right where the decision is being made. It used
+    // to close first, so a 409 could only flash as a toast.
     // Kurulu bir servisi kaldır: agent ile durdur + devre dışı + purge, sonra
     // yeniden tara. Saldırı yüzeyini geri küçültür — kurulumun aynası.
+    // Modal istek boyunca AÇIK kalır (B3d): ret, kanıtını — kimin
+    // engellediğini — kararın verildiği yerde çizer. Eskiden önce kapanıyordu;
+    // 409 ancak toast olarak parlayıp sönebiliyordu.
+    const [uninstallError, setUninstallError] = useState<ApiError | null>(null);
     const doUninstall = async (service: ManagedService) => {
-        setUninstallTarget(null);
         setBusy(service.id);
+        setUninstallError(null);
         try {
             const res = await fetch('/api/v1/service/uninstall', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ service_id: service.id }),
             });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || 'uninstall failed');
+            if (!res.ok) {
+                setUninstallError(await readApiError(res));
+                return;
+            }
+            setUninstallTarget(null);
             showToast('success', t('services.uninstalled', { name: service.name }));
-            scan();
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+            loadServices();
+        } catch {
+            showToast('error', t('services.actionFailed'));
         } finally {
             setBusy(null);
         }
@@ -627,7 +638,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 <UninstallServiceDialog
                     service={uninstallTarget}
                     busy={busy === uninstallTarget.id}
-                    onCancel={() => setUninstallTarget(null)}
+                    error={uninstallError}
+                    onCancel={() => { setUninstallTarget(null); setUninstallError(null); }}
                     onConfirm={() => doUninstall(uninstallTarget)}
                 />
             )}
@@ -895,34 +907,89 @@ function VersionDrawer({
     const instances = service.instances ?? [];
     const tarball = isTarballRuntime(service);
     const blocked = (service.requires_missing?.length ?? 0) > 0;
-    const [newVersion, setNewVersion] = useState('');
-    const [installing, setInstalling] = useState(false);
+    const nodeInstallHere = tarball && service.id === 'node' && !blocked;
+    const [installing, setInstalling] = useState<string | null>(null);
 
-    // Exact-semver gate mirrors the agent's validation; the endpoint verifies
-    // the tarball against nodejs.org's official checksums before extracting.
-    // Tam-semver denetimi agent'ın doğrulamasının aynasıdır; uç nokta
-    // tarball'ı açmadan önce nodejs.org'un resmi sağlamalarıyla doğrular.
-    const versionOK = /^\d+\.\d+\.\d+$/.test(newVersion.trim());
-    const installVersion = async () => {
-        if (!versionOK || installing) return;
-        setInstalling(true);
+    // Named LTS options from the official index — the free-text semver box
+    // died with B3d: an operator picks "Node 24 (LTS)" the way they pick
+    // "PHP 8.3", they do not transcribe version numbers.
+    // Resmi dizinden adlandırılmış LTS seçenekleri — serbest semver kutusu
+    // B3d ile öldü: operatör "PHP 8.3" seçer gibi "Node 24 (LTS)" seçer,
+    // sürüm numarası kopyalamaz.
+    const [lts, setLts] = useState<{ version: string; name: string }[] | null>(null);
+    const [ltsFailed, setLtsFailed] = useState(false);
+    const loadLts = () => {
+        setLtsFailed(false);
+        setLts(null);
+        fetch('/api/v1/runtimes/node/lts')
+            .then((r) => (r.ok ? r.json() : Promise.reject()))
+            .then((d) => setLts(d?.releases ?? []))
+            .catch(() => setLtsFailed(true));
+    };
+    useEffect(() => {
+        if (nodeInstallHere) loadLts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodeInstallHere]);
+
+    const installVersion = async (version: string) => {
+        if (installing) return;
+        setInstalling(version);
         try {
             const res = await fetch('/api/v1/runtimes/node', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ version: newVersion.trim() }),
+                body: JSON.stringify({ version }),
             });
             const data = await res.json();
             if (!res.ok || data.error) throw new Error(data.error);
-            showToast('success', t('services.versionInstalled', { version: newVersion.trim() }));
-            setNewVersion('');
+            showToast('success', t('services.versionInstalled', { version }));
             onVersionInstalled();
         } catch (e) {
             showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
         } finally {
-            setInstalling(false);
+            setInstalling(null);
         }
     };
+
+    // Per-version removal (B3d) — the reason the drawer may offer delete at
+    // all: the panel refuses with the blocking-site list while anything runs
+    // on the version, and that refusal renders right here in the confirm
+    // dialog. php versions go through the package pick; node versions
+    // through their own endpoint. Unmanaged ("system") rows never get one.
+    // Sürüm başına kaldırma (B3d) — çekmecenin silme sunabilmesinin sebebi:
+    // sürümün üstünde bir şey koşarken panel, engelleyen-site listesiyle
+    // reddeder ve o ret tam burada, onay penceresinde çizilir. php sürümleri
+    // paket seçiminden, node sürümleri kendi ucundan gider. Yönetilmeyen
+    // ("sistem") satıra silme verilmez.
+    const [removeTarget, setRemoveTarget] = useState<ServiceInstance | null>(null);
+    const [removeError, setRemoveError] = useState<ApiError | null>(null);
+    const [removing, setRemoving] = useState(false);
+    const removeVersion = async (inst: ServiceInstance) => {
+        setRemoving(true);
+        setRemoveError(null);
+        try {
+            const res = inst.unit
+                ? await fetch('/api/v1/service/uninstall', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ service_id: service.id, package: inst.unit }),
+                  })
+                : await fetch(`/api/v1/runtimes/node/${inst.version}`, { method: 'DELETE' });
+            if (!res.ok) {
+                setRemoveError(await readApiError(res));
+                return;
+            }
+            setRemoveTarget(null);
+            showToast('success', t('services.versionRemoved', { version: inst.version }));
+            onVersionInstalled();
+        } catch {
+            showToast('error', t('services.actionFailed'));
+        } finally {
+            setRemoving(false);
+        }
+    };
+    const canRemove = (inst: ServiceInstance) =>
+        inst.managed && (inst.unit ? service.kind === 'runtime' : service.id === 'node');
 
     return (
         <div className="mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3">
@@ -962,9 +1029,9 @@ function VersionDrawer({
                                 {(inst.size_bytes ?? 0) > 0 && (
                                     <span className="text-xs text-fg-subtle">{fmtBytes(inst.size_bytes as number)}</span>
                                 )}
-                                {inst.unit && inst.managed && (
+                                {(inst.unit && inst.managed) || canRemove(inst) ? (
                                     <span className="ml-auto flex items-center gap-1">
-                                        {instRunning ? (
+                                        {inst.unit && inst.managed && (instRunning ? (
                                             <>
                                                 <ActionIcon
                                                     title={t('services.restart')}
@@ -992,9 +1059,19 @@ function VersionDrawer({
                                             >
                                                 <Play className="h-4 w-4" fill="currentColor" />
                                             </ActionIcon>
+                                        ))}
+                                        {canRemove(inst) && (
+                                            <ActionIcon
+                                                title={t('services.removeVersion')}
+                                                onClick={() => { setRemoveError(null); setRemoveTarget(inst); }}
+                                                disabled={removing}
+                                                tone="danger"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </ActionIcon>
                                         )}
                                     </span>
-                                )}
+                                ) : null}
                             </li>
                         );
                     })}
@@ -1018,25 +1095,71 @@ function VersionDrawer({
                         </div>
                     ) : (
                         <>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <input
-                                    value={newVersion}
-                                    onChange={(e) => setNewVersion(e.target.value)}
-                                    placeholder="24.18.0"
-                                    className="w-32 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                />
-                                <button
-                                    onClick={installVersion}
-                                    disabled={!versionOK || installing}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                >
-                                    <DownloadCloud className="h-3.5 w-3.5" />
-                                    {installing ? t('services.installing') : t('services.installVersion')}
-                                </button>
-                            </div>
+                            {lts === null && !ltsFailed && (
+                                <div className="text-sm text-fg-subtle">{t('services.ltsLoading')}</div>
+                            )}
+                            {ltsFailed && (
+                                <div className="flex flex-wrap items-center gap-3 text-sm text-fg-subtle">
+                                    {t('services.ltsFailed')}
+                                    <Button variant="secondary" onClick={loadLts}>{t('services.ltsRetry')}</Button>
+                                </div>
+                            )}
+                            {lts !== null && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {lts.map((rel) => {
+                                        const already = instances.some((i) => i.managed && i.version === rel.version);
+                                        const major = rel.version.split('.')[0];
+                                        return (
+                                            <button
+                                                key={rel.version}
+                                                onClick={() => installVersion(rel.version)}
+                                                disabled={already || installing !== null}
+                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
+                                            >
+                                                <DownloadCloud className="h-3.5 w-3.5" />
+                                                {installing === rel.version
+                                                    ? t('services.installing')
+                                                    : already
+                                                      ? t('services.ltsInstalled', { major })
+                                                      : `Node ${major} LTS · ${rel.version}`}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                             <div className="mt-1.5 text-xs text-fg-subtle">{t('services.nodeInstallHint')}</div>
                         </>
                     )}
+                </div>
+            )}
+            {removeTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRemoveTarget(null)}>
+                    <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex items-start gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                                <Trash2 className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="text-lg font-semibold text-fg">
+                                    {t('services.removeVersionTitle', { name: service.name, version: removeTarget.version })}
+                                </h3>
+                                <p className="text-sm text-fg-muted">{t('services.removeVersionWarn')}</p>
+                            </div>
+                        </div>
+                        {/* The refusal's evidence — the blocking sites — lands
+                            here, in the confirm dialog (B3d).
+                            Retin kanıtı — engelleyen siteler — buraya, onay
+                            penceresine düşer (B3d). */}
+                        <ErrorBanner error={removeError} className="mb-4" />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="secondary" onClick={() => setRemoveTarget(null)} disabled={removing}>
+                                {t('common.cancel')}
+                            </Button>
+                            <Button variant="danger" onClick={() => removeVersion(removeTarget)} disabled={removing} icon={Trash2}>
+                                {removing ? t('services.uninstalling') : t('services.removeVersion')}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -1052,11 +1175,13 @@ function VersionDrawer({
 function UninstallServiceDialog({
     service,
     busy,
+    error,
     onCancel,
     onConfirm,
 }: {
     service: ManagedService;
     busy: boolean;
+    error: ApiError | null;
     onCancel: () => void;
     onConfirm: () => void;
 }) {
@@ -1081,6 +1206,11 @@ function UninstallServiceDialog({
                         ))}
                     </div>
                 </div>
+                {/* A refusal shows its evidence HERE, where the decision is
+                    made — who blocks, line by line (B3d).
+                    Ret, kanıtını kararın verildiği yerde gösterir — kimin
+                    engellediği, satır satır (B3d). */}
+                <ErrorBanner error={error} className="mb-4" />
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
                     <Button variant="danger" onClick={onConfirm} disabled={busy} icon={Trash2}>

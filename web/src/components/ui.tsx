@@ -280,17 +280,32 @@ export function ErrorBanner({ error, className }: { error: ApiError | null; clas
     const actionLabel = apiErrorActionLabel(error, t);
     return (
         <div
-            className={`flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger ${className ?? ''}`}
+            className={`rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger ${className ?? ''}`}
         >
-            <span className="min-w-0 flex-1">{apiErrorText(error, t)}</span>
-            {error.action && (
-                <button
-                    type="button"
-                    onClick={() => navigate(error.action!)}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90"
-                >
-                    {actionLabel}
-                </button>
+            <div className="flex flex-wrap items-center gap-3">
+                <span className="min-w-0 flex-1">{apiErrorText(error, t)}</span>
+                {error.action && (
+                    <button
+                        type="button"
+                        onClick={() => navigate(error.action!)}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90"
+                    >
+                        {actionLabel}
+                    </button>
+                )}
+            </div>
+            {/* The refusal's evidence (B3d): who blocks, one line each — an
+                admin must see what a click would break. The "+N" tail is the
+                producer's honest truncation marker.
+                Retin kanıtı (B3d): kimin engellediği, satır satır — admin
+                tıklamanın neyi kıracağını görmeli. "+N" kuyruğu üreticinin
+                dürüst kesme işaretidir. */}
+            {error.details && error.details.length > 0 && (
+                <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto border-t border-danger/20 pt-2 font-mono text-xs">
+                    {error.details.map((d) => (
+                        <li key={d}>{d.startsWith('+') ? t('common.andMore', { n: d.slice(1) }) : d}</li>
+                    ))}
+                </ul>
             )}
         </div>
     );

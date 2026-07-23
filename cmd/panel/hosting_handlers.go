@@ -100,6 +100,21 @@ func (p *Panel) handleUpdateHosting(w http.ResponseWriter, r *http.Request, doma
 			writeClientError(w, http.StatusBadRequest, "start_command is required for node projects")
 			return
 		}
+		// The "system interpreter" escape is closed (B3d): a node site must
+		// name a panel-installed version. An unnamed interpreter is one the
+		// panel cannot list, size, update or refuse to delete — every
+		// protection built today would be blind to it. Existing sites saved
+		// with the old empty value keep running until their next edit.
+		// "Sistem yorumlayıcısı" kaçağı kapandı (B3d): node sitesi panelin
+		// kurduğu bir sürümü adlandırmalı. Adsız yorumlayıcıyı panel
+		// listeleyemez, ölçemez, güncelleyemez, silinmesini reddedemez —
+		// bugün kurulan her koruma ona kör kalırdı. Eski boş değerle
+		// kayıtlı siteler bir sonraki düzenlemeye dek çalışmayı sürdürür.
+		if strings.TrimSpace(req.RuntimeVersion) == "" {
+			writeCodedError(w, http.StatusBadRequest, errCodeRuntimeVersionRequired,
+				"pick a Node.js version installed by the panel", "/services")
+			return
+		}
 	case "forwarding":
 		if !strings.HasPrefix(req.ForwardTo, "http://") && !strings.HasPrefix(req.ForwardTo, "https://") {
 			writeClientError(w, http.StatusBadRequest, "forward_to must be an http(s) URL")

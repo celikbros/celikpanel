@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -211,4 +212,127 @@ func fetchNodeChecksum(client *http.Client, url, fileName string) (string, error
 		}
 	}
 	return "", fmt.Errorf("no checksum entry for %s", fileName)
+}
+
+// --- B3d: per-version removal + upstream LTS list ---
+// --- B3d: sürüm başına kaldırma + kaynak LTS listesi ---
+
+type NodeRemoveRequest struct {
+	Version string `json:"version"`
+}
+
+type NodeRemoveResponse struct {
+	Removed bool   `json:"removed"`
+	Error   string `json:"error,omitempty"`
+}
+
+// RemoveNodeVersion deletes ONE managed runtime tree. The semver gate plus
+// the fixed base directory mean the path cannot name anything but a tree we
+// installed; usage checks (who runs on it) are the panel's job — the agent
+// stays tenant-blind. Idempotent: removing an absent version reports removed.
+// RemoveNodeVersion, yönetilen TEK runtime ağacını siler. Semver kapısı +
+// sabit taban dizini, yolun bizim kurduğumuz bir ağaçtan başkasını
+// adlandıramamasını sağlar; kullanım denetimi (üstünde kim koşuyor) panelin
+// işidir — agent kiracı-kördür. Idempotent: olmayan sürümü kaldırmak
+// kaldırıldı bildirir.
+func (a *Agent) RemoveNodeVersion(req *NodeRemoveRequest, resp *NodeRemoveResponse) error {
+	if !nodeVersionRe.MatchString(req.Version) {
+		resp.Error = "not a valid node version"
+		return nil
+	}
+	dir := filepath.Join(runtimesBaseDir, "node", req.Version)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		resp.Removed = true
+		return nil
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		resp.Error = fmt.Sprintf("could not remove %s: %v", req.Version, err)
+		return nil
+	}
+	resp.Removed = true
+	return nil
+}
+
+type NodeLTSRelease struct {
+	Version string `json:"version"` // "24.18.0"
+	Name    string `json:"name"`    // LTS codename, e.g. "Krypton"
+}
+
+type NodeLTSResponse struct {
+	Releases []NodeLTSRelease `json:"releases"`
+	Error    string           `json:"error,omitempty"`
+}
+
+// ListNodeLTS fetches the official release index and returns the newest
+// build of each LTS line, newest line first — the drawer's named install
+// options. The free-text version box died with B3d: an operator should pick
+// "Node 24 (LTS)" the way they pick "PHP 8.3", not transcribe semvers.
+// ListNodeLTS, resmi sürüm dizinini çeker ve her LTS hattının en yeni
+// yapımını, en yeni hat önce döndürür — çekmecenin adlandırılmış kurulum
+// seçenekleri. Serbest sürüm kutusu B3d ile öldü: operatör "PHP 8.3" seçer
+// gibi "Node 24 (LTS)" seçmeli, semver kopyalamamalı.
+func (a *Agent) ListNodeLTS(_ *struct{}, resp *NodeLTSResponse) error {
+	client := &http.Client{Timeout: 20 * time.Second}
+	res, err := client.Get("https://nodejs.org/dist/index.json")
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		resp.Error = fmt.Sprintf("HTTP %d", res.StatusCode)
+		return nil
+	}
+	body, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	releases, err := parseNodeLTS(body)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	resp.Releases = releases
+	return nil
+}
+
+// parseNodeLTS: index entries carry lts as EITHER false OR a codename string
+// — a deliberately mixed-type JSON field, hence json.RawMessage. The index
+// is newest-first per line, so the first entry seen for a major is its
+// newest build. Capped at 4 lines: the drawer offers choices, not an archive.
+// parseNodeLTS: dizin kayıtlarında lts alanı YA false YA kod adı dizesidir —
+// bilerek karışık tipli bir JSON alanı, bu yüzden json.RawMessage. Dizin hat
+// başına en-yeni-önce sıralıdır; bir major için görülen ilk kayıt en yeni
+// yapımıdır. 4 hatla sınırlı: çekmece arşiv değil seçenek sunar.
+func parseNodeLTS(body []byte) ([]NodeLTSRelease, error) {
+	var raw []struct {
+		Version string          `json:"version"` // "v24.18.0"
+		LTS     json.RawMessage `json:"lts"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, fmt.Errorf("release index unreadable: %v", err)
+	}
+	seen := map[string]bool{}
+	out := []NodeLTSRelease{}
+	for _, r := range raw {
+		var name string
+		if json.Unmarshal(r.LTS, &name) != nil || name == "" {
+			continue // lts:false ya da beklenmedik tip
+		}
+		v := strings.TrimPrefix(r.Version, "v")
+		if !nodeVersionRe.MatchString(v) {
+			continue
+		}
+		major := v[:strings.Index(v, ".")]
+		if seen[major] {
+			continue
+		}
+		seen[major] = true
+		out = append(out, NodeLTSRelease{Version: v, Name: name})
+		if len(out) == 4 {
+			break
+		}
+	}
+	return out, nil
 }

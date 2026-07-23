@@ -8,6 +8,53 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-016 · The page is named Components; the glossary is pinned; the service definition is refined
+
+*July 23, 2026 — 5-consultant panel (market, TR-UX, information architecture, devil's advocate, global/localization) + judge synthesis; operator approved*
+
+**Decision.**
+1. **The page is renamed NOW:** EN **Components** · TR **Bileşenler**. The
+   `/services` route stays. Four of five consultants independently concluded
+   the current name is already false (industry-wide, Services = daemons; the
+   page holds PHP, phpMyAdmin, nftables) and the rename cost only grows as
+   users and docs accumulate.
+2. **Glossary** (the store is born into these words; the umbrella is never
+   re-litigated): umbrella **component/bileşen** · kinds: **Service/Servis** ·
+   **Runtime/Çalışma Ortamı** (short badge form "Ortam") · **Tool/Araç** ·
+   future **Module/Modül**, **Task/Görev**, **Integration/Entegrasyon** ·
+   store: EN **Store**, TR **Mağaza** (page title "Bileşen Mağazası").
+   "Service" lives on as the default kind filter — support language ("restart
+   the service") keeps working.
+3. **The service definition is refined** (the operator's "start/stop-able =
+   service" test is directionally right, not literal): *a service is a
+   component that owns a resident process whose being down is an incident in
+   itself.* Two counterexamples from our own catalog: nftables accepts
+   start/stop via a oneshot unit yet leaves no resident process (correctly a
+   tool; oneshots deserve an "applied/not applied" state, never a running
+   dot), and php-fpm ships real daemons yet is a runtime because its primary
+   job is per-site version choice. "Has a controllable unit" is an ORTHOGONAL
+   capability, not a kind: start/stop buttons draw from that capability on
+   any row, including inside the version drawer.
+4. **Recorded dissent** (the global consultant, stated fairly): no major
+   panel uses "Components" in its nav (cPanel's umbrella is "Software",
+   aaPanel's is "App Store"); Components is the most abstract candidate for
+   ESL-heavy growth markets and collides with Joomla's
+   Components/Modules/Plugins. Its alternative was "Software". The judge
+   rejected it because "Software" goes false on a known schedule — the day
+   the integration kind (a Cloudflare connection, not software on the
+   server) is born, the exact disease that broke "Services" — and it offers
+   no countable row/doc noun. IF findability or ticket-language problems
+   surface, the fallback candidate is Software; this sentence exists for
+   that day.
+
+**Why now.** The item count only grows (module/task/integration are mapped,
+the store is coming); letting habit and docs pile onto a wrong name does
+nothing but make the correction day more expensive. That was the devil's
+advocate's own collapse condition: "I concede once non-service rows
+multiply" — the roadmap promises exactly that.
+
+---
+
 ## D-015 · An extension is a package, a kind is a nature: the store grants but never installs, the core catalog's boundary is responsibility not price, and the kind list is open
 
 *July 23, 2026*
