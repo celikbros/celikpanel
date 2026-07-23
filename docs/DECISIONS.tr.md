@@ -106,6 +106,24 @@ gerekçesi yanlış ifade edilmişti (fiyat değil sorumluluk). Danışmanın
 "gerçek sunucuda kontrol" bölümü (list-unit-files, ss -lntup) taramanın
 bugün yaptığının aynısıdır — dış doğrulama olarak kayda geçer.
 
+**Ek (24 Tem — operatörün sınır bekçiliği üzerine): çekirdeğin ölçüsü.**
+Operatör sordu: "hayati servisler dışındaki her şey önce mağazada durup
+istenince kataloğa geçmeyecek miydi? Yüzlerce program Components'e girerse
+kargaşa olmaz mı?" Doğru hatırlıyor ve sınır şimdi sayıya bağlanıyor:
+- **Çekirdek = rol başına varsayılan + 1-2 adlandırılmış alternatif.**
+  (web: nginx+Apache · DNS: PowerDNS+BIND · SMTP: Postfix+Exim · spam:
+  SpamAssassin+Rspamd · webmail: Roundcube …) Hedef ONLARCA kalem; asla
+  yüzlerce. 23-24 Tem eklemeleri (rspamd, exim) bu sınıfa girer — uzun
+  kuyruk değil, koltuk üyesi.
+- **Uzun kuyruk mağazada yaşar** (ücretsizse tek tık "ekle" ile edinilir ve
+  kataloğda belirir — 2. madde zaten böyle diyordu; sayı disiplini artık
+  açık). SOGo gibi büyük grupware çekirdeğe GİRMEZ, mağazayı bekler; netdata
+  sınırdadır (izleme rolünü panelin kendi sayfası karşılıyor) ve mağaza
+  doğduğunda oraya taşınmaya adaydır.
+- Kargaşanın bugünkü freni de kayıtta kalsın: varsayılan görünüm yalnız
+  kuruluları gösterir (D-010, kurulu-önce); katalog düğmenin arkasındadır.
+  Ama ölçek sigortası görünüm değil, mağaza kapısıdır.
+
 **Reddedilen alternatifler.**
 - **Danışmanın 7 biçimini bugün 7 cins yapmak:** elimizde modül, timer ve
   entegrasyon KALEMI yokken şema spekülatif olurdu; cins ilk kalemiyle

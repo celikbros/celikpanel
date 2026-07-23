@@ -113,6 +113,25 @@ responsibility). The consultant's "verify on a real server" section
 (list-unit-files, ss -lntup) is exactly what the scan already does —
 recorded as external validation.
 
+**Addendum (Jul 24 — on the operator's boundary-keeping): the core's measure.**
+The operator asked: "wasn't everything except vital services supposed to sit
+in the store first and enter the catalog on demand? won't hundreds of
+programs in Components be chaos?" They remember correctly, and the boundary
+now gets a number:
+- **Core = one default + 1-2 named alternatives per role.** (web:
+  nginx+Apache · DNS: PowerDNS+BIND · SMTP: Postfix+Exim · spam:
+  SpamAssassin+Rspamd · webmail: Roundcube …) Target: TENS of items; never
+  hundreds. The Jul 23-24 additions (rspamd, exim) are of this class — seat
+  members, not long tail.
+- **The long tail lives in the store** (free items acquired with one click
+  and then appearing in the catalog — clause 2 already said so; the size
+  discipline is now explicit). Large groupware like SOGo does NOT enter the
+  core and waits for the store; netdata is borderline (the monitoring role
+  is covered by the panel's own page) and is a candidate to move there.
+- Today's chaos brake stays on record too: the default view shows installed
+  items only (D-010, installed-first); the catalog sits behind a button.
+  But the scale insurance is the store gate, not the view.
+
 **Rejected alternatives.**
 - **Making the consultant's 7 shapes 7 kinds today:** with zero module,
   timer or integration ITEMS on hand the schema would be speculative; a
