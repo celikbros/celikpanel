@@ -49,6 +49,8 @@ uçtan uca kanıtlı (tek gerçek varlığımız). Sorunlar mimari değil: diki�
 - ⬜ Koku: `docs/CelikPanel Pano.html` 813KB blob — tasarım referansı; bilinçli tutuluyor, büyürse LFS/link.
 - ⬜ Koku: `en.ts` 900+ anahtar tek dosya + **dizgide kesme işareti derlemeyi bozar** — katkı tuzağı; B4 sırasında en azından belgeli lint.
 - ⬜ Koku: `cmd/debug_mariadb/main.go` — hiçbir yerden referanssız debug binary'si (`go build ./...` yine de derliyor). Ölü; gömülecek adaylardan (11 Tem taramasında bulundu).
+- ⬜ Koku: **Add-ons sayfası yer tutucu ürünlerle yaşıyor** (operatör, 23 Tem: "seçip yükleyebileceğim bir şey yok, saçma sapan bir sayfa, tasarımı bile berbat"). Sayfanın gerçek işlevi hak verme (subscription_entitlements — VPN gibi özellikler hakla açılıyor) ama ürünler uydurma fiyatlı kabuklar ve kurulum/Bileşenler dünyasıyla bağı yok. Karar gereği (D-012/D-015) bu sayfa Mağaza doğduğunda onun "hak" katmanına katlanır; Mağaza işine başlarken bu eleştiri tasarım girdisidir, ondan önce cilalamaya değmez.
+- ⬜ Koku: **DNS yazılımı değişim akışı yok.** pdns↔bind aynı koltuk (53 portu) — dışlama doğru; ama B3d bekçisi domain'ler varken DNS kaldırmayı (haklı olarak) engellediği için, domain'i olan bir sunucuda DNS yazılımını DEĞİŞTİRMENİN artık hiçbir yolu yok. cPanel bunu zone taşıyarak çözer (nameserver selection). İleride "değiştir" akışı: yeniyi kur → zone'ları senkronla → eskiyi kaldır. Talep doğana dek kayıt yeter.
 - ⬜ Koku: agent'ta 128 `exec.Command`, 0 interface — ROADMAP'teki BSD notunun "kod zaten böyle yazılıyor" cümlesi iyimser; taşınabilirlik iddiası RPC yüzeyiyle sınırlı. Yeni RPC yazan: exec'leri fonksiyon sonuna toplayın, "ne/nasıl" ayrımını gerçekten uygulayın.
 
 ## D. Felsefe ihlalleri (anayasa vs. kod)
