@@ -910,6 +910,81 @@ function VersionDrawer({
     const nodeInstallHere = tarball && service.id === 'node' && !blocked;
     const [installing, setInstalling] = useState<string | null>(null);
 
+    // Package-repo runtimes (php-fpm via Sury): installing an ADDITIONAL
+    // version happens here too — before this, the version-pick dialog only
+    // appeared while the service was NOT installed, so with 8.4 on the
+    // machine there was no panel path to add 7.4 for a legacy site (caught
+    // by the operator, 23 Jul). Same single-address rule as node: install
+    // and remove live in the drawer.
+    // Paket-depolu runtime'lar (Sury'li php-fpm): EK sürüm kurmak da burada —
+    // bundan önce sürüm seçtiren pencere yalnız servis KURULU DEĞİLKEN
+    // çıkıyordu; makinede 8.4 varken eski bir site için 7.4 eklemenin
+    // panelden yolu yoktu (operatör yakaladı, 23 Tem). Node'la aynı
+    // tek-adres kuralı: kur da kaldır da çekmecede.
+    const [repo, setRepo] = useState<RepoInfo | null>(null);
+    const [repoBusy, setRepoBusy] = useState(false);
+    useEffect(() => {
+        if (tarball || service.kind !== 'runtime') return;
+        fetch(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d: RepoInfo | null) => setRepo(d && d.available ? d : null))
+            .catch(() => {});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [service.id]);
+
+    const enableRepo = async () => {
+        setRepoBusy(true);
+        try {
+            const res = await fetch('/api/v1/repo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: service.id, action: 'enable' }),
+            });
+            const d = await res.json();
+            if (!res.ok || d.error) throw new Error(d.error);
+            setRepo(d);
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setRepoBusy(false);
+        }
+    };
+
+    const installPackage = async (pkg: string, version: string) => {
+        if (installing) return;
+        setInstalling(pkg);
+        try {
+            const res = await fetch('/api/v1/service/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service_id: service.id, package: pkg }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error);
+            showToast('success', t('services.versionInstalled', { version }));
+            onVersionInstalled();
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } finally {
+            setInstalling(null);
+        }
+    };
+
+    // "php8.2-fpm" → "8.2". / "php8.2-fpm" → "8.2".
+    const pkgVersion = (pkg: string) => /([0-9]+\.[0-9]+)/.exec(pkg)?.[1] ?? '';
+    // Every PHP line below 8.2 is past upstream security support in mid-2026.
+    // A static threshold is honest enough until a maintained EOL table exists
+    // (B4 note); the point is that a legacy line is never offered unlabeled.
+    // 8.2 altındaki her PHP hattı 2026 ortasında güvenlik desteğinin dışında.
+    // Bakımlı bir EOL tablosu gelene dek (B4 notu) sabit eşik yeterince
+    // dürüst; mesele eski hattın asla etiketsiz sunulmaması.
+    const isEOL = (version: string) => {
+        const m = /^([0-9]+)\.([0-9]+)$/.exec(version);
+        if (!m) return false;
+        const [maj, min] = [Number(m[1]), Number(m[2])];
+        return maj < 8 || (maj === 8 && min < 2);
+    };
+
     // Named LTS options from the official index — the free-text semver box
     // died with B3d: an operator picks "Node 24 (LTS)" the way they pick
     // "PHP 8.3", they do not transcribe version numbers.
@@ -1076,6 +1151,54 @@ function VersionDrawer({
                         );
                     })}
                 </ul>
+            )}
+            {/* Additional versions for a repo-backed runtime (php via Sury).
+                Not-yet-installed lines render as install buttons; EOL lines
+                are labeled, never hidden — a legacy site is a legitimate
+                reason, an unlabeled trap is not.
+                Depo-destekli runtime'da ek sürümler (Sury'li php). Kurulu
+                olmayan hatlar kurulum düğmesi olur; EOL hatlar etiketlenir,
+                asla gizlenmez — eski site meşru sebeptir, etiketsiz tuzak
+                değildir. */}
+            {!tarball && repo && (
+                <div className="mt-2 border-t border-border/60 pt-3">
+                    {!repo.enabled ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-xs text-fg-subtle">{t('services.repo.note')}</span>
+                            <Button variant="secondary" onClick={enableRepo} disabled={repoBusy}>
+                                {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {(repo.packages ?? []).map((pkg) => {
+                                    const v = pkgVersion(pkg);
+                                    const already = instances.some((i) => i.managed && i.version === v);
+                                    if (!v || already) return null;
+                                    return (
+                                        <button
+                                            key={pkg}
+                                            onClick={() => installPackage(pkg, v)}
+                                            disabled={installing !== null}
+                                            title={isEOL(v) ? t('services.eolHint') : pkg}
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
+                                        >
+                                            <DownloadCloud className="h-3.5 w-3.5" />
+                                            {installing === pkg ? t('services.installing') : `${service.name} ${v}`}
+                                            {isEOL(v) && (
+                                                <span className="rounded bg-warning/15 px-1 py-0.5 text-[10px] font-bold uppercase text-warning">
+                                                    {t('services.eolBadge')}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-1.5 text-xs text-fg-subtle">{t('services.phpVersionsHint')}</div>
+                        </>
+                    )}
+                </div>
             )}
             {/* The install endpoint is node-specific today; when a second
                 tarball runtime arrives the endpoint generalizes and this id
