@@ -110,6 +110,26 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Installing a web server is only half done until it can actually serve
+	// the panel's vhosts, db-tools and webmail. Debian's nginx already
+	// includes the drop-in dirs; Arch's does not (its minimal nginx.conf) —
+	// so "installed" would be a lie there until the includes are wired. A web
+	// server that cannot serve is not installed (operator, 24 Jul).
+	// Bir web sunucusu kurmak da, panelin vhost'larını, db-araçlarını ve
+	// webmail'ini fiilen sunana dek yarım kalır. Debian'ın nginx'i drop-in
+	// dizinlerini zaten dahil eder; Arch'ınki (minimal nginx.conf) etmez —
+	// yani include'lar bağlanana dek "kurulu" orada yalan olurdu. Sunamayan
+	// bir web sunucusu kurulu değildir (operatör, 24 Tem).
+	if req.ServiceID == "nginx" {
+		var nrResp struct {
+			Ready bool   `json:"ready"`
+			Error string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.EnsureNginxReady", &struct{}{}, &nrResp); err != nil || nrResp.Error != "" {
+			log.Printf("nginx ready after install: %v %s", err, nrResp.Error)
+		}
+	}
+
 	// Installing the mail stack is likewise only half done until postfix and
 	// dovecot are wired to the panel's virtual mailboxes.
 	// Mail yığınını kurmak da, postfix ve dovecot panelin sanal posta
