@@ -269,7 +269,10 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
   kataloğu kurulurken her kategoride yerleşiğin yanına modern FOSS alternatifi bilinçle aranır.
   İlk adaylar: **grommunio** (tam Exchange alternatifi: MAPI/EAS/EWS + web arayüzü — Kopano
   soyundan; kendi vendor deposuyla gelir, ağır yığın [MariaDB+nginx+PHP+gromox servisleri], D-015
-  eki gereği ÇEKİRDEĞE DEĞİL mağazaya; SOGo'ya modern rakip) · Stalwart (tek-binary modern posta
+  eki gereği ÇEKİRDEĞE DEĞİL mağazaya; SOGo'ya modern rakip. DB gerçeği doğrulandı [24 Tem,
+  docs.grommunio.com]: merkez dizin YALNIZ MariaDB/MySQL — PostgreSQL yok — ve gromox o DB'de
+  yalnız SELECT,UPDATE ister; postalar kutu başına SQLite [exchange.sqlite3+midb.sqlite3], çoklu
+  sunucu aynı MariaDB'yi paylaşabilir → kaydı `Requires: mariadb` taşır) · Stalwart (tek-binary modern posta
   sunucusu) · restic/borg (yedekleme) · Uptime Kuma (izleme). Her aday, girmeden önce canlı
   paket/depo doğrulamasından geçer (Buypass dersi: dış uç da bayatlıyor).
 
