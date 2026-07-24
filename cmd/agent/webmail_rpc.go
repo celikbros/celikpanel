@@ -347,28 +347,54 @@ func phpHasSQLite() bool {
 // çalışır).
 func ensurePHPSQLite(phpVer string) error {
 	family := detectPkgFamily()
-	var pkgs []string
 	switch family {
-	case "apt":
-		pkgs = []string{fmt.Sprintf("php%s-sqlite3", phpVer)}
+	case "apt", "dnf":
+		if phpVer == "" {
+			return fmt.Errorf("PHP version could not be detected")
+		}
+		// Debian/RHEL: the per-version package auto-enables via conf.d.
+		// Debian/RHEL: sürüm-başına paket conf.d ile kendini etkinleştirir.
+		if _, err := installPackages(family, []string{fmt.Sprintf("php%s-sqlite3", phpVer)}); err != nil {
+			return err
+		}
 	case "pacman":
-		pkgs = []string{"php-sqlite"}
-	case "dnf":
-		pkgs = []string{fmt.Sprintf("php%s-sqlite3", phpVer)}
+		// Arch ships the .so but does NOT enable it — its philosophy leaves
+		// that to the operator (caught live: package installed, `php -m` still
+		// had no sqlite). Enable it ourselves via a scanned conf.d drop-in.
+		// Arch .so'yu getirir ama etkinleştirMEZ — felsefesi bunu operatöre
+		// bırakır (canlıda yakalandı: paket kurulu, `php -m`'de hâlâ sqlite
+		// yok). Taranan bir conf.d drop-in ile kendimiz etkinleştiririz.
+		if _, err := installPackages(family, []string{"php-sqlite"}); err != nil {
+			return err
+		}
+		for _, dir := range []string{"/etc/php/conf.d", "/etc/php8/conf.d", "/etc/php/php.d"} {
+			if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+				_ = os.WriteFile(filepath.Join(dir, "celikpanel-sqlite.ini"),
+					[]byte("extension=pdo_sqlite\nextension=sqlite3\n"), 0o644)
+				break
+			}
+		}
 	default:
 		return fmt.Errorf("unsupported package manager for this distro")
 	}
-	if _, err := installPackages(family, pkgs); err != nil {
-		return err
-	}
-	// Best-effort reload; the extension is loadable regardless, and a failed
-	// reload must not fail the install.
-	// En-iyi-çaba yeniden yükleme; uzantı yine de yüklenebilir ve başarısız
-	// bir reload kurulumu bozmamalı.
+
+	// Reload FPM so a served request sees the new extension. Best-effort — the
+	// CLI initdb that follows picks it up regardless of the reload.
+	// Sunulan istek yeni uzantıyı görsün diye FPM'i yeniden yükle. En-iyi-çaba
+	// — ardından gelen CLI initdb reload'dan bağımsız uzantıyı alır.
 	if phpVer != "" && family == "apt" {
 		_ = exec.Command("systemctl", "reload", "php"+phpVer+"-fpm").Run()
 	} else {
 		_ = exec.Command("systemctl", "reload", "php-fpm").Run()
+	}
+
+	// Verify the driver is actually loadable now — better a clear failure here
+	// than a cryptic "could not find driver" from initdb two steps later.
+	// Sürücünün artık gerçekten yüklenebilir olduğunu doğrula — iki adım sonra
+	// initdb'den gelen anlaşılmaz "could not find driver" yerine burada net
+	// bir başarısızlık iyidir.
+	if !phpHasSQLite() {
+		return fmt.Errorf("installed but the pdo_sqlite driver is still not loadable")
 	}
 	return nil
 }
