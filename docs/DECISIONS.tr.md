@@ -326,6 +326,12 @@ zinciri anlamlı kılan önkoşuldur.
 
 *21 Temmuz 2026*
 
+**Durum: UYGULANDI (24 Tem).** Ekran artık yalnız amacı soruyor (Web sitesi /
+Yalnız DNS); PHP sürüm seçici oluşturmadan tamamen kalktı ve web sitesi için
+PHP ön koşul olmaktan çıktı — PHP'siz sunucu da site barındırabiliyor. Kabloda
+proje tipi "static" gider (PHP'nin kapalı hâli); sunucu sözleşmesi değişmedi.
+Canlı doğrulama: Boston'da site oluşturuldu ve anında sunuldu (HTTP 200).
+
 **Karar.** "Alan adı ekle" ekranı **"ne çalışacak?"** sorusunu sormayı bırakır.
 Sorduğu tek şey amaçtır: **web sitesi · yalnız posta · yalnız DNS**. Runtime
 (PHP açık/kapalı + sürüm, Node/proxy modu, port, başlangıç dosyası) oluşturmadan
