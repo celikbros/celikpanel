@@ -122,6 +122,22 @@ func (a *Agent) RestartService(args *transport.ServiceArgs, reply *bool) error {
 	return nil
 }
 
+// ResetFailedUnit clears a unit's "failed" state so it can be started again.
+// A unit that failed once (e.g. Dovecot before its TLS cert existed) stays
+// failed until reset, so a later, correct start would be refused and a fixed
+// install would still look broken. Best-effort: a unit that was never failed
+// resets harmlessly.
+// ResetFailedUnit, bir unit'in "failed" durumunu temizler; böylece yeniden
+// başlatılabilir. Bir kez başarısız olan unit (örn. TLS sertifikası yokken
+// Dovecot) sıfırlanana dek failed kalır; sonraki doğru başlatma reddedilir ve
+// düzeltilmiş bir kurulum yine bozuk görünürdü. En-iyi-çaba: hiç başarısız
+// olmamış unit zararsızca sıfırlanır.
+func (a *Agent) ResetFailedUnit(args *transport.ServiceArgs, reply *bool) error {
+	_ = exec.Command("systemctl", "reset-failed", args.ServiceName).Run()
+	*reply = true
+	return nil
+}
+
 func main() {
 	log.Println("Starting CelikPanel Agent...")
 

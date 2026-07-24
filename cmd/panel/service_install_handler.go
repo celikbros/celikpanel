@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // handleServiceInstall installs a managed service on demand (admin-only via
@@ -141,6 +142,22 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := p.agentClient.Call("Agent.ConfigureMailStack", &struct{}{}, &mailResp); err != nil || mailResp.Error != "" {
 			log.Printf("mail stack configure after install: %v %s", err, mailResp.Error)
+		}
+		// The agent starts a unit the moment its package lands, which is BEFORE
+		// this configuration ran — on Arch that first start failed (no TLS cert
+		// yet) and systemd left the service in "failed", so a correct install
+		// still looked broken. Configuration is done now, so start it again;
+		// systemd needs the failed state cleared first.
+		// Agent, paketi düşer düşmez unit'i başlatır; bu, bu yapılandırmadan
+		// ÖNCEdir — Arch'ta o ilk başlatma başarısız oluyordu (henüz TLS
+		// sertifikası yok) ve systemd servisi "failed"de bırakıyordu; doğru bir
+		// kurulum yine de bozuk görünüyordu. Yapılandırma bitti, tekrar başlat;
+		// systemd önce failed durumunun temizlenmesini ister.
+		unit := req.ServiceID
+		var ok bool
+		_ = p.agentClient.Call("Agent.ResetFailedUnit", &transport.ServiceArgs{ServiceName: unit}, &ok)
+		if err := p.agentClient.Call("Agent.StartService", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
+			log.Printf("mail service start after configure: %v", err)
 		}
 	}
 
