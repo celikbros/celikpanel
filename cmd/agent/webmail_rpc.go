@@ -59,6 +59,36 @@ func roundcubeInstalled() bool {
 	return fileExistsAgent(filepath.Join(webmailBaseDir, "public_html", "index.php"))
 }
 
+// detectFPMSocket finds the default PHP-FPM socket across distros — Debian
+// puts a versioned socket under /run/php (php8.4-fpm.sock), Arch a single one
+// under /run/php-fpm. Its existence is the honest "is PHP-FPM running here"
+// signal: services.DetectInstalledPHPVersion reads /etc/php/<v>/fpm and so
+// returns "" on Arch even when PHP-FPM is up (caught live: Roundcube refused
+// on Arch with "PHP-FPM is not installed", and /webmail/ 502'd on the wrong
+// socket path). One probe answers both "installed?" and "where?".
+// detectFPMSocket, varsayılan PHP-FPM soketini dağıtımlar arası bulur —
+// Debian /run/php altında sürümlü bir soket koyar (php8.4-fpm.sock), Arch
+// /run/php-fpm altında tek bir tane. Varlığı, dürüst "burada PHP-FPM çalışıyor
+// mu" sinyalidir: services.DetectInstalledPHPVersion /etc/php/<v>/fpm okur ve
+// Arch'ta PHP-FPM ayakta olsa bile "" döner (canlıda yakalandı: Roundcube
+// Arch'ta "PHP-FPM is not installed" ile reddetti, /webmail/ yanlış soket
+// yolunda 502 verdi). Tek yoklama hem "kurulu mu?" hem "nerede?" cevabı.
+func detectFPMSocket() string {
+	patterns := []string{
+		"/run/php/php*-fpm.sock",    // Debian, versioned default www pool
+		"/run/php-fpm/php-fpm.sock", // Arch
+		"/run/php/php-fpm.sock",     // some layouts
+		"/var/run/php/php*-fpm.sock",
+		"/var/run/php-fpm/php-fpm.sock",
+	}
+	for _, pat := range patterns {
+		if m, _ := filepath.Glob(pat); len(m) > 0 {
+			return m[len(m)-1] // newest-versioned last, e.g. php8.4 over php8.3
+		}
+	}
+	return ""
+}
+
 type InstallRoundcubeResponse struct {
 	Installed bool   `json:"installed"`
 	Version   string `json:"version"`
@@ -77,11 +107,19 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 		resp.Installed = true
 		return nil
 	}
-	phpVer := services.DetectInstalledPHPVersion()
-	if phpVer == "" {
+	// PHP-FPM presence is the socket's existence — portable across distros,
+	// unlike the /etc/php version read. phpVer may still be "" on Arch and
+	// that is fine: it is only used to name Debian's per-version sqlite
+	// package, and Arch's sqlite package is unversioned.
+	// PHP-FPM varlığı soketin varlığıdır — /etc/php sürüm okumasının aksine
+	// dağıtımlar arası taşınabilir. phpVer Arch'ta yine "" olabilir ve bu
+	// sorun değil: yalnız Debian'ın sürüm-başına sqlite paketini adlandırmak
+	// için kullanılır, Arch'ın sqlite paketi sürümsüzdür.
+	if detectFPMSocket() == "" {
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
+	phpVer := services.DetectInstalledPHPVersion()
 
 	url := fmt.Sprintf("https://github.com/roundcube/roundcubemail/releases/download/%s/roundcubemail-%s-complete.tar.gz",
 		roundcubeVersion, roundcubeVersion)
@@ -417,16 +455,17 @@ func (a *Agent) ConfigureWebmail(_ *struct{}, resp *ConfigureWebmailResponse) er
 	}
 	resp.Present = true
 
-	// Roundcube is PHP: hand .php to the installed PHP version's default FPM
-	// pool. The path is version-dependent, so detect — never assume.
-	// Roundcube PHP'dir: .php'yi kurulu PHP sürümünün varsayılan FPM havuzuna
-	// ver. Yol sürüme bağlıdır; tespit et — asla varsayma.
-	phpVer := services.DetectInstalledPHPVersion()
-	if phpVer == "" {
+	// Roundcube is PHP: hand .php to the default FPM socket. Detected across
+	// distros (Debian /run/php/php<v>-fpm.sock, Arch /run/php-fpm/php-fpm.sock)
+	// — never assume the Debian path.
+	// Roundcube PHP'dir: .php'yi varsayılan FPM soketine ver. Dağıtımlar arası
+	// tespit edilir (Debian /run/php/php<v>-fpm.sock, Arch
+	// /run/php-fpm/php-fpm.sock) — Debian yolunu asla varsayma.
+	socket := detectFPMSocket()
+	if socket == "" {
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
-	socket := fmt.Sprintf("/run/php/php%s-fpm.sock", phpVer)
 
 	// Path-preserving: the browser path (/webmail/…) and this server's path
 	// are identical, so Roundcube's own absolute URLs survive the panel proxy
