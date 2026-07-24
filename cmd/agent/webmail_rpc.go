@@ -220,10 +220,24 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	// grubuna ver; tam o üç dizini grup-yazılabilir yap — asla herkese değil.
 	if grp := webServerGroup(); grp != "" {
 		_ = exec.Command("chown", "-R", "root:"+grp, webmailBaseDir).Run()
+		// The base dir comes out of MkdirTemp as 0700, which locks the web
+		// group OUT — nginx then cannot traverse in to serve /webmail/
+		// (caught live: "permission denied" on stat). 0750 lets the group in
+		// while keeping it off the world.
+		// Taban dizin MkdirTemp'ten 0700 çıkar; bu web grubunu DIŞARIDA
+		// bırakır — nginx o zaman /webmail/'i sunmak için içeri giremez
+		// (canlıda yakalandı: stat'ta "permission denied"). 0750 grubu içeri
+		// alır, herkesi dışarıda tutar.
+		_ = os.Chmod(webmailBaseDir, 0o750)
+		// des_key lives in config.inc.php — group may read it (FPM needs it),
+		// the world may not.
+		// des_key config.inc.php'de yaşar — grup okuyabilir (FPM'e gerekli),
+		// herkes okuyamaz.
+		_ = os.Chmod(filepath.Join(webmailBaseDir, "config", "config.inc.php"), 0o640)
 		for _, p := range []string{"db", "temp", "logs"} {
-			_ = os.Chmod(filepath.Join(webmailBaseDir, p), 0o775)
+			_ = os.Chmod(filepath.Join(webmailBaseDir, p), 0o770)
 		}
-		_ = os.Chmod(dbPath, 0o664)
+		_ = os.Chmod(dbPath, 0o660)
 	}
 
 	resp.Installed = true
