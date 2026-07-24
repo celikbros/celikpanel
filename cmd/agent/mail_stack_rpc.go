@@ -81,6 +81,7 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 			resp.Error = fmt.Sprintf("postfix: %v", err)
 			return nil
 		}
+		ensureAliasDatabase()
 	}
 
 	if hasDovecot {
@@ -168,6 +169,7 @@ func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) erro
 		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
 			postmapReadable(p)
 		}
+		ensureAliasDatabase()
 	}
 	if err := applyMilterChain(); err != nil {
 		resp.Error = err.Error()
@@ -249,6 +251,16 @@ func spamassMilterEndpoint() string {
 // postconfValue tek bir Postfix ayarını okur; postfix yoksa "".
 func postconfValue(key string) string {
 	out, err := exec.Command("postconf", "-h", key).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// postconfExpanded reads a setting with $variable references resolved.
+// postconfExpanded, bir ayarı $değişken başvuruları çözülmüş olarak okur.
+func postconfExpanded(key string) string {
+	out, err := exec.Command("postconf", "-x", "-h", key).Output()
 	if err != nil {
 		return ""
 	}
@@ -610,6 +622,58 @@ func postmapReadable(path string) {
 	_ = os.Chmod(path, 0o644)
 	for _, ext := range []string{".db", ".lmdb"} {
 		_ = os.Chmod(path+ext, 0o644)
+	}
+}
+
+// ensureAliasDatabase builds the local alias index when the distro shipped only
+// the text file. Debian runs newaliases in its postinst; Arch does not, so
+// postfix starts with `alias_maps = lmdb:/etc/postfix/aliases` and no
+// aliases.lmdb — and every LOCAL recipient (root, cron reports, bounce
+// notifications) is refused with `451 Temporary lookup failure`. Found live on
+// Frankfurt (25 Jul) right after the virtual maps were fixed: the rejection
+// simply moved from one missing index to the next.
+//
+// ensureAliasDatabase, dağıtım yalnız metin dosyasını getirdiyse yerel takma ad
+// dizinini kurar. Debian postinst'inde newaliases koşturur, Arch koşturmaz;
+// böylece postfix `alias_maps = lmdb:/etc/postfix/aliases` ile açılır ve
+// aliases.lmdb yoktur — YEREL alıcıların hepsi (root, cron raporları, geri
+// dönüş bildirimleri) `451 Temporary lookup failure` ile reddedilir. 25 Tem'de
+// Frankfurt'ta, sanal haritalar düzeltilir düzeltilmez canlı bulundu: ret,
+// eksik bir dizinden diğerine taşınmıştı.
+func ensureAliasDatabase() {
+	// -x expands $variables. Arch ships `alias_database = $alias_maps`
+	// literally, and without expansion the value has no "type:path" to parse —
+	// the repair silently did nothing on exactly the distro that needed it.
+	// -x, $değişkenleri açar. Arch, `alias_database = $alias_maps`ı olduğu gibi
+	// getirir; açılmadan değerde ayrıştırılacak "tip:yol" yoktur — onarım, tam
+	// da ona ihtiyaç duyan dağıtımda sessizce hiçbir şey yapmıyordu.
+	db := postconfExpanded("alias_database")
+	if db == "" {
+		db = postconfExpanded("alias_maps")
+	}
+	// alias_database is "type:path" and may list several, comma separated.
+	// alias_database "tip:yol"dur ve virgülle birkaç tane sayabilir.
+	for _, entry := range strings.Split(db, ",") {
+		entry = strings.TrimSpace(entry)
+		i := strings.Index(entry, ":")
+		if i < 0 {
+			continue
+		}
+		typ, path := entry[:i], entry[i+1:]
+		if !fileExistsAgent(path) {
+			continue // no source file: nothing this panel should invent
+		}
+		indexed := false
+		for _, ext := range []string{".db", ".lmdb"} {
+			if fileExistsAgent(path + ext) {
+				indexed = true
+			}
+		}
+		if indexed || typ == "texthash" {
+			continue
+		}
+		_ = exec.Command("newaliases").Run()
+		return
 	}
 }
 
