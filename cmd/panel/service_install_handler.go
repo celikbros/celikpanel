@@ -101,6 +101,22 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Roundcube is a PHP app too: after (un)install the agent (re)generates the
+	// loopback nginx server that serves /webmail/. Same shape as the db tools,
+	// different audience (public webmail login, not an admin session).
+	// Roundcube da bir PHP uygulamasıdır: kur/kaldır sonrası agent /webmail/'i
+	// sunan loopback nginx sunucusunu yeniden üretir. db araçlarıyla aynı
+	// biçim, farklı kitle (public webmail girişi, admin oturumu değil).
+	if req.ServiceID == "roundcube" {
+		var wmResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
+			log.Printf("webmail configure after install: %v %s", err, wmResp.Error)
+		}
+	}
+
 	// A new service exists now; refresh the cached scan so every page keeps
 	// reading from cache instead of probing.
 	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar
@@ -222,6 +238,15 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
 			log.Printf("db tools configure after uninstall: %v %s", err, dbtResp.Error)
+		}
+	}
+	if req.ServiceID == "roundcube" {
+		var wmResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
+			log.Printf("webmail configure after uninstall: %v %s", err, wmResp.Error)
 		}
 	}
 	// Removed service's ports should close; re-sync the firewall.

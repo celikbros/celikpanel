@@ -491,15 +491,51 @@ var ManagedServices = []ManagedService{
 		Requires:    []string{"smtp-server"},
 	},
 	{
-		ID:            "dovecot",
-		Name:          "Dovecot",
-		Description:   "IMAP/POP3 Server",
-		Icon:          "📬",
-		Category:      "email",
+		ID:          "dovecot",
+		Name:        "Dovecot",
+		Description: "IMAP/POP3 Server",
+		Icon:        "📬",
+		Category:    "email",
 		Kind:        KindService,
-		SystemNames:   []string{"dovecot"},
+		SystemNames: []string{"dovecot"},
+		// The IMAP seat, like smtp-server: ports 143/993 have one owner, and
+		// anything that needs "an IMAP server" (webmail) names the ROLE, not
+		// Dovecot. A future Cyrus/Stalwart joins this group and satisfies the
+		// same dependents.
+		// IMAP koltuğu, smtp-server gibi: 143/993 portlarının tek sahibi olur;
+		// "bir IMAP sunucusu" isteyen her şey (webmail) ürünü değil ROLÜ
+		// adlandırır. İleride Cyrus/Stalwart bu gruba katılır ve aynı
+		// bağımlıları tatmin eder.
+		ConflictGroup: "imap-server",
 		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}, "pacman": {"dovecot"}},
 		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
+	},
+	{
+		// Webmail (operator, 23 Jul: "webmails too"). A PHP app, no daemon of
+		// ours → tool. It is an IMAP client, so it needs an IMAP server, a web
+		// server to serve it and PHP to run it — all declared, so the row
+		// gates itself the way phpMyAdmin does. Debian's package wires
+		// imap_host=localhost and a dbconfig SQLite store on install; Arch
+		// ships a differently-laid-out roundcubemail (config under
+		// /etc/webapps), so pacman is deliberately empty until that path is
+		// built and tested — an honest "not supported on this distro yet"
+		// beats a half-install (D-002).
+		// Webmail (operatör, 23 Tem: "webmailler olsun"). PHP uygulaması, bize
+		// ait daemon yok → tool. IMAP istemcisidir; bir IMAP sunucusu, onu
+		// sunacak web sunucusu ve çalıştıracak PHP ister — hepsi bildirilir,
+		// böylece satır phpMyAdmin gibi kendini kapılar. Debian paketi kurulumda
+		// imap_host=localhost ve dbconfig SQLite deposunu bağlar; Arch farklı
+		// yerleşimli roundcubemail taşır (config /etc/webapps altında), bu yüzden
+		// o yol kurulup test edilene dek pacman bilerek boştur — dürüst bir
+		// "bu dağıtımda henüz desteklenmiyor", yarım kurulumdan iyidir (D-002).
+		ID:          "roundcube",
+		Name:        "Roundcube",
+		Description: "Webmail",
+		Icon:        "✉️",
+		Category:    "email",
+		Kind:        KindTool,
+		Packages:    map[string][]string{"apt": {"roundcube", "roundcube-sqlite3"}},
+		Requires:    []string{"imap-server", "web-server", "php-fpm"},
 	},
 	{
 		ID:          "spamassassin",

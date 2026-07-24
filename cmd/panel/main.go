@@ -251,6 +251,7 @@ func main() {
 	http.HandleFunc("/api/v1/hosting/capabilities", panel.handleHostingCapabilities)
 	http.HandleFunc("/api/v1/panel/certificate", panel.handlePanelCertificate)
 	http.HandleFunc("/dbtool/", panel.handleDBToolProxy)
+	http.HandleFunc("/webmail/", panel.handleWebmailProxy)
 
 	// Domain Management
 	http.HandleFunc("/api/v1/domains", panel.handleDomains)
