@@ -1356,9 +1356,25 @@ function VersionDrawer({
                     )}
                 </div>
             )}
+                {/* No backdrop dismissal on a DESTRUCTIVE dialog. The operator
+                    pressed Uninstall on BIND, clicked next to the box, and the
+                    dialog vanished without a trace — which reads exactly like
+                    "I said remove and it did not remove" (24 Jul; the audit log
+                    later showed the request had never been sent). A silent
+                    cancel is indistinguishable from a broken button, so leaving
+                    requires the explicit Cancel. The install dialog keeps its
+                    backdrop dismissal: dropping an install prompt costs nothing.
+                    Yıkıcı diyalogda arka plana tıklayarak kapatma YOK. Operatör
+                    BIND'de Kaldır'a bastı, kutunun yanına tıkladı ve diyalog iz
+                    bırakmadan kayboldu — bu, "kaldır dedim kaldırmadı" diye
+                    okunur (24 Tem; denetim kaydı isteğin hiç gönderilmediğini
+                    sonradan gösterdi). Sessiz vazgeçme, bozuk düğmeden ayırt
+                    edilemez; çıkmak için açıkça Vazgeç gerekir. Kurulum
+                    diyalogu arka plan kapatmasını korur: kurulum istemini
+                    düşürmenin bedeli yok. */}
             {removeTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRemoveTarget(null)}>
-                    <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl">
                         <div className="mb-4 flex items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
                                 <Trash2 className="h-5 w-5" />
@@ -1410,9 +1426,12 @@ function UninstallServiceDialog({
     onConfirm: () => void;
 }) {
     const { t } = useI18n();
+    // Destructive: no backdrop dismissal — see the note on the version-removal
+    // dialog. / Yıkıcı: arka plana tıklayarak kapatma yok — sürüm kaldırma
+    // diyalogundaki nota bakın.
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
-            <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-xl">
                 <div className="mb-4 flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
                         <Trash2 className="h-5 w-5" />
