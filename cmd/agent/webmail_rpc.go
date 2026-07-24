@@ -149,23 +149,37 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 			return nil
 		}
 	}
-	// Initialize the SQLite schema via Roundcube's own initdb (reads the config
-	// we just wrote). PHP CLI only — no sqlite3 binary needed, so it works on
-	// any distro.
-	// SQLite şemasını Roundcube'un kendi initdb'siyle kur (az önce yazdığımız
-	// config'i okur). Yalnız PHP CLI — sqlite3 binary gerekmez, her dağıtımda
-	// çalışır.
-	if out, err := exec.Command("php", filepath.Join(stage, "bin", "initdb.sh"), "--dir", filepath.Join(stage, "SQL")).CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("db init failed: %v: %s", err, firstLine(string(out)))
-		return nil
-	}
 
+	// Move the tree into its final home BEFORE initializing the DB: the config
+	// points db_dsnw at the final path, so the SQLite file can only be created
+	// once that directory exists (caught live: initdb in the staging dir failed
+	// with "unable to open database file"). If initdb then fails, the tree is
+	// removed so a half-install is never served.
+	// DB'yi kurmadan ÖNCE ağacı son evine taşı: config db_dsnw'yi son yola
+	// işaret eder, SQLite dosyası ancak o dizin varken oluşturulabilir (canlıda
+	// yakalandı: staging'de initdb "unable to open database file" verdi).
+	// initdb sonra başarısız olursa ağaç silinir; yarım kurulum asla sunulmaz.
 	if roundcubeInstalled() {
 		_ = os.RemoveAll(webmailBaseDir + ".old")
 		_ = os.Rename(webmailBaseDir, webmailBaseDir+".old")
 	}
 	if err := os.Rename(stage, webmailBaseDir); err != nil {
 		resp.Error = err.Error()
+		return nil
+	}
+
+	// Initialize the SQLite schema via Roundcube's own initdb (reads the config
+	// we just wrote). PHP CLI only — no sqlite3 binary needed, so it works on
+	// any distro.
+	// SQLite şemasını Roundcube'un kendi initdb'siyle kur (az önce yazdığımız
+	// config'i okur). Yalnız PHP CLI — sqlite3 binary gerekmez, her dağıtımda
+	// çalışır.
+	if out, err := exec.Command("php", filepath.Join(webmailBaseDir, "bin", "initdb.sh"), "--dir", filepath.Join(webmailBaseDir, "SQL")).CombinedOutput(); err != nil {
+		_ = os.RemoveAll(webmailBaseDir)
+		if _, statErr := os.Stat(webmailBaseDir + ".old"); statErr == nil {
+			_ = os.Rename(webmailBaseDir+".old", webmailBaseDir)
+		}
+		resp.Error = fmt.Sprintf("db init failed: %v: %s", err, firstLine(string(out)))
 		return nil
 	}
 	_ = os.RemoveAll(webmailBaseDir + ".old")
@@ -181,9 +195,7 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 		for _, p := range []string{"temp", "logs"} {
 			_ = os.Chmod(filepath.Join(webmailBaseDir, p), 0o775)
 		}
-		for _, f := range []string{"roundcube.sqlite3"} {
-			_ = os.Chmod(filepath.Join(webmailBaseDir, f), 0o664)
-		}
+		_ = os.Chmod(filepath.Join(webmailBaseDir, "roundcube.sqlite3"), 0o664)
 	}
 
 	resp.Installed = true
