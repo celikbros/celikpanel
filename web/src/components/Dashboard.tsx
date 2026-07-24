@@ -218,6 +218,23 @@ function AdminDashboard() {
         });
     }
 
+    // serviceRunning: is this catalogue service actually up right now? The
+    // journey asks it because "installed" and "working" are different facts,
+    // and only the second one earns a tick.
+    // serviceRunning: bu katalog servisi şu an gerçekten ayakta mı? Yolculuk
+    // bunu sorar çünkü "kurulu" ile "çalışıyor" farklı gerçeklerdir ve tiki
+    // yalnız ikincisi hak eder.
+    const serviceRunning = (id: string) => {
+        const svc = services.find((s) => s.id === id);
+        if (!svc || !svc.is_installed) return false;
+        // A tool or a unit-less runtime has no daemon of ours: "installed" IS
+        // its working state (D-010) — never demand a running dot from it.
+        // Bir tool'un ya da unit'siz runtime'ın bize ait daemon'ı yoktur:
+        // "kurulu" onun çalışma hâlidir (D-010) — ondan koşan nokta beklenmez.
+        if (svc.kind === 'tool' || svc.status === 'installed') return true;
+        return svc.status?.toLowerCase().includes('running') === true;
+    };
+
     // Setup journey — live completion; the card disappears when all done.
     // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
     const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string; cta?: TranslationKey; onAct?: () => void }[] = [
@@ -226,7 +243,19 @@ function AdminDashboard() {
         // Her düğme gerçekten yaptığını söyler — Domains sayfasını açan
         // düğmede "Go to services" yazması operatörün yakaladığı bir yalandı.
         { key: 'dashboard.step.panel', done: true, to: '/' },
-        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '', to: '/services' },
+        // "Done" means WORKING, not merely present. A DNS server that is
+        // installed but not running serves no zone, so ticking that step was a
+        // lie — Hostinger's Arch image ships a disabled named.service and the
+        // journey happily said "DNS installed: Done" while the Components page
+        // showed 0/0 (Jul 16). The same honesty applies to mail: an installed
+        // Postfix that is dead delivers nothing.
+        // "Tamamlandı" ÇALIŞIYOR demektir, yalnız var demek değil. Kurulu ama
+        // koşmayan bir DNS sunucusu hiçbir zone sunmaz; o adımı işaretlemek
+        // yalandı — Hostinger'ın Arch imajı devre dışı bir named.service ile
+        // geliyor ve yolculuk keyifle "DNS kuruldu: Tamam" diyordu, Bileşenler
+        // sayfası 0/0 gösterirken (16 Tem). Aynı dürüstlük posta için de:
+        // kurulu ama ölü bir Postfix hiçbir şey teslim etmez.
+        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '' && serviceRunning(dnsServer), to: '/services' },
         { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains', cta: 'dashboard.addDomain' },
         { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings', cta: 'dashboard.goSettings' },
         // The firewall step acts in place: the engine ships with install.sh,
@@ -234,7 +263,7 @@ function AdminDashboard() {
         // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
         // dürüst tıktır, define avı değil.
         { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services', cta: 'firewall.turnOn', onAct: turnOnFirewall },
-        { key: 'dashboard.step.mail', done: mailInstalled, to: '/services' },
+        { key: 'dashboard.step.mail', done: mailInstalled && serviceRunning('postfix'), to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
     const journeyOpen = doneCount < steps.length;

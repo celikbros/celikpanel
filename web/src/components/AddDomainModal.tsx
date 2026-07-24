@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Globe, X, Lock, Server, FileCode2, Network } from 'lucide-react';
+import { Globe, X, Lock, Server, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { ErrorBanner } from './ui';
@@ -25,7 +25,20 @@ interface HostingCapabilities {
     mail_server: boolean;
 }
 
-type ProjectType = 'php' | 'static' | 'dnsonly';
+// What the domain is FOR — the only question this screen asks (D-013).
+// Runtime (PHP on/off, version, Node…) is a SITE SETTING chosen afterwards on
+// the site's own page, not a creation-time decision: a person adding a domain
+// knows their purpose, not their interpreter. "website" creates a site the
+// panel serves; "dnsonly" creates just the zone. `static` and `php` are the
+// same thing with the PHP switch off and on, so they stopped being separate
+// choices here.
+// Domain NE İÇİN — bu ekranın sorduğu tek soru (D-013). Runtime (PHP açık/kapalı,
+// sürüm, Node…) sonradan sitenin kendi sayfasında seçilen bir SİTE AYARIdır,
+// oluşturma anı kararı değil: domain ekleyen kişi amacını bilir, yorumlayıcısını
+// değil. "website" panelin sunduğu bir site oluşturur; "dnsonly" yalnız zone.
+// `static` ile `php` aynı şeyin PHP anahtarı kapalı/açık hâlidir; bu yüzden
+// burada ayrı seçenek olmaktan çıktılar.
+type Purpose = 'website' | 'dnsonly';
 
 const API_BASE = '/api/v1';
 
@@ -33,8 +46,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     const { t } = useI18n();
     const [domainName, setDomainName] = useState('');
     const [caps, setCaps] = useState<HostingCapabilities | null>(null);
-    const [projectType, setProjectType] = useState<ProjectType>('php');
-    const [phpVersion, setPHPVersion] = useState('');
+    const [purpose, setPurpose] = useState<Purpose>('website');
     const [sslEnabled, setSSLEnabled] = useState(false);
     const [loading, setLoading] = useState(false);
     // The full contract object, not just text: a coded refusal may carry an
@@ -72,10 +84,11 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                 if (!raw) return;
                 const c: HostingCapabilities = { ...raw, php_versions: raw.php_versions ?? [] };
                 setCaps(c);
-                setPHPVersion(c.php_versions[0] ?? '');
-                if (c.web_server && c.php_versions.length > 0) setProjectType('php');
-                else if (c.web_server) setProjectType('static');
-                else setProjectType('dnsonly');
+                // Default to what can actually work here: a website needs a web
+                // server; without one only the DNS zone is possible.
+                // Burada gerçekten çalışabilecek olana varsayılan yap: web sitesi
+                // web sunucusu ister; o yoksa yalnız DNS zone'u mümkündür.
+                setPurpose(c.web_server ? 'website' : 'dnsonly');
             })
             .catch(() => setCaps(null));
     }, []);
@@ -91,17 +104,21 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     // durumda da hiçbir şeyin uygun olduğu bilinmiyordur, o yüzden hiçbiri
     // sunulmaz.
     const dnsMissing = !caps || caps.dns_server === '';
-    const phpAvailable = !!caps && !dnsMissing && caps.web_server !== '' && caps.php_versions.length > 0;
-    const staticAvailable = !!caps && !dnsMissing && caps.web_server !== '';
+    // A website needs a web server — and ONLY a web server. PHP is no longer a
+    // precondition here (D-013): a site is created first, its PHP switch is a
+    // setting afterwards, so a server without PHP can still host websites.
+    // Web sitesi bir web sunucusu ister — ve YALNIZ onu. PHP artık burada ön
+    // koşul değildir (D-013): önce site oluşturulur, PHP anahtarı sonradan bir
+    // ayardır; yani PHP'siz bir sunucu da web sitesi barındırabilir.
+    const websiteAvailable = !!caps && !dnsMissing && caps.web_server !== '';
 
-    const typeOptions: {
-        id: ProjectType;
+    const purposeOptions: {
+        id: Purpose;
         icon: typeof Globe;
         available: boolean;
         requirement: string | null;
     }[] = [
-        { id: 'php', icon: FileCode2, available: phpAvailable, requirement: !caps || dnsMissing ? null : caps.web_server === '' ? t('domains.add.needsWebServer') : caps.php_versions.length === 0 ? t('domains.add.needsPhp') : null },
-        { id: 'static', icon: Server, available: staticAvailable, requirement: !caps || dnsMissing || staticAvailable ? null : t('domains.add.needsWebServer') },
+        { id: 'website', icon: Server, available: websiteAvailable, requirement: !caps || dnsMissing || websiteAvailable ? null : t('domains.add.needsWebServer') },
         { id: 'dnsonly', icon: Network, available: !dnsMissing, requirement: null },
     ];
 
@@ -111,12 +128,19 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
         setError(null);
 
         try {
+            // A website is created as a plain site; PHP is off until the
+            // operator turns it on in the site's settings (D-013). "static" is
+            // that off state — the wire value stays the same, only the question
+            // asked on screen changed.
+            // Web sitesi düz bir site olarak oluşturulur; PHP, operatör sitenin
+            // ayarlarından açana dek kapalıdır (D-013). "static" o kapalı
+            // hâldir — kablo üzerindeki değer aynı kaldı, yalnız ekranda
+            // sorulan soru değişti.
             const body: Record<string, unknown> = {
                 domain: domainName,
-                project_type: projectType,
-                ssl_type: projectType !== 'dnsonly' && sslEnabled ? 'letsencrypt' : 'none',
+                project_type: purpose === 'website' ? 'static' : 'dnsonly',
+                ssl_type: purpose !== 'dnsonly' && sslEnabled ? 'letsencrypt' : 'none',
             };
-            if (projectType === 'php' && phpVersion) body.php_version = phpVersion;
 
             const res = await fetch(`${API_BASE}/domains/create`, {
                 method: 'POST',
@@ -187,30 +211,30 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
 
                     <div>
                         <label className="block text-sm font-medium text-fg-muted mb-2">
-                            {t('domains.add.hostingType')}
+                            {t('domains.add.purpose')}
                         </label>
                         <div className="grid gap-2">
-                            {typeOptions.map(({ id, icon: Icon, available, requirement }) => (
+                            {purposeOptions.map(({ id, icon: Icon, available, requirement }) => (
                                 <label
                                     key={id}
                                     className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                                        projectType === id
+                                        purpose === id
                                             ? 'border-primary bg-primary/5'
                                             : 'border-border bg-surface-2/50'
                                     } ${available ? 'cursor-pointer hover:border-primary/50' : 'opacity-60'}`}
                                 >
                                     <input
                                         type="radio"
-                                        name="projectType"
-                                        checked={projectType === id}
+                                        name="purpose"
+                                        checked={purpose === id}
                                         disabled={!available}
-                                        onChange={() => setProjectType(id)}
+                                        onChange={() => setPurpose(id)}
                                         className="mt-1"
                                     />
                                     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
                                     <div className="min-w-0">
-                                        <div className="text-sm font-medium text-fg">{t(`domains.add.type.${id}`)}</div>
-                                        <p className="text-xs text-fg-subtle">{t(`domains.add.type.${id}.desc`)}</p>
+                                        <div className="text-sm font-medium text-fg">{t(`domains.add.purpose.${id}` as Parameters<typeof t>[0])}</div>
+                                        <p className="text-xs text-fg-subtle">{t(`domains.add.purpose.${id}.desc` as Parameters<typeof t>[0])}</p>
                                         {requirement && (
                                             <p className="mt-1 text-xs font-medium text-warning">{requirement}</p>
                                         )}
@@ -220,24 +244,17 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                         </div>
                     </div>
 
-                    {projectType === 'php' && caps && caps.php_versions.length > 0 && (
-                        <div>
-                            <label className="block text-sm font-medium text-fg-muted mb-2">
-                                {t('domains.add.phpVersion')}
-                            </label>
-                            <select
-                                value={phpVersion}
-                                onChange={(e) => setPHPVersion(e.target.value)}
-                                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-fg focus:outline-none focus:border-primary"
-                            >
-                                {caps.php_versions.map((v) => (
-                                    <option key={v} value={v}>PHP {v}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                    {/* The PHP version picker used to live here. It moved to the
+                        site's own settings (D-013): choosing an interpreter is
+                        not part of adding a domain, and advertising PHP on a
+                        server that has none contradicted "what isn't installed
+                        is invisible".
+                        PHP sürüm seçici burada dururdu. Sitenin kendi ayarlarına
+                        taşındı (D-013): yorumlayıcı seçmek domain eklemenin
+                        parçası değildir ve PHP'si olmayan bir sunucuda PHP'yi
+                        reklam etmek "kurulu olmayan görünmez" ilkesine aykırıydı. */}
 
-                    {projectType !== 'dnsonly' && (
+                    {purpose !== 'dnsonly' && (
                         <div className="flex items-start gap-3 p-4 bg-surface-2/50 rounded-lg">
                             <input
                                 type="checkbox"
