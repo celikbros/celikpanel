@@ -44,8 +44,21 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 		resp.Error = "mail stack configuration is a production action; not available with CELIKPANEL_MAIL_DIR set"
 		return nil
 	}
+	// Dovecot alone is a legitimate state: an operator may install IMAP first
+	// (or only IMAP, delivering mail from elsewhere). Configure whichever half
+	// is present instead of refusing outright — refusing left a freshly
+	// installed Dovecot completely unconfigured, i.e. "installed" but broken.
+	// Yalnız Dovecot meşru bir durumdur: operatör önce IMAP kurabilir (ya da
+	// yalnız IMAP; postayı başka yerden teslim edebilir). Toptan reddetmek
+	// yerine hangi yarı varsa onu yapılandır — reddetmek, yeni kurulmuş bir
+	// Dovecot'u tamamen yapılandırılmamış bırakıyordu: "kurulu" ama bozuk.
+	hasPostfix := true
 	if _, err := exec.LookPath("postconf"); err != nil {
-		resp.Error = "postfix is not installed"
+		hasPostfix = false
+	}
+	hasDovecot := fileExistsAgent("/etc/dovecot")
+	if !hasPostfix && !hasDovecot {
+		resp.Error = "no mail server is installed"
 		return nil
 	}
 
@@ -54,41 +67,123 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 		return nil
 	}
 
-	// Ensure the map files exist before postmap/postfix reference them.
-	// postmap/postfix onlara başvurmadan önce map dosyalarının var olmasını sağla.
-	for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
-		if !fileExistsAgent(p) {
-			_ = os.WriteFile(p, []byte(""), 0o644)
+	if hasPostfix {
+		// Ensure the map files exist before postmap/postfix reference them.
+		// postmap/postfix onlara başvurmadan önce map dosyalarının var olmasını sağla.
+		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
+			if !fileExistsAgent(p) {
+				_ = os.WriteFile(p, []byte(""), 0o644)
+			}
+			postmapReadable(p)
 		}
-		postmapReadable(p)
+		if err := configurePostfixVirtual(); err != nil {
+			resp.Error = fmt.Sprintf("postfix: %v", err)
+			return nil
+		}
 	}
 
-	if err := configurePostfixVirtual(); err != nil {
-		resp.Error = fmt.Sprintf("postfix: %v", err)
-		return nil
-	}
-	if err := configureDovecotVirtual(); err != nil {
-		resp.Error = fmt.Sprintf("dovecot: %v", err)
-		return nil
+	if hasDovecot {
+		if err := ensureDovecotSSLCert(); err != nil {
+			resp.Error = fmt.Sprintf("dovecot tls: %v", err)
+			return nil
+		}
+		if err := configureDovecotVirtual(); err != nil {
+			resp.Error = fmt.Sprintf("dovecot: %v", err)
+			return nil
+		}
 	}
 
-	if out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
-		return nil
+	if hasPostfix {
+		if out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
+			resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
+			return nil
+		}
 	}
-	if out, err := exec.Command("systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("dovecot restart: %s", strings.TrimSpace(string(out)))
-		return nil
+	if hasDovecot {
+		if out, err := exec.Command("systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
+			resp.Error = fmt.Sprintf("dovecot restart: %s", strings.TrimSpace(string(out)))
+			return nil
+		}
 	}
 
 	resp.Configured = true
-	resp.Detail = "postfix + dovecot configured for virtual mailboxes"
+	switch {
+	case hasPostfix && hasDovecot:
+		resp.Detail = "postfix + dovecot configured for virtual mailboxes"
+	case hasPostfix:
+		resp.Detail = "postfix configured for virtual mailboxes"
+	default:
+		resp.Detail = "dovecot configured for virtual mailboxes"
+	}
 	return nil
 }
 
 // postfixDomainsPath lists the virtual mailbox domains (postfix needs this
 // separately from the mailbox map).
 var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
+
+// ensureDovecotSSLCert creates the TLS keypair Dovecot's shipped config points
+// at, when the distro did not. Debian's dovecot-core generates one on install;
+// Arch does not, so its stock dovecot.conf references
+// /etc/dovecot/ssl-{cert,key}.pem and the daemon REFUSES TO START without them
+// — caught live on Frankfurt (24 Jul): Dovecot installed, enabled, and dead
+// with "cert_file: open(...) failed". A component the panel installed must
+// actually run, so the panel provides what the distro left out.
+//
+// Self-signed is the honest default: it makes IMAPS work today, and a real
+// certificate arrives with the domain's own (the panel already issues those).
+// Existing files are never touched — a real cert installed later must survive
+// any reconfigure.
+//
+// ensureDovecotSSLCert, Dovecot'un getirdiği yapılandırmanın işaret ettiği TLS
+// anahtar çiftini, dağıtım üretmediyse üretir. Debian'ın dovecot-core'u
+// kurulumda üretir; Arch üretmez, bu yüzden hazır dovecot.conf'u
+// /etc/dovecot/ssl-{cert,key}.pem'e başvurur ve daemon onlarsız BAŞLAMAYI
+// REDDEDER — Frankfurt'ta canlı yakalandı (24 Tem): Dovecot kurulu, etkin ve
+// ölü, "cert_file: open(...) failed". Panelin kurduğu bir bileşen gerçekten
+// çalışmalıdır; bu yüzden dağıtımın eksik bıraktığını panel tamamlar.
+//
+// Kendi-imzalı dürüst varsayılandır: IMAPS'i bugün çalışır kılar, gerçek
+// sertifika domain'in kendisiyle gelir (panel onları zaten veriyor). Var olan
+// dosyalara asla dokunulmaz — sonradan kurulan gerçek bir sertifika her
+// yeniden yapılandırmadan sağ çıkmalıdır.
+func ensureDovecotSSLCert() error {
+	const (
+		certPath = "/etc/dovecot/ssl-cert.pem"
+		keyPath  = "/etc/dovecot/ssl-key.pem"
+	)
+	// Only act when the shipped config actually asks for these files; on a
+	// distro that points elsewhere (or has its own pair) this is a no-op.
+	// Yalnız getirilen yapılandırma bu dosyaları gerçekten istediğinde davran;
+	// başka yeri işaret eden (ya da kendi çiftini taşıyan) dağıtımda işlem yok.
+	conf, err := os.ReadFile("/etc/dovecot/dovecot.conf")
+	if err != nil || !strings.Contains(string(conf), certPath) {
+		return nil
+	}
+	if fileExistsAgent(certPath) && fileExistsAgent(keyPath) {
+		return nil
+	}
+	if _, err := exec.LookPath("openssl"); err != nil {
+		return fmt.Errorf("openssl is required to create the mail TLS certificate")
+	}
+
+	host, _ := os.Hostname()
+	if host == "" {
+		host = "localhost"
+	}
+	out, err := exec.Command("openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
+		"-days", "3650",
+		"-subj", "/CN="+host,
+		"-keyout", keyPath, "-out", certPath).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("openssl: %s", firstLine(string(out)))
+	}
+	// The private key is a secret: root-only. The certificate is public.
+	// Özel anahtar bir sırdır: yalnız root. Sertifika geneldir.
+	_ = os.Chmod(keyPath, 0o600)
+	_ = os.Chmod(certPath, 0o644)
+	return nil
+}
 
 // ensureVmailUser creates the dedicated mailbox owner (uid/gid 5000) that
 // owns every maildir; a single non-login system user, the standard virtual-
