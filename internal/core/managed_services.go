@@ -511,30 +511,32 @@ var ManagedServices = []ManagedService{
 		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
 	},
 	{
-		// Webmail (operator, 23 Jul: "webmails too"). A PHP app, no daemon of
-		// ours → tool. It is an IMAP client, so it needs an IMAP server, a web
-		// server to serve it and PHP to run it — all declared, so the row
-		// gates itself the way phpMyAdmin does. Debian's package wires
-		// imap_host=localhost and a dbconfig SQLite store on install; Arch
-		// ships a differently-laid-out roundcubemail (config under
-		// /etc/webapps), so pacman is deliberately empty until that path is
-		// built and tested — an honest "not supported on this distro yet"
-		// beats a half-install (D-002).
-		// Webmail (operatör, 23 Tem: "webmailler olsun"). PHP uygulaması, bize
-		// ait daemon yok → tool. IMAP istemcisidir; bir IMAP sunucusu, onu
-		// sunacak web sunucusu ve çalıştıracak PHP ister — hepsi bildirilir,
-		// böylece satır phpMyAdmin gibi kendini kapılar. Debian paketi kurulumda
-		// imap_host=localhost ve dbconfig SQLite deposunu bağlar; Arch farklı
-		// yerleşimli roundcubemail taşır (config /etc/webapps altında), bu yüzden
-		// o yol kurulup test edilene dek pacman bilerek boştur — dürüst bir
-		// "bu dağıtımda henüz desteklenmiyor", yarım kurulumdan iyidir (D-002).
+		// Webmail (operator, 23 Jul: "webmails too"; 24 Jul: "if it can't be
+		// installed on both distros, don't — isn't there a webmail that runs
+		// on all Linux?"). The distro package (roundcube on apt, roundcubemail
+		// on pacman with a different layout) was exactly the distro-specific
+		// trap D-004 forbids. So Roundcube is installed from its OWN official
+		// tarball — the Node.js pattern: download, verify a pinned checksum,
+		// unpack under /opt/celikpanel/webmail. ONE path on every Linux. That
+		// is why Packages is empty: install goes through Agent.InstallRoundcube,
+		// not the package manager. Still a tool (a PHP app, no daemon of ours);
+		// still gates on imap-server + web-server + php-fpm.
+		// Webmail (operatör, 23 Tem: "webmailler olsun"; 24 Tem: "her iki
+		// sürümde kurulamıyorsa kurma — tüm Linux'ta çalışan webmail yok mu?").
+		// Dağıtım paketi (apt'ta roundcube, pacman'da farklı yerleşimli
+		// roundcubemail) tam da D-004'ün yasakladığı dağıtıma-özgü tuzaktı. Bu
+		// yüzden Roundcube KENDİ resmi tarball'ından kurulur — Node.js deseni:
+		// indir, sabitlenmiş checksum'ı doğrula, /opt/celikpanel/webmail altına
+		// aç. Her Linux'ta TEK yol. Packages'ın boş olma sebebi bu: kurulum
+		// paket yöneticisinden değil Agent.InstallRoundcube'dan geçer. Yine
+		// tool (PHP uygulaması, bize ait daemon yok); yine imap-server +
+		// web-server + php-fpm kapısından geçer.
 		ID:          "roundcube",
 		Name:        "Roundcube",
 		Description: "Webmail",
 		Icon:        "✉️",
 		Category:    "email",
 		Kind:        KindTool,
-		Packages:    map[string][]string{"apt": {"roundcube", "roundcube-sqlite3"}},
 		Requires:    []string{"imap-server", "web-server", "php-fpm"},
 	},
 	{

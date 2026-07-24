@@ -267,14 +267,12 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
   görmezden geldiği MÜKEMMEL açık kaynak alternatiflerini birinci sınıf sunmaktadır.** "Birçok panel
   hep aynı şeyleri sunuyor; her alanda güzel alternatifler var, bunları sunmamız gerekir." Mağaza
   kataloğu kurulurken her kategoride yerleşiğin yanına modern FOSS alternatifi bilinçle aranır.
-  İlk adaylar: **grommunio** (tam Exchange alternatifi: MAPI/EAS/EWS + web arayüzü — Kopano
-  soyundan; kendi vendor deposuyla gelir, ağır yığın [MariaDB+nginx+PHP+gromox servisleri], D-015
-  eki gereği ÇEKİRDEĞE DEĞİL mağazaya; SOGo'ya modern rakip. DB gerçeği doğrulandı [24 Tem,
-  docs.grommunio.com]: merkez dizin YALNIZ MariaDB/MySQL — PostgreSQL yok — ve gromox o DB'de
-  yalnız SELECT,UPDATE ister; postalar kutu başına SQLite [exchange.sqlite3+midb.sqlite3], çoklu
-  sunucu aynı MariaDB'yi paylaşabilir → kaydı `Requires: mariadb` taşır) · Stalwart (tek-binary modern posta
-  sunucusu) · restic/borg (yedekleme) · Uptime Kuma (izleme). Her aday, girmeden önce canlı
-  paket/depo doğrulamasından geçer (Buypass dersi: dış uç da bayatlıyor).
+  İlk adaylar (operatör kararı 24 Tem: grommunio elendi — kendi vendor deposuna + ağır dağıtıma
+  özgü yığına bağlı olması "her Linux'ta tek yol" ilkesine aykırı): Stalwart (tek-binary modern posta
+  sunucusu — taşınabilir) · restic/borg (yedekleme) · Uptime Kuma (izleme). Her aday, girmeden önce canlı
+  paket/depo doğrulamasından geçer (Buypass dersi: dış uç da bayatlıyor) VE dağıtımdan bağımsız
+  kurulabilmelidir (D-004: dağıtıma özgü çözüm kabul edilmez; webmail için Roundcube resmi
+  tarball'ı — Node deseni — çekirdek yol oldu).
 
 **Barındırma asgarileri (cPanel'den gelenin ilk haftası):**
 - FTP (vsftpd) uçtan uca — ölçütlü: domain başına hesap, site kullanıcısının docroot'una chroot,

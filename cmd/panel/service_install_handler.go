@@ -35,6 +35,43 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Roundcube is not a distro package (D-004: one path on every Linux) — it
+	// installs from its own verified tarball via a dedicated RPC, then the
+	// loopback webmail server is (re)generated. Handled here and returned so
+	// the package path below never sees it.
+	// Roundcube dağıtım paketi değildir (D-004: her Linux'ta tek yol) — kendi
+	// doğrulanmış tarball'ından adanmış bir RPC ile kurulur, sonra loopback
+	// webmail sunucusu yeniden üretilir. Burada ele alınıp döndürülür; aşağıdaki
+	// paket yolu onu hiç görmez.
+	if req.ServiceID == "roundcube" {
+		var rcResp struct {
+			Installed bool   `json:"installed"`
+			Version   string `json:"version"`
+			Error     string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.InstallRoundcube", &struct{}{}, &rcResp); err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if rcResp.Error != "" {
+			writeClientError(w, http.StatusConflict, rcResp.Error)
+			return
+		}
+		var wmResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
+			log.Printf("webmail configure after install: %v %s", err, wmResp.Error)
+		}
+		if _, err := p.scanManagedServices(r.Context()); err != nil {
+			log.Printf("rescan after roundcube install: %v", err)
+		}
+		p.audit(r, "service.install:roundcube", "service", 0)
+		json.NewEncoder(w).Encode(map[string]any{"installed": rcResp.Installed, "detail": "Roundcube " + rcResp.Version, "success": true})
+		return
+	}
+
 	// Package installs can take a while (apt fetches + configures); the
 	// agent runs it synchronously and reports the real outcome.
 	// Paket kurulumları sürebilir (apt indirir + yapılandırır); agent bunu
@@ -101,21 +138,8 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Roundcube is a PHP app too: after (un)install the agent (re)generates the
-	// loopback nginx server that serves /webmail/. Same shape as the db tools,
-	// different audience (public webmail login, not an admin session).
-	// Roundcube da bir PHP uygulamasıdır: kur/kaldır sonrası agent /webmail/'i
-	// sunan loopback nginx sunucusunu yeniden üretir. db araçlarıyla aynı
-	// biçim, farklı kitle (public webmail girişi, admin oturumu değil).
-	if req.ServiceID == "roundcube" {
-		var wmResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
-			log.Printf("webmail configure after install: %v %s", err, wmResp.Error)
-		}
-	}
+	// (Roundcube's install is handled earlier and returns before this point.)
+	// (Roundcube kurulumu yukarıda ele alınır ve buraya gelmeden döner.)
 
 	// A new service exists now; refresh the cached scan so every page keeps
 	// reading from cache instead of probing.
@@ -214,6 +238,40 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Roundcube removal is its own RPC (it was never a distro package): delete
+	// the tarball tree, then regenerate the loopback webmail server (which,
+	// finding nothing, removes its config). Handled and returned here.
+	// Roundcube kaldırma kendi RPC'sidir (hiç dağıtım paketi olmadı): tarball
+	// ağacını sil, sonra loopback webmail sunucusunu yeniden üret (hiçbir şey
+	// bulamayınca config'ini kaldırır). Burada ele alınıp döndürülür.
+	if req.ServiceID == "roundcube" {
+		var rmResp struct {
+			Removed bool   `json:"removed"`
+			Error   string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.RemoveRoundcube", &struct{}{}, &rmResp); err != nil {
+			writeAgentError(w, err, "roundcube remove")
+			return
+		}
+		if rmResp.Error != "" {
+			writeClientError(w, http.StatusConflict, rmResp.Error)
+			return
+		}
+		var wmResp struct {
+			Configured bool   `json:"configured"`
+			Error      string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
+			log.Printf("webmail configure after uninstall: %v %s", err, wmResp.Error)
+		}
+		if _, err := p.scanManagedServices(r.Context()); err != nil {
+			log.Printf("rescan after roundcube uninstall: %v", err)
+		}
+		p.audit(r, "service.uninstall:roundcube", "service", 0)
+		json.NewEncoder(w).Encode(map[string]any{"removed": rmResp.Removed, "success": true})
+		return
+	}
+
 	var resp struct {
 		Removed bool   `json:"removed"`
 		Detail  string `json:"detail,omitempty"`
@@ -238,15 +296,6 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
 			log.Printf("db tools configure after uninstall: %v %s", err, dbtResp.Error)
-		}
-	}
-	if req.ServiceID == "roundcube" {
-		var wmResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
-			log.Printf("webmail configure after uninstall: %v %s", err, wmResp.Error)
 		}
 	}
 	// Removed service's ports should close; re-sync the firewall.

@@ -31,7 +31,9 @@ import (
 // webServerGroup, yerel web sunucusunun çalıştığı grubu bildirir; henüz
 // kurulu değilse "" (Debian ailesi: www-data; RHEL ailesi: nginx).
 func webServerGroup() string {
-	for _, g := range []string{"www-data", "nginx"} {
+	// Debian: www-data · RHEL: nginx · Arch: http. First that exists wins.
+	// Debian: www-data · RHEL: nginx · Arch: http. Var olan ilki kazanır.
+	for _, g := range []string{"www-data", "nginx", "http"} {
 		if _, err := user.LookupGroup(g); err == nil {
 			return g
 		}
