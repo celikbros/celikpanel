@@ -445,3 +445,29 @@ func pkgSuffix(pkg string) string {
 	}
 	return ":" + pkg
 }
+
+// wireMailFiltersAtStartup repairs servers whose mail filters were installed
+// before the panel knew how to wire them. It runs once, in the background, so a
+// slow or absent agent never delays the listener.
+// wireMailFiltersAtStartup, posta filtreleri panel onları bağlamayı bilmeden
+// önce kurulmuş sunucuları onarır. Bir kez, arka planda koşar; böylece yavaş ya
+// da yok olan bir agent dinleyiciyi hiç geciktirmez.
+func (p *Panel) wireMailFiltersAtStartup() {
+	go func() {
+		var resp struct {
+			Wired  bool   `json:"wired"`
+			Detail string `json:"detail,omitempty"`
+			Error  string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &resp); err != nil {
+			return // no agent yet, or no postfix — nothing to repair
+		}
+		if resp.Error != "" {
+			log.Printf("milter wiring at startup: %s", resp.Error)
+			return
+		}
+		if resp.Detail != "" {
+			log.Printf("milter chain: %s", resp.Detail)
+		}
+	}()
+}

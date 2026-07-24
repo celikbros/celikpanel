@@ -217,6 +217,23 @@ func main() {
 	// Geçmiş, tarihçi ister: panel yaşadıkça örnekle.
 	panel.startMetricsSampler()
 
+	// A fix that only helps FUTURE installs leaves every existing server
+	// broken until someone happens to press the right button — and nobody
+	// knows which button, because the symptom is invisible: a spam filter that
+	// runs and filters nothing. Servers that installed Rspamd before the milter
+	// chain existed are in exactly that state right now. Re-composing the chain
+	// once at startup makes the upgrade itself the repair. It is idempotent
+	// (same inputs, same two settings) and a no-op where postfix is absent.
+	//
+	// Yalnız GELECEKTEKİ kurulumlara yarayan bir düzeltme, mevcut her sunucuyu,
+	// biri doğru düğmeye basana dek bozuk bırakır — ve kimse hangi düğme
+	// olduğunu bilmez, çünkü belirti görünmezdir: koşan ama hiçbir şey süzmeyen
+	// bir spam filtresi. Milter zinciri var olmadan önce Rspamd kurmuş
+	// sunucular şu anda tam olarak bu durumdadır. Zinciri açılışta bir kez
+	// yeniden bestelemek, yükseltmenin kendisini onarım hâline getirir.
+	// Etkisi değişmezdir (aynı girdi, aynı iki ayar) ve postfix yoksa boş işlem.
+	panel.wireMailFiltersAtStartup()
+
 	// PHP Management
 	http.HandleFunc("/api/v1/php/pools", panel.handlePHPPools)
 	http.HandleFunc("/api/v1/php/pool-config", panel.handlePHPPoolConfig)
