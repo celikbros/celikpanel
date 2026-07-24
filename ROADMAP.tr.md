@@ -263,6 +263,15 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
 - Faturalama defteri: `plan.create/update/delete`, `subscription.plan_change`, `subscription.cancel`,
   `subscription.suspend/resume`, `quota.exceeded` audit olayları — "bu kota ne zaman, kim tarafından
   değişti" sorusu ihtilaf sorusudur, kayıtsız kalınmaz.
+- **Mağaza seçki ilkesi (operatör, 24 Tem): farklılaşma, herkesin sunduğunu sunmakta değil,
+  görmezden geldiği MÜKEMMEL açık kaynak alternatiflerini birinci sınıf sunmaktadır.** "Birçok panel
+  hep aynı şeyleri sunuyor; her alanda güzel alternatifler var, bunları sunmamız gerekir." Mağaza
+  kataloğu kurulurken her kategoride yerleşiğin yanına modern FOSS alternatifi bilinçle aranır.
+  İlk adaylar: **grommunio** (tam Exchange alternatifi: MAPI/EAS/EWS + web arayüzü — Kopano
+  soyundan; kendi vendor deposuyla gelir, ağır yığın [MariaDB+nginx+PHP+gromox servisleri], D-015
+  eki gereği ÇEKİRDEĞE DEĞİL mağazaya; SOGo'ya modern rakip) · Stalwart (tek-binary modern posta
+  sunucusu) · restic/borg (yedekleme) · Uptime Kuma (izleme). Her aday, girmeden önce canlı
+  paket/depo doğrulamasından geçer (Buypass dersi: dış uç da bayatlıyor).
 
 **Barındırma asgarileri (cPanel'den gelenin ilk haftası):**
 - FTP (vsftpd) uçtan uca — ölçütlü: domain başına hesap, site kullanıcısının docroot'una chroot,
