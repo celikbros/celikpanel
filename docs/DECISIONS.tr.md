@@ -8,6 +8,60 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-018 · Kurulum kaynağı cinse göre sabittir: sistem servisi = dağıtım paketi, uygulama/runtime = resmi sürüm, Docker temel değildir
+
+*24 Temmuz 2026*
+
+**Karar.** Operatör sordu: "her zaman git'ten çekip sisteme göre derlesek ya da
+Docker kullansak daha iyi olmaz mı?" Cevap "her şeye tek yöntem" değildir —
+kaos onu değil, kuralsızlığı doğurur. Kaynak, kalemin CİNSİNE göre seçilir ve
+her cins için kural sabittir:
+
+1. **Sistem servisi** (nginx, PostgreSQL, MariaDB, Postfix, Dovecot, Redis…)
+   → **dağıtımın paket deposu** (apt/pacman/dnf). Neden: güvenlik yamasını
+   dağıtımın güvenlik ekibi üstlenir (`apt upgrade` yamalıyor); systemd
+   entegrasyonu ve config yolları hazır. Kaynaktan derlemek CVE takibini bize
+   yükler; Docker'lamak systemd üzerinden başlat/durdur/durum okumayı kırar.
+2. **Runtime + taşınabilir uygulama** (Node.js, Roundcube, ileride
+   Python/Ruby, webmail alternatifleri) → **üreticinin resmi sürümü**
+   (indir + sabit SHA-256 doğrula + aç). Neden: dağıtım tek sürüm dondurur,
+   biz çok+güncel isteriz; ve dağıtım paketi dağıtıma özgüdür (Roundcube'da
+   canlı kanıt: apt `roundcube` / pacman `roundcubemail` farklı yerleşim →
+   Debian'da çalışıp Arch'ta çalışmıyordu). Resmi sürüm her Linux'ta TEK yol
+   (D-004). Bu "git'ten çek + derle" DEĞİL "imzalı/donmuş sürüm" — composer/
+   derleme adımının kırılganlığı yok.
+3. **Docker temel DEĞİLDİR.** Paylaşımlı barındırma modeli sistemde doğrudan
+   çalışır (nginx vhost + site başına FPM havuzu); 100 site = 100 konteyner
+   israfı + port/ağ/volume kaosu + systemd entegrasyonu kaybı. Docker ileride
+   bir CİNS olabilir (müşterinin kendi konteyner uygulaması için proje tipi,
+   ya da izole/ağır bir yığın için mağazada seçenek) ama altyapının zemini
+   değil — Plesk'te de eklentidir, ana model değil.
+4. **Kaynaktan derleme**: yalnız gerçekten gerekince (dağıtımda yok VE resmi
+   binary yok — nadir); o zaman derleme araçları geçici kurulur, sonra
+   kaldırılır (temiz-sunucu).
+
+**Dürüst sınır (aynı dilimde kanıtlandı).** "Her Linux'ta tek yol" ideali
+bedava değildir: taşınabilir bir tarball bile ALT-bağımlılıklarda dağıtım
+gerçeklerine değer — Roundcube'un SQLite'ı PHP'nin pdo_sqlite'ına muhtaçtı
+(iki dağıtımda ayrı paket, Arch'ta üstelik elle enable), FPM soket yolu
+farklıydı, nginx conf yerleşimi Debian-only'ydi (A10). Doğru mimari saf değil
+HİBRİTTİR: taşınabilir gövde + dağıtım-farkındalıklı alt-detaylar (paket adı,
+soket yolu, uzantı enable) — ve o alt-detayların dağıtıma özgü tek gerçeği
+agent'ta yaşar, panel/katalog dağıtım bilmez.
+
+**Reddedilen alternatifler.**
+- **Her şeyi kaynaktan derlemek:** çoğu şey (PHP/script) derlenmez; sistem
+  servislerinde CVE-yama sorumluluğunu üstlenmek; "temiz sunucu"ya derleme
+  araçları dolar.
+- **Her şeyi Docker'a koymak:** shared-hosting DNA'sıyla çatışır; systemd
+  temelli tüm mekanizmalar (durum okuma, başlat/durdur) kırılır.
+- **Her şeyi dağıtım paketiyle kurmak:** runtime'da tek-sürüm hapsi;
+  taşınabilir uygulamada dağıtıma özgü yerleşim (Roundcube tuzağı).
+- **"Duruma göre karar" (yazılı kural yok):** her yeni kalemde aynı tartışma;
+  ve sınıf-atlaması riski (bir uygulamayı sistem servisi gibi paketlemek).
+
+---
+
 ## D-017 · Sunum evrenseldir: seçilebilen her şey — bileşen, sürüm, entegrasyon, ürün — tek teklif uzayında zincirden geçer
 
 *24 Temmuz 2026*

@@ -8,6 +8,60 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-018 · The install source is fixed by kind: system service = distro package, app/runtime = official release, Docker is not the base
+
+*July 24, 2026*
+
+**Decision.** The operator asked: "wouldn't it be better to always pull from
+git and build for our system, or use Docker?" The answer is not "one method
+for everything" — chaos comes from having no rule, not from this one. The
+source is chosen by the item's KIND, and each kind's rule is fixed:
+
+1. **System service** (nginx, PostgreSQL, MariaDB, Postfix, Dovecot, Redis…)
+   → the **distro's package repo** (apt/pacman/dnf). Why: the distro's
+   security team owns the patching (`apt upgrade` fixes it); systemd
+   integration and config paths come ready. Building from source puts CVE
+   tracking on us; Dockerizing breaks start/stop/status-read over systemd.
+2. **Runtime + portable app** (Node.js, Roundcube, later Python/Ruby, webmail
+   alternatives) → the **vendor's official release** (download + verify a
+   pinned SHA-256 + unpack). Why: the distro freezes one version, we want
+   many + current; and the distro package is distro-specific (live proof in
+   Roundcube: apt `roundcube` / pacman `roundcubemail` differ in layout →
+   worked on Debian, not Arch). The official release is one path on every
+   Linux (D-004). This is NOT "pull from git + build" but "signed/frozen
+   release" — none of the composer/build-step fragility.
+3. **Docker is NOT the base.** The shared-hosting model runs in-system
+   directly (nginx vhost + per-site FPM pool); 100 sites = 100 containers of
+   waste + port/network/volume chaos + loss of systemd integration. Docker
+   may later be a KIND (a project type for a customer's own container, or a
+   store option for an isolated/heavy stack) but never the substrate — in
+   Plesk too it is an add-on, not the model.
+4. **Building from source**: only when genuinely required (not in the distro
+   AND no official binary — rare); then build tools are installed
+   temporarily and removed after (clean-server).
+
+**Honest limit (proven in the same slice).** The "one path on every Linux"
+ideal is not free: even a portable tarball touches distro reality in its
+SUB-dependencies — Roundcube's SQLite needed PHP's pdo_sqlite (a separate
+package on each distro, and on Arch manually enabled), the FPM socket path
+differed, the nginx conf layout was Debian-only (A10). The right architecture
+is not pure but HYBRID: a portable body + distro-aware sub-details (package
+name, socket path, extension enable) — and that distro-specific truth lives
+in the agent; the panel/catalog knows no distro.
+
+**Rejected alternatives.**
+- **Build everything from source:** most things (PHP/scripts) don't compile;
+  taking on CVE-patching for system services; build tools clutter the "clean
+  server".
+- **Put everything in Docker:** clashes with shared-hosting DNA; every
+  systemd-based mechanism (status read, start/stop) breaks.
+- **Install everything via distro package:** single-version prison for
+  runtimes; distro-specific layout for portable apps (the Roundcube trap).
+- **"Decide case by case" (no written rule):** the same debate on every new
+  item; plus a class-slip risk (packaging an app like a system service).
+
+---
+
 ## D-017 · Offering is universal: everything choosable — component, version, integration, product — flows through the chain in one offering-ID space
 
 *July 24, 2026*
