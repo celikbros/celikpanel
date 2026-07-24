@@ -361,7 +361,19 @@ var ManagedServices = []ManagedService{
 		Icon:        "🐘",
 		Category:    "database",
 		Kind:        KindService,
-		SystemNames: []string{"postgresql"},
+		// "postgresql" is Debian's wrapper unit; the real per-cluster unit is
+		// postgresql@<major>-main. The wrapper alone reports the server up, but
+		// the pattern also matches the versioned unit so the scan is right even
+		// where only the cluster unit exists. Without it, the catalogue-derived
+		// ownership test (scan_match.go) would miss postgresql@16-main.
+		// "postgresql" Debian'ın sarmalayıcı unit'idir; gerçek küme-başına unit
+		// postgresql@<major>-main'dir. Sarmalayıcı tek başına sunucuyu ayakta
+		// bildirir ama desen, sürümlü unit'i de eşler; böylece yalnız küme
+		// unit'inin var olduğu yerde bile tarama doğrudur. Bu olmadan
+		// katalog-türevli sahiplik testi (scan_match.go) postgresql@16-main'i
+		// kaçırırdı.
+		SystemNames:       []string{"postgresql"},
+		SystemNamePattern: `^postgresql@`,
 		// pacman deliberately absent: on Arch the cluster needs a manual
 		// initdb before first start — mapping the package alone would install
 		// a server that cannot start. Same for MariaDB below.

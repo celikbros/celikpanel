@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -292,23 +291,6 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-// unitBelongsTo reports whether a systemd unit is one of this catalogue
-// entry's: either an exact declared name, or — for a versioned runtime — a
-// match on its pattern. The pattern is what lets a PHP version nobody wrote
-// down still be seen.
-// unitBelongsTo, bir systemd unit'inin bu katalog kaleminin olup olmadığını
-// bildirir: ya açıkça bildirilmiş bir ad, ya da — sürümlü bir runtime için —
-// deseniyle eşleşme. Desen, kimsenin yazmadığı bir PHP sürümünün yine de
-// görülmesini sağlayan şeydir.
-func unitBelongsTo(unit string, names []string, pattern *regexp.Regexp) bool {
-	for _, n := range names {
-		if unit == n {
-			return true
-		}
-	}
-	return pattern != nil && pattern.MatchString(unit)
-}
-
 // packageFamily returns the host's package-manager family, asked from the
 // agent once and kept. This is the one cheap fact the cached GET may fetch:
 // it is a single RPC that reads the distro id, not the system-wide probe the
@@ -394,12 +376,16 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		// hiç duymadığı bir PHP sürümü yine de gözlenir. Bu olmadan Sury'den
 		// kurulan php8.5-fpm, çalışan ve site sunan bir unit üretirken panel
 		// PHP'yi kurulu değil diye bildiriyordu.
-		var namePattern *regexp.Regexp
-		if managed.SystemNamePattern != "" {
-			namePattern, _ = regexp.Compile(managed.SystemNamePattern)
-		}
+		managed := managed // loop-var capture for the pointer below
 		for _, svc := range allServices {
-			if !unitBelongsTo(svc.Name, managed.SystemNames, namePattern) {
+			// core.UnitBelongsTo is the single owner of unit→service matching,
+			// shared with the agent scanner (scan_match.go) — one rule, so the
+			// scan and the fold can never disagree about who owns a unit.
+			// core.UnitBelongsTo, unit→servis eşleştirmesinin tek sahibidir,
+			// agent tarayıcısıyla paylaşılır (scan_match.go) — tek kural;
+			// böylece tarama ile birleştirme bir unit'in sahibi konusunda
+			// asla çelişemez.
+			if !core.UnitBelongsTo(svc.Name, &managed) {
 				continue
 			}
 			isInstalled = true

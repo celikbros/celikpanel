@@ -17,45 +17,28 @@ func NewManager() *Manager {
 	return &Manager{}
 }
 
-// serviceBases: the unit-name stems this scanner recognizes. ONE list — the
-// systemctl glob is `base+"*"` and the match is `Contains(name, base)`, so a
-// stem can never again be in the fetch list but missing from the match list.
-// That split shipped a live bug (23 Jul: rspamd/netdata were fetched by an
-// updated glob but dropped by a stale match list — the SECOND time a
-// two-list edit went half-done; spamd was the first). This still hardcodes
-// unit stems; the real cure is deriving them from the catalog (B3 remainder),
-// but until then there is one list to forget, not two.
+// ListServices scans for the units of every catalogue service. Both the
+// systemctl glob (what to fetch) and the ownership test (what a unit belongs
+// to) come from the catalogue via core.ServiceScanGlobs / core.ServiceForUnit
+// — there is no hand-written unit list to keep in sync. That hand-written
+// list (serviceBases) shipped the same silent bug three times: spamd, then
+// rspamd, then netdata were installed and running while the panel showed
+// "stopped" because the scanner never fetched their units. Add a service to
+// the catalogue and the scanner sees it; the class of bug is gone.
 //
-// serviceBases: bu tarayıcının tanıdığı unit-adı kökleri. TEK liste —
-// systemctl glob'u `kök+"*"`, eşleşme `Contains(name, kök)`; böylece bir kök
-// bir daha çekme listesinde olup eşleşme listesinde eksik kalamaz. Bu ayrım
-// canlı bir hata gönderdi (23 Tem: rspamd/netdata güncellenen glob'la çekildi
-// ama bayat eşleşme listesince elendi — iki-listeli düzenlemenin yarım
-// kaldığı İKİNCİ sefer; ilki spamd'di). Bu hâlâ unit köklerini sabitliyor;
-// gerçek çare onları katalogdan türetmek (B3 kalanı), ama o gelene dek
-// unutulacak iki değil tek liste var.
-var serviceBases = []string{
-	"nginx", "php", "postgresql", "mysql", "mariadb", "apache2", "caddy",
-	"certbot", "vsftpd", "fail2ban", "postfix", "dovecot",
-	"spamassassin", "spamd", "pdns", "wg-quick", "exim", "rspamd", "netdata",
-}
-
-// ListServices scans for known services
+// ListServices, her katalog servisinin unit'lerini tarar. Hem systemctl glob'u
+// (neyi çekeceği) hem sahiplik testi (bir unit'in neye ait olduğu) katalogdan
+// gelir — core.ServiceScanGlobs / core.ServiceForUnit — eşzamanlı tutulacak
+// elle yazılmış unit listesi yoktur. O elle liste (serviceBases) aynı sessiz
+// hatayı üç kez gönderdi: spamd, sonra rspamd, sonra netdata kurulu ve
+// çalışırken panel "durdu" gösterdi çünkü tarayıcı unit'lerini hiç çekmedi.
+// Kataloğa bir servis ekle, tarayıcı görür; hata sınıfı bitti.
 func (m *Manager) ListServices() ([]core.Service, error) {
-	targets := serviceBases
-
 	services := make([]core.Service, 0)
-
-	// The systemctl glob is derived from the same list — never maintained apart.
-	// systemctl glob'u aynı listeden türetilir — asla ayrı tutulmaz.
-	patterns := make([]string, len(serviceBases))
-	for i, b := range serviceBases {
-		patterns[i] = b + "*"
-	}
 
 	// Get specific active and inactive units
 	args := []string{"list-units", "--type=service", "--all", "--no-legend", "--no-pager"}
-	args = append(args, patterns...)
+	args = append(args, core.ServiceScanGlobs()...)
 
 	cmd := exec.Command("systemctl", args...)
 	output, err := cmd.Output()
@@ -75,53 +58,39 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 		activeState := fields[2] // active
 		subState := fields[3]    // running
 
-		// Check if this unit matches one of our targets
 		name := strings.TrimSuffix(unitName, ".service")
 
-		var serviceType core.ServiceType
-		matched := false
-
-		for _, t := range targets {
-			if strings.Contains(name, t) {
-				matched = true
-				switch {
-				case strings.Contains(name, "nginx") || strings.Contains(name, "apache") || strings.Contains(name, "caddy"):
-					serviceType = core.ServiceNginx // Generic web server for now
-				case strings.Contains(name, "php"):
-					serviceType = core.ServicePHP
-				case strings.Contains(name, "postgres"):
-					serviceType = core.ServicePostgres
-				case strings.Contains(name, "mysql") || strings.Contains(name, "mariadb"):
-					serviceType = core.ServiceMySQL
-				default:
-					serviceType = core.ServiceSystemd
-				}
-				break
-			}
+		// The catalogue decides ownership — a unit the glob over-collected but
+		// no service claims is skipped.
+		// Sahipliğe katalog karar verir — glob'un fazladan topladığı ama hiçbir
+		// servisin sahiplenmediği unit atlanır.
+		owner := core.ServiceForUnit(name)
+		if owner == nil {
+			continue
 		}
 
-		if matched {
-			// Get version
-			version := m.getServiceVersion(name, string(serviceType))
+		serviceType := serviceTypeForService(owner)
 
-			// Get config files
-			configFiles := m.getConfigFiles(name, string(serviceType))
+		// Get version
+		version := m.getServiceVersion(name, string(serviceType))
 
-			// Determine if this is a primary service (not a helper)
-			isPrimary := m.isPrimaryService(name)
+		// Get config files
+		configFiles := m.getConfigFiles(name, string(serviceType))
 
-			s := core.Service{
-				ID:          name,
-				Name:        name,
-				Type:        serviceType,
-				Status:      fmt.Sprintf("%s (%s)", activeState, subState),
-				Version:     version,
-				ConfigFiles: configFiles,
-				IsPrimary:   isPrimary,
-			}
+		// Determine if this is a primary service (not a helper)
+		isPrimary := m.isPrimaryService(name)
 
-			services = append(services, s)
+		s := core.Service{
+			ID:          name,
+			Name:        name,
+			Type:        serviceType,
+			Status:      fmt.Sprintf("%s (%s)", activeState, subState),
+			Version:     version,
+			ConfigFiles: configFiles,
+			IsPrimary:   isPrimary,
 		}
+
+		services = append(services, s)
 	}
 
 	// Ensure we never return nil
@@ -130,6 +99,30 @@ func (m *Manager) ListServices() ([]core.Service, error) {
 	}
 
 	return services, nil
+}
+
+// serviceTypeForService maps a catalogue service to the coarse ServiceType the
+// version/config detectors branch on. Keyed by catalogue id, it replaces the
+// old name-substring switch — the id is exact, so php-fpm can never be
+// misread as a generic web server the way `Contains(name, "php")` once could.
+// serviceTypeForService, bir katalog servisini sürüm/config tespitçilerinin
+// dallandığı kaba ServiceType'a eşler. Katalog id'siyle anahtarlanır, eski
+// ad-alt-dize switch'inin yerine geçer — id kesindir, bu yüzden php-fpm eskiden
+// `Contains(name, "php")`'in yapabildiği gibi genel bir web sunucusu diye
+// yanlış okunamaz.
+func serviceTypeForService(svc *core.ManagedService) core.ServiceType {
+	switch svc.ID {
+	case "php-fpm":
+		return core.ServicePHP
+	case "nginx", "apache":
+		return core.ServiceNginx
+	case "postgresql":
+		return core.ServicePostgres
+	case "mariadb":
+		return core.ServiceMySQL
+	default:
+		return core.ServiceSystemd
+	}
 }
 
 func (m *Manager) getServiceVersion(name string, serviceType string) string {
