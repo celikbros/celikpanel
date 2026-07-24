@@ -168,13 +168,33 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 		return nil
 	}
 
-	// Initialize the SQLite schema via Roundcube's own initdb (reads the config
-	// we just wrote). PHP CLI only — no sqlite3 binary needed, so it works on
-	// any distro.
-	// SQLite şemasını Roundcube'un kendi initdb'siyle kur (az önce yazdığımız
-	// config'i okur). Yalnız PHP CLI — sqlite3 binary gerekmez, her dağıtımda
-	// çalışır.
-	if out, err := exec.Command("php", filepath.Join(webmailBaseDir, "bin", "initdb.sh"), "--dir", filepath.Join(webmailBaseDir, "SQL")).CombinedOutput(); err != nil {
+	// Load the schema straight from Roundcube's SQL file, once. Its own
+	// initdb.sh re-runs the CREATE block a second time and exits non-zero on
+	// the resulting "table already exists" even though the 17 tables were
+	// created correctly (verified live) — trusting that exit code would fail a
+	// good install. A single PDO exec of sqlite.initial.sql is deterministic.
+	// The DB lives in a dedicated db/ subdir because SQLite must WRITE a
+	// journal next to the file, so the file's directory — not just the file —
+	// has to be group-writable.
+	// Şemayı Roundcube'un SQL dosyasından doğrudan, bir kez yükle. Kendi
+	// initdb.sh'ı CREATE bloğunu ikinci kez koşturup oluşan "table already
+	// exists" ile sıfırdan farklı çıkış verir — 17 tablo doğru oluşmuş olsa da
+	// (canlıda doğrulandı); o çıkış koduna güvenmek iyi bir kurulumu bozardı.
+	// sqlite.initial.sql'in tek PDO exec'i belirlenimcidir. DB, adanmış bir
+	// db/ alt dizininde yaşar çünkü SQLite dosyanın yanına journal YAZMALIDIR;
+	// yani yalnız dosya değil, dosyanın dizini de grup-yazılabilir olmalı.
+	dbDir := filepath.Join(webmailBaseDir, "db")
+	if err := os.MkdirAll(dbDir, 0o775); err != nil {
+		_ = os.RemoveAll(webmailBaseDir)
+		resp.Error = err.Error()
+		return nil
+	}
+	initSQL := filepath.Join(webmailBaseDir, "SQL", "sqlite.initial.sql")
+	dbPath := filepath.Join(dbDir, "roundcube.sqlite3")
+	phpLoad := fmt.Sprintf(
+		`$db=new PDO("sqlite:%s"); $db->exec(file_get_contents("%s")); $n=$db->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")->fetchColumn(); if($n<10){fwrite(STDERR,"only $n tables");exit(1);}`,
+		dbPath, initSQL)
+	if out, err := exec.Command("php", "-r", phpLoad).CombinedOutput(); err != nil {
 		_ = os.RemoveAll(webmailBaseDir)
 		if _, statErr := os.Stat(webmailBaseDir + ".old"); statErr == nil {
 			_ = os.Rename(webmailBaseDir+".old", webmailBaseDir)
@@ -184,18 +204,19 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	}
 	_ = os.RemoveAll(webmailBaseDir + ".old")
 
-	// The FPM pool that serves /webmail/ (the default www pool) must be able to
-	// read the tree and WRITE the sqlite db + temp/logs. Give the whole tree to
-	// the web group and make exactly those three writable — never world.
-	// /webmail/'i sunan FPM havuzu (varsayılan www havuzu) ağacı okuyabilmeli ve
-	// sqlite db + temp/logs'a YAZABİLMELİ. Ağacın tümünü web grubuna ver ve tam
-	// o üçünü yazılabilir yap — asla herkese değil.
+	// The FPM pool that serves /webmail/ (the default www pool) must READ the
+	// tree and WRITE the db dir (sqlite + its journal), temp and logs. Give the
+	// tree to the web group; make exactly those three dirs group-writable —
+	// never world.
+	// /webmail/'i sunan FPM havuzu (varsayılan www havuzu) ağacı OKUMALI ve db
+	// dizinine (sqlite + journal'ı), temp'e ve logs'a YAZMALIDIR. Ağacı web
+	// grubuna ver; tam o üç dizini grup-yazılabilir yap — asla herkese değil.
 	if grp := webServerGroup(); grp != "" {
 		_ = exec.Command("chown", "-R", "root:"+grp, webmailBaseDir).Run()
-		for _, p := range []string{"temp", "logs"} {
+		for _, p := range []string{"db", "temp", "logs"} {
 			_ = os.Chmod(filepath.Join(webmailBaseDir, p), 0o775)
 		}
-		_ = os.Chmod(filepath.Join(webmailBaseDir, "roundcube.sqlite3"), 0o664)
+		_ = os.Chmod(dbPath, 0o664)
 	}
 
 	resp.Installed = true
@@ -215,7 +236,10 @@ func writeRoundcubeConfig(root, phpVer string) error {
 	if _, err := rand.Read(key); err != nil {
 		return fmt.Errorf("des_key: %v", err)
 	}
-	dbPath := filepath.Join(webmailBaseDir, "roundcube.sqlite3")
+	// The DB lives in db/ (a group-writable subdir) so SQLite can write its
+	// journal beside the file. / DB db/ içinde yaşar (grup-yazılabilir alt
+	// dizin) ki SQLite journal'ını dosyanın yanına yazabilsin.
+	dbPath := filepath.Join(webmailBaseDir, "db", "roundcube.sqlite3")
 	conf := fmt.Sprintf(`<?php
 // Managed by CelikPanel. Roundcube installed from the official tarball (D-004:
 // one path on every Linux). SQLite store, localhost IMAP/SMTP.
