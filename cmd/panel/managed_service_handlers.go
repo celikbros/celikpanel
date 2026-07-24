@@ -38,6 +38,13 @@ type ManagedServiceResponse struct {
 	// çıkarılan ve üç ayrı şeyi tek bitle işaretleyen eski `daemonless`
 	// bayrağının yerine geçer.
 	Kind core.ServiceKind `json:"kind"`
+	// Unit: the real systemd unit behind this row, as found by the scan. The
+	// UI's start/stop/restart targets THIS, not the id (BIND's id is "bind",
+	// its unit is "named").
+	// Unit: bu satırın arkasındaki gerçek systemd unit'i, taramanın bulduğu
+	// hâliyle. Arayüzün başlat/durdur/yeniden başlatı BUNU hedefler, id'yi
+	// değil (BIND'in id'si "bind", unit'i "named").
+	Unit string `json:"unit,omitempty"`
 	// Instances: the per-copy truth behind a runtime row (B3b) — one entry
 	// per installed version, with unit/status/path/size. The version drawer
 	// renders these; Versions above is just their version strings.
@@ -84,9 +91,22 @@ type managedServicesPayload struct {
 // da boş yayınlanmasının sebebi tam buydu. Kodda yaşayan bir gerçeği
 // önbelleğe almak, kod ile ekranın birbirinden ayrı düşme biçimidir.
 type serviceObservation struct {
-	ID          string            `json:"id"`
-	IsInstalled bool              `json:"is_installed"`
-	Status      string            `json:"status"`
+	ID          string `json:"id"`
+	IsInstalled bool   `json:"is_installed"`
+	Status      string `json:"status"`
+	// Unit is the systemd unit the scan ACTUALLY found for this service —
+	// "named" for BIND, "apache2" for Apache. Start/stop/restart must target
+	// this, never the catalogue id: the two are equal for most services
+	// (nginx, postfix) and different for exactly the ones that broke live
+	// (operator, 24 Jul: BIND installed, stop/restart did nothing — the panel
+	// was calling `systemctl stop bind`, a unit that does not exist).
+	// Unit, taramanın bu servis için GERÇEKTEN bulduğu systemd unit'idir —
+	// BIND'de "named", Apache'de "apache2". Başlat/durdur/yeniden başlat bunu
+	// hedeflemeli, asla katalog id'sini: ikisi çoğu serviste aynıdır (nginx,
+	// postfix) ve tam da canlıda kırılanlarda farklıdır (operatör, 24 Tem:
+	// BIND kurulu, durdur/yeniden başlat hiçbir şey yapmıyordu — panel
+	// `systemctl stop bind` çağırıyordu; öyle bir unit yok).
+	Unit        string            `json:"unit,omitempty"`
 	ConfigFiles []core.ConfigFile `json:"config_files,omitempty"`
 	// Instances is the per-copy truth for runtimes (B3b), straight from
 	// Agent.ListServiceInstances: version, unit, path, managed, per-unit
@@ -240,6 +260,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 
 		response = append(response, ManagedServiceResponse{
 			ID:              managed.ID,
+			Unit:            o.Unit,
 			Name:            managed.Name,
 			Description:     managed.Description,
 			Icon:            managed.Icon,
@@ -377,6 +398,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		// kurulan php8.5-fpm, çalışan ve site sunan bir unit üretirken panel
 		// PHP'yi kurulu değil diye bildiriyordu.
 		managed := managed // loop-var capture for the pointer below
+		primaryUnit := ""
 		for _, svc := range allServices {
 			// core.UnitBelongsTo is the single owner of unit→service matching,
 			// shared with the agent scanner (scan_match.go) — one rule, so the
@@ -389,6 +411,17 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 				continue
 			}
 			isInstalled = true
+			// Remember the unit that answered, so the row's start/stop targets
+			// a unit that exists. A running one wins over a dead one: with
+			// bind9.service (alias) and named.service both present, the row
+			// must act on whichever systemd actually loaded.
+			// Cevap veren unit'i hatırla ki satırın başlat/durduru var olan bir
+			// unit'i hedeflesin. Çalışan olan ölüye üstün gelir: bind9.service
+			// (takma ad) ve named.service birlikteyken satır, systemd'nin
+			// gerçekten yüklediği hangisiyse ona etki etmeli.
+			if primaryUnit == "" || strings.HasPrefix(strings.ToLower(svc.Status), "active") {
+				primaryUnit = svc.Name
+			}
 
 			if len(svc.ConfigFiles) > 0 {
 				configFiles = append(configFiles, svc.ConfigFiles...)
@@ -492,6 +525,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			ID:          managed.ID,
 			IsInstalled: isInstalled,
 			Status:      status,
+			Unit:        primaryUnit,
 			Instances:   instances,
 			ConfigFiles: configFiles,
 		})

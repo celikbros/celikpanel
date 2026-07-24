@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
-import { readApiError, type ApiError } from '../lib/apiError';
+import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -23,6 +23,8 @@ interface ServiceInstance {
 
 interface ManagedService {
     id: string;
+    /** The real systemd unit the scan found (BIND's id is "bind", unit "named"). */
+    unit?: string;
     name: string;
     description: string;
     icon: string;
@@ -304,12 +306,27 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const handleAction = async (service: ManagedService, action: 'start' | 'stop' | 'restart') => {
         setBusy(service.id);
         try {
+            // Target the unit the SCAN found, not the catalogue id. They differ
+            // exactly where this broke live: BIND's id is "bind" but its unit is
+            // "named", so every stop/restart called a unit that does not exist
+            // and the row just sat there (operator, 24 Jul).
+            // Hedef, taramanın bulduğu unit'tir; katalog id'si değil. İkisi tam
+            // da bunun canlıda kırıldığı yerde ayrışır: BIND'in id'si "bind",
+            // unit'i "named"; bu yüzden her durdur/yeniden başlat var olmayan bir
+            // unit'i çağırıyor ve satır olduğu yerde kalıyordu (operatör, 24 Tem).
             const res = await fetch('/api/v1/service/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: service.id, action }),
+                body: JSON.stringify({ name: service.unit || service.id, action }),
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                // Say WHY. A generic "action failed" toast is why a real error
+                // read as "nothing happened".
+                // NEDENİNİ söyle. Genel "işlem başarısız" balonu, gerçek bir
+                // hatanın "hiçbir şey olmadı" diye okunmasının sebebiydi.
+                showToast('error', apiErrorText(await readApiError(res), t, 'services.actionFailed'));
+                return;
+            }
             await new Promise((r) => setTimeout(r, 1000));
             loadServices();
         } catch {

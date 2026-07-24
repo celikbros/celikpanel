@@ -191,3 +191,41 @@ func TestVersionFromPackage(t *testing.T) {
 		t.Error("nil service must yield nothing")
 	}
 }
+
+// The row's start/stop/restart targets a UNIT, and the unit is not always the
+// catalogue id: BIND's id is "bind" but its unit is "named"/"bind9", Apache's
+// id is "apache" but its unit is "apache2". Shipping the id as the unit made
+// every stop/restart on those services a no-op against a unit that does not
+// exist (operator, 24 Jul: "I said stop, it didn't stop"). catalogView must
+// therefore carry the scanned unit through to the API.
+//
+// Satırın başlat/durdur/yeniden başlatı bir UNIT'i hedefler ve unit her zaman
+// katalog id'si değildir: BIND'in id'si "bind" ama unit'i "named"/"bind9",
+// Apache'nin id'si "apache" ama unit'i "apache2". Id'yi unit diye göndermek, o
+// servislerde her durdur/yeniden başlatı var olmayan bir unit'e karşı boş
+// işleme çeviriyordu (operatör, 24 Tem: "durdur dedim durdurmadı").
+// catalogView bu yüzden taranan unit'i API'ye taşımalıdır.
+func TestCatalogViewCarriesTheScannedUnit(t *testing.T) {
+	obs := []serviceObservation{
+		{ID: "bind", IsInstalled: true, Status: "active (running)", Unit: "named"},
+		{ID: "apache", IsInstalled: true, Status: "active (running)", Unit: "apache2"},
+		{ID: "nginx", IsInstalled: true, Status: "active (running)", Unit: "nginx"},
+	}
+	byID := map[string]ManagedServiceResponse{}
+	for _, s := range catalogView(obs, "apt") {
+		byID[s.ID] = s
+	}
+
+	for id, wantUnit := range map[string]string{"bind": "named", "apache": "apache2", "nginx": "nginx"} {
+		if got := byID[id].Unit; got != wantUnit {
+			t.Errorf("%s: unit = %q, want %q — the UI acts on this, not the id", id, got, wantUnit)
+		}
+	}
+	// The two that differ are exactly the ones that broke; pin the difference
+	// so nobody "simplifies" the field away again.
+	// Farklı olan ikisi tam da kırılanlardır; kimse alanı "sadeleştirip"
+	// silmesin diye farkı sabitle.
+	if byID["bind"].Unit == byID["bind"].ID {
+		t.Error("bind's unit must not equal its id — that equality was the bug")
+	}
+}
