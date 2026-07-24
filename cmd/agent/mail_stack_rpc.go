@@ -149,12 +149,32 @@ type WireMailFiltersResponse struct {
 }
 
 func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) error {
+	// Repair the lookup tables while we are here. A server configured before
+	// the table type was discovered still carries `hash:` in main.cf, and on a
+	// postfix built without Berkeley DB that means every incoming message is
+	// rejected with 451. Re-applying is idempotent, costs one postconf pass,
+	// and turns the upgrade itself into the repair — no daemon is restarted.
+	// Buradayken arama tablolarını da onar. Tablo tipi keşfedilmeden önce
+	// yapılandırılmış bir sunucu main.cf'inde hâlâ `hash:` taşır ve Berkeley
+	// DB'siz derlenmiş bir postfix'te bu, gelen her iletinin 451 ile
+	// reddedilmesi demektir. Yeniden uygulamak değişmez etkilidir, bir postconf
+	// turu tutar ve yükseltmenin kendisini onarıma çevirir — daemon yeniden
+	// başlatılmaz.
+	if _, err := exec.LookPath("postconf"); err == nil && fileExistsAgent(postfixVBoxPath) {
+		if err := configurePostfixVirtual(); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
+			postmapReadable(p)
+		}
+	}
 	if err := applyMilterChain(); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
 	resp.Wired = true
-	resp.Detail = postconfValue("smtpd_milters")
+	resp.Detail = fmt.Sprintf("milters=%q maps=%s", postconfValue("smtpd_milters"), postfixMapType())
 	return nil
 }
 
@@ -423,11 +443,14 @@ func ensureMailRoot() error {
 // configurePostfixVirtual, Postfix'i map'lerimize yönlendirir ve barındırılan
 // postayı vmail kullanıcısı olarak maildir'lere teslim eder.
 func configurePostfixVirtual() error {
+	// The table type is DISCOVERED, never assumed — see postfixMapType.
+	// Tablo tipi VARSAYILMAZ, keşfedilir — bkz. postfixMapType.
+	mt := postfixMapType() + ":"
 	settings := [][2]string{
 		{"virtual_mailbox_base", mailRootDir},
-		{"virtual_mailbox_domains", "hash:" + postfixDomainsPath},
-		{"virtual_mailbox_maps", "hash:" + postfixVBoxPath},
-		{"virtual_alias_maps", "hash:" + postfixVirtualPath},
+		{"virtual_mailbox_domains", mt + postfixDomainsPath},
+		{"virtual_mailbox_maps", mt + postfixVBoxPath},
+		{"virtual_alias_maps", mt + postfixVirtualPath},
 		{"virtual_transport", "virtual"},
 		{"virtual_uid_maps", "static:" + vmailUID},
 		{"virtual_gid_maps", "static:" + vmailGID},
@@ -576,7 +599,84 @@ func ensurePostfixDomain(domain string) {
 // configuration error" ile ertelenir. Bu haritalar sır değil adres→yol
 // takma adı taşır; 0644 doğrudur.
 func postmapReadable(path string) {
-	_ = exec.Command("postmap", path).Run()
+	t := postfixMapType()
+	if t == "texthash" {
+		// texthash needs no index at all — postfix reads the plain file.
+		// texthash hiç dizin istemez — postfix düz dosyayı okur.
+		_ = os.Chmod(path, 0o644)
+		return
+	}
+	_ = exec.Command("postmap", t+":"+path).Run()
 	_ = os.Chmod(path, 0o644)
-	_ = os.Chmod(path+".db", 0o644)
+	for _, ext := range []string{".db", ".lmdb"} {
+		_ = os.Chmod(path+ext, 0o644)
+	}
+}
+
+// postfixMapType finds an indexed table type this postfix can ACTUALLY use.
+//
+// `hash:` was hardcoded, and it is not portable: Arch builds postfix without
+// Berkeley DB, so every lookup failed at runtime with "Berkeley DB support for
+// 'hash:...' is not available for this OS distribution" and postfix answered
+// every incoming message with `451 Temporary lookup failure`. Installed,
+// "Running", and rejecting all mail — found live on Frankfurt (25 Jul) by
+// sending one test message through the freshly wired milter chain.
+//
+// `postconf -m` cannot be trusted alone: it lists `hash` on Arch too, because
+// the type is COMPILED IN but its backend library is missing. The only honest
+// test is to run postmap on a probe file and see whether it works, so that is
+// what we do. Preference order puts lmdb first (Arch's real backend, and
+// faster), then hash (Debian/Ubuntu), then btree. If none index, texthash is
+// the universal floor: no index file, postfix reads the plain text.
+//
+// postfixMapType, bu postfix'in GERÇEKTEN kullanabildiği bir dizinli tablo
+// tipini bulur.
+//
+// `hash:` koda gömülüydü ve taşınabilir değil: Arch, postfix'i Berkeley DB'siz
+// derler; bu yüzden her arama çalışma anında "Berkeley DB support for
+// 'hash:...' is not available for this OS distribution" ile düşüyor ve postfix
+// gelen her iletiye `451 Temporary lookup failure` diyordu. Kurulu,
+// "Çalışıyor" ve tüm postayı reddediyor — 25 Tem'de Frankfurt'ta, yeni
+// bağlanan milter zincirinden tek bir test iletisi geçirilerek canlı bulundu.
+//
+// `postconf -m`'e tek başına güvenilemez: Arch'ta da `hash` listeler, çünkü tip
+// DERLENMİŞTİR ama arka uç kütüphanesi yoktur. Tek dürüst sınav, bir deneme
+// dosyasında postmap koşturup işe yarayıp yaramadığına bakmaktır; yaptığımız
+// da budur. Tercih sırası lmdb'yi öne alır (Arch'ın gerçek arka ucu ve daha
+// hızlı), sonra hash (Debian/Ubuntu), sonra btree. Hiçbiri dizinlemezse
+// texthash evrensel tabandır: dizin dosyası yok, postfix düz metni okur.
+func postfixMapType() string {
+	for _, t := range []string{"lmdb", "hash", "btree"} {
+		if postmapTypeWorks(t) {
+			return t
+		}
+	}
+	return "texthash"
+}
+
+func postmapTypeWorks(t string) bool {
+	dir, err := os.MkdirTemp("", "cpmap")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(dir)
+	probe := dir + "/probe"
+	if err := os.WriteFile(probe, []byte("probe@example.invalid OK\n"), 0o600); err != nil {
+		return false
+	}
+	// A type that is compiled in but unusable fails HERE, which is the whole
+	// point: we ask postmap, not the feature list.
+	// Derlenmiş ama kullanılamaz bir tip BURADA düşer; bütün mesele bu:
+	// özellik listesine değil, postmap'e soruyoruz.
+	if err := exec.Command("postmap", t+":"+probe).Run(); err != nil {
+		return false
+	}
+	// postmap can exit 0 and still write nothing usable; require the index.
+	// postmap 0 ile çıkıp kullanılır bir şey yazmamış olabilir; dizini şart koş.
+	for _, ext := range []string{".db", ".lmdb"} {
+		if fileExistsAgent(probe + ext) {
+			return true
+		}
+	}
+	return false
 }

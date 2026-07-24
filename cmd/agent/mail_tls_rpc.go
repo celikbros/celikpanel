@@ -190,7 +190,7 @@ func configurePostfixTLS(myhostname string, sni []MailSNIEntry) error {
 		if err := writePostfixSNIMap(sni); err != nil {
 			return err
 		}
-		settings = append(settings, [2]string{"tls_server_sni_maps", "hash:" + postfixSNIPath})
+		settings = append(settings, [2]string{"tls_server_sni_maps", postfixMapType() + ":" + postfixSNIPath})
 	} else {
 		settings = append(settings, [2]string{"tls_server_sni_maps", ""})
 	}
@@ -221,7 +221,22 @@ func writePostfixSNIMap(sni []MailSNIEntry) error {
 	if err := os.WriteFile(postfixSNIPath, []byte(b.String()), 0o600); err != nil {
 		return err
 	}
-	if out, err := exec.Command("postmap", "-F", "hash:"+postfixSNIPath).CombinedOutput(); err != nil {
+	// Same portability trap as the virtual maps: `hash:` is unusable on distros
+	// that build postfix without Berkeley DB (Arch), and per-domain mail
+	// certificates would silently never load. An SNI map MUST be indexed —
+	// postmap -F embeds the PEM contents into the index — so texthash is not an
+	// option here; say so instead of writing a map postfix cannot read.
+	// Sanal haritalardaki taşınabilirlik tuzağının aynısı: `hash:`, postfix'i
+	// Berkeley DB'siz derleyen dağıtımlarda (Arch) kullanılamaz ve alan başına
+	// posta sertifikaları sessizce hiç yüklenmezdi. SNI haritası dizinli
+	// OLMALIDIR — postmap -F, PEM içeriğini dizine gömer — bu yüzden texthash
+	// burada seçenek değil; postfix'in okuyamayacağı bir harita yazmaktansa
+	// durumu söyle.
+	mt := postfixMapType()
+	if mt == "texthash" {
+		return fmt.Errorf("postfix on this system has no indexed table type (lmdb/hash/btree); per-domain mail certificates need one")
+	}
+	if out, err := exec.Command("postmap", "-F", mt+":"+postfixSNIPath).CombinedOutput(); err != nil {
 		return fmt.Errorf("postmap -F: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
