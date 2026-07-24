@@ -432,6 +432,18 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			status = "inactive (dead)"
 		}
 
+		// A tool has no daemon of ours, so "inactive (dead)" is a lie for it:
+		// phpMyAdmin and Roundcube are PHP apps, not stopped services. The UI
+		// already masked this via kind, but the API status must be honest too
+		// — a status of "installed" is the whole truth (D-010/B3b).
+		// Bir tool'un bize ait daemon'ı yoktur; "inactive (dead)" onun için
+		// yalandır: phpMyAdmin ve Roundcube PHP uygulamalarıdır, durmuş servis
+		// değil. UI bunu zaten kind'le maskeliyordu ama API durumu da dürüst
+		// olmalı — "installed" tam gerçektir (D-010/B3b).
+		if isInstalled && managed.Kind == core.KindTool {
+			status = "installed"
+		}
+
 		// Runtimes are the per-copy exception: their truth is the instance
 		// list, not unit-name parsing (B3b — extractVersion is gone). A
 		// managed instance means installed even when nothing unit-based
