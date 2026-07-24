@@ -191,6 +191,19 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	if unit != "" {
 		_ = exec.Command("systemctl", "enable", "--now", unit).Run()
 	}
+	// Bridge daemons come in their own packages with their own units, and
+	// nothing else starts them: SpamAssassin's spamd scores a message handed
+	// to it, but spamass-milter is what hands Postfix's mail over. Leaving it
+	// stopped produced "installed", "Running", zero mail filtered.
+	// Köprü daemon'ları kendi paketlerinde, kendi unit'leriyle gelir ve onları
+	// başka hiçbir şey başlatmaz: SpamAssassin'in spamd'si kendisine verilen
+	// iletiyi puanlar ama Postfix'in postasını uzatan spamass-milter'dır. Onu
+	// durmuş bırakmak "kurulu", "Çalışıyor", süzülen posta sıfır üretiyordu.
+	for _, h := range svc.HelperUnits {
+		if unitExists(h) {
+			_ = exec.Command("systemctl", "enable", "--now", h).Run()
+		}
+	}
 
 	resp.Installed = true
 	resp.Detail = fmt.Sprintf("installed %s", strings.Join(pkgs, ", "))
@@ -328,7 +341,7 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	// durdurulur VE paketleri purge listesine eklenir — B3d'den önce php-fpm'i
 	// kaldırmak yalnız meta paketi söküyor, sürümlü daemon'ların hepsini
 	// kurulu, çalışır ve sunar hâlde bırakıyordu.
-	for _, unit := range svc.SystemNames {
+	for _, unit := range append(append([]string{}, svc.SystemNames...), svc.HelperUnits...) {
 		_ = exec.Command("systemctl", "disable", "--now", unit).Run()
 	}
 	if svc.SystemNamePattern != "" {

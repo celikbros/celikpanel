@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -94,6 +95,16 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 	}
 
 	if hasPostfix {
+		// Wire whatever filters are installed INTO Postfix. Without this a
+		// spam filter runs beside the mail server instead of inside it —
+		// installed, "Running", filtering nothing (operator, 24 Jul).
+		// Kurulu olan filtreleri Postfix'in İÇİNE bağla. Bu olmadan spam
+		// filtresi posta sunucusunun yanında koşar, içinde değil — kurulu,
+		// "Çalışıyor", hiçbir şey süzmüyor (operatör, 24 Tem).
+		if err := applyMilterChain(); err != nil {
+			resp.Error = fmt.Sprintf("milter wiring: %v", err)
+			return nil
+		}
 		if out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
 			resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
 			return nil
@@ -121,6 +132,198 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 // postfixDomainsPath lists the virtual mailbox domains (postfix needs this
 // separately from the mailbox map).
 var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
+
+// WireMailFilters re-composes Postfix's milter chain from whatever filters are
+// installed right now. It is called after a spam filter is installed OR
+// removed: installing one must start filtering, and removing one must stop
+// Postfix pointing at a socket that no longer answers.
+//
+// WireMailFilters, Postfix'in milter zincirini şu an kurulu olan filtrelerden
+// yeniden bestelemektedir. Bir spam filtresi kurulduktan VEYA kaldırıldıktan
+// sonra çağrılır: kurmak süzmeyi başlatmalı, kaldırmak da Postfix'i artık
+// cevap vermeyen bir sokete bakar hâlde bırakmamalıdır.
+type WireMailFiltersResponse struct {
+	Wired  bool   `json:"wired"`
+	Detail string `json:"detail,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) error {
+	if err := applyMilterChain(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	resp.Wired = true
+	resp.Detail = postconfValue("smtpd_milters")
+	return nil
+}
+
+// rspamdMilter is rspamd_proxy in milter mode — a TCP port, identical on every
+// distro, so there is nothing to discover.
+// rspamdMilter, milter kipindeki rspamd_proxy'dir — her dağıtımda aynı olan bir
+// TCP portu; keşfedilecek bir şey yok.
+const rspamdMilter = "inet:localhost:11332"
+
+// spamassMilterEndpoint finds where spamass-milter actually listens, instead of
+// hardcoding a path. Two facts make a constant wrong here:
+//   - the socket path is a packaging choice (Debian sets it in
+//     /etc/default/spamass-milter; an operator may move it), and
+//   - Postfix runs CHROOTED in its queue directory, so a socket living under
+//     /var/spool/postfix must be named relative to that root or postfix simply
+//     cannot see it.
+//
+// Guessing a socket path is the exact mistake that made webmail's PHP-FPM
+// socket wrong on Arch. When the path cannot be determined we return "" and the
+// caller skips the filter — a missing milter line is honest; a wrong one is a
+// mail server talking to nothing.
+//
+// spamassMilterEndpoint, bir yolu koda gömmek yerine spamass-milter'ın gerçekte
+// nerede dinlediğini bulur. Sabit kullanmayı iki olgu yanlışlar:
+//   - soket yolu bir paketleme tercihidir (Debian bunu
+//     /etc/default/spamass-milter'da belirler; operatör taşıyabilir) ve
+//   - Postfix kuyruk dizininde CHROOT'lu koşar; /var/spool/postfix altındaki bir
+//     soket, o köke GÖRE adlandırılmalıdır yoksa postfix onu göremez.
+//
+// Soket yolunu tahmin etmek, webmail'in PHP-FPM soketini Arch'ta yanlışlayan
+// hatanın ta kendisidir. Yol saptanamazsa "" döneriz ve çağıran filtreyi atlar —
+// eksik bir milter satırı dürüsttür; yanlış olanı, hiçliğe konuşan bir posta
+// sunucusudur.
+func spamassMilterEndpoint() string {
+	sock := ""
+	// The unit's own command line is the most truthful source: -p <socket>.
+	// Unit'in kendi komut satırı en doğru kaynaktır: -p <soket>.
+	if out, err := exec.Command("systemctl", "show", "spamass-milter.service", "-p", "ExecStart", "--value").Output(); err == nil {
+		if m := regexp.MustCompile(`-p\s+(\S+)`).FindStringSubmatch(string(out)); len(m) == 2 {
+			sock = m[1]
+		}
+	}
+	if sock == "" {
+		// Debian keeps it in the defaults file the unit sources.
+		// Debian bunu, unit'in okuduğu defaults dosyasında tutar.
+		if b, err := os.ReadFile("/etc/default/spamass-milter"); err == nil {
+			for _, line := range strings.Split(string(b), "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "#") || !strings.HasPrefix(line, "SOCKET=") {
+					continue
+				}
+				if v := strings.Trim(strings.TrimPrefix(line, "SOCKET="), "\"' "); v != "" {
+					sock = v
+				}
+			}
+		}
+	}
+	if sock == "" || !strings.HasPrefix(sock, "/") {
+		return ""
+	}
+	// Inside the chroot the path loses the queue directory prefix.
+	// Chroot içinde yol, kuyruk dizini önekini kaybeder.
+	if queue := strings.TrimSpace(postconfValue("queue_directory")); queue != "" {
+		if rel := strings.TrimPrefix(sock, strings.TrimSuffix(queue, "/")); rel != sock && strings.HasPrefix(rel, "/") {
+			return "unix:" + rel
+		}
+	}
+	return "unix:" + sock
+}
+
+// postconfValue reads one Postfix setting; "" when postfix is absent.
+// postconfValue tek bir Postfix ayarını okur; postfix yoksa "".
+func postconfValue(key string) string {
+	out, err := exec.Command("postconf", "-h", key).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// applyMilterChain is the SINGLE owner of Postfix's milter settings. Every
+// filter the panel installs (DKIM signing, a spam filter) is a milter, and
+// they must COMPOSE: before this existed the DKIM step wrote
+// `smtpd_milters = <opendkim>` outright, so any second filter would have
+// silently replaced DKIM signing or been replaced by it — last writer wins,
+// no error, mail quietly unsigned or unfiltered.
+//
+// It also answers the operator's finding (24 Jul): Rspamd was installed and
+// "Running" while `smtpd_milters` was EMPTY — the daemon was up and not one
+// message passed through it. A filter the panel installed must actually
+// filter, the same rule as every other component.
+//
+// applyMilterChain, Postfix'in milter ayarlarının TEK sahibidir. Panelin
+// kurduğu her filtre (DKIM imzalama, spam filtresi) bir milter'dır ve
+// BİRLEŞMELİdirler: bu var olmadan önce DKIM adımı doğrudan
+// `smtpd_milters = <opendkim>` yazıyordu; ikinci bir filtre DKIM imzalamayı
+// sessizce siler ya da onun tarafından silinirdi — son yazan kazanır, hata
+// yok, posta sessizce imzasız ya da süzgeçsiz.
+//
+// Ayrıca operatörün bulgusunu (24 Tem) yanıtlar: Rspamd kurulu ve
+// "Çalışıyor"ken `smtpd_milters` BOŞTU — daemon ayaktaydı ve içinden tek bir
+// ileti geçmiyordu. Panelin kurduğu filtre gerçekten süzmelidir; her bileşen
+// için geçerli olan aynı kural.
+func applyMilterChain() error {
+	if _, err := exec.LookPath("postconf"); err != nil {
+		return nil // no postfix here, nothing to wire
+	}
+
+	spam := ""
+	switch {
+	case unitExists("rspamd"):
+		spam = rspamdMilter
+	case unitExists("spamass-milter"):
+		spam = spamassMilterEndpoint()
+	}
+	incoming, outgoing := composeMilterChain(unitExists("opendkim") && fileExistsAgent(opendkimConfPath), spam)
+
+	settings := [][2]string{
+		{"smtpd_milters", incoming},
+		{"non_smtpd_milters", outgoing},
+		// A dead filter must never eat mail — accept beats bounce.
+		// Ölü filtre asla posta yutmamalı — kabul, reddi yener.
+		{"milter_default_action", "accept"},
+		{"milter_protocol", "6"},
+	}
+	for _, kv := range settings {
+		if out, err := exec.Command("postconf", "-e", kv[0]+"="+kv[1]).CombinedOutput(); err != nil {
+			return fmt.Errorf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
+		}
+	}
+	_ = exec.Command("systemctl", "reload-or-restart", "postfix").Run()
+	return nil
+}
+
+// composeMilterChain decides the two Postfix milter lists from what is present.
+// It is separated from the system calls so the ORDER and the two-list split —
+// the parts that decide whether mail is signed and filtered — can be tested
+// without a mail server.
+//
+// Rules:
+//   - DKIM first: it signs what leaves, so it must see the final content.
+//   - The spam filter judges only ARRIVING mail. Scanning our own outgoing
+//     messages burns CPU and can bounce legitimate mail we created ourselves.
+//   - An unknown spam endpoint contributes nothing rather than a broken line.
+//
+// composeMilterChain, iki Postfix milter listesini mevcut olandan karar verir.
+// Sistem çağrılarından ayrıdır; böylece SIRA ve iki-liste ayrımı — postanın
+// imzalanıp süzülüp süzülmeyeceğine karar veren parçalar — posta sunucusu
+// olmadan test edilebilir.
+//
+// Kurallar:
+//   - Önce DKIM: çıkanı imzalar, bu yüzden nihai içeriği görmelidir.
+//   - Spam filtresi yalnız GELEN postayı yargılar. Kendi çıkan iletilerimizi
+//     taramak CPU yakar ve kendi ürettiğimiz meşru postayı geri çevirebilir.
+//   - Bilinmeyen bir spam ucu, bozuk bir satır yerine hiçbir şey katmaz.
+func composeMilterChain(hasDKIM bool, spamEndpoint string) (incoming, outgoing string) {
+	in := []string{}
+	out := []string{}
+	if hasDKIM {
+		in = append(in, opendkimMilter)
+		// Locally submitted mail must be signed too.
+		// Yerel gönderilen posta da imzalanmalı.
+		out = append(out, opendkimMilter)
+	}
+	if spamEndpoint != "" {
+		in = append(in, spamEndpoint)
+	}
+	return strings.Join(in, ", "), strings.Join(out, ", ")
+}
 
 // ensureDovecotSSLCert creates the TLS keypair Dovecot's shipped config points
 // at, when the distro did not. Debian's dovecot-core generates one on install;

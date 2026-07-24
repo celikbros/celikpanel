@@ -161,6 +161,35 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// A spam filter that is installed but not wired into Postfix is theatre:
+	// the daemon runs, the row says "Running", and not one message passes
+	// through it — exactly what a live check found on 24 Jul (smtpd_milters was
+	// EMPTY next to a running Rspamd). Removing one is just as dangerous the
+	// other way: Postfix would keep pointing at a socket that no longer
+	// answers. Both directions therefore re-compose the chain. The trigger is
+	// the SEAT, not a product list, so a spam filter added to the catalogue
+	// tomorrow is wired without touching this file.
+	// Kurulu ama Postfix'e bağlanmamış bir spam filtresi tiyatrodur: daemon
+	// koşar, satır "Çalışıyor" der ve içinden tek bir ileti geçmez — 24 Tem'de
+	// canlı denetimin bulduğu tam olarak budur (çalışan bir Rspamd'nin yanında
+	// smtpd_milters BOŞtu). Kaldırmak da öbür yönden aynı ölçüde tehlikelidir:
+	// Postfix artık cevap vermeyen bir sokete bakmayı sürdürürdü. Bu yüzden iki
+	// yön de zinciri yeniden besteler. Tetikleyici ürün listesi değil KOLTUK'tur;
+	// böylece yarın kataloğa eklenen bir spam filtresi bu dosyaya dokunmadan
+	// bağlanır.
+	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
+		var wireResp struct {
+			Wired  bool   `json:"wired"`
+			Detail string `json:"detail,omitempty"`
+			Error  string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil || wireResp.Error != "" {
+			log.Printf("milter wiring after %s %s: %v %s", "install", req.ServiceID, err, wireResp.Error)
+		} else {
+			log.Printf("milter chain now: %q", wireResp.Detail)
+		}
+	}
+
 	// Database web tools are files, not daemons: after (un)install the agent
 	// must (re)generate the loopback nginx server that actually serves them.
 	// Veritabanı web araçları daemon değil dosyadır: kur/kaldır sonrası agent,
@@ -326,6 +355,35 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
+	// A spam filter that is installed but not wired into Postfix is theatre:
+	// the daemon runs, the row says "Running", and not one message passes
+	// through it — exactly what a live check found on 24 Jul (smtpd_milters was
+	// EMPTY next to a running Rspamd). Removing one is just as dangerous the
+	// other way: Postfix would keep pointing at a socket that no longer
+	// answers. Both directions therefore re-compose the chain. The trigger is
+	// the SEAT, not a product list, so a spam filter added to the catalogue
+	// tomorrow is wired without touching this file.
+	// Kurulu ama Postfix'e bağlanmamış bir spam filtresi tiyatrodur: daemon
+	// koşar, satır "Çalışıyor" der ve içinden tek bir ileti geçmez — 24 Tem'de
+	// canlı denetimin bulduğu tam olarak budur (çalışan bir Rspamd'nin yanında
+	// smtpd_milters BOŞtu). Kaldırmak da öbür yönden aynı ölçüde tehlikelidir:
+	// Postfix artık cevap vermeyen bir sokete bakmayı sürdürürdü. Bu yüzden iki
+	// yön de zinciri yeniden besteler. Tetikleyici ürün listesi değil KOLTUK'tur;
+	// böylece yarın kataloğa eklenen bir spam filtresi bu dosyaya dokunmadan
+	// bağlanır.
+	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
+		var wireResp struct {
+			Wired  bool   `json:"wired"`
+			Detail string `json:"detail,omitempty"`
+			Error  string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil || wireResp.Error != "" {
+			log.Printf("milter wiring after %s %s: %v %s", "uninstall", req.ServiceID, err, wireResp.Error)
+		} else {
+			log.Printf("milter chain now: %q", wireResp.Detail)
+		}
+	}
+
 	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
 		var dbtResp struct {
 			Configured bool   `json:"configured"`

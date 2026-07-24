@@ -108,22 +108,16 @@ TrustAnchorFile		/usr/share/dns/root.key
 	}
 	_ = exec.Command("systemctl", "restart", "opendkim").Run()
 
-	// Postfix: sign everything that leaves — smtpd (25/587/465) and local
-	// pickup alike. A dead milter must not eat mail.
-	// Postfix: çıkan her şeyi imzala — smtpd (25/587/465) ve yerel pickup.
-	// Ölü milter posta yutmamalı.
-	for _, kv := range [][2]string{
-		{"smtpd_milters", opendkimMilter},
-		{"non_smtpd_milters", opendkimMilter},
-		{"milter_default_action", "accept"},
-		{"milter_protocol", "6"},
-	} {
-		if out, err := exec.Command("postconf", "-e", kv[0]+"="+kv[1]).CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
-			return nil
-		}
+	// Wire the milters through the ONE composer: writing smtpd_milters here
+	// directly used to erase any spam filter already wired (last writer wins,
+	// silently). applyMilterChain composes every installed filter instead.
+	// Milter'ları TEK besteciden bağla: burada doğrudan smtpd_milters yazmak,
+	// önceden bağlanmış bir spam filtresini siliyordu (son yazan kazanır,
+	// sessizce). applyMilterChain bunun yerine kurulu her filtreyi birleştirir.
+	if err := applyMilterChain(); err != nil {
+		resp.Error = err.Error()
+		return nil
 	}
-	_ = exec.Command("systemctl", "reload-or-restart", "postfix").Run()
 
 	resp.Configured = true
 	resp.Domains = len(domains)

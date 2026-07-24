@@ -767,6 +767,8 @@ export const tr: Record<TranslationKey, string> = {
     'services.role.webServer': 'bir web sunucusu',
     'services.role.dnsServer': 'bir DNS sunucusu',
     'services.role.smtpServer': 'bir SMTP sunucusu',
+    'services.role.imapServer': 'bir IMAP sunucusu',
+    'services.role.spamFilter': 'bir spam filtresi',
     'services.eolBadge': 'EOL',
     'services.eolHint': 'Bu hat artık güvenlik yaması almıyor — yalnız yükseltilemeyen eski bir site için kurun.',
     'services.phpVersionsHint': 'Sürümler yan yana kurulur; her site kendi sürümünü kendi ayarından seçer.',

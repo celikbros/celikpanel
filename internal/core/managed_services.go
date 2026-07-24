@@ -217,6 +217,27 @@ type ManagedService struct {
 	// üzerinde anlamlıdır: UI, gereksinim karşılanana dek gizler/kapatır;
 	// agent da uygular.
 	Requires []string
+	// HelperUnits: units this service needs running that are NOT the service
+	// itself — the bridge daemons that connect it to the rest of the stack.
+	// SpamAssassin is the case that forced this field: its own daemon (spamd)
+	// only scores a message handed to it; the piece that hands Postfix's mail
+	// over is a SEPARATE package with a SEPARATE unit (spamass-milter). Starting
+	// only the service's own unit produced the exact lie this project keeps
+	// hunting — "installed", "Running", and not one message filtered.
+	// The panel enables and starts every helper unit that is present after an
+	// install, and stops them on removal.
+	//
+	// HelperUnits: bu servisin çalışır olmasına ihtiyaç duyduğu ama servisin
+	// KENDİSİ olmayan unit'ler — onu yığının geri kalanına bağlayan köprü
+	// daemon'ları. Bu alanı zorunlu kılan durum SpamAssassin'dir: kendi
+	// daemon'ı (spamd) yalnız kendisine verilen iletiyi puanlar; Postfix'in
+	// postasını ona uzatan parça AYRI bir pakette AYRI bir unit'tir
+	// (spamass-milter). Yalnız servisin kendi unit'ini başlatmak, bu projenin
+	// sürekli avladığı yalanın ta kendisini üretiyordu — "kurulu", "Çalışıyor"
+	// ve süzülen tek ileti yok.
+	// Panel, kurulumdan sonra mevcut olan her yardımcı unit'i etkinleştirip
+	// başlatır, kaldırmada durdurur.
+	HelperUnits []string
 }
 
 // RequirementsMissing returns which of a service's requirements are not met by
@@ -499,8 +520,19 @@ var ManagedServices = []ManagedService{
 		Category:    "email",
 		Kind:        KindService,
 		SystemNames: []string{"rspamd"},
-		Packages:    map[string][]string{"apt": {"rspamd"}, "pacman": {"rspamd"}},
-		Requires:    []string{"smtp-server"},
+		// The spam-filter seat (operator, 24 Jul: "can rspamd and SpamAssassin
+		// be installed together, do they work together?"). Two spam filters on
+		// one mail server is not a feature: Postfix hands mail to ONE filter
+		// chain, so a second would either be dead weight or double-scan with
+		// two verdicts. Same reasoning as the SMTP, DNS and IMAP seats.
+		// Spam-filtresi koltuğu (operatör, 24 Tem: "rspamd ile SpamAssassin
+		// birlikte kurulabiliyor mu, birlikte çalışırlar mı?"). Tek posta
+		// sunucusunda iki spam filtresi özellik değildir: Postfix postayı TEK
+		// filtre zincirine verir; ikincisi ya ölü yük olur ya iki ayrı kararla
+		// çift tarama yapar. SMTP, DNS ve IMAP koltuklarıyla aynı gerekçe.
+		ConflictGroup: "spam-filter",
+		Packages:      map[string][]string{"apt": {"rspamd"}, "pacman": {"rspamd"}},
+		Requires:      []string{"smtp-server"},
 	},
 	{
 		ID:          "dovecot",
@@ -572,8 +604,20 @@ var ManagedServices = []ManagedService{
 		// "Installing…" sonra "Not installed"e döndü; tarama dürüstçe unit
 		// bulamamıştı). Arch hâlâ tek paket + `spamassassin` unit'i taşır;
 		// iki adın sebebi bu.
-		SystemNames: []string{"spamd", "spamassassin"},
-		Packages:    map[string][]string{"apt": {"spamassassin", "spamd"}, "pacman": {"spamassassin"}},
+		SystemNames:   []string{"spamd", "spamassassin"},
+		ConflictGroup: "spam-filter",
+		// apt only: wiring SpamAssassin into Postfix needs spamass-milter, and
+		// that package does not exist in Arch's repos (AUR only, verified live
+		// 24 Jul). Offering an install that cannot filter mail would break
+		// "installed means working", so on Arch this row says, honestly, that
+		// it is not supported yet — Rspamd is the filter that works on both.
+		// Yalnız apt: SpamAssassin'i Postfix'e bağlamak spamass-milter ister ve
+		// o paket Arch depolarında yok (yalnız AUR, 24 Tem canlı doğrulandı).
+		// Postayı süzemeyecek bir kurulum sunmak "kurulunca çalışır"ı bozardı;
+		// bu yüzden Arch'ta bu satır dürüstçe "henüz desteklenmiyor" der —
+		// ikisinde de çalışan filtre Rspamd'dir.
+		Packages:    map[string][]string{"apt": {"spamassassin", "spamd", "spamass-milter"}},
+		HelperUnits: []string{"spamass-milter"},
 		// A spam filter without an SMTP server filters nothing — and the
 		// requirement names the ROLE, not a product: any member of the
 		// smtp-server seat satisfies it (operator, 23 Jul: "maybe I'll

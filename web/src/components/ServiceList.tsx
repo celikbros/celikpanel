@@ -55,6 +55,8 @@ const REQ_ROLE_KEYS: Record<string, string> = {
     'web-server': 'services.role.webServer',
     'dns-server': 'services.role.dnsServer',
     'smtp-server': 'services.role.smtpServer',
+    'imap-server': 'services.role.imapServer',
+    'spam-filter': 'services.role.spamFilter',
 };
 
 // Category display order + label key + section icon + icon tint. Each
