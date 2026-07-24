@@ -131,6 +131,24 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 		resp.Error = err.Error()
 		return nil
 	}
+	// Roundcube's SQLite store needs PHP's pdo_sqlite, which neither distro
+	// bundles with PHP and our PHP-FPM install did not pull in. This is where
+	// a portable tarball still touches distro packages (the honest limit of
+	// "one path on every Linux"): the app is distro-agnostic, its runtime
+	// extension is not. Provide it distro-aware — the package name is the only
+	// per-distro fact, and the agent already owns that.
+	// Roundcube'un SQLite deposu PHP'nin pdo_sqlite'ına muhtaç; ne dağıtım onu
+	// PHP'yle paketliyor ne de bizim PHP-FPM kurulumumuz çekti. Taşınabilir bir
+	// tarball'ın yine de dağıtım paketlerine değdiği yer burası ("her Linux'ta
+	// tek yol"un dürüst sınırı): uygulama dağıtımdan bağımsız, çalışma-zamanı
+	// uzantısı değil. Dağıtım-farkındalıklı sağla — dağıtıma özgü tek gerçek
+	// paket adıdır ve o bilgi zaten agent'ta.
+	if !phpHasSQLite() {
+		if err := ensurePHPSQLite(phpVer); err != nil {
+			resp.Error = fmt.Sprintf("PHP SQLite extension is required for webmail and could not be installed: %v", err)
+			return nil
+		}
+	}
 	// Initialize the SQLite schema via Roundcube's own initdb (reads the config
 	// we just wrote). PHP CLI only — no sqlite3 binary needed, so it works on
 	// any distro.
@@ -205,6 +223,59 @@ $config['enable_installer'] = false;
 	// The staging tree's config path (moved into place with the tree).
 	// Hazırlık ağacının config yolu (ağaçla birlikte yerine taşınır).
 	return os.WriteFile(filepath.Join(root, "config", "config.inc.php"), []byte(conf), 0o640)
+}
+
+// phpHasSQLite reports whether the PHP CLI can open a SQLite PDO — the exact
+// capability Roundcube's initdb needs. Asking PHP itself (not guessing from a
+// package name) is the honest check: it is true the moment the extension is
+// loadable, whatever installed it.
+// phpHasSQLite, PHP CLI'ın bir SQLite PDO açıp açamadığını bildirir —
+// Roundcube'un initdb'sinin tam ihtiyacı. Paket adından tahmin etmek yerine
+// PHP'nin kendisine sormak dürüst denetimdir: uzantı yüklenebilir olduğu an
+// doğrudur, onu ne kurmuş olursa olsun.
+func phpHasSQLite() bool {
+	out, err := exec.Command("php", "-r", `echo in_array("sqlite", PDO::getAvailableDrivers()) ? "yes" : "no";`).Output()
+	return err == nil && string(out) == "yes"
+}
+
+// ensurePHPSQLite installs PHP's SQLite extension for the running PHP. The
+// package name is the one distro-specific fact: Debian/Sury ships a
+// per-version php<ver>-sqlite3; Arch has a single php-sqlite. dnf mirrors
+// Debian's shape. After install, php-fpm is reloaded so a served request sees
+// the new extension too (the CLI initdb would see it without a reload, but the
+// webmail that follows runs under FPM).
+// ensurePHPSQLite, çalışan PHP için PHP'nin SQLite uzantısını kurar. Paket adı
+// dağıtıma özgü tek gerçektir: Debian/Sury sürüm-başına php<ver>-sqlite3
+// taşır; Arch'ta tek php-sqlite. dnf, Debian'ın biçimini yansıtır. Kurulumdan
+// sonra php-fpm yeniden yüklenir ki sunulan bir istek de yeni uzantıyı görsün
+// (CLI initdb reload olmadan görürdü ama ardından gelen webmail FPM altında
+// çalışır).
+func ensurePHPSQLite(phpVer string) error {
+	family := detectPkgFamily()
+	var pkgs []string
+	switch family {
+	case "apt":
+		pkgs = []string{fmt.Sprintf("php%s-sqlite3", phpVer)}
+	case "pacman":
+		pkgs = []string{"php-sqlite"}
+	case "dnf":
+		pkgs = []string{fmt.Sprintf("php%s-sqlite3", phpVer)}
+	default:
+		return fmt.Errorf("unsupported package manager for this distro")
+	}
+	if _, err := installPackages(family, pkgs); err != nil {
+		return err
+	}
+	// Best-effort reload; the extension is loadable regardless, and a failed
+	// reload must not fail the install.
+	// En-iyi-çaba yeniden yükleme; uzantı yine de yüklenebilir ve başarısız
+	// bir reload kurulumu bozmamalı.
+	if phpVer != "" && family == "apt" {
+		_ = exec.Command("systemctl", "reload", "php"+phpVer+"-fpm").Run()
+	} else {
+		_ = exec.Command("systemctl", "reload", "php-fpm").Run()
+	}
+	return nil
 }
 
 type RemoveRoundcubeResponse struct {

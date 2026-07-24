@@ -286,7 +286,7 @@ var ManagedServices = []ManagedService{
 			// ilk istekten önce ihtiyaç duyduğu uzantılardır.
 			VersionCompanions: []string{
 				"{v}-cli", "{v}-common", "{v}-opcache",
-				"{v}-mysql", "{v}-pgsql",
+				"{v}-mysql", "{v}-pgsql", "{v}-sqlite3",
 				"{v}-mbstring", "{v}-xml", "{v}-curl",
 				"{v}-gd", "{v}-zip", "{v}-intl", "{v}-bcmath",
 			},
