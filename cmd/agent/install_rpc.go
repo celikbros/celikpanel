@@ -369,6 +369,17 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 // unit'i varsa unit'inden, yoksa paketinden (phpMyAdmin gibi daemon'suz
 // araçlar unit değil dosyadır).
 func (a *Agent) serviceInstalled(svc *core.ManagedService) bool {
+	// Roundcube is a tarball tree, not a unit or a package (D-004): presence
+	// is the tree on disk, the same way Node's is. Without this it has no
+	// SystemNames and no Packages, so the loops below both say "not
+	// installed" even right after a successful install.
+	// Roundcube bir tarball ağacıdır, unit ya da paket değil (D-004): varlık
+	// diskteki ağaçtır, Node'unki gibi. Bu olmadan SystemNames'i de Packages'ı
+	// da yoktur; aşağıdaki iki döngü de başarılı bir kurulumdan hemen sonra
+	// bile "kurulu değil" der.
+	if svc.ID == "roundcube" {
+		return roundcubeInstalled()
+	}
 	if len(svc.SystemNames) > 0 {
 		return a.firstPresentUnit(svc) != ""
 	}

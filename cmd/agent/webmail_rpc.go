@@ -36,16 +36,23 @@ const (
 	roundcubeSHA256  = "48c9f212c77460132491f670abaf440b765c8276268349a690913764d26afbef"
 )
 
-// webmailBaseDir is where the verified tarball is unpacked — a fixed tree we
-// own, like the Node runtimes dir. Env-overridable for dev boxes.
-// webmailBaseDir, doğrulanmış tarball'ın açıldığı yerdir — sahip olduğumuz
-// sabit bir ağaç, Node runtime dizini gibi. Dev makineleri için env ile
-// geçersiz kılınabilir.
+// webmailBaseDir is where the verified tarball is unpacked. It lives under
+// /var/lib — NOT /opt/celikpanel — because nginx (running as the web user)
+// must traverse into it to serve /webmail/, and /opt/celikpanel is the
+// panel's own private tree that the web user cannot enter (caught live:
+// nginx stat() failed with "permission denied" on the /opt path). /var/lib
+// is the standard home for such served, mutable app data. Env-overridable.
+// webmailBaseDir, doğrulanmış tarball'ın açıldığı yerdir. /opt/celikpanel
+// altında DEĞİL /var/lib altında yaşar; çünkü nginx (web kullanıcısı olarak)
+// /webmail/'i sunmak için içine girebilmeli ve /opt/celikpanel, web
+// kullanıcısının giremediği panelin özel ağacıdır (canlıda yakalandı: nginx
+// /opt yolunda stat() "permission denied" verdi). Böyle sunulan, değişebilir
+// uygulama verisinin standart evi /var/lib'dir. Env ile değiştirilebilir.
 var webmailBaseDir = func() string {
 	if d := os.Getenv("CELIKPANEL_WEBMAIL_DIR"); d != "" {
 		return d
 	}
-	return "/opt/celikpanel/webmail"
+	return "/var/lib/celikpanel-webmail"
 }()
 
 func roundcubeInstalled() bool {
