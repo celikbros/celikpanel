@@ -8,6 +8,62 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-017 · Sunum evrenseldir: seçilebilen her şey — bileşen, sürüm, entegrasyon, ürün — tek teklif uzayında zincirden geçer
+
+*24 Temmuz 2026*
+
+**Karar.** Operatörün cümlesi kanun maddesi niteliğinde: *"müşteri SSL seçerken
+veya bayi müşterilerine hangi SSL'leri seçme izni vereceğini düşünürken,
+esasında bizim onlara sunduğumuz seçenekler içinde hareket edecekler."*
+
+1. **Zincirin öznesi genelleşir.** D-014'ün `kurulu ⊇ sunulan ⊇ kullanılan`
+   zinciri yalnız kurulu bileşenler için değil, SEÇİLEBİLEN her şey için
+   geçerlidir — sunucuya hiçbir şey kurmayan entegrasyonlar (SSL CA'ları,
+   ileride Cloudflare, yedek hedefleri) dahil. Müşteri deneyiminde "hangi
+   CA" seçimi, "hangi PHP sürümü" seçiminden farksız bir tekliftir.
+2. **Tek teklif-kimliği uzayı.** Her sunulabilir kalem kanonik bir kimlik
+   taşır: `component:<id>` (bütün) · `component:<id>:<sürüm>` (D-014: birim
+   sürümdür) · `integration:acme:<id>` · `product:<id>` (D-012'nin
+   `subscription_entitlements.product_id`'si bu uzayın ilk sakinidir).
+   Teklif türü başına ayrı tablo/model YOKTUR — "aynı bilginin iki sahibi"
+   hastalığının teklif katmanındaki karşılığı olurdu.
+3. **Üç katman, üç ayrı soru; etkin küme = kesişim.**
+   *Mevcut* (admin): kurulu bileşenler + kayıt defterinde sunucu genelinde
+   AÇIK bırakılanlar — admin bir CA'yı bütün panelde kapatabilmelidir.
+   *Sunulan* (bayi): plan içeriği — D-014'ün "eksik halka"sı burada
+   `plan_offerings` (plan ↔ teklif-kimliği) olarak doğar.
+   *Kullanılan* (müşteri): kullanım anındaki seçim (site başına sürüm,
+   sertifika başına CA).
+4. **Uygulama deseni her seçici uçta AYNIDIR.** Listeleme uçları (ssl
+   sağlayıcıları, php sürümleri, node sürümleri…) çağıranın etkin kümesine
+   süzülür; eylem uçları sunucu tarafında yeniden doğrular ve kodlu retle
+   döner (`NOT_OFFERED` ailesi). UI yalnız sunulanı çizer — D-012 #7'nin
+   ("görünürlük hakkı izler") genel hâli.
+5. **Varsayılan cömert, daraltma bilinçli.** Plan hiçbir kısıt bildirmiyorsa
+   her şey sunulur (bugünkü davranış aynen). Mekanizma geriye dönük hiçbir
+   şeyi kırmaz; bayi daraltmak İSTEDİĞİNDE daraltır — D-014'teki
+   "sadeleştirme hakkı"nın uygulanması.
+6. **Zamanlama dürüstlüğü.** Tam mekanizma v0.3 kiracı/plan dilimiyle gelir
+   (plan UI'sı olmadan davranışsız iskelet kurmak tiyatro olur). Bugünden
+   geçerli olan tek yükümlülük: yeni yazılan her seçici uç bu deseni bilerek
+   yazılır ve teklif kimlikleri şimdiden kanonik adlandırılır.
+
+**Neden.** Bugün üç ayrı seçici doğdu (PHP sürümü, Node sürümü, SSL CA'sı) ve
+üçü de "listeyi kim daraltır?" sorusuna cevapsız. Operatör, cevabın üçü için
+de AYNI olması gerektiğini gördü. Üç ayrı daraltma mekanizması yazmak, üç ayrı
+yetki modeli bakımı demekti.
+
+**Reddedilen alternatifler.**
+- **Entegrasyonları zincir dışında tutmak** ("kurulmuyor ki"): müşterinin
+  gözünde CA seçimi de bir tekliftir; dışarıda tutmak ikinci bir yetki
+  modeli doğurur.
+- **Teklif türü başına ayrı tablo:** tek uzay + tek sunum defteri; D-012
+  dersi.
+- **Şimdi tam uygulama:** plan arayüzü yokken davranış değiştirmeyen
+  iskelet — bekleyen karar, yarım kod'dan iyidir.
+
+---
+
 ## D-016 · Sayfanın adı Bileşenler'dir; sözlük sabitlenir; servis tanımı incelir
 
 *23 Temmuz 2026 — 5 danışmanlı panel (pazar, TR-UX, bilgi mimarisi, şeytanın avukatı, küresel/yerelleştirme) + hakem sentezi; operatör onayı*

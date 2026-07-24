@@ -207,6 +207,13 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
 - Planlara fiyat: `service_plans`'a `price_cents, currency, billing_period, is_free, is_public, sort_order,
   kdv_included`. Admin "Free — 1 domain, 0₺" ve "Pro — 10 domain, X₺/ay" planlarını panelden tanımlar;
   ürün fiyatları kod sabitinden DB'ye taşınır. Müşteri kendi planının adını ve fiyatını görür.
+- **Sunum defteri (D-017 / D-014'ün eksik halkası):** `plan_offerings` (plan ↔ teklif-kimliği) tek
+  kanonik uzayda — `component:<id>[:<sürüm>]`, `integration:acme:<id>`, `product:<id>`. Her seçici uç
+  (php sürümleri, node sürümleri, SSL sağlayıcıları) çağıranın etkin kümesine süzülür: mevcut(admin) ∩
+  plan(bayi); eylem uçları `NOT_OFFERED` kodlu retle yeniden doğrular. Kısıt bildirmeyen plan her şeyi
+  sunar (geriye dönük kırılma yok); admin kayıt-defteri kalemlerini (örn. bir CA'yı) sunucu genelinde
+  kapatabilir. Çıkış ölçütü: bayi planından PHP 7.4'ü ve ZeroSSL'i çıkarır → müşterisinin seçicilerinde
+  görünmez, API'den denerse kodlu ret + audit.
 - **Dönem modeli** ("yükselttim, ne ödüyorum?" sorusunun cevabı): abonelikte `current_period_start/end`;
   kural en basit dürüst olandır ve DECISIONS'a yazılır — yükseltme anında yeni dönem başlar (kıst yok,
   bu açıkça ilan edilir); düşürme ve iptal dönem sonunda uygulanır; `expires_at` dönem ucundan türetilir.

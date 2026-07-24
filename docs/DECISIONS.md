@@ -8,6 +8,62 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-017 · Offering is universal: everything choosable — component, version, integration, product — flows through the chain in one offering-ID space
+
+*July 24, 2026*
+
+**Decision.** The operator's sentence reads like a statute: *"when a customer
+picks an SSL provider, or a reseller decides which SSL providers their
+customers may pick, they in fact move within the options WE offer them."*
+
+1. **The chain's subject generalizes.** D-014's `installed ⊇ offered ⊇ used`
+   applies not only to installed components but to EVERYTHING choosable —
+   including integrations that install nothing on the server (SSL CAs;
+   later Cloudflare, backup targets). To a customer, "which CA" is an
+   offering exactly like "which PHP version".
+2. **One offering-ID space.** Every offerable item carries a canonical id:
+   `component:<id>` (whole) · `component:<id>:<version>` (D-014: the unit
+   is the version) · `integration:acme:<id>` · `product:<id>` (D-012's
+   `subscription_entitlements.product_id` is this space's first resident).
+   There is NO separate table/model per offering type — that would be the
+   "two owners of one fact" disease at the offering layer.
+3. **Three layers, three questions; effective set = intersection.**
+   *Available* (admin): installed components + registry entries left ON
+   server-wide — the admin must be able to disable a CA panel-wide.
+   *Offered* (reseller): plan contents — D-014's "missing link" is born
+   here as `plan_offerings` (plan ↔ offering-id).
+   *Used* (customer): the choice at use time (version per site, CA per
+   certificate).
+4. **One enforcement pattern at every chooser.** Listing endpoints (ssl
+   providers, php versions, node versions…) filter to the caller's
+   effective set; acting endpoints re-verify server-side and refuse with a
+   coded error (the `NOT_OFFERED` family). The UI draws only what is
+   offered — the general form of D-012 #7 ("visibility follows the right").
+5. **Generous by default, narrowing deliberate.** A plan that declares no
+   restriction offers everything (today's behavior, unchanged). The
+   mechanism breaks nothing retroactively; a reseller narrows WHEN they
+   choose to — D-014's "right to simplify" made real.
+6. **Timing honesty.** The full mechanism ships with the v0.3 tenant/plan
+   slice (a behaviorless skeleton without a plan UI would be theater). The
+   one obligation effective today: every NEW chooser endpoint is written to
+   this pattern, and offering ids are named canonically from now on.
+
+**Why.** Three choosers were born in two days (PHP version, Node version,
+SSL CA) and all three had no answer to "who narrows this list?". The
+operator saw the answer must be the SAME for all three. Three separate
+narrowing mechanisms would mean maintaining three authorization models.
+
+**Rejected alternatives.**
+- **Keeping integrations outside the chain** ("nothing gets installed"): to
+  the customer a CA pick is an offering; excluding it births a second
+  authorization model.
+- **A table per offering type:** one space, one offering ledger; the D-012
+  lesson.
+- **Full implementation now:** a skeleton that changes no behavior while
+  the plan UI does not exist — a recorded decision beats half-built code.
+
+---
+
 ## D-016 · The page is named Components; the glossary is pinned; the service definition is refined
 
 *July 23, 2026 — 5-consultant panel (market, TR-UX, information architecture, devil's advocate, global/localization) + judge synthesis; operator approved*
