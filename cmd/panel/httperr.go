@@ -98,6 +98,17 @@ const (
 	// göstermek bilinçlidir — meşru bir dosyayı düzenleyen operatör hiçbir şeyin
 	// NEDEN olmadığını öğrenmeli ve mesaj yalnız kendi verdiği yolu adlandırır.
 	errCodeConfigPathRefused = "CONFIG_PATH_REFUSED"
+	// The written config did not pass its own syntax check, so it was rolled
+	// back. The checker's message (nginx names the offending line) is the most
+	// useful thing the panel can possibly say here — hiding it behind a
+	// generic 500 leaves the operator staring at an editor that silently
+	// refuses to save.
+	// Yazılan yapılandırma kendi sözdizim denetimini geçmedi ve geri alındı.
+	// Denetleyicinin mesajı (nginx hatalı satırı adıyla söyler), panelin
+	// burada söyleyebileceği en yararlı şeydir — onu genel bir 500'ün arkasına
+	// gizlemek, operatörü sessizce kaydetmeyi reddeden bir editöre bakar
+	// hâlde bırakır.
+	errCodeConfigInvalid = "CONFIG_INVALID"
 )
 
 // writeCodedError is the single writer of the contract. action, when

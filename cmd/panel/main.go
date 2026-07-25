@@ -718,11 +718,24 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			// arkasına gizlemek, meşru bir dosyayı düzenleyen operatörü hiçbir
 			// şeyin neden olmadığını bilmeden bırakırdı. Agent'ın gerekçesi
 			// gösterilebilir: zaten çağıranın verdiği bir yolu adlandırır.
-			if msg := err.Error(); strings.Contains(msg, "not a managed configuration file") ||
+			msg := err.Error()
+			if strings.Contains(msg, "not a managed configuration file") ||
 				strings.Contains(msg, "protected and cannot be edited") ||
 				strings.Contains(msg, "symbolic link") ||
 				strings.Contains(msg, "must be absolute") {
 				writeCodedError(w, http.StatusForbidden, errCodeConfigPathRefused, msg, "")
+				return
+			}
+			// A syntax error is the operator's own text being wrong, not a
+			// server fault — and the file was already rolled back, so saying
+			// exactly what the checker complained about is both safe and the
+			// only useful answer.
+			// Sözdizim hatası, sunucu arızası değil operatörün kendi metninin
+			// yanlış olmasıdır — üstelik dosya zaten geri alındı; denetleyicinin
+			// neye takıldığını tam olarak söylemek hem güvenli hem de tek
+			// yararlı cevap.
+			if strings.Contains(msg, "config validation failed") {
+				writeCodedError(w, http.StatusUnprocessableEntity, errCodeConfigInvalid, msg, "")
 				return
 			}
 			writeServerError(w, err)
