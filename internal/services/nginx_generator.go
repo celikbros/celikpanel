@@ -85,10 +85,43 @@ func (ng *NginxGenerator) Render(data VhostData) (string, error) {
 
 // GenerateVhost generates nginx vhost config from site data
 func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, tempDomain string) (string, error) {
-	// Determine SSL type from enabled flag
+	// HTTPS is written ONLY when a certificate actually exists on disk.
+	//
+	// Asking for SSL used to be enough to emit the HTTPS server block, and that
+	// made the checkbox self-defeating: at domain-creation time no certificate
+	// has been issued yet (it cannot be — the domain must resolve here first),
+	// so the template rendered `ssl_certificate ;` with no argument, `nginx -t`
+	// refused the whole config, and the operator got "internal server error"
+	// while trying to add a domain (biovision.health on Boston, 25 Jul). Worse,
+	// the same branch turned port 80 into a 301 to HTTPS — so even a config
+	// nginx accepted would have redirected the ACME http-01 challenge away and
+	// the certificate could never be obtained. A chicken that ate its own egg.
+	//
+	// Now: no certificate → a plain HTTP vhost, which is exactly what ACME
+	// needs. The site is regenerated with HTTPS the moment the certificate is
+	// issued (applySiteVhost is the single regeneration path).
+	//
+	// HTTPS YALNIZ diskte gerçekten sertifika varken yazılır.
+	//
+	// Eskiden SSL istemek HTTPS sunucu bloğunu yazdırmaya yetiyordu ve bu,
+	// kutuyu kendi kendini baltalayan bir şeye çeviriyordu: alan adı
+	// oluşturulurken henüz sertifika verilmemiştir (verilemez de — alan adının
+	// önce buraya çözülmesi gerekir), dolayısıyla şablon argümansız
+	// `ssl_certificate ;` üretiyor, `nginx -t` tüm yapılandırmayı reddediyor ve
+	// operatör alan adı eklemeye çalışırken "sunucu hatası" alıyordu
+	// (Boston'da biovision.health, 25 Tem). Dahası aynı dal 80 portunu HTTPS'e
+	// 301 yapıyordu — yani nginx kabul etse bile ACME http-01 doğrulaması
+	// başka yere yönlendirilir ve sertifika hiçbir zaman alınamazdı. Kendi
+	// yumurtasını yiyen tavuk.
+	//
+	// Artık: sertifika yoksa düz HTTP vhost — ACME'nin ihtiyacı olan tam da bu.
+	// Sertifika verilir verilmez site HTTPS ile yeniden üretilir (tek yeniden
+	// üretim yolu applySiteVhost).
+	hasCert := site.SSLCertPath != nil && *site.SSLCertPath != "" &&
+		site.SSLKeyPath != nil && *site.SSLKeyPath != ""
 	sslType := "none"
-	if site.SSLEnabled {
-		sslType = "custom" // Will be letsencrypt or custom based on cert paths
+	if site.SSLEnabled && hasCert {
+		sslType = "custom"
 	}
 
 	data := VhostData{
@@ -97,8 +130,12 @@ func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, te
 		TempDomain:      tempDomain,
 		DocumentRoot:    site.DocumentRoot,
 		ProjectType:     site.ProjectType, // empty → Render defaults to php
-		SSLType:         sslType,
-		SSLAutoRedirect: site.SSLEnabled,
+		SSLType: sslType,
+		// Redirecting to HTTPS before a certificate exists takes the site
+		// offline. Redirect only once HTTPS can actually answer.
+		// Sertifika yokken HTTPS'e yönlendirmek siteyi tümüyle kapatır. Ancak
+		// HTTPS gerçekten cevap verebildiğinde yönlendir.
+		SSLAutoRedirect: site.SSLEnabled && hasCert,
 	}
 	// A missing FPM socket must not panic vhost generation (non-PHP types).
 	// Eksik FPM soketi vhost üretimini panikletmemeli (PHP dışı tipler).
@@ -106,8 +143,7 @@ func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, te
 		data.PHPSocket = *site.PHPFPMSocket
 	}
 
-	// Set SSL paths if enabled
-	if site.SSLCertPath != nil && site.SSLKeyPath != nil {
+	if hasCert {
 		data.SSLCert = *site.SSLCertPath
 		data.SSLKey = *site.SSLKeyPath
 	}

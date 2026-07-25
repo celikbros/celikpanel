@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Wiring Postfix and Dovecot to actually deliver to the virtual mailboxes the
@@ -709,13 +710,34 @@ func ensureAliasDatabase() {
 // da budur. Tercih sırası lmdb'yi öne alır (Arch'ın gerçek arka ucu ve daha
 // hızlı), sonra hash (Debian/Ubuntu), sonra btree. Hiçbiri dizinlemezse
 // texthash evrensel tabandır: dizin dosyası yok, postfix düz metni okur.
+// The probe result is cached: it cannot change while postfix stays installed,
+// and re-probing on every map write filled the agent's journal with postmap's
+// own "fatal: unsupported map type: lmdb" line — five times per mail
+// configuration on Debian, where lmdb is genuinely absent and falling through
+// to hash is the CORRECT outcome. An operator reading the journal saw the word
+// "fatal" repeatedly and had every reason to think something was broken.
+// Yoklama sonucu önbelleklenir: postfix kurulu kaldığı sürece değişemez ve her
+// harita yazımında yeniden yoklamak, agent günlüğünü postmap'in kendi
+// "fatal: unsupported map type: lmdb" satırıyla dolduruyordu — Debian'da posta
+// yapılandırması başına beş kez; oysa orada lmdb gerçekten yoktur ve hash'e
+// düşmek DOĞRU sonuçtur. Günlüğü okuyan operatör tekrar tekrar "fatal"
+// kelimesini görüyor ve bir şeyin bozuk olduğunu düşünmekte haklıydı.
+var (
+	mapTypeOnce   sync.Once
+	mapTypeCached string
+)
+
 func postfixMapType() string {
-	for _, t := range []string{"lmdb", "hash", "btree"} {
-		if postmapTypeWorks(t) {
-			return t
+	mapTypeOnce.Do(func() {
+		for _, t := range []string{"lmdb", "hash", "btree"} {
+			if postmapTypeWorks(t) {
+				mapTypeCached = t
+				return
+			}
 		}
-	}
-	return "texthash"
+		mapTypeCached = "texthash"
+	})
+	return mapTypeCached
 }
 
 func postmapTypeWorks(t string) bool {
@@ -732,7 +754,11 @@ func postmapTypeWorks(t string) bool {
 	// point: we ask postmap, not the feature list.
 	// Derlenmiş ama kullanılamaz bir tip BURADA düşer; bütün mesele bu:
 	// özellik listesine değil, postmap'e soruyoruz.
-	if err := exec.Command("postmap", t+":"+probe).Run(); err != nil {
+	// CombinedOutput (not Run) so postmap's refusal is captured instead of
+	// inherited onto the agent's stderr and printed into the journal.
+	// Run yerine CombinedOutput: postmap'in reddi agent'ın stderr'ine miras
+	// kalıp günlüğe basılmak yerine yakalanır.
+	if _, err := exec.Command("postmap", t+":"+probe).CombinedOutput(); err != nil {
 		return false
 	}
 	// postmap can exit 0 and still write nothing usable; require the index.
