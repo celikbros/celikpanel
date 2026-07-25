@@ -54,17 +54,36 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 
 	// Serial YYYYMMDDHH matches ensureZone; fits 32-bit SOA serial space.
 	// Seri YYYYMMDDHH ensureZone ile aynı; 32-bit SOA seri alanına sığar.
-	soa := fmt.Sprintf("ns1.%s hostmaster.%s %s 10800 3600 604800 3600",
-		domain, domain, time.Now().Format("2006010215"))
+	// The zone is delegated to THIS SERVER's nameserver pair, not to names
+	// under the hosted domain itself. Writing ns1.<domain> into every zone made
+	// each customer domain its own nameserver, which would have forced glue
+	// registration per domain — the "vanity nameserver" extra, sold as a
+	// feature elsewhere, imposed here as the default. Caught by the operator
+	// (25 Jul): "the server is boston.celikhost.com, how can the nameservers be
+	// ns1.biovision.health?" One server, one pair, glue registered once.
+	// Zone, barındırılan alan adının altındaki adlara değil, BU SUNUCUNUN ad
+	// sunucusu çiftine devredilir. Her zone'a ns1.<alanadı> yazmak, her müşteri
+	// alan adını kendi ad sunucusu yapıyor ve alan adı başına glue kaydını
+	// zorunlu kılıyordu — başka yerlerde ek özellik olarak satılan "vanity
+	// nameserver", burada varsayılan olarak dayatılmış. Operatör yakaladı
+	// (25 Tem): "sunucu boston.celikhost.com, ad sunucuları nasıl
+	// ns1.biovision.health olabilir?" Tek sunucu, tek çift, glue bir kez.
+	ns1, ns2 := p.serverNameservers(ctx)
+	if ns1 == "" || ns2 == "" {
+		// Never invent a delegation: a zone that advertises a nameserver which
+		// does not exist is worse than one the operator must finish by hand.
+		// Asla devir uydurma: var olmayan bir ad sunucusunu ilan eden zone,
+		// operatörün elle tamamlaması gereken zone'dan kötüdür.
+		ns1, ns2 = "ns1."+domain, "ns2."+domain
+	}
 
-	// NS record content is the nameserver name; both point at this panel
-	// host until the user delegates elsewhere.
-	// NS kaydının içeriği ad sunucusunun adıdır; kullanıcı başka yere
-	// devredene dek ikisi de bu panel makinesini gösterir.
+	soa := fmt.Sprintf("%s hostmaster.%s %s 10800 3600 604800 3600",
+		ns1, domain, time.Now().Format("2006010215"))
+
 	records := []record{
 		{domain, "SOA", soa, nil},
-		{domain, "NS", "ns1." + domain, nil},
-		{domain, "NS", "ns2." + domain, nil},
+		{domain, "NS", ns1, nil},
+		{domain, "NS", ns2, nil},
 		{domain, "MX", "mail." + domain, &mxPrio},
 		{"www." + domain, "CNAME", domain, nil},
 		{domain, "TXT", splitTXTContent(spfRecommended()), nil},
@@ -96,7 +115,18 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	}
 
 	if ip4 := serverPrimaryIP(); ip4 != "" {
-		hosts := []string{domain, "mail." + domain, "ns1." + domain, "ns2." + domain}
+		// Address records for the nameservers belong in the zone ONLY when the
+		// nameserver names live inside this zone (the panel's own domain).
+		// Otherwise their addresses are published by the zone that owns them.
+		// Ad sunucularının adres kayıtları zone'a YALNIZ ad sunucusu adları bu
+		// zone'un içindeyse aittir (panelin kendi alan adı). Aksi hâlde
+		// adreslerini onları sahiplenen zone yayınlar.
+		hosts := []string{domain, "mail." + domain}
+		for _, ns := range []string{ns1, ns2} {
+			if strings.HasSuffix(ns, "."+domain) || ns == domain {
+				hosts = append(hosts, ns)
+			}
+		}
 		if panelHost != "" {
 			hosts = append(hosts, panelHost)
 		}

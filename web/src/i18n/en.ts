@@ -812,6 +812,7 @@ export const en = {
     'conn.routeA.title': 'Route A — hand DNS to this server (recommended)',
     'conn.routeA.desc': 'The panel becomes the authority for this domain: mail records, security records and certificates are then managed for you automatically. It takes two steps at your registrar, and DNS changes can take a few hours to spread.',
     'conn.routeA.step1': '1. Register these child nameservers (also called glue records):',
+    'conn.routeA.sharedNs': 'These are this server’s own nameservers, already registered once. For this domain you only have to point at them — there is nothing to register under this domain name.',
     'conn.routeA.step2': '2. Then set the domain to use those nameservers:',
     'conn.routeB.title': 'Route B — keep DNS where it is, just point the address',
     'conn.routeB.desc': 'Leave the nameservers alone and add these records at your current DNS provider. A website and its certificate will work; mail records and automatic DNS management stay with your provider.',

@@ -53,6 +53,7 @@ Rules:
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
 | 🔐 WireGuard VPN | Service | `wireguard` | `wireguard-tools` | — | — |
+| 🔐 Let's Encrypt client (certbot) | Tool | `certbot` | `certbot` | — | — |
 | 🚫 Fail2ban | Service | `fail2ban` | `fail2ban` | — | — |
 | 🧱 Firewall engine | Tool | `nftables` | `nftables` | — | — |
 | 🦠 ClamAV | Service | `clamav` `clamav-daemon` | `clamav` | — | — |

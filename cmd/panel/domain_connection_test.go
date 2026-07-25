@@ -110,3 +110,30 @@ func TestClassifyConnection(t *testing.T) {
 		})
 	}
 }
+
+// One server, one nameserver pair. The panel used to write ns1.<domain> into
+// every zone, which made each hosted domain its own nameserver and would have
+// forced glue registration per customer — the operator caught it on sight
+// (25 Jul): "the server is boston.celikhost.com, how can the nameservers be
+// ns1.biovision.health?" The names must come from the SERVER's domain, never
+// from the domain being hosted.
+//
+// Tek sunucu, tek ad sunucusu çifti. Panel her zone'a ns1.<alanadı> yazıyordu;
+// bu, barındırılan her alan adını kendi ad sunucusu yapıyor ve müşteri başına
+// glue kaydını zorunlu kılacaktı — operatör görür görmez yakaladı (25 Tem):
+// "sunucu boston.celikhost.com, ad sunucuları nasıl ns1.biovision.health
+// olabilir?" Adlar SUNUCUNUN alan adından gelmeli, barındırılan alan adından
+// asla.
+func TestPanelBaseDomainIsTheServersDomainNotTheHostedOne(t *testing.T) {
+	for host, want := range map[string]string{
+		"boston.celikhost.com":     "celikhost.com",
+		"frankfurt.celikhost.com":  "celikhost.com",
+		"srv1.eu.example.co":       "example.co",
+		"celikhost.com":            "celikhost.com",
+		"localhost":                "",
+	} {
+		if got := baseDomainOf(host); got != want {
+			t.Errorf("baseDomainOf(%q) = %q, want %q", host, got, want)
+		}
+	}
+}

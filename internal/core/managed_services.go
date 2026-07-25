@@ -696,6 +696,41 @@ var ManagedServices = []ManagedService{
 		FirewallPorts: []FirewallPort{{51820, "udp"}},
 	},
 	{
+		// The ACME client that actually obtains certificates. It was installed
+		// silently on first use and appeared in no list, so the panel offered
+		// "Enable SSL (Let's Encrypt)" while the thing that talks to Let's
+		// Encrypt was invisible — you could not see whether it was there, which
+		// version, or remove it. The operator asked the right question (25 Jul):
+		// "to choose SSL, an SSL provider has to be installed on the server —
+		// how do we provide SSL without installing one?" We do install one; we
+		// just never showed it. A component the panel installs belongs in the
+		// catalogue, full stop.
+		//
+		// Kind=tool: certbot has no daemon of ours. Renewal runs from the
+		// distro's own systemd timer, and the panel has its own renewal
+		// scheduler as well, so there is no unit for us to start or stop.
+		//
+		// Sertifikaları gerçekten alan ACME istemcisi. İlk kullanımda sessizce
+		// kuruluyor ve hiçbir listede görünmüyordu; yani panel "SSL'i etkinleştir
+		// (Let's Encrypt)" derken Let's Encrypt ile konuşan şey görünmezdi —
+		// orada olup olmadığını, hangi sürüm olduğunu göremez, kaldıramazdınız.
+		// Operatör doğru soruyu sordu (25 Tem): "SSL seçebilmek için sunucuya bir
+		// SSL sağlayıcı yüklenmesi gerekir; kurmadan nasıl SSL sağlayacağız?"
+		// Kuruyoruz; yalnızca hiç göstermiyorduk. Panelin kurduğu bileşen
+		// kataloğa aittir, nokta.
+		//
+		// Kind=tool: certbot'un bize ait daemon'ı yoktur. Yenileme dağıtımın
+		// kendi systemd zamanlayıcısından koşar, ayrıca panelin kendi yenileme
+		// zamanlayıcısı vardır; başlatıp durduracağımız bir unit yok.
+		ID:          "certbot",
+		Name:        "Let's Encrypt client (certbot)",
+		Description: "SSL certificate provider",
+		Icon:        "🔐",
+		Category:    "security",
+		Kind:        KindTool,
+		Packages:    map[string][]string{"apt": {"certbot"}, "pacman": {"certbot"}},
+	},
+	{
 		ID:          "fail2ban",
 		Name:        "Fail2ban",
 		Description: "Intrusion Prevention",

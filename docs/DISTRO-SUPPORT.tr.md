@@ -51,6 +51,7 @@ Kurallar:
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
 | 🔐 WireGuard VPN | Servis | `wireguard` | `wireguard-tools` | — | — |
+| 🔐 Let's Encrypt client (certbot) | Araç | `certbot` | `certbot` | — | — |
 | 🚫 Fail2ban | Servis | `fail2ban` | `fail2ban` | — | — |
 | 🧱 Firewall engine | Araç | `nftables` | `nftables` | — | — |
 | 🦠 ClamAV | Servis | `clamav` `clamav-daemon` | `clamav` | — | — |

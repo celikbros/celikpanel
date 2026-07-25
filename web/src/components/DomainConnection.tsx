@@ -41,6 +41,7 @@ interface Connection {
     live_ips: string[];
     status: 'delegated' | 'delegated_mismatch' | 'a_record' | 'elsewhere' | 'unresolved';
     ssl_ready: boolean;
+    glue_needed: boolean;
     checked_at: string;
 }
 
@@ -150,12 +151,27 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                     <div className="mb-3 rounded-xl border border-border bg-surface p-4">
                         <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.routeA.title')}</h4>
                         <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('conn.routeA.desc')}</p>
-                        <p className="mb-2 text-xs font-medium text-fg-subtle">{t('conn.routeA.step1')}</p>
-                        <div className="mb-3 space-y-1.5">
-                            {c.nameservers.map((ns) => (
-                                <CopyField key={ns} label={ns} value={c.server_ip} />
-                            ))}
-                        </div>
+                        {/* Glue is only this domain's business when the
+                            nameserver names live under it. With the server's
+                            shared pair the glue was registered once, on the
+                            panel's own domain. / Glue, ad sunucusu adları bu
+                            alan adının altındaysa onun işidir. Sunucunun ortak
+                            çiftinde glue bir kez, panelin kendi alan adında
+                            kaydedilmiştir. */}
+                        {c.glue_needed ? (
+                            <>
+                                <p className="mb-2 text-xs font-medium text-fg-subtle">{t('conn.routeA.step1')}</p>
+                                <div className="mb-3 space-y-1.5">
+                                    {c.nameservers.map((ns) => (
+                                        <CopyField key={ns} label={ns} value={c.server_ip} />
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <p className="mb-3 rounded-lg bg-surface-2/60 p-2.5 text-xs leading-relaxed text-fg-muted">
+                                {t('conn.routeA.sharedNs')}
+                            </p>
+                        )}
                         <p className="mb-2 text-xs font-medium text-fg-subtle">{t('conn.routeA.step2')}</p>
                         <div className="space-y-1.5">
                             {c.nameservers.map((ns, i) => (

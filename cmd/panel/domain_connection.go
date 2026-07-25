@@ -72,8 +72,23 @@ type connectionCheck struct {
 	// certificate for a name that does not resolve to this machine.
 	// SSLReady dürüst ön koşuldur: Let's Encrypt, bu makineye çözülmeyen bir
 	// ad için sertifika veremez.
-	SSLReady  bool   `json:"ssl_ready"`
-	CheckedAt string `json:"checked_at"`
+	SSLReady bool `json:"ssl_ready"`
+	// GlueNeeded is true only when the nameserver names live INSIDE this
+	// domain, which is the one case where the operator must register glue for
+	// this particular domain. With the server's shared pair
+	// (ns1.celikhost.com) the glue was registered once, on the panel's own
+	// domain, and a hosted domain only has to point at those names. Telling
+	// someone to register glue for ns1.celikhost.com under biovision.health
+	// would be an instruction they cannot carry out.
+	// GlueNeeded yalnız ad sunucusu adları BU alan adının İÇİNDE yaşıyorsa
+	// doğrudur; operatörün tam da bu alan adı için glue kaydettirmesi gereken
+	// tek durum odur. Sunucunun ortak çiftinde (ns1.celikhost.com) glue bir kez,
+	// panelin kendi alan adında kaydedilmiştir ve barındırılan alan adının tek
+	// yapması gereken o adları göstermektir. Birine biovision.health altında
+	// ns1.celikhost.com için glue kaydettirmesini söylemek, yerine
+	// getiremeyeceği bir talimat olurdu.
+	GlueNeeded bool   `json:"glue_needed"`
+	CheckedAt  string `json:"checked_at"`
 }
 
 // handleDomainConnection answers GET /api/v1/domains/{id}/connection.
@@ -93,15 +108,19 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 	}
 
 	out := connectionCheck{
-		Domain:   name,
-		ServerIP: serverPrimaryIP(),
-		ServerV6: serverPrimaryIPv6(),
-		// These match what the zone template actually creates, so the screen
-		// and the served zone cannot disagree.
-		// Bunlar zone şablonunun gerçekten oluşturduklarıyla aynıdır; böylece
-		// ekran ile sunulan zone birbirine ters düşemez.
-		Nameservers: []string{"ns1." + name, "ns2." + name},
-		CheckedAt:   time.Now().UTC().Format(time.RFC3339),
+		Domain:    name,
+		ServerIP:  serverPrimaryIP(),
+		ServerV6:  serverPrimaryIPv6(),
+		CheckedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	// The SERVER's pair — the same names the zone template delegates to, so the
+	// screen and the served zone cannot disagree. Not ns1.<this domain>: that
+	// was the logic error the operator caught (25 Jul).
+	// SUNUCUNUN çifti — zone şablonunun devrettiği adların aynısı; böylece ekran
+	// ile sunulan zone birbirine ters düşemez. ns1.<bu alan adı> değil: operatörün
+	// yakaladığı mantık hatası oydu (25 Tem).
+	if ns1, ns2 := p.serverNameservers(r.Context()); ns1 != "" && ns2 != "" {
+		out.Nameservers = []string{ns1, ns2}
 	}
 
 	// A live lookup can hang on a broken resolver; the screen must still come
@@ -121,6 +140,12 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 	if addrs, err := res.LookupHost(ctx, name); err == nil {
 		out.LiveIPs = append(out.LiveIPs, addrs...)
 		sort.Strings(out.LiveIPs)
+	}
+
+	for _, ns := range out.Nameservers {
+		if strings.HasSuffix(ns, "."+name) {
+			out.GlueNeeded = true
+		}
 	}
 
 	out.Status, out.SSLReady = classifyConnection(out)

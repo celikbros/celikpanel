@@ -803,6 +803,7 @@ export const tr: Record<TranslationKey, string> = {
     'conn.routeA.title': 'A yolu — DNS yönetimini bu sunucuya verin (önerilen)',
     'conn.routeA.desc': 'Panel bu alan adının yetkilisi olur: posta kayıtları, güvenlik kayıtları ve sertifikalar sizin için otomatik yönetilir. Kayıtçınızda iki adım sürer ve DNS değişikliklerinin yayılması birkaç saat alabilir.',
     'conn.routeA.step1': '1. Şu alt ad sunucularını kaydedin (glue kaydı da denir):',
+    'conn.routeA.sharedNs': 'Bunlar bu sunucunun kendi ad sunucularıdır ve bir kez kaydedilmiştir. Bu alan adı için yalnızca onları göstermeniz yeterli — bu alan adının altında kaydedilecek bir şey yok.',
     'conn.routeA.step2': '2. Sonra alan adını bu ad sunucularını kullanacak şekilde ayarlayın:',
     'conn.routeB.title': 'B yolu — DNS olduğu yerde kalsın, yalnız adresi yöneltin',
     'conn.routeB.desc': 'Ad sunucularına dokunmayın ve mevcut DNS sağlayıcınızda şu kayıtları ekleyin. Web sitesi ve sertifikası çalışır; posta kayıtları ve otomatik DNS yönetimi sağlayıcınızda kalır.',
