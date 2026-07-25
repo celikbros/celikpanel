@@ -229,3 +229,45 @@ func TestCatalogViewCarriesTheScannedUnit(t *testing.T) {
 		t.Error("bind's unit must not equal its id — that equality was the bug")
 	}
 }
+
+// A component that cannot be installed on this distro must SAY so, not show an
+// Install button that fails late in the agent. The rule: package-installed
+// component with no mapping for this family → not_offered. Portable components
+// (no package mapping at all — node, roundcube) install the same way
+// everywhere and must never be marked.
+//
+// Bu dağıtımda kurulamayan bileşen bunu SÖYLEMELİ; agent'ta geç patlayan bir
+// Kur düğmesi göstermemeli. Kural: paketle kurulan bileşenin bu aile için
+// eşlemesi yoksa → not_offered. Taşınabilir bileşenler (hiç paket eşlemesi
+// olmayanlar — node, roundcube) her yerde aynı yoldan kurulur, asla
+// işaretlenmez.
+func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
+	for _, c := range []struct {
+		family string
+		id     string
+		want   bool
+		why    string
+	}{
+		{"pacman", "spamassassin", true, "spamass-milter Arch depolarında yok — süzemeyecek kurulum sunulmaz"},
+		{"apt", "spamassassin", false, "apt eşlemesi tam"},
+		{"apt", "netdata", true, "Debian vendor deposu dilimi henüz yapılmadı"},
+		{"pacman", "netdata", false, "pacman eşlemesi var"},
+		{"pacman", "roundcube", false, "taşınabilir (tarball) — her dağıtımda kurulur"},
+		{"apt", "node", false, "taşınabilir (resmi sürüm) — her dağıtımda kurulur"},
+	} {
+		var got *ManagedServiceResponse
+		for _, s := range catalogView(nil, c.family) {
+			if s.ID == c.id {
+				s := s
+				got = &s
+				break
+			}
+		}
+		if got == nil {
+			t.Fatalf("%s missing from catalogView", c.id)
+		}
+		if got.NotOffered != c.want {
+			t.Errorf("%s on %s: not_offered = %v, want %v — %s", c.id, c.family, got.NotOffered, c.want, c.why)
+		}
+	}
+}

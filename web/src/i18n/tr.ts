@@ -769,6 +769,8 @@ export const tr: Record<TranslationKey, string> = {
     'services.role.smtpServer': 'bir SMTP sunucusu',
     'services.role.imapServer': 'bir IMAP sunucusu',
     'services.role.spamFilter': 'bir spam filtresi',
+    'services.notOffered': 'Bu dağıtımda henüz sunulmuyor',
+    'services.notOfferedHint': 'Panel bu Linux dağıtımında bu bileşen için "kurulunca çalışır" sözünü veremiyor; kurulumdan sonra patlamak yerine satır dürüstçe kapalı.',
     'services.eolBadge': 'EOL',
     'services.eolHint': 'Bu hat artık güvenlik yaması almıyor — yalnız yükseltilemeyen eski bir site için kurun.',
     'services.phpVersionsHint': 'Sürümler yan yana kurulur; her site kendi sürümünü kendi ayarından seçer.',

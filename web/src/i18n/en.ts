@@ -778,6 +778,8 @@ export const en = {
     'services.role.smtpServer': 'an SMTP server',
     'services.role.imapServer': 'an IMAP server',
     'services.role.spamFilter': 'a spam filter',
+    'services.notOffered': 'Not offered on this distro yet',
+    'services.notOfferedHint': 'The panel cannot promise "installed means working" for this component on this Linux distribution, so the row is honestly closed instead of failing after install.',
     'services.eolBadge': 'EOL',
     'services.eolHint': 'This line no longer receives security fixes upstream — install it only for a legacy site that cannot be upgraded.',
     'services.phpVersionsHint': 'Versions install side by side; every site picks its own version in its settings.',

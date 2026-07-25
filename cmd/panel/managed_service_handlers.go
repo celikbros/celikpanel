@@ -27,6 +27,19 @@ type ManagedServiceResponse struct {
 	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
 	// id'leri ya da grup adları) — UI Kur'u kapatır ve önce neyin kurulacağını söyler.
 	RequiresMissing []string `json:"requires_missing,omitempty"`
+	// NotOffered: this component installs from distro packages and has no
+	// package mapping for THIS server's family — deliberately not offered here
+	// ("installed means working" cannot be promised; see docs/DISTRO-SUPPORT).
+	// The UI shows an honest badge instead of an Install button that would
+	// only fail late in the agent. Portable components (empty Packages map —
+	// node, roundcube) are never marked: their install path works everywhere.
+	// NotOffered: bu bileşen dağıtım paketinden kurulur ve BU sunucunun ailesi
+	// için paket eşlemesi yok — burada bilerek sunulmuyor ("kurulunca çalışır"
+	// sözü verilemiyor; bkz. docs/DISTRO-SUPPORT). Arayüz, agent'ta geç
+	// patlayacak bir Kur düğmesi yerine dürüst bir rozet gösterir. Taşınabilir
+	// bileşenler (boş Packages — node, roundcube) asla işaretlenmez: onların
+	// kurulum yolu her yerde çalışır.
+	NotOffered bool `json:"not_offered,omitempty"`
 	// Kind decides how the row is drawn and operated (D-010): "service" has a
 	// daemon to start/stop, "runtime" is versioned and picked per site, "tool"
 	// has no daemon of ours at all. It replaces the old `daemonless` flag,
@@ -246,6 +259,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 		// Kurulu-olmayan katalog servisleri de listelenir ki panel tek-tık
 		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
 		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
+		notOffered := false
 		if !o.IsInstalled {
 			status = "not_installed"
 			// Blocked only if the group's installed member is someone else.
@@ -256,6 +270,15 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 				}
 			}
 			requiresMissing = core.RequirementsMissing(&managed, installedSet)
+			// Package-installed component with no mapping for this family →
+			// honestly not offered here. This outranks conflicts and
+			// requirements: telling someone to install an SMTP server first,
+			// for a filter this distro cannot run, would be theatre.
+			// Paketle kurulan bileşenin bu aile için eşlemesi yoksa → burada
+			// dürüstçe sunulmuyor. Bu, çakışma ve gereksinimlerden önce gelir:
+			// bu dağıtımın koşturamayacağı bir filtre için önce SMTP sunucusu
+			// kurdurmak tiyatro olurdu.
+			notOffered = len(managed.Packages) > 0 && len(managed.Packages[pkgFamily]) == 0
 		}
 
 		response = append(response, ManagedServiceResponse{
@@ -271,6 +294,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			IsInstalled:     o.IsInstalled,
 			ConflictWith:    conflictWith,
 			RequiresMissing: requiresMissing,
+			NotOffered:      notOffered,
 			Kind:            managed.Kind,
 			Packages:        managed.Packages[pkgFamily],
 			ConfigFiles:     configFiles,

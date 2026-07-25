@@ -34,6 +34,7 @@ interface ManagedService {
     status: string;
     is_installed: boolean;
     conflict_with?: string;
+    not_offered?: boolean;
     requires_missing?: string[];
     kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
@@ -577,7 +578,22 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     </div>
                                                     <div className="ml-auto flex items-center justify-end gap-1">
                                                     {!s.is_installed ? (
-                                                        s.conflict_with ? (
+                                                        s.not_offered ? (
+                                                            /* Honest instead of a dead Install button that
+                                                               fails late in the agent (spamassassin on Arch,
+                                                               netdata on Debian). The full per-distro list
+                                                               lives in docs/DISTRO-SUPPORT.
+                                                               Agent'ta geç patlayan ölü bir Kur düğmesi yerine
+                                                               dürüstlük (Arch'ta spamassassin, Debian'da
+                                                               netdata). Dağıtım başına tam liste
+                                                               docs/DISTRO-SUPPORT içinde. */
+                                                            <span
+                                                                title={t('services.notOfferedHint')}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
+                                                            >
+                                                                {t('services.notOffered')}
+                                                            </span>
+                                                        ) : s.conflict_with ? (
                                                             <span
                                                                 title={t('services.conflictHint', { name: s.conflict_with })}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
