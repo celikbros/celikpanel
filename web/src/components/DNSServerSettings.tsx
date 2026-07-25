@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Network, Server, Check, AlertTriangle } from 'lucide-react';
+import { Network, Server, Check, AlertTriangle, Circle } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, inputClass, StatusDot } from './ui';
@@ -36,13 +36,11 @@ interface NSFact {
     ips: string[];
     points_here: boolean;
 }
-interface NSSettings {
-    ns1: string;
-    ns2: string;
-    derived: boolean;
-    server_ip: string;
-    facts: NSFact[];
-    usable: boolean;
+interface Step {
+    code: string;
+    done: boolean;
+    manual: boolean;
+    args?: string[];
 }
 interface Cluster {
     role: 'standalone' | 'primary' | 'secondary';
@@ -50,11 +48,14 @@ interface Cluster {
     peer_ns: string;
     peer_reachable: boolean;
     server_ip: string;
+    ns1: string;
+    ns2: string;
+    facts: NSFact[];
+    steps: Step[];
 }
 
 export function DNSServerSettings() {
     const { t } = useI18n();
-    const [ns, setNs] = useState<NSSettings | null>(null);
     const [cl, setCl] = useState<Cluster | null>(null);
     const [ns1, setNs1] = useState('');
     const [ns2, setNs2] = useState('');
@@ -66,7 +67,6 @@ export function DNSServerSettings() {
             fetch('/api/v1/settings/dns-cluster').then((r) => (r.ok ? r.json() : null)),
         ]);
         if (a) {
-            setNs(a);
             setNs1(a.ns1);
             setNs2(a.ns2);
         }
@@ -116,7 +116,7 @@ export function DNSServerSettings() {
         }
     };
 
-    if (!ns || !cl) return null;
+    if (!cl) return null;
 
     return (
         <section className="rounded-xl border border-border bg-surface p-6">
@@ -135,27 +135,34 @@ export function DNSServerSettings() {
 
             {/* The names, and where they really point. / Adlar ve gerçekte nereyi gösterdikleri. */}
             <p className="mb-2 text-sm font-medium text-fg">{t('dnssrv.namesTitle')}</p>
-            <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('dnssrv.namesHint', { ip: ns.server_ip })}</p>
+            <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('dnssrv.namesHint', { ip: cl.server_ip })}</p>
             <div className="mb-3 grid gap-2 sm:grid-cols-2">
                 <input className={inputClass} value={ns1} onChange={(e) => setNs1(e.target.value)} placeholder="ns1.example.com" />
                 <input className={inputClass} value={ns2} onChange={(e) => setNs2(e.target.value)} placeholder="ns2.example.com" />
             </div>
+            {/* Where each name really points — named plainly, with no verdict
+                attached. A green tick beside a name that resolves here says
+                "fine" even when BOTH do, which is precisely the failure.
+                Her adın gerçekte nereyi gösterdiği — düz düz, hüküm iliştirmeden.
+                Buraya çözülen bir adın yanındaki yeşil tik, İKİSİ de öyleyken
+                bile "iyi" der; oysa arıza tam olarak odur. */}
             <ul className="mb-3 space-y-1">
-                {ns.facts?.map((f) => (
-                    <li key={f.host} className="flex items-center gap-2 font-mono text-xs">
-                        <StatusDot ok={f.points_here} />
+                {cl.facts?.map((f) => (
+                    <li key={f.host} className="flex flex-wrap items-center gap-x-2 font-mono text-xs">
                         <span className="text-fg">{f.host}</span>
                         <span className="text-fg-muted">→ {f.ips.length ? f.ips.join(', ') : t('conn.none')}</span>
-                        {!f.points_here && <span className="text-warning">{t('dnssrv.notThisServer')}</span>}
+                        <span className="text-fg-subtle">
+                            {f.ips.length === 0
+                                ? t('dnssrv.whereNowhere')
+                                : f.points_here
+                                  ? t('dnssrv.whereHere')
+                                  : cl.peer_ip && f.ips.includes(cl.peer_ip)
+                                    ? t('dnssrv.wherePeer')
+                                    : t('dnssrv.whereOther')}
+                        </span>
                     </li>
                 ))}
             </ul>
-            {!ns.usable && (
-                <p className="mb-3 flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-xs leading-relaxed text-fg-muted">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                    <span>{t('dnssrv.notUsable')}</span>
-                </p>
-            )}
             <Button onClick={saveNS} disabled={busy}>
                 <Check className="h-4 w-4" /> {t('dnssrv.saveNames')}
             </Button>
@@ -218,6 +225,37 @@ export function DNSServerSettings() {
             <Button onClick={() => saveCluster(cl.role, cl.peer_ip, cl.peer_ns)} disabled={busy}>
                 <Check className="h-4 w-4" /> {t('dnssrv.saveRole')}
             </Button>
+
+            {/* What is LEFT. Computed from facts, including the steps that
+                happen at the registrar or on the other machine — which this
+                server cannot verify and therefore does not pretend to.
+                GERİYE ne kaldı. Olgulardan hesaplanır; kayıtçıda ya da öbür
+                makinede olan adımlar dahil — bu sunucu onları doğrulayamaz ve
+                doğruluyormuş gibi de yapmaz. */}
+            {cl.steps?.length > 0 && (
+                <div className="mt-5 rounded-xl border border-border bg-surface-2/50 p-4">
+                    <p className="mb-2 text-sm font-medium text-fg">{t('dnssrv.stepsTitle')}</p>
+                    <ul className="space-y-2">
+                        {cl.steps.map((st, i) => (
+                            <li key={i} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                                {st.done ? (
+                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                                ) : st.manual ? (
+                                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                                ) : (
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                                )}
+                                <span className={st.done ? 'text-fg-muted line-through' : 'text-fg'}>
+                                    {t(`dnssrv.step.${st.code}` as Parameters<typeof t>[0], {
+                                        a: st.args?.[0] ?? '',
+                                        b: st.args?.[1] ?? '',
+                                    })}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </section>
     );
 }

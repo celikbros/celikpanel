@@ -55,6 +55,105 @@ type dnsClusterView struct {
 	// adından değil, ayar ekranından öğrenmelidir.
 	PeerReachable bool   `json:"peer_reachable"`
 	ServerIP      string `json:"server_ip"`
+
+	// The names and where they really point, plus what is LEFT TO DO. The
+	// first version of this screen showed a green tick beside each name that
+	// resolved to this server — and on a lone machine BOTH names do, so the
+	// screen drew a tidy pair of green ticks over the exact problem the
+	// feature exists to fix: no backup at all. The operator's verdict was
+	// blunt and correct: "you are guiding me terribly."
+	//
+	// A checklist replaces the ticks. It is computed from what is actually
+	// true, it says which name is wrong and where it must point instead, and
+	// it names the steps that must happen somewhere else — at the registrar,
+	// or on the other server's own panel. A screen that only validates fields
+	// leaves the operator to assemble the plan; this one hands them the plan.
+	//
+	// Adlar, gerçekte nereyi gösterdikleri ve GERİYE NE KALDIĞI. Bu ekranın ilk
+	// hâli, bu sunucuya çözülen her adın yanına yeşil bir tik koyuyordu — ve tek
+	// başına bir makinede İKİ ad da öyle çözülür; yani ekran, özelliğin var olma
+	// sebebi olan sorunun üstüne düzgün bir çift yeşil tik çiziyordu: hiç yedek
+	// yok. Operatörün hükmü açık ve doğruydu: "berbat yönlendiriyorsun."
+	//
+	// Tiklerin yerine bir kontrol listesi geçti. Gerçekten doğru olandan
+	// hesaplanır, hangi adın yanlış olduğunu ve bunun yerine nereyi göstermesi
+	// gerektiğini söyler, ve başka bir yerde — kayıtçıda ya da diğer sunucunun
+	// kendi panelinde — olması gereken adımları adıyla anar. Yalnız alan
+	// doğrulayan bir ekran, planı operatöre kurdurur; bu ekran planı ona verir.
+	NS1   string           `json:"ns1"`
+	NS2   string           `json:"ns2"`
+	Facts []nameserverFact `json:"facts"`
+	Steps []clusterStep    `json:"steps"`
+}
+
+// clusterStep is one line of "what is left". Manual marks a step this server
+// cannot verify because it happens elsewhere — at the registrar, or on the
+// other machine. Pretending to check those would be worse than admitting we
+// cannot.
+// clusterStep, "geriye ne kaldı"nın bir satırıdır. Manual, bu sunucunun
+// doğrulayamayacağı bir adımı işaretler; çünkü başka bir yerde olur — kayıtçıda
+// ya da öbür makinede. Onları kontrol ediyormuş gibi yapmak, edemediğimizi
+// kabul etmekten kötü olurdu.
+type clusterStep struct {
+	Code   string   `json:"code"`
+	Done   bool     `json:"done"`
+	Manual bool     `json:"manual"`
+	Args   []string `json:"args,omitempty"`
+}
+
+// planSteps works out what still has to happen, from facts only.
+// planSteps, geriye ne kaldığını yalnızca olgulardan çıkarır.
+func planSteps(role, serverIP, peerIP string, facts []nameserverFact) []clusterStep {
+	here, atPeer, unresolved := []string{}, []string{}, []string{}
+	for _, f := range facts {
+		switch {
+		case len(f.IPs) == 0:
+			unresolved = append(unresolved, f.Host)
+		case f.PointsHere:
+			here = append(here, f.Host)
+		case peerIP != "" && containsStr(f.IPs, peerIP):
+			atPeer = append(atPeer, f.Host)
+		default:
+			// resolves, but to neither of the two servers
+			unresolved = append(unresolved, f.Host)
+		}
+	}
+
+	if role == "standalone" {
+		// Not a fault — a deliberate choice. But say the consequence out loud
+		// instead of drawing green ticks over it.
+		// Arıza değil — bilinçli bir tercih. Ama sonucunu yeşil tiklerle
+		// örtmek yerine yüksek sesle söyle.
+		return []clusterStep{{Code: "aloneNoBackup", Done: false, Manual: true}}
+	}
+
+	steps := []clusterStep{
+		{Code: "oneNameHere", Done: len(here) == 1, Args: here},
+		{Code: "otherNameAtPeer", Done: len(atPeer) == 1, Manual: true, Args: append(append([]string{}, unresolved...), peerIP)},
+		{Code: "peerAnswers", Done: peerIP != "" && dnsPortAnswers(peerIP)},
+	}
+	if role == "primary" {
+		steps = append(steps, clusterStep{Code: "peerIsSecondary", Manual: true, Args: []string{peerIP}})
+	} else {
+		steps = append(steps, clusterStep{Code: "peerIsPrimary", Manual: true, Args: []string{peerIP}})
+	}
+	// Both names on this machine is the failure the pair exists to prevent —
+	// name it explicitly rather than leaving it implied by an unticked box.
+	// İki adın da bu makinede olması, çiftin engellemek için var olduğu
+	// arızadır — işaretsiz bir kutuyla ima etmek yerine adıyla söyle.
+	if len(here) == 2 {
+		steps = append([]clusterStep{{Code: "bothNamesHere", Args: []string{serverIP}}}, steps...)
+	}
+	return steps
+}
+
+func containsStr(list []string, want string) bool {
+	for _, s := range list {
+		if s == want {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +177,9 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		if v.PeerIP != "" {
 			v.PeerReachable = dnsPortAnswers(v.PeerIP)
 		}
+		v.NS1, v.NS2 = p.serverNameservers(r.Context())
+		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
+		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.Facts)
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:
