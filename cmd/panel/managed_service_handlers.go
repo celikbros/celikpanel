@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -67,6 +68,15 @@ type ManagedServiceResponse struct {
 	Instances   []core.ServiceInstance `json:"instances"`
 	Packages    []string               `json:"packages,omitempty"` // distro packages (apt) shown before install
 	ConfigFiles []core.ConfigFile      `json:"config_files"`       // Detected config files
+	// Ports: the inbound ports this component exposes ("443/tcp"), from the
+	// catalogue. The firewall already opens exactly these on install; showing
+	// them per component answers "what did this open on my server?" without
+	// reading the global port strip and guessing which service owns what.
+	// Ports: bu bileşenin dışa açtığı gelen portlar ("443/tcp"), katalogdan.
+	// Güvenlik duvarı kurulumda zaten tam bunları açar; bileşen başına
+	// göstermek, "bu sunucumda neyi açtı?" sorusunu, genel port şeridini okuyup
+	// hangisinin kime ait olduğunu tahmin etmeden yanıtlar.
+	Ports []string `json:"ports,omitempty"`
 }
 
 // managedServicesPayload is what both endpoints return: the cached scan and
@@ -295,6 +305,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			ConflictWith:    conflictWith,
 			RequiresMissing: requiresMissing,
 			NotOffered:      notOffered,
+			Ports:           portStrings(managed.FirewallPorts),
 			Kind:            managed.Kind,
 			Packages:        managed.Packages[pkgFamily],
 			ConfigFiles:     configFiles,
@@ -577,4 +588,19 @@ func contains(slice []string, val string) bool {
 		}
 	}
 	return false
+}
+
+// portStrings renders catalogue ports as "443/tcp", matching the wording of
+// the firewall strip so the two read as the same fact.
+// portStrings, katalog portlarını "443/tcp" olarak çizer; güvenlik duvarı
+// şeridiyle aynı dili kullanır ki ikisi aynı gerçek olarak okunsun.
+func portStrings(ports []core.FirewallPort) []string {
+	if len(ports) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(ports))
+	for _, p := range ports {
+		out = append(out, fmt.Sprintf("%d/%s", p.Port, p.Proto))
+	}
+	return out
 }

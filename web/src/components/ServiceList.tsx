@@ -98,6 +98,7 @@ interface RepoInfo {
     id?: string;
     name?: string;
     detail?: string;
+    required?: boolean;
     packages?: string[];
     error?: string;
 }
@@ -885,7 +886,18 @@ function InstallServiceDialog({
 
                         {!repo.enabled ? (
                             <>
-                                <p className="mb-2 text-xs text-fg-subtle">{t('services.repo.note')}</p>
+                                {/* Required repo (Netdata on Debian/Ubuntu): the
+                                    package exists NOWHERE else, so pressing Install
+                                    without it fails inside apt with "no installation
+                                    candidate" — the operator's failed attempt on
+                                    25 Jul. Say it up front instead.
+                                    Zorunlu depo (Debian/Ubuntu'da Netdata): paket
+                                    BAŞKA HİÇBİR yerde yok; onsuz Kur'a basmak apt
+                                    içinde "kurulum adayı yok" ile düşer — operatörün
+                                    25 Tem'deki başarısız denemesi. Bunu baştan söyle. */}
+                                <p className={`mb-2 text-xs ${repo.required ? 'text-warning' : 'text-fg-subtle'}`}>
+                                    {repo.required ? t('services.repo.requiredNote') : t('services.repo.note')}
+                                </p>
                                 <Button
                                     variant="secondary"
                                     onClick={() => toggleRepo('enable')}

@@ -95,6 +95,22 @@ type ManagedRepo struct {
 	// yayınlamıyor; katı bir kurulum, tek bir isteğe bağlı uzantı yüzünden
 	// PHP 8.5'i tümüyle reddederdi.
 	VersionCompanions []string
+	// Required marks a repository WITHOUT which the package does not exist on
+	// this package family at all. Sury and PGDG are optional — the distro ships
+	// a PHP and a PostgreSQL, the repo only widens the choice. Netdata is the
+	// opposite: Debian/Ubuntu package it nowhere, so pressing Install without
+	// the repo fails inside apt with "no installation candidate" — a late,
+	// unexplained failure of exactly the kind this project keeps deleting.
+	// The UI reads this to present the repo as a required step instead of an
+	// optional upgrade.
+	// Required, BU paket ailesinde onsuz paketin hiç var olmadığı bir depoyu
+	// işaretler. Sury ve PGDG isteğe bağlıdır — dağıtım bir PHP ve bir
+	// PostgreSQL getirir, depo yalnız seçeneği genişletir. Netdata bunun tersi:
+	// Debian/Ubuntu onu hiçbir yerde paketlemez, dolayısıyla depo olmadan Kur'a
+	// basmak apt içinde "kurulum adayı yok" ile düşer — bu projenin sürekli
+	// sildiği türden geç ve açıklamasız bir arıza. Arayüz bunu okuyup depoyu
+	// isteğe bağlı bir yükseltme değil, zorunlu bir adım olarak sunar.
+	Required bool
 }
 
 // Kind answers "how is this row drawn and operated?" — the single question
@@ -785,7 +801,45 @@ var ManagedServices = []ManagedService{
 		Category:    "monitoring",
 		Kind:        KindService,
 		SystemNames: []string{"netdata"},
-		Packages:    map[string][]string{"pacman": {"netdata"}},
+		// Debian/Ubuntu ship NO netdata package at all — `apt-cache policy
+		// netdata` answers "Candidate: (none)" on Debian 13, which is why the
+		// operator's install attempt failed (25 Jul: "net data kurulamadı").
+		// Arch packages it, Debian does not; the vendor's own repository is
+		// the only honest apt source, exactly like Sury for PHP.
+		//
+		// Debian/Ubuntu netdata paketini HİÇ getirmez — Debian 13'te
+		// `apt-cache policy netdata` "Candidate: (none)" der; operatörün
+		// kurulum denemesinin düşme sebebi buydu (25 Tem: "net data
+		// kurulamadı"). Arch paketler, Debian paketlemez; tek dürüst apt
+		// kaynağı, tıpkı PHP'de Sury gibi, üreticinin kendi deposudur.
+		Packages: map[string][]string{"apt": {"netdata"}, "pacman": {"netdata"}},
+		Repo: &ManagedRepo{
+			ID:          "netdata",
+			Name:        "Netdata (repo.netdata.cloud)",
+			Description: "Netdata's official repository — the only apt source for Debian/Ubuntu, which do not package it.",
+			KeyURL:      "https://repo.netdata.cloud/netdatabot.gpg.key",
+			// A FLAT repository: the distribution is "{codename}/" with a
+			// trailing slash and no component list. Writing the usual
+			// "… {codename} main" here yields a 404 that apt reports as a
+			// missing Release file. Verified live before shipping (25 Jul):
+			// .../debian/trixie/Release is 200 and its Packages index carries
+			// netdata 2.10.0 — the rule from the Buypass incident is that an
+			// external endpoint is checked against the real service first.
+			//
+			// DÜZ (flat) depo: dağıtım adı sonunda eğik çizgiyle "{codename}/"
+			// ve bileşen listesi yok. Buraya alışılmış "… {codename} main"
+			// yazmak, apt'ın "Release dosyası yok" diye bildirdiği bir 404
+			// üretir. Göndermeden önce canlı doğrulandı (25 Tem):
+			// .../debian/trixie/Release 200 ve Packages dizini netdata
+			// 2.10.0 taşıyor — Buypass olayından kalan kural, dış ucun önce
+			// gerçek servise karşı sınanmasıdır.
+			SourceTemplate: "deb https://repo.netdata.cloud/repos/stable/debian/ {codename}/",
+			Required:       true,
+			// No PackagePattern: the repo serves one current netdata, not a
+			// menu of versions. Version choice is a PHP/PostgreSQL affair.
+			// PackagePattern yok: depo sürüm menüsü değil, tek güncel netdata
+			// sunar. Sürüm seçimi PHP/PostgreSQL işidir.
+		},
 	},
 }
 

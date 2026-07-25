@@ -259,6 +259,7 @@ func main() {
 
 	http.HandleFunc("/api/v1/config", panel.handleConfig)
 	http.HandleFunc("/api/v1/service/action", panel.handleServiceAction)
+	http.HandleFunc("/api/v1/service/logs", panel.handleServiceLogs)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
@@ -649,9 +650,17 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		// Start/stop/restart changed (or failed to change) the server's real
+		// state and left NO trace in the ledger — the operator could not show
+		// what they had done, and neither could I reconstruct it (25 Jul).
+		// Başlat/durdur/yeniden başlat, sunucunun gerçek durumunu değiştirdi
+		// (ya da değiştiremedi) ve defterde HİÇ iz bırakmıyordu — operatör ne
+		// yaptığını gösteremiyordu, ben de yeniden kuramıyordum (25 Tem).
+		p.audit(r, "service."+req.Action+".failed:"+serviceName+" — "+auditReason(err.Error()), "service", 0)
 		writeServerError(w, err)
 		return
 	}
+	p.audit(r, "service."+req.Action+":"+serviceName, "service", 0)
 
 	// The action changed real state, so the cached scan is stale; refresh it
 	// here — one deliberate action, one scan — so pages keep loading from

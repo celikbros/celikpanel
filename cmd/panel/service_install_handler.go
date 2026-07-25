@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -86,10 +88,24 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		ID      string `json:"id"`
 		Package string `json:"package,omitempty"`
 	}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
+		// A failed attempt must leave a trace. Netdata could not be installed
+		// on Debian (apt has no such package) and the audit log stayed SILENT —
+		// so from the log it looked as if the operator never tried. "log yok"
+		// (operator, 25 Jul) was really "failures are not logged": every entry
+		// in the ledger was a success, which makes the ledger a highlight reel
+		// instead of a record.
+		// Başarısız deneme de iz bırakmalı. Netdata Debian'da kurulamadı
+		// (apt'ta böyle paket yok) ve denetim kaydı SESSİZ kaldı — kayda
+		// bakınca operatör hiç denememiş gibi görünüyordu. "log yok"
+		// (operatör, 25 Tem) aslında "başarısızlıklar kaydedilmiyor" demekti:
+		// defterdeki her satır bir başarıydı, bu da defteri kayıt değil
+		// vitrin yapar.
+		p.audit(r, "service.install.failed:"+req.ServiceID+" — "+auditReason(err.Error()), "service", 0)
 		writeServerError(w, err)
 		return
 	}
 	if resp.Error != "" {
+		p.audit(r, "service.install.failed:"+req.ServiceID+" — "+auditReason(resp.Error), "service", 0)
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
@@ -348,10 +364,12 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			ID      string `json:"id"`
 			Package string `json:"package,omitempty"`
 		}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
+		p.audit(r, "service.uninstall.failed:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(err.Error()), "service", 0)
 		writeAgentError(w, err, "service uninstall")
 		return
 	}
 	if resp.Error != "" {
+		p.audit(r, "service.uninstall.failed:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(resp.Error), "service", 0)
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
 	}
@@ -470,4 +488,67 @@ func (p *Panel) wireMailFiltersAtStartup() {
 			log.Printf("milter chain: %s", resp.Detail)
 		}
 	}()
+}
+
+// auditReason trims a failure message to something an audit row can carry
+// without becoming a wall of text. The reason is the whole point of logging a
+// failure — "install failed" alone tells the operator nothing they did not
+// already see on screen.
+// auditReason, bir başarısızlık mesajını denetim satırının duvara dönüşmeden
+// taşıyabileceği boya kırpar. Sebep, başarısızlığı kaydetmenin bütün
+// anlamıdır — yalnız "kurulum başarısız", operatöre ekranda zaten gördüğünden
+// fazlasını söylemez.
+func auditReason(msg string) string {
+	msg = strings.TrimSpace(strings.ReplaceAll(msg, "\n", " "))
+	const max = 180
+	if len(msg) > max {
+		msg = msg[:max] + "…"
+	}
+	return msg
+}
+
+// handleServiceLogs serves a unit's recent journal so the generic component
+// page can show what a daemon is actually saying. Admin-only via the
+// /api/v1/service/ prefix. Read-only: nothing here can change the server.
+// handleServiceLogs, bir unit'in son günlüğünü sunar ki genel bileşen sayfası
+// bir daemon'ın gerçekte ne dediğini gösterebilsin. /api/v1/service/ öneki
+// sayesinde yalnız admin. Salt-okunur: burada sunucuyu değiştirebilecek hiçbir
+// şey yok.
+func (p *Panel) handleServiceLogs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	unit := strings.TrimSpace(r.URL.Query().Get("unit"))
+	if unit == "" {
+		writeClientError(w, http.StatusBadRequest, "unit is required")
+		return
+	}
+	lines := 200
+	if v := r.URL.Query().Get("lines"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			lines = n
+		}
+	}
+	var resp struct {
+		Unit  string   `json:"unit"`
+		Lines []string `json:"lines"`
+		Error string   `json:"error,omitempty"`
+	}
+	if err := p.agentClient.Call("Agent.ServiceJournal", struct {
+		Unit  string `json:"unit"`
+		Lines int    `json:"lines"`
+	}{Unit: unit, Lines: lines}, &resp); err != nil {
+		writeAgentError(w, err, "service logs")
+		return
+	}
+	if resp.Error != "" {
+		writeClientError(w, http.StatusBadRequest, resp.Error)
+		return
+	}
+	if resp.Lines == nil {
+		resp.Lines = []string{}
+	}
+	json.NewEncoder(w).Encode(resp)
 }

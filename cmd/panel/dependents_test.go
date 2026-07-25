@@ -250,7 +250,7 @@ func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
 	}{
 		{"pacman", "spamassassin", true, "spamass-milter Arch depolarında yok — süzemeyecek kurulum sunulmaz"},
 		{"apt", "spamassassin", false, "apt eşlemesi tam"},
-		{"apt", "netdata", true, "Debian vendor deposu dilimi henüz yapılmadı"},
+		{"apt", "netdata", false, "Debian'da üreticinin deposundan kurulur (zorunlu depo)"},
 		{"pacman", "netdata", false, "pacman eşlemesi var"},
 		{"pacman", "roundcube", false, "taşınabilir (tarball) — her dağıtımda kurulur"},
 		{"apt", "node", false, "taşınabilir (resmi sürüm) — her dağıtımda kurulur"},

@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useI18n } from './i18n';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
@@ -28,6 +27,7 @@ import { PowerDNSManagement } from './components/PowerDNSManagement';
 import { VsftpdManagement } from './components/VsftpdManagement';
 import { PostgreSQLManagement } from './components/PostgreSQLManagement';
 import { MariaDBManagement } from './components/MariaDBManagement';
+import { ComponentDetail } from './components/ComponentDetail';
 
 // Domain Detail Wrapper - fetches domain ID from domain name
 function DomainDetailPage() {
@@ -85,11 +85,11 @@ function DomainDetailPage() {
 interface ServiceManagementProps {
   serviceId: string;
   versions: string[];
+  onSelectConfig?: (path: string) => void;
 }
 
-function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
+function ServiceManagement({ serviceId, versions, onSelectConfig }: ServiceManagementProps) {
   const navigate = useNavigate();
-  const { t } = useI18n();
   const onBack = () => navigate('/services');
 
   switch (serviceId) {
@@ -112,20 +112,19 @@ function ServiceManagement({ serviceId, versions }: ServiceManagementProps) {
     case 'mariadb':
       return <MariaDBManagement onBack={onBack} />;
     default:
-      // Honest and localized: some services (node — its versions live in the
-      // Services page drawer) have no dedicated page, and saying so beats an
-      // English-only "Coming soon" that promises nothing in particular.
-      // Dürüst ve yerelleştirilmiş: bazı servislerin (node — sürümleri
-      // Servisler sayfasındaki çekmecede) özel sayfası yok; bunu söylemek,
-      // belirsiz bir şey vadeden İngilizce "Coming soon"dan iyidir.
-      return (
-        <div className="p-8 text-center">
-          <p className="mb-4 text-fg-muted">{t('services.noManagePage')}</p>
-          <button onClick={onBack} className="px-4 py-2 bg-surface-2 rounded-lg hover:bg-surface-3">
-            {t('common.back')}
-          </button>
-        </div>
-      );
+      // Every other component gets the DERIVED page — status, actions, unit,
+      // versions, packages, ports, config files and its own journal — instead
+      // of the dead end that used to sit here (operator, 25 Jul: "birçok
+      // servisin manage'i doğru düzgün çalışmıyor"). The specialised pages
+      // above stay because they do more than describe; this one needs no entry
+      // in any list, so a component added tomorrow is manageable at once.
+      // Geri kalan her bileşen, burada eskiden duran çıkmaz sokak yerine
+      // TÜRETİLMİŞ sayfayı alır: durum, eylemler, unit, sürümler, paketler,
+      // portlar, ayar dosyaları ve kendi günlüğü (operatör, 25 Tem: "birçok
+      // servisin manage'i doğru düzgün çalışmıyor"). Yukarıdaki özel sayfalar
+      // betimlemekten fazlasını yaptıkları için kalır; bunun hiçbir listeye
+      // girmesi gerekmez, yani yarın eklenen bileşen anında yönetilebilir.
+      return <ComponentDetail serviceId={serviceId} onBack={onBack} onSelectConfig={onSelectConfig} />;
   }
 }
 
@@ -137,6 +136,11 @@ function ServiceManagementPage() {
   const location = useLocation();
   const [versions, setVersions] = useState<string[]>(location.state?.versions || []);
   const [loading, setLoading] = useState(!location.state?.versions);
+  // Config files listed on the generic page open in the same editor the
+  // Components page uses — one editor, not a second copy.
+  // Genel sayfada listelenen ayar dosyaları, Bileşenler sayfasının kullandığı
+  // editörde açılır — tek editör, ikinci bir kopya değil.
+  const [configPath, setConfigPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (!serviceId) return;
@@ -175,7 +179,11 @@ function ServiceManagementPage() {
   // Boş-sürüm kaçışı yok: "default" sentinel'i öldüğünden (B3b) kurulu bir
   // nginx/postfix meşru olarak versions: [] taşır — burada kaçmak, böyle her
   // Yönet tıklamasının arkasında BOŞ sayfa çiziyordu.
-  return <ServiceManagement serviceId={serviceId!} versions={versions} />;
+  if (configPath) {
+    return <ConfigEditor path={configPath} onBack={() => setConfigPath(null)} />;
+  }
+
+  return <ServiceManagement serviceId={serviceId!} versions={versions} onSelectConfig={setConfigPath} />;
 }
 
 

@@ -81,7 +81,7 @@ Rules:
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| 📈 Netdata | Service | — | `netdata` | — | — |
+| 📈 Netdata | Service | `netdata` · version choice: Netdata (repo.netdata.cloud) | `netdata` | — | — |
 
 ## Installed from the official release (identical on every distro)
 

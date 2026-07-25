@@ -82,3 +82,39 @@ func contains(list []string, want string) bool {
 	}
 	return false
 }
+
+// A repo marked Required means the package exists NOWHERE else on that family.
+// Netdata is the case: Debian/Ubuntu package it nowhere, so an install without
+// the repo dies inside apt with "no installation candidate" — the operator's
+// failed attempt (25 Jul: "net data kurulamadı"). Optional repos (Sury, PGDG)
+// must NOT be marked, or the panel would demand a third-party repo for a
+// component the distro already ships.
+//
+// Required işaretli bir depo, paketin o ailede BAŞKA HİÇBİR yerde olmadığı
+// anlamına gelir. Netdata bu durumdadır: Debian/Ubuntu onu hiçbir yerde
+// paketlemez, dolayısıyla deposuz kurulum apt içinde "kurulum adayı yok" ile
+// ölür — operatörün başarısız denemesi (25 Tem: "net data kurulamadı").
+// İsteğe bağlı depolar (Sury, PGDG) işaretlenMEmelidir; yoksa panel, dağıtımın
+// zaten getirdiği bir bileşen için üçüncü taraf deposu dayatırdı.
+func TestOnlyUnpackagedComponentsRequireTheirRepo(t *testing.T) {
+	for id, wantRequired := range map[string]bool{
+		"netdata":    true,
+		"php-fpm":    false,
+		"postgresql": false,
+	} {
+		svc := GetManagedServiceByID(id)
+		if svc == nil || svc.Repo == nil {
+			t.Fatalf("%s: expected a catalogue entry with a repo", id)
+		}
+		if svc.Repo.Required != wantRequired {
+			t.Errorf("%s: Repo.Required = %v, want %v", id, svc.Repo.Required, wantRequired)
+		}
+		// A required repo is the ONLY apt source, so the family must still list
+		// the package — otherwise the row would be hidden as "not offered".
+		// Zorunlu depo tek apt kaynağıdır; bu yüzden aile paketi yine de
+		// saymalıdır — yoksa satır "sunulmuyor" diye gizlenirdi.
+		if wantRequired && len(svc.Packages["apt"]) == 0 {
+			t.Errorf("%s: a required repo still needs its apt package listed", id)
+		}
+	}
+}

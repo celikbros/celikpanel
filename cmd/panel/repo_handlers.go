@@ -31,6 +31,7 @@ type repoInfoResp struct {
 	ID        string   `json:"id,omitempty"`       // repo id, e.g. "pgdg"
 	Name      string   `json:"name,omitempty"`     // human name
 	Detail    string   `json:"detail,omitempty"`   // one-line description
+	Required  bool     `json:"required,omitempty"` // without this repo the package does not exist here
 	Packages  []string `json:"packages,omitempty"` // available version packages (newest first)
 	Error     string   `json:"error,omitempty"`
 }
@@ -111,7 +112,7 @@ func (p *Panel) handleRepo(w http.ResponseWriter, r *http.Request) {
 // repoInfo, agent'tan deponun mevcut durumunu ve etkinse şu an mevcut sürümlü
 // paketleri ister.
 func (p *Panel) repoInfo(repo *core.ManagedRepo) repoInfoResp {
-	info := repoInfoResp{Available: true, ID: repo.ID, Name: repo.Name, Detail: repo.Description}
+	info := repoInfoResp{Available: true, ID: repo.ID, Name: repo.Name, Detail: repo.Description, Required: repo.Required}
 	var st RepoStatusResp
 	if err := p.agentClient.Call("Agent.RepoStatus", &enableRepoReq{RepoID: repo.ID}, &st); err == nil {
 		info.Enabled = st.Enabled
