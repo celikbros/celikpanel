@@ -118,3 +118,52 @@ func TestOnlyUnpackagedComponentsRequireTheirRepo(t *testing.T) {
 		}
 	}
 }
+
+// The seat must be enforced where it cannot be skipped. It was UI-only: with
+// Redis running on Boston, a panel API call installed valkey-server, which
+// could not bind 6379 and died in a restart loop — "installed and dead", the
+// exact outcome the seat exists to prevent. The row already said "conflicts
+// with Redis"; the API did it anyway.
+//
+// Koltuk, atlatılamayacak yerde uygulanmalıdır. Yalnız arayüzdeydi: Boston'da
+// Redis çalışırken bir panel API çağrısı valkey-server kurdu, 6379'a
+// bağlanamadı ve yeniden başlatma döngüsünde öldü — "kurulu ve ölü", yani
+// koltuğun var olma sebebi olan sonucun ta kendisi. Satır zaten "Redis ile
+// çakışıyor" diyordu; API yine de yaptı.
+func TestSeatIsTakenByTheInstalledMember(t *testing.T) {
+	redis := GetManagedServiceByID("redis")
+	valkey := GetManagedServiceByID("valkey")
+	nginx := GetManagedServiceByID("nginx")
+	memcached := GetManagedServiceByID("memcached")
+	for name, svc := range map[string]*ManagedService{"redis": redis, "valkey": valkey, "nginx": nginx, "memcached": memcached} {
+		if svc == nil {
+			t.Fatalf("%s missing from the catalogue", name)
+		}
+	}
+
+	// The live case: Redis installed, Valkey refused by name.
+	// Canlı durum: Redis kurulu, Valkey adıyla reddediliyor.
+	if got := SeatTakenBy(valkey, map[string]bool{"redis": true}); got != "Redis" {
+		t.Errorf("Valkey with Redis installed → %q, want %q", got, "Redis")
+	}
+	// And the other way round, since Arch ships Valkey instead of Redis.
+	// Ve tersi; çünkü Arch, Redis yerine Valkey getirir.
+	if got := SeatTakenBy(redis, map[string]bool{"valkey": true}); got != "Valkey" {
+		t.Errorf("Redis with Valkey installed → %q, want %q", got, "Valkey")
+	}
+	// A free seat installs.
+	// Boş koltuk kurulur.
+	if got := SeatTakenBy(valkey, map[string]bool{"memcached": true, "nginx": true}); got != "" {
+		t.Errorf("Valkey with an empty kv-store seat → %q, want none", got)
+	}
+	// A component already installed does not block itself (reinstall/repair).
+	// Zaten kurulu bir bileşen kendini engellemez (yeniden kurma/onarım).
+	if got := SeatTakenBy(valkey, map[string]bool{"valkey": true}); got != "" {
+		t.Errorf("Valkey must not block itself → %q", got)
+	}
+	// No seat, no conflict: caches that coexist must never be blocked.
+	// Koltuğu olmayan çakışmaz: yan yana yaşayan önbellekler asla engellenmemeli.
+	if got := SeatTakenBy(memcached, map[string]bool{"redis": true, "valkey": true}); got != "" {
+		t.Errorf("Memcached has no seat and must coexist → %q", got)
+	}
+}

@@ -282,6 +282,44 @@ func RequirementsMissing(svc *ManagedService, installed map[string]bool) []strin
 	return missing
 }
 
+// SeatTakenBy returns the NAME of the installed component already occupying
+// this component's seat, or "". A seat means "same role, same port": installing
+// the second member cannot bind and lands in a failed restart loop.
+//
+// This exists because the rule was enforced only by the UI. The API happily
+// installed the second member: on Boston (Redis running, 6379 held) a panel
+// call installed valkey-server, which failed to start five times in a row and
+// stayed "enabled but failed" — the exact "installed and dead" outcome the
+// seat was invented to prevent. The UI is a courtesy; the agent is the
+// enforcement that cannot be skipped, the same rule already true of
+// requirements.
+//
+// SeatTakenBy, bu bileşenin koltuğunu zaten işgal eden kurulu bileşenin ADINI
+// döndürür, yoksa "". Koltuk "aynı rol, aynı port" demektir: ikinci üyeyi
+// kurmak porta bağlanamaz ve başarısız yeniden başlatma döngüsüne düşer.
+//
+// Bu, kuralın yalnız arayüzde uygulanıyor olmasından doğdu. API ikinci üyeyi
+// seve seve kuruyordu: Boston'da (Redis çalışıyor, 6379 tutulu) bir panel
+// çağrısı valkey-server kurdu, art arda beş kez başlatılamadı ve "etkin ama
+// başarısız" kaldı — koltuğun icat edilme sebebi olan "kurulu ve ölü"
+// sonucunun ta kendisi. Arayüz bir nezakettir; atlatılamayan uygulayıcı
+// agent'tır — gereksinimlerde zaten geçerli olan aynı kural.
+func SeatTakenBy(svc *ManagedService, installed map[string]bool) string {
+	if svc == nil || svc.ConflictGroup == "" {
+		return ""
+	}
+	for i := range ManagedServices {
+		other := &ManagedServices[i]
+		if other.ID == svc.ID || other.ConflictGroup != svc.ConflictGroup {
+			continue
+		}
+		if installed[other.ID] {
+			return other.Name
+		}
+	}
+	return ""
+}
+
 // ManagedServices is the list of services CelikPanel manages
 var ManagedServices = []ManagedService{
 	{

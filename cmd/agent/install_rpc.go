@@ -122,9 +122,26 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// Önce gereksinimler: üst servisi olmayan bağımlı araç bozuk kurulur
 	// (MariaDB'siz, web sunucususuz, PHP'siz phpMyAdmin). UI da engeller;
 	// atlatılamayan uygulayıcı agent'tır.
-	if missing := core.RequirementsMissing(svc, a.installedServiceSet()); len(missing) > 0 {
+	installed := a.installedServiceSet()
+	if missing := core.RequirementsMissing(svc, installed); len(missing) > 0 {
 		resp.Error = fmt.Sprintf("%s requires %s — install that first from Services",
 			svc.Name, strings.Join(missing, ", "))
+		return nil
+	}
+
+	// The seat, enforced HERE and not only in the browser. Two members of a
+	// seat bind the same port, so the second one installs and immediately dies
+	// — proven live on Boston: with Redis holding 6379, a panel call installed
+	// valkey-server and systemd gave up after five failed starts. The row said
+	// "conflicts with Redis"; the API did it anyway.
+	// Koltuk, yalnız tarayıcıda değil BURADA uygulanır. Bir koltuğun iki üyesi
+	// aynı portu tutar; ikincisi kurulur ve anında ölür — Boston'da canlı
+	// kanıtlandı: Redis 6379'u tutarken bir panel çağrısı valkey-server kurdu ve
+	// systemd beş başarısız başlatmadan sonra pes etti. Satır "Redis ile
+	// çakışıyor" diyordu; API yine de yaptı.
+	if taken := core.SeatTakenBy(svc, installed); taken != "" {
+		resp.Error = fmt.Sprintf("%s cannot run alongside %s — they do the same job and would fight over the same port. Remove %s first.",
+			svc.Name, taken, taken)
 		return nil
 	}
 
