@@ -87,8 +87,18 @@ type connectionCheck struct {
 	// yapması gereken o adları göstermektir. Birine biovision.health altında
 	// ns1.celikhost.com için glue kaydettirmesini söylemek, yerine
 	// getiremeyeceği bir talimat olurdu.
-	GlueNeeded bool   `json:"glue_needed"`
-	CheckedAt  string `json:"checked_at"`
+	GlueNeeded bool `json:"glue_needed"`
+	// NameserversUsable is false when this server's nameserver names do not
+	// resolve to this server. Route A must NOT be offered then: delegating to a
+	// nameserver that serves a different machine breaks the domain, and the
+	// panel would be the thing that told you to do it.
+	// NameserversUsable, bu sunucunun ad sunucusu adları bu sunucuya
+	// çözülmüyorsa yanlıştır. O zaman A yolu SUNULMAMALIDIR: başka bir makineye
+	// hizmet eden ad sunucusuna devretmek alan adını bozar ve bunu söyleyen
+	// panel olurdu.
+	NameserversUsable bool             `json:"nameservers_usable"`
+	NameserverFacts   []nameserverFact `json:"nameserver_facts,omitempty"`
+	CheckedAt         string           `json:"checked_at"`
 }
 
 // handleDomainConnection answers GET /api/v1/domains/{id}/connection.
@@ -145,6 +155,23 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 	for _, ns := range out.Nameservers {
 		if strings.HasSuffix(ns, "."+name) {
 			out.GlueNeeded = true
+		}
+	}
+	// Do the nameserver names this panel advertises actually answer for this
+	// machine? If not, saying "delegate here" would be advice that breaks the
+	// domain. Glue names inside this very zone are exempt: they cannot resolve
+	// until the delegation exists, so their absence is expected, not a fault.
+	// Panelin ilan ettiği ad sunucusu adları gerçekten bu makine adına cevap
+	// veriyor mu? Vermiyorsa "buraya devredin" demek, alan adını bozan bir
+	// tavsiye olurdu. Tam da bu zone'un içindeki glue adları muaftır: devir
+	// oluşmadan çözülemezler, yani yoklukları beklenen bir durumdur, arıza değil.
+	if len(out.Nameservers) == 2 {
+		if out.GlueNeeded {
+			out.NameserversUsable = true
+		} else {
+			facts := verifyNameservers(ctx, out.Nameservers, out.ServerIP, out.ServerV6)
+			out.NameserverFacts = facts
+			out.NameserversUsable = len(facts) == 2 && facts[0].PointsHere && facts[1].PointsHere
 		}
 	}
 

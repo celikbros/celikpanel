@@ -42,6 +42,8 @@ interface Connection {
     status: 'delegated' | 'delegated_mismatch' | 'a_record' | 'elsewhere' | 'unresolved';
     ssl_ready: boolean;
     glue_needed: boolean;
+    nameservers_usable: boolean;
+    nameserver_facts?: { host: string; ips: string[]; points_here: boolean }[];
     checked_at: string;
 }
 
@@ -147,8 +149,32 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 <>
                     <p className="mb-3 text-sm text-fg-muted">{t('conn.intro')}</p>
 
+                    {/* Route A is offered ONLY when this server's nameserver
+                        names actually answer for this server. Otherwise the
+                        instruction would break the domain — and the panel would
+                        be what said to do it. / A yolu YALNIZ bu sunucunun ad
+                        sunucusu adları gerçekten bu sunucu adına cevap
+                        verdiğinde sunulur. Aksi hâlde talimat alan adını
+                        bozardı — ve bunu söyleyen panel olurdu. */}
+                    {!c.nameservers_usable && (
+                        <div className="mb-3 rounded-xl border border-danger/40 bg-danger/5 p-4">
+                            <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.nsBroken.title')}</h4>
+                            <p className="text-xs leading-relaxed text-fg-muted">{t('conn.nsBroken.desc')}</p>
+                            {c.nameserver_facts?.length ? (
+                                <ul className="mt-2 space-y-1">
+                                    {c.nameserver_facts.map((f) => (
+                                        <li key={f.host} className="font-mono text-xs text-fg-muted">
+                                            {f.host} → {f.ips.length ? f.ips.join(', ') : t('conn.none')}
+                                            {!f.points_here && <span className="ml-1 text-danger">✕</span>}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : null}
+                        </div>
+                    )}
+
                     {/* Route A — full delegation. / A yolu — tam devir. */}
-                    <div className="mb-3 rounded-xl border border-border bg-surface p-4">
+                    <div className={`mb-3 rounded-xl border border-border bg-surface p-4 ${!c.nameservers_usable ? 'opacity-50' : ''}`}>
                         <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.routeA.title')}</h4>
                         <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('conn.routeA.desc')}</p>
                         {/* Glue is only this domain's business when the

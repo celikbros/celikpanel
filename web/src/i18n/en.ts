@@ -809,6 +809,8 @@ export const en = {
     'conn.liveIp': 'Resolves to right now',
     'conn.nameserverN': 'Nameserver {n}',
     'conn.intro': 'This domain does not point at this server yet, so nothing hosted here can answer for it. Pick one of the two routes below and enter the values at the company you bought the domain from.',
+    'conn.nsBroken.title': 'This server has no working nameservers yet',
+    'conn.nsBroken.desc': 'The nameserver names this server advertises do not answer for this server, so delegating a domain to them would send its traffic to the wrong machine. An administrator has to set the correct names under Settings first — until then, use Route B below.',
     'conn.routeA.title': 'Route A — hand DNS to this server (recommended)',
     'conn.routeA.desc': 'The panel becomes the authority for this domain: mail records, security records and certificates are then managed for you automatically. It takes two steps at your registrar, and DNS changes can take a few hours to spread.',
     'conn.routeA.step1': '1. Register these child nameservers (also called glue records):',

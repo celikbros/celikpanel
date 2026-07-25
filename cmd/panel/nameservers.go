@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // The server's nameserver pair — one pair for the whole machine, not one pair
@@ -102,6 +104,64 @@ func (p *Panel) serverNameservers(ctx context.Context) (string, string) {
 	return "", ""
 }
 
+// nameserverFact is one name and where it actually points, right now.
+// nameserverFact bir addır ve şu an gerçekte nereyi gösterdiğidir.
+type nameserverFact struct {
+	Host       string   `json:"host"`
+	IPs        []string `json:"ips"`
+	PointsHere bool     `json:"points_here"`
+}
+
+// verifyNameservers resolves the pair and reports whether each name actually
+// answers for THIS machine.
+//
+// Without this the panel confidently told an operator to delegate a domain to
+// ns1.celikhost.com while that name resolved to a DIFFERENT server of theirs
+// (Frankfurt, 72.62.38.15) and the domain was hosted here (Boston, 2.25.80.4).
+// Following that instruction would have sent every query for the domain to a
+// machine with no zone for it — the domain would simply not work, and the panel
+// would have been the one that said to do it. The operator caught it by knowing
+// their own infrastructure: "isn't celikhost.com on Frankfurt?"
+//
+// A guessed default is only safe when it is checked. This is the check.
+//
+// verifyNameservers çifti çözer ve her adın gerçekten BU makine adına cevap
+// verip vermediğini bildirir.
+//
+// Bu olmadan panel, operatöre bir alan adını ns1.celikhost.com'a devretmesini
+// güvenle söylüyordu; oysa o ad onların BAŞKA bir sunucusuna çözülüyordu
+// (Frankfurt, 72.62.38.15) ve alan adı burada barındırılıyordu (Boston,
+// 2.25.80.4). O talimatı uygulamak, alan adına gelen her sorguyu o alan adının
+// zone'u olmayan bir makineye yollardı — alan adı düpedüz çalışmazdı ve bunu
+// söyleyen panel olurdu. Operatör bunu kendi altyapısını bilerek yakaladı:
+// "celikhost.com ana domaini Frankfurt'ta değil mi?"
+//
+// Tahmin edilen varsayılan, ancak kontrol edildiğinde güvenlidir. Kontrol budur.
+func verifyNameservers(ctx context.Context, hosts []string, serverIP, serverV6 string) []nameserverFact {
+	res := &net.Resolver{}
+	out := make([]nameserverFact, 0, len(hosts))
+	for _, h := range hosts {
+		f := nameserverFact{Host: h}
+		if h == "" {
+			out = append(out, f)
+			continue
+		}
+		lookupCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
+		addrs, err := res.LookupHost(lookupCtx, h)
+		cancel()
+		if err == nil {
+			f.IPs = addrs
+			for _, a := range addrs {
+				if (serverIP != "" && a == serverIP) || (serverV6 != "" && a == serverV6) {
+					f.PointsHere = true
+				}
+			}
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
 func (p *Panel) setting(ctx context.Context, key string) string {
 	var v string
 	_ = p.db.GetDB().QueryRowContext(ctx, `SELECT value FROM panel_settings WHERE key = ?`, key).Scan(&v)
@@ -128,6 +188,14 @@ type nameserverSettings struct {
 	// göstermez.
 	Derived  bool   `json:"derived"`
 	ServerIP string `json:"server_ip"`
+	// Facts is where each name actually points. Usable is true only when BOTH
+	// names answer for this machine — the panel must not tell anyone to
+	// delegate to a nameserver that serves a different server.
+	// Facts, her adın gerçekte nereyi gösterdiğidir. Usable yalnız İKİ ad da bu
+	// makine adına cevap verdiğinde doğrudur — panel, başka bir sunucuya hizmet
+	// eden bir ad sunucusuna devretmeyi kimseye söylememelidir.
+	Facts  []nameserverFact `json:"facts"`
+	Usable bool             `json:"usable"`
 }
 
 // handleNameserverSettings serves and updates the pair (admin only: it changes
@@ -144,11 +212,16 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 	switch r.Method {
 	case http.MethodGet:
 		ns1, ns2 := p.serverNameservers(r.Context())
+		ip4, ip6 := serverPrimaryIP(), serverPrimaryIPv6()
+		facts := verifyNameservers(r.Context(), []string{ns1, ns2}, ip4, ip6)
+		usable := len(facts) == 2 && facts[0].PointsHere && facts[1].PointsHere
 		json.NewEncoder(w).Encode(nameserverSettings{
 			NS1:      ns1,
 			NS2:      ns2,
 			Derived:  p.setting(r.Context(), settingNS1) == "",
-			ServerIP: serverPrimaryIP(),
+			ServerIP: ip4,
+			Facts:    facts,
+			Usable:   usable,
 		})
 
 	case http.MethodPut:

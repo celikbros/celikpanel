@@ -800,6 +800,8 @@ export const tr: Record<TranslationKey, string> = {
     'conn.liveIp': 'Şu an çözüldüğü adres',
     'conn.nameserverN': '{n}. ad sunucusu',
     'conn.intro': 'Bu alan adı henüz bu sunucuyu göstermiyor; dolayısıyla burada barındırılan hiçbir şey onun adına cevap veremez. Aşağıdaki iki yoldan birini seçin ve değerleri alan adını aldığınız firmada girin.',
+    'conn.nsBroken.title': 'Bu sunucunun henüz çalışan ad sunucusu yok',
+    'conn.nsBroken.desc': 'Bu sunucunun ilan ettiği ad sunucusu adları bu sunucu adına cevap vermiyor; dolayısıyla bir alan adını onlara devretmek trafiğini yanlış makineye yollardı. Önce bir yöneticinin Ayarlar altında doğru adları belirlemesi gerekir — o zamana kadar aşağıdaki B yolunu kullanın.',
     'conn.routeA.title': 'A yolu — DNS yönetimini bu sunucuya verin (önerilen)',
     'conn.routeA.desc': 'Panel bu alan adının yetkilisi olur: posta kayıtları, güvenlik kayıtları ve sertifikalar sizin için otomatik yönetilir. Kayıtçınızda iki adım sürer ve DNS değişikliklerinin yayılması birkaç saat alabilir.',
     'conn.routeA.step1': '1. Şu alt ad sunucularını kaydedin (glue kaydı da denir):',
