@@ -70,23 +70,89 @@ func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) erro
 	}
 	log.Printf("Updating config %s", path)
 
-	// Write to file
-	// 0644 is standard for config files
+	// Keep the previous content so a failed validation can be UNDONE. The old
+	// code wrote first, validated after, and on failure returned an error with
+	// the comment "Revert? For now just return error" — leaving the file
+	// broken on disk. Proven live (25 Jul): a single bad write emptied
+	// /etc/nginx/nginx.conf; nginx kept serving from memory and would have
+	// died at the next reload, with nothing on screen saying so. A config
+	// editor that can destroy the file it edits is not an editor.
+	//
+	// Önceki içeriği sakla ki başarısız bir doğrulama GERİ ALINABİLSİN. Eski
+	// kod önce yazıyor, sonra doğruluyor ve düşünce "Revert? For now just
+	// return error" yorumuyla hata döndürüyordu — dosyayı diskte bozuk
+	// bırakarak. Canlıda kanıtlandı (25 Tem): tek bir hatalı yazma
+	// /etc/nginx/nginx.conf'u boşalttı; nginx bellekten sunmayı sürdürdü ve
+	// bir sonraki yeniden yüklemede ölecekti, ekranda bunu söyleyen hiçbir şey
+	// yokken. Düzenlediği dosyayı yok edebilen bir editör, editör değildir.
+	previous, hadPrevious := []byte(nil), false
+	if b, rerr := os.ReadFile(path); rerr == nil {
+		previous, hadPrevious = b, true
+	}
+	restore := func() {
+		if hadPrevious {
+			if werr := os.WriteFile(path, previous, 0644); werr != nil {
+				log.Printf("config rollback FAILED for %s: %v", path, werr)
+			} else {
+				log.Printf("config rolled back: %s", path)
+			}
+		} else {
+			_ = os.Remove(path)
+		}
+	}
+
 	if err := os.WriteFile(path, []byte(args.Content), 0644); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 
-	// Reload service if needed
-	if strings.Contains(path, "nginx") {
-		// Validate first
-		if err := exec.Command("nginx", "-t").Run(); err != nil {
-			// Revert? For now just return error
-			return fmt.Errorf("nginx config validation failed: %v", err)
+	// Validate, then roll back on failure — never leave a broken config
+	// behind. The validator is chosen by what the file belongs to; a file with
+	// no validator is written as-is (we cannot check what we cannot parse).
+	// Doğrula, düşerse geri al — arkanda asla bozuk bir yapılandırma bırakma.
+	// Doğrulayıcı, dosyanın ait olduğu şeye göre seçilir; doğrulayıcısı olmayan
+	// dosya olduğu gibi yazılır (ayrıştıramadığımızı denetleyemeyiz).
+	if v := configValidator(path); v != nil {
+		if out, verr := v.check(); verr != nil {
+			restore()
+			return fmt.Errorf("%s: %s", v.name, firstLine(out))
 		}
-		a.systemdMgr.Reload("nginx")
+		if v.reload != "" {
+			a.systemdMgr.Reload(v.reload)
+		}
 	}
 
 	*reply = true
+	return nil
+}
+
+// configValidator picks the syntax check for a config file, plus the unit to
+// reload once it passes. Nil means "no validator known for this file".
+// configValidator, bir yapılandırma dosyasının sözdizim denetimini ve geçince
+// yeniden yüklenecek unit'i seçer. Nil, "bu dosya için bilinen doğrulayıcı
+// yok" demektir.
+type validatorSpec struct {
+	name   string
+	reload string
+	check  func() (string, error)
+}
+
+func configValidator(path string) *validatorSpec {
+	run := func(name string, arg ...string) func() (string, error) {
+		return func() (string, error) {
+			out, err := exec.Command(name, arg...).CombinedOutput()
+			return string(out), err
+		}
+	}
+	switch {
+	case strings.Contains(path, "/nginx/"):
+		return &validatorSpec{name: "nginx config validation failed", reload: "nginx", check: run("nginx", "-t")}
+	case strings.Contains(path, "/postfix/"):
+		return &validatorSpec{name: "postfix config validation failed", reload: "postfix", check: run("postfix", "check")}
+	case strings.Contains(path, "/dovecot"):
+		return &validatorSpec{name: "dovecot config validation failed", reload: "dovecot", check: run("doveconf", "-n")}
+	case strings.Contains(path, "/apache2/") || strings.Contains(path, "/httpd/"):
+		return &validatorSpec{name: "apache config validation failed", reload: "", check: run("apachectl", "configtest")}
+	}
 	return nil
 }
 

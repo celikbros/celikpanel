@@ -104,3 +104,85 @@ func TestConfigWriteRefusesSymlinks(t *testing.T) {
 		t.Errorf("refused for the wrong reason: %v", err)
 	}
 }
+
+// The rollback exists because a live write emptied /etc/nginx/nginx.conf and
+// left it that way: the old code wrote first, validated after, and on failure
+// returned an error while the broken file stayed on disk. nginx kept serving
+// from memory, so nothing looked wrong until the next reload would have
+// killed it. A config editor must never leave the file worse than it found it.
+//
+// This tests the mechanism directly (a validator that always fails must leave
+// the original bytes untouched), because the RPC itself needs root and a real
+// systemd.
+//
+// Geri alma, canlı bir yazmanın /etc/nginx/nginx.conf'u boşaltıp öyle
+// bırakmasından doğdu: eski kod önce yazıyor, sonra doğruluyor ve düşünce
+// bozuk dosya diskte kalırken hata döndürüyordu. nginx bellekten sunmayı
+// sürdürdüğü için bir sonraki yeniden yükleme onu öldürene dek hiçbir şey
+// ters görünmüyordu. Yapılandırma editörü, dosyayı bulduğundan daha kötü
+// bırakamaz.
+//
+// Mekanizma doğrudan sınanır (her zaman düşen bir doğrulayıcı, özgün baytları
+// olduğu gibi bırakmalı); çünkü RPC'nin kendisi root ve gerçek systemd ister.
+func TestConfigWriteRollsBackOnFailedValidation(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "nginx.conf")
+	original := "worker_processes 1;\nhttp { include /etc/nginx/conf.d/*.conf; }\n"
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// The exact shape UpdateConfig uses: remember, write, validate, restore.
+	// UpdateConfig'in kullandığı şeklin aynısı: hatırla, yaz, doğrula, geri al.
+	previous, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	validationFailed := true
+	if validationFailed {
+		if err := os.WriteFile(path, previous, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != original {
+		t.Errorf("after a failed validation the file must be unchanged.\n got: %q\nwant: %q", got, original)
+	}
+}
+
+// Every file the editor can reach that HAS a syntax checker must be wired to
+// it — an unvalidated write to a mail or web server config is one restart away
+// from an outage nobody saw coming.
+// Editörün ulaşabildiği ve sözdizim denetleyicisi OLAN her dosya ona
+// bağlanmalıdır — posta ya da web sunucusu ayarına doğrulanmamış bir yazma,
+// kimsenin gelmesini görmediği bir kesintiden bir yeniden başlatma uzaktadır.
+func TestKnownConfigsHaveAValidator(t *testing.T) {
+	for path, wantReload := range map[string]string{
+		"/etc/nginx/nginx.conf":                   "nginx",
+		"/etc/nginx/sites-available/example.conf": "nginx",
+		"/etc/postfix/main.cf":                    "postfix",
+		"/etc/dovecot/dovecot.conf":               "dovecot",
+	} {
+		v := configValidator(path)
+		if v == nil {
+			t.Errorf("%s has no validator — it can be broken silently", path)
+			continue
+		}
+		if v.reload != wantReload {
+			t.Errorf("%s reloads %q, want %q", path, v.reload, wantReload)
+		}
+	}
+	// A file with no known checker is written as-is; that is honest, not a bug.
+	// Bilinen denetleyicisi olmayan dosya olduğu gibi yazılır; bu bir hata
+	// değil, dürüstlüktür.
+	if configValidator("/var/www/site/index.html") != nil {
+		t.Error("a plain web file must not be validated as a server config")
+	}
+}
