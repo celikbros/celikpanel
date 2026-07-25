@@ -779,6 +779,7 @@ export const en = {
     'services.role.dnsServer': 'a DNS server',
     'services.role.smtpServer': 'an SMTP server',
     'services.role.imapServer': 'an IMAP server',
+    'services.role.kvStore': 'a key-value cache',
     'services.role.spamFilter': 'a spam filter',
     'component.overview': 'Overview',
     'component.kind': 'Kind',

@@ -72,7 +72,8 @@ Kurallar:
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| ⚡ Redis | Servis | `redis-server` | — | — | — |
+| ⚡ Redis | Servis | `redis-server` | — | kv-store | — |
+| 🗝️ Valkey | Servis | `valkey-server` | `valkey` | kv-store | — |
 | 💾 Memcached | Servis | `memcached` | `memcached` | — | — |
 
 ### İzleme

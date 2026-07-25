@@ -634,6 +634,40 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             ],
         },
     },
+    'valkey': {
+        tr: {
+            what: 'Valkey, sık kullanılan verileri diskten çok daha hızlı olan bellekte tutan bir önbellek sunucusudur. WordPress, Laravel gibi uygulamalar oturum ve sorgu sonuçlarını burada saklayarak belirgin biçimde hızlanır. Redis\'in topluluk çatalıdır ve onunla aynı işi yapar; bu yüzden panel ikisini aynı koltukta tutar — aynı anda yalnız biri kurulabilir.',
+            tips: [
+                'Uygulamanız ona bağlanmadıkça kurmak tek başına siteyi hızlandırmaz — uygulamanın önbellek ayarında sunucu olarak 127.0.0.1:6379 seçilmiş olmalı.',
+                'Redis zaten kuruluysa Valkey satırı "Redis ile çakışıyor" der; geçiş yapmak isterseniz önce Redis\'i kaldırın. Bu bir ekleme değil, bir değiştirmedir.',
+                'Yalnız sunucunun kendisinden erişilir; açık portlar ekranında 6379 görünmemesi doğrudur. Kimlik doğrulamasız bir önbelleği internete açmak, bulunup boşaltılmasının en kısa yoludur.',
+                'Önbellekteki veri kalıcı değildir: yeniden başlatmak onu boşaltabilir. Bu bir kayıp değildir — uygulama veriyi gerektiğinde yeniden üretir.',
+                'Bir şey ters gittiğinde ilk bakılacak yer bu sayfadaki günlüktür; son birkaç satır sorunu genelde adıyla söyler.',
+            ],
+            troubleshoot: [
+                { symptom: 'Kurdum ama sitede hiçbir hız farkı yok.', fix: 'Beklenen durum: uygulama henüz ona bağlanmıyor olabilir. Uygulamanızın önbellek ayarını kontrol edin; çoğu sistemde önbelleği ayrıca etkinleştirmek gerekir.' },
+                { symptom: 'Servis çalışmıyor ya da başlar başlamaz duruyor.', fix: 'Genellikle 6379 portunu başka bir program tutuyordur — çoğu zaman Redis. Bileşenler sayfasında Redis kurulu mu bakın; aşağıdaki günlük "address already in use" diyorsa sebep budur.' },
+                { symptom: 'Uygulama "bağlanamadı" hatası veriyor.', fix: 'Servisin çalıştığını doğrulayın ve yeniden başlatın. Bağlantı adresi 127.0.0.1:6379 olmalı; uygulama başka bir makineyi işaret ediyorsa oraya erişim yoktur.' },
+                { symptom: 'Bellek kullanımı sürekli artıyor.', fix: 'Önbellek, sınır koyulmadıkça büyümeye devam eder. Yapılandırma dosyasından bir bellek üst sınırı belirleyip servisi yeniden başlatın; emin değilseniz bir uzmana danışın.' },
+            ],
+        },
+        en: {
+            what: 'Valkey is a cache server: it keeps frequently used data in memory, which is far faster than reading it from disk. Applications like WordPress or Laravel get noticeably quicker by storing sessions and query results here. It is the community fork of Redis and does the same job, which is why the panel gives them one seat — only one of the two can be installed at a time.',
+            tips: [
+                'Installing it does not speed up a site on its own — your application has to be pointed at it, usually as 127.0.0.1:6379 in its cache settings.',
+                'If Redis is already installed, the Valkey row will say it conflicts with it. Switching means removing Redis first: this is a swap, not an addition.',
+                'It is reachable only from this server, so seeing no port for it in the open-ports display is correct. Exposing an unauthenticated cache to the internet is the shortest path to having it found and emptied.',
+                'Cached data is not permanent: a restart can empty it. That is not data loss — the application rebuilds what it needs.',
+                'When something looks wrong, the log on this page is the first place to look; the last few lines usually name the problem.',
+            ],
+            troubleshoot: [
+                { symptom: 'I installed it but the site is no faster.', fix: 'That is expected until the application actually uses it. Check your application\'s cache settings — most systems need caching switched on separately.' },
+                { symptom: 'The service will not run, or stops right after starting.', fix: 'Usually another program already holds port 6379 — most often Redis. Check whether Redis is installed on the Components page; if the log below says "address already in use", that is the reason.' },
+                { symptom: 'The application reports it cannot connect.', fix: 'Confirm the service is running and restart it. The address should be 127.0.0.1:6379; if the application points at another machine, it has no route to it.' },
+                { symptom: 'Memory use keeps climbing.', fix: 'A cache grows until it is given a limit. Set a maximum memory value in the config file and restart the service; if you are unsure, ask an expert.' },
+            ],
+        },
+    },
     'vsftpd': {
         tr: {
             what: 'vsftpd bir FTP sunucusudur: insanların FileZilla gibi bir FTP programıyla bu sunucuya dosya yükleyip indirmesini sağlar. Site sahiplerine dosya erişimi vermenin klasik yoludur. Yalnız şunu bilin: düz FTP şifreleri şifrelemeden gönderir; bu yüzden yalnızca kullanıcılarınız gerçekten FTP istiyorsa çalıştırın — bugünlerde çoğu kişi SFTP\'yi tercih ediyor.',

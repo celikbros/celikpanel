@@ -770,6 +770,7 @@ export const tr: Record<TranslationKey, string> = {
     'services.role.dnsServer': 'bir DNS sunucusu',
     'services.role.smtpServer': 'bir SMTP sunucusu',
     'services.role.imapServer': 'bir IMAP sunucusu',
+    'services.role.kvStore': 'bir anahtar-değer önbelleği',
     'services.role.spamFilter': 'bir spam filtresi',
     'component.overview': 'Genel bakış',
     'component.kind': 'Tür',

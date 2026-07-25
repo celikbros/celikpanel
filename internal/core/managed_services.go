@@ -768,6 +768,47 @@ var ManagedServices = []ManagedService{
 		// altında sessizce çatal kurmak, paket takma adı kılığında bir ürün
 		// kararı olurdu.
 		Packages: map[string][]string{"apt": {"redis-server"}},
+		// Redis and Valkey both listen on 6379 by default: installing the
+		// second one leaves it unable to bind, i.e. "installed" and dead. The
+		// seat makes that a visible swap instead of a silent collision.
+		// Redis ve Valkey varsayılan olarak ikisi de 6379'u dinler: ikincisini
+		// kurmak onu porta bağlanamaz hâlde bırakır — yani "kurulu" ve ölü.
+		// Koltuk, bunu sessiz bir çakışma yerine görünür bir değiştirmeye
+		// çevirir.
+		ConflictGroup: "kv-store",
+	},
+	{
+		// Valkey is the community fork Redis left behind when it changed its
+		// licence; Arch ships it INSTEAD of Redis, Debian ships both. It is the
+		// row the Redis comment above was pointing at: the fork gets its own
+		// name rather than being installed under someone else's.
+		// Valkey, Redis lisansını değiştirince arkasında bıraktığı topluluk
+		// çatalıdır; Arch onu Redis YERİNE getirir, Debian ikisini birden.
+		// Yukarıdaki Redis yorumunun işaret ettiği satır budur: çatal, bir
+		// başkasının adı altında kurulmak yerine kendi adını alır.
+		ID:          "valkey",
+		Name:        "Valkey",
+		Description: "Cache Server",
+		Icon:        "🗝️",
+		Category:    "cache",
+		Kind:        KindService,
+		// Two names because the distros disagree: Debian's package is
+		// valkey-server with a valkey-server unit, Arch's is valkey with a
+		// valkey unit. Listing both lets the scanner claim whichever exists —
+		// the same reason SpamAssassin carries "spamd" and "spamassassin".
+		// İki ad, çünkü dağıtımlar anlaşamıyor: Debian'ın paketi valkey-server
+		// ve unit'i valkey-server, Arch'ınki valkey ve valkey. İkisini birden
+		// yazmak, tarayıcının hangisi varsa onu sahiplenmesini sağlar —
+		// SpamAssassin'in "spamd" ve "spamassassin" taşımasıyla aynı sebep.
+		SystemNames:   []string{"valkey-server", "valkey"},
+		ConflictGroup: "kv-store",
+		Packages:      map[string][]string{"apt": {"valkey-server"}, "pacman": {"valkey"}},
+		// No firewall ports: a cache is local-only, and that is the safest
+		// default. Exposing 6379 to the world is how unauthenticated caches get
+		// found and emptied.
+		// Güvenlik duvarı portu yok: önbellek yalnız yereldir ve en güvenli
+		// varsayılan budur. 6379'u dünyaya açmak, kimlik doğrulamasız
+		// önbelleklerin bulunup boşaltılma biçimidir.
 	},
 	{
 		ID:          "memcached",

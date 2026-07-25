@@ -74,7 +74,8 @@ Rules:
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| ⚡ Redis | Service | `redis-server` | — | — | — |
+| ⚡ Redis | Service | `redis-server` | — | kv-store | — |
+| 🗝️ Valkey | Service | `valkey-server` | `valkey` | kv-store | — |
 | 💾 Memcached | Service | `memcached` | `memcached` | — | — |
 
 ### Monitoring
