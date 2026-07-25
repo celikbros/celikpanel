@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 20 Temmuz 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 25 Temmuz 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -173,6 +173,47 @@ PHP sürümü kurulup bir siteye atanıyor (Sury), Arch'ta aynı ekran dürüst�
 kullanımdaki PHP sürümünü/servisi kaldırma denemesi kodlu retle dönüyor ve engelleyen site listesini
 gösteriyor · proje tipi listesi tek dosyada; her ölçüt iki test sunucusunda doğrulanmış.
 **Sert kısıt: v0.3, B1 bitmeden başlayamaz.**
+
+### 🚨 v0.2.6 — Emanet Edilebilirlik Zemini *(yeni basamak, 25 Tem 2026)*
+Yol haritası hazırlanırken yapılan kod denetimi **üç canlı veri-kaybı/yalan kusuru** buldu. Bunlar
+sıradaki her özelliğin önüne geçer: bir panel, müşterinin sitesini emanet edilebilir olmadan satılamaz.
+Üçü de kodda doğrulandı, tahmin değil.
+
+**Zeminin üç deliği:**
+1. **"Tam yedek" veritabanını içermiyor.** `createFullBackup`, kendi yorumuyla birlikte dosya
+   yedeğine düşüyor (*"For now, just backup files"*). Riskli bir değişiklik öncesi "Tam yedek" alan
+   operatör, geri yüklediğinde veritabanını geri alamaz — güvenlik ağı kılığında sessiz veri kaybı.
+   Aynı sebeple `full_` arşivinin geri yüklenmesi de yalnız dosyaları döndürür.
+2. **Geri yükleme yanlış veritabanının üzerine yazabiliyor.** Hedef ad, dosya adından alt çizgiyle
+   bölünüp ilk parça alınarak çıkarılıyor: `wp_site1` veritabanının yedeği `wp` adlı veritabanına
+   dönüyor. Alt çizgi veritabanı adlarında yaygın olduğu için bu, **başka bir müşterinin verisinin
+   üzerine yazmak** demektir.
+3. **Kurulum, servisin başlayıp başlamadığına bakmıyor.** `systemctl enable --now` sonucu yutuluyor
+   ve ardından koşulsuz "kuruldu" deniyor. Anayasanın birinci kuralı ("kurulunca çalışır") tam da
+   kurulum anında ölçülmüyor.
+
+**Zeminin dört yapısal eksiği:**
+4. **Şablon düzeltmeleri eski sitelere ulaşmıyor** (config drift, AUTOPSY C bölümü). Kapatılmış iki
+   güvenlik bulgusu — `.env`'in düz metin sunulması ve PHP kaynağının indirilmesi — düzeltmeden ÖNCE
+   oluşturulmuş her sitede hâlâ açık. "Tüm vhost'ları yeniden üret" yolu yok.
+5. **Dört site ayarı sunucuya hiç gitmiyor.** Belge kökü, www/https yönlendirmesi, HSTS/zorunlu-HTTPS
+   ve alan takma adları veritabanına yazılıyor, nginx'e ulaşmıyor. Operatör ayarı değiştiriyor, ekran
+   onaylıyor, sunucu eskisini sunmaya devam ediyor.
+6. **SSL kaldırmak vhost'u yenilemiyor** — bir sonraki yeniden yüklemede patlamaya hazır yapılandırma
+   bırakıyor.
+7. **Apache koltuğu alıyor ama Apache yazıcısı yok.** Tek vhost üreteci nginx'e ait
+   (`internal/services/nginx_generator.go`, şablon dizini yalnız `nginx/`). Apache kurmak 80 portunu
+   karartır. Yazıcı yazılana dek satır dürüstçe reddedilmeli.
+
+**Çıkış ölçütü:** "Tam yedek" arşivi açıldığında içinde veritabanı dökümü VAR ve her arşiv kendi
+içindekiler dosyasını taşıyor · geri yükleme hedefi dosya adından tahmin edilmiyor, içindekiler
+dosyasından okunuyor (alt çizgili ad iki sunucuda da doğru veritabanına dönüyor) · geri yükleme
+öncesi otomatik anlık görüntü alınıyor · kurulum, başlatma başarısızsa "kuruldu" demiyor ve günlük
+kuyruğunu gerekçe olarak gösteriyor · panelden değiştirilen dört site ayarı sunucuda ölçülebiliyor ·
+SSL kaldırıldıktan sonra `nginx -t` geçiyor · tek vhost yazıcı kaldı ve "tüm siteleri yeniden üret"
+düğmesi eski siteleri de düzeltiyor (iki eski güvenlik bulgusu eski sitelerde de kapanıyor) ·
+Apache satırı yazıcı yokken kodlu retle kapalı · CI gerçek bir panel açıp bu ölçütlerin duman
+betiklerini koşuyor. **Sert kısıt: v0.3 bu basamak bitmeden başlayamaz.**
 
 ### v0.3 — Çok Kiracılı Gerçeklik
 Birden fazla kiracıya utanmadan satabilmek. Dört ayak: müşteri ve bayi kendi başına yaşayabiliyor;
@@ -466,6 +507,31 @@ Operatörün gece 3'te ihtiyaç duyduğu şeyler:
   sertifika yenileme zamanlayıcısı gerçekten koşuyor mu, servis config'i motoru gerçekten başlatabiliyor mu.
   Bulgu = "Needs attention" satırı + tek tık onarım (Plesk'in Repair Kit'inin dürüst karşılığı)
 
+- **Katalog genişlemesi — Python, Arch'ta veritabanları, göç kolu (25 Tem 2026):**
+  - **Python çalışma ortamı.** Bugün panelde Python **yok** — ne katalogda bir kalem, ne kodda bir
+    satır; `hosting_handlers.go`'daki yorum "go/python sonradan eklenebilsin diye" diyor ama kalem hiç
+    açılmadı. Node'un kullandığı üç ilkel zaten var ve büyük ölçüde genel: site başına systemd unit
+    (`ApplyAppUnit`/`ControlAppUnit`/`AppUnitStatus`/`AppUnitLogs`), önündeki ters vekil ve sürüm
+    çekmecesi. Python'un eklediği üç şey: **site başına sanal ortam (venv)**, **uygulama sunucusu
+    seçimi** (gunicorn/uvicorn — WSGI ve ASGI ayrımı ürün kararıdır, gizlenemez) ve Add Domain'de
+    "Python Uygulaması" kartı. **Sistem python3'ü kullanmak yok:** Node'da bilerek kaldırılan
+    "sistem yorumlayıcısı" kaçağı burada açılmaz — panel yalnız kendi kurduğuyla çalışır.
+    Django/Flask/FastAPI barındırma, cPanel'in "Setup Python App"ine karşılık gelen ve ücretsiz
+    panellerin çoğunun kötü yaptığı yerdir; yeni kavram gerektirmeyen en büyük pazar genişlemesi.
+  - **Arch'ta veritabanları.** MariaDB ve PostgreSQL Arch'ta hiç sunulmuyor; sebep katalogda
+    "kurulum sonrası ilk hazırlık" alanının olmaması (`initdb` / `mariadb-install-db` adımı ifade
+    edilemiyor). **Tek katalog alanı** iki bileşeni açar, dağıtım matrisindeki iki boşluğu kapatır ve
+    Arch'ta tek tık WordPress'i mümkün kılar. "OS bağımsızlığı" iddiasının ölçülebilir sınavı budur.
+  - **DNS bölge içe/dışa aktarma (+ CAA).** Kimse içeri giden yol olmadan panel değiştirmez; zone
+    aktarımı en ucuz göç koludur ve panelin kendi yetkili DNS'ine sahip olması bunu yapısal olarak
+    kolaylaştırır.
+
+  **Çıkış ölçütü:** iki dağıtımda da panelden Python sürümü kurulup Add Domain'den tek formda çalışan
+  bir Django/FastAPI sitesi ayağa kalkıyor (venv site başına, unit çalışıyor, ters vekil doğru) ·
+  Arch'ta panelden MariaDB VE PostgreSQL kurulup ilk veritabanı oluşturuluyor · dağıtım matrisinde
+  bu üç hücre artık boş değil · bir cPanel zone dosyası panele aktarılıp alan adı sorgulara doğru
+  cevap veriyor.
+
 **Çıkış ölçütü:** öldürülen servis bir dakikada uyarı üretiyor; fişi çekilen sunucu 5 dakikada **dış**
 alarm üretiyor · geri yükleme tatbikatının tanımı: temiz VPS'te `install.sh` + panel-state restore +
 domain yedekleri ile tam sunucu ayağa kalkıyor ve DKIM imzalı posta **aynı anahtarlarla** INBOX'a düşüyor ·
@@ -614,25 +680,38 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 20 Temmuz 2026
+## Neredeyiz — 25 Temmuz 2026
 
-**Sürüm:** v0.1.0 alfa (henüz tag'siz — v0.2.5'te tek kaynağa bağlanacak), üretim VPS'inde canlı
-(Debian 13, yalnız-panel kurulum). İki test sunucusu: boston (Debian 13) + frankfurt (Arch — bilerek,
-D-004 Ek: paket katmanı çeşitliliği için). İki panel de gerçek Let's Encrypt sertifikası ve açık
-firewall'la (varsayılan-reddet) çalışıyor; yenileme provaları iki sunucuda da kanıtlı.
-**Merdivendeki yer:** v0.2 sürüyor — PowerDNS panelden kuruldu ve celikhost.com'u dünyaya sunuyor;
-sıradaki tıklama otomatik onarım, sonra ilk gerçek site.
-**Borç durumu (AUTOPSY):** A1–A4 kapalı (A3'ün admin kilidi B1'e bağlı duruyor), A5 açık ·
-B0 tamam, B1 ve B5 kısmi, B2–B4 açık.
-**Bu güncelleme:** operatörün üç yeni gereksinimi (panel-içi yardım, bayi+müşteri deneyimi, ücretsiz
-katmanlı plan sistemi) merdivene basamak basamak işlendi; abonelik makinesine giriş kadar **çıkış** da
-yazıldı (iptal, dönem modeli, ödeme defteri, süre bildirimleri, iade/chargeback, bayi tahsilatı,
-havuz zinciri); v0.35 "Plan Dürüstlüğü" ara basamağı eklendi; v0.4–v0.9 üretim güveni ve sürüm
-mühendisliği kalemleriyle genişletildi; hedef-dışılar gerekçeleriyle tahkim edildi.
-**Karne (11 Tem ölçümü, yeniden ölçülmedi):** özellik kodu ≈ v1.0 kapsamının %70'i · kanıtlar ≈ %45
-(Ubuntu tam, Debian kısmi) · cila/tasarım ≈ %80 · dokümantasyon ≈ %60 · dış doğrulama ≈ %0 (v0.6'da başlar).
-**Bugünkü sistem:** ~29 bin satır Go (151 dosya, 72 HTTP ucu, 38 agent RPC dosyası, 15 migration,
-19 servislik katalog) + ~16,5 bin satır TypeScript (55 bileşen dosyası, TR+EN).
+**Sürüm:** artık tek kaynaklı — sürüm ve commit bağlama anında HER İKİ binary'ye gömülüyor,
+`/api/v1/panel/version` sunuyor, panelin alt bilgisi oradan okuyor ve panel ile agent farklı yapıdaysa
+uyarı gösteriyor. Elle yazılmış "v0.1.0" metni silindi. İki test sunucusu aynı commit'te doğrulandı.
+**Merdivendeki yer:** v0.2 sürüyor; v0.2.5'in birçok kalemi yolda kapandı; **yeni v0.2.6 basamağı
+v0.3'ün önüne girdi** (yukarıdaki üç veri-kaybı kusuru sebebiyle).
+
+**Temmuz ikinci yarısında kapanan canlı kırıklar (hepsi iki sunucuda kanıtlı):** spam filtresi artık
+gerçekten süzüyor (milter zinciri tek sahipli; GTUBE testi iki dağıtımda da reddedildi) · Arch'ta
+Postfix gelen HER postayı reddediyordu (harita tipi artık keşfediliyor: lmdb/hash/btree/texthash) ·
+WireGuard kurulunca gerçekten çalışıyor · agent artık istekten gelen yola/URL'e güvenmiyor
+(yol beyaz listesi + sembolik bağ reddi; depo anahtarı kendi katalogdan) · yapılandırma editörü
+yaz→doğrula→**geri al** yapıyor (nginx/postfix/dovecot/apache doğrulayıcıları) · koltuk kuralı artık
+agent'ta uygulanıyor (arayüz engelliyordu, API kabul ediyordu) · takma ad unit'i artık kurulu
+saymıyor · güncelleme betiği artık bayat yapı kurmuyor.
+
+**Yeni yetenekler:** her yönetim sayfasında **Yardım** düğmesi (21 bileşen için özel içerik + türe
+göre 3 genel yedek, tamamı TR+EN; yardımsız sayfa yapısal olarak imkânsız) · boş yönetim sayfası
+yasağı (D-019) · dağıtım destek matrisi **katalogdan üretiliyor** ve bayatlarsa test kırmızı yanıyor ·
+"bu dağıtımda sunulmuyor" rozeti · izleme sayfası · Valkey kataloğa eklendi (yeni bileşenin gerçek
+maliyeti: 2 kaynak dosya, sıfır Go kodu).
+
+**Borç durumu:** tek API'nin yarısı ödendi (v2→v1, kiracı kapsamı, hata sözleşmesi) — **ödenmeyen
+yarı büyüyor**: ham `fetch` çağrısı denetim anında 74'tü, bugün 190. Route+authz tablosu ve rol×uç
+matrisi hâlâ açık (77 uç, elle tutulan 18 önek). Arayüz disiplini hiç başlamadı (30 tarayıcı
+`confirm()`, 6 kopya boyut biçimlendirici, 3 düğme sistemi, 3 ayrı Service tipi). CI hâlâ yalnız
+derliyor.
+
+**Bugünkü sistem:** ~37,9 bin satır Go (190 dosya, 77 HTTP ucu, 16 migration, **25 servislik
+katalog**) + ~19,5 bin satır TypeScript (57 bileşen dosyası, TR+EN), 22 test dosyası.
+
 
 ---
 

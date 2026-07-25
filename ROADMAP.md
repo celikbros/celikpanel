@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: July 20, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: July 25, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -184,6 +184,46 @@ is assigned to a site (Sury), while on Arch the same screen honestly says "the d
 attempting to remove an in-use PHP version/service returns a coded refusal listing the blocking sites ·
 the project-type list lives in one file; every criterion verified on both test servers.
 **Hard constraint: v0.3 cannot start before B1 is done.**
+
+### 🚨 v0.2.6 — The Trust Floor *(new step, 25 Jul 2026)*
+The code audit run while preparing this roadmap found **three live data-loss / dishonesty defects**.
+They come before every other feature: a panel cannot be sold until someone can entrust a paying
+customer's website to it. All three were verified in the code, not guessed.
+
+**Three holes in the floor:**
+1. **A "Full" backup contains no databases.** `createFullBackup` falls through to the files backup,
+   with its own comment admitting it (*"For now, just backup files"*). An operator who takes a "Full"
+   backup before a risky change cannot get the database back — silent data loss dressed as a safety
+   net. For the same reason, restoring a `full_` archive returns only files.
+2. **Restore can overwrite the wrong database.** The target name is derived by splitting the file
+   name on underscores and taking the first part: a backup of `wp_site1` is restored into a database
+   called `wp`. Underscores are common in database names, so this means **overwriting another
+   customer's data**.
+3. **Install never checks whether the service started.** The result of `systemctl enable --now` is
+   discarded and success is reported unconditionally. The constitution's first rule — "installed
+   means working" — is not measured at the one moment that decides it.
+
+**Four structural gaps in the floor:**
+4. **Template fixes never reach existing sites** (config drift, AUTOPSY section C). Two closed
+   security findings — `.env` served as plain text and PHP source offered as a download — are still
+   live on every site created before the fix. There is no "regenerate every vhost" path.
+5. **Four site settings never reach the server.** Document root, www/https redirect, HSTS/force-HTTPS
+   and domain aliases are written to the database and never to nginx. The operator changes a setting,
+   the screen confirms it, and the server keeps serving the old one.
+6. **Removing SSL does not regenerate the vhost** — it arms an outage for the next reload.
+7. **Apache takes the web-server seat with no Apache writer.** The only vhost generator is nginx's
+   (`internal/services/nginx_generator.go`; the template directory contains only `nginx/`). Installing
+   Apache blackholes port 80. Until the writer exists, the row must refuse honestly.
+
+**Exit criteria:** a "Full" archive opened by hand CONTAINS a database dump and every archive carries
+its own manifest · the restore target is read from the manifest instead of guessed from the file name
+(an underscored name lands in the right database on both servers) · a snapshot is taken before every
+restore · install does not say "installed" when the start failed, and shows the journal tail as its
+reason · the four site settings changed in the panel are measurable on the server · `nginx -t` passes
+after SSL removal · one vhost writer remains and a "regenerate every site" action fixes existing sites
+too (both old security findings close on pre-existing sites) · the Apache row is refused with a coded
+reason while no writer exists · CI boots a real panel and runs the smoke scripts for these criteria.
+**Hard constraint: v0.3 cannot start before this step is done.**
 
 ### v0.3 — Multi-Tenant Reality
 Selling to more than one tenant without embarrassment. Four legs: customer and reseller can live on
@@ -483,6 +523,32 @@ What the operator needs at 3 a.m.:
   engine. A finding = a "Needs attention" row + one-click repair (the honest counterpart of Plesk's
   Repair Kit)
 
+- **Catalogue widening — Python, databases on Arch, the migration lever (25 Jul 2026):**
+  - **Python as a runtime.** There is **no Python in the panel today** — not a catalogue entry, not a
+    line of code; the comment in `hosting_handlers.go` says "so go/python can be added without a table
+    rebuild", but the entry was never opened. The three primitives Node uses already exist and are
+    largely generic: a per-site systemd unit (`ApplyAppUnit`/`ControlAppUnit`/`AppUnitStatus`/
+    `AppUnitLogs`), the reverse proxy in front of it, and the version drawer. Python adds three things:
+    a **per-site virtual environment (venv)**, an **application-server choice** (gunicorn/uvicorn — the
+    WSGI vs ASGI split is a product decision and cannot be hidden), and a "Python Application" card in
+    Add Domain. **No use of the system python3:** the "system interpreter" leak deliberately removed
+    for Node is not reopened here — the panel only runs what it installed itself. Django/Flask/FastAPI
+    hosting is the equivalent of cPanel's "Setup Python App" and the place most free panels do badly;
+    it is the largest market widening that requires no new concept.
+  - **Databases on Arch.** MariaDB and PostgreSQL are not offered on Arch at all, because the catalogue
+    has no "post-install initialisation" field (there is no way to express `initdb` /
+    `mariadb-install-db`). **One catalogue field** opens both components, closes two cells in the
+    distro matrix, and makes one-click WordPress possible on Arch. This is the measurable test of the
+    "no OS lock-in" claim.
+  - **DNS zone import/export (+ CAA).** Nobody switches panels without a path in; zone transfer is the
+    cheapest migration lever, and owning our own authoritative DNS makes it structurally easier here.
+
+  **Exit criteria:** on both distros a Python version installs from the panel and a single Add Domain
+  form brings up a working Django/FastAPI site (venv per site, unit running, reverse proxy correct) ·
+  MariaDB AND PostgreSQL install from the panel on Arch and the first database is created · those
+  three cells in the distro matrix are no longer empty · a cPanel zone file imports and the domain
+  answers queries correctly.
+
 **Exit criterion:** a killed service alerts within a minute; a server with its plug pulled produces an
 **external** alarm within 5 minutes · the restore drill's definition: on a clean VPS, `install.sh` +
 panel-state restore + domain backups bring the full server up and DKIM-signed mail lands in the INBOX
@@ -648,27 +714,39 @@ product itself:
 
 ---
 
-## Where We Are — July 20, 2026
+## Where We Are — July 25, 2026
 
-**Version:** v0.1.0 alpha (untagged yet — bound to one source in v0.2.5), live on the production VPS
-(Debian 13, panel-only install). Two test servers: boston (Debian 13) + frankfurt (Arch — deliberate,
-D-004 amendment: package-layer diversity). Both panels run with real Let's Encrypt certificates and the
-firewall on (default-deny); renewal dry-runs proven on both.
-**Place on the ladder:** v0.2 in progress — PowerDNS installed from the panel and serving celikhost.com
-to the world; the next click is auto-repair, then the first real site.
-**Debt state (AUTOPSY):** A1–A4 closed (A3's admin gate hangs on B1), A5 open ·
-B0 done, B1 and B5 partial, B2–B4 open.
-**This update:** the operator's three new requirements (in-panel help, reseller+customer experience,
-free-tier plan system) worked into the ladder step by step; the subscription machine got its **exit**
-as well as its entry (cancellation, the period model, the payments ledger, time-based notifications,
-refund/chargeback, reseller collections, the pool chain rule); the v0.35 "Plan Honesty" step added;
-v0.4–v0.9 widened with operational-trust and release-engineering items; the non-goals fortified with
-reasons.
-**Report card (measured July 11, not re-measured):** feature code ≈ 70% of v1.0 scope · proofs ≈ 45%
-(Ubuntu full, Debian partial) · polish/design ≈ 80% · documentation ≈ 60% · external validation ≈ 0%
-(starts at v0.6).
-**Today's system:** ~29k lines of Go (151 files, 72 HTTP endpoints, 38 agent RPC files, 15 migrations,
-a 19-service catalog) + ~16.5k lines of TypeScript (55 component files, TR+EN).
+**Version:** now single-sourced — version and commit are linked into BOTH binaries, served from
+`/api/v1/panel/version`, read back by the panel footer, and a panel/agent build mismatch raises a
+warning. The hand-typed "v0.1.0" literal is gone. Both test servers verified on the same commit.
+**Position on the ladder:** v0.2 in progress; many v0.2.5 items closed along the way; **a new v0.2.6
+step now sits in front of v0.3** because of the three data-loss defects above.
+
+**Live breakages closed in the second half of July (all proven on both servers):** the spam filter
+actually filters now (single-owner milter chain; a GTUBE test was rejected on both distros) · Postfix
+on Arch was rejecting EVERY incoming message (the lookup-table type is now discovered:
+lmdb/hash/btree/texthash) · WireGuard actually works after install · the agent no longer trusts
+request-supplied paths or URLs (path allow-list + symlink refusal; the repo key comes from its own
+catalogue) · the config editor writes → validates → **rolls back** (nginx/postfix/dovecot/apache
+validators) · seat conflicts are enforced in the agent (the UI blocked them, the API did not) · an
+alias unit no longer counts as installed · the update script no longer installs a stale build.
+
+**New capabilities:** a **Help** button on every management page (bespoke content for 21 components
+plus three generic fallbacks by kind, all bilingual; a page without help is structurally impossible) ·
+the ban on empty management pages (D-019) · the distro support matrix is **generated from the
+catalogue** and a guard test fails when it goes stale · a "not offered on this distro" badge · the
+monitoring page · Valkey added to the catalogue (the real cost of a new component: 2 source files,
+zero Go code).
+
+**Debt status:** half of the one-API work is paid (v2→v1, tenant scope, the error contract) — **the
+unpaid half is growing**: raw `fetch` call sites were 74 at audit time, 190 today. The route+authz
+table and the role×endpoint matrix are still open (77 endpoints guarded by a hand-maintained list of
+18 prefixes). UI discipline has not started (30 native `confirm()` dialogs, 6 copies of the byte
+formatter, 3 button systems, 3 separate Service types). CI still only compiles.
+
+**The system today:** ~37.9k lines of Go (190 files, 77 HTTP endpoints, 16 migrations, **a 25-component
+catalogue**) + ~19.5k lines of TypeScript (57 component files, TR+EN), 22 test files.
+
 
 ---
 
