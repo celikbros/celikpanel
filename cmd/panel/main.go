@@ -710,6 +710,21 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			// sessizlik, güvenlik retlerini kimsenin fark etmediği bir
 			// başarıdan ayırt edilemez kılar.
 			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
+			// A REFUSAL is not a server fault, and hiding it behind "internal
+			// server error" would leave an operator editing a legitimate file
+			// with no idea why nothing happened. The agent's reason is safe to
+			// show: it names a path the caller already supplied.
+			// RET, sunucu arızası değildir; onu "internal server error"un
+			// arkasına gizlemek, meşru bir dosyayı düzenleyen operatörü hiçbir
+			// şeyin neden olmadığını bilmeden bırakırdı. Agent'ın gerekçesi
+			// gösterilebilir: zaten çağıranın verdiği bir yolu adlandırır.
+			if msg := err.Error(); strings.Contains(msg, "not a managed configuration file") ||
+				strings.Contains(msg, "protected and cannot be edited") ||
+				strings.Contains(msg, "symbolic link") ||
+				strings.Contains(msg, "must be absolute") {
+				writeCodedError(w, http.StatusForbidden, errCodeConfigPathRefused, msg, "")
+				return
+			}
 			writeServerError(w, err)
 			return
 		}

@@ -89,6 +89,15 @@ const (
 	// adlandırmalı — "sistem yorumlayıcısı" kaçağı kapandı (B3d): panel
 	// yalnız kendi kurduğunu işletir.
 	errCodeRuntimeVersionRequired = "RUNTIME_VERSION_REQUIRED"
+	// The config editor refused a path: not a component's discovered config
+	// file, or one of the machine's own protected files. Showing the reason is
+	// deliberate — an operator editing a legitimate file must learn WHY nothing
+	// happened, and the message only names a path they supplied themselves.
+	// Yapılandırma editörü bir yolu reddetti: ya bir bileşenin keşfedilmiş ayar
+	// dosyası değil ya da makinenin kendi korunan dosyalarından biri. Gerekçeyi
+	// göstermek bilinçlidir — meşru bir dosyayı düzenleyen operatör hiçbir şeyin
+	// NEDEN olmadığını öğrenmeli ve mesaj yalnız kendi verdiği yolu adlandırır.
+	errCodeConfigPathRefused = "CONFIG_PATH_REFUSED"
 )
 
 // writeCodedError is the single writer of the contract. action, when
