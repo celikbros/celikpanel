@@ -8,6 +8,41 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-019 · The panel does not scare: every management page carries its own help; empty pages are forbidden
+
+*25 July 2026*
+
+**Decision.** The operator asked for it directly: user-friendly, reassuring
+pages with a help button that explains the page itself. Three rules are
+permanent:
+
+1. **Every management page has a Help button.** It comes from the single
+   shell (ServiceShell), so nobody writing a new page has to remember help
+   separately. Content has three sections: *What is this?* (2-3 plain
+   sentences), *Tips* (practical panel-first tasks), *Something looks
+   wrong?* (symptom → fix). The language is deliberately non-technical:
+   "background process", "databases have no trash bin", "reading is always
+   safe".
+2. **Help content is CONTENT, not chrome.** It is not smeared over hundreds
+   of `help.x.tip3` i18n keys; both locales sit side by side in one entry
+   per component (`web/src/help/serviceHelp.ts`), so updating one language
+   and silently forgetting the other is structurally impossible. A component
+   without a specific entry gets its kind's generic one — a page without
+   help cannot exist.
+3. **Empty management pages are forbidden.** The panel already knows a
+   component's status, unit, versions, packages, ports, config files and
+   journal; a "coming soon" page is a refusal to show what is known. The
+   derived panels (ComponentPanels) are every page's floor; specialised
+   pages build ON TOP of it, never instead of it.
+
+**Why.** A page that scares goes unused, and an unused panel is untrusted.
+The help button must be there at exactly the moment a page frightens its
+reader — so it shows on not-installed, failed and half-configured services
+too. Hand-written page lists (the nine-page switch) rotted the same way the
+scanner's hand-written unit list did; the derived floor closes that class.
+
+---
+
 ## D-018 · The install source is fixed by kind: system service = distro package, app/runtime = official release, Docker is not the base
 
 *July 24, 2026*

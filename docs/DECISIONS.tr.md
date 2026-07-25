@@ -8,6 +8,39 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-019 · Panel korkutmaz: her yönetim sayfası kendi yardımını taşır; boş sayfa yasaktır
+
+*25 Temmuz 2026*
+
+**Karar.** Operatör istedi: "Kullanıcı dostu olması önemli. Korkutmasın,
+yardımcı olsun... yönetim sayfasında bir yardım butonu olsun ve sayfa ile
+ilgili yardım alınabilsin." Üç kural kalıcıdır:
+
+1. **Her yönetim sayfasında Yardım düğmesi vardır.** Tek kabuktan gelir
+   (ServiceShell); yeni sayfa yazan kimse yardımı ayrıca hatırlamak zorunda
+   değildir. İçerik üç bölümdür: *Bu nedir?* (düz dille 2-3 cümle),
+   *İpuçları* (panelden yapılacak pratik işler), *Bir şey mi ters
+   görünüyor?* (belirti → çözüm). Dil teknik değildir: "arka plan süreci",
+   "veritabanında çöp kutusu yoktur", "okumak her zaman güvenlidir".
+2. **Yardım içeriği chrome değil İÇERİKtir.** i18n anahtar dosyalarına
+   yüzlerce `help.x.tip3` anahtarı olarak dağıtılmaz; bileşen başına tek
+   kayıtta iki dil yan yana durur (`web/src/help/serviceHelp.ts`). Tek dili
+   güncelleyip öbürünü unutmak yapısal olarak imkânsızdır. Özel kaydı olmayan
+   bileşen türünün genel kaydını alır — yardımsız sayfa var olamaz.
+3. **Boş yönetim sayfası yasaktır.** Panel bir bileşenin durumunu, birimini,
+   sürümlerini, paketlerini, portlarını, ayar dosyalarını ve günlüğünü zaten
+   biliyor; "yakında" yazan bir sayfa, bilineni göstermeyi reddetmektir.
+   Türetilmiş paneller (ComponentPanels) her sayfanın tabanıdır; özel
+   sayfalar bunun ÜSTÜNE koyar, yerine geçmez.
+
+**Neden.** Korkutan sayfa kullanılmaz; kullanılmayan panel güvenilmez. Yardım
+düğmesinin sayfanın okuyucusunu korkuttuğu anda orada olması gerekir — kurulu
+olmayan, düşmüş, yarım servislerde de görünür. Elle yazılmış sayfa listeleri
+(9 sayfalık switch) tarayıcının elle unit listesi gibi çürüdü; türetilmiş
+taban bu sınıfı kapatır.
+
+---
+
 ## D-018 · Kurulum kaynağı cinse göre sabittir: sistem servisi = dağıtım paketi, uygulama/runtime = resmi sürüm, Docker temel değildir
 
 *24 Temmuz 2026*
