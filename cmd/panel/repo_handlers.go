@@ -76,11 +76,11 @@ func (p *Panel) handleRepo(w http.ResponseWriter, r *http.Request) {
 		var st RepoStatusResp
 		switch req.Action {
 		case "enable":
-			err := p.agentClient.Call("Agent.EnableRepo", &enableRepoReq{
-				RepoID:         repo.ID,
-				KeyURL:         repo.KeyURL,
-				SourceTemplate: repo.SourceTemplate,
-			}, &st)
+			// Only the id travels: the agent looks the URL and the source
+			// line up in its OWN catalogue. See EnableRepoRequest.
+			// Yalnız id yolculuk eder: URL'i ve kaynak satırını agent KENDİ
+			// kataloğunda arar. Bkz. EnableRepoRequest.
+			err := p.agentClient.Call("Agent.EnableRepo", &enableRepoReq{RepoID: repo.ID}, &st)
 			if err != nil {
 				writeAgentError(w, err, "repo enable")
 				return
@@ -126,10 +126,16 @@ func (p *Panel) repoInfo(repo *core.ManagedRepo) repoInfoResp {
 	return info
 }
 
+// enableRepoReq carries an ID and nothing else. The key URL and source line
+// deliberately do NOT travel over the RPC any more — the agent reads them from
+// its own compiled catalogue, so a compromised panel cannot choose what apt
+// trusts. Do not add fields here.
+// enableRepoReq yalnız bir ID taşır. Anahtar URL'i ve kaynak satırı artık
+// bilerek RPC üzerinden GİTMEZ — agent onları kendi derlenmiş kataloğundan
+// okur; böylece ele geçirilmiş bir panel apt'ın neye güveneceğini seçemez.
+// Buraya alan eklemeyin.
 type enableRepoReq struct {
-	RepoID         string `json:"repo_id"`
-	KeyURL         string `json:"key_url,omitempty"`
-	SourceTemplate string `json:"source_template,omitempty"`
+	RepoID string `json:"repo_id"`
 }
 
 type RepoStatusResp struct {

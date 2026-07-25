@@ -143,7 +143,7 @@ function Sidebar({
             </nav>
 
             <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted">
-                {t('app.name')} · v0.1.0 · <span className="font-mono" title={t('common.buildHint')}>build {__BUILD__}</span>
+                <BuildStamp />
             </div>
         </div>
     );
@@ -289,5 +289,46 @@ function UserMenu() {
 
             {showPassword && <ChangePasswordModal onClose={() => setShowPassword(false)} />}
         </div>
+    );
+}
+
+// The footer stamp, read from the SERVER. The version used to be a literal
+// typed into this file, and the commit came from the frontend bundle only — so
+// a deploy that replaced the backend changed neither, while common.buildHint
+// promised the operator this is how you see a new build land. Now the version
+// and the panel's commit come from the running binary, and a panel/agent
+// mismatch is shown as a warning rather than hidden behind a reassuring stamp.
+//
+// Footer damgası, SUNUCUDAN okunur. Sürüm eskiden bu dosyaya yazılmış bir
+// metindi ve commit yalnız ön yüz paketinden geliyordu — yani arka ucu
+// değiştiren bir dağıtım ikisini de değiştirmiyordu, oysa common.buildHint
+// operatöre yeni yapının indiğini böyle göreceğini söylüyordu. Artık sürüm ve
+// panelin commit'i çalışan binary'den gelir; panel/agent uyuşmazlığı da güven
+// veren bir damganın arkasına gizlenmek yerine uyarı olarak gösterilir.
+function BuildStamp() {
+    const { t } = useI18n();
+    const [v, setV] = useState<{ version: string; commit: string; agent_commit: string; agent_matches: boolean } | null>(null);
+
+    useEffect(() => {
+        fetch('/api/v1/panel/version')
+            .then((r) => (r.ok ? r.json() : null))
+            .then(setV)
+            .catch(() => {});
+    }, []);
+
+    if (!v) return <>{t('app.name')}</>;
+
+    return (
+        <>
+            {t('app.name')} · {v.version} ·{' '}
+            <span className="font-mono" title={t('common.buildHint')}>
+                build {v.commit}
+            </span>
+            {!v.agent_matches && v.agent_commit !== '' && (
+                <span className="ml-1.5 rounded bg-warning/15 px-1.5 py-0.5 text-warning" title={t('common.agentMismatchHint', { commit: v.agent_commit })}>
+                    {t('common.agentMismatch')}
+                </span>
+            )}
+        </>
     );
 }

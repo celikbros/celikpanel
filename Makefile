@@ -6,9 +6,13 @@
 GO      ?= $(shell [ -x .bin/go/bin/go ] && echo $(PWD)/.bin/go/bin/go || echo go)
 NPM     ?= $(shell [ -x .bin/node/bin/npm ] && echo $(PWD)/.bin/node/bin/npm || echo npm)
 NODEDIR := $(PWD)/.bin/node/bin
-LDFLAGS := -s -w
-
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+# One version, in both binaries. The UI reads it back over the API instead of
+# carrying a hand-typed literal.
+# Tek sürüm, iki binary'de de. Arayüz onu elle yazılmış bir metin taşımak
+# yerine API üzerinden geri okur.
+LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
 .PHONY: all build panel agent web clean dist

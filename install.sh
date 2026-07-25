@@ -205,17 +205,41 @@ bootstrap_node() {
     echo "$TOOLCHAIN/node/bin"
 }
 
-if [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] || [ ! -f "$SRC/web/dist/index.html" ]; then
-    step "Kaynaktan derleme (bin/panel, bin/agent, web/dist)"
+# Version stamped into BOTH binaries and the frontend, from one source: the
+# git description of the commit being installed. Before this the footer showed
+# a hand-typed "v0.1.0" that no build could change, so "which release is this
+# server running?" had no honest answer.
+# Sürüm, kurulan commit'in git tanımından TEK kaynaktan alınır ve HER İKİ
+# binary ile ön yüze gömülür. Bundan önce footer, hiçbir derlemenin
+# değiştiremediği elle yazılmış bir "v0.1.0" gösteriyordu; yani "bu sunucu
+# hangi sürümü koşuyor?" sorusunun dürüst bir cevabı yoktu.
+CP_VERSION=$(cd "$SRC" && git describe --tags --always --dirty 2>/dev/null || echo dev)
+CP_COMMIT=$(cd "$SRC" && git rev-parse --short HEAD 2>/dev/null || echo unknown)
+VER_FLAGS="-X main.buildVersion=$CP_VERSION -X main.buildCommit=$CP_COMMIT"
+
+# A git checkout ALWAYS rebuilds. bin/ and web/dist are gitignored, so they
+# survive `git pull` — and the old "skip the build if artifacts exist" test
+# then installed the PREVIOUS build while update.sh printed "services
+# restarted with the new build". A stale binary that reports the new release
+# is worse than no version at all, especially when the new release is a
+# security fix. Only a prebuilt release tarball (no .git) may skip.
+# Bir git checkout HER ZAMAN yeniden derler. bin/ ve web/dist git'te olmadığı
+# için `git pull`dan sağ çıkar — ve eski "ürünler varsa derlemeyi atla"
+# denetimi, update.sh "servisler yeni yapıyla yeniden başladı" yazarken BİR
+# ÖNCEKİ yapıyı kuruyordu. Yeni sürümü bildiren bayat bir binary, hiç sürüm
+# olmamasından kötüdür; hele yeni sürüm bir güvenlik düzeltmesiyse. Yalnız
+# önceden derlenmiş release tarball'ı (.git yok) atlayabilir.
+if [ -d "$SRC/.git" ] || [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] || [ ! -f "$SRC/web/dist/index.html" ]; then
+    step "Kaynaktan derleme (bin/panel, bin/agent, web/dist) — sürüm $CP_VERSION"
     GO_BIN=$(bootstrap_go)
     NODE_BIN=$(bootstrap_node)
-    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
-    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
+    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
+    ( cd "$SRC" && "$GO_BIN" build -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
     ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm ci --no-audit --no-fund >/dev/null 2>&1 || PATH="$NODE_BIN:$PATH" npm install --no-audit --no-fund >/dev/null 2>&1 ) || die "npm kurulumu başarısız"
     ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm run build >/dev/null ) || die "frontend derlenemedi"
-    ok "derlendi"
+    ok "derlendi ($CP_VERSION · $CP_COMMIT)"
 else
-    ok "Mevcut derleme kullanılıyor (bin/ + web/dist)"
+    ok "Önceden derlenmiş release kullanılıyor (bin/ + web/dist)"
 fi
 
 # 4. Install files -----------------------------------------------------------

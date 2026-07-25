@@ -53,21 +53,31 @@ func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.Config
 }
 
 func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) error {
-	log.Printf("Updating config %s", args.Path)
-
-	// Security check: Ensure path is valid (basic check)
-	if !strings.HasPrefix(args.Path, "/etc/") && !strings.HasPrefix(args.Path, "/var/www/") {
-		return fmt.Errorf("access denied to path: %s", args.Path)
+	// The path is judged by configWriteAllowed, which cleans it, refuses
+	// symlinks, protects the machine's own keys/units/cron, and otherwise
+	// accepts only files the scanner discovered for a catalogue component.
+	// The previous check was a bare prefix test that "/etc/../root/.ssh/
+	// authorized_keys" passed.
+	// Yolu configWriteAllowed yargılar: temizler, sembolik bağları reddeder,
+	// makinenin kendi anahtar/unit/cron dosyalarını korur ve bunun dışında
+	// yalnız tarayıcının bir katalog bileşeni için bulduğu dosyaları kabul
+	// eder. Önceki denetim, "/etc/../root/.ssh/authorized_keys"in geçtiği
+	// çıplak bir önek sınavıydı.
+	path, err := configWriteAllowed(args.Path)
+	if err != nil {
+		log.Printf("config write REFUSED %s: %v", args.Path, err)
+		return err
 	}
+	log.Printf("Updating config %s", path)
 
 	// Write to file
 	// 0644 is standard for config files
-	if err := os.WriteFile(args.Path, []byte(args.Content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(args.Content), 0644); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 
 	// Reload service if needed
-	if strings.Contains(args.Path, "nginx") {
+	if strings.Contains(path, "nginx") {
 		// Validate first
 		if err := exec.Command("nginx", "-t").Run(); err != nil {
 			// Revert? For now just return error

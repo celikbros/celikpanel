@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp, Activity } from 'lucide-react';
+import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp, Activity, Boxes } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -101,6 +101,25 @@ interface RepoInfo {
     required?: boolean;
     packages?: string[];
     error?: string;
+}
+
+// unknownCategories returns a card definition for every category present in
+// the data but missing from categoryOrder above, so nothing can be silently
+// dropped. The label falls back to the raw category id — honest and obviously
+// unfinished, which is exactly the signal that the id belongs in categoryOrder
+// with a proper label and icon.
+// unknownCategories, veride bulunup yukarıdaki categoryOrder'da olmayan her
+// kategori için bir kart tanımı döndürür; böylece hiçbir şey sessizce
+// düşmez. Etiket ham kategori id'sine düşer — dürüst ve bariz biçimde
+// yarım; ki bu da o id'nin düzgün bir etiket ve ikonla categoryOrder'a
+// girmesi gerektiğinin işaretidir.
+function unknownCategories(list: ManagedService[]) {
+    const known = new Set(categoryOrder.map((c) => c.id));
+    const extra: string[] = [];
+    for (const s of list) {
+        if (s.category && !known.has(s.category) && !extra.includes(s.category)) extra.push(s.category);
+    }
+    return extra.map((id) => ({ id, labelKey: id, icon: Boxes, tint: 'bg-slate-500/10 text-slate-600 dark:text-slate-400' }));
 }
 
 // Services grouped into per-category cards (Claude Design'dan uyarlandı).
@@ -490,7 +509,22 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     </div>
                 ) : (
                 <div className="space-y-4">
-                    {categoryOrder.map(({ id: cat, labelKey, icon: CatIcon, tint }) => {
+                    {/* A component whose category is not in categoryOrder used to
+                        render NOWHERE: the map only walks known categories and
+                        there was no leftover bucket — so a newly added component
+                        installed fine and was invisible on this page, while still
+                        counting in the "Catalog (n)" button. Adding the unknown
+                        categories to the walk means a new component always shows
+                        up somewhere, which is the whole promise of this page.
+                        Kategorisi categoryOrder'da olmayan bir bileşen HİÇBİR
+                        YERDE çizilmiyordu: map yalnız bilinen kategorileri
+                        dolaşıyor ve artık kova yoktu — yani yeni eklenen bileşen
+                        sorunsuz kuruluyor ama bu sayfada görünmüyordu, üstelik
+                        "Katalog (n)" sayacında görünmeye devam ediyordu.
+                        Bilinmeyen kategorileri de dolaşıma katmak, yeni bir
+                        bileşenin her zaman bir yerde görünmesi demektir; bu
+                        sayfanın bütün vaadi de budur. */}
+                    {[...categoryOrder, ...unknownCategories(filtered)].map(({ id: cat, labelKey, icon: CatIcon, tint }) => {
                         const group = filtered.filter((s) => s.category === cat);
                         if (group.length === 0) return null;
                         const installedCount = group.filter((s) => s.is_installed).length;

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/core"
 )
 
 // Managed vendor repositories. A distro freezes one major version of a
@@ -68,12 +70,52 @@ func repoKeyringPath(id string, armored bool) string {
 func repoKeyringCandidates(id string) []string {
 	return []string{repoKeyringPath(id, true), repoKeyringPath(id, false)}
 }
-func repoSourcePath(id string) string  { return "/etc/apt/sources.list.d/celikpanel-" + id + ".list" }
+func repoSourcePath(id string) string { return "/etc/apt/sources.list.d/celikpanel-" + id + ".list" }
 
+// EnableRepoRequest names WHICH repository, never WHAT it points at.
+//
+// It used to carry KeyURL and SourceTemplate straight from the caller, and the
+// agent wrote them to disk after checking only the "https://" and "deb https://"
+// prefixes. That made the panel an AUTHORITY on what apt trusts: anything able
+// to reach this RPC could pin a signing key of its choosing and add a matching
+// source, and the next install of a whitelisted package could then be satisfied
+// from it — defeating the compiled package whitelist that is the whole point of
+// the catalogue. Agent.InstallService never had this hole: it resolves req.ID
+// against core.ManagedServices and installs only the packages IT finds there.
+//
+// The invariant, now enforced here too: the agent re-derives every fact it acts
+// on from its own compiled catalogue. The panel is a courier, not an authority.
+//
+// EnableRepoRequest HANGİ deponun olduğunu söyler, neyi gösterdiğini asla.
+//
+// Eskiden KeyURL ve SourceTemplate'i doğrudan çağırandan taşıyordu ve agent
+// yalnız "https://" ile "deb https://" öneklerini denetleyip bunları diske
+// yazıyordu. Bu, panelin apt'ın neye güveneceği konusunda YETKİLİ olması
+// demekti: bu RPC'ye ulaşabilen herhangi bir şey kendi seçtiği imza anahtarını
+// sabitleyip eşleşen bir kaynak ekleyebilir, sonra whitelist'teki herhangi bir
+// paketin kurulumu oradan karşılanabilirdi — kataloğun bütün varlık sebebi olan
+// derlenmiş paket whitelist'i böylece çökerdi. Agent.InstallService'te bu açık
+// hiç yoktu: req.ID'yi core.ManagedServices'e karşı çözer ve yalnız ORADA
+// bulduğu paketleri kurar.
+//
+// Artık burada da geçerli olan değişmez kural: agent, üzerine iş yaptığı her
+// olguyu kendi derlenmiş kataloğundan yeniden türetir. Panel taşıyıcıdır,
+// yetkili değil.
 type EnableRepoRequest struct {
-	RepoID         string `json:"repo_id"`
-	KeyURL         string `json:"key_url"`
-	SourceTemplate string `json:"source_template"`
+	RepoID string `json:"repo_id"`
+}
+
+// repoFromCatalogue finds the catalogue repo with this id. Nothing outside the
+// binary can add one.
+// repoFromCatalogue, bu id'ye sahip katalog deposunu bulur. Binary dışından
+// hiçbir şey yeni bir tane ekleyemez.
+func repoFromCatalogue(id string) *core.ManagedRepo {
+	for i := range core.ManagedServices {
+		if r := core.ManagedServices[i].Repo; r != nil && r.ID == id {
+			return r
+		}
+	}
+	return nil
 }
 
 type RepoStatusResponse struct {
@@ -97,7 +139,12 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		resp.Error = "invalid repo id"
 		return nil
 	}
-	if !strings.HasPrefix(req.KeyURL, "https://") {
+	repo := repoFromCatalogue(req.RepoID)
+	if repo == nil {
+		resp.Error = "unknown repository"
+		return nil
+	}
+	if !strings.HasPrefix(repo.KeyURL, "https://") {
 		resp.Error = "repo key URL must be https"
 		return nil
 	}
@@ -107,7 +154,7 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		resp.Error = "could not determine the distribution codename (/etc/os-release)"
 		return nil
 	}
-	source := strings.ReplaceAll(req.SourceTemplate, "{codename}", codename)
+	source := strings.ReplaceAll(repo.SourceTemplate, "{codename}", codename)
 	// Only a plain "deb https://…" line is accepted, and signed-by= is injected
 	// so the source trusts our pinned key and nothing else.
 	// Yalnız düz bir "deb https://…" satırı kabul edilir ve signed-by= enjekte
@@ -120,7 +167,7 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	// the keyring filename, and signed-by= must point at the name we actually
 	// write. / Anahtar, kaynak satırından ÖNCE indirilir: biçimi keyring dosya
 	// adını belirler ve signed-by= gerçekten yazdığımız adı göstermelidir.
-	key, armored, err := fetchRepoKey(req.KeyURL)
+	key, armored, err := fetchRepoKey(repo.KeyURL)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil

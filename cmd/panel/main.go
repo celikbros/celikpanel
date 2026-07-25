@@ -260,6 +260,10 @@ func main() {
 	http.HandleFunc("/api/v1/config", panel.handleConfig)
 	http.HandleFunc("/api/v1/service/action", panel.handleServiceAction)
 	http.HandleFunc("/api/v1/service/logs", panel.handleServiceLogs)
+
+	// Version: one truth for "which build is this server running?"
+	// Sürüm: "bu sunucu hangi yapıyı koşuyor?" sorusunun tek doğrusu.
+	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
@@ -699,10 +703,22 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}, &reply)
 
 		if err != nil {
+			// A refused root write must be as visible as a granted one:
+			// silence is how a security refusal becomes indistinguishable
+			// from a success nobody noticed.
+			// Reddedilen bir root yazması, kabul edilen kadar görünür olmalı:
+			// sessizlik, güvenlik retlerini kimsenin fark etmediği bir
+			// başarıdan ayırt edilemez kılar.
+			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
 			writeServerError(w, err)
 			return
 		}
 
+		// Writing a root-owned file is the last thing that should be quieter
+		// than a service restart, which has always been audited.
+		// Root'a ait bir dosyayı yazmak, her zaman denetlenen servis yeniden
+		// başlatmasından daha sessiz olmaması gereken son şeydir.
+		p.audit(r, "config.write:"+req.Path, "config", 0)
 		json.NewEncoder(w).Encode(map[string]bool{"success": reply})
 		return
 	}
