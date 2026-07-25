@@ -186,3 +186,48 @@ func TestKnownConfigsHaveAValidator(t *testing.T) {
 		t.Error("a plain web file must not be validated as a server config")
 	}
 }
+
+// A unit name that is an ALIAS of another component's unit must not count as
+// proof that this component is installed. Arch's valkey package ships
+// /usr/lib/systemd/system/redis.service as a symlink to valkey.service (it
+// declares Provides: redis), so installing Valkey made the panel report
+// "Redis: installed, inactive (dead)" — a component that was never installed,
+// wearing someone else's name, and occupying its own seat while doing it.
+// Caught live on Frankfurt (25 Jul) the moment Valkey was added.
+//
+// Başka bir bileşenin unit'ine TAKMA AD olan bir unit adı, bu bileşenin kurulu
+// olduğunun kanıtı sayılamaz. Arch'ın valkey paketi
+// /usr/lib/systemd/system/redis.service'i valkey.service'e sembolik bağ olarak
+// koyar (Provides: redis der); bu yüzden Valkey kurmak paneli "Redis: kurulu,
+// ölü" demeye itiyordu — hiç kurulmamış bir bileşen, başkasının adını taşıyor
+// ve üstelik kendi koltuğunu işgal ediyordu. Valkey eklenir eklenmez
+// Frankfurt'ta canlı yakalandı (25 Tem).
+func TestUnitAliasDoesNotProveInstalled(t *testing.T) {
+	redisNames := []string{"redis-server", "redis"}
+	valkeyNames := []string{"valkey-server", "valkey"}
+
+	// The live case: redis.service -> valkey.service on Arch.
+	// Canlı durum: Arch'ta redis.service -> valkey.service.
+	if unitProvesInstalled("redis", "valkey", redisNames) {
+		t.Error("redis.service aliased to valkey.service must NOT mark Redis installed")
+	}
+	// Valkey's own unit, under its own name.
+	// Valkey'in kendi unit'i, kendi adıyla.
+	if !unitProvesInstalled("valkey", "valkey", valkeyNames) {
+		t.Error("a component's own unit must mark it installed")
+	}
+	// A component's SECOND name pointing at its FIRST is still itself: Debian
+	// ships valkey-server, Arch valkey, and either may alias the other.
+	// Bir bileşenin İKİNCİ adının BİRİNCİYE işaret etmesi yine kendisidir:
+	// Debian valkey-server, Arch valkey getirir; biri diğerine takma ad olabilir.
+	if !unitProvesInstalled("valkey-server", "valkey", valkeyNames) {
+		t.Error("an alias between a component's OWN names must still count")
+	}
+	// systemd said nothing (older systemd, odd unit): trust the name rather
+	// than calling an installed component missing.
+	// systemd bir şey söylemedi (eski systemd, tuhaf unit): kurulu bir bileşeni
+	// yok saymaktansa ada güven.
+	if !unitProvesInstalled("redis", "", redisNames) {
+		t.Error("when systemd cannot answer, the plain name must still count")
+	}
+}

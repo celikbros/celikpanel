@@ -240,6 +240,49 @@ func packageAvailable(name string) bool {
 	return false
 }
 
+// unitCanonicalName asks systemd what a unit name really resolves to. For a
+// plain unit the answer is itself; for an alias it is the target
+// ("redis.service" -> "valkey.service"). Returns "" when systemd cannot say.
+// unitCanonicalName, bir unit adının gerçekte neye çözüldüğünü systemd'ye
+// sorar. Düz bir unit için cevap kendisidir; takma ad için hedeftir
+// ("redis.service" -> "valkey.service"). systemd söyleyemezse "" döner.
+func unitCanonicalName(unit string) string {
+	out, err := exec.Command("systemctl", "show", unit+".service", "-p", "Id", "--value").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSuffix(strings.TrimSpace(string(out)), ".service")
+}
+
+// unitProvesInstalled decides whether the presence of `unit` really proves
+// this component is installed, given what systemd says the name resolves to.
+// Separated from the exec call so the RULE can be tested without systemd.
+//
+// - canonical == "" : systemd could not say; trust the name (a plain unit).
+// - canonical == unit : a real unit of its own. Installed.
+// - canonical is one of OUR names : still ours, just a second name for it.
+// - otherwise : the name is an alias for somebody else's unit. Not ours.
+//
+// unitProvesInstalled, `unit`in varlığının bu bileşenin kurulu olduğunu
+// gerçekten kanıtlayıp kanıtlamadığına, systemd'nin adı neye çözdüğüne bakarak
+// karar verir. exec çağrısından ayrıdır ki KURAL systemd olmadan test
+// edilebilsin.
+func unitProvesInstalled(unit, canonical string, systemNames []string) bool {
+	if canonical == "" || canonical == unit {
+		return true
+	}
+	return containsString(systemNames, canonical)
+}
+
+func containsString(list []string, want string) bool {
+	for _, s := range list {
+		if s == want {
+			return true
+		}
+	}
+	return false
+}
+
 // unitExists reports whether systemd knows a unit by exactly this name.
 // unitExists, systemd'nin tam bu adda bir unit tanıyıp tanımadığını bildirir.
 func unitExists(name string) bool {
@@ -482,6 +525,23 @@ func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
 		}
 		out, err := exec.Command("systemctl", "list-unit-files", lookup+".service", "--no-legend").Output()
 		if err == nil && strings.TrimSpace(string(out)) != "" {
+			// A unit name that is an ALIAS of some other component's unit does
+			// not prove this component is installed. Arch's valkey package
+			// ships /usr/lib/systemd/system/redis.service as a symlink to
+			// valkey.service (it declares Provides: redis), so installing
+			// Valkey made the panel report "Redis: installed, dead" — a
+			// component that was never installed, wearing someone else's name.
+			// Ask systemd for the canonical name instead of trusting the link.
+			// Başka bir bileşenin unit'ine TAKMA AD olan bir unit adı, bu
+			// bileşenin kurulu olduğunu kanıtlamaz. Arch'ın valkey paketi
+			// /usr/lib/systemd/system/redis.service'i valkey.service'e sembolik
+			// bağ olarak koyar (Provides: redis der); bu yüzden Valkey kurmak
+			// paneli "Redis: kurulu, ölü" demeye itiyordu — hiç kurulmamış bir
+			// bileşen, başkasının adını taşıyarak. Bağa güvenmek yerine asıl
+			// adı systemd'ye sor.
+			if !unitProvesInstalled(unit, unitCanonicalName(unit), svc.SystemNames) {
+				continue
+			}
 			return unit
 		}
 	}
