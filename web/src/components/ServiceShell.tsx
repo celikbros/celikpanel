@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { EmptyState, StatusDot } from './ui';
+import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText } from '../lib/apiError';
 
 interface ManagedService {
@@ -135,13 +136,23 @@ export function ServiceShell({
                     </p>
                 </div>
 
-                {installed && (
-                    <div className="ml-auto flex items-center gap-2">
-                        <CtrlButton icon={Play} label={t('services.start')} tone="success" solid disabled={busy || running} onClick={() => act('start')} />
-                        <CtrlButton icon={Square} label={t('services.stop')} tone="danger" solid disabled={busy || !running} onClick={() => act('stop')} />
-                        <CtrlButton icon={RotateCw} label={t('services.restart')} tone="warning" disabled={busy} onClick={() => act('restart')} />
-                    </div>
-                )}
+                {/* Help is ALWAYS reachable — installed or not, running or
+                    failed. The moment a page scares its reader is exactly when
+                    the button must be there (operator, 25 Jul: "Korkutmasın
+                    yardımcı olsun"). / Yardım HER ZAMAN erişilebilir — kurulu
+                    ya da değil, çalışıyor ya da düşmüş. Sayfanın okuyucusunu
+                    korkuttuğu an, düğmenin orada olması gereken andır
+                    (operatör, 25 Tem: "Korkutmasın yardımcı olsun"). */}
+                <div className="ml-auto flex items-center gap-2">
+                    <HelpButton serviceId={serviceId} name={name} />
+                    {installed && (
+                        <>
+                            <CtrlButton icon={Play} label={t('services.start')} tone="success" solid disabled={busy || running} onClick={() => act('start')} />
+                            <CtrlButton icon={Square} label={t('services.stop')} tone="danger" solid disabled={busy || !running} onClick={() => act('stop')} />
+                            <CtrlButton icon={RotateCw} label={t('services.restart')} tone="warning" disabled={busy} onClick={() => act('restart')} />
+                        </>
+                    )}
+                </div>
             </div>
 
             {loading ? (

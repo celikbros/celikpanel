@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Inbox, Clock, Users } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
+import { ComponentPanels } from './ComponentDetail';
 import { useI18n } from '../i18n';
 
 interface DovecotManagementProps {
     onBack: () => void;
+    onSelectConfig?: (path: string) => void;
 }
 
 interface DovecotStats {
@@ -15,7 +17,7 @@ interface DovecotStats {
     auth_fail: number;
 }
 
-export function DovecotManagement({ onBack }: DovecotManagementProps) {
+export function DovecotManagement({ onBack, onSelectConfig }: DovecotManagementProps) {
     const { t } = useI18n();
     const [stats, setStats] = useState<DovecotStats | null>(null);
 
@@ -39,6 +41,12 @@ export function DovecotManagement({ onBack }: DovecotManagementProps) {
                 <StatCard icon={Users} label={t('dovecot.connections')} value={stats ? String(stats.connections) : '—'} />
             </div>
             <p className="mt-4 text-xs text-fg-subtle">{t('dovecot.statsNote')}</p>
+            {/* The panel already knows Dovecot's unit, ports, packages, config
+                files and journal — show them instead of ending the page here
+                (operator, 25 Jul). / Panel, Dovecot'un birimini, portlarını,
+                paketlerini, ayar dosyalarını ve günlüğünü zaten biliyor —
+                sayfayı burada bitirmek yerine onları göster (operatör, 25 Tem). */}
+            <ComponentPanels serviceId="dovecot" onSelectConfig={onSelectConfig} />
         </ServiceShell>
     );
 }

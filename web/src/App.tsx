@@ -102,11 +102,11 @@ function ServiceManagement({ serviceId, versions, onSelectConfig }: ServiceManag
     case 'postfix':
       return <PostfixManagement onBack={onBack} />;
     case 'dovecot':
-      return <DovecotManagement onBack={onBack} />;
+      return <DovecotManagement onBack={onBack} onSelectConfig={onSelectConfig} />;
     case 'pdns':
       return <PowerDNSManagement onBack={onBack} />;
     case 'vsftpd':
-      return <VsftpdManagement onBack={onBack} />;
+      return <VsftpdManagement onBack={onBack} onSelectConfig={onSelectConfig} />;
     case 'postgresql':
       return <PostgreSQLManagement onBack={onBack} />;
     case 'mariadb':
@@ -200,6 +200,16 @@ function ServicesPage() {
     <ServiceList
       onSelectConfig={setSelectedConfigPath}
       onManageService={(serviceId: string, versions: string[]) => {
+        // WireGuard's real management — peers, client configs, QR codes —
+        // lives on the VPN page; a generic detail page next to it would be a
+        // second, poorer door to the same room (operator, 25 Jul).
+        // WireGuard'ın gerçek yönetimi — istemciler, yapılandırmalar, QR —
+        // VPN sayfasındadır; yanına genel bir detay sayfası koymak aynı odaya
+        // ikinci ve daha kötü bir kapı olurdu (operatör, 25 Tem).
+        if (serviceId === 'wireguard') {
+          navigate('/vpn');
+          return;
+        }
         // Navigate with state to avoid refetch if possible
         navigate(`/services/${serviceId}`, { state: { versions } });
       }}

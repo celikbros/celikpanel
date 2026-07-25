@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Database, Lightbulb } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
+import { ComponentPanels } from './ComponentDetail';
 import { MariaDBSettings } from './MariaDBSettings';
 import { useI18n } from '../i18n';
 
@@ -86,6 +87,11 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
                     </ul>
                 </div>
             </div>
+            {/* Overview + journal; the config list is skipped — this page
+                has a real editor for those files already. / Genel bakış +
+                günlük; ayar listesi atlanır — bu sayfada o dosyalar için
+                gerçek bir editör zaten var. */}
+            <ComponentPanels serviceId="mariadb" show={{ configs: false }} />
         </ServiceShell>
     );
 }

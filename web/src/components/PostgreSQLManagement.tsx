@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Database, Settings, ShieldCheck, FileCode, type LucideIcon } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
+import { ComponentPanels } from './ComponentDetail';
 import { ConfigEditor } from './ConfigEditor';
 import { PostgreSQLSettings } from './PostgreSQLSettings';
 import { PostgreSQLAccessRules } from './PostgreSQLAccessRules';
@@ -80,6 +81,11 @@ export function PostgreSQLManagement({ onBack }: PostgreSQLManagementProps) {
                     </div>
                 </div>
             )}
+            {/* Overview + journal; the config list is skipped — this page
+                has a real editor for those files already. / Genel bakış +
+                günlük; ayar listesi atlanır — bu sayfada o dosyalar için
+                gerçek bir editör zaten var. */}
+            <ComponentPanels serviceId="postgresql" show={{ configs: false }} />
         </ServiceShell>
     );
 }

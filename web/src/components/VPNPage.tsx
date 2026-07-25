@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, EmptyState, StatusDot, inputClass } from './ui';
+import { HelpButton } from './HelpDrawer';
 
 interface VPNStatus {
     installed: boolean;
@@ -158,7 +159,10 @@ export function VPNPage() {
 
     return (
         <div className="space-y-6">
-            <PageHeader title={t('vpn.title')} subtitle={t('vpn.subtitle')} />
+            <div className="flex items-start justify-between gap-3">
+                <PageHeader title={t('vpn.title')} subtitle={t('vpn.subtitle')} />
+                <HelpButton serviceId="wireguard" name="WireGuard VPN" />
+            </div>
 
             {/* Server status */}
             <section className="rounded-xl border border-border bg-surface p-5">

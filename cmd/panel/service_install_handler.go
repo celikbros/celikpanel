@@ -206,6 +206,36 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Installing WireGuard used to stop at the package: no server key, no
+	// wg0.conf, so the unit was guaranteed to FAIL on start — the operator
+	// pressed play on a fresh install and got a dead "Stopped" row (25 Jul:
+	// "WireGuard VPN server çalışmıyor"). The same lesson as nginx includes
+	// and Dovecot's TLS cert: install must leave the component WORKING. Setup
+	// is idempotent and syncs any peers already in the ledger, so a reinstall
+	// comes back with its clients intact.
+	// WireGuard kurulumu pakette kalıyordu: sunucu anahtarı yok, wg0.conf yok;
+	// unit başlatılınca DÜŞMEYE mahkûmdu — operatör taze kurulumda oynat'a
+	// bastı ve ölü bir "Durdu" satırı gördü (25 Tem: "WireGuard VPN server
+	// çalışmıyor"). Ders, nginx include'ları ve Dovecot TLS sertifikasıyla
+	// aynı: kurulum bileşeni ÇALIŞIR bırakmalı. Kurulum adımı değişmez etkili
+	// ve defterdeki peer'ları da senkronlar; yeniden kurulum istemcileriyle
+	// birlikte döner.
+	if req.ServiceID == "wireguard" {
+		var vpnResp struct {
+			Created bool   `json:"created"`
+			Detail  string `json:"detail,omitempty"`
+			Error   string `json:"error,omitempty"`
+		}
+		if err := p.agentClient.Call("Agent.SetupVPN", &struct {
+			Port int `json:"port"`
+		}{}, &vpnResp); err != nil || vpnResp.Error != "" {
+			log.Printf("vpn setup after install: %v %s", err, vpnResp.Error)
+			p.audit(r, "service.install:wireguard — setup incomplete: "+auditReason(vpnResp.Error), "service", 0)
+		} else if err := p.syncVPNPeers(r.Context()); err != nil {
+			log.Printf("vpn peer sync after install: %v", err)
+		}
+	}
+
 	// Database web tools are files, not daemons: after (un)install the agent
 	// must (re)generate the loopback nginx server that actually serves them.
 	// Veritabanı web araçları daemon değil dosyadır: kur/kaldır sonrası agent,

@@ -65,12 +65,58 @@ export function ComponentDetail({ serviceId, onBack, onSelectConfig }: { service
 
     return (
         <ServiceShell serviceId={serviceId} unitName={svc?.unit} name={svc?.name ?? serviceId} icon={Boxes} onBack={onBack}>
-            <div className="space-y-6">
-                <Facts svc={svc} />
-                <ConfigFiles svc={svc} onSelectConfig={onSelectConfig} />
-                <Journal unit={svc?.unit || serviceId} />
-            </div>
+            <ComponentPanels serviceId={serviceId} svc={svc} onSelectConfig={onSelectConfig} />
         </ServiceShell>
+    );
+}
+
+// ComponentPanels: the derived sections, exported so the SPECIALISED pages can
+// append them under their own content. Before this, a page like vsftpd's was
+// an empty "coming soon" shell while the panel already KNEW its config file,
+// its ports and its journal — the knowledge existed, only the page refused to
+// show it (operator, 25 Jul: "birçok servisin manage sayfaları berbat").
+// `show` lets a page skip sections it already covers better (PostgreSQL and
+// MariaDB have real config editors, so they hide the plain file list).
+//
+// ComponentPanels: türetilmiş bölümler; ÖZEL sayfalar kendi içeriklerinin
+// altına ekleyebilsin diye dışa açıldı. Bundan önce vsftpd'ninki gibi bir
+// sayfa boş bir "yakında" kabuğuyken panel onun ayar dosyasını, portlarını ve
+// günlüğünü zaten BİLİYORDU — bilgi vardı, yalnız sayfa göstermeyi
+// reddediyordu (operatör, 25 Tem: "birçok servisin manage sayfaları berbat").
+// `show`, bir sayfanın zaten daha iyi kapsadığı bölümü atlamasını sağlar
+// (PostgreSQL ve MariaDB'nin gerçek ayar editörleri var; düz dosya listesini
+// gizlerler).
+export function ComponentPanels({
+    serviceId,
+    svc: svcProp,
+    onSelectConfig,
+    show,
+}: {
+    serviceId: string;
+    svc?: Component | null;
+    onSelectConfig?: (path: string) => void;
+    show?: { facts?: boolean; configs?: boolean; journal?: boolean };
+}) {
+    const [fetched, setFetched] = useState<Component | null>(null);
+    const needFetch = svcProp === undefined;
+
+    useEffect(() => {
+        if (!needFetch) return;
+        fetch('/api/v1/managed-services')
+            .then((r) => (r.ok ? r.json() : { services: [] }))
+            .then((d: { services: Component[] }) => setFetched((d.services || []).find((s) => s.id === serviceId) ?? null))
+            .catch(() => {});
+    }, [serviceId, needFetch]);
+
+    const svc = needFetch ? fetched : svcProp;
+    const want = { facts: true, configs: true, journal: true, ...show };
+
+    return (
+        <div className="mt-6 space-y-6 first:mt-0">
+            {want.facts && <Facts svc={svc ?? null} />}
+            {want.configs && <ConfigFiles svc={svc ?? null} onSelectConfig={onSelectConfig} />}
+            {want.journal && <Journal unit={svc?.unit || serviceId} />}
+        </div>
     );
 }
 
