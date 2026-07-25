@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, inputClass } from './ui';
 import { readApiError } from '../lib/apiError';
+import { DNSServerSettings } from './DNSServerSettings';
 
 // Account settings. Today it hosts two-factor authentication; admins also
 // manage the panel's own certificate here.
@@ -20,6 +21,7 @@ export function Settings() {
             <div className="max-w-2xl space-y-6">
                 <TwoFactorPanel />
                 {role === 'admin' && <PanelCertificatePanel />}
+                {role === 'admin' && <DNSServerSettings />}
             </div>
         </div>
     );

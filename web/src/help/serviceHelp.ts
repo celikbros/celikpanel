@@ -126,6 +126,40 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             ],
         },
     },
+    'dns-server-settings': {
+        tr: {
+            what: 'Bu sayfa sunucunun DNS kimliğini belirler: alan adlarının yöneltileceği ad sunucusu adları ve bu sunucunun tek başına mı yoksa ikinci bir sunucuyla çift olarak mı çalıştığı. Barındırma sağlayıcılarının yaptığı işin ta kendisidir; bir kez ayarlanır ve sonra her alan adı için aynı adlar kullanılır.',
+            tips: [
+                'İki ad sunucusu ancak İKİ AYRI MAKİNE olduğunda anlamlıdır. İkisi de aynı sunucuyu gösteriyorsa, o sunucu düştüğünde barındırdığınız her alan adı kararır — çift, süs olmaktan öteye geçmez.',
+                'Adların bu sunucuya çözüldüğünü panel sizin için kontrol eder. Yeşil değilse o adlara alan adı devretmeyin; önce adres kayıtlarını düzeltin.',
+                'Ad sunucusu adlarını kendi alan adınızın kayıtçısında BİR KEZ kaydedersiniz (“child nameserver” / “glue”). Müşterinin alan adında böyle bir kayıt yapılmaz; müşteri yalnızca bu adları gösterir.',
+                'Çift kurduğunuzda zone kopyaları kendiliğinden gider: birincil değişikliği bildirir, ikincil kopyayı çeker. İki panelin birbiriyle konuşması gerekmez.',
+                'İkincil sunucuya alan adı EKLEMEYİN. Orası kopya tutar; alan adları birinciden gelir.',
+            ],
+            troubleshoot: [
+                { symptom: '"Bu sunucu değil" uyarısı çıkıyor.', fix: 'O ad şu an başka bir makineye çözülüyor. Ya bu sunucu için farklı adlar belirleyin (ör. ns1.sunucuadi.alanadiniz.com) ya da o adın adres kaydını bu sunucunun IP’siyle güncelleyin. Kayıt hangi alan adına aitse, düzeltme orada yapılır.' },
+                { symptom: '"Diğer sunucu buradan DNS’e cevap vermiyor" yazıyor.', fix: 'Karşı sunucuda PowerDNS çalışmıyor olabilir ya da aradaki 53 portu kapalıdır. Karşı sunucunun Bileşenler sayfasından PowerDNS’in çalıştığını doğrulayın; güvenlik duvarı ayarlarını kontrol edin.' },
+                { symptom: 'İkincil sunucuda zone’lar görünmüyor.', fix: 'Kopyalar ancak birincilde bir zone oluştuğunda ya da değiştiğinde gider. Birincilde yeni bir alan adı ekleyip birkaç dakika bekleyin. Hâlâ gelmiyorsa iki sunucu arasında 53 portunun her iki yönde açık olduğunu kontrol edin.' },
+                { symptom: 'Kayıtçı "iki ad sunucusu aynı IP’de olamaz" diyor.', fix: 'Haklı — bu tam olarak çiftin var olma sebebidir. İkinci sunucuyu ikincil rolüne alın ve ikinci adı onun IP’siyle kaydedin.' },
+            ],
+        },
+        en: {
+            what: 'This page sets the server’s DNS identity: the nameserver names domains are pointed at, and whether this server works alone or as one half of a pair. It is exactly what hosting providers do — set once, then used by every domain.',
+            tips: [
+                'Two nameservers only mean something when they are TWO DIFFERENT MACHINES. If both point at the same server, every domain you host goes dark when it does — the pair is decoration.',
+                'The panel checks for you that the names resolve to this server. If they are not green, do not delegate domains to them; fix the address records first.',
+                'You register the nameserver names ONCE at your own domain’s registrar (“child nameservers” / “glue”). Nothing like that is registered on a customer’s domain — the customer only points at these names.',
+                'Once a pair is configured, zone copies travel by themselves: the primary announces a change, the secondary pulls the copy. The two panels never have to talk.',
+                'Do NOT add domains on the secondary. It holds copies; domains arrive from the primary.',
+            ],
+            troubleshoot: [
+                { symptom: 'It says "not this server".', fix: 'That name currently resolves to a different machine. Either choose different names for this server (for example ns1.hostname.yourdomain.com), or update that name’s address record to this server’s IP. The fix belongs wherever that name’s domain is managed.' },
+                { symptom: 'It says the other server does not answer DNS.', fix: 'PowerDNS may not be running there, or port 53 between the two is closed. Confirm PowerDNS is running on the other server’s Components page and check the firewall.' },
+                { symptom: 'Zones do not appear on the secondary.', fix: 'Copies only travel when a zone is created or changed on the primary. Add a domain on the primary and wait a few minutes. If nothing arrives, check that port 53 is open in both directions between the servers.' },
+                { symptom: 'The registrar says two nameservers cannot share an IP.', fix: 'It is right — that is precisely why the pair exists. Make the second server a secondary and register the second name with its own IP.' },
+            ],
+        },
+    },
     'dovecot': {
         tr: {
             what: 'Dovecot, posta uygulamalarının — Outlook, Thunderbird, telefonlar — bu sunucudaki posta kutularını açmasını sağlayan hizmettir. IMAP ve POP3 girişlerini karşılar, iletileri uygulamaya aktarır ve klasörleri eşitli tutar. Birileri buradaki postasını okuduğu sürece gereklidir; webmail de buna dahildir.',

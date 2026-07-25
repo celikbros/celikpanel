@@ -37,7 +37,11 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 		return zoneID, false, nil
 	}
 
-	result, err := pool.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, 'NATIVE')`, domain)
+	// MASTER on a cluster primary so the secondary is notified the moment the
+	// zone appears; NATIVE on a lone server, where there is nobody to notify.
+	// Küme birincilinde MASTER, ki zone belirir belirmez ikincile haber
+	// verilsin; tek başına sunucuda NATIVE, çünkü haber verilecek kimse yok.
+	result, err := pool.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, ?)`, domain, p.dnsZoneType(ctx))
 	if err != nil {
 		return 0, false, err
 	}

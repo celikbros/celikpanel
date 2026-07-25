@@ -248,6 +248,7 @@ func main() {
 	// One nameserver pair for the whole server — see nameservers.go.
 	// Sunucunun tamamı için tek ad sunucusu çifti — bkz. nameservers.go.
 	http.HandleFunc("/api/v1/settings/nameservers", panel.handleNameserverSettings)
+	http.HandleFunc("/api/v1/settings/dns-cluster", panel.handleDNSCluster)
 	http.HandleFunc("/api/v1/nginx/ratelimits", panel.handleNginxRateLimits)
 
 	// Fail2ban Management
