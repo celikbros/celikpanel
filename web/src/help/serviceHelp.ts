@@ -92,6 +92,40 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             ],
         },
     },
+    'domain-connection': {
+        tr: {
+            what: 'Bir alan adı, "bu adı kim yanıtlıyor?" sorusunun cevabı internette kayıtlı olmadan çalışmaz. Bu bölüm o cevabın şu an ne olduğunu canlı olarak gösterir ve doğru olması için kayıtçınızda tam olarak ne yazmanız gerektiğini söyler. Alan adını satın aldığınız firmada bir kez yapılan bir ayardır.',
+            tips: [
+                'İki yol vardır ve ikisi de meşrudur: DNS yönetimini bu sunucuya vermek (A yolu) ya da DNS\'i olduğu yerde bırakıp yalnız adresi buraya yöneltmek (B yolu).',
+                'E-posta da barındıracaksanız A yolunu seçin: SPF, DKIM ve DMARC gibi posta kayıtları ancak DNS burada yönetilirken otomatik tutulabilir.',
+                'Yalnız bir web sitesi yayınlayacaksanız B yolu yeterlidir ve daha az adımdır.',
+                'Değişiklikten sonra hemen sonuç beklemeyin: DNS\'in dünyaya yayılması 15 dakikadan 24 saate kadar sürebilir. "Tekrar kontrol et" düğmesi gerçek durumu gösterir, tahmin etmez.',
+                'Bu ekrandaki her değer kopyalanabilir; kayıtçınızın formuna elle yazmanıza gerek yok.',
+            ],
+            troubleshoot: [
+                { symptom: '"Başka bir yeri gösteriyor" yazıyor.', fix: 'Alan adı şu an başka bir sunucuya bakıyor. Kayıtçınızdaki eski A kaydını bu sunucunun adresiyle değiştirin ya da A yoluna geçin. Eski adresi hatırlamıyorsanız yukarıdaki "Şu an çözüldüğü adres" satırı size onu söyler.' },
+                { symptom: '"Henüz çözülmüyor" yazıyor.', fix: 'Alan adı yeni alınmış ya da ad sunucuları yeni değişmiş olabilir; yayılması birkaç saat sürer. Bir gün sonra hâlâ aynıysa kayıtçınızda ad sunucularının gerçekten kaydedildiğini kontrol edin.' },
+                { symptom: '"Ad sunucuları buraya bakıyor ama adres uyuşmuyor" yazıyor.', fix: 'DNS yönetimi bizde ama alan adının A kaydı başka bir adresi gösteriyor. DNS sekmesinden A kaydını bu sunucunun adresiyle güncelleyin; ya da değişiklik yeni yapıldıysa yayılmasını bekleyin.' },
+                { symptom: 'Sertifika alınamıyor.', fix: 'Let\'s Encrypt sertifika vermeden önce alan adının bu sunucuya çözüldüğünü kendi kontrol eder. Bu bölüm "Bağlı" diyene kadar sertifika adımı beklemek zorundadır — bu bir panel kısıtı değil, sertifika sağlayıcısının kuralıdır.' },
+            ],
+        },
+        en: {
+            what: 'A domain does not work until the internet knows who answers for that name. This section shows what that answer is right now, live, and tells you exactly what to enter at your registrar to make it correct. It is a one-time setting at the company you bought the domain from.',
+            tips: [
+                'There are two legitimate routes: hand DNS management to this server (Route A), or leave DNS where it is and simply point the address here (Route B).',
+                'Choose Route A if you will also host e-mail: mail records such as SPF, DKIM and DMARC can only be maintained automatically while DNS lives here.',
+                'If you only need a website published, Route B is enough and has fewer steps.',
+                'Do not expect an instant result: DNS changes take anywhere from 15 minutes to 24 hours to spread. The "Check again" button reports reality rather than guessing.',
+                'Every value on this screen is copyable — you never have to retype it into your registrar\'s form.',
+            ],
+            troubleshoot: [
+                { symptom: 'It says "Points somewhere else".', fix: 'The domain currently points at another server. Replace the old A record at your registrar with this server\'s address, or switch to Route A. If you do not remember the old address, the "Resolves to right now" line above tells you what it is.' },
+                { symptom: 'It says "Does not resolve yet".', fix: 'The domain may be newly registered, or its nameservers were just changed; spreading takes a few hours. If it still says this a day later, check at your registrar that the nameservers were actually saved.' },
+                { symptom: 'It says the nameservers point here but the address does not match.', fix: 'DNS is managed here, but the domain\'s A record shows a different address. Update the A record from the DNS tab to this server\'s address — or, if you changed it just now, wait for it to spread.' },
+                { symptom: 'A certificate cannot be issued.', fix: 'Let\'s Encrypt verifies for itself that the domain resolves to this server before issuing anything. The certificate step has to wait until this section says "Connected" — that is the certificate provider\'s rule, not a panel limitation.' },
+            ],
+        },
+    },
     'dovecot': {
         tr: {
             what: 'Dovecot, posta uygulamalarının — Outlook, Thunderbird, telefonlar — bu sunucudaki posta kutularını açmasını sağlayan hizmettir. IMAP ve POP3 girişlerini karşılar, iletileri uygulamaya aktarır ve klasörleri eşitli tutar. Birileri buradaki postasını okuduğu sürece gereklidir; webmail de buna dahildir.',

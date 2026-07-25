@@ -354,6 +354,8 @@ func main() {
 			panel.handleAppInstall(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/usage") {
 			panel.handleDomainUsage(w, r)
+		} else if strings.Contains(r.URL.Path, "/connection") {
+			panel.handleDomainConnection(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/dns") {
 			panel.handleDomainDNS(w, r)
 		} else if r.Method == http.MethodDelete {

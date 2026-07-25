@@ -6,6 +6,7 @@ import {
 import { DomainPHPSettings } from './DomainPHPSettings';
 import { DomainGeneralSettings } from './DomainGeneralSettings';
 import { DomainSSLSettings } from './DomainSSLSettings';
+import { DomainConnection } from './DomainConnection';
 import { DomainLogsViewer } from './DomainLogsViewer';
 import { DomainDatabaseManager } from './DomainDatabaseManager';
 import { DomainFileManager } from './DomainFileManager';
@@ -127,7 +128,15 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const projectType = domain.project_type || 'php';
     const isDnsOnly = projectType === 'dnsonly';
     const tabs: TabDef[] = [
-        { id: 'overview', labelKey: 'domain.tab.overview', icon: LayoutGrid },
+        {
+            // The connection card leads the Overview: it is the precondition for
+            // the site, the certificate and the mail records, and it was the one
+            // thing the panel never said out loud.
+            // Bağlantı kartı Genel Bakış'ı açar: site, sertifika ve posta
+            // kayıtlarının ön koşuludur ve panelin hiç yüksek sesle söylemediği
+            // tek şeydi.
+            id: 'overview', labelKey: 'domain.tab.overview', icon: LayoutGrid,
+        },
         ...(!isDnsOnly ? [{
             id: 'hosting', labelKey: 'domain.tab.hosting', icon: Server,
             subs: [
@@ -254,6 +263,21 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                                     </button>
                                 );
                             })}
+                        </div>
+                    )}
+
+                    {/* The connection check sits ABOVE the card, on the Overview,
+                        because it is the precondition for everything inside it:
+                        no site, certificate or mail record can work until the
+                        domain points here. The panel knew this and never said it
+                        (operator, 25 Jul). / Bağlantı kontrolü Genel Bakış'ta
+                        kartın ÜSTÜNDE durur, çünkü içindeki her şeyin ön
+                        koşuludur: alan adı buraya bakmadan ne site, ne sertifika,
+                        ne posta kaydı çalışır. Panel bunu biliyor ve hiç
+                        söylemiyordu (operatör, 25 Tem). */}
+                    {activeTab === 'overview' && (
+                        <div className="mb-4">
+                            <DomainConnection domainId={domain.id} domainName={domain.domain_name} />
                         </div>
                     )}
 
