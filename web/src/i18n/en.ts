@@ -879,7 +879,7 @@ export const en = {
     'dnssrv.step.localName': '{a} must resolve to this server ({b}). Update the address record where that nameserver name is managed.',
     'dnssrv.step.peerName': '{a} must resolve to the peer server ({b}). Update the address record where that nameserver name is managed.',
 	'dnssrv.step.peerPort': 'The peer must accept TCP/53 for AXFR. This automatic check verifies that connection.',
-    'dnssrv.step.samePairOnPeer': 'Manual confirmation: on the peer ({a}), verify the same two nameserver names are saved, Paired node is selected, and it points back to this server.',
+    'dnssrv.step.samePairOnPeer': 'The peer ({a}) must serve the same nameserver pair. This is checked automatically with a direct DNS query.',
     'dnssrv.saveRole': 'Save operating mode',
     'dnssrv.roleSaved': 'DNS operating mode saved',
     'help.button': 'Help',
