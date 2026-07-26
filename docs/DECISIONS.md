@@ -773,6 +773,16 @@ domain exists — otherwise every domain would silently go dark, the exact trap
 the rule prevents. All "or manage externally" copy removed. Proven live:
 creation without DNS → 409.
 
+**Addendum (July 26, 2026 — two-server authority).** DNS ownership is not one
+machine-wide primary and one machine-wide secondary; PowerDNS assigns roles per
+zone. Two CelikPanels in **Paired** mode enable both capabilities: a zone created
+on either panel is `MASTER` there and an automatic secondary copy on the peer.
+Thus both nameservers remain authoritative regardless of which panel created the
+site. Both panels carry the same shared name pair; exactly one name resolves to
+the local IP and the other to the peer IP. Glue is registered once under the
+domain that owns those names; no child nameservers are created under customer
+domains.
+
 ---
 
 ## D-008 · Alpha: the operator drives the panel; every gap becomes a product feature

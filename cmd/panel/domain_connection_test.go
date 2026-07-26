@@ -31,8 +31,8 @@ func TestClassifyConnection(t *testing.T) {
 		why        string
 	}{
 		{
-			name: "hic cozulmuyor",
-			mutate: func(c *connectionCheck) {},
+			name:       "hic cozulmuyor",
+			mutate:     func(c *connectionCheck) {},
 			wantStatus: "unresolved", wantSSL: false,
 			why: "yeni alınmış ya da yayılmamış alan adı — sertifika istenemez",
 		},
@@ -77,11 +77,20 @@ func TestClassifyConnection(t *testing.T) {
 			// sertifikayı istemeye yollardı.
 			name: "devredilmis ama adres tutmuyor",
 			mutate: func(c *connectionCheck) {
-				c.LiveNameservers = []string{"ns1.biovision.health"}
+				c.LiveNameservers = []string{"ns1.biovision.health", "ns2.biovision.health"}
 				c.LiveIPs = []string{"203.0.113.9"}
 			},
 			wantStatus: "delegated_mismatch", wantSSL: false,
 			why: "yarı doğruyu tam doğru saymak, alınamayacak sertifikayı istetir",
+		},
+		{
+			name: "nameserverlarin yalniz yarisi devredilmis",
+			mutate: func(c *connectionCheck) {
+				c.LiveNameservers = []string{"ns1.biovision.health", "lunar.dns-parking.com"}
+				c.LiveIPs = []string{ip}
+			},
+			wantStatus: "a_record", wantSSL: true,
+			why: "tek eşleşen NS tam delegasyon değildir; yalnız A kaydı web için yeterlidir",
 		},
 		{
 			// Case must not decide the answer: DNS is case-insensitive and
@@ -90,7 +99,7 @@ func TestClassifyConnection(t *testing.T) {
 			// çözümleyiciler zone'da ne yazıyorsa onu döndürür.
 			name: "buyuk harfli nameserver",
 			mutate: func(c *connectionCheck) {
-				c.LiveNameservers = []string{"NS1.BioVision.Health"}
+				c.LiveNameservers = []string{"NS2.BioVision.Health", "NS1.BioVision.Health."}
 				c.LiveIPs = []string{ip}
 			},
 			wantStatus: "delegated", wantSSL: true,
@@ -111,6 +120,27 @@ func TestClassifyConnection(t *testing.T) {
 	}
 }
 
+func TestSameNameserverSetRequiresTheFullSet(t *testing.T) {
+	expected := []string{"ns1.celikhost.com", "ns2.celikhost.com"}
+	for _, tc := range []struct {
+		name string
+		live []string
+		want bool
+	}{
+		{name: "same set reordered", live: []string{"NS2.CELIKHOST.COM.", "ns1.celikhost.com"}, want: true},
+		{name: "only one", live: []string{"ns1.celikhost.com"}, want: false},
+		{name: "one ours one foreign", live: []string{"ns1.celikhost.com", "lunar.dns-parking.com"}, want: false},
+		{name: "extra name", live: []string{"ns1.celikhost.com", "ns2.celikhost.com", "ns3.celikhost.com"}, want: false},
+		{name: "duplicate name", live: []string{"ns1.celikhost.com", "ns1.celikhost.com"}, want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sameNameserverSet(tc.live, expected); got != tc.want {
+				t.Fatalf("sameNameserverSet(%v) = %v, want %v", tc.live, got, tc.want)
+			}
+		})
+	}
+}
+
 // One server, one nameserver pair. The panel used to write ns1.<domain> into
 // every zone, which made each hosted domain its own nameserver and would have
 // forced glue registration per customer — the operator caught it on sight
@@ -126,11 +156,11 @@ func TestClassifyConnection(t *testing.T) {
 // asla.
 func TestPanelBaseDomainIsTheServersDomainNotTheHostedOne(t *testing.T) {
 	for host, want := range map[string]string{
-		"boston.celikhost.com":     "celikhost.com",
-		"frankfurt.celikhost.com":  "celikhost.com",
-		"srv1.eu.example.co":       "example.co",
-		"celikhost.com":            "celikhost.com",
-		"localhost":                "",
+		"boston.celikhost.com":    "celikhost.com",
+		"frankfurt.celikhost.com": "celikhost.com",
+		"srv1.eu.example.co":      "example.co",
+		"celikhost.com":           "celikhost.com",
+		"localhost":               "",
 	} {
 		if got := baseDomainOf(host); got != want {
 			t.Errorf("baseDomainOf(%q) = %q, want %q", host, got, want)

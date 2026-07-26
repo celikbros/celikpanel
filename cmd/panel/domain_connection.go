@@ -88,14 +88,12 @@ type connectionCheck struct {
 	// ns1.celikhost.com için glue kaydettirmesini söylemek, yerine
 	// getiremeyeceği bir talimat olurdu.
 	GlueNeeded bool `json:"glue_needed"`
-	// NameserversUsable is false when this server's nameserver names do not
-	// resolve to this server. Route A must NOT be offered then: delegating to a
-	// nameserver that serves a different machine breaks the domain, and the
-	// panel would be the thing that told you to do it.
-	// NameserversUsable, bu sunucunun ad sunucusu adları bu sunucuya
-	// çözülmüyorsa yanlıştır. O zaman A yolu SUNULMAMALIDIR: başka bir makineye
-	// hizmet eden ad sunucusuna devretmek alan adını bozar ve bunu söyleyen
-	// panel olurdu.
+	// NameserversUsable is false when the public names do not match the saved
+	// operating mode: both local for standalone, or one local and one at the
+	// configured peer for paired mode. Route A must not be offered until then.
+	// NameserversUsable, kamusal adlar kayıtlı çalışma moduyla eşleşmiyorsa
+	// yanlıştır: tek başına modda ikisi yerel; eşli modda biri yerel, biri
+	// yapılandırılmış eşte olmalıdır. O zamana dek A yolu sunulmamalıdır.
 	NameserversUsable bool             `json:"nameservers_usable"`
 	NameserverFacts   []nameserverFact `json:"nameserver_facts,omitempty"`
 	CheckedAt         string           `json:"checked_at"`
@@ -171,7 +169,11 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 		} else {
 			facts := verifyNameservers(ctx, out.Nameservers, out.ServerIP, out.ServerV6)
 			out.NameserverFacts = facts
-			out.NameserversUsable = len(facts) == 2 && facts[0].PointsHere && facts[1].PointsHere
+			out.NameserversUsable = nameserverPairUsable(
+				p.setting(ctx, settingDNSRole),
+				p.setting(ctx, settingDNSPeerIP),
+				facts,
+			)
 		}
 	}
 
@@ -206,14 +208,7 @@ func classifyConnection(c connectionCheck) (status string, sslReady bool) {
 		}
 	}
 
-	delegated := false
-	for _, ns := range c.LiveNameservers {
-		for _, ours := range c.Nameservers {
-			if strings.EqualFold(strings.TrimSuffix(ns, "."), ours) {
-				delegated = true
-			}
-		}
-	}
+	delegated := sameNameserverSet(c.LiveNameservers, c.Nameservers)
 
 	switch {
 	case delegated && pointsHere:
@@ -235,4 +230,20 @@ func classifyConnection(c connectionCheck) (status string, sslReady bool) {
 	default:
 		return "unresolved", false
 	}
+}
+
+func sameNameserverSet(live, expected []string) bool {
+	if len(live) == 0 || len(live) != len(expected) {
+		return false
+	}
+	seen := make(map[string]bool, len(live))
+	for _, ns := range live {
+		seen[strings.ToLower(strings.TrimSuffix(ns, "."))] = true
+	}
+	for _, ns := range expected {
+		if !seen[strings.ToLower(strings.TrimSuffix(ns, "."))] {
+			return false
+		}
+	}
+	return true
 }

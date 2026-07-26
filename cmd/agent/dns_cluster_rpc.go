@@ -6,67 +6,49 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
-// Two nameservers on two machines — the thing "ns1 and ns2" is supposed to mean.
+// A paired PowerDNS node can be primary and secondary at the same time because
+// those roles belong to zones, not whole machines. Locally managed zones are
+// MASTER; zones announced by the configured peer arrive as SLAVE through
+// autoprimary. Both machines therefore serve every zone without a panel-to-
+// panel account or API channel.
 //
-// The operator asked the right question (25 Jul): "can we use Frankfurt and
-// Boston as the two nameservers, backing each other up? Or am I thinking
-// nonsense?" It is not nonsense; it is exactly what a hosting provider does.
-// Today both ns1.celikhost.com and ns2.celikhost.com resolve to ONE machine, so
-// the pair is decoration: one reboot and every hosted domain goes dark. Some
-// registries refuse glue for a pair sharing an address for precisely this
-// reason.
-//
-// The professional shape is a primary/secondary pair: one server owns the zone
-// data, the other holds a full copy and answers with equal authority. Both
-// serve EVERY zone, regardless of which machine hosts the website — DNS
-// authority and web hosting are separate jobs, and conflating them is what made
-// the earlier ns1.<domain> design wrong.
-//
-// The replication uses PowerDNS's own autoprimary mechanism rather than any
-// panel-to-panel API: the secondary is told "trust NOTIFYs from this address"
-// once, and thereafter every zone created on the primary appears there by
-// itself. That keeps the panel single-server — two panels never have to talk,
-// authenticate to each other, or stay in step.
-//
-// İki makinede iki ad sunucusu — "ns1 ve ns2"nin zaten anlatması gereken şey.
-//
-// Operatör doğru soruyu sordu (25 Tem): "Frankfurt'u ve Boston'u iki ad
-// sunucusu olarak kullanıp birbirlerini yedekleyebilir miyiz? Yoksa saçma mı
-// düşünüyorum?" Saçma değil; bir barındırma sağlayıcısının yaptığının ta
-// kendisi. Bugün ns1.celikhost.com ile ns2.celikhost.com TEK makineye
-// çözülüyor, yani çift bir süs: bir yeniden başlatma ve barındırılan her alan
-// adı kararıyor. Bazı kayıt kuruluşları tam da bu yüzden aynı adresi paylaşan
-// bir çifte glue vermeyi reddeder.
-//
-// Profesyonel şekil birincil/ikincil çiftidir: bir sunucu zone verisinin
-// sahibidir, diğeri tam bir kopya tutar ve eşit yetkiyle cevap verir. İkisi de
-// HER zone'u sunar, siteyi hangi makine barındırırsa barındırsın — DNS
-// yetkisi ile web barındırma ayrı işlerdir ve bunları karıştırmak, önceki
-// ns1.<alanadı> tasarımını yanlışlayan şeydi.
-//
-// Çoğaltma, panelden panele bir API yerine PowerDNS'in kendi otomatik-birincil
-// mekanizmasını kullanır: ikincile bir kez "bu adresten gelen NOTIFY'lara
-// güven" denir ve ondan sonra birincilde oluşturulan her zone orada kendiliğinden
-// belirir. Bu, paneli tek-sunucu olarak korur — iki panelin birbiriyle
-// konuşması, kimlik doğrulaması ya da senkron kalması hiç gerekmez.
+// Eşlenmiş PowerDNS düğümü aynı anda birincil ve ikincil olabilir; çünkü bu
+// roller makineye değil zone'a aittir. Yerelde yönetilen zone'lar MASTER olur,
+// yapılandırılmış eşin bildirdikleri autoprimary üzerinden SLAVE gelir. Böylece
+// panelden panele hesap ya da API kanalı olmadan iki makine de her zone'u sunar.
 
 const (
 	dnsRoleStandalone = "standalone"
+	dnsRolePaired     = "paired"
 	dnsRolePrimary    = "primary"
 	dnsRoleSecondary  = "secondary"
 )
 
-var dnsClusterConf = "/etc/powerdns/pdns.d/celikpanel-cluster.conf"
+var (
+	dnsClusterConf = "/etc/powerdns/pdns.d/celikpanel-cluster.conf"
+
+	dnsClusterLookPath = exec.LookPath
+	dnsClusterRestart  = func() ([]byte, error) {
+		return exec.Command("systemctl", "restart", "pdns").CombinedOutput()
+	}
+	dnsClusterRetrieve = func(zone string) ([]byte, error) {
+		return exec.Command("pdns_control", "retrieve", zone).CombinedOutput()
+	}
+	dnsClusterPurge = func(zone string) ([]byte, error) {
+		return exec.Command("pdns_control", "purge", zone+"$").CombinedOutput()
+	}
+	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
+	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
+)
 
 type DNSClusterRequest struct {
-	Role string `json:"role"` // standalone | primary | secondary
-	// PeerIP is the other server's address: where to send NOTIFY and allow
-	// AXFR from (primary), or whose NOTIFYs to trust (secondary).
-	// PeerIP diğer sunucunun adresidir: NOTIFY'ın gönderileceği ve AXFR'ye izin
-	// verilecek adres (birincil) ya da NOTIFY'larına güvenilecek adres (ikincil).
+	Role string `json:"role"` // standalone | paired (legacy primary/secondary migrate)
+	// PeerIP is both the NOTIFY/autoprimary trust source and the only address
+	// allowed to AXFR local zones.
 	PeerIP string `json:"peer_ip"`
 	// PeerNS is the peer's nameserver host name. PowerDNS records it with the
 	// autoprimary entry and stamps it into zones it auto-creates.
@@ -81,15 +63,45 @@ type DNSClusterResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+func normalizeAgentDNSRole(role string) string {
+	switch role {
+	case dnsRolePaired, dnsRolePrimary, dnsRoleSecondary:
+		return dnsRolePaired
+	case dnsRoleStandalone:
+		return dnsRoleStandalone
+	default:
+		return ""
+	}
+}
+
+func dnsClusterConfig(req *DNSClusterRequest) string {
+	if req.Role != dnsRolePaired {
+		return ""
+	}
+	return fmt.Sprintf(`# Managed by CelikPanel - do not edit by hand / elle duzenlemeyin
+# DNS pair: this server owns local zones and keeps secondary copies from %s.
+# DNS cifti: bu sunucu yerel zonelarin sahibi, %s uzerinden gelenlerin ikincilidir.
+primary=yes
+secondary=yes
+autosecondary=yes
+allow-axfr-ips=%s
+also-notify=%s
+`, req.PeerIP, req.PeerIP, req.PeerIP, req.PeerIP)
+}
+
 func (a *Agent) ConfigureDNSCluster(req *DNSClusterRequest, resp *DNSClusterResponse) error {
-	if _, err := exec.LookPath("pdns_server"); err != nil {
+	if _, err := dnsClusterLookPath("pdns_server"); err != nil {
 		resp.Error = "PowerDNS is not installed on this server"
 		return nil
 	}
+	// Migrate the first machine-wide primary/secondary model. PowerDNS roles
+	// belong to zones, so a paired server can own its local zones while keeping
+	// secondary copies of zones created on its peer.
+	req.Role = normalizeAgentDNSRole(req.Role)
 	switch req.Role {
-	case dnsRoleStandalone, dnsRolePrimary, dnsRoleSecondary:
+	case dnsRoleStandalone, dnsRolePaired:
 	default:
-		resp.Error = "role must be standalone, primary or secondary"
+		resp.Error = "role must be standalone or paired"
 		return nil
 	}
 	if req.Role != dnsRoleStandalone {
@@ -114,82 +126,114 @@ func (a *Agent) ConfigureDNSCluster(req *DNSClusterRequest, resp *DNSClusterResp
 	if b, err := os.ReadFile(dnsClusterConf); err == nil {
 		previous, hadPrevious = b, true
 	}
-	restore := func() {
+	restoreConfig := func(restart bool) error {
+		var restoreErr error
 		if hadPrevious {
-			_ = os.WriteFile(dnsClusterConf, previous, 0o644)
+			if err := os.WriteFile(dnsClusterConf, previous, 0o644); err != nil {
+				restoreErr = fmt.Errorf("restore cluster configuration: %w", err)
+			}
 		} else {
-			_ = os.Remove(dnsClusterConf)
+			if err := os.Remove(dnsClusterConf); err != nil && !os.IsNotExist(err) {
+				restoreErr = fmt.Errorf("remove cluster configuration: %w", err)
+			}
 		}
-		_ = exec.Command("systemctl", "restart", "pdns").Run()
+		if restart {
+			if out, err := dnsClusterRestart(); err != nil {
+				restartErr := fmt.Errorf("restart restored PowerDNS configuration: %s", firstLine(string(out)))
+				if restoreErr != nil {
+					return fmt.Errorf("%v; %w", restoreErr, restartErr)
+				}
+				return restartErr
+			}
+		}
+		return restoreErr
 	}
 
-	var conf string
-	switch req.Role {
-	case dnsRolePrimary:
-		// The primary owns the data: it must let the secondary pull a full copy
-		// (AXFR) and must tell it the moment a zone changes (NOTIFY).
-		// Birincil verinin sahibidir: ikincilin tam kopya çekmesine (AXFR) izin
-		// vermeli ve bir zone değişir değişmez ona haber vermelidir (NOTIFY).
-		conf = fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
-# DNS cluster role: primary. The secondary at %s holds a full copy.
-# DNS küme rolü: birincil. %s adresindeki ikincil tam kopya tutar.
-primary=yes
-allow-axfr-ip=%s
-also-notify=%s
-`, req.PeerIP, req.PeerIP, req.PeerIP, req.PeerIP)
-
-	case dnsRoleSecondary:
-		// The secondary trusts NOTIFYs from the primary and creates unknown
-		// zones on its own (autosecondary). No panel-to-panel call is needed.
-		// İkincil, birincilden gelen NOTIFY'lara güvenir ve bilmediği zone'ları
-		// kendiliğinden oluşturur (autosecondary). Panelden panele çağrı gerekmez.
-		conf = fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
-# DNS cluster role: secondary of %s. Zones arrive by themselves.
-# DNS küme rolü: %s'in ikincili. Zone'lar kendiliğinden gelir.
-secondary=yes
-autosecondary=yes
-`, req.PeerIP, req.PeerIP)
+	db, err := openPdnsDB()
+	if err != nil {
+		resp.Error = fmt.Sprintf("powerdns database: %v", err)
+		return nil
 	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		resp.Error = fmt.Sprintf("powerdns database: %v", err)
+		return nil
+	}
+	defer tx.Rollback()
+	fail := func(problem error, restart bool) {
+		_ = tx.Rollback()
+		if rollbackErr := restoreConfig(restart); rollbackErr != nil {
+			resp.Error = fmt.Sprintf("%v; rollback failed: %v", problem, rollbackErr)
+			return
+		}
+		resp.Error = problem.Error()
+	}
+
+	conf := dnsClusterConfig(req)
 
 	if conf == "" {
-		_ = os.Remove(dnsClusterConf)
+		if err := os.Remove(dnsClusterConf); err != nil && !os.IsNotExist(err) {
+			fail(err, false)
+			return nil
+		}
 	} else {
-		if err := os.MkdirAll("/etc/powerdns/pdns.d", 0o755); err != nil {
-			resp.Error = err.Error()
+		if err := os.MkdirAll(filepath.Dir(dnsClusterConf), 0o755); err != nil {
+			fail(err, false)
 			return nil
 		}
 		if err := os.WriteFile(dnsClusterConf, []byte(conf), 0o644); err != nil {
-			resp.Error = err.Error()
+			fail(err, false)
 			return nil
 		}
 		_ = os.Chmod(dnsClusterConf, 0o644)
 	}
 
-	if err := applyAutoprimary(req); err != nil {
-		restore()
-		resp.Error = err.Error()
+	if err := dnsClusterApplyAutoprimaryTx(tx, req); err != nil {
+		fail(err, false)
 		return nil
 	}
-	if err := setLocalZoneType(req.Role); err != nil {
-		restore()
-		resp.Error = err.Error()
+	peerZones, err := dnsClusterSetLocalZoneTypeTx(tx, req)
+	if err != nil {
+		fail(err, false)
 		return nil
 	}
 
-	if out, err := exec.Command("systemctl", "restart", "pdns").CombinedOutput(); err != nil {
-		restore()
-		resp.Error = fmt.Sprintf("PowerDNS refused the new configuration and it was rolled back: %s", firstLine(string(out)))
+	if out, err := dnsClusterRestart(); err != nil {
+		fail(fmt.Errorf("PowerDNS refused the new configuration and it was rolled back: %s", firstLine(string(out))), true)
+		return nil
+	}
+	if err := tx.Commit(); err != nil {
+		fail(fmt.Errorf("commit powerdns database: %w", err), true)
 		return nil
 	}
 
 	resp.Applied = true
 	switch req.Role {
-	case dnsRolePrimary:
-		resp.Detail = "this server is the DNS primary; " + req.PeerIP + " will receive a copy of every zone"
-	case dnsRoleSecondary:
-		resp.Detail = "this server is a DNS secondary of " + req.PeerIP + "; zones will arrive on their own"
+	case dnsRolePaired:
+		resp.Detail = "DNS pairing enabled; local zones are copied to " + req.PeerIP + " and peer zones are copied here"
 	default:
 		resp.Detail = "this server serves DNS on its own"
+	}
+	var refreshFailures []string
+	for _, zone := range peerZones {
+		var out []byte
+		var err error
+		if req.Role == dnsRoleStandalone {
+			out, err = dnsClusterPurge(zone)
+		} else {
+			out, err = dnsClusterRetrieve(zone)
+		}
+		if err != nil {
+			detail := firstLine(string(out))
+			if detail == "" {
+				detail = err.Error()
+			}
+			refreshFailures = append(refreshFailures, zone+": "+detail)
+		}
+	}
+	if len(refreshFailures) > 0 {
+		resp.Detail += "; DNS cache/peer refresh needs attention for " + strings.Join(refreshFailures, ", ")
 	}
 	return nil
 }
@@ -199,19 +243,33 @@ autosecondary=yes
 // applyAutoprimary, ikincilin güvendiği birincillerin listesini tutar. Tablo
 // PowerDNS'in kendisinindir (`supermasters`); burada şema uydurulmaz.
 func applyAutoprimary(req *DNSClusterRequest) error {
-	db, err := sql.Open("sqlite", pdnsDBPath())
+	db, err := openPdnsDB()
 	if err != nil {
 		return fmt.Errorf("powerdns database: %w", err)
 	}
 	defer db.Close()
-
-	if _, err := db.Exec(`DELETE FROM supermasters WHERE account = 'celikpanel'`); err != nil {
+	tx, err := db.Begin()
+	if err != nil {
 		return fmt.Errorf("powerdns database: %w", err)
 	}
-	if req.Role != dnsRoleSecondary {
+	defer tx.Rollback()
+	if err := applyAutoprimaryTx(tx, req); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("powerdns database: %w", err)
+	}
+	return nil
+}
+
+func applyAutoprimaryTx(tx *sql.Tx, req *DNSClusterRequest) error {
+	if _, err := tx.Exec(`DELETE FROM supermasters WHERE account = 'celikpanel'`); err != nil {
+		return fmt.Errorf("powerdns database: %w", err)
+	}
+	if req.Role != dnsRolePaired && req.Role != dnsRoleSecondary {
 		return nil
 	}
-	_, err = db.Exec(`INSERT INTO supermasters (ip, nameserver, account) VALUES (?, ?, 'celikpanel')`,
+	_, err := tx.Exec(`INSERT INTO supermasters (ip, nameserver, account) VALUES (?, ?, 'celikpanel')`,
 		req.PeerIP, strings.TrimSuffix(req.PeerNS, "."))
 	if err != nil {
 		return fmt.Errorf("powerdns database: %w", err)
@@ -221,28 +279,97 @@ func applyAutoprimary(req *DNSClusterRequest) error {
 
 // setLocalZoneType switches the zones this server already holds between NATIVE
 // (nobody replicates) and MASTER (this server notifies a secondary). A
-// secondary's zones are created by PowerDNS itself as SLAVE and are left alone.
+// secondary's zones are created by PowerDNS itself as SLAVE. Only zones marked
+// with the CelikPanel account are retargeted or removed as pairing changes;
+// manually managed secondaries are left alone.
 // setLocalZoneType, bu sunucunun hâlihazırda tuttuğu zone'ları NATIVE (kimse
 // çoğaltmıyor) ile MASTER (bu sunucu bir ikincile haber veriyor) arasında
 // değiştirir. İkincilin zone'larını PowerDNS kendisi SLAVE olarak oluşturur ve
 // onlara dokunulmaz.
-func setLocalZoneType(role string) error {
-	db, err := sql.Open("sqlite", pdnsDBPath())
-	if err != nil {
-		return fmt.Errorf("powerdns database: %w", err)
-	}
-	defer db.Close()
-
-	switch role {
-	case dnsRolePrimary:
-		_, err = db.Exec(`UPDATE domains SET type = 'MASTER' WHERE type = 'NATIVE'`)
+func setLocalZoneTypeTx(tx *sql.Tx, req *DNSClusterRequest) ([]string, error) {
+	switch req.Role {
+	case dnsRolePaired, dnsRolePrimary:
+		if _, err := tx.Exec(`UPDATE domains SET type = 'MASTER', master = NULL WHERE UPPER(type) = 'NATIVE'`); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		rows, err := tx.Query(`
+			SELECT name
+			FROM domains
+			WHERE account = 'celikpanel'
+			  AND UPPER(type) IN ('SLAVE', 'SECONDARY')
+			  AND COALESCE(master, '') <> ?
+			ORDER BY name`, req.PeerIP)
+		if err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		var changed []string
+		for rows.Next() {
+			var zone string
+			if err := rows.Scan(&zone); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("powerdns database: %w", err)
+			}
+			changed = append(changed, zone)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		if err := rows.Close(); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		if _, err := tx.Exec(`
+			UPDATE domains
+			SET master = ?, last_check = NULL
+			WHERE account = 'celikpanel'
+			  AND UPPER(type) IN ('SLAVE', 'SECONDARY')
+			  AND COALESCE(master, '') <> ?`, req.PeerIP, req.PeerIP); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		return changed, nil
 	case dnsRoleStandalone:
-		_, err = db.Exec(`UPDATE domains SET type = 'NATIVE' WHERE type = 'MASTER'`)
+		if _, err := tx.Exec(`UPDATE domains SET type = 'NATIVE', master = NULL WHERE UPPER(type) = 'MASTER'`); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		rows, err := tx.Query(`
+			SELECT name
+			FROM domains
+			WHERE account = 'celikpanel' AND UPPER(type) IN ('SLAVE', 'SECONDARY')
+			ORDER BY name`)
+		if err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		var removed []string
+		for rows.Next() {
+			var zone string
+			if err := rows.Scan(&zone); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("powerdns database: %w", err)
+			}
+			removed = append(removed, zone)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		if err := rows.Close(); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		for _, table := range []string{"records", "comments", "domainmetadata", "cryptokeys"} {
+			if _, err := tx.Exec(`DELETE FROM ` + table + ` WHERE domain_id IN (
+				SELECT id FROM domains
+				WHERE account = 'celikpanel' AND UPPER(type) IN ('SLAVE', 'SECONDARY')
+			)`); err != nil {
+				return nil, fmt.Errorf("powerdns database: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`
+			DELETE FROM domains
+			WHERE account = 'celikpanel' AND UPPER(type) IN ('SLAVE', 'SECONDARY')`); err != nil {
+			return nil, fmt.Errorf("powerdns database: %w", err)
+		}
+		return removed, nil
 	default:
-		return nil
+		return nil, nil
 	}
-	if err != nil {
-		return fmt.Errorf("powerdns database: %w", err)
-	}
-	return nil
 }

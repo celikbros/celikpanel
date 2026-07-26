@@ -1,6 +1,86 @@
 package main
 
-import "testing"
+import (
+	"context"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/rpc"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
+)
+
+type CompensationDNSClusterRequest struct {
+	Role   string
+	PeerIP string
+	PeerNS string
+}
+
+type CompensationDNSClusterResponse struct {
+	Applied bool
+	Detail  string
+	Error   string
+}
+
+type compensationDNSAgent struct {
+	mu       sync.Mutex
+	failCall int
+	calls    []CompensationDNSClusterRequest
+}
+
+func (a *compensationDNSAgent) ConfigureDNSCluster(
+	req *CompensationDNSClusterRequest,
+	resp *CompensationDNSClusterResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.calls = append(a.calls, *req)
+	if len(a.calls) == a.failCall {
+		resp.Error = "forced rollback failure with internal detail"
+		return nil
+	}
+	resp.Applied = true
+	resp.Detail = "configured"
+	return nil
+}
+
+func attachCompensationDNSAgent(t *testing.T, p *Panel, agent *compensationDNSAgent) {
+	t.Helper()
+	serverConn, clientConn := net.Pipe()
+	server := rpc.NewServer()
+	if err := server.RegisterName("Agent", agent); err != nil {
+		t.Fatalf("register fake DNS agent: %v", err)
+	}
+	go server.ServeConn(serverConn)
+	rawClient := rpc.NewClient(clientConn)
+	p.agentClient = transport.NewReconnectingClient(rawClient)
+	t.Cleanup(func() {
+		_ = rawClient.Close()
+		_ = serverConn.Close()
+	})
+}
+
+func rejectDNSClusterSettingWrites(t *testing.T, p *Panel) {
+	t.Helper()
+	if _, err := p.db.GetDB().Exec(`
+		CREATE TRIGGER reject_dns_role_insert
+		BEFORE INSERT ON panel_settings WHEN NEW.key = 'dns_role'
+		BEGIN SELECT RAISE(ABORT, 'forced DNS role save failure'); END;
+		CREATE TRIGGER reject_dns_role_update
+		BEFORE UPDATE ON panel_settings WHEN NEW.key = 'dns_role'
+		BEGIN SELECT RAISE(ABORT, 'forced DNS role save failure'); END;
+	`); err != nil {
+		t.Fatalf("install DNS role failure trigger: %v", err)
+	}
+}
+
+func compensationAdminRequest(body string) *http.Request {
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/dns-cluster", strings.NewReader(body))
+	return req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
+}
 
 // The checklist is the guidance, so it is tested as guidance: for each real
 // situation, does it name the ONE thing that is actually wrong?
@@ -18,7 +98,7 @@ import "testing"
 // yani çiftin engellemek için var olduğu arızanın üstüne iki yeşil tik
 // çiziyordu ve operatör bunu açıkça söyledi: "berbat yönlendiriyorsun."
 func TestPlanStepsNamesTheRealProblem(t *testing.T) {
-	const here, peer = "72.62.38.15", "2.25.80.4"
+	const here, peer = "127.0.0.1", "127.0.0.2"
 	facts := func(ip1, ip2 string) []nameserverFact {
 		f := []nameserverFact{{Host: "ns1.celikhost.com"}, {Host: "ns2.celikhost.com"}}
 		for i, ip := range []string{ip1, ip2} {
@@ -39,36 +119,31 @@ func TestPlanStepsNamesTheRealProblem(t *testing.T) {
 
 	// Standalone: not a fault, but the consequence must be stated, not hidden.
 	// Tek başına: arıza değil, ama sonucu gizlenmeyip söylenmeli.
-	if got := codes(planSteps("standalone", here, "", facts(here, here))); len(got) != 1 || got["aloneNoBackup"].Code == "" {
+	if got := codes(planSteps("standalone", here, "", "", facts(here, here))); len(got) != 1 || got["aloneNoBackup"].Code == "" {
 		t.Errorf("standalone must say it has no backup, got %v", got)
 	}
 
-	// The operator's exact situation: a pair chosen, but BOTH names still on
-	// this machine. That is the headline, and it must come first.
-	// Operatörün tam durumu: çift seçilmiş ama İKİ ad da bu makinede. Manşet
-	// bu ve en başta gelmeli.
-	steps := planSteps("primary", here, peer, facts(here, here))
-	if steps[0].Code != "bothNamesHere" {
-		t.Errorf("first step = %q, want bothNamesHere — it is the whole problem", steps[0].Code)
+	// A configured pair still has work left while both names point here.
+	// Yapılandırılmış bir çiftte iki ad da burayı gösteriyorsa iş bitmemiştir.
+	got := codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, here)))
+	if !got["localName"].Done {
+		t.Error("the local nameserver should be ready")
 	}
-	if got := codes(steps); got["otherNameAtPeer"].Done {
-		t.Error("with both names here, the second name is NOT at the peer")
+	if got["peerName"].Done {
+		t.Error("with both names here, the peer nameserver is NOT ready")
 	}
 
 	// Correctly split pair: one name here, one at the other server.
 	// Doğru bölünmüş çift: bir ad burada, biri diğer sunucuda.
-	got := codes(planSteps("primary", here, peer, facts(here, peer)))
-	if !got["oneNameHere"].Done || !got["otherNameAtPeer"].Done {
+	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, peer)))
+	if !got["localName"].Done || !got["peerName"].Done {
 		t.Errorf("a correctly split pair must tick both name steps, got %+v", got)
-	}
-	if _, bad := got["bothNamesHere"]; bad {
-		t.Error("a correctly split pair must not be told both names are here")
 	}
 	// The step that happens on the OTHER machine can never be verified from
 	// here, so it must be marked manual rather than silently ticked.
 	// ÖBÜR makinede olan adım buradan asla doğrulanamaz; bu yüzden sessizce
 	// işaretlenmek yerine elle-yapılır diye işaretlenmeli.
-	if !got["peerIsSecondary"].Manual {
+	if !got["samePairOnPeer"].Manual {
 		t.Error("configuring the other server cannot be verified from here — it must be a manual step")
 	}
 
@@ -76,18 +151,123 @@ func TestPlanStepsNamesTheRealProblem(t *testing.T) {
 	// checklist must still point at the peer's address as the target.
 	// Üçüncü bir makineye çözülen ad "diğer sunucuda" değildir ve liste hedef
 	// olarak yine eşin adresini göstermelidir.
-	got = codes(planSteps("primary", here, peer, facts(here, "203.0.113.7")))
-	if got["otherNameAtPeer"].Done {
+	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, "203.0.113.7")))
+	if got["peerName"].Done {
 		t.Error("a name pointing at a third machine must not count as pointing at the peer")
 	}
-	if len(got["otherNameAtPeer"].Args) == 0 || got["otherNameAtPeer"].Args[len(got["otherNameAtPeer"].Args)-1] != peer {
-		t.Errorf("the step must name the peer address as the target, got %v", got["otherNameAtPeer"].Args)
+	if len(got["peerName"].Args) != 2 || got["peerName"].Args[1] != peer {
+		t.Errorf("the step must name the peer address as the target, got %v", got["peerName"].Args)
+	}
+}
+
+func TestNameserverPairUsableRequiresTwoDistinctNames(t *testing.T) {
+	const here, peer = "72.62.38.15", "2.25.80.4"
+	correct := []nameserverFact{
+		{Host: "ns1.celikhost.com", IPs: []string{here}, PointsHere: true},
+		{Host: "ns2.celikhost.com", IPs: []string{peer}},
+	}
+	if !nameserverPairUsable("paired", peer, correct) {
+		t.Fatal("one local name plus one peer name must be usable")
+	}
+	if nameserverPairUsable("paired", peer, []nameserverFact{
+		{Host: "ns1.celikhost.com", IPs: []string{here}, PointsHere: true},
+		{Host: "ns2.celikhost.com", IPs: []string{here}, PointsHere: true},
+	}) {
+		t.Fatal("two names on the local server are not a usable pair")
+	}
+	if nameserverPairUsable("paired", peer, []nameserverFact{
+		{Host: "ns1.celikhost.com", IPs: []string{here, peer}, PointsHere: true},
+		{Host: "ns2.celikhost.com", IPs: nil},
+	}) {
+		t.Fatal("one multi-address name must not stand in for two distinct nameservers")
+	}
+	if !nameserverPairUsable("standalone", "", []nameserverFact{
+		{Host: "ns1.celikhost.com", IPs: []string{here}, PointsHere: true},
+		{Host: "ns2.celikhost.com", IPs: []string{here}, PointsHere: true},
+	}) {
+		t.Fatal("standalone mode may deliberately serve both names locally")
+	}
+	if nameserverPairUsable("", "", []nameserverFact{
+		{Host: "ns1.celikhost.com", IPs: []string{here}, PointsHere: true},
+		{Host: "ns2.celikhost.com", IPs: []string{here}, PointsHere: true},
+	}) {
+		t.Fatal("an unconfigured role must not report a ready DNS identity")
+	}
+}
+
+func TestDNSClusterSaveFailureRestoresPreviousAgentRole(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "paired")
+	agent := &compensationDNSAgent{}
+	attachCompensationDNSAgent(t, p, agent)
+	rejectDNSClusterSettingWrites(t, p)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSCluster(recorder, compensationAdminRequest(`{"role":"standalone"}`))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500; body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "previous DNS server role was restored") {
+		t.Fatalf("rollback success was not reported: %s", recorder.Body.String())
 	}
 
-	// A secondary is told to set the OTHER server as primary, not as secondary.
-	// İkincile, öbür sunucuyu ikincil değil BİRİNCİL yapması söylenir.
-	got = codes(planSteps("secondary", peer, here, facts(peer, here)))
-	if _, ok := got["peerIsPrimary"]; !ok {
-		t.Error("a secondary must be told the other server is the primary")
+	agent.mu.Lock()
+	calls := append([]CompensationDNSClusterRequest(nil), agent.calls...)
+	agent.mu.Unlock()
+	if len(calls) != 2 {
+		t.Fatalf("agent calls = %+v, want apply plus compensation", calls)
+	}
+	if calls[0].Role != "standalone" || calls[0].PeerIP != "" || calls[0].PeerNS != "" {
+		t.Fatalf("new agent state = %+v, want standalone", calls[0])
+	}
+	if calls[1].Role != "paired" || calls[1].PeerIP != "2.25.80.4" || calls[1].PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("compensation state = %+v, want previous paired state", calls[1])
+	}
+	if got := p.setting(context.Background(), settingDNSRole); got != "paired" {
+		t.Fatalf("failed panel save changed stored role to %q", got)
+	}
+}
+
+func TestDNSClusterRollbackFailureIsExplicitAndEmptyPreviousRoleMeansStandalone(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
+	p := newDNSPanelForTest(t)
+	for key, value := range map[string]string{
+		settingNS1: "ns1.celikhost.com",
+		settingNS2: "ns2.celikhost.com",
+	} {
+		if err := p.setSetting(context.Background(), key, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	agent := &compensationDNSAgent{failCall: 2}
+	attachCompensationDNSAgent(t, p, agent)
+	rejectDNSClusterSettingWrites(t, p)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSCluster(recorder, compensationAdminRequest(
+		`{"role":"paired","peer_ip":"2.25.80.4","peer_ns":"ns2.celikhost.com"}`,
+	))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500; body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "previous DNS server role could not be restored") {
+		t.Fatalf("rollback failure was not explicit: %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "forced rollback failure") {
+		t.Fatalf("agent internals leaked in response: %s", recorder.Body.String())
+	}
+
+	agent.mu.Lock()
+	calls := append([]CompensationDNSClusterRequest(nil), agent.calls...)
+	agent.mu.Unlock()
+	if len(calls) != 2 {
+		t.Fatalf("agent calls = %+v, want apply plus failed compensation", calls)
+	}
+	if calls[1].Role != "standalone" || calls[1].PeerIP != "" || calls[1].PeerNS != "" {
+		t.Fatalf("empty previous role restored as %+v, want standalone", calls[1])
+	}
+	if got := p.setting(context.Background(), settingDNSRole); got != "" {
+		t.Fatalf("failed panel save created stored role %q", got)
 	}
 }

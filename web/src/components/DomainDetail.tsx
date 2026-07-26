@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
     LayoutGrid, Server, Network, Mail, Database, Folder, Wrench, AppWindow,
@@ -64,10 +65,16 @@ interface DomainDetailProps {
 // Yedekler/Cron/Loglar); böylece üst çubuk kısa kalır.
 export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const { t } = useI18n();
+    const [searchParams] = useSearchParams();
+    const requestedTab = searchParams.get('tab');
     const [domain, setDomain] = useState<Domain | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(requestedTab === 'dns' ? 'dns' : 'overview');
     const [activeSub, setActiveSub] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (requestedTab === 'dns') setActiveTab('dns');
+    }, [domainId, requestedTab]);
 
     useEffect(() => {
         fetch('/api/v1/domains')

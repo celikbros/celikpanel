@@ -53,14 +53,19 @@ type ZoneRecord struct {
 }
 
 type SyncDNSZoneRequest struct {
-	Domain  string       `json:"domain"`
-	Delete  bool         `json:"delete"`
-	Records []ZoneRecord `json:"records"`
+	Domain   string       `json:"domain"`
+	Delete   bool         `json:"delete"`
+	ZoneType string       `json:"zone_type,omitempty"`
+	Records  []ZoneRecord `json:"records"`
 }
 
 type SyncDNSZoneResponse struct {
 	Synced bool   `json:"synced"`
 	Error  string `json:"error,omitempty"`
+}
+
+var dnsSyncCommand = func(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).CombinedOutput()
 }
 
 // SyncDNSZone replaces one zone in the pdns database with the given record
@@ -89,22 +94,58 @@ func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec(`DELETE FROM records WHERE domain_id IN (SELECT id FROM domains WHERE name = ?)`, req.Domain); err != nil {
-		resp.Error = err.Error()
-		return nil
+	zoneType := strings.ToUpper(strings.TrimSpace(req.ZoneType))
+	if zoneType == "" {
+		zoneType = "NATIVE"
 	}
-	if _, err := tx.Exec(`DELETE FROM domains WHERE name = ?`, req.Domain); err != nil {
-		resp.Error = err.Error()
+	if zoneType != "NATIVE" && zoneType != "MASTER" {
+		resp.Error = "zone type must be NATIVE or MASTER"
 		return nil
 	}
 
-	if !req.Delete {
-		res, err := tx.Exec(`INSERT INTO domains (name, type) VALUES (?, 'NATIVE')`, req.Domain)
-		if err != nil {
+	var zoneID int64
+	var existingType string
+	err = tx.QueryRow(`SELECT id, type FROM domains WHERE name = ?`, req.Domain).Scan(&zoneID, &existingType)
+	if err == nil && (strings.EqualFold(existingType, "SLAVE") || strings.EqualFold(existingType, "SECONDARY")) {
+		resp.Error = "this zone is owned by the peer and is read-only on this server"
+		return nil
+	}
+	switch {
+	case err == sql.ErrNoRows && req.Delete:
+		// Already absent: deletion is idempotent.
+	case err == sql.ErrNoRows:
+		res, insertErr := tx.Exec(`INSERT INTO domains (name, type) VALUES (?, ?)`, req.Domain, zoneType)
+		if insertErr != nil {
+			resp.Error = insertErr.Error()
+			return nil
+		}
+		zoneID, _ = res.LastInsertId()
+	case err != nil:
+		resp.Error = err.Error()
+		return nil
+	case req.Delete:
+		for _, table := range []string{"records", "comments", "domainmetadata", "cryptokeys"} {
+			if _, err := tx.Exec(`DELETE FROM `+table+` WHERE domain_id = ?`, zoneID); err != nil {
+				resp.Error = err.Error()
+				return nil
+			}
+		}
+		if _, err := tx.Exec(`DELETE FROM domains WHERE id = ?`, zoneID); err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
-		zoneID, _ := res.LastInsertId()
+	default:
+		if _, err := tx.Exec(`UPDATE domains SET type = ?, master = NULL WHERE id = ?`, zoneType, zoneID); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+	}
+
+	if !req.Delete {
+		if _, err := tx.Exec(`DELETE FROM records WHERE domain_id = ?`, zoneID); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
 		for _, rec := range req.Records {
 			disabled := 0
 			if rec.Disabled {
@@ -124,16 +165,30 @@ func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 		return nil
 	}
 
-	// Cache flush is best-effort: without it changes appear after TTL.
-	// Önbellek boşaltma en-iyi-çabadır: onsuz değişiklikler TTL sonrası görünür.
-	_ = exec.Command("pdns_control", "purge", req.Domain+"$").Run()
-
 	// A full-zone rewrite clears the ordername/auth columns DNSSEC relies
 	// on; rectify restores them on signed zones.
 	// Tam-zone yazımı, DNSSEC'in dayandığı ordername/auth kolonlarını siler;
 	// rectify imzalı zone'larda onları geri kurar.
 	if zoneSecured(req.Domain) {
-		_ = exec.Command("pdnsutil", "rectify-zone", req.Domain).Run()
+		if out, err := runPDNSUtil(
+			[]string{"zone", "rectify", req.Domain},
+			[]string{"rectify-zone", req.Domain},
+		); err != nil {
+			resp.Error = dnssecCommandError("rectify synced zone", out, err)
+			return nil
+		}
+	}
+
+	// Rectification must complete before a primary sends NOTIFY; otherwise a
+	// fast secondary can AXFR a signed zone whose denial-of-existence ordering
+	// is not ready yet. Cache control remains best-effort after the durable DB
+	// work has succeeded.
+	_, _ = dnsSyncCommand("pdns_control", "purge", req.Domain+"$")
+	if !req.Delete && zoneType == "MASTER" {
+		if out, err := dnsSyncCommand("pdns_control", "notify", req.Domain); err != nil {
+			resp.Error = dnssecCommandError("notify peer", out, err)
+			return nil
+		}
 	}
 
 	resp.Synced = true

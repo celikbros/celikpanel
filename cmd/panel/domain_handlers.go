@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strconv"
 
@@ -24,6 +26,36 @@ type DomainResponse struct {
 	DiskUsage   int64  `json:"disk_usage"`
 	Bandwidth   int64  `json:"bandwidth"`
 	ParentID    *int   `json:"parent_id,omitempty"`
+}
+
+const errCodeDNSPublicationPending = "DNS_PUBLICATION_PENDING"
+
+// domainCreatePartialSuccess is deliberately an error-shaped response with
+// enough success context for the client to leave the create flow. The domain
+// and site already exist, so asking the user to submit Create again would only
+// hit the duplicate-domain guard and strand them in the modal.
+type domainCreatePartialSuccess struct {
+	Error          string `json:"error"`
+	Code           string `json:"code"`
+	PartialSuccess bool   `json:"partial_success"`
+	DomainID       int    `json:"domain_id"`
+	Domain         string `json:"domain"`
+	ZoneExists     bool   `json:"zone_exists"`
+	Action         string `json:"action"`
+}
+
+func writeDomainCreatePartialSuccess(w http.ResponseWriter, domainID int, domain string, zoneExists bool) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusConflict)
+	_ = json.NewEncoder(w).Encode(domainCreatePartialSuccess{
+		Error:          "the domain was created, but its DNS setup is incomplete; review it in the domain's DNS management page",
+		Code:           errCodeDNSPublicationPending,
+		PartialSuccess: true,
+		DomainID:       domainID,
+		Domain:         domain,
+		ZoneExists:     zoneExists,
+		Action:         "/domains/" + url.PathEscape(domain) + "?tab=dns",
+	})
 }
 
 // handleDomains lists all domains
@@ -146,6 +178,12 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
 			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served",
 			"/services")
+		return
+	}
+	if !p.dnsIdentityConfigured(r.Context()) {
+		writeCodedError(w, http.StatusConflict, errCodeDNSSettingsRequired,
+			"DNS identity is not configured — save the shared nameserver names and operating mode under Settings before adding a domain",
+			"/settings")
 		return
 	}
 	if req.ProjectType == "php" || req.ProjectType == "static" {
@@ -289,21 +327,29 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			`UPDATE domains SET parent_domain_id = ? WHERE id = ?`, parentID, result.DomainID)
 		p.addSubdomainToParentZone(r.Context(), parentName, req.Domain)
 	} else {
-		// DNS zone with the full default record set. Best-effort: the site
-		// itself is already created, and the zone can always be (re)created
-		// from the domain's DNS page. Imported domains never pass through
-		// here — their records come from the archive.
-		// Tam varsayılan kayıt setiyle DNS zone. En-iyi-çaba: sitenin kendisi
-		// zaten oluştu ve zone, domain'in DNS sayfasından her zaman (yeniden)
-		// oluşturulabilir. İçe aktarılan domain'ler buradan geçmez.
-		if _, _, err := p.createZoneWithTemplate(r.Context(), req.Domain); err != nil {
-			log.Printf("dns zone template for %s: %v", req.Domain, err)
-		} else {
-			p.syncZoneToDNS(r.Context(), req.Domain, false)
+		// The site already exists, so a DNS failure must not trigger a risky
+		// rollback. Return its identity as an explicit partial success: the UI can
+		// close Create, refresh the list and continue in this domain's management
+		// screen instead of telling the operator to submit a duplicate Create.
+		zoneExists, err := p.publishNewTopLevelDomainZone(r.Context(), req.Domain)
+		if err != nil {
+			log.Printf("dns zone publication for %s: %v", req.Domain, err)
+			writeDomainCreatePartialSuccess(w, result.DomainID, req.Domain, zoneExists)
+			return
 		}
 	}
 
 	json.NewEncoder(w).Encode(result)
+}
+
+func (p *Panel) publishNewTopLevelDomainZone(ctx context.Context, domain string) (bool, error) {
+	if _, _, err := p.createZoneWithTemplate(ctx, domain); err != nil {
+		return false, fmt.Errorf("create DNS zone: %w", err)
+	}
+	if err := p.syncZoneToDNS(ctx, domain, false); err != nil {
+		return true, fmt.Errorf("publish DNS zone: %w", err)
+	}
+	return true, nil
 }
 
 // handleDeleteDomain deletes a domain

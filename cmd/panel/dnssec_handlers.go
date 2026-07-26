@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -27,6 +28,29 @@ import (
 // yayımladığıyla eşleşir.
 var mailTLSAPorts = []string{"25", "110", "465", "587", "993", "995"}
 
+type dnssecAgentResponse struct {
+	Secured bool     `json:"secured"`
+	DS      []string `json:"ds,omitempty"`
+	Error   string   `json:"error,omitempty"`
+}
+
+// dnssecResultError keeps failures returned inside an otherwise successful
+// RPC response visible to the operator. It also protects a newer panel from an
+// older agent that used to report signing success even when pdnsutil produced
+// no DS record to publish at the registrar.
+func dnssecResultError(resp dnssecAgentResponse, signing bool) string {
+	if resp.Error != "" {
+		return resp.Error
+	}
+	if resp.Secured && len(resp.DS) == 0 {
+		return "DNSSEC is not ready: the signed zone produced no DS records"
+	}
+	if signing && !resp.Secured {
+		return "DNSSEC signing did not complete"
+	}
+	return ""
+}
+
 // handleDomainDNSSEC: GET returns signing status + DS records; POST signs
 // the zone (admins and the domain's managers — same dispatcher authz as the
 // other domain endpoints).
@@ -41,17 +65,17 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		return
 	}
 
-	var resp struct {
-		Secured bool     `json:"secured"`
-		DS      []string `json:"ds,omitempty"`
-		Error   string   `json:"error,omitempty"`
-	}
+	var resp dnssecAgentResponse
 	switch r.Method {
 	case http.MethodGet:
 		if err := p.agentClient.Call("Agent.DNSSECStatus", &struct {
 			Zone string `json:"zone"`
 		}{Zone: domain}, &resp); err != nil {
 			writeAgentError(w, err, "DNSSEC")
+			return
+		}
+		if problem := dnssecResultError(resp, false); problem != "" {
+			writeClientError(w, http.StatusConflict, problem)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"secured": resp.Secured, "ds": resp.DS})
@@ -63,12 +87,21 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			writeAgentError(w, err, "DNSSEC")
 			return
 		}
-		if resp.Error != "" {
-			writeClientError(w, http.StatusConflict, resp.Error)
+		if problem := dnssecResultError(resp, true); problem != "" {
+			writeClientError(w, http.StatusConflict, problem)
+			return
+		}
+		// Bump the ledger SOA serial, republish the now-signed primary, rectify
+		// it, and only then send NOTIFY. This forces a full signed transfer path
+		// before the registrar-facing DS is handed back as a successful result.
+		if err := p.syncZoneToDNS(r.Context(), domain, false); err != nil {
+			log.Printf("dnssec publish %s: %v", domain, err)
+			writeClientError(w, http.StatusConflict,
+				"the zone was signed locally but its updated SOA could not be published; check the PowerDNS pair and retry")
 			return
 		}
 		p.audit(r, "dnssec.sign", "domain", domainID)
-		json.NewEncoder(w).Encode(map[string]any{"secured": true, "ds": resp.DS})
+		json.NewEncoder(w).Encode(map[string]any{"secured": resp.Secured, "ds": resp.DS})
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

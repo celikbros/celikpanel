@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -276,30 +277,68 @@ func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domai
 	})
 }
 
-// ensureZone returns the pdns zone id for the domain, creating the zone with
-// SOA/NS defaults when it does not exist yet (smart default: applying a mail
-// record should not require a manual zone step first).
-// ensureZone, domain için pdns zone kimliğini döndürür; zone henüz yoksa
-// SOA/NS varsayılanlarıyla oluşturur (akıllı varsayılan: bir mail kaydını
-// uygulamak önce elle zone adımı gerektirmemeli).
+// ensureZone returns the ledger zone id, creating only the authoritative
+// SOA/NS baseline needed by the mail-auth flow. It uses the server's shared
+// nameserver identity and current cluster kind; all rows are committed
+// together, so a failed baseline never leaves a half-created zone behind.
+// ensureZone, defterdeki zone kimliğini döndürür; yoksa posta-kimlik akışının
+// gerektirdiği yetkili SOA/NS temelini oluşturur. Sunucunun ortak ad sunucusu
+// kimliğini ve güncel küme türünü kullanır; bütün satırlar birlikte kaydedilir,
+// dolayısıyla başarısız bir temel yarım zone bırakmaz.
 func (p *Panel) ensureZone(ctx context.Context, domain string) (int, error) {
-	pool := p.db.GetDB()
-	var zoneID int
-	if err := pool.QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID); err == nil {
-		return zoneID, nil
+	ns1, ns2 := p.configuredNameservers(ctx)
+	if ns1 == "" || ns2 == "" {
+		return 0, fmt.Errorf("nameserver identity is not configured")
 	}
+	if !p.dnsIdentityConfigured(ctx) {
+		return 0, fmt.Errorf("DNS operating mode is not configured")
+	}
+	zoneType := p.dnsZoneType(ctx)
 
-	result, err := pool.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, 'NATIVE')`, domain)
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
-	id64, _ := result.LastInsertId()
+	defer tx.Rollback()
+
+	var zoneID int
+	err = tx.QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
+	if err == nil {
+		return zoneID, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, err
+	}
+
+	result, err := tx.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, ?)`, domain, zoneType)
+	if err != nil {
+		return 0, err
+	}
+	id64, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
 	zoneID = int(id64)
 
-	soa := fmt.Sprintf("ns1.%s hostmaster.%s %s 10800 3600 604800 3600", domain, domain, time.Now().Format("2006010215"))
-	_, _ = pool.ExecContext(ctx, `INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'SOA', ?, 3600)`, zoneID, domain, soa)
-	_, _ = pool.ExecContext(ctx, `INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'NS', ?, 3600)`, zoneID, domain, "ns1."+domain)
-	_, _ = pool.ExecContext(ctx, `INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'NS', ?, 3600)`, zoneID, domain, "ns2."+domain)
+	soa := fmt.Sprintf("%s hostmaster.%s %s 10800 3600 604800 3600",
+		ns1, domain, time.Now().UTC().Format("2006010200"))
+	for _, record := range []struct {
+		typ     string
+		content string
+	}{
+		{typ: "SOA", content: soa},
+		{typ: "NS", content: ns1},
+		{typ: "NS", content: ns2},
+	} {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, ?, ?, 3600)`,
+			zoneID, domain, record.typ, record.content); err != nil {
+			return 0, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
 	return zoneID, nil
 }
 
