@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"net"
+	"testing"
+)
 
 // The verdict this endpoint prints is the sentence an operator acts on, so it
 // must never round "half connected" up to "connected". The distinction that
@@ -165,5 +170,139 @@ func TestPanelBaseDomainIsTheServersDomainNotTheHostedOne(t *testing.T) {
 		if got := baseDomainOf(host); got != want {
 			t.Errorf("baseDomainOf(%q) = %q, want %q", host, got, want)
 		}
+	}
+}
+
+type fakeConnectionDNSResolver struct {
+	nameservers []*net.NS
+	addresses   []string
+	nsErr       error
+	hostErr     error
+}
+
+func (r fakeConnectionDNSResolver) LookupNS(context.Context, string) ([]*net.NS, error) {
+	return r.nameservers, r.nsErr
+}
+
+func (r fakeConnectionDNSResolver) LookupHost(context.Context, string) ([]string, error) {
+	return r.addresses, r.hostErr
+}
+
+func nsRecords(names ...string) []*net.NS {
+	out := make([]*net.NS, 0, len(names))
+	for _, name := range names {
+		out = append(out, &net.NS{Host: name})
+	}
+	return out
+}
+
+func TestObserveConnectionResolversSkipsUnavailableAndKeepsPartialAnswers(t *testing.T) {
+	sources := []namedConnectionResolver{
+		{
+			Name: "unavailable",
+			Resolver: fakeConnectionDNSResolver{
+				nsErr: errors.New("blocked"), hostErr: errors.New("blocked"),
+			},
+		},
+		{
+			Name: "address-only",
+			Resolver: fakeConnectionDNSResolver{
+				nsErr: errors.New("NS timeout"), addresses: []string{"2.25.80.4", "2.25.80.4"},
+			},
+		},
+	}
+
+	got := observeConnectionResolvers(context.Background(), "biovision.health", sources)
+	if len(got) != 1 {
+		t.Fatalf("observations = %d, want 1: %#v", len(got), got)
+	}
+	if got[0].Resolver != "address-only" || len(got[0].IPs) != 1 || got[0].IPs[0] != "2.25.80.4" {
+		t.Fatalf("unexpected partial observation: %#v", got[0])
+	}
+}
+
+func TestSummarizeConnectionObservationsReportsSplitPropagation(t *testing.T) {
+	base := connectionCheck{
+		Domain:      "biovision.health",
+		ServerIP:    "2.25.80.4",
+		ServerV6:    "2a02:4780:75:efdb::1",
+		Nameservers: []string{"ns1.celikhost.com", "ns2.celikhost.com"},
+	}
+	newView := func(resolver string) connectionResolverObservation {
+		return connectionResolverObservation{
+			Resolver:    resolver,
+			Nameservers: []string{"ns1.celikhost.com", "ns2.celikhost.com"},
+			IPs:         []string{"2.25.80.4", "2a02:4780:75:efdb::1"},
+		}
+	}
+	oldNSView := func(resolver string) connectionResolverObservation {
+		return connectionResolverObservation{
+			Resolver:    resolver,
+			Nameservers: []string{"lunar.dns-parking.com", "solar.dns-parking.com"},
+			IPs:         []string{"2.25.80.4", "2a02:4780:75:efdb::1"},
+		}
+	}
+	observations := []connectionResolverObservation{
+		newView("Cloudflare"), oldNSView("Google"), newView("Quad9"), oldNSView("OpenDNS"),
+	}
+
+	selected, enriched, propagating, known := summarizeConnectionObservations(base, observations)
+	if !known || !propagating {
+		t.Fatalf("known=%v propagating=%v, want true/true", known, propagating)
+	}
+	if selected.Status != "delegated" || !selected.SSLReady {
+		t.Fatalf("selected = %#v, want delegated and SSL-ready", selected)
+	}
+	delegated, addressOnly := 0, 0
+	for _, observation := range enriched {
+		switch observation.Status {
+		case "delegated":
+			delegated++
+		case "a_record":
+			addressOnly++
+		}
+	}
+	if delegated != 2 || addressOnly != 2 {
+		t.Fatalf("statuses delegated=%d a_record=%d: %#v", delegated, addressOnly, enriched)
+	}
+
+	// Resolver completion order must not change the verdict.
+	reversed := []connectionResolverObservation{
+		oldNSView("OpenDNS"), newView("Quad9"), oldNSView("Google"), newView("Cloudflare"),
+	}
+	selectedAgain, _, propagatingAgain, knownAgain := summarizeConnectionObservations(base, reversed)
+	if !knownAgain || !propagatingAgain || selectedAgain.Status != selected.Status ||
+		connectionObservationSignature(selectedAgain) != connectionObservationSignature(selected) {
+		t.Fatalf("order changed verdict: first=%#v second=%#v", selected, selectedAgain)
+	}
+}
+
+func TestSummarizeConnectionObservationsUsesMajorityView(t *testing.T) {
+	base := connectionCheck{
+		ServerIP:    "2.25.80.4",
+		Nameservers: []string{"ns1.celikhost.com", "ns2.celikhost.com"},
+	}
+	newView := connectionResolverObservation{
+		Resolver: "new", Nameservers: base.Nameservers, IPs: []string{base.ServerIP},
+	}
+	oldView := func(resolver string) connectionResolverObservation {
+		return connectionResolverObservation{
+			Resolver:    resolver,
+			Nameservers: []string{"lunar.dns-parking.com", "solar.dns-parking.com"},
+			IPs:         []string{"2.57.91.91"},
+		}
+	}
+	selected, _, propagating, known := summarizeConnectionObservations(base, []connectionResolverObservation{
+		newView, oldView("old-1"), oldView("old-2"), oldView("old-3"),
+	})
+	if !known || !propagating || selected.Status != "elsewhere" {
+		t.Fatalf("selected=%#v known=%v propagating=%v", selected, known, propagating)
+	}
+}
+
+func TestSummarizeConnectionObservationsUnknownWhenAllResolversFail(t *testing.T) {
+	_, enriched, propagating, known := summarizeConnectionObservations(connectionCheck{}, nil)
+	if known || propagating || len(enriched) != 0 {
+		t.Fatalf("known=%v propagating=%v enriched=%#v", known, propagating, enriched)
 	}
 }

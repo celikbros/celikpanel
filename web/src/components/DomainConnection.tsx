@@ -39,8 +39,16 @@ interface Connection {
     nameservers: string[];
     live_nameservers: string[];
     live_ips: string[];
-    status: 'delegated' | 'delegated_mismatch' | 'a_record' | 'elsewhere' | 'unresolved';
+    status: 'delegated' | 'delegated_mismatch' | 'a_record' | 'elsewhere' | 'unresolved' | 'unknown';
     ssl_ready: boolean;
+    propagation_pending?: boolean;
+    resolver_observations?: {
+        resolver: string;
+        nameservers: string[];
+        ips: string[];
+        status: string;
+        ssl_ready: boolean;
+    }[];
     glue_needed: boolean;
     nameservers_usable: boolean;
     nameserver_facts?: { host: string; ips: string[]; points_here: boolean }[];
@@ -79,7 +87,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
     const load = useCallback(async () => {
         setBusy(true);
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/connection`);
+            const res = await fetch(`/api/v1/domains/${domainId}/connection`, { cache: 'no-store' });
             if (res.ok) setC(await res.json());
         } catch {
             /* the card simply stays quiet if the check cannot run */
@@ -97,8 +105,9 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
     }
     if (!c) return null;
 
-    const ok = c.status === 'delegated' || c.status === 'a_record';
-    const tone = ok ? 'border-success/40 bg-success/5' : 'border-warning/40 bg-warning/5';
+    const connected = c.status === 'delegated' || c.status === 'a_record';
+    const stable = connected && !c.propagation_pending;
+    const tone = stable ? 'border-success/40 bg-success/5' : 'border-warning/40 bg-warning/5';
 
     return (
         <section className={`rounded-xl border ${tone} p-5`}>
@@ -109,8 +118,12 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-fg">{t('conn.title')}</h3>
                     <p className="flex items-center gap-1.5 text-xs">
-                        <StatusDot ok={ok} />
-                        <span className={ok ? 'text-success' : 'text-warning'}>{t(`conn.status.${c.status}` as Parameters<typeof t>[0])}</span>
+                        <StatusDot ok={stable} />
+                        <span className={stable ? 'text-success' : 'text-warning'}>
+                            {c.propagation_pending
+                                ? t('conn.status.propagating')
+                                : t(`conn.status.${c.status}` as Parameters<typeof t>[0])}
+                        </span>
                     </p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
@@ -141,7 +154,29 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 </div>
             </div>
 
-            {ok ? (
+            {c.propagation_pending && c.resolver_observations?.length ? (
+                <div className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3">
+                    <p className="text-sm font-medium text-fg">{t('conn.propagation.title')}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-fg-muted">{t('conn.propagation.desc')}</p>
+                    <ul className="mt-2 space-y-1">
+                        {c.resolver_observations.map((observation) => (
+                            <li key={observation.resolver} className="text-xs text-fg-muted">
+                                <span className="font-medium text-fg">{observation.resolver}</span>
+                                {' — NS '}
+                                <span className="font-mono">
+                                    {observation.nameservers.length ? observation.nameservers.join(', ') : t('conn.none')}
+                                </span>
+                                {' · IP '}
+                                <span className="font-mono">
+                                    {observation.ips.length ? observation.ips.join(', ') : t('conn.none')}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : null}
+
+            {connected ? (
                 <p className="rounded-lg bg-success/10 p-3 text-sm text-fg">
                     {c.status === 'delegated' ? t('conn.okDelegated') : t('conn.okARecord')}
                 </p>
@@ -223,12 +258,18 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 whether it can work yet. / İnsanların buraya en sık geliş sebebi
                 SSL'dir; bu yüzden şimdilik çalışıp çalışamayacağını düz söyle. */}
             <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
-                {c.ssl_ready ? (
+                {c.ssl_ready && !c.propagation_pending ? (
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 ) : (
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 )}
-                <span>{c.ssl_ready ? t('conn.sslReady') : t('conn.sslBlocked')}</span>
+                <span>
+                    {c.ssl_ready
+                        ? c.propagation_pending
+                            ? t('conn.sslPropagating')
+                            : t('conn.sslReady')
+                        : t('conn.sslBlocked')}
+                </span>
             </p>
         </section>
     );
