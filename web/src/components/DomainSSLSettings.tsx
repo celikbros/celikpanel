@@ -8,6 +8,7 @@ import type { TranslationKey } from '../i18n/en';
 interface DomainSSLSettingsProps {
     domainId: number;
     domainName: string;
+    onCertificateChange?: (hasCertificate: boolean) => void;
 }
 
 interface SSLCertificate {
@@ -37,7 +38,7 @@ interface SSLData {
     settings: SSLSettings;
 }
 
-export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsProps) {
+export function DomainSSLSettings({ domainId, domainName, onCertificateChange }: DomainSSLSettingsProps) {
     const { t } = useI18n();
     const [data, setData] = useState<SSLData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -75,7 +76,9 @@ export function DomainSSLSettings({ domainId, domainName }: DomainSSLSettingsPro
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl`);
             if (!res.ok) throw new Error();
-            setData(await res.json());
+            const nextData: SSLData = await res.json();
+            setData(nextData);
+            onCertificateChange?.(nextData.has_certificate);
             const mailRes = await fetch(`/api/v1/domains/${domainId}/ssl/mail`);
             if (mailRes.ok) setSecureMail((await mailRes.json()).secure_mail === true);
         } catch {

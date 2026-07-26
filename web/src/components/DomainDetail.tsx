@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useCallback, useState, useEffect, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
@@ -7,6 +7,7 @@ import {
 import { DomainPHPSettings } from './DomainPHPSettings';
 import { DomainGeneralSettings } from './DomainGeneralSettings';
 import { DomainSSLSettings } from './DomainSSLSettings';
+import { DomainSSLOverviewCard } from './DomainSSLOverviewCard';
 import { DomainConnection } from './DomainConnection';
 import { DomainLogsViewer } from './DomainLogsViewer';
 import { DomainDatabaseManager } from './DomainDatabaseManager';
@@ -71,6 +72,12 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(requestedTab === 'dns' ? 'dns' : 'overview');
     const [activeSub, setActiveSub] = useState<Record<string, string>>({});
+
+    const handleCertificateChange = useCallback((hasCertificate: boolean) => {
+        setDomain((currentDomain) => (
+            currentDomain ? { ...currentDomain, ssl_enabled: hasCertificate } : currentDomain
+        ));
+    }, []);
 
     useEffect(() => {
         if (requestedTab === 'dns') setActiveTab('dns');
@@ -150,7 +157,17 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 { id: 'general', labelKey: 'domain.sub.general', render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> },
                 { id: 'type', labelKey: 'domain.sub.hostingType', render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> },
                 ...(projectType === 'php' ? [{ id: 'php', labelKey: 'domain.sub.php', render: () => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} /> } satisfies SubDef] : []),
-                { id: 'ssl', labelKey: 'domain.sub.ssl', render: () => <DomainSSLSettings domainId={domain.id} domainName={domain.domain_name} /> },
+                {
+                    id: 'ssl',
+                    labelKey: 'domain.sub.ssl',
+                    render: () => (
+                        <DomainSSLSettings
+                            domainId={domain.id}
+                            domainName={domain.domain_name}
+                            onCertificateChange={handleCertificateChange}
+                        />
+                    ),
+                },
             ],
         } satisfies TabDef] : []),
         { id: 'dns', labelKey: 'domain.tab.dns', icon: Network, render: () => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} /> },
@@ -290,7 +307,20 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
 
                     <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
                         {activeTab === 'overview' ? (
-                            <Overview tabs={tabs} onGo={setActiveTab} />
+                            <Overview
+                                domainId={domain.id}
+                                tabs={tabs}
+                                onCertificateChange={handleCertificateChange}
+                                onGo={(tabId, subId) => {
+                                    if (subId) {
+                                        setActiveSub((currentSubs) => ({
+                                            ...currentSubs,
+                                            [tabId]: subId,
+                                        }));
+                                    }
+                                    setActiveTab(tabId);
+                                }}
+                            />
                         ) : current.subs ? (
                             current.subs.find((s) => s.id === subId)!.render()
                         ) : (
@@ -319,11 +349,29 @@ interface TabDef {
 // few, rather than Plesk's wall of icons.
 // Genel Bakış kompakt bir başlatıcıdır — her bölüm için kutucuklar; Plesk'in
 // ikon duvarı yerine görev-odaklı ve az.
-function Overview({ tabs, onGo }: { tabs: TabDef[]; onGo: (id: string) => void }) {
+function Overview({
+    domainId,
+    tabs,
+    onGo,
+    onCertificateChange,
+}: {
+    domainId: number;
+    tabs: TabDef[];
+    onGo: (id: string, subId?: string) => void;
+    onCertificateChange: (hasCertificate: boolean) => void;
+}) {
     const { t } = useI18n();
     const areas = tabs.filter((tb) => tb.id !== 'overview');
+    const hasHosting = areas.some((tb) => tb.id === 'hosting');
     return (
         <div>
+            {hasHosting && (
+                <DomainSSLOverviewCard
+                    domainId={domainId}
+                    onOpen={() => onGo('hosting', 'ssl')}
+                    onCertificateChange={onCertificateChange}
+                />
+            )}
             <p className="mb-4 text-sm text-fg-muted">{t('domain.overview.hint')}</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {areas.map((tb) => {
