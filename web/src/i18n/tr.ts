@@ -870,7 +870,7 @@ export const tr: Record<TranslationKey, string> = {
     'dnssrv.step.localName': '{a} bu sunucuya ({b}) çözülmelidir. Adres kaydını bu ad sunucusu adının yönetildiği yerde güncelleyin.',
     'dnssrv.step.peerName': '{a} eş sunucuya ({b}) çözülmelidir. Adres kaydını bu ad sunucusu adının yönetildiği yerde güncelleyin.',
 	'dnssrv.step.peerPort': 'Eş sunucu AXFR için TCP/53 trafiğini kabul etmelidir. Bu otomatik kontrol o bağlantıyı doğrular.',
-    'dnssrv.step.samePairOnPeer': 'Elle doğrulama: eş sunucuda ({a}) aynı iki ad sunucusu adının kayıtlı, Eşlenmiş düğüm’ün seçili ve bu sunucunun eş olarak gösterildiğini kontrol edin.',
+    'dnssrv.step.samePairOnPeer': 'Eş sunucu ({a}) aynı ad sunucusu çiftini sunmalıdır. Bu durum doğrudan DNS sorgusuyla otomatik denetlenir.',
     'dnssrv.saveRole': 'Çalışma modunu kaydet',
     'dnssrv.roleSaved': 'DNS çalışma modu kaydedildi',
     'help.button': 'Yardım',

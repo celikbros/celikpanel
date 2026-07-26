@@ -164,7 +164,7 @@ type clusterStep struct {
 // planSteps works out what still has to happen from saved topology and live
 // address facts. Its four paired-mode steps have stable argument positions so
 // the UI never has to guess which value is a hostname and which is an IP.
-func planSteps(role, serverIP, peerIP, peerNS string, facts []nameserverFact) []clusterStep {
+func planSteps(role, serverIP, peerIP, peerNS string, facts []nameserverFact, peerPairVerified bool) []clusterStep {
 	if role == "standalone" {
 		return []clusterStep{{Code: "aloneNoBackup", Manual: true}}
 	}
@@ -189,8 +189,84 @@ func planSteps(role, serverIP, peerIP, peerNS string, facts []nameserverFact) []
 		{Code: "localName", Done: localReady, Manual: true, Args: []string{localNS, serverIP}},
 		{Code: "peerName", Done: peerReady, Manual: true, Args: []string{peerNS, peerIP}},
 		{Code: "peerPort", Done: peerIP != "" && dnsPortAnswers(peerIP)},
-		{Code: "samePairOnPeer", Manual: true, Args: []string{peerIP}},
+		{Code: "samePairOnPeer", Done: peerPairVerified, Args: []string{peerIP}},
 	}
+}
+
+type nameserverSetResolver interface {
+	LookupNS(context.Context, string) ([]*net.NS, error)
+}
+
+// peerServesNameserverPair asks the configured peer directly, bypassing the
+// operating system resolver and its cache. A peer that returns the exact saved
+// NS set for one of our locally managed zones (or for the parent that owns the
+// nameserver names) proves the useful fact: both machines are serving the same
+// DNS identity. That is stronger than asking an operator to compare two forms.
+func (p *Panel) peerServesNameserverPair(ctx context.Context, peerIP, ns1, ns2 string) bool {
+	if net.ParseIP(peerIP) == nil || ns1 == "" || ns2 == "" {
+		return false
+	}
+
+	var zones []string
+	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT name FROM pdns_domains ORDER BY id LIMIT 8`)
+	if err == nil {
+		for rows.Next() {
+			var zone string
+			if rows.Scan(&zone) == nil {
+				zones = append(zones, zone)
+			}
+		}
+		_ = rows.Close()
+	}
+	for _, host := range []string{ns1, ns2} {
+		if owner := baseDomainOf(host); owner != "" {
+			zones = append(zones, owner)
+		}
+	}
+
+	dialer := net.Dialer{Timeout: 1500 * time.Millisecond}
+	resolver := &net.Resolver{
+		PreferGo:     true,
+		StrictErrors: true,
+		Dial: func(queryCtx context.Context, network, _ string) (net.Conn, error) {
+			return dialer.DialContext(queryCtx, network, net.JoinHostPort(peerIP, "53"))
+		},
+	}
+	queryCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	return resolverServesNameserverPair(queryCtx, resolver, zones, ns1, ns2)
+}
+
+func resolverServesNameserverPair(
+	ctx context.Context,
+	resolver nameserverSetResolver,
+	zones []string,
+	ns1, ns2 string,
+) bool {
+	want1 := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(ns1), "."))
+	want2 := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(ns2), "."))
+	seenZones := make(map[string]bool)
+	for _, rawZone := range zones {
+		zone := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(rawZone), "."))
+		if zone == "" || seenZones[zone] {
+			continue
+		}
+		seenZones[zone] = true
+		records, err := resolver.LookupNS(ctx, zone)
+		if err != nil {
+			continue
+		}
+		got1, got2 := false, false
+		for _, record := range records {
+			host := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(record.Host), "."))
+			got1 = got1 || host == want1
+			got2 = got2 || host == want2
+		}
+		if got1 && got2 {
+			return true
+		}
+	}
+	return false
 }
 
 func containsStr(list []string, want string) bool {
@@ -241,7 +317,11 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		}
 		v.NS1, v.NS2 = p.serverNameservers(r.Context())
 		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
-		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.PeerNS, v.Facts)
+		peerPairVerified := false
+		if v.Role == "paired" && v.PeerIP != "" {
+			peerPairVerified = p.peerServesNameserverPair(r.Context(), v.PeerIP, v.NS1, v.NS2)
+		}
+		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.PeerNS, v.Facts, peerPairVerified)
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:

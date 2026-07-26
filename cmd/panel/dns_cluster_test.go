@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,20 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+type fakeNameserverSetResolver map[string][]string
+
+func (f fakeNameserverSetResolver) LookupNS(_ context.Context, zone string) ([]*net.NS, error) {
+	hosts, ok := f[zone]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	out := make([]*net.NS, 0, len(hosts))
+	for _, host := range hosts {
+		out = append(out, &net.NS{Host: host})
+	}
+	return out, nil
+}
 
 type CompensationDNSClusterRequest struct {
 	Role   string
@@ -119,13 +134,13 @@ func TestPlanStepsNamesTheRealProblem(t *testing.T) {
 
 	// Standalone: not a fault, but the consequence must be stated, not hidden.
 	// Tek başına: arıza değil, ama sonucu gizlenmeyip söylenmeli.
-	if got := codes(planSteps("standalone", here, "", "", facts(here, here))); len(got) != 1 || got["aloneNoBackup"].Code == "" {
+	if got := codes(planSteps("standalone", here, "", "", facts(here, here), false)); len(got) != 1 || got["aloneNoBackup"].Code == "" {
 		t.Errorf("standalone must say it has no backup, got %v", got)
 	}
 
 	// A configured pair still has work left while both names point here.
 	// Yapılandırılmış bir çiftte iki ad da burayı gösteriyorsa iş bitmemiştir.
-	got := codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, here)))
+	got := codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, here), false))
 	if !got["localName"].Done {
 		t.Error("the local nameserver should be ready")
 	}
@@ -135,28 +150,53 @@ func TestPlanStepsNamesTheRealProblem(t *testing.T) {
 
 	// Correctly split pair: one name here, one at the other server.
 	// Doğru bölünmüş çift: bir ad burada, biri diğer sunucuda.
-	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, peer)))
+	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, peer), true))
 	if !got["localName"].Done || !got["peerName"].Done {
 		t.Errorf("a correctly split pair must tick both name steps, got %+v", got)
 	}
-	// The step that happens on the OTHER machine can never be verified from
-	// here, so it must be marked manual rather than silently ticked.
-	// ÖBÜR makinede olan adım buradan asla doğrulanamaz; bu yüzden sessizce
-	// işaretlenmek yerine elle-yapılır diye işaretlenmeli.
-	if !got["samePairOnPeer"].Manual {
-		t.Error("configuring the other server cannot be verified from here — it must be a manual step")
+	// A direct query to the peer turns the former manual comparison into an
+	// automatic operational check.
+	// Eşe doğrudan sorgu, eski elle karşılaştırmayı otomatik çalışma
+	// denetimine dönüştürür.
+	if !got["samePairOnPeer"].Done || got["samePairOnPeer"].Manual {
+		t.Error("a peer serving the saved pair must pass the automatic pair check")
 	}
 
 	// A name that resolves to a third machine is not "at the peer", and the
 	// checklist must still point at the peer's address as the target.
 	// Üçüncü bir makineye çözülen ad "diğer sunucuda" değildir ve liste hedef
 	// olarak yine eşin adresini göstermelidir.
-	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, "203.0.113.7")))
+	got = codes(planSteps("paired", here, peer, "ns2.celikhost.com", facts(here, "203.0.113.7"), false))
 	if got["peerName"].Done {
 		t.Error("a name pointing at a third machine must not count as pointing at the peer")
 	}
 	if len(got["peerName"].Args) != 2 || got["peerName"].Args[1] != peer {
 		t.Errorf("the step must name the peer address as the target, got %v", got["peerName"].Args)
+	}
+}
+
+func TestResolverServesNameserverPair(t *testing.T) {
+	resolver := fakeNameserverSetResolver{
+		"empty.example": {"ns9.example.net."},
+		"celikhost.com": {"NS2.CELIKHOST.COM.", "ns1.celikhost.com."},
+	}
+	if !resolverServesNameserverPair(
+		context.Background(),
+		resolver,
+		[]string{"empty.example", "celikhost.com", "celikhost.com"},
+		"ns1.celikhost.com",
+		"ns2.celikhost.com",
+	) {
+		t.Fatal("the exact pair served by the peer was not detected")
+	}
+	if resolverServesNameserverPair(
+		context.Background(),
+		resolver,
+		[]string{"empty.example"},
+		"ns1.celikhost.com",
+		"ns2.celikhost.com",
+	) {
+		t.Fatal("a partial or different NS set must not verify the pair")
 	}
 }
 
