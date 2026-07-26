@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -64,8 +65,14 @@ type connectionCheck struct {
 	// Gerçek dünya, şu an.
 	LiveNameservers []string `json:"live_nameservers"`
 	LiveIPs         []string `json:"live_ips"`
+	// ResolverObservations keeps "Check again" honest while a DNS change is
+	// spreading. One recursive cache can be hours behind the parent
+	// delegation; treating that single cache as the whole Internet made the
+	// panel keep showing the previous provider after the domain was delegated.
+	ResolverObservations []connectionResolverObservation `json:"resolver_observations,omitempty"`
+	PropagationPending   bool                            `json:"propagation_pending"`
 
-	// Verdict: delegated | a_record | elsewhere | unresolved
+	// Verdict: delegated | a_record | elsewhere | unresolved | unknown
 	// Karar: devredilmiş | a_kaydı | başka yerde | çözülmüyor
 	Status string `json:"status"`
 	// SSLReady is the honest precondition: Let's Encrypt cannot issue a
@@ -99,10 +106,222 @@ type connectionCheck struct {
 	CheckedAt         string           `json:"checked_at"`
 }
 
+type connectionDNSResolver interface {
+	LookupNS(context.Context, string) ([]*net.NS, error)
+	LookupHost(context.Context, string) ([]string, error)
+}
+
+type namedConnectionResolver struct {
+	Name     string
+	Resolver connectionDNSResolver
+}
+
+type connectionResolverObservation struct {
+	Resolver    string   `json:"resolver"`
+	Nameservers []string `json:"nameservers"`
+	IPs         []string `json:"ips"`
+	Status      string   `json:"status"`
+	SSLReady    bool     `json:"ssl_ready"`
+}
+
+// A recheck must not be another question to the same stale ISP cache. Ask
+// independent public resolvers in parallel and expose disagreements as DNS
+// propagation. The machine resolver remains a last fallback for restricted
+// networks and private installations.
+var publicConnectionResolvers = []namedConnectionResolver{
+	{Name: "Cloudflare (1.1.1.1)", Resolver: resolverAt("1.1.1.1:53")},
+	{Name: "Google (8.8.8.8)", Resolver: resolverAt("8.8.8.8:53")},
+	{Name: "Quad9 (9.9.9.9)", Resolver: resolverAt("9.9.9.9:53")},
+	{Name: "OpenDNS (208.67.222.222)", Resolver: resolverAt("208.67.222.222:53")},
+}
+
+func normalizeNameservers(records []*net.NS) []string {
+	seen := make(map[string]bool, len(records))
+	out := make([]string, 0, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		name := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(record.Host), "."))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func normalizeIPs(addrs []string) []string {
+	seen := make(map[string]bool, len(addrs))
+	out := make([]string, 0, len(addrs))
+	for _, raw := range addrs {
+		ip := net.ParseIP(strings.TrimSpace(raw))
+		if ip == nil {
+			continue
+		}
+		value := ip.String()
+		if seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func observeConnectionResolver(
+	ctx context.Context,
+	name string,
+	source namedConnectionResolver,
+) (connectionResolverObservation, bool) {
+	var (
+		nsRecords []*net.NS
+		addresses []string
+		nsErr     error
+		hostErr   error
+		wg        sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		queryCtx, cancel := context.WithTimeout(ctx, 2500*time.Millisecond)
+		defer cancel()
+		nsRecords, nsErr = source.Resolver.LookupNS(queryCtx, name)
+	}()
+	go func() {
+		defer wg.Done()
+		queryCtx, cancel := context.WithTimeout(ctx, 2500*time.Millisecond)
+		defer cancel()
+		addresses, hostErr = source.Resolver.LookupHost(queryCtx, name)
+	}()
+	wg.Wait()
+
+	observation := connectionResolverObservation{
+		Resolver:    source.Name,
+		Nameservers: normalizeNameservers(nsRecords),
+		IPs:         normalizeIPs(addresses),
+	}
+	// A partial answer is still useful: for example one address family may be
+	// absent. Drop the source only when both questions failed without facts.
+	if len(observation.Nameservers) == 0 && len(observation.IPs) == 0 && nsErr != nil && hostErr != nil {
+		return connectionResolverObservation{}, false
+	}
+	return observation, true
+}
+
+func observeConnectionResolvers(
+	ctx context.Context,
+	name string,
+	sources []namedConnectionResolver,
+) []connectionResolverObservation {
+	type result struct {
+		index       int
+		observation connectionResolverObservation
+		ok          bool
+	}
+	results := make(chan result, len(sources))
+	var wg sync.WaitGroup
+	for i, source := range sources {
+		wg.Add(1)
+		go func(index int, source namedConnectionResolver) {
+			defer wg.Done()
+			observation, ok := observeConnectionResolver(ctx, name, source)
+			results <- result{index: index, observation: observation, ok: ok}
+		}(i, source)
+	}
+	wg.Wait()
+	close(results)
+
+	ordered := make([]*connectionResolverObservation, len(sources))
+	for result := range results {
+		if result.ok {
+			value := result.observation
+			ordered[result.index] = &value
+		}
+	}
+	out := make([]connectionResolverObservation, 0, len(sources))
+	for _, observation := range ordered {
+		if observation != nil {
+			out = append(out, *observation)
+		}
+	}
+	return out
+}
+
+func connectionObservationSignature(observation connectionResolverObservation) string {
+	return strings.Join(observation.Nameservers, ",") + "|" + strings.Join(observation.IPs, ",")
+}
+
+func connectionStatusRank(status string) int {
+	switch status {
+	case "delegated":
+		return 5
+	case "a_record":
+		return 4
+	case "delegated_mismatch":
+		return 3
+	case "elsewhere":
+		return 2
+	case "unresolved":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// summarizeConnectionObservations picks the largest matching public view.
+// Equal-sized views prefer the one that has progressed toward the configured
+// server, while PropagationPending remains true and the UI shows every answer.
+// This makes a 2-new/2-old transition useful without hiding the split.
+func summarizeConnectionObservations(
+	base connectionCheck,
+	observations []connectionResolverObservation,
+) (connectionResolverObservation, []connectionResolverObservation, bool, bool) {
+	type group struct {
+		count int
+		first int
+		rank  int
+	}
+	groups := make(map[string]group)
+	enriched := append([]connectionResolverObservation(nil), observations...)
+	for i := range enriched {
+		candidate := base
+		candidate.LiveNameservers = enriched[i].Nameservers
+		candidate.LiveIPs = enriched[i].IPs
+		enriched[i].Status, enriched[i].SSLReady = classifyConnection(candidate)
+		signature := connectionObservationSignature(enriched[i])
+		g, exists := groups[signature]
+		if !exists {
+			g = group{first: i, rank: connectionStatusRank(enriched[i].Status)}
+		}
+		g.count++
+		groups[signature] = g
+	}
+	if len(enriched) == 0 {
+		return connectionResolverObservation{}, enriched, false, false
+	}
+
+	best := group{first: -1}
+	bestSignature := ""
+	for signature, candidate := range groups {
+		if best.first == -1 ||
+			candidate.count > best.count ||
+			(candidate.count == best.count && candidate.rank > best.rank) ||
+			(candidate.count == best.count && candidate.rank == best.rank && signature < bestSignature) {
+			best, bestSignature = candidate, signature
+		}
+	}
+	return enriched[best.first], enriched, len(groups) > 1, true
+}
+
 // handleDomainConnection answers GET /api/v1/domains/{id}/connection.
 // handleDomainConnection, GET /api/v1/domains/{id}/connection'a cevap verir.
 func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, domainID int) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	if r.Method != http.MethodGet {
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -131,23 +350,30 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 		out.Nameservers = []string{ns1, ns2}
 	}
 
-	// A live lookup can hang on a broken resolver; the screen must still come
-	// back. Whatever is unknown stays empty and is reported as unknown.
-	// Canlı sorgu bozuk bir çözümleyicide asılabilir; ekran yine de dönmeli.
-	// Bilinmeyen boş kalır ve bilinmiyor diye bildirilir.
-	ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
-	defer cancel()
-
-	res := &net.Resolver{}
-	if ns, err := res.LookupNS(ctx, name); err == nil {
-		for _, n := range ns {
-			out.LiveNameservers = append(out.LiveNameservers, strings.TrimSuffix(n.Host, "."))
+	// Ask independent public caches. A single machine/ISP cache is not "the
+	// real world", especially immediately after a registrar change.
+	lookupCtx, cancelLookup := context.WithTimeout(r.Context(), 4*time.Second)
+	observations := observeConnectionResolvers(lookupCtx, name, publicConnectionResolvers)
+	cancelLookup()
+	if len(observations) == 0 {
+		fallbackCtx, cancelFallback := context.WithTimeout(r.Context(), 3*time.Second)
+		if fallback, ok := observeConnectionResolver(fallbackCtx, name, namedConnectionResolver{
+			Name: "System resolver (fallback)", Resolver: net.DefaultResolver,
+		}); ok {
+			observations = append(observations, fallback)
 		}
-		sort.Strings(out.LiveNameservers)
+		cancelFallback()
 	}
-	if addrs, err := res.LookupHost(ctx, name); err == nil {
-		out.LiveIPs = append(out.LiveIPs, addrs...)
-		sort.Strings(out.LiveIPs)
+	selected, enriched, propagating, known := summarizeConnectionObservations(out, observations)
+	out.ResolverObservations = enriched
+	out.PropagationPending = propagating
+	if known {
+		out.LiveNameservers = selected.Nameservers
+		out.LiveIPs = selected.IPs
+		out.Status = selected.Status
+		out.SSLReady = selected.SSLReady
+	} else {
+		out.Status = "unknown"
 	}
 
 	for _, ns := range out.Nameservers {
@@ -167,17 +393,18 @@ func (p *Panel) handleDomainConnection(w http.ResponseWriter, r *http.Request, d
 		if out.GlueNeeded {
 			out.NameserversUsable = true
 		} else {
-			facts := verifyNameservers(ctx, out.Nameservers, out.ServerIP, out.ServerV6)
+			verifyCtx, cancelVerify := context.WithTimeout(r.Context(), 4*time.Second)
+			facts := verifyNameservers(verifyCtx, out.Nameservers, out.ServerIP, out.ServerV6)
+			cancelVerify()
 			out.NameserverFacts = facts
 			out.NameserversUsable = nameserverPairUsable(
-				p.setting(ctx, settingDNSRole),
-				p.setting(ctx, settingDNSPeerIP),
+				p.setting(r.Context(), settingDNSRole),
+				p.setting(r.Context(), settingDNSPeerIP),
 				facts,
 			)
 		}
 	}
 
-	out.Status, out.SSLReady = classifyConnection(out)
 	json.NewEncoder(w).Encode(out)
 }
 
