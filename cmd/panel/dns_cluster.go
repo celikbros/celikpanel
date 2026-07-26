@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -11,12 +13,10 @@ import (
 
 // The DNS cluster settings the operator enters — and the panel then applies.
 //
-// This is the answer to "what is the professional way?": two nameservers on two
-// different machines, each holding every zone, so one server going down does
-// not take every hosted domain with it. One of them owns the data (primary),
-// the other keeps a live copy (secondary). Both answer with equal authority,
-// and a domain's website can live on either machine — DNS authority and web
-// hosting are separate jobs.
+// Two machines hold every zone and answer with equal authority. Ownership is
+// per-zone: the panel that creates a zone is its primary and the peer keeps a
+// secondary copy. This lets operators add domains on either panel without
+// confusing DNS authority with where the website itself runs.
 //
 // The settings are entered here, in the panel, by the operator. That is not a
 // formality: a panel whose owner has to be talked through an SSH session to
@@ -24,12 +24,10 @@ import (
 //
 // Operatörün gireceği — ve panelin sonra uygulayacağı — DNS küme ayarları.
 //
-// Bu, "profesyonel olan nedir?" sorusunun cevabıdır: iki ayrı makinede iki ad
-// sunucusu, her biri her zone'u tutar; böylece bir sunucunun düşmesi
-// barındırılan her alan adını yanında götürmez. Biri verinin sahibidir
-// (birincil), diğeri canlı kopya tutar (ikincil). İkisi de eşit yetkiyle cevap
-// verir ve bir alan adının sitesi hangi makinede olursa olsun çalışır — DNS
-// yetkisi ile web barındırma ayrı işlerdir.
+// İki makine her zone'u tutar ve eşit yetkiyle cevap verir. Sahiplik zone
+// başınadır: zone'u oluşturan panel onun birincili, eş makine ikincil kopyasıdır.
+// Böylece DNS yetkisi ile sitenin koştuğu yer karıştırılmadan iki panele de
+// domain eklenebilir.
 //
 // Ayarlar burada, panelde, operatör tarafından girilir. Bu bir formalite
 // değildir: sahibine bir özelliği tamamlatmak için SSH oturumu anlattırılan
@@ -41,10 +39,72 @@ const (
 	settingDNSPeerNS = "dns_peer_ns"
 )
 
-type dnsClusterView struct {
+type dnsClusterAgentState struct {
 	Role   string `json:"role"`
 	PeerIP string `json:"peer_ip"`
 	PeerNS string `json:"peer_ns"`
+}
+
+type dnsClusterAgentResponse struct {
+	Applied bool   `json:"applied"`
+	Detail  string `json:"detail,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+func (p *Panel) applyDNSClusterAgent(state dnsClusterAgentState) (dnsClusterAgentResponse, error) {
+	var resp dnsClusterAgentResponse
+	err := p.agentClient.Call("Agent.ConfigureDNSCluster", &state, &resp)
+	return resp, err
+}
+
+// dnsClusterAgentSnapshot reads the three related settings consistently before
+// the agent is changed. An empty role is the pre-configuration state and maps
+// to standalone, which is the only safe agent state to restore.
+func (p *Panel) dnsClusterAgentSnapshot(ctx context.Context) (dnsClusterAgentState, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return dnsClusterAgentState{}, err
+	}
+	defer tx.Rollback()
+
+	rawRole, err := settingTx(ctx, tx, settingDNSRole)
+	if err != nil {
+		return dnsClusterAgentState{}, err
+	}
+	peerIP, err := settingTx(ctx, tx, settingDNSPeerIP)
+	if err != nil {
+		return dnsClusterAgentState{}, err
+	}
+	peerNS, err := settingTx(ctx, tx, settingDNSPeerNS)
+	if err != nil {
+		return dnsClusterAgentState{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return dnsClusterAgentState{}, err
+	}
+
+	rawRole = strings.TrimSpace(rawRole)
+	role := normalizeDNSRole(rawRole)
+	if rawRole == "" {
+		role = "standalone"
+	} else if role == "" {
+		return dnsClusterAgentState{}, fmt.Errorf("stored DNS role %q is invalid", rawRole)
+	}
+	if role == "standalone" {
+		peerIP, peerNS = "", ""
+	}
+	return dnsClusterAgentState{
+		Role:   role,
+		PeerIP: strings.TrimSpace(peerIP),
+		PeerNS: strings.ToLower(strings.TrimSpace(strings.TrimSuffix(peerNS, "."))),
+	}, nil
+}
+
+type dnsClusterView struct {
+	Configured bool   `json:"configured"`
+	Role       string `json:"role"`
+	PeerIP     string `json:"peer_ip"`
+	PeerNS     string `json:"peer_ns"`
 	// PeerReachable reports whether the other server actually answers DNS on
 	// port 53 from here. A cluster whose halves cannot reach each other is a
 	// cluster on paper only, and the operator should learn that on the settings
@@ -101,50 +161,36 @@ type clusterStep struct {
 	Args   []string `json:"args,omitempty"`
 }
 
-// planSteps works out what still has to happen, from facts only.
-// planSteps, geriye ne kaldığını yalnızca olgulardan çıkarır.
-func planSteps(role, serverIP, peerIP string, facts []nameserverFact) []clusterStep {
-	here, atPeer, unresolved := []string{}, []string{}, []string{}
+// planSteps works out what still has to happen from saved topology and live
+// address facts. Its four paired-mode steps have stable argument positions so
+// the UI never has to guess which value is a hostname and which is an IP.
+func planSteps(role, serverIP, peerIP, peerNS string, facts []nameserverFact) []clusterStep {
+	if role == "standalone" {
+		return []clusterStep{{Code: "aloneNoBackup", Manual: true}}
+	}
+
+	localNS := ""
 	for _, f := range facts {
-		switch {
-		case len(f.IPs) == 0:
-			unresolved = append(unresolved, f.Host)
-		case f.PointsHere:
-			here = append(here, f.Host)
-		case peerIP != "" && containsStr(f.IPs, peerIP):
-			atPeer = append(atPeer, f.Host)
-		default:
-			// resolves, but to neither of the two servers
-			unresolved = append(unresolved, f.Host)
+		if !strings.EqualFold(f.Host, peerNS) {
+			localNS = f.Host
+			break
 		}
 	}
-
-	if role == "standalone" {
-		// Not a fault — a deliberate choice. But say the consequence out loud
-		// instead of drawing green ticks over it.
-		// Arıza değil — bilinçli bir tercih. Ama sonucunu yeşil tiklerle
-		// örtmek yerine yüksek sesle söyle.
-		return []clusterStep{{Code: "aloneNoBackup", Done: false, Manual: true}}
+	localReady, peerReady := false, false
+	for _, f := range facts {
+		switch {
+		case strings.EqualFold(f.Host, localNS):
+			localReady = f.PointsHere
+		case strings.EqualFold(f.Host, peerNS):
+			peerReady = peerIP != "" && containsStr(f.IPs, peerIP)
+		}
 	}
-
-	steps := []clusterStep{
-		{Code: "oneNameHere", Done: len(here) == 1, Args: here},
-		{Code: "otherNameAtPeer", Done: len(atPeer) == 1, Manual: true, Args: append(append([]string{}, unresolved...), peerIP)},
-		{Code: "peerAnswers", Done: peerIP != "" && dnsPortAnswers(peerIP)},
+	return []clusterStep{
+		{Code: "localName", Done: localReady, Manual: true, Args: []string{localNS, serverIP}},
+		{Code: "peerName", Done: peerReady, Manual: true, Args: []string{peerNS, peerIP}},
+		{Code: "peerPort", Done: peerIP != "" && dnsPortAnswers(peerIP)},
+		{Code: "samePairOnPeer", Manual: true, Args: []string{peerIP}},
 	}
-	if role == "primary" {
-		steps = append(steps, clusterStep{Code: "peerIsSecondary", Manual: true, Args: []string{peerIP}})
-	} else {
-		steps = append(steps, clusterStep{Code: "peerIsPrimary", Manual: true, Args: []string{peerIP}})
-	}
-	// Both names on this machine is the failure the pair exists to prevent —
-	// name it explicitly rather than leaving it implied by an unticked box.
-	// İki adın da bu makinede olması, çiftin engellemek için var olduğu
-	// arızadır — işaretsiz bir kutuyla ima etmek yerine adıyla söyle.
-	if len(here) == 2 {
-		steps = append([]clusterStep{{Code: "bothNamesHere", Args: []string{serverIP}}}, steps...)
-	}
-	return steps
 }
 
 func containsStr(list []string, want string) bool {
@@ -156,6 +202,20 @@ func containsStr(list []string, want string) bool {
 	return false
 }
 
+// PowerDNS roles are per-zone. A paired server is primary for zones created
+// on its own panel and secondary for zones arriving from its peer. Legacy
+// machine-wide primary/secondary settings migrate to this symmetric model.
+func normalizeDNSRole(role string) string {
+	switch role {
+	case "paired", "primary", "secondary":
+		return "paired"
+	case "standalone":
+		return "standalone"
+	default:
+		return ""
+	}
+}
+
 func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
@@ -165,11 +225,13 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
+		rawRole := p.setting(r.Context(), settingDNSRole)
 		v := dnsClusterView{
-			Role:     p.setting(r.Context(), settingDNSRole),
-			PeerIP:   p.setting(r.Context(), settingDNSPeerIP),
-			PeerNS:   p.setting(r.Context(), settingDNSPeerNS),
-			ServerIP: serverPrimaryIP(),
+			Role:       normalizeDNSRole(rawRole),
+			Configured: rawRole == "standalone" || rawRole == "paired",
+			PeerIP:     p.setting(r.Context(), settingDNSPeerIP),
+			PeerNS:     p.setting(r.Context(), settingDNSPeerNS),
+			ServerIP:   serverPrimaryIP(),
 		}
 		if v.Role == "" {
 			v.Role = "standalone"
@@ -179,7 +241,7 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		}
 		v.NS1, v.NS2 = p.serverNameservers(r.Context())
 		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
-		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.Facts)
+		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.PeerNS, v.Facts)
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:
@@ -192,18 +254,30 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-		req.Role = strings.TrimSpace(req.Role)
+		req.Role = normalizeDNSRole(strings.TrimSpace(req.Role))
 		req.PeerIP = strings.TrimSpace(req.PeerIP)
 		req.PeerNS = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.PeerNS, ".")))
+		ns1, ns2 := p.configuredNameservers(r.Context())
+		if ns1 == "" || ns2 == "" {
+			writeClientError(w, http.StatusConflict, "save the two shared nameserver names before choosing an operating mode")
+			return
+		}
+		localIPv4, ok := canonicalIPv4(serverPrimaryIP())
+		if !ok {
+			writeClientError(w, http.StatusConflict, "this server has no usable IPv4 address; set CELIKPANEL_SERVER_IP and retry")
+			return
+		}
 
 		switch req.Role {
 		case "standalone":
 			req.PeerIP, req.PeerNS = "", ""
-		case "primary", "secondary":
-			if net.ParseIP(req.PeerIP) == nil {
-				writeClientError(w, http.StatusBadRequest, "enter the other server's IP address")
+		case "paired":
+			peerIP := net.ParseIP(req.PeerIP)
+			if peerIP == nil || peerIP.To4() == nil {
+				writeClientError(w, http.StatusBadRequest, "enter the other server's IPv4 address")
 				return
 			}
+			req.PeerIP = peerIP.To4().String()
 			if !validHostname.MatchString(req.PeerNS) {
 				writeClientError(w, http.StatusBadRequest, "enter the other server's nameserver name, for example ns2.example.com")
 				return
@@ -212,25 +286,29 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			// PowerDNS notify and transfer in a loop.
 			// Bir sunucuyu kendine yöneltmek küme değildir; PowerDNS'i döngüde
 			// bildirim ve aktarım yapmaya sokar.
-			if req.PeerIP == serverPrimaryIP() {
+			if req.PeerIP == localIPv4 {
 				writeClientError(w, http.StatusBadRequest, "the other server cannot be this server")
 				return
 			}
+			if !strings.EqualFold(req.PeerNS, ns1) && !strings.EqualFold(req.PeerNS, ns2) {
+				writeClientError(w, http.StatusBadRequest, "the other server's name must be one of the two saved nameservers")
+				return
+			}
 		default:
-			writeClientError(w, http.StatusBadRequest, "role must be standalone, primary or secondary")
+			writeClientError(w, http.StatusBadRequest, "role must be standalone or paired")
 			return
 		}
 
-		var resp struct {
-			Applied bool   `json:"applied"`
-			Detail  string `json:"detail,omitempty"`
-			Error   string `json:"error,omitempty"`
+		previous, err := p.dnsClusterAgentSnapshot(r.Context())
+		if err != nil {
+			writeServerError(w, fmt.Errorf("read previous DNS cluster settings: %w", err))
+			return
 		}
-		if err := p.agentClient.Call("Agent.ConfigureDNSCluster", &struct {
-			Role   string `json:"role"`
-			PeerIP string `json:"peer_ip"`
-			PeerNS string `json:"peer_ns"`
-		}{req.Role, req.PeerIP, req.PeerNS}, &resp); err != nil {
+
+		resp, err := p.applyDNSClusterAgent(dnsClusterAgentState{
+			Role: req.Role, PeerIP: req.PeerIP, PeerNS: req.PeerNS,
+		})
+		if err != nil {
 			writeAgentError(w, err, "DNS cluster")
 			return
 		}
@@ -238,16 +316,50 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, resp.Error)
 			return
 		}
+		if !resp.Applied {
+			writeClientError(w, http.StatusConflict, "the DNS server did not confirm the cluster change")
+			return
+		}
 
-		for k, v := range map[string]string{
-			settingDNSRole:   req.Role,
-			settingDNSPeerIP: req.PeerIP,
-			settingDNSPeerNS: req.PeerNS,
-		} {
-			if err := p.setSetting(r.Context(), k, v); err != nil {
-				writeServerError(w, err)
+		if err := p.saveDNSClusterSettingsAndReconcile(
+			r.Context(), req.Role, req.PeerIP, req.PeerNS, ns1, ns2, localIPv4,
+		); err != nil {
+			rollbackResp, rollbackCallErr := p.applyDNSClusterAgent(previous)
+			var rollbackErr error
+			switch {
+			case rollbackCallErr != nil:
+				rollbackErr = rollbackCallErr
+			case rollbackResp.Error != "":
+				rollbackErr = fmt.Errorf("%s", rollbackResp.Error)
+			case !rollbackResp.Applied:
+				rollbackErr = fmt.Errorf("agent did not confirm the restored DNS role")
+			}
+			if rollbackErr != nil {
+				log.Printf("[500][dns-cluster] save settings after agent apply: %v; restore previous role %q failed: %v",
+					err, previous.Role, rollbackErr)
+				writeCodedError(w, http.StatusInternalServerError, errCodeInternal,
+					"DNS cluster settings could not be saved, and the previous DNS server role could not be restored; check the DNS service before retrying",
+					"")
 				return
 			}
+			log.Printf("[500][dns-cluster] save settings after agent apply: %v; previous role %q restored",
+				err, previous.Role)
+			writeCodedError(w, http.StatusInternalServerError, errCodeInternal,
+				"DNS cluster settings could not be saved; the previous DNS server role was restored",
+				"")
+			return
+		}
+		// Re-publish every local zone after the mode changes. This advances each
+		// SOA serial and sends NOTIFY, so pre-existing zones are copied to the
+		// peer immediately instead of waiting for the next record edit.
+		if _, err := p.syncAllZonesStrict(r.Context()); err != nil {
+			err = fmt.Errorf("publish DNS cluster settings: %w", err)
+			if writeDNSPublicationConflict(w, err,
+				"DNS cluster settings were saved, but one or more zones could not be published; check the DNS service and retry") {
+				return
+			}
+			writeServerError(w, err)
+			return
 		}
 		p.audit(r, "settings.dns_cluster:"+req.Role+" peer="+req.PeerIP, "settings", 0)
 		json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail})
@@ -272,16 +384,14 @@ func dnsPortAnswers(ip string) bool {
 	return true
 }
 
-// dnsZoneType is the type a NEW zone gets on this server: MASTER when this
-// machine is the primary of a cluster (so the secondary is notified the moment
-// the zone appears), NATIVE otherwise. A secondary never creates zones itself —
-// they arrive from the primary — so its answer is irrelevant here.
-// dnsZoneType, bu sunucuda YENİ bir zone'un alacağı tiptir: bu makine bir
-// kümenin birincili ise MASTER (böylece zone belirir belirmez ikincile haber
-// verilir), aksi hâlde NATIVE. İkincil kendisi hiç zone oluşturmaz — onlar
-// birincilden gelir — bu yüzden onun cevabı burada önemsizdir.
+// dnsZoneType is the type a NEW local zone gets on this server: MASTER in
+// paired mode so it is transferred to the peer, NATIVE when this server works
+// alone. Zones created by the peer arrive separately as SLAVE/SECONDARY.
+// dnsZoneType, bu sunucuda YENİ yerel zone'un alacağı tiptir: eşli modda eşe
+// aktarılabilmesi için MASTER, sunucu tek başına çalışıyorsa NATIVE. Eşin
+// oluşturduğu zone'lar ayrıca SLAVE/SECONDARY olarak gelir.
 func (p *Panel) dnsZoneType(ctx context.Context) string {
-	if p.setting(ctx, settingDNSRole) == "primary" {
+	if normalizeDNSRole(p.setting(ctx, settingDNSRole)) == "paired" {
 		return "MASTER"
 	}
 	return "NATIVE"

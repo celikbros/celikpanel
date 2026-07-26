@@ -742,6 +742,15 @@ kaldırılmasını reddeder — yoksa her domain sessizce kararırdı; kuralın
 önlediği tuzağın ta kendisi. Tüm "ya da dışarıda yönet" metinleri kaldırıldı.
 Canlı kanıt: DNS'siz oluşturma → 409.
 
+**Ek (26 Temmuz 2026 — iki sunuculu yetki).** DNS rolü makine çapında tek
+birincil/tek ikincil değildir; PowerDNS'te sahiplik zone başınadır. İki
+CelikPanel **Eşli** modda hem birincil hem ikincil yeteneğini açar: bir panelde
+oluşturulan zone orada `MASTER`, diğer makinede otomatik ikincil kopyadır. Bu
+sayede site hangi panelde oluşturulursa oluşturulsun iki ad sunucusu da yetkili
+cevap verir. İki panel aynı ortak ad çiftini taşır; adlardan tam biri yerel IP'ye,
+diğeri eş IP'ye çözülür. Glue yalnız bu adların sahibi olan üst domain'de bir kez
+kaydedilir; müşteri domain'i altında child nameserver üretilmez.
+
 ---
 
 ## D-008 · Alfa: paneli operatör sürer; her boşluk bir ürün özelliğine dönüşür

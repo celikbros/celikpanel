@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net"
 	"os"
@@ -33,19 +34,54 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	pool := p.db.GetDB()
 
 	var zoneID int
-	if err := pool.QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID); err == nil {
+	err := pool.QueryRowContext(ctx, `SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID)
+	if err == nil {
 		return zoneID, false, nil
 	}
+	if err != sql.ErrNoRows {
+		return 0, false, err
+	}
+
+	// A zone must never invent names under the hosted customer domain. The
+	// shared server identity is configured once and reused by every zone.
+	// Barındırılan müşteri domain'i altında ad uydurulmaz. Sunucunun ortak
+	// kimliği bir kez yapılandırılır ve bütün zone'lar tarafından kullanılır.
+	ns1, ns2 := p.configuredNameservers(ctx)
+	if ns1 == "" || ns2 == "" {
+		return 0, false, fmt.Errorf("nameserver identity is not configured")
+	}
+	if !p.dnsIdentityConfigured(ctx) {
+		return 0, false, fmt.Errorf("DNS operating mode is not configured")
+	}
+	zoneType := p.dnsZoneType(ctx)
+	role := p.setting(ctx, settingDNSRole)
+	peerIP := p.setting(ctx, settingDNSPeerIP)
+	peerNS := p.setting(ctx, settingDNSPeerNS)
+	localNS, err := localNameserverForPlan(nameserverAddressPlan{
+		Role: role, NS1: ns1, NS2: ns2, PeerNS: peerNS,
+	})
+	if err != nil {
+		return 0, false, err
+	}
+
+	tx, err := pool.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, false, err
+	}
+	defer tx.Rollback()
 
 	// MASTER on a cluster primary so the secondary is notified the moment the
 	// zone appears; NATIVE on a lone server, where there is nobody to notify.
 	// Küme birincilinde MASTER, ki zone belirir belirmez ikincile haber
 	// verilsin; tek başına sunucuda NATIVE, çünkü haber verilecek kimse yok.
-	result, err := pool.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, ?)`, domain, p.dnsZoneType(ctx))
+	result, err := tx.ExecContext(ctx, `INSERT INTO pdns_domains (name, type) VALUES (?, ?)`, domain, zoneType)
 	if err != nil {
 		return 0, false, err
 	}
-	id64, _ := result.LastInsertId()
+	id64, err := result.LastInsertId()
+	if err != nil {
+		return 0, false, err
+	}
 	zoneID = int(id64)
 
 	type record struct {
@@ -56,8 +92,8 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	}
 	mxPrio := 10
 
-	// Serial YYYYMMDDHH matches ensureZone; fits 32-bit SOA serial space.
-	// Seri YYYYMMDDHH ensureZone ile aynı; 32-bit SOA seri alanına sığar.
+	// Serial YYYYMMDD00 is advanced monotonically by prepareZoneForSync.
+	// YYYYMMDD00 seri numarası prepareZoneForSync tarafından sürekli artırılır.
 	// The zone is delegated to THIS SERVER's nameserver pair, not to names
 	// under the hosted domain itself. Writing ns1.<domain> into every zone made
 	// each customer domain its own nameserver, which would have forced glue
@@ -72,17 +108,8 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	// nameserver", burada varsayılan olarak dayatılmış. Operatör yakaladı
 	// (25 Tem): "sunucu boston.celikhost.com, ad sunucuları nasıl
 	// ns1.biovision.health olabilir?" Tek sunucu, tek çift, glue bir kez.
-	ns1, ns2 := p.serverNameservers(ctx)
-	if ns1 == "" || ns2 == "" {
-		// Never invent a delegation: a zone that advertises a nameserver which
-		// does not exist is worse than one the operator must finish by hand.
-		// Asla devir uydurma: var olmayan bir ad sunucusunu ilan eden zone,
-		// operatörün elle tamamlaması gereken zone'dan kötüdür.
-		ns1, ns2 = "ns1."+domain, "ns2."+domain
-	}
-
 	soa := fmt.Sprintf("%s hostmaster.%s %s 10800 3600 604800 3600",
-		ns1, domain, time.Now().Format("2006010215"))
+		localNS, domain, time.Now().UTC().Format("2006010200"))
 
 	records := []record{
 		{domain, "SOA", soa, nil},
@@ -119,23 +146,28 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	}
 
 	if ip4 := serverPrimaryIP(); ip4 != "" {
-		// Address records for the nameservers belong in the zone ONLY when the
-		// nameserver names live inside this zone (the panel's own domain).
-		// Otherwise their addresses are published by the zone that owns them.
-		// Ad sunucularının adres kayıtları zone'a YALNIZ ad sunucusu adları bu
-		// zone'un içindeyse aittir (panelin kendi alan adı). Aksi hâlde
-		// adreslerini onları sahiplenen zone yayınlar.
 		hosts := []string{domain, "mail." + domain}
-		for _, ns := range []string{ns1, ns2} {
-			if strings.HasSuffix(ns, "."+domain) || ns == domain {
-				hosts = append(hosts, ns)
-			}
-		}
 		if panelHost != "" {
 			hosts = append(hosts, panelHost)
 		}
 		for _, host := range hosts {
 			records = append(records, record{host, "A", ip4, nil})
+		}
+		// In-bailiwick nameserver addresses belong in this owner zone. A paired
+		// zone must split them: the selected peer name gets the peer address and
+		// the other gets this machine's address. Writing both with ip4 recreated
+		// the exact single-machine pseudo-pair this settings flow is meant to fix.
+		for _, ns := range []string{ns1, ns2} {
+			if !strings.HasSuffix(ns, "."+domain) && ns != domain {
+				continue
+			}
+			target := ip4
+			if role == "paired" && strings.EqualFold(ns, peerNS) {
+				target = peerIP
+			}
+			if target != "" {
+				records = append(records, record{ns, "A", target, nil})
+			}
 		}
 	}
 	if ip6 := serverPrimaryIPv6(); ip6 != "" {
@@ -149,11 +181,14 @@ func (p *Panel) createZoneWithTemplate(ctx context.Context, domain string) (int,
 	}
 
 	for _, rec := range records {
-		if _, err := pool.ExecContext(ctx,
+		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO pdns_records (domain_id, name, type, content, ttl, prio) VALUES (?, ?, ?, ?, 3600, ?)`,
 			zoneID, rec.name, rec.typ, rec.content, rec.prio); err != nil {
-			return zoneID, true, fmt.Errorf("insert %s %s: %w", rec.typ, rec.name, err)
+			return 0, false, fmt.Errorf("insert %s %s: %w", rec.typ, rec.name, err)
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, false, err
 	}
 	return zoneID, true, nil
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, ShieldCheck, Copy, AlertTriangle } from 'lucide-react';
+import { Globe, Plus, Trash2, ShieldCheck, Copy, AlertTriangle, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, EmptyState, inputClass } from './ui';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 interface DNSRecord {
     id: number;
@@ -44,6 +45,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     const [newContent, setNewContent] = useState('');
     const [newTTL, setNewTTL] = useState(3600);
     const [newPrio, setNewPrio] = useState(0);
+    const [publishing, setPublishing] = useState(false);
 
     // Whether anything actually serves this zone: '' = no DNS server installed
     // (records are saved but not published), otherwise "pdns"/"bind". null
@@ -92,15 +94,21 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
         }
     };
 
-    const createZone = async () => {
+    const publishZone = async () => {
+        setPublishing(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/zone`, { method: 'POST' });
-            if (!res.ok) throw new Error();
-            showToast('success', t('dns.zoneCreated'));
+            if (!res.ok) {
+                throw new Error(apiErrorText(await readApiError(res), t, 'dns.zonePublishFailed'));
+            }
+            const result: { created?: boolean } = await res.json();
+            showToast('success', t(result.created ? 'dns.zoneCreated' : 'dns.zonePublished'));
             setZoneExists(true);
-            loadRecords();
-        } catch {
-            showToast('error', t('dns.zoneCreateFailed'));
+            await loadRecords();
+        } catch (error) {
+            showToast('error', error instanceof Error && error.message ? error.message : t('dns.zonePublishFailed'));
+        } finally {
+            setPublishing(false);
         }
     };
 
@@ -144,8 +152,8 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                 title={t('dns.zoneMissing')}
                 hint={t('dns.zoneMissingHint', { name: domainName })}
                 action={
-                    <Button variant="primary" icon={Plus} onClick={createZone}>
-                        {t('dns.enableZone')}
+                    <Button variant="primary" icon={Plus} disabled={publishing} onClick={publishZone}>
+                        {publishing ? t('dns.publishing') : t('dns.enableZone')}
                     </Button>
                 }
             />
@@ -172,13 +180,25 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                     <span>{t('dns.notServed')}</span>
                 </div>
             )}
-            {dnsServer !== '' && <DNSSECSection domainId={domainId} domainName={domainName} />}
+            {dnsServer !== null && dnsServer !== '' && (
+                <DNSSECSection domainId={domainId} domainName={domainName} />
+            )}
 
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: records.length })}</span>
-                <Button variant="primary" icon={Plus} onClick={() => setShowAddForm((s) => !s)}>
-                    {t('dns.addRecord')}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        variant="secondary"
+                        icon={RefreshCw}
+                        disabled={publishing || dnsServer === ''}
+                        onClick={publishZone}
+                    >
+                        {publishing ? t('dns.publishing') : t('dns.republish')}
+                    </Button>
+                    <Button variant="primary" icon={Plus} onClick={() => setShowAddForm((s) => !s)}>
+                        {t('dns.addRecord')}
+                    </Button>
+                </div>
             </div>
 
             {showAddForm && (
@@ -337,30 +357,34 @@ function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
     const { t } = useI18n();
     const [secured, setSecured] = useState(false);
     const [ds, setDs] = useState<string[]>([]);
-    const [busy, setBusy] = useState(false);
-    const [loaded, setLoaded] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const [loaded, setLoaded] = useState(false);
+	const [statusError, setStatusError] = useState('');
 
-    useEffect(() => {
-        fetch(`/api/v1/domains/${domainId}/dnssec`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                if (d) {
-                    setSecured(d.secured === true);
-                    setDs(d.ds || []);
-                }
-            })
-            .catch(() => {})
-            .finally(() => setLoaded(true));
-    }, [domainId]);
+	useEffect(() => {
+		fetch(`/api/v1/domains/${domainId}/dnssec`)
+			.then(async (r) => {
+				if (!r.ok) throw new Error(apiErrorText(await readApiError(r), t));
+				return r.json();
+			})
+			.then((d) => {
+				setSecured(d.secured === true);
+				setDs(d.ds || []);
+				setStatusError('');
+			})
+			.catch((e) => setStatusError(e instanceof Error && e.message ? e.message : t('common.error')))
+			.finally(() => setLoaded(true));
+	}, [domainId, t]);
 
     const sign = async () => {
         setBusy(true);
-        try {
-            const r = await fetch(`/api/v1/domains/${domainId}/dnssec`, { method: 'POST' });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.error);
-            setSecured(true);
+		try {
+			const r = await fetch(`/api/v1/domains/${domainId}/dnssec`, { method: 'POST' });
+			if (!r.ok) throw new Error(apiErrorText(await readApiError(r), t));
+			const d = await r.json();
+            setSecured(d.secured === true);
             setDs(d.ds || []);
+            setStatusError('');
             showToast('success', t('dnssec.signed'));
         } catch (e) {
             showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
@@ -382,7 +406,12 @@ function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
                     </span>
                 )}
             </div>
-            {secured ? (
+			{statusError ? (
+				<div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+					<span>{statusError}</span>
+				</div>
+			) : secured ? (
                 <>
                     <p className="mb-3 text-sm text-fg-muted">{t('dnssec.dsHint')}</p>
                     {/* Field-by-field: most registrars (Hostinger et al.) ask for

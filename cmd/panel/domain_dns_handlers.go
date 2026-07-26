@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,7 +78,7 @@ func (p *Panel) handleDomainDNS(w http.ResponseWriter, r *http.Request) {
 	} else if strings.HasSuffix(r.URL.Path, "/zone") {
 		// Check/Create Zone
 		if r.Method == "POST" {
-			p.handleCreateDNSZone(w, domainName)
+			p.handleCreateDNSZone(w, r, domainName)
 		} else if r.Method == "GET" {
 			p.handleGetDNSZone(w, domainName)
 		}
@@ -97,18 +99,27 @@ func (p *Panel) handleGetDNSZone(w http.ResponseWriter, domainName string) {
 	json.NewEncoder(w).Encode(zone)
 }
 
-func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, domainName string) {
-	zoneID, created, err := p.createZoneWithTemplate(context.Background(), domainName)
+func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, r *http.Request, domainName string) {
+	zoneID, created, err := p.createZoneWithTemplate(r.Context(), domainName)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	if !created {
-		http.Error(w, "Zone already exists", http.StatusConflict)
+	// POST is intentionally idempotent: an existing zone is the normal retry
+	// target after domain creation partially succeeded. Always publish the full
+	// ledger zone, whether it was just created or already existed.
+	if err := p.syncZoneToDNS(r.Context(), domainName, false); err != nil {
+		var publicationErr *dnsAgentPublicationError
+		if errors.As(err, &publicationErr) {
+			log.Printf("[409][dns] publish zone %s: %v", domainName, err)
+			writeCodedError(w, http.StatusConflict, "DNS_PUBLICATION_FAILED",
+				"the DNS zone is saved, but it could not be published; check the DNS service and retry", "")
+			return
+		}
+		writeServerError(w, err)
 		return
 	}
-	p.syncZoneToDNS(context.Background(), domainName, false)
-	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "id": zoneID})
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "id": zoneID, "created": created})
 }
 
 func (p *Panel) handleListDNSRecords(w http.ResponseWriter, domainName string) {

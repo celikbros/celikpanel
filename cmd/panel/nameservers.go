@@ -92,10 +92,33 @@ func baseDomainOf(hostname string) string {
 // serverNameservers, barındırılan her zone'un devredeceği çifti döndürür.
 // Ayarlanmış değer kazanır; yoksa panelin kendi alan adından türetilir; o da
 // bilinmiyorsa çift boştur ve arayüz ad uydurmak yerine bunu söyler.
-func (p *Panel) serverNameservers(ctx context.Context) (string, string) {
+func (p *Panel) configuredNameservers(ctx context.Context) (string, string) {
 	ns1 := strings.TrimSpace(p.setting(ctx, settingNS1))
 	ns2 := strings.TrimSpace(p.setting(ctx, settingNS2))
 	if ns1 != "" && ns2 != "" {
+		return ns1, ns2
+	}
+	return "", ""
+}
+
+func (p *Panel) dnsIdentityConfigured(ctx context.Context) bool {
+	ns1, ns2 := p.configuredNameservers(ctx)
+	role := p.setting(ctx, settingDNSRole)
+	if ns1 == "" || ns2 == "" {
+		return false
+	}
+	if role == "standalone" {
+		return true
+	}
+	if role != "paired" || net.ParseIP(p.setting(ctx, settingDNSPeerIP)) == nil {
+		return false
+	}
+	peerNS := p.setting(ctx, settingDNSPeerNS)
+	return strings.EqualFold(peerNS, ns1) || strings.EqualFold(peerNS, ns2)
+}
+
+func (p *Panel) serverNameservers(ctx context.Context) (string, string) {
+	if ns1, ns2 := p.configuredNameservers(ctx); ns1 != "" && ns2 != "" {
 		return ns1, ns2
 	}
 	if base := panelBaseDomain(); base != "" {
@@ -162,6 +185,40 @@ func verifyNameservers(ctx context.Context, hosts []string, serverIP, serverV6 s
 	return out
 }
 
+// nameserverPairUsable validates the topology, not just each hostname in
+// isolation. Standalone mode expects both names here. Paired mode expects one
+// name here and one at the configured peer.
+func nameserverPairUsable(role, peerIP string, facts []nameserverFact) bool {
+	if len(facts) != 2 {
+		return false
+	}
+	switch normalizeDNSRole(role) {
+	case "standalone":
+		return facts[0].PointsHere && facts[1].PointsHere
+	case "paired":
+		// Validated below.
+	default:
+		return false
+	}
+	here, peer := 0, 0
+	for _, fact := range facts {
+		atHere := fact.PointsHere
+		atPeer := peerIP != "" && containsStr(fact.IPs, peerIP)
+		// The two roles must be held by two different names. One multi-A name
+		// pointing at both machines does not rescue a missing second server.
+		if atHere == atPeer {
+			return false
+		}
+		if atHere {
+			here++
+		}
+		if atPeer {
+			peer++
+		}
+	}
+	return here == 1 && peer == 1
+}
+
 func (p *Panel) setting(ctx context.Context, key string) string {
 	var v string
 	_ = p.db.GetDB().QueryRowContext(ctx, `SELECT value FROM panel_settings WHERE key = ?`, key).Scan(&v)
@@ -188,12 +245,12 @@ type nameserverSettings struct {
 	// göstermez.
 	Derived  bool   `json:"derived"`
 	ServerIP string `json:"server_ip"`
-	// Facts is where each name actually points. Usable is true only when BOTH
-	// names answer for this machine — the panel must not tell anyone to
-	// delegate to a nameserver that serves a different server.
-	// Facts, her adın gerçekte nereyi gösterdiğidir. Usable yalnız İKİ ad da bu
-	// makine adına cevap verdiğinde doğrudur — panel, başka bir sunucuya hizmet
-	// eden bir ad sunucusuna devretmeyi kimseye söylememelidir.
+	// Facts is where each name actually points. Usable means the public mapping
+	// matches the saved mode: both names here when standalone, or one here and
+	// one at the configured peer when paired.
+	// Facts, her adın gerçekte nereyi gösterdiğidir. Usable, kamusal eşleşmenin
+	// kayıtlı moda uyduğunu belirtir: tek başına modda iki ad burada; eşli modda
+	// biri burada, diğeri yapılandırılmış eşte.
 	Facts  []nameserverFact `json:"facts"`
 	Usable bool             `json:"usable"`
 }
@@ -214,7 +271,11 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 		ns1, ns2 := p.serverNameservers(r.Context())
 		ip4, ip6 := serverPrimaryIP(), serverPrimaryIPv6()
 		facts := verifyNameservers(r.Context(), []string{ns1, ns2}, ip4, ip6)
-		usable := len(facts) == 2 && facts[0].PointsHere && facts[1].PointsHere
+		usable := nameserverPairUsable(
+			p.setting(r.Context(), settingDNSRole),
+			p.setting(r.Context(), settingDNSPeerIP),
+			facts,
+		)
 		json.NewEncoder(w).Encode(nameserverSettings{
 			NS1:      ns1,
 			NS2:      ns2,
@@ -245,11 +306,11 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 			writeClientError(w, http.StatusBadRequest, "the two nameservers must have different names")
 			return
 		}
-		if err := p.setSetting(r.Context(), settingNS1, req.NS1); err != nil {
-			writeServerError(w, err)
-			return
-		}
-		if err := p.setSetting(r.Context(), settingNS2, req.NS2); err != nil {
+		if err := p.saveNameservers(r.Context(), req.NS1, req.NS2); err != nil {
+			if writeDNSPublicationConflict(w, err,
+				"Nameserver settings were saved, but one or more zones could not be published; check the DNS service and retry") {
+				return
+			}
 			writeServerError(w, err)
 			return
 		}

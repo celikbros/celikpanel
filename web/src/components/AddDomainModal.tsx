@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Globe, X, Lock, Server, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -42,8 +43,51 @@ type Purpose = 'website' | 'dnsonly';
 
 const API_BASE = '/api/v1';
 
+interface DomainCreatePartialSuccess {
+    error: string;
+    code: 'DNS_PUBLICATION_PENDING';
+    partial_success: true;
+    domain_id: number;
+    domain: string;
+    zone_exists: boolean;
+    action?: string;
+}
+
+// A failed HTTP status does not always mean Create did nothing. When the site
+// already exists but DNS publication failed, preserve the structured success
+// identity before the generic API-error reader intentionally narrows the body.
+async function readDomainCreatePartialSuccess(res: Response): Promise<DomainCreatePartialSuccess | null> {
+    try {
+        const value: unknown = await res.clone().json();
+        if (!value || typeof value !== 'object') return null;
+        const data = value as Record<string, unknown>;
+        if (
+            data.code !== 'DNS_PUBLICATION_PENDING' ||
+            data.partial_success !== true ||
+            typeof data.domain_id !== 'number' ||
+            data.domain_id <= 0 ||
+            typeof data.domain !== 'string' ||
+            data.domain === ''
+        ) {
+            return null;
+        }
+        return {
+            error: typeof data.error === 'string' ? data.error : '',
+            code: 'DNS_PUBLICATION_PENDING',
+            partial_success: true,
+            domain_id: data.domain_id,
+            domain: data.domain,
+            zone_exists: data.zone_exists === true,
+            action: typeof data.action === 'string' ? data.action : undefined,
+        };
+    } catch {
+        return null;
+    }
+}
+
 export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     const { t } = useI18n();
+    const navigate = useNavigate();
     const [domainName, setDomainName] = useState('');
     const [caps, setCaps] = useState<HostingCapabilities | null>(null);
     const [purpose, setPurpose] = useState<Purpose>('website');
@@ -149,6 +193,19 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
             });
 
             if (!res.ok) {
+                const partial = await readDomainCreatePartialSuccess(res);
+                if (partial) {
+                    // Creation is finished; never leave the form enabled for a
+                    // duplicate retry. The parent closes this modal and refreshes
+                    // the list, then we continue at the newly created domain.
+                    const action = partial.action?.startsWith('/domains/')
+                        ? partial.action
+                        : `/domains/${encodeURIComponent(partial.domain)}`;
+                    showToast('warning', t('domains.add.createdDnsPending', { name: partial.domain }));
+                    onSuccess();
+                    navigate(action);
+                    return;
+                }
                 const apiErr = await readApiError(res);
                 if (!apiErr.message && !apiErr.code) apiErr.message = t('domains.add.failed');
                 setError(apiErr);
