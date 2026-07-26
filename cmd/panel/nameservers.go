@@ -57,6 +57,46 @@ const (
 
 var validHostname = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$`)
 
+type hostResolver interface {
+	LookupHost(context.Context, string) ([]string, error)
+}
+
+func resolverAt(address string) *net.Resolver {
+	return &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			var dialer net.Dialer
+			return dialer.DialContext(ctx, network, address)
+		},
+	}
+}
+
+// Public resolvers come first because a provider cache can retain an obsolete
+// answer after the authoritative servers and parent glue are already correct.
+// The machine resolver remains the fallback for private names and restricted
+// networks.
+var nameserverResolvers = []hostResolver{
+	resolverAt(`1.1.1.1:53`),
+	resolverAt(`8.8.8.8:53`),
+	net.DefaultResolver,
+}
+
+func lookupNameserverHost(ctx context.Context, host string, resolvers []hostResolver) ([]string, error) {
+	var lastErr error
+	for _, resolver := range resolvers {
+		lookupCtx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
+		addrs, err := resolver.LookupHost(lookupCtx, host)
+		cancel()
+		if err == nil && len(addrs) > 0 {
+			return addrs, nil
+		}
+		if err != nil {
+			lastErr = err
+		}
+	}
+	return nil, lastErr
+}
+
 // panelBaseDomain is the panel host's own domain: boston.celikhost.com →
 // celikhost.com. This is what the default nameserver names are built from,
 // because it is the domain whose registrar entry the operator already
@@ -161,7 +201,6 @@ type nameserverFact struct {
 //
 // Tahmin edilen varsayılan, ancak kontrol edildiğinde güvenlidir. Kontrol budur.
 func verifyNameservers(ctx context.Context, hosts []string, serverIP, serverV6 string) []nameserverFact {
-	res := &net.Resolver{}
 	out := make([]nameserverFact, 0, len(hosts))
 	for _, h := range hosts {
 		f := nameserverFact{Host: h}
@@ -169,9 +208,7 @@ func verifyNameservers(ctx context.Context, hosts []string, serverIP, serverV6 s
 			out = append(out, f)
 			continue
 		}
-		lookupCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
-		addrs, err := res.LookupHost(lookupCtx, h)
-		cancel()
+		addrs, err := lookupNameserverHost(ctx, h, nameserverResolvers)
 		if err == nil {
 			f.IPs = addrs
 			for _, a := range addrs {
