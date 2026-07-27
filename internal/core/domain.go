@@ -18,13 +18,13 @@ const (
 
 // Service represents a system service (e.g. nginx, php-fpm)
 type Service struct {
-	ID          string        `json:"ID"`
-	Name        string        `json:"Name"`
-	Type        ServiceType   `json:"Type"`
-	Version     string        `json:"Version"`
-	Status      string        `json:"Status"`
-	ConfigFiles []ConfigFile  `json:"ConfigFiles,omitempty"`
-	IsPrimary   bool          `json:"IsPrimary"`
+	ID          string       `json:"ID"`
+	Name        string       `json:"Name"`
+	Type        ServiceType  `json:"Type"`
+	Version     string       `json:"Version"`
+	Status      string       `json:"Status"`
+	ConfigFiles []ConfigFile `json:"ConfigFiles,omitempty"`
+	IsPrimary   bool         `json:"IsPrimary"`
 }
 
 // ConfigFile represents a configuration file
@@ -85,6 +85,7 @@ type Domain struct {
 	ID              int
 	SubscriptionID  int
 	Name            string
+	ParentDomainID  *int
 	DNSZoneID       *int
 	Status          string // active, suspended, pending
 	IPAddressID     int
@@ -99,7 +100,7 @@ type Site struct {
 	ID           int
 	DomainID     int
 	DocumentRoot string
-	WebServer    string  // nginx, apache, litespeed
+	WebServer    string // nginx, apache, litespeed
 	NginxConfig  *string
 	// ProjectType mirrors sites.project_type: php, static, node, proxy,
 	// forwarding, dnsonly. Empty is treated as "php" (pre-3A rows).
@@ -134,33 +135,33 @@ type Database struct {
 
 // DatabaseServerType represents a type of database server (PostgreSQL, MariaDB, etc.)
 type DatabaseServerType struct {
-	ID                  int
-	Name                string // "postgresql", "mariadb", "mssql"
-	DisplayName         string // "PostgreSQL", "MariaDB"
-	DefaultPort         int
-	Icon                string // "🐘", "🐬"
-	SupportsUsers       bool
-	SupportsDatabases   bool
-	CreatedAt           time.Time
+	ID                int
+	Name              string // "postgresql", "mariadb", "mssql"
+	DisplayName       string // "PostgreSQL", "MariaDB"
+	DefaultPort       int
+	Icon              string // "🐘", "🐬"
+	SupportsUsers     bool
+	SupportsDatabases bool
+	CreatedAt         time.Time
 }
 
 // DatabaseServer represents a database server instance
 type DatabaseServer struct {
-	ID                     int
-	SubscriptionID         int
-	TypeID                 int
-	TypeName               string // "PostgreSQL", "MariaDB"
-	TypeIcon               string // "🐘", "🐬"
-	Name                   string // "PostgreSQL 14 Production"
-	Version                string // "14.5"
-	Host                   string
-	Port                   int
-	IsDefault              bool
-	RootPasswordEncrypted  string
-	ConnectionParams       map[string]interface{} // JSONB
-	Status                 string                 // active, inactive, error
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID                    int
+	SubscriptionID        int
+	TypeID                int
+	TypeName              string // "PostgreSQL", "MariaDB"
+	TypeIcon              string // "🐘", "🐬"
+	Name                  string // "PostgreSQL 14 Production"
+	Version               string // "14.5"
+	Host                  string
+	Port                  int
+	IsDefault             bool
+	RootPasswordEncrypted string
+	ConnectionParams      map[string]interface{} // JSONB
+	Status                string                 // active, inactive, error
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 // DatabaseUser represents a database user (per server)
@@ -179,7 +180,7 @@ type DatabaseV2 struct {
 	ID             int
 	ServerID       int
 	SubscriptionID int
-	DomainID       *int   // Optional: Related domain/site (nullable)
+	DomainID       *int // Optional: Related domain/site (nullable)
 	Name           string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

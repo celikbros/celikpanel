@@ -5,6 +5,7 @@ import { AddDomainModal } from './AddDomainModal';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, Button, SearchInput, EmptyState, StatusDot, UsageBar } from './ui';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 // Type badge colours: categorical, readable in both themes.
 // Tip rozeti renkleri: kategorik, iki temada da okunur.
@@ -88,7 +89,11 @@ export function Domains() {
         if (!confirm(t('domains.confirmDelete', { name }))) return;
         try {
             const res = await fetch(`${API_BASE}/domains/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const apiError = await readApiError(res);
+                showToast('error', apiErrorText(apiError, t));
+                return;
+            }
             showToast('success', t('domains.deleted', { name }));
             setSelected((s) => s.filter((x) => x !== id));
             loadDomains();

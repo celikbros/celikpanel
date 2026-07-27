@@ -7,6 +7,8 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 )
 
+const testACMEChallengeRoot = "/var/lib/celikpanel-agent/acme-http-01/subscriptions/7/domains/19"
+
 // The vhost template is the panel's security boundary for anything sitting in
 // a document root, so these are not style assertions — each one is a leak that
 // reached production once (see AUTOPSY A6) or was found on the way there.
@@ -22,6 +24,7 @@ func TestVhostServingRules(t *testing.T) {
 
 	render := func(t *testing.T, d VhostData) string {
 		t.Helper()
+		d.ACMEChallengeRoot = testACMEChallengeRoot
 		out, err := ng.Render(d)
 		if err != nil {
 			t.Fatalf("render %s: %v", d.ProjectType, err)
@@ -76,7 +79,10 @@ func TestPHPVhostRefusesWithoutSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ng.Render(VhostData{SiteID: 1, Domain: "ornek.com", ProjectType: "php"}); err == nil {
+	if _, err := ng.Render(VhostData{
+		SiteID: 1, Domain: "ornek.com", ProjectType: "php",
+		ACMEChallengeRoot: testACMEChallengeRoot,
+	}); err == nil {
 		t.Error("rendered a php vhost with no FPM socket — nginx would reject the config")
 	}
 }
@@ -111,7 +117,7 @@ func TestSSLRequestedWithoutCertificateStaysHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain := &core.Domain{Name: "biovision.health"}
+	domain := &core.Domain{ID: 19, SubscriptionID: 7, Name: "biovision.health"}
 	site := &core.Site{
 		ID:           10,
 		DocumentRoot: "/var/www/biovision.health",
@@ -173,7 +179,9 @@ func TestBlankCertificatePathCountsAsNoCertificate(t *testing.T) {
 		ID: 11, DocumentRoot: "/var/www/x", ProjectType: "static",
 		SSLEnabled: true, SSLCertPath: &blank, SSLKeyPath: &blank,
 	}
-	out, err := ng.GenerateVhost(site, &core.Domain{Name: "x.example"}, "")
+	out, err := ng.GenerateVhost(site, &core.Domain{
+		ID: 19, SubscriptionID: 7, Name: "x.example",
+	}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

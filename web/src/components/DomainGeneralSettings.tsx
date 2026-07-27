@@ -3,6 +3,7 @@ import { Save, Plus, Trash2, Globe } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { FormSection, ToggleRow, FormActions, Button, inputClass } from './ui';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 interface DomainGeneralSettingsProps {
     domainId: number;
@@ -86,17 +87,37 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     };
 
     const handleAddAlias = async () => {
-        if (!newAlias.trim()) return;
+        const alias = newAlias.trim();
+        if (!alias) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/aliases`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alias: newAlias }),
-            });
-            if (!res.ok) throw new Error();
-            showToast('success', t('general.aliasAdded', { name: newAlias }));
+            const request = (confirmCertificateReissue: boolean) =>
+                fetch(`/api/v1/domains/${domainId}/aliases`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        alias,
+                        confirm_certificate_reissue: confirmCertificateReissue,
+                    }),
+                });
+            let res = await request(false);
+            if (!res.ok) {
+                let apiError = await readApiError(res);
+                if (apiError.code === 'ALIAS_CERTIFICATE_REISSUE_REQUIRED') {
+                    if (!confirm(t('general.aliasReissueAddConfirm', { name: alias }))) return;
+                    res = await request(true);
+                    if (!res.ok) apiError = await readApiError(res);
+                }
+                if (!res.ok) {
+                    showToast('error', apiErrorText(apiError, t, 'common.error'));
+                    if (apiError.code === 'ALIAS_CERTIFICATE_ACTIVATION_PENDING') {
+                        await loadSettings();
+                    }
+                    return;
+                }
+            }
+            showToast('success', t('general.aliasAdded', { name: alias }));
             setNewAlias('');
-            loadSettings();
+            await loadSettings();
         } catch {
             showToast('error', t('common.error'));
         }
@@ -105,10 +126,25 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     const handleDeleteAlias = async (alias: string) => {
         if (!confirm(t('general.confirmDeleteAlias', { name: alias }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/aliases/${alias}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
+            const endpoint = `/api/v1/domains/${domainId}/aliases/${encodeURIComponent(alias)}`;
+            let res = await fetch(endpoint, { method: 'DELETE' });
+            if (!res.ok) {
+                let apiError = await readApiError(res);
+                if (apiError.code === 'ALIAS_CERTIFICATE_REISSUE_REQUIRED') {
+                    if (!confirm(t('general.aliasReissueDeleteConfirm', { name: alias }))) return;
+                    res = await fetch(`${endpoint}?confirm_certificate_reissue=true`, { method: 'DELETE' });
+                    if (!res.ok) apiError = await readApiError(res);
+                }
+                if (!res.ok) {
+                    showToast('error', apiErrorText(apiError, t));
+                    if (apiError.code === 'ALIAS_CERTIFICATE_ACTIVATION_PENDING') {
+                        await loadSettings();
+                    }
+                    return;
+                }
+            }
             showToast('success', t('general.aliasDeleted', { name: alias }));
-            loadSettings();
+            await loadSettings();
         } catch {
             showToast('error', t('common.error'));
         }

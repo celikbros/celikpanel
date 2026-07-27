@@ -47,11 +47,24 @@ func lookupGroupID(name string) (int, bool) {
 // validPanelCertDomain: düz bir FQDN — certbot argümanı ve dosya yolu parçası
 // olur; makine adı karakterlerinden başkası geçemez.
 var validPanelCertDomain = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$`)
+var validStagedSiteLineage = regexp.MustCompile(`^cp-site-[1-9][0-9]*-[a-f0-9]{24}$`)
+
+const managedPanelTLSDir = "/var/lib/celikpanel/tls"
+
+var (
+	certificateCleanupIsolatedStorage = isolatedSiteCertbotStorage
+	certificateCleanupLegacyConfigDir = func() string { return legacyCertbotConfigDir }
+	certificateCleanupLookPath        = exec.LookPath
+	certificateCleanupRunCertbot      = func(args ...string) ([]byte, error) {
+		return runPanelCertCommand(panelCertCleanupTimeout, "certbot", args...)
+	}
+)
 
 type IssuePanelCertRequest struct {
-	Domain string `json:"domain"`
-	Email  string `json:"email"`
-	TLSDir string `json:"tls_dir"` // where the panel loads panel.crt/panel.key from
+	Domain              string `json:"domain"`
+	Email               string `json:"email"`
+	TLSDir              string `json:"tls_dir"` // where the panel loads panel.crt/panel.key from
+	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
 }
 
 type IssuePanelCertResponse struct {
@@ -61,16 +74,33 @@ type IssuePanelCertResponse struct {
 	Error     string    `json:"error,omitempty"`
 }
 
+func validatePanelCertTLSDir(raw string) (string, error) {
+	if raw != managedPanelTLSDir {
+		return "", fmt.Errorf("invalid TLS directory")
+	}
+	return managedPanelTLSDir, nil
+}
+
 func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePanelCertResponse) error {
+	if req == nil {
+		resp.Error = "panel certificate request is required"
+		return nil
+	}
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "issue panel certificate"); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 	domain := strings.ToLower(strings.TrimSpace(req.Domain))
 	if !validPanelCertDomain.MatchString(domain) {
 		resp.Error = "invalid domain name"
 		return nil
 	}
-	if req.TLSDir == "" || !strings.HasPrefix(filepath.Clean(req.TLSDir), "/") {
-		resp.Error = "invalid TLS directory"
+	tlsDir, err := validatePanelCertTLSDir(req.TLSDir)
+	if err != nil {
+		resp.Error = err.Error()
 		return nil
 	}
+	req.TLSDir = tlsDir
 
 	// certbot is installed on first use — a deliberate, user-initiated install
 	// (the button says so), consistent with the minimal-install principle.
@@ -101,9 +131,9 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	} else {
 		args = append(args, "--register-unsafely-without-email")
 	}
-	out, err := exec.Command("certbot", args...).CombinedOutput()
+	out, err := runPanelCertCommand(panelCertIssueTimeout, "certbot", args...)
 	if err != nil {
-		resp.Error = fmt.Sprintf("certbot failed: %s", certbotFirstError(string(out)))
+		resp.Error = panelCertCommandError("certbot issue", out, err).Error()
 		return nil
 	}
 
@@ -130,7 +160,9 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// 90 günde sessizce ölen sertifika özellik değil tuzaktır. Arch'ta
 	// canlıda yakalandı.
 	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
-		if exec.Command("systemctl", "enable", "--now", timer).Run() == nil {
+		if _, err := runPanelCertCommand(
+			panelCertSystemdTimeout, "systemctl", "enable", "--now", timer,
+		); err == nil {
 			break
 		}
 	}
@@ -190,10 +222,10 @@ func writePanelCertDeployHook(domain, tlsDir string) {
 # CelikPanel yönetir — certbot panelin sertifikasını yenileyince, panelin TLS
 # yüklediği yere kopyala ve sunması için paneli yeniden başlat.
 if [ "$RENEWED_LINEAGE" = "/etc/letsencrypt/live/%s" ]; then
-  cp -L "$RENEWED_LINEAGE/fullchain.pem" %s/panel.crt
-  cp -L "$RENEWED_LINEAGE/privkey.pem" %s/panel.key
-  chown root:celikpanel %s/panel.crt %s/panel.key
-  chmod 640 %s/panel.crt %s/panel.key
+  cp -L "$RENEWED_LINEAGE/fullchain.pem" '%s/panel.crt'
+  cp -L "$RENEWED_LINEAGE/privkey.pem" '%s/panel.key'
+  chown root:celikpanel '%s/panel.crt' '%s/panel.key'
+  chmod 640 '%s/panel.crt' '%s/panel.key'
   systemctl restart celikpanel-panel
 fi
 `, domain, tlsDir, tlsDir, tlsDir, tlsDir, tlsDir, tlsDir)
@@ -201,7 +233,11 @@ fi
 }
 
 type DeleteCertLineageRequest struct {
-	Domain string `json:"domain"`
+	Domain              string   `json:"domain"`
+	DeleteCanonical     bool     `json:"delete_canonical,omitempty"`
+	LineageNames        []string `json:"lineage_names,omitempty"`
+	SnapshotPath        string   `json:"snapshot_path,omitempty"`
+	ExpectedBuildCommit string   `json:"expected_build_commit,omitempty"`
 }
 
 type DeleteCertLineageResponse struct {
@@ -209,34 +245,165 @@ type DeleteCertLineageResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// DeleteCertLineage removes a deleted domain's Let's Encrypt material
-// (certificate, key, renewal config) via certbot's own delete. Without this,
-// the dead name's renewal config fails on every certbot run forever. No-op
-// when no lineage exists.
-// DeleteCertLineage, silinmiş bir domain'in Let's Encrypt malzemesini
-// (sertifika, anahtar, yenileme yapılandırması) certbot'un kendi delete'iyle
-// kaldırır. Bu olmadan ölü adın yenileme yapılandırması her certbot koşusunda
-// sonsuza dek başarısız olur. Soy yoksa no-op.
+// DeleteCertLineage removes only explicitly authorized CelikPanel
+// customer-site lineages and one verified, exact immutable snapshot version.
+// It never removes a domain snapshot root or deletes from the global
+// /etc/letsencrypt store, where panel and operator-owned lineages may live.
+// DeleteCertLineage yalnız açıkça yetkilendirilmiş CelikPanel müşteri-site
+// lineage'larını ve doğrulanmış tek bir değişmez snapshot sürümünü siler.
+// Domain snapshot kökünü veya panel/operatör lineage'larının bulunabileceği
+// global /etc/letsencrypt deposunu asla silmez.
 func (a *Agent) DeleteCertLineage(req *DeleteCertLineageRequest, resp *DeleteCertLineageResponse) error {
-	domain := strings.ToLower(strings.TrimSpace(req.Domain))
-	if !validPanelCertDomain.MatchString(domain) {
-		resp.Error = "invalid domain name"
+	if req == nil {
+		resp.Error = "certificate lineage deletion request is required"
 		return nil
 	}
-	if _, err := os.Stat(filepath.Join("/etc/letsencrypt/renewal", domain+".conf")); err != nil {
-		return nil // no lineage — nothing to clean / soy yok — temizlenecek şey yok
-	}
-	if _, err := exec.LookPath("certbot"); err != nil {
-		resp.Error = "renewal config exists but certbot is missing"
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "delete certificate lineage"); err != nil {
+		resp.Error = err.Error()
 		return nil
 	}
-	out, err := exec.Command("certbot", "delete", "--cert-name", domain, "--non-interactive").CombinedOutput()
-	if err != nil {
-		resp.Error = certbotFirstError(string(out))
+	domain := strings.TrimSpace(req.Domain)
+	if domain != "" {
+		var err error
+		domain, err = canonicalCertificateDomain(domain)
+		if err != nil {
+			resp.Error = "invalid domain name"
+			return nil
+		}
+	}
+	snapshotPath := strings.TrimSpace(req.SnapshotPath)
+	if snapshotPath != req.SnapshotPath {
+		resp.Error = "managed certificate snapshot path must be canonical"
 		return nil
 	}
-	resp.Deleted = true
+	if req.DeleteCanonical && domain == "" {
+		resp.Error = "canonical lineage deletion requires a domain"
+		return nil
+	}
+	if snapshotPath != "" && domain == "" {
+		resp.Error = "snapshot deletion requires a domain"
+		return nil
+	}
+	if !req.DeleteCanonical && len(req.LineageNames) == 0 &&
+		snapshotPath == "" {
+		resp.Error = "a canonical lineage, staged lineage, or exact snapshot is required"
+		return nil
+	}
+	if len(req.LineageNames) > 100 {
+		resp.Error = "too many staged lineages"
+		return nil
+	}
+	seen := make(map[string]struct{}, len(req.LineageNames))
+	normalizedLineages := make([]string, 0, len(req.LineageNames))
+	for _, raw := range req.LineageNames {
+		lineage := strings.ToLower(strings.TrimSpace(raw))
+		if !validStagedSiteLineage.MatchString(lineage) {
+			resp.Error = "invalid staged lineage name"
+			return nil
+		}
+		if _, ok := seen[lineage]; ok {
+			continue
+		}
+		seen[lineage] = struct{}{}
+		normalizedLineages = append(normalizedLineages, lineage)
+	}
+	var snapshotVersionDir string
+	if snapshotPath != "" {
+		var err error
+		snapshotVersionDir, err = verifyManagedCertificateVersionPath(
+			domain, snapshotPath,
+		)
+		if err != nil {
+			resp.Error = fmt.Sprintf(
+				"refuse unsafe immutable certificate snapshot cleanup: %v", err,
+			)
+			return nil
+		}
+	}
+	if !acquireSiteCertbot() {
+		resp.Error = "another site certificate operation is already running; retry shortly"
+		return nil
+	}
+	defer releaseSiteCertbot()
+
+	deleteLineage := func(storage certbotStorage, lineage string) error {
+		if !certbotLineageExists(storage.ConfigDir, lineage) {
+			return nil
+		}
+		if _, err := certificateCleanupLookPath("certbot"); err != nil {
+			return fmt.Errorf("certbot lineage exists but certbot is missing")
+		}
+		args := []string{"delete"}
+		args = append(args, storage.commandArgs()...)
+		args = append(args, "--cert-name", lineage, "--non-interactive")
+		out, err := certificateCleanupRunCertbot(args...)
+		if err != nil {
+			return panelCertCommandError("certbot delete", out, err)
+		}
+		resp.Deleted = true
+		return nil
+	}
+
+	var cleanupErrors []string
+	isolated := certificateCleanupIsolatedStorage()
+	if req.DeleteCanonical {
+		// The canonical domain lineage is removed only from CelikPanel's
+		// isolated store. A same-named global lineage may be the panel
+		// certificate or operator-owned legacy material.
+		if err := deleteLineage(isolated, domain); err != nil {
+			cleanupErrors = append(cleanupErrors, err.Error())
+		}
+	}
+
+	legacy := isolated
+	legacy.ConfigDir = certificateCleanupLegacyConfigDir()
+	for _, lineage := range normalizedLineages {
+		if err := deleteLineage(isolated, lineage); err != nil {
+			cleanupErrors = append(cleanupErrors, err.Error())
+		}
+		// A staged reissue of an upgraded legacy certificate deliberately
+		// reuses that legacy account store. The random, agent-generated prefix
+		// makes this exact deletion safe without exposing arbitrary names.
+		if err := deleteLineage(legacy, lineage); err != nil {
+			cleanupErrors = append(cleanupErrors, err.Error())
+		}
+	}
+
+	if snapshotVersionDir != "" {
+		versionRoot, err := customCertificateDirectory(domain)
+		if err != nil {
+			cleanupErrors = append(cleanupErrors, err.Error())
+		} else {
+			managedRoot := filepath.Dir(versionRoot)
+			relativeVersion, err := filepath.Rel(managedRoot, snapshotVersionDir)
+			if err != nil || relativeVersion == "." || relativeVersion == ".." ||
+				strings.HasPrefix(relativeVersion, ".."+string(filepath.Separator)) {
+				cleanupErrors = append(
+					cleanupErrors,
+					"refuse snapshot cleanup outside the managed certificate root",
+				)
+			} else if err := secureDeleteManagedCertificateSnapshot(
+				managedRoot, filepath.ToSlash(relativeVersion),
+			); err != nil {
+				cleanupErrors = append(
+					cleanupErrors,
+					fmt.Sprintf(
+						"remove exact immutable certificate snapshot: %v", err,
+					),
+				)
+			} else {
+				resp.Deleted = true
+			}
+		}
+	}
+	if len(cleanupErrors) != 0 {
+		resp.Error = strings.Join(cleanupErrors, "; ")
+	}
 	return nil
+}
+
+type RestartPanelSoonRequest struct {
+	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
 }
 
 // RestartPanelSoon restarts the panel a moment from now, detached via
@@ -245,10 +412,23 @@ func (a *Agent) DeleteCertLineage(req *DeleteCertLineageRequest, resp *DeleteCer
 // RestartPanelSoon, paneli birazdan yeniden başlatır; systemd-run ile ayrık —
 // önce RPC (ve onu tetikleyen HTTP cevabı) tamamlanır: yeni sertifikayı
 // etkinleştirmek, yoldaki cevabı öldürmemeli.
-func (a *Agent) RestartPanelSoon(_ *struct{}, resp *bool) error {
-	err := exec.Command("systemd-run", "--on-active=2", "--timer-property=AccuracySec=100ms",
-		"systemctl", "restart", "celikpanel-panel").Run()
+func (a *Agent) RestartPanelSoon(req *RestartPanelSoonRequest, resp *bool) error {
+	if req == nil {
+		return fmt.Errorf("panel restart request is required")
+	}
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "restart panel"); err != nil {
+		return err
+	}
+	_, err := runPanelCertCommand(
+		panelCertSystemdTimeout,
+		"systemd-run", "--on-active=2",
+		"--timer-property=AccuracySec=100ms",
+		"systemctl", "restart", "celikpanel-panel",
+	)
 	*resp = err == nil
+	if err != nil {
+		return fmt.Errorf("schedule panel restart: %w", err)
+	}
 	return nil
 }
 

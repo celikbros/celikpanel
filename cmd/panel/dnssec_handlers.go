@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
@@ -22,11 +23,33 @@ import (
 // Registrar'da DS olmadan doğrulayıcılar TLSA kayıtlarını güvensiz sayar
 // (tam Plesk'in uyardığı şey); bu yüzden arayüz ikisini birlikte gösterir.
 
-// mailTLSAPorts are the mail service ports that get TLSA records, matching
-// what Plesk publishes: SMTP, POP3(S), submission(s), IMAPS.
-// mailTLSAPorts, TLSA kaydı alan posta servis portlarıdır; Plesk'in
-// yayımladığıyla eşleşir.
-var mailTLSAPorts = []string{"25", "110", "465", "587", "993", "995"}
+// Release safety gate: the automatic publish/refresh/remove behavior
+// described above is disabled until both TTL-aware durable rollover and
+// explicit panel-record ownership exist.
+
+const (
+	automaticDANEMutationEnabled = false
+	automaticDANEMutationReason  = "automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release"
+)
+
+type daneAutomationState struct {
+	Enabled bool   `json:"enabled"`
+	Reason  string `json:"reason,omitempty"`
+}
+
+func currentDANEAutomationState() daneAutomationState {
+	return daneAutomationState{
+		Enabled: automaticDANEMutationEnabled,
+		Reason:  automaticDANEMutationReason,
+	}
+}
+
+func daneMutationSafetyPrerequisitesAvailable() bool {
+	// There is no durable rollover job and pdns_records has no ownership
+	// column in this release. Keep this separate barrier even if a future
+	// build changes the feature flag by mistake.
+	return false
+}
 
 type dnssecAgentResponse struct {
 	Secured bool     `json:"secured"`
@@ -78,7 +101,11 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			writeClientError(w, http.StatusConflict, problem)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]any{"secured": resp.Secured, "ds": resp.DS})
+		json.NewEncoder(w).Encode(map[string]any{
+			"secured":         resp.Secured,
+			"ds":              resp.DS,
+			"dane_automation": currentDANEAutomationState(),
+		})
 
 	case http.MethodPost:
 		if err := p.agentClient.Call("Agent.SecureDNSZone", &struct {
@@ -101,70 +128,35 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			return
 		}
 		p.audit(r, "dnssec.sign", "domain", domainID)
-		json.NewEncoder(w).Encode(map[string]any{"secured": resp.Secured, "ds": resp.DS})
+		json.NewEncoder(w).Encode(map[string]any{
+			"secured":         resp.Secured,
+			"ds":              resp.DS,
+			"dane_automation": currentDANEAutomationState(),
+		})
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// refreshTLSARecords brings the zone's TLSA records in line with reality:
-// when the domain's mail is secured by its certificate, publish TLSA for the
-// mail ports at mail.<domain>; otherwise remove them. Ends with a zone push.
-// refreshTLSARecords, zone'un TLSA kayıtlarını gerçekle hizalar: domain'in
-// postası sertifikasıyla korunuyorsa mail.<domain>'de posta portları için
-// TLSA yayımlar; değilse kaldırır. Zone itişiyle biter.
+// refreshTLSARecords intentionally performs no mutation in this release.
+// A safe DANE certificate rollover needs durable state and TTL waits:
+// publish old+new, wait, switch the mail certificate, wait again, then remove
+// old. The current schema also cannot distinguish panel-owned TLSA records
+// from user-created records. Until both capabilities exist, certificate and
+// mail operations leave every TLSA record untouched.
 func (p *Panel) refreshTLSARecords(ctx context.Context, domainID int) error {
-	var domain string
-	if err := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT name FROM domains WHERE id = ?`, domainID).Scan(&domain); err != nil {
-		return err
-	}
+	_ = p
+	_ = ctx
+	_ = domainID
 
-	var certPath string
-	_ = p.db.GetDB().QueryRowContext(ctx, `
-		SELECT cert_path FROM ssl_certificates
-		WHERE domain_id = ? AND status = 'active' AND secure_mail = 1
-		ORDER BY created_at DESC LIMIT 1`, domainID).Scan(&certPath)
-
-	// Drop the old TLSA rows either way; re-add below when mail is secured.
-	// Eski TLSA satırlarını her durumda düşür; posta korunuyorsa aşağıda
-	// yeniden ekle.
-	var zoneID int
-	if err := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT id FROM pdns_domains WHERE name = ?`, domain).Scan(&zoneID); err != nil {
-		// No zone in the ledger — nothing to publish TLSA into.
-		// Defterde zone yok — TLSA yayımlanacak yer yok.
+	if !automaticDANEMutationEnabled {
+		// Keep core certificate and mail TLS operations usable while the
+		// DNSSEC endpoint reports the disabled DANE automation state.
 		return nil
 	}
-	if _, err := p.db.GetDB().ExecContext(ctx,
-		`DELETE FROM pdns_records WHERE domain_id = ? AND type = 'TLSA'`, zoneID); err != nil {
-		return err
+	if !daneMutationSafetyPrerequisitesAvailable() {
+		return errors.New(automaticDANEMutationReason)
 	}
-
-	if certPath != "" {
-		var tlsa struct {
-			Content string `json:"content"`
-			Error   string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.ComputeTLSA", &struct {
-			CertPath string `json:"cert_path"`
-		}{CertPath: certPath}, &tlsa); err != nil {
-			return err
-		}
-		if tlsa.Error != "" {
-			return &backupError{tlsa.Error}
-		}
-		for _, port := range mailTLSAPorts {
-			name := "_" + port + "._tcp.mail." + domain
-			if _, err := p.db.GetDB().ExecContext(ctx, `
-				INSERT INTO pdns_records (domain_id, name, type, content, ttl, prio, disabled)
-				VALUES (?, ?, 'TLSA', ?, 3600, 0, 0)`, zoneID, name, tlsa.Content); err != nil {
-				return err
-			}
-		}
-	}
-
-	p.syncZoneToDNS(ctx, domain, false)
-	return nil
+	return errors.New("automatic DANE/TLSA mutation has no implementation in this release")
 }

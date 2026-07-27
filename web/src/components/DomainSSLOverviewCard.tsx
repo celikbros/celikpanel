@@ -9,11 +9,17 @@ import {
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { Button } from './ui';
+import type { SSLRuntimeSummary } from './DomainSSLSettings';
 
 interface OverviewCertificate {
     issuer: string;
     expires_at: string;
     days_until_expiry: number;
+    activated: boolean;
+    usable: boolean;
+    trust_status: 'trusted' | 'untrusted' | 'unknown' | 'invalid';
+    activation_pending: boolean;
+    dependents_pending: boolean;
 }
 
 interface OverviewSSLData {
@@ -35,7 +41,7 @@ export function DomainSSLOverviewCard({
 }: {
     domainId: number;
     onOpen: () => void;
-    onCertificateChange?: (hasCertificate: boolean) => void;
+    onCertificateChange?: (status: SSLRuntimeSummary) => void;
 }) {
     const { t } = useI18n();
     const [data, setData] = useState<OverviewSSLData | null>(null);
@@ -57,7 +63,10 @@ export function DomainSSLOverviewCard({
             })
             .then((result: OverviewSSLData) => {
                 setData(result);
-                onCertificateChange?.(result.has_certificate);
+                onCertificateChange?.({
+                    activated: result.certificate?.activated === true,
+                    usable: result.certificate?.usable === true,
+                });
             })
             .catch((error: unknown) => {
                 if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -93,13 +102,41 @@ export function DomainSSLOverviewCard({
                   surface: 'border-warning/30 bg-warning/5',
                   label: 'ssl.status.none',
               }
-            : cert.days_until_expiry < 0
+            : cert.activation_pending
+              ? {
+                    icon: Clock3,
+                    color: 'text-warning',
+                    surface: 'border-warning/30 bg-warning/5',
+                    label: 'ssl.status.pending',
+                }
+              : cert.trust_status === 'invalid' || cert.days_until_expiry < 0
               ? {
                     icon: ShieldAlert,
                     color: 'text-danger',
                     surface: 'border-danger/30 bg-danger/5',
-                    label: 'ssl.status.expired',
+                    label: cert.days_until_expiry < 0 ? 'ssl.status.expired' : 'ssl.status.invalid',
                 }
+              : cert.trust_status === 'untrusted'
+                ? {
+                      icon: ShieldAlert,
+                      color: 'text-danger',
+                      surface: 'border-danger/30 bg-danger/5',
+                      label: 'ssl.status.untrusted',
+                  }
+                : cert.trust_status === 'unknown'
+                  ? {
+                        icon: ShieldAlert,
+                        color: 'text-warning',
+                        surface: 'border-warning/30 bg-warning/5',
+                        label: 'ssl.status.trustUnknown',
+                    }
+                  : !cert.activated || !cert.usable
+                  ? {
+                        icon: ShieldAlert,
+                        color: 'text-warning',
+                        surface: 'border-warning/30 bg-warning/5',
+                        label: !cert.activated ? 'ssl.status.inactive' : 'ssl.status.incomplete',
+                    }
               : cert.days_until_expiry < 30
                 ? {
                       icon: Clock3,
@@ -107,7 +144,14 @@ export function DomainSSLOverviewCard({
                       surface: 'border-warning/30 bg-warning/5',
                       label: 'ssl.status.expiring',
                   }
-                : {
+                : cert.dependents_pending
+                  ? {
+                        icon: Clock3,
+                        color: 'text-warning',
+                        surface: 'border-warning/30 bg-warning/5',
+                        label: 'ssl.status.dependentsPending',
+                    }
+                  : {
                       icon: CheckCircle,
                       color: 'text-success',
                       surface: 'border-success/30 bg-success/5',
@@ -122,6 +166,14 @@ export function DomainSSLOverviewCard({
             detail = t('domain.overview.ssl.unavailableHint');
         } else if (!hasCertificate) {
             detail = t('domain.overview.ssl.none');
+        } else if (cert?.activation_pending) {
+            detail = t('domain.overview.ssl.activationPending');
+        } else if (cert?.trust_status === 'unknown') {
+            detail = t('domain.overview.ssl.trustUnknown');
+        } else if (cert?.dependents_pending) {
+            detail = t('domain.overview.ssl.dependentsPending');
+        } else if (cert && !cert.usable) {
+            detail = t('domain.overview.ssl.notUsable');
         } else if (cert) {
             detail = t('domain.overview.ssl.certificate', {
                 issuer: cert.issuer,
@@ -152,7 +204,7 @@ export function DomainSSLOverviewCard({
             </div>
             <Button
                 type="button"
-                variant={!loading && !failed && !hasCertificate ? 'primary' : 'secondary'}
+                variant={!loading && !failed && (!hasCertificate || !cert?.usable) ? 'primary' : 'secondary'}
                 icon={ArrowRight}
                 onClick={onOpen}
                 className="shrink-0 self-start sm:self-center"

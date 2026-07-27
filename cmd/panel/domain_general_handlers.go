@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
@@ -29,7 +34,181 @@ type UpdateGeneralSettingsRequest struct {
 }
 
 type AddAliasRequest struct {
-	Alias string `json:"alias"`
+	Alias                     string `json:"alias"`
+	ConfirmCertificateReissue bool   `json:"confirm_certificate_reissue"`
+}
+
+var (
+	domainAliasMutationLock     sync.Mutex
+	errInvalidDomainAlias       = errors.New("invalid domain alias")
+	errDomainAliasConflict      = errors.New("domain alias conflicts with an existing hostname")
+	errDomainAliasNotFound      = errors.New("domain alias not found")
+	errAliasCertificateCoverage = errors.New("active certificate does not cover the domain alias")
+)
+
+type aliasVhostApply func(context.Context, int) error
+type aliasCertificateVerifier func(context.Context, int, string) error
+
+func canonicalDomainAlias(raw string) (string, error) {
+	alias, err := hostname.CanonicalFQDN(raw)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", errInvalidDomainAlias, err)
+	}
+	return alias, nil
+}
+
+func (p *Panel) ensureActiveCertificateCoversAlias(
+	ctx context.Context,
+	domainID int,
+	alias string,
+) error {
+	var certPath, keyPath string
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT cert_path, key_path
+		FROM ssl_certificates
+		WHERE domain_id = ? AND status = 'active'
+		ORDER BY created_at DESC LIMIT 1`, domainID).
+		Scan(&certPath, &keyPath)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	info, err := p.inspectInstalledCertificate(ctx, certPath, keyPath)
+	if err != nil {
+		return fmt.Errorf("verify the active certificate before adding the alias: %w", err)
+	}
+	if !info.Valid || !certificateCoversHostname(info.DNSNames, alias) {
+		return fmt.Errorf(
+			"%w %q; remove or replace the certificate before adding this alias",
+			errAliasCertificateCoverage,
+			alias,
+		)
+	}
+	return nil
+}
+
+func (p *Panel) aliasConflicts(ctx context.Context, domainID int, alias string) error {
+	var domainExists bool
+	if err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM domains WHERE id = ?)`, domainID,
+	).Scan(&domainExists); err != nil {
+		return err
+	}
+	if !domainExists {
+		return sql.ErrNoRows
+	}
+
+	var conflict bool
+	if err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM hostname_reservations
+			WHERE hostname = ? COLLATE NOCASE
+		)`, alias,
+	).Scan(&conflict); err != nil {
+		return err
+	}
+	if conflict {
+		return errDomainAliasConflict
+	}
+	return nil
+}
+
+func (p *Panel) addDomainAlias(
+	ctx context.Context,
+	domainID int,
+	rawAlias string,
+	verify aliasCertificateVerifier,
+	apply aliasVhostApply,
+) (string, error) {
+	alias, err := canonicalDomainAlias(rawAlias)
+	if err != nil {
+		return "", err
+	}
+	if err := p.aliasConflicts(ctx, domainID, alias); err != nil {
+		return "", err
+	}
+	if verify != nil {
+		if err := verify(ctx, domainID, alias); err != nil {
+			return "", err
+		}
+	}
+	if _, err := p.db.GetDB().ExecContext(ctx,
+		`INSERT INTO domain_aliases (domain_id, alias) VALUES (?, ?)`,
+		domainID, alias,
+	); err != nil {
+		if hostname.IsNamespaceConflict(err) {
+			return "", errDomainAliasConflict
+		}
+		return "", err
+	}
+	if err := apply(ctx, domainID); err == nil {
+		return alias, nil
+	} else {
+		applyErr := err
+		rollbackCtx, cancel := sslCompensationContext()
+		defer cancel()
+		_, rollbackErr := p.db.GetDB().ExecContext(rollbackCtx,
+			`DELETE FROM domain_aliases WHERE domain_id = ? AND alias = ?`,
+			domainID, alias,
+		)
+		restoreErr := apply(rollbackCtx, domainID)
+		if rollbackErr != nil || restoreErr != nil {
+			return "", fmt.Errorf(
+				"apply alias vhost: %v; database rollback: %v; vhost restore: %v",
+				applyErr, rollbackErr, restoreErr,
+			)
+		}
+		return "", fmt.Errorf("apply alias vhost: %w", applyErr)
+	}
+}
+
+func (p *Panel) deleteDomainAlias(
+	ctx context.Context,
+	domainID int,
+	rawAlias string,
+	apply aliasVhostApply,
+) error {
+	alias, err := canonicalDomainAlias(rawAlias)
+	if err != nil {
+		return err
+	}
+	if err := p.ensureHSTSAllowsHostnameRemoval(ctx, domainID); err != nil {
+		return err
+	}
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		DELETE FROM domain_aliases
+		WHERE domain_id = ? AND lower(alias) = ?`, domainID, alias)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errDomainAliasNotFound
+	}
+	if err := apply(ctx, domainID); err == nil {
+		return nil
+	} else {
+		applyErr := err
+		rollbackCtx, cancel := sslCompensationContext()
+		defer cancel()
+		_, rollbackErr := p.db.GetDB().ExecContext(rollbackCtx,
+			`INSERT INTO domain_aliases (domain_id, alias) VALUES (?, ?)`,
+			domainID, alias,
+		)
+		restoreErr := apply(rollbackCtx, domainID)
+		if rollbackErr != nil || restoreErr != nil {
+			return fmt.Errorf(
+				"apply alias removal vhost: %v; database rollback: %v; vhost restore: %v",
+				applyErr, rollbackErr, restoreErr,
+			)
+		}
+		return fmt.Errorf("apply alias removal vhost: %w", applyErr)
+	}
 }
 
 // GET /api/v1/domains/:id/general
@@ -188,70 +367,384 @@ func (p *Panel) handleDomainAliases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Panel) handleAddAlias(w http.ResponseWriter, r *http.Request, domainID int) {
+	w.Header().Set("Content-Type", "application/json")
 	var req AddAliasRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Validate alias
-	if req.Alias == "" {
-		http.Error(w, "Alias cannot be empty", http.StatusBadRequest)
+	domainAliasMutationLock.Lock()
+	defer domainAliasMutationLock.Unlock()
+	unlock := lockDomainSSLOperation(domainID)
+	defer unlock()
+	ctx, cancel := sslDurableContext(r.Context())
+	defer cancel()
+
+	alias, err := canonicalDomainAlias(req.Alias)
+	if err != nil {
+		writeClientError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	ctx := context.Background()
-	pool := p.db.GetDB()
-
-	// Insert alias
-	_, err := pool.ExecContext(ctx, `
-		INSERT INTO domain_aliases (domain_id, alias) 
-		VALUES (?, ?)
-	`, domainID, req.Alias)
-
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
-			http.Error(w, "Alias already exists", http.StatusConflict)
+	if err := p.aliasConflicts(ctx, domainID, alias); err != nil {
+		if errors.Is(err, errDomainAliasConflict) {
+			writeClientError(w, http.StatusConflict, err.Error())
+		} else if errors.Is(err, sql.ErrNoRows) {
+			writeClientError(w, http.StatusNotFound, "domain not found")
 		} else {
-			http.Error(w, "Failed to add alias", http.StatusInternalServerError)
+			writeServerError(w, err)
 		}
 		return
 	}
 
-	// TODO: Regenerate nginx config
+	activeCert, err := p.loadActiveAliasCertificate(ctx, domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	needsManagedReissue := false
+	if activeCert != nil {
+		info, inspectErr := p.inspectInstalledCertificate(
+			ctx, activeCert.CertPath, activeCert.KeyPath,
+		)
+		if inspectErr != nil {
+			writeServerError(w, fmt.Errorf(
+				"inspect active certificate before adding alias: %w", inspectErr,
+			))
+			return
+		}
+		if !certificateCoversHostname(info.DNSNames, alias) {
+			if activeCert.Type != "letsencrypt" {
+				writeClientError(
+					w,
+					http.StatusConflict,
+					"the active custom certificate does not cover the alias; upload a replacement certificate first",
+				)
+				return
+			}
+			needsManagedReissue = true
+		}
+	}
 
+	if needsManagedReissue && !req.ConfirmCertificateReissue {
+		writeCodedError(
+			w,
+			http.StatusConflict,
+			errCodeAliasCertificateReissueRequired,
+			"adding this alias requires reissuing the active ACME certificate with the new hostname",
+			"confirm_certificate_reissue",
+		)
+		return
+	}
+
+	if needsManagedReissue {
+		currentNames, namesErr := p.managedSiteHostnames(ctx, domainID)
+		if namesErr != nil {
+			writeServerError(w, namesErr)
+			return
+		}
+		desiredNames, namesErr := desiredAliasCertificateNames(
+			currentNames, alias, "",
+		)
+		if namesErr != nil {
+			writeServerError(w, namesErr)
+			return
+		}
+		install, issueErr := p.issueAliasCertificateSnapshot(
+			ctx, domainID, activeCert, desiredNames, []string{alias},
+		)
+		if issueErr != nil {
+			writeClientError(w, http.StatusConflict,
+				"the alias certificate could not be reissued: "+issueErr.Error())
+			return
+		}
+
+		activation, err := p.mutateAliasAndActivateCertificate(
+			ctx, domainID, alias, true, install,
+		)
+		if err != nil {
+			cleanupCtx, cleanupCancel := sslCompensationContext()
+			defer cleanupCancel()
+			p.cleanupUncommittedCertificate(
+				cleanupCtx,
+				certificateCleanupTarget{
+					Domain:      install.DomainName,
+					LineageName: install.LineageName,
+					CertPath:    install.CertPath,
+					KeyPath:     install.KeyPath,
+					ChainPath:   install.ChainPath,
+				},
+			)
+			writeServerError(w, fmt.Errorf(
+				"atomically reserve alias and activate certificate: %w", err,
+			))
+			return
+		}
+		if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+			if markErr := p.markCertificatePendingDetached(
+				ctx, domainID, sslPendingActivation, true,
+			); markErr != nil {
+				writeServerError(w, fmt.Errorf(
+					"alias certificate activation failed: %v; pending state failed: %w",
+					err, markErr,
+				))
+				return
+			}
+			_ = activation
+			p.audit(r, "domain.alias.add.reissue.partial", "domain", domainID)
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeAliasCertificatePending,
+				"the alias and certificate were saved, but web-server activation is pending; use Retry activation on SSL/TLS",
+				"retry_ssl_activation",
+			)
+			return
+		}
+		if err := p.syncCertificateDependents(ctx, domainID); err != nil {
+			if markErr := p.markCertificatePendingDetached(
+				ctx, domainID, sslPendingDependents, false,
+			); markErr != nil {
+				writeServerError(w, fmt.Errorf(
+					"alias certificate dependent sync failed: %v; pending state failed: %w",
+					err, markErr,
+				))
+				return
+			}
+			p.audit(r, "domain.alias.add.reissue.dependents_partial", "domain", domainID)
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeAliasCertificatePending,
+				"the alias certificate is active, but mail TLS synchronization is pending; use Retry activation on SSL/TLS",
+				"retry_ssl_activation",
+			)
+			return
+		}
+		if err := p.clearCertificatePendingDetached(ctx, domainID); err != nil {
+			writeServerError(w, err)
+			return
+		}
+		p.audit(r, "domain.alias.add.reissue", "domain", domainID)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":                 "success",
+			"alias":                  alias,
+			"certificate_reissued":   true,
+			"certificate_expires_at": install.ExpiresAt,
+		})
+		return
+	}
+
+	alias, err = p.addDomainAlias(
+		ctx,
+		domainID,
+		req.Alias,
+		p.ensureActiveCertificateCoversAlias,
+		p.applyVhostForDomain,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, errInvalidDomainAlias):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, errDomainAliasConflict),
+			errors.Is(err, errAliasCertificateCoverage):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			writeServerError(w, err)
+		}
+		return
+	}
+
+	p.audit(r, "domain.alias.add", "domain", domainID)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"status": "success", "alias": req.Alias})
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "alias": alias})
 }
 
 func (p *Panel) handleDeleteAlias(w http.ResponseWriter, r *http.Request, domainID int, pathParts []string) {
+	w.Header().Set("Content-Type", "application/json")
 	if len(pathParts) < 7 {
 		http.Error(w, "Alias not specified", http.StatusBadRequest)
 		return
 	}
 
-	alias := pathParts[6]
+	domainAliasMutationLock.Lock()
+	defer domainAliasMutationLock.Unlock()
+	unlock := lockDomainSSLOperation(domainID)
+	defer unlock()
+	ctx, cancel := sslDurableContext(r.Context())
+	defer cancel()
 
-	ctx := context.Background()
-	pool := p.db.GetDB()
-
-	// Delete alias
-	result, err := pool.ExecContext(ctx, `
-		DELETE FROM domain_aliases 
-		WHERE domain_id = ? AND alias = ?
-	`, domainID, alias)
-
+	alias, err := canonicalDomainAlias(pathParts[6])
 	if err != nil {
-		http.Error(w, "Failed to delete alias", http.StatusInternalServerError)
+		writeClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := p.ensureHSTSAllowsHostnameRemoval(ctx, domainID); err != nil {
+		if message, guarded := hstsRemovalConflictMessage(err, "the alias"); guarded {
+			writeClientError(w, http.StatusConflict, message)
+		} else {
+			writeServerError(w, err)
+		}
+		return
+	}
+	var aliasExists bool
+	if err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM domain_aliases
+			WHERE domain_id = ? AND alias = ? COLLATE NOCASE
+		)`, domainID, alias).Scan(&aliasExists); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if !aliasExists {
+		writeClientError(w, http.StatusNotFound, "Alias not found")
 		return
 	}
 
-	affected, _ := result.RowsAffected()
-	if affected == 0 {
-		http.Error(w, "Alias not found", http.StatusNotFound)
+	activeCert, err := p.loadActiveAliasCertificate(ctx, domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	needsManagedReissue := false
+	if activeCert != nil && activeCert.Type == "letsencrypt" {
+		info, inspectErr := p.inspectInstalledCertificate(
+			ctx, activeCert.CertPath, activeCert.KeyPath,
+		)
+		if inspectErr != nil {
+			writeServerError(w, fmt.Errorf(
+				"inspect active certificate before deleting alias: %w", inspectErr,
+			))
+			return
+		}
+		needsManagedReissue = certificateCoversHostname(info.DNSNames, alias)
+	}
+	confirmedReissue := r.URL.Query().Get("confirm_certificate_reissue") == "true"
+	if needsManagedReissue && !confirmedReissue {
+		writeCodedError(
+			w,
+			http.StatusConflict,
+			errCodeAliasCertificateReissueRequired,
+			"removing this alias requires reissuing the active ACME certificate without that hostname",
+			"confirm_certificate_reissue",
+		)
 		return
 	}
 
+	if needsManagedReissue {
+		currentNames, namesErr := p.managedSiteHostnames(ctx, domainID)
+		if namesErr != nil {
+			writeServerError(w, namesErr)
+			return
+		}
+		desiredNames, namesErr := desiredAliasCertificateNames(
+			currentNames, "", alias,
+		)
+		if namesErr != nil {
+			writeServerError(w, namesErr)
+			return
+		}
+		install, issueErr := p.issueAliasCertificateSnapshot(
+			ctx, domainID, activeCert, desiredNames, nil,
+		)
+		if issueErr != nil {
+			writeClientError(w, http.StatusConflict,
+				"the alias certificate could not be reissued: "+issueErr.Error())
+			return
+		}
+		if _, err := p.mutateAliasAndActivateCertificate(
+			ctx, domainID, alias, false, install,
+		); err != nil {
+			cleanupCtx, cleanupCancel := sslCompensationContext()
+			defer cleanupCancel()
+			p.cleanupUncommittedCertificate(
+				cleanupCtx,
+				certificateCleanupTarget{
+					Domain:      install.DomainName,
+					LineageName: install.LineageName,
+					CertPath:    install.CertPath,
+					KeyPath:     install.KeyPath,
+					ChainPath:   install.ChainPath,
+				},
+			)
+			writeServerError(w, fmt.Errorf(
+				"atomically remove alias and activate certificate: %w", err,
+			))
+			return
+		}
+		if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+			if markErr := p.markCertificatePendingDetached(
+				ctx, domainID, sslPendingActivation, true,
+			); markErr != nil {
+				writeServerError(w, fmt.Errorf(
+					"alias removal certificate activation failed: %v; pending state failed: %w",
+					err, markErr,
+				))
+				return
+			}
+			p.audit(r, "domain.alias.delete.reissue.partial", "domain", domainID)
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeAliasCertificatePending,
+				"the alias was removed and its certificate was saved, but web-server activation is pending; use Retry activation on SSL/TLS",
+				"retry_ssl_activation",
+			)
+			return
+		}
+		if err := p.syncCertificateDependents(ctx, domainID); err != nil {
+			if markErr := p.markCertificatePendingDetached(
+				ctx, domainID, sslPendingDependents, false,
+			); markErr != nil {
+				writeServerError(w, fmt.Errorf(
+					"alias removal dependent sync failed: %v; pending state failed: %w",
+					err, markErr,
+				))
+				return
+			}
+			p.audit(r, "domain.alias.delete.reissue.dependents_partial", "domain", domainID)
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeAliasCertificatePending,
+				"the alias was removed, but mail TLS synchronization is pending; use Retry activation on SSL/TLS",
+				"retry_ssl_activation",
+			)
+			return
+		}
+		if err := p.clearCertificatePendingDetached(ctx, domainID); err != nil {
+			writeServerError(w, err)
+			return
+		}
+		p.audit(r, "domain.alias.delete.reissue", "domain", domainID)
+		json.NewEncoder(w).Encode(map[string]any{
+			"status":               "success",
+			"certificate_reissued": true,
+		})
+		return
+	}
+
+	err = p.deleteDomainAlias(
+		ctx, domainID, alias, p.applyVhostForDomain,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, errInvalidDomainAlias):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, errDomainAliasNotFound):
+			http.Error(w, "Alias not found", http.StatusNotFound)
+		default:
+			if message, guarded := hstsRemovalConflictMessage(err, "the alias"); guarded {
+				writeClientError(w, http.StatusConflict, message)
+				return
+			}
+			writeServerError(w, err)
+		}
+		return
+	}
+
+	p.audit(r, "domain.alias.delete", "domain", domainID)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
