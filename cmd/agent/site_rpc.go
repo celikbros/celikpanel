@@ -11,24 +11,106 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// CreateSite handles site creation with all privileged operations
-func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.CreateSiteResponse) error {
-	// The project type decides what actually gets built. A domain does not
-	// inherently need PHP — only a php-type site does. (dnsonly never reaches
-	// the agent at all; the panel short-circuits it.)
-	// Neyin kurulacağına proje tipi karar verir. Bir domain doğası gereği
-	// PHP'ye muhtaç değildir — yalnız php tipindeki site öyledir. (dnsonly
-	// agent'a hiç ulaşmaz; panel onu kısa devre eder.)
+func (a *Agent) validatedCreateSiteRequest(
+	req transport.CreateSiteRequest,
+) (
+	transport.CreateSiteRequest,
+	*ApplyVhostRequest,
+	services.RenderedVhost,
+	error,
+) {
+	if err := hostingpath.ValidateDocumentRoot(
+		req.DocumentRoot,
+		req.SubscriptionID,
+		req.DomainID,
+	); err != nil {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("refusing a document root outside the site's immutable home")
+	}
+
+	domain, err := hostname.CanonicalFQDN(req.Domain)
+	if err != nil {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("a valid canonical domain is required")
+	}
+	req.Domain = domain
+	if strings.TrimSpace(req.TempDomain) != "" {
+		tempDomain, canonicalErr := hostname.CanonicalFQDN(req.TempDomain)
+		if canonicalErr != nil {
+			return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+				fmt.Errorf("temporary domain is invalid")
+		}
+		req.TempDomain = tempDomain
+	}
+
+	req.ProjectType = strings.ToLower(strings.TrimSpace(req.ProjectType))
 	if req.ProjectType == "" {
 		req.ProjectType = "php"
 	}
+	if req.ProjectType != "php" && req.ProjectType != "static" {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("unsupported site creation project type")
+	}
+
+	phpSocket := ""
+	if req.ProjectType == "php" {
+		if err := services.ValidatePHPVersion(req.PHPVersion); err != nil {
+			return transport.CreateSiteRequest{}, nil, services.RenderedVhost{}, err
+		}
+		phpSocket = fmt.Sprintf(
+			"/var/run/php/php%s-fpm-site%d.sock",
+			req.PHPVersion,
+			req.SiteID,
+		)
+	}
+	vhostReq := &ApplyVhostRequest{
+		ExpectedBuildCommit: req.ExpectedBuildCommit,
+		SiteID:              req.SiteID,
+		SubscriptionID:      req.SubscriptionID,
+		DomainID:            req.DomainID,
+		Domain:              req.Domain,
+		TempDomain:          req.TempDomain,
+		DocumentRoot:        req.DocumentRoot,
+		PHPSocket:           phpSocket,
+		SSLType:             "none",
+		ProjectType:         req.ProjectType,
+	}
+	rendered, err := a.renderValidatedVhost(vhostReq)
+	if err != nil {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("invalid site vhost request: %w", err)
+	}
+	return req, vhostReq, rendered, nil
+}
+
+// CreateSite handles site creation with all privileged operations
+func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.CreateSiteResponse) error {
+	if err := requireExpectedBuildCommit(
+		req.ExpectedBuildCommit,
+		"creating a site",
+	); err != nil {
+		reply.ErrorMessage = err.Error()
+		return nil
+	}
+	req, vhostReq, rendered, err := a.validatedCreateSiteRequest(req)
+	if err != nil {
+		reply.ErrorMessage = err.Error()
+		return nil
+	}
+	if err := prepareValidatedVhostChallengeRoot(vhostReq); err != nil {
+		reply.Success = false
+		reply.ErrorMessage = fmt.Sprintf("failed to prepare ACME challenge root: %v", err)
+		return nil
+	}
 
 	// 1. Create directory structure
-	err := os.MkdirAll(req.DocumentRoot, 0755)
+	err = os.MkdirAll(req.DocumentRoot, 0755)
 	if err != nil {
 		reply.Success = false
 		reply.ErrorMessage = fmt.Sprintf("failed to create directories: %v", err)
@@ -66,6 +148,16 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 				"failed to create PHP-FPM pool (is PHP-FPM installed? install it from Services, or choose the static or DNS-only type): %v", err)
 			return nil
 		}
+	}
+	if socket != vhostReq.PHPSocket {
+		if req.ProjectType == "php" {
+			_ = a.phpManager.DeletePool(req.SiteID, req.PHPVersion)
+		}
+		_ = a.userManager.DeleteUser(req.Username)
+		_ = os.RemoveAll(filepath.Dir(req.DocumentRoot))
+		reply.Success = false
+		reply.ErrorMessage = "PHP-FPM socket did not match the validated site identity"
+		return nil
 	}
 	reply.PHPSocket = socket
 
@@ -122,50 +214,14 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 		log.Printf("CreateSite %s: hosting layout: %v", req.Domain, err)
 	}
 
-	// 6. Generate Nginx vhost (after socket is created)
-	site := &core.Site{
-		ID:           req.SiteID,
-		DomainID:     0, // Not needed for template
-		DocumentRoot: req.DocumentRoot,
-		ProjectType:  req.ProjectType,
-		PHPVersion:   req.PHPVersion,
-		PHPFPMSocket: &socket,
-		SSLEnabled:   req.SSLType != "none",
-	}
+	reply.NginxConfig = rendered.Config
 
-	domain := &core.Domain{
-		Name: req.Domain,
-	}
-
-	vhostConfig, err := a.nginxGen.GenerateVhost(site, domain, req.TempDomain)
+	// 7. Apply, validate and reload as one serialized transaction. The safe
+	// API restores and reactivates the previous vhost on every failure.
+	err = a.nginxGen.ApplyVhost(rendered.Domain, rendered.Config)
 	if err != nil {
 		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to generate vhost: %v", err)
-		return nil
-	}
-	reply.NginxConfig = vhostConfig
-
-	// 7. Write Nginx vhost file
-	err = a.nginxGen.WriteVhostFile(req.Domain, vhostConfig)
-	if err != nil {
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to write vhost: %v", err)
-		return nil
-	}
-
-	// 8. Validate and reload Nginx
-	err = a.nginxGen.ValidateNginx()
-	if err != nil {
-		a.nginxGen.DeleteVhost(req.Domain) // Rollback
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("nginx validation failed: %v", err)
-		return nil
-	}
-
-	err = a.nginxGen.ReloadNginx()
-	if err != nil {
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to reload nginx: %v", err)
+		reply.ErrorMessage = fmt.Sprintf("failed to apply nginx vhost: %v", err)
 		return nil
 	}
 
@@ -174,11 +230,12 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 }
 
 type DeleteSiteRequest struct {
-	SiteID     int    `json:"site_id"`
-	Domain     string `json:"domain"`
-	Username   string `json:"username"`
-	PHPVersion string `json:"php_version"`
-	SiteHome   string `json:"site_home"`
+	ExpectedBuildCommit string `json:"expected_build_commit"`
+	SiteID              int    `json:"site_id"`
+	Domain              string `json:"domain"`
+	Username            string `json:"username"`
+	PHPVersion          string `json:"php_version"`
+	SiteHome            string `json:"site_home"`
 }
 
 type DeleteSiteResponse struct {
@@ -198,6 +255,18 @@ type DeleteSiteResponse struct {
 // barındırma kökü altındaki site dizinleri ve yalnız sistem-dışı
 // kullanıcılar silinebilir.
 func (a *Agent) DeleteSite(req *DeleteSiteRequest, resp *DeleteSiteResponse) error {
+	if req == nil {
+		resp.Error = "delete site request is required"
+		return nil
+	}
+	if err := requireExpectedBuildCommit(
+		req.ExpectedBuildCommit,
+		"deleting a site",
+	); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
 	cleanHome := filepath.Clean(req.SiteHome)
 	if !strings.HasPrefix(cleanHome, "/var/www/celikpanel/subscriptions/") {
 		resp.Error = fmt.Sprintf("refusing to delete outside the hosting base: %s", req.SiteHome)

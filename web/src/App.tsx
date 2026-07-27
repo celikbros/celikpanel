@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
@@ -35,28 +35,57 @@ function DomainDetailPage() {
   const navigate = useNavigate();
   const [domainId, setDomainId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+    setDomainId(null);
+    setLoading(true);
+
     const fetchDomain = async () => {
       try {
-        const res = await fetch('/api/v1/domains');
-        if (res.ok) {
-          const domains = await res.json();
-          const domain = domains.find((d: any) => d.domain_name === domainName);
-          if (domain) {
-            setDomainId(domain.id);
-          } else {
-            navigate('/domains');
-          }
+        if (!domainName) {
+          navigate('/domains');
+          return;
+        }
+
+        const res = await fetch('/api/v1/domains', {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch domains: ${res.status}`);
+        }
+
+        const domains: Array<{ id: number; domain_name: string }> = await res.json();
+        if (controller.signal.aborted || requestIdRef.current !== requestId) {
+          return;
+        }
+
+        const domain = domains.find((item) => item.domain_name === domainName);
+        if (domain) {
+          setDomainId(domain.id);
+        } else {
+          navigate('/domains');
         }
       } catch (err) {
+        if (controller.signal.aborted || requestIdRef.current !== requestId) {
+          return;
+        }
         console.error('Failed to fetch domain:', err);
         navigate('/domains');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted && requestIdRef.current === requestId) {
+          setLoading(false);
+        }
       }
     };
     fetchDomain();
+
+    return () => {
+      controller.abort();
+    };
   }, [domainName, navigate]);
 
   if (loading) {
@@ -74,6 +103,7 @@ function DomainDetailPage() {
   return (
     <PageWithLayout>
       <DomainDetail
+        key={domainId}
         domainId={domainId}
         onBack={() => navigate('/domains')}
       />

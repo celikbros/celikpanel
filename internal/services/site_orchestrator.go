@@ -15,24 +15,35 @@ import (
 )
 
 type SiteOrchestrator struct {
-	db          *sql.DB
-	domainRepo  repositories.DomainRepository
-	agentClient *transport.ReconnectingClient
-	basePath    string
+	db                  *sql.DB
+	domainRepo          repositories.DomainRepository
+	agentClient         *transport.ReconnectingClient
+	basePath            string
+	expectedBuildCommit string
 }
 
-func NewSiteOrchestrator(db *sql.DB, agentClient *transport.ReconnectingClient) *SiteOrchestrator {
+func NewSiteOrchestrator(
+	db *sql.DB,
+	agentClient *transport.ReconnectingClient,
+	expectedBuildCommit ...string,
+) *SiteOrchestrator {
+	commit := ""
+	if len(expectedBuildCommit) > 0 {
+		commit = strings.TrimSpace(expectedBuildCommit[0])
+	}
 	return &SiteOrchestrator{
-		db:          db,
-		domainRepo:  repositories.NewPostgresDomainRepository(db),
-		agentClient: agentClient,
-		basePath:    "/var/www/celikpanel",
+		db:                  db,
+		domainRepo:          repositories.NewPostgresDomainRepository(db),
+		agentClient:         agentClient,
+		basePath:            "/var/www/celikpanel",
+		expectedBuildCommit: commit,
 	}
 }
 
 type CreateSiteRequest struct {
 	SubscriptionID int    `json:"subscription_id"`
 	Domain         string `json:"domain"`
+	ParentDomainID *int   `json:"-"`
 	UseTemporary   bool   `json:"use_temporary"`
 	// ProjectType selects what this domain does on this server: "php" or
 	// "static" (a website — needs a web server) or "dnsonly" (no web hosting
@@ -85,12 +96,14 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	domain := &core.Domain{
 		SubscriptionID: req.SubscriptionID,
 		Name:           req.Domain,
+		ParentDomainID: req.ParentDomainID,
 		Status:         "active",
 	}
 	err := so.domainRepo.Create(ctx, domain)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create domain: %v", err)
+		return nil, fmt.Errorf("failed to create domain: %w", err)
 	}
+	req.Domain = domain.Name
 
 	// DNS-only: the domain exists to be served by DNS (and later mail), not
 	// hosted as a website. No system user, no docroot, no vhost, no FTP —
@@ -150,16 +163,18 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 
 	// 4. Call Agent RPC to create site with sudo privileges
 	agentReq := transport.CreateSiteRequest{
-		SiteID:         siteID,
-		SubscriptionID: req.SubscriptionID,
-		Domain:         req.Domain,
-		TempDomain:     tempDomain,
-		DocumentRoot:   documentRoot,
-		ProjectType:    req.ProjectType,
-		PHPVersion:     req.PHPVersion,
-		SSLType:        req.SSLType,
-		Username:       username,
-		Password:       password,
+		ExpectedBuildCommit: so.expectedBuildCommit,
+		SiteID:              siteID,
+		SubscriptionID:      req.SubscriptionID,
+		DomainID:            domain.ID,
+		Domain:              req.Domain,
+		TempDomain:          tempDomain,
+		DocumentRoot:        documentRoot,
+		ProjectType:         req.ProjectType,
+		PHPVersion:          req.PHPVersion,
+		SSLType:             req.SSLType,
+		Username:            username,
+		Password:            password,
 	}
 
 	var agentReply transport.CreateSiteResponse

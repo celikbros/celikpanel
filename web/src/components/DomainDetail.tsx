@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { DomainPHPSettings } from './DomainPHPSettings';
 import { DomainGeneralSettings } from './DomainGeneralSettings';
-import { DomainSSLSettings } from './DomainSSLSettings';
+import { DomainSSLSettings, type SSLRuntimeSummary } from './DomainSSLSettings';
 import { DomainSSLOverviewCard } from './DomainSSLOverviewCard';
 import { DomainConnection } from './DomainConnection';
 import { DomainLogsViewer } from './DomainLogsViewer';
@@ -72,14 +72,17 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(requestedTab === 'dns' ? 'dns' : 'overview');
     const [activeSub, setActiveSub] = useState<Record<string, string>>({});
+    const [sslRuntime, setSSLRuntime] = useState<SSLRuntimeSummary | null>(null);
 
-    const handleCertificateChange = useCallback((hasCertificate: boolean) => {
+    const handleCertificateChange = useCallback((status: SSLRuntimeSummary) => {
+        setSSLRuntime(status);
         setDomain((currentDomain) => (
-            currentDomain ? { ...currentDomain, ssl_enabled: hasCertificate } : currentDomain
+            currentDomain ? { ...currentDomain, ssl_enabled: status.activated } : currentDomain
         ));
     }, []);
 
     useEffect(() => {
+        setSSLRuntime(null);
         if (requestedTab === 'dns') setActiveTab('dns');
     }, [domainId, requestedTab]);
 
@@ -141,6 +144,8 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // sekmeler girip çıkarak titremesin diye görünür kalırlar).
     const projectType = domain.project_type || 'php';
     const isDnsOnly = projectType === 'dnsonly';
+    const sslUsable = sslRuntime?.usable === true;
+    const sslConfigured = sslRuntime?.activated === true;
     const tabs: TabDef[] = [
         {
             // The connection card leads the Overview: it is the precondition for
@@ -164,6 +169,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         <DomainSSLSettings
                             domainId={domain.id}
                             domainName={domain.domain_name}
+                            mailAvailable={caps?.mail_server ?? null}
                             onCertificateChange={handleCertificateChange}
                         />
                     ),
@@ -202,7 +208,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 </button>
                 <div className="flex flex-wrap items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        {domain.ssl_enabled ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
+                        {sslUsable ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
                     </span>
                     <h1 className="text-2xl font-bold tracking-tight">{domain.domain_name}</h1>
                     <span className="inline-flex items-center gap-1.5 text-sm text-fg-muted">
@@ -211,7 +217,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     </span>
                     {!isDnsOnly && (
                         <a
-                            href={`https://${domain.domain_name}`}
+                            href={`${sslUsable ? 'https' : 'http'}://${domain.domain_name}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2"
@@ -237,8 +243,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         <>
                             <FactDivider />
                             <Fact label={t('domain.info.ssl')}>
-                                <span className={domain.ssl_enabled ? 'text-success' : 'text-fg-subtle'}>
-                                    {domain.ssl_enabled ? t('domain.info.on') : t('domain.info.off')}
+                                <span className={sslUsable ? 'text-success' : sslConfigured ? 'text-warning' : 'text-fg-subtle'}>
+                                    {sslRuntime === null
+                                        ? t('domain.overview.ssl.checking')
+                                        : sslUsable
+                                          ? t('domain.info.on')
+                                          : sslConfigured
+                                            ? t('domain.info.sslIssue')
+                                            : t('domain.info.off')}
                                 </span>
                             </Fact>
                             <FactDivider />
@@ -358,7 +370,7 @@ function Overview({
     domainId: number;
     tabs: TabDef[];
     onGo: (id: string, subId?: string) => void;
-    onCertificateChange: (hasCertificate: boolean) => void;
+    onCertificateChange: (status: SSLRuntimeSummary) => void;
 }) {
     const { t } = useI18n();
     const areas = tabs.filter((tb) => tb.id !== 'overview');

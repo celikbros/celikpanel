@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -19,12 +20,30 @@ import (
 // olarak kapatır; bu da paneli, kendisi yeniden başlatılana dek agent'sız
 // bırakırdı.
 type ReconnectingClient struct {
-	mu     sync.Mutex
-	client *rpc.Client
+	mu             sync.Mutex
+	client         *rpc.Client
+	connectContext func(context.Context) (*rpc.Client, error)
 }
 
 func NewReconnectingClient(c *rpc.Client) *ReconnectingClient {
-	return &ReconnectingClient{client: c}
+	return NewReconnectingClientWithContextConnector(c, ConnectAgentContext)
+}
+
+// NewReconnectingClientWithContextConnector builds a reconnecting client with
+// an instance-scoped connector for dedicated, cancelable calls. Production
+// uses ConnectAgentContext; tests can inject an authenticated in-memory or
+// temporary-socket connector without depending on production token paths.
+func NewReconnectingClientWithContextConnector(
+	c *rpc.Client,
+	connectContext func(context.Context) (*rpc.Client, error),
+) *ReconnectingClient {
+	if connectContext == nil {
+		connectContext = ConnectAgentContext
+	}
+	return &ReconnectingClient{
+		client:         c,
+		connectContext: connectContext,
+	}
 }
 
 // Call mirrors rpc.Client.Call. The first failing call still returns its real
@@ -64,6 +83,64 @@ func (r *ReconnectingClient) Call(serviceMethod string, args any, reply any) err
 	r.mu.Unlock()
 
 	return nc.Call(serviceMethod, args, reply)
+}
+
+// CallContext uses a dedicated authenticated connection so cancellation can
+// close the underlying stream without aborting unrelated in-flight calls on
+// the shared reconnecting client. The completed rpc.Call is always drained
+// before this method returns, so net/rpc cannot write to the caller-owned reply
+// after return.
+//
+// net/rpc has no server-side per-call cancellation: once the server has
+// dispatched a method, closing this client only stops transport/waiting and
+// does not promise to stop the handler. Mutating agent handlers must therefore
+// keep their own command timeouts and transactional safeguards.
+func (r *ReconnectingClient) CallContext(
+	ctx context.Context,
+	serviceMethod string,
+	args any,
+	reply any,
+) error {
+	if ctx == nil {
+		return errors.New("RPC call context is nil")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	connectContext := r.connectContext
+	r.mu.Unlock()
+	if connectContext == nil {
+		connectContext = ConnectAgentContext
+	}
+
+	client, err := connectContext(ctx)
+	if err != nil {
+		if client != nil {
+			_ = client.Close()
+		}
+		return err
+	}
+	if client == nil {
+		return errors.New("agent context connector returned a nil RPC client")
+	}
+	if err := ctx.Err(); err != nil {
+		_ = client.Close()
+		return err
+	}
+
+	done := make(chan *rpc.Call, 1)
+	client.Go(serviceMethod, args, reply, done)
+	select {
+	case <-ctx.Done():
+		_ = client.Close()
+		<-done
+		return ctx.Err()
+	case call := <-done:
+		_ = client.Close()
+		return call.Error
+	}
 }
 
 // connDown reports whether the error means the RPC connection itself is dead

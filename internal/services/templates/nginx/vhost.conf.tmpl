@@ -94,41 +94,15 @@
 {{- end}}
 {{- end}}
 
-{{- if eq .ProjectType "forwarding"}}
-server {
-    listen 80;
-    listen [::]:80;
-    server_name {{.Domain}}{{if .TempDomain}} {{.TempDomain}}{{end}};
+{{- define "acme-http-01"}}
+    # Root-owned validation content only; never tenant public_html.
+    location ^~ /.well-known/acme-challenge/ {
+        root {{.ACMEChallengeRoot}};
+        try_files $uri =404;
+    }
+{{- end}}
 
-    access_log /var/log/nginx/{{.Domain}}-access.log;
-    return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
-}
-{{- else if eq .SSLType "none"}}
-server {
-    listen 80;
-    listen [::]:80;
-    server_name {{.Domain}}{{if .TempDomain}} {{.TempDomain}}{{end}};
-
-    access_log /var/log/nginx/{{.Domain}}-access.log;
-    error_log /var/log/nginx/{{.Domain}}-error.log;
-{{template "locations" .}}
-}
-{{- else}}
-# HTTP server (redirect to HTTPS)
-server {
-    listen 80;
-    listen [::]:80;
-    server_name {{.Domain}}{{if .TempDomain}} {{.TempDomain}}{{end}};
-    return 301 https://$host$request_uri;
-}
-
-# HTTPS server
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
-    server_name {{.Domain}}{{if .TempDomain}} {{.TempDomain}}{{end}};
-
+{{- define "tls-settings"}}
     ssl_certificate {{.SSLCert}};
     ssl_certificate_key {{.SSLKey}};
 
@@ -137,6 +111,122 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
+{{if .HSTSEnabled}}
+    add_header Strict-Transport-Security "max-age={{.HSTSMaxAge}}" always;
+{{else}}
+    # A disabled policy must actively clear a cached HSTS decision while
+    # HTTPS is still available; omitting the header cannot undo browser state.
+    add_header Strict-Transport-Security "max-age=0" always;
+{{end}}
+{{- end}}
+
+{{- if .ACMEChallengeNames}}
+# Validation-only names such as mail.<domain>. This block deliberately serves
+# only ACME HTTP-01; it never publishes the website under a mail hostname.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ACMEChallengeNames}} {{.}}{{end}};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root {{.ACMEChallengeRoot}};
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 404;
+    }
+}
+{{- end}}
+
+{{- if eq .ProjectType "forwarding"}}
+{{- if eq .SSLType "none"}}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+
+    access_log /var/log/nginx/{{.Domain}}-access.log;
+    error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "acme-http-01" .}}
+
+    location / {
+        return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
+    }
+}
+{{- else}}
+# Forwarding HTTP server
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+
+    access_log /var/log/nginx/{{.Domain}}-access.log;
+    error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "acme-http-01" .}}
+
+    location / {
+{{if .ForceHTTPS}}
+        return 301 https://$host$request_uri;
+{{else}}
+        return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
+{{end}}
+    }
+}
+
+# Forwarding HTTPS server
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+{{template "tls-settings" .}}
+
+    access_log /var/log/nginx/{{.Domain}}-access.log;
+    error_log /var/log/nginx/{{.Domain}}-error.log;
+
+    location / {
+        return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
+    }
+}
+{{- end}}
+{{- else if eq .SSLType "none"}}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+
+    access_log /var/log/nginx/{{.Domain}}-access.log;
+    error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "acme-http-01" .}}
+{{template "locations" .}}
+}
+{{- else}}
+# HTTP server
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+{{template "acme-http-01" .}}
+{{if .ForceHTTPS}}
+    location / {
+        return 301 https://$host$request_uri;
+    }
+{{else}}
+    access_log /var/log/nginx/{{.Domain}}-access.log;
+    error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "locations" .}}
+{{end}}
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name{{range .ServerNames}} {{.}}{{end}};
+{{template "tls-settings" .}}
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;

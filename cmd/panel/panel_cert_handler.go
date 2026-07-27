@@ -4,9 +4,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -68,10 +70,11 @@ func (p *Panel) handlePanelCertificate(w http.ResponseWriter, r *http.Request) {
 			Error     string    `json:"error,omitempty"`
 		}
 		err := p.agentClient.Call("Agent.IssuePanelCertificate", &struct {
-			Domain string `json:"domain"`
-			Email  string `json:"email"`
-			TLSDir string `json:"tls_dir"`
-		}{Domain: req.Domain, Email: email, TLSDir: tlsDir()}, &resp)
+			ExpectedBuildCommit string `json:"expected_build_commit"`
+			Domain              string `json:"domain"`
+			Email               string `json:"email"`
+			TLSDir              string `json:"tls_dir"`
+		}{ExpectedBuildCommit: strings.TrimSpace(buildCommit), Domain: req.Domain, Email: email, TLSDir: tlsDir()}, &resp)
 		if err != nil {
 			writeAgentError(w, err, "panel certificate")
 			return
@@ -99,7 +102,16 @@ func (p *Panel) handlePanelCertificate(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			time.Sleep(500 * time.Millisecond)
 			var ok bool
-			_ = p.agentClient.Call("Agent.RestartPanelSoon", &struct{}{}, &ok)
+			err := p.agentClient.Call(
+				"Agent.RestartPanelSoon",
+				&struct {
+					ExpectedBuildCommit string `json:"expected_build_commit"`
+				}{ExpectedBuildCommit: strings.TrimSpace(buildCommit)},
+				&ok,
+			)
+			if err != nil {
+				log.Printf("schedule panel restart after certificate issue: %v", err)
+			}
 		}()
 
 	default:

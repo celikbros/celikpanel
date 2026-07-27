@@ -3,7 +3,34 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostname"
 )
+
+type applyVhostRPCRequest struct {
+	ExpectedBuildCommit string   `json:"expected_build_commit"`
+	SiteID              int      `json:"site_id"`
+	SubscriptionID      int      `json:"subscription_id"`
+	DomainID            int      `json:"domain_id"`
+	Domain              string   `json:"domain"`
+	TempDomain          string   `json:"temp_domain"`
+	ServerNames         []string `json:"server_names"`
+	ACMEChallengeNames  []string `json:"acme_challenge_names,omitempty"`
+	DocumentRoot        string   `json:"document_root"`
+	PHPSocket           string   `json:"php_socket"`
+	SSLType             string   `json:"ssl_type"`
+	SSLCert             string   `json:"ssl_cert"`
+	SSLKey              string   `json:"ssl_key"`
+	ForceHTTPS          bool     `json:"force_https"`
+	HSTSEnabled         bool     `json:"hsts_enabled"`
+	HSTSMaxAge          int      `json:"hsts_max_age"`
+	ProjectType         string   `json:"project_type"`
+	AppPort             int      `json:"app_port"`
+	ForwardTo           string   `json:"forward_to"`
+	ForwardCode         int      `json:"forward_code"`
+}
 
 // applyVhostForDomain regenerates a domain's nginx vhost from the current
 // database state via the agent (write → validate → reload). Every flow that
@@ -15,44 +42,121 @@ import (
 // tipi, yönlendirme — bu çağrıyla bitmeli; yoksa değişiklik yalnız defterde
 // kalır.
 func (p *Panel) applyVhostForDomain(ctx context.Context, domainID int) error {
+	return p.applyVhostForDomainWithACMEChallengeNames(ctx, domainID, nil)
+}
+
+// applyVhostForDomainWithACMEChallengeNames adds caller-authorized,
+// validation-only hostnames to a dedicated port-80 server block. They never
+// become website server names. This lets mail.<domain> and a not-yet-attached
+// alias answer HTTP-01 without serving or redirecting the site.
+func (p *Panel) applyVhostForDomainWithACMEChallengeNames(
+	ctx context.Context,
+	domainID int,
+	explicitChallengeNames []string,
+) error {
+	req, err := p.buildVhostRequest(
+		ctx,
+		domainID,
+		explicitChallengeNames,
+	)
+	if err != nil {
+		return err
+	}
+
+	var resp struct {
+		Config string `json:"config"`
+		Error  string `json:"error,omitempty"`
+	}
+	if err := p.agentClient.CallContext(ctx, "Agent.ApplyVhost", &req, &resp); err != nil {
+		return err
+	}
+	if resp.Error != "" {
+		return errors.New(resp.Error)
+	}
+	return nil
+}
+
+// buildVhostRequest derives the complete agent input from the durable panel
+// database without mutating nginx. Keeping derivation separate lets startup
+// prepare every hosted vhost first and submit one all-or-nothing batch.
+func (p *Panel) buildVhostRequest(
+	ctx context.Context,
+	domainID int,
+	explicitChallengeNames []string,
+) (applyVhostRPCRequest, error) {
 	var (
 		siteID                       int
+		subscriptionID               int
 		domainName, docroot          string
 		phpSocket, certPath, keyPath *string
 		sslEnabled                   bool
+		forceHTTPS, hstsEnabled      bool
+		hstsMaxAge                   int
 		projectType                  string
 		appPort, forwardCode         *int
 		forwardTo                    *string
 	)
 	err := p.db.GetDB().QueryRowContext(ctx, `
-		SELECT s.id, d.name, s.document_root, s.php_fpm_socket,
+		SELECT s.id, d.subscription_id, d.name, s.document_root, s.php_fpm_socket,
 		       s.ssl_enabled, s.ssl_cert_path, s.ssl_key_path,
+		       COALESCE(s.force_https, false), COALESCE(s.hsts_enabled, false), COALESCE(s.hsts_max_age, 31536000),
 		       COALESCE(s.project_type,'php'), s.app_port, s.forward_to, s.forward_code
 		FROM sites s JOIN domains d ON d.id = s.domain_id
 		WHERE s.domain_id = ?`, domainID).
-		Scan(&siteID, &domainName, &docroot, &phpSocket,
+		Scan(&siteID, &subscriptionID, &domainName, &docroot, &phpSocket,
 			&sslEnabled, &certPath, &keyPath,
+			&forceHTTPS, &hstsEnabled, &hstsMaxAge,
 			&projectType, &appPort, &forwardTo, &forwardCode)
 	if err != nil {
-		return err
+		return applyVhostRPCRequest{}, err
+	}
+	mailName, err := mailCertificateHostname(domainName)
+	if err != nil {
+		return applyVhostRPCRequest{}, fmt.Errorf(
+			"derive mail certificate hostname: %w",
+			err,
+		)
+	}
+	acmeChallengeNames := make([]string, 0, len(explicitChallengeNames)+1)
+	seenChallengeName := make(map[string]bool, len(explicitChallengeNames)+1)
+	for _, rawName := range explicitChallengeNames {
+		name, canonicalErr := hostname.CanonicalFQDN(rawName)
+		if canonicalErr != nil {
+			return applyVhostRPCRequest{}, fmt.Errorf(
+				"invalid ACME challenge hostname %q: %w",
+				rawName,
+				canonicalErr,
+			)
+		}
+		if seenChallengeName[name] {
+			continue
+		}
+		seenChallengeName[name] = true
+		acmeChallengeNames = append(acmeChallengeNames, name)
+	}
+	if sslEnabled && certPath != nil && keyPath != nil && *certPath != "" && *keyPath != "" {
+		info, inspectErr := p.inspectInstalledCertificate(ctx, *certPath, *keyPath)
+		if inspectErr != nil {
+			return applyVhostRPCRequest{}, fmt.Errorf(
+				"inspect active certificate challenge names: %w",
+				inspectErr,
+			)
+		}
+		if certificateCoversHostname(info.DNSNames, mailName) && !seenChallengeName[mailName] {
+			acmeChallengeNames = append(acmeChallengeNames, mailName)
+		}
+	}
+	serverNames, err := p.managedSiteHostnames(ctx, domainID)
+	if err != nil {
+		return applyVhostRPCRequest{}, err
 	}
 
-	req := struct {
-		SiteID       int    `json:"site_id"`
-		Domain       string `json:"domain"`
-		TempDomain   string `json:"temp_domain"`
-		DocumentRoot string `json:"document_root"`
-		PHPSocket    string `json:"php_socket"`
-		SSLType      string `json:"ssl_type"`
-		SSLCert      string `json:"ssl_cert"`
-		SSLKey       string `json:"ssl_key"`
-		ProjectType  string `json:"project_type"`
-		AppPort      int    `json:"app_port"`
-		ForwardTo    string `json:"forward_to"`
-		ForwardCode  int    `json:"forward_code"`
-	}{
-		SiteID: siteID, Domain: domainName, DocumentRoot: docroot,
+	req := applyVhostRPCRequest{
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+		SiteID:              siteID, SubscriptionID: subscriptionID, DomainID: domainID,
+		Domain: domainName, DocumentRoot: docroot,
 		SSLType: "none", ProjectType: projectType,
+		ServerNames: serverNames, ACMEChallengeNames: acmeChallengeNames,
 	}
 	if phpSocket != nil {
 		req.PHPSocket = *phpSocket
@@ -61,7 +165,11 @@ func (p *Panel) applyVhostForDomain(ctx context.Context, domainID int) error {
 		req.SSLType = "custom"
 		req.SSLCert = *certPath
 		req.SSLKey = *keyPath
+		req.ForceHTTPS = forceHTTPS
+		req.HSTSEnabled = hstsEnabled
+		req.HSTSMaxAge = hstsMaxAge
 	}
+
 	if appPort != nil {
 		req.AppPort = *appPort
 	}
@@ -71,16 +179,5 @@ func (p *Panel) applyVhostForDomain(ctx context.Context, domainID int) error {
 	if forwardCode != nil {
 		req.ForwardCode = *forwardCode
 	}
-
-	var resp struct {
-		Config string `json:"config"`
-		Error  string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.ApplyVhost", &req, &resp); err != nil {
-		return err
-	}
-	if resp.Error != "" {
-		return errors.New(resp.Error)
-	}
-	return nil
+	return req, nil
 }

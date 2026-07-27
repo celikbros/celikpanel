@@ -11,7 +11,7 @@ type AgentRPC interface {
 	StartService(serviceName string) error
 	StopService(serviceName string) error
 	RestartService(serviceName string) error
-	
+
 	// Site Management
 	CreateSite(req CreateSiteRequest) (*CreateSiteResponse, error)
 	DeleteSite(siteID int, domain string) error
@@ -84,11 +84,13 @@ type ChangeDatabasePasswordRequest struct {
 
 // CreateSiteRequest contains all data needed to create a site
 type CreateSiteRequest struct {
-	SiteID         int
-	SubscriptionID int
-	Domain         string
-	TempDomain     string
-	DocumentRoot   string
+	ExpectedBuildCommit string
+	SiteID              int
+	SubscriptionID      int
+	DomainID            int
+	Domain              string
+	TempDomain          string
+	DocumentRoot        string
 	// ProjectType decides what the agent actually builds: "php" (FPM pool +
 	// index.php) or "static" (no PHP at all). Empty means "php" for backward
 	// compatibility. "dnsonly" never reaches the agent — there is nothing to

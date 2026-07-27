@@ -98,7 +98,11 @@ func main() {
 	log.Println("Connected to Agent RPC")
 
 	// Initialize Site Orchestrator
-	orchestrator := services.NewSiteOrchestrator(database.GetDB(), client)
+	orchestrator := services.NewSiteOrchestrator(
+		database.GetDB(),
+		client,
+		buildCommit,
+	)
 
 	sessions := auth.NewSessionStore(database.GetDB())
 
@@ -156,6 +160,11 @@ func main() {
 	if err := panel.encryptLegacyDBPasswords(context.Background()); err != nil {
 		log.Fatalf("Failed to encrypt legacy database passwords: %v", err)
 	}
+
+	// Repair only derived certificate runtime state from the durable ledger.
+	// This removes crash-left staging lineages/validation names; it never
+	// changes a user's panel setting.
+	panel.reconcileCertificateRuntimeAtStartup()
 
 	// Purge expired sessions on startup and then hourly.
 	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.
@@ -322,6 +331,10 @@ func main() {
 			panel.handleDomainDNSSEC(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/ssl/mail") {
 			panel.handleDomainSSLMail(w, r, domainID)
+		} else if strings.Contains(r.URL.Path, "/ssl/retry") {
+			panel.handleRetrySSLActivation(w, r)
+		} else if strings.Contains(r.URL.Path, "/ssl/renewal") {
+			panel.handleSSLRenewalSetting(w, r, domainID)
 		} else if strings.Contains(r.URL.Path, "/ssl/letsencrypt") {
 			panel.handleIssueLetsEncrypt(w, r)
 		} else if strings.Contains(r.URL.Path, "/ssl/upload") {

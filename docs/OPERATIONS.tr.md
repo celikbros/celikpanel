@@ -38,10 +38,14 @@ statik arayüz `/opt/celikpanel/web/`, systemd unit'leri `celikpanel-agent` (roo
 
 ## 2. Dağıtım reçeteleri
 
-Üç değişiklik türü, üç reçete. Hepsi dev makinede derlenir; sunucuya yalnız ürün kopyalanır
+İki dağıtım yolu vardır. Hepsi dev makinede derlenir; sunucuya yalnız ürün artefaktları kopyalanır
 (sunucuda Go/Node YOKTUR, bilinçli — bkz. D-008 alfa modeli: sunucuda elle kurulum/ayar yapılmaz).
+Sürümlenmiş ürün artefaktlarını SSH ile kopyalayıp atomik biçimde kurmak izin verilen ürün
+dağıtımıdır. Bu izin; canlı panel ayarlarını, DNS, SSL, posta, güvenlik duvarı veya servis
+yapılandırmasını SSH üzerinden değiştirme yetkisi vermez; bunlar yalnız arayüzden yapılır.
 
-**A) Yalnız arayüz** (web/src değişti — restart gerekmez):
+**A) Yalnız arayüz** (yalnız `web/src` değişti; Go, `internal` veya migration değişikliği yok —
+restart gerekmez):
 ```bash
 cd web && npm run build && cd ..
 tar -C web/dist -czf /tmp/webdist.tar.gz .
@@ -51,30 +55,129 @@ ssh root@2.25.80.4 'mkdir -p /opt/celikpanel/web.new && tar -xzf /tmp/webdist.ta
 Yedekli geçiş: sorun anında `web.old` geri adlandırılır. `index.html` no-cache sunulur;
 kullanıcı tarafında normal yenileme yeter.
 
-**B) Panel binary'si** (cmd/panel veya internal değişti):
-```bash
-go build -o /tmp/panel ./cmd/panel
-scp /tmp/panel root@2.25.80.4:/tmp/
-ssh root@2.25.80.4 'install -m 0755 /tmp/panel /opt/celikpanel/bin/panel && systemctl restart celikpanel-panel && rm /tmp/panel && echo TAMAM'
-```
-1-2 saniyelik kesinti; oturumlar SQLite'ta olduğundan giriş korunur.
+**B) Anlık görüntülü eş-sürüm backend dağıtımı** (`cmd/panel`, `cmd/agent`, `internal`,
+migration veya başka herhangi bir backend değişikliği):
 
-**C) Agent binary'si** (cmd/agent veya internal/systemd|services değişti):
+Panel ve agent, hata durumunda kapalı kalan tek bir sürüm çiftidir. İki binary'den birini asla
+tek başına derlemeyin, kurmayın veya geri almayın. İkisini de aynı temiz ve birleştirilmiş Git
+commit'inden derleyin; tam 40 karakterlik commit SHA'sını iki binary'ye de gömün. Backend
+dağıtımı aynı commit'in web derlemesini de taşır.
+
 ```bash
-go build -o /tmp/agent ./cmd/agent
-scp /tmp/agent root@2.25.80.4:/tmp/
-ssh root@2.25.80.4 'install -m 0755 /tmp/agent /opt/celikpanel/bin/agent && systemctl restart celikpanel-agent && systemctl start celikpanel-panel && rm /tmp/agent && echo TAMAM'
+test -z "$(git status --porcelain)"
+RELEASE_COMMIT="$(git rev-parse --verify HEAD)"
+test "$(printf %s "$RELEASE_COMMIT" | wc -c)" -eq 40
+RELEASE_VERSION="$(git describe --tags --always)"
+RELEASE_DIR="/tmp/celikpanel-release-${RELEASE_COMMIT}"
+mkdir -p "$RELEASE_DIR"
+LDFLAGS="-s -w -X main.buildVersion=${RELEASE_VERSION} -X main.buildCommit=${RELEASE_COMMIT}"
+go test ./...
+go vet ./...
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o "$RELEASE_DIR/agent" ./cmd/agent
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o "$RELEASE_DIR/panel" ./cmd/panel
+(cd web && npm run build)
+tar -C web/dist -czf "$RELEASE_DIR/web.tar.gz" .
+(cd "$RELEASE_DIR" && sha256sum agent panel web.tar.gz > SHA256SUMS)
 ```
 
-**Tam sürüm yükseltme:** sunucuda `update.sh` (her koşumda anlık görüntü alır: DB + binary'ler +
-unit'ler + commit, son 5 saklanır); geri dönüş tek komut: `rollback.sh` (DB bilerek binary ile
-birlikte döner — eski binary yeni şemaya karşı koşturulmaz).
+Frankfurt'a başlamadan önce Boston dağıtımını bütünüyle tamamlayıp doğrulayın. Frankfurt'a
+aynı artefakt baytlarını gönderin. Frankfurt tamamlanamazsa hemen düzeltin veya Boston'ı
+anlık görüntüsünden geri alın; DNS çiftini farklı sürümlerde bırakmayın. Her sunucuda önce
+benzersiz release dizinine yükleyip manifesti doğrulayın:
 
-**Dağıtım doğrulaması** (her dağıtımdan sonra, dev makineden):
 ```bash
-curl -sk https://2.25.80.4:2083/ | grep -oE 'assets/index[^"]*'   # sunulan hash == web/dist'teki mi?
-curl -sk -o /dev/null -w '%{http_code}\n' https://2.25.80.4:2083/  # 200 mü?
+SERVER=root@2.25.80.4                  # sonra root@72.62.38.15
+PANEL_HOST=boston.celikhost.com        # sonra frankfurt.celikhost.com
+REMOTE_RELEASE="/opt/celikpanel/releases/${RELEASE_COMMIT}"
+ssh "$SERVER" "install -d -m 0755 '$REMOTE_RELEASE'"
+scp "$RELEASE_DIR/agent" "$RELEASE_DIR/panel" "$RELEASE_DIR/web.tar.gz" \
+    "$RELEASE_DIR/SHA256SUMS" "$SERVER:$REMOTE_RELEASE/"
+ssh "$SERVER" "cd '$REMOTE_RELEASE' && sha256sum -c SHA256SUMS"
 ```
+Şema değiştiren sürümden önce, kimliği doğrulanmış yönetici oturumuyla mevcut sürüm JSON'unu
+kaydedin; sonra paneli durdurup zorunlu anlık görüntüyü alın. `ADMIN_COOKIE_JAR`, normal panel
+girişinden (açıksa TOTP dahil) gelmeli, repo dışında ve `0600` modunda tutulmalıdır.
+`PANEL_HOST`, tarayıcıdaki alan adına bağlı oturum çerezinin gönderilmesi için IP adresi değil,
+bu girişte kullanılan hostname olmalıdır.
+
+```bash
+curl -fsSk -b "$ADMIN_COOKIE_JAR" \
+    "https://${PANEL_HOST}:2083/api/v1/panel/version" > "$RELEASE_DIR/${PANEL_HOST}.version-before.json"
+
+DEPLOY_ID="$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_COMMIT}"
+SNAPSHOT="/var/backups/celikpanel/releases/${DEPLOY_ID}"
+ssh "$SERVER" "SNAPSHOT='$SNAPSHOT' bash -se" <<'REMOTE'
+set -euo pipefail
+systemctl stop celikpanel-panel
+install -d -m 0700 "$SNAPSHOT"
+cp -a /opt/celikpanel/bin/agent /opt/celikpanel/bin/panel "$SNAPSHOT/"
+cp -a /opt/celikpanel/web "$SNAPSHOT/web"
+cp -a /var/lib/celikpanel/celikpanel.db "$SNAPSHOT/"
+for sidecar in -wal -shm; do
+    source="/var/lib/celikpanel/celikpanel.db${sidecar}"
+    if [ -f "$source" ]; then cp -a "$source" "$SNAPSHOT/"; fi
+done
+cp -a /etc/systemd/system/celikpanel-agent.service \
+      /etc/systemd/system/celikpanel-panel.service "$SNAPSHOT/"
+sha256sum "$SNAPSHOT/agent" "$SNAPSHOT/panel" > "$SNAPSHOT/BINARY_SHA256SUMS"
+systemctl cat celikpanel-agent celikpanel-panel > "$SNAPSHOT/units.txt"
+REMOTE
+scp "$RELEASE_DIR/${PANEL_HOST}.version-before.json" "$SERVER:$SNAPSHOT/version-before.json"
+```
+
+Korumasız her kopya zorunludur: DB, binary, web ağacı veya unit dosyası eksikse dağıtım durur.
+WAL/SHM yalnız SQLite bunları oluşturmamış olabileceği için isteğe bağlıdır. Şema değiştiren
+sürümlerde, aynı hata-kapalı DB yan dosyaları + iki binary + web + unit + önceki commit
+kimliği snapshot/restore güvencesini sağlamadan `update.sh` veya `rollback.sh` kullanmayın.
+
+Panel dururken doğrulanmış release dizininden önce agent'ı atomik değiştirip yeniden başlatın;
+sonra panel ile web'i hazırlayıp paneli en son başlatın. Bu sırada anlık görüntüyü yeniden
+kullanmayın veya silmeyin.
+
+```bash
+ssh "$SERVER" "REMOTE_RELEASE='$REMOTE_RELEASE' SNAPSHOT='$SNAPSHOT' RELEASE_COMMIT='$RELEASE_COMMIT' bash -se" <<'REMOTE'
+set -euo pipefail
+install -m 0755 "$REMOTE_RELEASE/agent" /opt/celikpanel/bin/agent.next
+mv -f /opt/celikpanel/bin/agent.next /opt/celikpanel/bin/agent
+systemctl restart celikpanel-agent
+
+install -m 0755 "$REMOTE_RELEASE/panel" /opt/celikpanel/bin/panel.next
+WEB_NEXT="/opt/celikpanel/web.${RELEASE_COMMIT}.next"
+test ! -e "$WEB_NEXT"
+install -d -m 0755 "$WEB_NEXT"
+tar -xzf "$REMOTE_RELEASE/web.tar.gz" -C "$WEB_NEXT" --no-same-owner
+mv /opt/celikpanel/web "$SNAPSHOT/web-before-swap"
+mv "$WEB_NEXT" /opt/celikpanel/web
+mv -f /opt/celikpanel/bin/panel.next /opt/celikpanel/bin/panel
+systemctl start celikpanel-panel
+REMOTE
+```
+
+**Dağıtım doğrulaması** (sonraki sunucuya geçmeden önce her sunucuda zorunlu):
+
+```bash
+EXPECTED_SCHEMA=20                    # sürümün migration hedefini yazın
+curl -fsSk -b "$ADMIN_COOKIE_JAR" \
+    "https://${PANEL_HOST}:2083/api/v1/panel/version" | \
+    jq -e --arg commit "$RELEASE_COMMIT" --argjson schema "$EXPECTED_SCHEMA" \
+      '.commit == $commit and
+       .agent_commit == $commit and
+       .agent_matches == true and
+       .schema_version == $schema'
+
+AGENT_PID="$(ssh "$SERVER" 'systemctl show -p MainPID --value celikpanel-agent')"
+PANEL_PID="$(ssh "$SERVER" 'systemctl show -p MainPID --value celikpanel-panel')"
+ssh "$SERVER" "systemctl is-active --quiet celikpanel-agent celikpanel-panel && \
+    sha256sum /proc/$AGENT_PID/exe /proc/$PANEL_PID/exe"
+curl -fsSk "https://${PANEL_HOST}:2083/" | grep -oE 'assets/index[^"]*'
+```
+
+Çalışan iki `/proc/.../exe` hash'i yüklenen `agent` ve `panel` hash'leriyle aynı olmalı;
+API'nin `schema_version` değeri `EXPECTED_SCHEMA` değerine eşit olmalı; sunulan asset bu web
+arşivine ait olmalı ve dağıtım zaman aralığında iki servis günlüğü de temiz kalmalıdır.
+Yalnız arayüzün açılması yeterli değildir. Geri alma eş-sürümdür: paneli durdurun, başarısız DB dosyalarını
+kenara taşıyın; snapshot'taki DB + yan dosyalar + agent + panel + web + unit'leri birlikte geri
+yükleyin, önce agent'ı ve en son paneli başlatın.
 
 ## 3. Geliştirme ve test
 
@@ -95,10 +198,13 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://2.25.80.4:2083/  # 200 mü?
 
 ## 4. Çalışma modeli (D-008 — alfa)
 
-Operatör paneli gerçek müşteri gibi kullanır; mühendis sunucuya **asla** elle servis/ayar kurmaz
-(SSH teşhis için salt-okurdur). Operatörün çarptığı her duvar bir ürün değişikliği olarak gelir:
-düzelt → derle → stub'da ekran görüntüsüyle doğrula → commit+push → dağıtım reçetesini operatöre ver.
-Commit dili Türkçedir; her commit'e `momerefe` + `celikalperen` co-author eklenir; ayrıntı
+Operatör paneli gerçek müşteri gibi kullanır; mühendis sunucuya **asla** elle servis/ayar kurmaz.
+Canlı panel ayarları ile DNS, SSL, posta, güvenlik duvarı ve servis yapılandırmasının tamamını
+yalnız operatör arayüzden değiştirir. SSH, yukarıda tanımlanan sürümlenmiş CelikPanel
+artefaktlarının dar kapsamlı ürün dağıtımı ve geri alınması dışında yalnız salt-okur teşhis
+içindir. Operatörün çarptığı her duvar bir ürün değişikliği olarak gelir: düzelt → derle →
+stub'da ekran görüntüsüyle doğrula → commit+push → ürün artefaktlarını dağıt. Commit dili
+Türkçedir; her commit'e `momerefe` + `celikalperen` co-author eklenir; ayrıntı
 [CONVENTIONS](CONVENTIONS.tr.md).
 
 ## 5. Canlı durum fotoğrafı (11 Temmuz 2026)
