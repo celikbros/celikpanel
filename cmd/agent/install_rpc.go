@@ -44,7 +44,8 @@ type InstallServiceResponse struct {
 
 // InstallService installs a managed service by its catalog ID, then enables +
 // starts its systemd unit so it is actually running (and survives reboot)
-// right after. Already-present services are a no-op reported honestly.
+// right after. Already-present services take the same idempotent preparation,
+// configuration and readiness path so a partial install can be repaired.
 // InstallService, katalog kimliğiyle yönetilen bir servisi kurar, sonra
 // systemd unit'ini etkinleştirip başlatır; böylece hemen ardından gerçekten
 // çalışır (ve reboot'tan sağ çıkar). Zaten kurulu servisler dürüstçe
@@ -53,6 +54,11 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	svc := core.GetManagedServiceByID(req.ID)
 	if svc == nil {
 		resp.Error = "unknown service"
+		return nil
+	}
+	family := detectPkgFamily()
+	if reason := core.ManagedServiceInstallDisabledReason(svc, family); reason != "" {
+		resp.Error = reason
 		return nil
 	}
 
@@ -74,7 +80,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		// apt'te vardır. Bu olmadan seçim doğrulamayı geçip pacman'in içinde
 		// "target not found: php8.3-fpm" diye ölür — panele ürün sorusu soran
 		// birine gösterilen bir paket-yöneticisi hatası.
-		if detectPkgFamily() != "apt" {
+		if family != "apt" {
 			resp.Error = "choosing a version needs a managed repository, which is only supported on apt (Debian/Ubuntu) systems yet"
 			return nil
 		}
@@ -104,16 +110,9 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// kılan şeydi: 8.4 varken 8.3 isteği "PHP-FPM zaten kurulu" diye
 	// reddediliyordu — Sury açık olsa bile admin, müşterinin ihtiyacı olan
 	// sürümü veremiyordu; D-014'ün zincirinin tüm amacı buydu.
+	alreadyPresent := a.serviceInstalled(svc)
 	if req.Package != "" {
-		if packageInstalled(req.Package) {
-			resp.Installed = false
-			resp.Detail = req.Package + " is already installed"
-			return nil
-		}
-	} else if a.serviceInstalled(svc) {
-		resp.Installed = false
-		resp.Detail = svc.Name + " is already installed"
-		return nil
+		alreadyPresent = packageInstalled(req.Package)
 	}
 
 	// Requirements first: a dependent tool without its parent service would
@@ -145,7 +144,6 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		return nil
 	}
 
-	family := detectPkgFamily()
 	pkgs := svc.Packages[family]
 	if len(pkgs) == 0 {
 		resp.Error = fmt.Sprintf("%s cannot be installed automatically on this system yet", svc.Name)
@@ -185,9 +183,32 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 			}
 		}
 	}
+	if family == "apt" && svc.Repo != nil && svc.Repo.Required {
+		var repoStatus RepoStatusResponse
+		if err := a.RepoStatus(&EnableRepoRequest{RepoID: svc.Repo.ID}, &repoStatus); err != nil {
+			resp.Error = fmt.Sprintf("required repository status failed: %v", err)
+			return nil
+		}
+		if repoStatus.Error != "" || !repoStatus.Enabled {
+			resp.Error = fmt.Sprintf("%s requires the %s repository; enable it from Services first", svc.Name, svc.Repo.Name)
+			return nil
+		}
+	}
 
-	if _, err := installPackages(family, pkgs); err != nil {
-		resp.Error = fmt.Sprintf("package install failed: %v", err)
+	missingPackages := make([]string, 0, len(pkgs))
+	for _, pkg := range pkgs {
+		if !packageInstalled(pkg) {
+			missingPackages = append(missingPackages, pkg)
+		}
+	}
+	if len(missingPackages) > 0 {
+		if _, err := installPackages(family, missingPackages); err != nil {
+			resp.Error = fmt.Sprintf("package install failed: %v", err)
+			return nil
+		}
+	}
+	if err := prepareInstalledService(req.ID, family); err != nil {
+		resp.Error = fmt.Sprintf("service preparation failed: %v", err)
 		return nil
 	}
 
@@ -206,7 +227,16 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		unit = a.firstPresentUnit(svc)
 	}
 	if unit != "" {
-		_ = exec.Command("systemctl", "enable", "--now", unit).Run()
+		var err error
+		if serviceStartsAfterPanelSetup(req.ID) {
+			err = a.systemdMgr.Enable(unit)
+		} else {
+			err = a.systemdMgr.EnableNow(unit)
+		}
+		if err != nil {
+			resp.Error = fmt.Sprintf("service did not become ready: %v", err)
+			return nil
+		}
 	}
 	// Bridge daemons come in their own packages with their own units, and
 	// nothing else starts them: SpamAssassin's spamd scores a message handed
@@ -218,16 +248,32 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// durmuş bırakmak "kurulu", "Çalışıyor", süzülen posta sıfır üretiyordu.
 	for _, h := range svc.HelperUnits {
 		if unitExists(h) {
-			_ = exec.Command("systemctl", "enable", "--now", h).Run()
+			if err := a.systemdMgr.EnableNow(h); err != nil {
+				resp.Error = fmt.Sprintf("helper service did not become ready: %v", err)
+				return nil
+			}
 		}
 	}
 
-	resp.Installed = true
-	resp.Detail = fmt.Sprintf("installed %s", strings.Join(pkgs, ", "))
+	resp.Installed = !alreadyPresent || len(missingPackages) > 0
+	if resp.Installed {
+		resp.Detail = fmt.Sprintf("installed %s", strings.Join(pkgs, ", "))
+	} else {
+		resp.Detail = fmt.Sprintf("verified and repaired %s", svc.Name)
+	}
 	if len(skipped) > 0 {
 		resp.Detail += fmt.Sprintf(" — not offered for this version: %s", strings.Join(skipped, ", "))
 	}
 	return nil
+}
+
+func serviceStartsAfterPanelSetup(serviceID string) bool {
+	switch serviceID {
+	case "pdns", "postfix", "dovecot", "wireguard":
+		return true
+	default:
+		return false
+	}
 }
 
 // packageAvailable reports whether apt knows a package name at all, so an

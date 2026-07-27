@@ -5,8 +5,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
+
+// Package managers own one machine-wide database lock. Serialize every panel
+// package mutation so browser tabs and API clients cannot race pacman or apt.
+var packageOperationMu sync.Mutex
 
 // Package-manager abstraction so service installation is not hard-wired to
 // one distro. We detect the family from the package-manager binary present
@@ -118,6 +123,9 @@ func refreshAptListsIfStale(maxAge time.Duration) {
 // etkileşimsiz kurar. Bilinmeyen ya da henüz desteklenmeyen aileler kör bir
 // komut yerine açık bir hata döndürür.
 func installPackages(family string, packages []string) (string, error) {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+
 	if len(packages) == 0 {
 		return "", fmt.Errorf("no packages to install")
 	}
@@ -155,8 +163,9 @@ func installPackages(family string, packages []string) (string, error) {
 		}
 		return out, nil
 	case "pacman":
-		// Refresh the index first (pacman's apt-get update); a failure must
-		// not veto an install the cached index can satisfy. --needed skips
+		// Refresh the index first (pacman's apt-get update). A failed refresh
+		// aborts honestly; continuing against a stale/unknown index produced
+		// silent no-op installs on the live Arch host. --needed skips
 		// what is present; deliberately NOT -Syu — a service install must
 		// never surprise-upgrade the whole system.
 		// Önce dizini tazele (pacman'in apt-get update'i); hata, önbellekli
@@ -164,7 +173,7 @@ func installPackages(family string, packages []string) (string, error) {
 		// olanı atlar; bilerek -Syu DEĞİL — servis kurulumu tüm sistemi
 		// sürprizle yükseltmemeli.
 		if out, err := exec.Command("pacman", "-Sy", "--noconfirm").CombinedOutput(); err != nil {
-			fmt.Printf("pacman -Sy before install failed (continuing): %s\n", firstLine(string(out)))
+			return "", fmt.Errorf("pacman-sync-failed:%v:%s", err, strings.TrimSpace(string(out)))
 		}
 		args := append([]string{"-S", "--noconfirm", "--needed"}, packages...)
 		out, err := exec.Command("pacman", args...).CombinedOutput()
@@ -189,6 +198,9 @@ func installPackages(family string, packages []string) (string, error) {
 // küçültmek için. "purge" config'i de siler; autoremove artık öksüz kalan
 // bağımlılıkları temizler.
 func removePackages(family string, packages []string) (string, error) {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+
 	if len(packages) == 0 {
 		return "", fmt.Errorf("no packages to remove")
 	}

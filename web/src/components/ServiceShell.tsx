@@ -5,7 +5,7 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
-import { readApiError, apiErrorText } from '../lib/apiError';
+import { useComponentOperation } from './ComponentOperation';
 
 interface ManagedService {
     id: string;
@@ -40,10 +40,10 @@ export function ServiceShell({
 }) {
     const { t } = useI18n();
     const { role } = useAuth();
+    const { startInstall, locked: installLocked, catalogSnapshot } = useComponentOperation();
     const [svc, setSvc] = useState<ManagedService | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
-    const [installing, setInstalling] = useState(false);
 
     const load = () =>
         fetch('/api/v1/managed-services')
@@ -55,6 +55,13 @@ export function ServiceShell({
     useEffect(() => {
         load();
     }, [serviceId]);
+
+    useEffect(() => {
+        if (!catalogSnapshot) return;
+        const services = catalogSnapshot.services as unknown as ManagedService[];
+        setSvc(services.find((service) => service.id === serviceId) ?? null);
+        setLoading(false);
+    }, [catalogSnapshot, serviceId]);
 
     const running = svc?.status?.includes('running') ?? false;
     const installed = svc?.is_installed ?? false;
@@ -68,22 +75,7 @@ export function ServiceShell({
     // başlatır. Dürüst hatalar (root değil, dağıtım desteklenmiyor) gerçek
     // hata olarak görünür.
     const install = async () => {
-        setInstalling(true);
-        try {
-            const r = await fetch('/api/v1/service/install', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ service_id: serviceId }),
-            });
-            if (!r.ok) {
-                showToast('error', apiErrorText(await readApiError(r), t, 'svc.actionFailed'));
-                return;
-            }
-            showToast('success', t('svc.installed', { name }));
-            await load();
-        } finally {
-            setInstalling(false);
-        }
+        await startInstall({ serviceId, name });
     };
 
     const act = async (action: 'start' | 'stop' | 'restart') => {
@@ -168,9 +160,9 @@ export function ServiceShell({
                         role === 'admin' ? (
                             <CtrlButton
                                 icon={Download}
-                                label={installing ? t('svc.installing') : t('svc.install', { name })}
+                                label={installLocked ? t('svc.installing') : t('svc.install', { name })}
                                 tone="success"
-                                disabled={installing}
+                                disabled={installLocked}
                                 onClick={install}
                             />
                         ) : undefined

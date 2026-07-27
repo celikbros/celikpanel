@@ -27,6 +27,9 @@ func TestAdditionalACMEChallengeVhostNeverPublishesWebsiteContent(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Embedded templates inherit the checkout's line endings. Normalize the
+	// rendered text so this structural assertion is identical on every build host.
+	out = strings.ReplaceAll(out, "\r\n", "\n")
 
 	const challengeServerNames = "server_name mail.example.test pending-alias.example.test;"
 	if got := strings.Count(out, challengeServerNames); got != 1 {

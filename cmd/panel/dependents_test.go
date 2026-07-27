@@ -254,6 +254,9 @@ func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
 		{"pacman", "netdata", false, "pacman eşlemesi var"},
 		{"pacman", "roundcube", false, "taşınabilir (tarball) — her dağıtımda kurulur"},
 		{"apt", "node", false, "taşınabilir (resmi sürüm) — her dağıtımda kurulur"},
+		{"apt", "apache", true, "paket var ama panel vhost adaptörü yok"},
+		{"pacman", "bind", true, "paket var ama panel zone adaptörü yok"},
+		{"apt", "exim", true, "paket var ama panel mail adaptörü yok"},
 	} {
 		var got *ManagedServiceResponse
 		for _, s := range catalogView(nil, c.family) {

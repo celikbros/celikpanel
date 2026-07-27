@@ -151,8 +151,8 @@ PostDown = %s
 	_ = os.WriteFile("/etc/sysctl.d/99-celikpanel-vpn.conf", []byte("net.ipv4.ip_forward = 1\n"), 0o644)
 	_ = exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1").Run()
 
-	if out, err := exec.Command("systemctl", "enable", "--now", "wg-quick@"+wgIface).CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("wg-quick start failed: %s", firstLine(string(out)))
+	if err := a.systemdMgr.EnableNow("wg-quick@" + wgIface); err != nil {
+		resp.Error = fmt.Sprintf("wg-quick start failed: %v", err)
 		return nil
 	}
 	resp.Detail = "VPN server is up on udp/" + strconv.Itoa(port)

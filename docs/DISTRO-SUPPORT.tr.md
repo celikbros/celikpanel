@@ -25,14 +25,14 @@ Kurallar:
 |---|---|---|---|---|---|
 | 🐘 PHP-FPM | Çalışma ortamı | `php-fpm` · sürüm seçimi: Sury PHP (packages.sury.org) | `php-fpm` | — | — |
 | 🔄 Nginx | Servis | `nginx` | `nginx` | web sunucusu | — |
-| 🪶 Apache | Servis | `apache2` | `apache` | web sunucusu | — |
+| 🪶 Apache | Servis | — | — | web sunucusu | — |
 
 ### Veritabanı
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| 🐘 PostgreSQL | Servis | `postgresql` · sürüm seçimi: PostgreSQL Global Development Group (PGDG) | — | — | — |
-| 🦭 MariaDB | Servis | `mariadb-server` | — | — | — |
+| 🐘 PostgreSQL | Servis | `postgresql` · sürüm seçimi: PostgreSQL Global Development Group (PGDG) | `postgresql` | — | — |
+| 🦭 MariaDB | Servis | `mariadb-server` | `mariadb` | — | — |
 | 🐬 phpMyAdmin | Araç | `phpmyadmin` | `phpmyadmin` | — | MariaDB, web sunucusu, PHP-FPM |
 | 🐘 phpPgAdmin | Araç | `phppgadmin` | — | — | PostgreSQL, web sunucusu, PHP-FPM |
 
@@ -41,7 +41,7 @@ Kurallar:
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
 | 📧 Postfix | Servis | `postfix` | `postfix` | SMTP sunucusu | — |
-| 📮 Exim | Servis | `exim4-daemon-light` | `exim` | SMTP sunucusu | — |
+| 📮 Exim | Servis | — | — | SMTP sunucusu | — |
 | 🧹 Rspamd | Servis | `rspamd` | `rspamd` | spam filtresi | SMTP sunucusu |
 | 📬 Dovecot | Servis | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | `dovecot` | IMAP sunucusu | — |
 | 🛡️ SpamAssassin | Servis | `spamassassin` `spamd` `spamass-milter` | — | spam filtresi | SMTP sunucusu |
@@ -60,14 +60,14 @@ Kurallar:
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| 🌐 BIND | Servis | `bind9` | `bind` | DNS sunucusu | — |
+| 🌐 BIND | Servis | — | — | DNS sunucusu | — |
 | ⚡ PowerDNS | Servis | `pdns-server` `pdns-backend-sqlite3` | `powerdns` | DNS sunucusu | — |
 
 ### FTP
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| 📂 vsftpd | Servis | `vsftpd` | `vsftpd` | — | — |
+| 📂 vsftpd | Servis | — | — | — | — |
 
 ### Önbellek
 
@@ -92,5 +92,5 @@ sürümü SHA-256 doğrulamasıyla indirir ve her Linux'ta aynı yoldan kurar
 | Bileşen | Tür | Koltuk | Gerekenler |
 |---|---|---|---|
 | 🟩 Node.js | Çalışma ortamı | — | web sunucusu |
-| ✉️ Roundcube | Araç | — | IMAP sunucusu, web sunucusu, PHP-FPM |
+| ✉️ Roundcube | Araç | — | SMTP sunucusu, IMAP sunucusu, web sunucusu, PHP-FPM |
 

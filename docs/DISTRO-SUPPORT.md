@@ -27,14 +27,14 @@ Rules:
 |---|---|---|---|---|---|
 | 🐘 PHP-FPM | Runtime | `php-fpm` · version choice: Sury PHP (packages.sury.org) | `php-fpm` | — | — |
 | 🔄 Nginx | Service | `nginx` | `nginx` | web server | — |
-| 🪶 Apache | Service | `apache2` | `apache` | web server | — |
+| 🪶 Apache | Service | — | — | web server | — |
 
 ### Database
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| 🐘 PostgreSQL | Service | `postgresql` · version choice: PostgreSQL Global Development Group (PGDG) | — | — | — |
-| 🦭 MariaDB | Service | `mariadb-server` | — | — | — |
+| 🐘 PostgreSQL | Service | `postgresql` · version choice: PostgreSQL Global Development Group (PGDG) | `postgresql` | — | — |
+| 🦭 MariaDB | Service | `mariadb-server` | `mariadb` | — | — |
 | 🐬 phpMyAdmin | Tool | `phpmyadmin` | `phpmyadmin` | — | MariaDB, web server, PHP-FPM |
 | 🐘 phpPgAdmin | Tool | `phppgadmin` | — | — | PostgreSQL, web server, PHP-FPM |
 
@@ -43,7 +43,7 @@ Rules:
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
 | 📧 Postfix | Service | `postfix` | `postfix` | SMTP server | — |
-| 📮 Exim | Service | `exim4-daemon-light` | `exim` | SMTP server | — |
+| 📮 Exim | Service | — | — | SMTP server | — |
 | 🧹 Rspamd | Service | `rspamd` | `rspamd` | spam filter | SMTP server |
 | 📬 Dovecot | Service | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | `dovecot` | IMAP server | — |
 | 🛡️ SpamAssassin | Service | `spamassassin` `spamd` `spamass-milter` | — | spam filter | SMTP server |
@@ -62,14 +62,14 @@ Rules:
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| 🌐 BIND | Service | `bind9` | `bind` | DNS server | — |
+| 🌐 BIND | Service | — | — | DNS server | — |
 | ⚡ PowerDNS | Service | `pdns-server` `pdns-backend-sqlite3` | `powerdns` | DNS server | — |
 
 ### FTP
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| 📂 vsftpd | Service | `vsftpd` | `vsftpd` | — | — |
+| 📂 vsftpd | Service | — | — | — | — |
 
 ### Cache
 
@@ -95,5 +95,5 @@ every column: yes.
 | Component | Kind | Seat | Needs |
 |---|---|---|---|
 | 🟩 Node.js | Runtime | — | web server |
-| ✉️ Roundcube | Tool | — | IMAP server, web server, PHP-FPM |
+| ✉️ Roundcube | Tool | — | SMTP server, IMAP server, web server, PHP-FPM |
 

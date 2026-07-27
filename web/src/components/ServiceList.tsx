@@ -5,6 +5,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { useComponentOperation } from './ComponentOperation';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -35,6 +36,7 @@ interface ManagedService {
     is_installed: boolean;
     conflict_with?: string;
     not_offered?: boolean;
+    not_offered_reason?: string;
     requires_missing?: string[];
     kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
@@ -133,6 +135,7 @@ function unknownCategories(list: ManagedService[]) {
 // wrapper-unit uç noktasından değil.
 export function ServiceList({ onManageService }: ServiceListProps) {
     const { t } = useI18n();
+    const { startInstall, catalogSnapshot } = useComponentOperation();
     const [services, setServices] = useState<ManagedService[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -189,6 +192,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     useEffect(() => {
         loadServices();
     }, []);
+
+    // The operation controller keeps the panel locked through its mandatory
+    // post-install scan. Consume that exact fresh snapshot before the overlay
+    // is removed instead of racing it with another independent load.
+    useEffect(() => {
+        if (!catalogSnapshot) return;
+        setServices(catalogSnapshot.services as unknown as ManagedService[]);
+        setScannedAt(catalogSnapshot.scanned_at ?? null);
+        setLoading(false);
+    }, [catalogSnapshot]);
 
     // Client-side filter: text search over name/description/id plus the
     // "hide not installed" switch. A live search overrides collapse so
@@ -267,22 +280,11 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
     const doInstall = async (service: ManagedService, pkg?: string) => {
         setInstallTarget(null);
-        setBusy(service.id);
-        try {
-            const res = await fetch('/api/v1/service/install', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ service_id: service.id, ...(pkg ? { package: pkg } : {}) }),
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || 'install failed');
-            showToast('success', t('services.installed', { name: service.name }));
-            scan();
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
-        } finally {
-            setBusy(null);
-        }
+        await startInstall({
+            serviceId: service.id,
+            name: service.name,
+            ...(pkg ? { package: pkg } : {}),
+        });
     };
 
     // Remove an installed service: stop + disable + purge via the agent, then
@@ -624,7 +626,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                netdata). Dağıtım başına tam liste
                                                                docs/DISTRO-SUPPORT içinde. */
                                                             <span
-                                                                title={t('services.notOfferedHint')}
+                                                                title={s.not_offered_reason || t('services.notOfferedHint')}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
                                                             >
                                                                 {t('services.notOffered')}
@@ -696,7 +698,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <Square className="h-4 w-4" fill="currentColor" />
                                                     </ActionIcon>
                                                     </>
-                                                    ) : (
+                                                    ) : s.not_offered ? (
+                                                    /* A legacy installation whose automatic integration is
+                                                       deliberately closed must remain manageable. Starting it
+                                                       is the only honest action because Repair is not supported. */
                                                     <ActionIcon
                                                         title={t('services.start')}
                                                         onClick={() => handleAction(s, 'start')}
@@ -704,6 +709,19 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         tone="success"
                                                     >
                                                         <Play className="h-4 w-4" fill="currentColor" />
+                                                    </ActionIcon>
+                                                    ) : (
+                                                    /* A stopped supported service may be a partial install.
+                                                       Re-running the durable idempotent install path repairs
+                                                       packages, configuration, helpers and readiness under the
+                                                       same full-page operation lock. */
+                                                    <ActionIcon
+                                                        title={t('services.repair')}
+                                                        onClick={() => startInstall({ serviceId: s.id, name: s.name })}
+                                                        disabled={busy === s.id}
+                                                        tone="warning"
+                                                    >
+                                                        <RotateCw className="h-4 w-4" />
                                                     </ActionIcon>
                                                     ))}
                                                     {/* The version drawer is where a runtime's per-version
@@ -760,6 +778,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             busy={busy}
                                                             onInstanceAction={handleInstanceAction}
                                                             onVersionInstalled={scan}
+                                                            onInstallPackage={(pkg, version) => startInstall({
+                                                                serviceId: s.id,
+                                                                package: pkg,
+                                                                name: `${s.name} ${version}`,
+                                                            })}
+                                                            onInstallNode={(version) => startInstall({
+                                                                serviceId: s.id,
+                                                                version,
+                                                                name: `Node ${version}`,
+                                                            })}
                                                         />
                                                     )}
                                                 </li>
@@ -985,7 +1013,12 @@ function InstallServiceDialog({
 
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
-                    <Button variant="primary" onClick={() => onConfirm(selectedPkg || undefined)} disabled={busy} icon={DownloadCloud}>
+                    <Button
+                        variant="primary"
+                        onClick={() => onConfirm(selectedPkg || undefined)}
+                        disabled={busy || Boolean(repo?.required && !repo.enabled)}
+                        icon={DownloadCloud}
+                    >
                         {busy ? t('services.installing') : t('services.install')}
                     </Button>
                 </div>
@@ -1057,11 +1090,15 @@ function VersionDrawer({
     busy,
     onInstanceAction,
     onVersionInstalled,
+    onInstallPackage,
+    onInstallNode,
 }: {
     service: ManagedService;
     busy: string | null;
     onInstanceAction: (serviceId: string, unit: string, action: 'start' | 'stop' | 'restart') => void;
     onVersionInstalled: () => void;
+    onInstallPackage: (pkg: string, version: string) => Promise<boolean>;
+    onInstallNode: (version: string) => Promise<boolean>;
 }) {
     const { t } = useI18n();
     const instances = service.instances ?? [];
@@ -1114,17 +1151,7 @@ function VersionDrawer({
         if (installing) return;
         setInstalling(pkg);
         try {
-            const res = await fetch('/api/v1/service/install', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ service_id: service.id, package: pkg }),
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error);
-            showToast('success', t('services.versionInstalled', { version }));
-            onVersionInstalled();
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+            await onInstallPackage(pkg, version);
         } finally {
             setInstalling(null);
         }
@@ -1170,17 +1197,7 @@ function VersionDrawer({
         if (installing) return;
         setInstalling(version);
         try {
-            const res = await fetch('/api/v1/runtimes/node', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ version }),
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error);
-            showToast('success', t('services.versionInstalled', { version }));
-            onVersionInstalled();
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+            await onInstallNode(version);
         } finally {
             setInstalling(null);
         }

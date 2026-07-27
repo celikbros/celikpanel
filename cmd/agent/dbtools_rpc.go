@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/alicelik/celikpanel/internal/services"
 )
 
 // Serving the database web tools. phpMyAdmin/phpPgAdmin are PHP files, not
@@ -28,9 +26,18 @@ const (
 
 // dbToolRoots: catalogue tool id → the docroot its distro package installs.
 // dbToolRoots: katalog araç id'si → dağıtım paketinin kurduğu kök dizin.
-var dbToolRoots = map[string]string{
-	"phpmyadmin": "/usr/share/phpmyadmin",
-	"phppgadmin": "/usr/share/phppgadmin",
+var dbToolRoots = map[string][]string{
+	"phpmyadmin": {"/usr/share/phpmyadmin", "/usr/share/webapps/phpMyAdmin"},
+	"phppgadmin": {"/usr/share/phppgadmin"},
+}
+
+func firstInstalledDBToolRoot(roots []string) string {
+	for _, root := range roots {
+		if fileExistsAgent(root) {
+			return root
+		}
+	}
+	return ""
 }
 
 type ConfigureDBToolsResponse struct {
@@ -52,15 +59,20 @@ func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) er
 	}
 
 	var tools []string
-	for id, root := range dbToolRoots {
-		if fileExistsAgent(root) {
+	installedRoots := make(map[string]string)
+	for id, roots := range dbToolRoots {
+		if root := firstInstalledDBToolRoot(roots); root != "" {
 			tools = append(tools, id)
+			installedRoots[id] = root
 		}
 	}
 
 	if len(tools) == 0 {
 		_ = os.Remove(dbToolsConfPath)
-		_ = exec.Command("systemctl", "reload", "nginx").Run()
+		if err := a.systemdMgr.Reload("nginx"); err != nil {
+			resp.Error = fmt.Sprintf("nginx reload: %v", err)
+			return nil
+		}
 		resp.Configured = true
 		return nil
 	}
@@ -69,12 +81,11 @@ func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) er
 	// PHP version. The path is version-dependent, so detect — never assume.
 	// Araçlar PHP'dir: .php'yi kurulu PHP sürümünün varsayılan FPM havuzuna
 	// ver. Yol sürüme bağlıdır; tespit et — asla varsayma.
-	phpVer := services.DetectInstalledPHPVersion()
-	if phpVer == "" {
+	socket := detectFPMSocket()
+	if socket == "" {
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
-	socket := fmt.Sprintf("/run/php/php%s-fpm.sock", phpVer)
 
 	var b strings.Builder
 	b.WriteString("# Managed by CelikPanel — database web tools, loopback only.\n")
@@ -83,7 +94,7 @@ func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) er
 	fmt.Fprintf(&b, "    listen %s;\n", dbToolsAddr)
 	b.WriteString("    server_name _;\n")
 	for _, id := range tools {
-		root := dbToolRoots[id]
+		root := installedRoots[id]
 		// Path-preserving locations: the browser path and this server's path
 		// are identical, so the tools' absolute URLs survive the panel proxy
 		// without any rewriting.
@@ -118,8 +129,8 @@ func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) er
 		resp.Error = fmt.Sprintf("nginx rejected the tools config: %s", firstLine(string(out)))
 		return nil
 	}
-	if out, err := exec.Command("systemctl", "reload", "nginx").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("nginx reload: %s", strings.TrimSpace(string(out)))
+	if err := a.systemdMgr.Reload("nginx"); err != nil {
+		resp.Error = fmt.Sprintf("nginx reload: %v", err)
 		return nil
 	}
 

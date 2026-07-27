@@ -113,7 +113,10 @@ func (a *Agent) EnsureNginxReady(_ *struct{}, resp *EnsureNginxReadyResponse) er
 		return nil
 	}
 	_ = os.Remove(backup)
-	_ = exec.Command("systemctl", "reload", "nginx").Run()
+	if err := a.systemdMgr.Reload("nginx"); err != nil {
+		resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
+		return nil
+	}
 
 	resp.Ready = true
 	resp.Changed = true

@@ -28,6 +28,7 @@ import { VsftpdManagement } from './components/VsftpdManagement';
 import { PostgreSQLManagement } from './components/PostgreSQLManagement';
 import { MariaDBManagement } from './components/MariaDBManagement';
 import { ComponentDetail } from './components/ComponentDetail';
+import { ComponentOperationProvider } from './components/ComponentOperation';
 
 // Domain Detail Wrapper - fetches domain ID from domain name
 function DomainDetailPage() {
@@ -372,7 +373,9 @@ function AuthGate() {
 
   return (
     <AuthProvider user={user} onLogout={() => setUser(null)}>
-      <AppRoutes />
+      <ComponentOperationProvider>
+        <AppRoutes />
+      </ComponentOperationProvider>
     </AuthProvider>
   );
 }

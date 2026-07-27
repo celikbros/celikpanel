@@ -167,32 +167,13 @@ func (m *Manager) Reload(serviceName string) error {
 }
 
 func (m *Manager) Restart(serviceName string) error {
-	out, err := exec.Command("systemctl", "restart", serviceName).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("systemctl restart failed: %v, output: %s", err, string(out))
-	}
-	return nil
+	return runUnitChange(serviceName, true, "restart", serviceName)
 }
 
 func (m *Manager) Start(serviceName string) error {
-	out, err := exec.Command("systemctl", "start", serviceName).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("systemctl start failed: %v, output: %s", err, string(out))
-	}
-	return nil
+	return runUnitChange(serviceName, true, "start", serviceName)
 }
 
 func (m *Manager) Stop(serviceName string) error {
-	cmd := exec.Command("systemctl", "stop", serviceName)
-	out, err := cmd.CombinedOutput()
-
-	// Log the output regardless of error
-	if len(out) > 0 {
-		fmt.Printf("systemctl stop %s output: %s\n", serviceName, string(out))
-	}
-
-	if err != nil {
-		return fmt.Errorf("systemctl stop failed: %v, output: %s", err, string(out))
-	}
-	return nil
+	return runUnitChange(serviceName, false, "stop", serviceName)
 }

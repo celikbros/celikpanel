@@ -73,14 +73,19 @@ func roundcubeInstalled() bool {
 // Arch'ta PHP-FPM ayakta olsa bile "" döner (canlıda yakalandı: Roundcube
 // Arch'ta "PHP-FPM is not installed" ile reddetti, /webmail/ yanlış soket
 // yolunda 502 verdi). Tek yoklama hem "kurulu mu?" hem "nerede?" cevabı.
+var fpmSocketPatterns = []string{
+	"/run/php/php*-fpm.sock",    // Debian, versioned default www pool
+	"/run/php-fpm/php-fpm.sock", // Arch
+	"/run/php/php-fpm.sock",     // some layouts
+	"/var/run/php/php*-fpm.sock",
+	"/var/run/php-fpm/php-fpm.sock",
+}
+
 func detectFPMSocket() string {
-	patterns := []string{
-		"/run/php/php*-fpm.sock",    // Debian, versioned default www pool
-		"/run/php-fpm/php-fpm.sock", // Arch
-		"/run/php/php-fpm.sock",     // some layouts
-		"/var/run/php/php*-fpm.sock",
-		"/var/run/php-fpm/php-fpm.sock",
-	}
+	return detectFPMSocketWithPatterns(fpmSocketPatterns)
+}
+
+func detectFPMSocketWithPatterns(patterns []string) string {
 	for _, pat := range patterns {
 		if m, _ := filepath.Glob(pat); len(m) > 0 {
 			return m[len(m)-1] // newest-versioned last, e.g. php8.4 over php8.3
@@ -189,7 +194,7 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	// uzantısı değil. Dağıtım-farkındalıklı sağla — dağıtıma özgü tek gerçek
 	// paket adıdır ve o bilgi zaten agent'ta.
 	if !phpHasSQLite() {
-		if err := ensurePHPSQLite(phpVer); err != nil {
+		if err := a.ensurePHPSQLite(phpVer); err != nil {
 			resp.Error = fmt.Sprintf("PHP SQLite extension is required for webmail and could not be installed: %v", err)
 			return nil
 		}
@@ -345,7 +350,7 @@ func phpHasSQLite() bool {
 // sonra php-fpm yeniden yüklenir ki sunulan bir istek de yeni uzantıyı görsün
 // (CLI initdb reload olmadan görürdü ama ardından gelen webmail FPM altında
 // çalışır).
-func ensurePHPSQLite(phpVer string) error {
+func (a *Agent) ensurePHPSQLite(phpVer string) error {
 	family := detectPkgFamily()
 	switch family {
 	case "apt", "dnf":
@@ -383,9 +388,13 @@ func ensurePHPSQLite(phpVer string) error {
 	// Sunulan istek yeni uzantıyı görsün diye FPM'i yeniden yükle. En-iyi-çaba
 	// — ardından gelen CLI initdb reload'dan bağımsız uzantıyı alır.
 	if phpVer != "" && family == "apt" {
-		_ = exec.Command("systemctl", "reload", "php"+phpVer+"-fpm").Run()
+		if err := a.systemdMgr.Reload("php" + phpVer + "-fpm"); err != nil {
+			return fmt.Errorf("PHP-FPM reload failed: %w", err)
+		}
 	} else {
-		_ = exec.Command("systemctl", "reload", "php-fpm").Run()
+		if err := a.systemdMgr.Reload("php-fpm"); err != nil {
+			return fmt.Errorf("PHP-FPM reload failed: %w", err)
+		}
 	}
 
 	// Verify the driver is actually loadable now — better a clear failure here
@@ -474,7 +483,10 @@ func (a *Agent) ConfigureWebmail(_ *struct{}, resp *ConfigureWebmailResponse) er
 	// başarılı yapımdan sonra yerine taşır; yarım kurulum asla sunulmaz.
 	if !fileExistsAgent(filepath.Join(roundcubeRootDir(), "index.php")) {
 		_ = os.Remove(webmailConfPath)
-		_ = exec.Command("systemctl", "reload", "nginx").Run()
+		if err := a.systemdMgr.Reload("nginx"); err != nil {
+			resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
+			return nil
+		}
 		resp.Configured = true
 		resp.Present = false
 		return nil
@@ -534,8 +546,8 @@ server {
 		resp.Error = fmt.Sprintf("nginx rejected the webmail config: %s", firstLine(string(out)))
 		return nil
 	}
-	if out, err := exec.Command("systemctl", "reload", "nginx").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("nginx reload failed: %s", firstLine(string(out)))
+	if err := a.systemdMgr.Reload("nginx"); err != nil {
+		resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
 		return nil
 	}
 

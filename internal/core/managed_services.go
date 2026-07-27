@@ -213,6 +213,12 @@ type ManagedService struct {
 	// kesin olduğu VE paketin dağıtıma özgü init adımı istemediği yerde dolu —
 	// boş girdi, dürüst "bu dağıtımda henüz desteklenmiyor"u korur.
 	Packages map[string][]string
+	// InstallDisabledReason explicitly closes automatic installation even when
+	// distro packages exist. A package alone is not a panel integration: until
+	// CelikPanel can configure the service for hosted domains, offering Install
+	// would produce an installed daemon that the rest of the panel cannot use.
+	// Existing installations remain visible and manageable.
+	InstallDisabledReason string
 	// Repo, when set, is the optional vendor repository this service can enable
 	// to unlock version choice (see ManagedRepo). nil means the service is only
 	// ever installed from the distro — the common, most conservative case.
@@ -254,6 +260,23 @@ type ManagedService struct {
 	// Panel, kurulumdan sonra mevcut olan her yardımcı unit'i etkinleştirip
 	// başlatır, kaldırmada durdurur.
 	HelperUnits []string
+}
+
+// ManagedServiceInstallDisabledReason is the single catalogue decision used
+// by both the panel and the privileged agent. Empty means automatic install is
+// offered. An empty Packages map is a portable installer (Node/Roundcube), not
+// a missing distro mapping.
+func ManagedServiceInstallDisabledReason(svc *ManagedService, family string) string {
+	if svc == nil {
+		return "unknown managed service"
+	}
+	if svc.InstallDisabledReason != "" {
+		return svc.InstallDisabledReason
+	}
+	if len(svc.Packages) > 0 && len(svc.Packages[family]) == 0 {
+		return "automatic installation is not supported on this Linux distribution yet"
+	}
+	return ""
 }
 
 // RequirementsMissing returns which of a service's requirements are not met by
@@ -328,7 +351,7 @@ var ManagedServices = []ManagedService{
 		Description: "PHP FastCGI Process Manager",
 		Icon:        "🐘",
 		Category:    "web",
-		Kind: KindRuntime,
+		Kind:        KindRuntime,
 		// The unversioned unit covers Arch (a single `php-fpm`); every versioned
 		// unit is matched by the pattern instead of being listed, so a version
 		// installed from Sury is never invisible to the panel.
@@ -411,23 +434,24 @@ var ManagedServices = []ManagedService{
 		Description:   "Reverse Proxy Server",
 		Icon:          "🔄",
 		Category:      "web",
-		Kind:        KindService,
+		Kind:          KindService,
 		SystemNames:   []string{"nginx"},
 		ConflictGroup: "web-server",
 		Packages:      map[string][]string{"apt": {"nginx"}, "pacman": {"nginx"}},
 		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
-		ID:            "apache",
-		Name:          "Apache",
-		Description:   "Web Server",
-		Icon:          "🪶",
-		Category:      "web",
-		Kind:        KindService,
-		SystemNames:   []string{"apache2", "httpd"},
-		ConflictGroup: "web-server",
-		Packages:      map[string][]string{"apt": {"apache2"}, "pacman": {"apache"}},
-		FirewallPorts: []FirewallPort{{80, "tcp"}, {443, "tcp"}},
+		ID:                    "apache",
+		Name:                  "Apache",
+		Description:           "Web Server",
+		Icon:                  "🪶",
+		Category:              "web",
+		Kind:                  KindService,
+		SystemNames:           []string{"apache2", "httpd"},
+		ConflictGroup:         "web-server",
+		Packages:              map[string][]string{"apt": {"apache2"}, "pacman": {"apache"}},
+		InstallDisabledReason: "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+		FirewallPorts:         []FirewallPort{{80, "tcp"}, {443, "tcp"}},
 	},
 	{
 		ID:          "postgresql",
@@ -449,13 +473,9 @@ var ManagedServices = []ManagedService{
 		// kaçırırdı.
 		SystemNames:       []string{"postgresql"},
 		SystemNamePattern: `^postgresql@`,
-		// pacman deliberately absent: on Arch the cluster needs a manual
-		// initdb before first start — mapping the package alone would install
-		// a server that cannot start. Same for MariaDB below.
-		// pacman bilerek yok: Arch'ta küme ilk başlatmadan önce elle initdb
-		// ister — yalnız paketi eşlemek, başlayamayan bir sunucu kurardı.
-		// Aşağıdaki MariaDB için de aynısı geçerli.
-		Packages: map[string][]string{"apt": {"postgresql"}},
+		// Arch requires initdb before first start; the agent performs that
+		// initialization inside the explicit Install operation.
+		Packages: map[string][]string{"apt": {"postgresql"}, "pacman": {"postgresql"}},
 		// The distro ships one PostgreSQL major; PGDG carries every current
 		// major, so an admin who needs 17 (or must stay on 16) can pick it.
 		// Dağıtım tek bir PostgreSQL major'u getirir; PGDG tüm güncel major'ları
@@ -478,7 +498,7 @@ var ManagedServices = []ManagedService{
 		Category:    "database",
 		Kind:        KindService,
 		SystemNames: []string{"mariadb", "mysql"},
-		Packages:    map[string][]string{"apt": {"mariadb-server"}},
+		Packages:    map[string][]string{"apt": {"mariadb-server"}, "pacman": {"mariadb"}},
 	},
 	// Web admin tools for the database servers. Daemonless (no systemd unit —
 	// just PHP files served by the web server), and only meaningful on top of
@@ -549,16 +569,17 @@ var ManagedServices = []ManagedService{
 		// kurarım"). Postfix koltuktayken Exim kurmak grupça reddedilir;
 		// "smtp-server" isteyen her şey (rspamd, SpamAssassin) ikisinden
 		// biriyle tatmin olur.
-		ID:            "exim",
-		Name:          "Exim",
-		Description:   "SMTP Server",
-		Icon:          "📮",
-		Category:      "email",
-		Kind:          KindService,
-		SystemNames:   []string{"exim4", "exim"}, // Debian unit exim4, Arch exim
-		ConflictGroup: "smtp-server",
-		Packages:      map[string][]string{"apt": {"exim4-daemon-light"}, "pacman": {"exim"}},
-		FirewallPorts: []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
+		ID:                    "exim",
+		Name:                  "Exim",
+		Description:           "SMTP Server",
+		Icon:                  "📮",
+		Category:              "email",
+		Kind:                  KindService,
+		SystemNames:           []string{"exim4", "exim"}, // Debian unit exim4, Arch exim
+		ConflictGroup:         "smtp-server",
+		Packages:              map[string][]string{"apt": {"exim4-daemon-light"}, "pacman": {"exim"}},
+		InstallDisabledReason: "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+		FirewallPorts:         []FirewallPort{{25, "tcp"}, {587, "tcp"}, {465, "tcp"}},
 	},
 	{
 		// The modern spam filter (operator, 23 Jul: "don't offer only
@@ -618,7 +639,8 @@ var ManagedServices = []ManagedService{
 		// unpack under /opt/celikpanel/webmail. ONE path on every Linux. That
 		// is why Packages is empty: install goes through Agent.InstallRoundcube,
 		// not the package manager. Still a tool (a PHP app, no daemon of ours);
-		// still gates on imap-server + web-server + php-fpm.
+		// still gates on SMTP + IMAP + web-server + PHP-FPM: the UI is not
+		// useful unless it can both read and submit mail.
 		// Webmail (operatör, 23 Tem: "webmailler olsun"; 24 Tem: "her iki
 		// sürümde kurulamıyorsa kurma — tüm Linux'ta çalışan webmail yok mu?").
 		// Dağıtım paketi (apt'ta roundcube, pacman'da farklı yerleşimli
@@ -635,7 +657,7 @@ var ManagedServices = []ManagedService{
 		Icon:        "✉️",
 		Category:    "email",
 		Kind:        KindTool,
-		Requires:    []string{"imap-server", "web-server", "php-fpm"},
+		Requires:    []string{"smtp-server", "imap-server", "web-server", "php-fpm"},
 	},
 	{
 		ID:          "spamassassin",
@@ -690,7 +712,7 @@ var ManagedServices = []ManagedService{
 		Description:   "Built-in VPN server",
 		Icon:          "\U0001F510",
 		Category:      "security",
-		Kind:        KindService,
+		Kind:          KindService,
 		SystemNames:   []string{"wg-quick@wg0"},
 		Packages:      map[string][]string{"apt": {"wireguard"}, "pacman": {"wireguard-tools"}},
 		FirewallPorts: []FirewallPort{{51820, "udp"}},
@@ -784,20 +806,22 @@ var ManagedServices = []ManagedService{
 		Icon:        "🦠",
 		Category:    "security",
 		Kind:        KindService,
-		SystemNames: []string{"clamav-daemon", "clamav-freshclam"},
+		SystemNames: []string{"clamav-daemon"},
+		HelperUnits: []string{"clamav-freshclam"},
 		Packages:    map[string][]string{"apt": {"clamav", "clamav-daemon"}, "pacman": {"clamav"}},
 	},
 	{
-		ID:            "bind",
-		Name:          "BIND",
-		Description:   "DNS Server",
-		Icon:          "🌐",
-		Category:      "dns",
-		Kind:        KindService,
-		SystemNames:   []string{"bind9", "named"},
-		ConflictGroup: "dns-server",
-		Packages:      map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
-		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
+		ID:                    "bind",
+		Name:                  "BIND",
+		Description:           "DNS Server",
+		Icon:                  "🌐",
+		Category:              "dns",
+		Kind:                  KindService,
+		SystemNames:           []string{"bind9", "named"},
+		ConflictGroup:         "dns-server",
+		Packages:              map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
+		InstallDisabledReason: "BIND zone synchronization is not available in CelikPanel yet; use PowerDNS.",
+		FirewallPorts:         []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
 		ID:            "pdns",
@@ -805,26 +829,27 @@ var ManagedServices = []ManagedService{
 		Description:   "DNS Server",
 		Icon:          "⚡",
 		Category:      "dns",
-		Kind:        KindService,
+		Kind:          KindService,
 		SystemNames:   []string{"pdns"},
 		ConflictGroup: "dns-server",
 		// Arch's powerdns ships the sqlite3 backend inside the main package —
 		// no separate backend package exists there.
 		// Arch'ın powerdns'i sqlite3 arka ucunu ana pakette taşır — orada ayrı
 		// backend paketi yoktur.
-		Packages: map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}, "pacman": {"powerdns"}},
+		Packages:      map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}, "pacman": {"powerdns"}},
 		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
-		ID:            "vsftpd",
-		Name:          "vsftpd",
-		Description:   "FTP Server",
-		Icon:          "📂",
-		Category:      "ftp",
-		Kind:        KindService,
-		SystemNames:   []string{"vsftpd"},
-		Packages:      map[string][]string{"apt": {"vsftpd"}, "pacman": {"vsftpd"}},
-		FirewallPorts: []FirewallPort{{21, "tcp"}},
+		ID:                    "vsftpd",
+		Name:                  "vsftpd",
+		Description:           "FTP Server",
+		Icon:                  "📂",
+		Category:              "ftp",
+		Kind:                  KindService,
+		SystemNames:           []string{"vsftpd"},
+		Packages:              map[string][]string{"apt": {"vsftpd"}, "pacman": {"vsftpd"}},
+		InstallDisabledReason: "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+		FirewallPorts:         []FirewallPort{{21, "tcp"}},
 	},
 	{
 		ID:          "redis",

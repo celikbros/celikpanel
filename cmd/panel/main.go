@@ -44,6 +44,11 @@ type Panel struct {
 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
 	pkgFamilyMu  sync.Mutex
 	pkgFamilyVal string
+	// serviceMutationMu is the in-process lease shared by durable installs and
+	// every remaining synchronous component mutation. TryLock makes competing
+	// requests fail fast instead of racing between an active-operation check
+	// and the actual machine change.
+	serviceMutationMu sync.Mutex
 }
 
 func main() {
@@ -149,6 +154,11 @@ func main() {
 		log.Fatalf("Failed to check users: %v", err)
 	} else if n == 0 {
 		log.Fatal("No users exist. Create the first admin with:  ./bin/panel --create-admin")
+	}
+	if recovered, err := panel.recoverInterruptedServiceOperations(context.Background()); err != nil {
+		log.Fatalf("Failed to recover interrupted service operations: %v", err)
+	} else if recovered > 0 {
+		log.Printf("Marked %d interrupted service operation(s) as failed", recovered)
 	}
 
 	// One-time repair of pre-A4 rows: seal any database root password that
@@ -279,6 +289,7 @@ func main() {
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
+	http.HandleFunc("/api/v1/service/operation", panel.handleServiceOperation)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
 	http.HandleFunc("/api/v1/service/uninstall", panel.handleServiceUninstall)
 	http.HandleFunc("/api/v1/firewall", panel.handleFirewall)
@@ -637,6 +648,11 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	release, busy := p.beginServiceMutation(w, r)
+	if busy {
+		return
+	}
+	defer release()
 
 	var req struct {
 		ServiceName string `json:"service_name"`
@@ -654,23 +670,17 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		serviceName = req.Name
 	}
 
-	var reply bool
-	var err error
-	args := &transport.ServiceArgs{ServiceName: serviceName}
-
 	switch req.Action {
-	case "start":
-		err = p.agentClient.Call("Agent.StartService", args, &reply)
-	case "stop":
-		err = p.agentClient.Call("Agent.StopService", args, &reply)
-	case "restart":
-		err = p.agentClient.Call("Agent.RestartService", args, &reply)
-	case "reload":
-		err = p.agentClient.Call("Agent.ReloadService", args, &reply)
+	case "start", "stop", "restart", "reload":
 	default:
-		http.Error(w, "invalid action", http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid action")
 		return
 	}
+	var reply transport.ServiceActionResult
+	err := p.agentClient.Call("Agent.ServiceAction", &transport.ServiceActionArgs{
+		ServiceName: serviceName,
+		Action:      req.Action,
+	}, &reply)
 
 	if err != nil {
 		// Start/stop/restart changed (or failed to change) the server's real
@@ -681,6 +691,11 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		// yaptığını gösteremiyordu, ben de yeniden kuramıyordum (25 Tem).
 		p.audit(r, "service."+req.Action+".failed:"+serviceName+" — "+auditReason(err.Error()), "service", 0)
 		writeServerError(w, err)
+		return
+	}
+	if reply.Error != "" {
+		p.audit(r, "service."+req.Action+".failed:"+serviceName+" — "+auditReason(reply.Error), "service", 0)
+		writeClientError(w, http.StatusConflict, reply.Error)
 		return
 	}
 	p.audit(r, "service."+req.Action+":"+serviceName, "service", 0)
@@ -695,7 +710,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		log.Printf("service scan after %s %s: %v", req.Action, serviceName, err)
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": reply})
+	json.NewEncoder(w).Encode(reply)
 }
 
 func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {

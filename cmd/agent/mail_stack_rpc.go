@@ -151,6 +151,10 @@ type WireMailFiltersResponse struct {
 }
 
 func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) error {
+	if _, err := exec.LookPath("postconf"); err != nil {
+		resp.Error = "Postfix is required before a mail filter can be wired"
+		return nil
+	}
 	// Repair the lookup tables while we are here. A server configured before
 	// the table type was discovered still carries `hash:` in main.cf, and on a
 	// postfix built without Berkeley DB that means every incoming message is

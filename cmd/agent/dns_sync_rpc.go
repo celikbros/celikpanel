@@ -310,8 +310,8 @@ api=no
 		return nil
 	}
 
-	if out, err := exec.Command("systemctl", "restart", "pdns").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("pdns restart: %s", string(out))
+	if err := a.systemdMgr.Restart("pdns"); err != nil {
+		resp.Error = fmt.Sprintf("pdns restart: %v", err)
 		return nil
 	}
 

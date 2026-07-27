@@ -134,3 +134,13 @@ type UpdateConfigArgs struct {
 type ServiceArgs struct {
 	ServiceName string
 }
+
+type ServiceActionArgs struct {
+	ServiceName string
+	Action      string
+}
+
+type ServiceActionResult struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}

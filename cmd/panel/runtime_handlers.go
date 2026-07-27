@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,28 +44,51 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Version string `json:"version"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeServiceOperationJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
-		var resp struct {
-			Installed bool   `json:"installed"`
-			Error     string `json:"error,omitempty"`
+		req.Version = strings.TrimSpace(req.Version)
+		if !nodeSemverRe.MatchString(req.Version) {
+			writeClientError(w, http.StatusBadRequest, "not a valid node version")
+			return
+		}
+		release, busy := p.beginServiceMutation(w, r)
+		if busy {
+			return
+		}
+		releaseInHandler := true
+		defer func() {
+			if releaseInHandler {
+				release()
+			}
+		}()
+		actor := captureServiceOperationActor(r)
+		op, err := p.createServiceOperation(
+			r.Context(), serviceOperationKindRuntimeInstall, "node", req.Version, actor,
+		)
+		if errors.Is(err, errServiceOperationBusy) {
+			writeServiceOperationBusy(w)
+			return
+		}
+		if err != nil {
+			writeServerError(w, err)
+			return
 		}
 		// Downloads can take a while; the agent verifies the official
 		// checksum before anything is unpacked.
 		// İndirme sürebilir; agent açmadan önce resmi sağlamayı doğrular.
-		if err := p.agentClient.Call("Agent.InstallNodeVersion", &struct {
-			Version string `json:"version"`
-		}{Version: req.Version}, &resp); err != nil {
-			writeServerError(w, err)
-			return
-		}
-		if resp.Error != "" {
-			writeClientError(w, http.StatusConflict, resp.Error)
-			return
-		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		p.launchServiceOperation(
+			op, actor, "installing",
+			"runtime.node.install:"+req.Version,
+			"runtime.node.install.failed:"+req.Version,
+			release,
+			func(ctx context.Context, advance func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+				return p.runNodeInstall(ctx, req.Version, advance)
+			},
+		)
+		releaseInHandler = false
+		writeAcceptedServiceOperation(w, op)
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -124,6 +149,11 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusForbidden, "administrator access required")
 			return
 		}
+		release, busy := p.beginServiceMutation(w, r)
+		if busy {
+			return
+		}
+		defer release()
 		version := rest
 		if !nodeSemverRe.MatchString(version) {
 			writeClientError(w, http.StatusBadRequest, "not a valid node version")

@@ -2,355 +2,518 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"mime"
 	"net/http"
-	"path/filepath"
+	"path"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/backupspec"
 )
 
-// Backup API Handlers
+const maxBackupRequestBody = 64 << 10
+
+type backupDomain struct {
+	ID, SubscriptionID int
+	Name, DocumentRoot string
+}
+
+type createBackupHTTPBody struct {
+	Type       string `json:"type"`
+	DatabaseID int    `json:"database_id,omitempty"`
+}
+
+func backupDomainIDFromPath(requestPath string) (int, error) {
+	parts := strings.Split(requestPath, "/")
+	if len(parts) < 5 {
+		return 0, errors.New("invalid path")
+	}
+	id, err := strconv.Atoi(parts[4])
+	if err != nil || id < 1 {
+		return 0, errors.New("invalid domain ID")
+	}
+	return id, nil
+}
+
+// loadBackupDomain resolves immutable tenant identity and the rollback-only
+// document root in one targeted query. A v2 agent derives paths from IDs.
+func (p *Panel) loadBackupDomain(ctx context.Context, domainID int) (backupDomain, error) {
+	var d backupDomain
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT d.id, d.subscription_id, d.name,
+		       COALESCE((SELECT s.document_root FROM sites s
+		                 WHERE s.domain_id=d.id ORDER BY s.id LIMIT 1), '')
+		FROM domains d WHERE d.id=?`, domainID,
+	).Scan(&d.ID, &d.SubscriptionID, &d.Name, &d.DocumentRoot)
+	if err != nil {
+		return backupDomain{}, err
+	}
+	if strings.TrimSpace(d.DocumentRoot) == "" {
+		d.DocumentRoot = path.Join("/var/www", d.Name)
+	}
+	return d, nil
+}
+
+// databaseIdentity authorizes only through databases_v2 -> database server ->
+// server type, with domain and subscription ownership checked together.
+func (p *Panel) databaseIdentity(ctx context.Context, d backupDomain, databaseID int) (backupspec.DatabaseIdentity, error) {
+	var out backupspec.DatabaseIdentity
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT db.id, db.name, dst.name
+		FROM databases_v2 db
+		JOIN database_servers ds ON ds.id=db.server_id
+		JOIN database_server_types dst ON dst.id=ds.type_id
+		WHERE db.id=? AND db.domain_id=? AND db.subscription_id=?
+		  AND ds.subscription_id=?`, databaseID, d.ID, d.SubscriptionID, d.SubscriptionID,
+	).Scan(&out.ID, &out.Name, &out.Type)
+	return out, err
+}
+
+func (p *Panel) domainDatabaseIdentities(ctx context.Context, d backupDomain) ([]backupspec.DatabaseIdentity, error) {
+	rows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT db.id, db.name, dst.name
+		FROM databases_v2 db
+		JOIN database_servers ds ON ds.id=db.server_id
+		JOIN database_server_types dst ON dst.id=ds.type_id
+		WHERE db.domain_id=? AND db.subscription_id=? AND ds.subscription_id=?
+		ORDER BY db.id`, d.ID, d.SubscriptionID, d.SubscriptionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	identities := make([]backupspec.DatabaseIdentity, 0)
+	for rows.Next() {
+		var identity backupspec.DatabaseIdentity
+		if err := rows.Scan(&identity.ID, &identity.Name, &identity.Type); err != nil {
+			return nil, err
+		}
+		identities = append(identities, identity)
+	}
+	return identities, rows.Err()
+}
+
+func decodeBackupJSON(w http.ResponseWriter, r *http.Request, target any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBackupRequestBody)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("multiple JSON values")
+		}
+		return err
+	}
+	return nil
+}
 
 func (p *Panel) handleDomainBackups(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method == "OPTIONS" {
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
-	// Extract domain ID from URL
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 5 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-
-	domainID, err := strconv.Atoi(pathParts[4])
+	domainID, err := backupDomainIDFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Invalid domain ID", http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid domain ID")
 		return
 	}
-
-	// Get domain name
-	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-	domains, err := domainRepo.List(context.Background())
+	d, err := p.loadBackupDomain(r.Context(), domainID)
 	if err != nil {
-		http.Error(w, "Failed to get domains", http.StatusInternalServerError)
-		return
-	}
-
-	var domainName string
-	for _, d := range domains {
-		if d.ID == domainID {
-			domainName = d.Name
-			break
+		if errors.Is(err, sql.ErrNoRows) {
+			writeClientError(w, http.StatusNotFound, "domain not found")
+		} else {
+			writeServerError(w, err)
 		}
-	}
-
-	if domainName == "" {
-		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
 	}
-
 	switch r.Method {
-	case "GET":
-		p.handleListBackups(w, domainName)
-	case "POST":
-		p.handleCreateBackup(w, r, domainID, domainName)
-	case "DELETE":
-		p.handleDeleteBackup(w, r, domainName)
+	case http.MethodGet:
+		p.handleListBackups(w, r, d)
+	case http.MethodPost:
+		p.handleCreateBackup(w, r, d)
+	case http.MethodDelete:
+		p.handleDeleteBackup(w, r, d)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// The CreatedAt fields must be time.Time: the agent's BackupInfo sends
-// time.Time over gob, and a string field on this side poisons the whole RPC
-// stream with a decode error.
-// CreatedAt alanları time.Time olmalıdır: agent'ın BackupInfo'su gob üzerinden
-// time.Time gönderir; bu taraftaki bir string alan, tüm RPC akışını bir çözme
-// hatasıyla zehirler.
-func (p *Panel) handleListBackups(w http.ResponseWriter, domainName string) {
-	var resp struct {
-		Backups []struct {
-			Name      string    `json:"name"`
-			Path      string    `json:"path"`
-			Size      int64     `json:"size"`
-			Type      string    `json:"type"`
-			CreatedAt time.Time `json:"created_at"`
-		} `json:"backups"`
+func (p *Panel) handleListBackups(w http.ResponseWriter, r *http.Request, d backupDomain) {
+	req := backupspec.ListRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name,
 	}
-
-	err := p.agentClient.Call("Agent.ListBackups", &struct{ DomainName string }{DomainName: domainName}, &resp)
-	if err != nil {
+	var resp backupspec.ListResponse
+	if err := p.agentClient.CallContext(r.Context(), "Agent.ListBackups", &req, &resp); err != nil {
 		writeServerError(w, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
-func (p *Panel) handleCreateBackup(w http.ResponseWriter, r *http.Request, domainID int, domainName string) {
-	var req struct {
-		Type         string `json:"type"`
-		DatabaseName string `json:"database_name,omitempty"`
-		DatabaseType string `json:"database_type,omitempty"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+func (p *Panel) handleCreateBackup(w http.ResponseWriter, r *http.Request, d backupDomain) {
+	var body createBackupHTTPBody
+	if err := decodeBackupJSON(w, r, &body); err != nil {
+		p.auditBackupFailure(r, "create", "", d.ID, "invalid request body")
+		writeClientError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-
-	// The agent has no DB access; resolve the real document root here so file
-	// backups archive the site's actual directory.
-	// Agent'ın DB erişimi yoktur; dosya yedeklerinin sitenin gerçek dizinini
-	// arşivlemesi için belge kökünü burada çöz.
-	sourceDir, err := p.siteDocroot(r.Context(), domainID)
-	if err != nil {
-		http.Error(w, "Domain not found", http.StatusNotFound)
+	req := backupspec.CreateRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, Type: body.Type,
+		Origin: backupspec.OriginManual, SourceDir: d.DocumentRoot,
+	}
+	switch body.Type {
+	case backupspec.TypeFiles:
+	case backupspec.TypeDatabase:
+		if body.DatabaseID < 1 {
+			p.auditBackupFailure(r, "create", body.Type, d.ID, "database_id is required")
+			writeClientError(w, http.StatusBadRequest, "database_id is required")
+			return
+		}
+		identity, err := p.databaseIdentity(r.Context(), d, body.DatabaseID)
+		if err != nil {
+			p.auditBackupFailure(r, "create", body.Type, d.ID, "database lookup failed")
+			if errors.Is(err, sql.ErrNoRows) {
+				writeClientError(w, http.StatusNotFound, "database not found")
+			} else {
+				writeServerError(w, err)
+			}
+			return
+		}
+		req.Database = identity
+		req.DatabaseName, req.DatabaseType = identity.Name, identity.Type
+	case backupspec.TypeFull:
+		identities, err := p.domainDatabaseIdentities(r.Context(), d)
+		if err != nil {
+			p.auditBackupFailure(r, "create", body.Type, d.ID, "database lookup failed")
+			writeServerError(w, err)
+			return
+		}
+		req.Databases = identities
+	default:
+		p.auditBackupFailure(r, "create", body.Type, d.ID, "unsupported backup type")
+		writeClientError(w, http.StatusBadRequest, "type must be files, database or full")
 		return
 	}
-
-	var resp struct {
-		Success bool `json:"success"`
-		Backup  struct {
-			Name      string    `json:"name"`
-			Path      string    `json:"path"`
-			Size      int64     `json:"size"`
-			Type      string    `json:"type"`
-			CreatedAt time.Time `json:"created_at"`
-		} `json:"backup,omitempty"`
-		Error string `json:"error,omitempty"`
-	}
-
-	err = p.agentClient.Call("Agent.CreateBackup", &struct {
-		DomainName   string
-		Type         string
-		DatabaseName string
-		DatabaseType string
-		SourceDir    string
-	}{
-		DomainName:   domainName,
-		Type:         req.Type,
-		DatabaseName: req.DatabaseName,
-		DatabaseType: req.DatabaseType,
-		SourceDir:    sourceDir,
-	}, &resp)
-
-	if err != nil {
+	var resp backupspec.CreateResponse
+	if err := p.agentClient.CallContext(r.Context(), "Agent.CreateBackup", &req, &resp); err != nil {
+		p.auditBackupFailure(r, "create", body.Type, d.ID, err.Error())
 		writeServerError(w, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(resp)
-}
-
-func (p *Panel) handleDeleteBackup(w http.ResponseWriter, r *http.Request, domainName string) {
-	backupName := r.URL.Query().Get("name")
-	if backupName == "" {
-		http.Error(w, "Backup name required", http.StatusBadRequest)
+	if !resp.Success || resp.Error != "" {
+		p.auditBackupFailure(r, "create", body.Type, d.ID, resp.Error)
+		writeAgentError(w, nil, resp.Error)
 		return
 	}
+	p.audit(r, "backup.create:"+body.Type, "domain", d.ID)
+	_ = json.NewEncoder(w).Encode(resp)
+}
 
+func (p *Panel) handleDeleteBackup(w http.ResponseWriter, r *http.Request, d backupDomain) {
+	name := r.URL.Query().Get("name")
+	if !validBackupName(name) {
+		p.auditBackupFailure(r, "delete", "", d.ID, "invalid backup name")
+		writeClientError(w, http.StatusBadRequest, "invalid backup name")
+		return
+	}
+	req := backupspec.DeleteRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, BackupName: name,
+	}
 	var success bool
-	err := p.agentClient.Call("Agent.DeleteBackup", &struct {
-		DomainName string
-		BackupName string
-	}{
-		DomainName: domainName,
-		BackupName: backupName,
-	}, &success)
-
-	if err != nil {
+	if err := p.agentClient.CallContext(r.Context(), "Agent.DeleteBackup", &req, &success); err != nil {
+		p.auditBackupFailure(r, "delete", "", d.ID, err.Error())
 		writeServerError(w, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(map[string]bool{"success": success})
+	if !success {
+		p.auditBackupFailure(r, "delete", "", d.ID, "agent refused deletion")
+		writeAgentError(w, nil, "backup deletion was not completed")
+		return
+	}
+	p.audit(r, "backup.delete", "domain", d.ID)
+	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func (p *Panel) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method == "OPTIONS" {
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	// Extract domain ID from URL
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 5 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-
-	domainID, err := strconv.Atoi(pathParts[4])
+	domainID, err := backupDomainIDFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Invalid domain ID", http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid domain ID")
 		return
 	}
-
-	// Get domain name
-	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-	domains, err := domainRepo.List(context.Background())
+	d, err := p.loadBackupDomain(r.Context(), domainID)
 	if err != nil {
-		http.Error(w, "Failed to get domains", http.StatusInternalServerError)
-		return
-	}
-
-	var domainName string
-	for _, d := range domains {
-		if d.ID == domainID {
-			domainName = d.Name
-			break
+		if errors.Is(err, sql.ErrNoRows) {
+			writeClientError(w, http.StatusNotFound, "domain not found")
+		} else {
+			writeServerError(w, err)
 		}
-	}
-
-	if domainName == "" {
-		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
 	}
-
-	var req struct {
+	var body struct {
 		BackupName string `json:"backup_name"`
 	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := decodeBackupJSON(w, r, &body); err != nil || !validBackupName(body.BackupName) {
+		p.auditBackupFailure(r, "restore", "", d.ID, "invalid request body or backup name")
+		writeClientError(w, http.StatusBadRequest, "invalid request body or backup name")
 		return
 	}
-
-	targetDir, err := p.siteDocroot(r.Context(), domainID)
-	if err != nil {
-		http.Error(w, "Domain not found", http.StatusNotFound)
-		return
+	inspectReq := backupspec.InspectRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, BackupName: body.BackupName,
 	}
-
-	var resp struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error,omitempty"`
-	}
-
-	err = p.agentClient.Call("Agent.RestoreBackup", &struct {
-		DomainName string
-		BackupName string
-		TargetDir  string
-	}{
-		DomainName: domainName,
-		BackupName: req.BackupName,
-		TargetDir:  targetDir,
-	}, &resp)
-
-	if err != nil {
+	var inspection backupspec.InspectResponse
+	if err := p.agentClient.CallContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
+		p.auditBackupFailure(r, "restore", "", d.ID, err.Error())
 		writeServerError(w, err)
 		return
 	}
-
-	json.NewEncoder(w).Encode(resp)
+	if !inspection.Success || inspection.Error != "" {
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, inspection.Error)
+		writeAgentError(w, nil, inspection.Error)
+		return
+	}
+	if !inspection.Backup.Restorable {
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, "unrestorable backup")
+		writeClientError(w, http.StatusConflict, "this backup cannot be restored safely")
+		return
+	}
+	restoreReq := backupspec.RestoreRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, BackupName: body.BackupName, TargetDir: d.DocumentRoot,
+	}
+	if err := p.authorizeRestoreDatabases(r.Context(), d, inspection, &restoreReq); err != nil {
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, err.Error())
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeClientError(w, http.StatusConflict, "backup database is no longer authorized for this domain")
+		case errors.Is(err, errUnsafeBackupMetadata):
+			writeClientError(w, http.StatusConflict, "backup metadata is incomplete or unsafe")
+		default:
+			writeServerError(w, err)
+		}
+		return
+	}
+	var resp backupspec.RestoreResponse
+	if err := p.agentClient.CallContext(r.Context(), "Agent.RestoreBackup", &restoreReq, &resp); err != nil {
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, err.Error())
+		writeServerError(w, err)
+		return
+	}
+	if !resp.Success || resp.Error != "" {
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, resp.Error)
+		writeAgentError(w, nil, resp.Error)
+		return
+	}
+	p.audit(r, "backup.restore:"+inspection.Backup.Type, "domain", d.ID)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// handleDownloadBackup streams a backup archive to the browser. Backups live
-// under /var/backups/celikpanel/<domain>/, outside the site's document root,
-// so the file-manager download endpoint can never reach them (its traversal
-// guard correctly refuses) — they need this dedicated route.
-//
-// handleDownloadBackup, bir yedek arşivini tarayıcıya akıtır. Yedekler,
-// sitenin belge kökünün dışında, /var/backups/celikpanel/<domain>/ altında
-// yaşar; bu yüzden dosya-yöneticisi indirme ucu onlara asla ulaşamaz (kaçış
-// koruması haklı olarak reddeder) — bu özel rotaya ihtiyaç duyarlar.
+var errUnsafeBackupMetadata = errors.New("unsafe backup metadata")
+
+// authorizeRestoreDatabases discards agent-provided names/types and resolves
+// every immutable database ID against the current tenant metadata again.
+func (p *Panel) authorizeRestoreDatabases(ctx context.Context, d backupDomain, inspection backupspec.InspectResponse, req *backupspec.RestoreRequest) error {
+	switch inspection.Backup.Type {
+	case backupspec.TypeFiles:
+		if len(inspection.Databases) != 0 || inspection.Backup.DatabaseID != 0 {
+			return errUnsafeBackupMetadata
+		}
+		return nil
+	case backupspec.TypeDatabase:
+		ids, err := inspectedDatabaseIDs(inspection)
+		if err != nil || len(ids) != 1 {
+			return errUnsafeBackupMetadata
+		}
+		identity, err := p.databaseIdentity(ctx, d, ids[0])
+		if err == nil {
+			req.Database = identity
+		}
+		return err
+	case backupspec.TypeFull:
+		ids, err := inspectedDatabaseIDs(inspection)
+		if err != nil {
+			return errUnsafeBackupMetadata
+		}
+		req.Databases = make([]backupspec.DatabaseIdentity, 0, len(ids))
+		for _, id := range ids {
+			identity, err := p.databaseIdentity(ctx, d, id)
+			if err != nil {
+				return err
+			}
+			req.Databases = append(req.Databases, identity)
+		}
+		return nil
+	default:
+		return errUnsafeBackupMetadata
+	}
+}
+
+func inspectedDatabaseIDs(inspection backupspec.InspectResponse) ([]int, error) {
+	ids := make([]int, 0, len(inspection.Databases)+1)
+	seen := make(map[int]struct{})
+	for _, database := range inspection.Databases {
+		if database.ID < 1 {
+			return nil, errUnsafeBackupMetadata
+		}
+		if _, duplicate := seen[database.ID]; duplicate {
+			return nil, errUnsafeBackupMetadata
+		}
+		seen[database.ID] = struct{}{}
+		ids = append(ids, database.ID)
+	}
+	if inspection.Backup.DatabaseID > 0 {
+		if _, duplicate := seen[inspection.Backup.DatabaseID]; !duplicate {
+			ids = append(ids, inspection.Backup.DatabaseID)
+		}
+	}
+	return ids, nil
+}
+
+func validBackupName(name string) bool {
+	if name == "" || name == "." || name == ".." || strings.HasPrefix(name, ".") {
+		return false
+	}
+	return !strings.Contains(name, "/") && !strings.Contains(name, `\`) && !strings.ContainsRune(name, '\x00')
+}
+
+func (p *Panel) auditBackupFailure(r *http.Request, operation, backupType string, domainID int, reason string) {
+	suffix := ""
+	if backupType != "" {
+		suffix = ":" + backupType
+	}
+	if reason == "" {
+		reason = "operation failed"
+	}
+	p.audit(r, "backup."+operation+".failed"+suffix+" — "+auditReason(reason), "domain", domainID)
+}
+
+// handleDownloadBackup streams bounded chunks from the agent. It never asks
+// for a privileged path and never materializes the whole archive/base64 copy.
 func (p *Panel) handleDownloadBackup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 5 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-	domainID, err := strconv.Atoi(pathParts[4])
+	domainID, err := backupDomainIDFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Invalid domain ID", http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid domain ID")
 		return
 	}
-
-	var domainName string
-	if err := p.db.GetDB().QueryRowContext(r.Context(),
-		`SELECT name FROM domains WHERE id = ?`, domainID).Scan(&domainName); err != nil {
-		http.Error(w, "Domain not found", http.StatusNotFound)
-		return
-	}
-
-	// The backup name is a single file name — never a path.
-	// Yedek adı tek bir dosya adıdır — asla bir yol değildir.
-	name := r.URL.Query().Get("name")
-	if name == "" || name != filepath.Base(name) || strings.HasPrefix(name, ".") {
-		http.Error(w, "Invalid backup name", http.StatusBadRequest)
-		return
-	}
-
-	// Resolve the file through the agent's own listing instead of rebuilding
-	// the path here — the agent owns the backup directory layout.
-	// Yolu burada yeniden kurmak yerine dosyayı agent'ın kendi listesinden
-	// çöz — yedek dizin düzeninin sahibi agent'tır.
-	var list struct {
-		Backups []struct {
-			Name      string    `json:"name"`
-			Path      string    `json:"path"`
-			Size      int64     `json:"size"`
-			Type      string    `json:"type"`
-			CreatedAt time.Time `json:"created_at"`
-		} `json:"backups"`
-	}
-	if err := p.agentClient.Call("Agent.ListBackups", &struct{ DomainName string }{DomainName: domainName}, &list); err != nil {
-		writeServerError(w, err)
-		return
-	}
-	backupPath := ""
-	for _, b := range list.Backups {
-		if b.Name == name {
-			backupPath = b.Path
-			break
-		}
-	}
-	if backupPath == "" {
-		http.Error(w, "Backup not found", http.StatusNotFound)
-		return
-	}
-
-	var resp struct {
-		Path     string `json:"path"`
-		Content  string `json:"content"`
-		Size     int64  `json:"size"`
-		IsBinary bool   `json:"is_binary"`
-	}
-	if err := p.agentClient.Call("Agent.ReadFile", &struct{ Path string }{Path: backupPath}, &resp); err != nil {
-		writeServerError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Disposition", "attachment; filename="+name)
-	w.Header().Set("Content-Type", "application/octet-stream")
-	if resp.IsBinary {
-		decoded, err := base64.StdEncoding.DecodeString(resp.Content)
-		if err != nil {
+	d, err := p.loadBackupDomain(r.Context(), domainID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeClientError(w, http.StatusNotFound, "domain not found")
+		} else {
 			writeServerError(w, err)
+		}
+		return
+	}
+	name := r.URL.Query().Get("name")
+	if !validBackupName(name) {
+		writeClientError(w, http.StatusBadRequest, "invalid backup name")
+		return
+	}
+	inspectReq := backupspec.InspectRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, BackupName: name,
+	}
+	var inspection backupspec.InspectResponse
+	if err := p.agentClient.CallContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if !inspection.Success || inspection.Error != "" {
+		writeAgentError(w, nil, inspection.Error)
+		return
+	}
+	first, err := p.readBackupChunk(r.Context(), d, name, 0)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if err := validateBackupChunk(first, 0, inspection.Backup.Size); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": name})
+	w.Header().Set("Content-Disposition", disposition)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.FormatInt(inspection.Backup.Size, 10))
+
+	chunk, offset := first, int64(0)
+	for {
+		if len(chunk.Data) > 0 {
+			if _, err := w.Write(chunk.Data); err != nil {
+				return
+			}
+		}
+		offset = chunk.Offset
+		if chunk.EOF {
 			return
 		}
-		w.Write(decoded)
-	} else {
-		w.Write([]byte(resp.Content))
+		if len(chunk.Data) == 0 {
+			log.Printf("backup download stopped: empty non-EOF chunk at %d", offset)
+			return
+		}
+		chunk, err = p.readBackupChunk(r.Context(), d, name, offset)
+		if err != nil {
+			log.Printf("backup download stopped at %d: %v", offset, err)
+			return
+		}
+		if err := validateBackupChunk(chunk, offset, inspection.Backup.Size); err != nil {
+			log.Printf("backup download stopped at %d: %v", offset, err)
+			return
+		}
 	}
+}
+
+func (p *Panel) readBackupChunk(ctx context.Context, d backupDomain, name string, offset int64) (backupspec.ReadChunkResponse, error) {
+	req := backupspec.ReadChunkRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, BackupName: name,
+		Offset: offset, MaxBytes: backupspec.MaxChunkBytes,
+	}
+	var resp backupspec.ReadChunkResponse
+	err := p.agentClient.CallContext(ctx, "Agent.ReadBackupChunk", &req, &resp)
+	return resp, err
+}
+
+func validateBackupChunk(chunk backupspec.ReadChunkResponse, requestOffset, expectedSize int64) error {
+	expectedNext := requestOffset + int64(len(chunk.Data))
+	if chunk.Offset != expectedNext {
+		return fmt.Errorf("backup chunk offset %d, want %d", chunk.Offset, expectedNext)
+	}
+	if len(chunk.Data) > backupspec.MaxChunkBytes {
+		return fmt.Errorf("backup chunk exceeds %d bytes", backupspec.MaxChunkBytes)
+	}
+	if chunk.Size != expectedSize {
+		return fmt.Errorf("backup size changed from %d to %d", expectedSize, chunk.Size)
+	}
+	if chunk.Offset > expectedSize {
+		return errors.New("backup chunk exceeds declared size")
+	}
+	if chunk.EOF && chunk.Offset != expectedSize {
+		return errors.New("backup ended before declared size")
+	}
+	return nil
 }

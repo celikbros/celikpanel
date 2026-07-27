@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path"
+	"sort"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/backupspec"
 )
 
 // Scheduled backups. A background loop wakes periodically, finds domains whose
@@ -42,7 +46,10 @@ func (p *Panel) startBackupScheduler() {
 func (p *Panel) runDueBackups() {
 	ctx := context.Background()
 	rows, err := p.db.GetDB().QueryContext(ctx, `
-		SELECT bs.domain_id, d.name, bs.frequency, bs.backup_type, bs.retention, bs.last_run
+		SELECT d.id, d.subscription_id, d.name,
+		       COALESCE((SELECT s.document_root FROM sites s
+		                 WHERE s.domain_id=d.id ORDER BY s.id LIMIT 1), ''),
+		       bs.frequency, bs.backup_type, bs.retention, bs.last_run
 		FROM backup_schedules bs JOIN domains d ON d.id = bs.domain_id
 		WHERE bs.enabled = 1`)
 	if err != nil {
@@ -50,15 +57,19 @@ func (p *Panel) runDueBackups() {
 		return
 	}
 	type job struct {
-		domainID          int
-		name, freq, btype string
-		retention         int
-		lastRun           *string
+		domain      backupDomain
+		freq, btype string
+		retention   int
+		lastRun     *string
 	}
 	var jobs []job
 	for rows.Next() {
 		var j job
-		if rows.Scan(&j.domainID, &j.name, &j.freq, &j.btype, &j.retention, &j.lastRun) == nil {
+		if rows.Scan(&j.domain.ID, &j.domain.SubscriptionID, &j.domain.Name,
+			&j.domain.DocumentRoot, &j.freq, &j.btype, &j.retention, &j.lastRun) == nil {
+			if j.domain.DocumentRoot == "" {
+				j.domain.DocumentRoot = path.Join("/var/www", j.domain.Name)
+			}
 			jobs = append(jobs, j)
 		}
 	}
@@ -69,13 +80,13 @@ func (p *Panel) runDueBackups() {
 		if !backupDue(j.freq, j.lastRun, now) {
 			continue
 		}
-		if err := p.runScheduledBackup(ctx, j.domainID, j.name, j.btype, j.retention); err != nil {
-			log.Printf("scheduled backup %s: %v", j.name, err)
+		if err := p.runScheduledBackup(ctx, j.domain, j.btype, j.retention); err != nil {
+			log.Printf("scheduled backup %s: %v", j.domain.Name, err)
 			continue
 		}
 		p.db.GetDB().ExecContext(ctx,
 			`UPDATE backup_schedules SET last_run = ? WHERE domain_id = ?`,
-			now.UTC().Format(time.RFC3339), j.domainID)
+			now.UTC().Format(time.RFC3339), j.domain.ID)
 	}
 }
 
@@ -102,26 +113,40 @@ func backupDue(freq string, lastRun *string, now time.Time) bool {
 // beyond the retention count.
 // runScheduledBackup, bir domain için bir yedek oluşturur ve saklama sayısını
 // aşan eski kopyaları budar.
-func (p *Panel) runScheduledBackup(ctx context.Context, domainID int, domainName, btype string, retention int) error {
-	docroot, err := p.siteDocroot(ctx, domainID)
-	if err != nil {
+func (p *Panel) runScheduledBackup(ctx context.Context, d backupDomain, btype string, retention int) error {
+	req := backupspec.CreateRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name, Type: btype,
+		Origin: backupspec.OriginScheduled, SourceDir: d.DocumentRoot,
+	}
+	switch btype {
+	case backupspec.TypeFiles:
+	case backupspec.TypeFull:
+		databases, err := p.domainDatabaseIdentities(ctx, d)
+		if err != nil {
+			p.auditBackupSystem(ctx, "backup.create.failed:scheduled — "+auditReason(err.Error()), d.ID)
+			return err
+		}
+		req.Databases = databases
+	default:
+		err := &backupError{"unsupported scheduled backup type"}
+		p.auditBackupSystem(ctx, "backup.create.failed:scheduled — "+auditReason(err.Error()), d.ID)
 		return err
 	}
-	var resp struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.CreateBackup", &struct {
-		DomainName string `json:"domain_name"`
-		Type       string `json:"type"`
-		SourceDir  string `json:"source_dir"`
-	}{DomainName: domainName, Type: btype, SourceDir: docroot}, &resp); err != nil {
+	var resp backupspec.CreateResponse
+	if err := p.agentClient.CallContext(ctx, "Agent.CreateBackup", &req, &resp); err != nil {
+		p.auditBackupSystem(ctx, "backup.create.failed:scheduled — "+auditReason(err.Error()), d.ID)
 		return err
 	}
-	if resp.Error != "" {
-		return &backupError{resp.Error}
+	if !resp.Success || resp.Error != "" {
+		err := &backupError{resp.Error}
+		p.auditBackupSystem(ctx, "backup.create.failed:scheduled — "+auditReason(err.Error()), d.ID)
+		return err
 	}
-	p.pruneBackups(domainName, retention)
+	p.auditBackupSystem(ctx, "backup.create:scheduled:"+btype, d.ID)
+	if err := p.pruneBackups(ctx, d, retention); err != nil {
+		log.Printf("scheduled backup retention %s: %v", d.Name, err)
+	}
 	return nil
 }
 
@@ -134,38 +159,58 @@ func (e *backupError) Error() string { return e.msg }
 // the scheduled file/full snapshots.
 // pruneBackups, bir domain için en yeni `retention` dosya/tam yedeğini tutar,
 // gerisini siler.
-func (p *Panel) pruneBackups(domainName string, retention int) {
+func (p *Panel) pruneBackups(ctx context.Context, d backupDomain, retention int) error {
 	if retention < 1 {
 		retention = 1
 	}
-	var resp struct {
-		Backups []struct {
-			Name      string    `json:"name"`
-			Type      string    `json:"type"`
-			CreatedAt time.Time `json:"created_at"`
-		} `json:"backups"`
+	req := backupspec.ListRequest{
+		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+		DomainID: d.ID, DomainName: d.Name,
 	}
-	if err := p.agentClient.Call("Agent.ListBackups",
-		&struct{ DomainName string }{DomainName: domainName}, &resp); err != nil {
-		return
+	var resp backupspec.ListResponse
+	if err := p.agentClient.CallContext(ctx, "Agent.ListBackups", &req, &resp); err != nil {
+		return err
 	}
-	// Newest first; keep the first `retention`, delete older scheduled ones.
-	// The agent already returns newest-first, but sort defensively by name
-	// (names embed a sortable timestamp).
-	// En yeni önce; ilk `retention`'ı tut, daha eski olanları sil.
-	var scheduled []string
+	var scheduled []backupspec.Info
 	for _, b := range resp.Backups {
-		if b.Type == "files" || b.Type == "full" {
-			scheduled = append(scheduled, b.Name)
+		if b.Origin == backupspec.OriginScheduled &&
+			(b.Type == backupspec.TypeFiles || b.Type == backupspec.TypeFull) {
+			scheduled = append(scheduled, b)
 		}
 	}
+	sort.Slice(scheduled, func(i, j int) bool {
+		if scheduled[i].CreatedAt.Equal(scheduled[j].CreatedAt) {
+			return scheduled[i].Name > scheduled[j].Name
+		}
+		return scheduled[i].CreatedAt.After(scheduled[j].CreatedAt)
+	})
 	if len(scheduled) <= retention {
-		return
+		return nil
 	}
-	for _, name := range scheduled[retention:] {
+	for _, backup := range scheduled[retention:] {
+		deleteReq := backupspec.DeleteRequest{
+			ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
+			DomainID: d.ID, DomainName: d.Name, BackupName: backup.Name,
+		}
 		var ok bool
-		_ = p.agentClient.Call("Agent.DeleteBackup",
-			&struct{ DomainName, BackupName string }{DomainName: domainName, BackupName: name}, &ok)
+		if err := p.agentClient.CallContext(ctx, "Agent.DeleteBackup", &deleteReq, &ok); err != nil {
+			p.auditBackupSystem(ctx, "backup.delete.failed:retention — "+auditReason(err.Error()), d.ID)
+			return err
+		}
+		if !ok {
+			p.auditBackupSystem(ctx, "backup.delete.failed:retention — agent refused deletion", d.ID)
+			return &backupError{"agent refused retention deletion"}
+		}
+		p.auditBackupSystem(ctx, "backup.delete:retention", d.ID)
+	}
+	return nil
+}
+
+func (p *Panel) auditBackupSystem(ctx context.Context, action string, domainID int) {
+	if _, err := p.db.GetDB().ExecContext(ctx, `
+		INSERT INTO audit_logs (action, resource_type, resource_id)
+		VALUES (?, 'domain', ?)`, action, domainID); err != nil {
+		log.Printf("audit write failed (%s): %v", action, err)
 	}
 }
 
@@ -197,7 +242,7 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 			BackupType string `json:"backup_type"`
 			Retention  int    `json:"retention"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeBackupJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -205,11 +250,13 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 			writeClientError(w, http.StatusBadRequest, "frequency must be daily or weekly")
 			return
 		}
-		if req.BackupType != "files" && req.BackupType != "full" {
-			req.BackupType = "files"
+		if req.BackupType != backupspec.TypeFiles && req.BackupType != backupspec.TypeFull {
+			writeClientError(w, http.StatusBadRequest, "backup_type must be files or full")
+			return
 		}
 		if req.Retention < 1 || req.Retention > 60 {
-			req.Retention = 7
+			writeClientError(w, http.StatusBadRequest, "retention must be between 1 and 60")
+			return
 		}
 		if _, err := p.db.GetDB().ExecContext(r.Context(), `
 			INSERT INTO backup_schedules (domain_id, frequency, backup_type, retention, enabled)

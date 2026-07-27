@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,20 +24,14 @@ import (
 // (isAdminOnlyPath ile yalnız admin). Panel kurulumda hiçbir şey kurmaz;
 // yönetici gerçekten istediği servisleri ekler ve agent bu makinenin
 // dağıtımı için whitelist'teki paketleri kurar.
-func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		ServiceID string `json:"service_id"`
-		Package   string `json:"package,omitempty"` // optional version pick from a managed repo
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
-		writeClientError(w, http.StatusBadRequest, "service_id is required")
-		return
+func (p *Panel) runServiceInstall(
+	ctx context.Context,
+	req serviceInstallRequest,
+	advance func(string) error,
+) (serviceOperationResult, *serviceOperationFailure) {
+	result := serviceOperationResult{"success": false, "installed": false}
+	if err := p.preflightManagedServiceInstall(ctx, req.ServiceID); err != nil {
+		return result, serviceInstallFailure(err)
 	}
 
 	// Roundcube is not a distro package (D-004: one path on every Linux) — it
@@ -52,27 +48,50 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Version   string `json:"version"`
 			Error     string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.InstallRoundcube", &struct{}{}, &rcResp); err != nil {
-			writeServerError(w, err)
-			return
+		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &struct{}{}, &rcResp); err != nil {
+			return result, serviceInstallFailure(err)
 		}
 		if rcResp.Error != "" {
-			writeClientError(w, http.StatusConflict, rcResp.Error)
-			return
+			return result, serviceInstallFailure(fmt.Errorf("roundcube install: %s", rcResp.Error))
+		}
+		result["installed"] = rcResp.Installed
+		if err := advance("configuring"); err != nil {
+			return result, operationAdvanceFailure(err)
 		}
 		var wmResp struct {
 			Configured bool   `json:"configured"`
+			Present    bool   `json:"present"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
-			log.Printf("webmail configure after install: %v %s", err, wmResp.Error)
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("roundcube webmail configuration: %w", err))
 		}
-		if _, err := p.scanManagedServices(r.Context()); err != nil {
-			log.Printf("rescan after roundcube install: %v", err)
+		if wmResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("roundcube webmail configuration: %s", wmResp.Error))
 		}
-		p.audit(r, "service.install:roundcube", "service", 0)
-		json.NewEncoder(w).Encode(map[string]any{"installed": rcResp.Installed, "detail": "Roundcube " + rcResp.Version, "success": true})
-		return
+		if !wmResp.Configured {
+			return result, serviceInstallFailure(errors.New("agent did not confirm Roundcube webmail configuration"))
+		}
+		if !wmResp.Present {
+			return result, serviceInstallFailure(errors.New("agent did not confirm that Roundcube is present in the webmail configuration"))
+		}
+		if err := advance("scanning"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		services, err := p.scanManagedServices(ctx)
+		if err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("roundcube post-install scan: %w", err))
+		}
+		if !verifyManagedServiceInstalled(services, req.ServiceID) {
+			return result, serviceInstallFailure(errors.New("post-install scan did not find Roundcube"))
+		}
+		result["installed"] = true
+		if err := advance("firewall"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		p.syncFirewall()
+		result["success"] = true
+		return result, nil
 	}
 
 	// Package installs can take a while (apt fetches + configures); the
@@ -84,7 +103,7 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		Detail    string `json:"detail,omitempty"`
 		Error     string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.InstallService", &struct {
+	if err := p.agentClient.CallContext(ctx, "Agent.InstallService", &struct {
 		ID      string `json:"id"`
 		Package string `json:"package,omitempty"`
 	}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
@@ -100,14 +119,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		// (operatör, 25 Tem) aslında "başarısızlıklar kaydedilmiyor" demekti:
 		// defterdeki her satır bir başarıydı, bu da defteri kayıt değil
 		// vitrin yapar.
-		p.audit(r, "service.install.failed:"+req.ServiceID+" — "+auditReason(err.Error()), "service", 0)
-		writeServerError(w, err)
-		return
+		return result, serviceInstallFailure(err)
 	}
 	if resp.Error != "" {
-		p.audit(r, "service.install.failed:"+req.ServiceID+" — "+auditReason(resp.Error), "service", 0)
-		writeClientError(w, http.StatusConflict, resp.Error)
-		return
+		return result, serviceInstallFailure(fmt.Errorf("service install: %s", resp.Error))
+	}
+	result["installed"] = resp.Installed
+	if err := advance("configuring"); err != nil {
+		return result, operationAdvanceFailure(err)
 	}
 
 	// Installing the DNS server is only half the job: point it at our
@@ -120,10 +139,36 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Synced bool   `json:"synced"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigurePowerDNSSQLite", &struct{}{}, &dnsResp); err != nil || dnsResp.Error != "" {
-			log.Printf("pdns configure after install: %v %s", err, dnsResp.Error)
-		} else {
-			p.syncAllZones(r.Context())
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigurePowerDNSSQLite", &struct{}{}, &dnsResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("PowerDNS configuration: %w", err))
+		}
+		if dnsResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("PowerDNS configuration: %s", dnsResp.Error))
+		}
+		if !dnsResp.Synced {
+			return result, serviceInstallFailure(errors.New("agent did not confirm PowerDNS configuration"))
+		}
+		if err := advance("starting"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		var lifecycle transport.ServiceActionResult
+		if err := p.agentClient.CallContext(ctx, "Agent.ServiceAction", &transport.ServiceActionArgs{
+			ServiceName: "pdns",
+			Action:      "restart",
+		}, &lifecycle); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("PowerDNS restart: %w", err))
+		}
+		if lifecycle.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("PowerDNS restart: %s", lifecycle.Error))
+		}
+		if !lifecycle.Success {
+			return result, serviceInstallFailure(errors.New("agent did not confirm PowerDNS restart"))
+		}
+		if err := advance("syncing"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		if _, err := p.syncAllZonesStrict(ctx); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("PowerDNS zone synchronization: %w", err))
 		}
 	}
 
@@ -142,8 +187,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Ready bool   `json:"ready"`
 			Error string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.EnsureNginxReady", &struct{}{}, &nrResp); err != nil || nrResp.Error != "" {
-			log.Printf("nginx ready after install: %v %s", err, nrResp.Error)
+		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &struct{}{}, &nrResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("nginx readiness configuration: %w", err))
+		}
+		if nrResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("nginx readiness configuration: %s", nrResp.Error))
+		}
+		if !nrResp.Ready {
+			return result, serviceInstallFailure(errors.New("agent did not confirm nginx readiness"))
 		}
 	}
 
@@ -156,8 +207,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Configured bool   `json:"configured"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigureMailStack", &struct{}{}, &mailResp); err != nil || mailResp.Error != "" {
-			log.Printf("mail stack configure after install: %v %s", err, mailResp.Error)
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &struct{}{}, &mailResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("mail stack configuration: %w", err))
+		}
+		if mailResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("mail stack configuration: %s", mailResp.Error))
+		}
+		if !mailResp.Configured {
+			return result, serviceInstallFailure(errors.New("agent did not confirm mail stack configuration"))
 		}
 		// The agent starts a unit the moment its package lands, which is BEFORE
 		// this configuration ran — on Arch that first start failed (no TLS cert
@@ -170,10 +227,22 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		// kurulum yine de bozuk görünüyordu. Yapılandırma bitti, tekrar başlat;
 		// systemd önce failed durumunun temizlenmesini ister.
 		unit := req.ServiceID
+		if err := advance("starting"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
 		var ok bool
-		_ = p.agentClient.Call("Agent.ResetFailedUnit", &transport.ServiceArgs{ServiceName: unit}, &ok)
-		if err := p.agentClient.Call("Agent.StartService", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
-			log.Printf("mail service start after configure: %v", err)
+		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnit", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("reset failed mail service: %w", err))
+		}
+		if !ok {
+			return result, serviceInstallFailure(errors.New("agent did not confirm resetting the mail service"))
+		}
+		ok = false
+		if err := p.agentClient.CallContext(ctx, "Agent.StartService", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("start configured mail service: %w", err))
+		}
+		if !ok {
+			return result, serviceInstallFailure(errors.New("agent did not confirm starting the configured mail service"))
 		}
 	}
 
@@ -199,10 +268,14 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Detail string `json:"detail,omitempty"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil || wireResp.Error != "" {
-			log.Printf("milter wiring after %s %s: %v %s", "install", req.ServiceID, err, wireResp.Error)
-		} else {
-			log.Printf("milter chain now: %q", wireResp.Detail)
+		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("mail filter wiring: %w", err))
+		}
+		if wireResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("mail filter wiring: %s", wireResp.Error))
+		}
+		if !wireResp.Wired {
+			return result, serviceInstallFailure(errors.New("agent did not confirm mail filter wiring"))
 		}
 	}
 
@@ -226,13 +299,22 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			Detail  string `json:"detail,omitempty"`
 			Error   string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.SetupVPN", &struct {
+		if err := advance("starting"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		if err := p.agentClient.CallContext(ctx, "Agent.SetupVPN", &struct {
 			Port int `json:"port"`
-		}{}, &vpnResp); err != nil || vpnResp.Error != "" {
-			log.Printf("vpn setup after install: %v %s", err, vpnResp.Error)
-			p.audit(r, "service.install:wireguard — setup incomplete: "+auditReason(vpnResp.Error), "service", 0)
-		} else if err := p.syncVPNPeers(r.Context()); err != nil {
-			log.Printf("vpn peer sync after install: %v", err)
+		}{}, &vpnResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("WireGuard setup: %w", err))
+		}
+		if vpnResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("WireGuard setup: %s", vpnResp.Error))
+		}
+		if err := advance("syncing"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		if err := p.syncVPNPeers(ctx); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("WireGuard peer synchronization: %w", err))
 		}
 	}
 
@@ -242,11 +324,21 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 	// onları fiilen sunan yalnız-loopback nginx sunucusunu yeniden üretmeli.
 	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
 		var dbtResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
+			Configured bool     `json:"configured"`
+			Tools      []string `json:"tools"`
+			Error      string   `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
-			log.Printf("db tools configure after install: %v %s", err, dbtResp.Error)
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("database tools configuration: %w", err))
+		}
+		if dbtResp.Error != "" {
+			return result, serviceInstallFailure(fmt.Errorf("database tools configuration: %s", dbtResp.Error))
+		}
+		if !dbtResp.Configured {
+			return result, serviceInstallFailure(errors.New("agent did not confirm database tools configuration"))
+		}
+		if !contains(dbtResp.Tools, req.ServiceID) {
+			return result, serviceInstallFailure(fmt.Errorf("agent did not confirm %s in the database tools configuration", req.ServiceID))
 		}
 	}
 
@@ -257,15 +349,26 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 	// reading from cache instead of probing.
 	// Artık yeni bir servis var; önbellekteki taramayı tazele ki sayfalar
 	// yoklama yapmak yerine önbellekten okumaya devam etsin.
-	if _, err := p.scanManagedServices(r.Context()); err != nil {
-		log.Printf("service scan after install %s: %v", req.ServiceID, err)
+	if err := advance("scanning"); err != nil {
+		return result, operationAdvanceFailure(err)
 	}
+	services, err := p.scanManagedServices(ctx)
+	if err != nil {
+		return result, serviceInstallFailure(fmt.Errorf("post-install scan: %w", err))
+	}
+	if !verifyManagedServiceReady(services, req.ServiceID) {
+		return result, serviceInstallFailure(errors.New("post-install scan did not find the requested service in its required state"))
+	}
+	result["installed"] = true
 
 	// New service may expose new ports; if the firewall is on, open them.
 	// Yeni servis yeni port açabilir; güvenlik duvarı açıksa onları aç.
+	if err := advance("firewall"); err != nil {
+		return result, operationAdvanceFailure(err)
+	}
 	p.syncFirewall()
-	p.audit(r, "service.install:"+req.ServiceID, "service", 0)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "installed": resp.Installed, "detail": resp.Detail})
+	result["success"] = true
+	return result, nil
 }
 
 // handleServiceCandidate returns the version apt would install for a service
@@ -300,6 +403,11 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	release, busy := p.beginServiceMutation(w, r)
+	if busy {
+		return
+	}
+	defer release()
 	var req struct {
 		ServiceID string `json:"service_id"`
 		// Package: remove ONE version of a runtime (php8.3-fpm) instead of

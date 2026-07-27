@@ -220,7 +220,7 @@ func RenderDistroMatrix(lang string) string {
 		for _, f := range families {
 			pkgs := svc.Packages[f]
 			cell := "—"
-			if len(pkgs) > 0 {
+			if svc.InstallDisabledReason == "" && len(pkgs) > 0 {
 				cell = "`" + strings.Join(pkgs, "` `") + "`"
 				if svc.Repo != nil && f == "apt" {
 					// Vendor repos are an apt mechanism today (Sury, PGDG):
@@ -277,7 +277,7 @@ func RenderDistroMatrix(lang string) string {
 	w("|---|---|---|---|")
 	for i := range ManagedServices {
 		svc := &ManagedServices[i]
-		if len(svc.Packages) > 0 {
+		if len(svc.Packages) > 0 || svc.InstallDisabledReason != "" {
 			continue
 		}
 		seat := "—"

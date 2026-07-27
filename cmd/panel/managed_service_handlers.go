@@ -14,15 +14,15 @@ import (
 
 // ManagedServiceResponse represents a managed service with runtime status
 type ManagedServiceResponse struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Description  string            `json:"description"`
-	Icon         string            `json:"icon"`
-	Category     string            `json:"category"`
-	Versions     []string          `json:"versions"` // Detected versions
-	Status       string            `json:"status"`   // Overall status
-	IsInstalled  bool              `json:"is_installed"`
-	ConflictWith string            `json:"conflict_with,omitempty"` // installed member of the same conflict group
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Icon         string   `json:"icon"`
+	Category     string   `json:"category"`
+	Versions     []string `json:"versions"` // Detected versions
+	Status       string   `json:"status"`   // Overall status
+	IsInstalled  bool     `json:"is_installed"`
+	ConflictWith string   `json:"conflict_with,omitempty"` // installed member of the same conflict group
 	// RequiresMissing: unmet requirements blocking install (service ids or
 	// group names) — the UI disables Install and says what to install first.
 	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
@@ -40,7 +40,8 @@ type ManagedServiceResponse struct {
 	// patlayacak bir Kur düğmesi yerine dürüst bir rozet gösterir. Taşınabilir
 	// bileşenler (boş Packages — node, roundcube) asla işaretlenmez: onların
 	// kurulum yolu her yerde çalışır.
-	NotOffered bool `json:"not_offered,omitempty"`
+	NotOffered       bool   `json:"not_offered,omitempty"`
+	NotOfferedReason string `json:"not_offered_reason,omitempty"`
 	// Kind decides how the row is drawn and operated (D-010): "service" has a
 	// daemon to start/stop, "runtime" is versioned and picked per site, "tool"
 	// has no daemon of ours at all. It replaces the old `daemonless` flag,
@@ -270,6 +271,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
 		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
 		notOffered := false
+		notOfferedReason := ""
 		if !o.IsInstalled {
 			status = "not_installed"
 			// Blocked only if the group's installed member is someone else.
@@ -288,27 +290,29 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			// dürüstçe sunulmuyor. Bu, çakışma ve gereksinimlerden önce gelir:
 			// bu dağıtımın koşturamayacağı bir filtre için önce SMTP sunucusu
 			// kurdurmak tiyatro olurdu.
-			notOffered = len(managed.Packages) > 0 && len(managed.Packages[pkgFamily]) == 0
+			notOfferedReason = core.ManagedServiceInstallDisabledReason(&managed, pkgFamily)
+			notOffered = notOfferedReason != ""
 		}
 
 		response = append(response, ManagedServiceResponse{
-			ID:              managed.ID,
-			Unit:            o.Unit,
-			Name:            managed.Name,
-			Description:     managed.Description,
-			Icon:            managed.Icon,
-			Category:        managed.Category,
-			Versions:        versions,
-			Instances:       instances,
-			Status:          status,
-			IsInstalled:     o.IsInstalled,
-			ConflictWith:    conflictWith,
-			RequiresMissing: requiresMissing,
-			NotOffered:      notOffered,
-			Ports:           portStrings(managed.FirewallPorts),
-			Kind:            managed.Kind,
-			Packages:        managed.Packages[pkgFamily],
-			ConfigFiles:     configFiles,
+			ID:               managed.ID,
+			Unit:             o.Unit,
+			Name:             managed.Name,
+			Description:      managed.Description,
+			Icon:             managed.Icon,
+			Category:         managed.Category,
+			Versions:         versions,
+			Instances:        instances,
+			Status:           status,
+			IsInstalled:      o.IsInstalled,
+			ConflictWith:     conflictWith,
+			RequiresMissing:  requiresMissing,
+			NotOffered:       notOffered,
+			NotOfferedReason: notOfferedReason,
+			Ports:            portStrings(managed.FirewallPorts),
+			Kind:             managed.Kind,
+			Packages:         managed.Packages[pkgFamily],
+			ConfigFiles:      configFiles,
 		})
 	}
 	return response
@@ -403,6 +407,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return nil, err
 	}
+	pkgFamily := p.packageFamily()
 
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
@@ -454,7 +459,8 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			// unit'i hedeflesin. Çalışan olan ölüye üstün gelir: bind9.service
 			// (takma ad) ve named.service birlikteyken satır, systemd'nin
 			// gerçekten yüklediği hangisiyse ona etki etmeli.
-			if primaryUnit == "" || strings.HasPrefix(strings.ToLower(svc.Status), "active") {
+			unitReady := managedServiceUnitReady(managed.ID, pkgFamily, svc.Name, svc.Status)
+			if primaryUnit == "" || unitReady {
 				primaryUnit = svc.Name
 			}
 
@@ -466,8 +472,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			// wg-quick@wg0 report "active (exited)" — both are up.
 			// Daemon'larda "active (running)"; wg-quick@wg0 gibi oneshot
 			// unit'ler "active (exited)" bildirir — ikisi de ayaktadır.
-			statusLower := strings.ToLower(svc.Status)
-			if strings.HasPrefix(statusLower, "active") {
+			if unitReady {
 				anyRunning = true
 			}
 		}
@@ -577,7 +582,32 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err != nil {
 		return nil, err
 	}
-	return catalogView(observations, p.packageFamily()), nil
+	return catalogView(observations, pkgFamily), nil
+}
+
+// managedServiceUnitReady decides whether one active unit proves that the
+// catalogue service is actually ready. Debian and Ubuntu package PostgreSQL
+// with an aggregate postgresql.service wrapper plus real per-cluster units
+// named postgresql@<major>-<cluster>. The wrapper can remain active (exited)
+// while every database cluster is down, so on apt hosts only an active cluster
+// unit is proof. Arch and other non-cluster layouts use postgresql.service as
+// the real daemon and keep the normal rule.
+//
+// managedServiceUnitReady, etkin bir unit'in katalog servisini gerçekten hazır
+// kanıtlayıp kanıtlamadığına karar verir. Debian ve Ubuntu, PostgreSQL'i toplu
+// postgresql.service sarmalayıcısı ve gerçek postgresql@<major>-<cluster>
+// unit'leriyle paketler. Tüm veritabanı kümeleri durmuşken sarmalayıcı etkin
+// (exited) kalabildiği için apt makinelerde yalnız etkin küme unit'i kanıttır.
+// Arch ve diğer kümesiz düzenlerde postgresql.service gerçek daemon'dır ve
+// olağan kural geçerlidir.
+func managedServiceUnitReady(serviceID, pkgFamily, unit, status string) bool {
+	if !strings.HasPrefix(strings.ToLower(status), "active") {
+		return false
+	}
+	if serviceID == "postgresql" && pkgFamily == "apt" {
+		return strings.HasPrefix(unit, "postgresql@")
+	}
+	return true
 }
 
 // contains checks if a string slice contains a value

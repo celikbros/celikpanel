@@ -208,6 +208,37 @@ func (a *Agent) RestartService(args *transport.ServiceArgs, reply *bool) error {
 // Dovecot) sıfırlanana dek failed kalır; sonraki doğru başlatma reddedilir ve
 // düzeltilmiş bir kurulum yine bozuk görünürdü. En-iyi-çaba: hiç başarısız
 // olmamış unit zararsızca sıfırlanır.
+// ServiceAction is the panel-facing checked action endpoint. It accepts only
+// units owned by the fixed service catalogue and returns an actionable result.
+func (a *Agent) ServiceAction(args *transport.ServiceActionArgs, reply *transport.ServiceActionResult) error {
+	name := strings.TrimSuffix(strings.TrimSpace(args.ServiceName), ".service")
+	if name == "" || core.ServiceForUnit(name) == nil {
+		reply.Error = "unknown managed service"
+		return nil
+	}
+	var err error
+	switch args.Action {
+	case "start":
+		err = a.systemdMgr.Start(name)
+	case "stop":
+		err = a.systemdMgr.Stop(name)
+	case "restart":
+		err = a.systemdMgr.Restart(name)
+	case "reload":
+		err = a.systemdMgr.Reload(name)
+	default:
+		reply.Error = "invalid service action"
+		return nil
+	}
+	if err != nil {
+		log.Printf("ERROR service %s %s: %v", args.Action, name, err)
+		reply.Error = firstLine(err.Error())
+		return nil
+	}
+	reply.Success = true
+	return nil
+}
+
 func (a *Agent) ResetFailedUnit(args *transport.ServiceArgs, reply *bool) error {
 	_ = exec.Command("systemctl", "reset-failed", args.ServiceName).Run()
 	*reply = true

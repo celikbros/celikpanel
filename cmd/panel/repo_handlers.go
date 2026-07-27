@@ -58,6 +58,11 @@ func (p *Panel) handleRepo(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(p.repoInfo(svc.Repo))
 
 	case http.MethodPost:
+		release, busy := p.beginServiceMutation(w, r)
+		if busy {
+			return
+		}
+		defer release()
 		var req struct {
 			ServiceID string `json:"service_id"`
 			Action    string `json:"action"` // "enable" | "disable"
