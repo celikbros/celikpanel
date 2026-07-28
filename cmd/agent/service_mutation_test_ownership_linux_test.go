@@ -4,13 +4,15 @@ package main
 
 import "os"
 
-// installServiceMutationTestOwnership aligns the test-only ownership contract
-// before package init functions run, including re-executed supervisor helpers.
-// installServiceMutationTestOwnership, yeniden çalıştırılan supervisor
-// yardımcıları dahil paket init işlevlerinden önce test sahiplik sözleşmesini
+// installServiceMutationTestOwnership aligns the ownership contract only in
+// re-executed supervisor test helpers, before package init functions run.
+// installServiceMutationTestOwnership, sahiplik sözleşmesini yalnız yeniden
+// çalıştırılan supervisor test yardımcılarında, paket init işlevlerinden önce
 // çalıştıran kullanıcıyla eşleştirir.
 var installServiceMutationTestOwnership = func() struct{} {
-	serviceMutationRequiredOwnerUID = uint32(os.Getuid())
-	serviceMutationRequiredOwnerGID = uint32(os.Getgid())
+	if len(os.Args) > 1 && os.Args[1] == serviceMutationSupervisorMode {
+		serviceMutationRequiredOwnerUID = uint32(os.Getuid())
+		serviceMutationRequiredOwnerGID = uint32(os.Getgid())
+	}
 	return struct{}{}
 }()
