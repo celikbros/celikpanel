@@ -385,7 +385,7 @@ func syncServiceMutationDirectory(path string) error {
 	return dir.Sync()
 }
 
-func packageManagerMutationBusy() (bool, error) {
+func realPackageManagerMutationBusy() (bool, error) {
 	busy, err := linuxPackageProcessBusy()
 	if err != nil || busy {
 		return busy, err

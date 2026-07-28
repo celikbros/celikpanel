@@ -67,6 +67,6 @@ func syncServiceMutationDirectory(string) error {
 	return nil
 }
 
-func packageManagerMutationBusy() (bool, error) {
+func realPackageManagerMutationBusy() (bool, error) {
 	return false, nil
 }
