@@ -21,8 +21,8 @@ func TestIsBinaryPublicKey(t *testing.T) {
 	}{
 		// Sury's apt.gpg begins 0x99 0x01 0x8d — old-format packet, tag 6.
 		// Sury'nin apt.gpg'si 0x99 0x01 0x8d ile başlar — eski biçim, tag 6.
-		{"sury old-format public key", []byte{0x99, 0x01, 0x8d, 0x04}, true},
-		{"new-format public key", []byte{0xC6, 0x01, 0x02}, true},
+		{"truncated old-format public key", []byte{0x99, 0x01, 0x8d, 0x04}, false},
+		{"truncated new-format public key", []byte{0xC6, 0x01, 0x02}, false},
 		// Tag 2 is a signature, not a public key — a detached signature file
 		// must not be installed as a keyring.
 		// Tag 2 imzadır, açık anahtar değil — ayrık imza dosyası keyring olarak

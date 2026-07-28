@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -91,18 +92,21 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 		Detail  string `json:"detail,omitempty"`
 		Error   string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.SetupVPN", &struct {
-		Port int `json:"port"`
-	}{Port: req.Port}, &resp); err != nil {
+	err := p.withStandaloneAgentMutation(r.Context(), "vpn_setup", "wireguard", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.SetupVPN", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			Port              int    `json:"port"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, req.Port}, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" {
+			return fmt.Errorf("VPN setup: %s", resp.Error)
+		}
+		return p.syncVPNPeers(callCtx)
+	})
+	if err != nil {
 		writeAgentError(w, err, "VPN")
-		return
-	}
-	if resp.Error != "" {
-		writeClientError(w, http.StatusConflict, resp.Error)
-		return
-	}
-	if err := p.syncVPNPeers(r.Context()); err != nil {
-		writeServerError(w, err)
 		return
 	}
 	p.audit(r, "vpn.setup", "", 0)
@@ -135,9 +139,23 @@ func (p *Panel) syncVPNPeers(ctx context.Context) error {
 		Applied bool   `json:"applied"`
 		Error   string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.SyncVPNPeers", &struct {
-		Peers []spec `json:"peers"`
-	}{Peers: peers}, &resp); err != nil {
+	err = p.withStandaloneAgentMutation(ctx, "vpn_peer_sync", "wireguard", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.SyncVPNPeers", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			Peers             []spec `json:"peers"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, peers}, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" {
+			return fmt.Errorf("peer sync: %s", resp.Error)
+		}
+		if !resp.Applied {
+			return errors.New("agent did not confirm peer synchronization")
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	if resp.Error != "" {

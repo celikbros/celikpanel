@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -154,7 +155,20 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		Detail     string `json:"detail,omitempty"`
 		Error      string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.ConfigureMailStack", &struct{}{}, &resp); err != nil {
+	err := p.withStandaloneAgentMutation(r.Context(), "mail_configure", "mail-stack", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailStack", &binding, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" {
+			return errors.New(resp.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		if resp.Error != "" {
+			writeClientError(w, http.StatusConflict, resp.Error)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -169,7 +183,20 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		Detail     string `json:"detail,omitempty"`
 		Error      string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.ConfigureMailSubmission", &struct{}{}, &sub); err != nil {
+	err = p.withStandaloneAgentMutation(r.Context(), "mail_submission_configure", "postfix", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailSubmission", &binding, &sub); err != nil {
+			return err
+		}
+		if sub.Error != "" {
+			return errors.New(sub.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		if sub.Error != "" {
+			writeClientError(w, http.StatusConflict, sub.Error)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -185,7 +212,20 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		Detail     string `json:"detail,omitempty"`
 		Error      string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.ConfigureDKIMSigning", &struct{}{}, &sign); err != nil {
+	err = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &binding, &sign); err != nil {
+			return err
+		}
+		if sign.Error != "" {
+			return errors.New(sign.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		if sign.Error != "" {
+			writeClientError(w, http.StatusConflict, sign.Error)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}

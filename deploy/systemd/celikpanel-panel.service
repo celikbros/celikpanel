@@ -38,6 +38,9 @@ Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
 ExecStart=/opt/celikpanel/bin/panel
 Restart=on-failure
 RestartSec=3
+KillMode=control-group
+SendSIGKILL=yes
+TimeoutStopSec=30s
 
 # Hardening: the panel has no business gaining privileges or writing outside
 # its state directory.

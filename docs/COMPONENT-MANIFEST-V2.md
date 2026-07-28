@@ -23,15 +23,15 @@ The catalog may describe:
 - support state and unsupported reason per component operation
 - package and service names
 - ordered typed operation steps
-- executable candidates and separate argv values
 - configuration templates and approved target paths
 - readiness probes and rollback counterparts
 
-The catalog may not grant authority or contain an unrestricted shell program.
-The agent must reject shell text such as `sh -c`, `bash -c`, `cmd /c`, or
-PowerShell script strings. Executable and every argument are stored separately
-and invoked through a direct process API. File and service operations use typed
-agent adapters rather than arbitrary command strings.
+The catalog may not grant authority or contain a generic executable step.
+`exec`, `exec_probe`, `program`, `args`, and `environment` are not part
+of V2. Package, file, service, firewall, and probe operations use typed agent
+adapters whose executable choices remain compiled into trusted Go code. This
+leaves no interpreter path such as Python `-c`, `env sh`, BusyBox, `cmd`,
+or PowerShell for catalog data to select.
 
 The following always remain in Go:
 
@@ -39,7 +39,7 @@ The following always remain in Go:
 - trusted host-profile detection
 - recipe validation and deterministic recipe selection
 - process, package, file, service, firewall, permission, and probe adapters
-- path traversal, environment, timeout, secret, and argument checks
+- path traversal, typed-variable, timeout, secret, and adapter-input checks
 - package-manager and operation locking
 
 ## Support states
@@ -81,21 +81,41 @@ Recipes are selected from most to least specific:
 
 Two matches at the same specificity are an error. Untested new OS versions do
 not match unless the selector explicitly permits an open-ended version range.
+Every recipe must name an explicit audited `os_family`; a distro or package
+manager without that boundary is rejected. The current schema validator accepts
+`linux` and `windows` recipe data and rejects every other family until its path
+and adapter contract has been audited.
 
 ## Minimum schema domains
 
-The normalized catalog contains these domains:
+The catalog uses a small relational envelope with versioned JSON payloads. It
+does not split every possible step field into another table, and it does not
+hide the entire catalog inside one unqueryable JSON blob.
 
-- release metadata: schema version, catalog version, minimum agent version, key ID
+Relational columns own identity and lookup:
+
+- release metadata: schema version, catalog version, monotonic catalog sequence,
+  minimum agent schema, and key ID
+- item ID, item kind (`component`, `addon`, `application`), revision, and enabled state
+- recipe ID, item ID, platform key, operation, revision, and support state
+
+Strict JSON objects own the parts that vary by platform and operation:
+
+- item presentation and product metadata
 - platform selectors
-- component recipes and operation-specific support state
-- operation variables with types and validation rules
-- ordered typed steps: package, executable, file, service, firewall, and probe
-- executable candidates with absolute paths
-- argv and environment values as separate rows
-- templates with content hashes and atomic-write policy
-- readiness probes
-- forward-step to rollback-step relationships
+- typed operation variables and validation rules
+- ordered package, file, service, firewall, and probe steps
+- templates, readiness probes, and rollback relationships
+
+All signed JSON rejects duplicate keys and uses exact, case-sensitive field
+names; Go's case-insensitive struct matching is not accepted. Selector and
+recipe JSON are decoded with unknown fields rejected. Each step
+type has an exact semantic field allowlist, and rollback references are valid
+only on entries in the main `steps` list. Item `metadata` is intentionally an
+extension bag for presentation and product data: unknown keys are accepted
+there, but metadata is never interpreted by an executor and cannot change
+authorization, selection, or operation behavior. The agent validates every
+recipe before it can participate in deterministic selection.
 
 ## Signing and updates
 
@@ -103,15 +123,67 @@ The catalog is root-operation policy and therefore part of the software supply
 chain.
 
 - Sign the database digest with Ed25519 and embed the trusted public key in the agent.
-- Open the verified database read-only and immutable, without WAL or journal files.
-- Validate signature, schema, catalog version, and minimum agent version before activation.
-- Download to a new file and activate with an atomic rename.
-- Keep the previous two verified releases for rollback.
+  `BuildCatalog` returns the digest of its still-open private inode, and signing
+  must receive that digest. Signing fails if reopening the published path does
+  not produce exactly those bytes. Build, signing, and opening all enforce the
+  same 64 MiB database limit.
+- Copy the candidate, with that 64 MiB size limit, into a private `0700`
+  temporary directory as a `0600` snapshot. Hash and verify that snapshot,
+  then open the exact same snapshot read-only and immutable with
+  `trusted_schema=OFF`; never hash one pathname and reopen mutable source
+  bytes.
+- Validate exact `sqlite_master.sql`, `table_xinfo`, tables, columns, CHECK
+  constraints, foreign keys, indexes, absence of extra schema objects, one and
+  only one metadata row, row-domain invariants, catalog version, and minimum
+  agent schema before use.
+- Require a positive `AgentSchema`. A bootstrap policy uses sequence zero and
+  no digest. After bootstrap, require
+  `OpenPolicy{MinimumCatalogSequence, MinimumCatalogDigest}` with a positive
+  sequence and its 64-character lowercase SHA-256 digest. Reject a lower
+  sequence and reject a different digest at the same sequence, preventing both
+  replay and same-sequence equivocation.
+- `OpenPolicy` is only the verification API. Runtime activation and durable
+  replay-state persistence are not implemented by this package. A future
+  activator must serialize activation, begin a transaction, re-read the current
+  sequence-and-digest floor inside that transaction, compare the candidate, and
+  use a CAS-equivalent guarded update before commit. It may commit the new floor
+  only for the catalog it successfully activates. Every later open must pass
+  both persisted values. The catalog package never silently lowers or resets
+  this floor or discards its same-sequence digest pin.
+- Before staging, Linux opens the publish parent with
+  `O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW`, pins it, and validates it with `fstat`.
+  The parent must be owned by root or the current effective UID and must not be
+  writable by group or other; a symlink, ownership mismatch, or unsafe mode
+  fails closed. Create the random private staging directory and catalog with
+  `mkdirat`/`openat` beneath that pinned parent, using modes `0700`/`0600` and
+  `O_NOFOLLOW`.
+- SQLite reaches the staged catalog through its pinned staging-dirfd path, and
+  the same already-open regular-file inode remains authoritative through build,
+  sync, digest, and one atomic no-overwrite hard-link publication. The signer
+  independently revalidates and pins the final parent, opens only its basename
+  with `openat(..., O_NOFOLLOW)`, rejects a non-regular, wrongly owned, or
+  group/other-writable artifact, and hashes and signs that exact open inode with
+  the build digest as an expected-value pin. The same dirfd boundaries are used
+  for inspection and cleanup. A directory-wide advisory lock serializes all
+  cooperating publishers through link, sync, and possible cleanup. Sync the
+  file and parent directory. If post-link directory sync fails, return a typed
+  partial-publication error, remove only a destination that is still the built
+  inode, and sync the cleanup; report when a destination may remain. An existing
+  destination is never modified.
+- Building and opening fail closed on every non-Linux GOOS. Linux is the only
+  audited filesystem-activation target today. Catalogs may still contain and
+  validate Windows-selected recipe data on Linux; this restriction is on
+  filesystem activation, not on the data model.
+- Keep prior verified releases for forensic or explicit emergency recovery.
+  Normal rollback may select only a release whose sequence is not below
+  `highest_accepted_catalog_sequence`; lowering the floor requires a separate,
+  explicit, audited recovery policy and is never a normal `OpenPolicy` path.
 - Build and sign a new database for schema changes; never migrate it at runtime.
 - Do not provide an unsigned local recipe editor in the panel UI.
 
-Every audit event records the manifest digest, recipe ID and revision, redacted
-argv, exit code, readiness result, and rollback result.
+Every audit event records the manifest digest, catalog sequence, recipe ID and
+revision, typed adapter action with redacted inputs, exit code, readiness
+result, and rollback result.
 
 ## Completion and rollback rules
 
@@ -124,6 +196,13 @@ state, hashes and safe backups of owned files, and CelikPanel-owned firewall
 state. Rollback reverts only changes made by that operation. It never deletes
 existing user data. If a safe rollback is impossible, the operation ends as
 `failed_recovery_required`.
+
+The privileged agent now owns a durable service-mutation ledger and a
+cross-process host lock. V2 execution nevertheless remains disabled until a
+trusted activator binds each resolved recipe sequence and catalog digest to
+that lease, commits activation with digest compare-and-swap, and enforces the
+executor-side package, unit, path, probe, and firewall allowlists described
+below.
 
 ## Platform adapters
 
@@ -138,14 +217,22 @@ firewall, permissions, and readiness probes.
 
 After the adapter exists, component and release differences belong in recipes.
 
+Schema validation is not execution authorization. Before runtime activation,
+the trusted adapter must bind each item id and typed step to compiled component
+boundaries: allowed package names or prefixes, service units, writable path
+roots, and firewall endpoint policy. Any recipe target outside those boundaries
+must fail closed. That executor-side allowlist and activator are not implemented
+by the current package, so V2 remains a verified dry-run foundation only.
+
 ## Migration sequence
 
 1. Implement HostProfile, schema validation, signature verification, and dry-run plans.
-2. Move Memcached first for Debian/Ubuntu and Arch, including lifecycle and TCP readiness.
-3. Compare legacy and V2 plans in shadow mode without executing V2.
-4. Move simple package-backed services.
-5. Move web, DNS, mail, VPN, and database tools with typed configuration steps.
-6. Move runtimes, vendor repositories, version selection, and Roundcube.
-7. Add and test the FreeBSD adapter.
-8. Add and test the Windows adapter.
-9. Remove legacy OS branches only after verified parity.
+2. Add the agent-owned durable job ledger, heartbeat/deadline recovery, and cross-process lock.
+3. Move Memcached first for Debian/Ubuntu and Arch, including lifecycle and TCP readiness.
+4. Compare legacy and V2 plans in shadow mode without executing V2.
+5. Move simple package-backed services.
+6. Move web, DNS, mail, VPN, and database tools with typed configuration steps.
+7. Move runtimes, vendor repositories, version selection, and Roundcube.
+8. Add and test the FreeBSD adapter.
+9. Add and test the Windows adapter.
+10. Remove legacy OS branches only after verified parity.

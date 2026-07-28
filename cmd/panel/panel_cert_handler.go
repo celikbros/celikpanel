@@ -90,10 +90,21 @@ func (p *Panel) handlePanelCertificate(w http.ResponseWriter, r *http.Request) {
 		// :80 open for HTTP-01 renewal. Resync now (no-op when disabled).
 		// Güvenlik duvarının istenen kümesi az önce değişti: gerçek sertifika,
 		// HTTP-01 yenilemesi için :80 ister. Şimdi senkronla (kapalıysa no-op).
-		p.syncFirewall()
-		json.NewEncoder(w).Encode(map[string]any{
-			"issued": true, "expires_at": resp.ExpiresAt, "detail": resp.Detail, "restarting": true,
-		})
+		if err := p.syncFirewall(r.Context()); err != nil {
+			log.Printf("panel certificate issued but firewall synchronization failed: %v", err)
+			p.audit(r, "panel.certificate.firewall_sync_failed:"+req.Domain, "panel", 0)
+			writeCodedError(
+				w,
+				http.StatusInternalServerError,
+				"firewall_sync_failed",
+				"the certificate was issued, but the active firewall policy could not be synchronized",
+				"/services",
+			)
+		} else {
+			json.NewEncoder(w).Encode(map[string]any{
+				"issued": true, "expires_at": resp.ExpiresAt, "detail": resp.Detail, "restarting": true,
+			})
+		}
 
 		// Activate after the response has left: the agent schedules a detached
 		// restart a moment from now (systemd-run), so this reply survives.

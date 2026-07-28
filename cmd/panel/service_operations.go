@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -26,16 +27,24 @@ const (
 	serviceOperationSucceeded = "succeeded"
 	serviceOperationFailed    = "failed"
 
-	errCodeServiceOperationBusy = "service_operation_busy"
+	errCodeServiceOperationBusy            = "service_operation_busy"
+	errCodeServiceOperationRequestConflict = "service_operation_request_conflict"
+	errCodeServiceOperationRunnerPanicked  = "service_operation_runner_panicked"
+	errCodeServiceOperationLeaseLost       = "service_operation_lease_lost"
 
 	maxServiceOperationBody = 64 << 10
 )
 
-var errServiceOperationBusy = errors.New("service operation busy")
+var (
+	errServiceOperationBusy            = errors.New("service operation busy")
+	errServiceOperationRequestConflict = errors.New("service operation request id conflict")
+	errServiceOperationReplay          = errors.New("service operation request replay")
+)
 
 type serviceInstallRequest struct {
 	ServiceID string `json:"service_id"`
 	Package   string `json:"package,omitempty"`
+	RequestID string `json:"request_id"`
 }
 
 type serviceOperationResult map[string]any
@@ -59,6 +68,7 @@ type serviceOperationError struct {
 
 type serviceOperation struct {
 	ID          string                 `json:"id"`
+	RequestID   string                 `json:"request_id,omitempty"`
 	Kind        string                 `json:"kind"`
 	ServiceID   string                 `json:"service_id"`
 	PackageName string                 `json:"package_name,omitempty"`
@@ -120,13 +130,33 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if !validServiceOperationID(req.RequestID) {
+		writeClientError(w, http.StatusBadRequest, "invalid request_id")
+		return
+	}
 	req.ServiceID = strings.TrimSpace(req.ServiceID)
+	req.Package = strings.TrimSpace(req.Package)
 	if req.ServiceID == "" {
 		writeClientError(w, http.StatusBadRequest, "service_id is required")
 		return
 	}
 	if core.GetManagedServiceByID(req.ServiceID) == nil {
 		writeClientError(w, http.StatusBadRequest, "unknown managed service")
+		return
+	}
+	existing, found, err := p.idempotentServiceOperation(
+		r.Context(), req.RequestID, serviceOperationKindInstall, req.ServiceID, req.Package,
+	)
+	if err != nil {
+		if errors.Is(err, errServiceOperationRequestConflict) {
+			writeServiceOperationRequestConflict(w)
+			return
+		}
+		writeServerError(w, err)
+		return
+	}
+	if found {
+		writeAcceptedServiceOperation(w, existing)
 		return
 	}
 	release, busy := p.beginServiceMutation(w, r)
@@ -141,11 +171,19 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	actor := captureServiceOperationActor(r)
-	op, err := p.createServiceOperation(
-		r.Context(), serviceOperationKindInstall, req.ServiceID, req.Package, actor,
+	op, err := p.createServiceOperationRequest(
+		r.Context(), serviceOperationKindInstall, req.ServiceID, req.Package, req.RequestID, actor,
 	)
 	if errors.Is(err, errServiceOperationBusy) {
 		writeServiceOperationBusy(w)
+		return
+	}
+	if errors.Is(err, errServiceOperationReplay) {
+		writeAcceptedServiceOperation(w, op)
+		return
+	}
+	if errors.Is(err, errServiceOperationRequestConflict) {
+		writeServiceOperationRequestConflict(w)
 		return
 	}
 	if err != nil {
@@ -182,6 +220,16 @@ func writeServiceOperationBusy(w http.ResponseWriter) {
 	)
 }
 
+func writeServiceOperationRequestConflict(w http.ResponseWriter) {
+	writeCodedError(
+		w,
+		http.StatusConflict,
+		errCodeServiceOperationRequestConflict,
+		"request_id already belongs to another package operation",
+		"",
+	)
+}
+
 // rejectIfServiceOperationBusy gates synchronous package mutations that have
 // not yet moved to the durable job runner.
 func (p *Panel) beginServiceMutation(w http.ResponseWriter, r *http.Request) (func(), bool) {
@@ -197,6 +245,19 @@ func (p *Panel) beginServiceMutation(w http.ResponseWriter, r *http.Request) (fu
 		return nil, true
 	}
 	if op != nil {
+		release()
+		writeServiceOperationBusy(w)
+		return nil, true
+	}
+	statusCtx, statusCancel := context.WithTimeout(r.Context(), panelMutationFinishTimeout)
+	agentJob, statusErr := p.statusAgentMutation(statusCtx, "")
+	statusCancel()
+	if statusErr != nil {
+		release()
+		writeServerError(w, fmt.Errorf("verify privileged service mutation admission: %w", statusErr))
+		return nil, true
+	}
+	if agentJob != nil && agentMutationActive(agentJob.Status) {
 		release()
 		writeServiceOperationBusy(w)
 		return nil, true
@@ -231,28 +292,56 @@ func (p *Panel) createServiceOperation(
 	kind, serviceID, packageName string,
 	actor serviceOperationActor,
 ) (serviceOperation, error) {
+	return p.createServiceOperationRequest(ctx, kind, serviceID, packageName, "", actor)
+}
+
+func (p *Panel) createServiceOperationRequest(
+	ctx context.Context,
+	kind, serviceID, packageName, requestID string,
+	actor serviceOperationActor,
+) (serviceOperation, error) {
 	id, err := newServiceOperationID()
 	if err != nil {
 		return serviceOperation{}, err
 	}
+	if requestID == "" {
+		// Older API clients do not know a pre-request id. Giving their operation
+		// a server-generated identity preserves the schema invariant, although
+		// only new clients can recover a lost POST response by that identity.
+		// Eski API istemcileri istek öncesi kimliği bilmez. Sunucunun ürettiği
+		// kimlik şema değişmezini korur; kayıp POST yanıtını bu kimlikle yalnız
+		// yeni istemciler kurtarabilir.
+		requestID = id
+	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	op := serviceOperation{
-		ID: id, Kind: kind, ServiceID: serviceID, PackageName: packageName,
+		ID: id, RequestID: requestID, Kind: kind, ServiceID: serviceID, PackageName: packageName,
 		Status: serviceOperationQueued, Phase: "queued", StartedAt: now,
 	}
 	_, err = p.db.GetDB().ExecContext(ctx, `
 		INSERT INTO service_operations (
-			id, kind, service_id, package_name, status, phase,
+			id, request_id, kind, service_id, package_name, status, phase,
 			requested_by, request_ip, user_agent,
 			started_at, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, kind, serviceID, nullableNonEmpty(packageName),
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, requestID, kind, serviceID, nullableNonEmpty(packageName),
 		serviceOperationQueued, "queued",
 		nullablePositiveInt(actor.UserID), nullableNonEmpty(actor.IP), nullableNonEmpty(actor.UserAgent),
 		now, now, now,
 	)
 	if err == nil {
 		return op, nil
+	}
+	if requestID != "" {
+		existing, found, lookupErr := p.idempotentServiceOperation(
+			ctx, requestID, kind, serviceID, packageName,
+		)
+		if lookupErr != nil {
+			return serviceOperation{}, lookupErr
+		}
+		if found {
+			return existing, errServiceOperationReplay
+		}
 	}
 	active, activeErr := p.activeServiceOperation(ctx)
 	if activeErr == nil && active != nil {
@@ -268,17 +357,109 @@ func (p *Panel) launchServiceOperation(
 	releaseMutation func(),
 	runner serviceOperationRunner,
 ) {
+	p.launchServiceOperationWithAudit(
+		op, actor, initialPhase, successAudit, failureAudit,
+		releaseMutation, runner, p.auditServiceOperation,
+	)
+}
+
+type serviceOperationAuditWriter func(context.Context, serviceOperationActor, string)
+
+// launchServiceOperationWithAudit owns the mutation lock until a terminal row
+// is durably persisted. The injected writer keeps that ordering testable even
+// when an audit backend becomes slow.
+// launchServiceOperationWithAudit, terminal satır kalıcı olarak yazılana dek
+// değişiklik kilidini tutar. Enjekte edilen yazıcı, denetim altyapısı yavaşlasa
+// bile bu sıralamanın test edilebilmesini sağlar.
+func (p *Panel) launchServiceOperationWithAudit(
+	op serviceOperation,
+	actor serviceOperationActor,
+	initialPhase, successAudit, failureAudit string,
+	releaseMutation func(),
+	runner serviceOperationRunner,
+	auditWriter serviceOperationAuditWriter,
+) {
+	p.launchServiceOperationWithAuditMode(
+		op, actor, initialPhase, successAudit, failureAudit,
+		releaseMutation, runner, auditWriter, false, false,
+	)
+}
+
+func (p *Panel) launchServiceOperationWithAuditMode(
+	op serviceOperation,
+	actor serviceOperationActor,
+	initialPhase, successAudit, failureAudit string,
+	releaseMutation func(),
+	runner serviceOperationRunner,
+	auditWriter serviceOperationAuditWriter,
+	resumeAgent bool,
+	panelAlreadyRunning bool,
+) {
 	go func() {
-		defer releaseMutation()
-		ctx := context.Background()
-		if err := p.markServiceOperationRunning(ctx, op.ID, initialPhase); err != nil {
-			log.Printf("service operation %s could not start: %v", op.ID, err)
+		var releaseOnce sync.Once
+		release := func() { releaseOnce.Do(releaseMutation) }
+		defer release()
+		ownerID, err := newServiceOperationID()
+		if err != nil {
 			failure := operationStartFailure(err)
-			if fallbackErr := p.forceFailActiveServiceOperation(ctx, op.ID, "start_failed", failure); fallbackErr != nil {
+			if fallbackErr := p.forceFailActiveServiceOperation(
+				context.Background(), op.ID, "lease_failed", failure,
+			); fallbackErr != nil {
+				log.Printf("service operation %s lease identity failure could not be persisted: %v", op.ID, fallbackErr)
+			}
+			return
+		}
+		beginCtx, beginCancel := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
+		agentJob, err := p.beginAgentMutation(beginCtx, op, ownerID, resumeAgent)
+		beginCancel()
+		if err != nil {
+			log.Printf("service operation %s could not acquire the agent lease: %v", op.ID, err)
+			failure := operationStartFailure(err)
+			if fallbackErr := p.forceFailActiveServiceOperation(
+				context.Background(), op.ID, "lease_failed", failure,
+			); fallbackErr != nil {
+				log.Printf("service operation %s lease failure could not be persisted: %v", op.ID, fallbackErr)
+				return
+			}
+			auditWriter(context.Background(), actor, failureAudit+" — "+failure.Code)
+			return
+		}
+		binding := agentMutationBinding{
+			MutationRequestID: op.RequestID,
+			MutationOwnerID:   ownerID,
+		}
+		deadline := agentJob.DeadlineAt
+		if deadline.IsZero() {
+			deadline = time.Now().Add(45 * time.Minute)
+		}
+		workerBase, cancelWorker := context.WithDeadline(context.Background(), deadline)
+		ctx := withPanelMutationBinding(workerBase, binding)
+		stopHeartbeat := p.startAgentMutationHeartbeat(workerBase, cancelWorker, binding)
+		defer func() {
+			_ = stopHeartbeat()
+			cancelWorker()
+		}()
+		startErr := error(nil)
+		if panelAlreadyRunning {
+			startErr = p.updateServiceOperationPhase(ctx, op.ID, initialPhase)
+		} else {
+			startErr = p.markServiceOperationRunning(ctx, op.ID, initialPhase)
+		}
+		if startErr != nil {
+			log.Printf("service operation %s could not start: %v", op.ID, startErr)
+			failure := operationStartFailure(startErr)
+			if _, finishErr := p.finishAgentMutation(binding, false, failure); finishErr != nil {
+				log.Printf("service operation %s agent start failure could not be finalized: %v", op.ID, finishErr)
+				return
+			}
+			terminalCtx, cancelTerminal := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
+			defer cancelTerminal()
+			if fallbackErr := p.forceFailActiveServiceOperation(terminalCtx, op.ID, "start_failed", failure); fallbackErr != nil {
 				log.Printf("service operation %s start failure could not be persisted: %v", op.ID, fallbackErr)
 				return
 			}
-			p.auditServiceOperation(ctx, actor, failureAudit+" — "+failure.Code)
+			release()
+			auditWriter(terminalCtx, actor, failureAudit+" — "+failure.Code)
 			return
 		}
 		phase := initialPhase
@@ -286,38 +467,93 @@ func (p *Panel) launchServiceOperation(
 			if err := p.updateServiceOperationPhase(ctx, op.ID, next); err != nil {
 				return err
 			}
+			pingCtx, pingCancel := context.WithTimeout(context.Background(), panelMutationHeartbeatInterval)
+			_, heartbeatErr := p.heartbeatAgentMutation(pingCtx, binding, next)
+			pingCancel()
+			if heartbeatErr != nil {
+				cancelWorker()
+				return fmt.Errorf("agent service mutation heartbeat: %w", heartbeatErr)
+			}
 			phase = next
 			return nil
 		}
 
-		result, failure := runner(ctx, advance)
+		result, failure := runServiceOperationRunner(ctx, advance, runner)
+		if heartbeatErr := stopHeartbeat(); heartbeatErr != nil && failure == nil {
+			failure = operationFailure(
+				errCodeServiceOperationLeaseLost,
+				"The package operation lost its privileged agent lease.",
+				heartbeatErr,
+			)
+		}
+		agentTerminal, finishErr := p.finishAgentMutation(binding, failure == nil, failure)
+		if finishErr != nil {
+			log.Printf("service operation %s agent terminal state could not be persisted: %v", op.ID, finishErr)
+			return
+		}
+		if failure == nil && agentTerminal.Status != agentMutationSucceeded {
+			failure = operationFailure(
+				errCodeServiceOperationLeaseLost,
+				"The privileged agent did not commit the package operation as successful.",
+				fmt.Errorf("agent terminal status is %s", agentTerminal.Status),
+			)
+		}
+		terminalCtx, cancelTerminal := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
+		defer cancelTerminal()
 		if failure != nil {
 			if failure.Cause != nil {
 				log.Printf("service operation %s (%s) failed in %s: %v", op.ID, op.ServiceID, phase, failure.Cause)
 			}
-			if err := p.finishServiceOperationFailed(ctx, op.ID, phase, result, failure); err != nil {
+			if err := p.finishServiceOperationFailed(terminalCtx, op.ID, phase, result, failure); err != nil {
 				log.Printf("service operation %s failure could not be persisted: %v", op.ID, err)
 				fallback := operationAdvanceFailure(err)
-				if fallbackErr := p.forceFailActiveServiceOperation(ctx, op.ID, phase, fallback); fallbackErr != nil {
+				if fallbackErr := p.forceFailActiveServiceOperation(terminalCtx, op.ID, phase, fallback); fallbackErr != nil {
 					log.Printf("service operation %s failure fallback could not be persisted: %v", op.ID, fallbackErr)
 					return
 				}
 			}
-			p.auditServiceOperation(ctx, actor, failureAudit+" — "+failure.Code)
+			release()
+			auditWriter(terminalCtx, actor, failureAudit+" — "+failure.Code)
 			return
 		}
-		if err := p.finishServiceOperationSucceeded(ctx, op.ID, result); err != nil {
+		if err := p.finishServiceOperationSucceeded(terminalCtx, op.ID, result); err != nil {
 			log.Printf("service operation %s success could not be persisted: %v", op.ID, err)
 			fallback := operationAdvanceFailure(err)
-			if fallbackErr := p.forceFailActiveServiceOperation(ctx, op.ID, phase, fallback); fallbackErr != nil {
+			if fallbackErr := p.forceFailActiveServiceOperation(terminalCtx, op.ID, phase, fallback); fallbackErr != nil {
 				log.Printf("service operation %s success fallback could not be persisted: %v", op.ID, fallbackErr)
 				return
 			}
-			p.auditServiceOperation(ctx, actor, failureAudit+" — "+fallback.Code)
+			release()
+			auditWriter(terminalCtx, actor, failureAudit+" — "+fallback.Code)
 			return
 		}
-		p.auditServiceOperation(ctx, actor, successAudit)
+		release()
+		auditWriter(terminalCtx, actor, successAudit)
 	}()
+}
+
+// runServiceOperationRunner converts a runner panic into the same sanitized
+// failure contract as an ordinary runner error. The caller then CAS-transitions
+// the active row before releasing the process-local mutation lock.
+// runServiceOperationRunner, runner panic'ini sıradan runner hatasıyla aynı
+// temizlenmiş hata sözleşmesine dönüştürür. Çağıran, süreç içi değişiklik
+// kilidini bırakmadan önce etkin satırı CAS ile terminal duruma geçirir.
+func runServiceOperationRunner(
+	ctx context.Context,
+	advance func(string) error,
+	runner serviceOperationRunner,
+) (result serviceOperationResult, failure *serviceOperationFailure) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			result = serviceOperationResult{"success": false}
+			failure = operationFailure(
+				errCodeServiceOperationRunnerPanicked,
+				"The package operation stopped unexpectedly.",
+				fmt.Errorf("service operation runner panic: %v", recovered),
+			)
+		}
+	}()
+	return runner(ctx, advance)
 }
 
 func (p *Panel) forceFailActiveServiceOperation(
@@ -468,9 +704,9 @@ type serviceOperationScanner interface {
 
 func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, error) {
 	var op serviceOperation
-	var packageName, finishedAt, resultJSON, errorCode, errorMessage sql.NullString
+	var requestID, packageName, finishedAt, resultJSON, errorCode, errorMessage sql.NullString
 	err := scanner.Scan(
-		&op.ID, &op.Kind, &op.ServiceID, &packageName, &op.Status, &op.Phase, &op.StartedAt,
+		&op.ID, &requestID, &op.Kind, &op.ServiceID, &packageName, &op.Status, &op.Phase, &op.StartedAt,
 		&finishedAt, &resultJSON, &errorCode, &errorMessage,
 	)
 	if err != nil {
@@ -482,6 +718,9 @@ func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, er
 	if packageName.Valid {
 		op.PackageName = packageName.String
 	}
+	if requestID.Valid {
+		op.RequestID = requestID.String
+	}
 	if resultJSON.Valid && json.Valid([]byte(resultJSON.String)) {
 		op.Result = json.RawMessage(resultJSON.String)
 	}
@@ -492,7 +731,7 @@ func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, er
 }
 
 const serviceOperationSelect = `
-	SELECT id, kind, service_id, package_name, status, phase, started_at,
+	SELECT id, request_id, kind, service_id, package_name, status, phase, started_at,
 	       finished_at, result_json, error_code, error_message
 	FROM service_operations`
 
@@ -500,6 +739,35 @@ func (p *Panel) serviceOperationByID(ctx context.Context, id string) (serviceOpe
 	return scanServiceOperation(p.db.GetDB().QueryRowContext(
 		ctx, serviceOperationSelect+` WHERE id=?`, id,
 	))
+}
+
+func (p *Panel) serviceOperationByRequestID(ctx context.Context, requestID string) (serviceOperation, error) {
+	return scanServiceOperation(p.db.GetDB().QueryRowContext(
+		ctx, serviceOperationSelect+` WHERE request_id=?`, requestID,
+	))
+}
+
+// idempotentServiceOperation returns the prior operation only when both the
+// opaque request id and its immutable target agree. Reusing one id for another
+// mutation is a conflict and is never treated as success.
+// idempotentServiceOperation, önceki işlemi yalnız opak istek kimliği ile
+// değişmez hedefi birlikte eşleştiğinde döndürür. Bir kimliği başka değişiklik
+// için yeniden kullanmak çakışmadır ve asla başarı sayılmaz.
+func (p *Panel) idempotentServiceOperation(
+	ctx context.Context,
+	requestID, kind, serviceID, packageName string,
+) (serviceOperation, bool, error) {
+	op, err := p.serviceOperationByRequestID(ctx, requestID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return serviceOperation{}, false, nil
+	}
+	if err != nil {
+		return serviceOperation{}, false, err
+	}
+	if op.Kind != kind || op.ServiceID != serviceID || op.PackageName != packageName {
+		return serviceOperation{}, false, errServiceOperationRequestConflict
+	}
+	return op, true, nil
 }
 
 func (p *Panel) activeServiceOperation(ctx context.Context) (*serviceOperation, error) {
@@ -539,6 +807,9 @@ func validServiceOperationID(id string) bool {
 	if len(id) != 32 {
 		return false
 	}
+	if strings.ToLower(id) != id {
+		return false
+	}
 	_, err := hex.DecodeString(id)
 	return err == nil
 }
@@ -549,7 +820,23 @@ func (p *Panel) handleServiceOperation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	id := r.URL.Query().Get("id")
+	requestID := r.URL.Query().Get("request_id")
+	activeValues, activePresent := r.URL.Query()["active"]
+	if activePresent && (len(activeValues) != 1 || activeValues[0] != "1") {
+		writeClientError(w, http.StatusBadRequest, "active must be 1")
+		return
+	}
+	selectorCount := 0
+	for _, selected := range []bool{id != "", requestID != "", activePresent} {
+		if selected {
+			selectorCount++
+		}
+	}
+	if selectorCount > 1 {
+		writeClientError(w, http.StatusBadRequest, "choose id, request_id or active")
+		return
+	}
 	if id != "" {
 		if !validServiceOperationID(id) {
 			writeClientError(w, http.StatusNotFound, "service operation not found")
@@ -567,6 +854,32 @@ func (p *Panel) handleServiceOperation(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"operation": op})
 		return
 	}
+	if requestID != "" {
+		if !validServiceOperationID(requestID) {
+			writeClientError(w, http.StatusNotFound, "service operation not found")
+			return
+		}
+		op, err := p.serviceOperationByRequestID(r.Context(), requestID)
+		if errors.Is(err, sql.ErrNoRows) {
+			writeClientError(w, http.StatusNotFound, "service operation not found")
+			return
+		}
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"operation": op})
+		return
+	}
+	if activePresent {
+		op, err := p.activeServiceOperation(r.Context())
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"operation": op})
+		return
+	}
 	op, err := p.latestServiceOperation(r.Context())
 	if err != nil {
 		writeServerError(w, err)
@@ -575,26 +888,187 @@ func (p *Panel) handleServiceOperation(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"operation": op})
 }
 
-// recoverInterruptedServiceOperations runs once before HTTP routes start.
-// A package command may have completed, failed, or still been running when
-// the panel process disappeared; without end-state verification success is
-// unknowable, so the only honest durable state is failed.
 func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64, error) {
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	result, err := p.db.GetDB().ExecContext(ctx, `
-		UPDATE service_operations
-		SET status=?, phase='interrupted',
-		    result_json='{"success":false}',
-		    error_code='panel_restarted_before_verification',
-		    error_message='Panel restarted before the package operation could be verified.',
-		    finished_at=?, updated_at=?
-		WHERE status IN (?, ?)`,
-		serviceOperationFailed, now, now, serviceOperationQueued, serviceOperationRunning,
-	)
+	op, err := p.activeServiceOperation(ctx)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	recoveryCtx, cancel := context.WithTimeout(ctx, panelMutationRecoveryTimeout)
+	defer cancel()
+
+	globalJob, err := p.statusAgentMutation(recoveryCtx, "")
+	if err != nil {
+		return 0, fmt.Errorf("read privileged mutation ledger during startup: %w", err)
+	}
+	if op == nil {
+		if globalJob == nil || !agentMutationActive(globalJob.Status) {
+			return 0, nil
+		}
+		if globalJob.Status == agentMutationRunning {
+			if err := p.cancelAgentMutation(
+				recoveryCtx,
+				globalJob,
+				"panel_operation_missing",
+				"The agent mutation has no matching active panel operation after restart.",
+			); err != nil {
+				return 0, fmt.Errorf("cancel unmatched privileged mutation: %w", err)
+			}
+		}
+		if _, err := p.waitAgentMutationTerminal(recoveryCtx, globalJob.RequestID); err != nil {
+			return 0, fmt.Errorf("wait for unmatched privileged mutation: %w", err)
+		}
+		return 0, nil
+	}
+	if !validServiceOperationID(op.RequestID) {
+		return 0, errors.New("active panel operation has no durable request identity")
+	}
+	if globalJob != nil && agentMutationActive(globalJob.Status) &&
+		globalJob.RequestID != op.RequestID {
+		return 0, fmt.Errorf(
+			"agent mutation %s does not match active panel operation %s",
+			globalJob.RequestID,
+			op.RequestID,
+		)
+	}
+
+	job, err := p.statusAgentMutation(recoveryCtx, op.RequestID)
+	if err != nil {
+		return 0, fmt.Errorf("read matching privileged mutation: %w", err)
+	}
+	if job == nil {
+		failure := operationFailure(
+			"panel_restarted_without_agent_ledger",
+			"Panel restarted and the privileged agent has no matching operation record.",
+			nil,
+		)
+		if err := p.forceFailActiveServiceOperation(ctx, op.ID, "interrupted", failure); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	if job.Kind != op.Kind || job.Target != op.ServiceID ||
+		job.PackageName != op.PackageName {
+		return 0, errors.New("panel and agent service mutation identities disagree")
+	}
+
+	if agentMutationActive(job.Status) {
+		if job.Status == agentMutationRunning {
+			if err := p.cancelAgentMutation(
+				recoveryCtx,
+				job,
+				"panel_restarted_during_mutation",
+				"Panel restarted before the privileged operation result was committed.",
+			); err != nil {
+				return 0, fmt.Errorf("cancel interrupted privileged mutation: %w", err)
+			}
+		}
+		job, err = p.waitAgentMutationTerminal(recoveryCtx, op.RequestID)
+		if err != nil {
+			return 0, fmt.Errorf("wait for interrupted privileged mutation: %w", err)
+		}
+		if job == nil {
+			return 0, errors.New("agent lost the interrupted mutation while reconciling it")
+		}
+	}
+
+	if job.Status == agentMutationSucceeded {
+		if op.Status == serviceOperationQueued {
+			if err := p.markServiceOperationRunning(ctx, op.ID, "recovered_terminal"); err != nil {
+				return 0, err
+			}
+		}
+		if err := p.finishServiceOperationSucceeded(
+			ctx,
+			op.ID,
+			serviceOperationResult{"success": true, "recovered": true},
+		); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	if !agentMutationCanResume(job) {
+		failure := operationFailure(
+			nonEmptyMutationValue(job.ErrorCode, "interrupted_service_mutation_failed"),
+			nonEmptyMutationValue(job.ErrorMessage, "The interrupted privileged operation failed."),
+			nil,
+		)
+		if err := p.forceFailActiveServiceOperation(ctx, op.ID, "interrupted", failure); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	if err := p.resumeInterruptedServiceOperation(*op); err != nil {
+		return 0, err
+	}
+	return 0, nil
+}
+
+func nonEmptyMutationValue(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return strings.TrimSpace(value)
+}
+
+func agentMutationCanResume(job *agentMutationJob) bool {
+	if job == nil || job.Status != agentMutationFailed {
+		return false
+	}
+	switch job.ErrorCode {
+	case "panel_restarted_during_mutation",
+		"agent_restarted_before_completion",
+		"service_mutation_lease_expired":
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
+	var (
+		runner       serviceOperationRunner
+		successAudit string
+		failureAudit string
+	)
+	switch op.Kind {
+	case serviceOperationKindInstall:
+		request := serviceInstallRequest{
+			ServiceID: op.ServiceID,
+			Package:   op.PackageName,
+			RequestID: op.RequestID,
+		}
+		runner = func(ctx context.Context, advance func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			return p.runServiceInstall(ctx, request, advance)
+		}
+		successAudit = "service.install.recovered:" + op.ServiceID
+		failureAudit = "service.install.recovered.failed:" + op.ServiceID
+	case serviceOperationKindRuntimeInstall:
+		if op.ServiceID != "node" || !nodeSemverRe.MatchString(op.PackageName) {
+			return errors.New("interrupted runtime operation has an invalid target")
+		}
+		runner = func(ctx context.Context, advance func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			return p.runNodeInstall(ctx, op.PackageName, advance)
+		}
+		successAudit = "runtime.node.install.recovered:" + op.PackageName
+		failureAudit = "runtime.node.install.recovered.failed:" + op.PackageName
+	default:
+		return fmt.Errorf("cannot resume unsupported service operation kind %q", op.Kind)
+	}
+
+	p.serviceMutationMu.Lock()
+	p.launchServiceOperationWithAuditMode(
+		op,
+		serviceOperationActor{},
+		"reconciling",
+		successAudit,
+		failureAudit,
+		p.serviceMutationMu.Unlock,
+		runner,
+		p.auditServiceOperation,
+		true,
+		op.Status == serviceOperationRunning,
+	)
+	return nil
 }
 
 func (p *Panel) auditServiceOperation(ctx context.Context, actor serviceOperationActor, action string) {
@@ -629,6 +1103,14 @@ func serviceInstallFailure(cause error) *serviceOperationFailure {
 	return operationFailure(
 		"service_install_failed",
 		"The service could not be installed and verified.",
+		cause,
+	)
+}
+
+func firewallSyncFailure(cause error) *serviceOperationFailure {
+	return operationFailure(
+		"firewall_sync_failed",
+		"The service changed successfully, but the active firewall policy could not be synchronized.",
 		cause,
 	)
 }
@@ -682,6 +1164,10 @@ func (p *Panel) runNodeInstall(
 	advance func(string) error,
 ) (serviceOperationResult, *serviceOperationFailure) {
 	result := serviceOperationResult{"success": false, "installed": false, "version": version}
+	binding, err := panelMutationBinding(ctx)
+	if err != nil {
+		return result, nodeInstallFailure(err)
+	}
 	if err := p.preflightManagedServiceInstall(ctx, "node"); err != nil {
 		return result, nodeInstallFailure(err)
 	}
@@ -690,8 +1176,14 @@ func (p *Panel) runNodeInstall(
 		Error     string `json:"error,omitempty"`
 	}
 	if err := p.agentClient.CallContext(ctx, "Agent.InstallNodeVersion", &struct {
-		Version string `json:"version"`
-	}{Version: version}, &response); err != nil {
+		MutationRequestID string `json:"mutation_request_id"`
+		MutationOwnerID   string `json:"mutation_owner_id"`
+		Version           string `json:"version"`
+	}{
+		MutationRequestID: binding.MutationRequestID,
+		MutationOwnerID:   binding.MutationOwnerID,
+		Version:           version,
+	}, &response); err != nil {
 		return result, nodeInstallFailure(err)
 	}
 	if response.Error != "" {

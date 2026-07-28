@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -80,6 +81,7 @@ func (a *Agent) ListNodeVersions(_ *struct{}, resp *NodeVersionsResponse) error 
 }
 
 type NodeInstallRequest struct {
+	ServiceMutationBinding
 	Version string `json:"version"` // e.g. "24.18.0"
 }
 
@@ -93,6 +95,16 @@ type NodeInstallResponse struct {
 // InstallNodeVersion, resmi bir Node derlemesini indirir, doğrular ve açar.
 // Bağımsızdır: zaten kurulu bir sürüm hemen başarı döndürür.
 func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if !nodeVersionRe.MatchString(req.Version) {
 		resp.Error = "invalid version (expected e.g. 24.18.0)"
 		return nil
@@ -115,7 +127,7 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 
 	// 1. Official checksums first — they decide whether anything is trusted.
 	// 1. Önce resmi sağlama toplamları — neye güvenileceğine onlar karar verir.
-	wantSum, err := fetchNodeChecksum(client, base+"/SHASUMS256.txt", tarName)
+	wantSum, err := fetchNodeChecksum(ctx, client, base+"/SHASUMS256.txt", tarName)
 	if err != nil {
 		resp.Error = fmt.Sprintf("cannot fetch checksums: %v", err)
 		return nil
@@ -135,7 +147,12 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
 
-	dl, err := client.Get(base + "/" + tarName)
+	dlRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/"+tarName, nil)
+	if err != nil {
+		resp.Error = fmt.Sprintf("download request failed: %v", err)
+		return nil
+	}
+	dl, err := client.Do(dlRequest)
 	if err != nil {
 		resp.Error = fmt.Sprintf("download failed: %v", err)
 		return nil
@@ -167,7 +184,7 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 	}
 	defer os.RemoveAll(stage)
 
-	if out, err := exec.Command("tar", "-xJf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
+	if out, err := runServiceMutationCombinedOutput(ctx, "tar", "-xJf", tmp.Name(), "-C", stage, "--strip-components=1"); err != nil {
 		resp.Error = fmt.Sprintf("extract failed: %v: %s", err, string(out))
 		return nil
 	}
@@ -194,8 +211,12 @@ func nodeBinPath(version string) string {
 // official SHASUMS256.txt.
 // fetchNodeChecksum, resmi SHASUMS256.txt'ten tek dosyanın beklenen
 // SHA-256'sını çeker.
-func fetchNodeChecksum(client *http.Client, url, fileName string) (string, error) {
-	res, err := client.Get(url)
+func fetchNodeChecksum(ctx context.Context, client *http.Client, url, fileName string) (string, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	res, err := client.Do(request)
 	if err != nil {
 		return "", err
 	}
@@ -218,6 +239,7 @@ func fetchNodeChecksum(client *http.Client, url, fileName string) (string, error
 // --- B3d: sürüm başına kaldırma + kaynak LTS listesi ---
 
 type NodeRemoveRequest struct {
+	ServiceMutationBinding
 	Version string `json:"version"`
 }
 
@@ -236,6 +258,30 @@ type NodeRemoveResponse struct {
 // işidir — agent kiracı-kördür. Idempotent: olmayan sürümü kaldırmak
 // kaldırıldı bildirir.
 func (a *Agent) RemoveNodeVersion(req *NodeRemoveRequest, resp *NodeRemoveResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	if !nodeVersionRe.MatchString(req.Version) {
+		resp.Error = "not a valid node version"
+		return nil
+	}
+	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	return a.removeNodeVersion(req, resp)
+}
+
+// removeNodeVersion performs the already-authorized filesystem mutation.
+// removeNodeVersion, önceden yetkilendirilmiş dosya sistemi değişikliğini yapar.
+func (a *Agent) removeNodeVersion(req *NodeRemoveRequest, resp *NodeRemoveResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
 	if !nodeVersionRe.MatchString(req.Version) {
 		resp.Error = "not a valid node version"
 		return nil

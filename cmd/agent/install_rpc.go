@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -22,6 +23,7 @@ import (
 // kurulur; gerçek paket adlarına dağıtım ailesi karar verir.
 
 type InstallServiceRequest struct {
+	ServiceMutationBinding
 	ID string `json:"id"` // managed service id, e.g. "postgresql"
 	// Package, when set, is a specific version package chosen from the service's
 	// managed repo (e.g. "postgresql-17") to install instead of the distro
@@ -39,7 +41,42 @@ type InstallServiceRequest struct {
 type InstallServiceResponse struct {
 	Installed bool   `json:"installed"` // false if it was already present
 	Detail    string `json:"detail,omitempty"`
-	Error     string `json:"error,omitempty"`
+	// Unit is the exact daemon unit started and verified by this operation.
+	// It matters for versioned PostgreSQL packages, whose package name
+	// (postgresql-17) is not their cluster unit (postgresql@17-main).
+	// Unit, bu işlemin başlattığı ve doğruladığı tam daemon unit'idir. Paket adı
+	// cluster unit'i olmayan sürümlü PostgreSQL paketlerinde önemlidir:
+	// postgresql-17 paketinin gerçek hedefi postgresql@17-main'dir.
+	Unit  string `json:"unit,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
+// validateRepoPackageSelection accepts a caller-selected package only when the
+// service catalogue explicitly declares a non-empty PackagePattern and that
+// pattern matches the entire package name. This validation is intentionally
+// pure so it runs before any package-manager probe.
+//
+// validateRepoPackageSelection, çağıranın seçtiği paketi yalnızca servis
+// kataloğu boş olmayan bir PackagePattern tanımlıyorsa ve desen paket adının
+// tamamıyla eşleşiyorsa kabul eder. Bu doğrulama bilerek saftır; paket
+// yöneticisine herhangi bir sorgu yapılmadan önce çalışır.
+func validateRepoPackageSelection(svc *core.ManagedService, packageName string) ([]string, error) {
+	if svc == nil || svc.Repo == nil {
+		return nil, fmt.Errorf("this service does not offer version selection")
+	}
+	pattern := strings.TrimSpace(svc.Repo.PackagePattern)
+	if pattern == "" {
+		return nil, fmt.Errorf("this service does not offer version selection")
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("invalid package pattern in catalogue")
+	}
+	match := re.FindStringSubmatch(packageName)
+	if match == nil || match[0] != packageName {
+		return nil, fmt.Errorf("%q is not a valid version package for %s", packageName, svc.Name)
+	}
+	return match, nil
 }
 
 // InstallService installs a managed service by its catalog ID, then enables +
@@ -51,11 +88,37 @@ type InstallServiceResponse struct {
 // çalışır (ve reboot'tan sağ çıkar). Zaten kurulu servisler dürüstçe
 // bildirilen bir no-op'tur.
 func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
 	svc := core.GetManagedServiceByID(req.ID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
 	}
+
+	// Reject an arbitrary or non-versioned package before detectPkgFamily or
+	// packageInstalled can invoke a package-manager command.
+	// Keyfi ya da sürümlü olmayan paketi detectPkgFamily veya packageInstalled
+	// bir paket-yöneticisi komutu çalıştırmadan önce reddet.
+	var selectedPackageMatch []string
+	if req.Package != "" {
+		var err error
+		selectedPackageMatch, err = validateRepoPackageSelection(svc, req.Package)
+		if err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+	}
+
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+
 	family := detectPkgFamily()
 	if reason := core.ManagedServiceInstallDisabledReason(svc, family); reason != "" {
 		resp.Error = reason
@@ -68,10 +131,6 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// demek olduğunu değiştiren şey odur.
 	var versionPrefix string
 	if req.Package != "" {
-		if svc.Repo == nil {
-			resp.Error = "this service does not offer version selection"
-			return nil
-		}
 		// Version selection comes from a managed vendor repo, which is apt-only
 		// today. Without this the pick sails through validation and dies inside
 		// pacman as "target not found: php8.3-fpm" — a package-manager error
@@ -84,18 +143,8 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 			resp.Error = "choosing a version needs a managed repository, which is only supported on apt (Debian/Ubuntu) systems yet"
 			return nil
 		}
-		re, err := regexp.Compile(svc.Repo.PackagePattern)
-		if err != nil {
-			resp.Error = "invalid package pattern in catalogue"
-			return nil
-		}
-		m := re.FindStringSubmatch(req.Package)
-		if m == nil {
-			resp.Error = fmt.Sprintf("%q is not a valid version package for %s", req.Package, svc.Name)
-			return nil
-		}
-		if len(m) > 1 {
-			versionPrefix = m[1]
+		if len(selectedPackageMatch) > 1 {
+			versionPrefix = selectedPackageMatch[1]
 		}
 	}
 
@@ -202,12 +251,12 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		}
 	}
 	if len(missingPackages) > 0 {
-		if _, err := installPackages(family, missingPackages); err != nil {
+		if _, err := installPackagesContext(ctx, family, missingPackages); err != nil {
 			resp.Error = fmt.Sprintf("package install failed: %v", err)
 			return nil
 		}
 	}
-	if err := prepareInstalledService(req.ID, family); err != nil {
+	if err := prepareInstalledServiceContext(ctx, req.ID, family); err != nil {
 		resp.Error = fmt.Sprintf("service preparation failed: %v", err)
 		return nil
 	}
@@ -221,22 +270,36 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// 8.3 kurulduktan sonra bu, 8.4'ü başlatıp operatörün az önce istediği
 	// sürümü durmuş bırakırdı.
 	unit := ""
-	if req.Package != "" && unitExists(req.Package) {
-		unit = req.Package
+	if exactUnit, exact := exactInstallUnit(req.ID, family, req.Package); exact {
+		// A selected package has one exact service target. Never fall back to
+		// another installed PHP major, postgresql.service or another PG
+		// cluster: that would report success while starting a different
+		// version than the operator selected.
+		//
+		// Seçilen paketin tek bir tam servis hedefi vardır. Başka kurulu PHP
+		// major'una, postgresql.service'e veya başka PG cluster'ına asla düşme;
+		// aksi hâlde operatörün seçtiğinden farklı sürüm başlatılıp başarı
+		// bildirilirdi.
+		if exactUnit == "" || !unitExists(exactUnit) {
+			resp.Error = fmt.Sprintf("selected package %s did not provide its exact service unit", req.Package)
+			return nil
+		}
+		unit = exactUnit
 	} else {
 		unit = a.firstPresentUnit(svc)
 	}
 	if unit != "" {
 		var err error
 		if serviceStartsAfterPanelSetup(req.ID) {
-			err = a.systemdMgr.Enable(unit)
+			err = enableServiceForMutation(ctx, unit, false)
 		} else {
-			err = a.systemdMgr.EnableNow(unit)
+			err = enableServiceForMutation(ctx, unit, true)
 		}
 		if err != nil {
 			resp.Error = fmt.Sprintf("service did not become ready: %v", err)
 			return nil
 		}
+		resp.Unit = unit
 	}
 	// Bridge daemons come in their own packages with their own units, and
 	// nothing else starts them: SpamAssassin's spamd scores a message handed
@@ -248,7 +311,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// durmuş bırakmak "kurulu", "Çalışıyor", süzülen posta sıfır üretiyordu.
 	for _, h := range svc.HelperUnits {
 		if unitExists(h) {
-			if err := a.systemdMgr.EnableNow(h); err != nil {
+			if err := enableServiceForMutation(ctx, h, true); err != nil {
 				resp.Error = fmt.Sprintf("helper service did not become ready: %v", err)
 				return nil
 			}
@@ -354,9 +417,93 @@ func unitExists(name string) bool {
 }
 
 type UninstallServiceResponse struct {
-	Removed bool   `json:"removed"`
-	Detail  string `json:"detail,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Removed         bool   `json:"removed"`
+	Detail          string `json:"detail,omitempty"`
+	Error           string `json:"error,omitempty"`
+	PartialSuccess  bool   `json:"partial_success,omitempty"`
+	MutationApplied bool   `json:"mutation_applied,omitempty"`
+}
+
+// serviceUninstallOps keeps privileged host operations behind one narrow
+// boundary. Production supplies fixed argv commands; tests supply recorders so
+// partial-mutation and package-selection contracts are exercised without
+// touching the test host.
+// serviceUninstallOps, yetkili makine işlemlerini tek ve dar bir sınırın
+// arkasında tutar. Üretim sabit argv komutları, testler ise test makinesine
+// dokunmadan kısmi değişiklik ve paket seçimi sözleşmelerini sınayan
+// kaydediciler sağlar.
+type serviceUninstallOps struct {
+	detectPackageFamily   func() string
+	packageInstalled      func(string) bool
+	unitExists            func(string) bool
+	unitsMatching         func(string) []string
+	disableUnit           func(string) error
+	removePackages        func(string, []string) (string, error)
+	installedRepoPackages func(*core.ManagedService) ([]string, error)
+}
+
+func defaultServiceUninstallOps(ctx context.Context) serviceUninstallOps {
+	return serviceUninstallOps{
+		detectPackageFamily: detectPkgFamily,
+		packageInstalled:    packageInstalled,
+		unitExists:          unitExists,
+		unitsMatching:       unitsMatching,
+		disableUnit: func(unit string) error {
+			_, err := runServiceMutationCombinedOutput(ctx, "systemctl", "disable", "--now", unit)
+			return err
+		},
+		removePackages: func(family string, packages []string) (string, error) {
+			return removePackagesContext(ctx, family, packages)
+		},
+		installedRepoPackages: func(service *core.ManagedService) ([]string, error) {
+			return installedRepoPackagesForServiceContext(ctx, service)
+		},
+	}
+}
+
+// failUninstallRemoval preserves the critical distinction between a refusal
+// before mutation and a package purge that failed after units were stopped.
+// failUninstallRemoval, değişiklik öncesi ret ile unit'ler durdurulduktan sonra
+// başarısız olan paket kaldırmayı birbirinden ayıran kritik bilgiyi korur.
+func failUninstallRemoval(resp *UninstallServiceResponse, err error, mutationApplied bool) {
+	resp.Error = fmt.Sprintf("package removal failed: %v", err)
+	resp.PartialSuccess = mutationApplied
+	resp.MutationApplied = mutationApplied
+}
+
+// failUninstallDisable is deliberately fail-closed. `systemctl disable --now`
+// may stop a unit before a later disable step fails, so every attempted
+// stop/disable error means the host state may already have changed. Package
+// removal must not continue from that uncertain state.
+// failUninstallDisable bilerek güvenli biçimde kapalı davranır. `systemctl
+// disable --now`, daha sonraki devre dışı bırakma adımı başarısız olmadan önce
+// unit'i durdurmuş olabilir. Bu nedenle denenen her stop/disable hatası makine
+// durumunun değişmiş olabileceği anlamına gelir; paket kaldırma sürdürülmez.
+func failUninstallDisable(resp *UninstallServiceResponse, unit string, err error) {
+	resp.Error = fmt.Sprintf(
+		"failed to stop and disable %s; service state may have changed: %v",
+		unit,
+		err,
+	)
+	resp.PartialSuccess = true
+	resp.MutationApplied = true
+}
+
+func uniquePackageNames(packages []string) []string {
+	seen := make(map[string]struct{}, len(packages))
+	out := make([]string, 0, len(packages))
+	for _, raw := range packages {
+		name := strings.TrimSpace(raw)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	return out
 }
 
 // UninstallService stops and disables a managed service, then purges its
@@ -369,12 +516,65 @@ type UninstallServiceResponse struct {
 // küçültmek için. Kurulu her servis sömürülebilir koddur; operatör bir
 // servisi yalnız ekleyebilmemeli, geri de alabilmeli.
 func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServiceResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
 	svc := core.GetManagedServiceByID(req.ID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
 	}
-	family := detectPkgFamily()
+	// Reject an invalid catalogue/package selection before asking for a
+	// privileged lease. This is pure input validation and mirrors InstallService.
+	// Geçersiz katalog/paket seçimini ayrıcalıklı lease istemeden önce reddet.
+	// Bu yalnızca girdi doğrulamasıdır ve InstallService akışını yansıtır.
+	if req.Package != "" {
+		if _, err := validateRepoPackageSelection(svc, req.Package); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	return a.uninstallServiceWithOps(req, resp, defaultServiceUninstallOps(ctx))
+}
+
+func (a *Agent) uninstallServiceWithOps(
+	req *InstallServiceRequest,
+	resp *UninstallServiceResponse,
+	ops serviceUninstallOps,
+) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	svc := core.GetManagedServiceByID(req.ID)
+	if svc == nil {
+		resp.Error = "unknown service"
+		return nil
+	}
+
+	// Apply the same catalogue boundary as install before any package-manager
+	// detection or installed-package query.
+	// Paket-yöneticisi algılama veya kurulu-paket sorgusundan önce kurulumla aynı
+	// katalog sınırını uygula.
+	var selectedPackageMatch []string
+	if req.Package != "" {
+		var err error
+		selectedPackageMatch, err = validateRepoPackageSelection(svc, req.Package)
+		if err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+	}
+
+	family := ops.detectPackageFamily()
+	mutationApplied := false
 
 	// Version pick (B3d): remove ONE version of a runtime, the mirror of the
 	// install pick. Same gates as install: the service must have a Repo, the
@@ -387,42 +587,46 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	// ({v}-cli, {v}-mysql… — öksüz kalıntılar, klasik panellerde "8.3'ü
 	// gerçekten kaldırdım mı?" sorusunu cevapsız bırakan şeydi).
 	if req.Package != "" {
-		if svc.Repo == nil {
-			resp.Error = fmt.Sprintf("%s has no per-version packages", svc.Name)
-			return nil
-		}
 		if family != "apt" {
 			resp.Error = "per-version removal is only supported on apt-based systems"
 			return nil
 		}
-		re, err := regexp.Compile(svc.Repo.PackagePattern)
-		if err != nil || !re.MatchString(req.Package) {
-			resp.Error = "package does not belong to this service"
-			return nil
-		}
-		if !packageInstalled(req.Package) {
+		if !ops.packageInstalled(req.Package) {
 			resp.Removed = true
 			resp.Detail = fmt.Sprintf("%s is not installed", req.Package)
 			return nil
 		}
 		versionPrefix := ""
-		if m := re.FindStringSubmatch(req.Package); len(m) > 1 {
-			versionPrefix = m[1]
+		if len(selectedPackageMatch) > 1 {
+			versionPrefix = selectedPackageMatch[1]
 		}
 		pkgs := []string{req.Package}
 		for _, tpl := range svc.Repo.VersionCompanions {
 			name := strings.ReplaceAll(tpl, "{v}", versionPrefix)
-			if packageInstalled(name) {
+			if ops.packageInstalled(name) {
 				pkgs = append(pkgs, name)
 			}
 		}
-		// Unit name == package name for version-pick installs (php8.3-fpm).
-		// Sürüm-seçimli kurulumda unit adı == paket adı (php8.3-fpm).
-		if unitExists(req.Package) {
-			_ = exec.Command("systemctl", "disable", "--now", req.Package).Run()
+		// Resolve the exact daemon target independently from the package name;
+		// PostgreSQL's postgresql-17 package owns postgresql@17-main.
+		// Tam daemon hedefini paket adından bağımsız çöz; PostgreSQL'in
+		// postgresql-17 paketi postgresql@17-main unit'ine sahiptir.
+		if exactUnit, exact := exactInstallUnit(req.ID, family, req.Package); exact {
+			if exactUnit == "" {
+				resp.Error = "selected package has no valid exact service unit"
+				return nil
+			}
+			if ops.unitExists(exactUnit) {
+				if err := ops.disableUnit(exactUnit); err != nil {
+					failUninstallDisable(resp, exactUnit, err)
+					return nil
+				}
+				mutationApplied = true
+			}
 		}
-		if _, err := removePackages(family, pkgs); err != nil {
-			resp.Error = fmt.Sprintf("package removal failed: %v", err)
+		pkgs = uniquePackageNames(pkgs)
+		if _, err := ops.removePackages(family, pkgs); err != nil {
+			failUninstallRemoval(resp, err, mutationApplied)
 			return nil
 		}
 		resp.Removed = true
@@ -430,11 +634,42 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 		return nil
 	}
 
-	pkgs := svc.Packages[family]
+	pkgs := append([]string(nil), svc.Packages[family]...)
 	if len(pkgs) == 0 {
 		resp.Error = fmt.Sprintf("%s cannot be removed automatically on this system yet", svc.Name)
 		return nil
 	}
+
+	// Discover catalogue-matching apt packages before stopping anything. The
+	// query is package-manager truth, not a systemd-name guess: in particular,
+	// postgresql@17-main must add postgresql-17, never the unit string itself.
+	// Herhangi bir şeyi durdurmadan önce katalogla eşleşen apt paketlerini bul.
+	// Sorgu systemd adı tahmini değil, paket yöneticisi gerçeğidir; özellikle
+	// postgresql@17-main, unit dizgesini değil postgresql-17 paketini eklemelidir.
+	if family == "apt" && svc.Repo != nil && svc.Repo.PackagePattern != "" {
+		repoPackages, err := ops.installedRepoPackages(svc)
+		if err != nil {
+			resp.Error = fmt.Sprintf("installed package discovery failed: %v", err)
+			return nil
+		}
+		pkgs = append(pkgs, repoPackages...)
+		re, err := regexp.Compile(svc.Repo.PackagePattern)
+		if err != nil {
+			resp.Error = "invalid catalogue package pattern"
+			return nil
+		}
+		for _, pkg := range repoPackages {
+			if match := re.FindStringSubmatch(pkg); len(match) > 1 {
+				for _, tpl := range svc.Repo.VersionCompanions {
+					companion := strings.ReplaceAll(tpl, "{v}", match[1])
+					if ops.packageInstalled(companion) {
+						pkgs = append(pkgs, companion)
+					}
+				}
+			}
+		}
+	}
+	pkgs = uniquePackageNames(pkgs)
 
 	// Stop + disable every present unit first, so purge does not fight a
 	// running process. Template instances ("wg-quick@wg0") are handled by
@@ -448,31 +683,33 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	// kaldırmak yalnız meta paketi söküyor, sürümlü daemon'ların hepsini
 	// kurulu, çalışır ve sunar hâlde bırakıyordu.
 	for _, unit := range append(append([]string{}, svc.SystemNames...), svc.HelperUnits...) {
-		_ = exec.Command("systemctl", "disable", "--now", unit).Run()
+		// Catalogue entries include distribution-specific alternatives (for
+		// example redis-server/redis). Only an existing unit is an attempted
+		// mutation; once attempted, any error is state-uncertain and aborts.
+		// Katalog girdileri dağıtıma özgü alternatifler içerir (örneğin
+		// redis-server/redis). Yalnız var olan bir unit için değişiklik denenir;
+		// denendikten sonra her hata durumu belirsiz sayılır ve işlem kesilir.
+		if !ops.unitExists(unit) {
+			continue
+		}
+		if err := ops.disableUnit(unit); err != nil {
+			failUninstallDisable(resp, unit, err)
+			return nil
+		}
+		mutationApplied = true
 	}
 	if svc.SystemNamePattern != "" {
-		for _, unit := range unitsMatching(svc.SystemNamePattern) {
-			_ = exec.Command("systemctl", "disable", "--now", unit).Run()
-			if family == "apt" && packageInstalled(unit) {
-				pkgs = append(pkgs, unit)
-				if svc.Repo != nil {
-					if re, err := regexp.Compile(svc.Repo.PackagePattern); err == nil {
-						if m := re.FindStringSubmatch(unit); len(m) > 1 {
-							for _, tpl := range svc.Repo.VersionCompanions {
-								name := strings.ReplaceAll(tpl, "{v}", m[1])
-								if packageInstalled(name) {
-									pkgs = append(pkgs, name)
-								}
-							}
-						}
-					}
-				}
+		for _, unit := range ops.unitsMatching(svc.SystemNamePattern) {
+			if err := ops.disableUnit(unit); err != nil {
+				failUninstallDisable(resp, unit, err)
+				return nil
 			}
+			mutationApplied = true
 		}
 	}
 
-	if _, err := removePackages(family, pkgs); err != nil {
-		resp.Error = fmt.Sprintf("package removal failed: %v", err)
+	if _, err := ops.removePackages(family, pkgs); err != nil {
+		failUninstallRemoval(resp, err, mutationApplied)
 		return nil
 	}
 

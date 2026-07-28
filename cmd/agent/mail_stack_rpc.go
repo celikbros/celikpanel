@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +38,16 @@ type ConfigureMailStackResponse struct {
 	Error      string `json:"error,omitempty"`
 }
 
-func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse) error {
+func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureMailStackResponse) error {
+	if req == nil {
+		return fmt.Errorf("mail stack configuration request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	// A dev agent runs against CELIKPANEL_MAIL_DIR and never touches the real
 	// system config; refuse rather than half-configure.
 	// Dev agent CELIKPANEL_MAIL_DIR üzerinde çalışır ve gerçek sistem
@@ -103,17 +113,17 @@ func (a *Agent) ConfigureMailStack(_ *struct{}, resp *ConfigureMailStackResponse
 		// Kurulu olan filtreleri Postfix'in İÇİNE bağla. Bu olmadan spam
 		// filtresi posta sunucusunun yanında koşar, içinde değil — kurulu,
 		// "Çalışıyor", hiçbir şey süzmüyor (operatör, 24 Tem).
-		if err := applyMilterChain(); err != nil {
+		if err := applyMilterChain(ctx); err != nil {
 			resp.Error = fmt.Sprintf("milter wiring: %v", err)
 			return nil
 		}
-		if out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
+		if out, err := serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
 			resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
 			return nil
 		}
 	}
 	if hasDovecot {
-		if out, err := exec.Command("systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
+		if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
 			resp.Error = fmt.Sprintf("dovecot restart: %s", strings.TrimSpace(string(out)))
 			return nil
 		}
@@ -150,7 +160,20 @@ type WireMailFiltersResponse struct {
 	Error  string `json:"error,omitempty"`
 }
 
-func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) error {
+func (a *Agent) WireMailFilters(req *ServiceMutationRequest, resp *WireMailFiltersResponse) error {
+	if req == nil {
+		return fmt.Errorf("mail filter wiring request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	return wireMailFilters(ctx, resp)
+}
+
+func wireMailFilters(ctx context.Context, resp *WireMailFiltersResponse) error {
 	if _, err := exec.LookPath("postconf"); err != nil {
 		resp.Error = "Postfix is required before a mail filter can be wired"
 		return nil
@@ -176,7 +199,7 @@ func (a *Agent) WireMailFilters(_ *struct{}, resp *WireMailFiltersResponse) erro
 		}
 		ensureAliasDatabase()
 	}
-	if err := applyMilterChain(); err != nil {
+	if err := applyMilterChain(ctx); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -295,7 +318,7 @@ func postconfExpanded(key string) string {
 // "Çalışıyor"ken `smtpd_milters` BOŞTU — daemon ayaktaydı ve içinden tek bir
 // ileti geçmiyordu. Panelin kurduğu filtre gerçekten süzmelidir; her bileşen
 // için geçerli olan aynı kural.
-func applyMilterChain() error {
+func applyMilterChain(ctx context.Context) error {
 	if _, err := exec.LookPath("postconf"); err != nil {
 		return nil // no postfix here, nothing to wire
 	}
@@ -318,11 +341,11 @@ func applyMilterChain() error {
 		{"milter_protocol", "6"},
 	}
 	for _, kv := range settings {
-		if out, err := exec.Command("postconf", "-e", kv[0]+"="+kv[1]).CombinedOutput(); err != nil {
+		if out, err := serviceMutationCommand(ctx, "postconf", "-e", kv[0]+"="+kv[1]).CombinedOutput(); err != nil {
 			return fmt.Errorf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
 		}
 	}
-	_ = exec.Command("systemctl", "reload-or-restart", "postfix").Run()
+	_ = serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").Run()
 	return nil
 }
 

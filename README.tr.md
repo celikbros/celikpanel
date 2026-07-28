@@ -75,6 +75,9 @@ cd web && npm install && npm run build   # çıktı: web/dist, panel binary'si t
 
 ## Belgeler
 
+- [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.tr.md) — yalnız panel kapsamı, onay, denetim ve abonelik kapısı planı
+- [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.tr.md) — imzalı SQLite/JSON tarifleri ve platform adaptörü sınırı
+
 - [Yol Haritası](ROADMAP.tr.md) — neredeyiz, nereye gidiyoruz ve bilinçli olarak neleri yapmayacağız
 - [Kullanıcı Rolleri ve Yetkiler](docs/ROLES.tr.md) — Yönetici / Bayi / Müşteri / Ek Kullanıcı modeli
 - [Frontend Mimarisi](docs/UI_ARCHITECTURE.tr.md) — tek kalıtımsal kabuk, role göre yetki-yönlendirmeli

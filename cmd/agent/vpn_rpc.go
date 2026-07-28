@@ -87,6 +87,7 @@ func (a *Agent) GenerateVPNKeys(_ *struct{}, resp *VPNKeysResponse) error {
 }
 
 type SetupVPNRequest struct {
+	ServiceMutationBinding
 	Port int `json:"port"` // 0 → default 51820
 }
 
@@ -105,6 +106,15 @@ type SetupVPNResponse struct {
 // servisin ayakta olmasını sağlar — sunucu anahtarını asla yeniden üretmez;
 // bu, verilmiş her istemci config'ini geçersiz bırakırdı.
 func (a *Agent) SetupVPN(req *SetupVPNRequest, resp *SetupVPNResponse) error {
+	if req == nil {
+		return fmt.Errorf("VPN setup request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if _, err := exec.LookPath("wg"); err != nil {
 		resp.Error = "wireguard is not installed"
 		return nil
@@ -149,9 +159,9 @@ PostDown = %s
 	// Clients cannot go anywhere without kernel forwarding; persist + apply.
 	// Çekirdek yönlendirmesi olmadan istemciler hiçbir yere gidemez.
 	_ = os.WriteFile("/etc/sysctl.d/99-celikpanel-vpn.conf", []byte("net.ipv4.ip_forward = 1\n"), 0o644)
-	_ = exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1").Run()
+	_ = serviceMutationCommand(ctx, "sysctl", "-w", "net.ipv4.ip_forward=1").Run()
 
-	if err := a.systemdMgr.EnableNow("wg-quick@" + wgIface); err != nil {
+	if err := enableServiceForMutation(ctx, "wg-quick@"+wgIface, true); err != nil {
 		resp.Error = fmt.Sprintf("wg-quick start failed: %v", err)
 		return nil
 	}
@@ -166,6 +176,7 @@ type VPNPeerSpec struct {
 }
 
 type SyncVPNPeersRequest struct {
+	ServiceMutationBinding
 	Peers []VPNPeerSpec `json:"peers"`
 }
 
@@ -181,6 +192,15 @@ type SyncVPNPeersResponse struct {
 // yeniden yazar ve mevcut tünelleri düşürmeden canlı arayüze uygular
 // (wg syncconf sıfırlamak yerine fark uygular).
 func (a *Agent) SyncVPNPeers(req *SyncVPNPeersRequest, resp *SyncVPNPeersResponse) error {
+	if req == nil {
+		return fmt.Errorf("VPN peer sync request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	raw, err := os.ReadFile(wgConfPath())
 	if err != nil {
 		resp.Error = "VPN server is not set up"
@@ -211,10 +231,10 @@ func (a *Agent) SyncVPNPeers(req *SyncVPNPeersRequest, resp *SyncVPNPeersRespons
 	// wg-quick@wg0 picks the file up.
 	// Yalnız arayüz ayaktaysa canlı uygula; değilse dosyayı bir sonraki
 	// wg-quick@wg0 başlangıcı alır.
-	if exec.Command("wg", "show", wgIface).Run() != nil {
+	if serviceMutationCommand(ctx, "wg", "show", wgIface).Run() != nil {
 		return nil
 	}
-	stripped, err := exec.Command("wg-quick", "strip", wgIface).Output()
+	stripped, err := serviceMutationCommand(ctx, "wg-quick", "strip", wgIface).Output()
 	if err != nil {
 		resp.Error = "wg-quick strip failed"
 		return nil
@@ -231,7 +251,7 @@ func (a *Agent) SyncVPNPeers(req *SyncVPNPeersRequest, resp *SyncVPNPeersRespons
 		return nil
 	}
 	tmp.Close()
-	if out, err := exec.Command("wg", "syncconf", wgIface, tmp.Name()).CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "wg", "syncconf", wgIface, tmp.Name()).CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("wg syncconf failed: %s", firstLine(string(out)))
 		return nil
 	}

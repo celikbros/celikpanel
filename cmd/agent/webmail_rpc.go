@@ -100,13 +100,27 @@ type InstallRoundcubeResponse struct {
 	Error     string `json:"error,omitempty"`
 }
 
+type WebmailMutationRequest struct {
+	ServiceMutationBinding
+}
+
 // InstallRoundcube downloads, verifies and configures Roundcube. Idempotent:
 // an existing install returns success. On any failure the staging tree is
 // discarded so a half-install is never served.
 // InstallRoundcube, Roundcube'u indirir, doğrular ve yapılandırır.
 // Idempotent: mevcut kurulum başarı döner. Herhangi bir hatada hazırlık ağacı
 // atılır; yarım kurulum asla sunulmaz.
-func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) error {
+func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRoundcubeResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	resp.Version = roundcubeVersion
 	if roundcubeInstalled() {
 		resp.Installed = true
@@ -142,7 +156,12 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
 
-	dl, err := client.Get(url)
+	downloadReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		resp.Error = fmt.Sprintf("download request failed: %v", err)
+		return nil
+	}
+	dl, err := client.Do(downloadReq)
 	if err != nil {
 		resp.Error = fmt.Sprintf("download failed: %v", err)
 		return nil
@@ -172,7 +191,7 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 		return nil
 	}
 	defer os.RemoveAll(stage)
-	if out, err := exec.Command("tar", "-xzf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "tar", "-xzf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("extract failed: %v: %s", err, string(out))
 		return nil
 	}
@@ -244,7 +263,7 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	phpLoad := fmt.Sprintf(
 		`$db=new PDO("sqlite:%s"); $db->exec(file_get_contents("%s")); $n=$db->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")->fetchColumn(); if($n<10){fwrite(STDERR,"only $n tables");exit(1);}`,
 		dbPath, initSQL)
-	if out, err := exec.Command("php", "-r", phpLoad).CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "php", "-r", phpLoad).CombinedOutput(); err != nil {
 		_ = os.RemoveAll(webmailBaseDir)
 		if _, statErr := os.Stat(webmailBaseDir + ".old"); statErr == nil {
 			_ = os.Rename(webmailBaseDir+".old", webmailBaseDir)
@@ -262,7 +281,7 @@ func (a *Agent) InstallRoundcube(_ *struct{}, resp *InstallRoundcubeResponse) er
 	// dizinine (sqlite + journal'ı), temp'e ve logs'a YAZMALIDIR. Ağacı web
 	// grubuna ver; tam o üç dizini grup-yazılabilir yap — asla herkese değil.
 	if grp := webServerGroup(); grp != "" {
-		_ = exec.Command("chown", "-R", "root:"+grp, webmailBaseDir).Run()
+		_ = serviceMutationCommand(ctx, "chown", "-R", "root:"+grp, webmailBaseDir).Run()
 		// The base dir comes out of MkdirTemp as 0700, which locks the web
 		// group OUT — nginx then cannot traverse in to serve /webmail/
 		// (caught live: "permission denied" on stat). 0750 lets the group in
@@ -417,7 +436,17 @@ type RemoveRoundcubeResponse struct {
 // there is nothing else it could delete. Idempotent.
 // RemoveRoundcube tüm webmail ağacını siler — sabit taban dizini, silebileceği
 // başka bir şey olmadığı anlamına gelir. Idempotenttir.
-func (a *Agent) RemoveRoundcube(_ *struct{}, resp *RemoveRoundcubeResponse) error {
+func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcubeResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if err := os.RemoveAll(webmailBaseDir); err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -470,7 +499,17 @@ type ConfigureWebmailResponse struct {
 // ConfigureWebmail, Roundcube kuruluyken loopback nginx sunucusunu (yeniden)
 // yazar, değilken kaldırır — ConfigureDBTools'un aynası; panel roundcube
 // kurulunca/kaldırılınca çağırır. Idempotenttir.
-func (a *Agent) ConfigureWebmail(_ *struct{}, resp *ConfigureWebmailResponse) error {
+func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWebmailResponse) error {
+	if req == nil {
+		resp.Error = "missing request"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if _, err := exec.LookPath("nginx"); err != nil {
 		resp.Error = "nginx is not installed"
 		return nil
@@ -541,7 +580,7 @@ server {
 	// server (and every customer site) down with it.
 	// Yeniden yüklemeden önce doğrula — bozuk bir webmail yapılandırması web
 	// sunucusunu (ve tüm müşteri sitelerini) beraberinde düşürmemeli.
-	if out, err := exec.Command("nginx", "-t").CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "nginx", "-t").CombinedOutput(); err != nil {
 		_ = os.Remove(webmailConfPath)
 		resp.Error = fmt.Sprintf("nginx rejected the webmail config: %s", firstLine(string(out)))
 		return nil

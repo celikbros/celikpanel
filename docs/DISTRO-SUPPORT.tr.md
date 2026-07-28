@@ -81,7 +81,7 @@ Kurallar:
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| 📈 Netdata | Servis | `netdata` · sürüm seçimi: Netdata (repo.netdata.cloud) | `netdata` | — | — |
+| 📈 Netdata | Servis | `netdata` · sürüm seçimi: Netdata (repository.netdata.cloud) | `netdata` | — | — |
 
 ## Resmi sürümden kurulanlar (her dağıtımda aynı)
 

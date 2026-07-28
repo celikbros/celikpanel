@@ -75,6 +75,9 @@ cd web && npm install && npm run build   # output: web/dist, served by the panel
 
 ## Documentation
 
+- [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.md) — panel-only scope, confirmation, audit and subscription-gating plan
+- [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.md) — signed SQLite/JSON recipes and platform-adapter boundary
+
 - [Roadmap](ROADMAP.md) — where we are, where we're going, and what we deliberately won't do
 - [User Roles & Permissions](docs/ROLES.md) — Administrator / Reseller / Customer / Additional User model
 - [Frontend Architecture](docs/UI_ARCHITECTURE.md) — one inherited shell, capability-driven per role

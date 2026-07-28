@@ -30,9 +30,11 @@ import (
 // git" düğmesi çizer. Kodsuz ret eskidir; yeni bilinçli ret kodla doğar.
 
 type apiErrorBody struct {
-	Error  string `json:"error"`
-	Code   string `json:"code,omitempty"`
-	Action string `json:"action,omitempty"`
+	Error           string `json:"error"`
+	Code            string `json:"code,omitempty"`
+	Action          string `json:"action,omitempty"`
+	PartialSuccess  bool   `json:"partial_success,omitempty"`
+	MutationApplied bool   `json:"mutation_applied,omitempty"`
 	// Details: the refusal's evidence, one line per item — for
 	// RUNTIME_IN_USE the blocking sites ("example.com (ali)"), capped and
 	// suffixed with "+N more" by the producer. Optional and additive: old
@@ -83,6 +85,35 @@ const (
 	// "kullanımda" değil KİMİN engellediğini söylemelidir; liste Details'ta.
 	errCodeRuntimeInUse         = "RUNTIME_IN_USE"
 	errCodeServiceHasDependents = "SERVICE_HAS_DEPENDENTS"
+	// FIREWALL_SYNC_FAILED means the requested service mutation and its fresh
+	// state scan completed, but the active firewall policy did not follow.
+	// FIREWALL_SYNC_FAILED, istenen servis değişikliği ile taze durum taramasının
+	// tamamlandığını ancak etkin güvenlik duvarı politikasının bunu izleyemediğini belirtir.
+	errCodeFirewallSyncFailed = "FIREWALL_SYNC_FAILED"
+	// MAIL_FILTER_SYNC_FAILED means package removal and fresh state verification
+	// completed, but Postfix's filter chain could not be recomposed safely.
+	// MAIL_FILTER_SYNC_FAILED, paket kaldırma ve taze durum doğrulamasının
+	// tamamlandığını ancak Postfix filtre zincirinin güvenle yeniden
+	// bestelenemediğini belirtir.
+	errCodeMailFilterSyncFailed = "MAIL_FILTER_SYNC_FAILED"
+	// SERVICE_UNINSTALL_PARTIAL means the service stop/disable mutation reached
+	// the host, but package purge failed. A fresh scan is already available.
+	// SERVICE_UNINSTALL_PARTIAL, servis durdurma/devre dışı bırakma
+	// değişikliğinin makineye ulaştığını ancak paket kaldırmanın başarısız
+	// olduğunu belirtir. Taze tarama zaten kullanılabilir.
+	errCodeServiceUninstallPartial = "SERVICE_UNINSTALL_PARTIAL"
+	// SERVICE_STATE_REFRESH_FAILED means the requested service mutation
+	// completed, but the mandatory follow-up probe failed. The caller must not
+	// mistake stale cache data for the result of the action.
+	// SERVICE_STATE_REFRESH_FAILED, istenen servis değişikliğinin tamamlandığı
+	// ancak zorunlu takip yoklamasının başarısız olduğu anlamına gelir. Çağıran,
+	// bayat önbellek verisini işlemin sonucu sanmamalıdır.
+	errCodeServiceStateRefreshFailed = "SERVICE_STATE_REFRESH_FAILED"
+	// SERVICE_STATE_UNVERIFIED means persisted scan bytes could not be decoded
+	// as a verified snapshot; fabricated not-installed rows must not be served.
+	// SERVICE_STATE_UNVERIFIED, kalıcı tarama baytlarının doğrulanmış snapshot
+	// olarak çözülemediğini belirtir; uydurma kurulu-değil satırları sunulamaz.
+	errCodeServiceStateUnverified = "SERVICE_STATE_UNVERIFIED"
 	// RUNTIME_VERSION_REQUIRED: a node site must name a panel-installed
 	// version — the "system interpreter" escape is closed (B3d): the panel
 	// only operates what it installed.
@@ -126,6 +157,72 @@ func writeCodedErrorDetails(w http.ResponseWriter, status int, code, message, ac
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action, Details: details})
+}
+
+// writeServiceStateRefreshFailed reports the deliberately asymmetric result:
+// the host mutation is complete, but the cache still represents the previous
+// verified scan. Clients must lock further mutations until a fresh scan wins.
+// writeServiceStateRefreshFailed, bilinçli olarak asimetrik sonucu bildirir:
+// makine değişikliği tamamlanmıştır ancak önbellek önceki doğrulanmış taramayı
+// temsil eder. İstemci, taze tarama başarılı olana dek yeni değişiklikleri
+// kilitlemelidir.
+func writeServiceStateRefreshFailed(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "service action completed, but the refreshed service state could not be verified",
+		Code:            errCodeServiceStateRefreshFailed,
+		PartialSuccess:  true,
+		MutationApplied: true,
+	})
+}
+
+// writeServiceFirewallSyncFailed reports a verified partial success: the
+// service state is fresh, while the firewall still needs operator attention.
+// writeServiceFirewallSyncFailed, doğrulanmış kısmi başarıyı bildirir: servis
+// durumu tazedir ancak güvenlik duvarı hâlâ operatör müdahalesi gerektirir.
+func writeServiceFirewallSyncFailed(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "service action completed, but the active firewall policy could not be synchronized",
+		Code:            errCodeFirewallSyncFailed,
+		Action:          "/services",
+		PartialSuccess:  true,
+		MutationApplied: true,
+	})
+}
+
+// writeServiceMailFilterSyncFailed reports verified package state while making
+// the unsafe mail-flow follow-up impossible to overlook.
+// writeServiceMailFilterSyncFailed, doğrulanmış paket durumunu bildirirken
+// güvenli olmayan posta akışı takibini gözden kaçırılamaz hâle getirir.
+func writeServiceMailFilterSyncFailed(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "service removal completed, but the Postfix mail-filter chain could not be synchronized",
+		Code:            errCodeMailFilterSyncFailed,
+		Action:          "/services",
+		PartialSuccess:  true,
+		MutationApplied: true,
+	})
+}
+
+// writeServiceUninstallPartial reports a verified host mutation whose package
+// purge did not finish. It never exposes package-manager output to the browser.
+// writeServiceUninstallPartial, paket kaldırması tamamlanmayan doğrulanmış
+// makine değişikliğini bildirir. Paket yöneticisi çıktısını tarayıcıya açmaz.
+func writeServiceUninstallPartial(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "the service was stopped or disabled, but its packages could not be fully removed",
+		Code:            errCodeServiceUninstallPartial,
+		Action:          "/services",
+		PartialSuccess:  true,
+		MutationApplied: true,
+	})
 }
 
 // writeServerError logs the internal error and returns a generic 500.

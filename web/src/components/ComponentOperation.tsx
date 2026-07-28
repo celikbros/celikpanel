@@ -16,15 +16,22 @@ import { ErrorBanner } from './ui';
 
 const OPERATION_ID_KEY = 'celikpanel.components.operation-id';
 const OPERATION_LABEL_KEY = 'celikpanel.components.operation-label';
+const OPERATION_RECOVERY_KEY = 'celikpanel.components.operation-recovery';
+const OPERATION_RECOVERY_VERSION = 2;
 const POLL_DELAY_MS = 1500;
 const RETRY_DELAY_MS = 3000;
 const RECOVERY_LOOKUP_GRACE_MS = 15000;
+const BUSY_EXACT_LOOKUP_GRACE_MS = 3000;
+const ACTIVE_DISCOVERY_TIMEOUT_MS = 5000;
 const RECENT_OPERATION_MS = 2 * 60 * 1000;
+const ERROR_CODE_OPERATION_BUSY = 'service_operation_busy';
+const OPERATION_ID_RE = /^[a-f0-9]{32}$/;
 
 type OperationStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
 export interface ComponentOperation {
     id: string;
+    request_id?: string;
     kind: string;
     service_id: string;
     package_name?: string;
@@ -48,6 +55,16 @@ export interface InstallOperationRequest {
     version?: string;
 }
 
+export interface OperationRecoveryMarker {
+    version: 2;
+    request_id: string;
+    service_id: string;
+    label: string;
+    package_name?: string;
+    runtime_version?: string;
+    created_at: number;
+}
+
 interface ComponentOperationContextValue {
     operation: ComponentOperation | null;
     locked: boolean;
@@ -59,6 +76,113 @@ interface ComponentOperationContextValue {
 
 const ComponentOperationContext = createContext<ComponentOperationContextValue | null>(null);
 
+// A terminal operation may unlock the page only after every field consumed by
+// the Components screen has a valid shape. A bare array is not verification.
+// Terminal işlem, sayfayı yalnız Bileşenler ekranının kullandığı her alan
+// geçerli biçimdeyse açabilir. Yalnızca bir dizi gelmesi doğrulama değildir.
+function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (
+        !Array.isArray(payload.services)
+        || !payload.services.every((entry) => {
+            if (!entry || typeof entry !== 'object') return false;
+            const service = entry as Record<string, unknown>;
+            return (
+                typeof service.id === 'string'
+                && typeof service.name === 'string'
+                && typeof service.description === 'string'
+                && typeof service.icon === 'string'
+                && typeof service.category === 'string'
+                && typeof service.status === 'string'
+                && typeof service.is_installed === 'boolean'
+                && Array.isArray(service.versions)
+                && service.versions.every((version) => typeof version === 'string')
+                && (service.unit === undefined || typeof service.unit === 'string')
+                && (
+                    service.instances === undefined
+                    || (
+                        Array.isArray(service.instances)
+                        && service.instances.every((candidate) => {
+                            if (!candidate || typeof candidate !== 'object') return false;
+                            const instance = candidate as Record<string, unknown>;
+                            return (
+                                typeof instance.version === 'string'
+                                && typeof instance.managed === 'boolean'
+                                && (instance.unit === undefined || typeof instance.unit === 'string')
+                                && (instance.path === undefined || typeof instance.path === 'string')
+                                && (instance.status === undefined || typeof instance.status === 'string')
+                                && (instance.size_bytes === undefined || typeof instance.size_bytes === 'number')
+                            );
+                        })
+                    )
+                )
+                && (service.conflict_with === undefined || typeof service.conflict_with === 'string')
+                && (service.not_offered === undefined || typeof service.not_offered === 'boolean')
+                && (service.not_offered_reason === undefined || typeof service.not_offered_reason === 'string')
+                && (
+                    service.requires_missing === undefined
+                    || (
+                        Array.isArray(service.requires_missing)
+                        && service.requires_missing.every((requirement) => typeof requirement === 'string')
+                    )
+                )
+                && (
+                    service.kind === undefined
+                    || service.kind === 'service'
+                    || service.kind === 'runtime'
+                    || service.kind === 'tool'
+                )
+                && (
+                    service.packages === undefined
+                    || (
+                        Array.isArray(service.packages)
+                        && service.packages.every((packageName) => typeof packageName === 'string')
+                    )
+                )
+                && (service.repair_package === undefined || typeof service.repair_package === 'string')
+                && (service.repair_available === undefined || typeof service.repair_available === 'boolean')
+            );
+        })
+        || typeof payload.scanned_at !== 'string'
+        || !Number.isFinite(Date.parse(payload.scanned_at))
+    ) {
+        return null;
+    }
+    return {
+        services: payload.services as Record<string, unknown>[],
+        scanned_at: payload.scanned_at,
+    };
+}
+
+function snapshotConfirmsTerminalOperation(
+    snapshot: ManagedServicesSnapshot,
+    operation: ComponentOperation,
+): boolean {
+    const scannedAt = Date.parse(snapshot.scanned_at || '');
+    const finishedAt = Date.parse(operation.finished_at || '');
+    if (!Number.isFinite(scannedAt) || !Number.isFinite(finishedAt) || scannedAt < finishedAt) {
+        return false;
+    }
+    if (operation.status === 'failed') return true;
+    if (operation.status !== 'succeeded') return false;
+
+    const service = snapshot.services.find((candidate) => candidate.id === operation.service_id);
+    if (!service || service.is_installed !== true) return false;
+    if (operation.kind !== 'runtime_install') return operation.kind === 'service_install';
+
+    const expectedVersion = operation.package_name || '';
+    if (!expectedVersion) return false;
+    const versions = Array.isArray(service.versions) ? service.versions : [];
+    const instances = Array.isArray(service.instances) ? service.instances : [];
+    return versions.includes(expectedVersion)
+        || instances.some((candidate) => (
+            candidate
+            && typeof candidate === 'object'
+            && (candidate as Record<string, unknown>).version === expectedVersion
+        ));
+}
+
 function readSessionValue(key: string): string {
     try {
         return sessionStorage.getItem(key) ?? '';
@@ -67,13 +191,17 @@ function readSessionValue(key: string): string {
     }
 }
 
-function storeOperation(id: string, label: string) {
+function storeOperation(id: string, label: string): boolean {
     try {
         sessionStorage.setItem(OPERATION_ID_KEY, id);
         sessionStorage.setItem(OPERATION_LABEL_KEY, label);
+        return true;
     } catch {
         // Restricted storage does not stop the live operation. The current
         // page can still poll it; only reload reattachment is unavailable.
+        // Kısıtlı depolama canlı işlemi durdurmaz. Geçerli sayfa işlemi
+        // yoklamayı sürdürür; yalnız yenileme sonrası yeniden bağlanma yoktur.
+        return false;
     }
 }
 
@@ -81,9 +209,120 @@ function clearStoredOperation() {
     try {
         sessionStorage.removeItem(OPERATION_ID_KEY);
         sessionStorage.removeItem(OPERATION_LABEL_KEY);
+        sessionStorage.removeItem(OPERATION_RECOVERY_KEY);
     } catch {
         // Nothing else is required when storage is unavailable.
+        // Depolama kullanılamadığında başka bir işlem gerekmez.
     }
+}
+
+function boundedMarkerString(value: unknown, maxLength: number, required = false): string | null {
+    if (value === undefined && !required) return '';
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    if ((required && !normalized) || normalized.length > maxLength) return null;
+    return normalized;
+}
+
+function createOperationRequestID(): string | null {
+    try {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    } catch {
+        return null;
+    }
+}
+
+export function createOperationRecoveryMarker(
+    request: InstallOperationRequest,
+    createdAt = Date.now(),
+    requestID = createOperationRequestID(),
+): OperationRecoveryMarker | null {
+    const serviceID = boundedMarkerString(request.serviceId, 128, true);
+    const label = boundedMarkerString(request.name, 256, true);
+    const packageName = boundedMarkerString(request.package, 256);
+    const runtimeVersion = boundedMarkerString(request.version, 128);
+    if (
+        requestID === null
+        || !/^[a-f0-9]{32}$/.test(requestID)
+        || serviceID === null
+        || label === null
+        || packageName === null
+        || runtimeVersion === null
+        || (packageName && runtimeVersion)
+        || !Number.isFinite(createdAt)
+        || createdAt <= 0
+    ) {
+        return null;
+    }
+    return {
+        version: OPERATION_RECOVERY_VERSION,
+        request_id: requestID,
+        service_id: serviceID,
+        label,
+        ...(packageName ? { package_name: packageName } : {}),
+        ...(runtimeVersion ? { runtime_version: runtimeVersion } : {}),
+        created_at: createdAt,
+    };
+}
+
+export function decodeOperationRecoveryMarker(raw: string): OperationRecoveryMarker | null {
+    let candidate: unknown;
+    try {
+        candidate = JSON.parse(raw);
+    } catch {
+        return null;
+    }
+    if (!candidate || typeof candidate !== 'object') return null;
+    const value = candidate as Record<string, unknown>;
+    if (value.version !== OPERATION_RECOVERY_VERSION) return null;
+    if (
+        (value.package_name !== undefined && typeof value.package_name !== 'string')
+        || (value.runtime_version !== undefined && typeof value.runtime_version !== 'string')
+    ) {
+        return null;
+    }
+    return createOperationRecoveryMarker({
+        serviceId: typeof value.service_id === 'string' ? value.service_id : '',
+        name: typeof value.label === 'string' ? value.label : '',
+        package: typeof value.package_name === 'string' ? value.package_name : undefined,
+        version: typeof value.runtime_version === 'string' ? value.runtime_version : undefined,
+    }, typeof value.created_at === 'number' ? value.created_at : Number.NaN,
+    typeof value.request_id === 'string' ? value.request_id : null);
+}
+
+function readStoredRecoveryMarker(): OperationRecoveryMarker | null {
+    const raw = readSessionValue(OPERATION_RECOVERY_KEY);
+    if (!raw) return null;
+    const marker = decodeOperationRecoveryMarker(raw);
+    if (!marker) {
+        try {
+            sessionStorage.removeItem(OPERATION_RECOVERY_KEY);
+        } catch {
+            // An invalid marker is ignored even when restricted storage cannot be cleaned.
+            // Kısıtlı depolama temizlenemese bile geçersiz işaretçi yok sayılır.
+        }
+    }
+    return marker;
+}
+
+function storeRecoveryMarker(marker: OperationRecoveryMarker): boolean {
+    try {
+        sessionStorage.setItem(OPERATION_RECOVERY_KEY, JSON.stringify(marker));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function requestFromRecoveryMarker(marker: OperationRecoveryMarker): InstallOperationRequest {
+    return {
+        serviceId: marker.service_id,
+        name: marker.label,
+        package: marker.package_name,
+        version: marker.runtime_version,
+    };
 }
 
 function decodeOperation(payload: unknown): ComponentOperation | null {
@@ -96,7 +335,11 @@ function decodeOperation(payload: unknown): ComponentOperation | null {
     const status = candidate.status;
     if (
         typeof candidate.id !== 'string'
-        || !candidate.id
+        || !OPERATION_ID_RE.test(candidate.id)
+        || (
+            candidate.request_id !== undefined
+            && (typeof candidate.request_id !== 'string' || !OPERATION_ID_RE.test(candidate.request_id))
+        )
         || (status !== 'queued' && status !== 'running' && status !== 'succeeded' && status !== 'failed')
     ) {
         return null;
@@ -104,6 +347,7 @@ function decodeOperation(payload: unknown): ComponentOperation | null {
 
     return {
         id: candidate.id,
+        request_id: typeof candidate.request_id === 'string' ? candidate.request_id : undefined,
         kind: typeof candidate.kind === 'string' ? candidate.kind : 'install',
         service_id: typeof candidate.service_id === 'string' ? candidate.service_id : '',
         package_name: typeof candidate.package_name === 'string' ? candidate.package_name : undefined,
@@ -116,19 +360,6 @@ function decodeOperation(payload: unknown): ComponentOperation | null {
     };
 }
 
-function expectedOperationKind(request: InstallOperationRequest): string {
-    return request.version ? 'runtime_install' : 'service_install';
-}
-
-function expectedOperationTarget(request: InstallOperationRequest): string {
-    return (request.version || request.package || '').trim().toLowerCase();
-}
-
-function operationMatchesRequest(operation: ComponentOperation, request: InstallOperationRequest): boolean {
-    if (operation.kind !== expectedOperationKind(request)) return false;
-    if (operation.service_id.trim().toLowerCase() !== request.serviceId.trim().toLowerCase()) return false;
-    return (operation.package_name || '').trim().toLowerCase() === expectedOperationTarget(request);
-}
 
 function operationDisplayLabel(operation: ComponentOperation): string {
     const serviceID = operation.service_id.trim();
@@ -152,6 +383,56 @@ function isRecentTerminalOperation(operation: ComponentOperation, referenceTime:
     const timestamp = Date.parse(operation.finished_at || operation.started_at);
     return Number.isFinite(timestamp)
         && Math.abs(referenceTime - timestamp) <= RECENT_OPERATION_MS;
+}
+
+export function operationMatchesRecoveryMarker(
+    operation: ComponentOperation,
+    marker: OperationRecoveryMarker,
+): boolean {
+    const expectedTarget = marker.runtime_version || marker.package_name || '';
+    return operation.request_id === marker.request_id
+        && operation.kind === (marker.runtime_version ? 'runtime_install' : 'service_install')
+        && operation.service_id === marker.service_id
+        && (operation.package_name || '') === expectedTarget;
+}
+
+export function shouldAdoptOperationFromRecoveryMarker(
+    operation: ComponentOperation,
+    marker: OperationRecoveryMarker,
+    referenceTime: number,
+): boolean {
+    if (!operationMatchesRecoveryMarker(operation, marker)) return false;
+    return operation.status === 'queued'
+        || operation.status === 'running'
+        || isRecentTerminalOperation(operation, referenceTime);
+}
+
+// recoveryMarkerForOperation creates the durable marker required before a
+// globally active operation can be adopted by a tab that did not start it.
+// recoveryMarkerForOperation, işlemi başlatmamış bir sekmenin global etkin
+// işlemi benimsemesinden önce gereken kalıcı işaretçiyi üretir.
+function recoveryMarkerForOperation(operation: ComponentOperation): OperationRecoveryMarker | null {
+    if (
+        !operation.request_id
+        || !OPERATION_ID_RE.test(operation.request_id)
+        || (operation.kind !== 'service_install' && operation.kind !== 'runtime_install')
+        || !operation.service_id
+        || (operation.kind === 'runtime_install' && !operation.package_name)
+    ) {
+        return null;
+    }
+    const startedAt = Date.parse(operation.started_at);
+    return createOperationRecoveryMarker(
+        {
+            serviceId: operation.service_id,
+            name: operationDisplayLabel(operation),
+            ...(operation.kind === 'runtime_install'
+                ? { version: operation.package_name }
+                : { package: operation.package_name }),
+        },
+        Number.isFinite(startedAt) && startedAt > 0 ? startedAt : Date.now(),
+        operation.request_id,
+    );
 }
 
 function waitForRetry(): Promise<void> {
@@ -183,6 +464,16 @@ function operationError(value: unknown, fallback: string): ApiError {
 function restoredOperation(): ComponentOperation | null {
     const id = readSessionValue(OPERATION_ID_KEY);
     if (!id) return null;
+    if (!OPERATION_ID_RE.test(id)) {
+        try {
+            sessionStorage.removeItem(OPERATION_ID_KEY);
+            sessionStorage.removeItem(OPERATION_LABEL_KEY);
+        } catch {
+            // Keep a separately valid recovery marker even when the operation id is corrupt.
+            // İşlem kimliği bozuk olsa bile ayrıca geçerli olan kurtarma işaretçisini koru.
+        }
+        return null;
+    }
     return {
         id,
         kind: 'install',
@@ -195,16 +486,34 @@ function restoredOperation(): ComponentOperation | null {
 
 export function ComponentOperationProvider({ children }: { children: ReactNode }) {
     const { t } = useI18n();
-    const [operation, setOperation] = useState<ComponentOperation | null>(restoredOperation);
-    const [label, setLabel] = useState(() => readSessionValue(OPERATION_LABEL_KEY));
-    const [submitting, setSubmitting] = useState(false);
+    const [initialSession] = useState(() => ({
+        operation: restoredOperation(),
+        recoveryMarker: readStoredRecoveryMarker(),
+    }));
+    const [operation, setOperation] = useState<ComponentOperation | null>(initialSession.operation);
+    const [label, setLabel] = useState(() => (
+        readSessionValue(OPERATION_LABEL_KEY) || initialSession.recoveryMarker?.label || ''
+    ));
+    const [submitting, setSubmitting] = useState(
+        () => initialSession.operation === null && initialSession.recoveryMarker !== null,
+    );
+    const [recoveringRequest, setRecoveringRequest] = useState(
+        () => initialSession.operation === null && initialSession.recoveryMarker !== null,
+    );
+    const [discoveringActive, setDiscoveringActive] = useState(
+        () => initialSession.operation === null && initialSession.recoveryMarker === null,
+    );
     const [refreshingCatalog, setRefreshingCatalog] = useState(false);
     const [connectionInterrupted, setConnectionInterrupted] = useState(false);
     const [failure, setFailure] = useState<ApiError | null>(null);
     const [catalogSnapshot, setCatalogSnapshot] = useState<ManagedServicesSnapshot | null>(null);
-    const locked = submitting || operation !== null || refreshingCatalog;
+    const locked = discoveringActive || submitting || operation !== null || refreshingCatalog;
     const lockedRef = useRef(locked);
     const recoveryGenerationRef = useRef(0);
+    const recoveryMarkerRef = useRef<OperationRecoveryMarker | null>(initialSession.recoveryMarker);
+    const adoptedOperationIDRef = useRef(initialSession.operation?.id || '');
+    const activeSyncInFlightRef = useRef(false);
+    const focusBeforeLockRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         lockedRef.current = locked;
@@ -217,6 +526,9 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
     // The overlay is portalled outside #root. Making #root inert therefore
     // blocks pointer, focus and keyboard interaction everywhere underneath
     // while the status dialog remains accessible.
+    // Katman #root dışına taşınır. Bu yüzden #root'u inert yapmak, durum
+    // iletişim kutusu erişilebilir kalırken alttaki işaretçi, odak ve klavyeyi
+    // engeller.
     useEffect(() => {
         if (!locked) return;
         const root = document.getElementById('root');
@@ -229,41 +541,133 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             if (!hadInert) root.removeAttribute('inert');
             if (previousBusy === null) root.removeAttribute('aria-busy');
             else root.setAttribute('aria-busy', previousBusy);
+            const focusTarget = focusBeforeLockRef.current;
+            focusBeforeLockRef.current = null;
+            if (focusTarget?.isConnected) focusTarget.focus();
         };
     }, [locked]);
 
     const finishFailure = (error: ApiError) => {
         clearStoredOperation();
+        recoveryMarkerRef.current = null;
+        adoptedOperationIDRef.current = '';
         lockedRef.current = false;
         setFailure(error);
         setOperation(null);
         setSubmitting(false);
+        setRecoveringRequest(false);
+        setDiscoveringActive(false);
         setRefreshingCatalog(false);
         setConnectionInterrupted(false);
     };
 
-    const adoptOperation = (next: ComponentOperation, nextLabel: string) => {
+    const adoptOperation = (
+        next: ComponentOperation,
+        nextLabel: string,
+        marker: OperationRecoveryMarker | null,
+    ): boolean => {
+        if (marker === null || !operationMatchesRecoveryMarker(next, marker)) return false;
         lockedRef.current = true;
+        recoveryMarkerRef.current = marker;
+        adoptedOperationIDRef.current = next.id;
+        storeRecoveryMarker(marker);
         storeOperation(next.id, nextLabel);
         setLabel(nextLabel);
         setFailure(null);
         setConnectionInterrupted(false);
+        setRecoveringRequest(false);
+        setSubmitting(false);
         setOperation(next);
+        return true;
+    };
+
+    const recoverActiveOperation = async (): Promise<'adopted' | 'retry' | 'auth'> => {
+        let response: Response;
+        try {
+            response = await fetch(
+                '/api/v1/service/operation?active=1',
+                { cache: 'no-store' },
+            );
+        } catch {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+        if (response.status === 401) {
+            setConnectionInterrupted(true);
+            return 'auth';
+        }
+        if (!response.ok) {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+
+        let payload: unknown;
+        try {
+            payload = await response.json();
+        } catch {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+        const envelope = payload && typeof payload === 'object'
+            ? payload as Record<string, unknown>
+            : null;
+        if (envelope?.operation === null) {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+        const next = decodeOperation(payload);
+        if (next === null || (next.status !== 'queued' && next.status !== 'running')) {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+        const marker = recoveryMarkerForOperation(next);
+        if (marker === null) {
+            setConnectionInterrupted(true);
+            return 'retry';
+        }
+
+        // Storage can be unavailable in a restricted browser. The live tab can
+        // still remain safe by adopting in memory; a reload rediscovers the
+        // server-wide active operation before enabling mutations.
+        // Kısıtlı bir tarayıcıda depolama kullanılamayabilir. Canlı sekme işlemi
+        // bellekte benimseyerek güvenli kalır; sayfa yenilendiğinde değişiklikler
+        // açılmadan önce sunucu genelindeki etkin işlem yeniden bulunur.
+        storeRecoveryMarker(marker);
+        recoveryMarkerRef.current = marker;
+        return adoptOperation(next, operationDisplayLabel(next), marker)
+            ? 'adopted'
+            : 'retry';
     };
 
     // A failed POST response is not proof that the POST failed. Keep the
     // panel locked while the authoritative operation endpoint is temporarily
     // unreachable, and attach to the operation once its identity is known.
+    // Başarısız POST yanıtı POST'un başarısız olduğunu kanıtlamaz. Yetkili
+    // işlem ucu geçici olarak erişilemezken paneli kilitli tut ve kimliği
+    // öğrenilince işleme bağlan.
     const recoverCurrentOperation = async (
         request: InstallOperationRequest,
-        mode: 'busy' | 'indeterminate',
+        mode: 'busy' | 'indeterminate' | 'marker',
         generation: number,
     ): Promise<boolean> => {
         const graceDeadline = Date.now() + RECOVERY_LOOKUP_GRACE_MS;
+        const busyExactDeadline = Date.now() + BUSY_EXACT_LOOKUP_GRACE_MS;
         while (recoveryGenerationRef.current === generation) {
+            const marker = recoveryMarkerRef.current;
+            if (marker === null) {
+                const activeResult = await recoverActiveOperation();
+                if (activeResult === 'adopted') return true;
+                if (activeResult === 'auth') return false;
+                await waitForRetry();
+                continue;
+            }
+
             let response: Response;
             try {
-                response = await fetch('/api/v1/service/operation', { cache: 'no-store' });
+                response = await fetch(
+                    `/api/v1/service/operation?request_id=${encodeURIComponent(marker.request_id)}`,
+                    { cache: 'no-store' },
+                );
             } catch {
                 setConnectionInterrupted(true);
                 await waitForRetry();
@@ -271,69 +675,352 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             }
 
             if (!response.ok) {
+                // AuthGate owns 401 handling and preserves the durable marker.
+                // AuthGate 401 işlemini yönetir ve kalıcı işaretçiyi korur.
+                if (response.status === 401) {
+                    setConnectionInterrupted(true);
+                    return false;
+                }
                 if (response.status === 429 || response.status >= 500) {
                     setConnectionInterrupted(true);
                     await waitForRetry();
                     continue;
                 }
-                const error = await readApiError(response);
-                finishFailure({
-                    ...error,
-                    message: error.message || t('services.operation.startFailed'),
-                });
-                return false;
-            }
+                if (response.status === 404) {
+                    if (mode === 'busy' && Date.now() < busyExactDeadline) {
+                        setConnectionInterrupted(false);
+                        await waitForRetry();
+                        continue;
+                    }
+                    if (mode !== 'busy') {
+                        if (Date.now() < graceDeadline) {
+                            setConnectionInterrupted(false);
+                            await waitForRetry();
+                            continue;
+                        }
+                    }
 
-            let next: ComponentOperation | null;
-            try {
-                next = decodeOperation(await response.json());
-            } catch {
-                finishFailure({ message: t('services.operation.invalidResponse') });
-                return false;
-            }
+                    let activeResponse: Response;
+                    try {
+                        activeResponse = await fetch(
+                            '/api/v1/service/operation?active=1',
+                            { cache: 'no-store' },
+                        );
+                    } catch {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    if (activeResponse.status === 401) {
+                        setConnectionInterrupted(true);
+                        return false;
+                    }
+                    if (activeResponse.status === 429 || activeResponse.status >= 500) {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    if (!activeResponse.ok) {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
 
-            if (next) {
-                const matching = operationMatchesRequest(next, request);
-                const active = next.status === 'queued' || next.status === 'running';
-                const recentTerminal = isRecentTerminalOperation(next, responseReferenceTime(response));
-                if (active || (recentTerminal && (mode === 'busy' || matching))) {
-                    // A 409 means the requested POST was rejected. Even if the
-                    // existing target looks similar, describe that operation
-                    // from its own persisted fields rather than the clicked UI.
-                    const nextLabel = mode === 'busy' || !matching
-                        ? operationDisplayLabel(next)
-                        : request.name;
-                    adoptOperation(next, nextLabel);
-                    return true;
+                    let activePayload: unknown;
+                    try {
+                        activePayload = await activeResponse.json();
+                    } catch {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    const activeEnvelope = activePayload && typeof activePayload === 'object'
+                        ? activePayload as Record<string, unknown>
+                        : null;
+                    if (activeEnvelope?.operation === null) {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    const activeOperation = decodeOperation(activePayload);
+                    if (
+                        activeOperation === null
+                        || (activeOperation.status !== 'queued' && activeOperation.status !== 'running')
+                    ) {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    const activeMarker = recoveryMarkerForOperation(activeOperation);
+                    if (activeMarker === null) {
+                        setConnectionInterrupted(true);
+                        await waitForRetry();
+                        continue;
+                    }
+                    storeRecoveryMarker(activeMarker);
+                    recoveryMarkerRef.current = activeMarker;
+                    return adoptOperation(
+                        activeOperation,
+                        operationDisplayLabel(activeOperation),
+                        activeMarker,
+                    );
                 }
+                setConnectionInterrupted(true);
+                await waitForRetry();
+                continue;
+            }
+
+            let payload: unknown;
+            try {
+                payload = await response.json();
+            } catch {
+                setConnectionInterrupted(true);
+                await waitForRetry();
+                continue;
+            }
+            const next = decodeOperation(payload);
+            if (
+                next !== null
+                && shouldAdoptOperationFromRecoveryMarker(
+                    next,
+                    marker,
+                    responseReferenceTime(response),
+                )
+            ) {
+                return adoptOperation(next, request.name, marker);
             }
 
             setConnectionInterrupted(false);
             if (Date.now() >= graceDeadline) {
-                finishFailure({ message: t('services.operation.startFailed') });
-                return false;
+                setConnectionInterrupted(true);
             }
             await waitForRetry();
         }
         return false;
     };
 
-    const startInstall = async (request: InstallOperationRequest): Promise<boolean> => {
-        if (lockedRef.current) return false;
-        const recoveryGeneration = ++recoveryGenerationRef.current;
+    // A POST can reach the server while its response is lost. The marker was
+    // saved before that POST, so a reload/login resumes discovery instead of
+    // offering a second Install click. Only a matching active or recent
+    // operation is adopted; this browser marker can never start an operation.
+    //
+    // POST sunucuya ulaşıp yanıtı kaybolabilir. İşaretçi POST'tan önce
+    // kaydedildiği için yenileme/giriş sonrası ikinci Kur tıklaması sunmak yerine
+    // keşif sürer. Yalnız eşleşen etkin veya yakın tarihli işlem benimsenir;
+    // tarayıcı işaretçisi hiçbir zaman işlem başlatamaz.
+    useEffect(() => {
+        const marker = recoveryMarkerRef.current;
+        if (initialSession.operation !== null || marker === null) return;
+        const request = requestFromRecoveryMarker(marker);
+        const generation = ++recoveryGenerationRef.current;
         lockedRef.current = true;
         setFailure(null);
         setLabel(request.name);
         setSubmitting(true);
+        setRecoveringRequest(true);
+        void recoverCurrentOperation(request, 'marker', generation).finally(() => {
+            if (recoveryGenerationRef.current !== generation) return;
+            setRecoveringRequest(false);
+            if (recoveryMarkerRef.current === null) setSubmitting(false);
+        });
+        // The initial durable session state owns exactly one recovery lookup.
+        // İlk kalıcı oturum durumu tam olarak bir kurtarma sorgusuna sahiptir.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        let activeDiscoveryController: AbortController | null = null;
+        let activeDiscoveryRetryTimer: number | undefined;
+
+        const syncActiveOperation = async (retrying = false) => {
+            if (
+                (lockedRef.current && !retrying)
+                || recoveryMarkerRef.current !== null
+                || activeSyncInFlightRef.current
+            ) {
+                return;
+            }
+            if (!lockedRef.current && document.activeElement instanceof HTMLElement) {
+                focusBeforeLockRef.current = document.activeElement;
+            }
+            activeSyncInFlightRef.current = true;
+            lockedRef.current = true;
+            setDiscoveringActive(true);
+            let adopted = false;
+            let verifiedNoActive = false;
+            let shouldRetry = false;
+            const controller = new AbortController();
+            activeDiscoveryController = controller;
+            const timeout = window.setTimeout(
+                () => controller.abort(),
+                ACTIVE_DISCOVERY_TIMEOUT_MS,
+            );
+            try {
+                let response: Response;
+                try {
+                    response = await fetch(
+                        '/api/v1/service/operation?active=1',
+                        { cache: 'no-store', signal: controller.signal },
+                    );
+                } catch {
+                    if (!cancelled) {
+                        setFailure({ message: t('services.operation.activeCheckFailed') });
+                        setConnectionInterrupted(true);
+                        shouldRetry = true;
+                    }
+                    return;
+                }
+                if (cancelled) return;
+                if (response.status === 401) {
+                    setConnectionInterrupted(true);
+                    return;
+                }
+                if (!response.ok) {
+                    setFailure({ message: t('services.operation.activeCheckFailed') });
+                    setConnectionInterrupted(true);
+                    shouldRetry = true;
+                    return;
+                }
+
+                let payload: unknown;
+                try {
+                    payload = await response.json();
+                } catch {
+                    if (!cancelled) {
+                        setFailure({ message: t('services.operation.invalidResponse') });
+                        setConnectionInterrupted(true);
+                        shouldRetry = true;
+                    }
+                    return;
+                }
+                const envelope = payload && typeof payload === 'object'
+                    ? payload as Record<string, unknown>
+                    : null;
+                if (envelope?.operation === null) {
+                    verifiedNoActive = true;
+                    return;
+                }
+
+                const next = decodeOperation(payload);
+                if (
+                    next === null
+                    || (next.status !== 'queued' && next.status !== 'running')
+                ) {
+                    if (!cancelled) {
+                        setFailure({ message: t('services.operation.invalidResponse') });
+                        setConnectionInterrupted(true);
+                        shouldRetry = true;
+                    }
+                    return;
+                }
+                const marker = recoveryMarkerForOperation(next);
+                if (marker === null) {
+                    if (!cancelled) {
+                        setFailure({ message: t('services.operation.recoveryStorageUnavailable') });
+                        setConnectionInterrupted(true);
+                        shouldRetry = true;
+                    }
+                    return;
+                }
+                if (cancelled) return;
+                storeRecoveryMarker(marker);
+                recoveryMarkerRef.current = marker;
+                adopted = adoptOperation(next, operationDisplayLabel(next), marker);
+                if (!adopted) {
+                    setConnectionInterrupted(true);
+                    shouldRetry = true;
+                }
+            } finally {
+                window.clearTimeout(timeout);
+                if (activeDiscoveryController === controller) activeDiscoveryController = null;
+                activeSyncInFlightRef.current = false;
+                if (adopted) {
+                    if (!cancelled) setDiscoveringActive(false);
+                } else if (verifiedNoActive) {
+                    lockedRef.current = false;
+                    if (!cancelled) {
+                        setDiscoveringActive(false);
+                        setConnectionInterrupted(false);
+                        setFailure(null);
+                    }
+                } else {
+                    // No valid "operation: null" or adoptable operation means
+                    // absence was not proved. Keep the page inert and retry.
+                    // Geçerli "operation: null" veya devralınabilir işlem yoksa
+                    // yokluk kanıtlanmamıştır. Sayfayı etkisiz tut ve yeniden dene.
+                    lockedRef.current = true;
+                    if (!cancelled) {
+                        setDiscoveringActive(true);
+                        if (shouldRetry) {
+                            activeDiscoveryRetryTimer = window.setTimeout(
+                                () => void syncActiveOperation(true),
+                                RETRY_DELAY_MS,
+                            );
+                        }
+                    }
+                }
+            }
+        };
+
+        const onFocus = () => {
+            void syncActiveOperation();
+        };
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') void syncActiveOperation();
+        };
+
+        void syncActiveOperation(true);
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            cancelled = true;
+            activeDiscoveryController?.abort();
+            if (activeDiscoveryRetryTimer !== undefined) {
+                window.clearTimeout(activeDiscoveryRetryTimer);
+            }
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+        // Mount, focus and visibility share one server-authoritative active lock.
+        // Açılış, odaklanma ve görünürlük aynı sunucu kaynaklı etkin kilidi paylaşır.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const startInstall = async (request: InstallOperationRequest): Promise<boolean> => {
+        if (lockedRef.current) {
+            showToast('info', t(
+                activeSyncInFlightRef.current
+                    ? 'services.operation.activeCheckInProgress'
+                    : 'services.operation.actionLocked',
+            ));
+            return false;
+        }
+        const marker = createOperationRecoveryMarker(request);
+        if (marker === null || !storeRecoveryMarker(marker)) {
+            setFailure({ message: t('services.operation.recoveryStorageUnavailable') });
+            return false;
+        }
+        recoveryMarkerRef.current = marker;
+        const recoveryGeneration = ++recoveryGenerationRef.current;
+        if (document.activeElement instanceof HTMLElement) {
+            focusBeforeLockRef.current = document.activeElement;
+        }
+        lockedRef.current = true;
+        setFailure(null);
+        setLabel(request.name);
+        setSubmitting(true);
+        setRecoveringRequest(false);
         setConnectionInterrupted(false);
 
         const isNodeRuntime = Boolean(request.version);
         const endpoint = isNodeRuntime ? '/api/v1/runtimes/node' : '/api/v1/service/install';
         const body = isNodeRuntime
-            ? { version: request.version }
+            ? { version: request.version, request_id: marker.request_id }
             : {
                   service_id: request.serviceId,
                   ...(request.package ? { package: request.package } : {}),
+                  request_id: marker.request_id,
               };
 
         try {
@@ -343,8 +1030,24 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 body: JSON.stringify(body),
             });
             if (!response.ok) {
+                if (response.status === 401) {
+                    setConnectionInterrupted(true);
+                    return false;
+                }
                 if (response.status === 409) {
-                    return await recoverCurrentOperation(request, 'busy', recoveryGeneration);
+                    const error = await readApiError(response);
+                    if (error.code === ERROR_CODE_OPERATION_BUSY) {
+                        return await recoverCurrentOperation(
+                            request,
+                            'busy',
+                            recoveryGeneration,
+                        );
+                    }
+                    finishFailure({
+                        ...error,
+                        message: error.message || t('services.operation.startFailed'),
+                    });
+                    return false;
                 }
                 if (response.status === 429 || response.status >= 500) {
                     setConnectionInterrupted(true);
@@ -368,16 +1071,31 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             if (!next) {
                 return await recoverCurrentOperation(request, 'indeterminate', recoveryGeneration);
             }
-            adoptOperation(next, request.name);
-            return true;
+            if (
+                shouldAdoptOperationFromRecoveryMarker(
+                    next,
+                    marker,
+                    responseReferenceTime(response),
+                )
+                && adoptOperation(next, request.name, marker)
+            ) {
+                return true;
+            }
+            return await recoverCurrentOperation(
+                request,
+                'indeterminate',
+                recoveryGeneration,
+            );
         } catch {
-            // The POST may have reached the server even when its response was
-            // lost. Try the authoritative active-operation endpoint before
-            // allowing another click that could duplicate the request.
+            // The POST may have reached the server even when its response was lost.
+            // Yanıt kaybolsa bile POST sunucuya ulaşmış olabilir.
             setConnectionInterrupted(true);
             return await recoverCurrentOperation(request, 'indeterminate', recoveryGeneration);
         } finally {
-            if (recoveryGenerationRef.current === recoveryGeneration) {
+            if (
+                recoveryGenerationRef.current === recoveryGeneration
+                && recoveryMarkerRef.current === null
+            ) {
                 setSubmitting(false);
             }
         }
@@ -392,27 +1110,115 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             if (!cancelled) timer = window.setTimeout(fn, delay);
         };
 
-        const poll = async () => {
+        // A terminal failure is not safe to publish until a fresh managed-service
+        // snapshot confirms the machine's real state. Preserve the operation error
+        // across retries and keep the global lock and recovery marker intact.
+        // Terminal hata, yeni bir yönetilen servis snapshot'ı makinenin gerçek
+        // durumunu doğrulamadan yayınlanamaz. Yeniden denemelerde işlem hatasını,
+        // genel kilidi ve kurtarma işaretçisini koru.
+        const refreshFailedSnapshot = async (
+            terminalFailure: ApiError,
+            terminalOperation: ComponentOperation,
+        ) => {
+            if (cancelled) return;
+            setRefreshingCatalog(true);
+
+            let scanResponse: Response;
+            try {
+                scanResponse = await fetch('/api/v1/managed-services/scan', {
+                    method: 'POST',
+                    cache: 'no-store',
+                });
+            } catch {
+                if (!cancelled) {
+                    setConnectionInterrupted(true);
+                    schedule(
+                        () => void refreshFailedSnapshot(terminalFailure, terminalOperation),
+                        RETRY_DELAY_MS,
+                    );
+                }
+                return;
+            }
+
+            // AuthGate owns 401 handling and the durable marker must survive login.
+            // 401 işlemini AuthGate yönetir; kalıcı işaretçi giriş boyunca korunmalıdır.
+            if (scanResponse.status === 401) return;
+            if (!scanResponse.ok) {
+                setConnectionInterrupted(true);
+                schedule(
+                    () => void refreshFailedSnapshot(terminalFailure, terminalOperation),
+                    RETRY_DELAY_MS,
+                );
+                return;
+            }
+
+            let snapshot: unknown;
+            try {
+                snapshot = await scanResponse.json();
+            } catch {
+                setConnectionInterrupted(true);
+                schedule(
+                    () => void refreshFailedSnapshot(terminalFailure, terminalOperation),
+                    RETRY_DELAY_MS,
+                );
+                return;
+            }
+            const freshSnapshot = decodeManagedServicesSnapshot(snapshot);
+            if (
+                freshSnapshot === null
+                || !snapshotConfirmsTerminalOperation(freshSnapshot, terminalOperation)
+            ) {
+                setConnectionInterrupted(true);
+                schedule(
+                    () => void refreshFailedSnapshot(terminalFailure, terminalOperation),
+                    RETRY_DELAY_MS,
+                );
+                return;
+            }
+
+            if (cancelled) return;
+            setCatalogSnapshot(freshSnapshot);
+            finishFailure(terminalFailure);
+        };
+
+        let poll: () => Promise<void>;
+        const reconcileUnverifiableOperation = async () => {
+            if (cancelled) return;
+            const marker = recoveryMarkerRef.current;
+            const request = marker !== null
+                ? requestFromRecoveryMarker(marker)
+                : {
+                    serviceId: operation.service_id || 'service',
+                    name: label || operationDisplayLabel(operation),
+                };
+            const generation = ++recoveryGenerationRef.current;
+            setRecoveringRequest(true);
+            setConnectionInterrupted(true);
+            const recovered = await recoverCurrentOperation(request, 'marker', generation);
+            if (
+                !cancelled
+                && recovered
+                && adoptedOperationIDRef.current === operation.id
+            ) {
+                schedule(poll, POLL_DELAY_MS);
+            }
+        };
+
+        poll = async () => {
             try {
                 const response = await fetch(
                     `/api/v1/service/operation?id=${encodeURIComponent(operation.id)}`,
                     { cache: 'no-store' },
                 );
                 if (!response.ok) {
-                    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-                        const error = await readApiError(response);
-                        if (!cancelled) {
-                            finishFailure({
-                                ...error,
-                                message: error.message || t('services.operation.notFound'),
-                            });
-                        }
+                    // AuthGate will require a fresh login. Do not erase the
+                    // operation id: it is the reattachment token after login.
+                    // AuthGate yeniden giriş ister. Giriş sonrası yeniden bağlanma
+                    // belirteci olan işlem kimliğini silme.
+                    if (response.status === 401) {
                         return;
                     }
-                    if (!cancelled) {
-                        setConnectionInterrupted(true);
-                        schedule(poll, RETRY_DELAY_MS);
-                    }
+                    await reconcileUnverifiableOperation();
                     return;
                 }
 
@@ -420,21 +1226,43 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 try {
                     payload = await response.json();
                 } catch {
-                    if (!cancelled) finishFailure({ message: t('services.operation.invalidResponse') });
+                    await reconcileUnverifiableOperation();
                     return;
                 }
                 const next = decodeOperation(payload);
                 if (!next) {
-                    if (!cancelled) finishFailure({ message: t('services.operation.invalidResponse') });
+                    await reconcileUnverifiableOperation();
                     return;
                 }
                 if (cancelled) return;
+
+                let marker = recoveryMarkerRef.current;
+                if (next.id !== operation.id) {
+                    await reconcileUnverifiableOperation();
+                    return;
+                }
+                if (marker === null) {
+                    marker = recoveryMarkerForOperation(next);
+                    if (marker === null) {
+                        await reconcileUnverifiableOperation();
+                        return;
+                    }
+                    storeRecoveryMarker(marker);
+                    recoveryMarkerRef.current = marker;
+                }
+                if (!operationMatchesRecoveryMarker(next, marker)) {
+                    await reconcileUnverifiableOperation();
+                    return;
+                }
 
                 setConnectionInterrupted(false);
                 setOperation(next);
 
                 if (next.status === 'failed') {
-                    finishFailure(operationError(next.error, t('services.operation.failed')));
+                    await refreshFailedSnapshot(
+                        operationError(next.error, t('services.operation.failed')),
+                        next,
+                    );
                     return;
                 }
 
@@ -446,22 +1274,23 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 // A terminal success is not a UI success yet. Keep the global
                 // lock until a fresh server scan has been received and stored;
                 // every Components consumer then renders the same snapshot.
+                // Terminal başarı henüz arayüz başarısı değildir. Taze sunucu
+                // taraması alınıp saklanana dek genel kilidi tut; ardından tüm
+                // Bileşenler tüketicileri aynı snapshot'ı çizer.
                 setRefreshingCatalog(true);
                 let scanResponse: Response;
                 try {
-                    scanResponse = await fetch('/api/v1/managed-services/scan', { method: 'POST' });
+                    scanResponse = await fetch('/api/v1/managed-services/scan', {
+                        method: 'POST',
+                        cache: 'no-store',
+                    });
                 } catch {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);
                     return;
                 }
                 if (!scanResponse.ok) {
-                    if (scanResponse.status >= 400 && scanResponse.status < 500 && scanResponse.status !== 429) {
-                        const error = await readApiError(scanResponse);
-                        finishFailure({
-                            ...error,
-                            message: error.message || t('services.operation.refreshFailed'),
-                        });
+                    if (scanResponse.status === 401) {
                         return;
                     }
                     setConnectionInterrupted(true);
@@ -473,25 +1302,24 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 try {
                     snapshot = await scanResponse.json();
                 } catch {
-                    finishFailure({ message: t('services.operation.refreshFailed') });
+                    setConnectionInterrupted(true);
+                    schedule(poll, RETRY_DELAY_MS);
                     return;
                 }
-                const record = snapshot && typeof snapshot === 'object'
-                    ? snapshot as Record<string, unknown>
-                    : null;
-                if (!record || !Array.isArray(record.services)) {
-                    finishFailure({ message: t('services.operation.refreshFailed') });
+                const freshSnapshot = decodeManagedServicesSnapshot(snapshot);
+                if (
+                    freshSnapshot === null
+                    || !snapshotConfirmsTerminalOperation(freshSnapshot, next)
+                ) {
+                    setConnectionInterrupted(true);
+                    schedule(poll, RETRY_DELAY_MS);
                     return;
                 }
 
-                const freshSnapshot: ManagedServicesSnapshot = {
-                    services: record.services as Record<string, unknown>[],
-                    scanned_at: typeof record.scanned_at === 'string' || record.scanned_at === null
-                        ? record.scanned_at
-                        : undefined,
-                };
                 setCatalogSnapshot(freshSnapshot);
                 clearStoredOperation();
+                recoveryMarkerRef.current = null;
+                adoptedOperationIDRef.current = '';
                 lockedRef.current = false;
                 setOperation(null);
                 setRefreshingCatalog(false);
@@ -503,6 +1331,8 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             } catch {
                 // Network errors and 5xx/429 responses are transient. Never
                 // unlock here: the server may still be changing packages.
+                // Ağ hataları ile 5xx/429 yanıtları geçicidir. Sunucu hâlâ
+                // paket değiştiriyor olabileceğinden burada kilidi asla açma.
                 if (!cancelled) {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);
@@ -517,6 +1347,8 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
         };
         // The operation id owns one polling loop. Phase/status updates should
         // not tear it down and open a second loop.
+        // İşlem kimliği tek yoklama döngüsünün sahibidir. Aşama/durum
+        // güncellemeleri onu kapatıp ikinci döngü açmamalıdır.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [operation?.id]);
 
@@ -536,7 +1368,9 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 <OperationOverlay
                     operation={operation}
                     label={label}
+                    discovering={discoveringActive}
                     submitting={submitting}
+                    recovering={recoveringRequest}
                     refreshing={refreshingCatalog}
                     interrupted={connectionInterrupted}
                 />,
@@ -569,13 +1403,17 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
 function OperationOverlay({
     operation,
     label,
+    discovering,
     submitting,
+    recovering,
     refreshing,
     interrupted,
 }: {
     operation: ComponentOperation | null;
     label: string;
+    discovering: boolean;
     submitting: boolean;
+    recovering: boolean;
     refreshing: boolean;
     interrupted: boolean;
 }) {
@@ -586,12 +1424,16 @@ function OperationOverlay({
         dialogRef.current?.focus();
     }, []);
 
-    let statusText = t('services.operation.starting');
-    if (interrupted) {
-        statusText = t('services.operation.reconnecting');
-    } else if (refreshing) {
+    let statusText = interrupted
+        ? t('services.operation.reconnecting')
+        : discovering
+            ? t('services.operation.checkingActive')
+            : t('services.operation.starting');
+    if (!interrupted && !discovering && recovering) {
+        statusText = t('services.operation.recoveringRequest');
+    } else if (!interrupted && !discovering && refreshing) {
         statusText = t('services.operation.refreshing');
-    } else if (!submitting && operation) {
+    } else if (!interrupted && !discovering && !submitting && operation) {
         const normalizedPhase = operation.phase.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
         const phaseKey = `services.operation.phase.${normalizedPhase}` as TranslationKey;
         const translated = t(phaseKey);
@@ -618,13 +1460,17 @@ function OperationOverlay({
                         : <LoaderCircle className="h-7 w-7 animate-spin" />}
                 </span>
                 <h2 id="component-operation-title" className="text-xl font-semibold text-fg">
-                    {t('services.operation.title', { name: label || t('services.install') })}
+                    {discovering
+                        ? t('services.operation.checkingTitle')
+                        : t('services.operation.title', { name: label || t('services.install') })}
                 </h2>
                 <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
                     {statusText}
                 </p>
                 <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
-                    {t('services.operation.backgroundHint')}
+                    {t(discovering
+                        ? 'services.operation.activeCheckHint'
+                        : 'services.operation.backgroundHint')}
                 </p>
                 {operation?.id && (
                     <p className="mt-3 font-mono text-[11px] text-fg-subtle">

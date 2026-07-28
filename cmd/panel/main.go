@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -56,9 +57,17 @@ func main() {
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
 	countUsersFlag := flag.Bool("count-users", false, "Print the number of users and exit (used by install.sh) / Kullanıcı sayısını yazıp çık (install.sh kullanır)")
+	checkServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle", false, "Exit successfully only when no queued or running service operation exists / Yalnızca sırada veya çalışan servis işlemi yoksa başarıyla çık")
 	flag.Parse()
 
 	log.Println("Starting CelikPanel Backend...")
+	if *checkServiceOperationsIdleFlag {
+		if err := checkServiceOperationsIdle(databaseFile()); err != nil {
+			log.Fatalf("Service operation idle check failed: %v", err)
+		}
+		log.Println("Service operation state is idle")
+		return
+	}
 
 	// Initialize SQLite Database. The data directory is created if missing so
 	// a fresh install boots without a manual mkdir.
@@ -158,7 +167,7 @@ func main() {
 	if recovered, err := panel.recoverInterruptedServiceOperations(context.Background()); err != nil {
 		log.Fatalf("Failed to recover interrupted service operations: %v", err)
 	} else if recovered > 0 {
-		log.Printf("Marked %d interrupted service operation(s) as failed", recovered)
+		log.Printf("Reconciled %d interrupted service operation(s)", recovered)
 	}
 
 	// One-time repair of pre-A4 rows: seal any database root password that
@@ -677,10 +686,20 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var reply transport.ServiceActionResult
-	err := p.agentClient.Call("Agent.ServiceAction", &transport.ServiceActionArgs{
-		ServiceName: serviceName,
-		Action:      req.Action,
-	}, &reply)
+	err := p.withStandaloneAgentMutation(r.Context(), "service_"+req.Action, serviceName, "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ServiceMutationAction", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			ServiceName       string `json:"service_name"`
+			Action            string `json:"action"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, serviceName, req.Action}, &reply); err != nil {
+			return err
+		}
+		if reply.Error != "" {
+			return errors.New(reply.Error)
+		}
+		return nil
+	})
 
 	if err != nil {
 		// Start/stop/restart changed (or failed to change) the server's real
@@ -708,6 +727,9 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	// yoklama yapmadan önbellekten yüklenmeye devam etsin.
 	if _, err := p.scanManagedServices(r.Context()); err != nil {
 		log.Printf("service scan after %s %s: %v", req.Action, serviceName, err)
+		p.audit(r, "service."+req.Action+".refresh.failed:"+serviceName+" — "+auditReason(err.Error()), "service", 0)
+		writeServiceStateRefreshFailed(w)
+		return
 	}
 
 	json.NewEncoder(w).Encode(reply)

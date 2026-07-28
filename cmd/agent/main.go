@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/fs"
@@ -156,97 +158,133 @@ func configValidator(path string) *validatorSpec {
 	return nil
 }
 
-func (a *Agent) ReloadService(args *transport.ServiceArgs, reply *bool) error {
-	log.Printf("Reloading service %s", args.ServiceName)
-	if err := a.systemdMgr.Reload(args.ServiceName); err != nil {
-		return err
-	}
-	*reply = true
-	return nil
+// ServiceMutationActionRequest carries the durable lease for a managed
+// service lifecycle action performed as part of a larger mutation.
+// ServiceMutationActionRequest, daha büyük bir değişikliğin parçası olarak
+// yapılan yönetilen servis yaşam döngüsü eyleminin kalıcı kirasını taşır.
+type ServiceMutationActionRequest struct {
+	ServiceMutationBinding
+	ServiceName string `json:"service_name"`
+	Action      string `json:"action"`
 }
 
-func (a *Agent) StartService(args *transport.ServiceArgs, reply *bool) error {
-	log.Printf("Starting service %s", args.ServiceName)
-	if err := a.systemdMgr.Start(args.ServiceName); err != nil {
-		log.Printf("ERROR starting service %s: %v", args.ServiceName, err)
-		return err
+func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *transport.ServiceActionResult) error {
+	if req == nil {
+		return fmt.Errorf("service mutation action request is required")
 	}
-	log.Printf("Successfully started service %s", args.ServiceName)
-	*reply = true
-	return nil
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		reply.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	return a.serviceActionContext(ctx, req.ServiceName, req.Action, reply)
 }
 
-func (a *Agent) StopService(args *transport.ServiceArgs, reply *bool) error {
-	log.Printf("Stopping service %s", args.ServiceName)
-	if err := a.systemdMgr.Stop(args.ServiceName); err != nil {
-		log.Printf("ERROR stopping service %s: %v", args.ServiceName, err)
-		return err
-	}
-	log.Printf("Successfully stopped service %s", args.ServiceName)
-	*reply = true
-	return nil
-}
-
-func (a *Agent) RestartService(args *transport.ServiceArgs, reply *bool) error {
-	log.Printf("Restarting service %s", args.ServiceName)
-	if err := a.systemdMgr.Restart(args.ServiceName); err != nil {
-		log.Printf("ERROR restarting service %s: %v", args.ServiceName, err)
-		return err
-	}
-	log.Printf("Successfully restarted service %s", args.ServiceName)
-	*reply = true
-	return nil
-}
-
-// ResetFailedUnit clears a unit's "failed" state so it can be started again.
-// A unit that failed once (e.g. Dovecot before its TLS cert existed) stays
-// failed until reset, so a later, correct start would be refused and a fixed
-// install would still look broken. Best-effort: a unit that was never failed
-// resets harmlessly.
-// ResetFailedUnit, bir unit'in "failed" durumunu temizler; böylece yeniden
-// başlatılabilir. Bir kez başarısız olan unit (örn. TLS sertifikası yokken
-// Dovecot) sıfırlanana dek failed kalır; sonraki doğru başlatma reddedilir ve
-// düzeltilmiş bir kurulum yine bozuk görünürdü. En-iyi-çaba: hiç başarısız
-// olmamış unit zararsızca sıfırlanır.
-// ServiceAction is the panel-facing checked action endpoint. It accepts only
-// units owned by the fixed service catalogue and returns an actionable result.
-func (a *Agent) ServiceAction(args *transport.ServiceActionArgs, reply *transport.ServiceActionResult) error {
-	name := strings.TrimSuffix(strings.TrimSpace(args.ServiceName), ".service")
+func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action string, reply *transport.ServiceActionResult) error {
+	name := strings.TrimSuffix(strings.TrimSpace(serviceName), ".service")
 	if name == "" || core.ServiceForUnit(name) == nil {
 		reply.Error = "unknown managed service"
 		return nil
 	}
-	var err error
-	switch args.Action {
-	case "start":
-		err = a.systemdMgr.Start(name)
-	case "stop":
-		err = a.systemdMgr.Stop(name)
-	case "restart":
-		err = a.systemdMgr.Restart(name)
-	case "reload":
-		err = a.systemdMgr.Reload(name)
+	switch action {
+	case "start", "stop", "restart", "reload":
 	default:
 		reply.Error = "invalid service action"
 		return nil
 	}
+	out, err := runServiceMutationCombinedOutput(ctx, "systemctl", action, name)
 	if err != nil {
-		log.Printf("ERROR service %s %s: %v", args.Action, name, err)
-		reply.Error = firstLine(err.Error())
+		log.Printf("ERROR service %s %s: %v: %s", action, name, err, strings.TrimSpace(string(out)))
+		reply.Error = firstLine(fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(out))))
 		return nil
 	}
 	reply.Success = true
 	return nil
 }
 
-func (a *Agent) ResetFailedUnit(args *transport.ServiceArgs, reply *bool) error {
-	_ = exec.Command("systemctl", "reset-failed", args.ServiceName).Run()
+type ServiceMutationServiceRequest struct {
+	ServiceMutationBinding
+	ServiceName string `json:"service_name"`
+}
+
+func (a *Agent) StartServiceMutation(req *ServiceMutationServiceRequest, reply *bool) error {
+	if req == nil {
+		return fmt.Errorf("start service mutation request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		return err
+	}
+	defer finishStep()
+	var result transport.ServiceActionResult
+	if err := a.serviceActionContext(ctx, req.ServiceName, "start", &result); err != nil {
+		return err
+	}
+	if result.Error != "" {
+		return errors.New(result.Error)
+	}
+	*reply = result.Success
+	return nil
+}
+
+func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, reply *bool) error {
+	if req == nil {
+		return fmt.Errorf("reset failed service mutation request is required")
+	}
+	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
+	if name == "" || core.ServiceForUnit(name) == nil {
+		return errors.New("unknown managed service")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		return err
+	}
+	defer finishStep()
+	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reset-failed", name); err != nil {
+		return fmt.Errorf("reset failed unit: %v: %s", err, strings.TrimSpace(string(out)))
+	}
 	*reply = true
 	return nil
 }
 
 func main() {
 	log.Println("Starting CelikPanel Agent...")
+	// The unit preflight validates the exact restore batch with nft --check and
+	// exits before the privileged RPC socket or background workers are opened.
+	// Unit ön kontrolü tam geri yükleme paketini nft --check ile doğrular ve
+	// ayrıcalıklı RPC soketi ya da arka plan işleri açılmadan çıkar.
+	if len(os.Args) == 2 && os.Args[1] == "--check-firewall-restore" {
+		if err := checkFirewallRestore(); err != nil {
+			log.Fatalf("Firewall restore preflight failed: %v", err)
+		}
+		log.Println("Firewall restore preflight complete")
+		return
+	}
+	// The early-boot oneshot calls only this fixed mode. It restores the
+	// root-owned firewall snapshot before network-pre.target, then exits without
+	// opening the privileged RPC socket or starting any watcher.
+	// Erken-açılış oneshot yalnız bu sabit modu çağırır. Root-sahipli firewall
+	// snapshot'ını network-pre.target'tan önce geri yükler; ayrıcalıklı RPC
+	// soketini açmadan veya izleyici başlatmadan çıkar.
+	if len(os.Args) == 2 && os.Args[1] == "--restore-firewall" {
+		if err := restoreFirewallSnapshot(); err != nil {
+			log.Fatalf("Firewall restore failed: %v", err)
+		}
+		log.Println("Firewall restore complete")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-service-mutation-idle" {
+		if err := checkServiceMutationIdle("", ""); err != nil {
+			log.Fatalf("Service mutation idle check failed: %v", err)
+		}
+		log.Println("Service mutation state is idle")
+		return
+	}
+
+	if _, err := agentServiceMutationManager(); err != nil {
+		log.Fatalf("Failed to initialize service mutation ledger: %v", err)
+	}
 
 	// Initialize Watcher
 	w, err := fs.NewWatcher()

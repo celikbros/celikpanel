@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -30,6 +31,10 @@ func (p *Panel) runServiceInstall(
 	advance func(string) error,
 ) (serviceOperationResult, *serviceOperationFailure) {
 	result := serviceOperationResult{"success": false, "installed": false}
+	binding, err := panelMutationBinding(ctx)
+	if err != nil {
+		return result, serviceInstallFailure(err)
+	}
 	if err := p.preflightManagedServiceInstall(ctx, req.ServiceID); err != nil {
 		return result, serviceInstallFailure(err)
 	}
@@ -48,7 +53,7 @@ func (p *Panel) runServiceInstall(
 			Version   string `json:"version"`
 			Error     string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &struct{}{}, &rcResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &binding, &rcResp); err != nil {
 			return result, serviceInstallFailure(err)
 		}
 		if rcResp.Error != "" {
@@ -63,7 +68,7 @@ func (p *Panel) runServiceInstall(
 			Present    bool   `json:"present"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &binding, &wmResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("roundcube webmail configuration: %w", err))
 		}
 		if wmResp.Error != "" {
@@ -89,7 +94,9 @@ func (p *Panel) runServiceInstall(
 		if err := advance("firewall"); err != nil {
 			return result, operationAdvanceFailure(err)
 		}
-		p.syncFirewall()
+		if err := p.syncFirewall(ctx); err != nil {
+			return result, firewallSyncFailure(err)
+		}
 		result["success"] = true
 		return result, nil
 	}
@@ -101,12 +108,20 @@ func (p *Panel) runServiceInstall(
 	var resp struct {
 		Installed bool   `json:"installed"`
 		Detail    string `json:"detail,omitempty"`
+		Unit      string `json:"unit,omitempty"`
 		Error     string `json:"error,omitempty"`
 	}
 	if err := p.agentClient.CallContext(ctx, "Agent.InstallService", &struct {
-		ID      string `json:"id"`
-		Package string `json:"package,omitempty"`
-	}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
+		MutationRequestID string `json:"mutation_request_id"`
+		MutationOwnerID   string `json:"mutation_owner_id"`
+		ID                string `json:"id"`
+		Package           string `json:"package,omitempty"`
+	}{
+		MutationRequestID: binding.MutationRequestID,
+		MutationOwnerID:   binding.MutationOwnerID,
+		ID:                req.ServiceID,
+		Package:           req.Package,
+	}, &resp); err != nil {
 		// A failed attempt must leave a trace. Netdata could not be installed
 		// on Debian (apt has no such package) and the audit log stayed SILENT —
 		// so from the log it looked as if the operator never tried. "log yok"
@@ -124,6 +139,21 @@ func (p *Panel) runServiceInstall(
 	if resp.Error != "" {
 		return result, serviceInstallFailure(fmt.Errorf("service install: %s", resp.Error))
 	}
+	if req.ServiceID == "postgresql" && req.Package != "" {
+		// A selected major is complete only when the agent confirms the exact
+		// per-cluster unit it started and verified. The later catalogue scan is
+		// intentionally aggregate and may also see an older running major, so it
+		// cannot replace this exact-target proof.
+		// Seçilen major yalnızca agent başlattığı ve doğruladığı tam cluster
+		// unit'ini onayladığında tamamlanır. Sonraki katalog taraması topludur ve
+		// çalışan eski bir major'ı da görebilir; bu yüzden tam hedef kanıtının
+		// yerini alamaz.
+		expectedUnit, ok := core.PostgreSQLClusterUnitForPackage(req.Package)
+		if !ok || resp.Unit != expectedUnit {
+			return result, serviceInstallFailure(fmt.Errorf(
+				"agent did not confirm the selected PostgreSQL cluster unit %s", expectedUnit))
+		}
+	}
 	result["installed"] = resp.Installed
 	if err := advance("configuring"); err != nil {
 		return result, operationAdvanceFailure(err)
@@ -139,7 +169,7 @@ func (p *Panel) runServiceInstall(
 			Synced bool   `json:"synced"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigurePowerDNSSQLite", &struct{}{}, &dnsResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigurePowerDNSSQLite", &binding, &dnsResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("PowerDNS configuration: %w", err))
 		}
 		if dnsResp.Error != "" {
@@ -152,9 +182,16 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var lifecycle transport.ServiceActionResult
-		if err := p.agentClient.CallContext(ctx, "Agent.ServiceAction", &transport.ServiceActionArgs{
-			ServiceName: "pdns",
-			Action:      "restart",
+		if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationAction", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			ServiceName       string `json:"service_name"`
+			Action            string `json:"action"`
+		}{
+			MutationRequestID: binding.MutationRequestID,
+			MutationOwnerID:   binding.MutationOwnerID,
+			ServiceName:       "pdns",
+			Action:            "restart",
 		}, &lifecycle); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("PowerDNS restart: %w", err))
 		}
@@ -187,7 +224,7 @@ func (p *Panel) runServiceInstall(
 			Ready bool   `json:"ready"`
 			Error string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &struct{}{}, &nrResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &binding, &nrResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("nginx readiness configuration: %w", err))
 		}
 		if nrResp.Error != "" {
@@ -207,7 +244,7 @@ func (p *Panel) runServiceInstall(
 			Configured bool   `json:"configured"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &struct{}{}, &mailResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &binding, &mailResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail stack configuration: %w", err))
 		}
 		if mailResp.Error != "" {
@@ -231,14 +268,22 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var ok bool
-		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnit", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnitMutation", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			ServiceName       string `json:"service_name"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, unit}, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("reset failed mail service: %w", err))
 		}
 		if !ok {
 			return result, serviceInstallFailure(errors.New("agent did not confirm resetting the mail service"))
 		}
 		ok = false
-		if err := p.agentClient.CallContext(ctx, "Agent.StartService", &transport.ServiceArgs{ServiceName: unit}, &ok); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.StartServiceMutation", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			ServiceName       string `json:"service_name"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, unit}, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("start configured mail service: %w", err))
 		}
 		if !ok {
@@ -268,7 +313,7 @@ func (p *Panel) runServiceInstall(
 			Detail string `json:"detail,omitempty"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &binding, &wireResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail filter wiring: %w", err))
 		}
 		if wireResp.Error != "" {
@@ -303,8 +348,10 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		if err := p.agentClient.CallContext(ctx, "Agent.SetupVPN", &struct {
-			Port int `json:"port"`
-		}{}, &vpnResp); err != nil {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			Port              int    `json:"port"`
+		}{MutationRequestID: binding.MutationRequestID, MutationOwnerID: binding.MutationOwnerID}, &vpnResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("WireGuard setup: %w", err))
 		}
 		if vpnResp.Error != "" {
@@ -328,7 +375,7 @@ func (p *Panel) runServiceInstall(
 			Tools      []string `json:"tools"`
 			Error      string   `json:"error,omitempty"`
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &binding, &dbtResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("database tools configuration: %w", err))
 		}
 		if dbtResp.Error != "" {
@@ -359,6 +406,29 @@ func (p *Panel) runServiceInstall(
 	if !verifyManagedServiceReady(services, req.ServiceID) {
 		return result, serviceInstallFailure(errors.New("post-install scan did not find the requested service in its required state"))
 	}
+	if req.ServiceID == "postgresql" && req.Package != "" {
+		expectedUnit, ok := core.PostgreSQLClusterUnitForPackage(req.Package)
+		if !ok {
+			return result, serviceInstallFailure(fmt.Errorf("invalid PostgreSQL package %q", req.Package))
+		}
+		// The aggregate catalogue scan can be green because an older major is
+		// still active. Re-read the agent's final unit state and require the
+		// selected cluster itself; the InstallService response is not a durable
+		// proof if that unit stops before the operation completes.
+		//
+		// Toplu katalog taraması eski bir major hâlâ çalıştığı için yeşil olabilir.
+		// Agent'ın son unit durumunu yeniden oku ve seçilen cluster'ın kendisini
+		// zorunlu tut; işlem bitmeden unit durursa InstallService yanıtı kalıcı
+		// kanıt değildir.
+		exactReady, err := p.exactServiceUnitActive(ctx, expectedUnit)
+		if err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("verify selected PostgreSQL cluster unit %s: %w", expectedUnit, err))
+		}
+		if !exactReady {
+			return result, serviceInstallFailure(fmt.Errorf(
+				"post-install scan did not find selected PostgreSQL cluster unit %s active", expectedUnit))
+		}
+	}
 	result["installed"] = true
 
 	// New service may expose new ports; if the firewall is on, open them.
@@ -366,9 +436,26 @@ func (p *Panel) runServiceInstall(
 	if err := advance("firewall"); err != nil {
 		return result, operationAdvanceFailure(err)
 	}
-	p.syncFirewall()
+	if err := p.syncFirewall(ctx); err != nil {
+		return result, firewallSyncFailure(err)
+	}
 	result["success"] = true
 	return result, nil
+}
+
+func (p *Panel) exactServiceUnitActive(ctx context.Context, expectedUnit string) (bool, error) {
+	var services []core.Service
+	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &services); err != nil {
+		return false, err
+	}
+	expectedUnit = strings.TrimSuffix(strings.TrimSpace(expectedUnit), ".service")
+	for _, service := range services {
+		unit := strings.TrimSuffix(strings.TrimSpace(service.Name), ".service")
+		if unit == expectedUnit && strings.HasPrefix(strings.ToLower(strings.TrimSpace(service.Status)), "active") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // handleServiceCandidate returns the version apt would install for a service
@@ -469,7 +556,16 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			Removed bool   `json:"removed"`
 			Error   string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.RemoveRoundcube", &struct{}{}, &rmResp); err != nil {
+		err := p.withStandaloneAgentMutation(r.Context(), "service_uninstall", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &binding, &rmResp); err != nil {
+				return err
+			}
+			if rmResp.Error != "" {
+				return errors.New(rmResp.Error)
+			}
+			return nil
+		})
+		if err != nil && rmResp.Error == "" {
 			writeAgentError(w, err, "roundcube remove")
 			return
 		}
@@ -477,39 +573,77 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, rmResp.Error)
 			return
 		}
+		// The agent confirmed the host mutation. Record that success before
+		// best-effort follow-up work so a failed refresh cannot erase history.
+		// Agent makine değişikliğini doğruladı. Başarısız bir tazeleme geçmişi
+		// silemesin diye başarıyı best-effort takip işlerinden önce kaydet.
+		p.audit(r, "service.uninstall:roundcube", "service", 0)
 		var wmResp struct {
 			Configured bool   `json:"configured"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigureWebmail", &struct{}{}, &wmResp); err != nil || wmResp.Error != "" {
+		err = p.withStandaloneAgentMutation(r.Context(), "webmail_configure", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &binding, &wmResp); err != nil {
+				return err
+			}
+			if wmResp.Error != "" {
+				return errors.New(wmResp.Error)
+			}
+			return nil
+		})
+		if err != nil || wmResp.Error != "" {
 			log.Printf("webmail configure after uninstall: %v %s", err, wmResp.Error)
 		}
 		if _, err := p.scanManagedServices(r.Context()); err != nil {
 			log.Printf("rescan after roundcube uninstall: %v", err)
+			p.audit(r, "service.uninstall.refresh.failed:roundcube — "+auditReason(err.Error()), "service", 0)
+			writeServiceStateRefreshFailed(w)
+			return
 		}
-		p.audit(r, "service.uninstall:roundcube", "service", 0)
 		json.NewEncoder(w).Encode(map[string]any{"removed": rmResp.Removed, "success": true})
 		return
 	}
 
 	var resp struct {
-		Removed bool   `json:"removed"`
-		Detail  string `json:"detail,omitempty"`
-		Error   string `json:"error,omitempty"`
+		Removed         bool   `json:"removed"`
+		Detail          string `json:"detail,omitempty"`
+		Error           string `json:"error,omitempty"`
+		PartialSuccess  bool   `json:"partial_success,omitempty"`
+		MutationApplied bool   `json:"mutation_applied,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.UninstallService",
-		&struct {
-			ID      string `json:"id"`
-			Package string `json:"package,omitempty"`
-		}{ID: req.ServiceID, Package: req.Package}, &resp); err != nil {
+	err := p.withStandaloneAgentMutation(r.Context(), "service_uninstall", req.ServiceID, req.Package, func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.UninstallService", &struct {
+			MutationRequestID string `json:"mutation_request_id"`
+			MutationOwnerID   string `json:"mutation_owner_id"`
+			ID                string `json:"id"`
+			Package           string `json:"package,omitempty"`
+		}{binding.MutationRequestID, binding.MutationOwnerID, req.ServiceID, req.Package}, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" && !resp.MutationApplied {
+			return errors.New(resp.Error)
+		}
+		return nil
+	})
+	if err != nil && resp.Error == "" {
 		p.audit(r, "service.uninstall.failed:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(err.Error()), "service", 0)
 		writeAgentError(w, err, "service uninstall")
 		return
 	}
-	if resp.Error != "" {
+	if resp.Error != "" && !resp.MutationApplied {
 		p.audit(r, "service.uninstall.failed:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(resp.Error), "service", 0)
 		writeClientError(w, http.StatusConflict, resp.Error)
 		return
+	}
+	packageRemovalPartial := resp.Error != "" && resp.MutationApplied
+	// The package mutation itself succeeded. Follow-up wiring, firewall and
+	// scan failures are separate outcomes and must not hide this audit entry.
+	// Paket değişikliğinin kendisi başarılı oldu. Sonraki bağlantı, güvenlik
+	// duvarı ve tarama hataları bu denetim kaydını gizlememelidir.
+	if packageRemovalPartial {
+		p.audit(r, "service.uninstall.partial:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(resp.Error), "service", 0)
+	} else {
+		p.audit(r, "service.uninstall:"+req.ServiceID+pkgSuffix(req.Package), "service", 0)
 	}
 	// A spam filter that is installed but not wired into Postfix is theatre:
 	// the daemon runs, the row says "Running", and not one message passes
@@ -527,14 +661,28 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// yön de zinciri yeniden besteler. Tetikleyici ürün listesi değil KOLTUK'tur;
 	// böylece yarın kataloğa eklenen bir spam filtresi bu dosyaya dokunmadan
 	// bağlanır.
+	var mailFilterSyncErr error
 	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
 		var wireResp struct {
 			Wired  bool   `json:"wired"`
 			Detail string `json:"detail,omitempty"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &wireResp); err != nil || wireResp.Error != "" {
-			log.Printf("milter wiring after %s %s: %v %s", "uninstall", req.ServiceID, err, wireResp.Error)
+		err := p.withStandaloneAgentMutation(r.Context(), "mail_filter_wire", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &binding, &wireResp); err != nil {
+				return err
+			}
+			if wireResp.Error != "" {
+				return errors.New(wireResp.Error)
+			}
+			return nil
+		})
+		if err != nil {
+			mailFilterSyncErr = err
+			log.Printf("milter wiring after %s %s: %v", "uninstall", req.ServiceID, err)
+		} else if wireResp.Error != "" {
+			mailFilterSyncErr = errors.New(wireResp.Error)
+			log.Printf("milter wiring after %s %s: %s", "uninstall", req.ServiceID, wireResp.Error)
 		} else {
 			log.Printf("milter chain now: %q", wireResp.Detail)
 		}
@@ -545,13 +693,22 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			Configured bool   `json:"configured"`
 			Error      string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.ConfigureDBTools", &struct{}{}, &dbtResp); err != nil || dbtResp.Error != "" {
+		err := p.withStandaloneAgentMutation(r.Context(), "dbtools_configure", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDBTools", &binding, &dbtResp); err != nil {
+				return err
+			}
+			if dbtResp.Error != "" {
+				return errors.New(dbtResp.Error)
+			}
+			return nil
+		})
+		if err != nil || dbtResp.Error != "" {
 			log.Printf("db tools configure after uninstall: %v %s", err, dbtResp.Error)
 		}
 	}
 	// Removed service's ports should close; re-sync the firewall.
 	// Kaldırılan servisin portları kapanmalı; güvenlik duvarını yeniden senkronla.
-	p.syncFirewall()
+	firewallErr := p.syncFirewall(r.Context())
 	// Refresh the scan cache so the page tells the truth immediately — the
 	// install path always did this; uninstall silently skipped it and the
 	// removed service kept its old row until someone pressed Scan.
@@ -560,8 +717,37 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// servis biri Tara'ya basana dek eski satırıyla kalıyordu.
 	if _, err := p.scanManagedServices(r.Context()); err != nil {
 		log.Printf("rescan after uninstall: %v", err)
+		if firewallErr != nil {
+			p.audit(r, "service.uninstall.partial:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(firewallErr.Error()), "service", 0)
+		}
+		p.audit(r, "service.uninstall.refresh.failed:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(err.Error()), "service", 0)
+		writeServiceStateRefreshFailed(w)
+		return
 	}
-	p.audit(r, "service.uninstall:"+req.ServiceID+pkgSuffix(req.Package), "service", 0)
+	if packageRemovalPartial {
+		if mailFilterSyncErr != nil {
+			p.audit(r, "service.uninstall.mail-filter.failed:"+req.ServiceID+" — "+auditReason(mailFilterSyncErr.Error()), "service", 0)
+		}
+		if firewallErr != nil {
+			p.audit(r, "service.uninstall.firewall.failed:"+req.ServiceID+" — "+auditReason(firewallErr.Error()), "service", 0)
+		}
+		writeServiceUninstallPartial(w)
+		return
+	}
+	if mailFilterSyncErr != nil {
+		p.audit(r, "service.uninstall.mail-filter.failed:"+req.ServiceID+" — "+auditReason(mailFilterSyncErr.Error()), "service", 0)
+		if firewallErr != nil {
+			p.audit(r, "service.uninstall.firewall.failed:"+req.ServiceID+" — "+auditReason(firewallErr.Error()), "service", 0)
+		}
+		writeServiceMailFilterSyncFailed(w)
+		return
+	}
+	if firewallErr != nil {
+		log.Printf("service removed but firewall synchronization failed: %v", firewallErr)
+		p.audit(r, "service.uninstall.partial:"+req.ServiceID+pkgSuffix(req.Package)+" — "+auditReason(firewallErr.Error()), "service", 0)
+		writeServiceFirewallSyncFailed(w)
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]any{"removed": resp.Removed, "detail": resp.Detail, "success": true})
 }
 
@@ -615,7 +801,18 @@ func (p *Panel) wireMailFiltersAtStartup() {
 			Detail string `json:"detail,omitempty"`
 			Error  string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.WireMailFilters", &struct{}{}, &resp); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		err := p.withStandaloneAgentMutation(ctx, "mail_filter_wire", "startup", "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &binding, &resp); err != nil {
+				return err
+			}
+			if resp.Error != "" {
+				return errors.New(resp.Error)
+			}
+			return nil
+		})
+		if err != nil {
 			return // no agent yet, or no postfix — nothing to repair
 		}
 		if resp.Error != "" {

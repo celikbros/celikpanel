@@ -36,152 +36,57 @@ static UI at `/opt/celikpanel/web/`, systemd units `celikpanel-agent` (root) + `
 | Access | `ssh root@72.62.38.15` — key only |
 | Role | Every change is tested on BOTH servers (Jul 16 operator decision). Expected difference on Arch: the service catalog says "not automatable" (apt-specific) — that is honesty, not a bug |
 
-## 2. Deploy recipes
+## 2. Deploy and rollback
 
-There are two release paths. Everything builds on the dev machine; only product artifacts
-are copied (the server has NO Go/Node — deliberately; see D-008: no hand-installs on the server).
-Copying and atomically installing those versioned artifacts over SSH is an allowed product
-deployment. It does not authorize changing live panel settings, DNS, SSL, mail, firewall, or
-service configuration over SSH; those changes remain UI-only.
+The only normative production update path is the reviewed [update.sh](../update.sh), and the
+only normative rollback path is [rollback.sh](../rollback.sh). Do not reproduce either script's
+snapshot, trust-chain, checksum, systemd-state, or restore internals in an SSH one-liner or a
+manual runbook. `update.sh` produces snapshot contract v3; `rollback.sh` accepts only that
+verified contract.
 
-**A) Frontend only** (only `web/src` changed; no Go, `internal`, or migration change — no
-restart needed):
-```bash
-cd web && npm run build && cd ..
-tar -C web/dist -czf /tmp/webdist.tar.gz .
-scp /tmp/webdist.tar.gz root@2.25.80.4:/tmp/
-ssh root@2.25.80.4 'mkdir -p /opt/celikpanel/web.new && tar -xzf /tmp/webdist.tar.gz -C /opt/celikpanel/web.new --no-same-owner && mv /opt/celikpanel/web /opt/celikpanel/web.old && mv /opt/celikpanel/web.new /opt/celikpanel/web && rm -rf /opt/celikpanel/web.old /tmp/webdist.tar.gz && echo DONE'
-```
-Backed swap: on trouble, rename `web.old` back. `index.html` is served no-cache;
-a normal browser refresh suffices.
+Running these version-controlled product scripts over SSH is allowed deployment work. It does
+not authorize changing live panel settings, DNS, SSL, mail, firewall, or service configuration
+over SSH; the operator performs those changes only through the panel.
 
-**B) Snapshot-backed paired backend release** (any `cmd/panel`, `cmd/agent`, `internal`,
-migration, or other backend change):
-
-Panel and agent are one fail-closed release pair. Never build, install, or roll back either
-binary independently. Build both from the same clean, merged Git commit and embed the exact
-40-character commit SHA in both binaries. A backend release also carries the web build from
-that commit.
+Before deployment, merge and push a clean commit and prove it in development with
+`go test ./...`, `go vet ./...`, and `cd web && npm run build`. Freeze that release commit for
+the two-server rollout. Update Boston first and verify it completely; update Frankfurt only
+after Boston passes. From each server's existing root-trusted CelikPanel checkout:
 
 ```bash
 test -z "$(git status --porcelain)"
-RELEASE_COMMIT="$(git rev-parse --verify HEAD)"
-test "$(printf %s "$RELEASE_COMMIT" | wc -c)" -eq 40
-RELEASE_VERSION="$(git describe --tags --always)"
-RELEASE_DIR="/tmp/celikpanel-release-${RELEASE_COMMIT}"
-mkdir -p "$RELEASE_DIR"
-LDFLAGS="-s -w -X main.buildVersion=${RELEASE_VERSION} -X main.buildCommit=${RELEASE_COMMIT}"
-
-go test ./...
-go vet ./...
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o "$RELEASE_DIR/agent" ./cmd/agent
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o "$RELEASE_DIR/panel" ./cmd/panel
-(cd web && npm run build)
-tar -C web/dist -czf "$RELEASE_DIR/web.tar.gz" .
-(cd "$RELEASE_DIR" && sha256sum agent panel web.tar.gz > SHA256SUMS)
+sudo ./update.sh
 ```
 
-Deploy Boston completely and verify it before starting Frankfurt. Frankfurt receives the
-exact same artifact bytes. If Frankfurt cannot be completed, fix it immediately or restore
-Boston from its snapshot; do not leave the DNS pair on different releases.
+`update.sh` owns the root trust-chain checks, mutation idle proofs and shared flock, paired
+panel/agent/web/database/ledger/unit snapshot, service enabled/active-state ledger, checksums,
+retention, fast-forward Git update, rebuild, install, and post-install service checks. It prints
+the absolute path of the verified rollback snapshot. Any refusal is a release blocker; do not
+repair snapshot or coordinator state by hand.
 
-For each server, create a unique remote release directory, upload every artifact, and verify
-the manifest before stopping anything:
+After each server, require the panel and agent to be active, require the authenticated
+`/api/v1/panel/version` response to report the same expected full commit for panel and agent and
+the expected schema, load the served UI asset, and inspect both service journals for the release
+window. Do not continue to the second server while any check differs.
+
+Firewall boot persistence follows the same explicit-user contract. `install.sh` installs the
+restore unit, then `enable-firewall-restore-if-saved.sh` removes persistent and runtime enable
+links when no safe saved snapshot exists; an existing non-empty regular snapshot is re-enabled
+without starting or applying it. Only explicit **Save for reboot** may create the first snapshot,
+and it enables the unit only after the durable write succeeds. Background synchronization may
+refresh an existing snapshot but never enables the unit. Explicit **Turn off** removes the
+snapshot and disables the unit. GET, rescan, and background status work never enable it.
+
+If verification fails, use the exact verified snapshot path printed by `update.sh`:
 
 ```bash
-SERVER=root@2.25.80.4                  # then root@72.62.38.15
-PANEL_HOST=boston.celikhost.com        # then frankfurt.celikhost.com
-REMOTE_RELEASE="/opt/celikpanel/releases/${RELEASE_COMMIT}"
-ssh "$SERVER" "install -d -m 0755 '$REMOTE_RELEASE'"
-scp "$RELEASE_DIR/agent" "$RELEASE_DIR/panel" "$RELEASE_DIR/web.tar.gz" \
-    "$RELEASE_DIR/SHA256SUMS" "$SERVER:$REMOTE_RELEASE/"
-ssh "$SERVER" "cd '$REMOTE_RELEASE' && sha256sum -c SHA256SUMS"
-```
-Before a schema-changing release, save the current version JSON with an authenticated admin
-session, then stop the panel and take a mandatory snapshot. `ADMIN_COOKIE_JAR` must come from
-the normal panel login flow (including TOTP when enabled); keep it outside the repository and
-mode `0600`. `PANEL_HOST` must be that login hostname, not its IP address, so the browser's
-domain-bound session cookie is sent.
-
-```bash
-curl -fsSk -b "$ADMIN_COOKIE_JAR" \
-    "https://${PANEL_HOST}:2083/api/v1/panel/version" > "$RELEASE_DIR/${PANEL_HOST}.version-before.json"
-
-DEPLOY_ID="$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_COMMIT}"
-SNAPSHOT="/var/backups/celikpanel/releases/${DEPLOY_ID}"
-ssh "$SERVER" "SNAPSHOT='$SNAPSHOT' bash -se" <<'REMOTE'
-set -euo pipefail
-systemctl stop celikpanel-panel
-install -d -m 0700 "$SNAPSHOT"
-cp -a /opt/celikpanel/bin/agent /opt/celikpanel/bin/panel "$SNAPSHOT/"
-cp -a /opt/celikpanel/web "$SNAPSHOT/web"
-cp -a /var/lib/celikpanel/celikpanel.db "$SNAPSHOT/"
-for sidecar in -wal -shm; do
-    source="/var/lib/celikpanel/celikpanel.db${sidecar}"
-    if [ -f "$source" ]; then cp -a "$source" "$SNAPSHOT/"; fi
-done
-cp -a /etc/systemd/system/celikpanel-agent.service \
-      /etc/systemd/system/celikpanel-panel.service "$SNAPSHOT/"
-sha256sum "$SNAPSHOT/agent" "$SNAPSHOT/panel" > "$SNAPSHOT/BINARY_SHA256SUMS"
-systemctl cat celikpanel-agent celikpanel-panel > "$SNAPSHOT/units.txt"
-REMOTE
-scp "$RELEASE_DIR/${PANEL_HOST}.version-before.json" "$SERVER:$SNAPSHOT/version-before.json"
+sudo ./rollback.sh "$VERIFIED_SNAPSHOT"
 ```
 
-Every unguarded copy above is required: a missing database, binary, web tree, or unit file
-aborts the release. The WAL/SHM files are optional only because SQLite may not have created
-them. Do not use `update.sh` or `rollback.sh` for a schema-changing release until those scripts
-provide the same fail-closed snapshot and restore of DB sidecars, both binaries, web, units,
-and the prior commit identity.
-
-Install from the verified release directory while the panel remains stopped: stage and
-atomically replace the agent first, restart it, then stage the panel and web, and finally start
-the panel. Never reuse or delete the snapshot during this sequence.
-
-```bash
-ssh "$SERVER" "REMOTE_RELEASE='$REMOTE_RELEASE' SNAPSHOT='$SNAPSHOT' RELEASE_COMMIT='$RELEASE_COMMIT' bash -se" <<'REMOTE'
-set -euo pipefail
-install -m 0755 "$REMOTE_RELEASE/agent" /opt/celikpanel/bin/agent.next
-mv -f /opt/celikpanel/bin/agent.next /opt/celikpanel/bin/agent
-systemctl restart celikpanel-agent
-
-install -m 0755 "$REMOTE_RELEASE/panel" /opt/celikpanel/bin/panel.next
-WEB_NEXT="/opt/celikpanel/web.${RELEASE_COMMIT}.next"
-test ! -e "$WEB_NEXT"
-install -d -m 0755 "$WEB_NEXT"
-tar -xzf "$REMOTE_RELEASE/web.tar.gz" -C "$WEB_NEXT" --no-same-owner
-mv /opt/celikpanel/web "$SNAPSHOT/web-before-swap"
-mv "$WEB_NEXT" /opt/celikpanel/web
-mv -f /opt/celikpanel/bin/panel.next /opt/celikpanel/bin/panel
-systemctl start celikpanel-panel
-REMOTE
-```
-
-**Post-deploy verification** (required on each server before moving to the next):
-
-```bash
-EXPECTED_SCHEMA=20                    # set to the release's migration target
-curl -fsSk -b "$ADMIN_COOKIE_JAR" \
-    "https://${PANEL_HOST}:2083/api/v1/panel/version" | \
-    jq -e --arg commit "$RELEASE_COMMIT" --argjson schema "$EXPECTED_SCHEMA" \
-      '.commit == $commit and
-       .agent_commit == $commit and
-       .agent_matches == true and
-       .schema_version == $schema'
-
-AGENT_PID="$(ssh "$SERVER" 'systemctl show -p MainPID --value celikpanel-agent')"
-PANEL_PID="$(ssh "$SERVER" 'systemctl show -p MainPID --value celikpanel-panel')"
-ssh "$SERVER" "systemctl is-active --quiet celikpanel-agent celikpanel-panel && \
-    sha256sum /proc/$AGENT_PID/exe /proc/$PANEL_PID/exe"
-curl -fsSk "https://${PANEL_HOST}:2083/" | grep -oE 'assets/index[^"]*'
-```
-
-The two running `/proc/.../exe` hashes must equal the uploaded `agent` and `panel` hashes,
-the API's `schema_version` must equal `EXPECTED_SCHEMA`, the served asset must belong to this
-web archive, and both service journals must be clean for the deployment window. A reachable
-UI is not sufficient. Rollback is paired: stop the panel, move the failed DB files aside, restore the
-snapshot's DB + sidecars, agent, panel, web, and units together, then restart agent first and
-panel last.
+`rollback.sh` validates the v3 snapshot and every checksum before stopping or overwriting
+anything. It restores the paired artifacts and restores each owned unit's saved enabled and
+active state exactly; firewall-unit presence alone never authorizes enablement. Roll back the
+already-updated server before attempting the other server, then repeat all read-only checks.
 
 ## 3. Development & testing
 

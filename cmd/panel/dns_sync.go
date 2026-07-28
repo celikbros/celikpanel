@@ -120,10 +120,12 @@ func writeDNSPublicationConflict(w http.ResponseWriter, err error, safeMessage s
 // veritabanına iter (deleted true ise zone'u kaldırır).
 func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) error {
 	req := struct {
-		Domain   string       `json:"domain"`
-		Delete   bool         `json:"delete"`
-		ZoneType string       `json:"zone_type,omitempty"`
-		Records  []zoneRecord `json:"records"`
+		MutationRequestID string       `json:"mutation_request_id"`
+		MutationOwnerID   string       `json:"mutation_owner_id"`
+		Domain            string       `json:"domain"`
+		Delete            bool         `json:"delete"`
+		ZoneType          string       `json:"zone_type,omitempty"`
+		Records           []zoneRecord `json:"records"`
 	}{Domain: domain, Delete: deleted, ZoneType: p.dnsZoneType(ctx)}
 
 	if !deleted {
@@ -163,7 +165,21 @@ func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) 
 		Synced bool   `json:"synced"`
 		Error  string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.SyncDNSZone", &req, &resp); err != nil {
+	err := p.withStandaloneAgentMutation(ctx, "dns_zone_sync", domain, "", func(callCtx context.Context, binding agentMutationBinding) error {
+		req.MutationRequestID = binding.MutationRequestID
+		req.MutationOwnerID = binding.MutationOwnerID
+		if err := p.agentClient.CallContext(callCtx, "Agent.SyncDNSZone", &req, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" {
+			return errors.New(resp.Error)
+		}
+		if !resp.Synced {
+			return errors.New("agent did not confirm DNS publication")
+		}
+		return nil
+	})
+	if err != nil {
 		log.Printf("dns sync %s: %v", domain, err)
 		return &dnsAgentPublicationError{Err: err}
 	}
@@ -194,7 +210,23 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 		Synced bool   `json:"synced"`
 		Error  string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.ConfigurePowerDNSSQLite", &struct{}{}, &resp); err != nil {
+	err := p.withStandaloneAgentMutation(r.Context(), "pdns_configure", "pdns", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigurePowerDNSSQLite", &binding, &resp); err != nil {
+			return err
+		}
+		if resp.Error != "" {
+			return errors.New(resp.Error)
+		}
+		if !resp.Synced {
+			return errors.New("agent did not confirm PowerDNS configuration")
+		}
+		return nil
+	})
+	if err != nil {
+		if resp.Error != "" {
+			writeClientError(w, http.StatusConflict, resp.Error)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}

@@ -165,7 +165,7 @@ func TestRoundcubePreflightAndConfigurationConfirmation(t *testing.T) {
 		fixture := newServiceOperationTestFixture(t)
 		seedInstalledServices(fixture.agent, "nginx", "php-fpm", "dovecot")
 		result, failure := fixture.panel.runServiceInstall(
-			context.Background(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
+			serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
 		)
 		if failure == nil || result["success"] != false {
 			t.Fatalf("result=%v failure=%+v", result, failure)
@@ -180,7 +180,7 @@ func TestRoundcubePreflightAndConfigurationConfirmation(t *testing.T) {
 		seedInstalledServices(fixture.agent, "nginx", "php-fpm", "dovecot", "postfix")
 		fixture.agent.installNoop = true
 		result, failure := fixture.panel.runServiceInstall(
-			context.Background(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
+			serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
 		)
 		if failure == nil || result["success"] != false {
 			t.Fatalf("result=%v failure=%+v", result, failure)
@@ -191,7 +191,7 @@ func TestRoundcubePreflightAndConfigurationConfirmation(t *testing.T) {
 		fixture := newServiceOperationTestFixture(t)
 		seedInstalledServices(fixture.agent, "nginx", "php-fpm", "dovecot", "postfix")
 		result, failure := fixture.panel.runServiceInstall(
-			context.Background(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
+			serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "roundcube"}, func(string) error { return nil },
 		)
 		if failure != nil || result["success"] != true || result["installed"] != true {
 			t.Fatalf("result=%v failure=%+v", result, failure)
@@ -204,7 +204,7 @@ func TestDatabaseToolMustBeNamedInConfigurationResponse(t *testing.T) {
 	seedInstalledServices(fixture.agent, "nginx", "php-fpm", "mariadb")
 	fixture.agent.installNoop = true
 	result, failure := fixture.panel.runServiceInstall(
-		context.Background(), serviceInstallRequest{ServiceID: "phpmyadmin"}, func(string) error { return nil },
+		serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "phpmyadmin"}, func(string) error { return nil },
 	)
 	if failure == nil || result["success"] != false {
 		t.Fatalf("result=%v failure=%+v", result, failure)

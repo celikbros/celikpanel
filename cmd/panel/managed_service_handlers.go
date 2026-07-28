@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -66,9 +70,25 @@ type ManagedServiceResponse struct {
 	// Instances: runtime satırının arkasındaki kopya-başına gerçek (B3b) —
 	// kurulu sürüm başına bir kayıt: unit/durum/yol/boyut. Sürüm çekmecesi
 	// bunları çizer; yukarıdaki Versions yalnız sürüm dizeleridir.
-	Instances   []core.ServiceInstance `json:"instances"`
-	Packages    []string               `json:"packages,omitempty"` // distro packages (apt) shown before install
-	ConfigFiles []core.ConfigFile      `json:"config_files"`       // Detected config files
+	Instances []core.ServiceInstance `json:"instances"`
+	Packages  []string               `json:"packages,omitempty"` // distro packages (apt) shown before install
+	// RepairPackage is emitted only when the scan provides one unambiguous,
+	// managed package name accepted by the service's trusted repo pattern.
+	// Re-running Install then repairs that exact version instead of silently
+	// switching a stopped versioned service back to its distro meta-package.
+	// RepairPackage yalniz tarama, servisin guvenilir depo desenine uyan tek ve
+	// belirsiz olmayan bir yonetilen paket adi buldugunda yayimlanir. Install'i
+	// yeniden calistirmak dagitim meta-paketine sessizce donmek yerine tam bu
+	// surumu onarir.
+	RepairPackage string `json:"repair_package,omitempty"`
+	// RepairAvailable is false only when a version-specific apt service cannot
+	// be tied to exactly one installed, catalogue-matching package. The UI must
+	// not fall back to a distro meta-package in that case.
+	// RepairAvailable, surume ozel apt servisi kurulu ve katalogla eslesen tam
+	// bir pakete baglanamiyorsa false olur. UI bu durumda dagitim meta-paketine
+	// geri donmemelidir.
+	RepairAvailable bool              `json:"repair_available"`
+	ConfigFiles     []core.ConfigFile `json:"config_files"` // Detected config files
 	// Ports: the inbound ports this component exposes ("443/tcp"), from the
 	// catalogue. The firewall already opens exactly these on install; showing
 	// them per component answers "what did this open on my server?" without
@@ -148,6 +168,15 @@ type serviceObservation struct {
 	// düşer (ölü "default" sentinel'i hariç); güncellenen panel bir sonraki
 	// taramaya dek sürümleri göstermeyi sürdürür.
 	Versions []string `json:"versions,omitempty"`
+	// InstalledRepoPackages comes from Agent.InstalledRepoPackages. Unlike a
+	// unit name, this remains truthful when PostgreSQL/PHP is stopped. It is
+	// persisted as observed host state; old cache rows simply decode it as an
+	// empty slice and therefore fail closed for version-specific Repair.
+	// InstalledRepoPackages, Agent.InstalledRepoPackages'tan gelir; PostgreSQL
+	// veya PHP durmuş olsa da unit adından daha doğru kalır. Gözlenen makine
+	// durumu olarak saklanır; eski önbellek satırları boş dilime çözülür ve sürüme
+	// özel Onarım için güvenli biçimde kapalı kalır.
+	InstalledRepoPackages []string `json:"installed_repo_packages,omitempty"`
 }
 
 // scanCacheDoc is the persisted shape. An object (not a bare array) so the
@@ -158,6 +187,21 @@ type scanCacheDoc struct {
 	Observations []serviceObservation `json:"observations"`
 }
 
+// These wire types mirror Agent.InstalledRepoPackages. Only ServiceID crosses
+// the privilege boundary; the package pattern remains agent-owned catalogue
+// data and can never be supplied by the browser or panel.
+// Bu wire tipleri Agent.InstalledRepoPackages'i yansitir. Yetki sinirini yalniz
+// ServiceID gecer; paket deseni agent katalogunda kalir ve tarayici ya da panel
+// tarafindan verilemez.
+type installedRepoPackagesReq struct {
+	ServiceID string `json:"service_id"`
+}
+
+type installedRepoPackagesResp struct {
+	Packages []string `json:"packages"`
+	Error    string   `json:"error,omitempty"`
+}
+
 // decodeScanCache reads both formats. A row written before the split is a
 // JSON array of full responses; its observed fields are still in there, so an
 // upgraded panel keeps showing the right state instead of blanking the page
@@ -166,12 +210,12 @@ type scanCacheDoc struct {
 // yanıtlardan oluşan bir JSON dizisidir; gözlem alanları hâlâ içindedir, bu
 // yüzden güncellenen panel, operatör yeniden tarama koşturana dek sayfayı
 // boşaltmak yerine doğru durumu göstermeyi sürdürür.
-func decodeScanCache(data string) []serviceObservation {
+func decodeScanCache(data string) ([]serviceObservation, error) {
 	trimmed := strings.TrimSpace(data)
 	if strings.HasPrefix(trimmed, "[") {
 		var legacy []ManagedServiceResponse
-		if json.Unmarshal([]byte(trimmed), &legacy) != nil {
-			return nil
+		if err := json.Unmarshal([]byte(trimmed), &legacy); err != nil {
+			return nil, fmt.Errorf("decode legacy service scan cache: %w", err)
 		}
 		obs := make([]serviceObservation, 0, len(legacy))
 		for _, l := range legacy {
@@ -183,13 +227,74 @@ func decodeScanCache(data string) []serviceObservation {
 				ConfigFiles: l.ConfigFiles,
 			})
 		}
-		return obs
+		return obs, nil
 	}
-	var doc scanCacheDoc
-	if json.Unmarshal([]byte(trimmed), &doc) != nil {
-		return nil
+	var envelope struct {
+		Observations json.RawMessage `json:"observations"`
 	}
-	return doc.Observations
+	if err := json.Unmarshal([]byte(trimmed), &envelope); err != nil {
+		return nil, fmt.Errorf("decode service scan cache: %w", err)
+	}
+	if len(envelope.Observations) == 0 || string(envelope.Observations) == "null" {
+		return nil, fmt.Errorf("decode service scan cache: observations are missing")
+	}
+	var observations []serviceObservation
+	if err := json.Unmarshal(envelope.Observations, &observations); err != nil {
+		return nil, fmt.Errorf("decode service scan observations: %w", err)
+	}
+	return observations, nil
+}
+
+// safeRepairPackage returns observed package identity only when it is
+// unambiguous and bounded again by the panel catalogue's trusted package
+// regexp. The agent already performs this validation against its own
+// catalogue; repeating it here prevents a stale or mismatched agent response
+// from becoming an install argument.
+// safeRepairPackage, gozlenen paket kimligini yalniz tek anlamliysa ve panel
+// katalogunun guvenilir paket regexp'iyle yeniden sinirlanmissa dondurur. Agent
+// ayni dogrulamayi kendi katalogunda yapar; burada tekrarlamak eski veya uyumsuz
+// agent yanitinin kurulum argumani olmasini engeller.
+func safeRepairPackage(managed *core.ManagedService, o serviceObservation, pkgFamily string) string {
+	if managed == nil || pkgFamily != "apt" || managed.Repo == nil || managed.Repo.PackagePattern == "" {
+		return ""
+	}
+	re, err := regexp.Compile(managed.Repo.PackagePattern)
+	if err != nil {
+		return ""
+	}
+	candidates := map[string]struct{}{}
+	for _, raw := range o.InstalledRepoPackages {
+		candidate := strings.TrimSpace(raw)
+		if candidate != "" && re.FindString(candidate) == candidate {
+			candidates[candidate] = struct{}{}
+		}
+	}
+	if len(candidates) != 1 {
+		return ""
+	}
+	for candidate := range candidates {
+		return candidate
+	}
+	return ""
+}
+
+// repairSelection makes the fail-closed choice explicit. Ordinary catalogue
+// services can safely repair through their fixed Packages mapping. An apt
+// service with a versioned repository pattern must reuse exactly one observed
+// installed package or Repair is unavailable.
+// repairSelection, guvenli-kapali secimi acik eder. Siradan katalog servisleri
+// sabit Packages eslemesiyle onarilabilir. Surumlu depo deseni olan apt servisi
+// tam bir gozlenen kurulu paketi yeniden kullanmalidir; aksi halde Onarim
+// kullanilamaz.
+func repairSelection(managed *core.ManagedService, o serviceObservation, pkgFamily string) (string, bool) {
+	if managed == nil {
+		return "", false
+	}
+	if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
+		pkg := safeRepairPackage(managed, o, pkgFamily)
+		return pkg, pkg != ""
+	}
+	return "", true
 }
 
 // catalogView joins observations onto the catalogue and derives what depends
@@ -263,6 +368,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 		status := o.Status
 		conflictWith := ""
 		var requiresMissing []string
+		repairPackage, repairAvailable := repairSelection(&managed, o, pkgFamily)
 
 		// Not-installed catalogue services are listed too, so the panel can
 		// offer a one-click install. They carry status "not_installed"; the UI
@@ -312,6 +418,8 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			Ports:            portStrings(managed.FirewallPorts),
 			Kind:             managed.Kind,
 			Packages:         managed.Packages[pkgFamily],
+			RepairPackage:    repairPackage,
+			RepairAvailable:  repairAvailable,
 			ConfigFiles:      configFiles,
 		})
 	}
@@ -336,6 +444,13 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	err := p.db.GetDB().QueryRowContext(r.Context(),
 		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
 	if err == nil {
+		observations, decodeErr := decodeScanCache(data)
+		if decodeErr != nil {
+			log.Printf("cached service state is unverified: %v", decodeErr)
+			writeCodedError(w, http.StatusServiceUnavailable, errCodeServiceStateUnverified,
+				"cached service state could not be verified; run a fresh scan", "/services")
+			return
+		}
 		if t, terr := time.Parse(time.RFC3339, scannedAt); terr == nil {
 			payload.ScannedAt = &t
 		}
@@ -345,7 +460,10 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		// Katalog okuma anında birleştirilir; böylece güncellenen panel kendi
 		// kataloğu hakkında anında doğruyu söyler — adı değişen bir servisi,
 		// yenisini ya da düzeltilmiş bir açıklamayı görmek için tarama gerekmez.
-		payload.Services = catalogView(decodeScanCache(data), p.packageFamily())
+		payload.Services = catalogView(observations, p.packageFamily())
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		writeServerError(w, fmt.Errorf("read service scan cache: %w", err))
+		return
 	}
 
 	json.NewEncoder(w).Encode(payload)
@@ -387,6 +505,11 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	release, busy := p.beginServiceMutation(w, r)
+	if busy {
+		return
+	}
+	defer release()
 
 	services, err := p.scanManagedServices(r.Context())
 	if err != nil {
@@ -412,7 +535,9 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
 	var installedIDs []string
-	_ = p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs)
+	if err := p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
+		return nil, fmt.Errorf("probe installed service ids: %w", err)
+	}
 	installedSet := map[string]bool{}
 	for _, id := range installedIDs {
 		installedSet[id] = true
@@ -428,6 +553,18 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		isInstalled := false
 		status := "inactive"
 		anyRunning := false
+		var installedRepoPackages []string
+		if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
+			var packageResult installedRepoPackagesResp
+			request := installedRepoPackagesReq{ServiceID: managed.ID}
+			if err := p.agentClient.Call("Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
+				return nil, fmt.Errorf("probe installed repository packages for %s: %w", managed.ID, err)
+			}
+			if packageResult.Error != "" {
+				return nil, fmt.Errorf("probe installed repository packages for %s: %s", managed.ID, packageResult.Error)
+			}
+			installedRepoPackages = append([]string(nil), packageResult.Packages...)
+		}
 
 		// A versioned runtime matches by pattern as well as by name, so a PHP
 		// version this catalogue has never heard of is still observed. Without
@@ -522,9 +659,13 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			req := struct {
 				ID string `json:"id"`
 			}{ID: managed.ID}
-			if err := p.agentClient.Call("Agent.ListServiceInstances", &req, &ir); err == nil {
-				instances = ir.Instances
+			if err := p.agentClient.Call("Agent.ListServiceInstances", &req, &ir); err != nil {
+				return nil, fmt.Errorf("probe service instances for %s: %w", managed.ID, err)
 			}
+			if ir.Error != "" {
+				return nil, fmt.Errorf("probe service instances for %s: %s", managed.ID, ir.Error)
+			}
+			instances = ir.Instances
 
 			anyManaged, anyUnit, anyUnitActive := false, false, false
 			for _, in := range instances {
@@ -562,12 +703,13 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		}
 
 		observations = append(observations, serviceObservation{
-			ID:          managed.ID,
-			IsInstalled: isInstalled,
-			Status:      status,
-			Unit:        primaryUnit,
-			Instances:   instances,
-			ConfigFiles: configFiles,
+			ID:                    managed.ID,
+			IsInstalled:           isInstalled,
+			Status:                status,
+			Unit:                  primaryUnit,
+			Instances:             instances,
+			ConfigFiles:           configFiles,
+			InstalledRepoPackages: installedRepoPackages,
 		})
 	}
 

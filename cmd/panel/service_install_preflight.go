@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -14,6 +15,11 @@ import (
 // button, but every API path must independently prove that this host supports
 // the component, its prerequisites exist, its exclusive seat is free and a
 // required repository is enabled before the agent mutates the machine.
+// preflightManagedServiceInstall; paket, taşınabilir araç ve runtime
+// kurulumlarının ortak backend kapısıdır. Tarayıcı düğmeyi kapatsa da her API
+// yolu; agent makineyi değiştirmeden önce host desteğini, önkoşulları, özel
+// servis yuvasının boş olduğunu ve zorunlu deponun etkinliğini bağımsız olarak
+// doğrular.
 func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID string) error {
 	managed := core.GetManagedServiceByID(serviceID)
 	if managed == nil {
@@ -47,10 +53,19 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID st
 	if family == "apt" && managed.Repo != nil && managed.Repo.Required {
 		var status RepoStatusResp
 		if err := p.agentClient.CallContext(ctx, "Agent.RepoStatus", &enableRepoReq{RepoID: managed.Repo.ID}, &status); err != nil {
-			return fmt.Errorf("required repository status: %w", err)
+			log.Printf("[repo][%s][install-preflight][transport] %v", managed.Repo.ID, err)
+			return errors.New("required repository status could not be verified")
 		}
 		if status.Error != "" {
-			return fmt.Errorf("required repository status: %s", status.Error)
+			code := normalizeRepoErrorCode(status.ErrorCode, errCodeRepoStatusFailed)
+			if status.Repairable {
+				code = normalizeRepoErrorCode(status.ErrorCode, errCodeRepoConfigurationInvalid)
+			}
+			log.Printf("[repo][%s][install-preflight][agent][%s] %s", managed.Repo.ID, code, status.Error)
+			if status.Repairable {
+				return errors.New("required repository configuration needs repair")
+			}
+			return errors.New("required repository status could not be verified")
 		}
 		if !status.Enabled {
 			return fmt.Errorf("%s requires the %s repository; enable it from Services first",

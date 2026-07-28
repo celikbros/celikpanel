@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud, ChevronDown, ChevronRight, Trash2, ShieldCheck, ShieldOff, Layers, Globe, Database, Mail, Network, Shield, Zap, FolderUp, Activity, Boxes } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
@@ -25,6 +25,7 @@ interface ServiceInstance {
 interface ManagedService {
     id: string;
     /** The real systemd unit the scan found (BIND's id is "bind", unit "named"). */
+    /** Taramanın bulduğu gerçek systemd unit'i (BIND id'si "bind", unit'i "named"). */
     unit?: string;
     name: string;
     description: string;
@@ -40,6 +41,106 @@ interface ManagedService {
     requires_missing?: string[];
     kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
+    /** Exact installed version package to reuse for a safe idempotent repair. */
+    /** Güvenli ve idempotent onarımda yeniden kullanılacak tam kurulu sürüm paketi. */
+    repair_package?: string;
+    /** False when a versioned apt install cannot be tied to one exact package. */
+    /** Sürümlü apt kurulumu tek bir kesin paketle eşleştirilemiyorsa false olur. */
+    repair_available: boolean;
+}
+
+interface ManagedServicesSnapshot {
+    services: ManagedService[];
+    scannedAt: string | null;
+}
+
+interface ServiceVerificationState {
+    unverified: boolean;
+    baselineScannedAt: string | null;
+}
+
+const serviceVerificationStorageKey = 'celikpanel.components.unverified-state';
+
+function isServiceInstance(value: unknown): value is ServiceInstance {
+    if (!value || typeof value !== 'object') return false;
+    const instance = value as Record<string, unknown>;
+    return (
+        typeof instance.version === 'string' &&
+        typeof instance.managed === 'boolean' &&
+        (instance.unit === undefined || typeof instance.unit === 'string') &&
+        (instance.path === undefined || typeof instance.path === 'string') &&
+        (instance.status === undefined || typeof instance.status === 'string') &&
+        (instance.size_bytes === undefined || typeof instance.size_bytes === 'number')
+    );
+}
+
+function isManagedService(value: unknown): value is ManagedService {
+    if (!value || typeof value !== 'object') return false;
+    const service = value as Record<string, unknown>;
+    return (
+        typeof service.id === 'string' &&
+        typeof service.name === 'string' &&
+        typeof service.description === 'string' &&
+        typeof service.icon === 'string' &&
+        typeof service.category === 'string' &&
+        typeof service.status === 'string' &&
+        typeof service.is_installed === 'boolean' &&
+        Array.isArray(service.versions) &&
+        service.versions.every((version) => typeof version === 'string') &&
+        (service.instances === undefined ||
+            (Array.isArray(service.instances) && service.instances.every(isServiceInstance))) &&
+        (service.repair_available === undefined || typeof service.repair_available === 'boolean')
+    );
+}
+
+// A snapshot is trusted only after validating the fields this screen uses.
+// An array-shaped error or half-written payload must never unlock mutations.
+// Bir snapshot yalnız bu ekranın kullandığı alanlar doğrulandıktan sonra
+// güvenilir sayılır. Dizi görünümlü hata ya da yarım yük mutasyon kilidini
+// asla açmamalıdır.
+function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (!Array.isArray(payload.services) || !payload.services.every(isManagedService)) return null;
+    if (
+        payload.scanned_at !== undefined
+        && payload.scanned_at !== null
+        && (
+            typeof payload.scanned_at !== 'string'
+            || !Number.isFinite(Date.parse(payload.scanned_at))
+        )
+    ) {
+        return null;
+    }
+    return {
+        services: payload.services,
+        scannedAt: typeof payload.scanned_at === 'string' ? payload.scanned_at : null,
+    };
+}
+
+function readServiceVerificationState(): ServiceVerificationState {
+    if (typeof sessionStorage === 'undefined') return { unverified: false, baselineScannedAt: null };
+    try {
+        const value = JSON.parse(sessionStorage.getItem(serviceVerificationStorageKey) ?? 'null') as Record<string, unknown> | null;
+        if (!value || value.unverified !== true) return { unverified: false, baselineScannedAt: null };
+        return {
+            unverified: true,
+            baselineScannedAt: typeof value.baselineScannedAt === 'string' ? value.baselineScannedAt : null,
+        };
+    } catch {
+        return { unverified: false, baselineScannedAt: null };
+    }
+}
+
+function persistServiceVerificationState(value: ServiceVerificationState) {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+        if (value.unverified) sessionStorage.setItem(serviceVerificationStorageKey, JSON.stringify(value));
+        else sessionStorage.removeItem(serviceVerificationStorageKey);
+    } catch {
+        // Restricted storage must not bypass the in-memory safety lock.
+        // Kısıtlı depolama, bellek içindeki güvenlik kilidini aşmamalıdır.
+    }
 }
 
 // A tarball runtime installs from upstream (nodejs.org), not from distro
@@ -98,12 +199,13 @@ interface ServiceListProps {
 interface RepoInfo {
     available: boolean;
     enabled: boolean;
+    repairable?: boolean;
     id?: string;
     name?: string;
     detail?: string;
     required?: boolean;
     packages?: string[];
-    error?: string;
+    error_code?: string;
 }
 
 // unknownCategories returns a card definition for every category present in
@@ -143,6 +245,67 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
+    const [verification, setVerification] = useState<ServiceVerificationState>(readServiceVerificationState);
+    const latestScannedAtRef = useRef<string | null>(null);
+    const stateUnverified = verification.unverified;
+
+    const markStateUnverified = () => {
+        setVerification((previous) => {
+            const next = {
+                unverified: true,
+                baselineScannedAt: previous.unverified ? previous.baselineScannedAt : scannedAt,
+            };
+            persistServiceVerificationState(next);
+            return next;
+        });
+    };
+
+    const clearStateUnverified = () => {
+        const next = { unverified: false, baselineScannedAt: null };
+        persistServiceVerificationState(next);
+        setVerification(next);
+    };
+
+    const applySnapshot = (value: unknown, source: 'load' | 'scan'): boolean => {
+        const snapshot = parseManagedServicesSnapshot(value);
+        if (!snapshot) return false;
+        if (source === 'scan' && snapshot.scannedAt === null) return false;
+
+        const currentScannedAt = latestScannedAtRef.current;
+        const currentTimestamp = Date.parse(currentScannedAt || '');
+        const nextTimestamp = Date.parse(snapshot.scannedAt || '');
+        if (
+            Number.isFinite(currentTimestamp)
+            && (
+                !Number.isFinite(nextTimestamp)
+                || nextTimestamp < currentTimestamp
+                || (source === 'load' && nextTimestamp === currentTimestamp)
+            )
+        ) {
+            return true;
+        }
+        latestScannedAtRef.current = snapshot.scannedAt;
+        setServices(snapshot.services);
+        setScannedAt(snapshot.scannedAt);
+
+        // A cached load may still be the exact pre-mutation snapshot retained
+        // after an atomic scan failure. Only a fresh scan, or a load carrying
+        // a newer scan token, may release the mutation lock.
+        // Önbellek yüklemesi, atomik tarama hatasından sonra korunan mutasyon
+        // öncesi snapshot'ın aynısı olabilir. Kilidi yalnız taze tarama veya
+        // daha yeni tarama belirteci taşıyan yükleme açabilir.
+        const loadProvesNewState =
+            source === 'load' &&
+            snapshot.scannedAt !== null &&
+            snapshot.scannedAt !== verification.baselineScannedAt;
+        if (source === 'scan' || !stateUnverified || loadProvesNewState) clearStateUnverified();
+        return true;
+    };
+
+    const handleStateRefreshFailure = (error: ApiError) => {
+        markStateUnverified();
+        showToast('error', apiErrorText(error, t, 'services.actionFailed'));
+    };
     // Installed-first (D-010, Jul 18): the page shows what this server RUNS,
     // not the whole catalog. Page length then tracks the installed count, not
     // the catalog size — a clean server is 3-4 rows whether the catalog holds
@@ -190,16 +353,21 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     };
 
     useEffect(() => {
-        loadServices();
+        void loadServices();
     }, []);
 
     // The operation controller keeps the panel locked through its mandatory
     // post-install scan. Consume that exact fresh snapshot before the overlay
     // is removed instead of racing it with another independent load.
-    useEffect(() => {
+    // İşlem denetleyicisi, zorunlu kurulum sonrası tarama boyunca paneli kilitli
+    // tutar. Overlay'i kaldırmadan önce, başka bağımsız yüklemeyle yarıştırmak
+    // yerine bu kesin taze snapshot'ı kullan.
+    useLayoutEffect(() => {
         if (!catalogSnapshot) return;
-        setServices(catalogSnapshot.services as unknown as ManagedService[]);
-        setScannedAt(catalogSnapshot.scanned_at ?? null);
+        if (!applySnapshot(catalogSnapshot, 'scan')) {
+            markStateUnverified();
+            showToast('error', t('services.scanFailed'));
+        }
         setLoading(false);
     }, [catalogSnapshot]);
 
@@ -230,28 +398,54 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // probe is the explicit user action below (scan).
     // ÖNBELLEKTEKİ taramayı okur — anlık, sistemi asla yoklamaz. Taze
     // yoklama aşağıdaki açık kullanıcı eylemidir (scan).
-    const loadServices = () => {
+    const loadServices = async (): Promise<boolean> => {
         setLoading(true);
-        fetch('/api/v1/managed-services')
-            .then((res) => res.json())
-            .then((data) => {
-                setServices(data?.services || []);
-                setScannedAt(data?.scanned_at ?? null);
-            })
-            .catch(() => showToast('error', t('common.error')))
-            .finally(() => setLoading(false));
+        try {
+            const res = await fetch('/api/v1/managed-services');
+            if (!res.ok) {
+                showToast('error', apiErrorText(await readApiError(res), t));
+                markStateUnverified();
+                return false;
+            }
+            const data: unknown = await res.json();
+            if (!applySnapshot(data, 'load')) {
+                showToast('error', t('services.scanFailed'));
+                markStateUnverified();
+                return false;
+            }
+            return true;
+        } catch {
+            showToast('error', t('common.error'));
+            markStateUnverified();
+            return false;
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const scan = async () => {
+    const scan = async (): Promise<boolean> => {
         setScanning(true);
         try {
-            const res = await fetch('/api/v1/managed-services/scan', { method: 'POST' });
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            setServices(data?.services || []);
-            setScannedAt(data?.scanned_at ?? null);
+            const res = await fetch('/api/v1/managed-services/scan', {
+                method: 'POST',
+                cache: 'no-store',
+            });
+            if (!res.ok) {
+                showToast('error', apiErrorText(await readApiError(res), t, 'services.scanFailed'));
+                markStateUnverified();
+                return false;
+            }
+            const data: unknown = await res.json();
+            if (!applySnapshot(data, 'scan')) {
+                showToast('error', t('services.scanFailed'));
+                markStateUnverified();
+                return false;
+            }
+            return true;
         } catch {
             showToast('error', t('services.scanFailed'));
+            markStateUnverified();
+            return false;
         } finally {
             setScanning(false);
         }
@@ -279,6 +473,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // Gerçek kurulum, onay modalından sonra koşar. Agent bu id için yalnız
     // beyaz-listedeki paketleri kurar, sonra unit'i etkinleştirir.
     const doInstall = async (service: ManagedService, pkg?: string) => {
+        if (stateUnverified) {
+            showToast('error', t('services.stateUnverifiedHint'));
+            return;
+        }
         setInstallTarget(null);
         await startInstall({
             serviceId: service.id,
@@ -299,6 +497,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // 409 ancak toast olarak parlayıp sönebiliyordu.
     const [uninstallError, setUninstallError] = useState<ApiError | null>(null);
     const doUninstall = async (service: ManagedService) => {
+        if (stateUnverified) {
+            showToast('error', t('services.stateUnverifiedHint'));
+            return;
+        }
         setBusy(service.id);
         setUninstallError(null);
         try {
@@ -308,13 +510,34 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 body: JSON.stringify({ service_id: service.id }),
             });
             if (!res.ok) {
-                setUninstallError(await readApiError(res));
+                const error = await readApiError(res);
+                if (error.code === 'SERVICE_STATE_REFRESH_FAILED') {
+                    setUninstallTarget(null);
+                    handleStateRefreshFailure(error);
+                    return;
+                }
+                // The removal and fresh scan succeeded; reload that verified cache while
+                // keeping the firewall warning visible instead of retaining the old row.
+                // Kaldırma ve taze tarama başarılıdır; eski satırı tutmak yerine güvenlik
+                // duvarı uyarısını gösterirken doğrulanmış cache'i yeniden yükle.
+                if (
+                    error.code === 'FIREWALL_SYNC_FAILED' ||
+                    error.code === 'MAIL_FILTER_SYNC_FAILED' ||
+                    error.code === 'SERVICE_UNINSTALL_PARTIAL'
+                ) {
+                    setUninstallTarget(null);
+                    showToast('error', apiErrorText(error, t, 'services.actionFailed'));
+                    if (!(await loadServices())) markStateUnverified();
+                    return;
+                }
+                setUninstallError(error);
                 return;
             }
             setUninstallTarget(null);
             showToast('success', t('services.uninstalled', { name: service.name }));
-            loadServices();
+            if (!(await loadServices())) markStateUnverified();
         } catch {
+            markStateUnverified();
             showToast('error', t('services.actionFailed'));
         } finally {
             setBusy(null);
@@ -330,6 +553,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // handleInstanceAction'dan geçer — eskiden burada yaşayan "default"
     // sentinel'li unit tahmini B3b ile gitti.
     const handleAction = async (service: ManagedService, action: 'start' | 'stop' | 'restart') => {
+        if (stateUnverified) {
+            showToast('error', t('services.stateUnverifiedHint'));
+            return;
+        }
         setBusy(service.id);
         try {
             // Target the unit the SCAN found, not the catalogue id. They differ
@@ -350,12 +577,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 // read as "nothing happened".
                 // NEDENİNİ söyle. Genel "işlem başarısız" balonu, gerçek bir
                 // hatanın "hiçbir şey olmadı" diye okunmasının sebebiydi.
-                showToast('error', apiErrorText(await readApiError(res), t, 'services.actionFailed'));
+                const error = await readApiError(res);
+                if (error.code === 'SERVICE_STATE_REFRESH_FAILED') {
+                    handleStateRefreshFailure(error);
+                    return;
+                }
+                showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                 return;
             }
-            await new Promise((r) => setTimeout(r, 1000));
-            loadServices();
+            if (!(await loadServices())) markStateUnverified();
         } catch {
+            markStateUnverified();
             showToast('error', t('services.actionFailed'));
         } finally {
             setBusy(null);
@@ -369,6 +601,10 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // sunucu tarafında yeniden tarar; ardından gelen yükleme kopya-başına
     // taze durumu getirir.
     const handleInstanceAction = async (serviceId: string, unit: string, action: 'start' | 'stop' | 'restart') => {
+        if (stateUnverified) {
+            showToast('error', t('services.stateUnverifiedHint'));
+            return;
+        }
         setBusy(`${serviceId}:${unit}`);
         try {
             const res = await fetch('/api/v1/service/action', {
@@ -376,10 +612,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: unit, action }),
             });
-            if (!res.ok) throw new Error();
-            await new Promise((r) => setTimeout(r, 1000));
-            loadServices();
+            if (!res.ok) {
+                const error = await readApiError(res);
+                if (error.code === 'SERVICE_STATE_REFRESH_FAILED') {
+                    handleStateRefreshFailure(error);
+                    return;
+                }
+                showToast('error', apiErrorText(error, t, 'services.actionFailed'));
+                return;
+            }
+            if (!(await loadServices())) markStateUnverified();
         } catch {
+            markStateUnverified();
             showToast('error', t('services.actionFailed'));
         } finally {
             setBusy(null);
@@ -401,6 +645,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         return services.find((x) => x.id === token)?.name ?? token;
     };
     const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
+    const pageControlsBusy = scanning || busy !== null;
+    const mutationControlsDisabled = pageControlsBusy || stateUnverified;
 
     return (
         <div className="p-6 md:p-8">
@@ -415,7 +661,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <button
                     onClick={scan}
-                    disabled={scanning}
+                    disabled={pageControlsBusy}
                     className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
                 >
                     <RefreshCw className={`h-4 w-4 ${scanning ? 'animate-spin' : ''}`} />
@@ -472,6 +718,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     </div>
                 )}
             </div>
+
+            {stateUnverified && (
+                <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/5 p-4">
+                    <ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                    <div>
+                        <div className="text-sm font-semibold text-fg">{t('services.stateUnverifiedTitle')}</div>
+                        <p className="text-sm text-fg-muted">{t('services.stateUnverifiedHint')}</p>
+                    </div>
+                </div>
+            )}
 
             {loading ? (
                 <div className="flex items-center justify-center py-16">
@@ -614,7 +870,11 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                     : t('services.stopped')}
                                                         </span>
                                                     </div>
-                                                    <div className="ml-auto flex items-center justify-end gap-1">
+                                                    <fieldset
+                                                        disabled={mutationControlsDisabled}
+                                                        aria-busy={pageControlsBusy}
+                                                        className="ml-auto flex min-w-0 items-center justify-end gap-1 border-0 p-0"
+                                                    >
                                                     {!s.is_installed ? (
                                                         s.not_offered ? (
                                                             /* Honest instead of a dead Install button that
@@ -716,9 +976,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                        packages, configuration, helpers and readiness under the
                                                        same full-page operation lock. */
                                                     <ActionIcon
-                                                        title={t('services.repair')}
-                                                        onClick={() => startInstall({ serviceId: s.id, name: s.name })}
-                                                        disabled={busy === s.id}
+                                                        title={s.repair_available ? t('services.repair') : t('services.repairUnavailable')}
+                                                        onClick={() => startInstall({
+                                                            serviceId: s.id,
+                                                            name: s.name,
+                                                            ...(s.repair_package ? { package: s.repair_package } : {}),
+                                                        })}
+                                                        disabled={busy === s.id || !s.repair_available}
                                                         tone="warning"
                                                     >
                                                         <RotateCw className="h-4 w-4" />
@@ -771,23 +1035,31 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     )}
                                                     </>
                                                     )}
-                                                    </div>
+                                                    </fieldset>
                                                     {s.kind === 'runtime' && openDrawers.has(s.id) && (
                                                         <VersionDrawer
                                                             service={s}
                                                             busy={busy}
+                                                            mutationDisabled={mutationControlsDisabled}
                                                             onInstanceAction={handleInstanceAction}
                                                             onVersionInstalled={scan}
-                                                            onInstallPackage={(pkg, version) => startInstall({
-                                                                serviceId: s.id,
-                                                                package: pkg,
-                                                                name: `${s.name} ${version}`,
-                                                            })}
-                                                            onInstallNode={(version) => startInstall({
-                                                                serviceId: s.id,
-                                                                version,
-                                                                name: `Node ${version}`,
-                                                            })}
+                                                            onStateUnverified={handleStateRefreshFailure}
+                                                            onInstallPackage={(pkg, version) => {
+                                                                if (stateUnverified) return Promise.resolve(false);
+                                                                return startInstall({
+                                                                    serviceId: s.id,
+                                                                    package: pkg,
+                                                                    name: `${s.name} ${version}`,
+                                                                });
+                                                            }}
+                                                            onInstallNode={(version) => {
+                                                                if (stateUnverified) return Promise.resolve(false);
+                                                                return startInstall({
+                                                                    serviceId: s.id,
+                                                                    version,
+                                                                    name: `Node ${version}`,
+                                                                });
+                                                            }}
                                                         />
                                                     )}
                                                 </li>
@@ -803,23 +1075,29 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 </>
             )}
 
-            {installTarget && (
-                <InstallServiceDialog
-                    service={installTarget}
-                    busy={busy === installTarget.id}
-                    onCancel={() => setInstallTarget(null)}
-                    onConfirm={(pkg) => doInstall(installTarget, pkg)}
-                />
-            )}
-            {uninstallTarget && (
-                <UninstallServiceDialog
-                    service={uninstallTarget}
-                    busy={busy === uninstallTarget.id}
-                    error={uninstallError}
-                    onCancel={() => { setUninstallTarget(null); setUninstallError(null); }}
-                    onConfirm={() => doUninstall(uninstallTarget)}
-                />
-            )}
+            <fieldset
+                disabled={mutationControlsDisabled}
+                aria-busy={pageControlsBusy}
+                className="min-w-0 border-0 p-0"
+            >
+                {installTarget && (
+                    <InstallServiceDialog
+                        service={installTarget}
+                        busy={busy === installTarget.id}
+                        onCancel={() => setInstallTarget(null)}
+                        onConfirm={(pkg) => doInstall(installTarget, pkg)}
+                    />
+                )}
+                {uninstallTarget && (
+                    <UninstallServiceDialog
+                        service={uninstallTarget}
+                        busy={busy === uninstallTarget.id}
+                        error={uninstallError}
+                        onCancel={() => { setUninstallTarget(null); setUninstallError(null); }}
+                        onConfirm={() => doUninstall(uninstallTarget)}
+                    />
+                )}
+            </fieldset>
         </div>
     );
 }
@@ -858,6 +1136,7 @@ function InstallServiceDialog({
     const [repo, setRepo] = useState<RepoInfo | null>(null);
     const [repoBusy, setRepoBusy] = useState(false);
     const [selectedPkg, setSelectedPkg] = useState<string>('');
+    const repoError = repo?.error_code ? apiErrorText({ message: '', code: repo.error_code }, t, 'services.actionFailed') : '';
 
     // Ask the server what apt would actually install right now — honest
     // "what will land", not a made-up version picker (the distro offers one).
@@ -888,12 +1167,15 @@ function InstallServiceDialog({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ service_id: service.id, action }),
             });
+            if (!res.ok) {
+                showToast('error', apiErrorText(await readApiError(res), t, 'services.actionFailed'));
+                return;
+            }
             const data: RepoInfo = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || 'repo failed');
             setRepo(data.available ? data : null);
             if (action === 'disable') setSelectedPkg('');
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } catch {
+            showToast('error', t('services.actionFailed'));
         } finally {
             setRepoBusy(false);
         }
@@ -906,10 +1188,16 @@ function InstallServiceDialog({
           : [service.id];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => {
+                if (!busy && !repoBusy) onCancel();
+            }}
+        >
             <div
                 className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
+                aria-busy={busy || repoBusy}
             >
                 <div className="mb-4 flex items-start gap-3">
                     <span className="text-3xl leading-none">{service.icon}</span>
@@ -961,10 +1249,11 @@ function InstallServiceDialog({
                                 <p className={`mb-2 text-xs ${repo.required ? 'text-warning' : 'text-fg-subtle'}`}>
                                     {repo.required ? t('services.repo.requiredNote') : t('services.repo.note')}
                                 </p>
+                                {repoError && <p className="mb-2 text-xs text-danger">{repoError}</p>}
                                 <Button
                                     variant="secondary"
                                     onClick={() => toggleRepo('enable')}
-                                    disabled={repoBusy || busy}
+                                    disabled={repoBusy || busy || Boolean(repo.error_code && !repo.repairable)}
                                     icon={Layers}
                                 >
                                     {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
@@ -972,15 +1261,17 @@ function InstallServiceDialog({
                             </>
                         ) : (
                             <>
+                                {repoError && <p className="mb-2 text-xs text-danger">{repoError}</p>}
                                 <p className="mb-1.5 text-xs font-medium text-fg-subtle">{t('services.repo.chooseVersion')}</p>
                                 <div className="flex flex-wrap gap-1.5">
                                     <button
                                         onClick={() => setSelectedPkg('')}
+                                        disabled={repoBusy || busy}
                                         className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                                             selectedPkg === ''
                                                 ? 'bg-primary text-primary-fg'
                                                 : 'bg-surface-3 text-fg-muted hover:text-fg'
-                                        }`}
+                                        } disabled:cursor-not-allowed disabled:opacity-50`}
                                     >
                                         {t('services.repo.distroDefault')}
                                         {version ? ` (${version})` : ''}
@@ -989,11 +1280,12 @@ function InstallServiceDialog({
                                         <button
                                             key={pkg}
                                             onClick={() => setSelectedPkg(pkg)}
+                                            disabled={repoBusy || busy}
                                             className={`rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
                                                 selectedPkg === pkg
                                                     ? 'bg-primary text-primary-fg'
                                                     : 'bg-surface-3 text-fg-muted hover:text-fg'
-                                            }`}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}
                                         >
                                             {pkg}
                                         </button>
@@ -1012,11 +1304,11 @@ function InstallServiceDialog({
                 )}
 
                 <div className="flex justify-end gap-2">
-                    <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
+                    <Button variant="secondary" onClick={onCancel} disabled={busy || repoBusy}>{t('common.cancel')}</Button>
                     <Button
                         variant="primary"
                         onClick={() => onConfirm(selectedPkg || undefined)}
-                        disabled={busy || Boolean(repo?.required && !repo.enabled)}
+                        disabled={busy || repoBusy || Boolean(repo?.required && (repo.error_code || !repo.enabled))}
                         icon={DownloadCloud}
                     >
                         {busy ? t('services.installing') : t('services.install')}
@@ -1088,15 +1380,19 @@ function fmtBytes(n: number): string {
 function VersionDrawer({
     service,
     busy,
+    mutationDisabled,
     onInstanceAction,
     onVersionInstalled,
+    onStateUnverified,
     onInstallPackage,
     onInstallNode,
 }: {
     service: ManagedService;
     busy: string | null;
+    mutationDisabled: boolean;
     onInstanceAction: (serviceId: string, unit: string, action: 'start' | 'stop' | 'restart') => void;
-    onVersionInstalled: () => void;
+    onVersionInstalled: () => Promise<boolean>;
+    onStateUnverified: (error: ApiError) => void;
     onInstallPackage: (pkg: string, version: string) => Promise<boolean>;
     onInstallNode: (version: string) => Promise<boolean>;
 }) {
@@ -1120,6 +1416,7 @@ function VersionDrawer({
     // tek-adres kuralı: kur da kaldır da çekmecede.
     const [repo, setRepo] = useState<RepoInfo | null>(null);
     const [repoBusy, setRepoBusy] = useState(false);
+    const repoError = repo?.error_code ? apiErrorText({ message: '', code: repo.error_code }, t, 'services.actionFailed') : '';
     useEffect(() => {
         if (tarball || service.kind !== 'runtime') return;
         fetch(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`)
@@ -1137,11 +1434,14 @@ function VersionDrawer({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ service_id: service.id, action: 'enable' }),
             });
-            const d = await res.json();
-            if (!res.ok || d.error) throw new Error(d.error);
+            if (!res.ok) {
+                showToast('error', apiErrorText(await readApiError(res), t, 'services.actionFailed'));
+                return;
+            }
+            const d: RepoInfo = await res.json();
             setRepo(d);
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('services.actionFailed'));
+        } catch {
+            showToast('error', t('services.actionFailed'));
         } finally {
             setRepoBusy(false);
         }
@@ -1228,14 +1528,41 @@ function VersionDrawer({
                   })
                 : await fetch(`/api/v1/runtimes/node/${inst.version}`, { method: 'DELETE' });
             if (!res.ok) {
-                setRemoveError(await readApiError(res));
+                const error = await readApiError(res);
+                if (error.code === 'SERVICE_STATE_REFRESH_FAILED') {
+                    setRemoveTarget(null);
+                    onStateUnverified(error);
+                    return;
+                }
+                // These responses carry a verified post-mutation snapshot.
+                // Warn, close the stale modal and reload instead of pretending
+                // the original row is still authoritative.
+                // Bu yanıtlar değişiklik sonrası doğrulanmış snapshot taşır.
+                // Eski satırı yetkili sanmak yerine uyar, modalı kapat ve yeniden yükle.
+                if (
+                    error.code === 'FIREWALL_SYNC_FAILED' ||
+                    error.code === 'MAIL_FILTER_SYNC_FAILED' ||
+                    error.code === 'SERVICE_UNINSTALL_PARTIAL'
+                ) {
+                    setRemoveTarget(null);
+                    showToast('error', apiErrorText(error, t, 'services.actionFailed'));
+                    await onVersionInstalled();
+                    return;
+                }
+                setRemoveError(error);
                 return;
             }
             setRemoveTarget(null);
             showToast('success', t('services.versionRemoved', { version: inst.version }));
-            onVersionInstalled();
+            // The endpoint mutation is not enough to trust the old row. Wait
+            // for the parent scan and keep its safety lock when verification
+            // fails.
+            // Uç nokta mutasyonu eski satıra güvenmek için yeterli değildir.
+            // Üst bileşenin taramasını bekle; doğrulama başarısızsa güvenlik
+            // kilidini koru.
+            if (!(await onVersionInstalled())) return;
         } catch {
-            showToast('error', t('services.actionFailed'));
+            onStateUnverified({ message: t('services.actionFailed') });
         } finally {
             setRemoving(false);
         }
@@ -1244,7 +1571,11 @@ function VersionDrawer({
         inst.managed && (inst.unit ? service.kind === 'runtime' : service.id === 'node');
 
     return (
-        <div className="mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3">
+        <fieldset
+            disabled={mutationDisabled}
+            aria-busy={mutationDisabled}
+            className="mt-1 w-full rounded-lg border border-border bg-surface-2/40 px-4 py-3"
+        >
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
                 {t('services.instancesTitle')}
             </div>
@@ -1341,8 +1672,10 @@ function VersionDrawer({
                 <div className="mt-2 border-t border-border/60 pt-3">
                     {!repo.enabled ? (
                         <div className="flex flex-wrap items-center gap-3">
-                            <span className="text-xs text-fg-subtle">{t('services.repo.note')}</span>
-                            <Button variant="secondary" onClick={enableRepo} disabled={repoBusy}>
+                            <span className={`text-xs ${repoError ? 'text-danger' : 'text-fg-subtle'}`}>
+                                {repoError || t('services.repo.note')}
+                            </span>
+                            <Button variant="secondary" onClick={enableRepo} disabled={repoBusy || Boolean(repo.error_code && !repo.repairable)}>
                                 {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
                             </Button>
                         </div>
@@ -1482,7 +1815,7 @@ function VersionDrawer({
                     </div>
                 </div>
             )}
-        </div>
+        </fieldset>
     );
 }
 
@@ -1554,13 +1887,71 @@ function UninstallServiceDialog({
 // açık. Açık küme koşan servisleri izler; kutu yalnız koşturduğunu açar.
 function FirewallBar() {
     const { t } = useI18n();
-    const [st, setSt] = useState<{ enabled: boolean; engine_available?: boolean; tcp_ports?: number[]; udp_ports?: number[]; ssh_ports?: number[] } | null>(null);
+    type FirewallViewStatus = {
+        enabled: boolean;
+        engine_available?: boolean;
+        tcp_ports?: number[];
+        udp_ports?: number[];
+        ssh_ports?: number[];
+        persistence_state?: string;
+        persistence_error?: string;
+        snapshot_version?: number;
+    };
+    const [st, setSt] = useState<FirewallViewStatus | null>(null);
+    const [statusError, setStatusError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
-    const load = () => {
-        fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setSt).catch(() => {});
+    // A failed status read is neither "on" nor "off". Preserve that distinction
+    // so an agent/permission/network failure can never be mistaken for an open firewall.
+    // Başarısız durum okuması ne "açık" ne de "kapalı"dır. Agent/yetki/ağ
+    // hatasının açık bir güvenlik duvarıyla karıştırılmaması için bu ayrımı koru.
+    const load = async () => {
+        try {
+            const r = await fetch('/api/v1/firewall');
+            let body: unknown;
+            try {
+                body = await r.json();
+            } catch {
+                throw new Error(
+                    r.ok
+                        ? t('firewall.invalidResponse')
+                        : `${t('firewall.loadFailed')} (HTTP ${r.status})`,
+                );
+            }
+
+            const apiError =
+                typeof body === 'object' &&
+                body !== null &&
+                'error' in body &&
+                typeof body.error === 'string' &&
+                body.error.trim()
+                    ? body.error
+                    : '';
+            if (!r.ok) {
+                throw new Error(apiError || `${t('firewall.loadFailed')} (HTTP ${r.status})`);
+            }
+            if (apiError) {
+                throw new Error(apiError);
+            }
+            if (
+                typeof body !== 'object' ||
+                body === null ||
+                !('enabled' in body) ||
+                typeof body.enabled !== 'boolean'
+            ) {
+                throw new Error(t('firewall.invalidResponse'));
+            }
+
+            setSt(body as FirewallViewStatus);
+            setStatusError(null);
+        } catch (e) {
+            setSt(null);
+            setStatusError(e instanceof Error && e.message ? e.message : t('firewall.loadFailed'));
+        }
     };
-    useEffect(load, []);
+    useEffect(() => {
+        void load();
+    }, []);
 
     const toggle = async () => {
         if (!st) return;
@@ -1584,9 +1975,61 @@ function FirewallBar() {
         }
     };
 
+    const saveForReboot = async () => {
+        setBusy(true);
+        try {
+            const r = await fetch('/api/v1/firewall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save_for_reboot' }),
+            });
+            const d = await r.json();
+            if (!r.ok || d.error) throw new Error(d.error || t('firewall.persistenceSaveFailed'));
+            if (d.persistence_state !== 'ready') throw new Error(d.persistence_error || t('firewall.persistenceSaveFailed'));
+            setSt(d);
+            showToast('success', t('firewall.persistenceSaved'));
+        } catch (e) {
+            showToast('error', e instanceof Error && e.message ? e.message : t('firewall.persistenceSaveFailed'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (statusError) {
+        return (
+            <section role="alert" className="mb-4 rounded-xl border border-danger/40 bg-danger/5 p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                    <ShieldOff className="h-5 w-5 shrink-0 text-danger" />
+                    <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-fg">
+                            {t('firewall.title')}{' '}
+                            <span className="text-danger">{t('firewall.unknown')}</span>
+                        </div>
+                        <p className="text-xs text-fg-muted">{t('firewall.unknownHint')}</p>
+                        <p className="mt-1 break-words text-xs text-danger">{statusError}</p>
+                    </div>
+                    <button
+                        type="button"
+                        disabled
+                        className="cursor-not-allowed rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-semibold text-fg opacity-50"
+                    >
+                        {t('firewall.controlUnavailable')}
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     if (!st) return null;
     const openTcp = st.tcp_ports || [];
     const openUdp = st.udp_ports || [];
+    const persistenceWarning = st.persistence_state === 'stale'
+        ? t('firewall.persistence.stale')
+        : st.persistence_state === 'invalid'
+            ? t('firewall.persistence.invalid')
+            : st.persistence_state === 'unverified'
+                ? t('firewall.persistence.unverified')
+                : '';
 
     // No engine → the box is exposed (no firewall) AND "Turn on" cannot work.
     // Route the operator to install the engine (it's the nftables card in the
@@ -1632,7 +2075,25 @@ function FirewallBar() {
                     <p className="text-xs text-fg-muted">
                         {st.enabled ? t('firewall.onHint') : t('firewall.offHint')}
                     </p>
+                    {st.enabled && st.persistence_state === 'missing' && (
+                        <p className="mt-1 text-xs text-warning">{t('firewall.persistenceMissing')}</p>
+                    )}
+                    {st.persistence_state && ['stale', 'invalid', 'unverified'].includes(st.persistence_state) && (
+                        <p className="mt-1 text-xs text-danger">
+                            {persistenceWarning}
+                            {st.persistence_error ? `: ${st.persistence_error}` : ''}
+                        </p>
+                    )}
                 </div>
+                {st.enabled && st.persistence_state === 'missing' && (
+                    <button
+                        onClick={saveForReboot}
+                        disabled={busy}
+                        className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+                    >
+                        {t('firewall.saveForReboot')}
+                    </button>
+                )}
                 <button
                     onClick={toggle}
                     disabled={busy}

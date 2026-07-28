@@ -42,15 +42,35 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var req struct {
-			Version string `json:"version"`
+			Version   string `json:"version"`
+			RequestID string `json:"request_id"`
 		}
 		if err := decodeServiceOperationJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
+		if !validServiceOperationID(req.RequestID) {
+			writeClientError(w, http.StatusBadRequest, "invalid request_id")
+			return
+		}
 		req.Version = strings.TrimSpace(req.Version)
 		if !nodeSemverRe.MatchString(req.Version) {
 			writeClientError(w, http.StatusBadRequest, "not a valid node version")
+			return
+		}
+		existing, found, err := p.idempotentServiceOperation(
+			r.Context(), req.RequestID, serviceOperationKindRuntimeInstall, "node", req.Version,
+		)
+		if err != nil {
+			if errors.Is(err, errServiceOperationRequestConflict) {
+				writeServiceOperationRequestConflict(w)
+				return
+			}
+			writeServerError(w, err)
+			return
+		}
+		if found {
+			writeAcceptedServiceOperation(w, existing)
 			return
 		}
 		release, busy := p.beginServiceMutation(w, r)
@@ -64,11 +84,19 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 		actor := captureServiceOperationActor(r)
-		op, err := p.createServiceOperation(
-			r.Context(), serviceOperationKindRuntimeInstall, "node", req.Version, actor,
+		op, err := p.createServiceOperationRequest(
+			r.Context(), serviceOperationKindRuntimeInstall, "node", req.Version, req.RequestID, actor,
 		)
 		if errors.Is(err, errServiceOperationBusy) {
 			writeServiceOperationBusy(w)
+			return
+		}
+		if errors.Is(err, errServiceOperationReplay) {
+			writeAcceptedServiceOperation(w, op)
+			return
+		}
+		if errors.Is(err, errServiceOperationRequestConflict) {
+			writeServiceOperationRequestConflict(w)
 			return
 		}
 		if err != nil {
@@ -174,9 +202,20 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 			Removed bool   `json:"removed"`
 			Error   string `json:"error,omitempty"`
 		}
-		if err := p.agentClient.Call("Agent.RemoveNodeVersion", &struct {
-			Version string `json:"version"`
-		}{Version: version}, &resp); err != nil {
+		err = p.withStandaloneAgentMutation(r.Context(), "runtime_remove", "node:"+version, "", func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveNodeVersion", &struct {
+				MutationRequestID string `json:"mutation_request_id"`
+				MutationOwnerID   string `json:"mutation_owner_id"`
+				Version           string `json:"version"`
+			}{binding.MutationRequestID, binding.MutationOwnerID, version}, &resp); err != nil {
+				return err
+			}
+			if resp.Error != "" {
+				return errors.New(resp.Error)
+			}
+			return nil
+		})
+		if err != nil && resp.Error == "" {
 			writeServerError(w, err)
 			return
 		}
@@ -184,12 +223,19 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, resp.Error)
 			return
 		}
+		// The runtime tree is already removed at this point. Preserve the
+		// successful host mutation even if its mandatory state refresh fails.
+		// Runtime ağacı bu noktada kaldırılmıştır. Zorunlu durum tazelemesi
+		// başarısız olsa bile başarılı makine değişikliğini kaybetme.
+		p.audit(r, "runtime.node.remove:"+version, "service", 0)
 		// Keep the components page truthful without a manual rescan.
 		// Bileşenler sayfası elle taramasız da doğru kalsın.
 		if _, err := p.scanManagedServices(r.Context()); err != nil {
 			log.Printf("rescan after node version removal: %v", err)
+			p.audit(r, "runtime.node.remove.refresh.failed:"+version+" — "+auditReason(err.Error()), "service", 0)
+			writeServiceStateRefreshFailed(w)
+			return
 		}
-		p.audit(r, "runtime.node.remove:"+version, "service", 0)
 		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 		return
 	}

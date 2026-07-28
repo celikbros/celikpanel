@@ -45,11 +45,33 @@ type StrictDNSRPCPowerResponse struct {
 }
 
 type strictDNSRPCAgent struct {
+	durableMutationRPCFixture
 	mu            sync.Mutex
 	failZone      string
 	syncCalls     []string
 	clusterCalls  int
 	powerDNSCalls int
+}
+
+func (a *strictDNSRPCAgent) BeginServiceMutation(
+	req *ServiceOperationMutationBeginRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	return a.durableMutationRPCFixture.BeginServiceMutation(req, resp)
+}
+
+func (a *strictDNSRPCAgent) HeartbeatServiceMutation(
+	req *ServiceOperationMutationHeartbeatRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	return a.durableMutationRPCFixture.HeartbeatServiceMutation(req, resp)
+}
+
+func (a *strictDNSRPCAgent) FinishServiceMutation(
+	req *ServiceOperationMutationFinishRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	return a.durableMutationRPCFixture.FinishServiceMutation(req, resp)
 }
 
 func (a *strictDNSRPCAgent) SyncDNSZone(req *StrictDNSRPCSyncRequest, resp *StrictDNSRPCSyncResponse) error {
@@ -83,18 +105,24 @@ func (a *strictDNSRPCAgent) ConfigurePowerDNSSQLite(_ *StrictDNSRPCEmpty, resp *
 
 func attachStrictDNSRPCAgent(t *testing.T, p *Panel, agent *strictDNSRPCAgent) {
 	t.Helper()
-	serverConn, clientConn := net.Pipe()
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register fake DNS agent: %v", err)
 	}
-	go server.ServeConn(serverConn)
-	rawClient := rpc.NewClient(clientConn)
-	p.agentClient = transport.NewReconnectingClient(rawClient)
-	t.Cleanup(func() {
-		_ = rawClient.Close()
-		_ = serverConn.Close()
-	})
+	connector := func(ctx context.Context) (*rpc.Client, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		serverConn, clientConn := net.Pipe()
+		go server.ServeConn(serverConn)
+		return rpc.NewClient(clientConn), nil
+	}
+	rawClient, err := connector(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.agentClient = transport.NewReconnectingClientWithContextConnector(rawClient, connector)
+	t.Cleanup(func() { _ = rawClient.Close() })
 }
 
 func strictDNSAdminRequest(req *http.Request) *http.Request {

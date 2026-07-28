@@ -7,6 +7,15 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 )
 
+func mustDecodeScanCache(t *testing.T, data string) []serviceObservation {
+	t.Helper()
+	observations, err := decodeScanCache(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return observations
+}
+
 // A cached scan must never be able to answer a catalogue question. The bug
 // this guards against shipped to both live servers: the cache held whole API
 // responses, so after the Kind field was added every service came back with
@@ -30,7 +39,7 @@ func TestCatalogViewIgnoresStaleCatalogueFields(t *testing.T) {
 	            {"id":"phpmyadmin","name":"pma","status":"not_installed",
 	             "is_installed":false,"config_files":[]}]`
 
-	view := catalogView(decodeScanCache(legacy), "apt")
+	view := catalogView(mustDecodeScanCache(t, legacy), "apt")
 	if len(view) != len(core.ManagedServices) {
 		t.Fatalf("view has %d services, catalogue has %d", len(view), len(core.ManagedServices))
 	}
@@ -131,6 +140,89 @@ func TestSentinelIsDeadAndInstancesDriveVersions(t *testing.T) {
 	}
 }
 
+func TestCatalogViewCarriesStoppedPostgreSQLRepairPackage(t *testing.T) {
+	obs := []serviceObservation{{
+		ID:                    "postgresql",
+		IsInstalled:           true,
+		Status:                "inactive (dead)",
+		Unit:                  "postgresql",
+		InstalledRepoPackages: []string{"postgresql-17"},
+	}}
+	for _, service := range catalogView(obs, "apt") {
+		if service.ID == "postgresql" {
+			if service.RepairPackage != "postgresql-17" {
+				t.Fatalf("repair_package = %q, want the observed installed package", service.RepairPackage)
+			}
+			if !service.RepairAvailable {
+				t.Fatal("repair must be available for one exact installed PostgreSQL major")
+			}
+			return
+		}
+	}
+	t.Fatal("postgresql missing from catalog view")
+}
+
+func TestSafeRepairPackageRejectsMultipleForeignOrUnmanaged(t *testing.T) {
+	postgres := core.GetManagedServiceByID("postgresql")
+	if postgres == nil {
+		t.Fatal("postgresql missing from catalogue")
+	}
+	tests := []struct {
+		name        string
+		family      string
+		observation serviceObservation
+	}{
+		{
+			name:   "multiple installed majors",
+			family: "apt",
+			observation: serviceObservation{InstalledRepoPackages: []string{
+				"postgresql-17", "postgresql-16",
+			}},
+		},
+		{
+			name:   "unmanaged unit without package proof",
+			family: "apt",
+			observation: serviceObservation{Instances: []core.ServiceInstance{
+				{Unit: "postgresql@17-main", Managed: false},
+			}},
+		},
+		{
+			name:        "foreign package response",
+			family:      "apt",
+			observation: serviceObservation{InstalledRepoPackages: []string{"postgresql-client-17"}},
+		},
+		{
+			name:        "non apt host",
+			family:      "pacman",
+			observation: serviceObservation{InstalledRepoPackages: []string{"postgresql-17"}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := safeRepairPackage(postgres, test.observation, test.family); got != "" {
+				t.Fatalf("safeRepairPackage = %q, want empty", got)
+			}
+			if _, available := repairSelection(postgres, test.observation, test.family); test.family == "apt" && available {
+				t.Fatal("versioned apt repair must fail closed without one exact package")
+			}
+		})
+	}
+}
+
+func TestOldCacheWithoutInstalledPackageProofFailsClosed(t *testing.T) {
+	old := `{"observations":[{"id":"postgresql","is_installed":true,"status":"inactive (dead)","unit":"postgresql@17-main"}]}`
+	view := catalogView(mustDecodeScanCache(t, old), "apt")
+	for _, service := range view {
+		if service.ID == "postgresql" {
+			if service.RepairAvailable || service.RepairPackage != "" {
+				t.Fatalf("old cache repair = (%q, %v), want unavailable without package proof", service.RepairPackage, service.RepairAvailable)
+			}
+			return
+		}
+	}
+	t.Fatal("postgresql missing from catalog view")
+}
+
 // Every catalogue entry appears in the view even when the cache has never
 // heard of it — that is how a newly added service shows up right after deploy
 // instead of waiting for a rescan.
@@ -163,7 +255,7 @@ func TestScanCacheRoundTripAndPkgFamily(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	back := decodeScanCache(string(data))
+	back := mustDecodeScanCache(t, string(data))
 	if len(back) != 1 || back[0].ID != "nginx" || !back[0].IsInstalled {
 		t.Fatalf("round trip lost the observation: %+v", back)
 	}
@@ -178,6 +270,19 @@ func TestScanCacheRoundTripAndPkgFamily(t *testing.T) {
 			if s.ID == "nginx" && len(s.Packages) != len(want) {
 				t.Errorf("%s: packages = %v, want %v", family, s.Packages, want)
 			}
+		}
+	}
+}
+
+func TestDecodeScanCacheRejectsCorruptOrUnverifiedDocuments(t *testing.T) {
+	for _, data := range []string{
+		`{"observations":[`,
+		`{"unexpected":[]}`,
+		`{"observations":null}`,
+		`[{"id":"nginx"`,
+	} {
+		if observations, err := decodeScanCache(data); err == nil {
+			t.Fatalf("decodeScanCache(%q) = %+v without an error", data, observations)
 		}
 	}
 }

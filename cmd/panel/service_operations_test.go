@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,18 +22,80 @@ import (
 )
 
 type ServiceOperationInstallRequest struct {
-	ID      string
-	Package string
+	MutationRequestID string
+	MutationOwnerID   string
+	ID                string
+	Package           string
 }
 
 type ServiceOperationInstallResponse struct {
 	Installed bool
 	Detail    string
+	Unit      string
 	Error     string
 }
 
 type ServiceOperationNodeRequest struct {
-	Version string
+	MutationRequestID string
+	MutationOwnerID   string
+	Version           string
+}
+
+type ServiceOperationMutationBeginRequest struct {
+	RequestID   string
+	OwnerID     string
+	Kind        string
+	Target      string
+	PackageName string
+	Resume      bool
+}
+
+type ServiceOperationMutationHeartbeatRequest struct {
+	RequestID string
+	OwnerID   string
+	Phase     string
+}
+
+type ServiceOperationMutationStatusRequest struct {
+	RequestID string
+}
+
+type ServiceOperationMutationCancelRequest struct {
+	RequestID      string
+	ExpectedOwner  string
+	Reason         string
+	FailureCode    string
+	FailureMessage string
+}
+
+type ServiceOperationMutationFinishRequest struct {
+	RequestID   string
+	OwnerID     string
+	Success     bool
+	FailureCode string
+	Message     string
+}
+
+type ServiceOperationMutationJob struct {
+	RequestID      string
+	OwnerID        string
+	Kind           string
+	Target         string
+	PackageName    string
+	Status         string
+	Phase          string
+	Attempt        int
+	LeaseExpiresAt time.Time
+	DeadlineAt     time.Time
+	ErrorCode      string
+	ErrorMessage   string
+	WorkerPID      int
+	WorkerStarted  string
+}
+
+type ServiceOperationMutationResponse struct {
+	Job   *ServiceOperationMutationJob
+	Error string
 }
 
 type ServiceOperationNodeResponse struct {
@@ -86,21 +149,34 @@ type serviceOperationTestAgent struct {
 	releaseInstall <-chan struct{}
 	startOnce      sync.Once
 
+	installCalls atomic.Int32
+	nodeCalls    atomic.Int32
+
 	installRPCError error
 	installError    string
 	installNoop     bool
-	nodeError       string
-	nodeNoop        bool
-	dnsError        string
-	serviceError    string
-	serviceSuccess  bool
-	vpnError        string
-	vpnCreated      bool
-	peerError       string
+	installUnit     string
+	// dropActiveBeforeGetServices simulates a selected unit that was started
+	// and reported by InstallService, then died before the final host scan.
+	// dropActiveBeforeGetServices, InstallService tarafından başlatılıp
+	// bildirilen seçili unit'in son makine taramasından önce ölmesini taklit eder.
+	dropActiveBeforeGetServices string
+	nodeError                   string
+	nodeNoop                    bool
+	dnsError                    string
+	serviceError                string
+	serviceSuccess              bool
+	vpnError                    string
+	vpnCreated                  bool
+	peerError                   string
 
 	installed    map[string]bool
 	active       map[string]bool
 	nodeVersions map[string]bool
+
+	mutationActive   string
+	mutationJobs     map[string]*ServiceOperationMutationJob
+	mutationDeadline time.Time
 }
 
 func newServiceOperationTestAgent() *serviceOperationTestAgent {
@@ -110,13 +186,143 @@ func newServiceOperationTestAgent() *serviceOperationTestAgent {
 		installed:      map[string]bool{},
 		active:         map[string]bool{},
 		nodeVersions:   map[string]bool{},
+		mutationJobs:   map[string]*ServiceOperationMutationJob{},
 	}
+}
+
+func cloneServiceOperationMutationJob(job *ServiceOperationMutationJob) *ServiceOperationMutationJob {
+	if job == nil {
+		return nil
+	}
+	copy := *job
+	return &copy
+}
+
+func (a *serviceOperationTestAgent) BeginServiceMutation(
+	req *ServiceOperationMutationBeginRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if active := a.mutationJobs[a.mutationActive]; active != nil &&
+		(active.Status == agentMutationRunning ||
+			active.Status == agentMutationCancelling ||
+			active.Status == agentMutationOrphaned) {
+		if active.RequestID == req.RequestID && active.OwnerID == req.OwnerID {
+			resp.Job = cloneServiceOperationMutationJob(active)
+			return nil
+		}
+		resp.Error = "another service mutation owns the host lease"
+		resp.Job = cloneServiceOperationMutationJob(active)
+		return nil
+	}
+	now := time.Now().UTC()
+	deadline := now.Add(time.Hour)
+	if !a.mutationDeadline.IsZero() {
+		deadline = a.mutationDeadline
+	}
+	job := &ServiceOperationMutationJob{
+		RequestID: req.RequestID, OwnerID: req.OwnerID, Kind: req.Kind,
+		Target: req.Target, PackageName: req.PackageName,
+		Status: agentMutationRunning, Phase: "starting", Attempt: 1,
+		LeaseExpiresAt: now.Add(time.Minute), DeadlineAt: deadline,
+	}
+	a.mutationJobs[req.RequestID] = job
+	a.mutationActive = req.RequestID
+	resp.Job = cloneServiceOperationMutationJob(job)
+	return nil
+}
+
+func (a *serviceOperationTestAgent) HeartbeatServiceMutation(
+	req *ServiceOperationMutationHeartbeatRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	job := a.mutationJobs[req.RequestID]
+	if job == nil || job.OwnerID != req.OwnerID || job.Status != agentMutationRunning {
+		resp.Error = "service mutation lease is not running"
+		resp.Job = cloneServiceOperationMutationJob(job)
+		return nil
+	}
+	if req.Phase != "" {
+		job.Phase = req.Phase
+	}
+	job.LeaseExpiresAt = time.Now().UTC().Add(time.Minute)
+	resp.Job = cloneServiceOperationMutationJob(job)
+	return nil
+}
+
+func (a *serviceOperationTestAgent) ServiceMutationStatus(
+	req *ServiceOperationMutationStatusRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if req.RequestID != "" {
+		resp.Job = cloneServiceOperationMutationJob(a.mutationJobs[req.RequestID])
+		return nil
+	}
+	resp.Job = cloneServiceOperationMutationJob(a.mutationJobs[a.mutationActive])
+	return nil
+}
+
+func (a *serviceOperationTestAgent) CancelServiceMutation(
+	req *ServiceOperationMutationCancelRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	job := a.mutationJobs[req.RequestID]
+	if job == nil || job.OwnerID != req.ExpectedOwner {
+		resp.Error = "service mutation owner mismatch"
+		resp.Job = cloneServiceOperationMutationJob(job)
+		return nil
+	}
+	job.Status = agentMutationFailed
+	job.Phase = "interrupted"
+	job.ErrorCode = req.FailureCode
+	job.ErrorMessage = req.FailureMessage
+	if a.mutationActive == req.RequestID {
+		a.mutationActive = ""
+	}
+	resp.Job = cloneServiceOperationMutationJob(job)
+	return nil
+}
+
+func (a *serviceOperationTestAgent) FinishServiceMutation(
+	req *ServiceOperationMutationFinishRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	job := a.mutationJobs[req.RequestID]
+	if job == nil || job.OwnerID != req.OwnerID {
+		resp.Error = "service mutation owner mismatch"
+		resp.Job = cloneServiceOperationMutationJob(job)
+		return nil
+	}
+	if req.Success {
+		job.Status = agentMutationSucceeded
+		job.Phase = "completed"
+	} else {
+		job.Status = agentMutationFailed
+		job.Phase = "failed"
+		job.ErrorCode = req.FailureCode
+		job.ErrorMessage = req.Message
+	}
+	if a.mutationActive == req.RequestID {
+		a.mutationActive = ""
+	}
+	resp.Job = cloneServiceOperationMutationJob(job)
+	return nil
 }
 
 func (a *serviceOperationTestAgent) InstallService(
 	req *ServiceOperationInstallRequest,
 	resp *ServiceOperationInstallResponse,
 ) error {
+	a.installCalls.Add(1)
 	if a.installStarted != nil {
 		a.startOnce.Do(func() { close(a.installStarted) })
 	}
@@ -134,6 +340,14 @@ func (a *serviceOperationTestAgent) InstallService(
 	}
 	a.installed[req.ID] = true
 	resp.Installed = !a.installNoop
+	if a.installUnit != "" {
+		resp.Unit = a.installUnit
+	} else if req.ID == "postgresql" {
+		resp.Unit, _ = core.PostgreSQLClusterUnitForPackage(req.Package)
+	}
+	if resp.Unit != "" {
+		a.active[resp.Unit] = true
+	}
 	return nil
 }
 
@@ -141,6 +355,7 @@ func (a *serviceOperationTestAgent) InstallNodeVersion(
 	req *ServiceOperationNodeRequest,
 	resp *ServiceOperationNodeResponse,
 ) error {
+	a.nodeCalls.Add(1)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.nodeError != "" {
@@ -155,16 +370,26 @@ func (a *serviceOperationTestAgent) InstallNodeVersion(
 func (a *serviceOperationTestAgent) GetServices(_ *transport.Empty, out *[]core.Service) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if a.dropActiveBeforeGetServices != "" && a.active[a.dropActiveBeforeGetServices] {
+		a.active[a.dropActiveBeforeGetServices] = false
+		a.dropActiveBeforeGetServices = ""
+	}
 	services := make([]core.Service, 0, len(a.active))
 	for id, active := range a.active {
 		if !active {
 			continue
 		}
+		unit := id
 		managed := core.GetManagedServiceByID(id)
-		if managed == nil || len(managed.SystemNames) == 0 {
+		if managed != nil && len(managed.SystemNames) > 0 {
+			unit = managed.SystemNames[0]
+		} else {
+			managed = core.ServiceForUnit(id)
+		}
+		if managed == nil {
 			continue
 		}
-		services = append(services, core.Service{Name: managed.SystemNames[0], Status: "active (running)"})
+		services = append(services, core.Service{Name: unit, Status: "active (running)"})
 	}
 	*out = services
 	return nil
@@ -237,6 +462,13 @@ func (a *serviceOperationTestAgent) ServiceAction(
 		a.active[req.ServiceName] = true
 	}
 	return nil
+}
+
+func (a *serviceOperationTestAgent) ServiceMutationAction(
+	req *transport.ServiceActionArgs,
+	resp *transport.ServiceActionResult,
+) error {
+	return a.ServiceAction(req, resp)
 }
 
 func (a *serviceOperationTestAgent) SetupVPN(
@@ -372,11 +604,35 @@ func waitForServiceOperation(
 	t.Fatalf("operation did not reach %s; last=%+v body=%s", wantStatus, op, body)
 	return nil, ""
 }
+func mustServiceOperationRequestID(t *testing.T) string {
+	t.Helper()
+	id, err := newServiceOperationID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func serviceOperationBoundContext() context.Context {
+	return withPanelMutationBinding(context.Background(), agentMutationBinding{
+		MutationRequestID: "00112233445566778899aabbccddeeff",
+		MutationOwnerID:   "ffeeddccbbaa99887766554433221100",
+	})
+}
 
 func postServiceInstall(t *testing.T, f serviceOperationTestFixture, serviceID string) (*httptest.ResponseRecorder, *serviceOperation) {
 	t.Helper()
+	return postServiceInstallRequest(t, f, serviceInstallRequest{ServiceID: serviceID, RequestID: mustServiceOperationRequestID(t)})
+}
+
+func postServiceInstallRequest(
+	t *testing.T,
+	f serviceOperationTestFixture,
+	request serviceInstallRequest,
+) (*httptest.ResponseRecorder, *serviceOperation) {
+	t.Helper()
 	recorder := httptest.NewRecorder()
-	body, err := json.Marshal(serviceInstallRequest{ServiceID: serviceID})
+	body, err := json.Marshal(request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,6 +641,168 @@ func postServiceInstall(t *testing.T, f serviceOperationTestFixture, serviceID s
 		serviceOperationAdminRequest(t, http.MethodPost, "/api/v1/service/install", string(body), f.userID),
 	)
 	return recorder, decodeServiceOperationEnvelope(t, recorder)
+}
+
+func TestInstallPostsRequireCanonicalRequestIDBeforePersistenceOrRPC(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	const uppercaseID = "00112233445566778899AABBCCDDEEFF"
+	tests := []struct {
+		name      string
+		target    string
+		body      string
+		handler   func(http.ResponseWriter, *http.Request)
+		callCount func() int32
+	}{
+		{
+			name:      "service blank",
+			target:    "/api/v1/service/install",
+			body:      `{"service_id":"certbot"}`,
+			handler:   f.panel.handleServiceInstall,
+			callCount: f.agent.installCalls.Load,
+		},
+		{
+			name:      "service uppercase",
+			target:    "/api/v1/service/install",
+			body:      `{"service_id":"certbot","request_id":"` + uppercaseID + `"}`,
+			handler:   f.panel.handleServiceInstall,
+			callCount: f.agent.installCalls.Load,
+		},
+		{
+			name:      "runtime blank",
+			target:    "/api/v1/runtimes/node",
+			body:      `{"version":"22.4.1"}`,
+			handler:   f.panel.handleNodeRuntimes,
+			callCount: f.agent.nodeCalls.Load,
+		},
+		{
+			name:      "runtime uppercase",
+			target:    "/api/v1/runtimes/node",
+			body:      `{"version":"22.4.1","request_id":"` + uppercaseID + `"}`,
+			handler:   f.panel.handleNodeRuntimes,
+			callCount: f.agent.nodeCalls.Load,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beforeCalls := tt.callCount()
+			var beforeRows int
+			if err := f.database.GetDB().QueryRow(`SELECT COUNT(*) FROM service_operations`).Scan(&beforeRows); err != nil {
+				t.Fatal(err)
+			}
+			recorder := httptest.NewRecorder()
+			tt.handler(
+				recorder,
+				serviceOperationAdminRequest(t, http.MethodPost, tt.target, tt.body, f.userID),
+			)
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+			}
+			if got := tt.callCount(); got != beforeCalls {
+				t.Fatalf("RPC calls=%d want %d", got, beforeCalls)
+			}
+			var afterRows int
+			if err := f.database.GetDB().QueryRow(`SELECT COUNT(*) FROM service_operations`).Scan(&afterRows); err != nil {
+				t.Fatal(err)
+			}
+			if afterRows != beforeRows {
+				t.Fatalf("operation rows=%d want %d", afterRows, beforeRows)
+			}
+		})
+	}
+}
+
+func TestServiceInstallRequestIDIsExactAndIdempotent(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	f.agent.installStarted = started
+	f.agent.releaseInstall = release
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
+
+	const requestID = "00112233445566778899aabbccddeeff"
+	request := serviceInstallRequest{ServiceID: "certbot", RequestID: requestID}
+	firstRecorder, first := postServiceInstallRequest(t, f, request)
+	if firstRecorder.Code != http.StatusAccepted || first == nil {
+		t.Fatalf("first request status=%d operation=%+v body=%s", firstRecorder.Code, first, firstRecorder.Body.String())
+	}
+	if first.RequestID != requestID {
+		t.Fatalf("first request_id=%q want %q", first.RequestID, requestID)
+	}
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("background install did not start")
+	}
+
+	// Replaying the same immutable request returns the same durable operation
+	// even while the package mutation lock is held; it never launches another.
+	// Aynı değişmez isteği yeniden göndermek paket değişikliği kilitliyken bile
+	// aynı kalıcı işlemi döndürür; ikinci bir işlem başlatmaz.
+	replayRecorder, replay := postServiceInstallRequest(t, f, request)
+	if replayRecorder.Code != http.StatusAccepted || replay == nil || replay.ID != first.ID {
+		t.Fatalf("replay status=%d operation=%+v first=%+v body=%s", replayRecorder.Code, replay, first, replayRecorder.Body.String())
+	}
+
+	recoveryRecorder := httptest.NewRecorder()
+	f.panel.handleServiceOperation(
+		recoveryRecorder,
+		serviceOperationAdminRequest(
+			t,
+			http.MethodGet,
+			"/api/v1/service/operation?request_id="+requestID,
+			"",
+			f.userID,
+		),
+	)
+	recovered := decodeServiceOperationEnvelope(t, recoveryRecorder)
+	if recoveryRecorder.Code != http.StatusOK || recovered == nil || recovered.ID != first.ID {
+		t.Fatalf("recover status=%d operation=%+v body=%s", recoveryRecorder.Code, recovered, recoveryRecorder.Body.String())
+	}
+
+	conflictRecorder, _ := postServiceInstallRequest(
+		t,
+		f,
+		serviceInstallRequest{ServiceID: "nginx", RequestID: requestID},
+	)
+	if conflictRecorder.Code != http.StatusConflict {
+		t.Fatalf("conflict status=%d body=%s", conflictRecorder.Code, conflictRecorder.Body.String())
+	}
+	var conflict apiErrorBody
+	if err := json.Unmarshal(conflictRecorder.Body.Bytes(), &conflict); err != nil {
+		t.Fatal(err)
+	}
+	if conflict.Code != "service_operation_request_conflict" {
+		t.Fatalf("conflict code=%q body=%s", conflict.Code, conflictRecorder.Body.String())
+	}
+
+	close(release)
+	succeeded, _ := waitForServiceOperation(t, f.panel, f.userID, first.ID, serviceOperationSucceeded)
+	if succeeded.RequestID != requestID {
+		t.Fatalf("succeeded request_id=%q want %q", succeeded.RequestID, requestID)
+	}
+	terminalRecorder, terminalReplay := postServiceInstallRequest(t, f, request)
+	if terminalRecorder.Code != http.StatusAccepted || terminalReplay == nil ||
+		terminalReplay.ID != first.ID || terminalReplay.Status != serviceOperationSucceeded {
+		t.Fatalf("terminal replay status=%d operation=%+v body=%s", terminalRecorder.Code, terminalReplay, terminalRecorder.Body.String())
+	}
+
+	var count int
+	if err := f.database.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM service_operations WHERE request_id=?`,
+		requestID,
+	).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("request_id row count=%d want 1", count)
+	}
 }
 
 func assertBusyResponse(t *testing.T, recorder *httptest.ResponseRecorder) {
@@ -554,7 +972,7 @@ func TestNodeRuntimeInstallUsesDurable202ContractAndIdempotentVerification(t *te
 	recorder := httptest.NewRecorder()
 	f.panel.handleNodeRuntimes(
 		recorder,
-		serviceOperationAdminRequest(t, http.MethodPost, "/api/v1/runtimes/node", `{"version":"22.4.1"}`, f.userID),
+		serviceOperationAdminRequest(t, http.MethodPost, "/api/v1/runtimes/node", `{"version":"22.4.1","request_id":"`+mustServiceOperationRequestID(t)+`"}`, f.userID),
 	)
 	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("node install status=%d body=%s", recorder.Code, recorder.Body.String())
@@ -574,6 +992,58 @@ func TestNodeRuntimeInstallUsesDurable202ContractAndIdempotentVerification(t *te
 	}
 	if result["success"] != true || result["installed"] != true || result["version"] != "22.4.1" {
 		t.Fatalf("node result=%v", result)
+	}
+}
+
+func TestNodeRuntimeInstallRequestIDReplaysExactly(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	seedInstalledServices(f.agent, "nginx")
+	const requestID = "11223344556677889900aabbccddeeff"
+	post := func(version string) (*httptest.ResponseRecorder, *serviceOperation) {
+		recorder := httptest.NewRecorder()
+		bodyBytes, err := json.Marshal(map[string]string{"version": version, "request_id": requestID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.panel.handleNodeRuntimes(
+			recorder,
+			serviceOperationAdminRequest(t, http.MethodPost, "/api/v1/runtimes/node", string(bodyBytes), f.userID),
+		)
+		return recorder, decodeServiceOperationEnvelope(t, recorder)
+	}
+
+	firstRecorder, first := post("22.4.1")
+	if firstRecorder.Code != http.StatusAccepted || first == nil || first.RequestID != requestID {
+		t.Fatalf("first node request status=%d operation=%+v body=%s", firstRecorder.Code, first, firstRecorder.Body.String())
+	}
+	waitForServiceOperation(t, f.panel, f.userID, first.ID, serviceOperationSucceeded)
+
+	replayRecorder, replay := post("22.4.1")
+	if replayRecorder.Code != http.StatusAccepted || replay == nil || replay.ID != first.ID {
+		t.Fatalf("node replay status=%d operation=%+v first=%+v body=%s", replayRecorder.Code, replay, first, replayRecorder.Body.String())
+	}
+
+	conflictRecorder, _ := post("22.5.0")
+	if conflictRecorder.Code != http.StatusConflict {
+		t.Fatalf("node conflict status=%d body=%s", conflictRecorder.Code, conflictRecorder.Body.String())
+	}
+	var conflict apiErrorBody
+	if err := json.Unmarshal(conflictRecorder.Body.Bytes(), &conflict); err != nil {
+		t.Fatal(err)
+	}
+	if conflict.Code != "service_operation_request_conflict" {
+		t.Fatalf("node conflict code=%q body=%s", conflict.Code, conflictRecorder.Body.String())
+	}
+
+	var count int
+	if err := f.database.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM service_operations WHERE request_id=?`,
+		requestID,
+	).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("node request_id row count=%d want 1", count)
 	}
 }
 
@@ -602,6 +1072,65 @@ func TestServiceInstallRequiresDaemonActiveButAllowsIdempotentRepair(t *testing.
 	}
 }
 
+func TestPostgreSQLVersionInstallRequiresExactClusterProof(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	f.agent.installNoop = true
+	f.agent.installed["postgresql"] = true
+	f.agent.active["postgresql@16-main"] = true
+	f.agent.installUnit = "postgresql@16-main"
+
+	result, failure := f.panel.runServiceInstall(
+		serviceOperationBoundContext(),
+		serviceInstallRequest{ServiceID: "postgresql", Package: "postgresql-17"},
+		func(string) error { return nil },
+	)
+	if failure == nil {
+		t.Fatalf("another running major produced success: result=%v", result)
+	}
+	if result["success"] != false {
+		t.Fatalf("failed exact-unit proof result=%v", result)
+	}
+
+	f.agent.installUnit = ""
+	result, failure = f.panel.runServiceInstall(
+		serviceOperationBoundContext(),
+		serviceInstallRequest{ServiceID: "postgresql", Package: "postgresql-17"},
+		func(string) error { return nil },
+	)
+	if failure != nil || result["success"] != true {
+		t.Fatalf("exact selected cluster was not accepted: result=%v failure=%+v", result, failure)
+	}
+	f.agent.mu.Lock()
+	exactActive := f.agent.active["postgresql@17-main"]
+	f.agent.mu.Unlock()
+	if !exactActive {
+		t.Fatal("selected postgresql@17-main was not started")
+	}
+}
+
+func TestPostgreSQLVersionInstallFailsWhenExactClusterStopsBeforeFinalScan(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	f.agent.installNoop = true
+	f.agent.installed["postgresql"] = true
+	f.agent.active["postgresql@16-main"] = true
+	f.agent.dropActiveBeforeGetServices = "postgresql@17-main"
+
+	result, failure := f.panel.runServiceInstall(
+		serviceOperationBoundContext(),
+		serviceInstallRequest{ServiceID: "postgresql", Package: "postgresql-17"},
+		func(string) error { return nil },
+	)
+	if failure == nil {
+		t.Fatalf("old active major masked stopped selected cluster: result=%v", result)
+	}
+	if failure.Cause == nil || !strings.Contains(failure.Cause.Error(), "postgresql@17-main") {
+		t.Fatalf("failure did not identify the selected cluster: %+v", failure)
+	}
+	if result["success"] != false {
+		t.Fatalf("stopped exact cluster result=%v", result)
+	}
+}
+
 func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
 	f.agent.installNoop = true
@@ -611,7 +1140,7 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	f.agent.active["wireguard"] = true
 
 	phases := []string{}
-	result, failure := f.panel.runServiceInstall(context.Background(), serviceInstallRequest{ServiceID: "pdns"}, func(phase string) error {
+	result, failure := f.panel.runServiceInstall(serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "pdns"}, func(phase string) error {
 		phases = append(phases, phase)
 		return nil
 	})
@@ -623,7 +1152,7 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	}
 
 	phases = nil
-	result, failure = f.panel.runServiceInstall(context.Background(), serviceInstallRequest{ServiceID: "wireguard"}, func(phase string) error {
+	result, failure = f.panel.runServiceInstall(serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "wireguard"}, func(phase string) error {
 		phases = append(phases, phase)
 		return nil
 	})
@@ -682,6 +1211,7 @@ func TestServiceOperationPersistsAndStartupRecoveryFailsInterruptedWork(t *testi
 	}
 	defer database.Close()
 	panel = &Panel{db: database}
+	attachServiceOperationTestAgent(t, panel, newServiceOperationTestAgent())
 	recovered, err := panel.recoverInterruptedServiceOperations(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -694,11 +1224,260 @@ func TestServiceOperationPersistsAndStartupRecoveryFailsInterruptedWork(t *testi
 		t.Fatal(err)
 	}
 	if loaded.Status != serviceOperationFailed || loaded.Phase != "interrupted" || loaded.Error == nil ||
-		loaded.Error.Code != "panel_restarted_before_verification" {
+		loaded.Error.Code != "panel_restarted_without_agent_ledger" {
 		t.Fatalf("recovered operation=%+v", loaded)
 	}
 	if !bytes.Equal(loaded.Result, []byte(`{"success":false}`)) {
 		t.Fatalf("recovery result=%s", loaded.Result)
+	}
+}
+
+func TestStartupRecoveryCommitsAgentTerminalSuccess(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	op, err := f.panel.createServiceOperation(
+		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.panel.markServiceOperationRunning(context.Background(), op.ID, "installing"); err != nil {
+		t.Fatal(err)
+	}
+	f.agent.mu.Lock()
+	f.agent.mutationJobs[op.RequestID] = &ServiceOperationMutationJob{
+		RequestID: op.RequestID,
+		OwnerID:   "00112233445566778899aabbccddeeff",
+		Kind:      op.Kind,
+		Target:    op.ServiceID,
+		Status:    agentMutationSucceeded,
+		Phase:     "completed",
+		Attempt:   1,
+	}
+	f.agent.mu.Unlock()
+
+	recovered, err := f.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered != 1 {
+		t.Fatalf("recovered=%d want 1", recovered)
+	}
+	loaded, err := f.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded || loaded.Phase != "completed" {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	var result map[string]any
+	if err := json.Unmarshal(loaded.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != true || result["recovered"] != true {
+		t.Fatalf("recovered result=%v", result)
+	}
+}
+
+func TestStartupRecoveryCancelsAndResumesMatchingActiveAgentMutation(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	op, err := f.panel.createServiceOperation(
+		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.panel.markServiceOperationRunning(context.Background(), op.ID, "installing"); err != nil {
+		t.Fatal(err)
+	}
+	f.agent.mu.Lock()
+	f.agent.mutationJobs[op.RequestID] = &ServiceOperationMutationJob{
+		RequestID:      op.RequestID,
+		OwnerID:        "00112233445566778899aabbccddeeff",
+		Kind:           op.Kind,
+		Target:         op.ServiceID,
+		Status:         agentMutationRunning,
+		Phase:          "installing",
+		Attempt:        1,
+		LeaseExpiresAt: time.Now().UTC().Add(time.Minute),
+		DeadlineAt:     time.Now().UTC().Add(time.Hour),
+	}
+	f.agent.mutationActive = op.RequestID
+	f.agent.mu.Unlock()
+
+	recovered, err := f.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered != 0 {
+		t.Fatalf("recovered=%d want asynchronous resume", recovered)
+	}
+	loaded, _ := waitForServiceOperation(t, f.panel, f.userID, op.ID, serviceOperationSucceeded)
+	if loaded.Phase != "completed" || f.agent.installCalls.Load() != 1 {
+		t.Fatalf("resumed operation=%+v install calls=%d", loaded, f.agent.installCalls.Load())
+	}
+	f.agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(f.agent.mutationJobs[op.RequestID])
+	f.agent.mu.Unlock()
+	if job == nil || job.Status != agentMutationSucceeded || job.Attempt != 1 {
+		t.Fatalf("agent terminal job=%+v", job)
+	}
+}
+
+func TestWorkerDeadlineStillPersistsTerminalOperation(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	f.agent.mutationDeadline = time.Now().UTC().Add(250 * time.Millisecond)
+	op, err := f.panel.createServiceOperation(
+		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	released := make(chan struct{})
+	var releaseOnce sync.Once
+	f.panel.launchServiceOperationWithAudit(
+		op,
+		serviceOperationActor{},
+		"installing",
+		"service.install:certbot",
+		"service.install.failed:certbot",
+		func() { releaseOnce.Do(func() { close(released) }) },
+		func(ctx context.Context, _ func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			<-ctx.Done()
+			return serviceOperationResult{"success": false}, operationFailure(
+				"service_operation_deadline_test",
+				"The package operation deadline expired.",
+				ctx.Err(),
+			)
+		},
+		func(context.Context, serviceOperationActor, string) {},
+	)
+
+	failed, _ := waitForServiceOperation(t, f.panel, f.userID, op.ID, serviceOperationFailed)
+	if failed.Error == nil || failed.Error.Code != "service_operation_deadline_test" {
+		t.Fatalf("deadline operation=%+v", failed)
+	}
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("mutation lock was not released after terminal persistence")
+	}
+}
+
+func TestActiveOperationQueryNeverFallsBackToLatestTerminalRow(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	terminal, err := f.panel.createServiceOperation(
+		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.panel.markServiceOperationRunning(context.Background(), terminal.ID, "installing"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.panel.finishServiceOperationSucceeded(
+		context.Background(), terminal.ID, serviceOperationResult{"success": true},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	f.panel.handleServiceOperation(
+		recorder,
+		serviceOperationAdminRequest(t, http.MethodGet, "/api/v1/service/operation?active=1", "", f.userID),
+	)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("terminal-only active status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if op := decodeServiceOperationEnvelope(t, recorder); op != nil {
+		t.Fatalf("active query fell back to terminal operation: %+v", op)
+	}
+
+	active, err := f.panel.createServiceOperation(
+		context.Background(), serviceOperationKindInstall, "nginx", "", serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder = httptest.NewRecorder()
+	f.panel.handleServiceOperation(
+		recorder,
+		serviceOperationAdminRequest(t, http.MethodGet, "/api/v1/service/operation?active=1", "", f.userID),
+	)
+	if got := decodeServiceOperationEnvelope(t, recorder); recorder.Code != http.StatusOK || got == nil || got.ID != active.ID {
+		t.Fatalf("active status=%d operation=%+v body=%s", recorder.Code, got, recorder.Body.String())
+	}
+
+	invalid := httptest.NewRecorder()
+	f.panel.handleServiceOperation(
+		invalid,
+		serviceOperationAdminRequest(t, http.MethodGet, "/api/v1/service/operation?active=0", "", f.userID),
+	)
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("active=0 status=%d body=%s", invalid.Code, invalid.Body.String())
+	}
+}
+
+func TestServiceOperationRunnerPanicFailsRowAndReleasesBeforeAudit(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	op, err := f.panel.createServiceOperationRequest(
+		context.Background(),
+		serviceOperationKindInstall,
+		"certbot",
+		"",
+		mustServiceOperationRequestID(t),
+		serviceOperationActor{UserID: f.userID},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var releaseCount atomic.Int32
+	released := make(chan struct{})
+	auditStarted := make(chan struct{})
+	allowAudit := make(chan struct{})
+	release := func() {
+		if releaseCount.Add(1) == 1 {
+			close(released)
+		}
+	}
+	audit := func(context.Context, serviceOperationActor, string) {
+		close(auditStarted)
+		<-allowAudit
+	}
+	f.panel.launchServiceOperationWithAudit(
+		op,
+		serviceOperationActor{UserID: f.userID},
+		"installing",
+		"service.install:certbot",
+		"service.install.failed:certbot",
+		release,
+		func(context.Context, func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			panic("forced runner panic")
+		},
+		audit,
+	)
+
+	select {
+	case <-auditStarted:
+	case <-time.After(time.Second):
+		t.Fatal("panic audit did not start")
+	}
+	select {
+	case <-released:
+	default:
+		t.Fatal("mutation lock was still held when audit started")
+	}
+	failed, _ := waitForServiceOperation(t, f.panel, f.userID, op.ID, serviceOperationFailed)
+	if failed.Error == nil || failed.Error.Code != errCodeServiceOperationRunnerPanicked {
+		t.Fatalf("panic operation=%+v", failed)
+	}
+	if releaseCount.Load() != 1 {
+		t.Fatalf("release count=%d want 1", releaseCount.Load())
+	}
+	close(allowAudit)
+	time.Sleep(20 * time.Millisecond)
+	if releaseCount.Load() != 1 {
+		t.Fatalf("release count after audit=%d want 1", releaseCount.Load())
 	}
 }
 

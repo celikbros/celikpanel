@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -11,37 +11,49 @@ import (
 // Packages on Arch leave some first-run initialization to the operator. Run
 // it only inside the explicit Install action, before reporting readiness.
 func prepareInstalledService(serviceID, family string) error {
+	return prepareInstalledServiceContext(context.Background(), serviceID, family)
+}
+
+// prepareInstalledServiceContext keeps first-run initialization in the same
+// cancellable process group as the durable install mutation.
+// prepareInstalledServiceContext, ilk çalıştırma hazırlığını kalıcı kurulum
+// değişikliğiyle aynı iptal edilebilir süreç grubunda tutar.
+func prepareInstalledServiceContext(ctx context.Context, serviceID, family string) error {
 	if family != "pacman" {
 		return nil
 	}
 	switch serviceID {
 	case "postgresql":
-		return prepareArchPostgreSQL()
+		return prepareArchPostgreSQLContext(ctx)
 	case "mariadb":
-		return prepareArchMariaDB()
+		return prepareArchMariaDBContext(ctx)
 	case "clamav":
-		return prepareArchClamAV()
+		return prepareArchClamAVContext(ctx)
 	default:
 		return nil
 	}
 }
 
 func prepareArchPostgreSQL() error {
+	return prepareArchPostgreSQLContext(context.Background())
+}
+
+func prepareArchPostgreSQLContext(ctx context.Context) error {
 	const dataDir = "/var/lib/postgres/data"
 	if _, err := os.Stat(filepath.Join(dataDir, "PG_VERSION")); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("postgresql data directory cannot be inspected: %w", err)
 	}
-	if out, err := exec.Command(
+	if out, err := runServiceMutationCombinedOutput(ctx,
 		"install", "-d", "-m", "0700", "-o", "postgres", "-g", "postgres", dataDir,
-	).CombinedOutput(); err != nil {
+	); err != nil {
 		return commandFailure("postgresql data directory setup", out, err)
 	}
-	out, err := exec.Command(
+	out, err := runServiceMutationCombinedOutput(ctx,
 		"runuser", "-u", "postgres", "--",
 		"initdb", "--locale=C.UTF-8", "--encoding=UTF8", "-D", dataDir,
-	).CombinedOutput()
+	)
 	if err != nil {
 		return commandFailure("postgresql cluster initialization", out, err)
 	}
@@ -49,16 +61,20 @@ func prepareArchPostgreSQL() error {
 }
 
 func prepareArchMariaDB() error {
+	return prepareArchMariaDBContext(context.Background())
+}
+
+func prepareArchMariaDBContext(ctx context.Context) error {
 	const dataDir = "/var/lib/mysql"
 	if _, err := os.Stat(filepath.Join(dataDir, "mysql")); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("mariadb data directory cannot be inspected: %w", err)
 	}
-	out, err := exec.Command(
+	out, err := runServiceMutationCombinedOutput(ctx,
 		"mariadb-install-db",
 		"--user=mysql", "--basedir=/usr", "--datadir="+dataDir,
-	).CombinedOutput()
+	)
 	if err != nil {
 		return commandFailure("mariadb data directory initialization", out, err)
 	}
@@ -68,10 +84,14 @@ func prepareArchMariaDB() error {
 var clamAVDatabaseDir = "/var/lib/clamav"
 
 func prepareArchClamAV() error {
+	return prepareArchClamAVContext(context.Background())
+}
+
+func prepareArchClamAVContext(ctx context.Context) error {
 	if clamAVSignaturesReady(clamAVDatabaseDir) {
 		return nil
 	}
-	out, err := exec.Command("freshclam").CombinedOutput()
+	out, err := runServiceMutationCombinedOutput(ctx, "freshclam")
 	if !clamAVSignaturesReady(clamAVDatabaseDir) {
 		if err != nil {
 			return commandFailure("clamav signature download", out, err)

@@ -265,6 +265,7 @@ ok "hazır"
 # 6. systemd units -----------------------------------------------------------
 step "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
+install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
 # Install-time overrides baked into the unit: bind address, and in R&D mode
 # the demo flags (quick-login accounts + cookies usable over plain HTTP).
 # Kuruluma gömülen üst-geçersiz kılmalar: bağlanma adresi ve AR-GE modunda
@@ -294,6 +295,14 @@ ok "kuruldu"
 # enable --now değil restart: yükseltme yeni binary'yi gerçekten yüklemeli;
 # servis zaten çalışıyorsa --now hiçbir şey yapmaz.
 step "Agent başlatılıyor"
+# A fresh install only lays down the restore unit. Existing persistence is
+# re-enabled during upgrade, but no activation link is created before the
+# operator explicitly chooses Save for reboot in the panel.
+# Temiz kurulum yalnız restore unitini yerleştirir. Mevcut kalıcılık yükseltmede
+# yeniden etkinleştirilir; operatör panelde açıkça Save for reboot seçmeden
+# hiçbir etkinleştirme bağlantısı oluşturulmaz.
+bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
+    die "firewall restore unit could not be reconciled"
 systemctl enable celikpanel-agent.service >/dev/null 2>&1 || true
 systemctl restart celikpanel-agent.service || true
 for _ in $(seq 1 20); do

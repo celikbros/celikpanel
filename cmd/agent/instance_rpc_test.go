@@ -104,7 +104,7 @@ func TestNodeInstancesFromDisk(t *testing.T) {
 	}
 	mk("9.9.9", true)
 	mk("24.18.0", true)
-	mk("22.1.0", false)     // no binary → not installed
+	mk("22.1.0", false)       // no binary → not installed
 	mk("not-a-version", true) // ignored by the semver gate
 
 	got := nodeInstances()
@@ -186,18 +186,18 @@ func TestRemoveNodeVersion(t *testing.T) {
 
 	a := &Agent{}
 	var resp NodeRemoveResponse
-	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "../../../etc"}, &resp); err != nil || resp.Error == "" {
+	if err := a.removeNodeVersion(&NodeRemoveRequest{Version: "../../../etc"}, &resp); err != nil || resp.Error == "" {
 		t.Error("a path-shaped version must be refused by the semver gate")
 	}
 	resp = NodeRemoveResponse{}
-	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
+	if err := a.removeNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
 		t.Fatalf("remove failed: %v %+v", err, resp)
 	}
 	if _, err := os.Stat(filepath.Join(runtimesBaseDir, "node", "24.18.0")); !os.IsNotExist(err) {
 		t.Error("tree still on disk after removal")
 	}
 	resp = NodeRemoveResponse{}
-	if err := a.RemoveNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
+	if err := a.removeNodeVersion(&NodeRemoveRequest{Version: "24.18.0"}, &resp); err != nil || !resp.Removed {
 		t.Error("removing an absent version must be idempotent success")
 	}
 }

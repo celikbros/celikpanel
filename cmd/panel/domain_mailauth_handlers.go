@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -268,7 +269,15 @@ func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domai
 		Configured bool   `json:"configured"`
 		Error      string `json:"error,omitempty"`
 	}
-	_ = p.agentClient.Call("Agent.ConfigureDKIMSigning", &struct{}{}, &sign)
+	_ = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &binding, &sign); err != nil {
+			return err
+		}
+		if sign.Error != "" {
+			return errors.New(sign.Error)
+		}
+		return nil
+	})
 	json.NewEncoder(w).Encode(map[string]any{
 		"success":     true,
 		"created":     resp.Created,

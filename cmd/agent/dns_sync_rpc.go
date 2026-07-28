@@ -53,6 +53,7 @@ type ZoneRecord struct {
 }
 
 type SyncDNSZoneRequest struct {
+	ServiceMutationBinding
 	Domain   string       `json:"domain"`
 	Delete   bool         `json:"delete"`
 	ZoneType string       `json:"zone_type,omitempty"`
@@ -75,6 +76,19 @@ var dnsSyncCommand = func(name string, args ...string) ([]byte, error) {
 // değiştirir (Delete işaretliyse tümüyle kaldırır), sonra cevaplar hemen
 // değişsin diye o adın pdns önbelleğini boşaltır.
 func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
+	if req == nil {
+		return fmt.Errorf("DNS zone sync request is required")
+	}
+	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	return a.syncDNSZone(req, resp)
+}
+
+func (a *Agent) syncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
 	if req.Domain == "" {
 		resp.Error = "domain is required"
 		return nil
@@ -200,7 +214,16 @@ func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 // ConfigurePowerDNSSQLite, pdns'i bize ayrılmış sqlite veritabanına
 // yönlendirir ve yeniden başlatır. Emekli PostgreSQL-dönemi yapılandırma
 // yolunun yerini alır.
-func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) error {
+func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncDNSZoneResponse) error {
+	if req == nil {
+		return fmt.Errorf("PowerDNS configuration request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	dbPath := pdnsDBPath()
 
 	// Create the database with the pdns schema before pdns first reads it.
@@ -217,7 +240,7 @@ func (a *Agent) ConfigurePowerDNSSQLite(_ *struct{}, resp *SyncDNSZoneResponse) 
 	// pdns kendi veritabanını okuyup yazabilmeli; hesap adı dağıtıma göre
 	// değişir (Debian "pdns", Arch "powerdns").
 	owner := pdnsUser()
-	_ = exec.Command("chown", "-R", owner+":"+owner, filepath.Dir(dbPath)).Run()
+	_ = serviceMutationCommand(ctx, "chown", "-R", owner+":"+owner, filepath.Dir(dbPath)).Run()
 
 	// zone-cache-refresh-interval=0: pdns caches the zone LIST for 300s by
 	// default, so a zone created after startup would be REFUSED for up to

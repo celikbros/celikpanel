@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -106,12 +107,15 @@ func aptListsAge() (time.Duration, bool) {
 // kurulumlar yalnız bir kez tazeler. En-iyi-çaba: bozuk bir üçüncü parti depo,
 // ana arşivlerin karşılayabileceği bir kurulumu veto etmemeli.
 func refreshAptListsIfStale(maxAge time.Duration) {
+	refreshAptListsIfStaleContext(context.Background(), maxAge)
+}
+
+func refreshAptListsIfStaleContext(ctx context.Context, maxAge time.Duration) {
 	if age, ok := aptListsAge(); ok && age <= maxAge {
 		return
 	}
-	cmd := exec.Command("apt-get", "update")
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	if out, err := cmd.CombinedOutput(); err != nil {
+	env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	if out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", "update"); err != nil {
 		fmt.Printf("apt-get update before install failed (continuing): %s\n", firstLine(string(out)))
 	}
 }
@@ -123,6 +127,10 @@ func refreshAptListsIfStale(maxAge time.Duration) {
 // etkileşimsiz kurar. Bilinmeyen ya da henüz desteklenmeyen aileler kör bir
 // komut yerine açık bir hata döndürür.
 func installPackages(family string, packages []string) (string, error) {
+	return installPackagesContext(context.Background(), family, packages)
+}
+
+func installPackagesContext(ctx context.Context, family string, packages []string) (string, error) {
 	packageOperationMu.Lock()
 	defer packageOperationMu.Unlock()
 
@@ -141,12 +149,11 @@ func installPackages(family string, packages []string) (string, error) {
 
 	switch family {
 	case "apt":
-		refreshAptListsIfStale(time.Hour)
+		refreshAptListsIfStaleContext(ctx, time.Hour)
 		run := func() (string, error) {
 			args := append([]string{"install", "-y", "--no-install-recommends"}, packages...)
-			cmd := exec.Command("apt-get", args...)
-			cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-			out, err := cmd.CombinedOutput()
+			env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+			out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", args...)
 			return string(out), err
 		}
 		out, err := run()
@@ -155,7 +162,7 @@ func installPackages(family string, packages []string) (string, error) {
 		// Ayna, tazelik penceremizin içinde döndü: listeler dosya var dedi,
 		// ayna 404 diyor. Koşulsuz tazele ve bir kez yeniden dene.
 		if err != nil && strings.Contains(out, "404") {
-			refreshAptListsIfStale(0)
+			refreshAptListsIfStaleContext(ctx, 0)
 			out, err = run()
 		}
 		if err != nil {
@@ -172,11 +179,11 @@ func installPackages(family string, packages []string) (string, error) {
 		// dizinin karşılayabileceği kurulumu veto etmemeli. --needed mevcut
 		// olanı atlar; bilerek -Syu DEĞİL — servis kurulumu tüm sistemi
 		// sürprizle yükseltmemeli.
-		if out, err := exec.Command("pacman", "-Sy", "--noconfirm").CombinedOutput(); err != nil {
+		if out, err := runServiceMutationCombinedOutput(ctx, "pacman", "-Sy", "--noconfirm"); err != nil {
 			return "", fmt.Errorf("pacman-sync-failed:%v:%s", err, strings.TrimSpace(string(out)))
 		}
 		args := append([]string{"-S", "--noconfirm", "--needed"}, packages...)
-		out, err := exec.Command("pacman", args...).CombinedOutput()
+		out, err := runServiceMutationCombinedOutput(ctx, "pacman", args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
@@ -198,6 +205,10 @@ func installPackages(family string, packages []string) (string, error) {
 // küçültmek için. "purge" config'i de siler; autoremove artık öksüz kalan
 // bağımlılıkları temizler.
 func removePackages(family string, packages []string) (string, error) {
+	return removePackagesContext(context.Background(), family, packages)
+}
+
+func removePackagesContext(ctx context.Context, family string, packages []string) (string, error) {
 	packageOperationMu.Lock()
 	defer packageOperationMu.Unlock()
 
@@ -212,9 +223,8 @@ func removePackages(family string, packages []string) (string, error) {
 	switch family {
 	case "apt":
 		args := append([]string{"purge", "-y", "--auto-remove"}, packages...)
-		cmd := exec.Command("apt-get", args...)
-		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-		out, err := cmd.CombinedOutput()
+		env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+		out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
@@ -225,7 +235,7 @@ func removePackages(family string, packages []string) (string, error) {
 		// -Rns = purge: paket, artık gereksiz bağımlılıkları (-s) ve config
 		// dosyaları (-n) — apt'ın purge --auto-remove'unun aynası.
 		args := append([]string{"-Rns", "--noconfirm"}, packages...)
-		out, err := exec.Command("pacman", args...).CombinedOutput()
+		out, err := runServiceMutationCombinedOutput(ctx, "pacman", args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}

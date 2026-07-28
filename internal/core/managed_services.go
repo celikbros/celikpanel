@@ -42,12 +42,30 @@ type ManagedRepo struct {
 	// ve kaynağı signed-by= ile ona sabitler — zırhlı dosya doğrudan kullanılır
 	// (apt ≥ 1.4), böylece gpg bağımlılığı çekilmez; minimal kurulum sözü korunur.
 	KeyURL string
+	// KeyFingerprint is the uppercase hexadecimal fingerprint of the one
+	// primary OpenPGP key this repository is allowed to trust. A valid but
+	// different key fetched from the same URL must still be rejected.
+	//
+	// KeyFingerprint, bu deponun guvenmesine izin verilen tek primary OpenPGP
+	// anahtarinin buyuk harfli hexadecimal fingerprint'idir. Ayni URL'den gelen
+	// gecerli fakat farkli bir anahtar yine de reddedilmelidir.
+	KeyFingerprint string
 	// SourceTemplate is the apt source line with a {codename} placeholder the
 	// agent fills from /etc/os-release (bookworm, noble…). The agent inserts the
 	// signed-by= option automatically.
 	// SourceTemplate, agent'ın /etc/os-release'ten doldurduğu {codename} yer
 	// tutuculu apt kaynak satırıdır. signed-by= seçeneğini agent otomatik ekler.
 	SourceTemplate string
+	// SourceTemplates optionally selects an exact source template by the
+	// trusted ID from /etc/os-release. It is used when one package-manager
+	// family has distro-specific repository roots (Netdata has separate
+	// Debian and Ubuntu trees). A non-empty map is a strict allowlist: an
+	// unknown derivative never falls through to another distro's packages.
+	// SourceTemplates, tek paket-yöneticisi ailesinin dağıtıma özgü depo
+	// kökleri olduğunda /etc/os-release içindeki güvenilir ID ile tam kaynak
+	// şablonunu seçer. Boş olmayan harita katı izin listesidir: bilinmeyen bir
+	// türev asla başka dağıtımın paketlerine sessizce düşmez.
+	SourceTemplates map[string]string
 	// PackagePattern is a regexp matching the versioned packages this repo
 	// provides. The repo — not this catalog — is the source of truth for which
 	// versions exist today, so the agent discovers them by matching this against
@@ -372,9 +390,19 @@ var ManagedServices = []ManagedService{
 		Repo: &ManagedRepo{
 			ID:             "sury",
 			Name:           "Sury PHP (packages.sury.org)",
-			Description:    "Debian/Ubuntu's standard PHP repository — every maintained version, side by side.",
+			Description:    "Debian/Ubuntu PHP repository — every maintained version, side by side.",
 			KeyURL:         "https://packages.sury.org/php/apt.gpg",
-			SourceTemplate: "deb https://packages.sury.org/php/ {codename} main",
+			KeyFingerprint: "15058500A0235D97F5D10063B188E2B695BD4743",
+			// The provider currently publishes the same signed source layout for
+			// supported Debian and Ubuntu suites. The map remains a strict allowlist;
+			// other apt derivatives never inherit either recipe by accident.
+			// Sağlayıcı şu anda desteklenen Debian ve Ubuntu sürümleri için aynı
+			// imzalı kaynak düzenini yayımlar. Harita katı izin listesi olarak kalır;
+			// diğer apt türevleri yanlışlıkla bu tariflerden birini devralmaz.
+			SourceTemplates: map[string]string{
+				"debian": "deb https://packages.sury.org/php/ {codename} main",
+				"ubuntu": "deb https://packages.sury.org/php/ {codename} main",
+			},
 			PackagePattern: `^(php[0-9]+\.[0-9]+)-fpm$`,
 			// A bare php8.x-fpm runs no real site: no database driver, no
 			// mbstring, no curl. These are the extensions WordPress, Laravel and
@@ -486,6 +514,7 @@ var ManagedServices = []ManagedService{
 			Name:           "PostgreSQL Global Development Group (PGDG)",
 			Description:    "Official PostgreSQL repository — every current major version, kept up to date.",
 			KeyURL:         "https://www.postgresql.org/media/keys/ACCC4CF8.asc",
+			KeyFingerprint: "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8",
 			SourceTemplate: "deb https://apt.postgresql.org/pub/repos/apt {codename}-pgdg main",
 			PackagePattern: "^postgresql-[0-9]+$",
 		},
@@ -953,10 +982,11 @@ var ManagedServices = []ManagedService{
 		// kaynağı, tıpkı PHP'de Sury gibi, üreticinin kendi deposudur.
 		Packages: map[string][]string{"apt": {"netdata"}, "pacman": {"netdata"}},
 		Repo: &ManagedRepo{
-			ID:          "netdata",
-			Name:        "Netdata (repo.netdata.cloud)",
-			Description: "Netdata's official repository — the only apt source for Debian/Ubuntu, which do not package it.",
-			KeyURL:      "https://repo.netdata.cloud/netdatabot.gpg.key",
+			ID:             "netdata",
+			Name:           "Netdata (repository.netdata.cloud)",
+			Description:    "Netdata's official repository — the only apt source for Debian/Ubuntu, which do not package it.",
+			KeyURL:         "https://repository.netdata.cloud/netdatabot.gpg.key",
+			KeyFingerprint: "6E155DC153906B73765A74A99DD4A74CECFA8F4F",
 			// A FLAT repository: the distribution is "{codename}/" with a
 			// trailing slash and no component list. Writing the usual
 			// "… {codename} main" here yields a 404 that apt reports as a
@@ -972,8 +1002,11 @@ var ManagedServices = []ManagedService{
 			// .../debian/trixie/Release 200 ve Packages dizini netdata
 			// 2.10.0 taşıyor — Buypass olayından kalan kural, dış ucun önce
 			// gerçek servise karşı sınanmasıdır.
-			SourceTemplate: "deb https://repo.netdata.cloud/repos/stable/debian/ {codename}/",
-			Required:       true,
+			SourceTemplates: map[string]string{
+				"debian": "deb https://repository.netdata.cloud/repos/stable/debian/ {codename}/",
+				"ubuntu": "deb https://repository.netdata.cloud/repos/stable/ubuntu/ {codename}/",
+			},
+			Required: true,
 			// No PackagePattern: the repo serves one current netdata, not a
 			// menu of versions. Version choice is a PHP/PostgreSQL affair.
 			// PackagePattern yok: depo sürüm menüsü değil, tek güncel netdata

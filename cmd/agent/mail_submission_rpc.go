@@ -33,7 +33,16 @@ type ConfigureMailSubmissionResponse struct {
 	Error      string `json:"error,omitempty"`
 }
 
-func (a *Agent) ConfigureMailSubmission(_ *struct{}, resp *ConfigureMailSubmissionResponse) error {
+func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *ConfigureMailSubmissionResponse) error {
+	if req == nil {
+		return fmt.Errorf("mail submission configuration request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" {
 		resp.Error = "mail submission is a production action; not available with CELIKPANEL_MAIL_DIR set"
 		return nil
@@ -77,12 +86,12 @@ service auth {
 
 	// Master.cf via postconf -M/-P: idempotent, no hand-editing.
 	// Master.cf, postconf -M/-P ile: idempotent, elle düzenleme yok.
-	if out, err := exec.Command("postconf", "-M",
+	if out, err := serviceMutationCommand(ctx, "postconf", "-M",
 		"submission/inet=submission inet n - y - - smtpd").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("postconf -M submission: %s", strings.TrimSpace(string(out)))
 		return nil
 	}
-	if out, err := exec.Command("postconf", "-M",
+	if out, err := serviceMutationCommand(ctx, "postconf", "-M",
 		"smtps/inet=smtps inet n - y - - smtpd").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("postconf -M smtps: %s", strings.TrimSpace(string(out)))
 		return nil
@@ -100,7 +109,7 @@ service auth {
 	apply := func(service string, extra [][2]string) error {
 		for _, kv := range append(append([][2]string{}, shared...), extra...) {
 			arg := fmt.Sprintf("%s/inet/%s=%s", service, kv[0], kv[1])
-			if out, err := exec.Command("postconf", "-P", arg).CombinedOutput(); err != nil {
+			if out, err := serviceMutationCommand(ctx, "postconf", "-P", arg).CombinedOutput(); err != nil {
 				return fmt.Errorf("postconf -P %s: %s", arg, strings.TrimSpace(string(out)))
 			}
 		}
@@ -123,8 +132,8 @@ service auth {
 		return nil
 	}
 
-	_ = exec.Command("systemctl", "restart", "dovecot").Run()
-	if out, err := exec.Command("systemctl", "restart", "postfix").CombinedOutput(); err != nil {
+	_ = serviceMutationCommand(ctx, "systemctl", "restart", "dovecot").Run()
+	if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "postfix").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("postfix restart: %s", firstLine(string(out)))
 		return nil
 	}

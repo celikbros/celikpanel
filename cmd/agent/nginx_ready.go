@@ -35,7 +35,16 @@ type EnsureNginxReadyResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func (a *Agent) EnsureNginxReady(_ *struct{}, resp *EnsureNginxReadyResponse) error {
+func (a *Agent) EnsureNginxReady(req *ServiceMutationRequest, resp *EnsureNginxReadyResponse) error {
+	if req == nil {
+		return fmt.Errorf("nginx readiness request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if _, err := exec.LookPath("nginx"); err != nil {
 		resp.Error = "nginx is not installed"
 		return nil
@@ -106,7 +115,7 @@ func (a *Agent) EnsureNginxReady(_ *struct{}, resp *EnsureNginxReadyResponse) er
 		resp.Error = fmt.Sprintf("write nginx.conf: %v", err)
 		return nil
 	}
-	if out, err := exec.Command("nginx", "-t").CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "nginx", "-t").CombinedOutput(); err != nil {
 		_ = os.WriteFile(nginxMainConf, data, 0o644) // restore
 		_ = os.Remove(backup)
 		resp.Error = fmt.Sprintf("nginx rejected the updated config, rolled back: %s", firstLine(string(out)))

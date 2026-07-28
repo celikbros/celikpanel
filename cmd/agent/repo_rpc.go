@@ -48,6 +48,16 @@ import (
 // /usr/share altındaki keyring ve kaynak dosyalarını adlandırır.
 var validRepoID = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
 
+// Values substituted into a source line come from /etc/os-release, but are
+// still treated as data rather than trusted apt syntax. Keeping them to one
+// conservative token prevents a malformed host file from injecting another
+// source line.
+// Kaynak satirina yerlestirilen degerler /etc/os-release'ten gelse de guvenilir
+// apt sozdizimi degil, veri sayilir. Tek ve tutucu bir token ile sinirlamak,
+// bozuk bir makine dosyasinin ikinci bir kaynak satiri enjekte etmesini
+// engeller.
+var validRepoOSReleaseToken = regexp.MustCompile(`^[a-z0-9][a-z0-9._+-]{0,63}$`)
+
 // A signing key ships either ASCII-armoured (.asc) or as a binary keyring
 // (.gpg) and apt's signed-by= accepts both — but only if the file is named for
 // what it actually contains. PGDG publishes armoured; Sury publishes binary, so
@@ -102,6 +112,7 @@ func repoSourcePath(id string) string { return "/etc/apt/sources.list.d/celikpan
 // olguyu kendi derlenmiş kataloğundan yeniden türetir. Panel taşıyıcıdır,
 // yetkili değil.
 type EnableRepoRequest struct {
+	ServiceMutationBinding
 	RepoID string `json:"repo_id"`
 }
 
@@ -118,10 +129,54 @@ func repoFromCatalogue(id string) *core.ManagedRepo {
 	return nil
 }
 
+// Stable repository error codes cross the privileged RPC boundary. Detailed
+// command output remains available to server logs, while the panel translates
+// these constants instead of exposing raw agent English to the browser.
+//
+// Sabit depo hata kodlari yetkili RPC sinirini gecer. Ayrintili komut ciktisi
+// sunucu logunda kalir; panel tarayiciya ham agent Ingilizcesi vermek yerine bu
+// sabitleri cevirir.
+const (
+	repoErrInvalidRequest          = "REPO_INVALID_REQUEST"
+	repoErrUnsupportedSystem       = "REPO_UNSUPPORTED_SYSTEM"
+	repoErrUnsupportedDistribution = "REPO_UNSUPPORTED_DISTRIBUTION"
+	repoErrKeyUntrusted            = "REPO_KEY_UNTRUSTED"
+	repoErrEnableFailed            = "REPO_ENABLE_FAILED"
+	repoErrDisableFailed           = "REPO_DISABLE_FAILED"
+	repoErrConfigurationInvalid    = "REPO_CONFIGURATION_INVALID"
+	repoErrStatusFailed            = "REPO_STATUS_FAILED"
+	repoErrPackagesFailed          = "REPO_PACKAGES_FAILED"
+)
+
 type RepoStatusResponse struct {
-	Enabled bool   `json:"enabled"`
-	Source  string `json:"source,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Enabled         bool   `json:"enabled"`
+	Repairable      bool   `json:"repairable,omitempty"`
+	PartialSuccess  bool   `json:"partial_success,omitempty"`
+	MutationApplied bool   `json:"mutation_applied,omitempty"`
+	Source          string `json:"source,omitempty"`
+	Error           string `json:"error,omitempty"`
+	ErrorCode       string `json:"error_code,omitempty"`
+}
+
+// signedRepoSource builds the one exact source line CelikPanel owns. Keeping
+// enable and status on the same helper prevents a stale or hand-edited source
+// from being reported as healthy merely because the file exists.
+// signedRepoSource, CelikPanel'in yönettiği tek ve tam kaynak satırını üretir.
+// Enable ve status'un aynı yardımcıyı kullanması, eski ya da elle değiştirilmiş
+// bir kaynağın sırf dosya var diye sağlıklı görünmesini engeller.
+func signedRepoSource(source, keyring string) string {
+	return "deb [signed-by=" + keyring + "] " + strings.TrimPrefix(source, "deb ")
+}
+
+// runRepoPackageMutation serializes repository publication/removal and apt
+// refresh with package install/remove operations.
+//
+// runRepoPackageMutation, depo yayinlama/kaldirma ve apt yenilemeyi paket
+// kurulum/kaldirma islemleriyle siraya koyar.
+func runRepoPackageMutation(operation func() error) error {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+	return operation()
 }
 
 // EnableRepo pins the vendor's signing key and writes an apt source that trusts
@@ -131,58 +186,100 @@ type RepoStatusResponse struct {
 // bir apt kaynağı yazar, sonra yalnız bu kaynağın paket listesini tazeler.
 // İdempotenttir: yeniden açmak anahtarı ve kaynağı yeniden yazar.
 func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) error {
+	if req == nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "missing request"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.ErrorCode = repoErrEnableFailed
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	defer ensureRepoStatusErrorCode(resp, repoErrEnableFailed)
 	if detectPkgFamily() != "apt" {
+		resp.ErrorCode = repoErrUnsupportedSystem
 		resp.Error = "managed repositories are only supported on apt (Debian/Ubuntu) systems yet"
 		return nil
 	}
 	if !validRepoID.MatchString(req.RepoID) {
+		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "invalid repo id"
 		return nil
 	}
 	repo := repoFromCatalogue(req.RepoID)
 	if repo == nil {
+		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "unknown repository"
 		return nil
 	}
 	if !strings.HasPrefix(repo.KeyURL, "https://") {
 		resp.Error = "repo key URL must be https"
+		resp.ErrorCode = repoErrInvalidRequest
 		return nil
 	}
 
-	codename := osCodename()
-	if codename == "" {
-		resp.Error = "could not determine the distribution codename (/etc/os-release)"
+	source, err := repoSourceForHost(repo)
+	if err != nil {
+		resp.ErrorCode = repoErrUnsupportedDistribution
+		resp.Error = err.Error()
 		return nil
 	}
-	source := strings.ReplaceAll(repo.SourceTemplate, "{codename}", codename)
 	// Only a plain "deb https://…" line is accepted, and signed-by= is injected
 	// so the source trusts our pinned key and nothing else.
 	// Yalnız düz bir "deb https://…" satırı kabul edilir ve signed-by= enjekte
 	// edilir; böylece kaynak yalnız sabitlediğimiz anahtara güvenir.
-	if !strings.HasPrefix(source, "deb https://") {
-		resp.Error = "repo source must be a deb https:// line"
-		return nil
-	}
 	// The key is fetched BEFORE the source line is built: its format decides
 	// the keyring filename, and signed-by= must point at the name we actually
 	// write. / Anahtar, kaynak satırından ÖNCE indirilir: biçimi keyring dosya
 	// adını belirler ve signed-by= gerçekten yazdığımız adı göstermelidir.
-	key, armored, err := fetchRepoKey(repo.KeyURL)
+	key, armored, err := fetchRepoKey(repo.KeyURL, repo.KeyFingerprint)
 	if err != nil {
+		resp.ErrorCode = repoErrKeyUntrusted
 		resp.Error = err.Error()
 		return nil
 	}
 	keyring := repoKeyringPath(req.RepoID, armored)
-	signed := "deb [signed-by=" + keyring + "] " + strings.TrimPrefix(source, "deb ")
+	signed := signedRepoSource(source, keyring)
 
 	// Re-enabling with a different key format must not leave the old file
 	// behind: apt would keep trusting a keyring nothing points at any more.
 	// Farklı bir anahtar biçimiyle yeniden açmak eski dosyayı bırakmamalı:
 	// apt, artık hiçbir kaynağın göstermediği bir keyring'e güvenmeyi sürdürürdü.
-	for _, stale := range repoKeyringCandidates(req.RepoID) {
-		if stale != keyring {
-			_ = os.Remove(stale)
+	paths := repoRecipePaths{
+		Keyring: keyring,
+		Source:  repoSourcePath(req.RepoID),
+	}
+	for _, candidate := range repoKeyringCandidates(req.RepoID) {
+		if candidate != keyring {
+			paths.StaleKeyrings = append(paths.StaleKeyrings, candidate)
 		}
+	}
+	// Publishing the key/source pair and refreshing apt share the package
+	// mutation lock with install/remove. This prevents an install from
+	// observing the key-first/source-last commit in the middle.
+	//
+	// Anahtar/kaynak ciftini yayinlama ve apt yenileme, kurulum/kaldirma ile
+	// ayni paket mutasyon kilidini kullanir. Boylece bir kurulum anahtar-once,
+	// kaynak-sonra commit'ini yarida goremez.
+	err = runRepoPackageMutation(func() error {
+		return prepareAndPublishRepoRecipe(paths, key, source, func(stagedSource string) ([]byte, error) {
+			cmd := serviceMutationCommand(ctx, "apt-get", "update",
+				"-o", "Dir::Etc::sourcelist="+stagedSource,
+				"-o", "Dir::Etc::sourceparts=/dev/null",
+				"-o", "APT::Get::List-Cleanup=0")
+			cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+			return cmd.CombinedOutput()
+		})
+	})
+	if err != nil {
+		resp.MutationApplied = repoMutationApplied(err)
+		resp.PartialSuccess = resp.MutationApplied
+		resp.Repairable = resp.MutationApplied
+		resp.Error = err.Error()
+		return nil
 	}
 	// apt drops to the unprivileged _apt user to run gpgv, so it must be able to
 	// read the keyring. The agent runs with UMask=0027, which would turn a 0644
@@ -194,42 +291,15 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	// 0640 root:celikpanel'e çevirir — _apt okuyamaz ve doğrulama "imzasız"
 	// hatasıyla başarısız olur. Yazdıktan sonra chmod umask'ı ezer; apt'ın
 	// beklediği gibi her iki dosya da dünyaca-okunur olur.
-	if err := os.WriteFile(keyring, key, 0o644); err != nil {
-		resp.Error = fmt.Sprintf("write keyring: %v", err)
-		return nil
-	}
-	if err := os.Chmod(keyring, 0o644); err != nil {
-		resp.Error = fmt.Sprintf("chmod keyring: %v", err)
-		return nil
-	}
-	if err := os.WriteFile(repoSourcePath(req.RepoID), []byte(signed+"\n"), 0o644); err != nil {
-		resp.Error = fmt.Sprintf("write source: %v", err)
-		return nil
-	}
-	if err := os.Chmod(repoSourcePath(req.RepoID), 0o644); err != nil {
-		resp.Error = fmt.Sprintf("chmod source: %v", err)
-		return nil
-	}
 
 	// Refresh only this source's lists (not the whole system), and do not prune
 	// other sources' cached data.
 	// Yalnız bu kaynağın listelerini tazele (tüm sistemi değil) ve diğer
 	// kaynakların önbelleğini budama.
-	cmd := exec.Command("apt-get", "update",
-		"-o", "Dir::Etc::sourcelist=sources.list.d/celikpanel-"+req.RepoID+".list",
-		"-o", "Dir::Etc::sourceparts=/dev/null",
-		"-o", "APT::Get::List-Cleanup=0")
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		// Roll the files back so a failed enable does not leave a half-configured
-		// source that breaks later apt runs.
-		// Başarısız açma sonrası ileriki apt çalışmalarını bozan yarı-yapılandırılmış
-		// bir kaynak kalmasın diye dosyaları geri al.
-		_ = os.Remove(repoSourcePath(req.RepoID))
-		_ = os.Remove(keyring)
-		resp.Error = fmt.Sprintf("apt update for new repo failed: %s", strings.TrimSpace(string(out)))
-		return nil
-	}
+	// Roll the files back so a failed enable does not leave a half-configured
+	// source that breaks later apt runs.
+	// Başarısız açma sonrası ileriki apt çalışmalarını bozan yarı-yapılandırılmış
+	// bir kaynak kalmasın diye dosyaları geri al.
 
 	resp.Enabled = true
 	resp.Source = signed
@@ -243,42 +313,160 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 // böylece vendor paketleri aday kümesinden çıkar (zaten kurulu paketler kalır —
 // onları kaldırmak ayrı bir uninstall'dır). Açmanın aynası.
 func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) error {
+	if req == nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "missing request"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.ErrorCode = repoErrDisableFailed
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	defer ensureRepoStatusErrorCode(resp, repoErrDisableFailed)
 	if !validRepoID.MatchString(req.RepoID) {
+		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "invalid repo id"
 		return nil
 	}
-	_ = os.Remove(repoSourcePath(req.RepoID))
-	for _, k := range repoKeyringCandidates(req.RepoID) {
-		_ = os.Remove(k)
+	// Removal and apt refresh must be one package-manager critical section.
+	// install/remove operations therefore cannot use stale source/key state.
+	//
+	// Kaldirma ve apt yenileme tek paket-yoneticisi kritik bolgesi olmalidir.
+	// Boylece kurulum/kaldirma islemleri eski kaynak/anahtar durumunu kullanamaz.
+	err = runRepoPackageMutation(func() error {
+		return disableRepoRecipe(
+			repoSourcePath(req.RepoID),
+			repoKeyringCandidates(req.RepoID),
+			func() ([]byte, error) {
+				cmd := serviceMutationCommand(ctx, "apt-get", "update", "-o", "APT::Get::List-Cleanup=1")
+				cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+				return cmd.CombinedOutput()
+			},
+		)
+	})
+	if err != nil {
+		resp.MutationApplied = repoMutationApplied(err)
+		resp.PartialSuccess = resp.MutationApplied
+		resp.Repairable = resp.MutationApplied
+		resp.Error = err.Error()
+		return nil
 	}
-	cmd := exec.Command("apt-get", "update", "-o", "APT::Get::List-Cleanup=1")
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	_, _ = cmd.CombinedOutput()
 	resp.Enabled = false
 	return nil
 }
 
-// RepoStatus reports whether our source file for this repo is present.
-// RepoStatus, bu depo için kaynak dosyamızın var olup olmadığını bildirir.
+// repoRecipeStatus compares the managed source and referenced keyring with the
+// exact recipe compiled into the catalogue. It performs no network access and
+// is separated from RepoStatus so stale-hostname and damaged-key cases can be
+// tested without writing under /etc.
+//
+// repoRecipeStatus, yönetilen kaynağı ve onun işaret ettiği keyring'i kataloğa
+// derlenmiş tam tarifle karşılaştırır. Ağ erişimi yapmaz; eski-hostname ve bozuk
+// anahtar durumları /etc altına yazmadan sınanabilsin diye RepoStatus'tan
+// ayrılmıştır.
+func repoRecipeStatus(repo *core.ManagedRepo, expectedSource, actualSource string, readFile func(string) ([]byte, error)) (bool, string) {
+	actualSource = strings.TrimSpace(actualSource)
+	for _, armored := range []bool{true, false} {
+		keyring := repoKeyringPath(repo.ID, armored)
+		if actualSource != signedRepoSource(expectedSource, keyring) {
+			continue
+		}
+		key, err := readFile(keyring)
+		if err != nil {
+			return false, fmt.Sprintf("referenced keyring cannot be read: %v", err)
+		}
+		actualArmored, err := validateRepoPublicKey(key, repo.KeyFingerprint)
+		if err != nil {
+			return false, fmt.Sprintf("referenced keyring is not the pinned OpenPGP public key: %v", err)
+		}
+		if actualArmored != armored {
+			return false, "referenced keyring extension does not match its OpenPGP encoding"
+		}
+		return true, ""
+	}
+	return false, "source line does not match the current catalogue recipe"
+}
+
+// RepoStatus reports healthy only when both the source contents and referenced
+// keyring match the current recipe. Existing drift is marked repairable because
+// EnableRepo is idempotent and rewrites both files from the trusted catalogue.
+// RepoStatus, yalnız kaynak içeriği ve işaret edilen keyring güncel tarifle
+// eşleştiğinde sağlıklı bildirir. Mevcut drift onarılabilir olarak işaretlenir;
+// çünkü EnableRepo idempotenttir ve iki dosyayı da güvenilir katalogdan yeniden
+// yazar.
 func (a *Agent) RepoStatus(req *EnableRepoRequest, resp *RepoStatusResponse) error {
+	if req == nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "missing request"
+		return nil
+	}
+	defer ensureRepoStatusErrorCode(resp, repoErrStatusFailed)
 	if !validRepoID.MatchString(req.RepoID) {
+		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "invalid repo id"
 		return nil
 	}
-	if data, err := os.ReadFile(repoSourcePath(req.RepoID)); err == nil {
-		resp.Enabled = true
-		resp.Source = strings.TrimSpace(string(data))
+	repo := repoFromCatalogue(req.RepoID)
+	if repo == nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "unknown repository"
+		return nil
 	}
+	expectedSource, err := repoSourceForHost(repo)
+	if err != nil {
+		resp.ErrorCode = repoErrUnsupportedDistribution
+		resp.Error = err.Error()
+		return nil
+	}
+	sourcePath := repoSourcePath(req.RepoID)
+	managedPaths := append([]string{sourcePath}, repoKeyringCandidates(req.RepoID)...)
+	// Recover an interrupted key/source transaction before reporting health, so
+	// callers never inspect a crash-created half state.
+	// Sağlık bildirmeden önce yarım kalmış anahtar/kaynak işlemini kurtar; böylece
+	// çağıranlar çökme sonucu oluşmuş yarım durumu hiçbir zaman incelemez.
+	if err := runRepoPackageMutation(func() error {
+		return recoverRepoTransaction(sourcePath, managedPaths)
+	}); err != nil {
+		resp.Repairable = true
+		resp.ErrorCode = repoErrConfigurationInvalid
+		resp.Error = fmt.Sprintf("recover repository transaction: %v", err)
+		return nil
+	}
+	data, err := readSecureRepoFile(sourcePath, repoManagedFileMode)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		resp.Repairable = true
+		resp.ErrorCode = repoErrConfigurationInvalid
+		resp.Error = fmt.Sprintf("read repository source: %v", err)
+		return nil
+	}
+	resp.Source = strings.TrimSpace(string(data))
+	healthy, reason := repoRecipeStatus(repo, expectedSource, resp.Source, func(path string) ([]byte, error) {
+		return readSecureRepoFile(path, repoManagedFileMode)
+	})
+	if !healthy {
+		resp.Repairable = true
+		resp.ErrorCode = repoErrConfigurationInvalid
+		resp.Error = fmt.Sprintf("managed repository configuration has drifted: %s; enable it again to repair", reason)
+		return nil
+	}
+	resp.Enabled = true
 	return nil
 }
 
 type RepoPackagesRequest struct {
-	Pattern string `json:"pattern"`
+	RepoID string `json:"repo_id"`
 }
 
 type RepoPackagesResponse struct {
-	Packages []string `json:"packages"` // newest major first, e.g. postgresql-17, 16, …
-	Error    string   `json:"error,omitempty"`
+	Packages  []string `json:"packages"` // newest major first, e.g. postgresql-17, 16, …
+	ErrorCode string   `json:"error_code,omitempty"`
+	Error     string   `json:"error,omitempty"`
 }
 
 // RepoPackages discovers which versioned packages are actually available now by
@@ -287,18 +475,62 @@ type RepoPackagesResponse struct {
 // RepoPackages, kataloğun desenini apt-cache ile eşleyerek şu an fiilen hangi
 // sürümlü paketlerin mevcut olduğunu keşfeder — hangi sürümlerin var olduğunun
 // kaynağı kodumuz değil depodur. En yeni major önce döner.
+// catalogueRepoPackagePattern resolves the only trusted search pattern from a
+// repository id. An empty catalogue pattern means “no version menu”, not
+// “enumerate every apt package”.
+// catalogueRepoPackagePattern, güvenilen tek arama desenini depo kimliğinden
+// çözer. Boş katalog deseni “sürüm menüsü yok” demektir; “apt'teki her paketi
+// listele” demek değildir.
+func catalogueRepoPackagePattern(repoID string) (string, *regexp.Regexp, error) {
+	if !validRepoID.MatchString(repoID) {
+		return "", nil, fmt.Errorf("invalid repo id")
+	}
+	repo := repoFromCatalogue(repoID)
+	if repo == nil {
+		return "", nil, fmt.Errorf("unknown repository")
+	}
+	pattern := strings.TrimSpace(repo.PackagePattern)
+	if pattern == "" {
+		return "", nil, fmt.Errorf("repository does not offer versioned package selection")
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid package pattern in catalogue")
+	}
+	return pattern, re, nil
+}
+
 func (a *Agent) RepoPackages(req *RepoPackagesRequest, resp *RepoPackagesResponse) error {
+	resp.Packages = []string{}
+	defer ensureRepoPackagesErrorCode(resp, repoErrPackagesFailed)
+	if req == nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "missing request"
+		return nil
+	}
+
+	// Resolve the search expression from the privileged agent's catalogue
+	// before probing apt. The caller names a repo; it never supplies executable
+	// search syntax, and a repo without a version pattern (Netdata) is rejected
+	// without running `apt-cache search ""`.
+	// apt sorgusundan önce arama ifadesini yetkili agent'ın kataloğundan çöz.
+	// Çağıran yalnız depo adını verir, çalıştırılabilir arama sözdizimi vermez;
+	// sürüm deseni olmayan depo (Netdata) `apt-cache search ""` çalıştırılmadan
+	// reddedilir.
+	pattern, re, err := catalogueRepoPackagePattern(req.RepoID)
+	if err != nil {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = err.Error()
+		return nil
+	}
 	if detectPkgFamily() != "apt" {
+		resp.ErrorCode = repoErrUnsupportedSystem
 		resp.Error = "not supported on this distro yet"
 		return nil
 	}
-	re, err := regexp.Compile(req.Pattern)
+	out, err := exec.Command("apt-cache", "search", "--names-only", pattern).Output()
 	if err != nil {
-		resp.Error = "invalid package pattern"
-		return nil
-	}
-	out, err := exec.Command("apt-cache", "search", "--names-only", req.Pattern).Output()
-	if err != nil {
+		resp.ErrorCode = repoErrPackagesFailed
 		resp.Error = fmt.Sprintf("apt-cache search failed: %v", err)
 		return nil
 	}
@@ -312,7 +544,7 @@ func (a *Agent) RepoPackages(req *RepoPackagesRequest, resp *RepoPackagesRespons
 		// true matches (postgresql-17, not postgresql-client-17) survive.
 		// apt-cache search deseni gevşek ele alır; tam yeniden süz ki yalnız
 		// gerçek eşleşmeler (postgresql-17, postgresql-client-17 değil) kalsın.
-		if name != "" && re.MatchString(name) {
+		if name != "" && re.FindString(name) == name {
 			pkgs = append(pkgs, name)
 		}
 	}
@@ -364,16 +596,70 @@ func versionOf(pkg string) (major, minor int) {
 // osCodename, /etc/os-release'ten VERSION_CODENAME okur (bookworm, noble, …);
 // vendor kaynak satırı doğru paketi seçmek için buna ihtiyaç duyar.
 func osCodename() string {
+	return osReleaseValue("VERSION_CODENAME")
+}
+
+func osDistributionID() string {
+	return strings.ToLower(osReleaseValue("ID"))
+}
+
+func osReleaseValue(key string) string {
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		return ""
 	}
+	return parseOSReleaseValue(data, key)
+}
+
+func parseOSReleaseValue(data []byte, key string) string {
 	for _, line := range strings.Split(string(data), "\n") {
-		if v, ok := strings.CutPrefix(line, "VERSION_CODENAME="); ok {
-			return strings.Trim(strings.TrimSpace(v), `"`)
+		if v, ok := strings.CutPrefix(strings.TrimSpace(line), key+"="); ok {
+			return strings.Trim(strings.TrimSpace(v), `"'`)
 		}
 	}
 	return ""
+}
+
+// repoSourceForHost selects an exact distro template where the catalogue
+// requires one, then substitutes only a validated codename. A non-empty
+// SourceTemplates map is deliberately a strict allowlist: Ubuntu must use the
+// Ubuntu Netdata tree, Debian the Debian tree, and an unknown apt derivative
+// is reported as unsupported instead of being fed Debian packages by accident.
+// repoSourceForHost, katalog gerektiriyorsa tam dagitim sablonunu secer ve
+// yalniz dogrulanmis kod adini yerlestirir. Bos olmayan SourceTemplates haritasi
+// kati bir izin listesidir: Ubuntu kendi, Debian kendi Netdata agacini kullanir;
+// bilinmeyen bir apt turevine yanlislikla Debian paketi verilmez, desteklenmiyor
+// olarak bildirilir.
+func repoSourceForHost(repo *core.ManagedRepo) (string, error) {
+	return renderRepoSource(repo, osDistributionID(), osCodename())
+}
+
+func renderRepoSource(repo *core.ManagedRepo, distroID, codename string) (string, error) {
+	if repo == nil {
+		return "", fmt.Errorf("unknown repository")
+	}
+	if !validRepoOSReleaseToken.MatchString(codename) {
+		return "", fmt.Errorf("could not determine a safe distribution codename (/etc/os-release)")
+	}
+	template := repo.SourceTemplate
+	if len(repo.SourceTemplates) > 0 {
+		if !validRepoOSReleaseToken.MatchString(distroID) {
+			return "", fmt.Errorf("could not determine a safe distribution ID (/etc/os-release)")
+		}
+		var ok bool
+		template, ok = repo.SourceTemplates[distroID]
+		if !ok {
+			return "", fmt.Errorf("%s repository is not offered on distribution %s", repo.Name, distroID)
+		}
+	}
+	source := strings.ReplaceAll(template, "{codename}", codename)
+	if source == "" || strings.Contains(source, "{codename}") || strings.ContainsAny(source, "\r\n") {
+		return "", fmt.Errorf("invalid repository source template")
+	}
+	if !strings.HasPrefix(source, "deb https://") {
+		return "", fmt.Errorf("repo source must be a deb https:// line")
+	}
+	return source, nil
 }
 
 // fetchRepoKey downloads a signing key over https and sanity-checks it before
@@ -397,7 +683,7 @@ func osCodename() string {
 // anahtarı olmayan her şeydir — güvenilir keyring diye kaydedilmiş bir HTML
 // hata sayfası, apt'ın doğrulamayı reddettiği bir depo bırakır ve hata
 // ("imzasız") gerçek sebepten çok uzakta görünür.
-func fetchRepoKey(url string) (key []byte, armored bool, err error) {
+func fetchRepoKey(url, expectedFingerprint string) (key []byte, armored bool, err error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	res, err := client.Get(url)
 	if err != nil {
@@ -411,13 +697,11 @@ func fetchRepoKey(url string) (key []byte, armored bool, err error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("read repo key: %v", err)
 	}
-	if strings.Contains(string(body), "BEGIN PGP PUBLIC KEY BLOCK") {
-		return body, true, nil
+	armored, err = validateRepoPublicKey(body, expectedFingerprint)
+	if err != nil {
+		return nil, false, fmt.Errorf("validate repo key: %v", err)
 	}
-	if isBinaryPublicKey(body) {
-		return body, false, nil
-	}
-	return nil, false, fmt.Errorf("downloaded repo key is neither an ASCII-armoured nor a binary OpenPGP public key")
+	return body, armored, nil
 }
 
 // isBinaryPublicKey reports whether the bytes begin with an OpenPGP Public-Key
@@ -438,14 +722,6 @@ func fetchRepoKey(url string) (key []byte, armored bool, err error) {
 // yeni biçim paketler tag'i alttaki 6 bitte, eski biçim olanlar 2-5. bitlerde
 // taşır. RFC 4880 §4.2.
 func isBinaryPublicKey(b []byte) bool {
-	if len(b) == 0 || b[0]&0x80 == 0 {
-		return false
-	}
-	var tag byte
-	if b[0]&0x40 != 0 {
-		tag = b[0] & 0x3F // new format
-	} else {
-		tag = (b[0] >> 2) & 0x0F // old format
-	}
-	return tag == 6 // Public-Key Packet
+	_, err := primaryPublicKeyFingerprint(b)
+	return err == nil
 }

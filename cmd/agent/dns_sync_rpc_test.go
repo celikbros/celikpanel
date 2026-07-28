@@ -63,7 +63,7 @@ func TestSyncDNSZonePreservesDomainIdentityAndDNSSECState(t *testing.T) {
 		},
 	}
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).SyncDNSZone(req, &resp); err != nil {
+	if err := (&Agent{}).syncDNSZone(req, &resp); err != nil {
 		t.Fatal(err)
 	}
 	if resp.Error != "" || !resp.Synced {
@@ -125,7 +125,7 @@ func TestSyncDNSZoneRefusesPeerOwnedZone(t *testing.T) {
 	db.Close()
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).SyncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
 		Domain:   "peer.example",
 		ZoneType: "MASTER",
 		Records:  []ZoneRecord{{Name: "peer.example", Type: "A", Content: "192.0.2.20", TTL: 300}},
@@ -168,7 +168,7 @@ func TestSyncDNSZoneRefusesDeletingPeerOwnedZone(t *testing.T) {
 	db.Close()
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).SyncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
 		Domain: "peer-delete.example",
 		Delete: true,
 	}, &resp); err != nil {
@@ -218,7 +218,7 @@ func TestSyncDNSZoneReportsNotifyFailure(t *testing.T) {
 	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(t.TempDir(), "pdns.sqlite3"))
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).SyncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
 		Domain:   "notify.example",
 		ZoneType: "MASTER",
 		Records: []ZoneRecord{{

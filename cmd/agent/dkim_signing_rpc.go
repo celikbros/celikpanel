@@ -47,7 +47,16 @@ type ConfigureDKIMSigningResponse struct {
 // ConfigureDKIMSigning, gerekirse OpenDKIM'i kurar, tabloları anahtar
 // dizininden yeniden üretir ve milter'ı Postfix'e bağlar. Idempotent —
 // yeni bir domain anahtarı üretildiğinde de aynı yol yeniden senkronlar.
-func (a *Agent) ConfigureDKIMSigning(_ *struct{}, resp *ConfigureDKIMSigningResponse) error {
+func (a *Agent) ConfigureDKIMSigning(req *ServiceMutationRequest, resp *ConfigureDKIMSigningResponse) error {
+	if req == nil {
+		return fmt.Errorf("DKIM signing configuration request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	// CELIKPANEL_MAIL_DIR marks a non-root dev agent (CELIKPANEL_DKIM_DIR
 	// alone does not: installed units set it to the production default).
 	// CELIKPANEL_MAIL_DIR root olmayan dev agent'ı işaretler (tek başına
@@ -102,11 +111,11 @@ TrustAnchorFile		/usr/share/dns/root.key
 		return nil
 	}
 
-	if out, err := exec.Command("systemctl", "enable", "--now", "opendkim").CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "systemctl", "enable", "--now", "opendkim").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("opendkim start: %s", firstLine(string(out)))
 		return nil
 	}
-	_ = exec.Command("systemctl", "restart", "opendkim").Run()
+	_ = serviceMutationCommand(ctx, "systemctl", "restart", "opendkim").Run()
 
 	// Wire the milters through the ONE composer: writing smtpd_milters here
 	// directly used to erase any spam filter already wired (last writer wins,
@@ -114,7 +123,7 @@ TrustAnchorFile		/usr/share/dns/root.key
 	// Milter'ları TEK besteciden bağla: burada doğrudan smtpd_milters yazmak,
 	// önceden bağlanmış bir spam filtresini siliyordu (son yazan kazanır,
 	// sessizce). applyMilterChain bunun yerine kurulu her filtreyi birleştirir.
-	if err := applyMilterChain(); err != nil {
+	if err := applyMilterChain(ctx); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}

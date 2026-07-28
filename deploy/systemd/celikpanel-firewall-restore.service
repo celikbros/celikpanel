@@ -1,0 +1,45 @@
+[Unit]
+# Restore only CelikPanel's persisted nftables table before networking is
+# configured. No snapshot means a clean no-op; installing this unit alone
+# never enables the firewall.
+# Yalniz CelikPanel'in kalici nftables tablosunu ag yapilandirilmadan once geri
+# yukler. Snapshot yoksa temizce atlanir; bu unit tek basina firewall'u acmaz.
+Description=Restore CelikPanel firewall policy before networking
+DefaultDependencies=no
+Requires=local-fs.target systemd-tmpfiles-setup.service
+Wants=network-pre.target
+After=local-fs.target systemd-tmpfiles-setup.service nftables.service ufw.service firewalld.service
+Before=network-pre.target celikpanel-agent.service
+ConditionPathExists=/etc/celikpanel/firewall.nft
+# A failed persistent-policy restore must not allow the boot to continue with
+# an unexpectedly open host. Recovery then requires the provider console.
+# Kalici politika geri yuklenemezse makine beklenmedik bicimde acik devam
+# etmez; kurtarma saglayici konsolundan yapilir.
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+RuntimeDirectory=sshd
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+ExecStartPre=/opt/celikpanel/bin/agent --check-firewall-restore
+ExecStart=/opt/celikpanel/bin/agent --restore-firewall
+TimeoutStartSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/celikpanel/firewall.nft
+RemainAfterExit=true
+
+[Install]
+# A persisted policy is a security boundary, not a best-effort convenience.
+# RequiredBy makes a failed restore stop network-pre instead of booting open.
+# Kalici ilke guvenlik siniridir, en-iyi-caba kolayligi degildir. RequiredBy,
+# basarisiz geri yuklemede agi acik baslatmak yerine network-pre'yi durdurur.
+RequiredBy=network-pre.target
+WantedBy=multi-user.target

@@ -52,7 +52,16 @@ type ConfigureDBToolsResponse struct {
 // ConfigureDBTools, şu an kurulu araçlar için yalnız-loopback nginx
 // sunucusunu yeniden üretir; hiçbiri kurulu değilse yapılandırma kaldırılır.
 // Panel bir araç kurulunca/kaldırılınca çağırır — idempotenttir.
-func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) error {
+func (a *Agent) ConfigureDBTools(req *ServiceMutationRequest, resp *ConfigureDBToolsResponse) error {
+	if req == nil {
+		return fmt.Errorf("database tools configuration request is required")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
 	if _, err := exec.LookPath("nginx"); err != nil {
 		resp.Error = "nginx is not installed"
 		return nil
@@ -124,7 +133,7 @@ func (a *Agent) ConfigureDBTools(_ *struct{}, resp *ConfigureDBToolsResponse) er
 	// server (and every customer site) down with it.
 	// Yeniden yüklemeden önce doğrula — bozuk bir araç yapılandırması web
 	// sunucusunu (ve tüm müşteri sitelerini) beraberinde düşürmemeli.
-	if out, err := exec.Command("nginx", "-t").CombinedOutput(); err != nil {
+	if out, err := serviceMutationCommand(ctx, "nginx", "-t").CombinedOutput(); err != nil {
 		_ = os.Remove(dbToolsConfPath)
 		resp.Error = fmt.Sprintf("nginx rejected the tools config: %s", firstLine(string(out)))
 		return nil
