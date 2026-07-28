@@ -274,11 +274,55 @@ func main() {
 		log.Println("Firewall restore complete")
 		return
 	}
+	// Ledger creation is an explicit one-time transition and never occurs during normal agent startup.
+	// Ledger oluşturma açık bir kerelik geçiştir ve normal agent başlangıcında asla gerçekleşmez.
+	if len(os.Args) == 2 && os.Args[1] == "--initialize-service-mutation-ledger" {
+		if err := initializeServiceMutationLedger("", ""); err != nil {
+			log.Fatalf("Failed to initialize service mutation ledger: %v", err)
+		}
+		log.Println("Service mutation ledger initialized")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-initial-service-mutation-ledger" {
+		if err := checkInitialServiceMutationLedger("", ""); err != nil {
+			log.Fatalf("Initial service mutation ledger check failed: %v", err)
+		}
+		log.Println("Initial service mutation ledger is exact and idle")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-initial-service-mutation-ledger-under-external-lock" {
+		if err := checkInitialServiceMutationLedgerUnderExternalLock("", ""); err != nil {
+			log.Fatalf("Initial service mutation ledger external-lock check failed: %v", err)
+		}
+		log.Println("Initial service mutation ledger is exact under the external lock")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-pre-ledger-service-mutation-idle" {
+		if err := checkPreLedgerServiceMutationIdle("", ""); err != nil {
+			log.Fatalf("Pre-ledger service mutation idle check failed: %v", err)
+		}
+		log.Println("Pre-ledger service mutation state is idle")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-pre-ledger-service-mutation-idle-under-external-lock" {
+		if err := checkPreLedgerServiceMutationIdleUnderExternalLock("", ""); err != nil {
+			log.Fatalf("Pre-ledger service mutation external-lock check failed: %v", err)
+		}
+		log.Println("Pre-ledger service mutation state is exact under the external lock")
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--check-service-mutation-idle" {
 		if err := checkServiceMutationIdle("", ""); err != nil {
 			log.Fatalf("Service mutation idle check failed: %v", err)
 		}
 		log.Println("Service mutation state is idle")
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--check-service-mutation-idle-under-external-lock" {
+		if err := checkServiceMutationIdleUnderExternalLock("", ""); err != nil {
+			log.Fatalf("Service mutation external-lock check failed: %v", err)
+		}
+		log.Println("Service mutation state is idle under the external lock")
 		return
 	}
 

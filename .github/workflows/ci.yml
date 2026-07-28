@@ -30,6 +30,15 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test ./...
+      # Keep the one-time pre-ledger release path fail-closed and ordered.
+      # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
+      - run: bash deploy/test-bootstrap-update-contract.sh
+      # Keep persistent release markers and controlled systemd starts fail-closed.
+      # Kalıcı sürüm işaretçilerini ve kontrollü systemd başlangıçlarını fail-closed tut.
+      - run: sudo bash deploy/test-release-transaction-guard.sh
+      # Prove exact coordinator identity and crash-safe quiesce recovery.
+      # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
+      - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
 
   web:
     name: Web — typecheck & build

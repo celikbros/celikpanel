@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -65,8 +65,8 @@ type SyncDNSZoneResponse struct {
 	Error  string `json:"error,omitempty"`
 }
 
-var dnsSyncCommand = func(name string, args ...string) ([]byte, error) {
-	return exec.Command(name, args...).CombinedOutput()
+var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+	return serviceMutationCommand(ctx, name, args...).CombinedOutput()
 }
 
 // SyncDNSZone replaces one zone in the pdns database with the given record
@@ -79,16 +79,16 @@ func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 	if req == nil {
 		return fmt.Errorf("DNS zone sync request is required")
 	}
-	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
 	defer finishStep()
-	return a.syncDNSZone(req, resp)
+	return a.syncDNSZone(ctx, req, resp)
 }
 
-func (a *Agent) syncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
+func (a *Agent) syncDNSZone(ctx context.Context, req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
 	if req.Domain == "" {
 		resp.Error = "domain is required"
 		return nil
@@ -197,9 +197,9 @@ func (a *Agent) syncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) 
 	// fast secondary can AXFR a signed zone whose denial-of-existence ordering
 	// is not ready yet. Cache control remains best-effort after the durable DB
 	// work has succeeded.
-	_, _ = dnsSyncCommand("pdns_control", "purge", req.Domain+"$")
+	_, _ = dnsSyncCommand(ctx, "pdns_control", "purge", req.Domain+"$")
 	if !req.Delete && zoneType == "MASTER" {
-		if out, err := dnsSyncCommand("pdns_control", "notify", req.Domain); err != nil {
+		if out, err := dnsSyncCommand(ctx, "pdns_control", "notify", req.Domain); err != nil {
 			resp.Error = dnssecCommandError("notify peer", out, err)
 			return nil
 		}
@@ -333,8 +333,8 @@ api=no
 		return nil
 	}
 
-	if err := a.systemdMgr.Restart("pdns"); err != nil {
-		resp.Error = fmt.Sprintf("pdns restart: %v", err)
+	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "restart", "pdns"); err != nil {
+		resp.Error = fmt.Sprintf("pdns restart: %v: %s", err, firstLine(string(out)))
 		return nil
 	}
 
@@ -450,7 +450,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS namealgoindex ON tsigkeys(name, algorithm);
 // tekil IP'lerini virgülle ayrılmış liste olarak döndürür — yetkili bir DNS
 // sunucusunun, yerel stub çözümleyiciyle çakışmadan dinlemesi gereken yer.
 func publicListenAddresses() string {
-	out, err := exec.Command("ip", "-o", "addr", "show", "scope", "global").Output()
+	out, err := serviceMutationCommand(context.Background(), "ip", "-o", "addr", "show", "scope", "global").Output()
 	if err != nil {
 		return ""
 	}

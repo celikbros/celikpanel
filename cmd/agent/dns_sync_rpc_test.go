@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 func TestSyncDNSZonePreservesDomainIdentityAndDNSSECState(t *testing.T) {
 	originalSyncCommand, originalDNSSECCommand := dnsSyncCommand, dnssecCommand
 	var publicationCalls []string
-	dnsSyncCommand = func(name string, args ...string) ([]byte, error) {
+	dnsSyncCommand = func(_ context.Context, name string, args ...string) ([]byte, error) {
 		publicationCalls = append(publicationCalls, name+" "+strings.Join(args, " "))
 		return nil, nil
 	}
@@ -63,7 +64,7 @@ func TestSyncDNSZonePreservesDomainIdentityAndDNSSECState(t *testing.T) {
 		},
 	}
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).syncDNSZone(req, &resp); err != nil {
+	if err := (&Agent{}).syncDNSZone(context.Background(), req, &resp); err != nil {
 		t.Fatal(err)
 	}
 	if resp.Error != "" || !resp.Synced {
@@ -125,7 +126,7 @@ func TestSyncDNSZoneRefusesPeerOwnedZone(t *testing.T) {
 	db.Close()
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(context.Background(), &SyncDNSZoneRequest{
 		Domain:   "peer.example",
 		ZoneType: "MASTER",
 		Records:  []ZoneRecord{{Name: "peer.example", Type: "A", Content: "192.0.2.20", TTL: 300}},
@@ -168,7 +169,7 @@ func TestSyncDNSZoneRefusesDeletingPeerOwnedZone(t *testing.T) {
 	db.Close()
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(context.Background(), &SyncDNSZoneRequest{
 		Domain: "peer-delete.example",
 		Delete: true,
 	}, &resp); err != nil {
@@ -203,7 +204,7 @@ func TestSyncDNSZoneRefusesDeletingPeerOwnedZone(t *testing.T) {
 
 func TestSyncDNSZoneReportsNotifyFailure(t *testing.T) {
 	originalSyncCommand, originalDNSSECCommand := dnsSyncCommand, dnssecCommand
-	dnsSyncCommand = func(name string, args ...string) ([]byte, error) {
+	dnsSyncCommand = func(_ context.Context, name string, args ...string) ([]byte, error) {
 		if name == "pdns_control" && len(args) > 0 && args[0] == "notify" {
 			return []byte("PowerDNS control socket unavailable\\n"), errors.New("exit status 1")
 		}
@@ -218,7 +219,7 @@ func TestSyncDNSZoneReportsNotifyFailure(t *testing.T) {
 	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(t.TempDir(), "pdns.sqlite3"))
 
 	var resp SyncDNSZoneResponse
-	if err := (&Agent{}).syncDNSZone(&SyncDNSZoneRequest{
+	if err := (&Agent{}).syncDNSZone(context.Background(), &SyncDNSZoneRequest{
 		Domain:   "notify.example",
 		ZoneType: "MASTER",
 		Records: []ZoneRecord{{

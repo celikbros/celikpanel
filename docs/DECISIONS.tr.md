@@ -1058,17 +1058,37 @@ kendileri derler, gerisini dağıtıma bırakır).
 
 ## D-001 · Güncelleme ve geri alma: sunucuyu asla sıfırdan kurma
 
-*8 Temmuz 2026*
+*8 Temmuz 2026 · 28 Temmuz 2026'da değiştirildi*
 
-**Karar.** Üretim güncellemeleri `sudo ./update.sh` (git pull + idempotent
-`install.sh`), asla sil-baştan-kur değil. Her güncelleme önce bir geri-alma
-anlık görüntüsü alır; `sudo ./rollback.sh` önceki çalışan duruma döner.
+**Karar.** Üretim güncellemeleri yalnız
+`sudo /bin/bash ./bootstrap-update.sh --normal` ile veya bir kerelik
+`sudo /bin/bash ./bootstrap-update.sh --bootstrap-pre-ledger` geçişiyle başlar.
+Bootstrap temiz ve incelenmiş commit'i dışa aktarır;
+`/var/backups/celikpanel/releases/<commit>-<nonce>/` altında değişmez, root
+sahipli bir release yayımlar. Güncellemeyi yalnız o release'in açık modla
+çağrılan `update.sh` dosyası yapabilir. Ayrıcalıklı güncelleme `git pull`
+çalıştırmaz ve değişebilir checkout içindeki updater veya installer'ı
+çalıştırmaz.
+
+Her güncelleme önce bir geri-alma snapshot'ı alır ve doğrular. Kurtarma yalnız
+update çıktısındaki kesin komutu ve `VERIFIED_SNAPSHOT` değerini kullanır:
+`sudo /bin/bash /var/backups/celikpanel/releases/<commit>-<nonce>/rollback.sh "$VERIFIED_SNAPSHOT"`.
+Checkout'taki `rollback.sh` veya başka bir release'in
+rollback scripti kurtarma yolu değildir. Servis mutasyon ledger'ı asla elle
+oluşturulmaz, değiştirilmez, boşaltılmaz veya migrate edilmez; yalnız ürünün
+kontrollü tek seferlik initializer'ı pre-ledger kurulum akışında onu
+oluşturabilir.
 
 **Neden.** Kutuda müşteri olması, verinin her güncellemeden sağ çıkması
 gerektiği anlamına gelir. Müşteri verisi (SQLite DB, site dosyaları, posta,
 DNS, sertifikalar, DKIM anahtarları) değişen yolların (`bin/`, `web/`) dışında
-yaşar; migration'lar panel açılışında uygulanır. Anlık görüntü (panel DB +
+yaşar. Anlık görüntüden sonra güncelleme, şema geçişlerini iki koordinatör de
+dururken staged panelin `--migrate-only` modu üzerinden çevrimdışı çalıştırır;
+bu adım tamamlanmadan hiçbir unit yeniden başlatılamaz. Anlık görüntü (panel DB +
 binary'ler + unit dosyaları + kaynak commit'i) "bir güncelleme işleri bozdu"yu
 felaket değil, kurtarılabilir bir olay yapar. Düzeltme akışı: dev kutusunda
-(VPS'in aynası) yeniden üret → kanıtla → push → VPS'te `update.sh` → gerekirse
-`rollback.sh`. Bkz. [update.sh](../update.sh), [rollback.sh](../rollback.sh).
+(VPS'in aynası) yeniden üret → kanıtla → push → VPS'te
+[`bootstrap-update.sh`](../bootstrap-update.sh) ile değişmez release'i stage
+edip doğrula → gerekirse yalnız çıktıda verilen root tarafından güvenilen
+rollback komutunu kullan. İç release ve snapshot sözleşmeleri için
+[`update.sh`](../update.sh) ve [`rollback.sh`](../rollback.sh) dosyalarına bakın.

@@ -59,6 +59,10 @@ func probeServiceMutationFileLockIdle(path string) error {
 	return errServiceMutationHostBusy
 }
 
+func verifyInheritedServiceMutationFileLock(string) error {
+	return fmt.Errorf("inherited service mutation flock proof is supported only on Linux")
+}
+
 func syncServiceMutationDirectory(string) error {
 	return nil
 }

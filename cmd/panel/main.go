@@ -58,9 +58,91 @@ func main() {
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
 	countUsersFlag := flag.Bool("count-users", false, "Print the number of users and exit (used by install.sh) / Kullanıcı sayısını yazıp çık (install.sh kullanır)")
 	checkServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle", false, "Exit successfully only when no queued or running service operation exists / Yalnızca sırada veya çalışan servis işlemi yoksa başarıyla çık")
+	checkPreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle", false, "Verify migration history through version 20 and reject partial service queue objects, then exit / 20. sürüme kadarki migration geçmişini doğrula ve yarım servis kuyruğu nesnelerini reddet, sonra çık")
+	createServiceOperationSnapshotFlag := flag.String("create-service-operation-snapshot", "", "Create a transaction-consistent standalone panel database snapshot at this absolute path, then exit / Bu mutlak yolda işlem tutarlı bağımsız panel veritabanı anlık görüntüsü oluştur, sonra çık")
+	restoreServiceOperationSnapshotFlag := flag.String("restore-service-operation-snapshot", "", "Offline root-only restore from this trusted absolute celikpanel.db; both services must be stopped and the inherited release guard must be held / Bu güvenilir mutlak celikpanel.db dosyasından çevrim dışı yalnız-root geri yükleme; iki servis durmalı ve devralınan yayın koruması tutulmalıdır")
+	releaseTransactionFDFlag := flag.Int("release-transaction-fd", -1, "Inherited descriptor that owns the global release transaction lock / Global yayın işlem kilidinin sahibi olan devralınmış descriptor")
+	releaseTransactionTokenFlag := flag.String("release-transaction-token", "", "Exact 64-character lowercase hexadecimal release transaction token / Tam 64 karakterli küçük harf onaltılık yayın işlem belirteci")
+	releaseTransactionOperationFlag := flag.String("release-transaction-operation", "", "Exact release transaction operation: update or rollback / Tam yayın işlem operasyonu: update veya rollback")
+	releaseTransactionSnapshotFlag := flag.String("release-transaction-snapshot", "", "Safe snapshot basename recorded by the release transaction / Yayın işleminin kaydettiği güvenli anlık görüntü temel adı")
+	serviceOperationSnapshotSchemaFlag := flag.String("snapshot-schema", "", "Snapshot schema contract: normal or pre-ledger / Anlık görüntü şema sözleşmesi: normal veya pre-ledger")
+	migrateOnlyFlag := flag.Bool("migrate-only", false, "Open the canonical database, apply embedded migrations, and exit before agent or HTTP startup / Kanonik veritabanını aç, gömülü migration'ları uygula ve agent ya da HTTP başlamadan çık")
 	flag.Parse()
 
 	log.Println("Starting CelikPanel Backend...")
+	releaseTransaction := serviceOperationReleaseTransaction{
+		fd:        *releaseTransactionFDFlag,
+		token:     *releaseTransactionTokenFlag,
+		operation: *releaseTransactionOperationFlag,
+		snapshot:  *releaseTransactionSnapshotFlag,
+	}
+	databaseActionRequestedByFlags :=
+		strings.TrimSpace(*createServiceOperationSnapshotFlag) != "" ||
+			strings.TrimSpace(*restoreServiceOperationSnapshotFlag) != "" ||
+			strings.TrimSpace(*serviceOperationSnapshotSchemaFlag) != "" ||
+			releaseTransaction.fd != -1 ||
+			strings.TrimSpace(releaseTransaction.token) != "" ||
+			strings.TrimSpace(releaseTransaction.operation) != "" ||
+			strings.TrimSpace(releaseTransaction.snapshot) != ""
+	if err := validatePanelCommandModes(panelCommandModes{
+		createAdmin:        *createAdmin,
+		countUsers:         *countUsersFlag,
+		checkIdle:          *checkServiceOperationsIdleFlag,
+		checkPreLedgerIdle: *checkPreLedgerServiceOperationsIdleFlag,
+		createOrRestore:    databaseActionRequestedByFlags,
+		migrateOnly:        *migrateOnlyFlag,
+		demo:               *demo,
+		insecureCookies:    *insecureCookies,
+	}); err != nil {
+		log.Fatalf("Invalid panel command mode: %v", err)
+	}
+	databaseAction, snapshotSchema, databaseActionRequested, err := validateServiceOperationDatabaseActionRequest(
+		*createServiceOperationSnapshotFlag,
+		*restoreServiceOperationSnapshotFlag,
+		*serviceOperationSnapshotSchemaFlag,
+		releaseTransaction,
+		false,
+	)
+	if err != nil {
+		log.Fatalf("Invalid service operation database request: %v", err)
+	}
+	if databaseActionRequested {
+		switch databaseAction {
+		case serviceOperationDatabaseActionCreate:
+			if err := createReleaseServiceOperationSnapshot(
+				databaseFile(),
+				*createServiceOperationSnapshotFlag,
+				snapshotSchema,
+				releaseTransaction,
+			); err != nil {
+				log.Fatalf("Create service operation snapshot failed: %v", err)
+			}
+			log.Printf("Service operation snapshot created at %s", *createServiceOperationSnapshotFlag)
+		case serviceOperationDatabaseActionRestore:
+			if err := restoreServiceOperationSnapshot(
+				*restoreServiceOperationSnapshotFlag,
+				snapshotSchema,
+				releaseTransaction,
+			); err != nil {
+				log.Fatalf(
+					"Restore service operation snapshot failed (%s): %v",
+					serviceOperationRestoreCommandContract(),
+					err,
+				)
+			}
+			log.Printf("Canonical panel database restored from %s", *restoreServiceOperationSnapshotFlag)
+		default:
+			log.Fatalf("Unsupported service operation database action %q", databaseAction)
+		}
+		return
+	}
+	if *checkPreLedgerServiceOperationsIdleFlag {
+		if err := checkPreLedgerServiceOperationsIdle(databaseFile()); err != nil {
+			log.Fatalf("Pre-ledger service operation check failed: %v", err)
+		}
+		log.Println("Pre-ledger service operation state is idle")
+		return
+	}
 	if *checkServiceOperationsIdleFlag {
 		if err := checkServiceOperationsIdle(databaseFile()); err != nil {
 			log.Fatalf("Service operation idle check failed: %v", err)
@@ -84,6 +166,10 @@ func main() {
 
 	// These bootstrap modes only touch the database, then exit — no agent.
 	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+	if *migrateOnlyFlag {
+		log.Println("Canonical panel database migrations completed")
+		return
+	}
 	if *countUsersFlag {
 		p := &Panel{db: database}
 		n, err := p.countUsers()

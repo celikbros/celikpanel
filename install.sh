@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # CelikPanel installer — one command from a fresh Ubuntu 24.04 (first-class
 # target) or Arch Linux (dev-test target) to a login screen. Idempotent: safe
@@ -22,12 +22,28 @@
 
 set -euo pipefail
 
+# Ignore caller-controlled command lookup before privileged installation.
+# Ayrıcalıklı kurulumdan önce çağıranın denetlediği komut arama yolunu yok say.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
 PREFIX=/opt/celikpanel
 DATA_DIR=/var/lib/celikpanel
 CONF_DIR=/etc/celikpanel
+AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
+AGENT_LEDGER="$AGENT_STATE_DIR/service-mutations.json"
+MUTATION_LOCK=/run/celikpanel/service-mutation.lock
+RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
+RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
+RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 SVC_USER=celikpanel
 SVC_GROUP=celikpanel
 LISTEN="${LISTEN:-:2083}"
+case "${CELIKPANEL_APPLY_ONLY:-0}" in
+    0|1) ;;
+    *) printf '%s\n' "HATA: CELIKPANEL_APPLY_ONLY yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
+esac
+APPLY_ONLY=${CELIKPANEL_APPLY_ONLY:-0}
 
 SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
@@ -36,8 +52,136 @@ step() { c '1;36' "==> $1"; }
 ok() { c '32' "    ✓ $1"; }
 die() { c '1;31' "HATA: $1" >&2; exit 1; }
 
+service_group_id() {
+    local group_id
+    group_id=$(getent group "$SVC_GROUP" | cut -d: -f3) || return 1
+    [[ "$group_id" =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "$group_id"
+}
+
 [ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
 command -v systemctl >/dev/null || die "systemd gerekli"
+
+# Apply-only is accepted solely from a completely verified immutable release
+# while the inherited persistent lock and exact active update marker are live.
+# Apply-only yalnız tamamen doğrulanmış değişmez sürümden, miras kalıcı kilit ve
+# tam active update işaretçisi canlıyken kabul edilir.
+validate_apply_only_transaction() {
+    local root canonical relative entry owner mode permissions state
+    [[ "$APPLY_ONLY" -eq 1 ]] || return 0
+    [[ "${INITIALIZE_SERVICE_MUTATION_LEDGER:-0}" == 0 ]] \
+        || die "apply-only cannot initialize the service mutation ledger"
+    [[ "${SKIP_DEPS:-}" == 1 && "${SKIP_SECURITY_UPDATES:-}" == 1 && "${SKIP_ADMIN:-}" == 1 ]] \
+        || die "apply-only requires dependency, security-update and admin work disabled"
+    [[ "${DEMO:-0}" != 1 ]] || die "apply-only refuses demo mode"
+    root=${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}
+    [[ "$root" == "$SRC" && "$root" == /* ]] || die "apply-only trusted release root mismatch"
+    canonical=$(readlink -e -- "$root") || die "apply-only trusted release is unavailable"
+    [[ "$canonical" == "$root" ]] || die "apply-only trusted release path is not canonical"
+    [[ "$root" == /var/backups/celikpanel/releases/* ]] || die "apply-only release is outside retained storage"
+    relative=${root#/var/backups/celikpanel/releases/}
+    [[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]] || die "apply-only release name is invalid"
+    [[ -d "$root" && ! -L "$root" && ! -e "$root/.git" ]] || die "apply-only release root is unsafe"
+    read -r owner mode < <(stat -Lc '%u %a' -- "$root") || die "cannot inspect apply-only release root"
+    [[ "$owner" == 0 && "$mode" == 700 ]] || die "apply-only release root must be root-owned mode 0700"
+    if find "$root" -type l -print -quit | grep -q .; then die "apply-only release contains a symbolic link"; fi
+    if find "$root" ! -type d ! -type f -print -quit | grep -q .; then die "apply-only release contains a special object"; fi
+    while IFS= read -r -d '' entry; do
+        read -r owner mode < <(stat -Lc '%u %a' -- "$entry") || die "cannot inspect apply-only release entry"
+        [[ "$owner" == 0 ]] || die "apply-only release entry is not root-owned"
+        permissions=$((8#$mode)); (( (permissions & 0022) == 0 )) || die "apply-only release entry is writable"
+    done < <(find "$root" -mindepth 1 -print0)
+    [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] || die "apply-only checksum manifest is missing"
+    (cd "$root"; LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | cmp -s - SHA256SUMS; sha256sum -c SHA256SUMS >/dev/null) \
+        || die "apply-only trusted release checksum verification failed"
+    [[ -x "$root/bin/panel" && -x "$root/bin/agent" && -f "$root/web/dist/index.html" ]] \
+        || die "apply-only release artifacts are incomplete"
+    [[ "${CELIKPANEL_RELEASE_TRANSACTION_FD:-}" =~ ^[0-9]+$ ]] || die "apply-only transaction FD is missing"
+    [[ "${CELIKPANEL_RELEASE_TRANSACTION_OPERATION:-}" == update ]] || die "apply-only operation must be update"
+    TRUSTED_RELEASE_ROOT=$root
+    # shellcheck source=deploy/release-transaction-guard.sh
+    source "$root/deploy/release-transaction-guard.sh"
+    release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        || die "apply-only inherited transaction lock proof failed"
+    release_txn_validate_active_token "$RELEASE_TRANSACTION_ROOT" \
+        "${CELIKPANEL_RELEASE_TRANSACTION_TOKEN:-}" update \
+        "${CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT:-}" \
+        || die "apply-only active transaction marker proof failed"
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        state=$(systemctl show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
+        [[ "$state" == inactive || "$state" == failed ]] || die "apply-only requires $unit stopped"
+    done
+    release_txn_install_and_verify_unit_guards \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+        /etc/systemd/system "$RELEASE_TRANSACTION_HELPER" \
+        "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        || die "apply-only transaction service guard proof failed"
+}
+validate_apply_only_transaction
+
+# Ledger initialization is one-shot. Permit it only for an explicitly audited
+# pre-ledger transition or a proven fresh host with neither DB nor private state.
+# Ledger başlatma tek seferliktir. Yalnız açıkça denetlenmiş pre-ledger geçişinde
+# veya DB ve özel state bulunmayan kanıtlanmış temiz makinede izin ver.
+case "${INITIALIZE_SERVICE_MUTATION_LEDGER:-0}" in
+    0|1) ;;
+    *) die "INITIALIZE_SERVICE_MUTATION_LEDGER yalnız 0 veya 1 olabilir" ;;
+esac
+initialize_ledger=${INITIALIZE_SERVICE_MUTATION_LEDGER:-0}
+# Existing private state must already be the exact root-only directory. Reject
+# aliases before install -d can follow or normalize them.
+# Mevcut özel state önceden tam root-only dizin olmalıdır. install -d yolu
+# izleyip normalleştirmeden önce alias'ları reddet.
+if [[ -e "$AGENT_STATE_DIR" || -L "$AGENT_STATE_DIR" ]]; then
+    [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]] \
+        || die "güvensiz özel agent state yolu: $AGENT_STATE_DIR"
+    read -r state_owner state_group state_mode < <(stat -Lc '%u %g %a' -- "$AGENT_STATE_DIR") \
+        || die "özel agent state dizini incelenemedi"
+    expected_state_group=$(service_group_id) \
+        || die "mevcut özel agent state için $SVC_GROUP grubu bulunamadı"
+    [[ "$state_owner" == 0 && "$state_group" == "$expected_state_group" && "$state_mode" == 700 ]] \
+        || die "özel agent state dizini root:$SVC_GROUP mode 0700 olmalı"
+fi
+# A failed fresh install may have created only the exact empty private
+# directory. Treat that one state as fresh so retry remains idempotent; any
+# hidden or visible entry keeps automatic initialization fail-closed.
+# Başarısız temiz kurulum yalnız tam boş özel dizini oluşturmuş olabilir.
+# Yeniden deneme idempotent kalsın diye yalnız bu durumu temiz kabul et; gizli
+# veya görünür herhangi bir girdi otomatik başlatmayı kapalı biçimde reddettirir.
+if [[ ! -e "$DATA_DIR/celikpanel.db" && ! -L "$DATA_DIR/celikpanel.db" ]]; then
+    if [[ ! -e "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]]; then
+        initialize_ledger=1
+    elif [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" &&
+            ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]]; then
+        partial_state_entry=$(find "$AGENT_STATE_DIR" -mindepth 1 -maxdepth 1 -print -quit) \
+            || die "özel agent state dizini boşluğu doğrulanamadı"
+        if [[ -z "$partial_state_entry" ]]; then
+            initialize_ledger=1
+        fi
+    fi
+fi
+if [[ $initialize_ledger -eq 1 &&
+      -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" &&
+      ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]]; then
+    unexpected_initial_state=$(find "$AGENT_STATE_DIR" -mindepth 1 -maxdepth 1 -print -quit) \
+        || die "özel agent state içeriği doğrulanamadı"
+    [[ -z "$unexpected_initial_state" ]] \
+        || die "ledger başlatma yalnız tamamen boş özel agent state dizininde yapılabilir"
+fi
+if [[ -e "$AGENT_LEDGER" || -L "$AGENT_LEDGER" ]]; then
+    [[ -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+        || die "güvensiz servis işlem ledger yolu: $AGENT_LEDGER"
+    read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT_LEDGER") \
+        || die "servis işlem ledger incelenemedi"
+    expected_ledger_group=$(service_group_id) \
+        || die "mevcut servis işlem ledger için $SVC_GROUP grubu bulunamadı"
+    [[ "$ledger_owner" == 0 && "$ledger_group" == "$expected_ledger_group" && "$ledger_mode" == 600 ]] \
+        || die "servis işlem ledger root:$SVC_GROUP mode 0600 olmalı"
+    [[ "${INITIALIZE_SERVICE_MUTATION_LEDGER:-0}" != 1 ]] \
+        || die "servis işlem ledger zaten var; explicit başlatma reddedildi"
+elif [[ $initialize_ledger -ne 1 ]]; then
+    die "servis işlem ledger eksik; yalnız temiz kurulum veya denetlenmiş bootstrap başlatabilir"
+fi
 
 # Package manager: apt (Ubuntu/Debian, the first-class tested target) and
 # pacman (Arch, dev-test target since Jul 16) are supported. Anything else
@@ -45,7 +189,9 @@ command -v systemctl >/dev/null || die "systemd gerekli"
 # Paket yöneticisi: apt (Ubuntu/Debian, birinci sınıf test hedefi) ve pacman
 # (Arch, 16 Tem'den beri geliştirme-test hedefi) desteklenir. Gerisi tahmin
 # etmek yerine dürüstçe durur.
-if command -v apt-get >/dev/null; then
+if [[ $APPLY_ONLY -eq 1 ]]; then
+    PKG_FAMILY=apply-only
+elif command -v apt-get >/dev/null; then
     PKG_FAMILY=apt
 elif command -v pacman >/dev/null; then
     PKG_FAMILY=pacman
@@ -84,7 +230,7 @@ fi
 # firewall ile ASLA çakışmaz (hepsi altta aynı nftables'ı sürer). Aracı kurmak
 # ≠ firewall'u açmak — böylece firewall temiz bir aç/kapa düğmesi kalır ve bu,
 # "firewall'u sürprizle açma" kuralına uyar.
-if [ "${SKIP_DEPS:-0}" != "1" ]; then
+if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
     step "Küçük ön gereksinimler (curl, tar, xz, nftables)"
     case "$PKG_FAMILY" in
     apt)
@@ -124,7 +270,7 @@ fi
 # kimse hatırlamak zorunda kalmadan yamalı tutar. Yalnız güvenlik kaynağı —
 # asla özellik yükseltmesi; barındırma kutusu davranış değişikliğiyle
 # şaşırmaz, yalnız düzeltmeyle. SKIP_SECURITY_UPDATES=1 devre dışı bırakır.
-if [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "apt" ]; then
+if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "apt" ]; then
     step "Otomatik güvenlik yamaları (unattended-upgrades)"
     export DEBIAN_FRONTEND=noninteractive
     if apt-get install -y -qq unattended-upgrades >/dev/null 2>&1; then
@@ -140,7 +286,7 @@ AUTOCONF
     else
         c '33' "    unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
     fi
-elif [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "pacman" ]; then
+elif [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "pacman" ]; then
     # Arch is rolling release: there is no security-only patch channel to
     # subscribe to, so we say so instead of pretending.
     # Arch yuvarlanan sürümdür: abone olunacak güvenlik-yalnız yama kanalı
@@ -151,11 +297,17 @@ fi
 
 # 2. Service user & group ----------------------------------------------------
 step "Servis kullanıcısı ve grubu"
-getent group "$SVC_GROUP" >/dev/null || groupadd --system "$SVC_GROUP"
-if ! id "$SVC_USER" >/dev/null 2>&1; then
-    useradd --system --gid "$SVC_GROUP" --home-dir "$DATA_DIR" \
-        --shell /usr/sbin/nologin "$SVC_USER"
+if [[ $APPLY_ONLY -eq 1 ]]; then
+    getent group "$SVC_GROUP" >/dev/null || die "apply-only requires existing $SVC_GROUP group"
+    id "$SVC_USER" >/dev/null 2>&1 || die "apply-only requires existing $SVC_USER user"
+else
+    getent group "$SVC_GROUP" >/dev/null || groupadd --system "$SVC_GROUP"
+    if ! id "$SVC_USER" >/dev/null 2>&1; then
+        useradd --system --gid "$SVC_GROUP" --home-dir "$DATA_DIR" \
+            --shell /usr/sbin/nologin "$SVC_USER"
+    fi
 fi
+SVC_GROUP_ID=$(service_group_id) || die "$SVC_GROUP grup kimliği çözülemedi"
 ok "$SVC_USER:$SVC_GROUP"
 
 # 3. Build if artifacts are missing ------------------------------------------
@@ -247,8 +399,44 @@ step "Dosyalar $PREFIX altına kuruluyor"
 install -d -m 0755 "$PREFIX/bin" "$PREFIX/web" "$PREFIX/runtimes"
 install -m 0755 "$SRC/bin/panel" "$PREFIX/bin/panel"
 install -m 0755 "$SRC/bin/agent" "$PREFIX/bin/agent"
-rm -rf "$PREFIX/web"/*
-cp -r "$SRC/web/dist/." "$PREFIX/web/"
+
+# Replace the exact fixed web root, including hidden entries and empty stale
+# directories. Canonical root-owned boundaries are proven before -delete runs.
+# Gizli girdiler ve boş bayat dizinler dahil tam sabit web root'unu değiştir.
+# -delete çalışmadan önce kanonik root-sahipli sınırlar kanıtlanır.
+installed_web_root="$PREFIX/web"
+[[ "$PREFIX" == /opt/celikpanel && "$installed_web_root" == /opt/celikpanel/web ]] \
+    || die "web kurulum root sınırı beklenmedik"
+for install_root in /opt "$PREFIX" "$installed_web_root"; do
+    [[ -d "$install_root" && ! -L "$install_root" ]] \
+        || die "güvensiz web kurulum sınırı: $install_root"
+    install_canonical=$(readlink -e -- "$install_root") \
+        || die "web kurulum sınırı çözümlenemedi: $install_root"
+    [[ "$install_canonical" == "$install_root" ]] \
+        || die "web kurulum sınırı alias içeriyor: $install_root"
+    read -r install_owner install_group install_mode < <(stat -Lc '%u %g %a' -- "$install_root") \
+        || die "web kurulum sınırı incelenemedi: $install_root"
+    install_permissions=$((8#$install_mode))
+    [[ "$install_owner" == 0 && "$install_group" == 0 ]] && \
+        (( (install_permissions & 0022) == 0 )) \
+        || die "web kurulum sınırı root:root ve group/other yazılamaz olmalı: $install_root"
+done
+[[ -d "$SRC/web/dist" && ! -L "$SRC/web/dist" ]] \
+    || die "web kaynak ağacı eksik veya güvensiz"
+if find "$SRC/web/dist" -type l -print -quit | grep -q .; then
+    die "web kaynak ağacı sembolik bağlantı içeriyor"
+fi
+if find "$SRC/web/dist" ! -type d ! -type f -print -quit | grep -q .; then
+    die "web kaynak ağacı özel dosya sistemi nesnesi içeriyor"
+fi
+find "$installed_web_root" -xdev -mindepth 1 -depth -delete \
+    || die "eski web ağacı tam temizlenemedi"
+if find "$installed_web_root" -mindepth 1 -print -quit | grep -q .; then
+    die "eski web ağacı temizlendikten sonra girdi kaldı"
+fi
+cp -a "$SRC/web/dist/." "$installed_web_root/"
+[[ -f "$installed_web_root/index.html" && ! -L "$installed_web_root/index.html" ]] \
+    || die "kurulu web index ürünü eksik veya güvensiz"
 # Runtimes dir is where the agent installs Node versions; group-owned so the
 # root agent writes and the panel can stat.
 # Runtimes dizini agent'ın Node sürümlerini kurduğu yerdir; grup-sahipli.
@@ -289,22 +477,67 @@ sed -e "s|^Environment=CELIKPANEL_LISTEN=.*|Environment=CELIKPANEL_LISTEN=$LISTE
 systemctl daemon-reload
 ok "kuruldu"
 
+# Apply-only ends after immutable layout and ledger metadata are verified. It
+# never initializes state, reconciles firewall, enables/starts services, waits
+# for sockets, creates admins, or runs panel migrations.
+# Apply-only değişmez yerleşim ve ledger metadata doğrulamasından sonra biter.
+# State başlatmaz, firewall uzlaştırmaz, servis açıp başlatmaz, socket beklemez,
+# admin oluşturmaz veya panel migration çalıştırmaz.
+if [[ $APPLY_ONLY -eq 1 ]]; then
+    [[ -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] || die "apply-only durable agent ledger is missing"
+    read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT_LEDGER") || die "apply-only cannot inspect agent ledger"
+    [[ "$ledger_owner" == 0 && "$ledger_group" == "$SVC_GROUP_ID" && "$ledger_mode" == 600 ]] || die "apply-only agent ledger metadata mismatch"
+    sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin" "$PREFIX/web" /etc/systemd/system \
+        || die "apply-only installed layout could not be made durable"
+    ok "apply-only yerleşim tamamlandı; servisler kapalı bırakıldı"
+    exit 0
+fi
+
 # 7. Start the agent (generates the shared token on first run) ---------------
 # restart, not enable --now: an upgrade must actually load the new binary;
 # --now is a no-op when the service is already running.
 # enable --now değil restart: yükseltme yeni binary'yi gerçekten yüklemeli;
 # servis zaten çalışıyorsa --now hiçbir şey yapmaz.
 step "Agent başlatılıyor"
+if [[ $initialize_ledger -eq 1 ]]; then
+    [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+        || die "servis işlem ledger başlatmadan önce mevcut"
+    mutation_lock_dir=$(dirname "$MUTATION_LOCK")
+    if [[ -e "$mutation_lock_dir" || -L "$mutation_lock_dir" ]]; then
+        [[ -d "$mutation_lock_dir" && ! -L "$mutation_lock_dir" ]] \
+            || die "güvensiz servis işlem kilit dizini: $mutation_lock_dir"
+        read -r lock_owner lock_mode < <(stat -Lc '%u %a' -- "$mutation_lock_dir") \
+            || die "servis işlem kilit dizini incelenemedi"
+        lock_permissions=$((8#$lock_mode))
+        [[ "$lock_owner" == 0 ]] && (( (lock_permissions & 0022) == 0 )) \
+            || die "servis işlem kilit dizini root sahipli ve group/other yazılamaz olmalı"
+    fi
+    install -d -m 0700 -o root -g "$SVC_GROUP" -- "$AGENT_STATE_DIR"
+    install -d -m 0750 -o root -g "$SVC_GROUP" -- "$mutation_lock_dir"
+    CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
+    CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        "$PREFIX/bin/agent" --initialize-service-mutation-ledger \
+        || die "servis işlem ledger başlatılamadı"
+fi
+[[ -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+    || die "servis işlem ledger eksik veya güvensiz"
+read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT_LEDGER") \
+    || die "servis işlem ledger incelenemedi"
+[[ "$ledger_owner" == 0 && "$ledger_group" == "$SVC_GROUP_ID" && "$ledger_mode" == 600 ]] \
+    || die "servis işlem ledger root:$SVC_GROUP mode 0600 olmalı"
 # A fresh install only lays down the restore unit. Existing persistence is
 # re-enabled during upgrade, but no activation link is created before the
 # operator explicitly chooses Save for reboot in the panel.
 # Temiz kurulum yalnız restore unitini yerleştirir. Mevcut kalıcılık yükseltmede
 # yeniden etkinleştirilir; operatör panelde açıkça Save for reboot seçmeden
 # hiçbir etkinleştirme bağlantısı oluşturulmaz.
-bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
+/bin/bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
     die "firewall restore unit could not be reconciled"
 systemctl enable celikpanel-agent.service >/dev/null 2>&1 || true
-systemctl restart celikpanel-agent.service || true
+systemctl restart celikpanel-agent.service || \
+    die "agent yeniden başlatılamadı — 'journalctl -u celikpanel-agent' inceleyin"
+systemctl is-active --quiet celikpanel-agent.service || \
+    die "agent aktif değil — 'journalctl -u celikpanel-agent' inceleyin"
 for _ in $(seq 1 20); do
     [ -S /run/celikpanel/agent.sock ] && break
     sleep 0.3
@@ -327,7 +560,8 @@ fi
 # 9. Start the panel ---------------------------------------------------------
 step "Panel başlatılıyor"
 systemctl enable celikpanel-panel.service >/dev/null 2>&1 || true
-systemctl restart celikpanel-panel.service || true
+systemctl restart celikpanel-panel.service || \
+    die "panel yeniden başlatılamadı — 'journalctl -u celikpanel-panel' inceleyin"
 sleep 1
 systemctl is-active --quiet celikpanel-panel.service || \
     die "panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"

@@ -1091,16 +1091,35 @@ cPanel/Plesk (they compile PHP themselves, leave the rest to the distro).
 
 ## D-001 · Update & rollback: never re-image the server
 
-*July 8, 2026*
+*July 8, 2026 · amended July 28, 2026*
 
-**Decision.** Production updates are `sudo ./update.sh` (git pull + idempotent
-`install.sh`), never a wipe-and-reinstall. Every update first takes a rollback
-snapshot; `sudo ./rollback.sh` returns to the previous working state.
+**Decision.** Production updates start only with
+`sudo /bin/bash ./bootstrap-update.sh --normal`, or the one-time
+`sudo /bin/bash ./bootstrap-update.sh --bootstrap-pre-ledger` transition. The
+bootstrap exports the clean reviewed commit and publishes an immutable,
+root-owned release below
+`/var/backups/celikpanel/releases/<commit>-<nonce>/`; only that release's
+`update.sh`, invoked with the explicit mode, may perform the update. A privileged
+update never runs `git pull` and never executes an updater or installer from the
+mutable checkout.
+
+Every update first takes and verifies a rollback snapshot. Recovery uses only
+the exact command and `VERIFIED_SNAPSHOT` printed by the update:
+`sudo /bin/bash /var/backups/celikpanel/releases/<commit>-<nonce>/rollback.sh "$VERIFIED_SNAPSHOT"`.
+A checkout `rollback.sh` or a rollback script from
+another release is not a recovery path. The service-mutation ledger is never
+created, edited, truncated, or migrated by hand; only the product's controlled
+one-shot initializer may create it during the pre-ledger install flow.
 
 **Why.** Customers on the box mean data must survive every update. Customer
 data (SQLite DB, site files, mail, DNS, certs, DKIM keys) lives outside the
-replaced paths (`bin/`, `web/`); migrations apply on panel start. The snapshot
+replaced paths (`bin/`, `web/`). After the snapshot, updates run schema
+migrations offline through the staged panel's `--migrate-only` mode while both
+coordinators are stopped; neither unit may restart before that step completes. The snapshot
 (panel DB + binaries + unit files + source commit) makes "an update made it
 worse" a recoverable event, not a disaster. Fix flow: reproduce on the dev
-box (the VPS's mirror) → prove → push → `update.sh` on the VPS → `rollback.sh`
-if needed. See [update.sh](../update.sh), [rollback.sh](../rollback.sh).
+box (the VPS's mirror) → prove → push → stage and verify the immutable release
+with [`bootstrap-update.sh`](../bootstrap-update.sh) on the VPS → use only the
+printed root-trusted rollback command if needed. See
+[`update.sh`](../update.sh) and [`rollback.sh`](../rollback.sh) for the internal
+release and snapshot contracts.

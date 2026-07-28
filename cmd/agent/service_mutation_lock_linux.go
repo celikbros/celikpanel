@@ -7,9 +7,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
+
+const serviceMutationLockFaultAfterCreate = "after_create_before_chown"
+
+const serviceMutationExternalLockFDEnvironment = "CELIKPANEL_MUTATION_LOCK_FD"
+
+var serviceMutationLockFaultHook func(string) error
 
 type serviceMutationFileLock struct {
 	file *os.File
@@ -37,34 +46,255 @@ func acquireServiceMutationFileLock(path string) (*serviceMutationFileLock, erro
 	if err != nil {
 		return nil, fmt.Errorf("open service mutation lock: %w", err)
 	}
-	if created {
-		if err := unix.Fchmod(fd, 0o600); err != nil {
-			_ = unix.Close(fd)
-			return nil, fmt.Errorf("secure new service mutation lock: %w", err)
-		}
-	}
 	file := os.NewFile(uintptr(fd), path)
 	if file == nil {
 		_ = unix.Close(fd)
 		return nil, errors.New("create service mutation lock file handle")
 	}
+	keepFile := false
+	defer func() {
+		if !keepFile {
+			_ = file.Close()
+		}
+	}()
 	info, err := file.Stat()
 	if err != nil {
-		_ = file.Close()
 		return nil, fmt.Errorf("inspect service mutation lock: %w", err)
 	}
-	if err := secureServiceMutationStat(path, info, false); err != nil {
-		_ = file.Close()
+	if err := verifyServiceMutationLockPathIdentity(path, info); err != nil {
 		return nil, err
 	}
 	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		_ = file.Close()
 		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
 			return nil, errServiceMutationHostBusy
 		}
 		return nil, fmt.Errorf("lock service mutation file: %w", err)
 	}
+	if created {
+		if err := verifyNewServiceMutationLockResidue(path, info); err != nil {
+			return nil, err
+		}
+		if serviceMutationLockFaultHook != nil {
+			if err := serviceMutationLockFaultHook(serviceMutationLockFaultAfterCreate); err != nil {
+				return nil, fmt.Errorf("injected service mutation lock creation failure: %w", err)
+			}
+		}
+	} else if err := secureServiceMutationStat(path, info, false); err != nil {
+		if recoverErr := verifyRecoverableServiceMutationLockResidue(path, info); recoverErr != nil {
+			return nil, errors.Join(err, recoverErr)
+		}
+	} else if info.Size() != 0 {
+		return nil, fmt.Errorf("%s service mutation lock must be empty", path)
+	}
+	if created || !serviceMutationLockHasRequiredMetadata(info) {
+		if err := completeServiceMutationLockMetadata(path, lockDir, file); err != nil {
+			return nil, err
+		}
+	}
+	info, err = file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("reinspect service mutation lock: %w", err)
+	}
+	if err := secureServiceMutationStat(path, info, false); err != nil {
+		return nil, err
+	}
+	if info.Size() != 0 {
+		return nil, fmt.Errorf("%s service mutation lock must remain empty", path)
+	}
+	if err := verifyServiceMutationLockPathIdentity(path, info); err != nil {
+		return nil, err
+	}
+	keepFile = true
 	return &serviceMutationFileLock{file: file}, nil
+}
+
+func serviceMutationLockHasRequiredMetadata(info os.FileInfo) bool {
+	if info == nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || info.Size() != 0 {
+		return false
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	return ok &&
+		stat.Uid == serviceMutationRequiredOwnerUID &&
+		stat.Gid == serviceMutationRequiredOwnerGID &&
+		stat.Nlink == 1
+}
+
+func verifyNewServiceMutationLockResidue(path string, info os.FileInfo) error {
+	if info == nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || info.Size() != 0 {
+		return fmt.Errorf("%s new lock must be an empty regular 0600 file", path)
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	creatorGID := uint32(os.Getegid())
+	if !ok ||
+		stat.Uid != uint32(os.Geteuid()) ||
+		(stat.Gid != creatorGID && stat.Gid != serviceMutationRequiredOwnerGID) ||
+		stat.Nlink != 1 {
+		return fmt.Errorf("%s new lock has unsafe creator metadata", path)
+	}
+	return nil
+}
+
+// A failed first creation may leave only the exact root:root empty lock that
+// exists between O_EXCL and fchown; every broader residue fails closed.
+// Başarısız ilk oluşturma yalnızca O_EXCL ile fchown arasında var olan tam
+// root:root boş kilidi bırakabilir; daha geniş tüm kalıntılar kapalı hata verir.
+func verifyRecoverableServiceMutationLockResidue(path string, info os.FileInfo) error {
+	if os.Geteuid() != 0 || serviceMutationRequiredOwnerUID != 0 ||
+		info == nil || !info.Mode().IsRegular() ||
+		info.Mode().Perm() != 0o600 || info.Size() != 0 {
+		return fmt.Errorf("%s is not a recoverable root:root empty lock residue", path)
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != 0 || stat.Gid != 0 || stat.Nlink != 1 {
+		return fmt.Errorf("%s is not a recoverable root:root empty lock residue", path)
+	}
+	return nil
+}
+
+func completeServiceMutationLockMetadata(path, lockDir string, file *os.File) error {
+	if file == nil {
+		return errors.New("missing service mutation lock handle")
+	}
+	before, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("inspect service mutation lock before repair: %w", err)
+	}
+	if err := verifyServiceMutationLockPathIdentity(path, before); err != nil {
+		return err
+	}
+	if err := unix.Fchown(
+		int(file.Fd()),
+		int(serviceMutationRequiredOwnerUID),
+		int(serviceMutationRequiredOwnerGID),
+	); err != nil {
+		return fmt.Errorf("set service mutation lock ownership: %w", err)
+	}
+	if err := unix.Fchmod(int(file.Fd()), 0o600); err != nil {
+		return fmt.Errorf("secure service mutation lock: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		return fmt.Errorf("sync service mutation lock: %w", err)
+	}
+	if err := syncServiceMutationLockDirectory(lockDir); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyServiceMutationLockPathIdentity(path string, fdInfo os.FileInfo) error {
+	pathInfo, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("inspect service mutation lock path: %w", err)
+	}
+	if !pathInfo.Mode().IsRegular() {
+		return fmt.Errorf("%s must be a real regular file", path)
+	}
+	fdStat, fdOK := fdInfo.Sys().(*syscall.Stat_t)
+	pathStat, pathOK := pathInfo.Sys().(*syscall.Stat_t)
+	if !fdOK || !pathOK || fdStat.Dev != pathStat.Dev || fdStat.Ino != pathStat.Ino {
+		return fmt.Errorf("%s changed while opening the service mutation lock", path)
+	}
+	return nil
+}
+
+// External-lock modes accept only a descriptor inherited from the caller that
+// already owns the exact common flock; merely naming an unlocked descriptor is
+// not authority to skip the normal lock probe.
+// Harici-kilit kipleri yalnız çağırandan miras kalan ve tam ortak flock'a zaten
+// sahip descriptor'ı kabul eder; kilitsiz descriptor adı vermek normal kilit
+// sınamasını atlama yetkisi değildir.
+func verifyInheritedServiceMutationFileLock(path string) error {
+	raw := strings.TrimSpace(os.Getenv(serviceMutationExternalLockFDEnvironment))
+	if raw == "" {
+		return fmt.Errorf("%s is required", serviceMutationExternalLockFDEnvironment)
+	}
+	fd64, err := strconv.ParseInt(raw, 10, 32)
+	if err != nil || fd64 < 3 {
+		return fmt.Errorf("%s must name an inherited descriptor", serviceMutationExternalLockFDEnvironment)
+	}
+	return verifyInheritedServiceMutationFileLockFD(path, int(fd64))
+}
+
+func verifyInheritedServiceMutationFileLockFD(path string, fd int) error {
+	path = filepath.Clean(path)
+	if !filepath.IsAbs(path) || fd < 3 {
+		return errors.New("inherited service mutation lock proof is invalid")
+	}
+	if err := ensureSecureServiceMutationLockDirectory(filepath.Dir(path)); err != nil {
+		return err
+	}
+	dupFD, err := unix.FcntlInt(uintptr(fd), unix.F_DUPFD_CLOEXEC, 3)
+	if err != nil {
+		return fmt.Errorf("duplicate inherited service mutation lock descriptor: %w", err)
+	}
+	file := os.NewFile(uintptr(dupFD), path)
+	if file == nil {
+		_ = unix.Close(dupFD)
+		return errors.New("open inherited service mutation lock descriptor")
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("inspect inherited service mutation lock descriptor: %w", err)
+	}
+	if err := secureServiceMutationStat(path, info, false); err != nil {
+		return err
+	}
+	if info.Size() != 0 {
+		return fmt.Errorf("%s service mutation lock must be empty", path)
+	}
+	if err := verifyServiceMutationLockPathIdentity(path, info); err != nil {
+		return err
+	}
+	fdInfo, err := os.ReadFile(filepath.Join("/proc/self/fdinfo", strconv.Itoa(dupFD)))
+	if err != nil {
+		return fmt.Errorf("inspect inherited service mutation flock ownership: %w", err)
+	}
+	if !serviceMutationFDInfoHasExclusiveFlock(fdInfo) {
+		return errors.New("inherited service mutation lock descriptor does not already own the flock")
+	}
+	probeFD, err := unix.Open(path, unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return fmt.Errorf("open independent service mutation lock proof: %w", err)
+	}
+	defer unix.Close(probeFD)
+	if err := unix.Flock(probeFD, unix.LOCK_EX|unix.LOCK_NB); err == nil {
+		_ = unix.Flock(probeFD, unix.LOCK_UN)
+		return errors.New("inherited service mutation descriptor does not exclude an independent opener")
+	} else if !errors.Is(err, unix.EWOULDBLOCK) && !errors.Is(err, unix.EAGAIN) {
+		return fmt.Errorf("prove inherited service mutation flock contention: %w", err)
+	}
+	return nil
+}
+
+func serviceMutationFDInfoHasExclusiveFlock(raw []byte) bool {
+	for _, line := range strings.Split(string(raw), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 9 && fields[0] == "lock:" &&
+			fields[2] == "FLOCK" && fields[3] == "ADVISORY" &&
+			fields[4] == "WRITE" && fields[len(fields)-2] == "0" &&
+			fields[len(fields)-1] == "EOF" {
+			return true
+		}
+	}
+	return false
+}
+
+func syncServiceMutationLockDirectory(path string) error {
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_DIRECTORY, 0)
+	if err != nil {
+		return fmt.Errorf("open service mutation lock directory for sync: %w", err)
+	}
+	dir := os.NewFile(uintptr(fd), path)
+	if dir == nil {
+		_ = unix.Close(fd)
+		return errors.New("open service mutation lock directory handle")
+	}
+	defer dir.Close()
+	if err := dir.Sync(); err != nil {
+		return fmt.Errorf("sync service mutation lock directory: %w", err)
+	}
+	return nil
 }
 
 func ensureSecureServiceMutationLockDirectory(path string) error {

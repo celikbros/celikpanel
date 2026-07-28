@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -213,7 +214,7 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	// uzantısı değil. Dağıtım-farkındalıklı sağla — dağıtıma özgü tek gerçek
 	// paket adıdır ve o bilgi zaten agent'ta.
 	if !phpHasSQLite() {
-		if err := a.ensurePHPSQLite(phpVer); err != nil {
+		if err := a.ensurePHPSQLite(ctx, phpVer); err != nil {
 			resp.Error = fmt.Sprintf("PHP SQLite extension is required for webmail and could not be installed: %v", err)
 			return nil
 		}
@@ -369,7 +370,7 @@ func phpHasSQLite() bool {
 // sonra php-fpm yeniden yüklenir ki sunulan bir istek de yeni uzantıyı görsün
 // (CLI initdb reload olmadan görürdü ama ardından gelen webmail FPM altında
 // çalışır).
-func (a *Agent) ensurePHPSQLite(phpVer string) error {
+func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
 	family := detectPkgFamily()
 	switch family {
 	case "apt", "dnf":
@@ -378,7 +379,7 @@ func (a *Agent) ensurePHPSQLite(phpVer string) error {
 		}
 		// Debian/RHEL: the per-version package auto-enables via conf.d.
 		// Debian/RHEL: sürüm-başına paket conf.d ile kendini etkinleştirir.
-		if _, err := installPackages(family, []string{fmt.Sprintf("php%s-sqlite3", phpVer)}); err != nil {
+		if _, err := installPackagesContext(ctx, family, []string{fmt.Sprintf("php%s-sqlite3", phpVer)}); err != nil {
 			return err
 		}
 	case "pacman":
@@ -388,7 +389,7 @@ func (a *Agent) ensurePHPSQLite(phpVer string) error {
 		// Arch .so'yu getirir ama etkinleştirMEZ — felsefesi bunu operatöre
 		// bırakır (canlıda yakalandı: paket kurulu, `php -m`'de hâlâ sqlite
 		// yok). Taranan bir conf.d drop-in ile kendimiz etkinleştiririz.
-		if _, err := installPackages(family, []string{"php-sqlite"}); err != nil {
+		if _, err := installPackagesContext(ctx, family, []string{"php-sqlite"}); err != nil {
 			return err
 		}
 		for _, dir := range []string{"/etc/php/conf.d", "/etc/php8/conf.d", "/etc/php/php.d"} {
@@ -407,12 +408,12 @@ func (a *Agent) ensurePHPSQLite(phpVer string) error {
 	// Sunulan istek yeni uzantıyı görsün diye FPM'i yeniden yükle. En-iyi-çaba
 	// — ardından gelen CLI initdb reload'dan bağımsız uzantıyı alır.
 	if phpVer != "" && family == "apt" {
-		if err := a.systemdMgr.Reload("php" + phpVer + "-fpm"); err != nil {
-			return fmt.Errorf("PHP-FPM reload failed: %w", err)
+		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "php"+phpVer+"-fpm"); err != nil {
+			return fmt.Errorf("PHP-FPM reload failed: %s", commandFailureDetail("systemctl reload", out, err))
 		}
 	} else {
-		if err := a.systemdMgr.Reload("php-fpm"); err != nil {
-			return fmt.Errorf("PHP-FPM reload failed: %w", err)
+		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "php-fpm"); err != nil {
+			return fmt.Errorf("PHP-FPM reload failed: %s", commandFailureDetail("systemctl reload", out, err))
 		}
 	}
 
@@ -522,8 +523,8 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 	// başarılı yapımdan sonra yerine taşır; yarım kurulum asla sunulmaz.
 	if !fileExistsAgent(filepath.Join(roundcubeRootDir(), "index.php")) {
 		_ = os.Remove(webmailConfPath)
-		if err := a.systemdMgr.Reload("nginx"); err != nil {
-			resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
+		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
+			resp.Error = commandFailureDetail("nginx reload failed", out, err)
 			return nil
 		}
 		resp.Configured = true
@@ -585,8 +586,8 @@ server {
 		resp.Error = fmt.Sprintf("nginx rejected the webmail config: %s", firstLine(string(out)))
 		return nil
 	}
-	if err := a.systemdMgr.Reload("nginx"); err != nil {
-		resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
+	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
+		resp.Error = commandFailureDetail("nginx reload failed", out, err)
 		return nil
 	}
 

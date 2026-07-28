@@ -9,9 +9,16 @@ import (
 )
 
 const (
-	subscriptionsRoot     = "/var/www/celikpanel/subscriptions"
-	acmeChallengeBaseRoot = "/var/lib/celikpanel-agent/acme-http-01"
+	subscriptionsRoot        = "/var/www/celikpanel/subscriptions"
+	acmeChallengeBaseRoot    = "/var/lib/celikpanel-agent/acme-http-01"
+	serviceMutationStateRoot = "/var/lib/celikpanel-agent-private"
 )
+
+// ServiceMutationStateRoot returns the root-only state directory used by privileged service mutations.
+// ServiceMutationStateRoot, ayrıcalıklı servis işlemlerinin kullandığı yalnızca root erişimli durum dizinini döndürür.
+func ServiceMutationStateRoot() string {
+	return serviceMutationStateRoot
+}
 
 func SiteHome(subscriptionID, domainID int) (string, error) {
 	if subscriptionID <= 0 || domainID <= 0 {

@@ -79,14 +79,14 @@ if grep -Eq '^[[:space:]]*systemctl[[:space:]]+reenable[[:space:]]+celikpanel-fi
     fail "install.sh still re-enables the restore unit unconditionally"
 fi
 
-# Deployment guides must delegate to the verified v3 scripts instead of
+# Deployment guides must delegate to the immutable staged scripts instead of
 # duplicating a privileged pseudo-runbook that can drift from their contract.
 # Dağıtım kılavuzları ayrıcalıklı ve sözleşmeden sapabilecek sahte runbook'u
-# kopyalamak yerine doğrulanmış v3 scriptlerine yetki vermelidir.
+# kopyalamak yerine değişmez hazırlanmış scriptlere yetki vermelidir.
 for runbook in "$root/docs/OPERATIONS.md" "$root/docs/OPERATIONS.tr.md"; do
-    grep -Fq 'sudo ./update.sh' "$runbook" || \
-        fail "$runbook does not use the canonical update script"
-    grep -Fq 'sudo ./rollback.sh "$VERIFIED_SNAPSHOT"' "$runbook" || \
+    grep -Fq 'sudo /bin/bash ./bootstrap-update.sh --normal' "$runbook" || \
+        fail "$runbook does not use the canonical immutable update bootstrap"
+    grep -Fq 'sudo /bin/bash /var/backups/celikpanel/releases/<commit>-<nonce>/rollback.sh "$VERIFIED_SNAPSHOT"' "$runbook" || \
         fail "$runbook does not use the canonical verified rollback snapshot"
     grep -Fq 'enable-firewall-restore-if-saved.sh' "$runbook" || \
         fail "$runbook does not document the no-snapshot disable invariant"
@@ -94,6 +94,10 @@ for runbook in "$root/docs/OPERATIONS.md" "$root/docs/OPERATIONS.tr.md"; do
         fail "$runbook still duplicates privileged firewall activation commands"
     fi
 done
+grep -Fq 'Do not invoke an' "$root/docs/OPERATIONS.md" || \
+    fail "English runbook does not forbid mutable-checkout update.sh execution"
+grep -Fq 'Değişebilir checkout' "$root/docs/OPERATIONS.tr.md" || \
+    fail "Turkish runbook does not forbid mutable-checkout update.sh execution"
 grep -Fq 'enabled_states[$unit]' "$root/rollback.sh" || \
     fail "rollback.sh does not restore snapshotted unit enablement"
 grep -Fq 'systemctl enable --runtime "$unit"' "$root/rollback.sh" || \

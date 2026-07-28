@@ -122,8 +122,8 @@ func (a *Agent) EnsureNginxReady(req *ServiceMutationRequest, resp *EnsureNginxR
 		return nil
 	}
 	_ = os.Remove(backup)
-	if err := a.systemdMgr.Reload("nginx"); err != nil {
-		resp.Error = fmt.Sprintf("nginx reload failed: %v", err)
+	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
+		resp.Error = commandFailureDetail("nginx reload failed", out, err)
 		return nil
 	}
 

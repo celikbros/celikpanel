@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -103,26 +103,35 @@ type sshSocketConfigurationReader interface {
 	ConfiguredSSHSocketPorts() ([]int, error)
 }
 
-type hostFirewallCommandRunner struct{}
+type hostFirewallCommandRunner struct {
+	ctx context.Context
+}
+
+func (r hostFirewallCommandRunner) commandContext() context.Context {
+	if r.ctx == nil {
+		return context.Background()
+	}
+	return r.ctx
+}
 
 func (hostFirewallCommandRunner) LookPath(file string) (string, error) {
 	return trustedCommandExecutablePath(file)
 }
 
-func (hostFirewallCommandRunner) Output(name string, args ...string) ([]byte, error) {
+func (r hostFirewallCommandRunner) Output(name string, args ...string) ([]byte, error) {
 	path, err := trustedCommandExecutablePath(name)
 	if err != nil {
 		return nil, err
 	}
-	return exec.Command(path, args...).Output()
+	return serviceMutationCommand(r.commandContext(), path, args...).Output()
 }
 
-func (hostFirewallCommandRunner) CombinedOutput(name string, args []string, stdin string) ([]byte, error) {
+func (r hostFirewallCommandRunner) CombinedOutput(name string, args []string, stdin string) ([]byte, error) {
 	path, err := trustedCommandExecutablePath(name)
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(path, args...)
+	cmd := serviceMutationCommand(r.commandContext(), path, args...)
 	if stdin != "" {
 		cmd.Stdin = strings.NewReader(stdin)
 	}
@@ -133,26 +142,26 @@ func (hostFirewallCommandRunner) VerifySSHDProcess(pid int) error {
 	return verifyRootSSHDProcess(pid)
 }
 
-func (hostFirewallCommandRunner) ConfiguredSSHPorts() ([]int, error) {
+func (r hostFirewallCommandRunner) ConfiguredSSHPorts() ([]int, error) {
 	sshdPath, err := trustedSSHDExecutablePath()
 	if err != nil {
 		return nil, err
 	}
-	out, err := exec.Command(sshdPath, "-T").CombinedOutput()
+	out, err := serviceMutationCommand(r.commandContext(), sshdPath, "-T").CombinedOutput()
 	if err != nil {
 		return nil, errors.New(commandFailureDetail("sshd -T failed", out, err))
 	}
 	return parseSSHDConfigurationPorts(out)
 }
 
-func (hostFirewallCommandRunner) ConfiguredSSHSocketPorts() ([]int, error) {
+func (r hostFirewallCommandRunner) ConfiguredSSHSocketPorts() ([]int, error) {
 	systemctlPath, err := trustedCommandExecutablePath("systemctl")
 	if err != nil {
 		return nil, err
 	}
 	var ports []int
 	for _, unit := range []string{"ssh.socket", "sshd.socket"} {
-		stateOut, stateErr := exec.Command(
+		stateOut, stateErr := serviceMutationCommand(r.commandContext(),
 			systemctlPath, "show", "--no-pager", "--property=LoadState", "--value", unit,
 		).CombinedOutput()
 		state := strings.TrimSpace(string(stateOut))
@@ -165,7 +174,7 @@ func (hostFirewallCommandRunner) ConfiguredSSHSocketPorts() ([]int, error) {
 		if state != "loaded" {
 			return nil, fmt.Errorf("systemctl %s returned unsupported LoadState %q", unit, state)
 		}
-		listenOut, listenErr := exec.Command(
+		listenOut, listenErr := serviceMutationCommand(r.commandContext(),
 			systemctlPath, "show", "--no-pager", "--property=Listen", "--value", unit,
 		).CombinedOutput()
 		if listenErr != nil {
@@ -464,7 +473,7 @@ func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusRes
 	// Her güvenlik duvarı yazımı kalıcı küresel servis mutation lease'ine
 	// katılmalıdır. Böylece UI işlemleri ve kurulum sonrası eşitleme; sürüm
 	// güncellemesi, geri alma veya başka ayrıcalıklı bileşen işlemiyle yarışmaz.
-	_, finishStep, err := a.requiredServiceMutationStep(binding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(binding)
 	if err != nil {
 		*resp = FirewallStatusResponse{
 			PersistenceState: firewallPersistenceUnverified,
@@ -474,7 +483,7 @@ func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusRes
 		return nil
 	}
 	defer finishStep()
-	return applyFirewallWithRunner(hostFirewallCommandRunner{}, req, resp)
+	return applyFirewallWithRunner(hostFirewallCommandRunner{ctx: ctx}, req, resp)
 }
 
 // applyFirewallWithRunner contains the transaction boundary separately from

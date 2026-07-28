@@ -30,6 +30,15 @@ func TestSitePathsAreDerivedFromPositiveIdentities(t *testing.T) {
 	if strings.HasPrefix(challengeRoot, home+"/") || strings.HasPrefix(home, challengeRoot+"/") {
 		t.Fatalf("challenge root %q overlaps tenant home %q", challengeRoot, home)
 	}
+	privateStateRoot := ServiceMutationStateRoot()
+	if strings.HasPrefix(challengeRoot, privateStateRoot+"/") ||
+		strings.HasPrefix(privateStateRoot, challengeRoot+"/") ||
+		challengeRoot == privateStateRoot {
+		t.Fatalf("challenge root %q overlaps private agent state %q", challengeRoot, privateStateRoot)
+	}
+	if want := "/var/lib/celikpanel-agent-private"; privateStateRoot != want {
+		t.Fatalf("private agent state = %q, want %q", privateStateRoot, want)
+	}
 }
 
 func TestValidateDocumentRootRejectsSiblingAndNginxText(t *testing.T) {

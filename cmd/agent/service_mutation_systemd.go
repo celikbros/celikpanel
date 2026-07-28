@@ -36,7 +36,22 @@ func enableServiceForMutation(ctx context.Context, serviceName string, start boo
 
 func verifyServiceMutationUnit(ctx context.Context, serviceName string, wantActive bool) error {
 	deadline := time.Now().Add(serviceMutationUnitWait)
-	reconcileCtx := context.WithoutCancel(ctx)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// Reconciliation must survive cancellation of the mutating client, but it is
+	// only a bounded, read-only probe. Shadow the durable execution tracker so a
+	// late probe cannot register a new privileged worker after the mutation has
+	// already entered cancelling/failed state.
+	// Uzlaştırma, değişiklik yapan istemcinin iptalinden sonra da sürebilmelidir;
+	// ancak yalnızca süreyle sınırlı, salt-okunur bir kontroldür. Geç kalan bir
+	// kontrol, mutation cancelling/failed durumuna girdikten sonra yeni ayrıcalıklı
+	// worker kaydedemesin diye kalıcı yürütme tracker'ını gölgele.
+	reconcileCtx := context.WithValue(
+		context.WithoutCancel(ctx),
+		serviceMutationExecutionTrackerKey{},
+		(*serviceMutationExecutionTracker)(nil),
+	)
 	for {
 		probeCtx, cancel := context.WithTimeout(reconcileCtx, 2*time.Second)
 		if !wantActive {

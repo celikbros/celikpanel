@@ -1,136 +1,251 @@
 # İşletim El Kitabı (Runbook)
 
-*Son güncelleme: 11 Temmuz 2026 · [English](OPERATIONS.md)*
+*Son güncelleme: 28 Temmuz 2026 · [English](OPERATIONS.md)*
 
-Bu belge, projeye sıfırdan katılan bir mühendisin üretimi anlaması, güvenle
-dağıtım yapması ve bozulanı geri alması için gereken HER işletim bilgisini
-taşır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
-[DECISIONS](DECISIONS.tr.md)'ta; burada yalnız "nasıl işletilir" var.
+Bu belge CelikPanel sürüm dağıtımı ve geri alma işlemlerinin operasyonel tek
+doğruluk kaynağıdır. Strateji [ROADMAP](../ROADMAP.tr.md)'te, mimari kararlar
+[DECISIONS](DECISIONS.tr.md)'ta, katkı kuralları
+[CONVENTIONS](CONVENTIONS.tr.md)'ta bulunur.
 
 ---
 
-## 1. Üretim sunucusu
+## 1. Yetki sınırı
 
-| Alan | Değer |
-|---|---|
-| Alan adı / IP | `celikpanel.cloud` → `2.25.80.4` (Hostinger KVM2, 2 vCPU / 8 GB) |
-| İşletim sistemi | Debian 13 (trixie), hostname `boston.celikhost.com` (16 Tem: makine kimlikleri celikhost.com çatısında, konuma göre adlandırıldı — celikpanel.cloud kayıt firmasında askıda) |
-| Erişim | `ssh root@2.25.80.4` — **yalnız anahtar** (parola girişi kullanılmaz; yetkili anahtarlar operatörde) |
-| Panel | `https://2.25.80.4:2083` (LE kurulana dek self-signed; alan adı çözülmüyorsa `curl --resolve` ile test) |
-| Dış engel (Tem 2026) | Alan adı kayıt operatöründe (Hostinger) askıda — çözümü operatör yürütüyor |
+Canlı paneldeki her değişikliğin sahibi panel kullanıcısıdır. DNS, nameserver,
+DNSSEC, SSL, posta, güvenlik duvarı, servisler, eklentiler, alan adları,
+kullanıcılar, veritabanları ve diğer panel ayarlarını kullanıcı CelikPanel
+arayüzünden değiştirir.
 
-**Sunucudaki yerleşim:** binary'ler `/opt/celikpanel/bin/{agent,panel}` (⚠️ `/usr/local/bin` DEĞİL),
-statik arayüz `/opt/celikpanel/web/`, systemd unit'leri `celikpanel-agent` (root) + `celikpanel-panel`
-(düşük yetki). Veri yolları ve ilk kurulum tek kaynaktan: `install.sh` (okuyun — kendini belgeler).
+Dağıtım araçları incelenmiş ve sürümlenmiş CelikPanel artefaktlarını, veritabanı
+migration'larını ve CelikPanel'in sahibi olduğu systemd unit'lerini kurabilir
+veya geri alabilir. Dağıtımın yan etkisi olarak panel ayar API'lerini çağıramaz,
+arayüz işlemi yapamaz, operatörün seçtiği bir servisi kuramaz; canlı DNS, SSL,
+posta, güvenlik duvarı veya servis yapılandırmasını yeniden yazamaz. SSH,
+burada belgelenen dar kapsamlı ürün güncellemesi, bir kerelik bootstrap ve geri
+alma yolları dışında teşhis için yalnız salt-okurdur.
 
-**⚠️ Bir numaralı tuzak:** `celikpanel-agent`'ı durdurmak/yeniden başlatmak paneli de düşürür
-(unit bağımlılığı). Agent'a dokunan her dağıtımın SONUNDA `systemctl start celikpanel-panel` çalıştırın.
+Üretimdeki bir sorun panel değişikliği gerektiriyorsa kesin arayüz adımını
+açıklayın ve kullanıcının uygulamasını bekleyin. Aynı işlemi arka planda
+tekrarlamayın.
 
-## 1b. İkinci test sunucusu (Arch — taşınabilirlik muhafızı)
+## 2. Değişmeyen dağıtım topolojisi
 
-| Alan | Değer |
-|---|---|
-| Alan adı / IP | `frankfurt.celikhost.com` → `72.62.38.15` (Hostinger KVM8, 8 vCPU / 32 GB / 400 GB) |
-| İşletim sistemi | Arch Linux (bilinçli — bkz. D-004 eki: geliştirme-test hedefi) |
-| Panel | `https://72.62.38.15:2083` (16 Tem: tüm sunucular ve varsayılan tek portta — 2083) |
-| Erişim | `ssh root@72.62.38.15` — yalnız anahtar |
-| Rol | Her değişiklik İKİ sunucuda da test edilir (16 Tem operatör kararı). Arch'ta beklenen fark: servis kataloğu "otomatik kurulamıyor" der (apt'ye özgü) — bu hata değil, dürüst davranıştır |
+Dağıtım hedefleri ve zorunlu sıraları şöyledir:
 
-## 2. Dağıtım ve geri alma
+| Sıra | Hedef | Adres | Rol |
+|---|---|---|---|
+| 1 | `boston.celikhost.com` | `2.25.80.4` | İlk üretim güncellemesi ve doğrulama |
+| 2 | `frankfurt.celikhost.com` | `72.62.38.15` | Yalnız Boston geçtikten sonra ikinci güncelleme |
 
-Üretimdeki tek normatif güncelleme yolu incelenmiş [update.sh](../update.sh), tek normatif geri
-alma yolu da [rollback.sh](../rollback.sh) dosyasıdır. Bu scriptlerin snapshot, güven zinciri,
-checksum, systemd durumu veya geri yükleme iç adımlarını SSH tek satırında ya da elle yazılmış
-runbook'ta tekrarlamayın. `update.sh` snapshot sözleşmesi v3 üretir; `rollback.sh` yalnız bu
-doğrulanmış sözleşmeyi kabul eder.
+Bu runbook canlı component envanteri, güvenlik duvarı durumu, alan adı sayısı,
+sertifika durumu veya kurulu sürüm varsayımı taşımaz. Bu bilgiler eskir; her
+dağıtımdan hemen önce hedeften salt-okur yöntemle alınmalıdır. Gözlenen commit,
+şema, işletim sistemi, unit durumları ve UTC zamanını sürüm kanıtına kaydedin;
+bu runbook'u canlı durum önbelleğine çevirmeyin.
 
-Sürümlenmiş bu ürün scriptlerini SSH üzerinden çalıştırmak izin verilen dağıtım işidir. Bu izin;
-canlı panel ayarlarını, DNS, SSL, posta, firewall veya servis yapılandırmasını SSH üzerinden
-değiştirme yetkisi vermez; bu değişiklikleri operatör yalnız panelden yapar.
+Ürünün değişmeyen yerleşimi:
 
-Dağıtımdan önce temiz commit'i birleştirip push edin; geliştirme ortamında `go test ./...`,
-`go vet ./...` ve `cd web && npm run build` ile kanıtlayın. İki sunuculuk dağıtım boyunca bu
-release commit'ini sabitleyin. Önce Boston'ı güncelleyip tamamen doğrulayın; yalnız Boston
-geçtikten sonra Frankfurt'u güncelleyin. Her sunucunun mevcut, root tarafından güvenilen
-CelikPanel checkout'unda:
+- binary'ler: `/opt/celikpanel/bin/{agent,panel}`
+- web artefaktları: `/opt/celikpanel/web/`
+- panel veritabanı: `/var/lib/celikpanel/celikpanel.db`
+- unit'ler: `celikpanel-agent` ve `celikpanel-panel`
 
-```bash
-test -z "$(git status --porcelain)"
-sudo ./update.sh
-```
+Agent'ı durdurmak bağımlı paneli de durdurabilir. Servis sıralaması ve toparlama
+incelenmiş ürün scriptlerinin sorumluluğundadır; bunların akışını doğaçlama SSH
+komutlarıyla değiştirmeyin.
 
-`update.sh`; root güven zinciri kontrollerini, mutasyon idle kanıtlarını ve ortak flock'u,
-eş panel/agent/web/veritabanı/ledger/unit snapshot'ını, servis enabled/active durum defterini,
-checksum'ları, saklama politikasını, fast-forward Git güncellemesini, yeniden derlemeyi, kurulumu
-ve kurulum sonrası servis kontrollerini yönetir. Doğrulanmış geri alma snapshot'ının mutlak
-yolunu yazdırır. Her ret release blocker'ıdır; snapshot veya koordinatör durumunu elle onarmayın.
+## 3. Sürüm kapıları
 
-Her sunucudan sonra panel ve agent'ın active olmasını; kimliği doğrulanmış
-`/api/v1/panel/version` yanıtının panel ile agent için beklenen aynı tam commit'i ve beklenen
-şemayı bildirmesini zorunlu tutun. Sunulan UI asset'ini yükleyin ve release zaman aralığı için iki
-servisin journal'ını inceleyin. Herhangi bir kontrol farklıysa ikinci sunucuya geçmeyin.
-
-Firewall açılış kalıcılığı da aynı açık-kullanıcı sözleşmesini izler. `install.sh` restore unit'ini
-kurar; ardından `enable-firewall-restore-if-saved.sh`, güvenli kayıtlı snapshot yoksa kalıcı ve
-runtime enable bağlantılarını kaldırır. Boş olmayan mevcut normal snapshot'ı ise başlatmadan veya
-uygulamadan yeniden etkinleştirir. İlk snapshot'ı yalnız açık **Save for reboot** işlemi
-oluşturabilir ve unit ancak dayanıklı yazma başarılı olduktan sonra etkinleşir. Arka plan
-senkronizasyonu mevcut snapshot'ı yenileyebilir ama unit'i asla etkinleştirmez. Açık **Turn off**
-snapshot'ı kaldırıp unit'i devre dışı bırakır. GET, rescan ve arka plan durum işleri unit'i asla
-etkinleştirmez.
-
-Doğrulama başarısızsa `update.sh` çıktısındaki kesin doğrulanmış snapshot yolunu kullanın:
+İki sunucu için tek, temiz ve push edilmiş release commit'ini sabitleyin. Her
+dağıtımdan önce tam commit şu kontrolleri geçmelidir:
 
 ```bash
-sudo ./rollback.sh "$VERIFIED_SNAPSHOT"
+go test ./...
+go vet ./...
+cd web && npm run build
 ```
 
-`rollback.sh`, bir şeyi durdurmadan veya üzerine yazmadan önce v3 snapshot'ı ve bütün
-checksum'ları doğrular. Eş artefaktları geri yükler ve sahip olduğu her unit'in kayıtlı enabled
-ve active durumunu birebir geri getirir; firewall unit'inin yalnız var olması etkinleştirme
-yetkisi vermez. Diğer sunucuyu denemeden önce güncellenmiş sunucuyu geri alın, sonra bütün
-salt-okur kontrolleri tekrarlayın.
+İncelenmiş commit push edildikten sonra sunucudaki checkout'u aşağıdaki tam
+fast-forward kanıtıyla hazırlayın. İki yer tutucuyu da değiştirin; onaylanan
+commit bir branch, tag veya kısaltılmış hash değil, tam nesne hash'i olmalıdır:
 
-## 3. Geliştirme ve test
+```bash
+export CELIKPANEL_APPROVED_COMMIT='<incelenmis-tam-commit-hash>'
+export CELIKPANEL_PREPARED_CHECKOUT='/root-sahipli/celikpanel-checkout/yolu'
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+[[ "$CELIKPANEL_APPROVED_COMMIT" =~ ^[0-9a-f]{40,64}$ ]]
+git switch main
+git fetch --prune origin main
+test "$(git rev-parse origin/main^{commit})" = "$CELIKPANEL_APPROVED_COMMIT"
+git merge --ff-only "$CELIKPANEL_APPROVED_COMMIT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+```
 
-- **Derleme:** `go build ./... && go vet ./...` · `cd web && npm run build` (tsc + vite; ikisi de sıfır hata ile geçmeli).
-- **Görsel doğrulama (canlı backend'siz):** `tools/dev-preview/preview-server.py` — gerçek API
-  şemasını taklit eden stub ile `web/dist`'i sunar; `FRESH=1` taze sunucu, `FIREWALL=on/off` bant
-  durumları. Ekran görüntüsü için playwright (chromium) herhangi bir kurulumdan kullanılabilir.
-  **Kural: stub gerçek şemaya sadık kalır (tipler dahil)** — sadakatsizlik bir kez gerçek hatayı
-  maskeledi (capabilities.mail_server BOOL'dur, metin değil).
-- **i18n:** `web/src/i18n/en.ts` anahtar kaynağıdır (TranslationKey tipini o üretir); `tr.ts`
-  anahtar kümesi birebir eş olmalı. Dizgi içinde kesme işareti derlemeyi bozar — cümleyi kesme
-  işaretsiz kur.
-- **Tasarım döngüsü:** tasarım sistemi claude.ai/design'da; ayrıntı ve tuzaklar
-  `.design-sync/NOTES.md` (özellikle: her web derlemesinde `cssEntry` hash'i güncellenmeli).
-- **Dev ortam kolaylıkları:** agent root olmadan koşarken `CELIKPANEL_*` env override'ları
-  (BACKUP_DIR, DKIM_DIR, MAIL_DIR, RUNTIMES_DIR, NGINX_DIR, SYSTEMD_USER) — kodda arayın,
-  her biri kullanım yerinde belgeli.
+Bu checkout edinimi operatörün release adımıdır. Ayrıcalıklı
+`bootstrap-update.sh`/`update.sh` yolu Git fetch, merge veya ilerletme işlemi
+yapmaz.
 
-## 4. Çalışma modeli (D-008 — alfa)
+Güvenlik duvarı restore yolu açılış açısından kritiktir. Kurulum, systemd,
+güvenlik duvarı kalıcılığı, update, bootstrap veya rollback davranışını
+değiştiren sürüm; disposable gerçek sanal makinelerde hem **Ubuntu 24.04** hem
+güncel **Arch Linux** üzerinde de geçmelidir. Her işletim sisteminde temiz
+kurulum, ilgili update modu, rollback ve gerçek reboot için en az şu durumların
+kanıtını saklayın:
 
-Operatör paneli gerçek müşteri gibi kullanır; mühendis sunucuya **asla** elle servis/ayar kurmaz.
-Canlı panel ayarları ile DNS, SSL, posta, güvenlik duvarı ve servis yapılandırmasının tamamını
-yalnız operatör arayüzden değiştirir. SSH, yukarıda tanımlanan sürümlenmiş CelikPanel
-artefaktlarının dar kapsamlı ürün dağıtımı ve geri alınması dışında yalnız salt-okur teşhis
-içindir. Operatörün çarptığı her duvar bir ürün değişikliği olarak gelir: düzelt → derle →
-stub'da ekran görüntüsüyle doğrula → commit+push → ürün artefaktlarını dağıt. Commit dili
-Türkçedir; her commit'e `momerefe` + `celikalperen` co-author eklenir; ayrıntı
-[CONVENTIONS](CONVENTIONS.tr.md).
+1. kayıtlı güvenlik duvarı snapshot'ı yokken restore unit'i kapalı kalır; reboot
+   politika etkinleştirmez veya uygulamaz;
+2. açık bir panel işlemiyle snapshot kaydedildiğinde reboot aynı politikayı geri
+   yükler;
+3. panelden açık **Turn off** sonrasında snapshot yoktur ve restore unit'i
+   reboot sonrasında da kapalıdır.
 
-## 5. Canlı durum fotoğrafı (11 Temmuz 2026)
+Mock unit testleri gereklidir fakat bu açılış kapısını karşılamaz. SSH
+kimlik doğrulamasının, VM erişiminin veya reboot/güvenlik duvarı çıktısının
+olmaması dağıtım engelidir; başarı varsayma gerekçesi değildir. Bu kanıtlar
+olmadan üretim dağıtımı başlatılamaz.
 
-- Panel v0.1.0 + panelden kurulmuş PowerDNS; başka servis YOK (operatör panelden kuracak).
-- Güvenlik duvarı: kapalı (operatör açacak — pano/Servisler amber uyarı gösteriyor).
-- Domain yok (D-009 gereği önce DNS gerekiyordu; PowerDNS artık kurulu → sıradaki adım domain).
-- DNSSEC: eski anahtar ve kayıt operatöründeki DS kaydı GEÇERSİZ (9 Tem sıfırlamasında DS silindi).
-  DNSSEC panelden etkinleştirilince YENİ anahtar üretilir; yeni DS kayıt operatörüne o zaman girilir.
-- Sıradaki adımlar: [ROADMAP](../ROADMAP.tr.md) → v0.2 listesi.
+## 4. Güncelleme modları
 
-## 6. Gizli bilgiler politikası
+### 4.1 Normal güncelleme
 
-Repoda gizli bilgi YOKTUR ve olmayacaktır (bir kez sızdı, bir daha asla — bkz. Faz 0.8 dersi).
-Panel yönetici parolası yalnız operatörde; sunucu SSH anahtarları operatörün makinelerinde;
-servis parolalarını (DB, posta) panel üretir ve kendi SQLite'ında tutar. Yeni mühendis erişimi =
-operatörün sunucuya yeni SSH açık anahtarı eklemesi; parola paylaşımı yapılmaz.
+Normal yolu yalnız kalıcı servis işlem tablosu ile agent'ın özel mutasyon durumu
+daha önce doğrulanmış bir sürüm tarafından kurulmuşsa kullanın. Bölüm 3'te
+kanıtlanan hazırlanmış checkout'ta:
+
+```bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./bootstrap-update.sh --normal
+```
+
+`bootstrap-update.sh` temiz ve incelenmiş commit'i dışa aktarmalı, derleyip
+doğrulamalı ve
+`/var/backups/celikpanel/releases/<commit>-<nonce>/` altında değişmez, root
+sahipli, `0700` kipli tek bir release yayımlamalıdır. Ardından o release'in
+`update.sh` dosyasını açık `--normal` moduyla çağırır. Değişebilir checkout
+içindeki `update.sh` dosyasını doğrudan çağırmayın. Staged updater; panel
+işlemleri, ayrıcalıklı mutasyon ledger'ı, ortak kilit veya host paket yöneticisi
+idle değilse fail-closed durmalıdır.
+
+### 4.2 Bir kerelik pre-ledger bootstrap
+
+Kurulu sürümü kalıcı servis işlem ledger'ından eski olan bir sunucu normal
+update yolunu kullanamaz. Bu genel bir kurtarma seçeneği değil, bir kerelik
+geçiştir.
+
+Bu yolu yalnız sürümde incelenmiş
+[`bootstrap-update.sh`](../bootstrap-update.sh) bulunduğunda ve
+[`update.sh`](../update.sh) `--bootstrap-pre-ledger` seçeneğini desteklediğinde
+kullanın:
+
+```bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./bootstrap-update.sh --bootstrap-pre-ledger
+```
+
+Normal modda olduğu gibi bootstrap temiz bir `git archive HEAD` hazırlamalı,
+staged panel ve agent'ı derleyip doğrulamalı ve değişmez, yalnız root'a açık bir
+release yayımlamalıdır. Şema v20'ye kadar kesintisiz tam migration geçmişini,
+servis işlem tablosu ile indexlerinin bulunmadığını kanıtlamalı ve yalnız bu
+eski sürüm için izin verilen eksik özel ledger/runtime durumunu kabul etmelidir.
+Ardından o release'in `update.sh` dosyasını açık
+`--bootstrap-pre-ledger` moduyla çağırır. Kısmi servis işlem nesnelerini, var
+olan tutarsız durumu, etkin paket işlemini, kirli kaynağı veya güvenilmeyen
+checkout'u reddetmelidir.
+
+Mutasyon ledger'ını asla elle oluşturmayın, değiştirmeyin, boşaltmayın veya
+uydurmayın; migration'larını elle çalıştırmayın. Pre-ledger kurulum akışında
+ledger'ı yalnız ürünün kontrollü tek seferlik initializer'ı oluşturur; normal
+panel veya agent başlangıcı bu initializer'ın yerini alamaz. Başarılı tek
+geçişten sonraki bütün sürümlerde `--normal` kullanın.
+
+### 4.3 Snapshot sözleşmesi
+
+Pre-ledger sürümü, özel agent durumunu ve eski sistemde ledger'ın bulunmadığı
+bilgisini rollback sırasında korumak için **snapshot sözleşmesi v4** gerektirir.
+Bu sürüm dağıtılmadan önce `update.sh` ve `rollback.sh` birlikte v4 desteğini
+bildirmelidir. Snapshot sözleşmesi sürümlerini karıştırmayın, snapshot içeriğini
+elle kopyalamayın ve başka sürüme ait rollback scriptini kullanmayın. Root güven
+zinciri doğrulaması, checksum'lar, unit durumu, eş
+panel/agent/web/veritabanı durumu, saklama ve geri yükleme sırası scriptlerin
+sorumluluğundadır.
+
+## 5. İki sunuculu dağıtım ve doğrulama
+
+Önce **Boston**'a dağıtın. Aşağıdaki Boston kontrollerinin tamamı geçmeden
+Frankfurt'a dokunmayın:
+
+1. update veya bir kerelik bootstrap başarıyla çıkar ve doğrulanmış snapshot'ın
+   mutlak yolunu yazdırır;
+2. `celikpanel-agent` ve `celikpanel-panel` active durumdadır;
+3. kimliği doğrulanmış `/api/v1/panel/version` yanıtı hem panel hem agent için
+   sabitlenen tam commit'i ve beklenen şemayı bildirir;
+4. sunulan UI artefaktı bu sürüme aittir;
+5. sürüm zaman aralığındaki panel ve agent journal'larında başarısız preflight,
+   migration, restart veya reconciliation yoktur;
+6. salt-okur servis işlemi ve mutasyon-ledger kontrolleri idle durumdadır.
+
+Yalnız bundan sonra ilgili update modunu **Frankfurt** üzerinde tekrarlayın ve
+aynı kontrolleri uygulayın. Herhangi bir kontrol başarısızsa dağıtımı durdurun;
+peer'ı denemeden önce güncellenen sunucuyu geri alın.
+
+Yalnız update çıktısında verilen root tarafından güvenilen rollback scriptini
+ve `VERIFIED_SNAPSHOT` değerini kullanın. Yer tutucuyu çıktıda verilen kesin
+release diziniyle değiştirin; checkout kopyasını veya başka bir release'in
+rollback scriptini asla kullanmayın:
+
+```bash
+sudo /bin/bash /var/backups/celikpanel/releases/<commit>-<nonce>/rollback.sh "$VERIFIED_SNAPSHOT"
+```
+
+O release'in `rollback.sh` dosyası herhangi bir şeyi durdurmadan veya üzerine
+yazmadan önce root güven zincirini, desteklenen snapshot sözleşmesini,
+provenance bilgisini ve bütün checksum'ları doğrulamalıdır. Rollback sonrasında
+bütün salt-okur doğrulamaları tekrarlayın.
+
+## 6. Güvenlik duvarı kalıcılığı yetkisi
+
+Kurulum CelikPanel güvenlik duvarı restore unit'ini yerleştirebilir; fakat
+dağıtım ilk kayıtlı politikayı oluşturamaz, güvenlik duvarını açamaz veya
+kaydedilmemiş runtime politikasını sessizce açılış politikasına çeviremez.
+
+`install.sh`, açılış bağlantılarının uzlaştırılmasını
+`deploy/systemd/enable-firewall-restore-if-saved.sh` dosyasına bırakır. Snapshot
+yolu yoksa ve sembolik bağ değilse yardımcı, unit'i başlatmadan veya durdurmadan
+hem kalıcı hem runtime etkinleştirme bağlantılarını kaldırır. Var olan snapshot,
+sembolik bağ olmayan, boş olmayan normal dosya olmalıdır; yardımcı yalnız bu
+durumda unit'i başlatmadan veya güvenlik duvarını uygulamadan mevcut kurulum
+topolojisini yeniler. Boş, normal dosya olmayan veya sembolik bağ snapshot ile
+disable/reenable hatası, güvenli kalıcılık varmış gibi davranmak yerine kurulumu
+durdurur.
+
+İlk dayanıklı snapshot'ı yalnız kullanıcının paneldeki açık **Save for reboot**
+işlemi oluşturabilir; restore ancak yazma başarılı olduktan sonra
+etkinleşebilir. Arka plan senkronizasyonu var olan snapshot'ı yenileyebilir
+ancak ilk etkinleştirme yetkisi vermez. Açık **Turn off** snapshot'ı kaldırır ve
+restore'u devre dışı bırakır. GET, rescan, monitoring, update, bootstrap ve
+rollback unit'in yalnız var olmasını kullanıcı onayı olarak yorumlayamaz.
+
+## 7. Geliştirme kontrolleri
+
+- **Derleme:** `go test ./...`, `go vet ./...` ve
+  `cd web && npm run build`.
+- **Görsel doğrulama:** `tools/dev-preview/preview-server.py`, `web/dist`
+  dizinini şemaya sadık bir stub arkasında sunar. `FRESH=1` ile
+  `FIREWALL=on/off` yalnız geliştirme önizlemesinde kullanılır.
+- **i18n:** `web/src/i18n/en.ts` anahtar kaynağıdır; `tr.ts` aynı anahtar
+  kümesine birebir sahip olmalıdır.
+- **Tasarım döngüsü:** `.design-sync/NOTES.md`, tasarım sistemi iş akışını ve
+  zorunlu CSS-entry hash yenilemesini açıklar.
+
+## 8. Gizli bilgiler politikası
+
+Gizli bilgiler repoya, runbook'a, sürüm kanıtına veya sohbette paylaşılan komut
+çıktısına girmez. Panel kimlik bilgileri ve SSH anahtarları operatörde kalır.
+CelikPanel'in ürettiği servis kimlik bilgileri ürünün korumalı deposunda kalır.
+Yeni mühendis erişimini operatör özel bir SSH açık anahtarı ekleyerek verir;
+parola paylaşılmaz.

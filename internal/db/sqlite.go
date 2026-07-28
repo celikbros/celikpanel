@@ -15,6 +15,12 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
+const createSchemaMigrationsSQL = `
+	CREATE TABLE IF NOT EXISTS schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT (datetime('now'))
+	)`
+
 type SQLiteDB struct {
 	db *sql.DB
 }
@@ -23,7 +29,7 @@ type SQLiteDB struct {
 func NewSQLiteDB(path string) (*SQLiteDB, error) {
 	// Enable WAL and foreign keys via connection string parameters
 	dsn := fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)", path)
-	
+
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open database: %v", err)
@@ -54,12 +60,7 @@ func (db *SQLiteDB) RunMigrations() error {
 	ctx := context.Background()
 
 	// Create migrations table if not exists
-	_, err := db.db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS schema_migrations (
-			version INTEGER PRIMARY KEY,
-			applied_at TEXT DEFAULT (datetime('now'))
-		)
-	`)
+	_, err := db.db.ExecContext(ctx, createSchemaMigrationsSQL)
 	if err != nil {
 		return fmt.Errorf("failed to create migrations table: %v", err)
 	}

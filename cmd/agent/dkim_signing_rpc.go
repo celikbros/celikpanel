@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -76,7 +77,7 @@ func (a *Agent) ConfigureDKIMSigning(req *ServiceMutationRequest, resp *Configur
 			resp.Error = "opendkim cannot be installed automatically on this distro yet"
 			return nil
 		}
-		if _, err := installPackages(family, []string{"opendkim", "opendkim-tools"}); err != nil {
+		if _, err := installPackagesContext(ctx, family, []string{"opendkim", "opendkim-tools"}); err != nil {
 			resp.Error = fmt.Sprintf("opendkim install: %v", err)
 			return nil
 		}
@@ -87,7 +88,7 @@ func (a *Agent) ConfigureDKIMSigning(req *ServiceMutationRequest, resp *Configur
 		resp.Error = err.Error()
 		return nil
 	}
-	if err := writeDKIMTables(domains); err != nil {
+	if err := writeDKIMTables(ctx, domains); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -163,7 +164,7 @@ func dkimSignedDomains() ([]string, error) {
 // the private keys readable by the opendkim group (root keeps ownership).
 // writeDKIMTables, OpenDKIM anahtar/imzalama/güven tablolarını üretir ve
 // özel anahtarları opendkim grubunca okunur yapar (sahiplik root'ta kalır).
-func writeDKIMTables(domains []string) error {
+func writeDKIMTables(ctx context.Context, domains []string) error {
 	if err := os.MkdirAll(opendkimTablesDir, 0o755); err != nil {
 		return err
 	}
@@ -175,9 +176,9 @@ func writeDKIMTables(domains []string) error {
 	// dosyası değil — 0700 bir üst dizin anahtarı sessizce keser.
 	// /etc/celikpanel'in kendisi root:celikpanel 0750; token dizinini
 	// gevşetmek yerine opendkim o gruba katılır.
-	_ = exec.Command("usermod", "-aG", "celikpanel", "opendkim").Run()
+	_ = serviceMutationCommand(ctx, "usermod", "-aG", "celikpanel", "opendkim").Run()
 	base := dkimBaseDir
-	_ = exec.Command("chgrp", "opendkim", base).Run()
+	_ = serviceMutationCommand(ctx, "chgrp", "opendkim", base).Run()
 	_ = os.Chmod(base, 0o750)
 	var kt, st strings.Builder
 	for _, d := range domains {
@@ -186,9 +187,9 @@ func writeDKIMTables(domains []string) error {
 		fmt.Fprintf(&st, "*@%s %s._domainkey.%s\n", d, signingSelector, d)
 		// OpenDKIM drops to its own user; give the group read access.
 		// OpenDKIM kendi kullanıcısına düşer; gruba okuma izni ver.
-		_ = exec.Command("chgrp", "opendkim", key).Run()
+		_ = serviceMutationCommand(ctx, "chgrp", "opendkim", key).Run()
 		_ = os.Chmod(key, 0o640)
-		_ = exec.Command("chgrp", "opendkim", filepath.Join(base, d)).Run()
+		_ = serviceMutationCommand(ctx, "chgrp", "opendkim", filepath.Join(base, d)).Run()
 		_ = os.Chmod(filepath.Join(base, d), 0o750)
 	}
 	trusted := "127.0.0.1\n::1\nlocalhost\n"

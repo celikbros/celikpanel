@@ -78,8 +78,8 @@ func (a *Agent) ConfigureDBTools(req *ServiceMutationRequest, resp *ConfigureDBT
 
 	if len(tools) == 0 {
 		_ = os.Remove(dbToolsConfPath)
-		if err := a.systemdMgr.Reload("nginx"); err != nil {
-			resp.Error = fmt.Sprintf("nginx reload: %v", err)
+		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
+			resp.Error = commandFailureDetail("nginx reload", out, err)
 			return nil
 		}
 		resp.Configured = true
@@ -138,8 +138,8 @@ func (a *Agent) ConfigureDBTools(req *ServiceMutationRequest, resp *ConfigureDBT
 		resp.Error = fmt.Sprintf("nginx rejected the tools config: %s", firstLine(string(out)))
 		return nil
 	}
-	if err := a.systemdMgr.Reload("nginx"); err != nil {
-		resp.Error = fmt.Sprintf("nginx reload: %v", err)
+	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
+		resp.Error = commandFailureDetail("nginx reload", out, err)
 		return nil
 	}
 

@@ -74,7 +74,7 @@ func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureM
 		return nil
 	}
 
-	if err := ensureVmailUser(); err != nil {
+	if err := ensureVmailUser(ctx); err != nil {
 		resp.Error = fmt.Sprintf("vmail user: %v", err)
 		return nil
 	}
@@ -86,17 +86,17 @@ func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureM
 			if !fileExistsAgent(p) {
 				_ = os.WriteFile(p, []byte(""), 0o644)
 			}
-			postmapReadable(p)
+			postmapReadableContext(ctx, p)
 		}
-		if err := configurePostfixVirtual(); err != nil {
+		if err := configurePostfixVirtual(ctx); err != nil {
 			resp.Error = fmt.Sprintf("postfix: %v", err)
 			return nil
 		}
-		ensureAliasDatabase()
+		ensureAliasDatabase(ctx)
 	}
 
 	if hasDovecot {
-		if err := ensureDovecotSSLCert(); err != nil {
+		if err := ensureDovecotSSLCert(ctx); err != nil {
 			resp.Error = fmt.Sprintf("dovecot tls: %v", err)
 			return nil
 		}
@@ -190,21 +190,21 @@ func wireMailFilters(ctx context.Context, resp *WireMailFiltersResponse) error {
 	// turu tutar ve yükseltmenin kendisini onarıma çevirir — daemon yeniden
 	// başlatılmaz.
 	if _, err := exec.LookPath("postconf"); err == nil && fileExistsAgent(postfixVBoxPath) {
-		if err := configurePostfixVirtual(); err != nil {
+		if err := configurePostfixVirtual(ctx); err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
 		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
-			postmapReadable(p)
+			postmapReadableContext(ctx, p)
 		}
-		ensureAliasDatabase()
+		ensureAliasDatabase(ctx)
 	}
 	if err := applyMilterChain(ctx); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
 	resp.Wired = true
-	resp.Detail = fmt.Sprintf("milters=%q maps=%s", postconfValue("smtpd_milters"), postfixMapType())
+	resp.Detail = fmt.Sprintf("milters=%q maps=%s", postconfValue("smtpd_milters"), postfixMapTypeContext(ctx))
 	return nil
 }
 
@@ -410,7 +410,7 @@ func composeMilterChain(hasDKIM bool, spamEndpoint string) (incoming, outgoing s
 // sertifika domain'in kendisiyle gelir (panel onları zaten veriyor). Var olan
 // dosyalara asla dokunulmaz — sonradan kurulan gerçek bir sertifika her
 // yeniden yapılandırmadan sağ çıkmalıdır.
-func ensureDovecotSSLCert() error {
+func ensureDovecotSSLCert(ctx context.Context) error {
 	const (
 		certPath = "/etc/dovecot/ssl-cert.pem"
 		keyPath  = "/etc/dovecot/ssl-key.pem"
@@ -434,7 +434,7 @@ func ensureDovecotSSLCert() error {
 	if host == "" {
 		host = "localhost"
 	}
-	out, err := exec.Command("openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
+	out, err := serviceMutationCommand(ctx, "openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
 		"-days", "3650",
 		"-subj", "/CN="+host,
 		"-keyout", keyPath, "-out", certPath).CombinedOutput()
@@ -453,16 +453,16 @@ func ensureDovecotSSLCert() error {
 // mailbox pattern.
 // ensureVmailUser, her maildir'in sahibi olan ayrılmış posta kutusu sahibini
 // (uid/gid 5000) oluşturur; tek, girişsiz bir sistem kullanıcısı.
-func ensureVmailUser() error {
+func ensureVmailUser(ctx context.Context) error {
 	if _, err := user.Lookup(vmailUser); err == nil {
 		return ensureMailRoot()
 	}
 	if _, err := user.LookupGroup(vmailUser); err != nil {
-		if out, err := exec.Command("groupadd", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
+		if out, err := serviceMutationCommand(ctx, "groupadd", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
 			return fmt.Errorf("groupadd: %s", strings.TrimSpace(string(out)))
 		}
 	}
-	if out, err := exec.Command("useradd", "-r", "-g", vmailGID, "-u", vmailUID,
+	if out, err := serviceMutationCommand(ctx, "useradd", "-r", "-g", vmailGID, "-u", vmailUID,
 		"-d", mailRootDir, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput(); err != nil {
 		return fmt.Errorf("useradd: %s", strings.TrimSpace(string(out)))
 	}
@@ -482,10 +482,10 @@ func ensureMailRoot() error {
 // but-hosted mail into the maildirs as the vmail user.
 // configurePostfixVirtual, Postfix'i map'lerimize yönlendirir ve barındırılan
 // postayı vmail kullanıcısı olarak maildir'lere teslim eder.
-func configurePostfixVirtual() error {
+func configurePostfixVirtual(ctx context.Context) error {
 	// The table type is DISCOVERED, never assumed — see postfixMapType.
 	// Tablo tipi VARSAYILMAZ, keşfedilir — bkz. postfixMapType.
-	mt := postfixMapType() + ":"
+	mt := postfixMapTypeContext(ctx) + ":"
 	settings := [][2]string{
 		{"virtual_mailbox_base", mailRootDir},
 		{"virtual_mailbox_domains", mt + postfixDomainsPath},
@@ -497,7 +497,7 @@ func configurePostfixVirtual() error {
 		{"virtual_minimum_uid", "100"},
 	}
 	for _, s := range settings {
-		if out, err := exec.Command("postconf", "-e", s[0]+"="+s[1]).CombinedOutput(); err != nil {
+		if out, err := serviceMutationCommand(ctx, "postconf", "-e", s[0]+"="+s[1]).CombinedOutput(); err != nil {
 			return fmt.Errorf("postconf %s: %s", s[0], strings.TrimSpace(string(out)))
 		}
 	}
@@ -639,14 +639,18 @@ func ensurePostfixDomain(domain string) {
 // configuration error" ile ertelenir. Bu haritalar sır değil adres→yol
 // takma adı taşır; 0644 doğrudur.
 func postmapReadable(path string) {
-	t := postfixMapType()
+	postmapReadableContext(context.Background(), path)
+}
+
+func postmapReadableContext(ctx context.Context, path string) {
+	t := postfixMapTypeContext(ctx)
 	if t == "texthash" {
 		// texthash needs no index at all — postfix reads the plain file.
 		// texthash hiç dizin istemez — postfix düz dosyayı okur.
 		_ = os.Chmod(path, 0o644)
 		return
 	}
-	_ = exec.Command("postmap", t+":"+path).Run()
+	_ = serviceMutationCommand(ctx, "postmap", t+":"+path).Run()
 	_ = os.Chmod(path, 0o644)
 	for _, ext := range []string{".db", ".lmdb"} {
 		_ = os.Chmod(path+ext, 0o644)
@@ -668,7 +672,7 @@ func postmapReadable(path string) {
 // dönüş bildirimleri) `451 Temporary lookup failure` ile reddedilir. 25 Tem'de
 // Frankfurt'ta, sanal haritalar düzeltilir düzeltilmez canlı bulundu: ret,
 // eksik bir dizinden diğerine taşınmıştı.
-func ensureAliasDatabase() {
+func ensureAliasDatabase(ctx context.Context) {
 	// -x expands $variables. Arch ships `alias_database = $alias_maps`
 	// literally, and without expansion the value has no "type:path" to parse —
 	// the repair silently did nothing on exactly the distro that needed it.
@@ -700,7 +704,7 @@ func ensureAliasDatabase() {
 		if indexed || typ == "texthash" {
 			continue
 		}
-		_ = exec.Command("newaliases").Run()
+		_ = serviceMutationCommand(ctx, "newaliases").Run()
 		return
 	}
 }
@@ -755,9 +759,13 @@ var (
 )
 
 func postfixMapType() string {
+	return postfixMapTypeContext(context.Background())
+}
+
+func postfixMapTypeContext(ctx context.Context) string {
 	mapTypeOnce.Do(func() {
 		for _, t := range []string{"lmdb", "hash", "btree"} {
-			if postmapTypeWorks(t) {
+			if postmapTypeWorksContext(ctx, t) {
 				mapTypeCached = t
 				return
 			}
@@ -768,6 +776,10 @@ func postfixMapType() string {
 }
 
 func postmapTypeWorks(t string) bool {
+	return postmapTypeWorksContext(context.Background(), t)
+}
+
+func postmapTypeWorksContext(ctx context.Context, t string) bool {
 	dir, err := os.MkdirTemp("", "cpmap")
 	if err != nil {
 		return false
@@ -785,7 +797,7 @@ func postmapTypeWorks(t string) bool {
 	// inherited onto the agent's stderr and printed into the journal.
 	// Run yerine CombinedOutput: postmap'in reddi agent'ın stderr'ine miras
 	// kalıp günlüğe basılmak yerine yakalanır.
-	if _, err := exec.Command("postmap", t+":"+probe).CombinedOutput(); err != nil {
+	if _, err := serviceMutationCommand(ctx, "postmap", t+":"+probe).CombinedOutput(); err != nil {
 		return false
 	}
 	// postmap can exit 0 and still write nothing usable; require the index.
