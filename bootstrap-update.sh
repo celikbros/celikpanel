@@ -1,6 +1,7 @@
 #!/bin/bash
-# Prepare one immutable, root-owned release for either a normal update or the
-# one-time exact pre-ledger transition, then hand it to update.sh.
+# Prepare one immutable, root-owned release for a normal update, the one-time
+# exact pre-ledger transition, or the reviewed exact-schema-17 bridge, then
+# hand it to update.sh.
 # Normal güncelleme veya tek seferlik tam pre-ledger geçişi için değişmez,
 # root sahipli bir sürüm hazırlar ve update.sh'ye verir.
 set -euo pipefail
@@ -139,6 +140,8 @@ validate_release_tree() {
     done < <(find "$root" -mindepth 1 -print0)
     [[ -x "$root/bin/panel" && -f "$root/bin/panel" ]] || die "staged panel binary is missing"
     [[ -x "$root/bin/agent" && -f "$root/bin/agent" ]] || die "staged agent binary is missing"
+    [[ -x "$root/bin/schema17-bridge" && -f "$root/bin/schema17-bridge" ]] \
+        || die "staged schema-17 bridge binary is missing"
     [[ -x "$root/install.sh" && -f "$root/install.sh" ]] || die "staged installer is missing"
     [[ -x "$root/update.sh" && -f "$root/update.sh" ]] || die "staged updater is missing"
     [[ -x "$root/rollback.sh" && -f "$root/rollback.sh" ]] || die "staged rollback is missing"
@@ -165,10 +168,10 @@ sync_release_tree_durably() {
     validate_release_tree "$root"
 }
 
-[[ $EUID -eq 0 ]] || die "Run as root / root olarak çalıştırın: sudo ./bootstrap-update.sh [--normal|--bootstrap-pre-ledger]"
-[[ $# -eq 1 ]] || die "usage: bootstrap-update.sh --normal|--bootstrap-pre-ledger"
+[[ $EUID -eq 0 ]] || die "Run as root / root olarak çalıştırın: sudo ./bootstrap-update.sh [--normal|--bootstrap-pre-ledger|--bootstrap-schema17]"
+[[ $# -eq 1 ]] || die "usage: bootstrap-update.sh --normal|--bootstrap-pre-ledger|--bootstrap-schema17"
 case "$1" in
-    --normal|--bootstrap-pre-ledger) UPDATE_MODE=$1 ;;
+    --normal|--bootstrap-pre-ledger|--bootstrap-schema17) UPDATE_MODE=$1 ;;
     *) die "unknown release mode / bilinmeyen sürüm modu: $1" ;;
 esac
 
@@ -238,13 +241,14 @@ go_bin=$(trusted_command go)
 node_bin=$(trusted_command node)
 npm_bin=$(trusted_command npm)
 mkdir -m 0755 -- "$incomplete_root/bin"
-version_flags="-X main.buildVersion=$release_version -X main.buildCommit=$release_short"
+version_flags="-X main.buildVersion=$release_version -X main.buildCommit=$release_commit"
 
 echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyor"
 (
     cd "$incomplete_root"
     run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
     run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
+    run_clean "$go_bin" build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"
@@ -274,6 +278,7 @@ chmod 0700 "$incomplete_root"
 chmod 0755 \
     "$incomplete_root/bin/panel" \
     "$incomplete_root/bin/agent" \
+    "$incomplete_root/bin/schema17-bridge" \
     "$incomplete_root/install.sh" \
     "$incomplete_root/update.sh" \
     "$incomplete_root/rollback.sh" \

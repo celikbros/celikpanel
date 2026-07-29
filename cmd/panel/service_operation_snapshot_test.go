@@ -373,12 +373,20 @@ func TestServiceOperationSnapshotRejectsFutureMigrationAndCleansPartialOutput(t 
 	if err != nil {
 		t.Fatal(err)
 	}
+	var latestVersion int
+	if err := database.GetDB().QueryRow(
+		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`,
+	).Scan(&latestVersion); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	futureVersion := latestVersion + 1
 	if _, err := database.GetDB().Exec(`
 		CREATE TABLE synthetic_future_snapshot_table (
 			id INTEGER PRIMARY KEY
 		);
-		INSERT INTO schema_migrations(version) VALUES (23);
-	`); err != nil {
+		INSERT INTO schema_migrations(version) VALUES (?);
+	`, futureVersion); err != nil {
 		database.Close()
 		t.Fatal(err)
 	}
@@ -390,8 +398,9 @@ func TestServiceOperationSnapshotRejectsFutureMigrationAndCleansPartialOutput(t 
 		destinationPath,
 		serviceOperationSnapshotSchemaNormal,
 	)
-	if err == nil || !strings.Contains(err.Error(), "embedded migration version 23 is unavailable") {
-		t.Fatalf("error=%v want future migration rejection", err)
+	wantError := fmt.Sprintf("embedded migration version %d is unavailable", futureVersion)
+	if err == nil || !strings.Contains(err.Error(), wantError) {
+		t.Fatalf("error=%v want %q", err, wantError)
 	}
 	assertSnapshotDirectoryEmpty(t, destinationDirectory)
 }
@@ -855,10 +864,34 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP TRIGGER vpn_offering_sync_update;
+		DROP TRIGGER vpn_entitlements_sync_delete;
+		DROP TRIGGER vpn_entitlements_sync_update;
+		DROP TRIGGER vpn_entitlements_sync_insert;
+		DROP TRIGGER vpn_peers_sync_delete;
+		DROP TRIGGER vpn_peers_sync_update;
+		DROP TRIGGER vpn_peers_sync_insert;
+		DROP INDEX idx_vpn_peers_desired_sync;
+		DROP TABLE vpn_sync_state;
+		ALTER TABLE vpn_peers DROP COLUMN delivery_expires_at;
+		ALTER TABLE vpn_peers DROP COLUMN delivery_token_hash;
+		ALTER TABLE vpn_peers DROP COLUMN provisioning_state;
+		ALTER TABLE vpn_peers DROP COLUMN updated_at;
+		ALTER TABLE vpn_peers DROP COLUMN sync_error;
+		ALTER TABLE vpn_peers DROP COLUMN sync_state;
+		ALTER TABLE vpn_peers DROP COLUMN desired_state;
+
+		DROP INDEX idx_store_offering_components_component;
+		DROP INDEX idx_store_offerings_release;
+		DROP TABLE store_offering_components;
+		DROP TABLE store_offerings;
+
 		DROP INDEX idx_service_operations_request_id;
+		ALTER TABLE service_operations DROP COLUMN request_id;
 		DROP INDEX idx_service_operations_recent;
 		DROP INDEX idx_service_operations_one_active;
 		DROP TABLE service_operations;
+
 		DELETE FROM schema_migrations WHERE version > 20;
 	`); err != nil {
 		database.Close()

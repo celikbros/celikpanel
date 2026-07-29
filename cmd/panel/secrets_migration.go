@@ -67,3 +67,70 @@ func (p *Panel) encryptLegacyDBPasswords(ctx context.Context) error {
 	}
 	return nil
 }
+
+// encryptLegacyVPNPresharedKeys seals WireGuard preshared keys that predate
+// encrypted VPN storage. It is idempotent and fails startup on partial work.
+// encryptLegacyVPNPresharedKeys şifreli VPN depolamasından önce yazılmış
+// WireGuard ön paylaşımlı anahtarlarını mühürler. Tekrarlanabilir çalışır ve
+// yarım kalan bir işlemde panel başlangıcını durdurur.
+func (p *Panel) encryptLegacyVPNPresharedKeys(ctx context.Context) error {
+	db := p.db.GetDB()
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, preshared_key
+		FROM vpn_peers
+		WHERE preshared_key != ''`)
+	if err != nil {
+		return err
+	}
+
+	type pending struct {
+		id     int
+		sealed string
+	}
+	var updates []pending
+	for rows.Next() {
+		var id int
+		var stored string
+		if err := rows.Scan(&id, &stored); err != nil {
+			rows.Close()
+			return err
+		}
+		if secrets.IsEncrypted(stored) {
+			continue
+		}
+		sealed, err := p.secrets.Encrypt(stored)
+		if err != nil {
+			rows.Close()
+			return err
+		}
+		updates = append(updates, pending{id: id, sealed: sealed})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, update := range updates {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE vpn_peers
+			SET preshared_key = ?, updated_at = datetime('now')
+			WHERE id = ?`, update.sealed, update.id); err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if len(updates) > 0 {
+		log.Printf("Sealed %d legacy plaintext VPN preshared key(s)", len(updates))
+	}
+	return nil
+}

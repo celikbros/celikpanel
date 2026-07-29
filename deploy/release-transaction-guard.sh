@@ -165,7 +165,8 @@ release_txn_validate_update_snapshot_stage() {
        "$size" -gt 0 && "$size" -le 32 ]] \
         || { _release_txn_fail "snapshot staging transition state metadata is invalid"; return 1; }
     if ! printf 'normal\n' | cmp -s - "$transition" &&
-       ! printf 'pre-ledger\n' | cmp -s - "$transition"; then
+       ! printf 'pre-ledger\n' | cmp -s - "$transition" &&
+       ! printf 'schema17\n' | cmp -s - "$transition"; then
         _release_txn_fail "snapshot staging transition state is not canonical"
         return 1
     fi

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Database, Download, Gauge, HardDrive, LockKeyhole, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Database, Download, Gauge, HardDrive, LockKeyhole, RefreshCw, Settings2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { showToast } from './Toast';
@@ -141,7 +142,7 @@ export function SystemSQLiteManager() {
         }
     };
 
-    if (loading) return <div className={'rounded-xl border border-border bg-surface py-16 text-center text-sm text-fg-muted shadow-card'}>{t('systemDb.loading')}</div>;
+    if (loading) return <div className={'rounded-xl border border-border bg-surface py-16 text-center text-sm text-fg-muted shadow-card'} role="status" aria-live="polite">{t('systemDb.loading')}</div>;
 
     return (
         <div className={'space-y-4'}>
@@ -156,6 +157,18 @@ export function SystemSQLiteManager() {
                         <div className={'mt-3 flex items-start gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-fg-muted'}>
                             <LockKeyhole className={'mt-0.5 h-4 w-4 shrink-0 text-success'} />
                             <span>{t('systemDb.safetyHint')}</span>
+                        </div>
+                        <div className={'mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2'}>
+                            <Settings2 className={'h-4 w-4 shrink-0 text-primary'} />
+                            <p className={'min-w-0 flex-1 text-xs leading-5 text-fg-muted'}>{t('systemDb.typedSettingsHint')}</p>
+                            <div className={'flex flex-wrap gap-2'}>
+                                <Link to="/addons?view=catalog" className={'rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:bg-surface-2'}>
+                                    {t('systemDb.openCatalog')}
+                                </Link>
+                                <Link to="/settings" className={'rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:bg-surface-2'}>
+                                    {t('systemDb.openSettings')}
+                                </Link>
+                            </div>
                         </div>
                     </div>
                     <Button icon={RefreshCw} disabled={busy !== null} onClick={() => void loadDatabases()}>
@@ -207,8 +220,9 @@ export function SystemSQLiteManager() {
                             corrupt: t('systemDb.statusMessage.error'),
                         }[database.status.toLowerCase()] || database.status_message;
                         return (
-                            <Card key={database.id} className={!database.available ? 'opacity-80' : ''}>
-                                <div className={'p-5'}>
+                            <div key={database.id} aria-busy={databaseBusy} aria-live="polite">
+                                <Card className={!database.available ? 'opacity-80' : ''}>
+                                    <div className={'p-5'}>
                                     <div className={'flex items-start justify-between gap-3'}>
                                         <div className={'min-w-0'}>
                                             <div className={'flex flex-wrap items-center gap-2'}>
@@ -235,7 +249,7 @@ export function SystemSQLiteManager() {
                                         <p className={'mt-3 text-xs text-fg-muted'}>{localizedStatusMessage}</p>
                                     )}
 
-                                    <dl className={'mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm'}>
+                                    <dl className={'mt-4 grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2'}>
                                         <Metadata label={t('systemDb.availableActions')} value={availableActions} />
                                         <Metadata label={t('systemDb.size')} value={formatBytes(database.size_bytes, t('systemDb.unknown'))} />
                                         <Metadata label={t('systemDb.modified')} value={formatDate(database.modified_at, locale, t('systemDb.unknown'))} />
@@ -288,8 +302,9 @@ export function SystemSQLiteManager() {
                                             <span className={'text-xs text-fg-subtle'}>{t('systemDb.noActions')}</span>
                                         )}
                                     </div>
-                                </div>
-                            </Card>
+                                    </div>
+                                </Card>
+                            </div>
                         );
                     })}
                 </div>

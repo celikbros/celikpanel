@@ -163,10 +163,59 @@ ledger'ı yalnız ürünün kontrollü tek seferlik initializer'ı oluşturur; n
 panel veya agent başlangıcı bu initializer'ın yerini alamaz. Başarılı tek
 geçişten sonraki bütün sürümlerde `--normal` kullanın.
 
-### 4.3 Snapshot sözleşmesi
+### 4.3 Bir kerelik exact şema-17 köprüsü
 
-Pre-ledger sürümü, özel agent durumunu ve eski sistemde ledger'ın bulunmadığı
-bilgisini rollback sırasında korumak için **snapshot sözleşmesi v4** gerektirir.
+`--bootstrap-schema17` modunu yalnız bilinen son pre-ledger veritabanı biçimi
+için kullanın: migration ledger'ı kesintisiz ve tam olarak `1..17` olmalı,
+18 ile 22 arasındaki migration'ların hiçbir nesnesi veya kolonu kısmen
+bulunmamalı ve özel agent mutasyon ledger'ı olmamalıdır. Yalnız en büyük
+migration numarası yeterli kanıt değildir. Bu modu seçmeden önce canlı sistemden
+salt-okur kanıt alın. Aşağıdaki sorgu yalnız ilk elemedir; beklenen çıktı
+`17|1|17|153` olmalıdır:
+
+```bash
+sudo /usr/bin/sqlite3 -readonly /var/lib/celikpanel/celikpanel.db \
+  'PRAGMA query_only=ON; SELECT count(*), min(version), max(version), sum(version) FROM schema_migrations;'
+sudo test ! -e /var/lib/celikpanel-agent-private/service-mutations.json
+```
+
+Sorgu çalıştırılamıyorsa, başka sonuç veriyorsa veya ledger varsa durun.
+Uyumluluk varsaymayın ve SQL'i elle çalıştırmayın. Değişmez release içindeki
+özel `schema17-bridge`, quiesce active olmadan önce authoritative salt-okur
+ledger, nesne, kolon, bütünlük ve foreign-key kanıtını yapar. Bilinmeyen, daha
+yeni, aralıklı veya kısmi biçimler veritabanı mutasyonundan önce fail-closed
+reddedilir.
+
+Hazırlanmış temiz checkout'tan çalıştırın:
+
+```bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./bootstrap-update.sh --bootstrap-schema17
+```
+
+Updater exact şema 17'yi quiesce öncesinde, iki coordinator frozen iken ve
+ikisi de durdurulduktan sonra yeniden kanıtlar. Ardından tam bir v4 exact-17
+snapshot'ı oluşturup dayanıklı biçimde yayımlar. Özel yardımcı yalnız bu
+yayımdan sonra allowlist içindeki 18, 19 ve 20 migration'larını uygulayabilir.
+Sonra normal pre-ledger bootstrap agent ledger'ını oluşturur, doğrulanmış
+release'i kurar ve kalan migration'ları offline çalıştırır. Başarılı köprüden
+sonraki bütün sürümlerde `--normal` kullanılır; iki schema bootstrap modu da
+onarım seçeneği değildir.
+
+Mutasyon sonrası herhangi bir adım başarısız olursa updater release transaction'ı
+bilerek active, iki coordinator'ı da stopped bırakır. Veritabanını değiştirmeyin,
+transaction marker'larını silmeyin, servisleri elle başlatmayın ve kilidi başka
+bir sürece devretmeyin. Yalnız başarısız update'in yazdırdığı exact trusted
+rollback komutunu çalıştırın. Rollback tam snapshot manifestini doğrular ve
+snapshot içindeki `schema17-bridge` ile exact şema 17'yi atomik olarak geri yükler.
+
+### 4.4 Snapshot sözleşmesi
+
+Pre-ledger ve exact-schema17 sürümleri; özel agent durumunu, eski sistemde
+ledger'ın bulunmadığı bilgisini ve geçişe özel checker kümesini rollback
+sırasında korumak için **snapshot sözleşmesi v4** gerektirir.
 Bu sürüm dağıtılmadan önce `update.sh` ve `rollback.sh` birlikte v4 desteğini
 bildirmelidir. Snapshot sözleşmesi sürümlerini karıştırmayın, snapshot içeriğini
 elle kopyalamayın ve başka sürüme ait rollback scriptini kullanmayın. Root güven
@@ -234,6 +283,8 @@ rollback unit'in yalnız var olmasını kullanıcı onayı olarak yorumlayamaz.
 
 - **Derleme:** `go test ./...`, `go vet ./...` ve
   `cd web && npm run build`.
+- **Release sözleşmeleri:** `bash deploy/test-bootstrap-update-contract.sh` ve
+  `bash deploy/test-schema17-bridge-contract.sh`.
 - **Görsel doğrulama:** `tools/dev-preview/preview-server.py`, `web/dist`
   dizinini şemaya sadık bir stub arkasında sunar. `FRESH=1` ile
   `FIREWALL=on/off` yalnız geliştirme önizlemesinde kullanılır.

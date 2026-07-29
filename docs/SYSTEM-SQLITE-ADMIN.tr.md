@@ -43,7 +43,7 @@ Bilinmeyen kimlikler reddedilir.
 | `panel` | CelikPanel durumu | `/var/lib/celikpanel/celikpanel.db` | envanter ve kontrol; yakın zamanda yeniden doğrulama gelene kadar anlık görüntü ve optimize kapalıdır |
 | `powerdns` | PowerDNS yetkili verisi | `/var/lib/powerdns/pdns.sqlite3` | envanter, kontrol, anlık görüntü indirme, optimize |
 | `roundcube` | Roundcube uygulama durumu | `/var/lib/celikpanel-webmail/db/roundcube.sqlite3` | envanter, kontrol, anlık görüntü indirme, optimize |
-| `component-catalog` | Component, add-on ve uygulama kataloğu | `/usr/share/celikpanel/manifests/components-v2.db` | envanter, kontrol, anlık görüntü indirme |
+| `component-catalog` | İmzalı bileşen işlem manifesti/kataloğu (Mağaza teklifleri veya hakları değildir) | `/usr/share/celikpanel/manifests/components-v2.db` | envanter, kontrol, anlık görüntü indirme |
 
 Bu konumlar agent politikasının parçasıdır ve teşhis için bir ipucu olarak
 gösterilebilir. İsteklerde düzenlenebilir alan değildir. Ortama özel yol
@@ -164,6 +164,10 @@ denetim düzlemi veritabanında da optimize işlemi kapalıdır.
 DNS kayıtları DNS akışından, mail ve webmail durumu mail akışından, panel
 ayarları da kendilerine ait türü belirli handler'lar üzerinden değiştirilmelidir.
 SQLite sayfası bu ürün sınırlarını aşmak için bir kestirme değildir.
+Mağaza teklifleri, bileşen bağları ve abonelik hakları `panel` veritabanında
+yaşar; **Eklentiler → Katalog yönetimi** ile tipli Mağaza/hak API'lerinden
+yönetilir. Bunlar `component-catalog` satırları değildir ve Sistem SQLite
+sayfası bunları bilinçli olarak düzenlemez.
 
 ## Bilinçli olarak kapsam dışında bırakılanlar
 
@@ -190,8 +194,9 @@ varsayılmamalıdır:
 - sabit güvenlik tavanının ve boş alan tabanının altında kalacak biçimde
   yapılandırılabilir saklama süresi ve kurulum başına daha düşük sınırlar
 - `celikpanel.db` dışında yalnızca eklemeye açık bir agent denetim kaydı
-- component katalog artifact'leri için arayüzde gösterilen ayrık imza ve
-  yeniden oynatma önleme doğrulaması
+- component katalog artifact'leri için Sistem SQLite bakım görünümünde
+  gösterilen ayrık imza ve yeniden oynatma önleme durumu (Manifest V2
+  doğrulaması vardır; üretim çalışma zamanı etkinleştirmesi beklemektedir)
 - servisleri güvenli biçimde durgunlaştıran, atomik değiştirme, hazır olma
   kontrolleri ve geri dönüş içeren bakım modu geri yükleme akışı
 - müşterilerin oluşturduğu SQLite veritabanları için ayrı, kiracı kapsamlı

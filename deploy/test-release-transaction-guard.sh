@@ -236,6 +236,18 @@ printf 'normal\n' > "$quiesce_child/snapshot-transition.state"
 chmod 0600 -- "$quiesce_child/service-states.tsv" "$quiesce_child/snapshot-transition.state"
 sync -f -- "$quiesce_child/service-states.tsv" "$quiesce_child/quiesce-coordinators.tsv" "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"
 release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+for transition_mode in pre-ledger schema17; do
+    printf '%s\n' "$transition_mode" > "$quiesce_child/snapshot-transition.state"
+    sync -f -- "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage" \
+        || fail "canonical $transition_mode transition mode was rejected"
+done
+printf 'unsupported\n' > "$quiesce_child/snapshot-transition.state"
+sync -f -- "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"
+expect_failure "unsupported transition mode was accepted" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf 'normal\n' > "$quiesce_child/snapshot-transition.state"
+sync -f -- "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"
 identity_ledger=$quiesce_child/quiesce-coordinators.tsv
 mv -- "$identity_ledger" "$identity_ledger.saved"
 expect_failure "stage accepted a missing coordinator ledger" \

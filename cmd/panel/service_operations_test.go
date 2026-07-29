@@ -18,6 +18,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	paneldb "github.com/alicelik/celikpanel/internal/db"
+	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -1133,6 +1134,11 @@ func TestPostgreSQLVersionInstallFailsWhenExactClusterStopsBeforeFinalScan(t *te
 
 func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
+	box, err := secrets.LoadOrCreate(filepath.Join(t.TempDir(), "secrets.key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.panel.secrets = box
 	f.agent.installNoop = true
 	f.agent.vpnCreated = false
 	f.agent.installed["pdns"] = true

@@ -2,25 +2,34 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
-// The panel side of the built-in VPN. The server is set up once by the admin
-// (the WireGuard service comes from the managed-service catalogue like any
-// other). Peers are the sellable unit: admins create them freely, customers
-// need the "vpn" product on their subscription. The panel allocates addresses
-// and keeps the ledger; every change pushes the full peer set to the agent.
-//
-// Yerleşik VPN'in panel tarafı. Sunucuyu yönetici bir kez kurar (WireGuard
-// servisi, diğerleri gibi yönetilen-servis kataloğundan gelir). Peer'lar
-// satılabilir birimdir: yöneticiler serbestçe oluşturur, müşterilerin
-// aboneliğinde "vpn" ürünü olmalıdır. Adresleri panel tahsis eder ve defteri
-// tutar; her değişiklik tam peer setini agent'a iter.
+const (
+	vpnProductID = "vpn"
+	vpnFixedPort = 51820
+)
+
+var errVPNAddressPoolFull = errors.New("the VPN address pool is full")
+
+// vpnMutationMu serializes every peer-set mutation. WireGuard receives a full
+// desired-state snapshot, so concurrent snapshots must never overtake one another.
+// vpnMutationMu tüm peer kümesi değişikliklerini sıraya alır. WireGuard istenen
+// durumun tamamını aldığı için eş zamanlı anlık görüntüler birbirini geçmemelidir.
+var vpnMutationMu sync.Mutex
 
 type vpnPeerRow struct {
 	ID             int     `json:"id"`
@@ -33,164 +42,491 @@ type vpnPeerRow struct {
 	RxBytes        int64   `json:"rx_bytes"`
 	TxBytes        int64   `json:"tx_bytes"`
 	Subscription   *string `json:"subscription,omitempty"`
+	DesiredState   string  `json:"desired_state"`
+	SyncState      string  `json:"sync_state"`
+	SyncError      *string `json:"sync_error,omitempty"`
 }
 
-// handleVPNStatus returns the live server state (any signed-in user — the
-// endpoint and public key are in every client config anyway).
-// handleVPNStatus, canlı sunucu durumunu döndürür (giriş yapmış herkes —
-// uç nokta ve genel anahtar zaten her istemci config'inde var).
+type vpnPeerSpec struct {
+	PublicKey    string `json:"public_key"`
+	PresharedKey string `json:"preshared_key"`
+	IP           string `json:"ip"`
+}
+
+// handleVPNStatus returns the live server state. The endpoint and public key
+// are not secrets; both are present in every issued client configuration.
+// handleVPNStatus canlı sunucu durumunu döndürür. Uç nokta ve genel anahtar
+// gizli değildir; verilen her istemci yapılandırmasında bulunur.
 func (p *Panel) handleVPNStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var st struct {
+	setVPNPrivateResponseHeaders(w)
+	if r.Method != http.MethodGet {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	caller := currentCaller(r)
+	if caller == nil {
+		writeClientError(w, http.StatusUnauthorized, "sign-in required")
+		return
+	}
+	var status struct {
 		Installed       bool   `json:"installed"`
 		Configured      bool   `json:"configured"`
 		Running         bool   `json:"running"`
 		ServerPublicKey string `json:"server_public_key,omitempty"`
 		Port            int    `json:"port,omitempty"`
 		Endpoint        string `json:"endpoint,omitempty"`
-		Peers           []struct {
-			PublicKey     string `json:"public_key"`
-			LastHandshake int64  `json:"last_handshake"`
-			RxBytes       int64  `json:"rx_bytes"`
-			TxBytes       int64  `json:"tx_bytes"`
-		} `json:"peers,omitempty"`
-		Error string `json:"error,omitempty"`
+		Error           string `json:"error,omitempty"`
 	}
-	if err := p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &st); err != nil {
+	if err := p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &status); err != nil {
 		writeAgentError(w, err, "VPN")
 		return
 	}
-	var peerCount int
-	_ = p.db.GetDB().QueryRowContext(r.Context(), `SELECT COUNT(*) FROM vpn_peers`).Scan(&peerCount)
+	peerCount, pendingCount, errorCount, err := p.vpnVisibleSyncSummary(r.Context(), caller)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]any{
-		"installed": st.Installed, "configured": st.Configured, "running": st.Running,
-		"server_public_key": st.ServerPublicKey, "port": st.Port, "endpoint": st.Endpoint,
-		"peer_count": peerCount,
+		"installed": status.Installed, "configured": status.Configured,
+		"running": status.Running, "server_public_key": status.ServerPublicKey,
+		"port": status.Port, "endpoint": status.Endpoint, "peer_count": peerCount,
+		"sync": map[string]any{
+			"in_sync": pendingCount == 0 && errorCount == 0,
+			"pending": pendingCount,
+			"errors":  errorCount,
+		},
+		"policy": map[string]any{
+			"interface":         "wg0",
+			"network":           "10.8.0.0/24",
+			"server_address":    "10.8.0.1",
+			"listen_protocol":   "UDP",
+			"listen_port":       vpnFixedPort,
+			"client_dns":        "1.1.1.1",
+			"allowed_ips":       "0.0.0.0/0",
+			"full_tunnel":       true,
+			"nat_required":      true,
+			"forward_required":  true,
+			"firewall_required": true,
+		},
 	})
 }
 
-// handleVPNSetup (admin-only) brings the WireGuard server up and syncs any
-// peers already in the ledger (e.g. after a reinstall).
-// handleVPNSetup (yalnız yönetici) WireGuard sunucusunu kaldırır ve defterde
-// zaten olan peer'ları senkronlar (örn. yeniden kurulum sonrası).
+// vpnVisibleSyncSummary scopes desired-state counters to subscriptions the
+// caller can access. Server-wide counts are reserved for administrators.
+// vpnVisibleSyncSummary istenen durum sayaçlarını çağıranın erişebildiği
+// aboneliklerle sınırlar. Sunucu geneli sayaçlar yalnız yöneticilere açıktır.
+func (p *Panel) vpnVisibleSyncSummary(
+	ctx context.Context, caller *Caller,
+) (active, pending, failed int, err error) {
+	rows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT subscription_id, desired_state, sync_state FROM vpn_peers`)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var subscriptionID *int
+		var desiredState, syncState string
+		if err := rows.Scan(&subscriptionID, &desiredState, &syncState); err != nil {
+			return 0, 0, 0, err
+		}
+		if caller.Role != roleAdmin &&
+			(subscriptionID == nil ||
+				p.canAccessSubscription(ctx, caller, *subscriptionID) != nil) {
+			continue
+		}
+		if desiredState == "active" && subscriptionID != nil {
+			active++
+		}
+		if syncState == "pending" {
+			pending++
+		}
+		if syncState == "error" {
+			failed++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, 0, 0, err
+	}
+	if caller.Role == roleAdmin {
+		var globalState string
+		if err := p.db.GetDB().QueryRowContext(ctx, `
+			SELECT status FROM vpn_sync_state WHERE id = 1`,
+		).Scan(&globalState); err != nil {
+			return 0, 0, 0, err
+		}
+		switch globalState {
+		case "pending":
+			if pending == 0 {
+				pending = 1
+			}
+		case "error":
+			if failed == 0 {
+				failed = 1
+			}
+		}
+	}
+	return active, pending, failed, nil
+}
+
+// handleVPNSetup starts the fixed WireGuard service and restores the complete
+// desired peer set. The public product deliberately exposes no custom port.
+// handleVPNSetup sabit WireGuard hizmetini başlatır ve istenen peer kümesinin
+// tamamını geri yükler. Ürün bilinçli olarak özel port seçeneği sunmaz.
 func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
+	if caller := currentCaller(r); caller == nil || caller.Role != roleAdmin {
 		writeClientError(w, http.StatusForbidden, "admin only")
 		return
 	}
-	var req struct {
-		Port int `json:"port"`
+	var request struct{}
+	if err := decodeStrictJSON(w, r, &request); err != nil {
+		writeClientError(w, http.StatusBadRequest, "invalid request body")
+		return
 	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
-	var resp struct {
+
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	var response struct {
 		Created bool   `json:"created"`
 		Detail  string `json:"detail,omitempty"`
 		Error   string `json:"error,omitempty"`
 	}
-	err := p.withStandaloneAgentMutation(r.Context(), "vpn_setup", "wireguard", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.SetupVPN", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			Port              int    `json:"port"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, req.Port}, &resp); err != nil {
-			return err
-		}
-		if resp.Error != "" {
-			return fmt.Errorf("VPN setup: %s", resp.Error)
-		}
-		return p.syncVPNPeers(callCtx)
-	})
+	err := p.withStandaloneAgentMutation(
+		r.Context(), "vpn_setup", "wireguard", "",
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.SetupVPN", &struct {
+				MutationRequestID string `json:"mutation_request_id"`
+				MutationOwnerID   string `json:"mutation_owner_id"`
+				Port              int    `json:"port"`
+			}{
+				MutationRequestID: binding.MutationRequestID,
+				MutationOwnerID:   binding.MutationOwnerID,
+				Port:              vpnFixedPort,
+			}, &response); err != nil {
+				return err
+			}
+			if response.Error != "" {
+				return fmt.Errorf("VPN setup: %s", response.Error)
+			}
+			return nil
+		},
+	)
 	if err != nil {
 		writeAgentError(w, err, "VPN")
 		return
 	}
+	// Setup owns one durable agent mutation. Reconciliation starts only after
+	// that lease is released, while the panel-level VPN lock still serializes it.
+	// Kurulum tek bir kalıcı agent mutasyonuna sahiptir. Eşitleme bu kira
+	// bırakıldıktan sonra, panel düzeyindeki VPN kilidi sıralamayı sürdürürken başlar.
+	if err := p.syncVPNPeersLocked(r.Context()); err != nil {
+		writeAgentError(w, err, "VPN")
+		return
+	}
 	p.audit(r, "vpn.setup", "", 0)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "created": resp.Created, "detail": resp.Detail})
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true, "created": response.Created, "detail": response.Detail,
+	})
 }
 
-// syncVPNPeers pushes the full ledger to the agent — the single write path
-// for the server's peer section.
-// syncVPNPeers, tam defteri agent'a iter — sunucunun peer bölümü için tek
-// yazma yolu.
+// syncVPNPeers is the public serialized entry point used by service lifecycle
+// code. Call syncVPNPeersLocked only while vpnMutationMu is held.
+// syncVPNPeers servis yaşam döngüsü kodunun kullandığı sıralı giriş noktasıdır.
+// syncVPNPeersLocked yalnız vpnMutationMu tutulurken çağrılmalıdır.
 func (p *Panel) syncVPNPeers(ctx context.Context) error {
-	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT public_key, preshared_key, ip FROM vpn_peers`)
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+	return p.syncVPNPeersLocked(ctx)
+}
+
+func (p *Panel) syncVPNPeersLocked(ctx context.Context) error {
+	return p.syncVPNPeersGenerationLocked(ctx, 4)
+}
+
+func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) error {
+	if p.secrets == nil {
+		return errors.New("VPN secret storage is unavailable")
+	}
+	token, err := newServiceOperationID()
+	if err != nil {
+		return errors.New("could not reserve VPN synchronization")
+	}
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	type spec struct {
-		PublicKey    string `json:"public_key"`
-		PresharedKey string `json:"preshared_key"`
-		IP           string `json:"ip"`
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE vpn_sync_state
+		SET lease_token = ?, lease_expires_at = datetime('now', '+2 minutes'),
+		    status = 'pending', updated_at = datetime('now')
+		WHERE id = 1
+		  AND (
+			lease_token IS NULL
+			OR lease_expires_at IS NULL
+			OR julianday(lease_expires_at) <= julianday('now')
+		  )`, token)
+	if err != nil {
+		return err
 	}
-	var peers []spec
+	claimed, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if claimed != 1 {
+		return errors.New("VPN synchronization is already in progress")
+	}
+	var generation int64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT desired_generation FROM vpn_sync_state WHERE id = 1`,
+	).Scan(&generation); err != nil {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT vp.id, vp.public_key, vp.preshared_key, vp.ip
+		FROM vpn_peers vp
+		WHERE vp.desired_state = 'active'
+		  AND (
+			vp.subscription_id IS NOT NULL
+			AND EXISTS (
+				SELECT 1
+				FROM subscription_entitlements e
+				JOIN store_offerings o ON o.id = e.product_id
+				WHERE e.subscription_id = vp.subscription_id
+				  AND e.product_id = 'vpn'
+				  AND e.status = 'active'
+				  AND o.release_state = 'available'
+				  AND o.entitlement_mode = 'grant'
+				  AND (
+					e.expires_at IS NULL
+					OR (
+						julianday(e.expires_at) IS NOT NULL
+						AND julianday(e.expires_at) > julianday('now')
+					)
+				  )
+			)
+		  )
+		ORDER BY vp.id`)
+	if err != nil {
+		return err
+	}
+
+	var peerIDs []int
+	var peers []vpnPeerSpec
 	for rows.Next() {
-		var s spec
-		if rows.Scan(&s.PublicKey, &s.PresharedKey, &s.IP) == nil {
-			peers = append(peers, s)
+		var id int
+		var peer vpnPeerSpec
+		var storedPSK string
+		if err := rows.Scan(&id, &peer.PublicKey, &storedPSK, &peer.IP); err != nil {
+			rows.Close()
+			return err
 		}
+		peer.PresharedKey, err = p.secrets.Decrypt(storedPSK)
+		if err != nil {
+			rows.Close()
+			return fmt.Errorf("decrypt VPN preshared key for peer %d: %w", id, err)
+		}
+		peerIDs = append(peerIDs, id)
+		peers = append(peers, peer)
 	}
-	rows.Close()
-	var resp struct {
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	var response struct {
 		Applied bool   `json:"applied"`
 		Error   string `json:"error,omitempty"`
 	}
-	err = p.withStandaloneAgentMutation(ctx, "vpn_peer_sync", "wireguard", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.SyncVPNPeers", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			Peers             []spec `json:"peers"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, peers}, &resp); err != nil {
-			return err
-		}
-		if resp.Error != "" {
-			return fmt.Errorf("peer sync: %s", resp.Error)
-		}
-		if !resp.Applied {
-			return errors.New("agent did not confirm peer synchronization")
-		}
-		return nil
-	})
+	err = p.withStandaloneAgentMutation(
+		ctx, "vpn_peer_sync", "wireguard", "",
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			if err := p.agentClient.CallContext(callCtx, "Agent.SyncVPNPeers", &struct {
+				MutationRequestID string        `json:"mutation_request_id"`
+				MutationOwnerID   string        `json:"mutation_owner_id"`
+				Peers             []vpnPeerSpec `json:"peers"`
+			}{
+				MutationRequestID: binding.MutationRequestID,
+				MutationOwnerID:   binding.MutationOwnerID,
+				Peers:             peers,
+			}, &response); err != nil {
+				return err
+			}
+			if response.Error != "" {
+				return fmt.Errorf("peer sync: %s", response.Error)
+			}
+			if !response.Applied {
+				return errors.New("agent did not confirm peer synchronization")
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		p.recordVPNSyncError(ctx, token, generation, err)
+		return err
+	}
+
+	tx, err = p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if resp.Error != "" {
-		return fmt.Errorf("peer sync: %s", resp.Error)
+	defer tx.Rollback()
+	result, err = tx.ExecContext(ctx, `
+		UPDATE vpn_sync_state
+		SET applied_generation = ?, status = 'applied', last_error = NULL,
+		    lease_token = NULL, lease_expires_at = NULL,
+		    updated_at = datetime('now')
+		WHERE id = 1 AND lease_token = ? AND desired_generation = ?`,
+		generation, token, generation,
+	)
+	if err != nil {
+		return err
 	}
-	return nil
+	current, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if current != 1 {
+		_, _ = tx.ExecContext(ctx, `
+			UPDATE vpn_sync_state
+			SET status = 'pending', lease_token = NULL, lease_expires_at = NULL,
+			    updated_at = datetime('now')
+			WHERE id = 1 AND lease_token = ?`, token)
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+		if retries <= 0 {
+			return errors.New("VPN desired state kept changing during synchronization")
+		}
+		return p.syncVPNPeersGenerationLocked(ctx, retries-1)
+	}
+	for _, id := range peerIDs {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE vpn_peers
+			SET sync_state = 'applied', sync_error = NULL, updated_at = datetime('now')
+			WHERE id = ? AND desired_state = 'active'`, id); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM vpn_peers WHERE desired_state = 'revoked'`,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
-// handleVPNPeers lists (GET) and creates (POST) peers. Admins see and create
-// everything; other roles are scoped to subscriptions they can access and
-// need the "vpn" entitlement to create.
-// handleVPNPeers, peer'ları listeler (GET) ve oluşturur (POST). Yöneticiler
-// her şeyi görür ve oluşturur; diğer roller erişebildikleri aboneliklerle
-// sınırlıdır ve oluşturmak için "vpn" hakkına ihtiyaç duyar.
+func (p *Panel) recordVPNSyncError(
+	ctx context.Context, token string, generation int64, syncErr error,
+) {
+	log.Printf("VPN peer synchronization failed: %v", syncErr)
+	message := vpnSyncErrorText(syncErr)
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("VPN sync failure state could not be recorded: %v", err)
+		return
+	}
+	defer tx.Rollback()
+	_, _ = tx.ExecContext(ctx, `
+		UPDATE vpn_sync_state
+		SET status = CASE
+				WHEN desired_generation = ? THEN 'error'
+				ELSE 'pending'
+			END,
+		    last_error = CASE
+				WHEN desired_generation = ? THEN ?
+				ELSE NULL
+			END,
+		    lease_token = NULL, lease_expires_at = NULL,
+		    updated_at = datetime('now')
+		WHERE id = 1 AND lease_token = ?`,
+		generation, generation, message, token,
+	)
+	_, _ = tx.ExecContext(ctx, `
+		UPDATE vpn_peers
+		SET sync_state = 'error', sync_error = ?, updated_at = datetime('now')
+		WHERE sync_state = 'pending'
+		  AND EXISTS (
+			SELECT 1 FROM vpn_sync_state
+			WHERE id = 1 AND desired_generation = ?
+		  )`, message, generation)
+	if err := tx.Commit(); err != nil {
+		log.Printf("VPN sync failure state commit failed: %v", err)
+	}
+}
+
+// handleVPNSync safely republishes the complete desired peer set. It accepts
+// no raw configuration, command, path or port input.
+// handleVPNSync istenen peer kümesinin tamamını güvenle yeniden yayımlar.
+// Ham yapılandırma, komut, yol veya port girdisi kabul etmez.
+func (p *Panel) handleVPNSync(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if caller := currentCaller(r); caller == nil || caller.Role != roleAdmin {
+		writeClientError(w, http.StatusForbidden, "admin only")
+		return
+	}
+	var request struct{}
+	if err := decodeStrictJSON(w, r, &request); err != nil {
+		writeClientError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := p.reconcileVPNEntitlements(r.Context()); err != nil {
+		writeAgentError(w, err, "VPN")
+		return
+	}
+	if err := p.syncVPNPeers(r.Context()); err != nil {
+		writeAgentError(w, err, "VPN")
+		return
+	}
+	p.audit(r, "vpn.sync", "", 0)
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+// handleVPNPeers lists and creates peers. Every subscription-bound peer needs
+// a currently active VPN entitlement, including peers issued by an admin.
+// handleVPNPeers peer'ları listeler ve oluşturur. Yönetici tarafından verilse
+// bile aboneliğe bağlı her peer için etkin bir VPN hakkı gerekir.
 func (p *Panel) handleVPNPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	c := currentCaller(r)
-	if c == nil {
+	setVPNPrivateResponseHeaders(w)
+	caller := currentCaller(r)
+	if caller == nil {
 		writeClientError(w, http.StatusUnauthorized, "sign-in required")
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
-		p.listVPNPeers(w, r, c)
+		p.listVPNPeers(w, r, caller)
 	case http.MethodPost:
-		p.createVPNPeer(w, r, c)
+		p.createVPNPeer(w, r, caller)
 	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
 }
 
-func (p *Panel) listVPNPeers(w http.ResponseWriter, r *http.Request, c *Caller) {
+func (p *Panel) listVPNPeers(w http.ResponseWriter, r *http.Request, caller *Caller) {
 	rows, err := p.db.GetDB().QueryContext(r.Context(), `
-		SELECT vp.id, vp.subscription_id, vp.name, vp.public_key, vp.ip, vp.created_at, s.name
-		FROM vpn_peers vp LEFT JOIN subscriptions s ON s.id = vp.subscription_id
+		SELECT vp.id, vp.subscription_id, vp.name, vp.public_key, vp.ip,
+		       vp.created_at, s.name, vp.desired_state, vp.sync_state, vp.sync_error
+		FROM vpn_peers vp
+		LEFT JOIN subscriptions s ON s.id = vp.subscription_id
 		ORDER BY vp.id`)
 	if err != nil {
 		writeServerError(w, err)
@@ -198,29 +534,50 @@ func (p *Panel) listVPNPeers(w http.ResponseWriter, r *http.Request, c *Caller) 
 	}
 	var peers []vpnPeerRow
 	for rows.Next() {
-		var pr vpnPeerRow
-		if rows.Scan(&pr.ID, &pr.SubscriptionID, &pr.Name, &pr.PublicKey, &pr.IP, &pr.CreatedAt, &pr.Subscription) != nil {
-			continue
+		var peer vpnPeerRow
+		if err := rows.Scan(
+			&peer.ID, &peer.SubscriptionID, &peer.Name, &peer.PublicKey, &peer.IP,
+			&peer.CreatedAt, &peer.Subscription, &peer.DesiredState,
+			&peer.SyncState, &peer.SyncError,
+		); err != nil {
+			rows.Close()
+			writeServerError(w, err)
+			return
 		}
-		peers = append(peers, pr)
+		peers = append(peers, peer)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		writeServerError(w, err)
+		return
 	}
 	rows.Close()
 
-	// Non-admins only see peers on subscriptions they can access.
-	// Yönetici olmayanlar yalnız erişebildikleri aboneliklerin peer'larını görür.
-	if c.Role != roleAdmin {
-		var mine []vpnPeerRow
-		for _, pr := range peers {
-			if pr.SubscriptionID != nil && p.canAccessSubscription(r.Context(), c, *pr.SubscriptionID) == nil {
-				mine = append(mine, pr)
+	if caller.Role != roleAdmin {
+		visible := make([]vpnPeerRow, 0, len(peers))
+		for _, peer := range peers {
+			if peer.SubscriptionID != nil &&
+				p.canAccessSubscription(r.Context(), caller, *peer.SubscriptionID) == nil {
+				// Tenant users receive state only. Agent, host and path details
+				// from synchronization errors are intentionally admin-only.
+				// Kiracı kullanıcılar yalnız durumu görür. Agent, ana makine ve
+				// yol ayrıntıları içerebilen eşitleme hataları yalnız yöneticiyedir.
+				peer.SyncError = nil
+				visible = append(visible, peer)
 			}
 		}
-		peers = mine
+		peers = visible
+	} else {
+		for i := range peers {
+			if peers[i].SyncError == nil {
+				continue
+			}
+			safe := vpnPublicSyncError(*peers[i].SyncError)
+			peers[i].SyncError = &safe
+		}
 	}
 
-	// Merge live kernel stats so "connected right now" is real, not implied.
-	// Canlı çekirdek istatistiklerini birleştir; "şu an bağlı" gerçek olsun.
-	var st struct {
+	var status struct {
 		Peers []struct {
 			PublicKey     string `json:"public_key"`
 			LastHandshake int64  `json:"last_handshake"`
@@ -228,82 +585,96 @@ func (p *Panel) listVPNPeers(w http.ResponseWriter, r *http.Request, c *Caller) 
 			TxBytes       int64  `json:"tx_bytes"`
 		} `json:"peers,omitempty"`
 	}
-	if p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &st) == nil {
-		live := map[string][3]int64{}
-		for _, lp := range st.Peers {
-			live[lp.PublicKey] = [3]int64{lp.LastHandshake, lp.RxBytes, lp.TxBytes}
+	if p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &status) == nil {
+		live := make(map[string][3]int64, len(status.Peers))
+		for _, peer := range status.Peers {
+			live[peer.PublicKey] = [3]int64{
+				peer.LastHandshake, peer.RxBytes, peer.TxBytes,
+			}
 		}
 		for i := range peers {
-			if v, ok := live[peers[i].PublicKey]; ok {
-				peers[i].LastHandshake, peers[i].RxBytes, peers[i].TxBytes = v[0], v[1], v[2]
+			if peers[i].DesiredState != "active" {
+				continue
+			}
+			if counters, ok := live[peers[i].PublicKey]; ok {
+				peers[i].LastHandshake = counters[0]
+				peers[i].RxBytes = counters[1]
+				peers[i].TxBytes = counters[2]
 			}
 		}
 	}
 	json.NewEncoder(w).Encode(map[string]any{"peers": peers})
 }
 
-// createVPNPeer allocates the next free address, has the agent generate keys,
-// records the peer and returns the complete client config — private key
-// included, shown exactly once and never stored.
-// createVPNPeer, sıradaki boş adresi tahsis eder, anahtarları agent'a
-// ürettirir, peer'ı kaydeder ve eksiksiz istemci config'ini döndürür — özel
-// anahtar dahil, tam bir kez gösterilir ve asla saklanmaz.
-func (p *Panel) createVPNPeer(w http.ResponseWriter, r *http.Request, c *Caller) {
-	var req struct {
+// createVPNPeer returns the private client configuration exactly once. The
+// response is explicitly non-cacheable and the private key is never persisted.
+// createVPNPeer özel istemci yapılandırmasını yalnız bir kez döndürür. Yanıt
+// açıkça önbelleğe alınamaz ve özel anahtar hiçbir zaman kalıcılaştırılmaz.
+func (p *Panel) createVPNPeer(w http.ResponseWriter, r *http.Request, caller *Caller) {
+	setVPNPrivateResponseHeaders(w)
+	var request struct {
 		Name           string `json:"name"`
 		SubscriptionID int    `json:"subscription_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeStrictJSON(w, r, &request); err != nil {
 		writeClientError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" || len(req.Name) > 60 {
-		writeClientError(w, http.StatusBadRequest, "peer name is required (max 60 chars)")
+	request.Name = strings.TrimSpace(request.Name)
+	if !validVPNPeerName(request.Name) {
+		writeClientError(w, http.StatusBadRequest, "peer name must be 1-60 visible characters")
 		return
 	}
 
-	var subID *int
-	if req.SubscriptionID > 0 {
-		if p.canAccessSubscription(r.Context(), c, req.SubscriptionID) != nil {
-			writeClientError(w, http.StatusNotFound, "subscription not found")
-			return
-		}
-		subID = &req.SubscriptionID
+	if request.SubscriptionID <= 0 {
+		writeClientError(w, http.StatusBadRequest, "subscription_id is required")
+		return
 	}
-	if c.Role != roleAdmin {
-		if subID == nil {
-			writeClientError(w, http.StatusBadRequest, "subscription_id is required")
-			return
-		}
-		if !p.requireEntitlement(w, r, *subID, "vpn") {
-			return
-		}
+	if p.canAccessSubscription(r.Context(), caller, request.SubscriptionID) != nil {
+		writeClientError(w, http.StatusNotFound, "subscription not found")
+		return
+	}
+	subscriptionID := &request.SubscriptionID
+
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	if !p.requireActiveVPNEntitlement(w, r, *subscriptionID) {
+		return
+	}
+	if p.secrets == nil {
+		writeServerError(w, errors.New("VPN secret storage is unavailable"))
+		return
 	}
 
-	// The server must be up before issuing configs that point at it.
-	// Ona işaret eden config'ler vermeden önce sunucu ayakta olmalı.
-	var st struct {
+	var status struct {
 		Running         bool   `json:"running"`
 		ServerPublicKey string `json:"server_public_key"`
 		Port            int    `json:"port"`
 		Endpoint        string `json:"endpoint"`
 	}
-	if err := p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &st); err != nil {
+	if err := p.agentClient.Call("Agent.VPNStatus", &struct{}{}, &status); err != nil {
 		writeAgentError(w, err, "VPN")
 		return
 	}
-	if !st.Running || st.ServerPublicKey == "" {
-		writeClientError(w, http.StatusConflict, "the VPN server is not running — set it up first")
+	if !status.Running || status.ServerPublicKey == "" || status.Endpoint == "" {
+		writeClientError(w, http.StatusConflict, "the VPN server is not ready")
+		return
+	}
+	if status.Port != vpnFixedPort {
+		writeClientError(w, http.StatusConflict, "the VPN server must listen on UDP port 51820")
 		return
 	}
 
 	ip, err := p.allocateVPNIP(r.Context())
 	if err != nil {
-		writeClientError(w, http.StatusConflict, err.Error())
+		if errors.Is(err, errVPNAddressPoolFull) {
+			writeClientError(w, http.StatusConflict, "the VPN address pool is full")
+		} else {
+			writeServerError(w, err)
+		}
 		return
 	}
-
 	var keys struct {
 		PrivateKey   string `json:"private_key"`
 		PublicKey    string `json:"public_key"`
@@ -318,26 +689,51 @@ func (p *Panel) createVPNPeer(w http.ResponseWriter, r *http.Request, c *Caller)
 		writeServerError(w, fmt.Errorf("key generation: %s", keys.Error))
 		return
 	}
+	deliveryToken, err := newServiceOperationID()
+	if err != nil {
+		writeServerError(w, errors.New("could not create VPN delivery receipt"))
+		return
+	}
+	deliveryTokenHash := vpnDeliveryTokenHash(deliveryToken)
+	sealedPSK, err := p.secrets.Encrypt(keys.PresharedKey)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("encrypt VPN preshared key: %w", err))
+		return
+	}
 
-	res, err := p.db.GetDB().ExecContext(r.Context(), `
-		INSERT INTO vpn_peers (subscription_id, name, public_key, preshared_key, ip, created_by)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		subID, req.Name, keys.PublicKey, keys.PresharedKey, ip, c.ID)
+	result, err := p.db.GetDB().ExecContext(r.Context(), `
+		INSERT INTO vpn_peers
+			(subscription_id, name, public_key, preshared_key, ip, created_by,
+			 desired_state, sync_state, provisioning_state, delivery_token_hash,
+			 delivery_expires_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, 'active', 'pending', 'provisioning', ?,
+		        datetime('now', '+5 minutes'), datetime('now'))`,
+		subscriptionID, request.Name, keys.PublicKey, sealedPSK, ip, caller.ID,
+		deliveryTokenHash,
+	)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	peerID, _ := res.LastInsertId()
+	peerID, _ := result.LastInsertId()
 
-	if err := p.syncVPNPeers(r.Context()); err != nil {
-		// Do not leave a ledger row the server does not serve.
-		// Sunucunun sunmadığı bir defter satırı bırakma.
-		p.db.GetDB().ExecContext(r.Context(), `DELETE FROM vpn_peers WHERE id = ?`, peerID)
-		writeServerError(w, err)
+	if err := p.syncVPNPeersLocked(r.Context()); err != nil {
+		_, _ = p.db.GetDB().ExecContext(r.Context(), `
+			UPDATE vpn_peers
+			SET desired_state = 'revoked', sync_state = 'pending',
+			    sync_error = ?, updated_at = datetime('now')
+			WHERE id = ?`, vpnSyncErrorText(err), peerID)
+		// A second full sync resolves an ambiguous transport failure by
+		// explicitly excluding the unissued peer.
+		// İkinci tam eşitleme, verilmeyen peer'ı açıkça dışarıda bırakarak
+		// belirsiz taşıma hatasını giderir.
+		_ = p.syncVPNPeersLocked(r.Context())
+		writeAgentError(w, err, "VPN")
 		return
 	}
 
-	clientConf := fmt.Sprintf(`[Interface]
+	endpoint := net.JoinHostPort(strings.Trim(status.Endpoint, "[]"), strconv.Itoa(status.Port))
+	clientConfig := fmt.Sprintf(`[Interface]
 PrivateKey = %s
 Address = %s/32
 DNS = 1.1.1.1
@@ -346,21 +742,96 @@ DNS = 1.1.1.1
 PublicKey = %s
 PresharedKey = %s
 AllowedIPs = 0.0.0.0/0
-Endpoint = %s:%d
+Endpoint = %s
 PersistentKeepalive = 25
-`, keys.PrivateKey, ip, st.ServerPublicKey, keys.PresharedKey, st.Endpoint, st.Port)
+`, keys.PrivateKey, ip, status.ServerPublicKey, keys.PresharedKey,
+		endpoint)
 
-	p.audit(r, "vpn.peer.add:"+req.Name, "vpn_peer", int(peerID))
-	json.NewEncoder(w).Encode(map[string]any{
+	if err := json.NewEncoder(w).Encode(map[string]any{
 		"success": true, "id": peerID, "ip": ip, "public_key": keys.PublicKey,
-		"client_config": clientConf,
-	})
+		"client_config": clientConfig, "delivery_token": deliveryToken,
+	}); err != nil {
+		_, _ = p.db.GetDB().ExecContext(context.Background(), `
+			UPDATE vpn_peers
+			SET desired_state = 'revoked', sync_state = 'pending',
+			    sync_error = NULL, updated_at = datetime('now')
+			WHERE id = ?`, peerID)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = p.syncVPNPeersLocked(cleanupCtx)
+		return
+	}
+	p.audit(r, "vpn.peer.add:"+request.Name, "vpn_peer", int(peerID))
 }
 
-// allocateVPNIP hands out the lowest free host address in 10.8.0.0/24
-// (server holds .1), reusing addresses freed by deleted peers.
-// allocateVPNIP, 10.8.0.0/24 içindeki en düşük boş adresi verir (.1
-// sunucunundur); silinen peer'ların boşalttığı adresleri yeniden kullanır.
+func vpnDeliveryTokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", sum[:])
+}
+
+func validVPNPeerName(value string) bool {
+	count := utf8.RuneCountInString(value)
+	if count < 1 || count > 60 {
+		return false
+	}
+	for _, char := range value {
+		if unicode.IsControl(char) || unicode.Is(unicode.Cf, char) {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *Panel) requireActiveVPNEntitlement(
+	w http.ResponseWriter, r *http.Request, subscriptionID int,
+) bool {
+	if p.hasEntitlement(r.Context(), subscriptionID, vpnProductID) {
+		return true
+	}
+	writeCodedError(
+		w, http.StatusPaymentRequired, errCodeEntitlement,
+		`this subscription requires the "VPN access" add-on`, "/addons",
+	)
+	return false
+}
+
+func setVPNPrivateResponseHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+}
+
+func vpnSyncErrorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return vpnPublicSyncError(err.Error())
+}
+
+// vpnPublicSyncError maps internal failures to a bounded message that cannot
+// reveal hostnames, paths, commands, keys or RPC transport details.
+// vpnPublicSyncError iç hataları ana makine, yol, komut, anahtar veya RPC
+// taşıma ayrıntılarını açığa çıkarmayan sınırlı bir mesaja dönüştürür.
+func vpnPublicSyncError(raw string) string {
+	lower := strings.ToLower(strings.TrimSpace(raw))
+	switch {
+	case strings.Contains(lower, "timeout"),
+		strings.Contains(lower, "deadline exceeded"):
+		return "VPN synchronization timed out"
+	case strings.Contains(lower, "unavailable"),
+		strings.Contains(lower, "connection refused"),
+		strings.Contains(lower, "not configured"),
+		strings.Contains(lower, "secret storage"):
+		return "VPN synchronization service is unavailable"
+	default:
+		return "VPN peer synchronization failed"
+	}
+}
+
+// allocateVPNIP returns the lowest address not represented by any active or
+// pending ledger row. A pending removal keeps its address until agent confirms it.
+// allocateVPNIP defterdeki etkin ya da bekleyen hiçbir satırın kullanmadığı en
+// düşük adresi verir. Bekleyen silme, agent doğrulayana kadar adresini korur.
 func (p *Panel) allocateVPNIP(ctx context.Context) (string, error) {
 	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT ip FROM vpn_peers`)
 	if err != nil {
@@ -369,9 +840,15 @@ func (p *Panel) allocateVPNIP(ctx context.Context) (string, error) {
 	used := map[string]bool{}
 	for rows.Next() {
 		var ip string
-		if rows.Scan(&ip) == nil {
-			used[ip] = true
+		if err := rows.Scan(&ip); err != nil {
+			rows.Close()
+			return "", err
 		}
+		used[ip] = true
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return "", err
 	}
 	rows.Close()
 	for n := 2; n <= 254; n++ {
@@ -380,49 +857,416 @@ func (p *Panel) allocateVPNIP(ctx context.Context) (string, error) {
 			return ip, nil
 		}
 	}
-	return "", fmt.Errorf("the VPN address pool is full (253 peers)")
+	return "", errVPNAddressPoolFull
 }
 
-// handleVPNPeerByID deletes a peer (owner or admin) and re-syncs the server.
-// handleVPNPeerByID, bir peer'ı siler (sahibi veya yönetici) ve sunucuyu
-// yeniden senkronlar.
+// handleVPNPeerByID marks a peer revoked before asking the agent to remove it.
+// A failed sync leaves a retryable tombstone instead of forgetting live access.
+// handleVPNPeerByID agent'tan kaldırmasını istemeden önce peer'ı iptal edildi
+// olarak işaretler. Başarısız eşitleme canlı erişimi unutmak yerine yeniden
+// denenebilir bir iz bırakır.
 func (p *Panel) handleVPNPeerByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	c := currentCaller(r)
-	if c == nil {
+	setVPNPrivateResponseHeaders(w)
+	caller := currentCaller(r)
+	if caller == nil {
 		writeClientError(w, http.StatusUnauthorized, "sign-in required")
 		return
 	}
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/api/v1/vpn/peers/"))
-	if err != nil {
-		writeClientError(w, http.StatusBadRequest, "invalid peer id")
-		return
-	}
-	var subID *int
-	var name string
-	if p.db.GetDB().QueryRowContext(r.Context(),
-		`SELECT subscription_id, name FROM vpn_peers WHERE id = ?`, id).Scan(&subID, &name) != nil {
+	suffix := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/vpn/peers/"), "/")
+	segments := strings.Split(suffix, "/")
+	if len(segments) < 1 || len(segments) > 2 {
 		writeClientError(w, http.StatusNotFound, "peer not found")
 		return
 	}
-	if c.Role != roleAdmin {
-		if subID == nil || p.canAccessSubscription(r.Context(), c, *subID) != nil {
+	id, err := strconv.Atoi(segments[0])
+	if err != nil || id <= 0 {
+		writeClientError(w, http.StatusBadRequest, "invalid peer id")
+		return
+	}
+	if len(segments) == 2 {
+		if segments[1] != "ack" {
+			writeClientError(w, http.StatusNotFound, "peer not found")
+			return
+		}
+		if r.Method != http.MethodPost {
+			writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		p.ackVPNPeerDelivery(w, r, caller, id)
+		return
+	}
+	if r.Method != http.MethodDelete {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	var subscriptionID *int
+	var name string
+	err = p.db.GetDB().QueryRowContext(r.Context(),
+		`SELECT subscription_id, name FROM vpn_peers WHERE id = ?`, id,
+	).Scan(&subscriptionID, &name)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeClientError(w, http.StatusNotFound, "peer not found")
+		return
+	}
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if caller.Role != roleAdmin {
+		if subscriptionID == nil ||
+			p.canAccessSubscription(r.Context(), caller, *subscriptionID) != nil {
 			writeClientError(w, http.StatusNotFound, "peer not found")
 			return
 		}
 	}
-	if _, err := p.db.GetDB().ExecContext(r.Context(), `DELETE FROM vpn_peers WHERE id = ?`, id); err != nil {
+	if _, err := p.db.GetDB().ExecContext(r.Context(), `
+		UPDATE vpn_peers
+		SET desired_state = 'revoked', sync_state = 'pending',
+		    sync_error = NULL, updated_at = datetime('now')
+		WHERE id = ?`, id); err != nil {
 		writeServerError(w, err)
 		return
 	}
-	if err := p.syncVPNPeers(r.Context()); err != nil {
-		writeServerError(w, err)
+	if err := p.syncVPNPeersLocked(r.Context()); err != nil {
+		writeAgentError(w, err, "VPN")
 		return
 	}
 	p.audit(r, "vpn.peer.remove:"+name, "vpn_peer", id)
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+// ackVPNPeerDelivery converts a short-lived delivery receipt into durable
+// issued state. The private client configuration itself is never persisted.
+// ackVPNPeerDelivery kısa ömürlü teslim makbuzunu kalıcı verilmiş duruma
+// dönüştürür. Özel istemci yapılandırmasının kendisi asla saklanmaz.
+func (p *Panel) ackVPNPeerDelivery(
+	w http.ResponseWriter, r *http.Request, caller *Caller, id int,
+) {
+	var request struct {
+		DeliveryToken string `json:"delivery_token"`
+	}
+	if err := decodeStrictJSON(w, r, &request); err != nil ||
+		len(request.DeliveryToken) != 32 {
+		writeClientError(w, http.StatusBadRequest, "invalid delivery receipt")
+		return
+	}
+
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	var subscriptionID *int
+	var createdBy *int
+	var name string
+	err := p.db.GetDB().QueryRowContext(r.Context(), `
+		SELECT subscription_id, created_by, name
+		FROM vpn_peers WHERE id = ?`, id,
+	).Scan(&subscriptionID, &createdBy, &name)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeClientError(w, http.StatusNotFound, "peer not found")
+		return
+	}
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if subscriptionID == nil ||
+		p.canAccessSubscription(r.Context(), caller, *subscriptionID) != nil ||
+		(caller.Role != roleAdmin && (createdBy == nil || *createdBy != caller.ID)) {
+		writeClientError(w, http.StatusNotFound, "peer not found")
+		return
+	}
+
+	result, err := p.db.GetDB().ExecContext(r.Context(), `
+		UPDATE vpn_peers
+		SET provisioning_state = 'issued', delivery_token_hash = NULL,
+		    delivery_expires_at = NULL, updated_at = datetime('now')
+		WHERE id = ?
+		  AND desired_state = 'active'
+		  AND provisioning_state = 'provisioning'
+		  AND delivery_token_hash = ?
+		  AND delivery_expires_at IS NOT NULL
+		  AND julianday(delivery_expires_at) > julianday('now')`,
+		id, vpnDeliveryTokenHash(request.DeliveryToken),
+	)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if affected != 1 {
+		writeClientError(w, http.StatusConflict, "delivery receipt expired or already used")
+		return
+	}
+	p.audit(r, "vpn.peer.delivery_ack:"+name, "vpn_peer", id)
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+// revokeVPNEntitlement suspends the right before removing peers. The grant is
+// deleted only after the agent confirms the deny state, so failure stays closed.
+// revokeVPNEntitlement peer'ları kaldırmadan önce hakkı askıya alır. Hak yalnız
+// agent engelleme durumunu doğruladıktan sonra silinir; hata kapalı durumda kalır.
+func (p *Panel) revokeVPNEntitlement(
+	w http.ResponseWriter, r *http.Request, subscriptionID int,
+) {
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	var status string
+	err := p.db.GetDB().QueryRowContext(r.Context(), `
+		SELECT status FROM subscription_entitlements
+		WHERE subscription_id = ? AND product_id = 'vpn'`,
+		subscriptionID,
+	).Scan(&status)
+	if errors.Is(err, sql.ErrNoRows) {
+		var orphanedPeers int
+		if countErr := p.db.GetDB().QueryRowContext(r.Context(),
+			`SELECT COUNT(*) FROM vpn_peers WHERE subscription_id = ?`,
+			subscriptionID,
+		).Scan(&orphanedPeers); countErr != nil {
+			writeServerError(w, countErr)
+			return
+		}
+		if orphanedPeers > 0 {
+			if _, markErr := p.db.GetDB().ExecContext(r.Context(), `
+				UPDATE vpn_peers
+				SET desired_state = 'revoked', sync_state = 'pending',
+				    sync_error = NULL, updated_at = datetime('now')
+				WHERE subscription_id = ?`,
+				subscriptionID,
+			); markErr != nil {
+				writeServerError(w, markErr)
+				return
+			}
+			if syncErr := p.syncVPNPeersLocked(r.Context()); syncErr != nil {
+				writeAgentError(w, syncErr, "VPN")
+				return
+			}
+		}
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "idempotent": true})
+		return
+	}
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+
+	tx, err := p.db.GetDB().BeginTx(r.Context(), nil)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(r.Context(), `
+		UPDATE subscription_entitlements
+		SET status = 'suspended'
+		WHERE subscription_id = ? AND product_id = 'vpn'`,
+		subscriptionID,
+	); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	_, err = tx.ExecContext(r.Context(), `
+		UPDATE vpn_peers
+		SET desired_state = 'revoked', sync_state = 'pending',
+		    sync_error = NULL, updated_at = datetime('now')
+		WHERE subscription_id = ? AND desired_state = 'active'`,
+		subscriptionID,
+	)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeServerError(w, err)
+		return
+	}
+
+	var peerCount int
+	if err := p.db.GetDB().QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM vpn_peers WHERE subscription_id = ?`,
+		subscriptionID,
+	).Scan(&peerCount); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if peerCount > 0 {
+		if err := p.syncVPNPeersLocked(r.Context()); err != nil {
+			writeAgentError(w, err, "VPN")
+			return
+		}
+	}
+
+	// A successful revoke must be proven by an empty desired-state ledger for
+	// this subscription. This also makes retry after a failed first sync safe.
+	// Başarılı iptal, bu aboneliğin istenen durum defterinin boş olmasıyla
+	// kanıtlanır. Böylece ilk eşitleme hatasından sonraki deneme de güvenli olur.
+	if err := p.db.GetDB().QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM vpn_peers WHERE subscription_id = ?`,
+		subscriptionID,
+	).Scan(&peerCount); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if peerCount != 0 {
+		writeServerError(w, errors.New("VPN peer revocation was not confirmed"))
+		return
+	}
+
+	tx, err = p.db.GetDB().BeginTx(r.Context(), nil)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(r.Context(), `
+		DELETE FROM subscription_entitlements
+		WHERE subscription_id = ? AND product_id = 'vpn'`,
+		subscriptionID,
+	)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if affected > 0 {
+		if err := insertEntitlementAudit(
+			r, tx, "entitlement.revoke:vpn", subscriptionID,
+		); err != nil {
+			writeServerError(w, err)
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true, "idempotent": affected == 0,
+	})
+}
+
+// reconcileVPNEntitlements revokes peers whose subscription right disappeared,
+// was suspended or expired. It is also run once immediately after startup.
+// reconcileVPNEntitlements abonelik hakkı silinen, askıya alınan ya da süresi
+// dolan peer'ları iptal eder. Başlangıçtan hemen sonra da bir kez çalışır.
+func (p *Panel) reconcileVPNEntitlements(ctx context.Context) error {
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	expired, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE vpn_peers
+		SET desired_state = 'revoked', sync_state = 'pending',
+		    sync_error = NULL, delivery_token_hash = NULL,
+		    delivery_expires_at = NULL, updated_at = datetime('now')
+		WHERE provisioning_state = 'provisioning'
+		  AND delivery_expires_at IS NOT NULL
+		  AND julianday(delivery_expires_at) <= julianday('now')`)
+	if err != nil {
+		return err
+	}
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE vpn_peers
+		SET desired_state = 'revoked', sync_state = 'pending',
+		    sync_error = NULL, updated_at = datetime('now')
+		WHERE subscription_id IS NOT NULL
+		  AND desired_state = 'active'
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM subscription_entitlements e
+			JOIN store_offerings o ON o.id = e.product_id
+			WHERE e.subscription_id = vpn_peers.subscription_id
+			  AND e.product_id = 'vpn'
+			  AND e.status = 'active'
+			  AND o.release_state = 'available'
+			  AND o.entitlement_mode = 'grant'
+			  AND (
+				e.expires_at IS NULL
+				OR (
+					julianday(e.expires_at) IS NOT NULL
+					AND julianday(e.expires_at) > julianday('now')
+				)
+			  )
+		  )`)
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	expiredCount, err := expired.RowsAffected()
+	if err != nil {
+		return err
+	}
+	var pending int
+	if err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM vpn_peers
+		WHERE desired_state = 'revoked'`,
+	).Scan(&pending); err != nil {
+		return err
+	}
+	if changed == 0 && expiredCount == 0 && pending == 0 {
+		return nil
+	}
+	return p.syncVPNPeersLocked(ctx)
+}
+
+// recoverVPNProvisioningState removes peers whose one-time private config was
+// not durably acknowledged before a restart. It runs synchronously before HTTP.
+// recoverVPNProvisioningState, yeniden başlatmadan önce tek kullanımlık özel
+// config'i kalıcı olarak onaylanmayan peer'ları HTTP başlamadan eşzamanlı kaldırır.
+func (p *Panel) recoverVPNProvisioningState(ctx context.Context) error {
+	vpnMutationMu.Lock()
+	defer vpnMutationMu.Unlock()
+
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE vpn_peers
+		SET desired_state = 'revoked', sync_state = 'pending',
+		    sync_error = NULL, updated_at = datetime('now')
+		WHERE provisioning_state = 'provisioning'`)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return nil
+	}
+	if err := p.syncVPNPeersLocked(ctx); err != nil {
+		return fmt.Errorf("remove incomplete VPN provisioning: %w", err)
+	}
+	return nil
+}
+
+func (p *Panel) startVPNEntitlementReconciler() {
+	go func() {
+		run := func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+			defer cancel()
+			if err := p.reconcileVPNEntitlements(ctx); err != nil {
+				log.Printf("VPN entitlement reconciliation failed: %v", err)
+			}
+		}
+		run()
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			run()
+		}
+	}()
 }

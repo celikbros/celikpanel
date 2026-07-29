@@ -265,6 +265,9 @@ func main() {
 	if err := panel.encryptLegacyDBPasswords(context.Background()); err != nil {
 		log.Fatalf("Failed to encrypt legacy database passwords: %v", err)
 	}
+	if err := panel.encryptLegacyVPNPresharedKeys(context.Background()); err != nil {
+		log.Fatalf("Failed to encrypt legacy VPN preshared keys: %v", err)
+	}
 
 	// Repair only derived certificate runtime state from the durable ledger.
 	// This removes crash-left staging lineages/validation names; it never
@@ -288,6 +291,21 @@ func main() {
 	// Süresi yaklaşan sertifikaları otomatik yenile.
 	panel.startCertRenewalScheduler()
 
+	// Fail closed before accepting HTTP: a peer whose one-time private config
+	// was interrupted must not survive a process restart as ghost access.
+	// HTTP kabulünden önce kapalı kal: tek kullanımlık özel config'i yarıda kalan
+	// bir peer süreç yeniden başladığında hayalet erişim olarak yaşamamalıdır.
+	recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	if err := panel.recoverVPNProvisioningState(recoveryCtx); err != nil {
+		recoveryCancel()
+		log.Fatalf("recover incomplete VPN provisioning: %v", err)
+	}
+	recoveryCancel()
+
+	// Revoke expired or suspended subscription VPN peers in the background.
+	// Süresi dolan veya askıya alınan abonelik VPN peer'larını arka planda kaldır.
+	panel.startVPNEntitlementReconciler()
+
 	// Authentication routes (login is public; logout/me require a session).
 	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
 	http.HandleFunc("/api/v1/auth/login", panel.handleLogin)
@@ -310,6 +328,8 @@ func main() {
 	http.HandleFunc("/api/v1/products", panel.handleProducts)
 	http.HandleFunc("/api/v1/store", panel.handleStore)
 	http.HandleFunc("/api/v1/store/", panel.handleStore)
+	http.HandleFunc("/api/v1/admin/store-catalog", panel.handleStoreCatalogAdmin)
+	http.HandleFunc("/api/v1/admin/store-catalog/", panel.handleStoreCatalogAdmin)
 	http.HandleFunc("/api/v1/audit-logs", panel.handleAuditLogs)
 	http.HandleFunc("/api/v1/dashboard", panel.handleDashboard)
 	http.HandleFunc("/api/v1/auth/password", panel.handleChangeOwnPassword)
@@ -502,6 +522,7 @@ func main() {
 	// PowerDNS Configuration
 	http.HandleFunc("/api/v1/vpn/status", panel.handleVPNStatus)
 	http.HandleFunc("/api/v1/vpn/setup", panel.handleVPNSetup)
+	http.HandleFunc("/api/v1/vpn/sync", panel.handleVPNSync)
 	http.HandleFunc("/api/v1/vpn/peers", panel.handleVPNPeers)
 	http.HandleFunc("/api/v1/vpn/peers/", panel.handleVPNPeerByID)
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)

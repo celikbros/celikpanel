@@ -178,6 +178,40 @@ Geçerli örnekler:
 
 ## Katalog bakımı
 
+Yöneticiler mevcut Mağaza sunumunu ve bileşen bağlarını **Eklentiler → Katalog
+yönetimi** bölümünden yönetir. Bu bölüm Mağazanın kullandığı aynı panel SQLite
+veritabanı üzerinde tipli bir görünümdür; SQL düzenleyicisi veya ayrı imzalı
+bileşen-işlem kataloğu değildir.
+
+```text
+GET   /api/v1/admin/store-catalog
+PATCH /api/v1/admin/store-catalog/{offering_id}
+```
+
+Admin görünümü yalnız kategori, sağlayıcı, yaşam döngüsü durumu, iki dilli
+sunum verisi, sıralama ve mevcut yönetilen bileşen bağlarını değiştirebilir.
+Teklif kimliği, tür, hak modeli ve yönetim yolu salt okunurdur. Arayüz teklif
+oluşturamaz veya fiziksel olarak silemez. Yeni değişmez teklif tanımları ve
+yayımlama geçişleri sürüm tarafından yönetilir; yeni geçiş/imzalı sürüm ister.
+Yönetici tarayıcıdan `coming_soon` veya `retired` durumunu yeniden `available`
+yapamaz.
+
+`available` durumunu `coming_soon` veya `retired` yapmak mevcut hakları
+kullanılamaz hale getirebilir. API etkin hak sayısını döndürür; sayı sıfırdan
+büyükse arayüz onayına ek olarak tipli
+`acknowledge_entitlement_impact: true` alanını zorunlu tutar. Değişiklik, açık
+etki onayı/sayısı, sınırlı değişen-alan özeti ve kanonik önce/sonra SHA-256
+parmak izleri tek bir denetim kaydıyla birlikte commit edilir.
+Her düzenleme `expected_updated_at` taşır; farklı bir eski düzenleme HTTP 409
+ile reddedilip yeniden yüklenir. Kanonik olarak aynı tekrar, `updated_at`
+değerini yeniden yazmayan ve çift denetim kaydı üretmeyen idempotent başarıdır.
+
+Kur/başlat/durdur/kaldır reçeteleri, paket komutları, ham SQL ve dosya sistemi
+yolları bu arayüzden asla alınmaz veya arayüze döndürülmez. Sayfa yalnızca salt
+okunur sürüm politikası özetini gösterir. İmzalı Manifest V2 doğrulaması
+uygulanmıştır; üretim çalışma zamanı etkinleştirmesi ise beklemektedir. Arayüz,
+imzalı işlem çalıştırmanın bugün etkin olduğunu iddia etmez.
+
 Geçiş yalnızca dürüst durumlar ekler:
 
 - yayınlanan teklifler `available` olarak işaretlenir;
@@ -185,7 +219,7 @@ Geçiş yalnızca dürüst durumlar ekler:
 - sahte fiyat saklanmaz;
 - bileşen gereksinimleri açık tipli satırlardır.
 
-Teklif eklemek veya değiştirmek için:
+Yeni teklif eklemek veya değişmez/sürüm-yönetimli alanı değiştirmek için:
 
 1. Yeni bir geçiş ekleyin; daha önce dağıtılmış geçişi düzenlemeyin.
 2. Tipli yaşam döngüsü, hak modu, kategori, satıcı ve güvenli dahili yönetim
@@ -198,5 +232,6 @@ Teklif eklemek veya değiştirmek için:
    doğrulayın.
 
 SQLite veritabanını doğrudan düzenlemek acil durum yöntemidir; normal yönetici
-arayüzü değildir. Yetkilendirme, doğrulama, idempotentlik ve denetim kaydı
-korunsun diye Mağaza ve hak API'lerini kullanın.
+arayüzü değildir. Yetkilendirme, katı doğrulama, iyimser eşzamanlılık,
+idempotentlik ve denetim kaydı korunsun diye **Katalog yönetimi**, Mağaza
+görünümü ve hak API'lerini kullanın.

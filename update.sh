@@ -27,9 +27,11 @@ RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 PREFLIGHT_PANEL="${CELIKPANEL_PREFLIGHT_PANEL:-$BIN_DIR/panel}"
 PREFLIGHT_AGENT="${CELIKPANEL_PREFLIGHT_AGENT:-$BIN_DIR/agent}"
+SCHEMA17_BRIDGE="${CELIKPANEL_SCHEMA17_BRIDGE:-}"
 KEEP_SNAPSHOTS=5
 
 BOOTSTRAP_PRE_LEDGER=0
+BOOTSTRAP_SCHEMA17=0
 TRUSTED_RELEASE_ROOT="${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}"
 panel_frozen=0
 agent_frozen=0
@@ -88,10 +90,14 @@ prepare_and_acquire_release_transaction_lock() {
 [[ $EUID -eq 0 ]] || die "Run as root / root olarak çalıştırın: use bootstrap-update.sh"
 prepare_and_acquire_release_transaction_lock
 
-[[ $# -eq 1 ]] || die "usage: update.sh --normal|--bootstrap-pre-ledger"
+[[ $# -eq 1 ]] || die "usage: update.sh --normal|--bootstrap-pre-ledger|--bootstrap-schema17"
 case "$1" in
     --bootstrap-pre-ledger)
         BOOTSTRAP_PRE_LEDGER=1
+        ;;
+    --bootstrap-schema17)
+        BOOTSTRAP_PRE_LEDGER=1
+        BOOTSTRAP_SCHEMA17=1
         ;;
     --normal) ;;
     *) die "unknown update mode: $1" ;;
@@ -241,6 +247,8 @@ validate_trusted_release() {
     [[ "$trusted_release_tree" =~ ^[0-9a-f]{40,64}$ ]] || die "invalid trusted release tree"
     [[ "$PREFLIGHT_PANEL" == "$root/bin/panel" ]] || die "panel preflight must come from the trusted release"
     [[ "$PREFLIGHT_AGENT" == "$root/bin/agent" ]] || die "agent preflight must come from the trusted release"
+    SCHEMA17_BRIDGE="$root/bin/schema17-bridge"
+    validate_preflight_binary "$SCHEMA17_BRIDGE" schema17-bridge
     [[ -x "$root/install.sh" && -f "$root/install.sh" ]] || die "trusted release installer is missing"
     [[ -x "$root/rollback.sh" && -f "$root/rollback.sh" ]] || die "trusted release rollback is missing"
     [[ -f "$root/web/dist/index.html" ]] || die "trusted release web artifact is missing"
@@ -863,6 +871,8 @@ validate_pending_update_snapshot() {
         pending_snapshot_transition=normal
     elif printf 'pre-ledger\n' | cmp -s - "$transition"; then
         pending_snapshot_transition=pre-ledger
+    elif printf 'schema17\n' | cmp -s - "$transition"; then
+        pending_snapshot_transition=schema17
     else
         die "pending snapshot transition state is not canonical"
     fi
@@ -1064,6 +1074,7 @@ done
 # daha sonra hedef release'den türetilmez.
 snapshot_schema=normal
 [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || snapshot_schema=pre-ledger
+[[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || snapshot_schema=schema17
 # A durable completion marker means bytes were already verified and only the
 # guarded start/cleanup phase remains. Finish that phase and require a fresh run.
 # Kalıcı completion işaretçisi baytların doğrulandığını ve yalnız korumalı
@@ -1614,7 +1625,10 @@ fail_before_active() {
 # iki koordinatör de frozen olduktan sonra yeniden yapılır.
 prepare_runtime_mutation_lock_dir
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
-    if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+    if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+        "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
+            || fail_before_active "panel is not at the exact supported schema version 17; schema17 bootstrap refused"
+    elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
         "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle; then
         fail_before_active "panel is not at exact pre-ledger schema version 20; bootstrap refused"
     fi
@@ -1661,7 +1675,10 @@ if [[ "$transaction_phase" == quiesce ]]; then
     # Bunlar son değişebilir durum kontrolleridir: askıdaki panel yeni satır
     # ekleyemez ve agent elde tutulan ortak flock sınırını geçemez.
     if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
-        if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+        if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+            "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
+                || fail_before_active "final frozen panel exact schema17 proof failed"
+        elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
             "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle; then
             fail_before_active "final frozen panel pre-ledger idle proof failed"
         fi
@@ -1748,9 +1765,14 @@ else
 fi
 acquire_release_mutation_lock
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
-    CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
-        || die "stopped panel pre-ledger idle proof failed"
+    if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+        "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
+            || die "stopped panel exact schema17 proof failed"
+    else
+        CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
+            || die "stopped panel pre-ledger idle proof failed"
+    fi
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
         "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
@@ -1772,15 +1794,25 @@ fi
 [[ -f "$UNIT_DIR/celikpanel-agent.service" ]] || die "installed agent unit is missing"
 [[ -f "$UNIT_DIR/celikpanel-panel.service" ]] || die "installed panel unit is missing"
 
-CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-    "$TRUSTED_RELEASE_ROOT/bin/panel" \
-    --create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")" \
-    --snapshot-schema="$snapshot_schema" \
-    --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
-    --release-transaction-token="$release_transaction_token" \
-    --release-transaction-operation=update \
-    --release-transaction-snapshot="$snapshot_name" \
-    || die "transaction-consistent panel database snapshot failed"
+if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+    release_txn_validate_active_token \
+        "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
+        || die "active marker changed before exact schema17 snapshot"
+    "$SCHEMA17_BRIDGE" snapshot \
+        --db "$PANEL_DB" \
+        --out "$tmp_snap/$(basename "$PANEL_DB")" \
+        || die "transaction-consistent exact schema17 panel database snapshot failed"
+else
+    CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+        "$TRUSTED_RELEASE_ROOT/bin/panel" \
+        --create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")" \
+        --snapshot-schema="$snapshot_schema" \
+        --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
+        --release-transaction-token="$release_transaction_token" \
+        --release-transaction-operation=update \
+        --release-transaction-snapshot="$snapshot_name" \
+        || die "transaction-consistent panel database snapshot failed"
+fi
 [[ -f "$tmp_snap/$(basename "$PANEL_DB")" && ! -L "$tmp_snap/$(basename "$PANEL_DB")" ]] \
     || die "online panel database snapshot is missing or unsafe"
 [[ ! -e "$tmp_snap/$(basename "$PANEL_DB")-wal" && \
@@ -1812,7 +1844,29 @@ fi
 # Snapshot güven durumunu açıkça kaydet. Ledger öncesi snapshot ayrıca geri alma
 # sırasında kısmen tamamlanmış yükseltmeyi sınıflandırmak için gereken tam
 # doğrulanmış checker binary'lerini saklar; her dosyayı eksiksiz manifest kapsar.
-if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
+if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+    printf 'schema17\n' | cmp -s - "$tmp_snap/snapshot-transition.state" \
+        || die "schema17 transition state changed after active marker publication"
+    mkdir "$tmp_snap/transition-preflight"
+    cp -a "$PREFLIGHT_PANEL" "$tmp_snap/transition-preflight/panel"
+    cp -a "$PREFLIGHT_AGENT" "$tmp_snap/transition-preflight/agent"
+    cp -a "$SCHEMA17_BRIDGE" "$tmp_snap/transition-preflight/schema17-bridge"
+    printf '%s\t%s\n' \
+        transition-version 1 \
+        mode bootstrap-schema17 \
+        source-schema-version 17 \
+        bridge-schema-version 20 \
+        target-release-commit "$trusted_release_commit" \
+        target-release-tree "$trusted_release_tree" \
+        agent-state-root "$AGENT_STATE_DIR" \
+        created-at-utc "$stamp" \
+        > "$tmp_snap/schema17-transition.tsv"
+    (
+        cd "$tmp_snap"
+        sha256sum schema17-transition.tsv > schema17-transition.sha256
+        sha256sum -c schema17-transition.sha256 >/dev/null
+    ) || die "schema17 transition marker checksum failed"
+elif [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     printf 'pre-ledger\n' | cmp -s - "$tmp_snap/snapshot-transition.state" \
         || die "pre-ledger transition state changed after active marker publication"
     mkdir "$tmp_snap/transition-preflight"
@@ -1946,6 +2000,21 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     # Dış flock'u yalnız güvenilir tek seferlik initializer için bırak. Tam boş
     # ledger'ı kanıtla, ortak kilidi yeniden oluşturup al ve initialization
     # kapalı kurucuyu çalıştır; böylece arada agent isteği giremez.
+    if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
+        release_txn_validate_active_token \
+            "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
+            || die "active marker changed before exact schema17 bridge migration"
+        [[ "$verified_snapshot" == "$snap" ]] \
+            || die "exact schema17 bridge requires the published verified snapshot"
+        mutation_started=1
+        "$SCHEMA17_BRIDGE" migrate \
+            --db "$PANEL_DB" \
+            --migrations-root "$TRUSTED_RELEASE_ROOT/internal/db/migrations" \
+            || die "exact schema17 to schema20 bridge migration failed; use the printed trusted rollback command"
+        CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
+            || die "schema17 bridge did not produce the exact idle schema20 state"
+    fi
     release_release_mutation_lock || die "cannot release bootstrap mutation lock before ledger initialization"
     mutation_started=1
     env -i \

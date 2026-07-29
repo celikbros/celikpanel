@@ -143,6 +143,8 @@ func parseEntitlementPath(path string) (entitlementPath, bool) {
 // hak havuzu modeli gelene kadar değişiklik yalnız admin içindir.
 func (p *Panel) handleSubscriptionEntitlements(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("Pragma", "no-cache")
 	path, ok := parseEntitlementPath(r.URL.Path)
 	if !ok {
 		http.NotFound(w, r)
@@ -408,6 +410,10 @@ func (p *Panel) revokeEntitlement(w http.ResponseWriter, r *http.Request, subscr
 	offering := offerings[0]
 	if offering.EntitlementMode != "grant" {
 		writeClientError(w, http.StatusConflict, "offering is not revocable")
+		return
+	}
+	if offering.ID == vpnProductID {
+		p.revokeVPNEntitlement(w, r, subscriptionID)
 		return
 	}
 

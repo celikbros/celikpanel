@@ -68,8 +68,8 @@ bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$INSTALL" "$RELEASE_GUARD"
 # Tek temiz incelenmiş commit iki mod için tek root-only sürüm üretmelidir.
 require_literal "$BOOTSTRAP" '#!/bin/bash'
 require_literal "$BOOTSTRAP" 'RELEASES_ROOT=/var/backups/celikpanel/releases'
-require_literal "$BOOTSTRAP" '[[ $# -eq 1 ]] || die "usage: bootstrap-update.sh --normal|--bootstrap-pre-ledger"'
-require_literal "$BOOTSTRAP" '--normal|--bootstrap-pre-ledger) UPDATE_MODE=$1'
+require_literal "$BOOTSTRAP" '[[ $# -eq 1 ]] || die "usage: bootstrap-update.sh --normal|--bootstrap-pre-ledger|--bootstrap-schema17"'
+require_literal "$BOOTSTRAP" '--normal|--bootstrap-pre-ledger|--bootstrap-schema17) UPDATE_MODE=$1'
 reject_literal "$BOOTSTRAP" 'UPDATE_MODE=--bootstrap-pre-ledger'
 require_literal "$BOOTSTRAP" 'git_bin=$(trusted_command git)'
 require_literal "$BOOTSTRAP" 'tar_bin=$(trusted_command tar)'
@@ -79,8 +79,10 @@ require_literal "$BOOTSTRAP" 'run_clean "$git_bin" archive --format=tar HEAD'
 require_literal "$BOOTSTRAP" 'run_clean "$tar_bin" -xf - -C "$incomplete_root"'
 require_literal "$BOOTSTRAP" 'release_root="$RELEASES_ROOT/$release_short-$release_nonce"'
 require_literal "$BOOTSTRAP" '[[ "$release_nonce" =~ ^[0-9a-f]{24}$ ]]'
+require_literal "$BOOTSTRAP" 'version_flags="-X main.buildVersion=$release_version -X main.buildCommit=$release_commit"'
 require_literal "$BOOTSTRAP" '! -path '\''./SHA256SUMS'\'' -print0'
 require_literal "$BOOTSTRAP" '[[ -x "$root/rollback.sh" && -f "$root/rollback.sh" ]]'
+require_literal "$BOOTSTRAP" '[[ -x "$root/bin/schema17-bridge" && -f "$root/bin/schema17-bridge" ]]'
 require_literal "$BOOTSTRAP" '"$incomplete_root/rollback.sh"'
 require_literal "$BOOTSTRAP" 'mv -T --no-clobber -- "$incomplete_root" "$release_root"'
 require_literal "$BOOTSTRAP" '/bin/bash "$release_root/update.sh" "$UPDATE_MODE"'
@@ -91,6 +93,7 @@ require_sequence "$BOOTSTRAP" \
     'run_clean "$git_bin" archive --format=tar HEAD' \
     'run_clean "$tar_bin" -xf - -C "$incomplete_root"' \
     'build -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel' \
+    'build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge' \
     '"$npm_bin" run build' \
     'validate_release_tree "$incomplete_root"' \
     'mv -T --no-clobber -- "$incomplete_root" "$release_root"' \
@@ -125,8 +128,9 @@ require_sequence "$BOOTSTRAP" \
 # preflight kontrolleri snapshot-root mutation işleminden önce tamamlanır.
 require_literal "$UPDATE" '#!/bin/bash'
 require_literal "$UPDATE" 'RELEASES_ROOT=/var/backups/celikpanel/releases'
-require_literal "$UPDATE" '[[ $# -eq 1 ]] || die "usage: update.sh --normal|--bootstrap-pre-ledger"'
+require_literal "$UPDATE" '[[ $# -eq 1 ]] || die "usage: update.sh --normal|--bootstrap-pre-ledger|--bootstrap-schema17"'
 require_literal "$UPDATE" '--bootstrap-pre-ledger)'
+require_literal "$UPDATE" '--bootstrap-schema17)'
 require_literal "$UPDATE" '--normal) ;;'
 require_literal "$UPDATE" '[[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]]'
 require_literal "$UPDATE" '[[ "$updater" == "$root/update.sh" ]]'
@@ -150,6 +154,7 @@ reject_literal "$UPDATE" ' ./install.sh'
 # tek bağımsız SQLite dosyasıdır, shell kopyası ve sidecar birleşimi değildir.
 require_literal "$UPDATE" 'snapshot_schema=normal'
 require_literal "$UPDATE" '[[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || snapshot_schema=pre-ledger'
+require_literal "$UPDATE" '[[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || snapshot_schema=schema17'
 require_literal "$UPDATE" '--create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")"'
 require_literal "$UPDATE" '--snapshot-schema="$snapshot_schema"'
 require_literal "$UPDATE" '--release-transaction-fd="$RELEASE_TRANSACTION_FD"'
@@ -160,6 +165,8 @@ require_literal "$UPDATE" '$(basename "$PANEL_DB")-wal'
 require_literal "$UPDATE" '$(basename "$PANEL_DB")-shm'
 require_literal "$UPDATE" '$(basename "$PANEL_DB")-journal'
 require_literal "$UPDATE" 'standalone without WAL/SHM/journal'
+require_literal "$UPDATE" '"$SCHEMA17_BRIDGE" snapshot'
+require_literal "$UPDATE" '"$SCHEMA17_BRIDGE" migrate'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB"'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB-wal"'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB-shm"'

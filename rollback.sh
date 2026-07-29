@@ -29,6 +29,7 @@ RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 PREFLIGHT_PANEL=
 PREFLIGHT_AGENT=
+PREFLIGHT_SCHEMA17_BRIDGE=
 trusted_rollback_release_commit=
 trusted_rollback_release_tree=
 legacy_agent_frozen=0
@@ -707,14 +708,19 @@ case "$transition_state" in
             || die "normal v4 snapshot must contain the durable agent ledger"
         [[ ! -e "$snap/pre-ledger-transition.tsv" && \
            ! -e "$snap/pre-ledger-transition.sha256" && \
+           ! -e "$snap/schema17-transition.tsv" && \
+           ! -e "$snap/schema17-transition.sha256" && \
            ! -e "$snap/transition-preflight" ]] \
-            || die "normal v4 snapshot contains pre-ledger transition payloads"
+            || die "normal v4 snapshot contains bootstrap transition payloads"
         ;;
     pre-ledger)
         printf 'pre-ledger\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "pre-ledger transition state marker is not exact"
         [[ "$agent_ledger_state" == absent ]] \
             || die "pre-ledger v4 snapshot must not contain the durable agent ledger"
+        [[ ! -e "$snap/schema17-transition.tsv" && \
+           ! -e "$snap/schema17-transition.sha256" ]] \
+            || die "pre-ledger v4 snapshot contains schema17 transition payloads"
         [[ -f "$snap/pre-ledger-transition.tsv" && ! -L "$snap/pre-ledger-transition.tsv" ]] \
             || die "pre-ledger transition marker is missing or unsafe"
         [[ -f "$snap/pre-ledger-transition.sha256" && ! -L "$snap/pre-ledger-transition.sha256" ]] \
@@ -777,6 +783,79 @@ case "$transition_state" in
 
 
         ;;
+    schema17)
+        printf 'schema17\n' | cmp -s - "$snap/snapshot-transition.state" \
+            || die "schema17 transition state marker is not exact"
+        [[ "$agent_ledger_state" == absent ]] \
+            || die "schema17 v4 snapshot must not contain the durable agent ledger"
+        [[ ! -e "$snap/pre-ledger-transition.tsv" && \
+           ! -e "$snap/pre-ledger-transition.sha256" ]] \
+            || die "schema17 v4 snapshot contains pre-ledger transition payloads"
+        [[ -f "$snap/schema17-transition.tsv" && ! -L "$snap/schema17-transition.tsv" ]] \
+            || die "schema17 transition marker is missing or unsafe"
+        [[ -f "$snap/schema17-transition.sha256" && ! -L "$snap/schema17-transition.sha256" ]] \
+            || die "schema17 transition checksum is missing or unsafe"
+        [[ -d "$snap/transition-preflight" && ! -L "$snap/transition-preflight" ]] \
+            || die "schema17 transition preflight directory is missing or unsafe"
+        [[ -x "$snap/transition-preflight/panel" && \
+           -x "$snap/transition-preflight/agent" && \
+           -x "$snap/transition-preflight/schema17-bridge" ]] \
+            || die "schema17 transition checker binaries are missing"
+        [[ $(find "$snap/transition-preflight" -mindepth 1 -maxdepth 1 | wc -l) -eq 3 ]] \
+            || die "schema17 transition preflight payload is not exact"
+        marker_checksum=$(cat "$snap/schema17-transition.sha256")
+        marker_pattern='^([0-9a-f]{64})  schema17-transition\.tsv$'
+        [[ "$marker_checksum" =~ $marker_pattern ]] \
+            || die "schema17 transition checksum manifest is malformed"
+        (
+            cd "$snap"
+            sha256sum -c schema17-transition.sha256 >/dev/null
+        ) || die "schema17 transition marker checksum failed"
+
+        declare -A schema17_values=()
+        while IFS=$'\t' read -r transition_key transition_value transition_extra; do
+            [[ -n "$transition_key" && -n "$transition_value" && -z "${transition_extra:-}" ]] \
+                || die "malformed schema17 transition marker"
+            case "$transition_key" in
+                transition-version|mode|source-schema-version|bridge-schema-version|target-release-commit|target-release-tree|agent-state-root|created-at-utc) ;;
+                *) die "unknown schema17 transition key: $transition_key" ;;
+            esac
+            [[ -z "${schema17_values[$transition_key]+x}" ]] \
+                || die "duplicate schema17 transition key: $transition_key"
+            schema17_values["$transition_key"]=$transition_value
+        done < "$snap/schema17-transition.tsv"
+        for transition_key in \
+            transition-version mode source-schema-version bridge-schema-version \
+            target-release-commit target-release-tree agent-state-root created-at-utc; do
+            [[ -n "${schema17_values[$transition_key]:-}" ]] \
+                || die "missing schema17 transition key: $transition_key"
+        done
+        [[ "${#schema17_values[@]}" -eq 8 ]] \
+            || die "schema17 transition marker has an unexpected key count"
+        [[ "${schema17_values[transition-version]}" == 1 ]] \
+            || die "unsupported schema17 transition version"
+        [[ "${schema17_values[mode]}" == bootstrap-schema17 ]] \
+            || die "invalid schema17 transition mode"
+        [[ "${schema17_values[source-schema-version]}" == 17 ]] \
+            || die "invalid schema17 source schema version"
+        [[ "${schema17_values[bridge-schema-version]}" == 20 ]] \
+            || die "invalid schema17 bridge schema version"
+        [[ "${schema17_values[target-release-commit]}" =~ ^[0-9a-f]{40,64}$ ]] \
+            || die "invalid schema17 release commit"
+        [[ "${schema17_values[target-release-tree]}" =~ ^[0-9a-f]{40,64}$ ]] \
+            || die "invalid schema17 release tree"
+        [[ "${schema17_values[agent-state-root]}" == "$AGENT_STATE_DIR" ]] \
+            || die "invalid schema17 agent state root"
+        [[ "${schema17_values[created-at-utc]}" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] \
+            || die "invalid schema17 creation time"
+        [[ "$target_release_commit" == "${schema17_values[target-release-commit]}" ]] \
+            || die "schema17 release commit does not match target provenance"
+        [[ "$target_release_tree" == "${schema17_values[target-release-tree]}" ]] \
+            || die "schema17 release tree does not match target provenance"
+        [[ "$snapshot_created_at" == "${schema17_values[created-at-utc]}" ]] \
+            || die "schema17 creation time does not match snapshot provenance"
+        PREFLIGHT_SCHEMA17_BRIDGE="$snap/transition-preflight/schema17-bridge"
+        ;;
     *) die "invalid snapshot transition state: $transition_state" ;;
 esac
 
@@ -814,6 +893,9 @@ fi
 
 validate_preflight_binary "$PREFLIGHT_PANEL" panel
 validate_preflight_binary "$PREFLIGHT_AGENT" agent
+if [[ "$transition_state" == schema17 ]]; then
+    validate_preflight_binary "$PREFLIGHT_SCHEMA17_BRIDGE" schema17-bridge
+fi
 case "$transition_state" in
     normal)
         CELIKPANEL_DATA_DIR="$snap" \
@@ -824,6 +906,11 @@ case "$transition_state" in
         CELIKPANEL_DATA_DIR="$snap" \
             "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
             || die "verified pre-ledger snapshot database is not exact schema version 20"
+        ;;
+    schema17)
+        "$PREFLIGHT_SCHEMA17_BRIDGE" check \
+            --db "$snap/$(basename "$PANEL_DB")" \
+            || die "verified schema17 snapshot database is not exact schema version 17"
         ;;
 esac
 
@@ -868,7 +955,7 @@ fi
 # yalnız agent ledger'ı, paket-yöneticisi kanıtı ve ortak flock ayrıcalıklı host
 # mutasyonunun yarışamayacağını veya sessizce unutulamayacağını kanıtlar.
 current_transition_phase=normal
-if [[ "$transition_state" == pre-ledger ]]; then
+if [[ "$transition_state" == pre-ledger || "$transition_state" == schema17 ]]; then
     if [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]]; then
         current_transition_phase=pre-ledger-legacy
     else
@@ -922,7 +1009,8 @@ esac
 # Ledger öncesi hedefte özel agent durum dizini yoktu. Beklenmeyen yükseltme
 # sonrası durumunu silmeyi reddet; bilinen tek geçiş ürünü kalıcı servis-mutasyon
 # ledger'ıdır.
-if [[ "$transition_state" == pre-ledger && ( -e "$AGENT_STATE_DIR" || -L "$AGENT_STATE_DIR" ) ]]; then
+if [[ ( "$transition_state" == pre-ledger || "$transition_state" == schema17 ) && \
+      ( -e "$AGENT_STATE_DIR" || -L "$AGENT_STATE_DIR" ) ]]; then
     [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]] \
         || die "current private agent state path is unsafe"
     unexpected_agent_state=$(
@@ -951,19 +1039,29 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     rm -rf -- "$WEB_DIR"
     cp -a "$snap/web" "$WEB_DIR"
 
-    # The trusted current panel performs the SQLite restore, including sidecar
-    # quarantine and atomic durable replacement. Shell never removes/copies DB bytes.
-    # SQLite geri yüklemesini sidecar karantinası ve atomik dayanıklı değiştirme dahil
-    # güvenilir güncel panel yapar. Shell DB baytlarını asla silmez/kopyalamaz.
-    CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$PREFLIGHT_PANEL" \
-        --restore-service-operation-snapshot="$snap/$(basename "$PANEL_DB")" \
-        --snapshot-schema="$transition_state" \
-        --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
-        --release-transaction-token="$rollback_transaction_token" \
-        --release-transaction-operation=rollback \
-        --release-transaction-snapshot="$snapshot_name" \
-        || die "trusted database restore was not confirmed; it may be committed-but-unconfirmed, retry this exact snapshot"
+    # A manifest-verified release helper performs the SQLite restore, including
+    # sidecar handling and atomic durable replacement. Shell never copies DB bytes.
+    # SQLite geri yüklemesini sidecar yönetimi ve atomik dayanıklı değiştirme dahil
+    # manifest ile doğrulanmış sürüm yardımcısı yapar. Shell DB baytlarını kopyalamaz.
+    if [[ "$transition_state" == schema17 ]]; then
+        release_txn_validate_active_token \
+            "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+            || die "active rollback marker changed before exact schema17 restore"
+        "$PREFLIGHT_SCHEMA17_BRIDGE" restore \
+            --db "$PANEL_DB" \
+            --snapshot "$snap/$(basename "$PANEL_DB")" \
+            || die "trusted schema17 database restore was not confirmed; it may be committed-but-unconfirmed, retry this exact snapshot"
+    else
+        CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+            "$PREFLIGHT_PANEL" \
+            --restore-service-operation-snapshot="$snap/$(basename "$PANEL_DB")" \
+            --snapshot-schema="$transition_state" \
+            --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
+            --release-transaction-token="$rollback_transaction_token" \
+            --release-transaction-operation=rollback \
+            --release-transaction-snapshot="$snapshot_name" \
+            || die "trusted database restore was not confirmed; it may be committed-but-unconfirmed, retry this exact snapshot"
+    fi
 
     # Restore the paired durable ledger. A pre-ledger target removes the now-empty
     # private directory so the one-time bootstrap can be retried exactly.
@@ -1074,6 +1172,16 @@ case "$transition_state" in
             "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
             || die "restored pre-ledger agent state is not idle under the release lock"
         ;;
+    schema17)
+        "$PREFLIGHT_SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
+            || die "restored schema17 panel database is not exact schema version 17"
+        [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+            || die "schema17 rollback unexpectedly restored an agent ledger"
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+            CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+            "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
+            || die "restored schema17 agent state is not idle under the release lock"
+        ;;
 esac
 
 find "$BIN_DIR" "$WEB_DIR" -type f -exec sync -f -- {} \; \
@@ -1137,6 +1245,10 @@ case "$transition_state" in
             "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
             || die "restored pre-ledger panel database changed during controlled start"
         ;;
+    schema17)
+        "$PREFLIGHT_SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
+            || die "restored schema17 panel database changed during controlled start"
+        ;;
 esac
 sync -f -- "$PANEL_DB" "$(dirname "$PANEL_DB")" \
     || die "restored panel database final state could not be made durable"
@@ -1158,6 +1270,12 @@ case "$transition_state" in
             CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
             "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
             || die "restored pre-ledger agent state changed during controlled starts"
+        ;;
+    schema17)
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+            CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+            "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
+            || die "restored schema17 agent state changed during controlled starts"
         ;;
 esac
 

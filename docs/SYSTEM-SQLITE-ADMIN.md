@@ -43,7 +43,7 @@ Unknown IDs are rejected.
 | `panel` | CelikPanel state | `/var/lib/celikpanel/celikpanel.db` | inventory and check; snapshot and optimize remain withheld until recent re-authentication exists |
 | `powerdns` | PowerDNS authoritative data | `/var/lib/powerdns/pdns.sqlite3` | inventory, check, snapshot download, optimize |
 | `roundcube` | Roundcube application state | `/var/lib/celikpanel-webmail/db/roundcube.sqlite3` | inventory, check, snapshot download, optimize |
-| `component-catalog` | Component, add-on, and application catalog | `/usr/share/celikpanel/manifests/components-v2.db` | inventory, check, snapshot download |
+| `component-catalog` | Signed component operation manifest/catalog (not Store offerings or entitlements) | `/usr/share/celikpanel/manifests/components-v2.db` | inventory, check, snapshot download |
 
 The locations are agent policy and may be represented by a diagnostic hint.
 They are not editable request fields. Environment-specific overrides remain a
@@ -158,6 +158,10 @@ control-plane database until recent re-authentication is implemented.
 DNS records must still be changed through the DNS workflow, mail and webmail
 state through the mail workflow, and panel settings through their typed panel
 handlers. The SQLite page is not a shortcut around those product boundaries.
+Store offerings, their component bindings, and subscription entitlements live
+in the `panel` database and are managed through **Add-ons → Catalog
+management** and the typed Store/entitlement APIs. They are not rows in
+`component-catalog`; the System SQLite page deliberately does not edit them.
 
 ## Deliberately excluded
 
@@ -184,8 +188,9 @@ current release:
 - configurable retention and lower per-installation limits beneath the fixed
   safety ceiling and free-space floor
 - an append-only agent audit ledger outside `celikpanel.db`
-- detached-signature and anti-replay verification surfaced for component
-  catalog artifacts
+- detached-signature and anti-replay verification status surfaced in the
+  System SQLite maintenance view for component catalog artifacts (Manifest V2
+  verification exists, but production runtime activation remains pending)
 - a maintenance-mode restore workflow with service quiescence, atomic
   replacement, readiness checks, and rollback
 - a separate tenant-scoped design for customer-created SQLite databases

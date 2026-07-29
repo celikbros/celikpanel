@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Package, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { Loader2, Package, RefreshCw, Settings2, ShoppingBag } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { Button, Card, EmptyState, ErrorBanner, PageHeader, inputClass } from './ui';
+import { useAuth } from '../auth/AuthContext';
+import { StoreCatalogAdmin } from './StoreCatalogAdmin';
 import {
     StoreCatalog,
     type StoreEntitlementState,
@@ -66,6 +69,13 @@ const STORE_ACTIONS = new Set<StoreItemAction>([
 
 export function AddonsPage() {
     const { t, locale } = useI18n();
+    const { role } = useAuth();
+    const isAdmin = role === 'admin';
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [adminView, setAdminView] = useState<'store' | 'catalog'>(() => (
+        isAdmin && searchParams.get('view') === 'catalog' ? 'catalog' : 'store'
+    ));
+    const [catalogDirty, setCatalogDirty] = useState(false);
     const [subscriptions, setSubscriptions] = useState<StoreSubscriptionView[]>([]);
     const [selected, setSelected] = useState<number | null>(null);
     const [items, setItems] = useState<StoreItemView[]>([]);
@@ -187,6 +197,35 @@ export function AddonsPage() {
     };
 
     const selectedSubscription = subscriptions.find((subscription) => subscription.id === selected) ?? null;
+    const changeAdminView = (next: 'store' | 'catalog') => {
+        if (next === adminView) return true;
+        if (adminView === 'catalog' && catalogDirty && !window.confirm(t('addons.admin.discardConfirm'))) {
+            return false;
+        }
+        setAdminView(next);
+        const nextSearchParams = new URLSearchParams(searchParams);
+        if (next === 'catalog') nextSearchParams.set('view', 'catalog');
+        else nextSearchParams.delete('view');
+        setSearchParams(nextSearchParams, { replace: true });
+        return true;
+    };
+    const moveAdminTab = (
+        event: KeyboardEvent<HTMLButtonElement>,
+        next: 'store' | 'catalog',
+    ) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' &&
+            event.key !== 'Home' && event.key !== 'End') return;
+        event.preventDefault();
+        const target = event.key === 'Home'
+            ? 'store'
+            : event.key === 'End'
+                ? 'catalog'
+                : next;
+        if (!changeAdminView(target)) return;
+        window.requestAnimationFrame(() => {
+            document.getElementById(`addons-${target}-tab`)?.focus();
+        });
+    };
 
     return (
         <div className="p-4 sm:p-6 md:p-8">
@@ -194,7 +233,7 @@ export function AddonsPage() {
                 title={t('addons.title')}
                 subtitle={t('addons.subtitle')}
                 breadcrumb={[t('common.home'), t('addons.title')]}
-                actions={selected != null ? (
+                actions={adminView === 'store' && selected != null ? (
                     <Button
                         icon={RefreshCw}
                         disabled={loadingStore || busyItemIDs.size > 0}
@@ -205,10 +244,51 @@ export function AddonsPage() {
                 ) : undefined}
             />
 
-            {loadingSubscriptions ? (
-                <StoreLoading />
+            {isAdmin && (
+                <Card className="mb-4">
+                    <div className="flex flex-wrap gap-2 p-2" role="tablist" aria-label={t('addons.admin.viewLabel')}>
+                        <button
+                            id="addons-store-tab"
+                            type="button"
+                            role="tab"
+                            aria-selected={adminView === 'store'}
+                            aria-controls="addons-store-panel"
+                            tabIndex={adminView === 'store' ? 0 : -1}
+                            onKeyDown={(event) => moveAdminTab(event, 'catalog')}
+                            onClick={() => { changeAdminView('store'); }}
+                            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${adminView === 'store' ? 'bg-primary text-primary-fg' : 'text-fg-muted hover:bg-surface-2 hover:text-fg'}`}
+                        >
+                            <ShoppingBag className="h-4 w-4" />
+                            {t('addons.admin.storeTab')}
+                        </button>
+                        <button
+                            id="addons-catalog-tab"
+                            type="button"
+                            role="tab"
+                            aria-selected={adminView === 'catalog'}
+                            aria-controls="addons-catalog-panel"
+                            tabIndex={adminView === 'catalog' ? 0 : -1}
+                            onKeyDown={(event) => moveAdminTab(event, 'store')}
+                            onClick={() => { changeAdminView('catalog'); }}
+                            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${adminView === 'catalog' ? 'bg-primary text-primary-fg' : 'text-fg-muted hover:bg-surface-2 hover:text-fg'}`}
+                        >
+                            <Settings2 className="h-4 w-4" />
+                            {t('addons.admin.catalogTab')}
+                        </button>
+                    </div>
+                </Card>
+            )}
+
+            {isAdmin && adminView === 'catalog' ? (
+                <div id="addons-catalog-panel" role="tabpanel" aria-labelledby="addons-catalog-tab">
+                    <StoreCatalogAdmin onDirtyChange={setCatalogDirty} />
+                </div>
+            ) : loadingSubscriptions ? (
+                <div id={isAdmin ? 'addons-store-panel' : undefined} role={isAdmin ? 'tabpanel' : undefined} aria-labelledby={isAdmin ? 'addons-store-tab' : undefined}>
+                    <StoreLoading />
+                </div>
             ) : subscriptionsError ? (
-                <div className="space-y-4">
+                <div id={isAdmin ? 'addons-store-panel' : undefined} role={isAdmin ? 'tabpanel' : undefined} aria-labelledby={isAdmin ? 'addons-store-tab' : undefined} className="space-y-4">
                     <ErrorBanner error={subscriptionsError} />
                     <EmptyState
                         icon={Package}
@@ -217,9 +297,11 @@ export function AddonsPage() {
                     />
                 </div>
             ) : subscriptions.length === 0 ? (
-                <EmptyState icon={Package} title={t('addons.noSubs')} hint={t('addons.noSubsHint')} />
+                <div id={isAdmin ? 'addons-store-panel' : undefined} role={isAdmin ? 'tabpanel' : undefined} aria-labelledby={isAdmin ? 'addons-store-tab' : undefined}>
+                    <EmptyState icon={Package} title={t('addons.noSubs')} hint={t('addons.noSubsHint')} />
+                </div>
             ) : (
-                <div className="space-y-4">
+                <div id={isAdmin ? 'addons-store-panel' : undefined} role={isAdmin ? 'tabpanel' : undefined} aria-labelledby={isAdmin ? 'addons-store-tab' : undefined} className="space-y-4">
                     <Card>
                         <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                             <label htmlFor="store-subscription" className="text-sm font-semibold text-fg">
@@ -269,7 +351,7 @@ function StoreLoading() {
     const { t } = useI18n();
     return (
         <Card>
-            <div className="flex min-h-64 flex-col items-center justify-center px-6 py-14 text-center">
+            <div className="flex min-h-64 flex-col items-center justify-center px-6 py-14 text-center" role="status" aria-live="polite">
                 <Loader2 className="h-9 w-9 animate-spin text-primary" />
                 <h2 className="mt-4 text-base font-semibold text-fg">{t('addons.loadingTitle')}</h2>
                 <p className="mt-1 text-sm text-fg-muted">{t('addons.loadingHint')}</p>

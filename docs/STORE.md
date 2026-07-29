@@ -178,6 +178,40 @@ Valid examples:
 
 ## Catalog maintenance
 
+Administrators manage existing Store presentation and component bindings from
+**Add-ons → Catalog management**. This is a typed view over the same panel
+SQLite database used by the Store; it is not a SQL editor and it is not the
+separate signed component-operation catalog.
+
+```text
+GET   /api/v1/admin/store-catalog
+PATCH /api/v1/admin/store-catalog/{offering_id}
+```
+
+The admin view may update only category, vendor, lifecycle state, bilingual
+presentation metadata, sort order, and existing managed-component bindings.
+Offering ID, kind, entitlement mode, and management path are read-only. The UI
+cannot create or physically delete an offering. New immutable offering
+definitions and publishing transitions are release-managed and require a new
+migration/signed release; an administrator cannot change `coming_soon` or
+`retired` back to `available` in the browser.
+
+Changing `available` to `coming_soon` or `retired` can make current
+entitlements unusable. The API returns the active-entitlement count and, when
+that count is non-zero, requires the typed
+`acknowledge_entitlement_impact: true` field in addition to the UI
+confirmation. The mutation, explicit impact acknowledgement/count, bounded
+changed-field summary, and canonical before/after SHA-256 fingerprints are
+committed with one audit record. Every edit carries `expected_updated_at`; a different
+stale edit is refused with HTTP 409 and reloaded. An exact canonical retry is
+an idempotent success that does not rewrite `updated_at` or duplicate audit.
+
+Install/start/stop/remove recipes, package commands, raw SQL, and filesystem
+paths are never returned to or accepted from this interface. The page shows
+only a read-only release policy summary. Signed Manifest V2 verification is
+implemented, while production runtime activation remains pending; the UI does
+not claim that signed operation execution is already active.
+
 The migration seeds only honest states:
 
 - released offerings are marked `available`;
@@ -185,7 +219,7 @@ The migration seeds only honest states:
 - no fake prices are stored;
 - component requirements are explicit typed rows.
 
-To add or change an offering:
+To add a new offering or change an immutable/release-managed field:
 
 1. Add a new migration; do not edit a migration already deployed.
 2. Set the typed lifecycle, entitlement mode, category, vendor, and safe
@@ -197,5 +231,6 @@ To add or change an offering:
 6. Verify `go test`, `go vet`, the web build, and the Store UI before release.
 
 Direct SQLite editing is an emergency procedure, not the normal admin
-interface. Use the Store and entitlement APIs so authorization, validation,
+interface. Use **Catalog management**, the Store projection, and entitlement
+APIs so authorization, strict validation, optimistic concurrency,
 idempotency, and audit logging remain enforced.

@@ -159,10 +159,56 @@ product's controlled one-shot initializer alone creates the ledger; normal
 panel and agent startup cannot substitute for that initializer. After one
 successful transition, every later release uses `--normal`.
 
-### 4.3 Snapshot contract
+### 4.3 One-time exact schema-17 bridge
 
-The pre-ledger release requires **snapshot contract v4** so rollback preserves
-the private agent state and whether the legacy ledger was absent.
+Use `--bootstrap-schema17` only for the last known pre-ledger database shape:
+an exact, contiguous migration ledger `1..17`, no object or column partially
+introduced by migrations 18 through 22, and no private agent mutation ledger.
+The maximum migration number alone is not sufficient proof. Before selecting
+this mode, collect read-only live evidence. This query is only an initial screen;
+its expected output is `17|1|17|153`:
+
+```bash
+sudo /usr/bin/sqlite3 -readonly /var/lib/celikpanel/celikpanel.db \
+  'PRAGMA query_only=ON; SELECT count(*), min(version), max(version), sum(version) FROM schema_migrations;'
+sudo test ! -e /var/lib/celikpanel-agent-private/service-mutations.json
+```
+
+If the query cannot be run, has any other result, or the ledger exists, stop.
+Do not infer compatibility and do not run SQL manually. The immutable release's
+dedicated `schema17-bridge` performs the authoritative read-only ledger, object,
+column, integrity and foreign-key proof before quiesce becomes active. Unknown,
+newer, gapped or partial shapes fail closed before database mutation.
+
+From the prepared clean checkout, run:
+
+```bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./bootstrap-update.sh --bootstrap-schema17
+```
+
+The updater proves exact schema 17 before quiesce, while both coordinators are
+frozen, and again after they are stopped. It then creates and durably publishes
+a complete v4 exact-17 snapshot. Only after that publication may the dedicated
+helper apply the allowlisted migrations 18, 19 and 20. The ordinary pre-ledger
+bootstrap then creates the agent ledger, installs the verified release and runs
+the remaining migrations offline. After a successful bridge, every later
+release uses `--normal`; neither schema bootstrap mode is a repair switch.
+
+If any post-mutation step fails, the updater intentionally leaves the release
+transaction active and both coordinators stopped. Do not edit the database,
+delete transaction markers, start either service manually, or hand the lock to
+another process. Run only the exact trusted rollback command printed by the
+failed update. That rollback verifies the complete snapshot manifest and uses
+the snapshot-carried `schema17-bridge` to atomically restore exact schema 17.
+
+### 4.4 Snapshot contract
+
+The pre-ledger and exact-schema17 releases require **snapshot contract v4** so
+rollback preserves the private agent state, whether the legacy ledger was
+absent, and the exact transition-specific checker set.
 `update.sh` and `rollback.sh` must both declare support for v4 before this
 release is deployable. Do not mix snapshot contract versions, copy snapshot
 internals by hand, or use a rollback script from a different release.
@@ -223,6 +269,8 @@ rollback must not reinterpret unit presence as user consent.
 ## 7. Development checks
 
 - **Builds:** `go test ./...`, `go vet ./...`, and `cd web && npm run build`.
+- **Release contracts:** `bash deploy/test-bootstrap-update-contract.sh` and
+  `bash deploy/test-schema17-bridge-contract.sh`.
 - **Visual verification:** `tools/dev-preview/preview-server.py` serves
   `web/dist` behind a schema-faithful stub. Use `FRESH=1` and
   `FIREWALL=on/off` only for development previews.

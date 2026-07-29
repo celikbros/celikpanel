@@ -45,6 +45,8 @@ type storeOffering struct {
 	ManagePath      string
 	Metadata        storeMetadata
 	ComponentIDs    []string
+	SortOrder       int
+	UpdatedAt       string
 }
 
 type storePrimaryAction struct {
@@ -110,7 +112,7 @@ func decodeStoreMetadata(raw string) (storeMetadata, error) {
 func (p *Panel) loadStoreOfferings(ctx context.Context, onlyID string) ([]storeOffering, error) {
 	query := `
 		SELECT id, kind, category, vendor, release_state, entitlement_mode,
-		       COALESCE(manage_path, ''), metadata_json
+		       COALESCE(manage_path, ''), metadata_json, sort_order, updated_at
 		FROM store_offerings`
 	args := []any{}
 	if onlyID != "" {
@@ -130,7 +132,8 @@ func (p *Panel) loadStoreOfferings(ctx context.Context, onlyID string) ([]storeO
 		var offering storeOffering
 		var rawMetadata string
 		if err := rows.Scan(&offering.ID, &offering.Kind, &offering.Category, &offering.Vendor,
-			&offering.ReleaseState, &offering.EntitlementMode, &offering.ManagePath, &rawMetadata); err != nil {
+			&offering.ReleaseState, &offering.EntitlementMode, &offering.ManagePath, &rawMetadata,
+			&offering.SortOrder, &offering.UpdatedAt); err != nil {
 			return nil, err
 		}
 		offering.Metadata, err = decodeStoreMetadata(rawMetadata)
@@ -545,6 +548,8 @@ func parseStoreQuery(r *http.Request) (int, string, error) {
 // görünümünü sunar. Asla bileşen kurmaz ve host agent'ını çağırmaz.
 func (p *Panel) handleStore(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("Pragma", "no-cache")
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
