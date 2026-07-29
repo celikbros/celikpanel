@@ -5,7 +5,9 @@ import { showToast } from './Toast';
 import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
 import { useI18n } from '../i18n';
+import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, EmptyState, StatusDot } from './ui';
+import { SystemSQLiteManager } from './SystemSQLiteManager';
 
 // One API surface (B1, Jul 18): the former /api/v2 lives under /api/v1 now.
 // Tek API yüzeyi (B1, 18 Tem): eski /api/v2 artık /api/v1 altında.
@@ -48,7 +50,10 @@ interface DatabaseUser {
 // dilimizde Veritabanları ve Kullanıcılar tabloları vardır.
 export function DatabaseManagementV2() {
     const { t } = useI18n();
+    const { role } = useAuth();
     const navigate = useNavigate();
+    const isAdmin = role === 'admin';
+    const [scopeTab, setScopeTab] = useState<'hosted' | 'system'>('hosted');
     const [servers, setServers] = useState<DatabaseServer[]>([]);
     const [selectedServer, setSelectedServer] = useState<DatabaseServer | null>(null);
     const [activeTab, setActiveTab] = useState<'databases' | 'users'>('databases');
@@ -134,6 +139,25 @@ export function DatabaseManagementV2() {
                 subtitle={t('databases.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.databases')]}
             />
+
+            {isAdmin && (
+                <div className={'mb-5 flex items-center gap-1 border-b border-border'}>
+                    <ScopeTab
+                        active={scopeTab === 'hosted'}
+                        label={t('databases.scope.hosted')}
+                        onClick={() => setScopeTab('hosted')}
+                    />
+                    <ScopeTab
+                        active={scopeTab === 'system'}
+                        label={t('databases.scope.system')}
+                        onClick={() => setScopeTab('system')}
+                    />
+                </div>
+            )}
+
+            {isAdmin && scopeTab === 'system' && <SystemSQLiteManager />}
+
+            <div className={isAdmin && scopeTab === 'system' ? 'hidden' : ''}>
 
             {/* No engine installed → the honest guidance, not a blank page.
                 Databases are served by MariaDB/PostgreSQL; with neither
@@ -309,7 +333,22 @@ export function DatabaseManagementV2() {
                     }}
                 />
             )}
+            </div>
         </div>
+    );
+}
+
+function ScopeTab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+    return (
+        <button
+            type={'button'}
+            onClick={onClick}
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                active ? 'border-primary text-primary' : 'border-transparent text-fg-muted hover:text-fg'
+            }`}
+        >
+            {label}
+        </button>
     );
 }
 

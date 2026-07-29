@@ -9,6 +9,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/parser"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/systemd"
+	"github.com/alicelik/celikpanel/internal/systemsqlite"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"log"
 	"net/rpc"
@@ -24,6 +25,7 @@ type Agent struct {
 	nginxGen    *services.NginxGenerator
 	phpManager  *services.PHPFPMManager
 	userManager *services.UserManager
+	sqliteAdmin *systemsqlite.Manager
 }
 
 // RPC Methods Implementation
@@ -249,6 +251,15 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 }
 
 func main() {
+	// The hidden owner worker exits before any root-only manager, watcher, socket, or background task starts.
+	// Gizli sahip çalışanı, root'a özel yönetici, izleyici, soket veya arka plan görevi başlamadan çıkar.
+	if handled, err := handleSystemSQLiteOwnerWorker(); handled {
+		if err != nil {
+			log.Printf("Isolated SQLite worker failed: %v", err)
+			os.Exit(1)
+		}
+		return
+	}
 	log.Println("Starting CelikPanel Agent...")
 	// The unit preflight validates the exact restore batch with nft --check and
 	// exits before the privileged RPC socket or background workers are opened.
@@ -356,6 +367,17 @@ func main() {
 	// Initialize User Manager
 	userMgr := services.NewUserManager()
 
+	// Initialize the fixed system SQLite inventory and private snapshot registry.
+	// Sabit sistem SQLite envanterini ve özel anlık görüntü kaydını başlat.
+	sqliteAdmin, err := newSystemSQLiteManager()
+	if err != nil {
+		// Keep the core agent available when only the optional SQLite maintenance feature cannot start.
+		// Yalnızca isteğe bağlı SQLite bakım özelliği başlatılamadığında ana ajanı kullanılabilir tut.
+		log.Printf("Warning: system SQLite administration is unavailable")
+	} else {
+		defer sqliteAdmin.Close()
+	}
+
 	// Initialize Agent
 	agent := &Agent{
 		watcher:     w,
@@ -364,6 +386,7 @@ func main() {
 		nginxGen:    nginxGen,
 		phpManager:  phpMgr,
 		userManager: userMgr,
+		sqliteAdmin: sqliteAdmin,
 	}
 
 	// Register RPC

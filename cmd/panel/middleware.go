@@ -126,6 +126,9 @@ func isPublicPath(r *http.Request) bool {
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
 // rotaları bilerek listelenmemiştir.
 func isAdminOnlyPath(path string) bool {
+	if path == "/api/v1/system-databases" || strings.HasPrefix(path, "/api/v1/system-databases/") {
+		return true
+	}
 	// /api/v2/ is deliberately NOT here anymore (B1 role split, Jul 17):
 	// its DB/user/grant endpoints are tenant-scoped inside their handlers
 	// (callerSubscriptionID + canAccessDBServer); only SERVER REGISTRATION
