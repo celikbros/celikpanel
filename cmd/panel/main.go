@@ -507,6 +507,13 @@ func main() {
 	http.HandleFunc("/api/v1/mail/policy", panel.handleMailPolicy)
 	http.HandleFunc("/api/v1/apps", panel.handleAppCatalog)
 
+	// System SQLite maintenance is a fixed-ID, administrator-only surface.
+	// Sistem SQLite bakımı, sabit kimlikli ve yalnız yöneticiye açık bir yüzeydir.
+	// It never accepts filesystem paths or arbitrary SQL from the browser.
+	// Tarayıcıdan hiçbir zaman dosya yolu ya da keyfi SQL kabul etmez.
+	http.HandleFunc("/api/v1/system-databases", panel.handleSystemSQLiteDatabases)
+	http.HandleFunc("/api/v1/system-databases/", panel.handleSystemSQLiteDatabaseAction)
+
 	// Node runtime management (admin-only via isAdminOnlyPath)
 	// Node runtime yönetimi (isAdminOnlyPath ile yalnızca admin)
 	http.HandleFunc("/api/v1/runtimes/node", panel.handleNodeRuntimes)
