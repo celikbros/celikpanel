@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -82,10 +84,17 @@ func (p *Panel) handleAppInstall(w http.ResponseWriter, r *http.Request, domainI
 	// "app_installer" hakkını tutmalı (yöneticiler atlar). Bu, ürün
 	// katmanının tiyatro olmadığını kanıtlayan tek gerçek uygulama noktası —
 	// ver, kurulumlar çalışır; geri al, 402 ile engellenir.
-	if subID, err := p.domainSubscriptionID(r.Context(), domainID); err == nil {
-		if !p.requireEntitlement(w, r, subID, "app_installer") {
-			return
-		}
+	subID, err := p.domainSubscriptionID(r.Context(), domainID)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeClientError(w, http.StatusNotFound, "domain not found")
+		return
+	}
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if !p.requireEntitlement(w, r, subID, "app_installer") {
+		return
 	}
 
 	docroot, err := p.siteDocroot(r.Context(), domainID)

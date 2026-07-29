@@ -308,6 +308,8 @@ func main() {
 	http.HandleFunc("/api/v1/subscriptions", panel.handleSubscriptions)
 	http.HandleFunc("/api/v1/subscriptions/", panel.handleSubscriptionEntitlements)
 	http.HandleFunc("/api/v1/products", panel.handleProducts)
+	http.HandleFunc("/api/v1/store", panel.handleStore)
+	http.HandleFunc("/api/v1/store/", panel.handleStore)
 	http.HandleFunc("/api/v1/audit-logs", panel.handleAuditLogs)
 	http.HandleFunc("/api/v1/dashboard", panel.handleDashboard)
 	http.HandleFunc("/api/v1/auth/password", panel.handleChangeOwnPassword)
