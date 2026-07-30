@@ -29,6 +29,16 @@ func (f fakeNameserverSetResolver) LookupNS(_ context.Context, zone string) ([]*
 	return out, nil
 }
 
+type fakeNameserverHostResolver map[string][]string
+
+func (f fakeNameserverHostResolver) LookupHost(_ context.Context, host string) ([]string, error) {
+	addrs, ok := f[canonicalDNSName(host)]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return append([]string(nil), addrs...), nil
+}
+
 type CompensationDNSClusterRequest struct {
 	Role   string
 	PeerIP string
@@ -125,6 +135,196 @@ func TestDNSClusterGETDoesNotPresentUnconfiguredModeAsStandalone(t *testing.T) {
 	}
 	if len(got.Steps) != 0 {
 		t.Fatalf("fresh DNS cluster exposed setup steps for an unsaved mode: %+v", got.Steps)
+	}
+}
+
+func TestSuggestDNSClusterPeerRequiresUnambiguousSavedPair(t *testing.T) {
+	const (
+		frankfurtIP = "72.62.38.15"
+		bostonIP    = "2.25.80.4"
+		ns1         = "ns1.celikhost.com"
+		ns2         = "ns2.celikhost.com"
+	)
+	tests := []struct {
+		name                    string
+		serverIP                string
+		facts                   []nameserverFact
+		wantLocal, wantPeer, ip string
+	}{
+		{
+			name: "Boston derives ns2 as local", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP}},
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+			},
+			wantLocal: ns2, wantPeer: ns1, ip: frankfurtIP,
+		},
+		{
+			name: "Frankfurt derives ns1 as local", serverIP: frankfurtIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP}, PointsHere: true},
+				{Host: ns2, IPs: []string{bostonIP}},
+			},
+			wantLocal: ns1, wantPeer: ns2, ip: bostonIP,
+		},
+		{
+			name: "duplicate equivalent peer answers are one canonical IPv4", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP, "::ffff:72.62.38.15"}},
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+			},
+			wantLocal: ns2, wantPeer: ns1, ip: frankfurtIP,
+		},
+		{
+			name: "both names point here", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{bostonIP}, PointsHere: true},
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+			},
+		},
+		{
+			name: "neither name points here", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP}},
+				{Host: ns2, IPs: []string{"198.51.100.2"}},
+			},
+		},
+		{
+			name: "peer has multiple distinct IPv4 answers", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP, "198.51.100.3"}},
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+			},
+		},
+		{
+			name: "peer canonical IPv4 is local address", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{"::ffff:2.25.80.4"}},
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+			},
+		},
+		{
+			name: "points-here marker lacks local IPv4", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP}},
+				{Host: ns2, IPs: []string{"2001:db8::2"}, PointsHere: true},
+			},
+		},
+		{
+			name: "facts do not contain both saved names", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns1, IPs: []string{frankfurtIP}},
+				{Host: "ns3.celikhost.com", IPs: []string{bostonIP}, PointsHere: true},
+			},
+		},
+		{
+			name: "duplicate fact name", serverIP: bostonIP,
+			facts: []nameserverFact{
+				{Host: ns2, IPs: []string{bostonIP}, PointsHere: true},
+				{Host: ns2, IPs: []string{frankfurtIP}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			local, peer, peerIP := suggestDNSClusterPeer(tt.serverIP, ns1, ns2, tt.facts)
+			if local != tt.wantLocal || peer != tt.wantPeer || peerIP != tt.ip {
+				t.Fatalf("suggestion = (%q, %q, %q), want (%q, %q, %q)",
+					local, peer, peerIP, tt.wantLocal, tt.wantPeer, tt.ip)
+			}
+		})
+	}
+}
+
+func TestDNSClusterGETSuggestsSavedPairWithoutMutatingSettings(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "2.25.80.4")
+	p := newDNSPanelForTest(t)
+	ctx := context.Background()
+	for key, value := range map[string]string{
+		settingNS1: "ns1.celikhost.com",
+		settingNS2: "ns2.celikhost.com",
+	} {
+		if err := p.setSetting(ctx, key, value); err != nil {
+			t.Fatalf("save %s: %v", key, err)
+		}
+	}
+
+	previousResolvers := nameserverResolvers
+	nameserverResolvers = []hostResolver{fakeNameserverHostResolver{
+		"ns1.celikhost.com": {"72.62.38.15"},
+		"ns2.celikhost.com": {"2.25.80.4"},
+	}}
+	t.Cleanup(func() { nameserverResolvers = previousResolvers })
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/dns-cluster", nil)
+	req = req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
+	recorder := httptest.NewRecorder()
+	p.handleDNSCluster(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	var got dnsClusterView
+	if err := json.NewDecoder(recorder.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Configured || got.Role != "" {
+		t.Fatalf("read-only suggestion configured a mode: configured=%v role=%q", got.Configured, got.Role)
+	}
+	if got.SuggestedLocalNS != "ns2.celikhost.com" ||
+		got.SuggestedPeerNS != "ns1.celikhost.com" ||
+		got.SuggestedPeerIP != "72.62.38.15" {
+		t.Fatalf("unexpected suggestion: local=%q peer=%q peer_ip=%q", got.SuggestedLocalNS, got.SuggestedPeerNS, got.SuggestedPeerIP)
+	}
+	for _, key := range []string{settingDNSRole, settingDNSPeerIP, settingDNSPeerNS} {
+		if value := p.setting(ctx, key); value != "" {
+			t.Fatalf("GET mutated %s to %q", key, value)
+		}
+	}
+}
+
+func TestDNSClusterPUTRejectsLocalPeerWithStableCodeBeforeMutation(t *testing.T) {
+	for _, peerIP := range []string{"2.25.80.4", "::ffff:2.25.80.4"} {
+		t.Run(peerIP, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "2.25.80.4")
+			p := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, p, "standalone")
+			agent := &compensationDNSAgent{}
+			attachCompensationDNSAgent(t, p, agent)
+
+			recorder := httptest.NewRecorder()
+			p.handleDNSCluster(recorder, compensationAdminRequest(
+				`{"role":"paired","peer_ip":"`+peerIP+`","peer_ns":"ns1.celikhost.com"}`,
+			))
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400; body=%s", recorder.Code, recorder.Body.String())
+			}
+			var body apiErrorBody
+			if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+				t.Fatalf("decode error response: %v", err)
+			}
+			if body.Code != errCodeDNSClusterPeerIsLocal {
+				t.Fatalf("code = %q, want %q", body.Code, errCodeDNSClusterPeerIsLocal)
+			}
+
+			agent.mu.Lock()
+			callCount := len(agent.calls)
+			agent.mu.Unlock()
+			if callCount != 0 {
+				t.Fatalf("self-peer rejection reached the agent %d time(s)", callCount)
+			}
+			ctx := context.Background()
+			if role := p.setting(ctx, settingDNSRole); role != "standalone" {
+				t.Fatalf("stored role = %q, want unchanged standalone", role)
+			}
+			if peer := p.setting(ctx, settingDNSPeerIP); peer != "" {
+				t.Fatalf("stored peer IP mutated to %q", peer)
+			}
+			if peerNS := p.setting(ctx, settingDNSPeerNS); peerNS != "" {
+				t.Fatalf("stored peer NS mutated to %q", peerNS)
+			}
+		})
 	}
 }
 

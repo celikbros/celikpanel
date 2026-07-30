@@ -97,6 +97,9 @@ func nameserverAddressesForPlan(plan nameserverAddressPlan) ([]nameserverAddress
 	if !ok {
 		return nil, false, fmt.Errorf("the peer server has no usable IPv4 address")
 	}
+	if peerIPv4 == localIPv4 {
+		return nil, false, fmt.Errorf("the peer server cannot be this server")
+	}
 	for i := range addresses {
 		if addresses[i].name == peerNS {
 			addresses[i].ipv4 = peerIPv4

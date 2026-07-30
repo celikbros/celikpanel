@@ -101,10 +101,13 @@ func (p *Panel) dnsClusterAgentSnapshot(ctx context.Context) (dnsClusterAgentSta
 }
 
 type dnsClusterView struct {
-	Configured bool   `json:"configured"`
-	Role       string `json:"role"`
-	PeerIP     string `json:"peer_ip"`
-	PeerNS     string `json:"peer_ns"`
+	Configured       bool   `json:"configured"`
+	Role             string `json:"role"`
+	PeerIP           string `json:"peer_ip"`
+	PeerNS           string `json:"peer_ns"`
+	SuggestedLocalNS string `json:"suggested_local_ns,omitempty"`
+	SuggestedPeerNS  string `json:"suggested_peer_ns,omitempty"`
+	SuggestedPeerIP  string `json:"suggested_peer_ip,omitempty"`
 	// PeerReachable reports whether the other server actually answers DNS on
 	// port 53 from here. A cluster whose halves cannot reach each other is a
 	// cluster on paper only, and the operator should learn that on the settings
@@ -292,6 +295,83 @@ func normalizeDNSRole(role string) string {
 	}
 }
 
+// suggestDNSClusterPeer derives a draft paired-node topology only from the
+// operator's saved nameserver pair and live DNS facts. It deliberately returns
+// no suggestion when either name is ambiguous: a guess here could silently
+// configure the wrong machine as the peer.
+func suggestDNSClusterPeer(serverIP, ns1, ns2 string, facts []nameserverFact) (localNS, peerNS, peerIP string) {
+	localIPv4, ok := canonicalIPv4(serverIP)
+	if !ok || len(facts) != 2 {
+		return "", "", ""
+	}
+
+	ns1, ns2 = canonicalDNSName(ns1), canonicalDNSName(ns2)
+	if ns1 == "" || ns2 == "" || ns1 == ns2 {
+		return "", "", ""
+	}
+
+	saved := map[string]struct{}{ns1: {}, ns2: {}}
+	byName := make(map[string]nameserverFact, 2)
+	for _, fact := range facts {
+		name := canonicalDNSName(fact.Host)
+		if _, isSaved := saved[name]; !isSaved {
+			return "", "", ""
+		}
+		if _, duplicate := byName[name]; duplicate {
+			return "", "", ""
+		}
+		byName[name] = fact
+	}
+	if len(byName) != 2 {
+		return "", "", ""
+	}
+
+	localNames := make([]string, 0, 1)
+	for _, name := range []string{ns1, ns2} {
+		fact := byName[name]
+		if !fact.PointsHere {
+			continue
+		}
+		localAddressPresent := false
+		for _, rawIP := range fact.IPs {
+			if ip, valid := canonicalIPv4(rawIP); valid && ip == localIPv4 {
+				localAddressPresent = true
+				break
+			}
+		}
+		if !localAddressPresent {
+			return "", "", ""
+		}
+		localNames = append(localNames, name)
+	}
+	if len(localNames) != 1 {
+		return "", "", ""
+	}
+
+	localNS = localNames[0]
+	if localNS == ns1 {
+		peerNS = ns2
+	} else {
+		peerNS = ns1
+	}
+	peerAddresses := make(map[string]struct{})
+	for _, rawIP := range byName[peerNS].IPs {
+		if ip, valid := canonicalIPv4(rawIP); valid {
+			peerAddresses[ip] = struct{}{}
+		}
+	}
+	if len(peerAddresses) != 1 {
+		return "", "", ""
+	}
+	for ip := range peerAddresses {
+		if ip == localIPv4 {
+			return "", "", ""
+		}
+		peerIP = ip
+	}
+	return localNS, peerNS, peerIP
+}
+
 func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
@@ -315,6 +395,11 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		}
 		v.NS1, v.NS2 = p.serverNameservers(r.Context())
 		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
+		if savedNS1, savedNS2 := p.configuredNameservers(r.Context()); savedNS1 != "" && savedNS2 != "" {
+			v.SuggestedLocalNS, v.SuggestedPeerNS, v.SuggestedPeerIP = suggestDNSClusterPeer(
+				v.ServerIP, savedNS1, savedNS2, v.Facts,
+			)
+		}
 		peerPairVerified := false
 		if v.Configured && v.Role == "paired" && v.PeerIP != "" {
 			peerPairVerified = p.peerServesNameserverPair(r.Context(), v.PeerIP, v.NS1, v.NS2)
@@ -367,7 +452,7 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			// Bir sunucuyu kendine yöneltmek küme değildir; PowerDNS'i döngüde
 			// bildirim ve aktarım yapmaya sokar.
 			if req.PeerIP == localIPv4 {
-				writeClientError(w, http.StatusBadRequest, "the other server cannot be this server")
+				writeCodedError(w, http.StatusBadRequest, errCodeDNSClusterPeerIsLocal, "the other server cannot be this server", "")
 				return
 			}
 			if !strings.EqualFold(req.PeerNS, ns1) && !strings.EqualFold(req.PeerNS, ns2) {

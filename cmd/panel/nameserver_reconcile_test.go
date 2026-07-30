@@ -240,3 +240,16 @@ func TestNameserverAddressPlanRejectsIPv6ForARecords(t *testing.T) {
 		t.Fatal("IPv6 peer address was accepted for an A-record mapping")
 	}
 }
+
+func TestNameserverAddressPlanRejectsLocalAddressAsPeer(t *testing.T) {
+	for _, peerIP := range []string{"72.62.38.15", "::ffff:72.62.38.15"} {
+		t.Run(peerIP, func(t *testing.T) {
+			if _, _, err := nameserverAddressesForPlan(nameserverAddressPlan{
+				Role: "paired", NS1: "ns1.celikhost.com", NS2: "ns2.celikhost.com",
+				PeerNS: "ns2.celikhost.com", LocalIPv4: "72.62.38.15", PeerIPv4: peerIP,
+			}); err == nil {
+				t.Fatal("local server address was accepted as the peer A-record mapping")
+			}
+		})
+	}
+}

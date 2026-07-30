@@ -49,19 +49,20 @@ type apiErrorBody struct {
 // Stable refusal codes. Renaming one is an API break — don't.
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
-	errCodeInternal            = "INTERNAL"
-	errCodeAuthRequired        = "AUTH_REQUIRED"
-	errCodeAdminOnly           = "ADMIN_ONLY"
-	errCodeAccountSuspended    = "ACCOUNT_SUSPENDED"
-	errCodeDNSServerRequired   = "DNS_SERVER_REQUIRED"
-	errCodeDNSSettingsRequired = "DNS_SETTINGS_REQUIRED"
-	errCodeWebServerRequired   = "WEB_SERVER_REQUIRED"
-	errCodePHPRequired         = "PHP_REQUIRED"
-	errCodeNoSubscription      = "NO_SUBSCRIPTION"
-	errCodeQuotaDomains        = "QUOTA_DOMAINS_EXCEEDED"
-	errCodeQuotaDisk           = "QUOTA_DISK_EXCEEDED"
-	errCodeEntitlement         = "ENTITLEMENT_REQUIRED"
-	errCodeFirewallNoEngine    = "FIREWALL_ENGINE_MISSING"
+	errCodeInternal              = "INTERNAL"
+	errCodeAuthRequired          = "AUTH_REQUIRED"
+	errCodeAdminOnly             = "ADMIN_ONLY"
+	errCodeAccountSuspended      = "ACCOUNT_SUSPENDED"
+	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
+	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"
+	errCodeDNSClusterPeerIsLocal = "DNS_CLUSTER_PEER_IS_LOCAL"
+	errCodeWebServerRequired     = "WEB_SERVER_REQUIRED"
+	errCodePHPRequired           = "PHP_REQUIRED"
+	errCodeNoSubscription        = "NO_SUBSCRIPTION"
+	errCodeQuotaDomains          = "QUOTA_DOMAINS_EXCEEDED"
+	errCodeQuotaDisk             = "QUOTA_DISK_EXCEEDED"
+	errCodeEntitlement           = "ENTITLEMENT_REQUIRED"
+	errCodeFirewallNoEngine      = "FIREWALL_ENGINE_MISSING"
 	// POOL_IDENTITY_FIXED: the caller tried to set who an FPM pool runs as or
 	// which socket it answers on. Those are the panel's to decide — they are
 	// the boundary between tenants, not a setting — so the attempt is refused
