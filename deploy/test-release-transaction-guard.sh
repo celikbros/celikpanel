@@ -102,8 +102,8 @@ systemd_root=$tmp/systemd
 helper_parent=$tmp/usr-libexec
 helper_path=$helper_parent/celikpanel/release-transaction-start-guard
 mkdir -m 0700 -- "$transaction_root"
-mkdir -m 0755 -- "$runtime_parent" "$systemd_root" "$helper_parent" "$tmp/bin"
-chown root:root -- "$transaction_root" "$runtime_parent" "$systemd_root" "$helper_parent" "$tmp/bin"
+mkdir -m 0755 -- "$runtime_parent" "$systemd_root" "$tmp/bin"
+chown root:root -- "$transaction_root" "$runtime_parent" "$systemd_root" "$tmp/bin"
 : > "$transaction_root/transaction.lock"
 chown root:root -- "$transaction_root/transaction.lock"
 chmod 0600 -- "$transaction_root/transaction.lock"
@@ -176,6 +176,8 @@ export PATH
 
 release_txn_install_and_verify_unit_guards \
     "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+[[ "$(stat -Lc '%u %g %a' -- "$helper_parent")" == "0 0 755" ]] \
+    || fail "missing secure helper parent was not created safely"
 [[ "$(stat -Lc '%u %g %a %h' -- "$helper_path")" == "0 0 755 1" ]] \
     || fail "installed start guard metadata mismatch"
 cmp -s -- "$START_GUARD" "$helper_path" \

@@ -672,6 +672,33 @@ _release_txn_validate_secure_parent_directory() {
         || { _release_txn_fail "secure parent directory is group/other writable: $path"; return 1; }
 }
 
+# Some supported distributions do not create /usr/libexec until the first
+# package needs it. Create exactly one missing trusted level, but only below an
+# already canonical root-owned parent that is not group/other writable.
+# Bazı desteklenen dağıtımlar /usr/libexec dizinini ilk paket gerektirene kadar
+# oluşturmaz. Yalnız kanonik, root sahipliğinde ve güvenli bir üst dizinin
+# altında eksik olan tek seviyeyi oluştur.
+_release_txn_prepare_secure_parent_directory() {
+    local path=$1 parent
+    _release_txn_validate_safe_path "$path" || return 1
+    if [[ -e "$path" || -L "$path" ]]; then
+        _release_txn_validate_secure_parent_directory "$path"
+        return
+    fi
+
+    parent=$(dirname -- "$path")
+    [[ "$parent" != "$path" ]] \
+        || { _release_txn_fail "cannot prepare secure parent directory at filesystem root"; return 1; }
+    _release_txn_validate_secure_parent_directory "$parent" || return 1
+    mkdir -m 0755 -- "$path" \
+        || { _release_txn_fail "cannot create secure parent directory: $path"; return 1; }
+    chown root:root -- "$path" \
+        || { _release_txn_fail "cannot own secure parent directory: $path"; return 1; }
+    sync -f -- "$parent" \
+        || { _release_txn_fail "cannot make secure parent directory durable: $path"; return 1; }
+    _release_txn_validate_secure_parent_directory "$path"
+}
+
 _release_txn_validate_start_helper() {
     local source=$1 target=$2 owner group mode links size source_hash target_hash canonical
     _release_txn_validate_safe_path "$target" || return 1
@@ -722,7 +749,7 @@ _release_txn_install_start_helper() {
 
     directory=$(dirname -- "$target")
     parent=$(dirname -- "$directory")
-    _release_txn_validate_secure_parent_directory "$parent" || return 1
+    _release_txn_prepare_secure_parent_directory "$parent" || return 1
     if [[ -e "$directory" || -L "$directory" ]]; then
         _release_txn_validate_root_directory "$directory" 755 || return 1
     else
