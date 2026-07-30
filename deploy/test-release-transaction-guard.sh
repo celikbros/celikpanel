@@ -174,6 +174,30 @@ export FIXTURE_SYSTEMD_ROOT=$systemd_root
 PATH=$tmp/bin:$PATH
 export PATH
 
+# Missing helper parents are created only below one already-trusted level;
+# aliases, writable/non-root identities and missing grandparents fail closed.
+unsafe_helper_parent=$tmp/unsafe-helper-parent
+ln -s -- "$tmp/bin" "$unsafe_helper_parent"
+expect_failure "symlink helper parent was accepted" \
+    _release_txn_prepare_secure_parent_directory "$unsafe_helper_parent"
+rm -- "$unsafe_helper_parent"
+
+mkdir -m 0755 -- "$unsafe_helper_parent"
+chmod 0777 -- "$unsafe_helper_parent"
+expect_failure "group/other-writable helper parent was accepted" \
+    _release_txn_prepare_secure_parent_directory "$unsafe_helper_parent"
+chmod 0755 -- "$unsafe_helper_parent"
+chown 65534:65534 -- "$unsafe_helper_parent"
+expect_failure "non-root helper parent was accepted" \
+    _release_txn_prepare_secure_parent_directory "$unsafe_helper_parent"
+chown root:root -- "$unsafe_helper_parent"
+rmdir -- "$unsafe_helper_parent"
+
+expect_failure "helper parent with a missing grandparent was accepted" \
+    _release_txn_prepare_secure_parent_directory "$tmp/missing-grandparent/child"
+[[ ! -e "$tmp/missing-grandparent" ]] \
+    || fail "missing grandparent path was mutated"
+
 release_txn_install_and_verify_unit_guards \
     "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
 [[ "$(stat -Lc '%u %g %a' -- "$helper_parent")" == "0 0 755" ]] \

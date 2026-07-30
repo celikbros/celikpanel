@@ -681,20 +681,22 @@ _release_txn_validate_secure_parent_directory() {
 _release_txn_prepare_secure_parent_directory() {
     local path=$1 parent
     _release_txn_validate_safe_path "$path" || return 1
-    if [[ -e "$path" || -L "$path" ]]; then
-        _release_txn_validate_secure_parent_directory "$path"
-        return
-    fi
-
     parent=$(dirname -- "$path")
     [[ "$parent" != "$path" ]] \
         || { _release_txn_fail "cannot prepare secure parent directory at filesystem root"; return 1; }
     _release_txn_validate_secure_parent_directory "$parent" || return 1
+    if [[ -e "$path" || -L "$path" ]]; then
+        _release_txn_validate_secure_parent_directory "$path" || return 1
+        sync -f -- "$path" "$parent" \
+            || { _release_txn_fail "cannot prove secure parent directory durability: $path"; return 1; }
+        return
+    fi
+
     mkdir -m 0755 -- "$path" \
         || { _release_txn_fail "cannot create secure parent directory: $path"; return 1; }
     chown root:root -- "$path" \
         || { _release_txn_fail "cannot own secure parent directory: $path"; return 1; }
-    sync -f -- "$parent" \
+    sync -f -- "$path" "$parent" \
         || { _release_txn_fail "cannot make secure parent directory durable: $path"; return 1; }
     _release_txn_validate_secure_parent_directory "$path"
 }
