@@ -33,6 +33,7 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-schema17-bridge-contract.sh
       # Keep persistent release markers and controlled systemd starts fail-closed.
       # Kalıcı sürüm işaretçilerini ve kontrollü systemd başlangıçlarını fail-closed tut.

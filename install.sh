@@ -324,6 +324,44 @@ GO_VERSION=1.25.0
 NODE_VERSION=24.18.0
 TOOLCHAIN=/opt/celikpanel/.toolchain
 
+# Downloaded toolchains are later trusted by the privileged updater. Archive
+# metadata must never decide their owner, and an existing tree is reused only
+# after every entry has passed the same ownership and write-permission checks.
+validate_bootstrap_toolchain_tree() {
+    local root=$1 entry target uid mode
+    case "$root" in
+        "$TOOLCHAIN/go"|"$TOOLCHAIN/node") ;;
+        *) die "refusing to validate unexpected toolchain path: $root" ;;
+    esac
+    [ -d "$root" ] && [ ! -L "$root" ] \
+        || die "toolchain root must be a real directory: $root"
+
+    while IFS= read -r -d '' entry; do
+        if [ -L "$entry" ]; then
+            target=$(readlink -f -- "$entry") \
+                || die "broken toolchain symlink: $entry"
+            [[ "$target" == "$root"/* ]] \
+                || die "toolchain symlink escapes its root: $entry"
+            continue
+        fi
+        [ -f "$entry" ] || [ -d "$entry" ] \
+            || die "unsupported object in toolchain: $entry"
+        uid=$(stat -c '%u' -- "$entry")
+        mode=$(stat -c '%a' -- "$entry")
+        [ "$uid" = 0 ] \
+            || die "toolchain entry must be owned by root: $entry"
+        (( (8#$mode & 8#022) == 0 )) \
+            || die "toolchain entry must not be group/other writable: $entry"
+    done < <(find "$root" -xdev -print0)
+}
+
+seal_bootstrap_toolchain_tree() {
+    local root=$1
+    chown -R -h root:root -- "$root"
+    chmod -R go-w -- "$root"
+    validate_bootstrap_toolchain_tree "$root"
+}
+
 # Toolchain download architecture, in Go/Node naming (amd64/arm64). uname -m
 # instead of dpkg so this works on every distro.
 # Araç zinciri indirme mimarisi, Go/Node adlandırmasıyla (amd64/arm64).
@@ -338,22 +376,32 @@ dl_arch() {
 
 bootstrap_go() {
     command -v go >/dev/null && { echo go; return; }
-    [ -x "$TOOLCHAIN/go/bin/go" ] && { echo "$TOOLCHAIN/go/bin/go"; return; }
+    if [ -x "$TOOLCHAIN/go/bin/go" ]; then
+        validate_bootstrap_toolchain_tree "$TOOLCHAIN/go"
+        echo "$TOOLCHAIN/go/bin/go"
+        return
+    fi
     c '33' "    Go $GO_VERSION indiriliyor…" >&2
     mkdir -p "$TOOLCHAIN"
     curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(dl_arch).tar.gz" \
-        | tar -xz -C "$TOOLCHAIN" || die "Go indirilemedi"
+        | tar -xz --no-same-owner -C "$TOOLCHAIN" || die "Go indirilemedi"
+    seal_bootstrap_toolchain_tree "$TOOLCHAIN/go"
     echo "$TOOLCHAIN/go/bin/go"
 }
 
 bootstrap_node() {
     command -v npm >/dev/null && { echo "$(command -v node | xargs dirname)"; return; }
-    [ -x "$TOOLCHAIN/node/bin/npm" ] && { echo "$TOOLCHAIN/node/bin"; return; }
+    if [ -x "$TOOLCHAIN/node/bin/npm" ]; then
+        validate_bootstrap_toolchain_tree "$TOOLCHAIN/node"
+        echo "$TOOLCHAIN/node/bin"
+        return
+    fi
     c '33' "    Node $NODE_VERSION indiriliyor…" >&2
     local arch; arch=$(dl_arch); [ "$arch" = "amd64" ] && arch=x64
     mkdir -p "$TOOLCHAIN/node"
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz" \
-        | tar -xJ -C "$TOOLCHAIN/node" --strip-components=1 || die "Node indirilemedi"
+        | tar -xJ --no-same-owner -C "$TOOLCHAIN/node" --strip-components=1 || die "Node indirilemedi"
+    seal_bootstrap_toolchain_tree "$TOOLCHAIN/node"
     echo "$TOOLCHAIN/node/bin"
 }
 
