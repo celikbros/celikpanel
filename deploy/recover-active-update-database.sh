@@ -12,6 +12,9 @@ RELEASES_ROOT=/var/backups/celikpanel/releases
 SNAPSHOT_ROOT=/var/backups/celikpanel/update-snapshots
 RECOVERY_SNAPSHOT_ROOT=/var/backups/celikpanel/recovery-snapshots
 TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
+RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
+RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
+UNIT_DIR=/etc/systemd/system
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 PANEL_DATA_DIR=/var/lib/celikpanel
@@ -60,8 +63,8 @@ done
 [[ $EUID -eq 0 ]] || die "recovery must run as root"
 
 for required_command in \
-    awk bash basename cmp dirname find flock getent grep id install readlink \
-    sha256sum sort stat sync systemctl tr xargs; do
+    awk bash basename chmod chown cmp cp dirname find flock getent grep id install mkdir \
+    mktemp mv readlink rm sha256sum sort stat sync systemctl tr xargs; do
     command -v "$required_command" >/dev/null 2>&1 \
         || die "required recovery tool is missing: $required_command"
 done
@@ -240,6 +243,9 @@ validate_trusted_release() {
     [[ -f "$canonical/deploy/release-transaction-guard.sh" &&
        ! -L "$canonical/deploy/release-transaction-guard.sh" ]] \
         || die "trusted release transaction guard is missing or unsafe"
+    [[ -f "$canonical/deploy/release-transaction-start-guard.sh" &&
+       ! -L "$canonical/deploy/release-transaction-start-guard.sh" ]] \
+        || die "trusted release transaction start guard is missing or unsafe"
     helper=$(readlink -e -- "$0") || die "cannot resolve running recovery helper"
     [[ "$helper" == "$canonical/deploy/recover-active-update-database.sh" ]] \
         || die "recovery helper must execute from the verified trusted release"
@@ -265,10 +271,13 @@ service_cgroup_pids() {
 }
 
 verify_unit_recursively_stopped() {
-    local unit=$1 load state main_pid pid_output
+    local unit=$1 load state job main_pid pid_output
     load=$(systemctl show --property=LoadState --value "$unit") \
         || die "cannot inspect load state for $unit"
     [[ "$load" == loaded ]] || die "$unit must remain loaded during recovery"
+    job=$(systemctl show --property=Job --value "$unit") \
+        || die "cannot inspect queued job for $unit"
+    [[ -z "$job" ]] || die "$unit has a queued systemd job: $job"
     state=$(systemctl show --property=ActiveState --value "$unit") \
         || die "cannot inspect active state for $unit"
     case "$state" in
@@ -289,6 +298,130 @@ verify_both_units_stopped() {
     verify_unit_recursively_stopped celikpanel-panel.service
 }
 
+install_and_verify_runtime_directory_preserve() {
+    local directory target tmp owner group mode links loaded_dropins loaded found manager_value
+    release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        || die "release transaction lock changed before runtime-directory preservation"
+    validate_root_trusted_dir_chain "$UNIT_DIR"
+    directory=$UNIT_DIR/celikpanel-agent.service.d
+    if [[ -e "$directory" || -L "$directory" ]]; then
+        [[ -d "$directory" && ! -L "$directory" ]] \
+            || die "agent systemd drop-in directory is unsafe"
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$directory") \
+            || die "cannot inspect agent systemd drop-in directory"
+        [[ "$owner" == 0 && "$group" == 0 && "$mode" == 755 ]] \
+            || die "agent systemd drop-in directory must be root:root mode 0755"
+    else
+        install -d -m 0755 -o root -g root -- "$directory" \
+            || die "cannot create agent systemd drop-in directory"
+        sync -f -- "$UNIT_DIR" \
+            || die "cannot make agent systemd drop-in directory durable"
+    fi
+    validate_root_trusted_dir_chain "$directory"
+    target=$directory/09-runtime-directory-preserve.conf
+    if [[ -e "$target" || -L "$target" ]]; then
+        [[ -f "$target" && ! -L "$target" ]] \
+            || die "existing runtime-directory preserve drop-in is unsafe"
+        read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$target") \
+            || die "cannot inspect existing runtime-directory preserve drop-in"
+        [[ "$owner" == 0 && "$group" == 0 && "$mode" == 644 && "$links" == 1 ]] \
+            || die "existing runtime-directory preserve drop-in metadata is unsafe"
+    fi
+    tmp=$(mktemp -p "$directory" '.09-runtime-directory-preserve.conf.tmp.XXXXXXXXXX') \
+        || die "cannot stage runtime-directory preserve drop-in"
+    if ! printf '[Service]\nRuntimeDirectoryPreserve=yes\n' > "$tmp" ||
+       ! chown root:root -- "$tmp" ||
+       ! chmod 0644 -- "$tmp" ||
+       ! sync -f -- "$tmp" ||
+       ! mv -T -- "$tmp" "$target" ||
+       ! sync -f -- "$directory"; then
+        [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+        die "cannot durably install runtime-directory preserve drop-in"
+    fi
+    [[ -f "$target" && ! -L "$target" ]] \
+        || die "installed runtime-directory preserve drop-in is unsafe"
+    read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$target") \
+        || die "cannot inspect installed runtime-directory preserve drop-in"
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 644 && "$links" == 1 ]] \
+        || die "installed runtime-directory preserve drop-in metadata is unsafe"
+    cmp -s "$target" <(printf '[Service]\nRuntimeDirectoryPreserve=yes\n') \
+        || die "installed runtime-directory preserve drop-in content is invalid"
+    systemctl daemon-reload \
+        || die "systemd daemon-reload failed after runtime-directory preservation"
+    loaded_dropins=$(systemctl show --property=DropInPaths --value celikpanel-agent.service) \
+        || die "cannot inspect loaded agent systemd drop-ins"
+    found=0
+    for loaded in $loaded_dropins; do
+        if [[ "$loaded" == "$target" ]]; then
+            found=1
+            break
+        fi
+    done
+    [[ "$found" == 1 ]] \
+        || die "systemd did not load the exact runtime-directory preserve drop-in"
+    manager_value=$(systemctl show --property=RuntimeDirectoryPreserve --value celikpanel-agent.service) \
+        || die "cannot inspect loaded RuntimeDirectoryPreserve value"
+    [[ "$manager_value" == yes ]] \
+        || die "systemd did not load RuntimeDirectoryPreserve=yes for the agent"
+}
+
+# systemd removes the agent RuntimeDirectory after both coordinators stop.
+# Recreate only the fixed shared-flock directory during an already-proven active
+# recovery; every existing object and the result are validated fail-closed.
+prepare_runtime_mutation_lock_dir() {
+    local lock_dir parent expected_group owner group mode links size entry
+    local dotglob_was_set=0 nullglob_was_set=0
+    local -a entries=()
+    lock_dir=$(dirname -- "$MUTATION_LOCK")
+    [[ "$lock_dir" == /run/celikpanel ]] \
+        || die "unexpected mutation lock directory: $lock_dir"
+    parent=$(dirname -- "$lock_dir")
+    [[ "$parent" == /run && -d "$parent" && ! -L "$parent" ]] \
+        || die "unsafe mutation lock parent: $parent"
+    validate_root_trusted_dir_chain "$parent"
+    expected_group=$(getent group celikpanel | awk -F: 'NR == 1 { print $3 }') \
+        || die "celikpanel group is unavailable"
+    [[ "$expected_group" =~ ^[0-9]+$ && "$expected_group" -gt 0 ]] \
+        || die "celikpanel group id is invalid"
+    if [[ -e "$lock_dir" || -L "$lock_dir" ]]; then
+        [[ -d "$lock_dir" && ! -L "$lock_dir" ]] \
+            || die "mutation lock directory exists but is unsafe"
+        validate_root_trusted_dir_chain "$lock_dir"
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$lock_dir") \
+            || die "cannot inspect the existing mutation lock directory"
+        [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 750 ]] \
+            || die "existing mutation lock directory must be root:celikpanel mode 0750"
+    else
+        install -d -m 0750 -o root -g celikpanel -- "$lock_dir" \
+            || die "cannot prepare the ephemeral mutation lock directory"
+    fi
+    validate_root_trusted_dir_chain "$lock_dir"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$lock_dir") \
+        || die "cannot inspect the prepared mutation lock directory"
+    [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 750 ]] \
+        || die "mutation lock directory must be root:celikpanel mode 0750"
+    shopt -q dotglob && dotglob_was_set=1
+    shopt -q nullglob && nullglob_was_set=1
+    shopt -s dotglob nullglob
+    entries=("$lock_dir"/*)
+    (( dotglob_was_set == 1 )) || shopt -u dotglob
+    (( nullglob_was_set == 1 )) || shopt -u nullglob
+    (( ${#entries[@]} <= 1 )) \
+        || die "mutation lock directory contains unexpected entries"
+    if (( ${#entries[@]} == 1 )); then
+        entry=${entries[0]}
+        [[ "$entry" == "$MUTATION_LOCK" ]] \
+            || die "mutation lock directory contains an unexpected entry: $entry"
+        [[ -f "$entry" && ! -L "$entry" ]] \
+            || die "existing mutation lock is not a safe regular file"
+        read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$entry") \
+            || die "cannot inspect the existing mutation lock"
+        [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 600 &&
+           "$links" == 1 && "$size" == 0 ]] \
+            || die "existing mutation lock must be empty root:celikpanel mode 0600 with one link"
+    fi
+}
+
 acquire_mutation_lock() {
     local lock_dir expected_group owner group mode links size path_identity fd_identity
     expected_group=$(getent group celikpanel | awk -F: 'NR == 1 { print $3 }') \
@@ -303,8 +436,17 @@ acquire_mutation_lock() {
         || die "cannot inspect mutation lock directory"
     [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 750 ]] \
         || die "mutation lock directory must be root:celikpanel mode 0750"
-    [[ -f "$MUTATION_LOCK" && ! -L "$MUTATION_LOCK" ]] \
-        || die "mutation lock is missing or unsafe"
+    if [[ -e "$MUTATION_LOCK" || -L "$MUTATION_LOCK" ]]; then
+        [[ -f "$MUTATION_LOCK" && ! -L "$MUTATION_LOCK" ]] \
+            || die "mutation lock exists but is unsafe"
+    else
+        (umask 077; set -o noclobber; : > "$MUTATION_LOCK") \
+            || die "cannot exclusively create the ephemeral mutation lock"
+        chown root:celikpanel -- "$MUTATION_LOCK" \
+            || die "cannot set mutation lock ownership"
+        chmod 0600 -- "$MUTATION_LOCK" \
+            || die "cannot set mutation lock permissions"
+    fi
     read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$MUTATION_LOCK") \
         || die "cannot inspect mutation lock"
     [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 600 &&
@@ -319,6 +461,52 @@ acquire_mutation_lock() {
         || die "mutation lock changed while opening"
     flock -n -x "$MUTATION_LOCK_FD" \
         || die "a service or package mutation is active"
+}
+
+verify_mutation_lock_held() {
+    local lock_dir expected_group owner group mode links size path_identity fd_identity
+    local dotglob_was_set=0 nullglob_was_set=0
+    local -a entries=()
+    [[ "$MUTATION_LOCK_FD" =~ ^[0-9]+$ ]] \
+        || die "mutation lock descriptor is invalid"
+    [[ -e "/proc/$BASHPID/fd/$MUTATION_LOCK_FD" ]] \
+        || die "mutation lock descriptor is no longer open"
+    expected_group=$(getent group celikpanel | awk -F: 'NR == 1 { print $3 }') \
+        || die "celikpanel group is unavailable"
+    [[ "$expected_group" =~ ^[0-9]+$ && "$expected_group" -gt 0 ]] \
+        || die "celikpanel group id is invalid"
+    lock_dir=$(dirname -- "$MUTATION_LOCK")
+    [[ -d "$lock_dir" && ! -L "$lock_dir" ]] \
+        || die "mutation lock directory is missing or unsafe"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$lock_dir") \
+        || die "cannot inspect mutation lock directory"
+    [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 750 ]] \
+        || die "mutation lock directory must remain root:celikpanel mode 0750"
+    shopt -q dotglob && dotglob_was_set=1
+    shopt -q nullglob && nullglob_was_set=1
+    shopt -s dotglob nullglob
+    entries=("$lock_dir"/*)
+    (( dotglob_was_set == 1 )) || shopt -u dotglob
+    (( nullglob_was_set == 1 )) || shopt -u nullglob
+    (( ${#entries[@]} == 1 )) \
+        || die "held mutation lock directory must contain exactly the fixed lock"
+    [[ "${entries[0]}" == "$MUTATION_LOCK" ]] \
+        || die "held mutation lock directory contains an unexpected entry"
+    [[ -f "$MUTATION_LOCK" && ! -L "$MUTATION_LOCK" ]] \
+        || die "mutation lock pathname is missing or unsafe"
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$MUTATION_LOCK") \
+        || die "cannot inspect held mutation lock"
+    [[ "$owner" == 0 && "$group" == "$expected_group" && "$mode" == 600 &&
+       "$links" == 1 && "$size" == 0 ]] \
+        || die "held mutation lock must remain empty root:celikpanel mode 0600 with one link"
+    path_identity=$(stat -Lc '%d:%i' -- "$MUTATION_LOCK") \
+        || die "cannot identify mutation lock pathname"
+    fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$MUTATION_LOCK_FD") \
+        || die "cannot identify held mutation lock descriptor"
+    [[ "$fd_identity" == "$path_identity" ]] \
+        || die "mutation lock pathname no longer names the held lock inode"
+    flock -n -x "$MUTATION_LOCK_FD" \
+        || die "mutation flock ownership changed"
 }
 
 verify_source_database_precondition() {
@@ -446,25 +634,88 @@ verify_source_database_precondition
 verify_both_units_stopped
 release_txn_validate_active_token \
     "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
-    || die "active marker changed before mutation-lock acquisition"
+    || die "active marker changed before recovery guard installation"
+[[ "$(stat -Lc '%d:%i' -- "$active_marker")" == "$active_marker_identity" ]] \
+    || die "active marker identity changed before recovery guard installation"
+[[ "$(sha256sum "$active_marker" | awk '{ print $1 }')" == "$active_marker_digest" ]] \
+    || die "active marker bytes changed before recovery guard installation"
+release_txn_validate_update_snapshot_stage \
+    "$SNAPSHOT_ROOT" "$snapshot_name" "$stage_root" \
+    || die "snapshot stage changed before recovery guard installation"
 
+install_and_verify_runtime_directory_preserve
+release_txn_install_and_verify_unit_guards \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" \
+    || die "release transaction service guards could not be installed and verified"
+release_txn_clear_stale_start_authorization \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" \
+    || die "stale release start authorization could not be cleared"
+verify_both_units_stopped
+release_txn_validate_active_token \
+    "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
+    || die "active marker changed after recovery guard installation"
+[[ "$(stat -Lc '%d:%i' -- "$active_marker")" == "$active_marker_identity" ]] \
+    || die "active marker identity changed after recovery guard installation"
+[[ "$(sha256sum "$active_marker" | awk '{ print $1 }')" == "$active_marker_digest" ]] \
+    || die "active marker bytes changed after recovery guard installation"
+release_txn_validate_update_snapshot_stage \
+    "$SNAPSHOT_ROOT" "$snapshot_name" "$stage_root" \
+    || die "snapshot stage changed after recovery guard installation"
+
+prepare_runtime_mutation_lock_dir
+
+# A coordinator that held the old /run/celikpanel lock inode before it stopped
+# may still have caused that pathname to be unlinked during RuntimeDirectory
+# teardown. RuntimeDirectoryPreserve=yes, start guards, empty queued jobs and
+# empty recursive cgroups close that old process domain before the recreated
+# pathname can become authoritative. The new flock is accepted only after the
+# trusted agent also proves its durable mutation ledger and package manager idle.
+install_and_verify_runtime_directory_preserve
+release_txn_install_and_verify_unit_guards \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" \
+    || die "release transaction service guards changed after runtime preparation"
+release_txn_clear_stale_start_authorization \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" \
+    || die "stale release start authorization reappeared after runtime preparation"
+verify_both_units_stopped
+release_txn_validate_active_token \
+    "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
+    || die "active marker changed while preparing the ephemeral mutation lock"
+[[ "$(stat -Lc '%d:%i' -- "$active_marker")" == "$active_marker_identity" ]] \
+    || die "active marker identity changed while preparing the ephemeral mutation lock"
+[[ "$(sha256sum "$active_marker" | awk '{ print $1 }')" == "$active_marker_digest" ]] \
+    || die "active marker bytes changed while preparing the ephemeral mutation lock"
+release_txn_validate_update_snapshot_stage \
+    "$SNAPSHOT_ROOT" "$snapshot_name" "$stage_root" \
+    || die "snapshot stage changed while preparing the ephemeral mutation lock"
 acquire_mutation_lock
+verify_mutation_lock_held
 verify_both_units_stopped
 run_trusted_agent_idle_check
+verify_mutation_lock_held
 verify_both_units_stopped
 release_txn_validate_active_token \
     "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
     || die "active marker changed before database recovery"
+[[ "$(stat -Lc '%d:%i' -- "$active_marker")" == "$active_marker_identity" ]] \
+    || die "active marker identity changed before database recovery"
+[[ "$(sha256sum "$active_marker" | awk '{ print $1 }')" == "$active_marker_digest" ]] \
+    || die "active marker bytes changed before database recovery"
+release_txn_validate_update_snapshot_stage \
+    "$SNAPSHOT_ROOT" "$snapshot_name" "$stage_root" \
+    || die "snapshot stage changed before database recovery"
 
 ensure_recovery_snapshot_directory
+verify_mutation_lock_held
 run_trusted_panel_snapshot_operation \
     --ensure-service-operation-rescue-snapshot "$rescue_destination" \
     || die "trusted recovery panel could not ensure the durable rescue snapshot at $rescue_destination"
+verify_mutation_lock_held
 
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     || die "release transaction lock changed during rescue snapshot creation"
-flock -n -x "$MUTATION_LOCK_FD" \
-    || die "mutation flock ownership changed during rescue snapshot creation"
 release_txn_validate_active_token \
     "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
     || die "active marker changed during rescue snapshot creation"
@@ -480,6 +731,7 @@ release_txn_validate_update_snapshot_stage \
     || die "snapshot stage changed during rescue snapshot creation"
 verify_both_units_stopped
 run_trusted_agent_idle_check
+verify_mutation_lock_held
 verify_both_units_stopped
 verify_root_snapshot_file "$rescue_destination"
 require_no_sqlite_sidecars "$rescue_destination"
@@ -490,14 +742,14 @@ sync -f -- "$rescue_destination" "$recovery_snapshot_dir" \
 [[ ! -e "$snapshot_destination" && ! -L "$snapshot_destination" ]] \
     || die "stage snapshot already exists; fail-closed with the rescue preserved at $rescue_destination"
 
+verify_mutation_lock_held
 run_trusted_panel_snapshot_operation \
     --create-service-operation-snapshot "$snapshot_destination" \
     || die "stage snapshot or canonical normalization failed; rescue remains at $rescue_destination"
+verify_mutation_lock_held
 
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     || die "release transaction lock changed during database recovery"
-flock -n -x "$MUTATION_LOCK_FD" \
-    || die "mutation flock ownership changed during database recovery"
 release_txn_validate_active_token \
     "$TRANSACTION_ROOT" "$transaction_token" update "$snapshot_name" \
     || die "active marker changed during database recovery"
@@ -513,6 +765,7 @@ release_txn_validate_update_snapshot_stage \
     || die "snapshot stage changed during database recovery"
 verify_both_units_stopped
 run_trusted_agent_idle_check
+verify_mutation_lock_held
 verify_root_snapshot_file "$rescue_destination"
 require_no_sqlite_sidecars "$rescue_destination"
 verify_root_snapshot_file "$snapshot_destination"

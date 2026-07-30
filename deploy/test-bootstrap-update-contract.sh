@@ -12,6 +12,7 @@ ROLLBACK="$ROOT/rollback.sh"
 INSTALL="$ROOT/install.sh"
 RELEASE_GUARD="$ROOT/deploy/release-transaction-guard.sh"
 PANEL_UNIT="$ROOT/deploy/systemd/celikpanel-panel.service"
+AGENT_UNIT="$ROOT/deploy/systemd/celikpanel-agent.service"
 
 die() {
     echo "bootstrap update contract failed: $*" >&2
@@ -77,6 +78,7 @@ bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$INSTALL" "$RELEASE_GUARD"
 # Temiz bootstrap ve sonraki tüm panel başlangıçları SQLite veritabanı ile
 # WAL/SHM yan dosyalarını özel izinlerle oluşturmalıdır.
 require_literal "$PANEL_UNIT" 'UMask=0077'
+require_literal "$AGENT_UNIT" 'RuntimeDirectoryPreserve=yes'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --count-users' 1

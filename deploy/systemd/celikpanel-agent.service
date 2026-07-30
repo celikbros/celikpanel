@@ -26,6 +26,7 @@ UMask=0027
 # systemd tarafından her başlangıçta root:celikpanel oluşturulur.
 RuntimeDirectory=celikpanel
 RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
 ConfigurationDirectory=celikpanel
 ConfigurationDirectoryMode=0750
 StateDirectory=celikpanel-agent-private
