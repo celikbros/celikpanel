@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -95,6 +96,48 @@ func rejectDNSClusterSettingWrites(t *testing.T, p *Panel) {
 func compensationAdminRequest(body string) *http.Request {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/dns-cluster", strings.NewReader(body))
 	return req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
+}
+
+func TestDNSClusterGETDoesNotPresentUnconfiguredModeAsStandalone(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/dns-cluster", nil)
+	req = req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
+	recorder := httptest.NewRecorder()
+	p.handleDNSCluster(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	var got dnsClusterView
+	if err := json.NewDecoder(recorder.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Configured {
+		t.Fatal("fresh DNS cluster reported configured")
+	}
+	if got.Role != "" {
+		t.Fatalf("fresh DNS cluster role = %q, want an explicit empty role", got.Role)
+	}
+	if got.Steps == nil {
+		t.Fatal("fresh DNS cluster steps encoded as null, want an empty array")
+	}
+	if len(got.Steps) != 0 {
+		t.Fatalf("fresh DNS cluster exposed setup steps for an unsaved mode: %+v", got.Steps)
+	}
+}
+
+func TestDNSClusterAgentSnapshotStillRestoresEmptyRoleAsStandalone(t *testing.T) {
+	p := newDNSPanelForTest(t)
+
+	got, err := p.dnsClusterAgentSnapshot(context.Background())
+	if err != nil {
+		t.Fatalf("read agent snapshot: %v", err)
+	}
+	if got.Role != "standalone" || got.PeerIP != "" || got.PeerNS != "" {
+		t.Fatalf("empty stored role snapshot = %+v, want safe standalone agent state", got)
+	}
 }
 
 // The checklist is the guidance, so it is tested as guidance: for each real

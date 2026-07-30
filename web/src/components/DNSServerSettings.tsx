@@ -7,6 +7,7 @@ import { readApiError, apiErrorText } from '../lib/apiError';
 import { HelpButton } from './HelpDrawer';
 
 type DNSRole = 'standalone' | 'paired';
+type DraftDNSRole = DNSRole | '';
 
 interface NSFact {
     host: string;
@@ -53,7 +54,7 @@ interface SavedSettings extends Omit<ClusterResponse, 'role' | 'configured'> {
 interface SettingsDraft {
     ns1: string;
     ns2: string;
-    role: DNSRole;
+    role: DraftDNSRole;
     peer_ip: string;
     peer_ns: string;
 }
@@ -124,7 +125,7 @@ export function DNSServerSettings() {
         setDraft({
             ns1,
             ns2,
-            role: preserveCluster?.role ?? role,
+            role: preserveCluster?.role ?? (snapshot.configured ? role : ''),
             peer_ip: preserveCluster?.peer_ip ?? cluster.peer_ip ?? '',
             peer_ns: savedPeerNames.includes(requestedPeerNS) ? requestedPeerNS : '',
         });
@@ -162,7 +163,7 @@ export function DNSServerSettings() {
     };
 
     const saveCluster = async () => {
-        if (!draft) return;
+        if (!draft || draft.role === '') return;
         setBusy(true);
         try {
             const paired = draft.role === 'paired';
@@ -199,13 +200,15 @@ export function DNSServerSettings() {
         effectivePeerNS === draftNS1 ? draftNS2 : effectivePeerNS === draftNS2 ? draftNS1 : '';
     const savedPeerIP = saved.role === 'paired' ? saved.peer_ip : '';
     const savedPeerNS = saved.role === 'paired' ? cleanHostname(saved.peer_ns) : '';
+    const savedDraftRole: DraftDNSRole = saved.configured ? saved.role : '';
     const clusterDirty =
-        draft.role !== saved.role || effectivePeerIP !== savedPeerIP || effectivePeerNS !== savedPeerNS;
+        draft.role !== savedDraftRole || effectivePeerIP !== savedPeerIP || effectivePeerNS !== savedPeerNS;
     const checksCurrent = !namesDirty && !clusterDirty;
     const nameserverNames = saved.namesDerived ? [] : Array.from(new Set([saved.ns1, saved.ns2].filter(Boolean)));
     const peerSelectionValid = nameserverNames.includes(effectivePeerNS);
     const canSaveNames = draftNS1 !== '' && draftNS2 !== '' && draftNS1 !== draftNS2;
     const canSaveCluster =
+        draft.role !== '' &&
         !namesDirty &&
         !saved.namesDerived &&
         (draft.role === 'standalone' ||
@@ -260,11 +263,13 @@ export function DNSServerSettings() {
                         </span>
                     </div>
                     <p className="mb-1 text-xs leading-relaxed text-fg-muted">{t('dnssrv.namesHint')}</p>
-                    <p className="mb-1 text-xs leading-relaxed text-fg-muted">
-                        {draft.role === 'paired'
-                            ? t('dnssrv.namesHintPaired', { ip: saved.server_ip })
-                            : t('dnssrv.namesHintStandalone', { ip: saved.server_ip })}
-                    </p>
+                    {draft.role !== '' && (
+                        <p className="mb-1 text-xs leading-relaxed text-fg-muted">
+                            {draft.role === 'paired'
+                                ? t('dnssrv.namesHintPaired', { ip: saved.server_ip })
+                                : t('dnssrv.namesHintStandalone', { ip: saved.server_ip })}
+                        </p>
+                    )}
                     <p className="mb-3 text-xs leading-relaxed text-fg-subtle">{t('dnssrv.namesRegistrarHint')}</p>
 
                     <div className="mb-3 grid gap-3 sm:grid-cols-2">

@@ -308,9 +308,7 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			PeerIP:     p.setting(r.Context(), settingDNSPeerIP),
 			PeerNS:     p.setting(r.Context(), settingDNSPeerNS),
 			ServerIP:   serverPrimaryIP(),
-		}
-		if v.Role == "" {
-			v.Role = "standalone"
+			Steps:      make([]clusterStep, 0),
 		}
 		if v.PeerIP != "" {
 			v.PeerReachable = dnsPortAnswers(v.PeerIP)
@@ -318,10 +316,12 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		v.NS1, v.NS2 = p.serverNameservers(r.Context())
 		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
 		peerPairVerified := false
-		if v.Role == "paired" && v.PeerIP != "" {
+		if v.Configured && v.Role == "paired" && v.PeerIP != "" {
 			peerPairVerified = p.peerServesNameserverPair(r.Context(), v.PeerIP, v.NS1, v.NS2)
 		}
-		v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.PeerNS, v.Facts, peerPairVerified)
+		if v.Configured {
+			v.Steps = planSteps(v.Role, v.ServerIP, v.PeerIP, v.PeerNS, v.Facts, peerPairVerified)
+		}
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:
