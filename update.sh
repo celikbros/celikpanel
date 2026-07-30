@@ -14,6 +14,7 @@ umask 077
 
 SNAPSHOT_VERSION=4
 SNAP_ROOT=/var/backups/celikpanel/update-snapshots
+RECOVERY_SNAPSHOT_ROOT=/var/backups/celikpanel/recovery-snapshots
 RELEASES_ROOT=/var/backups/celikpanel/releases
 PANEL_DB=/var/lib/celikpanel/celikpanel.db
 BIN_DIR=/opt/celikpanel/bin
@@ -41,6 +42,8 @@ quiesce_abort_failed=0
 transaction_completion_verified=0
 release_transaction_token=
 verified_snapshot=
+recovery_snapshot_dir=
+rescue_snapshot=
 die() {
     echo "!! $*" >&2
     exit 1
@@ -134,18 +137,112 @@ validate_root_trusted_dir_chain() {
 # Eksik root-only yol bileşenlerini var olan sembolik bağlantıyı izlemeden ayrı
 # ayrı oluştur ve doğrula.
 prepare_snapshot_root() {
-    local directory desired_mode
+    local directory desired_mode owner group mode
     validate_root_trusted_dir_chain /var
-    for directory in /var/backups /var/backups/celikpanel "$SNAP_ROOT"; do
+    for directory in /var/backups /var/backups/celikpanel "$SNAP_ROOT" "$RECOVERY_SNAPSHOT_ROOT"; do
         desired_mode=0700
         [[ "$directory" != /var/backups ]] || desired_mode=0755
         if [[ -e "$directory" || -L "$directory" ]]; then
             [[ -d "$directory" && ! -L "$directory" ]] || die "unsafe snapshot directory: $directory"
         else
             install -d -m "$desired_mode" -o root -g root -- "$directory" || die "cannot create snapshot directory: $directory"
+            sync -f -- "$(dirname -- "$directory")" || die "cannot make snapshot directory durable: $directory"
         fi
         validate_root_trusted_dir_chain "$directory"
+        if [[ "$directory" == "$RECOVERY_SNAPSHOT_ROOT" ]]; then
+            read -r owner group mode < <(stat -Lc '%u %g %a' -- "$directory") \
+                || die "cannot inspect recovery snapshot root"
+            [[ "$owner" == 0 && "$group" == 0 && "$mode" == 700 ]] \
+                || die "recovery snapshot root must be root:root mode 0700"
+        fi
     done
+}
+
+prepare_recovery_snapshot_directory() {
+    local canonical owner group mode
+    [[ "$snapshot_name" != */* && -n "$snapshot_name" ]] \
+        || die "unsafe recovery snapshot name"
+    recovery_snapshot_dir=$RECOVERY_SNAPSHOT_ROOT/$snapshot_name
+    if [[ -e "$recovery_snapshot_dir" || -L "$recovery_snapshot_dir" ]]; then
+        [[ -d "$recovery_snapshot_dir" && ! -L "$recovery_snapshot_dir" ]] \
+            || die "unsafe exact recovery snapshot directory"
+    else
+        install -d -m 0700 -o root -g root -- "$recovery_snapshot_dir" \
+            || die "cannot create exact recovery snapshot directory"
+        sync -f -- "$RECOVERY_SNAPSHOT_ROOT" \
+            || die "cannot make exact recovery snapshot directory durable"
+    fi
+    canonical=$(readlink -e -- "$recovery_snapshot_dir") \
+        || die "cannot resolve exact recovery snapshot directory"
+    [[ "$canonical" == "$recovery_snapshot_dir" ]] \
+        || die "exact recovery snapshot directory contains a symlink or alias"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$recovery_snapshot_dir") \
+        || die "cannot inspect exact recovery snapshot directory"
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 700 ]] \
+        || die "exact recovery snapshot directory must be root:root mode 0700"
+    rescue_snapshot=$recovery_snapshot_dir/$(basename -- "$PANEL_DB")
+}
+
+verify_recovery_snapshot() {
+    local path=$1 owner group mode links suffix
+    [[ -f "$path" && ! -L "$path" ]] \
+        || die "durable recovery snapshot is missing or unsafe: $path"
+    read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$path") \
+        || die "cannot inspect durable recovery snapshot"
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 && "$links" == 1 ]] \
+        || die "durable recovery snapshot must be root:root mode 0600 with one link"
+    for suffix in -wal -shm -journal; do
+        [[ ! -e "$path$suffix" && ! -L "$path$suffix" ]] \
+            || die "durable recovery snapshot has a forbidden SQLite sidecar: $path$suffix"
+    done
+}
+
+retire_recovery_snapshot_after_verified_publish() {
+    local expected_final canonical owner group mode
+    expected_final=$SNAP_ROOT/$snapshot_name
+    [[ "$verified_snapshot" == "$expected_final" && "$snap" == "$expected_final" ]] \
+        || die "refusing recovery retirement before the exact final snapshot is verified"
+    validate_root_trusted_dir_chain "$verified_snapshot"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$verified_snapshot") \
+        || die "cannot inspect the verified final snapshot"
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 700 ]] \
+        || die "verified final snapshot must be root:root mode 0700 before recovery retirement"
+    [[ -f "$verified_snapshot/SHA256SUMS" && ! -L "$verified_snapshot/SHA256SUMS" ]] \
+        || die "verified final snapshot manifest is missing before recovery retirement"
+    (
+        cd "$verified_snapshot"
+        sha256sum -c SHA256SUMS >/dev/null
+    ) || die "final snapshot checksum verification failed before recovery retirement"
+    [[ -f "$verified_snapshot/$(basename -- "$PANEL_DB")" &&
+       ! -L "$verified_snapshot/$(basename -- "$PANEL_DB")" ]] \
+        || die "final snapshot database is missing before recovery retirement"
+
+    [[ "$recovery_snapshot_dir" == "$RECOVERY_SNAPSHOT_ROOT/$snapshot_name" ]] \
+        || die "refusing recovery retirement outside the exact snapshot directory"
+    canonical=$(readlink -e -- "$recovery_snapshot_dir") \
+        || die "cannot resolve recovery directory before retirement"
+    [[ "$canonical" == "$recovery_snapshot_dir" ]] \
+        || die "recovery directory changed before retirement"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$recovery_snapshot_dir") \
+        || die "cannot inspect recovery directory before retirement"
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 700 ]] \
+        || die "recovery directory must remain root:root mode 0700 before retirement"
+    [[ "$rescue_snapshot" == "$recovery_snapshot_dir/$(basename -- "$PANEL_DB")" ]] \
+        || die "refusing recovery retirement of an inexact database path"
+    verify_recovery_snapshot "$rescue_snapshot"
+
+    rm -f -- "$rescue_snapshot" \
+        || die "cannot retire exact recovery snapshot after final verification"
+    [[ ! -e "$rescue_snapshot" && ! -L "$rescue_snapshot" ]] \
+        || die "exact recovery snapshot remained after retirement"
+    sync -f -- "$recovery_snapshot_dir" \
+        || die "cannot make exact recovery snapshot retirement durable"
+    rmdir -- "$recovery_snapshot_dir" \
+        || die "exact recovery directory is not empty after snapshot retirement"
+    sync -f -- "$RECOVERY_SNAPSHOT_ROOT" \
+        || die "cannot make recovery directory retirement durable"
+    rescue_snapshot=
+    recovery_snapshot_dir=
 }
 
 # Release preflights execute privileged code, so only an absolute, root-owned,
@@ -267,12 +364,13 @@ service_cgroup_pids() {
         || die "unsafe control group for $unit: $control_group"
     cgroup_root="/sys/fs/cgroup$control_group"
     [[ -d "$cgroup_root" ]] || return 0
-    while IFS= read -r -d '' procs_file; do
-        while IFS= read -r pid; do
-            [[ -z "$pid" || "$pid" =~ ^[0-9]+$ ]] || die "invalid pid in $procs_file"
-            [[ -z "$pid" ]] || printf '%s\n' "$pid"
-        done < "$procs_file"
-    done < <(find "$cgroup_root" -type f -name cgroup.procs -print0)
+    find "$cgroup_root" -type f -name cgroup.procs -print0 \
+        | while IFS= read -r -d '' procs_file; do
+            while IFS= read -r pid; do
+                [[ -z "$pid" || "$pid" =~ ^[0-9]+$ ]] || die "invalid pid in $procs_file"
+                [[ -z "$pid" ]] || printf '%s\n' "$pid"
+            done < "$procs_file"
+        done
 }
 
 # A frozen legacy agent may contain only its systemd MainPID. Any helper means
@@ -1805,6 +1903,60 @@ if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
         --out "$tmp_snap/$(basename "$PANEL_DB")" \
         || die "transaction-consistent exact schema17 panel database snapshot failed"
 else
+    if [[ $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
+        prepare_recovery_snapshot_directory
+        rescue_active_marker=$RELEASE_TRANSACTION_ROOT/active
+        rescue_active_marker_identity=$(stat -Lc '%d:%i' -- "$rescue_active_marker") \
+            || die "cannot identify active marker before durable rescue snapshot"
+        rescue_active_marker_digest=$(sha256sum "$rescue_active_marker" | awk '{ print $1 }') \
+            || die "cannot hash active marker before durable rescue snapshot"
+        CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+            "$TRUSTED_RELEASE_ROOT/bin/panel" \
+            --ensure-service-operation-rescue-snapshot="$rescue_snapshot" \
+            --snapshot-schema="$snapshot_schema" \
+            --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
+            --release-transaction-token="$release_transaction_token" \
+            --release-transaction-operation=update \
+            --release-transaction-snapshot="$snapshot_name" \
+            || die "transaction-consistent durable recovery snapshot failed; recovery path was retained"
+        release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+            || die "persistent release lock changed during durable recovery snapshot"
+        flock -n -x "$MUTATION_LOCK_FD" \
+            || die "service mutation lock changed during durable recovery snapshot"
+        release_txn_validate_active_token \
+            "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
+            || die "active marker changed during durable recovery snapshot"
+        [[ "$(stat -Lc '%d:%i' -- "$rescue_active_marker")" == "$rescue_active_marker_identity" ]] \
+            || die "active marker identity changed during durable recovery snapshot"
+        [[ "$(sha256sum "$rescue_active_marker" | awk '{ print $1 }')" == "$rescue_active_marker_digest" ]] \
+            || die "active marker bytes changed during durable recovery snapshot"
+        verify_quiesce_coordinator_stopped celikpanel-panel.service \
+            || die "panel coordinator changed during durable recovery snapshot"
+        verify_quiesce_coordinator_stopped celikpanel-agent.service \
+            || die "agent coordinator changed during durable recovery snapshot"
+        if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
+            [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
+                || die "agent ledger appeared during pre-ledger durable recovery snapshot"
+            CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+                CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+                "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
+                || die "pre-ledger agent/package state changed during durable recovery snapshot"
+            CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+                "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+                || die "pre-ledger panel service-operation state changed during durable recovery snapshot"
+        else
+            CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+                CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+                "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
+                || die "agent/package mutation state changed during durable recovery snapshot"
+            CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+                "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+                || die "panel service-operation state changed during durable recovery snapshot"
+        fi
+        verify_recovery_snapshot "$rescue_snapshot"
+        sync -f -- "$rescue_snapshot" "$recovery_snapshot_dir" \
+            || die "durable recovery snapshot could not be synchronized"
+    fi
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
         "$TRUSTED_RELEASE_ROOT/bin/panel" \
         --create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")" \
@@ -1952,6 +2104,9 @@ stage_root=""
 preserve_staging=0
 validate_root_trusted_dir_chain "$snap"
 verified_snapshot=$snap
+if [[ $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
+    retire_recovery_snapshot_after_verified_publish
+fi
 echo "==> Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap"
 
 # Retain five complete v4 snapshots. Older snapshot formats remain untouched:

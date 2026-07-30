@@ -12,6 +12,7 @@ Requires=celikpanel-agent.service
 Type=simple
 User=celikpanel
 Group=celikpanel
+UMask=0077
 WorkingDirectory=/opt/celikpanel
 
 # /var/lib/celikpanel (SQLite database + DKIM is under /etc), owned

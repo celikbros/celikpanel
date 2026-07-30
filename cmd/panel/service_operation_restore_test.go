@@ -174,6 +174,75 @@ func TestValidateServiceOperationDatabaseActionRequestBindsOperation(t *testing.
 	}
 }
 
+func TestValidateServiceOperationRescueSnapshotPathBindsUpdateTransaction(t *testing.T) {
+	root := filepath.Clean(t.TempDir())
+	previousRoot := serviceOperationRescueSnapshotRoot
+	serviceOperationRescueSnapshotRoot = root
+	t.Cleanup(func() { serviceOperationRescueSnapshotRoot = previousRoot })
+
+	transaction := validServiceOperationReleaseTransaction("update", "release-rescue")
+	validPath := filepath.Join(root, transaction.snapshot, serviceOperationSnapshotBasename)
+	if err := validateServiceOperationRescueSnapshotPath(validPath, transaction); err != nil {
+		t.Fatalf("valid rescue path: %v", err)
+	}
+	invalidPaths := []string{
+		filepath.Join(root, "other-release", serviceOperationSnapshotBasename),
+		filepath.Join(root, transaction.snapshot, "other.db"),
+		filepath.Join(filepath.Dir(root), transaction.snapshot, serviceOperationSnapshotBasename),
+		filepath.Join(root, transaction.snapshot, "nested", serviceOperationSnapshotBasename),
+		filepath.Join(root, transaction.snapshot) + string(filepath.Separator) + ".." +
+			string(filepath.Separator) + transaction.snapshot + string(filepath.Separator) +
+			serviceOperationSnapshotBasename,
+		filepath.Join("relative", transaction.snapshot, serviceOperationSnapshotBasename),
+	}
+	for _, path := range invalidPaths {
+		err := validateServiceOperationRescueSnapshotPath(path, transaction)
+		if err == nil {
+			t.Fatalf("invalid rescue path %q was accepted", path)
+		}
+	}
+}
+
+func TestValidateServiceOperationRescueSnapshotRequestRequiresExactUpdate(t *testing.T) {
+	root := filepath.Clean(t.TempDir())
+	previousRoot := serviceOperationRescueSnapshotRoot
+	serviceOperationRescueSnapshotRoot = root
+	t.Cleanup(func() { serviceOperationRescueSnapshotRoot = previousRoot })
+
+	transaction := validServiceOperationReleaseTransaction("update", "release-rescue")
+	destination := filepath.Join(root, transaction.snapshot, serviceOperationSnapshotBasename)
+	schema, requested, err := validateServiceOperationRescueSnapshotRequest(
+		destination,
+		"normal",
+		transaction,
+		false,
+	)
+	if err != nil || !requested || schema != serviceOperationSnapshotSchemaNormal {
+		t.Fatalf("schema=%q requested=%v err=%v", schema, requested, err)
+	}
+
+	rollback := validServiceOperationReleaseTransaction("rollback", transaction.snapshot)
+	_, requested, err = validateServiceOperationRescueSnapshotRequest(
+		destination,
+		"normal",
+		rollback,
+		false,
+	)
+	if !requested || err == nil || !strings.Contains(err.Error(), "exactly update") {
+		t.Fatalf("rollback requested=%v err=%v want exact update rejection", requested, err)
+	}
+
+	_, requested, err = validateServiceOperationRescueSnapshotRequest(
+		destination,
+		"normal",
+		transaction,
+		true,
+	)
+	if !requested || err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Fatalf("conflict requested=%v err=%v", requested, err)
+	}
+}
+
 func validServiceOperationReleaseTransaction(
 	operation string,
 	snapshot string,

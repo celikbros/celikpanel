@@ -47,12 +47,13 @@ func createReleaseServiceOperationSnapshotWithOwner(
 	defer func() {
 		returnErr = errors.Join(returnErr, source.close())
 	}()
-	return createVerifiedQuarantinedServiceOperationSnapshot(
-		source.sqlitePath(),
+	if err := source.createVerifiedSnapshotFromPinnedWAL(
 		destinationPath,
 		schema,
-		source.verify,
-	)
+	); err != nil {
+		return err
+	}
+	return source.normalizeCanonicalDatabase(schema)
 }
 
 func openQuarantinedServiceOperationSnapshotSource(
@@ -99,7 +100,11 @@ func openQuarantinedServiceOperationSnapshotSource(
 	if err := unix.Fstatat(parentFD, source.baseName, &databasePathStat, unix.AT_SYMLINK_NOFOLLOW); err != nil {
 		return fail(fmt.Errorf("inspect canonical snapshot source: %w", err))
 	}
-	if err := validatePanelOwnedDatabaseFile(databasePathStat, owner, "canonical snapshot source"); err != nil {
+	if err := validateNormalizablePanelOwnedDatabaseFile(
+		databasePathStat,
+		owner,
+		"canonical snapshot source",
+	); err != nil {
 		return fail(err)
 	}
 	source.initial = databasePathStat
@@ -115,7 +120,7 @@ func openQuarantinedServiceOperationSnapshotSource(
 	if err := rejectDatabaseQuarantineUsersAndHandles("/proc", owner.uid, databasePathStat); err != nil {
 		return fail(err)
 	}
-	if err := source.pinDatabaseAndSidecars(); err != nil {
+	if err := source.pinNormalizableDatabaseAndSidecars(); err != nil {
 		return fail(err)
 	}
 	if err := source.verify(); err != nil {
@@ -135,6 +140,25 @@ func validatePanelOwnedDatabaseFile(
 		stat.Mode&0o777 != 0o600 ||
 		stat.Nlink != 1 {
 		return fmt.Errorf("%s must be a celikpanel-owned single-link 0600 regular file", purpose)
+	}
+	return nil
+}
+
+func validateNormalizablePanelOwnedDatabaseFile(
+	stat unix.Stat_t,
+	owner serviceOperationRestoreOwner,
+	purpose string,
+) error {
+	mode := stat.Mode & 0o777
+	if stat.Mode&unix.S_IFMT != unix.S_IFREG ||
+		stat.Uid != owner.uid ||
+		stat.Gid != owner.gid ||
+		(mode != 0o600 && mode != 0o640 && mode != 0o644) ||
+		stat.Nlink != 1 {
+		return fmt.Errorf(
+			"%s must be a celikpanel-owned single-link 0600, 0640, or 0644 regular file",
+			purpose,
+		)
 	}
 	return nil
 }
@@ -202,7 +226,11 @@ func (s *quarantinedServiceOperationSnapshotSource) pinEntry(
 	if err != nil {
 		return nil, fmt.Errorf("inspect canonical SQLite source %s: %w", baseName, err)
 	}
-	if err := validatePanelOwnedDatabaseFile(pathStat, s.owner, "canonical SQLite source "+baseName); err != nil {
+	if err := validateNormalizablePanelOwnedDatabaseFile(
+		pathStat,
+		s.owner,
+		"canonical SQLite source "+baseName,
+	); err != nil {
 		return nil, err
 	}
 	fd, err := unix.Openat(
@@ -231,7 +259,7 @@ func (s *quarantinedServiceOperationSnapshotSource) pinEntry(
 	return &exactPinnedSQLiteFile{file: file, stat: descriptorStat}, nil
 }
 
-func (s *quarantinedServiceOperationSnapshotSource) pinDatabaseAndSidecars() error {
+func (s *quarantinedServiceOperationSnapshotSource) pinNormalizableDatabaseAndSidecars() error {
 	database, err := s.pinEntry("")
 	if err != nil {
 		return err
@@ -246,8 +274,12 @@ func (s *quarantinedServiceOperationSnapshotSource) pinDatabaseAndSidecars() err
 			return err
 		}
 		s.sidecars[suffix] = sidecar
-		if sidecar != nil {
-			return fmt.Errorf("canonical SQLite source %s%s must be absent before release snapshot", s.baseName, suffix)
+		if suffix == "-journal" && sidecar != nil {
+			return fmt.Errorf(
+				"canonical SQLite rollback journal %s%s must be absent before release snapshot",
+				s.baseName,
+				suffix,
+			)
 		}
 	}
 	return nil

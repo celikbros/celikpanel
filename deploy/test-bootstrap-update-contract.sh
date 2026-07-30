@@ -11,6 +11,7 @@ UPDATE="$ROOT/update.sh"
 ROLLBACK="$ROOT/rollback.sh"
 INSTALL="$ROOT/install.sh"
 RELEASE_GUARD="$ROOT/deploy/release-transaction-guard.sh"
+PANEL_UNIT="$ROOT/deploy/systemd/celikpanel-panel.service"
 
 die() {
     echo "bootstrap update contract failed: $*" >&2
@@ -70,6 +71,18 @@ require_exact_sequence() {
 }
 
 bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$INSTALL" "$RELEASE_GUARD"
+
+# Fresh bootstrap and all later panel starts must create the SQLite database
+# and its WAL/SHM sidecars with private permissions.
+# Temiz bootstrap ve sonraki tüm panel başlangıçları SQLite veritabanı ile
+# WAL/SHM yan dosyalarını özel izinlerle oluşturmalıdır.
+require_literal "$PANEL_UNIT" 'UMask=0077'
+require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
+require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
+require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --count-users' 1
+require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --create-admin' 1
+reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --count-users'
+reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --create-admin'
 
 # One clean reviewed commit must produce one root-only release for both modes.
 # Tek temiz incelenmiş commit iki mod için tek root-only sürüm üretmelidir.
@@ -162,6 +175,15 @@ reject_literal "$UPDATE" ' ./install.sh'
 require_literal "$UPDATE" 'snapshot_schema=normal'
 require_literal "$UPDATE" '[[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || snapshot_schema=pre-ledger'
 require_literal "$UPDATE" '[[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || snapshot_schema=schema17'
+require_literal "$UPDATE" 'RECOVERY_SNAPSHOT_ROOT=/var/backups/celikpanel/recovery-snapshots'
+require_literal "$UPDATE" 'recovery snapshot root must be root:root mode 0700'
+require_literal "$UPDATE" 'exact recovery snapshot directory must be root:root mode 0700'
+require_literal "$UPDATE" 'if [[ $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then'
+require_count "$UPDATE" '--ensure-service-operation-rescue-snapshot="$rescue_snapshot"' 1
+require_literal "$UPDATE" '--check-pre-ledger-service-mutation-idle-under-external-lock'
+require_literal "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware'
+require_literal "$UPDATE" 'verify_recovery_snapshot "$rescue_snapshot"'
+require_literal "$UPDATE" 'sync -f -- "$rescue_snapshot" "$recovery_snapshot_dir"'
 require_literal "$UPDATE" '--create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")"'
 require_literal "$UPDATE" '--snapshot-schema="$snapshot_schema"'
 require_literal "$UPDATE" '--release-transaction-fd="$RELEASE_TRANSACTION_FD"'
@@ -178,6 +200,40 @@ reject_literal "$UPDATE" 'cp -a "$PANEL_DB"'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB-wal"'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB-shm"'
 reject_literal "$UPDATE" 'cp -a "$PANEL_DB-journal"'
+reject_literal "$RELEASE_GUARD" 'recovery-snapshots'
+reject_literal "$RELEASE_GUARD" 'RECOVERY_SNAPSHOT_ROOT'
+require_sequence "$UPDATE" \
+    'prepare_recovery_snapshot_directory' \
+    '--ensure-service-operation-rescue-snapshot="$rescue_snapshot"' \
+    'release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD"' \
+    'flock -n -x "$MUTATION_LOCK_FD"' \
+    'active marker identity changed during durable recovery snapshot' \
+    'verify_quiesce_coordinator_stopped celikpanel-panel.service' \
+    'verify_quiesce_coordinator_stopped celikpanel-agent.service' \
+    'agent/package mutation state changed during durable recovery snapshot' \
+    'panel service-operation state changed during durable recovery snapshot' \
+    'verify_recovery_snapshot "$rescue_snapshot"' \
+    'sync -f -- "$rescue_snapshot" "$recovery_snapshot_dir"' \
+    '--create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")"'
+require_literal "$UPDATE" 'retire_recovery_snapshot_after_verified_publish() {'
+require_literal "$UPDATE" 'final snapshot checksum verification failed before recovery retirement'
+require_literal "$UPDATE" 'rm -f -- "$rescue_snapshot"'
+require_literal "$UPDATE" 'rmdir -- "$recovery_snapshot_dir"'
+require_sequence "$UPDATE" \
+    'retire_recovery_snapshot_after_verified_publish() {' \
+    '[[ "$verified_snapshot" == "$expected_final" && "$snap" == "$expected_final" ]]' \
+    'sha256sum -c SHA256SUMS >/dev/null' \
+    'verify_recovery_snapshot "$rescue_snapshot"' \
+    'rm -f -- "$rescue_snapshot"' \
+    'sync -f -- "$recovery_snapshot_dir"' \
+    'rmdir -- "$recovery_snapshot_dir"' \
+    'sync -f -- "$RECOVERY_SNAPSHOT_ROOT"'
+require_sequence "$UPDATE" \
+    'mv -T --no-clobber -- "$tmp_snap" "$snap"' \
+    'sync -f -- "$SNAP_ROOT"' \
+    'verified_snapshot=$snap' \
+    'retire_recovery_snapshot_after_verified_publish' \
+    'mutation_started=1'
 
 # Snapshot provenance describes old bytes as unknown and binds the separate
 # target release inside the complete checksum manifest.
@@ -305,6 +361,9 @@ require_sequence "$UPDATE" \
 # Güncelleyici sıralı tam iki kimlik kaydeder. Aktif-benzeri satırlar PID/başlangıç
 # zamanı taşır; pasif-benzeri satırlar kanonik state/0/0'dır ve sinyal almaz.
 require_literal "$UPDATE" 'coordinator_process_start_time() {'
+require_literal "$UPDATE" 'find "$cgroup_root" -type f -name cgroup.procs -print0 \'
+require_literal "$UPDATE" '| while IFS= read -r -d '\'''''\'' procs_file; do'
+reject_literal "$UPDATE" 'done < <(find "$cgroup_root" -type f -name cgroup.procs -print0)'
 require_literal "$UPDATE" 'for unit in celikpanel-agent.service celikpanel-panel.service; do'
 require_literal "$UPDATE" 'printf '\''%s\t%s\t%s\t%s\n'\'' "$unit" "$state" "$main_pid" "$start_time"'
 require_literal "$UPDATE" 'printf '\''%s\t%s\t0\t0\n'\'' "$unit" "$state"'
@@ -330,8 +389,8 @@ require_sequence "$UPDATE" \
 # Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
 # aşağıdaki iki cold postcondition immutable checker kullanabilir.
 require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
-require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 6
-require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 5
+require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 7
+require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
 require_regex_count "$UPDATE" '^[[:space:]]*"\$BIN_DIR/panel" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$TRUSTED_RELEASE_ROOT/bin/panel" --check-(pre-ledger-)?service-operations-idle([[:space:]]*\\|; then)$' 0

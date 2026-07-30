@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -19,6 +16,7 @@ const (
 	serviceOperationReleaseTransactionLockPath   = serviceOperationReleaseTransactionRoot + "/transaction.lock"
 	serviceOperationReleaseTransactionActivePath = serviceOperationReleaseTransactionRoot + "/active"
 	serviceOperationReleaseSnapshotRootDefault   = "/var/backups/celikpanel/update-snapshots"
+	serviceOperationRescueSnapshotRootDefault    = "/var/backups/celikpanel/recovery-snapshots"
 	serviceOperationRestoreUser                  = "celikpanel"
 	serviceOperationRestoreGroup                 = "celikpanel"
 )
@@ -33,6 +31,10 @@ var serviceOperationReleaseSnapshotStagingPattern = regexp.MustCompile(`^\.relea
 // özel root sahipliğindeki fixture'a bağlayabilmesi için paket değişkenidir.
 // Üretim kodu bu güven kökü için ortam veya CLI override'ı kabul etmez.
 var serviceOperationReleaseSnapshotRoot = serviceOperationReleaseSnapshotRootDefault
+
+// serviceOperationRescueSnapshotRoot is variable only so tests can bind the
+// immutable production path contract to a private root-owned fixture.
+var serviceOperationRescueSnapshotRoot = serviceOperationRescueSnapshotRootDefault
 
 type serviceOperationDatabaseAction string
 
@@ -61,6 +63,7 @@ type panelCommandModes struct {
 	checkWALAwareIdle          bool
 	checkWALAwarePreLedgerIdle bool
 	createOrRestore            bool
+	rescueSnapshot             bool
 	migrateOnly                bool
 	demo                       bool
 	insecureCookies            bool
@@ -145,6 +148,43 @@ func createReleaseServiceOperationSnapshot(
 	)
 }
 
+// ensureServiceOperationRescueSnapshot is the transaction-bound emergency
+// snapshot mode used only while an UPDATE transaction owns the inherited
+// release lock and both services are proven stopped. Unlike the normal release
+// snapshot mode, it never normalizes or otherwise mutates the canonical DB.
+func ensureServiceOperationRescueSnapshot(
+	sourcePath string,
+	destinationPath string,
+	schema serviceOperationSnapshotSchema,
+	transaction serviceOperationReleaseTransaction,
+) error {
+	if os.Geteuid() != 0 {
+		return fmt.Errorf("service operation rescue snapshot must run as root")
+	}
+	if err := validateServiceOperationReleaseTransaction(transaction, "update"); err != nil {
+		return err
+	}
+	if err := validateServiceOperationRescueSnapshotPath(destinationPath, transaction); err != nil {
+		return err
+	}
+	if err := verifyServiceOperationReleaseTransaction(transaction); err != nil {
+		return err
+	}
+	if err := verifyCelikPanelServicesStopped(); err != nil {
+		return err
+	}
+	owner, err := lookupServiceOperationRestoreOwner()
+	if err != nil {
+		return err
+	}
+	return ensureServiceOperationRescueSnapshotWithOwner(
+		sourcePath,
+		destinationPath,
+		schema,
+		owner,
+	)
+}
+
 func validateServiceOperationReleaseTransaction(
 	transaction serviceOperationReleaseTransaction,
 	expectedOperation string,
@@ -220,6 +260,32 @@ func validateServiceOperationReleaseTransactionPath(
 	return nil
 }
 
+func validateServiceOperationRescueSnapshotPath(
+	databasePath string,
+	transaction serviceOperationReleaseTransaction,
+) error {
+	if databasePath == "" ||
+		!filepath.IsAbs(databasePath) ||
+		filepath.Clean(databasePath) != databasePath ||
+		filepath.Base(databasePath) != serviceOperationSnapshotBasename {
+		return fmt.Errorf(
+			"rescue snapshot destination must be a clean absolute %s path",
+			serviceOperationSnapshotBasename,
+		)
+	}
+	expectedPath := filepath.Join(
+		serviceOperationRescueSnapshotRoot,
+		transaction.snapshot,
+		serviceOperationSnapshotBasename,
+	)
+	if databasePath != expectedPath {
+		return fmt.Errorf(
+			"rescue snapshot destination must match the canonical active update transaction recovery path",
+		)
+	}
+	return nil
+}
+
 func lookupServiceOperationRestoreOwner() (serviceOperationRestoreOwner, error) {
 	account, err := user.Lookup(serviceOperationRestoreUser)
 	if err != nil {
@@ -241,61 +307,7 @@ func lookupServiceOperationRestoreOwner() (serviceOperationRestoreOwner, error) 
 }
 
 func verifyCelikPanelServicesStopped() error {
-	for _, unit := range []string{
-		"celikpanel-panel.service",
-		"celikpanel-agent.service",
-	} {
-		state, err := readSystemdUnitActiveState(unit)
-		if err != nil {
-			return err
-		}
-		switch state {
-		case "inactive", "failed":
-		default:
-			return fmt.Errorf("%s must be stopped before database restore; active state is %q", unit, state)
-		}
-	}
-	return nil
-}
-
-func readSystemdUnitActiveState(unit string) (string, error) {
-	systemctlPath := ""
-	for _, candidate := range []string{"/usr/bin/systemctl", "/bin/systemctl"} {
-		if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
-			systemctlPath = candidate
-			break
-		}
-	}
-	if systemctlPath == "" {
-		return "", fmt.Errorf("systemctl is required to prove CelikPanel services are stopped")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	command := exec.CommandContext(
-		ctx,
-		systemctlPath,
-		"show",
-		"--property=ActiveState",
-		"--value",
-		"--",
-		unit,
-	)
-	command.Env = []string{
-		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-		"LC_ALL=C",
-	}
-	output, err := command.Output()
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return "", fmt.Errorf("prove %s is stopped: systemctl timed out", unit)
-		}
-		return "", fmt.Errorf("prove %s is stopped: %w", unit, err)
-	}
-	state := strings.TrimSpace(string(output))
-	if state == "" {
-		return "", fmt.Errorf("prove %s is stopped: systemd returned an empty active state", unit)
-	}
-	return state, nil
+	return verifyCelikPanelServicesStoppedPlatform()
 }
 
 func validateServiceOperationDatabaseActionRequest(
@@ -354,6 +366,39 @@ func validateServiceOperationDatabaseActionRequest(
 	return serviceOperationDatabaseActionRestore, schema, true, nil
 }
 
+func validateServiceOperationRescueSnapshotRequest(
+	destinationPath string,
+	schemaValue string,
+	transaction serviceOperationReleaseTransaction,
+	conflictingMode bool,
+) (serviceOperationSnapshotSchema, bool, error) {
+	destinationPath = strings.TrimSpace(destinationPath)
+	if destinationPath == "" {
+		return "", false, nil
+	}
+	if conflictingMode {
+		return "", true, fmt.Errorf("rescue snapshot mode is mutually exclusive with other database actions")
+	}
+	schemaValue = strings.TrimSpace(schemaValue)
+	if schemaValue == "" {
+		return "", true, fmt.Errorf("snapshot schema is required")
+	}
+	transaction.token = strings.TrimSpace(transaction.token)
+	transaction.operation = strings.TrimSpace(transaction.operation)
+	transaction.snapshot = strings.TrimSpace(transaction.snapshot)
+	schema, err := parseServiceOperationSnapshotSchema(schemaValue)
+	if err != nil {
+		return "", true, err
+	}
+	if err := validateServiceOperationReleaseTransaction(transaction, "update"); err != nil {
+		return "", true, err
+	}
+	if err := validateServiceOperationRescueSnapshotPath(destinationPath, transaction); err != nil {
+		return "", true, err
+	}
+	return schema, true, nil
+}
+
 func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 	if enabled && conflictingMode {
 		return errors.New("migrate-only mode is mutually exclusive with other panel modes")
@@ -362,7 +407,7 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 8)
+	oneShotModes := make([]string, 0, 9)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
@@ -374,6 +419,7 @@ func validatePanelCommandModes(modes panelCommandModes) error {
 		{name: "check-service-operations-idle-wal-aware", enabled: modes.checkWALAwareIdle},
 		{name: "check-pre-ledger-service-operations-idle-wal-aware", enabled: modes.checkWALAwarePreLedgerIdle},
 		{name: "service-operation-snapshot-create-or-restore", enabled: modes.createOrRestore},
+		{name: "ensure-service-operation-rescue-snapshot", enabled: modes.rescueSnapshot},
 		{name: "migrate-only", enabled: modes.migrateOnly},
 	} {
 		if mode.enabled {

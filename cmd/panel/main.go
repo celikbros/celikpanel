@@ -63,6 +63,7 @@ func main() {
 	checkPreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle", false, "Verify migration history through version 20 and reject partial service queue objects, then exit / 20. sürüme kadarki migration geçmişini doğrula ve yarım servis kuyruğu nesnelerini reddet, sonra çık")
 	createServiceOperationSnapshotFlag := flag.String("create-service-operation-snapshot", "", "Create a transaction-consistent standalone panel database snapshot at this absolute path, then exit / Bu mutlak yolda işlem tutarlı bağımsız panel veritabanı anlık görüntüsü oluştur, sonra çık")
 	restoreServiceOperationSnapshotFlag := flag.String("restore-service-operation-snapshot", "", "Offline root-only restore from this trusted absolute celikpanel.db; both services must be stopped and the inherited release guard must be held / Bu güvenilir mutlak celikpanel.db dosyasından çevrim dışı yalnız-root geri yükleme; iki servis durmalı ve devralınan yayın koruması tutulmalıdır")
+	ensureServiceOperationRescueSnapshotFlag := flag.String("ensure-service-operation-rescue-snapshot", "", "Ensure the transaction-bound root-only recovery snapshot exists without changing the canonical database, then exit / Kanonik veritabanını değiştirmeden işleme bağlı yalnız-root kurtarma anlık görüntüsünün varlığını doğrula, sonra çık")
 	releaseTransactionFDFlag := flag.Int("release-transaction-fd", -1, "Inherited descriptor that owns the global release transaction lock / Global yayın işlem kilidinin sahibi olan devralınmış descriptor")
 	releaseTransactionTokenFlag := flag.String("release-transaction-token", "", "Exact 64-character lowercase hexadecimal release transaction token / Tam 64 karakterli küçük harf onaltılık yayın işlem belirteci")
 	releaseTransactionOperationFlag := flag.String("release-transaction-operation", "", "Exact release transaction operation: update or rollback / Tam yayın işlem operasyonu: update veya rollback")
@@ -78,14 +79,19 @@ func main() {
 		operation: *releaseTransactionOperationFlag,
 		snapshot:  *releaseTransactionSnapshotFlag,
 	}
-	databaseActionRequestedByFlags :=
+	createOrRestorePathRequestedByFlags :=
 		strings.TrimSpace(*createServiceOperationSnapshotFlag) != "" ||
-			strings.TrimSpace(*restoreServiceOperationSnapshotFlag) != "" ||
-			strings.TrimSpace(*serviceOperationSnapshotSchemaFlag) != "" ||
+			strings.TrimSpace(*restoreServiceOperationSnapshotFlag) != ""
+	rescueSnapshotRequestedByFlags :=
+		strings.TrimSpace(*ensureServiceOperationRescueSnapshotFlag) != ""
+	transactionMetadataRequestedByFlags :=
+		strings.TrimSpace(*serviceOperationSnapshotSchemaFlag) != "" ||
 			releaseTransaction.fd != -1 ||
 			strings.TrimSpace(releaseTransaction.token) != "" ||
 			strings.TrimSpace(releaseTransaction.operation) != "" ||
 			strings.TrimSpace(releaseTransaction.snapshot) != ""
+	databaseActionRequestedByFlags := createOrRestorePathRequestedByFlags ||
+		(!rescueSnapshotRequestedByFlags && transactionMetadataRequestedByFlags)
 	if err := validatePanelCommandModes(panelCommandModes{
 		createAdmin:                *createAdmin,
 		countUsers:                 *countUsersFlag,
@@ -94,11 +100,33 @@ func main() {
 		checkWALAwareIdle:          *checkWALAwareServiceOperationsIdleFlag,
 		checkWALAwarePreLedgerIdle: *checkWALAwarePreLedgerServiceOperationsIdleFlag,
 		createOrRestore:            databaseActionRequestedByFlags,
+		rescueSnapshot:             rescueSnapshotRequestedByFlags,
 		migrateOnly:                *migrateOnlyFlag,
 		demo:                       *demo,
 		insecureCookies:            *insecureCookies,
 	}); err != nil {
 		log.Fatalf("Invalid panel command mode: %v", err)
+	}
+	if rescueSnapshotRequestedByFlags {
+		rescueSchema, _, err := validateServiceOperationRescueSnapshotRequest(
+			*ensureServiceOperationRescueSnapshotFlag,
+			*serviceOperationSnapshotSchemaFlag,
+			releaseTransaction,
+			createOrRestorePathRequestedByFlags,
+		)
+		if err != nil {
+			log.Fatalf("Invalid service operation rescue snapshot request: %v", err)
+		}
+		if err := ensureServiceOperationRescueSnapshot(
+			databaseFile(),
+			*ensureServiceOperationRescueSnapshotFlag,
+			rescueSchema,
+			releaseTransaction,
+		); err != nil {
+			log.Fatalf("Ensure service operation rescue snapshot failed: %v", err)
+		}
+		log.Printf("Service operation rescue snapshot is ready at %s", *ensureServiceOperationRescueSnapshotFlag)
+		return
 	}
 	databaseAction, snapshotSchema, databaseActionRequested, err := validateServiceOperationDatabaseActionRequest(
 		*createServiceOperationSnapshotFlag,

@@ -59,6 +59,16 @@ service_group_id() {
     printf '%s\n' "$group_id"
 }
 
+# Set the private mask after sudo changes identity so host sudoers policy
+# cannot widen SQLite database or sidecar permissions during bootstrap.
+# Kimlik sudo ile değiştirildikten sonra özel maskeyi ayarla; böylece sunucunun
+# sudoers ilkesi bootstrap sırasında SQLite veritabanı veya yan dosya
+# izinlerini genişletemez.
+run_panel_as_service_user_with_private_umask() {
+    sudo -u "$SVC_USER" CELIKPANEL_DATA_DIR="$DATA_DIR" \
+        /bin/sh -c 'umask 077; exec "$@"' celikpanel-install "$PREFIX/bin/panel" "$@"
+}
+
 [ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
 command -v systemctl >/dev/null || die "systemd gerekli"
 
@@ -595,9 +605,9 @@ ok "agent çalışıyor"
 
 # 8. First administrator -----------------------------------------------------
 if [ "${SKIP_ADMIN:-0}" != "1" ]; then
-    if sudo -u "$SVC_USER" CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --count-users 2>/dev/null | grep -q '^0$'; then
+    if run_panel_as_service_user_with_private_umask --count-users 2>/dev/null | grep -q '^0$'; then
         step "İlk yönetici oluşturuluyor"
-        sudo -u "$SVC_USER" CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --create-admin || \
+        run_panel_as_service_user_with_private_umask --create-admin || \
             die "yönetici oluşturma başarısız"
         ok "yönetici hazır"
     else
