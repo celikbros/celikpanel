@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, inputClass } from './ui';
 import { readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
+
+type SettingsSectionID = 'account' | 'panel' | 'dns';
+type SettingsSection = {
+    id: SettingsSectionID;
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+    description: string;
+};
 
 // Account settings. Today it hosts two-factor authentication; admins also
 // manage the panel's own certificate here.
@@ -15,15 +24,188 @@ import { DNSServerSettings } from './DNSServerSettings';
 export function Settings() {
     const { t } = useI18n();
     const { role } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const sections = [
+        {
+            id: 'account' as const,
+            icon: ShieldCheck,
+            title: t('settings.section.account'),
+            description: t('settings.section.account.desc'),
+        },
+        ...(role === 'admin'
+            ? [
+                {
+                    id: 'panel' as const,
+                    icon: Lock,
+                    title: t('settings.section.panel'),
+                    description: t('settings.section.panel.desc'),
+                },
+                {
+                    id: 'dns' as const,
+                    icon: Network,
+                    title: t('settings.section.dns'),
+                    description: t('settings.section.dns.desc'),
+                },
+            ]
+            : []),
+    ];
+    const requestedSection = searchParams.get('section');
+    const activeSection = sections.find((section) => section.id === requestedSection) ?? sections[0];
+
+    useEffect(() => {
+        if (requestedSection === activeSection.id) return;
+        const next = new URLSearchParams(searchParams);
+        next.set('section', activeSection.id);
+        setSearchParams(next, { replace: true });
+    }, [activeSection.id, requestedSection, searchParams, setSearchParams]);
+
+    const selectSection = (section: SettingsSectionID) => {
+        const next = new URLSearchParams(searchParams);
+        next.set('section', section);
+        setSearchParams(next, { replace: true });
+    };
+
+    const moveSection = (event: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+        const keyOffsets: Record<string, number> = {
+            ArrowRight: 1,
+            ArrowDown: 1,
+            ArrowLeft: -1,
+            ArrowUp: -1,
+        };
+        let nextIndex = currentIndex;
+        if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = sections.length - 1;
+        else if (event.key in keyOffsets) {
+            nextIndex = (currentIndex + keyOffsets[event.key] + sections.length) % sections.length;
+        } else {
+            return;
+        }
+        event.preventDefault();
+        const nextSection = sections[nextIndex];
+        selectSection(nextSection.id);
+        window.requestAnimationFrame(() => {
+            document.getElementById(`settings-${nextSection.id}-tab`)?.focus();
+        });
+    };
+
     return (
-        <div className="p-6 md:p-8">
+        <div className="p-4 sm:p-6 md:p-8">
             <PageHeader title={t('nav.settings')} subtitle={t('settings.subtitle')} breadcrumb={[t('common.home'), t('nav.settings')]} />
-            <div className="max-w-2xl space-y-6">
-                <TwoFactorPanel />
-                {role === 'admin' && <PanelCertificatePanel />}
-                {role === 'admin' && <DNSServerSettings />}
+            <SettingsWorkspace
+                sections={sections}
+                activeID={activeSection.id}
+                role={role}
+                label={t('settings.sections')}
+                onSelect={selectSection}
+                onKeyDown={moveSection}
+            />
+        </div>
+    );
+}
+
+function SettingsWorkspace({
+    sections,
+    activeID,
+    role,
+    label,
+    onSelect,
+    onKeyDown,
+}: {
+    sections: SettingsSection[];
+    activeID: SettingsSectionID;
+    role: string;
+    label: string;
+    onSelect: (section: SettingsSectionID) => void;
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => void;
+}) {
+    const activeSection = sections.find((section) => section.id === activeID) ?? sections[0];
+
+    return (
+        <div className="grid max-w-7xl gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
+            <SettingsSectionTabs
+                sections={sections}
+                activeID={activeID}
+                label={label}
+                onSelect={onSelect}
+                onKeyDown={onKeyDown}
+            />
+            <div className="min-w-0">
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-border bg-surface px-5 py-4 shadow-card">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <activeSection.icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <h2 className="font-semibold text-fg">{activeSection.title}</h2>
+                        <p className="text-sm text-fg-muted">{activeSection.description}</p>
+                    </div>
+                </div>
+                <div id="settings-account-panel" role="tabpanel" aria-labelledby="settings-account-tab" hidden={activeID !== 'account'}>
+                    <TwoFactorPanel />
+                </div>
+                {role === 'admin' && (
+                    <>
+                        <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
+                            <PanelCertificatePanel />
+                        </div>
+                        <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
+                            <DNSServerSettings />
+                        </div>
+                    </>
+                )}
             </div>
         </div>
+    );
+}
+
+function SettingsSectionTabs({
+    sections,
+    activeID,
+    label,
+    onSelect,
+    onKeyDown,
+}: {
+    sections: SettingsSection[];
+    activeID: SettingsSectionID;
+    label: string;
+    onSelect: (section: SettingsSectionID) => void;
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => void;
+}) {
+    return (
+        <nav
+            aria-label={label}
+            className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2 shadow-card lg:sticky lg:top-6 lg:flex-col lg:overflow-visible"
+            role="tablist"
+        >
+            {sections.map((section, index) => {
+                const Icon = section.icon;
+                const active = section.id === activeID;
+                return (
+                    <button
+                        key={section.id}
+                        id={`settings-${section.id}-tab`}
+                        type="button"
+                        role="tab"
+                        aria-controls={`settings-${section.id}-panel`}
+                        aria-selected={active}
+                        tabIndex={active ? 0 : -1}
+                        onClick={() => onSelect(section.id)}
+                        onKeyDown={(event) => onKeyDown(event, index)}
+                        className={`group flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:w-full ${active
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-fg-muted hover:bg-surface-subtle hover:text-fg'
+                            }`}
+                    >
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-primary text-white' : 'bg-surface-subtle text-fg-muted group-hover:text-fg'}`}>
+                            <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block whitespace-nowrap text-sm font-semibold lg:whitespace-normal">{section.title}</span>
+                            <span className="mt-0.5 hidden text-xs font-normal leading-5 text-fg-muted lg:block">{section.description}</span>
+                        </span>
+                    </button>
+                );
+            })}
+        </nav>
     );
 }
 
@@ -111,15 +293,19 @@ function PanelCertificatePanel() {
                 <p className="text-sm font-medium text-fg">{t('panelCert.restarting')}</p>
             ) : (
                 <>
-                    <label className="mb-1 block text-xs font-medium text-fg-subtle">{t('panelCert.domain')}</label>
-                    <div className="flex gap-2">
+                    <label htmlFor="panel-certificate-domain" className="mb-1 block text-xs font-medium text-fg-muted">
+                        {t('panelCert.domain')}
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                         <input
+                            id="panel-certificate-domain"
                             value={domain}
                             onChange={(e) => setDomain(e.target.value.trim())}
                             placeholder="panel.example.com"
-                            className={inputClass + ' flex-1'}
+                            autoComplete="url"
+                            className={inputClass + ' min-w-0 flex-1'}
                         />
-                        <Button variant="primary" onClick={issue} disabled={busy || !domain}>
+                        <Button className="w-full sm:w-auto" variant="primary" onClick={issue} disabled={busy || !domain}>
                             {busy ? t('panelCert.issuing') : t('panelCert.issue')}
                         </Button>
                     </div>
@@ -228,7 +414,7 @@ function TwoFactorPanel() {
         <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
             <div className="mb-1 flex items-center gap-2">
                 {enabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldOff className="h-5 w-5 text-fg-subtle" />}
-                <h3 className="text-base font-semibold text-fg">{t('settings.2fa.title')}</h3>
+                <h2 className="text-base font-semibold text-fg">{t('settings.2fa.title')}</h2>
                 {enabled && (
                     <span className="ml-auto rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                         {t('settings.2fa.on')}
@@ -243,8 +429,27 @@ function TwoFactorPanel() {
                 <div className="space-y-3">
                     <p className="text-sm text-fg-muted">{t('settings.2fa.disableHint')}</p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <input type="password" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder={t('login.password')} className={inputClass} />
-                        <input value={disableCode} onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className={`${inputClass} font-mono tracking-widest`} />
+                        <label className="space-y-1 text-sm font-medium text-fg">
+                            <span>{t('login.password')}</span>
+                            <input
+                                type="password"
+                                value={disablePw}
+                                onChange={(e) => setDisablePw(e.target.value)}
+                                autoComplete="current-password"
+                                className={inputClass}
+                            />
+                        </label>
+                        <label className="space-y-1 text-sm font-medium text-fg">
+                            <span>{t('settings.2fa.enterCode')}</span>
+                            <input
+                                value={disableCode}
+                                onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                placeholder="000000"
+                                className={`${inputClass} font-mono tracking-widest`}
+                            />
+                        </label>
                     </div>
                     <Button variant="danger" icon={ShieldOff} disabled={busy || !disablePw || disableCode.length < 6} onClick={disable}>
                         {t('settings.2fa.disable')}

@@ -195,19 +195,27 @@ export function DNSServerSettings() {
     const namesDirty = draftNS1 !== saved.ns1 || draftNS2 !== saved.ns2;
     const effectivePeerIP = draft.role === 'paired' ? draft.peer_ip.trim() : '';
     const effectivePeerNS = draft.role === 'paired' ? cleanHostname(draft.peer_ns) : '';
+    const effectiveLocalNS =
+        effectivePeerNS === draftNS1 ? draftNS2 : effectivePeerNS === draftNS2 ? draftNS1 : '';
     const savedPeerIP = saved.role === 'paired' ? saved.peer_ip : '';
     const savedPeerNS = saved.role === 'paired' ? cleanHostname(saved.peer_ns) : '';
     const clusterDirty =
         draft.role !== saved.role || effectivePeerIP !== savedPeerIP || effectivePeerNS !== savedPeerNS;
     const checksCurrent = !namesDirty && !clusterDirty;
-    const peerNames = saved.namesDerived ? [] : Array.from(new Set([saved.ns1, saved.ns2].filter(Boolean)));
-    const peerSelectionValid = peerNames.includes(effectivePeerNS);
+    const nameserverNames = saved.namesDerived ? [] : Array.from(new Set([saved.ns1, saved.ns2].filter(Boolean)));
+    const peerSelectionValid = nameserverNames.includes(effectivePeerNS);
     const canSaveNames = draftNS1 !== '' && draftNS2 !== '' && draftNS1 !== draftNS2;
-	const canSaveCluster =
-		!namesDirty &&
-		!saved.namesDerived &&
-		(draft.role === 'standalone' ||
+    const canSaveCluster =
+        !namesDirty &&
+        !saved.namesDerived &&
+        (draft.role === 'standalone' ||
             (!saved.namesDerived && effectivePeerIP !== '' && effectivePeerNS !== '' && peerSelectionValid));
+
+    const selectLocalNameserver = (localNS: string) => {
+        const selectedLocalNS = cleanHostname(localNS);
+        const peerNS = selectedLocalNS === saved.ns1 ? saved.ns2 : selectedLocalNS === saved.ns2 ? saved.ns1 : '';
+        setDraft((current) => (current ? { ...current, peer_ns: peerNS } : current));
+    };
 
     const factLocation = (fact: NSFact) => {
         if (fact.ips.length === 0) return t('dnssrv.whereNowhere');
@@ -231,236 +239,274 @@ export function DNSServerSettings() {
                 </div>
             </div>
 
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-fg">{t('dnssrv.namesTitle')}</p>
-                <span
-                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                        namesDirty
-                            ? 'bg-primary/10 text-primary'
-                            : saved.namesDerived
-                              ? 'bg-warning/10 text-warning'
-                              : 'bg-success/10 text-success'
-                    }`}
-                >
-                    {namesDirty
-                        ? t('dnssrv.stateUnsaved')
-                        : saved.namesDerived
-                          ? t('dnssrv.namesSuggested')
-                          : t('dnssrv.stateSaved')}
-                </span>
-            </div>
-            <p className="mb-1 text-xs leading-relaxed text-fg-muted">{t('dnssrv.namesHint')}</p>
-            <p className="mb-1 text-xs leading-relaxed text-fg-muted">
-                {draft.role === 'paired'
-                    ? t('dnssrv.namesHintPaired', { ip: saved.server_ip })
-                    : t('dnssrv.namesHintStandalone', { ip: saved.server_ip })}
-            </p>
-            <p className="mb-3 text-xs leading-relaxed text-fg-subtle">{t('dnssrv.namesRegistrarHint')}</p>
-
-            <div className="mb-3 grid gap-3 sm:grid-cols-2">
-                <Field label={t('dnssrv.ns1Label')} htmlFor="dns-ns1">
-                    <input
-                        id="dns-ns1"
-                        className={inputClass}
-                        value={draft.ns1}
-                        onChange={(e) => setDraft((current) => (current ? { ...current, ns1: e.target.value } : current))}
-                        placeholder="ns1.example.com"
-                    />
-                </Field>
-                <Field label={t('dnssrv.ns2Label')} htmlFor="dns-ns2">
-                    <input
-                        id="dns-ns2"
-                        className={inputClass}
-                        value={draft.ns2}
-                        onChange={(e) => setDraft((current) => (current ? { ...current, ns2: e.target.value } : current))}
-                        placeholder="ns2.example.com"
-                    />
-                </Field>
-            </div>
-
-            {checksCurrent && (
-                <div className="mb-3 rounded-lg border border-border bg-surface-2/50 p-3">
+            <div className="grid items-start gap-5 2xl:grid-cols-2">
+                <div className="min-w-0 rounded-xl border border-border bg-surface-2/30 p-4">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <p className="text-xs font-medium text-fg">{t('dnssrv.liveNamesTitle')}</p>
+                        <p className="text-sm font-medium text-fg">{t('dnssrv.namesTitle')}</p>
                         <span
                             className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                                saved.namesUsable ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                                namesDirty
+                                    ? 'bg-primary/10 text-primary'
+                                    : saved.namesDerived
+                                      ? 'bg-warning/10 text-warning'
+                                      : 'bg-success/10 text-success'
                             }`}
                         >
-                            {saved.namesUsable ? t('dnssrv.namesReady') : t('dnssrv.namesPending')}
+                            {namesDirty
+                                ? t('dnssrv.stateUnsaved')
+                                : saved.namesDerived
+                                  ? t('dnssrv.namesSuggested')
+                                  : t('dnssrv.stateSaved')}
                         </span>
                     </div>
-                    <ul className="space-y-1">
-                        {saved.facts?.map((fact) => (
-                            <li key={fact.host} className="flex flex-wrap items-center gap-x-2 font-mono text-xs">
-                                <span className="text-fg">{fact.host}</span>
-                                <span className="text-fg-muted">
-                                    → {fact.ips.length ? fact.ips.join(', ') : t('conn.none')}
-                                </span>
-                                <span className="text-fg-subtle">{factLocation(fact)}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+                    <p className="mb-1 text-xs leading-relaxed text-fg-muted">{t('dnssrv.namesHint')}</p>
+                    <p className="mb-1 text-xs leading-relaxed text-fg-muted">
+                        {draft.role === 'paired'
+                            ? t('dnssrv.namesHintPaired', { ip: saved.server_ip })
+                            : t('dnssrv.namesHintStandalone', { ip: saved.server_ip })}
+                    </p>
+                    <p className="mb-3 text-xs leading-relaxed text-fg-subtle">{t('dnssrv.namesRegistrarHint')}</p>
 
-            <Button onClick={saveNS} disabled={busy || !canSaveNames || (!namesDirty && !saved.namesDerived)}>
-                <Check className="h-4 w-4" /> {t('dnssrv.saveNames')}
-            </Button>
-
-            <hr className="my-6 border-border" />
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-fg">{t('dnssrv.roleTitle')}</p>
-                <span
-                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                        clusterDirty
-                            ? 'bg-primary/10 text-primary'
-                            : saved.configured
-                              ? 'bg-success/10 text-success'
-                              : 'bg-warning/10 text-warning'
-                    }`}
-                >
-                    {clusterDirty
-                        ? t('dnssrv.stateUnsaved')
-                        : saved.configured
-                          ? t('dnssrv.stateSaved')
-                          : t('dnssrv.roleUnconfigured')}
-                </span>
-            </div>
-            <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('dnssrv.roleHint')}</p>
-
-            {!saved.configured && !clusterDirty && (
-                <div className="mb-3 rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs leading-relaxed text-fg-muted">
-                    {t('dnssrv.roleSetupHint')}
-                </div>
-            )}
-
-            <div className="mb-3 space-y-2">
-                {(['standalone', 'paired'] as const).map((role) => (
-                    <label
-                        key={role}
-                        className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 ${
-                            draft.role === role ? 'border-primary bg-primary/5' : 'border-border'
-                        }`}
-                    >
-                        <input
-                            type="radio"
-                            name="dns-role"
-                            className="mt-0.5"
-                            checked={draft.role === role}
-                            onChange={() => setDraft((current) => (current ? { ...current, role } : current))}
-                        />
-                        <span className="min-w-0">
-                            <span className="block text-sm font-medium text-fg">
-                                {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
-                            </span>
-                            <span className="block text-xs leading-relaxed text-fg-muted">
-                                {t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
-                            </span>
-                        </span>
-                    </label>
-                ))}
-            </div>
-
-			{draft.role === 'paired' && (
-                <>
-                    <div className="mb-2 grid gap-3 sm:grid-cols-2">
-                        <Field label={t('dnssrv.peerIpLabel')} htmlFor="dns-peer-ip">
+                    <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                        <Field label={t('dnssrv.ns1Label')} htmlFor="dns-ns1">
                             <input
-                                id="dns-peer-ip"
+                                id="dns-ns1"
                                 className={inputClass}
-                                value={draft.peer_ip}
-                                onChange={(e) =>
-                                    setDraft((current) => (current ? { ...current, peer_ip: e.target.value } : current))
-                                }
-                                placeholder={t('dnssrv.peerIpPlaceholder')}
+                                value={draft.ns1}
+                                onChange={(e) => setDraft((current) => (current ? { ...current, ns1: e.target.value } : current))}
+                                placeholder="ns1.example.com"
                             />
                         </Field>
-                        <Field label={t('dnssrv.peerNsLabel')} hint={t('dnssrv.peerNsHint')} htmlFor="dns-peer-ns">
-                            <select
-                                id="dns-peer-ns"
+                        <Field label={t('dnssrv.ns2Label')} htmlFor="dns-ns2">
+                            <input
+                                id="dns-ns2"
                                 className={inputClass}
-                                value={draft.peer_ns}
-                                disabled={saved.namesDerived || namesDirty}
-                                onChange={(e) =>
-                                    setDraft((current) => (current ? { ...current, peer_ns: e.target.value } : current))
-                                }
-                            >
-                                <option value="">{t('dnssrv.peerNsPlaceholder')}</option>
-                                {peerNames.map((name) => (
-                                    <option key={name} value={name}>
-                                        {name}
-                                    </option>
-                                ))}
-                            </select>
+                                value={draft.ns2}
+                                onChange={(e) => setDraft((current) => (current ? { ...current, ns2: e.target.value } : current))}
+                                placeholder="ns2.example.com"
+                            />
                         </Field>
                     </div>
+                    <p className="mb-3 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
+                        {t('dnssrv.namesOrderHint')}
+                    </p>
 
-                    {(saved.namesDerived || namesDirty) && (
+                    {checksCurrent && (
+                        <div className="mb-3 rounded-lg border border-border bg-surface-2/50 p-3">
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-medium text-fg">{t('dnssrv.liveNamesTitle')}</p>
+                                <span
+                                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                                        saved.namesUsable ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                                    }`}
+                                >
+                                    {saved.namesUsable ? t('dnssrv.namesReady') : t('dnssrv.namesPending')}
+                                </span>
+                            </div>
+                            <ul className="space-y-1">
+                                {saved.facts?.map((fact) => (
+                                    <li key={fact.host} className="flex flex-wrap items-center gap-x-2 font-mono text-xs">
+                                        <span className="text-fg">{fact.host}</span>
+                                        <span className="text-fg-muted">
+                                            → {fact.ips.length ? fact.ips.join(', ') : t('conn.none')}
+                                        </span>
+                                        <span className="text-fg-subtle">{factLocation(fact)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <Button onClick={saveNS} disabled={busy || !canSaveNames || (!namesDirty && !saved.namesDerived)}>
+                        <Check className="h-4 w-4" /> {t('dnssrv.saveNames')}
+                    </Button>
+                </div>
+
+                <div className="min-w-0 rounded-xl border border-border bg-surface-2/30 p-4">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-fg">{t('dnssrv.roleTitle')}</p>
+                        <span
+                            className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                                clusterDirty
+                                    ? 'bg-primary/10 text-primary'
+                                    : saved.configured
+                                      ? 'bg-success/10 text-success'
+                                      : 'bg-warning/10 text-warning'
+                            }`}
+                        >
+                            {clusterDirty
+                                ? t('dnssrv.stateUnsaved')
+                                : saved.configured
+                                  ? t('dnssrv.stateSaved')
+                                  : t('dnssrv.roleUnconfigured')}
+                        </span>
+                    </div>
+                    <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('dnssrv.roleHint')}</p>
+
+                    {!saved.configured && !clusterDirty && (
+                        <div className="mb-3 rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs leading-relaxed text-fg-muted">
+                            {t('dnssrv.roleSetupHint')}
+                        </div>
+                    )}
+
+                    <fieldset className="mb-3 grid gap-2 sm:grid-cols-2">
+                        <legend className="sr-only">{t('dnssrv.roleTitle')}</legend>
+                        {(['standalone', 'paired'] as const).map((role) => (
+                            <label
+                                key={role}
+                                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 ${
+                                    draft.role === role ? 'border-primary bg-primary/5' : 'border-border'
+                                }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="dns-role"
+                                    className="mt-0.5"
+                                    checked={draft.role === role}
+                                    onChange={() => setDraft((current) => (current ? { ...current, role } : current))}
+                                />
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-medium text-fg">
+                                        {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
+                                    </span>
+                                    <span className="block text-xs leading-relaxed text-fg-muted">
+                                        {t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
+                                    </span>
+                                </span>
+                            </label>
+                        ))}
+                    </fieldset>
+
+                    {draft.role === 'paired' && (
+                        <>
+                            <div className="mb-2 grid gap-3 sm:grid-cols-2">
+                                <Field label={t('dnssrv.peerIpLabel')} htmlFor="dns-peer-ip">
+                                    <input
+                                        id="dns-peer-ip"
+                                        className={inputClass}
+                                        value={draft.peer_ip}
+                                        onChange={(e) =>
+                                            setDraft((current) => (current ? { ...current, peer_ip: e.target.value } : current))
+                                        }
+                                        placeholder={t('dnssrv.peerIpPlaceholder')}
+                                    />
+                                </Field>
+                                <Field label={t('dnssrv.localNsLabel')} hint={t('dnssrv.localNsHint')} htmlFor="dns-local-ns">
+                                    <select
+                                        id="dns-local-ns"
+                                        className={inputClass}
+                                        value={effectiveLocalNS}
+                                        disabled={saved.namesDerived || namesDirty}
+                                        onChange={(e) => selectLocalNameserver(e.target.value)}
+                                    >
+                                        <option value="">{t('dnssrv.localNsPlaceholder')}</option>
+                                        {nameserverNames.map((name) => (
+                                            <option key={name} value={name}>
+                                                {name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </Field>
+                            </div>
+
+                            <div className="mb-3">
+                                <p className="mb-2 text-xs font-medium text-fg">{t('dnssrv.identityTitle')}</p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    <div className="min-w-0 rounded-lg border border-primary/25 bg-primary/5 p-3">
+                                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                                            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                                                {t('dnssrv.thisServer')}
+                                            </span>
+                                            <span className="font-mono text-xs text-fg-muted">{saved.server_ip || '—'}</span>
+                                        </div>
+                                        <p className="break-all font-mono text-sm font-semibold text-fg">{effectiveLocalNS || '—'}</p>
+                                    </div>
+                                    <div className="min-w-0 rounded-lg border border-border bg-surface p-3">
+                                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                                            <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                                                {t('dnssrv.peerServer')}
+                                            </span>
+                                            <span className="font-mono text-xs text-fg-muted">{effectivePeerIP || '—'}</span>
+                                        </div>
+                                        <p className="break-all font-mono text-sm font-semibold text-fg">{effectivePeerNS || '—'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {(saved.namesDerived || namesDirty) && (
+                                <p className="mb-3 rounded-lg bg-surface-2/60 p-2.5 text-xs leading-relaxed text-fg-muted">
+                                    {t('dnssrv.saveNamesFirst')}
+                                </p>
+                            )}
+
+                            {checksCurrent && saved.configured && saved.role === 'paired' && saved.peer_ip && (
+                                <div className="mb-3 rounded-lg border border-border bg-surface-2/50 p-3">
+                                    <p className="flex items-center gap-1.5 text-xs">
+                                        <Server className="h-3.5 w-3.5 text-fg-muted" />
+                                        <StatusDot ok={saved.peer_reachable} />
+                                        <span className="text-fg-muted">
+                                            {saved.peer_reachable
+                                                ? t('dnssrv.peerTcpReachable', { ip: saved.peer_ip })
+                                                : t('dnssrv.peerTcpUnreachable', { ip: saved.peer_ip })}
+                                        </span>
+                                    </p>
+                                    <p className="mt-1 text-xs text-fg-subtle">{t('dnssrv.peerTcpOnly')}</p>
+                                </div>
+                            )}
+                        </>
+                    )}
+                    {draft.role === 'standalone' && (
+                        <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">{t('dnssrv.thisServer')}</p>
+                            <p className="font-mono text-xs text-fg-muted">{saved.server_ip || '—'}</p>
+                            <p className="mt-1 text-sm font-medium text-fg">{t('dnssrv.bothNames')}</p>
+                        </div>
+                    )}
+                    {draft.role === 'standalone' && (saved.namesDerived || namesDirty) && (
                         <p className="mb-3 rounded-lg bg-surface-2/60 p-2.5 text-xs leading-relaxed text-fg-muted">
                             {t('dnssrv.saveNamesFirst')}
                         </p>
                     )}
 
-                    {checksCurrent && saved.configured && saved.role === 'paired' && saved.peer_ip && (
-                        <div className="mb-3 rounded-lg border border-border bg-surface-2/50 p-3">
-                            <p className="flex items-center gap-1.5 text-xs">
-                                <Server className="h-3.5 w-3.5 text-fg-muted" />
-                                <StatusDot ok={saved.peer_reachable} />
-                                <span className="text-fg-muted">
-                                    {saved.peer_reachable
-                                        ? t('dnssrv.peerTcpReachable', { ip: saved.peer_ip })
-                                        : t('dnssrv.peerTcpUnreachable', { ip: saved.peer_ip })}
-                                </span>
-                            </p>
-                            <p className="mt-1 text-xs text-fg-subtle">{t('dnssrv.peerTcpOnly')}</p>
+                    <Button
+                        onClick={saveCluster}
+                        disabled={busy || !canSaveCluster || (!clusterDirty && saved.configured)}
+                    >
+                        <Check className="h-4 w-4" /> {t('dnssrv.saveRole')}
+                    </Button>
+
+                    {!checksCurrent && (
+                        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-fg-muted">
+                            {t('dnssrv.checksStale')}
                         </div>
                     )}
-                </>
-			)}
-			{draft.role === 'standalone' && (saved.namesDerived || namesDirty) && (
-				<p className="mb-3 rounded-lg bg-surface-2/60 p-2.5 text-xs leading-relaxed text-fg-muted">
-					{t('dnssrv.saveNamesFirst')}
-				</p>
-			)}
 
-			<Button
-                onClick={saveCluster}
-                disabled={busy || !canSaveCluster || (!clusterDirty && saved.configured)}
-            >
-                <Check className="h-4 w-4" /> {t('dnssrv.saveRole')}
-            </Button>
-
-            {!checksCurrent && (
-                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-fg-muted">
-                    {t('dnssrv.checksStale')}
+                    {checksCurrent && saved.configured && saved.steps?.length > 0 && (
+                        <div className="mt-5 rounded-xl border border-border bg-surface-2/50 p-4">
+                            <p className="mb-2 text-sm font-medium text-fg">{t('dnssrv.stepsTitle')}</p>
+                            <ul className="space-y-2">
+                                {saved.steps.map((step, index) => (
+                                    <li key={`${step.code}-${index}`} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                                        {step.done ? (
+                                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                                        ) : step.manual ? (
+                                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                                        ) : (
+                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                                        )}
+                                        <span className={step.done ? 'text-fg-muted line-through' : 'text-fg'}>
+                                            {t(`dnssrv.step.${step.code}` as Parameters<typeof t>[0], {
+                                                a: step.args?.[0] ?? '',
+                                                b: step.args?.[1] ?? '',
+                                            })}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
-            )}
-
-            {checksCurrent && saved.configured && saved.steps?.length > 0 && (
-                <div className="mt-5 rounded-xl border border-border bg-surface-2/50 p-4">
-                    <p className="mb-2 text-sm font-medium text-fg">{t('dnssrv.stepsTitle')}</p>
-                    <ul className="space-y-2">
-                        {saved.steps.map((step, index) => (
-                            <li key={`${step.code}-${index}`} className="flex items-start gap-2.5 text-xs leading-relaxed">
-                                {step.done ? (
-                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                                ) : step.manual ? (
-                                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
-                                ) : (
-                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                                )}
-                                <span className={step.done ? 'text-fg-muted line-through' : 'text-fg'}>
-                                    {t(`dnssrv.step.${step.code}` as Parameters<typeof t>[0], {
-                                        a: step.args?.[0] ?? '',
-                                        b: step.args?.[1] ?? '',
-                                    })}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+            </div>
         </section>
     );
 }
