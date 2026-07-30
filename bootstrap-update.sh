@@ -176,8 +176,13 @@ case "$1" in
 esac
 
 # Ignore a caller-controlled PATH before privileged build tools are resolved.
-# Ayrıcalıklı derleme araçları çözülmeden önce çağıranın denetlediği PATH'i yok say.
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Prefer canonical bin directories before compatibility sbin/bin aliases.
+# Arch links /usr/sbin, /sbin and /bin back to /usr/bin; resolving a common
+# tool through an alias would correctly fail the trust-chain check even though
+# the canonical /usr/bin entry is available.
+# Ayrıcalıklı derleme araçları çözülmeden önce çağıranın denetlediği PATH'i yok
+# say. Arch uyumluluk bağlantılarından önce kanonik bin dizinlerini tercih et.
+PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
 export PATH
 umask 077
 

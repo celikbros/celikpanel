@@ -117,6 +117,11 @@ require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --create-
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --count-users'
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --create-admin'
 
+# Arch's compatibility sbin/bin aliases must not win command resolution over
+# the canonical bin directories used by the trust-chain checker.
+require_literal "$BOOTSTRAP" 'PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin'
+reject_literal "$BOOTSTRAP" 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
 # One clean reviewed commit must produce one root-only release for both modes.
 # Tek temiz incelenmiş commit iki mod için tek root-only sürüm üretmelidir.
 require_literal "$BOOTSTRAP" '#!/bin/bash'
