@@ -480,6 +480,20 @@ type pinnedSQLiteSidecar struct {
 }
 
 func pinPanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
+	return pinPanelDatabaseWithWALPolicy(databasePath, false)
+}
+
+func pinWALAwarePanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
+	if isLinuxProcSelfFDPath(databasePath) {
+		return nil, fmt.Errorf(
+			"%w: WAL-aware panel database proof requires a canonical database path",
+			errServiceOperationsNotIdle,
+		)
+	}
+	return pinPanelDatabaseWithWALPolicy(databasePath, true)
+}
+
+func pinPanelDatabaseWithWALPolicy(databasePath string, allowNonEmptyWAL bool) (*pinnedPanelDatabase, error) {
 	if isLinuxProcSelfFDPath(databasePath) {
 		return pinPanelDatabaseDescriptor(databasePath)
 	}
@@ -544,7 +558,7 @@ func pinPanelDatabase(databasePath string) (*pinnedPanelDatabase, error) {
 		pinned.close()
 		return nil, fmt.Errorf("%w: panel database path changed while it was pinned", errServiceOperationsNotIdle)
 	}
-	if err := pinned.pinSidecars(); err != nil {
+	if err := pinned.pinSidecars(allowNonEmptyWAL); err != nil {
 		pinned.close()
 		return nil, err
 	}
@@ -643,7 +657,7 @@ func (p *pinnedPanelDatabase) siblingPath(suffix string) string {
 	return p.path + suffix
 }
 
-func (p *pinnedPanelDatabase) pinSidecars() error {
+func (p *pinnedPanelDatabase) pinSidecars(allowNonEmptyWAL bool) error {
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		pathInfo, err := os.Lstat(p.siblingPath(suffix))
 		if errors.Is(err, os.ErrNotExist) {
@@ -670,7 +684,7 @@ func (p *pinnedPanelDatabase) pinSidecars() error {
 			file.Close()
 			return fmt.Errorf("%w: SQLite sidecar %s changed while it was pinned", errServiceOperationsNotIdle, suffix)
 		}
-		if suffix == "-wal" && info.Size() != 0 {
+		if suffix == "-wal" && info.Size() != 0 && !allowNonEmptyWAL {
 			file.Close()
 			return fmt.Errorf("%w: SQLite WAL contains uncheckpointed data", errServiceOperationsNotIdle)
 		}

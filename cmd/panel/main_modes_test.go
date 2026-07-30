@@ -14,6 +14,8 @@ func TestValidatePanelCommandModesRejectsEveryOneShotPair(t *testing.T) {
 		{name: "count-users", enable: func(m *panelCommandModes) { m.countUsers = true }},
 		{name: "check-service-operations-idle", enable: func(m *panelCommandModes) { m.checkIdle = true }},
 		{name: "check-pre-ledger-service-operations-idle", enable: func(m *panelCommandModes) { m.checkPreLedgerIdle = true }},
+		{name: "check-service-operations-idle-wal-aware", enable: func(m *panelCommandModes) { m.checkWALAwareIdle = true }},
+		{name: "check-pre-ledger-service-operations-idle-wal-aware", enable: func(m *panelCommandModes) { m.checkWALAwarePreLedgerIdle = true }},
 		{name: "snapshot-create-or-restore", enable: func(m *panelCommandModes) { m.createOrRestore = true }},
 		{name: "migrate-only", enable: func(m *panelCommandModes) { m.migrateOnly = true }},
 	}
@@ -39,6 +41,8 @@ func TestValidatePanelCommandModesAcceptsEachOneShotAlone(t *testing.T) {
 		{countUsers: true},
 		{checkIdle: true},
 		{checkPreLedgerIdle: true},
+		{checkWALAwareIdle: true},
+		{checkWALAwarePreLedgerIdle: true},
 		{createOrRestore: true},
 		{migrateOnly: true},
 	}

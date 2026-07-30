@@ -1226,10 +1226,12 @@ for unit in celikpanel-agent.service celikpanel-panel.service; do
     verify_restored_service_active_state "$unit" "${active_states[$unit]}"
 done
 
-# Recheck the database after an active-like panel has executed, then restore its
-# saved runtime state under the same process-bound authorization.
-# Active-benzeri panel çalıştıktan sonra veritabanını yeniden denetle; ardından
-# aynı süreç-bağlı yetki altında kayıtlı çalışma durumunu geri getir.
+# Recheck the canonical database after an active-like panel has executed. That
+# controlled start may leave a healthy non-empty SQLite WAL, so this proof must
+# use the trusted WAL-aware checker before restoring the saved runtime state.
+# Active-benzeri panel çalıştıktan sonra kanonik veritabanını yeniden denetle.
+# Kontrollü başlangıç sağlıklı ve dolu bir SQLite WAL bırakabileceğinden kayıtlı
+# çalışma durumunu geri getirmeden önce güvenilir WAL-aware checker kullanılır.
 if service_state_is_active_like "${active_states[celikpanel-panel.service]}"; then
     systemctl stop celikpanel-panel.service \
         || die "restored panel could not be stopped for final database proof"
@@ -1237,12 +1239,12 @@ fi
 case "$transition_state" in
     normal)
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-service-operations-idle \
+            "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
             || die "restored normal panel database changed during controlled start"
         ;;
     pre-ledger)
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
+            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \
             || die "restored pre-ledger panel database changed during controlled start"
         ;;
     schema17)

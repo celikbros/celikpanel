@@ -53,6 +53,8 @@ type Panel struct {
 }
 
 func main() {
+	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
+	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
 	insecureCookies := flag.Bool("insecure-cookies", false, "Send session cookies without the Secure flag (HTTP-only local dev) / Oturum çerezlerini Secure bayrağı olmadan gönder (yalnızca HTTP yerel geliştirme)")
 	demo := flag.Bool("demo", false, "Development only: seed one account per role and show quick-login credentials on the login screen / Yalnızca geliştirme: her rol için hesap oluştur ve giriş ekranında hızlı-giriş bilgilerini göster")
@@ -85,14 +87,16 @@ func main() {
 			strings.TrimSpace(releaseTransaction.operation) != "" ||
 			strings.TrimSpace(releaseTransaction.snapshot) != ""
 	if err := validatePanelCommandModes(panelCommandModes{
-		createAdmin:        *createAdmin,
-		countUsers:         *countUsersFlag,
-		checkIdle:          *checkServiceOperationsIdleFlag,
-		checkPreLedgerIdle: *checkPreLedgerServiceOperationsIdleFlag,
-		createOrRestore:    databaseActionRequestedByFlags,
-		migrateOnly:        *migrateOnlyFlag,
-		demo:               *demo,
-		insecureCookies:    *insecureCookies,
+		createAdmin:                *createAdmin,
+		countUsers:                 *countUsersFlag,
+		checkIdle:                  *checkServiceOperationsIdleFlag,
+		checkPreLedgerIdle:         *checkPreLedgerServiceOperationsIdleFlag,
+		checkWALAwareIdle:          *checkWALAwareServiceOperationsIdleFlag,
+		checkWALAwarePreLedgerIdle: *checkWALAwarePreLedgerServiceOperationsIdleFlag,
+		createOrRestore:            databaseActionRequestedByFlags,
+		migrateOnly:                *migrateOnlyFlag,
+		demo:                       *demo,
+		insecureCookies:            *insecureCookies,
 	}); err != nil {
 		log.Fatalf("Invalid panel command mode: %v", err)
 	}
@@ -134,6 +138,20 @@ func main() {
 		default:
 			log.Fatalf("Unsupported service operation database action %q", databaseAction)
 		}
+		return
+	}
+	if *checkWALAwarePreLedgerServiceOperationsIdleFlag {
+		if err := checkWALAwarePreLedgerServiceOperationsIdle(databaseFile()); err != nil {
+			log.Fatalf("WAL-aware pre-ledger service operation check failed: %v", err)
+		}
+		log.Println("WAL-aware pre-ledger service operation state is idle")
+		return
+	}
+	if *checkWALAwareServiceOperationsIdleFlag {
+		if err := checkWALAwareServiceOperationsIdle(databaseFile()); err != nil {
+			log.Fatalf("WAL-aware service operation idle check failed: %v", err)
+		}
+		log.Println("WAL-aware service operation state is idle")
 		return
 	}
 	if *checkPreLedgerServiceOperationsIdleFlag {

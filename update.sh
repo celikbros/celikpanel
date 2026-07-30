@@ -1158,13 +1158,13 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
 
     if [[ "$pending_snapshot_transition" == normal ]]; then
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$BIN_DIR/panel" --check-service-operations-idle \
+            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
             || die "pending normal update panel ledger is not idle"
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-pre-ledger-service-operations-idle; then
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
         :
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-service-operations-idle; then
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
         :
     else
         die "pending pre-ledger update database is neither exact pre-ledger nor normal"
@@ -1619,17 +1619,19 @@ fail_before_active() {
     die "$reason; active phase was preserved for exact recovery or explicit rollback"
 }
 
-# Preliminary checks reduce disruption. They are repeated only after both
-# coordinators are frozen, which closes the panel enqueue race.
-# Ön kontroller kesintiyi azaltır. Panel enqueue yarışını kapatmak için kontroller
-# iki koordinatör de frozen olduktan sonra yeniden yapılır.
+# Preliminary checks reduce disruption. The panel proof is WAL-aware because a
+# healthy coordinator may retain a non-empty SQLite WAL. It is repeated after
+# both coordinators are frozen, which closes the panel enqueue race.
+# Ön kontroller kesintiyi azaltır. Sağlıklı bir koordinatör dolu SQLite WAL
+# tutabileceği için panel kanıtı WAL-aware'dır. Panel enqueue yarışını kapatmak
+# üzere iki koordinatör de frozen olduktan sonra yeniden alınır.
 prepare_runtime_mutation_lock_dir
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
         "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
             || fail_before_active "panel is not at the exact supported schema version 17; schema17 bootstrap refused"
     elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle; then
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
         fail_before_active "panel is not at exact pre-ledger schema version 20; bootstrap refused"
     fi
     [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
@@ -1640,7 +1642,7 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     fi
 else
     if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$PREFLIGHT_PANEL" --check-service-operations-idle; then
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
         fail_before_active "panel service operations are not idle; update refused"
     fi
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -1679,7 +1681,7 @@ if [[ "$transaction_phase" == quiesce ]]; then
             "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
                 || fail_before_active "final frozen panel exact schema17 proof failed"
         elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle; then
+            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel pre-ledger idle proof failed"
         fi
         [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
@@ -1691,7 +1693,7 @@ if [[ "$transaction_phase" == quiesce ]]; then
         fi
     else
         if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-service-operations-idle; then
+            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel idle proof failed"
         fi
         if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -1770,7 +1772,7 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
             || die "stopped panel exact schema17 proof failed"
     else
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \
+            "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
             || die "stopped panel pre-ledger idle proof failed"
     fi
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -1779,7 +1781,7 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
         || die "stopped pre-ledger agent idle proof failed"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$PREFLIGHT_PANEL" --check-service-operations-idle \
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
         || die "stopped panel idle proof failed"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
@@ -2081,11 +2083,11 @@ verify_installed_release_artifacts
 
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-pre-ledger-service-operations-idle \
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
         || die "pre-ledger panel database changed before the controlled start"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-service-operations-idle \
+        "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
         || die "installed panel durable ledger is not ready before controlled start"
 fi
 CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \

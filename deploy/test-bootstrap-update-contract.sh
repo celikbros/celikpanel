@@ -34,6 +34,13 @@ require_count() {
         || die "$(basename "$file") count for '$literal' is $actual, want $expected"
 }
 
+require_regex_count() {
+    local file=$1 regex=$2 expected=$3 actual
+    actual=$(grep -E -c -- "$regex" "$file" || true)
+    [[ "$actual" == "$expected" ]] \
+        || die "$(basename "$file") regex count for '$regex' is $actual, want $expected"
+}
+
 # Find every ordered literal after the previous match so helper definitions do
 # not satisfy a later runtime gate accidentally.
 # Her sıralı literal'i önceki eşleşmeden sonra bul; helper tanımları sonraki
@@ -318,6 +325,17 @@ require_sequence "$UPDATE" \
     'verify_quiesce_coordinator_identity celikpanel-panel.service unfrozen || return 1' \
     'verify_quiesce_coordinator_identity celikpanel-agent.service unfrozen || return 1'
 
+# Canonical panel checks tolerate a healthy non-empty WAL. Only the two cold
+# postconditions below may use the immutable checker against the canonical DB.
+# Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
+# aşağıdaki iki cold postcondition immutable checker kullanabilir.
+require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
+require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 6
+require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 5
+require_regex_count "$UPDATE" '^[[:space:]]*"\$BIN_DIR/panel" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$UPDATE" '^[[:space:]]*"\$TRUSTED_RELEASE_ROOT/bin/panel" --check-(pre-ledger-)?service-operations-idle([[:space:]]*\\|; then)$' 0
+
 # The normal quiesce path closes the enqueue race while holding the shared lock,
 # promotes the exact six/seven-argument marker, and proves both cgroups stopped.
 # Normal quiesce yolu ortak kilidi tutarken enqueue yarışını kapatır, tam altı/yedi
@@ -333,6 +351,8 @@ require_sequence "$UPDATE" \
 require_sequence "$UPDATE" \
     'freeze_release_service_cgroup celikpanel-panel.service panel panel_frozen' \
     'freeze_release_service_cgroup celikpanel-agent.service agent agent_frozen' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
     'final frozen panel idle proof failed' \
     'final frozen agent idle proof failed' \
     'verify_quiesce_coordinator_identity celikpanel-panel.service frozen' \
@@ -346,6 +366,8 @@ require_sequence "$UPDATE" \
     'release_release_mutation_lock || die "cannot release stale mutation lock after coordinator stop"' \
     'prepare_runtime_mutation_lock_dir' \
     'acquire_release_mutation_lock' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \' \
     'stopped panel idle proof failed' \
     'stopped agent idle proof failed'
 
@@ -429,16 +451,21 @@ require_sequence "$UPDATE" \
     'sync -f -- "$PANEL_DB" "$(dirname "$PANEL_DB")"' \
     '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock'
 
+require_sequence "$UPDATE" \
+    '"$SCHEMA17_BRIDGE" migrate \' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \' \
+    'schema17 bridge did not produce the exact idle schema20 state'
+
 # A pre-ledger pending retry accepts either the exact old schema or an already
 # completed normal migration; both successful elif bodies must be explicit no-ops.
 # Ledger öncesi bekleyen yeniden deneme ya tam eski şemayı ya da tamamlanmış normal
 # migration durumunu kabul eder; iki başarılı elif gövdesi de açık no-op olmalıdır.
 require_sequence "$UPDATE" \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$BIN_DIR/panel" --check-pre-ledger-service-operations-idle; then' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
     '        :' \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$BIN_DIR/panel" --check-service-operations-idle; then' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
     '        :'
 
 # Pending finalization keeps completion.pending until stopped-state validation,
@@ -485,7 +512,7 @@ require_sequence "$UPDATE" \
     'apply-only unexpectedly left $unit active' \
     'verify_saved_enablement' \
     'verify_installed_release_artifacts' \
-    '"$BIN_DIR/panel" --check-service-operations-idle' \
+    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
     '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
     'release_txn_mark_completion_pending \' \
     'run_panel_migrations_offline' \
@@ -534,11 +561,12 @@ require_sequence "$INSTALL" \
     'systemctl restart celikpanel-panel.service' \
     'systemctl is-active --quiet celikpanel-panel.service'
 
-# Rollback validates the snapshot database with the trusted snapshot checker
-# before stopping services, never classifies the mutable current DB, and never
-# restores SQLite sidecars.
-# Rollback snapshot DB'yi servisleri durdurmadan önce güvenilir snapshot checker
-# ile doğrular; değişebilir mevcut DB'yi sınıflandırmaz ve sidecar geri yüklemez.
+# Rollback validates standalone snapshots and the cold restore postcondition
+# with the immutable checker. A controlled panel start may leave a healthy WAL,
+# so the final canonical proof must use the WAL-aware checker.
+# Rollback standalone snapshotları ve cold restore postcondition'ı immutable
+# checker ile doğrular. Kontrollü panel başlangıcı sağlıklı bir WAL bırakabilir;
+# son kanonik kanıt bu nedenle WAL-aware checker kullanmalıdır.
 require_literal "$ROLLBACK" '#!/bin/bash'
 require_literal "$ROLLBACK" 'RELEASES_ROOT=/var/backups/celikpanel/releases'
 require_literal "$ROLLBACK" 'validate_running_release()'
@@ -553,6 +581,10 @@ require_literal "$ROLLBACK" 'panel database snapshot must be standalone without 
 require_literal "$ROLLBACK" 'CELIKPANEL_DATA_DIR="$snap"'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-service-operations-idle'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle'
+require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 1
+require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 1
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 2
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 2
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-wal"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-shm"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-journal"'
@@ -565,6 +597,21 @@ require_sequence "$ROLLBACK" \
     '"$PREFLIGHT_PANEL" --check-service-operations-idle' \
     'rollback_verified_snapshot=$snap' \
     'systemctl stop celikpanel-panel.service'
+
+require_sequence "$ROLLBACK" \
+    'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle \' \
+    'release_txn_create_start_authorization \' \
+    'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
+    'systemctl stop celikpanel-panel.service \' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \'
+require_sequence "$ROLLBACK" \
+    'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \' \
+    'release_txn_create_start_authorization \' \
+    'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
+    'systemctl stop celikpanel-panel.service \' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \'
 
 # Rollback repeats normal/initial/pre-ledger proofs under the outer flock. The
 # legacy cleanup accepts only one strict root-owned canonical-prefix stage.

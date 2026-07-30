@@ -54,14 +54,16 @@ type serviceOperationReleaseTransaction struct {
 }
 
 type panelCommandModes struct {
-	createAdmin        bool
-	countUsers         bool
-	checkIdle          bool
-	checkPreLedgerIdle bool
-	createOrRestore    bool
-	migrateOnly        bool
-	demo               bool
-	insecureCookies    bool
+	createAdmin                bool
+	countUsers                 bool
+	checkIdle                  bool
+	checkPreLedgerIdle         bool
+	checkWALAwareIdle          bool
+	checkWALAwarePreLedgerIdle bool
+	createOrRestore            bool
+	migrateOnly                bool
+	demo                       bool
+	insecureCookies            bool
 }
 
 type serviceOperationRestoreHooks struct {
@@ -360,7 +362,7 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 6)
+	oneShotModes := make([]string, 0, 8)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
@@ -369,6 +371,8 @@ func validatePanelCommandModes(modes panelCommandModes) error {
 		{name: "count-users", enabled: modes.countUsers},
 		{name: "check-service-operations-idle", enabled: modes.checkIdle},
 		{name: "check-pre-ledger-service-operations-idle", enabled: modes.checkPreLedgerIdle},
+		{name: "check-service-operations-idle-wal-aware", enabled: modes.checkWALAwareIdle},
+		{name: "check-pre-ledger-service-operations-idle-wal-aware", enabled: modes.checkWALAwarePreLedgerIdle},
 		{name: "service-operation-snapshot-create-or-restore", enabled: modes.createOrRestore},
 		{name: "migrate-only", enabled: modes.migrateOnly},
 	} {
