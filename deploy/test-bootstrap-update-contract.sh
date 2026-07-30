@@ -194,6 +194,9 @@ require_literal "$UPDATE" '[[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]]'
 require_literal "$UPDATE" '[[ "$updater" == "$root/update.sh" ]]'
 require_literal "$UPDATE" '! -path '\''./SHA256SUMS'\'' -print0'
 require_count "$UPDATE" 'preflight_staged_installer_runtime' 2
+reject_literal "$UPDATE" 'grep hostname id install'
+require_literal "$INSTALL" 'if command -v hostname >/dev/null 2>&1; then'
+require_literal "$INSTALL" 'hostname -I 2>/dev/null | awk '\''{print $1}'\'' || true'
 require_count "$UPDATE" 'prepare_snapshot_root' 2
 require_count "$UPDATE" 'validate_trusted_release' 2
 require_exact_sequence "$UPDATE" \

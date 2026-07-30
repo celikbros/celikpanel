@@ -626,7 +626,10 @@ systemctl is-active --quiet celikpanel-panel.service || \
 ok "panel çalışıyor"
 
 # 10. Done -------------------------------------------------------------------
-IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+IP=""
+if command -v hostname >/dev/null 2>&1; then
+    IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+fi
 PORT="${LISTEN##*:}"
 echo
 c '1;32' "CelikPanel kuruldu."

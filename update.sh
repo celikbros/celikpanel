@@ -276,7 +276,7 @@ preflight_staged_installer_runtime() {
     local required_command
     local -a required_commands=(
         awk basename bash chmod chown cmp cp cut dirname find flock getent
-        grep hostname id install ln mkdir mv od readlink rm rmdir sed seq
+        grep id install ln mkdir mv od readlink rm rmdir sed seq
         env sha256sum sleep sort stat sudo sync systemctl tr uname xargs
     )
     for required_command in "${required_commands[@]}"; do
