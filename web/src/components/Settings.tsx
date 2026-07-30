@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import QRCode from 'qrcode';
 import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -327,11 +326,22 @@ function TwoFactorPanel() {
     // otpauth:// URI'si QR olarak — taramak 32 karakterlik anahtarı yazmayı
     // döver. Tarayıcıda yerel üretilir; anahtar dışarı çıkmaz.
     useEffect(() => {
+        let cancelled = false;
+        setQr('');
         if (setup?.uri) {
-            QRCode.toDataURL(setup.uri, { width: 192, margin: 1 }).then(setQr).catch(() => setQr(''));
-        } else {
-            setQr('');
+            void import('qrcode')
+                .then(({ default: QRCode }) => QRCode.toDataURL(setup.uri, { width: 192, margin: 1 }))
+                .then((url) => {
+                    if (!cancelled) setQr(url);
+                })
+                .catch(() => {
+                    if (!cancelled) setQr('');
+                });
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [setup]);
     const [code, setCode] = useState('');
     const [disablePw, setDisablePw] = useState('');

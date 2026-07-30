@@ -7,6 +7,8 @@ import type { TranslationKey } from './en';
 export const tr: Record<TranslationKey, string> = {
     'app.name': 'CelikPanel',
     'app.tagline': 'Kontrol Paneli',
+    'app.pageLoadFailed': 'Bu bölüm yüklenemedi. Bu sekme açıkken CelikPanel güncellenmiş olabilir.',
+    'app.reload': 'CelikPanel’i yeniden yükle',
 
     'nav.dashboard': 'Panel',
     'nav.domains': 'Alan Adları',

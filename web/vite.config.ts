@@ -23,6 +23,11 @@ export default defineConfig({
     __BUILD__: JSON.stringify(buildStamp),
   },
   plugins: [react()],
+  build: {
+    // The post-build budget follows this graph so a route cannot hide a large
+    // payload behind several individually small shared chunks.
+    manifest: true,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

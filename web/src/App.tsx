@@ -1,34 +1,36 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { Component, lazy, Suspense, useState, useEffect, useRef, type ErrorInfo, type ReactNode } from 'react';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { navItems, navItemsForRole, canAccessPath } from './nav';
 import { Layout } from './components/Layout';
-import { Dashboard } from './components/Dashboard';
-import { Domains } from './components/Domains';
-import { DomainDetail } from './components/DomainDetail';
-import { DatabaseManagementV2 } from './components/DatabaseManagementV2';
-import { ServiceList } from './components/ServiceList';
-import { MonitoringPage } from './components/MonitoringPage';
-import { ConfigEditor } from './components/ConfigEditor';
-import { Settings } from './components/Settings';
-import { UsersPage } from './components/UsersPage';
-import { ImportPage } from './components/ImportPage';
-import { AuditLogPage } from './components/AuditLogPage';
-import { AddonsPage } from './components/AddonsPage';
-import { VPNPage } from './components/VPNPage';
-import { PHPManagement } from './components/PHPManagement';
-import { NginxManagement } from './components/NginxManagement';
-import { Fail2banManagement } from './components/Fail2banManagement';
-import { PostfixManagement } from './components/PostfixManagement';
-import { DovecotManagement } from './components/DovecotManagement';
-import { PowerDNSManagement } from './components/PowerDNSManagement';
-import { VsftpdManagement } from './components/VsftpdManagement';
-import { PostgreSQLManagement } from './components/PostgreSQLManagement';
-import { MariaDBManagement } from './components/MariaDBManagement';
-import { ComponentDetail } from './components/ComponentDetail';
 import { ComponentOperationProvider } from './components/ComponentOperation';
+import { useI18n } from './i18n';
+
+const Dashboard = lazy(() => import('./components/Dashboard').then((module) => ({ default: module.Dashboard })));
+const Domains = lazy(() => import('./components/Domains').then((module) => ({ default: module.Domains })));
+const DomainDetail = lazy(() => import('./components/DomainDetail').then((module) => ({ default: module.DomainDetail })));
+const DatabaseManagementV2 = lazy(() => import('./components/DatabaseManagementV2').then((module) => ({ default: module.DatabaseManagementV2 })));
+const ServiceList = lazy(() => import('./components/ServiceList').then((module) => ({ default: module.ServiceList })));
+const MonitoringPage = lazy(() => import('./components/MonitoringPage').then((module) => ({ default: module.MonitoringPage })));
+const ConfigEditor = lazy(() => import('./components/ConfigEditor').then((module) => ({ default: module.ConfigEditor })));
+const Settings = lazy(() => import('./components/Settings').then((module) => ({ default: module.Settings })));
+const UsersPage = lazy(() => import('./components/UsersPage').then((module) => ({ default: module.UsersPage })));
+const ImportPage = lazy(() => import('./components/ImportPage').then((module) => ({ default: module.ImportPage })));
+const AuditLogPage = lazy(() => import('./components/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
+const AddonsPage = lazy(() => import('./components/AddonsPage').then((module) => ({ default: module.AddonsPage })));
+const VPNPage = lazy(() => import('./components/VPNPage').then((module) => ({ default: module.VPNPage })));
+const PHPManagement = lazy(() => import('./components/PHPManagement').then((module) => ({ default: module.PHPManagement })));
+const NginxManagement = lazy(() => import('./components/NginxManagement').then((module) => ({ default: module.NginxManagement })));
+const Fail2banManagement = lazy(() => import('./components/Fail2banManagement').then((module) => ({ default: module.Fail2banManagement })));
+const PostfixManagement = lazy(() => import('./components/PostfixManagement').then((module) => ({ default: module.PostfixManagement })));
+const DovecotManagement = lazy(() => import('./components/DovecotManagement').then((module) => ({ default: module.DovecotManagement })));
+const PowerDNSManagement = lazy(() => import('./components/PowerDNSManagement').then((module) => ({ default: module.PowerDNSManagement })));
+const VsftpdManagement = lazy(() => import('./components/VsftpdManagement').then((module) => ({ default: module.VsftpdManagement })));
+const PostgreSQLManagement = lazy(() => import('./components/PostgreSQLManagement').then((module) => ({ default: module.PostgreSQLManagement })));
+const MariaDBManagement = lazy(() => import('./components/MariaDBManagement').then((module) => ({ default: module.MariaDBManagement })));
+const ComponentDetail = lazy(() => import('./components/ComponentDetail').then((module) => ({ default: module.ComponentDetail })));
 
 // Domain Detail Wrapper - fetches domain ID from domain name
 function DomainDetailPage() {
@@ -284,9 +286,76 @@ function MainLayout({ children, currentPath }: { children: React.ReactNode; curr
 }
 
 // Page wrapper component that provides layout
-function PageWithLayout({ children }: { children: React.ReactNode }) {
-  const currentPath = window.location.pathname;
-  return <MainLayout currentPath={currentPath}>{children}</MainLayout>;
+function PageWithLayout({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const currentPath = location.pathname;
+  return (
+    <MainLayout currentPath={currentPath}>
+      <RouteLoadBoundary key={currentPath}>
+        <Suspense fallback={<PageLoading />}>{children}</Suspense>
+      </RouteLoadBoundary>
+    </MainLayout>
+  );
+}
+
+function PageLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="flex min-h-64 items-center justify-center" role="status" aria-label={t('common.loading')}>
+      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+    </div>
+  );
+}
+
+interface RouteLoadErrorBoundaryProps {
+  children: ReactNode;
+  message: string;
+  reloadLabel: string;
+}
+
+interface RouteLoadErrorBoundaryState {
+  failed: boolean;
+}
+
+class RouteLoadErrorBoundary extends Component<RouteLoadErrorBoundaryProps, RouteLoadErrorBoundaryState> {
+  state: RouteLoadErrorBoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): RouteLoadErrorBoundaryState {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Page bundle failed to load', error, info);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+
+    return (
+      <div className="mx-auto flex min-h-64 max-w-lg flex-col items-center justify-center gap-4 rounded-xl border border-border bg-surface p-8 text-center">
+        <p className="text-sm text-fg-muted">{this.props.message}</p>
+        <button
+          type="button"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+          onClick={() => window.location.reload()}
+        >
+          {this.props.reloadLabel}
+        </button>
+      </div>
+    );
+  }
+}
+
+function RouteLoadBoundary({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <RouteLoadErrorBoundary
+      message={t('app.pageLoadFailed')}
+      reloadLabel={t('app.reload')}
+    >
+      {children}
+    </RouteLoadErrorBoundary>
+  );
 }
 
 function AppRoutes() {

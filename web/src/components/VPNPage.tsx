@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import QRCode from 'qrcode';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -227,15 +226,18 @@ export function VPNPage() {
         let cancelled = false;
         setQRURL('');
         if (!issued) return () => { cancelled = true; };
-        void QRCode.toDataURL(issued.config, {
-            width: 256,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-        }).then((url) => {
-            if (!cancelled) setQRURL(url);
-        }).catch(() => {
-            if (!cancelled) setQRURL('');
-        });
+        void import('qrcode')
+            .then(({ default: QRCode }) => QRCode.toDataURL(issued.config, {
+                width: 256,
+                margin: 1,
+                errorCorrectionLevel: 'M',
+            }))
+            .then((url) => {
+                if (!cancelled) setQRURL(url);
+            })
+            .catch(() => {
+                if (!cancelled) setQRURL('');
+            });
         return () => {
             cancelled = true;
         };

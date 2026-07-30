@@ -8,6 +8,8 @@
 export const en = {
     'app.name': 'CelikPanel',
     'app.tagline': 'Control Panel',
+    'app.pageLoadFailed': 'This section could not be loaded. CelikPanel may have been updated while this tab was open.',
+    'app.reload': 'Reload CelikPanel',
 
     'nav.dashboard': 'Dashboard',
     'nav.domains': 'Domains',
