@@ -60,6 +60,27 @@ interface SettingsDraft {
 
 type ClusterDraft = Pick<SettingsDraft, 'role' | 'peer_ip' | 'peer_ns'>;
 
+// API responses produced before the fresh-install fix can contain
+// `ips: null` when a nameserver does not resolve yet. Treat response data as
+// untrusted at this boundary so one missing DNS answer cannot blank the whole
+// Settings page.
+function normalizeFacts(value: unknown): NSFact[] {
+    if (!Array.isArray(value)) return [];
+
+    return value.flatMap((item): NSFact[] => {
+        if (!item || typeof item !== 'object') return [];
+        const fact = item as Partial<NSFact>;
+        if (typeof fact.host !== 'string') return [];
+        return [{
+            host: fact.host,
+            ips: Array.isArray(fact.ips)
+                ? fact.ips.filter((ip): ip is string => typeof ip === 'string')
+                : [],
+            points_here: fact.points_here === true,
+        }];
+    });
+}
+
 function cleanHostname(value: string): string {
     return value.trim().toLowerCase().replace(/\.$/, '');
 }
@@ -91,7 +112,7 @@ export function DNSServerSettings() {
             ns1,
             ns2,
             server_ip: cluster.server_ip || names.server_ip,
-            facts: cluster.facts || names.facts || [],
+            facts: normalizeFacts(cluster.facts ?? names.facts),
             namesDerived: names.derived === true,
             namesUsable: names.usable === true,
         };

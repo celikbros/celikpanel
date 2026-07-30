@@ -203,7 +203,10 @@ type nameserverFact struct {
 func verifyNameservers(ctx context.Context, hosts []string, serverIP, serverV6 string) []nameserverFact {
 	out := make([]nameserverFact, 0, len(hosts))
 	for _, h := range hosts {
-		f := nameserverFact{Host: h}
+		// Keep the JSON contract stable on a fresh install or during a DNS
+		// outage. A nil slice is encoded as null, while every consumer expects
+		// an array it can safely inspect.
+		f := nameserverFact{Host: h, IPs: make([]string, 0)}
 		if h == "" {
 			out = append(out, f)
 			continue

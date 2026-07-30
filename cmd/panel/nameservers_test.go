@@ -46,3 +46,15 @@ func TestLookupNameserverHostUsesMachineResolverAsLastFallback(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestVerifyNameserversKeepsUnresolvedIPsAsEmptySlice(t *testing.T) {
+	// An empty hostname follows the unresolved path without a network lookup,
+	// which keeps this JSON-contract prerequisite deterministic.
+	facts := verifyNameservers(context.Background(), []string{``}, `192.0.2.10`, ``)
+	if len(facts) != 1 {
+		t.Fatalf(`got %d facts, want 1`, len(facts))
+	}
+	if facts[0].IPs == nil {
+		t.Fatal(`unresolved nameserver IPs must be an empty slice, not nil`)
+	}
+}
