@@ -71,6 +71,37 @@ require_exact_sequence() {
     done
 }
 
+# Count only saved-active agent branches that perform the complete controlled
+# lock handoff. Because every handoff call is counted separately below, this
+# also proves that no handoff can run on the saved-inactive path.
+require_active_agent_handoff_blocks() {
+    local file=$1 expected=$2 actual
+    actual=$(awk '
+        BEGIN { inside = 0; count = 0 }
+        /^[[:space:]]*if service_state_is_active_like "\$\{saved_active_states\[celikpanel-agent\.service\]\}"; then[[:space:]]*$/ {
+            inside = 1
+            released = 0
+            started = 0
+            waited = 0
+            handed_off = 0
+            next
+        }
+        inside {
+            if (index($0, "release_release_mutation_lock") > 0) released = 1
+            if (index($0, "systemctl start celikpanel-agent.service") > 0) started = 1
+            if ($0 ~ /^[[:space:]]*wait_for_fresh_active_agent[[:space:]]*$/) waited = 1
+            if ($0 ~ /^[[:space:]]*acquire_release_mutation_lock handoff[[:space:]]*$/) handed_off = 1
+            if ($0 ~ /^[[:space:]]*fi[[:space:]]*$/) {
+                if (released && started && waited && handed_off) count++
+                inside = 0
+            }
+        }
+        END { print count }
+    ' "$file")
+    [[ "$actual" == "$expected" ]] \
+        || die "$(basename "$file") active agent handoff block count is $actual, want $expected"
+}
+
 bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$INSTALL" "$RELEASE_GUARD"
 
 # Fresh bootstrap and all later panel starts must create the SQLite database
@@ -285,12 +316,46 @@ require_sequence "$UPDATE" \
 # Kabuk ve agent tam root:celikpanel kilit metadatasını paylaşır. Quiesce, iki
 # koordinatörü de dondurmadan önce kalıcı PID/başlangıç-zamanı kimliklerine bağlar.
 for script in "$UPDATE" "$ROLLBACK"; do
-    require_literal "$script" 'local lock_dir group_id owner group mode before after'
     require_literal "$script" '(umask 077; set -o noclobber; : > "$MUTATION_LOCK")'
     require_literal "$script" 'chown root:celikpanel -- "$MUTATION_LOCK"'
     require_literal "$script" 'chmod 0600 -- "$MUTATION_LOCK"'
-    require_literal "$script" '[[ "$owner" == 0 && "$group" == "$group_id" && "$mode" == 600 ]]'
 done
+require_literal "$ROLLBACK" 'local lock_dir group_id owner group mode before after'
+require_literal "$ROLLBACK" '[[ "$owner" == 0 && "$group" == "$group_id" && "$mode" == 600 ]]'
+
+# Immediate acquisition may create the canonical lock. A controlled agent-start
+# handoff must instead reopen the exact recorded inode with exact metadata and
+# acquire it exclusively without waiting. The saved-inactive path never releases
+# the lock, while the two saved-active paths contain the complete handoff block.
+require_literal "$UPDATE" 'MUTATION_LOCK_IDENTITY='
+require_literal "$UPDATE" 'local acquire_mode=${1:-immediate}'
+require_literal "$UPDATE" 'local lock_dir group_id owner group mode links size path_identity fd_identity'
+require_sequence "$UPDATE" \
+    'acquire_release_mutation_lock() {' \
+    'immediate | handoff) ;;' \
+    '[[ "$acquire_mode" == immediate ]]' \
+    '(umask 077; set -o noclobber; : > "$MUTATION_LOCK")' \
+    'read -r owner group mode links size < <(stat -Lc '\''%u %g %a %h %s'\'' -- "$MUTATION_LOCK")' \
+    '&& "$links" == 1 && "$size" == 0 ]]' \
+    'path_identity=$(stat -Lc '\''%d:%i'\'' -- "$MUTATION_LOCK")' \
+    '[[ "$path_identity" == "$MUTATION_LOCK_IDENTITY" ]]' \
+    'fd_identity=$(stat -Lc '\''%d:%i'\'' -- "/proc/$BASHPID/fd/$MUTATION_LOCK_FD")' \
+    '[[ "$fd_identity" == "$MUTATION_LOCK_IDENTITY" ]]' \
+    'if ! flock -n -x "$MUTATION_LOCK_FD"; then'
+require_literal "$UPDATE" 'mutation lock file must be root:celikpanel mode 0600, single-link, and empty'
+require_literal "$UPDATE" 'mutation lock pathname disappeared before controlled agent-start handoff reacquire'
+require_literal "$UPDATE" 'mutation lock was not handed back after controlled agent start; update refused'
+reject_literal "$UPDATE" 'flock -w'
+reject_literal "$UPDATE" 'unset MUTATION_LOCK_IDENTITY'
+require_regex_count "$UPDATE" '^[[:space:]]*acquire_release_mutation_lock$' 5
+require_regex_count "$UPDATE" '^[[:space:]]*acquire_release_mutation_lock handoff$' 2
+require_count "$UPDATE" 'cannot hand the mutation lock to' 2
+require_active_agent_handoff_blocks "$UPDATE" 2
+require_sequence "$UPDATE" \
+    'release_release_mutation_lock() {' \
+    'exec {MUTATION_LOCK_FD}>&-' \
+    'MUTATION_LOCK_FD=' \
+    '}'
 
 # The guard accepts one canonical target-bound stage, preserves all three
 # recovery files on reset, and exposes exact six/seven-argument quiesce APIs.
@@ -529,6 +594,19 @@ require_sequence "$UPDATE" \
     '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
     '        :'
 
+# Controlled agent starts require a proven-absent socket and both a fresh socket
+# and active systemd state before the updater reacquires the mutation lock.
+require_sequence "$UPDATE" \
+    'prepare_fresh_agent_socket_start() {' \
+    'fresh socket preparation requires mutation lock' \
+    'reject_extra_service_cgroup_processes celikpanel-agent.service 0' \
+    '[[ -S $socket && ! -L $socket ]]' \
+    'rm -f -- /run/celikpanel/agent.sock' \
+    '[[ ! -e $socket && ! -L $socket ]]' \
+    'wait_for_fresh_active_agent() {' \
+    '[[ ! -L $socket ]]' \
+    '[[ $state == active && -S $socket ]]'
+
 # Pending finalization keeps completion.pending until stopped-state validation,
 # offline migration, controlled starts, post-grant proofs and durable removal pass.
 # Bekleyen sonlandırma; durmuş-durum doğrulaması, offline migration, kontrollü
@@ -544,8 +622,16 @@ require_sequence "$UPDATE" \
     'prepare_runtime_mutation_lock_dir' \
     'acquire_release_mutation_lock' \
     'run_panel_migrations_offline' \
+    'prepare_fresh_agent_socket_start' \
     'release_txn_create_start_authorization \' \
+    'release_release_mutation_lock \' \
     'systemctl start celikpanel-agent.service \' \
+    'wait_for_fresh_active_agent' \
+    'acquire_release_mutation_lock handoff' \
+    'pending update agent state is not idle after the startup lock handoff' \
+    'verify_installed_release_artifacts' \
+    'verify_saved_enablement' \
+    'pending update marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service \' \
     'verify_saved_runtime_states' \
     '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
@@ -579,8 +665,16 @@ require_sequence "$UPDATE" \
     'run_panel_migrations_offline' \
     'verify_installed_release_artifacts' \
     'release_txn_validate_pending_token \' \
+    'prepare_fresh_agent_socket_start' \
     'release_txn_create_start_authorization \' \
+    'release_release_mutation_lock || die "cannot hand the mutation lock to the verified agent"' \
     'systemctl start celikpanel-agent.service || die "verified agent could not be started"' \
+    'wait_for_fresh_active_agent' \
+    'acquire_release_mutation_lock handoff' \
+    'verified agent state is not idle after the startup lock handoff' \
+    'verify_installed_release_artifacts' \
+    'verify_saved_enablement' \
+    'update completion marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service || die "verified panel could not be started"' \
     'verify_saved_runtime_states' \
     '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \

@@ -23,6 +23,8 @@ UNIT_DIR=/etc/systemd/system
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 AGENT_LEDGER="$AGENT_STATE_DIR/service-mutations.json"
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
+MUTATION_LOCK_FD=
+MUTATION_LOCK_IDENTITY=
 RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
@@ -1043,12 +1045,20 @@ validate_retention_snapshot() {
     ) || die "retention snapshot checksum verification failed: $snapshot"
 }
 
-# The shell holds the same flock used by privileged agent mutations from the
-# final idle proof until the updated services have been verified.
-# Shell, son boşta doğrulamasından güncel servisler doğrulanana kadar ayrıcalıklı
-# agent işlemleriyle aynı flock kilidini tutar.
+# The shell holds the same flock used by privileged agent mutations through the
+# final proofs. It hands the lock to a saved-active agent only long enough for
+# startup reconciliation, then reacquires it before the panel may start.
+# Shell son kanıtlar boyunca ayrıcalıklı agent işlemleriyle aynı flock kilidini
+# tutar. Yalnız kayıtlı-aktif agent'ın başlangıç uzlaştırması için kilidi kısa
+# süreliğine devreder ve panel başlamadan önce yeniden alır.
 acquire_release_mutation_lock() {
-    local lock_dir group_id owner group mode before after
+    local acquire_mode=${1:-immediate}
+    local lock_dir group_id owner group mode links size path_identity fd_identity
+    [[ $# -le 1 ]] || die "release mutation lock accepts at most one acquisition mode"
+    case "$acquire_mode" in
+        immediate | handoff) ;;
+        *) die "unsupported release mutation lock acquisition mode: $acquire_mode" ;;
+    esac
     command -v flock >/dev/null || die "flock is required for a safe update"
     group_id=$(getent group celikpanel | cut -d: -f3) \
         || die "celikpanel group is unavailable for the mutation lock"
@@ -1063,6 +1073,8 @@ acquire_release_mutation_lock() {
     if [[ -e "$MUTATION_LOCK" || -L "$MUTATION_LOCK" ]]; then
         [[ -f "$MUTATION_LOCK" && ! -L "$MUTATION_LOCK" ]] || die "unsafe mutation lock file"
     else
+        [[ "$acquire_mode" == immediate ]] \
+            || die "mutation lock pathname disappeared before controlled agent-start handoff reacquire"
         (umask 077; set -o noclobber; : > "$MUTATION_LOCK") \
             || die "cannot exclusively create mutation lock file"
         chown root:celikpanel -- "$MUTATION_LOCK" \
@@ -1070,15 +1082,32 @@ acquire_release_mutation_lock() {
         chmod 0600 -- "$MUTATION_LOCK" \
             || die "cannot set mutation lock permissions"
     fi
-    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$MUTATION_LOCK") \
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$MUTATION_LOCK") \
         || die "cannot inspect mutation lock file"
-    [[ "$owner" == 0 && "$group" == "$group_id" && "$mode" == 600 ]] \
-        || die "mutation lock file must be root:celikpanel mode 0600"
-    before=$(stat -Lc '%d:%i' -- "$MUTATION_LOCK") || die "cannot identify mutation lock file"
+    [[ "$owner" == 0 && "$group" == "$group_id" && "$mode" == 600 \
+        && "$links" == 1 && "$size" == 0 ]] \
+        || die "mutation lock file must be root:celikpanel mode 0600, single-link, and empty"
+    path_identity=$(stat -Lc '%d:%i' -- "$MUTATION_LOCK") \
+        || die "cannot identify mutation lock file"
+    if [[ "$acquire_mode" == handoff ]]; then
+        [[ -n "$MUTATION_LOCK_IDENTITY" ]] \
+            || die "mutation lock identity is unavailable for controlled agent-start handoff"
+        [[ "$path_identity" == "$MUTATION_LOCK_IDENTITY" ]] \
+            || die "mutation lock pathname changed during controlled agent-start handoff"
+    else
+        MUTATION_LOCK_IDENTITY=$path_identity
+    fi
     exec {MUTATION_LOCK_FD}<>"$MUTATION_LOCK"
-    after=$(stat -Lc '%d:%i' -- "/proc/$$/fd/$MUTATION_LOCK_FD") || die "cannot identify opened mutation lock"
-    [[ "$before" == "$after" ]] || die "mutation lock changed while it was opened"
-    flock -n "$MUTATION_LOCK_FD" || die "a service/package mutation is active; update refused"
+    fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$MUTATION_LOCK_FD") \
+        || die "cannot identify opened mutation lock"
+    [[ "$fd_identity" == "$MUTATION_LOCK_IDENTITY" ]] \
+        || die "mutation lock changed while it was opened"
+    if ! flock -n -x "$MUTATION_LOCK_FD"; then
+        if [[ "$acquire_mode" == handoff ]]; then
+            die "mutation lock was not handed back after controlled agent start; update refused"
+        fi
+        die "a service/package mutation is active; update refused"
+    fi
 }
 # Close the exact flock descriptor before rebuilding a RuntimeDirectory-backed
 # lock path after agent shutdown or before the terminal idle proof.
@@ -1088,7 +1117,42 @@ release_release_mutation_lock() {
     [[ -n "${MUTATION_LOCK_FD:-}" ]] || return 0
     flock -u "$MUTATION_LOCK_FD" || return 1
     exec {MUTATION_LOCK_FD}>&-
-    unset MUTATION_LOCK_FD
+    MUTATION_LOCK_FD=
+}
+
+prepare_fresh_agent_socket_start() {
+    local socket=/run/celikpanel/agent.sock state
+    [[ -n "${MUTATION_LOCK_FD:-}" ]] || die "fresh socket preparation requires mutation lock"
+    state=$(systemctl show -p ActiveState --value celikpanel-agent.service) \
+        || die 'cannot inspect agent before fresh socket preparation'
+    case $state in
+        inactive|failed) ;;
+        *) die 'fresh socket preparation requires the agent stopped' ;;
+    esac
+    reject_extra_service_cgroup_processes celikpanel-agent.service 0
+    if [[ -e $socket || -L $socket ]]; then
+        [[ -S $socket && ! -L $socket ]] || die 'unsafe stale agent socket refused'
+        rm -f -- /run/celikpanel/agent.sock || die 'cannot remove verified stale agent socket'
+    fi
+    [[ ! -e $socket && ! -L $socket ]] || die 'agent socket path is not absent before controlled start'
+}
+
+wait_for_fresh_active_agent() {
+    local socket=/run/celikpanel/agent.sock state _
+    for _ in $(seq 1 40); do
+        state=$(systemctl show -p ActiveState --value celikpanel-agent.service) \
+            || die 'cannot inspect agent during controlled start'
+        [[ ! -L $socket ]] || die 'agent socket became a symbolic link during controlled start'
+        if [[ -e $socket && ! -S $socket ]]; then
+            die 'agent socket path became unsafe during controlled start'
+        fi
+        if [[ $state == active && -S $socket ]]; then
+            return 0
+        fi
+        [[ $state != failed ]] || die 'agent failed during controlled start'
+        sleep 0.3
+    done
+    die 'agent did not become active with a fresh socket'
 }
 
 # Run embedded migrations with both coordinators stopped and the exact mutation
@@ -1279,19 +1343,29 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
         || die "pending update marker changed before controlled starts"
 
+    if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]}"; then
+        prepare_fresh_agent_socket_start
+    fi
     release_txn_create_start_authorization \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
         "$RELEASE_TRANSACTION_FD" "$pending_token" update "$pending_snapshot" \
         || die "cannot authorize pending update controlled starts"
     if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]}"; then
+        release_release_mutation_lock \
+            || die "cannot hand the mutation lock to the pending update agent"
         systemctl start celikpanel-agent.service \
             || die "pending update agent could not be started"
-        for _ in $(seq 1 20); do
-            [[ -S /run/celikpanel/agent.sock ]] && break
-            sleep 0.3
-        done
-        [[ -S /run/celikpanel/agent.sock ]] \
-            || die "pending update agent socket did not appear"
+        wait_for_fresh_active_agent
+        acquire_release_mutation_lock handoff
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+            CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+            "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+            || die "pending update agent state is not idle after the startup lock handoff"
+        verify_installed_release_artifacts
+        verify_saved_enablement
+        release_txn_validate_pending_token \
+            "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+            || die "pending update marker changed during the startup lock handoff"
     fi
     if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
         systemctl start celikpanel-panel.service \
@@ -2269,17 +2343,27 @@ verify_saved_enablement
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
     || die "update completion marker changed before controlled starts"
+if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]}"; then
+    prepare_fresh_agent_socket_start
+fi
 release_txn_create_start_authorization \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
     "$RELEASE_TRANSACTION_FD" "$release_transaction_token" update "$snapshot_name" \
     || die "cannot authorize controlled update starts"
 if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]}"; then
+    release_release_mutation_lock || die "cannot hand the mutation lock to the verified agent"
     systemctl start celikpanel-agent.service || die "verified agent could not be started"
-    for _ in $(seq 1 20); do
-        [[ -S /run/celikpanel/agent.sock ]] && break
-        sleep 0.3
-    done
-    [[ -S /run/celikpanel/agent.sock ]] || die "verified agent socket did not appear"
+    wait_for_fresh_active_agent
+    acquire_release_mutation_lock handoff
+    CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        || die "verified agent state is not idle after the startup lock handoff"
+    verify_installed_release_artifacts
+    verify_saved_enablement
+    release_txn_validate_pending_token \
+        "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
+        || die "update completion marker changed during the startup lock handoff"
 fi
 if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
     systemctl start celikpanel-panel.service || die "verified panel could not be started"
