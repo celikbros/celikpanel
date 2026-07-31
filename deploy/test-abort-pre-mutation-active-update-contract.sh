@@ -104,6 +104,10 @@ require_text '[[ "$entries" == $'\''assets\nindex.html\nvite.svg'\'' ]]' \
     "reviewed historical web top-level allowlist is missing"
 require_text '[[ "$(find "$verification_tmp" -xdev -type d | wc -l)" -eq 2 &&' \
     "reviewed historical web archive exact counts are missing"
+require_text '"$(find "$verification_tmp" -xdev -type f | wc -l)" -eq 7 ]]' \
+    "reviewed historical web archive must contain exactly seven files"
+reject_text '"$(find "$verification_tmp" -xdev -type f | wc -l)" -eq 8 ]]' \
+    "stale eight-file historical web assertion remains"
 
 require_text 'celikpanel-agent.service\tenabled\tactive' \
     "exact incident agent service state is missing"

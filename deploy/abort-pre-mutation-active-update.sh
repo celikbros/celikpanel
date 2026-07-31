@@ -334,7 +334,7 @@ verify_installed_web_matches_previous_release() {
     [[ "$entries" == $'assets\nindex.html\nvite.svg' ]] \
         || die "previous web archive top-level allowlist differs from the reviewed release"
     [[ "$(find "$verification_tmp" -xdev -type d | wc -l)" -eq 2 &&
-       "$(find "$verification_tmp" -xdev -type f | wc -l)" -eq 8 ]] \
+       "$(find "$verification_tmp" -xdev -type f | wc -l)" -eq 7 ]] \
         || die "previous web archive object count differs from the reviewed release"
     while IFS= read -r -d '' entry; do
         read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$entry") \
