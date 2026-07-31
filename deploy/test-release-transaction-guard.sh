@@ -730,6 +730,119 @@ release_txn_mark_completion_pending \
 release_txn_remove_completion_pending \
     "$transaction_root" "$lock_fd" "$recovery_token" update "$recovery_snapshot"
 
+# The terminal active-marker primitive is intentionally smaller than the
+# incident helper: it proves only lock/marker/stage identity and durable
+# removal. The caller remains responsible for the exact pre-mutation payload,
+# stopped coordinators and unchanged installed-byte proofs.
+release_txn_cleanup_unmarked_update_snapshot_stage \
+    "$transaction_root" "$lock_fd" "$snapshot_root" \
+    || fail "completed recovery fixture stage cleanup failed"
+[[ ! -e "$recovery_stage" && ! -L "$recovery_stage" ]] \
+    || fail "completed recovery fixture stage remains"
+
+pre_abort_target=$(printf '9%.0s' {1..40})
+pre_abort_nonce=$(printf '8%.0s' {1..32})
+pre_abort_snapshot="20260728T120001Z-from-unknown-to-$pre_abort_target-$pre_abort_nonce"
+pre_abort_stage="$snapshot_root/.release-snapshot.incomplete.$BASHPID.$pre_abort_nonce"
+pre_abort_child="$pre_abort_stage/$pre_abort_snapshot"
+mkdir -m 0700 -- "$pre_abort_stage" "$pre_abort_child"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service not-found inactive \
+    > "$pre_abort_child/service-states.tsv"
+write_quiesce_coordinator_ledger "$pre_abort_child"
+printf 'pre-ledger\n' > "$pre_abort_child/snapshot-transition.state"
+chmod 0600 -- "$pre_abort_child/service-states.tsv" \
+    "$pre_abort_child/snapshot-transition.state"
+sync -f -- "$pre_abort_child/service-states.tsv" \
+    "$pre_abort_child/quiesce-coordinators.tsv" \
+    "$pre_abort_child/snapshot-transition.state" "$pre_abort_child" \
+    "$pre_abort_stage" "$snapshot_root"
+release_txn_validate_update_snapshot_stage \
+    "$snapshot_root" "$pre_abort_snapshot" "$pre_abort_stage" \
+    || fail "canonical pre-mutation abort fixture stage was rejected"
+
+pre_abort_token=$(release_txn_generate_token)
+release_txn_create_active_marker \
+    "$transaction_root" "$lock_fd" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "cannot publish pre-mutation abort fixture marker"
+
+expect_failure "rollback operation removed the pre-mutation update marker" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$pre_abort_token" rollback \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "wrong-operation abort did not preserve the exact active marker"
+
+wrong_pre_abort_token=$(printf '7%.0s' {1..64})
+expect_failure "wrong token removed the pre-mutation active marker" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$wrong_pre_abort_token" update \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "wrong-token abort did not preserve the exact active marker"
+
+expect_failure "wrong stage removed the pre-mutation active marker" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$pre_abort_token" update \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage.not-reviewed"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "wrong-stage abort did not preserve the exact active marker"
+
+mkdir -m 0700 -- "$snapshot_root/$pre_abort_snapshot"
+expect_failure "existing final snapshot permitted pre-mutation active abort" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$pre_abort_token" update \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "final-snapshot rejection did not preserve the exact active marker"
+rmdir -- "$snapshot_root/$pre_abort_snapshot"
+
+cp -- "$transaction_root/active" "$transaction_root/quiesce.pending"
+chmod 0600 -- "$transaction_root/quiesce.pending"
+sync -f -- "$transaction_root/quiesce.pending" "$transaction_root"
+expect_failure "coexisting quiesce marker permitted pre-mutation active abort" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$pre_abort_token" update \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "coexisting-marker rejection did not preserve the exact active marker"
+rm -f -- "$transaction_root/quiesce.pending"
+sync -f -- "$transaction_root"
+
+cp -- "$transaction_root/active" "$transaction_root/completion.pending"
+chmod 0600 -- "$transaction_root/completion.pending"
+sync -f -- "$transaction_root/completion.pending" "$transaction_root"
+expect_failure "coexisting completion marker permitted pre-mutation active abort" \
+    release_txn_remove_pre_mutation_active_marker \
+        "$transaction_root" "$lock_fd" "$pre_abort_token" update \
+        "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage"
+release_txn_validate_active_token \
+    "$transaction_root" "$pre_abort_token" update "$pre_abort_snapshot" \
+    || fail "completion-marker rejection did not preserve the exact active marker"
+rm -f -- "$transaction_root/completion.pending"
+sync -f -- "$transaction_root"
+
+release_txn_remove_pre_mutation_active_marker \
+    "$transaction_root" "$lock_fd" "$pre_abort_token" update \
+    "$pre_abort_snapshot" "$snapshot_root" "$pre_abort_stage" \
+    || fail "exact pre-mutation active abort was rejected"
+[[ ! -e "$transaction_root/active" && ! -L "$transaction_root/active" ]] \
+    || fail "exact pre-mutation active abort left its marker"
+[[ -d "$pre_abort_stage" && ! -L "$pre_abort_stage" ]] \
+    || fail "terminal marker primitive removed the evidence stage"
+release_txn_cleanup_unmarked_update_snapshot_stage \
+    "$transaction_root" "$lock_fd" "$snapshot_root" \
+    || fail "pre-mutation abort fixture stage cleanup failed"
+[[ ! -e "$pre_abort_stage" && ! -L "$pre_abort_stage" ]] \
+    || fail "pre-mutation abort fixture stage remains"
+
 flock -u "$lock_fd"
 exec {lock_fd}>&-
 printf 'PASS: release transaction guard fixture\n'

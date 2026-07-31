@@ -570,6 +570,42 @@ release_txn_remove_quiesce_marker() {
         || { _release_txn_fail "quiesce transaction marker still exists"; return 1; }
 }
 
+# Remove only the exact active marker for an update that has not crossed its
+# caller-proven mutation boundary. This primitive deliberately does not infer
+# "pre-mutation" from a transition label: the trusted recovery helper must first
+# prove the exact stage allowlist, saved service state, stopped coordinators and
+# unchanged installed bytes while holding both coordination locks.
+#
+# The final snapshot must still be absent and the supplied stage must be the
+# one canonical stage bound to this marker. Marker removal is made durable
+# before returning so a caller can restore services without exposing traffic
+# while an active transaction still exists.
+release_txn_remove_pre_mutation_active_marker() {
+    local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5
+    local snapshot_root=$6 stage=$7 found marker
+    release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    [[ "$operation" == update ]] \
+        || { _release_txn_fail "pre-mutation active abort is defined only for update"; return 1; }
+    release_txn_validate_active_token "$root" "$token" "$operation" "$snapshot" || return 1
+    [[ ! -e "$root/quiesce.pending" && ! -L "$root/quiesce.pending" ]] \
+        || { _release_txn_fail "quiesce marker cannot coexist with pre-mutation active abort"; return 1; }
+    [[ ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
+        || { _release_txn_fail "completion marker cannot coexist with pre-mutation active abort"; return 1; }
+    found=$(release_txn_find_update_snapshot_stage "$snapshot_root" "$snapshot") \
+        || return 1
+    [[ "$found" == "$stage" ]] \
+        || { _release_txn_fail "pre-mutation active abort stage does not match the canonical stage"; return 1; }
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot" "$stage" || return 1
+
+    marker=$root/active
+    rm -f -- "$marker" \
+        || { _release_txn_fail "cannot remove pre-mutation active transaction marker"; return 1; }
+    sync -f -- "$root" \
+        || { _release_txn_fail "cannot make pre-mutation active marker removal durable"; return 1; }
+    [[ ! -e "$marker" && ! -L "$marker" ]] \
+        || { _release_txn_fail "pre-mutation active transaction marker still exists"; return 1; }
+}
+
 # Publish one marker only after its bytes are durable, then fsync the parent
 # directory after the no-clobber rename.
 # Tek işaretçiyi yalnız baytları dayanıklı olduktan sonra yayımla; no-clobber

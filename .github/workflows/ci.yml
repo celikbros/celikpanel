@@ -39,6 +39,7 @@ jobs:
       # Kalıcı sürüm işaretçilerini ve kontrollü systemd başlangıçlarını fail-closed tut.
       - run: sudo bash deploy/test-release-transaction-guard.sh
       - run: bash deploy/test-finalize-pending-update-contract.sh
+      - run: bash deploy/test-abort-pre-mutation-active-update-contract.sh
       # Prove exact coordinator identity and crash-safe quiesce recovery.
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
