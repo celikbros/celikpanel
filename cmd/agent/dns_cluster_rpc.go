@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // A paired PowerDNS node can be primary and secondary at the same time because
@@ -61,6 +63,23 @@ type DNSClusterResponse struct {
 	Applied bool   `json:"applied"`
 	Detail  string `json:"detail,omitempty"`
 	Error   string `json:"error,omitempty"`
+}
+
+type DNSClusterReadinessResponse struct {
+	Ready  bool   `json:"ready"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// DNSClusterReadiness is a read-only preflight. It lets the panel explain the
+// exact missing prerequisite before the operator reaches the save action.
+func (a *Agent) DNSClusterReadiness(_ *transport.Empty, resp *DNSClusterReadinessResponse) error {
+	if _, err := dnsClusterLookPath("pdns_server"); err != nil {
+		resp.Detail = "PowerDNS is not installed on this server"
+		return nil
+	}
+	resp.Ready = true
+	resp.Detail = "PowerDNS is installed on this server"
+	return nil
 }
 
 func normalizeAgentDNSRole(role string) string {

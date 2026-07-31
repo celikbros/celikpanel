@@ -56,6 +56,7 @@ const (
 	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
 	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"
 	errCodeDNSClusterPeerIsLocal = "DNS_CLUSTER_PEER_IS_LOCAL"
+	errCodeDNSPublicationFailed  = "DNS_PUBLICATION_FAILED"
 	errCodeWebServerRequired     = "WEB_SERVER_REQUIRED"
 	errCodePHPRequired           = "PHP_REQUIRED"
 	errCodeNoSubscription        = "NO_SUBSCRIPTION"

@@ -112,7 +112,7 @@ func (p *Panel) handleCreateDNSZone(w http.ResponseWriter, r *http.Request, doma
 		var publicationErr *dnsAgentPublicationError
 		if errors.As(err, &publicationErr) {
 			log.Printf("[409][dns] publish zone %s: %v", domainName, err)
-			writeCodedError(w, http.StatusConflict, "DNS_PUBLICATION_FAILED",
+			writeCodedError(w, http.StatusConflict, errCodeDNSPublicationFailed,
 				"the DNS zone is saved, but it could not be published; check the DNS service and retry", "")
 			return
 		}

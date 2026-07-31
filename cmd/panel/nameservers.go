@@ -57,6 +57,19 @@ const (
 
 var validHostname = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$`)
 
+func validDNSHostname(value string) bool {
+	value = canonicalDNSName(value)
+	if value == "" || len(value) > 253 || !validHostname.MatchString(value) {
+		return false
+	}
+	for _, label := range strings.Split(value, ".") {
+		if len(label) == 0 || len(label) > 63 {
+			return false
+		}
+	}
+	return true
+}
+
 type hostResolver interface {
 	LookupHost(context.Context, string) ([]string, error)
 }
@@ -326,6 +339,9 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 		})
 
 	case http.MethodPut:
+		p.dnsTopologyMu.Lock()
+		defer p.dnsTopologyMu.Unlock()
+
 		var req struct {
 			NS1 string `json:"ns1"`
 			NS2 string `json:"ns2"`
@@ -337,7 +353,7 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 		req.NS1 = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.NS1, ".")))
 		req.NS2 = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.NS2, ".")))
 		for _, ns := range []string{req.NS1, req.NS2} {
-			if !validHostname.MatchString(ns) {
+			if !validDNSHostname(ns) {
 				writeClientError(w, http.StatusBadRequest, "a nameserver must be a full host name, for example ns1.example.com")
 				return
 			}

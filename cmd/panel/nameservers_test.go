@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -56,5 +57,30 @@ func TestVerifyNameserversKeepsUnresolvedIPsAsEmptySlice(t *testing.T) {
 	}
 	if facts[0].IPs == nil {
 		t.Fatal(`unresolved nameserver IPs must be an empty slice, not nil`)
+	}
+}
+
+func TestValidDNSHostnameEnforcesWireLengthLimits(t *testing.T) {
+	valid253 := strings.Repeat("a", 63) + "." +
+		strings.Repeat("b", 63) + "." +
+		strings.Repeat("c", 63) + "." +
+		strings.Repeat("d", 61)
+	for _, tc := range []struct {
+		name  string
+		value string
+		valid bool
+	}{
+		{name: "ordinary", value: "ns1.example.com", valid: true},
+		{name: "canonical trailing dot", value: "NS1.EXAMPLE.COM.", valid: true},
+		{name: "maximum total length", value: valid253, valid: true},
+		{name: "label too long", value: strings.Repeat("a", 64) + ".example.com"},
+		{name: "name too long", value: valid253 + "x"},
+		{name: "single label", value: "localhost"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := validDNSHostname(tc.value); got != tc.valid {
+				t.Fatalf("validDNSHostname(%q) = %v, want %v", tc.value, got, tc.valid)
+			}
+		})
 	}
 }

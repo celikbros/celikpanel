@@ -241,9 +241,11 @@ func rewriteAllZoneSOAMNamesTx(ctx context.Context, tx *sql.Tx, localNS string) 
 	return nil
 }
 
-// saveDNSClusterSettingsAndReconcile makes the selected mode and the A records
-// that express it visible together. A failed rewrite cannot leave partially
-// saved topology behind.
+// saveDNSClusterSettingsAndReconcile makes the selected nameserver pair,
+// operating mode and the records that express them visible in one ledger
+// transaction. This matters when a paired setup renames the name owned by its
+// peer: validating or saving the names against the old peer tuple first would
+// either reject the change or leave partially rewritten zones behind.
 func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, peerIP, peerNS, ns1, ns2, localIPv4 string) error {
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
@@ -252,6 +254,8 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 	defer tx.Rollback()
 
 	settings := []struct{ key, value string }{
+		{settingNS1, ns1},
+		{settingNS2, ns2},
 		{settingDNSRole, role},
 		{settingDNSPeerIP, peerIP},
 		{settingDNSPeerNS, peerNS},
@@ -269,8 +273,49 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 	if err != nil {
 		return err
 	}
-	if err := rewriteAllZoneSOAMNamesTx(ctx, tx, localNS); err != nil {
+
+	rows, err := tx.QueryContext(ctx, `SELECT id, name FROM pdns_domains ORDER BY id`)
+	if err != nil {
 		return err
+	}
+	type zone struct {
+		id   int
+		name string
+	}
+	var zones []zone
+	for rows.Next() {
+		var z zone
+		if err := rows.Scan(&z.id, &z.name); err != nil {
+			rows.Close()
+			return err
+		}
+		zones = append(zones, z)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+
+	for _, z := range zones {
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM pdns_records
+			WHERE domain_id = ? AND LOWER(TRIM(name, '.')) = ? AND UPPER(type) = 'NS'`,
+			z.id, canonicalDNSName(z.name)); err != nil {
+			return err
+		}
+		for _, ns := range []string{ns1, ns2} {
+			if _, err := tx.ExecContext(ctx, `
+				INSERT INTO pdns_records (domain_id, name, type, content, ttl, disabled, auth)
+				VALUES (?, ?, 'NS', ?, 3600, 0, 1)`, z.id, z.name, ns); err != nil {
+				return err
+			}
+		}
+		if err := rewriteZoneSOAMNameTx(ctx, tx, z.id, z.name, localNS); err != nil {
+			return err
+		}
 	}
 	if err := reconcileNameserverAddressesTx(ctx, tx, plan); err != nil {
 		return err

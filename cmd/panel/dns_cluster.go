@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // The DNS cluster settings the operator enters — and the panel then applies.
@@ -49,6 +51,11 @@ type dnsClusterAgentResponse struct {
 	Applied bool   `json:"applied"`
 	Detail  string `json:"detail,omitempty"`
 	Error   string `json:"error,omitempty"`
+}
+
+type dnsClusterReadinessResponse struct {
+	Ready  bool   `json:"ready"`
+	Detail string `json:"detail,omitempty"`
 }
 
 func (p *Panel) applyDNSClusterAgent(state dnsClusterAgentState) (dnsClusterAgentResponse, error) {
@@ -105,6 +112,9 @@ type dnsClusterView struct {
 	Role             string `json:"role"`
 	PeerIP           string `json:"peer_ip"`
 	PeerNS           string `json:"peer_ns"`
+	DNSServiceKnown  bool   `json:"dns_service_known"`
+	DNSServiceReady  bool   `json:"dns_service_ready"`
+	DNSServiceDetail string `json:"dns_service_detail,omitempty"`
 	SuggestedLocalNS string `json:"suggested_local_ns,omitempty"`
 	SuggestedPeerNS  string `json:"suggested_peer_ns,omitempty"`
 	SuggestedPeerIP  string `json:"suggested_peer_ip,omitempty"`
@@ -390,6 +400,14 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			ServerIP:   serverPrimaryIP(),
 			Steps:      make([]clusterStep, 0),
 		}
+		if p.agentClient != nil {
+			var readiness dnsClusterReadinessResponse
+			if err := p.agentClient.Call("Agent.DNSClusterReadiness", &transport.Empty{}, &readiness); err == nil {
+				v.DNSServiceKnown = true
+				v.DNSServiceReady = readiness.Ready
+				v.DNSServiceDetail = readiness.Detail
+			}
+		}
 		if v.PeerIP != "" {
 			v.PeerReachable = dnsPortAnswers(v.PeerIP)
 		}
@@ -410,6 +428,9 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:
+		p.dnsTopologyMu.Lock()
+		defer p.dnsTopologyMu.Unlock()
+
 		var req struct {
 			Role   string `json:"role"`
 			PeerIP string `json:"peer_ip"`
@@ -438,12 +459,13 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			req.PeerIP, req.PeerNS = "", ""
 		case "paired":
 			peerIP := net.ParseIP(req.PeerIP)
-			if peerIP == nil || peerIP.To4() == nil {
+			peerIPv4 := peerIP.To4()
+			if peerIPv4 == nil || !peerIPv4.IsGlobalUnicast() {
 				writeClientError(w, http.StatusBadRequest, "enter the other server's IPv4 address")
 				return
 			}
-			req.PeerIP = peerIP.To4().String()
-			if !validHostname.MatchString(req.PeerNS) {
+			req.PeerIP = peerIPv4.String()
+			if !validDNSHostname(req.PeerNS) {
 				writeClientError(w, http.StatusBadRequest, "enter the other server's nameserver name, for example ns2.example.com")
 				return
 			}

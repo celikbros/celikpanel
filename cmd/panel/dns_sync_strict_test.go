@@ -46,11 +46,14 @@ type StrictDNSRPCPowerResponse struct {
 
 type strictDNSRPCAgent struct {
 	durableMutationRPCFixture
-	mu            sync.Mutex
-	failZone      string
-	syncCalls     []string
-	clusterCalls  int
-	powerDNSCalls int
+	mu             sync.Mutex
+	failZone       string
+	clusterError   string
+	clusterEntered chan struct{}
+	clusterRelease <-chan struct{}
+	syncCalls      []string
+	clusterCalls   int
+	powerDNSCalls  int
 }
 
 func (a *strictDNSRPCAgent) BeginServiceMutation(
@@ -88,8 +91,24 @@ func (a *strictDNSRPCAgent) SyncDNSZone(req *StrictDNSRPCSyncRequest, resp *Stri
 
 func (a *strictDNSRPCAgent) ConfigureDNSCluster(_ *StrictDNSRPCClusterRequest, resp *StrictDNSRPCClusterResponse) error {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	a.clusterCalls++
+	clusterError := a.clusterError
+	entered := a.clusterEntered
+	release := a.clusterRelease
+	a.mu.Unlock()
+	if entered != nil {
+		select {
+		case entered <- struct{}{}:
+		default:
+		}
+	}
+	if release != nil {
+		<-release
+	}
+	if clusterError != "" {
+		resp.Error = clusterError
+		return nil
+	}
 	resp.Applied = true
 	resp.Detail = "configured"
 	return nil
@@ -143,6 +162,9 @@ func assertPublicationConflict(t *testing.T, recorder *httptest.ResponseRecorder
 	}
 	if !strings.Contains(recorder.Body.String(), "could not be published") {
 		t.Fatalf("response is not actionable: %s", recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"code":"`+errCodeDNSPublicationFailed+`"`) {
+		t.Fatalf("publication failure has no stable code: %s", recorder.Body.String())
 	}
 	if strings.Contains(recorder.Body.String(), "internal detail") {
 		t.Fatalf("response leaked agent detail: %s", recorder.Body.String())
@@ -400,7 +422,7 @@ func TestDNSZonePostReportsPublicationFailureAsConflict(t *testing.T) {
 	if recorder.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want 409; body=%s", recorder.Code, recorder.Body.String())
 	}
-	if !strings.Contains(recorder.Body.String(), `"code":"DNS_PUBLICATION_FAILED"`) {
+	if !strings.Contains(recorder.Body.String(), `"code":"`+errCodeDNSPublicationFailed+`"`) {
 		t.Fatalf("publication error contract missing: %s", recorder.Body.String())
 	}
 	if strings.Contains(recorder.Body.String(), "internal detail") {

@@ -51,10 +51,17 @@ type CompensationDNSClusterResponse struct {
 	Error   string
 }
 
+type CompensationDNSClusterReadinessResponse struct {
+	Ready  bool
+	Detail string
+}
+
 type compensationDNSAgent struct {
-	mu       sync.Mutex
-	failCall int
-	calls    []CompensationDNSClusterRequest
+	mu              sync.Mutex
+	failCall        int
+	calls           []CompensationDNSClusterRequest
+	readinessReady  bool
+	readinessDetail string
 }
 
 func (a *compensationDNSAgent) ConfigureDNSCluster(
@@ -70,6 +77,17 @@ func (a *compensationDNSAgent) ConfigureDNSCluster(
 	}
 	resp.Applied = true
 	resp.Detail = "configured"
+	return nil
+}
+
+func (a *compensationDNSAgent) DNSClusterReadiness(
+	_ *transport.Empty,
+	resp *CompensationDNSClusterReadinessResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	resp.Ready = a.readinessReady
+	resp.Detail = a.readinessDetail
 	return nil
 }
 
@@ -135,6 +153,59 @@ func TestDNSClusterGETDoesNotPresentUnconfiguredModeAsStandalone(t *testing.T) {
 	}
 	if len(got.Steps) != 0 {
 		t.Fatalf("fresh DNS cluster exposed setup steps for an unsaved mode: %+v", got.Steps)
+	}
+	if got.DNSServiceKnown {
+		t.Fatal("GET without an agent reported a known DNS service state")
+	}
+}
+
+func TestDNSClusterGETExposesPowerDNSReadiness(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		ready     bool
+		detail    string
+		wantReady bool
+	}{
+		{
+			name:      "installed",
+			ready:     true,
+			detail:    "PowerDNS is installed on this server",
+			wantReady: true,
+		},
+		{
+			name:      "missing",
+			detail:    "PowerDNS is not installed on this server",
+			wantReady: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			attachCompensationDNSAgent(t, p, &compensationDNSAgent{
+				readinessReady:  tc.ready,
+				readinessDetail: tc.detail,
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/dns-cluster", nil)
+			req = req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
+			recorder := httptest.NewRecorder()
+			p.handleDNSCluster(recorder, req)
+
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+			}
+			var got dnsClusterView
+			if err := json.NewDecoder(recorder.Body).Decode(&got); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if !got.DNSServiceKnown {
+				t.Fatal("successful readiness RPC was reported as unknown")
+			}
+			if got.DNSServiceReady != tc.wantReady || got.DNSServiceDetail != tc.detail {
+				t.Fatalf("DNS service = ready:%v detail:%q, want ready:%v detail:%q",
+					got.DNSServiceReady, got.DNSServiceDetail, tc.wantReady, tc.detail)
+			}
+		})
 	}
 }
 

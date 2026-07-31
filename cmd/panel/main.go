@@ -49,6 +49,11 @@ type Panel struct {
 	// requests fail fast instead of racing between an active-operation check
 	// and the actual machine change.
 	serviceMutationMu sync.Mutex
+	// dnsTopologyMu serializes every request-time DNS identity mutation. The
+	// setup endpoint and the two legacy endpoints share agent state and one
+	// SQLite tuple; their snapshot/apply/commit/rollback sequences must never
+	// interleave.
+	dnsTopologyMu sync.Mutex
 }
 
 func main() {
@@ -430,6 +435,7 @@ func main() {
 	// Sunucunun tamamı için tek ad sunucusu çifti — bkz. nameservers.go.
 	http.HandleFunc("/api/v1/settings/nameservers", panel.handleNameserverSettings)
 	http.HandleFunc("/api/v1/settings/dns-cluster", panel.handleDNSCluster)
+	http.HandleFunc("/api/v1/settings/dns-setup", panel.handleDNSSetup)
 	http.HandleFunc("/api/v1/nginx/ratelimits", panel.handleNginxRateLimits)
 
 	// Fail2ban Management

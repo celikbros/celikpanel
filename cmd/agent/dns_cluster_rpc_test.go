@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func prepareDNSClusterRuntimeTest(t *testing.T) string {
@@ -123,6 +125,42 @@ func TestNormalizeAgentDNSRoleMigratesLegacyValues(t *testing.T) {
 	}
 	if got := normalizeAgentDNSRole("not-a-role"); got != "" {
 		t.Errorf("invalid role normalized to %q, want empty", got)
+	}
+}
+
+func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
+	oldLookPath := dnsClusterLookPath
+	t.Cleanup(func() { dnsClusterLookPath = oldLookPath })
+
+	for _, tc := range []struct {
+		name       string
+		lookupPath func(string) (string, error)
+		wantReady  bool
+		wantDetail string
+	}{
+		{
+			name:       "installed",
+			lookupPath: func(string) (string, error) { return "/usr/sbin/pdns_server", nil },
+			wantReady:  true,
+			wantDetail: "PowerDNS is installed on this server",
+		},
+		{
+			name:       "missing",
+			lookupPath: func(string) (string, error) { return "", errors.New("not found") },
+			wantReady:  false,
+			wantDetail: "PowerDNS is not installed on this server",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dnsClusterLookPath = tc.lookupPath
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Ready != tc.wantReady || got.Detail != tc.wantDetail {
+				t.Fatalf("readiness = %+v, want ready=%v detail=%q", got, tc.wantReady, tc.wantDetail)
+			}
+		})
 	}
 }
 

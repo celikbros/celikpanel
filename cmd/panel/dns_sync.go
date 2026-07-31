@@ -110,7 +110,7 @@ func writeDNSPublicationConflict(w http.ResponseWriter, err error, safeMessage s
 		return false
 	}
 	log.Printf("[409][dns] %v", err)
-	writeClientError(w, http.StatusConflict, safeMessage)
+	writeCodedError(w, http.StatusConflict, errCodeDNSPublicationFailed, safeMessage, "")
 	return true
 }
 
