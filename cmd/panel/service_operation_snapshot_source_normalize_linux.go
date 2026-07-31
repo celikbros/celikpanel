@@ -86,6 +86,9 @@ func (s *quarantinedServiceOperationSnapshotSource) createVerifiedSnapshotFromPi
 	if err := normalizeStandaloneSQLiteSnapshot(privatePath); err != nil {
 		return fmt.Errorf("normalize private release snapshot: %w", err)
 	}
+	if err := canonicalizeKnownLegacySnapshotSchemaMigrations(privatePath); err != nil {
+		return fmt.Errorf("canonicalize known legacy private release snapshot: %w", err)
+	}
 	if err := requireSQLiteSidecarsAbsent(privatePath, "private release snapshot"); err != nil {
 		return err
 	}

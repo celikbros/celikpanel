@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"os"
 	"path/filepath"
@@ -46,6 +47,116 @@ func TestEnsureServiceOperationRescueSnapshotPreservesCommittedWALAndCanonicalMe
 			canonicalBefore[suffix],
 		)
 	}
+	assertReleaseServiceOperationSnapshotParentRestored(t, fixture)
+}
+
+func TestEnsureServiceOperationRescueSnapshotCanonicalizesKnownHistoricalMigrationDDLWithoutMutatingSource(
+	t *testing.T,
+) {
+	fixture := newReleaseServiceOperationSnapshotFixture(t)
+	destination := bindRescueSnapshotFixture(t, fixture, "release-rescue-legacy-ddl")
+	rebuildSchemaMigrationsDDLForTest(
+		t,
+		fixture.sourcePath,
+		knownLegacySchemaMigrationsSQL,
+	)
+	setSchemaMigrationAppliedAtForTest(t, fixture.sourcePath, 1, sql.NullString{})
+
+	sourceBefore := captureRescueSnapshotFileState(t, fixture.sourcePath)
+	sourceSQLBefore, sourceRowsBefore := readSchemaMigrationsStateForTest(
+		t,
+		fixture.sourcePath,
+	)
+	if sourceSQLBefore != knownLegacySchemaMigrationsSQL {
+		t.Fatalf("historical source DDL=%q", sourceSQLBefore)
+	}
+
+	if err := ensureServiceOperationRescueSnapshotWithOwner(
+		fixture.sourcePath,
+		destination,
+		serviceOperationSnapshotSchemaNormal,
+		fixture.owner,
+	); err != nil {
+		t.Fatalf("ensure rescue snapshot from historical DDL: %v", err)
+	}
+
+	assertRescueSnapshotFileStateUnchanged(t, fixture.sourcePath, sourceBefore)
+	sourceSQLAfter, sourceRowsAfter := readSchemaMigrationsStateForTest(
+		t,
+		fixture.sourcePath,
+	)
+	if sourceSQLAfter != sourceSQLBefore ||
+		!equalServiceOperationSnapshotMigrationRows(sourceRowsBefore, sourceRowsAfter) {
+		t.Fatal("canonical source schema or migration rows changed")
+	}
+
+	destinationSQL, destinationRows := readSchemaMigrationsStateForTest(t, destination)
+	if len(destinationRows) == 0 {
+		t.Fatal("canonical rescue snapshot has no migration rows")
+	}
+	canonicalSQL := referenceSchemaMigrationsSQLForTest(
+		t,
+		destinationRows[len(destinationRows)-1].version,
+	)
+	if destinationSQL != canonicalSQL {
+		t.Fatalf("rescue snapshot DDL=%q want %q", destinationSQL, canonicalSQL)
+	}
+	if !equalServiceOperationSnapshotMigrationRows(sourceRowsBefore, destinationRows) {
+		t.Fatal("rescue snapshot migration rows changed during canonicalization")
+	}
+	assertSchemaMigrationAppliedAtStorageClassesForTest(t, destinationRows)
+	assertStandaloneSnapshot(t, destination)
+	assertReleaseServiceOperationSnapshotParentRestored(t, fixture)
+}
+
+func TestEnsureServiceOperationRescueSnapshotRejectsHistoricalMigrationDDLWithBlobAppliedAtWithoutMutatingSource(
+	t *testing.T,
+) {
+	fixture := newReleaseServiceOperationSnapshotFixture(t)
+	destination := bindRescueSnapshotFixture(t, fixture, "release-rescue-legacy-blob")
+	rebuildSchemaMigrationsDDLForTest(
+		t,
+		fixture.sourcePath,
+		knownLegacySchemaMigrationsSQL,
+	)
+	setSchemaMigrationAppliedAtBlobForTest(t, fixture.sourcePath, 1)
+
+	sourceBefore := captureRescueSnapshotFileState(t, fixture.sourcePath)
+	sourceSQLBefore, sourceRowsBefore := readSchemaMigrationsStateForTest(
+		t,
+		fixture.sourcePath,
+	)
+	if sourceSQLBefore != knownLegacySchemaMigrationsSQL {
+		t.Fatalf("historical source DDL=%q", sourceSQLBefore)
+	}
+	if sourceRowsBefore[0].appliedAtStorageClass != "blob" {
+		t.Fatalf(
+			"historical source applied_at storage class=%q want blob",
+			sourceRowsBefore[0].appliedAtStorageClass,
+		)
+	}
+
+	err := ensureServiceOperationRescueSnapshotWithOwner(
+		fixture.sourcePath,
+		destination,
+		serviceOperationSnapshotSchemaNormal,
+		fixture.owner,
+	)
+	if err == nil ||
+		!strings.Contains(err.Error(), "unsupported applied_at storage class") {
+		t.Fatalf("error=%v want applied_at storage class rejection", err)
+	}
+
+	assertRescueSnapshotFileStateUnchanged(t, fixture.sourcePath, sourceBefore)
+	sourceSQLAfter, sourceRowsAfter := readSchemaMigrationsStateForTest(
+		t,
+		fixture.sourcePath,
+	)
+	if sourceSQLAfter != sourceSQLBefore ||
+		!equalServiceOperationSnapshotMigrationRows(sourceRowsBefore, sourceRowsAfter) {
+		t.Fatal("rejected canonical source schema, rows, or storage classes changed")
+	}
+	assertSnapshotDirectoryEmpty(t, filepath.Dir(destination))
 	assertReleaseServiceOperationSnapshotParentRestored(t, fixture)
 }
 

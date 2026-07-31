@@ -22,6 +22,10 @@ const (
 	serviceOperationSnapshotBasename                                       = "celikpanel.db"
 	serviceOperationSnapshotSchemaNormal    serviceOperationSnapshotSchema = "normal"
 	serviceOperationSnapshotSchemaPreLedger serviceOperationSnapshotSchema = "pre-ledger"
+	knownLegacySchemaMigrationsSQL                                         = `CREATE TABLE schema_migrations (
+			version INTEGER PRIMARY KEY,
+			applied_at TEXT DEFAULT (datetime('now'))
+		)`
 )
 
 type sqliteOnlineBackupConnection interface {
@@ -135,6 +139,9 @@ func createServiceOperationSnapshotWithCopyAndVerify(
 	if err := copyDatabase(sourcePath, stagePath); err != nil {
 		return fmt.Errorf("create SQLite online backup: %w", err)
 	}
+	if err := canonicalizeKnownLegacySnapshotSchemaMigrations(stagePath); err != nil {
+		return fmt.Errorf("canonicalize known legacy snapshot schema: %w", err)
+	}
 	if err := destination.syncAndVerifyStage(); err != nil {
 		return err
 	}
@@ -234,6 +241,219 @@ func normalizeStandaloneSQLiteSnapshot(databasePath string) (returnErr error) {
 		return fmt.Errorf("set standalone SQLite synchronous mode: %w", err)
 	}
 	return nil
+}
+
+type serviceOperationSnapshotMigrationRow struct {
+	version               int
+	appliedAt             sql.NullString
+	appliedAtStorageClass string
+}
+
+// canonicalizeKnownLegacySnapshotSchemaMigrations rewrites only the copied
+// snapshot stage when schema_migrations has the exact DDL emitted by the
+// initial CelikPanel release. Every other schema object must already match the
+// embedded contract. Unknown whitespace and semantic variants are deliberately
+// left untouched so the normal exact-schema validator rejects them.
+//
+// This function must only receive a private standalone copy. It is never
+// called with the canonical live database path.
+func canonicalizeKnownLegacySnapshotSchemaMigrations(
+	databasePath string,
+) (returnErr error) {
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		return fmt.Errorf("open copied SQLite snapshot: %w", err)
+	}
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
+	database.SetMaxOpenConns(1)
+	database.SetMaxIdleConns(1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := database.PingContext(ctx); err != nil {
+		return fmt.Errorf("read copied SQLite snapshot: %w", err)
+	}
+
+	actualObjects, err := paneldb.ReadSQLiteUserSchema(ctx, database)
+	if err != nil {
+		return fmt.Errorf("read copied snapshot schema contract: %w", err)
+	}
+	legacyIndex := -1
+	for index, object := range actualObjects {
+		if object.Type == "table" &&
+			object.Name == "schema_migrations" &&
+			object.TableName == "schema_migrations" {
+			legacyIndex = index
+			break
+		}
+	}
+	if legacyIndex < 0 ||
+		actualObjects[legacyIndex].SQL != knownLegacySchemaMigrationsSQL {
+		return nil
+	}
+
+	var maximumVersion int
+	if err := database.QueryRowContext(
+		ctx,
+		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`,
+	).Scan(&maximumVersion); err != nil {
+		return fmt.Errorf("inspect copied snapshot migration version: %w", err)
+	}
+	expectedObjects, err := paneldb.ReferenceSQLiteUserSchema(ctx, maximumVersion)
+	if err != nil {
+		return fmt.Errorf("build copied snapshot reference schema: %w", err)
+	}
+	canonicalSQL := ""
+	for _, object := range expectedObjects {
+		if object.Type == "table" &&
+			object.Name == "schema_migrations" &&
+			object.TableName == "schema_migrations" {
+			canonicalSQL = object.SQL
+			break
+		}
+	}
+	if canonicalSQL == "" || canonicalSQL == knownLegacySchemaMigrationsSQL {
+		return fmt.Errorf("embedded migration ledger schema is unavailable")
+	}
+
+	// Prove that the historical formatting is the only schema difference before
+	// dropping the copied ledger table. This prevents the rebuild from erasing
+	// an unexpected index or trigger and accidentally hiding schema drift.
+	comparableObjects := append([]paneldb.SQLiteSchemaObject(nil), actualObjects...)
+	comparableObjects[legacyIndex].SQL = canonicalSQL
+	if err := compareServiceOperationSnapshotSchemaObjects(
+		expectedObjects,
+		comparableObjects,
+	); err != nil {
+		return fmt.Errorf("validate known legacy copied schema: %w", err)
+	}
+
+	var invalidAppliedAtStorageClasses int
+	if err := database.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM schema_migrations
+		WHERE typeof(applied_at) NOT IN ('null', 'text')
+	`).Scan(&invalidAppliedAtStorageClasses); err != nil {
+		return fmt.Errorf("inspect copied migration ledger applied_at storage classes: %w", err)
+	}
+	if invalidAppliedAtStorageClasses != 0 {
+		return fmt.Errorf(
+			"copied migration ledger contains %d unsupported applied_at storage class value(s)",
+			invalidAppliedAtStorageClasses,
+		)
+	}
+
+	migrationRows, err := readServiceOperationSnapshotMigrationRows(ctx, database)
+	if err != nil {
+		return err
+	}
+	transaction, err := database.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin copied migration ledger canonicalization: %w", err)
+	}
+	defer func() {
+		if returnErr != nil {
+			_ = transaction.Rollback()
+		}
+	}()
+	if _, err := transaction.ExecContext(ctx, `DROP TABLE schema_migrations`); err != nil {
+		return fmt.Errorf("drop copied legacy migration ledger: %w", err)
+	}
+	if _, err := transaction.ExecContext(ctx, canonicalSQL); err != nil {
+		return fmt.Errorf("create canonical copied migration ledger: %w", err)
+	}
+	statement, err := transaction.PrepareContext(
+		ctx,
+		`INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)`,
+	)
+	if err != nil {
+		return fmt.Errorf("prepare copied migration ledger restore: %w", err)
+	}
+	for _, row := range migrationRows {
+		if _, err := statement.ExecContext(ctx, row.version, row.appliedAt); err != nil {
+			_ = statement.Close()
+			return fmt.Errorf("restore copied migration ledger version %d: %w", row.version, err)
+		}
+	}
+	if err := statement.Close(); err != nil {
+		return fmt.Errorf("close copied migration ledger restore: %w", err)
+	}
+	if err := transaction.Commit(); err != nil {
+		return fmt.Errorf("commit copied migration ledger canonicalization: %w", err)
+	}
+
+	var storedSQL string
+	if err := database.QueryRowContext(ctx, `
+		SELECT sql
+		FROM sqlite_schema
+		WHERE type = 'table'
+		  AND name = 'schema_migrations'
+		  AND tbl_name = 'schema_migrations'
+	`).Scan(&storedSQL); err != nil {
+		return fmt.Errorf("verify canonical copied migration ledger schema: %w", err)
+	}
+	if storedSQL != canonicalSQL {
+		return fmt.Errorf("canonical copied migration ledger schema differs after rebuild")
+	}
+	restoredRows, err := readServiceOperationSnapshotMigrationRows(ctx, database)
+	if err != nil {
+		return err
+	}
+	if !equalServiceOperationSnapshotMigrationRows(migrationRows, restoredRows) {
+		return fmt.Errorf("copied migration ledger changed during canonicalization")
+	}
+	return nil
+}
+
+func readServiceOperationSnapshotMigrationRows(
+	ctx context.Context,
+	database *sql.DB,
+) ([]serviceOperationSnapshotMigrationRow, error) {
+	rows, err := database.QueryContext(ctx, `
+		SELECT version, applied_at, typeof(applied_at)
+		FROM schema_migrations
+		ORDER BY version ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("read copied migration ledger: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]serviceOperationSnapshotMigrationRow, 0)
+	for rows.Next() {
+		var row serviceOperationSnapshotMigrationRow
+		if err := rows.Scan(
+			&row.version,
+			&row.appliedAt,
+			&row.appliedAtStorageClass,
+		); err != nil {
+			return nil, fmt.Errorf("scan copied migration ledger: %w", err)
+		}
+		result = append(result, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate copied migration ledger: %w", err)
+	}
+	return result, nil
+}
+
+func equalServiceOperationSnapshotMigrationRows(
+	left []serviceOperationSnapshotMigrationRow,
+	right []serviceOperationSnapshotMigrationRow,
+) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index].version != right[index].version ||
+			left[index].appliedAt.Valid != right[index].appliedAt.Valid ||
+			left[index].appliedAt.String != right[index].appliedAt.String ||
+			left[index].appliedAtStorageClass != right[index].appliedAtStorageClass {
+			return false
+		}
+	}
+	return true
 }
 
 func validateServiceOperationSnapshot(

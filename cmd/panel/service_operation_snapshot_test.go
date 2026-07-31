@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -197,6 +198,251 @@ func TestServiceOperationSnapshotAcceptsExactPreLedgerDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStandaloneSnapshot(t, destinationPath)
+}
+
+func TestServiceOperationSnapshotCanonicalizesKnownHistoricalMigrationDDL(t *testing.T) {
+	tests := []struct {
+		name   string
+		schema serviceOperationSnapshotSchema
+		create func(*testing.T, string) string
+	}{
+		{
+			name:   "normal",
+			schema: serviceOperationSnapshotSchemaNormal,
+			create: createCurrentPanelDatabaseInDirectory,
+		},
+		{
+			name:   "pre ledger",
+			schema: serviceOperationSnapshotSchemaPreLedger,
+			create: createPreLedgerPanelDatabaseInDirectory,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testRoot := newSecureSnapshotTestRoot(t)
+			sourcePath := test.create(t, filepath.Join(testRoot, "source"))
+			if err := normalizeStandaloneSQLiteSnapshot(sourcePath); err != nil {
+				t.Fatal(err)
+			}
+			rebuildSchemaMigrationsDDLForTest(
+				t,
+				sourcePath,
+				knownLegacySchemaMigrationsSQL,
+			)
+			setSchemaMigrationAppliedAtForTest(t, sourcePath, 1, sql.NullString{})
+
+			sourceSQLBefore, sourceRowsBefore := readSchemaMigrationsStateForTest(t, sourcePath)
+			if sourceSQLBefore != knownLegacySchemaMigrationsSQL {
+				t.Fatalf("historical source DDL=%q", sourceSQLBefore)
+			}
+			sourceBytesBefore, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			destinationDirectory := filepath.Join(testRoot, "destination")
+			mustMkdirSnapshotTestDirectory(t, destinationDirectory, 0o700)
+			destinationPath := filepath.Join(destinationDirectory, serviceOperationSnapshotBasename)
+			if err := createServiceOperationSnapshot(
+				sourcePath,
+				destinationPath,
+				test.schema,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			sourceBytesAfter, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(sourceBytesBefore, sourceBytesAfter) {
+				t.Fatal("canonical live source bytes changed")
+			}
+			sourceSQLAfter, sourceRowsAfter := readSchemaMigrationsStateForTest(t, sourcePath)
+			if sourceSQLAfter != sourceSQLBefore ||
+				!equalServiceOperationSnapshotMigrationRows(sourceRowsBefore, sourceRowsAfter) {
+				t.Fatal("canonical live source schema or migration rows changed")
+			}
+
+			destinationSQL, destinationRows := readSchemaMigrationsStateForTest(t, destinationPath)
+			canonicalSQL := referenceSchemaMigrationsSQLForTest(
+				t,
+				destinationRows[len(destinationRows)-1].version,
+			)
+			if destinationSQL != canonicalSQL {
+				t.Fatalf("destination DDL=%q want %q", destinationSQL, canonicalSQL)
+			}
+			if !equalServiceOperationSnapshotMigrationRows(sourceRowsBefore, destinationRows) {
+				t.Fatal("snapshot migration rows changed during canonicalization")
+			}
+			assertSchemaMigrationAppliedAtStorageClassesForTest(t, destinationRows)
+			assertStandaloneSnapshot(t, destinationPath)
+		})
+	}
+}
+
+func TestServiceOperationSnapshotRejectsHistoricalMigrationDDLWithBlobAppliedAt(
+	t *testing.T,
+) {
+	tests := []struct {
+		name   string
+		schema serviceOperationSnapshotSchema
+		create func(*testing.T, string) string
+	}{
+		{
+			name:   "normal",
+			schema: serviceOperationSnapshotSchemaNormal,
+			create: createCurrentPanelDatabaseInDirectory,
+		},
+		{
+			name:   "pre ledger",
+			schema: serviceOperationSnapshotSchemaPreLedger,
+			create: createPreLedgerPanelDatabaseInDirectory,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testRoot := newSecureSnapshotTestRoot(t)
+			sourcePath := test.create(t, filepath.Join(testRoot, "source"))
+			if err := normalizeStandaloneSQLiteSnapshot(sourcePath); err != nil {
+				t.Fatal(err)
+			}
+			rebuildSchemaMigrationsDDLForTest(
+				t,
+				sourcePath,
+				knownLegacySchemaMigrationsSQL,
+			)
+			setSchemaMigrationAppliedAtBlobForTest(t, sourcePath, 1)
+
+			sourceSQLBefore, sourceRowsBefore := readSchemaMigrationsStateForTest(
+				t,
+				sourcePath,
+			)
+			if sourceSQLBefore != knownLegacySchemaMigrationsSQL {
+				t.Fatalf("historical source DDL=%q", sourceSQLBefore)
+			}
+			if sourceRowsBefore[0].appliedAtStorageClass != "blob" {
+				t.Fatalf(
+					"historical source applied_at storage class=%q want blob",
+					sourceRowsBefore[0].appliedAtStorageClass,
+				)
+			}
+			sourceBytesBefore, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sourceInfoBefore, err := os.Stat(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			destinationDirectory := filepath.Join(testRoot, "destination")
+			mustMkdirSnapshotTestDirectory(t, destinationDirectory, 0o700)
+			destinationPath := filepath.Join(
+				destinationDirectory,
+				serviceOperationSnapshotBasename,
+			)
+			err = createServiceOperationSnapshot(
+				sourcePath,
+				destinationPath,
+				test.schema,
+			)
+			if err == nil ||
+				!strings.Contains(err.Error(), "unsupported applied_at storage class") {
+				t.Fatalf("error=%v want applied_at storage class rejection", err)
+			}
+
+			sourceBytesAfter, readErr := os.ReadFile(sourcePath)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if !bytes.Equal(sourceBytesBefore, sourceBytesAfter) {
+				t.Fatal("rejected canonical source bytes changed")
+			}
+			sourceInfoAfter, statErr := os.Stat(sourcePath)
+			if statErr != nil {
+				t.Fatal(statErr)
+			}
+			if !samePinnedSQLiteFileMetadata(sourceInfoBefore, sourceInfoAfter) {
+				t.Fatal("rejected canonical source metadata changed")
+			}
+			sourceSQLAfter, sourceRowsAfter := readSchemaMigrationsStateForTest(
+				t,
+				sourcePath,
+			)
+			if sourceSQLAfter != sourceSQLBefore ||
+				!equalServiceOperationSnapshotMigrationRows(
+					sourceRowsBefore,
+					sourceRowsAfter,
+				) {
+				t.Fatal("rejected canonical source schema, rows, or storage classes changed")
+			}
+			assertSnapshotDirectoryEmpty(t, destinationDirectory)
+		})
+	}
+}
+
+func TestServiceOperationSnapshotRejectsUnknownMigrationDDLVariants(t *testing.T) {
+	tests := []struct {
+		name string
+		ddl  string
+	}{
+		{
+			name: "unknown whitespace",
+			ddl: `CREATE TABLE schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT DEFAULT (datetime('now'))
+)`,
+		},
+		{
+			name: "semantic change",
+			ddl: `CREATE TABLE schema_migrations (
+		version INTEGER PRIMARY KEY,
+		applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+	)`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testRoot := newSecureSnapshotTestRoot(t)
+			sourcePath := createCurrentPanelDatabaseInDirectory(
+				t,
+				filepath.Join(testRoot, "source"),
+			)
+			if err := normalizeStandaloneSQLiteSnapshot(sourcePath); err != nil {
+				t.Fatal(err)
+			}
+			rebuildSchemaMigrationsDDLForTest(t, sourcePath, test.ddl)
+			sourceBytesBefore, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			destinationDirectory := filepath.Join(testRoot, "destination")
+			mustMkdirSnapshotTestDirectory(t, destinationDirectory, 0o700)
+			destinationPath := filepath.Join(destinationDirectory, serviceOperationSnapshotBasename)
+			err = createServiceOperationSnapshot(
+				sourcePath,
+				destinationPath,
+				serviceOperationSnapshotSchemaNormal,
+			)
+			if err == nil || !strings.Contains(err.Error(), "schema contract") {
+				t.Fatalf("error=%v want exact schema contract rejection", err)
+			}
+			sourceBytesAfter, readErr := os.ReadFile(sourcePath)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if !bytes.Equal(sourceBytesBefore, sourceBytesAfter) {
+				t.Fatal("rejected source bytes changed")
+			}
+			sourceSQL, _ := readSchemaMigrationsStateForTest(t, sourcePath)
+			if sourceSQL != test.ddl {
+				t.Fatalf("rejected source DDL=%q want %q", sourceSQL, test.ddl)
+			}
+			assertSnapshotDirectoryEmpty(t, destinationDirectory)
+		})
+	}
 }
 
 func TestServiceOperationSnapshotRejectsUnsafeDestinations(t *testing.T) {
@@ -853,6 +1099,231 @@ func mustMkdirSnapshotTestDirectory(t *testing.T, path string, mode os.FileMode)
 	if err := os.Chmod(path, mode); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func createCurrentPanelDatabaseInDirectory(t *testing.T, directory string) string {
+	t.Helper()
+	mustMkdirSnapshotTestDirectory(t, directory, 0o700)
+	path := filepath.Join(directory, serviceOperationSnapshotBasename)
+	database, err := paneldb.NewSQLiteDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.Close()
+	return path
+}
+
+func rebuildSchemaMigrationsDDLForTest(
+	t *testing.T,
+	databasePath string,
+	ddl string,
+) {
+	t.Helper()
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.SetMaxOpenConns(1)
+	database.SetMaxIdleConns(1)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := database.PingContext(ctx); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	migrationRows, err := readServiceOperationSnapshotMigrationRows(ctx, database)
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	transaction, err := database.BeginTx(ctx, nil)
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if _, err := transaction.ExecContext(ctx, `DROP TABLE schema_migrations`); err != nil {
+		_ = transaction.Rollback()
+		database.Close()
+		t.Fatal(err)
+	}
+	if _, err := transaction.ExecContext(ctx, ddl); err != nil {
+		_ = transaction.Rollback()
+		database.Close()
+		t.Fatal(err)
+	}
+	for _, row := range migrationRows {
+		if _, err := transaction.ExecContext(
+			ctx,
+			`INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)`,
+			row.version,
+			row.appliedAt,
+		); err != nil {
+			_ = transaction.Rollback()
+			database.Close()
+			t.Fatal(err)
+		}
+	}
+	if err := transaction.Commit(); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := normalizeStandaloneSQLiteSnapshot(databasePath); err != nil {
+		t.Fatal(err)
+	}
+	storedSQL, restoredRows := readSchemaMigrationsStateForTest(t, databasePath)
+	if storedSQL != ddl {
+		t.Fatalf("stored migration DDL=%q want %q", storedSQL, ddl)
+	}
+	if !equalServiceOperationSnapshotMigrationRows(migrationRows, restoredRows) {
+		t.Fatal("test fixture rebuild changed migration rows")
+	}
+}
+
+func setSchemaMigrationAppliedAtForTest(
+	t *testing.T,
+	databasePath string,
+	version int,
+	appliedAt sql.NullString,
+) {
+	t.Helper()
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := database.Exec(
+		`UPDATE schema_migrations SET applied_at=? WHERE version=?`,
+		appliedAt,
+		version,
+	)
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if rowsAffected != 1 {
+		database.Close()
+		t.Fatalf("updated migration rows=%d want 1", rowsAffected)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := normalizeStandaloneSQLiteSnapshot(databasePath); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func setSchemaMigrationAppliedAtBlobForTest(
+	t *testing.T,
+	databasePath string,
+	version int,
+) {
+	t.Helper()
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := database.Exec(
+		`UPDATE schema_migrations
+		 SET applied_at=CAST(X'00FF' AS BLOB)
+		 WHERE version=?`,
+		version,
+	)
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if rowsAffected != 1 {
+		database.Close()
+		t.Fatalf("updated migration rows=%d want 1", rowsAffected)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := normalizeStandaloneSQLiteSnapshot(databasePath); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readSchemaMigrationsStateForTest(
+	t *testing.T,
+	databasePath string,
+) (string, []serviceOperationSnapshotMigrationRow) {
+	t.Helper()
+	database, err := sql.Open("sqlite", sqliteSnapshotURI(databasePath, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.SetMaxOpenConns(1)
+	database.SetMaxIdleConns(1)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var ddl string
+	if err := database.QueryRowContext(ctx, `
+		SELECT sql
+		FROM sqlite_schema
+		WHERE type = 'table'
+		  AND name = 'schema_migrations'
+		  AND tbl_name = 'schema_migrations'
+	`).Scan(&ddl); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	migrationRows, err := readServiceOperationSnapshotMigrationRows(ctx, database)
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return ddl, migrationRows
+}
+
+func assertSchemaMigrationAppliedAtStorageClassesForTest(
+	t *testing.T,
+	rows []serviceOperationSnapshotMigrationRow,
+) {
+	t.Helper()
+	for _, row := range rows {
+		switch row.appliedAtStorageClass {
+		case "null", "text":
+		default:
+			t.Fatalf(
+				"migration version %d applied_at storage class=%q want null or text",
+				row.version,
+				row.appliedAtStorageClass,
+			)
+		}
+	}
+}
+
+func referenceSchemaMigrationsSQLForTest(t *testing.T, version int) string {
+	t.Helper()
+	objects, err := paneldb.ReferenceSQLiteUserSchema(context.Background(), version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, object := range objects {
+		if object.Type == "table" &&
+			object.Name == "schema_migrations" &&
+			object.TableName == "schema_migrations" {
+			return object.SQL
+		}
+	}
+	t.Fatal("reference migration ledger schema is unavailable")
+	return ""
 }
 
 func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) string {
