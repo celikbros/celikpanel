@@ -40,15 +40,24 @@ func TestDNSSettingsGuidedPairingContract(t *testing.T) {
 		`dns_service_ready?: boolean;`,
 		`dns_service_detail?: string;`,
 		`function canonicalIPv4(value: string): string`,
+		`function isGlobalUnicastIPv4(value: string): boolean`,
 		`function isValidNameserver(value: string): boolean`,
 		`const [needsClusterRetry, setNeedsClusterRetry] = useState(false);`,
 		`const [activeStep, setActiveStep] = useState<WizardStep>(1);`,
+		`const [detectedPeerStaged, setDetectedPeerStaged] = useState(false);`,
+		`const autoStageDetectedPeer =`,
+		`const storedPeerValid =`,
+		`const storedPeerMatchesSuggestion =`,
+		`!storedPeerMatchesSuggestion`,
 		`const mayReplacePeerIP =`,
 		`currentPeerIPv4 === serverIPv4`,
 		`: mayReplacePeerIP`,
 		`const detectedAssignmentNeedsApply =`,
+		`const peerIPUsable =`,
 		`onChange={() => selectRole(role)}`,
-		`const useDetectedAssignment = current.role !== 'paired' && detectedAssignmentAvailable;`,
+		`const useDetectedAssignment =`,
+		`const currentAssignmentMatchesDetected =`,
+		`role === 'paired' && detectedAssignmentAvailable && !currentAssignmentValid;`,
 		`peer_ip: useDetectedAssignment`,
 		`peer_ns: useDetectedAssignment`,
 		`const saveAndPublish = async () =>`,
@@ -71,8 +80,9 @@ func TestDNSSettingsGuidedPairingContract(t *testing.T) {
 		`t('dnssrv.modeChoiceTitle')`,
 		`t('dnssrv.namesTitle')`,
 		`t('dnssrv.assignmentTitle')`,
-		`const namesReadyForSetup = namesValid && derivedNamesReplaced;`,
-		`t('dnssrv.namesReplaceExample')`,
+		`const namesReadyForSetup = namesValid;`,
+		`t('dnssrv.namesInferredReview')`,
+		`t('dnssrv.peerCorrectionStaged'`,
 		`aria-label={t('dnssrv.assignmentSummary')}`,
 		`t('dnssrv.detectedAssignment')`,
 		`t('dnssrv.blocker.names')`,
@@ -111,6 +121,10 @@ func TestDNSSettingsGuidedPairingContract(t *testing.T) {
 		`t('dnssrv.verifyAndRepublish')`,
 		`t('dnssrv.retryApply')`,
 		`<details open={!namesValid}`,
+		`derivedNamesReplaced`,
+		`ns1NeedsReplacement`,
+		`ns2NeedsReplacement`,
+		`current.role !== 'paired' && detectedAssignmentAvailable`,
 	} {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf(`guided DNS pairing UI still contains %q`, forbidden)
@@ -129,7 +143,6 @@ func TestDNSSettingsSuggestionsRemainBoundToTheSavedPair(t *testing.T) {
 	source := dnsSettingsFrontendSource(t)
 	for _, required := range []string{
 		`const suggestionMatchesSavedPair =`,
-		`!saved.namesDerived`,
 		`!namesDirty`,
 		`savedNameserverNames.includes(rawSuggestedLocalNS)`,
 		`savedNameserverNames.includes(rawSuggestedPeerNS)`,
@@ -139,6 +152,9 @@ func TestDNSSettingsSuggestionsRemainBoundToTheSavedPair(t *testing.T) {
 		if !strings.Contains(source, required) {
 			t.Fatalf(`saved-pair suggestion provenance is missing %q`, required)
 		}
+	}
+	if strings.Contains(source, `!saved.namesDerived`) {
+		t.Fatal(`valid inferred names must remain eligible for a verified public-DNS assignment`)
 	}
 }
 

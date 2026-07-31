@@ -110,6 +110,21 @@ function canonicalIPv4(value: string): string {
     return parsed.some((octet) => octet < 0) ? '' : parsed.join('.');
 }
 
+// Keep browser readiness aligned with Go's net.IP.IsGlobalUnicast check in
+// the atomic DNS setup endpoint. Private addresses remain valid for peers on
+// an operator-controlled network; unspecified, loopback, multicast,
+// link-local and limited-broadcast addresses do not.
+function isGlobalUnicastIPv4(value: string): boolean {
+    const canonical = canonicalIPv4(value);
+    if (canonical === '') return false;
+    const [a, b] = canonical.split('.').map(Number);
+    return canonical !== '0.0.0.0' &&
+        canonical !== '255.255.255.255' &&
+        a !== 127 &&
+        !(a === 169 && b === 254) &&
+        !(a >= 224 && a <= 239);
+}
+
 function isValidNameserver(value: string): boolean {
     const hostname = cleanHostname(value);
     if (hostname.length < 3 || hostname.length > 253 || !hostname.includes('.')) return false;
@@ -156,6 +171,7 @@ export function DNSServerSettings() {
     const [needsClusterRetry, setNeedsClusterRetry] = useState(false);
     const [apiError, setApiError] = useState<ApiError | null>(null);
     const [activeStep, setActiveStep] = useState<WizardStep>(1);
+    const [detectedPeerStaged, setDetectedPeerStaged] = useState(false);
 
     const load = useCallback(async (preserveCluster?: ClusterDraft): Promise<boolean> => {
         try {
@@ -193,15 +209,51 @@ export function DNSServerSettings() {
             };
             setSaved(snapshot);
 
-            const savedPeerNames = snapshot.namesDerived ? [] : [ns1, ns2].filter(Boolean);
+            const savedPeerNames = [ns1, ns2].filter(Boolean);
             const preservedPeerNS = cleanHostname(preserveCluster?.peer_ns ?? '');
-            const requestedPeerNS = preservedPeerNS || cleanHostname(cluster.peer_ns ?? '');
+            const storedPeerNS = cleanHostname(cluster.peer_ns ?? '');
+            const serverIPv4 = canonicalIPv4(snapshot.server_ip);
+            const storedPeerIPv4 = canonicalIPv4(cluster.peer_ip ?? '');
+            const suggestedLocalNS = cleanHostname(snapshot.suggested_local_ns ?? '');
+            const suggestedPeerNS = cleanHostname(snapshot.suggested_peer_ns ?? '');
+            const suggestedPeerIPv4 = canonicalIPv4(snapshot.suggested_peer_ip ?? '');
+            const suggestionValid =
+                savedPeerNames.length === 2 &&
+                savedPeerNames.includes(suggestedLocalNS) &&
+                savedPeerNames.includes(suggestedPeerNS) &&
+                suggestedLocalNS !== suggestedPeerNS &&
+                isGlobalUnicastIPv4(suggestedPeerIPv4) &&
+                suggestedPeerIPv4 !== serverIPv4;
+            const storedPeerValid =
+                isGlobalUnicastIPv4(storedPeerIPv4) &&
+                storedPeerIPv4 !== serverIPv4 &&
+                savedPeerNames.includes(storedPeerNS) &&
+                otherNameserver(storedPeerNS, ns1, ns2) !== '';
+            const storedPeerMatchesSuggestion =
+                storedPeerValid &&
+                storedPeerIPv4 === suggestedPeerIPv4 &&
+                storedPeerNS === suggestedPeerNS &&
+                otherNameserver(storedPeerNS, ns1, ns2) === suggestedLocalNS;
+            const autoStageDetectedPeer =
+                preserveCluster === undefined &&
+                snapshot.configured &&
+                role === 'paired' &&
+                !storedPeerMatchesSuggestion &&
+                suggestionValid;
+            const draftPeerNS = preserveCluster !== undefined
+                ? (savedPeerNames.includes(preservedPeerNS) ? preservedPeerNS : '')
+                : autoStageDetectedPeer
+                  ? suggestedPeerNS
+                  : savedPeerNames.includes(storedPeerNS)
+                    ? storedPeerNS
+                    : '';
+            setDetectedPeerStaged(autoStageDetectedPeer);
             setDraft({
                 ns1,
                 ns2,
                 role: preserveCluster?.role ?? (snapshot.configured ? role : ''),
-                peer_ip: preserveCluster?.peer_ip ?? cluster.peer_ip ?? '',
-                peer_ns: savedPeerNames.includes(requestedPeerNS) ? requestedPeerNS : '',
+                peer_ip: preserveCluster?.peer_ip ?? (autoStageDetectedPeer ? suggestedPeerIPv4 : cluster.peer_ip ?? ''),
+                peer_ns: draftPeerNS,
             });
             setApiError(null);
             return true;
@@ -296,15 +348,13 @@ export function DNSServerSettings() {
     const ns2Valid = isValidNameserver(draftNS2);
     const namesDistinct = draftNS1 !== draftNS2;
     const namesValid = ns1Valid && ns2Valid && namesDistinct;
-    const ns1NeedsReplacement = saved.namesDerived && draftNS1 === saved.ns1;
-    const ns2NeedsReplacement = saved.namesDerived && draftNS2 === saved.ns2;
-    const derivedNamesReplaced = !ns1NeedsReplacement && !ns2NeedsReplacement;
-    const namesReadyForSetup = namesValid && derivedNamesReplaced;
+    const namesReadyForSetup = namesValid;
     const nameserverNames = namesReadyForSetup ? [draftNS1, draftNS2] : [];
     const peerSelectionValid = nameserverNames.includes(effectivePeerNS);
     const localSelectionValid = nameserverNames.includes(effectiveLocalNS);
     const serverIPv4 = canonicalIPv4(saved.server_ip);
-    const peerIPInvalid = draft.role === 'paired' && effectivePeerIP !== '' && effectivePeerIPv4 === '';
+    const peerIPUsable = draft.role !== 'paired' || isGlobalUnicastIPv4(effectivePeerIPv4);
+    const peerIPInvalid = draft.role === 'paired' && effectivePeerIP !== '' && !peerIPUsable;
     const peerIPSame =
         draft.role === 'paired' && effectivePeerIPv4 !== '' && serverIPv4 !== '' && effectivePeerIPv4 === serverIPv4;
     const hasChanges = namesDirty || saved.namesDerived || clusterDirty || !saved.configured;
@@ -316,7 +366,6 @@ export function DNSServerSettings() {
     const rawSuggestedLocalNS = cleanHostname(saved.suggested_local_ns ?? '');
     const rawSuggestedPeerNS = cleanHostname(saved.suggested_peer_ns ?? '');
     const suggestionMatchesSavedPair =
-        !saved.namesDerived &&
         !namesDirty &&
         savedNameserverNames.length === 2 &&
         savedNameserverNames.includes(rawSuggestedLocalNS) &&
@@ -326,7 +375,7 @@ export function DNSServerSettings() {
     const suggestedPeerNS = suggestionMatchesSavedPair ? rawSuggestedPeerNS : '';
     const suggestedPeerIPv4 = canonicalIPv4(saved.suggested_peer_ip ?? '');
     const safeSuggestedPeerIP =
-        suggestedPeerIPv4 !== '' && (serverIPv4 === '' || suggestedPeerIPv4 !== serverIPv4)
+        isGlobalUnicastIPv4(suggestedPeerIPv4) && (serverIPv4 === '' || suggestedPeerIPv4 !== serverIPv4)
             ? suggestedPeerIPv4
             : '';
     const detectedAssignmentAvailable =
@@ -343,7 +392,7 @@ export function DNSServerSettings() {
     else if (!namesReadyForSetup) clusterBlocker = 'names';
     else if (draft.role === '') clusterBlocker = 'chooseRole';
     else if (draft.role === 'paired' && peerIPSame) clusterBlocker = 'peerIpSame';
-    else if (draft.role === 'paired' && effectivePeerIPv4 === '') clusterBlocker = 'peerIp';
+    else if (draft.role === 'paired' && !peerIPUsable) clusterBlocker = 'peerIp';
     else if (draft.role === 'paired' && (!peerSelectionValid || !localSelectionValid)) clusterBlocker = 'peerNs';
 
     const blockerText = clusterBlocker === 'busy'
@@ -368,7 +417,7 @@ export function DNSServerSettings() {
 
     const assignmentReady = draft.role === 'standalone' || (
         draft.role === 'paired' &&
-        effectivePeerIPv4 !== '' &&
+        peerIPUsable &&
         !peerIPSame &&
         peerSelectionValid &&
         localSelectionValid
@@ -380,7 +429,7 @@ export function DNSServerSettings() {
           ? t('dnssrv.blocker.chooseRole')
           : draft.role === 'paired' && peerIPSame
             ? t('dnssrv.peerIpSame', { ip: saved.server_ip })
-            : draft.role === 'paired' && effectivePeerIPv4 === ''
+            : draft.role === 'paired' && !peerIPUsable
               ? t('dnssrv.blocker.peerIp')
               : draft.role === 'paired' && (!peerSelectionValid || !localSelectionValid)
                 ? t('dnssrv.blocker.peerNs')
@@ -389,13 +438,35 @@ export function DNSServerSettings() {
     const selectRole = (role: DNSRole) => {
         setNeedsClusterRetry(false);
         setApiError(null);
+        if (role === 'standalone') {
+            setDetectedPeerStaged(false);
+        }
+        const selectedPeerIPv4 = canonicalIPv4(draft.peer_ip);
+        const selectedPeerNS = cleanHostname(draft.peer_ns);
+        const selectedLocalNS = otherNameserver(selectedPeerNS, draftNS1, draftNS2);
+        const currentAssignmentStructurallyValid =
+            isGlobalUnicastIPv4(selectedPeerIPv4) &&
+            selectedPeerIPv4 !== serverIPv4 &&
+            nameserverNames.includes(selectedPeerNS) &&
+            nameserverNames.includes(selectedLocalNS);
+        const currentAssignmentMatchesDetected =
+            !detectedAssignmentAvailable ||
+            (selectedPeerIPv4 === safeSuggestedPeerIP &&
+                selectedPeerNS === suggestedPeerNS &&
+                selectedLocalNS === suggestedLocalNS);
+        const currentAssignmentValid =
+            currentAssignmentStructurallyValid && currentAssignmentMatchesDetected;
+        const useDetectedAssignment =
+            role === 'paired' && detectedAssignmentAvailable && !currentAssignmentValid;
+        if (useDetectedAssignment) {
+            setDetectedPeerStaged(true);
+        }
         setDraft((current) => {
             if (!current) return current;
             if (role === 'standalone') return { ...current, role };
 
             const currentPeerIP = current.peer_ip.trim();
             const currentPeerIPv4 = canonicalIPv4(currentPeerIP);
-            const useDetectedAssignment = current.role !== 'paired' && detectedAssignmentAvailable;
             const mayReplacePeerIP =
                 currentPeerIP === '' || (currentPeerIPv4 !== '' && serverIPv4 !== '' && currentPeerIPv4 === serverIPv4);
             const currentPeerNS = cleanHostname(current.peer_ns);
@@ -419,6 +490,7 @@ export function DNSServerSettings() {
     const selectLocalNameserver = (localNS: string) => {
         setNeedsClusterRetry(false);
         setApiError(null);
+        setDetectedPeerStaged(false);
         const peerNS = otherNameserver(localNS, draftNS1, draftNS2);
         setDraft((current) => (current ? { ...current, peer_ns: peerNS } : current));
     };
@@ -426,6 +498,7 @@ export function DNSServerSettings() {
     const useDetectedPeer = () => {
         setNeedsClusterRetry(false);
         setApiError(null);
+        setDetectedPeerStaged(true);
         setDraft((current) => current ? {
             ...current,
             role: 'paired',
@@ -590,9 +663,9 @@ export function DNSServerSettings() {
                         description={t('dnssrv.namesHint')}
                         complete={namesReadyForSetup}
                     />
-                    {saved.namesDerived && !derivedNamesReplaced && (
-                        <p className="mb-3 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
-                            {t('dnssrv.namesReplaceExample')}
+                    {saved.namesDerived && !namesDirty && (
+                        <p className="mb-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
+                            {t('dnssrv.namesInferredReview')}
                         </p>
                     )}
                     <div className="grid gap-3 md:grid-cols-2">
@@ -604,15 +677,13 @@ export function DNSServerSettings() {
                                 onChange={(e) => {
                                     setNeedsClusterRetry(false);
                                     setApiError(null);
+                                    setDetectedPeerStaged(false);
                                     setDraft((current) => (current ? { ...current, ns1: e.target.value } : current));
                                 }}
                                 placeholder="ns1.example.com"
-                                aria-invalid={!ns1Valid || ns1NeedsReplacement}
+                                aria-invalid={!ns1Valid}
                             />
                             {!ns1Valid && <p className="mt-1.5 text-xs text-danger">{t('dnssrv.namesInvalid')}</p>}
-                            {ns1Valid && ns1NeedsReplacement && (
-                                <p className="mt-1.5 text-xs text-danger">{t('dnssrv.namesReplaceOne')}</p>
-                            )}
                         </Field>
                         <Field label={t('dnssrv.ns2Label')} htmlFor="dns-ns2">
                             <input
@@ -622,17 +693,15 @@ export function DNSServerSettings() {
                                 onChange={(e) => {
                                     setNeedsClusterRetry(false);
                                     setApiError(null);
+                                    setDetectedPeerStaged(false);
                                     setDraft((current) => (current ? { ...current, ns2: e.target.value } : current));
                                 }}
                                 placeholder="ns2.example.com"
-                                aria-invalid={!ns2Valid || !namesDistinct || ns2NeedsReplacement}
+                                aria-invalid={!ns2Valid || !namesDistinct}
                             />
                             {!ns2Valid && <p className="mt-1.5 text-xs text-danger">{t('dnssrv.namesInvalid')}</p>}
                             {ns2Valid && !namesDistinct && (
                                 <p className="mt-1.5 text-xs text-danger">{t('dnssrv.namesMustDiffer')}</p>
-                            )}
-                            {ns2Valid && namesDistinct && ns2NeedsReplacement && (
-                                <p className="mt-1.5 text-xs text-danger">{t('dnssrv.namesReplaceOne')}</p>
                             )}
                         </Field>
                     </div>
@@ -655,6 +724,17 @@ export function DNSServerSettings() {
 
                             {draft.role === 'paired' && (
                         <>
+                            {detectedPeerStaged && (
+                                <div className="mb-4 rounded-xl border border-success/30 bg-success/5 p-3 text-xs leading-relaxed text-fg-muted">
+                                    <p className="font-semibold text-success">{t('dnssrv.peerCorrectionTitle')}</p>
+                                    <p className="mt-1">
+                                        {t('dnssrv.peerCorrectionStaged', {
+                                            ip: safeSuggestedPeerIP,
+                                            name: suggestedPeerNS,
+                                        })}
+                                    </p>
+                                </div>
+                            )}
                             {detectedAssignmentNeedsApply && (
                                 <div className="mb-4 rounded-xl border border-warning/30 bg-warning/5 p-3">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -727,6 +807,7 @@ export function DNSServerSettings() {
                                                 onChange={(e) => {
                                                     setNeedsClusterRetry(false);
                                                     setApiError(null);
+                                                    setDetectedPeerStaged(false);
                                                     setDraft((current) => (
                                                         current ? { ...current, peer_ip: e.target.value } : current
                                                     ));

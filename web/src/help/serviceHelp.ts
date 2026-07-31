@@ -131,13 +131,13 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             what: 'Bu sayfa barındırılan tüm alan adlarının kullanacağı ortak ad sunucusu çiftini ve bu makinenin tek başına mı yoksa başka bir DNS makinesiyle eşlenmiş mi çalışacağını belirler. Eşlenmiş düzende iki panel de aynı iki adı kullanır; her makine kendi panelinde oluşturulan zone’ların sahibi olur ve eşindeki zone’ların canlı kopyasını tutar.',
             tips: [
                 'Eşlenmiş modda adlardan biri bu makinenin, diğeri eş makinenin IP adresine çözülmelidir. İki ad da aynı IP’yi gösterirse yedeklilik yoktur.',
-                'İki panelde de aynı ad sunucusu çiftini kaydedin. Eş sunucu adı alanında, o makinenin IP adresine çözülen adı kayıtlı çiftin içinden seçin.',
+                'İki panelde de aynı ad sunucusu çiftini kullanın. Sihirbaz bu makinenin adını ve eş sunucunun adını genel DNS’ten algıladığında forma yerleştirir; son adımda adları ve topolojiyi tek işlemle kaydeder.',
 				'Ad sunucusu adlarının sahibi olan üst domain’de iki eşleşmeyi de yapın: yetkili zone’da A/AAAA, kayıtçıda child nameserver/glue. Barındırılan müşteri alan adı yalnız “ad sunucularını değiştir” ekranında bu çifti seçer; kendi altında child nameserver oluşturmaz.',
                 'İki makinede de Eşlenmiş düğüm modunu kaydedin. Böylece Frankfurt’ta oluşturulan zone Boston’a, Boston’da oluşturulan zone Frankfurt’a kopyalanabilir.',
 				'Paneller hesap veya API anahtarı paylaşmaz; PowerDNS normalde NOTIFY için UDP 53, zone aktarımı (AXFR) için TCP 53 kullanır. İki protokol de iki yönde açık olmalıdır.',
             ],
             troubleshoot: [
-                { symptom: 'Adların yanında “Önerildi — kaydedilmedi” yazıyor.', fix: 'Panel bu adları makine adından tahmin etti. Doğru ortak çift olduklarını doğrulayın ve önce Paylaşılan adları kaydet düğmesine basın; eş sunucu adı bundan sonra seçilebilir.' },
+                { symptom: 'Adların panel sunucu adından türetildiği yazıyor.', fix: 'Doğru ortak çift bunlarsa değiştirmeniz gerekmez. Sunucu eşleşmesini kontrol edip son adıma ilerleyin; tek kayıt düğmesi adları ve çalışma biçimini birlikte uygular.' },
                 { symptom: 'İki ad da aynı makineyi gösteriyor.', fix: 'Bu bir DNS çifti değildir. Adlardan birinin A/AAAA kaydını bu sunucuya, diğerinin kaydını eş sunucuya yöneltin ve genel DNS yayılımından sonra tekrar kontrol edin.' },
                 { symptom: '“TCP/53 erişilemiyor” yazıyor.', fix: 'Eş sunucuda PowerDNS çalışmıyor olabilir ya da sunucu/sağlayıcı güvenlik duvarı TCP 53’ü engelliyordur. İki yönde de TCP 53 erişimine izin verin; UDP 53 de genel DNS sorguları için açık olmalıdır.' },
                 { symptom: 'Zone eş sunucuda görünmüyor.', fix: 'İki panelde de aynı ad çiftinin ve Eşlenmiş düğüm modunun kayıtlı olduğunu, her panelin doğru eş IP’yi ve doğru eş adını seçtiğini doğrulayın. Sonra yerel zone’da bir değişiklik yapıp TCP 53 durumunu yeniden kontrol edin.' },
@@ -147,13 +147,13 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
             what: 'This page sets the shared nameserver pair used by every hosted domain and whether this machine works alone or is paired with another DNS machine. In a pair, both panels use the same two names; each machine owns zones created on its own panel and keeps live copies of zones created on its peer.',
             tips: [
                 'In paired mode, one name must resolve to this machine and the other to the peer machine. If both names show one IP, there is no redundancy.',
-                'Save the same nameserver pair on both panels. For the peer name, select the saved name that resolves to that other machine’s IP address.',
+                'Use the same nameserver pair on both panels. When public DNS identifies this machine and its peer, the wizard stages that assignment and the final action saves the names and topology together.',
 				'Configure both mappings under the parent domain that owns the names: A/AAAA in its authoritative zone and child-nameserver/glue at its registrar. A hosted customer domain only selects this pair under “change nameservers”; it does not create child nameservers of its own.',
                 'Save Paired node mode on both machines. Zones created in Frankfurt can then be copied to Boston, and zones created in Boston can be copied to Frankfurt.',
 				'The panels do not share accounts or API keys. PowerDNS normally uses UDP 53 for NOTIFY and TCP 53 for zone transfer (AXFR), so both protocols must be open in both directions.',
             ],
             troubleshoot: [
-                { symptom: 'The names show “Suggested — not saved”.', fix: 'The panel inferred them from the machine hostname. Confirm that they are the intended shared pair and save the names first; the peer-name selector becomes available afterwards.' },
+                { symptom: 'The names are marked as inferred from the panel hostname.', fix: 'If they are the intended shared pair, you do not need to change them. Review the server assignment and continue; one final action saves both the names and operating mode.' },
                 { symptom: 'Both names point at the same machine.', fix: 'That is not a DNS pair. Point one name’s A/AAAA record at this server and the other name’s record at the peer, then check again after public DNS has updated.' },
                 { symptom: 'It says TCP/53 cannot be reached.', fix: 'PowerDNS may not be running on the peer, or a server/provider firewall may be blocking TCP port 53. Allow TCP 53 in both directions; UDP 53 must also be open for normal public DNS queries.' },
                 { symptom: 'A zone does not appear on the peer.', fix: 'Confirm both panels saved the same names, Paired node mode, the correct peer IP, and the correct peer name. Then change the local zone once and recheck TCP port 53.' },

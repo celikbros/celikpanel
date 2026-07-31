@@ -306,17 +306,20 @@ func normalizeDNSRole(role string) string {
 }
 
 // suggestDNSClusterPeer derives a draft paired-node topology only from the
-// operator's saved nameserver pair and live DNS facts. It deliberately returns
-// no suggestion when either name is ambiguous: a guess here could silently
-// configure the wrong machine as the peer.
+// effective nameserver pair and live DNS facts. The effective pair may be the
+// operator's saved pair or the safe ns1/ns2 default derived from the panel
+// hostname on a fresh install. It deliberately returns no suggestion when
+// either name or address is ambiguous: a guess here could silently configure
+// the wrong machine as the peer.
 func suggestDNSClusterPeer(serverIP, ns1, ns2 string, facts []nameserverFact) (localNS, peerNS, peerIP string) {
 	localIPv4, ok := canonicalIPv4(serverIP)
-	if !ok || len(facts) != 2 {
+	localIP := net.ParseIP(localIPv4)
+	if !ok || localIP == nil || !localIP.To4().IsGlobalUnicast() || len(facts) != 2 {
 		return "", "", ""
 	}
 
 	ns1, ns2 = canonicalDNSName(ns1), canonicalDNSName(ns2)
-	if ns1 == "" || ns2 == "" || ns1 == ns2 {
+	if !validDNSHostname(ns1) || !validDNSHostname(ns2) || ns1 == ns2 {
 		return "", "", ""
 	}
 
@@ -336,23 +339,18 @@ func suggestDNSClusterPeer(serverIP, ns1, ns2 string, facts []nameserverFact) (l
 		return "", "", ""
 	}
 
+	// A local name is safe to infer only when every IPv4 answer canonicalizes
+	// to this server. In particular, an A record that contains both machines
+	// must not be treated as this node's identity.
 	localNames := make([]string, 0, 1)
 	for _, name := range []string{ns1, ns2} {
 		fact := byName[name]
-		if !fact.PointsHere {
-			continue
-		}
-		localAddressPresent := false
-		for _, rawIP := range fact.IPs {
-			if ip, valid := canonicalIPv4(rawIP); valid && ip == localIPv4 {
-				localAddressPresent = true
-				break
+		addresses := canonicalIPv4AnswerSet(fact.IPs)
+		if len(addresses) == 1 {
+			if _, isLocal := addresses[localIPv4]; isLocal {
+				localNames = append(localNames, name)
 			}
 		}
-		if !localAddressPresent {
-			return "", "", ""
-		}
-		localNames = append(localNames, name)
 	}
 	if len(localNames) != 1 {
 		return "", "", ""
@@ -364,22 +362,44 @@ func suggestDNSClusterPeer(serverIP, ns1, ns2 string, facts []nameserverFact) (l
 	} else {
 		peerNS = ns1
 	}
-	peerAddresses := make(map[string]struct{})
-	for _, rawIP := range byName[peerNS].IPs {
-		if ip, valid := canonicalIPv4(rawIP); valid {
-			peerAddresses[ip] = struct{}{}
-		}
-	}
+	peerAddresses := canonicalIPv4AnswerSet(byName[peerNS].IPs)
 	if len(peerAddresses) != 1 {
 		return "", "", ""
 	}
 	for ip := range peerAddresses {
-		if ip == localIPv4 {
+		if !safeDNSClusterPeerIPv4(ip, localIPv4) {
 			return "", "", ""
 		}
 		peerIP = ip
 	}
 	return localNS, peerNS, peerIP
+}
+
+// canonicalIPv4AnswerSet collapses equivalent DNS answers (for example an
+// IPv4 address and its IPv4-mapped representation) without hiding additional
+// IPv4 addresses. IPv6 answers are outside this IPv4 cluster tuple and do not
+// make an otherwise exact A-record mapping ambiguous.
+func canonicalIPv4AnswerSet(raw []string) map[string]struct{} {
+	out := make(map[string]struct{})
+	for _, value := range raw {
+		if ip, ok := canonicalIPv4(value); ok {
+			out[ip] = struct{}{}
+		}
+	}
+	return out
+}
+
+// safeDNSClusterPeerIPv4 mirrors the DNS setup validator: the peer must be a
+// canonical global-unicast IPv4 address and must not be this server. Go treats
+// routed private addresses as global-unicast; keeping that behavior is
+// intentional because the setup endpoint permits private replication links.
+func safeDNSClusterPeerIPv4(value, localIPv4 string) bool {
+	canonical, ok := canonicalIPv4(value)
+	if !ok || canonical == localIPv4 {
+		return false
+	}
+	ip := net.ParseIP(canonical)
+	return ip != nil && ip.To4() != nil && ip.To4().IsGlobalUnicast()
 }
 
 func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
@@ -413,11 +433,9 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		}
 		v.NS1, v.NS2 = p.serverNameservers(r.Context())
 		v.Facts = verifyNameservers(r.Context(), []string{v.NS1, v.NS2}, serverPrimaryIP(), serverPrimaryIPv6())
-		if savedNS1, savedNS2 := p.configuredNameservers(r.Context()); savedNS1 != "" && savedNS2 != "" {
-			v.SuggestedLocalNS, v.SuggestedPeerNS, v.SuggestedPeerIP = suggestDNSClusterPeer(
-				v.ServerIP, savedNS1, savedNS2, v.Facts,
-			)
-		}
+		v.SuggestedLocalNS, v.SuggestedPeerNS, v.SuggestedPeerIP = suggestDNSClusterPeer(
+			v.ServerIP, v.NS1, v.NS2, v.Facts,
+		)
 		peerPairVerified := false
 		if v.Configured && v.Role == "paired" && v.PeerIP != "" {
 			peerPairVerified = p.peerServesNameserverPair(r.Context(), v.PeerIP, v.NS1, v.NS2)
