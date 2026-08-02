@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -26,6 +28,73 @@ func TestConfigReadRefusesArbitraryRootFiles(t *testing.T) {
 		if reply.Content != `` || reply.Parsed != `` {
 			t.Errorf(`GetConfig(%q) leaked a response after refusal`, path)
 		}
+	}
+}
+
+func TestConfigAuthorizationRefusesUnmanagedPathBeforeFilesystemInspection(t *testing.T) {
+	inspectionErr := errors.New(`permission denied while traversing parent`)
+	inspected := false
+	path, err := configWriteAllowedFrom(`/root/.ssh/authorized_keys`, func() []string {
+		return nil
+	}, func(string) error {
+		inspected = true
+		return inspectionErr
+	})
+	if path != `` {
+		t.Fatalf(`authorized path = %q, want empty`, path)
+	}
+	if inspected {
+		t.Fatal(`unmanaged path reached filesystem inspection`)
+	}
+	if !errors.Is(err, errConfigPathRefused) {
+		t.Fatalf(`error = %v, want typed path refusal`, err)
+	}
+	if errors.Is(err, inspectionErr) {
+		t.Fatalf(`error leaked incidental filesystem failure: %v`, err)
+	}
+}
+
+func TestConfigAuthorizationRefusesProtectedPathBeforeDiscovery(t *testing.T) {
+	discovered := false
+	inspected := false
+	path, err := configWriteAllowedFrom(`/etc/shadow`, func() []string {
+		discovered = true
+		return []string{`/etc/shadow`}
+	}, func(string) error {
+		inspected = true
+		return nil
+	})
+	if path != `` {
+		t.Fatalf(`authorized path = %q, want empty`, path)
+	}
+	if discovered {
+		t.Fatal(`protected path triggered catalogue discovery`)
+	}
+	if inspected {
+		t.Fatal(`protected path reached filesystem inspection`)
+	}
+	if !errors.Is(err, errConfigPathRefused) {
+		t.Fatalf(`error = %v, want typed path refusal`, err)
+	}
+}
+
+func TestConfigAuthorizationInspectsManagedPathFailClosed(t *testing.T) {
+	inspectionErr := errors.New(`permission denied while traversing parent`)
+	const managed = `/etc/example/managed.conf`
+	expected := filepath.Clean(managed)
+	path, err := configWriteAllowedFrom(managed, func() []string {
+		return []string{managed}
+	}, func(got string) error {
+		if got != expected {
+			t.Fatalf(`inspected path = %q, want %q`, got, expected)
+		}
+		return inspectionErr
+	})
+	if path != `` {
+		t.Fatalf(`authorized path = %q after inspection failure, want empty`, path)
+	}
+	if !errors.Is(err, inspectionErr) {
+		t.Fatalf(`error = %v, want inspection failure`, err)
 	}
 }
 

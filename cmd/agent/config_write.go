@@ -80,6 +80,18 @@ var forbiddenPrefixes = []string{
 // nedenini bildirir. Neden döndürülür ki panel genel bir retten iyisini
 // gösterebilsin.
 func configWriteAllowed(path string) (string, error) {
+	return configWriteAllowedFrom(path, discoveredConfigPaths, rejectConfigPathSymlinks)
+}
+
+// configWriteAllowedFrom keeps the authorization decision independent from
+// filesystem accessibility. A caller-supplied path that is not in the
+// catalogue-derived allow-list is refused before we inspect any of its path
+// components. Besides producing the typed refusal promised by the RPC, this
+// prevents an unprivileged test runner (or a future non-root agent) from
+// turning an expected refusal into an incidental EACCES transport error.
+// Filesystem inspection remains mandatory after a path is authorized, so a
+// managed path containing a symlink is still rejected fail-closed.
+func configWriteAllowedFrom(path string, discover func() []string, inspect func(string) error) (string, error) {
 	if path == "" {
 		return "", configPathRefusal("path is required")
 	}
@@ -87,32 +99,45 @@ func configWriteAllowed(path string) (string, error) {
 		return "", configPathRefusal("path must be absolute")
 	}
 	clean := filepath.Clean(path)
-
-	// Check every existing component for a clear early error. The actual file
-	// operation repeats this rule atomically in the Linux kernel with openat2.
-	// Mevcut her yol bileşenini açık bir erken hata için denetle. Asıl dosya
-	// işlemi bu kuralı Linux çekirdeğinde openat2 ile atomik olarak tekrarlar.
-	if err := rejectConfigPathSymlinks(clean); err != nil {
-		return "", err
-	}
+	policyPath := filepath.ToSlash(clean)
 
 	for _, bad := range forbiddenPrefixes {
-		if clean == strings.TrimSuffix(bad, "/") || strings.HasPrefix(clean, bad) {
+		if policyPath == strings.TrimSuffix(bad, "/") || strings.HasPrefix(policyPath, bad) {
 			return "", configPathRefusal("this path is protected and cannot be edited here: %s", clean)
 		}
+	}
+	if discover == nil {
+		return "", fmt.Errorf("managed configuration discovery is unavailable")
 	}
 
 	// The scanner's discovered config files are the authoritative list of what
 	// a component actually reads — the same list the UI offers for editing.
 	// Tarayıcının keşfettiği yapılandırma dosyaları, bir bileşenin gerçekten
 	// neyi okuduğunun yetkili listesidir — arayüzün düzenlemeye sunduğu liste.
-	for _, p := range discoveredConfigPaths() {
+	managed := false
+	for _, p := range discover() {
 		if filepath.Clean(p) == clean {
-			return clean, nil
+			managed = true
+			break
 		}
 	}
+	if !managed {
+		return "", configPathRefusal("not a managed configuration file: %s", clean)
+	}
+	if inspect == nil {
+		return "", fmt.Errorf("managed configuration path inspection is unavailable")
+	}
 
-	return "", configPathRefusal("not a managed configuration file: %s", clean)
+	// Check every existing component only after the catalogue authorizes the
+	// path. The actual file operation repeats this rule atomically in the Linux
+	// kernel with openat2.
+	// Mevcut her yol bileşenini ancak katalog yolu yetkilendirdikten sonra
+	// denetle. Asıl dosya işlemi bu kuralı Linux çekirdeğinde openat2 ile atomik
+	// olarak tekrarlar.
+	if err := inspect(clean); err != nil {
+		return "", err
+	}
+	return clean, nil
 }
 
 // rejectConfigPathSymlinks checks every existing path component. Missing

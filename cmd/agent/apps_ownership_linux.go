@@ -177,6 +177,18 @@ func requireWordPressDirectoryBinding(parentFD int, name string, heldFD int) err
 }
 
 func prepareWordPressPathExchange(stageDir, documentRoot string) (wordpressPathExchange, error) {
+	return prepareWordPressPathExchangeOwnedBy(stageDir, documentRoot, 0)
+}
+
+// prepareWordPressPathExchangeOwnedBy exists so the descriptor-exchange tests
+// can exercise the real Linux implementation with directories owned by the
+// unprivileged test runner. Production always enters through
+// prepareWordPressPathExchange, which requires the staged tree to be owned by
+// root (UID 0).
+func prepareWordPressPathExchangeOwnedBy(
+	stageDir, documentRoot string,
+	expectedStageOwnerUID uint32,
+) (wordpressPathExchange, error) {
 	stageDir = filepath.Clean(stageDir)
 	documentRoot = filepath.Clean(documentRoot)
 	sitesDir := filepath.Dir(stageDir)
@@ -250,7 +262,7 @@ func prepareWordPressPathExchange(stageDir, documentRoot string) (wordpressPathE
 		_ = unix.Close(sitesFD)
 		return nil, fmt.Errorf("inspect staged WordPress root: %w", err)
 	}
-	if stageStat.Uid != 0 || stageStat.Mode&0o077 != 0 {
+	if stageStat.Uid != expectedStageOwnerUID || stageStat.Mode&0o077 != 0 {
 		_ = unix.Close(originalFD)
 		_ = unix.Close(stageFD)
 		_ = unix.Close(siteFD)
@@ -350,6 +362,16 @@ func (exchange *linuxWordPressPathExchange) PublishedRootMatches(expected os.Fil
 }
 
 func (exchange *linuxWordPressPathExchange) SealOriginalRoot(expected os.FileInfo) error {
+	return exchange.sealOriginalRootOwnedBy(expected, 0, 0)
+}
+
+// sealOriginalRootOwnedBy keeps the production root/root policy explicit while
+// allowing unprivileged tests to exercise the complete descriptor-bound seal
+// sequence using their own temporary-directory ownership.
+func (exchange *linuxWordPressPathExchange) sealOriginalRootOwnedBy(
+	expected os.FileInfo,
+	expectedUID, expectedGID uint32,
+) error {
 	held, err := wordPressDirectoryStat(exchange.originalFD)
 	if err != nil {
 		return err
@@ -364,7 +386,7 @@ func (exchange *linuxWordPressPathExchange) SealOriginalRoot(expected os.FileInf
 	if !wordPressSameInode(&held, &bound) {
 		return fmt.Errorf("original document root is no longer in its recovery path")
 	}
-	if err := unix.Fchown(exchange.originalFD, 0, 0); err != nil {
+	if err := unix.Fchown(exchange.originalFD, int(expectedUID), int(expectedGID)); err != nil {
 		return fmt.Errorf("seal original document-root ownership: %w", err)
 	}
 	if err := unix.Fchmod(exchange.originalFD, 0o700); err != nil {
@@ -377,7 +399,7 @@ func (exchange *linuxWordPressPathExchange) SealOriginalRoot(expected os.FileInf
 	if err != nil {
 		return err
 	}
-	if sealed.Uid != 0 || sealed.Gid != 0 || sealed.Mode&0o7777 != 0o700 {
+	if sealed.Uid != expectedUID || sealed.Gid != expectedGID || sealed.Mode&0o7777 != 0o700 {
 		return fmt.Errorf("sealed original document-root verification failed")
 	}
 	bound, err = wordPressDirectoryStatAt(exchange.sitesFD, exchange.stageName)

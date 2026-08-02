@@ -87,11 +87,15 @@ func TestConfigWriteRefusesSymlinks(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Skip("symlinks unavailable on this platform")
 	}
-	// The link is outside every allow-list anyway, so assert on the reason:
-	// the symlink refusal must fire before the allow-list is even consulted.
-	// Bağ zaten her beyaz listenin dışında; bu yüzden gerekçeyi sına: bağ reddi,
-	// beyaz listeye bakılmadan ÖNCE devreye girmelidir.
-	_, err := configWriteAllowed(link)
+	// Model the scanner authorizing this exact file. Authorization must not
+	// weaken the independent filesystem check: a managed symlink is still
+	// refused before any read or write can follow it.
+	// Tarayıcının tam bu dosyayı yetkilendirdiğini modelle. Yetkilendirme,
+	// bağımsız dosya sistemi denetimini zayıflatmamalıdır: yönetilen bir
+	// sembolik bağ, herhangi bir okuma ya da yazma onu izlemeden reddedilir.
+	_, err := configWriteAllowedFrom(link, func() []string {
+		return []string{link}
+	}, rejectConfigPathSymlinks)
 	if err == nil {
 		t.Fatal("a symlink must never be written through")
 	}

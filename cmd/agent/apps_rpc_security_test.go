@@ -10,11 +10,66 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 type wordpressArchiveEntry struct {
 	header  tar.Header
 	content string
+}
+
+type unprivilegedWordPressPathExchange struct {
+	*linuxWordPressPathExchange
+}
+
+func (exchange *unprivilegedWordPressPathExchange) LockPaths() error {
+	if err := exchange.linuxWordPressPathExchange.LockPaths(); err != nil {
+		return err
+	}
+	// Production runs as root and can perform renameat2 after removing write
+	// permission from the site home. An unprivileged CI process cannot bypass
+	// that permission, so restore owner write access through the already-held
+	// descriptor. The real lock/unlock behavior is covered separately below.
+	if err := unix.Fchmod(exchange.siteFD, exchange.siteMode); err != nil {
+		_ = exchange.linuxWordPressPathExchange.UnlockPaths()
+		return err
+	}
+	return nil
+}
+
+func (exchange *unprivilegedWordPressPathExchange) SealOriginalRoot(expected os.FileInfo) error {
+	return exchange.sealOriginalRootOwnedBy(
+		expected,
+		uint32(os.Geteuid()),
+		uint32(os.Getegid()),
+	)
+}
+
+func prepareCurrentUserWordPressPathExchange(
+	stageDir, documentRoot string,
+) (wordpressPathExchange, error) {
+	exchange, err := prepareWordPressPathExchangeOwnedBy(
+		stageDir,
+		documentRoot,
+		uint32(os.Geteuid()),
+	)
+	if err != nil {
+		return nil, err
+	}
+	linuxExchange, ok := exchange.(*linuxWordPressPathExchange)
+	if !ok {
+		_ = exchange.Close()
+		return nil, errors.New("Linux WordPress exchange has an unexpected implementation")
+	}
+	return &unprivilegedWordPressPathExchange{linuxExchange}, nil
+}
+
+func useCurrentUserWordPressPathExchange(t *testing.T) {
+	t.Helper()
+	previous := wordpressPrepareExchange
+	wordpressPrepareExchange = prepareCurrentUserWordPressPathExchange
+	t.Cleanup(func() { wordpressPrepareExchange = previous })
 }
 
 func writeWordPressArchive(t *testing.T, entries []wordpressArchiveEntry) string {
@@ -145,6 +200,7 @@ func TestExtractWordPressArchiveRejectsDuplicateEntry(t *testing.T) {
 }
 
 func TestPublishWordPressStageRollsBackWhenFinalCleanupFails(t *testing.T) {
+	useCurrentUserWordPressPathExchange(t)
 	const domain = "wordpress.example"
 	sitesDir := t.TempDir()
 	documentRoot := filepath.Join(sitesDir, "site", "public_html")
@@ -185,6 +241,7 @@ func TestPublishWordPressStageRollsBackWhenFinalCleanupFails(t *testing.T) {
 }
 
 func TestPublishWordPressStageRollsBackWhenOwnershipFinalizationFails(t *testing.T) {
+	useCurrentUserWordPressPathExchange(t)
 	const domain = "wordpress.example"
 	sitesDir := t.TempDir()
 	documentRoot := filepath.Join(sitesDir, "site", "public_html")
@@ -227,6 +284,7 @@ func TestPublishWordPressStageRollsBackWhenOwnershipFinalizationFails(t *testing
 }
 
 func TestPublishWordPressStagePreservesCanonicalPlaceholderRecoveryTree(t *testing.T) {
+	useCurrentUserWordPressPathExchange(t)
 	const domain = "wordpress.example"
 	sitesDir := t.TempDir()
 	documentRoot := filepath.Join(sitesDir, "site", "public_html")
@@ -284,7 +342,11 @@ func TestLinuxWordPressPathExchangeLocksAndRestoresSiteHome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exchange, err := prepareWordPressPathExchange(stageDir, documentRoot)
+	exchange, err := prepareWordPressPathExchangeOwnedBy(
+		stageDir,
+		documentRoot,
+		uint32(os.Geteuid()),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,6 +380,29 @@ func TestRequireWordPressStagingParentRejectsWritableParent(t *testing.T) {
 	}
 	if err := requireWordPressStagingParent(directory); err == nil {
 		t.Fatal("group/world-writable staging parent was accepted")
+	}
+}
+
+func TestPrepareWordPressPathExchangeRequiresRootOwnedStage(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("the production owner rejection requires an unprivileged test process")
+	}
+	sitesDir := t.TempDir()
+	documentRoot := filepath.Join(sitesDir, "site", "public_html")
+	if err := os.MkdirAll(documentRoot, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	stageDir, err := os.MkdirTemp(sitesDir, ".wordpress-stage-")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exchange, err := prepareWordPressPathExchange(stageDir, documentRoot)
+	if exchange != nil {
+		_ = exchange.Close()
+	}
+	if err == nil || !strings.Contains(err.Error(), "not root-owned and private") {
+		t.Fatalf("prepareWordPressPathExchange() error = %v, want root-owner rejection", err)
 	}
 }
 
@@ -384,7 +469,7 @@ func TestPublishWordPressStageUsesHeldDirectoryDescriptorsAcrossPathRebind(t *te
 	originalPrepare := wordpressPrepareExchange
 	movedSite := siteDir + ".moved"
 	wordpressPrepareExchange = func(stage, root string) (wordpressPathExchange, error) {
-		exchanger, prepareErr := prepareWordPressPathExchange(stage, root)
+		exchanger, prepareErr := prepareCurrentUserWordPressPathExchange(stage, root)
 		if prepareErr != nil {
 			return nil, prepareErr
 		}
@@ -421,6 +506,7 @@ func TestPublishWordPressStageUsesHeldDirectoryDescriptorsAcrossPathRebind(t *te
 }
 
 func TestPublishWordPressStageRestoresWhenPublishedTreeFsyncFails(t *testing.T) {
+	useCurrentUserWordPressPathExchange(t)
 	const domain = "wordpress.example"
 	sitesDir := t.TempDir()
 	documentRoot := filepath.Join(sitesDir, "site", "public_html")

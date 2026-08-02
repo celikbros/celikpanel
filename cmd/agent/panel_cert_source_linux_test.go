@@ -453,11 +453,6 @@ func TestReadPanelCertificateSourceRejectsUnsafeMetadata(t *testing.T) {
 				t.Fatal(err)
 			}
 		}, "private key has unsafe permissions"},
-		{"private-key-without-owner-read", func(t *testing.T, f testPanelCertificateSource) {
-			if err := os.Chmod(filepath.Join(f.archive, "privkey1.pem"), 0o200); err != nil {
-				t.Fatal(err)
-			}
-		}, "private key is not owner-readable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fixture := createTestPanelCertificateSource(t)
@@ -467,6 +462,39 @@ func TestReadPanelCertificateSourceRejectsUnsafeMetadata(t *testing.T) {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestReadPanelCertificateSourceRejectsUnreadablePrivateKey(t *testing.T) {
+	fixture := createTestPanelCertificateSource(t)
+	if err := os.Chmod(filepath.Join(fixture.archive, "privkey1.pem"), 0o200); err != nil {
+		t.Fatal(err)
+	}
+
+	certificate, privateKey, leafDER, notAfter, err := readPanelCertificateSource(fixture.domain)
+	if err == nil {
+		t.Fatal("unreadable private key was accepted")
+	}
+	if certificate != nil || privateKey != nil || leafDER != nil || !notAfter.IsZero() {
+		t.Fatal("unreadable private-key rejection leaked partial certificate material")
+	}
+}
+
+func TestValidatePanelCertificateSourceFileFDRejectsPrivateKeyWithoutOwnerRead(t *testing.T) {
+	fixture := createTestPanelCertificateSource(t)
+	keyPath := filepath.Join(fixture.archive, "privkey1.pem")
+	fd, err := unix.Open(keyPath, unix.O_PATH|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(fd)
+
+	if err := os.Chmod(keyPath, 0o200); err != nil {
+		t.Fatal(err)
+	}
+	_, err = validatePanelCertificateSourceFileFD(fd, true)
+	if err == nil || !strings.Contains(err.Error(), "private key is not owner-readable") {
+		t.Fatalf("error = %v, want owner-read metadata rejection", err)
 	}
 }
 
