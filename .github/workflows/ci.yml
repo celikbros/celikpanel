@@ -186,12 +186,17 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Build the exact commit release archive
-        run: make dist VERSION="${GITHUB_SHA}"
+        run: |
+          source_date_epoch="$(git show -s --format=%ct "${GITHUB_SHA}")"
+          umask 022
+          make dist VERSION="${GITHUB_SHA}" COMMIT="${GITHUB_SHA}" SOURCE_DATE_EPOCH="$source_date_epoch"
       - name: Rebuild and compare the release archive
         run: |
           archive="dist/celikpanel-${GITHUB_SHA}.tar.gz"
           first="$(sha256sum "$archive" | awk '{print $1}')"
-          make dist VERSION="${GITHUB_SHA}"
+          source_date_epoch="$(git show -s --format=%ct "${GITHUB_SHA}")"
+          umask 077
+          make dist VERSION="${GITHUB_SHA}" COMMIT="${GITHUB_SHA}" SOURCE_DATE_EPOCH="$source_date_epoch"
           second="$(sha256sum "$archive" | awk '{print $1}')"
           test "$first" = "$second" || {
             printf 'release archive is not reproducible: %s != %s\n' "$first" "$second"

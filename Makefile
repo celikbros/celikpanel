@@ -8,7 +8,7 @@ NPM     ?= $(shell [ -x .bin/node/bin/npm ] && echo $(PWD)/.bin/node/bin/npm || 
 NODEDIR := $(PWD)/.bin/node/bin
 override REQUIRED_GO_VERSION := go1.26.5
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+COMMIT  ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 # One version, in both binaries. The UI reads it back over the API instead of
 # carrying a hand-typed literal.
@@ -71,7 +71,10 @@ dist: build ## Assemble an offline initial-install tarball (no target toolchain 
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp install.sh bootstrap-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
-	tar --sort=name --mtime="@$(SOURCE_DATE_EPOCH)" --owner=0 --group=0 --numeric-owner --format=gnu -cf dist/$(DIST).tar -C dist $(DIST)
+	# Normalize archive modes as well as time/order/ownership. Plain cp applies
+	# the caller's umask, so the same source must not package differently on
+	# hosts using 022 and 077.
+	tar --sort=name --mtime="@$(SOURCE_DATE_EPOCH)" --owner=0 --group=0 --numeric-owner --mode='u=rwX,go=rX' --format=gnu -cf dist/$(DIST).tar -C dist $(DIST)
 	gzip -n -f dist/$(DIST).tar
 	rm -rf dist/$(DIST)
 	cd dist && sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"
