@@ -194,7 +194,10 @@ TOOLCHAIN_STAT_BIN=/usr/bin/stat
 eval "$trusted_dir_def"
 
 if [[ "$(uname -s)" == Linux ]]; then
-    for directory in / /usr /usr/bin /opt; do
+    # The installer's /opt trust check is mandatory, but hosted runners may
+    # intentionally provision a writable /opt. Test that policy hermetically
+    # below instead of assuming the host already satisfies it.
+    for directory in / /usr /usr/bin; do
         validate_bootstrap_trusted_directory "$directory" ||
             die "stock Linux trust root was rejected: $directory"
     done
