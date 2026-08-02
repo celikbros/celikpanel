@@ -47,7 +47,6 @@ func (p *Panel) siteFileScope(ctx context.Context, domainID int) (domainFileScop
 	).Scan(&subscriptionID, &docroot); err != nil {
 		return domainFileScope{}, err
 	}
-	docroot = filepath.Clean(docroot)
 	if err := hostingpath.ValidateDocumentRoot(docroot, subscriptionID, domainID); err != nil {
 		return domainFileScope{}, err
 	}

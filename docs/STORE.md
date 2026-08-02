@@ -228,7 +228,7 @@ To add a new offering or change an immutable/release-managed field:
    name and description.
 4. Add each required component to `store_offering_components`.
 5. Add migration, API, authorization, cache, and path-validation tests.
-6. Verify `go test`, `go vet`, the web build, and the Store UI before release.
+6. Run `make test vet web`, then verify the Store UI before release.
 
 Direct SQLite editing is an emergency procedure, not the normal admin
 interface. Use **Catalog management**, the Store projection, and entitlement

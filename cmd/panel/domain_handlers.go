@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -498,7 +497,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 
 	if hasSite && projectType != "dnsonly" {
 		if err := hostingpath.ValidateDocumentRoot(
-			filepath.Clean(docroot),
+			docroot,
 			siteSubscriptionID,
 			domainID,
 		); err != nil {
@@ -596,6 +595,11 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	// yok) — agent'ın sökeceği bir şey yok; yol koruması boş docroot'u zaten
 	// haklı olarak reddederdi.
 	if hasSite && projectType != "dnsonly" {
+		siteHome, err := hostingpath.SiteHome(siteSubscriptionID, domainID)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("derive stored site home: %w", err))
+			return
+		}
 		var agentResp transport.DeleteSiteResponse
 		agentReq := transport.DeleteSiteRequest{
 			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
@@ -605,7 +609,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			Domain:              domain.Name,
 			Username:            services.SiteUsername(domain.Name),
 			PHPVersion:          phpVersion,
-			SiteHome:            filepath.Dir(docroot),
+			SiteHome:            siteHome,
 		}
 		if err := p.callAgentContext(ctx, "Agent.DeleteSite", &agentReq, &agentResp); err != nil {
 			p.writeDomainDeletionPending(

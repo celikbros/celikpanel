@@ -62,12 +62,23 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 ## Kaynaktan derleme
 
-Gereksinimler: Go ≥ 1.24, Node ≥ 20.
+Gereksinimler: tam Go 1.26.5, Node ≥ 20. Make kapısı derleyicinin tam sürümünü
+doğrular, temiz bir `GOTOOLCHAIN=local` ortamı kullanır ve başka bir Go araç
+zincirini sessizce indirmez.
+
+Mühürlü derleme önbelleği Go 1.26.5'ten eski olan mevcut kurulumlar önce
+[operasyon kılavuzundaki](docs/OPERATIONS.tr.md) incelenmiş checkout kanıtını
+ve tek seferlik geçiş sırasını izlemeli, ardından uygun güncelleme modunu
+çalıştırmalıdır. Ayrıcalıklı geçiş betiğini doğrulanmamış bir checkout'tan
+çalıştırmayın.
+
+Geçiş betiği yalnız özel derleme araç zinciri önbelleğini değiştirir;
+CelikPanel servislerine, veritabanlarına, DNS kayıtlarına veya panel ayarlarına
+dokunmaz.
 
 ```bash
 # Backend (panel + agent)
-go build -o bin/panel ./cmd/panel
-go build -o bin/agent ./cmd/agent
+make panel agent
 
 # Frontend
 cd web && npm ci --no-audit --no-fund && npm run build   # çıktı: web/dist, panel binary'si tarafından sunulur

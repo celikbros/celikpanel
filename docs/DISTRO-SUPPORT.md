@@ -1,7 +1,7 @@
 # What is offered on which distro?
 
 <!-- THIS FILE IS GENERATED — do not edit by hand. -->
-<!-- Source: internal/core/managed_services.go · Regenerate: go run ./tools/gen-distro-matrix -->
+<!-- Source: internal/core/managed_services.go · Regenerate: make distro-matrix -->
 <!-- Guard: internal/core/distro_matrix_test.go (the test fails when the catalogue changes without regenerating) -->
 
 This list is not written by hand; it is generated from the component catalogue.

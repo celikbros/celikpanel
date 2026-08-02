@@ -553,19 +553,62 @@ ok "hazır"
 # adım tümüyle atlanır. Çıplak bir git checkout'tan kaynaktan derleriz;
 # sistemde yoksa Go ve Node araç zincirlerini indiririz — böylece stok bir
 # Ubuntu'da başka hiçbir şey olmadan "git clone && sudo ./install.sh" çalışır.
-GO_VERSION=1.25.0
+GO_VERSION=1.26.5
 NODE_VERSION=24.18.0
 TOOLCHAIN=/opt/celikpanel/.toolchain
-GO_SHA256_AMD64=2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613
-GO_SHA256_ARM64=05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae
+GO_SHA256_AMD64=5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053
+GO_SHA256_ARM64=fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49
 NODE_SHA256_AMD64=55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742
 NODE_SHA256_ARM64=58c9520501f6ae2b52d5b210444e24b9d0c029a58c5011b797bc1fe7105886f6
+TOOLCHAIN_ENV_BIN=/usr/bin/env
+TOOLCHAIN_CURL_BIN=/usr/bin/curl
+TOOLCHAIN_INSTALL_BIN=/usr/bin/install
+TOOLCHAIN_MV_BIN=/usr/bin/mv
+TOOLCHAIN_READLINK_BIN=/usr/bin/readlink
+TOOLCHAIN_SHA256_BIN=/usr/bin/sha256sum
+TOOLCHAIN_STAT_BIN=/usr/bin/stat
+TOOLCHAIN_TAR_BIN=/usr/bin/tar
+
+run_external_clean() {
+    "$TOOLCHAIN_ENV_BIN" -i \
+        HOME=/root \
+        PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+        LC_ALL=C \
+        LANG=C \
+        "$@"
+}
+
+# Privileged source builds must not inherit Go, compiler or npm configuration
+# from sudo's calling environment. Keep the allowlist explicit and disable
+# per-user Go configuration/workspace discovery and CGO tool invocation.
+run_go_clean() {
+    run_external_clean \
+        GOTOOLCHAIN=local \
+        GOENV=off \
+        GOWORK=off \
+        GOPATH=/root/go \
+        GOCACHE=/root/.cache/go-build \
+        CGO_ENABLED=0 \
+        "$@"
+}
+
+run_node_clean() {
+    local node_bin_dir=$1
+    shift
+    "$TOOLCHAIN_ENV_BIN" -i \
+        HOME=/root \
+        PATH="$node_bin_dir:/usr/sbin:/usr/bin:/sbin:/bin" \
+        LC_ALL=C \
+        LANG=C \
+        "$@"
+}
 
 # Downloaded toolchains are later trusted by the privileged updater. Archive
 # metadata must never decide their owner, and an existing tree is reused only
 # after every entry has passed the same ownership and write-permission checks.
 validate_bootstrap_toolchain_tree() {
     local root=$1 canonical entry link_value target uid gid mode
+    ensure_bootstrap_toolchain_root
     case "$root" in
         "$TOOLCHAIN/go"|"$TOOLCHAIN/node"|"$TOOLCHAIN"/.go-stage.*/go|"$TOOLCHAIN"/.node-stage.*) ;;
         *) die "refusing to validate unexpected toolchain path: $root" ;;
@@ -601,24 +644,55 @@ validate_bootstrap_toolchain_tree() {
 
 seal_bootstrap_toolchain_tree() {
     local root=$1
+    ensure_bootstrap_toolchain_root
     chown -R -h root:root -- "$root"
     chmod -R go-w -- "$root"
     validate_bootstrap_toolchain_tree "$root"
 }
 
+validate_bootstrap_trusted_directory() {
+    local directory=$1 canonical uid gid mode
+    [[ -d "$directory" && ! -L "$directory" ]] \
+        || die "trusted toolchain directory must be a real directory: $directory"
+    canonical=$("$TOOLCHAIN_READLINK_BIN" -e -- "$directory") \
+        || die "trusted toolchain directory is unavailable: $directory"
+    [[ "$canonical" == "$directory" ]] \
+        || die "trusted toolchain directory path is not canonical: $directory"
+    read -r uid gid mode < <("$TOOLCHAIN_STAT_BIN" -c '%u %g %a' -- "$directory") \
+        || die "trusted toolchain directory metadata is unavailable: $directory"
+    [[ "$uid:$gid" == 0:0 ]] \
+        || die "trusted toolchain directory must be owned by root:root: $directory"
+    (( (8#$mode & 8#022) == 0 )) \
+        || die "trusted toolchain directory must not be group/other writable: $directory"
+}
+
 ensure_bootstrap_toolchain_root() {
-    local canonical uid mode
-    if [[ -e "$TOOLCHAIN" || -L "$TOOLCHAIN" ]]; then
-        [[ -d "$TOOLCHAIN" && ! -L "$TOOLCHAIN" ]] || die "toolchain parent must be a real directory"
-        canonical=$(readlink -e -- "$TOOLCHAIN") || die "toolchain parent is unavailable"
-        [[ "$canonical" == "$TOOLCHAIN" ]] || die "toolchain parent path is not canonical"
-        uid=$(stat -c '%u' -- "$TOOLCHAIN")
-        mode=$(stat -c '%a' -- "$TOOLCHAIN")
-        [[ "$uid" == 0 ]] || die "toolchain parent must be owned by root"
-        (( (8#$mode & 8#022) == 0 )) || die "toolchain parent must not be group/other writable"
-        return
+    local command_path
+    for command_path in "$TOOLCHAIN_ENV_BIN" "$TOOLCHAIN_CURL_BIN" \
+        "$TOOLCHAIN_INSTALL_BIN" "$TOOLCHAIN_MV_BIN" "$TOOLCHAIN_READLINK_BIN" \
+        "$TOOLCHAIN_SHA256_BIN" "$TOOLCHAIN_STAT_BIN" "$TOOLCHAIN_TAR_BIN"; do
+        [[ -f "$command_path" && -x "$command_path" ]] ||
+            die "required trusted toolchain command is unavailable: $command_path"
+    done
+
+    validate_bootstrap_trusted_directory /
+    validate_bootstrap_trusted_directory /usr
+    validate_bootstrap_trusted_directory /usr/bin
+
+    if [[ ! -e /opt && ! -L /opt ]]; then
+        "$TOOLCHAIN_INSTALL_BIN" -d -m 0755 -o root -g root -- /opt
     fi
-    install -d -m 0755 -o root -g root "$TOOLCHAIN"
+    validate_bootstrap_trusted_directory /opt
+
+    if [[ ! -e "$PREFIX" && ! -L "$PREFIX" ]]; then
+        "$TOOLCHAIN_INSTALL_BIN" -d -m 0755 -o root -g root -- "$PREFIX"
+    fi
+    validate_bootstrap_trusted_directory "$PREFIX"
+
+    if [[ ! -e "$TOOLCHAIN" && ! -L "$TOOLCHAIN" ]]; then
+        "$TOOLCHAIN_INSTALL_BIN" -d -m 0755 -o root -g root -- "$TOOLCHAIN"
+    fi
+    validate_bootstrap_trusted_directory "$TOOLCHAIN"
 }
 
 toolchain_archive_sha256() {
@@ -635,16 +709,16 @@ toolchain_archive_sha256() {
 download_verified_toolchain_archive() {
     local url=$1 expected_sha256=$2 archive actual_sha256
     [[ "$expected_sha256" =~ ^[0-9a-f]{64}$ ]] || die "invalid pinned toolchain SHA-256"
-    command -v sha256sum >/dev/null || die "sha256sum is required to verify downloaded toolchains"
     ensure_bootstrap_toolchain_root
     archive=$(mktemp "$TOOLCHAIN/.toolchain-download.XXXXXXXX") || die "cannot create private toolchain download"
     chmod 0600 "$archive"
     chown root:root "$archive"
-    if ! curl --proto '=https' --tlsv1.2 --fail --location --retry 3 --show-error --silent --output "$archive" "$url"; then
+    if ! run_external_clean "$TOOLCHAIN_CURL_BIN" --disable --proto '=https' --tlsv1.2 \
+        --fail --location --retry 3 --show-error --silent --output "$archive" "$url"; then
         rm -f -- "$archive"
         die "toolchain archive could not be downloaded"
     fi
-    actual_sha256=$(sha256sum -- "$archive" | awk '{print $1}') || {
+    read -r actual_sha256 _ <<<"$(run_external_clean "$TOOLCHAIN_SHA256_BIN" -- "$archive")" || {
         rm -f -- "$archive"
         die "toolchain archive could not be hashed"
     }
@@ -667,15 +741,95 @@ dl_arch() {
     esac
 }
 
-bootstrap_go() {
-    local arch expected archive staging
-    command -v go >/dev/null && { echo go; return; }
-    if [ -x "$TOOLCHAIN/go/bin/go" ]; then
-        validate_bootstrap_toolchain_tree "$TOOLCHAIN/go"
-        echo "$TOOLCHAIN/go/bin/go"
-        return
+go_toolchain_version() {
+    local candidate=$1
+    run_go_clean "$candidate" env GOVERSION 2>/dev/null
+}
+
+go_toolchain_is_exact() {
+    local candidate=$1 expected_root=$2 version reported_root
+    local canonical_candidate canonical_root
+    canonical_candidate=$(readlink -e -- "$candidate") || return 1
+    canonical_root=$(readlink -e -- "$expected_root") || return 1
+    [[ "$canonical_candidate" == "$canonical_root/bin/go" ]] || return 1
+    version=$(go_toolchain_version "$candidate") || return 1
+    [[ "$version" == "go$GO_VERSION" ]] || return 1
+    reported_root=$(run_go_clean "$candidate" env GOROOT 2>/dev/null) || return 1
+    [[ "$reported_root" == "$canonical_root" ]]
+}
+
+rollback_bootstrap_go_publication() {
+    local active_root=$1 retired_root=$2 failed_root=$3
+    [[ -d "$retired_root" && ! -L "$retired_root" ]] || return 0
+    if [[ -e "$active_root" || -L "$active_root" ]]; then
+        if [[ -e "$failed_root" || -L "$failed_root" ]] ||
+            ! "$TOOLCHAIN_MV_BIN" -T --no-clobber -- "$active_root" "$failed_root"; then
+            c '1;31' "URGENT: interrupted Go candidate could not be isolated; previous Go remains at $retired_root" >&2
+            return 1
+        fi
     fi
-    [[ ! -e "$TOOLCHAIN/go" && ! -L "$TOOLCHAIN/go" ]] || die "incomplete Go toolchain already exists"
+    if [[ ! -e "$active_root" && ! -L "$active_root" ]] &&
+        ! "$TOOLCHAIN_MV_BIN" -T --no-clobber -- "$retired_root" "$active_root"; then
+        c '1;31' "URGENT: interrupted Go publication could not restore $retired_root" >&2
+        return 1
+    fi
+}
+
+publish_bootstrap_go_candidate() (
+    local candidate_root=$1 retired_root=$2 failed_root=$3 rollback_armed=0
+    finish_go_publication() {
+        local rc=$?
+        trap - EXIT
+        if (( rollback_armed == 1 )); then
+            rollback_bootstrap_go_publication "$TOOLCHAIN/go" "$retired_root" "$failed_root" || rc=1
+        fi
+        exit "$rc"
+    }
+    trap finish_go_publication EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    # Arm before the first rename. Cleanup inspects the filesystem, so a
+    # signal in either rename window restores the old tree.
+    rollback_armed=1
+    "$TOOLCHAIN_MV_BIN" -T --no-clobber -- "$TOOLCHAIN/go" "$retired_root" || {
+        rollback_armed=0
+        die "cached Go toolchain could not be safely retired"
+    }
+    "$TOOLCHAIN_MV_BIN" -T --no-clobber -- "$candidate_root" "$TOOLCHAIN/go" ||
+        die "Go publication failed; cleanup will restore the cached toolchain"
+    seal_bootstrap_toolchain_tree "$TOOLCHAIN/go"
+    go_toolchain_is_exact "$TOOLCHAIN/go/bin/go" "$TOOLCHAIN/go" ||
+        die "published Go toolchain is not exact go$GO_VERSION"
+    rollback_armed=0
+    trap - EXIT HUP INT TERM
+)
+
+bootstrap_go() {
+    local arch expected archive staging path_go cached_go cached_version
+    local cached_present=0 retired_go= failed_go=
+
+    # Privileged builds use only the toolchain extracted from the archive whose
+    # SHA-256 is pinned above. A same-version PATH binary is not equivalent:
+    # its GOROOT/pkg/tool tree is outside this installer's sealed trust root.
+    if path_go=$(command -v go 2>/dev/null); then
+        c '33' "    PATH Go ignored for privileged build: $path_go" >&2
+    fi
+    ensure_bootstrap_toolchain_root
+
+    cached_go="$TOOLCHAIN/go/bin/go"
+    if [[ -e "$TOOLCHAIN/go" || -L "$TOOLCHAIN/go" ]]; then
+        validate_bootstrap_toolchain_tree "$TOOLCHAIN/go"
+        [[ -x "$cached_go" ]] || die "cached Go toolchain has no executable go command"
+        if go_toolchain_is_exact "$cached_go" "$TOOLCHAIN/go"; then
+            printf '%s\n' "$cached_go"
+            return
+        fi
+        cached_present=1
+        cached_version=$(go_toolchain_version "$cached_go" || printf '%s' unreadable)
+        c '33' "    Cached Go will be retired: $cached_version (required go$GO_VERSION)" >&2
+    fi
     c '33' "    Go $GO_VERSION indiriliyor…" >&2
     arch=$(dl_arch)
     expected=$(toolchain_archive_sha256 go "$arch")
@@ -686,7 +840,8 @@ bootstrap_go() {
     }
     chmod 0700 "$staging"
     chown root:root "$staging"
-    if ! tar -xz --no-same-owner -C "$staging" --file "$archive"; then
+    if ! run_external_clean "$TOOLCHAIN_TAR_BIN" -xz --no-same-owner \
+        -C "$staging" --file "$archive"; then
         rm -f -- "$archive"
         rm -rf -- "$staging"
         die "verified Go archive could not be extracted"
@@ -700,21 +855,46 @@ bootstrap_go() {
         rm -rf -- "$staging"
         die "verified Go archive contains unexpected top-level entries"
     fi
-    chown -R -h root:root -- "$staging/go"
-    chmod -R go-w -- "$staging/go"
-    validate_bootstrap_toolchain_tree "$staging/go"
-    mv -T --no-clobber -- "$staging/go" "$TOOLCHAIN/go" || {
+    seal_bootstrap_toolchain_tree "$staging/go"
+    go_toolchain_is_exact "$staging/go/bin/go" "$staging/go" || {
         rm -rf -- "$staging"
-        die "Go toolchain could not be published"
+        die "verified Go archive does not provide exact go$GO_VERSION"
     }
+
+    # Never recursively delete a previously trusted compiler. Move it to a
+    # root-owned retired name, publish the verified replacement atomically,
+    # and roll back the move if publication fails. The operator may remove the
+    # retired tree later after inspecting it.
+    if (( cached_present )); then
+        retired_go="$TOOLCHAIN/.go-retired.$(date -u +%Y%m%dT%H%M%SZ).$$"
+        failed_go="$TOOLCHAIN/.go-failed.$(date -u +%Y%m%dT%H%M%SZ).$$"
+        [[ ! -e "$retired_go" && ! -L "$retired_go" ]] \
+            || die "refusing colliding retired Go path: $retired_go"
+        [[ ! -e "$failed_go" && ! -L "$failed_go" ]] \
+            || die "refusing colliding failed Go path: $failed_go"
+        if ! publish_bootstrap_go_candidate "$staging/go" "$retired_go" "$failed_go"; then
+            rm -rf -- "$staging"
+            die "Go toolchain could not be published safely; inspect retained toolchain paths"
+        fi
+    else
+        "$TOOLCHAIN_MV_BIN" -T --no-clobber -- "$staging/go" "$TOOLCHAIN/go" || {
+            rm -rf -- "$staging"
+            die "Go toolchain could not be published"
+        }
+    fi
     rmdir -- "$staging"
     seal_bootstrap_toolchain_tree "$TOOLCHAIN/go"
-    echo "$TOOLCHAIN/go/bin/go"
+    go_toolchain_is_exact "$TOOLCHAIN/go/bin/go" "$TOOLCHAIN/go" \
+        || die "published Go toolchain is not exact go$GO_VERSION"
+    [[ -z "$retired_go" ]] \
+        || c '33' "    Previous Go retained for operator review: $retired_go" >&2
+    printf '%s\n' "$TOOLCHAIN/go/bin/go"
 }
 
 bootstrap_node() {
     local arch archive expected node_archive_arch staging
     command -v npm >/dev/null && { echo "$(command -v node | xargs dirname)"; return; }
+    ensure_bootstrap_toolchain_root
     if [ -x "$TOOLCHAIN/node/bin/npm" ]; then
         validate_bootstrap_toolchain_tree "$TOOLCHAIN/node"
         echo "$TOOLCHAIN/node/bin"
@@ -733,7 +913,8 @@ bootstrap_node() {
     }
     chmod 0700 "$staging"
     chown root:root "$staging"
-    if ! tar -xJ --no-same-owner -C "$staging" --strip-components=1 --file "$archive"; then
+    if ! run_external_clean "$TOOLCHAIN_TAR_BIN" -xJ --no-same-owner \
+        -C "$staging" --strip-components=1 --file "$archive"; then
         rm -f -- "$archive"
         rm -rf -- "$staging"
         die "verified Node archive could not be extracted"
@@ -778,10 +959,10 @@ if [ -d "$SRC/.git" ] || [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] 
     step "Kaynaktan derleme (bin/panel, bin/agent, web/dist) — sürüm $CP_VERSION"
     GO_BIN=$(bootstrap_go)
     NODE_BIN=$(bootstrap_node)
-    ( cd "$SRC" && "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
-    ( cd "$SRC" && "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
-    ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm kurulumu başarısız"
-    ( cd "$SRC/web" && PATH="$NODE_BIN:$PATH" npm run build >/dev/null ) || die "frontend derlenemedi"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
+    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm kurulumu başarısız"
+    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" run build >/dev/null ) || die "frontend derlenemedi"
     ok "derlendi ($CP_VERSION · $CP_COMMIT)"
 else
     ok "Önceden derlenmiş release kullanılıyor (bin/ + web/dist)"

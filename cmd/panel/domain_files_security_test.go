@@ -59,6 +59,20 @@ func TestSiteDocrootRejectsForeignStoredPath(t *testing.T) {
 	}
 }
 
+func TestSiteDocrootRejectsCanonicalEquivalentStoredPath(t *testing.T) {
+	panel, domainID := newDomainAliasFixture(t)
+	if _, err := panel.db.GetDB().Exec(
+		`UPDATE sites SET document_root = document_root || '/.' WHERE domain_id = ?`,
+		domainID,
+	); err != nil {
+		t.Fatalf("set non-canonical document root: %v", err)
+	}
+
+	if _, err := panel.siteDocroot(context.Background(), domainID); err == nil {
+		t.Fatal("canonical-equivalent stored document root was accepted")
+	}
+}
+
 func TestSiteFileScopeLoadsSubscriptionThroughDomain(t *testing.T) {
 	panel, domainID := newDomainAliasFixture(t)
 	var wantSubscriptionID int

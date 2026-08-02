@@ -856,7 +856,7 @@ func (m *serviceMutationManager) watch(runtime *serviceMutationRuntime) {
 func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 	m.mu.Lock()
 	if m.poisoned != nil || m.active != runtime ||
-		!serviceMutationStatusActive(runtime.job.Status) {
+		runtime.job.Status != serviceMutationStatusRunning {
 		m.mu.Unlock()
 		return
 	}

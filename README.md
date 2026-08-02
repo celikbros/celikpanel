@@ -62,12 +62,21 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 ## Building from source
 
-Requirements: Go ≥ 1.24, Node ≥ 20.
+Requirements: exactly Go 1.26.5, Node ≥ 20. The Make gate verifies the exact
+compiler, uses a clean `GOTOOLCHAIN=local` environment and never silently
+downloads another Go toolchain.
+
+Existing installations whose sealed build cache predates Go 1.26.5 must first
+follow the reviewed-checkout proof and one-time migrator sequence in the
+[operations runbook](docs/OPERATIONS.md), then use the applicable update mode.
+Do not invoke the privileged migrator from an unverified checkout.
+
+The migrator changes only the private build toolchain cache. It does not touch
+CelikPanel services, databases, DNS records or panel settings.
 
 ```bash
 # Backend (panel + agent)
-go build -o bin/panel ./cmd/panel
-go build -o bin/agent ./cmd/agent
+make panel agent
 
 # Frontend
 cd web && npm ci --no-audit --no-fund && npm run build   # output: web/dist, served by the panel binary

@@ -6,6 +6,7 @@
 GO      ?= $(shell [ -x .bin/go/bin/go ] && echo $(PWD)/.bin/go/bin/go || echo go)
 NPM     ?= $(shell [ -x .bin/node/bin/npm ] && echo $(PWD)/.bin/node/bin/npm || echo npm)
 NODEDIR := $(PWD)/.bin/node/bin
+override REQUIRED_GO_VERSION := go1.26.5
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
@@ -16,20 +17,43 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build panel agent schema17-bridge web clean dist dist-sign
+.PHONY: all build check-go test vet panel agent schema17-bridge distro-matrix freebsd-cross web clean dist dist-sign
 
 all: build
 
 build: panel agent schema17-bridge web ## Build binaries and frontend
 
-panel: ## Build the panel binary
-	$(GO) build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/panel ./cmd/panel
+check-go: ## Require the exact reviewed Go compiler without auto-download
+	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
+		echo "Go $(REQUIRED_GO_VERSION) is required; unable to inspect $(GO)" >&2; \
+		exit 1; \
+	}; \
+	test "$$actual" = "$(REQUIRED_GO_VERSION)" || { \
+		echo "Go $(REQUIRED_GO_VERSION) is required; found $$actual at $(GO)" >&2; \
+		exit 1; \
+	}
 
-agent: ## Build the agent binary
-	$(GO) build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
+test: check-go ## Run the Go test suite with the exact reviewed compiler
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" test ./...
 
-schema17-bridge: ## Build the audited legacy schema transition helper
-	$(GO) build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+vet: check-go ## Run Go static analysis with the exact reviewed compiler
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" vet ./...
+
+panel: check-go ## Build the panel binary
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/panel ./cmd/panel
+
+agent: check-go ## Build the agent binary
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
+
+schema17-bridge: check-go ## Build the audited legacy schema transition helper
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+
+distro-matrix: check-go ## Regenerate the distro support matrix with the exact reviewed compiler
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./tools/gen-distro-matrix
+
+freebsd-cross: check-go ## Prove the documented FreeBSD targets with the exact reviewed compiler
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 "$(GO)" build ./cmd/panel ./cmd/agent
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 "$(GO)" build ./cmd/panel
 
 web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund

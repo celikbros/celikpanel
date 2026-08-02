@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -177,26 +176,6 @@ func readMemory() (used, total uint64) {
 		memAvailable = memTotal
 	}
 	return memTotal - memAvailable, memTotal
-}
-
-func readDisk(path string) (used, total uint64) {
-	var st syscall.Statfs_t
-	if err := syscall.Statfs(path, &st); err != nil {
-		return 0, 0
-	}
-	// Explicit casts: Statfs_t field types differ across OSes (Linux uses
-	// uint64, FreeBSD int64/uint32 mixes) — this line is what keeps the
-	// panel cross-compiling to BSD, per the roadmap's preserved option.
-	// Açık dönüşümler: Statfs_t alan tipleri OS'lere göre değişir (Linux
-	// uint64, FreeBSD int64/uint32 karışık) — panelin BSD'ye çapraz
-	// derlenmesini koruyan satır budur.
-	bs := uint64(st.Bsize)
-	total = uint64(st.Blocks) * bs
-	free := uint64(st.Bavail) * bs
-	if free > total {
-		free = total
-	}
-	return total - free, total
 }
 
 // sampleCPUPercent measures busy CPU over a short window by diffing two

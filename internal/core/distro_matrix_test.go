@@ -22,14 +22,14 @@ func TestDistroMatrixIsCurrent(t *testing.T) {
 	} {
 		got, err := os.ReadFile(path)
 		if err != nil {
-			t.Fatalf("%s: %v — run `go run ./tools/gen-distro-matrix` from the repo root", path, err)
+			t.Fatalf("%s: %v — run `make distro-matrix` from the repo root", path, err)
 		}
 		want := RenderDistroMatrix(lang)
 		// The repo may check files out with CRLF on Windows; compare content,
 		// not line endings. / Depo Windows'ta CRLF ile checkout edebilir;
 		// satır sonlarını değil içeriği karşılaştır.
 		if strings.ReplaceAll(string(got), "\r\n", "\n") != want {
-			t.Errorf("%s is stale: the catalogue changed without regenerating — run `go run ./tools/gen-distro-matrix`", path)
+			t.Errorf("%s is stale: the catalogue changed without regenerating — run `make distro-matrix`", path)
 		}
 	}
 }

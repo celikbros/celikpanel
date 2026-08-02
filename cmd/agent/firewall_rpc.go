@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -414,17 +413,6 @@ func ensureFirewallStateDir(dir string, ownerVerifier func(os.FileInfo, string) 
 	}
 	if info.Mode().Perm()&0o022 != 0 {
 		return fmt.Errorf("firewall state directory is group/world writable")
-	}
-	return nil
-}
-
-func requireRootOwner(info os.FileInfo, label string) error {
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return fmt.Errorf("%s owner UID is unavailable", label)
-	}
-	if stat.Uid != 0 {
-		return fmt.Errorf("%s owner UID is %d, want 0", label, stat.Uid)
 	}
 	return nil
 }
