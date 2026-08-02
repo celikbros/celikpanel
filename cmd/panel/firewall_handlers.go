@@ -58,8 +58,9 @@ func panelPort() int {
 // FirewallPorts) contribute nothing — exactly the point.
 // desiredFirewallPorts, açık olması gereken portları hesaplar: panel portu +
 // kurulu her servisin bildirdiği portlar. Yalnız-yerel servisler katkı vermez.
-func (p *Panel) desiredFirewallPorts() (tcp []int, udp []int, err error) {
+func (p *Panel) desiredFirewallPorts(extraTCP ...int) (tcp []int, udp []int, err error) {
 	tcp = append(tcp, panelPort())
+	tcp = append(tcp, extraTCP...)
 
 	// Let's Encrypt renewal answers HTTP-01 on :80. A panel carrying a real
 	// CA certificate with the firewall blocking 80 renews nothing — the
@@ -74,7 +75,7 @@ func (p *Panel) desiredFirewallPorts() (tcp []int, udp []int, err error) {
 	}
 
 	var installed []string
-	if err := p.agentClient.Call("Agent.InstalledServiceIDsStrict", &transport.Empty{}, &installed); err != nil {
+	if err := p.callAgent("Agent.InstalledServiceIDsStrict", &transport.Empty{}, &installed); err != nil {
 		return nil, nil, fmt.Errorf("discover installed services for firewall policy: %w", err)
 	}
 	installedSet := map[string]bool{}
@@ -104,6 +105,15 @@ func (p *Panel) desiredFirewallPorts() (tcp []int, udp []int, err error) {
 // yeniden uygular — yalnız zaten etkinken (asla sürpriz açmaz). Kurulum/
 // kaldırma sonrası çağrılır.
 func (p *Panel) syncFirewall(ctx context.Context) error {
+	return p.syncFirewallWithExtraTCP(ctx)
+}
+
+// syncFirewallWithExtraTCP temporarily extends the derived live policy for
+// an operation that must become reachable before its durable state exists.
+// The panel certificate HTTP-01 preflight is the current caller: on a fresh
+// self-signed installation, :80 must be open before certbot can prove the
+// hostname. Disabled firewalls remain disabled.
+func (p *Panel) syncFirewallWithExtraTCP(ctx context.Context, extraTCP ...int) error {
 	panelFirewallMu.Lock()
 	defer panelFirewallMu.Unlock()
 	return p.withStandaloneAgentMutation(
@@ -113,7 +123,7 @@ func (p *Panel) syncFirewall(ctx context.Context) error {
 		"",
 		func(_ context.Context, binding agentMutationBinding) error {
 			var st FirewallStatusResp
-			if err := p.agentClient.Call("Agent.FirewallStatus", &struct{}{}, &st); err != nil {
+			if err := p.callAgent("Agent.FirewallStatus", &transport.Empty{}, &st); err != nil {
 				return fmt.Errorf("read firewall status: %w", err)
 			}
 			if st.Error != "" {
@@ -122,19 +132,18 @@ func (p *Panel) syncFirewall(ctx context.Context) error {
 			if !st.Enabled {
 				return nil
 			}
-			tcp, udp, err := p.desiredFirewallPorts()
+			tcp, udp, err := p.desiredFirewallPorts(extraTCP...)
 			if err != nil {
 				return err
 			}
 			call := applyFirewallReq{
-				MutationRequestID: binding.MutationRequestID,
-				MutationOwnerID:   binding.MutationOwnerID,
-				Enabled:           true,
-				TCPPorts:          tcp,
-				UDPPorts:          udp,
+				ServiceMutationBinding: binding,
+				Enabled:                true,
+				TCPPorts:               tcp,
+				UDPPorts:               udp,
 			}
 			var out FirewallStatusResp
-			if err := p.agentClient.Call("Agent.ApplyFirewall", &call, &out); err != nil {
+			if err := p.callAgent("Agent.ApplyFirewall", &call, &out); err != nil {
 				return fmt.Errorf("apply firewall policy: %w", err)
 			}
 			if out.Error != "" {
@@ -145,14 +154,7 @@ func (p *Panel) syncFirewall(ctx context.Context) error {
 	)
 }
 
-type applyFirewallReq struct {
-	MutationRequestID string `json:"mutation_request_id,omitempty"`
-	MutationOwnerID   string `json:"mutation_owner_id,omitempty"`
-	Enabled           bool   `json:"enabled"`
-	TCPPorts          []int  `json:"tcp_ports"`
-	UDPPorts          []int  `json:"udp_ports"`
-	Persist           bool   `json:"persist"`
-}
+type applyFirewallReq = transport.ApplyFirewallRequest
 
 // Must mirror the agent's FirewallStatusResponse field-for-field: net/rpc
 // (gob) transfers by exported field NAME, so a field missing here is silently
@@ -164,23 +166,13 @@ type applyFirewallReq struct {
 // EngineAvailable agent'a eklenmiş ama buraya eklenmemişti — panelin
 // 'nftables kurulu değil'i asla görmemesinin ve motor yokken 'Turn on'
 // sunmaya devam etmesinin nedeni buydu.
-type FirewallStatusResp struct {
-	Enabled          bool   `json:"enabled"`
-	EngineAvailable  bool   `json:"engine_available"`
-	TCPPorts         []int  `json:"tcp_ports"`
-	UDPPorts         []int  `json:"udp_ports"`
-	SSHPorts         []int  `json:"ssh_ports"`
-	PersistenceState string `json:"persistence_state"`
-	PersistenceError string `json:"persistence_error,omitempty"`
-	SnapshotVersion  int    `json:"snapshot_version,omitempty"`
-	Error            string `json:"error,omitempty"`
-}
+type FirewallStatusResp = transport.FirewallStatusResponse
 
 func (p *Panel) readFirewallStatus() (FirewallStatusResp, error) {
 	panelFirewallMu.Lock()
 	defer panelFirewallMu.Unlock()
 	var st FirewallStatusResp
-	if err := p.agentClient.Call("Agent.FirewallStatus", &struct{}{}, &st); err != nil {
+	if err := p.callAgent("Agent.FirewallStatus", &transport.Empty{}, &st); err != nil {
 		return st, err
 	}
 	return st, nil
@@ -218,7 +210,7 @@ func (p *Panel) applyFirewallSettingContext(
 		func(_ context.Context, binding agentMutationBinding) error {
 			if enabled {
 				var cur FirewallStatusResp
-				if err := p.agentClient.Call("Agent.FirewallStatus", &struct{}{}, &cur); err != nil {
+				if err := p.callAgent("Agent.FirewallStatus", &transport.Empty{}, &cur); err != nil {
 					return err
 				}
 				if cur.Error != "" {
@@ -230,10 +222,9 @@ func (p *Panel) applyFirewallSettingContext(
 				}
 			}
 			call := applyFirewallReq{
-				MutationRequestID: binding.MutationRequestID,
-				MutationOwnerID:   binding.MutationOwnerID,
-				Enabled:           enabled,
-				Persist:           persist,
+				ServiceMutationBinding: binding,
+				Enabled:                enabled,
+				Persist:                persist,
 			}
 			if enabled {
 				var err error
@@ -242,7 +233,7 @@ func (p *Panel) applyFirewallSettingContext(
 					return err
 				}
 			}
-			if err := p.agentClient.Call("Agent.ApplyFirewall", &call, &st); err != nil {
+			if err := p.callAgent("Agent.ApplyFirewall", &call, &st); err != nil {
 				return err
 			}
 			if st.Error != "" {

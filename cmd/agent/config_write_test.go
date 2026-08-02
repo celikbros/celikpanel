@@ -44,32 +44,27 @@ func TestConfigWriteRefusesTakeoverPaths(t *testing.T) {
 	}
 }
 
-// The panel's own directories stay writable: that is the config editor doing
-// its job on files the panel itself created.
-// Panelin kendi dizinleri yazılabilir kalır: yapılandırma editörünün, panelin
-// kendi oluşturduğu dosyalar üzerinde işini yapması budur.
-func TestConfigWriteAllowsPanelOwnedPaths(t *testing.T) {
+// Broad directory prefixes are not an authorization boundary. Website files
+// are managed by the file manager and generated nginx files by their owning
+// workflow; the root config editor may edit only paths discovered in the
+// component catalogue.
+func TestConfigWriteRefusesBroadDirectoryPrefixes(t *testing.T) {
 	for _, p := range []string{
 		"/etc/nginx/sites-available/example.com.conf",
 		"/etc/nginx/conf.d/celikpanel-webmail.conf",
 		"/var/www/example.com/index.html",
 	} {
-		if _, err := configWriteAllowed(p); err != nil {
-			t.Errorf("%q refused (%v) — the panel manages this path", p, err)
+		if got, err := configWriteAllowed(p); err == nil {
+			t.Errorf("%q allowed as %q through a broad directory prefix", p, got)
 		}
 	}
 }
 
-// filepath.Clean must be what decides, so a path that LOOKS forbidden but
-// cleans into an allowed directory is accepted, and one that looks allowed but
-// cleans outside is refused. Both directions matter: a check that only looked
-// at the raw string was the bug.
-// Kararı filepath.Clean vermeli: yasak GÖRÜNEN ama izinli bir dizine temizlenen
-// yol kabul edilir, izinli görünüp dışarı temizlenen reddedilir. İki yön de
-// önemli: yalnız ham dizeye bakan denetim, hatanın ta kendisiydi.
+// filepath.Clean must be applied before authorization; neither a normalized
+// web path nor a path that escapes it receives blanket write permission.
 func TestConfigWriteJudgesTheCleanedPath(t *testing.T) {
-	if _, err := configWriteAllowed("/var/www/site/../site/index.html"); err != nil {
-		t.Errorf("a path that cleans back inside /var/www must be allowed: %v", err)
+	if _, err := configWriteAllowed("/var/www/site/../site/index.html"); err == nil {
+		t.Error("a normalized /var/www path must still require catalogue ownership")
 	}
 	if _, err := configWriteAllowed("/var/www/../etc/shadow"); err == nil {
 		t.Error("/var/www/../etc/shadow must be refused — it cleans to /etc/shadow")

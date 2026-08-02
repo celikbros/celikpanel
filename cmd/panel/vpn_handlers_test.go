@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -104,6 +105,55 @@ func insertVPNTestPeer(
 		t.Fatal(err)
 	}
 	return int(id)
+}
+
+func TestEncryptLegacyVPNPresharedKeysRejectsCorruptCiphertextWithoutPartialMigration(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	corruptID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, `corrupt-key`, ``, time.Time{},
+	)
+	legacyID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, `legacy-key`, ``, time.Time{},
+	)
+	const corrupt = `enc:v1:not-valid-ciphertext`
+	const legacy = `legacy-preshared-key`
+	if _, err := fixture.database.GetDB().Exec(
+		`UPDATE vpn_peers SET preshared_key = ? WHERE id = ?`, corrupt, corruptID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.database.GetDB().Exec(
+		`UPDATE vpn_peers SET preshared_key = ? WHERE id = ?`, legacy, legacyID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	err := fixture.panel.encryptLegacyVPNPresharedKeys(context.Background())
+	if err == nil {
+		t.Fatal(`corrupt encrypted VPN key was accepted`)
+	}
+	if strings.Contains(err.Error(), corrupt) || strings.Contains(err.Error(), legacy) {
+		t.Fatalf(`migration error leaked a VPN secret: %v`, err)
+	}
+
+	var storedCorrupt string
+	var storedLegacy string
+	if err := fixture.database.GetDB().QueryRow(
+		`SELECT preshared_key FROM vpn_peers WHERE id = ?`, corruptID,
+	).Scan(&storedCorrupt); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.database.GetDB().QueryRow(
+		`SELECT preshared_key FROM vpn_peers WHERE id = ?`, legacyID,
+	).Scan(&storedLegacy); err != nil {
+		t.Fatal(err)
+	}
+	if storedCorrupt != corrupt || storedLegacy != legacy {
+		t.Fatalf(
+			`failed validation changed VPN keys: corrupt=%q legacy=%q`,
+			storedCorrupt, storedLegacy,
+		)
+	}
 }
 
 func vpnCallerRequest(
@@ -256,6 +306,106 @@ func TestVPNEntitlementReconcileKeepsRetryableTombstoneOnSyncFailure(t *testing.
 	}
 	if remaining != 0 {
 		t.Fatalf("revoked peer remained after confirmed retry: %d", remaining)
+	}
+}
+
+func TestRecordVPNSyncErrorSurvivesCancelledRequestContext(t *testing.T) {
+	fixture, _, _, _ := newVPNSecurityFixture(t)
+	const token = "claimed-sync-token"
+	const generation = int64(7)
+	if _, err := fixture.database.GetDB().Exec(`
+		UPDATE vpn_sync_state
+		SET lease_token = ?, lease_expires_at = datetime('now', '+2 minutes'),
+		    status = 'pending', desired_generation = ?
+		WHERE id = 1`, token, generation); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := fixture.panel.recordVPNSyncError(
+		ctx,
+		token,
+		generation,
+		errors.New("simulated transport failure"),
+	); err != nil {
+		t.Fatalf("record failure after request cancellation: %v", err)
+	}
+	var status string
+	var lease *string
+	if err := fixture.database.GetDB().QueryRow(`
+		SELECT status, lease_token FROM vpn_sync_state WHERE id = 1`,
+	).Scan(&status, &lease); err != nil {
+		t.Fatal(err)
+	}
+	if status != "error" || lease != nil {
+		t.Fatalf("failure state=%q lease=%v, want error/nil", status, lease)
+	}
+}
+
+func TestRecordVPNSyncErrorReturnsLedgerFailure(t *testing.T) {
+	fixture, _, _, _ := newVPNSecurityFixture(t)
+	if _, err := fixture.database.GetDB().Exec(`DROP TABLE vpn_sync_state`); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.panel.recordVPNSyncError(
+		context.Background(),
+		"missing-ledger",
+		0,
+		errors.New("simulated transport failure"),
+	); err == nil {
+		t.Fatal("missing VPN synchronization ledger was silently accepted")
+	}
+}
+
+func TestRevokeUndeliveredVPNPeerRemovesConfirmedPeer(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	peerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "undelivered-device", "", time.Time{},
+	)
+	if err := fixture.panel.revokeUndeliveredVPNPeer(
+		context.Background(),
+		int64(peerID),
+		errors.New("response stream closed"),
+	); err != nil {
+		t.Fatalf("revoke undelivered peer: %v", err)
+	}
+	var remaining int
+	if err := fixture.database.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM vpn_peers WHERE id = ?`, peerID,
+	).Scan(&remaining); err != nil {
+		t.Fatal(err)
+	}
+	if remaining != 0 {
+		t.Fatalf("undelivered peer remained after confirmed sync: %d", remaining)
+	}
+}
+
+func TestRevokeUndeliveredVPNPeerKeepsErrorTombstoneWhenAgentFails(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	peerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "ambiguous-device", "", time.Time{},
+	)
+	fixture.agent.peerError = "simulated cleanup failure"
+	if err := fixture.panel.revokeUndeliveredVPNPeer(
+		context.Background(),
+		int64(peerID),
+		errors.New("response stream closed"),
+	); err == nil {
+		t.Fatal("agent cleanup failure was silently accepted")
+	}
+	var desiredState, syncState string
+	if err := fixture.database.GetDB().QueryRow(`
+		SELECT desired_state, sync_state FROM vpn_peers WHERE id = ?`, peerID,
+	).Scan(&desiredState, &syncState); err != nil {
+		t.Fatal(err)
+	}
+	if desiredState != "revoked" || syncState != "error" {
+		t.Fatalf(
+			"failed cleanup state=%s/%s, want revoked/error",
+			desiredState,
+			syncState,
+		)
 	}
 }
 

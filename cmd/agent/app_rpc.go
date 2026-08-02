@@ -1,13 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Supervised app processes (Node projects) — roadmap 3A. Every app is a
@@ -26,6 +31,20 @@ import (
 // gelir (bilinçli olarak PM2 yok).
 
 var systemdUserMode = os.Getenv("CELIKPANEL_SYSTEMD_USER") == "1"
+
+const appUnitMutationLockStripes = 256
+
+var appUnitMutationLocks [appUnitMutationLockStripes]sync.Mutex
+
+// net/rpc cannot cancel a method that was already dispatched. If the panel
+// times out and starts compensation, the original method may therefore still
+// be running. Serializing mutations for the same site makes the compensation
+// deterministically run after that original method, rather than racing it.
+func lockAppUnitMutation(siteID int) func() {
+	lock := &appUnitMutationLocks[siteID%appUnitMutationLockStripes]
+	lock.Lock()
+	return lock.Unlock
+}
 
 func systemctlArgs(args ...string) []string {
 	if systemdUserMode {
@@ -51,27 +70,15 @@ var appUnitNameRe = regexp.MustCompile(`^celikapp-[0-9]+$`)
 // appUnitName, bir site için unit adını üretir ve doğrular.
 func appUnitName(siteID int) string { return fmt.Sprintf("celikapp-%d", siteID) }
 
-type AppApplyRequest struct {
-	SiteID      int    `json:"site_id"`
-	Description string `json:"description"` // domain name, for `systemctl status` readability
-	WorkDir     string `json:"work_dir"`
-	Command     string `json:"command"`
-	Port        int    `json:"port"`
-	NodeVersion string `json:"node_version"` // installed runtime version ("" = system PATH)
-	RunAsUser   string `json:"run_as_user,omitempty"`
-}
-
-type AppApplyResponse struct {
-	Unit  string `json:"unit"`
-	Error string `json:"error,omitempty"`
-}
+type AppApplyRequest = transport.AppApplyRequest
+type AppApplyResponse = transport.AppApplyResponse
 
 // ApplyAppUnit writes (or rewrites) the unit file, reloads systemd and
 // enables + (re)starts the app.
 // ApplyAppUnit, unit dosyasını yazar (ya da yeniden yazar), systemd'yi
 // yeniden yükler ve uygulamayı etkinleştirip (yeniden) başlatır.
 func (a *Agent) ApplyAppUnit(req *AppApplyRequest, resp *AppApplyResponse) error {
-	if req.SiteID <= 0 || strings.TrimSpace(req.Command) == "" || req.Port <= 0 {
+	if req == nil || req.SiteID <= 0 || strings.TrimSpace(req.Command) == "" || req.Port <= 0 {
 		resp.Error = "site id, command and port are required"
 		return nil
 	}
@@ -79,6 +86,8 @@ func (a *Agent) ApplyAppUnit(req *AppApplyRequest, resp *AppApplyResponse) error
 		resp.Error = "invalid characters in command or workdir"
 		return nil
 	}
+	unlock := lockAppUnitMutation(req.SiteID)
+	defer unlock()
 
 	name := appUnitName(req.SiteID)
 	dir, err := unitDir()
@@ -159,18 +168,21 @@ func sanitizeUnitValue(s string) string {
 	}, s)
 }
 
-type AppControlRequest struct {
-	SiteID int    `json:"site_id"`
-	Action string `json:"action"` // start | stop | restart
-}
+type AppControlRequest = transport.AppControlRequest
 
 func (a *Agent) ControlAppUnit(req *AppControlRequest, resp *AppApplyResponse) error {
+	if req == nil || req.SiteID <= 0 {
+		resp.Error = "a positive site identity is required"
+		return nil
+	}
 	switch req.Action {
 	case "start", "stop", "restart":
 	default:
 		resp.Error = "action must be start, stop or restart"
 		return nil
 	}
+	unlock := lockAppUnitMutation(req.SiteID)
+	defer unlock()
 	name := appUnitName(req.SiteID)
 	if out, err := exec.Command("systemctl", systemctlArgs(req.Action, name)...).CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(out)))
@@ -180,31 +192,128 @@ func (a *Agent) ControlAppUnit(req *AppControlRequest, resp *AppApplyResponse) e
 	return nil
 }
 
+func appUnitSystemdState(name string) (loadState, activeState string, err error) {
+	out, commandErr := exec.Command(
+		"systemctl",
+		systemctlArgs(
+			"show",
+			name,
+			"--property=LoadState,ActiveState",
+		)...,
+	).CombinedOutput()
+	if commandErr != nil {
+		return "", "", fmt.Errorf(
+			"systemctl show: %v: %s",
+			commandErr,
+			strings.TrimSpace(string(out)),
+		)
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		switch key {
+		case "LoadState":
+			loadState = strings.TrimSpace(value)
+		case "ActiveState":
+			activeState = strings.TrimSpace(value)
+		}
+	}
+	if loadState == "" || activeState == "" {
+		return "", "", errors.New("systemctl returned an incomplete unit state")
+	}
+	return loadState, activeState, nil
+}
+
 // RemoveAppUnit stops, disables and deletes the unit (project type changed
 // or site deleted).
 // RemoveAppUnit, unit'i durdurur, devre dışı bırakır ve siler (proje tipi
 // değişti ya da site silindi).
 func (a *Agent) RemoveAppUnit(req *AppControlRequest, resp *AppApplyResponse) error {
-	name := appUnitName(req.SiteID)
-	_ = exec.Command("systemctl", systemctlArgs("stop", name)...).Run()
-	_ = exec.Command("systemctl", systemctlArgs("disable", name)...).Run()
-	dir, err := unitDir()
-	if err == nil {
-		_ = os.Remove(filepath.Join(dir, name+".service"))
+	if req == nil || req.SiteID <= 0 {
+		resp.Error = "a positive site identity is required"
+		return nil
 	}
-	_ = exec.Command("systemctl", systemctlArgs("daemon-reload")...).Run()
+	unlock := lockAppUnitMutation(req.SiteID)
+	defer unlock()
+	name := appUnitName(req.SiteID)
+	dir, err := unitDir()
+	if err != nil {
+		log.Printf("RemoveAppUnit site %d: locate unit directory: %v", req.SiteID, err)
+		resp.Error = "application unit cleanup incomplete"
+		return nil
+	}
+	unitPath := filepath.Join(dir, name+".service")
+	info, statErr := os.Lstat(unitPath)
+	unitFileExists := statErr == nil
+	if statErr != nil && !os.IsNotExist(statErr) {
+		log.Printf("RemoveAppUnit site %d: inspect unit: %v", req.SiteID, statErr)
+		resp.Error = "application unit cleanup incomplete"
+		return nil
+	}
+	if unitFileExists && !info.Mode().IsRegular() {
+		log.Printf("RemoveAppUnit site %d: refusing non-regular unit file", req.SiteID)
+		resp.Error = "application unit cleanup refused"
+		return nil
+	}
+
+	loadState, activeState, stateErr := appUnitSystemdState(name)
+	if !unitFileExists && stateErr == nil && loadState == "not-found" && activeState == "inactive" {
+		resp.Unit = name
+		return nil
+	}
+
+	// Even when the unit file is already gone, systemd may still have the unit
+	// loaded and its process running. Try every cleanup step, then use a final
+	// filesystem + systemd proof to decide success. Intermediate command errors
+	// are retained for diagnostics but are not fatal if that final proof shows
+	// the requested state was nevertheless reached.
+	var intermediateFailures []error
+	if stateErr != nil {
+		intermediateFailures = append(intermediateFailures, stateErr)
+	}
+	if output, err := exec.Command("systemctl", systemctlArgs("stop", name)...).CombinedOutput(); err != nil {
+		intermediateFailures = append(intermediateFailures, fmt.Errorf("stop: %v: %s", err, strings.TrimSpace(string(output))))
+	}
+	if output, err := exec.Command("systemctl", systemctlArgs("disable", name)...).CombinedOutput(); err != nil {
+		intermediateFailures = append(intermediateFailures, fmt.Errorf("disable: %v: %s", err, strings.TrimSpace(string(output))))
+	}
+	if err := os.Remove(unitPath); err != nil && !os.IsNotExist(err) {
+		intermediateFailures = append(intermediateFailures, fmt.Errorf("remove unit file: %w", err))
+	}
+	if output, err := exec.Command("systemctl", systemctlArgs("daemon-reload")...).CombinedOutput(); err != nil {
+		intermediateFailures = append(intermediateFailures, fmt.Errorf("daemon-reload: %v: %s", err, strings.TrimSpace(string(output))))
+	}
+
+	var finalFailures []error
+	if _, err := os.Lstat(unitPath); err == nil {
+		finalFailures = append(finalFailures, errors.New("unit file still exists"))
+	} else if !os.IsNotExist(err) {
+		finalFailures = append(finalFailures, fmt.Errorf("verify unit file removal: %w", err))
+	}
+	finalLoadState, finalActiveState, finalStateErr := appUnitSystemdState(name)
+	if finalStateErr != nil {
+		finalFailures = append(finalFailures, fmt.Errorf("verify unit state: %w", finalStateErr))
+	} else if finalLoadState != "not-found" || finalActiveState != "inactive" {
+		finalFailures = append(finalFailures, fmt.Errorf(
+			"unit remains load=%s active=%s",
+			finalLoadState,
+			finalActiveState,
+		))
+	}
+	if finalErr := errors.Join(finalFailures...); finalErr != nil {
+		detail := errors.Join(append(intermediateFailures, finalErr)...)
+		log.Printf("RemoveAppUnit site %d: %v", req.SiteID, detail)
+		resp.Error = "application unit cleanup incomplete"
+	} else if warning := errors.Join(intermediateFailures...); warning != nil {
+		log.Printf("RemoveAppUnit site %d: cleanup completed after intermediate errors: %v", req.SiteID, warning)
+	}
 	resp.Unit = name
 	return nil
 }
 
-type AppStatusResponse struct {
-	Exists   bool   `json:"exists"`
-	Active   string `json:"active"` // active | inactive | failed | activating...
-	PID      int    `json:"pid"`
-	MemoryMB int64  `json:"memory_mb"`
-	CPUUsec  int64  `json:"cpu_usec"`
-	Uptime   string `json:"uptime"`
-}
+type AppStatusResponse = transport.AppStatusResponse
 
 // AppUnitStatus reads live state from systemd (PID, memory, CPU time) — the
 // same honest numbers `systemctl status` would show.
@@ -238,15 +347,8 @@ func (a *Agent) AppUnitStatus(req *AppControlRequest, resp *AppStatusResponse) e
 	return nil
 }
 
-type AppLogsRequest struct {
-	SiteID int `json:"site_id"`
-	Lines  int `json:"lines"`
-}
-
-type AppLogsResponse struct {
-	Lines []string `json:"lines"`
-	Error string   `json:"error,omitempty"`
-}
+type AppLogsRequest = transport.AppLogsRequest
+type AppLogsResponse = transport.AppLogsResponse
 
 // AppUnitLogs tails the app's journal.
 // AppUnitLogs, uygulamanın journal'ını okur.

@@ -58,7 +58,11 @@ func (p *Panel) seedDemoAccounts() {
 		if err == nil {
 			existing.PasswordHash = hash
 			existing.Role = acc.Role
-			_ = p.users.Update(ctx, existing)
+			if err := p.users.UpdateAndRevokeSessions(ctx, existing); err != nil {
+				log.Printf("demo: failed to reset %s: %v", acc.Username, err)
+			} else {
+				revokePendingLogins(existing.ID)
+			}
 			continue
 		}
 		_ = p.users.Create(ctx, &core.User{

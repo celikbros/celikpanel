@@ -3,10 +3,15 @@ package services
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -29,6 +34,8 @@ pm.max_requests = 500
 chdir = /
 `
 
+var phpExtensionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$`)
+
 type PHPFPMManager struct {
 	tmpl          *template.Template
 	PoolManager   *PHPPoolManager
@@ -38,7 +45,7 @@ type PHPFPMManager struct {
 func NewPHPFPMManager() (*PHPFPMManager, error) {
 	tmpl, err := template.New("pool").Parse(phpPoolTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse pool template: %v", err)
+		return nil, fmt.Errorf("parse PHP pool template: %w", err)
 	}
 	return &PHPFPMManager{
 		tmpl:          tmpl,
@@ -53,252 +60,257 @@ type PoolData struct {
 	Socket   string
 }
 
-// CreatePool creates a PHP-FPM pool for a site
-func (pm *PHPFPMManager) CreatePool(siteID int, username string, phpVersion string) (string, error) {
+// CreatePool creates and activates a PHP-FPM pool as one rollback-safe change.
+func (pm *PHPFPMManager) CreatePool(siteID int, username, phpVersion string) (string, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return "", err
 	}
-	// Socket path
-	socket := fmt.Sprintf("/var/run/php/php%s-fpm-site%d.sock", phpVersion, siteID)
-
-	data := PoolData{
-		SiteID:   siteID,
-		Username: username,
-		Socket:   socket,
+	if siteID < 1 {
+		return "", fmt.Errorf("site ID must be positive")
+	}
+	if err := validatePoolIdentity("user", username); err != nil {
+		return "", err
 	}
 
-	// Generate pool config
-	var buf bytes.Buffer
-	err := pm.tmpl.Execute(&buf, data)
-	if err != nil {
-		return "", fmt.Errorf("failed to execute template: %v", err)
+	poolName := fmt.Sprintf("site%d", siteID)
+	path := poolFilePath(phpVersion, poolName)
+	socket := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName)
+	var body bytes.Buffer
+	if err := pm.tmpl.Execute(&body, PoolData{SiteID: siteID, Username: username, Socket: socket}); err != nil {
+		return "", fmt.Errorf("render PHP pool %s: %w", poolName, err)
 	}
-
-	// Write pool file
-	filename := fmt.Sprintf("/etc/php/%s/fpm/pool.d/site%d.conf", phpVersion, siteID)
-	err = os.WriteFile(filename, []byte(buf.String()), 0644)
-	if err != nil {
-		return "", fmt.Errorf("failed to write pool file: %v", err)
+	if err := createManagedConfig(path, body.Bytes(), 0o644,
+		func() error { return phpFPMConfigTest(phpVersion) },
+		func() error { return reloadPHPFPM(phpVersion) }); err != nil {
+		return "", fmt.Errorf("create PHP pool %s: %w", poolName, err)
 	}
-
-	// Reload PHP-FPM
-	err = pm.ReloadPHPFPM(phpVersion)
-	if err != nil {
-		return "", fmt.Errorf("failed to reload PHP-FPM: %v", err)
-	}
-
 	return socket, nil
 }
 
-// DeletePool removes a PHP-FPM pool
 func (pm *PHPFPMManager) DeletePool(siteID int, phpVersion string) error {
-	if err := ValidatePHPVersion(phpVersion); err != nil {
-		return err
+	if siteID < 1 {
+		return fmt.Errorf("site ID must be positive")
 	}
-	filename := fmt.Sprintf("/etc/php/%s/fpm/pool.d/site%d.conf", phpVersion, siteID)
-	os.Remove(filename)
-
-	return pm.ReloadPHPFPM(phpVersion)
+	return pm.PoolManager.DeletePoolByName(phpVersion, fmt.Sprintf("site%d", siteID))
 }
 
-// ListPools lists all PHP-FPM pools for a given version
 func (pm *PHPFPMManager) ListPools(phpVersion string) ([]core.PHPPool, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return nil, err
 	}
-	poolDir := fmt.Sprintf("/etc/php/%s/fpm/pool.d", phpVersion)
-	
-	files, err := os.ReadDir(poolDir)
+	files, err := os.ReadDir(poolDirPath(phpVersion))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read pool directory: %v", err)
+		return nil, fmt.Errorf("read PHP pool directory: %w", err)
 	}
 
-	var pools []core.PHPPool
+	pools := make([]core.PHPPool, 0, len(files))
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".conf") {
 			continue
 		}
-
-		poolPath := filepath.Join(poolDir, file.Name())
-		pool, err := pm.parsePoolFile(poolPath)
+		pool, err := pm.parsePoolFile(filepath.Join(poolDirPath(phpVersion), file.Name()))
 		if err != nil {
-			// Log error but continue with other pools
-			continue
+			return nil, fmt.Errorf("parse PHP pool %s: %w", file.Name(), err)
 		}
 		pools = append(pools, pool)
 	}
-
+	sort.Slice(pools, func(i, j int) bool { return pools[i].Name < pools[j].Name })
 	return pools, nil
 }
 
-// parsePoolFile parses a pool configuration file
 func (pm *PHPFPMManager) parsePoolFile(path string) (core.PHPPool, error) {
-	file, err := os.Open(path)
+	content, err := readManagedConfig(path)
 	if err != nil {
 		return core.PHPPool{}, err
 	}
-	defer file.Close()
-
-	pool := core.PHPPool{
-		PM: "dynamic", // default
-	}
-
-	scanner := bufio.NewScanner(file)
+	pool := core.PHPPool{PM: "dynamic"}
+	sectionSeen := false
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
-		// Skip comments and empty lines
-		if strings.HasPrefix(line, ";") || line == "" {
+		if line == "" || strings.HasPrefix(line, ";") {
 			continue
 		}
-
-		// Parse pool name
 		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			pool.Name = strings.Trim(line, "[]")
+			if sectionSeen {
+				return core.PHPPool{}, fmt.Errorf("multiple pool sections are not supported")
+			}
+			pool.Name = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]"))
+			if !configNamePattern.MatchString(pool.Name) {
+				return core.PHPPool{}, fmt.Errorf("invalid pool section %q", pool.Name)
+			}
+			sectionSeen = true
 			continue
 		}
-
-		// Parse key-value pairs
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
+		key, value, ok := configPair(line)
+		if !ok {
+			return core.PHPPool{}, fmt.Errorf("malformed pool directive %q", line)
 		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
 		switch key {
 		case "user":
+			if err := validatePoolIdentity("user", value); err != nil {
+				return core.PHPPool{}, err
+			}
 			pool.User = value
 		case "listen":
-			// Extract port if it's a TCP socket, otherwise it's a unix socket
-			if strings.Contains(value, ":") {
-				// TCP socket format: 127.0.0.1:9000
-				portParts := strings.Split(value, ":")
-				if len(portParts) == 2 {
-					fmt.Sscanf(portParts[1], "%d", &pool.Port)
+			if !strings.HasPrefix(value, "/") && strings.Contains(value, ":") {
+				_, portText, err := net.SplitHostPort(value)
+				if err != nil {
+					return core.PHPPool{}, fmt.Errorf("invalid TCP listen address %q: %w", value, err)
+				}
+				pool.Port, err = strconv.Atoi(portText)
+				if err != nil || pool.Port < 1 || pool.Port > 65535 {
+					return core.PHPPool{}, fmt.Errorf("invalid PHP pool port %q", portText)
 				}
 			}
 		case "pm":
+			if !validPMModes[value] {
+				return core.PHPPool{}, fmt.Errorf("invalid process-manager mode %q", value)
+			}
 			pool.PM = value
 		}
 	}
-
+	if err := scanner.Err(); err != nil {
+		return core.PHPPool{}, fmt.Errorf("scan PHP pool: %w", err)
+	}
+	if !sectionSeen || pool.User == "" {
+		return core.PHPPool{}, fmt.Errorf("pool section or user is missing")
+	}
 	return pool, nil
 }
 
-// ListExtensions lists all available PHP extensions and their status
 func (pm *PHPFPMManager) ListExtensions(phpVersion string) ([]core.PHPExtension, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return nil, err
 	}
-	// Get list of available modules
-	modsAvailableDir := fmt.Sprintf("/etc/php/%s/mods-available", phpVersion)
-	modsEnabledDir := fmt.Sprintf("/etc/php/%s/fpm/conf.d", phpVersion)
-
-	availableFiles, err := os.ReadDir(modsAvailableDir)
+	availableDir := filepath.Join(phpEtcDir, phpVersion, "mods-available")
+	enabledDir := filepath.Join(phpEtcDir, phpVersion, "fpm", "conf.d")
+	availableFiles, err := os.ReadDir(availableDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read mods-available: %v", err)
+		return nil, fmt.Errorf("read available PHP modules: %w", err)
+	}
+	enabledFiles, err := os.ReadDir(enabledDir)
+	if err != nil {
+		return nil, fmt.Errorf("read enabled PHP modules: %w", err)
 	}
 
-	// Get enabled modules (check for symlinks ending with the module name)
-	enabledMap := make(map[string]bool)
-	enabledFiles, err := os.ReadDir(modsEnabledDir)
-	if err == nil {
-		for _, file := range enabledFiles {
-			if strings.HasSuffix(file.Name(), ".ini") {
-				// Extract module name from filename (e.g., "20-calendar.ini" -> "calendar")
-				// Enabled files have format: NN-modulename.ini
-				parts := strings.Split(file.Name(), "-")
-				if len(parts) >= 2 {
-					// Get everything after the first dash, remove .ini
-					moduleName := strings.TrimSuffix(strings.Join(parts[1:], "-"), ".ini")
-					enabledMap[moduleName] = true
-				} else {
-					// No prefix, just use the filename
-					moduleName := strings.TrimSuffix(file.Name(), ".ini")
-					enabledMap[moduleName] = true
-				}
-			}
-		}
-	}
-
-	var extensions []core.PHPExtension
-	for _, file := range availableFiles {
-		if !strings.HasSuffix(file.Name(), ".ini") {
+	enabled := make(map[string]bool, len(enabledFiles))
+	for _, file := range enabledFiles {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".ini") {
 			continue
 		}
-
-		extName := strings.TrimSuffix(file.Name(), ".ini")
-		extensions = append(extensions, core.PHPExtension{
-			Name:    extName,
-			Enabled: enabledMap[extName],
-		})
+		name := strings.TrimSuffix(file.Name(), ".ini")
+		if index := strings.IndexByte(name, '-'); index >= 0 {
+			name = name[index+1:]
+		}
+		enabled[name] = true
 	}
 
+	extensions := make([]core.PHPExtension, 0, len(availableFiles))
+	for _, file := range availableFiles {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".ini") {
+			continue
+		}
+		name := strings.TrimSuffix(file.Name(), ".ini")
+		if !phpExtensionPattern.MatchString(name) {
+			return nil, fmt.Errorf("invalid PHP module filename %q", file.Name())
+		}
+		extensions = append(extensions, core.PHPExtension{Name: name, Enabled: enabled[name]})
+	}
+	sort.Slice(extensions, func(i, j int) bool { return extensions[i].Name < extensions[j].Name })
 	return extensions, nil
 }
 
-// EnableExtension enables a PHP extension
+func runPHPModuleCommand(command, phpVersion, extension string) error {
+	path := filepath.Join("/usr/sbin", command)
+	output, err := exec.Command(path, "-v", phpVersion, "-s", "fpm", extension).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s PHP extension %s: %s: %w", command, extension, strings.TrimSpace(string(output)), err)
+	}
+	return nil
+}
+
+func (pm *PHPFPMManager) mutateExtension(phpVersion, extension string, enable bool) error {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return err
+	}
+	if !phpExtensionPattern.MatchString(extension) {
+		return fmt.Errorf("invalid PHP extension %q", extension)
+	}
+
+	managedConfigMutationMu.Lock()
+	defer managedConfigMutationMu.Unlock()
+	extensions, err := pm.ListExtensions(phpVersion)
+	if err != nil {
+		return fmt.Errorf("inspect PHP extension %s: %w", extension, err)
+	}
+	available := false
+	currentlyEnabled := false
+	for _, candidate := range extensions {
+		if candidate.Name == extension {
+			available = true
+			currentlyEnabled = candidate.Enabled
+			break
+		}
+	}
+	if !available {
+		return fmt.Errorf("PHP extension %q is not available for PHP %s", extension, phpVersion)
+	}
+	if currentlyEnabled == enable {
+		return nil
+	}
+	command, rollbackCommand := "phpdismod", "phpenmod"
+	if enable {
+		command, rollbackCommand = "phpenmod", "phpdismod"
+	}
+	if err := runPHPModuleCommand(command, phpVersion, extension); err != nil {
+		return err
+	}
+	if err := reloadPHPFPM(phpVersion); err != nil {
+		rollbackErr := runPHPModuleCommand(rollbackCommand, phpVersion, extension)
+		reloadRollbackErr := reloadPHPFPM(phpVersion)
+		if rollbackErr != nil {
+			rollbackErr = fmt.Errorf("restore prior extension state: %w", rollbackErr)
+		}
+		if reloadRollbackErr != nil {
+			reloadRollbackErr = fmt.Errorf("reload restored extension state: %w", reloadRollbackErr)
+		}
+		return errors.Join(fmt.Errorf("reload PHP-FPM after %s: %w", command, err), rollbackErr, reloadRollbackErr)
+	}
+	return nil
+}
+
 func (pm *PHPFPMManager) EnableExtension(phpVersion, extension string) error {
-	cmd := exec.Command("/usr/sbin/phpenmod", "-v", phpVersion, "-s", "fpm", extension)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to enable extension: %s", string(output))
-	}
-
-	return pm.ReloadPHPFPM(phpVersion)
+	return pm.mutateExtension(phpVersion, extension, true)
 }
 
-// DisableExtension disables a PHP extension
 func (pm *PHPFPMManager) DisableExtension(phpVersion, extension string) error {
-	cmd := exec.Command("/usr/sbin/phpdismod", "-v", phpVersion, "-s", "fpm", extension)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to disable extension: %s", string(output))
-	}
-
-	return pm.ReloadPHPFPM(phpVersion)
+	return pm.mutateExtension(phpVersion, extension, false)
 }
 
-// GetConfig reads PHP configuration from php.ini
 func (pm *PHPFPMManager) GetConfig(phpVersion string) (*core.PHPConfig, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return nil, err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	file, err := os.Open(phpIni)
+	content, err := readManagedConfig(phpINIPath(phpVersion))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open php.ini: %v", err)
+		return nil, fmt.Errorf("read php.ini: %w", err)
 	}
-	defer file.Close()
-
 	config := &core.PHPConfig{
-		MemoryLimit:       "128M",
-		MaxExecutionTime:  "30",
-		UploadMaxFilesize: "2M",
-		PostMaxSize:       "8M",
-		DisplayErrors:     "Off",
+		MemoryLimit: "128M", UploadMaxFilesize: "2M", PostMaxSize: "8M",
+		MaxExecutionTime: "30", DisplayErrors: "Off",
 	}
-
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
-		// Skip comments and empty lines
-		if strings.HasPrefix(line, ";") || line == "" {
+		if line == "" || strings.HasPrefix(line, ";") {
 			continue
 		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		key, value, ok := configPair(line)
+		if !ok {
 			continue
 		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
+		value = trimInlineComment(value, ';')
 		switch key {
 		case "memory_limit":
 			config.MemoryLimit = value
@@ -312,49 +324,44 @@ func (pm *PHPFPMManager) GetConfig(phpVersion string) (*core.PHPConfig, error) {
 			config.DisplayErrors = value
 		}
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan php.ini: %w", err)
+	}
+	if err := validatePHPConfig(config); err != nil {
+		return nil, fmt.Errorf("invalid php.ini value: %w", err)
+	}
 	return config, nil
 }
 
-// UpdateConfig updates PHP configuration in php.ini
 func (pm *PHPFPMManager) UpdateConfig(phpVersion string, config *core.PHPConfig) error {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	// Read current content
-	content, err := os.ReadFile(phpIni)
-	if err != nil {
-		return fmt.Errorf("failed to read php.ini: %v", err)
+	if err := validatePHPConfig(config); err != nil {
+		return err
 	}
-
-	// Update settings
-	updated := string(content)
-	updated = updateOrAddSetting(updated, "memory_limit", config.MemoryLimit)
-	updated = updateOrAddSetting(updated, "max_execution_time", config.MaxExecutionTime)
-	updated = updateOrAddSetting(updated, "upload_max_filesize", config.UploadMaxFilesize)
-	updated = updateOrAddSetting(updated, "post_max_size", config.PostMaxSize)
-	updated = updateOrAddSetting(updated, "display_errors", config.DisplayErrors)
-
-	// Write back
-	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil { //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
-		return fmt.Errorf("failed to write php.ini: %v", err)
-	}
-
-	return pm.ReloadPHPFPM(phpVersion)
+	path := phpINIPath(phpVersion)
+	return mutateManagedConfig(path, 0o644, func(content []byte) ([]byte, error) {
+		updated := string(content)
+		updated = updateOrAddSetting(updated, "memory_limit", config.MemoryLimit)
+		updated = updateOrAddSetting(updated, "max_execution_time", config.MaxExecutionTime)
+		updated = updateOrAddSetting(updated, "upload_max_filesize", config.UploadMaxFilesize)
+		updated = updateOrAddSetting(updated, "post_max_size", config.PostMaxSize)
+		updated = updateOrAddSetting(updated, "display_errors", config.DisplayErrors)
+		return []byte(updated), nil
+	}, func() error { return phpFPMConfigTest(phpVersion) }, func() error { return reloadPHPFPM(phpVersion) })
 }
 
-// ReloadPHPFPM reloads PHP-FPM service
 func (pm *PHPFPMManager) ReloadPHPFPM(version string) error {
-	serviceName := fmt.Sprintf("php%s-fpm", version)
-	cmd := exec.Command("systemctl", "reload", serviceName)
-	return cmd.Run()
+	if err := ValidatePHPVersion(version); err != nil {
+		return err
+	}
+	return reloadPHPFPM(version)
 }
 
-// CheckPHPVersion checks if PHP version is installed
 func (pm *PHPFPMManager) CheckPHPVersion(version string) bool {
-	cmd := exec.Command("php"+version, "--version")
-	err := cmd.Run()
-	return err == nil
+	if ValidatePHPVersion(version) != nil {
+		return false
+	}
+	return exec.Command("php"+version, "--version").Run() == nil
 }

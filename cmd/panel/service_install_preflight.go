@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // preflightManagedServiceInstall is the backend gate shared by package,
@@ -51,8 +52,8 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID st
 	}
 
 	if family == "apt" && managed.Repo != nil && managed.Repo.Required {
-		var status RepoStatusResp
-		if err := p.agentClient.CallContext(ctx, "Agent.RepoStatus", &enableRepoReq{RepoID: managed.Repo.ID}, &status); err != nil {
+		var status transport.RepoStatusResponse
+		if err := p.callAgentContext(ctx, "Agent.RepoStatus", &transport.EnableRepoRequest{RepoID: managed.Repo.ID}, &status); err != nil {
 			log.Printf("[repo][%s][install-preflight][transport] %v", managed.Repo.ID, err)
 			return errors.New("required repository status could not be verified")
 		}

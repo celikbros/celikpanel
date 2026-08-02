@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // handleDomainUsage measures one domain's real disk and monthly traffic via
@@ -45,16 +47,9 @@ func (p *Panel) handleDomainUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp struct {
-		DiskBytes         int64  `json:"disk_bytes"`
-		TrafficMonthBytes int64  `json:"traffic_month_bytes"`
-		Error             string `json:"error,omitempty"`
-	}
-	req := struct {
-		SiteHome string `json:"site_home"`
-		Domain   string `json:"domain"`
-	}{SiteHome: filepath.Dir(docroot), Domain: domainName}
-	if err := p.agentClient.Call("Agent.SiteUsage", &req, &resp); err != nil {
+	var resp transport.SiteUsageResponse
+	req := transport.SiteUsageRequest{SiteHome: filepath.Dir(docroot), Domain: domainName}
+	if err := p.callAgent("Agent.SiteUsage", &req, &resp); err != nil {
 		writeServerError(w, err)
 		return
 	}

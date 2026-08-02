@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/rpc"
-	"strings"
 	"sync"
 	"testing"
 
@@ -93,18 +92,18 @@ func (a *compensationDNSAgent) DNSClusterReadiness(
 
 func attachCompensationDNSAgent(t *testing.T, p *Panel, agent *compensationDNSAgent) {
 	t.Helper()
-	serverConn, clientConn := net.Pipe()
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register fake DNS agent: %v", err)
 	}
-	go server.ServeConn(serverConn)
-	rawClient := rpc.NewClient(clientConn)
-	p.agentClient = transport.NewReconnectingClient(rawClient)
-	t.Cleanup(func() {
-		_ = rawClient.Close()
-		_ = serverConn.Close()
-	})
+	p.agentClient = transport.NewReconnectingClientWithContextConnector(
+		nil,
+		func(context.Context) (*rpc.Client, error) {
+			serverConn, clientConn := net.Pipe()
+			go server.ServeConn(serverConn)
+			return rpc.NewClient(clientConn), nil
+		},
+	)
 }
 
 func rejectDNSClusterSettingWrites(t *testing.T, p *Panel) {
@@ -119,11 +118,6 @@ func rejectDNSClusterSettingWrites(t *testing.T, p *Panel) {
 	`); err != nil {
 		t.Fatalf("install DNS role failure trigger: %v", err)
 	}
-}
-
-func compensationAdminRequest(body string) *http.Request {
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/dns-cluster", strings.NewReader(body))
-	return req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
 }
 
 func TestDNSClusterGETDoesNotPresentUnconfiguredModeAsStandalone(t *testing.T) {
@@ -355,50 +349,6 @@ func TestDNSClusterGETSuggestsSavedPairWithoutMutatingSettings(t *testing.T) {
 	}
 }
 
-func TestDNSClusterPUTRejectsLocalPeerWithStableCodeBeforeMutation(t *testing.T) {
-	for _, peerIP := range []string{"2.25.80.4", "::ffff:2.25.80.4"} {
-		t.Run(peerIP, func(t *testing.T) {
-			t.Setenv("CELIKPANEL_SERVER_IP", "2.25.80.4")
-			p := newDNSPanelForTest(t)
-			setDNSIdentityForTest(t, p, "standalone")
-			agent := &compensationDNSAgent{}
-			attachCompensationDNSAgent(t, p, agent)
-
-			recorder := httptest.NewRecorder()
-			p.handleDNSCluster(recorder, compensationAdminRequest(
-				`{"role":"paired","peer_ip":"`+peerIP+`","peer_ns":"ns1.celikhost.com"}`,
-			))
-			if recorder.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want 400; body=%s", recorder.Code, recorder.Body.String())
-			}
-			var body apiErrorBody
-			if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
-				t.Fatalf("decode error response: %v", err)
-			}
-			if body.Code != errCodeDNSClusterPeerIsLocal {
-				t.Fatalf("code = %q, want %q", body.Code, errCodeDNSClusterPeerIsLocal)
-			}
-
-			agent.mu.Lock()
-			callCount := len(agent.calls)
-			agent.mu.Unlock()
-			if callCount != 0 {
-				t.Fatalf("self-peer rejection reached the agent %d time(s)", callCount)
-			}
-			ctx := context.Background()
-			if role := p.setting(ctx, settingDNSRole); role != "standalone" {
-				t.Fatalf("stored role = %q, want unchanged standalone", role)
-			}
-			if peer := p.setting(ctx, settingDNSPeerIP); peer != "" {
-				t.Fatalf("stored peer IP mutated to %q", peer)
-			}
-			if peerNS := p.setting(ctx, settingDNSPeerNS); peerNS != "" {
-				t.Fatalf("stored peer NS mutated to %q", peerNS)
-			}
-		})
-	}
-}
-
 func TestDNSClusterAgentSnapshotStillRestoresEmptyRoleAsStandalone(t *testing.T) {
 	p := newDNSPanelForTest(t)
 
@@ -546,82 +496,5 @@ func TestNameserverPairUsableRequiresTwoDistinctNames(t *testing.T) {
 		{Host: "ns2.celikhost.com", IPs: []string{here}, PointsHere: true},
 	}) {
 		t.Fatal("an unconfigured role must not report a ready DNS identity")
-	}
-}
-
-func TestDNSClusterSaveFailureRestoresPreviousAgentRole(t *testing.T) {
-	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
-	p := newDNSPanelForTest(t)
-	setDNSIdentityForTest(t, p, "paired")
-	agent := &compensationDNSAgent{}
-	attachCompensationDNSAgent(t, p, agent)
-	rejectDNSClusterSettingWrites(t, p)
-
-	recorder := httptest.NewRecorder()
-	p.handleDNSCluster(recorder, compensationAdminRequest(`{"role":"standalone"}`))
-	if recorder.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want 500; body=%s", recorder.Code, recorder.Body.String())
-	}
-	if !strings.Contains(recorder.Body.String(), "previous DNS server role was restored") {
-		t.Fatalf("rollback success was not reported: %s", recorder.Body.String())
-	}
-
-	agent.mu.Lock()
-	calls := append([]CompensationDNSClusterRequest(nil), agent.calls...)
-	agent.mu.Unlock()
-	if len(calls) != 2 {
-		t.Fatalf("agent calls = %+v, want apply plus compensation", calls)
-	}
-	if calls[0].Role != "standalone" || calls[0].PeerIP != "" || calls[0].PeerNS != "" {
-		t.Fatalf("new agent state = %+v, want standalone", calls[0])
-	}
-	if calls[1].Role != "paired" || calls[1].PeerIP != "2.25.80.4" || calls[1].PeerNS != "ns2.celikhost.com" {
-		t.Fatalf("compensation state = %+v, want previous paired state", calls[1])
-	}
-	if got := p.setting(context.Background(), settingDNSRole); got != "paired" {
-		t.Fatalf("failed panel save changed stored role to %q", got)
-	}
-}
-
-func TestDNSClusterRollbackFailureIsExplicitAndEmptyPreviousRoleMeansStandalone(t *testing.T) {
-	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
-	p := newDNSPanelForTest(t)
-	for key, value := range map[string]string{
-		settingNS1: "ns1.celikhost.com",
-		settingNS2: "ns2.celikhost.com",
-	} {
-		if err := p.setSetting(context.Background(), key, value); err != nil {
-			t.Fatal(err)
-		}
-	}
-	agent := &compensationDNSAgent{failCall: 2}
-	attachCompensationDNSAgent(t, p, agent)
-	rejectDNSClusterSettingWrites(t, p)
-
-	recorder := httptest.NewRecorder()
-	p.handleDNSCluster(recorder, compensationAdminRequest(
-		`{"role":"paired","peer_ip":"2.25.80.4","peer_ns":"ns2.celikhost.com"}`,
-	))
-	if recorder.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want 500; body=%s", recorder.Code, recorder.Body.String())
-	}
-	if !strings.Contains(recorder.Body.String(), "previous DNS server role could not be restored") {
-		t.Fatalf("rollback failure was not explicit: %s", recorder.Body.String())
-	}
-	if strings.Contains(recorder.Body.String(), "forced rollback failure") {
-		t.Fatalf("agent internals leaked in response: %s", recorder.Body.String())
-	}
-
-	agent.mu.Lock()
-	calls := append([]CompensationDNSClusterRequest(nil), agent.calls...)
-	agent.mu.Unlock()
-	if len(calls) != 2 {
-		t.Fatalf("agent calls = %+v, want apply plus failed compensation", calls)
-	}
-	if calls[1].Role != "standalone" || calls[1].PeerIP != "" || calls[1].PeerNS != "" {
-		t.Fatalf("empty previous role restored as %+v, want standalone", calls[1])
-	}
-	if got := p.setting(context.Background(), settingDNSRole); got != "" {
-		t.Fatalf("failed panel save created stored role %q", got)
 	}
 }

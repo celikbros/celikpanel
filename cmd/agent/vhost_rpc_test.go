@@ -248,6 +248,22 @@ func TestValidatedVhostDataAcceptsAndCanonicalizesSupportedShapes(t *testing.T) 
 			},
 		},
 		{
+			name: "managed www redirect",
+			mutate: func(req *ApplyVhostRequest) {
+				req.RedirectWWW = true
+				req.ServerNames = append(req.ServerNames, "example.test")
+			},
+			check: func(t *testing.T, req ApplyVhostRequest) {
+				data, err := validatedVhostData(&req)
+				if err != nil {
+					t.Fatalf("validatedVhostData: %v", err)
+				}
+				if !data.RedirectWWW {
+					t.Fatal("validated vhost dropped redirect_www")
+				}
+			},
+		},
+		{
 			name: "node port",
 			mutate: func(req *ApplyVhostRequest) {
 				req.ProjectType = "node"
@@ -349,6 +365,19 @@ func TestValidatedVhostDataRejectsUnsafeTemplateInputs(t *testing.T) {
 			name: "directive in server name",
 			mutate: func(req *ApplyVhostRequest) {
 				req.ServerNames = []string{"www.example.test;return 200"}
+			},
+		},
+		{
+			name: "www redirect without canonical domain",
+			mutate: func(req *ApplyVhostRequest) {
+				req.RedirectWWW = true
+			},
+		},
+		{
+			name: "www redirect without managed www hostname",
+			mutate: func(req *ApplyVhostRequest) {
+				req.RedirectWWW = true
+				req.ServerNames = []string{"example.test"}
 			},
 		},
 		{

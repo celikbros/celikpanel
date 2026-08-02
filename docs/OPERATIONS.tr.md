@@ -50,8 +50,10 @@ bu runbook'u canlı durum önbelleğine çevirmeyin.
 - panel veritabanı: `/var/lib/celikpanel/celikpanel.db`
 - unit'ler: `celikpanel-agent` ve `celikpanel-panel`
 
-Agent'ı durdurmak bağımlı paneli de durdurabilir. Servis sıralaması ve toparlama
-incelenmiş ürün scriptlerinin sorumluluğundadır; bunların akışını doğaçlama SSH
+Agent'ı durdurmak veya temiz biçimde yeniden başlatmak artık paneli durdurmaz.
+Panel agent'tan sonra sıralanır, onu zayıf bağımlılık olarak ister ve agent geri
+dönerken yeniden dener. Daha sıkı dondurma, güncelleme ve toparlama sırası yine
+incelenmiş ürün scriptlerinin sorumluluğundadır; bu akışı doğaçlama SSH
 komutlarıyla değiştirmeyin.
 
 ## 3. Sürüm kapıları

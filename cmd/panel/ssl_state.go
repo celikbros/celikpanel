@@ -8,15 +8,38 @@ import (
 	"time"
 )
 
-var domainSSLOperationLocks sync.Map
+type sslOperationLock struct {
+	mu   sync.Mutex
+	refs int
+}
+
+var domainSSLOperationLocks = struct {
+	sync.Mutex
+	entries map[int]*sslOperationLock
+}{entries: make(map[int]*sslOperationLock)}
 
 const sslMutationTimeout = 20 * time.Minute
 
 func lockDomainSSLOperation(domainID int) func() {
-	value, _ := domainSSLOperationLocks.LoadOrStore(domainID, &sync.Mutex{})
-	lock := value.(*sync.Mutex)
-	lock.Lock()
-	return lock.Unlock
+	domainSSLOperationLocks.Lock()
+	entry := domainSSLOperationLocks.entries[domainID]
+	if entry == nil {
+		entry = &sslOperationLock{}
+		domainSSLOperationLocks.entries[domainID] = entry
+	}
+	entry.refs++
+	domainSSLOperationLocks.Unlock()
+
+	entry.mu.Lock()
+	return func() {
+		entry.mu.Unlock()
+		domainSSLOperationLocks.Lock()
+		entry.refs--
+		if entry.refs == 0 {
+			delete(domainSSLOperationLocks.entries, domainID)
+		}
+		domainSSLOperationLocks.Unlock()
+	}
 }
 
 func sslCompensationContext() (context.Context, context.CancelFunc) {

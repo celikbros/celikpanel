@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Mail authentication (SPF / DKIM / DMARC) for a domain — roadmap 3C.
@@ -185,14 +188,12 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 
 	// DKIM key state from the agent (never creates a key on GET).
 	// DKIM anahtar durumu agent'tan (GET'te asla anahtar oluşturmaz).
-	var dkimSt struct {
-		HasKey           bool   `json:"has_key"`
-		PublicKeyB64     string `json:"public_key_b64"`
-		SigningInstalled bool   `json:"signing_installed"`
-		Error            string `json:"error,omitempty"`
+	var dkimSt transport.DKIMStatusResponse
+	if err := p.callAgentContext(ctx, "Agent.GetDKIMStatus",
+		&transport.DKIMStatusRequest{Domain: domain, Selector: dkimSelector}, &dkimSt); err != nil {
+		writeAgentError(w, err, "DKIM status")
+		return
 	}
-	_ = p.agentClient.Call("Agent.GetDKIMStatus",
-		&struct{ Domain, Selector string }{Domain: domain, Selector: dkimSelector}, &dkimSt)
 	st.SigningInstalled = dkimSt.SigningInstalled
 
 	// SPF
@@ -247,13 +248,9 @@ func (p *Panel) handleMailAuthStatus(w http.ResponseWriter, r *http.Request, dom
 func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domain string) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var resp struct {
-		Created      bool   `json:"created"`
-		PublicKeyB64 string `json:"public_key_b64"`
-		Error        string `json:"error,omitempty"`
-	}
-	err := p.agentClient.Call("Agent.EnsureDKIMKey",
-		&struct{ Domain, Selector string }{Domain: domain, Selector: dkimSelector}, &resp)
+	var resp transport.DKIMEnsureResponse
+	err := p.callAgentContext(r.Context(), "Agent.EnsureDKIMKey",
+		&transport.DKIMEnsureRequest{Domain: domain, Selector: dkimSelector}, &resp)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -265,12 +262,10 @@ func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domai
 	// A new key must reach the signing tables, or the record passes and the
 	// signature never appears.
 	// Yeni anahtar imzalama tablolarına ulaşmalı; yoksa kayıt var, imza yok.
-	var sign struct {
-		Configured bool   `json:"configured"`
-		Error      string `json:"error,omitempty"`
-	}
+	var sign transport.ConfigureDKIMSigningResponse
 	_ = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &binding, &sign); err != nil {
+		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
 			return err
 		}
 		if sign.Error != "" {
@@ -354,22 +349,38 @@ func (p *Panel) ensureZone(ctx context.Context, domain string) (int, error) {
 // upsertTXT replaces (or inserts) the TXT record for a name in the zone.
 // upsertTXT, zone'daki bir ad için TXT kaydını değiştirir (ya da ekler).
 func (p *Panel) upsertTXT(ctx context.Context, zoneID int, name, value string) error {
-	pool := p.db.GetDB()
 	content := splitTXTContent(value)
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin TXT record update: %w", err)
+	}
+	defer tx.Rollback()
 
-	res, err := pool.ExecContext(ctx,
+	res, err := tx.ExecContext(ctx,
 		`UPDATE pdns_records SET content = ?, disabled = 0 WHERE domain_id = ? AND type = 'TXT' AND name = ?`,
 		content, zoneID, name)
 	if err != nil {
-		return err
+		return fmt.Errorf("update TXT record: %w", err)
 	}
-	if n, _ := res.RowsAffected(); n > 0 {
-		return nil
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("verify TXT record update: %w", err)
 	}
-	_, err = pool.ExecContext(ctx,
-		`INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'TXT', ?, 3600)`,
-		zoneID, name, content)
-	return err
+	if affected == 0 {
+		res, err = tx.ExecContext(ctx,
+			`INSERT INTO pdns_records (domain_id, name, type, content, ttl) VALUES (?, ?, 'TXT', ?, 3600)`,
+			zoneID, name, content)
+		if err != nil {
+			return fmt.Errorf("insert TXT record: %w", err)
+		}
+		if _, err := res.LastInsertId(); err != nil {
+			return fmt.Errorf("read inserted TXT record identity: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit TXT record update: %w", err)
+	}
+	return nil
 }
 
 // handleMailAuthApply writes the requested record into the zone.
@@ -393,14 +404,9 @@ func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, doma
 	case "dmarc":
 		name, value = "_dmarc."+domain, dmarcRecommended(domain, req.DMARCPolicy)
 	case "dkim":
-		var st struct {
-			HasKey           bool   `json:"has_key"`
-			PublicKeyB64     string `json:"public_key_b64"`
-			SigningInstalled bool   `json:"signing_installed"`
-			Error            string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.GetDKIMStatus",
-			&struct{ Domain, Selector string }{Domain: domain, Selector: dkimSelector}, &st); err != nil {
+		var st transport.DKIMStatusResponse
+		if err := p.callAgentContext(r.Context(), "Agent.GetDKIMStatus",
+			&transport.DKIMStatusRequest{Domain: domain, Selector: dkimSelector}, &st); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -424,6 +430,12 @@ func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, doma
 		return
 	}
 
-	p.syncZoneToDNS(r.Context(), domain, false)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "name": name, "value": value})
+	if !p.publishDNSMutation(w, r.Context(), domain) {
+		return
+	}
+	if err := json.NewEncoder(w).Encode(map[string]any{
+		"success": true, "name": name, "value": value,
+	}); err != nil {
+		log.Printf("encode mail authentication result for %s: %v", domain, err)
+	}
 }

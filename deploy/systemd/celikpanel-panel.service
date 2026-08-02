@@ -5,8 +5,8 @@
 # hiç root tutmaz ve agent ile yalnızca kimlik-doğrulamalı socket üzerinden
 # konuşur.
 Description=CelikPanel web panel
+Wants=celikpanel-agent.service
 After=celikpanel-agent.service network.target
-Requires=celikpanel-agent.service
 
 [Service]
 Type=simple
@@ -27,16 +27,18 @@ Environment=CELIKPANEL_WEB_DIR=/opt/celikpanel/web
 Environment=CELIKPANEL_LISTEN=:2083
 Environment=CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock
 Environment=CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token
-# HTTPS: a normal install adds CELIKPANEL_TLS=1 here (self-signed cert, so
-# the panel never serves credentials over plain HTTP). To use a real
-# certificate — e.g. the panel hostname's Let's Encrypt files — set instead:
-#   Environment=CELIKPANEL_TLS_CERT=/etc/letsencrypt/live/<host>/fullchain.pem
-#   Environment=CELIKPANEL_TLS_KEY=/etc/letsencrypt/live/<host>/privkey.pem
-# HTTPS: normal kurulum buraya CELIKPANEL_TLS=1 ekler (kendinden-imzalı; panel
-# kimlik bilgilerini düz HTTP'de sunmaz). Gerçek sertifika için yukarıdaki
-# CELIKPANEL_TLS_CERT / CELIKPANEL_TLS_KEY satırlarını kullanın.
+Environment=CELIKPANEL_TLS=1
+Environment=CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG=
+Environment=CELIKPANEL_PANEL_DEMO_FLAG=
+EnvironmentFile=-/etc/celikpanel/panel.env
+# HTTPS is the vendor default. Durable operator overrides belong in the
+# root-only /etc/celikpanel/panel.env; install and update preserve that file.
+# A real certificate can be selected there with CELIKPANEL_TLS_CERT and
+# CELIKPANEL_TLS_KEY. Demo flags are likewise read only from that file.
+# HTTPS üretici varsayılanıdır. Kalıcı operatör geçersiz kılmaları root-only
+# /etc/celikpanel/panel.env içine yazılır; kurulum ve güncelleme onu korur.
 
-ExecStart=/opt/celikpanel/bin/panel
+ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG
 Restart=on-failure
 RestartSec=3
 KillMode=control-group

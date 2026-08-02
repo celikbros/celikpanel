@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Server-wide mail policy — the Plesk "server-wide mail settings" core:
@@ -19,28 +21,11 @@ import (
 // güvenli taban artı zone başına bir reject_rbl_client); böylece yeniden
 // uygulamak her zaman yakınsar.
 
-type MailPolicy struct {
-	MessageSizeMB int      `json:"message_size_mb"`
-	DNSBLZones    []string `json:"dnsbl_zones"` // empty = protection off
-	// OutboundRateLimit caps how many messages one sending client may inject
-	// per minute (postfix smtpd_client_message_rate_limit). 0 = unlimited.
-	// This is the guard against BEING a spam source: a compromised customer
-	// account can no longer blast thousands of mails and get the server (and
-	// its domains) suspended — it runs into the per-minute ceiling instead.
-	// OutboundRateLimit, bir gönderen istemcinin dakikada kaç mesaj
-	// enjekte edebileceğini sınırlar (postfix smtpd_client_message_rate_limit).
-	// 0 = sınırsız. Bu, spam KAYNAĞI olmaya karşı korumadır: ele geçirilmiş
-	// bir müşteri hesabı artık binlerce mail patlatıp sunucuyu (ve
-	// domain'lerini) askıya aldıramaz — dakikalık tavana çarpar.
-	OutboundRateLimit int `json:"outbound_rate_limit"`
-}
+type MailPolicy = transport.MailPolicy
 
-type MailPolicyResponse struct {
-	Policy MailPolicy `json:"policy"`
-	Error  string     `json:"error,omitempty"`
-}
+type MailPolicyResponse = transport.MailPolicyResponse
 
-func (a *Agent) GetMailPolicy(_ *struct{}, resp *MailPolicyResponse) error {
+func (a *Agent) GetMailPolicy(_ *transport.Empty, resp *MailPolicyResponse) error {
 	if _, err := exec.LookPath("postconf"); err != nil {
 		resp.Error = "postfix is not installed"
 		return nil

@@ -12,12 +12,12 @@ func NewNginxParser() *NginxParser {
 	return &NginxParser{}
 }
 
-// Parse is a simplified parser for MVP. 
+// Parse is a simplified parser for MVP.
 // It mainly looks for "server { ... }" blocks and extracts basic directives.
 // For a production-ready parser, we would need a proper lexer/parser (e.g., using 'text/scanner').
 func (p *NginxParser) Parse(content string) (interface{}, error) {
 	blocks := []Block{}
-	
+
 	// Very basic regex to find server blocks
 	// This is NOT robust for nested braces but sufficient for MVP "managed" blocks
 	// We assume standard formatting for managed files.
@@ -29,7 +29,7 @@ func (p *NginxParser) Parse(content string) (interface{}, error) {
 			continue
 		}
 		blockBody := match[1]
-		
+
 		b := Block{
 			Name:       "server",
 			Directives: make(map[string]string),
@@ -69,7 +69,7 @@ func (p *NginxParser) Generate(data interface{}) (string, error) {
 	for _, b := range blocks {
 		if b.Name == "server" {
 			sb.WriteString("server {\n")
-			
+
 			if val, ok := b.Directives["listen"]; ok {
 				sb.WriteString(fmt.Sprintf("    listen %s;\n", val))
 			}
@@ -79,7 +79,7 @@ func (p *NginxParser) Generate(data interface{}) (string, error) {
 			if val, ok := b.Directives["root"]; ok {
 				sb.WriteString(fmt.Sprintf("    root %s;\n", val))
 			}
-			
+
 			// Default standard settings
 			sb.WriteString("    index index.php index.html;\n")
 			sb.WriteString("    location / {\n")

@@ -471,14 +471,17 @@ func TestPanelBackupV2ScheduledFullIncludesEveryDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := f.panel.runScheduledBackup(context.Background(), d, backupspec.TypeFull, 7); err != nil {
+	if err := f.panel.runScheduledBackup(
+		context.Background(), d, backupspec.TypeFull, 7, "schedule:test-full",
+	); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.agent.createReqs) != 1 {
 		t.Fatalf("create calls=%d", len(f.agent.createReqs))
 	}
 	got := f.agent.createReqs[0]
-	if got.Origin != backupspec.OriginScheduled || len(got.Databases) != 2 || got.Databases[0].ID != f.mariaID || got.Databases[1].ID != f.postgresID {
+	if got.Origin != backupspec.OriginScheduled || got.JobKey != "schedule:test-full" ||
+		len(got.Databases) != 2 || got.Databases[0].ID != f.mariaID || got.Databases[1].ID != f.postgresID {
 		t.Fatalf("scheduled full request=%+v", got)
 	}
 }

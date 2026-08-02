@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,24 @@ import (
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+const (
+	panelHTTPReadHeaderTimeout = 10 * time.Second
+	panelHTTPReadTimeout       = 5 * time.Minute
+	panelHTTPWriteTimeout      = 30 * time.Minute
+	panelHTTPIdleTimeout       = 2 * time.Minute
+)
+
+func newPanelHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: panelHTTPReadHeaderTimeout,
+		ReadTimeout:       panelHTTPReadTimeout,
+		WriteTimeout:      panelHTTPWriteTimeout,
+		IdleTimeout:       panelHTTPIdleTimeout,
+	}
+}
 
 type Panel struct {
 	agentClient   *transport.ReconnectingClient
@@ -54,6 +73,344 @@ type Panel struct {
 	// SQLite tuple; their snapshot/apply/commit/rollback sequences must never
 	// interleave.
 	dnsTopologyMu sync.Mutex
+	// mailMutationMu serializes the database/agent two-phase mail mutations.
+	// Postfix maps are global files, so two tenants must not snapshot and
+	// publish overlapping forwarding or mailbox states concurrently.
+	mailMutationMu sync.Mutex
+}
+
+type domainSubroute struct {
+	domainID int
+	kind     string
+	methods  []string
+}
+
+// strictRouteSegments parses URL path segments without letting encoded
+// separators or dot-segments change the route shape after dispatch.
+func strictRouteSegments(r *http.Request, prefix string) ([]string, bool) {
+	if r == nil || r.URL == nil {
+		return nil, false
+	}
+	escapedPath := r.URL.EscapedPath()
+	if !strings.HasPrefix(escapedPath, prefix) {
+		return nil, false
+	}
+	rest := strings.TrimPrefix(escapedPath, prefix)
+	if rest == "" || strings.HasSuffix(rest, "/") || strings.Contains(rest, "//") {
+		return nil, false
+	}
+	escapedSegments := strings.Split(rest, "/")
+	segments := make([]string, 0, len(escapedSegments))
+	for _, escapedSegment := range escapedSegments {
+		lower := strings.ToLower(escapedSegment)
+		if strings.Contains(lower, "%2e") || strings.Contains(lower, "%2f") ||
+			strings.Contains(lower, "%5c") || strings.Contains(lower, "%25") {
+			return nil, false
+		}
+		segment, err := url.PathUnescape(escapedSegment)
+		if err != nil || segment == "" || segment == "." || segment == ".." ||
+			strings.ContainsAny(segment, "/\\\x00\r\n") {
+			return nil, false
+		}
+		segments = append(segments, segment)
+	}
+	return segments, true
+}
+
+func strictPositiveID(segment string) (int, bool) {
+	id, err := strconv.Atoi(segment)
+	return id, err == nil && id > 0 && strconv.Itoa(id) == segment
+}
+
+func routeAllows(method string, allowed []string) bool {
+	for _, candidate := range allowed {
+		if method == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func rejectRouteMethod(w http.ResponseWriter, allowed []string) {
+	w.Header().Set("Allow", strings.Join(allowed, ", "))
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
+	segments, ok := strictRouteSegments(r, "/api/v1/domains/")
+	if !ok {
+		return domainSubroute{}, false
+	}
+	domainID, ok := strictPositiveID(segments[0])
+	if !ok {
+		return domainSubroute{}, false
+	}
+	match := domainSubroute{domainID: domainID}
+	tail := segments[1:]
+	key := strings.Join(tail, "/")
+	getPost := []string{http.MethodGet, http.MethodPost}
+	switch key {
+	case "":
+		match.kind, match.methods = "delete", []string{http.MethodDelete}
+	case "hosting":
+		match.kind, match.methods = "hosting", []string{http.MethodGet, http.MethodPut}
+	case "app/status", "app/logs":
+		match.kind, match.methods = "app", []string{http.MethodGet}
+	case "app/start", "app/stop", "app/restart":
+		match.kind, match.methods = "app", []string{http.MethodPost}
+	case "php":
+		match.kind, match.methods = "php", getPost
+	case "php/pool":
+		match.kind, match.methods = "php-pool", getPost
+	case "general":
+		match.kind, match.methods = "general", getPost
+	case "aliases":
+		match.kind, match.methods = "aliases", []string{http.MethodPost}
+	case "dnssec":
+		match.kind, match.methods = "dnssec", getPost
+	case "ssl/mail":
+		match.kind, match.methods = "ssl-mail", []string{http.MethodGet, http.MethodPut}
+	case "ssl/retry":
+		match.kind, match.methods = "ssl-retry", []string{http.MethodPost}
+	case "ssl/renewal":
+		match.kind, match.methods = "ssl-renewal", []string{http.MethodPut}
+	case "ssl/letsencrypt":
+		match.kind, match.methods = "ssl-letsencrypt", []string{http.MethodPost}
+	case "ssl/upload":
+		match.kind, match.methods = "ssl-upload", []string{http.MethodPost}
+	case "ssl/settings":
+		match.kind, match.methods = "ssl-settings", []string{http.MethodPost}
+	case "ssl":
+		match.kind, match.methods = "ssl", []string{http.MethodGet, http.MethodDelete}
+	case "logs/access", "logs/error", "logs/php":
+		match.kind, match.methods = "logs", []string{http.MethodGet, http.MethodDelete}
+	case "databases":
+		match.kind, match.methods = "databases", getPost
+	case "files":
+		match.kind, match.methods = "files", []string{http.MethodGet, http.MethodPost, http.MethodOptions}
+	case "files/download":
+		match.kind, match.methods = "files-download", []string{http.MethodGet}
+	case "backups/schedule":
+		match.kind, match.methods = "backup-schedule", []string{http.MethodGet, http.MethodPut, http.MethodDelete}
+	case "backups/restore":
+		match.kind, match.methods = "backup-restore", []string{http.MethodPost, http.MethodOptions}
+	case "backups/download":
+		match.kind, match.methods = "backup-download", []string{http.MethodGet}
+	case "backups":
+		match.kind, match.methods = "backups", []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions}
+	case "cron":
+		match.kind, match.methods = "cron", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
+	case "mail/health":
+		match.kind, match.methods = "mail-health", []string{http.MethodGet}
+	case "mail/accounts":
+		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
+	case "mail/quota", "mail/rbl", "mail/setup", "mail/auth":
+		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodOptions}
+	case "mail/forwardings":
+		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions}
+	case "mail/auth/dkim", "mail/auth/apply":
+		match.kind, match.methods = "mail", []string{http.MethodPost, http.MethodOptions}
+	case "mail/catch-all":
+		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodPut, http.MethodDelete, http.MethodOptions}
+	case "apps/install":
+		match.kind, match.methods = "app-install", []string{http.MethodPost}
+	case "usage":
+		match.kind, match.methods = "usage", []string{http.MethodGet}
+	case "connection":
+		match.kind, match.methods = "connection", []string{http.MethodGet}
+	case "dns/zone":
+		match.kind, match.methods = "dns", getPost
+	case "dns/records":
+		match.kind, match.methods = "dns", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+	default:
+		if len(tail) == 2 && tail[0] == "aliases" {
+			match.kind, match.methods = "aliases", []string{http.MethodDelete}
+		} else if len(tail) == 2 && tail[0] == "databases" {
+			if _, ok := strictPositiveID(tail[1]); !ok {
+				return domainSubroute{}, false
+			}
+			match.kind, match.methods = "database-delete", []string{http.MethodDelete}
+		} else {
+			return domainSubroute{}, false
+		}
+	}
+	return match, true
+}
+
+func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
+	match, ok := matchDomainSubroute(r)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if !routeAllows(r.Method, match.methods) {
+		rejectRouteMethod(w, match.methods)
+		return
+	}
+	if !p.authorizeDomain(w, r, match.domainID) {
+		return
+	}
+	switch match.kind {
+	case "delete":
+		p.handleDeleteDomain(w, r)
+	case "hosting":
+		p.handleDomainHosting(w, r, match.domainID)
+	case "app":
+		p.handleDomainApp(w, r, match.domainID)
+	case "php":
+		p.handleDomainPHPSettings(w, r)
+	case "php-pool":
+		p.handleDomainPHPPool(w, r)
+	case "general":
+		p.handleDomainGeneralSettings(w, r)
+	case "aliases":
+		p.handleDomainAliases(w, r)
+	case "dnssec":
+		p.handleDomainDNSSEC(w, r, match.domainID)
+	case "ssl-mail":
+		p.handleDomainSSLMail(w, r, match.domainID)
+	case "ssl-retry":
+		p.handleRetrySSLActivation(w, r)
+	case "ssl-renewal":
+		p.handleSSLRenewalSetting(w, r, match.domainID)
+	case "ssl-letsencrypt":
+		p.handleIssueLetsEncrypt(w, r)
+	case "ssl-upload":
+		p.handleUploadCertificate(w, r)
+	case "ssl-settings":
+		p.handleSSLSettings(w, r)
+	case "ssl":
+		p.handleDomainSSL(w, r)
+	case "logs":
+		p.handleDomainLogs(w, r)
+	case "databases":
+		p.handleDomainDatabases(w, r)
+	case "database-delete":
+		p.handleDeleteDatabase(w, r)
+	case "files":
+		p.handleDomainFiles(w, r)
+	case "files-download":
+		p.handleDomainFileDownload(w, r)
+	case "backup-schedule":
+		p.handleBackupSchedule(w, r, match.domainID)
+	case "backup-restore":
+		p.handleRestoreBackup(w, r)
+	case "backup-download":
+		p.handleDownloadBackup(w, r)
+	case "backups":
+		p.handleDomainBackups(w, r)
+	case "cron":
+		p.handleDomainCronJobs(w, r)
+	case "mail-health":
+		p.handleMailHealth(w, r, match.domainID)
+	case "mail":
+		p.handleDomainMail(w, r)
+	case "app-install":
+		p.handleAppInstall(w, r, match.domainID)
+	case "usage":
+		p.handleDomainUsage(w, r)
+	case "connection":
+		p.handleDomainConnection(w, r, match.domainID)
+	case "dns":
+		p.handleDomainDNS(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+type databaseSubroute struct {
+	resourceID int
+	kind       string
+	methods    []string
+}
+
+func matchDatabaseSubroute(r *http.Request, prefix string) (databaseSubroute, bool) {
+	segments, ok := strictRouteSegments(r, prefix)
+	if !ok {
+		return databaseSubroute{}, false
+	}
+	resourceID, ok := strictPositiveID(segments[0])
+	if !ok {
+		return databaseSubroute{}, false
+	}
+	match := databaseSubroute{resourceID: resourceID}
+	switch prefix {
+	case "/api/v1/database-servers/":
+		switch {
+		case len(segments) == 1:
+			match.kind, match.methods = "server-delete", []string{http.MethodDelete}
+		case len(segments) == 2 && segments[1] == "databases":
+			match.kind, match.methods = "server-databases", []string{http.MethodGet, http.MethodPost}
+		case len(segments) == 2 && segments[1] == "users":
+			match.kind, match.methods = "server-users", []string{http.MethodGet, http.MethodPost}
+		default:
+			return databaseSubroute{}, false
+		}
+	case "/api/v1/databases/":
+		switch {
+		case len(segments) == 1:
+			match.kind, match.methods = "database-delete", []string{http.MethodDelete}
+		case len(segments) == 2 && segments[1] == "grants":
+			match.kind, match.methods = "database-grants", []string{http.MethodGet, http.MethodPost}
+		default:
+			return databaseSubroute{}, false
+		}
+	case "/api/v1/database-users/":
+		if len(segments) != 1 {
+			return databaseSubroute{}, false
+		}
+		match.kind, match.methods = "user-delete", []string{http.MethodDelete}
+	case "/api/v1/database-grants/":
+		if len(segments) != 1 {
+			return databaseSubroute{}, false
+		}
+		match.kind, match.methods = "grant-delete", []string{http.MethodDelete}
+	default:
+		return databaseSubroute{}, false
+	}
+	return match, true
+}
+
+func (p *Panel) handleDatabaseSubroute(w http.ResponseWriter, r *http.Request, prefix string) {
+	match, ok := matchDatabaseSubroute(r, prefix)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if !routeAllows(r.Method, match.methods) {
+		rejectRouteMethod(w, match.methods)
+		return
+	}
+	switch match.kind {
+	case "server-delete":
+		p.handleDeleteDatabaseV2Server(w, r)
+	case "server-databases":
+		if r.Method == http.MethodGet {
+			p.handleListDatabasesV2(w, r)
+		} else {
+			p.handleCreateDatabaseV2(w, r)
+		}
+	case "server-users":
+		if r.Method == http.MethodGet {
+			p.handleListDatabaseUsers(w, r)
+		} else {
+			p.handleCreateDatabaseV2User(w, r)
+		}
+	case "database-delete":
+		p.handleDeleteDatabaseV2(w, r)
+	case "database-grants":
+		if r.Method == http.MethodGet {
+			p.handleListDatabaseGrants(w, r)
+		} else {
+			p.handleGrantDatabaseAccess(w, r)
+		}
+	case "user-delete":
+		p.handleDeleteDatabaseV2User(w, r)
+	case "grant-delete":
+		p.handleRevokeDatabaseAccess(w, r)
+	default:
+		http.NotFound(w, r)
+	}
 }
 
 func main() {
@@ -305,6 +662,11 @@ func main() {
 	} else if recovered > 0 {
 		log.Printf("Reconciled %d interrupted service operation(s)", recovered)
 	}
+	if recovered, err := panel.recoverInterruptedAppInstallOperations(context.Background()); err != nil {
+		log.Fatalf("Failed to recover interrupted application installs: %v", err)
+	} else if recovered > 0 {
+		log.Printf("Marked %d interrupted application install(s) for review", recovered)
+	}
 
 	// One-time repair of pre-A4 rows: seal any database root password that
 	// was stored as plaintext. Fatal on failure — booting with credentials
@@ -314,6 +676,9 @@ func main() {
 	// yarı düz metin, yarı mühürlü açılmak, A4'ün kapattığı sorunu gizler.
 	if err := panel.encryptLegacyDBPasswords(context.Background()); err != nil {
 		log.Fatalf("Failed to encrypt legacy database passwords: %v", err)
+	}
+	if err := panel.encryptLegacyTOTPSecrets(context.Background()); err != nil {
+		log.Fatalf("Failed to validate and encrypt TOTP secrets: %v", err)
 	}
 	if err := panel.encryptLegacyVPNPresharedKeys(context.Background()); err != nil {
 		log.Fatalf("Failed to encrypt legacy VPN preshared keys: %v", err)
@@ -431,8 +796,8 @@ func main() {
 	http.HandleFunc("/api/v1/nginx/global", panel.handleNginxGlobalConfig)
 	http.HandleFunc("/api/v1/nginx/ssl", panel.handleNginxSSLConfig)
 	http.HandleFunc("/api/v1/ssl/providers", panel.handleACMEProviders)
-	// One nameserver pair for the whole server — see nameservers.go.
-	// Sunucunun tamamı için tek ad sunucusu çifti — bkz. nameservers.go.
+	// The two legacy endpoints remain readable for old clients. Their partial
+	// PUT contracts fail closed; all topology writes go through dns-setup.
 	http.HandleFunc("/api/v1/settings/nameservers", panel.handleNameserverSettings)
 	http.HandleFunc("/api/v1/settings/dns-cluster", panel.handleDNSCluster)
 	http.HandleFunc("/api/v1/settings/dns-setup", panel.handleDNSSetup)
@@ -472,94 +837,13 @@ func main() {
 	http.HandleFunc("/api/v1/domains/create", panel.handleCreateDomain)
 
 	// Domain-specific routes (PHP, general, aliases, SSL, logs, databases, delete, etc.)
-	http.HandleFunc("/api/v1/domains/", func(w http.ResponseWriter, r *http.Request) {
-		// Single ownership chokepoint: every /domains/{id}/... sub-resource
-		// flows through here, so one guard covers them all. The first path
-		// segment after the prefix is the domain ID.
-		// Tek sahiplik kapısı: her /domains/{id}/... alt kaynağı buradan geçer,
-		// bu yüzden tek koruma hepsini kapsar. Önekten sonraki ilk yol parçası
-		// domain kimliğidir.
-		rest := strings.TrimPrefix(r.URL.Path, "/api/v1/domains/")
-		idStr := rest
-		if i := strings.IndexByte(rest, '/'); i >= 0 {
-			idStr = rest[:i]
-		}
-		domainID, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-		if !panel.authorizeDomain(w, r, domainID) {
-			return
-		}
-
-		// Route to appropriate handler based on path
-		if strings.Contains(r.URL.Path, "/hosting") {
-			panel.handleDomainHosting(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/app/") || strings.HasSuffix(r.URL.Path, "/app") {
-			panel.handleDomainApp(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/php/pool") {
-			panel.handleDomainPHPPool(w, r)
-		} else if strings.Contains(r.URL.Path, "/php") {
-			panel.handleDomainPHPSettings(w, r)
-		} else if strings.Contains(r.URL.Path, "/general") {
-			panel.handleDomainGeneralSettings(w, r)
-		} else if strings.Contains(r.URL.Path, "/aliases") {
-			panel.handleDomainAliases(w, r)
-		} else if strings.Contains(r.URL.Path, "/dnssec") {
-			panel.handleDomainDNSSEC(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/ssl/mail") {
-			panel.handleDomainSSLMail(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/ssl/retry") {
-			panel.handleRetrySSLActivation(w, r)
-		} else if strings.Contains(r.URL.Path, "/ssl/renewal") {
-			panel.handleSSLRenewalSetting(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/ssl/letsencrypt") {
-			panel.handleIssueLetsEncrypt(w, r)
-		} else if strings.Contains(r.URL.Path, "/ssl/upload") {
-			panel.handleUploadCertificate(w, r)
-		} else if strings.Contains(r.URL.Path, "/ssl/settings") {
-			panel.handleSSLSettings(w, r)
-		} else if strings.Contains(r.URL.Path, "/ssl") {
-			panel.handleDomainSSL(w, r)
-		} else if strings.Contains(r.URL.Path, "/logs/") {
-			panel.handleDomainLogs(w, r)
-		} else if strings.Contains(r.URL.Path, "/databases/") && len(strings.Split(r.URL.Path, "/")) > 6 {
-			panel.handleDeleteDatabase(w, r)
-		} else if strings.Contains(r.URL.Path, "/databases") {
-			panel.handleDomainDatabases(w, r)
-		} else if strings.Contains(r.URL.Path, "/files/download") {
-			panel.handleDomainFileDownload(w, r)
-		} else if strings.Contains(r.URL.Path, "/files") {
-			panel.handleDomainFiles(w, r)
-		} else if strings.Contains(r.URL.Path, "/backups/schedule") {
-			panel.handleBackupSchedule(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/backups/restore") {
-			panel.handleRestoreBackup(w, r)
-		} else if strings.Contains(r.URL.Path, "/backups/download") {
-			panel.handleDownloadBackup(w, r)
-		} else if strings.Contains(r.URL.Path, "/backups") {
-			panel.handleDomainBackups(w, r)
-		} else if strings.Contains(r.URL.Path, "/cron") {
-			panel.handleDomainCronJobs(w, r)
-		} else if strings.Contains(r.URL.Path, "/mail/health") {
-			panel.handleMailHealth(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/mail") {
-			panel.handleDomainMail(w, r)
-		} else if strings.Contains(r.URL.Path, "/apps/install") {
-			panel.handleAppInstall(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/usage") {
-			panel.handleDomainUsage(w, r)
-		} else if strings.Contains(r.URL.Path, "/connection") {
-			panel.handleDomainConnection(w, r, domainID)
-		} else if strings.Contains(r.URL.Path, "/dns") {
-			panel.handleDomainDNS(w, r)
-		} else if r.Method == http.MethodDelete {
-			panel.handleDeleteDomain(w, r)
-		} else {
-			http.NotFound(w, r)
-		}
-	})
+	http.HandleFunc("/api/v1/domains/", panel.handleDomainSubroute)
+	// Single ownership chokepoint: every /domains/{id}/... sub-resource
+	// flows through here, so one guard covers them all. The first path
+	// segment after the prefix is the domain ID.
+	// Tek sahiplik kapısı: her /domains/{id}/... alt kaynağı buradan geçer,
+	// bu yüzden tek koruma hepsini kapsar. Önekten sonraki ilk yol parçası
+	// domain kimliğidir.
 
 	// Service Configuration
 	http.HandleFunc("/api/v1/config/php", func(w http.ResponseWriter, r *http.Request) {
@@ -619,74 +903,22 @@ func main() {
 		}
 	})
 
-	// Combined handler for /api/v1/database-servers/{id}/* routes
 	http.HandleFunc("/api/v1/database-servers/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-
-		// DELETE /api/v1/database-servers/{id}
-		if r.Method == http.MethodDelete && !strings.Contains(path, "/databases") && !strings.Contains(path, "/users") {
-			panel.handleDeleteDatabaseV2Server(w, r)
-			return
-		}
-
-		// GET/POST /api/v1/database-servers/{id}/databases
-		if strings.Contains(path, "/databases") {
-			if r.Method == http.MethodGet {
-				panel.handleListDatabasesV2(w, r)
-			} else if r.Method == http.MethodPost {
-				panel.handleCreateDatabaseV2(w, r)
-			}
-			return
-		}
-
-		// GET/POST /api/v1/database-servers/{id}/users
-		if strings.Contains(path, "/users") {
-			if r.Method == http.MethodGet {
-				panel.handleListDatabaseUsers(w, r)
-			} else if r.Method == http.MethodPost {
-				panel.handleCreateDatabaseV2User(w, r)
-			}
-			return
-		}
-
-		http.Error(w, "not found", http.StatusNotFound)
+		panel.handleDatabaseSubroute(w, r, "/api/v1/database-servers/")
 	})
 
 	// Database operations
 	http.HandleFunc("/api/v1/databases/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete && !strings.Contains(r.URL.Path, "/grants") {
-			panel.handleDeleteDatabaseV2(w, r)
-			return
-		}
-
-		// GET/POST /api/v1/databases/{id}/grants
-		if strings.Contains(r.URL.Path, "/grants") {
-			if r.Method == http.MethodGet {
-				panel.handleListDatabaseGrants(w, r)
-			} else if r.Method == http.MethodPost {
-				panel.handleGrantDatabaseAccess(w, r)
-			}
-			return
-		}
-
-		http.Error(w, "not found", http.StatusNotFound)
+		panel.handleDatabaseSubroute(w, r, "/api/v1/databases/")
 	})
 
 	// User/Grant deletions
 	http.HandleFunc("/api/v1/database-users/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete {
-			panel.handleDeleteDatabaseV2User(w, r)
-			return
-		}
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		panel.handleDatabaseSubroute(w, r, "/api/v1/database-users/")
 	})
 
 	http.HandleFunc("/api/v1/database-grants/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete {
-			panel.handleRevokeDatabaseAccess(w, r)
-			return
-		}
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		panel.handleDatabaseSubroute(w, r, "/api/v1/database-grants/")
 	})
 
 	http.HandleFunc("/api/v1/config/mysql", func(w http.ResponseWriter, r *http.Request) {
@@ -711,6 +943,7 @@ func main() {
 			panel.requireAuth(http.DefaultServeMux)))
 
 	addr := listenAddr()
+	server := newPanelHTTPServer(addr, handler)
 
 	// Serve HTTPS when a certificate is configured (or self-sign one on
 	// request); fall back to plain HTTP for development.
@@ -722,7 +955,10 @@ func main() {
 	}
 	if tlsOn {
 		log.Printf("Panel listening on %s (HTTPS)", addr)
-		log.Fatal(http.ListenAndServeTLS(addr, certPath, keyPath, handler))
+		if err := servePanelHTTP(server, certPath, keyPath); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	// Plain HTTP with Secure cookies would hand the browser a cookie it
@@ -733,7 +969,9 @@ func main() {
 		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
 	}
 	log.Printf("Panel listening on %s (HTTP)", addr)
-	log.Fatal(http.ListenAndServe(addr, handler))
+	if err := servePanelHTTP(server, "", ""); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // countUsers reports how many users exist, to gate startup.
@@ -749,7 +987,7 @@ func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
 
 	// Call RPC
 	var services []core.Service
-	err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &services)
+	err := p.callAgent("Agent.GetServices", &transport.Empty{}, &services)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -814,12 +1052,12 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 	var reply transport.ServiceActionResult
 	err := p.withStandaloneAgentMutation(r.Context(), "service_"+req.Action, serviceName, "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ServiceMutationAction", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			ServiceName       string `json:"service_name"`
-			Action            string `json:"action"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, serviceName, req.Action}, &reply); err != nil {
+		request := transport.ServiceMutationActionRequest{
+			ServiceMutationBinding: binding,
+			ServiceName:            serviceName,
+			Action:                 req.Action,
+		}
+		if err := p.agentClient.CallContext(callCtx, "Agent.ServiceMutationAction", &request, &reply); err != nil {
 			return err
 		}
 		if reply.Error != "" {
@@ -879,48 +1117,28 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var reply bool
-		err := p.agentClient.Call("Agent.UpdateConfig", &transport.UpdateConfigArgs{
+		var reply transport.UpdateConfigResponse
+		err := p.callAgent("Agent.UpdateConfig", &transport.UpdateConfigArgs{
 			Path:    req.Path,
 			Content: req.Content,
 		}, &reply)
 
 		if err != nil {
-			// A refused root write must be as visible as a granted one:
-			// silence is how a security refusal becomes indistinguishable
-			// from a success nobody noticed.
-			// Reddedilen bir root yazması, kabul edilen kadar görünür olmalı:
-			// sessizlik, güvenlik retlerini kimsenin fark etmediği bir
-			// başarıdan ayırt edilemez kılar.
+			// Wire, protocol and unexpected agent failures remain server
+			// errors. Expected operator failures are returned below as typed
+			// response data and must never be inferred from this text.
 			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
-			// A REFUSAL is not a server fault, and hiding it behind "internal
-			// server error" would leave an operator editing a legitimate file
-			// with no idea why nothing happened. The agent's reason is safe to
-			// show: it names a path the caller already supplied.
-			// RET, sunucu arızası değildir; onu "internal server error"un
-			// arkasına gizlemek, meşru bir dosyayı düzenleyen operatörü hiçbir
-			// şeyin neden olmadığını bilmeden bırakırdı. Agent'ın gerekçesi
-			// gösterilebilir: zaten çağıranın verdiği bir yolu adlandırır.
-			msg := err.Error()
-			if strings.Contains(msg, "not a managed configuration file") ||
-				strings.Contains(msg, "protected and cannot be edited") ||
-				strings.Contains(msg, "symbolic link") ||
-				strings.Contains(msg, "must be absolute") {
-				writeCodedError(w, http.StatusForbidden, errCodeConfigPathRefused, msg, "")
-				return
-			}
-			// A syntax error is the operator's own text being wrong, not a
-			// server fault — and the file was already rolled back, so saying
-			// exactly what the checker complained about is both safe and the
-			// only useful answer.
-			// Sözdizim hatası, sunucu arızası değil operatörün kendi metninin
-			// yanlış olmasıdır — üstelik dosya zaten geri alındı; denetleyicinin
-			// neye takıldığını tam olarak söylemek hem güvenli hem de tek
-			// yararlı cevap.
-			if strings.Contains(msg, "config validation failed") {
-				writeCodedError(w, http.StatusUnprocessableEntity, errCodeConfigInvalid, msg, "")
-				return
-			}
+			writeServerError(w, err)
+			return
+		}
+		if reply.Error != nil {
+			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(reply.Error.Message), "config", 0)
+			writeConfigRPCError(w, reply.Error)
+			return
+		}
+		if !reply.Success {
+			err := errors.New("agent did not confirm configuration update")
+			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
 			writeServerError(w, err)
 			return
 		}
@@ -930,7 +1148,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		// Root'a ait bir dosyayı yazmak, her zaman denetlenen servis yeniden
 		// başlatmasından daha sessiz olmaması gereken son şeydir.
 		p.audit(r, "config.write:"+req.Path, "config", 0)
-		json.NewEncoder(w).Encode(map[string]bool{"success": reply})
+		json.NewEncoder(w).Encode(map[string]bool{"success": reply.Success})
 		return
 	}
 
@@ -942,11 +1160,18 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var reply transport.ConfigResponse
-	err := p.agentClient.Call("Agent.GetConfig", &transport.GetConfigArgs{Path: path}, &reply)
+	err := p.callAgent("Agent.GetConfig", &transport.GetConfigArgs{Path: path}, &reply)
 	if err != nil {
+		p.audit(r, `config.read.failed:`+path+` — `+auditReason(err.Error()), `config`, 0)
 		writeServerError(w, err)
 		return
 	}
+	if reply.Error != nil {
+		p.audit(r, `config.read.failed:`+path+` — `+auditReason(reply.Error.Message), `config`, 0)
+		writeConfigRPCError(w, reply.Error)
+		return
+	}
 
+	p.audit(r, `config.read:`+path, `config`, 0)
 	json.NewEncoder(w).Encode(reply)
 }

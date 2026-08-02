@@ -70,18 +70,49 @@ go build -o bin/panel ./cmd/panel
 go build -o bin/agent ./cmd/agent
 
 # Frontend
-cd web && npm install && npm run build   # çıktı: web/dist, panel binary'si tarafından sunulur
+cd web && npm ci --no-audit --no-fund && npm run build   # çıktı: web/dist, panel binary'si tarafından sunulur
 ```
+
+## Sürüm ürünleri
+
+`make dist VERSION=<sürüm>` paneli, agent'ı, şema köprüsünü ve web
+uygulamasını tek bir deterministik arşivde toplar. Arşivin yanına ayrıca
+harici bir `SHA256SUMS` biçimli dosya yazar:
+
+```bash
+make dist VERSION=v0.3.0
+sha256sum -c dist/celikpanel-v0.3.0.tar.gz.sha256
+```
+
+Sürüm operatörü korumalı bir GPG imzalama anahtarını hazırladıktan sonra,
+ayrık imzayı şu şekilde oluşturup doğrular:
+
+```bash
+make dist-sign VERSION=v0.3.0 SIGNING_KEY=<tam-anahtar-parmak-izi>
+gpg --verify dist/celikpanel-v0.3.0.tar.gz.asc dist/celikpanel-v0.3.0.tar.gz
+```
+
+Sağlama toplamı bayt bütünlüğünü kanıtlar; yayıncı kimliğini kanıtlamaz.
+Sürüm sahibi CI imzalama kimliğini hazırlayıp doğrulama anahtarını
+yayımlamadan açık veya ticari bir sürüm, imzalı kaynak iddiasında bulunmamalıdır.
 
 ## Belgeler
 
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.tr.md) — yalnız panel kapsamı, onay, denetim ve abonelik kapısı planı
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.tr.md) — imzalı SQLite/JSON tarifleri ve platform adaptörü sınırı
-
+- [Mağaza](docs/STORE.tr.md) — teklif kataloğu, hak sınırı ve operatör iş akışı
+- [Sistem SQLite Yönetimi](docs/SYSTEM-SQLITE-ADMIN.tr.md) — panele ait veritabanlarının sınırlı inceleme, yedekleme ve bakımı
+- [Web Bağımlılık Güvenliği](docs/WEB-DEPENDENCY-SECURITY.tr.md) — kilit dosyası, denetim ve bağımlılık güncelleme politikası
 - [Yol Haritası](ROADMAP.tr.md) — neredeyiz, nereye gidiyoruz ve bilinçli olarak neleri yapmayacağız
+- [Karar Defteri](docs/DECISIONS.tr.md) — kalıcı mimari ve ürün kararları
+- [Otopsi ve Borç Defteri](docs/AUTOPSY.tr.md) — doğrulanmış arızalar, kalan kokular ve düzeltme durumu
+- [Operasyonlar](docs/OPERATIONS.tr.md) — kurulum, güncelleme, geri alma ve kurtarma prosedürleri
+- [Dağıtım Desteği](docs/DISTRO-SUPPORT.tr.md) — üretilen platform destek sözleşmesi
 - [Kullanıcı Rolleri ve Yetkiler](docs/ROLES.tr.md) — Yönetici / Bayi / Müşteri / Ek Kullanıcı modeli
 - [Frontend Mimarisi](docs/UI_ARCHITECTURE.tr.md) — tek kalıtımsal kabuk, role göre yetki-yönlendirmeli
 - [Kurallar](docs/CONVENTIONS.tr.md) — dil ve isimlendirme: İngilizce isimler, iki dilli içerik (TR + EN)
+- [Güvenlik Politikası](SECURITY.md) — özel bildirim kanalı ve güvenli araştırma sınırları
+- [Teknik ve Üçüncü Taraf Bildirimi](NOTICE) — bağımlılık ve dağıtım yükümlülükleri
 
 ## Lisans
 

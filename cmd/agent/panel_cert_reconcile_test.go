@@ -1,0 +1,372 @@
+//go:build linux
+
+package main
+
+import (
+	"context"
+	"errors"
+	"os"
+	"reflect"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+type panelCertificateActivationMemoryStore struct {
+	mu      sync.Mutex
+	state   *panelCertificateActivationState
+	writes  []panelCertificateActivationPhase
+	removes int
+}
+
+func clonePanelCertificateActivationState(
+	state panelCertificateActivationState,
+) panelCertificateActivationState {
+	clone := state
+	if state.NotAfter != nil {
+		value := *state.NotAfter
+		clone.NotAfter = &value
+	}
+	if state.LastAttemptAt != nil {
+		value := *state.LastAttemptAt
+		clone.LastAttemptAt = &value
+	}
+	return clone
+}
+
+func installPanelCertificateActivationMemoryStore(
+	t *testing.T,
+) *panelCertificateActivationMemoryStore {
+	t.Helper()
+	store := &panelCertificateActivationMemoryStore{}
+	originalRead := panelCertificateActivationReadState
+	originalWrite := panelCertificateActivationWriteState
+	originalRemove := panelCertificateActivationRemoveState
+	t.Cleanup(func() {
+		panelCertificateActivationReadState = originalRead
+		panelCertificateActivationWriteState = originalWrite
+		panelCertificateActivationRemoveState = originalRemove
+	})
+	panelCertificateActivationReadState = func() (
+		panelCertificateActivationState, bool, error,
+	) {
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		if store.state == nil {
+			return panelCertificateActivationState{}, false, nil
+		}
+		return clonePanelCertificateActivationState(*store.state), true, nil
+	}
+	panelCertificateActivationWriteState = func(
+		state panelCertificateActivationState,
+	) error {
+		if err := validatePanelCertificateActivationState(state); err != nil {
+			return err
+		}
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		clone := clonePanelCertificateActivationState(state)
+		store.state = &clone
+		store.writes = append(store.writes, state.Phase)
+		return nil
+	}
+	panelCertificateActivationRemoveState = func() error {
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		store.state = nil
+		store.removes++
+		return nil
+	}
+	return store
+}
+
+func (store *panelCertificateActivationMemoryStore) seed(
+	t *testing.T,
+	state panelCertificateActivationState,
+) {
+	t.Helper()
+	if err := validatePanelCertificateActivationState(state); err != nil {
+		t.Fatal(err)
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	clone := clonePanelCertificateActivationState(state)
+	store.state = &clone
+}
+
+func (store *panelCertificateActivationMemoryStore) snapshot() (
+	panelCertificateActivationState,
+	bool,
+) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if store.state == nil {
+		return panelCertificateActivationState{}, false
+	}
+	return clonePanelCertificateActivationState(*store.state), true
+}
+
+func boundPanelCertificateActivationTestState(
+	t *testing.T,
+	phase panelCertificateActivationPhase,
+) panelCertificateActivationState {
+	t.Helper()
+	state, err := newPanelCertificateActivationState("panel.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = bindPanelCertificateActivationMaterial(
+		state,
+		[]byte("exact leaf DER"),
+		time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = panelCertificateActivationWithPhase(state, phase)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func installPanelCertificateReconcileTestSeams(t *testing.T) {
+	t.Helper()
+	originalSource := panelCertificateActivationReadSource
+	originalPublish := panelCertificateActivationPublishMaterial
+	originalRenewal := panelCertEnsureRenewal
+	originalHook := panelCertWriteDeployHook
+	originalLock := panelCertWithPublishLock
+	originalRun := panelCertRunMutationCommand
+	originalVerify := panelCertificateActivationVerifyServed
+	originalActive := panelCertActiveIdentity
+	originalNow := panelCertificateActivationNow
+	t.Cleanup(func() {
+		panelCertificateActivationReadSource = originalSource
+		panelCertificateActivationPublishMaterial = originalPublish
+		panelCertEnsureRenewal = originalRenewal
+		panelCertWriteDeployHook = originalHook
+		panelCertWithPublishLock = originalLock
+		panelCertRunMutationCommand = originalRun
+		panelCertificateActivationVerifyServed = originalVerify
+		panelCertActiveIdentity = originalActive
+		panelCertificateActivationNow = originalNow
+	})
+	panelCertWithPublishLock = func(action func() error) error { return action() }
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "", false, nil
+	}
+	panelCertificateActivationNow = func() time.Time {
+		return time.Date(2029, time.January, 2, 3, 4, 5, 0, time.UTC)
+	}
+}
+
+func TestPanelCertificateActivationReplaysEveryCrashPhase(t *testing.T) {
+	for _, phase := range []panelCertificateActivationPhase{
+		panelCertificateActivationPendingPublish,
+		panelCertificateActivationPendingRestart,
+		panelCertificateActivationPendingVerify,
+	} {
+		t.Run(string(phase), func(t *testing.T) {
+			store := installPanelCertificateActivationMemoryStore(t)
+			installPanelCertificateReconcileTestSeams(t)
+			state := boundPanelCertificateActivationTestState(t, phase)
+			store.seed(t, state)
+
+			published := 0
+			panelCertificateActivationReadSource = func(string) (
+				[]byte, []byte, []byte, time.Time, error,
+			) {
+				return []byte("certificate"), []byte("private key"),
+					[]byte("exact leaf DER"), *state.NotAfter, nil
+			}
+			panelCertificateActivationPublishMaterial = func(
+				string, string, []byte, []byte,
+			) error {
+				published++
+				return nil
+			}
+			panelCertEnsureRenewal = func(context.Context) error { return nil }
+			panelCertWriteDeployHook = func(string, string) error { return nil }
+
+			restarts := 0
+			activeChecks := 0
+			panelCertRunMutationCommand = func(
+				ctx context.Context,
+				_ time.Duration,
+				name string,
+				args ...string,
+			) ([]byte, error) {
+				if ctx.Value(serviceMutationExecutionTrackerKey{}) == nil {
+					t.Fatal("privileged command lacks durable mutation process tracker")
+				}
+				if name != "systemctl" {
+					t.Fatalf("unexpected command %q", name)
+				}
+				switch strings.Join(args, " ") {
+				case "restart celikpanel-panel":
+					restarts++
+				case "is-active --quiet celikpanel-panel":
+					activeChecks++
+				default:
+					t.Fatalf("unexpected systemctl args %#v", args)
+				}
+				return nil, nil
+			}
+			panelCertificateActivationVerifyServed = func(
+				_ context.Context, address, domain, fingerprint string,
+			) error {
+				if address != panelCertificateLoopbackAddress ||
+					domain != state.Domain || fingerprint != state.LeafSHA256 {
+					t.Fatalf("verification target = %q %q %q", address, domain, fingerprint)
+				}
+				return nil
+			}
+
+			manager, _ := newMutationTestManager(t)
+			if err := reconcilePanelCertificateActivationOnce(
+				context.Background(), manager,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if _, found := store.snapshot(); found {
+				t.Fatal("activation state survived exact served-certificate proof")
+			}
+			wantPublish, wantRestart := 0, 0
+			if phase == panelCertificateActivationPendingPublish {
+				wantPublish = 1
+			}
+			if phase != panelCertificateActivationPendingVerify {
+				wantRestart = 1
+			}
+			if published != wantPublish || restarts != wantRestart || activeChecks != 1 {
+				t.Fatalf(
+					"phase=%s publish=%d restart=%d active=%d",
+					phase, published, restarts, activeChecks,
+				)
+			}
+		})
+	}
+}
+
+func TestPanelCertificateActivationBusyLeaseDoesNotConsumeRetry(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	want := boundPanelCertificateActivationTestState(
+		t, panelCertificateActivationPendingRestart,
+	)
+	store.seed(t, want)
+	panelCertRunMutationCommand = func(
+		context.Context, time.Duration, string, ...string,
+	) ([]byte, error) {
+		t.Fatal("busy reconciler executed a privileged command")
+		return nil, nil
+	}
+
+	manager, _ := newMutationTestManager(t)
+	beginMutationTestJob(t, manager)
+	err := reconcilePanelCertificateActivationOnce(context.Background(), manager)
+	if !errors.Is(err, errPanelCertificateActivationBusy) {
+		t.Fatalf("busy reconciliation error = %v", err)
+	}
+	got, found := store.snapshot()
+	if !found || !reflect.DeepEqual(got, want) {
+		t.Fatalf("busy lease changed durable state: got=%+v found=%v", got, found)
+	}
+}
+
+func TestPanelCertificateActivationRetainsUntilExactListenerProof(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	state := boundPanelCertificateActivationTestState(
+		t, panelCertificateActivationPendingVerify,
+	)
+	store.seed(t, state)
+	now := time.Date(2029, time.January, 2, 3, 4, 5, 0, time.UTC)
+	panelCertificateActivationNow = func() time.Time { return now }
+	panelCertRunMutationCommand = func(
+		context.Context, time.Duration, string, ...string,
+	) ([]byte, error) {
+		return nil, nil
+	}
+	verifyFailure := errors.New("listener still serves old leaf")
+	panelCertificateActivationVerifyServed = func(
+		context.Context, string, string, string,
+	) error {
+		return verifyFailure
+	}
+
+	manager, _ := newMutationTestManager(t)
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); !errors.Is(err, verifyFailure) {
+		t.Fatalf("verification error = %v", err)
+	}
+	failed, found := store.snapshot()
+	if !found || failed.Attempts != 1 || failed.LastAttemptAt == nil {
+		t.Fatalf("failed verification did not retain retry state: %+v", failed)
+	}
+
+	now = panelCertificateActivationRetryAt(failed)
+	panelCertificateActivationVerifyServed = func(
+		_ context.Context, address, domain, fingerprint string,
+	) error {
+		if address != panelCertificateLoopbackAddress ||
+			domain != state.Domain || fingerprint != state.LeafSHA256 {
+			t.Fatalf("verification target = %q %q %q", address, domain, fingerprint)
+		}
+		return nil
+	}
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := store.snapshot(); found {
+		t.Fatal("verified activation state was not removed")
+	}
+}
+
+func TestPanelCertificateDriftDiscoveryPropagatesIntegrityFailure(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
+	}
+	panelCertificateActivationReadSource = func(string) (
+		[]byte, []byte, []byte, time.Time, error,
+	) {
+		return nil, nil, nil, time.Time{}, os.ErrPermission
+	}
+	manager, _ := newMutationTestManager(t)
+	err := reconcilePanelCertificateActivationOnce(context.Background(), manager)
+	if !errors.Is(err, os.ErrPermission) {
+		t.Fatalf("integrity failure = %v, want permission error", err)
+	}
+	if _, found := store.snapshot(); found {
+		t.Fatal("integrity failure created an unbound activation intent")
+	}
+}
+
+func TestPanelCertificateDriftDiscoveryIgnoresOnlyMissingLineage(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
+	}
+	panelCertificateActivationReadSource = func(string) (
+		[]byte, []byte, []byte, time.Time, error,
+	) {
+		return nil, nil, nil, time.Time{}, os.ErrNotExist
+	}
+	manager, _ := newMutationTestManager(t)
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := store.snapshot(); found {
+		t.Fatal("missing lineage created an activation intent")
+	}
+}

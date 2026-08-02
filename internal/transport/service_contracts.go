@@ -1,0 +1,235 @@
+package transport
+
+import (
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/core"
+)
+
+// ServiceMutationJob is the durable state shared by the panel and the
+// privileged agent while one host mutation is in progress. Keeping the full
+// shape here prevents gob from silently dropping fields when either side is
+// upgraded independently.
+type ServiceMutationJob struct {
+	RequestID      string    `json:"request_id"`
+	OwnerID        string    `json:"owner_id"`
+	Kind           string    `json:"kind"`
+	Target         string    `json:"target"`
+	PackageName    string    `json:"package_name,omitempty"`
+	Status         string    `json:"status"`
+	Phase          string    `json:"phase"`
+	Attempt        int       `json:"attempt"`
+	StartedAt      time.Time `json:"started_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	LeaseExpiresAt time.Time `json:"lease_expires_at"`
+	DeadlineAt     time.Time `json:"deadline_at"`
+	FinishedAt     time.Time `json:"finished_at,omitempty"`
+	ErrorCode      string    `json:"error_code,omitempty"`
+	ErrorMessage   string    `json:"error_message,omitempty"`
+	WorkerPID      int       `json:"worker_pid,omitempty"`
+	WorkerStarted  string    `json:"worker_started,omitempty"`
+	WorkerCommand  string    `json:"worker_command,omitempty"`
+}
+
+type ServiceMutationBeginRequest struct {
+	RequestID   string `json:"request_id"`
+	OwnerID     string `json:"owner_id"`
+	Kind        string `json:"kind"`
+	Target      string `json:"target"`
+	PackageName string `json:"package_name,omitempty"`
+	Resume      bool   `json:"resume,omitempty"`
+}
+
+type ServiceMutationBinding struct {
+	MutationRequestID string `json:"mutation_request_id,omitempty"`
+	MutationOwnerID   string `json:"mutation_owner_id,omitempty"`
+}
+
+type ServiceMutationRequest struct {
+	ServiceMutationBinding
+}
+
+type ServiceMutationHeartbeatRequest struct {
+	RequestID string `json:"request_id"`
+	OwnerID   string `json:"owner_id"`
+	Phase     string `json:"phase,omitempty"`
+}
+
+type ServiceMutationStatusRequest struct {
+	RequestID string `json:"request_id,omitempty"`
+}
+
+type ServiceMutationCancelRequest struct {
+	RequestID      string `json:"request_id"`
+	ExpectedOwner  string `json:"expected_owner"`
+	Reason         string `json:"reason,omitempty"`
+	FailureCode    string `json:"failure_code,omitempty"`
+	FailureMessage string `json:"failure_message,omitempty"`
+}
+
+type ServiceMutationFinishRequest struct {
+	RequestID   string `json:"request_id"`
+	OwnerID     string `json:"owner_id"`
+	Success     bool   `json:"success"`
+	FailureCode string `json:"failure_code,omitempty"`
+	Message     string `json:"message,omitempty"`
+}
+
+type ServiceMutationResponse struct {
+	Job   *ServiceMutationJob `json:"job,omitempty"`
+	Error string              `json:"error,omitempty"`
+}
+
+type ServiceMutationActionRequest struct {
+	ServiceMutationBinding
+	ServiceName string `json:"service_name"`
+	Action      string `json:"action"`
+}
+
+type ServiceMutationServiceRequest struct {
+	ServiceMutationBinding
+	ServiceName string `json:"service_name"`
+}
+
+type InstallServiceRequest struct {
+	ServiceMutationBinding
+	ID      string `json:"id"`
+	Package string `json:"package,omitempty"`
+}
+
+type InstallServiceResponse struct {
+	Installed bool   `json:"installed"`
+	Detail    string `json:"detail,omitempty"`
+	Unit      string `json:"unit,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type UninstallServiceResponse struct {
+	Removed         bool   `json:"removed"`
+	Detail          string `json:"detail,omitempty"`
+	Error           string `json:"error,omitempty"`
+	PartialSuccess  bool   `json:"partial_success,omitempty"`
+	MutationApplied bool   `json:"mutation_applied,omitempty"`
+}
+
+type ConfigureDBToolsResponse struct {
+	Configured bool     `json:"configured"`
+	Tools      []string `json:"tools"`
+	Error      string   `json:"error,omitempty"`
+}
+
+type ConfigureDKIMSigningResponse struct {
+	Configured bool   `json:"configured"`
+	Domains    int    `json:"domains"`
+	Detail     string `json:"detail,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type ConfigureMailStackResponse struct {
+	Configured bool   `json:"configured"`
+	Detail     string `json:"detail,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type WireMailFiltersResponse struct {
+	Wired  bool   `json:"wired"`
+	Detail string `json:"detail,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+type ConfigureMailSubmissionResponse struct {
+	Configured bool   `json:"configured"`
+	Detail     string `json:"detail,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type EnsureNginxReadyResponse struct {
+	Ready   bool   `json:"ready"`
+	Changed bool   `json:"changed"`
+	Error   string `json:"error,omitempty"`
+}
+
+type WebmailMutationRequest struct {
+	ServiceMutationBinding
+}
+
+type InstallRoundcubeResponse struct {
+	Installed bool   `json:"installed"`
+	Version   string `json:"version"`
+	Error     string `json:"error,omitempty"`
+}
+
+type RemoveRoundcubeResponse struct {
+	Removed bool   `json:"removed"`
+	Error   string `json:"error,omitempty"`
+}
+
+type ConfigureWebmailResponse struct {
+	Configured bool   `json:"configured"`
+	Present    bool   `json:"present"`
+	Error      string `json:"error,omitempty"`
+}
+
+type InstalledRepoPackagesRequest struct {
+	ServiceID string `json:"service_id"`
+}
+
+type InstalledRepoPackagesResponse struct {
+	Packages []string `json:"packages"`
+	Error    string   `json:"error,omitempty"`
+}
+
+type ServiceInstancesRequest struct {
+	ID string `json:"id"`
+}
+
+type ServiceInstancesResponse struct {
+	Instances []core.ServiceInstance `json:"instances"`
+	Error     string                 `json:"error,omitempty"`
+}
+
+type NodeVersionsResponse struct {
+	Installed     []string `json:"installed"`
+	SystemVersion string   `json:"system_version"`
+}
+
+type NodeInstallRequest struct {
+	ServiceMutationBinding
+	Version string `json:"version"`
+}
+
+type NodeInstallResponse struct {
+	Installed bool   `json:"installed"`
+	Error     string `json:"error,omitempty"`
+}
+
+type NodeRemoveRequest struct {
+	ServiceMutationBinding
+	Version string `json:"version"`
+}
+
+type NodeRemoveResponse struct {
+	Removed bool   `json:"removed"`
+	Error   string `json:"error,omitempty"`
+}
+
+type NodeLTSRelease struct {
+	Version string `json:"version"`
+	Name    string `json:"name"`
+}
+
+type NodeLTSResponse struct {
+	Releases []NodeLTSRelease `json:"releases"`
+	Error    string           `json:"error,omitempty"`
+}
+
+type ServiceJournalRequest struct {
+	Unit  string `json:"unit"`
+	Lines int    `json:"lines"`
+}
+
+type ServiceJournalResponse struct {
+	Unit  string   `json:"unit"`
+	Lines []string `json:"lines"`
+	Error string   `json:"error,omitempty"`
+}

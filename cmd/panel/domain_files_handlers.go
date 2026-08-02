@@ -4,40 +4,63 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // File Manager API Handlers
 
 // siteDocroot resolves the browsing root for a domain from the site's real
-// document_root. The orchestrator places sites under
-// /var/www/celikpanel/subscriptions/..., so guessing /var/www/<name> (the old
-// behaviour) pointed the file manager at a directory that never existed; the
-// legacy path remains only as a fallback for domains without a site row.
+// document_root. The stored path is accepted only when it matches the
+// immutable subscription/domain identity. Missing or inconsistent site rows
+// fail closed; the privileged file manager must never guess a filesystem root.
 //
 // siteDocroot, bir domain'in gezinme kökünü sitenin gerçek document_root'undan
 // çözer. Orchestrator siteleri /var/www/celikpanel/subscriptions/... altına
 // koyar; bu yüzden /var/www/<ad> tahmini (eski davranış) dosya yöneticisini
 // hiç var olmamış bir dizine yöneltiyordu; eski yol yalnızca site kaydı
 // olmayan domain'ler için yedek olarak kalır.
-func (p *Panel) siteDocroot(ctx context.Context, domainID int) (string, error) {
-	var docroot string
-	err := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT document_root FROM sites WHERE domain_id = ? LIMIT 1`, domainID).Scan(&docroot)
-	if err == nil && docroot != "" {
-		return filepath.Clean(docroot), nil
-	}
+type domainFileScope struct {
+	SubscriptionID int
+	DomainID       int
+	Root           string
+}
 
-	var name string
+func (p *Panel) siteFileScope(ctx context.Context, domainID int) (domainFileScope, error) {
+	var subscriptionID int
+	var docroot string
 	if err := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT name FROM domains WHERE id = ?`, domainID).Scan(&name); err != nil {
-		return "", err
+		`SELECT d.subscription_id, s.document_root
+		 FROM sites AS s
+		 JOIN domains AS d ON d.id = s.domain_id
+		 WHERE s.domain_id = ?
+		 LIMIT 1`,
+		domainID,
+	).Scan(&subscriptionID, &docroot); err != nil {
+		return domainFileScope{}, err
 	}
-	return filepath.Join("/var/www", name), nil
+	docroot = filepath.Clean(docroot)
+	if err := hostingpath.ValidateDocumentRoot(docroot, subscriptionID, domainID); err != nil {
+		return domainFileScope{}, err
+	}
+	return domainFileScope{
+		SubscriptionID: subscriptionID,
+		DomainID:       domainID,
+		Root:           docroot,
+	}, nil
+}
+
+func (p *Panel) siteDocroot(ctx context.Context, domainID int) (string, error) {
+	scope, err := p.siteFileScope(ctx, domainID)
+	return scope.Root, err
 }
 
 // withinRoot guards against path traversal: the resolved path must be the
@@ -48,6 +71,34 @@ func (p *Panel) siteDocroot(ctx context.Context, domainID int) (string, error) {
 // /var/www/foobar'a sızmasına izin verirdi).
 func withinRoot(fullPath, root string) bool {
 	return fullPath == root || strings.HasPrefix(fullPath, root+string(filepath.Separator))
+}
+
+func cleanDomainFilePath(raw string) (string, error) {
+	if strings.ContainsRune(raw, '\x00') {
+		return "", fmt.Errorf("path contains NUL")
+	}
+	normalized := strings.ReplaceAll(raw, `\`, "/")
+	for _, component := range strings.Split(normalized, "/") {
+		if component == ".." {
+			return "", fmt.Errorf("path traversal is not allowed")
+		}
+	}
+	normalized = strings.TrimLeft(normalized, "/")
+	cleaned := path.Clean(normalized)
+	if cleaned == "." {
+		return "", nil
+	}
+	if path.IsAbs(cleaned) || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", fmt.Errorf("path leaves site root")
+	}
+	return cleaned, nil
+}
+
+func displayDomainFilePath(relative string) string {
+	if relative == "" {
+		return "/"
+	}
+	return "/" + relative
 }
 
 func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +122,7 @@ func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domainRoot, err := p.siteDocroot(r.Context(), domainID)
+	scope, err := p.siteFileScope(r.Context(), domainID)
 	if err != nil {
 		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
@@ -79,28 +130,23 @@ func (p *Panel) handleDomainFiles(w http.ResponseWriter, r *http.Request) {
 
 	// Get requested path from query
 	reqPath := r.URL.Query().Get("path")
-	if reqPath == "" {
-		reqPath = "/"
-	}
-
-	// Construct full path and validate it's within domain root
-	fullPath := filepath.Clean(filepath.Join(domainRoot, reqPath))
-	if !withinRoot(fullPath, domainRoot) {
+	relativePath, err := cleanDomainFilePath(reqPath)
+	if err != nil {
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
 	switch r.Method {
 	case "GET":
-		p.handleListFiles(w, r, fullPath, domainRoot)
+		p.handleListFiles(w, r, relativePath, scope)
 	case "POST":
-		p.handleFileAction(w, r, fullPath, domainRoot)
+		p.handleFileAction(w, r, relativePath, scope)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, domainRoot string) {
+func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, relativePath string, scope domainFileScope) {
 	// ModTime must be time.Time to match the agent's FileInfo over gob; a
 	// string field poisons the RPC stream (same class as BackupInfo.CreatedAt).
 	// ModTime, gob üzerinden agent'ın FileInfo'suyla eşleşmek için time.Time
@@ -122,19 +168,13 @@ func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, do
 	}
 
 	// Call agent to list files
-	var resp struct {
-		Path  string `json:"path"`
-		Files []struct {
-			Name        string    `json:"name"`
-			Path        string    `json:"path"`
-			IsDir       bool      `json:"is_dir"`
-			Size        int64     `json:"size"`
-			Permissions string    `json:"permissions"`
-			ModTime     time.Time `json:"mod_time"`
-		} `json:"files"`
-	}
+	var resp transport.ListFilesResponse
 
-	err := p.agentClient.Call("Agent.ListFiles", &struct{ Path string }{Path: path}, &resp)
+	err := p.callAgentContext(r.Context(), "Agent.ListFiles", &transport.ListFilesRequest{
+		SubscriptionID: scope.SubscriptionID,
+		DomainID:       scope.DomainID,
+		Path:           relativePath,
+	}, &resp)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -142,28 +182,24 @@ func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, do
 
 	// Convert to relative paths
 	result := ListResponse{
-		CurrentPath: strings.TrimPrefix(path, domainRoot),
+		CurrentPath: displayDomainFilePath(relativePath),
 		ParentPath:  "",
 		Files:       make([]FileInfo, 0, len(resp.Files)),
 	}
 
-	if result.CurrentPath == "" {
-		result.CurrentPath = "/"
-	}
-
 	// Calculate parent path
 	if result.CurrentPath != "/" {
-		result.ParentPath = filepath.Dir(result.CurrentPath)
+		result.ParentPath = path.Dir(result.CurrentPath)
 	}
 
 	for _, f := range resp.Files {
-		relPath := strings.TrimPrefix(f.Path, domainRoot)
-		if relPath == "" {
-			relPath = "/"
+		relPath, cleanErr := cleanDomainFilePath(f.Path)
+		if cleanErr != nil {
+			continue
 		}
 		result.Files = append(result.Files, FileInfo{
 			Name:        f.Name,
-			Path:        relPath,
+			Path:        displayDomainFilePath(relPath),
 			IsDir:       f.IsDir,
 			Size:        f.Size,
 			Permissions: f.Permissions,
@@ -174,7 +210,8 @@ func (p *Panel) handleListFiles(w http.ResponseWriter, r *http.Request, path, do
 	json.NewEncoder(w).Encode(result)
 }
 
-func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, domainRoot string) {
+func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, relativePath string, scope domainFileScope) {
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<20)
 	var req struct {
 		Action      string `json:"action"`
 		Content     string `json:"content,omitempty"`
@@ -184,20 +221,21 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 		FileName    string `json:"file_name,omitempty"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	switch req.Action {
 	case "read":
-		var resp struct {
-			Path     string `json:"path"`
-			Content  string `json:"content"`
-			Size     int64  `json:"size"`
-			IsBinary bool   `json:"is_binary"`
-		}
-		err := p.agentClient.Call("Agent.ReadFile", &struct{ Path string }{Path: path}, &resp)
+		var resp transport.ReadFileResponse
+		err := p.callAgentContext(r.Context(), "Agent.ReadFile", &transport.ReadFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+		}, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -206,78 +244,120 @@ func (p *Panel) handleFileAction(w http.ResponseWriter, r *http.Request, path, d
 
 	case "write":
 		var success bool
-		err := p.agentClient.Call("Agent.WriteFile", &struct {
-			Path    string
-			Content string
-		}{Path: path, Content: req.Content}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.WriteFile", &transport.WriteFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+			Content:        req.Content,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file write was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	case "create":
 		var success bool
-		err := p.agentClient.Call("Agent.CreateFileOrDir", &struct {
-			Path  string
-			IsDir bool
-		}{Path: path, IsDir: req.IsDir}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.CreateFileOrDir", &transport.CreateFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+			IsDir:          req.IsDir,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file creation was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	case "delete":
 		var success bool
-		err := p.agentClient.Call("Agent.DeleteFileOrDir", &struct{ Path string }{Path: path}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.DeleteFileOrDir", &transport.DeleteFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file deletion was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	case "rename":
-		newFullPath := filepath.Clean(filepath.Join(domainRoot, req.NewPath))
-		if !strings.HasPrefix(newFullPath, domainRoot) {
+		newRelativePath, cleanErr := cleanDomainFilePath(req.NewPath)
+		if cleanErr != nil || newRelativePath == "" {
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return
 		}
 		var success bool
-		err := p.agentClient.Call("Agent.RenameFile", &struct {
-			OldPath string
-			NewPath string
-		}{OldPath: path, NewPath: newFullPath}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.RenameFile", &transport.RenameFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			OldPath:        relativePath,
+			NewPath:        newRelativePath,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file rename was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	case "chmod":
 		var success bool
-		err := p.agentClient.Call("Agent.ChmodFile", &struct {
-			Path        string
-			Permissions string
-		}{Path: path, Permissions: req.Permissions}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.ChmodFile", &transport.ChmodFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+			Permissions:    req.Permissions,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file permission change was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	case "upload":
+		if req.FileName == "" || filepath.Base(req.FileName) != req.FileName || req.FileName == "." || req.FileName == ".." {
+			http.Error(w, "Invalid file name", http.StatusBadRequest)
+			return
+		}
 		var success bool
-		err := p.agentClient.Call("Agent.UploadFile", &struct {
-			Path    string
-			Name    string
-			Content string
-		}{Path: path, Name: req.FileName, Content: req.Content}, &success)
+		err := p.callAgentContext(r.Context(), "Agent.UploadFile", &transport.UploadFileRequest{
+			SubscriptionID: scope.SubscriptionID,
+			DomainID:       scope.DomainID,
+			Path:           relativePath,
+			Name:           req.FileName,
+			Content:        req.Content,
+		}, &success)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": success})
+		if !success {
+			writeAgentError(w, nil, "file upload was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
 
 	default:
 		http.Error(w, "Unknown action", http.StatusBadRequest)
@@ -297,7 +377,7 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	domainRoot, err := p.siteDocroot(r.Context(), domainID)
+	scope, err := p.siteFileScope(r.Context(), domainID)
 	if err != nil {
 		http.Error(w, "Domain not found", http.StatusNotFound)
 		return
@@ -309,27 +389,26 @@ func (p *Panel) handleDomainFileDownload(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fullPath := filepath.Clean(filepath.Join(domainRoot, reqPath))
-	if !withinRoot(fullPath, domainRoot) {
+	relativePath, err := cleanDomainFilePath(reqPath)
+	if err != nil || relativePath == "" {
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
-	var resp struct {
-		Path     string `json:"path"`
-		Content  string `json:"content"`
-		Size     int64  `json:"size"`
-		IsBinary bool   `json:"is_binary"`
-	}
+	var resp transport.ReadFileResponse
 
-	err = p.agentClient.Call("Agent.ReadFile", &struct{ Path string }{Path: fullPath}, &resp)
+	err = p.callAgentContext(r.Context(), "Agent.ReadFile", &transport.ReadFileRequest{
+		SubscriptionID: scope.SubscriptionID,
+		DomainID:       scope.DomainID,
+		Path:           relativePath,
+	}, &resp)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
 
-	filename := filepath.Base(fullPath)
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	filename := path.Base(relativePath)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	w.Header().Set("Content-Type", "application/octet-stream")
 
 	if resp.IsBinary {

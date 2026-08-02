@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +13,54 @@ import (
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/services"
 )
+
+// newDatabaseDriver is a narrow construction seam used by handler tests to
+// prove rejected tenant references never reach a physical database engine.
+// Production always uses services.NewDatabaseDriver.
+var newDatabaseDriver = services.NewDatabaseDriver
+
+// compensateCreatedDatabase reverses only physical mutations that this
+// request completed. It runs in dependency order: privileges first, then a
+// newly-created user, then the newly-created database.
+func compensateCreatedDatabase(
+	driver services.DatabaseDriver,
+	databaseName string,
+	username string,
+	grantApplied bool,
+	userCreated bool,
+) error {
+	var compensationErrors []error
+	if grantApplied {
+		if err := driver.RevokePrivileges(databaseName, username); err != nil {
+			compensationErrors = append(
+				compensationErrors,
+				fmt.Errorf("revoke database grant during compensation: %w", err),
+			)
+		}
+	}
+	if userCreated {
+		if err := driver.DeleteUser(username); err != nil {
+			compensationErrors = append(
+				compensationErrors,
+				fmt.Errorf("delete database user during compensation: %w", err),
+			)
+		}
+	}
+	if err := driver.DeleteDatabase(databaseName); err != nil {
+		compensationErrors = append(
+			compensationErrors,
+			fmt.Errorf("delete database during compensation: %w", err),
+		)
+	}
+	return errors.Join(compensationErrors...)
+}
+
+func databaseMutationError(cause error, compensation error) error {
+	if compensation == nil {
+		return cause
+	}
+	return errors.Join(cause, compensation)
+}
 
 // Helper function to extract ID from path
 func getIDFromPath(path string) (int, error) {
@@ -37,7 +87,7 @@ func getServerIDFromPath(path string) (int, error) {
 func getDatabaseIDFromPath(path string) (int, error) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	// Path: api/v1/databases/{id}/grants
-	if len(parts) >= 3 && parts[2] == "databases" {
+	if len(parts) >= 4 && parts[2] == "databases" {
 		return strconv.Atoi(parts[3])
 	}
 	return 0, fmt.Errorf("database ID not found in path")
@@ -54,7 +104,7 @@ func (p *Panel) dbDriverFor(server *core.DatabaseServer) (services.DatabaseDrive
 	if err != nil {
 		return nil, fmt.Errorf("database server %d root password: %w", server.ID, err)
 	}
-	return services.NewDatabaseDriver(services.DriverConfig{
+	return newDatabaseDriver(services.DriverConfig{
 		Host:         server.Host,
 		Port:         server.Port,
 		RootPassword: rootPassword,
@@ -87,7 +137,10 @@ func (p *Panel) handleListDatabaseServers(w http.ResponseWriter, r *http.Request
 	// MariaDB/PostgreSQL are running.
 	// Kurulu motorları otomatik kaydet; böylece MariaDB/PostgreSQL çalışırken
 	// liste asla boş kalmaz.
-	p.ensureInstalledDBServers(ctx, subscriptionID)
+	if err := p.ensureInstalledDBServers(ctx, subscriptionID); err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	servers, err := serverRepo.ListBySubscription(ctx, subscriptionID)
@@ -259,6 +312,12 @@ func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
+	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
+	server, err := serverRepo.GetByID(ctx, serverID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database server for database list: %w", err))
+		return
+	}
 
 	dbRepo := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
 	databases, err := dbRepo.ListByServer(ctx, serverID)
@@ -280,14 +339,28 @@ func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
 
 	response := make([]DatabaseResponse, 0)
 	for _, db := range databases {
+		if db.SubscriptionID != server.SubscriptionID {
+			writeServerError(w, fmt.Errorf("database and server subscription mismatch"))
+			return
+		}
 		// Get grants
-		grants, _ := grantRepo.ListByDatabase(ctx, db.ID)
+		grants, err := grantRepo.ListByDatabase(ctx, db.ID)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
 		users := make([]string, 0)
 		for _, grant := range grants {
-			user, _ := userRepo.GetByID(ctx, grant.UserID)
-			if user != nil {
-				users = append(users, user.Username)
+			user, err := userRepo.GetByID(ctx, grant.UserID)
+			if err != nil {
+				writeServerError(w, fmt.Errorf("load database user for database list: %w", err))
+				return
 			}
+			if user.ServerID != serverID || user.SubscriptionID != server.SubscriptionID {
+				writeServerError(w, fmt.Errorf("database grant crosses server or subscription boundary"))
+				return
+			}
+			users = append(users, user.Username)
 		}
 
 		response = append(response, DatabaseResponse{
@@ -305,11 +378,6 @@ func (p *Panel) handleListDatabasesV2(w http.ResponseWriter, r *http.Request) {
 // handleCreateDatabase creates a new database
 func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	subscriptionID, err := p.callerSubscriptionID(r)
-	if err != nil {
-		writeClientError(w, http.StatusNotFound, "invalid request")
-		return
-	}
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
@@ -323,11 +391,6 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	// Quota: one more database must fit in the subscription.
 	// Kota: aboneliğe bir veritabanı daha sığmalı.
-	if err := p.checkSubscriptionQuota(r.Context(), subscriptionID, quotaDBs); err != nil {
-		writeClientError(w, http.StatusConflict, err.Error())
-		return
-	}
-
 	var req struct {
 		DatabaseName string `json:"database_name"`
 		DomainID     *int   `json:"domain_id,omitempty"`    // Optional: Related site/domain
@@ -356,6 +419,63 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The selected logical server is the source of truth for tenant scope.
+	// This also keeps admin operations from accidentally using the admin's
+	// unrelated primary subscription.
+	subscriptionID := server.SubscriptionID
+	caller := currentCaller(r)
+
+	// Resolve every caller-supplied reference before constructing a driver or
+	// mutating the physical engine/repository.
+	var selectedUser databaseUserReference
+	var newUserSecret string
+	var sealedNewUserSecret string
+	switch {
+	case req.UserID != 0:
+		user, err := p.databaseUserForServerSubscription(
+			ctx, caller, req.UserID, serverID, subscriptionID,
+		)
+		if err != nil {
+			writeDatabaseReferenceError(w, err)
+			return
+		}
+		selectedUser = *user
+	case req.NewUsername != ``:
+		selectedUser.Username = fmt.Sprintf(`%d_%s`, subscriptionID, req.NewUsername)
+		newUserSecret = req.NewPassword
+		if newUserSecret == `` {
+			newUserSecret, err = services.GeneratePassword(16)
+			if err != nil {
+				writeServerError(w, err)
+				return
+			}
+		}
+		sealedNewUserSecret, err = p.secrets.Encrypt(newUserSecret)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+	default:
+		http.Error(w, `either user_id or new_username is required`, http.StatusBadRequest)
+		return
+	}
+
+	if req.DomainID != nil {
+		if err := p.databaseDomainInSubscription(
+			ctx, caller, *req.DomainID, subscriptionID,
+		); err != nil {
+			writeDatabaseReferenceError(w, err)
+			return
+		}
+	}
+
+	// Quota is checked only after the complete reference preflight and against
+	// the selected server's subscription.
+	if err := p.checkSubscriptionQuota(ctx, subscriptionID, quotaDBs); err != nil {
+		writeClientError(w, http.StatusConflict, err.Error())
+		return
+	}
+
 	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		writeServerError(w, err)
@@ -365,14 +485,13 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	// Add subscription prefix
 	dbName := fmt.Sprintf("%d_%s", subscriptionID, req.DatabaseName)
 
-	// Create database on server
+	// Apply the complete physical mutation first. Metadata is not published
+	// until every engine operation succeeds.
 	if err := driver.CreateDatabase(dbName); err != nil {
 		writeServerError(w, err)
 		return
 	}
 
-	// Store in PostgreSQL
-	dbRepo := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
 	database := &core.DatabaseV2{
 		ServerID:       serverID,
 		SubscriptionID: subscriptionID,
@@ -380,49 +499,27 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		Name:           dbName,
 	}
 
-	if err := dbRepo.Create(ctx, database); err != nil {
-		writeServerError(w, err)
-		return
-	}
-
-	// Handle user (existing or new)
-	var userID int
-	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
-
-	if req.UserID != 0 {
-		// Use existing user
-		userID = req.UserID
-	} else if req.NewUsername != "" {
-		// Create new user
-		username := fmt.Sprintf("%d_%s", subscriptionID, req.NewUsername)
-		password := req.NewPassword
-		if password == "" {
-			password, _ = services.GeneratePassword(16)
-		}
-
-		// Create user on server
-		if err := driver.CreateUser(username, password); err != nil {
-			writeServerError(w, err)
+	// Existing users were resolved without loading their stored password.
+	// A newly issued password is passed to the engine in plaintext once, while
+	// only its sealed form is prepared for the later metadata transaction.
+	userID := selectedUser.ID
+	var newUser *core.DatabaseUser
+	userCreated := false
+	if newUserSecret != "" {
+		if err := driver.CreateUser(selectedUser.Username, newUserSecret); err != nil {
+			writeServerError(w, databaseMutationError(
+				fmt.Errorf("create physical database user: %w", err),
+				compensateCreatedDatabase(driver, dbName, selectedUser.Username, false, false),
+			))
 			return
 		}
-
-		// Store user
-		user := &core.DatabaseUser{
+		userCreated = true
+		newUser = &core.DatabaseUser{
 			ServerID:       serverID,
 			SubscriptionID: subscriptionID,
-			Username:       username,
-			Password:       password,
+			Username:       selectedUser.Username,
+			Password:       sealedNewUserSecret,
 		}
-
-		if err := userRepo.Create(ctx, user); err != nil {
-			writeServerError(w, err)
-			return
-		}
-
-		userID = user.ID
-	} else {
-		http.Error(w, "either user_id or new_username is required", http.StatusBadRequest)
-		return
 	}
 
 	// Grant privileges
@@ -431,37 +528,86 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		privileges = "ALL"
 	}
 
-	grantRepo := repositories.NewPostgresDatabaseGrantRepository(p.db.GetDB())
+	if err := driver.GrantPrivileges(dbName, selectedUser.Username, privileges); err != nil {
+		// A driver error may represent a partially-applied grant. The database
+		// was created by this request, so revoking on it is safe.
+		writeServerError(w, databaseMutationError(
+			fmt.Errorf("grant physical database privileges: %w", err),
+			compensateCreatedDatabase(driver, dbName, selectedUser.Username, true, userCreated),
+		))
+		return
+	}
+
+	// Publish database, optional user, and grant together. No observer can see
+	// a half-created metadata graph.
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		writeServerError(w, databaseMutationError(
+			fmt.Errorf("begin database metadata transaction: %w", err),
+			compensateCreatedDatabase(driver, dbName, selectedUser.Username, true, userCreated),
+		))
+		return
+	}
+	failMetadata := func(cause error) {
+		rollbackErr := tx.Rollback()
+		if errors.Is(rollbackErr, sql.ErrTxDone) {
+			rollbackErr = nil
+		}
+		if rollbackErr != nil {
+			rollbackErr = fmt.Errorf("rollback database metadata transaction: %w", rollbackErr)
+		}
+		writeServerError(w, errors.Join(
+			cause,
+			rollbackErr,
+			compensateCreatedDatabase(
+				driver, dbName, selectedUser.Username, true, userCreated,
+			),
+		))
+	}
+
+	dbRepo := repositories.NewPostgresDatabaseV2Repository(tx)
+	if err := dbRepo.Create(ctx, database); err != nil {
+		failMetadata(fmt.Errorf("publish database metadata: %w", err))
+		return
+	}
+	if newUser != nil {
+		userRepo := repositories.NewPostgresDatabaseUserRepository(tx)
+		if err := userRepo.Create(ctx, newUser); err != nil {
+			failMetadata(fmt.Errorf("publish database user metadata: %w", err))
+			return
+		}
+		userID = newUser.ID
+		selectedUser.ID = newUser.ID
+	}
+
 	grant := &core.DatabaseGrant{
 		DatabaseID: database.ID,
 		UserID:     userID,
 		Privileges: privileges,
 	}
-
+	grantRepo := repositories.NewPostgresDatabaseGrantRepository(tx)
 	if err := grantRepo.Grant(ctx, grant); err != nil {
-		writeServerError(w, err)
+		failMetadata(fmt.Errorf("publish database grant metadata: %w", err))
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		failMetadata(fmt.Errorf("commit database metadata transaction: %w", err))
 		return
 	}
 
-	// Get user for response
-	user, _ := userRepo.GetByID(ctx, userID)
-
-	// Grant on actual database server
-	if user != nil {
-		if err := driver.GrantPrivileges(dbName, user.Username, privileges); err != nil {
-			writeServerError(w, err)
-			return
-		}
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	response := map[string]interface{}{
 		"id":         database.ID,
 		"name":       database.Name,
-		"user":       user.Username,
-		"password":   user.Password,
+		"user":       selectedUser.Username,
 		"created_at": database.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	})
+	}
+	// Only a credential minted by this request is returned, exactly once.
+	// Stored credentials are never loaded into an API response.
+	if newUserSecret != "" {
+		response["password"] = newUserSecret
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // handleDeleteDatabase deletes a database
@@ -531,6 +677,12 @@ func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) 
 		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
+	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
+	server, err := serverRepo.GetByID(ctx, serverID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database server for user list: %w", err))
+		return
+	}
 
 	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
 	users, err := userRepo.ListByServer(ctx, serverID)
@@ -552,14 +704,28 @@ func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) 
 
 	response := make([]UserResponse, 0)
 	for _, user := range users {
+		if user.SubscriptionID != server.SubscriptionID {
+			writeServerError(w, fmt.Errorf("database user and server subscription mismatch"))
+			return
+		}
 		// Get grants
-		grants, _ := grantRepo.ListByUser(ctx, user.ID)
+		grants, err := grantRepo.ListByUser(ctx, user.ID)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
 		databases := make([]string, 0)
 		for _, grant := range grants {
-			db, _ := dbRepo.GetByID(ctx, grant.DatabaseID)
-			if db != nil {
-				databases = append(databases, db.Name)
+			db, err := dbRepo.GetByID(ctx, grant.DatabaseID)
+			if err != nil {
+				writeServerError(w, fmt.Errorf("load database for user list: %w", err))
+				return
 			}
+			if db.ServerID != serverID || db.SubscriptionID != server.SubscriptionID {
+				writeServerError(w, fmt.Errorf("database grant crosses server or subscription boundary"))
+				return
+			}
+			databases = append(databases, db.Name)
 		}
 
 		response = append(response, UserResponse{
@@ -577,11 +743,6 @@ func (p *Panel) handleListDatabaseUsers(w http.ResponseWriter, r *http.Request) 
 // handleCreateDatabaseUser creates a new database user
 func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	subscriptionID, err := p.callerSubscriptionID(r)
-	if err != nil {
-		writeClientError(w, http.StatusNotFound, "invalid request")
-		return
-	}
 	// Extract ID from path
 	serverID, err := getServerIDFromPath(r.URL.Path)
 	if err != nil {
@@ -615,6 +776,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "server not found", http.StatusNotFound)
 		return
 	}
+	subscriptionID := server.SubscriptionID
 
 	driver, err := p.dbDriverFor(server)
 	if err != nil {
@@ -626,7 +788,16 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	username := fmt.Sprintf("%d_%s", subscriptionID, req.Username)
 	password := req.Password
 	if password == "" {
-		password, _ = services.GeneratePassword(16)
+		password, err = services.GeneratePassword(16)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+	}
+	sealedPassword, err := p.secrets.Encrypt(password)
+	if err != nil {
+		writeServerError(w, err)
+		return
 	}
 
 	// Create user on server
@@ -641,11 +812,21 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		ServerID:       serverID,
 		SubscriptionID: subscriptionID,
 		Username:       username,
-		Password:       password,
+		Password:       sealedPassword,
 	}
 
 	if err := userRepo.Create(ctx, user); err != nil {
-		writeServerError(w, err)
+		deleteErr := driver.DeleteUser(username)
+		if deleteErr != nil {
+			deleteErr = fmt.Errorf(
+				"delete physical database user during compensation: %w",
+				deleteErr,
+			)
+		}
+		writeServerError(w, errors.Join(
+			fmt.Errorf("publish database user metadata: %w", err),
+			deleteErr,
+		))
 		return
 	}
 
@@ -653,7 +834,7 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":         user.ID,
 		"username":   user.Username,
-		"password":   user.Password,
+		"password":   password,
 		"created_at": user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	})
 }
@@ -682,7 +863,11 @@ func (p *Panel) handleDeleteDatabaseV2User(w http.ResponseWriter, r *http.Reques
 
 	// Check if user is used in any database
 	grantRepo := repositories.NewPostgresDatabaseGrantRepository(p.db.GetDB())
-	grants, _ := grantRepo.ListByUser(ctx, userID)
+	grants, err := grantRepo.ListByUser(ctx, userID)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 	if len(grants) > 0 {
 		http.Error(w, "user is still used in databases, revoke access first", http.StatusBadRequest)
 		return
@@ -741,6 +926,16 @@ func (p *Panel) handleListDatabaseGrants(w http.ResponseWriter, r *http.Request)
 		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
+	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
+	server, err := serverRepo.GetByID(ctx, db0.ServerID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database server for grant list: %w", err))
+		return
+	}
+	if db0.SubscriptionID != server.SubscriptionID {
+		writeServerError(w, fmt.Errorf("database and server subscription mismatch"))
+		return
+	}
 
 	grantRepo := repositories.NewPostgresDatabaseGrantRepository(p.db.GetDB())
 	grants, err := grantRepo.ListByDatabase(ctx, databaseID)
@@ -762,16 +957,20 @@ func (p *Panel) handleListDatabaseGrants(w http.ResponseWriter, r *http.Request)
 
 	response := make([]GrantResponse, 0)
 	for _, grant := range grants {
-		user, _ := userRepo.GetByID(ctx, grant.UserID)
-		username := ""
-		if user != nil {
-			username = user.Username
+		user, err := userRepo.GetByID(ctx, grant.UserID)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("load database user for grant list: %w", err))
+			return
+		}
+		if user.ServerID != db0.ServerID || user.SubscriptionID != db0.SubscriptionID {
+			writeServerError(w, fmt.Errorf("database grant crosses server or subscription boundary"))
+			return
 		}
 
 		response = append(response, GrantResponse{
 			ID:         grant.ID,
 			UserID:     grant.UserID,
-			Username:   username,
+			Username:   user.Username,
 			Privileges: grant.Privileges,
 			CreatedAt:  grant.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
@@ -828,24 +1027,31 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
-	user, err := userRepo.GetByID(ctx, req.UserID)
-	if err != nil {
-		http.Error(w, "user not found", http.StatusNotFound)
-		return
-	}
-
-	// Verify user and database are on same server
-	if user.ServerID != database.ServerID {
-		http.Error(w, "user and database must be on the same server", http.StatusBadRequest)
-		return
-	}
-
 	// Get server info
 	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
 	server, err := serverRepo.GetByID(ctx, database.ServerID)
 	if err != nil {
-		http.Error(w, "server not found", http.StatusNotFound)
+		writeServerError(w, fmt.Errorf("load database server for grant: %w", err))
+		return
+	}
+	if database.SubscriptionID != server.SubscriptionID {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
+
+	// A server match alone is not tenant isolation: legacy/corrupt metadata can
+	// contain a user from another subscription on the same logical server.
+	// Resolve the user through the exact server+subscription boundary and keep
+	// missing/foreign references indistinguishable.
+	user, err := p.databaseUserForServerSubscription(
+		ctx,
+		currentCaller(r),
+		req.UserID,
+		database.ServerID,
+		database.SubscriptionID,
+	)
+	if err != nil {
+		writeDatabaseReferenceError(w, err)
 		return
 	}
 
@@ -870,7 +1076,17 @@ func (p *Panel) handleGrantDatabaseAccess(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := grantRepo.Grant(ctx, grant); err != nil {
-		writeServerError(w, err)
+		revokeErr := driver.RevokePrivileges(database.Name, user.Username)
+		if revokeErr != nil {
+			revokeErr = fmt.Errorf(
+				"revoke physical database grant during compensation: %w",
+				revokeErr,
+			)
+		}
+		writeServerError(w, errors.Join(
+			fmt.Errorf("publish database grant metadata: %w", err),
+			revokeErr,
+		))
 		return
 	}
 
@@ -904,37 +1120,71 @@ func (p *Panel) handleRevokeDatabaseAccess(w http.ResponseWriter, r *http.Reques
 
 	// Get database and user info
 	dbRepo := repositories.NewPostgresDatabaseV2Repository(p.db.GetDB())
-	database, _ := dbRepo.GetByID(ctx, grant.DatabaseID)
-	// Ownership: the grant's database must belong to the caller.
-	// Sahiplik: grant'ın veritabanı çağırana ait olmalı.
-	if database == nil {
-		writeClientError(w, http.StatusNotFound, "invalid request")
+	database, err := dbRepo.GetByID(ctx, grant.DatabaseID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database for revoke: %w", err))
 		return
 	}
+	// Ownership: the grant's database must belong to the caller.
+	// Sahiplik: grant'ın veritabanı çağırana ait olmalı.
 	if err := p.canAccessDBServer(ctx, currentCaller(r), database.ServerID); err != nil {
 		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 
 	userRepo := repositories.NewPostgresDatabaseUserRepository(p.db.GetDB())
-	user, _ := userRepo.GetByID(ctx, grant.UserID)
+	user, err := userRepo.GetByID(ctx, grant.UserID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database user for revoke: %w", err))
+		return
+	}
+	if user.ServerID != database.ServerID ||
+		user.SubscriptionID != database.SubscriptionID {
+		writeServerError(w, fmt.Errorf("database grant crosses server or subscription boundary"))
+		return
+	}
 
-	if database != nil && user != nil {
-		// Get server info
-		serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
-		server, _ := serverRepo.GetByID(ctx, database.ServerID)
+	serverRepo := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB())
+	server, err := serverRepo.GetByID(ctx, database.ServerID)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("load database server for revoke: %w", err))
+		return
+	}
+	if server.SubscriptionID != database.SubscriptionID {
+		writeServerError(w, fmt.Errorf("database and server subscription mismatch"))
+		return
+	}
+	driver, err := p.dbDriverFor(server)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 
-		if server != nil {
-			// Revoke on server
-			if driver, err := p.dbDriverFor(server); err == nil {
-				driver.RevokePrivileges(database.Name, user.Username)
-			}
-		}
+	// Metadata remains authoritative until the physical revoke succeeds.
+	if err := driver.RevokePrivileges(database.Name, user.Username); err != nil {
+		writeServerError(w, fmt.Errorf("revoke physical database privileges: %w", err))
+		return
 	}
 
 	// Delete grant
 	if err := grantRepo.Delete(ctx, grantID); err != nil {
-		writeServerError(w, err)
+		// The physical revoke already succeeded. Restore the original grant when
+		// metadata cannot be removed so the engine and panel remain consistent.
+		regrantErr := driver.GrantPrivileges(
+			database.Name,
+			user.Username,
+			grant.Privileges,
+		)
+		if regrantErr != nil {
+			regrantErr = fmt.Errorf(
+				"restore physical database grant during compensation: %w",
+				regrantErr,
+			)
+		}
+		writeServerError(w, errors.Join(
+			fmt.Errorf("delete database grant metadata: %w", err),
+			regrantErr,
+		))
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -62,28 +63,45 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusUnauthorized, "invalid username or password")
 		return
 	}
-	if user.Status == "suspended" {
-		writeClientError(w, http.StatusForbidden, "account suspended")
-		return
-	}
-
 	// Second factor: if the account has 2FA on, the password alone does not
 	// grant a session. Hand back a short-lived pending token; the session is
 	// issued by /auth/login/totp once a valid code arrives.
 	// İkinci faktör: hesabın 2FA'sı açıksa parola tek başına oturum vermez.
 	// Kısa ömürlü bir bekleme jetonu döndür; oturum, geçerli bir kod gelince
 	// /auth/login/totp tarafından verilir.
-	if _, enabled := p.userTOTP(r.Context(), user.ID); enabled {
+	state, err := p.userAuthState(r.Context(), user.ID)
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
+	if state.passwordHash != user.PasswordHash {
+		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
+		return
+	}
+	if state.status == "suspended" {
+		writeClientError(w, http.StatusForbidden, "account suspended")
+		return
+	}
+	if state.totpEnabled {
+		pendingToken, err := newPendingToken(state)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"totp_required": true,
-			"pending_token": newPendingToken(user.ID),
+			"pending_token": pendingToken,
 		})
 		return
 	}
 
-	token, err := p.sessions.Create(r.Context(), user.ID)
+	token, err := p.sessions.CreateForAuthEpoch(r.Context(), user.ID, state.authEpoch, false)
 	if err != nil {
+		if errors.Is(err, auth.ErrAuthStateChanged) {
+			writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
+			return
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -98,20 +116,33 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"username": user.Username,
-		"role":     user.Role,
+		"username": state.username,
+		"role":     state.role,
 	})
 }
 
 // handleLogout deletes the current session and clears the cookie.
 // handleLogout, mevcut oturumu siler ve çerezi temizler.
 func (p *Panel) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var deleteErr error
 	if cookie, err := r.Cookie(sessionCookieName); err == nil {
-		_ = p.sessions.Delete(r.Context(), cookie.Value)
+		deleteErr = p.sessions.Delete(r.Context(), cookie.Value)
 	}
 	// An already-expired cookie tells the browser to drop it.
 	// Süresi geçmiş bir çerez, tarayıcıya onu bırakmasını söyler.
 	http.SetCookie(w, p.sessionCookie("", time.Unix(0, 0)))
+	if deleteErr != nil {
+		// The browser token is still cleared, but do not claim a complete
+		// logout when the server-side credential could not be revoked.
+		// Tarayıcı jetonu yine temizlenir; fakat sunucu tarafındaki kimlik
+		// bilgisi iptal edilemediyse çıkış tamamlandı diye davranma.
+		writeServerError(w, deleteErr)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -120,6 +151,10 @@ func (p *Panel) handleLogout(w http.ResponseWriter, r *http.Request) {
 // handleMe, mevcut kullanıcıyı döndürür; SPA'nın giriş ekranını gösterip
 // göstermeyeceğine karar vermek için kullanılır.
 func (p *Panel) handleMe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
 	user, err := p.users.GetByID(r.Context(), currentUserID(r))
 	if err != nil {
 		writeClientError(w, http.StatusUnauthorized, "authentication required")
@@ -172,7 +207,9 @@ var dummyHash = mustDummyHash()
 
 func mustDummyHash() string {
 	raw := make([]byte, 24)
-	_, _ = rand.Read(raw)
+	if _, err := rand.Read(raw); err != nil {
+		panic("failed to generate dummy password: " + err.Error())
+	}
 	h, err := auth.HashPassword(hex.EncodeToString(raw))
 	if err != nil {
 		panic("failed to compute dummy password hash: " + err.Error())

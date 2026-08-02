@@ -29,7 +29,7 @@ func (p *Panel) handleServiceStatus(w http.ResponseWriter, r *http.Request) {
 
 	// Get all services from agent to find the real status
 	var services []core.Service
-	err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &services)
+	err := p.callAgent("Agent.GetServices", &transport.Empty{}, &services)
 	if err != nil {
 		writeServerError(w, err)
 		return

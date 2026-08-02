@@ -39,6 +39,8 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     const [records, setRecords] = useState<DNSRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [zoneExists, setZoneExists] = useState<boolean | null>(null);
+	const [zoneError, setZoneError] = useState('');
+	const [recordsError, setRecordsError] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [newType, setNewType] = useState('A');
     const [newName, setNewName] = useState('@');
@@ -46,6 +48,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     const [newTTL, setNewTTL] = useState(3600);
     const [newPrio, setNewPrio] = useState(0);
     const [publishing, setPublishing] = useState(false);
+    const [mutatingRecord, setMutatingRecord] = useState(false);
 
     // Whether anything actually serves this zone: '' = no DNS server installed
     // (records are saved but not published), otherwise "pdns"/"bind". null
@@ -54,41 +57,64 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     // değil (kayıtlar kayıtlı ama yayınlanmıyor), aksi halde "pdns"/"bind".
     // Yüklenirken null — bant ancak kesin bilince görünür.
     const [dnsServer, setDnsServer] = useState<string | null>(null);
+	const [dnsServerError, setDnsServerError] = useState('');
 
     useEffect(() => {
-        checkZone();
+		void checkZone();
+		setDnsServer(null);
+		setDnsServerError('');
         fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((c) => setDnsServer(c ? (c.dns_server ?? '') : null))
-            .catch(() => setDnsServer(null));
+			.then(async (response) => {
+				if (!response.ok) {
+					throw new Error(apiErrorText(await readApiError(response), t, 'dns.statusUnavailable'));
+				}
+				return response.json();
+			})
+			.then((capabilities) => {
+				setDnsServer(capabilities.dns_server ?? '');
+				setDnsServerError('');
+			})
+			.catch((error) => {
+				setDnsServer(null);
+				setDnsServerError(error instanceof Error && error.message ? error.message : t('dns.statusUnavailable'));
+			});
     }, [domainId]);
 
     const checkZone = async () => {
+		setLoading(true);
+		setZoneError('');
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/zone`);
             if (res.ok) {
                 setZoneExists(true);
-                loadRecords();
-            } else {
+				await loadRecords();
+			} else if (res.status === 404) {
                 setZoneExists(false);
                 setLoading(false);
+			} else {
+				throw new Error(apiErrorText(await readApiError(res), t, 'dns.zoneStatusUnavailable'));
             }
-        } catch {
-            setZoneExists(false);
+		} catch (error) {
+			setZoneExists(null);
+			setZoneError(error instanceof Error && error.message ? error.message : t('dns.zoneStatusUnavailable'));
             setLoading(false);
         }
     };
 
     const loadRecords = async () => {
         setLoading(true);
+		setRecordsError('');
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/records`);
-            if (res.ok) {
-                const data = await res.json();
-                setRecords(data.records || []);
+			if (!res.ok) {
+				throw new Error(apiErrorText(await readApiError(res), t, 'dns.recordsLoadFailed'));
             }
-        } catch {
-            showToast('error', t('common.error'));
+			const data = await res.json();
+			setRecords(Array.isArray(data.records) ? data.records : []);
+		} catch (error) {
+			const message = error instanceof Error && error.message ? error.message : t('dns.recordsLoadFailed');
+			setRecordsError(message);
+			showToast('error', message);
         } finally {
             setLoading(false);
         }
@@ -113,35 +139,60 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     };
 
     const addRecord = async () => {
+        setMutatingRecord(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/records`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: newName, type: newType, content: newContent, ttl: newTTL, prio: newPrio }),
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                throw new Error(apiErrorText(await readApiError(res), t, 'dns.recordAddFailed'));
+            }
             showToast('success', t('dns.recordAdded'));
             setShowAddForm(false);
             setNewContent('');
-            loadRecords();
-        } catch {
-            showToast('error', t('dns.recordAddFailed'));
+            await loadRecords();
+        } catch (error) {
+            showToast('error', error instanceof Error && error.message ? error.message : t('dns.recordAddFailed'));
+        } finally {
+            setMutatingRecord(false);
         }
     };
 
     const deleteRecord = async (id: number) => {
         if (!confirm(t('dns.confirmDelete'))) return;
+        setMutatingRecord(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/records?id=${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                throw new Error(apiErrorText(await readApiError(res), t, 'dns.recordDeleteFailed'));
+            }
             showToast('success', t('dns.recordDeleted'));
-            loadRecords();
-        } catch {
-            showToast('error', t('dns.recordDeleteFailed'));
+            await loadRecords();
+        } catch (error) {
+            showToast('error', error instanceof Error && error.message ? error.message : t('dns.recordDeleteFailed'));
+        } finally {
+            setMutatingRecord(false);
         }
     };
 
-    if (loading && zoneExists === null) {
+	if (zoneError) {
+		return (
+			<EmptyState
+				icon={AlertTriangle}
+				title={t('dns.zoneStatusUnavailable')}
+				hint={zoneError}
+				action={
+					<Button variant="secondary" icon={RefreshCw} disabled={loading} onClick={() => void checkZone()}>
+						{t('common.retry')}
+					</Button>
+				}
+			/>
+		);
+	}
+
+	if (loading && zoneExists === null) {
         return <p className="text-sm text-fg-muted">{t('dns.checking')}</p>;
     }
 
@@ -180,6 +231,12 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                     <span>{t('dns.notServed')}</span>
                 </div>
             )}
+			{dnsServerError && (
+				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
+					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+					<span>{dnsServerError}</span>
+				</div>
+			)}
             {dnsServer !== null && dnsServer !== '' && (
                 <DNSSECSection domainId={domainId} domainName={domainName} />
             )}
@@ -200,6 +257,15 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                     </Button>
                 </div>
             </div>
+
+			{recordsError && (
+				<div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-fg">
+					<span>{recordsError}</span>
+					<Button variant="secondary" icon={RefreshCw} disabled={loading} onClick={() => void loadRecords()}>
+						{t('common.retry')}
+					</Button>
+				</div>
+			)}
 
             {showAddForm && (
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
@@ -237,7 +303,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                         <Button variant="secondary" onClick={() => setShowAddForm(false)}>
                             {t('dns.cancel')}
                         </Button>
-                        <Button variant="primary" icon={Plus} onClick={addRecord}>
+                        <Button variant="primary" icon={Plus} disabled={mutatingRecord} onClick={addRecord}>
                             {t('dns.save')}
                         </Button>
                     </div>
@@ -259,7 +325,9 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                             </tr>
                         </thead>
                         <tbody>
-                            {records.map((rec) => (
+                            {records.map((rec) => {
+                                const managedRecord = rec.type === 'SOA' || (rec.type === 'NS' && rec.name === domainName);
+                                return (
                                 <tr key={rec.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
                                     <td className="px-4 py-2.5">
                                         <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${typeColor[rec.type] ?? 'bg-surface-2 text-fg-muted'}`}>
@@ -275,13 +343,17 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                                     <td className="px-4 py-2.5 text-right">
                                         <button
                                             onClick={() => deleteRecord(rec.id)}
-                                            className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger"
+                                            disabled={managedRecord || mutatingRecord}
+                                            aria-label={t('dns.confirmDelete')}
+                                            title={managedRecord ? t('dns.managedRecord') : t('dns.confirmDelete')}
+                                            className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-subtle"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

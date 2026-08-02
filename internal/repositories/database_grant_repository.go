@@ -10,11 +10,11 @@ import (
 
 // PostgresDatabaseGrantRepository implements DatabaseGrantRepository
 type PostgresDatabaseGrantRepository struct {
-	db *sql.DB
+	db sqlExecutor
 }
 
 // NewPostgresDatabaseGrantRepository creates a new database grant repository
-func NewPostgresDatabaseGrantRepository(db *sql.DB) *PostgresDatabaseGrantRepository {
+func NewPostgresDatabaseGrantRepository(db sqlExecutor) *PostgresDatabaseGrantRepository {
 	return &PostgresDatabaseGrantRepository{db: db}
 }
 
@@ -41,7 +41,7 @@ func (r *PostgresDatabaseGrantRepository) Grant(ctx context.Context, grant *core
 	}
 
 	return r.db.QueryRowContext(ctx, "SELECT id, created_at FROM database_user_grants WHERE id = ?", id).
-		Scan(&grant.ID, &grant.CreatedAt)
+		Scan(&grant.ID, scanTime(&grant.CreatedAt))
 }
 
 // Revoke removes a grant
@@ -79,7 +79,7 @@ func (r *PostgresDatabaseGrantRepository) ListByDatabase(ctx context.Context, da
 			&grant.DatabaseID,
 			&grant.UserID,
 			&grant.Privileges,
-			&grant.CreatedAt,
+			scanTime(&grant.CreatedAt),
 		)
 
 		if err != nil {
@@ -87,6 +87,9 @@ func (r *PostgresDatabaseGrantRepository) ListByDatabase(ctx context.Context, da
 		}
 
 		grants = append(grants, grant)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to list grants by database: %v", err)
 	}
 
 	return grants, nil
@@ -115,7 +118,7 @@ func (r *PostgresDatabaseGrantRepository) ListByUser(ctx context.Context, userID
 			&grant.DatabaseID,
 			&grant.UserID,
 			&grant.Privileges,
-			&grant.CreatedAt,
+			scanTime(&grant.CreatedAt),
 		)
 
 		if err != nil {
@@ -123,6 +126,9 @@ func (r *PostgresDatabaseGrantRepository) ListByUser(ctx context.Context, userID
 		}
 
 		grants = append(grants, grant)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to list grants by user: %v", err)
 	}
 
 	return grants, nil
@@ -142,7 +148,7 @@ func (r *PostgresDatabaseGrantRepository) GetByID(ctx context.Context, id int) (
 		&grant.DatabaseID,
 		&grant.UserID,
 		&grant.Privileges,
-		&grant.CreatedAt,
+		scanTime(&grant.CreatedAt),
 	)
 
 	if err != nil {

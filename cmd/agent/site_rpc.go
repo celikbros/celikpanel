@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
@@ -16,6 +18,155 @@ import (
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+const siteMutationLockStripeCount = 256
+
+var siteMutationLockStripes [siteMutationLockStripeCount]sync.Mutex
+var siteUsernameLockStripes [siteMutationLockStripeCount]sync.Mutex
+
+func siteMutationMutex(siteID int) *sync.Mutex {
+	return &siteMutationLockStripes[uint(siteID)%siteMutationLockStripeCount]
+}
+
+func siteUsernameMutex(username string) *sync.Mutex {
+	var hash uint32 = 2166136261
+	for i := 0; i < len(username); i++ {
+		hash ^= uint32(username[i])
+		hash *= 16777619
+	}
+	return &siteUsernameLockStripes[hash%siteMutationLockStripeCount]
+}
+
+type siteLifecycleOps struct {
+	prepareChallengeRoot func(*ApplyVhostRequest) error
+	pathExists           func(string) (bool, error)
+	mkdirAll             func(string, os.FileMode) error
+	lookupUser           func(string) (*user.User, error)
+	createUser           func(string, string, string) (bool, error)
+	deleteUser           func(string) error
+	killUser             func(string) error
+	setOwnership         func(string, string) error
+	createPool           func(int, string, string) (string, error)
+	deletePool           func(int, string) error
+	writeFileExclusive   func(string, []byte, os.FileMode) error
+	applyLayout          func(string, string) error
+	applyVhost           func(string, string) error
+	removeVhost          func(string) error
+	removeAppUnit        func(int) error
+	removeAll            func(string) error
+}
+
+func (a *Agent) resolvedSiteLifecycleOps() siteLifecycleOps {
+	if a.siteOps != nil {
+		return *a.siteOps
+	}
+	return siteLifecycleOps{
+		prepareChallengeRoot: prepareValidatedVhostChallengeRoot,
+		pathExists: func(path string) (bool, error) {
+			_, err := os.Lstat(path)
+			if err == nil {
+				return true, nil
+			}
+			if os.IsNotExist(err) {
+				return false, nil
+			}
+			return false, err
+		},
+		mkdirAll:     os.MkdirAll,
+		lookupUser:   user.Lookup,
+		createUser:   a.userManager.CreateUser,
+		deleteUser:   a.userManager.DeleteUser,
+		setOwnership: a.userManager.SetOwnership,
+		createPool:   a.phpManager.CreatePool,
+		deletePool:   a.phpManager.DeletePool,
+		writeFileExclusive: func(path string, content []byte, mode os.FileMode) error {
+			file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+			if err != nil {
+				return err
+			}
+			if _, err := file.Write(content); err != nil {
+				_ = file.Close()
+				_ = os.Remove(path)
+				return err
+			}
+			if err := file.Sync(); err != nil {
+				_ = file.Close()
+				_ = os.Remove(path)
+				return err
+			}
+			return file.Close()
+		},
+		applyLayout: applyHostingLayout,
+		applyVhost:  a.nginxGen.ApplyVhost,
+		removeVhost: a.nginxGen.RemoveVhost,
+		removeAppUnit: func(siteID int) error {
+			var response AppApplyResponse
+			if err := a.RemoveAppUnit(&AppControlRequest{SiteID: siteID}, &response); err != nil {
+				return err
+			}
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			return nil
+		},
+		killUser: func(username string) error {
+			err := exec.Command("pkill", "-u", username).Run()
+			if err == nil {
+				time.Sleep(300 * time.Millisecond)
+				return nil
+			}
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+				return nil
+			}
+			return err
+		},
+		removeAll: os.RemoveAll,
+	}
+}
+
+type siteLifecycleFailure struct {
+	step string
+	err  error
+}
+
+func logSiteLifecycleFailures(action, domain string, failures []siteLifecycleFailure) {
+	for _, failure := range failures {
+		log.Printf("%s %s: %s: %v", action, domain, failure.step, failure.err)
+	}
+}
+
+func unknownSiteUser(err error) bool {
+	var unknown user.UnknownUserError
+	return errors.As(err, &unknown)
+}
+
+func removeSiteUser(
+	ops siteLifecycleOps,
+	username, expectedHome string,
+) error {
+	account, err := ops.lookupUser(username)
+	if err != nil {
+		if unknownSiteUser(err) {
+			return nil
+		}
+		return fmt.Errorf("lookup user: %w", err)
+	}
+	uid, err := strconv.Atoi(account.Uid)
+	if err != nil || uid < 1000 {
+		return fmt.Errorf("refusing non-tenant uid %q", account.Uid)
+	}
+	if filepath.Clean(account.HomeDir) != expectedHome {
+		return fmt.Errorf("refusing user whose home does not match the immutable site home")
+	}
+	if err := ops.killUser(username); err != nil {
+		return fmt.Errorf("stop site processes: %w", err)
+	}
+	if err := ops.deleteUser(username); err != nil {
+		return fmt.Errorf("delete site user: %w", err)
+	}
+	return nil
+}
 
 func (a *Agent) validatedCreateSiteRequest(
 	req transport.CreateSiteRequest,
@@ -25,6 +176,10 @@ func (a *Agent) validatedCreateSiteRequest(
 	services.RenderedVhost,
 	error,
 ) {
+	if req.SiteID <= 0 {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("a positive site identity is required")
+	}
 	if err := hostingpath.ValidateDocumentRoot(
 		req.DocumentRoot,
 		req.SubscriptionID,
@@ -40,6 +195,14 @@ func (a *Agent) validatedCreateSiteRequest(
 			fmt.Errorf("a valid canonical domain is required")
 	}
 	req.Domain = domain
+	if req.Username != services.SiteUsername(domain) {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("the system user does not match the immutable site identity")
+	}
+	if strings.TrimSpace(req.Password) == "" {
+		return transport.CreateSiteRequest{}, nil, services.RenderedVhost{},
+			fmt.Errorf("a site password is required")
+	}
 	if strings.TrimSpace(req.TempDomain) != "" {
 		tempDomain, canonicalErr := hostname.CanonicalFQDN(req.TempDomain)
 		if canonicalErr != nil {
@@ -89,8 +252,52 @@ func (a *Agent) validatedCreateSiteRequest(
 	return req, vhostReq, rendered, nil
 }
 
+func rollbackCreateSite(
+	ops siteLifecycleOps,
+	req transport.CreateSiteRequest,
+	siteHome string,
+	poolMayExist, userMayExist, homeMayExist bool,
+) []siteLifecycleFailure {
+	var failures []siteLifecycleFailure
+	if poolMayExist {
+		if err := ops.deletePool(req.SiteID, req.PHPVersion); err != nil {
+			failures = append(failures, siteLifecycleFailure{"PHP-FPM pool rollback", err})
+		}
+	}
+	if userMayExist {
+		if err := removeSiteUser(ops, req.Username, siteHome); err != nil {
+			failures = append(failures, siteLifecycleFailure{"system user rollback", err})
+		}
+	}
+	if homeMayExist {
+		if err := ops.removeAll(siteHome); err != nil {
+			failures = append(failures, siteLifecycleFailure{"site files rollback", err})
+		}
+	}
+	return failures
+}
+
+func failCreateSite(
+	reply *transport.CreateSiteResponse,
+	domain, stage string,
+	cause error,
+	rollbackFailures []siteLifecycleFailure,
+) {
+	reply.Success = false
+	reply.ErrorMessage = "site provisioning failed during " + stage
+	log.Printf("CreateSite %s: %s: %v", domain, stage, cause)
+	if len(rollbackFailures) > 0 {
+		reply.ErrorMessage += "; automatic rollback is incomplete"
+		logSiteLifecycleFailures("CreateSite rollback", domain, rollbackFailures)
+	}
+}
+
 // CreateSite handles site creation with all privileged operations
 func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.CreateSiteResponse) error {
+	mutationMu := siteMutationMutex(req.SiteID)
+	mutationMu.Lock()
+	defer mutationMu.Unlock()
+
 	if err := requireExpectedBuildCommit(
 		req.ExpectedBuildCommit,
 		"creating a site",
@@ -103,32 +310,81 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 		reply.ErrorMessage = err.Error()
 		return nil
 	}
-	if err := prepareValidatedVhostChallengeRoot(vhostReq); err != nil {
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to prepare ACME challenge root: %v", err)
+	identityMu := siteUsernameMutex(req.Username)
+	identityMu.Lock()
+	defer identityMu.Unlock()
+
+	ops := a.resolvedSiteLifecycleOps()
+	siteHome, err := hostingpath.SiteHome(req.SubscriptionID, req.DomainID)
+	if err != nil {
+		reply.ErrorMessage = "the immutable site identity is invalid"
+		return nil
+	}
+	if exists, statErr := ops.pathExists(siteHome); statErr != nil {
+		failCreateSite(reply, req.Domain, "site identity preflight", statErr, nil)
+		return nil
+	} else if exists {
+		reply.ErrorMessage = "site provisioning refused because its immutable home already exists"
+		return nil
+	}
+	if account, lookupErr := ops.lookupUser(req.Username); lookupErr == nil {
+		log.Printf(
+			"CreateSite %s: refusing existing user %q (uid %s, home %q)",
+			req.Domain,
+			req.Username,
+			account.Uid,
+			account.HomeDir,
+		)
+		reply.ErrorMessage = "site provisioning refused because its system user already exists"
+		return nil
+	} else if !unknownSiteUser(lookupErr) {
+		failCreateSite(reply, req.Domain, "site identity preflight", lookupErr, nil)
+		return nil
+	}
+	if err := ops.prepareChallengeRoot(vhostReq); err != nil {
+		failCreateSite(reply, req.Domain, "ACME challenge preparation", err, nil)
 		return nil
 	}
 
-	// 1. Create directory structure
-	err = os.MkdirAll(req.DocumentRoot, 0755)
+	homeMayExist := false
+	userMayExist := false
+	poolMayExist := false
+	fail := func(stage string, cause error) {
+		failCreateSite(
+			reply,
+			req.Domain,
+			stage,
+			cause,
+			rollbackCreateSite(
+				ops,
+				req,
+				siteHome,
+				poolMayExist,
+				userMayExist,
+				homeMayExist,
+			),
+		)
+	}
+
+	// 1. Create directory structure.
+	homeMayExist = true
+	err = ops.mkdirAll(req.DocumentRoot, 0o750)
 	if err != nil {
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to create directories: %v", err)
+		fail("document root creation", err)
 		return nil
 	}
 
 	// 2. Create Linux user
-	err = a.userManager.CreateUser(req.Username, filepath.Dir(req.DocumentRoot), req.Password)
+	userMayExist, err = ops.createUser(req.Username, siteHome, req.Password)
 	if err != nil {
-		os.RemoveAll(filepath.Dir(req.DocumentRoot)) // Rollback
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to create user: %v", err)
+		fail("system user creation", err)
 		return nil
 	}
 
 	// 3. Set ownership
-	if err := a.userManager.SetOwnership(filepath.Dir(req.DocumentRoot), req.Username); err != nil {
-		log.Printf("CreateSite %s: ownership: %v", req.Domain, err)
+	if err := ops.setOwnership(siteHome, req.Username); err != nil {
+		fail("site ownership", err)
+		return nil
 	}
 
 	// 4. Create PHP-FPM pool — php sites only. The error is actionable: on a
@@ -139,27 +395,20 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	// değil "kur ya da başka tip seç" duymalı.
 	socket := ""
 	if req.ProjectType == "php" {
-		socket, err = a.phpManager.CreatePool(req.SiteID, req.Username, req.PHPVersion)
+		poolMayExist = true
+		socket, err = ops.createPool(req.SiteID, req.Username, req.PHPVersion)
 		if err != nil {
-			a.userManager.DeleteUser(req.Username) // Rollback
-			os.RemoveAll(filepath.Dir(req.DocumentRoot))
-			reply.Success = false
-			reply.ErrorMessage = fmt.Sprintf(
-				"failed to create PHP-FPM pool (is PHP-FPM installed? install it from Services, or choose the static or DNS-only type): %v", err)
+			fail("PHP-FPM pool creation", err)
 			return nil
 		}
 	}
 	if socket != vhostReq.PHPSocket {
-		if req.ProjectType == "php" {
-			_ = a.phpManager.DeletePool(req.SiteID, req.PHPVersion)
-		}
-		_ = a.userManager.DeleteUser(req.Username)
-		_ = os.RemoveAll(filepath.Dir(req.DocumentRoot))
-		reply.Success = false
-		reply.ErrorMessage = "PHP-FPM socket did not match the validated site identity"
+		fail(
+			"PHP-FPM socket verification",
+			errors.New("generated socket did not match the immutable site identity"),
+		)
 		return nil
 	}
-	reply.PHPSocket = socket
 
 	// 5. Create the placeholder page. Deliberately NOT phpinfo(): that leaks
 	// paths, modules and settings to anyone who finds the fresh site. For php
@@ -169,36 +418,16 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	// bulan herkese yolları, modülleri ve ayarları sızdırır. php sitelerinde
 	// küçük PHP ifadesi PHP'nin uçtan uca çalıştığını yine de kanıtlar; statik
 	// siteler düz HTML alır (yollarında hiç PHP yok).
-	placeholderBody := `  <p>CelikPanel</p>`
-	placeholderName := "index.html"
-	if req.ProjectType == "php" {
-		placeholderBody = `  <p>CelikPanel · PHP <?php echo htmlspecialchars(PHP_VERSION); ?> · <?php echo date('Y'); ?></p>`
-		placeholderName = "index.php"
+	placeholderName, indexContent := celikPanelSitePlaceholder(req.Domain, req.ProjectType)
+	placeholderPath := filepath.Join(req.DocumentRoot, placeholderName)
+	if err := ops.writeFileExclusive(placeholderPath, indexContent, 0o640); err != nil {
+		fail("placeholder creation", err)
+		return nil
 	}
-	indexContent := fmt.Sprintf(`<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>%s</title>
-<style>
-  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}
-  main{text-align:center;padding:2rem}
-  h1{font-weight:600}
-  p{color:#94a3b8}
-</style>
-</head>
-<body>
-<main>
-  <h1>%s</h1>
-  <p>Bu site hazırlanıyor. / This site is being prepared.</p>
-%s
-</main>
-</body>
-</html>
-`, req.Domain, req.Domain, placeholderBody)
-	os.WriteFile(filepath.Join(req.DocumentRoot, placeholderName), []byte(indexContent), 0644)
-	a.userManager.SetOwnership(filepath.Join(req.DocumentRoot, placeholderName), req.Username)
+	if err := ops.setOwnership(placeholderPath, req.Username); err != nil {
+		fail("placeholder ownership", err)
+		return nil
+	}
 
 	// 5b. Hosting permission layout: web-server group access, setgid
 	// docroot, traverse-only parents — after the placeholder exists so file
@@ -210,38 +439,28 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	// diye yer tutucu oluştuktan sonra. Agent'ın root olmadığı dev'de
 	// en-iyi-çaba; üretimde hata sitenin yayınlanmaması olarak görünür ve
 	// günlük satırı teşhis ettirir.
-	if err := applyHostingLayout(req.DocumentRoot, req.Username); err != nil {
-		log.Printf("CreateSite %s: hosting layout: %v", req.Domain, err)
+	if err := ops.applyLayout(req.DocumentRoot, req.Username); err != nil {
+		fail("hosting permission layout", err)
+		return nil
 	}
 
 	reply.NginxConfig = rendered.Config
 
 	// 7. Apply, validate and reload as one serialized transaction. The safe
 	// API restores and reactivates the previous vhost on every failure.
-	err = a.nginxGen.ApplyVhost(rendered.Domain, rendered.Config)
+	err = ops.applyVhost(rendered.Domain, rendered.Config)
 	if err != nil {
-		reply.Success = false
-		reply.ErrorMessage = fmt.Sprintf("failed to apply nginx vhost: %v", err)
+		fail("nginx vhost activation", err)
 		return nil
 	}
 
+	reply.PHPSocket = socket
 	reply.Success = true
 	return nil
 }
 
-type DeleteSiteRequest struct {
-	ExpectedBuildCommit string `json:"expected_build_commit"`
-	SiteID              int    `json:"site_id"`
-	Domain              string `json:"domain"`
-	Username            string `json:"username"`
-	PHPVersion          string `json:"php_version"`
-	SiteHome            string `json:"site_home"`
-}
-
-type DeleteSiteResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error,omitempty"`
-}
+type DeleteSiteRequest = transport.DeleteSiteRequest
+type DeleteSiteResponse = transport.DeleteSiteResponse
 
 // DeleteSite tears down everything CreateSite built: app unit, vhost, PHP
 // pool, system user and files. Idempotent — already-gone pieces are fine, so
@@ -259,6 +478,10 @@ func (a *Agent) DeleteSite(req *DeleteSiteRequest, resp *DeleteSiteResponse) err
 		resp.Error = "delete site request is required"
 		return nil
 	}
+	mutationMu := siteMutationMutex(req.SiteID)
+	mutationMu.Lock()
+	defer mutationMu.Unlock()
+
 	if err := requireExpectedBuildCommit(
 		req.ExpectedBuildCommit,
 		"deleting a site",
@@ -267,49 +490,92 @@ func (a *Agent) DeleteSite(req *DeleteSiteRequest, resp *DeleteSiteResponse) err
 		return nil
 	}
 
-	cleanHome := filepath.Clean(req.SiteHome)
-	if !strings.HasPrefix(cleanHome, "/var/www/celikpanel/subscriptions/") {
-		resp.Error = fmt.Sprintf("refusing to delete outside the hosting base: %s", req.SiteHome)
+	if req.SiteID <= 0 {
+		resp.Error = "refusing to delete a site without a positive site identity"
+		return nil
+	}
+	cleanHome, err := hostingpath.SiteHome(req.SubscriptionID, req.DomainID)
+	if err != nil {
+		resp.Error = "refusing to delete a site without a valid immutable hosting identity"
+		return nil
+	}
+	if req.SiteHome != "" && filepath.Clean(req.SiteHome) != cleanHome {
+		resp.Error = "refusing a site home that does not match the immutable hosting identity"
+		return nil
+	}
+	canonicalDomain, err := hostname.CanonicalFQDN(req.Domain)
+	if err != nil || canonicalDomain != req.Domain {
+		resp.Error = "refusing to delete a site without a canonical domain"
+		return nil
+	}
+	expectedUsername := services.SiteUsername(canonicalDomain)
+	if req.Username != expectedUsername {
+		resp.Error = "refusing a system user that does not match the immutable site identity"
+		return nil
+	}
+	if req.PHPVersion != "" {
+		if err := services.ValidatePHPVersion(req.PHPVersion); err != nil {
+			resp.Error = "refusing an invalid PHP version during site deletion"
+			return nil
+		}
+	}
+	if err := hostingpath.ValidateDocumentRoot(
+		filepath.Join(cleanHome, "public_html"),
+		req.SubscriptionID,
+		req.DomainID,
+	); err != nil {
+		resp.Error = "refusing an inconsistent immutable hosting identity"
+		return nil
+	}
+	identityMu := siteUsernameMutex(req.Username)
+	identityMu.Lock()
+	defer identityMu.Unlock()
+
+	ops := a.resolvedSiteLifecycleOps()
+	var failures []siteLifecycleFailure
+	keepFailure := func(step string, err error) {
+		if err != nil {
+			failures = append(failures, siteLifecycleFailure{step, err})
+		}
+	}
+
+	// 1. Remove, validate and reload the vhost as one rollback-capable nginx
+	// transaction. If nginx cannot confirm the site is no longer served, do not
+	// destroy any tenant resource behind that still-live route.
+	if err := ops.removeVhost(req.Domain); err != nil {
+		failures = append(failures, siteLifecycleFailure{"nginx vhost", err})
+		logSiteLifecycleFailures("DeleteSite", req.Domain, failures)
+		resp.Success = false
+		resp.Error = "site cleanup incomplete: nginx vhost"
 		return nil
 	}
 
-	// 1. Supervised app unit (node projects) — harmless when absent.
-	// 1. Denetimli uygulama unit'i (node projeleri) — yoksa zararsız.
-	_ = a.RemoveAppUnit(&AppControlRequest{SiteID: req.SiteID}, &AppApplyResponse{})
-
-	// 2. Vhost out first so nginx stops serving before files vanish.
-	// 2. Önce vhost; dosyalar yok olmadan nginx sunmayı bıraksın.
-	if req.Domain != "" {
-		_ = a.nginxGen.DeleteVhost(req.Domain)
-		_ = a.nginxGen.ReloadNginx()
-	}
+	// 2. Supervised app unit (node projects) — harmless when absent.
+	keepFailure("application unit", ops.removeAppUnit(req.SiteID))
 
 	// 3. PHP-FPM pool for this site.
-	// 3. Bu sitenin PHP-FPM havuzu.
 	if req.PHPVersion != "" {
-		_ = a.phpManager.DeletePool(req.SiteID, req.PHPVersion)
+		keepFailure("PHP-FPM pool", ops.deletePool(req.SiteID, req.PHPVersion))
 	}
 
 	// 4. System user — never a system account, even if asked.
 	// 4. Sistem kullanıcısı — istense bile asla bir sistem hesabı değil.
 	if req.Username != "" {
-		if u, err := user.Lookup(req.Username); err == nil {
-			if uid, _ := strconv.Atoi(u.Uid); uid >= 1000 {
-				_ = exec.Command("pkill", "-u", req.Username).Run()
-				time.Sleep(300 * time.Millisecond)
-				if err := a.userManager.DeleteUser(req.Username); err != nil {
-					log.Printf("DeleteSite %s: userdel: %v", req.Domain, err)
-				}
-			} else {
-				log.Printf("DeleteSite %s: refusing to delete system user %q (uid %s)", req.Domain, req.Username, u.Uid)
-			}
-		}
+		keepFailure("system user", removeSiteUser(ops, req.Username, cleanHome))
 	}
 
 	// 5. Files — userdel -r usually removed the home already.
 	// 5. Dosyalar — userdel -r genelde home'u zaten kaldırdı.
-	if err := os.RemoveAll(cleanHome); err != nil {
-		resp.Error = fmt.Sprintf("files could not be removed: %v", err)
+	keepFailure("site files", ops.removeAll(cleanHome))
+
+	if len(failures) > 0 {
+		logSiteLifecycleFailures("DeleteSite", req.Domain, failures)
+		steps := make([]string, 0, len(failures))
+		for _, failure := range failures {
+			steps = append(steps, failure.step)
+		}
+		resp.Success = false
+		resp.Error = "site cleanup incomplete: " + strings.Join(steps, ", ")
 		return nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -39,7 +40,10 @@ func tlsSettings() (enabled bool, certPath, keyPath string, err error) {
 
 	// An explicit pair means "serve HTTPS with exactly this certificate".
 	// Açık bir çift "tam olarak bu sertifikayla HTTPS sun" demektir.
-	if certPath != "" && keyPath != "" {
+	if certPath != "" || keyPath != "" {
+		if certPath == "" || keyPath == "" {
+			return false, "", "", fmt.Errorf("explicit panel TLS certificate pair is incomplete")
+		}
 		return true, certPath, keyPath, nil
 	}
 
@@ -52,15 +56,90 @@ func tlsSettings() (enabled bool, certPath, keyPath string, err error) {
 	// Talep üzerine config/tls dizinine kendinden-imzala; sertifika yeniden
 	// başlatmalarda kararlı kalsın diye var olanı yeniden kullan.
 	dir := tlsDir()
+	activeCert, activeKey, activePairExists, err := managedPanelCertificatePaths(dir)
+	if err != nil {
+		return false, "", "", err
+	}
+	if activePairExists {
+		return true, activeCert, activeKey, nil
+	}
 	certPath = filepath.Join(dir, "panel.crt")
 	keyPath = filepath.Join(dir, "panel.key")
-	if fileExists(certPath) && fileExists(keyPath) {
+	legacyCertExists := fileExists(certPath)
+	legacyKeyExists := fileExists(keyPath)
+	if legacyCertExists || legacyKeyExists {
+		if !legacyCertExists || !legacyKeyExists {
+			return false, "", "", fmt.Errorf("legacy panel TLS certificate pair is incomplete")
+		}
 		return true, certPath, keyPath, nil
 	}
 	if err := generateSelfSigned(certPath, keyPath); err != nil {
 		return false, "", "", err
 	}
 	return true, certPath, keyPath, nil
+}
+
+const managedPanelCertVersionPrefix = ".panel-cert-"
+
+// managedPanelCertificatePaths resolves the active link once and returns paths
+// inside that immutable version directory. ListenAndServeTLS opens the
+// certificate and key separately; returning current/panel.* would allow a
+// renewal between those opens to mix two different versions.
+func managedPanelCertificatePaths(dir string) (
+	certPath, keyPath string,
+	found bool,
+	err error,
+) {
+	current := filepath.Join(dir, "current")
+	info, err := os.Lstat(current)
+	if os.IsNotExist(err) {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, fmt.Errorf("inspect active managed panel TLS pair: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return "", "", false, fmt.Errorf("active managed panel TLS entry is not a version link")
+	}
+	version, err := os.Readlink(current)
+	if err != nil {
+		return "", "", false, fmt.Errorf("read active managed panel TLS link: %w", err)
+	}
+	if !validManagedPanelCertVersionName(version) {
+		return "", "", false, fmt.Errorf("active managed panel TLS link has an invalid target")
+	}
+
+	versionDir := filepath.Join(dir, version)
+	versionInfo, err := os.Lstat(versionDir)
+	if err != nil {
+		return "", "", false, fmt.Errorf("inspect active managed panel TLS version: %w", err)
+	}
+	if !versionInfo.IsDir() || versionInfo.Mode()&os.ModeSymlink != 0 {
+		return "", "", false, fmt.Errorf("active managed panel TLS version is not a directory")
+	}
+
+	certPath = filepath.Join(versionDir, "panel.crt")
+	keyPath = filepath.Join(versionDir, "panel.key")
+	for _, path := range []string{certPath, keyPath} {
+		fileInfo, statErr := os.Lstat(path)
+		if statErr != nil {
+			return "", "", false, fmt.Errorf("inspect active managed panel TLS file: %w", statErr)
+		}
+		if !fileInfo.Mode().IsRegular() {
+			return "", "", false, fmt.Errorf("active managed panel TLS file is not regular")
+		}
+	}
+	return certPath, keyPath, true, nil
+}
+
+func validManagedPanelCertVersionName(name string) bool {
+	if name != filepath.Base(name) ||
+		len(name) != len(managedPanelCertVersionPrefix)+32 ||
+		name[:len(managedPanelCertVersionPrefix)] != managedPanelCertVersionPrefix {
+		return false
+	}
+	_, err := hex.DecodeString(name[len(managedPanelCertVersionPrefix):])
+	return err == nil
 }
 
 // tlsDir is where the self-signed material lives (CELIKPANEL_TLS_DIR, else a

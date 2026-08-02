@@ -19,128 +19,35 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // SSL/TLS Certificate Management RPC Methods
 
 // IssueLetsEncryptRequest represents a request to issue a Let's Encrypt certificate
-type IssueLetsEncryptRequest struct {
-	ExpectedBuildCommit string   `json:"expected_build_commit"`
-	Domain              string   `json:"domain"`
-	Aliases             []string `json:"aliases"`
-	Email               string   `json:"email"`
-	SubscriptionID      int      `json:"subscription_id"`
-	DomainID            int      `json:"domain_id"`
-	AutoRenew           bool     `json:"auto_renew"`
-	// ACMEServer is the CA directory URL (empty = Let's Encrypt default). The
-	// panel resolves the chosen provider to this; the agent only relays it to
-	// certbot. certbot writes it into the renewal config, so renewals keep
-	// using the same CA without the panel re-specifying it.
-	// ACMEServer, CA dizin URL'sidir (boş = Let's Encrypt varsayılanı). Panel
-	// seçilen sağlayıcıyı buna çözer; agent yalnız certbot'a aktarır. certbot
-	// bunu yenileme yapılandırmasına yazar, böylece yenilemeler panel yeniden
-	// belirtmeden aynı CA'yı kullanmaya devam eder.
-	ACMEServer string `json:"acme_server,omitempty"`
-	// EABKeyID / EABHMACKey: external account binding, required by ZeroSSL and
-	// Google. Only sent for those CAs. Not persisted anywhere — certbot binds
-	// the account once at first issuance and renewals reuse it, so the HMAC
-	// secret never needs to live in our database.
-	// EABKeyID / EABHMACKey: dış hesap bağlaması; ZeroSSL ve Google ister.
-	// Yalnız o CA'lar için gönderilir. Hiçbir yerde saklanmaz — certbot hesabı
-	// ilk vermede bir kez bağlar ve yenilemeler onu yeniden kullanır; böylece
-	// HMAC sırrı veritabanımızda yaşamak zorunda kalmaz.
-	EABKeyID   string `json:"eab_key_id,omitempty"`
-	EABHMACKey string `json:"eab_hmac_key,omitempty"`
-	// ForceRenewal explicitly requests a replacement certificate even when
-	// certbot considers the current certificate too new to renew. The panel
-	// only sets this after a user-confirmed reissue.
-	ForceRenewal bool `json:"force_renewal,omitempty"`
-	// StageLineage issues a replacement under a fresh, agent-generated
-	// certbot name. The currently active lineage/account is selected by its
-	// durable name and immutable certificate fingerprint, so the old renewal
-	// source remains untouched until the panel commits the new ledger row.
-	StageLineage bool `json:"stage_lineage,omitempty"`
-	// FreshLineage starts an isolated replacement without selecting an
-	// existing certbot lineage. This is used only when a user explicitly
-	// replaces an active custom certificate with ACME.
-	FreshLineage       bool   `json:"fresh_lineage,omitempty"`
-	CurrentCertPath    string `json:"current_cert_path,omitempty"`
-	CurrentLineageName string `json:"current_lineage_name,omitempty"`
-}
+type IssueLetsEncryptRequest = transport.IssueLetsEncryptRequest
 
 // IssueLetsEncryptResponse represents the response from issuing a certificate
-type IssueLetsEncryptResponse struct {
-	Success     bool      `json:"success"`
-	CertPath    string    `json:"cert_path"`
-	KeyPath     string    `json:"key_path"`
-	ChainPath   string    `json:"chain_path"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	DNSNames    []string  `json:"dns_names,omitempty"`
-	LineageName string    `json:"lineage_name"`
-	Error       string    `json:"error,omitempty"`
-}
+type IssueLetsEncryptResponse = transport.IssueLetsEncryptResponse
 
 // RenewCertRequest represents a request to renew a certificate
-type RenewCertRequest struct {
-	ExpectedBuildCommit string `json:"expected_build_commit"`
-	Domain              string `json:"domain"`
-	CurrentCertPath     string `json:"current_cert_path,omitempty"`
-	LineageName         string `json:"lineage_name,omitempty"`
-	SubscriptionID      int    `json:"subscription_id"`
-	DomainID            int    `json:"domain_id"`
-}
+type RenewCertRequest = transport.RenewCertRequest
 
 // RenewCertResponse represents the response from renewing a certificate
-type RenewCertResponse struct {
-	Success     bool      `json:"success"`
-	CertPath    string    `json:"cert_path"`
-	KeyPath     string    `json:"key_path"`
-	ChainPath   string    `json:"chain_path"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	DNSNames    []string  `json:"dns_names,omitempty"`
-	LineageName string    `json:"lineage_name"`
-	Error       string    `json:"error,omitempty"`
-}
+type RenewCertResponse = transport.RenewCertResponse
 
 // ValidateCertRequest represents a request to validate a certificate
-type ValidateCertRequest struct {
-	CertContent  string `json:"cert_content"`
-	KeyContent   string `json:"key_content"`
-	ChainContent string `json:"chain_content,omitempty"`
-	Domain       string `json:"domain"`
-}
+type ValidateCertRequest = transport.ValidateCertRequest
 
 // ValidateCertResponse represents the response from validating a certificate
-type ValidateCertResponse struct {
-	Valid        bool      `json:"valid"`
-	Trusted      bool      `json:"trusted"`
-	TrustChecked bool      `json:"trust_checked"`
-	TrustError   string    `json:"trust_error,omitempty"`
-	Issuer       string    `json:"issuer"`
-	Subject      string    `json:"subject"`
-	IssuedAt     time.Time `json:"issued_at"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	DNSNames     []string  `json:"dns_names,omitempty"`
-	Error        string    `json:"error,omitempty"`
-}
+type ValidateCertResponse = transport.ValidateCertResponse
 
 // InstallCertRequest represents a request to install a custom certificate
-type InstallCertRequest struct {
-	ExpectedBuildCommit string `json:"expected_build_commit"`
-	Domain              string `json:"domain"`
-	CertContent         string `json:"cert_content"`
-	KeyContent          string `json:"key_content"`
-	ChainContent        string `json:"chain_content,omitempty"`
-}
+type InstallCertRequest = transport.InstallCertRequest
 
 // InstallCertResponse represents the response from installing a certificate
-type InstallCertResponse struct {
-	Success   bool   `json:"success"`
-	CertPath  string `json:"cert_path"`
-	KeyPath   string `json:"key_path"`
-	ChainPath string `json:"chain_path,omitempty"`
-	Error     string `json:"error,omitempty"`
-}
+type InstallCertResponse = transport.InstallCertResponse
 
 const (
 	siteCertbotConfigDir   = "/etc/celikpanel/certbot"
@@ -1212,12 +1119,7 @@ func (a *Agent) GetCertificateInfo(certPath string, resp *ValidateCertResponse) 
 	return nil
 }
 
-type InspectCertificateRequest struct {
-	Domain    string `json:"domain,omitempty"`
-	CertPath  string `json:"cert_path"`
-	KeyPath   string `json:"key_path"`
-	ChainPath string `json:"chain_path,omitempty"`
-}
+type InspectCertificateRequest = transport.InspectCertificateRequest
 
 var certificateVersionDirectoryRE = regexp.MustCompile(`^sha256-[0-9a-f]{64}$`)
 

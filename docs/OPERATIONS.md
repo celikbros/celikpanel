@@ -49,9 +49,10 @@ The stable product layout is:
 - panel database: `/var/lib/celikpanel/celikpanel.db`
 - units: `celikpanel-agent` and `celikpanel-panel`
 
-Stopping the agent can also stop the dependent panel. The reviewed product
-scripts own service ordering and recovery; do not replace their sequence with
-ad-hoc SSH commands.
+Stopping or cleanly restarting the agent no longer stops the panel. The panel
+orders itself after and weakly wants the agent, then retries while the agent
+returns. Reviewed product scripts still own the stricter freeze, update and
+recovery sequence; do not replace that sequence with ad-hoc SSH commands.
 
 ## 3. Release gates
 

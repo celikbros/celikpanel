@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { FormSection, Field, FormActions, Button, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { sslTier, sslTierLabel } from '../lib/sslTier';
 
 interface DomainSSLSettingsProps {
     domainId: number;
@@ -536,7 +537,10 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     }
     if (!data) return <p className="text-danger">{t('ssl.loadFailed')}</p>;
 
-    const cert = data.certificate;
+    // The backend may retain historical certificate details after the active
+    // assignment is removed. has_certificate is authoritative; stale details
+    // must never make the heading or controls claim that SSL is still active.
+    const cert = data.has_certificate ? data.certificate : undefined;
     const managedNamesFromServer = Array.isArray(data.managed_names) ? data.managed_names : null;
     const managedNames = uniqueDNSNames(managedNamesFromServer?.length ? managedNamesFromServer : [domainName]);
     const certificateDNSNames = Array.isArray(cert?.dns_names) ? uniqueDNSNames(cert.dns_names) : null;
@@ -557,29 +561,22 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     const hstsRetirementRemaining = hstsRetirementUntil
         ? formatHSTSRemaining(hstsRetirementUntil, clockMs, locale)
         : '';
-    // Status tier drives icon + color, echoing Plesk's date pills but tokened.
-    // Durum kademesi ikon+rengi belirler; Plesk'in tarih rozetlerini token'lı yansıtır.
-    const tier = !cert
-        ? { icon: XCircle, color: 'text-fg-subtle', label: 'ssl.status.none' as TranslationKey }
-        : cert.activation_pending
-          ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.pending' as TranslationKey }
-          : cert.trust_status === 'invalid'
-            ? { icon: XCircle, color: 'text-danger', label: 'ssl.status.invalid' as TranslationKey }
-            : cert.trust_status === 'untrusted'
-              ? { icon: Shield, color: 'text-danger', label: 'ssl.status.untrusted' as TranslationKey }
-              : cert.trust_status === 'unknown'
-                ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.trustUnknown' as TranslationKey }
-                : !cert.activated
-                  ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.inactive' as TranslationKey }
-        : cert.days_until_expiry < 0
-          ? { icon: XCircle, color: 'text-danger', label: 'ssl.status.expired' as TranslationKey }
-          : cert.days_until_expiry < 30
-            ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.expiring' as TranslationKey }
-            : !cert.usable
-              ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.incomplete' as TranslationKey }
-              : cert.dependents_pending
-                ? { icon: AlertTriangle, color: 'text-warning', label: 'ssl.status.dependentsPending' as TranslationKey }
-                : { icon: CheckCircle, color: 'text-success', label: 'ssl.status.valid' as TranslationKey };
+    // The status order is shared with the overview card so one certificate can
+    // never be shown in two different states on the same domain page.
+    const status = sslTier(cert);
+    const tier = {
+        none: { icon: XCircle, color: 'text-fg-subtle' },
+        pending: { icon: AlertTriangle, color: 'text-warning' },
+        invalid: { icon: XCircle, color: 'text-danger' },
+        untrusted: { icon: Shield, color: 'text-danger' },
+        trustUnknown: { icon: AlertTriangle, color: 'text-warning' },
+        expired: { icon: XCircle, color: 'text-danger' },
+        inactive: { icon: AlertTriangle, color: 'text-warning' },
+        incomplete: { icon: AlertTriangle, color: 'text-warning' },
+        expiring: { icon: AlertTriangle, color: 'text-warning' },
+        dependentsPending: { icon: AlertTriangle, color: 'text-warning' },
+        valid: { icon: CheckCircle, color: 'text-success' },
+    }[status];
     const TierIcon = tier.icon;
 
     return (
@@ -589,7 +586,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                 <div className="flex items-start gap-3">
                     <TierIcon className={`mt-0.5 h-6 w-6 shrink-0 ${tier.color}`} />
                     <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-fg">{t(tier.label)}</p>
+                    <p className="font-semibold text-fg">{t(sslTierLabel[status])}</p>
                         {data.has_certificate && cert ? (
                             <>
                                 <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">

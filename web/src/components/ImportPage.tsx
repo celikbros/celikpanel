@@ -130,7 +130,7 @@ export function ImportPage() {
                             value={path}
                             onChange={(e) => setPath(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && path && inspect()}
-                            placeholder="/home/backup/cpmove-user.tar.gz"
+                            placeholder="/var/lib/celikpanel-imports/cpmove-user.tar.gz"
                             className={`${inputClass} font-mono`}
                             autoFocus
                         />

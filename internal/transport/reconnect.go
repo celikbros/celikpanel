@@ -7,7 +7,10 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
+	"time"
 )
+
+const defaultAgentRPCCallTimeout = 25 * time.Minute
 
 // ReconnectingClient wraps the agent RPC client and redials once when the
 // underlying connection is down. net/rpc permanently shuts a client down
@@ -23,6 +26,7 @@ type ReconnectingClient struct {
 	mu             sync.Mutex
 	client         *rpc.Client
 	connectContext func(context.Context) (*rpc.Client, error)
+	callTimeout    time.Duration
 }
 
 func NewReconnectingClient(c *rpc.Client) *ReconnectingClient {
@@ -43,6 +47,7 @@ func NewReconnectingClientWithContextConnector(
 	return &ReconnectingClient{
 		client:         c,
 		connectContext: connectContext,
+		callTimeout:    defaultAgentRPCCallTimeout,
 	}
 }
 
@@ -56,9 +61,10 @@ func NewReconnectingClientWithContextConnector(
 func (r *ReconnectingClient) Call(serviceMethod string, args any, reply any) error {
 	r.mu.Lock()
 	c := r.client
+	timeout := r.callTimeout
 	r.mu.Unlock()
 
-	err := c.Call(serviceMethod, args, reply)
+	err := callWithTimeout(c, serviceMethod, args, reply, timeout)
 	if err == nil || !connDown(err) {
 		return err
 	}
@@ -82,7 +88,43 @@ func (r *ReconnectingClient) Call(serviceMethod string, args any, reply any) err
 	}
 	r.mu.Unlock()
 
-	return nc.Call(serviceMethod, args, reply)
+	return callWithTimeout(nc, serviceMethod, args, reply, timeout)
+}
+
+// callWithTimeout prevents legacy context-free call sites from blocking the
+// panel forever. New request-bound code should still prefer CallContext so a
+// disconnected HTTP client can cancel its dedicated RPC connection early.
+//
+// A timed-out shared stream is closed and the completed rpc.Call is drained
+// before returning. That guarantees net/rpc cannot mutate the caller-owned
+// reply after Call has returned; the next legacy call will reconnect normally.
+func callWithTimeout(
+	client *rpc.Client,
+	serviceMethod string,
+	args any,
+	reply any,
+	timeout time.Duration,
+) error {
+	if client == nil {
+		return rpc.ErrShutdown
+	}
+	if timeout <= 0 {
+		timeout = defaultAgentRPCCallTimeout
+	}
+
+	done := make(chan *rpc.Call, 1)
+	client.Go(serviceMethod, args, reply, done)
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case call := <-done:
+		return call.Error
+	case <-timer.C:
+		_ = client.Close()
+		<-done
+		return context.DeadlineExceeded
+	}
 }
 
 // CallContext uses a dedicated authenticated connection so cancellation can

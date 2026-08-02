@@ -24,7 +24,7 @@ func (s *ServiceScanner) ScanService(serviceName string) ([]core.ConfigFile, err
 	// Try multiple discovery methods
 	configs = append(configs, s.discoverFromSystemctl(serviceName)...)
 	configs = append(configs, s.discoverFromCommonPaths(serviceName)...)
-	
+
 	// Deduplicate
 	seen := make(map[string]bool)
 	unique := []core.ConfigFile{}
@@ -37,20 +37,20 @@ func (s *ServiceScanner) ScanService(serviceName string) ([]core.ConfigFile, err
 			}
 		}
 	}
-	
+
 	return unique, nil
 }
 
 // discoverFromSystemctl uses systemctl show to find config paths
 func (s *ServiceScanner) discoverFromSystemctl(serviceName string) []core.ConfigFile {
 	var configs []core.ConfigFile
-	
+
 	cmd := exec.Command("systemctl", "show", serviceName, "--property=ExecStart")
 	output, err := cmd.Output()
 	if err != nil {
 		return configs
 	}
-	
+
 	// Parse ExecStart line to find --config or -c flags
 	execLine := strings.TrimSpace(string(output))
 	if strings.Contains(execLine, "--config") || strings.Contains(execLine, "-c") {
@@ -65,17 +65,17 @@ func (s *ServiceScanner) discoverFromSystemctl(serviceName string) []core.Config
 			}
 		}
 	}
-	
+
 	return configs
 }
 
 // discoverFromCommonPaths searches common configuration directories
 func (s *ServiceScanner) discoverFromCommonPaths(serviceName string) []core.ConfigFile {
 	var configs []core.ConfigFile
-	
+
 	// Service-specific search paths
 	searchPaths := s.getSearchPaths(serviceName)
-	
+
 	for _, searchPath := range searchPaths {
 		// Check if path exists
 		if _, err := os.Stat(searchPath); err == nil {
@@ -85,14 +85,14 @@ func (s *ServiceScanner) discoverFromCommonPaths(serviceName string) []core.Conf
 			})
 		}
 	}
-	
+
 	return configs
 }
 
 // getSearchPaths returns common config paths for known services
 func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 	paths := []string{}
-	
+
 	if strings.Contains(serviceName, "nginx") {
 		paths = []string{
 			"/etc/nginx/nginx.conf",
@@ -171,7 +171,7 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 			"/etc/dovecot/dovecot.conf",
 		}
 	}
-	
+
 	return paths
 }
 

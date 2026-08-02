@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // The ledger↔pdns bridge. Zone records live in the panel's own database
@@ -24,14 +26,7 @@ import (
 // itiş sonrakiyle onarılır. Bilerek en-iyi-çaba: DNS sunumunun kapalı olması
 // panel düzenlemelerini engellememeli; hatalar günlüğe düşer.
 
-type zoneRecord struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Content  string `json:"content"`
-	TTL      int    `json:"ttl"`
-	Prio     int    `json:"prio"`
-	Disabled bool   `json:"disabled"`
-}
+type zoneRecord = transport.ZoneRecord
 
 type dnsZoneSyncFailure struct {
 	Zone string
@@ -39,8 +34,8 @@ type dnsZoneSyncFailure struct {
 }
 
 // dnsSyncAllResult records the whole publication attempt. Settings changes use
-// Failures as a hard error; ordinary record edits still call syncZoneToDNS
-// directly and remain best-effort.
+// Failures as a hard error; ordinary record edits call syncZoneToDNS directly
+// and return an explicit saved-but-not-published conflict when it fails.
 type dnsSyncAllResult struct {
 	Attempted int
 	Synced    int
@@ -119,14 +114,9 @@ func writeDNSPublicationConflict(w http.ResponseWriter, err error, safeMessage s
 // syncZoneToDNS, bir domain'in defterdeki güncel kayıt setini pdns
 // veritabanına iter (deleted true ise zone'u kaldırır).
 func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) error {
-	req := struct {
-		MutationRequestID string       `json:"mutation_request_id"`
-		MutationOwnerID   string       `json:"mutation_owner_id"`
-		Domain            string       `json:"domain"`
-		Delete            bool         `json:"delete"`
-		ZoneType          string       `json:"zone_type,omitempty"`
-		Records           []zoneRecord `json:"records"`
-	}{Domain: domain, Delete: deleted, ZoneType: p.dnsZoneType(ctx)}
+	req := transport.SyncDNSZoneRequest{
+		Domain: domain, Delete: deleted, ZoneType: p.dnsZoneType(ctx),
+	}
 
 	if !deleted {
 		if err := p.prepareZoneForSync(ctx, domain); err != nil {
@@ -161,14 +151,10 @@ func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) 
 		}
 	}
 
-	var resp struct {
-		Synced bool   `json:"synced"`
-		Error  string `json:"error,omitempty"`
-	}
+	var resp transport.SyncDNSZoneResponse
 	err := p.withStandaloneAgentMutation(ctx, "dns_zone_sync", domain, "", func(callCtx context.Context, binding agentMutationBinding) error {
-		req.MutationRequestID = binding.MutationRequestID
-		req.MutationOwnerID = binding.MutationOwnerID
-		if err := p.agentClient.CallContext(callCtx, "Agent.SyncDNSZone", &req, &resp); err != nil {
+		req.ServiceMutationBinding = binding
+		if err := p.callAgentContext(callCtx, "Agent.SyncDNSZone", &req, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" {
@@ -206,12 +192,10 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp struct {
-		Synced bool   `json:"synced"`
-		Error  string `json:"error,omitempty"`
-	}
+	var resp transport.SyncDNSZoneResponse
 	err := p.withStandaloneAgentMutation(r.Context(), "pdns_configure", "pdns", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigurePowerDNSSQLite", &binding, &resp); err != nil {
+		req := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+		if err := p.callAgentContext(callCtx, "Agent.ConfigurePowerDNSSQLite", &req, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" {

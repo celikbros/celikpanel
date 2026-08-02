@@ -14,7 +14,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-SUPPORTED_SNAPSHOT_VERSION=4
+SUPPORTED_SNAPSHOT_VERSION=5
 SNAP_ROOT=/var/backups/celikpanel/update-snapshots
 RELEASES_ROOT=/var/backups/celikpanel/releases
 PANEL_DB=/var/lib/celikpanel/celikpanel.db
@@ -23,6 +23,9 @@ WEB_DIR=/opt/celikpanel/web
 UNIT_DIR=/etc/systemd/system
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 AGENT_LEDGER="$AGENT_STATE_DIR/service-mutations.json"
+PANEL_TLS_DIR=/var/lib/celikpanel/tls
+PANEL_CERT_PENDING="$AGENT_STATE_DIR/panel-certificate-activation.json"
+PANEL_CERT_HOOK=/etc/letsencrypt/renewal-hooks/deploy/celikpanel-panel-cert
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
 RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
@@ -37,6 +40,11 @@ rollback_mutation_started=0
 rollback_transaction_started=0
 rollback_transaction_token=
 rollback_pending_resume=0
+rollback_scheduler_only_resume=0
+rollback_scheduler_restore_pending=0
+rollback_scheduler_restore_completed=0
+rollback_completion_verified=0
+rollback_completion_removing=0
 rollback_pending_snapshot=
 rollback_verified_snapshot=
 rollback_service_state_recorded=0
@@ -172,6 +180,9 @@ validate_running_release() {
         || die "invalid rollback release tree"
     [[ "${trusted_rollback_release_commit:0:12}" == "${relative%%-*}" ]] \
         || die "rollback release directory does not match its commit"
+    [[ -f "$root/deploy/panel-tls-snapshot.sh" &&
+       ! -L "$root/deploy/panel-tls-snapshot.sh" ]] \
+        || die "rollback release panel TLS snapshot helper is missing"
 }
 
 # Rollback preflights run as root. Accept only an absolute, root-owned,
@@ -233,9 +244,42 @@ reject_extra_service_cgroup_processes() {
 
 unfreeze_legacy_agent() {
     if [[ $legacy_agent_frozen -eq 1 ]]; then
-        systemctl kill --kill-whom=all --signal=SIGCONT celikpanel-agent.service >/dev/null 2>&1 || true
+        systemctl kill --kill-whom=all --signal=SIGCONT celikpanel-agent.service \
+            >/dev/null 2>&1 || return 1
         legacy_agent_frozen=0
     fi
+}
+
+# An error after SIGSTOP must never make pre-ledger package mutation code
+# runnable again. Queue a stop, kill the whole frozen cgroup without SIGCONT,
+# and clear the frozen flag only after the unit is inactive and its cgroup is
+# proved empty. This helper is intentionally bounded because it runs in EXIT.
+# SIGSTOP sonrasındaki bir hata ledger öncesi paket mutasyon kodunu yeniden
+# çalıştırmamalıdır. Durdurmayı sıraya al, donmuş cgroup'un tamamını SIGCONT
+# olmadan öldür ve donmuş bayrağını yalnız birim pasif ve cgroup boş kanıtlanınca sil.
+terminate_frozen_legacy_agent_fail_closed() {
+    local pid_output
+    [[ $legacy_agent_frozen -eq 1 ]] || return 0
+
+    systemctl stop --no-block celikpanel-agent.service >/dev/null 2>&1 || true
+    systemctl kill --kill-whom=all --signal=SIGKILL celikpanel-agent.service \
+        >/dev/null 2>&1 || true
+    systemctl stop --no-block celikpanel-agent.service >/dev/null 2>&1 || true
+
+    for _ in $(seq 1 50); do
+        if ! systemctl is-active --quiet celikpanel-agent.service; then
+            pid_output=
+            if pid_output=$(service_cgroup_pids celikpanel-agent.service 2>/dev/null) &&
+               [[ -z "$pid_output" ]]; then
+                legacy_agent_frozen=0
+                return 0
+            fi
+        fi
+        sleep 0.02
+    done
+
+    echo "!! Frozen pre-ledger agent cgroup could not be proved empty during fail-closed cleanup." >&2
+    return 1
 }
 
 # Freeze before the cgroup proof so pre-ledger code cannot spawn a package
@@ -269,7 +313,6 @@ freeze_and_stop_legacy_agent() {
                 || die "pre-ledger agent stop could not be queued"
             systemctl kill --kill-whom=all --signal=SIGKILL celikpanel-agent.service \
                 || die "frozen pre-ledger agent could not be terminated"
-            legacy_agent_frozen=0
             systemctl stop celikpanel-agent.service \
                 || die "pre-ledger agent could not be stopped"
             ;;
@@ -283,6 +326,7 @@ freeze_and_stop_legacy_agent() {
     systemctl is-active --quiet celikpanel-agent.service \
         && die "pre-ledger agent is still active after stop"
     reject_extra_service_cgroup_processes celikpanel-agent.service 0
+    legacy_agent_frozen=0
 }
 
 # systemd removes RuntimeDirectory after agent shutdown. Recreate only the
@@ -507,10 +551,79 @@ stop_new_agent_and_hold_mutation_lock() {
 # Kurulu hiçbir bayt değişmemişken yalnız erişilebilirliği geri getir. Geri alma
 # mutasyonu başladıktan sonra iki servisi kapalı bırakıp tam yeniden deneme ver.
 rollback_on_exit() {
-    local status=$?
-    unfreeze_legacy_agent
+    local status=$? frozen_cleanup_failed=0
+    trap - EXIT
+
+    if [[ $legacy_agent_frozen -eq 1 ]]; then
+        if [[ $rollback_transaction_started -eq 0 &&
+              $rollback_mutation_started -eq 0 &&
+              $rollback_service_state_recorded -eq 1 ]]; then
+            if ! unfreeze_legacy_agent; then
+                terminate_frozen_legacy_agent_fail_closed || frozen_cleanup_failed=1
+            fi
+        else
+            terminate_frozen_legacy_agent_fail_closed || frozen_cleanup_failed=1
+        fi
+    fi
+    if [[ $frozen_cleanup_failed -eq 1 ]]; then
+        systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
+        systemctl stop --no-block celikpanel-agent.service >/dev/null 2>&1 || true
+        release_release_mutation_lock >/dev/null 2>&1 || true
+        echo "!! Frozen pre-ledger agent cleanup was not provably complete; both services remain fail-closed." >&2
+        [[ $status -ne 0 ]] && return "$status"
+        return 1
+    fi
     if [[ $status -eq 0 ]]; then
         return 0
+    fi
+    if [[ $rollback_completion_verified -eq 1 &&
+          $rollback_completion_removing -eq 1 &&
+          $rollback_scheduler_restore_pending -eq 1 &&
+          $rollback_transaction_started -eq 1 &&
+          $rollback_mutation_started -eq 1 &&
+          ! -e "$RELEASE_TRANSACTION_ROOT/completion.pending" &&
+          ! -L "$RELEASE_TRANSACTION_ROOT/completion.pending" &&
+          ( -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ||
+            -L "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ) ]] &&
+       release_txn_validate_scheduler_restore_token \
+           "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" \
+           rollback "$(basename -- "$rollback_verified_snapshot")"; then
+        if ! release_release_mutation_lock >/dev/null 2>&1; then
+            echo "!! Runtime completion is visible and exact, but the mutation lock could not be released cleanly." >&2
+        fi
+        echo "!! Rollback runtime completion is visible; completion marker removal durability is uncertain. Restored runtime was left intact and exact scheduler recovery remains retryable." >&2
+        echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
+        echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+        return "$status"
+    fi
+    if [[ $rollback_scheduler_restore_pending -eq 1 &&
+          $rollback_transaction_started -eq 0 ]]; then
+        if [[ $rollback_scheduler_restore_completed -eq 1 &&
+              ! -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" &&
+              ! -L "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]]; then
+            release_release_mutation_lock >/dev/null 2>&1 || true
+            echo "!! Certbot scheduler restoration completed; durable marker removal is uncertain. Runtime was left intact and rollback did not claim success." >&2
+            echo "!! Verified snapshot / DoÄŸrulanmÄ±ÅŸ snapshot: $rollback_verified_snapshot" >&2
+            return "$status"
+        fi
+        if [[ -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ||
+              -L "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] &&
+           release_txn_validate_scheduler_restore_token \
+               "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" \
+               rollback "$(basename -- "$rollback_verified_snapshot")"; then
+            if ! release_release_mutation_lock >/dev/null 2>&1; then
+                echo "!! Scheduler recovery remains pending and the mutation lock could not be released cleanly." >&2
+            fi
+            echo "!! Rollback runtime is complete; exact Certbot scheduler restoration remains safely retryable." >&2
+            echo "!! Verified snapshot / Doğrulanmış snapshot: $rollback_verified_snapshot" >&2
+            echo "!! Retry / Yeniden deneyin: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$rollback_verified_snapshot'" >&2
+            return "$status"
+        fi
+        systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
+        systemctl stop celikpanel-agent.service >/dev/null 2>&1 || true
+        release_release_mutation_lock >/dev/null 2>&1 || true
+        echo "!! Scheduler restoration failed without an exact durable retry marker; both services were stopped." >&2
+        return "$status"
     fi
     if [[ $rollback_transaction_started -eq 1 ]]; then
         systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
@@ -546,16 +659,60 @@ rollback_on_exit() {
 validate_running_release
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
+# shellcheck source=deploy/panel-tls-snapshot.sh
+source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
 release_txn_install_and_verify_unit_guards "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" || die "release transaction service guards could not be installed"
 release_txn_clear_stale_start_authorization "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" || die "stale release start authorization could not be cleared"
-if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACTION_ROOT/completion.pending" ]]; then
-    IFS=$'\t' read -r pending_token pending_operation pending_snapshot < <(release_txn_read_pending_fields "$RELEASE_TRANSACTION_ROOT") || die "cannot read pending release transaction"
+rollback_quiesce_present=0
+rollback_active_present=0
+rollback_completion_present=0
+rollback_scheduler_present=0
+[[ -e "$RELEASE_TRANSACTION_ROOT/quiesce.pending" ||
+   -L "$RELEASE_TRANSACTION_ROOT/quiesce.pending" ]] && rollback_quiesce_present=1
+[[ -e "$RELEASE_TRANSACTION_ROOT/active" ||
+   -L "$RELEASE_TRANSACTION_ROOT/active" ]] && rollback_active_present=1
+[[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" ||
+   -L "$RELEASE_TRANSACTION_ROOT/completion.pending" ]] && rollback_completion_present=1
+[[ -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ||
+   -L "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] && rollback_scheduler_present=1
+[[ "$rollback_quiesce_present" -eq 0 ]] \
+    || die "quiesce.pending must be recovered by update.sh before rollback"
+[[ $((rollback_active_present + rollback_completion_present)) -le 1 ]] \
+    || die "ambiguous rollback transaction topology"
+[[ ! ( "$rollback_scheduler_present" -eq 1 &&
+        "$rollback_active_present" -eq 1 ) ]] \
+    || die "scheduler restoration cannot coexist with an active rollback phase"
+
+if [[ "$rollback_completion_present" -eq 1 ]]; then
+    IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
+        < <(release_txn_read_pending_fields "$RELEASE_TRANSACTION_ROOT") \
+        || die "cannot read pending release transaction"
     [[ "$pending_operation" == rollback ]] \
         || die "a pending update must be finalized by update.sh"
+    release_txn_validate_pending_token \
+        "$RELEASE_TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+        || die "pending rollback transaction marker proof failed"
+    if [[ "$rollback_scheduler_present" -eq 1 ]]; then
+        release_txn_validate_scheduler_restore_token \
+            "$RELEASE_TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+            || die "pending rollback scheduler marker does not match completion.pending"
+    fi
     rollback_pending_resume=1
     rollback_pending_snapshot=$pending_snapshot
     rollback_transaction_token=$pending_token
+elif [[ "$rollback_scheduler_present" -eq 1 ]]; then
+    IFS=$'\t' read -r scheduler_token scheduler_operation scheduler_snapshot \
+        < <(release_txn_read_scheduler_restore_fields "$RELEASE_TRANSACTION_ROOT") \
+        || die "cannot read pending scheduler restoration"
+    [[ "$scheduler_operation" == rollback ]] \
+        || die "a pending update scheduler restoration must be recovered by update.sh"
+    release_txn_validate_scheduler_restore_token \
+        "$RELEASE_TRANSACTION_ROOT" "$scheduler_token" rollback "$scheduler_snapshot" \
+        || die "pending rollback scheduler marker proof failed"
+    rollback_scheduler_only_resume=1
+    rollback_pending_snapshot=$scheduler_snapshot
+    rollback_transaction_token=$scheduler_token
 fi
 PREFLIGHT_PANEL="$TRUSTED_RELEASE_ROOT/bin/panel"
 PREFLIGHT_AGENT="$TRUSTED_RELEASE_ROOT/bin/agent"
@@ -563,7 +720,8 @@ trap rollback_on_exit EXIT
 
 validate_root_trusted_dir_chain "$SNAP_ROOT"
 requested=${1:-}
-if [[ $rollback_pending_resume -eq 1 ]]; then
+if [[ $rollback_pending_resume -eq 1 ||
+      $rollback_scheduler_only_resume -eq 1 ]]; then
     if [[ -n "$requested" ]]; then
         requested=${requested%/}
         case "$requested" in
@@ -605,10 +763,46 @@ if find "$snap" ! -type d ! -type f -print -quit | grep -q .; then
     die "snapshot contains a special filesystem object"
 fi
 
+[[ -f "$snap/SHA256SUMS" && ! -L "$snap/SHA256SUMS" ]] \
+    || die "SHA256SUMS is missing or unsafe"
+read -r manifest_owner manifest_group manifest_mode manifest_links manifest_size \
+    < <(stat -Lc '%u %g %a %h %s' -- "$snap/SHA256SUMS") \
+    || die "cannot inspect snapshot checksum manifest"
+manifest_permissions=$((8#$manifest_mode))
+[[ "$manifest_owner" == 0 && "$manifest_group" == 0 && "$manifest_links" == 1 &&
+   "$manifest_size" -gt 0 && "$manifest_size" -le 16777216 ]] &&
+    (( (manifest_permissions & 0022) == 0 )) \
+    || die "snapshot checksum manifest metadata is unsafe"
+
+outer_manifest_verified=0
+# Reject manifest paths that could escape the verified snapshot directory.
+# Doğrulanmış snapshot dizininin dışına çıkabilecek manifest yollarını reddet.
+while IFS= read -r checksum_line; do
+    manifest_path=${checksum_line#*  }
+    [[ "$manifest_path" == ./* ]] || die "unsafe checksum path: $manifest_path"
+    [[ "$manifest_path" != *'/../'* && "$manifest_path" != '../'* ]] || die "unsafe checksum traversal: $manifest_path"
+done < "$snap/SHA256SUMS"
+(
+    cd "$snap"
+    LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 \
+        | LC_ALL=C sort -z \
+        | xargs -0 sha256sum \
+        | cmp -s - SHA256SUMS
+    sha256sum -c SHA256SUMS >/dev/null
+) || die "snapshot checksum verification failed / snapshot checksum doğrulaması başarısız"
+outer_manifest_verified=1
+[[ "$outer_manifest_verified" -eq 1 ]] \
+    || die "outer snapshot manifest verification barrier was not reached"
+
 [[ -f "$snap/snapshot.version" ]] || die "snapshot.version is missing"
 version=$(tr -d '[:space:]' < "$snap/snapshot.version")
-[[ "$version" == "$SUPPORTED_SNAPSHOT_VERSION" ]] || die "unsupported snapshot version: $version"
-[[ -f "$snap/SHA256SUMS" ]] || die "SHA256SUMS is missing"
+case "$version" in
+    "$SUPPORTED_SNAPSHOT_VERSION") ;;
+    4)
+        die "snapshot version 4 predates exact panel TLS rollback state; use its matching historical recovery release or create a fresh version 5 snapshot"
+        ;;
+    *) die "unsupported snapshot version: $version" ;;
+esac
 [[ -f "$snap/commit" ]] || die "commit provenance is missing"
 [[ -f "$snap/target-release.commit" ]] || die "target release commit is missing"
 [[ -f "$snap/target-release.tree" ]] || die "target release tree is missing"
@@ -663,26 +857,16 @@ case "$agent_ledger_state" in
         ;;
 esac
 
-# Reject manifest paths that could escape the verified snapshot directory.
-# Doğrulanmış snapshot dizininin dışına çıkabilecek manifest yollarını reddet.
-while IFS= read -r checksum_line; do
-    manifest_path=${checksum_line#*  }
-    [[ "$manifest_path" == ./* ]] || die "unsafe checksum path: $manifest_path"
-    [[ "$manifest_path" != *'/../'* && "$manifest_path" != '../'* ]] || die "unsafe checksum traversal: $manifest_path"
-done < "$snap/SHA256SUMS"
-(
-    cd "$snap"
-    LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 \
-        | LC_ALL=C sort -z \
-        | xargs -0 sha256sum \
-        | cmp -s - SHA256SUMS
-    sha256sum -c SHA256SUMS >/dev/null
-) || die "snapshot checksum verification failed / snapshot checksum doğrulaması başarısız"
+# The panel TLS helper reads layout, ownership and scheduler metadata. Treat it
+# as payload interpretation: never inspect those values until the complete
+# outer manifest has proved the exact file set and bytes.
+panel_tls_snapshot_validate "$snap/panel-tls" \
+    || die "panel TLS compatibility snapshot is missing or invalid"
 
 # Interpret transition metadata only after the exact outer manifest has been
-# verified. Normal v4 snapshots must not carry bootstrap-only payloads.
+# verified. Normal v5 snapshots must not carry bootstrap-only payloads.
 # Geçiş metadata'sını yalnız tam dış manifest doğrulandıktan sonra yorumla.
-# Normal v4 snapshotlar yalnız bootstrap'a ait ürünleri taşımamalıdır.
+# Normal v5 snapshotlar yalnız bootstrap'a ait ürünleri taşımamalıdır.
 snapshot_commit=$(cat "$snap/commit")
 snapshot_created_at=$(cat "$snap/created-at-utc")
 target_release_commit=$(cat "$snap/target-release.commit")
@@ -705,22 +889,22 @@ case "$transition_state" in
         printf 'normal\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "normal transition state marker is not exact"
         [[ "$agent_ledger_state" == present ]] \
-            || die "normal v4 snapshot must contain the durable agent ledger"
+            || die "normal v5 snapshot must contain the durable agent ledger"
         [[ ! -e "$snap/pre-ledger-transition.tsv" && \
            ! -e "$snap/pre-ledger-transition.sha256" && \
            ! -e "$snap/schema17-transition.tsv" && \
            ! -e "$snap/schema17-transition.sha256" && \
            ! -e "$snap/transition-preflight" ]] \
-            || die "normal v4 snapshot contains bootstrap transition payloads"
+            || die "normal v5 snapshot contains bootstrap transition payloads"
         ;;
     pre-ledger)
         printf 'pre-ledger\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "pre-ledger transition state marker is not exact"
         [[ "$agent_ledger_state" == absent ]] \
-            || die "pre-ledger v4 snapshot must not contain the durable agent ledger"
+            || die "pre-ledger v5 snapshot must not contain the durable agent ledger"
         [[ ! -e "$snap/schema17-transition.tsv" && \
            ! -e "$snap/schema17-transition.sha256" ]] \
-            || die "pre-ledger v4 snapshot contains schema17 transition payloads"
+            || die "pre-ledger v5 snapshot contains schema17 transition payloads"
         [[ -f "$snap/pre-ledger-transition.tsv" && ! -L "$snap/pre-ledger-transition.tsv" ]] \
             || die "pre-ledger transition marker is missing or unsafe"
         [[ -f "$snap/pre-ledger-transition.sha256" && ! -L "$snap/pre-ledger-transition.sha256" ]] \
@@ -787,10 +971,10 @@ case "$transition_state" in
         printf 'schema17\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "schema17 transition state marker is not exact"
         [[ "$agent_ledger_state" == absent ]] \
-            || die "schema17 v4 snapshot must not contain the durable agent ledger"
+            || die "schema17 v5 snapshot must not contain the durable agent ledger"
         [[ ! -e "$snap/pre-ledger-transition.tsv" && \
            ! -e "$snap/pre-ledger-transition.sha256" ]] \
-            || die "schema17 v4 snapshot contains pre-ledger transition payloads"
+            || die "schema17 v5 snapshot contains pre-ledger transition payloads"
         [[ -f "$snap/schema17-transition.tsv" && ! -L "$snap/schema17-transition.tsv" ]] \
             || die "schema17 transition marker is missing or unsafe"
         [[ -f "$snap/schema17-transition.sha256" && ! -L "$snap/schema17-transition.sha256" ]] \
@@ -865,22 +1049,47 @@ esac
 # sürümün sahip olduğu üç unit'i değiştirebilir.
 declare -A enabled_states=()
 declare -A active_states=()
-while IFS=$'\t' read -r unit enabled_state active_state extra; do
+service_state_count=0
+while IFS=$'\t' read -r unit enabled_state active_state extra ||
+      [[ -n "$unit$enabled_state$active_state${extra:-}" ]]; do
     [[ -n "$unit" && -n "$enabled_state" && -n "$active_state" && -z "${extra:-}" ]] || die "malformed service state ledger"
-    case "$unit" in
-        celikpanel-agent.service|celikpanel-panel.service|celikpanel-firewall-restore.service) ;;
-        *) die "unexpected unit in service state ledger: $unit" ;;
+    case "$service_state_count" in
+        0) expected_unit=celikpanel-agent.service ;;
+        1) expected_unit=celikpanel-panel.service ;;
+        2) expected_unit=celikpanel-firewall-restore.service ;;
+        3) expected_unit=certbot.timer ;;
+        4) expected_unit=certbot-renew.timer ;;
+        *) die "service state ledger contains extra rows" ;;
     esac
-    validate_service_active_state "$unit" "$active_state"
-    enabled_states["$unit"]=$enabled_state
-    active_states["$unit"]=$active_state
+    [[ "$unit" == "$expected_unit" ]] \
+        || die "service state ledger order is not canonical: got $unit, want $expected_unit"
+    if [[ "$service_state_count" -lt 3 ]]; then
+        case "$enabled_state" in
+            enabled|enabled-runtime|disabled|static|indirect|not-found) ;;
+            *) die "unsupported saved enable state for $unit: $enabled_state" ;;
+        esac
+        validate_service_active_state "$unit" "$active_state"
+        enabled_states["$unit"]=$enabled_state
+        active_states["$unit"]=$active_state
+    else
+        case "$enabled_state" in
+            enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated|disabled|masked|masked-runtime|not-found) ;;
+            *) die "unsupported saved scheduler enable state for $unit: $enabled_state" ;;
+        esac
+        case "$active_state" in
+            active|inactive) ;;
+            *) die "unsupported saved scheduler active state for $unit: $active_state" ;;
+        esac
+    fi
+    service_state_count=$((service_state_count + 1))
 done < "$snap/service-states.tsv"
+[[ "$service_state_count" -eq 5 ]] \
+    || die "service state ledger must contain exactly five canonical rows"
+panel_tls_snapshot_scheduler_matches_service_ledger \
+    "$snap/panel-tls" "$snap/service-states.tsv" \
+    || die "panel TLS scheduler snapshot disagrees with the service ledger"
 for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
     [[ -n "${enabled_states[$unit]:-}" ]] || die "service state is missing for $unit"
-    case "${enabled_states[$unit]}" in
-        enabled|enabled-runtime|disabled|static|indirect|not-found) ;;
-        *) die "unsupported saved enable state for $unit: ${enabled_states[$unit]}" ;;
-    esac
 done
 case "$firewall_state:${enabled_states[celikpanel-firewall-restore.service]}" in
     absent:not-found|present:*) ;;
@@ -915,6 +1124,29 @@ case "$transition_state" in
 esac
 
 rollback_verified_snapshot=$snap
+if [[ $rollback_scheduler_only_resume -eq 1 ]]; then
+    release_txn_validate_scheduler_restore_token \
+        "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+        || die "rollback scheduler marker changed after snapshot verification"
+    rollback_scheduler_restore_pending=1
+    panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \
+        || die "Certbot renewal scheduler could not be re-quiesced for exact recovery"
+    release_txn_validate_scheduler_restore_token \
+        "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+        || die "rollback scheduler marker changed during exact recovery"
+    panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
+        || die "Certbot renewal scheduler state could not be restored"
+    rollback_scheduler_restore_completed=1
+    release_txn_remove_scheduler_restore_pending \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        "$rollback_transaction_token" rollback "$snapshot_name" \
+        || die "cannot remove the exact rollback scheduler marker"
+    rollback_scheduler_restore_pending=0
+    trap - EXIT
+    echo
+    echo "==> Rollback runtime was already complete; Certbot scheduler restoration is complete."
+    exit 0
+fi
 if [[ $rollback_pending_resume -eq 1 ]]; then
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
@@ -1015,7 +1247,8 @@ if [[ ( "$transition_state" == pre-ledger || "$transition_state" == schema17 ) &
         || die "current private agent state path is unsafe"
     unexpected_agent_state=$(
         find "$AGENT_STATE_DIR" -mindepth 1 -maxdepth 1 \
-            ! -name service-mutations.json -print -quit
+            ! -name service-mutations.json \
+            ! -name panel-certificate-activation.json -print -quit
     )
     [[ -z "$unexpected_agent_state" ]] \
         || die "unexpected private agent state prevents exact pre-ledger rollback: $unexpected_agent_state"
@@ -1032,6 +1265,19 @@ for unit in celikpanel-agent.service celikpanel-panel.service; do
     [[ "$stopped_state" == inactive || "$stopped_state" == failed ]] \
         || die "rollback requires $unit stopped before restore"
 done
+
+# Prevent the package-owned renewal scheduler from racing the exact TLS/hook
+# restore. Already-running renewal services are never killed mid-transaction;
+# rollback stops safely and can be retried after they finish.
+panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \
+    || die "Certbot renewal scheduler could not be quiesced safely"
+
+# This restore is deliberately idempotent and therefore also repairs a
+# completion-pending retry. It restores the active certificate layout, the
+# legacy/current hook contract, and exact pending activation presence/bytes.
+panel_tls_restore_snapshot \
+    "$snap/panel-tls" "$PANEL_TLS_DIR" "$PANEL_CERT_PENDING" "$PANEL_CERT_HOOK" \
+    || die "panel TLS compatibility state could not be restored"
 
 if [[ $rollback_pending_resume -eq 0 ]]; then
     rm -rf -- "$BIN_DIR"
@@ -1285,13 +1531,41 @@ release_txn_remove_start_authorization \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
     "$RELEASE_TRANSACTION_FD" "$rollback_transaction_token" rollback "$snapshot_name" \
     || die "cannot remove controlled rollback start authorization"
+release_txn_validate_pending_token \
+    "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+    || die "rollback completion marker changed before scheduler publication"
+rollback_completion_verified=1
+release_txn_mark_scheduler_restore_pending \
+    "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+    "$rollback_transaction_token" rollback "$snapshot_name" \
+    || die "cannot durably record pending rollback scheduler restoration"
+rollback_scheduler_restore_pending=1
+release_txn_validate_scheduler_restore_token \
+    "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+    || die "rollback scheduler marker changed before completion removal"
+rollback_completion_removing=1
 release_txn_remove_completion_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     "$rollback_transaction_token" rollback "$snapshot_name" \
     || die "cannot durably complete rollback transaction"
 rollback_transaction_started=0
-release_release_mutation_lock || die "cannot release rollback mutation lock"
 rollback_mutation_started=0
+rollback_completion_removing=0
+rollback_completion_verified=0
+release_release_mutation_lock || die "cannot release rollback mutation lock"
+panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \
+    || die "Certbot renewal scheduler could not be re-quiesced before restoration"
+release_txn_validate_scheduler_restore_token \
+    "$RELEASE_TRANSACTION_ROOT" "$rollback_transaction_token" rollback "$snapshot_name" \
+    || die "rollback scheduler marker changed before restoration"
+panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
+    || die "Certbot renewal scheduler state could not be restored"
+rollback_scheduler_restore_completed=1
+release_txn_remove_scheduler_restore_pending \
+    "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+    "$rollback_transaction_token" rollback "$snapshot_name" \
+    || die "cannot remove the exact rollback scheduler marker"
+rollback_scheduler_restore_pending=0
 commit=$(tr -d '[:space:]' < "$snap/commit")
 trap - EXIT
 echo

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-candidate=${1:-/mnt/c/tmp/update-B67-quiesce-exit-hardened.sh}
+candidate=${1:-update.sh}
 [[ -f "$candidate" ]] || { echo "FAIL: missing candidate: $candidate" >&2; exit 1; }
 bash -n "$candidate"
 if LC_ALL=C grep -q $'\r' "$candidate"; then
@@ -223,6 +223,8 @@ source <(extract_function stop_release_coordinators_fail_closed)
 source <(extract_function preserve_quiesce_recovery_marker)
 source <(extract_function fail_closed_quiesce_abort)
 source <(extract_function abort_quiesce_before_active)
+source <(extract_function classify_durable_update_marker)
+source <(extract_function on_exit)
 
 declare -A saved_active_states=()
 declare -A quiesce_active_states=()
@@ -405,6 +407,91 @@ release_release_mutation_lock() {
     printf 'unlock\n' >> "$mock_log"
 }
 
+mock_active_marker_valid=1
+mock_pending_marker_valid=1
+mock_scheduler_marker_valid=1
+
+assert_terminal_marker_args() {
+    [[ $# -eq 4 && "$1" == "$RELEASE_TRANSACTION_ROOT" &&
+       "$2" == "$release_transaction_token" && "$3" == update &&
+       "$4" == "$snapshot_name" ]] \
+        || fail "terminal marker validation arguments are not ROOT TOKEN OP SNAP"
+}
+
+release_txn_validate_active_token() {
+    assert_terminal_marker_args "$@"
+    printf 'validate-active\n' >> "$mock_log"
+    [[ "$mock_active_marker_valid" -eq 1 &&
+       -f "$RELEASE_TRANSACTION_ROOT/active" ]]
+}
+
+release_txn_validate_pending_token() {
+    assert_terminal_marker_args "$@"
+    printf 'validate-completion\n' >> "$mock_log"
+    [[ "$mock_pending_marker_valid" -eq 1 &&
+       -f "$RELEASE_TRANSACTION_ROOT/completion.pending" ]]
+}
+
+release_txn_validate_scheduler_restore_token() {
+    assert_terminal_marker_args "$@"
+    printf 'validate-scheduler\n' >> "$mock_log"
+    [[ "$mock_scheduler_marker_valid" -eq 1 &&
+       -f "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]]
+}
+
+cleanup_incomplete() {
+    printf 'cleanup\n' >> "$mock_log"
+}
+
+restart_previous_services() {
+    printf 'restart %s\n' "$1" >> "$mock_log"
+}
+
+reset_terminal_exit_state() {
+    : > "$mock_log"
+    rm -f -- \
+        "$RELEASE_TRANSACTION_ROOT/quiesce.pending" \
+        "$RELEASE_TRANSACTION_ROOT/active" \
+        "$RELEASE_TRANSACTION_ROOT/completion.pending" \
+        "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending"
+    reset_active_identities
+    mock_active_marker_valid=1
+    mock_pending_marker_valid=1
+    mock_scheduler_marker_valid=1
+    preserve_staging=1
+    transaction_started=1
+    mutation_started=1
+    transaction_phase=none
+    transaction_completion_verified=0
+    scheduler_restore_verified=0
+    quiesce_abort_failed=0
+}
+
+run_failed_exit() {
+    local status
+    set +e
+    ( set +e; false; on_exit )
+    status=$?
+    set -e
+    [[ "$status" -ne 0 ]] || fail "failed update EXIT unexpectedly returned success"
+}
+
+assert_runtime_preserved() {
+    ! grep -Fq 'stop --no-block celikpanel-panel.service' "$mock_log" \
+        || fail "$1 stopped panel despite exact retry evidence"
+    ! grep -Fq 'stop --no-block celikpanel-agent.service' "$mock_log" \
+        || fail "$1 stopped agent despite exact retry evidence"
+    grep -Fq 'unlock' "$mock_log" \
+        || fail "$1 did not release the mutation lock"
+}
+
+assert_runtime_stopped() {
+    grep -Fq 'stop --no-block celikpanel-panel.service' "$mock_log" \
+        || fail "$1 did not stop panel"
+    grep -Fq 'stop --no-block celikpanel-agent.service' "$mock_log" \
+        || fail "$1 did not stop agent"
+}
+
 assert_fail_closed_abort() {
     [[ -e "$RELEASE_TRANSACTION_ROOT/quiesce.pending" ]] \
         || fail "failed abort removed the recovery marker"
@@ -556,5 +643,60 @@ recover_active_release_service celikpanel-agent.service agent agent_frozen
     || fail "already-stopped coordinators were signalled after the second crash boundary"
 [[ -e "$RELEASE_TRANSACTION_ROOT/active" && ! -e "$SNAP_ROOT/$snapshot_name" ]] \
     || fail "idempotent active retry changed the durable crash boundary"
+
+# Completion unlink became visible but its parent-directory fsync failed. The
+# exact scheduler marker is the remaining durable obligation, so runtime stays up.
+reset_terminal_exit_state
+touch "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending"
+transaction_phase=completion-removing
+transaction_completion_verified=1
+run_failed_exit
+assert_runtime_preserved "visible completion unlink boundary"
+[[ -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] \
+    || fail "visible completion unlink boundary removed the scheduler retry marker"
+
+# A failure before completion unlink can expose both exact markers. This is a
+# valid, retryable topology and must not turn a completed runtime into an outage.
+reset_terminal_exit_state
+touch \
+    "$RELEASE_TRANSACTION_ROOT/completion.pending" \
+    "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending"
+transaction_phase=completion-removing
+transaction_completion_verified=1
+run_failed_exit
+assert_runtime_preserved "completion plus scheduler boundary"
+[[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" &&
+   -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] \
+    || fail "completion plus scheduler boundary changed durable markers"
+
+# Scheduler-marker unlink became visible but its parent-directory fsync failed
+# only after scheduler restoration was verified under the mutation lock.
+reset_terminal_exit_state
+transaction_phase=scheduler-removing
+scheduler_restore_verified=1
+run_failed_exit
+assert_runtime_preserved "visible scheduler unlink boundary"
+
+# Missing scheduler evidence at completion-removal time is not retryable.
+reset_terminal_exit_state
+touch "$RELEASE_TRANSACTION_ROOT/completion.pending"
+transaction_phase=completion-removing
+transaction_completion_verified=1
+run_failed_exit
+assert_runtime_stopped "completion without scheduler evidence"
+[[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" ]] \
+    || fail "fail-closed completion boundary removed its marker"
+
+# A present but invalid scheduler marker must fail before the preserve-runtime
+# branch and stop both release coordinators.
+reset_terminal_exit_state
+touch "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending"
+mock_scheduler_marker_valid=0
+transaction_phase=completion-removing
+transaction_completion_verified=1
+run_failed_exit
+assert_runtime_stopped "invalid scheduler marker"
+[[ -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] \
+    || fail "invalid scheduler marker was removed"
 
 echo "PASS: update quiesce/EXIT durable identity contract"

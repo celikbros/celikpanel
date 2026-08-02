@@ -30,8 +30,11 @@ bulgularını geri getirmeyen bir sürüm yayımlandığında yapılmalıdır.
 
 Her web yayını için:
 
-1. `npm ci` çalıştırın;
+1. `npm ci --no-audit --no-fund` çalıştırın;
 2. `npm run build` çalıştırın;
-3. `npm audit --omit=dev` çalıştırın;
+3. yalnızca açık işletmen onayından sonra `npm audit --omit=dev` çalıştırın;
+   bu ağ denetimi paket adlarını ve sürümlerini yapılandırılmış npm kayıt
+   servisine gönderir. Onay tam olarak şu cümleyi içermelidir: “Paket adları ve
+   sürümlerinin npm’in açık denetim servisine gönderilmesini onaylıyorum.”;
 4. yukarıdaki server/RSC API'lerinin uygulamada hâlâ bulunmadığını doğrulayın;
 5. değişen uyarı aralığını yayın incelemesine kaydedin.

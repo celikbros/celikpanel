@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DKIM signing — the missing half of DKIM. The panel has long generated keys
@@ -35,12 +39,7 @@ const (
 	opendkimMilter    = "inet:localhost:8891"
 )
 
-type ConfigureDKIMSigningResponse struct {
-	Configured bool   `json:"configured"`
-	Domains    int    `json:"domains"`
-	Detail     string `json:"detail,omitempty"`
-	Error      string `json:"error,omitempty"`
-}
+type ConfigureDKIMSigningResponse = transport.ConfigureDKIMSigningResponse
 
 // ConfigureDKIMSigning installs OpenDKIM if needed, regenerates the tables
 // from the key directory and wires the milter into Postfix. Idempotent —
@@ -88,11 +87,6 @@ func (a *Agent) ConfigureDKIMSigning(req *ServiceMutationRequest, resp *Configur
 		resp.Error = err.Error()
 		return nil
 	}
-	if err := writeDKIMTables(ctx, domains); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-
 	conf := fmt.Sprintf(`# Managed by CelikPanel — DKIM signing for hosted domains. Do not edit by hand.
 Syslog			yes
 UMask			007
@@ -107,16 +101,19 @@ SigningTable		refile:%s/signingtable
 InternalHosts		%s/trustedhosts
 TrustAnchorFile		/usr/share/dns/root.key
 `, opendkimSocket, opendkimTablesDir, opendkimTablesDir, opendkimTablesDir)
-	if err := os.WriteFile(opendkimConfPath, []byte(conf), 0o644); err != nil {
+	if err := writeDKIMTables(ctx, domains, conf); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
 
-	if out, err := serviceMutationCommand(ctx, "systemctl", "enable", "--now", "opendkim").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("opendkim start: %s", firstLine(string(out)))
+	if out, err := serviceMutationCommand(ctx, "systemctl", "enable", "opendkim").CombinedOutput(); err != nil {
+		resp.Error = fmt.Sprintf("opendkim enable: %s", firstLine(string(out)))
 		return nil
 	}
-	_ = serviceMutationCommand(ctx, "systemctl", "restart", "opendkim").Run()
+	if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "opendkim").CombinedOutput(); err != nil {
+		resp.Error = fmt.Sprintf("opendkim restart: %s", firstLine(string(out)))
+		return nil
+	}
 
 	// Wire the milters through the ONE composer: writing smtpd_milters here
 	// directly used to erase any spam filter already wired (last writer wins,
@@ -151,8 +148,15 @@ func dkimSignedDomains() ([]string, error) {
 		if !e.IsDir() {
 			continue
 		}
-		key := filepath.Join(base, e.Name(), signingSelector+".private")
-		if st, err := os.Stat(key); err == nil && st.Mode().IsRegular() {
+		key, err := dkimKeyPath(e.Name(), signingSelector)
+		if err != nil {
+			return nil, fmt.Errorf("invalid DKIM key directory %q: %w", e.Name(), err)
+		}
+		exists, err := secureMailFileExists(key)
+		if err != nil {
+			return nil, fmt.Errorf("inspect DKIM private key for %s: %w", e.Name(), err)
+		}
+		if exists {
 			domains = append(domains, e.Name())
 		}
 	}
@@ -164,9 +168,12 @@ func dkimSignedDomains() ([]string, error) {
 // the private keys readable by the opendkim group (root keeps ownership).
 // writeDKIMTables, OpenDKIM anahtar/imzalama/güven tablolarını üretir ve
 // özel anahtarları opendkim grubunca okunur yapar (sahiplik root'ta kalır).
-func writeDKIMTables(ctx context.Context, domains []string) error {
-	if err := os.MkdirAll(opendkimTablesDir, 0o755); err != nil {
-		return err
+func writeDKIMTables(ctx context.Context, domains []string, conf string) error {
+	if err := secureMkdirAll(opendkimTablesDir, 0o755); err != nil {
+		return fmt.Errorf("create OpenDKIM table directory: %w", err)
+	}
+	if err := secureMkdirAll(dkimBaseDir, 0o750); err != nil {
+		return fmt.Errorf("create DKIM key directory: %w", err)
 	}
 	// The whole directory chain must be traversable by opendkim, not just
 	// the key file — a 0700 parent blocks the key silently. /etc/celikpanel
@@ -176,28 +183,46 @@ func writeDKIMTables(ctx context.Context, domains []string) error {
 	// dosyası değil — 0700 bir üst dizin anahtarı sessizce keser.
 	// /etc/celikpanel'in kendisi root:celikpanel 0750; token dizinini
 	// gevşetmek yerine opendkim o gruba katılır.
-	_ = serviceMutationCommand(ctx, "usermod", "-aG", "celikpanel", "opendkim").Run()
+	if out, err := serviceMutationCommand(ctx, "usermod", "-aG", "celikpanel", "opendkim").CombinedOutput(); err != nil {
+		return fmt.Errorf("add opendkim to celikpanel group: %w: %s", err, firstLine(string(out)))
+	}
+	opendkimGroup, err := user.LookupGroup("opendkim")
+	if err != nil {
+		return fmt.Errorf("look up opendkim group: %w", err)
+	}
+	opendkimGID, err := strconv.Atoi(opendkimGroup.Gid)
+	if err != nil {
+		return fmt.Errorf("parse opendkim group id %q: %w", opendkimGroup.Gid, err)
+	}
 	base := dkimBaseDir
-	_ = serviceMutationCommand(ctx, "chgrp", "opendkim", base).Run()
-	_ = os.Chmod(base, 0o750)
+	if err := secureSetMailDirectoryMetadata(base, 0o750, 0, opendkimGID); err != nil {
+		return err
+	}
+	if err := secureSetMailDirectoryMetadata(opendkimTablesDir, 0o755, 0, 0); err != nil {
+		return err
+	}
 	var kt, st strings.Builder
 	for _, d := range domains {
-		key := filepath.Join(base, d, signingSelector+".private")
+		key, err := dkimKeyPath(d, signingSelector)
+		if err != nil {
+			return fmt.Errorf("invalid DKIM domain %q: %w", d, err)
+		}
 		fmt.Fprintf(&kt, "%s._domainkey.%s %s:%s:%s\n", signingSelector, d, d, signingSelector, key)
 		fmt.Fprintf(&st, "*@%s %s._domainkey.%s\n", d, signingSelector, d)
 		// OpenDKIM drops to its own user; give the group read access.
 		// OpenDKIM kendi kullanıcısına düşer; gruba okuma izni ver.
-		_ = serviceMutationCommand(ctx, "chgrp", "opendkim", key).Run()
-		_ = os.Chmod(key, 0o640)
-		_ = serviceMutationCommand(ctx, "chgrp", "opendkim", filepath.Join(base, d)).Run()
-		_ = os.Chmod(filepath.Join(base, d), 0o750)
+		if err := secureSetMailFileMetadata(key, 0o640, 0, opendkimGID); err != nil {
+			return fmt.Errorf("secure DKIM private key for %s: %w", d, err)
+		}
+		if err := secureSetMailDirectoryMetadata(filepath.Dir(key), 0o750, 0, opendkimGID); err != nil {
+			return fmt.Errorf("secure DKIM key directory for %s: %w", d, err)
+		}
 	}
 	trusted := "127.0.0.1\n::1\nlocalhost\n"
-	if err := os.WriteFile(filepath.Join(opendkimTablesDir, "keytable"), []byte(kt.String()), 0o644); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(opendkimTablesDir, "signingtable"), []byte(st.String()), 0o644); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(opendkimTablesDir, "trustedhosts"), []byte(trusted), 0o644)
+	return applyMailFileMutation(ctx, []mailFileWrite{
+		{path: filepath.Join(opendkimTablesDir, "keytable"), content: []byte(kt.String()), mode: 0o644},
+		{path: filepath.Join(opendkimTablesDir, "signingtable"), content: []byte(st.String()), mode: 0o644},
+		{path: filepath.Join(opendkimTablesDir, "trustedhosts"), content: []byte(trusted), mode: 0o644},
+		{path: opendkimConfPath, content: []byte(conf), mode: 0o644},
+	}, nil, nil)
 }

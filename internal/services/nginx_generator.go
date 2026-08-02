@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -55,6 +56,7 @@ type VhostData struct {
 	SSLType            string
 	SSLCert            string
 	SSLKey             string
+	RedirectWWW        bool
 	ForceHTTPS         bool
 	HSTSEnabled        bool
 	HSTSMaxAge         int
@@ -324,13 +326,25 @@ func (ng *NginxGenerator) restoreVhost(domain string, snapshot vhostSnapshot) er
 }
 
 func (ng *NginxGenerator) rollbackVhostMutation(domain string, snapshot vhostSnapshot, cause error) error {
+	return ng.rollbackVhostMutationWithRuntime(
+		domain, snapshot, cause, ng.ValidateNginx, ng.ReloadNginx,
+	)
+}
+
+func (ng *NginxGenerator) rollbackVhostMutationWithRuntime(
+	domain string,
+	snapshot vhostSnapshot,
+	cause error,
+	validateNginx func() error,
+	reloadNginx func() error,
+) error {
 	if err := ng.restoreVhost(domain, snapshot); err != nil {
 		return fmt.Errorf("%w; rollback restore failed: %v", cause, err)
 	}
-	if err := ng.ValidateNginx(); err != nil {
+	if err := validateNginx(); err != nil {
 		return fmt.Errorf("%w; rollback validation failed: %v", cause, err)
 	}
-	if err := ng.ReloadNginx(); err != nil {
+	if err := reloadNginx(); err != nil {
 		return fmt.Errorf("%w; rollback reload failed: %v", cause, err)
 	}
 	return fmt.Errorf("%w; rollback restored and reloaded the previous vhost", cause)
@@ -445,6 +459,43 @@ func (ng *NginxGenerator) ApplyVhosts(vhosts []RenderedVhost) error {
 // snapshot, write, validate and reload are serialized with all other vhost
 // mutations. Any failure restores, validates and reloads the previous state.
 func (ng *NginxGenerator) ApplyVhost(domain, config string) error {
+	return ng.applyVhostWithRuntime(
+		domain, config, ng.ValidateNginx, ng.ReloadNginx,
+	)
+}
+
+// NginxCommandRunner lets an owning mutation supervisor execute nginx
+// validation and reload without escaping its process tracker.
+type NginxCommandRunner func(
+	context.Context,
+	string,
+	...string,
+) ([]byte, error)
+
+// ApplyVhostWithCommandRunner preserves the same snapshot/rollback
+// transaction as ApplyVhost while routing every subprocess through the
+// caller-owned durable mutation runner.
+func (ng *NginxGenerator) ApplyVhostWithCommandRunner(
+	ctx context.Context,
+	domain, config string,
+	run NginxCommandRunner,
+) error {
+	if ctx == nil || run == nil {
+		return errors.New("nginx mutation command context and runner are required")
+	}
+	return ng.applyVhostWithRuntime(
+		domain,
+		config,
+		func() error { return ng.validateNginxWithCommandRunner(ctx, run) },
+		func() error { return ng.reloadNginxWithCommandRunner(ctx, run) },
+	)
+}
+
+func (ng *NginxGenerator) applyVhostWithRuntime(
+	domain, config string,
+	validateNginx func() error,
+	reloadNginx func() error,
+) error {
 	nginxMutationMu.Lock()
 	defer nginxMutationMu.Unlock()
 
@@ -453,18 +504,21 @@ func (ng *NginxGenerator) ApplyVhost(domain, config string) error {
 		return err
 	}
 	if err := ng.writeVhostFile(domain, config); err != nil {
-		return ng.rollbackVhostMutation(
+		return ng.rollbackVhostMutationWithRuntime(
 			domain, snapshot, fmt.Errorf("vhost write failed: %w", err),
+			validateNginx, reloadNginx,
 		)
 	}
-	if err := ng.ValidateNginx(); err != nil {
-		return ng.rollbackVhostMutation(
+	if err := validateNginx(); err != nil {
+		return ng.rollbackVhostMutationWithRuntime(
 			domain, snapshot, fmt.Errorf("nginx validation failed: %w", err),
+			validateNginx, reloadNginx,
 		)
 	}
-	if err := ng.ReloadNginx(); err != nil {
-		return ng.rollbackVhostMutation(
+	if err := reloadNginx(); err != nil {
+		return ng.rollbackVhostMutationWithRuntime(
 			domain, snapshot, fmt.Errorf("nginx reload failed: %w", err),
+			validateNginx, reloadNginx,
 		)
 	}
 	return nil
@@ -517,27 +571,100 @@ func (ng *NginxGenerator) WriteVhostFile(domain string, config string) error {
 
 func (ng *NginxGenerator) writeVhostFile(domain string, config string) error {
 	filename, symlinkPath := vhostPaths(domain)
-	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+	availableDir := filepath.Dir(filename)
+	if err := os.MkdirAll(availableDir, 0o755); err != nil {
 		return err
 	}
-	err := os.WriteFile(filename, []byte(config), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write vhost file: %v", err)
+	if err := atomicWriteRegularFile(filename, []byte(config), 0o644); err != nil {
+		return fmt.Errorf("failed to write vhost file: %w", err)
 	}
 
-	// Create symlink in sites-enabled
-	if err := os.MkdirAll(filepath.Dir(symlinkPath), 0o755); err != nil {
+	// Publish the enabled link with one rename. Remove+Symlink left a window
+	// in which nginx could observe no enabled vhost at all.
+	enabledDir := filepath.Dir(symlinkPath)
+	if err := os.MkdirAll(enabledDir, 0o755); err != nil {
 		return err
 	}
-	if err := os.Remove(symlinkPath); err != nil && !os.IsNotExist(err) {
+	if err := atomicReplaceSymlink(symlinkPath, filename); err != nil {
 		return fmt.Errorf("failed to replace enabled vhost link: %w", err)
-	}
-	err = os.Symlink(filename, symlinkPath)
-	if err != nil {
-		return fmt.Errorf("failed to create symlink: %v", err)
 	}
 
 	return nil
+}
+
+func atomicWriteRegularFile(filename string, content []byte, mode os.FileMode) (returnErr error) {
+	directory := filepath.Dir(filename)
+	temporary, err := os.CreateTemp(directory, "."+filepath.Base(filename)+".tmp-")
+	if err != nil {
+		return err
+	}
+	temporaryName := temporary.Name()
+	defer func() {
+		if temporary != nil {
+			_ = temporary.Close()
+		}
+		if returnErr != nil {
+			_ = os.Remove(temporaryName)
+		}
+	}()
+	if err := temporary.Chmod(mode); err != nil {
+		return err
+	}
+	if _, err := temporary.Write(content); err != nil {
+		return err
+	}
+	if err := temporary.Sync(); err != nil {
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	temporary = nil
+	if err := os.Rename(temporaryName, filename); err != nil {
+		return err
+	}
+	if err := syncDirectory(directory); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func atomicReplaceSymlink(linkPath, target string) (returnErr error) {
+	directory := filepath.Dir(linkPath)
+	placeholder, err := os.CreateTemp(directory, "."+filepath.Base(linkPath)+".tmp-")
+	if err != nil {
+		return err
+	}
+	temporaryName := placeholder.Name()
+	if err := placeholder.Close(); err != nil {
+		_ = os.Remove(temporaryName)
+		return err
+	}
+	if err := os.Remove(temporaryName); err != nil {
+		return err
+	}
+	defer func() {
+		if returnErr != nil {
+			_ = os.Remove(temporaryName)
+		}
+	}()
+	if err := os.Symlink(target, temporaryName); err != nil {
+		return err
+	}
+	if err := os.Rename(temporaryName, linkPath); err != nil {
+		return err
+	}
+	return syncDirectory(directory)
+}
+
+func syncDirectory(directory string) error {
+	handle, err := os.Open(directory)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+	return handle.Sync()
 }
 
 // ValidateNginx runs nginx -t to validate configuration. Skipped in dev
@@ -564,6 +691,24 @@ func (ng *NginxGenerator) ValidateNginx() error {
 	return nil
 }
 
+func (ng *NginxGenerator) validateNginxWithCommandRunner(
+	ctx context.Context,
+	run NginxCommandRunner,
+) error {
+	if ng.validateNginx != nil {
+		return ng.validateNginx()
+	}
+	output, err := run(ctx, "nginx", "-t")
+	if err != nil {
+		detail := strings.TrimSpace(string(output))
+		if detail == "" {
+			return fmt.Errorf("nginx validation failed: %w", err)
+		}
+		return fmt.Errorf("nginx validation failed: %s: %w", detail, err)
+	}
+	return nil
+}
+
 // ReloadNginx reloads nginx service
 func (ng *NginxGenerator) ReloadNginx() error {
 	if ng.reloadNginx != nil {
@@ -573,6 +718,24 @@ func (ng *NginxGenerator) ReloadNginx() error {
 		return nil
 	}
 	output, err := runNginxCommand("systemctl", "reload", "nginx")
+	if err != nil {
+		detail := strings.TrimSpace(string(output))
+		if detail == "" {
+			return fmt.Errorf("nginx reload failed: %w", err)
+		}
+		return fmt.Errorf("nginx reload failed: %s: %w", detail, err)
+	}
+	return nil
+}
+
+func (ng *NginxGenerator) reloadNginxWithCommandRunner(
+	ctx context.Context,
+	run NginxCommandRunner,
+) error {
+	if ng.reloadNginx != nil {
+		return ng.reloadNginx()
+	}
+	output, err := run(ctx, "systemctl", "reload", "nginx")
 	if err != nil {
 		detail := strings.TrimSpace(string(output))
 		if detail == "" {

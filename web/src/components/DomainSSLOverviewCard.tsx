@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
+import { sslTier, sslTierLabel, type SSLTier } from '../lib/sslTier';
 import { Button } from './ui';
 import type { SSLRuntimeSummary } from './DomainSSLSettings';
 
@@ -33,6 +34,20 @@ interface Tier {
     surface: string;
     label: TranslationKey;
 }
+
+const sslTierPresentation: Record<SSLTier, Omit<Tier, 'label'>> = {
+    none: { icon: AlertTriangle, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    pending: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    invalid: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
+    untrusted: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
+    trustUnknown: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    expired: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
+    inactive: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    incomplete: { icon: ShieldAlert, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    expiring: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    dependentsPending: { icon: Clock3, color: 'text-warning', surface: 'border-warning/30 bg-warning/5' },
+    valid: { icon: CheckCircle, color: 'text-success', surface: 'border-success/30 bg-success/5' },
+};
 
 export function DomainSSLOverviewCard({
     domainId,
@@ -81,6 +96,7 @@ export function DomainSSLOverviewCard({
     }, [domainId, onCertificateChange]);
 
     const cert = data?.certificate;
+    const certificateTier = sslTier(data?.has_certificate ? cert : undefined);
     const tier: Tier = loading
         ? {
               icon: Clock3,
@@ -95,68 +111,10 @@ export function DomainSSLOverviewCard({
                 surface: 'border-warning/30 bg-warning/5',
                 label: 'domain.overview.ssl.unavailable',
             }
-          : !data?.has_certificate || !cert
-            ? {
-                  icon: AlertTriangle,
-                  color: 'text-warning',
-                  surface: 'border-warning/30 bg-warning/5',
-                  label: 'ssl.status.none',
-              }
-            : cert.activation_pending
-              ? {
-                    icon: Clock3,
-                    color: 'text-warning',
-                    surface: 'border-warning/30 bg-warning/5',
-                    label: 'ssl.status.pending',
-                }
-              : cert.trust_status === 'invalid' || cert.days_until_expiry < 0
-              ? {
-                    icon: ShieldAlert,
-                    color: 'text-danger',
-                    surface: 'border-danger/30 bg-danger/5',
-                    label: cert.days_until_expiry < 0 ? 'ssl.status.expired' : 'ssl.status.invalid',
-                }
-              : cert.trust_status === 'untrusted'
-                ? {
-                      icon: ShieldAlert,
-                      color: 'text-danger',
-                      surface: 'border-danger/30 bg-danger/5',
-                      label: 'ssl.status.untrusted',
-                  }
-                : cert.trust_status === 'unknown'
-                  ? {
-                        icon: ShieldAlert,
-                        color: 'text-warning',
-                        surface: 'border-warning/30 bg-warning/5',
-                        label: 'ssl.status.trustUnknown',
-                    }
-                  : !cert.activated || !cert.usable
-                  ? {
-                        icon: ShieldAlert,
-                        color: 'text-warning',
-                        surface: 'border-warning/30 bg-warning/5',
-                        label: !cert.activated ? 'ssl.status.inactive' : 'ssl.status.incomplete',
-                    }
-              : cert.days_until_expiry < 30
-                ? {
-                      icon: Clock3,
-                      color: 'text-warning',
-                      surface: 'border-warning/30 bg-warning/5',
-                      label: 'ssl.status.expiring',
-                  }
-                : cert.dependents_pending
-                  ? {
-                        icon: Clock3,
-                        color: 'text-warning',
-                        surface: 'border-warning/30 bg-warning/5',
-                        label: 'ssl.status.dependentsPending',
-                    }
-                  : {
-                      icon: CheckCircle,
-                      color: 'text-success',
-                      surface: 'border-success/30 bg-success/5',
-                      label: 'ssl.status.valid',
-                  };
+          : {
+                ...sslTierPresentation[certificateTier],
+                label: sslTierLabel[certificateTier],
+            };
     const TierIcon = tier.icon;
     const hasCertificate = Boolean(data?.has_certificate && cert);
 

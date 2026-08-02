@@ -16,7 +16,7 @@ interface GeneralSettings {
     document_root: string;
     web_server: string;
     redirect_www: boolean;
-    redirect_https: boolean;
+    redirect_www_available: boolean;
     aliases: string[];
 }
 
@@ -26,26 +26,10 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [newAlias, setNewAlias] = useState('');
-    const [webServers, setWebServers] = useState<string[]>(['nginx']);
 
     useEffect(() => {
         loadSettings();
-        loadWebServers();
     }, [domainId]);
-
-    const loadWebServers = async () => {
-        try {
-            const res = await fetch('/api/v1/system/check');
-            if (!res.ok) return;
-            const data = await res.json();
-            const servers: string[] = [];
-            if (data.nginx) servers.push('nginx');
-            if (data.apache) servers.push('apache');
-            if (servers.length) setWebServers(servers);
-        } catch {
-            /* keep default */
-        }
-    };
 
     const loadSettings = async () => {
         setLoading(true);
@@ -70,15 +54,18 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    document_root: fd.get('document_root') as string,
-                    web_server: fd.get('web_server') as string,
+                    document_root: settings.document_root,
+                    web_server: 'nginx',
                     redirect_www: fd.get('redirect_www') === 'on',
-                    redirect_https: fd.get('redirect_https') === 'on',
                 }),
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const apiError = await readApiError(res);
+                showToast('error', apiErrorText(apiError, t, 'general.saveFailed'));
+                return;
+            }
             showToast('success', t('general.saved'));
-            loadSettings();
+            await loadSettings();
         } catch {
             showToast('error', t('general.saveFailed'));
         } finally {
@@ -163,48 +150,37 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
         <div>
             <form onSubmit={handleSave}>
                 <FormSection title={t('general.docRoot')} description={t('general.docRootHint')}>
-                    <input
-                        type="text"
-                        name="document_root"
-                        defaultValue={settings.document_root}
-                        placeholder="/var/www/html"
-                        className={`${inputClass} font-mono`}
-                    />
+                    <p className="break-all rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-sm text-fg">
+                        {settings.document_root}
+                    </p>
                 </FormSection>
 
                 <FormSection
                     title={t('general.webServer')}
-                    description={webServers.length > 1 ? t('general.webServerHintMulti') : t('general.webServerHintSingle')}
+                    description={t('general.webServerHintSingle')}
                 >
-                    {webServers.length > 1 ? (
-                        <select name="web_server" defaultValue={settings.web_server} className={inputClass}>
-                            {webServers.map((s) => (
-                                <option key={s} value={s}>
-                                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                                </option>
-                            ))}
-                        </select>
-                    ) : (
-                        <>
-                            <p className="text-sm text-fg">{webServers[0].charAt(0).toUpperCase() + webServers[0].slice(1)}</p>
-                            <input type="hidden" name="web_server" value={webServers[0]} />
-                        </>
+                    <p className="text-sm font-medium text-fg">Nginx</p>
+                    {settings.web_server !== 'nginx' && (
+                        <p className="mt-1 text-xs text-warning">
+                            {t('general.webServerUnsupported', { name: settings.web_server || 'unknown' })}
+                        </p>
                     )}
                 </FormSection>
 
                 <FormSection title={t('general.redirects')}>
-                    <ToggleRow
-                        name="redirect_www"
-                        defaultChecked={settings.redirect_www}
-                        label={t('general.redirectWww')}
-                        hint={`${domainName} → www.${domainName}`}
-                    />
-                    <ToggleRow
-                        name="redirect_https"
-                        defaultChecked={settings.redirect_https}
-                        label={t('general.forceHttps')}
-                        hint={t('general.forceHttpsHint')}
-                    />
+                    {settings.redirect_www_available ? (
+                        <ToggleRow
+                            name="redirect_www"
+                            defaultChecked={settings.redirect_www}
+                            label={t('general.redirectWww')}
+                            hint={`${domainName} → www.${domainName}`}
+                        />
+                    ) : (
+                        <p className="text-sm text-fg-muted">{t('general.redirectWwwUnavailable')}</p>
+                    )}
+                    <p className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-fg-muted">
+                        {t('general.forceHttpsManaged')}
+                    </p>
                 </FormSection>
 
                 <FormActions>

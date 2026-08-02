@@ -24,7 +24,6 @@ type DatabaseDriver interface {
 	// Privilege operations
 	GrantPrivileges(database, user, privileges string) error
 	RevokePrivileges(database, user string) error
-	ListUserDatabases(username string) ([]string, error)
 }
 
 // DriverConfig holds configuration for database drivers

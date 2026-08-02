@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Package managers own one machine-wide database lock. Serialize every panel
@@ -170,19 +172,15 @@ func installPackagesContext(ctx context.Context, family string, packages []strin
 		}
 		return out, nil
 	case "pacman":
-		// Refresh the index first (pacman's apt-get update). A failed refresh
-		// aborts honestly; continuing against a stale/unknown index produced
-		// silent no-op installs on the live Arch host. --needed skips
-		// what is present; deliberately NOT -Syu — a service install must
-		// never surprise-upgrade the whole system.
-		// Önce dizini tazele (pacman'in apt-get update'i); hata, önbellekli
-		// dizinin karşılayabileceği kurulumu veto etmemeli. --needed mevcut
-		// olanı atlar; bilerek -Syu DEĞİL — servis kurulumu tüm sistemi
-		// sürprizle yükseltmemeli.
-		if out, err := runServiceMutationCombinedOutput(ctx, "pacman", "-Sy", "--noconfirm"); err != nil {
-			return "", fmt.Errorf("pacman-sync-failed:%v:%s", err, strings.TrimSpace(string(out)))
-		}
-		args := append([]string{"-S", "--noconfirm", "--needed"}, packages...)
+		// Arch supports only full-system upgrades. Refreshing databases with
+		// -Sy and then installing with -S creates an unsupported partial
+		// upgrade window. Keep refresh, upgrade and requested package install
+		// in one pacman transaction instead.
+		// Arch yalnızca tam sistem yükseltmelerini destekler. -Sy ile veritabanı
+		// tazeleyip sonra -S ile kurmak desteklenmeyen bir kısmi yükseltme
+		// penceresi açar. Tazeleme, yükseltme ve istenen paket kurulumunu tek
+		// pacman işleminde tut.
+		args := pacmanInstallArgs(packages)
 		out, err := runServiceMutationCombinedOutput(ctx, "pacman", args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
@@ -193,6 +191,10 @@ func installPackagesContext(ctx context.Context, family string, packages []strin
 	default:
 		return "", fmt.Errorf("unrecognised distribution; install %s manually", strings.Join(packages, ", "))
 	}
+}
+
+func pacmanInstallArgs(packages []string) []string {
+	return append([]string{"-Syu", "--noconfirm", "--needed"}, packages...)
 }
 
 // removePackages purges the given packages with the host's package manager,
@@ -254,15 +256,23 @@ func removePackagesContext(ctx context.Context, family string, packages []string
 // systemd unit'i olmayan katalog girdileri için varlık testi (phpMyAdmin ve
 // benzerleri daemon değil, web sunucusunun sunduğu dosyalardır).
 func packageInstalled(pkg string) bool {
+	return packageInstalledForFamily(detectPkgFamily(), pkg)
+}
+
+func packageInstalledForFamily(family, pkg string) bool {
 	if !validPackageName(pkg) {
 		return false
 	}
-	switch detectPkgFamily() {
-	case "pacman":
-		return exec.Command("pacman", "-Q", pkg).Run() == nil
-	default:
+	switch family {
+	case "apt":
 		out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pkg).Output()
 		return err == nil && strings.Contains(string(out), "install ok installed")
+	case "pacman":
+		return exec.Command("pacman", "-Q", pkg).Run() == nil
+	case "dnf":
+		return exec.Command("rpm", "-q", "--", pkg).Run() == nil
+	default:
+		return false
 	}
 }
 
@@ -272,7 +282,7 @@ func packageInstalled(pkg string) bool {
 // PkgFamily, makinenin paket-yöneticisi ailesini panele açar; panel kur/kaldır
 // pencerelerinde aileye doğru paket adlarını göstermek için buna muhtaçtır
 // (katalog Packages'ı aileyle anahtarlar; panel apt varsayamaz).
-func (a *Agent) PkgFamily(_ *struct{}, reply *string) error {
+func (a *Agent) PkgFamily(_ *transport.Empty, reply *string) error {
 	*reply = detectPkgFamily()
 	return nil
 }

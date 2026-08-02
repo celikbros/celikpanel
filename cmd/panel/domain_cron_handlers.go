@@ -9,6 +9,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Cron Jobs API Handlers
@@ -80,17 +81,9 @@ func (p *Panel) handleDomainCronJobs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Panel) handleListCronJobs(w http.ResponseWriter, username string) {
-	var resp struct {
-		Jobs []struct {
-			ID       string `json:"id"`
-			Schedule string `json:"schedule"`
-			Command  string `json:"command"`
-			Enabled  bool   `json:"enabled"`
-			Comment  string `json:"comment"`
-		} `json:"jobs"`
-	}
+	var resp transport.ListCronJobsResponse
 
-	err := p.agentClient.Call("Agent.ListCronJobs", &struct{ Username string }{Username: username}, &resp)
+	err := p.callAgent("Agent.ListCronJobs", &transport.ListCronJobsRequest{Username: username}, &resp)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -112,12 +105,7 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, usernam
 	}
 
 	var success bool
-	err := p.agentClient.Call("Agent.AddCronJob", &struct {
-		Username string
-		Schedule string
-		Command  string
-		Comment  string
-	}{
+	err := p.callAgentContext(r.Context(), "Agent.AddCronJob", &transport.AddCronJobRequest{
 		Username: username,
 		Schedule: req.Schedule,
 		Command:  req.Command,
@@ -125,11 +113,15 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, usernam
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
+		writeServerError(w, err)
+		return
+	}
+	if !success {
+		writeAgentError(w, nil, "cron job creation was not completed")
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": success})
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, username string) {
@@ -147,14 +139,7 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, user
 	}
 
 	var success bool
-	err := p.agentClient.Call("Agent.UpdateCronJob", &struct {
-		Username string
-		ID       string
-		Schedule string
-		Command  string
-		Enabled  bool
-		Comment  string
-	}{
+	err := p.callAgentContext(r.Context(), "Agent.UpdateCronJob", &transport.UpdateCronJobRequest{
 		Username: username,
 		ID:       req.ID,
 		Schedule: req.Schedule,
@@ -164,11 +149,15 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, user
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
+		writeServerError(w, err)
+		return
+	}
+	if !success {
+		writeAgentError(w, nil, "cron job update was not completed")
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": success})
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, username string) {
@@ -179,18 +168,19 @@ func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, user
 	}
 
 	var success bool
-	err := p.agentClient.Call("Agent.DeleteCronJob", &struct {
-		Username string
-		ID       string
-	}{
+	err := p.callAgentContext(r.Context(), "Agent.DeleteCronJob", &transport.DeleteCronJobRequest{
 		Username: username,
 		ID:       jobID,
 	}, &success)
 
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "operation failed"})
+		writeServerError(w, err)
+		return
+	}
+	if !success {
+		writeAgentError(w, nil, "cron job deletion was not completed")
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": success})
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

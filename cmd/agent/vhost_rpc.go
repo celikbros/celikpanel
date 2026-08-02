@@ -14,6 +14,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // ApplyVhost regenerates a domain's nginx vhost from explicit data (used
@@ -26,43 +27,10 @@ import (
 // → yeniden yükle; `nginx -t`ten geçemeyen yapılandırma geri alınır, nginx
 // asla bozuk kalmaz.
 
-type ApplyVhostRequest struct {
-	ExpectedBuildCommit string   `json:"expected_build_commit"`
-	SiteID              int      `json:"site_id"`
-	SubscriptionID      int      `json:"subscription_id"`
-	DomainID            int      `json:"domain_id"`
-	Domain              string   `json:"domain"`
-	TempDomain          string   `json:"temp_domain"`
-	ServerNames         []string `json:"server_names"`
-	ACMEChallengeNames  []string `json:"acme_challenge_names,omitempty"`
-	DocumentRoot        string   `json:"document_root"`
-	PHPSocket           string   `json:"php_socket"`
-	SSLType             string   `json:"ssl_type"` // none | custom | letsencrypt
-	SSLCert             string   `json:"ssl_cert"`
-	SSLKey              string   `json:"ssl_key"`
-	ForceHTTPS          bool     `json:"force_https"`
-	HSTSEnabled         bool     `json:"hsts_enabled"`
-	HSTSMaxAge          int      `json:"hsts_max_age"`
-	ProjectType         string   `json:"project_type"`
-	AppPort             int      `json:"app_port"`
-	ForwardTo           string   `json:"forward_to"`
-	ForwardCode         int      `json:"forward_code"`
-}
-
-type ApplyVhostResponse struct {
-	Config string `json:"config"`
-	Error  string `json:"error,omitempty"`
-}
-
-type ApplyVhostsRequest struct {
-	ExpectedBuildCommit string              `json:"expected_build_commit"`
-	Vhosts              []ApplyVhostRequest `json:"vhosts"`
-}
-
-type ApplyVhostsResponse struct {
-	Applied int    `json:"applied"`
-	Error   string `json:"error,omitempty"`
-}
+type ApplyVhostRequest = transport.ApplyVhostRequest
+type ApplyVhostResponse = transport.ApplyVhostResponse
+type ApplyVhostsRequest = transport.ApplyVhostsRequest
+type ApplyVhostsResponse = transport.ApplyVhostsResponse
 
 const maxApplyVhostBatch = 4096
 
@@ -302,6 +270,15 @@ func validatedVhostData(req *ApplyVhostRequest) (services.VhostData, error) {
 	if err != nil {
 		return services.VhostData{}, err
 	}
+	if req.RedirectWWW {
+		wwwName := "www." + domain
+		if !containsVhostServerName(serverNames, domain) ||
+			!containsVhostServerName(serverNames, wwwName) {
+			return services.VhostData{}, fmt.Errorf(
+				"www redirection requires the canonical domain and its managed www hostname",
+			)
+		}
+	}
 	challengeNames, err := normalizeACMEChallengeNames(domain, req.ACMEChallengeNames)
 	if err != nil {
 		return services.VhostData{}, err
@@ -337,6 +314,7 @@ func validatedVhostData(req *ApplyVhostRequest) (services.VhostData, error) {
 		ServerNames:        serverNames,
 		ACMEChallengeNames: challengeNames,
 		ACMEChallengeRoot:  acmeChallengeRoot,
+		RedirectWWW:        req.RedirectWWW,
 		ProjectType:        projectType,
 	}
 
@@ -394,6 +372,15 @@ func validatedVhostData(req *ApplyVhostRequest) (services.VhostData, error) {
 	}
 
 	return data, nil
+}
+
+func containsVhostServerName(names []string, target string) bool {
+	for _, name := range names {
+		if name == target {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeVhostServerNames(raw []string) ([]string, error) {

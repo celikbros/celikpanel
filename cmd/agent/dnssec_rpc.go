@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DNSSEC — zone signing through pdnsutil, which operates on the same
@@ -27,15 +29,9 @@ import (
 // güvenlidir. ComputeTLSA, DANE'yi destekler: sertifikayı özetler ki panel
 // Plesk usulü posta uçlarının yanında TLSA kayıtları yayımlayabilsin.
 
-type DNSSECRequest struct {
-	Zone string `json:"zone"`
-}
+type DNSSECRequest = transport.DNSSECRequest
 
-type DNSSECStatusResponse struct {
-	Secured bool     `json:"secured"`
-	DS      []string `json:"ds,omitempty"`
-	Error   string   `json:"error,omitempty"`
-}
+type DNSSECStatusResponse = transport.DNSSECStatusResponse
 
 var (
 	dnssecLookPath = exec.LookPath
@@ -243,18 +239,9 @@ func zoneDSRecords(zone string) []string {
 	return ds
 }
 
-type TLSARequest struct {
-	CertPath string `json:"cert_path"`
-}
+type TLSARequest = transport.TLSARequest
 
-type TLSAResponse struct {
-	// Content is the TLSA rdata "3 0 1 <sha256hex>": DANE-EE, full
-	// certificate, SHA-256 — the same selector Plesk publishes.
-	// Content, TLSA rdata'sıdır "3 0 1 <sha256hex>": DANE-EE, tam
-	// sertifika, SHA-256 — Plesk'in yayımladığı seçicinin aynısı.
-	Content string `json:"content"`
-	Error   string `json:"error,omitempty"`
-}
+type TLSAResponse = transport.TLSAResponse
 
 // ComputeTLSA hashes the leaf certificate at CertPath for a DANE TLSA record.
 // ComputeTLSA, DANE TLSA kaydı için CertPath'teki uç sertifikayı özetler.

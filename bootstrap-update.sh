@@ -251,9 +251,9 @@ version_flags="-X main.buildVersion=$release_version -X main.buildCommit=$releas
 echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyor"
 (
     cd "$incomplete_root"
-    run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
-    run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
-    run_clean "$go_bin" build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"

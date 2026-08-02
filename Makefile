@@ -8,6 +8,7 @@ NPM     ?= $(shell [ -x .bin/node/bin/npm ] && echo $(PWD)/.bin/node/bin/npm || 
 NODEDIR := $(PWD)/.bin/node/bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 # One version, in both binaries. The UI reads it back over the API instead of
 # carrying a hand-typed literal.
 # Tek sürüm, iki binary'de de. Arayüz onu elle yazılmış bir metin taşımak
@@ -15,36 +16,50 @@ COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build panel agent web clean dist
+.PHONY: all build panel agent schema17-bridge web clean dist dist-sign
 
 all: build
 
-build: panel agent web ## Build binaries and frontend
+build: panel agent schema17-bridge web ## Build binaries and frontend
 
 panel: ## Build the panel binary
-	$(GO) build -ldflags "$(LDFLAGS)" -o bin/panel ./cmd/panel
+	$(GO) build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/panel ./cmd/panel
 
 agent: ## Build the agent binary
-	$(GO) build -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
+	$(GO) build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
+
+schema17-bridge: ## Build the audited legacy schema transition helper
+	$(GO) build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
 
 web: ## Build the frontend (web/dist)
-	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund 2>/dev/null || (cd web && PATH="$(NODEDIR):$$PATH" $(NPM) install --no-audit --no-fund)
+	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
-dist: build ## Assemble a self-contained release tarball (no toolchain needed on target)
-	# Mirror the repo layout (bin/, web/dist/, deploy/systemd/) so install.sh
-	# runs identically from a checkout or from an extracted release.
-	# install.sh'nin bir checkout'tan da açılmış release'ten de aynı çalışması
-	# için depo düzenini (bin/, web/dist/, deploy/systemd/) yansıt.
+dist: build ## Assemble an offline initial-install tarball (no target toolchain needed)
+	# Mirror the operational release layout so initial installation has all
+	# reviewed helpers. Privileged updates still enter through bootstrap-update.sh,
+	# which publishes and verifies an immutable release before changing /opt.
+	# İlk kurulum için incelenmiş yardımcıların tamamını taşı. Yetkili güncellemeler
+	# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
 	rm -rf dist/$(DIST)
 	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy
-	cp bin/panel bin/agent dist/$(DIST)/bin/
+	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
-	cp -r deploy/systemd dist/$(DIST)/deploy/
-	cp install.sh Makefile dist/$(DIST)/
-	tar -czf dist/$(DIST).tar.gz -C dist $(DIST)
+	cp -r deploy/. dist/$(DIST)/deploy/
+	cp install.sh bootstrap-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
+	tar --sort=name --mtime="@$(SOURCE_DATE_EPOCH)" --owner=0 --group=0 --numeric-owner --format=gnu -cf dist/$(DIST).tar -C dist $(DIST)
+	gzip -n -f dist/$(DIST).tar
 	rm -rf dist/$(DIST)
+	cd dist && sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"
 	@echo "→ dist/$(DIST).tar.gz"
+	@echo "→ dist/$(DIST).tar.gz.sha256"
+
+dist-sign: dist ## Create an optional detached signature with an operator-owned key
+	@test -n "$(SIGNING_KEY)" || { echo "SIGNING_KEY is required (GPG key ID or fingerprint)" >&2; exit 1; }
+	@command -v gpg >/dev/null || { echo "gpg is required for dist-sign" >&2; exit 1; }
+	gpg --batch --yes --armor --local-user "$(SIGNING_KEY)" --detach-sign \
+		--output "dist/$(DIST).tar.gz.asc" "dist/$(DIST).tar.gz"
+	@echo "→ dist/$(DIST).tar.gz.asc"
 
 clean: ## Remove build outputs
 	rm -rf bin web/dist dist

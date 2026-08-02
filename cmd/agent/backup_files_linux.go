@@ -16,7 +16,10 @@ import (
 	"syscall"
 )
 
-var backupRename = os.Rename
+var (
+	backupRename             = os.Rename
+	backupRemovePublishedOld = os.RemoveAll
+)
 
 // The outer package contains only a small, fixed number of payloads, but a
 // legitimate website can contain far more than 10,000 files. Keep a separate
@@ -503,7 +506,7 @@ func (s *stagedFilesRestore) Commit() error {
 	if s == nil || !s.published {
 		return errors.New("staged restore was not published")
 	}
-	if err := os.RemoveAll(s.old); err != nil {
+	if err := backupRemovePublishedOld(s.old); err != nil {
 		return err
 	}
 	s.old = ""

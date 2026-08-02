@@ -68,6 +68,13 @@ func ACMEChallengeRoot(subscriptionID, domainID int) (string, error) {
 	), nil
 }
 
+// PanelACMEChallengeRoot returns the fixed, root-owned HTTP-01 webroot used
+// for the panel hostname. It is deliberately outside tenant document roots
+// and has no user-controlled path component.
+func PanelACMEChallengeRoot() string {
+	return path.Join(acmeChallengeBaseRoot, "panel")
+}
+
 func ValidateACMEChallengeRoot(candidate string, subscriptionID, domainID int) error {
 	expected, err := ACMEChallengeRoot(subscriptionID, domainID)
 	if err != nil {

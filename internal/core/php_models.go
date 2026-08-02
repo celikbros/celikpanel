@@ -33,7 +33,7 @@ type ExtendedPHPConfig struct {
 	UploadMaxFilesize string `json:"upload_max_filesize"`
 	OpcacheEnable     string `json:"opcache_enable"`
 	DisableFunctions  string `json:"disable_functions"`
-	
+
 	// Common Settings
 	IncludePath       string `json:"include_path"`
 	SessionSavePath   string `json:"session_save_path"`
@@ -45,21 +45,21 @@ type ExtendedPHPConfig struct {
 	AllowUrlFopen     string `json:"allow_url_fopen"`
 	FileUploads       string `json:"file_uploads"`
 	ShortOpenTag      string `json:"short_open_tag"`
-	
+
 	// Additional Directives
 	AdditionalDirectives string `json:"additional_directives"`
 }
 
 // PHPPoolConfig represents detailed PHP-FPM pool configuration
 type PHPPoolConfig struct {
-	Name              string `json:"name"`
-	User              string `json:"user"`
-	Group             string `json:"group"`
-	Listen            string `json:"listen"` // socket path or port
-	ListenOwner       string `json:"listen_owner"`
-	ListenGroup       string `json:"listen_group"`
-	ListenMode        string `json:"listen_mode"`
-	
+	Name        string `json:"name"`
+	User        string `json:"user"`
+	Group       string `json:"group"`
+	Listen      string `json:"listen"` // socket path or port
+	ListenOwner string `json:"listen_owner"`
+	ListenGroup string `json:"listen_group"`
+	ListenMode  string `json:"listen_mode"`
+
 	// Process Manager
 	PM                string `json:"pm"` // dynamic, ondemand, static
 	PMMaxChildren     int    `json:"pm_max_children"`

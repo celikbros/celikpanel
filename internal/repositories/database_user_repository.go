@@ -6,20 +6,24 @@ import (
 	"fmt"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/secrets"
 )
 
 // PostgresDatabaseUserRepository implements DatabaseUserRepository
 type PostgresDatabaseUserRepository struct {
-	db *sql.DB
+	db sqlExecutor
 }
 
 // NewPostgresDatabaseUserRepository creates a new database user repository
-func NewPostgresDatabaseUserRepository(db *sql.DB) *PostgresDatabaseUserRepository {
+func NewPostgresDatabaseUserRepository(db sqlExecutor) *PostgresDatabaseUserRepository {
 	return &PostgresDatabaseUserRepository{db: db}
 }
 
 // Create inserts a new database user
 func (r *PostgresDatabaseUserRepository) Create(ctx context.Context, user *core.DatabaseUser) error {
+	if user.Password != `` && !secrets.IsEncrypted(user.Password) {
+		return fmt.Errorf(`database user password must be sealed before repository create`)
+	}
 	query := `
 		INSERT INTO database_users (server_id, subscription_id, username, password)
 		VALUES (?, ?, ?, ?)
@@ -42,7 +46,7 @@ func (r *PostgresDatabaseUserRepository) Create(ctx context.Context, user *core.
 	}
 
 	return r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM database_users WHERE id = ?", id).
-		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+		Scan(&user.ID, scanTime(&user.CreatedAt), scanTime(&user.UpdatedAt))
 }
 
 // GetByID retrieves a database user by ID
@@ -60,8 +64,8 @@ func (r *PostgresDatabaseUserRepository) GetByID(ctx context.Context, id int) (*
 		&user.SubscriptionID,
 		&user.Username,
 		&user.Password,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		scanTime(&user.CreatedAt),
+		scanTime(&user.UpdatedAt),
 	)
 
 	if err != nil {
@@ -89,8 +93,8 @@ func (r *PostgresDatabaseUserRepository) GetByUsername(ctx context.Context, serv
 		&user.SubscriptionID,
 		&user.Username,
 		&user.Password,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		scanTime(&user.CreatedAt),
+		scanTime(&user.UpdatedAt),
 	)
 
 	if err != nil {
@@ -127,8 +131,8 @@ func (r *PostgresDatabaseUserRepository) ListByServer(ctx context.Context, serve
 			&user.SubscriptionID,
 			&user.Username,
 			&user.Password,
-			&user.CreatedAt,
-			&user.UpdatedAt,
+			scanTime(&user.CreatedAt),
+			scanTime(&user.UpdatedAt),
 		)
 
 		if err != nil {
@@ -137,12 +141,18 @@ func (r *PostgresDatabaseUserRepository) ListByServer(ctx context.Context, serve
 
 		users = append(users, user)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to list database users: %v", err)
+	}
 
 	return users, nil
 }
 
 // Update updates a database user
 func (r *PostgresDatabaseUserRepository) Update(ctx context.Context, user *core.DatabaseUser) error {
+	if user.Password != `` && !secrets.IsEncrypted(user.Password) {
+		return fmt.Errorf(`database user password must be sealed before repository update`)
+	}
 	query := `
 		UPDATE database_users
 		SET username = ?, password = ?, updated_at = datetime('now')

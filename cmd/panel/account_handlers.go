@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
@@ -333,44 +336,173 @@ func (p *Panel) handleUpdateUser(w http.ResponseWriter, r *http.Request, target 
 		target.Status = *req.Status
 	}
 
-	if err := p.users.Update(r.Context(), target); err != nil {
+	revokeSessions := req.Password != nil || (req.Status != nil && *req.Status == "suspended")
+	var err error
+	if revokeSessions {
+		err = p.users.UpdateAndRevokeSessions(r.Context(), target)
+	} else {
+		err = p.users.Update(r.Context(), target)
+	}
+	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-
-	// Suspension takes effect immediately: kill the target's sessions.
-	// Askıya alma anında etkilidir: hedefin oturumlarını öldür.
-	if req.Status != nil && *req.Status == "suspended" {
-		_, _ = p.db.GetDB().ExecContext(r.Context(), `DELETE FROM sessions WHERE user_id = ?`, target.ID)
+	if revokeSessions {
+		revokePendingLogins(target.ID)
 	}
 
+	// Password resets and suspensions take effect immediately: the transaction
+	// above has already removed the target's sessions.
+	// Askıya alma anında etkilidir: hedefin oturumlarını öldür.
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func (p *Panel) handleDeleteUser(w http.ResponseWriter, r *http.Request, target *core.User) {
-	// A reseller with customers cannot be deleted — no orphaned accounts.
-	// Müşterisi olan bir bayi silinemez — sahipsiz hesap kalmaz.
-	var children int
-	_ = p.db.GetDB().QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM users WHERE parent_id = ?`, target.ID).Scan(&children)
-	if children > 0 {
-		writeClientError(w, http.StatusConflict, "this account still has sub-accounts; delete or move them first")
-		return
-	}
-
-	// Deleting a user cascades subscriptions → domains → sites via foreign
-	// keys. The UI confirms loudly; the API states it plainly here.
-	// Kullanıcı silmek, yabancı anahtarlarla abonelikler → domain'ler →
-	// siteler kaskadını tetikler. Arayüz yüksek sesle onaylatır.
-	if err := p.users.Delete(r.Context(), target.ID); err != nil {
+	dependencies, deleted, err := p.deleteUserWhenEmpty(r.Context(), target.ID)
+	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	_, _ = p.db.GetDB().ExecContext(r.Context(), `DELETE FROM sessions WHERE user_id = ?`, target.ID)
+	if dependencies.ChildAccounts > 0 {
+		writeClientError(w, http.StatusConflict, "this account still has sub-accounts; delete or move them first")
+		return
+	}
+	if resources := dependencies.liveResourceNames(); len(resources) > 0 {
+		writeClientError(w, http.StatusConflict,
+			"this account still owns live resources ("+strings.Join(resources, ", ")+"); delete them through their management screens first")
+		return
+	}
+	if !deleted {
+		writeServerError(w, errors.New("account deletion did not remove the target user"))
+		return
+	}
 
 	log.Printf("[audit] deleted user %d (%s, role=%s)", target.ID, target.Username, target.Role)
 	p.audit(r, "user.delete:"+target.Username, "user", target.ID)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+		log.Printf("encode delete-user response: %v", err)
+	}
+}
+
+// accountDeletionDependencies lists state whose lifecycle cannot safely be
+// completed by an SQLite foreign-key cascade. Empty subscription and
+// entitlement rows are metadata and may cascade; the resources below have
+// operating-system, database-engine, DNS or VPN counterparts which must be
+// removed through their own handlers first.
+type accountDeletionDependencies struct {
+	ChildAccounts    int
+	Domains          int
+	FTPAccounts      int
+	DatabaseUsers    int
+	ManagedDatabases int
+	LegacyDatabases  int
+	VPNPeers         int
+}
+
+func (d accountDeletionDependencies) liveResourceNames() []string {
+	resources := make([]string, 0, 6)
+	if d.Domains > 0 {
+		resources = append(resources, "domains")
+	}
+	if d.FTPAccounts > 0 {
+		resources = append(resources, "FTP accounts")
+	}
+	if d.DatabaseUsers > 0 {
+		resources = append(resources, "database users")
+	}
+	if d.ManagedDatabases > 0 || d.LegacyDatabases > 0 {
+		resources = append(resources, "databases")
+	}
+	if d.VPNPeers > 0 {
+		resources = append(resources, "VPN peers")
+	}
+	return resources
+}
+
+// deleteUserWhenEmpty holds an SQLite write reservation while it proves that
+// the account owns no live resources and deletes it. BEGIN IMMEDIATE is
+// deliberate: a concurrent resource create cannot slip between the proof and
+// the cascading user delete. Sessions are removed by their foreign key.
+func (p *Panel) deleteUserWhenEmpty(ctx context.Context, userID int) (
+	accountDeletionDependencies,
+	bool,
+	error,
+) {
+	var dependencies accountDeletionDependencies
+	connection, err := p.db.GetDB().Conn(ctx)
+	if err != nil {
+		return dependencies, false, fmt.Errorf("reserve account deletion connection: %w", err)
+	}
+	defer connection.Close()
+
+	if _, err := connection.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
+		return dependencies, false, fmt.Errorf("begin account deletion transaction: %w", err)
+	}
+	transactionOpen := true
+	defer func() {
+		if transactionOpen {
+			_, _ = connection.ExecContext(context.Background(), `ROLLBACK`)
+		}
+	}()
+
+	err = connection.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM users WHERE parent_id = ?),
+			(SELECT COUNT(*) FROM domains d
+			 JOIN subscriptions s ON s.id = d.subscription_id
+			 WHERE s.owner_id = ?),
+			(SELECT COUNT(*) FROM ftp_accounts f
+			 JOIN subscriptions s ON s.id = f.subscription_id
+			 WHERE s.owner_id = ?),
+			(SELECT COUNT(*) FROM database_users du
+			 JOIN subscriptions s ON s.id = du.subscription_id
+			 WHERE s.owner_id = ?),
+			(SELECT COUNT(*) FROM databases_v2 d
+			 JOIN subscriptions s ON s.id = d.subscription_id
+			 WHERE s.owner_id = ?),
+			(SELECT COUNT(*) FROM databases d
+			 JOIN subscriptions s ON s.id = d.subscription_id
+			 WHERE s.owner_id = ?),
+			(SELECT COUNT(*) FROM vpn_peers vp
+			 JOIN subscriptions s ON s.id = vp.subscription_id
+			 WHERE s.owner_id = ?)
+	`, userID, userID, userID, userID, userID, userID, userID).Scan(
+		&dependencies.ChildAccounts,
+		&dependencies.Domains,
+		&dependencies.FTPAccounts,
+		&dependencies.DatabaseUsers,
+		&dependencies.ManagedDatabases,
+		&dependencies.LegacyDatabases,
+		&dependencies.VPNPeers,
+	)
+	if err != nil {
+		return dependencies, false, fmt.Errorf("inspect account deletion dependencies: %w", err)
+	}
+
+	if dependencies.ChildAccounts > 0 || len(dependencies.liveResourceNames()) > 0 {
+		if _, err := connection.ExecContext(ctx, `ROLLBACK`); err != nil {
+			return dependencies, false, fmt.Errorf("release blocked account deletion: %w", err)
+		}
+		transactionOpen = false
+		return dependencies, false, nil
+	}
+
+	result, err := connection.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, userID)
+	if err != nil {
+		return dependencies, false, fmt.Errorf("delete empty account: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return dependencies, false, fmt.Errorf("verify account deletion: %w", err)
+	}
+	if affected != 1 {
+		return dependencies, false, sql.ErrNoRows
+	}
+	if _, err := connection.ExecContext(ctx, `COMMIT`); err != nil {
+		return dependencies, false, fmt.Errorf("commit account deletion: %w", err)
+	}
+	transactionOpen = false
+	return dependencies, true, nil
 }
 
 const impersonatorCookieName = "celikpanel_impersonator"
@@ -409,7 +541,7 @@ func (p *Panel) handleImpersonate(w http.ResponseWriter, r *http.Request, c *Cal
 func (p *Panel) handleUnimpersonate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
@@ -418,18 +550,53 @@ func (p *Panel) handleUnimpersonate(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "not impersonating")
 		return
 	}
+	cur, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		http.SetCookie(w, p.sessionCookie("", time.Unix(0, 0)))
+		http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
+		writeClientError(w, http.StatusUnauthorized, "impersonated session missing; sign in again")
+		return
+	}
+	if cur.Value == imp.Value {
+		// A duplicated cookie is not an impersonation state. Preserve the valid
+		// operator session and remove only the bogus return-path marker.
+		http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
+		writeClientError(w, http.StatusBadRequest, "not impersonating")
+		return
+	}
 	// The stored token must still be a valid session.
 	// Saklanan token hâlâ geçerli bir oturum olmalı.
 	if _, err := p.sessions.Validate(r.Context(), imp.Value); err != nil {
+		if !errors.Is(err, auth.ErrSessionInvalid) {
+			writeServerError(w, err)
+			return
+		}
+
+		revokeCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 5*time.Second)
+		revokeErr := p.sessions.Delete(revokeCtx, cur.Value)
+		cancel()
+		http.SetCookie(w, p.sessionCookie("", time.Unix(0, 0)))
 		http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
+		if revokeErr != nil {
+			writeServerError(w, fmt.Errorf("revoke impersonated session after original session expired: %w", revokeErr))
+			return
+		}
 		writeClientError(w, http.StatusUnauthorized, "original session expired; sign in again")
 		return
 	}
 
 	// Drop the impersonated session, restore the original.
 	// Taklit oturumu bırak, aslını geri yükle.
-	if cur, err := r.Cookie(sessionCookieName); err == nil {
-		_ = p.sessions.Delete(r.Context(), cur.Value)
+	revokeCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 5*time.Second)
+	revokeErr := p.sessions.Delete(revokeCtx, cur.Value)
+	cancel()
+	if revokeErr != nil {
+		// The browser must not keep a token whose server-side revocation is
+		// uncertain. Do not claim that the original session was restored.
+		http.SetCookie(w, p.sessionCookie("", time.Unix(0, 0)))
+		http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
+		writeServerError(w, fmt.Errorf("revoke impersonated session: %w", revokeErr))
+		return
 	}
 	http.SetCookie(w, p.cookie(sessionCookieName, imp.Value, 0))
 	http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
@@ -460,7 +627,12 @@ func (p *Panel) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	user, err := p.users.GetByID(r.Context(), currentUserID(r))
+	userID := currentUserID(r)
+	if !p.allowSensitiveAuthAttempt(r, userID, "password-change") {
+		writeClientError(w, http.StatusTooManyRequests, "too many attempts, try again later")
+		return
+	}
+	user, err := p.users.GetByID(r.Context(), userID)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -477,10 +649,15 @@ func (p *Panel) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	user.PasswordHash = hash
-	if err := p.users.Update(r.Context(), user); err != nil {
+	if err := p.users.UpdateAndRevokeSessions(r.Context(), user); err != nil {
 		writeServerError(w, err)
 		return
 	}
+	revokePendingLogins(user.ID)
+	// The transaction revokes this request's session too. Clear the browser
+	// cookies so the client immediately returns to sign-in.
+	http.SetCookie(w, p.sessionCookie("", time.Unix(0, 0)))
+	http.SetCookie(w, p.cookie(impersonatorCookieName, "", -1))
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 

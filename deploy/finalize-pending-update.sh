@@ -8,7 +8,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-SNAPSHOT_VERSION=4
+SNAPSHOT_VERSION=5
 RELEASES_ROOT=/var/backups/celikpanel/releases
 SNAPSHOT_ROOT=/var/backups/celikpanel/update-snapshots
 TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
@@ -38,6 +38,10 @@ pending_snapshot_path=
 start_authorization_created=0
 completion_verified=0
 completion_removing=0
+scheduler_restore_pending=0
+scheduler_only_resume=0
+scheduler_recovery_verified=0
+scheduler_restore_completed=0
 finalization_succeeded=0
 
 declare -A saved_enabled_states=()
@@ -230,6 +234,9 @@ validate_immutable_release() {
         [[ -f "$canonical/deploy/release-transaction-start-guard.sh" &&
            ! -L "$canonical/deploy/release-transaction-start-guard.sh" ]] \
             || die "recovery release transaction start guard is missing or unsafe"
+        [[ -f "$canonical/deploy/panel-tls-snapshot.sh" &&
+           ! -L "$canonical/deploy/panel-tls-snapshot.sh" ]] \
+            || die "recovery release panel TLS snapshot helper is missing or unsafe"
         helper=$(readlink -e -- "$0") \
             || die "cannot resolve running pending-update finalizer"
         [[ "$helper" == "$canonical/$required_helper" ]] \
@@ -330,28 +337,47 @@ coordinator_process_start_time() {
 }
 
 load_saved_service_states() {
-    local ledger=$1 unit enabled_state active_state extra count=0
+    local ledger=$1 unit enabled_state active_state extra count=0 expected_unit
     saved_enabled_states=()
     saved_active_states=()
-    while IFS=$'\t' read -r unit enabled_state active_state extra; do
+    [[ -f "$ledger" && ! -L "$ledger" ]] \
+        || die "service state ledger is missing or unsafe: $ledger"
+    while IFS=$'\t' read -r unit enabled_state active_state extra ||
+          [[ -n "$unit$enabled_state$active_state${extra:-}" ]]; do
         [[ -n "$unit" && -n "$enabled_state" && -n "$active_state" && -z "${extra:-}" ]] \
             || die "malformed service state ledger"
-        case "$unit" in
-            celikpanel-agent.service|celikpanel-panel.service|celikpanel-firewall-restore.service) ;;
-            *) die "unexpected unit in service state ledger: $unit" ;;
+        case "$count" in
+            0) expected_unit=celikpanel-agent.service ;;
+            1) expected_unit=celikpanel-panel.service ;;
+            2) expected_unit=celikpanel-firewall-restore.service ;;
+            3) expected_unit=certbot.timer ;;
+            4) expected_unit=certbot-renew.timer ;;
+            *) die "service state ledger contains extra rows" ;;
         esac
-        [[ -z "${saved_enabled_states[$unit]+x}" ]] \
-            || die "duplicate unit in service state ledger: $unit"
-        case "$enabled_state" in
-            enabled|enabled-runtime|disabled|static|indirect|not-found) ;;
-            *) die "unsupported saved enable state for $unit: $enabled_state" ;;
-        esac
-        validate_service_active_state "$unit" "$active_state"
-        saved_enabled_states["$unit"]=$enabled_state
-        saved_active_states["$unit"]=$active_state
+        [[ "$unit" == "$expected_unit" ]] \
+            || die "service state ledger order is not canonical: got $unit, want $expected_unit"
+        if [[ "$count" -lt 3 ]]; then
+            case "$enabled_state" in
+                enabled|enabled-runtime|disabled|static|indirect|not-found) ;;
+                *) die "unsupported saved enable state for $unit: $enabled_state" ;;
+            esac
+            validate_service_active_state "$unit" "$active_state"
+            saved_enabled_states["$unit"]=$enabled_state
+            saved_active_states["$unit"]=$active_state
+        else
+            case "$enabled_state" in
+                enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated|disabled|masked|masked-runtime|not-found) ;;
+                *) die "unsupported saved scheduler enable state for $unit: $enabled_state" ;;
+            esac
+            case "$active_state" in
+                active|inactive) ;;
+                *) die "unsupported saved scheduler active state for $unit: $active_state" ;;
+            esac
+        fi
         count=$((count + 1))
     done < "$ledger"
-    [[ "$count" -eq 3 ]] || die "service state ledger must contain exactly three rows"
+    [[ "$count" -eq 5 ]] \
+        || die "service state ledger must contain exactly five canonical rows"
     for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
         [[ -n "${saved_enabled_states[$unit]:-}" ]] \
             || die "service state is missing for $unit"
@@ -464,11 +490,13 @@ validate_pending_update_snapshot() {
     [[ -d "$pending_snapshot_path" && ! -L "$pending_snapshot_path" ]] \
         || die "pending update final snapshot is missing or unsafe"
     validate_retention_snapshot "$pending_snapshot_path"
+    panel_tls_snapshot_validate "$pending_snapshot_path/panel-tls" \
+        || die "pending snapshot panel TLS compatibility payload is invalid"
     while IFS= read -r -d '' entry; do
         read -r owner group mode < <(stat -Lc '%u %g %a' -- "$entry") \
             || die "cannot inspect pending snapshot object"
         permissions=$((8#$mode))
-        [[ "$owner" == 0 && "$group" == 0 ]] &&
+        [[ "$owner" == 0 ]] &&
             (( (permissions & 0022) == 0 )) \
             || die "pending snapshot objects must be root-owned and group/other non-writable"
     done < <(find "$pending_snapshot_path" -mindepth 1 -print0)
@@ -512,6 +540,9 @@ validate_pending_update_snapshot() {
     _release_txn_validate_quiesce_coordinators "$identity_ledger" \
         || die "pending snapshot coordinator ledger failed canonical validation"
     load_saved_service_states "$ledger"
+    panel_tls_snapshot_scheduler_matches_service_ledger \
+        "$pending_snapshot_path/panel-tls" "$ledger" \
+        || die "pending snapshot TLS scheduler state disagrees with the service ledger"
     load_quiesce_coordinator_identities "$identity_ledger"
 }
 
@@ -794,6 +825,12 @@ verify_pending_evidence() {
     release_txn_validate_pending_token \
         "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
         || die "completion.pending marker changed during finalization"
+    if [[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ||
+          -L "$TRANSACTION_ROOT/scheduler-restore.pending" ]]; then
+        release_txn_validate_scheduler_restore_token \
+            "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+            || die "scheduler-restore.pending does not match completion.pending"
+    fi
     validate_pending_update_snapshot "$pending_snapshot"
     verify_installed_release_artifacts
     verify_saved_enablement
@@ -830,17 +867,42 @@ finalization_exit() {
     local status=$?
     trap - EXIT
     if [[ "$status" -ne 0 && "$finalization_succeeded" -eq 0 ]]; then
-        if [[ "$completion_verified" -eq 1 &&
-              "$completion_removing" -eq 1 &&
-              ! -e "$TRANSACTION_ROOT/completion.pending" &&
-              ! -L "$TRANSACTION_ROOT/completion.pending" ]]; then
-            # Marker unlink succeeded but its durability sync reported failure.
-            # There is no retry marker now, so do not turn a verified, restored
-            # runtime into an unrecoverable marker-less outage.
-            release_mutation_lock >/dev/null 2>&1 || true
+        if [[ "$scheduler_restore_completed" -eq 1 &&
+              ! -e "$TRANSACTION_ROOT/scheduler-restore.pending" &&
+              ! -L "$TRANSACTION_ROOT/scheduler-restore.pending" ]]; then
+            # The scheduler restore itself succeeded. Marker removal became
+            # visible but its parent-directory durability proof failed, so do
+            # not turn a completed runtime into a markerless outage. This is
+            # deliberately still a failed finalization, not assumed success.
+            if ! release_mutation_lock >/dev/null 2>&1; then
+                printf '%s\n' \
+                    "!! Certbot scheduler restoration completed, but the mutation lock did not release cleanly." >&2
+            fi
             printf '%s\n' \
-                "!! completion.pending disappeared during verified terminal removal; saved runtime state was left intact." >&2
+                "!! Certbot scheduler restoration completed; durable marker removal is uncertain. Runtime was left intact and finalization did not claim success." >&2
             return "$status"
+        fi
+        if [[ ( "$completion_verified" -eq 1 &&
+                "$completion_removing" -eq 1 &&
+                ! -e "$TRANSACTION_ROOT/completion.pending" &&
+                ! -L "$TRANSACTION_ROOT/completion.pending" ) ||
+              ( "$scheduler_only_resume" -eq 1 &&
+                "$scheduler_recovery_verified" -eq 1 ) ]]; then
+            # Runtime completion is safe to preserve only when the exact durable
+            # scheduler obligation remains. A missing or tampered marker falls
+            # through to the fail-closed path below.
+            if [[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ||
+                  -L "$TRANSACTION_ROOT/scheduler-restore.pending" ]] &&
+               release_txn_validate_scheduler_restore_token \
+                   "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot"; then
+                if ! release_mutation_lock >/dev/null 2>&1; then
+                    printf '%s\n' \
+                        "!! Exact scheduler recovery marker remains, but the mutation lock did not release cleanly." >&2
+                fi
+                printf '%s\n' \
+                    "!! Runtime completion is durable; exact Certbot scheduler restoration remains safely retryable." >&2
+                return "$status"
+            fi
         fi
         systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
         systemctl stop celikpanel-agent.service >/dev/null 2>&1 || true
@@ -875,36 +937,103 @@ validate_immutable_release \
 TRUSTED_RELEASE_ROOT=$TRUSTED_RECOVERY_RELEASE
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$TRUSTED_RECOVERY_RELEASE/deploy/release-transaction-guard.sh"
+# shellcheck source=deploy/panel-tls-snapshot.sh
+source "$TRUSTED_RECOVERY_RELEASE/deploy/panel-tls-snapshot.sh"
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     || die "recovery guard rejected the inherited release transaction lock"
 
 marker_count=0
-for marker_name in quiesce.pending active completion.pending; do
+quiesce_present=0
+active_present=0
+completion_present=0
+scheduler_present=0
+[[ -e "$TRANSACTION_ROOT/quiesce.pending" ||
+   -L "$TRANSACTION_ROOT/quiesce.pending" ]] && quiesce_present=1
+[[ -e "$TRANSACTION_ROOT/active" ||
+   -L "$TRANSACTION_ROOT/active" ]] && active_present=1
+[[ -e "$TRANSACTION_ROOT/completion.pending" ||
+   -L "$TRANSACTION_ROOT/completion.pending" ]] && completion_present=1
+[[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ||
+   -L "$TRANSACTION_ROOT/scheduler-restore.pending" ]] && scheduler_present=1
+for marker_name in quiesce.pending active completion.pending scheduler-restore.pending; do
     [[ -e "$TRANSACTION_ROOT/$marker_name" ||
        -L "$TRANSACTION_ROOT/$marker_name" ]] &&
         marker_count=$((marker_count + 1))
 done
-[[ "$marker_count" -eq 1 &&
-   ! -e "$TRANSACTION_ROOT/quiesce.pending" &&
-   ! -L "$TRANSACTION_ROOT/quiesce.pending" &&
-   ! -e "$TRANSACTION_ROOT/active" &&
-   ! -L "$TRANSACTION_ROOT/active" &&
-   -f "$TRANSACTION_ROOT/completion.pending" &&
-   ! -L "$TRANSACTION_ROOT/completion.pending" ]] \
-    || die "finalizer requires completion.pending as the only durable phase"
-
-IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
-    < <(release_txn_read_pending_fields "$TRANSACTION_ROOT") \
-    || die "cannot read the exact completion.pending marker"
-[[ "$pending_operation" == update ]] \
-    || die "completion-only update finalizer refuses a rollback marker"
-release_txn_validate_pending_token \
-    "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
-    || die "completion.pending marker failed exact validation"
+[[ "$quiesce_present" -eq 0 && "$active_present" -eq 0 ]] \
+    || die "finalizer refuses quiesce.pending or active transaction topology"
+if [[ "$completion_present" -eq 1 ]]; then
+    [[ ( "$marker_count" -eq 1 || "$marker_count" -eq 2 ) &&
+       -f "$TRANSACTION_ROOT/completion.pending" &&
+       ! -L "$TRANSACTION_ROOT/completion.pending" ]] \
+        || die "finalizer requires completion.pending with at most its matching scheduler marker"
+    IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
+        < <(release_txn_read_pending_fields "$TRANSACTION_ROOT") \
+        || die "cannot read the exact completion.pending marker"
+    [[ "$pending_operation" == update ]] \
+        || die "completion-only update finalizer refuses a rollback marker"
+    release_txn_validate_pending_token \
+        "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+        || die "completion.pending marker failed exact validation"
+    if [[ "$scheduler_present" -eq 1 ]]; then
+        release_txn_validate_scheduler_restore_token \
+            "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+            || die "scheduler-restore.pending does not exactly match completion.pending"
+        scheduler_restore_pending=1
+    fi
+elif [[ "$marker_count" -eq 1 && "$scheduler_present" -eq 1 ]]; then
+    IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
+        < <(release_txn_read_scheduler_restore_fields "$TRANSACTION_ROOT") \
+        || die "cannot read the exact scheduler-restore.pending marker"
+    [[ "$pending_operation" == update ]] \
+        || die "update finalizer refuses a rollback scheduler marker"
+    scheduler_only_resume=1
+    scheduler_restore_pending=1
+    trap finalization_exit EXIT
+    release_txn_validate_scheduler_restore_token \
+        "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+        || die "scheduler-only marker failed exact validation"
+else
+    die "finalizer requires completion.pending or an exact scheduler-only recovery marker"
+fi
 
 validate_pending_update_snapshot "$pending_snapshot"
 verify_installed_release_artifacts
 verify_saved_enablement
+if [[ "$scheduler_only_resume" -eq 1 ]]; then
+    verify_saved_runtime_states
+    scheduler_recovery_verified=1
+    release_txn_validate_scheduler_restore_token \
+        "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+        || die "scheduler-only marker changed after snapshot verification"
+    panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+        || die "Certbot renewal scheduler could not be re-quiesced for exact recovery"
+    release_txn_validate_scheduler_restore_token \
+        "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+        || die "scheduler-only marker changed during exact recovery"
+    panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+        || die "Certbot renewal scheduler state could not be restored"
+    scheduler_restore_completed=1
+    release_txn_remove_scheduler_restore_pending \
+        "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        "$pending_token" update "$pending_snapshot" \
+        || die "cannot remove the exact scheduler-only recovery marker"
+    scheduler_restore_pending=0
+    finalization_succeeded=1
+    trap - EXIT
+    printf '\n%s\n' \
+        "==> Pending update runtime was already complete; Certbot scheduler restoration is complete."
+    exit 0
+fi
+if [[ "$completion_present" -eq 1 && "$scheduler_present" -eq 1 ]]; then
+    # A crash after the durable scheduler marker was written but before the
+    # completion marker was removed can leave restored coordinators active
+    # without this process owning the old mutation-lock descriptor. Never use
+    # that topology as a shortcut. The trap stops both coordinators while both
+    # exact markers remain; the next exact invocation uses the complete
+    # lock/idle/WAL-aware finalization path below.
+    trap finalization_exit EXIT
+fi
 verify_both_units_stopped
 trap finalization_exit EXIT
 
@@ -987,13 +1116,31 @@ run_target_agent_idle_locked
 verify_pending_evidence
 completion_verified=1
 completion_removing=1
+release_txn_mark_scheduler_restore_pending \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+    "$pending_token" update "$pending_snapshot" \
+    || die "cannot durably record pending Certbot scheduler restoration"
+scheduler_restore_pending=1
 release_txn_remove_completion_pending \
     "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     "$pending_token" update "$pending_snapshot" \
     || die "cannot remove the exact completion.pending marker"
-finalization_succeeded=1
 release_mutation_lock \
     || die "cannot release terminal pending-update mutation lock"
+panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+    || die "Certbot renewal scheduler could not be re-quiesced before restoration"
+release_txn_validate_scheduler_restore_token \
+    "$TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
+    || die "scheduler-restore.pending changed before restoration"
+panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+    || die "Certbot renewal scheduler state could not be restored"
+scheduler_restore_completed=1
+release_txn_remove_scheduler_restore_pending \
+    "$TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+    "$pending_token" update "$pending_snapshot" \
+    || die "cannot remove the exact scheduler-restore.pending marker"
+scheduler_restore_pending=0
+finalization_succeeded=1
 trap - EXIT
 
 printf '\n%s\n' "==> Pending update finalized from dual verified provenance."

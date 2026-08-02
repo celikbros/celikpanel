@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"time"
@@ -38,32 +40,51 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	out := dashboardExtras{ExpiringCerts: []dashboardExpiringCert{}}
 	db := p.db.GetDB()
 
-	// Count failures degrade to 0 rather than failing the whole dashboard.
-	// Sayaç hataları tüm panoyu düşürmek yerine 0'a iner.
-	_ = db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM databases_v2`).Scan(&out.Databases)
-	_ = db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM email_accounts`).Scan(&out.MailAccounts)
+	if err := db.QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM databases_v2`,
+	).Scan(&out.Databases); err != nil {
+		writeServerError(w, fmt.Errorf("count databases for dashboard: %w", err))
+		return
+	}
+	if err := db.QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM email_accounts`,
+	).Scan(&out.MailAccounts); err != nil {
+		writeServerError(w, fmt.Errorf("count mail accounts for dashboard: %w", err))
+		return
+	}
 
 	rows, err := db.QueryContext(r.Context(), `
-		SELECT d.domain_name, c.expires_at
+		SELECT d.name, c.expires_at
 		FROM ssl_certificates c
 		JOIN domains d ON d.id = c.domain_id
 		WHERE c.status = 'active'`)
-	if err == nil {
-		defer rows.Close()
-		now := time.Now()
-		for rows.Next() {
-			var name, expires string
-			if rows.Scan(&name, &expires) != nil {
-				continue
-			}
-			exp, ok := parseCertTime(expires)
-			if !ok {
-				continue
-			}
-			if days := int(exp.Sub(now).Hours() / 24); days <= 30 {
-				out.ExpiringCerts = append(out.ExpiringCerts, dashboardExpiringCert{DomainName: name, DaysLeft: days})
-			}
+	if err != nil {
+		writeServerError(w, fmt.Errorf("list certificates for dashboard: %w", err))
+		return
+	}
+	defer rows.Close()
+	now := time.Now()
+	for rows.Next() {
+		var name, expires string
+		if err := rows.Scan(&name, &expires); err != nil {
+			writeServerError(w, fmt.Errorf("scan dashboard certificate: %w", err))
+			return
 		}
+		exp, ok := parseCertTime(expires)
+		if !ok {
+			writeServerError(w, fmt.Errorf(
+				"active certificate for %q has an invalid expiry timestamp",
+				name,
+			))
+			return
+		}
+		if days := int(exp.Sub(now).Hours() / 24); days <= 30 {
+			out.ExpiringCerts = append(out.ExpiringCerts, dashboardExpiringCert{DomainName: name, DaysLeft: days})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		writeServerError(w, fmt.Errorf("iterate dashboard certificates: %w", err))
+		return
 	}
 	sort.Slice(out.ExpiringCerts, func(i, j int) bool {
 		return out.ExpiringCerts[i].DaysLeft < out.ExpiringCerts[j].DaysLeft
@@ -72,7 +93,9 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		out.ExpiringCerts = out.ExpiringCerts[:6]
 	}
 
-	_ = json.NewEncoder(w).Encode(out)
+	if err := json.NewEncoder(w).Encode(out); err != nil {
+		log.Printf("encode dashboard response: %v", err)
+	}
 }
 
 // expires_at is TEXT and historic rows carry mixed layouts (the sqlite

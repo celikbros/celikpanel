@@ -1335,6 +1335,16 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP INDEX idx_application_install_operations_domain;
+		DROP INDEX idx_application_install_operations_status;
+		DROP TABLE application_install_operations;
+
+		ALTER TABLE backup_schedules DROP COLUMN active_job_key;
+		ALTER TABLE backup_schedules DROP COLUMN last_error;
+		ALTER TABLE backup_schedules DROP COLUMN last_status;
+		ALTER TABLE backup_schedules DROP COLUMN last_attempt;
+		ALTER TABLE users DROP COLUMN auth_epoch;
+
 		DROP TRIGGER vpn_offering_sync_update;
 		DROP TRIGGER vpn_entitlements_sync_delete;
 		DROP TRIGGER vpn_entitlements_sync_update;

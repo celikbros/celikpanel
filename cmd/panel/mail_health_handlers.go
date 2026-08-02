@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // The deliverability health screen: every signal that decides "inbox or
@@ -39,17 +41,8 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 	}
 
 	// --- Server facts from the agent / Sunucu gerçekleri agent'tan
-	var mh struct {
-		ServerIP       string `json:"server_ip"`
-		Myhostname     string `json:"myhostname"`
-		HostnameFQDN   bool   `json:"hostname_fqdn"`
-		PTR            string `json:"ptr"`
-		FCrDNS         bool   `json:"fcrdns"`
-		PTRAligned     bool   `json:"ptr_aligned"`
-		TLSEnabled     bool   `json:"tls_enabled"`
-		OutboundPort25 string `json:"outbound_port_25"`
-	}
-	if err := p.agentClient.Call("Agent.MailHealth", &struct{}{}, &mh); err != nil {
+	var mh transport.MailHealthResponse
+	if err := p.callAgent("Agent.MailHealth", &transport.Empty{}, &mh); err != nil {
 		writeAgentError(w, err, "mail health")
 		return
 	}
@@ -101,15 +94,8 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 	checkTXT("dmarc", "_dmarc."+domain, "v=DMARC1")
 
 	// --- Blacklists / Kara listeler
-	var rbl struct {
-		IP      string `json:"ip"`
-		Results []struct {
-			Listed bool   `json:"listed"`
-			Detail string `json:"detail,omitempty"`
-		} `json:"results"`
-		Error string `json:"error,omitempty"`
-	}
-	if p.agentClient.Call("Agent.CheckRBL", &struct{}{}, &rbl) == nil && rbl.Error == "" && len(rbl.Results) > 0 {
+	var rbl transport.CheckRBLResponse
+	if p.callAgent("Agent.CheckRBL", &transport.Empty{}, &rbl) == nil && rbl.Error == "" && len(rbl.Results) > 0 {
 		listed := 0
 		for _, res := range rbl.Results {
 			if res.Listed {
@@ -137,12 +123,8 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 	}
 
 	// --- DNSSEC
-	var ds struct {
-		Secured bool `json:"secured"`
-	}
-	if p.agentClient.Call("Agent.DNSSECStatus", &struct {
-		Zone string `json:"zone"`
-	}{Zone: domain}, &ds) == nil && ds.Secured {
+	var ds transport.DNSSECStatusResponse
+	if p.callAgent("Agent.DNSSECStatus", &transport.DNSSECRequest{Zone: domain}, &ds) == nil && ds.Secured {
 		add("dnssec", "ok", "")
 	} else {
 		add("dnssec", "warn", "")

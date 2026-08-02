@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -73,26 +74,7 @@ func (e *serviceMutationLedgerWriteError) Unwrap() error {
 	return e.err
 }
 
-type ServiceMutationJob struct {
-	RequestID      string    `json:"request_id"`
-	OwnerID        string    `json:"owner_id"`
-	Kind           string    `json:"kind"`
-	Target         string    `json:"target"`
-	PackageName    string    `json:"package_name,omitempty"`
-	Status         string    `json:"status"`
-	Phase          string    `json:"phase"`
-	Attempt        int       `json:"attempt"`
-	StartedAt      time.Time `json:"started_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	LeaseExpiresAt time.Time `json:"lease_expires_at"`
-	DeadlineAt     time.Time `json:"deadline_at"`
-	FinishedAt     time.Time `json:"finished_at,omitempty"`
-	ErrorCode      string    `json:"error_code,omitempty"`
-	ErrorMessage   string    `json:"error_message,omitempty"`
-	WorkerPID      int       `json:"worker_pid,omitempty"`
-	WorkerStarted  string    `json:"worker_started,omitempty"`
-	WorkerCommand  string    `json:"worker_command,omitempty"`
-}
+type ServiceMutationJob = transport.ServiceMutationJob
 
 type serviceMutationLedger struct {
 	Version         int                            `json:"version"`
@@ -100,58 +82,25 @@ type serviceMutationLedger struct {
 	Jobs            map[string]*ServiceMutationJob `json:"jobs"`
 }
 
-type ServiceMutationBeginRequest struct {
-	RequestID   string `json:"request_id"`
-	OwnerID     string `json:"owner_id"`
-	Kind        string `json:"kind"`
-	Target      string `json:"target"`
-	PackageName string `json:"package_name,omitempty"`
-	Resume      bool   `json:"resume,omitempty"`
-}
+type ServiceMutationBeginRequest = transport.ServiceMutationBeginRequest
 
-type ServiceMutationBinding struct {
-	MutationRequestID string `json:"mutation_request_id,omitempty"`
-	MutationOwnerID   string `json:"mutation_owner_id,omitempty"`
-}
+type ServiceMutationBinding = transport.ServiceMutationBinding
 
 // ServiceMutationRequest is the common request envelope for privileged RPCs
 // that do not otherwise need arguments.
 // ServiceMutationRequest, başka argümana ihtiyaç duymayan ayrıcalıklı RPC'ler
 // için ortak istek zarfıdır.
-type ServiceMutationRequest struct {
-	ServiceMutationBinding
-}
+type ServiceMutationRequest = transport.ServiceMutationRequest
 
-type ServiceMutationHeartbeatRequest struct {
-	RequestID string `json:"request_id"`
-	OwnerID   string `json:"owner_id"`
-	Phase     string `json:"phase,omitempty"`
-}
+type ServiceMutationHeartbeatRequest = transport.ServiceMutationHeartbeatRequest
 
-type ServiceMutationStatusRequest struct {
-	RequestID string `json:"request_id,omitempty"`
-}
+type ServiceMutationStatusRequest = transport.ServiceMutationStatusRequest
 
-type ServiceMutationCancelRequest struct {
-	RequestID      string `json:"request_id"`
-	ExpectedOwner  string `json:"expected_owner"`
-	Reason         string `json:"reason,omitempty"`
-	FailureCode    string `json:"failure_code,omitempty"`
-	FailureMessage string `json:"failure_message,omitempty"`
-}
+type ServiceMutationCancelRequest = transport.ServiceMutationCancelRequest
 
-type ServiceMutationFinishRequest struct {
-	RequestID   string `json:"request_id"`
-	OwnerID     string `json:"owner_id"`
-	Success     bool   `json:"success"`
-	FailureCode string `json:"failure_code,omitempty"`
-	Message     string `json:"message,omitempty"`
-}
+type ServiceMutationFinishRequest = transport.ServiceMutationFinishRequest
 
-type ServiceMutationResponse struct {
-	Job   *ServiceMutationJob `json:"job,omitempty"`
-	Error string              `json:"error,omitempty"`
-}
+type ServiceMutationResponse = transport.ServiceMutationResponse
 
 type serviceMutationRuntime struct {
 	job    *ServiceMutationJob

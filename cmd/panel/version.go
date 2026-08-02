@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // The one version. Both values are set at link time (-X main.buildVersion=…,
@@ -44,10 +46,8 @@ func (p *Panel) requireMatchingAgentBuild(ctx context.Context) error {
 	if panelCommit == "" || panelCommit == "unknown" {
 		return nil
 	}
-	var agent struct {
-		Commit string `json:"commit"`
-	}
-	if err := p.agentClient.CallContext(ctx, "Agent.Version", &struct{}{}, &agent); err != nil {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
 		return fmt.Errorf("verify panel/agent build pair: %w", err)
 	}
 	agentCommit := strings.TrimSpace(agent.Commit)
@@ -93,11 +93,8 @@ func (p *Panel) handleVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	agentCommit := ""
-	var av struct {
-		Version string `json:"version"`
-		Commit  string `json:"commit"`
-	}
-	if err := p.agentClient.Call("Agent.Version", &struct{}{}, &av); err == nil {
+	var av transport.AgentVersionResponse
+	if err := p.callAgent("Agent.Version", &transport.Empty{}, &av); err == nil {
 		agentCommit = av.Commit
 	}
 

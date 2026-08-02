@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Authenticated mail submission — the half of the mail stack that lets
@@ -27,11 +29,7 @@ const (
 	postfixLoginMapPath   = "/etc/postfix/celikpanel_login_map"
 )
 
-type ConfigureMailSubmissionResponse struct {
-	Configured bool   `json:"configured"`
-	Detail     string `json:"detail,omitempty"`
-	Error      string `json:"error,omitempty"`
-}
+type ConfigureMailSubmissionResponse = transport.ConfigureMailSubmissionResponse
 
 func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *ConfigureMailSubmissionResponse) error {
 	if req == nil {

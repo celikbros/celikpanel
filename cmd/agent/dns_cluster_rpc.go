@@ -47,28 +47,11 @@ var (
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
 )
 
-type DNSClusterRequest struct {
-	Role string `json:"role"` // standalone | paired (legacy primary/secondary migrate)
-	// PeerIP is both the NOTIFY/autoprimary trust source and the only address
-	// allowed to AXFR local zones.
-	PeerIP string `json:"peer_ip"`
-	// PeerNS is the peer's nameserver host name. PowerDNS records it with the
-	// autoprimary entry and stamps it into zones it auto-creates.
-	// PeerNS, eşin ad sunucusu makine adıdır. PowerDNS onu otomatik-birincil
-	// kaydıyla saklar ve kendiliğinden oluşturduğu zone'lara işler.
-	PeerNS string `json:"peer_ns"`
-}
+type DNSClusterRequest = transport.DNSClusterRequest
 
-type DNSClusterResponse struct {
-	Applied bool   `json:"applied"`
-	Detail  string `json:"detail,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
+type DNSClusterResponse = transport.DNSClusterResponse
 
-type DNSClusterReadinessResponse struct {
-	Ready  bool   `json:"ready"`
-	Detail string `json:"detail,omitempty"`
-}
+type DNSClusterReadinessResponse = transport.DNSClusterReadinessResponse
 
 // DNSClusterReadiness is a read-only preflight. It lets the panel explain the
 // exact missing prerequisite before the operator reaches the save action.
@@ -205,7 +188,10 @@ func (a *Agent) ConfigureDNSCluster(req *DNSClusterRequest, resp *DNSClusterResp
 			fail(err, false)
 			return nil
 		}
-		_ = os.Chmod(dnsClusterConf, 0o644)
+		if err := os.Chmod(dnsClusterConf, 0o644); err != nil {
+			fail(fmt.Errorf("set cluster configuration permissions: %w", err), false)
+			return nil
+		}
 	}
 
 	if err := dnsClusterApplyAutoprimaryTx(tx, req); err != nil {

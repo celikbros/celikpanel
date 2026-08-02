@@ -13,6 +13,38 @@ func okHandler() http.Handler {
 	})
 }
 
+func TestNewPanelHTTPServer(t *testing.T) {
+	server := newPanelHTTPServer(`127.0.0.1:0`, okHandler())
+	if server.Addr != `127.0.0.1:0` {
+		t.Fatalf(`Addr = %q, want %q`, server.Addr, `127.0.0.1:0`)
+	}
+
+	timeouts := []struct {
+		name string
+		got  time.Duration
+		want time.Duration
+	}{
+		{name: `read header`, got: server.ReadHeaderTimeout, want: 10 * time.Second},
+		{name: `read`, got: server.ReadTimeout, want: 5 * time.Minute},
+		{name: `write`, got: server.WriteTimeout, want: 30 * time.Minute},
+		{name: `idle`, got: server.IdleTimeout, want: 2 * time.Minute},
+	}
+	for _, tt := range timeouts {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Fatalf(`timeout = %s, want %s`, tt.got, tt.want)
+			}
+		})
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, `/`, nil)
+	server.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf(`handler status = %d, want %d`, rec.Code, http.StatusOK)
+	}
+}
+
 func TestSecurityHeaders(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -123,5 +155,25 @@ func TestRateLimiterWindowExpiry(t *testing.T) {
 	time.Sleep(40 * time.Millisecond)
 	if !l.allow("k") {
 		t.Fatal("attempt after window still denied")
+	}
+}
+
+func TestRateLimiterSweepsExpiredOneOffKeys(t *testing.T) {
+	l := newRateLimiter(2, time.Minute)
+	old := time.Now().Add(-2 * time.Minute)
+	l.hits["expired-a"] = []time.Time{old}
+	l.hits["expired-b"] = []time.Time{old}
+
+	if !l.allow("current") {
+		t.Fatal("current key denied")
+	}
+	if _, ok := l.hits["expired-a"]; ok {
+		t.Fatal("first expired key was not removed")
+	}
+	if _, ok := l.hits["expired-b"]; ok {
+		t.Fatal("second expired key was not removed")
+	}
+	if len(l.hits) != 1 {
+		t.Fatalf("limiter retained %d keys, want only the current key", len(l.hits))
 	}
 }

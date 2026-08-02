@@ -44,6 +44,28 @@ validate_root_file() {
         || deny "file metadata mismatch: $path"
 }
 
+marker_token=
+marker_operation=
+marker_snapshot=
+validate_canonical_marker() {
+    local path=$1 label=$2
+    local token operation snapshot
+    local -a marker_lines
+    validate_root_file "$path" 600 512
+    mapfile -t marker_lines < "$path"
+    [[ ${#marker_lines[@]} -eq 4 && "${marker_lines[0]}" == version=1 ]] || deny "$label is not canonical"
+    token=${marker_lines[1]#token=}
+    operation=${marker_lines[2]#operation=}
+    snapshot=${marker_lines[3]#snapshot=}
+    [[ "${marker_lines[1]}" == "token=$token" && "$token" =~ ^[0-9a-f]{64}$ ]] || deny "$label token is invalid"
+    [[ "${marker_lines[2]}" == "operation=$operation" && ( "$operation" == update || "$operation" == rollback ) ]] || deny "$label operation is invalid"
+    [[ "${marker_lines[3]}" == "snapshot=$snapshot" && "$snapshot" != . && "$snapshot" != .. && "$snapshot" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || deny "$label snapshot is invalid"
+    cmp -s "$path" <(printf 'version=1\ntoken=%s\noperation=%s\nsnapshot=%s\n' "$token" "$operation" "$snapshot") || deny "$label bytes are not canonical"
+    marker_token=$token
+    marker_operation=$operation
+    marker_snapshot=$snapshot
+}
+
 validate_root_directory "$transaction_root" 700
 transaction_lock=$transaction_root/transaction.lock
 [[ -f "$transaction_lock" && ! -L "$transaction_lock" ]] \
@@ -58,12 +80,20 @@ read -r lock_owner lock_group lock_mode lock_links lock_size \
 quiesce_present=0
 active_present=0
 pending_present=0
+scheduler_present=0
 [[ -e "$transaction_root/quiesce.pending" || -L "$transaction_root/quiesce.pending" ]] && quiesce_present=1
 [[ -e "$transaction_root/active" || -L "$transaction_root/active" ]] && active_present=1
 [[ -e "$transaction_root/completion.pending" || -L "$transaction_root/completion.pending" ]] && pending_present=1
+[[ -e "$transaction_root/scheduler-restore.pending" || -L "$transaction_root/scheduler-restore.pending" ]] && scheduler_present=1
 [[ $((quiesce_present + active_present + pending_present)) -le 1 ]] \
     || deny "multiple release transaction markers exist"
+if [[ "$scheduler_present" -eq 1 && $((quiesce_present + active_present)) -ne 0 ]]; then
+    deny "scheduler restore cannot coexist with quiesce or active"
+fi
 if [[ $quiesce_present -eq 0 && $active_present -eq 0 && $pending_present -eq 0 ]]; then
+    if [[ "$scheduler_present" -eq 1 ]]; then
+        validate_canonical_marker "$transaction_root/scheduler-restore.pending" "scheduler restore marker"
+    fi
     exit 0
 fi
 if [[ $quiesce_present -eq 1 ]]; then
@@ -73,26 +103,20 @@ elif [[ $active_present -eq 1 ]]; then
 else
     marker=$transaction_root/completion.pending
 fi
-validate_root_file "$marker" 600 512
-
-mapfile -t marker_lines < "$marker"
-[[ ${#marker_lines[@]} -eq 4 && "${marker_lines[0]}" == version=1 ]] \
-    || deny "release marker is not canonical"
-token=${marker_lines[1]#token=}
-operation=${marker_lines[2]#operation=}
-snapshot=${marker_lines[3]#snapshot=}
-[[ "${marker_lines[1]}" == "token=$token" && "$token" =~ ^[0-9a-f]{64}$ ]] \
-    || deny "release marker token is invalid"
-[[ "${marker_lines[2]}" == "operation=$operation" &&
-   ( "$operation" == update || "$operation" == rollback ) ]] \
-    || deny "release marker operation is invalid"
-[[ "${marker_lines[3]}" == "snapshot=$snapshot" &&
-   "$snapshot" != . && "$snapshot" != .. &&
-   "$snapshot" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] \
-    || deny "release marker snapshot is invalid"
-cmp -s "$marker" <(printf 'version=1\ntoken=%s\noperation=%s\nsnapshot=%s\n' \
-    "$token" "$operation" "$snapshot") \
-    || deny "release marker bytes are not canonical"
+validate_canonical_marker "$marker" "release marker"
+token=$marker_token
+operation=$marker_operation
+snapshot=$marker_snapshot
+if [[ "$scheduler_present" -eq 1 ]]; then
+    primary_token=$token
+    primary_operation=$operation
+    primary_snapshot=$snapshot
+    validate_canonical_marker "$transaction_root/scheduler-restore.pending" "scheduler restore marker"
+    [[ "$marker_token" == "$primary_token" && "$marker_operation" == "$primary_operation" && "$marker_snapshot" == "$primary_snapshot" ]] || deny "scheduler restore marker does not exactly match completion"
+    token=$primary_token
+    operation=$primary_operation
+    snapshot=$primary_snapshot
+fi
 
 # The pre-active phase never authorizes a start; both cgroups must first be
 # frozen and atomically covered by the active marker.

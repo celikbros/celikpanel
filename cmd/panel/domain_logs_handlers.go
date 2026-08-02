@@ -5,20 +5,76 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Domain Logs Handlers
 
 // LogsResponse represents log data
 type LogsResponse struct {
-	Success bool     `json:"success"`
-	Lines   []string `json:"lines"`
-	Total   int      `json:"total"`
-	LogPath string   `json:"log_path"`
+	Success    bool                           `json:"success"`
+	Lines      []string                       `json:"lines"`
+	Total      int                            `json:"total"`
+	LogPath    string                         `json:"log_path"`
+	Truncated  bool                           `json:"truncated,omitempty"`
+	Warning    string                         `json:"warning,omitempty"`
+	TimeFilter *transport.LogTimeFilterResult `json:"time_filter,omitempty"`
+}
+
+type domainLogQuery struct {
+	lines     int
+	filter    string
+	startTime string
+	endTime   string
+}
+
+func parseDomainLogQuery(values url.Values) (domainLogQuery, error) {
+	result := domainLogQuery{
+		lines:     100,
+		filter:    values.Get("filter"),
+		startTime: values.Get("start_time"),
+		endTime:   values.Get("end_time"),
+	}
+	if raw := values.Get("lines"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 5000 {
+			return domainLogQuery{}, fmt.Errorf("lines must be an integer between 1 and 5000")
+		}
+		result.lines = parsed
+	}
+	if len(result.filter) > 1024 {
+		return domainLogQuery{}, fmt.Errorf("filter exceeds the 1024-byte limit")
+	}
+
+	parseTime := func(field, raw string) (*time.Time, error) {
+		if raw == "" {
+			return nil, nil
+		}
+		parsed, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be RFC3339 with an explicit timezone", field)
+		}
+		return &parsed, nil
+	}
+	start, err := parseTime("start_time", result.startTime)
+	if err != nil {
+		return domainLogQuery{}, err
+	}
+	end, err := parseTime("end_time", result.endTime)
+	if err != nil {
+		return domainLogQuery{}, err
+	}
+	if start != nil && end != nil && start.After(*end) {
+		return domainLogQuery{}, fmt.Errorf("start_time must not be after end_time")
+	}
+	return result, nil
 }
 
 // handleDomainLogs handles GET for domain logs
@@ -59,7 +115,7 @@ func (p *Panel) handleDomainLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID int, logType string) {
-	ctx := context.Background()
+	ctx := r.Context()
 	pool := p.db.GetDB()
 
 	// Get domain name
@@ -84,30 +140,21 @@ func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID i
 		return
 	}
 
-	// Get query parameters
-	lines := 100 // default
-	if linesParam := r.URL.Query().Get("lines"); linesParam != "" {
-		fmt.Sscanf(linesParam, "%d", &lines)
+	query, err := parseDomainLogQuery(r.URL.Query())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-
-	filter := r.URL.Query().Get("filter")
 
 	// Call agent to get logs
-	var agentResp struct {
-		Success bool     `json:"success"`
-		Lines   []string `json:"lines"`
-		Total   int      `json:"total"`
-		Error   string   `json:"error"`
-	}
+	var agentResp transport.GetLogsResponse
 
-	agentReq := struct {
-		LogPath string `json:"log_path"`
-		Lines   int    `json:"lines"`
-		Filter  string `json:"filter"`
-	}{
-		LogPath: logPath,
-		Lines:   lines,
-		Filter:  filter,
+	agentReq := transport.GetLogsRequest{
+		LogPath:   logPath,
+		Lines:     query.lines,
+		Filter:    query.filter,
+		StartTime: query.startTime,
+		EndTime:   query.endTime,
 	}
 
 	var rpcMethod string
@@ -120,7 +167,7 @@ func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID i
 		rpcMethod = "Agent.GetPHPLogs"
 	}
 
-	err = p.agentClient.Call(rpcMethod, agentReq, &agentResp)
+	err = p.callAgent(rpcMethod, agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		// A missing log file is not a server error: a fresh domain simply has
 		// no traffic yet. Report it as an honest empty log.
@@ -139,10 +186,13 @@ func (p *Panel) handleGetLogs(w http.ResponseWriter, r *http.Request, domainID i
 	}
 
 	response := LogsResponse{
-		Success: true,
-		Lines:   agentResp.Lines,
-		Total:   agentResp.Total,
-		LogPath: logPath,
+		Success:    true,
+		Lines:      agentResp.Lines,
+		Total:      agentResp.Total,
+		LogPath:    logPath,
+		Truncated:  agentResp.Truncated,
+		Warning:    agentResp.Warning,
+		TimeFilter: agentResp.TimeFilter,
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -175,18 +225,13 @@ func (p *Panel) handleClearLogs(w http.ResponseWriter, r *http.Request, domainID
 	}
 
 	// Call agent to clear logs
-	var agentResp struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error"`
-	}
+	var agentResp transport.ClearLogsResponse
 
-	agentReq := struct {
-		LogPath string `json:"log_path"`
-	}{
+	agentReq := transport.ClearLogsRequest{
 		LogPath: logPath,
 	}
 
-	err = p.agentClient.Call("Agent.ClearLogs", agentReq, &agentResp)
+	err = p.callAgent("Agent.ClearLogs", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		writeAgentError(w, err, agentResp.Error)
 		return

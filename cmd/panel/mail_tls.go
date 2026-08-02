@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 var mailTLSSyncMu sync.Mutex
@@ -66,12 +68,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		return err
 	}
 	defer rows.Close()
-	type entry struct {
-		Names    []string `json:"names"`
-		CertPath string   `json:"cert_path"`
-		KeyPath  string   `json:"key_path"`
-	}
-	var sni []entry
+	var sni []transport.MailSNIEntry
 	strictTargetSeen := false
 	for rows.Next() {
 		var domainID int
@@ -125,7 +122,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		if certificateCoversHostname(info.DNSNames, name) {
 			names = append(names, name)
 		}
-		sni = append(sni, entry{
+		sni = append(sni, transport.MailSNIEntry{
 			Names:    names,
 			CertPath: cert,
 			KeyPath:  key,
@@ -142,17 +139,10 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 	if err != nil {
 		return fmt.Errorf("read mail server hostname: %w", err)
 	}
-	var resp struct {
-		Configured bool   `json:"configured"`
-		SNICount   int    `json:"sni_count"`
-		Error      string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.CallContext(ctx, "Agent.SecureMailTLS", &struct {
-		ExpectedBuildCommit string  `json:"expected_build_commit"`
-		Myhostname          string  `json:"myhostname"`
-		SNI                 []entry `json:"sni"`
-	}{ExpectedBuildCommit: strings.TrimSpace(buildCommit),
-		Myhostname: host, SNI: sni}, &resp); err != nil {
+	var resp transport.SecureMailTLSResponse
+	if err := p.callAgentContext(ctx, "Agent.SecureMailTLS", &transport.SecureMailTLSRequest{
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+		Myhostname:          host, SNI: sni}, &resp); err != nil {
 		return err
 	}
 	if resp.Error != "" {

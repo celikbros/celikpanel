@@ -3,64 +3,69 @@ package services
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
 
-// PHPConfigManager handles PHP configuration (php.ini)
+const (
+	additionalPHPBegin = "; BEGIN CELIKPANEL ADDITIONAL DIRECTIVES"
+	additionalPHPEnd   = "; END CELIKPANEL ADDITIONAL DIRECTIVES"
+)
+
 type PHPConfigManager struct{}
 
-func NewPHPConfigManager() *PHPConfigManager {
-	return &PHPConfigManager{}
-}
+func NewPHPConfigManager() *PHPConfigManager { return &PHPConfigManager{} }
 
-// GetExtendedConfig reads comprehensive PHP configuration
 func (cm *PHPConfigManager) GetExtendedConfig(phpVersion string) (*core.ExtendedPHPConfig, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return nil, err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	file, err := os.Open(phpIni)
+	content, err := readManagedConfig(phpINIPath(phpVersion))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open php.ini: %v", err)
+		return nil, fmt.Errorf("read php.ini: %w", err)
 	}
-	defer file.Close()
-
 	config := &core.ExtendedPHPConfig{
-		// Defaults
-		MemoryLimit:       "128M",
-		MaxExecutionTime:  "30",
-		MaxInputTime:      "60",
-		PostMaxSize:       "8M",
-		UploadMaxFilesize: "2M",
-		DisplayErrors:     "Off",
-		LogErrors:         "On",
-		AllowUrlFopen:     "On",
-		FileUploads:       "On",
-		ShortOpenTag:      "Off",
+		MemoryLimit: "128M", MaxExecutionTime: "30", MaxInputTime: "60",
+		PostMaxSize: "8M", UploadMaxFilesize: "2M", OpcacheEnable: "1",
+		RealpathCacheSize: "4096K", DisplayErrors: "Off", LogErrors: "On",
+		AllowUrlFopen: "On", FileUploads: "On", ShortOpenTag: "Off",
 	}
-
-	scanner := bufio.NewScanner(file)
+	inAdditional := false
+	additionalSeen := false
+	additional := make([]string, 0)
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		
+		raw := scanner.Text()
+		line := strings.TrimSpace(raw)
+		if line == additionalPHPBegin {
+			if inAdditional || additionalSeen {
+				return nil, fmt.Errorf("duplicate additional-directive begin marker")
+			}
+			additionalSeen = true
+			inAdditional = true
+			continue
+		}
+		if line == additionalPHPEnd {
+			if !inAdditional {
+				return nil, fmt.Errorf("additional-directive end marker without begin marker")
+			}
+			inAdditional = false
+			continue
+		}
+		if inAdditional {
+			additional = append(additional, raw)
+			continue
+		}
 		if strings.HasPrefix(line, ";") || line == "" {
 			continue
 		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		key, value, ok := configPair(line)
+		if !ok {
 			continue
 		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
+		value = trimInlineComment(value, ';')
 		switch key {
-		// Performance & Security
 		case "memory_limit":
 			config.MemoryLimit = value
 		case "max_execution_time":
@@ -75,8 +80,6 @@ func (cm *PHPConfigManager) GetExtendedConfig(phpVersion string) (*core.Extended
 			config.OpcacheEnable = value
 		case "disable_functions":
 			config.DisableFunctions = value
-		
-		// Common Settings
 		case "include_path":
 			config.IncludePath = value
 		case "session.save_path":
@@ -99,54 +102,94 @@ func (cm *PHPConfigManager) GetExtendedConfig(phpVersion string) (*core.Extended
 			config.ShortOpenTag = value
 		}
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan php.ini: %w", err)
+	}
+	if inAdditional {
+		return nil, fmt.Errorf("unterminated additional-directive block")
+	}
+	config.AdditionalDirectives = strings.TrimSpace(strings.Join(additional, "\n"))
+	if err := validateExtendedPHPConfig(config); err != nil {
+		return nil, fmt.Errorf("invalid php.ini value: %w", err)
+	}
 	return config, nil
 }
 
-// UpdateExtendedConfig updates comprehensive PHP configuration
+func replaceAdditionalPHPBlock(content, directives string) (string, error) {
+	beginCount := strings.Count(content, additionalPHPBegin)
+	endCount := strings.Count(content, additionalPHPEnd)
+	if beginCount > 1 || endCount > 1 {
+		return "", fmt.Errorf("duplicate CelikPanel additional-directive marker")
+	}
+	if beginCount != endCount {
+		return "", fmt.Errorf("malformed CelikPanel additional-directive block")
+	}
+	if beginCount == 1 {
+		begin := strings.Index(content, additionalPHPBegin)
+		end := strings.Index(content, additionalPHPEnd)
+		if end < begin {
+			return "", fmt.Errorf("malformed CelikPanel additional-directive block")
+		}
+		end += len(additionalPHPEnd)
+		prefix := strings.TrimRight(content[:begin], "\r\n")
+		suffix := strings.TrimLeft(content[end:], "\r\n")
+		switch {
+		case prefix != "" && suffix != "":
+			content = prefix + "\n" + suffix
+		case prefix != "":
+			content = prefix
+		default:
+			content = suffix
+		}
+	}
+	directives = strings.TrimSpace(directives)
+	if directives == "" {
+		return strings.TrimRight(content, "\r\n") + "\n", nil
+	}
+	return strings.TrimRight(content, "\r\n") + "\n\n" + additionalPHPBegin + "\n" + directives + "\n" + additionalPHPEnd + "\n", nil
+}
+
+type phpSettingValue struct {
+	key   string
+	value string
+}
+
 func (cm *PHPConfigManager) UpdateExtendedConfig(phpVersion string, config *core.ExtendedPHPConfig) error {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	content, err := os.ReadFile(phpIni)
-	if err != nil {
-		return fmt.Errorf("failed to read php.ini: %v", err)
+	if err := validateExtendedPHPConfig(config); err != nil {
+		return err
 	}
-
-	updated := string(content)
-	
-	// Performance & Security
-	updated = updateOrAddSetting(updated, "memory_limit", config.MemoryLimit)
-	updated = updateOrAddSetting(updated, "max_execution_time", config.MaxExecutionTime)
-	updated = updateOrAddSetting(updated, "max_input_time", config.MaxInputTime)
-	updated = updateOrAddSetting(updated, "post_max_size", config.PostMaxSize)
-	updated = updateOrAddSetting(updated, "upload_max_filesize", config.UploadMaxFilesize)
-	updated = updateOrAddSetting(updated, "opcache.enable", config.OpcacheEnable)
-	updated = updateOrAddSetting(updated, "disable_functions", config.DisableFunctions)
-	
-	// Common Settings
-	updated = updateOrAddSetting(updated, "include_path", config.IncludePath)
-	updated = updateOrAddSetting(updated, "session.save_path", config.SessionSavePath)
-	updated = updateOrAddSetting(updated, "realpath_cache_size", config.RealpathCacheSize)
-	updated = updateOrAddSetting(updated, "open_basedir", config.OpenBasedir)
-	updated = updateOrAddSetting(updated, "error_reporting", config.ErrorReporting)
-	updated = updateOrAddSetting(updated, "display_errors", config.DisplayErrors)
-	updated = updateOrAddSetting(updated, "log_errors", config.LogErrors)
-	updated = updateOrAddSetting(updated, "allow_url_fopen", config.AllowUrlFopen)
-	updated = updateOrAddSetting(updated, "file_uploads", config.FileUploads)
-	updated = updateOrAddSetting(updated, "short_open_tag", config.ShortOpenTag)
-	
-	// Additional directives
-	if config.AdditionalDirectives != "" {
-		updated += "\n; Additional custom directives\n"
-		updated += config.AdditionalDirectives + "\n"
+	settings := []phpSettingValue{
+		{"memory_limit", config.MemoryLimit},
+		{"max_execution_time", config.MaxExecutionTime},
+		{"max_input_time", config.MaxInputTime},
+		{"post_max_size", config.PostMaxSize},
+		{"upload_max_filesize", config.UploadMaxFilesize},
+		{"opcache.enable", config.OpcacheEnable},
+		{"disable_functions", config.DisableFunctions},
+		{"include_path", config.IncludePath},
+		{"session.save_path", config.SessionSavePath},
+		{"realpath_cache_size", config.RealpathCacheSize},
+		{"open_basedir", config.OpenBasedir},
+		{"error_reporting", config.ErrorReporting},
+		{"display_errors", config.DisplayErrors},
+		{"log_errors", config.LogErrors},
+		{"allow_url_fopen", config.AllowUrlFopen},
+		{"file_uploads", config.FileUploads},
+		{"short_open_tag", config.ShortOpenTag},
 	}
-
-	if err := os.WriteFile(phpIni, []byte(updated), 0644); err != nil { //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
-		return fmt.Errorf("failed to write php.ini: %v", err)
-	}
-
-	return reloadPHPFPM(phpVersion)
+	path := phpINIPath(phpVersion)
+	return mutateManagedConfig(path, 0o644, func(content []byte) ([]byte, error) {
+		updated := string(content)
+		for _, setting := range settings {
+			updated = updateOrAddSetting(updated, setting.key, setting.value)
+		}
+		updated, err := replaceAdditionalPHPBlock(updated, config.AdditionalDirectives)
+		if err != nil {
+			return nil, err
+		}
+		return []byte(updated), nil
+	}, func() error { return phpFPMConfigTest(phpVersion) }, func() error { return reloadPHPFPM(phpVersion) })
 }

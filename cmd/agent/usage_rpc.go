@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Real usage numbers for one site: disk from du, this month's traffic from
@@ -17,16 +19,9 @@ import (
 // nginx erişim günlüğünden. Panel asla uydurma değer göstermemeli — hep 0
 // okunan bir istatistik, hiç olmamasından kötüdür.
 
-type SiteUsageRequest struct {
-	SiteHome string `json:"site_home"` // /var/www/celikpanel/subscriptions/N/sites/M
-	Domain   string `json:"domain"`
-}
+type SiteUsageRequest = transport.SiteUsageRequest
 
-type SiteUsageResponse struct {
-	DiskBytes         int64  `json:"disk_bytes"`
-	TrafficMonthBytes int64  `json:"traffic_month_bytes"`
-	Error             string `json:"error,omitempty"`
-}
+type SiteUsageResponse = transport.SiteUsageResponse
 
 func (a *Agent) SiteUsage(req *SiteUsageRequest, resp *SiteUsageResponse) error {
 	cleanHome := filepath.Clean(req.SiteHome)

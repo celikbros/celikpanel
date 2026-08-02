@@ -56,9 +56,10 @@ func runCreateAdmin(database *db.SQLiteDB) error {
 		existing.PasswordHash = hash
 		existing.Email = email
 		existing.Role = "admin"
-		if err := repo.Update(ctx, existing); err != nil {
+		if err := repo.UpdateAndRevokeSessions(ctx, existing); err != nil {
 			return fmt.Errorf("failed to update admin: %w", err)
 		}
+		revokePendingLogins(existing.ID)
 		fmt.Printf("Updated existing admin %q / Mevcut yönetici %q güncellendi.\n", username, username)
 		return nil
 	}

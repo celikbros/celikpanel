@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -93,15 +95,8 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 		return
 	}
 
-	var lineageResp struct {
-		Deleted int    `json:"deleted"`
-		Error   string `json:"error,omitempty"`
-	}
-	err = p.agentClient.CallContext(ctx, "Agent.ReconcileSiteCertLineages", &struct {
-		ExpectedBuildCommit string   `json:"expected_build_commit"`
-		ReferencedLineages  []string `json:"referenced_lineages"`
-		ActiveLineages      []string `json:"active_lineages"`
-	}{
+	var lineageResp transport.ReconcileSiteCertLineagesResponse
+	err = p.callAgentContext(ctx, "Agent.ReconcileSiteCertLineages", &transport.ReconcileSiteCertLineagesRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		ReferencedLineages:  referencedLineages,
 		// Keep the former field populated during rolling upgrades. Old agents
@@ -460,17 +455,11 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 		requests = append(requests, request)
 	}
 
-	var resp struct {
-		Applied int    `json:"applied"`
-		Error   string `json:"error,omitempty"`
-	}
+	var resp transport.ApplyVhostsResponse
 	err = p.agentClient.CallContext(
 		ctx,
 		"Agent.ApplyVhosts",
-		&struct {
-			ExpectedBuildCommit string                 `json:"expected_build_commit"`
-			Vhosts              []applyVhostRPCRequest `json:"vhosts"`
-		}{
+		&transport.ApplyVhostsRequest{
 			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 			Vhosts:              requests,
 		},

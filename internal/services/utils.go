@@ -24,7 +24,7 @@ func GeneratePassword(length int) (string, error) {
 	password := base64.URLEncoding.EncodeToString(bytes)
 	password = strings.ReplaceAll(password, "-", "")
 	password = strings.ReplaceAll(password, "_", "")
-	
+
 	// Truncate to desired length
 	if len(password) > length {
 		password = password[:length]
@@ -39,13 +39,11 @@ func GeneratePassword(length int) (string, error) {
 // updateOrAddSetting updates or adds a setting in config content
 func updateOrAddSetting(content, key, value string) string {
 	// Try to update existing setting (handles commented and uncommented lines)
-	re := regexp.MustCompile(fmt.Sprintf(`(?m)^(\s*;?\s*)%s(\s*=\s*.*)$`, regexp.QuoteMeta(key)))
-	
+	re := regexp.MustCompile(fmt.Sprintf(`(?m)^([ \t]*[;#]?[ \t]*)%s([ \t]*=[ \t]*.*)$`, regexp.QuoteMeta(key)))
 	replacement := fmt.Sprintf("%s = %s", key, value)
 	if re.MatchString(content) {
-		return re.ReplaceAllString(content, replacement)
+		return re.ReplaceAllStringFunc(content, func(string) string { return replacement })
 	}
-	
 	// If not found, add at the end
-	return content + "\n" + replacement + "\n"
+	return strings.TrimRight(content, "\n") + "\n" + replacement + "\n"
 }

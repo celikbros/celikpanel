@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/crypto/curve25519"
 )
 
@@ -321,18 +322,13 @@ func wgKeyPair() (privB64, pubB64 string, err error) {
 		base64.StdEncoding.EncodeToString(public), nil
 }
 
-type VPNKeysResponse struct {
-	PrivateKey   string `json:"private_key"`
-	PublicKey    string `json:"public_key"`
-	PresharedKey string `json:"preshared_key"`
-	Error        string `json:"error,omitempty"`
-}
+type VPNKeysResponse = transport.VPNKeysResponse
 
 // GenerateVPNKeys returns a fresh client key pair and preshared key. Only the
 // public and encrypted preshared keys are kept by the panel.
 // GenerateVPNKeys yeni istemci anahtar çiftini ve ön paylaşımlı anahtarı
 // döndürür. Panel yalnız genel anahtarı ve şifreli ön paylaşımlı anahtarı tutar.
-func (a *Agent) GenerateVPNKeys(_ *struct{}, response *VPNKeysResponse) error {
+func (a *Agent) GenerateVPNKeys(_ *transport.Empty, response *VPNKeysResponse) error {
 	private, public, err := wgKeyPair()
 	if err != nil {
 		response.Error = err.Error()
@@ -349,16 +345,9 @@ func (a *Agent) GenerateVPNKeys(_ *struct{}, response *VPNKeysResponse) error {
 	return nil
 }
 
-type SetupVPNRequest struct {
-	ServiceMutationBinding
-	Port int `json:"port"`
-}
+type SetupVPNRequest = transport.SetupVPNRequest
 
-type SetupVPNResponse struct {
-	Created bool   `json:"created"`
-	Detail  string `json:"detail,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
+type SetupVPNResponse = transport.SetupVPNResponse
 
 // SetupVPN writes the server configuration once, enables forwarding and
 // starts wg-quick@wg0. The release-managed port is always UDP/51820.
@@ -724,22 +713,11 @@ PostDown = %s
 	return nil
 }
 
-type VPNPeerSpec struct {
-	PublicKey    string `json:"public_key"`
-	PresharedKey string `json:"preshared_key"`
-	IP           string `json:"ip"`
-}
+type VPNPeerSpec = transport.VPNPeerSpec
 
-type SyncVPNPeersRequest struct {
-	ServiceMutationBinding
-	Peers []VPNPeerSpec `json:"peers"`
-}
+type SyncVPNPeersRequest = transport.SyncVPNPeersRequest
 
-type SyncVPNPeersResponse struct {
-	// Applied confirms the durable desired config and, when running, live state.
-	Applied bool   `json:"applied"`
-	Error   string `json:"error,omitempty"`
-}
+type SyncVPNPeersResponse = transport.SyncVPNPeersResponse
 
 // SyncVPNPeers validates and stages the full peer set, applies it live when
 // wg0 is up, and only then atomically commits wg0.conf.
@@ -896,27 +874,13 @@ func applyWireGuardConfig(ctx context.Context, configPath string) error {
 	return nil
 }
 
-type VPNPeerStat struct {
-	PublicKey     string `json:"public_key"`
-	LastHandshake int64  `json:"last_handshake"`
-	RxBytes       int64  `json:"rx_bytes"`
-	TxBytes       int64  `json:"tx_bytes"`
-}
+type VPNPeerStat = transport.VPNPeerStat
 
-type VPNStatusResponse struct {
-	Installed       bool          `json:"installed"`
-	Configured      bool          `json:"configured"`
-	Running         bool          `json:"running"`
-	ServerPublicKey string        `json:"server_public_key,omitempty"`
-	Port            int           `json:"port,omitempty"`
-	Endpoint        string        `json:"endpoint,omitempty"`
-	Peers           []VPNPeerStat `json:"peers,omitempty"`
-	Error           string        `json:"error,omitempty"`
-}
+type VPNStatusResponse = transport.VPNStatusResponse
 
 // VPNStatus reports tool, config, interface and live peer-counter state.
 // VPNStatus araç, yapılandırma, arayüz ve canlı peer sayaç durumunu bildirir.
-func (a *Agent) VPNStatus(_ *struct{}, response *VPNStatusResponse) error {
+func (a *Agent) VPNStatus(_ *transport.Empty, response *VPNStatusResponse) error {
 	if err := preflightVPNHost(); err != nil {
 		return nil
 	}

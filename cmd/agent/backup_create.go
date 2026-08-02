@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,18 +9,26 @@ import (
 )
 
 func (a *Agent) createBackup(req *backupspec.CreateRequest) (backupspec.Info, error) {
-	scope := createScope(req)
-	if err := validateV2Scope(scope); err != nil {
+	identity, err := normalizeBackupCreateRequest(req)
+	if err != nil {
 		return backupspec.Info{}, err
 	}
-	origin := req.Origin
-	if origin == "" {
-		origin = backupspec.OriginManual
+	if identity.jobKey == "" {
+		return a.createBackupPhysical(identity)
 	}
-	if !validBackupOrigin(origin) {
-		return backupspec.Info{}, errors.New("invalid backup origin")
+	lock := backupJobMutex(identity)
+	lock.Lock()
+	defer lock.Unlock()
+	if info, found, err := findPublishedBackupForJob(identity); err != nil {
+		return backupspec.Info{}, err
+	} else if found {
+		return info, nil
 	}
-	backupDir, err := ensureBackupDir(scope)
+	return a.createBackupPhysical(identity)
+}
+
+func (a *Agent) createBackupPhysical(identity backupCreateIdentity) (backupspec.Info, error) {
+	backupDir, err := ensureBackupDir(identity.scope)
 	if err != nil {
 		return backupspec.Info{}, err
 	}
@@ -37,45 +44,36 @@ func (a *Agent) createBackup(req *backupspec.CreateRequest) (backupspec.Info, er
 
 	manifest := backupManifest{
 		Version:        backupspec.ProtocolVersion,
-		Type:           req.Type,
-		Origin:         origin,
-		SubscriptionID: scope.SubscriptionID,
-		DomainID:       scope.DomainID,
+		Type:           identity.typeName,
+		Origin:         identity.origin,
+		JobKey:         identity.jobKey,
+		SubscriptionID: identity.scope.SubscriptionID,
+		DomainID:       identity.scope.DomainID,
 		CreatedAt:      backupNow().UTC(),
 	}
-	switch req.Type {
+	switch identity.typeName {
 	case backupspec.TypeFiles:
-		if err := buildFilesPayload(scope, workDir, &manifest); err != nil {
+		if err := buildFilesPayload(identity.scope, workDir, &manifest); err != nil {
 			return backupspec.Info{}, err
 		}
 	case backupspec.TypeDatabase:
-		database, err := databaseFromCreateRequest(req)
-		if err != nil {
-			return backupspec.Info{}, err
-		}
-		if err := buildDatabasePayload(workDir, database, &manifest); err != nil {
+		if err := buildDatabasePayload(workDir, identity.databases[0], &manifest); err != nil {
 			return backupspec.Info{}, err
 		}
 	case backupspec.TypeFull:
-		databases, err := validateDatabaseSet(req.Databases)
-		if err != nil {
+		if err := buildFilesPayload(identity.scope, workDir, &manifest); err != nil {
 			return backupspec.Info{}, err
 		}
-		if err := buildFilesPayload(scope, workDir, &manifest); err != nil {
-			return backupspec.Info{}, err
-		}
-		for _, database := range databases {
+		for _, database := range identity.databases {
 			if err := buildDatabasePayload(workDir, database, &manifest); err != nil {
 				return backupspec.Info{}, err
 			}
 		}
-	default:
-		return backupspec.Info{}, errors.New("invalid backup type")
 	}
-	if err := validateManifest(manifest, scope); err != nil {
+	if err := validateManifest(manifest, identity.scope); err != nil {
 		return backupspec.Info{}, err
 	}
-	name, err := newBackupName(req.Type, manifestDatabaseID(manifest))
+	name, err := newBackupName(identity.typeName, manifestDatabaseID(manifest))
 	if err != nil {
 		return backupspec.Info{}, err
 	}

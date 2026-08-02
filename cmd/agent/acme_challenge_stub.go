@@ -15,3 +15,8 @@ func prepareACMEChallengeRoot(subscriptionID, domainID int) (string, error) {
 	}
 	return challengeRoot, fmt.Errorf("secure ACME challenge roots require Linux openat2")
 }
+
+func preparePanelACMEChallengeRoot() (string, error) {
+	return hostingpath.PanelACMEChallengeRoot(),
+		fmt.Errorf("secure ACME challenge roots require Linux openat2")
+}

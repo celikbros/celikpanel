@@ -35,6 +35,14 @@ func prepareACMEChallengeRoot(subscriptionID, domainID int) (string, error) {
 	return challengeRoot, nil
 }
 
+func preparePanelACMEChallengeRoot() (string, error) {
+	challengeRoot := hostingpath.PanelACMEChallengeRoot()
+	if err := secureEnsureACMEChallengeDirectory(challengeRoot); err != nil {
+		return "", err
+	}
+	return challengeRoot, nil
+}
+
 func secureEnsureACMEChallengeDirectory(challengeRoot string) error {
 	if !filepath.IsAbs(challengeRoot) || filepath.Clean(challengeRoot) != challengeRoot {
 		return fmt.Errorf("ACME challenge root must be an absolute canonical path")

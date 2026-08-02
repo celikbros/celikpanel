@@ -17,21 +17,29 @@ func (p *Panel) handlePostfixQueue(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req core.PostfixActionRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeStrictJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		var ok bool
-		if err := p.agentClient.Call("Agent.PostfixQueueAction", &req, &ok); err != nil {
+		if err := p.callAgentContext(r.Context(), "Agent.PostfixQueueAction", &req, &ok); err != nil {
 			writeServerError(w, err)
+			return
+		}
+		if !ok {
+			http.Error(w, "mail queue action was not confirmed by the agent", http.StatusBadGateway)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
 		return
 	}
+	if r.Method != http.MethodGet {
+		rejectRouteMethod(w, []string{http.MethodGet, http.MethodPost})
+		return
+	}
 
 	var result core.PostfixQueueResult
-	if err := p.agentClient.Call("Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -44,7 +52,7 @@ func (p *Panel) handlePostfixSummary(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var result core.PostfixQueueResult
-	if err := p.agentClient.Call("Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -57,7 +65,7 @@ func (p *Panel) handleDovecotStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var result core.DovecotStatsResult
-	if err := p.agentClient.Call("Agent.DovecotStats", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.DovecotStats", &transport.Empty{}, &result); err != nil {
 		writeServerError(w, err)
 		return
 	}

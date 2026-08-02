@@ -4,16 +4,21 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // cPanel importer (roadmap 3B). A cpmove/backup archive is inspected in a
@@ -29,47 +34,24 @@ import (
 
 const cpmoveControlFileLimit = 2 << 20 // 2 MB: control files are tiny; refuse absurd ones
 
-type CpmoveMailAccount struct {
-	Domain    string `json:"domain"`
-	User      string `json:"user"`
-	CryptHash string `json:"crypt_hash"`
-	QuotaMB   int    `json:"quota_mb"`
-}
+const (
+	cpmoveMySQLCreateTimeout = 30 * time.Second
+	cpmoveMySQLDropTimeout   = 30 * time.Second
+	cpmoveMySQLImportTimeout = 30 * time.Minute
+	cpmoveDatabaseDumpLimit  = int64(1 << 40) // 1 TiB hard ceiling before staging
+)
 
-type CpmoveForwarder struct {
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-}
+type CpmoveMailAccount = transport.CpmoveMailAccount
 
-type CpmoveDNSRecord struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Content string `json:"content"`
-	TTL     int    `json:"ttl"`
-	Prio    int    `json:"prio"`
-}
+type CpmoveForwarder = transport.CpmoveForwarder
 
-type CpmoveDatabase struct {
-	Name      string `json:"name"`
-	DumpBytes int64  `json:"dump_bytes"`
-}
+type CpmoveDNSRecord = transport.CpmoveDNSRecord
 
-type CpmoveInspectRequest struct {
-	Path string `json:"path"`
-}
+type CpmoveDatabase = transport.CpmoveDatabase
 
-type CpmoveInspectResponse struct {
-	Username     string                       `json:"username"`
-	MainDomain   string                       `json:"main_domain"`
-	Domains      []string                     `json:"domains"`
-	PublicHTML   bool                         `json:"public_html"`
-	SiteBytes    int64                        `json:"site_bytes"`
-	MailAccounts []CpmoveMailAccount          `json:"mail_accounts"`
-	Forwarders   []CpmoveForwarder            `json:"forwarders"`
-	DNSZones     map[string][]CpmoveDNSRecord `json:"dns_zones"`
-	Databases    []CpmoveDatabase             `json:"databases"`
-	Error        string                       `json:"error,omitempty"`
-}
+type CpmoveInspectRequest = transport.CpmoveInspectRequest
+
+type CpmoveInspectResponse = transport.CpmoveInspectResponse
 
 // cpmoveRel normalises an archive member path: the leading cpmove-USER/ or
 // backup-.../ directory is stripped so lookups see homedir/, cp/, va/…
@@ -91,9 +73,9 @@ func openCpmove(archivePath string) (*tar.Reader, func(), error) {
 	if !strings.HasSuffix(archivePath, ".tar.gz") && !strings.HasSuffix(archivePath, ".tgz") {
 		return nil, nil, fmt.Errorf("expected a .tar.gz cpmove/backup archive")
 	}
-	f, err := os.Open(archivePath)
+	f, err := openTrustedCpmoveArchive(archivePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("open trusted cpmove archive: %w", err)
 	}
 	gz, err := gzip.NewReader(f)
 	if err != nil {
@@ -113,6 +95,12 @@ func readSmall(tr *tar.Reader, size int64) (string, error) {
 }
 
 func (a *Agent) InspectCpmove(req *CpmoveInspectRequest, resp *CpmoveInspectResponse) error {
+	if req == nil || resp == nil {
+		return os.ErrInvalid
+	}
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "cpmove archive inspection"); err != nil {
+		return err
+	}
 	tr, done, err := openCpmove(req.Path)
 	if err != nil {
 		resp.Error = err.Error()
@@ -421,16 +409,9 @@ func qualifyZoneName(name, zone string) string {
 	return name + "." + zone
 }
 
-type CpmoveExtractRequest struct {
-	Path      string `json:"path"`
-	TargetDir string `json:"target_dir"`
-}
+type CpmoveExtractRequest = transport.CpmoveExtractRequest
 
-type CpmoveExtractResponse struct {
-	Files int    `json:"files"`
-	Bytes int64  `json:"bytes"`
-	Error string `json:"error,omitempty"`
-}
+type CpmoveExtractResponse = transport.CpmoveExtractResponse
 
 // ExtractCpmoveFiles streams homedir/public_html out of the archive into the
 // site's document root. Entries are sanitised (no "..", no absolute paths)
@@ -440,80 +421,95 @@ type CpmoveExtractResponse struct {
 // akıtır. Girişler temizlenir (".." yok, mutlak yol yok) ve symlink/hardlink
 // atlanır — bir arşiv hedef dizinin dışına yazamaz.
 func (a *Agent) ExtractCpmoveFiles(req *CpmoveExtractRequest, resp *CpmoveExtractResponse) error {
-	if req.TargetDir == "" || !filepath.IsAbs(req.TargetDir) {
-		resp.Error = "target_dir must be an absolute path"
-		return nil
+	if req == nil || resp == nil {
+		return os.ErrInvalid
 	}
-	tr, done, err := openCpmove(req.Path)
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "cpmove site extraction"); err != nil {
+		return err
+	}
+	return extractCpmoveFilesSecure(req, resp)
+}
+
+type CpmoveImportDBRequest = transport.CpmoveImportDBRequest
+
+type CpmoveImportDBResponse = transport.CpmoveImportDBResponse
+
+type cpmoveDatabaseCommandRunner interface {
+	Run(ctx context.Context, executable string, args []string, stdin io.Reader) error
+}
+
+type cpmoveExecDatabaseCommandRunner struct{}
+
+func (cpmoveExecDatabaseCommandRunner) Run(ctx context.Context, executable string, args []string, stdin io.Reader) error {
+	cmd := exec.CommandContext(ctx, executable, args...)
+	cmd.Stdin = stdin
+	// SQL clients can echo the failing statement. A cpmove dump can contain
+	// credentials and other customer data, so command output must never be
+	// copied into the RPC response.
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	return cmd.Run()
+}
+
+func runCpmoveDatabaseCommand(runner cpmoveDatabaseCommandRunner, timeout time.Duration, args []string, stdin io.Reader) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	err := runner.Run(ctx, "mysql", args, stdin)
+	timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded)
+	return timedOut, err
+}
+
+func cpmoveDatabaseCommandError(stage string, timedOut bool, err error) string {
+	if timedOut {
+		return "mysql " + stage + " timed out"
+	}
+	var execErr *exec.Error
+	if errors.As(err, &execErr) {
+		return "mysql client is unavailable"
+	}
+	return "mysql " + stage + " failed"
+}
+
+func createSecureCpmoveSQLFile() (*os.File, func(), error) {
+	tempDir, err := os.MkdirTemp("", "celikpanel-cpmove-sql-*")
 	if err != nil {
-		resp.Error = err.Error()
-		return nil
+		return nil, nil, err
 	}
-	defer done()
+	cleanupDir := true
+	defer func() {
+		if cleanupDir {
+			_ = os.RemoveAll(tempDir)
+		}
+	}()
 
-	if err := os.MkdirAll(req.TargetDir, 0o755); err != nil {
-		resp.Error = err.Error()
-		return nil
+	if err := os.Chmod(tempDir, 0o700); err != nil {
+		return nil, nil, err
 	}
-
-	const prefix = "homedir/public_html/"
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			resp.Error = fmt.Sprintf("archive read failed: %v", err)
-			return nil
-		}
-		rel := cpmoveRel(hdr.Name)
-		if !strings.HasPrefix(rel, prefix) {
-			continue
-		}
-		sub := strings.TrimPrefix(rel, prefix)
-		if sub == "" {
-			continue
-		}
-		clean := path.Clean(sub)
-		if clean == ".." || strings.HasPrefix(clean, "../") || path.IsAbs(clean) {
-			continue
-		}
-		dest := filepath.Join(req.TargetDir, filepath.FromSlash(clean))
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			_ = os.MkdirAll(dest, os.FileMode(hdr.Mode&0o755)|0o700)
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-				continue
-			}
-			out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode&0o777))
-			if err != nil {
-				continue
-			}
-			n, err := io.Copy(out, tr) //nosec G110 -- admin-supplied archive, extraction bounded by disk
-			out.Close()
-			if err == nil {
-				resp.Files++
-				resp.Bytes += n
-			}
-		default:
-			// Symlinks, devices etc. are deliberately not imported.
-			// Symlink, aygıt vb. bilerek içe alınmaz.
+	tmp, err := os.OpenFile(filepath.Join(tempDir, "dump.sql"), os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return nil, nil, err
+	}
+	// Unix keeps the open file descriptor usable after unlink. Removing the
+	// directory entry now prevents a crash or SIGKILL from leaving customer
+	// SQL material behind in the global temporary directory.
+	if runtime.GOOS != "windows" {
+		if err := os.Remove(tmp.Name()); err != nil {
+			_ = tmp.Close()
+			return nil, nil, err
 		}
 	}
-	return nil
-}
 
-type CpmoveImportDBRequest struct {
-	Path     string `json:"path"`
-	DumpName string `json:"dump_name"` // database name inside mysql/ (e.g. user_wp)
-	TargetDB string `json:"target_db"` // database to import into (already created)
-}
-
-type CpmoveImportDBResponse struct {
-	Imported bool   `json:"imported"`
-	Error    string `json:"error,omitempty"`
+	cleanupDir = false
+	cleanup := func() {
+		_ = tmp.Close()
+		_ = os.RemoveAll(tempDir)
+	}
+	return tmp, cleanup, nil
 }
 
 // ImportCpmoveDatabase extracts one mysql/<name>.sql dump to a temp file and
@@ -521,26 +517,39 @@ type CpmoveImportDBResponse struct {
 // ImportCpmoveDatabase, tek bir mysql/<ad>.sql dump'ını geçici dosyaya
 // çıkarır ve mysql istemcisine verir. Hedef veritabanı önceden var olmalıdır.
 func (a *Agent) ImportCpmoveDatabase(req *CpmoveImportDBRequest, resp *CpmoveImportDBResponse) error {
+	return importCpmoveDatabase(req, resp, cpmoveExecDatabaseCommandRunner{})
+}
+
+func importCpmoveDatabase(req *CpmoveImportDBRequest, resp *CpmoveImportDBResponse, runner cpmoveDatabaseCommandRunner) error {
+	if req == nil || resp == nil {
+		return os.ErrInvalid
+	}
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "cpmove database import"); err != nil {
+		return err
+	}
 	if err := services.ValidateSQLIdentifier(req.TargetDB); err != nil {
 		resp.Error = "invalid target database name"
+		return nil
+	}
+	if err := services.ValidateSQLIdentifier(req.DumpName); err != nil {
+		resp.Error = "invalid dump name"
 		return nil
 	}
 
 	tr, done, err := openCpmove(req.Path)
 	if err != nil {
-		resp.Error = err.Error()
+		resp.Error = "cpmove archive could not be opened"
 		return nil
 	}
 	defer done()
 
 	want := "mysql/" + req.DumpName + ".sql"
-	tmp, err := os.CreateTemp("", "cpmove-sql-*")
+	tmp, cleanup, err := createSecureCpmoveSQLFile()
 	if err != nil {
-		resp.Error = err.Error()
+		resp.Error = "temporary database import file could not be created"
 		return nil
 	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
+	defer cleanup()
 
 	found := false
 	for {
@@ -549,12 +558,16 @@ func (a *Agent) ImportCpmoveDatabase(req *CpmoveImportDBRequest, resp *CpmoveImp
 			break
 		}
 		if err != nil {
-			resp.Error = fmt.Sprintf("archive read failed: %v", err)
+			resp.Error = "cpmove archive could not be read"
 			return nil
 		}
 		if cpmoveRel(hdr.Name) == want && hdr.Typeflag == tar.TypeReg {
-			if _, err := io.Copy(tmp, tr); err != nil { //nosec G110 -- bounded by disk, admin-supplied archive
-				resp.Error = err.Error()
+			if hdr.Size < 0 || hdr.Size > cpmoveDatabaseDumpLimit {
+				resp.Error = "database dump exceeds the import size limit"
+				return nil
+			}
+			if _, err := io.CopyN(tmp, tr, hdr.Size); err != nil {
+				resp.Error = "database dump could not be staged"
 				return nil
 			}
 			found = true
@@ -562,11 +575,23 @@ func (a *Agent) ImportCpmoveDatabase(req *CpmoveImportDBRequest, resp *CpmoveImp
 		}
 	}
 	if !found {
-		resp.Error = fmt.Sprintf("dump %s not found in archive", want)
+		resp.Error = "requested database dump was not found in the archive"
+		return nil
+	}
+	if err := tmp.Sync(); err != nil {
+		resp.Error = "database dump could not be staged"
+		return nil
+	}
+	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
+		resp.Error = "database dump could not be staged"
 		return nil
 	}
 
-	// Create the database (idempotent), then feed the dump. Database USERS
+	// Create a new database exclusively, then feed the dump. IF NOT EXISTS
+	// would silently import an untrusted archive into an unrelated database
+	// that happened to have the same name.
+	//
+	// Database USERS
 	// are deliberately not migrated in v1 — cPanel grants carry hashed
 	// passwords tied to its mysql.sql; apps must be repointed manually.
 	// Veritabanını oluştur (bağımsız), sonra dump'ı yükle. Veritabanı
@@ -574,18 +599,28 @@ func (a *Agent) ImportCpmoveDatabase(req *CpmoveImportDBRequest, resp *CpmoveImp
 	// yeni kimlik bilgilerine yönlendirilmelidir.
 	dbIdent, err := services.QuoteMySQLIdentifier(req.TargetDB)
 	if err != nil {
-		resp.Error = fmt.Sprintf("invalid target database name: %v", err)
+		resp.Error = "invalid target database name"
 		return nil
 	}
-	if out, err := exec.Command("mysql", "-e",
-		fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s;", dbIdent)).CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("mysql create failed: %v: %s", err, strings.TrimSpace(string(out)))
+	createArgs := []string{"--execute", fmt.Sprintf("CREATE DATABASE %s;", dbIdent)}
+	if timedOut, err := runCpmoveDatabaseCommand(runner, cpmoveMySQLCreateTimeout, createArgs, nil); err != nil {
+		resp.Error = cpmoveDatabaseCommandError("create", timedOut, err)
 		return nil
 	}
 
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("mysql %s < %s", req.TargetDB, tmp.Name()))
-	if out, err := cmd.CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("mysql import failed: %v: %s", err, strings.TrimSpace(string(out)))
+	importArgs := []string{"--database", req.TargetDB}
+	if timedOut, err := runCpmoveDatabaseCommand(runner, cpmoveMySQLImportTimeout, importArgs, tmp); err != nil {
+		primaryError := cpmoveDatabaseCommandError("import", timedOut, err)
+		// CREATE above is deliberately exclusive, so this handler owns the
+		// database it just created. Compensate a failed import immediately.
+		// IF EXISTS makes a retried cleanup harmless without risking an
+		// unrelated pre-existing database (which CREATE would have rejected).
+		dropArgs := []string{"--execute", fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbIdent)}
+		if _, cleanupErr := runCpmoveDatabaseCommand(runner, cpmoveMySQLDropTimeout, dropArgs, nil); cleanupErr != nil {
+			resp.Error = primaryError + "; database cleanup failed; manual reconciliation is required"
+			return nil
+		}
+		resp.Error = primaryError
 		return nil
 	}
 	resp.Imported = true

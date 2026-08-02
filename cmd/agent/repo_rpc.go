@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Managed vendor repositories. A distro freezes one major version of a
@@ -111,10 +112,7 @@ func repoSourcePath(id string) string { return "/etc/apt/sources.list.d/celikpan
 // Artık burada da geçerli olan değişmez kural: agent, üzerine iş yaptığı her
 // olguyu kendi derlenmiş kataloğundan yeniden türetir. Panel taşıyıcıdır,
 // yetkili değil.
-type EnableRepoRequest struct {
-	ServiceMutationBinding
-	RepoID string `json:"repo_id"`
-}
+type EnableRepoRequest = transport.EnableRepoRequest
 
 // repoFromCatalogue finds the catalogue repo with this id. Nothing outside the
 // binary can add one.
@@ -148,15 +146,7 @@ const (
 	repoErrPackagesFailed          = "REPO_PACKAGES_FAILED"
 )
 
-type RepoStatusResponse struct {
-	Enabled         bool   `json:"enabled"`
-	Repairable      bool   `json:"repairable,omitempty"`
-	PartialSuccess  bool   `json:"partial_success,omitempty"`
-	MutationApplied bool   `json:"mutation_applied,omitempty"`
-	Source          string `json:"source,omitempty"`
-	Error           string `json:"error,omitempty"`
-	ErrorCode       string `json:"error_code,omitempty"`
-}
+type RepoStatusResponse = transport.RepoStatusResponse
 
 // signedRepoSource builds the one exact source line CelikPanel owns. Keeping
 // enable and status on the same helper prevents a stale or hand-edited source
@@ -459,15 +449,8 @@ func (a *Agent) RepoStatus(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	return nil
 }
 
-type RepoPackagesRequest struct {
-	RepoID string `json:"repo_id"`
-}
-
-type RepoPackagesResponse struct {
-	Packages  []string `json:"packages"` // newest major first, e.g. postgresql-17, 16, …
-	ErrorCode string   `json:"error_code,omitempty"`
-	Error     string   `json:"error,omitempty"`
-}
+type RepoPackagesRequest = transport.RepoPackagesRequest
+type RepoPackagesResponse = transport.RepoPackagesResponse
 
 // RepoPackages discovers which versioned packages are actually available now by
 // matching the catalog's pattern against apt-cache — the repo, not our code, is

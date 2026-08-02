@@ -78,8 +78,18 @@ require_text 'pending-update finalizer must execute from the verified recovery r
     "running finalizer is not pinned to the recovery release"
 require_text 'target web artifact is missing or unsafe' \
     "historical target web artifact is not required"
-require_text 'finalizer requires completion.pending as the only durable phase' \
-    "completion-only phase gate is missing"
+require_text 'finalizer requires completion.pending with at most its matching scheduler marker' \
+    "completion plus optional scheduler phase gate is missing"
+require_text 'scheduler-restore.pending does not exactly match completion.pending' \
+    "optional scheduler marker is not bound exactly to completion.pending"
+require_text 'finalizer requires completion.pending or an exact scheduler-only recovery marker' \
+    "scheduler-only exact retry topology is missing"
+require_text 'release_txn_read_scheduler_restore_fields' \
+    "scheduler-only retry does not parse the exact scheduler marker"
+require_text 'scheduler-only marker failed exact validation' \
+    "scheduler-only retry does not reject a tampered marker"
+require_text 'scheduler_recovery_verified=1' \
+    "scheduler-only retry is not gated by complete recovery evidence"
 require_text '"$target" == "$PENDING_TARGET"' \
     "snapshot identity is not bound to the explicit pending target"
 require_text '"$TRUSTED_TARGET_RELEASE/bin/panel"' \
@@ -115,21 +125,46 @@ require_text 'completion_verified=0' \
     "terminal completion verification state is missing"
 require_text 'completion_removing=0' \
     "terminal completion removal state is missing"
-require_text 'completion.pending disappeared during verified terminal removal; saved runtime state was left intact.' \
-    "marker-absent partial-success handling is missing"
+require_text 'scheduler_restore_completed=0' \
+    "post-restore marker-removal uncertainty state is missing"
+require_text 'Runtime completion is durable; exact Certbot scheduler restoration remains safely retryable.' \
+    "exact scheduler-marker partial-success handling is missing"
+require_text 'durable marker removal is uncertain. Runtime was left intact and finalization did not claim success.' \
+    "restore-success marker-removal uncertainty is not handled safely"
+require_text 'release_txn_mark_scheduler_restore_pending \' \
+    "terminal scheduler obligation is not durably published"
+require_text 'release_txn_remove_scheduler_restore_pending \' \
+    "completed scheduler obligation is not durably removed"
 
 transaction_lock=$(line_of_last 'acquire_release_transaction_lock')
 recovery_release=$(line_after "$transaction_lock" 'validate_immutable_release \')
 target_release=$(line_after "$recovery_release" 'validate_immutable_release \')
 guard_source=$(line_after "$target_release" 'source "$TRUSTED_RECOVERY_RELEASE/deploy/release-transaction-guard.sh"')
 inherited_lock=$(line_after "$guard_source" 'release_txn_verify_inherited_lock')
-marker_gate=$(line_after "$inherited_lock" 'finalizer requires completion.pending as the only durable phase')
+marker_gate=$(line_after "$inherited_lock" 'finalizer requires completion.pending with at most its matching scheduler marker')
 pending_read=$(line_after "$marker_gate" 'release_txn_read_pending_fields')
 pending_validate=$(line_after "$pending_read" 'release_txn_validate_pending_token \')
-snapshot_validate=$(line_after "$pending_validate" 'validate_pending_update_snapshot "$pending_snapshot"')
+optional_scheduler_validate=$(line_after "$pending_validate" 'release_txn_validate_scheduler_restore_token \')
+scheduler_only_read=$(line_after "$optional_scheduler_validate" 'release_txn_read_scheduler_restore_fields')
+scheduler_only_trap=$(line_after "$scheduler_only_read" 'trap finalization_exit EXIT')
+scheduler_only_validate=$(line_after "$scheduler_only_trap" 'release_txn_validate_scheduler_restore_token \')
+snapshot_validate=$(line_after "$scheduler_only_validate" 'validate_pending_update_snapshot "$pending_snapshot"')
 artifact_validate=$(line_after "$snapshot_validate" 'verify_installed_release_artifacts')
 enablement_validate=$(line_after "$artifact_validate" 'verify_saved_enablement')
-stopped_validate=$(line_after "$enablement_validate" 'verify_both_units_stopped')
+scheduler_only_branch=$(line_after "$enablement_validate" 'if [[ "$scheduler_only_resume" -eq 1 ]]; then')
+scheduler_runtime_proof=$(line_after "$scheduler_only_branch" 'verify_saved_runtime_states')
+scheduler_recovery_proof=$(line_after "$scheduler_runtime_proof" 'scheduler_recovery_verified=1')
+scheduler_revalidate=$(line_after "$scheduler_recovery_proof" 'release_txn_validate_scheduler_restore_token \')
+scheduler_quiesce=$(line_after "$scheduler_revalidate" 'panel_tls_quiesce_certbot_scheduler')
+scheduler_post_quiesce_validate=$(line_after "$scheduler_quiesce" 'release_txn_validate_scheduler_restore_token \')
+scheduler_restore=$(line_after "$scheduler_post_quiesce_validate" 'panel_tls_restore_certbot_scheduler')
+scheduler_restore_completed=$(line_after "$scheduler_restore" 'scheduler_restore_completed=1')
+scheduler_remove=$(line_after "$scheduler_restore_completed" 'release_txn_remove_scheduler_restore_pending \')
+scheduler_success=$(line_after "$scheduler_remove" 'finalization_succeeded=1')
+scheduler_exit=$(line_after "$scheduler_success" 'exit 0')
+late_branch=$(line_after "$scheduler_exit" 'if [[ "$completion_present" -eq 1 && "$scheduler_present" -eq 1 ]]; then')
+late_trap=$(line_after "$late_branch" 'trap finalization_exit EXIT')
+stopped_validate=$(line_after "$late_trap" 'verify_both_units_stopped')
 exit_trap=$(line_after "$stopped_validate" 'trap finalization_exit EXIT')
 preserve_runtime=$(line_after "$exit_trap" 'install_and_verify_runtime_directory_preserve')
 unit_guards=$(line_after "$preserve_runtime" 'release_txn_install_and_verify_unit_guards \')
@@ -164,10 +199,22 @@ terminal_idle=$(line_after "$terminal_runtime" 'run_target_agent_idle_locked')
 terminal_evidence=$(line_after "$terminal_idle" 'verify_pending_evidence')
 completion_verified=$(line_after "$terminal_evidence" 'completion_verified=1')
 completion_removing=$(line_after "$completion_verified" 'completion_removing=1')
-remove_pending=$(line_after "$completion_removing" 'release_txn_remove_completion_pending \')
+mark_scheduler=$(line_after "$completion_removing" 'release_txn_mark_scheduler_restore_pending \')
+remove_pending=$(line_after "$mark_scheduler" 'release_txn_remove_completion_pending \')
 terminal_unlock=$(line_after "$remove_pending" 'release_mutation_lock \')
-marker_absent_branch=$(line_of_first 'if [[ "$completion_verified" -eq 1 &&')
-marker_absent_unlock=$(line_after "$marker_absent_branch" 'release_mutation_lock')
+terminal_quiesce=$(line_after "$terminal_unlock" 'panel_tls_quiesce_certbot_scheduler')
+terminal_scheduler_validate=$(line_after "$terminal_quiesce" 'release_txn_validate_scheduler_restore_token \')
+terminal_scheduler_restore=$(line_after "$terminal_scheduler_validate" 'panel_tls_restore_certbot_scheduler')
+terminal_restore_completed=$(line_after "$terminal_scheduler_restore" 'scheduler_restore_completed=1')
+remove_scheduler=$(line_after "$terminal_restore_completed" 'release_txn_remove_scheduler_restore_pending \')
+terminal_success=$(line_after "$remove_scheduler" 'finalization_succeeded=1')
+restore_absent_branch=$(line_of_first 'if [[ "$scheduler_restore_completed" -eq 1 &&')
+restore_absent_unlock=$(line_after "$restore_absent_branch" 'release_mutation_lock')
+restore_absent_message=$(line_after "$restore_absent_unlock" 'durable marker removal is uncertain.')
+restore_absent_return=$(line_after "$restore_absent_message" 'return "$status"')
+marker_absent_branch=$(line_of_first 'if [[ ( "$completion_verified" -eq 1 &&')
+marker_retry_validate=$(line_after "$marker_absent_branch" 'release_txn_validate_scheduler_restore_token \')
+marker_absent_unlock=$(line_after "$marker_retry_validate" 'release_mutation_lock')
 marker_absent_return=$(line_after "$marker_absent_unlock" 'return "$status"')
 fail_closed_stop=$(line_after "$marker_absent_return" 'systemctl stop celikpanel-panel.service')
 
@@ -180,11 +227,45 @@ assert_before "$target_release" "$guard_source" \
 assert_before "$guard_source" "$inherited_lock" \
     "sourced guard must verify the inherited transaction lock"
 assert_before "$marker_gate" "$pending_read" \
-    "completion-only gate must precede marker parsing"
+    "completion plus optional scheduler gate must precede marker parsing"
 assert_before "$pending_validate" "$snapshot_validate" \
     "exact pending token must be validated before snapshot trust"
+assert_before "$pending_validate" "$optional_scheduler_validate" \
+    "completion token must be validated before its optional scheduler token"
+assert_before "$optional_scheduler_validate" "$snapshot_validate" \
+    "optional scheduler token must be validated before snapshot trust"
+assert_before "$scheduler_only_read" "$scheduler_only_trap" \
+    "scheduler-only identity must be parsed before its fail-closed trap"
+assert_before "$scheduler_only_trap" "$scheduler_only_validate" \
+    "scheduler-only fail-closed trap must precede exact marker validation"
+assert_before "$scheduler_only_validate" "$snapshot_validate" \
+    "scheduler-only marker must be exact before snapshot trust"
 assert_before "$snapshot_validate" "$artifact_validate" \
     "snapshot proof must precede installed artifact trust"
+assert_before "$scheduler_only_branch" "$scheduler_runtime_proof" \
+    "scheduler-only retry must enter its dedicated runtime-proof branch"
+assert_before "$scheduler_runtime_proof" "$scheduler_recovery_proof" \
+    "saved runtime state must be proved before recovery is retry-safe"
+assert_before "$scheduler_recovery_proof" "$scheduler_revalidate" \
+    "complete recovery evidence must precede scheduler marker revalidation"
+assert_before "$scheduler_revalidate" "$scheduler_quiesce" \
+    "exact scheduler marker must be revalidated before re-quiescing"
+assert_before "$scheduler_quiesce" "$scheduler_post_quiesce_validate" \
+    "scheduler marker must be revalidated after re-quiescing"
+assert_before "$scheduler_post_quiesce_validate" "$scheduler_restore" \
+    "post-quiesce marker proof must precede scheduler restoration"
+assert_before "$scheduler_restore" "$scheduler_restore_completed" \
+    "scheduler restore completion must be recorded immediately after restoration"
+assert_before "$scheduler_restore_completed" "$scheduler_remove" \
+    "scheduler state must be restored before exact marker removal"
+assert_before "$scheduler_remove" "$scheduler_success" \
+    "scheduler-only success must follow exact marker removal"
+assert_before "$scheduler_success" "$scheduler_exit" \
+    "scheduler-only recovery must exit before full finalization mutation"
+assert_before "$late_branch" "$late_trap" \
+    "completion+scheduler late topology must install its fail-closed trap"
+assert_before "$late_trap" "$stopped_validate" \
+    "late completion+scheduler topology must not bypass the stopped-unit gate"
 assert_before "$stopped_validate" "$exit_trap" \
     "initial read-only proofs must precede the mutating failure trap"
 assert_before "$exit_trap" "$preserve_runtime" \
@@ -233,15 +314,187 @@ assert_before "$terminal_evidence" "$completion_verified" \
     "terminal evidence must precede completion verification state"
 assert_before "$completion_verified" "$completion_removing" \
     "verified completion must precede removal state"
-assert_before "$completion_removing" "$remove_pending" \
-    "completion state must be set before durable marker removal"
+assert_before "$completion_removing" "$mark_scheduler" \
+    "completion state must be set before publishing scheduler recovery"
+assert_before "$mark_scheduler" "$remove_pending" \
+    "scheduler recovery must be durable before completion removal"
 assert_before "$remove_pending" "$terminal_unlock" \
     "completion marker must be removed while the mutation lock is held"
-assert_before "$marker_absent_branch" "$marker_absent_unlock" \
-    "marker-absent partial success must release the mutation lock"
+assert_before "$terminal_unlock" "$terminal_quiesce" \
+    "mutation lock must be released before scheduler re-quiesce"
+assert_before "$terminal_quiesce" "$terminal_scheduler_validate" \
+    "terminal scheduler marker must be revalidated after re-quiesce"
+assert_before "$terminal_scheduler_validate" "$terminal_scheduler_restore" \
+    "terminal marker proof must precede scheduler restoration"
+assert_before "$terminal_scheduler_restore" "$terminal_restore_completed" \
+    "terminal scheduler restore completion must be recorded immediately"
+assert_before "$terminal_restore_completed" "$remove_scheduler" \
+    "terminal scheduler state must be restored before marker removal"
+assert_before "$remove_scheduler" "$terminal_success" \
+    "final success must follow exact scheduler marker removal"
+assert_before "$restore_absent_branch" "$restore_absent_unlock" \
+    "restore-completed markerless partial success must release any mutation lock"
+assert_before "$restore_absent_unlock" "$restore_absent_message" \
+    "markerless post-restore state must be reported explicitly"
+assert_before "$restore_absent_message" "$restore_absent_return" \
+    "markerless post-restore partial success must return before fail-closed stopping"
+assert_before "$restore_absent_return" "$marker_absent_branch" \
+    "post-restore markerless handling must precede exact-marker retry handling"
+assert_before "$marker_absent_branch" "$marker_retry_validate" \
+    "partial success must prove the exact scheduler retry marker"
+assert_before "$marker_retry_validate" "$marker_absent_unlock" \
+    "exact scheduler proof must precede mutation-lock release"
 assert_before "$marker_absent_unlock" "$marker_absent_return" \
-    "marker-absent partial success must exit before fail-closed stopping"
+    "exact scheduler partial success must exit before fail-closed stopping"
 assert_before "$marker_absent_return" "$fail_closed_stop" \
-    "verified marker absence must not stop restored services"
+    "verified exact scheduler retry state must not stop restored services"
+
+extract_function() {
+    local name=$1
+    awk -v signature="$name() {" '
+        $0 == signature { inside=1 }
+        inside { print }
+        inside && $0 == "}" { exit }
+    ' "$candidate"
+}
+
+tmp_root=$(mktemp -d)
+case "$tmp_root" in
+    /tmp/*) ;;
+    *) fail "unsafe temporary root: $tmp_root" ;;
+esac
+trap 'rm -rf -- "$tmp_root"' EXIT
+
+source <(extract_function finalization_exit)
+
+TRANSACTION_ROOT="$tmp_root/transaction"
+TRANSACTION_RUNTIME_ROOT="$tmp_root/runtime"
+mkdir -m 0700 "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT"
+RELEASE_TRANSACTION_FD=9
+pending_token=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+pending_snapshot=20260801T000000Z-from-a-to-b-0123456789abcdef0123456789abcdef
+mock_log="$tmp_root/finalizer.log"
+mock_scheduler_marker_valid=1
+
+assert_scheduler_marker_args() {
+    [[ $# -eq 4 && "$1" == "$TRANSACTION_ROOT" &&
+       "$2" == "$pending_token" && "$3" == update &&
+       "$4" == "$pending_snapshot" ]] \
+        || fail "scheduler validation arguments are not ROOT TOKEN OP SNAP"
+}
+
+release_txn_validate_scheduler_restore_token() {
+    assert_scheduler_marker_args "$@"
+    printf 'validate-scheduler\n' >> "$mock_log"
+    [[ "$mock_scheduler_marker_valid" -eq 1 &&
+       -f "$TRANSACTION_ROOT/scheduler-restore.pending" ]]
+}
+
+release_txn_remove_start_authorization() {
+    printf 'remove-start-authorization\n' >> "$mock_log"
+}
+
+release_mutation_lock() {
+    printf 'unlock\n' >> "$mock_log"
+}
+
+systemctl() {
+    printf 'systemctl %s\n' "$*" >> "$mock_log"
+}
+
+reset_finalizer_exit_state() {
+    : > "$mock_log"
+    rm -f -- \
+        "$TRANSACTION_ROOT/completion.pending" \
+        "$TRANSACTION_ROOT/scheduler-restore.pending"
+    finalization_succeeded=0
+    scheduler_restore_completed=0
+    completion_verified=0
+    completion_removing=0
+    scheduler_only_resume=0
+    scheduler_recovery_verified=0
+    start_authorization_created=0
+    mock_scheduler_marker_valid=1
+}
+
+run_finalizer_failure() {
+    local status
+    set +e
+    ( set +e; false; finalization_exit )
+    status=$?
+    set -e
+    [[ "$status" -ne 0 ]] \
+        || fail "failed pending finalization unexpectedly returned success"
+}
+
+assert_finalizer_runtime_preserved() {
+    ! grep -Fq 'systemctl stop celikpanel-panel.service' "$mock_log" \
+        || fail "$1 stopped panel despite exact terminal evidence"
+    ! grep -Fq 'systemctl stop celikpanel-agent.service' "$mock_log" \
+        || fail "$1 stopped agent despite exact terminal evidence"
+    grep -Fq 'unlock' "$mock_log" \
+        || fail "$1 did not release the mutation lock"
+}
+
+assert_finalizer_runtime_stopped() {
+    grep -Fq 'systemctl stop celikpanel-panel.service' "$mock_log" \
+        || fail "$1 did not stop panel"
+    grep -Fq 'systemctl stop celikpanel-agent.service' "$mock_log" \
+        || fail "$1 did not stop agent"
+}
+
+# Scheduler restoration completed and its marker unlink became visible before
+# the parent-directory fsync failed. Runtime is complete and must stay up.
+reset_finalizer_exit_state
+scheduler_restore_completed=1
+run_finalizer_failure
+assert_finalizer_runtime_preserved "visible scheduler unlink boundary"
+
+# Completion unlink became visible only after the exact scheduler obligation
+# was published. Preserve runtime and the retry marker.
+reset_finalizer_exit_state
+touch "$TRANSACTION_ROOT/scheduler-restore.pending"
+completion_verified=1
+completion_removing=1
+run_finalizer_failure
+assert_finalizer_runtime_preserved "visible completion unlink boundary"
+[[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ]] \
+    || fail "visible completion unlink boundary removed scheduler evidence"
+
+# A dedicated scheduler-only retry is safe only after full recovery proof.
+reset_finalizer_exit_state
+touch "$TRANSACTION_ROOT/scheduler-restore.pending"
+scheduler_only_resume=1
+scheduler_recovery_verified=1
+run_finalizer_failure
+assert_finalizer_runtime_preserved "scheduler-only verified retry"
+
+# Before completion unlink, completion+scheduler remains a full finalization
+# retry topology. The failing invocation itself must fail closed.
+reset_finalizer_exit_state
+touch \
+    "$TRANSACTION_ROOT/completion.pending" \
+    "$TRANSACTION_ROOT/scheduler-restore.pending"
+completion_verified=1
+completion_removing=1
+run_finalizer_failure
+assert_finalizer_runtime_stopped "completion plus scheduler pre-unlink boundary"
+
+# Missing, incomplete, or tampered scheduler proof never preserves runtime.
+reset_finalizer_exit_state
+completion_verified=1
+completion_removing=1
+run_finalizer_failure
+assert_finalizer_runtime_stopped "completion without scheduler evidence"
+
+reset_finalizer_exit_state
+touch "$TRANSACTION_ROOT/scheduler-restore.pending"
+scheduler_only_resume=1
+scheduler_recovery_verified=1
+mock_scheduler_marker_valid=0
+run_finalizer_failure
+assert_finalizer_runtime_stopped "invalid scheduler-only marker"
+[[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ]] \
+    || fail "invalid scheduler-only marker was removed"
 
 printf 'pending-update finalizer contract: PASS\n'

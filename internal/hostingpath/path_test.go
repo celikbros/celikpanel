@@ -30,6 +30,14 @@ func TestSitePathsAreDerivedFromPositiveIdentities(t *testing.T) {
 	if strings.HasPrefix(challengeRoot, home+"/") || strings.HasPrefix(home, challengeRoot+"/") {
 		t.Fatalf("challenge root %q overlaps tenant home %q", challengeRoot, home)
 	}
+	panelChallengeRoot := PanelACMEChallengeRoot()
+	if want := "/var/lib/celikpanel-agent/acme-http-01/panel"; panelChallengeRoot != want {
+		t.Fatalf("panel challenge root = %q, want %q", panelChallengeRoot, want)
+	}
+	if strings.HasPrefix(panelChallengeRoot, home+"/") ||
+		strings.HasPrefix(home, panelChallengeRoot+"/") {
+		t.Fatalf("panel challenge root %q overlaps tenant home %q", panelChallengeRoot, home)
+	}
 	privateStateRoot := ServiceMutationStateRoot()
 	if strings.HasPrefix(challengeRoot, privateStateRoot+"/") ||
 		strings.HasPrefix(privateStateRoot, challengeRoot+"/") ||

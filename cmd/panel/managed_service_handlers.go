@@ -193,14 +193,9 @@ type scanCacheDoc struct {
 // Bu wire tipleri Agent.InstalledRepoPackages'i yansitir. Yetki sinirini yalniz
 // ServiceID gecer; paket deseni agent katalogunda kalir ve tarayici ya da panel
 // tarafindan verilemez.
-type installedRepoPackagesReq struct {
-	ServiceID string `json:"service_id"`
-}
+type installedRepoPackagesReq = transport.InstalledRepoPackagesRequest
 
-type installedRepoPackagesResp struct {
-	Packages []string `json:"packages"`
-	Error    string   `json:"error,omitempty"`
-}
+type installedRepoPackagesResp = transport.InstalledRepoPackagesResponse
 
 // decodeScanCache reads both formats. A row written before the split is a
 // JSON array of full responses; its observed fields are still in there, so an
@@ -472,15 +467,15 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 // packageFamily returns the host's package-manager family, asked from the
 // agent once and kept. This is the one cheap fact the cached GET may fetch:
 // it is a single RPC that reads the distro id, not the system-wide probe the
-// cache exists to avoid. A failed call answers "apt" without memoising it, so
-// a momentarily-down agent cannot freeze the wrong answer for the process's
-// lifetime.
+// cache exists to avoid. A failed call returns an empty family without
+// memoising it. Callers then fail closed for package-backed services instead
+// of presenting apt operations on an unknown host.
 // packageFamily, makinenin paket-yöneticisi ailesini döndürür; agent'a bir kez
 // sorulup saklanır. Önbellekli GET'in çekmesine izin verilen tek ucuz gerçek
 // budur: dağıtım kimliğini okuyan tek bir RPC'dir, önbelleğin var olma sebebi
-// olan sistem geneli yoklama değil. Başarısız çağrı, belleğe yazmadan "apt"
-// yanıtlar; böylece anlık düşmüş bir agent yanlış yanıtı süreç boyunca
-// dondurmaz.
+// olan sistem geneli yoklama değil. Başarısız çağrı, belleğe yazmadan boş aile
+// döndürür. Böylece bilinmeyen bir makinede apt işlemleri sunulmaz ve anlık
+// düşmüş bir agent yanlış yanıtı süreç boyunca dondurmaz.
 func (p *Panel) packageFamily() string {
 	p.pkgFamilyMu.Lock()
 	defer p.pkgFamilyMu.Unlock()
@@ -488,11 +483,11 @@ func (p *Panel) packageFamily() string {
 		return p.pkgFamilyVal
 	}
 	var fam string
-	if err := p.agentClient.Call("Agent.PkgFamily", &transport.Empty{}, &fam); err == nil && fam != "" {
+	if err := p.callAgent("Agent.PkgFamily", &transport.Empty{}, &fam); err == nil && fam != "" {
 		p.pkgFamilyVal = fam
 		return fam
 	}
-	return "apt"
+	return ""
 }
 
 // handleManagedServicesScan runs a fresh scan on user request, caches it and
@@ -527,7 +522,7 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 // kataloğa işler ve sonucu kalıcılaştırır.
 func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceResponse, error) {
 	var allServices []core.Service
-	if err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
+	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return nil, err
 	}
 	pkgFamily := p.packageFamily()
@@ -535,7 +530,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
 	var installedIDs []string
-	if err := p.agentClient.Call("Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
+	if err := p.agentClient.CallContext(ctx, "Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
 		return nil, fmt.Errorf("probe installed service ids: %w", err)
 	}
 	installedSet := map[string]bool{}
@@ -557,7 +552,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
 			var packageResult installedRepoPackagesResp
 			request := installedRepoPackagesReq{ServiceID: managed.ID}
-			if err := p.agentClient.Call("Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
+			if err := p.agentClient.CallContext(ctx, "Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
 				return nil, fmt.Errorf("probe installed repository packages for %s: %w", managed.ID, err)
 			}
 			if packageResult.Error != "" {
@@ -652,14 +647,9 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		// onu göremez).
 		var instances []core.ServiceInstance
 		if managed.Kind == core.KindRuntime {
-			var ir struct {
-				Instances []core.ServiceInstance `json:"instances"`
-				Error     string                 `json:"error,omitempty"`
-			}
-			req := struct {
-				ID string `json:"id"`
-			}{ID: managed.ID}
-			if err := p.agentClient.Call("Agent.ListServiceInstances", &req, &ir); err != nil {
+			var ir transport.ServiceInstancesResponse
+			req := transport.ServiceInstancesRequest{ID: managed.ID}
+			if err := p.agentClient.CallContext(ctx, "Agent.ListServiceInstances", &req, &ir); err != nil {
 				return nil, fmt.Errorf("probe service instances for %s: %w", managed.ID, err)
 			}
 			if ir.Error != "" {

@@ -108,8 +108,8 @@ func TestForeignUnitsBelongToNothing(t *testing.T) {
 
 func TestPatternPrefix(t *testing.T) {
 	cases := map[string]string{
-		`^php[0-9]+\.[0-9]+-fpm$`: "php",
-		`^postgresql@`:            "postgresql",
+		`^php[0-9]+\.[0-9]+-fpm$`:   "php",
+		`^postgresql@`:              "postgresql",
 		`^(php[0-9]+\.[0-9]+)-fpm$`: "", // a group opens immediately — no literal head
 		``:                          "",
 	}

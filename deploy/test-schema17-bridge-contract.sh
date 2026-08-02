@@ -49,7 +49,7 @@ bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$GUARD"
 
 # The immutable release contains the dedicated helper and recognizes the mode.
 require_literal "$BOOTSTRAP" '--normal|--bootstrap-pre-ledger|--bootstrap-schema17) UPDATE_MODE=$1'
-require_literal "$BOOTSTRAP" 'run_clean "$go_bin" build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge'
+require_literal "$BOOTSTRAP" 'run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge'
 require_literal "$BOOTSTRAP" '[[ -x "$root/bin/schema17-bridge" && -f "$root/bin/schema17-bridge" ]]'
 require_literal "$BOOTSTRAP" '"$incomplete_root/bin/schema17-bridge"'
 require_literal "$UPDATE" 'SCHEMA17_BRIDGE="$root/bin/schema17-bridge"'

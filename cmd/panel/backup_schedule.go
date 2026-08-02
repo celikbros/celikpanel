@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"path"
@@ -21,6 +26,24 @@ import (
 // gelmiş domain'leri bulur, yedeği agent üzerinden koşar ve eski kopyaları
 // ayarlanan saklamaya budar. Zamanlamayı panel tutar (SQLite durumu), ayrıcalıklı
 // dosya/db işini agent yapar.
+
+const (
+	backupScheduleQueryTimeout = 5 * time.Second
+	backupScheduleJobTimeout   = 2 * time.Hour
+	backupScheduleWriteTimeout = 5 * time.Second
+)
+
+type backupSchedulerLimits struct {
+	query time.Duration
+	job   time.Duration
+	write time.Duration
+}
+
+var productionBackupSchedulerLimits = backupSchedulerLimits{
+	query: backupScheduleQueryTimeout,
+	job:   backupScheduleJobTimeout,
+	write: backupScheduleWriteTimeout,
+}
 
 // startBackupScheduler runs the due-schedule check on a fixed cadence. The
 // first run is immediate-ish (after one interval) so a fresh panel does not
@@ -44,50 +67,195 @@ func (p *Panel) startBackupScheduler() {
 // runDueBackups backs up every domain whose schedule is enabled and due.
 // runDueBackups, zamanlaması etkin ve gecikmiş her domain'i yedekler.
 func (p *Panel) runDueBackups() {
-	ctx := context.Background()
-	rows, err := p.db.GetDB().QueryContext(ctx, `
-		SELECT d.id, d.subscription_id, d.name,
+	p.runDueBackupsWithLimits(context.Background(), productionBackupSchedulerLimits)
+}
+
+// runDueBackupsWithLimits is the bounded scheduler implementation. The short
+// query/write contexts protect SQLite pool availability, while every backup
+// receives a fresh, longer context so one stuck agent call cannot block this
+// scheduler forever or consume the next job's budget.
+func (p *Panel) runDueBackupsWithLimits(parent context.Context, limits backupSchedulerLimits) {
+	queryCtx, cancelQuery := context.WithTimeout(parent, limits.query)
+	rows, err := p.db.GetDB().QueryContext(queryCtx, `
+		SELECT bs.id, d.id, d.subscription_id, d.name,
 		       COALESCE((SELECT s.document_root FROM sites s
 		                 WHERE s.domain_id=d.id ORDER BY s.id LIMIT 1), ''),
-		       bs.frequency, bs.backup_type, bs.retention, bs.last_run
+		       bs.frequency, bs.backup_type, bs.retention, bs.last_run,
+		       bs.active_job_key
 		FROM backup_schedules bs JOIN domains d ON d.id = bs.domain_id
-		WHERE bs.enabled = 1`)
+		WHERE bs.enabled = 1
+		ORDER BY bs.id`)
 	if err != nil {
-		log.Printf("backup scheduler: %v", err)
+		cancelQuery()
+		log.Printf("backup scheduler query: %v", err)
 		return
 	}
 	type job struct {
-		domain      backupDomain
-		freq, btype string
-		retention   int
-		lastRun     *string
+		scheduleID   int
+		domain       backupDomain
+		freq, btype  string
+		retention    int
+		lastRun      *string
+		activeJobKey *string
 	}
 	var jobs []job
+	var scanErr error
 	for rows.Next() {
 		var j job
-		if rows.Scan(&j.domain.ID, &j.domain.SubscriptionID, &j.domain.Name,
-			&j.domain.DocumentRoot, &j.freq, &j.btype, &j.retention, &j.lastRun) == nil {
-			if j.domain.DocumentRoot == "" {
-				j.domain.DocumentRoot = path.Join("/var/www", j.domain.Name)
-			}
-			jobs = append(jobs, j)
+		if err := rows.Scan(&j.scheduleID, &j.domain.ID, &j.domain.SubscriptionID, &j.domain.Name,
+			&j.domain.DocumentRoot, &j.freq, &j.btype, &j.retention, &j.lastRun,
+			&j.activeJobKey); err != nil {
+			scanErr = err
+			break
 		}
+		if j.domain.DocumentRoot == "" {
+			j.domain.DocumentRoot = path.Join("/var/www", j.domain.Name)
+		}
+		jobs = append(jobs, j)
 	}
-	rows.Close()
+	rowsErr := rows.Err()
+	closeErr := rows.Close()
+	cancelQuery()
+	if scanErr != nil {
+		log.Printf("backup scheduler scan: %v", scanErr)
+		return
+	}
+	if rowsErr != nil {
+		log.Printf("backup scheduler rows: %v", rowsErr)
+		return
+	}
+	if closeErr != nil {
+		log.Printf("backup scheduler close rows: %v", closeErr)
+		return
+	}
 
 	now := time.Now()
 	for _, j := range jobs {
-		if !backupDue(j.freq, j.lastRun, now) {
+		if j.activeJobKey == nil && !backupDue(j.freq, j.lastRun, now) {
 			continue
 		}
-		if err := p.runScheduledBackup(ctx, j.domain, j.btype, j.retention); err != nil {
+		jobKey, err := p.claimBackupScheduleJobKey(
+			parent, limits.write, j.scheduleID, j.activeJobKey,
+		)
+		if err != nil {
+			log.Printf("scheduled backup %s job claim: %v", j.domain.Name, err)
+			continue
+		}
+		attemptedAt := time.Now().UTC().Format(time.RFC3339)
+		if err := p.updateBackupScheduleStatus(parent, limits.write, j.scheduleID, jobKey,
+			attemptedAt, `running`, ``, false); err != nil {
+			log.Printf(`scheduled backup %s status running: %v`, j.domain.Name, err)
+			continue
+		}
+		jobCtx, cancelJob := context.WithTimeout(parent, limits.job)
+		err = p.runScheduledBackup(jobCtx, j.domain, j.btype, j.retention, jobKey)
+		cancelJob()
+		if err != nil {
+			failureCode := `BACKUP_JOB_FAILED`
+			if errors.Is(err, context.DeadlineExceeded) {
+				failureCode = `BACKUP_JOB_TIMED_OUT`
+			}
+			if statusErr := p.updateBackupScheduleStatus(parent, limits.write, j.scheduleID, jobKey,
+				attemptedAt, `failed`, failureCode, false); statusErr != nil {
+				log.Printf(`scheduled backup %s failure status: %v`, j.domain.Name, statusErr)
+			}
 			log.Printf("scheduled backup %s: %v", j.domain.Name, err)
 			continue
 		}
-		p.db.GetDB().ExecContext(ctx,
-			`UPDATE backup_schedules SET last_run = ? WHERE domain_id = ?`,
-			now.UTC().Format(time.RFC3339), j.domain.ID)
+
+		if err := p.updateBackupScheduleStatus(parent, limits.write, j.scheduleID, jobKey,
+			attemptedAt, `success`, ``, true); err != nil {
+			log.Printf(`scheduled backup %s success status: %v`, j.domain.Name, err)
+		}
 	}
+}
+
+func (p *Panel) claimBackupScheduleJobKey(
+	parent context.Context,
+	timeout time.Duration,
+	scheduleID int,
+	existing *string,
+) (string, error) {
+	if existing != nil {
+		if !backupspec.ValidJobKey(*existing) {
+			return "", errors.New("stored backup job key is invalid")
+		}
+		return *existing, nil
+	}
+	random := make([]byte, 16)
+	if _, err := rand.Read(random); err != nil {
+		return "", fmt.Errorf("generate backup job key: %w", err)
+	}
+	candidate := "schedule:" + hex.EncodeToString(random)
+	writeCtx, cancelWrite := context.WithTimeout(parent, timeout)
+	defer cancelWrite()
+	if _, err := p.db.GetDB().ExecContext(writeCtx, `
+		UPDATE backup_schedules
+		SET active_job_key = ?
+		WHERE id = ? AND enabled = 1
+		  AND (active_job_key IS NULL OR active_job_key = '')`,
+		candidate, scheduleID); err != nil {
+		return "", err
+	}
+	var saved string
+	if err := p.db.GetDB().QueryRowContext(writeCtx, `
+		SELECT active_job_key
+		FROM backup_schedules
+		WHERE id = ? AND enabled = 1`, scheduleID).Scan(&saved); err != nil {
+		return "", err
+	}
+	if !backupspec.ValidJobKey(saved) {
+		return "", errors.New("stored backup job key is invalid")
+	}
+	return saved, nil
+}
+
+func (p *Panel) updateBackupScheduleStatus(
+	parent context.Context,
+	timeout time.Duration,
+	scheduleID int,
+	jobKey string,
+	attemptedAt, status, errorCode string,
+	succeeded bool,
+) error {
+	writeCtx, cancelWrite := context.WithTimeout(parent, timeout)
+	defer cancelWrite()
+	if succeeded {
+		result, err := p.db.GetDB().ExecContext(writeCtx, `
+			UPDATE backup_schedules
+			SET last_attempt = ?, last_run = ?, last_status = ?, last_error = NULL,
+			    active_job_key = NULL
+			WHERE id = ? AND active_job_key = ?`,
+			attemptedAt, time.Now().UTC().Format(time.RFC3339), status, scheduleID, jobKey)
+		return verifyBackupScheduleStatusUpdate(result, err)
+	}
+	var safeError any
+	if errorCode != `` {
+		safeError = errorCode
+	}
+	result, err := p.db.GetDB().ExecContext(writeCtx, `
+		UPDATE backup_schedules
+		SET last_attempt = ?, last_status = ?, last_error = ?
+		WHERE id = ? AND active_job_key = ?`,
+		attemptedAt, status, safeError, scheduleID, jobKey)
+	return verifyBackupScheduleStatusUpdate(result, err)
+}
+
+func verifyBackupScheduleStatusUpdate(result sql.Result, execErr error) error {
+	if execErr != nil {
+		return execErr
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("inspect backup schedule status update: %w", err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf(
+			"backup schedule status update lost job ownership: rows affected %d",
+			rowsAffected,
+		)
+	}
+	return nil
 }
 
 // backupDue reports whether a schedule that last ran at lastRun is due now.
@@ -113,11 +281,17 @@ func backupDue(freq string, lastRun *string, now time.Time) bool {
 // beyond the retention count.
 // runScheduledBackup, bir domain için bir yedek oluşturur ve saklama sayısını
 // aşan eski kopyaları budar.
-func (p *Panel) runScheduledBackup(ctx context.Context, d backupDomain, btype string, retention int) error {
+func (p *Panel) runScheduledBackup(
+	ctx context.Context,
+	d backupDomain,
+	btype string,
+	retention int,
+	jobKey string,
+) error {
 	req := backupspec.CreateRequest{
 		ProtocolVersion: backupspec.ProtocolVersion, SubscriptionID: d.SubscriptionID,
 		DomainID: d.ID, DomainName: d.Name, Type: btype,
-		Origin: backupspec.OriginScheduled, SourceDir: d.DocumentRoot,
+		Origin: backupspec.OriginScheduled, JobKey: jobKey, SourceDir: d.DocumentRoot,
 	}
 	switch btype {
 	case backupspec.TypeFiles:
@@ -223,17 +397,27 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 	case http.MethodGet:
 		var freq, btype string
 		var retention, enabled int
-		var lastRun *string
+		var lastRun, lastAttempt, lastStatus, lastError *string
 		err := p.db.GetDB().QueryRowContext(r.Context(), `
-			SELECT frequency, backup_type, retention, enabled, last_run
-			FROM backup_schedules WHERE domain_id = ?`, domainID).Scan(&freq, &btype, &retention, &enabled, &lastRun)
-		if err != nil {
+			SELECT frequency, backup_type, retention, enabled, last_run,
+			       last_attempt, last_status, last_error
+			FROM backup_schedules WHERE domain_id = ?`, domainID).Scan(
+			&freq, &btype, &retention, &enabled, &lastRun,
+			&lastAttempt, &lastStatus, &lastError,
+		)
+		if errors.Is(err, sql.ErrNoRows) {
 			json.NewEncoder(w).Encode(map[string]any{"enabled": false})
+			return
+		}
+		if err != nil {
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{
 			"enabled": enabled == 1, "frequency": freq, "backup_type": btype,
 			"retention": retention, "last_run": lastRun,
+			"last_attempt": lastAttempt, "last_status": lastStatus,
+			"last_error": lastError,
 		})
 
 	case http.MethodPut:
@@ -263,7 +447,12 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 			VALUES (?, ?, ?, ?, 1)
 			ON CONFLICT(domain_id) DO UPDATE SET
 			  frequency = excluded.frequency, backup_type = excluded.backup_type,
-			  retention = excluded.retention, enabled = 1`,
+			  retention = excluded.retention, enabled = 1,
+			  active_job_key = CASE
+			    WHEN backup_schedules.backup_type = excluded.backup_type
+			    THEN backup_schedules.active_job_key
+			    ELSE NULL
+			  END`,
 			domainID, req.Frequency, req.BackupType, req.Retention); err != nil {
 			writeServerError(w, err)
 			return
@@ -272,7 +461,11 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 		json.NewEncoder(w).Encode(map[string]any{"success": true})
 
 	case http.MethodDelete:
-		p.db.GetDB().ExecContext(r.Context(), `DELETE FROM backup_schedules WHERE domain_id = ?`, domainID)
+		if _, err := p.db.GetDB().ExecContext(r.Context(),
+			`DELETE FROM backup_schedules WHERE domain_id = ?`, domainID); err != nil {
+			writeServerError(w, err)
+			return
+		}
 		p.audit(r, "backup.schedule.off", "domain", domainID)
 		json.NewEncoder(w).Encode(map[string]any{"success": true})
 

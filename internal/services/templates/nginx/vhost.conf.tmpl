@@ -8,6 +8,7 @@
     index index.php index.html index.htm;
 
     location / {
+{{template "www-redirect" .}}
         try_files $uri $uri/ /index.php?$query_string;
     }
 
@@ -41,6 +42,7 @@
     index index.html index.htm;
 
     location / {
+{{template "www-redirect" .}}
         try_files $uri $uri/ =404;
     }
 
@@ -81,6 +83,7 @@
 {{- else}}
     # Reverse proxy to the application / Uygulamaya ters vekil
     location / {
+{{template "www-redirect" .}}
         proxy_pass {{.Upstream}};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -91,6 +94,20 @@
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 60s;
     }
+{{- end}}
+{{- end}}
+
+{{- define "www-redirect"}}
+{{- if .RedirectWWW}}
+        # A return-only nginx if is safe here. Keeping it inside the content
+        # location leaves the higher-priority ACME HTTP-01 location reachable.
+        if ($host = {{.Domain}}) {
+{{if and .ForceHTTPS (ne .SSLType "none")}}
+            return 301 https://www.{{.Domain}}$request_uri;
+{{else}}
+            return 301 $scheme://www.{{.Domain}}$request_uri;
+{{end}}
+        }
 {{- end}}
 {{- end}}
 
@@ -152,6 +169,7 @@ server {
 {{template "acme-http-01" .}}
 
     location / {
+{{template "www-redirect" .}}
         return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
     }
 }
@@ -167,6 +185,7 @@ server {
 {{template "acme-http-01" .}}
 
     location / {
+{{template "www-redirect" .}}
 {{if .ForceHTTPS}}
         return 301 https://$host$request_uri;
 {{else}}
@@ -187,6 +206,7 @@ server {
     error_log /var/log/nginx/{{.Domain}}-error.log;
 
     location / {
+{{template "www-redirect" .}}
         return {{.ForwardCode}} {{.ForwardTo}}$request_uri;
     }
 }
@@ -211,6 +231,7 @@ server {
 {{template "acme-http-01" .}}
 {{if .ForceHTTPS}}
     location / {
+{{template "www-redirect" .}}
         return 301 https://$host$request_uri;
     }
 {{else}}

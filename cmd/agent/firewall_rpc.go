@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // The firewall — the third leg of attack-surface management. A default-deny
@@ -427,35 +429,9 @@ func requireRootOwner(info os.FileInfo, label string) error {
 	return nil
 }
 
-type ApplyFirewallRequest struct {
-	ServiceMutationBinding
-	Enabled  bool  `json:"enabled"`
-	TCPPorts []int `json:"tcp_ports"`
-	UDPPorts []int `json:"udp_ports"`
-	// Persist is set only by the panel's explicit on/off action. Automatic
-	// service sync may update an existing snapshot but can never create one.
-	// Persist yalnız paneldeki açık aç/kapat eyleminde gönderilir. Otomatik
-	// servis eşitlemesi mevcut snapshot'ı güncelleyebilir ama yenisini oluşturamaz.
-	Persist bool `json:"persist"`
-}
+type ApplyFirewallRequest = transport.ApplyFirewallRequest
 
-type FirewallStatusResponse struct {
-	Enabled bool `json:"enabled"`
-	// EngineAvailable: whether nftables (the engine the panel drives) is
-	// installed. When false the panel routes the operator to Services to
-	// install it, instead of failing an opaque "Turn on".
-	// EngineAvailable: panelin kullandığı motor nftables kurulu mu. False ise
-	// panel operatörü, anlamsız bir "Turn on" hatası yerine motoru kurmak için
-	// Servisler'e yönlendirir.
-	EngineAvailable  bool   `json:"engine_available"`
-	TCPPorts         []int  `json:"tcp_ports"`
-	UDPPorts         []int  `json:"udp_ports"`
-	SSHPorts         []int  `json:"ssh_ports"`
-	PersistenceState string `json:"persistence_state"`
-	PersistenceError string `json:"persistence_error,omitempty"`
-	SnapshotVersion  int    `json:"snapshot_version,omitempty"`
-	Error            string `json:"error,omitempty"`
-}
+type FirewallStatusResponse = transport.FirewallStatusResponse
 
 // ApplyFirewall installs (or tears down) our nftables table. Enabled=false
 // removes it. Enabled=true builds a default-drop input chain that always
@@ -894,7 +870,7 @@ func firewallTablePresent(out []byte) bool {
 
 // FirewallStatus reports whether our table is present and what it admits.
 // FirewallStatus, tablomuzun var olup olmadığını ve neyi kabul ettiğini bildirir.
-func (a *Agent) FirewallStatus(_ *struct{}, resp *FirewallStatusResponse) error {
+func (a *Agent) FirewallStatus(_ *transport.Empty, resp *FirewallStatusResponse) error {
 	return firewallStatusWithRunnerAndStore(hostFirewallCommandRunner{}, fileFirewallStateStore{path: firewallSnapshotPath}, resp)
 }
 

@@ -50,16 +50,6 @@ import (
 // dokunabileceğini kendi derlenmiş kataloğundan ve gerçek dosya sisteminden
 // yeniden türetir — istekten asla.
 
-// panelOwnedPrefixes are directories the panel itself creates and manages, so
-// writing inside them is writing to our own work.
-// panelOwnedPrefixes, panelin kendi oluşturup yönettiği dizinlerdir; oraya
-// yazmak kendi işimize yazmaktır.
-var panelOwnedPrefixes = []string{
-	"/etc/nginx/sites-available/",
-	"/etc/nginx/conf.d/",
-	"/var/www/",
-}
-
 // forbiddenExact names paths that are inside an allowed area but must never be
 // rewritten through the config editor, because writing them is not editing a
 // config — it is taking over the machine or the panel.
@@ -91,32 +81,24 @@ var forbiddenPrefixes = []string{
 // gösterebilsin.
 func configWriteAllowed(path string) (string, error) {
 	if path == "" {
-		return "", fmt.Errorf("path is required")
+		return "", configPathRefusal("path is required")
 	}
 	if !strings.HasPrefix(path, "/") {
-		return "", fmt.Errorf("path must be absolute")
+		return "", configPathRefusal("path must be absolute")
 	}
 	clean := filepath.Clean(path)
 
-	// A symlink anywhere along the way can point outside every list below, so
-	// the resolved path is what gets judged — and a link is refused outright
-	// rather than silently followed.
-	// Yol üzerindeki herhangi bir sembolik bağ aşağıdaki listelerin dışına
-	// çıkabilir; bu yüzden yargılanan çözülmüş yoldur — ve bağ sessizce takip
-	// edilmek yerine doğrudan reddedilir.
-	if fi, err := os.Lstat(clean); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-		return "", fmt.Errorf("refusing to write through a symbolic link: %s", clean)
+	// Check every existing component for a clear early error. The actual file
+	// operation repeats this rule atomically in the Linux kernel with openat2.
+	// Mevcut her yol bileşenini açık bir erken hata için denetle. Asıl dosya
+	// işlemi bu kuralı Linux çekirdeğinde openat2 ile atomik olarak tekrarlar.
+	if err := rejectConfigPathSymlinks(clean); err != nil {
+		return "", err
 	}
 
 	for _, bad := range forbiddenPrefixes {
 		if clean == strings.TrimSuffix(bad, "/") || strings.HasPrefix(clean, bad) {
-			return "", fmt.Errorf("this path is protected and cannot be edited here: %s", clean)
-		}
-	}
-
-	for _, pre := range panelOwnedPrefixes {
-		if strings.HasPrefix(clean, pre) {
-			return clean, nil
+			return "", configPathRefusal("this path is protected and cannot be edited here: %s", clean)
 		}
 	}
 
@@ -130,7 +112,32 @@ func configWriteAllowed(path string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("not a managed configuration file: %s", clean)
+	return "", configPathRefusal("not a managed configuration file: %s", clean)
+}
+
+// rejectConfigPathSymlinks checks every existing path component. Missing
+// suffixes are inspected until the first missing component. Missing paths are
+// still rejected by the discovered-config allow-list below; this preflight
+// only improves error messages and secureConfig* remains authoritative.
+func rejectConfigPathSymlinks(clean string) error {
+	current := string(os.PathSeparator)
+	for _, part := range strings.Split(strings.TrimPrefix(clean, current), current) {
+		if part == "" || part == "." {
+			continue
+		}
+		current = filepath.Join(current, part)
+		info, err := os.Lstat(current)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return fmt.Errorf("cannot inspect managed configuration path %s: %w", current, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return configPathRefusal("refusing configuration path containing a symbolic link: %s", current)
+		}
+	}
+	return nil
 }
 
 // discoveredConfigPaths returns every config file the scanner finds for the
