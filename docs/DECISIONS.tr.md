@@ -998,6 +998,12 @@ için dolu; MariaDB/PostgreSQL (initdb ister), phpPgAdmin (AUR-only) ve Redis
 (Arch'ta Valkey çatalı) bilerek boş — dürüst "henüz desteklenmiyor" derler.
 UI, paket adlarını agent'ın bildirdiği aileden gösterir (`Agent.PkgFamily`).
 
+*Ek 3 (3 Ağu 2026):* Debian 13, Ubuntu 24.04'ün yanında açık bir apt kabul
+hedefidir. Bu, çalıştırılmamış bir testi geçmiş saymaz: sürüm kabul edilmeden
+önce etiketli, önceden derlenmiş ürün tam belgelenmiş operatör akışıyla temiz
+Debian 13 kurulumundan geçmelidir. Kaynak checkout'ları, geliştiriciye özel
+bundle'lar ve kurulum sonrası SSH düzeltmeleri kanıt sayılmaz.
+
 ---
 
 ## D-003 · Servis kataloğu: her şeyi göster, çakışmayla engelle — "yönetilmiyor" ile değil
