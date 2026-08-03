@@ -50,8 +50,13 @@ grep -Fq "Content-Security-Policy" "$tmp/site/.htaccess" || fail "CSP header is 
 grep -Fq -- "--proto '=https'" "$bootstrap" || fail "HTTPS protocol restriction is missing"
 grep -Fq "sha256sum -c" "$bootstrap" || fail "archive checksum is not verified"
 grep -Fq "Archive contains unsafe or unexpected paths" "$bootstrap" || fail "path validation is missing"
+grep -Fq "Arşiv güvensiz veya beklenmeyen yollar içeriyor" "$bootstrap" || fail "Turkish path validation is missing"
 grep -Fq "command -v bash" "$bootstrap" || fail "bash requirement is missing"
 grep -Fq 'bash "$installer"' "$bootstrap" || fail "installer is not executed with bash"
+grep -Fq "Usage:" "$bootstrap" || fail "English usage text is missing"
+grep -Fq "Kullanım:" "$bootstrap" || fail "Turkish usage text is missing"
+grep -Fq "Installing CelikPanel" "$bootstrap" || fail "English install progress is missing"
+grep -Fq "doğrulanmış" "$bootstrap" || fail "Turkish install progress is missing"
 if grep -Eq 'curl[^\n]*\|[[:space:]]*(ba)?sh' "$repo_root/download-portal/index.html"; then
   fail "home page recommends curl-pipe-shell"
 fi

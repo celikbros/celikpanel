@@ -4,8 +4,14 @@ set -eu
 base_url=https://celikpanel.net
 requested_version=latest
 
+message() {
+  printf '%s / %s\n' "$1" "$2"
+}
+
 usage() {
-  printf '%s\n' "Usage: $0 [--version vX.Y.Z[-prerelease]]"
+  message \
+    "Usage: $0 [--version vX.Y.Z[-prerelease]]" \
+    "Kullanım: $0 [--version vX.Y.Z[-önsürüm]]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -27,24 +33,28 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ "$(id -u)" -eq 0 ] || {
-  printf '%s\n' "CelikPanel installation must run as root." >&2
+  message \
+    "CelikPanel installation must run as root." \
+    "CelikPanel kurulumu root olarak çalıştırılmalıdır." >&2
   exit 1
 }
 
 command -v curl >/dev/null 2>&1 || {
-  printf '%s\n' "curl is required. Install it with your operating system package manager." >&2
+  message \
+    "curl is required. Install it with your operating system package manager." \
+    "curl gereklidir. İşletim sisteminizin paket yöneticisiyle kurun." >&2
   exit 1
 }
 command -v sha256sum >/dev/null 2>&1 || {
-  printf '%s\n' "sha256sum is required." >&2
+  message "sha256sum is required." "sha256sum gereklidir." >&2
   exit 1
 }
 command -v tar >/dev/null 2>&1 || {
-  printf '%s\n' "tar is required." >&2
+  message "tar is required." "tar gereklidir." >&2
   exit 1
 }
 command -v bash >/dev/null 2>&1 || {
-  printf '%s\n' "bash is required." >&2
+  message "bash is required." "bash gereklidir." >&2
   exit 1
 }
 
@@ -57,7 +67,12 @@ curl_fetch() {
 workdir=$(mktemp -d "${TMPDIR:-/tmp}/celikpanel-install.XXXXXXXX")
 case "$workdir" in
   "${TMPDIR:-/tmp}"/celikpanel-install.*) ;;
-  *) printf '%s\n' "Unexpected temporary directory: $workdir" >&2; exit 1 ;;
+  *)
+    message \
+      "Unexpected temporary directory: $workdir" \
+      "Beklenmeyen geçici dizin: $workdir" >&2
+    exit 1
+    ;;
 esac
 chmod 0700 "$workdir"
 cleanup() { rm -rf -- "$workdir"; }
@@ -71,7 +86,9 @@ else
 fi
 
 printf '%s\n' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || {
-  printf '%s\n' "Unsafe or invalid release version: $version" >&2
+  message \
+    "Unsafe or invalid release version: $version" \
+    "Güvensiz veya geçersiz sürüm: $version" >&2
   exit 1
 }
 
@@ -83,17 +100,26 @@ curl_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256"
 expected_line=$(tr -d '\r' < "$workdir/$archive.sha256")
 set -- $expected_line
 [ "$#" -eq 2 ] || {
-  printf '%s\n' "Checksum file has an unexpected format." >&2
+  message \
+    "Checksum file has an unexpected format." \
+    "Sağlama toplamı dosyası beklenmeyen biçimde." >&2
   exit 1
 }
 checksum_value=$1
 checksum_name=$2
 [ "$checksum_name" = "$archive" ] && [ "${#checksum_value}" -eq 64 ] || {
-  printf '%s\n' "Checksum file has an unexpected format." >&2
+  message \
+    "Checksum file has an unexpected format." \
+    "Sağlama toplamı dosyası beklenmeyen biçimde." >&2
   exit 1
 }
 case "$checksum_value" in
-  *[!0-9a-fA-F]*) printf '%s\n' "Checksum file has an unexpected format." >&2; exit 1 ;;
+  *[!0-9a-fA-F]*)
+    message \
+      "Checksum file has an unexpected format." \
+      "Sağlama toplamı dosyası beklenmeyen biçimde." >&2
+    exit 1
+    ;;
 esac
 
 (cd "$workdir" && sha256sum -c "$archive.sha256")
@@ -108,7 +134,9 @@ tar -tzf "$workdir/$archive" | awk -v root="$root" '
   }
   END { if (!ok || count == 0) exit 1 }
 ' || {
-  printf '%s\n' "Archive contains unsafe or unexpected paths." >&2
+  message \
+    "Archive contains unsafe or unexpected paths." \
+    "Arşiv güvensiz veya beklenmeyen yollar içeriyor." >&2
   exit 1
 }
 
@@ -118,10 +146,14 @@ tar -xzf "$workdir/$archive" -C "$workdir/extract" \
 
 installer="$workdir/extract/$root/install.sh"
 [ -f "$installer" ] && [ ! -L "$installer" ] || {
-  printf '%s\n' "The verified archive does not contain a regular install.sh." >&2
+  message \
+    "The verified archive does not contain a regular install.sh." \
+    "Doğrulanan arşiv normal bir install.sh dosyası içermiyor." >&2
   exit 1
 }
 
-printf '%s\n' "Installing CelikPanel $version from verified archive $archive"
+message \
+  "Installing CelikPanel $version from verified archive $archive" \
+  "CelikPanel $version doğrulanmış $archive arşivinden kuruluyor"
 cd "$workdir/extract/$root"
 bash "$installer"
