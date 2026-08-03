@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Verified CelikPanel release downloads and installation instructions.">
+  <title>CelikPanel Downloads</title>
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <span class="brand">CelikPanel</span>
+      <h1>Install a verified CelikPanel release</h1>
+      <p>Download an exact, immutable release or install the current published version. Every archive is checked before installation.</p>
+    </header>
+
+    <section class="release-card" aria-labelledby="latest-title">
+      <div>
+        <p class="eyebrow">Current release</p>
+        <h2 id="latest-title"><span id="release-version">Loading…</span></h2>
+        <dl class="release-meta">
+          <div><dt>Published</dt><dd id="release-date">—</dd></div>
+          <div><dt>Commit</dt><dd><code id="release-commit">—</code></dd></div>
+          <div><dt>SHA-256</dt><dd><code id="release-sha">—</code></dd></div>
+        </dl>
+      </div>
+      <div class="actions">
+        <a class="button primary" id="archive-link" href="#">Download archive</a>
+        <a class="button" id="checksum-link" href="#">Checksum</a>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Installation commands">
+      <article class="command-card">
+        <p class="eyebrow">Latest published version</p>
+        <h2>Standard installation</h2>
+        <p>Run these commands as root on a clean supported server.</p>
+        <pre><code id="latest-command">curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
+sh /tmp/celikpanel-get.sh</code></pre>
+        <button class="copy" type="button" data-copy="latest-command">Copy</button>
+      </article>
+
+      <article class="command-card">
+        <p class="eyebrow">Pinned version</p>
+        <h2>Reproducible installation</h2>
+        <p>The exact version remains available even after a newer release is published.</p>
+        <pre><code id="exact-command">Loading…</code></pre>
+        <button class="copy" type="button" data-copy="exact-command">Copy</button>
+      </article>
+    </section>
+
+    <section class="notice">
+      <h2>Integrity model</h2>
+      <p>The installer downloads the archive and checksum separately over HTTPS, validates the SHA-256 digest, checks archive paths, and only then runs the packaged installer. This alpha release does not yet include a detached publisher-identity signature.</p>
+      <p><a href="/releases/index.json">Machine-readable release index</a></p>
+    </section>
+  </main>
+  <script src="/assets/site.js" defer></script>
+</body>
+</html>

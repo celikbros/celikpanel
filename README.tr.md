@@ -67,32 +67,27 @@ değil, önceden derlenmiş sürüm arşividir. Eşleşen panel, agent ve web uy
 arşivde bulunduğu için hedef sunucuda Go, Node veya Git gerekmez.
 Mevcut alpha arşivi Linux x86_64/amd64 içindir.
 
-Private alpha sırasında yetkili operatör iki sürüm dosyasını kimliği doğrulanmış
-iş istasyonunda indirir ve aynı baytları yeni sunucuya aktarır. Herkese açık
-anonim indirme ayrı bir CelikPanel indirme kanalı gerektirir; private GitHub
-deposu bunu sağlayamaz.
+Yayımlanan sürümler `https://celikpanel.net` adresindeki herkese açık CelikPanel
+indirme kanalından dağıtılır. Bootstrap betiğini temiz ve desteklenen sunucuda
+root olarak çalıştırın. Betik seçilen değişmez arşivi ve sağlama toplamını HTTPS
+üzerinden indirir; SHA-256 özetini ve arşiv yollarını doğruladıktan sonra
+paketteki kurucuyu çalıştırır.
 
 ```bash
-# Kimliği doğrulanmış operatör iş istasyonu
-VERSION=v0.1.0-alpha.1
-gh release download "$VERSION" --repo celikbros/celikpanel \
-  --pattern "celikpanel-$VERSION.tar.gz" \
-  --pattern "celikpanel-$VERSION.tar.gz.sha256"
-sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
-scp "celikpanel-$VERSION.tar.gz" "celikpanel-$VERSION.tar.gz.sha256" root@SUNUCU:/root/
+# Yayımlanan son sürüm
+curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+  https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
+sh /tmp/celikpanel-get.sh
 
-# Yeni Debian 13 veya Ubuntu 24.04 sunucu
-cd /root
-sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
-tar -xzf "celikpanel-$VERSION.tar.gz"
-cd "celikpanel-$VERSION"
-sudo ./install.sh
+# Veya tam bir değişmez sürümü sabitleyin
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.1
 ```
 
 Kurucu ilk yöneticiyi etkileşimli olarak oluşturur. Yönetici parolasını shell
 geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sağlama toplamı
-değişen baytları saptar fakat yayıncı kimliğini kanıtlamaz; aşağıdaki imzalama
-sınırına bakın.
+değişen baytları saptar fakat yayıncı kimliğini kanıtlamaz. Sürüm arşivleri ve
+makinece okunabilir manifestler `https://celikpanel.net/releases/` altında
+kalıcıdır; aşağıdaki imzalama sınırına da bakın.
 
 ## Kaynaktan derleme
 
