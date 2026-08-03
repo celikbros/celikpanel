@@ -9,10 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/services"
 )
 
@@ -422,8 +422,9 @@ func qualifyZoneName(name, zone string) string {
 }
 
 type CpmoveExtractRequest struct {
-	Path      string `json:"path"`
-	TargetDir string `json:"target_dir"`
+	Path           string `json:"path"`
+	SubscriptionID int    `json:"subscription_id"`
+	DomainID       int    `json:"domain_id"`
 }
 
 type CpmoveExtractResponse struct {
@@ -440,8 +441,9 @@ type CpmoveExtractResponse struct {
 // akıtır. Girişler temizlenir (".." yok, mutlak yol yok) ve symlink/hardlink
 // atlanır — bir arşiv hedef dizinin dışına yazamaz.
 func (a *Agent) ExtractCpmoveFiles(req *CpmoveExtractRequest, resp *CpmoveExtractResponse) error {
-	if req.TargetDir == "" || !filepath.IsAbs(req.TargetDir) {
-		resp.Error = "target_dir must be an absolute path"
+	targetDir, err := hostingpath.DocumentRoot(req.SubscriptionID, req.DomainID)
+	if err != nil {
+		resp.Error = "invalid site filesystem identity"
 		return nil
 	}
 	tr, done, err := openCpmove(req.Path)
@@ -451,56 +453,8 @@ func (a *Agent) ExtractCpmoveFiles(req *CpmoveExtractRequest, resp *CpmoveExtrac
 	}
 	defer done()
 
-	if err := os.MkdirAll(req.TargetDir, 0o755); err != nil {
+	if err := secureExtractCpmoveFiles(tr, targetDir, resp); err != nil {
 		resp.Error = err.Error()
-		return nil
-	}
-
-	const prefix = "homedir/public_html/"
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			resp.Error = fmt.Sprintf("archive read failed: %v", err)
-			return nil
-		}
-		rel := cpmoveRel(hdr.Name)
-		if !strings.HasPrefix(rel, prefix) {
-			continue
-		}
-		sub := strings.TrimPrefix(rel, prefix)
-		if sub == "" {
-			continue
-		}
-		clean := path.Clean(sub)
-		if clean == ".." || strings.HasPrefix(clean, "../") || path.IsAbs(clean) {
-			continue
-		}
-		dest := filepath.Join(req.TargetDir, filepath.FromSlash(clean))
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			_ = os.MkdirAll(dest, os.FileMode(hdr.Mode&0o755)|0o700)
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-				continue
-			}
-			out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode&0o777))
-			if err != nil {
-				continue
-			}
-			n, err := io.Copy(out, tr) //nosec G110 -- admin-supplied archive, extraction bounded by disk
-			out.Close()
-			if err == nil {
-				resp.Files++
-				resp.Bytes += n
-			}
-		default:
-			// Symlinks, devices etc. are deliberately not imported.
-			// Symlink, aygıt vb. bilerek içe alınmaz.
-		}
 	}
 	return nil
 }

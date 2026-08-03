@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/hostname"
 )
 
 // Real usage numbers for one site: disk from du, this month's traffic from
@@ -18,8 +21,9 @@ import (
 // okunan bir istatistik, hiç olmamasından kötüdür.
 
 type SiteUsageRequest struct {
-	SiteHome string `json:"site_home"` // /var/www/celikpanel/subscriptions/N/sites/M
-	Domain   string `json:"domain"`
+	SubscriptionID int    `json:"subscription_id"`
+	DomainID       int    `json:"domain_id"`
+	Domain         string `json:"domain"`
 }
 
 type SiteUsageResponse struct {
@@ -29,22 +33,41 @@ type SiteUsageResponse struct {
 }
 
 func (a *Agent) SiteUsage(req *SiteUsageRequest, resp *SiteUsageResponse) error {
-	cleanHome := filepath.Clean(req.SiteHome)
-	if !strings.HasPrefix(cleanHome, "/var/www/celikpanel/subscriptions/") {
-		resp.Error = "site home outside the hosting base"
+	siteHome, domain, err := siteUsageIdentity(req)
+	if err != nil {
+		resp.Error = err.Error()
 		return nil
 	}
 
 	// du -sb: one fast syscall walk done by a tool that exists everywhere.
 	// du -sb: her yerde bulunan bir araçla tek hızlı tarama.
-	if out, err := exec.Command("du", "-sb", cleanHome).Output(); err == nil {
+	if out, err := exec.Command("du", "-sb", siteHome).Output(); err == nil {
 		if fields := strings.Fields(string(out)); len(fields) > 0 {
 			resp.DiskBytes, _ = strconv.ParseInt(fields[0], 10, 64)
 		}
 	}
 
-	resp.TrafficMonthBytes = monthTrafficFromLog(req.Domain)
+	resp.TrafficMonthBytes = monthTrafficFromLog(domain)
 	return nil
+}
+
+// siteUsageIdentity is the privileged boundary for usage measurements. The
+// panel sends database identities, never a filesystem path; the agent derives
+// the one permitted site home and canonicalizes the hostname used in log
+// paths.
+func siteUsageIdentity(req *SiteUsageRequest) (string, string, error) {
+	if req == nil {
+		return "", "", fmt.Errorf("site usage request is required")
+	}
+	siteHome, err := hostingpath.SiteHome(req.SubscriptionID, req.DomainID)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid site identity: %w", err)
+	}
+	domain, err := hostname.CanonicalFQDN(req.Domain)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid site domain: %w", err)
+	}
+	return siteHome, domain, nil
 }
 
 // monthTrafficFromLog sums $body_bytes_sent for the current month from the

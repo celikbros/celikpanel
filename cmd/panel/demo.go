@@ -12,6 +12,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/auth"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 )
 
 // Demo mode is a development-only convenience: it seeds one account per role
@@ -122,37 +123,21 @@ func (p *Panel) seedDemoData() {
 	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (1, 'admin-site.local', 'active')`)
 	_, _ = db.ExecContext(ctx, `INSERT OR IGNORE INTO domains (subscription_id, name, status) VALUES (?, 'customer-site.local', 'active')`, subID)
 
-	// A site row per domain with a document root that actually exists, so the
-	// file manager and backups browse a real directory. The production
-	// convention (/var/www/celikpanel) is preferred; on dev boxes where the
-	// panel user cannot write there, fall back to the user's home. Idempotent:
-	// re-running updates the docroot and leaves existing files alone.
-	//
-	// Her domain için, belge kökü gerçekten var olan bir site satırı; böylece
-	// dosya yöneticisi ve yedekler gerçek bir dizinde gezinir. Üretim geleneği
-	// (/var/www/celikpanel) tercih edilir; panel kullanıcısının oraya
-	// yazamadığı geliştirme makinelerinde kullanıcının ev dizinine düşülür.
-	// Bağımsızdır: yeniden çalıştırma belge kökünü günceller, dosyalara dokunmaz.
-	demoRoot := "/var/www/celikpanel/demo"
-	if err := os.MkdirAll(demoRoot, 0o755); err != nil {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			log.Printf("demo: no writable docroot location: %v / %v", err, herr)
-			return
-		}
-		demoRoot = filepath.Join(home, "celikpanel-demo")
-		if err := os.MkdirAll(demoRoot, 0o755); err != nil {
-			log.Printf("demo: cannot create demo docroot %s: %v", demoRoot, err)
-			return
-		}
-	}
-
+	// Demo sites use the exact same identity-derived layout as production.
+	// This keeps the development shortcut from becoming a second source of
+	// filesystem truth.
 	for _, name := range []string{"admin-site.local", "customer-site.local"} {
-		var domID int
-		if err := db.QueryRowContext(ctx, `SELECT id FROM domains WHERE name = ?`, name).Scan(&domID); err != nil {
+		var domID, subscriptionID int
+		if err := db.QueryRowContext(ctx,
+			`SELECT id, subscription_id FROM domains WHERE name = ?`, name,
+		).Scan(&domID, &subscriptionID); err != nil {
 			continue
 		}
-		docroot := filepath.Join(demoRoot, name)
+		docroot, err := hostingpath.DocumentRoot(subscriptionID, domID)
+		if err != nil {
+			log.Printf("demo: derive docroot for %s: %v", name, err)
+			continue
+		}
 		if err := os.MkdirAll(docroot, 0o755); err != nil {
 			log.Printf("demo: mkdir %s: %v", docroot, err)
 			continue
@@ -166,10 +151,9 @@ func (p *Panel) seedDemoData() {
 			SELECT ?, ?, 'nginx', '8.3'
 			WHERE NOT EXISTS (SELECT 1 FROM sites WHERE domain_id = ?)`,
 			domID, docroot, domID)
-		_, _ = db.ExecContext(ctx, `UPDATE sites SET document_root = ? WHERE domain_id = ?`, docroot, domID)
 	}
 
-	log.Printf("demo: seeded ownership hierarchy (customer→reseller, subscription, 2 domains + real docroots under %s)", demoRoot)
+	log.Printf("demo: seeded ownership hierarchy (customer→reseller, subscription, 2 domains + identity-derived docroots)")
 }
 
 // handleDemoAccounts lists the demo credentials — but only in demo mode.

@@ -11,7 +11,7 @@ type AgentRPC interface {
 	StartService(serviceName string) error
 	StopService(serviceName string) error
 	RestartService(serviceName string) error
-	
+
 	// Site Management
 	CreateSite(req CreateSiteRequest) (*CreateSiteResponse, error)
 	DeleteSite(siteID int, domain string) error
@@ -86,6 +86,7 @@ type ChangeDatabasePasswordRequest struct {
 type CreateSiteRequest struct {
 	SiteID         int
 	SubscriptionID int
+	DomainID       int
 	Domain         string
 	TempDomain     string
 	DocumentRoot   string

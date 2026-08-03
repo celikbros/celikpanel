@@ -6,10 +6,10 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
-	"path/filepath"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -18,7 +18,6 @@ type SiteOrchestrator struct {
 	db          *sql.DB
 	domainRepo  repositories.DomainRepository
 	agentClient *transport.ReconnectingClient
-	basePath    string
 }
 
 func NewSiteOrchestrator(db *sql.DB, agentClient *transport.ReconnectingClient) *SiteOrchestrator {
@@ -26,13 +25,13 @@ func NewSiteOrchestrator(db *sql.DB, agentClient *transport.ReconnectingClient) 
 		db:          db,
 		domainRepo:  repositories.NewPostgresDomainRepository(db),
 		agentClient: agentClient,
-		basePath:    "/var/www/celikpanel",
 	}
 }
 
 type CreateSiteRequest struct {
 	SubscriptionID int    `json:"subscription_id"`
 	Domain         string `json:"domain"`
+	ParentDomainID *int   `json:"-"`
 	UseTemporary   bool   `json:"use_temporary"`
 	// ProjectType selects what this domain does on this server: "php" or
 	// "static" (a website — needs a web server) or "dnsonly" (no web hosting
@@ -85,12 +84,14 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	domain := &core.Domain{
 		SubscriptionID: req.SubscriptionID,
 		Name:           req.Domain,
+		ParentDomainID: req.ParentDomainID,
 		Status:         "active",
 	}
 	err := so.domainRepo.Create(ctx, domain)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create domain: %v", err)
+		return nil, fmt.Errorf("failed to create domain: %w", err)
 	}
+	req.Domain = domain.Name
 
 	// DNS-only: the domain exists to be served by DNS (and later mail), not
 	// hosted as a website. No system user, no docroot, no vhost, no FTP —
@@ -123,8 +124,11 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	username := so.generateUsername(req.Domain)
 	password := so.generatePassword()
 
-	siteDir := filepath.Join(so.basePath, "subscriptions", fmt.Sprintf("%d", req.SubscriptionID), "sites", fmt.Sprintf("%d", domain.ID))
-	documentRoot := filepath.Join(siteDir, "public_html")
+	documentRoot, err := hostingpath.DocumentRoot(req.SubscriptionID, domain.ID)
+	if err != nil {
+		so.domainRepo.Delete(ctx, domain.ID)
+		return nil, fmt.Errorf("derive site document root: %w", err)
+	}
 
 	tempDomain := ""
 	if req.UseTemporary {
@@ -152,6 +156,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	agentReq := transport.CreateSiteRequest{
 		SiteID:         siteID,
 		SubscriptionID: req.SubscriptionID,
+		DomainID:       domain.ID,
 		Domain:         req.Domain,
 		TempDomain:     tempDomain,
 		DocumentRoot:   documentRoot,
@@ -197,6 +202,25 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 func (so *SiteOrchestrator) createSiteRecord(ctx context.Context, site *core.Site) (int, error) {
 	if site.ProjectType == "" {
 		site.ProjectType = "php"
+	}
+	if site.ProjectType == "dnsonly" {
+		// sites.document_root predates DNS-only and is NOT NULL. The empty
+		// string is the explicit representation of "this domain owns no
+		// filesystem tree"; it must never inherit a caller-supplied path.
+		site.DocumentRoot = ""
+	} else {
+		var subscriptionID int
+		if err := so.db.QueryRowContext(ctx,
+			`SELECT subscription_id FROM domains WHERE id = ?`,
+			site.DomainID,
+		).Scan(&subscriptionID); err != nil {
+			return 0, fmt.Errorf("derive site filesystem identity: %w", err)
+		}
+		documentRoot, err := hostingpath.DocumentRoot(subscriptionID, site.DomainID)
+		if err != nil {
+			return 0, fmt.Errorf("derive site filesystem identity: %w", err)
+		}
+		site.DocumentRoot = documentRoot
 	}
 	query := `
 		INSERT INTO sites (domain_id, document_root, project_type, php_version, php_fpm_socket, ssl_enabled, status)

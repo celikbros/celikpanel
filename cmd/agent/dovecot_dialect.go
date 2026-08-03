@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -38,7 +37,7 @@ import (
 // 2.4+ taşıyor ve 2.3'te doğrulama adımı yanlış tahmini yine açık bir hatayla
 // yakalar.
 func dovecotIs24() bool {
-	out, err := exec.Command("dovecot", "--version").Output()
+	out, err := runMailTLSCommand("dovecot", "--version")
 	if err != nil {
 		return true
 	}
@@ -153,14 +152,18 @@ func applyDovecotConf(path string, content string) error {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return err
 	}
-	out, err := exec.Command("doveconf", "-n").CombinedOutput()
+	out, err := runMailTLSCommand("doveconf", "-n")
 	if err != nil {
 		if prevErr == nil {
 			_ = os.WriteFile(path, prev, 0o644)
 		} else {
 			_ = os.Remove(path)
 		}
-		return fmt.Errorf("dovecot rejected the configuration: %s", dovecotFirstError(string(out)))
+		detail := dovecotFirstError(string(out))
+		if strings.TrimSpace(string(out)) == "" {
+			detail = err.Error()
+		}
+		return fmt.Errorf("dovecot rejected the configuration: %s", detail)
 	}
 	return nil
 }

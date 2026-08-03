@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -144,13 +143,10 @@ func (p *Panel) handleUpdateHosting(w http.ResponseWriter, r *http.Request, doma
 
 	var siteID int
 	var docroot, oldType string
-	var sslEnabled bool
-	var phpSocket, sslCert, sslKey *string
 	err := p.db.GetDB().QueryRowContext(r.Context(),
-		`SELECT id, document_root, COALESCE(project_type,'php'), ssl_enabled,
-		        php_fpm_socket, ssl_cert_path, ssl_key_path
+		`SELECT id, document_root, COALESCE(project_type,'php')
 		 FROM sites WHERE domain_id = ?`, domainID).
-		Scan(&siteID, &docroot, &oldType, &sslEnabled, &phpSocket, &sslCert, &sslKey)
+		Scan(&siteID, &docroot, &oldType)
 	if err != nil {
 		writeClientError(w, http.StatusNotFound, "site not found")
 		return
@@ -223,48 +219,8 @@ func (p *Panel) handleUpdateHosting(w http.ResponseWriter, r *http.Request, doma
 	// Vhost'u yeniden üret; nginx yeni proje tipini yansıtsın. Doğrulama
 	// hatasında agent vhost'u geri alır; ayarlar kayıtlı kalır ve dürüst hata
 	// çağırana ulaşır.
-	sslType := "none"
-	if sslEnabled {
-		sslType = "custom"
-	}
-	vhostReq := struct {
-		SiteID       int    `json:"site_id"`
-		Domain       string `json:"domain"`
-		TempDomain   string `json:"temp_domain"`
-		DocumentRoot string `json:"document_root"`
-		PHPSocket    string `json:"php_socket"`
-		SSLType      string `json:"ssl_type"`
-		SSLCert      string `json:"ssl_cert"`
-		SSLKey       string `json:"ssl_key"`
-		ProjectType  string `json:"project_type"`
-		AppPort      int    `json:"app_port"`
-		ForwardTo    string `json:"forward_to"`
-		ForwardCode  int    `json:"forward_code"`
-	}{
-		SiteID: siteID, Domain: domainName, DocumentRoot: docroot,
-		SSLType: sslType, ProjectType: req.ProjectType,
-		AppPort: req.AppPort, ForwardTo: req.ForwardTo, ForwardCode: req.ForwardCode,
-	}
-	if phpSocket != nil {
-		vhostReq.PHPSocket = *phpSocket
-	}
-	if sslCert != nil {
-		vhostReq.SSLCert = *sslCert
-	}
-	if sslKey != nil {
-		vhostReq.SSLKey = *sslKey
-	}
-
-	var vhostResp struct {
-		Config string `json:"config"`
-		Error  string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.ApplyVhost", &vhostReq, &vhostResp); err != nil {
-		writeServerError(w, err)
-		return
-	}
-	if vhostResp.Error != "" {
-		writeClientError(w, http.StatusConflict, vhostResp.Error)
+	if err := p.applyVhostForDomain(r.Context(), domainID); err != nil {
+		writeClientError(w, http.StatusConflict, err.Error())
 		return
 	}
 
@@ -285,51 +241,7 @@ func (p *Panel) handleUpdateHosting(w http.ResponseWriter, r *http.Request, doma
 // Vhost'u ilgilendiren site alanını değiştiren her handler sonrasında bunu
 // çağırır.
 func (p *Panel) applySiteVhost(ctx context.Context, domainID int) error {
-	var (
-		siteID, appPort, forwardCode                                                 int
-		domain, docroot, phpSocket, sslType, sslCert, sslKey, projectType, forwardTo string
-	)
-	err := p.db.GetDB().QueryRowContext(ctx, `
-		SELECT s.id, d.name, COALESCE(s.document_root,''), COALESCE(s.php_fpm_socket,''),
-		       COALESCE(s.ssl_type,'none'), COALESCE(s.ssl_cert_path,''), COALESCE(s.ssl_key_path,''),
-		       COALESCE(s.project_type,'php'), COALESCE(s.app_port,0),
-		       COALESCE(s.forward_to,''), COALESCE(s.forward_code,301)
-		FROM sites s JOIN domains d ON s.domain_id = d.id
-		WHERE s.domain_id = ?`, domainID).Scan(
-		&siteID, &domain, &docroot, &phpSocket, &sslType, &sslCert, &sslKey,
-		&projectType, &appPort, &forwardTo, &forwardCode)
-	if err != nil {
-		return err
-	}
-	req := struct {
-		SiteID       int    `json:"site_id"`
-		Domain       string `json:"domain"`
-		TempDomain   string `json:"temp_domain"`
-		DocumentRoot string `json:"document_root"`
-		PHPSocket    string `json:"php_socket"`
-		SSLType      string `json:"ssl_type"`
-		SSLCert      string `json:"ssl_cert"`
-		SSLKey       string `json:"ssl_key"`
-		ProjectType  string `json:"project_type"`
-		AppPort      int    `json:"app_port"`
-		ForwardTo    string `json:"forward_to"`
-		ForwardCode  int    `json:"forward_code"`
-	}{
-		SiteID: siteID, Domain: domain, DocumentRoot: docroot, PHPSocket: phpSocket,
-		SSLType: sslType, SSLCert: sslCert, SSLKey: sslKey, ProjectType: projectType,
-		AppPort: appPort, ForwardTo: forwardTo, ForwardCode: forwardCode,
-	}
-	var resp struct {
-		Config string `json:"config"`
-		Error  string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.ApplyVhost", &req, &resp); err != nil {
-		return err
-	}
-	if resp.Error != "" {
-		return fmt.Errorf("vhost regen: %s", resp.Error)
-	}
-	return nil
+	return p.applyVhostForDomain(ctx, domainID)
 }
 
 // allocateAppPort hands out the first unused local app port from 3001 up.

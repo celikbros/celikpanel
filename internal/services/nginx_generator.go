@@ -3,21 +3,37 @@ package services
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
+	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 )
 
 //go:embed templates/nginx/vhost.conf.tmpl
 var vhostTemplate string
 
 type NginxGenerator struct {
-	tmpl *template.Template
+	tmpl          *template.Template
+	validateNginx func() error
+	reloadNginx   func() error
+	// writeVhostBatch is a test seam for failures that happen after a batch
+	// item has partially touched the filesystem. Restores deliberately bypass
+	// it so rollback can repair the injected forward-write failure.
+	writeVhostBatch func(domain, config string) error
 }
+
+// nginxMutationMu serializes the complete nginx mutation transaction across
+// every generator instance. nginx -t validates the whole configuration, so
+// two otherwise unrelated vhost writes must never interleave between their
+// snapshot, validation and reload steps.
+var nginxMutationMu sync.Mutex
 
 func NewNginxGenerator() (*NginxGenerator, error) {
 	tmpl, err := template.New("vhost").Parse(vhostTemplate)
@@ -28,14 +44,22 @@ func NewNginxGenerator() (*NginxGenerator, error) {
 }
 
 type VhostData struct {
-	SiteID          int
-	Domain          string
-	TempDomain      string
-	DocumentRoot    string
-	PHPSocket       string
-	SSLType         string
-	SSLCert         string
-	SSLKey          string
+	SiteID             int
+	Domain             string
+	TempDomain         string
+	ServerNames        []string
+	ACMEChallengeNames []string
+	ACMEChallengeRoot  string
+	DocumentRoot       string
+	PHPSocket          string
+	SSLType            string
+	SSLCert            string
+	SSLKey             string
+	ForceHTTPS         bool
+	HSTSEnabled        bool
+	HSTSMaxAge         int
+	// SSLAutoRedirect is kept for callers that still use the pre-settings
+	// vhost API. New callers should use ForceHTTPS.
 	SSLAutoRedirect bool
 	// Project-type fields (roadmap 3A). Upstream is derived: node projects
 	// proxy to 127.0.0.1:AppPort, proxy projects to ForwardTo.
@@ -53,6 +77,16 @@ type VhostData struct {
 // Render, hazırlanmış veriyle vhost şablonunu çalıştırır; node/proxy
 // tiplerinde vekil upstream'ini türetir.
 func (ng *NginxGenerator) Render(data VhostData) (string, error) {
+	data.ServerNames = normalizedServerNames(data.Domain, data.TempDomain, data.ServerNames)
+	data.ACMEChallengeNames = normalizedAdditionalServerNames(data.ACMEChallengeNames)
+	if err := validateACMEChallengeRootForTemplate(
+		data.ACMEChallengeRoot, data.DocumentRoot,
+	); err != nil {
+		return "", err
+	}
+	if !data.ForceHTTPS && data.SSLAutoRedirect {
+		data.ForceHTTPS = true
+	}
 	if data.ProjectType == "" {
 		data.ProjectType = "php"
 	}
@@ -83,8 +117,67 @@ func (ng *NginxGenerator) Render(data VhostData) (string, error) {
 	return buf.String(), nil
 }
 
+func validateACMEChallengeRootForTemplate(challengeRoot, documentRoot string) error {
+	if challengeRoot == "" || !path.IsAbs(challengeRoot) ||
+		path.Clean(challengeRoot) != challengeRoot ||
+		strings.ContainsAny(challengeRoot, " \t\r\n;{}") {
+		return fmt.Errorf("ACME challenge root must be an absolute canonical nginx path")
+	}
+	cleanDocumentRoot := path.Clean(documentRoot)
+	if challengeRoot == cleanDocumentRoot ||
+		strings.HasPrefix(challengeRoot, cleanDocumentRoot+"/") ||
+		strings.HasPrefix(cleanDocumentRoot, challengeRoot+"/") {
+		return fmt.Errorf("ACME challenge root must not overlap the tenant document root")
+	}
+	return nil
+}
+
+func normalizedAdditionalServerNames(serverNames []string) []string {
+	result := make([]string, 0, len(serverNames))
+	seen := make(map[string]struct{}, len(serverNames))
+	for _, candidate := range serverNames {
+		name := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(candidate), "."))
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, name)
+	}
+	return result
+}
+
+func normalizedServerNames(domain, tempDomain string, serverNames []string) []string {
+	candidates := make([]string, 0, len(serverNames)+2)
+	candidates = append(candidates, domain, tempDomain)
+	candidates = append(candidates, serverNames...)
+
+	result := make([]string, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		name := strings.ToLower(strings.TrimSpace(candidate))
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, name)
+	}
+	return result
+}
+
 // GenerateVhost generates nginx vhost config from site data
 func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, tempDomain string) (string, error) {
+	acmeChallengeRoot, err := hostingpath.ACMEChallengeRoot(
+		domain.SubscriptionID, domain.ID,
+	)
+	if err != nil {
+		return "", fmt.Errorf("derive ACME challenge root: %w", err)
+	}
 	// HTTPS is written ONLY when a certificate actually exists on disk.
 	//
 	// Asking for SSL used to be enough to emit the HTTPS server block, and that
@@ -125,12 +218,13 @@ func (ng *NginxGenerator) GenerateVhost(site *core.Site, domain *core.Domain, te
 	}
 
 	data := VhostData{
-		SiteID:          site.ID,
-		Domain:          domain.Name,
-		TempDomain:      tempDomain,
-		DocumentRoot:    site.DocumentRoot,
-		ProjectType:     site.ProjectType, // empty → Render defaults to php
-		SSLType: sslType,
+		SiteID:            site.ID,
+		Domain:            domain.Name,
+		TempDomain:        tempDomain,
+		ACMEChallengeRoot: acmeChallengeRoot,
+		DocumentRoot:      site.DocumentRoot,
+		ProjectType:       site.ProjectType, // empty → Render defaults to php
+		SSLType:           sslType,
 		// Redirecting to HTTPS before a certificate exists takes the site
 		// offline. Redirect only once HTTPS can actually answer.
 		// Sertifika yokken HTTPS'e yönlendirmek siteyi tümüyle kapatır. Ancak
@@ -171,8 +265,257 @@ func vhostPaths(domain string) (available, enabled string) {
 		fmt.Sprintf("%s/sites-enabled/%s.conf", base, domain)
 }
 
-// WriteVhostFile writes vhost config to file
+type vhostSnapshot struct {
+	config  string
+	exists  bool
+	enabled bool
+}
+
+// RenderedVhost is an already trust-checked nginx vhost ready for the
+// filesystem transaction. Agent RPC validation owns all untrusted inputs;
+// this type keeps the generator batch API small and deterministic.
+type RenderedVhost struct {
+	Domain string
+	Config string
+}
+
+func (ng *NginxGenerator) snapshotVhost(domain string) (vhostSnapshot, error) {
+	filename, symlinkPath := vhostPaths(domain)
+	config, err := os.ReadFile(filename)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return vhostSnapshot{}, fmt.Errorf("failed to snapshot vhost file: %w", err)
+		}
+	} else {
+		returnSnapshot := vhostSnapshot{config: string(config), exists: true}
+		if _, statErr := os.Lstat(symlinkPath); statErr != nil {
+			if !os.IsNotExist(statErr) {
+				return vhostSnapshot{}, fmt.Errorf("failed to snapshot enabled vhost: %w", statErr)
+			}
+		} else {
+			returnSnapshot.enabled = true
+		}
+		return returnSnapshot, nil
+	}
+
+	if _, statErr := os.Lstat(symlinkPath); statErr != nil && !os.IsNotExist(statErr) {
+		return vhostSnapshot{}, fmt.Errorf("failed to snapshot enabled vhost: %w", statErr)
+	}
+	return vhostSnapshot{}, nil
+}
+
+func (ng *NginxGenerator) restoreVhost(domain string, snapshot vhostSnapshot) error {
+	if err := ng.deleteVhostFiles(domain); err != nil {
+		return fmt.Errorf("remove mutated vhost: %w", err)
+	}
+	if !snapshot.exists {
+		return nil
+	}
+	if err := ng.writeVhostFile(domain, snapshot.config); err != nil {
+		return fmt.Errorf("restore vhost file: %w", err)
+	}
+	if !snapshot.enabled {
+		_, symlinkPath := vhostPaths(domain)
+		if err := os.Remove(symlinkPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("restore disabled vhost state: %w", err)
+		}
+	}
+	return nil
+}
+
+func (ng *NginxGenerator) rollbackVhostMutation(domain string, snapshot vhostSnapshot, cause error) error {
+	if err := ng.restoreVhost(domain, snapshot); err != nil {
+		return fmt.Errorf("%w; rollback restore failed: %v", cause, err)
+	}
+	if err := ng.ValidateNginx(); err != nil {
+		return fmt.Errorf("%w; rollback validation failed: %v", cause, err)
+	}
+	if err := ng.ReloadNginx(); err != nil {
+		return fmt.Errorf("%w; rollback reload failed: %v", cause, err)
+	}
+	return fmt.Errorf("%w; rollback restored and reloaded the previous vhost", cause)
+}
+
+func (ng *NginxGenerator) rollbackVhostMutations(
+	touched []RenderedVhost,
+	snapshots map[string]vhostSnapshot,
+	cause error,
+) error {
+	var rollbackErrors []error
+	for index := len(touched) - 1; index >= 0; index-- {
+		item := touched[index]
+		snapshot, exists := snapshots[item.Domain]
+		if !exists {
+			continue
+		}
+		if err := ng.restoreVhost(item.Domain, snapshot); err != nil {
+			rollbackErrors = append(
+				rollbackErrors,
+				fmt.Errorf("restore %s: %w", item.Domain, err),
+			)
+		}
+	}
+	if len(rollbackErrors) > 0 {
+		return fmt.Errorf(
+			"%w; batch rollback incomplete: %v",
+			cause,
+			errors.Join(rollbackErrors...),
+		)
+	}
+	if err := ng.ValidateNginx(); err != nil {
+		return fmt.Errorf(
+			"%w; batch rollback incomplete: rollback validation: %v",
+			cause,
+			err,
+		)
+	}
+	if err := ng.ReloadNginx(); err != nil {
+		return fmt.Errorf(
+			"%w; batch rollback incomplete: rollback reload: %v",
+			cause,
+			err,
+		)
+	}
+	return fmt.Errorf(
+		"%w; rollback restored and reloaded all touched vhosts",
+		cause,
+	)
+}
+
+// ApplyVhosts atomically activates a complete vhost set from nginx's point of
+// view. Every old file is snapshotted before the first write. All writes,
+// the single nginx validation and the single reload are serialized with every
+// other nginx mutation. Any failure restores only the attempted write prefix;
+// trailing vhosts that were never touched remain byte-for-byte unchanged. The
+// restored set is reloaded only after every restore and nginx validation pass.
+func (ng *NginxGenerator) ApplyVhosts(vhosts []RenderedVhost) error {
+	if len(vhosts) == 0 {
+		return nil
+	}
+
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+
+	snapshots := make(map[string]vhostSnapshot, len(vhosts))
+	for _, item := range vhosts {
+		if _, exists := snapshots[item.Domain]; exists {
+			return fmt.Errorf("duplicate vhost domain %q", item.Domain)
+		}
+		snapshot, err := ng.snapshotVhost(item.Domain)
+		if err != nil {
+			return fmt.Errorf("snapshot vhost %s: %w", item.Domain, err)
+		}
+		snapshots[item.Domain] = snapshot
+	}
+	touched := make([]RenderedVhost, 0, len(vhosts))
+	for _, item := range vhosts {
+		// Include the attempted item before calling the writer: a failure can
+		// happen after its available file or enabled link was already changed.
+		touched = append(touched, item)
+		writeVhost := ng.writeVhostFile
+		if ng.writeVhostBatch != nil {
+			writeVhost = ng.writeVhostBatch
+		}
+		if err := writeVhost(item.Domain, item.Config); err != nil {
+			return ng.rollbackVhostMutations(
+				touched,
+				snapshots,
+				fmt.Errorf("write vhost %s: %w", item.Domain, err),
+			)
+		}
+	}
+	if err := ng.ValidateNginx(); err != nil {
+		return ng.rollbackVhostMutations(
+			touched,
+			snapshots,
+			fmt.Errorf("nginx batch validation failed: %w", err),
+		)
+	}
+	if err := ng.ReloadNginx(); err != nil {
+		return ng.rollbackVhostMutations(
+			touched,
+			snapshots,
+			fmt.Errorf("nginx batch reload failed: %w", err),
+		)
+	}
+	return nil
+}
+
+// ApplyVhost atomically applies one vhost from nginx's point of view:
+// snapshot, write, validate and reload are serialized with all other vhost
+// mutations. Any failure restores, validates and reloads the previous state.
+func (ng *NginxGenerator) ApplyVhost(domain, config string) error {
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+
+	snapshot, err := ng.snapshotVhost(domain)
+	if err != nil {
+		return err
+	}
+	if err := ng.writeVhostFile(domain, config); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("vhost write failed: %w", err),
+		)
+	}
+	if err := ng.ValidateNginx(); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("nginx validation failed: %w", err),
+		)
+	}
+	if err := ng.ReloadNginx(); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("nginx reload failed: %w", err),
+		)
+	}
+	return nil
+}
+
+// RemoveVhost safely removes one vhost and reloads nginx. If remove,
+// validation or reload fails, the previous vhost is restored and activated.
+func (ng *NginxGenerator) RemoveVhost(domain string) error {
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+
+	snapshot, err := ng.snapshotVhost(domain)
+	if err != nil {
+		return err
+	}
+	if err := ng.deleteVhostFiles(domain); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("vhost removal failed: %w", err),
+		)
+	}
+	if err := ng.ValidateNginx(); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("nginx validation after vhost removal failed: %w", err),
+		)
+	}
+	if err := ng.ReloadNginx(); err != nil {
+		return ng.rollbackVhostMutation(
+			domain, snapshot, fmt.Errorf("nginx reload after vhost removal failed: %w", err),
+		)
+	}
+	return nil
+}
+
+// WriteAndValidateVhost remains as a compatibility name for older callers.
+// The safe operation also reloads nginx so no caller can accidentally leave a
+// validated-but-inactive vhost behind.
+func (ng *NginxGenerator) WriteAndValidateVhost(domain, config string) error {
+	return ng.ApplyVhost(domain, config)
+}
+
+// WriteVhostFile is the compatibility entry point for raw file writes. New
+// production callers should use ApplyVhost so validation, reload and rollback
+// stay in the same transaction. The global lock still prevents this legacy
+// operation from interleaving with another nginx mutation.
 func (ng *NginxGenerator) WriteVhostFile(domain string, config string) error {
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+	return ng.writeVhostFile(domain, config)
+}
+
+func (ng *NginxGenerator) writeVhostFile(domain string, config string) error {
 	filename, symlinkPath := vhostPaths(domain)
 	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
 		return err
@@ -186,7 +529,9 @@ func (ng *NginxGenerator) WriteVhostFile(domain string, config string) error {
 	if err := os.MkdirAll(filepath.Dir(symlinkPath), 0o755); err != nil {
 		return err
 	}
-	os.Remove(symlinkPath) // Remove if exists
+	if err := os.Remove(symlinkPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to replace enabled vhost link: %w", err)
+	}
 	err = os.Symlink(filename, symlinkPath)
 	if err != nil {
 		return fmt.Errorf("failed to create symlink: %v", err)
@@ -202,30 +547,58 @@ func (ng *NginxGenerator) WriteVhostFile(domain string, config string) error {
 // modunda atlanır: yönlendirilmiş vhost dosyaları canlı nginx config'inin
 // parçası değildir; onu doğrulamak bunlar hakkında bir şey kanıtlamaz.
 func (ng *NginxGenerator) ValidateNginx() error {
+	if ng.validateNginx != nil {
+		return ng.validateNginx()
+	}
 	if nginxDevMode() {
 		return nil
 	}
-	cmd := exec.Command("nginx", "-t")
-	output, err := cmd.CombinedOutput()
+	output, err := runNginxCommand("nginx", "-t")
 	if err != nil {
-		return fmt.Errorf("nginx validation failed: %s", string(output))
+		detail := strings.TrimSpace(string(output))
+		if detail == "" {
+			detail = err.Error()
+		}
+		return fmt.Errorf("nginx validation failed: %s", detail)
 	}
 	return nil
 }
 
 // ReloadNginx reloads nginx service
 func (ng *NginxGenerator) ReloadNginx() error {
+	if ng.reloadNginx != nil {
+		return ng.reloadNginx()
+	}
 	if nginxDevMode() {
 		return nil
 	}
-	cmd := exec.Command("systemctl", "reload", "nginx")
-	return cmd.Run()
+	output, err := runNginxCommand("systemctl", "reload", "nginx")
+	if err != nil {
+		detail := strings.TrimSpace(string(output))
+		if detail == "" {
+			return err
+		}
+		return fmt.Errorf("nginx reload failed: %s", detail)
+	}
+	return nil
 }
 
-// DeleteVhost removes vhost config files
+// DeleteVhost is the compatibility entry point for raw file removal. New
+// production callers should use RemoveVhost. Errors are never swallowed.
 func (ng *NginxGenerator) DeleteVhost(domain string) error {
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+	return ng.deleteVhostFiles(domain)
+}
+
+func (ng *NginxGenerator) deleteVhostFiles(domain string) error {
 	filename, symlinkPath := vhostPaths(domain)
-	os.Remove(symlinkPath)
-	os.Remove(filename)
-	return nil
+	var removeErrors []error
+	if err := os.Remove(symlinkPath); err != nil && !os.IsNotExist(err) {
+		removeErrors = append(removeErrors, fmt.Errorf("remove enabled vhost link: %w", err))
+	}
+	if err := os.Remove(filename); err != nil && !os.IsNotExist(err) {
+		removeErrors = append(removeErrors, fmt.Errorf("remove vhost file: %w", err))
+	}
+	return errors.Join(removeErrors...)
 }

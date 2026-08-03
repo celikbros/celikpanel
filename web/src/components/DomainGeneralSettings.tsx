@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Globe } from 'lucide-react';
+import { Plus, Trash2, Globe } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { FormSection, ToggleRow, FormActions, Button, inputClass } from './ui';
+import { FormSection, Button, inputClass } from './ui';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 interface DomainGeneralSettingsProps {
     domainId: number;
-    domainName: string;
 }
 
 interface GeneralSettings {
@@ -14,37 +14,18 @@ interface GeneralSettings {
     domain_name: string;
     document_root: string;
     web_server: string;
-    redirect_www: boolean;
-    redirect_https: boolean;
     aliases: string[];
 }
 
-export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSettingsProps) {
+export function DomainGeneralSettings({ domainId }: DomainGeneralSettingsProps) {
     const { t } = useI18n();
     const [settings, setSettings] = useState<GeneralSettings | null>(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [newAlias, setNewAlias] = useState('');
-    const [webServers, setWebServers] = useState<string[]>(['nginx']);
 
     useEffect(() => {
         loadSettings();
-        loadWebServers();
     }, [domainId]);
-
-    const loadWebServers = async () => {
-        try {
-            const res = await fetch('/api/v1/system/check');
-            if (!res.ok) return;
-            const data = await res.json();
-            const servers: string[] = [];
-            if (data.nginx) servers.push('nginx');
-            if (data.apache) servers.push('apache');
-            if (servers.length) setWebServers(servers);
-        } catch {
-            /* keep default */
-        }
-    };
 
     const loadSettings = async () => {
         setLoading(true);
@@ -59,44 +40,38 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
         }
     };
 
-    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!settings) return;
-        const fd = new FormData(e.currentTarget);
-        setSaving(true);
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/general`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_root: fd.get('document_root') as string,
-                    web_server: fd.get('web_server') as string,
-                    redirect_www: fd.get('redirect_www') === 'on',
-                    redirect_https: fd.get('redirect_https') === 'on',
-                }),
-            });
-            if (!res.ok) throw new Error();
-            showToast('success', t('general.saved'));
-            loadSettings();
-        } catch {
-            showToast('error', t('general.saveFailed'));
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleAddAlias = async () => {
-        if (!newAlias.trim()) return;
+        const alias = newAlias.trim();
+        if (!alias) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/aliases`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alias: newAlias }),
-            });
-            if (!res.ok) throw new Error();
-            showToast('success', t('general.aliasAdded', { name: newAlias }));
+            const request = (confirmCertificateReissue: boolean) =>
+                fetch(`/api/v1/domains/${domainId}/aliases`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        alias,
+                        confirm_certificate_reissue: confirmCertificateReissue,
+                    }),
+                });
+            let res = await request(false);
+            if (!res.ok) {
+                let apiError = await readApiError(res);
+                if (apiError.code === 'ALIAS_CERTIFICATE_REISSUE_REQUIRED') {
+                    if (!confirm(t('general.aliasReissueAddConfirm', { name: alias }))) return;
+                    res = await request(true);
+                    if (!res.ok) apiError = await readApiError(res);
+                }
+                if (!res.ok) {
+                    showToast('error', apiErrorText(apiError, t, 'common.error'));
+                    if (apiError.code === 'ALIAS_CERTIFICATE_ACTIVATION_PENDING') {
+                        await loadSettings();
+                    }
+                    return;
+                }
+            }
+            showToast('success', t('general.aliasAdded', { name: alias }));
             setNewAlias('');
-            loadSettings();
+            await loadSettings();
         } catch {
             showToast('error', t('common.error'));
         }
@@ -105,10 +80,25 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
     const handleDeleteAlias = async (alias: string) => {
         if (!confirm(t('general.confirmDeleteAlias', { name: alias }))) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/aliases/${alias}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
+            const endpoint = `/api/v1/domains/${domainId}/aliases/${encodeURIComponent(alias)}`;
+            let res = await fetch(endpoint, { method: 'DELETE' });
+            if (!res.ok) {
+                let apiError = await readApiError(res);
+                if (apiError.code === 'ALIAS_CERTIFICATE_REISSUE_REQUIRED') {
+                    if (!confirm(t('general.aliasReissueDeleteConfirm', { name: alias }))) return;
+                    res = await fetch(`${endpoint}?confirm_certificate_reissue=true`, { method: 'DELETE' });
+                    if (!res.ok) apiError = await readApiError(res);
+                }
+                if (!res.ok) {
+                    showToast('error', apiErrorText(apiError, t));
+                    if (apiError.code === 'ALIAS_CERTIFICATE_ACTIVATION_PENDING') {
+                        await loadSettings();
+                    }
+                    return;
+                }
+            }
             showToast('success', t('general.aliasDeleted', { name: alias }));
-            loadSettings();
+            await loadSettings();
         } catch {
             showToast('error', t('common.error'));
         }
@@ -125,58 +115,17 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
 
     return (
         <div>
-            <form onSubmit={handleSave}>
-                <FormSection title={t('general.docRoot')} description={t('general.docRootHint')}>
-                    <input
-                        type="text"
-                        name="document_root"
-                        defaultValue={settings.document_root}
-                        placeholder="/var/www/html"
-                        className={`${inputClass} font-mono`}
-                    />
-                </FormSection>
+            <FormSection title={t('general.docRoot')} description={t('general.docRootHint')}>
+                <p className="break-all rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-sm text-fg">
+                    {settings.document_root}
+                </p>
+            </FormSection>
 
-                <FormSection
-                    title={t('general.webServer')}
-                    description={webServers.length > 1 ? t('general.webServerHintMulti') : t('general.webServerHintSingle')}
-                >
-                    {webServers.length > 1 ? (
-                        <select name="web_server" defaultValue={settings.web_server} className={inputClass}>
-                            {webServers.map((s) => (
-                                <option key={s} value={s}>
-                                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                                </option>
-                            ))}
-                        </select>
-                    ) : (
-                        <>
-                            <p className="text-sm text-fg">{webServers[0].charAt(0).toUpperCase() + webServers[0].slice(1)}</p>
-                            <input type="hidden" name="web_server" value={webServers[0]} />
-                        </>
-                    )}
-                </FormSection>
-
-                <FormSection title={t('general.redirects')}>
-                    <ToggleRow
-                        name="redirect_www"
-                        defaultChecked={settings.redirect_www}
-                        label={t('general.redirectWww')}
-                        hint={`${domainName} → www.${domainName}`}
-                    />
-                    <ToggleRow
-                        name="redirect_https"
-                        defaultChecked={settings.redirect_https}
-                        label={t('general.forceHttps')}
-                        hint={t('general.forceHttpsHint')}
-                    />
-                </FormSection>
-
-                <FormActions>
-                    <Button type="submit" variant="primary" icon={Save} disabled={saving}>
-                        {saving ? t('general.saving') : t('general.save')}
-                    </Button>
-                </FormActions>
-            </form>
+            <FormSection title={t('general.webServer')} description={t('general.webServerHintSingle')}>
+                <p className="text-sm text-fg">
+                    {settings.web_server.charAt(0).toUpperCase() + settings.web_server.slice(1)}
+                </p>
+            </FormSection>
 
             <div className="mt-6 border-t border-border pt-5">
                 <h3 className="text-sm font-semibold text-fg">{t('general.aliases')}</h3>

@@ -10,10 +10,16 @@ import { EmptyState, Button, inputClass } from './ui';
 
 interface BackupItem {
     name: string;
-    path: string;
     size: number;
     type: string;
+    database_id?: number;
     created_at: string;
+}
+
+interface BackupDatabase {
+    id: number;
+    name: string;
+    type: string;
 }
 
 interface DomainBackupManagerProps {
@@ -47,9 +53,16 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [restoring, setRestoring] = useState<string | null>(null);
+    const [databases, setDatabases] = useState<BackupDatabase[]>([]);
+    const [databasesLoading, setDatabasesLoading] = useState(true);
+    const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
 
     useEffect(() => {
+        // A database choice is tenant-specific. Never carry it across domains
+        // and never silently choose the first database on the user's behalf.
+        setSelectedDatabaseId(null);
         loadBackups();
+        loadDatabases();
     }, [domainId]);
 
     const loadBackups = async () => {
@@ -66,13 +79,41 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
         }
     };
 
+    const loadDatabases = async () => {
+        setDatabasesLoading(true);
+        try {
+            const res = await fetch(`/api/v1/domains/${domainId}/databases`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            const next = Array.isArray(data.databases) ? data.databases as BackupDatabase[] : [];
+            setDatabases(next);
+            setSelectedDatabaseId((current) => (
+                current !== null && next.some((database) => database.id === current)
+                    ? current
+                    : null
+            ));
+        } catch {
+            setDatabases([]);
+            setSelectedDatabaseId(null);
+            showToast('error', t('common.error'));
+        } finally {
+            setDatabasesLoading(false);
+        }
+    };
+
     const createBackup = async (type: BackupType) => {
+        if (type === 'database' && selectedDatabaseId === null) {
+            showToast('error', t('backup.databaseRequired'));
+            return;
+        }
         setCreating(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/backups`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type }),
+                body: JSON.stringify(type === 'database'
+                    ? { type, database_id: selectedDatabaseId }
+                    : { type }),
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
@@ -124,12 +165,42 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
             {/* Create */}
             <section>
                 <h3 className="mb-3 text-sm font-semibold text-fg">{t('backup.createTitle')}</h3>
+                <label className="mb-3 block max-w-xl text-sm">
+                    <span className="mb-1 block text-xs text-fg-muted">{t('backup.databaseSelect')}</span>
+                    <select
+                        value={selectedDatabaseId ?? ''}
+                        onChange={(event) => setSelectedDatabaseId(
+                            event.target.value === '' ? null : Number(event.target.value),
+                        )}
+                        disabled={databasesLoading || databases.length === 0 || creating}
+                        className={inputClass}
+                    >
+                        <option value="">
+                            {databasesLoading
+                                ? t('common.loading')
+                                : t('backup.databaseSelectPlaceholder')}
+                        </option>
+                        {databases.map((database) => (
+                            <option key={database.id} value={database.id}>
+                                {database.name} ({database.type})
+                            </option>
+                        ))}
+                    </select>
+                    {!databasesLoading && databases.length === 0 && (
+                        <span className="mt-1 block text-xs text-fg-subtle">
+                            {t('backup.databaseNone')}
+                        </span>
+                    )}
+                </label>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     {backupTypes.map(({ type, icon: Icon, labelKey, descKey, tone }) => (
                         <button
                             key={type}
                             onClick={() => createBackup(type)}
-                            disabled={creating}
+                            disabled={creating || (
+                                type === 'database' &&
+                                (databasesLoading || selectedDatabaseId === null)
+                            )}
                             className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tone}`}>
@@ -237,7 +308,10 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
 
             <p className="flex items-start gap-2 text-xs text-fg-subtle">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                {t('backup.storageNote', { path: `/var/backups/celikpanel/${domainName}/` })}
+                {t('backup.storageNote', {
+                    domain: domainName,
+                    path: `/var/backups/celikpanel/subscriptions/<subscription-id>/domains/${domainId}/`,
+                })}
             </p>
         </div>
     );

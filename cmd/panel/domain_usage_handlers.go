@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -35,11 +34,12 @@ func (p *Panel) handleDomainUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var domainName, docroot string
+	var subscriptionID int
+	var domainName string
 	err = p.db.GetDB().QueryRowContext(r.Context(), `
-		SELECT d.name, s.document_root
+		SELECT d.subscription_id, d.name
 		FROM sites s JOIN domains d ON d.id = s.domain_id
-		WHERE s.domain_id = ?`, domainID).Scan(&domainName, &docroot)
+		WHERE s.domain_id = ?`, domainID).Scan(&subscriptionID, &domainName)
 	if err != nil {
 		http.Error(w, "site not found", http.StatusNotFound)
 		return
@@ -50,10 +50,11 @@ func (p *Panel) handleDomainUsage(w http.ResponseWriter, r *http.Request) {
 		TrafficMonthBytes int64  `json:"traffic_month_bytes"`
 		Error             string `json:"error,omitempty"`
 	}
-	req := struct {
-		SiteHome string `json:"site_home"`
-		Domain   string `json:"domain"`
-	}{SiteHome: filepath.Dir(docroot), Domain: domainName}
+	req := siteUsageAgentRequest{
+		SubscriptionID: subscriptionID,
+		DomainID:       domainID,
+		Domain:         domainName,
+	}
 	if err := p.agentClient.Call("Agent.SiteUsage", &req, &resp); err != nil {
 		writeServerError(w, err)
 		return
@@ -72,4 +73,10 @@ func (p *Panel) handleDomainUsage(w http.ResponseWriter, r *http.Request) {
 		"disk_usage": resp.DiskBytes,
 		"bandwidth":  resp.TrafficMonthBytes,
 	})
+}
+
+type siteUsageAgentRequest struct {
+	SubscriptionID int    `json:"subscription_id"`
+	DomainID       int    `json:"domain_id"`
+	Domain         string `json:"domain"`
 }

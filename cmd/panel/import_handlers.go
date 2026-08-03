@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/hostname"
 )
 
 // cPanel importer endpoints (admin-only via isAdminOnlyPath). Two steps by
@@ -103,7 +106,6 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		Path           string `json:"path"`
 		SubscriptionID int    `json:"subscription_id"`
 		Domain         string `json:"domain"` // which domain from the archive to import
-		DocumentRoot   string `json:"document_root,omitempty"`
 		DoFiles        bool   `json:"do_files"`
 		DoMail         bool   `json:"do_mail"`
 		DoDNS          bool   `json:"do_dns"`
@@ -130,6 +132,16 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "the archive does not declare a domain; pass one explicitly")
 		return
 	}
+	canonicalDomain, err := hostname.CanonicalFQDN(req.Domain)
+	if err != nil {
+		writeClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if _, err := hostname.MailFQDN(canonicalDomain); err != nil {
+		writeClientError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	req.Domain = canonicalDomain
 
 	ctx := r.Context()
 	steps := []importStep{}
@@ -147,14 +159,13 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	docroot := req.DocumentRoot
 	var domainID, siteID int
 	res, err := p.db.GetDB().ExecContext(ctx,
 		`INSERT INTO domains (subscription_id, name, status) VALUES (?, ?, 'active')`,
 		req.SubscriptionID, req.Domain)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE") {
-			writeClientError(w, http.StatusConflict, "domain already exists on this server")
+		if hostname.IsNamespaceConflict(err) {
+			writeClientError(w, http.StatusConflict, "this hostname is already used by a domain, its www name, or an alias")
 			return
 		}
 		writeServerError(w, err)
@@ -163,8 +174,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 	id64, _ := res.LastInsertId()
 	domainID = int(id64)
 
-	if docroot == "" {
-		docroot = fmt.Sprintf("/var/www/celikpanel/subscriptions/%d/sites/%d/public_html", req.SubscriptionID, domainID)
+	docroot, err := hostingpath.DocumentRoot(req.SubscriptionID, domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return
 	}
 	res, err = p.db.GetDB().ExecContext(ctx,
 		`INSERT INTO sites (domain_id, document_root, php_version, project_type, status) VALUES (?, ?, '8.3', 'php', 'active')`,
@@ -186,9 +199,14 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			Error string `json:"error,omitempty"`
 		}
 		err := p.agentClient.Call("Agent.ExtractCpmoveFiles", &struct {
-			Path      string `json:"path"`
-			TargetDir string `json:"target_dir"`
-		}{Path: req.Path, TargetDir: docroot}, &ext)
+			Path           string `json:"path"`
+			SubscriptionID int    `json:"subscription_id"`
+			DomainID       int    `json:"domain_id"`
+		}{
+			Path:           req.Path,
+			SubscriptionID: req.SubscriptionID,
+			DomainID:       domainID,
+		}, &ext)
 		switch {
 		case err != nil:
 			fail("files", err)
@@ -204,10 +222,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 	if req.DoMail {
 		imported := 0
 		for _, acc := range preview.MailAccounts {
-			if acc.Domain != req.Domain {
+			if !strings.EqualFold(acc.Domain, req.Domain) {
 				continue
 			}
-			email := acc.User + "@" + acc.Domain
+			email := acc.User + "@" + req.Domain
 			var done bool
 			err := p.agentClient.Call("Agent.ImportMailAccount", &struct {
 				Email     string `json:"email"`
@@ -231,7 +249,7 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 
 		fwd := 0
 		for _, f := range preview.Forwarders {
-			if !strings.HasSuffix(f.Source, "@"+req.Domain) {
+			if !strings.HasSuffix(strings.ToLower(f.Source), "@"+req.Domain) {
 				continue
 			}
 			_, err := p.db.GetDB().ExecContext(ctx,
@@ -251,6 +269,15 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 	// 4. DNS kayıtları zone'umuza (NS/SOA hariç — bizimkiler üretilir).
 	if req.DoDNS {
 		records, has := preview.DNSZones[req.Domain]
+		if !has {
+			for archiveDomain, archiveRecords := range preview.DNSZones {
+				canonicalArchiveDomain, canonicalErr := hostname.CanonicalFQDN(archiveDomain)
+				if canonicalErr == nil && canonicalArchiveDomain == req.Domain {
+					records, has = archiveRecords, true
+					break
+				}
+			}
+		}
 		if !has {
 			ok("dns", "archive has no zone for this domain")
 		} else {

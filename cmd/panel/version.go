@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 // The one version. Both values are set at link time (-X main.buildVersion=…,
@@ -30,6 +33,31 @@ var (
 	buildVersion = "dev"
 	buildCommit  = "unknown"
 )
+
+// requireMatchingAgentBuild fails closed for privileged mutations whenever
+// the production panel and agent were not built from the same commit. Dev and
+// test binaries keep "unknown", where there is no meaningful release identity
+// to compare.
+func (p *Panel) requireMatchingAgentBuild(ctx context.Context) error {
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit == "" || panelCommit == "unknown" {
+		return nil
+	}
+	var agent struct {
+		Commit string `json:"commit"`
+	}
+	if err := p.agentClient.CallContext(ctx, "Agent.Version", &struct{}{}, &agent); err != nil {
+		return fmt.Errorf("verify panel/agent build pair: %w", err)
+	}
+	agentCommit := strings.TrimSpace(agent.Commit)
+	if agentCommit == "" || agentCommit != panelCommit {
+		return fmt.Errorf(
+			"panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before changing SSL",
+			panelCommit, agentCommit,
+		)
+	}
+	return nil
+}
 
 // handleVersion reports the panel's version and BOTH commits — the panel's own
 // and the agent's. They are deployed together and must match; when they do not,

@@ -42,7 +42,8 @@ func (p *Panel) startBackupScheduler() {
 func (p *Panel) runDueBackups() {
 	ctx := context.Background()
 	rows, err := p.db.GetDB().QueryContext(ctx, `
-		SELECT bs.domain_id, d.name, bs.frequency, bs.backup_type, bs.retention, bs.last_run
+		SELECT bs.domain_id, d.subscription_id, d.name,
+		       bs.frequency, bs.backup_type, bs.retention, bs.last_run
 		FROM backup_schedules bs JOIN domains d ON d.id = bs.domain_id
 		WHERE bs.enabled = 1`)
 	if err != nil {
@@ -51,6 +52,7 @@ func (p *Panel) runDueBackups() {
 	}
 	type job struct {
 		domainID          int
+		subscriptionID    int
 		name, freq, btype string
 		retention         int
 		lastRun           *string
@@ -58,7 +60,10 @@ func (p *Panel) runDueBackups() {
 	var jobs []job
 	for rows.Next() {
 		var j job
-		if rows.Scan(&j.domainID, &j.name, &j.freq, &j.btype, &j.retention, &j.lastRun) == nil {
+		if rows.Scan(
+			&j.domainID, &j.subscriptionID, &j.name,
+			&j.freq, &j.btype, &j.retention, &j.lastRun,
+		) == nil {
 			jobs = append(jobs, j)
 		}
 	}
@@ -69,7 +74,9 @@ func (p *Panel) runDueBackups() {
 		if !backupDue(j.freq, j.lastRun, now) {
 			continue
 		}
-		if err := p.runScheduledBackup(ctx, j.domainID, j.name, j.btype, j.retention); err != nil {
+		if err := p.runScheduledBackup(
+			ctx, j.subscriptionID, j.domainID, j.name, j.btype, j.retention,
+		); err != nil {
 			log.Printf("scheduled backup %s: %v", j.name, err)
 			continue
 		}
@@ -102,26 +109,33 @@ func backupDue(freq string, lastRun *string, now time.Time) bool {
 // beyond the retention count.
 // runScheduledBackup, bir domain için bir yedek oluşturur ve saklama sayısını
 // aşan eski kopyaları budar.
-func (p *Panel) runScheduledBackup(ctx context.Context, domainID int, domainName, btype string, retention int) error {
-	docroot, err := p.siteDocroot(ctx, domainID)
-	if err != nil {
-		return err
-	}
+func (p *Panel) runScheduledBackup(
+	ctx context.Context,
+	subscriptionID, domainID int,
+	domainName, btype string,
+	retention int,
+) error {
 	var resp struct {
 		Success bool   `json:"success"`
 		Error   string `json:"error,omitempty"`
 	}
 	if err := p.agentClient.Call("Agent.CreateBackup", &struct {
-		DomainName string `json:"domain_name"`
-		Type       string `json:"type"`
-		SourceDir  string `json:"source_dir"`
-	}{DomainName: domainName, Type: btype, SourceDir: docroot}, &resp); err != nil {
+		SubscriptionID int
+		DomainID       int
+		Type           string
+		Scheduled      bool
+	}{
+		SubscriptionID: subscriptionID,
+		DomainID:       domainID,
+		Type:           btype,
+		Scheduled:      true,
+	}, &resp); err != nil {
 		return err
 	}
 	if resp.Error != "" {
 		return &backupError{resp.Error}
 	}
-	p.pruneBackups(domainName, retention)
+	p.pruneBackups(subscriptionID, domainID, retention)
 	return nil
 }
 
@@ -129,43 +143,60 @@ type backupError struct{ msg string }
 
 func (e *backupError) Error() string { return e.msg }
 
+type backupRetentionRecord struct {
+	Name      string    `json:"name"`
+	Type      string    `json:"type"`
+	Scheduled bool      `json:"scheduled"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func scheduledBackupsToDelete(backups []backupRetentionRecord, retention int) []string {
+	if retention < 1 {
+		retention = 1
+	}
+	var scheduled []string
+	for _, backup := range backups {
+		if backup.Scheduled && (backup.Type == "files" || backup.Type == "full") {
+			scheduled = append(scheduled, backup.Name)
+		}
+	}
+	if len(scheduled) <= retention {
+		return nil
+	}
+	return scheduled[retention:]
+}
+
 // pruneBackups keeps the newest `retention` file/full backups for a domain and
 // deletes the rest. Database backups are left alone — retention here is about
 // the scheduled file/full snapshots.
 // pruneBackups, bir domain için en yeni `retention` dosya/tam yedeğini tutar,
 // gerisini siler.
-func (p *Panel) pruneBackups(domainName string, retention int) {
+func (p *Panel) pruneBackups(subscriptionID, domainID, retention int) {
 	if retention < 1 {
 		retention = 1
 	}
 	var resp struct {
-		Backups []struct {
-			Name      string    `json:"name"`
-			Type      string    `json:"type"`
-			CreatedAt time.Time `json:"created_at"`
-		} `json:"backups"`
+		Backups []backupRetentionRecord `json:"backups"`
 	}
 	if err := p.agentClient.Call("Agent.ListBackups",
-		&struct{ DomainName string }{DomainName: domainName}, &resp); err != nil {
+		&struct {
+			SubscriptionID int
+			DomainID       int
+		}{subscriptionID, domainID}, &resp); err != nil {
 		return
 	}
 	// Newest first; keep the first `retention`, delete older scheduled ones.
 	// The agent already returns newest-first, but sort defensively by name
 	// (names embed a sortable timestamp).
 	// En yeni önce; ilk `retention`'ı tut, daha eski olanları sil.
-	var scheduled []string
-	for _, b := range resp.Backups {
-		if b.Type == "files" || b.Type == "full" {
-			scheduled = append(scheduled, b.Name)
-		}
-	}
-	if len(scheduled) <= retention {
-		return
-	}
-	for _, name := range scheduled[retention:] {
+	for _, name := range scheduledBackupsToDelete(resp.Backups, retention) {
 		var ok bool
 		_ = p.agentClient.Call("Agent.DeleteBackup",
-			&struct{ DomainName, BackupName string }{DomainName: domainName, BackupName: name}, &ok)
+			&struct {
+				SubscriptionID int
+				DomainID       int
+				BackupName     string
+			}{subscriptionID, domainID, name}, &ok)
 	}
 }
 

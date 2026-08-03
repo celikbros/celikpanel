@@ -2,6 +2,7 @@ package transport
 
 import (
 	"bufio"
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"encoding/hex"
@@ -187,17 +188,42 @@ func serverHandshake(conn net.Conn, token string) error {
 // doğrular ve hazır bir RPC istemcisi döndürür. Panelin agent ile
 // konuşmasının tek yolu budur.
 func ConnectAgent() (*rpc.Client, error) {
+	return ConnectAgentContext(context.Background())
+}
+
+// ConnectAgentContext dials and authenticates an agent connection while
+// honoring cancellation during both socket dialing and the authentication
+// handshake.
+func ConnectAgentContext(ctx context.Context) (*rpc.Client, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("connect agent context is nil")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	token, err := ReadToken(AgentTokenPath())
 	if err != nil {
 		return nil, fmt.Errorf("cannot read agent token (is the agent running, and does the panel user have read access?): %w", err)
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
-	conn, err := net.DialTimeout("unix", AgentSocketPath(), handshakeTimeout)
+	dialer := net.Dialer{Timeout: handshakeTimeout}
+	conn, err := dialer.DialContext(ctx, "unix", AgentSocketPath())
 	if err != nil {
+		if ctxErr := contextCompletionError(ctx); ctxErr != nil {
+			return nil, ctxErr
+		}
 		return nil, fmt.Errorf("cannot reach agent socket: %w", err)
 	}
 
-	if err := clientHandshake(conn, token); err != nil {
+	if err := clientHandshakeContext(ctx, conn, token); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
 		conn.Close()
 		return nil, err
 	}
@@ -205,22 +231,80 @@ func ConnectAgent() (*rpc.Client, error) {
 }
 
 func clientHandshake(conn net.Conn, token string) error {
-	if err := conn.SetDeadline(time.Now().Add(handshakeTimeout)); err != nil {
+	return clientHandshakeContext(context.Background(), conn, token)
+}
+
+func clientHandshakeContext(ctx context.Context, conn net.Conn, token string) error {
+	if ctx == nil {
+		return fmt.Errorf("handshake context is nil")
+	}
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 
+	deadline := time.Now().Add(handshakeTimeout)
+	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(deadline) {
+		deadline = contextDeadline
+	}
+	if err := conn.SetDeadline(deadline); err != nil {
+		return err
+	}
+
+	cancelClosed := make(chan struct{})
+	stopCancelClose := context.AfterFunc(ctx, func() {
+		_ = conn.Close()
+		close(cancelClosed)
+	})
+
 	if _, err := conn.Write([]byte(token + "\n")); err != nil {
+		if !stopCancelClose() {
+			<-cancelClosed
+		}
+		if ctxErr := contextCompletionError(ctx); ctxErr != nil {
+			return ctxErr
+		}
 		return fmt.Errorf("handshake write failed: %w", err)
 	}
 
 	reader := bufio.NewReaderSize(conn, maxTokenLineLen)
 	line, err := reader.ReadString('\n')
 	if err != nil {
+		if !stopCancelClose() {
+			<-cancelClosed
+		}
+		if ctxErr := contextCompletionError(ctx); ctxErr != nil {
+			return ctxErr
+		}
 		return fmt.Errorf("agent rejected the handshake: %w", err)
 	}
 	if strings.TrimSpace(line) != handshakeOK {
+		if !stopCancelClose() {
+			<-cancelClosed
+		}
+		if ctxErr := contextCompletionError(ctx); ctxErr != nil {
+			return ctxErr
+		}
 		return fmt.Errorf("unexpected handshake response")
 	}
 
+	if !stopCancelClose() {
+		<-cancelClosed
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return conn.SetDeadline(time.Time{})
+}
+
+// contextCompletionError also recognizes the narrow scheduling window where
+// an I/O deadline fires at the context's deadline just before the context
+// timer goroutine publishes Done/Err.
+func contextCompletionError(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if deadline, ok := ctx.Deadline(); ok && !time.Now().Before(deadline) {
+		return context.DeadlineExceeded
+	}
+	return nil
 }

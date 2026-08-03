@@ -257,6 +257,8 @@ type TLSAResponse struct {
 }
 
 // ComputeTLSA hashes the leaf certificate at CertPath for a DANE TLSA record.
+// This RPC is calculation-only: it never publishes, replaces, or removes DNS
+// records. TLSA ownership and rollover policy remain panel responsibilities.
 // ComputeTLSA, DANE TLSA kaydı için CertPath'teki uç sertifikayı özetler.
 func (a *Agent) ComputeTLSA(req *TLSARequest, resp *TLSAResponse) error {
 	raw, err := os.ReadFile(req.CertPath)
