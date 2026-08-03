@@ -184,10 +184,10 @@ require_literal "$INSTALL" 'validate_panel_env "$PANEL_ENV"'
 require_literal "$INSTALL" 'mv -T --no-clobber -- "$temp_env" "$PANEL_ENV"'
 require_literal "$INSTALL" 'install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/'
 require_sequence "$INSTALL" \
-    'step "Panel yapılandırması $PANEL_ENV"' \
+    'step "Panel configuration $PANEL_ENV" "Panel yapılandırması $PANEL_ENV"' \
     'ensure_panel_env' \
     '# 3. Build if artifacts are missing' \
-    'step "Dosyalar $PREFIX altına kuruluyor"'
+    'step "Installing files under $PREFIX" "Dosyalar $PREFIX altına kuruluyor"'
 reject_literal "$INSTALL" 'PANEL_ARGS='
 reject_literal "$INSTALL" 'TLS_ENV='
 reject_literal "$INSTALL" 's|^ExecStart=/opt/celikpanel/bin/panel'

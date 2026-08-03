@@ -43,20 +43,29 @@ SVC_GROUP=celikpanel
 LISTEN="${LISTEN:-:2083}"
 case "${CELIKPANEL_APPLY_ONLY:-0}" in
     0|1) ;;
-    *) printf '%s\n' "HATA: CELIKPANEL_APPLY_ONLY yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
+    *) printf '%s\n' "ERROR / HATA: CELIKPANEL_APPLY_ONLY must be 0 or 1 / yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
 esac
 APPLY_ONLY=${CELIKPANEL_APPLY_ONLY:-0}
 case "${DEMO:-0}" in
     0|1) ;;
-    *) printf '%s\n' "HATA: DEMO yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
+    *) printf '%s\n' "ERROR / HATA: DEMO must be 0 or 1 / yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
 esac
 
 SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 c() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
-step() { c '1;36' "==> $1"; }
-ok() { c '32' "    ✓ $1"; }
-die() { c '1;31' "HATA: $1" >&2; exit 1; }
+bilingual() {
+    local english=$1 turkish=${2:-}
+    if [[ -n "$turkish" ]]; then
+        printf '%s / %s' "$english" "$turkish"
+    else
+        printf '%s' "$english"
+    fi
+}
+step() { c '1;36' "==> $(bilingual "$@")"; }
+ok() { c '32' "    ✓ $(bilingual "$@")"; }
+warn() { c '33' "    $(bilingual "$@")"; }
+die() { c '1;31' "ERROR / HATA: $(bilingual "$@")" >&2; exit 1; }
 
 valid_panel_listen() {
     local value=$1 host port
@@ -410,7 +419,8 @@ elif command -v apt-get >/dev/null; then
 elif command -v pacman >/dev/null; then
     PKG_FAMILY=pacman
 else
-    die "desteklenen paket yöneticisi yok (apt veya pacman gerekli)"
+    die "No supported package manager was found (apt or pacman is required)" \
+        "Desteklenen paket yöneticisi bulunamadı (apt veya pacman gerekli)"
 fi
 
 # 1. Minimal prerequisites ---------------------------------------------------
@@ -445,7 +455,8 @@ fi
 # ≠ firewall'u açmak — böylece firewall temiz bir aç/kapa düğmesi kalır ve bu,
 # "firewall'u sürprizle açma" kuralına uyar.
 if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
-    step "Küçük ön gereksinimler (curl, tar, xz, nftables)"
+    step "Small prerequisites (curl, tar, xz, nftables)" \
+        "Küçük ön gereksinimler (curl, tar, xz, nftables)"
     case "$PKG_FAMILY" in
     apt)
         export DEBIAN_FRONTEND=noninteractive
@@ -453,7 +464,8 @@ if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
         # need come from the base archives and may already be cached.
         # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
         # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
-        apt-get update -qq || c '33' "    apt-get update uyarı verdi — devam ediliyor"
+        apt-get update -qq || warn "apt-get update returned a warning — continuing" \
+            "apt-get update uyarı verdi — devam ediliyor"
         apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
         ;;
     pacman)
@@ -466,9 +478,10 @@ if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
         pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables >/dev/null
         ;;
     esac
-    ok "hazır"
+    ok "ready" "hazır"
 else
-    step "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
+    step "Prerequisite installation skipped (SKIP_DEPS=1)" \
+        "Ön gereksinim kurulumu atlandı (SKIP_DEPS=1)"
 fi
 
 # 1b. Automatic security patches --------------------------------------------
@@ -484,7 +497,8 @@ fi
 # asla özellik yükseltmesi; barındırma kutusu davranış değişikliğiyle
 # şaşırmaz, yalnız düzeltmeyle. SKIP_SECURITY_UPDATES=1 devre dışı bırakır.
 if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "apt" ]; then
-    step "Otomatik güvenlik yamaları (unattended-upgrades)"
+    step "Automatic security patches (unattended-upgrades)" \
+        "Otomatik güvenlik yamaları (unattended-upgrades)"
     export DEBIAN_FRONTEND=noninteractive
     if apt-get install -y -qq unattended-upgrades >/dev/null 2>&1; then
         # Enable the periodic timer: update lists + apply security upgrades daily.
@@ -495,21 +509,23 @@ APT::Periodic::Unattended-Upgrade "1";
 APT::Periodic::AutocleanInterval "7";
 AUTOCONF
         systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
-        ok "güvenlik yamaları etkin"
+        ok "security patches enabled" "güvenlik yamaları etkin"
     else
-        c '33' "    unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
+        warn "unattended-upgrades could not be installed — skipped (it can be installed manually)" \
+            "unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
     fi
 elif [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "pacman" ]; then
     # Arch is rolling release: there is no security-only patch channel to
     # subscribe to, so we say so instead of pretending.
     # Arch yuvarlanan sürümdür: abone olunacak güvenlik-yalnız yama kanalı
     # yoktur; öyleymiş gibi yapmak yerine bunu söyleriz.
-    step "Otomatik güvenlik yamaları"
-    c '33' "    Arch'ta güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun"
+    step "Automatic security patches" "Otomatik güvenlik yamaları"
+    warn "Arch has no security-only channel — automatic patches were not configured; keep the system current with 'pacman -Syu'" \
+        "Arch'ta güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun"
 fi
 
 # 2. Service user & group ----------------------------------------------------
-step "Servis kullanıcısı ve grubu"
+step "Service user and group" "Servis kullanıcısı ve grubu"
 if [[ $APPLY_ONLY -eq 1 ]]; then
     getent group "$SVC_GROUP" >/dev/null || die "apply-only requires existing $SVC_GROUP group"
     id "$SVC_USER" >/dev/null 2>&1 || die "apply-only requires existing $SVC_USER user"
@@ -520,7 +536,8 @@ else
             --shell /usr/sbin/nologin "$SVC_USER"
     fi
 fi
-SVC_GROUP_ID=$(service_group_id) || die "$SVC_GROUP grup kimliği çözülemedi"
+SVC_GROUP_ID=$(service_group_id) || die "$SVC_GROUP group ID could not be resolved" \
+    "$SVC_GROUP grup kimliği çözülemedi"
 ok "$SVC_USER:$SVC_GROUP"
 
 # Validate or migrate durable operator choices before building or replacing any
@@ -529,7 +546,7 @@ ok "$SVC_USER:$SVC_GROUP"
 # Kalıcı operatör seçimlerini kurulu ürün baytlarını derlemeden veya
 # değiştirmeden önce doğrula/taşı. Bozuk root-only yapılandırma, mevcut sürüme
 # dokunulmadan güvenli biçimde kurulumu durdurmalıdır.
-step "Panel yapılandırması $PANEL_ENV"
+step "Panel configuration $PANEL_ENV" "Panel yapılandırması $PANEL_ENV"
 if [[ -e "$CONF_DIR" || -L "$CONF_DIR" ]]; then
     [[ -d "$CONF_DIR" && ! -L "$CONF_DIR" ]] || die "panel yapılandırma dizini güvensiz"
     read -r conf_owner conf_group conf_mode < <(stat -Lc '%u %g %a' -- "$CONF_DIR") \
@@ -541,7 +558,7 @@ if [[ -e "$CONF_DIR" || -L "$CONF_DIR" ]]; then
 fi
 install -d -m 0750 -o root -g "$SVC_GROUP" "$CONF_DIR"
 ensure_panel_env
-ok "hazır"
+ok "ready" "hazır"
 
 # 3. Build if artifacts are missing ------------------------------------------
 # A prebuilt release tarball already contains bin/ and web/dist, so this whole
@@ -814,7 +831,8 @@ bootstrap_go() {
     # SHA-256 is pinned above. A same-version PATH binary is not equivalent:
     # its GOROOT/pkg/tool tree is outside this installer's sealed trust root.
     if path_go=$(command -v go 2>/dev/null); then
-        c '33' "    PATH Go ignored for privileged build: $path_go" >&2
+        warn "PATH Go ignored for privileged build: $path_go" \
+            "Ayrıcalıklı derlemede PATH üzerindeki Go yok sayıldı: $path_go" >&2
     fi
     ensure_bootstrap_toolchain_root
 
@@ -828,9 +846,10 @@ bootstrap_go() {
         fi
         cached_present=1
         cached_version=$(go_toolchain_version "$cached_go" || printf '%s' unreadable)
-        c '33' "    Cached Go will be retired: $cached_version (required go$GO_VERSION)" >&2
+        warn "Cached Go will be retired: $cached_version (required go$GO_VERSION)" \
+            "Önbellekteki Go kaldırılacak: $cached_version (gereken go$GO_VERSION)" >&2
     fi
-    c '33' "    Go $GO_VERSION indiriliyor…" >&2
+    warn "Downloading Go $GO_VERSION…" "Go $GO_VERSION indiriliyor…" >&2
     arch=$(dl_arch)
     expected=$(toolchain_archive_sha256 go "$arch")
     archive=$(download_verified_toolchain_archive "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz" "$expected")
@@ -901,7 +920,7 @@ bootstrap_node() {
         return
     fi
     [[ ! -e "$TOOLCHAIN/node" && ! -L "$TOOLCHAIN/node" ]] || die "incomplete Node toolchain already exists"
-    c '33' "    Node $NODE_VERSION indiriliyor…" >&2
+    warn "Downloading Node $NODE_VERSION…" "Node $NODE_VERSION indiriliyor…" >&2
     arch=$(dl_arch)
     node_archive_arch=$arch
     [[ "$node_archive_arch" != amd64 ]] || node_archive_arch=x64
@@ -956,20 +975,22 @@ VER_FLAGS="-X main.buildVersion=$CP_VERSION -X main.buildCommit=$CP_COMMIT"
 # olmamasından kötüdür; hele yeni sürüm bir güvenlik düzeltmesiyse. Yalnız
 # önceden derlenmiş release tarball'ı (.git yok) atlayabilir.
 if [ -d "$SRC/.git" ] || [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] || [ ! -f "$SRC/web/dist/index.html" ]; then
-    step "Kaynaktan derleme (bin/panel, bin/agent, web/dist) — sürüm $CP_VERSION"
+    step "Building from source (bin/panel, bin/agent, web/dist) — version $CP_VERSION" \
+        "Kaynaktan derleme (bin/panel, bin/agent, web/dist) — sürüm $CP_VERSION"
     GO_BIN=$(bootstrap_go)
     NODE_BIN=$(bootstrap_node)
-    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "panel derlenemedi"
-    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "agent derlenemedi"
-    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm kurulumu başarısız"
-    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" run build >/dev/null ) || die "frontend derlenemedi"
-    ok "derlendi ($CP_VERSION · $CP_COMMIT)"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "Panel build failed" "Panel derlenemedi"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "Agent build failed" "Agent derlenemedi"
+    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm installation failed" "npm kurulumu başarısız"
+    ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" run build >/dev/null ) || die "Frontend build failed" "Frontend derlenemedi"
+    ok "built ($CP_VERSION · $CP_COMMIT)" "derlendi ($CP_VERSION · $CP_COMMIT)"
 else
-    ok "Önceden derlenmiş release kullanılıyor (bin/ + web/dist)"
+    ok "Using the prebuilt release (bin/ + web/dist)" \
+        "Önceden derlenmiş sürüm kullanılıyor (bin/ + web/dist)"
 fi
 
 # 4. Install files -----------------------------------------------------------
-step "Dosyalar $PREFIX altına kuruluyor"
+step "Installing files under $PREFIX" "Dosyalar $PREFIX altına kuruluyor"
 install -d -m 0755 "$PREFIX/bin" "$PREFIX/web" "$PREFIX/runtimes"
 install -m 0755 "$SRC/bin/panel" "$PREFIX/bin/panel"
 install -m 0755 "$SRC/bin/agent" "$PREFIX/bin/agent"
@@ -1032,19 +1053,19 @@ fi
 # Runtimes dizini agent'ın Node sürümlerini kurduğu yerdir; grup-sahipli.
 chown -R root:"$SVC_GROUP" "$PREFIX/runtimes"
 chmod 0775 "$PREFIX/runtimes"
-ok "kuruldu"
+ok "installed" "kuruldu"
 
 # 5. Data directory (SQLite lives here; StateDirectory also ensures it) ------
-step "Veri dizini $DATA_DIR"
+step "Data directory $DATA_DIR" "Veri dizini $DATA_DIR"
 install -d -m 0750 -o "$SVC_USER" -g "$SVC_GROUP" "$DATA_DIR"
 # Privileged imports must not live below the panel-owned data directory. The
 # root agent accepts only owner-only regular files from this root; the
 # unprivileged panel merely forwards the operator-selected path.
 install -d -m 0700 -o root -g root "$IMPORT_DIR"
-ok "hazır"
+ok "ready" "hazır"
 
 # 6. systemd units -----------------------------------------------------------
-step "systemd servisleri"
+step "systemd services" "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
@@ -1053,10 +1074,11 @@ install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/syst
 # Operatör seçimleri root-only /etc/celikpanel/panel.env içindedir. Yeniden
 # kurulum ve güncelleme üretici unitini yeniler; kalıcı ayara dokunmaz.
 if [[ "$VALIDATED_PANEL_HTTPS" == 0 ]]; then
-    c '33' "    AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
+    warn "R&D mode: demo accounts are enabled and cookies work over plain HTTP — do not expose this server to the internet" \
+        "AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
 fi
 systemctl daemon-reload
-ok "kuruldu"
+ok "installed" "kuruldu"
 
 # Apply-only ends after immutable layout and ledger metadata are verified. It
 # never initializes state, reconciles firewall, enables/starts services, waits
@@ -1071,7 +1093,8 @@ if [[ $APPLY_ONLY -eq 1 ]]; then
     sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin" "$PREFIX/web" \
         "$PANEL_ENV" "$CONF_DIR" /etc/systemd/system \
         || die "apply-only installed layout could not be made durable"
-    ok "apply-only yerleşim tamamlandı; servisler kapalı bırakıldı"
+    ok "apply-only layout completed; services were left stopped" \
+        "apply-only yerleşim tamamlandı; servisler kapalı bırakıldı"
     exit 0
 fi
 
@@ -1080,7 +1103,7 @@ fi
 # --now is a no-op when the service is already running.
 # enable --now değil restart: yükseltme yeni binary'yi gerçekten yüklemeli;
 # servis zaten çalışıyorsa --now hiçbir şey yapmaz.
-step "Agent başlatılıyor"
+step "Starting the agent" "Agent başlatılıyor"
 if [[ $initialize_ledger -eq 1 ]]; then
     [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
         || die "servis işlem ledger başlatmadan önce mevcut"
@@ -1117,37 +1140,44 @@ read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT
     die "firewall restore unit could not be reconciled"
 systemctl enable celikpanel-agent.service >/dev/null 2>&1 || true
 systemctl restart celikpanel-agent.service || \
-    die "agent yeniden başlatılamadı — 'journalctl -u celikpanel-agent' inceleyin"
+    die "The agent could not be restarted — inspect 'journalctl -u celikpanel-agent'" \
+        "Agent yeniden başlatılamadı — 'journalctl -u celikpanel-agent' inceleyin"
 systemctl is-active --quiet celikpanel-agent.service || \
-    die "agent aktif değil — 'journalctl -u celikpanel-agent' inceleyin"
+    die "The agent is not active — inspect 'journalctl -u celikpanel-agent'" \
+        "Agent aktif değil — 'journalctl -u celikpanel-agent' inceleyin"
 for _ in $(seq 1 20); do
     [ -S /run/celikpanel/agent.sock ] && break
     sleep 0.3
 done
-[ -S /run/celikpanel/agent.sock ] || die "agent socket oluşmadı — 'journalctl -u celikpanel-agent' inceleyin"
-ok "agent çalışıyor"
+[ -S /run/celikpanel/agent.sock ] || die \
+    "The agent socket was not created — inspect 'journalctl -u celikpanel-agent'" \
+    "Agent socket oluşmadı — 'journalctl -u celikpanel-agent' inceleyin"
+ok "agent is running" "agent çalışıyor"
 
 # 8. First administrator -----------------------------------------------------
 if [ "${SKIP_ADMIN:-0}" != "1" ]; then
     if run_panel_as_service_user_with_private_umask --count-users 2>/dev/null | grep -q '^0$'; then
-        step "İlk yönetici oluşturuluyor"
+        step "Creating the first administrator" "İlk yönetici oluşturuluyor"
         run_panel_as_service_user_with_private_umask --create-admin || \
-            die "yönetici oluşturma başarısız"
-        ok "yönetici hazır"
+            die "Administrator creation failed" "Yönetici oluşturma başarısız"
+        ok "administrator is ready" "yönetici hazır"
     else
-        ok "Yönetici zaten var — atlandı"
+        ok "An administrator already exists — skipped" \
+            "Yönetici zaten var — atlandı"
     fi
 fi
 
 # 9. Start the panel ---------------------------------------------------------
-step "Panel başlatılıyor"
+step "Starting the panel" "Panel başlatılıyor"
 systemctl enable celikpanel-panel.service >/dev/null 2>&1 || true
 systemctl restart celikpanel-panel.service || \
-    die "panel yeniden başlatılamadı — 'journalctl -u celikpanel-panel' inceleyin"
+    die "The panel could not be restarted — inspect 'journalctl -u celikpanel-panel'" \
+        "Panel yeniden başlatılamadı — 'journalctl -u celikpanel-panel' inceleyin"
 sleep 1
 systemctl is-active --quiet celikpanel-panel.service || \
-    die "panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
-ok "panel çalışıyor"
+    die "The panel did not start — inspect 'journalctl -u celikpanel-panel'" \
+        "Panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
+ok "panel is running" "panel çalışıyor"
 
 # 10. Done -------------------------------------------------------------------
 IP=""
@@ -1158,7 +1188,7 @@ PORT="${VALIDATED_PANEL_LISTEN##*:}"
 PANEL_SCHEME=https
 [[ "$VALIDATED_PANEL_HTTPS" == 1 ]] || PANEL_SCHEME=http
 echo
-c '1;32' "CelikPanel kuruldu."
+c '1;32' "CelikPanel was installed successfully. / CelikPanel başarıyla kuruldu."
 echo "    Panel:  ${PANEL_SCHEME}://${IP:-SUNUCU_IP}:${PORT}"
-echo "    Servisler: systemctl status celikpanel-agent celikpanel-panel"
-echo "    Günlükler: journalctl -u celikpanel-panel -f"
+echo "    Services / Servisler: systemctl status celikpanel-agent celikpanel-panel"
+echo "    Logs / Günlükler: journalctl -u celikpanel-panel -f"

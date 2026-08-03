@@ -70,6 +70,7 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      - run: bash deploy/test-install-localization-contract.sh
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
       - run: bash deploy/test-download-portal-contract.sh
