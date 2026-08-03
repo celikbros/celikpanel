@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { Globe, Plus, Trash2, ExternalLink, Settings, Lock, HardDrive } from 'lucide-react';
 import { AddDomainModal } from './AddDomainModal';
 import { showToast } from './Toast';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { Globe, X, Lock, Server, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';

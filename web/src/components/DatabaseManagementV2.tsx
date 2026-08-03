@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { Database, Plus, Trash2, Users, Server } from 'lucide-react';
 import { showToast } from './Toast';
 import { AddDatabaseModalV2 } from './AddDatabaseModalV2';

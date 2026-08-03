@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { Network, Wrench, RotateCw, CheckCircle2, Globe, FileText, ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';

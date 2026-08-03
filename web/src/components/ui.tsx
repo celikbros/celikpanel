@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
 
