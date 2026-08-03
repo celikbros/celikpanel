@@ -80,7 +80,7 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) er
 	if err != nil {
 		return err
 	}
-	
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		return err
@@ -146,6 +146,34 @@ func (r *PostgresUserRepository) Update(ctx context.Context, user *core.User) er
 	`
 	_, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, user.Status, user.ID)
 	return err
+}
+
+// UpdateAndRevokeSessions applies the user update and removes every existing
+// session in one transaction. Password and suspension changes use this path so
+// a failed revocation cannot leave an updated credential with old sessions
+// still active.
+func (r *PostgresUserRepository) UpdateAndRevokeSessions(ctx context.Context, user *core.User) error {
+	if user.Status == "" {
+		user.Status = "active"
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE users
+		SET username = ?, password_hash = ?, email = ?, role = ?, status = ?,
+		    auth_epoch = auth_epoch + 1, updated_at = datetime('now')
+		WHERE id = ?
+	`, user.Username, user.PasswordHash, user.Email, user.Role, user.Status, user.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, user.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *PostgresUserRepository) Delete(ctx context.Context, id int) error {

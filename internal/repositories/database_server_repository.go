@@ -218,7 +218,7 @@ func (r *PostgresDatabaseServerRepository) ListByType(ctx context.Context, subsc
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan database server: %v", err)
 		}
-		
+
 		if rootPassword.Valid {
 			server.RootPasswordEncrypted = rootPassword.String
 		}

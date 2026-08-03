@@ -202,13 +202,17 @@ release_txn_reset_update_snapshot_stage() {
     child=$stage/$snapshot
     while IFS= read -r -d '' entry; do
         case "$(basename -- "$entry")" in
-            service-states.tsv|quiesce-coordinators.tsv|snapshot-transition.state) continue ;;
+            service-states.tsv|quiesce-coordinators.tsv|snapshot-transition.state|panel-tls) continue ;;
         esac
         removable+=("$entry")
     done < <(find "$child" -mindepth 1 -maxdepth 1 -print0)
     if [[ ${#removable[@]} -gt 0 ]]; then
         rm -rf -- "${removable[@]}" \
             || { _release_txn_fail "cannot reset resumable snapshot staging payload"; return 1; }
+    fi
+    if [[ -e "$child/panel-tls" || -L "$child/panel-tls" ]]; then
+        [[ -d "$child/panel-tls" && ! -L "$child/panel-tls" ]] || return 1
+        sync -f -- "$child/panel-tls" || return 1
     fi
     sync -f -- "$child/service-states.tsv" "$child/quiesce-coordinators.tsv" \
         "$child/snapshot-transition.state" \
@@ -228,7 +232,8 @@ release_txn_cleanup_unmarked_update_snapshot_stage() {
     release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
     _release_txn_validate_root_directory "$transaction_root" 700 || return 1
     _release_txn_validate_root_directory "$snapshot_root" 700 || return 1
-    for marker in quiesce.pending active completion.pending; do
+    _release_txn_require_scheduler_restore_absent "$transaction_root" || return 1
+    for marker in quiesce.pending active completion.pending scheduler-restore.pending; do
         [[ ! -e "$transaction_root/$marker" && ! -L "$transaction_root/$marker" ]] \
             || { _release_txn_fail "unmarked snapshot cleanup requires no transaction marker"; return 1; }
     done
@@ -369,7 +374,7 @@ _release_txn_read_marker_fields() {
     local token operation snapshot
     local -a marker_lines
     release_txn_validate_root "$root" || return 1
-    [[ "$marker_name" == quiesce.pending || "$marker_name" == active || "$marker_name" == completion.pending ]] \
+    [[ "$marker_name" == quiesce.pending || "$marker_name" == active || "$marker_name" == completion.pending || "$marker_name" == scheduler-restore.pending ]] \
         || { _release_txn_fail "unsupported transaction marker name"; return 1; }
     marker=$root/$marker_name
     [[ -f "$marker" && ! -L "$marker" ]] \
@@ -410,6 +415,10 @@ release_txn_read_active_fields() {
 release_txn_read_pending_fields() {
     _release_txn_read_marker_fields "$1" completion.pending
 }
+
+release_txn_read_scheduler_restore_fields() {
+    _release_txn_read_marker_fields "$1" scheduler-restore.pending
+}
 _release_txn_validate_marker() {
     local root=$1 marker_name=$2 expected_token=$3 expected_operation=$4 expected_snapshot=$5
     local marker owner group mode links size
@@ -417,7 +426,7 @@ _release_txn_validate_marker() {
     release_txn_validate_operation "$expected_operation" || return 1
     release_txn_validate_snapshot_name "$expected_snapshot" || return 1
     release_txn_validate_root "$root" || return 1
-    [[ "$marker_name" == quiesce.pending || "$marker_name" == active || "$marker_name" == completion.pending ]] \
+    [[ "$marker_name" == quiesce.pending || "$marker_name" == active || "$marker_name" == completion.pending || "$marker_name" == scheduler-restore.pending ]] \
         || { _release_txn_fail "unsupported transaction marker name"; return 1; }
     marker=$root/$marker_name
     [[ -f "$marker" && ! -L "$marker" ]] \
@@ -445,6 +454,16 @@ release_txn_validate_active_token() {
 release_txn_validate_pending_token() {
     _release_txn_validate_marker "$1" completion.pending "$2" "$3" "$4"
 }
+
+release_txn_validate_scheduler_restore_token() {
+    _release_txn_validate_marker "$1" scheduler-restore.pending "$2" "$3" "$4"
+}
+
+_release_txn_require_scheduler_restore_absent() {
+    local root=$1
+    [[ ! -e "$root/scheduler-restore.pending" && ! -L "$root/scheduler-restore.pending" ]] \
+        || { _release_txn_fail "scheduler restore must be finalized before another transaction transition"; return 1; }
+}
 # A failed update may be taken over by rollback only for the exact same
 # snapshot. Preserve the token and atomically rewrite update to rollback; a
 # rerun after either side of the rename is idempotent.
@@ -456,6 +475,7 @@ release_txn_takeover_active_for_rollback() {
     local marker token operation snapshot tmp
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
     release_txn_validate_snapshot_name "$requested_snapshot" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     [[ ! -e "$root/quiesce.pending" && ! -L "$root/quiesce.pending" ]] \
         || { _release_txn_fail "quiesce.pending must be recovered by update before rollback takeover"; return 1; }
     [[ ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
@@ -501,6 +521,7 @@ release_txn_takeover_active_for_rollback() {
 release_txn_create_quiesce_marker() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5 snapshot_root=$6 stage=$7 marker tmp
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     release_txn_validate_token "$token" || return 1
     release_txn_validate_operation "$operation" || return 1
     release_txn_validate_snapshot_name "$snapshot" || return 1
@@ -535,6 +556,7 @@ release_txn_create_quiesce_marker() {
 release_txn_promote_quiesce_to_active() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5 snapshot_root=$6 stage=$7
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     release_txn_validate_quiesce_token "$root" "$token" "$operation" "$snapshot" "$snapshot_root" "$stage" || return 1
     [[ ! -e "$root/active" && ! -L "$root/active" ]] \
         || { _release_txn_fail "active transaction marker already exists"; return 1; }
@@ -557,6 +579,7 @@ release_txn_promote_quiesce_to_active() {
 release_txn_remove_quiesce_marker() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5 snapshot_root=$6 stage=$7
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     release_txn_validate_quiesce_token "$root" "$token" "$operation" "$snapshot" "$snapshot_root" "$stage" || return 1
     [[ ! -e "$root/active" && ! -L "$root/active" ]] \
         || { _release_txn_fail "active marker cannot coexist with quiesce abort"; return 1; }
@@ -584,6 +607,7 @@ release_txn_remove_pre_mutation_active_marker() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5
     local snapshot_root=$6 stage=$7 found marker
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     [[ "$operation" == update ]] \
         || { _release_txn_fail "pre-mutation active abort is defined only for update"; return 1; }
     release_txn_validate_active_token "$root" "$token" "$operation" "$snapshot" || return 1
@@ -613,6 +637,7 @@ release_txn_remove_pre_mutation_active_marker() {
 release_txn_create_active_marker() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5 marker tmp
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     release_txn_validate_token "$token" || return 1
     release_txn_validate_operation "$operation" || return 1
     release_txn_validate_snapshot_name "$snapshot" || return 1
@@ -642,6 +667,7 @@ release_txn_create_active_marker() {
 release_txn_mark_completion_pending() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_require_scheduler_restore_absent "$root" || return 1
     release_txn_validate_active_token "$root" "$token" "$operation" "$snapshot" || return 1
     [[ ! -e "$root/quiesce.pending" && ! -L "$root/quiesce.pending" ]] \
         || { _release_txn_fail "quiesce marker cannot coexist with active completion"; return 1; }
@@ -653,18 +679,64 @@ release_txn_mark_completion_pending() {
         || { _release_txn_fail "cannot make completion-pending rename durable"; return 1; }
     release_txn_validate_pending_token "$root" "$token" "$operation" "$snapshot"
 }
+
+# Persist the remaining Certbot scheduler obligation before runtime completion
+# evidence is removed. Re-publishing the exact marker is idempotent.
+release_txn_mark_scheduler_restore_pending() {
+    local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5 marker tmp
+    release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    release_txn_validate_pending_token "$root" "$token" "$operation" "$snapshot" || return 1
+    [[ ! -e "$root/quiesce.pending" && ! -L "$root/quiesce.pending" &&
+       ! -e "$root/active" && ! -L "$root/active" ]] \
+        || { _release_txn_fail "scheduler restore requires completion.pending as the runtime phase"; return 1; }
+    marker=$root/scheduler-restore.pending
+    if [[ -e "$marker" || -L "$marker" ]]; then
+        release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot"
+        return
+    fi
+    tmp=$(mktemp -p "$root" '.scheduler-restore.tmp.XXXXXXXXXX') \
+        || { _release_txn_fail "cannot stage scheduler-restore marker"; return 1; }
+    if ! _release_txn_print_marker "$token" "$operation" "$snapshot" > "$tmp" ||
+       ! chown root:root -- "$tmp" ||
+       ! chmod 0600 -- "$tmp" ||
+       ! sync -f -- "$tmp" ||
+       ! mv -T --no-clobber -- "$tmp" "$marker" ||
+       ! sync -f -- "$root"; then
+        [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+        _release_txn_fail "cannot durably publish scheduler-restore marker"
+        return 1
+    fi
+    release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot"
+}
 # Only the fully verified success path may remove completion.pending.
 # Yalnız tamamen doğrulanmış başarı yolu completion.pending işaretçisini silebilir.
 release_txn_remove_completion_pending() {
     local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5
     release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
     release_txn_validate_pending_token "$root" "$token" "$operation" "$snapshot" || return 1
+    release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot" || return 1
     rm -f -- "$root/completion.pending" \
         || { _release_txn_fail "cannot remove completion-pending transaction marker"; return 1; }
     sync -f -- "$root" \
         || { _release_txn_fail "cannot make completion-pending removal durable"; return 1; }
     [[ ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
         || { _release_txn_fail "completion-pending transaction marker still exists"; return 1; }
+}
+
+release_txn_remove_scheduler_restore_pending() {
+    local root=$1 inherited_fd=$2 token=$3 operation=$4 snapshot=$5
+    release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot" || return 1
+    [[ ! -e "$root/quiesce.pending" && ! -L "$root/quiesce.pending" &&
+       ! -e "$root/active" && ! -L "$root/active" &&
+       ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
+        || { _release_txn_fail "scheduler-restore marker cannot be removed before runtime completion"; return 1; }
+    rm -f -- "$root/scheduler-restore.pending" \
+        || { _release_txn_fail "cannot remove scheduler-restore marker"; return 1; }
+    sync -f -- "$root" \
+        || { _release_txn_fail "cannot make scheduler-restore marker removal durable"; return 1; }
+    [[ ! -e "$root/scheduler-restore.pending" && ! -L "$root/scheduler-restore.pending" ]] \
+        || { _release_txn_fail "scheduler-restore marker still exists"; return 1; }
 }
 _release_txn_validate_root_directory() {
     local path=$1 expected_mode=$2 owner group mode canonical
@@ -953,17 +1025,24 @@ _release_txn_prepare_runtime_root() {
 }
 
 _release_txn_current_marker() {
-    local root=$1 token=$2 operation=$3 snapshot=$4 quiesce_present=0 active_present=0 pending_present=0
+    local root=$1 token=$2 operation=$3 snapshot=$4
+    local quiesce_present=0 active_present=0 pending_present=0 scheduler_present=0
     [[ -e "$root/quiesce.pending" || -L "$root/quiesce.pending" ]] && quiesce_present=1
     [[ -e "$root/active" || -L "$root/active" ]] && active_present=1
     [[ -e "$root/completion.pending" || -L "$root/completion.pending" ]] && pending_present=1
+    [[ -e "$root/scheduler-restore.pending" || -L "$root/scheduler-restore.pending" ]] && scheduler_present=1
     [[ "$quiesce_present" -eq 0 && $((active_present + pending_present)) -eq 1 ]] \
         || { _release_txn_fail "start authorization requires exactly one active or completion marker"; return 1; }
     if [[ "$active_present" -eq 1 ]]; then
+        [[ "$scheduler_present" -eq 0 ]] \
+            || { _release_txn_fail "scheduler restore cannot coexist with active start authorization"; return 1; }
         release_txn_validate_active_token "$root" "$token" "$operation" "$snapshot" || return 1
         printf '%s\n' "$root/active"
     else
         release_txn_validate_pending_token "$root" "$token" "$operation" "$snapshot" || return 1
+        if [[ "$scheduler_present" -eq 1 ]]; then
+            release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot" || return 1
+        fi
         printf '%s\n' "$root/completion.pending"
     fi
 }

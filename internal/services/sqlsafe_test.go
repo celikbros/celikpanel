@@ -15,12 +15,12 @@ func TestValidateSQLIdentifier(t *testing.T) {
 	// sınır durumudur.
 	invalid := []string{
 		"",
-		"1db",                        // starts with a digit
-		"drop table",                 // space
-		`ex";DROP TABLE users;--`,    // classic injection
-		"user'--",                    // quote
-		"user`--",                    // backtick
-		"tab\tname",                  // control char
+		"1db",                     // starts with a digit
+		"drop table",              // space
+		`ex";DROP TABLE users;--`, // classic injection
+		"user'--",                 // quote
+		"user`--",                 // backtick
+		"tab\tname",               // control char
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // too long
 	}
 	for _, name := range invalid {

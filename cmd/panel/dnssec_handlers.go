@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DNSSEC + DANE, panel side. Signing happens in pdns through the agent; the
@@ -51,11 +53,7 @@ func daneMutationSafetyPrerequisitesAvailable() bool {
 	return false
 }
 
-type dnssecAgentResponse struct {
-	Secured bool     `json:"secured"`
-	DS      []string `json:"ds,omitempty"`
-	Error   string   `json:"error,omitempty"`
-}
+type dnssecAgentResponse = transport.DNSSECStatusResponse
 
 // dnssecResultError keeps failures returned inside an otherwise successful
 // RPC response visible to the operator. It also protects a newer panel from an
@@ -91,9 +89,7 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 	var resp dnssecAgentResponse
 	switch r.Method {
 	case http.MethodGet:
-		if err := p.agentClient.Call("Agent.DNSSECStatus", &struct {
-			Zone string `json:"zone"`
-		}{Zone: domain}, &resp); err != nil {
+		if err := p.callAgent("Agent.DNSSECStatus", &transport.DNSSECRequest{Zone: domain}, &resp); err != nil {
 			writeAgentError(w, err, "DNSSEC")
 			return
 		}
@@ -108,9 +104,7 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		})
 
 	case http.MethodPost:
-		if err := p.agentClient.Call("Agent.SecureDNSZone", &struct {
-			Zone string `json:"zone"`
-		}{Zone: domain}, &resp); err != nil {
+		if err := p.callAgent("Agent.SecureDNSZone", &transport.DNSSECRequest{Zone: domain}, &resp); err != nil {
 			writeAgentError(w, err, "DNSSEC")
 			return
 		}

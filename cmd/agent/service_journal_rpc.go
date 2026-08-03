@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // ServiceJournal returns a unit's recent journal lines. Nine components had a
@@ -28,18 +30,11 @@ import (
 //
 // Yapısı gereği salt-okunur: journalctl sorgulanır, asla yazılmaz ve unit adı
 // doğrulanır ki argüman bir seçeneğe ya da ikinci bir komuta dönüşemesin.
-type ServiceJournalRequest struct {
-	Unit  string `json:"unit"`
-	Lines int    `json:"lines"`
-}
+type ServiceJournalRequest = transport.ServiceJournalRequest
 
-type ServiceJournalResponse struct {
-	Unit  string   `json:"unit"`
-	Lines []string `json:"lines"`
-	Error string   `json:"error,omitempty"`
-}
+type ServiceJournalResponse = transport.ServiceJournalResponse
 
-func (a *Agent) ServiceJournal(req ServiceJournalRequest, resp *ServiceJournalResponse) error {
+func (a *Agent) ServiceJournal(req *ServiceJournalRequest, resp *ServiceJournalResponse) error {
 	unit := strings.TrimSpace(req.Unit)
 	if !validUnitName(unit) {
 		resp.Error = "invalid unit name"

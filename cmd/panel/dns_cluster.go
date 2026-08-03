@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -41,26 +40,15 @@ const (
 	settingDNSPeerNS = "dns_peer_ns"
 )
 
-type dnsClusterAgentState struct {
-	Role   string `json:"role"`
-	PeerIP string `json:"peer_ip"`
-	PeerNS string `json:"peer_ns"`
-}
+type dnsClusterAgentState = transport.DNSClusterRequest
 
-type dnsClusterAgentResponse struct {
-	Applied bool   `json:"applied"`
-	Detail  string `json:"detail,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
+type dnsClusterAgentResponse = transport.DNSClusterResponse
 
-type dnsClusterReadinessResponse struct {
-	Ready  bool   `json:"ready"`
-	Detail string `json:"detail,omitempty"`
-}
+type dnsClusterReadinessResponse = transport.DNSClusterReadinessResponse
 
 func (p *Panel) applyDNSClusterAgent(state dnsClusterAgentState) (dnsClusterAgentResponse, error) {
 	var resp dnsClusterAgentResponse
-	err := p.agentClient.Call("Agent.ConfigureDNSCluster", &state, &resp)
+	err := p.callAgent("Agent.ConfigureDNSCluster", &state, &resp)
 	return resp, err
 }
 
@@ -422,7 +410,7 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		}
 		if p.agentClient != nil {
 			var readiness dnsClusterReadinessResponse
-			if err := p.agentClient.Call("Agent.DNSClusterReadiness", &transport.Empty{}, &readiness); err == nil {
+			if err := p.callAgent("Agent.DNSClusterReadiness", &transport.Empty{}, &readiness); err == nil {
 				v.DNSServiceKnown = true
 				v.DNSServiceReady = readiness.Ready
 				v.DNSServiceDetail = readiness.Detail
@@ -446,128 +434,7 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(v)
 
 	case http.MethodPut:
-		p.dnsTopologyMu.Lock()
-		defer p.dnsTopologyMu.Unlock()
-
-		var req struct {
-			Role   string `json:"role"`
-			PeerIP string `json:"peer_ip"`
-			PeerNS string `json:"peer_ns"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-		req.Role = normalizeDNSRole(strings.TrimSpace(req.Role))
-		req.PeerIP = strings.TrimSpace(req.PeerIP)
-		req.PeerNS = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.PeerNS, ".")))
-		ns1, ns2 := p.configuredNameservers(r.Context())
-		if ns1 == "" || ns2 == "" {
-			writeClientError(w, http.StatusConflict, "save the two shared nameserver names before choosing an operating mode")
-			return
-		}
-		localIPv4, ok := canonicalIPv4(serverPrimaryIP())
-		if !ok {
-			writeClientError(w, http.StatusConflict, "this server has no usable IPv4 address; set CELIKPANEL_SERVER_IP and retry")
-			return
-		}
-
-		switch req.Role {
-		case "standalone":
-			req.PeerIP, req.PeerNS = "", ""
-		case "paired":
-			peerIP := net.ParseIP(req.PeerIP)
-			peerIPv4 := peerIP.To4()
-			if peerIPv4 == nil || !peerIPv4.IsGlobalUnicast() {
-				writeClientError(w, http.StatusBadRequest, "enter the other server's IPv4 address")
-				return
-			}
-			req.PeerIP = peerIPv4.String()
-			if !validDNSHostname(req.PeerNS) {
-				writeClientError(w, http.StatusBadRequest, "enter the other server's nameserver name, for example ns2.example.com")
-				return
-			}
-			// Pointing a server at itself is not a cluster, and it would make
-			// PowerDNS notify and transfer in a loop.
-			// Bir sunucuyu kendine yöneltmek küme değildir; PowerDNS'i döngüde
-			// bildirim ve aktarım yapmaya sokar.
-			if req.PeerIP == localIPv4 {
-				writeCodedError(w, http.StatusBadRequest, errCodeDNSClusterPeerIsLocal, "the other server cannot be this server", "")
-				return
-			}
-			if !strings.EqualFold(req.PeerNS, ns1) && !strings.EqualFold(req.PeerNS, ns2) {
-				writeClientError(w, http.StatusBadRequest, "the other server's name must be one of the two saved nameservers")
-				return
-			}
-		default:
-			writeClientError(w, http.StatusBadRequest, "role must be standalone or paired")
-			return
-		}
-
-		previous, err := p.dnsClusterAgentSnapshot(r.Context())
-		if err != nil {
-			writeServerError(w, fmt.Errorf("read previous DNS cluster settings: %w", err))
-			return
-		}
-
-		resp, err := p.applyDNSClusterAgent(dnsClusterAgentState{
-			Role: req.Role, PeerIP: req.PeerIP, PeerNS: req.PeerNS,
-		})
-		if err != nil {
-			writeAgentError(w, err, "DNS cluster")
-			return
-		}
-		if resp.Error != "" {
-			writeClientError(w, http.StatusConflict, resp.Error)
-			return
-		}
-		if !resp.Applied {
-			writeClientError(w, http.StatusConflict, "the DNS server did not confirm the cluster change")
-			return
-		}
-
-		if err := p.saveDNSClusterSettingsAndReconcile(
-			r.Context(), req.Role, req.PeerIP, req.PeerNS, ns1, ns2, localIPv4,
-		); err != nil {
-			rollbackResp, rollbackCallErr := p.applyDNSClusterAgent(previous)
-			var rollbackErr error
-			switch {
-			case rollbackCallErr != nil:
-				rollbackErr = rollbackCallErr
-			case rollbackResp.Error != "":
-				rollbackErr = fmt.Errorf("%s", rollbackResp.Error)
-			case !rollbackResp.Applied:
-				rollbackErr = fmt.Errorf("agent did not confirm the restored DNS role")
-			}
-			if rollbackErr != nil {
-				log.Printf("[500][dns-cluster] save settings after agent apply: %v; restore previous role %q failed: %v",
-					err, previous.Role, rollbackErr)
-				writeCodedError(w, http.StatusInternalServerError, errCodeInternal,
-					"DNS cluster settings could not be saved, and the previous DNS server role could not be restored; check the DNS service before retrying",
-					"")
-				return
-			}
-			log.Printf("[500][dns-cluster] save settings after agent apply: %v; previous role %q restored",
-				err, previous.Role)
-			writeCodedError(w, http.StatusInternalServerError, errCodeInternal,
-				"DNS cluster settings could not be saved; the previous DNS server role was restored",
-				"")
-			return
-		}
-		// Re-publish every local zone after the mode changes. This advances each
-		// SOA serial and sends NOTIFY, so pre-existing zones are copied to the
-		// peer immediately instead of waiting for the next record edit.
-		if _, err := p.syncAllZonesStrict(r.Context()); err != nil {
-			err = fmt.Errorf("publish DNS cluster settings: %w", err)
-			if writeDNSPublicationConflict(w, err,
-				"DNS cluster settings were saved, but one or more zones could not be published; check the DNS service and retry") {
-				return
-			}
-			writeServerError(w, err)
-			return
-		}
-		p.audit(r, "settings.dns_cluster:"+req.Role+" peer="+req.PeerIP, "settings", 0)
-		json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail})
+		writeDNSSetupRequired(w)
 
 	default:
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")

@@ -265,14 +265,23 @@ func injectOneServiceMutationWriteFault(
 	point string,
 ) *bool {
 	fired := false
-	manager.writeFault = func(actual string) error {
+	setServiceMutationWriteFault(manager, func(actual string) error {
 		if actual == point && !fired {
 			fired = true
 			return fmt.Errorf("injected %s", point)
 		}
 		return nil
-	}
+	})
 	return &fired
+}
+
+func setServiceMutationWriteFault(
+	manager *serviceMutationManager,
+	fault func(string) error,
+) {
+	manager.mu.Lock()
+	manager.writeFault = fault
+	manager.mu.Unlock()
 }
 
 func readServiceMutationCrashLedger(t *testing.T, manager *serviceMutationManager) ([]byte, serviceMutationLedger) {
@@ -303,7 +312,7 @@ func assertServiceMutationMemoryMatchesDisk(t *testing.T, manager *serviceMutati
 
 func finishServiceMutationCrashTestManager(t *testing.T, manager *serviceMutationManager) {
 	t.Helper()
-	manager.writeFault = nil
+	setServiceMutationWriteFault(manager, nil)
 	manager.mu.Lock()
 	poisoned := manager.poisoned != nil
 	runtime := manager.active
@@ -358,7 +367,7 @@ func TestServiceMutationLedgerPrePublishFailuresRollBack(t *testing.T) {
 			}
 			assertServiceMutationMemoryMatchesDisk(t, manager, afterRaw)
 
-			manager.writeFault = nil
+			setServiceMutationWriteFault(manager, nil)
 			if err := operation.invoke(manager); err != nil {
 				t.Fatalf("retry after pre-publish fault: %v", err)
 			}
@@ -522,14 +531,14 @@ func TestServiceMutationCancelWinsDeterministicFinishRace(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})
 	blocked := false
-	manager.writeFault = func(point string) error {
+	setServiceMutationWriteFault(manager, func(point string) error {
 		if point == serviceMutationWriteFaultBeforeRename && !blocked {
 			blocked = true
 			close(entered)
 			<-release
 		}
 		return nil
-	}
+	})
 	type result struct {
 		job *ServiceMutationJob
 		err error
@@ -537,8 +546,10 @@ func TestServiceMutationCancelWinsDeterministicFinishRace(t *testing.T) {
 	cancelResult := make(chan result, 1)
 	go func() {
 		job, cancelErr := manager.cancelJob(&ServiceMutationCancelRequest{
-			RequestID:     testMutationRequestID,
-			ExpectedOwner: testMutationOwnerID,
+			RequestID:      testMutationRequestID,
+			ExpectedOwner:  testMutationOwnerID,
+			FailureCode:    "service_mutation_cancelled",
+			FailureMessage: "The test explicitly cancelled this mutation.",
 		})
 		cancelResult <- result{job: job, err: cancelErr}
 	}()
@@ -560,7 +571,8 @@ func TestServiceMutationCancelWinsDeterministicFinishRace(t *testing.T) {
 
 	cancelled := <-cancelResult
 	if cancelled.err != nil || cancelled.job == nil ||
-		cancelled.job.Status != serviceMutationStatusCancelling {
+		cancelled.job.Status != serviceMutationStatusCancelling ||
+		cancelled.job.ErrorCode != "service_mutation_cancelled" {
 		t.Fatalf("cancel result job=%+v err=%v", cancelled.job, cancelled.err)
 	}
 	finished := <-finishResult
@@ -569,10 +581,11 @@ func TestServiceMutationCancelWinsDeterministicFinishRace(t *testing.T) {
 		t.Fatalf("finish raced past cancellation job=%+v err=%v", finished.job, finished.err)
 	}
 
-	manager.writeFault = nil
+	setServiceMutationWriteFault(manager, nil)
 	done()
 	job := manager.status(testMutationRequestID)
-	if job == nil || job.Status != serviceMutationStatusFailed {
+	if job == nil || job.Status != serviceMutationStatusFailed ||
+		job.ErrorCode != "service_mutation_cancelled" {
 		t.Fatalf("cancelled mutation did not become terminal after its step exited: %+v", job)
 	}
 }

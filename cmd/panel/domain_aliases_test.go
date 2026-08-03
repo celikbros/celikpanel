@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 func newDomainAliasFixture(t *testing.T) (*Panel, int) {
@@ -47,6 +48,48 @@ func TestCanonicalDomainAlias(t *testing.T) {
 		if _, err := canonicalDomainAlias(invalid); !errors.Is(err, errInvalidDomainAlias) {
 			t.Fatalf("canonicalDomainAlias(%q) error = %v", invalid, err)
 		}
+	}
+}
+
+func TestAliasMutationLockSerializesOnlyMatchingAlias(t *testing.T) {
+	unlockFirst := lockDomainAliasMutation("same.example.test")
+	firstReleased := false
+	defer func() {
+		if !firstReleased {
+			unlockFirst()
+		}
+	}()
+
+	sameAcquired := make(chan struct{})
+	go func() {
+		unlock := lockDomainAliasMutation("same.example.test")
+		close(sameAcquired)
+		unlock()
+	}()
+	select {
+	case <-sameAcquired:
+		t.Fatal("matching alias mutation was not serialized")
+	case <-time.After(40 * time.Millisecond):
+	}
+
+	differentAcquired := make(chan struct{})
+	go func() {
+		unlock := lockDomainAliasMutation("different.example.test")
+		close(differentAcquired)
+		unlock()
+	}()
+	select {
+	case <-differentAcquired:
+	case <-time.After(time.Second):
+		t.Fatal("unrelated alias mutation was blocked by another alias")
+	}
+
+	unlockFirst()
+	firstReleased = true
+	select {
+	case <-sameAcquired:
+	case <-time.After(time.Second):
+		t.Fatal("matching alias mutation stayed blocked after release")
 	}
 }
 

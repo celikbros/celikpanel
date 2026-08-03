@@ -2,24 +2,18 @@ package main
 
 import (
 	"os/exec"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // System Check RPC Methods
 
-// CheckInstalledServicesRequest represents a request to check installed services
-type CheckInstalledServicesRequest struct{}
+type CheckInstalledServicesRequest = transport.Empty
 
-// CheckInstalledServicesResponse represents installed services
-type CheckInstalledServicesResponse struct {
-	Nginx      bool `json:"nginx"`
-	Apache     bool `json:"apache"`
-	MySQL      bool `json:"mysql"`
-	PostgreSQL bool `json:"postgresql"`
-	PHP        bool `json:"php"`
-}
+type CheckInstalledServicesResponse = transport.CheckInstalledServicesResponse
 
 // CheckInstalledServices checks which services are installed on the system
-func (a *Agent) CheckInstalledServices(req CheckInstalledServicesRequest, resp *CheckInstalledServicesResponse) error {
+func (a *Agent) CheckInstalledServices(req *CheckInstalledServicesRequest, resp *CheckInstalledServicesResponse) error {
 	// Check nginx
 	cmd := exec.Command("which", "nginx")
 	if err := cmd.Run(); err == nil {

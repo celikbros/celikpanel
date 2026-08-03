@@ -20,6 +20,19 @@ type dnsSetupRequest struct {
 	PeerNS string `json:"peer_ns"`
 }
 
+// writeDNSSetupRequired keeps the legacy read endpoints available while
+// refusing their old partial-write contracts. DNS identity is one topology:
+// the pair, role and peer assignment must be validated and committed together.
+func writeDNSSetupRequired(w http.ResponseWriter) {
+	writeCodedError(
+		w,
+		http.StatusConflict,
+		errCodeDNSSetupRequired,
+		"legacy DNS settings writes are disabled; submit the complete nameserver pair and operating mode to /api/v1/settings/dns-setup",
+		"/settings?section=dns",
+	)
+}
+
 // handleDNSSetup applies the complete DNS identity idempotently. The agent is
 // changed first, then the pair, role, peer tuple and every ledger-zone rewrite
 // commit together. If the ledger transaction fails, the previous agent role is

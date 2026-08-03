@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Node runtime management endpoints (admin-only via isAdminOnlyPath).
@@ -19,11 +22,10 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		var resp struct {
-			Installed     []string `json:"installed"`
-			SystemVersion string   `json:"system_version"`
-		}
-		if err := p.agentClient.Call("Agent.ListNodeVersions", &struct{}{}, &resp); err != nil {
+		var resp transport.NodeVersionsResponse
+		callCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
+		if err := p.agentClient.CallContext(callCtx, "Agent.ListNodeVersions", &transport.Empty{}, &resp); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -139,14 +141,10 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/api/v1/runtimes/node/")
 
 	if rest == "lts" && r.Method == http.MethodGet {
-		var resp struct {
-			Releases []struct {
-				Version string `json:"version"`
-				Name    string `json:"name"`
-			} `json:"releases"`
-			Error string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.ListNodeLTS", &struct{}{}, &resp); err != nil {
+		var resp transport.NodeLTSResponse
+		callCtx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+		defer cancel()
+		if err := p.agentClient.CallContext(callCtx, "Agent.ListNodeLTS", &transport.Empty{}, &resp); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -159,10 +157,7 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if resp.Releases == nil {
-			resp.Releases = []struct {
-				Version string `json:"version"`
-				Name    string `json:"name"`
-			}{}
+			resp.Releases = []transport.NodeLTSRelease{}
 		}
 		json.NewEncoder(w).Encode(resp)
 		return
@@ -198,16 +193,15 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 				"", blockers)
 			return
 		}
-		var resp struct {
-			Removed bool   `json:"removed"`
-			Error   string `json:"error,omitempty"`
-		}
+		var resp transport.NodeRemoveResponse
 		err = p.withStandaloneAgentMutation(r.Context(), "runtime_remove", "node:"+version, "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveNodeVersion", &struct {
-				MutationRequestID string `json:"mutation_request_id"`
-				MutationOwnerID   string `json:"mutation_owner_id"`
-				Version           string `json:"version"`
-			}{binding.MutationRequestID, binding.MutationOwnerID, version}, &resp); err != nil {
+			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveNodeVersion", &transport.NodeRemoveRequest{
+				ServiceMutationBinding: transport.ServiceMutationBinding{
+					MutationRequestID: binding.MutationRequestID,
+					MutationOwnerID:   binding.MutationOwnerID,
+				},
+				Version: version,
+			}, &resp); err != nil {
 				return err
 			}
 			if resp.Error != "" {

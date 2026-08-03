@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Project-type hosting for a domain — roadmap 3A. A site now declares what
@@ -81,152 +83,6 @@ func (p *Panel) handleDomainHosting(w http.ResponseWriter, r *http.Request, doma
 	}
 }
 
-func (p *Panel) handleUpdateHosting(w http.ResponseWriter, r *http.Request, domainID int) {
-	var req hostingSettings
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeClientError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	if !validProjectTypes[req.ProjectType] {
-		writeClientError(w, http.StatusBadRequest, "project_type must be one of php, static, node, proxy, forwarding")
-		return
-	}
-
-	// Type-specific validation, honest and specific.
-	// Tipe özgü doğrulama; dürüst ve belirli.
-	switch req.ProjectType {
-	case "node":
-		if strings.TrimSpace(req.StartCommand) == "" {
-			writeClientError(w, http.StatusBadRequest, "start_command is required for node projects")
-			return
-		}
-		// The "system interpreter" escape is closed (B3d): a node site must
-		// name a panel-installed version. An unnamed interpreter is one the
-		// panel cannot list, size, update or refuse to delete — every
-		// protection built today would be blind to it. Existing sites saved
-		// with the old empty value keep running until their next edit.
-		// "Sistem yorumlayıcısı" kaçağı kapandı (B3d): node sitesi panelin
-		// kurduğu bir sürümü adlandırmalı. Adsız yorumlayıcıyı panel
-		// listeleyemez, ölçemez, güncelleyemez, silinmesini reddedemez —
-		// bugün kurulan her koruma ona kör kalırdı. Eski boş değerle
-		// kayıtlı siteler bir sonraki düzenlemeye dek çalışmayı sürdürür.
-		if strings.TrimSpace(req.RuntimeVersion) == "" {
-			writeCodedError(w, http.StatusBadRequest, errCodeRuntimeVersionRequired,
-				"pick a Node.js version installed by the panel", "/services")
-			return
-		}
-	case "forwarding":
-		if !strings.HasPrefix(req.ForwardTo, "http://") && !strings.HasPrefix(req.ForwardTo, "https://") {
-			writeClientError(w, http.StatusBadRequest, "forward_to must be an http(s) URL")
-			return
-		}
-		if req.ForwardCode != 301 && req.ForwardCode != 302 {
-			req.ForwardCode = 301
-		}
-	case "proxy":
-		if !strings.HasPrefix(req.ForwardTo, "http://") && !strings.HasPrefix(req.ForwardTo, "https://") {
-			writeClientError(w, http.StatusBadRequest, "forward_to (upstream URL) is required for proxy projects")
-			return
-		}
-	}
-
-	// node needs a local port; allocate the first free one when not given.
-	// node yerel port ister; verilmemişse ilk boş portu tahsis et.
-	if req.ProjectType == "node" && req.AppPort == 0 {
-		port, err := p.allocateAppPort(r.Context())
-		if err != nil {
-			writeServerError(w, err)
-			return
-		}
-		req.AppPort = port
-	}
-
-	var siteID int
-	var docroot, oldType string
-	err := p.db.GetDB().QueryRowContext(r.Context(),
-		`SELECT id, document_root, COALESCE(project_type,'php')
-		 FROM sites WHERE domain_id = ?`, domainID).
-		Scan(&siteID, &docroot, &oldType)
-	if err != nil {
-		writeClientError(w, http.StatusNotFound, "site not found")
-		return
-	}
-
-	if _, err := p.db.GetDB().ExecContext(r.Context(), `
-		UPDATE sites SET project_type = ?, app_port = ?, start_command = ?,
-		       runtime_version = ?, forward_to = ?, forward_code = ?,
-		       updated_at = datetime('now')
-		WHERE id = ?`,
-		req.ProjectType, nullIfZero(req.AppPort), nullIfEmpty(req.StartCommand),
-		nullIfEmpty(req.RuntimeVersion), nullIfEmpty(req.ForwardTo), req.ForwardCode, siteID); err != nil {
-		writeServerError(w, err)
-		return
-	}
-
-	var domainName string
-	_ = p.db.GetDB().QueryRowContext(r.Context(), `SELECT name FROM domains WHERE id = ?`, domainID).Scan(&domainName)
-
-	// Supervised app lifecycle follows the type change.
-	// Gözetimli uygulama yaşam döngüsü tip değişikliğini izler.
-	if req.ProjectType == "node" {
-		var resp struct {
-			Unit  string `json:"unit"`
-			Error string `json:"error,omitempty"`
-		}
-		err := p.agentClient.Call("Agent.ApplyAppUnit", &struct {
-			SiteID      int    `json:"site_id"`
-			Description string `json:"description"`
-			WorkDir     string `json:"work_dir"`
-			Command     string `json:"command"`
-			Port        int    `json:"port"`
-			NodeVersion string `json:"node_version"`
-			RunAsUser   string `json:"run_as_user,omitempty"`
-		}{
-			SiteID:      siteID,
-			Description: domainName,
-			WorkDir:     docroot,
-			Command:     req.StartCommand,
-			Port:        req.AppPort,
-			NodeVersion: req.RuntimeVersion,
-			// Until per-site system users land, apps run as the web user in
-			// production — never root.
-			// Site başına sistem kullanıcıları gelene dek uygulamalar üretimde
-			// web kullanıcısı olarak çalışır — asla root değil.
-			RunAsUser: "www-data",
-		}, &resp)
-		if err != nil {
-			writeServerError(w, err)
-			return
-		}
-		if resp.Error != "" {
-			writeClientError(w, http.StatusConflict, resp.Error)
-			return
-		}
-	} else if oldType == "node" {
-		var resp struct {
-			Unit  string `json:"unit"`
-			Error string `json:"error,omitempty"`
-		}
-		_ = p.agentClient.Call("Agent.RemoveAppUnit", &struct {
-			SiteID int    `json:"site_id"`
-			Action string `json:"action"`
-		}{SiteID: siteID}, &resp)
-	}
-
-	// Regenerate the vhost so nginx reflects the new project type. A
-	// validation failure rolls the vhost back on the agent side; the settings
-	// stay saved and the honest error reaches the caller.
-	// Vhost'u yeniden üret; nginx yeni proje tipini yansıtsın. Doğrulama
-	// hatasında agent vhost'u geri alır; ayarlar kayıtlı kalır ve dürüst hata
-	// çağırana ulaşır.
-	if err := p.applyVhostForDomain(r.Context(), domainID); err != nil {
-		writeClientError(w, http.StatusConflict, err.Error())
-		return
-	}
-
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "app_port": req.AppPort})
-}
-
 // applySiteVhost regenerates a domain's nginx vhost from its DB row — the
 // one honest source after any change that alters what the vhost must say
 // (PHP socket, project type). Born from a live catch (23 Jul): switching PHP
@@ -257,9 +113,13 @@ func (p *Panel) allocateAppPort(ctx context.Context) (int, error) {
 	used := map[int]bool{}
 	for rows.Next() {
 		var port int
-		if rows.Scan(&port) == nil {
-			used[port] = true
+		if err := rows.Scan(&port); err != nil {
+			return 0, err
 		}
+		used[port] = true
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
 	}
 	for port := 3001; port < 4000; port++ {
 		if !used[port] {
@@ -267,20 +127,6 @@ func (p *Panel) allocateAppPort(ctx context.Context) (int, error) {
 		}
 	}
 	return 0, context.DeadlineExceeded
-}
-
-func nullIfZero(v int) any {
-	if v == 0 {
-		return nil
-	}
-	return v
-}
-
-func nullIfEmpty(s string) any {
-	if strings.TrimSpace(s) == "" {
-		return nil
-	}
-	return s
 }
 
 // handleDomainApp serves the supervised-app surface of a domain:
@@ -309,18 +155,8 @@ func (p *Panel) handleDomainApp(w http.ResponseWriter, r *http.Request, domainID
 
 	switch {
 	case strings.HasSuffix(r.URL.Path, "/status") && r.Method == http.MethodGet:
-		var st struct {
-			Exists   bool   `json:"exists"`
-			Active   string `json:"active"`
-			PID      int    `json:"pid"`
-			MemoryMB int64  `json:"memory_mb"`
-			CPUUsec  int64  `json:"cpu_usec"`
-			Uptime   string `json:"uptime"`
-		}
-		if err := p.agentClient.Call("Agent.AppUnitStatus", &struct {
-			SiteID int    `json:"site_id"`
-			Action string `json:"action"`
-		}{SiteID: siteID}, &st); err != nil {
+		var st transport.AppStatusResponse
+		if err := p.callAgent("Agent.AppUnitStatus", &transport.AppControlRequest{SiteID: siteID}, &st); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -331,14 +167,8 @@ func (p *Panel) handleDomainApp(w http.ResponseWriter, r *http.Request, domainID
 		if l := r.URL.Query().Get("lines"); l != "" {
 			json.Unmarshal([]byte(l), &lines) //nolint — best-effort int parse
 		}
-		var logs struct {
-			Lines []string `json:"lines"`
-			Error string   `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.AppUnitLogs", &struct {
-			SiteID int `json:"site_id"`
-			Lines  int `json:"lines"`
-		}{SiteID: siteID, Lines: lines}, &logs); err != nil {
+		var logs transport.AppLogsResponse
+		if err := p.callAgent("Agent.AppUnitLogs", &transport.AppLogsRequest{SiteID: siteID, Lines: lines}, &logs); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -349,14 +179,8 @@ func (p *Panel) handleDomainApp(w http.ResponseWriter, r *http.Request, domainID
 
 	case r.Method == http.MethodPost:
 		action := r.URL.Path[strings.LastIndexByte(r.URL.Path, '/')+1:]
-		var resp struct {
-			Unit  string `json:"unit"`
-			Error string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.ControlAppUnit", &struct {
-			SiteID int    `json:"site_id"`
-			Action string `json:"action"`
-		}{SiteID: siteID, Action: action}, &resp); err != nil {
+		var resp transport.AppApplyResponse
+		if err := p.callAgent("Agent.ControlAppUnit", &transport.AppControlRequest{SiteID: siteID, Action: action}, &resp); err != nil {
 			writeServerError(w, err)
 			return
 		}

@@ -6,11 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sync"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DKIM key management. Keys are generated with pure Go crypto (no opendkim
@@ -41,30 +45,16 @@ var dkimBaseDir = func() string {
 var (
 	dkimDomainRe   = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`)
 	dkimSelectorRe = regexp.MustCompile(`^[a-z0-9]{1,32}$`)
+	dkimKeyMu      sync.Mutex
 )
 
-type DKIMStatusRequest struct {
-	Domain   string `json:"domain"`
-	Selector string `json:"selector"`
-}
+type DKIMStatusRequest = transport.DKIMStatusRequest
 
-type DKIMStatusResponse struct {
-	HasKey           bool   `json:"has_key"`
-	PublicKeyB64     string `json:"public_key_b64"`
-	SigningInstalled bool   `json:"signing_installed"`
-	Error            string `json:"error,omitempty"`
-}
+type DKIMStatusResponse = transport.DKIMStatusResponse
 
-type DKIMEnsureRequest struct {
-	Domain   string `json:"domain"`
-	Selector string `json:"selector"`
-}
+type DKIMEnsureRequest = transport.DKIMEnsureRequest
 
-type DKIMEnsureResponse struct {
-	Created      bool   `json:"created"`
-	PublicKeyB64 string `json:"public_key_b64"`
-	Error        string `json:"error,omitempty"`
-}
+type DKIMEnsureResponse = transport.DKIMEnsureResponse
 
 // dkimKeyPath validates inputs and returns the private-key path. Validation
 // lives on the agent because it is the privileged side: it must not trust the
@@ -95,7 +85,7 @@ func dkimPublicB64(key *rsa.PrivateKey) (string, error) {
 }
 
 func readDKIMKey(path string) (*rsa.PrivateKey, error) {
-	data, err := os.ReadFile(path)
+	data, err := secureReadConfig(path)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +109,10 @@ func signingFilterInstalled() bool {
 // GetDKIMStatus, bir anahtarın var olup olmadığını bildirir (asla oluşturmaz).
 func (a *Agent) GetDKIMStatus(req *DKIMStatusRequest, resp *DKIMStatusResponse) error {
 	resp.SigningInstalled = signingFilterInstalled()
+	if req == nil {
+		resp.Error = "DKIM status request is required"
+		return nil
+	}
 
 	path, err := dkimKeyPath(req.Domain, req.Selector)
 	if err != nil {
@@ -127,8 +121,12 @@ func (a *Agent) GetDKIMStatus(req *DKIMStatusRequest, resp *DKIMStatusResponse) 
 	}
 	key, err := readDKIMKey(path)
 	if err != nil {
-		// No key yet is a normal state, not an error.
-		// Henüz anahtar olmaması normal bir durumdur, hata değildir.
+		if errors.Is(err, os.ErrNotExist) {
+			// No key yet is a normal state, not an error.
+			// Henüz anahtar olmaması normal bir durumdur, hata değildir.
+			return nil
+		}
+		resp.Error = fmt.Sprintf("cannot read DKIM key: %v", err)
 		return nil
 	}
 	pub, err := dkimPublicB64(key)
@@ -146,13 +144,24 @@ func (a *Agent) GetDKIMStatus(req *DKIMStatusRequest, resp *DKIMStatusResponse) 
 // EnsureDKIMKey, yoksa domain/selector için 2048-bit RSA anahtarı oluşturur
 // ve her durumda genel kısmı döndürür. Bağımsızdır.
 func (a *Agent) EnsureDKIMKey(req *DKIMEnsureRequest, resp *DKIMEnsureResponse) error {
+	if req == nil {
+		resp.Error = "DKIM key request is required"
+		return nil
+	}
 	path, err := dkimKeyPath(req.Domain, req.Selector)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
 
+	dkimKeyMu.Lock()
+	defer dkimKeyMu.Unlock()
+
 	if key, err := readDKIMKey(path); err == nil {
+		if err := secureChmodMailFile(path, 0o600); err != nil {
+			resp.Error = fmt.Sprintf("cannot secure existing DKIM key: %v", err)
+			return nil
+		}
 		pub, perr := dkimPublicB64(key)
 		if perr != nil {
 			resp.Error = perr.Error()
@@ -160,9 +169,12 @@ func (a *Agent) EnsureDKIMKey(req *DKIMEnsureRequest, resp *DKIMEnsureResponse) 
 		}
 		resp.PublicKeyB64 = pub
 		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		resp.Error = fmt.Sprintf("cannot read existing DKIM key: %v", err)
+		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := secureMkdirAll(filepath.Dir(path), 0o700); err != nil {
 		resp.Error = fmt.Sprintf("cannot create key directory: %v", err)
 		return nil
 	}
@@ -177,8 +189,12 @@ func (a *Agent) EnsureDKIMKey(req *DKIMEnsureRequest, resp *DKIMEnsureResponse) 
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
-	if err := os.WriteFile(path, pemBytes, 0o600); err != nil {
+	if err := secureWriteConfig(path, pemBytes, 0o600); err != nil {
 		resp.Error = fmt.Sprintf("cannot write key: %v", err)
+		return nil
+	}
+	if err := secureChmodMailFile(path, 0o600); err != nil {
+		resp.Error = fmt.Sprintf("cannot secure new DKIM key: %v", err)
 		return nil
 	}
 

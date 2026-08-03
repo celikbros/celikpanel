@@ -11,6 +11,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DomainPHPSettingsResponse represents PHP settings for a domain
@@ -71,15 +72,12 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 	if r.Method == "GET" {
 		// Get pool config from agent
 		var poolConfig core.PHPPoolConfig
-		req := struct {
-			Version  string `json:"version"`
-			PoolName string `json:"pool_name"`
-		}{
+		req := transport.GetPHPPoolConfigRequest{
 			Version:  phpVersion,
 			PoolName: poolName,
 		}
 
-		err = p.agentClient.Call("Agent.GetPHPPoolConfig", req, &poolConfig)
+		err = p.callAgent("Agent.GetPHPPoolConfig", req, &poolConfig)
 		if err != nil {
 			// A read must not write. This branch used to build a default pool
 			// and POST it to the agent, so merely OPENING the PHP settings page
@@ -136,18 +134,14 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 		// Only migrate if version is actually changing
 		if req.PHPVersion != phpVersion {
 			// Migrate pool from old version to new version
-			migrateReq := struct {
-				OldVersion string `json:"old_version"`
-				NewVersion string `json:"new_version"`
-				PoolName   string `json:"pool_name"`
-			}{
+			migrateReq := transport.MigratePHPPoolRequest{
 				OldVersion: phpVersion,
 				NewVersion: req.PHPVersion,
 				PoolName:   poolName,
 			}
 
-			var migrateResp struct{}
-			err = p.agentClient.Call("Agent.MigratePHPPool", migrateReq, &migrateResp)
+			var migrateResp transport.Empty
+			err = p.callAgent("Agent.MigratePHPPool", migrateReq, &migrateResp)
 			if err != nil {
 				writeServerError(w, err)
 				return
@@ -226,7 +220,7 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 			PoolName: poolName,
 		}
 
-		err = p.agentClient.Call("Agent.GetPHPPoolConfig", req, &poolConfig)
+		err = p.callAgent("Agent.GetPHPPoolConfig", req, &poolConfig)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -267,8 +261,8 @@ func (p *Panel) handleDomainPHPPool(w http.ResponseWriter, r *http.Request) {
 		req.Version = phpVersion
 		req.PoolConfig.Name = poolName
 
-		var resp struct{}
-		err = p.agentClient.Call("Agent.UpdatePHPPoolConfig", req, &resp)
+		var resp transport.Empty
+		err = p.callAgent("Agent.UpdatePHPPoolConfig", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return

@@ -27,6 +27,13 @@ write_quiesce_coordinator_ledger() {
     chmod 0600 -- "$child/quiesce-coordinators.tsv"
 }
 
+complete_scheduler_restore_obligation() {
+    local root=$1 lock_fd=$2 token=$3 operation=$4 snapshot=$5
+    release_txn_mark_scheduler_restore_pending "$root" "$lock_fd" "$token" "$operation" "$snapshot"
+    release_txn_remove_completion_pending "$root" "$lock_fd" "$token" "$operation" "$snapshot"
+    release_txn_remove_scheduler_restore_pending "$root" "$lock_fd" "$token" "$operation" "$snapshot"
+}
+
 bash -n "$LIBRARY" "$START_GUARD" "$0"
 
 # Complete release manifests hash every regular payload file and exclude only
@@ -313,6 +320,11 @@ cmp -s "$transaction_root/quiesce.pending" \
     <(printf 'version=1\ntoken=%s\noperation=%s\nsnapshot=%s\n' \
         "$token" "$operation" "$snapshot_name") \
     || fail "quiesce marker bytes are not canonical"
+cp -- "$transaction_root/quiesce.pending" "$transaction_root/scheduler-restore.pending"
+chmod 0600 -- "$transaction_root/scheduler-restore.pending"
+expect_failure "quiesce plus scheduler marker permitted an ordinary start" \
+    "$helper_path" "$transaction_root" "$runtime_root"
+rm -f -- "$transaction_root/scheduler-restore.pending"
 expect_failure "quiesce marker permitted an ordinary start" \
     "$helper_path" "$transaction_root" "$runtime_root"
 expect_failure "quiesce marker permitted controlled-start authorization" \
@@ -377,6 +389,11 @@ release_txn_create_start_authorization \
     "$transaction_root" "$runtime_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "exact live-holder authorization did not permit a controlled start"
+cp -- "$transaction_root/active" "$transaction_root/scheduler-restore.pending"
+chmod 0600 -- "$transaction_root/scheduler-restore.pending"
+expect_failure "active plus scheduler marker bypassed a valid controlled-start authorization" \
+    "$helper_path" "$transaction_root" "$runtime_root"
+rm -f -- "$transaction_root/scheduler-restore.pending"
 
 # Authorization must match the persistent marker and holder bytes exactly.
 # Yetkilendirme kalıcı işaretçi ve holder baytlarıyla tam eşleşmelidir.
@@ -426,6 +443,18 @@ release_txn_mark_completion_pending \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "completion.pending blocked the exact controlled start"
+release_txn_mark_scheduler_restore_pending \
+    "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
+"$helper_path" "$transaction_root" "$runtime_root" \
+    || fail "matching completion and scheduler markers blocked the exact controlled start"
+_release_txn_print_marker "$wrong_token" "$operation" "$snapshot_name" \
+    > "$transaction_root/scheduler-restore.pending"
+chmod 0600 -- "$transaction_root/scheduler-restore.pending"
+expect_failure "mismatched scheduler marker permitted a controlled start" \
+    "$helper_path" "$transaction_root" "$runtime_root"
+_release_txn_print_marker "$token" "$operation" "$snapshot_name" \
+    > "$transaction_root/scheduler-restore.pending"
+chmod 0600 -- "$transaction_root/scheduler-restore.pending"
 expect_failure "pending removal accepted a mismatched snapshot" \
     release_txn_remove_completion_pending \
         "$transaction_root" "$lock_fd" "$token" "$operation" other-snapshot
@@ -434,6 +463,16 @@ release_txn_remove_start_authorization \
 expect_failure "completion.pending without authorization permitted an ordinary start" \
     "$helper_path" "$transaction_root" "$runtime_root"
 release_txn_remove_completion_pending \
+    "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
+"$helper_path" "$transaction_root" "$runtime_root" \
+    || fail "exact scheduler-only obligation blocked an ordinary service start"
+printf '\n' >> "$transaction_root/scheduler-restore.pending"
+expect_failure "non-canonical scheduler-only marker permitted an ordinary start" \
+    "$helper_path" "$transaction_root" "$runtime_root"
+_release_txn_print_marker "$token" "$operation" "$snapshot_name" \
+    > "$transaction_root/scheduler-restore.pending"
+chmod 0600 -- "$transaction_root/scheduler-restore.pending"
+release_txn_remove_scheduler_restore_pending \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "start guard remained closed after verified completion"
@@ -450,7 +489,7 @@ expect_failure "simultaneous active and completion.pending markers permitted a s
 rm -f -- "$transaction_root/completion.pending"
 release_txn_mark_completion_pending \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
-release_txn_remove_completion_pending \
+complete_scheduler_restore_obligation \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 
 # A child may publish while sharing the inherited lock, but after it exits its
@@ -470,7 +509,7 @@ expect_failure "active marker permitted a start after stale authorization cleanu
     "$helper_path" "$transaction_root" "$runtime_root"
 release_txn_mark_completion_pending \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
-release_txn_remove_completion_pending \
+complete_scheduler_restore_obligation \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 
 # Runtime authorization disappears on reboot; a persistent marker must still
@@ -490,7 +529,7 @@ expect_failure "persistent marker permitted a start after runtime state disappea
     "$helper_path" "$transaction_root" "$runtime_root"
 release_txn_mark_completion_pending \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
-release_txn_remove_completion_pending \
+complete_scheduler_restore_obligation \
     "$transaction_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "ordinary start remained blocked with no persistent marker"
@@ -536,7 +575,7 @@ expect_failure "rollback takeover accepted completion.pending" \
         "$transaction_root" "$lock_fd" "$snapshot_name"
 release_txn_validate_pending_token \
     "$transaction_root" "$token" rollback "$snapshot_name"
-release_txn_remove_completion_pending \
+complete_scheduler_restore_obligation \
     "$transaction_root" "$lock_fd" "$token" rollback "$snapshot_name"
 rm -rf -- "$quiesce_stage"
 
@@ -727,7 +766,7 @@ expect_failure "final snapshot permitted pre-mutation update resume" \
 rmdir -- "$snapshot_root/$recovery_snapshot"
 release_txn_mark_completion_pending \
     "$transaction_root" "$lock_fd" "$recovery_token" update "$recovery_snapshot"
-release_txn_remove_completion_pending \
+complete_scheduler_restore_obligation \
     "$transaction_root" "$lock_fd" "$recovery_token" update "$recovery_snapshot"
 
 # The terminal active-marker primitive is intentionally smaller than the

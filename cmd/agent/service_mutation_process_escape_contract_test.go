@@ -56,6 +56,7 @@ func TestDurableMutationCallGraphRejectsRawProcessEscapes(t *testing.T) {
 		{"php", "-r", `echo in_array("sqlite", PDO::getAvailableDrivers()) ? "yes" : "no";`},
 		{"postconf", "-h", anyExecArgument},
 		{"postconf", "-x", "-h", anyExecArgument},
+		{"rpm", "-q", "--", anyExecArgument},
 		{"systemctl", "list-unit-files", anyExecArgument, "--no-legend"},
 		{"systemctl", "list-unit-files", "--type=service", "--no-legend", "--no-pager"},
 		{"systemctl", "show", anyExecArgument, "-p", "Id", "--value"},

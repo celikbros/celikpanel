@@ -5,15 +5,19 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Roundcube is installed from its OWN official tarball, not a distro package
@@ -35,6 +39,7 @@ import (
 const (
 	roundcubeVersion = "1.6.15"
 	roundcubeSHA256  = "48c9f212c77460132491f670abaf440b765c8276268349a690913764d26afbef"
+	roundcubeMaxSize = 100 << 20
 )
 
 // webmailBaseDir is where the verified tarball is unpacked. It lives under
@@ -57,7 +62,29 @@ var webmailBaseDir = func() string {
 }()
 
 func roundcubeInstalled() bool {
-	return fileExistsAgent(filepath.Join(webmailBaseDir, "public_html", "index.php"))
+	installed, err := roundcubeInstallState()
+	return err == nil && installed
+}
+
+func roundcubeInstallState() (bool, error) {
+	return roundcubeInstallStateAt(webmailBaseDir)
+}
+
+func roundcubeInstallStateAt(baseDir string) (bool, error) {
+	for _, path := range []string{
+		filepath.Join(baseDir, "public_html", "index.php"),
+		filepath.Join(baseDir, "config", "config.inc.php"),
+		filepath.Join(baseDir, "db", "roundcube.sqlite3"),
+	} {
+		exists, err := secureMailFileExists(path)
+		if err != nil {
+			return false, fmt.Errorf("inspect Roundcube installation %s: %w", path, err)
+		}
+		if !exists {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // detectFPMSocket finds the default PHP-FPM socket across distros — Debian
@@ -95,14 +122,19 @@ func detectFPMSocketWithPatterns(patterns []string) string {
 	return ""
 }
 
-type InstallRoundcubeResponse struct {
-	Installed bool   `json:"installed"`
-	Version   string `json:"version"`
-	Error     string `json:"error,omitempty"`
-}
+type InstallRoundcubeResponse = transport.InstallRoundcubeResponse
 
-type WebmailMutationRequest struct {
-	ServiceMutationBinding
+type WebmailMutationRequest = transport.WebmailMutationRequest
+
+func appendRoundcubeInstallError(resp *InstallRoundcubeResponse, err error) {
+	if err == nil {
+		return
+	}
+	if resp.Error == "" {
+		resp.Error = err.Error()
+		return
+	}
+	resp.Error = fmt.Sprintf("%s; %v", resp.Error, err)
 }
 
 // InstallRoundcube downloads, verifies and configures Roundcube. Idempotent:
@@ -123,7 +155,12 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	}
 	defer finishStep()
 	resp.Version = roundcubeVersion
-	if roundcubeInstalled() {
+	installed, err := roundcubeInstallState()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if installed {
 		resp.Installed = true
 		return nil
 	}
@@ -145,7 +182,7 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		roundcubeVersion, roundcubeVersion)
 	client := &http.Client{Timeout: 5 * time.Minute}
 
-	if err := os.MkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
+	if err := secureMkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -154,8 +191,15 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = err.Error()
 		return nil
 	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
+	tmpClosed := false
+	defer func() {
+		if !tmpClosed {
+			appendRoundcubeInstallError(resp, tmp.Close())
+		}
+		if err := os.Remove(tmp.Name()); err != nil && !errors.Is(err, os.ErrNotExist) {
+			appendRoundcubeInstallError(resp, fmt.Errorf("remove Roundcube download: %w", err))
+		}
+	}()
 
 	downloadReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -167,14 +211,23 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = fmt.Sprintf("download failed: %v", err)
 		return nil
 	}
-	defer dl.Body.Close()
+	defer func() {
+		if err := dl.Body.Close(); err != nil {
+			appendRoundcubeInstallError(resp, fmt.Errorf("close Roundcube download response: %w", err))
+		}
+	}()
 	if dl.StatusCode != http.StatusOK {
 		resp.Error = fmt.Sprintf("download failed: HTTP %d", dl.StatusCode)
 		return nil
 	}
 	h := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(tmp, h), dl.Body); err != nil {
+	written, err := io.Copy(io.MultiWriter(tmp, h), io.LimitReader(dl.Body, roundcubeMaxSize+1))
+	if err != nil {
 		resp.Error = fmt.Sprintf("download failed: %v", err)
+		return nil
+	}
+	if written > roundcubeMaxSize {
+		resp.Error = "download exceeded the maximum allowed Roundcube archive size"
 		return nil
 	}
 	if got := hex.EncodeToString(h.Sum(nil)); got != roundcubeSHA256 {
@@ -186,12 +239,26 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	// must never look installed (Node pattern).
 	// Hazırlık dizinine aç, sonra yerine taşı — yarım açılmış ağaç asla kurulu
 	// görünmemeli (Node deseni).
+	if err := tmp.Sync(); err != nil {
+		resp.Error = fmt.Sprintf("sync verified download: %v", err)
+		return nil
+	}
+	closeErr := tmp.Close()
+	tmpClosed = true
+	if closeErr != nil {
+		resp.Error = fmt.Sprintf("close verified download: %v", closeErr)
+		return nil
+	}
 	stage, err := os.MkdirTemp(filepath.Dir(webmailBaseDir), "rc-stage-*")
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	defer os.RemoveAll(stage)
+	defer func() {
+		if err := retireRoundcubeTree(stage); err != nil {
+			appendRoundcubeInstallError(resp, fmt.Errorf("clean Roundcube staging tree: %w", err))
+		}
+	}()
 	if out, err := serviceMutationCommand(ctx, "tar", "-xzf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("extract failed: %v: %s", err, string(out))
 		return nil
@@ -213,31 +280,20 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	// tek yol"un dürüst sınırı): uygulama dağıtımdan bağımsız, çalışma-zamanı
 	// uzantısı değil. Dağıtım-farkındalıklı sağla — dağıtıma özgü tek gerçek
 	// paket adıdır ve o bilgi zaten agent'ta.
-	if !phpHasSQLite() {
+	if !phpHasSQLite(ctx) {
 		if err := a.ensurePHPSQLite(ctx, phpVer); err != nil {
 			resp.Error = fmt.Sprintf("PHP SQLite extension is required for webmail and could not be installed: %v", err)
 			return nil
 		}
 	}
 
-	// Move the tree into its final home BEFORE initializing the DB: the config
-	// points db_dsnw at the final path, so the SQLite file can only be created
-	// once that directory exists (caught live: initdb in the staging dir failed
-	// with "unable to open database file"). If initdb then fails, the tree is
-	// removed so a half-install is never served.
-	// DB'yi kurmadan ÖNCE ağacı son evine taşı: config db_dsnw'yi son yola
-	// işaret eder, SQLite dosyası ancak o dizin varken oluşturulabilir (canlıda
-	// yakalandı: staging'de initdb "unable to open database file" verdi).
-	// initdb sonra başarısız olursa ağaç silinir; yarım kurulum asla sunulmaz.
-	if roundcubeInstalled() {
-		_ = os.RemoveAll(webmailBaseDir + ".old")
-		_ = os.Rename(webmailBaseDir, webmailBaseDir+".old")
-	}
-	if err := os.Rename(stage, webmailBaseDir); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-
+	// Build the database and apply permissions inside the staging tree. The
+	// generated config points at the final database path, while the schema
+	// loader below explicitly opens the staging database. The final rename
+	// therefore publishes a complete tree in one step.
+	// Veritabanını ve izinleri hazırlık ağacında tamamla. Üretilen yapılandırma
+	// son veritabanı yolunu gösterirken aşağıdaki şema yükleyici hazırlık
+	// veritabanını açıkça kullanır. Böylece son rename yalnızca tam ağacı yayınlar.
 	// Load the schema straight from Roundcube's SQL file, once. Its own
 	// initdb.sh re-runs the CREATE block a second time and exits non-zero on
 	// the resulting "table already exists" even though the 17 tables were
@@ -253,26 +309,20 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	// sqlite.initial.sql'in tek PDO exec'i belirlenimcidir. DB, adanmış bir
 	// db/ alt dizininde yaşar çünkü SQLite dosyanın yanına journal YAZMALIDIR;
 	// yani yalnız dosya değil, dosyanın dizini de grup-yazılabilir olmalı.
-	dbDir := filepath.Join(webmailBaseDir, "db")
-	if err := os.MkdirAll(dbDir, 0o775); err != nil {
-		_ = os.RemoveAll(webmailBaseDir)
+	dbDir := filepath.Join(stage, "db")
+	if err := secureMkdirAll(dbDir, 0o775); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	initSQL := filepath.Join(webmailBaseDir, "SQL", "sqlite.initial.sql")
+	initSQL := filepath.Join(stage, "SQL", "sqlite.initial.sql")
 	dbPath := filepath.Join(dbDir, "roundcube.sqlite3")
 	phpLoad := fmt.Sprintf(
 		`$db=new PDO("sqlite:%s"); $db->exec(file_get_contents("%s")); $n=$db->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")->fetchColumn(); if($n<10){fwrite(STDERR,"only $n tables");exit(1);}`,
 		dbPath, initSQL)
 	if out, err := serviceMutationCommand(ctx, "php", "-r", phpLoad).CombinedOutput(); err != nil {
-		_ = os.RemoveAll(webmailBaseDir)
-		if _, statErr := os.Stat(webmailBaseDir + ".old"); statErr == nil {
-			_ = os.Rename(webmailBaseDir+".old", webmailBaseDir)
-		}
 		resp.Error = fmt.Sprintf("db init failed: %v: %s", err, firstLine(string(out)))
 		return nil
 	}
-	_ = os.RemoveAll(webmailBaseDir + ".old")
 
 	// The FPM pool that serves /webmail/ (the default www pool) must READ the
 	// tree and WRITE the db dir (sqlite + its journal), temp and logs. Give the
@@ -281,29 +331,91 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	// /webmail/'i sunan FPM havuzu (varsayılan www havuzu) ağacı OKUMALI ve db
 	// dizinine (sqlite + journal'ı), temp'e ve logs'a YAZMALIDIR. Ağacı web
 	// grubuna ver; tam o üç dizini grup-yazılabilir yap — asla herkese değil.
-	if grp := webServerGroup(); grp != "" {
-		_ = serviceMutationCommand(ctx, "chown", "-R", "root:"+grp, webmailBaseDir).Run()
-		// The base dir comes out of MkdirTemp as 0700, which locks the web
-		// group OUT — nginx then cannot traverse in to serve /webmail/
-		// (caught live: "permission denied" on stat). 0750 lets the group in
-		// while keeping it off the world.
-		// Taban dizin MkdirTemp'ten 0700 çıkar; bu web grubunu DIŞARIDA
-		// bırakır — nginx o zaman /webmail/'i sunmak için içeri giremez
-		// (canlıda yakalandı: stat'ta "permission denied"). 0750 grubu içeri
-		// alır, herkesi dışarıda tutar.
-		_ = os.Chmod(webmailBaseDir, 0o750)
-		// des_key lives in config.inc.php — group may read it (FPM needs it),
-		// the world may not.
-		// des_key config.inc.php'de yaşar — grup okuyabilir (FPM'e gerekli),
-		// herkes okuyamaz.
-		_ = os.Chmod(filepath.Join(webmailBaseDir, "config", "config.inc.php"), 0o640)
-		for _, p := range []string{"db", "temp", "logs"} {
-			_ = os.Chmod(filepath.Join(webmailBaseDir, p), 0o770)
-		}
-		_ = os.Chmod(dbPath, 0o660)
+	grp := webServerGroup()
+	if grp == "" {
+		resp.Error = "web server group could not be detected"
+		return nil
+	}
+	if err := applyRoundcubePermissions(ctx, stage, dbPath, grp, runServiceMutationCombinedOutput); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	installed, err = roundcubeInstallStateAt(stage)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if !installed {
+		resp.Error = "Roundcube staging tree is incomplete after installation"
+		return nil
+	}
+	if err := publishRoundcubeStage(stage, webmailBaseDir); err != nil {
+		resp.Error = err.Error()
+		return nil
 	}
 
 	resp.Installed = true
+	return nil
+}
+
+type webmailCommandRunner func(context.Context, string, ...string) ([]byte, error)
+
+func applyRoundcubePermissions(
+	ctx context.Context,
+	baseDir string,
+	dbPath string,
+	groupName string,
+	run webmailCommandRunner,
+) error {
+	if groupName == "" {
+		return fmt.Errorf("web server group is required")
+	}
+	if run == nil {
+		return fmt.Errorf("webmail command runner is required")
+	}
+	group, err := user.LookupGroup(groupName)
+	if err != nil {
+		return fmt.Errorf("look up web server group %q: %w", groupName, err)
+	}
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return fmt.Errorf("parse web server group id %q: %w", group.Gid, err)
+	}
+	baseDir, err = validateRoundcubeTreePath(baseDir)
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(baseDir)
+	if err != nil {
+		return fmt.Errorf("inspect Roundcube tree: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("Roundcube tree is not a real directory: %s", baseDir)
+	}
+	out, err := run(ctx, "chown", "-R", "root:"+groupName, "--", baseDir)
+	if err != nil {
+		return fmt.Errorf("set Roundcube tree ownership: %s", commandFailureDetail("chown", out, err))
+	}
+	if err := secureSetMailDirectoryMetadata(baseDir, 0o750, 0, gid); err != nil {
+		return err
+	}
+	for _, name := range []string{"db", "temp", "logs"} {
+		path := filepath.Join(baseDir, name)
+		if err := secureSetMailDirectoryMetadata(path, 0o770, 0, gid); err != nil {
+			return fmt.Errorf("secure Roundcube %s directory: %w", name, err)
+		}
+	}
+	if err := secureSetMailFileMetadata(
+		filepath.Join(baseDir, "config", "config.inc.php"),
+		0o640,
+		0,
+		gid,
+	); err != nil {
+		return fmt.Errorf("secure Roundcube configuration: %w", err)
+	}
+	if err := secureSetMailFileMetadata(dbPath, 0o660, 0, gid); err != nil {
+		return fmt.Errorf("secure Roundcube database: %w", err)
+	}
 	return nil
 }
 
@@ -342,7 +454,7 @@ $config['enable_installer'] = false;
 `, dbPath, hex.EncodeToString(key))
 	// The staging tree's config path (moved into place with the tree).
 	// Hazırlık ağacının config yolu (ağaçla birlikte yerine taşınır).
-	return os.WriteFile(filepath.Join(root, "config", "config.inc.php"), []byte(conf), 0o640)
+	return secureWriteConfig(filepath.Join(root, "config", "config.inc.php"), []byte(conf), 0o640)
 }
 
 // phpHasSQLite reports whether the PHP CLI can open a SQLite PDO — the exact
@@ -353,8 +465,8 @@ $config['enable_installer'] = false;
 // Roundcube'un initdb'sinin tam ihtiyacı. Paket adından tahmin etmek yerine
 // PHP'nin kendisine sormak dürüst denetimdir: uzantı yüklenebilir olduğu an
 // doğrudur, onu ne kurmuş olursa olsun.
-func phpHasSQLite() bool {
-	out, err := exec.Command("php", "-r", `echo in_array("sqlite", PDO::getAvailableDrivers()) ? "yes" : "no";`).Output()
+func phpHasSQLite(ctx context.Context) bool {
+	out, err := serviceMutationCommand(ctx, "php", "-r", `echo in_array("sqlite", PDO::getAvailableDrivers()) ? "yes" : "no";`).Output()
 	return err == nil && string(out) == "yes"
 }
 
@@ -392,12 +504,24 @@ func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
 		if _, err := installPackagesContext(ctx, family, []string{"php-sqlite"}); err != nil {
 			return err
 		}
+		configured := false
 		for _, dir := range []string{"/etc/php/conf.d", "/etc/php8/conf.d", "/etc/php/php.d"} {
-			if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
-				_ = os.WriteFile(filepath.Join(dir, "celikpanel-sqlite.ini"),
-					[]byte("extension=pdo_sqlite\nextension=sqlite3\n"), 0o644)
-				break
+			fi, err := os.Lstat(dir)
+			if err != nil || fi.Mode()&os.ModeSymlink != 0 || !fi.IsDir() {
+				continue
 			}
+			if err := secureWriteConfig(
+				filepath.Join(dir, "celikpanel-sqlite.ini"),
+				[]byte("extension=pdo_sqlite\nextension=sqlite3\n"),
+				0o644,
+			); err != nil {
+				return fmt.Errorf("enable PHP SQLite extension: %w", err)
+			}
+			configured = true
+			break
+		}
+		if !configured {
+			return fmt.Errorf("PHP configuration directory could not be found")
 		}
 	default:
 		return fmt.Errorf("unsupported package manager for this distro")
@@ -422,16 +546,13 @@ func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
 	// Sürücünün artık gerçekten yüklenebilir olduğunu doğrula — iki adım sonra
 	// initdb'den gelen anlaşılmaz "could not find driver" yerine burada net
 	// bir başarısızlık iyidir.
-	if !phpHasSQLite() {
+	if !phpHasSQLite(ctx) {
 		return fmt.Errorf("installed but the pdo_sqlite driver is still not loadable")
 	}
 	return nil
 }
 
-type RemoveRoundcubeResponse struct {
-	Removed bool   `json:"removed"`
-	Error   string `json:"error,omitempty"`
-}
+type RemoveRoundcubeResponse = transport.RemoveRoundcubeResponse
 
 // RemoveRoundcube deletes the whole webmail tree — the fixed base dir means
 // there is nothing else it could delete. Idempotent.
@@ -448,7 +569,7 @@ func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcu
 		return nil
 	}
 	defer finishStep()
-	if err := os.RemoveAll(webmailBaseDir); err != nil {
+	if err := retireRoundcubeTree(webmailBaseDir); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -478,6 +599,68 @@ const (
 	webmailAddr     = "127.0.0.1:8307"
 )
 
+func applyWebmailNginxMutation(
+	ctx context.Context,
+	path string,
+	content []byte,
+	present bool,
+	run webmailCommandRunner,
+) error {
+	if run == nil {
+		return fmt.Errorf("webmail command runner is required")
+	}
+	snapshot, err := snapshotMailFile(path)
+	if err != nil {
+		return fmt.Errorf("snapshot webmail nginx configuration: %w", err)
+	}
+	if present {
+		if err := secureWriteConfig(path, content, 0o644); err != nil {
+			return fmt.Errorf("write webmail nginx configuration: %w", err)
+		}
+	} else if snapshot.exists {
+		if err := secureRemoveConfig(path); err != nil {
+			return fmt.Errorf("remove webmail nginx configuration: %w", err)
+		}
+	}
+
+	rollback := func(cause error, restoreRuntime bool) error {
+		var rollbackErrs []error
+		if err := restoreMailFile(snapshot); err != nil {
+			rollbackErrs = append(rollbackErrs, err)
+		} else if restoreRuntime {
+			if out, err := run(ctx, "nginx", "-t"); err != nil {
+				rollbackErrs = append(rollbackErrs, fmt.Errorf(
+					"validate restored nginx configuration: %s",
+					commandFailureDetail("nginx -t", out, err),
+				))
+			} else if out, err := run(ctx, "systemctl", "reload", "nginx"); err != nil {
+				rollbackErrs = append(rollbackErrs, fmt.Errorf(
+					"reload restored nginx configuration: %s",
+					commandFailureDetail("systemctl reload nginx", out, err),
+				))
+			}
+		}
+		if len(rollbackErrs) == 0 {
+			return cause
+		}
+		return errors.Join(cause, fmt.Errorf("webmail nginx rollback failed: %w", errors.Join(rollbackErrs...)))
+	}
+
+	if out, err := run(ctx, "nginx", "-t"); err != nil {
+		return rollback(fmt.Errorf(
+			"nginx rejected the webmail configuration: %s",
+			commandFailureDetail("nginx -t", out, err),
+		), false)
+	}
+	if out, err := run(ctx, "systemctl", "reload", "nginx"); err != nil {
+		return rollback(fmt.Errorf(
+			"nginx reload failed: %s",
+			commandFailureDetail("systemctl reload nginx", out, err),
+		), true)
+	}
+	return nil
+}
+
 // roundcubeRoot is the public entry point inside our own tarball tree. The
 // complete tarball's public_html holds index.php with skins/plugins symlinked
 // up one level and program/ real; nginx follows the symlinks, so this single
@@ -488,11 +671,7 @@ const (
 // kök tüm uygulamayı sunar.
 func roundcubeRootDir() string { return filepath.Join(webmailBaseDir, "public_html") }
 
-type ConfigureWebmailResponse struct {
-	Configured bool   `json:"configured"`
-	Present    bool   `json:"present"`
-	Error      string `json:"error,omitempty"`
-}
+type ConfigureWebmailResponse = transport.ConfigureWebmailResponse
 
 // ConfigureWebmail (re)writes the loopback nginx server when Roundcube is
 // installed, and removes it when it is not — the mirror of ConfigureDBTools,
@@ -521,10 +700,20 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 	// never served.
 	// Varlık, giriş noktasının varlığıdır — InstallRoundcube ağacı yalnız
 	// başarılı yapımdan sonra yerine taşır; yarım kurulum asla sunulmaz.
-	if !fileExistsAgent(filepath.Join(roundcubeRootDir(), "index.php")) {
-		_ = os.Remove(webmailConfPath)
-		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
-			resp.Error = commandFailureDetail("nginx reload failed", out, err)
+	installed, err := roundcubeInstallState()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if !installed {
+		if err := applyWebmailNginxMutation(
+			ctx,
+			webmailConfPath,
+			nil,
+			false,
+			runServiceMutationCombinedOutput,
+		); err != nil {
+			resp.Error = err.Error()
 			return nil
 		}
 		resp.Configured = true
@@ -573,24 +762,20 @@ server {
 }
 `, webmailAddr, roundcubeRootDir(), roundcubeRootDir(), socket)
 
-	if err := os.WriteFile(webmailConfPath, []byte(conf), 0o644); err != nil {
-		resp.Error = fmt.Sprintf("write nginx config: %v", err)
+	if err := applyWebmailNginxMutation(
+		ctx,
+		webmailConfPath,
+		[]byte(conf),
+		true,
+		runServiceMutationCombinedOutput,
+	); err != nil {
+		resp.Error = err.Error()
 		return nil
 	}
 	// Validate before reload — a broken webmail config must not take the web
 	// server (and every customer site) down with it.
 	// Yeniden yüklemeden önce doğrula — bozuk bir webmail yapılandırması web
 	// sunucusunu (ve tüm müşteri sitelerini) beraberinde düşürmemeli.
-	if out, err := serviceMutationCommand(ctx, "nginx", "-t").CombinedOutput(); err != nil {
-		_ = os.Remove(webmailConfPath)
-		resp.Error = fmt.Sprintf("nginx rejected the webmail config: %s", firstLine(string(out)))
-		return nil
-	}
-	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "nginx"); err != nil {
-		resp.Error = commandFailureDetail("nginx reload failed", out, err)
-		return nil
-	}
-
 	resp.Configured = true
 	return nil
 }

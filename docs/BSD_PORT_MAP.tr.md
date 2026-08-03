@@ -12,10 +12,12 @@ Desteklediği karar için bkz. [DECISIONS.tr.md](DECISIONS.tr.md#d-004).
 Kod tabanının tamamı **şu an**, güncel kaynakla FreeBSD'ye çapraz derleniyor:
 
 ```
-GOOS=freebsd GOARCH=amd64 go build ./cmd/panel   → ✓
-GOOS=freebsd GOARCH=amd64 go build ./cmd/agent   → ✓
-GOOS=freebsd GOARCH=arm64 go build ./cmd/panel   → ✓
+make freebsd-cross   → ✓
 ```
+
+Bu hedef önce tam Go 1.26.5 dışındaki her derleyiciyi reddeder, otomatik araç
+zinciri indirmesini kapatır; ardından amd64 için panel ve agent'ı, arm64 için
+paneli kanıtlar.
 
 **Panel** (HTTP, SQLite, UI, iş mantığı, RPC sözleşmesi) OS-nötr Go'dur ve
 **sıfır** değişiklik ister. Tüm BSD işi agent'ta — ve yalnız 36 dosyasından

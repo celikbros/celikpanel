@@ -4,21 +4,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-type ReconcileSiteCertLineagesRequest struct {
-	ExpectedBuildCommit string   `json:"expected_build_commit"`
-	ReferencedLineages  []string `json:"referenced_lineages"`
-	// ActiveLineages is the pre-ledger-expansion wire field. Accepting it keeps
-	// reconciliation safe while panel and agent binaries are rolling between
-	// versions; both fields have identical "retain this lineage" semantics.
-	ActiveLineages []string `json:"active_lineages"`
-}
-
-type ReconcileSiteCertLineagesResponse struct {
-	Deleted int    `json:"deleted"`
-	Error   string `json:"error,omitempty"`
-}
+type ReconcileSiteCertLineagesRequest = transport.ReconcileSiteCertLineagesRequest
+type ReconcileSiteCertLineagesResponse = transport.ReconcileSiteCertLineagesResponse
 
 // ReconcileSiteCertLineages removes only agent-generated staging lineages
 // that are not referenced anywhere in the panel's certificate ledger. It never

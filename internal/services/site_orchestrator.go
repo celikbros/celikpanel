@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/big"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
@@ -20,6 +22,27 @@ type SiteOrchestrator struct {
 	agentClient         *transport.ReconnectingClient
 	basePath            string
 	expectedBuildCommit string
+}
+
+const (
+	siteAgentCompensationTimeout = 2 * time.Minute
+	siteDBCompensationTimeout    = 30 * time.Second
+)
+
+type deleteCreatedSiteRequest struct {
+	ExpectedBuildCommit string
+	SiteID              int
+	SubscriptionID      int
+	DomainID            int
+	Domain              string
+	Username            string
+	PHPVersion          string
+	SiteHome            string
+}
+
+type deleteCreatedSiteResponse struct {
+	Success bool
+	Error   string
 }
 
 func NewSiteOrchestrator(
@@ -45,6 +68,10 @@ type CreateSiteRequest struct {
 	Domain         string `json:"domain"`
 	ParentDomainID *int   `json:"-"`
 	UseTemporary   bool   `json:"use_temporary"`
+	// InitialStatus is an internal fail-closed creation control. It is not
+	// accepted from the public HTTP request; an empty value preserves the
+	// normal active-site behaviour.
+	InitialStatus string `json:"-"`
 	// ProjectType selects what this domain does on this server: "php" or
 	// "static" (a website — needs a web server) or "dnsonly" (no web hosting
 	// at all: just the domain and its DNS zone — Plesk's "no web hosting").
@@ -83,6 +110,14 @@ var CreationProjectTypes = map[string]bool{"php": true, "static": true, "dnsonly
 
 // CreateSite orchestrates site creation via Agent RPC
 func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteRequest) (*CreateSiteResponse, error) {
+	initialStatus := strings.TrimSpace(req.InitialStatus)
+	if initialStatus == "" {
+		initialStatus = "active"
+	}
+	if initialStatus != "active" && initialStatus != "pending" {
+		return nil, fmt.Errorf("unsupported initial site status %q", initialStatus)
+	}
+
 	// Normalise the project type once; everything below branches on it.
 	// Proje tipini bir kez normalize et; aşağıdaki her şey ona göre dallanır.
 	if req.ProjectType == "" {
@@ -97,7 +132,7 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		SubscriptionID: req.SubscriptionID,
 		Name:           req.Domain,
 		ParentDomainID: req.ParentDomainID,
-		Status:         "active",
+		Status:         initialStatus,
 	}
 	err := so.domainRepo.Create(ctx, domain)
 	if err != nil {
@@ -117,12 +152,12 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		site := &core.Site{
 			DomainID:    domain.ID,
 			ProjectType: "dnsonly",
-			Status:      "active",
+			Status:      initialStatus,
 		}
 		siteID, err := so.createSiteRecord(ctx, site)
 		if err != nil {
-			so.domainRepo.Delete(ctx, domain.ID)
-			return nil, fmt.Errorf("failed to create site record: %v", err)
+			cause := fmt.Errorf("failed to create site record: %w", err)
+			return nil, errors.Join(cause, so.rollbackCreatedSiteMetadata(domain.ID, 0))
 		}
 		return &CreateSiteResponse{
 			DomainID:    domain.ID,
@@ -151,13 +186,13 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		ProjectType:  req.ProjectType,
 		PHPVersion:   req.PHPVersion,
 		SSLEnabled:   req.SSLType != "none",
-		Status:       "active",
+		Status:       initialStatus,
 	}
 
 	siteID, err := so.createSiteRecord(ctx, site)
 	if err != nil {
-		so.domainRepo.Delete(ctx, domain.ID)
-		return nil, fmt.Errorf("failed to create site record: %v", err)
+		cause := fmt.Errorf("failed to create site record: %w", err)
+		return nil, errors.Join(cause, so.rollbackCreatedSiteMetadata(domain.ID, 0))
 	}
 	site.ID = siteID
 
@@ -178,23 +213,26 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	}
 
 	var agentReply transport.CreateSiteResponse
-	err = so.agentClient.Call("Agent.CreateSite", agentReq, &agentReply)
+	err = so.agentClient.CallContext(ctx, "Agent.CreateSite", agentReq, &agentReply)
 	if err != nil {
-		// Rollback database records
-		so.db.ExecContext(ctx, "DELETE FROM sites WHERE id = ?", siteID)
-		so.domainRepo.Delete(ctx, domain.ID)
-		return nil, fmt.Errorf("agent RPC failed: %v", err)
+		cause := fmt.Errorf("agent RPC failed: %w", err)
+		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
 	}
 
 	if !agentReply.Success {
-		// Rollback database records
-		so.db.ExecContext(ctx, "DELETE FROM sites WHERE id = ?", siteID)
-		so.domainRepo.Delete(ctx, domain.ID)
-		return nil, fmt.Errorf("site creation failed: %s", agentReply.ErrorMessage)
+		cause := fmt.Errorf("site creation failed: %s", agentReply.ErrorMessage)
+		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
 	}
 
 	// 5. Update site record with PHP socket
-	so.db.ExecContext(ctx, "UPDATE sites SET php_fpm_socket = ? WHERE id = ?", agentReply.PHPSocket, siteID)
+	result, err := so.db.ExecContext(ctx, "UPDATE sites SET php_fpm_socket = ? WHERE id = ?", agentReply.PHPSocket, siteID)
+	if err == nil {
+		err = requireSingleSiteMutation(result, "record PHP-FPM socket")
+	}
+	if err != nil {
+		cause := fmt.Errorf("failed to record PHP-FPM socket: %w", err)
+		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
+	}
 
 	return &CreateSiteResponse{
 		DomainID:     domain.ID,
@@ -207,6 +245,111 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		FTPPassword:  password,
 		PHPVersion:   req.PHPVersion,
 	}, nil
+}
+
+// rollbackCreatedSite tears down privileged state before removing its durable
+// metadata. If the agent cannot confirm physical cleanup, the records stay in
+// SQLite so an operator can see and retry the incomplete site instead of
+// losing the only recovery identity for orphaned files, users and vhosts.
+func (so *SiteOrchestrator) rollbackCreatedSite(
+	created transport.CreateSiteRequest,
+	domainID, siteID int,
+) error {
+	if err := so.rollbackCreatedAgentSite(created); err != nil {
+		return errors.Join(
+			err,
+			fmt.Errorf(
+				"rollback site metadata: retained domain %d and site %d because agent cleanup was not confirmed",
+				domainID,
+				siteID,
+			),
+		)
+	}
+	return so.rollbackCreatedSiteMetadata(domainID, siteID)
+}
+
+func (so *SiteOrchestrator) rollbackCreatedAgentSite(created transport.CreateSiteRequest) error {
+	ctx, cancel := context.WithTimeout(context.Background(), siteAgentCompensationTimeout)
+	defer cancel()
+
+	req := deleteCreatedSiteRequest{
+		ExpectedBuildCommit: created.ExpectedBuildCommit,
+		SiteID:              created.SiteID,
+		SubscriptionID:      created.SubscriptionID,
+		DomainID:            created.DomainID,
+		Domain:              created.Domain,
+		Username:            created.Username,
+		PHPVersion:          created.PHPVersion,
+		SiteHome:            filepath.Dir(created.DocumentRoot),
+	}
+	var reply deleteCreatedSiteResponse
+	if err := so.agentClient.CallContext(ctx, "Agent.DeleteSite", &req, &reply); err != nil {
+		return fmt.Errorf("rollback agent site: %w", err)
+	}
+	if !reply.Success {
+		message := strings.TrimSpace(reply.Error)
+		if message == "" {
+			message = "agent did not confirm site deletion"
+		}
+		return fmt.Errorf("rollback agent site: %s", message)
+	}
+	return nil
+}
+
+func (so *SiteOrchestrator) rollbackCreatedSiteMetadata(domainID, siteID int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), siteDBCompensationTimeout)
+	defer cancel()
+
+	tx, err := so.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("rollback site metadata: begin transaction: %w", err)
+	}
+	fail := func(cause error) error {
+		rollbackErr := tx.Rollback()
+		if errors.Is(rollbackErr, sql.ErrTxDone) {
+			rollbackErr = nil
+		}
+		if rollbackErr != nil {
+			rollbackErr = fmt.Errorf("rollback metadata transaction: %w", rollbackErr)
+		}
+		return errors.Join(cause, rollbackErr)
+	}
+
+	if siteID > 0 {
+		result, err := tx.ExecContext(ctx, "DELETE FROM sites WHERE id = ?", siteID)
+		if err != nil {
+			return fail(fmt.Errorf("rollback site metadata: delete site %d: %w", siteID, err))
+		}
+		if err := requireSingleSiteMutation(result, "rollback site metadata"); err != nil {
+			return fail(err)
+		}
+	}
+
+	result, err := tx.ExecContext(ctx, "DELETE FROM domains WHERE id = ?", domainID)
+	if err != nil {
+		return fail(fmt.Errorf("rollback site metadata: delete domain %d: %w", domainID, err))
+	}
+	if err := requireSingleSiteMutation(result, "rollback domain metadata"); err != nil {
+		return fail(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("rollback site metadata: commit: %w", err)
+	}
+	return nil
+}
+
+func requireSingleSiteMutation(result sql.Result, operation string) error {
+	if result == nil {
+		return fmt.Errorf("%s: database returned no result", operation)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: read affected rows: %w", operation, err)
+	}
+	if rows != 1 {
+		return fmt.Errorf("%s: affected %d rows, want exactly 1", operation, rows)
+	}
+	return nil
 }
 
 func (so *SiteOrchestrator) createSiteRecord(ctx context.Context, site *core.Site) (int, error) {

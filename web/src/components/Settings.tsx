@@ -344,6 +344,7 @@ function TwoFactorPanel() {
         };
     }, [setup]);
     const [code, setCode] = useState('');
+    const [setupPw, setSetupPw] = useState('');
     const [disablePw, setDisablePw] = useState('');
     const [disableCode, setDisableCode] = useState('');
     const [busy, setBusy] = useState(false);
@@ -362,11 +363,15 @@ function TwoFactorPanel() {
     const startSetup = async () => {
         setBusy(true);
         try {
-            const r = await fetch('/api/v1/auth/2fa/setup', { method: 'POST' });
-            if (!r.ok) throw new Error();
+            const r = await fetch('/api/v1/auth/2fa/setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: setupPw }),
+            });
+            if (!r.ok) throw new Error((await readApiError(r)).message);
             setSetup(await r.json());
-        } catch {
-            showToast('error', t('common.error'));
+        } catch (e) {
+            showToast('error', (e as Error).message || t('settings.2fa.reauthFailed'));
         } finally {
             setBusy(false);
         }
@@ -378,11 +383,12 @@ function TwoFactorPanel() {
             const r = await fetch('/api/v1/auth/2fa/enable', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code.trim() }),
+                body: JSON.stringify({ password: setupPw, code: code.trim() }),
             });
             if (!r.ok) throw new Error((await readApiError(r)).message);
             showToast('success', t('settings.2fa.enabled'));
             setSetup(null);
+            setSetupPw('');
             setCode('');
             setEnabled(true);
         } catch (e) {
@@ -488,18 +494,31 @@ function TwoFactorPanel() {
                         <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className={`${inputClass} max-w-[12rem] font-mono text-lg tracking-[0.3em]`} />
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="primary" icon={ShieldCheck} disabled={busy || code.length < 6} onClick={enable}>
+                        <Button variant="primary" icon={ShieldCheck} disabled={busy || !setupPw || code.length < 6} onClick={enable}>
                             {t('settings.2fa.verify')}
                         </Button>
-                        <Button variant="secondary" onClick={() => { setSetup(null); setCode(''); }}>
+                        <Button variant="secondary" onClick={() => { setSetup(null); setSetupPw(''); setCode(''); }}>
                             {t('common.back')}
                         </Button>
                     </div>
                 </div>
             ) : (
-                <Button variant="primary" icon={ShieldCheck} disabled={busy} onClick={startSetup}>
-                    {t('settings.2fa.setup')}
-                </Button>
+                <div className="space-y-3">
+                    <p className="text-sm text-fg-muted">{t('settings.2fa.reauthHint')}</p>
+                    <label className="block max-w-md space-y-1 text-sm font-medium text-fg">
+                        <span>{t('login.password')}</span>
+                        <input
+                            type="password"
+                            value={setupPw}
+                            onChange={(e) => setSetupPw(e.target.value)}
+                            autoComplete="current-password"
+                            className={inputClass}
+                        />
+                    </label>
+                    <Button variant="primary" icon={ShieldCheck} disabled={busy || !setupPw} onClick={startSetup}>
+                        {t('settings.2fa.setup')}
+                    </Button>
+                </div>
             )}
         </section>
     );

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -148,16 +147,21 @@ func buildDovecotTLSConf(is24 bool, certPath, keyPath string, sni []MailSNIEntry
 // geri gelir (dosya yoktuysa silinir) ve ayrıştırıcının ilk şikâyeti döner —
 // yapılandırma gürültüyle başarısız olabilir, posta servisi bozulamaz.
 func applyDovecotConf(path string, content string) error {
-	prev, prevErr := os.ReadFile(path)
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		return err
+	snapshot, err := snapshotMailFile(path)
+	if err != nil {
+		return fmt.Errorf("snapshot dovecot configuration: %w", err)
+	}
+	if err := secureWriteConfig(path, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("write dovecot configuration: %w", err)
 	}
 	out, err := runMailTLSCommand("doveconf", "-n")
 	if err != nil {
-		if prevErr == nil {
-			_ = os.WriteFile(path, prev, 0o644)
-		} else {
-			_ = os.Remove(path)
+		if rollbackErr := restoreMailFile(snapshot); rollbackErr != nil {
+			return fmt.Errorf(
+				"dovecot rejected the configuration and rollback failed: %s: %v",
+				dovecotFirstError(string(out)),
+				rollbackErr,
+			)
 		}
 		detail := dovecotFirstError(string(out))
 		if strings.TrimSpace(string(out)) == "" {

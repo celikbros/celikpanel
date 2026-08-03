@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Server-side deliverability facts: the checks that decide whether the big
@@ -19,30 +21,11 @@ import (
 // barındırma sağlayıcısında ayarlanır — bu yüzden sonuç, arayüzün operatöre
 // oraya tam olarak ne gireceğini söyleyebileceği kadar ayrıntı taşır.
 
-type MailHealthResponse struct {
-	ServerIP   string `json:"server_ip"`
-	Myhostname string `json:"myhostname"`
-	// HostnameFQDN: HELO names without a dot are rejected by many receivers.
-	// HostnameFQDN: noktasız HELO adlarını birçok alıcı reddeder.
-	HostnameFQDN bool   `json:"hostname_fqdn"`
-	PTR          string `json:"ptr"`
-	// FCrDNS: the PTR name resolves back to the server IP (forward-confirmed
-	// reverse DNS) — the strongest anti-spam identity signal.
-	// FCrDNS: PTR adı sunucu IP'sine geri çözülür — en güçlü kimlik sinyali.
-	FCrDNS     bool `json:"fcrdns"`
-	PTRAligned bool `json:"ptr_aligned"` // PTR == myhostname
-	TLSEnabled bool `json:"tls_enabled"`
-	// OutboundPort25: "open", "blocked" or "unknown" — many VPS providers
-	// block it by default and mail silently never leaves.
-	// OutboundPort25: "open", "blocked" ya da "unknown" — birçok VPS
-	// sağlayıcısı varsayılan kapatır ve posta sessizce hiç çıkmaz.
-	OutboundPort25 string `json:"outbound_port_25"`
-	Error          string `json:"error,omitempty"`
-}
+type MailHealthResponse = transport.MailHealthResponse
 
 // MailHealth measures the server-level deliverability facts.
 // MailHealth, sunucu düzeyi teslim edilebilirlik gerçeklerini ölçer.
-func (a *Agent) MailHealth(_ *struct{}, resp *MailHealthResponse) error {
+func (a *Agent) MailHealth(_ *transport.Empty, resp *MailHealthResponse) error {
 	resp.ServerIP = detectPublicIP()
 
 	if out, err := exec.Command("postconf", "-h", "myhostname").Output(); err == nil {

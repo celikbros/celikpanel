@@ -38,6 +38,7 @@ func (p *Panel) runServiceInstall(
 	if err := p.preflightManagedServiceInstall(ctx, req.ServiceID); err != nil {
 		return result, serviceInstallFailure(err)
 	}
+	mutationRequest := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
 
 	// Roundcube is not a distro package (D-004: one path on every Linux) — it
 	// installs from its own verified tarball via a dedicated RPC, then the
@@ -48,12 +49,9 @@ func (p *Panel) runServiceInstall(
 	// webmail sunucusu yeniden üretilir. Burada ele alınıp döndürülür; aşağıdaki
 	// paket yolu onu hiç görmez.
 	if req.ServiceID == "roundcube" {
-		var rcResp struct {
-			Installed bool   `json:"installed"`
-			Version   string `json:"version"`
-			Error     string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &binding, &rcResp); err != nil {
+		var rcResp transport.InstallRoundcubeResponse
+		webmailRequest := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
+		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &webmailRequest, &rcResp); err != nil {
 			return result, serviceInstallFailure(err)
 		}
 		if rcResp.Error != "" {
@@ -63,12 +61,8 @@ func (p *Panel) runServiceInstall(
 		if err := advance("configuring"); err != nil {
 			return result, operationAdvanceFailure(err)
 		}
-		var wmResp struct {
-			Configured bool   `json:"configured"`
-			Present    bool   `json:"present"`
-			Error      string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &binding, &wmResp); err != nil {
+		var wmResp transport.ConfigureWebmailResponse
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &webmailRequest, &wmResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("roundcube webmail configuration: %w", err))
 		}
 		if wmResp.Error != "" {
@@ -105,22 +99,11 @@ func (p *Panel) runServiceInstall(
 	// agent runs it synchronously and reports the real outcome.
 	// Paket kurulumları sürebilir (apt indirir + yapılandırır); agent bunu
 	// senkron çalıştırır ve gerçek sonucu bildirir.
-	var resp struct {
-		Installed bool   `json:"installed"`
-		Detail    string `json:"detail,omitempty"`
-		Unit      string `json:"unit,omitempty"`
-		Error     string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.CallContext(ctx, "Agent.InstallService", &struct {
-		MutationRequestID string `json:"mutation_request_id"`
-		MutationOwnerID   string `json:"mutation_owner_id"`
-		ID                string `json:"id"`
-		Package           string `json:"package,omitempty"`
-	}{
-		MutationRequestID: binding.MutationRequestID,
-		MutationOwnerID:   binding.MutationOwnerID,
-		ID:                req.ServiceID,
-		Package:           req.Package,
+	var resp transport.InstallServiceResponse
+	if err := p.agentClient.CallContext(ctx, "Agent.InstallService", &transport.InstallServiceRequest{
+		ServiceMutationBinding: binding,
+		ID:                     req.ServiceID,
+		Package:                req.Package,
 	}, &resp); err != nil {
 		// A failed attempt must leave a trace. Netdata could not be installed
 		// on Debian (apt has no such package) and the audit log stayed SILENT —
@@ -165,11 +148,8 @@ func (p *Panel) runServiceInstall(
 	// DNS sunucusunu kurmak işin yarısıdır: onu bize ayrılmış veritabanına
 	// yönlendir ve hemen cevap versin diye mevcut zone'ları it.
 	if req.ServiceID == "pdns" {
-		var dnsResp struct {
-			Synced bool   `json:"synced"`
-			Error  string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigurePowerDNSSQLite", &binding, &dnsResp); err != nil {
+		var dnsResp transport.SyncDNSZoneResponse
+		if err := p.callAgentContext(ctx, "Agent.ConfigurePowerDNSSQLite", &mutationRequest, &dnsResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("PowerDNS configuration: %w", err))
 		}
 		if dnsResp.Error != "" {
@@ -182,16 +162,10 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var lifecycle transport.ServiceActionResult
-		if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationAction", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			ServiceName       string `json:"service_name"`
-			Action            string `json:"action"`
-		}{
-			MutationRequestID: binding.MutationRequestID,
-			MutationOwnerID:   binding.MutationOwnerID,
-			ServiceName:       "pdns",
-			Action:            "restart",
+		if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationAction", &transport.ServiceMutationActionRequest{
+			ServiceMutationBinding: binding,
+			ServiceName:            "pdns",
+			Action:                 "restart",
 		}, &lifecycle); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("PowerDNS restart: %w", err))
 		}
@@ -220,11 +194,8 @@ func (p *Panel) runServiceInstall(
 	// yani include'lar bağlanana dek "kurulu" orada yalan olurdu. Sunamayan
 	// bir web sunucusu kurulu değildir (operatör, 24 Tem).
 	if req.ServiceID == "nginx" {
-		var nrResp struct {
-			Ready bool   `json:"ready"`
-			Error string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &binding, &nrResp); err != nil {
+		var nrResp transport.EnsureNginxReadyResponse
+		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &mutationRequest, &nrResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("nginx readiness configuration: %w", err))
 		}
 		if nrResp.Error != "" {
@@ -240,11 +211,8 @@ func (p *Panel) runServiceInstall(
 	// Mail yığınını kurmak da, postfix ve dovecot panelin sanal posta
 	// kutularına bağlanana dek yarım kalır.
 	if req.ServiceID == "postfix" || req.ServiceID == "dovecot" {
-		var mailResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &binding, &mailResp); err != nil {
+		var mailResp transport.ConfigureMailStackResponse
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &mutationRequest, &mailResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail stack configuration: %w", err))
 		}
 		if mailResp.Error != "" {
@@ -268,22 +236,18 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var ok bool
-		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnitMutation", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			ServiceName       string `json:"service_name"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, unit}, &ok); err != nil {
+		serviceRequest := transport.ServiceMutationServiceRequest{
+			ServiceMutationBinding: binding,
+			ServiceName:            unit,
+		}
+		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnitMutation", &serviceRequest, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("reset failed mail service: %w", err))
 		}
 		if !ok {
 			return result, serviceInstallFailure(errors.New("agent did not confirm resetting the mail service"))
 		}
 		ok = false
-		if err := p.agentClient.CallContext(ctx, "Agent.StartServiceMutation", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			ServiceName       string `json:"service_name"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, unit}, &ok); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.StartServiceMutation", &serviceRequest, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("start configured mail service: %w", err))
 		}
 		if !ok {
@@ -308,12 +272,8 @@ func (p *Panel) runServiceInstall(
 	// böylece yarın kataloğa eklenen bir spam filtresi bu dosyaya dokunmadan
 	// bağlanır.
 	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
-		var wireResp struct {
-			Wired  bool   `json:"wired"`
-			Detail string `json:"detail,omitempty"`
-			Error  string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &binding, &wireResp); err != nil {
+		var wireResp transport.WireMailFiltersResponse
+		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &mutationRequest, &wireResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail filter wiring: %w", err))
 		}
 		if wireResp.Error != "" {
@@ -339,19 +299,16 @@ func (p *Panel) runServiceInstall(
 	// ve defterdeki peer'ları da senkronlar; yeniden kurulum istemcileriyle
 	// birlikte döner.
 	if req.ServiceID == "wireguard" {
-		var vpnResp struct {
-			Created bool   `json:"created"`
-			Detail  string `json:"detail,omitempty"`
-			Error   string `json:"error,omitempty"`
-		}
+		var vpnResp transport.SetupVPNResponse
 		if err := advance("starting"); err != nil {
 			return result, operationAdvanceFailure(err)
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.SetupVPN", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			Port              int    `json:"port"`
-		}{MutationRequestID: binding.MutationRequestID, MutationOwnerID: binding.MutationOwnerID}, &vpnResp); err != nil {
+		if err := p.agentClient.CallContext(ctx, "Agent.SetupVPN", &transport.SetupVPNRequest{
+			ServiceMutationBinding: transport.ServiceMutationBinding{
+				MutationRequestID: binding.MutationRequestID,
+				MutationOwnerID:   binding.MutationOwnerID,
+			},
+		}, &vpnResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("WireGuard setup: %w", err))
 		}
 		if vpnResp.Error != "" {
@@ -370,12 +327,8 @@ func (p *Panel) runServiceInstall(
 	// Veritabanı web araçları daemon değil dosyadır: kur/kaldır sonrası agent,
 	// onları fiilen sunan yalnız-loopback nginx sunucusunu yeniden üretmeli.
 	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
-		var dbtResp struct {
-			Configured bool     `json:"configured"`
-			Tools      []string `json:"tools"`
-			Error      string   `json:"error,omitempty"`
-		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &binding, &dbtResp); err != nil {
+		var dbtResp transport.ConfigureDBToolsResponse
+		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &mutationRequest, &dbtResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("database tools configuration: %w", err))
 		}
 		if dbtResp.Error != "" {
@@ -470,10 +423,15 @@ func (p *Panel) handleServiceCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var version string
-	_ = p.agentClient.Call("Agent.ServiceCandidateVersion",
-		&struct {
-			ID string `json:"id"`
-		}{ID: id}, &version)
+	if err := p.callAgentContext(
+		r.Context(),
+		"Agent.ServiceCandidateVersion",
+		&transport.InstallServiceRequest{ID: id},
+		&version,
+	); err != nil {
+		writeServerError(w, err)
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]string{"version": version})
 }
 
@@ -552,12 +510,10 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// ağacını sil, sonra loopback webmail sunucusunu yeniden üret (hiçbir şey
 	// bulamayınca config'ini kaldırır). Burada ele alınıp döndürülür.
 	if req.ServiceID == "roundcube" {
-		var rmResp struct {
-			Removed bool   `json:"removed"`
-			Error   string `json:"error,omitempty"`
-		}
+		var rmResp transport.RemoveRoundcubeResponse
 		err := p.withStandaloneAgentMutation(r.Context(), "service_uninstall", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &binding, &rmResp); err != nil {
+			request := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
+			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &request, &rmResp); err != nil {
 				return err
 			}
 			if rmResp.Error != "" {
@@ -578,12 +534,10 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		// Agent makine değişikliğini doğruladı. Başarısız bir tazeleme geçmişi
 		// silemesin diye başarıyı best-effort takip işlerinden önce kaydet.
 		p.audit(r, "service.uninstall:roundcube", "service", 0)
-		var wmResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
-		}
+		var wmResp transport.ConfigureWebmailResponse
 		err = p.withStandaloneAgentMutation(r.Context(), "webmail_configure", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &binding, &wmResp); err != nil {
+			request := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
+			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &request, &wmResp); err != nil {
 				return err
 			}
 			if wmResp.Error != "" {
@@ -604,20 +558,14 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp struct {
-		Removed         bool   `json:"removed"`
-		Detail          string `json:"detail,omitempty"`
-		Error           string `json:"error,omitempty"`
-		PartialSuccess  bool   `json:"partial_success,omitempty"`
-		MutationApplied bool   `json:"mutation_applied,omitempty"`
-	}
+	var resp transport.UninstallServiceResponse
 	err := p.withStandaloneAgentMutation(r.Context(), "service_uninstall", req.ServiceID, req.Package, func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.UninstallService", &struct {
-			MutationRequestID string `json:"mutation_request_id"`
-			MutationOwnerID   string `json:"mutation_owner_id"`
-			ID                string `json:"id"`
-			Package           string `json:"package,omitempty"`
-		}{binding.MutationRequestID, binding.MutationOwnerID, req.ServiceID, req.Package}, &resp); err != nil {
+		request := transport.InstallServiceRequest{
+			ServiceMutationBinding: binding,
+			ID:                     req.ServiceID,
+			Package:                req.Package,
+		}
+		if err := p.agentClient.CallContext(callCtx, "Agent.UninstallService", &request, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" && !resp.MutationApplied {
@@ -663,13 +611,10 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// bağlanır.
 	var mailFilterSyncErr error
 	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
-		var wireResp struct {
-			Wired  bool   `json:"wired"`
-			Detail string `json:"detail,omitempty"`
-			Error  string `json:"error,omitempty"`
-		}
+		var wireResp transport.WireMailFiltersResponse
 		err := p.withStandaloneAgentMutation(r.Context(), "mail_filter_wire", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &binding, &wireResp); err != nil {
+			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &request, &wireResp); err != nil {
 				return err
 			}
 			if wireResp.Error != "" {
@@ -689,12 +634,10 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
-		var dbtResp struct {
-			Configured bool   `json:"configured"`
-			Error      string `json:"error,omitempty"`
-		}
+		var dbtResp transport.ConfigureDBToolsResponse
 		err := p.withStandaloneAgentMutation(r.Context(), "dbtools_configure", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDBTools", &binding, &dbtResp); err != nil {
+			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDBTools", &request, &dbtResp); err != nil {
 				return err
 			}
 			if dbtResp.Error != "" {
@@ -796,15 +739,12 @@ func pkgSuffix(pkg string) string {
 // da yok olan bir agent dinleyiciyi hiç geciktirmez.
 func (p *Panel) wireMailFiltersAtStartup() {
 	go func() {
-		var resp struct {
-			Wired  bool   `json:"wired"`
-			Detail string `json:"detail,omitempty"`
-			Error  string `json:"error,omitempty"`
-		}
+		var resp transport.WireMailFiltersResponse
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		err := p.withStandaloneAgentMutation(ctx, "mail_filter_wire", "startup", "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &binding, &resp); err != nil {
+			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &request, &resp); err != nil {
 				return err
 			}
 			if resp.Error != "" {
@@ -866,15 +806,11 @@ func (p *Panel) handleServiceLogs(w http.ResponseWriter, r *http.Request) {
 			lines = n
 		}
 	}
-	var resp struct {
-		Unit  string   `json:"unit"`
-		Lines []string `json:"lines"`
-		Error string   `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.ServiceJournal", struct {
-		Unit  string `json:"unit"`
-		Lines int    `json:"lines"`
-	}{Unit: unit, Lines: lines}, &resp); err != nil {
+	var resp transport.ServiceJournalResponse
+	callCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	request := transport.ServiceJournalRequest{Unit: unit, Lines: lines}
+	if err := p.agentClient.CallContext(callCtx, "Agent.ServiceJournal", &request, &resp); err != nil {
 		writeAgentError(w, err, "service logs")
 		return
 	}

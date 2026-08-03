@@ -7,30 +7,10 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-type applyVhostRPCRequest struct {
-	ExpectedBuildCommit string   `json:"expected_build_commit"`
-	SiteID              int      `json:"site_id"`
-	SubscriptionID      int      `json:"subscription_id"`
-	DomainID            int      `json:"domain_id"`
-	Domain              string   `json:"domain"`
-	TempDomain          string   `json:"temp_domain"`
-	ServerNames         []string `json:"server_names"`
-	ACMEChallengeNames  []string `json:"acme_challenge_names,omitempty"`
-	DocumentRoot        string   `json:"document_root"`
-	PHPSocket           string   `json:"php_socket"`
-	SSLType             string   `json:"ssl_type"`
-	SSLCert             string   `json:"ssl_cert"`
-	SSLKey              string   `json:"ssl_key"`
-	ForceHTTPS          bool     `json:"force_https"`
-	HSTSEnabled         bool     `json:"hsts_enabled"`
-	HSTSMaxAge          int      `json:"hsts_max_age"`
-	ProjectType         string   `json:"project_type"`
-	AppPort             int      `json:"app_port"`
-	ForwardTo           string   `json:"forward_to"`
-	ForwardCode         int      `json:"forward_code"`
-}
+type applyVhostRPCRequest = transport.ApplyVhostRequest
 
 // applyVhostForDomain regenerates a domain's nginx vhost from the current
 // database state via the agent (write → validate → reload). Every flow that
@@ -63,10 +43,7 @@ func (p *Panel) applyVhostForDomainWithACMEChallengeNames(
 		return err
 	}
 
-	var resp struct {
-		Config string `json:"config"`
-		Error  string `json:"error,omitempty"`
-	}
+	var resp transport.ApplyVhostResponse
 	if err := p.agentClient.CallContext(ctx, "Agent.ApplyVhost", &req, &resp); err != nil {
 		return err
 	}
@@ -90,6 +67,7 @@ func (p *Panel) buildVhostRequest(
 		domainName, docroot          string
 		phpSocket, certPath, keyPath *string
 		sslEnabled                   bool
+		redirectWWW                  bool
 		forceHTTPS, hstsEnabled      bool
 		hstsMaxAge                   int
 		projectType                  string
@@ -99,12 +77,14 @@ func (p *Panel) buildVhostRequest(
 	err := p.db.GetDB().QueryRowContext(ctx, `
 		SELECT s.id, d.subscription_id, d.name, s.document_root, s.php_fpm_socket,
 		       s.ssl_enabled, s.ssl_cert_path, s.ssl_key_path,
+		       COALESCE(s.redirect_www, false),
 		       COALESCE(s.force_https, false), COALESCE(s.hsts_enabled, false), COALESCE(s.hsts_max_age, 31536000),
 		       COALESCE(s.project_type,'php'), s.app_port, s.forward_to, s.forward_code
 		FROM sites s JOIN domains d ON d.id = s.domain_id
 		WHERE s.domain_id = ?`, domainID).
 		Scan(&siteID, &subscriptionID, &domainName, &docroot, &phpSocket,
 			&sslEnabled, &certPath, &keyPath,
+			&redirectWWW,
 			&forceHTTPS, &hstsEnabled, &hstsMaxAge,
 			&projectType, &appPort, &forwardTo, &forwardCode)
 	if err != nil {
@@ -157,6 +137,7 @@ func (p *Panel) buildVhostRequest(
 		Domain: domainName, DocumentRoot: docroot,
 		SSLType: "none", ProjectType: projectType,
 		ServerNames: serverNames, ACMEChallengeNames: acmeChallengeNames,
+		RedirectWWW: redirectWWW,
 	}
 	if phpSocket != nil {
 		req.PHPSocket = *phpSocket

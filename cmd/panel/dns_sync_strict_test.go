@@ -248,45 +248,6 @@ func TestSyncZoneScanFailureNeverPublishesPartialZone(t *testing.T) {
 	}
 }
 
-func TestDNSSettingsEndpointsRefuseSuccessWhenZonePublicationFails(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		method  string
-		path    string
-		body    string
-		handler func(*Panel, http.ResponseWriter, *http.Request)
-	}{
-		{
-			name:    "nameservers",
-			method:  http.MethodPut,
-			path:    "/api/v1/settings/nameservers",
-			body:    `{"ns1":"ns1.example.net","ns2":"ns2.example.net"}`,
-			handler: (*Panel).handleNameserverSettings,
-		},
-		{
-			name:    "cluster role",
-			method:  http.MethodPut,
-			path:    "/api/v1/settings/dns-cluster",
-			body:    `{"role":"standalone"}`,
-			handler: (*Panel).handleDNSCluster,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
-			p := newDNSPanelForTest(t)
-			setDNSIdentityForTest(t, p, "standalone")
-			seedStrictDNSZone(t, p, "biovision.health")
-			agent := &strictDNSRPCAgent{failZone: "biovision.health"}
-			attachStrictDNSRPCAgent(t, p, agent)
-
-			req := strictDNSAdminRequest(httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)))
-			recorder := httptest.NewRecorder()
-			tc.handler(p, recorder, req)
-			assertPublicationConflict(t, recorder)
-		})
-	}
-}
-
 func TestPDNSEnableRefusesSuccessWhenAnyZonePublicationFails(t *testing.T) {
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "standalone")

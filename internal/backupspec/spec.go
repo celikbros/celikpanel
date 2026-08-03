@@ -7,6 +7,7 @@ import "time"
 const (
 	ProtocolVersion = 2
 	MaxChunkBytes   = 1 << 20
+	MaxJobKeyBytes  = 128
 )
 
 const (
@@ -41,14 +42,18 @@ type RequestScope struct {
 }
 
 type CreateRequest struct {
-	ProtocolVersion int                `json:"protocol_version"`
-	SubscriptionID  int                `json:"subscription_id"`
-	DomainID        int                `json:"domain_id"`
-	DomainName      string             `json:"domain_name"`
-	Type            string             `json:"type"`
-	Origin          string             `json:"origin"`
-	Database        DatabaseIdentity   `json:"database,omitempty"`
-	Databases       []DatabaseIdentity `json:"databases,omitempty"`
+	ProtocolVersion int    `json:"protocol_version"`
+	SubscriptionID  int    `json:"subscription_id"`
+	DomainID        int    `json:"domain_id"`
+	DomainName      string `json:"domain_name"`
+	Type            string `json:"type"`
+	Origin          string `json:"origin"`
+	// JobKey makes a logical create operation idempotent across RPC timeouts
+	// and retries. Scheduled creates always set it; manual and pre-restore
+	// creates leave it empty.
+	JobKey    string             `json:"job_key,omitempty"`
+	Database  DatabaseIdentity   `json:"database,omitempty"`
+	Databases []DatabaseIdentity `json:"databases,omitempty"`
 
 	// DatabaseName and DatabaseType keep the v2 panel wire-compatible with a
 	// pre-v2 agent during a stopped-together upgrade or rollback. A v2 agent
@@ -151,4 +156,23 @@ type ReadChunkResponse struct {
 	Offset int64  `json:"offset"`
 	Size   int64  `json:"size"`
 	EOF    bool   `json:"eof"`
+}
+
+// ValidJobKey reports whether key is safe to persist, log and compare as an
+// opaque idempotency identifier. It deliberately accepts only a small ASCII
+// alphabet so every transport and filesystem-facing diagnostic represents the
+// same bytes.
+func ValidJobKey(key string) bool {
+	if len(key) < 1 || len(key) > MaxJobKeyBytes {
+		return false
+	}
+	for i := 0; i < len(key); i++ {
+		c := key[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == ':' {
+			continue
+		}
+		return false
+	}
+	return true
 }

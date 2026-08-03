@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // InstalledRepoPackagesRequest identifies a catalogue service. The caller
@@ -16,18 +17,13 @@ import (
 // InstalledRepoPackagesRequest, katalogdaki bir servisi tanımlar. Çağıran paket
 // düzenli ifadesi vermez; agent servisi ve güvenilen PackagePattern değerini
 // kendi derlenmiş kataloğundan çözer.
-type InstalledRepoPackagesRequest struct {
-	ServiceID string `json:"service_id"`
-}
+type InstalledRepoPackagesRequest = transport.InstalledRepoPackagesRequest
 
 // InstalledRepoPackagesResponse reports installed apt packages which exactly
 // match the selected service's catalogue PackagePattern.
 // InstalledRepoPackagesResponse, seçilen servisin katalog PackagePattern
 // değeriyle tam eşleşen kurulu apt paketlerini bildirir.
-type InstalledRepoPackagesResponse struct {
-	Packages []string `json:"packages"`
-	Error    string   `json:"error,omitempty"`
-}
+type InstalledRepoPackagesResponse = transport.InstalledRepoPackagesResponse
 
 // InstalledRepoPackages gives the panel a package-level repair identity even
 // when a versioned service is stopped and therefore has no useful active unit.

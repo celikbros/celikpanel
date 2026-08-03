@@ -5,50 +5,27 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // CronJob represents a cron job entry
-type CronJob struct {
-	ID       string `json:"id"`
-	Schedule string `json:"schedule"` // "* * * * *" format
-	Command  string `json:"command"`
-	Enabled  bool   `json:"enabled"`
-	Comment  string `json:"comment,omitempty"`
-}
+type CronJob = transport.CronJob
 
 // ListCronJobsRequest for listing cron jobs
-type ListCronJobsRequest struct {
-	Username string `json:"username"` // system user (e.g., www-data, domain user)
-}
+type ListCronJobsRequest = transport.ListCronJobsRequest
 
 // ListCronJobsResponse contains cron job list
-type ListCronJobsResponse struct {
-	Jobs []CronJob `json:"jobs"`
-}
+type ListCronJobsResponse = transport.ListCronJobsResponse
 
 // AddCronJobRequest for adding a new cron job
-type AddCronJobRequest struct {
-	Username string `json:"username"`
-	Schedule string `json:"schedule"`
-	Command  string `json:"command"`
-	Comment  string `json:"comment,omitempty"`
-}
+type AddCronJobRequest = transport.AddCronJobRequest
 
 // UpdateCronJobRequest for updating an existing cron job
-type UpdateCronJobRequest struct {
-	Username string `json:"username"`
-	ID       string `json:"id"`
-	Schedule string `json:"schedule"`
-	Command  string `json:"command"`
-	Enabled  bool   `json:"enabled"`
-	Comment  string `json:"comment,omitempty"`
-}
+type UpdateCronJobRequest = transport.UpdateCronJobRequest
 
 // DeleteCronJobRequest for deleting a cron job
-type DeleteCronJobRequest struct {
-	Username string `json:"username"`
-	ID       string `json:"id"`
-}
+type DeleteCronJobRequest = transport.DeleteCronJobRequest
 
 // ListCronJobs lists all cron jobs for a user
 func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsResponse) error {

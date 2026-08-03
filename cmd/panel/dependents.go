@@ -91,7 +91,7 @@ func collectBlockers(ctx context.Context, db *sql.DB, where string, args ...any)
 //     a php_version column value (legacy '8.2' default, import fixtures),
 //     but does not USE PHP — counting it would block removals with ghosts.
 //
-// Node: runtime_version is NULL/'' for the legacy "system node" rows; those
+// Node: runtime_version is NULL or empty for the legacy "system node" rows; those
 // never pin a specific tarball version, so they cannot block one.
 //
 // runtimeVersionBlockers: TEK bir sürümün üstünde koşan siteler —
@@ -103,7 +103,7 @@ func collectBlockers(ctx context.Context, db *sql.DB, where string, args ...any)
 //     (eski '8.2' varsayılanı, import kalıntıları) ama PHP KULLANMAZ —
 //     sayılsaydı kaldırmaları hayaletler engellerdi.
 //
-// Node: eski "sistem node'u" satırlarında runtime_version NULL/''dır; belirli
+// Node: eski "sistem node'u" satırlarında runtime_version NULL veya boştur; belirli
 // bir tarball sürümüne bağlanmazlar, dolayısıyla birini engelleyemezler.
 func runtimeVersionBlockers(ctx context.Context, db *sql.DB, serviceID, version string) (int, []string, error) {
 	switch serviceID {

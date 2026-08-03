@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/alicelik/celikpanel/internal/core"
-	"github.com/alicelik/celikpanel/internal/fs"
 	"github.com/alicelik/celikpanel/internal/parser"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/systemd"
@@ -16,16 +15,19 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 type Agent struct {
-	watcher     *fs.Watcher
-	parser      *parser.NginxParser
-	systemdMgr  *systemd.Manager
-	nginxGen    *services.NginxGenerator
-	phpManager  *services.PHPFPMManager
-	userManager *services.UserManager
-	sqliteAdmin *systemsqlite.Manager
+	parser       *parser.NginxParser
+	systemdMgr   *systemd.Manager
+	nginxGen     *services.NginxGenerator
+	phpManager   *services.PHPFPMManager
+	userManager  *services.UserManager
+	sqliteAdmin  *systemsqlite.Manager
+	siteOps      *siteLifecycleOps
+	configMu     sync.Mutex
+	configReload func(string) error
 }
 
 // RPC Methods Implementation
@@ -40,9 +42,30 @@ func (a *Agent) GetServices(args *transport.Empty, reply *[]core.Service) error 
 }
 
 func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.ConfigResponse) error {
-	content, err := os.ReadFile(args.Path)
+	if args == nil || reply == nil {
+		return errors.New(`config read requires a path and response`)
+	}
+	*reply = transport.ConfigResponse{}
+
+	// The agent runs as root, so reads and writes must share the same
+	// catalogue-derived path boundary. Otherwise this RPC becomes an arbitrary
+	// root file reader for any caller that reaches the panel endpoint.
+	path, err := configWriteAllowed(args.Path)
 	if err != nil {
-		return fmt.Errorf("failed to read file: %v", err)
+		log.Printf(`config read REFUSED %s: %v`, args.Path, err)
+		if reply.Error = configRPCError(err); reply.Error != nil {
+			return nil
+		}
+		return err
+	}
+
+	content, err := secureReadConfig(path)
+	if err != nil {
+		err = fmt.Errorf("failed to read file: %w", err)
+		if reply.Error = configRPCError(err); reply.Error != nil {
+			return nil
+		}
+		return err
 	}
 
 	reply.Content = string(content)
@@ -56,7 +79,12 @@ func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.Config
 	return nil
 }
 
-func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) error {
+func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *transport.UpdateConfigResponse) error {
+	if args == nil || reply == nil {
+		return errors.New("config update requires a path, content and response")
+	}
+	*reply = transport.UpdateConfigResponse{}
+
 	// The path is judged by configWriteAllowed, which cleans it, refuses
 	// symlinks, protects the machine's own keys/units/cron, and otherwise
 	// accepts only files the scanner discovered for a catalogue component.
@@ -70,62 +98,93 @@ func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *bool) erro
 	path, err := configWriteAllowed(args.Path)
 	if err != nil {
 		log.Printf("config write REFUSED %s: %v", args.Path, err)
+		if reply.Error = configRPCError(err); reply.Error != nil {
+			return nil
+		}
 		return err
 	}
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
 	log.Printf("Updating config %s", path)
 
-	// Keep the previous content so a failed validation can be UNDONE. The old
-	// code wrote first, validated after, and on failure returned an error with
-	// the comment "Revert? For now just return error" — leaving the file
-	// broken on disk. Proven live (25 Jul): a single bad write emptied
-	// /etc/nginx/nginx.conf; nginx kept serving from memory and would have
-	// died at the next reload, with nothing on screen saying so. A config
-	// editor that can destroy the file it edits is not an editor.
-	//
-	// Önceki içeriği sakla ki başarısız bir doğrulama GERİ ALINABİLSİN. Eski
-	// kod önce yazıyor, sonra doğruluyor ve düşünce "Revert? For now just
-	// return error" yorumuyla hata döndürüyordu — dosyayı diskte bozuk
-	// bırakarak. Canlıda kanıtlandı (25 Tem): tek bir hatalı yazma
-	// /etc/nginx/nginx.conf'u boşalttı; nginx bellekten sunmayı sürdürdü ve
-	// bir sonraki yeniden yüklemede ölecekti, ekranda bunu söyleyen hiçbir şey
-	// yokken. Düzenlediği dosyayı yok edebilen bir editör, editör değildir.
-	previous, hadPrevious := []byte(nil), false
-	if b, rerr := os.ReadFile(path); rerr == nil {
-		previous, hadPrevious = b, true
-	}
-	restore := func() {
-		if hadPrevious {
-			if werr := os.WriteFile(path, previous, 0644); werr != nil {
-				log.Printf("config rollback FAILED for %s: %v", path, werr)
-			} else {
-				log.Printf("config rolled back: %s", path)
-			}
+	reload := a.configReload
+	if reload == nil {
+		if a.systemdMgr == nil {
+			reload = func(string) error { return errors.New("systemd manager unavailable") }
 		} else {
-			_ = os.Remove(path)
+			reload = a.systemdMgr.Reload
 		}
 	}
-
-	if err := os.WriteFile(path, []byte(args.Content), 0644); err != nil {
-		return fmt.Errorf("failed to write file: %v", err)
+	if err := applyConfigUpdate(path, []byte(args.Content), configValidator(path), reload); err != nil {
+		if reply.Error = configRPCError(err); reply.Error != nil {
+			return nil
+		}
+		return err
 	}
 
-	// Validate, then roll back on failure — never leave a broken config
-	// behind. The validator is chosen by what the file belongs to; a file with
-	// no validator is written as-is (we cannot check what we cannot parse).
-	// Doğrula, düşerse geri al — arkanda asla bozuk bir yapılandırma bırakma.
-	// Doğrulayıcı, dosyanın ait olduğu şeye göre seçilir; doğrulayıcısı olmayan
-	// dosya olduğu gibi yazılır (ayrıştıramadığımızı denetleyemeyiz).
-	if v := configValidator(path); v != nil {
-		if out, verr := v.check(); verr != nil {
-			restore()
-			return fmt.Errorf("%s: %s", v.name, firstLine(out))
+	reply.Success = true
+	return nil
+}
+
+// applyConfigUpdate atomically publishes one file, validates it and reloads
+// the owning service. A failed validation or reload restores the previous
+// bytes atomically; reload failure also reloads the restored configuration so
+// disk and the running daemon cannot silently diverge.
+func applyConfigUpdate(path string, content []byte, validator *validatorSpec, reload func(string) error) error {
+	previous, hadPrevious := []byte(nil), false
+	if existing, err := secureReadConfig(path); err == nil {
+		previous, hadPrevious = existing, true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to read existing file safely: %w", err)
+	}
+	restore := func() error {
+		if hadPrevious {
+			return secureWriteConfig(path, previous, 0o644)
 		}
-		if v.reload != "" {
-			a.systemdMgr.Reload(v.reload)
+		if err := secureRemoveConfig(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
 		}
+		return nil
 	}
 
-	*reply = true
+	if err := secureWriteConfig(path, content, 0o644); err != nil {
+		if rollbackErr := restore(); rollbackErr != nil {
+			return fmt.Errorf("failed to write file: %v; rollback also failed: %v", err, rollbackErr)
+		}
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	if validator == nil {
+		return nil
+	}
+	if out, err := validator.check(); err != nil {
+		if rollbackErr := restore(); rollbackErr != nil {
+			return fmt.Errorf("%s: %s; rollback failed: %v", validator.name, firstLine(out), rollbackErr)
+		}
+		return fmt.Errorf("%w (%s): %s", errConfigValidationFail, validator.name, firstLine(out))
+	}
+	if validator.reload == "" {
+		return nil
+	}
+	if reload == nil {
+		if rollbackErr := restore(); rollbackErr != nil {
+			return fmt.Errorf("reload %s unavailable; rollback failed: %v", validator.reload, rollbackErr)
+		}
+		return fmt.Errorf("reload %s unavailable; previous configuration restored", validator.reload)
+	}
+	if err := reload(validator.reload); err != nil {
+		rollbackErr := restore()
+		if rollbackErr != nil {
+			return fmt.Errorf("reload %s failed: %v; rollback failed: %v", validator.reload, err, rollbackErr)
+		}
+		if out, checkErr := validator.check(); checkErr != nil {
+			return fmt.Errorf("reload %s failed: %v; previous configuration was restored but no longer validates: %s", validator.reload, err, firstLine(out))
+		}
+		if oldReloadErr := reload(validator.reload); oldReloadErr != nil {
+			return fmt.Errorf("reload %s failed: %v; previous configuration was restored but its reload failed: %w", validator.reload, err, oldReloadErr)
+		}
+		return fmt.Errorf("reload %s failed: %v; previous configuration restored and reloaded", validator.reload, err)
+	}
 	return nil
 }
 
@@ -149,13 +208,13 @@ func configValidator(path string) *validatorSpec {
 	}
 	switch {
 	case strings.Contains(path, "/nginx/"):
-		return &validatorSpec{name: "nginx config validation failed", reload: "nginx", check: run("nginx", "-t")}
+		return &validatorSpec{name: "nginx", reload: "nginx", check: run("nginx", "-t")}
 	case strings.Contains(path, "/postfix/"):
-		return &validatorSpec{name: "postfix config validation failed", reload: "postfix", check: run("postfix", "check")}
+		return &validatorSpec{name: "postfix", reload: "postfix", check: run("postfix", "check")}
 	case strings.Contains(path, "/dovecot"):
-		return &validatorSpec{name: "dovecot config validation failed", reload: "dovecot", check: run("doveconf", "-n")}
+		return &validatorSpec{name: "dovecot", reload: "dovecot", check: run("doveconf", "-n")}
 	case strings.Contains(path, "/apache2/") || strings.Contains(path, "/httpd/"):
-		return &validatorSpec{name: "apache config validation failed", reload: "", check: run("apachectl", "configtest")}
+		return &validatorSpec{name: "apache", reload: "", check: run("apachectl", "configtest")}
 	}
 	return nil
 }
@@ -164,11 +223,7 @@ func configValidator(path string) *validatorSpec {
 // service lifecycle action performed as part of a larger mutation.
 // ServiceMutationActionRequest, daha büyük bir değişikliğin parçası olarak
 // yapılan yönetilen servis yaşam döngüsü eyleminin kalıcı kirasını taşır.
-type ServiceMutationActionRequest struct {
-	ServiceMutationBinding
-	ServiceName string `json:"service_name"`
-	Action      string `json:"action"`
-}
+type ServiceMutationActionRequest = transport.ServiceMutationActionRequest
 
 func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *transport.ServiceActionResult) error {
 	if req == nil {
@@ -205,10 +260,7 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 	return nil
 }
 
-type ServiceMutationServiceRequest struct {
-	ServiceMutationBinding
-	ServiceName string `json:"service_name"`
-}
+type ServiceMutationServiceRequest = transport.ServiceMutationServiceRequest
 
 func (a *Agent) StartServiceMutation(req *ServiceMutationServiceRequest, reply *bool) error {
 	if req == nil {
@@ -251,13 +303,36 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 }
 
 func main() {
-	// The hidden owner worker exits before any root-only manager, watcher, socket, or background task starts.
-	// Gizli sahip çalışanı, root'a özel yönetici, izleyici, soket veya arka plan görevi başlamadan çıkar.
+	// The hidden owner worker exits before any root-only manager, socket, or background task starts.
+	// Gizli sahip çalışanı, root'a özel yönetici, soket veya arka plan görevi başlamadan çıkar.
 	if handled, err := handleSystemSQLiteOwnerWorker(); handled {
 		if err != nil {
 			log.Printf("Isolated SQLite worker failed: %v", err)
 			os.Exit(1)
 		}
+		return
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--restart-panel-after-certificate-publish" {
+		if err := restartPanelAfterCertificatePublish(); err != nil {
+			log.Fatalf("Restart panel after certificate publish: %v", err)
+		}
+		log.Println("Panel certificate activation reconciliation completed")
+		return
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--deploy-panel-certificate" {
+		lineageName := strings.ToLower(strings.TrimSpace(os.Args[2]))
+		if !validPanelCertLineage.MatchString(lineageName) {
+			log.Fatal("Invalid panel certificate lineage")
+		}
+		deployed, err := deployRenewedPanelCertFiles(lineageName, managedPanelTLSDir)
+		if err != nil {
+			log.Fatalf("Deploy panel certificate: %v", err)
+		}
+		if !deployed {
+			log.Printf("Renewed lineage %s is not the active panel identity; skipped", lineageName)
+			return
+		}
+		log.Println("Panel certificate activation queued for durable reconciliation")
 		return
 	}
 	log.Println("Starting CelikPanel Agent...")
@@ -274,10 +349,10 @@ func main() {
 	}
 	// The early-boot oneshot calls only this fixed mode. It restores the
 	// root-owned firewall snapshot before network-pre.target, then exits without
-	// opening the privileged RPC socket or starting any watcher.
+	// opening the privileged RPC socket or starting background workers.
 	// Erken-açılış oneshot yalnız bu sabit modu çağırır. Root-sahipli firewall
 	// snapshot'ını network-pre.target'tan önce geri yükler; ayrıcalıklı RPC
-	// soketini açmadan veya izleyici başlatmadan çıkar.
+	// soketini açmadan veya arka plan işlerini başlatmadan çıkar.
 	if len(os.Args) == 2 && os.Args[1] == "--restore-firewall" {
 		if err := restoreFirewallSnapshot(); err != nil {
 			log.Fatalf("Firewall restore failed: %v", err)
@@ -337,17 +412,10 @@ func main() {
 		return
 	}
 
-	if _, err := agentServiceMutationManager(); err != nil {
+	mutationManager, err := agentServiceMutationManager()
+	if err != nil {
 		log.Fatalf("Failed to initialize service mutation ledger: %v", err)
 	}
-
-	// Initialize Watcher
-	w, err := fs.NewWatcher()
-	if err != nil {
-		log.Fatalf("Failed to create watcher: %v", err)
-	}
-	go w.Start()
-	defer w.Close()
 
 	// Initialize Systemd Manager
 	sysMgr := systemd.NewManager()
@@ -380,7 +448,6 @@ func main() {
 
 	// Initialize Agent
 	agent := &Agent{
-		watcher:     w,
 		parser:      parser.NewNginxParser(),
 		systemdMgr:  sysMgr,
 		nginxGen:    nginxGen,
@@ -390,7 +457,9 @@ func main() {
 	}
 
 	// Register RPC
-	rpc.Register(agent)
+	if err := rpc.Register(agent); err != nil {
+		log.Fatalf(`failed to register agent RPC service: %v`, err)
+	}
 
 	token, err := transport.LoadOrCreateToken(transport.AgentTokenPath())
 	if err != nil {
@@ -404,13 +473,7 @@ func main() {
 	}
 	defer listener.Close()
 	log.Printf("Agent listening on unix socket %s", socketPath)
-
-	// Watcher Event Loop (for debugging)
-	go func() {
-		for event := range w.Events {
-			log.Printf("FS Event: %s", event)
-		}
-	}()
+	startPanelCertificateActivationReconciler(mutationManager)
 
 	for {
 		conn, err := listener.Accept()

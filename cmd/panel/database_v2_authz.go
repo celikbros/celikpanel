@@ -39,6 +39,78 @@ func (p *Panel) callerSubscriptionID(r *http.Request) (int, error) {
 	return subID, err
 }
 
+// databaseUserReference deliberately excludes the stored password. Reference
+// validation and API responses never need to load a reusable credential.
+type databaseUserReference struct {
+	ID       int
+	Username string
+}
+
+// databaseUserForServerSubscription resolves an existing user only inside the
+// exact logical server and subscription selected by the request. A missing ID
+// and a foreign ID deliberately have the same result.
+func (p *Panel) databaseUserForServerSubscription(
+	ctx context.Context,
+	c *Caller,
+	userID int,
+	serverID int,
+	subscriptionID int,
+) (*databaseUserReference, error) {
+	var ref databaseUserReference
+	var ownerID int
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT du.id, du.username, s.owner_id
+		FROM database_users du
+		JOIN subscriptions s ON s.id = du.subscription_id
+		WHERE du.id = ? AND du.server_id = ? AND du.subscription_id = ?`,
+		userID, serverID, subscriptionID,
+	).Scan(&ref.ID, &ref.Username, &ownerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := p.ownerAllowed(ctx, c, ownerID); err != nil {
+		return nil, err
+	}
+	return &ref, nil
+}
+
+// databaseDomainInSubscription accepts a domain only when it belongs to the
+// same subscription as the selected logical database server and is visible to
+// the caller. Missing and foreign references remain indistinguishable.
+func (p *Panel) databaseDomainInSubscription(
+	ctx context.Context,
+	c *Caller,
+	domainID int,
+	subscriptionID int,
+) error {
+	var ownerID int
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT s.owner_id
+		FROM domains d
+		JOIN subscriptions s ON s.id = d.subscription_id
+		WHERE d.id = ? AND d.subscription_id = ?`,
+		domainID, subscriptionID,
+	).Scan(&ownerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errNotFound
+	}
+	if err != nil {
+		return err
+	}
+	return p.ownerAllowed(ctx, c, ownerID)
+}
+
+func writeDatabaseReferenceError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errNotFound) {
+		writeClientError(w, http.StatusNotFound, `invalid request`)
+		return
+	}
+	writeServerError(w, err)
+}
+
 // canAccessDBServer verifies the caller may act on the given database server,
 // resolving server → subscription → ownership. Returns errNotFound when the
 // server is absent OR invisible (the two are deliberately indistinguishable,

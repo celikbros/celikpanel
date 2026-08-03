@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/transport"
 	_ "modernc.org/sqlite"
 )
 
@@ -43,27 +44,11 @@ func pdnsUser() string {
 	return "pdns"
 }
 
-type ZoneRecord struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Content  string `json:"content"`
-	TTL      int    `json:"ttl"`
-	Prio     int    `json:"prio"`
-	Disabled bool   `json:"disabled"`
-}
+type ZoneRecord = transport.ZoneRecord
 
-type SyncDNSZoneRequest struct {
-	ServiceMutationBinding
-	Domain   string       `json:"domain"`
-	Delete   bool         `json:"delete"`
-	ZoneType string       `json:"zone_type,omitempty"`
-	Records  []ZoneRecord `json:"records"`
-}
+type SyncDNSZoneRequest = transport.SyncDNSZoneRequest
 
-type SyncDNSZoneResponse struct {
-	Synced bool   `json:"synced"`
-	Error  string `json:"error,omitempty"`
-}
+type SyncDNSZoneResponse = transport.SyncDNSZoneResponse
 
 var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]byte, error) {
 	return serviceMutationCommand(ctx, name, args...).CombinedOutput()
@@ -133,7 +118,11 @@ func (a *Agent) syncDNSZone(ctx context.Context, req *SyncDNSZoneRequest, resp *
 			resp.Error = insertErr.Error()
 			return nil
 		}
-		zoneID, _ = res.LastInsertId()
+		zoneID, err = res.LastInsertId()
+		if err != nil {
+			resp.Error = fmt.Sprintf("read inserted zone identity: %v", err)
+			return nil
+		}
 	case err != nil:
 		resp.Error = err.Error()
 		return nil
@@ -233,14 +222,30 @@ func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncD
 		resp.Error = err.Error()
 		return nil
 	}
-	db.Close()
+	if err := db.Close(); err != nil {
+		resp.Error = fmt.Sprintf("close initialized PowerDNS database: %v", err)
+		return nil
+	}
 
 	// pdns must read and write its own database; the account name differs per
 	// distro (Debian "pdns", Arch "powerdns").
 	// pdns kendi veritabanını okuyup yazabilmeli; hesap adı dağıtıma göre
 	// değişir (Debian "pdns", Arch "powerdns").
 	owner := pdnsUser()
-	_ = serviceMutationCommand(ctx, "chown", "-R", owner+":"+owner, filepath.Dir(dbPath)).Run()
+	if out, err := serviceMutationCommand(
+		ctx,
+		"chown",
+		"-R",
+		owner+":"+owner,
+		filepath.Dir(dbPath),
+	).CombinedOutput(); err != nil {
+		resp.Error = fmt.Sprintf(
+			"set PowerDNS database ownership: %v: %s",
+			err,
+			firstLine(string(out)),
+		)
+		return nil
+	}
 
 	// zone-cache-refresh-interval=0: pdns caches the zone LIST for 300s by
 	// default, so a zone created after startup would be REFUSED for up to

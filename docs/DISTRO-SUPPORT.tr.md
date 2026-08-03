@@ -1,7 +1,7 @@
 # Hangi dağıtımda ne sunuluyor?
 
 <!-- BU DOSYA ÜRETİLİR — elle düzenlemeyin. -->
-<!-- Kaynak: internal/core/managed_services.go · Üretmek için: go run ./tools/gen-distro-matrix -->
+<!-- Kaynak: internal/core/managed_services.go · Üretmek için: make distro-matrix -->
 <!-- Bekçi: internal/core/distro_matrix_test.go (katalog değişip bu dosya üretilmezse test düşer) -->
 
 Bu liste elle yazılmaz; bileşen kataloğundan üretilir. Panelin Bileşenler

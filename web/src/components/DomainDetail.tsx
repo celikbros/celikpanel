@@ -123,6 +123,20 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             .catch(() => setCaps(null));
     }, []);
 
+    // Capabilities arrive after the first paint. If they remove the selected
+    // tab, synchronise the stored selection as well as the rendered fallback;
+    // otherwise a later capability refresh could resurrect a stale tab.
+    useEffect(() => {
+        if (!domain || !caps) return;
+        const projectType = domain.project_type || 'php';
+        const unavailable =
+            (activeTab === 'mail' && !caps.mail_server) ||
+            (activeTab === 'databases' && (caps.database_servers?.length ?? 0) === 0) ||
+            (activeTab === 'apps' && projectType !== 'php') ||
+            ((activeTab === 'files' || activeTab === 'advanced') && projectType === 'dnsonly');
+        if (unavailable) setActiveTab('overview');
+    }, [activeTab, caps, domain]);
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -266,7 +280,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     <div className="mb-4 flex flex-wrap gap-1 border-b border-border">
                         {tabs.map((tb) => {
                             const Icon = tb.icon;
-                            const active = tb.id === activeTab;
+                            const active = tb.id === current.id;
                             return (
                                 <button
                                     key={tb.id}
@@ -311,14 +325,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         koşuludur: alan adı buraya bakmadan ne site, ne sertifika,
                         ne posta kaydı çalışır. Panel bunu biliyor ve hiç
                         söylemiyordu (operatör, 25 Tem). */}
-                    {activeTab === 'overview' && (
+                    {current.id === 'overview' && (
                         <div className="mb-4">
                             <DomainConnection domainId={domain.id} domainName={domain.domain_name} />
                         </div>
                     )}
 
                     <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
-                        {activeTab === 'overview' ? (
+                        {current.id === 'overview' ? (
                             <Overview
                                 domainId={domain.id}
                                 tabs={tabs}

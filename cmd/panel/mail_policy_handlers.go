@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Admin-only server mail policy: message size and inbound DNSBL protection.
@@ -15,15 +17,8 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		var resp struct {
-			Policy struct {
-				MessageSizeMB     int      `json:"message_size_mb"`
-				DNSBLZones        []string `json:"dnsbl_zones"`
-				OutboundRateLimit int      `json:"outbound_rate_limit"`
-			} `json:"policy"`
-			Error string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.GetMailPolicy", &struct{}{}, &resp); err != nil {
+		var resp transport.MailPolicyResponse
+		if err := p.callAgent("Agent.GetMailPolicy", &transport.Empty{}, &resp); err != nil {
 			writeAgentError(w, err, "mail policy")
 			return
 		}
@@ -34,24 +29,13 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(resp.Policy)
 
 	case http.MethodPut:
-		var req struct {
-			MessageSizeMB     int      `json:"message_size_mb"`
-			DNSBLZones        []string `json:"dnsbl_zones"`
-			OutboundRateLimit int      `json:"outbound_rate_limit"`
-		}
+		var req transport.MailPolicy
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
-		var resp struct {
-			Policy struct {
-				MessageSizeMB     int      `json:"message_size_mb"`
-				DNSBLZones        []string `json:"dnsbl_zones"`
-				OutboundRateLimit int      `json:"outbound_rate_limit"`
-			} `json:"policy"`
-			Error string `json:"error,omitempty"`
-		}
-		if err := p.agentClient.Call("Agent.SetMailPolicy", &req, &resp); err != nil {
+		var resp transport.MailPolicyResponse
+		if err := p.callAgent("Agent.SetMailPolicy", &req, &resp); err != nil {
 			writeAgentError(w, err, "mail policy")
 			return
 		}

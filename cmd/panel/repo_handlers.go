@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Managed vendor repositories, panel side. A distro pins one major version of a
@@ -176,11 +177,10 @@ func (p *Panel) handleRepo(w http.ResponseWriter, r *http.Request) {
 		}
 		err := p.withStandaloneAgentMutation(r.Context(), "repo_"+req.Action, repo.ID, "", func(callCtx context.Context, binding agentMutationBinding) error {
 			request := &enableRepoReq{
-				MutationRequestID: binding.MutationRequestID,
-				MutationOwnerID:   binding.MutationOwnerID,
-				RepoID:            repo.ID,
+				ServiceMutationBinding: binding,
+				RepoID:                 repo.ID,
 			}
-			if err := p.agentClient.CallContext(callCtx, method, request, &st); err != nil {
+			if err := p.callAgentContext(callCtx, method, request, &st); err != nil {
 				return err
 			}
 			if st.Error != "" {
@@ -237,7 +237,7 @@ func (p *Panel) handleRepo(w http.ResponseWriter, r *http.Request) {
 func (p *Panel) repoInfo(repo *core.ManagedRepo) repoInfoResp {
 	info := repoInfoResp{Available: true, ID: repo.ID, Name: repo.Name, Detail: repo.Description, Required: repo.Required}
 	var st RepoStatusResp
-	if err := p.agentClient.Call("Agent.RepoStatus", &enableRepoReq{RepoID: repo.ID}, &st); err != nil {
+	if err := p.callAgent("Agent.RepoStatus", &enableRepoReq{RepoID: repo.ID}, &st); err != nil {
 		log.Printf("[repo][%s][status][transport] %v", repo.ID, err)
 		info.ErrorCode = errCodeRepoStatusUnavailable
 		return info
@@ -258,7 +258,7 @@ func (p *Panel) repoInfo(repo *core.ManagedRepo) repoInfoResp {
 	// yüzden agent'tan boş aramayla paket listelemesini asla isteme.
 	if info.Enabled && strings.TrimSpace(repo.PackagePattern) != "" {
 		var pkgs RepoPackagesResp
-		if err := p.agentClient.Call("Agent.RepoPackages", &repoPackagesReq{RepoID: repo.ID}, &pkgs); err != nil {
+		if err := p.callAgent("Agent.RepoPackages", &repoPackagesReq{RepoID: repo.ID}, &pkgs); err != nil {
 			log.Printf("[repo][%s][packages][transport] %v", repo.ID, err)
 			info.ErrorCode = errCodeRepoPackagesUnavailable
 			return info
@@ -280,28 +280,7 @@ func (p *Panel) repoInfo(repo *core.ManagedRepo) repoInfoResp {
 // bilerek RPC üzerinden GİTMEZ — agent onları kendi derlenmiş kataloğundan
 // okur; böylece ele geçirilmiş bir panel apt'ın neye güveneceğini seçemez.
 // Buraya alan eklemeyin.
-type enableRepoReq struct {
-	MutationRequestID string `json:"mutation_request_id,omitempty"`
-	MutationOwnerID   string `json:"mutation_owner_id,omitempty"`
-	RepoID            string `json:"repo_id"`
-}
-
-type RepoStatusResp struct {
-	Enabled         bool   `json:"enabled"`
-	Repairable      bool   `json:"repairable,omitempty"`
-	PartialSuccess  bool   `json:"partial_success,omitempty"`
-	MutationApplied bool   `json:"mutation_applied,omitempty"`
-	Source          string `json:"source,omitempty"`
-	Error           string `json:"error,omitempty"`
-	ErrorCode       string `json:"error_code,omitempty"`
-}
-
-type repoPackagesReq struct {
-	RepoID string `json:"repo_id"`
-}
-
-type RepoPackagesResp struct {
-	Packages  []string `json:"packages"`
-	Error     string   `json:"error,omitempty"`
-	ErrorCode string   `json:"error_code,omitempty"`
-}
+type enableRepoReq = transport.EnableRepoRequest
+type RepoStatusResp = transport.RepoStatusResponse
+type repoPackagesReq = transport.RepoPackagesRequest
+type RepoPackagesResp = transport.RepoPackagesResponse

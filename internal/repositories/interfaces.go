@@ -12,18 +12,9 @@ type UserRepository interface {
 	GetByUsername(ctx context.Context, username string) (*core.User, error)
 	GetByEmail(ctx context.Context, email string) (*core.User, error)
 	Update(ctx context.Context, user *core.User) error
+	UpdateAndRevokeSessions(ctx context.Context, user *core.User) error
 	Delete(ctx context.Context, id int) error
 	List(ctx context.Context) ([]*core.User, error)
-}
-
-// SubscriptionRepository defines operations for Subscription entity
-type SubscriptionRepository interface {
-	Create(ctx context.Context, sub *core.Subscription) error
-	GetByID(ctx context.Context, id int) (*core.Subscription, error)
-	GetByOwnerID(ctx context.Context, ownerID int) ([]*core.Subscription, error)
-	Update(ctx context.Context, sub *core.Subscription) error
-	Delete(ctx context.Context, id int) error
-	List(ctx context.Context) ([]*core.Subscription, error)
 }
 
 // DomainRepository defines operations for Domain entity
@@ -76,14 +67,4 @@ type DatabaseGrantRepository interface {
 	ListByUser(ctx context.Context, userID int) ([]*core.DatabaseGrant, error)
 	GetByID(ctx context.Context, id int) (*core.DatabaseGrant, error)
 	Delete(ctx context.Context, id int) error
-}
-
-// SiteRepository defines operations for Site entity
-type SiteRepository interface {
-	Create(ctx context.Context, site *core.Site) error
-	GetByID(ctx context.Context, id int) (*core.Site, error)
-	GetByDomainID(ctx context.Context, domainID int) ([]*core.Site, error)
-	Update(ctx context.Context, site *core.Site) error
-	Delete(ctx context.Context, id int) error
-	List(ctx context.Context) ([]*core.Site, error)
 }

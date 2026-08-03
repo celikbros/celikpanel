@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Serving the database web tools. phpMyAdmin/phpPgAdmin are PHP files, not
@@ -40,11 +42,7 @@ func firstInstalledDBToolRoot(roots []string) string {
 	return ""
 }
 
-type ConfigureDBToolsResponse struct {
-	Configured bool     `json:"configured"`
-	Tools      []string `json:"tools"`
-	Error      string   `json:"error,omitempty"`
-}
+type ConfigureDBToolsResponse = transport.ConfigureDBToolsResponse
 
 // ConfigureDBTools regenerates the loopback nginx server for whichever tools
 // are installed right now; with none installed the config is removed. Called

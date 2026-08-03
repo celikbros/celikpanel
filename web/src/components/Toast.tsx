@@ -65,6 +65,9 @@ export function ToastContainer() {
             {toasts.map(toast => (
                 <div
                     key={toast.id}
+                    role={toast.type === 'error' ? 'alert' : 'status'}
+                    aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+                    aria-atomic={true}
                     className={`flex items-center gap-3 p-4 rounded-lg border backdrop-blur-sm shadow-lg animate-slide-in ${getStyles(toast.type)}`}
                 >
                     {getIcon(toast.type)}

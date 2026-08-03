@@ -50,8 +50,10 @@ bu runbook'u canlı durum önbelleğine çevirmeyin.
 - panel veritabanı: `/var/lib/celikpanel/celikpanel.db`
 - unit'ler: `celikpanel-agent` ve `celikpanel-panel`
 
-Agent'ı durdurmak bağımlı paneli de durdurabilir. Servis sıralaması ve toparlama
-incelenmiş ürün scriptlerinin sorumluluğundadır; bunların akışını doğaçlama SSH
+Agent'ı durdurmak veya temiz biçimde yeniden başlatmak artık paneli durdurmaz.
+Panel agent'tan sonra sıralanır, onu zayıf bağımlılık olarak ister ve agent geri
+dönerken yeniden dener. Daha sıkı dondurma, güncelleme ve toparlama sırası yine
+incelenmiş ürün scriptlerinin sorumluluğundadır; bu akışı doğaçlama SSH
 komutlarıyla değiştirmeyin.
 
 ## 3. Sürüm kapıları
@@ -60,10 +62,12 @@ komutlarıyla değiştirmeyin.
 dağıtımdan önce tam commit şu kontrolleri geçmelidir:
 
 ```bash
-go test ./...
-go vet ./...
-cd web && npm run build
+make test vet web
 ```
+
+Make hedefleri incelenmiş Go 1.26.5 dışındaki tüm derleyicileri reddeder,
+otomatik Go toolchain indirmesini kapatır ve test ile vet işlemlerini temiz bir
+ortamda çalıştırır.
 
 İncelenmiş commit push edildikten sonra sunucudaki checkout'u aşağıdaki tam
 fast-forward kanıtıyla hazırlayın. İki yer tutucuyu da değiştirin; onaylanan
@@ -106,6 +110,29 @@ olmaması dağıtım engelidir; başarı varsayma gerekçesi değildir. Bu kanı
 olmadan üretim dağıtımı başlatılamaz.
 
 ## 4. Güncelleme modları
+
+### 4.0 Tam Go derleme önbelleği önkoşulu
+
+Kaynaktan derlenen her güncelleme, /opt/celikpanel/.toolchain/go altındaki
+mühürlü özel önbelleğin tam Go 1.26.5 olmasını gerektirir. Bunun dışında
+güvenilir olan mevcut bir kurulumda daha eski bir Go ağacı varsa aşağıdaki
+uygun güncelleme modunu seçmeden önce, aynı temiz ve incelenmiş checkout
+içindeki geçiş betiğini çalıştırın:
+
+~~~bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./deploy/migrate-go-toolchain.sh
+~~~
+
+Geçiş betiği yol veya sürüm geçersiz kılması kabul etmez. Eski ağacı emekliye
+ayırmadan önce sabitlenmiş resmî arşiv SHA-256 değerini ve hazırlanmış ağacın
+tamamını doğrular. Eski ağaç operatör incelemesi için korunur; yayın veya son
+doğrulama hatası onu geri getirir. Hiçbir servisi, veritabanını, DNS kaydını
+veya panel ayarını değiştirmez. Bu komutu güvenilmeyen, eksik ya da daha yeni
+bir araç zinciri ağacını onarmak için kullanmayın; bunun yerine durumu
+inceleyin.
 
 ### 4.1 Normal güncelleme
 
@@ -281,8 +308,7 @@ rollback unit'in yalnız var olmasını kullanıcı onayı olarak yorumlayamaz.
 
 ## 7. Geliştirme kontrolleri
 
-- **Derleme:** `go test ./...`, `go vet ./...` ve
-  `cd web && npm run build`.
+- **Derleme:** `make test vet web` (tam Go 1.26.5 kapısı dahil).
 - **Release sözleşmeleri:** `bash deploy/test-bootstrap-update-contract.sh` ve
   `bash deploy/test-schema17-bridge-contract.sh`.
 - **Görsel doğrulama:** `tools/dev-preview/preview-server.py`, `web/dist`

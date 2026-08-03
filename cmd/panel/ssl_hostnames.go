@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 var issuedStagedLineageSuffixRE = regexp.MustCompile(`^[a-f0-9]{24}$`)
@@ -148,18 +148,7 @@ func mailCertificateHostname(domain string) (string, error) {
 	return hostname.MailFQDN(domain)
 }
 
-type installedCertificateInfo struct {
-	Valid        bool      `json:"valid"`
-	Trusted      bool      `json:"trusted"`
-	TrustChecked bool      `json:"trust_checked"`
-	TrustError   string    `json:"trust_error,omitempty"`
-	Issuer       string    `json:"issuer,omitempty"`
-	Subject      string    `json:"subject,omitempty"`
-	IssuedAt     time.Time `json:"issued_at,omitempty"`
-	ExpiresAt    time.Time `json:"expires_at,omitempty"`
-	DNSNames     []string  `json:"dns_names,omitempty"`
-	Error        string    `json:"error,omitempty"`
-}
+type installedCertificateInfo = transport.ValidateCertResponse
 
 func (p *Panel) installedCertificateDetails(certPath string) (installedCertificateInfo, error) {
 	info, err := p.readInstalledCertificateInfo(certPath)
@@ -180,7 +169,7 @@ func (p *Panel) readInstalledCertificateInfo(certPath string) (installedCertific
 	if strings.TrimSpace(certPath) == "" {
 		return info, fmt.Errorf("certificate path is empty")
 	}
-	if err := p.agentClient.Call("Agent.GetCertificateInfo", certPath, &info); err != nil {
+	if err := p.callAgent("Agent.GetCertificateInfo", certPath, &info); err != nil {
 		return info, err
 	}
 	info.DNSNames = normalizeCertificateDNSNames(info.DNSNames)
@@ -209,12 +198,7 @@ func (p *Panel) inspectManagedCertificate(
 	if strings.TrimSpace(keyPath) == "" {
 		return info, fmt.Errorf("private key path is empty")
 	}
-	request := struct {
-		Domain    string `json:"domain,omitempty"`
-		CertPath  string `json:"cert_path"`
-		KeyPath   string `json:"key_path"`
-		ChainPath string `json:"chain_path,omitempty"`
-	}{
+	request := transport.InspectCertificateRequest{
 		Domain: domain, CertPath: certPath, KeyPath: keyPath, ChainPath: chainPath,
 	}
 	if err := p.agentClient.CallContext(ctx, "Agent.InspectInstalledCertificate", request, &info); err != nil {

@@ -990,9 +990,9 @@ preserved by architecture, and it will **never** be a separate product.
   **panel** (HTTP, SQLite, UI, business logic) is portable Go; the **agent**
   is the only OS-touching layer. The panel says *what* ("create site"); only
   the agent knows *how* (systemctl/apt/nftables).
-- Proven, not claimed: as of this date `GOOS=freebsd go build` compiles **both**
+- Proven, not claimed: as of this date `make freebsd-cross` compiles **both**
   panel and agent. One portability fix was needed (Statfs_t field types differ
-  Linux vs BSD — explicit `uint64` casts in `cmd/panel/system_stats.go`) and is
+  Linux vs BSD — explicit `uint64` casts in `cmd/panel/system_stats_disk_unix.go`) and is
   done. The whole codebase cross-compiles to FreeBSD today.
 - Two CelikPanels would be the exact bloat the user feared: every feature
   twice, every bug twice, two mediocre products. Instead, a hypothetical BSD

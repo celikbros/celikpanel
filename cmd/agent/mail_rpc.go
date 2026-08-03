@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Mail RPC Methods
@@ -34,6 +38,7 @@ func init() {
 	if d := os.Getenv("CELIKPANEL_MAIL_DIR"); d != "" {
 		postfixVBoxPath = filepath.Join(d, "vmailbox")
 		postfixVirtualPath = filepath.Join(d, "virtual")
+		postfixDomainsPath = filepath.Join(d, "vmailbox_domains")
 		dovecotUsersPath = filepath.Join(d, "dovecot-users")
 		mailRootDir = filepath.Join(d, "vhosts")
 		_ = os.MkdirAll(d, 0o700)
@@ -43,27 +48,16 @@ func init() {
 var mailMutex sync.Mutex
 
 // MailAccount represents a mail user
-type MailAccount struct {
-	Email    string `json:"email"`
-	Password string `json:"password,omitempty"` // Plain text for creation (hashed by agent)
-	QuotaMB  int    `json:"quota_mb"`
-}
+type MailAccount = transport.MailAccount
 
 // MailForwarding represents an alias
-type MailForwarding struct {
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-}
+type MailForwarding = transport.MailForwarding
 
 // MailConfigSyncRequest contains full state to sync files
-type MailConfigSyncRequest struct {
-	Accounts    []MailAccount    `json:"accounts"`
-	Forwardings []MailForwarding `json:"forwardings"`
-	Domains     []string         `json:"domains"`
-}
+type MailConfigSyncRequest = transport.MailConfigSyncRequest
 
 // SyncMailConfig updates all mail configuration files
-func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *bool) error {
+func (a *Agent) syncMailConfigLegacy(req *MailConfigSyncRequest, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
@@ -113,8 +107,68 @@ func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *bool) error {
 	return nil
 }
 
+func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail sync request and response are required")
+	}
+	resp.Applied = false
+
+	vmailboxLines := make([]string, 0, len(req.Accounts))
+	domainSet := make(map[string]struct{}, len(req.Domains)+len(req.Accounts))
+	mailboxSet := make(map[string]struct{}, len(req.Accounts))
+	for _, account := range req.Accounts {
+		email, local, domain, err := canonicalAgentMailbox(account.Email)
+		if err != nil {
+			return err
+		}
+		if _, duplicate := mailboxSet[email]; duplicate {
+			return fmt.Errorf("duplicate mailbox: %s", email)
+		}
+		mailboxSet[email] = struct{}{}
+		domainSet[domain] = struct{}{}
+		vmailboxLines = append(vmailboxLines, fmt.Sprintf("%s %s/%s/", email, domain, local))
+	}
+	for _, rawDomain := range req.Domains {
+		domain, err := canonicalAgentDomain(rawDomain)
+		if err != nil {
+			return fmt.Errorf("invalid mail domain: %w", err)
+		}
+		domainSet[domain] = struct{}{}
+	}
+
+	forwardings, err := canonicalAgentForwardings(req.Forwardings)
+	if err != nil {
+		return err
+	}
+	virtualLines := make([]string, 0, len(forwardings))
+	for _, forwarding := range forwardings {
+		virtualLines = append(virtualLines, forwarding.Source+" "+forwarding.Destination)
+	}
+	sort.Strings(vmailboxLines)
+	sort.Strings(virtualLines)
+	domainLines := make([]string, 0, len(domainSet))
+	for domain := range domainSet {
+		domainLines = append(domainLines, domain+" OK")
+	}
+	sort.Strings(domainLines)
+
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: postfixVBoxPath, content: renderMailFile(vmailboxLines), mode: 0o644},
+		{path: postfixVirtualPath, content: renderMailFile(virtualLines), mode: 0o644},
+		{path: postfixDomainsPath, content: renderMailFile(domainLines), mode: 0o644},
+	}, []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath}, nil); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
 // AddMailAccount creates a new mail account
-func (a *Agent) AddMailAccount(req *MailAccount, resp *bool) error {
+func (a *Agent) addMailAccountLegacy(req *MailAccount, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
@@ -143,7 +197,7 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *bool) error {
 	// separately from the mailbox map, or it rejects mail for it.
 	// Postfix, domain'i posta kutusu haritasından ayrı olarak sanal posta
 	// kutusu domain'i diye kayıtlı ister; yoksa o domain'e postayı reddeder.
-	ensurePostfixDomain(domain)
+	_ = ensurePostfixDomain(context.Background(), domain)
 
 	// Rebuild map
 	postmapReadable(postfixVBoxPath)
@@ -171,17 +225,68 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *bool) error {
 // parent domain directory must belong to vmail for postfix to deliver.
 // chownRecursive, bir yolu ve altındaki her şeyi chown eder — maildir ve üst
 // domain dizini, postfix teslim edebilsin diye vmail'e ait olmalı.
+func (a *Agent) AddMailAccount(req *MailAccount, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail account request and response are required")
+	}
+	resp.Applied = false
+	email, local, domain, err := canonicalAgentMailbox(req.Email)
+	if err != nil {
+		return err
+	}
+	if len(req.Password) < transport.MinMailboxPasswordBytes || len(req.Password) > transport.MaxMailboxPasswordBytes {
+		return fmt.Errorf("mailbox password must be between %d and %d bytes", transport.MinMailboxPasswordBytes, transport.MaxMailboxPasswordBytes)
+	}
+	if err := validateAgentQuota(req.QuotaMB); err != nil {
+		return err
+	}
+
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	hash, err := mailHashGenerator(ctx, req.Password)
+	if err != nil {
+		return fmt.Errorf("generate mailbox password hash: %w", err)
+	}
+	users, err := readMailFile(dovecotUsersPath)
+	if err != nil {
+		return err
+	}
+	vboxes, err := readMailFile(postfixVBoxPath)
+	if err != nil {
+		return err
+	}
+	domains, err := readMailFile(postfixDomainsPath)
+	if err != nil {
+		return err
+	}
+	if mailFileHasKey(users, email) || mailFileHasKey(vboxes, email) {
+		return fmt.Errorf("mail account already exists")
+	}
+
+	users = upsertMailLine(users, email, fmt.Sprintf("%s:%s::::::userdb_quota_rule=*:storage=%dM", email, hash, req.QuotaMB))
+	vboxes = upsertMailLine(vboxes, email, fmt.Sprintf("%s %s/%s/", email, domain, local))
+	domains = upsertMailLine(domains, domain, domain+" OK")
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: dovecotUsersPath, content: users, mode: 0o640},
+		{path: postfixVBoxPath, content: vboxes, mode: 0o644},
+		{path: postfixDomainsPath, content: domains, mode: 0o644},
+	}, []string{postfixVBoxPath, postfixDomainsPath}, func() (func() error, error) {
+		return ensureMailboxDirectory(domain, local)
+	}); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
 func chownRecursive(root string, uid, gid int) error {
-	return filepath.Walk(root, func(p string, _ os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		return os.Chown(p, uid, gid)
-	})
+	return fmt.Errorf("recursive mail ownership mutation is disabled")
 }
 
 // DeleteMailAccount removes a mail account
-func (a *Agent) DeleteMailAccount(req *struct{ Email string }, resp *bool) error {
+func (a *Agent) deleteMailAccountLegacy(req *transport.DeleteMailAccountRequest, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
@@ -205,9 +310,43 @@ func (a *Agent) DeleteMailAccount(req *struct{ Email string }, resp *bool) error
 }
 
 // UpdateMailForwarding updates aliases
-func (a *Agent) UpdateMailForwarding(req *struct {
-	Forwardings []MailForwarding `json:"forwardings"`
-}, resp *bool) error {
+func (a *Agent) DeleteMailAccount(req *transport.DeleteMailAccountRequest, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail account delete request and response are required")
+	}
+	resp.Applied = false
+	email, _, _, err := canonicalAgentMailbox(req.Email)
+	if err != nil {
+		return err
+	}
+	users, err := readMailFile(dovecotUsersPath)
+	if err != nil {
+		return err
+	}
+	vboxes, err := readMailFile(postfixVBoxPath)
+	if err != nil {
+		return err
+	}
+	newUsers, removedUser := removeMailLine(users, email)
+	newVBoxes, removedVBox := removeMailLine(vboxes, email)
+	if !removedUser && !removedVBox {
+		return fmt.Errorf("mail account not found")
+	}
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: dovecotUsersPath, content: newUsers, mode: 0o640},
+		{path: postfixVBoxPath, content: newVBoxes, mode: 0o644},
+	}, []string{postfixVBoxPath}, nil); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
+func (a *Agent) updateMailForwardingLegacy(req *transport.UpdateMailForwardingRequest, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
@@ -231,11 +370,34 @@ func (a *Agent) UpdateMailForwarding(req *struct {
 // ImportMailAccount, parolası ZATEN ÖZETLENMİŞ bir hesap ekler (cPanel göçü:
 // shadow dosyaları crypt özetleri taşır, dovecot bunları {CRYPT} şemasıyla
 // doğrular — kullanıcılar göçte parolalarını korur).
-func (a *Agent) ImportMailAccount(req *struct {
-	Email     string `json:"email"`
-	CryptHash string `json:"crypt_hash"`
-	QuotaMB   int    `json:"quota_mb"`
-}, resp *bool) error {
+func (a *Agent) UpdateMailForwarding(req *transport.UpdateMailForwardingRequest, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail forwarding request and response are required")
+	}
+	resp.Applied = false
+	forwardings, err := canonicalAgentForwardings(req.Forwardings)
+	if err != nil {
+		return err
+	}
+	lines := make([]string, 0, len(forwardings))
+	for _, forwarding := range forwardings {
+		lines = append(lines, forwarding.Source+" "+forwarding.Destination)
+	}
+	sort.Strings(lines)
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: postfixVirtualPath, content: renderMailFile(lines), mode: 0o644},
+	}, []string{postfixVirtualPath}, nil); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
+func (a *Agent) importMailAccountLegacy(req *transport.ImportMailAccountRequest, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
@@ -275,19 +437,66 @@ func (a *Agent) ImportMailAccount(req *struct {
 // UpdateMailQuota rewrites the quota rule on an existing dovecot users line.
 // UpdateMailQuota, mevcut bir dovecot kullanıcı satırındaki kota kuralını
 // yeniden yazar.
-func (a *Agent) UpdateMailQuota(req *struct {
-	Email   string `json:"email"`
-	QuotaMB int    `json:"quota_mb"`
-}, resp *bool) error {
+func (a *Agent) ImportMailAccount(req *transport.ImportMailAccountRequest, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail account import request and response are required")
+	}
+	resp.Applied = false
+	email, local, domain, err := canonicalAgentMailbox(req.Email)
+	if err != nil {
+		return err
+	}
+	if err := validateImportedCryptHash(req.CryptHash); err != nil {
+		return err
+	}
+	if err := validateAgentQuota(req.QuotaMB); err != nil {
+		return err
+	}
+	users, err := readMailFile(dovecotUsersPath)
+	if err != nil {
+		return err
+	}
+	vboxes, err := readMailFile(postfixVBoxPath)
+	if err != nil {
+		return err
+	}
+	domains, err := readMailFile(postfixDomainsPath)
+	if err != nil {
+		return err
+	}
+	if mailFileHasKey(users, email) || mailFileHasKey(vboxes, email) {
+		return fmt.Errorf("mail account already exists")
+	}
+	users = upsertMailLine(users, email, fmt.Sprintf("%s:{CRYPT}%s::::::userdb_quota_rule=*:storage=%dM", email, req.CryptHash, req.QuotaMB))
+	vboxes = upsertMailLine(vboxes, email, fmt.Sprintf("%s %s/%s/", email, domain, local))
+	domains = upsertMailLine(domains, domain, domain+" OK")
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: dovecotUsersPath, content: users, mode: 0o640},
+		{path: postfixVBoxPath, content: vboxes, mode: 0o644},
+		{path: postfixDomainsPath, content: domains, mode: 0o644},
+	}, []string{postfixVBoxPath, postfixDomainsPath}, func() (func() error, error) {
+		return ensureMailboxDirectory(domain, local)
+	}); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
+func (a *Agent) updateMailQuotaLegacy(req *transport.UpdateMailQuotaRequest, resp *bool) error {
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
 
-	content, err := os.ReadFile(dovecotUsersPath)
+	content, err := readMailFile(dovecotUsersPath)
 	if err != nil {
 		return fmt.Errorf("cannot read dovecot users: %w", err)
 	}
 
-	lines := strings.Split(string(content), "\n")
+	lines := splitMailFile(content)
 	found := false
 	for i, line := range lines {
 		if !strings.HasPrefix(line, req.Email+":") {
@@ -308,30 +517,67 @@ func (a *Agent) UpdateMailQuota(req *struct {
 		return fmt.Errorf("mail account not found")
 	}
 
-	if err := os.WriteFile(dovecotUsersPath, []byte(strings.Join(lines, "\n")), 0644); err != nil { //nosec G703 -- fixed dovecot users path
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{{
+		path: dovecotUsersPath, content: renderMailFile(lines), mode: 0o640,
+	}}, nil, nil); err != nil {
 		return err
 	}
 	*resp = true
 	return nil
 }
 
+func (a *Agent) UpdateMailQuota(req *transport.UpdateMailQuotaRequest, resp *transport.MailMutationResponse) error {
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail quota request and response are required")
+	}
+	resp.Applied = false
+	email, _, _, err := canonicalAgentMailbox(req.Email)
+	if err != nil {
+		return err
+	}
+	if err := validateAgentQuota(req.QuotaMB); err != nil {
+		return err
+	}
+	content, err := readMailFile(dovecotUsersPath)
+	if err != nil {
+		return err
+	}
+	lines := splitMailFile(content)
+	found := false
+	for index, line := range lines {
+		if !strings.HasPrefix(line, email+":") {
+			continue
+		}
+		found = true
+		if quotaIndex := strings.Index(line, "userdb_quota_rule="); quotaIndex >= 0 {
+			lines[index] = line[:quotaIndex] + fmt.Sprintf("userdb_quota_rule=*:storage=%dM", req.QuotaMB)
+		} else {
+			lines[index] = line + fmt.Sprintf(":userdb_quota_rule=*:storage=%dM", req.QuotaMB)
+		}
+	}
+	if !found {
+		return fmt.Errorf("mail account not found")
+	}
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	if err := applyMailFileMutation(ctx, []mailFileWrite{
+		{path: dovecotUsersPath, content: renderMailFile(lines), mode: 0o640},
+	}, nil, nil); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
 // MailQuotaUsage is one account's live quota state from doveadm.
 // MailQuotaUsage, doveadm'den bir hesabın canlı kota durumudur.
-type MailQuotaUsage struct {
-	Email     string `json:"email"`
-	UsedKB    int64  `json:"used_kb"`
-	LimitKB   int64  `json:"limit_kb"` // 0 = unlimited / kural yok
-	Available bool   `json:"available"`
-}
-
-type MailQuotaStatusRequest struct {
-	Emails []string `json:"emails"`
-}
-
-type MailQuotaStatusResponse struct {
-	PluginEnabled bool             `json:"plugin_enabled"`
-	Usages        []MailQuotaUsage `json:"usages"`
-}
+type MailQuotaUsage = transport.MailQuotaUsage
+type MailQuotaStatusRequest = transport.MailQuotaStatusRequest
+type MailQuotaStatusResponse = transport.MailQuotaStatusResponse
 
 // GetMailQuotaStatus reports whether dovecot's quota plugin is active and,
 // per account, the live usage from `doveadm quota get`. Honesty first: when
@@ -377,52 +623,79 @@ func (a *Agent) GetMailQuotaStatus(req *MailQuotaStatusRequest, resp *MailQuotaS
 
 // Helpers
 
+func mailFileMode(path string) os.FileMode {
+	if path == dovecotUsersPath {
+		return 0o640
+	}
+	return 0o644
+}
+
 func updateMapFile(path string, lines []string) error {
-	content := strings.Join(lines, "\n") + "\n"
-	return os.WriteFile(path, []byte(content), 0644)
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	return applyMailFileMutation(ctx, []mailFileWrite{{
+		path: path, content: renderMailFile(lines), mode: 0o644,
+	}}, []string{path}, nil)
 }
 
 func appendToFile(path, line string) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	content, err := readMailFile(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err := f.WriteString(line + "\n"); err != nil {
-		return err
+	lines := splitMailFile(content)
+	lines = append(lines, line)
+	postmapPaths := []string(nil)
+	if path == postfixVBoxPath || path == postfixVirtualPath || path == postfixDomainsPath {
+		postmapPaths = []string{path}
 	}
-	return nil
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	return applyMailFileMutation(ctx, []mailFileWrite{{
+		path: path, content: renderMailFile(lines), mode: mailFileMode(path),
+	}}, postmapPaths, nil)
 }
 
 func removeLineFromFile(path, prefix string) error {
-	content, err := os.ReadFile(path)
+	content, err := readMailFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
 		return err
 	}
 
-	lines := strings.Split(string(content), "\n")
+	lines := splitMailFile(content)
 	var newLines []string
 	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
 		if !strings.HasPrefix(line, prefix) {
 			newLines = append(newLines, line)
 		}
 	}
 
-	return os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644) //nosec G703 -- callers pass fixed system map-file paths (postfix/dovecot)
+	postmapPaths := []string(nil)
+	if path == postfixVBoxPath || path == postfixVirtualPath || path == postfixDomainsPath {
+		postmapPaths = []string{path}
+	}
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	return applyMailFileMutation(ctx, []mailFileWrite{{
+		path: path, content: renderMailFile(newLines), mode: mailFileMode(path),
+	}}, postmapPaths, nil)
 }
 
 func generateDovecotHash(password string) (string, error) {
-	// Use doveadm pw if available
-	cmd := exec.Command("doveadm", "pw", "-s", "SHA512-CRYPT", "-p", password)
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	return generateDovecotHashContext(ctx, password)
+}
+
+func generateDovecotHashContext(ctx context.Context, password string) (string, error) {
+	// Never pass a mailbox password in argv: process listings are not a
+	// secret transport. With no -p argument doveadm reads and confirms it from
+	// stdin.
+	cmd := exec.CommandContext(ctx, "doveadm", "pw", "-s", "SHA512-CRYPT")
+	cmd.Stdin = strings.NewReader(password + "\n" + password + "\n")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("doveadm password hashing failed")
 	}
 	// Output format: {SHA512-CRYPT}$6$....
 	return strings.TrimSpace(string(output)), nil

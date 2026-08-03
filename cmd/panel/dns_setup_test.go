@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -9,6 +10,26 @@ import (
 	"testing"
 	"time"
 )
+
+func assertDNSSetupRequired(t *testing.T, recorder *httptest.ResponseRecorder) {
+	t.Helper()
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409; body=%s", recorder.Code, recorder.Body.String())
+	}
+	var body apiErrorBody
+	if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+		t.Fatalf("decode legacy DNS refusal: %v", err)
+	}
+	if body.Code != errCodeDNSSetupRequired {
+		t.Fatalf("code = %q, want %q", body.Code, errCodeDNSSetupRequired)
+	}
+	if body.Action != "/settings?section=dns" {
+		t.Fatalf("action = %q, want DNS settings", body.Action)
+	}
+	if !strings.Contains(body.Error, "/api/v1/settings/dns-setup") {
+		t.Fatalf("migration endpoint missing from response: %q", body.Error)
+	}
+}
 
 func dnsSetupAdminRequest(body string) *http.Request {
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/dns-setup", strings.NewReader(body))
@@ -277,7 +298,102 @@ func TestDNSSetupPublicationFailureCanRetrySameMutation(t *testing.T) {
 	}
 }
 
-func TestDNSTopologyPUTsAreSerialized(t *testing.T) {
+func TestLegacyDNSSettingsPUTsRequireCompleteSetupWithoutMutation(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		path    string
+		body    string
+		handler func(*Panel, http.ResponseWriter, *http.Request)
+	}{
+		{
+			name:    "nameserver pair",
+			path:    "/api/v1/settings/nameservers",
+			body:    `{"ns1":"ns3.example.net","ns2":"ns4.example.net"}`,
+			handler: (*Panel).handleNameserverSettings,
+		},
+		{
+			name:    "cluster tuple",
+			path:    "/api/v1/settings/dns-cluster",
+			body:    `{"role":"standalone"}`,
+			handler: (*Panel).handleDNSCluster,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, p, "paired")
+			agent := &strictDNSRPCAgent{}
+			attachStrictDNSRPCAgent(t, p, agent)
+
+			recorder := httptest.NewRecorder()
+			request := strictDNSAdminRequest(httptest.NewRequest(
+				http.MethodPut, tc.path, strings.NewReader(tc.body),
+			))
+			tc.handler(p, recorder, request)
+			assertDNSSetupRequired(t, recorder)
+
+			assertDNSSetupSettings(t, p, map[string]string{
+				settingNS1:       "ns1.celikhost.com",
+				settingNS2:       "ns2.celikhost.com",
+				settingDNSRole:   "paired",
+				settingDNSPeerIP: "2.25.80.4",
+				settingDNSPeerNS: "ns2.celikhost.com",
+			})
+			agent.mu.Lock()
+			clusterCalls := agent.clusterCalls
+			syncCalls := append([]string(nil), agent.syncCalls...)
+			agent.mu.Unlock()
+			if clusterCalls != 0 || len(syncCalls) != 0 {
+				t.Fatalf("legacy PUT reached agent: cluster=%d sync=%v", clusterCalls, syncCalls)
+			}
+		})
+	}
+}
+
+func TestLegacyDNSSettingsGETsRemainCompatible(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	previousResolvers := nameserverResolvers
+	nameserverResolvers = []hostResolver{fakeNameserverHostResolver{
+		"ns1.celikhost.com": {"192.0.2.10"},
+		"ns2.celikhost.com": {"192.0.2.10"},
+	}}
+	t.Cleanup(func() { nameserverResolvers = previousResolvers })
+
+	namesRecorder := httptest.NewRecorder()
+	p.handleNameserverSettings(namesRecorder, strictDNSAdminRequest(httptest.NewRequest(
+		http.MethodGet, "/api/v1/settings/nameservers", nil,
+	)))
+	if namesRecorder.Code != http.StatusOK {
+		t.Fatalf("nameserver GET status = %d, want 200; body=%s", namesRecorder.Code, namesRecorder.Body.String())
+	}
+	var names nameserverSettings
+	if err := json.NewDecoder(namesRecorder.Body).Decode(&names); err != nil {
+		t.Fatalf("decode nameserver GET: %v", err)
+	}
+	if names.NS1 != "ns1.celikhost.com" || names.NS2 != "ns2.celikhost.com" || names.Derived {
+		t.Fatalf("nameserver GET changed contract: %+v", names)
+	}
+
+	clusterRecorder := httptest.NewRecorder()
+	p.handleDNSCluster(clusterRecorder, strictDNSAdminRequest(httptest.NewRequest(
+		http.MethodGet, "/api/v1/settings/dns-cluster", nil,
+	)))
+	if clusterRecorder.Code != http.StatusOK {
+		t.Fatalf("cluster GET status = %d, want 200; body=%s", clusterRecorder.Code, clusterRecorder.Body.String())
+	}
+	var cluster dnsClusterView
+	if err := json.NewDecoder(clusterRecorder.Body).Decode(&cluster); err != nil {
+		t.Fatalf("decode cluster GET: %v", err)
+	}
+	if !cluster.Configured || cluster.Role != "standalone" ||
+		cluster.NS1 != names.NS1 || cluster.NS2 != names.NS2 {
+		t.Fatalf("cluster GET changed contract: %+v", cluster)
+	}
+}
+
+func TestLegacyDNSTopologyPUTFailsClosedWhileAtomicSetupIsInFlight(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "paired")
@@ -301,32 +417,26 @@ func TestDNSTopologyPUTsAreSerialized(t *testing.T) {
 		t.Fatal("first DNS topology mutation did not reach the blocked agent")
 	}
 
-	secondDone := make(chan *httptest.ResponseRecorder, 1)
-	go func() {
-		recorder := httptest.NewRecorder()
-		p.handleNameserverSettings(recorder, strictDNSAdminRequest(httptest.NewRequest(
-			http.MethodPut, "/api/v1/settings/nameservers",
-			strings.NewReader(`{"ns1":"ns1.celikhost.com","ns2":"ns2.celikhost.com"}`),
-		)))
-		secondDone <- recorder
-	}()
-	select {
-	case recorder := <-secondDone:
-		t.Fatalf("legacy topology PUT interleaved with setup PUT; status=%d body=%s", recorder.Code, recorder.Body.String())
-	case <-time.After(150 * time.Millisecond):
+	legacy := httptest.NewRecorder()
+	p.handleNameserverSettings(legacy, strictDNSAdminRequest(httptest.NewRequest(
+		http.MethodPut, "/api/v1/settings/nameservers",
+		strings.NewReader(`{"ns1":"ns3.example.net","ns2":"ns4.example.net"}`),
+	)))
+	assertDNSSetupRequired(t, legacy)
+	agent.mu.Lock()
+	clusterCalls := agent.clusterCalls
+	agent.mu.Unlock()
+	if clusterCalls != 1 {
+		t.Fatalf("legacy PUT reached the agent while setup was in flight: cluster calls=%d", clusterCalls)
 	}
 	close(release)
 
-	for name, done := range map[string]<-chan *httptest.ResponseRecorder{
-		"setup": firstDone, "legacy nameserver": secondDone,
-	} {
-		select {
-		case recorder := <-done:
-			if recorder.Code != http.StatusOK {
-				t.Fatalf("%s status = %d, want 200; body=%s", name, recorder.Code, recorder.Body.String())
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatalf("%s did not finish after releasing the topology lock", name)
+	select {
+	case recorder := <-firstDone:
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("setup status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
 		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("setup did not finish after releasing the topology lock")
 	}
 }

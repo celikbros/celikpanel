@@ -1,8 +1,12 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -12,6 +16,7 @@ type PostgreSQLDriver struct {
 	host         string
 	port         int
 	rootPassword string
+	openDB       func(string) (*sql.DB, error)
 }
 
 // NewPostgreSQLDriver creates a new PostgreSQL driver
@@ -25,21 +30,35 @@ func NewPostgreSQLDriver(config DriverConfig) *PostgreSQLDriver {
 
 // getDB establishes a connection to the PostgreSQL server
 func (d *PostgreSQLDriver) getDB(dbname string) (*sql.DB, error) {
-	dsn := fmt.Sprintf("postgres://postgres:%s@%s:%d/%s?sslmode=disable",
-		d.rootPassword, d.host, d.port, dbname)
+	if d.openDB != nil {
+		return d.openDB(dbname)
+	}
+	dsn := postgreSQLDSN(d.host, d.port, dbname, d.rootPassword)
 	return sql.Open("pgx", dsn)
+}
+
+func postgreSQLDSN(host string, port int, dbname, password string) string {
+	query := url.Values{}
+	query.Set("sslmode", "disable")
+	return (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword("postgres", password),
+		Host:     net.JoinHostPort(host, strconv.Itoa(port)),
+		Path:     "/" + dbname,
+		RawQuery: query.Encode(),
+	}).String()
 }
 
 // TestConnection tests PostgreSQL connection
 func (d *PostgreSQLDriver) TestConnection() error {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return fmt.Errorf("failed to open connection: %v", err)
+		return fmt.Errorf("failed to open connection: %w", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		return fmt.Errorf("PostgreSQL connection failed: %v", err)
+		return fmt.Errorf("PostgreSQL connection failed: %w", err)
 	}
 	return nil
 }
@@ -49,7 +68,7 @@ func (d *PostgreSQLDriver) CreateDatabase(name string) error {
 	// Connect to 'postgres' db to create new db
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return err
+		return fmt.Errorf("open PostgreSQL control database for create: %w", err)
 	}
 	defer db.Close()
 
@@ -60,7 +79,7 @@ func (d *PostgreSQLDriver) CreateDatabase(name string) error {
 
 	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s WITH ENCODING='UTF8';", ident))
 	if err != nil {
-		return fmt.Errorf("failed to create database: %v", err)
+		return fmt.Errorf("failed to create database: %w", err)
 	}
 	return nil
 }
@@ -69,7 +88,7 @@ func (d *PostgreSQLDriver) CreateDatabase(name string) error {
 func (d *PostgreSQLDriver) DeleteDatabase(name string) error {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return err
+		return fmt.Errorf("open PostgreSQL control database for delete: %w", err)
 	}
 	defer db.Close()
 
@@ -78,19 +97,26 @@ func (d *PostgreSQLDriver) DeleteDatabase(name string) error {
 		return fmt.Errorf("invalid database name: %w", err)
 	}
 
-	// Terminate connections first. The name here is a value comparison, so
-	// a bound parameter is the right tool.
+	// Terminate connections first. Refuse to report a successful delete if the
+	// server could not terminate every matching backend.
+	// The name here is a value comparison, so a bound parameter is the right tool.
 	// Önce bağlantıları sonlandır. Buradaki ad bir değer karşılaştırmasıdır,
 	// bu yüzden bağlı parametre doğru araçtır.
-	_, _ = db.Exec(`
-		SELECT pg_terminate_backend(pid)
+	var terminated bool
+	if err := db.QueryRow(`
+		SELECT COALESCE(bool_and(pg_terminate_backend(pid)), TRUE)
 		FROM pg_stat_activity
 		WHERE datname = $1 AND pid <> pg_backend_pid()
-	`, name)
+	`, name).Scan(&terminated); err != nil {
+		return fmt.Errorf("failed to terminate database connections: %w", err)
+	}
+	if !terminated {
+		return fmt.Errorf("failed to terminate every connection to database %q", name)
+	}
 
 	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s;", ident))
 	if err != nil {
-		return fmt.Errorf("failed to drop database: %v", err)
+		return fmt.Errorf("failed to drop database: %w", err)
 	}
 	return nil
 }
@@ -99,13 +125,13 @@ func (d *PostgreSQLDriver) DeleteDatabase(name string) error {
 func (d *PostgreSQLDriver) ListDatabases() ([]string, error) {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open PostgreSQL control database for listing databases: %w", err)
 	}
 	defer db.Close()
 
 	rows, err := db.Query("SELECT datname FROM pg_database WHERE datistemplate = false;")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list databases: %v", err)
+		return nil, fmt.Errorf("failed to list databases: %w", err)
 	}
 	defer rows.Close()
 
@@ -113,9 +139,12 @@ func (d *PostgreSQLDriver) ListDatabases() ([]string, error) {
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read listed database: %w", err)
 		}
 		databases = append(databases, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while listing databases: %w", err)
 	}
 	return databases, nil
 }
@@ -124,7 +153,7 @@ func (d *PostgreSQLDriver) ListDatabases() ([]string, error) {
 func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return err
+		return fmt.Errorf("open PostgreSQL control database for creating user: %w", err)
 	}
 	defer db.Close()
 
@@ -141,7 +170,7 @@ func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 	var exists bool
 	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=$1)", username).Scan(&exists)
 	if err != nil {
-		return err
+		return fmt.Errorf("check PostgreSQL user existence: %w", err)
 	}
 
 	if exists {
@@ -150,7 +179,7 @@ func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 
 	_, err = db.Exec(fmt.Sprintf("CREATE USER %s WITH PASSWORD %s;", ident, pwLiteral))
 	if err != nil {
-		return fmt.Errorf("failed to create user: %v", err)
+		return fmt.Errorf("failed to create user: %w", err)
 	}
 	return nil
 }
@@ -159,7 +188,7 @@ func (d *PostgreSQLDriver) CreateUser(username, password string) error {
 func (d *PostgreSQLDriver) DeleteUser(username string) error {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return err
+		return fmt.Errorf("open PostgreSQL control database for deleting user: %w", err)
 	}
 	defer db.Close()
 
@@ -170,7 +199,7 @@ func (d *PostgreSQLDriver) DeleteUser(username string) error {
 
 	_, err = db.Exec(fmt.Sprintf("DROP USER IF EXISTS %s;", ident))
 	if err != nil {
-		return fmt.Errorf("failed to drop user: %v", err)
+		return fmt.Errorf("failed to drop user: %w", err)
 	}
 	return nil
 }
@@ -179,7 +208,7 @@ func (d *PostgreSQLDriver) DeleteUser(username string) error {
 func (d *PostgreSQLDriver) ChangePassword(username, newPassword string) error {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return err
+		return fmt.Errorf("open PostgreSQL control database for changing password: %w", err)
 	}
 	defer db.Close()
 
@@ -194,7 +223,7 @@ func (d *PostgreSQLDriver) ChangePassword(username, newPassword string) error {
 
 	_, err = db.Exec(fmt.Sprintf("ALTER USER %s WITH PASSWORD %s;", ident, pwLiteral))
 	if err != nil {
-		return fmt.Errorf("failed to change password: %v", err)
+		return fmt.Errorf("failed to change password: %w", err)
 	}
 	return nil
 }
@@ -203,13 +232,13 @@ func (d *PostgreSQLDriver) ChangePassword(username, newPassword string) error {
 func (d *PostgreSQLDriver) ListUsers() ([]string, error) {
 	db, err := d.getDB("postgres")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open PostgreSQL control database for listing users: %w", err)
 	}
 	defer db.Close()
 
 	rows, err := db.Query("SELECT usename FROM pg_user;")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list users: %v", err)
+		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 	defer rows.Close()
 
@@ -217,21 +246,18 @@ func (d *PostgreSQLDriver) ListUsers() ([]string, error) {
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read listed PostgreSQL user: %w", err)
 		}
 		users = append(users, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed while listing users: %w", err)
 	}
 	return users, nil
 }
 
 // GrantPrivileges grants privileges to a user on a database
 func (d *PostgreSQLDriver) GrantPrivileges(database, user, privileges string) error {
-	db, err := d.getDB("postgres")
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	dbIdent, err := QuotePGIdentifier(database)
 	if err != nil {
 		return fmt.Errorf("invalid database name: %w", err)
@@ -241,57 +267,58 @@ func (d *PostgreSQLDriver) GrantPrivileges(database, user, privileges string) er
 		return fmt.Errorf("invalid username: %w", err)
 	}
 
-	// Grant connect on database
-	_, err = db.Exec(fmt.Sprintf("GRANT CONNECT ON DATABASE %s TO %s;", dbIdent, userIdent))
-	if err != nil {
-		return fmt.Errorf("failed to grant connect: %v", err)
-	}
-
-	// For tables, we need to connect to the specific database
 	dbSpecific, err := d.getDB(database)
 	if err != nil {
-		return err
+		return fmt.Errorf("open target database for grant: %w", err)
 	}
 	defer dbSpecific.Close()
+	tx, err := dbSpecific.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("begin privilege grant: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Keep every physical grant in one transaction. A later schema/table/default
+	// privilege failure must not leave CONNECT or a subset of rights behind.
+	if _, err = tx.Exec(fmt.Sprintf("GRANT CONNECT ON DATABASE %s TO %s;", dbIdent, userIdent)); err != nil {
+		return fmt.Errorf("failed to grant connect: %w", err)
+	}
 
 	if privileges == "ALL" {
 		// Grant schema usage
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL ON SCHEMA public TO %s;", userIdent))
+		_, err = tx.Exec(fmt.Sprintf("GRANT ALL ON SCHEMA public TO %s;", userIdent))
 		if err != nil {
-			return fmt.Errorf("failed to grant schema usage: %v", err)
+			return fmt.Errorf("failed to grant schema usage: %w", err)
 		}
 		// Grant all tables
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %s;", userIdent))
+		_, err = tx.Exec(fmt.Sprintf("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %s;", userIdent))
 		if err != nil {
-			return fmt.Errorf("failed to grant table privileges: %v", err)
+			return fmt.Errorf("failed to grant table privileges: %w", err)
 		}
 		// Default privileges for future tables
-		_, err = dbSpecific.Exec(fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO %s;", userIdent))
+		_, err = tx.Exec(fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO %s;", userIdent))
 		if err != nil {
-			return fmt.Errorf("failed to alter default privileges: %v", err)
+			return fmt.Errorf("failed to alter default privileges: %w", err)
 		}
 	} else {
 		privList, err := ValidatePrivileges(privileges)
 		if err != nil {
 			return fmt.Errorf("invalid privileges: %w", err)
 		}
-		_, err = dbSpecific.Exec(fmt.Sprintf("GRANT %s ON ALL TABLES IN SCHEMA public TO %s;", privList, userIdent))
+		_, err = tx.Exec(fmt.Sprintf("GRANT %s ON ALL TABLES IN SCHEMA public TO %s;", privList, userIdent))
 		if err != nil {
-			return fmt.Errorf("failed to grant privileges: %v", err)
+			return fmt.Errorf("failed to grant privileges: %w", err)
 		}
 	}
 
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit privilege grant: %w", err)
+	}
 	return nil
 }
 
 // RevokePrivileges revokes privileges from a user on a database
 func (d *PostgreSQLDriver) RevokePrivileges(database, user string) error {
-	db, err := d.getDB("postgres")
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	dbIdent, err := QuotePGIdentifier(database)
 	if err != nil {
 		return fmt.Errorf("invalid database name: %w", err)
@@ -301,25 +328,35 @@ func (d *PostgreSQLDriver) RevokePrivileges(database, user string) error {
 		return fmt.Errorf("invalid username: %w", err)
 	}
 
-	_, err = db.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON DATABASE %s FROM %s;", dbIdent, userIdent))
-	if err != nil {
-		return fmt.Errorf("failed to revoke privileges: %v", err)
-	}
-
-	// Also revoke on tables
 	dbSpecific, err := d.getDB(database)
 	if err != nil {
-		// If DB doesn't exist, ignore
-		return nil
+		return fmt.Errorf("open target database for revoke: %w", err)
 	}
 	defer dbSpecific.Close()
+	tx, err := dbSpecific.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("begin privilege revoke: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
 
-	_, _ = dbSpecific.Exec(fmt.Sprintf("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;", userIdent))
+	statements := []struct {
+		label string
+		sql   string
+	}{
+		{"database privileges", fmt.Sprintf("REVOKE ALL PRIVILEGES ON DATABASE %s FROM %s;", dbIdent, userIdent)},
+		{"schema privileges", fmt.Sprintf("REVOKE ALL PRIVILEGES ON SCHEMA public FROM %s;", userIdent)},
+		{"table privileges", fmt.Sprintf("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;", userIdent)},
+		{"sequence privileges", fmt.Sprintf("REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;", userIdent)},
+		{"default table privileges", fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %s;", userIdent)},
+	}
+	for _, statement := range statements {
+		if _, err := tx.Exec(statement.sql); err != nil {
+			return fmt.Errorf("failed to revoke %s: %w", statement.label, err)
+		}
+	}
 
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit privilege revoke: %w", err)
+	}
 	return nil
-}
-
-// ListUserDatabases lists databases a user has access to
-func (d *PostgreSQLDriver) ListUserDatabases(username string) ([]string, error) {
-	return []string{}, nil
 }

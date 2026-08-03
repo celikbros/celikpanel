@@ -308,10 +308,10 @@ type nameserverSettings struct {
 	Usable bool             `json:"usable"`
 }
 
-// handleNameserverSettings serves and updates the pair (admin only: it changes
-// what every hosted zone advertises).
-// handleNameserverSettings çifti sunar ve günceller (yalnız yönetici: her
-// barındırılan zone'un ilan ettiği şeyi değiştirir).
+// handleNameserverSettings keeps the legacy pair read contract. Legacy writes
+// fail closed so the complete DNS topology is published through dns-setup.
+// handleNameserverSettings eski çift okuma sözleşmesini korur. Eski yazmalar,
+// DNS topolojisinin tamamı dns-setup üzerinden yayınlansın diye kapalı reddedilir.
 func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
@@ -339,39 +339,7 @@ func (p *Panel) handleNameserverSettings(w http.ResponseWriter, r *http.Request)
 		})
 
 	case http.MethodPut:
-		p.dnsTopologyMu.Lock()
-		defer p.dnsTopologyMu.Unlock()
-
-		var req struct {
-			NS1 string `json:"ns1"`
-			NS2 string `json:"ns2"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-		req.NS1 = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.NS1, ".")))
-		req.NS2 = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(req.NS2, ".")))
-		for _, ns := range []string{req.NS1, req.NS2} {
-			if !validDNSHostname(ns) {
-				writeClientError(w, http.StatusBadRequest, "a nameserver must be a full host name, for example ns1.example.com")
-				return
-			}
-		}
-		if req.NS1 == req.NS2 {
-			writeClientError(w, http.StatusBadRequest, "the two nameservers must have different names")
-			return
-		}
-		if err := p.saveNameservers(r.Context(), req.NS1, req.NS2); err != nil {
-			if writeDNSPublicationConflict(w, err,
-				"Nameserver settings were saved, but one or more zones could not be published; check the DNS service and retry") {
-				return
-			}
-			writeServerError(w, err)
-			return
-		}
-		p.audit(r, "settings.nameservers:"+req.NS1+","+req.NS2, "settings", 0)
-		json.NewEncoder(w).Encode(nameserverSettings{NS1: req.NS1, NS2: req.NS2, ServerIP: serverPrimaryIP()})
+		writeDNSSetupRequired(w)
 
 	default:
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")

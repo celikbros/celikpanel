@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 25 Temmuz 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 2 Ağustos 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -384,7 +384,8 @@ ilk gerçek kiracıdan önce üretim güveni tamam.
   N+1'de kaldır) — rollback veri kaybetmez. CI'ya iki test: temiz DB'ye tam zincir + dolu v(N−1) fixture
   üstüne güncel zincir; `rollback.sh` anlık görüntüden sonra yazılmış satır sayısını raporlayıp açık onay
   ister; "geri alma, snapshot sonrası değişiklikleri kaybeder" cümlesi belgelidir.
-- CI güvenlik kapıları: `gosec`, `govulncheck`, `npm audit --audit-level=high` her PR'da; istisnalar
+- CI güvenlik kapıları: `gosec` ve `govulncheck` her PR'da; ağ kullanan bağımlılık denetimleri paket adlarını ve
+  sürümlerini yapılandırılmış kayıt servisine gönderdiği için açık işletmen onayı gerektirir; istisnalar
   `#nosec` + gerekçe. (v0.5 dış denetimi bu kapıların aylık yeşil geçmişiyle karşılanır.)
 - Yazılı terfi ritüeli (OPERATIONS.md): (1) CI yeşil → (2) iki test sunucusunda (boston/Debian,
   frankfurt/Arch) `update.sh` + golden-path smoke → (3) üretim. Kanal netleşir: main=edge (test
@@ -680,7 +681,7 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 25 Temmuz 2026
+## Neredeyiz — 2 Ağustos 2026
 
 **Sürüm:** artık tek kaynaklı — sürüm ve commit bağlama anında HER İKİ binary'ye gömülüyor,
 `/api/v1/panel/version` sunuyor, panelin alt bilgisi oradan okuyor ve panel ile agent farklı yapıdaysa
@@ -703,14 +704,16 @@ yasağı (D-019) · dağıtım destek matrisi **katalogdan üretiliyor** ve baya
 "bu dağıtımda sunulmuyor" rozeti · izleme sayfası · Valkey kataloğa eklendi (yeni bileşenin gerçek
 maliyeti: 2 kaynak dosya, sıfır Go kodu).
 
-**Borç durumu:** tek API'nin yarısı ödendi (v2→v1, kiracı kapsamı, hata sözleşmesi) — **ödenmeyen
-yarı büyüyor**: ham `fetch` çağrısı denetim anında 74'tü, bugün 190. Route+authz tablosu ve rol×uç
-matrisi hâlâ açık (77 uç, elle tutulan 18 önek). Arayüz disiplini hiç başlamadı (30 tarayıcı
-`confirm()`, 6 kopya boyut biçimlendirici, 3 düğme sistemi, 3 ayrı Service tipi). CI hâlâ yalnız
-derliyor.
+**Borç durumu:** üretilen OpenAPI istemcisi, tek bildirimsel route/authz tablosu, arayüz tekleştirmesi
+ve ölçülmüş uçtan uca gecikme açık. D-017 kanonik teklif kimliklerini tanımlıyor; kalıcı Mağaza satırları
+ise hâlâ düz eski kimlikleri kullanıyor ve geçiş açık bir veri/API uyumluluk migration'ı gerektiriyor.
+CI artık yalnız derlemiyor: Go biçim/derleme/vet/test/race, shell ve depo sözleşmeleri, kilitli web
+derlemesi ve bağımlılık kapısı ile yeniden üretilebilir sürüm ürünlerini denetliyor.
 
-**Bugünkü sistem:** ~37,9 bin satır Go (190 dosya, 77 HTTP ucu, 16 migration, **25 servislik
-katalog**) + ~19,5 bin satır TypeScript (57 bileşen dosyası, TR+EN), 22 test dosyası.
+**Depo anlık görüntüsü:** `bash tools/repo-metrics.sh`, 79.783 ürün-Go satırı / 310 kaynak dosyası,
+178 Go test dosyası, 35.388 panel satırı / 113 dosya, 85 API rota-önek kaydı, 27 migration ve agent'ta
+93 komut çalıştırma yeri raporluyor. Web'de 27.629 TypeScript satırı / 76 dosya ve 208 ham `fetch(`
+yeri var. Bunlar kaynak-ağaç ölçümleridir; test sunucularındaki dağıtılmış yapı iddiası değildir.
 
 
 ---

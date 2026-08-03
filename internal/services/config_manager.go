@@ -3,196 +3,180 @@ package services
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-// ConfigManager manages service configuration files
+// ConfigManager manages service configuration files.
 type ConfigManager struct{}
 
-func NewConfigManager() *ConfigManager {
-	return &ConfigManager{}
+var mysqlServerConfigPath = "/etc/mysql/mariadb.conf.d/50-server.cnf"
+
+func NewConfigManager() *ConfigManager { return &ConfigManager{} }
+
+func phpINIPath(phpVersion string) string {
+	return filepath.Join(phpEtcDir, phpVersion, "fpm", "php.ini")
 }
 
-// PHPSettings represents common PHP configuration
 type PHPSettings struct {
-	MemoryLimit       string `json:"memory_limit"`        // e.g., "256M"
-	MaxExecutionTime  int    `json:"max_execution_time"`  // seconds
-	UploadMaxFilesize string `json:"upload_max_filesize"` // e.g., "64M"
-	PostMaxSize       string `json:"post_max_size"`       // e.g., "64M"
-	MaxInputVars      int    `json:"max_input_vars"`      // number
+	MemoryLimit       string `json:"memory_limit"`
+	MaxExecutionTime  int    `json:"max_execution_time"`
+	UploadMaxFilesize string `json:"upload_max_filesize"`
+	PostMaxSize       string `json:"post_max_size"`
+	MaxInputVars      int    `json:"max_input_vars"`
 }
 
-// MySQLSettings represents common MySQL configuration
 type MySQLSettings struct {
-	MaxConnections    int    `json:"max_connections"`
-	InnodbBufferPool  string `json:"innodb_buffer_pool_size"` // e.g., "1G"
-	QueryCacheSize    string `json:"query_cache_size"`        // e.g., "64M"
-	MaxAllowedPacket  string `json:"max_allowed_packet"`      // e.g., "64M"
+	MaxConnections   int    `json:"max_connections"`
+	InnodbBufferPool string `json:"innodb_buffer_pool_size"`
+	QueryCacheSize   string `json:"query_cache_size"`
+	MaxAllowedPacket string `json:"max_allowed_packet"`
 }
 
-// GetPHPSettings reads current PHP settings from php.ini
+func configPair(line string) (key, value string, ok bool) {
+	parts := strings.SplitN(line, "=", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	key, value = strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+	return key, value, key != "" && value != ""
+}
+
+func trimInlineComment(value string, marker byte) string {
+	if index := strings.IndexByte(value, marker); index >= 0 {
+		value = value[:index]
+	}
+	return strings.TrimSpace(value)
+}
+
 func (cm *ConfigManager) GetPHPSettings(phpVersion string) (*PHPSettings, error) {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return nil, err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	file, err := os.Open(phpIni)
+	content, err := readManagedConfig(phpINIPath(phpVersion))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open php.ini: %v", err)
+		return nil, fmt.Errorf("read php.ini: %w", err)
 	}
-	defer file.Close()
-	
-	settings := &PHPSettings{
-		MemoryLimit:       "128M",
-		MaxExecutionTime:  30,
-		UploadMaxFilesize: "2M",
-		PostMaxSize:       "8M",
-		MaxInputVars:      1000,
-	}
-	
-	scanner := bufio.NewScanner(file)
+	settings := &PHPSettings{MemoryLimit: "128M", MaxExecutionTime: 30, UploadMaxFilesize: "2M", PostMaxSize: "8M", MaxInputVars: 1000}
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, ";") || line == "" {
+		if line == "" || strings.HasPrefix(line, ";") {
 			continue
 		}
-		
-		if strings.HasPrefix(line, "memory_limit") {
-			settings.MemoryLimit = cm.extractValue(line)
-		} else if strings.HasPrefix(line, "max_execution_time") {
-			if val, err := strconv.Atoi(cm.extractValue(line)); err == nil {
-				settings.MaxExecutionTime = val
+		key, value, ok := configPair(line)
+		if !ok {
+			continue
+		}
+		value = trimInlineComment(value, ';')
+		switch key {
+		case "memory_limit":
+			settings.MemoryLimit = value
+		case "max_execution_time":
+			settings.MaxExecutionTime, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("parse max_execution_time: %w", err)
 			}
-		} else if strings.HasPrefix(line, "upload_max_filesize") {
-			settings.UploadMaxFilesize = cm.extractValue(line)
-		} else if strings.HasPrefix(line, "post_max_size") {
-			settings.PostMaxSize = cm.extractValue(line)
-		} else if strings.HasPrefix(line, "max_input_vars") {
-			if val, err := strconv.Atoi(cm.extractValue(line)); err == nil {
-				settings.MaxInputVars = val
+		case "upload_max_filesize":
+			settings.UploadMaxFilesize = value
+		case "post_max_size":
+			settings.PostMaxSize = value
+		case "max_input_vars":
+			settings.MaxInputVars, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("parse max_input_vars: %w", err)
 			}
 		}
 	}
-	
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan php.ini: %w", err)
+	}
+	if err := validatePHPSettings(settings); err != nil {
+		return nil, fmt.Errorf("invalid php.ini value: %w", err)
+	}
 	return settings, nil
 }
 
-// UpdatePHPSettings updates PHP configuration
 func (cm *ConfigManager) UpdatePHPSettings(phpVersion string, settings *PHPSettings) error {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return err
 	}
-	phpIni := fmt.Sprintf("/etc/php/%s/fpm/php.ini", phpVersion)
-	
-	// Read current content
-	content, err := os.ReadFile(phpIni)
-	if err != nil {
-		return fmt.Errorf("failed to read php.ini: %v", err)
+	if err := validatePHPSettings(settings); err != nil {
+		return err
 	}
-	
-	// Update settings
-	updated := string(content)
-	updated = cm.updateOrAddSetting(updated, "memory_limit", settings.MemoryLimit)
-	updated = cm.updateOrAddSetting(updated, "max_execution_time", fmt.Sprintf("%d", settings.MaxExecutionTime))
-	updated = cm.updateOrAddSetting(updated, "upload_max_filesize", settings.UploadMaxFilesize)
-	updated = cm.updateOrAddSetting(updated, "post_max_size", settings.PostMaxSize)
-	updated = cm.updateOrAddSetting(updated, "max_input_vars", fmt.Sprintf("%d", settings.MaxInputVars))
-	
-	// Write back
-	return os.WriteFile(phpIni, []byte(updated), 0644) //nosec G703 -- phpVersion validated by ValidatePHPVersion at entry
+	path := phpINIPath(phpVersion)
+	return mutateManagedConfig(path, 0o644, func(content []byte) ([]byte, error) {
+		updated := string(content)
+		updated = cm.updateOrAddSetting(updated, "memory_limit", settings.MemoryLimit)
+		updated = cm.updateOrAddSetting(updated, "max_execution_time", strconv.Itoa(settings.MaxExecutionTime))
+		updated = cm.updateOrAddSetting(updated, "upload_max_filesize", settings.UploadMaxFilesize)
+		updated = cm.updateOrAddSetting(updated, "post_max_size", settings.PostMaxSize)
+		updated = cm.updateOrAddSetting(updated, "max_input_vars", strconv.Itoa(settings.MaxInputVars))
+		return []byte(updated), nil
+	}, func() error { return phpFPMConfigTest(phpVersion) }, func() error { return reloadPHPFPM(phpVersion) })
 }
 
-// GetMySQLSettings reads current MySQL settings from my.cnf
 func (cm *ConfigManager) GetMySQLSettings() (*MySQLSettings, error) {
-	myCnf := "/etc/mysql/mariadb.conf.d/50-server.cnf"
-	
-	file, err := os.Open(myCnf)
+	content, err := readManagedConfig(mysqlServerConfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open my.cnf: %v", err)
+		return nil, fmt.Errorf("read database configuration: %w", err)
 	}
-	defer file.Close()
-	
-	settings := &MySQLSettings{
-		MaxConnections:   151,
-		InnodbBufferPool: "128M",
-		QueryCacheSize:   "16M",
-		MaxAllowedPacket: "16M",
-	}
-	
-	scanner := bufio.NewScanner(file)
+	settings := &MySQLSettings{MaxConnections: 151, InnodbBufferPool: "128M", QueryCacheSize: "16M", MaxAllowedPacket: "16M"}
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "#") || line == "" {
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
 			continue
 		}
-		
-		if strings.HasPrefix(line, "max_connections") {
-			if val, err := strconv.Atoi(cm.extractValue(line)); err == nil {
-				settings.MaxConnections = val
+		key, value, ok := configPair(line)
+		if !ok {
+			continue
+		}
+		value = trimInlineComment(value, '#')
+		switch key {
+		case "max_connections":
+			settings.MaxConnections, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("parse max_connections: %w", err)
 			}
-		} else if strings.HasPrefix(line, "innodb_buffer_pool_size") {
-			settings.InnodbBufferPool = cm.extractValue(line)
-		} else if strings.HasPrefix(line, "query_cache_size") {
-			settings.QueryCacheSize = cm.extractValue(line)
-		} else if strings.HasPrefix(line, "max_allowed_packet") {
-			settings.MaxAllowedPacket = cm.extractValue(line)
+		case "innodb_buffer_pool_size":
+			settings.InnodbBufferPool = value
+		case "query_cache_size":
+			settings.QueryCacheSize = value
+		case "max_allowed_packet":
+			settings.MaxAllowedPacket = value
 		}
 	}
-	
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan database configuration: %w", err)
+	}
+	if err := validateMySQLSettings(settings); err != nil {
+		return nil, fmt.Errorf("invalid database configuration value: %w", err)
+	}
 	return settings, nil
 }
 
-// UpdateMySQLSettings updates MySQL configuration
 func (cm *ConfigManager) UpdateMySQLSettings(settings *MySQLSettings) error {
-	myCnf := "/etc/mysql/mariadb.conf.d/50-server.cnf"
-	
-	// Read current content
-	content, err := os.ReadFile(myCnf)
-	if err != nil {
-		return fmt.Errorf("failed to read my.cnf: %v", err)
+	if err := validateMySQLSettings(settings); err != nil {
+		return err
 	}
-	
-	// Update settings
-	updated := string(content)
-	updated = cm.updateOrAddSetting(updated, "max_connections", fmt.Sprintf("%d", settings.MaxConnections))
-	updated = cm.updateOrAddSetting(updated, "innodb_buffer_pool_size", settings.InnodbBufferPool)
-	updated = cm.updateOrAddSetting(updated, "query_cache_size", settings.QueryCacheSize)
-	updated = cm.updateOrAddSetting(updated, "max_allowed_packet", settings.MaxAllowedPacket)
-	
-	// Write back
-	return os.WriteFile(myCnf, []byte(updated), 0644) //nosec G703 -- myCnf is a fixed constant path
+	return mutateManagedConfig(mysqlServerConfigPath, 0o644, func(content []byte) ([]byte, error) {
+		updated := string(content)
+		updated = cm.updateOrAddSetting(updated, "max_connections", strconv.Itoa(settings.MaxConnections))
+		updated = cm.updateOrAddSetting(updated, "innodb_buffer_pool_size", settings.InnodbBufferPool)
+		updated = cm.updateOrAddSetting(updated, "query_cache_size", settings.QueryCacheSize)
+		updated = cm.updateOrAddSetting(updated, "max_allowed_packet", settings.MaxAllowedPacket)
+		return []byte(updated), nil
+	}, mysqlConfigTest, restartMariaDB)
 }
 
-// extractValue extracts value from "key = value" or "key value" format
-func (cm *ConfigManager) extractValue(line string) string {
-	parts := strings.SplitN(line, "=", 2)
-	if len(parts) == 2 {
-		return strings.TrimSpace(parts[1])
-	}
-	
-	// Space separated
-	fields := strings.Fields(line)
-	if len(fields) >= 2 {
-		return fields[1]
-	}
-	
-	return ""
-}
-
-// updateOrAddSetting updates or adds a setting in config content
 func (cm *ConfigManager) updateOrAddSetting(content, key, value string) string {
-	// Try to update existing setting
-	re := regexp.MustCompile(fmt.Sprintf(`(?m)^(\s*;?\s*)%s(\s*=\s*.*)$`, regexp.QuoteMeta(key)))
-	
+	re := regexp.MustCompile(fmt.Sprintf(`(?m)^([ \t]*[;#]?[ \t]*)%s([ \t]*=[ \t]*.*)$`, regexp.QuoteMeta(key)))
 	replacement := fmt.Sprintf("%s = %s", key, value)
 	if re.MatchString(content) {
-		return re.ReplaceAllString(content, replacement)
+		return re.ReplaceAllStringFunc(content, func(string) string { return replacement })
 	}
-	
-	// If not found, add at the end
-	return content + "\n" + replacement + "\n"
+	return strings.TrimRight(content, "\n") + "\n" + replacement + "\n"
 }

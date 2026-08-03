@@ -306,6 +306,154 @@ func TestBackupFullZeroDatabasesRestoresFilesAndRemovesStale(t *testing.T) {
 	}
 }
 
+func TestBackupFullMultipleDatabasesRestoresFilesAndDatabasesSuccessfully(t *testing.T) {
+	_, docroot := installBackupTestPaths(t)
+	databases := []backupspec.DatabaseIdentity{
+		{ID: 1, Name: "tenant_one", Type: "mysql"},
+		{ID: 2, Name: "tenant_two", Type: "postgresql"},
+	}
+	state := map[int]string{1: "target-one", 2: "target-two"}
+	var calls []string
+	installDatabaseState(t, state, nil, &calls)
+	if err := os.WriteFile(filepath.Join(docroot, "target.html"), []byte("target-files"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	agent := &Agent{}
+	create := testCreateRequest(backupspec.TypeFull)
+	create.Databases = databases
+	target, err := agent.createBackup(create)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := readBackupManifest(target.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Type != backupspec.TypeFull ||
+		manifest.Files.Name != filesPayloadName ||
+		len(manifest.Databases) != len(databases) {
+		t.Fatalf("invalid full manifest: %#v", manifest)
+	}
+	if err := validateManifest(manifest, testScope()); err != nil {
+		t.Fatalf("manifest validation failed: %v", err)
+	}
+	for _, payload := range sortedPayloads(manifest) {
+		if payload.Size < 1 || len(payload.SHA256) != 64 {
+			t.Fatalf("payload digest metadata is incomplete: %#v", payload)
+		}
+	}
+
+	state[1], state[2] = "live-one", "live-two"
+	if err := os.Remove(filepath.Join(docroot, "target.html")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(docroot, "stale.html"), []byte("stale-files"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	restore := &backupspec.RestoreRequest{
+		ProtocolVersion: backupspec.ProtocolVersion,
+		SubscriptionID:  7,
+		DomainID:        9,
+		DomainName:      "example.test",
+		BackupName:      target.Name,
+		Databases:       databases,
+	}
+
+	first := &backupspec.RestoreResponse{}
+	if err := agent.restoreBackup(restore, first); err != nil {
+		t.Fatal(err)
+	}
+	if !first.Success || first.SafetyBackup == nil ||
+		first.SafetyBackup.Origin != backupspec.OriginPreRestore {
+		t.Fatalf("successful restore did not expose its safety backup: %#v", first)
+	}
+	if _, err := os.Stat(first.SafetyBackup.Path); err != nil {
+		t.Fatalf("safety backup is unavailable: %v", err)
+	}
+	if state[1] != "target-one" || state[2] != "target-two" {
+		t.Fatalf("database state = %#v", state)
+	}
+	if data, err := os.ReadFile(filepath.Join(docroot, "target.html")); err != nil ||
+		string(data) != "target-files" {
+		t.Fatalf("target files were not restored: %q, %v", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(docroot, "stale.html")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale file survived successful full restore: %v", err)
+	}
+	wantFirstCalls := []string{"1=target-one", "2=target-two"}
+	if !reflect.DeepEqual(calls, wantFirstCalls) {
+		t.Fatalf("first restore calls = %#v, want %#v", calls, wantFirstCalls)
+	}
+
+	// A retry of the same verified package is safe and converges to the same
+	// database and document-root state.
+	second := &backupspec.RestoreResponse{}
+	if err := agent.restoreBackup(restore, second); err != nil {
+		t.Fatal(err)
+	}
+	if !second.Success || second.SafetyBackup == nil ||
+		second.SafetyBackup.Name == first.SafetyBackup.Name {
+		t.Fatalf("idempotent retry did not create a distinct durable safety point: %#v", second)
+	}
+	wantAllCalls := []string{
+		"1=target-one", "2=target-two",
+		"1=target-one", "2=target-two",
+	}
+	if !reflect.DeepEqual(calls, wantAllCalls) {
+		t.Fatalf("retry calls = %#v, want %#v", calls, wantAllCalls)
+	}
+	if state[1] != "target-one" || state[2] != "target-two" {
+		t.Fatalf("retry changed database state: %#v", state)
+	}
+}
+
+func TestBackupRestoreCommitFailureIsReportedAndSafetyBackupRemains(t *testing.T) {
+	_, docroot := installBackupTestPaths(t)
+	if err := os.WriteFile(filepath.Join(docroot, "target.html"), []byte("target"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	agent := &Agent{}
+	target, err := agent.createBackup(testCreateRequest(backupspec.TypeFiles))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(docroot, "target.html"), []byte("live"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	oldRemove := backupRemovePublishedOld
+	backupRemovePublishedOld = func(string) error {
+		return errors.New("injected old-tree cleanup failure")
+	}
+	t.Cleanup(func() { backupRemovePublishedOld = oldRemove })
+
+	resp := &backupspec.RestoreResponse{}
+	err = agent.restoreBackup(&backupspec.RestoreRequest{
+		ProtocolVersion: backupspec.ProtocolVersion,
+		SubscriptionID:  7,
+		DomainID:        9,
+		DomainName:      "example.test",
+		BackupName:      target.Name,
+	}, resp)
+	if err == nil || !strings.Contains(err.Error(), "durability proof failed") {
+		t.Fatalf("commit failure was not reported: %v", err)
+	}
+	if resp.Success {
+		t.Fatal("restore reported success after commit failure")
+	}
+	if resp.SafetyBackup == nil || resp.SafetyBackup.Origin != backupspec.OriginPreRestore {
+		t.Fatalf("safety backup was not retained: %#v", resp)
+	}
+	if _, statErr := os.Stat(resp.SafetyBackup.Path); statErr != nil {
+		t.Fatalf("safety backup is not accessible: %v", statErr)
+	}
+	if data, readErr := os.ReadFile(filepath.Join(docroot, "target.html")); readErr != nil ||
+		string(data) != "target" {
+		t.Fatalf("published target is not internally consistent: %q, %v", data, readErr)
+	}
+}
+
 func TestBackupFullRestoreSetMismatchDoesNotCreateSafetyBackup(t *testing.T) {
 	_, docroot := installBackupTestPaths(t)
 	if err := os.WriteFile(filepath.Join(docroot, "target.html"), []byte("target"), 0o644); err != nil {

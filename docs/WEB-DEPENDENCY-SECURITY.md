@@ -31,9 +31,12 @@ reintroducing reachable client-side findings.
 
 For every web release:
 
-1. run `npm ci`;
+1. run `npm ci --no-audit --no-fund`;
 2. run `npm run build`;
-3. run `npm audit --omit=dev`;
+3. only after explicit operator approval, run `npm audit --omit=dev`; this is
+   a networked check that sends package names and versions to the configured
+   npm registry. The approval must contain exactly: “Paket adları ve
+   sürümlerinin npm’in açık denetim servisine gönderilmesini onaylıyorum.”;
 4. confirm the application still contains none of the server/RSC APIs listed
    above;
 5. record any changed advisory range in the release review.

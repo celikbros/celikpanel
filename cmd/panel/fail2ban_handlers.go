@@ -15,23 +15,35 @@ import (
 func (p *Panel) handleFail2banJails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
+		r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 		var req core.Fail2banJailRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		var ok bool
-		if err := p.agentClient.Call("Agent.Fail2banToggleJail", &req, &ok); err != nil {
+		if err := p.callAgentContext(r.Context(), "Agent.Fail2banToggleJail", &req, &ok); err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
+		if !ok {
+			writeAgentError(w, nil, "fail2ban jail mutation was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		return
+	case http.MethodGet:
+	default:
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	var result core.Fail2banStatusResult
-	if err := p.agentClient.Call("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgent("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -48,23 +60,35 @@ func (p *Panel) handleFail2banJails(w http.ResponseWriter, r *http.Request) {
 func (p *Panel) handleFail2banBannedIPs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
+		r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 		var req core.Fail2banUnbanRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 		var ok bool
-		if err := p.agentClient.Call("Agent.Fail2banUnban", &req, &ok); err != nil {
+		if err := p.callAgentContext(r.Context(), "Agent.Fail2banUnban", &req, &ok); err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": ok})
+		if !ok {
+			writeAgentError(w, nil, "fail2ban unban mutation was not completed")
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		return
+	case http.MethodGet:
+	default:
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	var result core.Fail2banStatusResult
-	if err := p.agentClient.Call("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgent("Agent.Fail2banStatus", &transport.Empty{}, &result); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -91,7 +115,7 @@ func (p *Panel) handleFail2banConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var config core.Fail2banConfig
-	if err := p.agentClient.Call("Agent.Fail2banConfig", &transport.Empty{}, &config); err != nil {
+	if err := p.callAgent("Agent.Fail2banConfig", &transport.Empty{}, &config); err != nil {
 		writeServerError(w, err)
 		return
 	}

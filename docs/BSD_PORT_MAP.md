@@ -13,10 +13,12 @@ The whole codebase cross-compiles to FreeBSD **right now**, on current
 source:
 
 ```
-GOOS=freebsd GOARCH=amd64 go build ./cmd/panel   → ✓
-GOOS=freebsd GOARCH=amd64 go build ./cmd/agent   → ✓
-GOOS=freebsd GOARCH=arm64 go build ./cmd/panel   → ✓
+make freebsd-cross   → ✓
 ```
+
+The target first rejects every compiler except exactly Go 1.26.5, disables
+automatic toolchain downloads, then proves panel and agent on amd64 and panel
+on arm64.
 
 The **panel** (HTTP, SQLite, UI, business logic, the RPC contract) is
 OS-neutral Go and needs **zero** changes. All BSD work lives in the agent —

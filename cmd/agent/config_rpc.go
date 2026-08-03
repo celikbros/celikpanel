@@ -8,88 +8,60 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// GetPHPConfig returns PHP configuration
 func (a *Agent) GetPHPConfig(req transport.GetPHPConfigRequest, resp *transport.GetPHPConfigResponse) error {
 	log.Printf("Getting PHP %s config", req.PHPVersion)
-
-	configMgr := services.NewConfigManager()
-	settings, err := configMgr.GetPHPSettings(req.PHPVersion)
+	settings, err := services.NewConfigManager().GetPHPSettings(req.PHPVersion)
 	if err != nil {
-		return fmt.Errorf("failed to get PHP config: %v", err)
+		return fmt.Errorf("failed to get PHP config: %w", err)
 	}
-
 	resp.MemoryLimit = settings.MemoryLimit
 	resp.MaxExecutionTime = settings.MaxExecutionTime
 	resp.UploadMaxFilesize = settings.UploadMaxFilesize
 	resp.PostMaxSize = settings.PostMaxSize
 	resp.MaxInputVars = settings.MaxInputVars
-
 	return nil
 }
 
-// UpdatePHPConfig updates PHP configuration
-func (a *Agent) UpdatePHPConfig(req transport.UpdatePHPConfigRequest, resp *struct{}) error {
+// UpdatePHPConfig returns only after validation, atomic publication and PHP-FPM
+// activation have all succeeded. ConfigManager restores the previous live state
+// before returning any error.
+func (a *Agent) UpdatePHPConfig(req transport.UpdatePHPConfigRequest, _ *transport.Empty) error {
 	log.Printf("Updating PHP %s config", req.PHPVersion)
-
-	configMgr := services.NewConfigManager()
 	settings := &services.PHPSettings{
-		MemoryLimit:       req.MemoryLimit,
-		MaxExecutionTime:  req.MaxExecutionTime,
-		UploadMaxFilesize: req.UploadMaxFilesize,
-		PostMaxSize:       req.PostMaxSize,
-		MaxInputVars:      req.MaxInputVars,
+		MemoryLimit: req.MemoryLimit, MaxExecutionTime: req.MaxExecutionTime,
+		UploadMaxFilesize: req.UploadMaxFilesize, PostMaxSize: req.PostMaxSize,
+		MaxInputVars: req.MaxInputVars,
 	}
-
-	if err := configMgr.UpdatePHPSettings(req.PHPVersion, settings); err != nil {
-		return fmt.Errorf("failed to update PHP config: %v", err)
+	if err := services.NewConfigManager().UpdatePHPSettings(req.PHPVersion, settings); err != nil {
+		return fmt.Errorf("failed to update PHP config: %w", err)
 	}
-
-	// Reload PHP-FPM
-	if err := a.phpManager.ReloadPHPFPM(req.PHPVersion); err != nil {
-		log.Printf("Warning: Failed to reload PHP-FPM: %v", err)
-	}
-
 	return nil
 }
 
-// GetMySQLConfig returns MySQL configuration
-func (a *Agent) GetMySQLConfig(req struct{}, resp *transport.GetMySQLConfigResponse) error {
+func (a *Agent) GetMySQLConfig(_ transport.Empty, resp *transport.GetMySQLConfigResponse) error {
 	log.Println("Getting MySQL config")
-
-	configMgr := services.NewConfigManager()
-	settings, err := configMgr.GetMySQLSettings()
+	settings, err := services.NewConfigManager().GetMySQLSettings()
 	if err != nil {
-		return fmt.Errorf("failed to get MySQL config: %v", err)
+		return fmt.Errorf("failed to get MySQL config: %w", err)
 	}
-
 	resp.MaxConnections = settings.MaxConnections
 	resp.InnodbBufferPool = settings.InnodbBufferPool
 	resp.QueryCacheSize = settings.QueryCacheSize
 	resp.MaxAllowedPacket = settings.MaxAllowedPacket
-
 	return nil
 }
 
-// UpdateMySQLConfig updates MySQL configuration
-func (a *Agent) UpdateMySQLConfig(req transport.UpdateMySQLConfigRequest, resp *struct{}) error {
+// UpdateMySQLConfig returns only after validation, atomic publication and
+// MariaDB restart have all succeeded. It never logs-and-returns-success on a
+// failed restart.
+func (a *Agent) UpdateMySQLConfig(req transport.UpdateMySQLConfigRequest, _ *transport.Empty) error {
 	log.Println("Updating MySQL config")
-
-	configMgr := services.NewConfigManager()
 	settings := &services.MySQLSettings{
-		MaxConnections:   req.MaxConnections,
-		InnodbBufferPool: req.InnodbBufferPool,
-		QueryCacheSize:   req.QueryCacheSize,
-		MaxAllowedPacket: req.MaxAllowedPacket,
+		MaxConnections: req.MaxConnections, InnodbBufferPool: req.InnodbBufferPool,
+		QueryCacheSize: req.QueryCacheSize, MaxAllowedPacket: req.MaxAllowedPacket,
 	}
-
-	if err := configMgr.UpdateMySQLSettings(settings); err != nil {
-		return fmt.Errorf("failed to update MySQL config: %v", err)
+	if err := services.NewConfigManager().UpdateMySQLSettings(settings); err != nil {
+		return fmt.Errorf("failed to update MySQL config: %w", err)
 	}
-
-	// Restart MySQL
-	if err := a.systemdMgr.Restart("mariadb"); err != nil {
-		log.Printf("Warning: Failed to restart MariaDB: %v", err)
-	}
-
 	return nil
 }

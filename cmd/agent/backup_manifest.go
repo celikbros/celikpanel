@@ -35,6 +35,7 @@ type backupManifest struct {
 	Version        int                `json:"version"`
 	Type           string             `json:"type"`
 	Origin         string             `json:"origin"`
+	JobKey         string             `json:"job_key,omitempty"`
 	SubscriptionID int                `json:"subscription_id"`
 	DomainID       int                `json:"domain_id"`
 	CreatedAt      time.Time          `json:"created_at"`
@@ -140,6 +141,9 @@ func validateManifest(m backupManifest, scope backupScope) error {
 	}
 	if !validBackupOrigin(m.Origin) || m.CreatedAt.IsZero() {
 		return errors.New("invalid manifest metadata")
+	}
+	if m.JobKey != "" && !backupspec.ValidJobKey(m.JobKey) {
+		return errors.New("invalid backup job key")
 	}
 	if m.Files.Name != "" {
 		if err := validateManifestPayload(m.Files); err != nil {

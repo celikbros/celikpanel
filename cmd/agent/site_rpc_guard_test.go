@@ -3,11 +3,42 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+func TestSiteMutationMutexSerializesTheSameSite(t *testing.T) {
+	first := siteMutationMutex(104729)
+	second := siteMutationMutex(104729)
+	if first != second {
+		t.Fatal("the same site ID mapped to different mutation locks")
+	}
+
+	first.Lock()
+	acquired := make(chan struct{})
+	go func() {
+		second.Lock()
+		close(acquired)
+		second.Unlock()
+	}()
+
+	select {
+	case <-acquired:
+		first.Unlock()
+		t.Fatal("a second mutation for the same site bypassed serialization")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	first.Unlock()
+	select {
+	case <-acquired:
+	case <-time.After(time.Second):
+		t.Fatal("the serialized site mutation did not resume after unlock")
+	}
+}
 
 func validCreateSiteGuardRequest(t *testing.T) transport.CreateSiteRequest {
 	t.Helper()
@@ -24,6 +55,8 @@ func validCreateSiteGuardRequest(t *testing.T) transport.CreateSiteRequest {
 		DocumentRoot:        documentRoot,
 		ProjectType:         "static",
 		SSLType:             "none",
+		Username:            services.SiteUsername("example.com"),
+		Password:            "test-password",
 	}
 }
 

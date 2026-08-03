@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // RBL (DNS blocklist) check for the server's outbound IPv4 address. A mail
@@ -29,19 +31,11 @@ var rblZones = []string{
 	"dnsbl.sorbs.net",
 }
 
-type RBLResult struct {
-	Zone   string `json:"zone"`
-	Listed bool   `json:"listed"`
-	Detail string `json:"detail,omitempty"`
-}
+type RBLResult = transport.RBLResult
 
-type CheckRBLResponse struct {
-	IP      string      `json:"ip"`
-	Results []RBLResult `json:"results"`
-	Error   string      `json:"error,omitempty"`
-}
+type CheckRBLResponse = transport.CheckRBLResponse
 
-func (a *Agent) CheckRBL(_ *struct{}, resp *CheckRBLResponse) error {
+func (a *Agent) CheckRBL(_ *transport.Empty, resp *CheckRBLResponse) error {
 	ip := outboundIPv4()
 	if ip == "" {
 		resp.Error = "could not determine the server's outbound IPv4 address"

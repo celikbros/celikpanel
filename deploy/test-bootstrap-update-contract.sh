@@ -10,6 +10,7 @@ BOOTSTRAP="$ROOT/bootstrap-update.sh"
 UPDATE="$ROOT/update.sh"
 ROLLBACK="$ROOT/rollback.sh"
 INSTALL="$ROOT/install.sh"
+MAKEFILE="$ROOT/Makefile"
 RELEASE_GUARD="$ROOT/deploy/release-transaction-guard.sh"
 PANEL_UNIT="$ROOT/deploy/systemd/celikpanel-panel.service"
 AGENT_UNIT="$ROOT/deploy/systemd/celikpanel-agent.service"
@@ -55,6 +56,60 @@ require_sequence() {
             | awk -F: -v cursor="$cursor" '$1 > cursor { print $1; exit }')
         [[ "$line" =~ ^[0-9]+$ ]] \
             || die "$(basename "$file") has no ordered marker after line $cursor: $literal"
+        cursor=$line
+    done
+}
+
+# Extract exactly one top-level shell function so rollback security assertions
+# cannot be satisfied accidentally by a helper definition or another branch.
+extract_function_source() {
+    local file=$1 function_name=$2
+    awk -v header="$function_name() {" '
+        $0 == header {
+            inside = 1
+            found = 1
+        }
+        inside {
+            print
+        }
+        inside && $0 == "}" {
+            closed = 1
+            exit
+        }
+        END {
+            if (!found || !closed) {
+                exit 1
+            }
+        }
+    ' "$file"
+}
+
+require_function_literal() {
+    local file=$1 function_name=$2 literal=$3 source
+    source=$(extract_function_source "$file" "$function_name") \
+        || die "$(basename "$file") has no complete function: $function_name"
+    grep -Fq -- "$literal" <<< "$source" \
+        || die "$function_name is missing: $literal"
+}
+
+reject_function_literal() {
+    local file=$1 function_name=$2 literal=$3 source
+    source=$(extract_function_source "$file" "$function_name") \
+        || die "$(basename "$file") has no complete function: $function_name"
+    ! grep -Fq -- "$literal" <<< "$source" \
+        || die "$function_name must not contain: $literal"
+}
+
+require_function_sequence() {
+    local file=$1 function_name=$2 source cursor=0 literal line
+    shift 2
+    source=$(extract_function_source "$file" "$function_name") \
+        || die "$(basename "$file") has no complete function: $function_name"
+    for literal in "$@"; do
+        line=$({ grep -Fn -- "$literal" <<< "$source" || true; } \
+            | awk -F: -v cursor="$cursor" '$1 > cursor { print $1; exit }')
+        [[ "$line" =~ ^[0-9]+$ ]] \
+            || die "$function_name has no ordered marker after line $cursor: $literal"
         cursor=$line
     done
 }
@@ -109,6 +164,11 @@ bash -n "$BOOTSTRAP" "$UPDATE" "$ROLLBACK" "$INSTALL" "$RELEASE_GUARD"
 # Temiz bootstrap ve sonraki tüm panel başlangıçları SQLite veritabanı ile
 # WAL/SHM yan dosyalarını özel izinlerle oluşturmalıdır.
 require_literal "$PANEL_UNIT" 'UMask=0077'
+require_literal "$PANEL_UNIT" 'Wants=celikpanel-agent.service'
+require_literal "$PANEL_UNIT" 'After=celikpanel-agent.service network.target'
+reject_literal "$PANEL_UNIT" 'Requires=celikpanel-agent.service'
+require_literal "$PANEL_UNIT" 'EnvironmentFile=-/etc/celikpanel/panel.env'
+require_literal "$PANEL_UNIT" 'ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG'
 require_literal "$AGENT_UNIT" 'RuntimeDirectoryPreserve=yes'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
@@ -116,6 +176,39 @@ require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --count-u
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --create-admin' 1
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --count-users'
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --create-admin'
+
+# Operator choices are durable data, not generated vendor-unit bytes. A clean
+# agent restart must not tear down the otherwise healthy web panel.
+require_literal "$INSTALL" 'PANEL_ENV="$CONF_DIR/panel.env"'
+require_literal "$INSTALL" 'validate_panel_env "$PANEL_ENV"'
+require_literal "$INSTALL" 'mv -T --no-clobber -- "$temp_env" "$PANEL_ENV"'
+require_literal "$INSTALL" 'install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/'
+require_sequence "$INSTALL" \
+    'step "Panel yapılandırması $PANEL_ENV"' \
+    'ensure_panel_env' \
+    '# 3. Build if artifacts are missing' \
+    'step "Dosyalar $PREFIX altına kuruluyor"'
+reject_literal "$INSTALL" 'PANEL_ARGS='
+reject_literal "$INSTALL" 'TLS_ENV='
+reject_literal "$INSTALL" 's|^ExecStart=/opt/celikpanel/bin/panel'
+
+# Arch package databases and the base system must advance in one transaction;
+# neither the installer nor the agent may create a partial-upgrade window.
+require_literal "$INSTALL" 'pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables'
+reject_literal "$INSTALL" 'pacman -Sy --noconfirm'
+
+# The Makefile artifact contains the complete offline initial-install payload.
+# Updates and rollbacks still use the immutable bootstrap transaction path.
+require_literal "$MAKEFILE" 'build: panel agent schema17-bridge web'
+require_literal "$MAKEFILE" '$(NPM) ci --no-audit --no-fund'
+reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'
+require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/'
+require_literal "$MAKEFILE" 'cp -r deploy/. dist/$(DIST)/deploy/'
+require_literal "$MAKEFILE" 'cp install.sh bootstrap-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/'
+require_literal "$MAKEFILE" 'sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"'
+require_literal "$MAKEFILE" 'dist-sign: dist'
+require_literal "$MAKEFILE" 'SIGNING_KEY is required (GPG key ID or fingerprint)'
+require_literal "$MAKEFILE" 'gpg --batch --yes --armor --local-user "$(SIGNING_KEY)" --detach-sign'
 
 # Arch's compatibility sbin/bin aliases must not win command resolution over
 # the canonical bin directories used by the trust-chain checker.
@@ -150,8 +243,8 @@ require_sequence "$BOOTSTRAP" \
     'run_clean "$git_bin" status --porcelain=v1 --untracked-files=all' \
     'run_clean "$git_bin" archive --format=tar HEAD' \
     'run_clean "$tar_bin" -xf - -C "$incomplete_root"' \
-    'build -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel' \
-    'build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge' \
+    'build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel' \
+    'build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge' \
     '"$npm_bin" run build' \
     'validate_release_tree "$incomplete_root"' \
     'mv -T --no-clobber -- "$incomplete_root" "$release_root"' \
@@ -377,7 +470,7 @@ require_literal "$RELEASE_GUARD" '1) expected=celikpanel-panel.service ;;'
 require_literal "$RELEASE_GUARD" 'active|activating|reloading|refreshing)'
 require_literal "$RELEASE_GUARD" '[[ "$pid" == 0 && "$start_time" == 0 ]]'
 require_literal "$RELEASE_GUARD" '_release_txn_validate_quiesce_coordinators "$coordinators" || return 1'
-require_literal "$RELEASE_GUARD" 'service-states.tsv|quiesce-coordinators.tsv|snapshot-transition.state) continue ;;'
+require_literal "$RELEASE_GUARD" 'service-states.tsv|quiesce-coordinators.tsv|snapshot-transition.state|panel-tls) continue ;;'
 require_literal "$RELEASE_GUARD" 'sync -f -- "$child/service-states.tsv" "$child/quiesce-coordinators.tsv"'
 require_sequence "$RELEASE_GUARD" \
     'release_txn_validate_quiesce_token() {' \
@@ -409,7 +502,7 @@ require_sequence "$RELEASE_GUARD" \
     'release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1' \
     '_release_txn_validate_root_directory "$transaction_root" 700 || return 1' \
     '_release_txn_validate_root_directory "$snapshot_root" 700 || return 1' \
-    'for marker in quiesce.pending active completion.pending; do' \
+    'for marker in quiesce.pending active completion.pending scheduler-restore.pending; do' \
     '-name '\''.release-snapshot.incomplete*'\'' -print0)' \
     '[[ ${#candidates[@]} -le 1 ]] \' \
     '[[ -d "$candidate" && ! -L "$candidate" ]] \' \
@@ -464,7 +557,7 @@ require_sequence "$UPDATE" \
 # Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
 # aşağıdaki iki cold postcondition immutable checker kullanabilir.
 require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
-require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 7
+require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 8
 require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
 require_regex_count "$UPDATE" '^[[:space:]]*"\$BIN_DIR/panel" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
@@ -623,6 +716,8 @@ require_sequence "$UPDATE" \
     'if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACTION_ROOT/completion.pending" ]]; then' \
     'pending_completion_verified=0' \
     'pending_completion_removing=0' \
+    'pending_scheduler_restore_pending=0' \
+    'pending_scheduler_restored=0' \
     'validate_pending_update_snapshot "$pending_snapshot"' \
     'systemctl stop celikpanel-panel.service \' \
     'systemctl stop celikpanel-agent.service \' \
@@ -650,10 +745,18 @@ require_sequence "$UPDATE" \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'pending_completion_verified=1' \
+    'release_txn_mark_scheduler_restore_pending \' \
+    'pending_scheduler_restore_pending=1' \
     'pending_completion_removing=1' \
     'release_txn_remove_completion_pending \' \
-    'pending_finalization_succeeded=1' \
     'release_release_mutation_lock \' \
+    'panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \' \
+    'pending_scheduler_restored=1' \
+    'release_txn_remove_scheduler_restore_pending \' \
+    'pending_scheduler_restore_pending=0' \
+    'pending_finalization_succeeded=1' \
     'trap - EXIT'
 
 # Normal success publishes a complete snapshot before apply-only, then follows
@@ -693,10 +796,21 @@ require_sequence "$UPDATE" \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'transaction_completion_verified=1' \
+    'transaction_phase=scheduler-publishing' \
+    'release_txn_mark_scheduler_restore_pending \' \
     'transaction_phase=completion-removing' \
     'release_txn_remove_completion_pending \' \
     'transaction_started=0' \
+    'mutation_started=0' \
     'release_release_mutation_lock || die "cannot release update mutation lock"' \
+    'transaction_phase=scheduler-restoring' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'panel_tls_restore_certbot_scheduler "$snap/panel-tls" \' \
+    'scheduler_restore_verified=1' \
+    'transaction_phase=scheduler-removing' \
+    'release_txn_remove_scheduler_restore_pending \' \
     'trap - EXIT'
 
 # The general installer retains strict fresh/explicit one-shot semantics and
@@ -806,12 +920,115 @@ require_sequence "$ROLLBACK" \
     'rm -f -- "$stage"' \
     'sync -d -- "$AGENT_STATE_DIR"'
 
+# A pre-ledger agent frozen for the proof-to-stop handoff must never receive
+# SIGCONT on a fail-closed error path. Its whole cgroup is killed, stopped and
+# proved empty before the frozen flag can be cleared.
+require_function_sequence "$ROLLBACK" freeze_and_stop_legacy_agent \
+    'systemctl kill --kill-whom=all --signal=SIGSTOP celikpanel-agent.service' \
+    'legacy_agent_frozen=1' \
+    'reject_extra_service_cgroup_processes celikpanel-agent.service "$main_pid"' \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'systemctl kill --kill-whom=all --signal=SIGKILL celikpanel-agent.service' \
+    'systemctl stop celikpanel-agent.service \' \
+    'systemctl is-active --quiet celikpanel-agent.service' \
+    'reject_extra_service_cgroup_processes celikpanel-agent.service 0' \
+    'legacy_agent_frozen=0'
+require_function_sequence "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'systemctl kill --kill-whom=all --signal=SIGKILL celikpanel-agent.service' \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'service_cgroup_pids celikpanel-agent.service' \
+    'legacy_agent_frozen=0'
+reject_function_literal "$ROLLBACK" freeze_and_stop_legacy_agent 'SIGCONT'
+reject_function_literal "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed 'SIGCONT'
+reject_function_literal "$ROLLBACK" rollback_on_exit 'SIGCONT'
+require_function_sequence "$ROLLBACK" rollback_on_exit \
+    'local status=$? frozen_cleanup_failed=0' \
+    'trap - EXIT' \
+    'if [[ $legacy_agent_frozen -eq 1 ]]; then' \
+    'if [[ $rollback_transaction_started -eq 0 &&' \
+    '$rollback_mutation_started -eq 0 &&' \
+    '$rollback_service_state_recorded -eq 1 ]]; then' \
+    'if ! unfreeze_legacy_agent; then' \
+    'terminate_frozen_legacy_agent_fail_closed || frozen_cleanup_failed=1' \
+    'if [[ $frozen_cleanup_failed -eq 1 ]]; then' \
+    'if [[ $status -eq 0 ]]; then'
+
+# Rollback completion is split into two durable obligations: runtime rollback
+# and exact Certbot scheduler restoration. Both a completion+scheduler retry
+# and a scheduler-only retry must remain bound to one token and snapshot.
+require_literal "$ROLLBACK" 'rollback_scheduler_only_resume=0'
+require_literal "$ROLLBACK" 'rollback_scheduler_restore_pending=0'
+require_literal "$ROLLBACK" 'rollback_scheduler_restore_completed=0'
+require_literal "$ROLLBACK" 'rollback_completion_verified=0'
+require_literal "$ROLLBACK" 'rollback_completion_removing=0'
+require_literal "$ROLLBACK" 'release_txn_read_scheduler_restore_fields'
+require_literal "$ROLLBACK" 'release_txn_validate_scheduler_restore_token \'
+require_literal "$ROLLBACK" 'release_txn_mark_scheduler_restore_pending \'
+require_literal "$ROLLBACK" 'release_txn_remove_scheduler_restore_pending \'
+require_literal "$ROLLBACK" 'pending rollback scheduler marker does not match completion.pending'
+require_literal "$ROLLBACK" 'pending rollback scheduler marker proof failed'
+require_sequence "$ROLLBACK" \
+    'rollback_verified_snapshot=$snap' \
+    'if [[ $rollback_scheduler_only_resume -eq 1 ]]; then' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'rollback_scheduler_restore_pending=1' \
+    'panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'panel_tls_restore_certbot_scheduler "$snap/panel-tls" \' \
+    'rollback_scheduler_restore_completed=1' \
+    'release_txn_remove_scheduler_restore_pending \' \
+    'rollback_scheduler_restore_pending=0' \
+    'trap - EXIT' \
+    'exit 0'
+require_sequence "$ROLLBACK" \
+    'release_txn_remove_start_authorization \' \
+    'release_txn_validate_pending_token \' \
+    'rollback_completion_verified=1' \
+    'release_txn_mark_scheduler_restore_pending \' \
+    'rollback_scheduler_restore_pending=1' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'rollback_completion_removing=1' \
+    'release_txn_remove_completion_pending \' \
+    'rollback_transaction_started=0' \
+    'rollback_mutation_started=0' \
+    'rollback_completion_removing=0' \
+    'rollback_completion_verified=0' \
+    'release_release_mutation_lock || die "cannot release rollback mutation lock"' \
+    'panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'panel_tls_restore_certbot_scheduler "$snap/panel-tls" \' \
+    'rollback_scheduler_restore_completed=1' \
+    'release_txn_remove_scheduler_restore_pending \' \
+    'rollback_scheduler_restore_pending=0' \
+    'trap - EXIT'
+
 # Any rollback failure after mutation leaves both coordinators stopped and
 # prints an exact immutable retry command.
 # Mutation başladıktan sonraki rollback hatası iki koordinatörü durdurur ve tam
 # değişmez retry komutunu yazdırır.
 require_literal "$ROLLBACK" 'rollback_mutation_started=0'
 require_literal "$ROLLBACK" 'if [[ $rollback_mutation_started -eq 1 ]]; then'
+require_literal "$ROLLBACK" 'if [[ $rollback_scheduler_restore_pending -eq 1 &&'
+require_literal "$ROLLBACK" 'if [[ $rollback_scheduler_restore_completed -eq 1 &&'
+require_function_sequence "$ROLLBACK" rollback_on_exit \
+    'if [[ $rollback_completion_verified -eq 1 &&' \
+    '$rollback_completion_removing -eq 1 &&' \
+    '$rollback_scheduler_restore_pending -eq 1 &&' \
+    '$rollback_transaction_started -eq 1 &&' \
+    '$rollback_mutation_started -eq 1 &&' \
+    '! -e "$RELEASE_TRANSACTION_ROOT/completion.pending"' \
+    '! -L "$RELEASE_TRANSACTION_ROOT/completion.pending"' \
+    '-e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending"' \
+    'release_txn_validate_scheduler_restore_token \' \
+    'release_release_mutation_lock' \
+    'Restored runtime was left intact and exact scheduler recovery remains retryable.' \
+    'if [[ $rollback_scheduler_restore_pending -eq 1 &&' \
+    'if [[ $rollback_transaction_started -eq 1 ]]; then'
+require_literal "$ROLLBACK" 'durable marker removal is uncertain. Runtime was left intact and rollback did not claim success.'
+require_literal "$ROLLBACK" 'completion marker removal durability is uncertain. Restored runtime was left intact and exact scheduler recovery remains retryable.'
+require_literal "$ROLLBACK" 'Rollback runtime is complete; exact Certbot scheduler restoration remains safely retryable.'
+require_literal "$ROLLBACK" 'Scheduler restoration failed without an exact durable retry marker; both services were stopped.'
 require_literal "$ROLLBACK" 'systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true'
 require_literal "$ROLLBACK" 'systemctl stop celikpanel-agent.service >/dev/null 2>&1 || true'
 require_literal "$ROLLBACK" 'sudo /bin/bash '\''$TRUSTED_RELEASE_ROOT/rollback.sh'\'' '\''$rollback_verified_snapshot'\'''
@@ -829,5 +1046,226 @@ require_sequence "$ROLLBACK" \
     'rollback_mutation_started=1' \
     'rm -rf -- "$BIN_DIR"' \
     'trap - EXIT'
+
+# Exercise the privileged rollback EXIT state machine itself with injected
+# systemd and marker failures. Static literals alone cannot prove that a
+# failure after SIGSTOP avoids SIGCONT, or that the rm-visible/fsync-failed
+# completion boundary preserves the already-restored runtime.
+rollback_contract_tmp=$(mktemp -d)
+trap 'rm -rf -- "$rollback_contract_tmp"' EXIT
+
+legacy_trace="$rollback_contract_tmp/legacy-freeze.trace"
+set +e
+(
+    set -euo pipefail
+    eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
+    eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
+    eval "$(extract_function_source "$ROLLBACK" freeze_and_stop_legacy_agent)"
+    eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
+
+    TRACE="$legacy_trace"
+    legacy_stop_attempts=0
+    die() {
+        printf 'die %s\n' "$*" >> "$TRACE"
+        exit 23
+    }
+    systemctl() {
+        printf 'systemctl %s\n' "$*" >> "$TRACE"
+        case "$*" in
+            'show --property=ActiveState --value celikpanel-agent.service')
+                printf 'active\n'
+                ;;
+            'show --property=MainPID --value celikpanel-agent.service')
+                printf '4242\n'
+                ;;
+            'stop --no-block celikpanel-agent.service')
+                legacy_stop_attempts=$((legacy_stop_attempts + 1))
+                if [[ "$legacy_stop_attempts" -eq 1 ]]; then
+                    return 1
+                fi
+                return 0
+                ;;
+            'is-active --quiet celikpanel-agent.service')
+                return 1
+                ;;
+        esac
+        return 0
+    }
+    reject_extra_service_cgroup_processes() {
+        printf 'cgroup-proof %s %s\n' "$1" "$2" >> "$TRACE"
+        return 0
+    }
+    service_cgroup_pids() {
+        printf 'cgroup-empty %s\n' "$1" >> "$TRACE"
+        return 0
+    }
+    awk() {
+        printf 'T\n'
+    }
+    sleep() {
+        :
+    }
+    release_release_mutation_lock() {
+        printf 'release-mutation-lock\n' >> "$TRACE"
+        return 0
+    }
+    release_txn_validate_scheduler_restore_token() {
+        printf 'validate-scheduler %s\n' "$*" >> "$TRACE"
+        return 0
+    }
+
+    legacy_agent_frozen=0
+    rollback_transaction_started=1
+    rollback_mutation_started=0
+    rollback_service_state_recorded=1
+    rollback_completion_verified=0
+    rollback_completion_removing=0
+    rollback_scheduler_restore_pending=0
+    rollback_scheduler_restore_completed=0
+    rollback_agent_was_active=1
+    rollback_panel_was_active=1
+    rollback_transaction_token=legacy-token
+    rollback_verified_snapshot="$rollback_contract_tmp/legacy-snapshot"
+    RELEASE_TRANSACTION_ROOT="$rollback_contract_tmp/legacy-transaction"
+    TRUSTED_RELEASE_ROOT=/trusted/release
+
+    trap rollback_on_exit EXIT
+    freeze_and_stop_legacy_agent
+) 2> "$rollback_contract_tmp/legacy-freeze.stderr"
+legacy_status=$?
+set -e
+[[ "$legacy_status" -eq 23 ]] \
+    || die "rollback SIGSTOP failure changed original status: $legacy_status"
+require_sequence "$legacy_trace" \
+    'systemctl kill --kill-whom=all --signal=SIGSTOP celikpanel-agent.service' \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'systemctl kill --kill-whom=all --signal=SIGKILL celikpanel-agent.service' \
+    'systemctl stop --no-block celikpanel-agent.service' \
+    'systemctl is-active --quiet celikpanel-agent.service' \
+    'cgroup-empty celikpanel-agent.service' \
+    'systemctl stop celikpanel-panel.service' \
+    'systemctl stop celikpanel-agent.service'
+reject_literal "$legacy_trace" 'SIGCONT'
+reject_literal "$legacy_trace" 'systemctl start '
+
+run_rollback_completion_exit_case() {
+    local name=$1 completion_shape=$2 scheduler_shape=$3 validator_ok=$4
+    local completion_verified=$5 completion_removing=$6 expected=$7
+    local case_root="$rollback_contract_tmp/$name"
+    local case_trace="$case_root/trace"
+    local case_stderr="$case_root/stderr"
+    local case_status
+    mkdir -p -- "$case_root/transaction" "$case_root/snapshot-name"
+
+    case "$completion_shape" in
+        absent) ;;
+        regular) printf 'completion\n' > "$case_root/transaction/completion.pending" ;;
+        symlink) ln -s nowhere "$case_root/transaction/completion.pending" ;;
+        *) die "unknown rollback completion test shape: $completion_shape" ;;
+    esac
+    case "$scheduler_shape" in
+        absent) ;;
+        regular) printf 'scheduler\n' > "$case_root/transaction/scheduler-restore.pending" ;;
+        symlink) ln -s nowhere "$case_root/transaction/scheduler-restore.pending" ;;
+        *) die "unknown rollback scheduler test shape: $scheduler_shape" ;;
+    esac
+
+    set +e
+    (
+        set -euo pipefail
+        eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
+        eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
+        eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
+
+        TRACE="$case_trace"
+        VALIDATOR_OK="$validator_ok"
+        systemctl() {
+            printf 'systemctl %s\n' "$*" >> "$TRACE"
+            case "$*" in
+                'is-active --quiet '*) return 1 ;;
+            esac
+            return 0
+        }
+        release_release_mutation_lock() {
+            printf 'release-mutation-lock\n' >> "$TRACE"
+            return 0
+        }
+        release_txn_validate_scheduler_restore_token() {
+            printf 'validate-scheduler %s\n' "$*" >> "$TRACE"
+            [[ "$VALIDATOR_OK" -eq 1 ]]
+        }
+        service_cgroup_pids() {
+            return 0
+        }
+        sleep() {
+            :
+        }
+
+        legacy_agent_frozen=0
+        rollback_transaction_started=1
+        rollback_mutation_started=1
+        rollback_service_state_recorded=1
+        rollback_completion_verified="$completion_verified"
+        rollback_completion_removing="$completion_removing"
+        rollback_scheduler_restore_pending=1
+        rollback_scheduler_restore_completed=0
+        rollback_agent_was_active=1
+        rollback_panel_was_active=1
+        rollback_transaction_token=completion-token
+        rollback_verified_snapshot="$case_root/snapshot-name"
+        RELEASE_TRANSACTION_ROOT="$case_root/transaction"
+        TRUSTED_RELEASE_ROOT=/trusted/release
+
+        set +e
+        (exit 37)
+        rollback_on_exit 2> "$case_stderr"
+        case_status=$?
+        set -e
+        [[ "$case_status" -eq 37 ]] || exit 91
+    )
+    case_status=$?
+    set -e
+    [[ "$case_status" -eq 0 ]] \
+        || die "rollback completion EXIT case $name failed: $case_status"
+
+    case "$expected" in
+        preserve)
+            require_literal "$case_trace" \
+                "validate-scheduler $case_root/transaction completion-token rollback snapshot-name"
+            require_literal "$case_trace" 'release-mutation-lock'
+            reject_literal "$case_trace" 'systemctl '
+            require_literal "$case_stderr" \
+                'Restored runtime was left intact and exact scheduler recovery remains retryable.'
+            ;;
+        fail-closed)
+            require_sequence "$case_trace" \
+                'systemctl stop celikpanel-panel.service' \
+                'systemctl stop celikpanel-agent.service'
+            reject_literal "$case_trace" 'systemctl start '
+            ;;
+        *) die "unknown rollback completion test expectation: $expected" ;;
+    esac
+}
+
+run_rollback_completion_exit_case \
+    completion-absent-exact absent regular 1 1 1 preserve
+run_rollback_completion_exit_case \
+    completion-present regular regular 1 1 1 fail-closed
+run_rollback_completion_exit_case \
+    completion-symlink symlink regular 1 1 1 fail-closed
+run_rollback_completion_exit_case \
+    scheduler-absent absent absent 1 1 1 fail-closed
+run_rollback_completion_exit_case \
+    scheduler-symlink absent symlink 0 1 1 fail-closed
+run_rollback_completion_exit_case \
+    scheduler-validator-failed absent regular 0 1 1 fail-closed
+run_rollback_completion_exit_case \
+    completion-not-verified absent regular 1 0 1 fail-closed
+run_rollback_completion_exit_case \
+    completion-not-removing absent regular 1 1 0 fail-closed
+
+rm -rf -- "$rollback_contract_tmp"
+trap - EXIT
 
 echo "bootstrap update contract: ok"

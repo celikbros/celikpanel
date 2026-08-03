@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -185,17 +185,8 @@ func (p *Panel) cleanupUncommittedCertificate(
 	if target.LineageName != "" {
 		lineageNames = []string{target.LineageName}
 	}
-	var resp struct {
-		Deleted bool   `json:"deleted"`
-		Error   string `json:"error,omitempty"`
-	}
-	err := p.agentClient.CallContext(ctx, "Agent.DeleteCertLineage", &struct {
-		ExpectedBuildCommit string   `json:"expected_build_commit"`
-		Domain              string   `json:"domain"`
-		DeleteCanonical     bool     `json:"delete_canonical,omitempty"`
-		LineageNames        []string `json:"lineage_names,omitempty"`
-		SnapshotPath        string   `json:"snapshot_path,omitempty"`
-	}{
+	var resp transport.DeleteCertLineageResponse
+	err := p.callAgentContext(ctx, "Agent.DeleteCertLineage", &transport.DeleteCertLineageRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		Domain:              target.Domain,
 		DeleteCanonical:     target.DeleteCanonical,
@@ -315,30 +306,8 @@ func (p *Panel) issueAliasCertificateSnapshot(
 		}
 	}()
 
-	var agentResp struct {
-		Success     bool      `json:"success"`
-		CertPath    string    `json:"cert_path"`
-		KeyPath     string    `json:"key_path"`
-		ChainPath   string    `json:"chain_path"`
-		ExpiresAt   time.Time `json:"expires_at"`
-		DNSNames    []string  `json:"dns_names"`
-		LineageName string    `json:"lineage_name"`
-		Error       string    `json:"error"`
-	}
-	agentReq := struct {
-		ExpectedBuildCommit string   `json:"expected_build_commit"`
-		Domain              string   `json:"domain"`
-		Aliases             []string `json:"aliases"`
-		Email               string   `json:"email"`
-		SubscriptionID      int      `json:"subscription_id"`
-		DomainID            int      `json:"domain_id"`
-		AutoRenew           bool     `json:"auto_renew"`
-		ForceRenewal        bool     `json:"force_renewal"`
-		StageLineage        bool     `json:"stage_lineage"`
-		CurrentCertPath     string   `json:"current_cert_path"`
-		CurrentLineageName  string   `json:"current_lineage_name"`
-		ACMEServer          string   `json:"acme_server,omitempty"`
-	}{
+	var agentResp transport.IssueLetsEncryptResponse
+	agentReq := transport.IssueLetsEncryptRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		Domain:              domainName,
 		Aliases:             append([]string(nil), requestedNames[1:]...),

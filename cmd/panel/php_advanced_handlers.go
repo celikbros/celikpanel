@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // handlePHPPoolConfig handles GET/POST/DELETE for pool configuration
@@ -27,12 +28,9 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var config core.PHPPoolConfig
-		req := struct {
-			Version  string `json:"version"`
-			PoolName string `json:"pool_name"`
-		}{Version: version, PoolName: poolName}
+		req := transport.GetPHPPoolConfigRequest{Version: version, PoolName: poolName}
 
-		err := p.agentClient.Call("Agent.GetPHPPoolConfig", req, &config)
+		err := p.callAgent("Agent.GetPHPPoolConfig", req, &config)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -47,8 +45,8 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var resp struct{}
-		err := p.agentClient.Call("Agent.UpdatePHPPoolConfig", req, &resp)
+		var resp transport.Empty
+		err := p.callAgent("Agent.UpdatePHPPoolConfig", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -67,20 +65,27 @@ func (p *Panel) handlePHPPoolConfig(w http.ResponseWriter, r *http.Request) {
 			PoolName: poolName,
 		}
 
-		var resp struct{}
-		err := p.agentClient.Call("Agent.DeletePHPPool", req, &resp)
+		var resp transport.Empty
+		err := p.callAgent("Agent.DeletePHPPool", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
 
 		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Pool deleted"})
+
+	default:
+		rejectRouteMethod(w, []string{http.MethodGet, http.MethodPost, http.MethodDelete})
 	}
 }
 
 // handlePHPExtendedConfig handles GET/POST for extended PHP configuration
 func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		rejectRouteMethod(w, []string{http.MethodGet, http.MethodPost})
+		return
+	}
 
 	if r.Method == "GET" {
 		version := r.URL.Query().Get("version")
@@ -92,7 +97,7 @@ func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) 
 		var config core.ExtendedPHPConfig
 		req := core.PHPVersionRequest{Version: version}
 
-		err := p.agentClient.Call("Agent.GetExtendedPHPConfig", req, &config)
+		err := p.callAgent("Agent.GetExtendedPHPConfig", req, &config)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -115,8 +120,8 @@ func (p *Panel) handlePHPExtendedConfig(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		var resp struct{}
-		err := p.agentClient.Call("Agent.UpdateExtendedPHPConfig", req, &resp)
+		var resp transport.Empty
+		err := p.callAgent("Agent.UpdateExtendedPHPConfig", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return

@@ -16,10 +16,11 @@ import (
 // yok. Giriş uç noktasında kimlik bilgisi tahminini yavaşlatmak için
 // kullanılır.
 type rateLimiter struct {
-	mu     sync.Mutex
-	hits   map[string][]time.Time
-	limit  int
-	window time.Duration
+	mu        sync.Mutex
+	hits      map[string][]time.Time
+	limit     int
+	window    time.Duration
+	lastSweep time.Time
 }
 
 func newRateLimiter(limit int, window time.Duration) *rateLimiter {
@@ -40,6 +41,26 @@ func (l *rateLimiter) allow(key string) bool {
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
+	// Traffic from one-off keys (for example, scanned source addresses) must
+	// not make the map grow forever. Sweep the complete map at most once per
+	// window; the hot path still only prunes the current key.
+	if l.lastSweep.IsZero() || now.Sub(l.lastSweep) >= l.window {
+		for candidate, timestamps := range l.hits {
+			kept := timestamps[:0]
+			for _, timestamp := range timestamps {
+				if timestamp.After(cutoff) {
+					kept = append(kept, timestamp)
+				}
+			}
+			if len(kept) == 0 {
+				delete(l.hits, candidate)
+				continue
+			}
+			l.hits[candidate] = kept
+		}
+		l.lastSweep = now
+	}
 
 	recent := l.hits[key][:0]
 	for _, t := range l.hits[key] {

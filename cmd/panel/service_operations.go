@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -1171,18 +1172,13 @@ func (p *Panel) runNodeInstall(
 	if err := p.preflightManagedServiceInstall(ctx, "node"); err != nil {
 		return result, nodeInstallFailure(err)
 	}
-	var response struct {
-		Installed bool   `json:"installed"`
-		Error     string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.CallContext(ctx, "Agent.InstallNodeVersion", &struct {
-		MutationRequestID string `json:"mutation_request_id"`
-		MutationOwnerID   string `json:"mutation_owner_id"`
-		Version           string `json:"version"`
-	}{
-		MutationRequestID: binding.MutationRequestID,
-		MutationOwnerID:   binding.MutationOwnerID,
-		Version:           version,
+	var response transport.NodeInstallResponse
+	if err := p.agentClient.CallContext(ctx, "Agent.InstallNodeVersion", &transport.NodeInstallRequest{
+		ServiceMutationBinding: transport.ServiceMutationBinding{
+			MutationRequestID: binding.MutationRequestID,
+			MutationOwnerID:   binding.MutationOwnerID,
+		},
+		Version: version,
 	}, &response); err != nil {
 		return result, nodeInstallFailure(err)
 	}

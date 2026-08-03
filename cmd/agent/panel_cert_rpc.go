@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // lookupGroupID resolves a system group's numeric gid.
@@ -47,9 +52,13 @@ func lookupGroupID(name string) (int, bool) {
 // validPanelCertDomain: düz bir FQDN — certbot argümanı ve dosya yolu parçası
 // olur; makine adı karakterlerinden başkası geçemez.
 var validPanelCertDomain = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$`)
+var validPanelCertLineage = regexp.MustCompile(`^celikpanel-panel-[a-f0-9]{24}$`)
 var validStagedSiteLineage = regexp.MustCompile(`^cp-site-[1-9][0-9]*-[a-f0-9]{24}$`)
 
-const managedPanelTLSDir = "/var/lib/celikpanel/tls"
+const (
+	managedPanelTLSDir   = "/var/lib/celikpanel/tls"
+	panelACMEVhostPrefix = "celikpanel-panel-acme-"
+)
 
 var (
 	certificateCleanupIsolatedStorage = isolatedSiteCertbotStorage
@@ -58,21 +67,42 @@ var (
 	certificateCleanupRunCertbot      = func(args ...string) ([]byte, error) {
 		return runPanelCertCommand(panelCertCleanupTimeout, "certbot", args...)
 	}
+	panelCertLookPath             = exec.LookPath
+	panelCertRunCommand           = runPanelCertCommand
+	panelCertRunMutationCommand   = runPanelCertMutationCommand
+	panelCertPrepareChallengeRoot = preparePanelACMEChallengeRoot
+	panelCertApplyVhost           = func(
+		ctx context.Context,
+		a *Agent,
+		name, config string,
+	) error {
+		if a == nil || a.nginxGen == nil {
+			return fmt.Errorf("nginx configuration manager is unavailable")
+		}
+		return a.nginxGen.ApplyVhostWithCommandRunner(
+			ctx,
+			name,
+			config,
+			func(
+				commandCtx context.Context,
+				command string,
+				args ...string,
+			) ([]byte, error) {
+				return panelCertRunMutationCommand(
+					commandCtx, panelCertSystemdTimeout, command, args...,
+				)
+			},
+		)
+	}
+	panelCertInstallFiles    = installPanelCertFiles
+	panelCertWriteDeployHook = writePanelCertDeployHook
+	panelCertEnsureRenewal   = ensurePanelCertRenewalScheduler
+	panelCertActiveIdentity  = activePanelCertificateIdentity
+	panelCertWithPublishLock = withPanelCertPublishLock
 )
 
-type IssuePanelCertRequest struct {
-	Domain              string `json:"domain"`
-	Email               string `json:"email"`
-	TLSDir              string `json:"tls_dir"` // where the panel loads panel.crt/panel.key from
-	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
-}
-
-type IssuePanelCertResponse struct {
-	Issued    bool      `json:"issued"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Detail    string    `json:"detail,omitempty"`
-	Error     string    `json:"error,omitempty"`
-}
+type IssuePanelCertRequest = transport.IssuePanelCertificateRequest
+type IssuePanelCertResponse = transport.IssuePanelCertificateResponse
 
 func validatePanelCertTLSDir(raw string) (string, error) {
 	if raw != managedPanelTLSDir {
@@ -101,15 +131,33 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		return nil
 	}
 	req.TLSDir = tlsDir
+	stepCtx, finishStep, err := a.requiredServiceMutationStep(
+		ServiceMutationBinding{
+			MutationRequestID: req.MutationRequestID,
+			MutationOwnerID:   req.MutationOwnerID,
+		},
+	)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	if !acquireSiteCertbot() {
+		resp.Error = "another certificate operation is already in progress; retry shortly"
+		return nil
+	}
+	defer releaseSiteCertbot()
 
 	// certbot is installed on first use — a deliberate, user-initiated install
 	// (the button says so), consistent with the minimal-install principle.
 	// certbot ilk kullanımda kurulur — bilinçli, kullanıcı-tetikli bir kurulum
 	// (düğme bunu söyler); minimal kurulum ilkesiyle tutarlı.
 	installedCertbot := false
-	if _, err := exec.LookPath("certbot"); err != nil {
+	if _, err := panelCertLookPath("certbot"); err != nil {
 		family := detectPkgFamily()
-		if _, err := installPackages(family, []string{"certbot"}); err != nil {
+		if _, err := installPackagesContext(
+			stepCtx, family, []string{"certbot"},
+		); err != nil {
 			resp.Error = fmt.Sprintf("certbot install failed: %v", err)
 			return nil
 		}
@@ -121,24 +169,101 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// Standalone, HTTP-01 doğrulamasını :80'de kendisi cevaplar — yalnız-panel
 	// sunucu için doğru olan. :80'i bir web sunucusu tutuyorsa hata bunu
 	// dürüstçe söyler.
-	args := []string{
-		"certonly", "--standalone", "--preferred-challenges", "http",
-		"-d", domain,
-		"--agree-tos", "--non-interactive", "--keep-until-expiring",
+	challengeArgs, err := a.panelCertificateChallengeArgs(stepCtx, domain)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
 	}
+	args := append([]string{"certonly"}, challengeArgs...)
+	args = append(args,
+		"--preferred-challenges", "http",
+		"--cert-name", panelCertLineageName(domain),
+		"-d", domain,
+		"--agree-tos", "--non-interactive", "--force-renewal",
+	)
 	if req.Email != "" {
 		args = append(args, "--email", req.Email)
 	} else {
 		args = append(args, "--register-unsafely-without-email")
 	}
-	out, err := runPanelCertCommand(panelCertIssueTimeout, "certbot", args...)
-	if err != nil {
-		resp.Error = panelCertCommandError("certbot issue", out, err).Error()
+	// Persist the source intent before Certbot starts, but do not hold the
+	// publication lock while Certbot invokes deploy hooks. A previously
+	// installed synchronous hook also takes this lock; holding it here would
+	// deadlock Certbot against its own child hook. The durable mutation lease
+	// remains owned for this entire RPC and every later privileged command.
+	var intent panelCertificateActivationState
+	if err := panelCertWithPublishLock(func() error {
+		var err error
+		intent, err = beginPanelCertificateIssuanceLocked(domain)
+		return err
+	}); err != nil {
+		resp.Error = fmt.Sprintf("begin panel certificate issuance: %v", err)
 		return nil
 	}
 
-	if err := installPanelCertFiles(domain, req.TLSDir); err != nil {
-		resp.Error = err.Error()
+	out, issueErr := panelCertRunMutationCommand(
+		stepCtx, panelCertIssueTimeout, "certbot", args...,
+	)
+	if issueErr != nil {
+		cleanupErr := panelCertWithPublishLock(func() error {
+			return clearPanelCertificateIssuanceIntentLocked(intent)
+		})
+		resp.Error = errors.Join(
+			panelCertCommandError("certbot issue", out, issueErr),
+			cleanupErr,
+		).Error()
+		return nil
+	}
+
+	var issuedNotAfter time.Time
+	if err := panelCertWithPublishLock(func() error {
+		if err := requirePanelCertificateIssuanceIntentLocked(intent); err != nil {
+			return err
+		}
+		certificate, privateKey, leafDER, notAfter, err :=
+			panelCertificateActivationReadSource(domain)
+		if err != nil {
+			return fmt.Errorf("read issued panel certificate source: %w", err)
+		}
+		state, err := bindPanelCertificateActivationMaterial(
+			intent,
+			leafDER,
+			notAfter,
+		)
+		if err != nil {
+			return err
+		}
+		if err := panelCertificateActivationWriteState(state); err != nil {
+			return fmt.Errorf("bind issued panel certificate activation: %w", err)
+		}
+		if err := panelCertEnsureRenewal(stepCtx); err != nil {
+			return err
+		}
+		if err := panelCertWriteDeployHook(domain, req.TLSDir); err != nil {
+			return fmt.Errorf("install certbot deploy hook: %w", err)
+		}
+		if err := panelCertificateActivationPublishMaterial(
+			domain,
+			req.TLSDir,
+			certificate,
+			privateKey,
+		); err != nil {
+			return err
+		}
+		state, err = panelCertificateActivationNextPhase(
+			state,
+			panelCertificateActivationPendingRestart,
+		)
+		if err != nil {
+			return err
+		}
+		if err := panelCertificateActivationWriteState(state); err != nil {
+			return fmt.Errorf("persist pending panel restart: %w", err)
+		}
+		issuedNotAfter = notAfter
+		return nil
+	}); err != nil {
+		resp.Error = fmt.Sprintf("issue and publish panel certificate: %v", err)
 		return nil
 	}
 
@@ -148,7 +273,8 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// Deploy kancası: sertifikayı certbot'un kendi zamanlayıcısı yeniler; bu
 	// kanca her yenilemeyi panelin TLS dizinine kopyalar ve paneli yeniden
 	// başlatır — yenileme kimsenin bir şey hatırlamasını gerektirmez.
-	writePanelCertDeployHook(domain, req.TLSDir)
+	// The hook and a working renewal scheduler were both verified before the
+	// active certificate pair was published above.
 
 	// "certbot's own timer" must actually exist and run: Debian's package
 	// enables certbot.timer by itself, Arch ships certbot-renew.timer
@@ -159,20 +285,86 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// certbot-renew.timer'ı KAPALI getirir. Bu dağıtımda hangisi varsa aç —
 	// 90 günde sessizce ölen sertifika özellik değil tuzaktır. Arch'ta
 	// canlıda yakalandı.
-	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
-		if _, err := runPanelCertCommand(
-			panelCertSystemdTimeout, "systemctl", "enable", "--now", timer,
-		); err == nil {
-			break
-		}
-	}
-
 	resp.Issued = true
-	resp.ExpiresAt = panelCertExpiry(filepath.Join(req.TLSDir, "panel.crt"))
+	resp.ExpiresAt = issuedNotAfter
 	if installedCertbot {
 		resp.Detail = "certbot installed"
 	}
 	return nil
+}
+
+func (a *Agent) panelCertificateChallengeArgs(
+	ctx context.Context,
+	domain string,
+) ([]string, error) {
+	if _, err := panelCertLookPath("nginx"); err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return []string{"--standalone"}, nil
+		}
+		return nil, fmt.Errorf("inspect nginx availability: %w", err)
+	}
+
+	output, err := panelCertRunMutationCommand(
+		ctx, panelCertSystemdTimeout,
+		"systemctl", "is-active", "--quiet", "nginx",
+	)
+	if err != nil {
+		detail := strings.TrimSpace(string(output))
+		if detail != "" {
+			return nil, fmt.Errorf(
+				"nginx is installed but not active (%s); start nginx and retry: %w",
+				detail, err,
+			)
+		}
+		return nil, fmt.Errorf(
+			"nginx is installed but not active; start nginx and retry: %w", err,
+		)
+	}
+
+	challengeRoot, err := panelCertPrepareChallengeRoot()
+	if err != nil {
+		return nil, fmt.Errorf("prepare panel ACME challenge root: %w", err)
+	}
+	config := renderPanelACMEChallengeVhost(domain, challengeRoot)
+	if err := panelCertApplyVhost(
+		ctx, a, panelACMEVhostName(domain), config,
+	); err != nil {
+		return nil, fmt.Errorf("publish panel ACME nginx vhost: %w", err)
+	}
+	return []string{"--webroot", "--webroot-path", challengeRoot}, nil
+}
+
+// panelACMEVhostName gives every candidate panel hostname an independent
+// challenge vhost. A failed A -> B certificate attempt must not overwrite the
+// still-active A renewal route before B has been issued and published.
+func panelACMEVhostName(domain string) string {
+	sum := sha256.Sum256([]byte(domain))
+	return fmt.Sprintf("%s%x", panelACMEVhostPrefix, sum[:12])
+}
+
+func panelCertLineageName(domain string) string {
+	sum := sha256.Sum256([]byte(domain))
+	return fmt.Sprintf("celikpanel-panel-%x", sum[:12])
+}
+
+func renderPanelACMEChallengeVhost(domain, challengeRoot string) string {
+	return fmt.Sprintf(
+		"# Managed by CelikPanel. Kept active for certbot renewals.\n"+
+			"server {\n"+
+			"    listen 80;\n"+
+			"    listen [::]:80;\n"+
+			"    server_name %s;\n\n"+
+			"    location ^~ /.well-known/acme-challenge/ {\n"+
+			"        root %s;\n"+
+			"        default_type text/plain;\n"+
+			"        try_files $uri =404;\n"+
+			"    }\n\n"+
+			"    location / {\n"+
+			"        return 404;\n"+
+			"    }\n"+
+			"}\n",
+		domain, challengeRoot,
+	)
 }
 
 // installPanelCertFiles copies the live LE material over the panel's
@@ -181,69 +373,29 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 // installPanelCertFiles, canlı LE malzemesini panelin cert/key çiftinin
 // üzerine kopyalar: root sahipli, grup-okunur — düşük yetkili panel
 // (celikpanel grubu) yükleyebilsin ama anahtarı başkası okuyamasın.
-func installPanelCertFiles(domain, tlsDir string) error {
-	live := filepath.Join("/etc/letsencrypt/live", domain)
-	if err := os.MkdirAll(tlsDir, 0o750); err != nil {
-		return fmt.Errorf("tls dir: %v", err)
-	}
-	for _, f := range [][2]string{
-		{filepath.Join(live, "fullchain.pem"), filepath.Join(tlsDir, "panel.crt")},
-		{filepath.Join(live, "privkey.pem"), filepath.Join(tlsDir, "panel.key")},
-	} {
-		data, err := os.ReadFile(f[0])
-		if err != nil {
-			return fmt.Errorf("read %s: %v", f[0], err)
+func ensurePanelCertRenewalScheduler(ctx context.Context) error {
+	var failures []string
+	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
+		output, err := panelCertRunMutationCommand(
+			ctx, panelCertSystemdTimeout,
+			"systemctl", "enable", "--now", timer,
+		)
+		if err == nil {
+			return nil
 		}
-		if err := os.WriteFile(f[1], data, 0o640); err != nil {
-			return fmt.Errorf("write %s: %v", f[1], err)
-		}
-		chownRootPanelGroup(f[1])
+		failures = append(
+			failures,
+			panelCertCommandError("enable "+timer, output, err).Error(),
+		)
 	}
-	return nil
+	return fmt.Errorf(
+		"certificate was issued but automatic renewal could not be enabled: %s",
+		strings.Join(failures, "; "),
+	)
 }
 
-// chownRootPanelGroup sets root:celikpanel so the panel user reads via group.
-// chownRootPanelGroup, root:celikpanel yapar; panel kullanıcısı grup üzerinden okur.
-func chownRootPanelGroup(path string) {
-	if gid, ok := lookupGroupID("celikpanel"); ok {
-		_ = os.Chown(path, 0, gid)
-	}
-	_ = os.Chmod(path, 0o640)
-}
-
-func writePanelCertDeployHook(domain, tlsDir string) {
-	hookDir := "/etc/letsencrypt/renewal-hooks/deploy"
-	if err := os.MkdirAll(hookDir, 0o755); err != nil {
-		return
-	}
-	script := fmt.Sprintf(`#!/bin/sh
-# Managed by CelikPanel — after certbot renews the panel's certificate, copy
-# it where the panel loads TLS from and restart the panel to serve it.
-# CelikPanel yönetir — certbot panelin sertifikasını yenileyince, panelin TLS
-# yüklediği yere kopyala ve sunması için paneli yeniden başlat.
-if [ "$RENEWED_LINEAGE" = "/etc/letsencrypt/live/%s" ]; then
-  cp -L "$RENEWED_LINEAGE/fullchain.pem" '%s/panel.crt'
-  cp -L "$RENEWED_LINEAGE/privkey.pem" '%s/panel.key'
-  chown root:celikpanel '%s/panel.crt' '%s/panel.key'
-  chmod 640 '%s/panel.crt' '%s/panel.key'
-  systemctl restart celikpanel-panel
-fi
-`, domain, tlsDir, tlsDir, tlsDir, tlsDir, tlsDir, tlsDir)
-	_ = os.WriteFile(filepath.Join(hookDir, "celikpanel-panel-cert"), []byte(script), 0o755)
-}
-
-type DeleteCertLineageRequest struct {
-	Domain              string   `json:"domain"`
-	DeleteCanonical     bool     `json:"delete_canonical,omitempty"`
-	LineageNames        []string `json:"lineage_names,omitempty"`
-	SnapshotPath        string   `json:"snapshot_path,omitempty"`
-	ExpectedBuildCommit string   `json:"expected_build_commit,omitempty"`
-}
-
-type DeleteCertLineageResponse struct {
-	Deleted bool   `json:"deleted"`
-	Error   string `json:"error,omitempty"`
-}
+type DeleteCertLineageRequest = transport.DeleteCertLineageRequest
+type DeleteCertLineageResponse = transport.DeleteCertLineageResponse
 
 // DeleteCertLineage removes only explicitly authorized CelikPanel
 // customer-site lineages and one verified, exact immutable snapshot version.
@@ -402,16 +554,11 @@ func (a *Agent) DeleteCertLineage(req *DeleteCertLineageRequest, resp *DeleteCer
 	return nil
 }
 
-type RestartPanelSoonRequest struct {
-	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
-}
+type RestartPanelSoonRequest = transport.RestartPanelSoonRequest
 
-// RestartPanelSoon restarts the panel a moment from now, detached via
-// systemd-run so the RPC (and the HTTP response that triggered it) completes
-// first — activating a new certificate must not kill the reply in flight.
-// RestartPanelSoon, paneli birazdan yeniden başlatır; systemd-run ile ayrık —
-// önce RPC (ve onu tetikleyen HTTP cevabı) tamamlanır: yeni sertifikayı
-// etkinleştirmek, yoldaki cevabı öldürmemeli.
+// RestartPanelSoon wakes the durable activation reconciler. The reconciler
+// owns the mutation lease, publication lock, restart and exact listener proof.
+// RestartPanelSoon dayanıklı etkinleştirme uzlaştırıcısını uyandırır.
 func (a *Agent) RestartPanelSoon(req *RestartPanelSoonRequest, resp *bool) error {
 	if req == nil {
 		return fmt.Errorf("panel restart request is required")
@@ -419,17 +566,39 @@ func (a *Agent) RestartPanelSoon(req *RestartPanelSoonRequest, resp *bool) error
 	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "restart panel"); err != nil {
 		return err
 	}
-	_, err := runPanelCertCommand(
-		panelCertSystemdTimeout,
-		"systemd-run", "--on-active=2",
-		"--timer-property=AccuracySec=100ms",
-		"systemctl", "restart", "celikpanel-panel",
-	)
-	*resp = err == nil
-	if err != nil {
-		return fmt.Errorf("schedule panel restart: %w", err)
-	}
+	wakePanelCertificateActivationReconciler()
+	*resp = true
 	return nil
+}
+
+func schedulePanelRestart() error {
+	wakePanelCertificateActivationReconciler()
+	return nil
+}
+
+// schedulePanelCertificateRestart is retained for compatibility. It wakes the
+// durable reconciler and never launches an untracked detached process.
+func schedulePanelCertificateRestart(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("panel certificate activation context is required")
+	}
+	wakePanelCertificateActivationReconciler()
+	return nil
+}
+
+func restartPanelAfterCertificatePublish() error {
+	manager, err := agentServiceMutationManager()
+	if err != nil {
+		if errors.Is(err, errServiceMutationHostBusy) {
+			return nil
+		}
+		return err
+	}
+	err = reconcilePanelCertificateActivationOnce(context.Background(), manager)
+	if errors.Is(err, errPanelCertificateActivationBusy) {
+		return nil
+	}
+	return err
 }
 
 // panelCertExpiry parses NotAfter from a PEM certificate, zero on any failure.

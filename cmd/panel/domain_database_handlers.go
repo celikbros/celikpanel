@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Domain Database Management Handlers
@@ -119,10 +120,15 @@ func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request,
 		var db DatabaseInfo
 		var serverType string
 		if err := rows.Scan(&db.ID, &db.Name, &serverType, &db.User, &db.CreatedAt); err != nil {
-			continue
+			http.Error(w, "Failed to load databases", http.StatusInternalServerError)
+			return
 		}
 		db.Type = apiTypeNameFor(serverType)
 		databases = append(databases, db)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Failed to load databases", http.StatusInternalServerError)
+		return
 	}
 
 	response := map[string]interface{}{
@@ -171,7 +177,10 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 	// type; auto-registration keeps this working without manual server setup.
 	// Veritabanları aboneliğin istenen tipteki kayıtlı motorunda yaşar;
 	// otomatik kayıt, elle sunucu eklemeye gerek bırakmaz.
-	p.ensureInstalledDBServers(ctx, domain.SubscriptionID)
+	if err := p.ensureInstalledDBServers(ctx, domain.SubscriptionID); err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	var serverID int
 	err = pool.QueryRowContext(ctx, `
@@ -207,24 +216,22 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 	}
 
 	// Create database via agent RPC
-	var agentResp struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error"`
+	var agentResp transport.CreateDatabaseResponse
+
+	sealedPassword, err := p.secrets.Encrypt(req.Password)
+	if err != nil {
+		writeServerError(w, err)
+		return
 	}
 
-	agentReq := struct {
-		Type     string `json:"type"`
-		Name     string `json:"name"`
-		User     string `json:"user"`
-		Password string `json:"password"`
-	}{
+	agentReq := transport.CreateDatabaseRequest{
 		Type:     req.Type,
 		Name:     dbName,
 		User:     dbUser,
 		Password: req.Password,
 	}
 
-	err = p.agentClient.Call("Agent.CreateDatabase", agentReq, &agentResp)
+	err = p.callAgent("Agent.CreateDatabase", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		writeAgentError(w, err, agentResp.Error)
 		return
@@ -265,7 +272,7 @@ func (p *Panel) handleCreateDatabase(w http.ResponseWriter, r *http.Request, dom
 		res, err = tx.ExecContext(ctx, `
 			INSERT INTO database_users (server_id, subscription_id, username, password)
 			VALUES (?, ?, ?, ?)
-		`, serverID, domain.SubscriptionID, dbUser, req.Password)
+		`, serverID, domain.SubscriptionID, dbUser, sealedPassword)
 		if err == nil {
 			userID, err = res.LastInsertId()
 		}
@@ -359,22 +366,15 @@ func (p *Panel) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete database via agent RPC
-	var agentResp struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error"`
-	}
+	var agentResp transport.DeleteDatabaseResponse
 
-	agentReq := struct {
-		Type string `json:"type"`
-		Name string `json:"name"`
-		User string `json:"user"`
-	}{
+	agentReq := transport.DeleteDatabaseRequest{
 		Type: apiTypeNameFor(serverType),
 		Name: dbName,
 		User: dbUser,
 	}
 
-	err = p.agentClient.Call("Agent.DeleteDatabase", agentReq, &agentResp)
+	err = p.callAgent("Agent.DeleteDatabase", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		writeAgentError(w, err, agentResp.Error)
 		return

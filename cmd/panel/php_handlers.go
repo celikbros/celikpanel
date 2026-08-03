@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // handlePHPPools handles GET and POST requests for PHP pools
 func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet {
+		rejectRouteMethod(w, []string{http.MethodGet})
+		return
+	}
 
 	version := r.URL.Query().Get("version")
 	if version == "" {
@@ -17,37 +21,25 @@ func (p *Panel) handlePHPPools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == "GET" {
-		var pools []core.PHPPool
-		req := core.PHPVersionRequest{Version: version}
+	var pools []transport.PHPPool
+	req := transport.PHPVersionRequest{Version: version}
 
-		err := p.agentClient.Call("Agent.GetPHPPools", req, &pools)
-		if err != nil {
-			writeServerError(w, err)
-			return
-		}
-
-		json.NewEncoder(w).Encode(pools)
+	err := p.callAgent("Agent.GetPHPPools", req, &pools)
+	if err != nil {
+		writeServerError(w, err)
 		return
 	}
 
-	if r.Method == "POST" {
-		var req core.PHPPoolRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeClientError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-
-		// TODO: Implement SavePHPPool RPC method
-		// For now, return success
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Pool saved"})
-	}
+	json.NewEncoder(w).Encode(pools)
 }
 
 // handlePHPExtensions handles GET and POST requests for PHP extensions
 func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		rejectRouteMethod(w, []string{http.MethodGet, http.MethodPost})
+		return
+	}
 
 	if r.Method == "GET" {
 		version := r.URL.Query().Get("version")
@@ -56,10 +48,10 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var extensions []core.PHPExtension
-		req := core.PHPVersionRequest{Version: version}
+		var extensions []transport.PHPExtension
+		req := transport.PHPVersionRequest{Version: version}
 
-		err := p.agentClient.Call("Agent.GetPHPExtensions", req, &extensions)
+		err := p.callAgent("Agent.GetPHPExtensions", req, &extensions)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -70,7 +62,7 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "POST" {
-		var req core.PHPExtensionRequest
+		var req transport.PHPExtensionRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
@@ -82,8 +74,8 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var resp struct{}
-		err := p.agentClient.Call("Agent.TogglePHPExtension", req, &resp)
+		var resp transport.Empty
+		err := p.callAgent("Agent.TogglePHPExtension", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -97,6 +89,10 @@ func (p *Panel) handlePHPExtensions(w http.ResponseWriter, r *http.Request) {
 // handlePHPConfig handles GET and POST requests for php.ini
 func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		rejectRouteMethod(w, []string{http.MethodGet, http.MethodPost})
+		return
+	}
 
 	version := r.URL.Query().Get("version")
 	if version == "" {
@@ -105,10 +101,10 @@ func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		var config core.PHPConfig
-		req := core.PHPVersionRequest{Version: version}
+		var config transport.PHPConfig
+		req := transport.PHPVersionRequest{Version: version}
 
-		err := p.agentClient.Call("Agent.GetPHPConfiguration", req, &config)
+		err := p.callAgent("Agent.GetPHPConfiguration", req, &config)
 		if err != nil {
 			writeServerError(w, err)
 			return
@@ -119,14 +115,14 @@ func (p *Panel) handlePHPConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "POST" {
-		var req core.PHPConfigRequest
+		var req transport.PHPConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
 
-		var resp struct{}
-		err := p.agentClient.Call("Agent.UpdatePHPConfiguration", req, &resp)
+		var resp transport.Empty
+		err := p.callAgent("Agent.UpdatePHPConfiguration", req, &resp)
 		if err != nil {
 			writeServerError(w, err)
 			return

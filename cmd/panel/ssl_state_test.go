@@ -151,6 +151,37 @@ func TestSSLCompensationContextIsDetachedAndBounded(t *testing.T) {
 	}
 }
 
+func TestDomainSSLOperationLockEntryIsRemovedAfterLastHolder(t *testing.T) {
+	const domainID = 987654321
+
+	domainSSLOperationLocks.Lock()
+	if _, exists := domainSSLOperationLocks.entries[domainID]; exists {
+		domainSSLOperationLocks.Unlock()
+		t.Fatal("test domain lock already exists")
+	}
+	domainSSLOperationLocks.Unlock()
+
+	unlock := lockDomainSSLOperation(domainID)
+	domainSSLOperationLocks.Lock()
+	entry, exists := domainSSLOperationLocks.entries[domainID]
+	refs := 0
+	if entry != nil {
+		refs = entry.refs
+	}
+	domainSSLOperationLocks.Unlock()
+	if !exists || refs != 1 {
+		t.Fatalf("held lock exists=%v refs=%d, want true/1", exists, refs)
+	}
+
+	unlock()
+	domainSSLOperationLocks.Lock()
+	_, exists = domainSSLOperationLocks.entries[domainID]
+	domainSSLOperationLocks.Unlock()
+	if exists {
+		t.Fatal("domain SSL lock registry retained an unused entry")
+	}
+}
+
 func multipartCertificateRequest(t *testing.T, fields map[string][]byte) *http.Request {
 	t.Helper()
 	var body bytes.Buffer

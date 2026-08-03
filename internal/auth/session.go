@@ -19,6 +19,10 @@ const SessionDuration = 24 * time.Hour
 // ErrSessionInvalid; eksik, süresi dolmuş ya da bozuk bir oturumu kapsar.
 var ErrSessionInvalid = errors.New("session invalid or expired")
 
+// ErrAuthStateChanged means an authentication flow was completed against an
+// obsolete password, suspension or two-factor state.
+var ErrAuthStateChanged = errors.New("authentication state changed")
+
 // SessionStore persists sessions in SQLite. Only the SHA-256 of each token
 // is stored, so the raw token exists solely in the user's cookie.
 // SessionStore, oturumları SQLite'da saklar. Her jetonun yalnızca SHA-256
@@ -58,6 +62,43 @@ func (s *SessionStore) Create(ctx context.Context, userID int) (string, error) {
 	return token, nil
 }
 
+// CreateForAuthEpoch creates a session only while the user's credential epoch
+// and account state still match the authentication flow. The conditional
+// INSERT closes the race between the final state check and session creation.
+func (s *SessionStore) CreateForAuthEpoch(ctx context.Context, userID int, authEpoch int64, requireTOTP bool) (string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", fmt.Errorf("failed to generate session token: %w", err)
+	}
+	token := hex.EncodeToString(raw)
+	expiresAt := time.Now().Add(SessionDuration).UTC().Format(time.RFC3339)
+	totpRequired := 0
+	if requireTOTP {
+		totpRequired = 1
+	}
+
+	result, err := s.db.ExecContext(ctx, `
+		INSERT INTO sessions (token_hash, user_id, expires_at)
+		SELECT ?, id, ?
+		FROM users
+		WHERE id = ?
+		  AND auth_epoch = ?
+		  AND COALESCE(status, 'active') != 'suspended'
+		  AND (? = 0 OR totp_enabled = 1)`,
+		hashToken(token), expiresAt, userID, authEpoch, totpRequired)
+	if err != nil {
+		return "", fmt.Errorf("failed to store session: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return "", fmt.Errorf("failed to confirm session creation: %w", err)
+	}
+	if affected != 1 {
+		return "", ErrAuthStateChanged
+	}
+	return token, nil
+}
+
 // Validate resolves a raw token to its user ID, rejecting expired ones.
 // Expired rows are cleaned up opportunistically.
 // Validate, ham bir jetonu kullanıcı kimliğine çözer ve süresi dolmuş
@@ -73,8 +114,11 @@ func (s *SessionStore) Validate(ctx context.Context, token string) (int, error) 
 		"SELECT user_id, expires_at FROM sessions WHERE token_hash = ?",
 		hashToken(token),
 	).Scan(&userID, &expiresAt)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrSessionInvalid
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to load session: %w", err)
 	}
 
 	exp, err := time.Parse(time.RFC3339, expiresAt)

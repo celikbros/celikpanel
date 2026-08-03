@@ -2,72 +2,76 @@ package services
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
 
-// phpEtcDir is the root of the distro's PHP tree. It is a variable rather than a
-// constant purely so tests can point it at a temp directory — the pool writer
-// carries a security invariant (identity is never taken from the caller) and an
-// invariant with no test is a promise, not a guarantee.
-// phpEtcDir, dağıtımın PHP ağacının köküdür. Sabit değil değişken olmasının tek
-// sebebi, testlerin onu geçici bir dizine yöneltebilmesidir — havuz yazıcısı bir
-// güvenlik değişmezi taşır (kimlik asla çağırandan alınmaz) ve testi olmayan bir
-// değişmez garanti değil, vaattir.
 var phpEtcDir = "/etc/php"
 
 func poolFilePath(phpVersion, poolName string) string {
-	return fmt.Sprintf("%s/%s/fpm/pool.d/%s.conf", phpEtcDir, phpVersion, poolName)
+	return filepath.Join(phpEtcDir, phpVersion, "fpm", "pool.d", poolName+".conf")
 }
 
 func poolDirPath(phpVersion string) string {
-	return fmt.Sprintf("%s/%s/fpm/pool.d", phpEtcDir, phpVersion)
+	return filepath.Join(phpEtcDir, phpVersion, "fpm", "pool.d")
 }
 
-// PHPPoolManager handles PHP-FPM pool operations
 type PHPPoolManager struct{}
 
-func NewPHPPoolManager() *PHPPoolManager {
-	return &PHPPoolManager{}
+func NewPHPPoolManager() *PHPPoolManager { return &PHPPoolManager{} }
+
+var (
+	validPoolName   = regexp.MustCompile(`^site[0-9]+$`)
+	validListenMode = regexp.MustCompile(`^0[0-7]{3}$`)
+	validPMModes    = map[string]bool{"dynamic": true, "ondemand": true, "static": true}
+)
+
+func parsePoolInteger(key, value string) (int, error) {
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("invalid %s value %q", key, value)
+	}
+	return n, nil
 }
 
-// GetPoolConfig reads detailed pool configuration
 func (pm *PHPPoolManager) GetPoolConfig(phpVersion, poolName string) (*core.PHPPoolConfig, error) {
-	poolFile := poolFilePath(phpVersion, poolName)
-	
-	file, err := os.Open(poolFile)
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
+	if !validPoolName.MatchString(poolName) {
+		return nil, fmt.Errorf("invalid pool name %q", poolName)
+	}
+	content, err := readManagedConfig(poolFilePath(phpVersion, poolName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open pool file: %v", err)
+		return nil, fmt.Errorf("read pool file: %w", err)
 	}
-	defer file.Close()
-
-	config := &core.PHPPoolConfig{
-		Name:          poolName,
-		PM:            "dynamic",
-		PMMaxChildren: 5,
-		ListenMode:    "0660",
-	}
-
-	scanner := bufio.NewScanner(file)
+	config := &core.PHPPoolConfig{Name: poolName, PM: "dynamic", PMMaxChildren: 5, ListenMode: "0660"}
+	sectionSeen := false
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, ";") || line == "" {
+		if line == "" || strings.HasPrefix(line, ";") {
 			continue
 		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			if sectionSeen || strings.TrimSuffix(strings.TrimPrefix(line, "["), "]") != poolName {
+				return nil, fmt.Errorf("pool file contains an unexpected section %q", line)
+			}
+			sectionSeen = true
 			continue
 		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
+		key, value, ok := configPair(line)
+		if !ok {
+			return nil, fmt.Errorf("malformed pool directive %q", line)
+		}
 		switch key {
 		case "user":
 			config.User = value
@@ -84,37 +88,44 @@ func (pm *PHPPoolManager) GetPoolConfig(phpVersion, poolName string) (*core.PHPP
 		case "pm":
 			config.PM = value
 		case "pm.max_children":
-			config.PMMaxChildren, _ = strconv.Atoi(value)
+			config.PMMaxChildren, err = parsePoolInteger(key, value)
 		case "pm.start_servers":
-			config.PMStartServers, _ = strconv.Atoi(value)
+			config.PMStartServers, err = parsePoolInteger(key, value)
 		case "pm.min_spare_servers":
-			config.PMMinSpareServers, _ = strconv.Atoi(value)
+			config.PMMinSpareServers, err = parsePoolInteger(key, value)
 		case "pm.max_spare_servers":
-			config.PMMaxSpareServers, _ = strconv.Atoi(value)
+			config.PMMaxSpareServers, err = parsePoolInteger(key, value)
 		case "pm.max_requests":
-			config.PMMaxRequests, _ = strconv.Atoi(value)
+			config.PMMaxRequests, err = parsePoolInteger(key, value)
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan pool file: %w", err)
+	}
+	if !sectionSeen {
+		return nil, fmt.Errorf("pool section %q is missing", poolName)
+	}
+	for key, value := range map[string]string{"user": config.User, "group": config.Group, "listen.owner": config.ListenOwner, "listen.group": config.ListenGroup} {
+		if err := validatePoolIdentity(key, value); err != nil {
+			return nil, err
+		}
+	}
+	expectedListen := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName)
+	if config.Listen != expectedListen {
+		return nil, fmt.Errorf("pool listen path %q does not match managed socket %q", config.Listen, expectedListen)
+	}
+	if !validListenMode.MatchString(config.ListenMode) {
+		return nil, fmt.Errorf("invalid pool listen mode %q", config.ListenMode)
+	}
+	if !validPMModes[config.PM] || config.PMMaxChildren < 1 {
+		return nil, fmt.Errorf("invalid process-manager configuration")
+	}
 	return config, nil
 }
 
-// validPoolName bounds a pool name to the panel's own naming scheme, since it
-// selects the file this writes under /etc/php/<ver>/fpm/pool.d/.
-// validPoolName, bir havuz adını panelin kendi adlandırma şemasına sınırlar;
-// çünkü /etc/php/<ver>/fpm/pool.d/ altında yazılacak dosyayı o seçer.
-var validPoolName = regexp.MustCompile(`^site[0-9]+$`)
-
-// validPMModes are the only process-manager modes php-fpm accepts. Anything
-// else makes the master refuse to start the pool.
-// validPMModes, php-fpm'in kabul ettiği tek süreç-yöneticisi kipleridir.
-// Başka bir şey, master'ın havuzu başlatmayı reddetmesine yol açar.
-var validPMModes = map[string]bool{"dynamic": true, "ondemand": true, "static": true}
-
-// clamp bounds a tunable, and substitutes the default when the caller sent
-// nothing (0) — a pool with pm.max_children = 0 does not start.
-// clamp bir ayarı sınırlar ve çağıran hiçbir şey göndermediyse (0) varsayılanı
-// koyar — pm.max_children = 0 olan bir havuz başlamaz.
 func clamp(v, min, max, def int) int {
 	if v == 0 {
 		return def
@@ -128,100 +139,40 @@ func clamp(v, min, max, def int) int {
 	return v
 }
 
-// UpdatePoolConfig rewrites a pool's PERFORMANCE settings, and only those.
-//
-// The pool's identity — user, group, listen socket and the socket's ownership
-// and mode — is never taken from the caller. It is read back from the pool file
-// the panel itself wrote at site creation and carried over unchanged. That is
-// not defensive style, it closes a live privilege escalation: this function is
-// reached from POST /api/v1/domains/{id}/php/pool, which is authorised by
-// DOMAIN OWNERSHIP, not by admin. The handler pinned only Version and Name, so
-// a customer could send {"pool_config":{"user":"root","group":"root"}} and the
-// next FPM reload would run their PHP as root. The socket fields are equally
-// load-bearing: `listen` is the path nginx talks to (repoint it and you answer
-// another tenant's requests), and listen.owner/mode decide who may speak to the
-// pool at all.
-//
-// The agent enforces this rather than the handler because the agent is the
-// layer that cannot be bypassed — a future handler that forgets to pin a field
-// must not be able to reopen the hole.
-//
-// UpdatePoolConfig bir havuzun yalnızca PERFORMANS ayarlarını yeniden yazar.
-//
-// Havuzun kimliği — kullanıcı, grup, dinlenen soket ve soketin sahipliği ile
-// kipi — asla çağırandan alınmaz. Panelin site oluşturulurken kendi yazdığı
-// havuz dosyasından geri okunur ve olduğu gibi taşınır. Bu savunmacı bir üslup
-// değil, canlı bir yetki yükseltmeyi kapatır: bu fonksiyona
-// POST /api/v1/domains/{id}/php/pool üzerinden gelinir ve o rota admin ile
-// değil ALAN ADI SAHİPLİĞİ ile yetkilendirilir. Handler yalnız Version ve
-// Name'i sabitliyordu; yani bir müşteri {"pool_config":{"user":"root"}}
-// gönderip bir sonraki FPM yeniden yüklemesinde PHP'sini root olarak
-// koşturabiliyordu. Soket alanları da aynı ölçüde taşıyıcıdır: `listen`,
-// nginx'in konuştuğu yoldur (başka yere çevirirsen başka kiracının isteklerini
-// yanıtlarsın) ve listen.owner/mode havuzla kimin konuşabileceğine karar verir.
-//
-// Bunu handler değil agent uygular; çünkü atlatılamayan katman agent'tır — bir
-// alanı sabitlemeyi unutan gelecekteki bir handler deliği yeniden açamamalıdır.
 func (pm *PHPPoolManager) UpdatePoolConfig(phpVersion string, config *core.PHPPoolConfig) error {
 	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return err
 	}
-	if !validPoolName.MatchString(config.Name) {
-		return fmt.Errorf("invalid pool name %q", config.Name)
+	if config == nil || !validPoolName.MatchString(config.Name) {
+		return fmt.Errorf("invalid pool name")
 	}
+	managedConfigMutationMu.Lock()
+	defer managedConfigMutationMu.Unlock()
 
-	// The existing pool is the only source of identity. If it is not there,
-	// this is not an update — refuse rather than inventing one, because a pool
-	// whose user cannot be resolved makes the FPM master refuse to start and
-	// takes down every site on this version, not just this one.
-	// Kimliğin tek kaynağı mevcut havuzdur. Yoksa bu bir güncelleme değildir —
-	// uydurmak yerine reddet; çünkü kullanıcısı çözülemeyen bir havuz, FPM
-	// master'ının başlamayı reddetmesine ve bu sürümdeki yalnız bu sitenin
-	// değil TÜM sitelerin düşmesine yol açar.
 	current, err := pm.GetPoolConfig(phpVersion, config.Name)
 	if err != nil {
-		return fmt.Errorf("pool %s does not exist for PHP %s: %v", config.Name, phpVersion, err)
+		return fmt.Errorf("pool %s does not exist for PHP %s: %w", config.Name, phpVersion, err)
 	}
-
-	poolFile := poolFilePath(phpVersion, config.Name)
-
 	pmMode := config.PM
-	if !validPMModes[pmMode] {
+	if pmMode == "" {
 		pmMode = current.PM
-		if !validPMModes[pmMode] {
-			pmMode = "dynamic"
-		}
 	}
-
-	// Upper bounds are not comfort limits: pm.max_children multiplies this
-	// tenant's memory across the whole host, so an unclamped value from a
-	// customer is a one-request denial of service against every other site.
-	// Üst sınırlar konfor sınırı değildir: pm.max_children bu kiracının
-	// belleğini tüm makine boyunca çarpar; müşteriden gelen sınırsız bir değer,
-	// diğer tüm sitelere karşı tek istekle hizmet reddidir.
+	if !validPMModes[pmMode] {
+		return fmt.Errorf("invalid process-manager mode %q", config.PM)
+	}
 	maxChildren := clamp(config.PMMaxChildren, 1, 200, 5)
 	startServers := clamp(config.PMStartServers, 1, maxChildren, 2)
 	minSpare := clamp(config.PMMinSpareServers, 1, maxChildren, 1)
 	maxSpare := clamp(config.PMMaxSpareServers, minSpare, maxChildren, 3)
-	maxRequests := clamp(config.PMMaxRequests, 0, 100000, 500)
-
+	maxRequests := clamp(config.PMMaxRequests, 1, 100000, 500)
 	content := renderPool(config.Name, current.User, current.Group, current.Listen,
 		current.ListenOwner, current.ListenGroup, current.ListenMode,
 		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
-
-	if err := os.WriteFile(poolFile, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write pool file: %v", err)
-	}
-
-	return reloadPHPFPM(phpVersion)
+	return applyManagedConfigLocked(poolFilePath(phpVersion, config.Name), []byte(content), 0o644,
+		func() error { return phpFPMConfigTest(phpVersion) },
+		func() error { return reloadPHPFPM(phpVersion) })
 }
 
-// renderPool is the ONE producer of pool-file text. Both writers go through
-// it — the tenant-facing update above and the panel-internal migration below
-// — so the file format cannot fork between them.
-// renderPool, havuz dosyası metninin TEK üreticisidir. İki yazıcı da buradan
-// geçer — yukarıdaki kiracıya dönük güncelleme ve aşağıdaki panel-içi taşıma —
-// böylece dosya biçimi ikisi arasında çatallanamaz.
 func renderPool(name, user, group, listen, listenOwner, listenGroup, listenMode, pmMode string,
 	maxChildren, startServers, minSpare, maxSpare, maxRequests int) string {
 	return fmt.Sprintf(`[%s]
@@ -238,102 +189,101 @@ pm.min_spare_servers = %d
 pm.max_spare_servers = %d
 pm.max_requests = %d
 chdir = /
-`,
-		name, user, group, listen, listenOwner, listenGroup, listenMode,
+`, name, user, group, listen, listenOwner, listenGroup, listenMode,
 		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
 }
 
-// DeletePoolByName deletes a pool by name
 func (pm *PHPPoolManager) DeletePoolByName(phpVersion, poolName string) error {
-	poolFile := poolFilePath(phpVersion, poolName)
-	
-	if err := os.Remove(poolFile); err != nil {
-		return fmt.Errorf("failed to delete pool: %v", err)
-	}
-
-	return reloadPHPFPM(phpVersion)
-}
-
-// ListPoolNames returns list of pool names
-func (pm *PHPPoolManager) ListPoolNames(phpVersion string) ([]string, error) {
-	poolDir := poolDirPath(phpVersion)
-	
-	files, err := os.ReadDir(poolDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var names []string
-	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".conf") {
-			name := strings.TrimSuffix(file.Name(), ".conf")
-			names = append(names, name)
-		}
-	}
-
-	return names, nil
-}
-
-// MigratePool moves a site's pool from one PHP version to another. It writes
-// the new file DIRECTLY instead of going through UpdatePoolConfig — that path
-// refuses to create pools by design (the identity-forgery gate from the
-// FPM-as-root fix), and the refusal is right: identity must never come from a
-// caller. Here it does not — every field is read from the OLD pool file,
-// which the panel itself wrote at site creation; only the socket path is
-// re-derived for the new version. This regressed live exactly once: the
-// hardening made version switching return 500 (caught 23 Jul on Boston,
-// b3d-test.celikhost.com 8.3→8.4), because two callers with two intents were
-// sharing one function.
-//
-// MigratePool, bir sitenin havuzunu bir PHP sürümünden diğerine taşır. Yeni
-// dosyayı UpdatePoolConfig'ten geçirmek yerine DOĞRUDAN yazar — o yol,
-// tasarım gereği havuz yaratmayı reddeder (FPM-root düzeltmesinin
-// kimlik-uydurma kapısı) ve ret haklıdır: kimlik asla çağırandan gelmemeli.
-// Burada gelmiyor — her alan, panelin site oluştururken kendi yazdığı ESKİ
-// havuz dosyasından okunur; yalnız soket yolu yeni sürüm için türetilir. Bu,
-// canlıda tam bir kez geriledi: sertleştirme, sürüm değiştirmeyi 500'e
-// çevirdi (23 Tem, Boston, b3d-test 8.3→8.4) — çünkü iki niyetli iki çağıran
-// tek fonksiyonu paylaşıyordu.
-func (pm *PHPPoolManager) MigratePool(oldVersion, newVersion, poolName string) error {
-	if err := ValidatePHPVersion(newVersion); err != nil {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
 		return err
 	}
 	if !validPoolName.MatchString(poolName) {
 		return fmt.Errorf("invalid pool name %q", poolName)
 	}
+	err := deleteManagedConfig(poolFilePath(phpVersion, poolName), 0o644,
+		func() error { return phpFPMConfigTest(phpVersion) },
+		func() error { return reloadPHPFPM(phpVersion) })
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
+}
+
+func (pm *PHPPoolManager) ListPoolNames(phpVersion string) ([]string, error) {
+	if err := ValidatePHPVersion(phpVersion); err != nil {
+		return nil, err
+	}
+	files, err := os.ReadDir(poolDirPath(phpVersion))
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(files))
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".conf") {
+			continue
+		}
+		name := strings.TrimSuffix(file.Name(), ".conf")
+		if validPoolName.MatchString(name) {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+func (pm *PHPPoolManager) MigratePool(oldVersion, newVersion, poolName string) error {
+	if err := ValidatePHPVersion(oldVersion); err != nil {
+		return err
+	}
+	if err := ValidatePHPVersion(newVersion); err != nil {
+		return err
+	}
+	if oldVersion == newVersion {
+		return fmt.Errorf("source and target PHP versions are identical")
+	}
+	if !validPoolName.MatchString(poolName) {
+		return fmt.Errorf("invalid pool name %q", poolName)
+	}
+	managedConfigMutationMu.Lock()
+	defer managedConfigMutationMu.Unlock()
+
 	oldConfig, err := pm.GetPoolConfig(oldVersion, poolName)
 	if err != nil {
-		return fmt.Errorf("failed to get pool config from PHP %s: %v", oldVersion, err)
+		return fmt.Errorf("get pool config from PHP %s: %w", oldVersion, err)
 	}
-
+	newPath := poolFilePath(newVersion, poolName)
 	pmMode := oldConfig.PM
 	if !validPMModes[pmMode] {
-		pmMode = "dynamic"
+		return fmt.Errorf("invalid source process-manager mode %q", pmMode)
 	}
 	maxChildren := clamp(oldConfig.PMMaxChildren, 1, 200, 5)
 	startServers := clamp(oldConfig.PMStartServers, 1, maxChildren, 2)
 	minSpare := clamp(oldConfig.PMMinSpareServers, 1, maxChildren, 1)
 	maxSpare := clamp(oldConfig.PMMaxSpareServers, minSpare, maxChildren, 3)
-	maxRequests := clamp(oldConfig.PMMaxRequests, 0, 100000, 500)
-
+	maxRequests := clamp(oldConfig.PMMaxRequests, 1, 100000, 500)
 	content := renderPool(poolName, oldConfig.User, oldConfig.Group,
 		fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", newVersion, poolName),
 		oldConfig.ListenOwner, oldConfig.ListenGroup, oldConfig.ListenMode,
 		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
-
-	if err := os.WriteFile(poolFilePath(newVersion, poolName), []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write pool for PHP %s: %v", newVersion, err)
+	if err := createManagedConfigLocked(newPath, []byte(content), 0o644,
+		func() error { return phpFPMConfigTest(newVersion) },
+		func() error { return reloadPHPFPM(newVersion) }); err != nil {
+		return fmt.Errorf("activate target PHP %s pool: %w", newVersion, err)
 	}
-	if err := reloadPHPFPM(newVersion); err != nil {
-		return fmt.Errorf("failed to reload PHP %s: %v", newVersion, err)
+	oldPath := poolFilePath(oldVersion, poolName)
+	if err := deleteManagedConfigLocked(oldPath, 0o644,
+		func() error { return phpFPMConfigTest(oldVersion) },
+		func() error { return reloadPHPFPM(oldVersion) }); err != nil {
+		cleanupErr := deleteManagedConfigLocked(newPath, 0o644,
+			func() error { return phpFPMConfigTest(newVersion) },
+			func() error { return reloadPHPFPM(newVersion) })
+		return errors.Join(fmt.Errorf("remove source PHP %s pool: %w", oldVersion, err),
+			func() error {
+				if cleanupErr != nil {
+					return fmt.Errorf("rollback target pool: %w", cleanupErr)
+				}
+				return nil
+			}())
 	}
-
-	// Delete pool from old version
-	if err := pm.DeletePoolByName(oldVersion, poolName); err != nil {
-		// Log but don't fail - pool already exists in new version
-		fmt.Printf("Warning: failed to delete old pool: %v\n", err)
-	}
-
 	return nil
 }
-

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // One-click service installation — the flip side of "what isn't installed is
@@ -22,34 +23,9 @@ import (
 // ID'si sabit kataloğa karşı doğrulanır; böylece yalnız bilinen paketler
 // kurulur; gerçek paket adlarına dağıtım ailesi karar verir.
 
-type InstallServiceRequest struct {
-	ServiceMutationBinding
-	ID string `json:"id"` // managed service id, e.g. "postgresql"
-	// Package, when set, is a specific version package chosen from the service's
-	// managed repo (e.g. "postgresql-17") to install instead of the distro
-	// default. It is accepted only if the service has a Repo and the name
-	// matches that repo's PackagePattern — so a version pick can never turn into
-	// an arbitrary package install.
-	// Package, ayarlıysa, servisin yönetilen deposundan seçilmiş belirli bir
-	// sürüm paketidir (örn. "postgresql-17"); dağıtım varsayılanı yerine kurulur.
-	// Yalnız servisin bir Repo'su varsa ve ad o deponun PackagePattern'ına
-	// uyuyorsa kabul edilir — böylece sürüm seçimi asla keyfi paket kurulumuna
-	// dönüşemez.
-	Package string `json:"package,omitempty"`
-}
+type InstallServiceRequest = transport.InstallServiceRequest
 
-type InstallServiceResponse struct {
-	Installed bool   `json:"installed"` // false if it was already present
-	Detail    string `json:"detail,omitempty"`
-	// Unit is the exact daemon unit started and verified by this operation.
-	// It matters for versioned PostgreSQL packages, whose package name
-	// (postgresql-17) is not their cluster unit (postgresql@17-main).
-	// Unit, bu işlemin başlattığı ve doğruladığı tam daemon unit'idir. Paket adı
-	// cluster unit'i olmayan sürümlü PostgreSQL paketlerinde önemlidir:
-	// postgresql-17 paketinin gerçek hedefi postgresql@17-main'dir.
-	Unit  string `json:"unit,omitempty"`
-	Error string `json:"error,omitempty"`
-}
+type InstallServiceResponse = transport.InstallServiceResponse
 
 // validateRepoPackageSelection accepts a caller-selected package only when the
 // service catalogue explicitly declares a non-empty PackagePattern and that
@@ -416,13 +392,7 @@ func unitExists(name string) bool {
 	return err == nil && strings.TrimSpace(string(out)) != ""
 }
 
-type UninstallServiceResponse struct {
-	Removed         bool   `json:"removed"`
-	Detail          string `json:"detail,omitempty"`
-	Error           string `json:"error,omitempty"`
-	PartialSuccess  bool   `json:"partial_success,omitempty"`
-	MutationApplied bool   `json:"mutation_applied,omitempty"`
-}
+type UninstallServiceResponse = transport.UninstallServiceResponse
 
 // serviceUninstallOps keeps privileged host operations behind one narrow
 // boundary. Production supplies fixed argv commands; tests supply recorders so

@@ -469,6 +469,9 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
     const [backupType, setBackupType] = useState<'files' | 'full'>('files');
     const [retention, setRetention] = useState(7);
     const [lastRun, setLastRun] = useState<string | null>(null);
+    const [lastAttempt, setLastAttempt] = useState<string | null>(null);
+    const [lastStatus, setLastStatus] = useState<string | null>(null);
+    const [lastError, setLastError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const busy = loading || saving;
@@ -484,12 +487,18 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
                     backup_type?: 'files' | 'full';
                     retention?: number;
                     last_run?: string | null;
+                    last_attempt?: string | null;
+                    last_status?: string | null;
+                    last_error?: string | null;
                 }>(response, t);
                 setEnabled(Boolean(data.enabled));
                 if (data.frequency) setFrequency(data.frequency);
                 if (data.backup_type) setBackupType(data.backup_type);
                 if (data.retention) setRetention(data.retention);
                 setLastRun(data.last_run || null);
+                setLastAttempt(data.last_attempt || null);
+                setLastStatus(data.last_status || null);
+                setLastError(data.last_error || null);
             } catch (error) {
                 showToast('error', errorText(error, t));
             } finally {
@@ -524,6 +533,9 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
             await readJSONResponse<{ success?: boolean; error?: string }>(r, t);
             setEnabled(false);
             setLastRun(null);
+            setLastAttempt(null);
+            setLastStatus(null);
+            setLastError(null);
             showToast('success', t('backup.auto.off'));
         } catch (error) {
             showToast('error', errorText(error, t));
@@ -572,7 +584,24 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
                 </p>
             )}
 
-            {enabled && lastRun && (
+            {enabled && lastStatus === 'running' && (
+                <p className="mt-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary" role="status">
+                    {t('backup.auto.running')}
+                </p>
+            )}
+
+            {enabled && lastStatus === 'failed' && (
+                <p className="mt-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger" role="alert">
+                    {t(
+                        lastError === 'BACKUP_JOB_TIMED_OUT'
+                            ? 'backup.auto.timedOut'
+                            : 'backup.auto.failed',
+                        { time: lastAttempt ? new Date(lastAttempt.replace(' ', 'T')).toLocaleString() : '—' },
+                    )}
+                </p>
+            )}
+
+            {enabled && lastStatus === 'success' && lastRun && (
                 <p className="mt-2 text-xs text-fg-subtle">
                     {t('backup.auto.lastRun', { time: new Date(lastRun.replace(' ', 'T')).toLocaleString() })}
                 </p>

@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Second-round mail features: client setup info (how to configure Thunderbird
@@ -55,9 +57,13 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 	case http.MethodGet:
 		var dest string
 		err := pool.QueryRowContext(r.Context(),
-			`SELECT destination FROM mail_catch_all WHERE domain_id = ?`, domainID).Scan(&dest)
-		if err != nil {
+			"SELECT destination FROM mail_catch_all WHERE domain_id = ?", domainID).Scan(&dest)
+		if errors.Is(err, sql.ErrNoRows) {
 			json.NewEncoder(w).Encode(map[string]any{"enabled": false, "destination": ""})
+			return
+		}
+		if err != nil {
+			writeServerError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"enabled": true, "destination": dest})
@@ -66,32 +72,49 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 		var req struct {
 			Destination string `json:"destination"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeStrictJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
-		dest := strings.TrimSpace(req.Destination)
-		if !strings.Contains(dest, "@") || strings.ContainsAny(dest, " \n\t") {
-			writeClientError(w, http.StatusBadRequest, "destination must be a valid email address")
-			return
-		}
-		if _, err := pool.ExecContext(r.Context(), `
-			INSERT INTO mail_catch_all (domain_id, destination) VALUES (?, ?)
-			ON CONFLICT(domain_id) DO UPDATE SET destination = excluded.destination`,
-			domainID, dest); err != nil {
+		domain, err := p.domainNameByIDStrict(r.Context(), domainID)
+		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		p.pushForwardingsToAgent(r.Context())
-		json.NewEncoder(w).Encode(map[string]any{"enabled": true, "destination": dest})
+		dest, err := transport.CanonicalMailAddress(req.Destination)
+		if err != nil {
+			writeClientError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		p.mailMutationMu.Lock()
+		err = p.mutateForwardings(r.Context(), func(tx *sql.Tx) error {
+			_, err := tx.ExecContext(r.Context(),
+				"INSERT INTO mail_catch_all (domain_id, destination) VALUES (?, ?) "+
+					"ON CONFLICT(domain_id) DO UPDATE SET destination = excluded.destination",
+				domainID, dest)
+			return err
+		})
+		p.mailMutationMu.Unlock()
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{
+			"enabled": true, "destination": dest, "source": "@" + domain,
+		})
 
 	case http.MethodDelete:
-		if _, err := pool.ExecContext(r.Context(),
-			`DELETE FROM mail_catch_all WHERE domain_id = ?`, domainID); err != nil {
+		p.mailMutationMu.Lock()
+		err := p.mutateForwardings(r.Context(), func(tx *sql.Tx) error {
+			_, err := tx.ExecContext(r.Context(),
+				"DELETE FROM mail_catch_all WHERE domain_id = ?", domainID)
+			return err
+		})
+		p.mailMutationMu.Unlock()
+		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		p.pushForwardingsToAgent(r.Context())
 		json.NewEncoder(w).Encode(map[string]any{"enabled": false})
 
 	default:
@@ -109,16 +132,8 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 func (p *Panel) handleMailRBL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var resp struct {
-		IP      string `json:"ip"`
-		Results []struct {
-			Zone   string `json:"zone"`
-			Listed bool   `json:"listed"`
-			Detail string `json:"detail,omitempty"`
-		} `json:"results"`
-		Error string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.CheckRBL", &struct{}{}, &resp); err != nil {
+	var resp transport.CheckRBLResponse
+	if err := p.callAgent("Agent.CheckRBL", &transport.Empty{}, &resp); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -150,13 +165,10 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	var resp struct {
-		Configured bool   `json:"configured"`
-		Detail     string `json:"detail,omitempty"`
-		Error      string `json:"error,omitempty"`
-	}
+	var resp transport.ConfigureMailStackResponse
 	err := p.withStandaloneAgentMutation(r.Context(), "mail_configure", "mail-stack", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailStack", &binding, &resp); err != nil {
+		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailStack", &request, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" {
@@ -178,13 +190,10 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 	}
 	// Receiving without sending is half a mail server: wire submission too.
 	// Göndermesiz almak yarım posta sunucusudur: gönderimi de bağla.
-	var sub struct {
-		Configured bool   `json:"configured"`
-		Detail     string `json:"detail,omitempty"`
-		Error      string `json:"error,omitempty"`
-	}
+	var sub transport.ConfigureMailSubmissionResponse
 	err = p.withStandaloneAgentMutation(r.Context(), "mail_submission_configure", "postfix", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailSubmission", &binding, &sub); err != nil {
+		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailSubmission", &request, &sub); err != nil {
 			return err
 		}
 		if sub.Error != "" {
@@ -206,14 +215,10 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 	}
 	// Sign what leaves: DKIM records without signatures fail at receivers.
 	// Çıkanı imzala: imzasız DKIM kaydı alıcıda "kalır" demektir.
-	var sign struct {
-		Configured bool   `json:"configured"`
-		Domains    int    `json:"domains"`
-		Detail     string `json:"detail,omitempty"`
-		Error      string `json:"error,omitempty"`
-	}
+	var sign transport.ConfigureDKIMSigningResponse
 	err = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &binding, &sign); err != nil {
+		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
+		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
 			return err
 		}
 		if sign.Error != "" {

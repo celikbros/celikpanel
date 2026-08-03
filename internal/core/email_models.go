@@ -51,6 +51,6 @@ type PostfixQueueResult struct {
 // gerçekten okunup okunamadığını işaretler; ölçülemeyen değerler
 // uydurulmak yerine sıfır kalır.
 type DovecotStatsResult struct {
-	Installed bool        `json:"installed"`
+	Installed bool         `json:"installed"`
 	Stats     DovecotStats `json:"stats"`
 }

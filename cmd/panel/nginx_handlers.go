@@ -12,7 +12,7 @@ import (
 // nginxInspect, agent'ın ayrıştırdığı gerçek nginx yapılandırmasını getirir.
 func (p *Panel) nginxInspect() (*core.NginxInspectResult, error) {
 	var result core.NginxInspectResult
-	if err := p.agentClient.Call("Agent.NginxInspect", &transport.Empty{}, &result); err != nil {
+	if err := p.callAgent("Agent.NginxInspect", &transport.Empty{}, &result); err != nil {
 		return nil, err
 	}
 	if result.RateLimits == nil {

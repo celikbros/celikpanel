@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -48,5 +49,34 @@ func TestAptListsAge(t *testing.T) {
 	age, ok = aptListsAge()
 	if !ok || age < 2*time.Hour {
 		t.Errorf("back-dated file: age=%v ok=%v, want ≥2h + true", age, ok)
+	}
+}
+
+func TestPacmanInstallArgsUseOneFullUpgradeTransaction(t *testing.T) {
+	packages := []string{"nginx", "php-fpm"}
+	got := pacmanInstallArgs(packages)
+	want := []string{"-Syu", "--noconfirm", "--needed", "nginx", "php-fpm"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("pacman install args = %q, want %q", got, want)
+	}
+	if !reflect.DeepEqual(packages, []string{"nginx", "php-fpm"}) {
+		t.Fatalf("pacmanInstallArgs mutated caller packages: %q", packages)
+	}
+}
+
+func TestPackageInstalledForUnknownFamilyFailsClosed(t *testing.T) {
+	if packageInstalledForFamily("", "bash") {
+		t.Fatal("unknown package family must not be treated as apt")
+	}
+	if packageInstalledForFamily("windows", "bash") {
+		t.Fatal("unsupported package family must fail closed")
+	}
+}
+
+func TestPackageInstalledForFamilyRejectsInvalidPackageBeforeExec(t *testing.T) {
+	for _, family := range []string{"apt", "pacman", "dnf"} {
+		if packageInstalledForFamily(family, "--help") {
+			t.Fatalf("family %q accepted an invalid package name", family)
+		}
 	}
 }

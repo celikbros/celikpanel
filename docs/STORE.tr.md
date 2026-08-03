@@ -228,8 +228,8 @@ Yeni teklif eklemek veya değişmez/sürüm-yönetimli alanı değiştirmek içi
    ad ile açıklamayı birlikte verin.
 4. Gerekli her bileşeni `store_offering_components` tablosuna ekleyin.
 5. Geçiş, API, yetkilendirme, önbellek ve yol doğrulama testlerini ekleyin.
-6. Yayından önce `go test`, `go vet`, web derlemesi ve Mağaza arayüzünü
-   doğrulayın.
+6. Yayından önce `make test vet web` komutunu çalıştırın ve ardından Mağaza
+   arayüzünü doğrulayın.
 
 SQLite veritabanını doğrudan düzenlemek acil durum yöntemidir; normal yönetici
 arayüzü değildir. Yetkilendirme, katı doğrulama, iyimser eşzamanlılık,

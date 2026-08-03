@@ -5,6 +5,8 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Automatic certificate renewal — what makes "Will be automatically renewed"
@@ -45,7 +47,8 @@ func (p *Panel) runDueCertRenewals() {
 	rows, err := p.db.GetDB().QueryContext(ctx, `
 		SELECT sc.id, sc.domain_id, d.name, sc.type, sc.auto_renew, sc.expires_at
 		FROM ssl_certificates sc JOIN domains d ON d.id = sc.domain_id
-		WHERE sc.status = 'active' AND sc.expires_at < ?`, cutoff)
+		WHERE sc.status = 'active' AND sc.expires_at < ?
+		ORDER BY sc.id`, cutoff)
 	if err != nil {
 		log.Printf("cert renewal scheduler: %v", err)
 		return
@@ -58,14 +61,24 @@ func (p *Panel) runDueCertRenewals() {
 	var jobs []due
 	for rows.Next() {
 		var j due
-		if rows.Scan(&j.certID, &j.domainID, &j.name, &j.ctype, &j.autoRenew, &j.expiresAt) == nil {
-			jobs = append(jobs, j)
+		if err := rows.Scan(
+			&j.certID, &j.domainID, &j.name, &j.ctype, &j.autoRenew, &j.expiresAt,
+		); err != nil {
+			log.Printf("cert renewal scheduler scan: %v", err)
+			rows.Close()
+			return
 		}
+		jobs = append(jobs, j)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("cert renewal scheduler rows: %v", err)
+		rows.Close()
+		return
 	}
-	rows.Close()
+	if err := rows.Close(); err != nil {
+		log.Printf("cert renewal scheduler close: %v", err)
+		return
+	}
 
 	for _, j := range jobs {
 		switch {
@@ -82,9 +95,11 @@ func (p *Panel) runDueCertRenewals() {
 			// the UI can warn; do not overwrite a fresher status every run.
 			// Yüklenmiş sertifikalar kendi CA'sında yenilenir, burada değil.
 			// UI uyarabilsin diye bir kez işaretle.
-			p.db.GetDB().ExecContext(ctx, `
+			if _, err := p.db.GetDB().ExecContext(ctx, `
 				UPDATE ssl_certificates SET renewal_status = 'expiring'
-				WHERE id = ? AND (renewal_status IS NULL OR renewal_status = '')`, j.certID)
+				WHERE id = ? AND (renewal_status IS NULL OR renewal_status = '')`, j.certID); err != nil {
+				log.Printf("cert renewal %s: record expiring status: %v", j.name, err)
+			}
 		}
 	}
 }
@@ -171,25 +186,9 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 		}
 	}()
 
-	var resp struct {
-		Success     bool      `json:"success"`
-		CertPath    string    `json:"cert_path"`
-		KeyPath     string    `json:"key_path"`
-		ChainPath   string    `json:"chain_path"`
-		ExpiresAt   time.Time `json:"expires_at"`
-		DNSNames    []string  `json:"dns_names,omitempty"`
-		LineageName string    `json:"lineage_name"`
-		Error       string    `json:"error,omitempty"`
-	}
+	var resp transport.RenewCertResponse
 	err = p.agentClient.CallContext(ctx, "Agent.RenewLetsEncryptCertificate",
-		&struct {
-			ExpectedBuildCommit string `json:"expected_build_commit"`
-			Domain              string `json:"domain"`
-			CurrentCertPath     string `json:"current_cert_path,omitempty"`
-			LineageName         string `json:"lineage_name,omitempty"`
-			SubscriptionID      int    `json:"subscription_id"`
-			DomainID            int    `json:"domain_id"`
-		}{
+		&transport.RenewCertRequest{
 			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 			Domain:              domainName,
 			CurrentCertPath:     current.CertPath,

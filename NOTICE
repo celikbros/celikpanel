@@ -1,0 +1,25 @@
+CelikPanel technical and third-party notice
+============================================
+
+This NOTICE records distribution and supply-chain facts. It is not a license
+and does not grant permission to use, copy, modify or distribute CelikPanel.
+The project license is currently undecided, as stated in README.md. A project
+owner must choose and publish a license before any public distribution terms
+can be inferred.
+
+CelikPanel builds use third-party Go modules and npm packages. Those components
+remain subject to their respective licenses, copyright notices and source or
+attribution obligations. Anyone preparing a public or commercial distribution
+must review the exact dependency set in go.mod, go.sum, web/package.json and
+web/package-lock.json and retain all notices required by those dependencies.
+
+The source installer can download pinned Go and Node.js toolchain archives when
+an adequate system toolchain is unavailable. The installer accepts only the
+hard-coded version, architecture and SHA-256 combinations reviewed in
+install.sh, downloads them over HTTPS and verifies the archive before
+extraction. Go and Node.js remain separate third-party projects governed by
+their own licenses and trademark policies.
+
+Operating-system packages installed from the host package manager are not
+redistributed by this repository and remain governed by their publishers'
+terms.

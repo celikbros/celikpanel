@@ -14,6 +14,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -497,16 +498,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call agent to issue certificate
-	var agentResp struct {
-		Success     bool      `json:"success"`
-		CertPath    string    `json:"cert_path"`
-		KeyPath     string    `json:"key_path"`
-		ChainPath   string    `json:"chain_path"`
-		ExpiresAt   time.Time `json:"expires_at"`
-		DNSNames    []string  `json:"dns_names"`
-		LineageName string    `json:"lineage_name"`
-		Error       string    `json:"error"`
-	}
+	var agentResp transport.IssueLetsEncryptResponse
 
 	// Empty keeps the documented Let's Encrypt default. A non-empty unknown
 	// provider is a client error; never silently issue from a different CA.
@@ -564,23 +556,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	agentReq := struct {
-		ExpectedBuildCommit string   `json:"expected_build_commit"`
-		Domain              string   `json:"domain"`
-		Aliases             []string `json:"aliases"`
-		Email               string   `json:"email"`
-		SubscriptionID      int      `json:"subscription_id"`
-		DomainID            int      `json:"domain_id"`
-		AutoRenew           bool     `json:"auto_renew"`
-		ForceRenewal        bool     `json:"force_renewal,omitempty"`
-		StageLineage        bool     `json:"stage_lineage,omitempty"`
-		FreshLineage        bool     `json:"fresh_lineage,omitempty"`
-		CurrentCertPath     string   `json:"current_cert_path,omitempty"`
-		CurrentLineageName  string   `json:"current_lineage_name,omitempty"`
-		ACMEServer          string   `json:"acme_server,omitempty"`
-		EABKeyID            string   `json:"eab_key_id,omitempty"`
-		EABHMACKey          string   `json:"eab_hmac_key,omitempty"`
-	}{
+	agentReq := transport.IssueLetsEncryptRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		Domain:              domain.Name,
 		Aliases:             aliases,
@@ -860,24 +836,9 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Validate certificate via agent
-	var validateResp struct {
-		Valid        bool      `json:"valid"`
-		Trusted      bool      `json:"trusted"`
-		TrustChecked bool      `json:"trust_checked"`
-		Issuer       string    `json:"issuer"`
-		Subject      string    `json:"subject"`
-		IssuedAt     time.Time `json:"issued_at"`
-		ExpiresAt    time.Time `json:"expires_at"`
-		DNSNames     []string  `json:"dns_names"`
-		Error        string    `json:"error"`
-	}
+	var validateResp transport.ValidateCertResponse
 
-	validateReq := struct {
-		CertContent  string `json:"cert_content"`
-		KeyContent   string `json:"key_content"`
-		ChainContent string `json:"chain_content,omitempty"`
-		Domain       string `json:"domain"`
-	}{
+	validateReq := transport.ValidateCertRequest{
 		CertContent:  string(certContent),
 		KeyContent:   string(keyContent),
 		ChainContent: string(chainContent),
@@ -935,21 +896,9 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 	previousSecureMail := replacementState.PreviousSecureMail
 
 	// Install certificate via agent
-	var installResp struct {
-		Success   bool   `json:"success"`
-		CertPath  string `json:"cert_path"`
-		KeyPath   string `json:"key_path"`
-		ChainPath string `json:"chain_path"`
-		Error     string `json:"error"`
-	}
+	var installResp transport.InstallCertResponse
 
-	installReq := struct {
-		ExpectedBuildCommit string `json:"expected_build_commit"`
-		Domain              string `json:"domain"`
-		CertContent         string `json:"cert_content"`
-		KeyContent          string `json:"key_content"`
-		ChainContent        string `json:"chain_content"`
-	}{
+	installReq := transport.InstallCertRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		Domain:              domain.Name,
 		CertContent:         string(certContent),

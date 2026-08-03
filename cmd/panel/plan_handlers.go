@@ -2,6 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,6 +29,8 @@ type planPayload struct {
 	BandwidthQuotaMB int    `json:"bandwidth_quota_mb"`
 	Subscribers      int    `json:"subscribers,omitempty"`
 }
+
+const maxPlanRequestBytes = 32 << 10
 
 func (p *Panel) handlePlans(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -51,11 +57,22 @@ func (p *Panel) handlePlans(w http.ResponseWriter, r *http.Request) {
 			var pl planPayload
 			if err := rows.Scan(&pl.ID, &pl.Name, &pl.MaxDomains, &pl.MaxDatabases,
 				&pl.MaxEmailAccounts, &pl.DiskQuotaMB, &pl.BandwidthQuotaMB, &pl.Subscribers); err != nil {
-				continue
+				writeServerError(w, fmt.Errorf("scan service plan: %w", err))
+				return
 			}
 			plans = append(plans, pl)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"plans": plans})
+		if err := rows.Err(); err != nil {
+			writeServerError(w, fmt.Errorf("read service plans: %w", err))
+			return
+		}
+		if err := rows.Close(); err != nil {
+			writeServerError(w, fmt.Errorf("close service plan rows: %w", err))
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]any{"plans": plans}); err != nil {
+			log.Printf("encode service plans: %v", err)
+		}
 
 	case http.MethodPost:
 		if c.Role != roleAdmin {
@@ -74,8 +91,14 @@ func (p *Panel) handlePlans(w http.ResponseWriter, r *http.Request) {
 			writeServerError(w, err)
 			return
 		}
-		id, _ := res.LastInsertId()
-		json.NewEncoder(w).Encode(map[string]any{"success": true, "id": id})
+		id, err := res.LastInsertId()
+		if err != nil {
+			writeServerError(w, fmt.Errorf("read inserted service plan identity: %w", err))
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]any{"success": true, "id": id}); err != nil {
+			log.Printf("encode service plan creation: %v", err)
+		}
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -95,7 +118,7 @@ func (p *Panel) handlePlanByID(w http.ResponseWriter, r *http.Request) {
 
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/plans/")
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id <= 0 {
 		writeClientError(w, http.StatusBadRequest, "invalid plan id")
 		return
 	}
@@ -110,41 +133,100 @@ func (p *Panel) handlePlanByID(w http.ResponseWriter, r *http.Request) {
 		// the point of a template (Plesk: "apply changes to subscribers").
 		// Plan düzenlemeleri, plandan doğan abonelikleri de tazeler — bir
 		// şablonun amacı budur (Plesk: "değişiklikleri abonelere uygula").
-		if _, err := p.db.GetDB().ExecContext(r.Context(), `
+		tx, err := p.db.GetDB().BeginTx(r.Context(), nil)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("begin service plan update: %w", err))
+			return
+		}
+		defer tx.Rollback()
+		result, err := tx.ExecContext(r.Context(), `
 			UPDATE service_plans SET name = ?, max_domains = ?, max_databases = ?,
 			       max_email_accounts = ?, disk_quota_mb = ?, bandwidth_quota_mb = ?,
 			       updated_at = datetime('now')
 			WHERE id = ?`,
 			pl.Name, pl.MaxDomains, pl.MaxDatabases, pl.MaxEmailAccounts,
-			pl.DiskQuotaMB, pl.BandwidthQuotaMB, id); err != nil {
-			writeServerError(w, err)
+			pl.DiskQuotaMB, pl.BandwidthQuotaMB, id)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("update service plan: %w", err))
 			return
 		}
-		if _, err := p.db.GetDB().ExecContext(r.Context(), `
+		affected, err := result.RowsAffected()
+		if err != nil {
+			writeServerError(w, fmt.Errorf("verify service plan update: %w", err))
+			return
+		}
+		if affected == 0 {
+			writeClientError(w, http.StatusNotFound, "service plan not found")
+			return
+		}
+		if affected != 1 {
+			writeServerError(w, fmt.Errorf("update service plan: expected one affected row, got %d", affected))
+			return
+		}
+		if _, err := tx.ExecContext(r.Context(), `
 			UPDATE subscriptions SET max_domains = ?, max_databases = ?,
 			       max_email_accounts = ?, disk_quota_mb = ?, bandwidth_quota_mb = ?,
 			       updated_at = datetime('now')
 			WHERE plan_id = ?`,
 			pl.MaxDomains, pl.MaxDatabases, pl.MaxEmailAccounts,
 			pl.DiskQuotaMB, pl.BandwidthQuotaMB, id); err != nil {
-			writeServerError(w, err)
+			writeServerError(w, fmt.Errorf("apply service plan to subscriptions: %w", err))
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		if err := tx.Commit(); err != nil {
+			writeServerError(w, fmt.Errorf("commit service plan update: %w", err))
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+			log.Printf("encode service plan update: %v", err)
+		}
 
 	case http.MethodDelete:
-		var subscribers int
-		_ = p.db.GetDB().QueryRowContext(r.Context(),
-			`SELECT COUNT(*) FROM subscriptions WHERE plan_id = ?`, id).Scan(&subscribers)
-		if subscribers > 0 {
+		tx, err := p.db.GetDB().BeginTx(r.Context(), nil)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("begin service plan deletion: %w", err))
+			return
+		}
+		defer tx.Rollback()
+		result, err := tx.ExecContext(r.Context(), `
+			DELETE FROM service_plans
+			WHERE id = ?
+			  AND NOT EXISTS (SELECT 1 FROM subscriptions WHERE plan_id = service_plans.id)`, id)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("delete service plan: %w", err))
+			return
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			writeServerError(w, fmt.Errorf("verify service plan deletion: %w", err))
+			return
+		}
+		if affected == 0 {
+			var exists bool
+			if err := tx.QueryRowContext(r.Context(),
+				`SELECT EXISTS(SELECT 1 FROM service_plans WHERE id = ?)`, id,
+			).Scan(&exists); err != nil {
+				writeServerError(w, fmt.Errorf("verify service plan existence: %w", err))
+				return
+			}
+			if !exists {
+				writeClientError(w, http.StatusNotFound, "service plan not found")
+				return
+			}
 			writeClientError(w, http.StatusConflict, "plan has subscriptions; move them to another plan first")
 			return
 		}
-		if _, err := p.db.GetDB().ExecContext(r.Context(), `DELETE FROM service_plans WHERE id = ?`, id); err != nil {
-			writeServerError(w, err)
+		if affected != 1 {
+			writeServerError(w, fmt.Errorf("delete service plan: expected one affected row, got %d", affected))
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		if err := tx.Commit(); err != nil {
+			writeServerError(w, fmt.Errorf("commit service plan deletion: %w", err))
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]bool{"success": true}); err != nil {
+			log.Printf("encode service plan deletion: %v", err)
+		}
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -153,12 +235,25 @@ func (p *Panel) handlePlanByID(w http.ResponseWriter, r *http.Request) {
 
 func decodePlan(w http.ResponseWriter, r *http.Request) (planPayload, bool) {
 	var pl planPayload
-	if err := json.NewDecoder(r.Body).Decode(&pl); err != nil || strings.TrimSpace(pl.Name) == "" {
+	r.Body = http.MaxBytesReader(w, r.Body, maxPlanRequestBytes)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&pl); err != nil {
+		writeClientError(w, http.StatusBadRequest, "invalid service plan")
+		return pl, false
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		writeClientError(w, http.StatusBadRequest, "invalid service plan")
+		return pl, false
+	}
+	pl.Name = strings.TrimSpace(pl.Name)
+	if pl.Name == "" {
 		writeClientError(w, http.StatusBadRequest, "plan name is required")
 		return pl, false
 	}
-	if pl.MaxDomains <= 0 || pl.MaxDatabases < 0 || pl.MaxEmailAccounts < 0 || pl.DiskQuotaMB <= 0 {
-		writeClientError(w, http.StatusBadRequest, "limits must be positive")
+	if pl.MaxDomains <= 0 || pl.MaxDatabases < 0 || pl.MaxEmailAccounts < 0 ||
+		pl.DiskQuotaMB <= 0 || pl.BandwidthQuotaMB < 0 {
+		writeClientError(w, http.StatusBadRequest, "limits must be positive or explicitly zero where unlimited is supported")
 		return pl, false
 	}
 	return pl, true

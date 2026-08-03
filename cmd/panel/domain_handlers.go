@@ -9,13 +9,15 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DomainResponse is the API response for domain listing
@@ -32,7 +34,11 @@ type DomainResponse struct {
 	ParentID    *int   `json:"parent_id,omitempty"`
 }
 
-const errCodeDNSPublicationPending = "DNS_PUBLICATION_PENDING"
+const (
+	errCodeDNSPublicationPending = "DNS_PUBLICATION_PENDING"
+	domainCreateTimeout          = 2 * time.Minute
+	domainDNSPublicationTimeout  = 30 * time.Second
+)
 
 // domainCreatePartialSuccess is deliberately an error-shaped response with
 // enough success context for the client to leave the create flow. The domain
@@ -188,7 +194,11 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "project_type must be php, static or dnsonly")
 		return
 	}
-	caps := p.hostingCaps()
+	caps, err := p.hostingCaps(r.Context())
+	if err != nil {
+		writeAgentError(w, err, "hosting capabilities")
+		return
+	}
 	if caps.DNSServer == "" {
 		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
 			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served",
@@ -324,12 +334,26 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	// site makinesini paylaşır ama DNS'i paylaşmaz: yeni zone yok, yalnız ana
 	// domain'in zone'una bir kayıt. Ana domain bağını kaydedebilmek için site
 	// oluşturmadan önce tespit edilir.
-	parentID, parentName, isSubdomain := p.resolveParentDomain(r.Context(), req.SubscriptionID, req.Domain)
+	parentID, parentName, isSubdomain, err := p.resolveParentDomain(
+		r.Context(),
+		req.SubscriptionID,
+		req.Domain,
+	)
+	if err != nil {
+		if errors.Is(err, errParentDomainUnavailable) {
+			writeClientError(w, http.StatusConflict, "the parent domain is not active")
+			return
+		}
+		writeServerError(w, err)
+		return
+	}
 	if isSubdomain {
 		req.ParentDomainID = &parentID
 	}
 
-	result, err := p.orchestrator.CreateSite(context.Background(), &req)
+	createCtx, cancelCreate := context.WithTimeout(r.Context(), domainCreateTimeout)
+	result, err := p.orchestrator.CreateSite(createCtx, &req)
+	cancelCreate()
 	if err != nil {
 		if hostname.IsNamespaceConflict(err) {
 			writeClientError(w, http.StatusConflict, "this hostname is already used by a domain, its www name, or an alias")
@@ -339,19 +363,39 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.audit(r, "domain.create", "domain", result.DomainID)
+	dnsCtx, cancelDNS := context.WithTimeout(
+		context.WithoutCancel(r.Context()),
+		domainDNSPublicationTimeout,
+	)
+	defer cancelDNS()
 
 	if isSubdomain {
 		// Link the child to its parent and add its address record to the
 		// parent's zone — no separate zone for a subdomain.
 		// Çocuğu ana domain'e bağla ve adres kaydını ana domain'in zone'una
 		// ekle — subdomain için ayrı zone yok.
-		p.addSubdomainToParentZone(r.Context(), parentName, req.Domain)
+		dnsResult, err := p.addSubdomainToParentZone(
+			dnsCtx,
+			parentName,
+			req.Domain,
+		)
+		if err != nil {
+			log.Printf("subdomain DNS publication for %s through %s: %v", req.Domain, parentName, err)
+			p.audit(r, "domain.create.dns_pending", "domain", result.DomainID)
+			writeDomainCreatePartialSuccess(
+				w,
+				result.DomainID,
+				req.Domain,
+				dnsResult.LedgerReady,
+			)
+			return
+		}
 	} else {
 		// The site already exists, so a DNS failure must not trigger a risky
 		// rollback. Return its identity as an explicit partial success: the UI can
 		// close Create, refresh the list and continue in this domain's management
 		// screen instead of telling the operator to submit a duplicate Create.
-		zoneExists, err := p.publishNewTopLevelDomainZone(r.Context(), req.Domain)
+		zoneExists, err := p.publishNewTopLevelDomainZone(dnsCtx, req.Domain)
 		if err != nil {
 			log.Printf("dns zone publication for %s: %v", req.Domain, err)
 			writeDomainCreatePartialSuccess(w, result.DomainID, req.Domain, zoneExists)
@@ -395,7 +439,7 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 
 	// Get domain
 	domainRepo := repositories.NewPostgresDomainRepository(p.db.GetDB())
-	domain, err := domainRepo.GetByID(context.Background(), domainID)
+	domain, err := domainRepo.GetByID(ctx, domainID)
 	if err != nil {
 		http.Error(w, "domain not found", http.StatusNotFound)
 		return
@@ -415,20 +459,31 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	// zone'undadır — silmede doğru kaydı kaldırmak için ana domain'i çöz.
 	var parentDomainID *int
 	var parentDomainName string
-	p.db.GetDB().QueryRowContext(context.Background(),
-		`SELECT parent_domain_id FROM domains WHERE id = ?`, domainID).Scan(&parentDomainID)
+	if err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT parent_domain_id FROM domains WHERE id = ?`, domainID).
+		Scan(&parentDomainID); err != nil {
+		writeServerError(w, fmt.Errorf("read domain parent identity: %w", err))
+		return
+	}
 	if parentDomainID != nil {
-		p.db.GetDB().QueryRowContext(context.Background(),
-			`SELECT name FROM domains WHERE id = ?`, *parentDomainID).Scan(&parentDomainName)
+		if err := p.db.GetDB().QueryRowContext(ctx,
+			`SELECT name FROM domains WHERE id = ?`, *parentDomainID).
+			Scan(&parentDomainName); err != nil {
+			writeServerError(w, fmt.Errorf("read parent domain identity: %w", err))
+			return
+		}
 	}
 
-	var siteID int
+	var siteID, siteSubscriptionID int
 	var docroot, phpVersion, projectType string
 	hasSite := true
 	if err := p.db.GetDB().QueryRowContext(ctx,
-		`SELECT id, document_root, COALESCE(php_version,''), COALESCE(project_type,'php')
-		 FROM sites WHERE domain_id = ?`,
-		domainID).Scan(&siteID, &docroot, &phpVersion, &projectType); err != nil {
+		`SELECT s.id, d.subscription_id, s.document_root,
+		        COALESCE(s.php_version,''), COALESCE(s.project_type,'php')
+		 FROM sites s
+		 JOIN domains d ON d.id = s.domain_id
+		 WHERE s.domain_id = ?`,
+		domainID).Scan(&siteID, &siteSubscriptionID, &docroot, &phpVersion, &projectType); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Historic DNS-only domains may predate the placeholder site row.
 			// They have no OS resources to remove.
@@ -441,6 +496,14 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if hasSite && projectType != "dnsonly" {
+		if err := hostingpath.ValidateDocumentRoot(
+			docroot,
+			siteSubscriptionID,
+			domainID,
+		); err != nil {
+			writeServerError(w, fmt.Errorf("stored site identity is inconsistent: %w", err))
+			return
+		}
 		if err := p.requireMatchingAgentBuild(ctx); err != nil {
 			writeClientError(w, http.StatusServiceUnavailable, err.Error())
 			return
@@ -454,13 +517,17 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		SELECT DISTINCT lineage_name
 		FROM ssl_certificates
 		WHERE domain_id = ?
-		  AND lineage_name LIKE 'cp-site-%'
+		  AND type = 'letsencrypt'
 		  AND lineage_name IS NOT NULL`, domainID)
 	if err != nil {
 		writeServerError(w, err)
 		return
 	}
-	var stagedLineages []string
+	var (
+		deleteCanonicalLineage bool
+		stagedLineages         []string
+	)
+	canonicalDomainName := strings.ToLower(strings.TrimSpace(domain.Name))
 	for lineageRows.Next() {
 		var lineage string
 		if err := lineageRows.Scan(&lineage); err != nil {
@@ -468,7 +535,21 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			writeServerError(w, err)
 			return
 		}
-		stagedLineages = append(stagedLineages, lineage)
+		lineage = strings.ToLower(strings.TrimSpace(lineage))
+		switch {
+		case lineage == canonicalDomainName:
+			deleteCanonicalLineage = true
+		case strings.HasPrefix(lineage, "cp-site-"):
+			stagedLineages = append(stagedLineages, lineage)
+		default:
+			lineageRows.Close()
+			writeServerError(w, fmt.Errorf(
+				"refuse unknown managed certificate lineage %q for domain %s",
+				lineage,
+				domain.Name,
+			))
+			return
+		}
 	}
 	if err := lineageRows.Err(); err != nil {
 		lineageRows.Close()
@@ -477,15 +558,26 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	lineageRows.Close()
 
-	mailTLSRemoval, err := p.prepareDomainMailTLSRemoval(ctx, domainID)
-	if err != nil {
+	if err := p.markDomainDeletionPending(ctx, domainID); err != nil {
 		writeServerError(w, err)
 		return
 	}
-	rollbackMailTLS := func() error {
-		rollbackCtx, rollbackCancel := sslCompensationContext()
-		defer rollbackCancel()
-		return p.rollbackDomainMailTLSRemoval(rollbackCtx, mailTLSRemoval)
+
+	_, err = p.prepareDomainMailTLSRemoval(ctx, domainID)
+	if err != nil {
+		if restoreErr := p.restoreDomainStatus(ctx, domainID, domain.Status); restoreErr != nil {
+			p.writeDomainDeletionPending(
+				w,
+				r,
+				domainID,
+				domain.Name,
+				"mail_tls_cleanup",
+				fmt.Errorf("%v; restore domain status: %w", err, restoreErr),
+			)
+			return
+		}
+		writeServerError(w, err)
+		return
 	}
 
 	// Tear down the system side first — vhost, PHP pool, app unit, system
@@ -503,98 +595,63 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	// yok) — agent'ın sökeceği bir şey yok; yol koruması boş docroot'u zaten
 	// haklı olarak reddederdi.
 	if hasSite && projectType != "dnsonly" {
-		var agentResp struct {
-			Success bool   `json:"success"`
-			Error   string `json:"error,omitempty"`
+		siteHome, err := hostingpath.SiteHome(siteSubscriptionID, domainID)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("derive stored site home: %w", err))
+			return
 		}
-		agentReq := struct {
-			ExpectedBuildCommit string `json:"expected_build_commit"`
-			SiteID              int    `json:"site_id"`
-			Domain              string `json:"domain"`
-			Username            string `json:"username"`
-			PHPVersion          string `json:"php_version"`
-			SiteHome            string `json:"site_home"`
-		}{
+		var agentResp transport.DeleteSiteResponse
+		agentReq := transport.DeleteSiteRequest{
 			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 			SiteID:              siteID,
+			SubscriptionID:      siteSubscriptionID,
+			DomainID:            domainID,
 			Domain:              domain.Name,
 			Username:            services.SiteUsername(domain.Name),
 			PHPVersion:          phpVersion,
-			SiteHome:            filepath.Dir(docroot),
+			SiteHome:            siteHome,
 		}
-		if err := p.agentClient.Call("Agent.DeleteSite", &agentReq, &agentResp); err != nil {
-			if rollbackErr := rollbackMailTLS(); rollbackErr != nil {
-				writeServerError(w, fmt.Errorf("%v; mail TLS rollback failed: %w", err, rollbackErr))
-			} else {
-				writeServerError(w, err)
-			}
+		if err := p.callAgentContext(ctx, "Agent.DeleteSite", &agentReq, &agentResp); err != nil {
+			p.writeDomainDeletionPending(
+				w, r, domainID, domain.Name, "site_cleanup", err,
+			)
 			return
 		}
 		if !agentResp.Success {
-			if rollbackErr := rollbackMailTLS(); rollbackErr != nil {
-				writeServerError(w, fmt.Errorf(
-					"site cleanup failed: %s; mail TLS rollback failed: %w",
-					agentResp.Error,
-					rollbackErr,
-				))
-				return
-			}
-			writeClientError(w, http.StatusConflict, "site cleanup failed: "+agentResp.Error)
+			p.writeDomainDeletionPending(
+				w,
+				r,
+				domainID,
+				domain.Name,
+				"site_cleanup",
+				fmt.Errorf("agent did not confirm complete site cleanup: %s", agentResp.Error),
+			)
 			return
 		}
 	}
 
-	// Delete domain (cascades to sites via foreign key)
-	if err := domainRepo.Delete(ctx, domainID); err != nil {
-		if rollbackErr := rollbackMailTLS(); rollbackErr != nil {
-			writeServerError(w, fmt.Errorf("%v; mail TLS rollback failed: %w", err, rollbackErr))
-		} else {
-			writeServerError(w, err)
-		}
+	if err := p.removeDomainDNSForDeletion(ctx, domain.Name, parentDomainName); err != nil {
+		p.writeDomainDeletionPending(
+			w, r, domainID, domain.Name, "dns_cleanup", err,
+		)
 		return
 	}
-
-	if parentDomainName != "" {
-		// Subdomain: pull its record out of the parent's zone; the parent
-		// zone itself stays (it serves the parent and any siblings).
-		// Subdomain: kaydını ana domain'in zone'undan çıkar; ana zone
-		// (kendisine ve kardeşlerine hizmet ettiği için) kalır.
-		p.removeSubdomainFromParentZone(context.Background(), parentDomainName, domain.Name)
-	} else {
-		// Top-level domain: drop its whole zone — a zone that keeps answering
-		// for a deleted domain is stale, publicly visible state. Records
-		// first: the pdns tables are not covered by SQLite's FK pragma here.
-		// Tepe-seviye domain: tüm zone'unu düşür — silinmiş bir domain için
-		// cevap vermeye devam eden zone bayat, kamuya görünür durumdur.
-		if _, err := p.db.GetDB().ExecContext(context.Background(),
-			`DELETE FROM pdns_records WHERE domain_id IN (SELECT id FROM pdns_domains WHERE name = ?)`, domain.Name); err == nil {
-			p.db.GetDB().ExecContext(context.Background(), `DELETE FROM pdns_domains WHERE name = ?`, domain.Name)
-		}
-		p.syncZoneToDNS(context.Background(), domain.Name, true)
+	if err := p.removeManagedDomainCertificates(
+		ctx,
+		domain.Name,
+		deleteCanonicalLineage,
+		stagedLineages,
+	); err != nil {
+		p.writeDomainDeletionPending(
+			w, r, domainID, domain.Name, "certificate_cleanup", err,
+		)
+		return
 	}
-
-	// Remove only the isolated customer-site lineages. Historical immutable
-	// snapshots are retained; failure compensation may delete only one exact,
-	// verified snapshot that has no certificate-ledger reference.
-	// The agent never touches global/legacy /etc/letsencrypt material here
-	// because it may own the panel certificate. Best-effort: certificate
-	// cleanup cannot undo the domain deletion.
-	var certResp struct {
-		Deleted bool   `json:"deleted"`
-		Error   string `json:"error,omitempty"`
-	}
-	if err := p.agentClient.Call("Agent.DeleteCertLineage", &struct {
-		Domain              string   `json:"domain"`
-		DeleteCanonical     bool     `json:"delete_canonical,omitempty"`
-		LineageNames        []string `json:"lineage_names,omitempty"`
-		ExpectedBuildCommit string   `json:"expected_build_commit"`
-	}{
-		Domain:              domain.Name,
-		DeleteCanonical:     true,
-		LineageNames:        stagedLineages,
-		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
-	}, &certResp); err != nil || certResp.Error != "" {
-		log.Printf("cert lineage cleanup for %s: %v %s", domain.Name, err, certResp.Error)
+	if err := p.finalizeDomainDeletion(ctx, domainID); err != nil {
+		p.writeDomainDeletionPending(
+			w, r, domainID, domain.Name, "ledger_delete", err,
+		)
+		return
 	}
 
 	p.audit(r, "domain.delete:"+domain.Name, "domain", domainID)

@@ -958,9 +958,9 @@ mimariyle korunur ve **asla** ayrı bir ürün olmaz.
   bağımsızlığıdır. **Panel** (HTTP, SQLite, UI, iş mantığı) taşınabilir Go;
   OS'e dokunan tek katman **agent**. Panel *ne* yapılacağını der ("site kur");
   *nasıl*ını yalnız agent bilir (systemctl/apt/nftables).
-- İddia değil kanıt: bu tarih itibarıyla `GOOS=freebsd go build` **hem** paneli
+- İddia değil kanıt: bu tarih itibarıyla `make freebsd-cross` **hem** paneli
   hem agent'ı derliyor. Tek bir taşınabilirlik düzeltmesi gerekti (Statfs_t
-  alan tipleri Linux ile BSD'de farklı — `cmd/panel/system_stats.go`'da açık
+  alan tipleri Linux ile BSD'de farklı — `cmd/panel/system_stats_disk_unix.go`'da açık
   `uint64` dönüşümleri) ve yapıldı. Kod tabanının tamamı bugün FreeBSD'ye
   çapraz derleniyor.
 - İki CelikPanel, kullanıcının korktuğu hantallığın ta kendisi olurdu: her

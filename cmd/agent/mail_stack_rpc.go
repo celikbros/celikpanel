@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Wiring Postfix and Dovecot to actually deliver to the virtual mailboxes the
@@ -32,11 +35,7 @@ const (
 	vmailGID  = "5000"
 )
 
-type ConfigureMailStackResponse struct {
-	Configured bool   `json:"configured"`
-	Detail     string `json:"detail,omitempty"`
-	Error      string `json:"error,omitempty"`
-}
+type ConfigureMailStackResponse = transport.ConfigureMailStackResponse
 
 func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureMailStackResponse) error {
 	if req == nil {
@@ -83,16 +82,30 @@ func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureM
 		// Ensure the map files exist before postmap/postfix reference them.
 		// postmap/postfix onlara başvurmadan önce map dosyalarının var olmasını sağla.
 		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
-			if !fileExistsAgent(p) {
-				_ = os.WriteFile(p, []byte(""), 0o644)
+			exists, err := secureMailFileExists(p)
+			if err != nil {
+				resp.Error = fmt.Sprintf("inspect postfix map %s: %v", p, err)
+				return nil
 			}
-			postmapReadableContext(ctx, p)
+			if !exists {
+				if err := secureWriteConfig(p, []byte(""), 0o644); err != nil {
+					resp.Error = fmt.Sprintf("create postfix map %s: %v", p, err)
+					return nil
+				}
+			}
+			if err := postmapReadableContext(ctx, p); err != nil {
+				resp.Error = err.Error()
+				return nil
+			}
 		}
 		if err := configurePostfixVirtual(ctx); err != nil {
 			resp.Error = fmt.Sprintf("postfix: %v", err)
 			return nil
 		}
-		ensureAliasDatabase(ctx)
+		if err := ensureAliasDatabase(ctx); err != nil {
+			resp.Error = fmt.Sprintf("postfix aliases: %v", err)
+			return nil
+		}
 	}
 
 	if hasDovecot {
@@ -154,11 +167,7 @@ var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
 // yeniden bestelemektedir. Bir spam filtresi kurulduktan VEYA kaldırıldıktan
 // sonra çağrılır: kurmak süzmeyi başlatmalı, kaldırmak da Postfix'i artık
 // cevap vermeyen bir sokete bakar hâlde bırakmamalıdır.
-type WireMailFiltersResponse struct {
-	Wired  bool   `json:"wired"`
-	Detail string `json:"detail,omitempty"`
-	Error  string `json:"error,omitempty"`
-}
+type WireMailFiltersResponse = transport.WireMailFiltersResponse
 
 func (a *Agent) WireMailFilters(req *ServiceMutationRequest, resp *WireMailFiltersResponse) error {
 	if req == nil {
@@ -195,9 +204,15 @@ func wireMailFilters(ctx context.Context, resp *WireMailFiltersResponse) error {
 			return nil
 		}
 		for _, p := range []string{postfixVBoxPath, postfixVirtualPath, postfixDomainsPath} {
-			postmapReadableContext(ctx, p)
+			if err := postmapReadableContext(ctx, p); err != nil {
+				resp.Error = err.Error()
+				return nil
+			}
 		}
-		ensureAliasDatabase(ctx)
+		if err := ensureAliasDatabase(ctx); err != nil {
+			resp.Error = fmt.Sprintf("postfix aliases: %v", err)
+			return nil
+		}
 	}
 	if err := applyMilterChain(ctx); err != nil {
 		resp.Error = err.Error()
@@ -293,6 +308,14 @@ func postconfExpanded(key string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+func postconfExpandedContext(ctx context.Context, key string) (string, error) {
+	out, err := serviceMutationCommand(ctx, "postconf", "-x", "-h", key).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("postconf %s failed: %s", key, firstLine(string(out)))
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // applyMilterChain is the SINGLE owner of Postfix's milter settings. Every
@@ -522,6 +545,29 @@ func configureDovecotVirtual() error {
 	if !fileExistsAgent(confDir) {
 		return fmt.Errorf("dovecot is not installed")
 	}
+	managedConf := confDir + "/99-celikpanel.conf"
+	authConf := confDir + "/10-auth.conf"
+	paths := []string{dovecotUsersPath, managedConf, authConf}
+	snapshots := make([]mailFileSnapshot, 0, len(paths))
+	for _, path := range paths {
+		snapshot, err := snapshotMailFile(path)
+		if err != nil {
+			return fmt.Errorf("snapshot dovecot state: %w", err)
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	rollback := func(cause error) error {
+		var rollbackErrs []error
+		for index := len(snapshots) - 1; index >= 0; index-- {
+			if err := restoreMailFile(snapshots[index]); err != nil {
+				rollbackErrs = append(rollbackErrs, err)
+			}
+		}
+		if len(rollbackErrs) != 0 {
+			return fmt.Errorf("%w; dovecot state rollback failed: %v", cause, errors.Join(rollbackErrs...))
+		}
+		return cause
+	}
 	// /etc/dovecot/users holds password hashes (a secret), so it must NOT be
 	// world-readable — but dovecot's auth process runs as the dovecot user,
 	// not in the celikpanel group, so root:celikpanel 0640 locks it out
@@ -531,22 +577,29 @@ func configureDovecotVirtual() error {
 	// ama dovecot'un auth süreci dovecot kullanıcısı olarak çalışır, celikpanel
 	// grubunda değildir; root:celikpanel 0640 onu dışarıda bırakır (izin yok,
 	// geçici auth hatası). dovecot grubuna 0640 ver: dovecot okur, başkası okumaz.
-	if err := os.WriteFile(dovecotUsersPath, mustExistBytes(dovecotUsersPath), 0o640); err != nil {
-		return err
-	}
-	if g, err := user.LookupGroup("dovecot"); err == nil {
-		if gid, err := strconv.Atoi(g.Gid); err == nil {
-			_ = os.Chown(dovecotUsersPath, 0, gid)
+	if !snapshots[0].exists {
+		if err := secureWriteConfig(dovecotUsersPath, []byte(""), 0o640); err != nil {
+			return rollback(fmt.Errorf("create dovecot users file: %w", err))
 		}
 	}
-	_ = os.Chmod(dovecotUsersPath, 0o640)
+	group, err := user.LookupGroup("dovecot")
+	if err != nil {
+		return rollback(fmt.Errorf("lookup dovecot group: %w", err))
+	}
+	dovecotGID, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return rollback(fmt.Errorf("parse dovecot group id: %w", err))
+	}
+	if err := secureSetMailFileMetadata(dovecotUsersPath, 0o640, 0, dovecotGID); err != nil {
+		return rollback(err)
+	}
 	// Validate with dovecot's own parser before the service is restarted; a
 	// dialect mistake must surface here as an error, not as a dead service.
 	// Servis yeniden başlatılmadan önce dovecot'un kendi ayrıştırıcısıyla
 	// doğrula; bir lehçe hatası ölü servis olarak değil burada hata olarak
 	// yüzeye çıkmalı.
-	if err := applyDovecotConf(confDir+"/99-celikpanel.conf", conf); err != nil {
-		return err
+	if err := applyDovecotConf(managedConf, conf); err != nil {
+		return rollback(err)
 	}
 
 	// Disable system-user auth. This is a virtual-mailbox server: mail users
@@ -562,7 +615,16 @@ func configureDovecotVirtual() error {
 	// sistem kullanıcısı bulamayınca, bizim passwd-file userdb'miz denenmeden
 	// lookup zincirini kırar (parola geçerliyken "User doesn't exist").
 	// include'u yorumlamak idempotenttir.
-	disableDovecotSystemAuth(confDir + "/10-auth.conf")
+	if err := disableDovecotSystemAuth(authConf); err != nil {
+		return rollback(err)
+	}
+	if out, err := runMailTLSCommand("doveconf", "-n"); err != nil {
+		detail := dovecotFirstError(string(out))
+		if strings.TrimSpace(string(out)) == "" {
+			detail = err.Error()
+		}
+		return rollback(fmt.Errorf("dovecot rejected the complete virtual-mail configuration: %s", detail))
+	}
 	return nil
 }
 
@@ -570,10 +632,17 @@ func configureDovecotVirtual() error {
 // virtual passwd-file provides users. No-op if already commented or absent.
 // disableDovecotSystemAuth, auth-system include'unu yorumlar; böylece
 // kullanıcıları yalnız bizim sanal passwd-file'ımız sağlar.
-func disableDovecotSystemAuth(authConf string) {
-	data, err := os.ReadFile(authConf)
+func disableDovecotSystemAuth(authConf string) error {
+	exists, err := secureMailFileExists(authConf)
 	if err != nil {
-		return
+		return fmt.Errorf("inspect dovecot system authentication configuration: %w", err)
+	}
+	if !exists {
+		return nil
+	}
+	data, err := secureReadConfig(authConf)
+	if err != nil {
+		return fmt.Errorf("read dovecot system authentication configuration: %w", err)
 	}
 	lines := strings.Split(string(data), "\n")
 	changed := false
@@ -584,8 +653,11 @@ func disableDovecotSystemAuth(authConf string) {
 		}
 	}
 	if changed {
-		_ = os.WriteFile(authConf, []byte(strings.Join(lines, "\n")), 0o644)
+		if err := secureWriteConfig(authConf, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+			return fmt.Errorf("disable dovecot system authentication: %w", err)
+		}
 	}
+	return nil
 }
 
 // mustExistBytes returns a file's contents, or empty when absent — used to
@@ -610,20 +682,28 @@ func fileExistsAgent(p string) bool {
 // domain twice is a no-op. Skipped for a dev agent (no real postfix).
 // ensurePostfixDomain, bir domain'i sanal-posta-kutusu-domain'leri haritasına
 // zaten yoksa ekler, sonra haritayı yeniden kurar. Idempotenttir.
-func ensurePostfixDomain(domain string) {
-	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" || domain == "" {
-		return
+func ensurePostfixDomain(ctx context.Context, domain string) error {
+	canonical, err := canonicalAgentDomain(domain)
+	if err != nil {
+		return fmt.Errorf("invalid postfix domain: %w", err)
 	}
-	existing, _ := os.ReadFile(postfixDomainsPath)
-	for _, line := range strings.Split(string(existing), "\n") {
-		if strings.Fields(line) != nil && strings.HasPrefix(strings.TrimSpace(line), domain+" ") {
-			return // already present / zaten var
+	existing, err := readMailFile(postfixDomainsPath)
+	if err != nil {
+		return fmt.Errorf("read postfix domains: %w", err)
+	}
+	for _, line := range splitMailFile(existing) {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == canonical {
+			return nil
 		}
 	}
 	// The value column is a dummy ("OK"); postfix only checks the key exists.
 	// Değer sütunu yer tutucudur ("OK"); postfix yalnız anahtarın varlığına bakar.
-	_ = appendToFile(postfixDomainsPath, domain+" OK")
-	postmapReadable(postfixDomainsPath)
+	return applyMailFileMutation(ctx, []mailFileWrite{{
+		path:    postfixDomainsPath,
+		content: upsertMailLine(existing, canonical, canonical+" OK"),
+		mode:    0o644,
+	}}, []string{postfixDomainsPath}, nil)
 }
 
 // postmapReadable rebuilds a postfix map and makes both the source and the
@@ -638,23 +718,45 @@ func ensurePostfixDomain(domain string) {
 // (celikpanel grubunda değil) "Permission denied" alır — posta "mail system
 // configuration error" ile ertelenir. Bu haritalar sır değil adres→yol
 // takma adı taşır; 0644 doğrudur.
-func postmapReadable(path string) {
-	postmapReadableContext(context.Background(), path)
+func postmapReadable(path string) error {
+	return postmapReadableContext(context.Background(), path)
 }
 
-func postmapReadableContext(ctx context.Context, path string) {
+func postmapReadableContext(ctx context.Context, path string) error {
+	if _, err := secureReadConfig(path); err != nil {
+		return fmt.Errorf("read postfix map source %s: %w", path, err)
+	}
 	t := postfixMapTypeContext(ctx)
 	if t == "texthash" {
 		// texthash needs no index at all — postfix reads the plain file.
 		// texthash hiç dizin istemez — postfix düz dosyayı okur.
-		_ = os.Chmod(path, 0o644)
-		return
+		return secureChmodMailFile(path, 0o644)
 	}
-	_ = serviceMutationCommand(ctx, "postmap", t+":"+path).Run()
-	_ = os.Chmod(path, 0o644)
+	out, err := serviceMutationCommand(ctx, "postmap", t+":"+path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("postmap %s failed: %s", path, firstLine(string(out)))
+	}
+	if err := secureChmodMailFile(path, 0o644); err != nil {
+		return err
+	}
+	indexed := false
 	for _, ext := range []string{".db", ".lmdb"} {
-		_ = os.Chmod(path+ext, 0o644)
+		exists, err := secureMailFileExists(path + ext)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			continue
+		}
+		indexed = true
+		if err := secureChmodMailFile(path+ext, 0o644); err != nil {
+			return err
+		}
 	}
+	if !indexed {
+		return errors.New("postmap completed without creating a readable index")
+	}
+	return nil
 }
 
 // ensureAliasDatabase builds the local alias index when the distro shipped only
@@ -672,16 +774,22 @@ func postmapReadableContext(ctx context.Context, path string) {
 // dönüş bildirimleri) `451 Temporary lookup failure` ile reddedilir. 25 Tem'de
 // Frankfurt'ta, sanal haritalar düzeltilir düzeltilmez canlı bulundu: ret,
 // eksik bir dizinden diğerine taşınmıştı.
-func ensureAliasDatabase(ctx context.Context) {
+func ensureAliasDatabase(ctx context.Context) error {
 	// -x expands $variables. Arch ships `alias_database = $alias_maps`
 	// literally, and without expansion the value has no "type:path" to parse —
 	// the repair silently did nothing on exactly the distro that needed it.
 	// -x, $değişkenleri açar. Arch, `alias_database = $alias_maps`ı olduğu gibi
 	// getirir; açılmadan değerde ayrıştırılacak "tip:yol" yoktur — onarım, tam
 	// da ona ihtiyaç duyan dağıtımda sessizce hiçbir şey yapmıyordu.
-	db := postconfExpanded("alias_database")
+	db, err := postconfExpandedContext(ctx, "alias_database")
+	if err != nil {
+		return err
+	}
 	if db == "" {
-		db = postconfExpanded("alias_maps")
+		db, err = postconfExpandedContext(ctx, "alias_maps")
+		if err != nil {
+			return err
+		}
 	}
 	// alias_database is "type:path" and may list several, comma separated.
 	// alias_database "tip:yol"dur ve virgülle birkaç tane sayabilir.
@@ -704,9 +812,13 @@ func ensureAliasDatabase(ctx context.Context) {
 		if indexed || typ == "texthash" {
 			continue
 		}
-		_ = serviceMutationCommand(ctx, "newaliases").Run()
-		return
+		out, err := serviceMutationCommand(ctx, "newaliases").CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("newaliases failed: %s", firstLine(string(out)))
+		}
+		return nil
 	}
+	return nil
 }
 
 // postfixMapType finds an indexed table type this postfix can ACTUALLY use.

@@ -62,26 +62,66 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 ## Building from source
 
-Requirements: Go ≥ 1.24, Node ≥ 20.
+Requirements: exactly Go 1.26.5, Node ≥ 20. The Make gate verifies the exact
+compiler, uses a clean `GOTOOLCHAIN=local` environment and never silently
+downloads another Go toolchain.
+
+Existing installations whose sealed build cache predates Go 1.26.5 must first
+follow the reviewed-checkout proof and one-time migrator sequence in the
+[operations runbook](docs/OPERATIONS.md), then use the applicable update mode.
+Do not invoke the privileged migrator from an unverified checkout.
+
+The migrator changes only the private build toolchain cache. It does not touch
+CelikPanel services, databases, DNS records or panel settings.
 
 ```bash
 # Backend (panel + agent)
-go build -o bin/panel ./cmd/panel
-go build -o bin/agent ./cmd/agent
+make panel agent
 
 # Frontend
-cd web && npm install && npm run build   # output: web/dist, served by the panel binary
+cd web && npm ci --no-audit --no-fund && npm run build   # output: web/dist, served by the panel binary
 ```
+
+## Release artifacts
+
+`make dist VERSION=<version>` builds the panel, agent, schema bridge and web
+application into one deterministic archive. It also writes an external
+`SHA256SUMS`-style file next to the archive:
+
+```bash
+make dist VERSION=v0.3.0
+sha256sum -c dist/celikpanel-v0.3.0.tar.gz.sha256
+```
+
+When the release operator has provisioned a protected GPG signing key, create
+and verify a detached signature with:
+
+```bash
+make dist-sign VERSION=v0.3.0 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.3.0.tar.gz.asc dist/celikpanel-v0.3.0.tar.gz
+```
+
+The checksum proves byte integrity, not publisher identity. A public or
+commercial release must not claim signed provenance until the release owner
+has provisioned the CI signing identity and published its verification key.
 
 ## Documentation
 
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.md) — panel-only scope, confirmation, audit and subscription-gating plan
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.md) — signed SQLite/JSON recipes and platform-adapter boundary
-
+- [Store](docs/STORE.md) — offering catalogue, entitlement boundary and operator workflow
+- [System SQLite Administration](docs/SYSTEM-SQLITE-ADMIN.md) — bounded inspection, backup and maintenance of panel-owned databases
+- [Web Dependency Security](docs/WEB-DEPENDENCY-SECURITY.md) — lockfile, audit and dependency-update policy
 - [Roadmap](ROADMAP.md) — where we are, where we're going, and what we deliberately won't do
+- [Decision Ledger](docs/DECISIONS.md) — durable architecture and product decisions
+- [Autopsy & Debt Ledger](docs/AUTOPSY.md) — verified failures, remaining smells and remediation status
+- [Operations](docs/OPERATIONS.md) — installation, update, rollback and recovery procedures
+- [Distribution Support](docs/DISTRO-SUPPORT.md) — generated platform support contract
 - [User Roles & Permissions](docs/ROLES.md) — Administrator / Reseller / Customer / Additional User model
 - [Frontend Architecture](docs/UI_ARCHITECTURE.md) — one inherited shell, capability-driven per role
 - [Conventions](docs/CONVENTIONS.md) — language & naming: English identifiers, bilingual content (TR + EN)
+- [Security Policy](SECURITY.md) — private reporting channel and safe research boundaries
+- [Technical and Third-Party Notice](NOTICE) — dependency and distribution obligations
 
 ## License
 

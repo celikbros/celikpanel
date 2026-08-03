@@ -49,9 +49,10 @@ The stable product layout is:
 - panel database: `/var/lib/celikpanel/celikpanel.db`
 - units: `celikpanel-agent` and `celikpanel-panel`
 
-Stopping the agent can also stop the dependent panel. The reviewed product
-scripts own service ordering and recovery; do not replace their sequence with
-ad-hoc SSH commands.
+Stopping or cleanly restarting the agent no longer stops the panel. The panel
+orders itself after and weakly wants the agent, then retries while the agent
+returns. Reviewed product scripts still own the stricter freeze, update and
+recovery sequence; do not replace that sequence with ad-hoc SSH commands.
 
 ## 3. Release gates
 
@@ -59,10 +60,12 @@ Freeze one clean, pushed release commit for both servers. Before any deployment
 the exact commit must pass:
 
 ```bash
-go test ./...
-go vet ./...
-cd web && npm run build
+make test vet web
 ```
+
+The Make targets reject every compiler except the reviewed Go 1.26.5 toolchain,
+disable automatic Go toolchain downloads, and run tests and vet in a clean
+environment.
 
 After the reviewed commit has been pushed, prepare the server-side checkout with
 this exact fast-forward proof. Replace both placeholders; the approved commit
@@ -104,6 +107,27 @@ deployment blocker, not a reason to infer success. No production deployment may
 start until this evidence exists.
 
 ## 4. Update modes
+
+### 4.0 Exact Go build-cache prerequisite
+
+Every source-build update requires the sealed private cache at
+/opt/celikpanel/.toolchain/go to be exact Go 1.26.5. If an existing, otherwise
+trusted installation still has an older Go tree, run the migrator from the
+same clean reviewed checkout before choosing the applicable update mode below:
+
+~~~bash
+cd "$CELIKPANEL_PREPARED_CHECKOUT"
+test "$(git rev-parse HEAD)" = "$CELIKPANEL_APPROVED_COMMIT"
+test -z "$(git status --porcelain=v1 --untracked-files=all)"
+sudo /bin/bash ./deploy/migrate-go-toolchain.sh
+~~~
+
+The migrator accepts no paths or version overrides. It verifies the pinned
+official archive SHA-256 and the complete staged tree before retiring the old
+tree. The old tree is retained for operator review; a publication or final
+validation failure restores it. It changes no service, database, DNS record or
+panel setting. Do not use this command to repair an untrusted, missing or newer
+toolchain tree; investigate that state instead.
 
 ### 4.1 Normal update
 
@@ -268,7 +292,7 @@ rollback must not reinterpret unit presence as user consent.
 
 ## 7. Development checks
 
-- **Builds:** `go test ./...`, `go vet ./...`, and `cd web && npm run build`.
+- **Builds:** `make test vet web` (including the exact Go 1.26.5 gate).
 - **Release contracts:** `bash deploy/test-bootstrap-update-contract.sh` and
   `bash deploy/test-schema17-bridge-contract.sh`.
 - **Visual verification:** `tools/dev-preview/preview-server.py` serves

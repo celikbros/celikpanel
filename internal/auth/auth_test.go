@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -97,6 +98,22 @@ func TestSessionValidateRejectsUnknownToken(t *testing.T) {
 	store := NewSessionStore(newTestDB(t))
 	if _, err := store.Validate(context.Background(), "deadbeef"); err != ErrSessionInvalid {
 		t.Fatalf("Validate(unknown) = %v; want ErrSessionInvalid", err)
+	}
+}
+
+func TestSessionValidateDoesNotMaskDatabaseFailureAsInvalidSession(t *testing.T) {
+	db := newTestDB(t)
+	store := NewSessionStore(db)
+	if err := db.Close(); err != nil {
+		t.Fatalf("close session database: %v", err)
+	}
+
+	_, err := store.Validate(context.Background(), "deadbeef")
+	if err == nil {
+		t.Fatal("Validate succeeded against a closed database")
+	}
+	if errors.Is(err, ErrSessionInvalid) {
+		t.Fatalf("Validate masked database failure as invalid session: %v", err)
 	}
 }
 

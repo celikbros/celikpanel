@@ -1,21 +1,13 @@
 package transport
 
-import "github.com/alicelik/celikpanel/internal/core"
+import "time"
 
-// AgentRPC defines the interface between Panel and Agent
-type AgentRPC interface {
-	ListServices() ([]core.Service, error)
-	GetConfig(path string) (string, error)
-	UpdateConfig(path string, content string) error
-	ReloadConfig(serviceName string) error
-	StartService(serviceName string) error
-	StopService(serviceName string) error
-	RestartService(serviceName string) error
-
-	// Site Management
-	CreateSite(req CreateSiteRequest) (*CreateSiteResponse, error)
-	DeleteSite(siteID int, domain string) error
-}
+// The concrete RPC request and response structs in this package are the
+// protocol contract. Both panel and agent import these exact types so a field
+// rename or removal fails at compile time instead of being silently ignored by
+// net/rpc's gob decoder. Do not replace this with a hand-written method
+// interface: the RPC surface is registered by name and such an interface can
+// drift without protecting the wire format.
 
 // Service configuration requests/responses
 
@@ -57,23 +49,34 @@ type UpdateMySQLConfigRequest struct {
 // Database management RPC types
 
 type CreateDatabaseRequest struct {
-	DatabaseType string `json:"database_type"` // "postgresql" or "mariadb"
-	DatabaseName string `json:"database_name"`
-	Username     string `json:"username"`
+	Type         string `json:"type"` // "mysql" or "postgresql"
+	Name         string `json:"name"`
+	User         string `json:"user"`
 	Password     string `json:"password"`
+	OperationID  string `json:"operation_id,omitempty"`
+	CleanupToken string `json:"cleanup_token,omitempty"`
 }
 
 type CreateDatabaseResponse struct {
-	Success bool   `json:"success"`
-	Host    string `json:"host"`
-	Port    int    `json:"port"`
-	Error   string `json:"error,omitempty"`
+	Success           bool   `json:"success"`
+	OwnedByOperation  bool   `json:"owned_by_operation,omitempty"`
+	CleanupIncomplete bool   `json:"cleanup_incomplete,omitempty"`
+	Error             string `json:"error,omitempty"`
 }
 
 type DeleteDatabaseRequest struct {
-	DatabaseType string `json:"database_type"` // "postgresql" or "mariadb"
-	DatabaseName string `json:"database_name"`
-	Username     string `json:"username"`
+	Type                  string `json:"type"` // "mysql" or "postgresql"
+	Name                  string `json:"name"`
+	User                  string `json:"user"`
+	RequireUserCleanup    bool   `json:"require_user_cleanup,omitempty"`
+	RequireOwnershipProof bool   `json:"require_ownership_proof,omitempty"`
+	OperationID           string `json:"operation_id,omitempty"`
+	CleanupToken          string `json:"cleanup_token,omitempty"`
+}
+
+type DeleteDatabaseResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
 }
 
 type ChangeDatabasePasswordRequest struct {
@@ -121,14 +124,36 @@ type GetConfigArgs struct {
 	Path string
 }
 
+// ConfigErrorCode is the machine-readable failure contract for the privileged
+// configuration editor. Expected operator errors travel in the RPC response
+// instead of net/rpc's string-only error channel, so the panel never has to
+// infer an HTTP status from human-readable text.
+type ConfigErrorCode string
+
+const (
+	ConfigErrorPathRefused    ConfigErrorCode = "path_refused"
+	ConfigErrorValidationFail ConfigErrorCode = "validation_failed"
+)
+
+type ConfigRPCError struct {
+	Code    ConfigErrorCode `json:"code"`
+	Message string          `json:"message"`
+}
+
 type ConfigResponse struct {
-	Content string
-	Parsed  string // JSON string
+	Content string          `json:"Content"`
+	Parsed  string          `json:"Parsed"` // JSON string
+	Error   *ConfigRPCError `json:"Error,omitempty"`
 }
 
 type UpdateConfigArgs struct {
 	Path    string
 	Content string
+}
+
+type UpdateConfigResponse struct {
+	Success bool            `json:"success"`
+	Error   *ConfigRPCError `json:"error,omitempty"`
 }
 
 type ServiceArgs struct {
@@ -143,4 +168,68 @@ type ServiceActionArgs struct {
 type ServiceActionResult struct {
 	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
+}
+
+// ApplyVhostRequest is the complete, explicit nginx vhost input shared by the
+// panel and the privileged agent.
+type ApplyVhostRequest struct {
+	ExpectedBuildCommit string   `json:"expected_build_commit"`
+	SiteID              int      `json:"site_id"`
+	SubscriptionID      int      `json:"subscription_id"`
+	DomainID            int      `json:"domain_id"`
+	Domain              string   `json:"domain"`
+	TempDomain          string   `json:"temp_domain"`
+	ServerNames         []string `json:"server_names"`
+	ACMEChallengeNames  []string `json:"acme_challenge_names,omitempty"`
+	DocumentRoot        string   `json:"document_root"`
+	PHPSocket           string   `json:"php_socket"`
+	SSLType             string   `json:"ssl_type"`
+	SSLCert             string   `json:"ssl_cert"`
+	SSLKey              string   `json:"ssl_key"`
+	RedirectWWW         bool     `json:"redirect_www"`
+	ForceHTTPS          bool     `json:"force_https"`
+	HSTSEnabled         bool     `json:"hsts_enabled"`
+	HSTSMaxAge          int      `json:"hsts_max_age"`
+	ProjectType         string   `json:"project_type"`
+	AppPort             int      `json:"app_port"`
+	ForwardTo           string   `json:"forward_to"`
+	ForwardCode         int      `json:"forward_code"`
+}
+
+type ApplyVhostResponse struct {
+	Config string `json:"config"`
+	Error  string `json:"error,omitempty"`
+}
+
+type ApplyVhostsRequest struct {
+	ExpectedBuildCommit string              `json:"expected_build_commit"`
+	Vhosts              []ApplyVhostRequest `json:"vhosts"`
+}
+
+type ApplyVhostsResponse struct {
+	Applied int    `json:"applied"`
+	Error   string `json:"error,omitempty"`
+}
+
+// IssuePanelCertificateRequest and response are shared because the build
+// commit gate is security-critical: silently omitting ExpectedBuildCommit
+// would make every production request fail before certbot runs.
+type IssuePanelCertificateRequest struct {
+	MutationRequestID   string `json:"mutation_request_id,omitempty"`
+	MutationOwnerID     string `json:"mutation_owner_id,omitempty"`
+	Domain              string `json:"domain"`
+	Email               string `json:"email"`
+	TLSDir              string `json:"tls_dir"`
+	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
+}
+
+type IssuePanelCertificateResponse struct {
+	Issued    bool      `json:"issued"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Detail    string    `json:"detail,omitempty"`
+	Error     string    `json:"error,omitempty"`
+}
+
+type RestartPanelSoonRequest struct {
+	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
 }

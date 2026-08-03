@@ -159,10 +159,12 @@ func restoreFilesArchive(archivePath, docroot string) error {
 	if err := staged.Publish(); err != nil {
 		return err
 	}
-	// The restored directory is live and internally consistent at this point.
-	// Failure to remove the old private tree must not turn a valid restore into
-	// a mixed files/database state; cleanup can safely be retried later.
-	_ = staged.Commit()
+	if err := staged.Commit(); err != nil {
+		return fmt.Errorf(
+			"restored files were published, but final cleanup or durability proof failed; pre-restore safety backup was retained: %w",
+			err,
+		)
+	}
 	return nil
 }
 
@@ -219,7 +221,12 @@ func (a *Agent) restoreFullPackage(scope backupScope, targetDir, safetyPath, doc
 		rollbackErr := rollbackDatabases(attempted, safetyDir)
 		return restoreRollbackError(err, rollbackErr)
 	}
-	_ = staged.Commit()
+	if err := staged.Commit(); err != nil {
+		return fmt.Errorf(
+			"full restore was published, but final cleanup or durability proof failed; pre-restore safety backup was retained: %w",
+			err,
+		)
+	}
 	return nil
 }
 

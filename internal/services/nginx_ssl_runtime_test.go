@@ -85,6 +85,7 @@ func TestNoCertificateNeverEmitsHTTPSControls(t *testing.T) {
 		DocumentRoot:      "/var/www/example.test",
 		ProjectType:       "static",
 		SSLType:           "none",
+		RedirectWWW:       true,
 		ForceHTTPS:        true,
 		HSTSEnabled:       true,
 		HSTSMaxAge:        63072000,
@@ -97,6 +98,58 @@ func TestNoCertificateNeverEmitsHTTPSControls(t *testing.T) {
 	}
 	if !strings.Contains(out, "server_name example.test www.example.test;") {
 		t.Fatalf("managed names must still be served over HTTP\n%s", out)
+	}
+	if !strings.Contains(out, "return 301 $scheme://www.example.test$request_uri;") {
+		t.Fatalf("www redirect without a certificate must remain on the request scheme\n%s", out)
+	}
+}
+
+func TestWWWRedirectIsACMESafeAndUsesCanonicalHTTPS(t *testing.T) {
+	ng, err := NewNginxGenerator()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := VhostData{
+		Domain:            "example.test",
+		ServerNames:       []string{"example.test", "www.example.test"},
+		ACMEChallengeRoot: testACMEChallengeRoot,
+		DocumentRoot:      "/var/www/example.test",
+		ProjectType:       "static",
+		SSLType:           "none",
+		RedirectWWW:       true,
+	}
+	out, err := ng.Render(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	schemeRedirect := "return 301 $scheme://www.example.test$request_uri;"
+	if got := strings.Count(out, schemeRedirect); got != 1 {
+		t.Fatalf("HTTP www redirect count = %d, want 1\n%s", got, out)
+	}
+	challengeAt := strings.Index(out, "location ^~ /.well-known/acme-challenge/")
+	redirectAt := strings.Index(out, schemeRedirect)
+	if challengeAt < 0 || redirectAt < 0 || challengeAt > redirectAt {
+		t.Fatalf("ACME location must precede the content-level www redirect\n%s", out)
+	}
+
+	data.SSLType = "letsencrypt"
+	data.SSLCert = "/etc/letsencrypt/live/example.test/fullchain.pem"
+	data.SSLKey = "/etc/letsencrypt/live/example.test/privkey.pem"
+	data.ForceHTTPS = true
+	out, err = ng.Render(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directHTTPS := "return 301 https://www.example.test$request_uri;"
+	if got := strings.Count(out, directHTTPS); got != 2 {
+		t.Fatalf("canonical HTTPS www redirect count = %d, want HTTP and HTTPS copies\n%s", got, out)
+	}
+	genericHTTPS := "return 301 https://$host$request_uri;"
+	challengeAt = strings.Index(out, "location ^~ /.well-known/acme-challenge/")
+	directAt := strings.Index(out, directHTTPS)
+	genericAt := strings.Index(out, genericHTTPS)
+	if challengeAt < 0 || directAt < 0 || genericAt < 0 || challengeAt > directAt || directAt > genericAt {
+		t.Fatalf("HTTP redirect order must be ACME, canonical www, then generic HTTPS\n%s", out)
 	}
 }
 

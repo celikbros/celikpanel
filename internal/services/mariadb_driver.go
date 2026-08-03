@@ -1,9 +1,13 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"runtime"
 	"strings"
+	"time"
 )
 
 // MariaDBDriver implements DatabaseDriver for MariaDB
@@ -11,6 +15,87 @@ type MariaDBDriver struct {
 	host         string
 	port         int
 	rootPassword string
+}
+
+const mariaDBCommandTimeout = 30 * time.Second
+
+func quoteMySQLOptionValue(value string) (string, error) {
+	if strings.IndexByte(value, 0) >= 0 {
+		return ``, fmt.Errorf(`MySQL option value contains NUL`)
+	}
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, string(rune(13)), `\r`)
+	value = strings.ReplaceAll(value, string(rune(10)), `\n`)
+	value = strings.ReplaceAll(value, string(rune(9)), `\t`)
+	value = strings.ReplaceAll(value, string(rune(34)), string([]rune{92, 34}))
+	return string(rune(34)) + value + string(rune(34)), nil
+}
+
+func (d *MariaDBDriver) writeMySQLClientFile() (string, func(), error) {
+	file, err := os.CreateTemp(``, `celikpanel-mysql-*.cnf`)
+	if err != nil {
+		return ``, nil, fmt.Errorf(`create protected MySQL client file: %w`, err)
+	}
+	path := file.Name()
+	cleanup := func() {
+		_ = os.Remove(path)
+	}
+	fail := func(cause error) (string, func(), error) {
+		_ = file.Close()
+		cleanup()
+		return ``, nil, cause
+	}
+	if err := file.Chmod(0o600); err != nil {
+		return fail(fmt.Errorf(`protect MySQL client file: %w`, err))
+	}
+	if _, err := fmt.Fprintln(file, `[client]`); err != nil {
+		return fail(fmt.Errorf(`write MySQL client file: %w`, err))
+	}
+	writeOption := func(key, value string) error {
+		quoted, err := quoteMySQLOptionValue(value)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(file, key+`=`+quoted)
+		return err
+	}
+	if err := writeOption(`user`, `root`); err != nil {
+		return fail(fmt.Errorf(`write MySQL client user: %w`, err))
+	}
+	if d.rootPassword != `` {
+		if err := writeOption(`password`, d.rootPassword); err != nil {
+			return fail(fmt.Errorf(`write MySQL client password: %w`, err))
+		}
+	}
+	if d.host != `` {
+		if err := writeOption(`host`, d.host); err != nil {
+			return fail(fmt.Errorf(`write MySQL client host: %w`, err))
+		}
+	}
+	if d.port > 0 {
+		if _, err := fmt.Fprintln(file, `port=`+fmt.Sprint(d.port)); err != nil {
+			return fail(fmt.Errorf(`write MySQL client port: %w`, err))
+		}
+	}
+	if d.host != `` || d.port > 0 {
+		if _, err := fmt.Fprintln(file, `protocol=tcp`); err != nil {
+			return fail(fmt.Errorf(`write MySQL client protocol: %w`, err))
+		}
+	}
+	if err := file.Close(); err != nil {
+		cleanup()
+		return ``, nil, fmt.Errorf(`close MySQL client file: %w`, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		cleanup()
+		return ``, nil, fmt.Errorf(`inspect MySQL client file: %w`, err)
+	}
+	if runtime.GOOS != `windows` && info.Mode().Perm() != 0o600 {
+		cleanup()
+		return ``, nil, fmt.Errorf(`MySQL client file mode is %o, want 600`, info.Mode().Perm())
+	}
+	return path, cleanup, nil
 }
 
 // NewMariaDBDriver creates a new MariaDB driver
@@ -22,11 +107,45 @@ func NewMariaDBDriver(config DriverConfig) *MariaDBDriver {
 	}
 }
 
+func (d *MariaDBDriver) mysqlCommand(ctx context.Context, sql string) (*exec.Cmd, func(), error) {
+	path, cleanup, err := d.writeMySQLClientFile()
+	if err != nil {
+		return nil, nil, err
+	}
+	cmd := exec.CommandContext(
+		ctx,
+		`mysql`,
+		`--defaults-extra-file=`+path,
+		`--batch`,
+		`--raw`,
+	)
+	cmd.Stdin = strings.NewReader(sql)
+	return cmd, cleanup, nil
+}
+
+func (d *MariaDBDriver) runSQL(sql string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mariaDBCommandTimeout)
+	defer cancel()
+	cmd, cleanup, err := d.mysqlCommand(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf(`MariaDB command timed out: %w`, ctx.Err())
+		}
+		return nil, fmt.Errorf(`MariaDB command failed: %w`, err)
+	}
+	return output, nil
+}
+
 // TestConnection tests MariaDB connection
 func (d *MariaDBDriver) TestConnection() error {
-	cmd := exec.Command("mysql", "-u", "root", fmt.Sprintf("-p%s", d.rootPassword), "-e", "SELECT 1;")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("MariaDB connection failed: %v", err)
+	_, err := d.runSQL(`SELECT 1;`)
+	if err != nil {
+		return fmt.Errorf(`MariaDB connection failed: %w`, err)
 	}
 	return nil
 }
@@ -53,8 +172,7 @@ func (d *MariaDBDriver) DeleteDatabase(name string) error {
 
 // ListDatabases lists all MariaDB databases
 func (d *MariaDBDriver) ListDatabases() ([]string, error) {
-	cmd := exec.Command("mysql", "-u", "root", fmt.Sprintf("-p%s", d.rootPassword), "-e", "SHOW DATABASES;")
-	output, err := cmd.CombinedOutput()
+	output, err := d.runSQL(`SHOW DATABASES;`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list databases: %v", err)
 	}
@@ -137,8 +255,7 @@ func (d *MariaDBDriver) ChangePassword(username, newPassword string) error {
 
 // ListUsers lists all MariaDB users
 func (d *MariaDBDriver) ListUsers() ([]string, error) {
-	cmd := exec.Command("mysql", "-u", "root", fmt.Sprintf("-p%s", d.rootPassword), "-e", "SELECT User FROM mysql.user WHERE Host='localhost';")
-	output, err := cmd.CombinedOutput()
+	output, err := d.runSQL(`SELECT User FROM mysql.user WHERE Host='localhost';`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %v", err)
 	}
@@ -205,18 +322,8 @@ func (d *MariaDBDriver) RevokePrivileges(database, user string) error {
 	return d.executeSQL("FLUSH PRIVILEGES;")
 }
 
-// ListUserDatabases lists databases a user has access to
-func (d *MariaDBDriver) ListUserDatabases(username string) ([]string, error) {
-	// This would require parsing SHOW GRANTS - simplified for now
-	return []string{}, nil
-}
-
 // executeSQL executes SQL command via mysql CLI
 func (d *MariaDBDriver) executeSQL(sql string) error {
-	cmd := exec.Command("mysql", "-u", "root", fmt.Sprintf("-p%s", d.rootPassword), "-e", sql)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("SQL error: %v, output: %s", err, string(output))
-	}
-	return nil
+	_, err := d.runSQL(sql)
+	return err
 }

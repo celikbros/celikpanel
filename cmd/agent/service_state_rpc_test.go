@@ -13,6 +13,8 @@ type fakeStrictServiceStateProbe struct {
 	canonicalErr   error
 	packages       map[string]struct{}
 	packagesErr    error
+	roundcube      bool
+	roundcubeErr   error
 	unitCalls      int
 	canonicalCalls int
 	packageCalls   int
@@ -34,6 +36,10 @@ func (f *fakeStrictServiceStateProbe) CanonicalUnit(unit string) (string, error)
 func (f *fakeStrictServiceStateProbe) InstalledPackages(string) (map[string]struct{}, error) {
 	f.packageCalls++
 	return f.packages, f.packagesErr
+}
+
+func (f *fakeStrictServiceStateProbe) RoundcubeInstalled() (bool, error) {
+	return f.roundcube, f.roundcubeErr
 }
 
 func TestStrictServiceDiscoveryStopsOnSystemdFailure(t *testing.T) {
@@ -60,5 +66,29 @@ func TestStrictServiceDiscoveryStopsOnPackageDatabaseFailure(t *testing.T) {
 	}
 	if probe.packageCalls != 1 {
 		t.Fatalf("package database calls = %d, want 1", probe.packageCalls)
+	}
+}
+
+func TestStrictServiceDiscoveryRejectsUnknownPackageFamilyBeforeProbing(t *testing.T) {
+	probe := &fakeStrictServiceStateProbe{}
+
+	_, err := discoverInstalledServiceIDsStrict(probe, `unknown`)
+	if err == nil || !strings.Contains(err.Error(), `unsupported package family`) {
+		t.Fatalf(`discovery error = %v, want unsupported package family`, err)
+	}
+	if probe.unitCalls != 0 {
+		t.Fatalf(`unit discovery calls = %d, want 0`, probe.unitCalls)
+	}
+}
+
+func TestStrictServiceDiscoveryStopsOnRoundcubeStatFailure(t *testing.T) {
+	probe := &fakeStrictServiceStateProbe{
+		units:        map[string]struct{}{},
+		roundcubeErr: errors.New(`forced roundcube stat failure`),
+	}
+
+	_, err := discoverInstalledServiceIDsStrict(probe, `apt`)
+	if err == nil || !strings.Contains(err.Error(), `forced roundcube stat failure`) {
+		t.Fatalf(`discovery error = %v, want Roundcube stat failure`, err)
 	}
 }

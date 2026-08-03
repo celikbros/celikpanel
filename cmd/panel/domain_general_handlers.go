@@ -11,26 +11,28 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // Domain general settings structures
 type DomainGeneralSettings struct {
-	DomainID      int      `json:"domain_id"`
-	DomainName    string   `json:"domain_name"`
-	DocumentRoot  string   `json:"document_root"`
-	WebServer     string   `json:"web_server"`
-	RedirectWWW   bool     `json:"redirect_www"`
-	RedirectHTTPS bool     `json:"redirect_https"`
-	Aliases       []string `json:"aliases"`
+	DomainID             int      `json:"domain_id"`
+	DomainName           string   `json:"domain_name"`
+	DocumentRoot         string   `json:"document_root"`
+	WebServer            string   `json:"web_server"`
+	RedirectWWW          bool     `json:"redirect_www"`
+	RedirectWWWAvailable bool     `json:"redirect_www_available"`
+	RedirectHTTPS        bool     `json:"redirect_https"`
+	Aliases              []string `json:"aliases"`
 }
 
 type UpdateGeneralSettingsRequest struct {
 	DocumentRoot  string `json:"document_root"`
 	WebServer     string `json:"web_server"`
 	RedirectWWW   bool   `json:"redirect_www"`
-	RedirectHTTPS bool   `json:"redirect_https"`
+	RedirectHTTPS *bool  `json:"redirect_https"`
 }
 
 type AddAliasRequest struct {
@@ -38,16 +40,54 @@ type AddAliasRequest struct {
 	ConfirmCertificateReissue bool   `json:"confirm_certificate_reissue"`
 }
 
+type aliasMutationLock struct {
+	mu   sync.Mutex
+	refs int
+}
+
 var (
-	domainAliasMutationLock     sync.Mutex
-	errInvalidDomainAlias       = errors.New("invalid domain alias")
-	errDomainAliasConflict      = errors.New("domain alias conflicts with an existing hostname")
-	errDomainAliasNotFound      = errors.New("domain alias not found")
-	errAliasCertificateCoverage = errors.New("active certificate does not cover the domain alias")
+	domainAliasMutationLocks = struct {
+		sync.Mutex
+		entries map[string]*aliasMutationLock
+	}{entries: make(map[string]*aliasMutationLock)}
+	errInvalidDomainAlias           = errors.New("invalid domain alias")
+	errDomainAliasConflict          = errors.New("domain alias conflicts with an existing hostname")
+	errDomainAliasNotFound          = errors.New("domain alias not found")
+	errAliasCertificateCoverage     = errors.New("active certificate does not cover the domain alias")
+	errGeneralUnsupportedWebServer  = errors.New("unsupported general-settings web server")
+	errGeneralImmutableDocumentRoot = errors.New("document root is immutable")
+	errGeneralHTTPSManagedBySSL     = errors.New("HTTPS redirection is managed by SSL/TLS")
+	errGeneralWWWUnavailable        = errors.New("managed www hostname is unavailable")
+	errGeneralVhostApplyRejected    = errors.New("general settings vhost apply was rejected and restored")
 )
 
 type aliasVhostApply func(context.Context, int) error
 type aliasCertificateVerifier func(context.Context, int, string) error
+
+// lockDomainAliasMutation serializes only operations that target the same
+// canonical alias. The old process-wide mutex kept every tenant blocked while
+// an unrelated alias waited on ACME, which could take up to the SSL timeout.
+func lockDomainAliasMutation(alias string) func() {
+	domainAliasMutationLocks.Lock()
+	entry := domainAliasMutationLocks.entries[alias]
+	if entry == nil {
+		entry = &aliasMutationLock{}
+		domainAliasMutationLocks.entries[alias] = entry
+	}
+	entry.refs++
+	domainAliasMutationLocks.Unlock()
+
+	entry.mu.Lock()
+	return func() {
+		entry.mu.Unlock()
+		domainAliasMutationLocks.Lock()
+		entry.refs--
+		if entry.refs == 0 {
+			delete(domainAliasMutationLocks.entries, alias)
+		}
+		domainAliasMutationLocks.Unlock()
+	}
+}
 
 func canonicalDomainAlias(raw string) (string, error) {
 	alias, err := hostname.CanonicalFQDN(raw)
@@ -211,6 +251,133 @@ func (p *Panel) deleteDomainAlias(
 	}
 }
 
+type domainGeneralState struct {
+	SubscriptionID int
+	DomainName     string
+	DocumentRoot   string
+	WebServer      string
+	RedirectWWW    bool
+}
+
+func (p *Panel) managedWWWRedirectAvailable(
+	ctx context.Context,
+	domainID int,
+	domainName string,
+) (bool, error) {
+	domain, err := hostname.CanonicalFQDN(domainName)
+	if err != nil {
+		return false, err
+	}
+	names, err := p.managedSiteHostnames(ctx, domainID)
+	if err != nil {
+		return false, err
+	}
+	target := "www." + domain
+	for _, name := range names {
+		if name == target {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// updateDomainGeneralSettings mutates only settings backed by the live nginx
+// adapter. The database change and vhost activation form one compensated
+// operation: an activation failure restores both the prior row and prior
+// runtime vhost before returning.
+func (p *Panel) updateDomainGeneralSettings(
+	ctx context.Context,
+	domainID int,
+	req UpdateGeneralSettingsRequest,
+	apply aliasVhostApply,
+) error {
+	var previous domainGeneralState
+	if err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT d.subscription_id, d.name, s.document_root,
+		       COALESCE(s.web_server, 'nginx'),
+		       COALESCE(s.redirect_www, false)
+		FROM sites s
+		JOIN domains d ON d.id = s.domain_id
+		WHERE s.domain_id = ?`, domainID).Scan(
+		&previous.SubscriptionID,
+		&previous.DomainName,
+		&previous.DocumentRoot,
+		&previous.WebServer,
+		&previous.RedirectWWW,
+	); err != nil {
+		return err
+	}
+	if req.RedirectHTTPS != nil {
+		return errGeneralHTTPSManagedBySSL
+	}
+	if req.WebServer != "nginx" {
+		return errGeneralUnsupportedWebServer
+	}
+	if req.DocumentRoot != previous.DocumentRoot {
+		return errGeneralImmutableDocumentRoot
+	}
+	if err := hostingpath.ValidateDocumentRoot(
+		req.DocumentRoot,
+		previous.SubscriptionID,
+		domainID,
+	); err != nil {
+		return fmt.Errorf("%w: %v", errGeneralImmutableDocumentRoot, err)
+	}
+	if req.RedirectWWW {
+		available, err := p.managedWWWRedirectAvailable(
+			ctx,
+			domainID,
+			previous.DomainName,
+		)
+		if err != nil {
+			return err
+		}
+		if !available {
+			return errGeneralWWWUnavailable
+		}
+	}
+
+	if _, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE sites
+		SET web_server = 'nginx',
+		    redirect_www = ?,
+		    updated_at = datetime('now')
+		WHERE domain_id = ?`, req.RedirectWWW, domainID); err != nil {
+		return err
+	}
+	if err := apply(ctx, domainID); err == nil {
+		return nil
+	} else {
+		applyErr := err
+		rollbackCtx, cancel := sslCompensationContext()
+		defer cancel()
+		if _, rollbackErr := p.db.GetDB().ExecContext(rollbackCtx, `
+			UPDATE sites
+			SET web_server = ?,
+			    redirect_www = ?,
+			    updated_at = datetime('now')
+			WHERE domain_id = ?`,
+			previous.WebServer,
+			previous.RedirectWWW,
+			domainID,
+		); rollbackErr != nil {
+			return fmt.Errorf(
+				"apply general settings vhost: %v; database rollback: %w",
+				applyErr,
+				rollbackErr,
+			)
+		}
+		if restoreErr := apply(rollbackCtx, domainID); restoreErr != nil {
+			return fmt.Errorf(
+				"apply general settings vhost: %v; vhost restore: %w",
+				applyErr,
+				restoreErr,
+			)
+		}
+		return fmt.Errorf("%w: %v", errGeneralVhostApplyRejected, applyErr)
+	}
+}
+
 // GET /api/v1/domains/:id/general
 func (p *Panel) handleDomainGeneralSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "POST" {
@@ -239,7 +406,7 @@ func (p *Panel) handleDomainGeneralSettings(w http.ResponseWriter, r *http.Reque
 }
 
 func (p *Panel) handleGetGeneralSettings(w http.ResponseWriter, r *http.Request, domainID int) {
-	ctx := context.Background()
+	ctx := r.Context()
 	pool := p.db.GetDB()
 
 	// Get domain info using repository
@@ -261,12 +428,21 @@ func (p *Panel) handleGetGeneralSettings(w http.ResponseWriter, r *http.Request,
 		SELECT document_root, 
 		       COALESCE(web_server, 'nginx') as web_server,
 		       COALESCE(redirect_www, false) as redirect_www,
-		       COALESCE(redirect_https, false) as redirect_https
+		       COALESCE(force_https, false) as redirect_https
 		FROM sites WHERE domain_id = ?
 	`, domainID).Scan(&site.DocumentRoot, &site.WebServer, &site.RedirectWWW, &site.RedirectHTTPS)
 
 	if err != nil {
 		http.Error(w, "Site not found", http.StatusNotFound)
+		return
+	}
+	redirectWWWAvailable, err := p.managedWWWRedirectAvailable(
+		ctx,
+		domainID,
+		domain.Name,
+	)
+	if err != nil {
+		writeServerError(w, err)
 		return
 	}
 
@@ -278,23 +454,29 @@ func (p *Panel) handleGetGeneralSettings(w http.ResponseWriter, r *http.Request,
 	}
 	defer rows.Close()
 
-	var aliases []string
+	aliases := make([]string, 0)
 	for rows.Next() {
 		var alias string
 		if err := rows.Scan(&alias); err != nil {
-			continue
+			writeServerError(w, err)
+			return
 		}
 		aliases = append(aliases, alias)
 	}
+	if err := rows.Err(); err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	settings := DomainGeneralSettings{
-		DomainID:      domain.ID,
-		DomainName:    domain.Name,
-		DocumentRoot:  site.DocumentRoot,
-		WebServer:     site.WebServer,
-		RedirectWWW:   site.RedirectWWW,
-		RedirectHTTPS: site.RedirectHTTPS,
-		Aliases:       aliases,
+		DomainID:             domain.ID,
+		DomainName:           domain.Name,
+		DocumentRoot:         site.DocumentRoot,
+		WebServer:            site.WebServer,
+		RedirectWWW:          site.RedirectWWW,
+		RedirectWWWAvailable: redirectWWWAvailable,
+		RedirectHTTPS:        site.RedirectHTTPS,
+		Aliases:              aliases,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -302,41 +484,52 @@ func (p *Panel) handleGetGeneralSettings(w http.ResponseWriter, r *http.Request,
 }
 
 func (p *Panel) handleUpdateGeneralSettings(w http.ResponseWriter, r *http.Request, domainID int) {
+	w.Header().Set("Content-Type", "application/json")
 	var req UpdateGeneralSettingsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeClientError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Validate web server
-	if req.WebServer != "nginx" && req.WebServer != "apache" {
-		http.Error(w, "Invalid web server", http.StatusBadRequest)
+	unlock := lockDomainSSLOperation(domainID)
+	defer unlock()
+	ctx, cancel := sslDurableContext(r.Context())
+	defer cancel()
+
+	if err := p.updateDomainGeneralSettings(
+		ctx,
+		domainID,
+		req,
+		p.applyVhostForDomain,
+	); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeClientError(w, http.StatusNotFound, "domain site not found")
+		case errors.Is(err, errGeneralUnsupportedWebServer):
+			writeClientError(w, http.StatusBadRequest, "Nginx is the only supported web-server adapter")
+		case errors.Is(err, errGeneralImmutableDocumentRoot):
+			writeClientError(w, http.StatusBadRequest, "document root is fixed to this site's managed directory")
+		case errors.Is(err, errGeneralHTTPSManagedBySSL):
+			writeClientError(w, http.StatusBadRequest, "Force HTTPS is managed in the SSL/TLS section")
+		case errors.Is(err, errGeneralWWWUnavailable):
+			writeClientError(w, http.StatusConflict, "www redirection requires a managed www hostname for this site")
+		case errors.Is(err, errGeneralVhostApplyRejected):
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				"GENERAL_VHOST_APPLY_FAILED",
+				"settings were not saved because the web-server configuration could not be activated",
+				"",
+			)
+		default:
+			writeServerError(w, err)
+		}
 		return
 	}
 
-	ctx := context.Background()
-	pool := p.db.GetDB()
-
-	// Update site settings
-	_, err := pool.ExecContext(ctx, `
-		UPDATE sites 
-		SET document_root = ?,
-		    web_server = ?,
-		    redirect_www = ?,
-		    redirect_https = ?,
-		    updated_at = datetime('now')
-		WHERE domain_id = ?
-	`, req.DocumentRoot, req.WebServer, req.RedirectWWW, req.RedirectHTTPS, domainID)
-
-	if err != nil {
-		http.Error(w, "Failed to update settings", http.StatusInternalServerError)
-		return
-	}
-
-	// TODO: Regenerate nginx/apache config
-
+	p.audit(r, "domain.general.update", "domain", domainID)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // POST /api/v1/domains/:id/aliases
@@ -374,18 +567,18 @@ func (p *Panel) handleAddAlias(w http.ResponseWriter, r *http.Request, domainID 
 		return
 	}
 
-	domainAliasMutationLock.Lock()
-	defer domainAliasMutationLock.Unlock()
-	unlock := lockDomainSSLOperation(domainID)
-	defer unlock()
-	ctx, cancel := sslDurableContext(r.Context())
-	defer cancel()
-
 	alias, err := canonicalDomainAlias(req.Alias)
 	if err != nil {
 		writeClientError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	unlockAlias := lockDomainAliasMutation(alias)
+	defer unlockAlias()
+	unlock := lockDomainSSLOperation(domainID)
+	defer unlock()
+	ctx, cancel := sslDurableContext(r.Context())
+	defer cancel()
+
 	if err := p.aliasConflicts(ctx, domainID, alias); err != nil {
 		if errors.Is(err, errDomainAliasConflict) {
 			writeClientError(w, http.StatusConflict, err.Error())
@@ -568,18 +761,18 @@ func (p *Panel) handleDeleteAlias(w http.ResponseWriter, r *http.Request, domain
 		return
 	}
 
-	domainAliasMutationLock.Lock()
-	defer domainAliasMutationLock.Unlock()
-	unlock := lockDomainSSLOperation(domainID)
-	defer unlock()
-	ctx, cancel := sslDurableContext(r.Context())
-	defer cancel()
-
 	alias, err := canonicalDomainAlias(pathParts[6])
 	if err != nil {
 		writeClientError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	unlockAlias := lockDomainAliasMutation(alias)
+	defer unlockAlias()
+	unlock := lockDomainSSLOperation(domainID)
+	defer unlock()
+	ctx, cancel := sslDurableContext(r.Context())
+	defer cancel()
+
 	if err := p.ensureHSTSAllowsHostnameRemoval(ctx, domainID); err != nil {
 		if message, guarded := hstsRemovalConflictMessage(err, "the alias"); guarded {
 			writeClientError(w, http.StatusConflict, message)

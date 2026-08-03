@@ -1,5 +1,7 @@
 package main
 
+import "github.com/alicelik/celikpanel/internal/transport"
+
 // The agent carries the same two link-time values as the panel, so a
 // panel/agent version mismatch is detectable instead of silent. They are
 // deployed as a pair; when the pair breaks, the side that ENFORCES a rule may
@@ -14,12 +16,9 @@ var (
 	buildCommit  = "unknown"
 )
 
-type AgentVersionResponse struct {
-	Version string `json:"version"`
-	Commit  string `json:"commit"`
-}
+type AgentVersionResponse = transport.AgentVersionResponse
 
-func (a *Agent) Version(_ *struct{}, resp *AgentVersionResponse) error {
+func (a *Agent) Version(_ *transport.Empty, resp *AgentVersionResponse) error {
 	resp.Version = buildVersion
 	resp.Commit = buildCommit
 	return nil

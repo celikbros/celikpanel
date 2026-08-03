@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: July 25, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: August 2, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -261,6 +261,10 @@ place; production trust is done before the first real tenant.
 - Prices on plans: `service_plans` gains `price_cents, currency, billing_period, is_free, is_public,
   sort_order, vat_included`. The admin defines "Free — 1 domain, 0₺" and "Pro — 10 domains, X₺/mo" from
   the panel; product prices move from code constants to the DB. The customer sees their plan's name and price.
+- **Offering ledger (D-017 / the missing link in D-014):** `plan_offerings` uses one canonical namespace:
+  `component:<id>[:<version>]`, `integration:acme:<id>`, and `product:<id>`. Selector and action endpoints
+  must enforce the caller's effective offering set, with coded `NOT_OFFERED` refusals and audit records.
+  Existing plain Store IDs need an explicit backward-compatible data/API migration; do not rename them ad hoc.
 - **The period model** (the answer to "I upgraded — what am I paying?"): subscriptions gain
   `current_period_start/end`; the rule is the simplest honest one and goes to DECISIONS — an upgrade
   starts a new period immediately (no proration, declared openly); downgrades and cancellations apply at
@@ -392,7 +396,8 @@ place; production trust is done before the first real tenant.
   DB + the current chain onto a populated v(N−1) fixture; `rollback.sh` reports the number of rows
   written after the snapshot and asks for explicit confirmation; the sentence "rollback loses changes
   made after the snapshot" is documented.
-- CI security gates: `gosec`, `govulncheck`, `npm audit --audit-level=high` on every PR; exceptions are
+- CI security gates: `gosec` and `govulncheck` on every PR; networked dependency audits require explicit
+  operator authorisation because they disclose package names and versions to the configured registry; exceptions are
   `#nosec` + reason. (The v0.5 external audit is met with these gates' monthly green history.)
 - A written promotion ritual (OPERATIONS.md): (1) CI green → (2) `update.sh` + golden-path smoke on both
   test servers (boston/Debian, frankfurt/Arch) → (3) production. Channels become explicit: main=edge
@@ -714,7 +719,7 @@ product itself:
 
 ---
 
-## Where We Are — July 25, 2026
+## Where We Are — August 2, 2026
 
 **Version:** now single-sourced — version and commit are linked into BOTH binaries, served from
 `/api/v1/panel/version`, read back by the panel footer, and a panel/agent build mismatch raises a
@@ -738,14 +743,16 @@ catalogue** and a guard test fails when it goes stale · a "not offered on this 
 monitoring page · Valkey added to the catalogue (the real cost of a new component: 2 source files,
 zero Go code).
 
-**Debt status:** half of the one-API work is paid (v2→v1, tenant scope, the error contract) — **the
-unpaid half is growing**: raw `fetch` call sites were 74 at audit time, 190 today. The route+authz
-table and the role×endpoint matrix are still open (77 endpoints guarded by a hand-maintained list of
-18 prefixes). UI discipline has not started (30 native `confirm()` dialogs, 6 copies of the byte
-formatter, 3 button systems, 3 separate Service types). CI still only compiles.
+**Debt status:** the generated OpenAPI client, one declarative route/authz table, UI consolidation and
+measured end-to-end latency remain open. D-017 defines canonical offering identities, but persisted Store
+rows still use plain legacy IDs; adoption requires an explicit data/API compatibility migration. CI is no
+longer compile-only: it covers Go formatting/build/vet/test/race, shell and repository contracts, the
+locked web build and dependency gate, and reproducible release artifacts.
 
-**The system today:** ~37.9k lines of Go (190 files, 77 HTTP endpoints, 16 migrations, **a 25-component
-catalogue**) + ~19.5k lines of TypeScript (57 component files, TR+EN), 22 test files.
+**Repository snapshot:** `bash tools/repo-metrics.sh` reports 79,783 product-Go lines / 310 source files,
+178 Go test files, 35,388 panel lines / 113 files, 85 API route-prefix registrations, 27 migrations and
+93 agent command sites. Web has 27,629 TypeScript lines / 76 files and 208 raw `fetch(` sites. These are
+reproducible source-tree measurements, not claims about either test server's deployed build.
 
 
 ---

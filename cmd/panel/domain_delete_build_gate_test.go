@@ -92,3 +92,51 @@ func TestDeleteDomainRejectsMismatchedAgentBuildBeforeSiteCleanup(t *testing.T) 
 		)
 	}
 }
+
+func TestDeleteDomainRejectsCanonicalEquivalentStoredDocumentRoot(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	domainID, _ := seedDomainDeletionLedger(
+		t,
+		p,
+		"delete-noncanonical.example",
+		"static",
+	)
+	db := p.db.GetDB()
+	if _, err := db.Exec(
+		`UPDATE sites SET document_root = document_root || '/.' WHERE domain_id = ?`,
+		domainID,
+	); err != nil {
+		t.Fatalf("set non-canonical document root: %v", err)
+	}
+
+	withPanelBuildCommit(t, "document-root-test")
+	attachVersionPairAgent(t, p, "different-agent-build")
+
+	request := httptest.NewRequest(
+		http.MethodDelete,
+		fmt.Sprintf("/api/v1/domains/%d", domainID),
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+	p.handleDeleteDomain(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("delete status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var domainCount, siteCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM domains WHERE id = ?`, domainID).
+		Scan(&domainCount); err != nil {
+		t.Fatalf("count domain: %v", err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sites WHERE domain_id = ?`, domainID).
+		Scan(&siteCount); err != nil {
+		t.Fatalf("count site: %v", err)
+	}
+	if domainCount != 1 || siteCount != 1 {
+		t.Fatalf(
+			"non-canonical delete state = domains:%d sites:%d, want 1/1",
+			domainCount,
+			siteCount,
+		)
+	}
+}

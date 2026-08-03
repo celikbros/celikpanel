@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -21,32 +23,11 @@ const (
 	panelMutationRecoveryTimeout   = 90 * time.Second
 )
 
-type agentMutationBinding struct {
-	MutationRequestID string `json:"mutation_request_id"`
-	MutationOwnerID   string `json:"mutation_owner_id"`
-}
+type agentMutationBinding = transport.ServiceMutationBinding
 
-type agentMutationJob struct {
-	RequestID      string    `json:"request_id"`
-	OwnerID        string    `json:"owner_id"`
-	Kind           string    `json:"kind"`
-	Target         string    `json:"target"`
-	PackageName    string    `json:"package_name,omitempty"`
-	Status         string    `json:"status"`
-	Phase          string    `json:"phase"`
-	Attempt        int       `json:"attempt"`
-	LeaseExpiresAt time.Time `json:"lease_expires_at"`
-	DeadlineAt     time.Time `json:"deadline_at"`
-	ErrorCode      string    `json:"error_code,omitempty"`
-	ErrorMessage   string    `json:"error_message,omitempty"`
-	WorkerPID      int       `json:"worker_pid,omitempty"`
-	WorkerStarted  string    `json:"worker_started,omitempty"`
-}
+type agentMutationJob = transport.ServiceMutationJob
 
-type agentMutationResponse struct {
-	Job   *agentMutationJob `json:"job,omitempty"`
-	Error string            `json:"error,omitempty"`
-}
+type agentMutationResponse = transport.ServiceMutationResponse
 
 type panelMutationContextKey struct{}
 
@@ -76,14 +57,7 @@ func (p *Panel) beginAgentMutation(
 	resume bool,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	err := p.agentClient.CallContext(ctx, "Agent.BeginServiceMutation", &struct {
-		RequestID   string `json:"request_id"`
-		OwnerID     string `json:"owner_id"`
-		Kind        string `json:"kind"`
-		Target      string `json:"target"`
-		PackageName string `json:"package_name,omitempty"`
-		Resume      bool   `json:"resume,omitempty"`
-	}{
+	err := p.agentClient.CallContext(ctx, "Agent.BeginServiceMutation", &transport.ServiceMutationBeginRequest{
 		RequestID: op.RequestID, OwnerID: ownerID, Kind: op.Kind,
 		Target: op.ServiceID, PackageName: op.PackageName, Resume: resume,
 	}, &response)
@@ -106,11 +80,7 @@ func (p *Panel) heartbeatAgentMutation(
 	phase string,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	err := p.agentClient.CallContext(ctx, "Agent.HeartbeatServiceMutation", &struct {
-		RequestID string `json:"request_id"`
-		OwnerID   string `json:"owner_id"`
-		Phase     string `json:"phase,omitempty"`
-	}{
+	err := p.agentClient.CallContext(ctx, "Agent.HeartbeatServiceMutation", &transport.ServiceMutationHeartbeatRequest{
 		RequestID: binding.MutationRequestID,
 		OwnerID:   binding.MutationOwnerID,
 		Phase:     strings.TrimSpace(phase),
@@ -135,9 +105,9 @@ func (p *Panel) statusAgentMutation(
 	requestID string,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationStatus", &struct {
-		RequestID string `json:"request_id,omitempty"`
-	}{RequestID: requestID}, &response); err != nil {
+	if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{
+		RequestID: requestID,
+	}, &response); err != nil {
 		return nil, err
 	}
 	if response.Error != "" {
@@ -156,13 +126,7 @@ func (p *Panel) cancelAgentMutation(
 		return errors.New("agent mutation has no reusable durable owner identity")
 	}
 	var response agentMutationResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.CancelServiceMutation", &struct {
-		RequestID      string `json:"request_id"`
-		ExpectedOwner  string `json:"expected_owner"`
-		Reason         string `json:"reason,omitempty"`
-		FailureCode    string `json:"failure_code,omitempty"`
-		FailureMessage string `json:"failure_message,omitempty"`
-	}{
+	if err := p.agentClient.CallContext(ctx, "Agent.CancelServiceMutation", &transport.ServiceMutationCancelRequest{
 		RequestID: job.RequestID, ExpectedOwner: job.OwnerID,
 		Reason: "panel_restart_reconcile", FailureCode: code, FailureMessage: message,
 	}, &response); err != nil {
@@ -181,13 +145,7 @@ func (p *Panel) finishAgentMutation(
 ) (*agentMutationJob, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
 	defer cancel()
-	request := struct {
-		RequestID   string `json:"request_id"`
-		OwnerID     string `json:"owner_id"`
-		Success     bool   `json:"success"`
-		FailureCode string `json:"failure_code,omitempty"`
-		Message     string `json:"message,omitempty"`
-	}{
+	request := transport.ServiceMutationFinishRequest{
 		RequestID: binding.MutationRequestID,
 		OwnerID:   binding.MutationOwnerID,
 		Success:   success,

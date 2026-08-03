@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Mail TLS — the equivalent of Plesk's "assign the certificate to the mail
@@ -60,29 +61,9 @@ var postfixTLSManagedSettings = []string{
 	"tls_server_sni_maps",
 }
 
-type MailSNIEntry struct {
-	// Names this certificate should answer for (domain, mail.domain, …).
-	// Bu sertifikanın yanıt vereceği adlar (domain, mail.domain, …).
-	Names    []string `json:"names"`
-	CertPath string   `json:"cert_path"`
-	KeyPath  string   `json:"key_path"`
-}
-
-type SecureMailTLSRequest struct {
-	ExpectedBuildCommit string `json:"expected_build_commit"`
-	// Myhostname fixes Postfix's HELO name; empty keeps the system FQDN.
-	// Myhostname, Postfix'in HELO adını sabitler; boşsa sistem FQDN'i kalır.
-	Myhostname string         `json:"myhostname"`
-	SNI        []MailSNIEntry `json:"sni"`
-}
-
-type SecureMailTLSResponse struct {
-	Configured  bool   `json:"configured"`
-	DefaultCert string `json:"default_cert"`
-	SNICount    int    `json:"sni_count"`
-	Detail      string `json:"detail,omitempty"`
-	Error       string `json:"error,omitempty"`
-}
+type MailSNIEntry = transport.MailSNIEntry
+type SecureMailTLSRequest = transport.SecureMailTLSRequest
+type SecureMailTLSResponse = transport.SecureMailTLSResponse
 
 type mailTLSFileSnapshot struct {
 	path    string

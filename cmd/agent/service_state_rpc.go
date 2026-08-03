@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // InstalledServiceIDs reports which catalogue services have their package
@@ -22,7 +23,16 @@ import (
 // kurulu ama başlatılmamışken oluşan boşluğu kapatır — en görünür örnek
 // WireGuard: wg-quick@wg0 şablon unit'i ancak bir config varken başlar, bu
 // yüzden yalnız "çalışan unit" taraması onu sürekli "kurulu değil" sanardı.
-func (a *Agent) InstalledServiceIDs(_ *struct{}, reply *[]string) error {
+func (a *Agent) InstalledServiceIDs(_ *transport.Empty, reply *[]string) error {
+	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{}, detectPkgFamily())
+	if err != nil {
+		return err
+	}
+	*reply = ids
+	return nil
+}
+
+func (a *Agent) installedServiceIDsBestEffort(_ *transport.Empty, reply *[]string) error {
 	var ids []string
 	for i := range core.ManagedServices {
 		svc := &core.ManagedServices[i]
@@ -51,6 +61,7 @@ type strictServiceStateProbe interface {
 	UnitFiles() (map[string]struct{}, error)
 	CanonicalUnit(string) (string, error)
 	InstalledPackages(string) (map[string]struct{}, error)
+	RoundcubeInstalled() (bool, error)
 }
 
 type hostStrictServiceStateProbe struct{}
@@ -126,6 +137,10 @@ func (hostStrictServiceStateProbe) InstalledPackages(family string) (map[string]
 	return packages, nil
 }
 
+func (hostStrictServiceStateProbe) RoundcubeInstalled() (bool, error) {
+	return roundcubeInstallState()
+}
+
 // InstalledServiceIDsStrict is the firewall-safe counterpart of
 // InstalledServiceIDs. Probe failures are returned to the panel instead of
 // being converted into an incomplete "not installed" answer.
@@ -133,7 +148,7 @@ func (hostStrictServiceStateProbe) InstalledPackages(family string) (map[string]
 // InstalledServiceIDsStrict, InstalledServiceIDs'nin firewall için güvenli
 // karşılığıdır. Yoklama hataları eksik bir "kurulu değil" cevabına çevrilmez,
 // panele geri döndürülür.
-func (a *Agent) InstalledServiceIDsStrict(_ *struct{}, reply *[]string) error {
+func (a *Agent) InstalledServiceIDsStrict(_ *transport.Empty, reply *[]string) error {
 	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{}, detectPkgFamily())
 	if err != nil {
 		return err
@@ -143,6 +158,12 @@ func (a *Agent) InstalledServiceIDsStrict(_ *struct{}, reply *[]string) error {
 }
 
 func discoverInstalledServiceIDsStrict(probe strictServiceStateProbe, family string) ([]string, error) {
+	switch family {
+	case `apt`, `pacman`, `dnf`:
+	default:
+		return nil, fmt.Errorf(`strict service discovery: unsupported package family %q`, family)
+	}
+
 	units, err := probe.UnitFiles()
 	if err != nil {
 		return nil, fmt.Errorf("strict service discovery: %w", err)
@@ -156,7 +177,10 @@ func discoverInstalledServiceIDsStrict(probe strictServiceStateProbe, family str
 		installed := false
 
 		if svc.ID == "roundcube" {
-			installed = roundcubeInstalled()
+			installed, err = probe.RoundcubeInstalled()
+			if err != nil {
+				return nil, fmt.Errorf(`strict service discovery for %s: %w`, svc.ID, err)
+			}
 		} else if len(svc.SystemNames) > 0 || svc.SystemNamePattern != "" {
 			for _, unit := range svc.SystemNames {
 				lookup := unit

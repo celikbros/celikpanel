@@ -177,6 +177,46 @@ func TestReconnectingClientCallContextClosesTimedOutDedicatedCall(t *testing.T) 
 	}
 }
 
+func TestReconnectingClientCallHasHardTimeoutAndDrainsReply(t *testing.T) {
+	service := &LateReply{
+		start:   make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	sharedClient := pipeClient(t, func(server *rpc.Server) {
+		if err := server.RegisterName("Late", service); err != nil {
+			t.Fatalf("register late service: %v", err)
+		}
+	})
+	client := NewReconnectingClientWithContextConnector(sharedClient, nil)
+	client.callTimeout = 30 * time.Millisecond
+
+	reply := "initial"
+	returned := make(chan error, 1)
+	go func() {
+		returned <- client.Call("Late.Wait", struct{}{}, &reply)
+	}()
+	select {
+	case <-service.start:
+	case <-time.After(time.Second):
+		t.Fatal("server method was not dispatched")
+	}
+	select {
+	case err := <-returned:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("Call error = %v, want deadline exceeded", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Call did not return after its hard timeout")
+	}
+
+	reply = "caller-after-return"
+	close(service.release)
+	time.Sleep(30 * time.Millisecond)
+	if reply != "caller-after-return" {
+		t.Fatalf("reply changed after Call returned: %q", reply)
+	}
+}
+
 func TestConnectAgentContextCancelsAuthenticationHandshake(t *testing.T) {
 	const token = "stalled-handshake-token"
 	socketPath := filepath.Join(t.TempDir(), "stalled-agent.sock")

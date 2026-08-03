@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Agent.ListServiceInstances is the ONE per-version discovery contract (B3b):
@@ -24,14 +25,9 @@ import (
 // (extractVersion) yerine geçer; o, tam olarak tek servisi tek dağıtım
 // düzeninde anlıyor, geri kalan her yerde "default" cevaplıyordu.
 
-type ServiceInstancesRequest struct {
-	ID string `json:"id"`
-}
+type ServiceInstancesRequest = transport.ServiceInstancesRequest
 
-type ServiceInstancesResponse struct {
-	Instances []core.ServiceInstance `json:"instances"`
-	Error     string                 `json:"error,omitempty"`
-}
+type ServiceInstancesResponse = transport.ServiceInstancesResponse
 
 func (a *Agent) ListServiceInstances(req *ServiceInstancesRequest, resp *ServiceInstancesResponse) error {
 	resp.Instances = []core.ServiceInstance{}

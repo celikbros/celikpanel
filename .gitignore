@@ -19,6 +19,9 @@ web/dist/
 *.bak
 *.backup
 __pycache__/
+/.tmp*
+/*.patch
+/.codex_*
 
 # Migration sürecinden kalan tek seferlik yardımcılar
 /cmd/panel/fix_handlers.py

@@ -8,6 +8,9 @@ set -euo pipefail
 
 RELEASES_ROOT=/var/backups/celikpanel/releases
 TOOLCHAIN_ROOT=/opt/celikpanel/.toolchain
+PINNED_GO_ROOT="$TOOLCHAIN_ROOT/go"
+PINNED_GO_BIN="$PINNED_GO_ROOT/bin/go"
+REQUIRED_GO_VERSION=go1.26.5
 
 die() {
     echo "!! $*" >&2
@@ -62,12 +65,49 @@ validate_root_owned_regular_tree() {
     done < <(find "$root" -print0)
 }
 
+# Official toolchain archives may contain relocatable internal symlinks. Permit
+# only those links while applying the same root ownership and write-protection
+# proof to every entry in the pinned Go tree.
+validate_pinned_go_tree() {
+    local root=$1 entry owner group mode permissions link_value target
+    [[ "$root" == "$PINNED_GO_ROOT" ]] || die "unexpected pinned Go root: $root"
+    validate_root_trusted_dir_chain "$root"
+    while IFS= read -r -d '' entry; do
+        read -r owner group mode < <(stat -c '%u %g %a' -- "$entry") ||
+            die "cannot inspect pinned Go entry: $entry"
+        [[ "$owner:$group" == 0:0 ]] ||
+            die "pinned Go entry must be owned by root:root: $entry"
+        if [[ -L "$entry" ]]; then
+            link_value=$(readlink -- "$entry") || die "cannot inspect pinned Go symlink: $entry"
+            [[ "$link_value" != /* ]] || die "pinned Go symlink must be relative: $entry"
+            target=$(readlink -f -- "$entry") || die "broken pinned Go symlink: $entry"
+            [[ "$target" == "$root"/* ]] || die "pinned Go symlink escapes GOROOT: $entry"
+            continue
+        fi
+        [[ -f "$entry" || -d "$entry" ]] || die "special object in pinned Go tree: $entry"
+        permissions=$((8#$mode))
+        (( (permissions & 0022) == 0 )) ||
+            die "pinned Go entry must not be group/other writable: $entry"
+    done < <(find "$root" -xdev -print0)
+}
+
 # Privileged child tools receive a minimal environment so Git, Go and Node
 # behavior cannot be changed through caller-controlled configuration variables.
 # Ayrıcalıklı alt araçlar en küçük ortamı alır; böylece Git, Go ve Node davranışı
 # çağıranın denetlediği yapılandırma değişkenleriyle değiştirilemez.
 run_clean() {
-    env -i HOME=/root PATH="$PATH" LC_ALL=C "$@"
+    env -i \
+        HOME=/root \
+        PATH="$PATH" \
+        LC_ALL=C \
+        LANG=C \
+        GOTOOLCHAIN=local \
+        GOENV=off \
+        GOWORK=off \
+        GOPATH=/root/go \
+        GOCACHE=/root/.cache/go-build \
+        CGO_ENABLED=0 \
+        "$@"
 }
 
 # Create only the documented root-owned release hierarchy, refusing aliases or
@@ -115,6 +155,27 @@ trusted_command() {
     permissions=$((8#$mode))
     (( (permissions & 0022) == 0 )) || die "build tool must not be group/other writable: $canonical"
     printf '%s\n' "$candidate"
+}
+
+# Release builds accept only the complete Go tree installed from the archive
+# with the installer-pinned SHA-256. Validate the whole GOROOT before executing
+# its compiler, then bind the compiler-reported GOROOT and version to that tree.
+validate_pinned_go_toolchain() {
+    local canonical_bin version reported_root
+    validate_root_trusted_dir_chain "$PINNED_GO_ROOT"
+    validate_pinned_go_tree "$PINNED_GO_ROOT"
+    canonical_bin=$(readlink -e -- "$PINNED_GO_BIN") ||
+        die "pinned Go compiler is unavailable: $PINNED_GO_BIN"
+    [[ "$canonical_bin" == "$PINNED_GO_BIN" ]] ||
+        die "pinned Go compiler must be a canonical regular file"
+    [[ -f "$PINNED_GO_BIN" && -x "$PINNED_GO_BIN" ]] ||
+        die "pinned Go compiler is not executable"
+    version=$(run_clean "$PINNED_GO_BIN" env GOVERSION 2>/dev/null || printf '%s' unreadable)
+    [[ "$version" == "$REQUIRED_GO_VERSION" ]] ||
+        die "exact $REQUIRED_GO_VERSION is required in pinned GOROOT; found $version"
+    reported_root=$(run_clean "$PINNED_GO_BIN" env GOROOT 2>/dev/null || true)
+    [[ "$reported_root" == "$PINNED_GO_ROOT" ]] ||
+        die "pinned Go compiler reported unexpected GOROOT"
 }
 
 # The release contains only directories and regular files from the reviewed
@@ -242,7 +303,8 @@ if find "$incomplete_root" ! -type d ! -type f -print -quit | grep -q .; then
     die "reviewed archive contains a special filesystem object"
 fi
 
-go_bin=$(trusted_command go)
+validate_pinned_go_toolchain
+go_bin="$PINNED_GO_BIN"
 node_bin=$(trusted_command node)
 npm_bin=$(trusted_command npm)
 mkdir -m 0755 -- "$incomplete_root/bin"
@@ -251,9 +313,9 @@ version_flags="-X main.buildVersion=$release_version -X main.buildCommit=$releas
 echo "==> Building matching panel and agent / Eşleşen panel ve agent derleniyor"
 (
     cd "$incomplete_root"
-    run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
-    run_clean "$go_bin" build -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
-    run_clean "$go_bin" build -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/panel ./cmd/panel
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w $version_flags" -o bin/agent ./cmd/agent
+    run_clean "$go_bin" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/schema17-bridge ./deploy/schema17bridge
 )
 
 echo "==> Building matching web artifact / Eşleşen web ürünü derleniyor"

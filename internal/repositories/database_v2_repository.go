@@ -10,11 +10,11 @@ import (
 
 // PostgresDatabaseV2Repository implements DatabaseV2Repository
 type PostgresDatabaseV2Repository struct {
-	db *sql.DB
+	db sqlExecutor
 }
 
 // NewPostgresDatabaseV2Repository creates a new database v2 repository
-func NewPostgresDatabaseV2Repository(db *sql.DB) *PostgresDatabaseV2Repository {
+func NewPostgresDatabaseV2Repository(db sqlExecutor) *PostgresDatabaseV2Repository {
 	return &PostgresDatabaseV2Repository{db: db}
 }
 
@@ -42,7 +42,7 @@ func (r *PostgresDatabaseV2Repository) Create(ctx context.Context, db *core.Data
 	}
 
 	return r.db.QueryRowContext(ctx, "SELECT id, created_at, updated_at FROM databases_v2 WHERE id = ?", id).
-		Scan(&db.ID, &db.CreatedAt, &db.UpdatedAt)
+		Scan(&db.ID, scanTime(&db.CreatedAt), scanTime(&db.UpdatedAt))
 }
 
 // GetByID retrieves a database by ID
@@ -60,8 +60,8 @@ func (r *PostgresDatabaseV2Repository) GetByID(ctx context.Context, id int) (*co
 		&db.SubscriptionID,
 		&db.DomainID,
 		&db.Name,
-		&db.CreatedAt,
-		&db.UpdatedAt,
+		scanTime(&db.CreatedAt),
+		scanTime(&db.UpdatedAt),
 	)
 
 	if err != nil {
@@ -98,8 +98,8 @@ func (r *PostgresDatabaseV2Repository) ListByServer(ctx context.Context, serverI
 			&db.SubscriptionID,
 			&db.DomainID,
 			&db.Name,
-			&db.CreatedAt,
-			&db.UpdatedAt,
+			scanTime(&db.CreatedAt),
+			scanTime(&db.UpdatedAt),
 		)
 
 		if err != nil {
@@ -107,6 +107,9 @@ func (r *PostgresDatabaseV2Repository) ListByServer(ctx context.Context, serverI
 		}
 
 		databases = append(databases, db)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to list databases: %v", err)
 	}
 
 	return databases, nil

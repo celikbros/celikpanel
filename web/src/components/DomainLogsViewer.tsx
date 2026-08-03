@@ -1,8 +1,14 @@
-import { useState, useEffect } from 'react';
-import { FileText, Download, Trash2, RefreshCw, Search } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, Clock3, FileText, Download, Trash2, RefreshCw, Search, X } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
+import {
+    buildLogTimeRangeQuery,
+    parseDomainLogsResponse,
+    type DomainLogsResponse,
+    type LogTimeRangeError,
+} from '../lib/domainLogs';
 import { EmptyState, inputClass } from './ui';
 
 interface DomainLogsViewerProps {
@@ -31,6 +37,12 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
     const [filter, setFilter] = useState('');
     const [lines, setLines] = useState(100);
     const [autoRefresh, setAutoRefresh] = useState(false);
+    const [showTimeRange, setShowTimeRange] = useState(false);
+    const [startLocal, setStartLocal] = useState('');
+    const [endLocal, setEndLocal] = useState('');
+    const [timeError, setTimeError] = useState<LogTimeRangeError | null>(null);
+    const [result, setResult] = useState<DomainLogsResponse | null>(null);
+    const requestSequence = useRef(0);
 
     useEffect(() => {
         loadLogs();
@@ -38,23 +50,47 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
 
     useEffect(() => {
         if (!autoRefresh) return;
-        const interval = setInterval(loadLogs, 5000);
+        const interval = setInterval(() => loadLogs(), 5000);
         return () => clearInterval(interval);
-    }, [autoRefresh, domainId, logType, lines, filter]);
+    }, [autoRefresh, domainId, logType, lines, filter, startLocal, endLocal]);
 
-    const loadLogs = async () => {
+    useEffect(() => () => {
+        requestSequence.current += 1;
+    }, []);
+
+    const loadLogs = async (requestedStartLocal = startLocal, requestedEndLocal = endLocal) => {
+        const timeRange = buildLogTimeRangeQuery(requestedStartLocal, requestedEndLocal);
+        if (timeRange.error) {
+            setTimeError(timeRange.error);
+            return;
+        }
+        setTimeError(null);
+        const requestID = ++requestSequence.current;
         setLoading(true);
         try {
             const params = new URLSearchParams({ lines: String(lines), ...(filter && { filter }) });
+            if (timeRange.startTime) params.set('start_time', timeRange.startTime);
+            if (timeRange.endTime) params.set('end_time', timeRange.endTime);
             const res = await fetch(`/api/v1/domains/${domainId}/logs/${logType}?${params}`);
             if (!res.ok) throw new Error();
-            const data = await res.json();
-            setLogs(data.lines || []);
+            const data = parseDomainLogsResponse(await res.json());
+            if (!data) throw new Error();
+            if (requestID !== requestSequence.current) return;
+            setLogs(data.lines);
+            setResult(data);
         } catch {
-            showToast('error', t('common.error'));
+            if (requestID === requestSequence.current) showToast('error', t('common.error'));
         } finally {
-            setLoading(false);
+            if (requestID === requestSequence.current) setLoading(false);
         }
+    };
+
+    const clearTimeRange = () => {
+        setStartLocal('');
+        setEndLocal('');
+        setTimeError(null);
+        setResult(null);
+        void loadLogs('', '');
     };
 
     const clearLogs = async () => {
@@ -84,6 +120,10 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
     };
 
     const currentType = logTypes.find((l) => l.value === logType)!;
+    const timeFilterActive = Boolean(startLocal || endLocal);
+    const timeFilter = result?.time_filter;
+    const resultHasWarning = Boolean(result?.truncated || result?.warning || (timeFilter?.applied && !timeFilter.exact));
+    const showResultNotice = Boolean(result && (resultHasWarning || timeFilter?.applied));
 
     return (
         <div className="space-y-4">
@@ -127,7 +167,7 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
                             type="text"
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && loadLogs()}
+                            onKeyDown={(e) => e.key === 'Enter' && void loadLogs()}
                             placeholder={t('logs.filterPlaceholder')}
                             className={`${inputClass} pl-9`}
                         />
@@ -136,9 +176,10 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
 
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={loadLogs}
+                        onClick={() => void loadLogs()}
                         disabled={loading}
                         title={t('logs.refresh')}
+                        aria-label={t('logs.refresh')}
                         className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -147,6 +188,7 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
                         onClick={downloadLogs}
                         disabled={logs.length === 0}
                         title={t('logs.download')}
+                        aria-label={t('logs.download')}
                         className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
                     >
                         <Download className="h-4 w-4" />
@@ -154,6 +196,7 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
                     <button
                         onClick={clearLogs}
                         title={t('logs.clear')}
+                        aria-label={t('logs.clear')}
                         className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -161,15 +204,150 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
                 </div>
             </div>
 
-            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-fg-muted">
-                <input
-                    type="checkbox"
-                    checked={autoRefresh}
-                    onChange={(e) => setAutoRefresh(e.target.checked)}
-                    className="h-4 w-4 rounded border-border accent-[rgb(var(--primary))]"
-                />
-                {t('logs.autoRefresh')}
-            </label>
+            <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                        <input
+                            type="checkbox"
+                            checked={autoRefresh}
+                            onChange={(e) => setAutoRefresh(e.target.checked)}
+                            className="h-4 w-4 rounded border-border accent-[rgb(var(--primary))]"
+                        />
+                        {t('logs.autoRefresh')}
+                    </label>
+                    <button
+                        type="button"
+                        aria-expanded={showTimeRange}
+                        aria-controls="log-time-range"
+                        onClick={() => setShowTimeRange((visible) => !visible)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                    >
+                        <Clock3 className="h-4 w-4" />
+                        {t('logs.timeRangeOptional')}
+                        {timeFilterActive && (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                                {t('logs.timeActive')}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {showTimeRange && (
+                    <fieldset id="log-time-range" className="rounded-xl border border-border bg-surface-2/40 p-3">
+                        <legend className="sr-only">{t('logs.timeRangeOptional')}</legend>
+                        <div className="flex flex-wrap items-end gap-3">
+                            <label className="block min-w-[230px] flex-1">
+                                <span className="mb-1.5 block text-sm font-medium text-fg-muted">{t('logs.timeStart')}</span>
+                                <input
+                                    type="datetime-local"
+                                    step="1"
+                                    value={startLocal}
+                                    onChange={(event) => {
+                                        setStartLocal(event.target.value);
+                                        setTimeError(null);
+                                    }}
+                                    onKeyDown={(event) => event.key === 'Enter' && void loadLogs()}
+                                    aria-invalid={timeError ? true : undefined}
+                                    aria-describedby={timeError ? 'log-time-error' : undefined}
+                                    className={inputClass}
+                                />
+                            </label>
+                            <label className="block min-w-[230px] flex-1">
+                                <span className="mb-1.5 block text-sm font-medium text-fg-muted">{t('logs.timeEnd')}</span>
+                                <input
+                                    type="datetime-local"
+                                    step="1"
+                                    value={endLocal}
+                                    onChange={(event) => {
+                                        setEndLocal(event.target.value);
+                                        setTimeError(null);
+                                    }}
+                                    onKeyDown={(event) => event.key === 'Enter' && void loadLogs()}
+                                    aria-invalid={timeError ? true : undefined}
+                                    aria-describedby={timeError ? 'log-time-error' : undefined}
+                                    className={inputClass}
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => void loadLogs()}
+                                disabled={loading}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                {t('logs.timeApply')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={clearTimeRange}
+                                disabled={!timeFilterActive}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <X className="h-4 w-4" />
+                                {t('logs.timeClear')}
+                            </button>
+                        </div>
+                        <p className="mt-2 text-xs text-fg-subtle">{t('logs.timeZoneHint')}</p>
+                        {timeError && (
+                            <p id="log-time-error" role="alert" className="mt-2 text-sm font-medium text-danger">
+                                {t(timeError === 'reversed' ? 'logs.timeReversed' : 'logs.timeInvalid')}
+                            </p>
+                        )}
+                    </fieldset>
+                )}
+            </div>
+
+            {showResultNotice && result && (
+                <section
+                    role={resultHasWarning ? 'alert' : 'status'}
+                    aria-live="polite"
+                    className={`rounded-xl border p-3 text-sm ${
+                        resultHasWarning
+                            ? 'border-warning/40 bg-warning/10 text-fg'
+                            : 'border-success/30 bg-success/5 text-fg'
+                    }`}
+                >
+                    <div className="flex items-start gap-2">
+                        {resultHasWarning ? (
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                        ) : (
+                            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                        )}
+                        <div className="min-w-0 space-y-1">
+                            <p className="font-semibold">
+                                {timeFilter?.applied
+                                    ? t(timeFilter.exact ? 'logs.timeResultExact' : 'logs.timeResultPartial')
+                                    : t('logs.resultLimited')}
+                            </p>
+                            {timeFilter?.applied && (
+                                <ul className="space-y-0.5 text-xs text-fg-muted">
+                                    {(timeFilter.start_time || timeFilter.end_time) && (
+                                        <li>
+                                            {t('logs.timeAppliedBounds', {
+                                                start: timeFilter.start_time || t('logs.timeOpenBound'),
+                                                end: timeFilter.end_time || t('logs.timeOpenBound'),
+                                            })}
+                                        </li>
+                                    )}
+                                    <li>{t('logs.timeParsed', { n: timeFilter.parsed_lines })}</li>
+                                    {timeFilter.unparsed_lines > 0 && (
+                                        <li>{t('logs.timeUnparsed', { n: timeFilter.unparsed_lines })}</li>
+                                    )}
+                                    {timeFilter.assumed_timezone && (
+                                        <li>{t('logs.timeAssumedZone', { zone: timeFilter.assumed_timezone })}</li>
+                                    )}
+                                </ul>
+                            )}
+                            {result.truncated && <p className="text-xs text-fg-muted">{t('logs.resultTruncated')}</p>}
+                            {(result.warning || timeFilter?.warning) && (
+                                <p className="break-words font-mono text-xs text-fg-muted">
+                                    {t('logs.serverWarning', { warning: result.warning || timeFilter?.warning || '' })}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Log output */}
             <div className="rounded-xl border border-border">

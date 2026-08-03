@@ -17,6 +17,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Node.js runtime management — roadmap 3A. Official tarballs are installed
@@ -40,16 +42,11 @@ var runtimesBaseDir = func() string {
 
 var nodeVersionRe = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 
-type NodeVersionsResponse struct {
-	Installed []string `json:"installed"`
-	// SystemVersion is the `node` found on PATH, if any ("" otherwise).
-	// SystemVersion, PATH'te bulunan `node` sürümüdür (yoksa "").
-	SystemVersion string `json:"system_version"`
-}
+type NodeVersionsResponse = transport.NodeVersionsResponse
 
 // ListNodeVersions reports what is actually on disk — never a wish list.
 // ListNodeVersions, gerçekten diskte olanı bildirir — asla bir dilek listesi değil.
-func (a *Agent) ListNodeVersions(_ *struct{}, resp *NodeVersionsResponse) error {
+func (a *Agent) ListNodeVersions(_ *transport.Empty, resp *NodeVersionsResponse) error {
 	resp.Installed = []string{}
 
 	entries, err := os.ReadDir(filepath.Join(runtimesBaseDir, "node"))
@@ -80,15 +77,9 @@ func (a *Agent) ListNodeVersions(_ *struct{}, resp *NodeVersionsResponse) error 
 	return nil
 }
 
-type NodeInstallRequest struct {
-	ServiceMutationBinding
-	Version string `json:"version"` // e.g. "24.18.0"
-}
+type NodeInstallRequest = transport.NodeInstallRequest
 
-type NodeInstallResponse struct {
-	Installed bool   `json:"installed"`
-	Error     string `json:"error,omitempty"`
-}
+type NodeInstallResponse = transport.NodeInstallResponse
 
 // InstallNodeVersion downloads, verifies and unpacks an official Node build.
 // Idempotent: an already-installed version returns success immediately.
@@ -238,15 +229,9 @@ func fetchNodeChecksum(ctx context.Context, client *http.Client, url, fileName s
 // --- B3d: per-version removal + upstream LTS list ---
 // --- B3d: sürüm başına kaldırma + kaynak LTS listesi ---
 
-type NodeRemoveRequest struct {
-	ServiceMutationBinding
-	Version string `json:"version"`
-}
+type NodeRemoveRequest = transport.NodeRemoveRequest
 
-type NodeRemoveResponse struct {
-	Removed bool   `json:"removed"`
-	Error   string `json:"error,omitempty"`
-}
+type NodeRemoveResponse = transport.NodeRemoveResponse
 
 // RemoveNodeVersion deletes ONE managed runtime tree. The semver gate plus
 // the fixed base directory mean the path cannot name anything but a tree we
@@ -299,15 +284,9 @@ func (a *Agent) removeNodeVersion(req *NodeRemoveRequest, resp *NodeRemoveRespon
 	return nil
 }
 
-type NodeLTSRelease struct {
-	Version string `json:"version"` // "24.18.0"
-	Name    string `json:"name"`    // LTS codename, e.g. "Krypton"
-}
+type NodeLTSRelease = transport.NodeLTSRelease
 
-type NodeLTSResponse struct {
-	Releases []NodeLTSRelease `json:"releases"`
-	Error    string           `json:"error,omitempty"`
-}
+type NodeLTSResponse = transport.NodeLTSResponse
 
 // ListNodeLTS fetches the official release index and returns the newest
 // build of each LTS line, newest line first — the drawer's named install
@@ -317,7 +296,7 @@ type NodeLTSResponse struct {
 // yapımını, en yeni hat önce döndürür — çekmecenin adlandırılmış kurulum
 // seçenekleri. Serbest sürüm kutusu B3d ile öldü: operatör "PHP 8.3" seçer
 // gibi "Node 24 (LTS)" seçmeli, semver kopyalamamalı.
-func (a *Agent) ListNodeLTS(_ *struct{}, resp *NodeLTSResponse) error {
+func (a *Agent) ListNodeLTS(_ *transport.Empty, resp *NodeLTSResponse) error {
 	client := &http.Client{Timeout: 20 * time.Second}
 	res, err := client.Get("https://nodejs.org/dist/index.json")
 	if err != nil {
