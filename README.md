@@ -60,6 +60,40 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 
+## Installing a tagged release
+
+The supported fresh-install input is the prebuilt release archive, not a Git
+checkout and not an operator-specific bundle. It contains the matching panel,
+agent and web application, so the target server needs no Go, Node or Git.
+The current alpha archive targets Linux x86_64/amd64.
+
+During the private alpha, an authorised operator downloads the two release
+assets on an authenticated workstation and transfers those unchanged bytes to
+the new server. Public anonymous downloads require a separate public CelikPanel
+download channel; this private repository cannot provide one.
+
+```bash
+# Authenticated operator workstation
+VERSION=v0.1.0-alpha.1
+gh release download "$VERSION" --repo celikbros/celikpanel \
+  --pattern "celikpanel-$VERSION.tar.gz" \
+  --pattern "celikpanel-$VERSION.tar.gz.sha256"
+sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
+scp "celikpanel-$VERSION.tar.gz" "celikpanel-$VERSION.tar.gz.sha256" root@SERVER:/root/
+
+# New Debian 13 or Ubuntu 24.04 server
+cd /root
+sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
+tar -xzf "celikpanel-$VERSION.tar.gz"
+cd "celikpanel-$VERSION"
+sudo ./install.sh
+```
+
+The installer interactively creates the first administrator. Do not place the
+administrator password in shell history, deployment scripts or release files.
+The checksum detects changed bytes but does not prove publisher identity; see
+the signing boundary below.
+
 ## Building from source
 
 Requirements: exactly Go 1.26.5, Node ≥ 20. The Make gate verifies the exact

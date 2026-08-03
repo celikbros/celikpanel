@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# CelikPanel installer — one command from a fresh Ubuntu 24.04 (first-class
-# target) or Arch Linux (dev-test target) to a login screen. Idempotent: safe
-# to re-run to upgrade an existing install.
+# CelikPanel installer — one command from a fresh Debian 13 or Ubuntu 24.04
+# acceptance target (or Arch Linux dev-test target) to a login screen. Install
+# tagged prebuilt releases; existing installations use the reviewed updater.
 #
-# CelikPanel kurulumu — temiz bir Ubuntu 24.04'ten (birinci sınıf hedef) ya da
-# Arch Linux'tan (geliştirme-test hedefi) giriş ekranına tek komut. Bağımsızdır:
-# mevcut bir kurulumu yükseltmek için yeniden çalıştırmak güvenlidir.
+# CelikPanel kurulumu — temiz Debian 13 veya Ubuntu 24.04 kabul hedefinden (ya
+# da Arch Linux geliştirme-test hedefinden) giriş ekranına tek komut. Etiketli,
+# önceden derlenmiş sürümü kurun; mevcut kurulumlarda incelenmiş updater'ı kullanın.
 #
 #   sudo ./install.sh
 #

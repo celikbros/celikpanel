@@ -1029,6 +1029,12 @@ phpPgAdmin (AUR-only) and Redis (Valkey fork on Arch) stay deliberately empty �
 they keep saying an honest "not supported yet". The UI shows package names for
 the family the agent reports (`Agent.PkgFamily`).
 
+*Amendment 3 (Aug 3, 2026):* Debian 13 joins Ubuntu 24.04 as an explicit apt
+acceptance target. This does not declare an unrun test successful: a tagged,
+prebuilt release must pass a clean Debian 13 installation through the exact
+documented operator workflow before the release is accepted. Source checkouts,
+developer-only bundles and post-install SSH fixes do not count as evidence.
+
 ---
 
 ## D-003 · Service catalogue: show everything, block by conflict — not by "unmanaged"

@@ -60,6 +60,40 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 **Sırada ne var:** [Yol Haritası](ROADMAP.tr.md) — Faz 0 güvenlik sprinti → Faz 1 altın yolun sertleştirilmesi → Faz 2 60 saniyelik kurulum → Faz 3 WordPress toolkit + cPanel importer.
 
+## Etiketli sürüm kurulumu
+
+Temiz kurulumun desteklenen girdisi Git checkout'u veya operatöre özel bundle
+değil, önceden derlenmiş sürüm arşividir. Eşleşen panel, agent ve web uygulaması
+arşivde bulunduğu için hedef sunucuda Go, Node veya Git gerekmez.
+Mevcut alpha arşivi Linux x86_64/amd64 içindir.
+
+Private alpha sırasında yetkili operatör iki sürüm dosyasını kimliği doğrulanmış
+iş istasyonunda indirir ve aynı baytları yeni sunucuya aktarır. Herkese açık
+anonim indirme ayrı bir CelikPanel indirme kanalı gerektirir; private GitHub
+deposu bunu sağlayamaz.
+
+```bash
+# Kimliği doğrulanmış operatör iş istasyonu
+VERSION=v0.1.0-alpha.1
+gh release download "$VERSION" --repo celikbros/celikpanel \
+  --pattern "celikpanel-$VERSION.tar.gz" \
+  --pattern "celikpanel-$VERSION.tar.gz.sha256"
+sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
+scp "celikpanel-$VERSION.tar.gz" "celikpanel-$VERSION.tar.gz.sha256" root@SUNUCU:/root/
+
+# Yeni Debian 13 veya Ubuntu 24.04 sunucu
+cd /root
+sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
+tar -xzf "celikpanel-$VERSION.tar.gz"
+cd "celikpanel-$VERSION"
+sudo ./install.sh
+```
+
+Kurucu ilk yöneticiyi etkileşimli olarak oluşturur. Yönetici parolasını shell
+geçmişine, dağıtım betiklerine veya sürüm dosyalarına koymayın. Sağlama toplamı
+değişen baytları saptar fakat yayıncı kimliğini kanıtlamaz; aşağıdaki imzalama
+sınırına bakın.
+
 ## Kaynaktan derleme
 
 Gereksinimler: tam Go 1.26.5, Node ≥ 20. Make kapısı derleyicinin tam sürümünü
