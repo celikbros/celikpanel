@@ -1009,6 +1009,22 @@ if find "$installed_web_root" -mindepth 1 -print -quit | grep -q .; then
     die "eski web ağacı temizlendikten sonra girdi kaldı"
 fi
 cp -a "$SRC/web/dist/." "$installed_web_root/"
+# Static assets are public product bytes, not secrets. Do not preserve a
+# caller's restrictive umask (for example 0077) through the build directory
+# and cp -a: the unprivileged panel process must traverse the complete tree
+# and read every asset. Normalize the already proven symlink-free tree and
+# verify it before any service is started.
+chown -R root:root -- "$installed_web_root"
+find "$installed_web_root" -xdev -type d -exec chmod 0755 -- {} + \
+    || die "installed web directory permissions could not be normalized"
+find "$installed_web_root" -xdev -type f -exec chmod 0644 -- {} + \
+    || die "installed web file permissions could not be normalized"
+if find "$installed_web_root" -xdev -type d ! -perm 0755 -print -quit | grep -q .; then
+    die "installed web directory permissions could not be verified"
+fi
+if find "$installed_web_root" -xdev -type f ! -perm 0644 -print -quit | grep -q .; then
+    die "installed web file permissions could not be verified"
+fi
 [[ -f "$installed_web_root/index.html" && ! -L "$installed_web_root/index.html" ]] \
     || die "kurulu web index ürünü eksik veya güvensiz"
 # Runtimes dir is where the agent installs Node versions; group-owned so the
