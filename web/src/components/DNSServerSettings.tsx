@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../router';
 import { Network, Server, Check, AlertTriangle, Circle, Loader2 } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';

@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from '../router';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
     LayoutGrid, Server, Network, Mail, Database, Folder, Wrench, AppWindow,

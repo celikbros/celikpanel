@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
     Shield, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,

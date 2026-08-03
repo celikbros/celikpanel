@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Database, Download, Gauge, HardDrive, LockKeyhole, RefreshCw, Settings2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { showToast } from './Toast';

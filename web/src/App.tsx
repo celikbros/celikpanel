@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from './router';
 import { Component, lazy, Suspense, useState, useEffect, useRef, type ErrorInfo, type ReactNode } from 'react';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
@@ -167,8 +167,9 @@ function ServiceManagementPage() {
   const { serviceId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [versions, setVersions] = useState<string[]>(location.state?.versions || []);
-  const [loading, setLoading] = useState(!location.state?.versions);
+  const navigationState = location.state as { versions?: string[] } | null;
+  const [versions, setVersions] = useState<string[]>(navigationState?.versions || []);
+  const [loading, setLoading] = useState(!navigationState?.versions);
   // Config files listed on the generic page open in the same editor the
   // Components page uses — one editor, not a second copy.
   // Genel sayfada listelenen ayar dosyaları, Bileşenler sayfasının kullandığı

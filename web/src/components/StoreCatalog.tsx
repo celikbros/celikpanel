@@ -27,7 +27,7 @@ import {
     Sparkles,
     type LucideIcon,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../router';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { Button, Card, inputClass } from './ui';

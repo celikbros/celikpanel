@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from '../router';
 import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';

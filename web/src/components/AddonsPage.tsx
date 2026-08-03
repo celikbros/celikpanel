@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Loader2, Package, RefreshCw, Settings2, ShoppingBag } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from '../router';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
