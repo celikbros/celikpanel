@@ -43,6 +43,10 @@ command -v tar >/dev/null 2>&1 || {
   printf '%s\n' "tar is required." >&2
   exit 1
 }
+command -v bash >/dev/null 2>&1 || {
+  printf '%s\n' "bash is required." >&2
+  exit 1
+}
 
 curl_fetch() {
   curl --fail --show-error --silent --location \
@@ -120,4 +124,4 @@ installer="$workdir/extract/$root/install.sh"
 
 printf '%s\n' "Installing CelikPanel $version from verified archive $archive"
 cd "$workdir/extract/$root"
-/bin/sh "$installer"
+bash "$installer"
