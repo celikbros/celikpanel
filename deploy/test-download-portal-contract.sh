@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+builder="$repo_root/deploy/build-download-portal.sh"
+bootstrap="$repo_root/download-portal/get.sh"
+
+fail() {
+  printf 'download portal contract failed: %s\n' "$1" >&2
+  exit 1
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
+
+version=v1.2.3-alpha.4
+commit=0123456789abcdef0123456789abcdef01234567
+published_at=2026-08-03T08:55:11Z
+archive="celikpanel-$version.tar.gz"
+mkdir -p "$tmp/source/celikpanel-$version"
+printf '#!/bin/sh\nprintf test-install\\n\n' > "$tmp/source/celikpanel-$version/install.sh"
+tar -czf "$tmp/$archive" -C "$tmp/source" "celikpanel-$version"
+(cd "$tmp" && sha256sum "$archive" > "$archive.sha256")
+
+bash "$builder" "$version" "$commit" "$published_at" \
+  "$tmp/$archive" "$tmp/$archive.sha256" "$tmp/site"
+
+[[ -f "$tmp/site/index.html" ]] || fail "home page was not generated"
+[[ -x "$tmp/site/get.sh" ]] || fail "bootstrap is not executable"
+[[ -f "$tmp/site/releases/$version/$archive" ]] || fail "versioned archive is missing"
+[[ "$(cat "$tmp/site/releases/latest.txt")" == "$version" ]] || fail "latest pointer is wrong"
+cmp "$tmp/$archive" "$tmp/site/releases/$version/$archive" || fail "archive bytes changed"
+
+python3 - "$tmp/site/releases/latest.json" "$tmp/site/releases/index.json" <<'PY'
+import json
+import pathlib
+import sys
+
+latest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+index = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert latest["version"] == "v1.2.3-alpha.4"
+assert latest["commit"] == "0123456789abcdef0123456789abcdef01234567"
+assert len(latest["sha256"]) == 64
+assert index["latest"] == latest["version"]
+assert index["releases"] == [latest]
+PY
+
+grep -Fq "Options -Indexes" "$tmp/site/.htaccess" || fail "directory listing is not disabled"
+grep -Fq "Content-Security-Policy" "$tmp/site/.htaccess" || fail "CSP header is missing"
+grep -Fq -- "--proto '=https'" "$bootstrap" || fail "HTTPS protocol restriction is missing"
+grep -Fq "sha256sum -c" "$bootstrap" || fail "archive checksum is not verified"
+grep -Fq "Archive contains unsafe or unexpected paths" "$bootstrap" || fail "path validation is missing"
+if grep -Eq 'curl[^\n]*\|[[:space:]]*(ba)?sh' "$repo_root/download-portal/index.html"; then
+  fail "home page recommends curl-pipe-shell"
+fi
+
+if bash "$builder" "$version" "$commit" "$published_at" \
+  "$tmp/$archive" "$tmp/$archive.sha256" "$tmp/site" >/dev/null 2>&1; then
+  fail "builder overwrote an existing output directory"
+fi
+
+printf 'download portal contract passed\n'

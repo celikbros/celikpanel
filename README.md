@@ -67,32 +67,27 @@ checkout and not an operator-specific bundle. It contains the matching panel,
 agent and web application, so the target server needs no Go, Node or Git.
 The current alpha archive targets Linux x86_64/amd64.
 
-During the private alpha, an authorised operator downloads the two release
-assets on an authenticated workstation and transfers those unchanged bytes to
-the new server. Public anonymous downloads require a separate public CelikPanel
-download channel; this private repository cannot provide one.
+Published releases are distributed from the public CelikPanel download channel
+at `https://celikpanel.net`. Run the bootstrap as root on a clean supported
+server. The bootstrap downloads the selected immutable archive and its checksum
+over HTTPS, validates the SHA-256 digest and archive paths, and only then runs
+the packaged installer.
 
 ```bash
-# Authenticated operator workstation
-VERSION=v0.1.0-alpha.1
-gh release download "$VERSION" --repo celikbros/celikpanel \
-  --pattern "celikpanel-$VERSION.tar.gz" \
-  --pattern "celikpanel-$VERSION.tar.gz.sha256"
-sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
-scp "celikpanel-$VERSION.tar.gz" "celikpanel-$VERSION.tar.gz.sha256" root@SERVER:/root/
+# Latest published version
+curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+  https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
+sh /tmp/celikpanel-get.sh
 
-# New Debian 13 or Ubuntu 24.04 server
-cd /root
-sha256sum -c "celikpanel-$VERSION.tar.gz.sha256"
-tar -xzf "celikpanel-$VERSION.tar.gz"
-cd "celikpanel-$VERSION"
-sudo ./install.sh
+# Or pin an exact immutable version
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.1
 ```
 
 The installer interactively creates the first administrator. Do not place the
 administrator password in shell history, deployment scripts or release files.
-The checksum detects changed bytes but does not prove publisher identity; see
-the signing boundary below.
+Release archives and machine-readable manifests remain available under
+`https://celikpanel.net/releases/`. The checksum detects changed bytes but
+does not prove publisher identity; see the signing boundary below.
 
 ## Building from source
 

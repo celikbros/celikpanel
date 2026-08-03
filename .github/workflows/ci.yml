@@ -72,6 +72,7 @@ jobs:
       - run: bash deploy/test-bootstrap-update-contract.sh
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
+      - run: bash deploy/test-download-portal-contract.sh
       - run: bash deploy/test-go-toolchain-contract.sh
       - run: sudo bash deploy/test-go-toolchain-migration-contract.sh
       - run: bash deploy/test-schema17-bridge-contract.sh
