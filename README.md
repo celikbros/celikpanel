@@ -60,7 +60,7 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 
-## Installing a tagged release
+## Installing or updating a tagged release
 
 The supported fresh-install input is the prebuilt release archive, not a Git
 checkout and not an operator-specific bundle. It contains the matching panel,
@@ -69,9 +69,11 @@ The current alpha archive targets Linux x86_64/amd64.
 
 Published releases are distributed from the public CelikPanel download channel
 at `https://celikpanel.net`. Run the bootstrap as root on a clean supported
-server. The bootstrap downloads the selected immutable archive and its checksum
-over HTTPS, validates the SHA-256 digest and archive paths, and only then runs
-the packaged installer.
+server. The same command is also the supported normal update path for an
+existing, completed installation. The bootstrap detects clean install versus
+update, downloads the selected immutable archive and its checksum over HTTPS,
+validates the SHA-256 digest, archive paths and packaged release manifest, and
+only then enters the installer or transaction-safe updater.
 
 ```bash
 # Latest published version
@@ -83,11 +85,20 @@ sh /tmp/celikpanel-get.sh
 sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.1
 ```
 
+Use `--install` or `--update` only when explicitly selecting a mode for
+diagnostics. Automatic mode refuses partial or ambiguous installations instead
+of guessing. A failed first-administrator attempt may be retried with
+`--install`; a completed installation is marked only after both services and
+the administrator path succeed. Normal updates use the prebuilt binaries and
+web application and do not install Go, Node or Git on the server.
+
 The installer interactively creates the first administrator. Do not place the
 administrator password in shell history, deployment scripts or release files.
 Release archives and machine-readable manifests remain available under
-`https://celikpanel.net/releases/`. The checksum detects changed bytes but
-does not prove publisher identity; see the signing boundary below.
+`https://celikpanel.net/releases/`. Each archive also carries an exact internal
+`SHA256SUMS` manifest and commit/tree provenance. The HTTPS channel and checksum
+detect changed bytes but do not independently prove publisher identity; see the
+signing boundary below.
 
 ## Building from source
 

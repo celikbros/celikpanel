@@ -32,6 +32,7 @@ DATA_DIR=/var/lib/celikpanel
 IMPORT_DIR=/var/lib/celikpanel-imports
 CONF_DIR=/etc/celikpanel
 PANEL_ENV="$CONF_DIR/panel.env"
+INSTALL_COMPLETE=/etc/celikpanel/install.complete
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 AGENT_LEDGER="$AGENT_STATE_DIR/service-mutations.json"
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
@@ -1178,6 +1179,12 @@ systemctl is-active --quiet celikpanel-panel.service || \
     die "The panel did not start — inspect 'journalctl -u celikpanel-panel'" \
         "Panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
 ok "panel is running" "panel çalışıyor"
+
+# Record completion only after both services and the administrator path have
+# succeeded. The public bootstrapper uses this root-only marker to distinguish
+# a finished installation from a failed first-admin attempt.
+install -m 0600 -o root -g root /dev/null "$INSTALL_COMPLETE"
+sync -f "$INSTALL_COMPLETE" "$CONF_DIR"
 
 # 10. Done -------------------------------------------------------------------
 IP=""

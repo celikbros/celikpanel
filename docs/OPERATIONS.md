@@ -108,6 +108,23 @@ start until this evidence exists.
 
 ## 4. Update modes
 
+### Public prebuilt path (normal users)
+
+For a supported tagged release, normal users do not prepare a Git checkout and
+do not build on the server. Download `https://celikpanel.net/get.sh` over HTTPS
+and run it as root. With no mode flag it distinguishes a clean server from a
+completed CelikPanel installation. It refuses partial or ambiguous layouts.
+
+On update, the bootstrap verifies the external archive checksum, rejects links
+and special archive objects, verifies the exact internal `SHA256SUMS` manifest
+and commit/tree provenance, publishes a root-only immutable release under
+`/var/backups/celikpanel/releases/`, and enters that release's existing
+transactional `update.sh --normal` path. No compiler or mutable Git checkout is
+used. `--install` and `--update` are diagnostic overrides, not routine choices.
+
+The source-build modes below are retained for release engineering, audited
+transitions and recovery. They are not the normal customer update procedure.
+
 ### 4.0 Exact Go build-cache prerequisite
 
 Every source-build update requires the sealed private cache at

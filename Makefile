@@ -9,6 +9,7 @@ NODEDIR := $(PWD)/.bin/node/bin
 override REQUIRED_GO_VERSION := go1.26.5
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+TREE    ?= $(shell git rev-parse 'HEAD^{tree}' 2>/dev/null || echo unknown)
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 # One version, in both binaries. The UI reads it back over the API instead of
 # carrying a hand-typed literal.
@@ -59,7 +60,9 @@ web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
-dist: build ## Assemble an offline initial-install tarball (no target toolchain needed)
+dist: build ## Assemble an offline initial-install tarball with verified provenance
+	@printf '%s\n' "$(COMMIT)" | grep -Eq '^[0-9a-f]{40,64}$$'
+	@printf '%s\n' "$(TREE)" | grep -Eq '^[0-9a-f]{40,64}$$'
 	# Mirror the operational release layout so initial installation has all
 	# reviewed helpers. Privileged updates still enter through bootstrap-update.sh,
 	# which publishes and verifies an immutable release before changing /opt.
@@ -70,7 +73,17 @@ dist: build ## Assemble an offline initial-install tarball (no target toolchain 
 	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
-	cp install.sh bootstrap-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
+	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
+	echo 1 > dist/$(DIST)/release.version
+	echo $(COMMIT) > dist/$(DIST)/release.commit
+	echo $(TREE) > dist/$(DIST)/release.tree
+	find dist/$(DIST) -type d -exec chmod 0755 {} +
+	find dist/$(DIST) -type f -exec chmod 0644 {} +
+	chmod 0755 dist/$(DIST)/bin/panel dist/$(DIST)/bin/agent dist/$(DIST)/bin/schema17-bridge
+	chmod 0755 dist/$(DIST)/install.sh dist/$(DIST)/bootstrap-update.sh dist/$(DIST)/bootstrap-prebuilt-update.sh
+	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
+	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
+	bash dist/$(DIST)/deploy/write-release-manifest.sh dist/$(DIST)
 	# Normalize archive modes as well as time/order/ownership. Plain cp applies
 	# the caller's umask, so the same source must not package differently on
 	# hosts using 022 and 077.

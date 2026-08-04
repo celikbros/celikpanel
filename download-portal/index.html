@@ -11,8 +11,8 @@
   <main class="shell">
     <header class="hero">
       <span class="brand">CelikPanel</span>
-      <h1>Install a verified CelikPanel release</h1>
-      <p>Download an exact, immutable release or install the current published version. Every archive is checked before installation.</p>
+      <h1>Install or update a verified CelikPanel release</h1>
+      <p>Use the same command for a clean installation or a completed CelikPanel installation. Every immutable archive is checked before any install or update begins.</p>
     </header>
 
     <section class="release-card" aria-labelledby="latest-title">
@@ -34,8 +34,8 @@
     <section class="grid" aria-label="Installation commands">
       <article class="command-card">
         <p class="eyebrow">Latest published version</p>
-        <h2>Standard installation</h2>
-        <p>Run these commands as root on a clean supported server.</p>
+        <h2>Standard install or update</h2>
+        <p>Run these commands as root. Clean servers are installed; completed installations are updated transactionally. Partial installations are refused.</p>
         <pre><code id="latest-command">curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
 sh /tmp/celikpanel-get.sh</code></pre>
         <button class="copy" type="button" data-copy="latest-command">Copy</button>

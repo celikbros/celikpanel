@@ -111,6 +111,25 @@ olmadan üretim dağıtımı başlatılamaz.
 
 ## 4. Güncelleme modları
 
+### Herkese açık hazır paket yolu (normal kullanıcılar)
+
+Desteklenen etiketli bir sürümde normal kullanıcı Git checkout hazırlamaz ve
+sunucuda derleme yapmaz. `https://celikpanel.net/get.sh` dosyasını HTTPS ile
+indirip root olarak çalıştırır. Betik, mod seçeneği verilmediğinde temiz sunucu
+ile tamamlanmış CelikPanel kurulumunu ayırır; yarım veya belirsiz yerleşimde
+tahmin yürütmeden durur.
+
+Güncellemede dış arşiv sağlaması doğrulanır; bağlantılar ve özel arşiv nesneleri
+reddedilir; tam iç `SHA256SUMS` manifesti ile commit/tree kaynağı doğrulanır.
+Ardından `/var/backups/celikpanel/releases/` altında yalnız root'a açık,
+değişmez bir sürüm yayımlanır ve o sürümün mevcut işlem güvenli
+`update.sh --normal` yoluna girilir. Derleyici veya değiştirilebilir Git checkout
+kullanılmaz. `--install` ile `--update` rutin seçimler değil, tanılama amaçlı
+açık geçersiz kılmalardır.
+
+Aşağıdaki kaynaktan derleme modları sürüm mühendisliği, denetlenen geçişler ve
+kurtarma için korunur; normal müşteri güncelleme yöntemi değildir.
+
 ### 4.0 Tam Go derleme önbelleği önkoşulu
 
 Kaynaktan derlenen her güncelleme, /opt/celikpanel/.toolchain/go altındaki
