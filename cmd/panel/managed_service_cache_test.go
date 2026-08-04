@@ -2,9 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	paneldb "github.com/alicelik/celikpanel/internal/db"
 )
 
 func mustDecodeScanCache(t *testing.T, data string) []serviceObservation {
@@ -14,6 +19,77 @@ func mustDecodeScanCache(t *testing.T, data string) []serviceObservation {
 		t.Fatal(err)
 	}
 	return observations
+}
+
+func newManagedServiceCachePanel(t *testing.T) *Panel {
+	t.Helper()
+	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(database.Close)
+	return &Panel{db: database, pkgFamilyVal: "apt"}
+}
+
+func TestManagedServicesFreshDatabaseReturnsCatalogue(t *testing.T) {
+	panel := newManagedServiceCachePanel(t)
+	recorder := httptest.NewRecorder()
+	panel.handleManagedServices(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/managed-services", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	var payload managedServicesPayload
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.ScannedAt != nil {
+		t.Fatalf("scanned_at = %v, want null on a fresh database", payload.ScannedAt)
+	}
+	if len(payload.Services) != len(core.ManagedServices) {
+		t.Fatalf("fresh database returned %d services, want catalogue size %d", len(payload.Services), len(core.ManagedServices))
+	}
+}
+
+func TestManagedServicesConditionalScanReusesFreshCache(t *testing.T) {
+	panel := newManagedServiceCachePanel(t)
+	scannedAt := time.Now().UTC().Truncate(time.Second)
+	raw, err := json.Marshal(scanCacheDoc{Observations: []serviceObservation{{
+		ID: "nftables", IsInstalled: true, Status: "installed",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := panel.db.GetDB().Exec(
+		`INSERT INTO service_scan_cache (id, data, scanned_at) VALUES (1, ?, ?)`,
+		string(raw), scannedAt.Format(time.RFC3339),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	panel.handleManagedServicesScan(recorder, httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/managed-services/scan?max_age_seconds=300",
+		nil,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	var payload managedServicesPayload
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.ScannedAt == nil || !payload.ScannedAt.Equal(scannedAt) {
+		t.Fatalf("conditional scan timestamp = %v, want cached %v", payload.ScannedAt, scannedAt)
+	}
+}
+
+func TestManagedServiceScanMaxAgeRejectsInvalidValue(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/managed-services/scan?max_age_seconds=0", nil)
+	if _, _, err := managedServiceScanMaxAge(request); err == nil {
+		t.Fatal("zero max_age_seconds must be rejected")
+	}
 }
 
 // A cached scan must never be able to answer a catalogue question. The bug

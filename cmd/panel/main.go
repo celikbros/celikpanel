@@ -63,6 +63,10 @@ type Panel struct {
 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
 	pkgFamilyMu  sync.Mutex
 	pkgFamilyVal string
+	// serviceScanMu coalesces page-triggered service scans. A first visit,
+	// React StrictMode and multiple open tabs must not probe the host in
+	// parallel.
+	serviceScanMu sync.Mutex
 	// serviceMutationMu is the in-process lease shared by durable installs and
 	// every remaining synchronous component mutation. TryLock makes competing
 	// requests fail fast instead of racing between an active-operation check

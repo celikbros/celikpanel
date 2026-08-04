@@ -197,6 +197,9 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		intent, err = beginPanelCertificateIssuanceLocked(domain)
 		return err
 	}); err != nil {
+		if errors.Is(err, errPanelCertificateActivationPending) {
+			resp.ErrorCode = transport.IssuePanelCertificateErrorActivationPending
+		}
 		resp.Error = fmt.Sprintf("begin panel certificate issuance: %v", err)
 		return nil
 	}

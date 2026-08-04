@@ -382,20 +382,31 @@ func retainPanelCertificateActivationFailure(
 func beginPanelCertificateIssuanceLocked(
 	domain string,
 ) (panelCertificateActivationState, error) {
+	state, err := newPanelCertificateActivationState(domain)
+	if err != nil {
+		return panelCertificateActivationState{}, err
+	}
 	existing, found, err := panelCertificateActivationReadState()
 	if err != nil {
 		return panelCertificateActivationState{}, err
 	}
 	if found {
-		return panelCertificateActivationState{}, fmt.Errorf(
-			"panel certificate activation for %s is already pending in phase %s",
-			existing.Domain,
-			existing.Phase,
-		)
-	}
-	state, err := newPanelCertificateActivationState(domain)
-	if err != nil {
-		return panelCertificateActivationState{}, err
+		// A source-less intent means the previous request stopped before it
+		// produced certificate material. IssuePanelCertificate reaches this
+		// point while holding both the durable mutation lease and Certbot's
+		// per-site lock, so reclaiming that exact same-domain intent is safe.
+		// Never overwrite an intent for another domain or one that has already
+		// bound certificate material and advanced to publication.
+		if existing.Domain != state.Domain ||
+			existing.LineageName != state.LineageName ||
+			existing.Phase != panelCertificateActivationPendingSource {
+			return panelCertificateActivationState{}, fmt.Errorf(
+				"%w for %s in phase %s",
+				errPanelCertificateActivationPending,
+				existing.Domain,
+				existing.Phase,
+			)
+		}
 	}
 	if err := panelCertificateActivationWriteState(state); err != nil {
 		return panelCertificateActivationState{}, fmt.Errorf(

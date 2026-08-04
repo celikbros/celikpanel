@@ -192,6 +192,12 @@ interface ServiceListProps {
     onManageService?: (serviceId: string, versions: string[]) => void;
 }
 
+// A cached scan keeps the page instant. Revalidate it in the background when
+// it is older than this, and always scan on the first visit after installation.
+// Önbellekteki tarama sayfayı anında açar. Bu süreden eskiyse arka planda
+// doğrula; kurulumdan sonraki ilk ziyarette ise mutlaka tara.
+const AUTO_SCAN_MAX_AGE_SECONDS = 300;
+
 // A service's optional managed vendor repository (e.g. PGDG for PostgreSQL).
 // When available+enabled, the install dialog offers a specific major version.
 // Bir servisin isteğe bağlı yönetilen vendor deposu (örn. PostgreSQL için PGDG).
@@ -394,10 +400,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const collapseAll = () => setCollapsed(new Set(visibleCats().map((c) => c.id)));
     const expandAll = () => setCollapsed(new Set());
 
-    // Reads the CACHED scan — instant, never probes the system. A fresh
-    // probe is the explicit user action below (scan).
-    // ÖNBELLEKTEKİ taramayı okur — anlık, sistemi asla yoklamaz. Taze
-    // yoklama aşağıdaki açık kullanıcı eylemidir (scan).
+    // Load the cached snapshot first so returning visits stay instant. A
+    // missing or stale snapshot is then revalidated through a conditional
+    // scan: the backend coalesces StrictMode, multiple tabs and simultaneous
+    // page opens into at most one host-wide probe.
+    // Önce önbellekteki snapshot'ı yükle; geri dönen ziyaretler anında açılsın.
+    // Eksik veya bayat snapshot daha sonra koşullu taramayla doğrulanır:
+    // backend StrictMode'u, çoklu sekmeleri ve eşzamanlı açılışları en fazla
+    // tek sistem geneli yoklamada birleştirir.
     const loadServices = async (): Promise<boolean> => {
         setLoading(true);
         try {
@@ -408,10 +418,50 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 return false;
             }
             const data: unknown = await res.json();
-            if (!applySnapshot(data, 'load')) {
+            const snapshot = parseManagedServicesSnapshot(data);
+            if (!snapshot || !applySnapshot(data, 'load')) {
                 showToast('error', t('services.scanFailed'));
                 markStateUnverified();
                 return false;
+            }
+
+            const scannedTimestamp = Date.parse(snapshot.scannedAt ?? '');
+            const cacheIsStale =
+                !Number.isFinite(scannedTimestamp)
+                || Date.now() - scannedTimestamp > AUTO_SCAN_MAX_AGE_SECONDS * 1000;
+            if (!cacheIsStale) return true;
+
+            // Keep a valid cached page visible while it is refreshed. A fresh
+            // install has no trusted observation yet, so retain the loader
+            // until the first scan completes instead of briefly claiming that
+            // every catalogue item is not installed.
+            // Geçerli önbelleği yenilerken sayfada tut. Taze kurulumda henüz
+            // güvenilir gözlem yoktur; bütün katalog yanlışlıkla "kurulu değil"
+            // görünmesin diye ilk tarama bitene dek yükleyiciyi koru.
+            if (snapshot.scannedAt !== null) setLoading(false);
+            setScanning(true);
+            try {
+                const scanResponse = await fetch(
+                    `/api/v1/managed-services/scan?max_age_seconds=${AUTO_SCAN_MAX_AGE_SECONDS}`,
+                    { method: 'POST', cache: 'no-store' },
+                );
+                if (!scanResponse.ok) {
+                    showToast('error', apiErrorText(await readApiError(scanResponse), t, 'services.scanFailed'));
+                    markStateUnverified();
+                    return false;
+                }
+                const refreshed: unknown = await scanResponse.json();
+                if (!applySnapshot(refreshed, 'scan')) {
+                    showToast('error', t('services.scanFailed'));
+                    markStateUnverified();
+                    return false;
+                }
+            } catch {
+                showToast('error', t('services.scanFailed'));
+                markStateUnverified();
+                return false;
+            } finally {
+                setScanning(false);
             }
             return true;
         } catch {
@@ -730,8 +780,9 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-fg-muted">
                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+                    {scanning && <span>{t('services.autoScanning')}</span>}
                 </div>
             ) : !scannedAt && services.length === 0 ? (
                 <EmptyState

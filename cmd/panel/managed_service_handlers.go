@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -421,18 +422,19 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 	return response
 }
 
-// handleManagedServices serves the CACHED scan only — opening a page must
-// never probe the whole system (a dozen units × version execs × config
-// scans made every navigation slow). A fresh probe is an explicit user
-// action: POST /api/v1/managed-services/scan.
-// handleManagedServices YALNIZ önbellekteki taramayı sunar — bir sayfayı
-// açmak asla tüm sistemi yoklamamalı (bir düzine unit × sürüm çalıştırması ×
-// config taraması her gezinmeyi yavaşlatıyordu). Taze yoklama açık bir
-// kullanıcı eylemidir: POST /api/v1/managed-services/scan.
+// handleManagedServices serves the catalogue joined with the cached
+// observation. It never performs the expensive host-wide probe itself; the
+// page conditionally refreshes a missing/stale cache through the scan endpoint.
+// handleManagedServices kataloğu önbellekteki gözlemle birleştirerek sunar.
+// Pahalı sistem geneli taramayı kendisi yapmaz; sayfa eksik/bayat önbelleği
+// tarama uç noktası üzerinden koşullu olarak yeniler.
 func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	payload := managedServicesPayload{Services: []ManagedServiceResponse{}}
+	// A fresh installation has no observation row yet, but its installable
+	// catalogue is still known. Never render an empty Components page merely
+	// because the first scan has not completed.
+	payload := managedServicesPayload{Services: catalogView(nil, p.packageFamily())}
 
 	var data string
 	var scannedAt string
@@ -500,6 +502,30 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	maxAge, conditional, err := managedServiceScanMaxAge(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Serialize page-triggered and manual scans before taking the wider
+	// mutation lease. A second tab waits for the first scan, observes its new
+	// timestamp and returns that cache instead of probing the host again.
+	p.serviceScanMu.Lock()
+	defer p.serviceScanMu.Unlock()
+	if conditional {
+		cached, fresh, err := p.managedServicesCacheWithin(r.Context(), maxAge)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if fresh {
+			json.NewEncoder(w).Encode(cached)
+			return
+		}
+	}
+
 	release, busy := p.beginServiceMutation(w, r)
 	if busy {
 		return
@@ -514,6 +540,55 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 
 	now := time.Now().UTC()
 	json.NewEncoder(w).Encode(managedServicesPayload{ScannedAt: &now, Services: services})
+}
+
+// managedServiceScanMaxAge distinguishes automatic conditional refreshes from
+// an operator's explicit Rescan. Manual requests omit the parameter and always
+// probe the host.
+func managedServiceScanMaxAge(r *http.Request) (time.Duration, bool, error) {
+	raw := r.URL.Query().Get("max_age_seconds")
+	if raw == "" {
+		return 0, false, nil
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds < 1 || seconds > 86400 {
+		return 0, false, fmt.Errorf("max_age_seconds must be between 1 and 86400")
+	}
+	return time.Duration(seconds) * time.Second, true, nil
+}
+
+func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Duration) (managedServicesPayload, bool, error) {
+	var data string
+	var scannedAt string
+	err := p.db.GetDB().QueryRowContext(ctx,
+		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return managedServicesPayload{}, false, nil
+	}
+	if err != nil {
+		return managedServicesPayload{}, false, err
+	}
+
+	scanned, err := time.Parse(time.RFC3339, scannedAt)
+	if err != nil {
+		return managedServicesPayload{}, false, nil
+	}
+	age := time.Since(scanned)
+	if age < 0 {
+		age = 0
+	}
+	if age > maxAge {
+		return managedServicesPayload{}, false, nil
+	}
+
+	observations, err := decodeScanCache(data)
+	if err != nil {
+		return managedServicesPayload{}, false, nil
+	}
+	return managedServicesPayload{
+		ScannedAt: &scanned,
+		Services:  catalogView(observations, p.packageFamily()),
+	}, true, nil
 }
 
 // scanManagedServices asks the agent for the real system state, folds it

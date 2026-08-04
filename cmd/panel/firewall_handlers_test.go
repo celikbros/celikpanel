@@ -252,7 +252,8 @@ func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
 	agent := &firewallSyncTestAgent{
 		status: FirewallStatusResp{Enabled: true, EngineAvailable: true},
 		issueResponse: transport.IssuePanelCertificateResponse{
-			Error: "forced certificate failure",
+			ErrorCode: transport.IssuePanelCertificateErrorActivationPending,
+			Error:     "forced internal activation detail",
 		},
 	}
 	panel := &Panel{db: database}
@@ -272,6 +273,10 @@ func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
 	panel.handlePanelCertificate(recorder, req)
 	if recorder.Code != http.StatusConflict {
 		t.Fatalf("response = %d %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"code":"panel_certificate_activation_pending"`) ||
+		strings.Contains(recorder.Body.String(), "forced internal activation detail") {
+		t.Fatalf("coded certificate refusal leaked internal detail: %s", recorder.Body.String())
 	}
 	agent.mu.Lock()
 	defer agent.mu.Unlock()

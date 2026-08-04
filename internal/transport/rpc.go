@@ -223,10 +223,13 @@ type IssuePanelCertificateRequest struct {
 	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
 }
 
+const IssuePanelCertificateErrorActivationPending = "panel_certificate_activation_pending"
+
 type IssuePanelCertificateResponse struct {
 	Issued    bool      `json:"issued"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Detail    string    `json:"detail,omitempty"`
+	ErrorCode string    `json:"error_code,omitempty"`
 	Error     string    `json:"error,omitempty"`
 }
 

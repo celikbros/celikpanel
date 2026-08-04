@@ -162,6 +162,70 @@ func installPanelCertificateReconcileTestSeams(t *testing.T) {
 	}
 }
 
+func TestBeginPanelCertificateIssuanceReclaimsSameDomainPendingSource(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	existing, err := newPanelCertificateActivationState("panel.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2029, time.January, 2, 3, 4, 5, 0, time.UTC)
+	existing.Attempts = 7
+	existing.LastAttemptAt = &now
+	existing.LastError = "previous source lookup failed"
+	store.seed(t, existing)
+
+	got, err := beginPanelCertificateIssuanceLocked("PANEL.EXAMPLE.TEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := newPanelCertificateActivationState("panel.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("reclaimed intent = %+v, want %+v", got, want)
+	}
+	persisted, found := store.snapshot()
+	if !found || !reflect.DeepEqual(persisted, want) {
+		t.Fatalf("persisted reclaimed intent = %+v found=%v, want %+v", persisted, found, want)
+	}
+}
+
+func TestBeginPanelCertificateIssuancePreservesOtherDomainIntent(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	existing, err := newPanelCertificateActivationState("other.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.seed(t, existing)
+
+	_, err = beginPanelCertificateIssuanceLocked("panel.example.test")
+	if !errors.Is(err, errPanelCertificateActivationPending) {
+		t.Fatalf("error = %v, want activation-pending refusal", err)
+	}
+	persisted, found := store.snapshot()
+	if !found || !reflect.DeepEqual(persisted, existing) {
+		t.Fatalf("other-domain intent changed: got=%+v found=%v want=%+v", persisted, found, existing)
+	}
+}
+
+func TestBeginPanelCertificateIssuancePreservesAdvancedIntent(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	existing := boundPanelCertificateActivationTestState(
+		t, panelCertificateActivationPendingPublish,
+	)
+	store.seed(t, existing)
+
+	_, err := beginPanelCertificateIssuanceLocked("panel.example.test")
+	if !errors.Is(err, errPanelCertificateActivationPending) {
+		t.Fatalf("error = %v, want activation-pending refusal", err)
+	}
+	persisted, found := store.snapshot()
+	if !found || !reflect.DeepEqual(persisted, existing) {
+		t.Fatalf("advanced intent changed: got=%+v found=%v want=%+v", persisted, found, existing)
+	}
+}
+
 func TestPanelCertificateActivationReplaysEveryCrashPhase(t *testing.T) {
 	for _, phase := range []panelCertificateActivationPhase{
 		panelCertificateActivationPendingPublish,

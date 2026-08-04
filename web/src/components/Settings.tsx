@@ -5,7 +5,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, inputClass } from './ui';
-import { readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
 
 type SettingsSectionID = 'account' | 'panel' | 'dns';
@@ -246,8 +246,13 @@ function PanelCertificatePanel() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ domain }),
             });
+            if (!res.ok) {
+                showToast('error', apiErrorText(await readApiError(res), t, 'panelCert.failed'));
+                setBusy(false);
+                return;
+            }
             const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error || t('panelCert.failed'));
+            if (data.error) throw new Error(data.error || t('panelCert.failed'));
             showToast('success', t('panelCert.issued'));
             setRestarting(true);
             // The panel restarts to serve the new certificate; move the

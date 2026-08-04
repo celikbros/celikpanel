@@ -42,6 +42,10 @@ var errPanelCertificateActivationUnsupported = errors.New(
 	"durable panel certificate activation is unsupported on this platform",
 )
 
+var errPanelCertificateActivationPending = errors.New(
+	"panel certificate activation is already pending",
+)
+
 // panelCertificateActivationState is the durable activation intent. Phase is
 // advisory for recovery: callers must still compare source, published, and
 // served fingerprints before deciding which idempotent step is next.

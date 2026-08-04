@@ -293,7 +293,17 @@ func (p *Panel) handlePanelCertificate(w http.ResponseWriter, r *http.Request) {
 					"/services",
 				)
 			case result.Stage == panelCertificateStageRejected:
-				writeClientError(w, http.StatusConflict, result.Response.Error)
+				if result.Response.ErrorCode == transport.IssuePanelCertificateErrorActivationPending {
+					writeCodedError(
+						w,
+						http.StatusConflict,
+						transport.IssuePanelCertificateErrorActivationPending,
+						"a previous panel certificate activation is still being finalized; wait briefly, then retry",
+						"/settings?section=panel",
+					)
+				} else {
+					writeClientError(w, http.StatusConflict, result.Response.Error)
+				}
 			case result.Stage == panelCertificateStageFirewall:
 				writeCodedError(
 					w,
