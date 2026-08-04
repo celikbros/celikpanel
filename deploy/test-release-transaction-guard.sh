@@ -269,6 +269,84 @@ printf 'normal\n' > "$quiesce_child/snapshot-transition.state"
 chmod 0600 -- "$quiesce_child/service-states.tsv" "$quiesce_child/snapshot-transition.state"
 sync -f -- "$quiesce_child/service-states.tsv" "$quiesce_child/quiesce-coordinators.tsv" "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"
 release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+service_ledger=$quiesce_child/service-states.tsv
+chmod 0644 -- "$service_ledger"
+expect_failure "stage accepted a non-0600 service-state ledger" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+chmod 0600 -- "$service_ledger"
+ln -- "$service_ledger" "$service_ledger.alias"
+expect_failure "stage accepted a hard-linked service-state ledger" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+rm -- "$service_ledger.alias"
+printf '%s\t%s\t%s\n' \
+    celikpanel-panel.service enabled active \
+    celikpanel-agent.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted out-of-order service-state rows" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-agent.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted duplicate service-state rows" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service unsupported active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted an unsupported service enablement state" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled unknown \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted an unsupported service active state" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled inactive \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted an active panel with an inactive agent" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    unexpected.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted a four-row service-state ledger" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    certbot.timer enabled active \
+    certbot-renew.timer disabled inactive \
+    > "$service_ledger"
+release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage" \
+    || fail "canonical five-row service-state ledger was rejected"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+printf '%s\t%s\t%s' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
+expect_failure "stage accepted a service-state ledger without a final newline" \
+    release_txn_validate_update_snapshot_stage "$snapshot_root" "$snapshot_name" "$quiesce_stage"
+printf '%s\t%s\t%s\n' \
+    celikpanel-agent.service enabled active \
+    celikpanel-panel.service enabled active \
+    celikpanel-firewall-restore.service disabled inactive \
+    > "$service_ledger"
 for transition_mode in pre-ledger schema17; do
     printf '%s\n' "$transition_mode" > "$quiesce_child/snapshot-transition.state"
     sync -f -- "$quiesce_child/snapshot-transition.state" "$quiesce_child" "$quiesce_stage" "$snapshot_root"

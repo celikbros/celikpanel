@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 HELPER=$ROOT/deploy/panel-tls-snapshot.sh
+INSTALL=$ROOT/install.sh
 UPDATE=$ROOT/update.sh
 ROLLBACK=$ROOT/rollback.sh
 FINALIZER=$ROOT/deploy/finalize-pending-update.sh
@@ -36,7 +37,7 @@ expect_tls_success_without_stderr() {
     }
 }
 
-for script in "$HELPER" "$UPDATE" "$ROLLBACK" "$FINALIZER"; do
+for script in "$HELPER" "$INSTALL" "$UPDATE" "$ROLLBACK" "$FINALIZER"; do
     bash -n "$script" || fail "syntax: $script"
 done
 
@@ -44,6 +45,8 @@ grep -Fq 'SNAPSHOT_VERSION=5' "$UPDATE" || fail 'update snapshot version is not 
 grep -Fq 'SUPPORTED_SNAPSHOT_VERSION=5' "$ROLLBACK" || fail 'rollback snapshot version is not 5'
 grep -Fq 'SNAPSHOT_VERSION=5' "$FINALIZER" || fail 'finalizer snapshot version is not 5'
 grep -Fq 'panel_tls_snapshot_capture' "$UPDATE" || fail 'update does not capture panel TLS state'
+grep -Fq 'panel_tls_normalize_legacy_self_signed' "$INSTALL" || fail 'install does not protect its initial self-signed TLS pair'
+grep -Fq 'panel_tls_normalize_legacy_self_signed' "$UPDATE" || fail 'update does not normalize the narrowly defined legacy TLS pair'
 grep -Fq 'panel_tls_snapshot_validate' "$ROLLBACK" || fail 'rollback does not validate panel TLS state'
 grep -Fq 'panel_tls_quiesce_certbot_scheduler' "$ROLLBACK" || fail 'rollback does not quiesce Certbot timers'
 grep -Fq 'panel_tls_restore_snapshot' "$ROLLBACK" || fail 'rollback does not restore panel TLS state'
@@ -158,6 +161,51 @@ systemctl() {
 
 # shellcheck source=deploy/panel-tls-snapshot.sh
 source "$HELPER"
+
+# A fresh install historically created this exact two-file layout as the panel
+# service user. Reject any extra object, then prove normalization changes only
+# metadata, preserves bytes, and is safe to repeat after an interrupted retry.
+ATOMIC_TLS_DIR=$TEST_ROOT/atomic-tls
+mv -- "$TLS_DIR" "$ATOMIC_TLS_DIR"
+install -d -m 0700 "$TLS_DIR"
+printf 'FRESH-CERT\n' >"$TLS_DIR/panel.crt"
+printf 'FRESH-KEY\n' >"$TLS_DIR/panel.key"
+chmod 0600 "$TLS_DIR/panel.crt" "$TLS_DIR/panel.key"
+chown -R 65534:65534 -- "$TLS_DIR"
+printf 'unexpected\n' >"$TLS_DIR/unexpected"
+chown 65534:65534 "$TLS_DIR/unexpected"
+chmod 0600 "$TLS_DIR/unexpected"
+expect_tls_failure_with_stderr 'legacy TLS normalization accepted an extra object' panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 65534
+[[ $(stat -Lc '%u:%g:%a' "$TLS_DIR") == 65534:65534:700 ]] || fail 'rejected legacy TLS normalization changed root metadata'
+rm -f -- "$TLS_DIR/unexpected"
+LEGACY_CERT_SHA=$(sha256sum "$TLS_DIR/panel.crt")
+LEGACY_CERT_SHA=${LEGACY_CERT_SHA%% *}
+LEGACY_KEY_SHA=$(sha256sum "$TLS_DIR/panel.key")
+LEGACY_KEY_SHA=${LEGACY_KEY_SHA%% *}
+panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 65534 || fail 'fresh legacy TLS normalization failed'
+[[ $(stat -Lc '%u:%g:%a' "$TLS_DIR") == 0:65534:750 ]] || fail 'normalized legacy TLS root metadata is wrong'
+[[ $(stat -Lc '%u:%g:%a' "$TLS_DIR/panel.crt") == 0:65534:640 ]] || fail 'normalized legacy certificate metadata is wrong'
+[[ $(stat -Lc '%u:%g:%a' "$TLS_DIR/panel.key") == 0:65534:640 ]] || fail 'normalized legacy key metadata is wrong'
+NORMALIZED_CERT_SHA=$(sha256sum "$TLS_DIR/panel.crt")
+NORMALIZED_CERT_SHA=${NORMALIZED_CERT_SHA%% *}
+NORMALIZED_KEY_SHA=$(sha256sum "$TLS_DIR/panel.key")
+NORMALIZED_KEY_SHA=${NORMALIZED_KEY_SHA%% *}
+[[ $NORMALIZED_CERT_SHA == "$LEGACY_CERT_SHA" && $NORMALIZED_KEY_SHA == "$LEGACY_KEY_SHA" ]] || fail 'legacy TLS normalization changed certificate bytes'
+panel_tls_normalize_legacy_self_signed "$TLS_DIR" 65534 65534 || fail 'legacy TLS normalization is not retry-safe'
+LEGACY_TLS_SNAPSHOT=$SNAPSHOT/legacy-panel-tls
+install -d -m 0700 "$LEGACY_TLS_SNAPSHOT"
+panel_tls_snapshot_capture "$LEGACY_TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" \
+    || fail 'normalized legacy TLS snapshot capture failed'
+[[ $(stat -Lc '%u:%g' "$LEGACY_TLS_SNAPSHOT/managed/panel.crt") == 0:65534 ]] \
+    || fail 'legacy certificate snapshot did not preserve its trusted group'
+[[ $(stat -Lc '%u:%g' "$LEGACY_TLS_SNAPSHOT/managed/panel.key") == 0:65534 ]] \
+    || fail 'legacy key snapshot did not preserve its trusted group'
+grep -Fq $'F\tpanel.key\t0\t65534\t640\t' "$LEGACY_TLS_SNAPSHOT/managed.manifest" \
+    || fail 'legacy key source ownership was not preserved in the manifest'
+rm -rf -- "$LEGACY_TLS_SNAPSHOT"
+rm -rf -- "$TLS_DIR"
+mv -- "$ATOMIC_TLS_DIR" "$TLS_DIR"
+
 panel_tls_capture_scheduler_states_to_service_ledger "$LEDGER" \
     || fail 'scheduler ledger capture failed'
 [[ $(wc -l <"$LEDGER") -eq 5 ]] || fail 'scheduler ledger is not canonical five rows'

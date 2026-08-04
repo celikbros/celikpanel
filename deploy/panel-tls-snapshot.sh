@@ -195,6 +195,117 @@ _panel_tls_sync_path() {
     sync -f -- "$path" || { _panel_tls_fail "cannot durably sync $path"; return 1; }
 }
 
+# Fresh installations historically let the unprivileged panel process create
+# the initial self-signed pair. Exact update snapshots are root-trusted, so
+# normalize only that narrowly defined legacy layout after both coordinators
+# have stopped. This is retry-safe: an interrupted normalization may leave any
+# of the three objects owned by either the panel user or root, but no other
+# owner, object type or filename is accepted.
+panel_tls_normalize_legacy_self_signed() (
+    set -euo pipefail
+    local tls_dir=${1:?TLS directory required}
+    local panel_uid=${2:?panel uid required} panel_gid=${3:?panel gid required}
+    local expected listing path base metadata owner group mode links size permissions
+    local entry_count=0 cert_digest key_digest normalized_cert_digest normalized_key_digest
+
+    [[ $(id -u) -eq 0 ]] || { _panel_tls_fail "legacy TLS normalization requires root"; return 1; }
+    [[ $panel_uid =~ ^[0-9]+$ && $panel_gid =~ ^[0-9]+$ && $panel_uid -ne 0 ]] || {
+        _panel_tls_fail "invalid panel service identity for legacy TLS normalization"
+        return 1
+    }
+    if [[ -n ${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-} ]]; then
+        expected=$CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT/tls
+    else
+        expected=/var/lib/celikpanel/tls
+    fi
+    [[ $tls_dir == "$expected" ]] || {
+        _panel_tls_fail "managed TLS path identity mismatch during legacy normalization"
+        return 1
+    }
+    if [[ ! -e $tls_dir && ! -L $tls_dir ]]; then
+        return 0
+    fi
+    [[ -d $tls_dir && ! -L $tls_dir && $(readlink -e -- "$tls_dir") == "$tls_dir" ]] || {
+        _panel_tls_fail "legacy TLS root is not a canonical real directory"
+        return 1
+    }
+    _panel_tls_mount_guard "$tls_dir" || return 1
+
+    metadata=$(stat -Lc '%u %g %a' -- "$tls_dir") || {
+        _panel_tls_fail "cannot inspect legacy TLS root"
+        return 1
+    }
+    read -r owner group mode <<<"$metadata"
+    [[ ( $owner == 0 || $owner == "$panel_uid" ) && $group == "$panel_gid" &&
+       $mode =~ ^[0-7]{3,4}$ ]] || {
+        _panel_tls_fail "legacy TLS root has unexpected ownership or mode"
+        return 1
+    }
+    permissions=$((8#$mode))
+    (( (permissions & 0022) == 0 )) || {
+        _panel_tls_fail "legacy TLS root is group/other writable"
+        return 1
+    }
+
+    listing=$(mktemp "${TMPDIR:-/tmp}/celikpanel-legacy-tls.XXXXXXXX") || return 1
+    trap 'rm -f -- "$listing"' EXIT HUP INT TERM
+    _panel_tls_find0 "$listing" "$tls_dir" -mindepth 1 -maxdepth 1 || return 1
+    while IFS= read -r -d '' path; do
+        base=${path##*/}
+        case "$base" in
+            panel.crt|panel.key) ;;
+            *) _panel_tls_fail "legacy TLS root contains an unexpected entry: $base"; return 1 ;;
+        esac
+        [[ -f $path && ! -L $path ]] || {
+            _panel_tls_fail "legacy TLS entry is not a real regular file: $base"
+            return 1
+        }
+        metadata=$(stat -Lc '%u %g %a %h %s' -- "$path") || return 1
+        read -r owner group mode links size <<<"$metadata"
+        [[ ( $owner == 0 || $owner == "$panel_uid" ) && $group == "$panel_gid" &&
+           $mode =~ ^[0-7]{3,4}$ && $links == 1 && $size =~ ^[0-9]+$ &&
+           $size -gt 0 && $size -le 1048576 ]] || {
+            _panel_tls_fail "legacy TLS file metadata is unsafe: $base"
+            return 1
+        }
+        permissions=$((8#$mode))
+        (( (permissions & 0022) == 0 )) || {
+            _panel_tls_fail "legacy TLS file is group/other writable: $base"
+            return 1
+        }
+        entry_count=$((entry_count + 1))
+    done <"$listing"
+    [[ $entry_count -eq 2 && -f $tls_dir/panel.crt && ! -L $tls_dir/panel.crt &&
+       -f $tls_dir/panel.key && ! -L $tls_dir/panel.key ]] || {
+        _panel_tls_fail "legacy TLS root must contain exactly panel.crt and panel.key"
+        return 1
+    }
+
+    cert_digest=$(sha256sum -- "$tls_dir/panel.crt"); cert_digest=${cert_digest%% *}
+    key_digest=$(sha256sum -- "$tls_dir/panel.key"); key_digest=${key_digest%% *}
+    chown root:"$panel_gid" -- "$tls_dir/panel.crt" "$tls_dir/panel.key" "$tls_dir" || {
+        _panel_tls_fail "cannot normalize legacy TLS ownership"
+        return 1
+    }
+    chmod 0640 -- "$tls_dir/panel.crt" "$tls_dir/panel.key" || return 1
+    chmod 0750 -- "$tls_dir" || return 1
+    normalized_cert_digest=$(sha256sum -- "$tls_dir/panel.crt")
+    normalized_cert_digest=${normalized_cert_digest%% *}
+    normalized_key_digest=$(sha256sum -- "$tls_dir/panel.key")
+    normalized_key_digest=${normalized_key_digest%% *}
+    [[ $normalized_cert_digest == "$cert_digest" && $normalized_key_digest == "$key_digest" ]] || {
+        _panel_tls_fail "legacy TLS bytes changed during ownership normalization"
+        return 1
+    }
+    _panel_tls_sync_path "$tls_dir/panel.crt" || return 1
+    _panel_tls_sync_path "$tls_dir/panel.key" || return 1
+    _panel_tls_sync_path "$tls_dir" || return 1
+    _panel_tls_validate_managed_tree "$tls_dir" || {
+        _panel_tls_fail "normalized legacy TLS tree failed strict validation"
+        return 1
+    }
+)
+
 _panel_tls_systemctl_load_state() {
     local unit=${1:?unit required} value
     value=$(systemctl show --property=LoadState --value -- "$unit" 2>/dev/null) ||
@@ -461,6 +572,8 @@ panel_tls_snapshot_capture() (
         _panel_tls_regular "$hook_file" 1048576 || exit 1
         printf 'present\n' >"$root/hook.state" || { _panel_tls_fail "cannot record hook state"; return 1; }
         cp -a -- "$hook_file" "$root/hook/celikpanel-panel-cert" || { _panel_tls_fail "cannot capture renewal hook"; return 1; }
+        chown root:root -- "$root/hook/celikpanel-panel-cert" ||
+            { _panel_tls_fail "cannot protect captured renewal hook"; return 1; }
     else
         printf 'absent\n' >"$root/hook.state" || { _panel_tls_fail "cannot record hook state"; return 1; }
     fi
@@ -472,6 +585,8 @@ panel_tls_snapshot_capture() (
         printf 'present\n' >"$root/pending.state" || { _panel_tls_fail "cannot record pending activation state"; return 1; }
         cp -a -- "$pending_file" "$root/pending/panel-certificate-activation.json" ||
             { _panel_tls_fail "cannot capture pending activation file"; return 1; }
+        chown root:root -- "$root/pending/panel-certificate-activation.json" ||
+            { _panel_tls_fail "cannot protect captured pending activation file"; return 1; }
     else
         printf 'absent\n' >"$root/pending.state" || { _panel_tls_fail "cannot record pending activation state"; return 1; }
     fi
@@ -515,7 +630,13 @@ panel_tls_snapshot_validate() (
         esac
         [[ ! -L $path && ( -d $path || -f $path ) ]] || { _panel_tls_fail "unsafe TLS snapshot object: $rel"; return 1; }
         ownership=$(stat -Lc '%u:%g' -- "$path") || { _panel_tls_fail "cannot stat snapshot ownership"; return 1; }
-        [[ $ownership == 0:0 ]] || { _panel_tls_fail "TLS snapshot object is not root-owned: $rel"; return 1; }
+        if [[ $rel == managed/* ]]; then
+            [[ $ownership =~ ^0:[0-9]+$ ]] ||
+                { _panel_tls_fail "managed TLS snapshot object is not root-owned: $rel"; return 1; }
+        else
+            [[ $ownership == 0:0 ]] ||
+                { _panel_tls_fail "TLS snapshot object is not root-owned: $rel"; return 1; }
+        fi
         mode=$(stat -Lc '%a' -- "$path") || { _panel_tls_fail "cannot stat TLS snapshot mode"; return 1; }
         [[ $mode =~ ^[0-7]{3,4}$ ]] || { _panel_tls_fail "invalid TLS snapshot mode: $rel"; return 1; }
         (( (0$mode & 022) == 0 )) || { _panel_tls_fail "TLS snapshot object is group/world writable: $rel"; return 1; }

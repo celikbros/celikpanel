@@ -102,6 +102,75 @@ _release_txn_validate_quiesce_coordinators() {
     cmp -s "$path" <(printf '%s\n' "${rows[@]}") || { _release_txn_fail "quiesce coordinator ledger bytes are not canonical"; return 1; }
 }
 
+# Validate the durable service-state ledger before any recovery decision uses
+# it. Canonical row order and a final newline make duplicate, omitted and
+# appended values fail closed.
+release_txn_validate_service_states() {
+    local path=$1 unit enabled_state active_state extra expected index
+    local owner group mode links size
+    local agent_active_state panel_active_state
+    local -a rows=()
+    [[ -f "$path" && ! -L "$path" ]] \
+        || { _release_txn_fail "service-state ledger is missing or unsafe"; return 1; }
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$path") \
+        || { _release_txn_fail "cannot inspect service-state ledger"; return 1; }
+    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 && "$links" == 1 &&
+       "$size" -gt 0 && "$size" -le 4096 ]] \
+        || { _release_txn_fail "service-state ledger metadata is invalid"; return 1; }
+    mapfile -t rows < "$path" \
+        || { _release_txn_fail "cannot read service-state ledger"; return 1; }
+    [[ ${#rows[@]} -eq 3 || ${#rows[@]} -eq 5 ]] \
+        || { _release_txn_fail "service-state ledger must contain exactly three or five rows"; return 1; }
+    for index in "${!rows[@]}"; do
+        case "$index" in
+            0) expected=celikpanel-agent.service ;;
+            1) expected=celikpanel-panel.service ;;
+            2) expected=celikpanel-firewall-restore.service ;;
+            3) expected=certbot.timer ;;
+            4) expected=certbot-renew.timer ;;
+            *) _release_txn_fail "service-state ledger contains extra rows"; return 1 ;;
+        esac
+        IFS=$'\t' read -r unit enabled_state active_state extra <<< "${rows[$index]}"
+        [[ -n "$unit" && -n "$enabled_state" && -n "$active_state" &&
+           -z "${extra:-}" && "$unit" == "$expected" ]] \
+            || { _release_txn_fail "service-state ledger is malformed or out of order"; return 1; }
+        if (( index < 3 )); then
+            case "$enabled_state" in
+                enabled|enabled-runtime|disabled|static|indirect|not-found) ;;
+                *) _release_txn_fail "unsupported saved enable state: $unit: $enabled_state"; return 1 ;;
+            esac
+            case "$active_state" in
+                active|activating|reloading|refreshing|inactive|failed|deactivating|maintenance) ;;
+                *) _release_txn_fail "unsupported saved active state: $unit: $active_state"; return 1 ;;
+            esac
+            [[ "$index" != 0 ]] || agent_active_state=$active_state
+            [[ "$index" != 1 ]] || panel_active_state=$active_state
+        else
+            case "$enabled_state" in
+                enabled|enabled-runtime|linked|linked-runtime|alias|static|indirect|generated|disabled|masked|masked-runtime|not-found) ;;
+                *) _release_txn_fail "unsupported saved scheduler enable state: $unit: $enabled_state"; return 1 ;;
+            esac
+            case "$active_state" in
+                active|inactive) ;;
+                *) _release_txn_fail "unsupported saved scheduler active state: $unit: $active_state"; return 1 ;;
+            esac
+        fi
+    done
+    case "$panel_active_state" in
+        active|activating|reloading|refreshing)
+            case "$agent_active_state" in
+                active|activating|reloading|refreshing) ;;
+                *)
+                    _release_txn_fail "service-state ledger is inconsistent: an active panel requires an active agent"
+                    return 1
+                    ;;
+            esac
+            ;;
+    esac
+    cmp -s "$path" <(printf '%s\n' "${rows[@]}") \
+        || { _release_txn_fail "service-state ledger bytes are not canonical"; return 1; }
+}
+
 # A resumable pre-publish tree is one exact root-only direct child containing
 # only the target snapshot child. Every partial payload object is non-link,
 # non-special, root-owned and not writable by group or others.
@@ -147,13 +216,7 @@ release_txn_validate_update_snapshot_stage() {
             || { _release_txn_fail "snapshot staging objects must be root-owned and group/other non-writable"; return 1; }
     done < <(find "$stage" -mindepth 1 -print0)
     ledger=$child/service-states.tsv
-    [[ -f "$ledger" && ! -L "$ledger" ]] \
-        || { _release_txn_fail "snapshot staging service-state ledger is missing or unsafe"; return 1; }
-    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$ledger") \
-        || { _release_txn_fail "cannot inspect snapshot staging service-state ledger"; return 1; }
-    [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 && "$links" == 1 &&
-       "$size" -gt 0 && "$size" -le 4096 ]] \
-        || { _release_txn_fail "snapshot staging service-state ledger metadata is invalid"; return 1; }
+    release_txn_validate_service_states "$ledger" || return 1
     coordinators=$child/quiesce-coordinators.tsv
     _release_txn_validate_quiesce_coordinators "$coordinators" || return 1
     transition=$child/snapshot-transition.state

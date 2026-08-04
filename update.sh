@@ -2315,6 +2315,9 @@ fi
 # validated tree is atomically published as panel-tls.
 tls_snapshot_root="$tmp_snap/panel-tls"
 if [[ ! -e "$tls_snapshot_root" && ! -L "$tls_snapshot_root" ]]; then
+    panel_tls_normalize_legacy_self_signed \
+        "$PANEL_TLS_DIR" "$(id -u celikpanel)" "$(getent group celikpanel | cut -d: -f3)" \
+        || die "legacy self-signed panel TLS ownership normalization failed"
     service_state_rows=$(wc -l < "$tmp_snap/service-states.tsv")
     if [[ "$service_state_rows" -eq 3 ]]; then
         panel_tls_capture_scheduler_states_to_service_ledger \

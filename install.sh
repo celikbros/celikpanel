@@ -53,6 +53,13 @@ case "${DEMO:-0}" in
 esac
 
 SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PANEL_TLS_DIR="$DATA_DIR/tls"
+
+# Fresh self-signed certificates are created by the unprivileged panel process.
+# Normalize their metadata once, after the service is stopped, so the public
+# transactional updater can later take an exact root-trusted snapshot.
+# shellcheck source=deploy/panel-tls-snapshot.sh
+source "$SRC/deploy/panel-tls-snapshot.sh"
 
 c() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
 bilingual() {
@@ -1179,6 +1186,23 @@ systemctl is-active --quiet celikpanel-panel.service || \
     die "The panel did not start — inspect 'journalctl -u celikpanel-panel'" \
         "Panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
 ok "panel is running" "panel çalışıyor"
+
+step "Protecting the initial panel certificate" "Ilk panel sertifikasi korumaya aliniyor"
+systemctl stop celikpanel-panel.service || \
+    die "The panel could not be stopped for certificate protection" \
+        "Sertifika korumasi icin panel durdurulamadi"
+panel_tls_normalize_legacy_self_signed \
+    "$PANEL_TLS_DIR" "$(id -u "$SVC_USER")" "$(getent group "$SVC_GROUP" | cut -d: -f3)" || \
+    die "The initial panel certificate metadata could not be protected" \
+        "Ilk panel sertifikasi metaverisi korunamadi"
+systemctl restart celikpanel-panel.service || \
+    die "The panel could not be restarted after certificate protection" \
+        "Sertifika korumasindan sonra panel yeniden baslatilamadi"
+sleep 1
+systemctl is-active --quiet celikpanel-panel.service || \
+    die "The panel did not start after certificate protection" \
+        "Sertifika korumasindan sonra panel baslamadi"
+ok "initial panel certificate is protected" "ilk panel sertifikasi korundu"
 
 # Record completion only after both services and the administrator path have
 # succeeded. The public bootstrapper uses this root-only marker to distinguish
