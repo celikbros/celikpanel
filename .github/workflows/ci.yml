@@ -197,7 +197,7 @@ jobs:
   package:
     name: Release — reproducible archive and checksum
     runs-on: ubuntu-latest
-    needs: [go, web, windows-portability, freebsd-compile, darwin-compile]
+    needs: [go, panel-race, web, windows-portability, freebsd-compile, darwin-compile]
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:
