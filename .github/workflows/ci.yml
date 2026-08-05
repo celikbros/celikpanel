@@ -52,19 +52,6 @@ jobs:
           ./internal/services
           ./internal/transport
           ./cmd/agent
-      # cmd/panel has hundreds of SQLite-backed tests. Running it beside all
-      # other race packages causes CPU contention and can hit Go's default
-      # package timeout even though no test is deadlocked. These two regexes
-      # are disjoint and cover every valid Test* suffix, including a future
-      # exact `Test` name or non-uppercase suffix in the first shard.
-      - name: Race-test panel boundaries — A through M
-        run: >-
-          go test -race -count=1 -timeout=8m ./cmd/panel
-          -run '^Test($|[A-M]|[^A-Z])'
-      - name: Race-test panel boundaries — N through Z
-        run: >-
-          go test -race -count=1 -timeout=8m ./cmd/panel
-          -run '^Test[N-Z]'
       - name: Verify shell syntax
         run: git ls-files -z '*.sh' | xargs -0 -r bash -n
       - name: Verify POSIX download bootstrap syntax
@@ -91,6 +78,37 @@ jobs:
       # Prove exact coordinator identity and crash-safe quiesce recovery.
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
+
+  panel-race:
+    name: Panel race — ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: A through M
+            pattern: '^Test($|[A-M]|[^A-Z])'
+          - shard: N through R
+            pattern: '^Test[N-R]'
+          - shard: S
+            pattern: '^TestS'
+          - shard: T through Z
+            pattern: '^Test[T-Z]'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.5'
+          cache: true
+      - name: Verify exact Go toolchain
+        run: test "$(go env GOVERSION)" = go1.26.5
+      # cmd/panel has hundreds of SQLite-backed tests. These four matrix
+      # entries run concurrently, are disjoint and cover every valid Test*
+      # suffix, including a future exact `Test` name or non-uppercase suffix.
+      - name: Race-test panel boundaries
+        run: >-
+          go test -race -count=1 -timeout=8m ./cmd/panel
+          -run '${{ matrix.pattern }}'
 
   windows-portability:
     name: Platform portability — Windows build and targeted tests
