@@ -104,6 +104,25 @@ validate_real_alpha4_tls_capture_fixture() (
   validate_known_alpha4_tls_capture "$capture" "$child" 0 0
 )
 
+validate_alpha4_agent_state_root_contract() (
+  set -euo pipefail
+  local test_root expected legacy
+
+  test_root=$(mktemp -d /tmp/celikpanel-alpha4-agent-root-contract.XXXXXXXX)
+  trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+  expected="$test_root/expected"
+  legacy="$test_root/legacy"
+  printf '%s\n' /var/lib/celikpanel-agent-private >"$expected"
+  printf '%s\n' /var/lib/celikpanel-agent >"$legacy"
+
+  eval "$(extract_function_source "$bootstrap" validate_known_alpha4_agent_state_root)"
+  validate_known_alpha4_agent_state_root "$expected" \
+    || fail "the exact alpha.4 private agent-state root was rejected"
+  if validate_known_alpha4_agent_state_root "$legacy"; then
+    fail "the legacy public agent-state root was accepted"
+  fi
+)
+
 [[ -f "$bootstrap" && ! -L "$bootstrap" ]] || fail "bootstrap is missing or unsafe"
 bash -n "$bootstrap"
 
@@ -132,6 +151,8 @@ require_literal 'release_txn_validate_service_states "$child/service-states.tsv"
 require_literal 'captured alpha.4 coordinator process still exists'
 require_literal 'validate_exact_alpha2_installed_artifacts'
 require_literal 'validate_known_alpha4_tls_capture'
+require_literal 'validate_known_alpha4_agent_state_root'
+require_literal "printf '/var/lib/celikpanel-agent-private\\n'"
 require_literal 'verify_active_marker_unchanged'
 require_literal 'remove_known_alpha4_pre_snapshot_payload'
 [[ "$(grep -Fc 'rows=0; seen_certbot=0; seen_renew=0' "$bootstrap")" -eq 3 ]] \
@@ -159,5 +180,6 @@ require_literal 'release.commit' "$makefile"
 require_literal 'release.tree' "$makefile"
 
 validate_real_alpha4_tls_capture_fixture
+validate_alpha4_agent_state_root_contract
 
 printf 'prebuilt update contract passed\n'
