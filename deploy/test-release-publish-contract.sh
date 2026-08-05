@@ -33,7 +33,7 @@ test -f "$WORKFLOW"
 
 # A tag is built only after the same commit passed every platform and web gate.
 require_literal "tags: ['v*']"
-require_literal 'needs: [go, web, windows-portability, freebsd-compile, darwin-compile]'
+require_literal 'needs: [go, panel-race, web, windows-portability, freebsd-compile, darwin-compile]'
 require_literal 'release_version: ${{ steps.release_version.outputs.value }}'
 require_literal '[[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]'
 require_literal 'git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main'
