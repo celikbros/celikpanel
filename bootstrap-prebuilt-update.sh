@@ -398,6 +398,11 @@ validate_known_alpha4_tls_capture() {
         || die "alpha.4 service snapshot row count differs"
 }
 
+validate_known_alpha4_agent_state_root() {
+    local path=$1
+    cmp -s "$path" <(printf '/var/lib/celikpanel-agent-private\n')
+}
+
 find_known_alpha4_tls_failure_stage() {
     local snapshot=$1 nonce=$2 panel_uid=$3 panel_gid=$4 candidate child entries path owner group mode links permissions size
     local capture_base
@@ -444,7 +449,7 @@ find_known_alpha4_tls_failure_stage() {
         || die "alpha.4 coordinator ledger is unsafe"
     cmp -s "$child/snapshot-transition.state" <(printf 'normal\n') \
         || die "alpha.4 snapshot transition state differs"
-    cmp -s "$child/agent-state-root" <(printf '/var/lib/celikpanel-agent\n') \
+    validate_known_alpha4_agent_state_root "$child/agent-state-root" \
         || die "alpha.4 agent-state root differs"
     case "$(tr -d '[:space:]' < "$child/agent-ledger.state")" in
         present)
