@@ -523,7 +523,8 @@ verify_interrupted_coordinators_gone() {
 }
 
 remove_known_alpha4_pre_snapshot_payload() {
-    local stage=$1 snapshot=$2 child=$stage/$snapshot capture entries
+    local stage=$1 snapshot=$2
+    local child=$stage/$snapshot capture entries
     local -a removable=()
     capture=$(find "$child" -mindepth 1 -maxdepth 1 -type d -name '.panel-tls.capture.*' -print -quit)
     [[ -n "$capture" ]] || die "verified alpha.4 private TLS capture disappeared"
