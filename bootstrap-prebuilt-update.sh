@@ -287,6 +287,25 @@ validate_known_alpha4_tls_capture() {
     done < <(find "$root" -xdev -mindepth 1 -print0)
 
     entries=$(find "$root" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+    # alpha.4 creates the version marker and these four empty directories
+    # before it validates the live TLS tree. Fresh alpha.2 installations can
+    # still have the narrowly supported panel-owned self-signed pair, so that
+    # validation stops at this exact prefix. Accept only the deterministic
+    # prefix: the live pair is independently normalized and revalidated later
+    # while both coordinators remain stopped.
+    if [[ "$entries" == $'hook\nmanaged\npending\nsnapshot.version\ntimer-effective' ]]; then
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$root/snapshot.version")" == 0:0:600:1 ]] \
+            || die "alpha.4 partial TLS capture version marker is not canonical"
+        cmp -s -- "$root/snapshot.version" <(printf '2\n') \
+            || die "alpha.4 partial TLS capture version differs"
+        for path in managed hook pending timer-effective; do
+            [[ "$(stat -Lc '%u:%g:%a' -- "$root/$path")" == 0:0:700 ]] \
+                || die "alpha.4 partial TLS directory metadata is unsafe: $path"
+            [[ -z "$(find "$root/$path" -mindepth 1 -print -quit)" ]] \
+                || die "alpha.4 partial TLS directory is not empty: $path"
+        done
+        return 0
+    fi
     [[ "$entries" == $'certbot-services.tsv\ncertbot-timers.tsv\nhook\nhook.state\nlayout.state\nmanaged\nmanaged.manifest\npending\npending.state\nroot.meta\nsnapshot.version\ntimer-effective' ]] \
         || die "alpha.4 private TLS capture top-level allowlist differs"
     for path in managed hook pending timer-effective; do

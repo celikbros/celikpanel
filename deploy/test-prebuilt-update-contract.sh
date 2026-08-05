@@ -104,6 +104,84 @@ validate_real_alpha4_tls_capture_fixture() (
   validate_known_alpha4_tls_capture "$capture" "$child" 0 0
 )
 
+validate_partial_alpha4_tls_capture_fixture() (
+  set -euo pipefail
+  umask 077
+  local test_root child capture tls pending hook mountinfo panel_uid panel_gid entries candidate
+
+  [[ "$(id -u)" -eq 0 ]] || fail "partial alpha.4 TLS capture fixture requires root"
+  [[ -f "$tls_helper" && ! -L "$tls_helper" ]] || fail "TLS snapshot helper is missing or unsafe"
+  panel_uid=$(id -u nobody)
+  panel_gid=$(id -g nobody)
+  [[ "$panel_uid" -ne 0 && "$panel_gid" -ne 0 ]] \
+    || fail "partial alpha.4 fixture requires a non-root service identity"
+
+  test_root=$(mktemp -d /tmp/celikpanel-alpha4-partial-tls-contract.XXXXXXXX)
+  trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+  chmod 0700 "$test_root"
+
+  child="$test_root/update-snapshot"
+  capture="$child/.panel-tls.capture.123"
+  tls="$test_root/tls"
+  pending="$test_root/agent/panel-certificate-activation.json"
+  hook="$test_root/etc/letsencrypt/renewal-hooks/deploy/celikpanel-panel-cert"
+  mountinfo="$test_root/mountinfo"
+
+  install -d -m 0700 "$child" "$capture" "$test_root/agent"
+  install -d -m 0750 "$tls"
+  install -d -m 0755 "${hook%/*}"
+  : >"$mountinfo"
+  chmod 0600 "$mountinfo"
+  printf '%s\n' 'legacy certificate bytes' >"$tls/panel.crt"
+  printf '%s\n' 'legacy private-key bytes' >"$tls/panel.key"
+  chmod 0640 "$tls/panel.crt" "$tls/panel.key"
+  chown -R "$panel_uid:$panel_gid" "$tls"
+
+  export CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT="$test_root"
+  export CELIKPANEL_TLS_SNAPSHOT_MOUNTINFO="$mountinfo"
+  source "$tls_helper"
+  if panel_tls_snapshot_capture "$capture" "$tls" "$pending" "$hook"; then
+    fail "panel-owned legacy TLS unexpectedly produced a complete alpha.4 capture"
+  fi
+
+  entries=$(find "$capture" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  [[ "$entries" == $'hook\nmanaged\npending\nsnapshot.version\ntimer-effective' ]] \
+    || fail "production capture did not leave the reviewed alpha.4 partial prefix"
+
+  eval "$(extract_function_source "$bootstrap" die)"
+  eval "$(extract_function_source "$bootstrap" validate_known_alpha4_tls_capture)"
+  PANEL_TLS_DIR="$tls"
+  validate_known_alpha4_tls_capture "$capture" "$child" "$panel_uid" "$panel_gid"
+
+  candidate="$child/.panel-tls.capture.124"
+  cp -a -- "$capture" "$candidate"
+  printf 'unexpected\n' >"$candidate/extra"
+  if (validate_known_alpha4_tls_capture "$candidate" "$child" "$panel_uid" "$panel_gid") >/dev/null 2>&1; then
+    fail "partial alpha.4 capture with an extra entry was accepted"
+  fi
+
+  candidate="$child/.panel-tls.capture.125"
+  cp -a -- "$capture" "$candidate"
+  rm -rf -- "$candidate/hook"
+  if (validate_known_alpha4_tls_capture "$candidate" "$child" "$panel_uid" "$panel_gid") >/dev/null 2>&1; then
+    fail "incomplete alpha.4 partial capture was accepted"
+  fi
+
+  candidate="$child/.panel-tls.capture.126"
+  cp -a -- "$capture" "$candidate"
+  printf 'payload\n' >"$candidate/hook/celikpanel-panel-cert"
+  if (validate_known_alpha4_tls_capture "$candidate" "$child" "$panel_uid" "$panel_gid") >/dev/null 2>&1; then
+    fail "non-empty alpha.4 partial capture directory was accepted"
+  fi
+
+  candidate="$child/.panel-tls.capture.127"
+  cp -a -- "$capture" "$candidate"
+  printf '3\n' >"$candidate/snapshot.version"
+  if (validate_known_alpha4_tls_capture "$candidate" "$child" "$panel_uid" "$panel_gid") >/dev/null 2>&1; then
+    fail "alpha.4 partial capture with another version was accepted"
+  fi
+)
+
 validate_alpha4_agent_state_root_contract() (
   set -euo pipefail
   local test_root expected legacy
@@ -180,6 +258,7 @@ require_literal 'release.commit' "$makefile"
 require_literal 'release.tree' "$makefile"
 
 validate_real_alpha4_tls_capture_fixture
+validate_partial_alpha4_tls_capture_fixture
 validate_alpha4_agent_state_root_contract
 
 printf 'prebuilt update contract passed\n'
