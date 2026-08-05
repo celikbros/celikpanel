@@ -110,6 +110,107 @@ validate_root_directory_chain() {
   done
 }
 
+# BEGIN DOWNLOAD OPERATION POLICY
+interrupted_update_directory_chain_is_safe() {
+  recovery_transaction_root=$1
+  recovery_canonical=$(readlink -e -- "$recovery_transaction_root") || return 1
+  [ "$recovery_canonical" = "$recovery_transaction_root" ] || return 1
+  [ -d "$recovery_transaction_root" ] && [ ! -L "$recovery_transaction_root" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a' -- "$recovery_transaction_root")" = 0:0:700 ] || return 1
+
+  recovery_current=$recovery_transaction_root
+  while :; do
+    [ -d "$recovery_current" ] && [ ! -L "$recovery_current" ] || return 1
+    set -- $(stat -Lc '%u %g %a' -- "$recovery_current")
+    [ "$1" -eq 0 ] && [ "$2" -eq 0 ] || return 1
+    recovery_permissions=$((0$3))
+    [ $((recovery_permissions & 0022)) -eq 0 ] || return 1
+    [ "$recovery_current" = / ] && break
+    recovery_current=$(dirname -- "$recovery_current")
+  done
+}
+
+detect_known_interrupted_update_candidate_at() {
+  recovery_transaction_root=$1
+  recovery_alpha4_target=8bbbac8b628fae4fca0e127e52c1c7835f56f8b8
+  interrupted_update_directory_chain_is_safe "$recovery_transaction_root" || return 1
+
+  recovery_lock=$recovery_transaction_root/transaction.lock
+  recovery_active=$recovery_transaction_root/active
+  [ -f "$recovery_lock" ] && [ ! -L "$recovery_lock" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$recovery_lock")" = 0:0:600:1:0 ] || return 1
+  [ -f "$recovery_active" ] && [ ! -L "$recovery_active" ] || return 1
+  set -- $(stat -Lc '%u %g %a %h %s' -- "$recovery_active")
+  [ "$1:$2:$3:$4" = 0:0:600:1 ] || return 1
+  [ "$5" -ge 1 ] && [ "$5" -le 512 ] || return 1
+
+  for recovery_phase_marker in \
+    quiesce.pending completion.pending scheduler-restore.pending; do
+    [ ! -e "$recovery_transaction_root/$recovery_phase_marker" ] && \
+      [ ! -L "$recovery_transaction_root/$recovery_phase_marker" ] || return 1
+  done
+
+  recovery_version=
+  recovery_token_line=
+  recovery_operation=
+  recovery_snapshot_line=
+  recovery_extra=
+  {
+    IFS= read -r recovery_version || return 1
+    IFS= read -r recovery_token_line || return 1
+    IFS= read -r recovery_operation || return 1
+    IFS= read -r recovery_snapshot_line || return 1
+    if IFS= read -r recovery_extra || [ -n "$recovery_extra" ]; then
+      return 1
+    fi
+  } < "$recovery_active"
+
+  [ "$recovery_version" = version=1 ] || return 1
+  recovery_token=${recovery_token_line#token=}
+  [ "$recovery_token_line" = "token=$recovery_token" ] && \
+    [ "${#recovery_token}" -eq 64 ] || return 1
+  printf '%s\n' "$recovery_token" | LC_ALL=C grep -Eq '^[0-9a-f]{64}$' || return 1
+  [ "$recovery_operation" = operation=update ] || return 1
+  recovery_snapshot=${recovery_snapshot_line#snapshot=}
+  [ "$recovery_snapshot_line" = "snapshot=$recovery_snapshot" ] || return 1
+  printf '%s\n' "$recovery_snapshot" | LC_ALL=C grep -Eq \
+    "^[0-9]{8}T[0-9]{6}Z-from-unknown-to-${recovery_alpha4_target}-[0-9a-f]{32}$" || return 1
+}
+
+detect_known_interrupted_update_candidate() {
+  detect_known_interrupted_update_candidate_at \
+    /var/lib/celikpanel-release-transaction
+}
+
+select_download_operation() {
+  selection_requested=$1
+  selection_marker_state=$2
+  selection_full_install=$3
+  selection_any_install=$4
+  selection_panel_active=$5
+  selection_agent_active=$6
+  selection_recovery_candidate=$7
+
+  if [ "$selection_requested" != auto ]; then
+    printf '%s\n' "$selection_requested"
+  elif [ "$selection_full_install" -eq 1 ] && \
+    { [ "$selection_marker_state" = valid ] || \
+      { [ "$selection_panel_active" -eq 1 ] && [ "$selection_agent_active" -eq 1 ]; }; }; then
+    printf '%s\n' update
+  elif [ "$selection_full_install" -eq 1 ] && \
+    [ "$selection_marker_state" = absent ] && \
+    [ "$selection_panel_active" -eq 0 ] && \
+    [ "$selection_agent_active" -eq 0 ] && \
+    [ "$selection_recovery_candidate" -eq 1 ]; then
+    printf '%s\n' recovery-update
+  elif [ "$selection_any_install" -eq 0 ]; then
+    printf '%s\n' install
+  else
+    printf '%s\n' ambiguous
+  fi
+}
+# END DOWNLOAD OPERATION POLICY
+
 prepare_release_storage() {
   validate_root_directory_chain /var
   for directory in /var/backups /var/backups/celikpanel "$releases_root"; do
@@ -170,18 +271,14 @@ if command -v systemctl >/dev/null 2>&1; then
   systemctl is-active --quiet celikpanel-agent.service 2>/dev/null && agent_active=1 || true
 fi
 
-operation=$requested_action
-if [ "$operation" = auto ]; then
-  if [ "$full_install" -eq 1 ] && { [ "$marker_state" = valid ] || { [ "$panel_active" -eq 1 ] && [ "$agent_active" -eq 1 ]; }; }; then
-    operation=update
-  elif [ "$any_install" -eq 0 ]; then
-    operation=install
-  else
-    fail \
-      "A partial or ambiguous CelikPanel installation was found. Retry with --install after a failed first setup, or use --update only after verifying the existing installation." \
-      "Yarım veya belirsiz bir CelikPanel kurulumu bulundu. İlk kurulum başarısız olduysa --install ile yeniden deneyin; --update seçeneğini yalnız mevcut kurulumu doğruladıktan sonra kullanın."
-  fi
-fi
+recovery_candidate=0
+detect_known_interrupted_update_candidate && recovery_candidate=1 || true
+operation=$(select_download_operation \
+  "$requested_action" "$marker_state" "$full_install" "$any_install" \
+  "$panel_active" "$agent_active" "$recovery_candidate")
+[ "$operation" != ambiguous ] || fail \
+  "A partial or ambiguous CelikPanel installation was found. Retry with --install after a failed first setup, or use --update only after verifying the existing installation." \
+  "Yarım veya belirsiz bir CelikPanel kurulumu bulundu. İlk kurulum başarısız olduysa --install ile yeniden deneyin; --update seçeneğini yalnız mevcut kurulumu doğruladıktan sonra kullanın."
 
 if [ "$operation" = install ]; then
   [ "$marker_state" = absent ] && [ "$panel_active" -eq 0 ] || fail \
@@ -196,6 +293,11 @@ else
   [ "$marker_state" != invalid ] || fail \
     "The installation-complete marker is unsafe; refusing an update." \
     "Kurulum-tamamlandı işareti güvenli değil; güncelleme reddedildi."
+  if [ "$operation" = recovery-update ]; then
+    detect_known_interrupted_update_candidate || fail \
+      "The interrupted-update evidence changed; refusing automatic recovery." \
+      "Kesilen güncelleme kanıtı değişti; otomatik kurtarma reddedildi."
+  fi
   prepare_release_storage
   workdir=$(mktemp -d "$releases_root/.download.XXXXXXXX")
   chmod 0700 "$workdir"
@@ -313,6 +415,11 @@ if [ "$operation" = install ]; then
   cd "$extracted_root"
   bash "$installer"
 else
+  if [ "$operation" = recovery-update ]; then
+    detect_known_interrupted_update_candidate || fail \
+      "The interrupted-update evidence changed while downloading the release; refusing automatic recovery." \
+      "Sürüm indirilirken kesilen güncelleme kanıtı değişti; otomatik kurtarma reddedildi."
+  fi
   updater=$extracted_root/bootstrap-prebuilt-update.sh
   [ -f "$updater" ] && [ ! -L "$updater" ] || fail \
     "The verified archive does not contain the prebuilt update entry point." \

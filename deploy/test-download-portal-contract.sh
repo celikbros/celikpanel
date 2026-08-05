@@ -60,6 +60,20 @@ grep -Fq -- '--install|--update' "$bootstrap" || fail "install/update selector i
 grep -Fq '/etc/celikpanel/install.complete' "$bootstrap" || fail "completion marker gate is missing"
 grep -Fq 'A partial or ambiguous CelikPanel installation was found.' "$bootstrap" \
   || fail "partial installation refusal is missing"
+grep -Fq '# BEGIN DOWNLOAD OPERATION POLICY' "$bootstrap" \
+  || fail "extractable download operation policy is missing"
+grep -Fq 'detect_known_interrupted_update_candidate_at()' "$bootstrap" \
+  || fail "interrupted-update detector is missing"
+grep -Fq '/var/lib/celikpanel-release-transaction' "$bootstrap" \
+  || fail "fixed production transaction root is missing"
+grep -Fq '8bbbac8b628fae4fca0e127e52c1c7835f56f8b8' "$bootstrap" \
+  || fail "known interrupted alpha.4 target is missing"
+grep -Fq 'select_download_operation()' "$bootstrap" \
+  || fail "pure download operation selector is missing"
+grep -Fq 'recovery-update' "$bootstrap" \
+  || fail "narrow recovery-update classification is missing"
+[[ "$(grep -Fc 'detect_known_interrupted_update_candidate || fail' "$bootstrap")" -eq 2 ]] \
+  || fail "interrupted-update evidence is not rechecked exactly twice"
 grep -Fq 'bootstrap-prebuilt-update.sh' "$bootstrap" || fail "prebuilt updater is missing"
 grep -Fq 'Updating CelikPanel to' "$bootstrap" || fail "English update progress is missing"
 grep -Fq "Usage:" "$bootstrap" || fail "English usage text is missing"
