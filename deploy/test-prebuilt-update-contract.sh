@@ -201,6 +201,39 @@ validate_alpha4_agent_state_root_contract() (
   fi
 )
 
+validate_alpha4_pre_snapshot_cleanup_contract() (
+  set -euo pipefail
+  local test_root stage snapshot child capture entries
+
+  test_root=$(mktemp -d /tmp/celikpanel-alpha4-cleanup-contract.XXXXXXXX)
+  trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+  UPDATE_SNAPSHOT_ROOT="$test_root/update-snapshots"
+  snapshot=20260804T132650Z-from-unknown-to-8bbbac8b628fae4fca0e127e52c1c7835f56f8b8-d1d186528aec6c8426f56f437f96e58c
+  stage="$UPDATE_SNAPSHOT_ROOT/.release-snapshot.incomplete.123.d1d186528aec6c8426f56f437f96e58c"
+  child="$stage/$snapshot"
+  capture="$child/.panel-tls.capture.123"
+
+  install -d -m 0700 "$capture" "$child/agent-state"
+  printf 'present\n' >"$child/agent-ledger.state"
+  printf '/var/lib/celikpanel-agent-private\n' >"$child/agent-state-root"
+  printf 'database snapshot\n' >"$child/celikpanel.db"
+  printf 'enabled\n' >"$child/service-states.tsv"
+  printf 'stopped\n' >"$child/quiesce-coordinators.tsv"
+  printf 'normal\n' >"$child/snapshot-transition.state"
+
+  release_txn_validate_update_snapshot_stage() {
+    [[ "$1" == "$UPDATE_SNAPSHOT_ROOT" && "$2" == "$snapshot" && "$3" == "$stage" ]]
+  }
+
+  eval "$(extract_function_source "$bootstrap" die)"
+  eval "$(extract_function_source "$bootstrap" remove_known_alpha4_pre_snapshot_payload)"
+  remove_known_alpha4_pre_snapshot_payload "$stage" "$snapshot"
+
+  entries=$(find "$child" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  [[ "$entries" == $'quiesce-coordinators.tsv\nservice-states.tsv\nsnapshot-transition.state' ]] \
+    || fail "alpha.4 cleanup did not leave the exact pre-mutation ledger"
+)
+
 [[ -f "$bootstrap" && ! -L "$bootstrap" ]] || fail "bootstrap is missing or unsafe"
 bash -n "$bootstrap"
 
@@ -260,5 +293,6 @@ require_literal 'release.tree' "$makefile"
 validate_real_alpha4_tls_capture_fixture
 validate_partial_alpha4_tls_capture_fixture
 validate_alpha4_agent_state_root_contract
+validate_alpha4_pre_snapshot_cleanup_contract
 
 printf 'prebuilt update contract passed\n'
