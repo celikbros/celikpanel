@@ -113,7 +113,18 @@ start until this evidence exists.
 For a supported tagged release, normal users do not prepare a Git checkout and
 do not build on the server. Download `https://celikpanel.net/get.sh` over HTTPS
 and run it as root. With no mode flag it distinguishes a clean server from a
-completed CelikPanel installation. It refuses partial or ambiguous layouts.
+completed CelikPanel installation. Partial or ambiguous layouts still fail
+closed, with one deliberately narrow exception: an update interrupted by the
+`v0.1.0-alpha.4` panel TLS compatibility snapshot defect. The public no-flag
+command selects a recovery update only when the transaction records the exact
+alpha.4 target `8bbbac8b628fae4fca0e127e52c1c7835f56f8b8`, the expected
+version, token, operation and snapshot metadata, all file type, owner and mode
+checks pass, no conflicting phase marker exists, and both CelikPanel services
+are stopped.
+It verifies that complete fingerprint once before release storage or download
+and again after archive verification, immediately before starting the updater.
+Any mismatch remains ambiguous and stops. The operator uses no recovery flag,
+and this recovery path does not change panel settings or rely on their values.
 
 On update, the bootstrap verifies the external archive checksum, rejects links
 and special archive objects, verifies the exact internal `SHA256SUMS` manifest

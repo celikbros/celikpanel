@@ -6,6 +6,7 @@ set -euo pipefail
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 bootstrap="$repo_root/bootstrap-prebuilt-update.sh"
 makefile="$repo_root/Makefile"
+tls_helper="$repo_root/deploy/panel-tls-snapshot.sh"
 
 fail() {
   printf 'prebuilt update contract failed: %s\n' "$1" >&2
@@ -24,6 +25,84 @@ require_before() {
   [[ -n "$first_line" && -n "$second_line" && "$first_line" -lt "$second_line" ]] \
     || fail "$first must precede $second"
 }
+
+extract_function_source() {
+  local file=$1 function_name=$2
+  awk -v header="$function_name() {" '
+    $0 == header { inside = 1; found = 1 }
+    inside { print }
+    inside && $0 == "}" { closed = 1; exit }
+    END { if (!found || !closed) exit 1 }
+  ' "$file"
+}
+
+validate_real_alpha4_tls_capture_fixture() (
+  set -euo pipefail
+  local test_root child capture tls pending hook mountinfo
+
+  [[ "$(id -u)" -eq 0 ]] || fail "real alpha.4 TLS capture fixture requires root"
+  [[ -f "$tls_helper" && ! -L "$tls_helper" ]] || fail "TLS snapshot helper is missing or unsafe"
+
+  test_root=$(mktemp -d /tmp/celikpanel-alpha4-tls-contract.XXXXXXXX)
+  trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+  chmod 0700 "$test_root"
+
+  child="$test_root/update-snapshot"
+  capture="$child/.panel-tls.capture.123"
+  tls="$test_root/tls"
+  pending="$test_root/agent/panel-certificate-activation.json"
+  hook="$test_root/etc/letsencrypt/renewal-hooks/deploy/celikpanel-panel-cert"
+  mountinfo="$test_root/mountinfo"
+
+  install -d -m 0700 "$child" "$capture" "$test_root/agent"
+  install -d -m 0750 "$tls"
+  install -d -m 0755 "${hook%/*}"
+  : >"$mountinfo"
+  chmod 0600 "$mountinfo"
+  printf '%s\n' 'fixture certificate bytes' >"$tls/panel.crt"
+  printf '%s\n' 'fixture private-key bytes' >"$tls/panel.key"
+  chmod 0640 "$tls/panel.crt" "$tls/panel.key"
+
+  systemctl() {
+    case "${1:-}" in
+      show)
+        printf '%s\n' not-found
+        ;;
+      is-enabled)
+        printf '%s\n' not-found
+        return 1
+        ;;
+      is-active)
+        printf '%s\n' inactive
+        return 3
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  }
+
+  export CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT="$test_root"
+  export CELIKPANEL_TLS_SNAPSHOT_MOUNTINFO="$mountinfo"
+  # Generate the fixture through the production capture path. This makes the
+  # regression exercise the real manifest, timer and service ledgers rather
+  # than a test-side imitation of their format.
+  source "$tls_helper"
+  panel_tls_snapshot_capture "$capture" "$tls" "$pending" "$hook" \
+    || fail "production TLS snapshot helper could not create the alpha.4 fixture"
+
+  [[ "$(wc -l <"$capture/managed.manifest")" -eq 2 ]] \
+    || fail "real alpha.4 fixture must contain two managed manifest rows"
+  [[ "$(wc -l <"$capture/certbot-timers.tsv")" -eq 2 ]] \
+    || fail "real alpha.4 fixture must contain two timer rows"
+  [[ "$(wc -l <"$capture/certbot-services.tsv")" -eq 2 ]] \
+    || fail "real alpha.4 fixture must contain two service rows"
+
+  eval "$(extract_function_source "$bootstrap" die)"
+  eval "$(extract_function_source "$bootstrap" validate_known_alpha4_tls_capture)"
+  PANEL_TLS_DIR="$tls"
+  validate_known_alpha4_tls_capture "$capture" "$child" 0 0
+)
 
 [[ -f "$bootstrap" && ! -L "$bootstrap" ]] || fail "bootstrap is missing or unsafe"
 bash -n "$bootstrap"
@@ -55,6 +134,8 @@ require_literal 'validate_exact_alpha2_installed_artifacts'
 require_literal 'validate_known_alpha4_tls_capture'
 require_literal 'verify_active_marker_unchanged'
 require_literal 'remove_known_alpha4_pre_snapshot_payload'
+[[ "$(grep -Fc 'rows=0; seen_certbot=0; seen_renew=0' "$bootstrap")" -eq 3 ]] \
+  || fail "alpha.4 TLS capture row-set counters must reset independently before manifest, timer and service validation"
 require_literal 'systemctl start "${saved_units[0]}"'
 require_literal 'systemctl start "${saved_units[1]}"'
 require_literal 'release_txn_remove_pre_mutation_active_marker'
@@ -76,5 +157,7 @@ require_literal 'deploy/write-release-manifest.sh' "$makefile"
 require_literal 'find "$root" -xdev -type f -links +1' "$repo_root/deploy/write-release-manifest.sh"
 require_literal 'release.commit' "$makefile"
 require_literal 'release.tree' "$makefile"
+
+validate_real_alpha4_tls_capture_fixture
 
 printf 'prebuilt update contract passed\n'

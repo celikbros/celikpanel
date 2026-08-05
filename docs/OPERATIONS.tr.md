@@ -116,8 +116,18 @@ olmadan üretim dağıtımı başlatılamaz.
 Desteklenen etiketli bir sürümde normal kullanıcı Git checkout hazırlamaz ve
 sunucuda derleme yapmaz. `https://celikpanel.net/get.sh` dosyasını HTTPS ile
 indirip root olarak çalıştırır. Betik, mod seçeneği verilmediğinde temiz sunucu
-ile tamamlanmış CelikPanel kurulumunu ayırır; yarım veya belirsiz yerleşimde
-tahmin yürütmeden durur.
+ile tamamlanmış CelikPanel kurulumunu ayırır. Yarım veya belirsiz yerleşimler,
+bilerek dar tutulan tek istisna dışında, fail-closed biçimde durmaya devam eder:
+`v0.1.0-alpha.4` panel TLS uyumluluk snapshot kusuruyla kesilmiş güncelleme.
+Herkese açık seçeneksiz komut; transaction kaydı kesin alpha.4 hedefi
+`8bbbac8b628fae4fca0e127e52c1c7835f56f8b8` ile beklenen sürüm, token,
+operasyon ve snapshot metadata'sını gösteriyorsa, bütün dosya türü, sahiplik ve
+kip kontrolleri geçiyorsa, çakışan faz marker'ı yoksa ve iki CelikPanel servisi
+de durmuşsa kurtarma güncellemesini seçer. Bu eksiksiz parmak izini release
+depolama veya indirmeden önce bir kez; arşiv doğrulamasından sonra, updater'ı
+başlatmadan hemen önce ikinci kez doğrular. Her uyumsuzluk belirsiz sayılır ve
+işlemi durdurur. Operatör özel bir kurtarma seçeneği kullanmaz; bu kurtarma yolu
+panel ayarlarını değiştirmez ve onların değerlerine dayanmaz.
 
 Güncellemede dış arşiv sağlaması doğrulanır; bağlantılar ve özel arşiv nesneleri
 reddedilir; tam iç `SHA256SUMS` manifesti ile commit/tree kaynağı doğrulanır.

@@ -355,7 +355,7 @@ validate_known_alpha4_tls_capture() {
         [[ "$state" == absent && -z "$(find "$root/pending" -mindepth 1 -print -quit)" ]] \
         || die "alpha.4 pending-certificate capture disagrees with its state"
 
-    rows=0
+    rows=0; seen_certbot=0; seen_renew=0
     while IFS=$'\t' read -r unit load enabled active extra || [[ -n "$unit$load$enabled$active${extra:-}" ]]; do
         case "$unit" in certbot.timer|certbot-renew.timer) ;; *) die "unexpected alpha.4 timer row" ;; esac
         if [[ "$unit" == certbot.timer ]]; then
