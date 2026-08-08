@@ -21,7 +21,7 @@ import (
 // yolu; agent makineyi değiştirmeden önce host desteğini, önkoşulları, özel
 // servis yuvasının boş olduğunu ve zorunlu deponun etkinliğini bağımsız olarak
 // doğrular.
-func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID string) error {
+func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, selectedPackage string) error {
 	managed := core.GetManagedServiceByID(serviceID)
 	if managed == nil {
 		return errors.New("unknown managed service")
@@ -51,7 +51,11 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID st
 			managed.Name, taken)
 	}
 
-	if family == "apt" && managed.Repo != nil && managed.Repo.Required {
+	requiresRepo, err := core.InstallRequiresManagedRepository(managed, selectedPackage)
+	if err != nil {
+		return fmt.Errorf("%s repository policy: %w", managed.Name, err)
+	}
+	if family == "apt" && requiresRepo {
 		var status transport.RepoStatusResponse
 		if err := p.callAgentContext(ctx, "Agent.RepoStatus", &transport.EnableRepoRequest{RepoID: managed.Repo.ID}, &status); err != nil {
 			log.Printf("[repo][%s][install-preflight][transport] %v", managed.Repo.ID, err)
@@ -69,6 +73,10 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID st
 			return errors.New("required repository status could not be verified")
 		}
 		if !status.Enabled {
+			if selectedPackage = strings.TrimSpace(selectedPackage); selectedPackage != "" {
+				return fmt.Errorf("selected package %s requires the %s repository; enable it from Services first",
+					selectedPackage, managed.Repo.Name)
+			}
 			return fmt.Errorf("%s requires the %s repository; enable it from Services first",
 				managed.Name, managed.Repo.Name)
 		}

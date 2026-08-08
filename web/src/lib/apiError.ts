@@ -42,7 +42,9 @@ export async function readApiError(res: Response): Promise<ApiError> {
                     message: d.error || '',
                     code: d.code,
                     action: d.action,
-                    details: Array.isArray(d.details) ? d.details : undefined,
+                    details: Array.isArray(d.details)
+                        ? d.details.filter((item: unknown): item is string => typeof item === 'string')
+                        : undefined,
                 };
             }
         } catch {

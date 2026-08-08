@@ -160,6 +160,30 @@ func TestNodeInstallRequiresWebServerBeforeMutation(t *testing.T) {
 	}
 }
 
+func TestSelectedPostgreSQLVersionRequiresEnabledPGDGRepository(t *testing.T) {
+	t.Run("distro default does not require optional PGDG", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		fixture.agent.installNoop = true
+		if err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", ""); err != nil {
+			t.Fatalf("default PostgreSQL preflight failed: %v", err)
+		}
+	})
+	t.Run("exact PostgreSQL version fails before mutation when PGDG is disabled", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		fixture.agent.installNoop = true
+		err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", "postgresql-18")
+		if err == nil {
+			t.Fatal("expected PostgreSQL 18 preflight to require PGDG")
+		}
+	})
+	t.Run("exact PostgreSQL version passes with PGDG enabled", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		if err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", "postgresql-18"); err != nil {
+			t.Fatalf("PostgreSQL 18 preflight failed with PGDG enabled: %v", err)
+		}
+	})
+}
+
 func TestRoundcubePreflightAndConfigurationConfirmation(t *testing.T) {
 	t.Run("SMTP is required before mutation", func(t *testing.T) {
 		fixture := newServiceOperationTestFixture(t)
