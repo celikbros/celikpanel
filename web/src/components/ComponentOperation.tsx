@@ -119,6 +119,11 @@ function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot 
                 )
                 && (service.conflict_with === undefined || typeof service.conflict_with === 'string')
                 && (service.not_offered === undefined || typeof service.not_offered === 'boolean')
+                && (
+                    service.not_offered_kind === undefined
+                    || service.not_offered_kind === 'integration'
+                    || service.not_offered_kind === 'distribution'
+                )
                 && (service.not_offered_reason === undefined || typeof service.not_offered_reason === 'string')
                 && (
                     service.requires_missing === undefined

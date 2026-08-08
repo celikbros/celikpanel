@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import { useComponentOperation } from './ComponentOperation';
+import { useNavigate } from '../router';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -37,6 +38,7 @@ interface ManagedService {
     is_installed: boolean;
     conflict_with?: string;
     not_offered?: boolean;
+    not_offered_kind?: 'integration' | 'distribution';
     not_offered_reason?: string;
     requires_missing?: string[];
     kind?: 'service' | 'runtime' | 'tool';
@@ -243,6 +245,7 @@ function unknownCategories(list: ManagedService[]) {
 // wrapper-unit uç noktasından değil.
 export function ServiceList({ onManageService }: ServiceListProps) {
     const { t } = useI18n();
+    const navigate = useNavigate();
     const { startInstall, catalogSnapshot } = useComponentOperation();
     const [services, setServices] = useState<ManagedService[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
@@ -927,7 +930,24 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         className="ml-auto flex min-w-0 items-center justify-end gap-1 border-0 p-0"
                                                     >
                                                     {!s.is_installed ? (
-                                                        s.not_offered ? (
+                                                        s.conflict_with ? (
+                                                            <span
+                                                                title={t('services.conflictHint', { name: s.conflict_with })}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
+                                                            >
+                                                                {t('services.conflictWith', { name: s.conflict_with })}
+                                                            </span>
+                                                        ) : s.not_offered_kind === 'integration' && s.id === 'vsftpd' ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => navigate('/domains')}
+                                                                title={t('services.useBuiltInSFTPHint')}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                                                            >
+                                                                {t('services.useBuiltInSFTP')}
+                                                                <ChevronRight className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        ) : s.not_offered ? (
                                                             /* Honest instead of a dead Install button that
                                                                fails late in the agent (spamassassin on Arch,
                                                                netdata on Debian). The full per-distro list
@@ -937,17 +957,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                                netdata). Dağıtım başına tam liste
                                                                docs/DISTRO-SUPPORT içinde. */
                                                             <span
-                                                                title={s.not_offered_reason || t('services.notOfferedHint')}
+                                                                title={s.not_offered_kind === 'integration'
+                                                                    ? t('services.integrationPendingHint')
+                                                                    : (s.not_offered_reason || t('services.notOfferedHint'))}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
                                                             >
-                                                                {t('services.notOffered')}
-                                                            </span>
-                                                        ) : s.conflict_with ? (
-                                                            <span
-                                                                title={t('services.conflictHint', { name: s.conflict_with })}
-                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
-                                                            >
-                                                                {t('services.conflictWith', { name: s.conflict_with })}
+                                                                {s.not_offered_kind === 'integration'
+                                                                    ? t('services.integrationPending')
+                                                                    : t('services.notOffered')}
                                                             </span>
                                                         ) : s.requires_missing && s.requires_missing.length > 0 ? (
                                                             <span

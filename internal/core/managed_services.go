@@ -280,21 +280,37 @@ type ManagedService struct {
 	HelperUnits []string
 }
 
-// ManagedServiceInstallDisabledReason is the single catalogue decision used
+// ManagedServiceInstallBlockKind distinguishes missing platform support from
+// an available package whose safe CelikPanel lifecycle is not integrated yet.
+type ManagedServiceInstallBlockKind string
+
+const (
+	ManagedServiceInstallBlockNone         ManagedServiceInstallBlockKind = ""
+	ManagedServiceInstallBlockIntegration  ManagedServiceInstallBlockKind = "integration"
+	ManagedServiceInstallBlockDistribution ManagedServiceInstallBlockKind = "distribution"
+)
+
+// ManagedServiceInstallBlock is the single catalogue decision used
 // by both the panel and the privileged agent. Empty means automatic install is
 // offered. An empty Packages map is a portable installer (Node/Roundcube), not
 // a missing distro mapping.
-func ManagedServiceInstallDisabledReason(svc *ManagedService, family string) string {
+func ManagedServiceInstallBlock(svc *ManagedService, family string) (ManagedServiceInstallBlockKind, string) {
 	if svc == nil {
-		return "unknown managed service"
+		return ManagedServiceInstallBlockIntegration, "unknown managed service"
 	}
 	if svc.InstallDisabledReason != "" {
-		return svc.InstallDisabledReason
+		return ManagedServiceInstallBlockIntegration, svc.InstallDisabledReason
 	}
 	if len(svc.Packages) > 0 && len(svc.Packages[family]) == 0 {
-		return "automatic installation is not supported on this Linux distribution yet"
+		return ManagedServiceInstallBlockDistribution, "automatic installation is not supported on this Linux distribution yet"
 	}
-	return ""
+	return ManagedServiceInstallBlockNone, ""
+}
+
+// ManagedServiceInstallDisabledReason preserves the shared enforcement API.
+func ManagedServiceInstallDisabledReason(svc *ManagedService, family string) string {
+	_, reason := ManagedServiceInstallBlock(svc, family)
+	return reason
 }
 
 // RequirementsMissing returns which of a service's requirements are not met by
