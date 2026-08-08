@@ -45,8 +45,9 @@ type ManagedServiceResponse struct {
 	// patlayacak bir Kur düğmesi yerine dürüst bir rozet gösterir. Taşınabilir
 	// bileşenler (boş Packages — node, roundcube) asla işaretlenmez: onların
 	// kurulum yolu her yerde çalışır.
-	NotOffered       bool   `json:"not_offered,omitempty"`
-	NotOfferedReason string `json:"not_offered_reason,omitempty"`
+	NotOffered       bool                                `json:"not_offered,omitempty"`
+	NotOfferedKind   core.ManagedServiceInstallBlockKind `json:"not_offered_kind,omitempty"`
+	NotOfferedReason string                              `json:"not_offered_reason,omitempty"`
 	// Kind decides how the row is drawn and operated (D-010): "service" has a
 	// daemon to start/stop, "runtime" is versioned and picked per site, "tool"
 	// has no daemon of ours at all. It replaces the old `daemonless` flag,
@@ -373,6 +374,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 		// kurulum sunabilsin. "not_installed" durumu taşırlar; arayüz
 		// başlat/durdur/yönet yerine Kur düğmesi gösterir.
 		notOffered := false
+		notOfferedKind := core.ManagedServiceInstallBlockNone
 		notOfferedReason := ""
 		if !o.IsInstalled {
 			status = "not_installed"
@@ -389,10 +391,10 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			// requirements: telling someone to install an SMTP server first,
 			// for a filter this distro cannot run, would be theatre.
 			// Paketle kurulan bileşenin bu aile için eşlemesi yoksa → burada
-			// dürüstçe sunulmuyor. Bu, çakışma ve gereksinimlerden önce gelir:
-			// bu dağıtımın koşturamayacağı bir filtre için önce SMTP sunucusu
-			// kurdurmak tiyatro olurdu.
-			notOfferedReason = core.ManagedServiceInstallDisabledReason(&managed, pkgFamily)
+			// dürüstçe sunulmuyor. Arayüz mevcut bir rakip servis çakışmasını
+			// bu rozetten önce gösterir; böylece BIND/Exim için asıl engel
+			// kaybolmaz. Gereksinimlerse ancak kurulum sunulduğunda anlamlıdır.
+			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlock(&managed, pkgFamily)
 			notOffered = notOfferedReason != ""
 		}
 
@@ -410,6 +412,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			ConflictWith:     conflictWith,
 			RequiresMissing:  requiresMissing,
 			NotOffered:       notOffered,
+			NotOfferedKind:   notOfferedKind,
 			NotOfferedReason: notOfferedReason,
 			Ports:            portStrings(managed.FirewallPorts),
 			Kind:             managed.Kind,

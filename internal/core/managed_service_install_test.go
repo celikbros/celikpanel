@@ -5,28 +5,31 @@ import "testing"
 func TestManagedServiceInstallDisabledReason(t *testing.T) {
 	tests := []struct {
 		id, family string
-		blocked    bool
+		want       ManagedServiceInstallBlockKind
 	}{
-		{"apache", "apt", true},
-		{"apache", "pacman", true},
-		{"bind", "apt", true},
-		{"bind", "pacman", true},
-		{"exim", "apt", true},
-		{"exim", "pacman", true},
-		{"vsftpd", "apt", true},
-		{"vsftpd", "pacman", true},
-		{"nginx", "apt", false},
-		{"pdns", "pacman", false},
-		{"postfix", "apt", false},
-		{"spamassassin", "pacman", true},
-		{"roundcube", "pacman", false},
-		{"node", "apt", false},
+		{"apache", "apt", ManagedServiceInstallBlockIntegration},
+		{"apache", "pacman", ManagedServiceInstallBlockIntegration},
+		{"bind", "apt", ManagedServiceInstallBlockIntegration},
+		{"bind", "pacman", ManagedServiceInstallBlockIntegration},
+		{"exim", "apt", ManagedServiceInstallBlockIntegration},
+		{"exim", "pacman", ManagedServiceInstallBlockIntegration},
+		{"vsftpd", "apt", ManagedServiceInstallBlockIntegration},
+		{"vsftpd", "pacman", ManagedServiceInstallBlockIntegration},
+		{"nginx", "apt", ManagedServiceInstallBlockNone},
+		{"pdns", "pacman", ManagedServiceInstallBlockNone},
+		{"postfix", "apt", ManagedServiceInstallBlockNone},
+		{"spamassassin", "pacman", ManagedServiceInstallBlockDistribution},
+		{"roundcube", "pacman", ManagedServiceInstallBlockNone},
+		{"node", "apt", ManagedServiceInstallBlockNone},
 	}
 	for _, tt := range tests {
 		t.Run(tt.id+"/"+tt.family, func(t *testing.T) {
-			got := ManagedServiceInstallDisabledReason(GetManagedServiceByID(tt.id), tt.family)
-			if (got != "") != tt.blocked {
-				t.Fatalf("disabled reason = %q, blocked = %v", got, tt.blocked)
+			kind, reason := ManagedServiceInstallBlock(GetManagedServiceByID(tt.id), tt.family)
+			if kind != tt.want {
+				t.Fatalf("block kind = %q, want %q (reason %q)", kind, tt.want, reason)
+			}
+			if (reason == "") != (kind == ManagedServiceInstallBlockNone) {
+				t.Fatalf("block kind = %q with inconsistent reason %q", kind, reason)
 			}
 		})
 	}

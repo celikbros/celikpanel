@@ -274,3 +274,33 @@ func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
 		}
 	}
 }
+
+func TestNotOfferedKindDistinguishesIntegrationFromDistribution(t *testing.T) {
+	for _, c := range []struct {
+		family string
+		id     string
+		want   core.ManagedServiceInstallBlockKind
+	}{
+		{"apt", "apache", core.ManagedServiceInstallBlockIntegration},
+		{"apt", "bind", core.ManagedServiceInstallBlockIntegration},
+		{"apt", "exim", core.ManagedServiceInstallBlockIntegration},
+		{"apt", "vsftpd", core.ManagedServiceInstallBlockIntegration},
+		{"pacman", "spamassassin", core.ManagedServiceInstallBlockDistribution},
+		{"apt", "nginx", core.ManagedServiceInstallBlockNone},
+	} {
+		var got *ManagedServiceResponse
+		for _, service := range catalogView(nil, c.family) {
+			if service.ID == c.id {
+				service := service
+				got = &service
+				break
+			}
+		}
+		if got == nil {
+			t.Fatalf("%s missing from catalogView", c.id)
+		}
+		if got.NotOfferedKind != c.want {
+			t.Errorf("%s on %s: not_offered_kind = %q, want %q", c.id, c.family, got.NotOfferedKind, c.want)
+		}
+	}
+}
