@@ -75,7 +75,7 @@ func (a *serviceOperationTestAgent) RepoStatus(
 ) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	resp.Enabled = !a.installNoop
+	resp.Enabled = a.repoEnabled
 	return nil
 }
 
@@ -118,7 +118,7 @@ func TestServiceInstallPreflightFailsBeforeAgentMutation(t *testing.T) {
 			name:      "required repository disabled",
 			serviceID: "netdata",
 			setup: func(agent *serviceOperationTestAgent) {
-				agent.installNoop = true
+				agent.repoEnabled = false
 			},
 		},
 	}
@@ -158,6 +158,32 @@ func TestNodeInstallRequiresWebServerBeforeMutation(t *testing.T) {
 	if installed {
 		t.Fatal("Node install RPC ran without a web server")
 	}
+}
+
+func TestSelectedPostgreSQLVersionRequiresEnabledPGDGRepository(t *testing.T) {
+	t.Run("distro default does not require optional PGDG", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		fixture.agent.installNoop = true
+		fixture.agent.repoEnabled = false
+		if err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", ""); err != nil {
+			t.Fatalf("default PostgreSQL preflight failed: %v", err)
+		}
+	})
+	t.Run("exact PostgreSQL version fails before mutation when PGDG is disabled", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		fixture.agent.installNoop = true
+		fixture.agent.repoEnabled = false
+		err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", "postgresql-18")
+		if err == nil {
+			t.Fatal("expected PostgreSQL 18 preflight to require PGDG")
+		}
+	})
+	t.Run("exact PostgreSQL version passes with PGDG enabled", func(t *testing.T) {
+		fixture := newServiceOperationTestFixture(t)
+		if err := fixture.panel.preflightManagedServiceInstall(context.Background(), "postgresql", "postgresql-18"); err != nil {
+			t.Fatalf("PostgreSQL 18 preflight failed with PGDG enabled: %v", err)
+		}
+	})
 }
 
 func TestRoundcubePreflightAndConfigurationConfirmation(t *testing.T) {

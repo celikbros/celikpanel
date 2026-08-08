@@ -208,14 +208,23 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 			}
 		}
 	}
-	if family == "apt" && svc.Repo != nil && svc.Repo.Required {
+	requiresRepo, err := core.InstallRequiresManagedRepository(svc, req.Package)
+	if err != nil {
+		resp.Error = fmt.Sprintf("repository policy failed: %v", err)
+		return nil
+	}
+	if family == "apt" && requiresRepo {
 		var repoStatus RepoStatusResponse
 		if err := a.RepoStatus(&EnableRepoRequest{RepoID: svc.Repo.ID}, &repoStatus); err != nil {
 			resp.Error = fmt.Sprintf("required repository status failed: %v", err)
 			return nil
 		}
 		if repoStatus.Error != "" || !repoStatus.Enabled {
-			resp.Error = fmt.Sprintf("%s requires the %s repository; enable it from Services first", svc.Name, svc.Repo.Name)
+			if req.Package != "" {
+				resp.Error = fmt.Sprintf("selected package %s requires the %s repository; enable it from Services first", req.Package, svc.Repo.Name)
+			} else {
+				resp.Error = fmt.Sprintf("%s requires the %s repository; enable it from Services first", svc.Name, svc.Repo.Name)
+			}
 			return nil
 		}
 	}
@@ -227,7 +236,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		}
 	}
 	if len(missingPackages) > 0 {
-		if _, err := installPackagesContext(ctx, family, missingPackages); err != nil {
+		if _, err := installPackagesWithCandidateContext(ctx, family, missingPackages, strings.TrimSpace(req.Package)); err != nil {
 			resp.Error = fmt.Sprintf("package install failed: %v", err)
 			return nil
 		}

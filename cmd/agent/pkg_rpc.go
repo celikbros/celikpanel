@@ -133,6 +133,10 @@ func installPackages(family string, packages []string) (string, error) {
 }
 
 func installPackagesContext(ctx context.Context, family string, packages []string) (string, error) {
+	return installPackagesWithCandidateContext(ctx, family, packages, "")
+}
+
+func installPackagesWithCandidateContext(ctx context.Context, family string, packages []string, requiredCandidate string) (string, error) {
 	packageOperationMu.Lock()
 	defer packageOperationMu.Unlock()
 
@@ -152,6 +156,15 @@ func installPackagesContext(ctx context.Context, family string, packages []strin
 	switch family {
 	case "apt":
 		refreshAptListsIfStaleContext(ctx, time.Hour)
+		if requiredCandidate = strings.TrimSpace(requiredCandidate); requiredCandidate != "" {
+			candidate, err := aptInstallCandidateContext(ctx, requiredCandidate)
+			if err != nil {
+				return "", fmt.Errorf("check APT installation candidate for %s: %w", requiredCandidate, err)
+			}
+			if candidate == "" {
+				return "", fmt.Errorf("selected package %s has no APT installation candidate after refreshing package lists; enable or repair its managed repository and rescan", requiredCandidate)
+			}
+		}
 		run := func() (string, error) {
 			args := append([]string{"install", "-y", "--no-install-recommends"}, packages...)
 			env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
@@ -191,6 +204,39 @@ func installPackagesContext(ctx context.Context, family string, packages []strin
 	default:
 		return "", fmt.Errorf("unrecognised distribution; install %s manually", strings.Join(packages, ", "))
 	}
+}
+
+func aptInstallCandidateContext(ctx context.Context, packageName string) (string, error) {
+	if !validPackageName(packageName) {
+		return "", fmt.Errorf("invalid package name: %q", packageName)
+	}
+	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := runServiceMutationCombinedOutputEnv(
+		ctx,
+		env,
+		"apt-cache",
+		"policy",
+		packageName,
+	)
+	if err != nil {
+		return "", fmt.Errorf("apt-cache policy failed: %v: %s", err, firstLine(string(out)))
+	}
+	return parseAptInstallCandidate(out), nil
+}
+
+func parseAptInstallCandidate(out []byte) string {
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "Candidate:") {
+			continue
+		}
+		candidate := strings.TrimSpace(strings.TrimPrefix(line, "Candidate:"))
+		if candidate == "" || candidate == "(none)" {
+			return ""
+		}
+		return candidate
+	}
+	return ""
 }
 
 func pacmanInstallArgs(packages []string) []string {

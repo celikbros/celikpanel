@@ -9,6 +9,7 @@ func TestPostgreSQLClusterUnitForPackage(t *testing.T) {
 		wantOK      bool
 	}{
 		{packageName: "postgresql-17", wantUnit: "postgresql@17-main", wantOK: true},
+		{packageName: "postgresql-18", wantUnit: "postgresql@18-main", wantOK: true},
 		{packageName: "postgresql-16", wantUnit: "postgresql@16-main", wantOK: true},
 		{packageName: "postgresql", wantOK: false},
 		{packageName: "postgresql-17-client", wantOK: false},

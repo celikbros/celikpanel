@@ -1169,7 +1169,7 @@ func (p *Panel) runNodeInstall(
 	if err != nil {
 		return result, nodeInstallFailure(err)
 	}
-	if err := p.preflightManagedServiceInstall(ctx, "node"); err != nil {
+	if err := p.preflightManagedServiceInstall(ctx, "node", ""); err != nil {
 		return result, nodeInstallFailure(err)
 	}
 	var response transport.NodeInstallResponse

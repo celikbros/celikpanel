@@ -157,6 +157,7 @@ type serviceOperationTestAgent struct {
 	installError    string
 	installNoop     bool
 	installUnit     string
+	repoEnabled     bool
 	// dropActiveBeforeGetServices simulates a selected unit that was started
 	// and reported by InstallService, then died before the final host scan.
 	// dropActiveBeforeGetServices, InstallService tarafından başlatılıp
@@ -184,6 +185,7 @@ func newServiceOperationTestAgent() *serviceOperationTestAgent {
 	return &serviceOperationTestAgent{
 		serviceSuccess: true,
 		vpnCreated:     true,
+		repoEnabled:    true,
 		installed:      map[string]bool{},
 		active:         map[string]bool{},
 		nodeVersions:   map[string]bool{},

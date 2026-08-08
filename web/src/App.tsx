@@ -361,8 +361,7 @@ function RouteLoadBoundary({ children }: { children: ReactNode }) {
 
 function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
         {/* Dashboard */}
         <Route path="/" element={<PageWithLayout><Dashboard /></PageWithLayout>} />
 
@@ -392,8 +391,7 @@ function AppRoutes() {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    </Routes>
   );
 }
 
@@ -443,9 +441,11 @@ function AuthGate() {
 
   return (
     <AuthProvider user={user} onLogout={() => setUser(null)}>
-      <ComponentOperationProvider>
-        <AppRoutes />
-      </ComponentOperationProvider>
+      <BrowserRouter>
+        <ComponentOperationProvider>
+          <AppRoutes />
+        </ComponentOperationProvider>
+      </BrowserRouter>
     </AuthProvider>
   );
 }
