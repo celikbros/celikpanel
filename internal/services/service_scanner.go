@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -121,20 +122,13 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 			"/usr/local/mysql/my.cnf",
 		}
 	} else if strings.Contains(serviceName, "postgres") {
-		// Try to find active cluster
-		paths = []string{
-			"/etc/postgresql/16/main/postgresql.conf",
-			"/etc/postgresql/15/main/postgresql.conf",
-			"/etc/postgresql/14/main/postgresql.conf",
-		}
-		// Also check for pg_hba.conf
-		for i, path := range paths {
-			if strings.HasSuffix(path, "postgresql.conf") {
-				dir := filepath.Dir(path)
-				paths = append(paths, filepath.Join(dir, "pg_hba.conf"))
-			}
-			_ = i
-		}
+		paths = append(paths, discoverDebianPostgreSQLPaths("/etc/postgresql", serviceName)...)
+		paths = append(paths,
+			"/var/lib/pgsql/data/postgresql.conf",
+			"/var/lib/pgsql/data/pg_hba.conf",
+			"/var/lib/postgres/data/postgresql.conf",
+			"/var/lib/postgres/data/pg_hba.conf",
+		)
 	} else if strings.Contains(serviceName, "certbot") {
 		paths = []string{
 			"/etc/letsencrypt/cli.ini",
@@ -173,6 +167,91 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 	}
 
 	return paths
+}
+
+var (
+	postgresqlUnitPattern    = regexp.MustCompile(`^postgresql@([0-9]+)-([A-Za-z0-9][A-Za-z0-9_.-]*)$`)
+	postgresqlMajorPattern   = regexp.MustCompile(`^[0-9]+$`)
+	postgresqlClusterPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+)
+
+// discoverDebianPostgreSQLPaths finds configuration files for every locally
+// installed PostgreSQL cluster without hard-coding server major versions.
+// Exact instance units such as postgresql@18-main are restricted to their own
+// cluster. Generic PostgreSQL scans enumerate all real cluster directories so
+// the same discovered allowlist can safely authorize configuration writes.
+func discoverDebianPostgreSQLPaths(root, serviceName string) []string {
+	if !isRealDirectory(root) {
+		return nil
+	}
+
+	if match := postgresqlUnitPattern.FindStringSubmatch(serviceName); match != nil {
+		return postgresqlConfigFiles(root, match[1], match[2])
+	}
+	if strings.Contains(serviceName, "@") {
+		// Refuse malformed instance names instead of turning them into paths or
+		// broadening them to every cluster.
+		return nil
+	}
+
+	majorEntries, err := os.ReadDir(root)
+	if err != nil {
+		return nil
+	}
+
+	var paths []string
+	for _, majorEntry := range majorEntries {
+		major := majorEntry.Name()
+		majorPath := filepath.Join(root, major)
+		if !postgresqlMajorPattern.MatchString(major) || !isRealDirectory(majorPath) {
+			continue
+		}
+
+		clusterEntries, err := os.ReadDir(majorPath)
+		if err != nil {
+			continue
+		}
+		for _, clusterEntry := range clusterEntries {
+			cluster := clusterEntry.Name()
+			if !postgresqlClusterPattern.MatchString(cluster) {
+				continue
+			}
+			paths = append(paths, postgresqlConfigFiles(root, major, cluster)...)
+		}
+	}
+
+	return paths
+}
+
+func postgresqlConfigFiles(root, major, cluster string) []string {
+	if !postgresqlMajorPattern.MatchString(major) || !postgresqlClusterPattern.MatchString(cluster) {
+		return nil
+	}
+
+	majorPath := filepath.Join(root, major)
+	clusterPath := filepath.Join(majorPath, cluster)
+	if !isRealDirectory(root) || !isRealDirectory(majorPath) || !isRealDirectory(clusterPath) {
+		return nil
+	}
+
+	var paths []string
+	for _, name := range []string{"postgresql.conf", "pg_hba.conf"} {
+		path := filepath.Join(clusterPath, name)
+		if isRealRegularFile(path) {
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+func isRealDirectory(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0
+}
+
+func isRealRegularFile(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0
 }
 
 // extractPHPVersion extracts version from service name (e.g., php8.3-fpm -> 8.3).
