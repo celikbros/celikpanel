@@ -187,7 +187,9 @@ jobs:
       # registry. Keep CI deterministic and non-disclosing; a networked audit
       # is a separate, explicitly authorised release-review action.
       - run: npm ci --no-audit --no-fund
-      - run: npm run test:router
+      # Run every UI contract: routing, tenant authorization, mailbox secrets,
+      # webmail fail-closed behavior, API errors and provider boundaries.
+      - run: npm test
       # `build` is `tsc && vite build` — tsc is the typecheck gate, so a type
       # error (e.g. the capabilities bool/string class of bug) fails CI here.
       # `build` = `tsc && vite build` — tsc tip denetimi kapısıdır; bir tip

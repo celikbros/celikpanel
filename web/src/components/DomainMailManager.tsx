@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info } from 'lucide-react';
+import { lazy, useState, useEffect, useRef } from 'react';
+import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info, KeyRound, X } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { apiErrorText, readApiError } from '../lib/apiError';
 import { Button, EmptyState, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
 import { MailSettingsPanel } from './MailSettingsPanel';
@@ -36,6 +37,9 @@ interface DomainMailManagerProps {
     readOnly?: boolean;
 }
 
+const mailPasswordByteLength = (value: string) => new TextEncoder().encode(value).byteLength;
+const WebmailAccess = lazy(() => import('./WebmailAccess'));
+
 export function DomainMailManager({ domainId, domainName, readOnly = false }: DomainMailManagerProps) {
     const { t } = useI18n();
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
@@ -57,12 +61,32 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
     const [editingQuota, setEditingQuota] = useState<number | null>(null);
     const [quotaDraft, setQuotaDraft] = useState(1024);
-
+    const [passwordAccount, setPasswordAccount] = useState<EmailAccount | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
+    const [passwordSaving, setPasswordSaving] = useState(false);
+    const passwordRequestRef = useRef<AbortController | null>(null);
     useEffect(() => {
         loadData();
         setShowForm(false);
         setEditingQuota(null);
     }, [domainId, activeTab, readOnly]);
+
+    useEffect(() => {
+        // A mailbox secret must not survive an authorization or domain context
+        // change, even briefly in an otherwise hidden dialog.
+        passwordRequestRef.current?.abort();
+        passwordRequestRef.current = null;
+        setPasswordAccount(null);
+        setNewPassword('');
+        setPasswordConfirmation('');
+        setPasswordSaving(false);
+
+        return () => {
+            passwordRequestRef.current?.abort();
+            passwordRequestRef.current = null;
+        };
+    }, [domainId, readOnly, activeTab]);
 
     const loadData = async () => {
         // The auth tab owns its own data loading (MailAuthPanel).
@@ -141,6 +165,62 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
         }
     };
 
+    const openPasswordDialog = (account: EmailAccount) => {
+        if (readOnly) return;
+        setPasswordAccount(account);
+        setNewPassword('');
+        setPasswordConfirmation('');
+    };
+
+    const closePasswordDialog = () => {
+        if (passwordSaving) return;
+        setPasswordAccount(null);
+        setNewPassword('');
+        setPasswordConfirmation('');
+    };
+
+    const rotateAccountPassword = async () => {
+        if (readOnly || passwordSaving || !passwordAccount || passwordRequestRef.current) return;
+        const passwordBytes = mailPasswordByteLength(newPassword);
+        if (passwordBytes < 8 || passwordBytes > 1024 || newPassword !== passwordConfirmation) return;
+
+        const request = new AbortController();
+        passwordRequestRef.current = request;
+        let succeeded = false;
+        setPasswordSaving(true);
+        try {
+            const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: passwordAccount.id, new_password: newPassword }),
+                signal: request.signal,
+            });
+            if (!res.ok) {
+                const apiError = await readApiError(res);
+                // Stable codes stay useful, but an untrusted server message is
+                // not echoed on this secret-bearing path.
+                showToast('error', apiErrorText({ ...apiError, message: '' }, t, 'mail.passwordUpdateFailed'));
+                return;
+            }
+            succeeded = true;
+            showToast('success', t('mail.passwordUpdated'));
+        } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') return;
+            showToast('error', t('mail.passwordUpdateFailed'));
+        } finally {
+            // Clear submitted secrets after both success and failure. On a
+            // failure the target stays visible so the user can safely retry,
+            // but the password must be entered again.
+            if (passwordRequestRef.current === request) {
+                passwordRequestRef.current = null;
+                setNewPassword('');
+                setPasswordConfirmation('');
+                setPasswordSaving(false);
+                if (succeeded) setPasswordAccount(null);
+            }
+        }
+    };
+
     const createForwarding = async () => {
         if (readOnly || !fwdSource || !fwdDest) return;
         try {
@@ -176,9 +256,13 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     };
 
     const count = activeTab === 'accounts' ? accounts.length : forwardings.length;
+    const passwordBytes = mailPasswordByteLength(newPassword);
+    const passwordInRange = passwordBytes >= 8 && passwordBytes <= 1024;
+    const passwordMatches = passwordConfirmation.length > 0 && newPassword === passwordConfirmation;
 
     return (
         <div>
+            <WebmailAccess domainId={domainId} />
             <div className="mb-4 flex items-center gap-1 border-b border-border">
                 <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={accounts.length} />
                 <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={forwardings.length} />
@@ -334,7 +418,20 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right">
-                                                    {!readOnly && <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />}
+                                                    {!readOnly && (
+                                                        <span className="inline-flex items-center justify-end gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openPasswordDialog(a)}
+                                                                aria-label={t('mail.changePasswordFor', { address: a.address })}
+                                                                title={t('mail.changePasswordFor', { address: a.address })}
+                                                                className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-primary"
+                                                            >
+                                                                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                                                            </button>
+                                                            <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );
@@ -377,6 +474,114 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             )}
                 </>
             )}
+
+            {passwordAccount && !readOnly && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    onClick={(event) => event.target === event.currentTarget && closePasswordDialog()}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="mail-password-dialog-title"
+                        aria-describedby="mail-password-dialog-account mail-password-session-warning"
+                        aria-busy={passwordSaving}
+                        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-lg"
+                        onKeyDown={(event) => event.key === 'Escape' && closePasswordDialog()}
+                    >
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 id="mail-password-dialog-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
+                                    <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
+                                    {t('mail.passwordDialog.title')}
+                                </h3>
+                                <p id="mail-password-dialog-account" className="mt-1 break-all text-xs text-fg-muted">
+                                    {t('mail.passwordDialog.account')}: <strong className="font-medium text-fg">{passwordAccount.address}</strong>
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closePasswordDialog}
+                                disabled={passwordSaving}
+                                aria-label={t('mail.passwordDialog.close')}
+                                className="rounded-md p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                        </div>
+
+                        <form
+                            noValidate
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                void rotateAccountPassword();
+                            }}
+                        >
+                            <div className="space-y-3">
+                                <label className="block">
+                                    <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.new')}</span>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(event) => setNewPassword(event.target.value)}
+                                        minLength={8}
+                                        maxLength={1024}
+                                        autoComplete="new-password"
+                                        required
+                                        autoFocus
+                                        disabled={passwordSaving}
+                                        aria-invalid={newPassword.length > 0 && !passwordInRange}
+                                        aria-describedby="mail-password-requirements"
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <label className="block">
+                                    <span className="mb-1 block text-xs text-fg-muted">{t('mail.passwordDialog.confirm')}</span>
+                                    <input
+                                        type="password"
+                                        value={passwordConfirmation}
+                                        onChange={(event) => setPasswordConfirmation(event.target.value)}
+                                        minLength={8}
+                                        maxLength={1024}
+                                        autoComplete="new-password"
+                                        required
+                                        disabled={passwordSaving}
+                                        aria-invalid={passwordConfirmation.length > 0 && !passwordMatches}
+                                        aria-describedby={passwordConfirmation.length > 0 && !passwordMatches ? 'mail-password-mismatch' : undefined}
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <p id="mail-password-requirements" className={`text-xs ${newPassword.length > 0 && !passwordInRange ? 'text-danger' : 'text-fg-subtle'}`}>
+                                    {t('mail.passwordDialog.requirements')}
+                                </p>
+                                {passwordConfirmation.length > 0 && !passwordMatches && (
+                                    <p id="mail-password-mismatch" role="alert" className="text-xs text-danger">
+                                        {t('mail.passwordDialog.mismatch')}
+                                    </p>
+                                )}
+                                <p id="mail-password-session-warning" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-fg-muted">
+                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
+                                    {t('mail.passwordDialog.sessionWarning')}
+                                </p>
+                            </div>
+
+                            <div className="mt-4 flex justify-end gap-2">
+                                <Button type="button" onClick={closePasswordDialog} disabled={passwordSaving}>
+                                    {t('common.cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    icon={KeyRound}
+                                    disabled={readOnly || passwordSaving || !passwordInRange || !passwordMatches}
+                                >
+                                    {passwordSaving ? t('mail.passwordDialog.saving') : t('mail.passwordDialog.submit')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -385,7 +590,7 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
     return (
         <button
             onClick={onClick}
-            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium ${
                 active ? 'border-primary text-primary' : 'border-transparent text-fg-muted hover:text-fg'
             }`}
         >
@@ -399,7 +604,7 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
 
 function DeleteBtn({ onClick }: { onClick: () => void }) {
     return (
-        <button onClick={onClick} className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger">
+        <button onClick={onClick} className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-danger">
             <Trash2 className="h-4 w-4" />
         </button>
     );

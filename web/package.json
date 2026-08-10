@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && node scripts/check-bundle-budget.mjs",
+    "test": "node --test tests/*.test.mjs",
     "test:router": "node --test tests/router-core.test.mjs tests/provider-router-contract.test.mjs tests/api-error.test.mjs tests/service-availability-contract.test.mjs",
     "preview": "vite preview"
   },

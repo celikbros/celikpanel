@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const detailSource = readFileSync(new URL('../src/components/DomainDetail.tsx', import.meta.url), 'utf8');
+const domainsSource = readFileSync(new URL('../src/components/Domains.tsx', import.meta.url), 'utf8');
 const filesSource = readFileSync(new URL('../src/components/DomainFileManager.tsx', import.meta.url), 'utf8');
 const databasesSource = readFileSync(new URL('../src/components/DomainDatabaseManager.tsx', import.meta.url), 'utf8');
 const phpSource = readFileSync(new URL('../src/components/DomainPHPSettings.tsx', import.meta.url), 'utf8');
@@ -57,4 +58,15 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   assert.match(dnsSource, /DNSSECSection[^>]+readOnly=\{readOnly\}/s);
   assert.match(dnsSource, /readOnly \? \([\s\S]*loadRecords\(\)[\s\S]*\) : \(/);
   assert.match(dnsSource, /!readOnly && showAddForm/);
+});
+
+test('redacted domain metadata stays optional and fails closed in the UI', () => {
+  for (const source of [domainsSource, detailSource]) {
+    assert.match(source, /php_version\?: string;/);
+    assert.match(source, /ssl_enabled\?: boolean;/);
+  }
+
+  assert.match(detailSource, /currentVersion=\{domain\.php_version \?\? ''\}/);
+  assert.match(domainsSource, /canView\(d, 'ssl'\) && d\.ssl_enabled/);
+  assert.match(domainsSource, /canView\(d, 'php'\)[\s\S]*d\.php_version/);
 });

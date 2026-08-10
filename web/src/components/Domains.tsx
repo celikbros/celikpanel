@@ -29,8 +29,8 @@ const typeBadge: Record<string, string> = {
 interface Domain {
     id: number;
     domain_name: string;
-    php_version: string;
-    ssl_enabled: boolean;
+    php_version?: string;
+    ssl_enabled?: boolean;
     status: string;
     project_type?: string;
     created_at: string;

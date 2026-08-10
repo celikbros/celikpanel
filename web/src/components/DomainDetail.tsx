@@ -34,9 +34,9 @@ import {
 interface Domain {
     id: number;
     domain_name: string;
-    php_version: string;
+    php_version?: string;
     project_type?: string;
-    ssl_enabled: boolean;
+    ssl_enabled?: boolean;
     status: string;
     created_at: string;
     disk_usage?: number;
@@ -223,7 +223,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             { id: 'type', labelKey: 'domain.sub.hostingType', capabilities: ['files'], render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
         ] : []),
         ...(projectType === 'php' && canView('php') ? [
-            { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
+            { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
         ] : []),
         ...(canView('ssl') ? [{
             id: 'ssl',
