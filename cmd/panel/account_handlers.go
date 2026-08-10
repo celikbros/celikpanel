@@ -68,14 +68,20 @@ func canManageUser(c *Caller, target *core.User) bool {
 	return target.ParentID != nil && *target.ParentID == c.ID
 }
 
-// handleSubscriptions lists subscriptions visible to the caller, with their
-// owner — used by the import wizard and future subscription pickers.
+// handleSubscriptions lists subscriptions visible to a full account, with
+// their owner — used by the import wizard and subscription pickers.
 // handleSubscriptions, çağıranın görebildiği abonelikleri sahipleriyle
 // listeler — içe aktarım sihirbazı ve gelecekteki abonelik seçicileri için.
 func (p *Panel) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	c := p.requireManager(w, r)
-	if c == nil {
+	if r.Method != http.MethodGet {
+		rejectRouteMethod(w, []string{http.MethodGet})
+		return
+	}
+	c := currentCaller(r)
+	if c == nil || (!c.hasAccountRole(roleAdmin) &&
+		!c.hasAccountRole(roleReseller) && !c.hasAccountRole(roleCustomer)) {
+		writeClientError(w, http.StatusForbidden, "account access required")
 		return
 	}
 
@@ -83,11 +89,16 @@ func (p *Panel) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
 		SELECT s.id, s.name, u.username
 		FROM subscriptions s JOIN users u ON s.owner_id = u.id`
 	args := []any{}
-	if c.Role != roleAdmin {
+	switch {
+	case c.hasAccountRole(roleAdmin):
+	case c.hasAccountRole(roleReseller):
 		// Own subscriptions plus those of the reseller's customers.
 		// Kendi abonelikleri artı bayinin müşterilerinin abonelikleri.
 		query += ` WHERE s.owner_id = ? OR s.owner_id IN (SELECT id FROM users WHERE parent_id = ?)`
 		args = append(args, c.ID, c.ID)
+	case c.hasAccountRole(roleCustomer):
+		query += ` WHERE s.owner_id = ?`
+		args = append(args, c.ID)
 	}
 	query += ` ORDER BY u.username, s.name`
 

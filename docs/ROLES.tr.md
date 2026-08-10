@@ -53,8 +53,10 @@ Asıl web sitelerini işleten kişi. Bir *cPanel hesabı* / Plesk *Customer* kar
 
 Müşteri, **kotası dahilinde** şunları yönetir: domainler ve siteler, DNS kayıtları, e-posta hesapları, veritabanları, dosyalar, yedekler, cron işleri, SSL, PHP ayarları, loglar ve istatistikler — ama yalnızca kendi abonelikleri için.
 
-### 4. Ek Kullanıcı (`additional_user`)
+### 4. Ek Kullanıcı (etkin rol `additional_user`)
 Tek bir müşteriye ait, işin bir kısmını ana parolayı paylaşmadan devretmek için kullanılan **sınırlandırılmış** bir giriş. cPanel *alt hesaplar / User Manager* ve Plesk *Ek Kullanıcılar* karşılığı.
+
+Şema uyumluluğu için bu kimlik `users.role = 'customer'` ve değiştirilemez `users.account_type = 'additional_user'` işaretiyle saklanır. Kimlik doğrulama, etkin `additional_user` rolünü bu ikiliden ve sahip `parent_id` değerinden türetir; tutarsız birleşimler varsayılan olarak reddedilir.
 
 Örnekler:
 - Dosya ve veritabanlarını düzenleyebilen ama e-posta ya da faturaya dokunamayan bir geliştirici
@@ -116,10 +118,10 @@ Arayüz yalnızca API'nin reddedeceği şeyi gizler — "kurmadığın servis g�
 
 Mevcut şema omurgayı zaten içeriyor: `users(role)` ve `subscriptions(owner_id)`. Bu tasarımı hayata geçirmek için:
 
-- `users.role` CHECK kısıtı `additional_user`'ı içerecek şekilde genişletilir.
-- `users.parent_id` eklenir (nullable, `users.id`'ye referans) — bu kullanıcıyı kimin oluşturduğu/sahibi. Hiyerarşi kenarı budur: bayi→müşteri, müşteri→ek_kullanıcı.
+- Değiştirilemez bir `users.account_type` işareti (`account` veya `additional_user`) eklenir. Ek kullanıcıların saklanan rolü `customer` kalır; yetkilendirme iki sütundan birine tek başına güvenmek yerine türetilen etkin rolü kullanır.
+- Kullanıcıyı kimin oluşturduğunu/sahiplendiğini göstermek için `users.parent_id` (nullable, `users.id`'ye referans) kullanılır. Ek kullanıcı için bu alan etkin, gerçek bir müşteri hesabını göstermelidir.
 - Bayinin dağıttığı kaynak havuzu için bir `reseller_pools` kavramı (ya da bayinin kendi kaydında sütunlar) eklenir.
-- Ek kullanıcılar için bir `user_permissions` tablosu eklenir: `(user_id, capability, scope_domain_id nullable, mode: view|manage)`.
+- Yetkiler iki açık kapsam tablosunda tutulur: `additional_user_subscription_permissions` ve `additional_user_domain_permissions`. İkisinde de kapalı bir yetenek kümesi ile `view|manage` modu vardır. Bir domain için etkin erişim, doğrudan-domain ve abonelik yetkilerinin eklemeli birleşimidir; `manage`, `view` değerinden baskındır.
 - Her veri erişim repository'sine bir sahiplik filtresi eklenir; hiçbir handler sahiplik kontrolü olmadan ham ID ile sorgu yapmaz.
 
 Bu değişiklikler **eklemeli** olup Faz 0.2'de kimlik doğrulamayla birlikte gelir; böylece model ve onu uygulayan kurallar birlikte yayınlanır — arkasındaki kurallar olmadan asla bir giriş ekranı çıkmaz.

@@ -40,7 +40,7 @@ func parseDBTime(s sql.NullString) time.Time {
 
 // userColumns is the canonical select list; scanUser must match it.
 // userColumns standart seçim listesidir; scanUser onunla eşleşmelidir.
-const userColumns = `id, username, password_hash, email, role, parent_id, COALESCE(status,'active'), created_at, updated_at`
+const userColumns = `id, username, password_hash, email, role, COALESCE(account_type,'account'), parent_id, COALESCE(status,'active'), created_at, updated_at`
 
 // scanUser scans a user row, parsing the two timestamp columns leniently.
 // scanUser, bir kullanıcı satırını tarar ve iki zaman damgası sütununu
@@ -48,9 +48,10 @@ const userColumns = `id, username, password_hash, email, role, parent_id, COALES
 func scanUser(row interface{ Scan(...any) error }, user *core.User) error {
 	var createdAt, updatedAt sql.NullString
 	var parentID sql.NullInt64
+	var accountType string
 	err := row.Scan(
 		&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.Role,
-		&parentID, &user.Status, &createdAt, &updatedAt,
+		&accountType, &parentID, &user.Status, &createdAt, &updatedAt,
 	)
 	if err != nil {
 		return err
@@ -59,6 +60,7 @@ func scanUser(row interface{ Scan(...any) error }, user *core.User) error {
 		v := int(parentID.Int64)
 		user.ParentID = &v
 	}
+	user.AccountType = core.AccountType(accountType)
 	user.CreatedAt = parseDBTime(createdAt)
 	user.UpdatedAt = parseDBTime(updatedAt)
 	return nil
@@ -68,15 +70,21 @@ func (r *PostgresUserRepository) Create(ctx context.Context, user *core.User) er
 	if user.Status == "" {
 		user.Status = "active"
 	}
+	if user.AccountType == "" {
+		user.AccountType = core.AccountTypeAccount
+	}
+	if user.AccountType != core.AccountTypeAccount {
+		return fmt.Errorf("unsupported account type %q: additional users require the dedicated atomic creation path", user.AccountType)
+	}
 	query := `
-		INSERT INTO users (username, password_hash, email, role, parent_id, status)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO users (username, password_hash, email, role, account_type, parent_id, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 	var parent any
 	if user.ParentID != nil {
 		parent = *user.ParentID
 	}
-	result, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, parent, user.Status)
+	result, err := r.db.ExecContext(ctx, query, user.Username, user.PasswordHash, user.Email, user.Role, user.AccountType, parent, user.Status)
 	if err != nil {
 		return err
 	}
@@ -162,6 +170,19 @@ func (r *PostgresUserRepository) UpdateAndRevokeSessions(ctx context.Context, us
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	var storedRole, storedAccountType, storedStatus string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT role, COALESCE(NULLIF(account_type, ''), 'account'),
+		       COALESCE(NULLIF(status, ''), 'active')
+		FROM users
+		WHERE id = ?
+	`, user.ID).Scan(&storedRole, &storedAccountType, &storedStatus); err != nil {
+		return err
+	}
+	revokeTeamMembers := storedRole == "customer" &&
+		storedAccountType == string(core.AccountTypeAccount) &&
+		storedStatus != "suspended" && user.Status == "suspended"
+
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE users
 		SET username = ?, password_hash = ?, email = ?, role = ?, status = ?,
@@ -172,6 +193,29 @@ func (r *PostgresUserRepository) UpdateAndRevokeSessions(ctx context.Context, us
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, user.ID); err != nil {
 		return err
+	}
+	if revokeTeamMembers {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE users
+			SET auth_epoch = auth_epoch + 1, updated_at = datetime('now')
+			WHERE parent_id = ?
+			  AND role = 'customer'
+			  AND account_type = 'additional_user'
+		`, user.ID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM sessions
+			WHERE user_id IN (
+				SELECT id
+				FROM users
+				WHERE parent_id = ?
+				  AND role = 'customer'
+				  AND account_type = 'additional_user'
+			)
+		`, user.ID); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

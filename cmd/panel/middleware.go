@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/core"
 )
 
 // sessionCookieName is the cookie carrying the raw session token.
@@ -23,6 +25,14 @@ const callerKey contextKey = "caller"
 // herkese açıktır, böylece giriş ekranının kendisi yüklenebilir.
 func (p *Panel) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// API preflights never need application data. Terminate them here so an
+		// unauthenticated OPTIONS request cannot reach a handler that happens to
+		// omit its own method check and disclose the protected GET response.
+		if r.Method == http.MethodOptions && strings.HasPrefix(r.URL.Path, "/api/") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		if isPublicPath(r) {
 			next.ServeHTTP(w, r)
 			return
@@ -52,7 +62,7 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// Kapalı-varsayılan: kullanıcı kaydı okunamayan istek boş rolle asla
 		// ilerlemez — okunamayan kullanıcı, rolsüz değil geçersiz oturumdur.
 		u, err := p.users.GetByID(r.Context(), userID)
-		if err != nil {
+		if err != nil || u == nil {
 			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
 			return
 		}
@@ -60,7 +70,68 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 			writeCodedError(w, http.StatusForbidden, errCodeAccountSuspended, "account suspended", "")
 			return
 		}
-		c := &Caller{ID: userID, Role: u.Role}
+		if u.Status != "active" {
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			return
+		}
+
+		identity, ok := u.EffectiveIdentity()
+		if !ok || identity.UserID != userID {
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			return
+		}
+
+		accountType := u.AccountType
+		if accountType == "" {
+			accountType = core.AccountTypeAccount
+		}
+
+		// An additional-user marker is only meaningful while it points to a
+		// live, real customer account. Validate the parent through the
+		// repository on every authenticated request so a deleted, suspended or
+		// retyped parent immediately revokes the member's effective identity.
+		if accountType == core.AccountTypeAdditionalUser {
+			parent, parentErr := p.users.GetByID(r.Context(), identity.CustomerID)
+			if parentErr != nil || parent == nil {
+				writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+				return
+			}
+			if parent.Status == "suspended" {
+				writeCodedError(w, http.StatusForbidden, errCodeAccountSuspended, "account suspended", "")
+				return
+			}
+			parentIdentity, parentOK := parent.EffectiveIdentity()
+			parentType := parent.AccountType
+			if parentType == "" {
+				parentType = core.AccountTypeAccount
+			}
+			if parent.Status != "active" || !parentOK ||
+				parentType != core.AccountTypeAccount ||
+				parentIdentity.UserID != identity.CustomerID ||
+				parentIdentity.CustomerID != identity.CustomerID ||
+				parentIdentity.Role != roleCustomer {
+				writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+				return
+			}
+		}
+
+		c := &Caller{
+			ID:          identity.UserID,
+			Role:        identity.Role,
+			AccountType: accountType,
+			CustomerID:  identity.CustomerID,
+		}
+		if !c.validAuthorizationIdentity() {
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+			return
+		}
+
+		// Additional users are tenant-scoped team members. Server-global and
+		// account-management surfaces are not inherited from a parent customer.
+		if c.isAdditionalUser() && isAdditionalUserRestrictedPath(r.URL.Path) {
+			writeCodedError(w, http.StatusForbidden, errCodeAdditionalUserScope, "resource is unavailable to additional users", "")
+			return
+		}
 
 		// Server/OS-layer endpoints are administrator-only (ROLES.md: only the
 		// admin touches services, config files, and infrastructure). Tenant
@@ -69,7 +140,7 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 		// servisler, config dosyaları ve altyapıya yalnızca yönetici dokunur).
 		// Kiracı verisi (domain'ler) ise kendi işleyicilerinde sahiplik
 		// süzgecinden geçer.
-		if isAdminOnlyPath(r.URL.Path) && c.Role != roleAdmin {
+		if isAdminOnlyPath(r.URL.Path) && !c.hasAccountRole(roleAdmin) {
 			writeCodedError(w, http.StatusForbidden, errCodeAdminOnly, "administrator access required", "")
 			return
 		}
@@ -83,10 +154,10 @@ func (p *Panel) requireAuth(next http.Handler) http.Handler {
 // isPublicPath, hangi isteklerin kimlik doğrulamayı atlayacağına karar verir.
 func isPublicPath(r *http.Request) bool {
 	// The database-tool proxy is NOT public: it fronts loopback-only web
-	// apps and demands an authenticated admin session.
+	// apps and demands an authenticated, authorized session.
 	// Veritabanı-aracı vekili herkese açık DEĞİLDİR: yalnız-loopback web
-	// uygulamalarının önündedir ve kimlik doğrulamalı yönetici oturumu ister.
-	if strings.HasPrefix(r.URL.Path, "/dbtool/") {
+	// uygulamalarının önündedir ve kimliği doğrulanmış, yetkili oturum ister.
+	if r.URL.Path == "/dbtool" || strings.HasPrefix(r.URL.Path, "/dbtool/") {
 		return false
 	}
 	// Non-API paths are static files or SPA routes and must stay public.
@@ -107,20 +178,14 @@ func isPublicPath(r *http.Request) bool {
 	if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/demo" || r.URL.Path == "/api/v1/auth/login/totp" {
 		return true
 	}
-	// Same-origin CORS preflight carries no credentials; let it through so
-	// the handler's own OPTIONS branch can answer.
-	// Aynı köken CORS ön kontrolü kimlik bilgisi taşımaz; işleyicinin kendi
-	// OPTIONS dalının yanıtlayabilmesi için geçmesine izin ver.
-	if r.Method == http.MethodOptions {
-		return true
-	}
 	return false
 }
 
 // isAdminOnlyPath matches the server/OS-layer and infrastructure endpoints
-// that only administrators may call. Read-only dashboard health
-// (/api/v1/system/stats), auth, and the ownership-filtered domain routes are
-// intentionally not listed.
+// that only administrators may call. Read-only dashboard health, auth, and
+// the ownership-filtered domain routes are intentionally not listed here.
+// Additional-user restrictions for server-global read-only data are enforced
+// separately so reseller and customer account behavior remains unchanged.
 // isAdminOnlyPath, yalnızca yöneticilerin çağırabileceği sunucu/OS-katmanı ve
 // altyapı uç noktalarını eşler. Salt-okunur panel sağlığı
 // (/api/v1/system/stats), kimlik doğrulama ve sahiplik-süzgeçli domain
@@ -168,6 +233,37 @@ func isAdminOnlyPath(path string) bool {
 	}
 	for _, prefix := range adminPrefixes {
 		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// isAdditionalUserRestrictedPath centralizes routes that tenant-scoped team
+// members must never inherit from their parent customer account. It covers
+// server-global inventory and account, billing, VPN, and database-tool
+// management surfaces. Real admin, reseller, and customer accounts bypass
+// this additional-user-only guard and retain their existing handler rules.
+func isAdditionalUserRestrictedPath(path string) bool {
+	switch path {
+	case "/api/v1/system/stats",
+		"/api/v1/hosting/capabilities",
+		"/api/v1/products",
+		"/api/v1/domains/create":
+		return true
+	}
+
+	for _, root := range []string{
+		"/api/v1/store",
+		"/api/v1/users",
+		"/api/v1/team-members",
+		"/api/v1/plans",
+		"/api/v1/subscriptions",
+		"/api/v1/vpn",
+		"/api/v1/runtimes",
+		"/dbtool",
+	} {
+		if path == root || strings.HasPrefix(path, root+"/") {
 			return true
 		}
 	}

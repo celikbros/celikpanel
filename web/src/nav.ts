@@ -24,11 +24,17 @@ export interface NavItem {
     countKey?: 'domains' | 'databases' | 'services';
 }
 
-const ALL: Role[] = ['admin', 'reseller', 'customer', 'additional_user'];
+export interface NavAccessContext {
+    accountType?: string;
+    teamMembers?: boolean;
+}
+
+const ACCOUNT_ROLES: Role[] = ['admin', 'reseller', 'customer'];
+const DOMAIN_ROLES: Role[] = [...ACCOUNT_ROLES, 'additional_user'];
 
 export const navItems: NavItem[] = [
-    { id: 'dashboard', path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, roles: ALL, group: 'main' },
-    { id: 'domains', path: '/domains', labelKey: 'nav.domains', icon: Globe, roles: ALL, group: 'hosting', countKey: 'domains' },
+    { id: 'dashboard', path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, roles: DOMAIN_ROLES, group: 'main' },
+    { id: 'domains', path: '/domains', labelKey: 'nav.domains', icon: Globe, roles: DOMAIN_ROLES, group: 'hosting', countKey: 'domains' },
     // Admin-only UNTIL the v2 DB API is tenant-scoped: the backend hardcodes
     // subscription 1 (database_v2_handlers.go "TODO: Get from auth") and the
     // whole /api/v2/ prefix is admin-gated — non-admins only ever saw a
@@ -41,14 +47,14 @@ export const navItems: NavItem[] = [
     // kilidi kalktı — Databases yeniden self-servis. Sunucu KAYDI arka uçta
     // admin'de kalır; bu sayfada zaten kayıt düğmesi yok (oto-keşif).
     { id: 'databases', path: '/databases', labelKey: 'nav.databases', icon: Database, roles: ['admin', 'reseller', 'customer'], group: 'hosting', countKey: 'databases' },
-    { id: 'users', path: '/users', labelKey: 'nav.users', icon: Users, roles: ['admin', 'reseller'], group: 'hosting' },
+    { id: 'users', path: '/users', labelKey: 'nav.users', icon: Users, roles: ['admin', 'reseller', 'customer'], group: 'hosting' },
     { id: 'addons', path: '/addons', labelKey: 'nav.addons', icon: Package, roles: ['admin', 'reseller'], group: 'hosting' },
-    { id: 'vpn', path: '/vpn', labelKey: 'nav.vpn', icon: Shield, roles: ALL, group: 'hosting' },
+    { id: 'vpn', path: '/vpn', labelKey: 'nav.vpn', icon: Shield, roles: ACCOUNT_ROLES, group: 'hosting' },
     { id: 'services', path: '/services', labelKey: 'nav.services', icon: Server, roles: ['admin'], group: 'server', countKey: 'services' },
     { id: 'monitoring', path: '/monitoring', labelKey: 'nav.monitoring', icon: Activity, roles: ['admin'], group: 'server' },
     { id: 'import', path: '/import', labelKey: 'nav.import', icon: DownloadCloud, roles: ['admin'], group: 'server' },
     { id: 'audit', path: '/audit', labelKey: 'nav.audit', icon: ScrollText, roles: ['admin'], group: 'server' },
-    { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings, roles: ALL, group: 'server' },
+    { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings, roles: ACCOUNT_ROLES, group: 'server' },
 ];
 
 // Group order and their heading translation keys. A group with no visible
@@ -61,16 +67,29 @@ export const navGroups: { id: NavGroup; labelKey?: TranslationKey }[] = [
     { id: 'server', labelKey: 'nav.group.server' },
 ];
 
-export function navItemsForRole(role: Role): NavItem[] {
-    return navItems.filter((item) => item.roles.includes(role));
+export function isNavItemAllowed(item: NavItem, role: Role, access?: NavAccessContext): boolean {
+    if (!item.roles.includes(role)) return false;
+    if (item.id === 'users' && role === 'customer') {
+        return access?.accountType === 'account' && access.teamMembers === true;
+    }
+    return true;
 }
 
-// canAccessPath guards routes: a role may open a path only if it maps to a
-// nav item that role can see. Unknown paths default to allowed (child pages
-// like /domains/:name are gated by their parent section).
+export function navItemsForRole(role: Role, access?: NavAccessContext): NavItem[] {
+    return navItems.filter((item) => isNavItemAllowed(item, role, access));
+}
+
+// canAccessPath guards routes from the same fail-closed navigation contract.
+// Child pages inherit the nearest segment-aware parent; paths with no known
+// parent are denied instead of accidentally inheriting customer access.
 // canAccessPath rotaları korur: bir rol yalnızca görebileceği bir nav
 // öğesine eşlenen bir yolu açabilir. Bilinmeyen yollar varsayılan izinli.
-export function canAccessPath(role: Role, path: string): boolean {
-    const match = navItems.find((item) => item.path === path);
-    return match ? match.roles.includes(role) : true;
+export function canAccessPath(role: Role, path: string, access?: NavAccessContext): boolean {
+    const normalizedPath = path.split('?')[0].replace(/\/$/, '') || '/';
+    const match = [...navItems]
+        .sort((a, b) => b.path.length - a.path.length)
+        .find((item) => item.path === '/'
+            ? normalizedPath === '/'
+            : normalizedPath === item.path || normalizedPath.startsWith(`${item.path}/`));
+    return match ? isNavItemAllowed(match, role, access) : false;
 }

@@ -33,9 +33,10 @@ interface Forwarding {
 interface DomainMailManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
-export function DomainMailManager({ domainId, domainName }: DomainMailManagerProps) {
+export function DomainMailManager({ domainId, domainName, readOnly = false }: DomainMailManagerProps) {
     const { t } = useI18n();
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
     const [forwardings, setForwardings] = useState<Forwarding[]>([]);
@@ -60,7 +61,8 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     useEffect(() => {
         loadData();
         setShowForm(false);
-    }, [domainId, activeTab]);
+        setEditingQuota(null);
+    }, [domainId, activeTab, readOnly]);
 
     const loadData = async () => {
         // The auth tab owns its own data loading (MailAuthPanel).
@@ -90,7 +92,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     const createAccount = async () => {
-        if (!user || !pass) return;
+        if (readOnly || !user || !pass) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`, {
                 method: 'POST',
@@ -110,7 +112,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     const saveQuota = async (id: number) => {
-        if (quotaDraft <= 0) return;
+        if (readOnly || quotaDraft <= 0) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`, {
                 method: 'PUT',
@@ -127,6 +129,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     const deleteAccount = async (id: number, address: string) => {
+        if (readOnly) return;
         if (!confirm(t('mail.confirmDeleteAccount', { name: address }))) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts?id=${id}`, { method: 'DELETE' });
@@ -139,7 +142,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     const createForwarding = async () => {
-        if (!fwdSource || !fwdDest) return;
+        if (readOnly || !fwdSource || !fwdDest) return;
         try {
             const source = fwdSource.includes('@') ? fwdSource : `${fwdSource}@${domainName}`;
             const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings`, {
@@ -160,6 +163,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
     };
 
     const deleteForwarding = async (id: number, source: string) => {
+        if (readOnly) return;
         if (!confirm(t('mail.confirmDeleteForwarder', { name: source }))) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings?id=${id}`, { method: 'DELETE' });
@@ -185,20 +189,22 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
             {activeTab === 'auth' ? (
                 <>
                     <DeliverabilityCard domainId={domainId} />
-                    <MailAuthPanel domainId={domainId} />
+                    <MailAuthPanel domainId={domainId} readOnly={readOnly} />
                 </>
             ) : activeTab === 'settings' ? (
-                <MailSettingsPanel domainId={domainId} domainName={domainName} />
+                <MailSettingsPanel domainId={domainId} domainName={domainName} readOnly={readOnly} />
             ) : (
                 <>
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: count })}</span>
-                <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
-                    {activeTab === 'accounts' ? t('mail.addAccount') : t('mail.addForwarder')}
-                </Button>
+                {!readOnly && (
+                    <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
+                        {activeTab === 'accounts' ? t('mail.addAccount') : t('mail.addForwarder')}
+                    </Button>
+                )}
             </div>
 
-            {showForm && (
+            {!readOnly && showForm && (
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
                     {activeTab === 'accounts' ? (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -279,7 +285,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-2.5 text-fg-muted">
-                                                    {editingQuota === a.id ? (
+                                                    {!readOnly && editingQuota === a.id ? (
                                                         <span className="flex items-center gap-2">
                                                             <input
                                                                 type="number"
@@ -298,16 +304,18 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                                                     ) : (
                                                         <span className="flex items-center gap-1.5">
                                                             {a.quota_mb} MB
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingQuota(a.id);
-                                                                    setQuotaDraft(a.quota_mb);
-                                                                }}
-                                                                title={t('mail.editQuota')}
-                                                                className="rounded p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
-                                                            >
-                                                                <Pencil className="h-3.5 w-3.5" />
-                                                            </button>
+                                                            {!readOnly && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingQuota(a.id);
+                                                                        setQuotaDraft(a.quota_mb);
+                                                                    }}
+                                                                    title={t('mail.editQuota')}
+                                                                    className="rounded p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
                                                         </span>
                                                     )}
                                                 </td>
@@ -326,7 +334,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right">
-                                                    <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
+                                                    {!readOnly && <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />}
                                                 </td>
                                             </tr>
                                         );
@@ -359,7 +367,7 @@ export function DomainMailManager({ domainId, domainName }: DomainMailManagerPro
                                         </span>
                                     </td>
                                     <td className="px-4 py-2.5 text-right">
-                                        <DeleteBtn onClick={() => deleteForwarding(f.id, f.source)} />
+                                        {!readOnly && <DeleteBtn onClick={() => deleteForwarding(f.id, f.source)} />}
                                     </td>
                                 </tr>
                             ))}

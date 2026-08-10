@@ -52,6 +52,7 @@ const (
 	errCodeInternal              = "INTERNAL"
 	errCodeAuthRequired          = "AUTH_REQUIRED"
 	errCodeAdminOnly             = "ADMIN_ONLY"
+	errCodeAdditionalUserScope   = "ADDITIONAL_USER_SCOPE"
 	errCodeAccountSuspended      = "ACCOUNT_SUSPENDED"
 	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
 	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"

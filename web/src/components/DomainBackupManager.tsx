@@ -29,6 +29,7 @@ interface DatabaseInfo {
 interface DomainBackupManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
 type BackupType = 'files' | 'database' | 'full';
@@ -82,7 +83,7 @@ function errorText(error: unknown, t: Translate): string {
 // Create, restore, download, delete — no invented rows.
 // Agent üzerinden gerçek yedekler (/var/backups/celikpanel altında tar/dump).
 // Oluştur, geri yükle, indir, sil — uydurma satır yok.
-export function DomainBackupManager({ domainId, domainName }: DomainBackupManagerProps) {
+export function DomainBackupManager({ domainId, domainName, readOnly = false }: DomainBackupManagerProps) {
     const { t } = useI18n();
     const [backups, setBackups] = useState<BackupItem[]>([]);
     const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
@@ -138,6 +139,7 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     };
 
     const createBackup = async (type: BackupType) => {
+        if (readOnly) return;
         if (type === 'database' && !selectedDatabaseId) return;
         setCreating(type);
         try {
@@ -160,6 +162,7 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     };
 
     const restoreBackup = async (backup: BackupItem) => {
+        if (readOnly) return;
         if (!backup.restorable || !confirm(t('backup.restoreConfirm', { name: backup.name }))) return;
         setRestoring(backup.name);
         try {
@@ -181,6 +184,7 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     };
 
     const deleteBackup = async (name: string) => {
+        if (readOnly) return;
         if (!confirm(t('backup.deleteConfirm', { name }))) return;
         setDeleting(name);
         try {
@@ -220,7 +224,7 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
     return (
         <div className="space-y-5">
             {/* Create */}
-            <section aria-busy={creating !== null}>
+            {!readOnly && <section aria-busy={creating !== null}>
                 <h3 className="mb-3 text-sm font-semibold text-fg">{t('backup.createTitle')}</h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     {backupTypes.filter(({ type }) => type === 'files').map(({ type, icon: Icon, labelKey, descKey, tone }) => (
@@ -311,9 +315,9 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                         {t('backup.creating')}
                     </p>
                 )}
-            </section>
+            </section>}
 
-            <AutoBackupSection domainId={domainId} databaseCount={databases.length} />
+            <AutoBackupSection domainId={domainId} databaseCount={databases.length} readOnly={readOnly} />
 
             {/* List */}
             <section aria-busy={loading || busy}>
@@ -387,20 +391,22 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                                     </div>
 
                                     <div className="flex items-center gap-0.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => void restoreBackup(backup)}
-                                            disabled={busy || restoreBlocked}
-                                            title={restoreBlocked ? blockedReason : t('backup.restore')}
-                                            aria-label={restoreBlocked ? blockedReason : t('backup.restore')}
-                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-success disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {restoring === backup.name ? (
-                                                <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
-                                            ) : (
-                                                <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                                            )}
-                                        </button>
+                                        {!readOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void restoreBackup(backup)}
+                                                disabled={busy || restoreBlocked}
+                                                title={restoreBlocked ? blockedReason : t('backup.restore')}
+                                                aria-label={restoreBlocked ? blockedReason : t('backup.restore')}
+                                                className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-success disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {restoring === backup.name ? (
+                                                    <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                ) : (
+                                                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                                                )}
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => void downloadBackup(backup.name)}
@@ -413,18 +419,20 @@ export function DomainBackupManager({ domainId, domainName }: DomainBackupManage
                                                 ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
                                                 : <Download className="h-4 w-4" aria-hidden="true" />}
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void deleteBackup(backup.name)}
-                                            disabled={busy}
-                                            title={t('backup.delete')}
-                                            aria-label={t('backup.delete')}
-                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {deleting === backup.name
-                                                ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
-                                                : <Trash2 className="h-4 w-4" aria-hidden="true" />}
-                                        </button>
+                                        {!readOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void deleteBackup(backup.name)}
+                                                disabled={busy}
+                                                title={t('backup.delete')}
+                                                aria-label={t('backup.delete')}
+                                                className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {deleting === backup.name
+                                                    ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                                    : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -462,7 +470,15 @@ function fmtDate(dateStr: string): string {
 // Otomatik yedekler: bu domain için günlük/haftalık zamanlamayı aç ve kaç
 // kopya tutulacağını seç. Panel arka planda koşar; saklamayı aşan eski
 // kopyalar budanır.
-function AutoBackupSection({ domainId, databaseCount }: { domainId: number; databaseCount: number }) {
+function AutoBackupSection({
+    domainId,
+    databaseCount,
+    readOnly = false,
+}: {
+    domainId: number;
+    databaseCount: number;
+    readOnly?: boolean;
+}) {
     const { t } = useI18n();
     const [enabled, setEnabled] = useState(false);
     const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
@@ -509,6 +525,7 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
     }, [domainId]);
 
     const save = async () => {
+        if (readOnly) return;
         setSaving(true);
         try {
             const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, {
@@ -527,6 +544,7 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
     };
 
     const turnOff = async () => {
+        if (readOnly) return;
         setSaving(true);
         try {
             const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, { method: 'DELETE' });
@@ -560,21 +578,21 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.frequency')}</span>
-                    <select disabled={busy} value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')} className={inputClass}>
+                    <select disabled={busy || readOnly} value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')} className={inputClass}>
                         <option value="daily">{t('backup.auto.daily')}</option>
                         <option value="weekly">{t('backup.auto.weekly')}</option>
                     </select>
                 </label>
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.type')}</span>
-                    <select disabled={busy} value={backupType} onChange={(e) => setBackupType(e.target.value as 'files' | 'full')} className={inputClass}>
+                    <select disabled={busy || readOnly} value={backupType} onChange={(e) => setBackupType(e.target.value as 'files' | 'full')} className={inputClass}>
                         <option value="files">{t('backup.type.files')}</option>
                         <option value="full">{t('backup.type.full')}</option>
                     </select>
                 </label>
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.retention')}</span>
-                    <input disabled={busy} type="number" min={1} max={60} value={retention} onChange={(e) => setRetention(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))} className={inputClass} />
+                    <input disabled={busy || readOnly} type="number" min={1} max={60} value={retention} onChange={(e) => setRetention(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))} className={inputClass} />
                 </label>
             </div>
 
@@ -607,16 +625,18 @@ function AutoBackupSection({ domainId, databaseCount }: { domainId: number; data
                 </p>
             )}
 
-            <div className="mt-3 flex gap-2">
-                <Button type="button" variant="primary" disabled={busy} onClick={() => void save()}>
-                    {enabled ? t('backup.auto.update') : t('backup.auto.enable')}
-                </Button>
-                {enabled && (
-                    <Button type="button" variant="secondary" disabled={busy} onClick={() => void turnOff()}>
-                        {t('backup.auto.turnOff')}
+            {!readOnly && (
+                <div className="mt-3 flex gap-2">
+                    <Button type="button" variant="primary" disabled={busy} onClick={() => void save()}>
+                        {enabled ? t('backup.auto.update') : t('backup.auto.enable')}
                     </Button>
-                )}
-            </div>
+                    {enabled && (
+                        <Button type="button" variant="secondary" disabled={busy} onClick={() => void turnOff()}>
+                            {t('backup.auto.turnOff')}
+                        </Button>
+                    )}
+                </div>
+            )}
             {saving && <span className="sr-only" role="status" aria-live="polite">{t('common.loading')}</span>}
         </section>
     );

@@ -24,6 +24,11 @@ interface AuthStatus {
     signing_installed: boolean;
 }
 
+interface MailAuthPanelProps {
+    domainId: number;
+    readOnly?: boolean;
+}
+
 // Mail authentication (roadmap 3C): one card per record. The status is
 // derived server-side from the zone AND a live DNS lookup, so "verified"
 // means the world can actually see it — never an assumption.
@@ -31,7 +36,7 @@ interface AuthStatus {
 // E-posta kimlik doğrulaması (yol haritası 3C): kayıt başına bir kart. Durum,
 // sunucu tarafında zone'dan VE canlı DNS sorgusundan türetilir; "doğrulandı"
 // demek dünyanın onu gerçekten görebildiği demektir — asla varsayım değil.
-export function MailAuthPanel({ domainId }: { domainId: number }) {
+export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps) {
     const { t } = useI18n();
     const [status, setStatus] = useState<AuthStatus | null>(null);
     const [loading, setLoading] = useState(true);
@@ -56,6 +61,7 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
     }, [domainId]);
 
     const generateKey = async () => {
+        if (readOnly) return;
         setBusy('dkim-key');
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/auth/dkim`, { method: 'POST' });
@@ -70,6 +76,7 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
     };
 
     const apply = async (record: 'spf' | 'dkim' | 'dmarc') => {
+        if (readOnly) return;
         setBusy(record);
         try {
             const body: Record<string, string> = { record };
@@ -118,6 +125,7 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
                 descKey="mailauth.spfDesc"
                 record={status.spf}
                 busy={busy === 'spf'}
+                readOnly={readOnly}
                 onApply={() => apply('spf')}
                 onCopy={copy}
             />
@@ -128,10 +136,11 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
                 descKey="mailauth.dkimDesc"
                 record={status.dkim}
                 busy={busy === 'dkim'}
+                readOnly={readOnly}
                 onApply={() => apply('dkim')}
                 onCopy={copy}
                 extraAction={
-                    status.dkim.status === 'no_key' ? (
+                    !readOnly && status.dkim.status === 'no_key' ? (
                         <Button variant="primary" icon={KeyRound} onClick={generateKey} disabled={busy === 'dkim-key'}>
                             {t('mailauth.generateKey')}
                         </Button>
@@ -145,9 +154,10 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
                 descKey="mailauth.dmarcDesc"
                 record={status.dmarc}
                 busy={busy === 'dmarc'}
+                readOnly={readOnly}
                 onApply={() => apply('dmarc')}
                 onCopy={copy}
-                extraControls={
+                extraControls={!readOnly ? (
                     <label className="flex items-center gap-2 text-sm text-fg-muted">
                         {t('mailauth.dmarcPolicy')}
                         <select
@@ -160,7 +170,7 @@ export function MailAuthPanel({ domainId }: { domainId: number }) {
                             <option value="reject">{t('mailauth.policy.reject')}</option>
                         </select>
                     </label>
-                }
+                ) : undefined}
             />
         </div>
     );
@@ -185,6 +195,7 @@ function RecordCard({
     descKey,
     record,
     busy,
+    readOnly,
     onApply,
     onCopy,
     extraAction,
@@ -195,6 +206,7 @@ function RecordCard({
     descKey: TranslationKey;
     record: AuthRecord;
     busy: boolean;
+    readOnly: boolean;
     onApply: () => void;
     onCopy: (v: string) => void;
     extraAction?: React.ReactNode;
@@ -246,7 +258,7 @@ function RecordCard({
                 <div>{extraControls}</div>
                 <div className="flex items-center gap-2">
                     {extraAction}
-                    {record.status !== 'no_key' && record.status !== 'ok' && (
+                    {!readOnly && record.status !== 'no_key' && record.status !== 'ok' && (
                         <Button variant="primary" icon={Plus} onClick={onApply} disabled={busy}>
                             {t('mailauth.apply')}
                         </Button>

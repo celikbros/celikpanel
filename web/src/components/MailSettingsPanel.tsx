@@ -7,6 +7,7 @@ import { Button, inputClass } from './ui';
 interface Props {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
 interface SetupProtocol {
@@ -40,7 +41,7 @@ interface RblReport {
 // Mail yöneticisinin "Ayarlar" sekmesi: bir istemci nasıl ayarlanır, domain
 // catch-all'ı ve gönderim IP'si için RBL kara-liste kontrolü. Buradaki her
 // değer gerçektir.
-export function MailSettingsPanel({ domainId, domainName }: Props) {
+export function MailSettingsPanel({ domainId, domainName, readOnly = false }: Props) {
     const { t } = useI18n();
     const [setup, setSetup] = useState<Setup | null>(null);
     const [catchAll, setCatchAll] = useState('');
@@ -66,6 +67,7 @@ export function MailSettingsPanel({ domainId, domainName }: Props) {
     }, [domainId]);
 
     const saveCatchAll = async () => {
+        if (readOnly) return;
         setSavingCatchAll(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/catch-all`, {
@@ -84,6 +86,7 @@ export function MailSettingsPanel({ domainId, domainName }: Props) {
     };
 
     const removeCatchAll = async () => {
+        if (readOnly) return;
         setSavingCatchAll(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/mail/catch-all`, { method: 'DELETE' });
@@ -153,12 +156,15 @@ export function MailSettingsPanel({ domainId, domainName }: Props) {
                             onChange={(e) => setCatchAll(e.target.value)}
                             placeholder={`inbox@${domainName}`}
                             className={inputClass}
+                            disabled={readOnly}
                         />
                     </label>
-                    <Button variant="primary" onClick={saveCatchAll} disabled={savingCatchAll || !catchAll.trim()}>
-                        {catchAllEnabled ? t('mail.catchAll.update') : t('mail.catchAll.enable')}
-                    </Button>
-                    {catchAllEnabled && (
+                    {!readOnly && (
+                        <Button variant="primary" onClick={saveCatchAll} disabled={savingCatchAll || !catchAll.trim()}>
+                            {catchAllEnabled ? t('mail.catchAll.update') : t('mail.catchAll.enable')}
+                        </Button>
+                    )}
+                    {!readOnly && catchAllEnabled && (
                         <Button variant="secondary" onClick={removeCatchAll} disabled={savingCatchAll}>
                             {t('mail.catchAll.disable')}
                         </Button>

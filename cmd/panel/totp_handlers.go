@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/auth"
+	"github.com/alicelik/celikpanel/internal/core"
 	secretstore "github.com/alicelik/celikpanel/internal/secrets"
 )
 
@@ -34,6 +35,8 @@ type userAuthState struct {
 	userID       int
 	username     string
 	role         string
+	accountType  core.AccountType
+	parentID     sql.NullInt64
 	passwordHash string
 	status       string
 	totpSecret   string
@@ -42,8 +45,23 @@ type userAuthState struct {
 }
 
 func (s userAuthState) binding() [sha256.Size]byte {
-	return sha256.Sum256([]byte(fmt.Sprintf("%d:%d:%q:%q:%q:%q:%q:%t",
-		s.userID, s.authEpoch, s.username, s.role, s.passwordHash, s.status, s.totpSecret, s.totpEnabled)))
+	return sha256.Sum256([]byte(fmt.Sprintf("%d:%d:%q:%q:%q:%t:%d:%q:%q:%q:%t",
+		s.userID, s.authEpoch, s.username, s.role, s.accountType, s.parentID.Valid, s.parentID.Int64,
+		s.passwordHash, s.status, s.totpSecret, s.totpEnabled)))
+}
+
+func (s userAuthState) matchesCanonical(identity canonicalAuthIdentity) bool {
+	if identity.user == nil ||
+		s.userID != identity.user.ID ||
+		s.username != identity.user.Username ||
+		s.role != identity.user.Role ||
+		s.accountType != normalizedStoredAccountType(identity.user) {
+		return false
+	}
+	if identity.user.ParentID == nil {
+		return !s.parentID.Valid
+	}
+	return s.parentID.Valid && s.parentID.Int64 == int64(*identity.user.ParentID)
 }
 
 type pendingLogin struct {
@@ -112,10 +130,12 @@ func (p *Panel) userAuthState(ctx context.Context, userID int) (userAuthState, e
 	var stored *string
 	var enabled int
 	if err := p.db.GetDB().QueryRowContext(ctx, `
-		SELECT username, role, password_hash, COALESCE(status, 'active'),
+		SELECT username, role, COALESCE(NULLIF(account_type, ''), 'account'), parent_id,
+		       password_hash, COALESCE(status, 'active'),
 		       totp_secret, totp_enabled, auth_epoch
 		FROM users WHERE id = ?`, userID).Scan(
-		&state.username, &state.role, &state.passwordHash, &state.status,
+		&state.username, &state.role, &state.accountType, &state.parentID,
+		&state.passwordHash, &state.status,
 		&stored, &enabled, &state.authEpoch,
 	); err != nil {
 		return userAuthState{}, fmt.Errorf("read authentication state: %w", err)
@@ -302,6 +322,11 @@ func (p *Panel) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
 		return
 	}
+	identity, err := p.canonicalAuthIdentity(r.Context(), pending.userID)
+	if err != nil || !state.matchesCanonical(identity) {
+		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
+		return
+	}
 	if !state.totpEnabled || !auth.ValidateTOTP(state.totpSecret, req.Code) {
 		writeClientError(w, http.StatusUnauthorized, "invalid code")
 		return
@@ -318,7 +343,7 @@ func (p *Panel) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, p.sessionCookie(token, time.Now().Add(auth.SessionDuration)))
 	p.auditAs(r, pending.userID, "auth.login.2fa", "", 0)
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"username": state.username, "role": state.role})
+	_ = json.NewEncoder(w).Encode(identity.response(false))
 }
 
 // handle2FA routes the self-service 2FA endpoints for the signed-in user.

@@ -9,6 +9,8 @@ interface DomainPHPSettingsProps {
     domainName: string;
     currentVersion: string;
     onVersionChange: (version: string) => void;
+    readOnly?: boolean;
+    isAdditionalUser?: boolean;
 }
 
 interface PHPSettings {
@@ -17,9 +19,32 @@ interface PHPSettings {
     php_version: string;
     pool_name: string;
     pool_config?: any;
+    available_versions?: unknown;
 }
 
-export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }: DomainPHPSettingsProps) {
+const phpVersionPattern = /^[0-9]{1,2}\.[0-9]{1,2}$/;
+
+function parseAvailablePHPVersions(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+
+    const parsed: string[] = [];
+    const seen = new Set<string>();
+    for (const item of value) {
+        if (typeof item !== 'string' || !phpVersionPattern.test(item)) return [];
+        if (seen.has(item)) continue;
+        seen.add(item);
+        parsed.push(item);
+    }
+    return parsed;
+}
+
+export function DomainPHPSettings({
+    domainId,
+    currentVersion,
+    onVersionChange,
+    readOnly = false,
+    isAdditionalUser = false,
+}: DomainPHPSettingsProps) {
     const { t } = useI18n();
     const [settings, setSettings] = useState<PHPSettings | null>(null);
     const [loading, setLoading] = useState(true);
@@ -35,8 +60,10 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
 
     useEffect(() => {
         loadSettings();
-        loadVersions();
-    }, [domainId]);
+        if (!isAdditionalUser) {
+            loadVersions();
+        }
+    }, [domainId, currentVersion, isAdditionalUser]);
 
     const loadVersions = async () => {
         try {
@@ -51,12 +78,21 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
 
     const loadSettings = async () => {
         setLoading(true);
+        if (isAdditionalUser) {
+            setVersions([]);
+            setSettings(null);
+        }
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/php`);
             if (!res.ok) throw new Error();
-            const data = await res.json();
-            setSettings(data);
-            setSelectedVersion(data.php_version);
+            const data: unknown = await res.json();
+            if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error();
+            const nextSettings = data as PHPSettings;
+            setSettings(nextSettings);
+            setSelectedVersion(nextSettings.php_version);
+            if (isAdditionalUser) {
+                setVersions(parseAvailablePHPVersions(nextSettings.available_versions));
+            }
         } catch {
             showToast('error', t('php.loadFailed'));
         } finally {
@@ -65,7 +101,8 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
     };
 
     const handleVersionChange = async () => {
-        if (selectedVersion === currentVersion) return;
+        if (readOnly || selectedVersion === currentVersion) return;
+        if (isAdditionalUser && !versions.includes(selectedVersion)) return;
         if (!confirm(t('php.changeConfirm', { from: currentVersion, to: selectedVersion }))) return;
         setSaving(true);
         try {
@@ -88,6 +125,7 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
 
     const handleSavePool = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (readOnly) return;
         const fd = new FormData(e.currentTarget);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/php/pool`, {
@@ -125,6 +163,9 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
 
     const pc = settings.pool_config;
     const pending = selectedVersion !== currentVersion;
+    const displayedVersions = currentVersion && !versions.includes(currentVersion)
+        ? [currentVersion, ...versions]
+        : versions;
 
     return (
         <div>
@@ -133,9 +174,10 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
                     <select
                         value={selectedVersion}
                         onChange={(e) => setSelectedVersion(e.target.value)}
+                        disabled={readOnly || (isAdditionalUser && versions.length === 0)}
                         className={inputClass}
                     >
-                        {versions.map((v) => (
+                        {displayedVersions.map((v) => (
                             <option key={v} value={v}>
                                 PHP {v}
                             </option>
@@ -145,7 +187,7 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
                         variant="primary"
                         icon={Save}
                         onClick={handleVersionChange}
-                        disabled={saving || !pending}
+                        disabled={readOnly || saving || !pending || (isAdditionalUser && !versions.includes(selectedVersion))}
                     >
                         {saving ? t('php.applying') : t('php.apply')}
                     </Button>
@@ -162,36 +204,38 @@ export function DomainPHPSettings({ domainId, currentVersion, onVersionChange }:
                     <form onSubmit={handleSavePool}>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <Field label={t('php.pmMode')}>
-                                <select name="pm" defaultValue={pc.pm || 'dynamic'} className={inputClass}>
+                                <select name="pm" defaultValue={pc.pm || 'dynamic'} disabled={readOnly} className={inputClass}>
                                     <option value="dynamic">dynamic</option>
                                     <option value="static">static</option>
                                     <option value="ondemand">ondemand</option>
                                 </select>
                             </Field>
                             <Field label={t('php.maxChildren')}>
-                                <input type="number" name="pm_max_children" defaultValue={pc.pm_max_children || 5} className={inputClass} />
+                                <input type="number" name="pm_max_children" defaultValue={pc.pm_max_children || 5} readOnly={readOnly} className={inputClass} />
                             </Field>
                             <Field label={t('php.startServers')}>
-                                <input type="number" name="pm_start_servers" defaultValue={pc.pm_start_servers || 2} className={inputClass} />
+                                <input type="number" name="pm_start_servers" defaultValue={pc.pm_start_servers || 2} readOnly={readOnly} className={inputClass} />
                             </Field>
                             <Field label={t('php.minSpare')}>
-                                <input type="number" name="pm_min_spare_servers" defaultValue={pc.pm_min_spare_servers || 1} className={inputClass} />
+                                <input type="number" name="pm_min_spare_servers" defaultValue={pc.pm_min_spare_servers || 1} readOnly={readOnly} className={inputClass} />
                             </Field>
                             <Field label={t('php.maxSpare')}>
-                                <input type="number" name="pm_max_spare_servers" defaultValue={pc.pm_max_spare_servers || 3} className={inputClass} />
+                                <input type="number" name="pm_max_spare_servers" defaultValue={pc.pm_max_spare_servers || 3} readOnly={readOnly} className={inputClass} />
                             </Field>
                             <Field label={t('php.user')}>
-                                <input type="text" name="user" defaultValue={pc.user || 'www-data'} className={inputClass} />
+                                <input type="text" name="user" defaultValue={pc.user || 'www-data'} readOnly={readOnly} className={inputClass} />
                             </Field>
                             <Field label={t('php.group')}>
-                                <input type="text" name="group" defaultValue={pc.group || 'www-data'} className={inputClass} />
+                                <input type="text" name="group" defaultValue={pc.group || 'www-data'} readOnly={readOnly} className={inputClass} />
                             </Field>
                         </div>
-                        <FormActions>
-                            <Button type="submit" variant="primary" icon={Save}>
-                                {t('php.savePool')}
-                            </Button>
-                        </FormActions>
+                        {!readOnly && (
+                            <FormActions>
+                                <Button type="submit" variant="primary" icon={Save}>
+                                    {t('php.savePool')}
+                                </Button>
+                            </FormActions>
+                        )}
                     </form>
                 ) : (
                     <p className="text-sm text-fg-muted">{t('php.poolUnavailable')}</p>

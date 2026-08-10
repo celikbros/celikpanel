@@ -22,16 +22,17 @@ import (
 
 // DomainResponse is the API response for domain listing
 type DomainResponse struct {
-	ID          int    `json:"id"`
-	DomainName  string `json:"domain_name"`
-	PHPVersion  string `json:"php_version"`
-	SSLEnabled  bool   `json:"ssl_enabled"`
-	Status      string `json:"status"`
-	ProjectType string `json:"project_type"`
-	CreatedAt   string `json:"created_at"`
-	DiskUsage   int64  `json:"disk_usage"`
-	Bandwidth   int64  `json:"bandwidth"`
-	ParentID    *int   `json:"parent_id,omitempty"`
+	ID          int               `json:"id"`
+	DomainName  string            `json:"domain_name"`
+	PHPVersion  string            `json:"php_version"`
+	SSLEnabled  bool              `json:"ssl_enabled"`
+	Status      string            `json:"status"`
+	ProjectType string            `json:"project_type"`
+	CreatedAt   string            `json:"created_at"`
+	DiskUsage   int64             `json:"disk_usage"`
+	Bandwidth   int64             `json:"bandwidth"`
+	ParentID    *int              `json:"parent_id,omitempty"`
+	Access      map[string]string `json:"access,omitempty"`
 }
 
 const (
@@ -87,7 +88,15 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 
 	// Filter to the domains the caller owns (admins see all).
 	// Çağıranın sahip olduğu domain'lere filtrele (yöneticiler hepsini görür).
-	visible, all, err := p.visibleOwnerIDs(r.Context(), currentCaller(r))
+	caller := currentCaller(r)
+	var visibleOwners map[int]bool
+	var visibleDomains map[int]bool
+	var all bool
+	if caller != nil && caller.isAdditionalUser() {
+		visibleDomains, err = p.teamMemberVisibleDomainIDs(r.Context(), caller)
+	} else {
+		visibleOwners, all, err = p.visibleOwnerIDs(r.Context(), caller)
+	}
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -96,9 +105,23 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	// Build response with proper field names for frontend
 	response := make([]DomainResponse, 0, len(domains))
 	for _, domain := range domains {
-		if !all {
+		var access map[string]string
+		if caller != nil && caller.isAdditionalUser() {
+			if !visibleDomains[domain.ID] {
+				continue
+			}
+			capabilities, err := p.teamMemberEffectiveDomainCapabilities(r.Context(), caller, domain.ID)
+			if errors.Is(err, errNotFound) {
+				continue
+			}
+			if err != nil {
+				writeServerError(w, err)
+				return
+			}
+			access = teamMemberAccessResponse(capabilities)
+		} else if !all {
 			ownerID, err := p.domainOwnerID(r.Context(), domain.ID)
-			if err != nil || !visible[ownerID] {
+			if err != nil || !visibleOwners[ownerID] {
 				continue
 			}
 		}
@@ -137,6 +160,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			DiskUsage:   diskUsage,
 			Bandwidth:   bandwidth,
 			ParentID:    parentID,
+			Access:      access,
 		})
 	}
 

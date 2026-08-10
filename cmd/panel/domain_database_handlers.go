@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -59,6 +60,39 @@ func apiTypeNameFor(serverType string) string {
 	return serverType
 }
 
+// availableDatabaseTypes returns only the active engines registered for one
+// subscription. The domain dispatcher has already authorized the domain; this
+// query deliberately stays on that domain's tenant boundary and never asks the
+// global host capability or agent surfaces.
+func availableDatabaseTypes(ctx context.Context, pool *sql.DB, subscriptionID int) ([]string, error) {
+	rows, err := pool.QueryContext(ctx, `
+		SELECT DISTINCT dst.name
+		FROM database_servers ds
+		JOIN database_server_types dst ON dst.id = ds.type_id
+		WHERE ds.subscription_id = ?
+		  AND ds.status = 'active'
+		  AND dst.name IN ('mariadb', 'postgresql')
+		ORDER BY dst.name
+	`, subscriptionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	types := make([]string, 0, 2)
+	for rows.Next() {
+		var serverType string
+		if err := rows.Scan(&serverType); err != nil {
+			return nil, err
+		}
+		types = append(types, apiTypeNameFor(serverType))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return types, nil
+}
+
 // handleDomainDatabases handles GET/POST for domain databases
 func (p *Panel) handleDomainDatabases(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -88,6 +122,12 @@ func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request,
 	domain, err := domainRepo.GetByID(ctx, domainID)
 	if err != nil {
 		http.Error(w, "Domain not found", http.StatusNotFound)
+		return
+	}
+
+	availableTypes, err := availableDatabaseTypes(ctx, pool, domain.SubscriptionID)
+	if err != nil {
+		http.Error(w, "Failed to load databases", http.StatusInternalServerError)
 		return
 	}
 
@@ -132,9 +172,10 @@ func (p *Panel) handleGetDomainDatabases(w http.ResponseWriter, r *http.Request,
 	}
 
 	response := map[string]interface{}{
-		"domain_id":   domain.ID,
-		"domain_name": domain.Name,
-		"databases":   databases,
+		"domain_id":       domain.ID,
+		"domain_name":     domain.Name,
+		"databases":       databases,
+		"available_types": availableTypes,
 	}
 
 	json.NewEncoder(w).Encode(response)

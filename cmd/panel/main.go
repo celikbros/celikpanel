@@ -251,7 +251,7 @@ func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
 		rejectRouteMethod(w, match.methods)
 		return
 	}
-	if !p.authorizeDomain(w, r, match.domainID) {
+	if !p.authorizeDomainSubroute(w, r, match.domainID, match.kind) {
 		return
 	}
 	switch match.kind {
@@ -740,6 +740,8 @@ func main() {
 	// Hesap yönetimi (admin + bayi; rol kuralları işleyicilerin içinde).
 	http.HandleFunc("/api/v1/users", panel.handleUsers)
 	http.HandleFunc("/api/v1/users/", panel.handleUserByID)
+	http.HandleFunc("/api/v1/team-members", panel.handleTeamMembers)
+	http.HandleFunc("/api/v1/team-members/", panel.handleTeamMemberByID)
 	http.HandleFunc("/api/v1/plans", panel.handlePlans)
 	http.HandleFunc("/api/v1/plans/", panel.handlePlanByID)
 	http.HandleFunc("/api/v1/subscriptions", panel.handleSubscriptions)

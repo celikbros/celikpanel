@@ -61,7 +61,9 @@ interface Extras {
 
 export function Dashboard() {
     const { role } = useAuth();
-    return role === 'admin' ? <AdminDashboard /> : <CustomerDashboard />;
+    if (role === 'admin') return <AdminDashboard />;
+    if (role === 'additional_user') return <AdditionalUserDashboard />;
+    return <CustomerDashboard />;
 }
 
 function AdminDashboard() {
@@ -560,10 +562,96 @@ function AdminDashboard() {
     );
 }
 
-// Non-admin view: server gauges + facts + quick actions (unchanged scope —
-// tenants have no server-layer data to act on).
-// Yönetici olmayan görünüm: sunucu göstergeleri + bilgiler + hızlı eylemler
-// (kapsam değişmedi — kiracının aksiyon alacağı sunucu-katmanı verisi yok).
+// Additional users get no server telemetry or account-level actions here.
+function AdditionalUserDashboard() {
+    const { t } = useI18n();
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [domains, setDomains] = useState<DomainLite[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetch('/api/v1/domains', { signal: controller.signal })
+            .then((response) => {
+                if (!response.ok) throw new Error('failed to load granted domains');
+                return response.json();
+            })
+            .then((value: unknown) => {
+                // The server filters this collection to the signed-in user's
+                // grants. An unexpected payload still fails closed here.
+                setDomains(Array.isArray(value) ? value : []);
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) setDomains([]);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false);
+            });
+
+        return () => controller.abort();
+    }, []);
+
+    return (
+        <div className={'p-6 md:p-8'}>
+            <PageHeader
+                title={t('dashboard.welcome', { name: user.username })}
+                subtitle={t('nav.domains')}
+            />
+
+            <section className={'max-w-4xl rounded-xl border border-border bg-surface p-6 shadow-card'}>
+                <div className={'flex items-center justify-between gap-4'}>
+                    <div className={'flex items-center gap-3'}>
+                        <span className={'rounded-lg bg-primary/10 p-2 text-primary'}>
+                            <Globe className={'h-5 w-5'} />
+                        </span>
+                        <h2 className={'text-lg font-semibold text-fg'}>{t('dashboard.domains')}</h2>
+                    </div>
+                    <span
+                        className={'rounded-full bg-surface-muted px-3 py-1 text-sm font-semibold text-fg-muted'}
+                        aria-label={t('dashboard.domains')}
+                    >
+                        {loading ? '—' : domains.length}
+                    </span>
+                </div>
+
+                {loading ? (
+                    <p className={'mt-6 text-sm text-fg-muted'} aria-live={'polite'}>
+                        {t('common.loading')}
+                    </p>
+                ) : domains.length === 0 ? (
+                    <div className={'mt-6 rounded-lg border border-dashed border-border p-6 text-center'}>
+                        <p className={'font-semibold text-fg'}>{t('domains.empty')}</p>
+                        <button
+                            type={'button'}
+                            onClick={() => navigate('/domains')}
+                            className={'mt-4 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-muted'}
+                        >
+                            {t('nav.domains')}
+                        </button>
+                    </div>
+                ) : (
+                    <div className={'mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2'}>
+                        {domains.map((domain) => (
+                            <button
+                                key={domain.id}
+                                type={'button'}
+                                onClick={() => navigate(`/domains/${encodeURIComponent(domain.domain_name)}`)}
+                                className={'flex items-center justify-between gap-4 rounded-lg border border-border p-4 text-left hover:border-primary/40 hover:bg-surface-muted'}
+                            >
+                                <span className={'min-w-0 truncate font-semibold text-fg'}>{domain.domain_name}</span>
+                                <span className={'shrink-0 text-sm font-semibold text-primary'}>{t('domains.action.manage')}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </section>
+        </div>
+    );
+}
+
+// Non-admin account view: server gauges + facts + quick actions.
 function CustomerDashboard() {
     const { t } = useI18n();
     const [stats, setStats] = useState<SystemStats | null>(null);

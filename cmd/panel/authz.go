@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+
+	"github.com/alicelik/celikpanel/internal/core"
 )
 
 // Authorization model (see docs/ROLES.md). Every resource resolves to an
@@ -28,8 +30,60 @@ const (
 // Caller is the authenticated identity attached to every request in requireAuth.
 // Caller, requireAuth içinde her isteğe iliştirilen kimliği doğrulanmış kimliktir.
 type Caller struct {
-	ID   int
-	Role string
+	ID          int
+	Role        string
+	AccountType core.AccountType
+	CustomerID  int
+}
+
+// normalizedAccountType keeps existing account sessions and older focused
+// tests compatible while treating every explicit, unknown marker as invalid.
+func (c *Caller) normalizedAccountType() core.AccountType {
+	if c == nil {
+		return ""
+	}
+	if c.AccountType == "" {
+		return core.AccountTypeAccount
+	}
+	return c.AccountType
+}
+
+// validAuthorizationIdentity validates the effective identity carried in the
+// request context. Additional users are intentionally a separate effective
+// role; they must never become administrators or inherit their parent account's
+// ownership merely by changing a stored role marker.
+func (c *Caller) validAuthorizationIdentity() bool {
+	if c == nil || c.ID <= 0 {
+		return false
+	}
+	switch c.normalizedAccountType() {
+	case core.AccountTypeAccount:
+		switch c.Role {
+		case roleAdmin, roleReseller:
+			return c.CustomerID == 0
+		case roleCustomer:
+			// CustomerID == 0 is accepted for legacy in-process callers. The
+			// authentication middleware always emits the canonical self ID.
+			return c.CustomerID == 0 || c.CustomerID == c.ID
+		default:
+			return false
+		}
+	case core.AccountTypeAdditionalUser:
+		return c.Role == core.EffectiveRoleAdditionalUser &&
+			c.CustomerID > 0 && c.CustomerID != c.ID
+	default:
+		return false
+	}
+}
+
+func (c *Caller) hasAccountRole(role string) bool {
+	return c != nil && c.normalizedAccountType() == core.AccountTypeAccount &&
+		c.validAuthorizationIdentity() && c.Role == role
+}
+
+func (c *Caller) isAdditionalUser() bool {
+	return c != nil && c.normalizedAccountType() == core.AccountTypeAdditionalUser &&
+		c.validAuthorizationIdentity()
 }
 
 // visibleOwnerIDs returns the set of user IDs whose resources the caller may
@@ -38,11 +92,17 @@ type Caller struct {
 // visibleOwnerIDs, çağıranın kaynaklarını görebileceği kullanıcı kimlikleri
 // kümesini döndürür. Yönetici için (nil, true) döner; yani "herkes".
 func (p *Panel) visibleOwnerIDs(ctx context.Context, c *Caller) (ids map[int]bool, all bool, err error) {
-	if c == nil {
+	if c == nil || !c.validAuthorizationIdentity() {
 		return map[int]bool{}, false, nil
 	}
-	if c.Role == roleAdmin {
+	if c.hasAccountRole(roleAdmin) {
 		return nil, true, nil
+	}
+	// Team-member grants are not wired to resource scopes yet. Until they are,
+	// fail closed: neither the member's row nor its parent customer's resources
+	// are visible through the legacy ownership graph.
+	if c.isAdditionalUser() {
+		return map[int]bool{}, false, nil
 	}
 	// Self plus any users this caller created (reseller → customers,
 	// customer → additional users).

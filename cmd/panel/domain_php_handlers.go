@@ -6,21 +6,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // DomainPHPSettingsResponse represents PHP settings for a domain
 type DomainPHPSettingsResponse struct {
-	DomainID   int                 `json:"domain_id"`
-	DomainName string              `json:"domain_name"`
-	PHPVersion string              `json:"php_version"`
-	PoolName   string              `json:"pool_name"`
-	PoolConfig *core.PHPPoolConfig `json:"pool_config,omitempty"`
+	DomainID          int                 `json:"domain_id"`
+	DomainName        string              `json:"domain_name"`
+	PHPVersion        string              `json:"php_version"`
+	AvailableVersions []string            `json:"available_versions"`
+	PoolName          string              `json:"pool_name"`
+	PoolConfig        *core.PHPPoolConfig `json:"pool_config,omitempty"`
 }
 
 // UpdateDomainPHPRequest represents a request to update domain PHP settings
@@ -70,6 +73,19 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if r.Method == "GET" {
+		availableVersions := domainPHPAvailableVersions(phpVersion, nil)
+		discoveredVersions, discoveryErr := p.phpVersionsFromAgent(r.Context())
+		if discoveryErr != nil {
+			// The page already had a tolerant read contract for a missing pool
+			// configuration. Keep that contract when discovery is temporarily
+			// unavailable: the site's stored current version is known and is the
+			// only honest fallback, while the internal failure remains visible in
+			// the server log. Never invent another version.
+			log.Printf("discover PHP versions for domain %d: %v", domainID, discoveryErr)
+		} else {
+			availableVersions = domainPHPAvailableVersions(phpVersion, discoveredVersions)
+		}
+
 		// Get pool config from agent
 		var poolConfig core.PHPPoolConfig
 		req := transport.GetPHPPoolConfigRequest{
@@ -100,20 +116,22 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 			// yok diye bildirilir; havuz oluşturmak sayfa yüklemenin değil, site
 			// oluşturma yolunun işidir.
 			json.NewEncoder(w).Encode(DomainPHPSettingsResponse{
-				DomainID:   domainID,
-				DomainName: domain.Name,
-				PHPVersion: phpVersion,
-				PoolName:   poolName,
+				DomainID:          domainID,
+				DomainName:        domain.Name,
+				PHPVersion:        phpVersion,
+				AvailableVersions: availableVersions,
+				PoolName:          poolName,
 			})
 			return
 		}
 
 		json.NewEncoder(w).Encode(DomainPHPSettingsResponse{
-			DomainID:   domainID,
-			DomainName: domain.Name,
-			PHPVersion: phpVersion,
-			PoolName:   poolName,
-			PoolConfig: &poolConfig,
+			DomainID:          domainID,
+			DomainName:        domain.Name,
+			PHPVersion:        phpVersion,
+			AvailableVersions: availableVersions,
+			PoolName:          poolName,
+			PoolConfig:        &poolConfig,
 		})
 		return
 	}
@@ -125,9 +143,24 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		// Validate PHP version
-		if req.PHPVersion == "" {
-			http.Error(w, "PHP version is required", http.StatusBadRequest)
+		// Validate the closed version shape before asking the agent or building
+		// a socket path. Then require the exact managed version reported by the
+		// agent; even a no-op switch to the stored version fails closed when that
+		// version is no longer discoverable.
+		if err := services.ValidatePHPVersion(req.PHPVersion); err != nil {
+			writeClientError(w, http.StatusBadRequest, "invalid PHP version")
+			return
+		}
+		discoveredVersions, err := p.phpVersionsFromAgent(r.Context())
+		if err != nil {
+			writeAgentError(w, err, "PHP version discovery")
+			return
+		}
+		if !containsDomainPHPVersion(
+			domainPHPAvailableVersions("", discoveredVersions),
+			req.PHPVersion,
+		) {
+			writeClientError(w, http.StatusBadRequest, "PHP version is not available")
 			return
 		}
 
@@ -185,6 +218,57 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 			"message": "PHP version updated",
 		})
 	}
+}
+
+// domainPHPAvailableVersions closes the picker contract over validated
+// major.minor versions, removes duplicate agent rows and sorts newest first.
+// The stored current version is included only when it has the same safe shape;
+// it is known domain state, not a guessed installed version.
+func domainPHPAvailableVersions(current string, discovered []string) []string {
+	seen := make(map[string]struct{}, len(discovered)+1)
+	versions := make([]string, 0, len(discovered)+1)
+	add := func(version string) {
+		if services.ValidatePHPVersion(version) != nil {
+			return
+		}
+		if _, exists := seen[version]; exists {
+			return
+		}
+		seen[version] = struct{}{}
+		versions = append(versions, version)
+	}
+	for _, version := range discovered {
+		add(version)
+	}
+	add(current)
+	sort.Slice(versions, func(i, j int) bool {
+		leftMajor, leftMinor := domainPHPVersionParts(versions[i])
+		rightMajor, rightMinor := domainPHPVersionParts(versions[j])
+		if leftMajor != rightMajor {
+			return leftMajor > rightMajor
+		}
+		if leftMinor != rightMinor {
+			return leftMinor > rightMinor
+		}
+		return versions[i] < versions[j]
+	})
+	return versions
+}
+
+func domainPHPVersionParts(version string) (int, int) {
+	major, minor, _ := strings.Cut(version, ".")
+	majorNumber, _ := strconv.Atoi(major)
+	minorNumber, _ := strconv.Atoi(minor)
+	return majorNumber, minorNumber
+}
+
+func containsDomainPHPVersion(versions []string, target string) bool {
+	for _, version := range versions {
+		if version == target {
+			return true
+		}
+	}
+	return false
 }
 
 // handleDomainPHPPool handles GET/POST for domain-specific pool configuration

@@ -1335,6 +1335,27 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP TRIGGER guard_additional_user_owner_role;
+		DROP TRIGGER guard_additional_user_owner_with_granted_scope;
+		DROP TRIGGER guard_domain_subscription_with_additional_user_grants;
+		DROP TRIGGER guard_subscription_owner_with_additional_user_domain_grants;
+		DROP TRIGGER guard_subscription_owner_with_additional_user_grants;
+		DROP TRIGGER validate_additional_user_domain_permission_update;
+		DROP TRIGGER validate_additional_user_domain_permission_insert;
+		DROP TRIGGER validate_additional_user_subscription_permission_update;
+		DROP TRIGGER validate_additional_user_subscription_permission_insert;
+		DROP TRIGGER reject_additional_user_subscription_owner_update;
+		DROP TRIGGER reject_additional_user_subscription_owner_insert;
+		DROP TRIGGER validate_additional_user_identity_update;
+		DROP TRIGGER validate_additional_user_identity_insert;
+		DROP TRIGGER validate_user_account_type_immutable;
+		DROP INDEX idx_additional_user_domain_permissions_scope;
+		DROP TABLE additional_user_domain_permissions;
+		DROP INDEX idx_additional_user_subscription_permissions_scope;
+		DROP TABLE additional_user_subscription_permissions;
+		DROP INDEX idx_users_parent_account_type;
+		ALTER TABLE users DROP COLUMN account_type;
+
 		DROP INDEX idx_application_install_operations_domain;
 		DROP INDEX idx_application_install_operations_status;
 		DROP TABLE application_install_operations;

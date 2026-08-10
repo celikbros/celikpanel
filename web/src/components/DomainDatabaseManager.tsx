@@ -7,6 +7,28 @@ import { readApiError } from '../lib/apiError';
 interface DomainDatabaseManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
+    isAdditionalUser?: boolean;
+}
+
+type DatabaseType = 'mysql' | 'postgresql';
+type DatabaseEngine = { value: DatabaseType; label: string };
+
+function parseAvailableDatabaseTypes(value: unknown): DatabaseEngine[] {
+    if (!Array.isArray(value)) return [];
+
+    const parsed: DatabaseEngine[] = [];
+    const seen = new Set<DatabaseType>();
+    for (const item of value) {
+        if (item !== 'mysql' && item !== 'postgresql') return [];
+        if (seen.has(item)) continue;
+        seen.add(item);
+        parsed.push({
+            value: item,
+            label: item === 'mysql' ? 'MySQL / MariaDB' : 'PostgreSQL',
+        });
+    }
+    return parsed;
 }
 
 // The database web tools (phpMyAdmin / phpPgAdmin). Installed → a launch
@@ -77,7 +99,13 @@ interface DatabaseInfo {
     created_at: string;
 }
 
-export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseManagerProps) {
+export function DomainDatabaseManager({
+    domainId,
+    domainName,
+    readOnly = false,
+    isAdditionalUser = false,
+}: DomainDatabaseManagerProps) {
+    const { t } = useI18n();
     const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -88,8 +116,15 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
     // page for ghosts. The engine ids map to the panel's db types.
     // Yalnız gerçekten kurulu motorlar sunulabilir — ikisi de koşmayan bir
     // sunucuda MySQL+PostgreSQL açılır listesi, hayaletlere ayar sayfasıdır.
-    const [engines, setEngines] = useState<{ value: 'mysql' | 'postgresql'; label: string }[]>([]);
+    const [engines, setEngines] = useState<DatabaseEngine[]>([]);
     useEffect(() => {
+        if (isAdditionalUser) {
+            // Server-wide capability inventory is admin-only. For a team
+            // member, loadDatabases consumes only the tenant-safe
+            // available_types field returned with this domain's databases.
+            setEngines([]);
+            return;
+        }
         fetch('/api/v1/hosting/capabilities')
             .then((r) => (r.ok ? r.json() : null))
             .then((c: { database_servers?: string[] } | null) => {
@@ -102,24 +137,37 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                 if (list.length > 0) setDbType(list[0].value);
             })
             .catch(() => setEngines([]));
-    }, []);
+    }, [isAdditionalUser]);
 
     // Form state
     const [dbName, setDbName] = useState('');
-    const [dbType, setDbType] = useState<'mysql' | 'postgresql'>('mysql');
+    const [dbType, setDbType] = useState<DatabaseType>('mysql');
     const [dbPassword, setDbPassword] = useState('');
 
     useEffect(() => {
         loadDatabases();
-    }, [domainId]);
+    }, [domainId, isAdditionalUser]);
 
     const loadDatabases = async () => {
         setLoading(true);
+        if (isAdditionalUser) {
+            setEngines([]);
+            setDatabases([]);
+        }
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/databases`);
             if (res.ok) {
-                const data = await res.json();
-                setDatabases(data.databases || []);
+                const data: unknown = await res.json();
+                const payload = data && typeof data === 'object' && !Array.isArray(data)
+                    ? data as Record<string, unknown>
+                    : {};
+                const nextDatabases: DatabaseInfo[] = Array.isArray(payload.databases) ? payload.databases as DatabaseInfo[] : [];
+                setDatabases(nextDatabases);
+                if (isAdditionalUser) {
+                    const list = parseAvailableDatabaseTypes(payload.available_types);
+                    setEngines(list);
+                    if (list.length > 0) setDbType(list[0].value);
+                }
             } else {
                 showToast('error', 'Failed to load databases');
             }
@@ -133,6 +181,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
 
     const handleCreateDatabase = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (readOnly || (isAdditionalUser && !engines.some((engine) => engine.value === dbType))) return;
 
         if (!dbName || !dbPassword) {
             showToast('error', 'Name and password are required');
@@ -170,6 +219,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
     };
 
     const handleDeleteDatabase = async (db: DatabaseInfo) => {
+        if (readOnly) return;
         if (!confirm(`Delete database "${db.name}"?\n\nThis action cannot be undone. All data will be lost.`)) {
             return;
         }
@@ -201,7 +251,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
             </div>
 
             {/* Create Database Button */}
-            {!showCreateForm && (
+            {!readOnly && !showCreateForm && (!isAdditionalUser || engines.length > 0) && (
                 <button
                     onClick={() => setShowCreateForm(true)}
                     className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2"
@@ -211,8 +261,14 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                 </button>
             )}
 
+            {!readOnly && isAdditionalUser && !loading && engines.length === 0 && (
+                <div className="rounded-lg border border-info/30 bg-info/10 px-4 py-3 text-sm text-fg">
+                    {t('db.teamEngineUnavailable')}
+                </div>
+            )}
+
             {/* Create Database Form */}
-            {showCreateForm && (
+            {!readOnly && showCreateForm && (!isAdditionalUser || engines.length > 0) && (
                 <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                     <h4 className="text-md font-semibold text-fg mb-4">Create New Database</h4>
                     <form onSubmit={handleCreateDatabase} className="space-y-4">
@@ -235,7 +291,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                             <label className="block text-sm text-fg-muted mb-2">Database Type</label>
                             <select
                                 value={dbType}
-                                onChange={(e) => setDbType(e.target.value as 'mysql' | 'postgresql')}
+                                onChange={(e) => setDbType(e.target.value as DatabaseType)}
                                 className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary focus:outline-none"
                             >
                                 {engines.map((eng) => (
@@ -259,7 +315,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                         <div className="flex gap-2">
                             <button
                                 type="submit"
-                                disabled={creating}
+                                disabled={creating || (isAdditionalUser && !engines.some((engine) => engine.value === dbType))}
                                 className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 flex items-center gap-2"
                             >
                                 <Database className="w-4 h-4" />
@@ -310,7 +366,9 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                         <div className="text-center text-fg-subtle py-12">
                             <Database className="w-12 h-12 mx-auto mb-2 opacity-50" />
                             <p>No databases created yet</p>
-                            <p className="text-sm mt-1">Click "Create Database" to get started</p>
+                            {!readOnly && (!isAdditionalUser || engines.length > 0) && (
+                                <p className="text-sm mt-1">Click "Create Database" to get started</p>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -344,15 +402,18 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleDeleteDatabase(db)}
-                                                className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
-                                                title="Delete database"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        {!readOnly && (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleDeleteDatabase(db)}
+                                                    className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
+                                                    title="Delete database"
+                                                    aria-label="Delete database"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -361,7 +422,7 @@ export function DomainDatabaseManager({ domainId, domainName }: DomainDatabaseMa
                 </div>
             </div>
 
-            <DBToolsCard />
+            {!isAdditionalUser && <DBToolsCard />}
         </div>
     );
 }
