@@ -53,6 +53,10 @@ type Panel struct {
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
+	// webmailReadinessProbe is injectable only so handler tests never need a
+	// real Roundcube process. Production leaves it nil and uses the fixed,
+	// Unix-socket-backed probe.
+	webmailReadinessProbe func(context.Context) bool
 	// pkgFamily caches the host's package-manager family ("apt", "pacman").
 	// It is a property of the machine and never changes while the panel runs,
 	// so it is asked once instead of being persisted with the service scan —
@@ -206,6 +210,8 @@ func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
 		match.kind, match.methods = "cron", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
 	case "mail/health":
 		match.kind, match.methods = "mail-health", []string{http.MethodGet}
+	case "mail/accounts/password":
+		match.kind, match.methods = "mail", []string{http.MethodPut}
 	case "mail/accounts":
 		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
 	case "mail/quota", "mail/rbl", "mail/setup", "mail/auth":

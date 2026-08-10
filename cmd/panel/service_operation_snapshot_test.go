@@ -1335,6 +1335,8 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP TABLE domain_deletion_operations;
+
 		DROP TRIGGER guard_additional_user_owner_role;
 		DROP TRIGGER guard_additional_user_owner_with_granted_scope;
 		DROP TRIGGER guard_domain_subscription_with_additional_user_grants;

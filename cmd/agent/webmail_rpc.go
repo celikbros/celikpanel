@@ -581,23 +581,68 @@ func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcu
 // panel session), webmail is for END USERS: a customer with only a mailbox —
 // no panel account — signs in with their email credentials. So the panel
 // fronts it at a PUBLIC /webmail/ path (Roundcube's own login is the auth),
-// and the agent serves it loopback-only on 127.0.0.1:8307. The split from the
-// db-tools server (8306) is deliberate: different audience, different access
-// rule, so a change to one can never widen the other.
+// and the agent serves it only on a root-bound Unix socket. The split from the
+// TCP-based db-tools server is deliberate: different audience, different
+// access rule, so a change to one can never widen the other.
 //
 // Roundcube webmail sunumu. Veritabanı araçlarının (yalnız-admin, panel
 // oturumu arkasında) aksine webmail SON KULLANICI içindir: yalnız posta
 // kutusu olan bir müşteri — panel hesabı olmadan — e-posta bilgileriyle girer.
 // Bu yüzden panel onu PUBLIC bir /webmail/ yolunda önler (kimlik doğrulama
-// Roundcube'un kendi girişidir) ve agent onu yalnız-loopback 127.0.0.1:8307'de
-// sunar. db-araçları sunucusundan (8306) ayrı olması bilinçlidir: farklı
-// kitle, farklı erişim kuralı; birine yapılan değişiklik diğerini asla
-// genişletemez.
+// Roundcube'un kendi girişidir) ve agent onu yalnız root'un bağlayabildiği
+// Unix socket'te sunar. db-araçlarının TCP sunucusundan ayrı olması
+// bilinçlidir: farklı kitle, farklı erişim kuralı; birine yapılan değişiklik
+// diğerini asla genişletemez.
 
 const (
 	webmailConfPath = "/etc/nginx/conf.d/celikpanel-webmail.conf"
-	webmailAddr     = "127.0.0.1:8307"
 )
+
+var webmailSetConfigMetadata = secureSetMailFileMetadata
+
+func webmailSocketPathForNginx() (string, error) {
+	path := transport.WebmailSocketPath()
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path ||
+		len(path) > 100 || filepath.Ext(path) != ".sock" {
+		return "", fmt.Errorf("invalid webmail socket path")
+	}
+	for _, r := range path {
+		if !(r == '/' || r == '-' || r == '_' || r == '.' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9')) {
+			return "", fmt.Errorf("invalid webmail socket path")
+		}
+	}
+	return path, nil
+}
+
+func webmailConfigMetadataIdentity(path string) (int, int) {
+	if path == webmailConfPath {
+		return 0, 0
+	}
+	return -1, -1
+}
+
+func removeInactiveWebmailSocket() error {
+	path, err := webmailSocketPathForNginx()
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect inactive webmail socket: %w", err)
+	}
+	if info.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf("refuse to remove non-socket webmail path")
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove inactive webmail socket: %w", err)
+	}
+	return nil
+}
 
 func applyWebmailNginxMutation(
 	ctx context.Context,
@@ -612,15 +657,6 @@ func applyWebmailNginxMutation(
 	snapshot, err := snapshotMailFile(path)
 	if err != nil {
 		return fmt.Errorf("snapshot webmail nginx configuration: %w", err)
-	}
-	if present {
-		if err := secureWriteConfig(path, content, 0o644); err != nil {
-			return fmt.Errorf("write webmail nginx configuration: %w", err)
-		}
-	} else if snapshot.exists {
-		if err := secureRemoveConfig(path); err != nil {
-			return fmt.Errorf("remove webmail nginx configuration: %w", err)
-		}
 	}
 
 	rollback := func(cause error, restoreRuntime bool) error {
@@ -646,6 +682,23 @@ func applyWebmailNginxMutation(
 		return errors.Join(cause, fmt.Errorf("webmail nginx rollback failed: %w", errors.Join(rollbackErrs...)))
 	}
 
+	if present {
+		if err := secureWriteConfig(path, content, 0o600); err != nil {
+			return rollback(fmt.Errorf("write webmail nginx configuration: %w", err), false)
+		}
+		// Unit tests and unprivileged development use a private temporary
+		// config path and leave its owner unchanged. Production's fixed /etc
+		// path is always explicitly reset to root:root.
+		uid, gid := webmailConfigMetadataIdentity(path)
+		if err := webmailSetConfigMetadata(path, 0o600, uid, gid); err != nil {
+			return rollback(fmt.Errorf("secure webmail nginx configuration metadata: %w", err), false)
+		}
+	} else if snapshot.exists {
+		if err := secureRemoveConfig(path); err != nil {
+			return rollback(fmt.Errorf("remove webmail nginx configuration: %w", err), false)
+		}
+	}
+
 	if out, err := run(ctx, "nginx", "-t"); err != nil {
 		return rollback(fmt.Errorf(
 			"nginx rejected the webmail configuration: %s",
@@ -657,6 +710,11 @@ func applyWebmailNginxMutation(
 			"nginx reload failed: %s",
 			commandFailureDetail("systemctl reload nginx", out, err),
 		), true)
+	}
+	if !present && path == webmailConfPath {
+		if err := removeInactiveWebmailSocket(); err != nil {
+			return rollback(err, true)
+		}
 	}
 	return nil
 }
@@ -671,12 +729,36 @@ func applyWebmailNginxMutation(
 // kök tüm uygulamayı sunar.
 func roundcubeRootDir() string { return filepath.Join(webmailBaseDir, "public_html") }
 
+func renderWebmailNginxConfig(webmailSocket, roundcubeRoot, fpmSocket string) string {
+	return fmt.Sprintf(`# Managed by CelikPanel — Roundcube webmail, Unix socket only.
+# The panel reverse-proxies /webmail/ here; Roundcube's own login is the auth.
+server {
+    listen unix:%s;
+    server_name _;
+    client_max_body_size 25m;
+
+    location /webmail/ {
+        alias %s/;
+        index index.php;
+        try_files $uri $uri/ /webmail/index.php$is_args$args;
+
+        location ~ ^/webmail/(.+\.php)$ {
+            alias %s/$1;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $request_filename;
+            fastcgi_pass unix:%s;
+        }
+    }
+}
+`, webmailSocket, roundcubeRoot, roundcubeRoot, fpmSocket)
+}
+
 type ConfigureWebmailResponse = transport.ConfigureWebmailResponse
 
-// ConfigureWebmail (re)writes the loopback nginx server when Roundcube is
+// ConfigureWebmail (re)writes the Unix-socket nginx server when Roundcube is
 // installed, and removes it when it is not — the mirror of ConfigureDBTools,
 // called by the panel after roundcube is installed or uninstalled. Idempotent.
-// ConfigureWebmail, Roundcube kuruluyken loopback nginx sunucusunu (yeniden)
+// ConfigureWebmail, Roundcube kuruluyken Unix-socket nginx sunucusunu (yeniden)
 // yazar, değilken kaldırır — ConfigureDBTools'un aynası; panel roundcube
 // kurulunca/kaldırılınca çağırır. Idempotenttir.
 func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWebmailResponse) error {
@@ -733,6 +815,11 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
+	webmailSocket, err := webmailSocketPathForNginx()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 
 	// Path-preserving: the browser path (/webmail/…) and this server's path
 	// are identical, so Roundcube's own absolute URLs survive the panel proxy
@@ -740,27 +827,7 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 	// Yol-koruyan: tarayıcı yolu (/webmail/…) ile bu sunucunun yolu aynıdır;
 	// böylece Roundcube'un mutlak URL'leri panel vekilinden yeniden yazım
 	// olmadan sağ çıkar — db-araçları sunucusunun kullandığı aynı numara.
-	conf := fmt.Sprintf(`# Managed by CelikPanel — Roundcube webmail, loopback only.
-# The panel reverse-proxies /webmail/ here; Roundcube's own login is the auth.
-server {
-    listen %s;
-    server_name _;
-    client_max_body_size 25m;
-
-    location /webmail/ {
-        alias %s/;
-        index index.php;
-        try_files $uri $uri/ /webmail/index.php$is_args$args;
-
-        location ~ ^/webmail/(.+\.php)$ {
-            alias %s/$1;
-            include fastcgi_params;
-            fastcgi_param SCRIPT_FILENAME $request_filename;
-            fastcgi_pass unix:%s;
-        }
-    }
-}
-`, webmailAddr, roundcubeRootDir(), roundcubeRootDir(), socket)
+	conf := renderWebmailNginxConfig(webmailSocket, roundcubeRootDir(), socket)
 
 	if err := applyWebmailNginxMutation(
 		ctx,

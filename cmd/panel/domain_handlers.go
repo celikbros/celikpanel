@@ -24,13 +24,13 @@ import (
 type DomainResponse struct {
 	ID          int               `json:"id"`
 	DomainName  string            `json:"domain_name"`
-	PHPVersion  string            `json:"php_version"`
-	SSLEnabled  bool              `json:"ssl_enabled"`
+	PHPVersion  *string           `json:"php_version,omitempty"`
+	SSLEnabled  *bool             `json:"ssl_enabled,omitempty"`
 	Status      string            `json:"status"`
-	ProjectType string            `json:"project_type"`
+	ProjectType *string           `json:"project_type,omitempty"`
 	CreatedAt   string            `json:"created_at"`
-	DiskUsage   int64             `json:"disk_usage"`
-	Bandwidth   int64             `json:"bandwidth"`
+	DiskUsage   *int64            `json:"disk_usage,omitempty"`
+	Bandwidth   *int64            `json:"bandwidth,omitempty"`
 	ParentID    *int              `json:"parent_id,omitempty"`
 	Access      map[string]string `json:"access,omitempty"`
 }
@@ -69,6 +69,15 @@ func writeDomainCreatePartialSuccess(w http.ResponseWriter, domainID int, domain
 	})
 }
 
+func domainAccessIncludes(access map[string]string, capabilities ...string) bool {
+	for _, capability := range capabilities {
+		if mode := access[capability]; mode == "view" || mode == "manage" {
+			return true
+		}
+	}
+	return false
+}
+
 // handleDomains lists all domains
 func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -89,10 +98,11 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	// Filter to the domains the caller owns (admins see all).
 	// Çağıranın sahip olduğu domain'lere filtrele (yöneticiler hepsini görür).
 	caller := currentCaller(r)
+	additionalUser := caller != nil && caller.isAdditionalUser()
 	var visibleOwners map[int]bool
 	var visibleDomains map[int]bool
 	var all bool
-	if caller != nil && caller.isAdditionalUser() {
+	if additionalUser {
 		visibleDomains, err = p.teamMemberVisibleDomainIDs(r.Context(), caller)
 	} else {
 		visibleOwners, all, err = p.visibleOwnerIDs(r.Context(), caller)
@@ -106,7 +116,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	response := make([]DomainResponse, 0, len(domains))
 	for _, domain := range domains {
 		var access map[string]string
-		if caller != nil && caller.isAdditionalUser() {
+		if additionalUser {
 			if !visibleDomains[domain.ID] {
 				continue
 			}
@@ -129,36 +139,64 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 		// cached measurements — lists never probe the filesystem.
 		// Site bilgisini doğrudan veritabanından sorgula. Kullanım sayıları
 		// önbellekli ölçümlerdir — listeler asla dosya sistemini yoklamaz.
-		var phpVersion, projectType string
-		var sslEnabled bool
-		var diskUsage, bandwidth int64
+		showPHP := !additionalUser || domainAccessIncludes(access, "php")
+		showSSL := !additionalUser || domainAccessIncludes(access, "ssl")
+		showStatistics := !additionalUser || domainAccessIncludes(access, "statistics")
+		showProjectType := !additionalUser || domainAccessIncludes(
+			access, "files", "php", "cron", "backups", "statistics",
+		)
 
-		query := `SELECT php_version, COALESCE(ssl_enabled, false), COALESCE(project_type,'php'),
-			COALESCE(disk_usage_bytes,0), COALESCE(traffic_month_bytes,0)
-			FROM sites WHERE domain_id = ? LIMIT 1`
-		err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).
-			Scan(&phpVersion, &sslEnabled, &projectType, &diskUsage, &bandwidth)
-		if err != nil {
-			// Default values if site not found
-			phpVersion = "8.3"
-			sslEnabled = false
-			projectType = "php"
+		var phpVersionResponse, projectTypeResponse *string
+		var sslEnabledResponse *bool
+		var diskUsageResponse, bandwidthResponse *int64
+		if showPHP || showSSL || showStatistics || showProjectType {
+			// Query site info only when at least one authorized response field
+			// needs it. Usage numbers are cached measurements; lists never probe
+			// the filesystem.
+			var phpVersion, projectType string
+			var sslEnabled bool
+			var diskUsage, bandwidth int64
+			query := `SELECT php_version, COALESCE(ssl_enabled, false), COALESCE(project_type,'php'),
+				COALESCE(disk_usage_bytes,0), COALESCE(traffic_month_bytes,0)
+				FROM sites WHERE domain_id = ? LIMIT 1`
+			err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).
+				Scan(&phpVersion, &sslEnabled, &projectType, &diskUsage, &bandwidth)
+			if err != nil {
+				// Preserve the legacy full-account defaults when no site exists.
+				phpVersion = "8.3"
+				sslEnabled = false
+				projectType = "php"
+			}
+			if showPHP {
+				phpVersionResponse = &phpVersion
+			}
+			if showSSL {
+				sslEnabledResponse = &sslEnabled
+			}
+			if showStatistics {
+				diskUsageResponse = &diskUsage
+				bandwidthResponse = &bandwidth
+			}
+			if showProjectType {
+				projectTypeResponse = &projectType
+			}
 		}
 
-		var parentID *int
-		p.db.GetDB().QueryRowContext(context.Background(),
-			`SELECT parent_domain_id FROM domains WHERE id = ?`, domain.ID).Scan(&parentID)
+		parentID := domain.ParentDomainID
+		if additionalUser && parentID != nil && !visibleDomains[*parentID] {
+			parentID = nil
+		}
 
 		response = append(response, DomainResponse{
 			ID:          domain.ID,
 			DomainName:  domain.Name,
-			PHPVersion:  phpVersion,
-			SSLEnabled:  sslEnabled,
+			PHPVersion:  phpVersionResponse,
+			SSLEnabled:  sslEnabledResponse,
 			Status:      domain.Status,
-			ProjectType: projectType,
+			ProjectType: projectTypeResponse,
 			CreatedAt:   domain.CreatedAt.Format("2006-01-02T15:04:05Z"),
-			DiskUsage:   diskUsage,
-			Bandwidth:   bandwidth,
+			DiskUsage:   diskUsageResponse,
+			Bandwidth:   bandwidthResponse,
 			ParentID:    parentID,
 			Access:      access,
 		})
@@ -528,10 +566,13 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			writeServerError(w, fmt.Errorf("stored site identity is inconsistent: %w", err))
 			return
 		}
-		if err := p.requireMatchingAgentBuild(ctx); err != nil {
-			writeClientError(w, http.StatusServiceUnavailable, err.Error())
-			return
-		}
+	}
+	// Every deletion now asks the privileged agent to converge the domain mail
+	// runtime, including DNS-only domains with no site row. Check the paired
+	// build before publishing any durable deletion marker or mail-TLS change.
+	if err := p.requireMatchingAgentBuild(ctx); err != nil {
+		writeClientError(w, http.StatusServiceUnavailable, err.Error())
+		return
 	}
 
 	// Capture agent-generated staged lineages before the cascading domain
@@ -582,14 +623,25 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	lineageRows.Close()
 
-	if err := p.markDomainDeletionPending(ctx, domainID); err != nil {
+	p.mailMutationMu.Lock()
+	firstDeletionAttempt, err := p.markDomainDeletionPending(ctx, domainID)
+	if err != nil {
+		p.mailMutationMu.Unlock()
 		writeServerError(w, err)
 		return
 	}
 
 	_, err = p.prepareDomainMailTLSRemoval(ctx, domainID)
 	if err != nil {
-		if restoreErr := p.restoreDomainStatus(ctx, domainID, domain.Status); restoreErr != nil {
+		if !firstDeletionAttempt {
+			p.mailMutationMu.Unlock()
+			p.writeDomainDeletionPending(
+				w, r, domainID, domain.Name, "mail_tls_cleanup", err,
+			)
+			return
+		}
+		if restoreErr := p.restoreDomainDeletionStart(ctx, domainID); restoreErr != nil {
+			p.mailMutationMu.Unlock()
 			p.writeDomainDeletionPending(
 				w,
 				r,
@@ -600,9 +652,24 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
+		p.mailMutationMu.Unlock()
 		writeServerError(w, err)
 		return
 	}
+
+	if err := p.removeDomainMailRuntimeLocked(ctx, domainID, domain.Name); err != nil {
+		p.mailMutationMu.Unlock()
+		p.writeDomainDeletionPending(
+			w,
+			r,
+			domainID,
+			domain.Name,
+			"mail_runtime_cleanup",
+			err,
+		)
+		return
+	}
+	p.mailMutationMu.Unlock()
 
 	// Tear down the system side first — vhost, PHP pool, app unit, system
 	// user, files. If that fails the ledger row stays, the honest error goes

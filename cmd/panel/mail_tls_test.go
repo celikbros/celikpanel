@@ -111,6 +111,14 @@ func (a *mailTLSIsolationRPCAgent) SecureMailTLS(
 	return nil
 }
 
+func (a *mailTLSIsolationRPCAgent) DeleteMailDomain(
+	_ *transport.DeleteMailDomainRequest,
+	resp *transport.DeleteMailDomainResponse,
+) error {
+	resp.Applied = true
+	return nil
+}
+
 func attachMailTLSIsolationAgent(t *testing.T, p *Panel, agent *mailTLSIsolationRPCAgent) {
 	t.Helper()
 	socketFile, err := os.CreateTemp("", "cp-mailtls-*.sock")
@@ -427,16 +435,26 @@ func TestDeleteDomainAbortsAndRestoresSecureMailWhenSNICleanupFails(t *testing.T
 	}
 
 	var domainCount, secureMail int
+	var domainStatus string
 	if err := p.db.GetDB().QueryRow(`
-		SELECT COUNT(*), COALESCE(MAX(sc.secure_mail), 0)
+		SELECT COUNT(*), COALESCE(MAX(sc.secure_mail), 0), COALESCE(MAX(d.status), '')
 		FROM domains d
 		LEFT JOIN ssl_certificates sc ON sc.domain_id = d.id AND sc.status = 'active'
 		WHERE d.id = ?`, targetID).
-		Scan(&domainCount, &secureMail); err != nil {
+		Scan(&domainCount, &secureMail, &domainStatus); err != nil {
 		t.Fatalf("read aborted delete state: %v", err)
 	}
-	if domainCount != 1 || secureMail != 1 {
-		t.Fatalf("aborted delete state = domains:%d secure_mail:%d, want 1/1", domainCount, secureMail)
+	var markerCount int
+	if err := p.db.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM domain_deletion_operations WHERE domain_id = ?`, targetID,
+	).Scan(&markerCount); err != nil {
+		t.Fatal(err)
+	}
+	if domainCount != 1 || secureMail != 1 || domainStatus != "active" || markerCount != 0 {
+		t.Fatalf(
+			"aborted delete state = domains:%d secure_mail:%d status:%q markers:%d",
+			domainCount, secureMail, domainStatus, markerCount,
+		)
 	}
 	want := []string{"/certs/keep-mail", "/certs/other-mail"}
 	if got := mailTLSSnapshotPaths(agent); strings.Join(got, ",") != strings.Join(want, ",") {

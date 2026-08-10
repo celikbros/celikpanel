@@ -20,6 +20,10 @@ func newMailMutationContext() (context.Context, context.CancelFunc) {
 }
 
 func readMailFile(path string) ([]byte, error) {
+	if path == dovecotUsersPath {
+		content, _, err := readDovecotUsersFileForMutation(path, true)
+		return content, err
+	}
 	content, err := secureReadConfig(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return []byte{}, nil

@@ -24,9 +24,11 @@ type domainDeletionRPCAgent struct {
 	deleteSiteCalls int
 	syncRequests    []transport.SyncDNSZoneRequest
 	certRequests    []transport.DeleteCertLineageRequest
+	mailRequests    []transport.DeleteMailDomainRequest
 
-	syncErrorsRemaining int
-	certErrorsRemaining int
+	syncErrorsRemaining   int
+	certErrorsRemaining   int
+	mailFailuresRemaining int
 }
 
 func (a *domainDeletionRPCAgent) BeginServiceMutation(
@@ -66,6 +68,21 @@ func (a *domainDeletionRPCAgent) DeleteSite(
 	a.deleteSiteCalls++
 	a.callsMu.Unlock()
 	resp.Success = true
+	return nil
+}
+
+func (a *domainDeletionRPCAgent) DeleteMailDomain(
+	req *transport.DeleteMailDomainRequest,
+	resp *transport.DeleteMailDomainResponse,
+) error {
+	a.callsMu.Lock()
+	defer a.callsMu.Unlock()
+	a.mailRequests = append(a.mailRequests, *req)
+	if a.mailFailuresRemaining > 0 {
+		a.mailFailuresRemaining--
+		return nil
+	}
+	resp.Applied = true
 	return nil
 }
 
@@ -232,6 +249,163 @@ func requireDeletionPendingStage(
 	if response.Status != domainDeletionPendingStatus || response.Stage != stage {
 		t.Fatalf("pending deletion response = %+v, want status=%q stage=%q",
 			response, domainDeletionPendingStatus, stage)
+	}
+}
+
+func TestDomainDeletionMarkerIsIdempotentRestorableAndRequiredForFinalize(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	domainID, _ := seedDomainDeletionLedger(t, p, "marker.example", "dnsonly")
+	if _, err := p.db.GetDB().Exec(
+		`UPDATE domains SET status = 'suspended' WHERE id = ?`, domainID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	first, err := p.markDomainDeletionPending(context.Background(), domainID)
+	if err != nil || !first {
+		t.Fatalf("first marker = %v, %v", first, err)
+	}
+	second, err := p.markDomainDeletionPending(context.Background(), domainID)
+	if err != nil || second {
+		t.Fatalf("second marker = %v, %v", second, err)
+	}
+	var status, previousStatus string
+	var markerCount int
+	if err := p.db.GetDB().QueryRow(
+		`SELECT status FROM domains WHERE id = ?`, domainID,
+	).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.db.GetDB().QueryRow(`
+		SELECT previous_status, COUNT(*)
+		FROM domain_deletion_operations
+		WHERE domain_id = ?`, domainID,
+	).Scan(&previousStatus, &markerCount); err != nil {
+		t.Fatal(err)
+	}
+	if status != domainDeletionLedgerStatus || previousStatus != "suspended" || markerCount != 1 {
+		t.Fatalf("status=%q previous=%q markers=%d", status, previousStatus, markerCount)
+	}
+	if err := p.restoreDomainDeletionStart(context.Background(), domainID); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.db.GetDB().QueryRow(
+		`SELECT status FROM domains WHERE id = ?`, domainID,
+	).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "suspended" {
+		t.Fatalf("restored status = %q", status)
+	}
+	if err := p.db.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM domain_deletion_operations WHERE domain_id = ?`, domainID,
+	).Scan(&markerCount); err != nil {
+		t.Fatal(err)
+	}
+	if markerCount != 0 {
+		t.Fatalf("markers after restoration = %d", markerCount)
+	}
+
+	if _, err := p.db.GetDB().Exec(
+		`UPDATE domains SET status = 'pending' WHERE id = ?`, domainID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.finalizeDomainDeletion(context.Background(), domainID); err == nil {
+		t.Fatal("finalize without operation marker unexpectedly succeeded")
+	}
+	var domainCount int
+	if err := p.db.GetDB().QueryRow(
+		`SELECT COUNT(*) FROM domains WHERE id = ?`, domainID,
+	).Scan(&domainCount); err != nil {
+		t.Fatal(err)
+	}
+	if domainCount != 1 {
+		t.Fatalf("domains after refused finalize = %d", domainCount)
+	}
+}
+
+func TestDeleteDomainMailRuntimeFailureRetainsMailLedgerForRetry(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	domain := "mail-retry.example"
+	domainID, _ := seedDomainDeletionLedger(t, p, domain, "static")
+	if _, err := p.db.GetDB().Exec(`
+		INSERT INTO email_accounts (domain_id, address, password_hash, quota_mb)
+		VALUES (?, ?, 'managed-by-agent', 100)`, domainID, "user@"+domain); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.db.GetDB().Exec(`
+		INSERT INTO email_forwardings (domain_id, source, destination)
+		VALUES (?, ?, 'archive@other.test')`, domainID, "alias@"+domain); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.db.GetDB().Exec(`
+		INSERT INTO mail_catch_all (domain_id, destination)
+		VALUES (?, 'catch@other.test')`, domainID); err != nil {
+		t.Fatal(err)
+	}
+	withPanelBuildCommit(t, "domain-delete-test")
+	agent := &domainDeletionRPCAgent{
+		commit:                "domain-delete-test",
+		mailFailuresRemaining: 1,
+	}
+	attachDomainDeletionRPCAgent(t, p, agent)
+
+	first := deleteDomainForSagaTest(t, p, domainID)
+	requireDeletionPendingStage(t, first, "mail_runtime_cleanup")
+	agent.callsMu.Lock()
+	firstDeleteSiteCalls := agent.deleteSiteCalls
+	agent.callsMu.Unlock()
+	if firstDeleteSiteCalls != 0 {
+		t.Fatalf("site cleanup ran before mail convergence: %d", firstDeleteSiteCalls)
+	}
+	for table := range map[string]struct{}{
+		"domains": {}, "domain_deletion_operations": {}, "email_accounts": {},
+		"email_forwardings": {}, "mail_catch_all": {},
+	} {
+		var count int
+		query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE domain_id = ?", table)
+		if table == "domains" {
+			query = "SELECT COUNT(*) FROM domains WHERE id = ?"
+		}
+		if err := p.db.GetDB().QueryRow(query, domainID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("%s rows after failure = %d", table, count)
+		}
+	}
+
+	second := deleteDomainForSagaTest(t, p, domainID)
+	if second.Code != http.StatusOK {
+		t.Fatalf("retry status=%d body=%s", second.Code, second.Body.String())
+	}
+	for table := range map[string]struct{}{
+		"domains": {}, "domain_deletion_operations": {}, "email_accounts": {},
+		"email_forwardings": {}, "mail_catch_all": {},
+	} {
+		var count int
+		query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE domain_id = ?", table)
+		if table == "domains" {
+			query = "SELECT COUNT(*) FROM domains WHERE id = ?"
+		}
+		if err := p.db.GetDB().QueryRow(query, domainID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("%s rows after successful retry = %d", table, count)
+		}
+	}
+	agent.callsMu.Lock()
+	requests := append([]transport.DeleteMailDomainRequest(nil), agent.mailRequests...)
+	agent.callsMu.Unlock()
+	if len(requests) != 2 {
+		t.Fatalf("mail cleanup requests = %d", len(requests))
+	}
+	for _, request := range requests {
+		if request.DomainID != domainID || request.Domain != domain ||
+			request.ExpectedBuildCommit != "domain-delete-test" {
+			t.Fatalf("mail cleanup request = %+v", request)
+		}
 	}
 }
 

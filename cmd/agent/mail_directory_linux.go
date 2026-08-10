@@ -19,7 +19,7 @@ func ensureMailboxDirectory(domain, local string) (func() error, error) {
 		return nil, nil
 	}
 	uid, gid := 5000, 5000
-	rootFD, err := unix.Open(mailRootDir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	rootFD, err := openManagedMailRoot()
 	if err != nil {
 		return nil, fmt.Errorf("open mail root: %w", err)
 	}
@@ -55,7 +55,7 @@ func ensureMailboxDirectory(domain, local string) (func() error, error) {
 }
 
 func rollbackMailboxDirectory(domain, local string, domainCreated, mailboxCreated bool) error {
-	rootFD, err := unix.Open(mailRootDir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	rootFD, err := openManagedMailRoot()
 	if err != nil {
 		return fmt.Errorf("reopen mail root for rollback: %w", err)
 	}

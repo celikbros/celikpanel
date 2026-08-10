@@ -13,11 +13,13 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
+var errDomainDeletionPending = errors.New("domain deletion is pending")
+
 const (
 	// The domains table deliberately has a small, schema-enforced lifecycle
-	// vocabulary. Reuse its existing pending state as the durable deletion
-	// marker; the API uses the more explicit value below so callers can
-	// distinguish deletion work from other pending states.
+	// vocabulary. Pending is the ledger state shared with import work; the
+	// domain_deletion_operations row is the durable deletion marker that
+	// distinguishes the two and preserves the previous status for rollback.
 	domainDeletionLedgerStatus  = "pending"
 	domainDeletionPendingStatus = "deletion_pending"
 )
@@ -25,40 +27,87 @@ const (
 // markDomainDeletionPending leaves a durable retry handle before any external
 // resource is removed. A crash or partial agent failure therefore cannot make
 // the remaining work disappear behind an apparently active/deleted domain.
-func (p *Panel) markDomainDeletionPending(ctx context.Context, domainID int) error {
-	result, err := p.db.GetDB().ExecContext(ctx, `
-		UPDATE domains
-		SET status = ?, updated_at = datetime('now')
-		WHERE id = ?`,
-		domainDeletionLedgerStatus,
-		domainID,
-	)
+func (p *Panel) markDomainDeletionPending(ctx context.Context, domainID int) (bool, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("mark domain deletion pending: %w", err)
+		return false, fmt.Errorf("begin domain deletion marker: %w", err)
 	}
-	changed, err := result.RowsAffected()
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		INSERT INTO domain_deletion_operations (domain_id, previous_status)
+		SELECT id, status FROM domains WHERE id = ?
+		ON CONFLICT(domain_id) DO NOTHING`, domainID)
 	if err != nil {
-		return fmt.Errorf("confirm domain deletion marker: %w", err)
+		return false, fmt.Errorf("create domain deletion marker: %w", err)
 	}
-	if changed != 1 {
-		return fmt.Errorf("mark domain deletion pending: expected one domain, changed %d", changed)
+	created, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("confirm domain deletion marker creation: %w", err)
 	}
-	return nil
+	firstAttempt := created == 1
+	if !firstAttempt {
+		var status string
+		err := tx.QueryRowContext(ctx, `
+			SELECT d.status
+			FROM domains d
+			JOIN domain_deletion_operations op ON op.domain_id = d.id
+			WHERE d.id = ?`, domainID).Scan(&status)
+		if err != nil {
+			return false, fmt.Errorf("read existing domain deletion marker: %w", err)
+		}
+		if status != domainDeletionLedgerStatus {
+			return false, fmt.Errorf("existing domain deletion marker has unexpected domain status %q", status)
+		}
+	} else {
+		result, err = tx.ExecContext(ctx, `
+			UPDATE domains
+			SET status = ?, updated_at = datetime('now')
+			WHERE id = ?`, domainDeletionLedgerStatus, domainID)
+		if err != nil {
+			return false, fmt.Errorf("mark domain deletion pending: %w", err)
+		}
+		changed, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
+			return false, fmt.Errorf("confirm domain deletion status: %w", rowsErr)
+		}
+		if changed != 1 {
+			return false, fmt.Errorf("mark domain deletion pending: expected one domain, changed %d", changed)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE domain_deletion_operations
+		SET updated_at = datetime('now')
+		WHERE domain_id = ?`, domainID); err != nil {
+		return false, fmt.Errorf("touch domain deletion marker: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit domain deletion marker: %w", err)
+	}
+	return firstAttempt, nil
 }
 
-func (p *Panel) restoreDomainStatus(
-	ctx context.Context,
-	domainID int,
-	previousStatus string,
-) error {
-	result, err := p.db.GetDB().ExecContext(ctx, `
+func (p *Panel) restoreDomainDeletionStart(ctx context.Context, domainID int) error {
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin domain deletion restoration: %w", err)
+	}
+	defer tx.Rollback()
+	var previousStatus string
+	err = tx.QueryRowContext(ctx, `
+		SELECT op.previous_status
+		FROM domain_deletion_operations op
+		JOIN domains d ON d.id = op.domain_id
+		WHERE op.domain_id = ? AND d.status = ?`,
+		domainID, domainDeletionLedgerStatus,
+	).Scan(&previousStatus)
+	if err != nil {
+		return fmt.Errorf("read domain deletion restoration state: %w", err)
+	}
+	result, err := tx.ExecContext(ctx, `
 		UPDATE domains
 		SET status = ?, updated_at = datetime('now')
 		WHERE id = ? AND status = ?`,
-		previousStatus,
-		domainID,
-		domainDeletionLedgerStatus,
-	)
+		previousStatus, domainID, domainDeletionLedgerStatus)
 	if err != nil {
 		return fmt.Errorf("restore domain status: %w", err)
 	}
@@ -68,6 +117,90 @@ func (p *Panel) restoreDomainStatus(
 	}
 	if changed != 1 {
 		return fmt.Errorf("restore domain status: expected one pending domain, changed %d", changed)
+	}
+	result, err = tx.ExecContext(ctx,
+		`DELETE FROM domain_deletion_operations WHERE domain_id = ?`, domainID)
+	if err != nil {
+		return fmt.Errorf("remove domain deletion marker: %w", err)
+	}
+	changed, err = result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("confirm domain deletion marker removal: %w", err)
+	}
+	if changed != 1 {
+		return fmt.Errorf("remove domain deletion marker: expected one marker, changed %d", changed)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit domain deletion restoration: %w", err)
+	}
+	return nil
+}
+
+func (p *Panel) ensureMailDomainMutable(ctx context.Context, domainID int) error {
+	var marked int
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM domain_deletion_operations WHERE domain_id = ?
+		)`, domainID).Scan(&marked)
+	if err != nil {
+		return fmt.Errorf("read domain deletion marker: %w", err)
+	}
+	if marked != 0 {
+		return errDomainDeletionPending
+	}
+	return nil
+}
+
+func writeMailDomainMutationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errDomainDeletionPending) {
+		writeCodedError(
+			w,
+			http.StatusConflict,
+			errCodeDomainDeletionPending,
+			"domain deletion is pending; mail settings cannot be changed",
+			"",
+		)
+		return
+	}
+	writeServerError(w, err)
+}
+
+// removeDomainMailRuntimeLocked requires p.mailMutationMu. Keeping marker
+// publication, mail-TLS reconciliation and runtime cleanup under that one
+// lock prevents another global forwarding snapshot from observing a marker
+// that is later rolled back.
+func (p *Panel) removeDomainMailRuntimeLocked(
+	ctx context.Context,
+	domainID int,
+	domain string,
+) error {
+	var storedDomain string
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT d.name
+		FROM domains d
+		JOIN domain_deletion_operations op ON op.domain_id = d.id
+		WHERE d.id = ? AND d.status = ?`,
+		domainID, domainDeletionLedgerStatus,
+	).Scan(&storedDomain)
+	if err != nil {
+		return fmt.Errorf("verify domain deletion marker before mail cleanup: %w", err)
+	}
+	storedDomain = strings.ToLower(strings.TrimSpace(storedDomain))
+	if !strings.EqualFold(storedDomain, strings.TrimSpace(domain)) {
+		return fmt.Errorf("mail cleanup domain identity changed")
+	}
+
+	var response transport.DeleteMailDomainResponse
+	err = p.callAgentContext(ctx, "Agent.DeleteMailDomain", &transport.DeleteMailDomainRequest{
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+		DomainID:            domainID,
+		Domain:              storedDomain,
+	}, &response)
+	if err != nil {
+		return fmt.Errorf("remove mail domain runtime: %w", err)
+	}
+	if !response.Applied {
+		return fmt.Errorf("remove mail domain runtime: agent did not confirm convergence")
 	}
 	return nil
 }
@@ -178,7 +311,12 @@ func (p *Panel) removeManagedDomainCertificates(
 func (p *Panel) finalizeDomainDeletion(ctx context.Context, domainID int) error {
 	result, err := p.db.GetDB().ExecContext(ctx, `
 		DELETE FROM domains
-		WHERE id = ? AND status = ?`,
+		WHERE id = ? AND status = ?
+		  AND EXISTS (
+			SELECT 1
+			FROM domain_deletion_operations op
+			WHERE op.domain_id = domains.id
+		  )`,
 		domainID,
 		domainDeletionLedgerStatus,
 	)

@@ -15,7 +15,7 @@ func TestAgentRPCTimeoutPoliciesAreExplicitAndClassified(t *testing.T) {
 		"Agent.ConfigurePowerDNSSQLite", "Agent.ControlAppUnit",
 		"Agent.CreateDatabase", "Agent.CreateFileOrDir", "Agent.DeleteCertLineage",
 		"Agent.DeleteCronJob", "Agent.DeleteDatabase", "Agent.DeleteFileOrDir",
-		"Agent.DeleteMailAccount", "Agent.DeletePHPPool", "Agent.DeleteSite",
+		"Agent.DeleteMailAccount", "Agent.DeleteMailDomain", "Agent.DeletePHPPool", "Agent.DeleteSite",
 		"Agent.DisableRepo",
 		"Agent.DNSClusterReadiness", "Agent.DNSSECStatus", "Agent.DovecotStats",
 		"Agent.EnableRepo", "Agent.EnsureDKIMKey", "Agent.ExtractCpmoveFiles", "Agent.Fail2banConfig",
@@ -36,7 +36,7 @@ func TestAgentRPCTimeoutPoliciesAreExplicitAndClassified(t *testing.T) {
 		"Agent.SecureDNSZone", "Agent.SecureMailTLS", "Agent.ServiceCandidateVersion", "Agent.SetMailPolicy",
 		"Agent.SiteUsage", "Agent.SyncDNSZone", "Agent.TogglePHPExtension", "Agent.UpdateConfig",
 		"Agent.UpdateCronJob", "Agent.UpdateExtendedPHPConfig", "Agent.UpdateMailForwarding",
-		"Agent.UpdateMailQuota", "Agent.UpdateMySQLConfig", "Agent.UpdatePHPConfig",
+		"Agent.UpdateMailPassword", "Agent.UpdateMailQuota", "Agent.UpdateMySQLConfig", "Agent.UpdatePHPConfig",
 		"Agent.UpdatePHPConfiguration", "Agent.UpdatePHPPoolConfig", "Agent.UploadFile",
 		"Agent.Version", "Agent.VPNStatus", "Agent.WriteFile",
 	}

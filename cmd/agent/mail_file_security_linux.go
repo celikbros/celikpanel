@@ -98,7 +98,7 @@ func secureSnapshotMailFile(path string) ([]byte, os.FileMode, int, int, error) 
 	if err != nil {
 		return nil, 0, 0, 0, fmt.Errorf("read mail file %s: %w", path, err)
 	}
-	return content, os.FileMode(stat.Mode & 0o777), int(stat.Uid), int(stat.Gid), nil
+	return content, os.FileMode(stat.Mode & 0o7777), int(stat.Uid), int(stat.Gid), nil
 }
 
 func openSecureMailFile(path string) (int, error) {

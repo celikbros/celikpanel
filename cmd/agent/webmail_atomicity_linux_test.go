@@ -6,11 +6,55 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestRenderWebmailNginxConfigUsesUnixSocketOnly(t *testing.T) {
+	config := renderWebmailNginxConfig(
+		"/run/celikpanel-webmail.sock",
+		"/var/lib/celikpanel-webmail/public_html",
+		"/run/php/php-fpm.sock",
+	)
+	if !strings.Contains(config, "listen unix:/run/celikpanel-webmail.sock;") {
+		t.Fatalf("Unix socket listen is missing:\n%s", config)
+	}
+	for _, forbidden := range []string{"127.0.0.1:8307", "listen 8307", "proxy_pass http"} {
+		if strings.Contains(config, forbidden) {
+			t.Fatalf("webmail config contains TCP fallback %q:\n%s", forbidden, config)
+		}
+	}
+}
+
+func TestWebmailSocketPathForNginxRejectsConfigInjection(t *testing.T) {
+	for _, path := range []string{
+		"relative.sock",
+		"/run/webmail.sock; listen 0.0.0.0:8307",
+		"/run/../tmp/webmail.sock",
+		"/run/web mail.sock",
+	} {
+		t.Run(path, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_WEBMAIL_SOCKET", path)
+			if got, err := webmailSocketPathForNginx(); err == nil {
+				t.Fatalf("unsafe socket path accepted: %q", got)
+			}
+		})
+	}
+}
+
+func TestWebmailProductionConfigMetadataIsRootOnly(t *testing.T) {
+	uid, gid := webmailConfigMetadataIdentity(webmailConfPath)
+	if uid != 0 || gid != 0 {
+		t.Fatalf("production metadata identity = %d:%d, want 0:0", uid, gid)
+	}
+	uid, gid = webmailConfigMetadataIdentity(filepath.Join(t.TempDir(), "webmail.conf"))
+	if uid != -1 || gid != -1 {
+		t.Fatalf("test metadata identity = %d:%d, want unchanged", uid, gid)
+	}
+}
 
 func TestPublishRoundcubeStageRefusesExistingDestination(t *testing.T) {
 	parent := t.TempDir()
@@ -104,6 +148,73 @@ func TestApplyWebmailNginxMutationRestoresOnValidationFailure(t *testing.T) {
 	if len(calls) != 1 || calls[0] != "nginx -t" {
 		t.Fatalf("unexpected commands: %#v", calls)
 	}
+}
+
+func TestApplyWebmailNginxMutationSecuresSuccessfulConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "webmail.conf")
+	mustWriteTestFile(t, path, []byte("old\n"), 0o644)
+	if err := applyWebmailNginxMutation(
+		context.Background(), path, []byte("new\n"), true,
+		func(context.Context, string, ...string) ([]byte, error) { return nil, nil },
+	); err != nil {
+		t.Fatal(err)
+	}
+	assertTestFileContent(t, path, []byte("new\n"))
+	assertTestFileMode(t, path, 0o600)
+}
+
+func TestApplyWebmailNginxMutationMetadataFailureRollsBack(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "webmail.conf")
+	old := []byte("old\n")
+	mustWriteTestFile(t, path, old, 0o640)
+	previous := webmailSetConfigMetadata
+	webmailSetConfigMetadata = func(string, os.FileMode, int, int) error {
+		return errors.New("metadata refused")
+	}
+	t.Cleanup(func() { webmailSetConfigMetadata = previous })
+
+	runnerCalls := 0
+	err := applyWebmailNginxMutation(
+		context.Background(), path, []byte("new\n"), true,
+		func(context.Context, string, ...string) ([]byte, error) {
+			runnerCalls++
+			return nil, nil
+		},
+	)
+	if err == nil {
+		t.Fatal("metadata failure unexpectedly succeeded")
+	}
+	if runnerCalls != 0 {
+		t.Fatalf("nginx commands ran before metadata was secured: %d", runnerCalls)
+	}
+	assertTestFileContent(t, path, old)
+	assertTestFileMode(t, path, 0o640)
+}
+
+func TestRemoveInactiveWebmailSocketOnlyRemovesSocket(t *testing.T) {
+	socketPath := filepath.Join(t.TempDir(), "webmail.sock")
+	t.Setenv("CELIKPANEL_WEBMAIL_SOCKET", socketPath)
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeInactiveWebmailSocket(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(socketPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("inactive socket still exists: %v", err)
+	}
+
+	regular := filepath.Join(t.TempDir(), "not-a-socket")
+	t.Setenv("CELIKPANEL_WEBMAIL_SOCKET", regular)
+	mustWriteTestFile(t, regular, []byte("keep"), 0o600)
+	if err := removeInactiveWebmailSocket(); err == nil {
+		t.Fatal("regular file at socket path was removed")
+	}
+	assertTestFileContent(t, regular, []byte("keep"))
 }
 
 func TestApplyWebmailNginxMutationRestoresAndReloadsOnReloadFailure(t *testing.T) {

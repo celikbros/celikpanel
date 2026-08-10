@@ -54,6 +54,7 @@ const (
 	errCodeAdminOnly             = "ADMIN_ONLY"
 	errCodeAdditionalUserScope   = "ADDITIONAL_USER_SCOPE"
 	errCodeAccountSuspended      = "ACCOUNT_SUSPENDED"
+	errCodeDomainDeletionPending = "DOMAIN_DELETION_PENDING"
 	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
 	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"
 	errCodeDNSSetupRequired      = "DNS_SETUP_REQUIRED"

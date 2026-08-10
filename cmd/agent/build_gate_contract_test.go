@@ -50,6 +50,36 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
+			name: "DeleteMailDomain",
+			run: func(expected string) string {
+				var response transport.DeleteMailDomainResponse
+				err := agent.DeleteMailDomain(&transport.DeleteMailDomainRequest{
+					ExpectedBuildCommit: expected,
+					DomainID:            41,
+					Domain:              "example.com",
+				}, &response)
+				if err == nil {
+					return ""
+				}
+				return err.Error()
+			},
+		},
+		{
+			name: "UpdateMailPassword",
+			run: func(expected string) string {
+				var response transport.MailMutationResponse
+				err := agent.UpdateMailPassword(&transport.UpdateMailPasswordRequest{
+					ExpectedBuildCommit: expected,
+					Email:               "user@example.com",
+					NewPassword:         "not-a-real-password",
+				}, &response)
+				if err == nil {
+					return ""
+				}
+				return err.Error()
+			},
+		},
+		{
 			name: "DeleteSite",
 			run: func(expected string) string {
 				var response DeleteSiteResponse

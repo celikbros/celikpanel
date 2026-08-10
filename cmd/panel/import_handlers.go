@@ -244,6 +244,11 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			}
 
 			p.mailMutationMu.Lock()
+			if guardErr := p.ensureMailDomainMutable(ctx, domainID); guardErr != nil {
+				p.mailMutationMu.Unlock()
+				writeMailDomainMutationError(w, guardErr)
+				return
+			}
 			tx, txErr := p.db.GetDB().BeginTx(ctx, nil)
 			if txErr == nil {
 				_, txErr = tx.ExecContext(ctx,
@@ -300,7 +305,7 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			ok("forwarders", "0 forwarders")
 		} else {
 			p.mailMutationMu.Lock()
-			err := p.mutateForwardings(ctx, func(tx *sql.Tx) error {
+			err := p.mutateForwardings(ctx, domainID, func(tx *sql.Tx) error {
 				for _, forwarding := range forwardings {
 					if _, err := tx.ExecContext(ctx,
 						"INSERT INTO email_forwardings (domain_id, source, destination) VALUES (?, ?, ?)",
@@ -312,6 +317,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			})
 			p.mailMutationMu.Unlock()
 			if err != nil {
+				if errors.Is(err, errDomainDeletionPending) {
+					writeMailDomainMutationError(w, err)
+					return
+				}
 				fail("forwarders", err)
 			} else {
 				ok("forwarders", fmt.Sprintf("%d forwarders", len(forwardings)))
