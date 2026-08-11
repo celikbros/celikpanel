@@ -59,6 +59,8 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      # Keep the RHEL preview probe blocked-only, default-dry-run and injection-safe.
+      - run: bash deploy/e2e/rhel9/test-contract.sh
       - run: bash deploy/test-install-localization-contract.sh
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
