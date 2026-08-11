@@ -31,14 +31,47 @@ PREFIX=/opt/celikpanel
 DATA_DIR=/var/lib/celikpanel
 IMPORT_DIR=/var/lib/celikpanel-imports
 CONF_DIR=/etc/celikpanel
+UNIT_DIR=/etc/systemd/system
 PANEL_ENV="$CONF_DIR/panel.env"
 INSTALL_COMPLETE=/etc/celikpanel/install.complete
+PANEL_CERT_HOOK=/etc/letsencrypt/renewal-hooks/deploy/celikpanel-panel-cert
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 AGENT_LEDGER="$AGENT_STATE_DIR/service-mutations.json"
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
+RUNTIME_DIR=/run/celikpanel
+BACKUP_ROOT=/var/backups/celikpanel
 RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
+LIBEXEC_DIR=/usr/libexec/celikpanel
+readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
+    AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
+    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR
+SELINUX_OS_RELEASE=/etc/os-release
+SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
+RHEL_DNF_BIN=/usr/bin/dnf
+RHEL_DNF_CANONICAL_ALT=/usr/bin/dnf-3
+SELINUX_RESTORECON_BIN=/usr/sbin/restorecon
+SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon
+SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce
+UNAME_BIN=/usr/bin/uname
+# Bootstrap trust boundary: these fixed inspection helpers perform the first
+# metadata read, so they cannot recursively attest themselves. They are never
+# selected through PATH; replacing them already requires root-equivalent
+# control of the vendor filesystem that this privileged script must trust.
+VENDOR_READLINK_BIN=/usr/bin/readlink
+VENDOR_STAT_BIN=/usr/bin/stat
+VENDOR_DIRNAME_BIN=/usr/bin/dirname
+SYSTEMCTL_BIN=/usr/bin/systemctl
+VENDOR_TRUST_ANCHOR=/
+VENDOR_EXPECTED_UID=0
+VENDOR_EXPECTED_GID=0
+readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \
+    RHEL_DNF_CANONICAL_ALT SELINUX_RESTORECON_BIN \
+    SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \
+    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN VENDOR_TRUST_ANCHOR \
+    VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID
+SELINUX_PLATFORM_MODE=unverified
 SVC_USER=celikpanel
 SVC_GROUP=celikpanel
 LISTEN="${LISTEN:-:2083}"
@@ -74,6 +107,93 @@ step() { c '1;36' "==> $(bilingual "$@")"; }
 ok() { c '32' "    ✓ $(bilingual "$@")"; }
 warn() { c '33' "    $(bilingual "$@")"; }
 die() { c '1;31' "ERROR / HATA: $(bilingual "$@")" >&2; exit 1; }
+
+validate_vendor_directory_chain() {
+    local path=$1 current parent canonical owner group mode permissions
+    current=$("$VENDOR_DIRNAME_BIN" -- "$path") \
+        || die "cannot derive vendor tool parent: $path"
+    while true; do
+        case "$VENDOR_TRUST_ANCHOR" in
+            /) [[ "$current" == /* ]] || die "vendor tool path escaped root: $path" ;;
+            *)
+                [[ "$current" == "$VENDOR_TRUST_ANCHOR" || \
+                   "$current" == "$VENDOR_TRUST_ANCHOR"/* ]] \
+                    || die "vendor tool path escaped test trust anchor: $path"
+                ;;
+        esac
+        [[ -d "$current" && ! -L "$current" ]] \
+            || die "vendor tool ancestor is missing or symbolic: $current"
+        canonical=$("$VENDOR_READLINK_BIN" -e -- "$current") \
+            || die "cannot canonicalize vendor tool ancestor: $current"
+        [[ "$canonical" == "$current" ]] \
+            || die "vendor tool ancestor is not canonical: $current"
+        read -r owner group mode < <("$VENDOR_STAT_BIN" -Lc '%u %g %a' -- "$current") \
+            || die "cannot inspect vendor tool ancestor: $current"
+        [[ "$owner" == "$VENDOR_EXPECTED_UID" && "$group" == "$VENDOR_EXPECTED_GID" ]] \
+            || die "vendor tool ancestor is not owned by the trusted principal: $current"
+        permissions=$((8#$mode))
+        (( (permissions & 0022) == 0 )) \
+            || die "vendor tool ancestor is group/other writable: $current"
+        [[ "$current" == "$VENDOR_TRUST_ANCHOR" ]] && break
+        parent=$("$VENDOR_DIRNAME_BIN" -- "$current") \
+            || die "cannot walk vendor tool ancestors: $current"
+        [[ "$parent" != "$current" ]] \
+            || die "vendor tool trust anchor was not reached: $path"
+        current=$parent
+    done
+}
+
+validate_rhel_vendor_tool() {
+    local role=$1 path canonical allowed_alt= owner group mode links permissions
+    case "$role" in
+        uname) path=$UNAME_BIN ;;
+        dnf) path=$RHEL_DNF_BIN; allowed_alt=$RHEL_DNF_CANONICAL_ALT ;;
+        restorecon) path=$SELINUX_RESTORECON_BIN ;;
+        matchpathcon) path=$SELINUX_MATCHPATHCON_BIN ;;
+        getenforce) path=$SELINUX_GETENFORCE_BIN ;;
+        *) die "unknown RHEL vendor tool role: $role" ;;
+    esac
+    [[ -e "$path" || -L "$path" ]] \
+        || die "CelikPanel lifecycle requires the exact vendor $role path: $path"
+    validate_vendor_directory_chain "$path"
+    canonical=$("$VENDOR_READLINK_BIN" -e -- "$path") \
+        || die "cannot resolve vendor $role path: $path"
+    if [[ -L "$path" ]]; then
+        # Only the vendor dnf compatibility link is accepted, and its resolved
+        # target is pinned below to the reviewed /usr/bin/dnf-3 alternative.
+        [[ "$role" == dnf ]] \
+            || die "vendor $role path must not be symbolic: $path"
+        read -r owner group < <("$VENDOR_STAT_BIN" -c '%u %g' -- "$path") \
+            || die "cannot inspect vendor $role symlink: $path"
+        [[ "$owner" == "$VENDOR_EXPECTED_UID" && "$group" == "$VENDOR_EXPECTED_GID" ]] \
+            || die "vendor $role symlink is not owned by the trusted principal: $path"
+    else
+        [[ "$canonical" == "$path" ]] \
+            || die "vendor $role path is not canonical: $path"
+    fi
+    [[ "$canonical" == "$path" || \
+       ( -n "$allowed_alt" && "$canonical" == "$allowed_alt" ) ]] \
+        || die "vendor $role canonical target is not pinned: $canonical"
+    validate_vendor_directory_chain "$canonical"
+    [[ -f "$canonical" && -x "$canonical" ]] \
+        || die "vendor $role target is not an executable regular file: $canonical"
+    read -r owner group mode links < <("$VENDOR_STAT_BIN" -Lc '%u %g %a %h' -- "$canonical") \
+        || die "cannot inspect vendor $role target: $canonical"
+    [[ "$owner" == "$VENDOR_EXPECTED_UID" && "$group" == "$VENDOR_EXPECTED_GID" ]] \
+        || die "vendor $role target is not owned by the trusted principal: $canonical"
+    [[ "$links" == 1 ]] \
+        || die "vendor $role target must have exactly one hard link: $canonical"
+    permissions=$((8#$mode))
+    (( (permissions & 0022) == 0 )) \
+        || die "vendor $role target is group/other writable: $canonical"
+}
+
+vendor_machine_architecture() {
+    local machine
+    validate_rhel_vendor_tool uname
+    machine=$("$UNAME_BIN" -m) || die "cannot determine vendor machine architecture"
+    printf '%s\n' "$machine"
+}
 
 # Read only the authorization-bearing os-release fields without sourcing the
 # file. ID_LIKE is deliberately ignored: a compatible derivative is not a
@@ -140,6 +260,7 @@ parse_bootstrap_os_release() {
 
 classify_bootstrap_platform() {
     local os_release=$1 machine=$2
+    SELINUX_PLATFORM_MODE=unverified
     parse_bootstrap_os_release "$os_release"
     case "$machine" in
         x86_64) BOOTSTRAP_ARCH=amd64 ;;
@@ -152,11 +273,13 @@ classify_bootstrap_platform() {
             [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^13([.][0-9]+)*$ ]] \
                 || die "Debian bootstrap requires Debian 13"
             PKG_FAMILY=apt
+            SELINUX_PLATFORM_MODE=inert
             ;;
         ubuntu)
             [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^24[.]04([.][0-9]+)*$ ]] \
                 || die "Ubuntu bootstrap requires Ubuntu 24.04 LTS"
             PKG_FAMILY=apt
+            SELINUX_PLATFORM_MODE=inert
             ;;
         arch)
             [[ -z "$BOOTSTRAP_DISTRO_VERSION_ID" || "$BOOTSTRAP_DISTRO_VERSION_ID" == rolling ]] \
@@ -164,11 +287,13 @@ classify_bootstrap_platform() {
             [[ "$BOOTSTRAP_ARCH" == amd64 ]] \
                 || die "Arch Linux bootstrap is certified only for x86_64"
             PKG_FAMILY=pacman
+            SELINUX_PLATFORM_MODE=inert
             ;;
         almalinux|rocky)
             [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^9([.][0-9]+)*$ ]] \
                 || die "RHEL-family preview bootstrap requires AlmaLinux 9 or Rocky Linux 9"
             PKG_FAMILY=dnf-preview
+            SELINUX_PLATFORM_MODE=rhel9
             ;;
         rhel)
             die "subscription-based RHEL bootstrap is not certified; CelikPanel never registers subscriptions automatically"
@@ -183,15 +308,23 @@ classify_bootstrap_platform() {
 }
 
 verify_rhel_preview_host() {
-    local selinux_enforce_file=$1 dnf_bin=$2 enforcing
-    [[ -f "$selinux_enforce_file" && ! -L "$selinux_enforce_file" && -r "$selinux_enforce_file" ]] \
+    local enforcing reported_state
+    [[ "$SELINUX_PLATFORM_MODE" == rhel9 ]] \
+        || die "RHEL SELinux verification requires a strict AlmaLinux/Rocky Linux 9 classification"
+    [[ -f "$SELINUX_ENFORCE_FILE" && ! -L "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]] \
         || die "RHEL-family preview requires SELinux Enforcing; SELinux state is unavailable"
-    IFS= read -r enforcing < "$selinux_enforce_file" \
+    IFS= read -r enforcing < "$SELINUX_ENFORCE_FILE" \
         || die "RHEL-family preview could not read the SELinux enforcement state"
     [[ "$enforcing" == 1 ]] \
         || die "RHEL-family preview requires SELinux Enforcing and will not change host policy"
-    [[ -f "$dnf_bin" && -x "$dnf_bin" ]] \
-        || die "RHEL-family preview requires the vendor dnf executable at $dnf_bin"
+    validate_rhel_vendor_tool dnf
+    validate_rhel_vendor_tool restorecon
+    validate_rhel_vendor_tool matchpathcon
+    validate_rhel_vendor_tool getenforce
+    reported_state=$("$SELINUX_GETENFORCE_BIN") \
+        || die "RHEL-family preview could not query SELinux through $SELINUX_GETENFORCE_BIN"
+    [[ "$reported_state" == Enforcing ]] \
+        || die "RHEL-family preview requires getenforce to report Enforcing"
 }
 
 # Pure dry-run description of the future prerequisite transaction. The normal
@@ -199,20 +332,96 @@ verify_rhel_preview_host() {
 # passed an SELinux-Enforcing acceptance test on both preview distributions.
 rhel_preview_prerequisite_command() {
     printf '%s\n' /usr/bin/dnf --assumeyes --setopt=install_weak_deps=False \
-        install tar xz curl ca-certificates
+        install tar xz curl ca-certificates selinux-policy-targeted \
+        policycoreutils libselinux-utils
 }
 
 preflight_bootstrap_platform() {
-    local os_release=$1 machine=$2 selinux_enforce_file=$3 dnf_bin=$4
+    local os_release=$1 machine=$2
+    classify_bootstrap_platform "$os_release" "$machine"
+    if [[ "$SELINUX_PLATFORM_MODE" == rhel9 ]]; then
+        verify_rhel_preview_host
+        die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"
+    fi
     if [[ $APPLY_ONLY -eq 1 ]]; then
         PKG_FAMILY=apply-only
         return
     fi
-    classify_bootstrap_platform "$os_release" "$machine"
-    if [[ "$PKG_FAMILY" == dnf-preview ]]; then
-        verify_rhel_preview_host "$selinux_enforce_file" "$dnf_bin"
-        die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"
-    fi
+}
+
+# SELinux lifecycle is inert only after strict Debian/Ubuntu/Arch preflight.
+# Alma/Rocky 9 publication revalidates pinned vendor tools immediately before
+# use and labels only fixed CelikPanel-owned paths.
+restore_celikpanel_selinux_labels() {
+    local state drift candidate
+    local -a paths=()
+    case "$SELINUX_PLATFORM_MODE" in
+        inert) return 0 ;;
+        rhel9) ;;
+        *) die "SELinux lifecycle platform preflight was not completed" ;;
+    esac
+    validate_rhel_vendor_tool restorecon
+    validate_rhel_vendor_tool matchpathcon
+    validate_rhel_vendor_tool getenforce
+    state=$("$SELINUX_GETENFORCE_BIN") \
+        || die "SELinux lifecycle could not query enforcement state"
+    [[ "$state" == Enforcing ]] \
+        || die "SELinux lifecycle requires Enforcing mode and will not change host policy"
+
+    for candidate in \
+        "$PREFIX" \
+        "$CONF_DIR" \
+        "$DATA_DIR" \
+        "$IMPORT_DIR" \
+        "$AGENT_STATE_DIR" \
+        "$RUNTIME_DIR" \
+        "$BACKUP_ROOT" \
+        "$RELEASE_TRANSACTION_ROOT" \
+        "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+        "$LIBEXEC_DIR" \
+        "$RELEASE_TRANSACTION_HELPER" \
+        "$PANEL_CERT_HOOK" \
+        "$UNIT_DIR/celikpanel-agent.service" \
+        "$UNIT_DIR/celikpanel-firewall-restore.service" \
+        "$UNIT_DIR/celikpanel-panel.service" \
+        "$UNIT_DIR/celikpanel-agent.service.d" \
+        "$UNIT_DIR/celikpanel-panel.service.d" \
+        "$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf" \
+        "$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
+    do
+        if [[ -L "$candidate" ]]; then
+            die "SELinux lifecycle refuses a symbolic-link publication root: $candidate"
+        fi
+        [[ -e "$candidate" ]] && paths+=("$candidate")
+    done
+    ((${#paths[@]} > 0)) || return 0
+
+    "$SELINUX_RESTORECON_BIN" -xRF -- "${paths[@]}" \
+        || die "CelikPanel SELinux labels could not be restored"
+    drift=$("$SELINUX_RESTORECON_BIN" -nxRFv -- "${paths[@]}") \
+        || die "CelikPanel SELinux labels could not be verified"
+    [[ -z "$drift" ]] \
+        || die "CelikPanel SELinux labels still differ from filesystem policy: $drift"
+    for candidate in "${paths[@]}"; do
+        "$SELINUX_MATCHPATHCON_BIN" -V -- "$candidate" >/dev/null \
+            || die "CelikPanel SELinux top-level context differs from policy: $candidate"
+    done
+}
+
+# The trusted guard helper publishes its helper/drop-ins and then calls
+# systemctl daemon-reload internally. Interpose only that bounded call so RHEL
+# labels are restored after publication but before systemd reads the bytes.
+install_release_transaction_guards_with_label_barrier() {
+    local status=0
+    systemctl() {
+        if [[ $# -eq 1 && "$1" == daemon-reload ]]; then
+            restore_celikpanel_selinux_labels
+        fi
+        "$SYSTEMCTL_BIN" "$@"
+    }
+    release_txn_install_and_verify_unit_guards "$@" || status=$?
+    unset -f systemctl
+    return "$status"
 }
 
 valid_panel_listen() {
@@ -431,7 +640,8 @@ run_panel_as_service_user_with_private_umask() {
 }
 
 [ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
-preflight_bootstrap_platform /etc/os-release "$(uname -m)" /sys/fs/selinux/enforce /usr/bin/dnf
+bootstrap_machine=$(vendor_machine_architecture)
+preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"
 command -v systemctl >/dev/null || die "systemd gerekli"
 
 # Apply-only is accepted solely from a completely verified immutable release
@@ -483,7 +693,7 @@ validate_apply_only_transaction() {
         state=$(systemctl show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
         [[ "$state" == inactive || "$state" == failed ]] || die "apply-only requires $unit stopped"
     done
-    release_txn_install_and_verify_unit_guards \
+    install_release_transaction_guards_with_label_barrier \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
         /etc/systemd/system "$RELEASE_TRANSACTION_HELPER" \
         "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
@@ -899,10 +1109,12 @@ download_verified_toolchain_archive() {
 # Araç zinciri indirme mimarisi, Go/Node adlandırmasıyla (amd64/arm64).
 # dpkg yerine uname -m — böylece her dağıtımda çalışır.
 dl_arch() {
-    case "$(uname -m)" in
+    local machine
+    machine=$(vendor_machine_architecture)
+    case "$machine" in
         x86_64)  echo amd64 ;;
         aarch64) echo arm64 ;;
-        *) die "desteklenmeyen mimari: $(uname -m)" ;;
+        *) die "desteklenmeyen mimari: $machine" ;;
     esac
 }
 
@@ -1225,6 +1437,7 @@ if [[ "$VALIDATED_PANEL_HTTPS" == 0 ]]; then
     warn "R&D mode: demo accounts are enabled and cookies work over plain HTTP — do not expose this server to the internet" \
         "AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
 fi
+restore_celikpanel_selinux_labels
 systemctl daemon-reload
 ok "installed" "kuruldu"
 
