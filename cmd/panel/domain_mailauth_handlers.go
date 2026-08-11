@@ -265,7 +265,7 @@ func (p *Panel) handleMailAuthDKIM(w http.ResponseWriter, r *http.Request, domai
 	var sign transport.ConfigureDKIMSigningResponse
 	_ = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
 		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
 			return err
 		}
 		if sign.Error != "" {

@@ -619,13 +619,6 @@ func main() {
 	client := transport.NewReconnectingClient(rawClient)
 	log.Println("Connected to Agent RPC")
 
-	// Initialize Site Orchestrator
-	orchestrator := services.NewSiteOrchestrator(
-		database.GetDB(),
-		client,
-		buildCommit,
-	)
-
 	sessions := auth.NewSessionStore(database.GetDB())
 
 	// Load (or on first boot, create) the key that seals stored credentials
@@ -644,7 +637,6 @@ func main() {
 	panel := &Panel{
 		agentClient:   client,
 		db:            database,
-		orchestrator:  orchestrator,
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
 		secrets:       secretBox,
@@ -656,6 +648,11 @@ func main() {
 		loginLimiter: newRateLimiter(10, 5*time.Minute),
 		demoMode:     *demo,
 	}
+	panel.orchestrator = services.NewSiteOrchestrator(
+		database.GetDB(),
+		panelSiteAgentClient{panel: panel},
+		buildCommit,
+	)
 
 	// Development demo accounts (gated behind --demo).
 	// Geliştirme demo hesapları (--demo bayrağının arkasında).
@@ -1075,7 +1072,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 			ServiceName:            serviceName,
 			Action:                 req.Action,
 		}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ServiceMutationAction", &request, &reply); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ServiceMutationAction", &request, &reply); err != nil {
 			return err
 		}
 		if reply.Error != "" {

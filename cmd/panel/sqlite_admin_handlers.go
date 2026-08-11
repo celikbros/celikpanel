@@ -39,7 +39,7 @@ func (p *Panel) handleSystemSQLiteDatabases(w http.ResponseWriter, r *http.Reque
 
 	request := systemsqlite.ListRequest{ProtocolVersion: systemsqlite.ProtocolVersion}
 	var response systemsqlite.ListResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.ListSystemSQLiteDatabases", &request, &response); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.ListSystemSQLiteDatabases", &request, &response); err != nil {
 		writeAgentError(w, err, "")
 		return
 	}
@@ -172,7 +172,7 @@ func (p *Panel) handleSystemSQLiteCheck(w http.ResponseWriter, r *http.Request, 
 		DatabaseID:      databaseID,
 	}
 	var response systemsqlite.CheckResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.CheckSystemSQLiteDatabase", &request, &response); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.CheckSystemSQLiteDatabase", &request, &response); err != nil {
 		p.auditSystemSQLiteResult(r, databaseID, "check", "failed")
 		writeAgentError(w, err, "")
 		return
@@ -204,7 +204,7 @@ func (p *Panel) handleSystemSQLiteOptimize(w http.ResponseWriter, r *http.Reques
 		DatabaseID:      databaseID,
 	}
 	var response systemsqlite.OptimizeResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.OptimizeSystemSQLiteDatabase", &request, &response); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.OptimizeSystemSQLiteDatabase", &request, &response); err != nil {
 		p.auditSystemSQLiteResult(r, databaseID, "optimize", "failed")
 		writeAgentError(w, err, "")
 		return
@@ -233,7 +233,7 @@ func (p *Panel) handleSystemSQLiteSnapshot(w http.ResponseWriter, r *http.Reques
 		DatabaseID:      databaseID,
 	}
 	var response systemsqlite.SnapshotResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.CreateSystemSQLiteSnapshot", &request, &response); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.CreateSystemSQLiteSnapshot", &request, &response); err != nil {
 		p.auditSystemSQLiteResult(r, databaseID, "snapshot", "failed")
 		writeAgentError(w, err, "")
 		return
@@ -417,7 +417,7 @@ func (p *Panel) readSystemSQLiteSnapshotChunk(
 		MaxBytes:        systemsqlite.MaxChunkSize,
 	}
 	var response systemsqlite.ReadSnapshotChunkResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ReadSystemSQLiteSnapshotChunk", &request, &response); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ReadSystemSQLiteSnapshotChunk", &request, &response); err != nil {
 		return systemsqlite.ReadSnapshotChunkResponse{}, err
 	}
 	if !response.Success || response.Error != "" {
@@ -471,7 +471,7 @@ func (p *Panel) releaseSystemSQLiteSnapshot(r *http.Request, databaseID, token s
 		Token:           token,
 	}
 	var response systemsqlite.ReleaseSnapshotResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ReleaseSystemSQLiteSnapshot", &request, &response); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ReleaseSystemSQLiteSnapshot", &request, &response); err != nil {
 		p.auditSystemSQLiteResult(r, databaseID, "snapshot_release", "failed")
 		log.Printf("system SQLite snapshot release failed: %v", err)
 		return

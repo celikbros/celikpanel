@@ -42,7 +42,10 @@ func newCronMutationTestPanel(t *testing.T, agent *cronMutationTestAgent) *Panel
 		t.Fatalf("connect cron test agent: %v", err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
-	return &Panel{agentClient: transport.NewReconnectingClientWithContextConnector(client, connector)}
+	return &Panel{
+		pkgFamilyVal: "apt",
+		agentClient:  transport.NewReconnectingClientWithContextConnector(client, connector),
+	}
 }
 
 func TestAddCronJobDoesNotReportFailedMutationAsSuccess(t *testing.T) {

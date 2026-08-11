@@ -39,7 +39,10 @@ func newFail2banMutationTestPanel(t *testing.T) *Panel {
 		t.Fatalf("connect fail2ban test agent: %v", err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
-	return &Panel{agentClient: transport.NewReconnectingClientWithContextConnector(client, connector)}
+	return &Panel{
+		pkgFamilyVal: "apt",
+		agentClient:  transport.NewReconnectingClientWithContextConnector(client, connector),
+	}
 }
 
 func TestFail2banFalseMutationIsServerError(t *testing.T) {

@@ -124,6 +124,7 @@ func (a *strictDNSRPCAgent) ConfigurePowerDNSSQLite(_ *StrictDNSRPCEmpty, resp *
 
 func attachStrictDNSRPCAgent(t *testing.T, p *Panel, agent *strictDNSRPCAgent) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register fake DNS agent: %v", err)

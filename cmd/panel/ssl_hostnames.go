@@ -201,7 +201,7 @@ func (p *Panel) inspectManagedCertificate(
 	request := transport.InspectCertificateRequest{
 		Domain: domain, CertPath: certPath, KeyPath: keyPath, ChainPath: chainPath,
 	}
-	if err := p.agentClient.CallContext(ctx, "Agent.InspectInstalledCertificate", request, &info); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.InspectInstalledCertificate", request, &info); err != nil {
 		return info, err
 	}
 	info.DNSNames = normalizeCertificateDNSNames(info.DNSNames)

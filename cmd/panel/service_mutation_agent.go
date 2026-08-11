@@ -57,7 +57,7 @@ func (p *Panel) beginAgentMutation(
 	resume bool,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	err := p.agentClient.CallContext(ctx, "Agent.BeginServiceMutation", &transport.ServiceMutationBeginRequest{
+	err := p.callAgentContext(ctx, "Agent.BeginServiceMutation", &transport.ServiceMutationBeginRequest{
 		RequestID: op.RequestID, OwnerID: ownerID, Kind: op.Kind,
 		Target: op.ServiceID, PackageName: op.PackageName, Resume: resume,
 	}, &response)
@@ -80,7 +80,7 @@ func (p *Panel) heartbeatAgentMutation(
 	phase string,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	err := p.agentClient.CallContext(ctx, "Agent.HeartbeatServiceMutation", &transport.ServiceMutationHeartbeatRequest{
+	err := p.callAgentContext(ctx, "Agent.HeartbeatServiceMutation", &transport.ServiceMutationHeartbeatRequest{
 		RequestID: binding.MutationRequestID,
 		OwnerID:   binding.MutationOwnerID,
 		Phase:     strings.TrimSpace(phase),
@@ -105,7 +105,7 @@ func (p *Panel) statusAgentMutation(
 	requestID string,
 ) (*agentMutationJob, error) {
 	var response agentMutationResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{
+	if err := p.callAgentContext(ctx, "Agent.ServiceMutationStatus", &transport.ServiceMutationStatusRequest{
 		RequestID: requestID,
 	}, &response); err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (p *Panel) cancelAgentMutation(
 		return errors.New("agent mutation has no reusable durable owner identity")
 	}
 	var response agentMutationResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.CancelServiceMutation", &transport.ServiceMutationCancelRequest{
+	if err := p.callAgentContext(ctx, "Agent.CancelServiceMutation", &transport.ServiceMutationCancelRequest{
 		RequestID: job.RequestID, ExpectedOwner: job.OwnerID,
 		Reason: "panel_restart_reconcile", FailureCode: code, FailureMessage: message,
 	}, &response); err != nil {
@@ -155,7 +155,7 @@ func (p *Panel) finishAgentMutation(
 		request.Message = failure.Message
 	}
 	var response agentMutationResponse
-	if err := p.agentClient.CallContext(
+	if err := p.callAgentContext(
 		ctx,
 		"Agent.FinishServiceMutation",
 		&request,

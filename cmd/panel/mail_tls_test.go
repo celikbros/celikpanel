@@ -156,6 +156,7 @@ func (a *mailTLSIsolationRPCAgent) DeleteMailDomain(
 
 func attachMailTLSIsolationAgent(t *testing.T, p *Panel, agent *mailTLSIsolationRPCAgent) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	socketFile, err := os.CreateTemp("", "cp-mailtls-*.sock")
 	if err != nil {
 		t.Fatalf("reserve fake mail TLS agent socket path: %v", err)

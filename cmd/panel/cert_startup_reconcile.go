@@ -456,7 +456,7 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 	}
 
 	var resp transport.ApplyVhostsResponse
-	err = p.agentClient.CallContext(
+	err = p.callAgentContext(
 		ctx,
 		"Agent.ApplyVhosts",
 		&transport.ApplyVhostsRequest{

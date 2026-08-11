@@ -284,7 +284,7 @@ func (p *Panel) runMailProfileInstall(
 		return result, operationAdvanceFailure(err)
 	}
 	var mailStack transport.ConfigureMailStackResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &mutationRequest, &mailStack); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ConfigureMailStack", &mutationRequest, &mailStack); err != nil {
 		return result, mailProfileInstallFailure(fmt.Errorf("final mail stack configuration: %w", err))
 	}
 	if mailStack.Error != "" {
@@ -315,7 +315,7 @@ func (p *Panel) runMailProfileInstall(
 		return result, operationAdvanceFailure(err)
 	}
 	var submission transport.ConfigureMailSubmissionResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailSubmission", &mutationRequest, &submission); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ConfigureMailSubmission", &mutationRequest, &submission); err != nil {
 		return result, mailProfileInstallFailure(fmt.Errorf("mail submission configuration: %w", err))
 	}
 	if submission.Error != "" {

@@ -134,6 +134,7 @@ func (a *firewallSyncTestAgent) FinishServiceMutation(
 
 func attachFirewallSyncTestAgent(t *testing.T, panel *Panel, agent *firewallSyncTestAgent) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register firewall test agent: %v", err)

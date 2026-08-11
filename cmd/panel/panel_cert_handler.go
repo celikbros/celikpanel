@@ -107,7 +107,7 @@ func (p *Panel) issuePanelCertificateDurably(
 				)
 			}
 
-			err := p.agentClient.CallContext(
+			err := p.callAgentContext(
 				boundCtx,
 				"Agent.IssuePanelCertificate",
 				&transport.IssuePanelCertificateRequest{

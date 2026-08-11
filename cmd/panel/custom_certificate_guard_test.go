@@ -202,6 +202,7 @@ func attachCustomCertificateGuardAgent(
 	agent *customCertificateGuardAgent,
 ) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register custom-certificate guard agent: %v", err)

@@ -187,7 +187,7 @@ func (p *Panel) handleVPNSetup(w http.ResponseWriter, r *http.Request) {
 	err := p.withStandaloneAgentMutation(
 		r.Context(), "vpn_setup", "wireguard", "",
 		func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.SetupVPN", &transport.SetupVPNRequest{
+			if err := p.callAgentContext(callCtx, "Agent.SetupVPN", &transport.SetupVPNRequest{
 				ServiceMutationBinding: transport.ServiceMutationBinding{
 					MutationRequestID: binding.MutationRequestID,
 					MutationOwnerID:   binding.MutationOwnerID,
@@ -335,7 +335,7 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 	err = p.withStandaloneAgentMutation(
 		ctx, "vpn_peer_sync", "wireguard", "",
 		func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.SyncVPNPeers", &transport.SyncVPNPeersRequest{
+			if err := p.callAgentContext(callCtx, "Agent.SyncVPNPeers", &transport.SyncVPNPeersRequest{
 				ServiceMutationBinding: transport.ServiceMutationBinding{
 					MutationRequestID: binding.MutationRequestID,
 					MutationOwnerID:   binding.MutationOwnerID,

@@ -95,6 +95,7 @@ func fmtIntForHostingTest(value int) string {
 
 func attachHostingTestAgent(t *testing.T, panel *Panel, agent *hostingTestAgent) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatal(err)

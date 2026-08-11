@@ -662,7 +662,7 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 // kataloğa işler ve sonucu kalıcılaştırır.
 func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceResponse, error) {
 	var allServices []core.Service
-	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return nil, err
 	}
 	host := p.managedServiceHostProfile()
@@ -671,7 +671,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
 	var installedIDs []string
-	if err := p.agentClient.CallContext(ctx, "Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
 		return nil, fmt.Errorf("probe installed service ids: %w", err)
 	}
 	installedSet := map[string]bool{}
@@ -693,7 +693,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
 			var packageResult installedRepoPackagesResp
 			request := installedRepoPackagesReq{ServiceID: managed.ID}
-			if err := p.agentClient.CallContext(ctx, "Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
+			if err := p.callAgentContext(ctx, "Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
 				return nil, fmt.Errorf("probe installed repository packages for %s: %w", managed.ID, err)
 			}
 			if packageResult.Error != "" {
@@ -790,7 +790,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		if managed.Kind == core.KindRuntime {
 			var ir transport.ServiceInstancesResponse
 			req := transport.ServiceInstancesRequest{ID: managed.ID}
-			if err := p.agentClient.CallContext(ctx, "Agent.ListServiceInstances", &req, &ir); err != nil {
+			if err := p.callAgentContext(ctx, "Agent.ListServiceInstances", &req, &ir); err != nil {
 				return nil, fmt.Errorf("probe service instances for %s: %w", managed.ID, err)
 			}
 			if ir.Error != "" {

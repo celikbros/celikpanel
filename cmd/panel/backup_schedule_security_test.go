@@ -61,6 +61,7 @@ func (a *blockingBackupSchedulerAgent) calledJobKeys() []string {
 
 func attachBackupSchedulerAgent(t *testing.T, p *Panel, agent any) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register scheduler agent: %v", err)

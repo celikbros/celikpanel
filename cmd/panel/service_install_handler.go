@@ -57,7 +57,7 @@ func (p *Panel) runServiceInstall(
 	if req.ServiceID == "roundcube" {
 		var rcResp transport.InstallRoundcubeResponse
 		webmailRequest := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
-		if err := p.agentClient.CallContext(ctx, "Agent.InstallRoundcube", &webmailRequest, &rcResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.InstallRoundcube", &webmailRequest, &rcResp); err != nil {
 			return result, serviceInstallFailure(err)
 		}
 		if rcResp.Error != "" {
@@ -68,7 +68,7 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var wmResp transport.ConfigureWebmailResponse
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureWebmail", &webmailRequest, &wmResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.ConfigureWebmail", &webmailRequest, &wmResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("roundcube webmail configuration: %w", err))
 		}
 		if wmResp.Error != "" {
@@ -108,7 +108,7 @@ func (p *Panel) runServiceInstall(
 	// Paket kurulumları sürebilir (apt indirir + yapılandırır); agent bunu
 	// senkron çalıştırır ve gerçek sonucu bildirir.
 	var resp transport.InstallServiceResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.InstallService", &transport.InstallServiceRequest{
+	if err := p.callAgentContext(ctx, "Agent.InstallService", &transport.InstallServiceRequest{
 		ServiceMutationBinding: binding,
 		ID:                     req.ServiceID,
 		Package:                req.Package,
@@ -170,7 +170,7 @@ func (p *Panel) runServiceInstall(
 			return result, operationAdvanceFailure(err)
 		}
 		var lifecycle transport.ServiceActionResult
-		if err := p.agentClient.CallContext(ctx, "Agent.ServiceMutationAction", &transport.ServiceMutationActionRequest{
+		if err := p.callAgentContext(ctx, "Agent.ServiceMutationAction", &transport.ServiceMutationActionRequest{
 			ServiceMutationBinding: binding,
 			ServiceName:            "pdns",
 			Action:                 "restart",
@@ -203,7 +203,7 @@ func (p *Panel) runServiceInstall(
 	// bir web sunucusu kurulu değildir (operatör, 24 Tem).
 	if req.ServiceID == "nginx" {
 		var nrResp transport.EnsureNginxReadyResponse
-		if err := p.agentClient.CallContext(ctx, "Agent.EnsureNginxReady", &mutationRequest, &nrResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.EnsureNginxReady", &mutationRequest, &nrResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("nginx readiness configuration: %w", err))
 		}
 		if nrResp.Error != "" {
@@ -220,7 +220,7 @@ func (p *Panel) runServiceInstall(
 	// kutularına bağlanana dek yarım kalır.
 	if req.ServiceID == "postfix" || req.ServiceID == "dovecot" {
 		var mailResp transport.ConfigureMailStackResponse
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureMailStack", &mutationRequest, &mailResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.ConfigureMailStack", &mutationRequest, &mailResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail stack configuration: %w", err))
 		}
 		if mailResp.Error != "" {
@@ -248,14 +248,14 @@ func (p *Panel) runServiceInstall(
 			ServiceMutationBinding: binding,
 			ServiceName:            unit,
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.ResetFailedUnitMutation", &serviceRequest, &ok); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.ResetFailedUnitMutation", &serviceRequest, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("reset failed mail service: %w", err))
 		}
 		if !ok {
 			return result, serviceInstallFailure(errors.New("agent did not confirm resetting the mail service"))
 		}
 		ok = false
-		if err := p.agentClient.CallContext(ctx, "Agent.StartServiceMutation", &serviceRequest, &ok); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.StartServiceMutation", &serviceRequest, &ok); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("start configured mail service: %w", err))
 		}
 		if !ok {
@@ -281,7 +281,7 @@ func (p *Panel) runServiceInstall(
 	// bağlanır.
 	if svc := core.GetManagedServiceByID(req.ServiceID); svc != nil && svc.ConflictGroup == "spam-filter" {
 		var wireResp transport.WireMailFiltersResponse
-		if err := p.agentClient.CallContext(ctx, "Agent.WireMailFilters", &mutationRequest, &wireResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.WireMailFilters", &mutationRequest, &wireResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("mail filter wiring: %w", err))
 		}
 		if wireResp.Error != "" {
@@ -311,7 +311,7 @@ func (p *Panel) runServiceInstall(
 		if err := advance("starting"); err != nil {
 			return result, operationAdvanceFailure(err)
 		}
-		if err := p.agentClient.CallContext(ctx, "Agent.SetupVPN", &transport.SetupVPNRequest{
+		if err := p.callAgentContext(ctx, "Agent.SetupVPN", &transport.SetupVPNRequest{
 			ServiceMutationBinding: transport.ServiceMutationBinding{
 				MutationRequestID: binding.MutationRequestID,
 				MutationOwnerID:   binding.MutationOwnerID,
@@ -336,7 +336,7 @@ func (p *Panel) runServiceInstall(
 	// onları fiilen sunan yalnız-loopback nginx sunucusunu yeniden üretmeli.
 	if req.ServiceID == "phpmyadmin" || req.ServiceID == "phppgadmin" {
 		var dbtResp transport.ConfigureDBToolsResponse
-		if err := p.agentClient.CallContext(ctx, "Agent.ConfigureDBTools", &mutationRequest, &dbtResp); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.ConfigureDBTools", &mutationRequest, &dbtResp); err != nil {
 			return result, serviceInstallFailure(fmt.Errorf("database tools configuration: %w", err))
 		}
 		if dbtResp.Error != "" {
@@ -408,7 +408,7 @@ func (p *Panel) runServiceInstall(
 
 func (p *Panel) exactServiceUnitActive(ctx context.Context, expectedUnit string) (bool, error) {
 	var services []core.Service
-	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &services); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.GetServices", &transport.Empty{}, &services); err != nil {
 		return false, err
 	}
 	expectedUnit = strings.TrimSuffix(strings.TrimSpace(expectedUnit), ".service")
@@ -539,7 +539,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			var removeCallErr error
 			for attempt := 0; attempt < 2; attempt++ {
 				rmResp = transport.RemoveRoundcubeResponse{}
-				removeCallErr = p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &request, &rmResp)
+				removeCallErr = p.callAgentContext(callCtx, "Agent.RemoveRoundcube", &request, &rmResp)
 				if removeCallErr == nil {
 					break
 				}
@@ -566,7 +566,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 				var configureCallErr error
 				for attempt := 0; attempt < 2; attempt++ {
 					wmResp = transport.ConfigureWebmailResponse{}
-					configureCallErr = p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &request, &wmResp)
+					configureCallErr = p.callAgentContext(callCtx, "Agent.ConfigureWebmail", &request, &wmResp)
 					if configureCallErr == nil {
 						break
 					}
@@ -669,7 +669,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 			ID:                     req.ServiceID,
 			Package:                req.Package,
 		}
-		if err := p.agentClient.CallContext(callCtx, "Agent.UninstallService", &request, &resp); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.UninstallService", &request, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" && !resp.MutationApplied {
@@ -718,7 +718,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		var wireResp transport.WireMailFiltersResponse
 		err := p.withStandaloneAgentMutation(r.Context(), "mail_filter_wire", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
 			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &request, &wireResp); err != nil {
+			if err := p.callAgentContext(callCtx, "Agent.WireMailFilters", &request, &wireResp); err != nil {
 				return err
 			}
 			if wireResp.Error != "" {
@@ -741,7 +741,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		var dbtResp transport.ConfigureDBToolsResponse
 		err := p.withStandaloneAgentMutation(r.Context(), "dbtools_configure", req.ServiceID, "", func(callCtx context.Context, binding agentMutationBinding) error {
 			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDBTools", &request, &dbtResp); err != nil {
+			if err := p.callAgentContext(callCtx, "Agent.ConfigureDBTools", &request, &dbtResp); err != nil {
 				return err
 			}
 			if dbtResp.Error != "" {
@@ -848,7 +848,7 @@ func (p *Panel) wireMailFiltersAtStartup() {
 		defer cancel()
 		err := p.withStandaloneAgentMutation(ctx, "mail_filter_wire", "startup", "", func(callCtx context.Context, binding agentMutationBinding) error {
 			request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-			if err := p.agentClient.CallContext(callCtx, "Agent.WireMailFilters", &request, &resp); err != nil {
+			if err := p.callAgentContext(callCtx, "Agent.WireMailFilters", &request, &resp); err != nil {
 				return err
 			}
 			if resp.Error != "" {
@@ -914,7 +914,7 @@ func (p *Panel) handleServiceLogs(w http.ResponseWriter, r *http.Request) {
 	callCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 	request := transport.ServiceJournalRequest{Unit: unit, Lines: lines}
-	if err := p.agentClient.CallContext(callCtx, "Agent.ServiceJournal", &request, &resp); err != nil {
+	if err := p.callAgentContext(callCtx, "Agent.ServiceJournal", &request, &resp); err != nil {
 		writeAgentError(w, err, "service logs")
 		return
 	}

@@ -187,7 +187,7 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 	}()
 
 	var resp transport.RenewCertResponse
-	err = p.agentClient.CallContext(ctx, "Agent.RenewLetsEncryptCertificate",
+	err = p.callAgentContext(ctx, "Agent.RenewLetsEncryptCertificate",
 		&transport.RenewCertRequest{
 			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 			Domain:              domainName,

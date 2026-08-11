@@ -48,6 +48,31 @@ type SiteOrchestratorTestAgent struct {
 	DeleteCalls []SiteOrchestratorTestDeleteRequest
 }
 
+type preflightRejectingSiteAgent struct {
+	err            error
+	authorizeCalls int
+	callCalls      int
+}
+
+func (agent *preflightRejectingSiteAgent) AuthorizeContext(
+	context.Context,
+	string,
+	any,
+) error {
+	agent.authorizeCalls++
+	return agent.err
+}
+
+func (agent *preflightRejectingSiteAgent) CallContext(
+	context.Context,
+	string,
+	any,
+	any,
+) error {
+	agent.callCalls++
+	return nil
+}
+
 func (a *SiteOrchestratorTestAgent) CreateSite(
 	req transport.CreateSiteRequest,
 	reply *transport.CreateSiteResponse,
@@ -207,6 +232,35 @@ func TestCreateSiteRejectsUnsupportedInitialStatusBeforeMutation(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("unsupported status created %d domain rows", count)
 	}
+}
+
+func TestCreateSitePreflightDenialRollsBackOnlyMetadata(t *testing.T) {
+	orchestrator, database, subscriptionID := newSiteOrchestratorFixture(
+		t,
+		&SiteOrchestratorTestAgent{},
+	)
+	denied := errors.New("platform capability denied")
+	guard := &preflightRejectingSiteAgent{err: denied}
+	orchestrator.agentClient = guard
+
+	response, err := orchestrator.CreateSite(
+		context.Background(),
+		createSiteTestRequest(subscriptionID, "blocked-platform.example.test"),
+	)
+	if !errors.Is(err, denied) {
+		t.Fatalf("CreateSite error = %v, want preflight denial", err)
+	}
+	if response != nil {
+		t.Fatalf("CreateSite response = %#v, want nil", response)
+	}
+	if guard.authorizeCalls != 1 || guard.callCalls != 0 {
+		t.Fatalf(
+			"guard calls authorize=%d dispatch=%d, want 1/0",
+			guard.authorizeCalls,
+			guard.callCalls,
+		)
+	}
+	assertSiteMetadataCounts(t, database, 0, 0)
 }
 
 func TestCreateSiteSocketUpdateFailureCompensatesAgentAndMetadata(t *testing.T) {

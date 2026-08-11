@@ -92,6 +92,7 @@ func (a *compensationDNSAgent) DNSClusterReadiness(
 
 func attachCompensationDNSAgent(t *testing.T, p *Panel, agent *compensationDNSAgent) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register fake DNS agent: %v", err)

@@ -308,6 +308,7 @@ func attachValidationRestoreAgent(
 	agent *validationRestoreAgent,
 ) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register validation-restore agent: %v", err)

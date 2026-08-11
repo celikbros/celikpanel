@@ -1204,7 +1204,7 @@ func (p *Panel) runNodeInstall(
 		return result, nodeInstallFailure(err)
 	}
 	var response transport.NodeInstallResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.InstallNodeVersion", &transport.NodeInstallRequest{
+	if err := p.callAgentContext(ctx, "Agent.InstallNodeVersion", &transport.NodeInstallRequest{
 		ServiceMutationBinding: transport.ServiceMutationBinding{
 			MutationRequestID: binding.MutationRequestID,
 			MutationOwnerID:   binding.MutationOwnerID,

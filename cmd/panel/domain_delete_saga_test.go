@@ -132,6 +132,7 @@ func attachDomainDeletionRPCAgent(
 	agent *domainDeletionRPCAgent,
 ) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register domain deletion agent: %v", err)
