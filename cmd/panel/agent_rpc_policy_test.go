@@ -32,7 +32,7 @@ func TestAgentRPCTimeoutPoliciesAreExplicitAndClassified(t *testing.T) {
 		"Agent.ListFiles", "Agent.MailHealth", "Agent.MigratePHPPool",
 		"Agent.NginxInspect", "Agent.PkgFamily", "Agent.PostfixQueue",
 		"Agent.PostfixQueueAction", "Agent.ReadFile", "Agent.RemoveAppUnit",
-		"Agent.ReconcileSiteCertLineages", "Agent.RenameFile", "Agent.RepoPackages", "Agent.RepoStatus",
+		"Agent.ReconcileMailTLSMutation", "Agent.ReconcileSiteCertLineages", "Agent.RenameFile", "Agent.RepoPackages", "Agent.RepoStatus",
 		"Agent.SecureDNSZone", "Agent.SecureMailTLS", "Agent.ServiceCandidateVersion", "Agent.SetMailPolicy",
 		"Agent.SiteUsage", "Agent.SyncDNSZone", "Agent.TogglePHPExtension", "Agent.UpdateConfig",
 		"Agent.UpdateCronJob", "Agent.UpdateExtendedPHPConfig", "Agent.UpdateMailForwarding",

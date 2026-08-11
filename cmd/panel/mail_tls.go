@@ -60,12 +60,74 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 	mailTLSSyncMu.Lock()
 	defer mailTLSSyncMu.Unlock()
 
+	host, sni, err := p.loadMailTLSSnapshotLocked(ctx, strictDomainID)
+	if err != nil {
+		return err
+	}
+	var resp transport.SecureMailTLSResponse
+	if err := p.callAgentContext(ctx, "Agent.SecureMailTLS", &transport.SecureMailTLSRequest{
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+		Myhostname:          host, SNI: sni}, &resp); err != nil {
+		return err
+	}
+	return validateMailTLSResponse(resp, len(sni))
+}
+
+// reconcileMailTLSMutation publishes the same safe, full-state SNI snapshot
+// used by certificate lifecycle reconciliation, but only through an existing
+// durable service-mutation lease. Service-profile workers use this bound RPC
+// after their preflight has verified the panel/agent build and host identity.
+func (p *Panel) reconcileMailTLSMutation(
+	ctx context.Context,
+) (transport.SecureMailTLSResponse, error) {
+	binding, err := panelMutationBinding(ctx)
+	if err != nil {
+		return transport.SecureMailTLSResponse{},
+			fmt.Errorf("reconcile mail TLS mutation: %w", err)
+	}
+
+	// Snapshot construction includes certificate inspection RPCs. Keep those
+	// reads and the final full-state publication in one critical section so a
+	// lifecycle resync cannot publish an older snapshot after this mutation.
+	mailTLSSyncMu.Lock()
+	defer mailTLSSyncMu.Unlock()
+
+	host, sni, err := p.loadMailTLSSnapshotLocked(ctx, 0)
+	if err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	var resp transport.SecureMailTLSResponse
+	if err := p.callAgentContext(
+		ctx,
+		"Agent.ReconcileMailTLSMutation",
+		&transport.ReconcileMailTLSMutationRequest{
+			ServiceMutationBinding: binding,
+			ExpectedBuildCommit:    strings.TrimSpace(buildCommit),
+			Myhostname:             host,
+			SNI:                    sni,
+		},
+		&resp,
+	); err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	if err := validateMailTLSResponse(resp, len(sni)); err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	return resp, nil
+}
+
+// loadMailTLSSnapshotLocked builds the safe full-state payload. Callers must hold
+// mailTLSSyncMu continuously from this read through their publication RPC.
+func (p *Panel) loadMailTLSSnapshotLocked(
+	ctx context.Context,
+	strictDomainID int,
+) (string, []transport.MailSNIEntry, error) {
 	rows, err := p.db.GetDB().QueryContext(ctx, `
 		SELECT sc.domain_id, d.name, sc.cert_path, sc.key_path
 		FROM ssl_certificates sc JOIN domains d ON d.id = sc.domain_id
 		WHERE sc.status = 'active' AND sc.secure_mail = 1`)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 	defer rows.Close()
 	var sni []transport.MailSNIEntry
@@ -74,7 +136,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		var domainID int
 		var name, cert, key string
 		if err := rows.Scan(&domainID, &name, &cert, &key); err != nil {
-			return err
+			return "", nil, err
 		}
 		isStrictTarget := strictDomainID > 0 && domainID == strictDomainID
 		if isStrictTarget {
@@ -82,7 +144,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		}
 		if strings.TrimSpace(cert) == "" || strings.TrimSpace(key) == "" {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s has an empty certificate or private-key path", name)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s has an empty certificate or private-key path", name)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated domain %s (%d): empty certificate or private-key path",
 				name, domainID)
@@ -92,11 +154,11 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		if infoErr != nil {
 			// A transport failure means the panel could not safely inspect the
 			// full snapshot at all. Do not publish a destructive partial map.
-			return fmt.Errorf("inspect mail TLS certificate for %s: %w", name, infoErr)
+			return "", nil, fmt.Errorf("inspect mail TLS certificate for %s: %w", name, infoErr)
 		}
 		if !info.Valid {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s is invalid: %s", name, info.Error)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s is invalid: %s", name, info.Error)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated invalid certificate for %s (%d): %s",
 				name, domainID, strings.TrimSpace(info.Error))
@@ -104,7 +166,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		}
 		if !info.TrustChecked || !info.Trusted {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s is not trusted", name)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s is not trusted", name)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated untrusted certificate for %s (%d)", name, domainID)
 			continue
@@ -112,7 +174,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		mailName := "mail." + name
 		if !certificateCoversHostname(info.DNSNames, mailName) {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate does not cover %s", mailName)
+				return "", nil, fmt.Errorf("mail TLS certificate does not cover %s", mailName)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated certificate for %s (%d): it does not cover %s",
 				name, domainID, mailName)
@@ -129,29 +191,33 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		})
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return "", nil, err
 	}
 	if strictDomainID > 0 && !strictTargetSeen {
-		return fmt.Errorf("target domain %d is not active in the secure-mail ledger", strictDomainID)
+		return "", nil, fmt.Errorf("target domain %d is not active in the secure-mail ledger", strictDomainID)
 	}
 
 	host, err := os.Hostname()
 	if err != nil {
-		return fmt.Errorf("read mail server hostname: %w", err)
+		return "", nil, fmt.Errorf("read mail server hostname: %w", err)
 	}
-	var resp transport.SecureMailTLSResponse
-	if err := p.callAgentContext(ctx, "Agent.SecureMailTLS", &transport.SecureMailTLSRequest{
-		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
-		Myhostname:          host, SNI: sni}, &resp); err != nil {
-		return err
-	}
+	return host, sni, nil
+}
+
+func validateMailTLSResponse(resp transport.SecureMailTLSResponse, expectedSNICount int) error {
 	if resp.Error != "" {
 		return &backupError{resp.Error}
 	}
-	if !resp.Configured || resp.SNICount != len(sni) {
+	if !resp.Configured || resp.SNICount != expectedSNICount {
 		return fmt.Errorf(
 			"mail TLS agent applied %d of %d SNI entries",
-			resp.SNICount, len(sni),
+			resp.SNICount, expectedSNICount,
+		)
+	}
+	if resp.DefaultCert != transport.DefaultMailTLSCertificatePath {
+		return fmt.Errorf(
+			"mail TLS agent reported unexpected default certificate path %q",
+			resp.DefaultCert,
 		)
 	}
 	return nil

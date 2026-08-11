@@ -42,17 +42,22 @@ type MailTLSSecureRPCRequest struct {
 }
 
 type MailTLSSecureRPCResponse struct {
-	Configured bool
-	SNICount   int
-	Error      string
+	Configured  bool
+	DefaultCert string
+	SNICount    int
+	Error       string
 }
 
 type mailTLSIsolationRPCAgent struct {
 	mu                  sync.Mutex
 	certificates        map[string]MailTLSInspectRPCResponse
+	inspectErrors       map[string]string
 	inspectCalls        []string
 	secureCalls         [][]MailTLSSNIRPCEntry
 	secureMailErrorOnce string
+	reconcileCalls      []transport.ReconcileMailTLSMutationRequest
+	reconcileResponse   *transport.SecureMailTLSResponse
+	reconcileRPCError   string
 	applyVhostErrorOnce string
 }
 
@@ -80,12 +85,41 @@ func (a *mailTLSIsolationRPCAgent) InspectInstalledCertificate(
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.inspectCalls = append(a.inspectCalls, req.CertPath)
+	if message := a.inspectErrors[req.CertPath]; message != "" {
+		return fmt.Errorf("%s", message)
+	}
 	info, ok := a.certificates[req.CertPath]
 	if !ok {
 		info = MailTLSInspectRPCResponse{Error: "certificate fixture is missing"}
 	}
 	info.DNSNames = append([]string(nil), info.DNSNames...)
 	*resp = info
+	return nil
+}
+
+func (a *mailTLSIsolationRPCAgent) ReconcileMailTLSMutation(
+	req *transport.ReconcileMailTLSMutationRequest,
+	resp *transport.SecureMailTLSResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	cloned := *req
+	cloned.SNI = make([]transport.MailSNIEntry, 0, len(req.SNI))
+	for _, item := range req.SNI {
+		item.Names = append([]string(nil), item.Names...)
+		cloned.SNI = append(cloned.SNI, item)
+	}
+	a.reconcileCalls = append(a.reconcileCalls, cloned)
+	if a.reconcileRPCError != "" {
+		return fmt.Errorf("%s", a.reconcileRPCError)
+	}
+	if a.reconcileResponse != nil {
+		*resp = *a.reconcileResponse
+		return nil
+	}
+	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
+	resp.SNICount = len(req.SNI)
 	return nil
 }
 
@@ -107,6 +141,7 @@ func (a *mailTLSIsolationRPCAgent) SecureMailTLS(
 		return nil
 	}
 	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
 	resp.SNICount = len(snapshot)
 	return nil
 }
@@ -256,6 +291,242 @@ func mailTLSSnapshotPaths(agent *mailTLSIsolationRPCAgent) []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+func mailTLSMutationBoundContext() context.Context {
+	return withPanelMutationBinding(context.Background(), agentMutationBinding{
+		MutationRequestID: "11111111111111111111111111111111",
+		MutationOwnerID:   "22222222222222222222222222222222",
+	})
+}
+
+func mailTLSReconcileSnapshotPaths(agent *mailTLSIsolationRPCAgent) []string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.reconcileCalls) == 0 {
+		return nil
+	}
+	last := agent.reconcileCalls[len(agent.reconcileCalls)-1]
+	paths := make([]string, 0, len(last.SNI))
+	for _, item := range last.SNI {
+		paths = append(paths, item.CertPath)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+func TestReconcileMailTLSMutationRequiresDurableBindingBeforeRPC(t *testing.T) {
+	p := &Panel{}
+	agent := &mailTLSIsolationRPCAgent{}
+	attachMailTLSIsolationAgent(t, p, agent)
+
+	resp, err := p.reconcileMailTLSMutation(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "durable service mutation binding is missing") {
+		t.Fatalf("missing binding error = %v", err)
+	}
+	if resp != (transport.SecureMailTLSResponse{}) {
+		t.Fatalf("missing binding response = %+v, want zero", resp)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.inspectCalls) != 0 || len(agent.reconcileCalls) != 0 {
+		t.Fatalf(
+			"missing binding reached agent RPCs: inspect=%v reconcile=%v",
+			agent.inspectCalls,
+			agent.reconcileCalls,
+		)
+	}
+}
+
+func TestReconcileMailTLSMutationPublishesCustomAndACMESnapshot(t *testing.T) {
+	p, subscriptionID := newMailTLSIsolationFixture(t)
+	addMailTLSIsolationDomain(
+		t, p, subscriptionID, "custom.example", "/certs/custom", "active", true,
+	)
+	acmeDomainID := addMailTLSIsolationDomain(
+		t, p, subscriptionID, "acme.example", "/certs/acme", "active", true,
+	)
+	if _, err := p.db.GetDB().Exec(
+		`UPDATE ssl_certificates SET type = 'letsencrypt' WHERE domain_id = ?`,
+		acmeDomainID,
+	); err != nil {
+		t.Fatalf("mark ACME certificate: %v", err)
+	}
+	agent := &mailTLSIsolationRPCAgent{certificates: map[string]MailTLSInspectRPCResponse{
+		"/certs/custom": validMailTLSCertificate("custom.example"),
+		"/certs/acme":   validMailTLSCertificate("acme.example"),
+	}}
+	attachMailTLSIsolationAgent(t, p, agent)
+
+	if _, err := p.reconcileMailTLSMutation(mailTLSMutationBoundContext()); err != nil {
+		t.Fatalf("reconcile bound mail TLS: %v", err)
+	}
+	wantPaths := []string{"/certs/acme", "/certs/custom"}
+	if got := mailTLSReconcileSnapshotPaths(agent); strings.Join(got, ",") != strings.Join(wantPaths, ",") {
+		t.Fatalf("bound snapshot paths = %v, want %v", got, wantPaths)
+	}
+	host, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.reconcileCalls) != 1 {
+		t.Fatalf("ReconcileMailTLSMutation calls = %d, want 1", len(agent.reconcileCalls))
+	}
+	req := agent.reconcileCalls[0]
+	if req.MutationRequestID != "11111111111111111111111111111111" ||
+		req.MutationOwnerID != "22222222222222222222222222222222" ||
+		req.ExpectedBuildCommit != strings.TrimSpace(buildCommit) ||
+		req.Myhostname != host {
+		t.Fatalf("bound mail TLS request metadata = %+v", req)
+	}
+}
+
+func TestReconcileMailTLSMutationOmitsUnrelatedInvalidCertificate(t *testing.T) {
+	p, subscriptionID := newMailTLSIsolationFixture(t)
+	addMailTLSIsolationDomain(
+		t, p, subscriptionID, "healthy.example", "/certs/healthy", "active", true,
+	)
+	addMailTLSIsolationDomain(
+		t, p, subscriptionID, "invalid.example", "/certs/invalid", "active", true,
+	)
+	agent := &mailTLSIsolationRPCAgent{certificates: map[string]MailTLSInspectRPCResponse{
+		"/certs/healthy": validMailTLSCertificate("healthy.example"),
+		"/certs/invalid": {Error: "certificate is invalid"},
+	}}
+	attachMailTLSIsolationAgent(t, p, agent)
+
+	if _, err := p.reconcileMailTLSMutation(mailTLSMutationBoundContext()); err != nil {
+		t.Fatalf("reconcile safe snapshot: %v", err)
+	}
+	wantPaths := []string{"/certs/healthy"}
+	if got := mailTLSReconcileSnapshotPaths(agent); strings.Join(got, ",") != strings.Join(wantPaths, ",") {
+		t.Fatalf("safe bound snapshot paths = %v, want %v", got, wantPaths)
+	}
+}
+
+func TestReconcileMailTLSMutationInspectionFailureStopsPublication(t *testing.T) {
+	p, subscriptionID := newMailTLSIsolationFixture(t)
+	addMailTLSIsolationDomain(
+		t, p, subscriptionID, "unreadable.example", "/certs/unreadable", "active", true,
+	)
+	agent := &mailTLSIsolationRPCAgent{
+		certificates:  map[string]MailTLSInspectRPCResponse{},
+		inspectErrors: map[string]string{"/certs/unreadable": "forced inspection transport failure"},
+	}
+	attachMailTLSIsolationAgent(t, p, agent)
+
+	resp, err := p.reconcileMailTLSMutation(mailTLSMutationBoundContext())
+	if err == nil || !strings.Contains(err.Error(), "forced inspection transport failure") {
+		t.Fatalf("inspection failure error = %v", err)
+	}
+	if resp != (transport.SecureMailTLSResponse{}) {
+		t.Fatalf("inspection failure response = %+v, want zero", resp)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.reconcileCalls) != 0 {
+		t.Fatalf("inspection failure published a snapshot: %+v", agent.reconcileCalls)
+	}
+}
+
+func TestReconcileMailTLSMutationAcceptsEmptySnapshotFallback(t *testing.T) {
+	p, _ := newMailTLSIsolationFixture(t)
+	agent := &mailTLSIsolationRPCAgent{reconcileResponse: &transport.SecureMailTLSResponse{
+		Configured: true, SNICount: 0, DefaultCert: transport.DefaultMailTLSCertificatePath,
+	}}
+	attachMailTLSIsolationAgent(t, p, agent)
+
+	resp, err := p.reconcileMailTLSMutation(mailTLSMutationBoundContext())
+	if err != nil {
+		t.Fatalf("empty snapshot fallback: %v", err)
+	}
+	if !resp.Configured || resp.SNICount != 0 ||
+		resp.DefaultCert != transport.DefaultMailTLSCertificatePath {
+		t.Fatalf("empty snapshot fallback response = %+v", resp)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.reconcileCalls) != 1 || len(agent.reconcileCalls[0].SNI) != 0 {
+		t.Fatalf("empty snapshot request = %+v", agent.reconcileCalls)
+	}
+}
+
+func TestReconcileMailTLSMutationRejectsInvalidAgentResponse(t *testing.T) {
+	tests := []struct {
+		name       string
+		response   transport.SecureMailTLSResponse
+		rpcError   string
+		wantMarker string
+	}{
+		{
+			name: "unconfigured",
+			response: transport.SecureMailTLSResponse{
+				Configured: false, SNICount: 0,
+				DefaultCert: transport.DefaultMailTLSCertificatePath,
+			},
+			wantMarker: "applied 0 of 0",
+		},
+		{
+			name: "wrong count",
+			response: transport.SecureMailTLSResponse{
+				Configured: true, SNICount: 1,
+				DefaultCert: transport.DefaultMailTLSCertificatePath,
+			},
+			wantMarker: "applied 1 of 0",
+		},
+		{
+			name:       "agent error",
+			response:   transport.SecureMailTLSResponse{Configured: true, SNICount: 0, Error: "forced agent rejection"},
+			wantMarker: "forced agent rejection",
+		},
+		{
+			name:       "missing default certificate",
+			response:   transport.SecureMailTLSResponse{Configured: true, SNICount: 0},
+			wantMarker: "unexpected default certificate path",
+		},
+		{
+			name: "unexpected default certificate",
+			response: transport.SecureMailTLSResponse{
+				Configured: true, SNICount: 0,
+				DefaultCert: "/etc/ssl/certs/fallback.pem",
+			},
+			wantMarker: "unexpected default certificate path",
+		},
+		{
+			name: "whitespace-padded default certificate",
+			response: transport.SecureMailTLSResponse{
+				Configured: true, SNICount: 0,
+				DefaultCert: " " + transport.DefaultMailTLSCertificatePath + " ",
+			},
+			wantMarker: "unexpected default certificate path",
+		},
+		{
+			name:       "rpc error",
+			rpcError:   "forced reconcile transport failure",
+			wantMarker: "forced reconcile transport failure",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, _ := newMailTLSIsolationFixture(t)
+			response := tt.response
+			agent := &mailTLSIsolationRPCAgent{
+				reconcileResponse: &response,
+				reconcileRPCError: tt.rpcError,
+			}
+			attachMailTLSIsolationAgent(t, p, agent)
+
+			resp, err := p.reconcileMailTLSMutation(mailTLSMutationBoundContext())
+			if err == nil || !strings.Contains(err.Error(), tt.wantMarker) {
+				t.Fatalf("reconcile response error = %v, want marker %q", err, tt.wantMarker)
+			}
+			if resp != (transport.SecureMailTLSResponse{}) {
+				t.Fatalf("failed reconcile response = %+v, want zero", resp)
+			}
+		})
+	}
 }
 
 func TestSyncCertificateDependentsWebOnlyTargetSkipsGlobalMailTLS(t *testing.T) {

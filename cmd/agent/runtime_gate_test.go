@@ -56,6 +56,16 @@ func TestMailTLSCommandErrorPreservesOutputAndCause(t *testing.T) {
 	}
 }
 
+func TestRunMailTLSMutationCommandRejectsCanceledLease(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := runMailTLSMutationCommand(ctx, "command-that-must-not-run")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled mutation command error = %v, want context canceled", err)
+	}
+}
+
 func TestValidatePanelCertTLSDirAllowsOnlyManagedDirectory(t *testing.T) {
 	if got, err := validatePanelCertTLSDir(managedPanelTLSDir); err != nil ||
 		got != managedPanelTLSDir {

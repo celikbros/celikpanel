@@ -204,7 +204,23 @@ type MailSNIEntry struct {
 	KeyPath  string   `json:"key_path"`
 }
 
+// DefaultMailTLSCertificatePath is the fixed agent-owned fallback certificate
+// published when no trusted per-domain mail certificate is available.
+const DefaultMailTLSCertificatePath = "/etc/ssl/celikpanel/_mail/default-cert.pem"
+
 type SecureMailTLSRequest struct {
+	ExpectedBuildCommit string         `json:"expected_build_commit"`
+	Myhostname          string         `json:"myhostname"`
+	SNI                 []MailSNIEntry `json:"sni"`
+}
+
+// ReconcileMailTLSMutationRequest binds the mail TLS reconciliation to the
+// durable service mutation that authorized it. SecureMailTLSRequest remains
+// the legacy lifecycle contract; new multi-service orchestration must use this
+// request so the privileged agent can prove lease ownership for the whole
+// step.
+type ReconcileMailTLSMutationRequest struct {
+	ServiceMutationBinding
 	ExpectedBuildCommit string         `json:"expected_build_commit"`
 	Myhostname          string         `json:"myhostname"`
 	SNI                 []MailSNIEntry `json:"sni"`

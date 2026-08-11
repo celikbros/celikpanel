@@ -1,11 +1,245 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestReconcileMailTLSFailsClosedWithoutDovecotBeforeCommands(t *testing.T) {
+	previousLookup := lookupMailTLSCommand
+	postconfPath := filepath.Join(t.TempDir(), "postconf")
+	lookupMailTLSCommand = func(name string) (string, error) {
+		if name == "postconf" {
+			return postconfPath, nil
+		}
+		return "", fmt.Errorf("%s unavailable", name)
+	}
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+	t.Setenv("CELIKPANEL_MAIL_DIR", "")
+
+	commandCalled := false
+	runner := func(string, ...string) ([]byte, error) {
+		commandCalled = true
+		return nil, nil
+	}
+	var response SecureMailTLSResponse
+	if err := reconcileMailTLS(&SecureMailTLSRequest{}, &response, runner); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != "dovecot is not installed" {
+		t.Fatalf("missing-Dovecot error = %q", response.Error)
+	}
+	if commandCalled {
+		t.Fatal("missing Dovecot was detected only after a host command")
+	}
+}
+
+func TestMailTLSPreflightPinsAbsoluteCommandsAfterAllLookups(t *testing.T) {
+	previousLookup := lookupMailTLSCommand
+	binRoot := filepath.Join(t.TempDir(), "bin")
+	var lookups []string
+	lookupMailTLSCommand = func(name string) (string, error) {
+		lookups = append(lookups, name)
+		return filepath.Join(binRoot, name), nil
+	}
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+	var calls []string
+	runner := func(name string, args ...string) ([]byte, error) {
+		if got := strings.Join(lookups, ","); got != "postconf,doveconf,postfix,dovecot,systemctl,postmap" {
+			t.Fatalf("runner called before all lookups completed: %s", got)
+		}
+		calls = append(calls, name)
+		if filepath.Base(name) == "postmap" {
+			if len(args) != 2 || args[0] != "-F" || !strings.HasPrefix(args[1], "lmdb:") {
+				t.Fatalf("unexpected probe command: %q %q", name, args)
+			}
+			probe := strings.TrimPrefix(args[1], "lmdb:")
+			if err := os.WriteFile(probe+".lmdb", []byte("index"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return nil, nil
+	}
+	preflight, err := preflightMailTLSCommands(true, runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preflight.sniMapType != "lmdb" {
+		t.Fatalf("map type = %q, want lmdb", preflight.sniMapType)
+	}
+	if _, err := preflight.run("postconf", "-h", "myhostname"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := calls[len(calls)-1], filepath.Join(binRoot, "postconf"); got != want {
+		t.Fatalf("pinned command = %q, want %q", got, want)
+	}
+	before := len(calls)
+	if _, err := preflight.run("unapproved-command"); err == nil || !strings.Contains(err.Error(), "not pinned") {
+		t.Fatalf("unknown pinned command error = %v", err)
+	}
+	if len(calls) != before {
+		t.Fatal("unknown command reached the underlying runner")
+	}
+}
+
+func TestMailTLSPreflightRejectsNonCanonicalCommandPathBeforeRunner(t *testing.T) {
+	previousLookup := lookupMailTLSCommand
+	lookupMailTLSCommand = func(name string) (string, error) { return name, nil }
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+	called := false
+	_, err := preflightMailTLSCommands(false, func(string, ...string) ([]byte, error) {
+		called = true
+		return nil, nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "canonical absolute path") {
+		t.Fatalf("non-canonical lookup error = %v", err)
+	}
+	if called {
+		t.Fatal("runner called after a non-canonical lookup")
+	}
+}
+
+func TestMailTLSPreflightRefusesEveryMissingToolBeforeRunner(t *testing.T) {
+	tests := []struct {
+		missing     string
+		needsSNIMap bool
+		wantMarker  string
+	}{
+		{missing: "postconf", wantMarker: "postfix is not installed"},
+		{missing: "doveconf", wantMarker: "dovecot is not installed"},
+		{missing: "postfix", wantMarker: "postfix"},
+		{missing: "dovecot", wantMarker: "dovecot"},
+		{missing: "systemctl", wantMarker: "systemctl"},
+		{missing: "postmap", needsSNIMap: true, wantMarker: "postmap"},
+	}
+	for _, test := range tests {
+		t.Run(test.missing, func(t *testing.T) {
+			previousLookup := lookupMailTLSCommand
+			binRoot := filepath.Join(t.TempDir(), "bin")
+			lookupMailTLSCommand = func(name string) (string, error) {
+				if name == test.missing {
+					return "", fmt.Errorf("%s is unavailable", name)
+				}
+				return filepath.Join(binRoot, name), nil
+			}
+			t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+
+			runnerCalled := false
+			_, err := preflightMailTLSCommands(test.needsSNIMap, func(string, ...string) ([]byte, error) {
+				runnerCalled = true
+				return nil, nil
+			})
+			if err == nil || !strings.Contains(err.Error(), test.wantMarker) {
+				t.Fatalf("missing %s error = %v", test.missing, err)
+			}
+			if runnerCalled {
+				t.Fatalf("missing %s reached the command runner", test.missing)
+			}
+		})
+	}
+}
+
+func TestMailTLSPreflightDoesNotRequirePostmapWithoutSNI(t *testing.T) {
+	previousLookup := lookupMailTLSCommand
+	binRoot := filepath.Join(t.TempDir(), "bin")
+	postmapLookup := false
+	lookupMailTLSCommand = func(name string) (string, error) {
+		if name == "postmap" {
+			postmapLookup = true
+			return "", fmt.Errorf("postmap is unavailable")
+		}
+		return filepath.Join(binRoot, name), nil
+	}
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+
+	runnerCalled := false
+	if _, err := preflightMailTLSCommands(false, func(string, ...string) ([]byte, error) {
+		runnerCalled = true
+		return nil, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if postmapLookup {
+		t.Fatal("empty SNI preflight looked up postmap")
+	}
+	if runnerCalled {
+		t.Fatal("empty SNI preflight ran a command")
+	}
+}
+
+func TestReconcileMailTLSRejectsUnsupportedSNIMapBeforeSnapshot(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CELIKPANEL_MAIL_DIR", "")
+	t.Setenv("CELIKPANEL_CUSTOM_CERT_ROOT", root)
+	snapshot := createManagedMailTLSSnapshot(t, root, "example.test", "")
+	previousLookup := lookupMailTLSCommand
+	binRoot := filepath.Join(t.TempDir(), "bin")
+	lookupMailTLSCommand = func(name string) (string, error) { return filepath.Join(binRoot, name), nil }
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+	var commands []string
+	runner := func(name string, _ ...string) ([]byte, error) {
+		commands = append(commands, filepath.Base(name))
+		return nil, nil
+	}
+	var response SecureMailTLSResponse
+	err := reconcileMailTLS(&SecureMailTLSRequest{
+		Myhostname: "mail.example.test",
+		SNI:        []MailSNIEntry{validMailSNIEntry(snapshot)},
+	}, &response, runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(response.Error, "no usable indexed table type") {
+		t.Fatalf("unsupported map response = %#v", response)
+	}
+	if got := strings.Join(commands, ","); got != "postmap,postmap,postmap" {
+		t.Fatalf("commands before unsupported-map refusal = %q", got)
+	}
+}
+
+func TestReconcileMailTLSMutationRequiresRequestAndDurableBinding(t *testing.T) {
+	agent := &Agent{}
+	if err := agent.SecureMailTLS(nil, nil); err == nil ||
+		!strings.Contains(err.Error(), "response is required") {
+		t.Fatalf("legacy nil response error = %v", err)
+	}
+	if err := agent.ReconcileMailTLSMutation(nil, nil); err == nil ||
+		!strings.Contains(err.Error(), "response is required") {
+		t.Fatalf("nil response error = %v", err)
+	}
+	var missingRequest SecureMailTLSResponse
+	if err := agent.ReconcileMailTLSMutation(nil, &missingRequest); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(missingRequest.Error, "request is required") {
+		t.Fatalf("nil request error = %q", missingRequest.Error)
+	}
+
+	var missingBinding SecureMailTLSResponse
+	if err := agent.ReconcileMailTLSMutation(
+		&ReconcileMailTLSMutationRequest{Myhostname: "mail.example.test"},
+		&missingBinding,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(missingBinding.Error, "durable service mutation lease") {
+		t.Fatalf("missing binding error = %q", missingBinding.Error)
+	}
+
+	var missingHostname SecureMailTLSResponse
+	if err := agent.ReconcileMailTLSMutation(
+		&ReconcileMailTLSMutationRequest{},
+		&missingHostname,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(missingHostname.Error, "requires a server hostname") {
+		t.Fatalf("missing hostname error = %q", missingHostname.Error)
+	}
+}
 
 const testCertificateVersion = "sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
@@ -185,46 +419,6 @@ func TestValidateMailSNIEntriesRejectsDuplicateNamesAcrossEntries(t *testing.T) 
 		validMailSNIEntry(second),
 	}); err == nil || !strings.Contains(err.Error(), "already claimed") {
 		t.Fatalf("duplicate SNI name error = %v", err)
-	}
-}
-
-func TestMailTLSFileSnapshotRestoresExistingAndAbsentFiles(t *testing.T) {
-	dir := t.TempDir()
-	existingPath := filepath.Join(dir, "existing.conf")
-	if err := os.WriteFile(existingPath, []byte("old state"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	existing, err := snapshotMailTLSFile(existingPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(existingPath, []byte("new state"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := existing.restore(); err != nil {
-		t.Fatal(err)
-	}
-	content, err := os.ReadFile(existingPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(content) != "old state" {
-		t.Fatalf("restored content = %q, want old state", content)
-	}
-
-	absentPath := filepath.Join(dir, "new.conf")
-	absent, err := snapshotMailTLSFile(absentPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(absentPath, []byte("temporary state"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := absent.restore(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(absentPath); !os.IsNotExist(err) {
-		t.Fatalf("restoring an absent snapshot left the file behind: %v", err)
 	}
 }
 

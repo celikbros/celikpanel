@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type StartupPendingInspectRequest struct {
@@ -27,9 +29,10 @@ type StartupPendingSecureMailRequest struct {
 }
 
 type StartupPendingSecureMailResponse struct {
-	Configured bool
-	SNICount   int
-	Error      string
+	Configured  bool
+	DefaultCert string
+	SNICount    int
+	Error       string
 }
 
 type StartupPendingReconcileRequest struct {
@@ -101,6 +104,7 @@ func (a *startupPendingAgent) SecureMailTLS(
 		return nil
 	}
 	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
 	resp.SNICount = len(req.SNI)
 	return nil
 }

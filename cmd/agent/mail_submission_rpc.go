@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,7 +26,7 @@ import (
 // posta kutusu diğerinin adına gönderemez. 25 portu olduğu gibi kalır:
 // dünyadan alma.
 
-const (
+var (
 	dovecotSubmissionConf = "/etc/dovecot/conf.d/97-celikpanel-submission.conf"
 	postfixLoginMapPath   = "/etc/postfix/celikpanel_login_map"
 )
@@ -32,6 +34,10 @@ const (
 type ConfigureMailSubmissionResponse = transport.ConfigureMailSubmissionResponse
 
 func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *ConfigureMailSubmissionResponse) error {
+	if resp == nil {
+		return fmt.Errorf("mail submission configuration response is required")
+	}
+	*resp = ConfigureMailSubmissionResponse{}
 	if req == nil {
 		return fmt.Errorf("mail submission configuration request is required")
 	}
@@ -41,6 +47,15 @@ func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *Confi
 		return nil
 	}
 	defer finishStep()
+	if err := lockMailMutation(ctx); err != nil {
+		resp.Error = fmt.Sprintf(
+			"mail submission configuration did not start: service mutation lease ended before mail submission configuration completed: %v",
+			err,
+		)
+		return nil
+	}
+	defer mailMutex.Unlock()
+
 	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" {
 		resp.Error = "mail submission is a production action; not available with CELIKPANEL_MAIL_DIR set"
 		return nil
@@ -49,14 +64,80 @@ func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *Confi
 		resp.Error = "postfix is not installed"
 		return nil
 	}
+	if _, err := exec.LookPath("doveconf"); err != nil {
+		resp.Error = "dovecot is not installed"
+		return nil
+	}
+	if err := mailSubmissionLeaseError(ctx); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+
+	paths := []string{dovecotSubmissionConf, postfixLoginMapPath}
+	snapshots := make([]mailFileSnapshot, 0, len(paths))
+	for _, path := range paths {
+		snapshot, err := snapshotMailFile(path)
+		if err != nil {
+			resp.Error = fmt.Sprintf("snapshot mail submission configuration: %v", err)
+			return nil
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	filesMayHaveChanged := false
+	postfixMayHaveChanged := false
+	rollback := func(cause error, recoverDovecot bool) error {
+		var rollbackErrs []error
+		if filesMayHaveChanged {
+			for index := len(snapshots) - 1; index >= 0; index-- {
+				if err := restoreMailFile(snapshots[index]); err != nil {
+					rollbackErrs = append(rollbackErrs, err)
+				}
+			}
+		}
+
+		recoverySkipped := false
+		if recoverDovecot {
+			if ctx.Err() != nil {
+				recoverySkipped = true
+			} else if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "dovecot"); err != nil {
+				rollbackErrs = append(rollbackErrs, mailSubmissionCommandError(
+					ctx,
+					"restore dovecot after failed mail submission configuration",
+					out,
+					err,
+				))
+			}
+		}
+
+		if len(rollbackErrs) != 0 {
+			return fmt.Errorf("%w; mail submission rollback failed: %v", cause, errors.Join(rollbackErrs...))
+		}
+		detail := "managed files restored"
+		if !filesMayHaveChanged {
+			detail = "no managed files changed"
+		}
+		if postfixMayHaveChanged {
+			detail += "; Postfix master.cf changes may remain until the same operation is retried"
+		}
+		if recoverySkipped {
+			detail += "; Dovecot recovery restart was skipped because the mutation lease ended"
+		}
+		return fmt.Errorf("%w; %s", cause, detail)
+	}
+	fail := func(err error) error {
+		resp.Configured = false
+		resp.Detail = ""
+		resp.Error = err.Error()
+		return nil
+	}
 
 	// Dovecot: auth socket reachable from Postfix's chroot.
 	// Dovecot: Postfix chroot'undan erişilebilir kimlik soketi.
 	// service auth / unix_listener syntax is identical in Dovecot 2.3 and 2.4;
-	// still validated via applyDovecotConf so a broken combination with the
-	// other drop-ins surfaces here rather than as a dead service.
+	// still validated by a lease-bound doveconf command so a broken combination
+	// with the other drop-ins surfaces here rather than as a dead service.
 	// service auth / unix_listener sözdizimi Dovecot 2.3 ve 2.4'te aynıdır;
-	// yine de applyDovecotConf ile doğrulanır ki diğer eklerle bozuk bir
+	// yine de lease'e bağlı doveconf ile doğrulanır ki diğer eklerle bozuk bir
 	// bileşim ölü servis yerine burada yüzeye çıksın.
 	dovecotConf := `# Managed by CelikPanel — SASL for Postfix submission. Do not edit by hand.
 service auth {
@@ -67,9 +148,20 @@ service auth {
   }
 }
 `
-	if err := applyDovecotConf(dovecotSubmissionConf, dovecotConf); err != nil {
-		resp.Error = err.Error()
-		return nil
+	if err := mailSubmissionLeaseError(ctx); err != nil {
+		return fail(err)
+	}
+	filesMayHaveChanged = true
+	if err := secureWriteConfig(dovecotSubmissionConf, []byte(dovecotConf), 0o644); err != nil {
+		return fail(rollback(fmt.Errorf("write dovecot submission configuration: %w", err), false))
+	}
+	if out, err := runMailTLSMutationCommand(ctx, "doveconf", "-n"); err != nil {
+		return fail(rollback(mailSubmissionCommandError(
+			ctx,
+			"dovecot rejected the mail submission configuration",
+			out,
+			err,
+		), false))
 	}
 
 	// Sender spoofing guard: the SASL login must equal the MAIL FROM address.
@@ -77,22 +169,23 @@ service auth {
 	// Gönderici sahteciliği koruması: SASL girişi MAIL FROM adresine eşit
 	// olmalı. Bilinçli v1 sadeleştirmesi: takma adlar henüz adına gönderemez.
 	loginMap := "/^(.+)$/ ${1}\n"
-	if err := os.WriteFile(postfixLoginMapPath, []byte(loginMap), 0o644); err != nil {
-		resp.Error = err.Error()
-		return nil
+	if err := mailSubmissionLeaseError(ctx); err != nil {
+		return fail(rollback(err, false))
+	}
+	if err := secureWriteConfig(postfixLoginMapPath, []byte(loginMap), 0o644); err != nil {
+		return fail(rollback(fmt.Errorf("write postfix sender login map: %w", err), false))
 	}
 
 	// Master.cf via postconf -M/-P: idempotent, no hand-editing.
 	// Master.cf, postconf -M/-P ile: idempotent, elle düzenleme yok.
-	if out, err := serviceMutationCommand(ctx, "postconf", "-M",
-		"submission/inet=submission inet n - y - - smtpd").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("postconf -M submission: %s", strings.TrimSpace(string(out)))
-		return nil
+	postfixMayHaveChanged = true
+	if out, err := runMailTLSMutationCommand(ctx, "postconf", "-M",
+		"submission/inet=submission inet n - y - - smtpd"); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "postconf -M submission", out, err), false))
 	}
-	if out, err := serviceMutationCommand(ctx, "postconf", "-M",
-		"smtps/inet=smtps inet n - y - - smtpd").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("postconf -M smtps: %s", strings.TrimSpace(string(out)))
-		return nil
+	if out, err := runMailTLSMutationCommand(ctx, "postconf", "-M",
+		"smtps/inet=smtps inet n - y - - smtpd"); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "postconf -M smtps", out, err), false))
 	}
 
 	shared := [][2]string{
@@ -107,8 +200,8 @@ service auth {
 	apply := func(service string, extra [][2]string) error {
 		for _, kv := range append(append([][2]string{}, shared...), extra...) {
 			arg := fmt.Sprintf("%s/inet/%s=%s", service, kv[0], kv[1])
-			if out, err := serviceMutationCommand(ctx, "postconf", "-P", arg).CombinedOutput(); err != nil {
-				return fmt.Errorf("postconf -P %s: %s", arg, strings.TrimSpace(string(out)))
+			if out, err := runMailTLSMutationCommand(ctx, "postconf", "-P", arg); err != nil {
+				return mailSubmissionCommandError(ctx, "postconf -P "+arg, out, err)
 			}
 		}
 		return nil
@@ -119,24 +212,47 @@ service auth {
 		{"syslog_name", "postfix/submission"},
 		{"smtpd_tls_security_level", "encrypt"},
 	}); err != nil {
-		resp.Error = err.Error()
-		return nil
+		return fail(rollback(err, false))
 	}
 	if err := apply("smtps", [][2]string{
 		{"syslog_name", "postfix/smtps"},
 		{"smtpd_tls_wrappermode", "yes"},
 	}); err != nil {
-		resp.Error = err.Error()
-		return nil
+		return fail(rollback(err, false))
 	}
 
-	_ = serviceMutationCommand(ctx, "systemctl", "restart", "dovecot").Run()
-	if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "postfix").CombinedOutput(); err != nil {
-		resp.Error = fmt.Sprintf("postfix restart: %s", firstLine(string(out)))
-		return nil
+	if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "dovecot"); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "dovecot restart", out, err), true))
+	}
+	if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "postfix"); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "postfix restart", out, err), true))
+	}
+	if err := mailSubmissionLeaseError(ctx); err != nil {
+		return fail(rollback(err, true))
 	}
 
 	resp.Configured = true
 	resp.Detail = "submission on 587 (STARTTLS) and 465 (TLS), SASL via Dovecot, sender spoofing blocked"
 	return nil
+}
+
+func mailSubmissionLeaseError(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("service mutation lease context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("service mutation lease ended before mail submission configuration completed: %w", err)
+	}
+	return nil
+}
+
+func mailSubmissionCommandError(ctx context.Context, operation string, out []byte, commandErr error) error {
+	if err := mailSubmissionLeaseError(ctx); err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	detail := strings.TrimSpace(firstLine(string(out)))
+	if detail == "" {
+		detail = commandErr.Error()
+	}
+	return fmt.Errorf("%s: %s", operation, detail)
 }

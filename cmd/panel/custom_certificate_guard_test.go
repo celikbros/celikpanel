@@ -82,9 +82,10 @@ type CustomGuardSecureMailRequest struct {
 }
 
 type CustomGuardSecureMailResponse struct {
-	Configured bool
-	SNICount   int
-	Error      string
+	Configured  bool
+	DefaultCert string
+	SNICount    int
+	Error       string
 }
 
 type customCertificateGuardAgent struct {
@@ -190,6 +191,7 @@ func (a *customCertificateGuardAgent) SecureMailTLS(
 		return nil
 	}
 	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
 	resp.SNICount = len(req.SNI)
 	return nil
 }

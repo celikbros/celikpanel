@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,7 +43,7 @@ const (
 	mailTLSDir        = "/etc/ssl/celikpanel/_mail"
 	postfixSNIPath    = "/etc/postfix/celikpanel_sni"
 	dovecotTLSConf    = "/etc/dovecot/conf.d/98-celikpanel-tls.conf"
-	defaultMailCert   = mailTLSDir + "/default-cert.pem"
+	defaultMailCert   = transport.DefaultMailTLSCertificatePath
 	defaultMailKey    = mailTLSDir + "/default-key.pem"
 	mailCertValidDays = 2 * 365
 	maxMailSNIEntries = 4096
@@ -61,15 +63,33 @@ var postfixTLSManagedSettings = []string{
 	"tls_server_sni_maps",
 }
 
+var lookupMailTLSCommand = exec.LookPath
+
 type MailSNIEntry = transport.MailSNIEntry
 type SecureMailTLSRequest = transport.SecureMailTLSRequest
+type ReconcileMailTLSMutationRequest = transport.ReconcileMailTLSMutationRequest
 type SecureMailTLSResponse = transport.SecureMailTLSResponse
+
+type mailTLSCommandRunner func(name string, args ...string) ([]byte, error)
+type defaultMailTLSWriter func(path string, content []byte, mode os.FileMode) error
+
+type mailTLSDirectoryOwner struct {
+	uid uint64
+	gid uint64
+}
+
+type mailTLSCommandPreflight struct {
+	run        mailTLSCommandRunner
+	sniMapType string
+}
 
 type mailTLSFileSnapshot struct {
 	path    string
 	existed bool
 	data    []byte
 	mode    os.FileMode
+	uid     int
+	gid     int
 }
 
 type postfixTLSSettingSnapshot struct {
@@ -90,6 +110,10 @@ type mailTLSStateSnapshot struct {
 // daemon'da da domain başına SNI, modern protokol tabanı, fırsatçı giden TLS
 // ve sabit HELO adı. Yeniden koşmak güvenlidir; yakınsar.
 func (a *Agent) SecureMailTLS(req *SecureMailTLSRequest, resp *SecureMailTLSResponse) error {
+	if resp == nil {
+		return fmt.Errorf("mail TLS response is required")
+	}
+	*resp = SecureMailTLSResponse{}
 	if req == nil {
 		resp.Error = "mail TLS request is required"
 		return nil
@@ -104,50 +128,118 @@ func (a *Agent) SecureMailTLS(req *SecureMailTLSRequest, resp *SecureMailTLSResp
 
 	mailMutex.Lock()
 	defer mailMutex.Unlock()
+	return reconcileMailTLS(req, resp, runMailTLSCommand)
+}
+
+// ReconcileMailTLSMutation is the durable, lease-bound entry point used by
+// multi-service orchestration. It deliberately reuses the legacy lifecycle
+// implementation, but every host command is executed through the tracked
+// service-mutation runner below.
+func (a *Agent) ReconcileMailTLSMutation(
+	req *ReconcileMailTLSMutationRequest,
+	resp *SecureMailTLSResponse,
+) error {
+	if resp == nil {
+		return fmt.Errorf("mail TLS reconciliation response is required")
+	}
+	*resp = SecureMailTLSResponse{}
+	if req == nil {
+		resp.Error = "mail TLS reconciliation request is required"
+		return nil
+	}
+	if err := requireExpectedBuildCommit(
+		req.ExpectedBuildCommit,
+		"reconciling the mail TLS stack",
+	); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if strings.TrimSpace(req.Myhostname) == "" {
+		resp.Error = "mail TLS reconciliation requires a server hostname"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+
+	if err := lockMailMutation(ctx); err != nil {
+		resp.Error = fmt.Sprintf(
+			"service mutation lease expired before mail TLS reconciliation: %v",
+			err,
+		)
+		return nil
+	}
+	defer mailMutex.Unlock()
+	if err := ctx.Err(); err != nil {
+		resp.Error = fmt.Sprintf("service mutation lease expired before mail TLS reconciliation: %v", err)
+		return nil
+	}
+
+	legacyRequest := &SecureMailTLSRequest{
+		ExpectedBuildCommit: req.ExpectedBuildCommit,
+		Myhostname:          req.Myhostname,
+		SNI:                 req.SNI,
+	}
+	runner := func(name string, args ...string) ([]byte, error) {
+		return runMailTLSMutationCommand(ctx, name, args...)
+	}
+	return reconcileMailTLS(legacyRequest, resp, runner)
+}
+
+func reconcileMailTLS(
+	req *SecureMailTLSRequest,
+	resp *SecureMailTLSResponse,
+	run mailTLSCommandRunner,
+) error {
 
 	if os.Getenv("CELIKPANEL_MAIL_DIR") != "" {
 		resp.Error = "mail TLS is a production action; not available with CELIKPANEL_MAIL_DIR set"
 		return nil
 	}
-	if _, err := exec.LookPath("postconf"); err != nil {
-		resp.Error = "postfix is not installed"
-		return nil
-	}
-
 	myhostname, valid, err := validateSecureMailTLSRequest(req)
 	if err != nil {
 		resp.Error = fmt.Sprintf("mail TLS validation: %v", err)
 		return nil
 	}
-	previous, err := snapshotMailTLSState()
+	preflight, err := preflightMailTLSCommands(len(valid) > 0, run)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	run = preflight.run
+
+	previous, err := snapshotMailTLSState(run)
 	if err != nil {
 		resp.Error = fmt.Sprintf("mail TLS snapshot: %v", err)
 		return nil
 	}
-	if err := ensureDefaultMailCert(); err != nil {
-		setMailTLSFailure(resp, "default certificate", err, previous)
+	if err := ensureDefaultMailCert(myhostname); err != nil {
+		setMailTLSFailure(resp, "default certificate", err, previous, run)
 		return nil
 	}
 	resp.DefaultCert = defaultMailCert
 
-	if err := configurePostfixTLS(myhostname, valid); err != nil {
-		setMailTLSFailure(resp, "postfix configuration", err, previous)
+	if err := configurePostfixTLS(myhostname, valid, preflight.sniMapType, run); err != nil {
+		setMailTLSFailure(resp, "postfix configuration", err, previous, run)
 		return nil
 	}
-	if err := configureDovecotTLS(valid); err != nil {
-		setMailTLSFailure(resp, "dovecot configuration", err, previous)
+	if err := configureDovecotTLS(valid, run); err != nil {
+		setMailTLSFailure(resp, "dovecot configuration", err, previous, run)
 		return nil
 	}
-	if err := validatePostfixTLSConfig(); err != nil {
-		setMailTLSFailure(resp, "postfix validation", err, previous)
+	if err := validatePostfixTLSConfig(run); err != nil {
+		setMailTLSFailure(resp, "postfix validation", err, previous, run)
 		return nil
 	}
-	if err := reloadMailTLSService("postfix"); err != nil {
-		setMailTLSFailure(resp, "postfix reload", err, previous)
+	if err := reloadMailTLSService("postfix", run); err != nil {
+		setMailTLSFailure(resp, "postfix reload", err, previous, run)
 		return nil
 	}
-	if err := reloadMailTLSService("dovecot"); err != nil {
-		setMailTLSFailure(resp, "dovecot reload", err, previous)
+	if err := reloadMailTLSService("dovecot", run); err != nil {
+		setMailTLSFailure(resp, "dovecot reload", err, previous, run)
 		return nil
 	}
 
@@ -174,6 +266,85 @@ func validateSecureMailTLSRequest(req *SecureMailTLSRequest) (string, []MailSNIE
 		return "", nil, fmt.Errorf("SNI: %w", err)
 	}
 	return myhostname, entries, nil
+}
+
+func preflightMailTLSCommands(needsSNIMap bool, execute mailTLSCommandRunner) (mailTLSCommandPreflight, error) {
+	if execute == nil {
+		return mailTLSCommandPreflight{}, fmt.Errorf("mail TLS command runner is required")
+	}
+	required := []string{"postconf", "doveconf", "postfix", "dovecot", "systemctl"}
+	if needsSNIMap {
+		required = append(required, "postmap")
+	}
+	resolved := make(map[string]string, len(required))
+	for _, name := range required {
+		commandPath, err := lookupMailTLSCommand(name)
+		if err != nil {
+			switch name {
+			case "postconf":
+				return mailTLSCommandPreflight{}, fmt.Errorf("postfix is not installed")
+			case "doveconf":
+				return mailTLSCommandPreflight{}, fmt.Errorf("dovecot is not installed")
+			default:
+				return mailTLSCommandPreflight{}, fmt.Errorf("mail TLS prerequisite command %q is unavailable: %w", name, err)
+			}
+		}
+		if commandPath != strings.TrimSpace(commandPath) || !filepath.IsAbs(commandPath) || filepath.Clean(commandPath) != commandPath {
+			return mailTLSCommandPreflight{}, fmt.Errorf("mail TLS prerequisite command %q did not resolve to a canonical absolute path", name)
+		}
+		resolved[name] = commandPath
+	}
+	pinned := func(name string, args ...string) ([]byte, error) {
+		commandPath, ok := resolved[name]
+		if !ok {
+			return nil, fmt.Errorf("mail TLS command %q was not pinned during preflight", name)
+		}
+		return execute(commandPath, args...)
+	}
+	preflight := mailTLSCommandPreflight{run: pinned}
+	if needsSNIMap {
+		mapType, err := probePostfixTLSMapType(pinned)
+		if err != nil {
+			return mailTLSCommandPreflight{}, err
+		}
+		preflight.sniMapType = mapType
+	}
+	return preflight, nil
+}
+
+func probePostfixTLSMapType(run mailTLSCommandRunner) (string, error) {
+	dir, err := os.MkdirTemp("", "celikpanel-mail-tls-map-")
+	if err != nil {
+		return "", fmt.Errorf("prepare Postfix SNI map preflight: %w", err)
+	}
+	defer os.RemoveAll(dir)
+	keyPath := filepath.Join(dir, "probe-key.pem")
+	certPath := filepath.Join(dir, "probe-cert.pem")
+	if err := os.WriteFile(keyPath, []byte("probe private key\n"), 0o600); err != nil {
+		return "", fmt.Errorf("prepare Postfix SNI key probe: %w", err)
+	}
+	if err := os.WriteFile(certPath, []byte("probe certificate\n"), 0o600); err != nil {
+		return "", fmt.Errorf("prepare Postfix SNI certificate probe: %w", err)
+	}
+	probe := filepath.Join(dir, "probe")
+	probeLine := fmt.Sprintf("probe.example.invalid %s %s\n", keyPath, certPath)
+	if err := os.WriteFile(probe, []byte(probeLine), 0o600); err != nil {
+		return "", fmt.Errorf("prepare Postfix SNI map probe: %w", err)
+	}
+	for _, mapType := range []string{"lmdb", "hash", "btree"} {
+		for _, extension := range []string{".db", ".lmdb"} {
+			if err := os.Remove(probe + extension); err != nil && !os.IsNotExist(err) {
+				return "", fmt.Errorf("reset Postfix SNI map probe: %w", err)
+			}
+		}
+		if _, err := run("postmap", "-F", mapType+":"+probe); err != nil {
+			continue
+		}
+		if fileExists(probe+".db") || fileExists(probe+".lmdb") {
+			return mapType, nil
+		}
+	}
+	return "", fmt.Errorf("postfix on this system has no usable indexed table type (lmdb/hash/btree); per-domain mail certificates require one")
 }
 
 func validateMailSNIEntries(entries []MailSNIEntry) ([]MailSNIEntry, error) {
@@ -393,6 +564,10 @@ func mailTLSFileOwner(info os.FileInfo) (uint64, bool) {
 	return mailTLSStatUint(info, "Uid")
 }
 
+func mailTLSFileGroup(info os.FileInfo) (uint64, bool) {
+	return mailTLSStatUint(info, "Gid")
+}
+
 func mailTLSFileLinkCount(info os.FileInfo) (uint64, bool) {
 	return mailTLSStatUint(info, "Nlink")
 }
@@ -430,43 +605,53 @@ func mailTLSStatUint(info os.FileInfo, fieldName string) (uint64, bool) {
 
 func snapshotMailTLSFile(path string) (mailTLSFileSnapshot, error) {
 	snapshot := mailTLSFileSnapshot{path: path}
-	info, err := os.Stat(path)
+	info, err := os.Lstat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return snapshot, nil
 		}
 		return snapshot, err
 	}
-	if !info.Mode().IsRegular() {
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return snapshot, fmt.Errorf("%s is not a regular file", path)
 	}
-	data, err := os.ReadFile(path)
+	if links, ok := mailTLSFileLinkCount(info); ok && links != 1 {
+		return snapshot, fmt.Errorf("%s has %d hard links", path, links)
+	}
+	data, mode, uid, gid, err := secureSnapshotMailFile(path)
 	if err != nil {
 		return snapshot, err
 	}
 	snapshot.existed = true
 	snapshot.data = data
-	snapshot.mode = info.Mode().Perm()
+	snapshot.mode = mode
+	snapshot.uid = uid
+	snapshot.gid = gid
 	return snapshot, nil
 }
 
 func (snapshot mailTLSFileSnapshot) restore() error {
 	if !snapshot.existed {
-		if err := os.Remove(snapshot.path); err != nil && !os.IsNotExist(err) {
+		if err := secureRemoveConfig(snapshot.path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(snapshot.path), 0o755); err != nil {
+	if err := secureWriteConfig(snapshot.path, snapshot.data, snapshot.mode); err != nil {
 		return err
 	}
-	return os.WriteFile(snapshot.path, snapshot.data, snapshot.mode)
+	return secureSetMailFileMetadata(
+		snapshot.path,
+		snapshot.mode,
+		snapshot.uid,
+		snapshot.gid,
+	)
 }
 
-func snapshotMailTLSState() (*mailTLSStateSnapshot, error) {
+func snapshotMailTLSState(run mailTLSCommandRunner) (*mailTLSStateSnapshot, error) {
 	snapshot := &mailTLSStateSnapshot{}
 	for _, name := range postfixTLSManagedSettings {
-		out, err := runMailTLSCommand("postconf", "-h", name)
+		out, err := run("postconf", "-h", name)
 		if err != nil {
 			return nil, mailTLSCommandError("postconf read "+name, out, err)
 		}
@@ -505,31 +690,31 @@ func mailTLSCommandError(label string, output []byte, err error) error {
 	return fmt.Errorf("%s: %s: %w", label, detail, err)
 }
 
-func validatePostfixTLSConfig() error {
-	out, err := runMailTLSCommand("postfix", "check")
+func validatePostfixTLSConfig(run mailTLSCommandRunner) error {
+	out, err := run("postfix", "check")
 	if err != nil {
 		return mailTLSCommandError("postfix check", out, err)
 	}
 	return nil
 }
 
-func validateDovecotTLSConfig() error {
-	out, err := runMailTLSCommand("doveconf", "-n")
+func validateDovecotTLSConfig(run mailTLSCommandRunner) error {
+	out, err := run("doveconf", "-n")
 	if err != nil {
 		return mailTLSCommandError("doveconf -n", out, err)
 	}
 	return nil
 }
 
-func reloadMailTLSService(service string) error {
-	out, err := runMailTLSCommand("systemctl", "reload-or-restart", service)
+func reloadMailTLSService(service string, run mailTLSCommandRunner) error {
+	out, err := run("systemctl", "reload-or-restart", service)
 	if err != nil {
 		return mailTLSCommandError("systemctl reload-or-restart "+service, out, err)
 	}
 	return nil
 }
 
-func (snapshot *mailTLSStateSnapshot) rollback() error {
+func (snapshot *mailTLSStateSnapshot) rollback(run mailTLSCommandRunner) error {
 	var rollbackErrors []error
 	for _, fileSnapshot := range snapshot.files {
 		if err := fileSnapshot.restore(); err != nil {
@@ -540,31 +725,37 @@ func (snapshot *mailTLSStateSnapshot) rollback() error {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("restore %s: %w", snapshot.dovecotFile.path, err))
 	}
 	for _, setting := range snapshot.postfixSettings {
-		out, err := runMailTLSCommand("postconf", "-e", setting.name+"="+setting.value)
+		out, err := run("postconf", "-e", setting.name+"="+setting.value)
 		if err != nil {
 			rollbackErrors = append(rollbackErrors, mailTLSCommandError("restore postconf "+setting.name, out, err))
 		}
 	}
 
-	if err := validatePostfixTLSConfig(); err != nil {
+	if err := validatePostfixTLSConfig(run); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("rollback postfix validation: %w", err))
-	} else if err := reloadMailTLSService("postfix"); err != nil {
+	} else if err := reloadMailTLSService("postfix", run); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("rollback postfix reload: %w", err))
 	}
-	if err := validateDovecotTLSConfig(); err != nil {
+	if err := validateDovecotTLSConfig(run); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("rollback dovecot validation: %w", err))
-	} else if err := reloadMailTLSService("dovecot"); err != nil {
+	} else if err := reloadMailTLSService("dovecot", run); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("rollback dovecot reload: %w", err))
 	}
 	return errors.Join(rollbackErrors...)
 }
 
-func setMailTLSFailure(resp *SecureMailTLSResponse, stage string, failure error, snapshot *mailTLSStateSnapshot) {
+func setMailTLSFailure(
+	resp *SecureMailTLSResponse,
+	stage string,
+	failure error,
+	snapshot *mailTLSStateSnapshot,
+	run mailTLSCommandRunner,
+) {
 	resp.Configured = false
 	resp.DefaultCert = ""
 	resp.SNICount = 0
 	resp.Error = fmt.Sprintf("%s: %v", stage, failure)
-	if rollbackErr := snapshot.rollback(); rollbackErr != nil {
+	if rollbackErr := snapshot.rollback(run); rollbackErr != nil {
 		resp.Error += fmt.Sprintf("; rollback incomplete: %v", rollbackErr)
 		return
 	}
@@ -578,52 +769,209 @@ func setMailTLSFailure(resp *SecureMailTLSResponse, stage string, failure error,
 // ensureDefaultMailCert, makinenin hostname'i için bir kez self-signed
 // sertifika üretir. Fırsatçı SMTP TLS zinciri asla doğrulamaz; bu, düz metin
 // taşımayı durdurmaya yeter. Gerçek sertifikalı domain'ler SNI ile ezer.
-func ensureDefaultMailCert() error {
-	if fileExists(defaultMailCert) && fileExists(defaultMailKey) {
-		return nil
-	}
-	if err := os.MkdirAll(mailTLSDir, 0o755); err != nil {
-		return err
-	}
-	host, _ := os.Hostname()
+func ensureDefaultMailCert(host string) error {
+	host = strings.TrimSpace(host)
 	if host == "" {
-		host = "mail.local"
+		host, _ = os.Hostname()
+		host = strings.TrimSpace(host)
+		if host == "" {
+			host = "mail.local"
+		}
 	}
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return ensureDefaultMailCertPair(
+		defaultMailCert,
+		defaultMailKey,
+		host,
+		time.Now(),
+		secureWriteConfig,
+	)
+}
+
+func validateDefaultMailTLSDirectoryPaths(certPath, keyPath string) (string, bool, error) {
+	for label, candidate := range map[string]string{"certificate": certPath, "private key": keyPath} {
+		if candidate != strings.TrimSpace(candidate) || len(candidate) > maxMailTLSPathLen || !filepath.IsAbs(candidate) || filepath.Clean(candidate) != candidate {
+			return "", false, fmt.Errorf("default mail %s path must be canonical and absolute", label)
+		}
+	}
+	separator := string(filepath.Separator)
+	usesProductionTree := func(candidate string) bool {
+		return candidate == mailTLSDir || strings.HasPrefix(candidate, mailTLSDir+separator)
+	}
+	if usesProductionTree(certPath) || usesProductionTree(keyPath) {
+		if certPath != defaultMailCert || keyPath != defaultMailKey {
+			return "", false, fmt.Errorf("production default mail TLS paths must use the exact certificate and private-key pair")
+		}
+		return mailTLSDir, true, nil
+	}
+	certDir := filepath.Dir(certPath)
+	if certDir == "." || certDir == string(filepath.Separator) || certDir != filepath.Dir(keyPath) {
+		return "", false, fmt.Errorf("default mail certificate and key must share one non-root directory")
+	}
+	return certDir, false, nil
+}
+
+func ensureDefaultMailCertPair(
+	certPath string,
+	keyPath string,
+	host string,
+	now time.Time,
+	write defaultMailTLSWriter,
+) error {
+	if write == nil {
+		return fmt.Errorf("default mail TLS writer is required")
+	}
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return fmt.Errorf("default mail TLS hostname is required")
+	}
+	owner, err := prepareDefaultMailTLSDirectory(certPath, keyPath)
 	if err != nil {
 		return err
 	}
-	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+
+	certExists, err := inspectDefaultMailTLSFile(certPath, owner, 0o644)
+	if err != nil {
+		return fmt.Errorf("default mail certificate: %w", err)
+	}
+	keyExists, err := inspectDefaultMailTLSFile(keyPath, owner, 0o600)
+	if err != nil {
+		return fmt.Errorf("default mail private key: %w", err)
+	}
+	if certExists && keyExists {
+		if err := validateDefaultMailCertPair(certPath, keyPath, host, now); err == nil {
+			return nil
+		}
+	}
+
+	certPEM, keyPEM, err := generateDefaultMailCertPair(host, now)
+	if err != nil {
+		return err
+	}
+	// Each publish uses secureWriteConfig: no-follow temp creation, explicit
+	// chmod, file fsync, rename and parent-directory fsync. A crash between the
+	// two publishes leaves a detectable mismatch which the next retry replaces.
+	if err := write(certPath, certPEM, 0o644); err != nil {
+		return fmt.Errorf("publish default mail certificate: %w", err)
+	}
+	if err := write(keyPath, keyPEM, 0o600); err != nil {
+		return fmt.Errorf("publish default mail private key: %w", err)
+	}
+	if _, err := inspectDefaultMailTLSFile(certPath, owner, 0o644); err != nil {
+		return fmt.Errorf("verify default mail certificate metadata: %w", err)
+	}
+	if _, err := inspectDefaultMailTLSFile(keyPath, owner, 0o600); err != nil {
+		return fmt.Errorf("verify default mail private key metadata: %w", err)
+	}
+	if err := validateDefaultMailCertPair(certPath, keyPath, host, now); err != nil {
+		return fmt.Errorf("verify default mail certificate pair: %w", err)
+	}
+	return nil
+}
+
+func inspectDefaultMailTLSFile(
+	path string,
+	expectedOwner mailTLSDirectoryOwner,
+	expectedMode os.FileMode,
+) (bool, error) {
+	if _, err := os.Lstat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	if err := requireMailTLSRegularFile(path, &expectedOwner.uid, expectedMode); err != nil {
+		return false, err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false, err
+	}
+	group, ok := mailTLSFileGroup(info)
+	if !ok || group != expectedOwner.gid {
+		return false, fmt.Errorf("%s group does not match managed directory group", path)
+	}
+	return true, nil
+}
+
+func validateDefaultMailCertPair(certPath, keyPath, host string, now time.Time) error {
+	certPEM, err := secureReadConfig(certPath)
+	if err != nil {
+		return fmt.Errorf("read certificate: %w", err)
+	}
+	keyPEM, err := secureReadConfig(keyPath)
+	if err != nil {
+		return fmt.Errorf("read private key: %w", err)
+	}
+	pair, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return fmt.Errorf("parse certificate and private key: %w", err)
+	}
+	if len(pair.Certificate) == 0 {
+		return fmt.Errorf("certificate chain is empty")
+	}
+	certificate, err := x509.ParseCertificate(pair.Certificate[0])
+	if err != nil {
+		return fmt.Errorf("parse certificate: %w", err)
+	}
+	if now.Before(certificate.NotBefore) {
+		return fmt.Errorf("certificate is not valid yet")
+	}
+	if !now.Before(certificate.NotAfter) {
+		return fmt.Errorf("certificate has expired")
+	}
+	if err := certificate.VerifyHostname(host); err != nil {
+		return fmt.Errorf("certificate does not cover %s: %w", host, err)
+	}
+	if err := certificate.CheckSignature(
+		certificate.SignatureAlgorithm,
+		certificate.RawTBSCertificate,
+		certificate.Signature,
+	); err != nil {
+		return fmt.Errorf("certificate self-signature: %w", err)
+	}
+	return nil
+}
+
+func generateDefaultMailCertPair(host string, now time.Time) ([]byte, []byte, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, err
+	}
 	tmpl := x509.Certificate{
 		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: host},
 		DNSNames:     []string{host},
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().AddDate(0, 0, mailCertValidDays),
+		NotBefore:    now.Add(-time.Hour),
+		NotAfter:     now.AddDate(0, 0, mailCertValidDays),
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &key.PublicKey, key)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	if err := os.WriteFile(defaultMailCert,
-		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o644); err != nil {
-		return err
-	}
-	return os.WriteFile(defaultMailKey,
-		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), 0o600)
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), nil
 }
 
 // configurePostfixTLS sets the default certificate, protocol floor,
 // opportunistic TLS both ways, HELO name and the SNI map.
 // configurePostfixTLS, varsayılan sertifikayı, protokol tabanını, iki yönlü
 // fırsatçı TLS'i, HELO adını ve SNI map'ini ayarlar.
-func configurePostfixTLS(myhostname string, sni []MailSNIEntry) error {
+func configurePostfixTLS(
+	myhostname string,
+	sni []MailSNIEntry,
+	sniMapType string,
+	run mailTLSCommandRunner,
+) error {
 	settings := [][2]string{
 		{"smtpd_tls_cert_file", defaultMailCert},
 		{"smtpd_tls_key_file", defaultMailKey},
@@ -641,15 +989,18 @@ func configurePostfixTLS(myhostname string, sni []MailSNIEntry) error {
 		settings = append(settings, [2]string{"myhostname", myhostname})
 	}
 	if len(sni) > 0 {
-		if err := writePostfixSNIMap(sni); err != nil {
+		if sniMapType == "" {
+			return fmt.Errorf("Postfix SNI map type was not selected during preflight")
+		}
+		if err := writePostfixSNIMap(sni, sniMapType, run); err != nil {
 			return err
 		}
-		settings = append(settings, [2]string{"tls_server_sni_maps", postfixMapType() + ":" + postfixSNIPath})
+		settings = append(settings, [2]string{"tls_server_sni_maps", sniMapType + ":" + postfixSNIPath})
 	} else {
 		settings = append(settings, [2]string{"tls_server_sni_maps", ""})
 	}
 	for _, s := range settings {
-		if out, err := runMailTLSCommand("postconf", "-e", s[0]+"="+s[1]); err != nil {
+		if out, err := run("postconf", "-e", s[0]+"="+s[1]); err != nil {
 			return mailTLSCommandError("postconf "+s[0], out, err)
 		}
 	}
@@ -660,7 +1011,14 @@ func configurePostfixTLS(myhostname string, sni []MailSNIEntry) error {
 // which embeds the PEM contents into the .db (required for SNI maps).
 // writePostfixSNIMap, kaynak map'i yazar ve postmap -F ile derler; -F, PEM
 // içeriklerini .db'ye gömer (SNI map'leri için gereklidir).
-func writePostfixSNIMap(sni []MailSNIEntry) error {
+func writePostfixSNIMap(
+	sni []MailSNIEntry,
+	mapType string,
+	run mailTLSCommandRunner,
+) error {
+	if mapType != "lmdb" && mapType != "hash" && mapType != "btree" {
+		return fmt.Errorf("invalid preflighted Postfix SNI map type %q", mapType)
+	}
 	var b strings.Builder
 	b.WriteString("# Managed by CelikPanel — per-domain mail certificates (SNI).\n")
 	for _, e := range sni {
@@ -672,7 +1030,7 @@ func writePostfixSNIMap(sni []MailSNIEntry) error {
 			fmt.Fprintf(&b, "%s %s %s\n", name, e.KeyPath, e.CertPath)
 		}
 	}
-	if err := os.WriteFile(postfixSNIPath, []byte(b.String()), 0o600); err != nil {
+	if err := secureWriteConfig(postfixSNIPath, []byte(b.String()), 0o600); err != nil {
 		return err
 	}
 	// Same portability trap as the virtual maps: `hash:` is unusable on distros
@@ -686,11 +1044,7 @@ func writePostfixSNIMap(sni []MailSNIEntry) error {
 	// OLMALIDIR — postmap -F, PEM içeriğini dizine gömer — bu yüzden texthash
 	// burada seçenek değil; postfix'in okuyamayacağı bir harita yazmaktansa
 	// durumu söyle.
-	mt := postfixMapType()
-	if mt == "texthash" {
-		return fmt.Errorf("postfix on this system has no indexed table type (lmdb/hash/btree); per-domain mail certificates need one")
-	}
-	if out, err := runMailTLSCommand("postmap", "-F", mt+":"+postfixSNIPath); err != nil {
+	if out, err := run("postmap", "-F", mapType+":"+postfixSNIPath); err != nil {
 		return mailTLSCommandError("postmap -F", out, err)
 	}
 	return nil
@@ -700,7 +1054,7 @@ func writePostfixSNIMap(sni []MailSNIEntry) error {
 // local_name block per SNI name so IMAP/POP clients get the right chain.
 // configureDovecotTLS, TLS ekimizi yazar: varsayılan sertifika artı SNI adı
 // başına bir local_name bloğu; IMAP/POP istemcileri doğru zinciri alır.
-func configureDovecotTLS(sni []MailSNIEntry) error {
+func configureDovecotTLS(sni []MailSNIEntry, run mailTLSCommandRunner) error {
 	if err := os.MkdirAll(filepath.Dir(dovecotTLSConf), 0o755); err != nil {
 		return err
 	}
@@ -708,8 +1062,59 @@ func configureDovecotTLS(sni []MailSNIEntry) error {
 	// validated by dovecot's parser before any restart — see dovecot_dialect.go.
 	// Lehçe-farkında (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=) ve yeniden
 	// başlatmadan önce dovecot ayrıştırıcısıyla doğrulanır.
-	conf := buildDovecotTLSConf(dovecotIs24(), defaultMailCert, defaultMailKey, sni)
-	return applyDovecotConf(dovecotTLSConf, conf)
+	conf := buildDovecotTLSConf(dovecotIs24WithRunner(run), defaultMailCert, defaultMailKey, sni)
+	return applyDovecotTLSConf(dovecotTLSConf, conf, run)
+}
+
+func dovecotIs24WithRunner(run mailTLSCommandRunner) bool {
+	out, err := run("dovecot", "--version")
+	if err != nil {
+		return true
+	}
+	fields := strings.Fields(strings.TrimSpace(string(out)))
+	if len(fields) == 0 {
+		return true
+	}
+	parts := strings.SplitN(fields[0], ".", 3)
+	if len(parts) < 2 {
+		return true
+	}
+	major, majorErr := strconv.Atoi(parts[0])
+	minor, minorErr := strconv.Atoi(parts[1])
+	if majorErr != nil || minorErr != nil {
+		return true
+	}
+	return major > 2 || (major == 2 && minor >= 4)
+}
+
+func applyDovecotTLSConf(
+	path string,
+	content string,
+	run mailTLSCommandRunner,
+) error {
+	snapshot, err := snapshotMailFile(path)
+	if err != nil {
+		return fmt.Errorf("snapshot dovecot configuration: %w", err)
+	}
+	if err := secureWriteConfig(path, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("write dovecot configuration: %w", err)
+	}
+	out, err := run("doveconf", "-n")
+	if err == nil {
+		return nil
+	}
+	if rollbackErr := restoreMailFile(snapshot); rollbackErr != nil {
+		return fmt.Errorf(
+			"dovecot rejected the configuration and rollback failed: %s: %v",
+			dovecotFirstError(string(out)),
+			rollbackErr,
+		)
+	}
+	detail := dovecotFirstError(string(out))
+	if strings.TrimSpace(string(out)) == "" {
+		detail = err.Error()
+	}
+	return fmt.Errorf("dovecot rejected the configuration: %s", detail)
 }
 
 func fileExists(p string) bool {

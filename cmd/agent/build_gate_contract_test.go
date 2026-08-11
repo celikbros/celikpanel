@@ -173,6 +173,17 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
+			name: "ReconcileMailTLSMutation",
+			run: func(expected string) string {
+				var response SecureMailTLSResponse
+				_ = agent.ReconcileMailTLSMutation(
+					&ReconcileMailTLSMutationRequest{ExpectedBuildCommit: expected},
+					&response,
+				)
+				return response.Error
+			},
+		},
+		{
 			name: "RenewLetsEncryptCertificate",
 			run: func(expected string) string {
 				var response RenewCertResponse
