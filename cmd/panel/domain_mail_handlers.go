@@ -300,7 +300,16 @@ func (p *Panel) handleUpdateEmailPassword(w http.ResponseWriter, r *http.Request
 	}, &response); err != nil {
 		// Do not pass a remote error through the logger: an untrusted agent
 		// message must not be able to echo the mailbox address or password.
-		writeServerError(w, errors.New("mail password rotation RPC failed"))
+		// Preserve only the two local platform-policy sentinels, stripped of
+		// any wrapper text, so their stable operator-facing codes survive.
+		switch {
+		case isPureWrappedError(err, errAgentRPCPlatformCapabilityDenied):
+			writeServerError(w, errAgentRPCPlatformCapabilityDenied)
+		case isPureWrappedError(err, errAgentRPCPlatformIdentityUnavailable):
+			writeServerError(w, errAgentRPCPlatformIdentityUnavailable)
+		default:
+			writeServerError(w, errors.New("mail password rotation RPC failed"))
+		}
 		return
 	}
 	if !response.Applied {

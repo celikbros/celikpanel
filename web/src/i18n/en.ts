@@ -318,6 +318,8 @@ export const en = {
     'err.ACCOUNT_SUSPENDED': 'This account is suspended.',
     'err.DOMAIN_DELETION_PENDING': 'This domain is being deleted. Mail settings cannot be changed until deletion finishes or is safely retried.',
     'err.INTERNAL': 'The server hit an internal error. Try again; if it persists, check the panel logs.',
+    'err.PLATFORM_CAPABILITY_UNAVAILABLE': 'This operation is not available for the connected server platform.',
+    'err.PLATFORM_IDENTITY_UNAVAILABLE': 'The connected server\'s platform identity could not be verified. Try again; if it persists, check the agent connection.',
     'err.REPO_STATUS_UNAVAILABLE': 'Repository status could not be checked because the server agent is unavailable. Try again.',
     'err.REPO_PACKAGES_UNAVAILABLE': 'The repository is enabled, but its package list could not be loaded. The distribution default remains available when the repository is optional.',
     'err.REPO_AGENT_UNAVAILABLE': 'The server agent could not complete the repository operation. Try again and check the audit log if it persists.',

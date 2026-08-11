@@ -1131,7 +1131,18 @@ func operationStartFailure(err error) *serviceOperationFailure {
 	)
 }
 
+func platformServiceOperationFailure(cause error) *serviceOperationFailure {
+	classification, ok := classifyAgentRPCPlatformError(cause)
+	if !ok {
+		return nil
+	}
+	return operationFailure(classification.Code, classification.Message, cause)
+}
+
 func serviceInstallFailure(cause error) *serviceOperationFailure {
+	if failure := platformServiceOperationFailure(cause); failure != nil {
+		return failure
+	}
 	return operationFailure(
 		"service_install_failed",
 		"The service could not be installed and verified.",
@@ -1148,6 +1159,9 @@ func firewallSyncFailure(cause error) *serviceOperationFailure {
 }
 
 func nodeInstallFailure(cause error) *serviceOperationFailure {
+	if failure := platformServiceOperationFailure(cause); failure != nil {
+		return failure
+	}
 	return operationFailure(
 		"node_runtime_install_failed",
 		"The Node.js runtime could not be installed and verified.",

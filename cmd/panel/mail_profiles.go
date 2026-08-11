@@ -227,6 +227,9 @@ func newMailProfileResult(profile mailProfileDefinition) serviceOperationResult 
 }
 
 func mailProfileInstallFailure(cause error) *serviceOperationFailure {
+	if failure := platformServiceOperationFailure(cause); failure != nil {
+		return failure
+	}
 	return operationFailure(
 		"mail_profile_install_failed",
 		"The mail profile could not be installed and verified.",

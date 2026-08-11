@@ -49,24 +49,26 @@ type apiErrorBody struct {
 // Stable refusal codes. Renaming one is an API break — don't.
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
-	errCodeInternal              = "INTERNAL"
-	errCodeAuthRequired          = "AUTH_REQUIRED"
-	errCodeAdminOnly             = "ADMIN_ONLY"
-	errCodeAdditionalUserScope   = "ADDITIONAL_USER_SCOPE"
-	errCodeAccountSuspended      = "ACCOUNT_SUSPENDED"
-	errCodeDomainDeletionPending = "DOMAIN_DELETION_PENDING"
-	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
-	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"
-	errCodeDNSSetupRequired      = "DNS_SETUP_REQUIRED"
-	errCodeDNSClusterPeerIsLocal = "DNS_CLUSTER_PEER_IS_LOCAL"
-	errCodeDNSPublicationFailed  = "DNS_PUBLICATION_FAILED"
-	errCodeWebServerRequired     = "WEB_SERVER_REQUIRED"
-	errCodePHPRequired           = "PHP_REQUIRED"
-	errCodeNoSubscription        = "NO_SUBSCRIPTION"
-	errCodeQuotaDomains          = "QUOTA_DOMAINS_EXCEEDED"
-	errCodeQuotaDisk             = "QUOTA_DISK_EXCEEDED"
-	errCodeEntitlement           = "ENTITLEMENT_REQUIRED"
-	errCodeFirewallNoEngine      = "FIREWALL_ENGINE_MISSING"
+	errCodeInternal                      = "INTERNAL"
+	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
+	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"
+	errCodeAuthRequired                  = "AUTH_REQUIRED"
+	errCodeAdminOnly                     = "ADMIN_ONLY"
+	errCodeAdditionalUserScope           = "ADDITIONAL_USER_SCOPE"
+	errCodeAccountSuspended              = "ACCOUNT_SUSPENDED"
+	errCodeDomainDeletionPending         = "DOMAIN_DELETION_PENDING"
+	errCodeDNSServerRequired             = "DNS_SERVER_REQUIRED"
+	errCodeDNSSettingsRequired           = "DNS_SETTINGS_REQUIRED"
+	errCodeDNSSetupRequired              = "DNS_SETUP_REQUIRED"
+	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
+	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
+	errCodeWebServerRequired             = "WEB_SERVER_REQUIRED"
+	errCodePHPRequired                   = "PHP_REQUIRED"
+	errCodeNoSubscription                = "NO_SUBSCRIPTION"
+	errCodeQuotaDomains                  = "QUOTA_DOMAINS_EXCEEDED"
+	errCodeQuotaDisk                     = "QUOTA_DISK_EXCEEDED"
+	errCodeEntitlement                   = "ENTITLEMENT_REQUIRED"
+	errCodeFirewallNoEngine              = "FIREWALL_ENGINE_MISSING"
 	// POOL_IDENTITY_FIXED: the caller tried to set who an FPM pool runs as or
 	// which socket it answers on. Those are the panel's to decide — they are
 	// the boundary between tenants, not a setting — so the attempt is refused
@@ -150,6 +152,66 @@ const (
 	// hâlde bırakır.
 	errCodeConfigInvalid = "CONFIG_INVALID"
 )
+
+type agentRPCPlatformErrorClassification struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+type singleErrorUnwrapper interface {
+	Unwrap() error
+}
+
+type multiErrorUnwrapper interface {
+	Unwrap() []error
+}
+
+// isPureWrappedError accepts only one linear wrapper chain ending at target.
+// Joined/aggregate errors may contain rollback, compensation or partial-state
+// failures, so they must retain the generic or caller-specific failure path.
+func isPureWrappedError(err, target error) bool {
+	if err == nil || target == nil {
+		return false
+	}
+	for err != nil {
+		if err == target {
+			return true
+		}
+		if _, joined := err.(multiErrorUnwrapper); joined {
+			return false
+		}
+		wrapped, ok := err.(singleErrorUnwrapper)
+		if !ok {
+			return false
+		}
+		err = wrapped.Unwrap()
+	}
+	return false
+}
+
+// classifyAgentRPCPlatformError exposes only the two local, policy-authored
+// platform failures when they are the sole cause. Transport, context, remote
+// RPC and aggregate/compensation errors deliberately retain INTERNAL or their
+// caller-specific partial-state contract.
+func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassification, bool) {
+	switch {
+	case isPureWrappedError(err, errAgentRPCPlatformCapabilityDenied):
+		return agentRPCPlatformErrorClassification{
+			Status:  http.StatusConflict,
+			Code:    errCodePlatformCapabilityUnavailable,
+			Message: "this operation is unavailable on the connected server platform",
+		}, true
+	case isPureWrappedError(err, errAgentRPCPlatformIdentityUnavailable):
+		return agentRPCPlatformErrorClassification{
+			Status:  http.StatusBadGateway,
+			Code:    errCodePlatformIdentityUnavailable,
+			Message: "the connected server platform identity could not be verified",
+		}, true
+	default:
+		return agentRPCPlatformErrorClassification{}, false
+	}
+}
 
 // writeCodedError is the single writer of the contract. action, when
 // non-empty, is an in-panel path that fixes the refusal (e.g. "/services").
@@ -264,9 +326,21 @@ func writeWebmailUninstallPartial(w http.ResponseWriter, mutationApplied bool) {
 	})
 }
 
-// writeServerError logs the internal error and returns a generic 500.
-// writeServerError iç hatayı log'lar ve genel bir 500 döndürür.
+// writeServerError logs the internal cause. Local platform-policy sentinels
+// receive stable operator-facing codes; every other error remains a generic
+// INTERNAL response.
 func writeServerError(w http.ResponseWriter, err error) {
+	if classification, ok := classifyAgentRPCPlatformError(err); ok {
+		log.Printf("[%d] %v", classification.Status, err)
+		writeCodedError(
+			w,
+			classification.Status,
+			classification.Code,
+			classification.Message,
+			"",
+		)
+		return
+	}
 	if err != nil {
 		log.Printf("[500] %v", err)
 	}
@@ -283,17 +357,15 @@ func writeClientError(w http.ResponseWriter, status int, message string) {
 	writeCodedError(w, status, "", message, "")
 }
 
-// writeAgentError handles a failed agent RPC. The agent's error string may
-// carry command output and paths, so it is logged, never returned; the
-// transport error (if any) is logged too, and the client gets a generic
-// 500.
-// writeAgentError, başarısız bir agent RPC'sini ele alır. Agent'ın hata
-// metni komut çıktısı ve yollar taşıyabilir; bu yüzden log'lanır, asla
-// döndürülmez; taşıma hatası (varsa) da log'lanır ve istemci genel bir
-// 500 alır.
+// writeAgentError logs untrusted agent detail without returning it to the
+// client, then delegates stable local-policy classification to writeServerError.
 func writeAgentError(w http.ResponseWriter, err error, agentDetail string) {
 	if agentDetail != "" {
-		log.Printf("[500][agent] %s", agentDetail)
+		status := http.StatusInternalServerError
+		if classification, ok := classifyAgentRPCPlatformError(err); ok {
+			status = classification.Status
+		}
+		log.Printf("[%d][agent] %s", status, agentDetail)
 	}
 	writeServerError(w, err)
 }

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { readApiError } from '../src/lib/apiError.ts';
+import { apiErrorText, readApiError } from '../src/lib/apiError.ts';
+import { en } from '../src/i18n/en.ts';
+import { tr } from '../src/i18n/tr.ts';
 
 test('readApiError keeps only string detail lines from JSON errors', async () => {
   const response = new Response(JSON.stringify({
@@ -29,4 +31,22 @@ test('readApiError ignores a non-array details value', async () => {
   const error = await readApiError(response);
 
   assert.equal(error.details, undefined);
+});
+
+test('platform refusal codes have localized operator-safe text', () => {
+  const translate = (catalog) => (key) => catalog[key] ?? key;
+  for (const code of [
+    'PLATFORM_CAPABILITY_UNAVAILABLE',
+    'PLATFORM_IDENTITY_UNAVAILABLE',
+  ]) {
+    const remoteText = 'remote secret and command output';
+    const english = apiErrorText({ code, message: remoteText }, translate(en));
+    const turkish = apiErrorText({ code, message: remoteText }, translate(tr));
+    assert.equal(english, en['err.' + code]);
+    assert.equal(turkish, tr['err.' + code]);
+    assert.ok(english.length > 0 && turkish.length > 0);
+    assert.ok(!english.includes(remoteText) && !turkish.includes(remoteText));
+    assert.ok(!english.includes('No host changes were made'));
+    assert.ok(!turkish.includes('hiçbir değişiklik yapılmadı'));
+  }
 });

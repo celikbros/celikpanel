@@ -311,6 +311,8 @@ export const tr: Record<TranslationKey, string> = {
     'err.ACCOUNT_SUSPENDED': 'Bu hesap askıya alınmış.',
     'err.DOMAIN_DELETION_PENDING': 'Bu domain siliniyor. Silme işlemi tamamlanana veya güvenle yeniden denenene kadar posta ayarları değiştirilemez.',
     'err.INTERNAL': 'Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın.',
+    'err.PLATFORM_CAPABILITY_UNAVAILABLE': 'Bu işlem bağlı sunucu platformunda kullanılamıyor.',
+    'err.PLATFORM_IDENTITY_UNAVAILABLE': 'Bağlı sunucunun platform kimliği doğrulanamadı. Yeniden deneyin; sürerse agent bağlantısını kontrol edin.',
     'err.REPO_STATUS_UNAVAILABLE': 'Sunucu agentına ulaşılamadığı için depo durumu denetlenemedi. Yeniden deneyin.',
     'err.REPO_PACKAGES_UNAVAILABLE': 'Depo etkin ancak paket listesi yüklenemedi. Depo isteğe bağlıysa dağıtımın varsayılan paketi kullanılabilir.',
     'err.REPO_AGENT_UNAVAILABLE': 'Sunucu agentı depo işlemini tamamlayamadı. Yeniden deneyin; sürerse denetim günlüğüne bakın.',
