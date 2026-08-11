@@ -1,7 +1,5 @@
 package transport
 
-import "os"
-
 const defaultWebmailSocketPath = "/run/celikpanel-webmail.sock"
 
 // WebmailSocketPath is the authenticated local boundary between the panel
@@ -9,12 +7,10 @@ const defaultWebmailSocketPath = "/run/celikpanel-webmail.sock"
 // root-owned /run: an unprivileged site user cannot create, replace or remove
 // its socket node and impersonate the webmail upstream.
 //
-// CELIKPANEL_WEBMAIL_SOCKET exists for isolated development and tests. The
-// privileged agent validates the resolved value before placing it in nginx
-// configuration.
+// This boundary is intentionally not configurable: both the panel and the
+// privileged agent must agree on a path directly below root-owned /run. Tests
+// that need a temporary socket inject that path into their local helper rather
+// than changing the production boundary through process environment.
 func WebmailSocketPath() string {
-	if path := os.Getenv("CELIKPANEL_WEBMAIL_SOCKET"); path != "" {
-		return path
-	}
 	return defaultWebmailSocketPath
 }

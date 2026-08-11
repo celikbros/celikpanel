@@ -16,6 +16,12 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
+const (
+	roundcubeUninstallMutationTimeout = 15 * time.Minute
+	roundcubeUninstallScanTimeout     = 2 * time.Minute
+	roundcubeUninstallAuditTimeout    = 5 * time.Second
+)
+
 // handleServiceInstall installs a managed service on demand (admin-only via
 // isAdminOnlyPath). The panel installs nothing at setup; the admin adds the
 // services they actually want, and the agent installs exactly the whitelisted
@@ -511,49 +517,143 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	// bulamayınca config'ini kaldırır). Burada ele alınıp döndürülür.
 	if req.ServiceID == "roundcube" {
 		var rmResp transport.RemoveRoundcubeResponse
-		err := p.withStandaloneAgentMutation(r.Context(), "service_uninstall", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
-			request := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
-			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &request, &rmResp); err != nil {
-				return err
-			}
-			if rmResp.Error != "" {
-				return errors.New(rmResp.Error)
-			}
-			return nil
-		})
-		if err != nil && rmResp.Error == "" {
-			writeAgentError(w, err, "roundcube remove")
-			return
-		}
-		if rmResp.Error != "" {
-			writeClientError(w, http.StatusConflict, rmResp.Error)
-			return
-		}
-		// The agent confirmed the host mutation. Record that success before
-		// best-effort follow-up work so a failed refresh cannot erase history.
-		// Agent makine değişikliğini doğruladı. Başarısız bir tazeleme geçmişi
-		// silemesin diye başarıyı best-effort takip işlerinden önce kaydet.
-		p.audit(r, "service.uninstall:roundcube", "service", 0)
 		var wmResp transport.ConfigureWebmailResponse
-		err = p.withStandaloneAgentMutation(r.Context(), "webmail_configure", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
+		var mutationWorkErr error
+		mutationApplied := false
+		configureAttempted := false
+
+		// A browser going away must not strand the host half-mutated. The durable
+		// lease, both idempotent host steps and lease finalization therefore run
+		// under their own hard deadline while retaining caller values for
+		// attribution.
+		mutationCtx, cancelMutation := context.WithTimeout(
+			context.WithoutCancel(r.Context()),
+			roundcubeUninstallMutationTimeout,
+		)
+		mutationErr := p.withStandaloneAgentMutation(mutationCtx, "service_uninstall", "roundcube", "", func(callCtx context.Context, binding agentMutationBinding) error {
 			request := transport.WebmailMutationRequest{ServiceMutationBinding: binding}
-			if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &request, &wmResp); err != nil {
-				return err
+			var removeCallErr error
+			for attempt := 0; attempt < 2; attempt++ {
+				rmResp = transport.RemoveRoundcubeResponse{}
+				removeCallErr = p.agentClient.CallContext(callCtx, "Agent.RemoveRoundcube", &request, &rmResp)
+				if removeCallErr == nil {
+					break
+				}
 			}
-			if wmResp.Error != "" {
-				return errors.New(wmResp.Error)
+
+			var workErrors []error
+			if removeCallErr != nil {
+				workErrors = append(workErrors, fmt.Errorf("remove Roundcube after retry: %w", removeCallErr))
+			} else {
+				mutationApplied = rmResp.MutationApplied
+				if rmResp.Error != "" {
+					workErrors = append(workErrors, fmt.Errorf("remove Roundcube: %s", rmResp.Error))
+				}
+				if !rmResp.Removed {
+					workErrors = append(workErrors, errors.New("agent did not confirm Roundcube removal"))
+				}
 			}
-			return nil
+
+			// A lost Remove response is ambiguous, and an applied Remove may carry a
+			// post-mutation error. Configure is idempotent and serialized by the
+			// same agent step lock, so it is the safe reconciliation in both cases.
+			if removeCallErr != nil || rmResp.Removed || rmResp.MutationApplied {
+				configureAttempted = true
+				var configureCallErr error
+				for attempt := 0; attempt < 2; attempt++ {
+					wmResp = transport.ConfigureWebmailResponse{}
+					configureCallErr = p.agentClient.CallContext(callCtx, "Agent.ConfigureWebmail", &request, &wmResp)
+					if configureCallErr == nil {
+						break
+					}
+				}
+				if configureCallErr != nil {
+					workErrors = append(workErrors, fmt.Errorf("clean up Roundcube webmail configuration after retry: %w", configureCallErr))
+				} else {
+					if wmResp.Error != "" {
+						workErrors = append(workErrors, fmt.Errorf("clean up Roundcube webmail configuration: %s", wmResp.Error))
+					}
+					if !wmResp.Configured {
+						workErrors = append(workErrors, errors.New("agent did not confirm Roundcube webmail cleanup"))
+					}
+					if wmResp.Present {
+						workErrors = append(workErrors, errors.New("agent still reports Roundcube present after webmail cleanup"))
+					}
+				}
+			}
+
+			mutationWorkErr = errors.Join(workErrors...)
+			return mutationWorkErr
 		})
-		if err != nil || wmResp.Error != "" {
-			log.Printf("webmail configure after uninstall: %v %s", err, wmResp.Error)
+		cancelMutation()
+
+		// The final host observation and every audit write get new detached,
+		// bounded contexts. Clone retains the authenticated caller and request
+		// metadata even when the original HTTP context has been canceled.
+		auditDetached := func(action string) {
+			auditCtx, cancelAudit := context.WithTimeout(
+				context.WithoutCancel(r.Context()),
+				roundcubeUninstallAuditTimeout,
+			)
+			defer cancelAudit()
+			p.audit(r.Clone(auditCtx), action, "service", 0)
 		}
-		if _, err := p.scanManagedServices(r.Context()); err != nil {
-			log.Printf("rescan after roundcube uninstall: %v", err)
-			p.audit(r, "service.uninstall.refresh.failed:roundcube — "+auditReason(err.Error()), "service", 0)
-			writeServiceStateRefreshFailed(w)
+		scanCtx, cancelScan := context.WithTimeout(
+			context.WithoutCancel(r.Context()),
+			roundcubeUninstallScanTimeout,
+		)
+		services, scanErr := p.scanManagedServices(scanCtx)
+		cancelScan()
+
+		cleanMutation := mutationErr == nil && mutationWorkErr == nil &&
+			rmResp.Removed && rmResp.Error == "" &&
+			configureAttempted && wmResp.Configured && !wmResp.Present && wmResp.Error == ""
+		failureErr := mutationErr
+		if failureErr == nil {
+			failureErr = mutationWorkErr
+		} else if mutationWorkErr != nil && !errors.Is(failureErr, mutationWorkErr) {
+			failureErr = errors.Join(mutationWorkErr, failureErr)
+		}
+
+		if scanErr != nil {
+			log.Printf("rescan after roundcube uninstall: %v", scanErr)
+			if cleanMutation {
+				auditDetached("service.uninstall:roundcube")
+			} else {
+				reason := failureErr
+				if reason == nil {
+					reason = errors.New("Roundcube removal outcome is uncertain")
+				}
+				auditDetached("service.uninstall.partial:roundcube — " + auditReason(reason.Error()))
+			}
+			auditDetached("service.uninstall.refresh.failed:roundcube — " + auditReason(scanErr.Error()))
+			writeRoundcubeStateRefreshFailed(w, mutationApplied)
 			return
 		}
+
+		// The fresh scan is authoritative. Even a positive RPC acknowledgement
+		// cannot be reported as applied when the host still exposes Roundcube.
+		if verifyManagedServiceInstalled(services, "roundcube") {
+			installedErr := errors.New("fresh service scan still reports Roundcube installed")
+			if failureErr != nil {
+				installedErr = errors.Join(failureErr, installedErr)
+			}
+			auditDetached("service.uninstall.failed:roundcube — " + auditReason(installedErr.Error()))
+			writeAgentError(w, installedErr, "roundcube remains installed after removal attempt")
+			return
+		}
+
+		if !cleanMutation {
+			if failureErr == nil {
+				failureErr = errors.New("Roundcube removal could not be fully confirmed")
+			}
+			log.Printf("roundcube uninstall partial: %v", failureErr)
+			auditDetached("service.uninstall.partial:roundcube — " + auditReason(failureErr.Error()))
+			writeWebmailUninstallPartial(w, mutationApplied)
+			return
+		}
+
+		auditDetached("service.uninstall:roundcube")
 		json.NewEncoder(w).Encode(map[string]any{"removed": rmResp.Removed, "success": true})
 		return
 	}

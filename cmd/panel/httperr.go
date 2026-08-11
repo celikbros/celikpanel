@@ -107,12 +107,15 @@ const (
 	// değişikliğinin makineye ulaştığını ancak paket kaldırmanın başarısız
 	// olduğunu belirtir. Taze tarama zaten kullanılabilir.
 	errCodeServiceUninstallPartial = "SERVICE_UNINSTALL_PARTIAL"
-	// SERVICE_STATE_REFRESH_FAILED means the requested service mutation
-	// completed, but the mandatory follow-up probe failed. The caller must not
-	// mistake stale cache data for the result of the action.
-	// SERVICE_STATE_REFRESH_FAILED, istenen servis değişikliğinin tamamlandığı
-	// ancak zorunlu takip yoklamasının başarısız olduğu anlamına gelir. Çağıran,
-	// bayat önbellek verisini işlemin sonucu sanmamalıdır.
+	errCodeWebmailUninstallPartial = "WEBMAIL_UNINSTALL_PARTIAL"
+	// SERVICE_STATE_REFRESH_FAILED means the mandatory follow-up probe failed
+	// after a service action. The response flags and message say whether the
+	// mutation itself was positively confirmed; callers must never infer that
+	// from this code or mistake stale cache data for the result of the action.
+	// SERVICE_STATE_REFRESH_FAILED, bir servis işleminden sonraki zorunlu takip
+	// yoklamasının başarısız olduğunu belirtir. Değişikliğin pozitif olarak
+	// doğrulanıp doğrulanmadığını yanıt bayrakları ve mesaj söyler; çağıran bunu
+	// hata kodundan çıkarmamalı veya bayat önbelleği işlemin sonucu sanmamalıdır.
 	errCodeServiceStateRefreshFailed = "SERVICE_STATE_REFRESH_FAILED"
 	// SERVICE_STATE_UNVERIFIED means persisted scan bytes could not be decoded
 	// as a verified snapshot; fabricated not-installed rows must not be served.
@@ -164,22 +167,38 @@ func writeCodedErrorDetails(w http.ResponseWriter, status int, code, message, ac
 	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action, Details: details})
 }
 
-// writeServiceStateRefreshFailed reports the deliberately asymmetric result:
-// the host mutation is complete, but the cache still represents the previous
-// verified scan. Clients must lock further mutations until a fresh scan wins.
-// writeServiceStateRefreshFailed, bilinçli olarak asimetrik sonucu bildirir:
-// makine değişikliği tamamlanmıştır ancak önbellek önceki doğrulanmış taramayı
-// temsil eder. İstemci, taze tarama başarılı olana dek yeni değişiklikleri
-// kilitlemelidir.
-func writeServiceStateRefreshFailed(w http.ResponseWriter) {
+// writeServiceStateRefreshFailure centralizes the refresh-failure code while
+// emitting outcome flags only when the host mutation was positively confirmed.
+func writeServiceStateRefreshFailure(w http.ResponseWriter, message string, mutationApplied bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadGateway)
 	_ = json.NewEncoder(w).Encode(apiErrorBody{
-		Error:           "service action completed, but the refreshed service state could not be verified",
+		Error:           message,
 		Code:            errCodeServiceStateRefreshFailed,
-		PartialSuccess:  true,
-		MutationApplied: true,
+		PartialSuccess:  mutationApplied,
+		MutationApplied: mutationApplied,
 	})
+}
+
+// writeServiceStateRefreshFailed reports the deliberately asymmetric result
+// used by ordinary service operations: the host mutation is complete, but the
+// cache still represents the previous verified scan.
+func writeServiceStateRefreshFailed(w http.ResponseWriter) {
+	writeServiceStateRefreshFailure(
+		w,
+		"service action completed, but the refreshed service state could not be verified",
+		true,
+	)
+}
+
+// writeRoundcubeStateRefreshFailed does not turn an idempotent already-absent
+// result or a lost RPC response into proof that this request changed the host.
+func writeRoundcubeStateRefreshFailed(w http.ResponseWriter, mutationApplied bool) {
+	writeServiceStateRefreshFailure(
+		w,
+		"the Roundcube removal outcome and current service state could not be verified",
+		mutationApplied,
+	)
 }
 
 // writeServiceFirewallSyncFailed reports a verified partial success: the
@@ -227,6 +246,21 @@ func writeServiceUninstallPartial(w http.ResponseWriter) {
 		Action:          "/services",
 		PartialSuccess:  true,
 		MutationApplied: true,
+	})
+}
+
+// writeWebmailUninstallPartial reports a fresh scan where Roundcube is no
+// longer detected, while serving cleanup or durable lease finalization still
+// needs operator attention. An already-absent tree is not an applied mutation.
+func writeWebmailUninstallPartial(w http.ResponseWriter, mutationApplied bool) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "Roundcube removal is no longer detected, but webmail cleanup or durable finalization could not be fully verified",
+		Code:            errCodeWebmailUninstallPartial,
+		Action:          "/services",
+		PartialSuccess:  true,
+		MutationApplied: mutationApplied,
 	})
 }
 

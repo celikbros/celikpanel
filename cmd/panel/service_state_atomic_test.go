@@ -42,20 +42,50 @@ type serviceStateAtomicAgent struct {
 	uninstallCalls   atomic.Int32
 	wireFilterCalls  atomic.Int32
 	roundcubeCalls   atomic.Int32
+	webmailCalls     atomic.Int32
 	nodeRemoveCalls  atomic.Int32
 	serviceRemoved   atomic.Bool
+	roundcubePresent atomic.Bool
 
-	getServicesError    error
-	firewallStatusError error
-	installedIDsError   error
-	repoPackagesError   error
-	repoPackagesReply   string
-	instancesError      error
-	instancesReply      string
-	serviceActionError  string
-	uninstallReplyError string
-	uninstallMutation   bool
-	wireFilterReply     string
+	getServicesError        error
+	firewallStatusError     error
+	installedIDsError       error
+	repoPackagesError       error
+	repoPackagesReply       string
+	instancesError          error
+	instancesReply          string
+	serviceActionError      string
+	uninstallReplyError     string
+	uninstallMutation       bool
+	wireFilterReply         string
+	roundcubeRemovedFalse   bool
+	roundcubeMutation       bool
+	roundcubeReplyError     string
+	roundcubeRPCFailures    int32
+	roundcubeFailureApplies bool
+	roundcubeCallHook       func()
+	webmailConfiguredFalse  bool
+	webmailPresent          bool
+	webmailReplyError       string
+	webmailRPCFailures      int32
+	finishReplyError        string
+	roundcubeRequestID      string
+	roundcubeOwnerID        string
+	webmailRequestID        string
+	webmailOwnerID          string
+	roundcubeBindings       []transport.ServiceMutationBinding
+	webmailBindings         []transport.ServiceMutationBinding
+}
+
+func (a *serviceStateAtomicAgent) FinishServiceMutation(
+	req *ServiceOperationMutationFinishRequest,
+	out *ServiceOperationMutationResponse,
+) error {
+	if a.finishReplyError != "" {
+		out.Error = a.finishReplyError
+		return nil
+	}
+	return a.durableMutationRPCFixture.FinishServiceMutation(req, out)
 }
 
 func (a *serviceStateAtomicAgent) GetServices(_ *transport.Empty, out *[]core.Service) error {
@@ -75,11 +105,14 @@ func (a *serviceStateAtomicAgent) InstalledServiceIDs(_ *transport.Empty, out *[
 	if a.installedIDsError != nil {
 		return a.installedIDsError
 	}
-	if a.serviceRemoved.Load() {
-		*out = []string{}
-		return nil
+	var installed []string
+	if !a.serviceRemoved.Load() {
+		installed = append(installed, "redis")
 	}
-	*out = []string{"redis"}
+	if a.roundcubePresent.Load() {
+		installed = append(installed, "roundcube")
+	}
+	*out = installed
 	return nil
 }
 
@@ -169,7 +202,7 @@ func newServiceStateAtomicPanel(t *testing.T) (*Panel, *serviceStateAtomicAgent,
 		t.Fatal(err)
 	}
 
-	agent := &serviceStateAtomicAgent{}
+	agent := &serviceStateAtomicAgent{roundcubeMutation: true}
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatal(err)

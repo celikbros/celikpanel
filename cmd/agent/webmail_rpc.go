@@ -47,19 +47,15 @@ const (
 // must traverse into it to serve /webmail/, and /opt/celikpanel is the
 // panel's own private tree that the web user cannot enter (caught live:
 // nginx stat() failed with "permission denied" on the /opt path). /var/lib
-// is the standard home for such served, mutable app data. Env-overridable.
+// is the standard home for such served, mutable app data. The production
+// mutation target is fixed; tests may reassign this package variable.
 // webmailBaseDir, doğrulanmış tarball'ın açıldığı yerdir. /opt/celikpanel
 // altında DEĞİL /var/lib altında yaşar; çünkü nginx (web kullanıcısı olarak)
 // /webmail/'i sunmak için içine girebilmeli ve /opt/celikpanel, web
 // kullanıcısının giremediği panelin özel ağacıdır (canlıda yakalandı: nginx
 // /opt yolunda stat() "permission denied" verdi). Böyle sunulan, değişebilir
-// uygulama verisinin standart evi /var/lib'dir. Env ile değiştirilebilir.
-var webmailBaseDir = func() string {
-	if d := os.Getenv("CELIKPANEL_WEBMAIL_DIR"); d != "" {
-		return d
-	}
-	return "/var/lib/celikpanel-webmail"
-}()
+// uygulama verisinin standart evi /var/lib'dir. Üretim mutation hedefi sabittir.
+var webmailBaseDir = "/var/lib/celikpanel-webmail"
 
 func roundcubeInstalled() bool {
 	installed, err := roundcubeInstallState()
@@ -155,6 +151,18 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 	}
 	defer finishStep()
 	resp.Version = roundcubeVersion
+	if err := ensureRoundcubeLifecycleSupported(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if err := secureMkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if err := reconcileRoundcubeArtifacts(webmailBaseDir, ""); err != nil {
+		resp.Error = fmt.Sprintf("reconcile Roundcube install artifacts: %v", err)
+		return nil
+	}
 	installed, err := roundcubeInstallState()
 	if err != nil {
 		resp.Error = err.Error()
@@ -182,11 +190,17 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		roundcubeVersion, roundcubeVersion)
 	client := &http.Client{Timeout: 5 * time.Minute}
 
-	if err := secureMkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
+	stage, err := createRoundcubeInstallStage(webmailBaseDir)
+	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(webmailBaseDir), "rc-dl-*")
+	defer func() {
+		if _, err := retireRoundcubeTree(stage); err != nil {
+			appendRoundcubeInstallError(resp, fmt.Errorf("clean Roundcube staging tree: %w", err))
+		}
+	}()
+	tmp, err := os.CreateTemp(stage, "rc-dl-*")
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -249,18 +263,12 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = fmt.Sprintf("close verified download: %v", closeErr)
 		return nil
 	}
-	stage, err := os.MkdirTemp(filepath.Dir(webmailBaseDir), "rc-stage-*")
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	defer func() {
-		if err := retireRoundcubeTree(stage); err != nil {
-			appendRoundcubeInstallError(resp, fmt.Errorf("clean Roundcube staging tree: %w", err))
-		}
-	}()
 	if out, err := serviceMutationCommand(ctx, "tar", "-xzf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("extract failed: %v: %s", err, string(out))
+		return nil
+	}
+	if err := os.Remove(tmp.Name()); err != nil {
+		resp.Error = fmt.Sprintf("remove verified Roundcube download: %v", err)
 		return nil
 	}
 
@@ -554,6 +562,11 @@ func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
 
 type RemoveRoundcubeResponse = transport.RemoveRoundcubeResponse
 
+type roundcubeRetirementResult struct {
+	Removed         bool
+	MutationApplied bool
+}
+
 // RemoveRoundcube deletes the whole webmail tree — the fixed base dir means
 // there is nothing else it could delete. Idempotent.
 // RemoveRoundcube tüm webmail ağacını siler — sabit taban dizini, silebileceği
@@ -569,11 +582,13 @@ func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcu
 		return nil
 	}
 	defer finishStep()
-	if err := retireRoundcubeTree(webmailBaseDir); err != nil {
+	result, err := retireRoundcubeTree(webmailBaseDir)
+	resp.Removed = result.Removed
+	resp.MutationApplied = result.MutationApplied
+	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	resp.Removed = true
 	return nil
 }
 
@@ -601,7 +616,10 @@ const (
 var webmailSetConfigMetadata = secureSetMailFileMetadata
 
 func webmailSocketPathForNginx() (string, error) {
-	path := transport.WebmailSocketPath()
+	return validateWebmailSocketPath(transport.WebmailSocketPath())
+}
+
+func validateWebmailSocketPath(path string) (string, error) {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path ||
 		len(path) > 100 || filepath.Ext(path) != ".sock" {
 		return "", fmt.Errorf("invalid webmail socket path")
@@ -624,7 +642,11 @@ func webmailConfigMetadataIdentity(path string) (int, int) {
 }
 
 func removeInactiveWebmailSocket() error {
-	path, err := webmailSocketPathForNginx()
+	return removeInactiveWebmailSocketAt(transport.WebmailSocketPath())
+}
+
+func removeInactiveWebmailSocketAt(path string) error {
+	path, err := validateWebmailSocketPath(path)
 	if err != nil {
 		return err
 	}
