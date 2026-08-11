@@ -13,7 +13,7 @@ func TestReconcileMailTLSMutationCanceledWhileBusyDoesNotRun(t *testing.T) {
 	manager, _ := newMutationTestManager(t)
 	manager.leaseDuration = time.Minute
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(t, manager, "mail_profile_install", "core-mail", "")
 
 	previousLookup := lookupMailTLSCommand
 	lookupCalled := false

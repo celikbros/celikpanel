@@ -140,13 +140,17 @@ func appendRoundcubeInstallError(resp *InstallRoundcubeResponse, err error) {
 // Idempotent: mevcut kurulum başarı döner. Herhangi bir hatada hazırlık ağacı
 // atılır; yarım kurulum asla sunulmaz.
 func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRoundcubeResponse) error {
+	*resp = InstallRoundcubeResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepInstallRoundcube, "roundcube", "", "install"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = InstallRoundcubeResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -572,13 +576,17 @@ type roundcubeRetirementResult struct {
 // RemoveRoundcube tüm webmail ağacını siler — sabit taban dizini, silebileceği
 // başka bir şey olmadığı anlamına gelir. Idempotenttir.
 func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcubeResponse) error {
+	*resp = RemoveRoundcubeResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	_, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepRemoveRoundcube, "roundcube", "", "remove"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = RemoveRoundcubeResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -784,13 +792,17 @@ type ConfigureWebmailResponse = transport.ConfigureWebmailResponse
 // yazar, değilken kaldırır — ConfigureDBTools'un aynası; panel roundcube
 // kurulunca/kaldırılınca çağırır. Idempotenttir.
 func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWebmailResponse) error {
+	*resp = ConfigureWebmailResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureWebmail, "roundcube", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureWebmailResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

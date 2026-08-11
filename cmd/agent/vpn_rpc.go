@@ -483,19 +483,24 @@ func reconcileVPNNFTTable(
 }
 
 func (a *Agent) SetupVPN(request *SetupVPNRequest, response *SetupVPNResponse) error {
+	*response = SetupVPNResponse{}
 	if request == nil {
 		return errors.New("VPN setup request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(request.ServiceMutationBinding)
+	port := request.Port
+	if err := validateVPNSetupPort(port); err != nil {
+		*response = SetupVPNResponse{Error: err.Error()}
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		request.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup"),
+	)
 	if err != nil {
-		response.Error = err.Error()
+		*response = SetupVPNResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	if err := validateVPNSetupPort(request.Port); err != nil {
-		response.Error = err.Error()
-		return nil
-	}
 	if err := preflightVPNHost(); err != nil {
 		response.Error = err.Error()
 		return nil
@@ -732,12 +737,16 @@ func (a *Agent) SyncVPNPeers(
 	request *SyncVPNPeersRequest,
 	response *SyncVPNPeersResponse,
 ) error {
+	*response = SyncVPNPeersResponse{}
 	if request == nil {
 		return errors.New("VPN peer sync request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(request.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		request.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepSyncVPNPeers, "wireguard", "", "sync"),
+	)
 	if err != nil {
-		response.Error = err.Error()
+		*response = SyncVPNPeersResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

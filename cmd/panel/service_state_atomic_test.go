@@ -240,7 +240,7 @@ func TestServiceActionReportsRefreshFailureAndAuditsBothOutcomes(t *testing.T) {
 	panel.handleServiceAction(recorder, serviceStateAtomicRequest(
 		http.MethodPost,
 		"/api/v1/service/action",
-		`{"service_name":"redis","action":"restart"}`,
+		`{"service_name":" redis.service ","action":"restart"}`,
 		userID,
 	))
 

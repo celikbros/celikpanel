@@ -68,7 +68,9 @@ func (p *Panel) beginAgentMutation(
 		return response.Job, errors.New(response.Error)
 	}
 	if response.Job == nil || response.Job.RequestID != op.RequestID ||
-		response.Job.OwnerID != ownerID || response.Job.Status != agentMutationRunning {
+		response.Job.OwnerID != ownerID || response.Job.Kind != op.Kind ||
+		response.Job.Target != op.ServiceID || response.Job.PackageName != op.PackageName ||
+		response.Job.Status != agentMutationRunning {
 		return response.Job, errors.New("agent did not grant the requested service mutation lease")
 	}
 	return response.Job, nil

@@ -595,7 +595,7 @@ func TestRemoveRoundcubeReportsAppliedMutationAfterRenameSyncFailure(t *testing.
 
 	manager, _ := newMutationTestManager(t)
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(t, manager, "service_uninstall", "roundcube", "")
 	request := &WebmailMutationRequest{ServiceMutationBinding: ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,

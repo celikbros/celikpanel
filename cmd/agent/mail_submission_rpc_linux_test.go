@@ -76,7 +76,7 @@ exit 0`)
 	// that instrumentation cost; cancellation tests still cancel it explicitly.
 	manager.leaseDuration = 2 * time.Minute
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(t, manager, "mail_submission_configure", "postfix", "")
 	return &mailSubmissionTestEnvironment{
 		manager: manager,
 		binding: ServiceMutationBinding{

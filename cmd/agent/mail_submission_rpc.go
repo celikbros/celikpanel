@@ -41,9 +41,12 @@ func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *Confi
 	if req == nil {
 		return fmt.Errorf("mail submission configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureMailSubmission, "postfix", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureMailSubmissionResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

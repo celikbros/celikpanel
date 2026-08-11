@@ -19,7 +19,7 @@ func bindPanelCertificateMutation(
 	t.Helper()
 	manager, _ := newMutationTestManager(t)
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(t, manager, "panel_certificate_issue", strings.ToLower(strings.TrimSpace(req.Domain)), "certbot")
 	req.MutationRequestID = testMutationRequestID
 	req.MutationOwnerID = testMutationOwnerID
 }

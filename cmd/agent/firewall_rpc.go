@@ -427,17 +427,29 @@ type FirewallStatusResponse = transport.FirewallStatusResponse
 // service ports.
 // ApplyFirewall, nftables tablomuzu kurar (ya da kaldırır).
 func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
-	binding := ServiceMutationBinding{}
-	if req != nil {
-		binding = req.ServiceMutationBinding
+	*resp = FirewallStatusResponse{}
+	if req == nil {
+		*resp = FirewallStatusResponse{Error: "missing firewall request"}
+		return nil
 	}
+	enabled := req.Enabled
+	persist := req.Persist
+	authorizedReq := *req
+	authorizedReq.Enabled = enabled
+	authorizedReq.Persist = persist
+	req = &authorizedReq
+	binding := req.ServiceMutationBinding
+	action := serviceMutationFirewallAction(enabled, persist)
 	// Every firewall write must join the durable global service mutation lease.
 	// This prevents UI actions and post-install synchronization from racing
 	// release updates, rollbacks, or another privileged component operation.
 	// Her güvenlik duvarı yazımı kalıcı küresel servis mutation lease'ine
 	// katılmalıdır. Böylece UI işlemleri ve kurulum sonrası eşitleme; sürüm
 	// güncellemesi, geri alma veya başka ayrıcalıklı bileşen işlemiyle yarışmaz.
-	ctx, finishStep, err := a.requiredServiceMutationStep(binding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		binding,
+		newServiceMutationStepClaim(serviceMutationStepApplyFirewall, "nftables", "", action),
+	)
 	if err != nil {
 		*resp = FirewallStatusResponse{
 			PersistenceState: firewallPersistenceUnverified,

@@ -167,11 +167,11 @@ esac
 	return host
 }
 
-func beginVPNRPCTestMutation(t *testing.T) ServiceMutationBinding {
+func beginVPNRPCTestMutation(t *testing.T, kind string) ServiceMutationBinding {
 	t.Helper()
 	manager, _ := newMutationTestManager(t)
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(t, manager, kind, "wireguard", "")
 	return ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
@@ -207,7 +207,7 @@ func readVPNTestState(t *testing.T, path string) string {
 
 func TestSyncVPNPeersCommitFailureRestoresLiveAndDurableConfig(t *testing.T) {
 	host := newVPNRPCTestHost(t)
-	binding := beginVPNRPCTestMutation(t)
+	binding := beginVPNRPCTestMutation(t, "vpn_peer_sync")
 	original := managedVPNTestConfig("original")
 	if err := os.WriteFile(host.configPath, original, 0o600); err != nil {
 		t.Fatal(err)
@@ -268,7 +268,7 @@ func TestSyncVPNPeersCommitFailureRestoresLiveAndDurableConfig(t *testing.T) {
 
 func TestSetupVPNReadyFailureRestoresConfigSysctlUnitAndForwarding(t *testing.T) {
 	host := newVPNRPCTestHost(t)
-	binding := beginVPNRPCTestMutation(t)
+	binding := beginVPNRPCTestMutation(t, "vpn_setup")
 	originalSysctl := []byte("# previous policy\nnet.ipv4.ip_forward = 0\n")
 	if err := os.WriteFile(host.sysctlPath, originalSysctl, 0o644); err != nil {
 		t.Fatal(err)

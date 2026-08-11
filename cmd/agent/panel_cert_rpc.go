@@ -112,6 +112,7 @@ func validatePanelCertTLSDir(raw string) (string, error) {
 }
 
 func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePanelCertResponse) error {
+	*resp = IssuePanelCertResponse{}
 	if req == nil {
 		resp.Error = "panel certificate request is required"
 		return nil
@@ -130,15 +131,19 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		resp.Error = err.Error()
 		return nil
 	}
-	req.TLSDir = tlsDir
+	authorizedReq := *req
+	authorizedReq.Domain = domain
+	authorizedReq.TLSDir = tlsDir
+	req = &authorizedReq
 	stepCtx, finishStep, err := a.requiredServiceMutationStep(
 		ServiceMutationBinding{
 			MutationRequestID: req.MutationRequestID,
 			MutationOwnerID:   req.MutationOwnerID,
 		},
+		newServiceMutationStepClaim(serviceMutationStepIssuePanelCertificate, domain, "certbot", "issue"),
 	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = IssuePanelCertResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

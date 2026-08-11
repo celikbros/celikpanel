@@ -86,21 +86,26 @@ type NodeInstallResponse = transport.NodeInstallResponse
 // InstallNodeVersion, resmi bir Node derlemesini indirir, doğrular ve açar.
 // Bağımsızdır: zaten kurulu bir sürüm hemen başarı döndürür.
 func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallResponse) error {
+	*resp = NodeInstallResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	defer finishStep()
-	if !nodeVersionRe.MatchString(req.Version) {
+	version := req.Version
+	if !nodeVersionRe.MatchString(version) {
 		resp.Error = "invalid version (expected e.g. 24.18.0)"
 		return nil
 	}
-	if _, err := os.Stat(nodeBinPath(req.Version)); err == nil {
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepInstallNodeVersion, "node", version, "install"),
+	)
+	if err != nil {
+		*resp = NodeInstallResponse{Error: err.Error()}
+		return nil
+	}
+	defer finishStep()
+	if _, err := os.Stat(nodeBinPath(version)); err == nil {
 		resp.Installed = true
 		return nil
 	}
@@ -111,8 +116,8 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 		return nil
 	}
 
-	base := fmt.Sprintf("https://nodejs.org/dist/v%s", req.Version)
-	tarName := fmt.Sprintf("node-v%s-linux-%s.tar.xz", req.Version, arch)
+	base := fmt.Sprintf("https://nodejs.org/dist/v%s", version)
+	tarName := fmt.Sprintf("node-v%s-linux-%s.tar.xz", version, arch)
 
 	client := &http.Client{Timeout: 5 * time.Minute}
 
@@ -180,7 +185,7 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 		return nil
 	}
 
-	dest := filepath.Join(runtimesBaseDir, "node", req.Version)
+	dest := filepath.Join(runtimesBaseDir, "node", version)
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -243,21 +248,28 @@ type NodeRemoveResponse = transport.NodeRemoveResponse
 // işidir — agent kiracı-kördür. Idempotent: olmayan sürümü kaldırmak
 // kaldırıldı bildirir.
 func (a *Agent) RemoveNodeVersion(req *NodeRemoveRequest, resp *NodeRemoveResponse) error {
+	*resp = NodeRemoveResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	if !nodeVersionRe.MatchString(req.Version) {
+	version := req.Version
+	if !nodeVersionRe.MatchString(version) {
 		resp.Error = "not a valid node version"
 		return nil
 	}
-	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	_, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepRemoveNodeVersion, "node", version, "remove"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = NodeRemoveResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	return a.removeNodeVersion(req, resp)
+	authorizedReq := *req
+	authorizedReq.Version = version
+	return a.removeNodeVersion(&authorizedReq, resp)
 }
 
 // removeNodeVersion performs the already-authorized filesystem mutation.

@@ -177,20 +177,27 @@ func runRepoPackageMutation(operation func() error) error {
 // bir apt kaynağı yazar, sonra yalnız bu kaynağın paket listesini tazeler.
 // İdempotenttir: yeniden açmak anahtarı ve kaynağı yeniden yazar.
 func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) error {
+	*resp = RepoStatusResponse{}
 	if req == nil {
 		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "missing request"
 		return nil
 	}
-	if !validRepoID.MatchString(req.RepoID) {
+	repoID := req.RepoID
+	if !validRepoID.MatchString(repoID) {
 		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "invalid repo id"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.RepoID = repoID
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepEnableRepo, repoID, "", "enable"),
+	)
 	if err != nil {
-		resp.ErrorCode = repoErrEnableFailed
-		resp.Error = err.Error()
+		*resp = RepoStatusResponse{ErrorCode: repoErrEnableFailed, Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -313,20 +320,27 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 // böylece vendor paketleri aday kümesinden çıkar (zaten kurulu paketler kalır —
 // onları kaldırmak ayrı bir uninstall'dır). Açmanın aynası.
 func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) error {
+	*resp = RepoStatusResponse{}
 	if req == nil {
 		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "missing request"
 		return nil
 	}
-	if !validRepoID.MatchString(req.RepoID) {
+	repoID := req.RepoID
+	if !validRepoID.MatchString(repoID) {
 		resp.ErrorCode = repoErrInvalidRequest
 		resp.Error = "invalid repo id"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.RepoID = repoID
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepDisableRepo, repoID, "", "disable"),
+	)
 	if err != nil {
-		resp.ErrorCode = repoErrDisableFailed
-		resp.Error = err.Error()
+		*resp = RepoStatusResponse{ErrorCode: repoErrDisableFailed, Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

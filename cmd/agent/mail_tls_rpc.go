@@ -158,9 +158,12 @@ func (a *Agent) ReconcileMailTLSMutation(
 		resp.Error = "mail TLS reconciliation requires a server hostname"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepReconcileMailTLS, "mail-tls", "", "reconcile"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = SecureMailTLSResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

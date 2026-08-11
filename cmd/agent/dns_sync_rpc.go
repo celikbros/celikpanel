@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/transport"
 	_ "modernc.org/sqlite"
 )
@@ -61,16 +62,33 @@ var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]b
 // değiştirir (Delete işaretliyse tümüyle kaldırır), sonra cevaplar hemen
 // değişsin diye o adın pdns önbelleğini boşaltır.
 func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
+	*resp = SyncDNSZoneResponse{}
 	if req == nil {
 		return fmt.Errorf("DNS zone sync request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	domain, err := hostname.CanonicalFQDN(req.Domain)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = SyncDNSZoneResponse{Error: "invalid domain"}
+		return nil
+	}
+	deleteZone := req.Delete
+	action := "sync"
+	if deleteZone {
+		action = "delete"
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepSyncDNSZone, domain, "", action),
+	)
+	if err != nil {
+		*resp = SyncDNSZoneResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	return a.syncDNSZone(ctx, req, resp)
+	authorizedReq := *req
+	authorizedReq.Domain = domain
+	authorizedReq.Delete = deleteZone
+	return a.syncDNSZone(ctx, &authorizedReq, resp)
 }
 
 func (a *Agent) syncDNSZone(ctx context.Context, req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
@@ -204,12 +222,16 @@ func (a *Agent) syncDNSZone(ctx context.Context, req *SyncDNSZoneRequest, resp *
 // yönlendirir ve yeniden başlatır. Emekli PostgreSQL-dönemi yapılandırma
 // yolunun yerini alır.
 func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncDNSZoneResponse) error {
+	*resp = SyncDNSZoneResponse{}
 	if req == nil {
 		return fmt.Errorf("PowerDNS configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = SyncDNSZoneResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

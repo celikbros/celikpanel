@@ -162,7 +162,15 @@ func reconcilePanelCertificateActivationOnce(
 		MutationRequestID: requestID,
 		MutationOwnerID:   ownerID,
 	}
-	stepCtx, finishStep, err := manager.acquireStep(binding)
+	stepCtx, finishStep, err := manager.acquireStep(
+		binding,
+		newServiceMutationStepClaim(
+			serviceMutationStepActivatePanelCertificate,
+			state.Domain,
+			"",
+			"activate",
+		),
+	)
 	if err != nil {
 		_, _ = manager.finish(&ServiceMutationFinishRequest{
 			RequestID:   requestID,

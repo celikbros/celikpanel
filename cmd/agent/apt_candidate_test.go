@@ -61,7 +61,7 @@ func TestSelectedPackageRepositoryGuardPrecedesInstallMutation(t *testing.T) {
 		t.Fatal("InstallService function was not found")
 	}
 	body = body[start : start+end]
-	packageValidation := strings.Index(body, "validateRepoPackageSelection(svc, req.Package)")
+	packageValidation := strings.Index(body, "validateRepoPackageSelection(svc, packageName)")
 	repositoryGuard := strings.Index(body, "core.InstallRequiresManagedRepository(svc, req.Package)")
 	installMutation := strings.Index(body, "installPackagesWithCandidateContext(ctx, family, missingPackages")
 	if packageValidation < 0 || repositoryGuard < 0 || installMutation < 0 {

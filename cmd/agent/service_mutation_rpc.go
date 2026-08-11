@@ -1105,6 +1105,7 @@ func (m *serviceMutationManager) finishRuntimeLocked(
 
 func (m *serviceMutationManager) acquireStep(
 	binding ServiceMutationBinding,
+	claim serviceMutationStepClaim,
 ) (context.Context, func(), error) {
 	if !validMutationIdentity(binding.MutationRequestID) ||
 		!validMutationIdentity(binding.MutationOwnerID) {
@@ -1122,6 +1123,10 @@ func (m *serviceMutationManager) acquireStep(
 		m.mu.Unlock()
 		return nil, nil, errors.New("service mutation step does not own the active lease")
 	}
+	if err := authorizeServiceMutationStep(runtime.job, claim); err != nil {
+		m.mu.Unlock()
+		return nil, nil, err
+	}
 	m.mu.Unlock()
 
 	runtime.stepMu.Lock()
@@ -1131,6 +1136,11 @@ func (m *serviceMutationManager) acquireStep(
 		m.mu.Unlock()
 		runtime.stepMu.Unlock()
 		return nil, nil, errors.New("service mutation lease expired before the step started")
+	}
+	if err := authorizeServiceMutationStep(runtime.job, claim); err != nil {
+		m.mu.Unlock()
+		runtime.stepMu.Unlock()
+		return nil, nil, err
 	}
 	runtime.steps++
 	ctx := context.WithValue(
@@ -1404,6 +1414,7 @@ func (a *Agent) FinishServiceMutation(
 
 func (a *Agent) requiredServiceMutationStep(
 	binding ServiceMutationBinding,
+	claim serviceMutationStepClaim,
 ) (context.Context, func(), error) {
 	if !validMutationIdentity(binding.MutationRequestID) ||
 		!validMutationIdentity(binding.MutationOwnerID) {
@@ -1413,5 +1424,5 @@ func (a *Agent) requiredServiceMutationStep(
 	if manager == nil {
 		return nil, nil, errors.New("service mutation manager is unavailable")
 	}
-	return manager.acquireStep(binding)
+	return manager.acquireStep(binding, claim)
 }

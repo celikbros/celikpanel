@@ -38,12 +38,16 @@ const (
 type ConfigureMailStackResponse = transport.ConfigureMailStackResponse
 
 func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureMailStackResponse) error {
+	*resp = ConfigureMailStackResponse{}
 	if req == nil {
 		return fmt.Errorf("mail stack configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureMailStack, "mail-stack", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureMailStackResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -172,12 +176,16 @@ var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
 type WireMailFiltersResponse = transport.WireMailFiltersResponse
 
 func (a *Agent) WireMailFilters(req *ServiceMutationRequest, resp *WireMailFiltersResponse) error {
+	*resp = WireMailFiltersResponse{}
 	if req == nil {
 		return fmt.Errorf("mail filter wiring request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepWireMailFilters, "mail-filters", "", "wire"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = WireMailFiltersResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

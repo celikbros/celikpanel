@@ -226,16 +226,32 @@ func configValidator(path string) *validatorSpec {
 type ServiceMutationActionRequest = transport.ServiceMutationActionRequest
 
 func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *transport.ServiceActionResult) error {
+	*reply = transport.ServiceActionResult{}
 	if req == nil {
 		return fmt.Errorf("service mutation action request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
+	if name == "" || core.ServiceForUnit(name) == nil {
+		reply.Error = "unknown managed service"
+		return nil
+	}
+	action := req.Action
+	switch action {
+	case "start", "stop", "restart", "reload":
+	default:
+		reply.Error = "invalid service action"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepServiceAction, name, "", action),
+	)
 	if err != nil {
-		reply.Error = err.Error()
+		*reply = transport.ServiceActionResult{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	return a.serviceActionContext(ctx, req.ServiceName, req.Action, reply)
+	return a.serviceActionContext(ctx, name, action, reply)
 }
 
 func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action string, reply *transport.ServiceActionResult) error {
@@ -250,7 +266,12 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 		reply.Error = "invalid service action"
 		return nil
 	}
-	out, err := runServiceMutationCombinedOutput(ctx, "systemctl", action, name)
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		reply.Error = "systemd client failed security validation"
+		return nil
+	}
+	out, err := runServiceMutationCombinedOutput(ctx, systemctl, action, name)
 	if err != nil {
 		log.Printf("ERROR service %s %s: %v: %s", action, name, err, strings.TrimSpace(string(out)))
 		reply.Error = firstLine(fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(out))))
@@ -263,16 +284,25 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 type ServiceMutationServiceRequest = transport.ServiceMutationServiceRequest
 
 func (a *Agent) StartServiceMutation(req *ServiceMutationServiceRequest, reply *bool) error {
+	*reply = false
 	if req == nil {
 		return fmt.Errorf("start service mutation request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
+	if name == "" || core.ServiceForUnit(name) == nil {
+		return errors.New("unknown managed service")
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepStartService, name, "", "start"),
+	)
 	if err != nil {
+		*reply = false
 		return err
 	}
 	defer finishStep()
 	var result transport.ServiceActionResult
-	if err := a.serviceActionContext(ctx, req.ServiceName, "start", &result); err != nil {
+	if err := a.serviceActionContext(ctx, name, "start", &result); err != nil {
 		return err
 	}
 	if result.Error != "" {
@@ -283,6 +313,7 @@ func (a *Agent) StartServiceMutation(req *ServiceMutationServiceRequest, reply *
 }
 
 func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, reply *bool) error {
+	*reply = false
 	if req == nil {
 		return fmt.Errorf("reset failed service mutation request is required")
 	}
@@ -290,12 +321,20 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 	if name == "" || core.ServiceForUnit(name) == nil {
 		return errors.New("unknown managed service")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepResetFailedUnit, name, "", "reset-failed"),
+	)
 	if err != nil {
+		*reply = false
 		return err
 	}
 	defer finishStep()
-	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reset-failed", name); err != nil {
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		return errors.New("systemd client failed security validation")
+	}
+	if out, err := runServiceMutationCombinedOutput(ctx, systemctl, "reset-failed", name); err != nil {
 		return fmt.Errorf("reset failed unit: %v: %s", err, strings.TrimSpace(string(out)))
 	}
 	*reply = true

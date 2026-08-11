@@ -40,23 +40,31 @@ type mailProfileDefinition struct {
 
 var mailProfileDefinitions = [...]mailProfileDefinition{
 	{
-		ID:          "core-mail",
+		ID:          core.MailProfileCore,
 		Name:        "Core Mail",
 		Description: "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
-		Services:    []string{"postfix", "dovecot"},
+		Services:    mustMailProfileServiceIDs(core.MailProfileCore),
 	},
 	{
-		ID:          "webmail",
+		ID:          core.MailProfileWebmail,
 		Name:        "Webmail",
 		Description: "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
-		Services:    []string{"postfix", "dovecot", "nginx", "php-fpm", "roundcube"},
+		Services:    mustMailProfileServiceIDs(core.MailProfileWebmail),
 	},
 	{
-		ID:          "protected-mail",
+		ID:          core.MailProfileProtected,
 		Name:        "Spam-Protected Mail",
 		Description: "Core mail with Rspamd spam filtering.",
-		Services:    []string{"postfix", "dovecot", "rspamd"},
+		Services:    mustMailProfileServiceIDs(core.MailProfileProtected),
 	},
+}
+
+func mustMailProfileServiceIDs(profileID string) []string {
+	services, ok := core.MailProfileServiceIDs(profileID)
+	if !ok {
+		panic("unknown compiled mail profile: " + profileID)
+	}
+	return services
 }
 
 type mailProfileInstallRequest struct {

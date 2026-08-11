@@ -1063,6 +1063,11 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	if serviceName == "" {
 		serviceName = req.Name
 	}
+	serviceName = strings.TrimSuffix(strings.TrimSpace(serviceName), ".service")
+	if serviceName == "" || core.ServiceForUnit(serviceName) == nil {
+		writeClientError(w, http.StatusBadRequest, "unknown managed service")
+		return
+	}
 
 	switch req.Action {
 	case "start", "stop", "restart", "reload":

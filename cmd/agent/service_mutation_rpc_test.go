@@ -223,17 +223,35 @@ func TestNewServiceMutationManagerRejectsMissingLedgerWithoutCreatingIt(t *testi
 }
 
 func beginMutationTestJob(t *testing.T, manager *serviceMutationManager) *ServiceMutationJob {
+	return beginMutationTestJobWithIdentity(t, manager, "service_install", "nginx", "")
+}
+
+func beginMutationTestJobWithIdentity(
+	t *testing.T,
+	manager *serviceMutationManager,
+	kind, target, packageName string,
+) *ServiceMutationJob {
 	t.Helper()
 	job, err := manager.begin(&ServiceMutationBeginRequest{
-		RequestID: testMutationRequestID,
-		OwnerID:   testMutationOwnerID,
-		Kind:      "service_install",
-		Target:    "nginx",
+		RequestID:   testMutationRequestID,
+		OwnerID:     testMutationOwnerID,
+		Kind:        kind,
+		Target:      target,
+		PackageName: packageName,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return job
+}
+
+func nginxInstallTestStepClaim() serviceMutationStepClaim {
+	return newServiceMutationStepClaim(
+		serviceMutationStepEnsureNginxReady,
+		"nginx",
+		"",
+		"ready",
+	)
 }
 
 func installGlobalMutationTestManager(t *testing.T, manager *serviceMutationManager) {
@@ -391,7 +409,7 @@ func TestRequiredServiceMutationStepHoldsJobUntilRelease(t *testing.T) {
 	ctx, release, err := (&Agent{}).requiredServiceMutationStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -625,7 +643,7 @@ func TestServiceMutationLeaseIsDurableAndHeldUntilTerminalState(t *testing.T) {
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1042,7 +1060,7 @@ func TestServiceMutationCancellationKillsTrackedProcessGroup(t *testing.T) {
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}

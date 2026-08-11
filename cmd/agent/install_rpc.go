@@ -64,11 +64,14 @@ func validateRepoPackageSelection(svc *core.ManagedService, packageName string) 
 // çalışır (ve reboot'tan sağ çıkar). Zaten kurulu servisler dürüstçe
 // bildirilen bir no-op'tur.
 func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceResponse) error {
+	*resp = InstallServiceResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	svc := core.GetManagedServiceByID(req.ID)
+	serviceID := req.ID
+	packageName := req.Package
+	svc := core.GetManagedServiceByID(serviceID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
@@ -79,18 +82,25 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// Keyfi ya da sürümlü olmayan paketi detectPkgFamily veya packageInstalled
 	// bir paket-yöneticisi komutu çalıştırmadan önce reddet.
 	var selectedPackageMatch []string
-	if req.Package != "" {
+	if packageName != "" {
 		var err error
-		selectedPackageMatch, err = validateRepoPackageSelection(svc, req.Package)
+		selectedPackageMatch, err = validateRepoPackageSelection(svc, packageName)
 		if err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
 	}
 
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.ID = svc.ID
+	authorizedReq.Package = packageName
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepInstallService, svc.ID, packageName, "install"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = InstallServiceResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -562,11 +572,14 @@ func uniquePackageNames(packages []string) []string {
 // küçültmek için. Kurulu her servis sömürülebilir koddur; operatör bir
 // servisi yalnız ekleyebilmemeli, geri de alabilmeli.
 func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServiceResponse) error {
+	*resp = UninstallServiceResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	svc := core.GetManagedServiceByID(req.ID)
+	serviceID := req.ID
+	packageName := req.Package
+	svc := core.GetManagedServiceByID(serviceID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
@@ -575,15 +588,22 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	// privileged lease. This is pure input validation and mirrors InstallService.
 	// Geçersiz katalog/paket seçimini ayrıcalıklı lease istemeden önce reddet.
 	// Bu yalnızca girdi doğrulamasıdır ve InstallService akışını yansıtır.
-	if req.Package != "" {
-		if _, err := validateRepoPackageSelection(svc, req.Package); err != nil {
+	if packageName != "" {
+		if _, err := validateRepoPackageSelection(svc, packageName); err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.ID = svc.ID
+	authorizedReq.Package = packageName
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepUninstallService, svc.ID, packageName, "uninstall"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = UninstallServiceResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

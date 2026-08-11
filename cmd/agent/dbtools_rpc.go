@@ -51,12 +51,16 @@ type ConfigureDBToolsResponse = transport.ConfigureDBToolsResponse
 // sunucusunu yeniden üretir; hiçbiri kurulu değilse yapılandırma kaldırılır.
 // Panel bir araç kurulunca/kaldırılınca çağırır — idempotenttir.
 func (a *Agent) ConfigureDBTools(req *ServiceMutationRequest, resp *ConfigureDBToolsResponse) error {
+	*resp = ConfigureDBToolsResponse{}
 	if req == nil {
 		return fmt.Errorf("database tools configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureDBTools, "dbtools", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureDBToolsResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
