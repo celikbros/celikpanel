@@ -67,6 +67,11 @@ type Panel struct {
 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
 	pkgFamilyMu  sync.Mutex
 	pkgFamilyVal string
+	// hostPlatformResolutionMu guards the context-aware shared identity flight.
+	// Mutating callers authorize against one published result without holding
+	// a mutex across the HostPlatform RPC.
+	hostPlatformResolutionMu sync.Mutex
+	hostPlatformResolution   *agentRPCHostIdentityResolution
 	// hostPlatformVal is the verified identity behind distribution-specific
 	// capability decisions. PkgFamily remains for backward-compatible package
 	// code, but dnf alone can never qualify a preview target.

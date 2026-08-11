@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -431,10 +432,31 @@ func agentRPCTimeout(method string) (time.Duration, error) {
 	return policy.timeout, nil
 }
 
-// authorizeAgentRPCPolicyForPackageFamily is the pure platform firewall.
-// Established apt/pacman behavior remains available. DNF has zero mutation
-// capabilities until a later certification commit enables them individually.
-func authorizeAgentRPCPolicyForPackageFamily(policy agentRPCPolicy, packageFamily string) error {
+type agentRPCHostIdentity struct {
+	host     core.ManagedServiceHostProfile
+	verified bool
+}
+
+type agentRPCHostIdentityResolution struct {
+	done     chan struct{}
+	identity agentRPCHostIdentity
+	err      error
+}
+
+// rhelPreviewAgentRPCMethodGrants is a dormant exact-method prefilter, not an
+// activation surface or a broad capability-family switch. Its empty production
+// value keeps all RHEL/DNF mutations closed. An entry remains forbidden until
+// parameterized RPC arguments and the durable lease kind/target/package are
+// bound and the lifecycle has passed live certification.
+var rhelPreviewAgentRPCMethodGrants = map[string]agentRPCCapability{}
+
+// authorizeAgentRPCPolicyForHost is the pure platform firewall. Established
+// apt/pacman behavior remains available, including the legacy family-only
+// identity. DNF requires a verified, narrowly qualified HostPlatform identity
+// and an exact method/capability prefilter entry; family-only dnf can never
+// authorize a mutation. A prefilter entry alone is deliberately insufficient
+// for a parameterized method until its request and durable target are bound.
+func authorizeAgentRPCPolicyForHost(method string, policy agentRPCPolicy, identity agentRPCHostIdentity) error {
 	if err := policy.validate(); err != nil {
 		return fmt.Errorf("%w: %v", errAgentRPCPolicyInvalid, err)
 	}
@@ -442,16 +464,30 @@ func authorizeAgentRPCPolicyForPackageFamily(policy agentRPCPolicy, packageFamil
 	case agentRPCEffectRead, agentRPCEffectControl:
 		return nil
 	case agentRPCEffectHostMutation, agentRPCEffectHostRepairMutation:
-		switch strings.TrimSpace(packageFamily) {
+		packageFamily := strings.TrimSpace(identity.host.PackageFamily)
+		switch packageFamily {
 		case "apt", "pacman":
 			return nil
 		case "":
 			return errAgentRPCPlatformIdentityUnavailable
+		case "dnf":
+			if identity.verified && core.IsRHELPreviewNginxCandidate(identity.host) {
+				grantedCapability, granted := rhelPreviewAgentRPCMethodGrants[method]
+				if granted && grantedCapability == policy.capability {
+					return nil
+				}
+			}
+			return fmt.Errorf(
+				"%w: package_family=%s capability=%s",
+				errAgentRPCPlatformCapabilityDenied,
+				packageFamily,
+				policy.capability,
+			)
 		default:
 			return fmt.Errorf(
 				"%w: package_family=%s capability=%s",
 				errAgentRPCPlatformCapabilityDenied,
-				strings.TrimSpace(packageFamily),
+				packageFamily,
 				policy.capability,
 			)
 		}
@@ -469,19 +505,19 @@ func (p *Panel) authorizeAgentRPCContext(ctx context.Context, method string) err
 		return err
 	}
 	if policy.effect == agentRPCEffectRead || policy.effect == agentRPCEffectControl {
-		return authorizeAgentRPCPolicyForPackageFamily(policy, "")
+		return authorizeAgentRPCPolicyForHost(method, policy, agentRPCHostIdentity{})
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	family, err := p.agentRPCPackageFamily(ctx)
+	identity, err := p.agentRPCHostIdentity(ctx)
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return err
 		}
 		return fmt.Errorf("%w: %s: %v", errAgentRPCPlatformIdentityUnavailable, method, err)
 	}
-	if err := authorizeAgentRPCPolicyForPackageFamily(policy, family); err != nil {
+	if err := authorizeAgentRPCPolicyForHost(method, policy, identity); err != nil {
 		return fmt.Errorf("%s: %w", method, err)
 	}
 	return nil
@@ -492,9 +528,7 @@ func agentRPCMethodUnavailable(err error, method string) bool {
 	if !errors.As(err, &serverErr) {
 		return false
 	}
-	message := string(serverErr)
-	return strings.Contains(message, "can't find method "+method) ||
-		strings.Contains(message, "method "+method+" not found")
+	return strings.TrimSpace(string(serverErr)) == "rpc: can't find method "+method
 }
 
 func (p *Panel) rawAgentCallContext(ctx context.Context, method string, args, reply any) error {
@@ -504,83 +538,205 @@ func (p *Panel) rawAgentCallContext(ctx context.Context, method string, args, re
 	return p.agentClient.CallContext(ctx, method, args, reply)
 }
 
-// agentRPCPackageFamily resolves identity through the sole raw dispatcher so
-// policy evaluation cannot recurse. No panel mutex is held across an RPC.
-func (p *Panel) agentRPCPackageFamily(ctx context.Context) (string, error) {
+// agentRPCHostIdentity resolves identity through the sole raw dispatcher so
+// policy evaluation cannot recurse. A shared flight coalesces the first
+// HostPlatform lookup without holding a mutex across the RPC: each waiter can
+// still honor its own context, while waiters that remain receive the leader's
+// exact result. A cached DNF family is intentionally enriched through
+// HostPlatform when an agent is available; otherwise it remains an unverified
+// identity that the firewall must deny.
+func (p *Panel) agentRPCHostIdentity(ctx context.Context) (agentRPCHostIdentity, error) {
 	if p == nil {
-		return "", errAgentRPCClientUnavailable
+		return agentRPCHostIdentity{}, errAgentRPCClientUnavailable
 	}
-	p.pkgFamilyMu.Lock()
-	if p.hostPlatformKnown {
-		response := p.hostPlatformVal
-		p.pkgFamilyMu.Unlock()
-		host, ok := managedServiceHostProfileFromResponse(response)
-		if !ok {
-			return "", errors.New("cached HostPlatform identity is invalid")
-		}
-		return host.PackageFamily, nil
-	}
-	if family := strings.TrimSpace(p.pkgFamilyVal); family != "" {
-		p.pkgFamilyMu.Unlock()
-		return family, nil
-	}
-	p.pkgFamilyMu.Unlock()
-
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	identityCtx, cancel := context.WithTimeout(ctx, agentRPCQuickReadTimeout)
-	defer cancel()
-	var response transport.HostPlatformResponse
-	err := p.rawAgentCallContext(
-		identityCtx,
-		"Agent.HostPlatform",
-		&transport.Empty{},
-		&response,
-	)
-	if err == nil {
-		host, ok := managedServiceHostProfileFromResponse(response)
-		if !ok {
-			return "", errors.New("HostPlatform returned an invalid identity")
-		}
-		p.pkgFamilyMu.Lock()
-		p.hostPlatformVal = response
-		p.hostPlatformKnown = true
-		p.pkgFamilyVal = host.PackageFamily
-		p.pkgFamilyMu.Unlock()
-		return host.PackageFamily, nil
-	}
-	if identityCtx.Err() != nil {
-		return "", identityCtx.Err()
-	}
-	if !agentRPCMethodUnavailable(err, "Agent.HostPlatform") {
-		return "", fmt.Errorf("read HostPlatform: %w", err)
+	if err := ctx.Err(); err != nil {
+		return agentRPCHostIdentity{}, err
 	}
 
-	// Only an agent that truly predates HostPlatform may use this compatibility
-	// fallback. Family-only dnf remains blocked by the platform firewall.
-	var family string
-	if err := p.rawAgentCallContext(
-		identityCtx,
-		"Agent.PkgFamily",
-		&transport.Empty{},
-		&family,
-	); err != nil {
-		if identityCtx.Err() != nil {
-			return "", identityCtx.Err()
-		}
-		return "", fmt.Errorf("read legacy PkgFamily: %w", err)
-	}
-	family = strings.TrimSpace(family)
-	if family == "" {
-		return "", errors.New("legacy PkgFamily returned an empty identity")
-	}
+	// A fully published identity is immutable for the panel lifetime and can
+	// take the fast path without consulting the flight registry.
 	p.pkgFamilyMu.Lock()
-	if p.pkgFamilyVal == "" {
-		p.pkgFamilyVal = family
+	if p.hostPlatformKnown {
+		response := p.hostPlatformVal
+		family := strings.TrimSpace(p.pkgFamilyVal)
+		p.pkgFamilyMu.Unlock()
+		host, ok := managedServiceHostProfileFromResponse(response)
+		if !ok {
+			return agentRPCHostIdentity{}, errors.New("cached HostPlatform identity is invalid")
+		}
+		if family != "" && family != host.PackageFamily {
+			return agentRPCHostIdentity{}, errors.New("cached HostPlatform identity conflicts with cached PkgFamily")
+		}
+		return agentRPCHostIdentity{host: host, verified: true}, nil
 	}
 	p.pkgFamilyMu.Unlock()
-	return family, nil
+
+	p.hostPlatformResolutionMu.Lock()
+	if err := ctx.Err(); err != nil {
+		p.hostPlatformResolutionMu.Unlock()
+		return agentRPCHostIdentity{}, err
+	}
+	if resolution := p.hostPlatformResolution; resolution != nil {
+		p.hostPlatformResolutionMu.Unlock()
+		select {
+		case <-resolution.done:
+			if err := ctx.Err(); err != nil {
+				return agentRPCHostIdentity{}, err
+			}
+			return resolution.identity, resolution.err
+		case <-ctx.Done():
+			return agentRPCHostIdentity{}, ctx.Err()
+		}
+	}
+
+	// The cache must be checked again after joining the flight registry: a
+	// previous leader may have published and cleared its completed flight
+	// between the fast-path read and this critical section.
+	p.pkgFamilyMu.Lock()
+	family := strings.TrimSpace(p.pkgFamilyVal)
+	if p.hostPlatformKnown {
+		response := p.hostPlatformVal
+		p.pkgFamilyMu.Unlock()
+		p.hostPlatformResolutionMu.Unlock()
+		host, ok := managedServiceHostProfileFromResponse(response)
+		if !ok {
+			return agentRPCHostIdentity{}, errors.New("cached HostPlatform identity is invalid")
+		}
+		if family != "" && family != host.PackageFamily {
+			return agentRPCHostIdentity{}, errors.New("cached HostPlatform identity conflicts with cached PkgFamily")
+		}
+		return agentRPCHostIdentity{host: host, verified: true}, nil
+	}
+	hasAgent := p.agentClient != nil
+	if family != "" && (family != "dnf" || !hasAgent) {
+		p.pkgFamilyMu.Unlock()
+		p.hostPlatformResolutionMu.Unlock()
+		return agentRPCHostIdentity{
+			host: core.ManagedServiceHostProfile{PackageFamily: family},
+		}, nil
+	}
+	p.pkgFamilyMu.Unlock()
+	if !hasAgent {
+		p.hostPlatformResolutionMu.Unlock()
+		return agentRPCHostIdentity{}, errAgentRPCClientUnavailable
+	}
+
+	resolution := &agentRPCHostIdentityResolution{done: make(chan struct{})}
+	p.hostPlatformResolution = resolution
+	p.hostPlatformResolutionMu.Unlock()
+
+	go func(resolution *agentRPCHostIdentityResolution, family string) {
+		identityCtx, cancel := context.WithTimeout(
+			context.Background(),
+			agentRPCQuickReadTimeout,
+		)
+		defer cancel()
+		identity, resolveErr := func() (agentRPCHostIdentity, error) {
+			var response transport.HostPlatformResponse
+			err := p.rawAgentCallContext(
+				identityCtx,
+				"Agent.HostPlatform",
+				&transport.Empty{},
+				&response,
+			)
+			if err == nil {
+				host, ok := managedServiceHostProfileFromResponse(response)
+				if !ok {
+					return agentRPCHostIdentity{}, errors.New("HostPlatform returned an invalid identity")
+				}
+				p.pkgFamilyMu.Lock()
+				if p.hostPlatformKnown {
+					publishedResponse := p.hostPlatformVal
+					publishedFamily := strings.TrimSpace(p.pkgFamilyVal)
+					p.pkgFamilyMu.Unlock()
+					publishedHost, ok := managedServiceHostProfileFromResponse(publishedResponse)
+					if !ok {
+						return agentRPCHostIdentity{}, errors.New("published HostPlatform identity is invalid")
+					}
+					if publishedFamily != "" && publishedFamily != publishedHost.PackageFamily {
+						return agentRPCHostIdentity{}, errors.New("published HostPlatform identity conflicts with cached PkgFamily")
+					}
+					return agentRPCHostIdentity{host: publishedHost, verified: true}, nil
+				}
+				publishedFamily := strings.TrimSpace(p.pkgFamilyVal)
+				if publishedFamily != "" && publishedFamily != host.PackageFamily {
+					p.pkgFamilyMu.Unlock()
+					return agentRPCHostIdentity{}, errors.New("HostPlatform identity conflicts with cached PkgFamily")
+				}
+				p.hostPlatformVal = response
+				p.hostPlatformKnown = true
+				p.pkgFamilyVal = host.PackageFamily
+				p.pkgFamilyMu.Unlock()
+				return agentRPCHostIdentity{host: host, verified: true}, nil
+			}
+			if identityCtx.Err() != nil {
+				return agentRPCHostIdentity{}, identityCtx.Err()
+			}
+			if !agentRPCMethodUnavailable(err, "Agent.HostPlatform") {
+				return agentRPCHostIdentity{}, fmt.Errorf("read HostPlatform: %w", err)
+			}
+
+			// Only an agent that truly predates HostPlatform may use this
+			// compatibility fallback. Family-only dnf remains blocked by the
+			// platform firewall.
+			if family == "" {
+				p.pkgFamilyMu.Lock()
+				family = strings.TrimSpace(p.pkgFamilyVal)
+				p.pkgFamilyMu.Unlock()
+			}
+			if family == "" {
+				if err := p.rawAgentCallContext(
+					identityCtx,
+					"Agent.PkgFamily",
+					&transport.Empty{},
+					&family,
+				); err != nil {
+					if identityCtx.Err() != nil {
+						return agentRPCHostIdentity{}, identityCtx.Err()
+					}
+					return agentRPCHostIdentity{}, fmt.Errorf("read legacy PkgFamily: %w", err)
+				}
+			}
+			family = strings.TrimSpace(family)
+			if family == "" {
+				return agentRPCHostIdentity{}, errors.New("legacy PkgFamily returned an empty identity")
+			}
+			p.pkgFamilyMu.Lock()
+			if p.pkgFamilyVal == "" {
+				p.pkgFamilyVal = family
+			}
+			publishedFamily := strings.TrimSpace(p.pkgFamilyVal)
+			p.pkgFamilyMu.Unlock()
+			if publishedFamily != family {
+				return agentRPCHostIdentity{}, errors.New("legacy PkgFamily conflicts with cached PkgFamily")
+			}
+			return agentRPCHostIdentity{
+				host: core.ManagedServiceHostProfile{PackageFamily: publishedFamily},
+			}, nil
+		}()
+
+		p.hostPlatformResolutionMu.Lock()
+		resolution.identity = identity
+		resolution.err = resolveErr
+		if p.hostPlatformResolution == resolution {
+			p.hostPlatformResolution = nil
+		}
+		close(resolution.done)
+		p.hostPlatformResolutionMu.Unlock()
+	}(resolution, family)
+
+	select {
+	case <-resolution.done:
+		if err := ctx.Err(); err != nil {
+			return agentRPCHostIdentity{}, err
+		}
+		return resolution.identity, resolution.err
+	case <-ctx.Done():
+		return agentRPCHostIdentity{}, ctx.Err()
+	}
 }
 
 // callAgent is the compatibility entry point for handlers that do not yet

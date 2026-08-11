@@ -45,6 +45,18 @@ altındaki panel/agent yaşam döngüsü gerçek makine uçtan uca sertifikasyon
 geçmeden sunulmaz. Fedora, CentOS Stream, CloudLinux, abonelikli RHEL, diğer
 sürümler ve diğer mimariler bu adaylığı otomatik devralmaz.
 
+**Varsayılan-red kesin-yöntem ön filtresi.** Panel, her RHEL adayı için
+doğrulanmış tam host kimliğini tek ham dispatcher'ın hemen önünde kesin Agent
+RPC yöntemiyle anahtarlanan bir ön filtreye taşır. Bu fail-closed bir temeldir;
+açıkça aktivasyon yüzeyi değildir. Kesin yöntem ile host kimliği, parametreli
+bir RPC'yi yetkilendirmeye yetmez: aynı yöntem farklı servis, paket veya hedef
+argümanları taşıyabilir. Hiçbir RHEL yetki girdisi, RPC argümanları kalıcı lease
+kaydının kesin `Kind`, `Target` ve `PackageName` değerlerine bağlanmadan ve bu
+eksiksiz yaşam döngüsü gerçek makine uçtan uca sertifikasyonundan geçmeden
+eklenemez. DNF/RHEL yetki kümesi boş kalır; dolayısıyla RHEL üzerindeki bütün
+host mutasyonları reddedilmeye devam eder. Algılama, kimlik çözümleme, çapraz
+derleme ve smoke kapsamı destek veya yetenek iddiası değildir.
+
 **Kapsam dışı.** openSUSE/SLES, Alpine ve NixOS bugün yeni bir aile adaptörünü
 haklı çıkaran talebe sahip değildir; talep doğarsa ayrı `suse`, `alpine` veya
 `nixos` ailesi olarak eklenir, mevcut ailelerden biriymiş gibi davranılmaz.

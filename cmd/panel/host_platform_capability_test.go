@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/rpc"
 	"strings"
@@ -82,6 +83,32 @@ func TestPanelUsesAndCachesServerDerivedHostIdentity(t *testing.T) {
 	}
 }
 
+func TestManagedCatalogAndRPCFirewallSharePublishedHostIdentity(t *testing.T) {
+	agent := &hostPlatformCapabilityTestAgent{
+		response: transport.HostPlatformResponse{
+			DistroFamily:   "rhel",
+			PackageManager: "dnf",
+			ServiceManager: "systemd",
+			DistroID:       "rocky",
+			VersionID:      "9.6",
+			Architecture:   "amd64",
+		},
+	}
+	panel := newHostPlatformCapabilityTestPanel(t, agent)
+
+	host := panel.managedServiceHostProfile()
+	if !core.IsRHELPreviewNginxCandidate(host) {
+		t.Fatalf("catalog identity was not the expected RHEL candidate: %+v", host)
+	}
+	err := panel.authorizeAgentRPCContext(context.Background(), "Agent.UpdateConfig")
+	if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+		t.Fatalf("firewall error = %v, want capability denial", err)
+	}
+	if agent.hostCalls != 1 || agent.familyCalls != 0 {
+		t.Fatalf("shared identity RPC calls host=%d family=%d, want 1/0", agent.hostCalls, agent.familyCalls)
+	}
+}
+
 func TestPanelDoesNotAuthorizeDNFFromFamilyOnlyFallback(t *testing.T) {
 	agent := &hostPlatformCapabilityTestAgent{
 		response: transport.HostPlatformResponse{
@@ -105,6 +132,55 @@ func TestPanelDoesNotAuthorizeDNFFromFamilyOnlyFallback(t *testing.T) {
 	}
 	if agent.hostCalls != 1 || agent.familyCalls != 1 {
 		t.Fatalf("RPC calls host=%d family=%d, want one of each", agent.hostCalls, agent.familyCalls)
+	}
+	panel.pkgFamilyMu.Lock()
+	cachedFamily := panel.pkgFamilyVal
+	panel.pkgFamilyMu.Unlock()
+	if cachedFamily != "" {
+		t.Fatalf("catalogue fallback seeded mutation family cache with %q", cachedFamily)
+	}
+	err := panel.authorizeAgentRPCContext(context.Background(), "Agent.UpdateConfig")
+	if !errors.Is(err, errAgentRPCPlatformIdentityUnavailable) {
+		t.Fatalf("mutation authorization error = %v, want identity unavailable", err)
+	}
+	if agent.hostCalls != 2 || agent.familyCalls != 1 {
+		t.Fatalf("RPC calls after mutation preflight host=%d family=%d, want 2/1",
+			agent.hostCalls, agent.familyCalls)
+	}
+}
+
+func TestManagedCatalogFallbackDoesNotSeedMutationIdentityCache(t *testing.T) {
+	agent := &hostPlatformCapabilityTestAgent{
+		response: transport.HostPlatformResponse{
+			DistroFamily:   "debian",
+			PackageManager: "apt",
+			ServiceManager: "systemd",
+			DistroID:       "rocky",
+			VersionID:      "12",
+			Architecture:   "amd64",
+		},
+		family: "apt",
+	}
+	panel := newHostPlatformCapabilityTestPanel(t, agent)
+
+	host := panel.managedServiceHostProfile()
+	if host.PackageFamily != "apt" || host.DistroID != "" {
+		t.Fatalf("catalogue fallback identity = %+v, want family-only apt", host)
+	}
+	panel.pkgFamilyMu.Lock()
+	cachedFamily := panel.pkgFamilyVal
+	panel.pkgFamilyMu.Unlock()
+	if cachedFamily != "" {
+		t.Fatalf("catalogue fallback seeded mutation family cache with %q", cachedFamily)
+	}
+
+	err := panel.authorizeAgentRPCContext(context.Background(), "Agent.UpdateConfig")
+	if !errors.Is(err, errAgentRPCPlatformIdentityUnavailable) {
+		t.Fatalf("mutation authorization error = %v, want identity unavailable", err)
+	}
+	if agent.hostCalls != 2 || agent.familyCalls != 1 {
+		t.Fatalf("RPC calls host=%d family=%d, want host=2 family=1",
+			agent.hostCalls, agent.familyCalls)
 	}
 }
 

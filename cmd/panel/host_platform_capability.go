@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"strings"
+
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -10,36 +13,24 @@ import (
 // fallback is sufficient for established apt/pacman mappings but deliberately
 // lacks the distro proof required by every dnf preview capability.
 func (p *Panel) managedServiceHostProfile() core.ManagedServiceHostProfile {
-	p.pkgFamilyMu.Lock()
-	if p.hostPlatformKnown {
-		response := p.hostPlatformVal
-		p.pkgFamilyMu.Unlock()
-		host, _ := managedServiceHostProfileFromResponse(response)
-		return host
+	if p == nil {
+		return core.ManagedServiceHostProfile{}
 	}
-	hasAgent := p.agentClient != nil
+	identity, err := p.agentRPCHostIdentity(context.Background())
+	if err == nil {
+		return identity.host
+	}
+	p.pkgFamilyMu.Lock()
 	fallbackFamily := p.pkgFamilyVal
 	p.pkgFamilyMu.Unlock()
-
-	if hasAgent {
-		var response transport.HostPlatformResponse
-		if err := p.callAgent("Agent.HostPlatform", &transport.Empty{}, &response); err == nil {
-			if host, ok := managedServiceHostProfileFromResponse(response); ok {
-				p.pkgFamilyMu.Lock()
-				p.hostPlatformVal = response
-				p.hostPlatformKnown = true
-				p.pkgFamilyVal = response.PackageManager
-				p.pkgFamilyMu.Unlock()
-				return host
-			}
-		}
-	}
-
-	if !hasAgent {
-		return core.ManagedServiceHostProfile{PackageFamily: fallbackFamily}
-	}
 	if fallbackFamily == "" {
-		fallbackFamily = p.packageFamily()
+		// A catalogue read may still display a family-only compatibility view,
+		// but an invalid or timed-out HostPlatform response must not seed the
+		// authorization cache and let a later mutation bypass full identity.
+		var family string
+		if callErr := p.callAgent("Agent.PkgFamily", &transport.Empty{}, &family); callErr == nil {
+			fallbackFamily = strings.TrimSpace(family)
+		}
 	}
 	return core.ManagedServiceHostProfile{PackageFamily: fallbackFamily}
 }

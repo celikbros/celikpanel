@@ -49,6 +49,19 @@ lifecycle have passed real-machine end-to-end certification. Fedora, CentOS
 Stream, CloudLinux, subscription RHEL, other versions, and other architectures
 do not inherit this candidate status.
 
+**Default-deny exact-method prefilter.** For every RHEL candidate, the panel
+carries the complete verified host identity into a prefilter keyed by the exact
+Agent RPC method immediately before the sole raw dispatcher. This is a
+fail-closed foundation, explicitly not an activation surface, and exact method
+plus host identity is insufficient to authorize a parameterized RPC: the same
+method can carry different service, package, or target arguments. No RHEL grant
+entry may be added until the RPC arguments are bound to the durable lease's
+exact `Kind`, `Target`, and `PackageName`, and that complete lifecycle has
+passed live-machine end-to-end certification. The DNF/RHEL grant set remains
+empty, so every RHEL host mutation remains denied. Detection, identity
+resolution, cross-compilation, and smoke coverage are neither a support claim
+nor a capability claim.
+
 **Out of scope.** openSUSE/SLES, Alpine, and NixOS do not currently justify a
 new family adapter. Proven demand may add distinct `suse`, `alpine`, or `nixos`
 families later; none is impersonated as an existing family. Kali Linux is
