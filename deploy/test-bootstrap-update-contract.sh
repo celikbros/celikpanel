@@ -1494,6 +1494,10 @@ require_sequence "$UPDATE" \
 # başlatmadan önce ledger'ı root:celikpanel 0600 yayımlar.
 require_literal "$INSTALL" '#!/bin/bash'
 require_literal "$INSTALL" 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+require_literal "$INSTALL" 'SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"'
+require_literal "$INSTALL" '[ "$(/usr/bin/id -u)" -eq 0 ] || die'
+reject_literal "$INSTALL" 'SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"'
+reject_literal "$INSTALL" '[ "$(id -u)" -eq 0 ] || die'
 require_literal "$INSTALL" 'INITIALIZE_SERVICE_MUTATION_LEDGER'
 require_literal "$INSTALL" '! -e "$DATA_DIR/celikpanel.db"'
 require_literal "$INSTALL" '! -e "$AGENT_STATE_DIR"'

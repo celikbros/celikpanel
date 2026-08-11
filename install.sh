@@ -85,7 +85,7 @@ case "${DEMO:-0}" in
     *) printf '%s\n' "ERROR / HATA: DEMO must be 0 or 1 / yalnız 0 veya 1 olabilir" >&2; exit 1 ;;
 esac
 
-SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"
 PANEL_TLS_DIR="$DATA_DIR/tls"
 
 # Fresh self-signed certificates are created by the unprivileged panel process.
@@ -639,7 +639,7 @@ run_panel_as_service_user_with_private_umask() {
         /bin/sh -c 'umask 077; exec "$@"' celikpanel-install "$PREFIX/bin/panel" "$@"
 }
 
-[ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
+[ "$(/usr/bin/id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
 bootstrap_machine=$(vendor_machine_architecture)
 preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"
 command -v systemctl >/dev/null || die "systemd gerekli"
