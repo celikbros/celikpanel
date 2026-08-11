@@ -834,6 +834,7 @@ func main() {
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
+	http.HandleFunc(mailProfileInstallPath, panel.handleMailProfileInstall)
 	http.HandleFunc("/api/v1/service/operation", panel.handleServiceOperation)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
 	http.HandleFunc("/api/v1/service/uninstall", panel.handleServiceUninstall)

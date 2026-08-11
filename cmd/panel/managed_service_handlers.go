@@ -109,6 +109,7 @@ type ManagedServiceResponse struct {
 type managedServicesPayload struct {
 	ScannedAt *time.Time               `json:"scanned_at"`
 	Services  []ManagedServiceResponse `json:"services"`
+	Profiles  []MailProfileResponse    `json:"profiles"`
 }
 
 // serviceObservation is everything a scan can DISCOVER about this host: is the
@@ -187,6 +188,13 @@ type serviceObservation struct {
 // diye çıplak dizi değil nesnedir.
 type scanCacheDoc struct {
 	Observations []serviceObservation `json:"observations"`
+	WebmailReady *bool                `json:"webmail_ready,omitempty"`
+}
+
+type decodedScanCache struct {
+	Observations  []serviceObservation
+	WebmailReady  bool
+	WebmailProven bool
 }
 
 // These wire types mirror Agent.InstalledRepoPackages. Only ServiceID crosses
@@ -208,11 +216,16 @@ type installedRepoPackagesResp = transport.InstalledRepoPackagesResponse
 // yüzden güncellenen panel, operatör yeniden tarama koşturana dek sayfayı
 // boşaltmak yerine doğru durumu göstermeyi sürdürür.
 func decodeScanCache(data string) ([]serviceObservation, error) {
+	decoded, err := decodeScanCacheSnapshot(data)
+	return decoded.Observations, err
+}
+
+func decodeScanCacheSnapshot(data string) (decodedScanCache, error) {
 	trimmed := strings.TrimSpace(data)
 	if strings.HasPrefix(trimmed, "[") {
 		var legacy []ManagedServiceResponse
 		if err := json.Unmarshal([]byte(trimmed), &legacy); err != nil {
-			return nil, fmt.Errorf("decode legacy service scan cache: %w", err)
+			return decodedScanCache{}, fmt.Errorf("decode legacy service scan cache: %w", err)
 		}
 		obs := make([]serviceObservation, 0, len(legacy))
 		for _, l := range legacy {
@@ -224,22 +237,28 @@ func decodeScanCache(data string) ([]serviceObservation, error) {
 				ConfigFiles: l.ConfigFiles,
 			})
 		}
-		return obs, nil
+		return decodedScanCache{Observations: obs}, nil
 	}
 	var envelope struct {
 		Observations json.RawMessage `json:"observations"`
+		WebmailReady *bool           `json:"webmail_ready"`
 	}
 	if err := json.Unmarshal([]byte(trimmed), &envelope); err != nil {
-		return nil, fmt.Errorf("decode service scan cache: %w", err)
+		return decodedScanCache{}, fmt.Errorf("decode service scan cache: %w", err)
 	}
 	if len(envelope.Observations) == 0 || string(envelope.Observations) == "null" {
-		return nil, fmt.Errorf("decode service scan cache: observations are missing")
+		return decodedScanCache{}, fmt.Errorf("decode service scan cache: observations are missing")
 	}
 	var observations []serviceObservation
 	if err := json.Unmarshal(envelope.Observations, &observations); err != nil {
-		return nil, fmt.Errorf("decode service scan observations: %w", err)
+		return decodedScanCache{}, fmt.Errorf("decode service scan observations: %w", err)
 	}
-	return observations, nil
+	decoded := decodedScanCache{Observations: observations}
+	if envelope.WebmailReady != nil {
+		decoded.WebmailReady = *envelope.WebmailReady
+		decoded.WebmailProven = true
+	}
+	return decoded, nil
 }
 
 // safeRepairPackage returns observed package identity only when it is
@@ -437,14 +456,19 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	// A fresh installation has no observation row yet, but its installable
 	// catalogue is still known. Never render an empty Components page merely
 	// because the first scan has not completed.
-	payload := managedServicesPayload{Services: catalogView(nil, p.packageFamily())}
+	packageFamily := p.packageFamily()
+	payload := managedServicesPayload{
+		Services: catalogView(nil, packageFamily),
+		Profiles: mailProfilesView(nil, false, packageFamily, false, false),
+	}
 
 	var data string
 	var scannedAt string
+	profilesVerified := false
 	err := p.db.GetDB().QueryRowContext(r.Context(),
 		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
 	if err == nil {
-		observations, decodeErr := decodeScanCache(data)
+		snapshot, decodeErr := decodeScanCacheSnapshot(data)
 		if decodeErr != nil {
 			log.Printf("cached service state is unverified: %v", decodeErr)
 			writeCodedError(w, http.StatusServiceUnavailable, errCodeServiceStateUnverified,
@@ -453,6 +477,8 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		}
 		if t, terr := time.Parse(time.RFC3339, scannedAt); terr == nil {
 			payload.ScannedAt = &t
+			age := time.Since(t)
+			profilesVerified = age >= 0 && age <= 5*time.Minute
 		}
 		// The catalogue is joined on at read time, so an upgraded panel tells
 		// the truth about its own catalogue immediately — no rescan needed to
@@ -460,7 +486,14 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		// Katalog okuma anında birleştirilir; böylece güncellenen panel kendi
 		// kataloğu hakkında anında doğruyu söyler — adı değişen bir servisi,
 		// yenisini ya da düzeltilmiş bir açıklamayı görmek için tarama gerekmez.
-		payload.Services = catalogView(observations, p.packageFamily())
+		payload.Services = catalogView(snapshot.Observations, packageFamily)
+		payload.Profiles = mailProfilesView(
+			payload.Services,
+			profilesVerified,
+			packageFamily,
+			snapshot.WebmailReady,
+			snapshot.WebmailProven,
+		)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		writeServerError(w, fmt.Errorf("read service scan cache: %w", err))
 		return
@@ -540,9 +573,18 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		writeServerError(w, err)
 		return
 	}
+	webmailReady, webmailProven, err := p.cachedWebmailReadinessProof(r.Context())
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	now := time.Now().UTC()
-	json.NewEncoder(w).Encode(managedServicesPayload{ScannedAt: &now, Services: services})
+	json.NewEncoder(w).Encode(managedServicesPayload{
+		ScannedAt: &now,
+		Services:  services,
+		Profiles:  mailProfilesView(services, true, p.packageFamily(), webmailReady, webmailProven),
+	})
 }
 
 // managedServiceScanMaxAge distinguishes automatic conditional refreshes from
@@ -584,13 +626,16 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 		return managedServicesPayload{}, false, nil
 	}
 
-	observations, err := decodeScanCache(data)
+	snapshot, err := decodeScanCacheSnapshot(data)
 	if err != nil {
 		return managedServicesPayload{}, false, nil
 	}
+	packageFamily := p.packageFamily()
+	services := catalogView(snapshot.Observations, packageFamily)
 	return managedServicesPayload{
 		ScannedAt: &scanned,
-		Services:  catalogView(observations, p.packageFamily()),
+		Services:  services,
+		Profiles:  mailProfilesView(services, true, packageFamily, snapshot.WebmailReady, snapshot.WebmailProven),
 	}, true, nil
 }
 
@@ -781,7 +826,14 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		})
 	}
 
-	data, err := json.Marshal(scanCacheDoc{Observations: observations})
+	webmailReady := false
+	if installedSet["roundcube"] {
+		webmailReady = p.webmailAvailable(ctx)
+	}
+	data, err := json.Marshal(scanCacheDoc{
+		Observations: observations,
+		WebmailReady: &webmailReady,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -793,6 +845,21 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		return nil, err
 	}
 	return catalogView(observations, pkgFamily), nil
+}
+
+func (p *Panel) cachedWebmailReadinessProof(ctx context.Context) (bool, bool, error) {
+	var data string
+	if err := p.db.GetDB().QueryRowContext(
+		ctx,
+		`SELECT data FROM service_scan_cache WHERE id = 1`,
+	).Scan(&data); err != nil {
+		return false, false, fmt.Errorf("read cached webmail readiness proof: %w", err)
+	}
+	snapshot, err := decodeScanCacheSnapshot(data)
+	if err != nil {
+		return false, false, err
+	}
+	return snapshot.WebmailReady, snapshot.WebmailProven, nil
 }
 
 // managedServiceUnitReady decides whether one active unit proves that the

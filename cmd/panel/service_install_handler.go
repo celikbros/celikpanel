@@ -91,11 +91,13 @@ func (p *Panel) runServiceInstall(
 			return result, serviceInstallFailure(errors.New("post-install scan did not find Roundcube"))
 		}
 		result["installed"] = true
-		if err := advance("firewall"); err != nil {
-			return result, operationAdvanceFailure(err)
-		}
-		if err := p.syncFirewall(ctx); err != nil {
-			return result, firewallSyncFailure(err)
+		if !serviceInstallFirewallDeferred(ctx) {
+			if err := advance("firewall"); err != nil {
+				return result, operationAdvanceFailure(err)
+			}
+			if err := p.syncFirewall(ctx); err != nil {
+				return result, firewallSyncFailure(err)
+			}
 		}
 		result["success"] = true
 		return result, nil
@@ -392,11 +394,13 @@ func (p *Panel) runServiceInstall(
 
 	// New service may expose new ports; if the firewall is on, open them.
 	// Yeni servis yeni port açabilir; güvenlik duvarı açıksa onları aç.
-	if err := advance("firewall"); err != nil {
-		return result, operationAdvanceFailure(err)
-	}
-	if err := p.syncFirewall(ctx); err != nil {
-		return result, firewallSyncFailure(err)
+	if !serviceInstallFirewallDeferred(ctx) {
+		if err := advance("firewall"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		if err := p.syncFirewall(ctx); err != nil {
+			return result, firewallSyncFailure(err)
+		}
 	}
 	result["success"] = true
 	return result, nil

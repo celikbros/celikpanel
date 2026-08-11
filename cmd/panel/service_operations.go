@@ -923,6 +923,17 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	if !validServiceOperationID(op.RequestID) {
 		return 0, errors.New("active panel operation has no durable request identity")
 	}
+	var recoveryProfile mailProfileDefinition
+	if op.Kind == serviceOperationKindMailProfileInstall {
+		if op.PackageName != "" {
+			return 0, errors.New("interrupted mail profile operation has an unexpected package target")
+		}
+		var ok bool
+		recoveryProfile, ok = mailProfileByID(op.ServiceID)
+		if !ok {
+			return 0, errors.New("interrupted mail profile operation has an unknown profile target")
+		}
+	}
 	if globalJob != nil && agentMutationActive(globalJob.Status) &&
 		globalJob.RequestID != op.RequestID {
 		return 0, fmt.Errorf(
@@ -973,6 +984,13 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	}
 
 	if job.Status == agentMutationSucceeded {
+		result := serviceOperationResult{"success": true, "recovered": true}
+		if op.Kind == serviceOperationKindMailProfileInstall {
+			result, err = p.reconstructSucceededMailProfileResult(recoveryCtx, recoveryProfile)
+			if err != nil {
+				return 0, fmt.Errorf("reconstruct succeeded mail profile operation: %w", err)
+			}
+		}
 		if op.Status == serviceOperationQueued {
 			if err := p.markServiceOperationRunning(ctx, op.ID, "recovered_terminal"); err != nil {
 				return 0, err
@@ -981,7 +999,7 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 		if err := p.finishServiceOperationSucceeded(
 			ctx,
 			op.ID,
-			serviceOperationResult{"success": true, "recovered": true},
+			result,
 		); err != nil {
 			return 0, err
 		}
@@ -1052,6 +1070,19 @@ func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
 		}
 		successAudit = "runtime.node.install.recovered:" + op.PackageName
 		failureAudit = "runtime.node.install.recovered.failed:" + op.PackageName
+	case serviceOperationKindMailProfileInstall:
+		if op.PackageName != "" {
+			return errors.New("interrupted mail profile operation has an unexpected package target")
+		}
+		profile, ok := mailProfileByID(op.ServiceID)
+		if !ok {
+			return errors.New("interrupted mail profile operation has an unknown profile target")
+		}
+		runner = func(ctx context.Context, advance func(string) error) (serviceOperationResult, *serviceOperationFailure) {
+			return p.runMailProfileInstall(ctx, profile.ID, advance)
+		}
+		successAudit = "mail.profile.install.recovered:" + profile.ID
+		failureAudit = "mail.profile.install.recovered.failed:" + profile.ID
 	default:
 		return fmt.Errorf("cannot resume unsupported service operation kind %q", op.Kind)
 	}

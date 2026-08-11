@@ -5,7 +5,11 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
-import { useComponentOperation } from './ComponentOperation';
+import {
+    decodeManagedMailProfiles,
+    useComponentOperation,
+    type ManagedMailProfile,
+} from './ComponentOperation';
 import { useNavigate } from '../router';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
@@ -53,6 +57,7 @@ interface ManagedService {
 
 interface ManagedServicesSnapshot {
     services: ManagedService[];
+    profiles: ManagedMailProfile[];
     scannedAt: string | null;
 }
 
@@ -104,6 +109,19 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     if (!value || typeof value !== 'object') return null;
     const payload = value as Record<string, unknown>;
     if (!Array.isArray(payload.services) || !payload.services.every(isManagedService)) return null;
+    const serviceIDs = new Set<string>();
+    for (const service of payload.services) {
+        if (
+            service.id.trim() !== service.id
+            || service.id === ''
+            || serviceIDs.has(service.id)
+        ) {
+            return null;
+        }
+        serviceIDs.add(service.id);
+    }
+    const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
+    if (profiles === null) return null;
     if (
         payload.scanned_at !== undefined
         && payload.scanned_at !== null
@@ -116,6 +134,7 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     }
     return {
         services: payload.services,
+        profiles,
         scannedAt: typeof payload.scanned_at === 'string' ? payload.scanned_at : null,
     };
 }
@@ -248,6 +267,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const navigate = useNavigate();
     const { startInstall, catalogSnapshot } = useComponentOperation();
     const [services, setServices] = useState<ManagedService[]>([]);
+    const [profiles, setProfiles] = useState<ManagedMailProfile[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
@@ -295,6 +315,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         }
         latestScannedAtRef.current = snapshot.scannedAt;
         setServices(snapshot.services);
+        setProfiles(snapshot.profiles);
         setScannedAt(snapshot.scannedAt);
 
         // A cached load may still be the exact pre-mutation snapshot retained
@@ -762,6 +783,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
     const pageControlsBusy = scanning || busy !== null;
     const mutationControlsDisabled = pageControlsBusy || stateUnverified;
+    const installProfile = async (profile: ManagedMailProfile) => {
+        if (stateUnverified || !profile.available) return;
+        await startInstall({
+            serviceId: profile.id,
+            name: profile.name,
+            operationKind: 'mail_profile_install',
+        });
+    };
 
     return (
         <div className="p-6 md:p-8">
@@ -842,6 +871,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         <p className="text-sm text-fg-muted">{t('services.stateUnverifiedHint')}</p>
                     </div>
                 </div>
+            )}
+
+            {!loading && profiles.length > 0 && (
+                <MailProfileCards
+                    profiles={profiles}
+                    services={services}
+                    disabled={mutationControlsDisabled}
+                    onInstall={installProfile}
+                />
             )}
 
             {loading ? (
@@ -1278,6 +1316,95 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 // tam olarak ne ineceğini (dağıtım paketleri) gösterir; kurulum asla kör bir
 // "yallah" değildir. PHP için dağıtım varsayılan sürümünün kurulacağı,
 // ek sürümlerin site başına başka yerde yönetildiği belirtilir.
+function MailProfileCards({ profiles, services, disabled, onInstall }: {
+    profiles: ManagedMailProfile[];
+    services: ManagedService[];
+    disabled: boolean;
+    onInstall: (profile: ManagedMailProfile) => Promise<void>;
+}) {
+    const { t } = useI18n();
+    const actionLabel = (profile: ManagedMailProfile) => {
+        if (profile.status === 'available') return t('services.mailProfiles.install');
+        if (profile.status === 'partial') return t('services.mailProfiles.continue');
+        if (profile.status === 'complete') return t('services.mailProfiles.repair');
+        return t('services.mailProfiles.unavailable');
+    };
+    const serviceName = (id: string) => services.find((service) => service.id === id)?.name ?? id;
+    return (
+        <section aria-labelledby='mail-profile-heading' className='mb-6'>
+            <div className='mb-3 flex items-start gap-3'>
+                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                    <Layers className='h-5 w-5' />
+                </span>
+                <div>
+                    <h2 id='mail-profile-heading' className='text-lg font-semibold text-fg'>
+                        {t('services.mailProfiles.title')}
+                    </h2>
+                    <p className='text-sm text-fg-muted'>{t('services.mailProfiles.subtitle')}</p>
+                </div>
+            </div>
+            <div className='grid gap-3 lg:grid-cols-3'>
+                {profiles.map((profile) => {
+                    const actionable = profile.available && (
+                        profile.status === 'available'
+                        || profile.status === 'partial'
+                        || profile.status === 'complete'
+                    );
+                    const detail = profile.status === 'complete' && profile.warning
+                        ? t('services.mailProfiles.profileComponentsNeedRepair')
+                        : profile.status === 'blocked'
+                            ? profile.blocked_reason
+                            : profile.warning;
+                    const ActionIcon = profile.status === 'available' ? DownloadCloud : RotateCw;
+                    return (
+                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4 shadow-card'>
+                            <div className='flex items-start gap-3'>
+                                <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                                    {profile.id === 'protected-mail'
+                                        ? <ShieldCheck className='h-5 w-5' />
+                                        : <Mail className='h-5 w-5' />}
+                                </span>
+                                <div className='min-w-0'>
+                                    <h3 className='font-semibold text-fg'>{profile.name}</h3>
+                                    <p className='mt-1 text-xs leading-5 text-fg-muted'>{profile.description}</p>
+                                </div>
+                            </div>
+                            <div className='mt-4 flex flex-wrap gap-1.5' aria-label={t('services.mailProfiles.includes')}>
+                                {profile.services.map((id) => (
+                                    <span key={id} className='rounded-md bg-surface-2 px-2 py-1 text-[11px] font-medium text-fg-muted'>
+                                        {serviceName(id)}
+                                    </span>
+                                ))}
+                            </div>
+                            {detail && (
+                                <p className={`mt-3 text-xs leading-5 ${profile.status === 'blocked' ? 'text-danger' : 'text-warning'}`}>
+                                    {detail}
+                                </p>
+                            )}
+                            <div className='mt-auto flex items-center justify-between gap-3 pt-4'>
+                                <span className='inline-flex items-center gap-1.5 text-xs font-medium text-fg-muted'>
+                                    <StatusDot ok={profile.status === 'complete'} />
+                                    {t(`services.mailProfiles.status.${profile.status}` as Parameters<typeof t>[0])}
+                                </span>
+                                <button
+                                    type='button'
+                                    onClick={() => void onInstall(profile)}
+                                    disabled={disabled || !actionable}
+                                    title={detail || actionLabel(profile)}
+                                    className='inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
+                                >
+                                    <ActionIcon className='h-3.5 w-3.5' />
+                                    {actionLabel(profile)}
+                                </button>
+                            </div>
+                        </article>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 function InstallServiceDialog({
     service,
     busy,
