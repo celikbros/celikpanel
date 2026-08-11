@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -23,16 +24,27 @@ func (a *Agent) ServiceCandidateVersion(req *InstallServiceRequest, reply *strin
 	if svc == nil {
 		return fmt.Errorf("unknown catalog service %q", req.ID)
 	}
-	profile, err := verifiedHostProfile("apt")
+	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return err
 	}
-	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	family := string(profile.PackageManager)
+	var executable string
+	switch family {
+	case "apt":
+		executable, err = executableForProfile(profile, family, "apt-cache")
+	case "dnf":
+		executable, err = dnfExecutableForProfile(profile)
+	default:
+		return fmt.Errorf("candidate version lookup is not supported for package-manager family %q", family)
+	}
 	if err != nil {
 		return err
 	}
-	version, err := candidateVersionForService(svc, "apt", func(_ string, args ...string) ([]byte, error) {
-		return serviceMutationCommand(context.Background(), aptCache, args...).Output()
+	version, err := candidateVersionForService(svc, family, func(_ string, args ...string) ([]byte, error) {
+		cmd := serviceMutationCommand(context.Background(), executable, args...)
+		cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+		return cmd.Output()
 	})
 	if err != nil {
 		return err
@@ -45,7 +57,7 @@ func candidateVersionForService(svc *core.ManagedService, family string, run ser
 	if svc == nil {
 		return "", fmt.Errorf("catalog service is required")
 	}
-	if family != "apt" {
+	if family != "apt" && family != "dnf" {
 		if family == "" {
 			return "", fmt.Errorf("cannot determine package-manager family for service %q", svc.ID)
 		}
@@ -58,26 +70,47 @@ func candidateVersionForService(svc *core.ManagedService, family string, run ser
 	if run == nil {
 		return "", fmt.Errorf("candidate version command runner is required")
 	}
-	out, err := run("apt-cache", "policy", packages[0])
-	if err != nil {
-		return "", fmt.Errorf("query candidate version for service %q: %w", svc.ID, err)
-	}
-	for _, line := range strings.Split(string(out), "\n") {
-		candidate, ok := strings.CutPrefix(strings.TrimSpace(line), "Candidate:")
-		if !ok {
-			continue
+	switch family {
+	case "apt":
+		out, err := run("apt-cache", "policy", packages[0])
+		if err != nil {
+			return "", fmt.Errorf("query candidate version for service %q: %w", svc.ID, err)
 		}
-		candidate = strings.TrimSpace(candidate)
-		if candidate == "" || candidate == "(none)" {
+		for _, line := range strings.Split(string(out), "\n") {
+			candidate, ok := strings.CutPrefix(strings.TrimSpace(line), "Candidate:")
+			if !ok {
+				continue
+			}
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "" || candidate == "(none)" {
+				return "", fmt.Errorf("package index has no install candidate for service %q", svc.ID)
+			}
+			version := cleanAptVersion(candidate)
+			if version == "" {
+				return "", fmt.Errorf("package index returned an invalid candidate for service %q", svc.ID)
+			}
+			return version, nil
+		}
+		return "", fmt.Errorf("package index response has no Candidate field for service %q", svc.ID)
+	case "dnf":
+		out, err := run("dnf", dnfCandidateQueryArgs(packages[0])...)
+		if err != nil {
+			return "", fmt.Errorf("query candidate version for service %q: %w", svc.ID, err)
+		}
+		candidate, err := parseDNFInstallCandidate(out)
+		if err != nil {
+			return "", fmt.Errorf("query candidate version for service %q: %w", svc.ID, err)
+		}
+		if candidate == "" {
 			return "", fmt.Errorf("package index has no install candidate for service %q", svc.ID)
 		}
-		version := cleanAptVersion(candidate)
+		version := cleanRPMVersion(candidate)
 		if version == "" {
 			return "", fmt.Errorf("package index returned an invalid candidate for service %q", svc.ID)
 		}
 		return version, nil
 	}
-	return "", fmt.Errorf("package index response has no Candidate field for service %q", svc.ID)
+	panic("unreachable package-manager family")
 }
 
 func cleanAptVersion(v string) string {
@@ -88,4 +121,14 @@ func cleanAptVersion(v string) string {
 		v = v[:i]
 	}
 	return v
+}
+
+func cleanRPMVersion(v string) string {
+	if i := strings.IndexByte(v, ':'); i >= 0 {
+		v = v[i+1:]
+	}
+	if i := strings.LastIndexByte(v, '-'); i >= 0 {
+		v = v[:i]
+	}
+	return strings.TrimSpace(v)
 }

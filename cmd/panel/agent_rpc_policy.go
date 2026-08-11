@@ -47,6 +47,7 @@ var agentRPCTimeoutPolicies = map[string]time.Duration{
 	"Agent.GetPHPPoolConfig":          agentRPCQuickReadTimeout,
 	"Agent.GetPHPPools":               agentRPCQuickReadTimeout,
 	"Agent.GetServices":               agentRPCQuickReadTimeout,
+	"Agent.HostPlatform":              agentRPCQuickReadTimeout,
 	"Agent.InstalledServiceIDsStrict": agentRPCQuickReadTimeout,
 	"Agent.ListServiceInstances":      agentRPCQuickReadTimeout,
 	"Agent.ListCronJobs":              agentRPCQuickReadTimeout,

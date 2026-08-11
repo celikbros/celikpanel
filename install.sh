@@ -75,6 +75,146 @@ ok() { c '32' "    ✓ $(bilingual "$@")"; }
 warn() { c '33' "    $(bilingual "$@")"; }
 die() { c '1;31' "ERROR / HATA: $(bilingual "$@")" >&2; exit 1; }
 
+# Read only the authorization-bearing os-release fields without sourcing the
+# file. ID_LIKE is deliberately ignored: a compatible derivative is not a
+# certified bootstrap target.
+parse_bootstrap_os_release_scalar() {
+    local raw=$1 field=$2 value
+    case "$raw" in
+        \"*)
+            [[ ${#raw} -ge 2 && "${raw: -1}" == '"' ]] \
+                || die "malformed quoted $field in /etc/os-release"
+            value=${raw:1:${#raw}-2}
+            [[ "$value" != *'"'* && "$value" != *\\* ]] \
+                || die "unsupported escape in $field in /etc/os-release"
+            ;;
+        \'*)
+            [[ ${#raw} -ge 2 && "${raw: -1}" == "'" ]] \
+                || die "malformed quoted $field in /etc/os-release"
+            value=${raw:1:${#raw}-2}
+            [[ "$value" != *"'"* && "$value" != *\\* ]] \
+                || die "unsupported escape in $field in /etc/os-release"
+            ;;
+        *)
+            [[ "$raw" != *'"'* && "$raw" != *"'"* && "$raw" != *\\* ]] \
+                || die "malformed $field in /etc/os-release"
+            value=$raw
+            ;;
+    esac
+    BOOTSTRAP_OS_RELEASE_VALUE=$value
+}
+
+parse_bootstrap_os_release() {
+    local file=$1 line key raw
+    local -A seen=()
+    BOOTSTRAP_DISTRO_ID=
+    BOOTSTRAP_DISTRO_VERSION_ID=
+    [[ -f "$file" ]] \
+        || die "missing operating-system identity file: $file"
+    if IFS= read -r -d '' _ < "$file"; then
+        die "NUL byte in operating-system identity file: $file"
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        case "$line" in ''|'#'*) continue ;; esac
+        [[ "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] \
+            || die "malformed entry in operating-system identity file: $file"
+        key=${BASH_REMATCH[1]}
+        raw=${BASH_REMATCH[2]}
+        case "$key" in
+            ID|VERSION_ID)
+                [[ -z "${seen[$key]+present}" ]] \
+                    || die "duplicate $key in operating-system identity file: $file"
+                seen[$key]=1
+                parse_bootstrap_os_release_scalar "$raw" "$key"
+                if [[ "$key" == ID ]]; then
+                    BOOTSTRAP_DISTRO_ID=$BOOTSTRAP_OS_RELEASE_VALUE
+                else
+                    BOOTSTRAP_DISTRO_VERSION_ID=$BOOTSTRAP_OS_RELEASE_VALUE
+                fi
+                ;;
+        esac
+    done < "$file"
+    [[ "$BOOTSTRAP_DISTRO_ID" =~ ^[a-z0-9][a-z0-9._-]*$ ]] \
+        || die "missing or invalid ID in operating-system identity file: $file"
+}
+
+classify_bootstrap_platform() {
+    local os_release=$1 machine=$2
+    parse_bootstrap_os_release "$os_release"
+    case "$machine" in
+        x86_64) BOOTSTRAP_ARCH=amd64 ;;
+        aarch64) BOOTSTRAP_ARCH=arm64 ;;
+        *) die "unsupported bootstrap architecture: $machine" ;;
+    esac
+
+    case "$BOOTSTRAP_DISTRO_ID" in
+        debian)
+            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^13([.][0-9]+)*$ ]] \
+                || die "Debian bootstrap requires Debian 13"
+            PKG_FAMILY=apt
+            ;;
+        ubuntu)
+            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^24[.]04([.][0-9]+)*$ ]] \
+                || die "Ubuntu bootstrap requires Ubuntu 24.04 LTS"
+            PKG_FAMILY=apt
+            ;;
+        arch)
+            [[ -z "$BOOTSTRAP_DISTRO_VERSION_ID" || "$BOOTSTRAP_DISTRO_VERSION_ID" == rolling ]] \
+                || die "Arch bootstrap requires the rolling Arch Linux release"
+            [[ "$BOOTSTRAP_ARCH" == amd64 ]] \
+                || die "Arch Linux bootstrap is certified only for x86_64"
+            PKG_FAMILY=pacman
+            ;;
+        almalinux|rocky)
+            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^9([.][0-9]+)*$ ]] \
+                || die "RHEL-family preview bootstrap requires AlmaLinux 9 or Rocky Linux 9"
+            PKG_FAMILY=dnf-preview
+            ;;
+        rhel)
+            die "subscription-based RHEL bootstrap is not certified; CelikPanel never registers subscriptions automatically"
+            ;;
+        fedora|centos|cloudlinux)
+            die "RHEL-family distribution $BOOTSTRAP_DISTRO_ID is compatible but not certified for bootstrap"
+            ;;
+        *)
+            die "unsupported bootstrap distribution ID: $BOOTSTRAP_DISTRO_ID"
+            ;;
+    esac
+}
+
+verify_rhel_preview_host() {
+    local selinux_enforce_file=$1 dnf_bin=$2 enforcing
+    [[ -f "$selinux_enforce_file" && ! -L "$selinux_enforce_file" && -r "$selinux_enforce_file" ]] \
+        || die "RHEL-family preview requires SELinux Enforcing; SELinux state is unavailable"
+    IFS= read -r enforcing < "$selinux_enforce_file" \
+        || die "RHEL-family preview could not read the SELinux enforcement state"
+    [[ "$enforcing" == 1 ]] \
+        || die "RHEL-family preview requires SELinux Enforcing and will not change host policy"
+    [[ -f "$dnf_bin" && -x "$dnf_bin" ]] \
+        || die "RHEL-family preview requires the vendor dnf executable at $dnf_bin"
+}
+
+# Pure dry-run description of the future prerequisite transaction. The normal
+# installer does not execute this command until panel and agent activation has
+# passed an SELinux-Enforcing acceptance test on both preview distributions.
+rhel_preview_prerequisite_command() {
+    printf '%s\n' /usr/bin/dnf --assumeyes --setopt=install_weak_deps=False \
+        install tar xz curl ca-certificates
+}
+
+preflight_bootstrap_platform() {
+    local os_release=$1 machine=$2 selinux_enforce_file=$3 dnf_bin=$4
+    if [[ $APPLY_ONLY -eq 1 ]]; then
+        PKG_FAMILY=apply-only
+        return
+    fi
+    classify_bootstrap_platform "$os_release" "$machine"
+    if [[ "$PKG_FAMILY" == dnf-preview ]]; then
+        verify_rhel_preview_host "$selinux_enforce_file" "$dnf_bin"
+        die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"
+    fi
+}
+
 valid_panel_listen() {
     local value=$1 host port
     case "$value" in
@@ -291,6 +431,7 @@ run_panel_as_service_user_with_private_umask() {
 }
 
 [ "$(id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
+preflight_bootstrap_platform /etc/os-release "$(uname -m)" /sys/fs/selinux/enforce /usr/bin/dnf
 command -v systemctl >/dev/null || die "systemd gerekli"
 
 # Apply-only is accepted solely from a completely verified immutable release
@@ -414,22 +555,21 @@ elif [[ $initialize_ledger -ne 1 ]]; then
     die "servis işlem ledger eksik; yalnız temiz kurulum veya denetlenmiş bootstrap başlatabilir"
 fi
 
-# Package manager: apt (Ubuntu/Debian, the first-class tested target) and
-# pacman (Arch, dev-test target since Jul 16) are supported. Anything else
-# fails honestly instead of guessing.
-# Paket yöneticisi: apt (Ubuntu/Debian, birinci sınıf test hedefi) ve pacman
-# (Arch, 16 Tem'den beri geliştirme-test hedefi) desteklenir. Gerisi tahmin
-# etmek yerine dürüstçe durur.
-if [[ $APPLY_ONLY -eq 1 ]]; then
-    PKG_FAMILY=apply-only
-elif command -v apt-get >/dev/null; then
-    PKG_FAMILY=apt
-elif command -v pacman >/dev/null; then
-    PKG_FAMILY=pacman
-else
-    die "No supported package manager was found (apt or pacman is required)" \
-        "Desteklenen paket yöneticisi bulunamadı (apt veya pacman gerekli)"
-fi
+# The exact distro identity selects a package family; the presence of a
+# foreign package manager never authorizes a bootstrap. RHEL preview hosts
+# have already stopped above, before any mutation.
+case "$PKG_FAMILY" in
+    apply-only) ;;
+    apt)
+        command -v apt-get >/dev/null \
+            || die "Debian-family bootstrap requires apt-get"
+        ;;
+    pacman)
+        command -v pacman >/dev/null \
+            || die "Arch bootstrap requires pacman"
+        ;;
+    *) die "internal bootstrap package-family error: $PKG_FAMILY" ;;
+esac
 
 # 1. Minimal prerequisites ---------------------------------------------------
 # The panel and agent are self-contained (static Go binaries + embedded

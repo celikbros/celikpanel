@@ -39,6 +39,16 @@ capabilities stay hidden or blocked. RHEL-family work begins as an explicitly
 labelled preview and does not become full family support merely because dnf
 was detected.
 
+**Current RHEL preview gate.** The test-covered DNF transaction, RPM inventory,
+host-identity, and external-package-lock primitives may be developed and tested
+before any RHEL capability is exposed. Normal installation on the first
+candidate targets (AlmaLinux 9 and Rocky Linux 9 on `amd64`/`arm64`) still stops
+before its first host mutation. Nginx remains unavailable even there until a
+default-deny platform-capability API guard and a SELinux-Enforcing panel/agent
+lifecycle have passed real-machine end-to-end certification. Fedora, CentOS
+Stream, CloudLinux, subscription RHEL, other versions, and other architectures
+do not inherit this candidate status.
+
 **Out of scope.** openSUSE/SLES, Alpine, and NixOS do not currently justify a
 new family adapter. Proven demand may add distinct `suse`, `alpine`, or `nixos`
 families later; none is impersonated as an existing family. Kali Linux is

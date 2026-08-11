@@ -1,5 +1,7 @@
 package core
 
+import "strings"
+
 // FirewallPort is one inbound port a service needs open, with its protocol.
 // FirewallPort, bir servisin açık olmasını istediği bir gelen port ve protokolü.
 type FirewallPort struct {
@@ -290,18 +292,96 @@ const (
 	ManagedServiceInstallBlockDistribution ManagedServiceInstallBlockKind = "distribution"
 )
 
+// ManagedServiceHostProfile is the small, verified host identity needed for
+// distribution-specific lifecycle certification. It intentionally contains
+// no executable paths and treats package-manager family as evidence, never as
+// authorization by itself.
+type ManagedServiceHostProfile struct {
+	DistroFamily   string
+	PackageFamily  string
+	ServiceManager string
+	DistroID       string
+	VersionID      string
+	Architecture   string
+}
+
+const (
+	rhelPreviewOnlyNginxReason   = "the RHEL-family preview does not offer this component; only Nginx on an explicitly qualified host is being evaluated"
+	rhelPreviewNginxTargetReason = "the RHEL-family Nginx preview candidate is limited to AlmaLinux 9 and Rocky Linux 9"
+	// RHELPreviewNginxCertificationPendingReason is deliberately user-facing:
+	// a qualified distro is still not an enabled capability until both the
+	// cross-route API boundary and SELinux enforcing-mode lifecycle are proven.
+	RHELPreviewNginxCertificationPendingReason = "the RHEL-family Nginx preview remains disabled until the central platform-capability firewall (API guard) and SELinux enforcing-mode lifecycle are certified"
+)
+
+// IsRHELPreviewNginxCandidate identifies the deliberately narrow first
+// certification target. Candidate does not mean supported or installable.
+// Exact distro identity and a numeric major version are required; ID_LIKE or
+// package-manager family cannot promote another distribution into this set.
+func IsRHELPreviewNginxCandidate(host ManagedServiceHostProfile) bool {
+	if host.DistroFamily != "rhel" || host.PackageFamily != "dnf" || host.ServiceManager != "systemd" {
+		return false
+	}
+	if host.DistroID != "almalinux" && host.DistroID != "rocky" {
+		return false
+	}
+	if host.Architecture != "amd64" && host.Architecture != "arm64" {
+		return false
+	}
+	return numericVersionMajor(host.VersionID) == "9"
+}
+
+func numericVersionMajor(version string) string {
+	parts := strings.Split(version, ".")
+	if len(parts) == 0 {
+		return ""
+	}
+	for _, part := range parts {
+		if part == "" {
+			return ""
+		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return ""
+			}
+		}
+	}
+	return parts[0]
+}
+
 // ManagedServiceInstallBlock is the single catalogue decision used
 // by both the panel and the privileged agent. Empty means automatic install is
-// offered. An empty Packages map is a portable installer (Node/Roundcube), not
-// a missing distro mapping.
+// offered. On established, certified families an empty Packages map is a
+// portable installer (Node/Roundcube), not a missing distro mapping. Preview
+// families remain under their explicit allowlist even for portable installers.
 func ManagedServiceInstallBlock(svc *ManagedService, family string) (ManagedServiceInstallBlockKind, string) {
+	return ManagedServiceInstallBlockForHost(svc, ManagedServiceHostProfile{PackageFamily: family})
+}
+
+// ManagedServiceInstallBlockForHost is the host-identity-aware catalogue
+// decision. In particular, dnf alone never enables a RHEL-family capability.
+// The first Alma/Rocky 9 Nginx target remains explicitly closed while its API
+// and SELinux boundaries are still uncertified.
+func ManagedServiceInstallBlockForHost(svc *ManagedService, host ManagedServiceHostProfile) (ManagedServiceInstallBlockKind, string) {
 	if svc == nil {
 		return ManagedServiceInstallBlockIntegration, "unknown managed service"
 	}
 	if svc.InstallDisabledReason != "" {
 		return ManagedServiceInstallBlockIntegration, svc.InstallDisabledReason
 	}
-	if len(svc.Packages) > 0 && len(svc.Packages[family]) == 0 {
+	if host.PackageFamily == "dnf" {
+		if svc.ID != "nginx" {
+			return ManagedServiceInstallBlockDistribution, rhelPreviewOnlyNginxReason
+		}
+		if !IsRHELPreviewNginxCandidate(host) {
+			return ManagedServiceInstallBlockDistribution, rhelPreviewNginxTargetReason
+		}
+		return ManagedServiceInstallBlockDistribution, RHELPreviewNginxCertificationPendingReason
+	}
+	if host.PackageFamily == "" {
+		return ManagedServiceInstallBlockDistribution, "automatic installation is unavailable until the host platform is verified"
+	}
+	if len(svc.Packages) > 0 && len(svc.Packages[host.PackageFamily]) == 0 {
 		return ManagedServiceInstallBlockDistribution, "automatic installation is not supported on this Linux distribution yet"
 	}
 	return ManagedServiceInstallBlockNone, ""

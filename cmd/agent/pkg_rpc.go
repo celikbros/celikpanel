@@ -16,14 +16,17 @@ import (
 // package mutation so browser tabs and API clients cannot race pacman or apt.
 var packageOperationMu sync.Mutex
 
+var errDNFMutationCertificationPending = fmt.Errorf("DNF package mutation is pending per-service and per-distribution certification; no package changes were made")
+
 // Package-manager abstraction so service installation is not hard-wired to
 // one distro. The central host-platform detector selects a distribution family
 // from os-release and then verifies that family's required tools; each manager
 // knows how to install a set of packages non-interactively. apt is the first-class
 // tested family; pacman (Arch) is supported as the dev-test target the
 // operator keeps a second server on (D-004 amendment) — for services whose
-// catalog entry carries pacman package names. dnf is recognised and returns
-// an honest "not supported yet". We never claim a distro we haven't run on.
+// catalog entry carries pacman package names. The dnf transaction core is a
+// bounded preview: the catalogue remains the allowlist for which services may
+// use it, so recognising a RHEL-family host does not claim broad support.
 //
 // Paket-yöneticisi soyutlaması; servis kurulumu tek dağıtıma gömülü değildir.
 // Merkezi platform dedektörü aileyi os-release içindeki tam kimliklerden seçer;
@@ -32,8 +35,9 @@ var packageOperationMu sync.Mutex
 // (Ubuntu/Debian) birinci sınıf test edilmiş ailedir; pacman (Arch),
 // operatörün ikinci sunucuyu üzerinde tuttuğu geliştirme-test hedefi olarak
 // desteklenir (D-004 eki) — katalog girdisi pacman paket adı taşıyan
-// servisler için. dnf tanınır ve dürüst "henüz desteklenmiyor" döndürür.
-// Üzerinde çalışmadığımız bir dağıtımı asla iddia etmeyiz.
+// servisler için. dnf işlem çekirdeği sınırlı bir önizlemedir; hangi servisin
+// bunu kullanabileceğine katalog izin listesi karar verir. Bir RHEL ailesini
+// tanımak geniş özellik desteği iddiası değildir.
 
 var detectHostPlatform = hostplatform.Detect
 
@@ -249,7 +253,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		}
 		return string(out), nil
 	case "dnf":
-		return "", fmt.Errorf("automatic install on this distro (%s) is not supported yet; install %s manually", family, strings.Join(packages, ", "))
+		return "", errDNFMutationCertificationPending
 	default:
 		return "", fmt.Errorf("unrecognised distribution; install %s manually", strings.Join(packages, ", "))
 	}
@@ -307,15 +311,192 @@ func pacmanInstallArgs(packages []string) []string {
 	return append([]string{"-Syu", "--noconfirm", "--needed"}, packages...)
 }
 
-// removePackages purges the given packages with the host's package manager,
-// non-interactively — the mirror of installPackages, for shrinking the attack
-// surface back down. "purge" (not "remove") also drops config, so an
-// uninstalled service leaves nothing behind. autoremove clears now-orphaned
-// dependencies for the same reason.
-// removePackages, verilen paketleri makinenin paket yöneticisiyle etkileşimsiz
-// kaldırır (purge) — installPackages'in aynası, saldırı yüzeyini geri
-// küçültmek için. "purge" config'i de siler; autoremove artık öksüz kalan
-// bağımlılıkları temizler.
+func dnfExecutableForProfile(profile hostplatform.Profile) (string, error) {
+	if profile.PackageManager != hostplatform.PackageManagerDNF {
+		return "", fmt.Errorf("host package manager is %s, want dnf", profile.PackageManager)
+	}
+	// A future detector may pin dnf5 explicitly. Never discover it from PATH
+	// here: only a path already verified in the trusted profile is accepted.
+	for _, name := range []string{"dnf5", "dnf"} {
+		if path := profile.Executables[name]; path != "" {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("host DNF executable has not been verified")
+}
+
+func dnfInstallArgs(packages []string) []string {
+	return append([]string{
+		"-y",
+		"--setopt=install_weak_deps=False",
+		"install",
+	}, packages...)
+}
+
+func dnfRemoveArgs(packages []string) []string {
+	return append([]string{
+		"-y",
+		"--setopt=clean_requirements_on_remove=False",
+		"remove",
+	}, packages...)
+}
+
+func dnfCandidateQueryArgs(packageName string) []string {
+	return []string{
+		"-C",
+		"-q",
+		"repoquery",
+		"--available",
+		"--latest-limit=1",
+		`--queryformat=CELIKPANEL_EVR:%{evr}\n`,
+		packageName,
+	}
+}
+
+func dnfMetadataRefreshArgs() []string {
+	return []string{"-q", "--refresh", "makecache"}
+}
+
+type dnfPreviewCommandRunner func(context.Context, []string, string, ...string) ([]byte, error)
+
+var runDNFPreviewCommand dnfPreviewCommandRunner = runServiceMutationCombinedOutputEnv
+
+func refreshDNFMetadataWithExecutable(ctx context.Context, dnf string) error {
+	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := runDNFPreviewCommand(ctx, env, dnf, dnfMetadataRefreshArgs()...)
+	if err != nil {
+		return fmt.Errorf("DNF metadata refresh failed: %v: %s", err, firstLine(string(out)))
+	}
+	return nil
+}
+
+func dnfInstallCandidateWithExecutable(ctx context.Context, dnf, packageName string) (string, error) {
+	if !validPackageName(packageName) {
+		return "", fmt.Errorf("invalid package name: %q", packageName)
+	}
+	if err := refreshDNFMetadataWithExecutable(ctx, dnf); err != nil {
+		return "", err
+	}
+	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := runDNFPreviewCommand(ctx, env, dnf, dnfCandidateQueryArgs(packageName)...)
+	if err != nil {
+		return "", fmt.Errorf("DNF repoquery failed: %v: %s", err, firstLine(string(out)))
+	}
+	return parseDNFInstallCandidate(out)
+}
+
+func parseDNFInstallCandidate(out []byte) (string, error) {
+	const prefix = "CELIKPANEL_EVR:"
+	var candidate string
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		evr := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+		if !validRPMEVR(evr) {
+			return "", fmt.Errorf("DNF repoquery returned an invalid candidate")
+		}
+		if candidate != "" && candidate != evr {
+			return "", fmt.Errorf("DNF repoquery returned ambiguous candidates")
+		}
+		candidate = evr
+	}
+	return candidate, nil
+}
+
+func validRPMEVR(value string) bool {
+	if value == "" || len(value) > 256 {
+		return false
+	}
+	for _, r := range value {
+		alnum := r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
+		if !alnum && r != '.' && r != '_' && r != '+' && r != '~' && r != '^' && r != ':' && r != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+// installDNFPreviewPackagesContext preserves the audited DNF transaction
+// implementation without making it reachable from a production handler. A
+// certified service/distro slice must add its own explicit gate before it may
+// call this primitive.
+func installDNFPreviewPackagesContext(ctx context.Context, packages []string, requiredCandidate string) (string, error) {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+
+	if len(packages) == 0 {
+		return "", fmt.Errorf("no packages to install")
+	}
+	for _, pkg := range packages {
+		if !validPackageName(pkg) {
+			return "", fmt.Errorf("invalid package name: %q", pkg)
+		}
+	}
+	profile, err := verifiedHostProfile("dnf")
+	if err != nil {
+		return "", err
+	}
+	dnf, err := dnfExecutableForProfile(profile)
+	if err != nil {
+		return "", err
+	}
+	if requiredCandidate = strings.TrimSpace(requiredCandidate); requiredCandidate != "" {
+		candidate, err := dnfInstallCandidateWithExecutable(ctx, dnf, requiredCandidate)
+		if err != nil {
+			return "", fmt.Errorf("check DNF installation candidate for %s: %w", requiredCandidate, err)
+		}
+		if candidate == "" {
+			return "", fmt.Errorf("selected package %s has no DNF installation candidate after refreshing repository metadata; enable or repair its managed repository and rescan", requiredCandidate)
+		}
+	} else if err := refreshDNFMetadataWithExecutable(ctx, dnf); err != nil {
+		return "", err
+	}
+	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := runDNFPreviewCommand(ctx, env, dnf, dnfInstallArgs(packages)...)
+	if err != nil {
+		return "", fmt.Errorf("DNF install failed: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
+}
+
+// removeDNFPreviewPackagesContext is intentionally unreachable for the same
+// reason as installDNFPreviewPackagesContext.
+func removeDNFPreviewPackagesContext(ctx context.Context, packages []string) (string, error) {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+
+	if len(packages) == 0 {
+		return "", fmt.Errorf("no packages to remove")
+	}
+	for _, pkg := range packages {
+		if !validPackageName(pkg) {
+			return "", fmt.Errorf("invalid package name: %q", pkg)
+		}
+	}
+	profile, err := verifiedHostProfile("dnf")
+	if err != nil {
+		return "", err
+	}
+	dnf, err := dnfExecutableForProfile(profile)
+	if err != nil {
+		return "", err
+	}
+	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := runDNFPreviewCommand(ctx, env, dnf, dnfRemoveArgs(packages)...)
+	if err != nil {
+		return "", fmt.Errorf("DNF removal failed: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
+}
+
+// removePackages removes named packages non-interactively. APT and pacman use
+// their established configuration/orphan cleanup policy; the bounded DNF
+// preview explicitly keeps dependencies that merely became unused.
+// removePackages, adlandırılmış paketleri etkileşimsiz kaldırır. APT ve pacman
+// mevcut yapılandırma/öksüz bağımlılık temizleme politikasını kullanır; sınırlı
+// DNF önizlemesi ise yeni boşa düşen bağımlılıkları bilerek otomatik kaldırmaz.
 func removePackages(family string, packages []string) (string, error) {
 	return removePackagesContext(context.Background(), family, packages)
 }
@@ -365,7 +546,7 @@ func removePackagesContext(ctx context.Context, family string, packages []string
 		}
 		return string(out), nil
 	case "dnf":
-		return "", fmt.Errorf("automatic removal on this distro (%s) is not supported yet; remove %s manually", family, strings.Join(packages, ", "))
+		return "", errDNFMutationCertificationPending
 	default:
 		return "", fmt.Errorf("unrecognised distribution; remove %s manually", strings.Join(packages, ", "))
 	}

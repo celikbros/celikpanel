@@ -36,6 +36,15 @@ bir türev uyumlu/doğrulanmamış kalır; desteklenmeyen yetenekler gizli veya
 engelli olur. RHEL ailesi çalışması açıkça etiketlenmiş bir önizleme olarak
 başlar; yalnız dnf algılandı diye tam aile desteğine dönüşmez.
 
+**Güncel RHEL önizleme kapısı.** Testlerle kapsanan DNF transaction, RPM envanteri,
+host kimliği ve dış paket kilidi temelleri herhangi bir RHEL yeteneği açılmadan
+önce geliştirilebilir ve sınanabilir. İlk aday hedeflerde (AlmaLinux 9 ve Rocky
+Linux 9, `amd64`/`arm64`) normal kurulum yine ilk host mutasyonundan önce durur.
+Nginx bile varsayılan-red platform-yeteneği API koruması ile SELinux Enforcing
+altındaki panel/agent yaşam döngüsü gerçek makine uçtan uca sertifikasyonundan
+geçmeden sunulmaz. Fedora, CentOS Stream, CloudLinux, abonelikli RHEL, diğer
+sürümler ve diğer mimariler bu adaylığı otomatik devralmaz.
+
 **Kapsam dışı.** openSUSE/SLES, Alpine ve NixOS bugün yeni bir aile adaptörünü
 haklı çıkaran talebe sahip değildir; talep doğarsa ayrı `suse`, `alpine` veya
 `nixos` ailesi olarak eklenir, mevcut ailelerden biriymiş gibi davranılmaz.

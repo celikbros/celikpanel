@@ -197,6 +197,154 @@ reject_literal "$INSTALL" 's|^ExecStart=/opt/celikpanel/bin/panel'
 require_literal "$INSTALL" 'pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables'
 reject_literal "$INSTALL" 'pacman -Sy --noconfirm'
 
+# Fresh-install authorization comes from an exact distro/version/architecture
+# tuple, never from ID_LIKE or whichever package manager happens to be on PATH.
+platform_defs=
+for function_name in \
+    parse_bootstrap_os_release_scalar \
+    parse_bootstrap_os_release \
+    classify_bootstrap_platform \
+    verify_rhel_preview_host \
+    rhel_preview_prerequisite_command \
+    preflight_bootstrap_platform
+do
+    function_source=$(extract_function_source "$INSTALL" "$function_name") \
+        || die "install.sh has no complete function: $function_name"
+    platform_defs+=$'\n'"$function_source"
+done
+
+platform_tmp=$(mktemp -d)
+cleanup_platform_contract() {
+    rm -rf -- "$platform_tmp"
+}
+trap cleanup_platform_contract EXIT
+
+run_platform_classifier() (
+    local release_data=$1 machine=$2 fixture=$platform_tmp/os-release
+    eval "$platform_defs"
+    printf '%s' "$release_data" > "$fixture"
+    classify_bootstrap_platform "$fixture" "$machine"
+    printf '%s %s\n' "$PKG_FAMILY" "$BOOTSTRAP_ARCH"
+)
+
+assert_platform_accepts() {
+    local name=$1 release_data=$2 machine=$3 expected=$4 actual
+    if ! actual=$(run_platform_classifier "$release_data" "$machine"); then
+        die "$name was rejected"
+    fi
+    [[ "$actual" == "$expected" ]] \
+        || die "$name classified as '$actual', want '$expected'"
+}
+
+assert_platform_rejects() {
+    local name=$1 release_data=$2 machine=$3
+    if run_platform_classifier "$release_data" "$machine" >/dev/null 2>&1; then
+        die "$name was accepted"
+    fi
+}
+
+assert_platform_accepts debian-13 \
+    $'ID=debian\nVERSION_ID="13"\n' x86_64 'apt amd64'
+assert_platform_accepts ubuntu-24.04 \
+    $'ID=ubuntu\nID_LIKE=debian\nVERSION_ID="24.04"\n' aarch64 'apt arm64'
+assert_platform_accepts arch-rolling \
+    $'ID=arch\nBUILD_ID=rolling\n' x86_64 'pacman amd64'
+assert_platform_accepts almalinux-9 \
+    $'ID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.6"\n' x86_64 'dnf-preview amd64'
+assert_platform_accepts rocky-9 \
+    $'ID=rocky\nID_LIKE="rhel centos fedora"\nVERSION_ID=9.5\n' aarch64 'dnf-preview arm64'
+
+assert_platform_rejects almalinux-8 $'ID=almalinux\nVERSION_ID=8.10\n' x86_64
+assert_platform_rejects rocky-10 $'ID=rocky\nVERSION_ID=10.0\n' x86_64
+assert_platform_rejects rhel-9 $'ID=rhel\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects centos-stream-9 $'ID=centos\nVERSION_ID=9\n' x86_64
+assert_platform_rejects fedora-42 $'ID=fedora\nVERSION_ID=42\n' x86_64
+assert_platform_rejects cloudlinux-9 $'ID=cloudlinux\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects compatible-amazon \
+    $'ID=amzn\nID_LIKE="fedora rhel centos"\nVERSION_ID=2023\n' x86_64
+assert_platform_rejects unsupported-architecture \
+    $'ID=almalinux\nVERSION_ID=9.6\n' s390x
+assert_platform_rejects arch-arm-derivative \
+    $'ID=arch\n' aarch64
+assert_platform_rejects duplicate-id \
+    $'ID=rocky\nID=almalinux\nVERSION_ID=9.6\n' x86_64
+injection_marker=$platform_tmp/os-release-injection
+assert_platform_rejects executable-id \
+    "ID=\"\$(touch $injection_marker)\""$'\nVERSION_ID=9.6\n' x86_64
+[[ ! -e "$injection_marker" ]] \
+    || die 'os-release parser executed untrusted data'
+printf 'ID=rocky\0\nVERSION_ID=9.6\n' > "$platform_tmp/os-release"
+if (
+    eval "$platform_defs"
+    classify_bootstrap_platform "$platform_tmp/os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'os-release parser accepted a NUL byte'
+fi
+
+dnf_command=$(
+    eval "$platform_defs"
+    rhel_preview_prerequisite_command
+)
+expected_dnf_command=$'/usr/bin/dnf\n--assumeyes\n--setopt=install_weak_deps=False\ninstall\ntar\nxz\ncurl\nca-certificates'
+[[ "$dnf_command" == "$expected_dnf_command" ]] \
+    || die "RHEL preview prerequisite command is not the exact reviewed dry-run argv"
+
+selinux_enforce=$platform_tmp/selinux-enforce
+fake_dnf=$platform_tmp/dnf
+dnf_invoked=$platform_tmp/dnf-invoked
+after_preflight=$platform_tmp/after-preflight
+printf '1\n' > "$selinux_enforce"
+cat > "$fake_dnf" <<FAKE_DNF
+#!/bin/bash
+: > "$dnf_invoked"
+exit 97
+FAKE_DNF
+chmod 0700 "$fake_dnf"
+printf 'ID=almalinux\nVERSION_ID=9.6\n' > "$platform_tmp/os-release"
+
+run_rhel_preview_preflight() (
+    eval "$platform_defs"
+    APPLY_ONLY=0
+    preflight_bootstrap_platform \
+        "$platform_tmp/os-release" x86_64 "$selinux_enforce" "$fake_dnf"
+    : > "$after_preflight"
+)
+
+if run_rhel_preview_preflight >/dev/null 2>&1; then
+    die 'RHEL preview preflight returned to the mutating installer path'
+fi
+[[ ! -e "$dnf_invoked" && ! -e "$after_preflight" ]] \
+    || die 'RHEL preview preflight reached a command after its certification blocker'
+
+printf '0\n' > "$selinux_enforce"
+if run_rhel_preview_preflight >/dev/null 2>&1; then
+    die 'RHEL preview accepted SELinux permissive mode'
+fi
+
+require_sequence "$INSTALL" \
+    'preflight_bootstrap_platform /etc/os-release "$(uname -m)" /sys/fs/selinux/enforce /usr/bin/dnf' \
+    'command -v systemctl >/dev/null' \
+    'validate_apply_only_transaction' \
+    'apt-get update -qq' \
+    'useradd --system' \
+    'install -d -m 0750 -o root -g "$SVC_GROUP" "$CONF_DIR"'
+require_function_literal "$INSTALL" preflight_bootstrap_platform \
+    'die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"'
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'systemctl '
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'useradd '
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'mkdir '
+reject_function_literal "$INSTALL" preflight_bootstrap_platform '"$dnf_bin" --'
+require_count "$INSTALL" 'rhel_preview_prerequisite_command' 1
+reject_literal "$INSTALL" 'subscription-manager'
+reject_literal "$INSTALL" 'setenforce'
+reject_literal "$INSTALL" 'SELINUX=permissive'
+reject_literal "$INSTALL" 'SELINUX=disabled'
+reject_literal "$INSTALL" 'dnf-automatic'
+reject_literal "$INSTALL" 'upgrade --security'
+
+cleanup_platform_contract
+trap - EXIT
+
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
 require_literal "$MAKEFILE" 'build: panel agent schema17-bridge web'

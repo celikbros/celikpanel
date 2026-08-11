@@ -26,6 +26,7 @@ func TestAgentRPCTimeoutPoliciesAreExplicitAndClassified(t *testing.T) {
 		"Agent.GetMailQuotaStatus", "Agent.GetMySQLConfig", "Agent.GetPHPConfig",
 		"Agent.GetPHPConfiguration", "Agent.GetPHPExtensions", "Agent.GetPHPLogs",
 		"Agent.GetPHPPoolConfig", "Agent.GetPHPPools", "Agent.GetServices",
+		"Agent.HostPlatform",
 		"Agent.ImportCpmoveDatabase", "Agent.ImportMailAccount", "Agent.InspectCpmove",
 		"Agent.InstalledServiceIDsStrict", "Agent.InstallWordPress", "Agent.ListCronJobs",
 		"Agent.ListServiceInstances",

@@ -27,8 +27,9 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, s
 		return errors.New("unknown managed service")
 	}
 
-	family := p.packageFamily()
-	if reason := core.ManagedServiceInstallDisabledReason(managed, family); reason != "" {
+	host := p.managedServiceHostProfile()
+	family := host.PackageFamily
+	if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
 		return fmt.Errorf("%s: %s", managed.Name, reason)
 	}
 

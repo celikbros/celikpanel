@@ -239,8 +239,8 @@ func TestCatalogViewCarriesTheScannedUnit(t *testing.T) {
 // Bu dağıtımda kurulamayan bileşen bunu SÖYLEMELİ; agent'ta geç patlayan bir
 // Kur düğmesi göstermemeli. Kural: paketle kurulan bileşenin bu aile için
 // eşlemesi yoksa → not_offered. Taşınabilir bileşenler (hiç paket eşlemesi
-// olmayanlar — node, roundcube) her yerde aynı yoldan kurulur, asla
-// işaretlenmez.
+// olmayanlar — node, roundcube) sertifikalı apt/pacman hedeflerinde aynı
+// yoldan kurulur; RHEL önizlemesinin ayrı allowlist kapısı vardır.
 func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
 	for _, c := range []struct {
 		family string
@@ -302,5 +302,66 @@ func TestNotOfferedKindDistinguishesIntegrationFromDistribution(t *testing.T) {
 		if got.NotOfferedKind != c.want {
 			t.Errorf("%s on %s: not_offered_kind = %q, want %q", c.id, c.family, got.NotOfferedKind, c.want)
 		}
+	}
+}
+
+func TestQualifiedRHELPreviewCatalogStillOffersNoInstall(t *testing.T) {
+	host := core.ManagedServiceHostProfile{
+		DistroFamily:   "rhel",
+		PackageFamily:  "dnf",
+		ServiceManager: "systemd",
+		DistroID:       "rocky",
+		VersionID:      "9.6",
+		Architecture:   "amd64",
+	}
+	for _, service := range catalogViewForHost(nil, host) {
+		if !service.NotOffered || service.NotOfferedReason == "" {
+			t.Errorf("%s is offered on the still-uncertified RHEL preview: %+v", service.ID, service)
+		}
+		if service.ID == "nginx" {
+			if service.NotOfferedReason != core.RHELPreviewNginxCertificationPendingReason {
+				t.Errorf("nginx block reason = %q, want %q",
+					service.NotOfferedReason, core.RHELPreviewNginxCertificationPendingReason)
+			}
+			if len(service.Packages) != 0 {
+				t.Errorf("nginx exposed dnf packages before certification: %v", service.Packages)
+			}
+		}
+	}
+}
+
+func TestInstalledRHELPreviewServiceCannotExposeRepair(t *testing.T) {
+	host := core.ManagedServiceHostProfile{
+		DistroFamily:   "rhel",
+		PackageFamily:  "dnf",
+		ServiceManager: "systemd",
+		DistroID:       "almalinux",
+		VersionID:      "9.6",
+		Architecture:   "amd64",
+	}
+	observations := []serviceObservation{{
+		ID:          "nginx",
+		IsInstalled: true,
+		Status:      "active (running)",
+		Unit:        "nginx",
+	}}
+	var nginx *ManagedServiceResponse
+	for _, service := range catalogViewForHost(observations, host) {
+		if service.ID == "nginx" {
+			service := service
+			nginx = &service
+			break
+		}
+	}
+	if nginx == nil || !nginx.IsInstalled {
+		t.Fatalf("installed nginx observation missing from catalog: %+v", nginx)
+	}
+	if nginx.RepairAvailable || nginx.RepairPackage != "" {
+		t.Fatalf("uncertified dnf nginx repair = (%q, %v), want unavailable",
+			nginx.RepairPackage, nginx.RepairAvailable)
+	}
+	kind, reason := core.ManagedServiceInstallBlockForHost(core.GetManagedServiceByID("nginx"), host)
+	if kind == core.ManagedServiceInstallBlockNone || reason != core.RHELPreviewNginxCertificationPendingReason {
+		t.Fatalf("installed observation bypassed catalog lifecycle block: kind=%q reason=%q", kind, reason)
 	}
 }

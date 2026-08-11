@@ -35,6 +35,31 @@ func TestInstalledPackagesMatchingPatternRejectsForeignAndUnmanaged(t *testing.T
 	}
 }
 
+func TestInstalledRPMPackagesMatchingPattern(t *testing.T) {
+	pattern := regexp.MustCompile(`^postgresql[0-9]+-server$`)
+	input := "CELIKPANEL_PACKAGE:postgresql17-server\n" +
+		"CELIKPANEL_PACKAGE:postgresql16-libs\n" +
+		"subscription-manager notice\n" +
+		"CELIKPANEL_PACKAGE:postgresql15-server\n" +
+		"CELIKPANEL_PACKAGE:postgresql17-server\n" +
+		"CELIKPANEL_PACKAGE:--invalid\n"
+
+	want := []string{"postgresql17-server", "postgresql15-server"}
+	if got := installedRPMPackagesMatchingPattern(input, pattern); !reflect.DeepEqual(got, want) {
+		t.Fatalf("installed RPM packages = %v, want %v", got, want)
+	}
+	if got := installedRPMPackagesMatchingPattern(input, nil); len(got) != 0 {
+		t.Fatalf("nil pattern returned RPM packages: %v", got)
+	}
+}
+
+func TestRPMInventoryArgsUseOnlyFixedQueryFormat(t *testing.T) {
+	want := []string{"-qa", "--qf", "CELIKPANEL_PACKAGE:%{NAME}\n"}
+	if got := rpmInventoryArgs(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("RPM inventory args = %q, want %q", got, want)
+	}
+}
+
 func TestDpkgRecoverableInstallState(t *testing.T) {
 	tests := []struct {
 		status string

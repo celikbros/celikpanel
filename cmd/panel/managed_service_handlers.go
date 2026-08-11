@@ -38,13 +38,14 @@ type ManagedServiceResponse struct {
 	// ("installed means working" cannot be promised; see docs/DISTRO-SUPPORT).
 	// The UI shows an honest badge instead of an Install button that would
 	// only fail late in the agent. Portable components (empty Packages map —
-	// node, roundcube) are never marked: their install path works everywhere.
+	// node, roundcube) still need a certified host lifecycle boundary; the
+	// RHEL preview therefore keeps them closed too.
 	// NotOffered: bu bileşen dağıtım paketinden kurulur ve BU sunucunun ailesi
 	// için paket eşlemesi yok — burada bilerek sunulmuyor ("kurulunca çalışır"
 	// sözü verilemiyor; bkz. docs/DISTRO-SUPPORT). Arayüz, agent'ta geç
 	// patlayacak bir Kur düğmesi yerine dürüst bir rozet gösterir. Taşınabilir
-	// bileşenler (boş Packages — node, roundcube) asla işaretlenmez: onların
-	// kurulum yolu her yerde çalışır.
+	// bileşenler (boş Packages — node, roundcube) de sertifikalı bir host yaşam
+	// döngüsü sınırı ister; RHEL önizlemesinde onlar da kapalıdır.
 	NotOffered       bool                                `json:"not_offered,omitempty"`
 	NotOfferedKind   core.ManagedServiceInstallBlockKind `json:"not_offered_kind,omitempty"`
 	NotOfferedReason string                              `json:"not_offered_reason,omitempty"`
@@ -83,12 +84,14 @@ type ManagedServiceResponse struct {
 	// yeniden calistirmak dagitim meta-paketine sessizce donmek yerine tam bu
 	// surumu onarir.
 	RepairPackage string `json:"repair_package,omitempty"`
-	// RepairAvailable is false only when a version-specific apt service cannot
-	// be tied to exactly one installed, catalogue-matching package. The UI must
-	// not fall back to a distro meta-package in that case.
-	// RepairAvailable, surume ozel apt servisi kurulu ve katalogla eslesen tam
-	// bir pakete baglanamiyorsa false olur. UI bu durumda dagitim meta-paketine
-	// geri donmemelidir.
+	// RepairAvailable is false when a version-specific apt service cannot be
+	// tied to exactly one installed, catalogue-matching package, or when this
+	// host family has no certified repair lifecycle. The UI must not turn an
+	// observed package into an unsupported mutation.
+	// RepairAvailable, surume ozel apt servisi katalogla eslesen tek bir kurulu
+	// pakete baglanamiyorsa ya da bu host ailesinin sertifikali onarim yasam
+	// dongusu yoksa false olur. UI, gozlenen paketi desteklenmeyen bir
+	// mutasyona cevirmemelidir.
 	RepairAvailable bool              `json:"repair_available"`
 	ConfigFiles     []core.ConfigFile `json:"config_files"` // Detected config files
 	// Ports: the inbound ports this component exposes ("443/tcp"), from the
@@ -294,23 +297,30 @@ func safeRepairPackage(managed *core.ManagedService, o serviceObservation, pkgFa
 	return ""
 }
 
-// repairSelection makes the fail-closed choice explicit. Ordinary catalogue
-// services can safely repair through their fixed Packages mapping. An apt
-// service with a versioned repository pattern must reuse exactly one observed
-// installed package or Repair is unavailable.
-// repairSelection, guvenli-kapali secimi acik eder. Siradan katalog servisleri
-// sabit Packages eslemesiyle onarilabilir. Surumlu depo deseni olan apt servisi
-// tam bir gozlenen kurulu paketi yeniden kullanmalidir; aksi halde Onarim
-// kullanilamaz.
+// repairSelection makes the fail-closed choice explicit. Established apt and
+// pacman lifecycles preserve their current repair behavior. An apt service
+// with a versioned repository pattern must reuse exactly one observed package.
+// Every other family, including the still-uncertified dnf preview, is blocked.
+// repairSelection, guvenli-kapali secimi acik eder. Yerlesik apt ve pacman
+// yasam donguleri mevcut onarim davranislarini korur. Surumlu depo deseni olan
+// apt servisi tam bir gozlenen kurulu paketi yeniden kullanmalidir. Henuz
+// sertifikali olmayan dnf onizlemesi dahil diger her aile kapali kalir.
 func repairSelection(managed *core.ManagedService, o serviceObservation, pkgFamily string) (string, bool) {
 	if managed == nil {
 		return "", false
 	}
-	if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
-		pkg := safeRepairPackage(managed, o, pkgFamily)
-		return pkg, pkg != ""
+	switch pkgFamily {
+	case "apt":
+		if managed.Repo != nil && managed.Repo.PackagePattern != "" {
+			pkg := safeRepairPackage(managed, o, pkgFamily)
+			return pkg, pkg != ""
+		}
+		return "", true
+	case "pacman":
+		return "", true
+	default:
+		return "", false
 	}
-	return "", true
 }
 
 // catalogView joins observations onto the catalogue and derives what depends
@@ -322,6 +332,11 @@ func repairSelection(managed *core.ManagedService, o serviceObservation, pkgFami
 // ManagedServiceResponse'un kurulduğu tek yer burasıdır; böylece önbellekten
 // okuma ile taze tarama farklı yanıt veremez.
 func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceResponse {
+	return catalogViewForHost(obs, core.ManagedServiceHostProfile{PackageFamily: pkgFamily})
+}
+
+func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostProfile) []ManagedServiceResponse {
+	pkgFamily := host.PackageFamily
 	byID := make(map[string]serviceObservation, len(obs))
 	installedSet := map[string]bool{}
 	for _, o := range obs {
@@ -413,7 +428,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			// dürüstçe sunulmuyor. Arayüz mevcut bir rakip servis çakışmasını
 			// bu rozetten önce gösterir; böylece BIND/Exim için asıl engel
 			// kaybolmaz. Gereksinimlerse ancak kurulum sunulduğunda anlamlıdır.
-			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlock(&managed, pkgFamily)
+			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlockForHost(&managed, host)
 			notOffered = notOfferedReason != ""
 		}
 
@@ -456,9 +471,10 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	// A fresh installation has no observation row yet, but its installable
 	// catalogue is still known. Never render an empty Components page merely
 	// because the first scan has not completed.
-	packageFamily := p.packageFamily()
+	host := p.managedServiceHostProfile()
+	packageFamily := host.PackageFamily
 	payload := managedServicesPayload{
-		Services: catalogView(nil, packageFamily),
+		Services: catalogViewForHost(nil, host),
 		Profiles: mailProfilesView(nil, false, packageFamily, false, false),
 	}
 
@@ -486,7 +502,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		// Katalog okuma anında birleştirilir; böylece güncellenen panel kendi
 		// kataloğu hakkında anında doğruyu söyler — adı değişen bir servisi,
 		// yenisini ya da düzeltilmiş bir açıklamayı görmek için tarama gerekmez.
-		payload.Services = catalogView(snapshot.Observations, packageFamily)
+		payload.Services = catalogViewForHost(snapshot.Observations, host)
 		payload.Profiles = mailProfilesView(
 			payload.Services,
 			profilesVerified,
@@ -630,8 +646,9 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 	if err != nil {
 		return managedServicesPayload{}, false, nil
 	}
-	packageFamily := p.packageFamily()
-	services := catalogView(snapshot.Observations, packageFamily)
+	host := p.managedServiceHostProfile()
+	packageFamily := host.PackageFamily
+	services := catalogViewForHost(snapshot.Observations, host)
 	return managedServicesPayload{
 		ScannedAt: &scanned,
 		Services:  services,
@@ -648,7 +665,8 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return nil, err
 	}
-	pkgFamily := p.packageFamily()
+	host := p.managedServiceHostProfile()
+	pkgFamily := host.PackageFamily
 
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
@@ -844,7 +862,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err != nil {
 		return nil, err
 	}
-	return catalogView(observations, pkgFamily), nil
+	return catalogViewForHost(observations, host), nil
 }
 
 func (p *Panel) cachedWebmailReadinessProof(ctx context.Context) (bool, bool, error) {

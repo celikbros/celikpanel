@@ -67,6 +67,11 @@ type Panel struct {
 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
 	pkgFamilyMu  sync.Mutex
 	pkgFamilyVal string
+	// hostPlatformVal is the verified identity behind distribution-specific
+	// capability decisions. PkgFamily remains for backward-compatible package
+	// code, but dnf alone can never qualify a preview target.
+	hostPlatformVal   transport.HostPlatformResponse
+	hostPlatformKnown bool
 	// serviceScanMu coalesces page-triggered service scans. A first visit,
 	// React StrictMode and multiple open tabs must not probe the host in
 	// parallel.
