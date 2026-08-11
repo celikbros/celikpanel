@@ -1,18 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
 
 type serviceVersionCommand func(name string, args ...string) ([]byte, error)
-
-func runServiceVersionCommand(name string, args ...string) ([]byte, error) {
-	return exec.Command(name, args...).Output()
-}
 
 // ServiceCandidateVersion returns a version only when the catalog lookup,
 // package-family lookup and package-manager query all succeed.
@@ -27,7 +23,17 @@ func (a *Agent) ServiceCandidateVersion(req *InstallServiceRequest, reply *strin
 	if svc == nil {
 		return fmt.Errorf("unknown catalog service %q", req.ID)
 	}
-	version, err := candidateVersionForService(svc, detectPkgFamily(), runServiceVersionCommand)
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		return err
+	}
+	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	if err != nil {
+		return err
+	}
+	version, err := candidateVersionForService(svc, "apt", func(_ string, args ...string) ([]byte, error) {
+		return serviceMutationCommand(context.Background(), aptCache, args...).Output()
+	})
 	if err != nil {
 		return err
 	}

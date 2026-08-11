@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -17,51 +17,70 @@ import (
 var packageOperationMu sync.Mutex
 
 // Package-manager abstraction so service installation is not hard-wired to
-// one distro. We detect the family from the package-manager binary present
-// (with an /etc/os-release fallback); each family knows how to install a set
-// of packages non-interactively. apt (Ubuntu/Debian) is the first-class
+// one distro. The central host-platform detector selects a distribution family
+// from os-release and then verifies that family's required tools; each manager
+// knows how to install a set of packages non-interactively. apt is the first-class
 // tested family; pacman (Arch) is supported as the dev-test target the
 // operator keeps a second server on (D-004 amendment) — for services whose
 // catalog entry carries pacman package names. dnf is recognised and returns
 // an honest "not supported yet". We never claim a distro we haven't run on.
 //
 // Paket-yöneticisi soyutlaması; servis kurulumu tek dağıtıma gömülü değildir.
-// Aileyi var olan paket-yöneticisi ikilisinden tespit ederiz (os-release
-// yedeğiyle); her aile bir paket kümesini etkileşimsiz kurmayı bilir. apt
+// Merkezi platform dedektörü aileyi os-release içindeki tam kimliklerden seçer;
+// ardından o aile için gereken araçların doğrulanmış mutlak yollarını ve canlı
+// systemd yöneticisini denetler. Her aile bir paket kümesini etkileşimsiz kurmayı bilir. apt
 // (Ubuntu/Debian) birinci sınıf test edilmiş ailedir; pacman (Arch),
 // operatörün ikinci sunucuyu üzerinde tuttuğu geliştirme-test hedefi olarak
 // desteklenir (D-004 eki) — katalog girdisi pacman paket adı taşıyan
 // servisler için. dnf tanınır ve dürüst "henüz desteklenmiyor" döndürür.
 // Üzerinde çalışmadığımız bir dağıtımı asla iddia etmeyiz.
 
-// detectPkgFamily reports which package-manager family this host uses
-// ("apt", "dnf", "pacman", or "" when unrecognised).
-// detectPkgFamily, bu makinenin hangi paket-yöneticisi ailesini kullandığını
-// bildirir.
+var detectHostPlatform = hostplatform.Detect
+
+func verifiedHostProfileForAnyFamily() (hostplatform.Profile, error) {
+	profile, err := detectHostPlatform()
+	if err != nil {
+		return hostplatform.Profile{}, fmt.Errorf("detect host platform: %w", err)
+	}
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT, hostplatform.PackageManagerDNF, hostplatform.PackageManagerPacman:
+		return profile, nil
+	default:
+		return hostplatform.Profile{}, fmt.Errorf("unsupported package manager %q", profile.PackageManager)
+	}
+}
+
+func verifiedHostProfile(family string) (hostplatform.Profile, error) {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return hostplatform.Profile{}, err
+	}
+	if string(profile.PackageManager) != family {
+		return hostplatform.Profile{}, fmt.Errorf("host package manager changed from %s to %s", family, profile.PackageManager)
+	}
+	return profile, nil
+}
+
+func executableForProfile(profile hostplatform.Profile, family, name string) (string, error) {
+	if string(profile.PackageManager) != family {
+		return "", fmt.Errorf("host package manager is %s, want %s", profile.PackageManager, family)
+	}
+	path := profile.Executables[name]
+	if path == "" {
+		return "", fmt.Errorf("host executable %s has not been verified", name)
+	}
+	return path, nil
+}
+
+// detectPkgFamily is the compatibility boundary for existing package code. It
+// returns a manager only after release, binaries, and systemd are verified.
+// Detection failures fail closed.
 func detectPkgFamily() string {
-	for _, m := range []struct{ bin, family string }{
-		{"apt-get", "apt"},
-		{"dnf", "dnf"},
-		{"yum", "dnf"},
-		{"pacman", "pacman"},
-	} {
-		if _, err := exec.LookPath(m.bin); err == nil {
-			return m.family
-		}
+	profile, err := detectHostPlatform()
+	if err != nil {
+		return ""
 	}
-	// Fall back to os-release when no known binary is on PATH.
-	// PATH'te bilinen ikili yoksa os-release'e düş.
-	data, _ := os.ReadFile("/etc/os-release")
-	osr := strings.ToLower(string(data))
-	switch {
-	case strings.Contains(osr, "debian"), strings.Contains(osr, "ubuntu"):
-		return "apt"
-	case strings.Contains(osr, "rhel"), strings.Contains(osr, "fedora"), strings.Contains(osr, "centos"):
-		return "dnf"
-	case strings.Contains(osr, "arch"):
-		return "pacman"
-	}
-	return ""
+	return string(profile.PackageManager)
 }
 
 // aptListsDir is where apt keeps downloaded package lists; their newest mtime
@@ -113,11 +132,25 @@ func refreshAptListsIfStale(maxAge time.Duration) {
 }
 
 func refreshAptListsIfStaleContext(ctx context.Context, maxAge time.Duration) {
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		fmt.Printf("apt-get update before install skipped: %s\n", err)
+		return
+	}
+	aptGet, err := executableForProfile(profile, "apt", "apt-get")
+	if err != nil {
+		fmt.Printf("apt-get update before install skipped: %s\n", err)
+		return
+	}
+	refreshAptListsIfStaleWithExecutable(ctx, maxAge, aptGet)
+}
+
+func refreshAptListsIfStaleWithExecutable(ctx context.Context, maxAge time.Duration, aptGet string) {
 	if age, ok := aptListsAge(); ok && age <= maxAge {
 		return
 	}
 	env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	if out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", "update"); err != nil {
+	if out, err := runServiceMutationCombinedOutputEnv(ctx, env, aptGet, "update"); err != nil {
 		fmt.Printf("apt-get update before install failed (continuing): %s\n", firstLine(string(out)))
 	}
 }
@@ -152,12 +185,24 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 			return "", fmt.Errorf("invalid package name: %q", p)
 		}
 	}
+	profile, err := verifiedHostProfile(family)
+	if err != nil {
+		return "", err
+	}
 
 	switch family {
 	case "apt":
-		refreshAptListsIfStaleContext(ctx, time.Hour)
+		aptGet, err := executableForProfile(profile, family, "apt-get")
+		if err != nil {
+			return "", err
+		}
+		aptCache, err := executableForProfile(profile, family, "apt-cache")
+		if err != nil {
+			return "", err
+		}
+		refreshAptListsIfStaleWithExecutable(ctx, time.Hour, aptGet)
 		if requiredCandidate = strings.TrimSpace(requiredCandidate); requiredCandidate != "" {
-			candidate, err := aptInstallCandidateContext(ctx, requiredCandidate)
+			candidate, err := aptInstallCandidateWithExecutable(ctx, aptCache, requiredCandidate)
 			if err != nil {
 				return "", fmt.Errorf("check APT installation candidate for %s: %w", requiredCandidate, err)
 			}
@@ -168,7 +213,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		run := func() (string, error) {
 			args := append([]string{"install", "-y", "--no-install-recommends"}, packages...)
 			env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-			out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", args...)
+			out, err := runServiceMutationCombinedOutputEnv(ctx, env, aptGet, args...)
 			return string(out), err
 		}
 		out, err := run()
@@ -177,7 +222,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		// Ayna, tazelik penceremizin içinde döndü: listeler dosya var dedi,
 		// ayna 404 diyor. Koşulsuz tazele ve bir kez yeniden dene.
 		if err != nil && strings.Contains(out, "404") {
-			refreshAptListsIfStaleContext(ctx, 0)
+			refreshAptListsIfStaleWithExecutable(ctx, 0, aptGet)
 			out, err = run()
 		}
 		if err != nil {
@@ -185,6 +230,10 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		}
 		return out, nil
 	case "pacman":
+		pacman, err := executableForProfile(profile, family, "pacman")
+		if err != nil {
+			return "", err
+		}
 		// Arch supports only full-system upgrades. Refreshing databases with
 		// -Sy and then installing with -S creates an unsupported partial
 		// upgrade window. Keep refresh, upgrade and requested package install
@@ -194,7 +243,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		// penceresi açar. Tazeleme, yükseltme ve istenen paket kurulumunu tek
 		// pacman işleminde tut.
 		args := pacmanInstallArgs(packages)
-		out, err := runServiceMutationCombinedOutput(ctx, "pacman", args...)
+		out, err := runServiceMutationCombinedOutput(ctx, pacman, args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
@@ -210,11 +259,26 @@ func aptInstallCandidateContext(ctx context.Context, packageName string) (string
 	if !validPackageName(packageName) {
 		return "", fmt.Errorf("invalid package name: %q", packageName)
 	}
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		return "", err
+	}
+	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	if err != nil {
+		return "", err
+	}
+	return aptInstallCandidateWithExecutable(ctx, aptCache, packageName)
+}
+
+func aptInstallCandidateWithExecutable(ctx context.Context, aptCache, packageName string) (string, error) {
+	if !validPackageName(packageName) {
+		return "", fmt.Errorf("invalid package name: %q", packageName)
+	}
 	env := append(os.Environ(), "LC_ALL=C", "LANG=C")
 	out, err := runServiceMutationCombinedOutputEnv(
 		ctx,
 		env,
-		"apt-cache",
+		aptCache,
 		"policy",
 		packageName,
 	)
@@ -268,22 +332,34 @@ func removePackagesContext(ctx context.Context, family string, packages []string
 			return "", fmt.Errorf("invalid package name: %q", p)
 		}
 	}
+	profile, err := verifiedHostProfile(family)
+	if err != nil {
+		return "", err
+	}
 	switch family {
 	case "apt":
+		aptGet, err := executableForProfile(profile, family, "apt-get")
+		if err != nil {
+			return "", err
+		}
 		args := append([]string{"purge", "-y", "--auto-remove"}, packages...)
 		env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-		out, err := runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", args...)
+		out, err := runServiceMutationCombinedOutputEnv(ctx, env, aptGet, args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
 		return string(out), nil
 	case "pacman":
+		pacman, err := executableForProfile(profile, family, "pacman")
+		if err != nil {
+			return "", err
+		}
 		// -Rns = purge: the package, its now-unneeded dependencies (-s) and
 		// its config files (-n) — mirrors apt's purge --auto-remove.
 		// -Rns = purge: paket, artık gereksiz bağımlılıkları (-s) ve config
 		// dosyaları (-n) — apt'ın purge --auto-remove'unun aynası.
 		args := append([]string{"-Rns", "--noconfirm"}, packages...)
-		out, err := runServiceMutationCombinedOutput(ctx, "pacman", args...)
+		out, err := runServiceMutationCombinedOutput(ctx, pacman, args...)
 		if err != nil {
 			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
 		}
@@ -302,21 +378,37 @@ func removePackagesContext(ctx context.Context, family string, packages []string
 // systemd unit'i olmayan katalog girdileri için varlık testi (phpMyAdmin ve
 // benzerleri daemon değil, web sunucusunun sunduğu dosyalardır).
 func packageInstalled(pkg string) bool {
-	return packageInstalledForFamily(detectPkgFamily(), pkg)
+	profile, err := detectHostPlatform()
+	return err == nil && packageInstalledForProfile(profile, pkg)
 }
 
 func packageInstalledForFamily(family, pkg string) bool {
 	if !validPackageName(pkg) {
 		return false
 	}
+	profile, err := verifiedHostProfile(family)
+	return err == nil && packageInstalledForProfile(profile, pkg)
+}
+
+func packageInstalledForProfile(profile hostplatform.Profile, pkg string) bool {
+	if !validPackageName(pkg) {
+		return false
+	}
+	family := string(profile.PackageManager)
 	switch family {
 	case "apt":
-		out, err := exec.Command("dpkg-query", "-W", "-f", "${Status}", pkg).Output()
+		dpkgQuery, err := executableForProfile(profile, family, "dpkg-query")
+		if err != nil {
+			return false
+		}
+		out, err := serviceMutationCommand(context.Background(), dpkgQuery, "-W", "-f", "${Status}", pkg).Output()
 		return err == nil && strings.Contains(string(out), "install ok installed")
 	case "pacman":
-		return exec.Command("pacman", "-Q", pkg).Run() == nil
+		pacman, err := executableForProfile(profile, family, "pacman")
+		return err == nil && serviceMutationCommand(context.Background(), pacman, "-Q", pkg).Run() == nil
 	case "dnf":
-		return exec.Command("rpm", "-q", "--", pkg).Run() == nil
+		rpm, err := executableForProfile(profile, family, "rpm")
+		return err == nil && serviceMutationCommand(context.Background(), rpm, "-q", "--", pkg).Run() == nil
 	default:
 		return false
 	}
@@ -329,7 +421,12 @@ func packageInstalledForFamily(family, pkg string) bool {
 // pencerelerinde aileye doğru paket adlarını göstermek için buna muhtaçtır
 // (katalog Packages'ı aileyle anahtarlar; panel apt varsayamaz).
 func (a *Agent) PkgFamily(_ *transport.Empty, reply *string) error {
-	*reply = detectPkgFamily()
+	profile, err := detectHostPlatform()
+	if err != nil {
+		*reply = ""
+		return fmt.Errorf("detect host platform: %w", err)
+	}
+	*reply = string(profile.PackageManager)
 	return nil
 }
 

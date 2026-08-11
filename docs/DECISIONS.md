@@ -8,6 +8,60 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-020 · Managed-server support follows Linux families, not distribution names
+
+*August 11, 2026*
+
+**Decision.** The CelikPanel Agent targets managed Linux servers only. Its
+platform architecture standardizes on three Linux family targets: `debian`,
+`rhel`, and `arch`. This defines adapter boundaries, not blanket feature
+availability.
+Debian and Ubuntu use `debian`; RHEL, AlmaLinux, Rocky Linux, CentOS Stream,
+Fedora, and CloudLinux use `rhel`; Arch Linux uses `arch`. Distributions are not
+separate installer engines. A narrow override exists only where a package,
+repository, service, security policy, or path genuinely differs.
+
+**Detection and trust boundary.** The family is derived from `ID` and
+`ID_LIKE` in `/etc/os-release`, but a name alone never authorizes a mutation.
+Before mutation the adapter verifies its package manager, init/service manager,
+and required security capabilities; a mismatch fails closed. Distribution
+names are CI compatibility fixtures rather than architecture: verified
+fixtures appear in the product matrix, while another derivative may reuse the
+same adapter only after explicit certification and precondition proof.
+`ID_LIKE` identifies a compatibility candidate; it never enables mutation by
+itself.
+
+**Certification boundary.** Family membership is not a blanket support claim.
+The UI exposes only capabilities whose package, path, security-policy,
+lifecycle, and readiness recipes have passed the representative end-to-end
+matrix. An unverified derivative remains compatible/unverified and unsupported
+capabilities stay hidden or blocked. RHEL-family work begins as an explicitly
+labelled preview and does not become full family support merely because dnf
+was detected.
+
+**Out of scope.** openSUSE/SLES, Alpine, and NixOS do not currently justify a
+new family adapter. Proven demand may add distinct `suse`, `alpine`, or `nixos`
+families later; none is impersonated as an existing family. Kali Linux is
+explicitly refused despite its Debian ancestry because it is not a hosting
+server product. Windows and FreeBSD are not managed-server targets. `!linux`
+files preserve build portability and a no-mutation, fail-closed contract only;
+they do not promise product support.
+
+**Install-source policy is unchanged.** A family adapter enforces D-018:
+system services are distro packages installed through `apt`/`dnf`/`pacman`,
+while portable applications and runtimes use verified official releases. A
+truly necessary source build happens in central CI, not on a customer's
+server, and is distributed as a signed family-native package. Security
+updates, file ownership, uninstall, and rollback therefore remain integrated
+with the package manager as family coverage grows.
+
+**Why.** One installer copied per distribution multiplies code while dividing
+quality. Building everything from source only unifies binary production; it
+does not unify systemd/SELinux/AppArmor, users, paths, firewall, or update
+integration. A platform-family adapter is the correct reuse boundary.
+
+---
+
 ## D-019 · The panel does not scare: every management page carries its own help; empty pages are forbidden
 
 *25 July 2026*

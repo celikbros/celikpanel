@@ -999,6 +999,7 @@ func (catalog *Catalog) Resolve(
 
 func selectorSpecificity(selector PlatformSelector, host HostProfile) (int, bool, error) {
 	host.OSFamily = normalizeToken(host.OSFamily)
+	host.DistroFamily = normalizeToken(host.DistroFamily)
 	host.DistroID = normalizeToken(host.DistroID)
 	host.Version = strings.TrimSpace(host.Version)
 	host.Architecture = normalizeToken(host.Architecture)
@@ -1007,8 +1008,17 @@ func selectorSpecificity(selector PlatformSelector, host HostProfile) (int, bool
 	for index := range host.DistroLike {
 		host.DistroLike[index] = normalizeToken(host.DistroLike[index])
 	}
+	if host.DistroFamily == "" {
+		return 0, false, fmt.Errorf("host distro_family is required")
+	}
+	if _, ok := allowedDistroFamilies[host.DistroFamily]; !ok {
+		return 0, false, fmt.Errorf("host uses unsupported distro_family %q", host.DistroFamily)
+	}
 
 	if selector.OSFamily != "" && normalizeToken(selector.OSFamily) != host.OSFamily {
+		return 0, false, nil
+	}
+	if selector.DistroFamily != "" && normalizeToken(selector.DistroFamily) != host.DistroFamily {
 		return 0, false, nil
 	}
 	if selector.PackageManager != "" &&
@@ -1044,7 +1054,9 @@ func selectorSpecificity(selector PlatformSelector, host HostProfile) (int, bool
 		if normalizeToken(selector.DistroID) != host.DistroID {
 			return 0, false, nil
 		}
-		score = 600
+		score = 700
+	case selector.DistroFamily != "":
+		score = 500
 	case selector.DistroLike != "":
 		match := false
 		for _, like := range host.DistroLike {

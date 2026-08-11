@@ -154,6 +154,11 @@ esac
 			t.Fatal(err)
 		}
 	}
+	previousSystemctlResolver := serviceMutationSystemctlResolver
+	serviceMutationSystemctlResolver = func() (string, error) {
+		return filepath.Join(binDirectory, "systemctl"), nil
+	}
+	t.Cleanup(func() { serviceMutationSystemctlResolver = previousSystemctlResolver })
 	t.Setenv("PATH", binDirectory+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("VPN_TEST_FORWARDING", host.forwardingPath)
 	t.Setenv("VPN_TEST_INTERFACE", host.interfacePath)

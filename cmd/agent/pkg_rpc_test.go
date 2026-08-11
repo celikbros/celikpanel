@@ -1,11 +1,16 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // aptListsAge decides whether an install is preceded by `apt-get update`; a
@@ -78,5 +83,35 @@ func TestPackageInstalledForFamilyRejectsInvalidPackageBeforeExec(t *testing.T) 
 		if packageInstalledForFamily(family, "--help") {
 			t.Fatalf("family %q accepted an invalid package name", family)
 		}
+	}
+}
+
+func TestDetectPkgFamilyUsesVerifiedHostProfile(t *testing.T) {
+	original := detectHostPlatform
+	defer func() { detectHostPlatform = original }()
+	detectHostPlatform = func() (hostplatform.Profile, error) {
+		return hostplatform.Profile{PackageManager: hostplatform.PackageManagerAPT}, nil
+	}
+	if got := detectPkgFamily(); got != "apt" {
+		t.Fatalf("detectPkgFamily() = %q, want apt", got)
+	}
+}
+
+func TestPkgFamilySurfacesDetectionError(t *testing.T) {
+	original := detectHostPlatform
+	defer func() { detectHostPlatform = original }()
+	detectHostPlatform = func() (hostplatform.Profile, error) {
+		return hostplatform.Profile{}, errors.New("systemd offline")
+	}
+	var reply string
+	err := (&Agent{}).PkgFamily(&transport.Empty{}, &reply)
+	if err == nil || !strings.Contains(err.Error(), "systemd offline") {
+		t.Fatalf("PkgFamily error = %v, want platform detection detail", err)
+	}
+	if reply != "" {
+		t.Fatalf("PkgFamily reply = %q, want fail-closed empty value", reply)
+	}
+	if got := detectPkgFamily(); got != "" {
+		t.Fatalf("compatibility family = %q, want fail-closed empty value", got)
 	}
 }

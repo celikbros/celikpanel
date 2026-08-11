@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -181,6 +182,11 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		resp.Error = "missing request"
 		return nil
 	}
+	if !validRepoID.MatchString(req.RepoID) {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "invalid repo id"
+		return nil
+	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
 	if err != nil {
 		resp.ErrorCode = repoErrEnableFailed
@@ -189,14 +195,10 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	}
 	defer finishStep()
 	defer ensureRepoStatusErrorCode(resp, repoErrEnableFailed)
-	if detectPkgFamily() != "apt" {
+	_, err = verifiedHostProfile("apt")
+	if err != nil {
 		resp.ErrorCode = repoErrUnsupportedSystem
 		resp.Error = "managed repositories are only supported on apt (Debian/Ubuntu) systems yet"
-		return nil
-	}
-	if !validRepoID.MatchString(req.RepoID) {
-		resp.ErrorCode = repoErrInvalidRequest
-		resp.Error = "invalid repo id"
 		return nil
 	}
 	repo := repoFromCatalogue(req.RepoID)
@@ -255,8 +257,16 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	// ayni paket mutasyon kilidini kullanir. Boylece bir kurulum anahtar-once,
 	// kaynak-sonra commit'ini yarida goremez.
 	err = runRepoPackageMutation(func() error {
+		lockedProfile, err := verifiedHostProfile("apt")
+		if err != nil {
+			return err
+		}
+		aptGet, err := executableForProfile(lockedProfile, "apt", "apt-get")
+		if err != nil {
+			return err
+		}
 		return prepareAndPublishRepoRecipe(paths, key, source, func(stagedSource string) ([]byte, error) {
-			cmd := serviceMutationCommand(ctx, "apt-get", "update",
+			cmd := serviceMutationCommand(ctx, aptGet, "update",
 				"-o", "Dir::Etc::sourcelist="+stagedSource,
 				"-o", "Dir::Etc::sourceparts=/dev/null",
 				"-o", "APT::Get::List-Cleanup=0")
@@ -308,6 +318,11 @@ func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) er
 		resp.Error = "missing request"
 		return nil
 	}
+	if !validRepoID.MatchString(req.RepoID) {
+		resp.ErrorCode = repoErrInvalidRequest
+		resp.Error = "invalid repo id"
+		return nil
+	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
 	if err != nil {
 		resp.ErrorCode = repoErrDisableFailed
@@ -316,9 +331,10 @@ func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) er
 	}
 	defer finishStep()
 	defer ensureRepoStatusErrorCode(resp, repoErrDisableFailed)
-	if !validRepoID.MatchString(req.RepoID) {
-		resp.ErrorCode = repoErrInvalidRequest
-		resp.Error = "invalid repo id"
+	_, err = verifiedHostProfile("apt")
+	if err != nil {
+		resp.ErrorCode = repoErrUnsupportedSystem
+		resp.Error = "managed repositories are only supported on apt (Debian/Ubuntu) systems yet"
 		return nil
 	}
 	// Removal and apt refresh must be one package-manager critical section.
@@ -327,11 +343,19 @@ func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) er
 	// Kaldirma ve apt yenileme tek paket-yoneticisi kritik bolgesi olmalidir.
 	// Boylece kurulum/kaldirma islemleri eski kaynak/anahtar durumunu kullanamaz.
 	err = runRepoPackageMutation(func() error {
+		lockedProfile, err := verifiedHostProfile("apt")
+		if err != nil {
+			return err
+		}
+		aptGet, err := executableForProfile(lockedProfile, "apt", "apt-get")
+		if err != nil {
+			return err
+		}
 		return disableRepoRecipe(
 			repoSourcePath(req.RepoID),
 			repoKeyringCandidates(req.RepoID),
 			func() ([]byte, error) {
-				cmd := serviceMutationCommand(ctx, "apt-get", "update", "-o", "APT::Get::List-Cleanup=1")
+				cmd := serviceMutationCommand(ctx, aptGet, "update", "-o", "APT::Get::List-Cleanup=1")
 				cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
 				return cmd.CombinedOutput()
 			},
@@ -399,6 +423,11 @@ func (a *Agent) RepoStatus(req *EnableRepoRequest, resp *RepoStatusResponse) err
 		resp.Error = "invalid repo id"
 		return nil
 	}
+	if _, err := verifiedHostProfile("apt"); err != nil {
+		resp.ErrorCode = repoErrUnsupportedSystem
+		resp.Error = err.Error()
+		return nil
+	}
 	repo := repoFromCatalogue(req.RepoID)
 	if repo == nil {
 		resp.ErrorCode = repoErrInvalidRequest
@@ -418,6 +447,9 @@ func (a *Agent) RepoStatus(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	// Sağlık bildirmeden önce yarım kalmış anahtar/kaynak işlemini kurtar; böylece
 	// çağıranlar çökme sonucu oluşmuş yarım durumu hiçbir zaman incelemez.
 	if err := runRepoPackageMutation(func() error {
+		if _, err := verifiedHostProfile("apt"); err != nil {
+			return err
+		}
 		return recoverRepoTransaction(sourcePath, managedPaths)
 	}); err != nil {
 		resp.Repairable = true
@@ -506,12 +538,19 @@ func (a *Agent) RepoPackages(req *RepoPackagesRequest, resp *RepoPackagesRespons
 		resp.Error = err.Error()
 		return nil
 	}
-	if detectPkgFamily() != "apt" {
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
 		resp.ErrorCode = repoErrUnsupportedSystem
 		resp.Error = "not supported on this distro yet"
 		return nil
 	}
-	out, err := exec.Command("apt-cache", "search", "--names-only", pattern).Output()
+	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	if err != nil {
+		resp.ErrorCode = repoErrUnsupportedSystem
+		resp.Error = err.Error()
+		return nil
+	}
+	out, err := serviceMutationCommand(context.Background(), aptCache, "search", "--names-only", pattern).Output()
 	if err != nil {
 		resp.ErrorCode = repoErrPackagesFailed
 		resp.Error = fmt.Sprintf("apt-cache search failed: %v", err)
@@ -595,12 +634,22 @@ func osReleaseValue(key string) string {
 }
 
 func parseOSReleaseValue(data []byte, key string) string {
-	for _, line := range strings.Split(string(data), "\n") {
-		if v, ok := strings.CutPrefix(strings.TrimSpace(line), key+"="); ok {
-			return strings.Trim(strings.TrimSpace(v), `"'`)
-		}
+	release, err := hostplatform.ParseOSRelease(data)
+	if err != nil {
+		return ""
 	}
-	return ""
+	switch key {
+	case "ID":
+		return release.ID
+	case "ID_LIKE":
+		return strings.Join(release.IDLike, " ")
+	case "VERSION_ID":
+		return release.Version
+	case "VERSION_CODENAME":
+		return release.Codename
+	default:
+		return ""
+	}
 }
 
 // repoSourceForHost selects an exact distro template where the catalogue

@@ -503,15 +503,15 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 }
 
 // packageFamily returns the host's package-manager family, asked from the
-// agent once and kept. This is the one cheap fact the cached GET may fetch:
-// it is a single RPC that reads the distro id, not the system-wide probe the
-// cache exists to avoid. A failed call returns an empty family without
+// agent once and kept. This is one bounded identity/readiness preflight, not a
+// service-state inventory; caching prevents repeating its executable and
+// systemd verification on every GET. A failed call returns an empty family without
 // memoising it. Callers then fail closed for package-backed services instead
 // of presenting apt operations on an unknown host.
 // packageFamily, makinenin paket-yöneticisi ailesini döndürür; agent'a bir kez
-// sorulup saklanır. Önbellekli GET'in çekmesine izin verilen tek ucuz gerçek
-// budur: dağıtım kimliğini okuyan tek bir RPC'dir, önbelleğin var olma sebebi
-// olan sistem geneli yoklama değil. Başarısız çağrı, belleğe yazmadan boş aile
+// sorulup saklanır. Bu, servis durumu envanteri değil; sınırlı bir kimlik ve
+// hazır-oluş ön kontrolüdür. Önbellek, executable ve systemd doğrulamasının her
+// GET'te tekrarlanmasını önler. Başarısız çağrı, belleğe yazmadan boş aile
 // döndürür. Böylece bilinmeyen bir makinede apt işlemleri sunulmaz ve anlık
 // düşmüş bir agent yanlış yanıtı süreç boyunca dondurmaz.
 func (p *Panel) packageFamily() string {

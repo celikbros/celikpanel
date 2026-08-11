@@ -39,7 +39,8 @@ func (a *Agent) InstalledRepoPackages(req *InstalledRepoPackagesRequest, resp *I
 		resp.Error = "missing request"
 		return nil
 	}
-	if detectPkgFamily() != "apt" {
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
 		resp.Error = "installed version packages are only supported on apt systems"
 		return nil
 	}
@@ -48,7 +49,12 @@ func (a *Agent) InstalledRepoPackages(req *InstalledRepoPackagesRequest, resp *I
 		resp.Error = "service has no versioned package catalogue"
 		return nil
 	}
-	packages, err := installedRepoPackagesForService(service)
+	dpkgQuery, err := executableForProfile(profile, "apt", "dpkg-query")
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	packages, err := installedRepoPackagesForServiceWithExecutable(context.Background(), service, dpkgQuery)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -70,6 +76,18 @@ func installedRepoPackagesForService(service *core.ManagedService) ([]string, er
 }
 
 func installedRepoPackagesForServiceContext(ctx context.Context, service *core.ManagedService) ([]string, error) {
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		return nil, err
+	}
+	dpkgQuery, err := executableForProfile(profile, "apt", "dpkg-query")
+	if err != nil {
+		return nil, err
+	}
+	return installedRepoPackagesForServiceWithExecutable(ctx, service, dpkgQuery)
+}
+
+func installedRepoPackagesForServiceWithExecutable(ctx context.Context, service *core.ManagedService, dpkgQuery string) ([]string, error) {
 	if service == nil || service.Repo == nil || service.Repo.PackagePattern == "" {
 		return nil, fmt.Errorf("service has no versioned package catalogue")
 	}
@@ -78,7 +96,7 @@ func installedRepoPackagesForServiceContext(ctx context.Context, service *core.M
 		return nil, fmt.Errorf("invalid catalogue package pattern")
 	}
 	out, err := serviceMutationCommand(ctx,
-		"dpkg-query",
+		dpkgQuery,
 		"-W",
 		"-f=${Package}\t${db:Status-Abbrev}\n",
 	).Output()

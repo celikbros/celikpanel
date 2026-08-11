@@ -63,6 +63,7 @@ Agent, örneğin aşağıdaki gibi güvenilir bir ana makine profili oluşturur:
 
 ```text
 os_family=linux
+distro_family=debian
 distro_id=ubuntu
 distro_like=debian
 version=24.04
@@ -76,18 +77,20 @@ Reçeteler en özelden en genele doğru seçilir:
 1. tam dağıtım, sürüm aralığı ve mimari
 2. tam dağıtım ve sürüm aralığı
 3. tam dağıtım
-4. `ID_LIKE` ve sürüm aralığı
-5. `ID_LIKE`
-6. paket yöneticisi ve servis yöneticisi
-7. açıkça tanımlanmış işletim sistemi ailesi varsayılanı
+4. dağıtım ailesi ve sürüm aralığı
+5. dağıtım ailesi
+6. `ID_LIKE` ve sürüm aralığı
+7. `ID_LIKE`
+8. paket yöneticisi ve servis yöneticisi
+9. açıkça tanımlanmış işletim sistemi ailesi varsayılanı
 
 Aynı özgüllük düzeyindeki iki eşleşme hatadır. Test edilmemiş yeni işletim
 sistemi sürümleri, seçici açık uçlu bir sürüm aralığına açıkça izin vermedikçe
 eşleşmez.
 Her reçete açıkça denetlenmiş bir `os_family` belirtmelidir; bu sınır olmadan
-yalnız dağıtım veya paket yöneticisi belirtmek reddedilir. Geçerli şema
-doğrulayıcısı `linux` ve `windows` reçete verilerini kabul eder; diğer tüm
-aileleri yol ve adaptör sözleşmeleri denetlenene kadar reddeder.
+yalnız dağıtım veya paket yöneticisi belirtmek reddedilir. Yönetilen sunucu
+şeması yalnız `linux` reçete verisini kabul eder. Desteklenen mutasyon veya
+etkinleştirme sözleşmesi bulunmadığı için Linux dışındaki her aile reddedilir.
 
 ## Asgari şema alanları
 
@@ -176,10 +179,10 @@ bir parçasıdır.
   oluşturulan inode olan hedefi kaldırın, temizliği eşzamanlayın ve hedefin
   kalmış olabileceği durumu bildirin. Mevcut hedef hiçbir zaman değiştirilmez.
 - Oluşturma ve açma Linux dışındaki her GOOS üzerinde güvenli biçimde başarısız
-  olur. Bugün dosya sistemi etkinleştirmesi denetlenmiş tek hedef Linux'tur.
-  Linux'taki kataloglar Windows seçicili reçete verilerini yine saklayıp
-  doğrulayabilir; bu kısıtlama veri modeline değil dosya sistemi
-  etkinleştirmesine ilişkindir.
+  olur. Yönetilen sunucu ve dosya sistemi etkinleştirmesi için tek hedef
+  Linux'tur. `!linux` dosyaları yalnız derleme taşınabilirliği için bulunur ve
+  mutasyonsuz, fail-closed sözleşmeyi korur; Linux dışı reçete verisine yetki
+  vermez veya ürün desteği vaat etmez.
 - Önceki doğrulanmış sürümleri adli inceleme veya açık acil durum kurtarması için
   saklayın. Normal geri alma yalnız sıra numarası
   `highest_accepted_catalog_sequence` değerinin altında olmayan bir sürümü
@@ -214,17 +217,26 @@ kapalı kalır.
 
 ## Platform adaptörleri
 
-Mevcut adaptörleri paylaşan ek dağıtımlar normalde yalnızca katalog verileriyle
-eklenebilir. Tamamen yeni bir işletim sistemi ailesi için ana makineyi yoklama,
-süreç yürütme, dosyalar, servisler, güvenlik duvarı, izinler ve hazırlık probları
-amacıyla tek seferlik güvenilir bir adaptör uygulaması yine gereklidir.
+ÇelikPanel'in hedef mimarisi üç birinci sınıf Linux dağıtım ailesi adaptörü
+tanımlar. Dağıtım adları ayrı kurulum motorları değil, uyumluluk örnekleridir:
 
-- Linux: paket yöneticileri, systemd, nftables, Unix izinleri
-- FreeBSD: pkg, rc.d/sysrc, pf veya ipfw
-- Windows: yerel süreç API'si, SCM, Windows Güvenlik Duvarı, ACL'ler
+- `debian`: Debian ve Ubuntu; `apt`/`dpkg`, systemd, AppArmor ve nftables
+- `rhel`: RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora ve CloudLinux;
+  `dnf`/RPM, systemd, SELinux ve firewalld/nftables
+- `arch`: Arch Linux; `pacman`, systemd ve nftables
 
-Adaptör mevcut olduktan sonra bileşen ve sürüm farklılıkları reçetelerde yer
-alır.
+Güvenilir ana makine profili `distro_family` değerini `/etc/os-release`
+içindeki `ID` ve `ID_LIKE` alanlarından türetir. İsim tek başına mutasyon yetkisi
+vermez: adaptör önce paket yöneticisini, servis yöneticisini ve gerekli güvenlik
+yeteneklerini doğrular; uyuşmazlıkta fail-closed reddeder. Paket, depo, servis,
+güvenlik politikası veya yollardaki gerçek dağıtım farkları dar reçete
+override'ları kullanır. `ID_LIKE` bir uyumluluk adayı belirleyebilir, fakat o
+dağıtım kimliği ve istenen yetenek için açık sertifikasyon kanıtı bulunana kadar
+mutasyona asla izin vermez.
+
+openSUSE/SLES, Alpine ve NixOS için kanıtlanmış talep haklı çıkarırsa gelecekte
+ayrı aile adaptörleri gerekir. Kali Linux, Debian kökenine rağmen açıkça
+reddedilir. FreeBSD ve Windows yönetilen sunucu hedefi değildir.
 
 Şema doğrulaması yürütme yetkisi değildir. Çalışma zamanı etkinleştirmesinden
 önce güvenilir adaptör, her öğe kimliği ile türü belirlenmiş adımı derlenmiş
@@ -238,11 +250,11 @@ uygulanmadığı için V2 yalnız doğrulanmış kuru çalışma temeli olarak k
 
 1. HostProfile, şema doğrulama, imza doğrulama ve kuru çalıştırma planlarını uygulayın.
 2. Agent'a ait kalıcı iş defterini, heartbeat/son süre kurtarmasını ve süreçler arası kilidi ekleyin.
-3. Yaşam döngüsü ve TCP hazırlığı dâhil olmak üzere önce Debian/Ubuntu ve Arch için Memcached'i taşıyın.
-4. V2'yi yürütmeden gölge modunda eski ve V2 planlarını karşılaştırın.
-5. Basit, paket tabanlı servisleri taşıyın.
-6. Web, DNS, posta, VPN ve veritabanı araçlarını türü belirlenmiş yapılandırma adımlarıyla taşıyın.
-7. Çalışma zamanlarını, üretici depolarını, sürüm seçimini ve Roundcube'u taşıyın.
-8. FreeBSD adaptörünü ekleyin ve test edin.
-9. Windows adaptörünü ekleyin ve test edin.
+3. Memcached'i önce `debian` aile adaptörüyle taşıyın; ardından yaşam döngüsü ve TCP hazırlığı dâhil Debian ve Ubuntu örneklerini sertifikalandırın.
+4. `rhel` aile adaptörünü ekleyip temsili RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora ve CloudLinux örneklerini sertifikalandırın.
+5. `arch` aile adaptörünü ekleyip güncel Arch Linux örneğini sertifikalandırın.
+6. V2'yi yürütmeden gölge modunda eski ve V2 planlarını karşılaştırın.
+7. Basit, paket tabanlı servisleri üç ailede taşıyın.
+8. Web, DNS, posta, VPN ve veritabanı araçlarını türü belirlenmiş yapılandırma adımlarıyla taşıyın.
+9. Çalışma zamanlarını, üretici depolarını, sürüm seçimini ve Roundcube'u taşıyın.
 10. Eski işletim sistemi dallarını yalnızca doğrulanmış eşdeğerlik sağlandıktan sonra kaldırın.

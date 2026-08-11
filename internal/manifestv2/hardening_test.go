@@ -58,13 +58,8 @@ func TestSelectorAwareRecipePaths(t *testing.T) {
 		{name: "POSIX absolute", osFamily: "linux", path: "/etc/celikpanel/service.conf", wantOK: true},
 		{name: "POSIX rejects Windows", osFamily: "linux", path: `C:\ProgramData\CelikPanel\service.conf`},
 		{name: "unaudited POSIX family", osFamily: "freebsd", path: "/usr/local/etc/service.conf"},
-		{name: "Windows drive", osFamily: "windows", path: `C:\ProgramData\CelikPanel\service.conf`, wantOK: true},
-		{name: "Windows UNC", osFamily: "windows", path: `\\server\share\service.conf`, wantOK: true},
+		{name: "Windows recipe family rejected", osFamily: "windows", path: `C:\ProgramData\CelikPanel\service.conf`},
 		{name: "Windows rejects POSIX", osFamily: "windows", path: "/etc/celikpanel/service.conf"},
-		{name: "Windows rejects drive relative", osFamily: "windows", path: `C:service.conf`},
-		{name: "Windows rejects traversal", osFamily: "windows", path: `C:\ProgramData\..\secret`},
-		{name: "Windows rejects ADS", osFamily: "windows", path: `C:\ProgramData\file:stream`},
-		{name: "Windows rejects device namespace", osFamily: "windows", path: `\\?\C:\ProgramData\file`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			err := validateRecipePath(PlatformSelector{OSFamily: test.osFamily}, test.path)
@@ -76,15 +71,13 @@ func TestSelectorAwareRecipePaths(t *testing.T) {
 }
 
 func TestSelectorRequiresAuditedOSFamily(t *testing.T) {
-	for _, family := range []string{"", "freebsd", "darwin"} {
+	for _, family := range []string{"", "freebsd", "darwin", "windows"} {
 		if err := validateSelector("test.recipe", PlatformSelector{OSFamily: family}); err == nil {
 			t.Fatalf("validateSelector accepted os_family %q", family)
 		}
 	}
-	for _, family := range []string{"linux", "windows"} {
-		if err := validateSelector("test.recipe", PlatformSelector{OSFamily: family}); err != nil {
-			t.Fatalf("validateSelector rejected audited os_family %q: %v", family, err)
-		}
+	if err := validateSelector("test.recipe", PlatformSelector{OSFamily: "linux"}); err != nil {
+		t.Fatalf("validateSelector rejected linux os_family: %v", err)
 	}
 }
 
@@ -109,58 +102,6 @@ func TestTCPProbeRequiresLoopbackIPAddress(t *testing.T) {
 		if (err == nil) != test.wantOK {
 			t.Fatalf("validateStep TCP host %q error = %v", test.host, err)
 		}
-	}
-}
-
-func TestCatalogCanValidateWindowsRecipeData(t *testing.T) {
-	doc := testCatalogDocument("release-key-1")
-	doc.Recipes = append(doc.Recipes, CatalogRecipe{
-		ID:          "memcached.windows.install",
-		ItemID:      "memcached",
-		PlatformKey: "windows",
-		Operation:   "install",
-		Revision:    1,
-		Support:     SupportSupported,
-		Selector: PlatformSelector{
-			OSFamily:       "windows",
-			PackageManager: "winget",
-			ServiceManager: "scm",
-		},
-		Spec: RecipeSpec{Steps: []RecipeStep{{
-			ID:       "write.config",
-			Type:     "file_write",
-			Path:     `C:\ProgramData\CelikPanel\memcached.conf`,
-			Template: "port 11211",
-		}}},
-	})
-	if err := validateDocument(doc); err != nil {
-		t.Fatalf("validate Windows recipe: %v", err)
-	}
-	if runtime.GOOS != "linux" {
-		return
-	}
-	path, signature, publicKey := buildSignedTestCatalog(t, doc)
-	catalog, err := OpenVerified(
-		context.Background(),
-		path,
-		signature,
-		map[string]ed25519.PublicKey{doc.Metadata.KeyID: publicKey},
-		testOpenPolicy(),
-	)
-	if err != nil {
-		t.Fatalf("open catalog containing Windows recipe: %v", err)
-	}
-	defer catalog.Close()
-	resolved, err := catalog.Resolve(context.Background(), "memcached", "install", HostProfile{
-		OSFamily:       "windows",
-		PackageManager: "winget",
-		ServiceManager: "scm",
-	})
-	if err != nil {
-		t.Fatalf("resolve Windows recipe: %v", err)
-	}
-	if resolved.Recipe.ID != "memcached.windows.install" {
-		t.Fatalf("resolved Windows recipe = %q", resolved.Recipe.ID)
 	}
 }
 
@@ -408,6 +349,7 @@ func TestResolveIsSafeDuringAndAfterClose(t *testing.T) {
 	}
 	host := HostProfile{
 		OSFamily:       "linux",
+		DistroFamily:   "debian",
 		DistroID:       "debian",
 		Version:        "12",
 		Architecture:   "amd64",

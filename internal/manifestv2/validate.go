@@ -36,6 +36,12 @@ var allowedStepTypes = map[string]struct{}{
 	"tcp_probe":       {},
 }
 
+var allowedDistroFamilies = map[string]struct{}{
+	"arch":   {},
+	"debian": {},
+	"rhel":   {},
+}
+
 func validateDocument(doc CatalogDocument) error {
 	if err := validateMetadata(doc.Metadata); err != nil {
 		return err
@@ -58,6 +64,13 @@ func validateDocument(doc CatalogDocument) error {
 		}
 		if err := validateRecipe(recipe); err != nil {
 			return err
+		}
+		if normalizeToken(recipe.Selector.DistroFamily) != "" && doc.Metadata.MinimumAgentSchema < 2 {
+			return fmt.Errorf(
+				"recipe %q uses distro_family but minimum_agent_schema is %d; version 2 or newer is required",
+				recipe.ID,
+				doc.Metadata.MinimumAgentSchema,
+			)
 		}
 		if _, exists := recipes[recipe.ID]; exists {
 			return fmt.Errorf("duplicate recipe %q", recipe.ID)
@@ -156,13 +169,14 @@ func validateRecipe(recipe CatalogRecipe) error {
 
 func validateSelector(recipeID string, selector PlatformSelector) error {
 	selector.OSFamily = normalizeToken(selector.OSFamily)
+	selector.DistroFamily = normalizeToken(selector.DistroFamily)
 	selector.DistroID = normalizeToken(selector.DistroID)
 	selector.DistroLike = normalizeToken(selector.DistroLike)
 	selector.PackageManager = normalizeToken(selector.PackageManager)
 	selector.ServiceManager = normalizeToken(selector.ServiceManager)
 
 	switch selector.OSFamily {
-	case "linux", "windows":
+	case "linux":
 	case "":
 		return fmt.Errorf("recipe %q selector requires an explicit audited os_family", recipeID)
 	default:
@@ -172,8 +186,17 @@ func validateSelector(recipeID string, selector PlatformSelector) error {
 			selector.OSFamily,
 		)
 	}
-	if selector.DistroID != "" && selector.DistroLike != "" {
-		return fmt.Errorf("recipe %q selector cannot combine distro_id and distro_like", recipeID)
+	if selector.DistroFamily != "" {
+		if _, ok := allowedDistroFamilies[selector.DistroFamily]; !ok {
+			return fmt.Errorf(
+				"recipe %q selector uses unsupported distro_family %q",
+				recipeID,
+				selector.DistroFamily,
+			)
+		}
+	}
+	if selector.DistroLike != "" && (selector.DistroID != "" || selector.DistroFamily != "") {
+		return fmt.Errorf("recipe %q selector cannot combine distro_like with distro_id or distro_family", recipeID)
 	}
 	if (selector.PackageManager == "") != (selector.ServiceManager == "") {
 		return fmt.Errorf("recipe %q selector must pair package_manager and service_manager", recipeID)
@@ -308,9 +331,6 @@ func validateStep(recipeID string, selector PlatformSelector, step RecipeStep, s
 		if step.Template == "" {
 			return fmt.Errorf("recipe %q step %q has no template", recipeID, step.ID)
 		}
-		if normalizeToken(selector.OSFamily) == "windows" && step.Mode != "" {
-			return fmt.Errorf("recipe %q step %q cannot use a POSIX mode on Windows", recipeID, step.ID)
-		}
 		if step.Mode != "" && !modePattern.MatchString(step.Mode) {
 			return fmt.Errorf("recipe %q step %q has invalid mode %q", recipeID, step.ID, step.Mode)
 		}
@@ -395,8 +415,6 @@ func validateRecipePath(selector PlatformSelector, value string) error {
 	switch normalizeToken(selector.OSFamily) {
 	case "linux":
 		return validatePOSIXRecipePath(value)
-	case "windows":
-		return validateWindowsRecipePath(value)
 	default:
 		return fmt.Errorf("path requires an explicit audited os_family")
 	}
@@ -410,39 +428,6 @@ func validatePOSIXRecipePath(value string) error {
 		return fmt.Errorf("path contains parent traversal")
 	}
 	return nil
-}
-
-func validateWindowsRecipePath(value string) error {
-	normalized := strings.ReplaceAll(value, "/", `\`)
-	lower := strings.ToLower(normalized)
-	if strings.HasPrefix(lower, `\\?\`) || strings.HasPrefix(lower, `\\.\`) {
-		return fmt.Errorf("Windows device paths are not allowed")
-	}
-	if containsParentTraversal(normalized) {
-		return fmt.Errorf("path contains parent traversal")
-	}
-	if len(normalized) >= 3 &&
-		((normalized[0] >= 'A' && normalized[0] <= 'Z') ||
-			(normalized[0] >= 'a' && normalized[0] <= 'z')) &&
-		normalized[1] == ':' && normalized[2] == '\\' {
-		if strings.Contains(normalized[2:], ":") {
-			return fmt.Errorf("Windows alternate data streams are not allowed")
-		}
-		return nil
-	}
-	if strings.HasPrefix(normalized, `\\`) {
-		parts := strings.Split(strings.TrimPrefix(normalized, `\\`), `\`)
-		if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("UNC path must include server and share")
-		}
-		for _, part := range parts {
-			if strings.Contains(part, ":") {
-				return fmt.Errorf("Windows alternate data streams are not allowed")
-			}
-		}
-		return nil
-	}
-	return fmt.Errorf("path is not an absolute Windows path")
 }
 
 func containsParentTraversal(value string) bool {

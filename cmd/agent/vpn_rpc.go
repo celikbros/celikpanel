@@ -500,6 +500,11 @@ func (a *Agent) SetupVPN(request *SetupVPNRequest, response *SetupVPNResponse) e
 		response.Error = err.Error()
 		return nil
 	}
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		response.Error = "systemd client failed security validation"
+		return nil
+	}
 	if err := secureMkdirAll(wgConfDir, 0o700); err != nil {
 		response.Error = "could not prepare the VPN configuration directory"
 		return nil
@@ -581,7 +586,7 @@ PostDown = %s
 	}
 	unitName := "wg-quick@" + wgIface
 	enabledOutput, _ := serviceMutationCommand(
-		ctx, "systemctl", "is-enabled", unitName,
+		ctx, systemctl, "is-enabled", unitName,
 	).Output()
 	unitWasEnabled := strings.HasPrefix(
 		strings.TrimSpace(string(enabledOutput)), "enabled",
@@ -606,7 +611,7 @@ PostDown = %s
 
 		var rollbackErrors []error
 		if serviceAttempted && !interfaceRunning {
-			_, _ = serviceMutationCommand(recoveryCtx, "systemctl", "stop", unitName).CombinedOutput()
+			_, _ = serviceMutationCommand(recoveryCtx, systemctl, "stop", unitName).CombinedOutput()
 			if serviceMutationCommand(recoveryCtx, "wg", "show", wgIface).Run() == nil {
 				rollbackErrors = append(
 					rollbackErrors, errors.New("VPN interface remained active"),
@@ -614,9 +619,9 @@ PostDown = %s
 			}
 		}
 		if serviceAttempted && !unitWasEnabled {
-			_, _ = serviceMutationCommand(recoveryCtx, "systemctl", "disable", unitName).CombinedOutput()
+			_, _ = serviceMutationCommand(recoveryCtx, systemctl, "disable", unitName).CombinedOutput()
 			probe, _ := serviceMutationCommand(
-				recoveryCtx, "systemctl", "is-enabled", unitName,
+				recoveryCtx, systemctl, "is-enabled", unitName,
 			).Output()
 			if strings.HasPrefix(strings.TrimSpace(string(probe)), "enabled") {
 				rollbackErrors = append(
@@ -701,7 +706,7 @@ PostDown = %s
 		response.Created = true
 	}
 	serviceAttempted = true
-	if err := enableServiceForMutation(ctx, unitName, true); err != nil {
+	if err := enableServiceForMutationWithExecutable(ctx, systemctl, unitName, true); err != nil {
 		failSetup("wg-quick failed to start the VPN server")
 		return nil
 	}

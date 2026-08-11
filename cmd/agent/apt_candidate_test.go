@@ -38,9 +38,9 @@ func TestAptCandidateGuardPrecedesInstallMutation(t *testing.T) {
 		t.Fatal("candidate-aware APT install function was not found")
 	}
 	body = body[start : start+end]
-	lookup := strings.Index(body, "aptInstallCandidateContext(ctx, requiredCandidate)")
+	lookup := strings.Index(body, "aptInstallCandidateWithExecutable(ctx, aptCache, requiredCandidate)")
 	rejection := strings.Index(body, "selected package %s has no APT installation candidate")
-	mutation := strings.Index(body, `runServiceMutationCombinedOutputEnv(ctx, env, "apt-get", args...)`)
+	mutation := strings.Index(body, `runServiceMutationCombinedOutputEnv(ctx, env, aptGet, args...)`)
 	if lookup < 0 || rejection < 0 || mutation < 0 {
 		t.Fatalf("candidate lookup, rejection, or apt install mutation is missing")
 	}

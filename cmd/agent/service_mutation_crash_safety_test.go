@@ -778,7 +778,7 @@ esac
 	}
 	t.Cleanup(func() { serviceMutationWorkerFaultHook = previousHook })
 
-	if err := enableServiceForMutation(ctx, "celikpanel-test.service", true); err != nil {
+	if err := enableServiceForMutationWithExecutable(ctx, systemctl, "celikpanel-test.service", true); err != nil {
 		t.Fatalf("verified systemd state did not reconcile the cancelled client: %v", err)
 	}
 	if hookCalls != 1 {

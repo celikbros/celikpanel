@@ -8,6 +8,56 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-020 · Yönetilen sunucu desteği dağıtım adına değil Linux ailesine bağlanır
+
+*11 Ağustos 2026*
+
+**Karar.** ÇelikPanel Agent'ın yönetilen sunucu hedefi yalnız Linux'tur. Platform
+mimarisi üç Linux aile hedefinde standartlaşır: `debian`, `rhel` ve `arch`.
+Bu, genel özellik erişilebilirliği değil adaptör sınırlarını tanımlar. Debian ile
+Ubuntu `debian`; RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora ve
+CloudLinux `rhel`; Arch Linux `arch` adaptörünü kullanır. Dağıtımlar ayrı
+kurulum motorları değildir; yalnız gerçekten ayrışan paket, depo, servis,
+güvenlik politikası veya yol için dar bir override ekler.
+
+**Algılama ve güven sınırı.** Aile `/etc/os-release` içindeki `ID` ve `ID_LIKE`
+ile bulunur, fakat isim tek başına mutasyon yetkisi vermez. Adaptör paket
+yöneticisini, init/servis yöneticisini ve gerekli güvenlik yeteneklerini
+mutasyondan önce doğrular; uyuşmayan sistem fail-closed reddedilir. Dağıtım
+isimleri kod mimarisi değil CI uyumluluk örnekleridir: doğrulanan örnekler ürün
+matrisinde görünür; aynı ailedeki başka bir türev aynı adaptörü yalnız açık
+sertifikasyon ve önkoşul kanıtından sonra yeniden kullanabilir. `ID_LIKE`
+yalnız uyumluluk adayı belirler; tek başına asla mutasyon yetkisi vermez.
+
+**Sertifikasyon sınırı.** Aile üyeliği tek başına genel destek iddiası değildir.
+Arayüz yalnız paket, yol, güvenlik politikası, yaşam döngüsü ve hazırlık
+reçeteleri temsili uçtan uca matristen geçmiş yetenekleri gösterir. Doğrulanmamış
+bir türev uyumlu/doğrulanmamış kalır; desteklenmeyen yetenekler gizli veya
+engelli olur. RHEL ailesi çalışması açıkça etiketlenmiş bir önizleme olarak
+başlar; yalnız dnf algılandı diye tam aile desteğine dönüşmez.
+
+**Kapsam dışı.** openSUSE/SLES, Alpine ve NixOS bugün yeni bir aile adaptörünü
+haklı çıkaran talebe sahip değildir; talep doğarsa ayrı `suse`, `alpine` veya
+`nixos` ailesi olarak eklenir, mevcut ailelerden biriymiş gibi davranılmaz.
+Kali Linux sunucu ürünü olmadığı için Debian kökenine rağmen açıkça reddedilir.
+Windows ve FreeBSD yönetilen sunucu hedefi değildir. `!linux` dosyaları yalnız
+derleme taşınabilirliği ve mutasyonsuz fail-closed sözleşmesini korur; ürün
+desteği vaat etmez.
+
+**Kurulum kaynağı değişmez.** Aile adaptörü D-018'i uygular: sistem servisleri
+`apt`/`dnf`/`pacman` üzerinden dağıtım paketidir; taşınabilir uygulama ve
+runtime'lar doğrulanmış resmi sürümdür. Zorunlu bir kaynak derlemesi müşteri
+sunucusunda yapılmaz; merkezi CI'da üretilip imzalı aile paketi olarak
+dağıtılır. Böylece aile kapsamı büyürken güvenlik güncellemesi, dosya sahipliği,
+kaldırma ve geri alma paket yöneticisinde kalır.
+
+**Neden.** Dağıtım başına kopyalanmış installer sayısı kaliteyi bölerek
+büyütür; her şeyi kaynaktan derlemek ise yalnız binary üretimini ortaklaştırır,
+systemd/SELinux/AppArmor, kullanıcılar, yollar, firewall ve güncelleme
+entegrasyonunu ortaklaştırmaz. Aile adaptörü doğru tekrar-kullanım sınırıdır.
+
+---
+
 ## D-019 · Panel korkutmaz: her yönetim sayfası kendi yardımını taşır; boş sayfa yasaktır
 
 *25 Temmuz 2026*
