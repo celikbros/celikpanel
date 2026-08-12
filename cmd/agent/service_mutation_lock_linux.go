@@ -389,13 +389,22 @@ func syncServiceMutationDirectory(path string) error {
 // include directory. Unlike the service-mutation state directory, pdns.d is
 // normally mode 0755 and need not use the CelikPanel service group; it must
 // still be a trusted, non-writable real directory owned by the required UID.
-func syncDNSClusterConfigDirectory(path string) error {
-	dirPath := filepath.Dir(path)
+func validateDNSClusterConfigDirectory(dirPath string) error {
+	dirPath = filepath.Clean(dirPath)
 	info, err := os.Lstat(dirPath)
 	if err != nil {
 		return err
 	}
-	if err := secureServiceMutationParentDirectoryStat(dirPath, info); err != nil {
+	return secureRequiredOwnerDirectoryStat(
+		dirPath,
+		info,
+		dnsClusterConfigRequiredOwnerUID,
+	)
+}
+
+func syncDNSClusterConfigDirectory(path string) error {
+	dirPath := filepath.Dir(path)
+	if err := validateDNSClusterConfigDirectory(dirPath); err != nil {
 		return err
 	}
 	fd, err := unix.Open(dirPath, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_DIRECTORY, 0)

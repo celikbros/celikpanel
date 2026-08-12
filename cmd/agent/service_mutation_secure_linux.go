@@ -67,6 +67,18 @@ func secureServiceMutationStat(path string, info os.FileInfo, wantDirectory bool
 // Güvenilir UID ile yazılamaz gerçek-dizin sözleşmesini zorunlu tutarken üst
 // dizinin GID değerini bilinçli olarak sınırlamayız.
 func secureServiceMutationParentDirectoryStat(path string, info os.FileInfo) error {
+	return secureRequiredOwnerDirectoryStat(
+		path,
+		info,
+		serviceMutationRequiredOwnerUID,
+	)
+}
+
+func secureRequiredOwnerDirectoryStat(
+	path string,
+	info os.FileInfo,
+	requiredOwnerUID uint32,
+) error {
 	if info == nil || !info.IsDir() {
 		return fmt.Errorf("%s must be a real directory", path)
 	}
@@ -74,8 +86,8 @@ func secureServiceMutationParentDirectoryStat(path string, info os.FileInfo) err
 	if !ok {
 		return fmt.Errorf("inspect owner of %s", path)
 	}
-	if stat.Uid != serviceMutationRequiredOwnerUID {
-		return fmt.Errorf("%s must be owned by uid %d", path, serviceMutationRequiredOwnerUID)
+	if stat.Uid != requiredOwnerUID {
+		return fmt.Errorf("%s must be owned by uid %d", path, requiredOwnerUID)
 	}
 	if info.Mode().Perm()&0o022 != 0 {
 		return fmt.Errorf("%s must not be writable by group or others", path)

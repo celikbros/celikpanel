@@ -321,6 +321,74 @@ func TestConfigureDNSClusterV2PostIntentEffectiveDriftPoisons(t *testing.T) {
 	t.Cleanup(func() { releasePoisonedDNSClusterConfigTestManager(manager) })
 }
 
+func TestPublishDNSClusterConfigRejectsUntrustedDirectoryBeforeMutation(t *testing.T) {
+	for _, trust := range []string{"owner", "mode"} {
+		for _, mutation := range []string{"create", "replace", "remove"} {
+			t.Run(trust+"/"+mutation, func(t *testing.T) {
+				confPath := prepareDNSClusterRuntimeTest(t)
+				dir := filepath.Dir(confPath)
+				priorConfig := []byte("prior cluster configuration\n")
+				if mutation != "create" {
+					if err := os.WriteFile(confPath, priorConfig, 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+				stagePath := filepath.Join(dir, ".celikpanel-cluster-stage-preserve.tmp")
+				priorStage := []byte("unpublished stage\n")
+				if err := os.WriteFile(stagePath, priorStage, 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				expectedError := "must be owned by uid"
+				switch trust {
+				case "owner":
+					dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid()) ^ 1
+				case "mode":
+					expectedError = "must not be writable by group or others"
+					if err := os.Chmod(dir, 0o770); err != nil {
+						t.Fatal(err)
+					}
+				}
+				desired := "replacement cluster configuration\n"
+				if mutation == "remove" {
+					desired = ""
+				}
+				err := publishDNSClusterConfigFile(desired)
+				if err == nil || !strings.Contains(err.Error(), expectedError) {
+					t.Fatalf("untrusted directory publication error = %v, want %q", err, expectedError)
+				}
+				if mutation == "create" {
+					if _, statErr := os.Lstat(confPath); !errors.Is(statErr, os.ErrNotExist) {
+						t.Fatalf("untrusted directory created config: %v", statErr)
+					}
+				} else {
+					gotConfig, readErr := os.ReadFile(confPath)
+					if readErr != nil || string(gotConfig) != string(priorConfig) {
+						t.Fatalf("untrusted directory changed config: got=%q err=%v", gotConfig, readErr)
+					}
+				}
+				gotStage, readErr := os.ReadFile(stagePath)
+				if readErr != nil || string(gotStage) != string(priorStage) {
+					t.Fatalf("untrusted directory cleaned stage: got=%q err=%v", gotStage, readErr)
+				}
+				entries, readErr := os.ReadDir(dir)
+				if readErr != nil {
+					t.Fatal(readErr)
+				}
+				var stages int
+				for _, entry := range entries {
+					if strings.HasPrefix(entry.Name(), ".celikpanel-cluster-stage-") {
+						stages++
+					}
+				}
+				if stages != 1 {
+					t.Fatalf("untrusted directory stage count = %d, want 1", stages)
+				}
+			})
+		}
+	}
+}
+
 func TestConfigureDNSClusterLegacyIsStableZeroTouch(t *testing.T) {
 	oldRestart := dnsClusterRestart
 	oldApply := dnsClusterApplyAutoprimaryTx

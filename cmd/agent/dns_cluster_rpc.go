@@ -534,6 +534,12 @@ func publishDNSClusterConfigFile(config string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
+	// Reject an untrusted include directory before cleanup, staging, removal,
+	// or rename can alter anything PowerDNS may load. The final directory fsync
+	// repeats the same proof to close replacement races around publication.
+	if err := validateDNSClusterConfigDirectory(dir); err != nil {
+		return err
+	}
 	if err := cleanupAbandonedDNSClusterConfigStages(dir); err != nil {
 		return err
 	}

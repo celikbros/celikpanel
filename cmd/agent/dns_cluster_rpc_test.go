@@ -625,10 +625,10 @@ func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(
 			db.Close()
 			before := dnsClusterDatabaseSnapshot(t)
 
-			var restartCalls int
-			switch stage {
-			case "apply-autoprimary":
-				dnsClusterApplyAutoprimaryTx = func(tx *sql.Tx, _ *DNSClusterRequest) error {
+			var applyCalls, setTypeCalls, restartCalls int
+			dnsClusterApplyAutoprimaryTx = func(tx *sql.Tx, req *DNSClusterRequest) error {
+				applyCalls++
+				if stage == "apply-autoprimary" {
 					if _, err := tx.Exec(`DELETE FROM supermasters WHERE account = 'celikpanel'`); err != nil {
 						return err
 					}
@@ -637,21 +637,24 @@ func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(
 					}
 					return errors.New("injected apply-autoprimary failure")
 				}
-			case "set-zone-types":
-				dnsClusterSetLocalZoneTypeTx = func(tx *sql.Tx, _ *DNSClusterRequest) ([]string, error) {
+				return applyAutoprimaryTx(tx, req)
+			}
+			dnsClusterSetLocalZoneTypeTx = func(tx *sql.Tx, req *DNSClusterRequest) ([]string, error) {
+				setTypeCalls++
+				if stage == "set-zone-types" {
 					if _, err := tx.Exec(`UPDATE domains SET type = 'MASTER', master = 'mutated' WHERE id = 1`); err != nil {
 						return nil, err
 					}
 					return nil, errors.New("injected set-zone-types failure")
 				}
-			case "restart":
-				dnsClusterRestart = func(context.Context) ([]byte, error) {
-					restartCalls++
-					if restartCalls == 1 {
-						return []byte("new configuration rejected\n"), errors.New("exit status 1")
-					}
-					return nil, nil
+				return setLocalZoneTypeTx(tx, req)
+			}
+			dnsClusterRestart = func(context.Context) ([]byte, error) {
+				restartCalls++
+				if stage == "restart" {
+					return []byte("new configuration rejected\n"), errors.New("exit status 1")
 				}
+				return nil, nil
 			}
 
 			req := &DNSClusterRequest{
@@ -663,8 +666,25 @@ func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := convergeDNSClusterConfig(context.Background(), commitment); err == nil {
+			_, convergeErr := convergeDNSClusterConfig(context.Background(), commitment)
+			if convergeErr == nil {
 				t.Fatalf("failure stage %q was reported as success", stage)
+			}
+			expectedError := map[string]string{
+				"apply-autoprimary": "injected apply-autoprimary failure",
+				"set-zone-types":    "injected set-zone-types failure",
+				"restart":           "restart PowerDNS after cluster convergence",
+			}[stage]
+			if !strings.Contains(convergeErr.Error(), expectedError) {
+				t.Fatalf("failure stage %q error = %v, want %q", stage, convergeErr, expectedError)
+			}
+			expectedCalls := map[string][3]int{
+				"apply-autoprimary": {1, 0, 0},
+				"set-zone-types":    {1, 1, 0},
+				"restart":           {1, 1, 1},
+			}[stage]
+			if got := [3]int{applyCalls, setTypeCalls, restartCalls}; got != expectedCalls {
+				t.Fatalf("failure stage %q calls = %v, want %v", stage, got, expectedCalls)
 			}
 			after := dnsClusterDatabaseSnapshot(t)
 			if stage == "restart" {
@@ -680,12 +700,6 @@ func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(
 			}
 			if string(gotConfig) != dnsClusterConfig(req) {
 				t.Fatalf("desired forward configuration was not retained: %q", gotConfig)
-			}
-			if stage == "restart" && restartCalls != 1 {
-				t.Fatalf("restart calls = %d, want one failed convergence start", restartCalls)
-			}
-			if stage != "restart" && restartCalls != 0 {
-				t.Fatalf("restart called before database preparation completed: %d", restartCalls)
 			}
 		})
 	}
