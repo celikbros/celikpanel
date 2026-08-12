@@ -193,12 +193,12 @@ type serviceOperationTestAgent struct {
 	active       map[string]bool
 	nodeVersions map[string]bool
 
-	mutationActive   string
-	mutationJobs     map[string]*ServiceOperationMutationJob
-	mutationDeadline time.Time
-	mutationEvents   []string
-	finishLossKind   string
-	finishLossUsed   bool
+	mutationActive        string
+	mutationJobs          map[string]*ServiceOperationMutationJob
+	mutationDeadlineAfter time.Duration
+	mutationEvents        []string
+	finishLossKind        string
+	finishLossUsed        bool
 
 	activateAfterGlobalStatus *ServiceOperationMutationJob
 	activationTriggered       bool
@@ -267,8 +267,8 @@ func (a *serviceOperationTestAgent) BeginServiceMutation(
 	}
 	now := time.Now().UTC()
 	deadline := now.Add(time.Hour)
-	if !a.mutationDeadline.IsZero() {
-		deadline = a.mutationDeadline
+	if a.mutationDeadlineAfter > 0 {
+		deadline = now.Add(a.mutationDeadlineAfter)
 	}
 	job := &ServiceOperationMutationJob{
 		RequestID: req.RequestID, OwnerID: req.OwnerID, Kind: req.Kind,
@@ -2499,7 +2499,7 @@ func TestStartupRecoveryCancelsAndResumesMatchingActiveAgentMutation(t *testing.
 
 func TestWorkerDeadlineStillPersistsTerminalOperation(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
-	f.agent.mutationDeadline = time.Now().UTC().Add(250 * time.Millisecond)
+	f.agent.mutationDeadlineAfter = time.Second
 	op, err := f.panel.createServiceOperation(
 		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
 	)
