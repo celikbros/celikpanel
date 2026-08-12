@@ -58,6 +58,24 @@ func TestAgentRPCPoliciesAreExplicitAndValid(t *testing.T) {
 	}
 }
 
+func TestVPNSyncRPCPolicyRequiresV2(t *testing.T) {
+	policy, err := agentRPCPolicyForMethod("Agent.SyncVPNPeersV2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.timeout != agentRPCMutationTimeout ||
+		policy.effect != agentRPCEffectHostMutation ||
+		policy.capability != agentRPCCapabilityVPN {
+		t.Fatalf("SyncVPNPeersV2 policy = %+v", policy)
+	}
+	if _, err := agentRPCPolicyForMethod("Agent.SyncVPNPeers"); !errors.Is(
+		err,
+		errAgentRPCPolicyMissing,
+	) {
+		t.Fatalf("legacy SyncVPNPeers policy error = %v, want missing", err)
+	}
+}
+
 func TestProductionAgentRPCLiteralsHavePolicies(t *testing.T) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

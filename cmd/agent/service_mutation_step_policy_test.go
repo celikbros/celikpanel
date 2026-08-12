@@ -29,6 +29,10 @@ func mutationPolicyClaim(
 }
 
 func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
+	if serviceMutationStepSyncVPNPeers != "Agent.SyncVPNPeersV2" {
+		t.Fatalf("VPN peer mutation method=%q", serviceMutationStepSyncVPNPeers)
+	}
+	vpnQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)
 	tests := []struct {
 		name  string
 		job   *ServiceMutationJob
@@ -81,8 +85,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"configure phppgadmin standalone", mutationPolicyJob("dbtools_configure", "phppgadmin", ""), mutationPolicyClaim(serviceMutationStepConfigureDBTools, "dbtools", "", "configure")},
 		{"setup vpn", mutationPolicyJob("vpn_setup", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup")},
 		{"setup vpn after install", mutationPolicyJob("service_install", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup")},
-		{"sync vpn peers", mutationPolicyJob("vpn_peer_sync", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", "", "sync")},
-		{"sync vpn peers after install", mutationPolicyJob("service_install", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", "", "sync")},
+		{"sync vpn peers", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", vpnQualifier, "sync")},
 		{"firewall live apply", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
 		{"firewall persisted apply", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnablePersisted)},
 		{"firewall persisted disable", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallDisablePersisted)},
@@ -206,6 +209,8 @@ func TestServiceMutationMailProfilesAllowOnlyExactCompiledMembership(t *testing.
 }
 
 func TestServiceMutationStepPolicyRejectsMismatchesAndConfusedDeputies(t *testing.T) {
+	vpnQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)
+	otherVPNQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("1", 64)
 	tests := []struct {
 		name  string
 		job   *ServiceMutationJob
@@ -224,7 +229,10 @@ func TestServiceMutationStepPolicyRejectsMismatchesAndConfusedDeputies(t *testin
 		{"protected profile cannot prepare nginx", mutationPolicyJob("mail_profile_install", core.MailProfileProtected, ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"repo enable cannot disable", mutationPolicyJob("repo_enable", "docker", ""), mutationPolicyClaim(serviceMutationStepDisableRepo, "docker", "", "disable")},
 		{"nginx install cannot install node", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepInstallNodeVersion, "node", "22.14.0", "install")},
-		{"vpn setup cannot sync peers", mutationPolicyJob("vpn_setup", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", "", "sync")},
+		{"vpn setup cannot sync peers", mutationPolicyJob("vpn_setup", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", vpnQualifier, "sync")},
+		{"legacy direct vpn sync has no commitment", mutationPolicyJob("vpn_peer_sync", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", vpnQualifier, "sync")},
+		{"direct vpn sync digest mismatch", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", otherVPNQualifier, "sync")},
+		{"direct vpn sync malformed digest", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", "not-a-qualifier", "sync")},
 		{"certificate domain mismatch", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "other.example.com", "certbot", "issue")},
 		{"noncanonical certificate issue target", mutationPolicyJob("panel_certificate_issue", "panel.example.com.", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com.", "certbot", "issue")},
 		{"invalid certificate issue target", mutationPolicyJob("panel_certificate_issue", "not-a-domain", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "not-a-domain", "certbot", "issue")},

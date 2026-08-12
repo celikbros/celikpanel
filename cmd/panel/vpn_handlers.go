@@ -17,6 +17,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -327,20 +328,25 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 	if err := rows.Close(); err != nil {
 		return err
 	}
+	commitment, err := mutationpayload.CanonicalVPNPeerSync(generation, peers)
+	if err != nil {
+		return fmt.Errorf("canonicalize VPN peer snapshot: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 
 	var response transport.SyncVPNPeersResponse
 	err = p.withStandaloneAgentMutation(
-		ctx, "vpn_peer_sync", "wireguard", "",
+		ctx, "vpn_peer_sync", "wireguard", commitment.Qualifier,
 		func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.callAgentContext(callCtx, "Agent.SyncVPNPeers", &transport.SyncVPNPeersRequest{
+			if err := p.callAgentContext(callCtx, "Agent.SyncVPNPeersV2", &transport.SyncVPNPeersRequest{
 				ServiceMutationBinding: transport.ServiceMutationBinding{
 					MutationRequestID: binding.MutationRequestID,
 					MutationOwnerID:   binding.MutationOwnerID,
 				},
-				Peers: peers,
+				DesiredGeneration: commitment.DesiredGeneration,
+				Peers:             commitment.Peers,
 			}, &response); err != nil {
 				return err
 			}
@@ -349,6 +355,13 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 			}
 			if !response.Applied {
 				return errors.New("agent did not confirm peer synchronization")
+			}
+			if response.AppliedGeneration != commitment.DesiredGeneration {
+				return fmt.Errorf(
+					"agent confirmed VPN peer generation %d, expected %d",
+					response.AppliedGeneration,
+					commitment.DesiredGeneration,
+				)
 			}
 			return nil
 		},
@@ -364,12 +377,17 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 		return err
 	}
 
-	tx, err = p.db.GetDB().BeginTx(ctx, nil)
+	finalizeCtx, cancelFinalize := context.WithTimeout(
+		context.WithoutCancel(ctx),
+		panelMutationFinishTimeout,
+	)
+	defer cancelFinalize()
+	tx, err = p.db.GetDB().BeginTx(finalizeCtx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	result, err = tx.ExecContext(ctx, `
+	result, err = tx.ExecContext(finalizeCtx, `
 		UPDATE vpn_sync_state
 		SET applied_generation = ?, status = 'applied', last_error = NULL,
 		    lease_token = NULL, lease_expires_at = NULL,
@@ -385,7 +403,7 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 		return err
 	}
 	if current != 1 {
-		released, releaseErr := tx.ExecContext(ctx, `
+		released, releaseErr := tx.ExecContext(finalizeCtx, `
 			UPDATE vpn_sync_state
 			SET status = 'pending', lease_token = NULL, lease_expires_at = NULL,
 			    updated_at = datetime('now')
@@ -409,14 +427,14 @@ func (p *Panel) syncVPNPeersGenerationLocked(ctx context.Context, retries int) e
 		return p.syncVPNPeersGenerationLocked(ctx, retries-1)
 	}
 	for _, id := range peerIDs {
-		if _, err := tx.ExecContext(ctx, `
+		if _, err := tx.ExecContext(finalizeCtx, `
 			UPDATE vpn_peers
 			SET sync_state = 'applied', sync_error = NULL, updated_at = datetime('now')
 			WHERE id = ? AND desired_state = 'active'`, id); err != nil {
 			return err
 		}
 	}
-	if _, err := tx.ExecContext(ctx,
+	if _, err := tx.ExecContext(finalizeCtx,
 		`DELETE FROM vpn_peers WHERE desired_state = 'revoked'`,
 	); err != nil {
 		return err

@@ -297,8 +297,9 @@ func (p *Panel) runServiceInstall(
 	// pressed play on a fresh install and got a dead "Stopped" row (25 Jul:
 	// "WireGuard VPN server çalışmıyor"). The same lesson as nginx includes
 	// and Dovecot's TLS cert: install must leave the component WORKING. Setup
-	// is idempotent and syncs any peers already in the ledger, so a reinstall
-	// comes back with its clients intact.
+	// is idempotent. Peer publication deliberately runs only after this outer
+	// service_install lease is durably succeeded, under its own payload-bound
+	// vpn_peer_sync lease.
 	// WireGuard kurulumu pakette kalıyordu: sunucu anahtarı yok, wg0.conf yok;
 	// unit başlatılınca DÜŞMEYE mahkûmdu — operatör taze kurulumda oynat'a
 	// bastı ve ölü bir "Durdu" satırı gördü (25 Tem: "WireGuard VPN server
@@ -321,12 +322,6 @@ func (p *Panel) runServiceInstall(
 		}
 		if vpnResp.Error != "" {
 			return result, serviceInstallFailure(fmt.Errorf("WireGuard setup: %s", vpnResp.Error))
-		}
-		if err := advance("syncing"); err != nil {
-			return result, operationAdvanceFailure(err)
-		}
-		if err := p.syncVPNPeers(ctx); err != nil {
-			return result, serviceInstallFailure(fmt.Errorf("WireGuard peer synchronization: %w", err))
 		}
 	}
 

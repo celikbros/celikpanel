@@ -6,6 +6,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
 type serviceMutationStepMethod string
@@ -32,7 +33,7 @@ const (
 	serviceMutationStepInstallNodeVersion       serviceMutationStepMethod = "Agent.InstallNodeVersion"
 	serviceMutationStepRemoveNodeVersion        serviceMutationStepMethod = "Agent.RemoveNodeVersion"
 	serviceMutationStepSetupVPN                 serviceMutationStepMethod = "Agent.SetupVPN"
-	serviceMutationStepSyncVPNPeers             serviceMutationStepMethod = "Agent.SyncVPNPeers"
+	serviceMutationStepSyncVPNPeers             serviceMutationStepMethod = "Agent.SyncVPNPeersV2"
 	serviceMutationStepInstallRoundcube         serviceMutationStepMethod = "Agent.InstallRoundcube"
 	serviceMutationStepRemoveRoundcube          serviceMutationStepMethod = "Agent.RemoveRoundcube"
 	serviceMutationStepConfigureWebmail         serviceMutationStepMethod = "Agent.ConfigureWebmail"
@@ -273,9 +274,11 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 				serviceMutationJobMatches(job, "service_install", "wireguard", ""))
 
 	case serviceMutationStepSyncVPNPeers:
-		return claim.target == "wireguard" && claim.packageName == "" && claim.action == "sync" &&
-			(serviceMutationJobMatches(job, "vpn_peer_sync", "wireguard", "") ||
-				serviceMutationJobMatches(job, "service_install", "wireguard", ""))
+		if claim.target != "wireguard" || claim.action != "sync" ||
+			!mutationpayload.ValidVPNPeerSyncQualifier(claim.packageName) {
+			return false
+		}
+		return serviceMutationJobMatches(job, "vpn_peer_sync", "wireguard", claim.packageName)
 
 	case serviceMutationStepApplyFirewall:
 		if claim.target != "nftables" || claim.packageName != "" {

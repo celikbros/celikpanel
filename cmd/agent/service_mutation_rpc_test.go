@@ -245,6 +245,37 @@ func beginMutationTestJobWithIdentity(
 	return job
 }
 
+func TestVPNPeerSyncBeginRequiresCanonicalPayloadQualifier(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	tests := []struct {
+		name        string
+		target      string
+		packageName string
+	}{
+		{name: "old panel omitted qualifier", target: "wireguard"},
+		{name: "wrong target", target: "nginx", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)},
+		{name: "malformed qualifier", target: "wireguard", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 63)},
+		{name: "uppercase digest", target: "wireguard", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("A", 64)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			job, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID:   testMutationRequestID,
+				OwnerID:     testMutationOwnerID,
+				Kind:        "vpn_peer_sync",
+				Target:      test.target,
+				PackageName: test.packageName,
+			})
+			if err == nil || job != nil {
+				t.Fatalf("unsafe begin job=%+v err=%v", job, err)
+			}
+			if manager.active != nil || manager.ledger.ActiveRequestID != "" || len(manager.ledger.Jobs) != 0 {
+				t.Fatal("invalid VPN payload qualifier occupied or mutated the durable lease")
+			}
+		})
+	}
+}
+
 func nginxInstallTestStepClaim() serviceMutationStepClaim {
 	return newServiceMutationStepClaim(
 		serviceMutationStepEnsureNginxReady,

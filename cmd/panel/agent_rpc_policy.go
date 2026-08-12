@@ -191,7 +191,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.InstallNodeVersion Agent.RemoveNodeVersion
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityVPN, `
-		Agent.GenerateVPNKeys Agent.SetupVPN Agent.SyncVPNPeers
+		Agent.GenerateVPNKeys Agent.SetupVPN Agent.SyncVPNPeersV2
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityDatabase, `
 		Agent.CreateDatabase Agent.DeleteDatabase Agent.ImportCpmoveDatabase
@@ -307,7 +307,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.ReleaseSystemSQLiteSnapshot": agentRPCMutationTimeout,
 	"Agent.ResetFailedUnitMutation":     agentRPCMutationTimeout,
 	"Agent.StartServiceMutation":        agentRPCMutationTimeout,
-	"Agent.SyncVPNPeers":                agentRPCMutationTimeout,
+	"Agent.SyncVPNPeersV2":              agentRPCMutationTimeout,
 	"Agent.ValidateCertificate":         agentRPCMutationTimeout,
 	"Agent.PostfixQueueAction":          agentRPCMutationTimeout,
 	"Agent.ReconcileSiteCertLineages":   agentRPCDeploymentTimeout,

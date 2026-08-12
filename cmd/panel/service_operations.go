@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -386,6 +387,36 @@ func (p *Panel) launchServiceOperationWithAudit(
 	)
 }
 
+func wireGuardInstallNeedsPeerSync(op serviceOperation) bool {
+	return op.Kind == serviceOperationKindInstall && op.ServiceID == "wireguard"
+}
+
+// syncWireGuardPeersAfterInstall opens a fresh, unbound durable mutation only
+// after the outer service_install job is terminal. The process mutation lock
+// remains owned by the caller until this step and the panel row are terminal.
+func (p *Panel) syncWireGuardPeersAfterInstall(
+	op serviceOperation,
+) *serviceOperationFailure {
+	if !wireGuardInstallNeedsPeerSync(op) {
+		return nil
+	}
+	syncCtx, cancelSync := context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	defer cancelSync()
+	if err := p.updateServiceOperationPhase(syncCtx, op.ID, "syncing"); err != nil {
+		return operationAdvanceFailure(err)
+	}
+	if err := p.syncVPNPeers(syncCtx); err != nil {
+		return serviceInstallFailure(fmt.Errorf(
+			"WireGuard peer synchronization: %w",
+			err,
+		))
+	}
+	return nil
+}
+
 func (p *Panel) launchServiceOperationWithAuditMode(
 	op serviceOperation,
 	actor serviceOperationActor,
@@ -429,6 +460,7 @@ func (p *Panel) launchServiceOperationWithAuditMode(
 			MutationRequestID: op.RequestID,
 			MutationOwnerID:   ownerID,
 		}
+		identity := agentMutationIdentityForOperation(op, ownerID)
 		deadline := agentJob.DeadlineAt
 		if deadline.IsZero() {
 			deadline = time.Now().Add(45 * time.Minute)
@@ -487,7 +519,12 @@ func (p *Panel) launchServiceOperationWithAuditMode(
 				heartbeatErr,
 			)
 		}
-		agentTerminal, finishErr := p.finishAgentMutation(binding, failure == nil, failure)
+		agentTerminal, finishErr := p.finishExpectedAgentMutation(
+			binding,
+			identity,
+			failure == nil,
+			failure,
+		)
 		if finishErr != nil {
 			log.Printf("service operation %s agent terminal state could not be persisted: %v", op.ID, finishErr)
 			return
@@ -498,6 +535,16 @@ func (p *Panel) launchServiceOperationWithAuditMode(
 				"The privileged agent did not commit the package operation as successful.",
 				fmt.Errorf("agent terminal status is %s", agentTerminal.Status),
 			)
+		}
+		if failure == nil && wireGuardInstallNeedsPeerSync(op) {
+			phase = "syncing"
+			if syncFailure := p.syncWireGuardPeersAfterInstall(op); syncFailure != nil {
+				if result == nil {
+					result = serviceOperationResult{}
+				}
+				result["success"] = false
+				failure = syncFailure
+			}
 		}
 		terminalCtx, cancelTerminal := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
 		defer cancelTerminal()
@@ -889,7 +936,120 @@ func (p *Panel) handleServiceOperation(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"operation": op})
 }
 
+func validDirectVPNPeerSync(job *agentMutationJob) bool {
+	return job != nil && agentMutationActive(job.Status) &&
+		validServiceOperationID(job.RequestID) &&
+		validServiceOperationID(job.OwnerID) &&
+		job.Kind == "vpn_peer_sync" &&
+		job.Target == "wireguard" &&
+		mutationpayload.ValidVPNPeerSyncQualifier(job.PackageName)
+}
+
+func recoverableWireGuardPeerSync(
+	op *serviceOperation,
+	job *agentMutationJob,
+) bool {
+	return op != nil && wireGuardInstallNeedsPeerSync(*op) &&
+		validDirectVPNPeerSync(job)
+}
+
+func agentMutationJobIdentity(job *agentMutationJob) agentMutationIdentity {
+	if job == nil {
+		return agentMutationIdentity{}
+	}
+	return agentMutationIdentity{
+		RequestID:   job.RequestID,
+		OwnerID:     job.OwnerID,
+		Kind:        job.Kind,
+		Target:      job.Target,
+		PackageName: job.PackageName,
+	}
+}
+
+func (p *Panel) terminalizeInterruptedWireGuardPeerSync(
+	ctx context.Context,
+	job *agentMutationJob,
+) error {
+	identity := agentMutationJobIdentity(job)
+	if !validDirectVPNPeerSync(job) || !identity.matches(job) {
+		return errors.New("interrupted WireGuard peer sync has an invalid durable identity")
+	}
+	current := job
+	if current.Status == agentMutationRunning {
+		cancelErr := p.cancelAgentMutation(
+			ctx,
+			current,
+			"panel_restarted_during_vpn_peer_sync",
+			"Panel restarted before WireGuard peer synchronization was reconciled.",
+		)
+		if cancelErr != nil {
+			observed, statusErr := p.statusAgentMutation(ctx, identity.RequestID)
+			if statusErr != nil {
+				return errors.Join(
+					fmt.Errorf("cancel interrupted WireGuard peer sync: %w", cancelErr),
+					fmt.Errorf("verify interrupted WireGuard peer sync: %w", statusErr),
+				)
+			}
+			if err := validateAgentMutationIdentity(observed, identity); err != nil {
+				return err
+			}
+			current = observed
+			if current.Status == agentMutationRunning {
+				return fmt.Errorf("cancel interrupted WireGuard peer sync: %w", cancelErr)
+			}
+		}
+	}
+	if agentMutationActive(current.Status) {
+		terminal, err := p.waitAgentMutationTerminal(ctx, identity.RequestID)
+		if err != nil {
+			return fmt.Errorf("wait for interrupted WireGuard peer sync: %w", err)
+		}
+		if err := validateAgentMutationIdentity(terminal, identity); err != nil {
+			return err
+		}
+		current = terminal
+	}
+	if current == nil || agentMutationActive(current.Status) {
+		return errors.New("interrupted WireGuard peer sync did not reach a terminal state")
+	}
+	return nil
+}
+
+func (p *Panel) clearInterruptedVPNSyncLease(ctx context.Context) (bool, error) {
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE vpn_sync_state
+		SET status = 'pending', last_error = NULL,
+		    lease_token = NULL, lease_expires_at = NULL,
+		    updated_at = datetime('now')
+		WHERE id = 1 AND lease_token IS NOT NULL`)
+	if err != nil {
+		return false, fmt.Errorf("clear interrupted VPN synchronization lease: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("verify interrupted VPN synchronization lease cleanup: %w", err)
+	}
+	return affected == 1, nil
+}
+
+func (p *Panel) syncVPNPeersAfterRecovery() error {
+	syncCtx, cancelSync := context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	defer cancelSync()
+	return p.syncVPNPeers(syncCtx)
+}
+
 func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64, error) {
+	p.serviceMutationMu.Lock()
+	lockTransferred := false
+	defer func() {
+		if !lockTransferred {
+			p.serviceMutationMu.Unlock()
+		}
+	}()
+
 	op, err := p.activeServiceOperation(ctx)
 	if err != nil {
 		return 0, err
@@ -903,6 +1063,30 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	}
 	if op == nil {
 		if globalJob == nil || !agentMutationActive(globalJob.Status) {
+			cleared, clearErr := p.clearInterruptedVPNSyncLease(recoveryCtx)
+			if clearErr != nil {
+				return 0, clearErr
+			}
+			if cleared {
+				if err := p.syncVPNPeersAfterRecovery(); err != nil {
+					return 0, fmt.Errorf("resynchronize orphaned WireGuard peers: %w", err)
+				}
+			}
+			return 0, nil
+		}
+		if validDirectVPNPeerSync(globalJob) {
+			if err := p.terminalizeInterruptedWireGuardPeerSync(
+				recoveryCtx,
+				globalJob,
+			); err != nil {
+				return 0, err
+			}
+			if _, err := p.clearInterruptedVPNSyncLease(recoveryCtx); err != nil {
+				return 0, err
+			}
+			if err := p.syncVPNPeersAfterRecovery(); err != nil {
+				return 0, fmt.Errorf("resynchronize interrupted WireGuard peers: %w", err)
+			}
 			return 0, nil
 		}
 		if globalJob.Status == agentMutationRunning {
@@ -936,11 +1120,19 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	}
 	if globalJob != nil && agentMutationActive(globalJob.Status) &&
 		globalJob.RequestID != op.RequestID {
-		return 0, fmt.Errorf(
-			"agent mutation %s does not match active panel operation %s",
-			globalJob.RequestID,
-			op.RequestID,
-		)
+		if !recoverableWireGuardPeerSync(op, globalJob) {
+			return 0, fmt.Errorf(
+				"agent mutation %s does not match active panel operation %s",
+				globalJob.RequestID,
+				op.RequestID,
+			)
+		}
+		if err := p.terminalizeInterruptedWireGuardPeerSync(
+			recoveryCtx,
+			globalJob,
+		); err != nil {
+			return 0, err
+		}
 	}
 
 	job, err := p.statusAgentMutation(recoveryCtx, op.RequestID)
@@ -982,6 +1174,11 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 			return 0, errors.New("agent lost the interrupted mutation while reconciling it")
 		}
 	}
+	if wireGuardInstallNeedsPeerSync(*op) {
+		if _, err := p.clearInterruptedVPNSyncLease(recoveryCtx); err != nil {
+			return 0, err
+		}
+	}
 
 	if job.Status == agentMutationSucceeded {
 		result := serviceOperationResult{"success": true, "recovered": true}
@@ -995,6 +1192,27 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 			if err := p.markServiceOperationRunning(ctx, op.ID, "recovered_terminal"); err != nil {
 				return 0, err
 			}
+		}
+		if syncFailure := p.syncWireGuardPeersAfterInstall(*op); syncFailure != nil {
+			if result == nil {
+				result = serviceOperationResult{}
+			}
+			result["success"] = false
+			terminalCtx, cancelTerminal := context.WithTimeout(
+				context.Background(),
+				panelMutationFinishTimeout,
+			)
+			defer cancelTerminal()
+			if err := p.finishServiceOperationFailed(
+				terminalCtx,
+				op.ID,
+				"syncing",
+				result,
+				syncFailure,
+			); err != nil {
+				return 0, err
+			}
+			return 1, nil
 		}
 		if err := p.finishServiceOperationSucceeded(
 			ctx,
@@ -1016,9 +1234,10 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 		}
 		return 1, nil
 	}
-	if err := p.resumeInterruptedServiceOperation(*op); err != nil {
+	if err := p.resumeInterruptedServiceOperationLocked(*op); err != nil {
 		return 0, err
 	}
+	lockTransferred = true
 	return 0, nil
 }
 
@@ -1043,7 +1262,10 @@ func agentMutationCanResume(job *agentMutationJob) bool {
 	}
 }
 
-func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
+// resumeInterruptedServiceOperationLocked transfers the already-owned process
+// mutation lock to the resumed goroutine, which releases it only after the
+// panel operation reaches a durable terminal state.
+func (p *Panel) resumeInterruptedServiceOperationLocked(op serviceOperation) error {
 	var (
 		runner       serviceOperationRunner
 		successAudit string
@@ -1087,7 +1309,6 @@ func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
 		return fmt.Errorf("cannot resume unsupported service operation kind %q", op.Kind)
 	}
 
-	p.serviceMutationMu.Lock()
 	p.launchServiceOperationWithAuditMode(
 		op,
 		serviceOperationActor{},
@@ -1100,6 +1321,15 @@ func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
 		true,
 		op.Status == serviceOperationRunning,
 	)
+	return nil
+}
+
+func (p *Panel) resumeInterruptedServiceOperation(op serviceOperation) error {
+	p.serviceMutationMu.Lock()
+	if err := p.resumeInterruptedServiceOperationLocked(op); err != nil {
+		p.serviceMutationMu.Unlock()
+		return err
+	}
 	return nil
 }
 

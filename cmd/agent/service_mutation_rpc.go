@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -103,12 +104,13 @@ type ServiceMutationFinishRequest = transport.ServiceMutationFinishRequest
 type ServiceMutationResponse = transport.ServiceMutationResponse
 
 type serviceMutationRuntime struct {
-	job    *ServiceMutationJob
-	lock   *serviceMutationFileLock
-	ctx    context.Context
-	cancel context.CancelFunc
-	stepMu sync.Mutex
-	steps  int
+	job                       *ServiceMutationJob
+	lock                      *serviceMutationFileLock
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	stepMu                    sync.Mutex
+	steps                     int
+	vpnPeerSyncPublishedPhase string
 }
 
 type serviceMutationManager struct {
@@ -391,6 +393,19 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 			job.Attempt <= 0 {
 			return errors.New("service mutation ledger job metadata is incomplete")
 		}
+		if strings.HasPrefix(job.Phase, vpnPeerSyncCommitPhasePrefix) {
+			state, requestID, qualifier, err := parseVPNPeerSyncCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID || qualifier != job.PackageName ||
+				job.Kind != "vpn_peer_sync" || job.Target != "wireguard" {
+				return errors.New("service mutation ledger has an invalid VPN peer commit receipt")
+			}
+			if (state == vpnPeerSyncCommitIntent &&
+				job.Status != serviceMutationStatusRunning &&
+				job.Status != serviceMutationStatusCancelling) ||
+				(state == vpnPeerSyncCommitPublished && job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger VPN peer commit receipt conflicts with job status")
+			}
+		}
 		hasWorkerPID := job.WorkerPID > 0
 		hasWorkerStarted := strings.TrimSpace(job.WorkerStarted) != ""
 		hasWorkerCommand := strings.TrimSpace(job.WorkerCommand) != ""
@@ -551,9 +566,17 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		return errors.New("service mutation ledger lost its active job")
 	}
 
+	workerAlive := serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted)
+	if !workerAlive {
+		handled, recoveryErr := m.recoverPersistedVPNPeerSyncLocked(job, lock)
+		if handled {
+			return recoveryErr
+		}
+	}
+
 	var writeErr error
 	switch {
-	case serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted):
+	case workerAlive:
 		before := cloneServiceMutationLedger(m.ledger)
 		job.Status = serviceMutationStatusOrphaned
 		job.Phase = "waiting_for_orphaned_process"
@@ -634,6 +657,9 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted) {
 		return errors.Join(errServiceMutationHostBusy, lock.Close())
 	}
+	if handled, recoveryErr := m.recoverPersistedVPNPeerSyncLocked(job, lock); handled {
+		return recoveryErr
+	}
 	busy, err := packageManagerMutationBusy()
 	if err != nil {
 		return errors.Join(fmt.Errorf("verify orphaned service mutation: %w", err), lock.Close())
@@ -713,6 +739,15 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		strings.TrimSpace(request.Kind) == "" ||
 		strings.TrimSpace(request.Target) == "" {
 		return nil, errors.New("invalid service mutation identity")
+	}
+	// The existing PackageName identity slot is the durable payload qualifier
+	// for a direct peer-set publication. Validate it before orphan resolution,
+	// the host flock, or any ledger write so an old or confused panel fails
+	// closed without occupying the machine mutation lease.
+	if request.Kind == "vpn_peer_sync" &&
+		(request.Target != "wireguard" ||
+			!mutationpayload.ValidVPNPeerSyncQualifier(request.PackageName)) {
+		return nil, errors.New("invalid VPN peer mutation payload qualifier")
 	}
 	if err := m.tryResolvePersistedOrphan(); err != nil &&
 		!errors.Is(err, errServiceMutationHostBusy) {
@@ -860,6 +895,16 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 		m.mu.Unlock()
 		return
 	}
+	if runtime.vpnPeerSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.vpnPeerSyncPublishedPhase, "", "",
+		)
+		if err != nil && m.poisoned == nil {
+			_ = m.poisonLocked(err)
+		}
+		m.mu.Unlock()
+		return
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusCancelling
@@ -917,12 +962,19 @@ func (m *serviceMutationManager) heartbeat(
 		runtime.job.Status != serviceMutationStatusRunning {
 		return m.jobLocked(request.RequestID), errors.New("service mutation lease is not owned by this panel")
 	}
+	if runtime.vpnPeerSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.vpnPeerSyncPublishedPhase, "", "",
+		)
+		return m.jobLocked(request.RequestID), err
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	if !now.Before(runtime.job.DeadlineAt) {
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation deadline has expired")
 	}
-	if phase := strings.TrimSpace(request.Phase); phase != "" {
+	if phase := strings.TrimSpace(request.Phase); phase != "" &&
+		!strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) {
 		runtime.job.Phase = phase
 	}
 	runtime.job.UpdatedAt = now
@@ -972,7 +1024,19 @@ func (m *serviceMutationManager) cancelJob(
 		runtime.job.OwnerID != request.ExpectedOwner {
 		job := m.jobLocked(request.RequestID)
 		m.mu.Unlock()
+		if job != nil && job.OwnerID == request.ExpectedOwner &&
+			!serviceMutationStatusActive(job.Status) {
+			return job, nil
+		}
 		return job, errors.New("active service mutation identity changed")
+	}
+	if runtime.vpnPeerSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.vpnPeerSyncPublishedPhase, "", "",
+		)
+		job := m.jobLocked(request.RequestID)
+		m.mu.Unlock()
+		return job, err
 	}
 	if runtime.job.Status != serviceMutationStatusRunning {
 		job := cloneServiceMutationJob(runtime.job)
@@ -989,9 +1053,11 @@ func (m *serviceMutationManager) cancelJob(
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	runtime.job.Status = serviceMutationStatusCancelling
-	runtime.job.Phase = "cancelling"
-	if reason := strings.TrimSpace(request.Reason); reason != "" {
-		runtime.job.Phase = reason
+	if !strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) {
+		runtime.job.Phase = "cancelling"
+		if reason := strings.TrimSpace(request.Reason); reason != "" {
+			runtime.job.Phase = reason
+		}
 	}
 	runtime.job.ErrorCode = code
 	runtime.job.ErrorMessage = message
@@ -1036,6 +1102,14 @@ func (m *serviceMutationManager) finish(
 	if runtime.job.RequestID != request.RequestID || runtime.job.OwnerID != request.OwnerID {
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation lease is owned by another request")
 	}
+	if runtime.vpnPeerSyncPublishedPhase != "" {
+		if err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.vpnPeerSyncPublishedPhase, "", "",
+		); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
+		return m.jobLocked(request.RequestID), nil
+	}
 	if runtime.job.Status != serviceMutationStatusRunning {
 		return cloneServiceMutationJob(runtime.job), errors.New("only a running service mutation may be finished")
 	}
@@ -1061,19 +1135,34 @@ func (m *serviceMutationManager) finishRuntimeLocked(
 	success bool,
 	code, message string,
 ) error {
+	phase := "completed"
+	if !success {
+		phase = "failed"
+	}
+	return m.finishRuntimeTerminalLocked(runtime, success, phase, code, message)
+}
+
+func (m *serviceMutationManager) finishRuntimeTerminalLocked(
+	runtime *serviceMutationRuntime,
+	success bool,
+	phase, code, message string,
+) error {
 	if m.active != runtime {
 		return errors.New("service mutation runtime changed")
+	}
+	if strings.TrimSpace(phase) == "" {
+		return errors.New("service mutation terminal phase is required")
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	if success {
 		runtime.job.Status = serviceMutationStatusSucceeded
-		runtime.job.Phase = "completed"
+		runtime.job.Phase = phase
 		runtime.job.ErrorCode = ""
 		runtime.job.ErrorMessage = ""
 	} else {
 		runtime.job.Status = serviceMutationStatusFailed
-		runtime.job.Phase = "failed"
+		runtime.job.Phase = phase
 		if strings.TrimSpace(code) == "" {
 			code = "service_mutation_failed"
 		}
