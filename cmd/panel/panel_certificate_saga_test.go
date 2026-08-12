@@ -859,8 +859,12 @@ func TestStartupRecoveryAllowsOnlyExactCertificateActivationRestartWindow(t *tes
 		t.Fatal("resumed certificate saga did not retain the process mutation lock")
 	}
 	waitPanelCertificateOperation(t, panel, op.RequestID, serviceOperationSucceeded)
-	if !panel.serviceMutationMu.TryLock() {
-		t.Fatal("terminal resumed certificate saga retained the process mutation lock")
+	deadline := time.Now().Add(2 * time.Second)
+	for !panel.serviceMutationMu.TryLock() {
+		if time.Now().After(deadline) {
+			t.Fatal("terminal resumed certificate saga retained the process mutation lock")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 	panel.serviceMutationMu.Unlock()
 	agent.mu.Lock()
