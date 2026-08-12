@@ -26,6 +26,8 @@ bash "$builder" "$version" "$commit" "$published_at" \
   "$tmp/$archive" "$tmp/$archive.sha256" "$tmp/site"
 
 [[ -f "$tmp/site/index.html" ]] || fail "home page was not generated"
+[[ -f "$tmp/site/assets/site.js" ]] || fail "home page script was not generated"
+[[ -f "$tmp/site/.well-known/security.txt" ]] || fail "security.txt was not generated"
 [[ -x "$tmp/site/get.sh" ]] || fail "bootstrap is not executable"
 [[ -f "$tmp/site/releases/$version/$archive" ]] || fail "versioned archive is missing"
 [[ "$(cat "$tmp/site/releases/latest.txt")" == "$version" ]] || fail "latest pointer is wrong"
@@ -47,6 +49,60 @@ PY
 
 grep -Fq "Options -Indexes" "$tmp/site/.htaccess" || fail "directory listing is not disabled"
 grep -Fq "Content-Security-Policy" "$tmp/site/.htaccess" || fail "CSP header is missing"
+[[ "$(grep -Fc 'data-language="tr"' "$tmp/site/index.html")" -eq 1 ]] \
+  || fail "Turkish language selector is missing or duplicated"
+[[ "$(grep -Fc 'data-language="en"' "$tmp/site/index.html")" -eq 1 ]] \
+  || fail "English language selector is missing or duplicated"
+python3 - "$tmp/site/index.html" <<'PY'
+from html.parser import HTMLParser
+import pathlib
+import sys
+
+class LanguageButtons(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.buttons = {}
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "button":
+            return
+        values = dict(attrs)
+        language = values.get("data-language")
+        if language:
+            self.buttons[language] = values
+
+parser = LanguageButtons()
+parser.feed(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert parser.buttons["tr"]["lang"] == "tr"
+assert parser.buttons["tr"]["aria-label"] == "Türkçe"
+assert parser.buttons["en"]["lang"] == "en"
+assert parser.buttons["en"]["aria-label"] == "English"
+PY
+grep -Fq 'celikpanel-language' "$tmp/site/assets/site.js" \
+  || fail "language preference persistence is missing"
+grep -Fq 'Simple and Modern Hosting Control Panel' "$tmp/site/assets/site.js" \
+  || fail "English product copy is missing"
+grep -Fq 'document.documentElement.lang = currentLanguage' "$tmp/site/assets/site.js" \
+  || fail "document language is not updated"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml' "$tmp/site/index.html" \
+  || fail "Turkish bug report link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_en.yml' "$tmp/site/index.html" \
+  || fail "English bug report link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml' "$tmp/site/index.html" \
+  || fail "Turkish feature request link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=feature_en.yml' "$tmp/site/index.html" \
+  || fail "English feature request link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/security/advisories/new' "$tmp/site/index.html" \
+  || fail "private security report link is missing"
+grep -Fq 'data-localized-href' "$tmp/site/assets/site.js" \
+  || fail "localized feedback link behavior is missing"
+grep -Fq 'Canonical: https://celikpanel.net/.well-known/security.txt' "$tmp/site/.well-known/security.txt" \
+  || fail "security.txt canonical URL is missing"
+grep -Fq 'Preferred-Languages: tr, en' "$tmp/site/.well-known/security.txt" \
+  || fail "security.txt language preference is missing"
+if grep -Eq '<button[^>]*>(+ Yeni site|×|Devam et)' "$tmp/site/index.html"; then
+  fail "illustrative product controls must not enter the keyboard tab order"
+fi
 grep -Fq -- "--proto '=https'" "$bootstrap" || fail "HTTPS protocol restriction is missing"
 grep -Fq "sha256sum -c" "$bootstrap" || fail "archive checksum is not verified"
 grep -Fq "exact internal checksum manifest" "$bootstrap" || fail "exact internal manifest validation is missing"

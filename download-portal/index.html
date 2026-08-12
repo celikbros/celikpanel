@@ -1,61 +1,694 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Verified CelikPanel release downloads and installation instructions.">
-  <title>CelikPanel Downloads</title>
-  <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-  <main class="shell">
-    <header class="hero">
-      <span class="brand">CelikPanel</span>
-      <h1>Install or update a verified CelikPanel release</h1>
-      <p>Use the same command for a clean installation or a completed CelikPanel installation. Every immutable archive is checked before any install or update begins.</p>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CelikPanel ile web sitelerinizi, alan adlarınızı, e-postalarınızı, veritabanlarınızı ve sunucunuzu tek panelden kolayca yönetin."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <title>CelikPanel | Kolay ve Modern Hosting Kontrol Paneli</title>
+    <link rel="stylesheet" href="/assets/site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#ana-icerik">Ana içeriğe geç</a>
+    <header class="site-header">
+      <div class="container nav-shell">
+        <a class="brand" href="/" aria-label="CelikPanel ana sayfa">
+          <span class="brand-mark" aria-hidden="true">C</span>
+          <span class="brand-copy"
+            ><strong>CelikPanel</strong
+            ><small>Hosting Control Panel</small></span
+          >
+        </a>
+        <nav class="site-nav" aria-label="Ana menü">
+          <a href="#ozellikler">Özellikler</a><a href="#panel">Paneli keşfet</a
+          ><a href="#kurulum">Kurulum</a><a href="#surum">Sürüm</a
+          ><a href="#destek">Destek</a>
+        </nav>
+        <div class="language-switch" role="group" aria-label="Dil seçimi">
+          <button
+            type="button"
+            data-language="tr"
+            lang="tr"
+            aria-label="Türkçe"
+            aria-pressed="true"
+          >
+            TR
+          </button>
+          <button
+            type="button"
+            data-language="en"
+            lang="en"
+            aria-label="English"
+            aria-pressed="false"
+          >
+            EN
+          </button>
+        </div>
+        <a class="button button-small button-primary" href="#kurulum"
+          >Ücretsiz kur</a
+        >
+      </div>
     </header>
+    <main id="ana-icerik">
+      <section class="hero">
+        <div class="hero-blob hero-blob-one" aria-hidden="true"></div>
+        <div class="hero-blob hero-blob-two" aria-hidden="true"></div>
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">
+              <span></span> Linux sunucular için modern hosting paneli
+            </div>
+            <h1>Hosting yönetimi<br /><em>tek ekranda kolay.</em></h1>
+            <p class="hero-lede">
+              Web siteleri, WordPress, alan adları, e-posta, DNS, veritabanları
+              ve yedekler. CelikPanel, günlük hosting işlerini anlaşılır bir
+              arayüzde bir araya getirir.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#kurulum"
+                >CelikPanel’i kur <span>→</span></a
+              ><a class="button button-secondary" href="#panel"
+                >Paneli incele</a
+              >
+            </div>
+            <div class="hero-points">
+              <span><i>✓</i> Ücretsiz alpha</span
+              ><span><i>✓</i> Tek komutla kurulum</span
+              ><span><i>✓</i> Türkçe arayüz</span>
+            </div>
+          </div>
+          <div
+            class="product-stage"
+            id="panel"
+            role="img"
+            aria-label="CelikPanel ürün arayüzü önizlemesi"
+          >
+            <div class="product-window">
+              <div class="window-topbar">
+                <div class="window-dots"><i></i><i></i><i></i></div>
+                <div class="window-address">
+                  <span>●</span> panel.sunucum.com
+                </div>
+                <div class="window-avatar">AY</div>
+              </div>
+              <div class="app-shell">
+                <aside class="app-sidebar">
+                  <div class="app-logo">
+                    <span>C</span><strong>CelikPanel</strong>
+                  </div>
+                  <small>GENEL</small>
+                  <div class="app-nav active">⌂ <span>Genel bakış</span></div>
+                  <div class="app-nav">◎ <span>Siteler</span><b>6</b></div>
+                  <div class="app-nav">◇ <span>Uygulamalar</span></div>
+                  <small>HOSTING</small>
+                  <div class="app-nav">@ <span>E-posta</span></div>
+                  <div class="app-nav">▦ <span>Veritabanları</span></div>
+                  <div class="app-nav">☁ <span>Yedekler</span></div>
+                  <div class="app-nav">⚙ <span>Servisler</span></div>
+                  <div class="sidebar-server">
+                    <i></i
+                    ><span
+                      ><strong>Sunucu çevrimiçi</strong
+                      ><small>Ubuntu 24.04</small></span
+                    >
+                  </div>
+                </aside>
+                <div class="app-content">
+                  <div class="app-welcome">
+                    <div>
+                      <small>12 Ağustos, Çarşamba</small>
+                      <h2>Günaydın, Ali 👋</h2>
+                      <p>Sunucunuz sağlıklı çalışıyor.</p>
+                    </div>
+                    <span class="mock-button">+ Yeni site</span>
+                  </div>
+                  <div class="metric-grid">
+                    <div class="metric-card">
+                      <span class="metric-icon purple">◉</span>
+                      <div>
+                        <small>Web siteleri</small><strong>6</strong
+                        ><em>5 yayında</em>
+                      </div>
+                    </div>
+                    <div class="metric-card">
+                      <span class="metric-icon cyan">↯</span>
+                      <div>
+                        <small>Kaynak kullanımı</small><strong>%28</strong
+                        ><em>Normal</em>
+                      </div>
+                    </div>
+                    <div class="metric-card">
+                      <span class="metric-icon orange">▣</span>
+                      <div>
+                        <small>Yedekler</small><strong>12</strong
+                        ><em>Bugün alındı</em>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="app-main-grid">
+                    <div class="sites-card">
+                      <div class="card-title">
+                        <div>
+                          <strong>Web sitelerim</strong
+                          ><small>Son eklenen projeler</small>
+                        </div>
+                        <span class="mock-link">Tümünü gör</span>
+                      </div>
+                      <div class="site-row">
+                        <span class="site-favicon coral">W</span>
+                        <div>
+                          <strong>magazam.com</strong
+                          ><small>WordPress · PHP 8.3</small>
+                        </div>
+                        <span class="status online">Yayında</span><b>⋯</b>
+                      </div>
+                      <div class="site-row">
+                        <span class="site-favicon blue">A</span>
+                        <div>
+                          <strong>ajansim.net</strong
+                          ><small>Laravel · PHP 8.2</small>
+                        </div>
+                        <span class="status online">Yayında</span><b>⋯</b>
+                      </div>
+                      <div class="site-row">
+                        <span class="site-favicon violet">N</span>
+                        <div>
+                          <strong>nextapp.dev</strong
+                          ><small>Node.js · 22 LTS</small>
+                        </div>
+                        <span class="status draft">Hazırlanıyor</span><b>⋯</b>
+                      </div>
+                    </div>
+                    <div class="health-card">
+                      <div class="card-title">
+                        <div>
+                          <strong>Sunucu durumu</strong
+                          ><small>Canlı kaynak kullanımı</small>
+                        </div>
+                        <span class="health-live"><i></i> Canlı</span>
+                      </div>
+                      <div class="health-ring">
+                        <div>
+                          <strong>99.9%</strong><small>Çalışma süresi</small>
+                        </div>
+                      </div>
+                      <div class="health-bars">
+                        <div>
+                          <span>CPU <b>%24</b></span
+                          ><i><em style="width: 24%"></em></i>
+                        </div>
+                        <div>
+                          <span>Bellek <b>%41</b></span
+                          ><i><em style="width: 41%"></em></i>
+                        </div>
+                        <div>
+                          <span>Disk <b>%36</b></span
+                          ><i><em style="width: 36%"></em></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="float-card float-wordpress">
+              <span>W</span>
+              <div>
+                <strong>WordPress hazır</strong
+                ><small>Kurulum tamamlandı</small>
+              </div>
+              <i>✓</i>
+            </div>
+            <div class="float-card float-ssl">
+              <span>🔒</span>
+              <div>
+                <strong>SSL aktif</strong><small>Otomatik yenilenir</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="container audience-strip">
+          <span>Ajanslar için</span><i></i><span>Freelancer’lar için</span
+          ><i></i><span>Hosting sağlayıcıları için</span><i></i
+          ><span>Kendi sunucusunu yönetenler için</span>
+        </div>
+      </section>
+      <section class="feature-section" id="ozellikler">
+        <div class="container">
+          <div class="section-heading centered">
+            <span class="section-kicker">TEK PANEL, TÜM HOSTING İŞLERİ</span>
+            <h2>Sunucunuzu yönetmek için<br />ihtiyacınız olan her şey.</h2>
+            <p>
+              Dağınık araçlar ve ezberlenen komutlar yerine, günlük işlerinizi
+              tek ve anlaşılır bir panelden yönetin.
+            </p>
+          </div>
+          <div class="feature-cards">
+            <article class="feature-card">
+              <div class="feature-icon sites">◎</div>
+              <h3>Web siteleri ve uygulamalar</h3>
+              <p>
+                PHP, WordPress, Laravel ve Node.js projelerini oluşturun; alan
+                adı, SSL ve çalışma sürümünü aynı yerden yönetin.
+              </p>
+              <div class="mini-sites">
+                <span><i class="coral">W</i> WordPress</span
+                ><span><i class="blue">L</i> Laravel</span
+                ><span><i class="green">N</i> Node.js</span>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-icon mail">@</div>
+              <h3>Profesyonel e-posta</h3>
+              <p>
+                Alan adınıza bağlı posta kutuları oluşturun; teslimat, kimlik
+                doğrulama ve spam korumasını yönetin.
+              </p>
+              <div class="mail-preview">
+                <span>hello@sirketim.com</span><i>Aktif</i>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-icon db">▦</div>
+              <h3>Veritabanları</h3>
+              <p>
+                MariaDB ve PostgreSQL veritabanlarını, kullanıcılarını ve erişim
+                izinlerini birkaç tıklamayla hazırlayın.
+              </p>
+              <div class="db-chips">
+                <span>MariaDB</span><span>PostgreSQL</span
+                ><span>phpMyAdmin</span>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-icon domain">◈</div>
+              <h3>Alan adı, DNS ve SSL</h3>
+              <p>
+                DNS kayıtlarını düzenleyin, ücretsiz TLS sertifikası alın ve
+                yönlendirmeleri tek ekrandan yönetin.
+              </p>
+              <div class="domain-preview">
+                <i></i
+                ><span
+                  ><strong>celikpanel.net</strong
+                  ><small>SSL ile korunuyor</small></span
+                ><b>✓</b>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-icon backup">☁</div>
+              <h3>Yedekleme ve geri yükleme</h3>
+              <p>
+                Site ve veritabanı yedeklerini planlayın. Gerektiğinde doğru
+                noktaya güvenle geri dönün.
+              </p>
+              <div class="backup-chart">
+                <i style="height: 30%"></i><i style="height: 48%"></i
+                ><i style="height: 42%"></i><i style="height: 68%"></i
+                ><i style="height: 60%"></i><i style="height: 82%"></i
+                ><i style="height: 74%"></i>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-icon team">♙</div>
+              <h3>Kullanıcılar ve ekipler</h3>
+              <p>
+                Yönetici, müşteri ve ekip üyelerine yalnızca ihtiyaç duydukları
+                alanları gösterin.
+              </p>
+              <div class="team-faces">
+                <span>AY</span><span>MK</span><span>SE</span><i>+4</i>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
-    <section class="release-card" aria-labelledby="latest-title">
-      <div>
-        <p class="eyebrow">Current release</p>
-        <h2 id="latest-title"><span id="release-version">Loading…</span></h2>
-        <dl class="release-meta">
-          <div><dt>Published</dt><dd id="release-date">—</dd></div>
-          <div><dt>Commit</dt><dd><code id="release-commit">—</code></dd></div>
-          <div><dt>SHA-256</dt><dd><code id="release-sha">—</code></dd></div>
-        </dl>
-      </div>
-      <div class="actions">
-        <a class="button primary" id="archive-link" href="#">Download archive</a>
-        <a class="button" id="checksum-link" href="#">Checksum</a>
-      </div>
-    </section>
+      <section class="workflow-section">
+        <div class="container workflow-grid">
+          <div class="workflow-copy">
+            <span class="section-kicker">SİTENİZİ HIZLA YAYINA ALIN</span>
+            <h2>Fikirden çalışan siteye, birkaç adımda.</h2>
+            <p>
+              Sunucu detaylarında kaybolmadan projenize odaklanın. CelikPanel
+              gerekli servisleri sizin seçiminize göre hazırlar.
+            </p>
+            <ol class="workflow-list">
+              <li class="active">
+                <span>1</span>
+                <div>
+                  <strong>Alan adınızı ekleyin</strong
+                  ><small>Yeni veya mevcut alan adınızı bağlayın.</small>
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>Uygulamanızı seçin</strong
+                  ><small>WordPress, PHP veya Node.js ile başlayın.</small>
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>Yayına alın</strong
+                  ><small>DNS ve SSL tamamlandığında siteniz hazır.</small>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <div class="setup-demo">
+            <div class="setup-header">
+              <span>Yeni web sitesi</span
+              ><span class="mock-close" aria-hidden="true">×</span>
+            </div>
+            <div class="setup-progress">
+              <i class="done"></i><em></em><i class="active"></i><em></em><i></i
+              ><span>Alan adı</span><span>Uygulama</span><span>Yayınla</span>
+            </div>
+            <div class="setup-form">
+              <label>Ne kurmak istiyorsunuz?</label>
+              <div class="app-choice selected">
+                <span class="site-favicon coral">W</span>
+                <div>
+                  <strong>WordPress</strong
+                  ><small>Blog, kurumsal site veya mağaza</small>
+                </div>
+                <b>✓</b>
+              </div>
+              <div class="app-choice">
+                <span class="site-favicon blue">P</span>
+                <div>
+                  <strong>Özel PHP sitesi</strong
+                  ><small>Laravel veya kendi uygulamanız</small>
+                </div>
+              </div>
+              <label>Alan adı</label>
+              <div class="fake-input">
+                <span>www.</span><strong>yenisitem.com</strong><i>✓ Uygun</i>
+              </div>
+              <span class="setup-button">Devam et →</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="roles-section">
+        <div class="container">
+          <div class="section-heading roles-heading">
+            <div>
+              <span class="section-kicker">HERKES İÇİN ANLAŞILIR</span>
+              <h2>Tek ürün.<br />Farklı çalışma biçimleri.</h2>
+            </div>
+            <p>
+              İster birkaç müşteri sitesi yönetin, ister büyüyen bir hosting
+              operasyonu kurun; CelikPanel işinize uyum sağlar.
+            </p>
+          </div>
+          <div class="role-tabs">
+            <article class="role-card">
+              <span class="role-emoji">🚀</span>
+              <h3>Ajanslar ve freelancer’lar</h3>
+              <p>
+                Müşteri sitelerini, e-postaları ve yedekleri tek hesaptan
+                izleyin.
+              </p>
+              <ul>
+                <li>Hızlı site kurulumu</li>
+                <li>Müşteri erişimi</li>
+                <li>Toplu sunucu görünümü</li>
+              </ul>
+            </article>
+            <article class="role-card highlighted">
+              <span class="popular">En popüler kullanım</span
+              ><span class="role-emoji">🏢</span>
+              <h3>Hosting sağlayıcıları</h3>
+              <p>
+                Paketler, kullanıcılar ve servislerle ölçeklenebilir hosting
+                deneyimi sunun.
+              </p>
+              <ul>
+                <li>Çok kullanıcılı yapı</li>
+                <li>Rol ve yetki yönetimi</li>
+                <li>Modüler servis kataloğu</li>
+              </ul>
+            </article>
+            <article class="role-card">
+              <span class="role-emoji">🧑‍💻</span>
+              <h3>Sunucu sahipleri</h3>
+              <p>
+                Komut satırına ihtiyaç duymadan kişisel sunucunuzu düzenli
+                tutun.
+              </p>
+              <ul>
+                <li>Canlı kaynak takibi</li>
+                <li>Kolay servis yönetimi</li>
+                <li>Planlı yedekler</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
 
-    <section class="grid" aria-label="Installation commands">
-      <article class="command-card">
-        <p class="eyebrow">Latest published version</p>
-        <h2>Standard install or update</h2>
-        <p>Run these commands as root. Clean servers are installed; completed installations are updated transactionally. Partial installations are refused.</p>
-        <pre><code id="latest-command">curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
+      <section class="install-section" id="kurulum">
+        <div class="container install-shell">
+          <div class="install-intro">
+            <span class="section-kicker">HEMEN DENEYİN</span>
+            <h2>Temiz bir sunucu.<br />İki kısa komut.</h2>
+            <p>
+              CelikPanel, desteklenen bir Linux test sunucusuna önceden
+              derlenmiş paket olarak kurulur. Hedefte Go, Node.js veya Git
+              gerekmez.
+            </p>
+            <div class="install-badges">
+              <span>Ubuntu / Debian</span><span>Linux amd64</span
+              ><span>Alpha preview</span>
+            </div>
+          </div>
+          <div class="command-stack">
+            <article class="command-card primary">
+              <div class="command-head">
+                <div>
+                  <small>ÖNERİLEN</small>
+                  <h3>Güncel sürümü kur</h3>
+                </div>
+                <button
+                  class="copy-button"
+                  type="button"
+                  data-copy="latest-command"
+                  aria-label="Standart kurulum komutunu kopyala"
+                >
+                  <span data-copy-label>Kopyala</span>
+                </button>
+              </div>
+              <pre
+                tabindex="0"
+              ><code id="latest-command">curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
 sh /tmp/celikpanel-get.sh</code></pre>
-        <button class="copy" type="button" data-copy="latest-command">Copy</button>
-      </article>
-
-      <article class="command-card">
-        <p class="eyebrow">Pinned version</p>
-        <h2>Reproducible installation</h2>
-        <p>The exact version remains available even after a newer release is published.</p>
-        <pre><code id="exact-command">Loading…</code></pre>
-        <button class="copy" type="button" data-copy="exact-command">Copy</button>
-      </article>
-    </section>
-
-    <section class="notice">
-      <h2>Integrity model</h2>
-      <p>The installer downloads the archive and checksum separately over HTTPS, validates the SHA-256 digest, checks archive paths, and only then runs the packaged installer. This alpha release does not yet include a detached publisher-identity signature.</p>
-      <p><a href="/releases/index.json">Machine-readable release index</a></p>
-    </section>
-  </main>
-  <script src="/assets/site.js" defer></script>
-</body>
+            </article>
+            <article class="command-card">
+              <div class="command-head">
+                <div>
+                  <small>SABİT SÜRÜM</small>
+                  <h3>Tekrarlanabilir kurulum</h3>
+                </div>
+                <button
+                  class="copy-button"
+                  id="exact-copy"
+                  type="button"
+                  data-copy="exact-command"
+                  aria-label="Sabit sürüm kurulum komutunu kopyala"
+                  disabled
+                >
+                  <span data-copy-label>Kopyala</span>
+                </button>
+              </div>
+              <pre
+                tabindex="0"
+              ><code id="exact-command">Sürüm bilgisi bekleniyor…</code></pre>
+            </article>
+            <p class="install-note">
+              <span>i</span> Alpha sürümü üretim ortamı için hazır değildir.
+              Önce izole bir test sunucusunda değerlendirin.
+            </p>
+            <p
+              class="copy-status sr-only"
+              id="copy-status"
+              aria-live="polite"
+            ></p>
+          </div>
+        </div>
+      </section>
+      <section class="release-section" id="surum">
+        <div class="container release-layout">
+          <div class="release-copy">
+            <span class="section-kicker">ŞEFFAF SÜRÜM KANALI</span>
+            <h2>Ne kurduğunuzu bilin.</h2>
+            <p>
+              Her CelikPanel paketi sürüm, kaynak commit ve SHA-256 özetiyle
+              yayımlanır. İsterseniz güncel paketi, isterseniz sabit bir sürümü
+              kullanın.
+            </p>
+            <div class="release-trust">
+              <span><i>✓</i> HTTPS indirme</span
+              ><span><i>✓</i> SHA-256 doğrulama</span
+              ><span><i>✓</i> Paket içi manifest</span>
+            </div>
+          </div>
+          <aside
+            class="release-panel"
+            aria-labelledby="latest-title"
+            aria-busy="true"
+          >
+            <div class="release-top">
+              <div>
+                <span class="release-label">GÜNCEL ALPHA SÜRÜMÜ</span>
+                <h3 id="latest-title">
+                  <span id="release-version" aria-live="polite"
+                    >Yükleniyor…</span
+                  >
+                </h3>
+              </div>
+              <span class="release-ready"
+                ><i></i><span id="release-status">Manifest okunuyor</span></span
+              >
+            </div>
+            <dl class="release-meta">
+              <div>
+                <dt>Yayın tarihi</dt>
+                <dd><time id="release-date">—</time></dd>
+              </div>
+              <div>
+                <dt>Kaynak commit</dt>
+                <dd><code id="release-commit">—</code></dd>
+              </div>
+              <div>
+                <dt>SHA-256</dt>
+                <dd><code id="release-sha">—</code></dd>
+              </div>
+            </dl>
+            <div class="release-actions">
+              <a
+                class="button button-primary"
+                id="archive-link"
+                href="/releases/"
+                aria-disabled="true"
+                tabindex="-1"
+                >Paketi indir <span>↓</span></a
+              ><a
+                id="checksum-link"
+                href="/releases/"
+                aria-disabled="true"
+                tabindex="-1"
+                >SHA-256 dosyası</a
+              >
+            </div>
+          </aside>
+        </div>
+      </section>
+      <section class="support-section" id="destek">
+        <div class="container">
+          <div class="section-heading centered">
+            <span class="section-kicker">GERİ BİLDİRİM VE DESTEK</span>
+            <h2>Bir fikriniz veya karşılaştığınız bir sorun mu var?</h2>
+            <p>
+              CelikPanel’i birlikte geliştirelim. Hataları ve özellik
+              önerilerini herkese açık formlarla, güvenlik açıklarını ise gizli
+              kanaldan bildirin.
+            </p>
+          </div>
+          <div class="support-cards">
+            <a
+              class="support-card bug"
+              href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml"
+              data-localized-href
+              data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml"
+              data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=bug_en.yml"
+            >
+              <span class="support-icon" aria-hidden="true">!</span>
+              <span class="support-eyebrow">HATA BİLDİR</span>
+              <h3>Bir sorun mu buldunuz?</h3>
+              <p>
+                Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata
+                çıktısını paylaşın.
+              </p>
+              <span class="support-link">Hata formunu aç →</span>
+            </a>
+            <a
+              class="support-card feature"
+              href="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml"
+              data-localized-href
+              data-href-tr="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml"
+              data-href-en="https://github.com/celikbros/celikpanel-feedback/issues/new?template=feature_en.yml"
+            >
+              <span class="support-icon" aria-hidden="true">+</span>
+              <span class="support-eyebrow">ÖZELLİK ÖNER</span>
+              <h3>Paneli nasıl iyileştirebiliriz?</h3>
+              <p>
+                İhtiyacınızı ve beklediğiniz kullanıcı deneyimini kısa ve net
+                biçimde anlatın.
+              </p>
+              <span class="support-link">Öneri formunu aç →</span>
+            </a>
+            <a
+              class="support-card security"
+              href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new"
+            >
+              <span class="support-icon" aria-hidden="true">◇</span>
+              <span class="support-eyebrow">GİZLİ GÜVENLİK BİLDİRİMİ</span>
+              <h3>Bir güvenlik açığı mı buldunuz?</h3>
+              <p>
+                Açığı herkese açık issue olarak yazmayın. GitHub üzerinden
+                yalnız bakım ekibinin görebileceği şekilde bildirin.
+              </p>
+              <span class="support-link">Gizli bildirim aç →</span>
+            </a>
+          </div>
+          <p class="support-privacy">
+            Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya
+            özel alan adı paylaşmayın.
+          </p>
+        </div>
+      </section>
+      <section class="final-cta">
+        <div class="container final-cta-shell">
+          <div>
+            <span class="section-kicker">YENİ NESİL HOSTING PANELİ</span>
+            <h2>Sunucunuzu daha kolay yönetmeye başlayın.</h2>
+            <p>CelikPanel’i ücretsiz bir test sunucusunda keşfedin.</p>
+          </div>
+          <a class="button button-light" href="#kurulum"
+            >Kurulum komutunu al →</a
+          >
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="brand footer-brand">
+          <span class="brand-mark">C</span
+          ><span class="brand-copy"
+            ><strong>CelikPanel</strong
+            ><small>Hosting Control Panel</small></span
+          >
+        </div>
+        <p>Web siteleri ve sunucular için sade, modern kontrol paneli.</p>
+        <nav aria-label="Alt menü">
+          <a href="#ozellikler">Özellikler</a><a href="#kurulum">Kurulum</a
+          ><a href="/releases/index.json">Sürümler</a
+          ><a href="#destek">Destek</a
+          ><a
+            href="https://github.com/celikbros/celikpanel-feedback/security/advisories/new"
+            >Güvenlik</a
+          >
+        </nav>
+      </div>
+      <div class="container footer-bottom">
+        <span>© 2026 CelikPanel</span><span>Alpha preview · Linux</span>
+      </div>
+    </footer>
+    <script src="/assets/site.js" defer></script>
+  </body>
 </html>

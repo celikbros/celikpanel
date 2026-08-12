@@ -106,9 +106,10 @@ release_dir="$version_root"
 if [[ "$signing_mode" == required ]]; then
   release_dir="$release_dir/$platform_os/$platform_arch"
 fi
-mkdir -p -- "$output/assets" "$release_dir"
+mkdir -p -- "$output/assets" "$release_dir" "$output/.well-known"
 cp -- "$template/index.html" "$template/.htaccess" "$template/get.sh" "$output/"
 cp -- "$template/assets/site.css" "$template/assets/site.js" "$output/assets/"
+cp -- "$template/security.txt" "$output/.well-known/security.txt"
 cp -- "$archive" "$checksum" "$release_dir/"
 # Re-prove exact bytes after staging. The signer hashes only this reviewed copy,
 # never a pathname whose source/destination equality was merely assumed.
@@ -141,7 +142,6 @@ if [[ "$signing_mode" == required ]]; then
   printf '%s  %s\n' "$sha256" "$legacy_archive" \
     > "$version_root/$legacy_archive.sha256"
 fi
-
 if [[ "$signing_mode" == required ]]; then
   archive_url="/releases/$version/$platform_os/$platform_arch/$expected_archive"
 else
