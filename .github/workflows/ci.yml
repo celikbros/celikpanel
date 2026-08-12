@@ -65,7 +65,7 @@ jobs:
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
       - run: bash deploy/test-download-portal-contract.sh
-      - run: sudo bash deploy/test-signed-release-manifest-contract.sh
+      - run: sudo env PATH=$PATH GOTOOLCHAIN=local bash deploy/test-signed-release-manifest-contract.sh
       - run: sudo bash deploy/test-release-foundation-root-contract.sh
       - run: sudo bash deploy/test-signed-release-enrollment-contract.sh
       - run: bash deploy/test-release-updater-rollback-contract.sh
