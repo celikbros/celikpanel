@@ -136,6 +136,38 @@ func TestSetCpmoveImportStatusRollsBackBothRows(t *testing.T) {
 	}
 }
 
+func TestSetCpmoveImportStatusRefusesActiveWhenDomainDeletionMarked(t *testing.T) {
+	db := openCpmoveSafetyDB(t)
+	mustExecCpmoveSafety(t, db, `
+		CREATE TABLE domains(id INTEGER PRIMARY KEY, status TEXT NOT NULL);
+		CREATE TABLE sites(id INTEGER PRIMARY KEY, status TEXT NOT NULL);
+		CREATE TABLE domain_deletion_operations(domain_id INTEGER PRIMARY KEY);
+		INSERT INTO domains VALUES(1,'pending');
+		INSERT INTO sites VALUES(2,'pending');
+		INSERT INTO domain_deletion_operations VALUES(1);
+	`)
+	if err := setCpmoveImportStatus(context.Background(), db, 1, 2, "active"); err == nil {
+		t.Fatal("marked domain unexpectedly finalized as active")
+	}
+	var domainStatus, siteStatus string
+	if err := db.QueryRow(`SELECT status FROM domains WHERE id=1`).Scan(&domainStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT status FROM sites WHERE id=2`).Scan(&siteStatus); err != nil {
+		t.Fatal(err)
+	}
+	if domainStatus != "pending" || siteStatus != "pending" {
+		t.Fatalf("statuses = %q/%q, want pending/pending", domainStatus, siteStatus)
+	}
+	var markerCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM domain_deletion_operations WHERE domain_id=1`).Scan(&markerCount); err != nil {
+		t.Fatal(err)
+	}
+	if markerCount != 1 {
+		t.Fatalf("marker count = %d, want 1", markerCount)
+	}
+}
+
 func openCpmoveSafetyDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := sql.Open("sqlite", "file:"+t.Name()+"?mode=memory&cache=shared")

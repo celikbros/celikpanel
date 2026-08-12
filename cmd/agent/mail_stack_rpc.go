@@ -38,15 +38,21 @@ const (
 type ConfigureMailStackResponse = transport.ConfigureMailStackResponse
 
 func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureMailStackResponse) error {
+	*resp = ConfigureMailStackResponse{}
 	if req == nil {
 		return fmt.Errorf("mail stack configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureMailStack, "mail-stack", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureMailStackResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
 	// A dev agent runs against CELIKPANEL_MAIL_DIR and never touches the real
 	// system config; refuse rather than half-configure.
 	// Dev agent CELIKPANEL_MAIL_DIR üzerinde çalışır ve gerçek sistem
@@ -170,15 +176,21 @@ var postfixDomainsPath = "/etc/postfix/vmailbox_domains"
 type WireMailFiltersResponse = transport.WireMailFiltersResponse
 
 func (a *Agent) WireMailFilters(req *ServiceMutationRequest, resp *WireMailFiltersResponse) error {
+	*resp = WireMailFiltersResponse{}
 	if req == nil {
 		return fmt.Errorf("mail filter wiring request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepWireMailFilters, "mail-filters", "", "wire"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = WireMailFiltersResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
+	mailMutex.Lock()
+	defer mailMutex.Unlock()
 	return wireMailFilters(ctx, resp)
 }
 
@@ -493,12 +505,7 @@ func ensureVmailUser(ctx context.Context) error {
 }
 
 func ensureMailRoot() error {
-	if err := os.MkdirAll(mailRootDir, 0o770); err != nil {
-		return err
-	}
-	uid, _ := strconv.Atoi(vmailUID)
-	gid, _ := strconv.Atoi(vmailGID)
-	return os.Chown(mailRootDir, uid, gid)
+	return secureEnsureMailRoot(mailRootDir)
 }
 
 // configurePostfixVirtual points Postfix at our maps and delivers unmatched-

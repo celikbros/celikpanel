@@ -226,7 +226,6 @@ func ownerWorkerEnvironment() []string {
 		"CELIKPANEL_DATA_DIR",
 		"CELIKPANEL_PDNS_DB",
 		"CELIKPANEL_COMPONENT_CATALOG",
-		"CELIKPANEL_WEBMAIL_DIR",
 	} {
 		if value, exists := os.LookupEnv(name); exists {
 			environment = append(environment, name+"="+value)

@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -24,7 +25,11 @@ import (
 // WireGuard: wg-quick@wg0 şablon unit'i ancak bir config varken başlar, bu
 // yüzden yalnız "çalışan unit" taraması onu sürekli "kurulu değil" sanardı.
 func (a *Agent) InstalledServiceIDs(_ *transport.Empty, reply *[]string) error {
-	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{}, detectPkgFamily())
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return fmt.Errorf("strict service discovery: host platform is not verified: %w", err)
+	}
+	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{profile: profile}, string(profile.PackageManager))
 	if err != nil {
 		return err
 	}
@@ -33,6 +38,11 @@ func (a *Agent) InstalledServiceIDs(_ *transport.Empty, reply *[]string) error {
 }
 
 func (a *Agent) installedServiceIDsBestEffort(_ *transport.Empty, reply *[]string) error {
+	profile, err := detectHostPlatform()
+	if err != nil {
+		*reply = []string{}
+		return nil
+	}
 	var ids []string
 	for i := range core.ManagedServices {
 		svc := &core.ManagedServices[i]
@@ -40,7 +50,7 @@ func (a *Agent) installedServiceIDsBestEffort(_ *transport.Empty, reply *[]strin
 		// presence decides) — phpMyAdmin and friends.
 		// serviceInstalled, daemon'suz araçları da kapsar (unit yok, paket
 		// varlığı belirler) — phpMyAdmin ve benzerleri.
-		if a.serviceInstalled(svc) {
+		if a.serviceInstalledWithProfile(svc, profile) {
 			ids = append(ids, svc.ID)
 		}
 	}
@@ -64,12 +74,14 @@ type strictServiceStateProbe interface {
 	RoundcubeInstalled() (bool, error)
 }
 
-type hostStrictServiceStateProbe struct{}
+type hostStrictServiceStateProbe struct{ profile hostplatform.Profile }
 
-func (hostStrictServiceStateProbe) UnitFiles() (map[string]struct{}, error) {
-	out, err := exec.Command(
-		"systemctl", "list-unit-files", "--type=service", "--no-legend", "--no-pager",
-	).Output()
+func (p hostStrictServiceStateProbe) UnitFiles() (map[string]struct{}, error) {
+	systemctl, err := executableForProfile(p.profile, string(p.profile.PackageManager), "systemctl")
+	if err != nil {
+		return nil, err
+	}
+	out, err := serviceMutationCommand(context.Background(), systemctl, "list-unit-files", "--type=service", "--no-legend", "--no-pager").Output()
 	if err != nil {
 		return nil, fmt.Errorf("list systemd unit files: %w", err)
 	}
@@ -84,8 +96,12 @@ func (hostStrictServiceStateProbe) UnitFiles() (map[string]struct{}, error) {
 	return units, nil
 }
 
-func (hostStrictServiceStateProbe) CanonicalUnit(unit string) (string, error) {
-	out, err := exec.Command("systemctl", "show", unit+".service", "-p", "Id", "--value").Output()
+func (p hostStrictServiceStateProbe) CanonicalUnit(unit string) (string, error) {
+	systemctl, err := executableForProfile(p.profile, string(p.profile.PackageManager), "systemctl")
+	if err != nil {
+		return "", err
+	}
+	out, err := serviceMutationCommand(context.Background(), systemctl, "show", unit+".service", "-p", "Id", "--value").Output()
 	if err != nil {
 		return "", fmt.Errorf("resolve systemd unit %s: %w", unit, err)
 	}
@@ -96,18 +112,28 @@ func (hostStrictServiceStateProbe) CanonicalUnit(unit string) (string, error) {
 	return canonical, nil
 }
 
-func (hostStrictServiceStateProbe) InstalledPackages(family string) (map[string]struct{}, error) {
+func (p hostStrictServiceStateProbe) InstalledPackages(family string) (map[string]struct{}, error) {
 	var out []byte
 	var err error
 	switch family {
 	case "apt":
-		out, err = exec.Command(
-			"dpkg-query", "-W", "-f=${binary:Package}\t${Status}\n",
-		).Output()
+		dpkgQuery, pathErr := executableForProfile(p.profile, family, "dpkg-query")
+		if pathErr != nil {
+			return nil, pathErr
+		}
+		out, err = serviceMutationCommand(context.Background(), dpkgQuery, "-W", "-f=${binary:Package}\t${Status}\n").Output()
 	case "pacman":
-		out, err = exec.Command("pacman", "-Qq").Output()
+		pacman, pathErr := executableForProfile(p.profile, family, "pacman")
+		if pathErr != nil {
+			return nil, pathErr
+		}
+		out, err = serviceMutationCommand(context.Background(), pacman, "-Qq").Output()
 	case "dnf":
-		out, err = exec.Command("rpm", "-qa", "--qf", "%{NAME}\n").Output()
+		rpm, pathErr := executableForProfile(p.profile, family, "rpm")
+		if pathErr != nil {
+			return nil, pathErr
+		}
+		out, err = serviceMutationCommand(context.Background(), rpm, "-qa", "--qf", "%{NAME}\n").Output()
 	default:
 		return nil, fmt.Errorf("query installed packages: unsupported package family %q", family)
 	}
@@ -149,7 +175,11 @@ func (hostStrictServiceStateProbe) RoundcubeInstalled() (bool, error) {
 // karşılığıdır. Yoklama hataları eksik bir "kurulu değil" cevabına çevrilmez,
 // panele geri döndürülür.
 func (a *Agent) InstalledServiceIDsStrict(_ *transport.Empty, reply *[]string) error {
-	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{}, detectPkgFamily())
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return err
+	}
+	ids, err := discoverInstalledServiceIDsStrict(hostStrictServiceStateProbe{profile: profile}, string(profile.PackageManager))
 	if err != nil {
 		return err
 	}

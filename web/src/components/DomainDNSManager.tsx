@@ -18,6 +18,8 @@ interface DNSRecord {
 interface DomainDNSManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
+    isAdditionalUser?: boolean;
 }
 
 const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV'];
@@ -34,7 +36,12 @@ const typeColor: Record<string, string> = {
     SRV: 'bg-warning/15 text-warning',
 };
 
-export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps) {
+export function DomainDNSManager({
+    domainId,
+    domainName,
+    readOnly = false,
+    isAdditionalUser = false,
+}: DomainDNSManagerProps) {
     const { t } = useI18n();
     const [records, setRecords] = useState<DNSRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,6 +70,12 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 		void checkZone();
 		setDnsServer(null);
 		setDnsServerError('');
+        if (isAdditionalUser) {
+            // Team members deliberately cannot inspect server-global service
+            // inventory. Domain records, zone state and DNSSEC remain available
+            // through their tenant-scoped endpoints below.
+            return;
+        }
         fetch('/api/v1/hosting/capabilities')
 			.then(async (response) => {
 				if (!response.ok) {
@@ -78,7 +91,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 				setDnsServer(null);
 				setDnsServerError(error instanceof Error && error.message ? error.message : t('dns.statusUnavailable'));
 			});
-    }, [domainId]);
+    }, [domainId, isAdditionalUser, t]);
 
     const checkZone = async () => {
 		setLoading(true);
@@ -121,6 +134,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     };
 
     const publishZone = async () => {
+        if (readOnly) return;
         setPublishing(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/zone`, { method: 'POST' });
@@ -139,6 +153,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     };
 
     const addRecord = async () => {
+        if (readOnly) return;
         setMutatingRecord(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/dns/records`, {
@@ -161,6 +176,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
     };
 
     const deleteRecord = async (id: number) => {
+        if (readOnly) return;
         if (!confirm(t('dns.confirmDelete'))) return;
         setMutatingRecord(true);
         try {
@@ -203,9 +219,11 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                 title={t('dns.zoneMissing')}
                 hint={t('dns.zoneMissingHint', { name: domainName })}
                 action={
-                    <Button variant="primary" icon={Plus} disabled={publishing} onClick={publishZone}>
-                        {publishing ? t('dns.publishing') : t('dns.enableZone')}
-                    </Button>
+                    readOnly ? undefined : (
+                        <Button variant="primary" icon={Plus} disabled={publishing} onClick={publishZone}>
+                            {publishing ? t('dns.publishing') : t('dns.enableZone')}
+                        </Button>
+                    )
                 }
             />
         );
@@ -231,30 +249,44 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                     <span>{t('dns.notServed')}</span>
                 </div>
             )}
+			{isAdditionalUser && (
+				<div className="mb-4 flex items-start gap-2 rounded-lg border border-info/30 bg-info/10 p-3 text-sm text-fg">
+					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+					<span>{t('dns.teamServerStatusUnavailable')}</span>
+				</div>
+			)}
 			{dnsServerError && (
 				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-fg">
 					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
 					<span>{dnsServerError}</span>
 				</div>
 			)}
-            {dnsServer !== null && dnsServer !== '' && (
-                <DNSSECSection domainId={domainId} domainName={domainName} />
+            {(isAdditionalUser || (dnsServer !== null && dnsServer !== '')) && (
+                <DNSSECSection domainId={domainId} domainName={domainName} readOnly={readOnly} />
             )}
 
             <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: records.length })}</span>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                        variant="secondary"
-                        icon={RefreshCw}
-                        disabled={publishing || dnsServer === ''}
-                        onClick={publishZone}
-                    >
-                        {publishing ? t('dns.publishing') : t('dns.republish')}
-                    </Button>
-                    <Button variant="primary" icon={Plus} onClick={() => setShowAddForm((s) => !s)}>
-                        {t('dns.addRecord')}
-                    </Button>
+                    {readOnly ? (
+                        <Button variant="secondary" icon={RefreshCw} disabled={loading} onClick={() => void loadRecords()}>
+                            {t('dns.refresh')}
+                        </Button>
+                    ) : (
+                        <>
+                            <Button
+                                variant="secondary"
+                                icon={RefreshCw}
+                                disabled={publishing || dnsServer === ''}
+                                onClick={publishZone}
+                            >
+                                {publishing ? t('dns.publishing') : t('dns.republish')}
+                            </Button>
+                            <Button variant="primary" icon={Plus} onClick={() => setShowAddForm((s) => !s)}>
+                                {t('dns.addRecord')}
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -267,7 +299,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
 				</div>
 			)}
 
-            {showAddForm && (
+            {!readOnly && showAddForm && (
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                         <label className="sm:col-span-2">
@@ -321,7 +353,7 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                                 <th className="px-4 py-2.5">{t('dns.name')}</th>
                                 <th className="px-4 py-2.5">{t('dns.content')}</th>
                                 <th className="px-4 py-2.5">{t('dns.ttl')}</th>
-                                <th className="px-4 py-2.5" />
+                                {!readOnly && <th className="px-4 py-2.5" />}
                             </tr>
                         </thead>
                         <tbody>
@@ -340,17 +372,19 @@ export function DomainDNSManager({ domainId, domainName }: DomainDNSManagerProps
                                         {rec.content}
                                     </td>
                                     <td className="px-4 py-2.5 text-fg-muted">{rec.ttl}</td>
-                                    <td className="px-4 py-2.5 text-right">
-                                        <button
-                                            onClick={() => deleteRecord(rec.id)}
-                                            disabled={managedRecord || mutatingRecord}
-                                            aria-label={t('dns.confirmDelete')}
-                                            title={managedRecord ? t('dns.managedRecord') : t('dns.confirmDelete')}
-                                            className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-subtle"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </td>
+                                    {!readOnly && (
+                                        <td className="px-4 py-2.5 text-right">
+                                            <button
+                                                onClick={() => deleteRecord(rec.id)}
+                                                disabled={managedRecord || mutatingRecord}
+                                                aria-label={t('dns.confirmDelete')}
+                                                title={managedRecord ? t('dns.managedRecord') : t('dns.confirmDelete')}
+                                                className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-subtle"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    )}
                                 </tr>
                                 );
                             })}
@@ -425,7 +459,7 @@ function DSField({ label, value, note, mono }: { label: string; value: string; n
 // DNSSEC: zone'u tek tıkla imzala ve operatöre registrar'a girilecek DS
 // kayıtlarını ver. O DS olmadan doğrulayıcılar zone'u (ve DANE/TLSA
 // kayıtlarını) güvensiz sayar — o yüzden ikisi burada birlikte yaşar.
-function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
+function DNSSECSection({ domainId, readOnly = false }: { domainId: number; domainName: string; readOnly?: boolean }) {
     const { t } = useI18n();
     const [secured, setSecured] = useState(false);
     const [ds, setDs] = useState<string[]>([]);
@@ -449,6 +483,7 @@ function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
 	}, [domainId, t]);
 
     const sign = async () => {
+        if (readOnly) return;
         setBusy(true);
 		try {
 			const r = await fetch(`/api/v1/domains/${domainId}/dnssec`, { method: 'POST' });
@@ -525,9 +560,11 @@ function DNSSECSection({ domainId }: { domainId: number; domainName: string }) {
             ) : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-fg-muted">{t('dnssec.offHint')}</p>
-                    <Button variant="primary" disabled={busy} onClick={sign}>
-                        {t('dnssec.sign')}
-                    </Button>
+                    {!readOnly && (
+                        <Button variant="primary" disabled={busy} onClick={sign}>
+                            {t('dnssec.sign')}
+                        </Button>
+                    )}
                 </div>
             )}
         </section>

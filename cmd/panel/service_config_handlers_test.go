@@ -50,7 +50,10 @@ func newServiceConfigPanel(t *testing.T, agent *serviceConfigRPCAgent) *Panel {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
-	return &Panel{agentClient: transport.NewReconnectingClientWithContextConnector(client, connector)}
+	return &Panel{
+		pkgFamilyVal: "apt",
+		agentClient:  transport.NewReconnectingClientWithContextConnector(client, connector),
+	}
 }
 
 func TestUpdatePHPConfigDoesNotReturnSuccessWhenAgentActivationFails(t *testing.T) {

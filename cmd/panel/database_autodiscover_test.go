@@ -63,6 +63,7 @@ func attachDatabaseAutodiscoverAgent(
 	agent *databaseAutodiscoverAgent,
 ) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatal(err)

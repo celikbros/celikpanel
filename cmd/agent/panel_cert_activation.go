@@ -14,15 +14,18 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
 const (
-	panelCertificateActivationStateVersion = 1
-	panelCertificateActivationStateName    = "panel-certificate-activation.json"
-	panelCertificateActivationStatePath    = "/var/lib/celikpanel-agent-private/" + panelCertificateActivationStateName
-	panelCertificateActivationStateMaxSize = 4 * 1024
-	panelCertificateActivationErrorMaxSize = 1024
-	panelCertificateActivationMaxAttempts  = 1_000_000
+	panelCertificateActivationLegacyVersion = 1
+	panelCertificateActivationStateVersion  = 2
+	panelCertificateActivationStateName     = "panel-certificate-activation.json"
+	panelCertificateActivationStatePath     = "/var/lib/celikpanel-agent-private/" + panelCertificateActivationStateName
+	panelCertificateActivationStateMaxSize  = 4 * 1024
+	panelCertificateActivationErrorMaxSize  = 1024
+	panelCertificateActivationMaxAttempts   = 1_000_000
 
 	panelCertificateActivationInitialBackoff = 15 * time.Second
 	panelCertificateActivationMaximumBackoff = 5 * time.Minute
@@ -30,12 +33,16 @@ const (
 )
 
 type panelCertificateActivationPhase string
+type panelCertificateActivationOrigin string
 
 const (
 	panelCertificateActivationPendingSource  panelCertificateActivationPhase = "pending_source"
 	panelCertificateActivationPendingPublish panelCertificateActivationPhase = "pending_publish"
 	panelCertificateActivationPendingRestart panelCertificateActivationPhase = "pending_restart"
 	panelCertificateActivationPendingVerify  panelCertificateActivationPhase = "pending_verify"
+
+	panelCertificateActivationOriginRenewal     panelCertificateActivationOrigin = "renewal"
+	panelCertificateActivationOriginInteractive panelCertificateActivationOrigin = "interactive"
 )
 
 var errPanelCertificateActivationUnsupported = errors.New(
@@ -54,6 +61,21 @@ var errPanelCertificateActivationPending = errors.New(
 // kurtarma için yalnız bir ipucudur: çağıranlar sonraki idempotent adıma karar
 // vermeden önce kaynak, yayımlanmış ve sunulan parmak izlerini karşılaştırır.
 type panelCertificateActivationState struct {
+	Version       int                              `json:"version"`
+	Origin        panelCertificateActivationOrigin `json:"origin"`
+	RequestID     string                           `json:"request_id,omitempty"`
+	Qualifier     string                           `json:"qualifier,omitempty"`
+	Domain        string                           `json:"domain"`
+	LineageName   string                           `json:"lineage_name"`
+	LeafSHA256    string                           `json:"leaf_sha256,omitempty"`
+	NotAfter      *time.Time                       `json:"not_after,omitempty"`
+	Phase         panelCertificateActivationPhase  `json:"phase"`
+	Attempts      uint32                           `json:"attempts"`
+	LastAttemptAt *time.Time                       `json:"last_attempt_at,omitempty"`
+	LastError     string                           `json:"last_error,omitempty"`
+}
+
+type panelCertificateActivationStateV1 struct {
 	Version       int                             `json:"version"`
 	Domain        string                          `json:"domain"`
 	LineageName   string                          `json:"lineage_name"`
@@ -94,10 +116,27 @@ func newPanelCertificateActivationState(
 	domain = strings.ToLower(strings.TrimSpace(domain))
 	state := panelCertificateActivationState{
 		Version:     panelCertificateActivationStateVersion,
+		Origin:      panelCertificateActivationOriginRenewal,
 		Domain:      domain,
 		LineageName: panelCertLineageName(domain),
 		Phase:       panelCertificateActivationPendingSource,
 	}
+	if err := validatePanelCertificateActivationState(state); err != nil {
+		return panelCertificateActivationState{}, err
+	}
+	return state, nil
+}
+
+func newInteractivePanelCertificateActivationState(
+	domain, requestID, qualifier string,
+) (panelCertificateActivationState, error) {
+	state, err := newPanelCertificateActivationState(domain)
+	if err != nil {
+		return panelCertificateActivationState{}, err
+	}
+	state.Origin = panelCertificateActivationOriginInteractive
+	state.RequestID = requestID
+	state.Qualifier = qualifier
 	if err := validatePanelCertificateActivationState(state); err != nil {
 		return panelCertificateActivationState{}, err
 	}
@@ -219,6 +258,19 @@ func validatePanelCertificateActivationState(
 			state.Version,
 		)
 	}
+	switch state.Origin {
+	case panelCertificateActivationOriginRenewal:
+		if state.RequestID != "" || state.Qualifier != "" {
+			return errors.New("renewal activation must not carry interactive identity")
+		}
+	case panelCertificateActivationOriginInteractive:
+		if !validMutationIdentity(state.RequestID) ||
+			!mutationpayload.ValidPanelCertificateIssueQualifier(state.Qualifier) {
+			return errors.New("invalid interactive panel certificate activation identity")
+		}
+	default:
+		return fmt.Errorf("invalid panel certificate activation origin %q", state.Origin)
+	}
 	if len(state.Domain) == 0 || len(state.Domain) > 253 ||
 		state.Domain != strings.ToLower(state.Domain) ||
 		state.Domain != strings.TrimSpace(state.Domain) ||
@@ -299,24 +351,51 @@ func decodePanelCertificateActivationState(
 			"panel certificate activation state has invalid size",
 		)
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
+	var envelope struct {
+		Version int `json:"version"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return panelCertificateActivationState{}, fmt.Errorf(
+			"decode panel certificate activation state version: %w", err,
+		)
+	}
 	var state panelCertificateActivationState
-	if err := decoder.Decode(&state); err != nil {
-		return panelCertificateActivationState{}, fmt.Errorf(
-			"decode panel certificate activation state: %w", err,
-		)
-	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			err = errors.New("multiple JSON values")
+	var canonical []byte
+	var err error
+	switch envelope.Version {
+	case panelCertificateActivationLegacyVersion:
+		var legacy panelCertificateActivationStateV1
+		if err := decodeStrictPanelCertificateActivationJSON(raw, &legacy); err != nil {
+			return panelCertificateActivationState{}, err
 		}
+		state = panelCertificateActivationState{
+			Version:       panelCertificateActivationStateVersion,
+			Origin:        panelCertificateActivationOriginRenewal,
+			Domain:        legacy.Domain,
+			LineageName:   legacy.LineageName,
+			LeafSHA256:    legacy.LeafSHA256,
+			NotAfter:      legacy.NotAfter,
+			Phase:         legacy.Phase,
+			Attempts:      legacy.Attempts,
+			LastAttemptAt: legacy.LastAttemptAt,
+			LastError:     legacy.LastError,
+		}
+		if err := validatePanelCertificateActivationState(state); err != nil {
+			return panelCertificateActivationState{}, err
+		}
+		canonical, err = json.Marshal(legacy)
+		canonical = append(canonical, '\n')
+	case panelCertificateActivationStateVersion:
+		if err := decodeStrictPanelCertificateActivationJSON(raw, &state); err != nil {
+			return panelCertificateActivationState{}, err
+		}
+		canonical, err = canonicalPanelCertificateActivationState(state)
+	default:
 		return panelCertificateActivationState{}, fmt.Errorf(
-			"decode panel certificate activation state trailer: %w", err,
+			"unsupported panel certificate activation state version %d",
+			envelope.Version,
 		)
 	}
-	canonical, err := canonicalPanelCertificateActivationState(state)
 	if err != nil {
 		return panelCertificateActivationState{}, err
 	}
@@ -326,6 +405,22 @@ func decodePanelCertificateActivationState(
 		)
 	}
 	return state, nil
+}
+
+func decodeStrictPanelCertificateActivationJSON(raw []byte, destination any) error {
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		return fmt.Errorf("decode panel certificate activation state: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			err = errors.New("multiple JSON values")
+		}
+		return fmt.Errorf("decode panel certificate activation state trailer: %w", err)
+	}
+	return nil
 }
 
 func verifyServedPanelCertificate(

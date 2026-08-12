@@ -42,7 +42,10 @@ func newFileMutationTestPanel(t *testing.T, agent *fileMutationTestAgent) *Panel
 		t.Fatalf("connect file test agent: %v", err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
-	return &Panel{agentClient: transport.NewReconnectingClientWithContextConnector(client, connector)}
+	return &Panel{
+		pkgFamilyVal: "apt",
+		agentClient:  transport.NewReconnectingClientWithContextConnector(client, connector),
+	}
 }
 
 func TestSiteDocrootRejectsForeignStoredPath(t *testing.T) {

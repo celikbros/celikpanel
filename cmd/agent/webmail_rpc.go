@@ -47,19 +47,15 @@ const (
 // must traverse into it to serve /webmail/, and /opt/celikpanel is the
 // panel's own private tree that the web user cannot enter (caught live:
 // nginx stat() failed with "permission denied" on the /opt path). /var/lib
-// is the standard home for such served, mutable app data. Env-overridable.
+// is the standard home for such served, mutable app data. The production
+// mutation target is fixed; tests may reassign this package variable.
 // webmailBaseDir, doğrulanmış tarball'ın açıldığı yerdir. /opt/celikpanel
 // altında DEĞİL /var/lib altında yaşar; çünkü nginx (web kullanıcısı olarak)
 // /webmail/'i sunmak için içine girebilmeli ve /opt/celikpanel, web
 // kullanıcısının giremediği panelin özel ağacıdır (canlıda yakalandı: nginx
 // /opt yolunda stat() "permission denied" verdi). Böyle sunulan, değişebilir
-// uygulama verisinin standart evi /var/lib'dir. Env ile değiştirilebilir.
-var webmailBaseDir = func() string {
-	if d := os.Getenv("CELIKPANEL_WEBMAIL_DIR"); d != "" {
-		return d
-	}
-	return "/var/lib/celikpanel-webmail"
-}()
+// uygulama verisinin standart evi /var/lib'dir. Üretim mutation hedefi sabittir.
+var webmailBaseDir = "/var/lib/celikpanel-webmail"
 
 func roundcubeInstalled() bool {
 	installed, err := roundcubeInstallState()
@@ -144,17 +140,33 @@ func appendRoundcubeInstallError(resp *InstallRoundcubeResponse, err error) {
 // Idempotent: mevcut kurulum başarı döner. Herhangi bir hatada hazırlık ağacı
 // atılır; yarım kurulum asla sunulmaz.
 func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRoundcubeResponse) error {
+	*resp = InstallRoundcubeResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepInstallRoundcube, "roundcube", "", "install"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = InstallRoundcubeResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
 	resp.Version = roundcubeVersion
+	if err := ensureRoundcubeLifecycleSupported(); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if err := secureMkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if err := reconcileRoundcubeArtifacts(webmailBaseDir, ""); err != nil {
+		resp.Error = fmt.Sprintf("reconcile Roundcube install artifacts: %v", err)
+		return nil
+	}
 	installed, err := roundcubeInstallState()
 	if err != nil {
 		resp.Error = err.Error()
@@ -182,11 +194,17 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		roundcubeVersion, roundcubeVersion)
 	client := &http.Client{Timeout: 5 * time.Minute}
 
-	if err := secureMkdirAll(filepath.Dir(webmailBaseDir), 0o755); err != nil {
+	stage, err := createRoundcubeInstallStage(webmailBaseDir)
+	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(webmailBaseDir), "rc-dl-*")
+	defer func() {
+		if _, err := retireRoundcubeTree(stage); err != nil {
+			appendRoundcubeInstallError(resp, fmt.Errorf("clean Roundcube staging tree: %w", err))
+		}
+	}()
+	tmp, err := os.CreateTemp(stage, "rc-dl-*")
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -249,18 +267,12 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = fmt.Sprintf("close verified download: %v", closeErr)
 		return nil
 	}
-	stage, err := os.MkdirTemp(filepath.Dir(webmailBaseDir), "rc-stage-*")
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	defer func() {
-		if err := retireRoundcubeTree(stage); err != nil {
-			appendRoundcubeInstallError(resp, fmt.Errorf("clean Roundcube staging tree: %w", err))
-		}
-	}()
 	if out, err := serviceMutationCommand(ctx, "tar", "-xzf", tmp.Name(), "-C", stage, "--strip-components=1").CombinedOutput(); err != nil {
 		resp.Error = fmt.Sprintf("extract failed: %v: %s", err, string(out))
+		return nil
+	}
+	if err := os.Remove(tmp.Name()); err != nil {
+		resp.Error = fmt.Sprintf("remove verified Roundcube download: %v", err)
 		return nil
 	}
 
@@ -554,26 +566,37 @@ func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
 
 type RemoveRoundcubeResponse = transport.RemoveRoundcubeResponse
 
+type roundcubeRetirementResult struct {
+	Removed         bool
+	MutationApplied bool
+}
+
 // RemoveRoundcube deletes the whole webmail tree — the fixed base dir means
 // there is nothing else it could delete. Idempotent.
 // RemoveRoundcube tüm webmail ağacını siler — sabit taban dizini, silebileceği
 // başka bir şey olmadığı anlamına gelir. Idempotenttir.
 func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcubeResponse) error {
+	*resp = RemoveRoundcubeResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	_, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	_, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepRemoveRoundcube, "roundcube", "", "remove"),
+	)
+	if err != nil {
+		*resp = RemoveRoundcubeResponse{Error: err.Error()}
+		return nil
+	}
+	defer finishStep()
+	result, err := retireRoundcubeTree(webmailBaseDir)
+	resp.Removed = result.Removed
+	resp.MutationApplied = result.MutationApplied
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	defer finishStep()
-	if err := retireRoundcubeTree(webmailBaseDir); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	resp.Removed = true
 	return nil
 }
 
@@ -581,23 +604,75 @@ func (a *Agent) RemoveRoundcube(req *WebmailMutationRequest, resp *RemoveRoundcu
 // panel session), webmail is for END USERS: a customer with only a mailbox —
 // no panel account — signs in with their email credentials. So the panel
 // fronts it at a PUBLIC /webmail/ path (Roundcube's own login is the auth),
-// and the agent serves it loopback-only on 127.0.0.1:8307. The split from the
-// db-tools server (8306) is deliberate: different audience, different access
-// rule, so a change to one can never widen the other.
+// and the agent serves it only on a root-bound Unix socket. The split from the
+// TCP-based db-tools server is deliberate: different audience, different
+// access rule, so a change to one can never widen the other.
 //
 // Roundcube webmail sunumu. Veritabanı araçlarının (yalnız-admin, panel
 // oturumu arkasında) aksine webmail SON KULLANICI içindir: yalnız posta
 // kutusu olan bir müşteri — panel hesabı olmadan — e-posta bilgileriyle girer.
 // Bu yüzden panel onu PUBLIC bir /webmail/ yolunda önler (kimlik doğrulama
-// Roundcube'un kendi girişidir) ve agent onu yalnız-loopback 127.0.0.1:8307'de
-// sunar. db-araçları sunucusundan (8306) ayrı olması bilinçlidir: farklı
-// kitle, farklı erişim kuralı; birine yapılan değişiklik diğerini asla
-// genişletemez.
+// Roundcube'un kendi girişidir) ve agent onu yalnız root'un bağlayabildiği
+// Unix socket'te sunar. db-araçlarının TCP sunucusundan ayrı olması
+// bilinçlidir: farklı kitle, farklı erişim kuralı; birine yapılan değişiklik
+// diğerini asla genişletemez.
 
 const (
 	webmailConfPath = "/etc/nginx/conf.d/celikpanel-webmail.conf"
-	webmailAddr     = "127.0.0.1:8307"
 )
+
+var webmailSetConfigMetadata = secureSetMailFileMetadata
+
+func webmailSocketPathForNginx() (string, error) {
+	return validateWebmailSocketPath(transport.WebmailSocketPath())
+}
+
+func validateWebmailSocketPath(path string) (string, error) {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path ||
+		len(path) > 100 || filepath.Ext(path) != ".sock" {
+		return "", fmt.Errorf("invalid webmail socket path")
+	}
+	for _, r := range path {
+		if !(r == '/' || r == '-' || r == '_' || r == '.' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9')) {
+			return "", fmt.Errorf("invalid webmail socket path")
+		}
+	}
+	return path, nil
+}
+
+func webmailConfigMetadataIdentity(path string) (int, int) {
+	if path == webmailConfPath {
+		return 0, 0
+	}
+	return -1, -1
+}
+
+func removeInactiveWebmailSocket() error {
+	return removeInactiveWebmailSocketAt(transport.WebmailSocketPath())
+}
+
+func removeInactiveWebmailSocketAt(path string) error {
+	path, err := validateWebmailSocketPath(path)
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect inactive webmail socket: %w", err)
+	}
+	if info.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf("refuse to remove non-socket webmail path")
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove inactive webmail socket: %w", err)
+	}
+	return nil
+}
 
 func applyWebmailNginxMutation(
 	ctx context.Context,
@@ -612,15 +687,6 @@ func applyWebmailNginxMutation(
 	snapshot, err := snapshotMailFile(path)
 	if err != nil {
 		return fmt.Errorf("snapshot webmail nginx configuration: %w", err)
-	}
-	if present {
-		if err := secureWriteConfig(path, content, 0o644); err != nil {
-			return fmt.Errorf("write webmail nginx configuration: %w", err)
-		}
-	} else if snapshot.exists {
-		if err := secureRemoveConfig(path); err != nil {
-			return fmt.Errorf("remove webmail nginx configuration: %w", err)
-		}
 	}
 
 	rollback := func(cause error, restoreRuntime bool) error {
@@ -646,6 +712,23 @@ func applyWebmailNginxMutation(
 		return errors.Join(cause, fmt.Errorf("webmail nginx rollback failed: %w", errors.Join(rollbackErrs...)))
 	}
 
+	if present {
+		if err := secureWriteConfig(path, content, 0o600); err != nil {
+			return rollback(fmt.Errorf("write webmail nginx configuration: %w", err), false)
+		}
+		// Unit tests and unprivileged development use a private temporary
+		// config path and leave its owner unchanged. Production's fixed /etc
+		// path is always explicitly reset to root:root.
+		uid, gid := webmailConfigMetadataIdentity(path)
+		if err := webmailSetConfigMetadata(path, 0o600, uid, gid); err != nil {
+			return rollback(fmt.Errorf("secure webmail nginx configuration metadata: %w", err), false)
+		}
+	} else if snapshot.exists {
+		if err := secureRemoveConfig(path); err != nil {
+			return rollback(fmt.Errorf("remove webmail nginx configuration: %w", err), false)
+		}
+	}
+
 	if out, err := run(ctx, "nginx", "-t"); err != nil {
 		return rollback(fmt.Errorf(
 			"nginx rejected the webmail configuration: %s",
@@ -657,6 +740,11 @@ func applyWebmailNginxMutation(
 			"nginx reload failed: %s",
 			commandFailureDetail("systemctl reload nginx", out, err),
 		), true)
+	}
+	if !present && path == webmailConfPath {
+		if err := removeInactiveWebmailSocket(); err != nil {
+			return rollback(err, true)
+		}
 	}
 	return nil
 }
@@ -671,22 +759,50 @@ func applyWebmailNginxMutation(
 // kök tüm uygulamayı sunar.
 func roundcubeRootDir() string { return filepath.Join(webmailBaseDir, "public_html") }
 
+func renderWebmailNginxConfig(webmailSocket, roundcubeRoot, fpmSocket string) string {
+	return fmt.Sprintf(`# Managed by CelikPanel — Roundcube webmail, Unix socket only.
+# The panel reverse-proxies /webmail/ here; Roundcube's own login is the auth.
+server {
+    listen unix:%s;
+    server_name _;
+    client_max_body_size 25m;
+
+    location /webmail/ {
+        alias %s/;
+        index index.php;
+        try_files $uri $uri/ /webmail/index.php$is_args$args;
+
+        location ~ ^/webmail/(.+\.php)$ {
+            alias %s/$1;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $request_filename;
+            fastcgi_pass unix:%s;
+        }
+    }
+}
+`, webmailSocket, roundcubeRoot, roundcubeRoot, fpmSocket)
+}
+
 type ConfigureWebmailResponse = transport.ConfigureWebmailResponse
 
-// ConfigureWebmail (re)writes the loopback nginx server when Roundcube is
+// ConfigureWebmail (re)writes the Unix-socket nginx server when Roundcube is
 // installed, and removes it when it is not — the mirror of ConfigureDBTools,
 // called by the panel after roundcube is installed or uninstalled. Idempotent.
-// ConfigureWebmail, Roundcube kuruluyken loopback nginx sunucusunu (yeniden)
+// ConfigureWebmail, Roundcube kuruluyken Unix-socket nginx sunucusunu (yeniden)
 // yazar, değilken kaldırır — ConfigureDBTools'un aynası; panel roundcube
 // kurulunca/kaldırılınca çağırır. Idempotenttir.
 func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWebmailResponse) error {
+	*resp = ConfigureWebmailResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureWebmail, "roundcube", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureWebmailResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -733,6 +849,11 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
+	webmailSocket, err := webmailSocketPathForNginx()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 
 	// Path-preserving: the browser path (/webmail/…) and this server's path
 	// are identical, so Roundcube's own absolute URLs survive the panel proxy
@@ -740,27 +861,7 @@ func (a *Agent) ConfigureWebmail(req *WebmailMutationRequest, resp *ConfigureWeb
 	// Yol-koruyan: tarayıcı yolu (/webmail/…) ile bu sunucunun yolu aynıdır;
 	// böylece Roundcube'un mutlak URL'leri panel vekilinden yeniden yazım
 	// olmadan sağ çıkar — db-araçları sunucusunun kullandığı aynı numara.
-	conf := fmt.Sprintf(`# Managed by CelikPanel — Roundcube webmail, loopback only.
-# The panel reverse-proxies /webmail/ here; Roundcube's own login is the auth.
-server {
-    listen %s;
-    server_name _;
-    client_max_body_size 25m;
-
-    location /webmail/ {
-        alias %s/;
-        index index.php;
-        try_files $uri $uri/ /webmail/index.php$is_args$args;
-
-        location ~ ^/webmail/(.+\.php)$ {
-            alias %s/$1;
-            include fastcgi_params;
-            fastcgi_param SCRIPT_FILENAME $request_filename;
-            fastcgi_pass unix:%s;
-        }
-    }
-}
-`, webmailAddr, roundcubeRootDir(), roundcubeRootDir(), socket)
+	conf := renderWebmailNginxConfig(webmailSocket, roundcubeRootDir(), socket)
 
 	if err := applyWebmailNginxMutation(
 		ctx,

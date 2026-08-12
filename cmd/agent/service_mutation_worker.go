@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const serviceMutationWorkerFaultAfterStartBeforeRegister = "after_start_before_register"
@@ -17,8 +18,35 @@ var serviceMutationWorkerFaultHook func(string, *exec.Cmd) error
 type serviceMutationExecutionTrackerKey struct{}
 
 type serviceMutationExecutionTracker struct {
-	manager *serviceMutationManager
-	runtime *serviceMutationRuntime
+	manager                 *serviceMutationManager
+	runtime                 *serviceMutationRuntime
+	allowCancellingRecovery bool
+}
+
+// serviceMutationCancellingRecoveryContext keeps rollback commands bounded,
+// tracked in the durable worker ledger, and eligible to register while the
+// owning mutation is cancelling. It never detaches or disables the tracker.
+func serviceMutationCancellingRecoveryContext(
+	ctx context.Context,
+	timeout time.Duration,
+) (context.Context, context.CancelFunc, error) {
+	if ctx == nil || timeout <= 0 {
+		return nil, nil, errors.New("invalid service mutation recovery context")
+	}
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return nil, nil, errors.New("service mutation recovery requires a durable execution tracker")
+	}
+	recoveryBase := context.WithoutCancel(ctx)
+	recoveryTracker := *tracker
+	recoveryTracker.allowCancellingRecovery = true
+	recoveryBase = context.WithValue(
+		recoveryBase,
+		serviceMutationExecutionTrackerKey{},
+		&recoveryTracker,
+	)
+	recoveryCtx, cancel := context.WithTimeout(recoveryBase, timeout)
+	return recoveryCtx, cancel, nil
 }
 
 func runServiceMutationCombinedOutput(ctx context.Context, name string, args ...string) ([]byte, error) {
@@ -128,7 +156,9 @@ func (t *serviceMutationExecutionTracker) register(pid int, started, command str
 	if err := m.healthErrorLocked(); err != nil {
 		return err
 	}
-	if m.active != t.runtime || t.runtime.job.Status != serviceMutationStatusRunning ||
+	statusAllowsWorker := t.runtime.job.Status == serviceMutationStatusRunning ||
+		(t.allowCancellingRecovery && t.runtime.job.Status == serviceMutationStatusCancelling)
+	if m.active != t.runtime || !statusAllowsWorker ||
 		t.runtime.steps != 1 || t.runtime.job.WorkerPID != 0 {
 		return errors.New("service mutation cannot register this privileged worker")
 	}

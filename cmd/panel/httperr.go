@@ -49,22 +49,26 @@ type apiErrorBody struct {
 // Stable refusal codes. Renaming one is an API break — don't.
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
-	errCodeInternal              = "INTERNAL"
-	errCodeAuthRequired          = "AUTH_REQUIRED"
-	errCodeAdminOnly             = "ADMIN_ONLY"
-	errCodeAccountSuspended      = "ACCOUNT_SUSPENDED"
-	errCodeDNSServerRequired     = "DNS_SERVER_REQUIRED"
-	errCodeDNSSettingsRequired   = "DNS_SETTINGS_REQUIRED"
-	errCodeDNSSetupRequired      = "DNS_SETUP_REQUIRED"
-	errCodeDNSClusterPeerIsLocal = "DNS_CLUSTER_PEER_IS_LOCAL"
-	errCodeDNSPublicationFailed  = "DNS_PUBLICATION_FAILED"
-	errCodeWebServerRequired     = "WEB_SERVER_REQUIRED"
-	errCodePHPRequired           = "PHP_REQUIRED"
-	errCodeNoSubscription        = "NO_SUBSCRIPTION"
-	errCodeQuotaDomains          = "QUOTA_DOMAINS_EXCEEDED"
-	errCodeQuotaDisk             = "QUOTA_DISK_EXCEEDED"
-	errCodeEntitlement           = "ENTITLEMENT_REQUIRED"
-	errCodeFirewallNoEngine      = "FIREWALL_ENGINE_MISSING"
+	errCodeInternal                      = "INTERNAL"
+	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
+	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"
+	errCodeAuthRequired                  = "AUTH_REQUIRED"
+	errCodeAdminOnly                     = "ADMIN_ONLY"
+	errCodeAdditionalUserScope           = "ADDITIONAL_USER_SCOPE"
+	errCodeAccountSuspended              = "ACCOUNT_SUSPENDED"
+	errCodeDomainDeletionPending         = "DOMAIN_DELETION_PENDING"
+	errCodeDNSServerRequired             = "DNS_SERVER_REQUIRED"
+	errCodeDNSSettingsRequired           = "DNS_SETTINGS_REQUIRED"
+	errCodeDNSSetupRequired              = "DNS_SETUP_REQUIRED"
+	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
+	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
+	errCodeWebServerRequired             = "WEB_SERVER_REQUIRED"
+	errCodePHPRequired                   = "PHP_REQUIRED"
+	errCodeNoSubscription                = "NO_SUBSCRIPTION"
+	errCodeQuotaDomains                  = "QUOTA_DOMAINS_EXCEEDED"
+	errCodeQuotaDisk                     = "QUOTA_DISK_EXCEEDED"
+	errCodeEntitlement                   = "ENTITLEMENT_REQUIRED"
+	errCodeFirewallNoEngine              = "FIREWALL_ENGINE_MISSING"
 	// POOL_IDENTITY_FIXED: the caller tried to set who an FPM pool runs as or
 	// which socket it answers on. Those are the panel's to decide — they are
 	// the boundary between tenants, not a setting — so the attempt is refused
@@ -105,12 +109,15 @@ const (
 	// değişikliğinin makineye ulaştığını ancak paket kaldırmanın başarısız
 	// olduğunu belirtir. Taze tarama zaten kullanılabilir.
 	errCodeServiceUninstallPartial = "SERVICE_UNINSTALL_PARTIAL"
-	// SERVICE_STATE_REFRESH_FAILED means the requested service mutation
-	// completed, but the mandatory follow-up probe failed. The caller must not
-	// mistake stale cache data for the result of the action.
-	// SERVICE_STATE_REFRESH_FAILED, istenen servis değişikliğinin tamamlandığı
-	// ancak zorunlu takip yoklamasının başarısız olduğu anlamına gelir. Çağıran,
-	// bayat önbellek verisini işlemin sonucu sanmamalıdır.
+	errCodeWebmailUninstallPartial = "WEBMAIL_UNINSTALL_PARTIAL"
+	// SERVICE_STATE_REFRESH_FAILED means the mandatory follow-up probe failed
+	// after a service action. The response flags and message say whether the
+	// mutation itself was positively confirmed; callers must never infer that
+	// from this code or mistake stale cache data for the result of the action.
+	// SERVICE_STATE_REFRESH_FAILED, bir servis işleminden sonraki zorunlu takip
+	// yoklamasının başarısız olduğunu belirtir. Değişikliğin pozitif olarak
+	// doğrulanıp doğrulanmadığını yanıt bayrakları ve mesaj söyler; çağıran bunu
+	// hata kodundan çıkarmamalı veya bayat önbelleği işlemin sonucu sanmamalıdır.
 	errCodeServiceStateRefreshFailed = "SERVICE_STATE_REFRESH_FAILED"
 	// SERVICE_STATE_UNVERIFIED means persisted scan bytes could not be decoded
 	// as a verified snapshot; fabricated not-installed rows must not be served.
@@ -146,6 +153,66 @@ const (
 	errCodeConfigInvalid = "CONFIG_INVALID"
 )
 
+type agentRPCPlatformErrorClassification struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+type singleErrorUnwrapper interface {
+	Unwrap() error
+}
+
+type multiErrorUnwrapper interface {
+	Unwrap() []error
+}
+
+// isPureWrappedError accepts only one linear wrapper chain ending at target.
+// Joined/aggregate errors may contain rollback, compensation or partial-state
+// failures, so they must retain the generic or caller-specific failure path.
+func isPureWrappedError(err, target error) bool {
+	if err == nil || target == nil {
+		return false
+	}
+	for err != nil {
+		if err == target {
+			return true
+		}
+		if _, joined := err.(multiErrorUnwrapper); joined {
+			return false
+		}
+		wrapped, ok := err.(singleErrorUnwrapper)
+		if !ok {
+			return false
+		}
+		err = wrapped.Unwrap()
+	}
+	return false
+}
+
+// classifyAgentRPCPlatformError exposes only the two local, policy-authored
+// platform failures when they are the sole cause. Transport, context, remote
+// RPC and aggregate/compensation errors deliberately retain INTERNAL or their
+// caller-specific partial-state contract.
+func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassification, bool) {
+	switch {
+	case isPureWrappedError(err, errAgentRPCPlatformCapabilityDenied):
+		return agentRPCPlatformErrorClassification{
+			Status:  http.StatusConflict,
+			Code:    errCodePlatformCapabilityUnavailable,
+			Message: "this operation is unavailable on the connected server platform",
+		}, true
+	case isPureWrappedError(err, errAgentRPCPlatformIdentityUnavailable):
+		return agentRPCPlatformErrorClassification{
+			Status:  http.StatusBadGateway,
+			Code:    errCodePlatformIdentityUnavailable,
+			Message: "the connected server platform identity could not be verified",
+		}, true
+	default:
+		return agentRPCPlatformErrorClassification{}, false
+	}
+}
+
 // writeCodedError is the single writer of the contract. action, when
 // non-empty, is an in-panel path that fixes the refusal (e.g. "/services").
 // writeCodedError, sözleşmenin tek yazıcısıdır. action boş değilse reti
@@ -162,22 +229,38 @@ func writeCodedErrorDetails(w http.ResponseWriter, status int, code, message, ac
 	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Action: action, Details: details})
 }
 
-// writeServiceStateRefreshFailed reports the deliberately asymmetric result:
-// the host mutation is complete, but the cache still represents the previous
-// verified scan. Clients must lock further mutations until a fresh scan wins.
-// writeServiceStateRefreshFailed, bilinçli olarak asimetrik sonucu bildirir:
-// makine değişikliği tamamlanmıştır ancak önbellek önceki doğrulanmış taramayı
-// temsil eder. İstemci, taze tarama başarılı olana dek yeni değişiklikleri
-// kilitlemelidir.
-func writeServiceStateRefreshFailed(w http.ResponseWriter) {
+// writeServiceStateRefreshFailure centralizes the refresh-failure code while
+// emitting outcome flags only when the host mutation was positively confirmed.
+func writeServiceStateRefreshFailure(w http.ResponseWriter, message string, mutationApplied bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadGateway)
 	_ = json.NewEncoder(w).Encode(apiErrorBody{
-		Error:           "service action completed, but the refreshed service state could not be verified",
+		Error:           message,
 		Code:            errCodeServiceStateRefreshFailed,
-		PartialSuccess:  true,
-		MutationApplied: true,
+		PartialSuccess:  mutationApplied,
+		MutationApplied: mutationApplied,
 	})
+}
+
+// writeServiceStateRefreshFailed reports the deliberately asymmetric result
+// used by ordinary service operations: the host mutation is complete, but the
+// cache still represents the previous verified scan.
+func writeServiceStateRefreshFailed(w http.ResponseWriter) {
+	writeServiceStateRefreshFailure(
+		w,
+		"service action completed, but the refreshed service state could not be verified",
+		true,
+	)
+}
+
+// writeRoundcubeStateRefreshFailed does not turn an idempotent already-absent
+// result or a lost RPC response into proof that this request changed the host.
+func writeRoundcubeStateRefreshFailed(w http.ResponseWriter, mutationApplied bool) {
+	writeServiceStateRefreshFailure(
+		w,
+		"the Roundcube removal outcome and current service state could not be verified",
+		mutationApplied,
+	)
 }
 
 // writeServiceFirewallSyncFailed reports a verified partial success: the
@@ -228,9 +311,36 @@ func writeServiceUninstallPartial(w http.ResponseWriter) {
 	})
 }
 
-// writeServerError logs the internal error and returns a generic 500.
-// writeServerError iç hatayı log'lar ve genel bir 500 döndürür.
+// writeWebmailUninstallPartial reports a fresh scan where Roundcube is no
+// longer detected, while serving cleanup or durable lease finalization still
+// needs operator attention. An already-absent tree is not an applied mutation.
+func writeWebmailUninstallPartial(w http.ResponseWriter, mutationApplied bool) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:           "Roundcube removal is no longer detected, but webmail cleanup or durable finalization could not be fully verified",
+		Code:            errCodeWebmailUninstallPartial,
+		Action:          "/services",
+		PartialSuccess:  true,
+		MutationApplied: mutationApplied,
+	})
+}
+
+// writeServerError logs the internal cause. Local platform-policy sentinels
+// receive stable operator-facing codes; every other error remains a generic
+// INTERNAL response.
 func writeServerError(w http.ResponseWriter, err error) {
+	if classification, ok := classifyAgentRPCPlatformError(err); ok {
+		log.Printf("[%d] %v", classification.Status, err)
+		writeCodedError(
+			w,
+			classification.Status,
+			classification.Code,
+			classification.Message,
+			"",
+		)
+		return
+	}
 	if err != nil {
 		log.Printf("[500] %v", err)
 	}
@@ -247,17 +357,15 @@ func writeClientError(w http.ResponseWriter, status int, message string) {
 	writeCodedError(w, status, "", message, "")
 }
 
-// writeAgentError handles a failed agent RPC. The agent's error string may
-// carry command output and paths, so it is logged, never returned; the
-// transport error (if any) is logged too, and the client gets a generic
-// 500.
-// writeAgentError, başarısız bir agent RPC'sini ele alır. Agent'ın hata
-// metni komut çıktısı ve yollar taşıyabilir; bu yüzden log'lanır, asla
-// döndürülmez; taşıma hatası (varsa) da log'lanır ve istemci genel bir
-// 500 alır.
+// writeAgentError logs untrusted agent detail without returning it to the
+// client, then delegates stable local-policy classification to writeServerError.
 func writeAgentError(w http.ResponseWriter, err error, agentDetail string) {
 	if agentDetail != "" {
-		log.Printf("[500][agent] %s", agentDetail)
+		status := http.StatusInternalServerError
+		if classification, ok := classifyAgentRPCPlatformError(err); ok {
+			status = classification.Status
+		}
+		log.Printf("[%d][agent] %s", status, agentDetail)
 	}
 	writeServerError(w, err)
 }

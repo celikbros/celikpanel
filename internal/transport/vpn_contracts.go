@@ -26,12 +26,14 @@ type VPNPeerSpec struct {
 
 type SyncVPNPeersRequest struct {
 	ServiceMutationBinding
-	Peers []VPNPeerSpec `json:"peers"`
+	DesiredGeneration int64         `json:"desired_generation"`
+	Peers             []VPNPeerSpec `json:"peers"`
 }
 
 type SyncVPNPeersResponse struct {
-	Applied bool   `json:"applied"`
-	Error   string `json:"error,omitempty"`
+	Applied           bool   `json:"applied"`
+	AppliedGeneration int64  `json:"applied_generation"`
+	Error             string `json:"error,omitempty"`
 }
 
 type VPNPeerStat struct {

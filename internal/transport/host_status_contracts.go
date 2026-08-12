@@ -32,9 +32,19 @@ type SiteUsageResponse struct {
 }
 
 type AgentVersionResponse struct {
-	Version string `json:"version"`
-	Commit  string `json:"commit"`
+	Version      string   `json:"version"`
+	Commit       string   `json:"commit"`
+	Capabilities []string `json:"capabilities,omitempty"`
 }
+
+const (
+	AgentCapabilityFirewallApplyV2         = "firewall_apply_v2"
+	AgentCapabilityPanelCertificateIssueV2 = "panel_certificate_issue_v2"
+	AgentCapabilityDNSZoneSyncV2           = "dns_zone_sync_v2"
+	AgentCapabilityDNSSECSecureV2          = "dnssec_secure_v2"
+	AgentCapabilityDNSClusterConfigureV2   = "dns_cluster_configure_v2"
+	AgentCapabilityMailTLSSyncV2           = "mail_tls_sync_v2"
+)
 
 type CheckInstalledServicesResponse struct {
 	Nginx      bool `json:"nginx"`

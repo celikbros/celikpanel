@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/crypto/curve25519"
 )
@@ -272,9 +273,12 @@ func readSecureVPNConfig() ([]byte, error) {
 	if err := validateRepoFileMetadata(info, 0o600); err != nil {
 		return nil, errors.New("VPN configuration file failed security validation")
 	}
-	data, err := io.ReadAll(file)
+	data, err := io.ReadAll(io.LimitReader(file, vpnPeerSyncConfigMaxSize+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(data) > vpnPeerSyncConfigMaxSize {
+		return nil, errors.New("VPN configuration file exceeds the size limit")
 	}
 	after, err := file.Stat()
 	if err != nil {
@@ -483,21 +487,31 @@ func reconcileVPNNFTTable(
 }
 
 func (a *Agent) SetupVPN(request *SetupVPNRequest, response *SetupVPNResponse) error {
+	*response = SetupVPNResponse{}
 	if request == nil {
 		return errors.New("VPN setup request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(request.ServiceMutationBinding)
+	port := request.Port
+	if err := validateVPNSetupPort(port); err != nil {
+		*response = SetupVPNResponse{Error: err.Error()}
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		request.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup"),
+	)
 	if err != nil {
-		response.Error = err.Error()
+		*response = SetupVPNResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	if err := validateVPNSetupPort(request.Port); err != nil {
+	if err := preflightVPNHost(); err != nil {
 		response.Error = err.Error()
 		return nil
 	}
-	if err := preflightVPNHost(); err != nil {
-		response.Error = err.Error()
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		response.Error = "systemd client failed security validation"
 		return nil
 	}
 	if err := secureMkdirAll(wgConfDir, 0o700); err != nil {
@@ -581,7 +595,7 @@ PostDown = %s
 	}
 	unitName := "wg-quick@" + wgIface
 	enabledOutput, _ := serviceMutationCommand(
-		ctx, "systemctl", "is-enabled", unitName,
+		ctx, systemctl, "is-enabled", unitName,
 	).Output()
 	unitWasEnabled := strings.HasPrefix(
 		strings.TrimSpace(string(enabledOutput)), "enabled",
@@ -606,7 +620,7 @@ PostDown = %s
 
 		var rollbackErrors []error
 		if serviceAttempted && !interfaceRunning {
-			_, _ = serviceMutationCommand(recoveryCtx, "systemctl", "stop", unitName).CombinedOutput()
+			_, _ = serviceMutationCommand(recoveryCtx, systemctl, "stop", unitName).CombinedOutput()
 			if serviceMutationCommand(recoveryCtx, "wg", "show", wgIface).Run() == nil {
 				rollbackErrors = append(
 					rollbackErrors, errors.New("VPN interface remained active"),
@@ -614,9 +628,9 @@ PostDown = %s
 			}
 		}
 		if serviceAttempted && !unitWasEnabled {
-			_, _ = serviceMutationCommand(recoveryCtx, "systemctl", "disable", unitName).CombinedOutput()
+			_, _ = serviceMutationCommand(recoveryCtx, systemctl, "disable", unitName).CombinedOutput()
 			probe, _ := serviceMutationCommand(
-				recoveryCtx, "systemctl", "is-enabled", unitName,
+				recoveryCtx, systemctl, "is-enabled", unitName,
 			).Output()
 			if strings.HasPrefix(strings.TrimSpace(string(probe)), "enabled") {
 				rollbackErrors = append(
@@ -701,7 +715,7 @@ PostDown = %s
 		response.Created = true
 	}
 	serviceAttempted = true
-	if err := enableServiceForMutation(ctx, unitName, true); err != nil {
+	if err := enableServiceForMutationWithExecutable(ctx, systemctl, unitName, true); err != nil {
 		failSetup("wg-quick failed to start the VPN server")
 		return nil
 	}
@@ -719,20 +733,86 @@ type SyncVPNPeersRequest = transport.SyncVPNPeersRequest
 
 type SyncVPNPeersResponse = transport.SyncVPNPeersResponse
 
-// SyncVPNPeers validates and stages the full peer set, applies it live when
-// wg0 is up, and only then atomically commits wg0.conf.
-// SyncVPNPeers tam peer kümesini doğrulayıp hazırlar, wg0 açıksa canlı uygular
-// ve ancak bundan sonra wg0.conf dosyasını atomik olarak kalıcılaştırır.
+const syncVPNPeersLegacyUnsupportedError = "Agent.SyncVPNPeers is unsupported; use Agent.SyncVPNPeersV2"
+
+// SyncVPNPeers is retained only as a fail-closed compatibility endpoint. It
+// must not inspect the request, acquire a lease, or touch host state.
 func (a *Agent) SyncVPNPeers(
+	_ *SyncVPNPeersRequest,
+	response *SyncVPNPeersResponse,
+) error {
+	*response = SyncVPNPeersResponse{Error: syncVPNPeersLegacyUnsupportedError}
+	return nil
+}
+
+func probeWireGuardInterface(ctx context.Context) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	output, err := serviceMutationCommand(ctx, "wg", "show", "interfaces").Output()
+	if err != nil {
+		if contextErr := ctx.Err(); contextErr != nil {
+			return false, contextErr
+		}
+		return false, errors.New("WireGuard interface probe failed")
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
+	interfaceUp := false
+	seen := make(map[string]struct{})
+	for _, name := range strings.Fields(string(output)) {
+		// Linux IFNAMSIZ includes the terminating NUL, so a real name is at
+		// most 15 bytes and cannot contain a path separator or embedded NUL.
+		if len(name) > 15 || name == "." || name == ".." ||
+			strings.ContainsRune(name, '/') || strings.ContainsRune(name, '\x00') {
+			return false, errors.New("WireGuard interface probe returned invalid output")
+		}
+		if _, duplicate := seen[name]; duplicate {
+			return false, errors.New("WireGuard interface probe returned invalid output")
+		}
+		seen[name] = struct{}{}
+		if name == wgIface {
+			interfaceUp = true
+		}
+	}
+	return interfaceUp, nil
+}
+
+// SyncVPNPeersV2 validates and stages the full peer set, applies it live when
+// wg0 is proven up, and only then atomically commits wg0.conf.
+func (a *Agent) SyncVPNPeersV2(
 	request *SyncVPNPeersRequest,
 	response *SyncVPNPeersResponse,
 ) error {
+	*response = SyncVPNPeersResponse{}
 	if request == nil {
 		return errors.New("VPN peer sync request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(request.ServiceMutationBinding)
+	commitment, err := mutationpayload.CanonicalVPNPeerSync(
+		request.DesiredGeneration,
+		request.Peers,
+	)
 	if err != nil {
 		response.Error = err.Error()
+		return nil
+	}
+	authorizedRequest := *request
+	authorizedRequest.DesiredGeneration = commitment.DesiredGeneration
+	authorizedRequest.Peers = commitment.Peers
+	request = &authorizedRequest
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		request.ServiceMutationBinding,
+		newServiceMutationStepClaim(
+			serviceMutationStepSyncVPNPeers,
+			"wireguard",
+			commitment.Qualifier,
+			"sync",
+		),
+	)
+	if err != nil {
+		*response = SyncVPNPeersResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -742,37 +822,38 @@ func (a *Agent) SyncVPNPeers(
 		response.Error = "VPN server is not set up"
 		return nil
 	}
+	requestID, err := vpnPeerSyncCommitIdentity(ctx, commitment.Qualifier)
+	if err != nil {
+		response.Error = err.Error()
+		return nil
+	}
 	interfaceConfig := string(current)
 	if index := strings.Index(interfaceConfig, "[Peer]"); index >= 0 {
 		interfaceConfig = interfaceConfig[:index]
 	}
+	interfaceConfig, err = replaceVPNPeerSyncReceiptMarker(interfaceConfig, requestID, commitment.Qualifier)
+	if err != nil {
+		response.Error = err.Error()
+		return nil
+	}
 	interfaceConfig = strings.TrimRight(interfaceConfig, "\n") + "\n"
 	var desired strings.Builder
 	desired.WriteString(interfaceConfig)
-	publicKeys := make(map[string]struct{}, len(request.Peers))
-	addresses := make(map[string]struct{}, len(request.Peers))
 	for _, peer := range request.Peers {
-		if !validWGKey(peer.PublicKey) ||
-			!validWGKey(peer.PresharedKey) ||
-			!validPeerIP(peer.IP) {
-			response.Error = "invalid peer spec"
-			return nil
-		}
-		if _, duplicate := publicKeys[peer.PublicKey]; duplicate {
-			response.Error = "duplicate VPN peer public key"
-			return nil
-		}
-		if _, duplicate := addresses[peer.IP]; duplicate {
-			response.Error = "duplicate VPN peer address"
-			return nil
-		}
-		publicKeys[peer.PublicKey] = struct{}{}
-		addresses[peer.IP] = struct{}{}
 		fmt.Fprintf(
 			&desired,
 			"\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s/32\n",
 			peer.PublicKey, peer.PresharedKey, peer.IP,
 		)
+	}
+	interfaceUp, err := probeWireGuardInterface(ctx)
+	if err != nil {
+		response.Error = "could not determine VPN interface state"
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		response.Error = "service mutation lease ended before VPN peers were committed"
+		return nil
 	}
 
 	staged, err := stageAtomicFile(wgConfPath(), []byte(desired.String()), 0o600)
@@ -782,27 +863,86 @@ func (a *Agent) SyncVPNPeers(
 	}
 	defer os.Remove(staged)
 
-	interfaceUp := serviceMutationCommand(ctx, "wg", "show", wgIface).Run() == nil
+	if err := ctx.Err(); err != nil {
+		response.Error = "service mutation lease ended before VPN peers were committed"
+		return nil
+	}
 	if interfaceUp {
 		if err := applyWireGuardConfig(ctx, staged); err != nil {
+			recoveryCtx, cancel, recoveryContextErr := serviceMutationCancellingRecoveryContext(ctx, 30*time.Second)
+			if recoveryContextErr != nil {
+				poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(err, recoveryContextErr))
+				log.Printf("VPN peer recovery context failed after sync error %v: %v; poison: %v", err, recoveryContextErr, poisonErr)
+				response.Error = "VPN peer synchronization failed and automatic recovery is required"
+				return nil
+			}
+			rollbackErr := applyWireGuardBytes(recoveryCtx, current)
+			cancel()
+			if rollbackErr != nil {
+				poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(err, rollbackErr))
+				log.Printf("VPN peer live rollback failed after sync error %v: %v; poison: %v", err, rollbackErr, poisonErr)
+				response.Error = "VPN peer synchronization failed and automatic recovery is required"
+				return nil
+			}
 			response.Error = err.Error()
 			return nil
 		}
 	}
-	if err := commitAtomicFile(staged, wgConfPath()); err != nil {
+	if err := ctx.Err(); err != nil {
+		if interfaceUp {
+			recoveryCtx, cancel, recoveryContextErr := serviceMutationCancellingRecoveryContext(ctx, 30*time.Second)
+			if recoveryContextErr != nil {
+				poisonErr := poisonVPNPeerSyncRollback(ctx, recoveryContextErr)
+				log.Printf("VPN peer recovery context failed after lease cancellation: %v; poison: %v", recoveryContextErr, poisonErr)
+				response.Error = "VPN peer synchronization was canceled and automatic recovery is required"
+				return nil
+			}
+			rollbackErr := applyWireGuardBytes(recoveryCtx, current)
+			cancel()
+			if rollbackErr != nil {
+				poisonErr := poisonVPNPeerSyncRollback(ctx, rollbackErr)
+				log.Printf("VPN peer live rollback failed after lease cancellation: %v; poison: %v", rollbackErr, poisonErr)
+				response.Error = "VPN peer synchronization was canceled and automatic recovery is required"
+				return nil
+			}
+		}
+		response.Error = "service mutation lease ended before VPN peers were committed"
+		return nil
+	}
+	hostPublished, commitErr := commitStandaloneVPNPeerSyncStep(ctx, func() error {
+		return commitAtomicFile(staged, wgConfPath())
+	})
+	if commitErr != nil {
+		if hostPublished {
+			// Publication won the commit race. The manager either persisted
+			// terminal success or retained the host lock for startup recovery.
+			log.Printf("VPN peer host publication completed with receipt error: %v", commitErr)
+			response.Applied = true
+			response.AppliedGeneration = request.DesiredGeneration
+			return nil
+		}
 		// The rename may have happened before parent-directory fsync failed.
 		// Always attempt both live and durable rollback; one failure must not
 		// prevent the other recovery path from running.
 		// Yeniden adlandırma üst dizin fsync hatasından önce gerçekleşmiş olabilir.
 		// Canlı ve kalıcı geri almayı daima dene; birinin hatası diğer kurtarma
 		// yolunun çalışmasını engellememelidir.
+		recoveryCtx, cancel, recoveryContextErr := serviceMutationCancellingRecoveryContext(ctx, 30*time.Second)
+		if recoveryContextErr != nil {
+			poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(commitErr, recoveryContextErr))
+			log.Printf("VPN peer recovery context failed after commit error %v: %v; poison: %v", commitErr, recoveryContextErr, poisonErr)
+			response.Error = "persist VPN config failed and automatic recovery is required"
+			return nil
+		}
 		rollbackErr := runVPNCommitRollback(
 			interfaceUp,
-			func() error { return applyWireGuardBytes(ctx, current) },
+			func() error { return applyWireGuardBytes(recoveryCtx, current) },
 			func() error { return writeSecureRootFile(wgConfPath(), current, 0o600) },
 		)
+		cancel()
 		if rollbackErr != nil {
-			log.Printf("VPN peer commit rollback failed after %v: %v", err, rollbackErr)
+			poisonErr := poisonVPNPeerSyncRollback(ctx, errors.Join(commitErr, rollbackErr))
+			log.Printf("VPN peer commit rollback failed after %v: %v; poison: %v", commitErr, rollbackErr, poisonErr)
 			response.Error = "persist VPN config failed and automatic recovery is required"
 			return nil
 		}
@@ -810,6 +950,7 @@ func (a *Agent) SyncVPNPeers(
 		return nil
 	}
 	response.Applied = true
+	response.AppliedGeneration = request.DesiredGeneration
 	return nil
 }
 
@@ -967,19 +1108,6 @@ func detectPublicIP() string {
 		}
 	}
 	return ""
-}
-
-func validWGKey(value string) bool {
-	raw, err := base64.StdEncoding.DecodeString(value)
-	return err == nil && len(raw) == 32
-}
-
-func validPeerIP(value string) bool {
-	if !strings.HasPrefix(value, "10.8.0.") {
-		return false
-	}
-	host, err := strconv.Atoi(strings.TrimPrefix(value, "10.8.0."))
-	return err == nil && host >= 2 && host <= 254
 }
 
 func firstLine(value string) string {

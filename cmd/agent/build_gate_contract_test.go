@@ -50,6 +50,36 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
+			name: "DeleteMailDomain",
+			run: func(expected string) string {
+				var response transport.DeleteMailDomainResponse
+				err := agent.DeleteMailDomain(&transport.DeleteMailDomainRequest{
+					ExpectedBuildCommit: expected,
+					DomainID:            41,
+					Domain:              "example.com",
+				}, &response)
+				if err == nil {
+					return ""
+				}
+				return err.Error()
+			},
+		},
+		{
+			name: "UpdateMailPassword",
+			run: func(expected string) string {
+				var response transport.MailMutationResponse
+				err := agent.UpdateMailPassword(&transport.UpdateMailPasswordRequest{
+					ExpectedBuildCommit: expected,
+					Email:               "user@example.com",
+					NewPassword:         "not-a-real-password",
+				}, &response)
+				if err == nil {
+					return ""
+				}
+				return err.Error()
+			},
+		},
+		{
 			name: "DeleteSite",
 			run: func(expected string) string {
 				var response DeleteSiteResponse
@@ -124,10 +154,15 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
-			name: "IssuePanelCertificate",
+			name: "IssuePanelCertificateV2",
 			run: func(expected string) string {
-				var response IssuePanelCertResponse
-				_ = agent.IssuePanelCertificate(&IssuePanelCertRequest{ExpectedBuildCommit: expected}, &response)
+				var response IssuePanelCertV2Response
+				_ = agent.IssuePanelCertificateV2(&IssuePanelCertV2Request{
+					Domain:              "panel.example.test",
+					Email:               "admin@example.test",
+					TLSDir:              managedPanelTLSDir,
+					ExpectedBuildCommit: expected,
+				}, &response)
 				return response.Error
 			},
 		},
@@ -165,10 +200,13 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
-			name: "SecureMailTLS",
+			name: "SyncMailTLSV2",
 			run: func(expected string) string {
 				var response SecureMailTLSResponse
-				_ = agent.SecureMailTLS(&SecureMailTLSRequest{ExpectedBuildCommit: expected}, &response)
+				_ = agent.SyncMailTLSV2(&SyncMailTLSV2Request{
+					ExpectedBuildCommit: expected,
+					Myhostname:          "mail.example.test",
+				}, &response)
 				return response.Error
 			},
 		},
@@ -182,6 +220,13 @@ func agentRPCMethodsWithBuildCommitField(t *testing.T) []string {
 	methods := make([]string, 0)
 	for index := 0; index < agentType.NumMethod(); index++ {
 		method := agentType.Method(index)
+		// V1 is a stable zero-touch mixed-version stub. It deliberately keeps
+		// the old wire request shape but never reaches the build gate or host.
+		if method.Name == "IssuePanelCertificate" ||
+			method.Name == "ReconcileMailTLSMutation" ||
+			method.Name == "SecureMailTLS" {
+			continue
+		}
 		if method.Type.NumIn() != 3 {
 			continue
 		}

@@ -34,6 +34,18 @@ func applyMailFileMutation(
 	postmapPaths []string,
 	afterWrite func() (func() error, error),
 ) error {
+	// The Dovecot passwd-file contains password hashes. Validate its exact
+	// ownership and mode again immediately before the transaction snapshots
+	// and writes it. ConfigureMailStack deliberately bypasses this mutation
+	// helper because it is the one explicit create/repair path.
+	for _, write := range writes {
+		if write.path == dovecotUsersPath {
+			if err := validateDovecotUsersFileMetadata(write.path, true); err != nil {
+				return err
+			}
+		}
+	}
+
 	paths := make(map[string]struct{}, len(writes)+2*len(postmapPaths))
 	for _, write := range writes {
 		paths[write.path] = struct{}{}

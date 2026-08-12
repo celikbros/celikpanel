@@ -24,25 +24,58 @@ import (
 // the mail host is mail.<domain>, the standard submission/IMAPS/POP3S ports.
 // handleMailClientSetup, kullanıcının bu domain için bir posta istemcisi
 // ayarlamak üzere gereksindiği IMAP/POP3/SMTP bağlantı ayarlarını döndürür.
-func (p *Panel) handleMailClientSetup(w http.ResponseWriter, domain string) {
+type mailClientProtocol struct {
+	Host         string `json:"host"`
+	Port         int    `json:"port"`
+	Security     string `json:"security"`
+	AuthRequired bool   `json:"auth_required,omitempty"`
+}
+
+type mailClientSetupResponse struct {
+	MailHost            string             `json:"mail_host"`
+	IMAP                mailClientProtocol `json:"imap"`
+	POP3                mailClientProtocol `json:"pop3"`
+	SMTP                mailClientProtocol `json:"smtp"`
+	UsernameIsFullEmail bool               `json:"username_is_full_email"`
+	WebmailAvailable    bool               `json:"webmail_available"`
+	WebmailURL          string             `json:"webmail_url"`
+}
+
+func (p *Panel) webmailAvailable(ctx context.Context) bool {
+	probe := p.webmailReadinessProbe
+	if probe == nil {
+		probe = probeWebmailReadiness
+	}
+	return probe(ctx)
+}
+
+func (p *Panel) handleMailClientSetup(w http.ResponseWriter, r *http.Request, domain string) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	host := "mail." + domain
-	json.NewEncoder(w).Encode(map[string]any{
-		"mail_host": host,
-		"imap": map[string]any{
-			"host": host, "port": 993, "security": "SSL/TLS",
+	available := p.webmailAvailable(r.Context())
+	webmailURL := ""
+	if available {
+		webmailURL = webmailPublicPath
+	}
+	json.NewEncoder(w).Encode(mailClientSetupResponse{
+		MailHost: host,
+		IMAP: mailClientProtocol{
+			Host: host, Port: 993, Security: "SSL/TLS",
 		},
-		"pop3": map[string]any{
-			"host": host, "port": 995, "security": "SSL/TLS",
+		POP3: mailClientProtocol{
+			Host: host, Port: 995, Security: "SSL/TLS",
 		},
-		"smtp": map[string]any{
-			"host": host, "port": 587, "security": "STARTTLS", "auth_required": true,
+		SMTP: mailClientProtocol{
+			Host: host, Port: 587, Security: "STARTTLS", AuthRequired: true,
 		},
 		// The username is always the full email address; that is the one
 		// detail people get wrong most.
 		// Kullanıcı adı her zaman tam e-posta adresidir; insanların en çok
 		// yanlış yaptığı ayrıntı budur.
-		"username_is_full_email": true,
+		UsernameIsFullEmail: true,
+		WebmailAvailable:    available,
+		WebmailURL:          webmailURL,
 	})
 }
 
@@ -87,7 +120,7 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 			return
 		}
 		p.mailMutationMu.Lock()
-		err = p.mutateForwardings(r.Context(), func(tx *sql.Tx) error {
+		err = p.mutateForwardings(r.Context(), domainID, func(tx *sql.Tx) error {
 			_, err := tx.ExecContext(r.Context(),
 				"INSERT INTO mail_catch_all (domain_id, destination) VALUES (?, ?) "+
 					"ON CONFLICT(domain_id) DO UPDATE SET destination = excluded.destination",
@@ -96,7 +129,7 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 		})
 		p.mailMutationMu.Unlock()
 		if err != nil {
-			writeServerError(w, err)
+			writeMailDomainMutationError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{
@@ -105,14 +138,14 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 
 	case http.MethodDelete:
 		p.mailMutationMu.Lock()
-		err := p.mutateForwardings(r.Context(), func(tx *sql.Tx) error {
+		err := p.mutateForwardings(r.Context(), domainID, func(tx *sql.Tx) error {
 			_, err := tx.ExecContext(r.Context(),
 				"DELETE FROM mail_catch_all WHERE domain_id = ?", domainID)
 			return err
 		})
 		p.mailMutationMu.Unlock()
 		if err != nil {
-			writeServerError(w, err)
+			writeMailDomainMutationError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"enabled": false})
@@ -168,7 +201,7 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 	var resp transport.ConfigureMailStackResponse
 	err := p.withStandaloneAgentMutation(r.Context(), "mail_configure", "mail-stack", "", func(callCtx context.Context, binding agentMutationBinding) error {
 		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailStack", &request, &resp); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ConfigureMailStack", &request, &resp); err != nil {
 			return err
 		}
 		if resp.Error != "" {
@@ -193,7 +226,7 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 	var sub transport.ConfigureMailSubmissionResponse
 	err = p.withStandaloneAgentMutation(r.Context(), "mail_submission_configure", "postfix", "", func(callCtx context.Context, binding agentMutationBinding) error {
 		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureMailSubmission", &request, &sub); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ConfigureMailSubmission", &request, &sub); err != nil {
 			return err
 		}
 		if sub.Error != "" {
@@ -218,7 +251,7 @@ func (p *Panel) handleMailConfigure(w http.ResponseWriter, r *http.Request) {
 	var sign transport.ConfigureDKIMSigningResponse
 	err = p.withStandaloneAgentMutation(r.Context(), "dkim_signing_configure", "opendkim", "", func(callCtx context.Context, binding agentMutationBinding) error {
 		request := transport.ServiceMutationRequest{ServiceMutationBinding: binding}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ConfigureDKIMSigning", &request, &sign); err != nil {
 			return err
 		}
 		if sign.Error != "" {

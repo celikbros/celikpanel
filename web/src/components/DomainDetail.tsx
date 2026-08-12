@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, type ReactNode } from 'react';
+import { Fragment, useCallback, useState, useEffect, type ReactNode } from 'react';
 import { useSearchParams } from '../router';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
@@ -21,17 +21,27 @@ import { DomainAppsPanel } from './DomainAppsPanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { StatusDot } from './ui';
+import { useAuth } from '../auth/AuthContext';
+import {
+    hasAnyDomainAccess,
+    hasDomainAccess,
+    normalizeDomainAccess,
+    type DomainAccess,
+    type DomainAccessMode,
+    type DomainCapability,
+} from '../auth/domainAccess';
 
 interface Domain {
     id: number;
     domain_name: string;
-    php_version: string;
+    php_version?: string;
     project_type?: string;
-    ssl_enabled: boolean;
+    ssl_enabled?: boolean;
     status: string;
     created_at: string;
     disk_usage?: number;
     bandwidth?: number;
+    access?: DomainAccess;
 }
 
 // What the server can actually do — tabs for services that are not installed
@@ -66,6 +76,8 @@ interface DomainDetailProps {
 // Yedekler/Cron/Loglar); böylece üst çubuk kısa kalır.
 export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const { t } = useI18n();
+    const { role } = useAuth();
+    const isTeamMember = role === 'additional_user';
     const [searchParams] = useSearchParams();
     const requestedTab = searchParams.get('tab');
     const [domain, setDomain] = useState<Domain | null>(null);
@@ -87,16 +99,45 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     }, [domainId, requestedTab]);
 
     useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setDomain(null);
         fetch('/api/v1/domains')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((list: Domain[]) => {
-                const found = list.find((d) => d.id === domainId);
-                if (found) setDomain(found);
-                else onBack();
+            .then(async (response) => {
+                if (!response.ok) throw new Error('domains request failed');
+                const payload: unknown = await response.json();
+                if (!Array.isArray(payload)) throw new Error('invalid domains response');
+                const found = payload.find((item) => (
+                    item !== null
+                    && typeof item === 'object'
+                    && !Array.isArray(item)
+                    && Number((item as { id?: unknown }).id) === domainId
+                ));
+                if (!found || typeof found !== 'object' || Array.isArray(found)) {
+                    throw new Error('domain not found');
+                }
+                if (!isTeamMember) return found as Domain;
+
+                const row = found as Domain & { access?: unknown };
+                const access = normalizeDomainAccess(row.access);
+                if (!access || !hasAnyDomainAccess(access)) {
+                    throw new Error('invalid domain access');
+                }
+                return { ...row, access };
             })
-            .catch(onBack)
-            .finally(() => setLoading(false));
-    }, [domainId]);
+            .then((found) => {
+                if (!cancelled) setDomain(found);
+            })
+            .catch(() => {
+                if (!cancelled) onBack();
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [domainId, isTeamMember]);
 
     // Refresh the real usage numbers in the background after render: one
     // domain, one measurement. The page shows cached values instantly and
@@ -105,29 +146,35 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // domain, bir ölçüm. Sayfa önbellekli değerleri anında gösterir, tazeler
     // gelince güncellenir — asla bir yoklamayı beklemez.
     const domainLoaded = domain !== null;
+    const canViewStatistics = !isTeamMember
+        || Boolean(domain?.access && hasDomainAccess(domain.access, 'statistics'));
     useEffect(() => {
-        if (!domainLoaded) return;
+        if (!domainLoaded || !canViewStatistics) return;
         fetch(`/api/v1/domains/${domainId}/usage`)
             .then((r) => (r.ok ? r.json() : null))
             .then((u) => {
                 if (u) setDomain((d) => (d ? { ...d, disk_usage: u.disk_usage, bandwidth: u.bandwidth } : d));
             })
             .catch(() => {});
-    }, [domainId, domainLoaded]);
+    }, [canViewStatistics, domainId, domainLoaded]);
 
     const [caps, setCaps] = useState<Caps | null>(null);
     useEffect(() => {
+        if (isTeamMember) {
+            setCaps(null);
+            return;
+        }
         fetch('/api/v1/hosting/capabilities')
             .then((r) => (r.ok ? r.json() : null))
             .then(setCaps)
             .catch(() => setCaps(null));
-    }, []);
+    }, [isTeamMember]);
 
     // Capabilities arrive after the first paint. If they remove the selected
     // tab, synchronise the stored selection as well as the rendered fallback;
     // otherwise a later capability refresh could resurrect a stale tab.
     useEffect(() => {
-        if (!domain || !caps) return;
+        if (isTeamMember || !domain || !caps) return;
         const projectType = domain.project_type || 'php';
         const unavailable =
             (activeTab === 'mail' && !caps.mail_server) ||
@@ -135,7 +182,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             (activeTab === 'apps' && projectType !== 'php') ||
             ((activeTab === 'files' || activeTab === 'advanced') && projectType === 'dnsonly');
         if (unavailable) setActiveTab('overview');
-    }, [activeTab, caps, domain]);
+    }, [activeTab, caps, domain, isTeamMember]);
 
     if (loading) {
         return (
@@ -160,8 +207,46 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const isDnsOnly = projectType === 'dnsonly';
     const sslUsable = sslRuntime?.usable === true;
     const sslConfigured = sslRuntime?.activated === true;
+    const canView = (capability: DomainCapability) => (
+        !isTeamMember || Boolean(domain.access && hasDomainAccess(domain.access, capability))
+    );
+    const combinedAccessMode = (capabilities: DomainCapability[]): DomainAccessMode => {
+        if (!isTeamMember) return 'manage';
+        const modes = capabilities.map((capability) => domain.access?.[capability] ?? 'none');
+        if (modes.some((mode) => mode === 'none')) return 'none';
+        if (modes.some((mode) => mode === 'view')) return 'view';
+        return 'manage';
+    };
+    const hostingSubs: SubDef[] = [
+        ...(!isTeamMember && canView('files') ? [
+            { id: 'general', labelKey: 'domain.sub.general', capabilities: ['files'], render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
+            { id: 'type', labelKey: 'domain.sub.hostingType', capabilities: ['files'], render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
+        ] : []),
+        ...(projectType === 'php' && canView('php') ? [
+            { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
+        ] : []),
+        ...(canView('ssl') ? [{
+            id: 'ssl',
+            labelKey: 'domain.sub.ssl',
+            capabilities: ['ssl'],
+            render: (readOnly) => (
+                <DomainSSLSettings
+                    domainId={domain.id}
+                    domainName={domain.domain_name}
+                    mailAvailable={isTeamMember ? canView('mail') : (caps?.mail_server ?? null)}
+                    onCertificateChange={handleCertificateChange}
+                    readOnly={readOnly}
+                />
+            ),
+        } satisfies SubDef] : []),
+    ];
+    const advancedSubs: SubDef[] = [
+        ...(canView('backups') ? [{ id: 'backups', labelKey: 'domain.sub.backups', capabilities: ['backups'], render: (readOnly) => <DomainBackupManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies SubDef] : []),
+        ...(canView('cron') ? [{ id: 'cron', labelKey: 'domain.sub.cron', capabilities: ['cron'], render: (readOnly) => <DomainCronManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies SubDef] : []),
+        ...(canView('statistics') ? [{ id: 'logs', labelKey: 'domain.sub.logs', capabilities: ['statistics'], render: (readOnly) => <DomainLogsViewer domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies SubDef] : []),
+    ];
     const tabs: TabDef[] = [
-        {
+        ...(!isTeamMember ? [{
             // The connection card leads the Overview: it is the precondition for
             // the site, the certificate and the mail records, and it was the one
             // thing the panel never said out loud.
@@ -169,39 +254,19 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             // kayıtlarının ön koşuludur ve panelin hiç yüksek sesle söylemediği
             // tek şeydi.
             id: 'overview', labelKey: 'domain.tab.overview', icon: LayoutGrid,
-        },
-        ...(!isDnsOnly ? [{
-            id: 'hosting', labelKey: 'domain.tab.hosting', icon: Server,
-            subs: [
-                { id: 'general', labelKey: 'domain.sub.general', render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> },
-                { id: 'type', labelKey: 'domain.sub.hostingType', render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> },
-                ...(projectType === 'php' ? [{ id: 'php', labelKey: 'domain.sub.php', render: () => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} /> } satisfies SubDef] : []),
-                {
-                    id: 'ssl',
-                    labelKey: 'domain.sub.ssl',
-                    render: () => (
-                        <DomainSSLSettings
-                            domainId={domain.id}
-                            domainName={domain.domain_name}
-                            mailAvailable={caps?.mail_server ?? null}
-                            onCertificateChange={handleCertificateChange}
-                        />
-                    ),
-                },
-            ],
         } satisfies TabDef] : []),
-        { id: 'dns', labelKey: 'domain.tab.dns', icon: Network, render: () => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} /> },
-        ...(!caps || caps.mail_server ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, render: () => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
-        ...(!caps || (caps.database_servers?.length ?? 0) > 0 ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, render: () => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
-        ...(projectType === 'php' ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
-        ...(!isDnsOnly ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, render: () => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
-        ...(!isDnsOnly ? [{
+        ...(!isDnsOnly && hostingSubs.length > 0 ? [{
+            id: 'hosting', labelKey: 'domain.tab.hosting', icon: Server,
+            subs: hostingSubs,
+        } satisfies TabDef] : []),
+        ...(canView('dns') ? [{ id: 'dns', labelKey: 'domain.tab.dns', icon: Network, capabilities: ['dns'], render: (readOnly) => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
+        ...(canView('mail') && (isTeamMember || !caps || caps.mail_server) ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, capabilities: ['mail'], render: (readOnly) => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
+        ...(canView('databases') && (isTeamMember || !caps || (caps.database_servers?.length ?? 0) > 0) ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, capabilities: ['databases'], render: (readOnly) => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
+        ...(!isTeamMember && projectType === 'php' && canView('files') && canView('php') ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, capabilities: ['files', 'php'], render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
+        ...(!isDnsOnly && canView('files') ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, capabilities: ['files'], render: (readOnly) => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
+        ...(!isDnsOnly && advancedSubs.length > 0 ? [{
             id: 'advanced', labelKey: 'domain.tab.advanced', icon: Wrench,
-            subs: [
-                { id: 'backups', labelKey: 'domain.sub.backups', render: () => <DomainBackupManager domainId={domain.id} domainName={domain.domain_name} /> },
-                { id: 'cron', labelKey: 'domain.sub.cron', render: () => <DomainCronManager domainId={domain.id} domainName={domain.domain_name} /> },
-                { id: 'logs', labelKey: 'domain.sub.logs', render: () => <DomainLogsViewer domainId={domain.id} domainName={domain.domain_name} /> },
-            ],
+            subs: advancedSubs,
         } satisfies TabDef] : []),
     ];
 
@@ -210,7 +275,55 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // Yetenekler yüklenince (ya da tip değişince) bir sekme kaybolabilir —
     // bayat seçimde asla çökme, genel bakışa düş.
     const current = tabs.find((tb) => tb.id === activeTab) ?? tabs[0];
-    const subId = current.subs ? activeSub[current.id] ?? current.subs[0].id : undefined;
+    if (!current) return null;
+    const requestedSubId = current.subs ? activeSub[current.id] : undefined;
+    const currentSub = current.subs
+        ? current.subs.find((sub) => sub.id === requestedSubId) ?? current.subs[0]
+        : undefined;
+    const subId = currentSub?.id;
+    const currentMode = combinedAccessMode(currentSub?.capabilities ?? current.capabilities ?? []);
+    const readOnly = isTeamMember && currentMode === 'view';
+    const facts: Array<{ key: string; content: ReactNode }> = [];
+    if (!isTeamMember || canView('files') || canView('php')) {
+        facts.push({
+            key: 'type',
+            content: <Fact label={t('domain.info.type')}>{projectType}</Fact>,
+        });
+    }
+    if (projectType === 'php' && canView('php')) {
+        facts.push({
+            key: 'php',
+            content: <Fact label={t('domain.info.php')}>{domain.php_version || '—'}</Fact>,
+        });
+    }
+    if (!isDnsOnly && canView('ssl')) {
+        facts.push({
+            key: 'ssl',
+            content: (
+                <Fact label={t('domain.info.ssl')}>
+                    <span className={sslUsable ? 'text-success' : sslConfigured ? 'text-warning' : 'text-fg-subtle'}>
+                        {sslRuntime === null
+                            ? t('domain.overview.ssl.checking')
+                            : sslUsable
+                              ? t('domain.info.on')
+                              : sslConfigured
+                                ? t('domain.info.sslIssue')
+                                : t('domain.info.off')}
+                    </span>
+                </Fact>
+            ),
+        });
+    }
+    if (!isDnsOnly && canView('statistics')) {
+        facts.push({
+            key: 'disk',
+            content: <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>,
+        });
+        facts.push({
+            key: 'traffic',
+            content: <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>,
+        });
+    }
 
     return (
         <div className="p-6 md:p-8">
@@ -222,14 +335,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 </button>
                 <div className="flex flex-wrap items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        {sslUsable ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
+                        {canView('ssl') && sslUsable ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
                     </span>
                     <h1 className="text-2xl font-bold tracking-tight">{domain.domain_name}</h1>
                     <span className="inline-flex items-center gap-1.5 text-sm text-fg-muted">
                         <StatusDot ok={domain.status === 'active'} />
                         {domain.status === 'active' ? t('domains.status.active') : domain.status}
                     </span>
-                    {!isDnsOnly && (
+                    {!isDnsOnly && canView('files') && (
                         <a
                             href={`${sslUsable ? 'https' : 'http'}://${domain.domain_name}`}
                             target="_blank"
@@ -245,35 +358,16 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 {/* Fact strip — status already lives next to the title, so
                     only the facts that add something. / Bilgi şeridi — durum
                     zaten başlığın yanında; yalnız bir şey katan bilgiler. */}
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                    <Fact label={t('domain.info.type')}>{projectType}</Fact>
-                    {projectType === 'php' && (
-                        <>
-                            <FactDivider />
-                            <Fact label={t('domain.info.php')}>{domain.php_version || '—'}</Fact>
-                        </>
-                    )}
-                    {!isDnsOnly && (
-                        <>
-                            <FactDivider />
-                            <Fact label={t('domain.info.ssl')}>
-                                <span className={sslUsable ? 'text-success' : sslConfigured ? 'text-warning' : 'text-fg-subtle'}>
-                                    {sslRuntime === null
-                                        ? t('domain.overview.ssl.checking')
-                                        : sslUsable
-                                          ? t('domain.info.on')
-                                          : sslConfigured
-                                            ? t('domain.info.sslIssue')
-                                            : t('domain.info.off')}
-                                </span>
-                            </Fact>
-                            <FactDivider />
-                            <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>
-                            <FactDivider />
-                            <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>
-                        </>
-                    )}
-                </div>
+                {facts.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                        {facts.map((fact, index) => (
+                            <Fragment key={fact.key}>
+                                {index > 0 && <FactDivider />}
+                                {fact.content}
+                            </Fragment>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="min-w-0">
@@ -331,6 +425,12 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                         </div>
                     )}
 
+                    {readOnly && (
+                        <div className="mb-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm text-fg">
+                            View-only access / Salt görüntüleme yetkisi
+                        </div>
+                    )}
+
                     <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
                         {current.id === 'overview' ? (
                             <Overview
@@ -347,10 +447,10 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                                     setActiveTab(tabId);
                                 }}
                             />
-                        ) : current.subs ? (
-                            current.subs.find((s) => s.id === subId)!.render()
+                        ) : currentSub ? (
+                            currentSub.render(readOnly)
                         ) : (
-                            current.render!()
+                            current.render!(readOnly)
                         )}
                     </div>
             </div>
@@ -361,14 +461,16 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
 interface SubDef {
     id: string;
     labelKey: TranslationKey;
-    render: () => ReactNode;
+    render: (readOnly: boolean) => ReactNode;
+    capabilities?: DomainCapability[];
 }
 interface TabDef {
     id: string;
     labelKey: TranslationKey;
     icon: typeof Server;
-    render?: () => ReactNode;
+    render?: (readOnly: boolean) => ReactNode;
     subs?: SubDef[];
+    capabilities?: DomainCapability[];
 }
 
 // Overview is a compact launcher — tiles for each area, task-oriented and

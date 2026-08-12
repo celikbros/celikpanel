@@ -14,6 +14,7 @@ import { EmptyState, inputClass } from './ui';
 interface DomainLogsViewerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
 type LogType = 'access' | 'error' | 'php';
@@ -29,7 +30,7 @@ const logTypes: { value: LogType; labelKey: TranslationKey; tone: string }[] = [
 //
 // Bir domain için canlı günlük kuyruğu (erişim/hata/php), sunucu tarafında
 // filtrelenir. İndirme istemci tarafındadır; temizleme yıkıcıdır ve onay ister.
-export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps) {
+export function DomainLogsViewer({ domainId, domainName, readOnly = false }: DomainLogsViewerProps) {
     const { t } = useI18n();
     const [logType, setLogType] = useState<LogType>('access');
     const [logs, setLogs] = useState<string[]>([]);
@@ -94,6 +95,7 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
     };
 
     const clearLogs = async () => {
+        if (readOnly) return;
         const typeLabel = t(logTypes.find((l) => l.value === logType)!.labelKey);
         if (!confirm(t('logs.clearConfirm', { type: typeLabel, domain: domainName }))) return;
         try {
@@ -193,14 +195,16 @@ export function DomainLogsViewer({ domainId, domainName }: DomainLogsViewerProps
                     >
                         <Download className="h-4 w-4" />
                     </button>
-                    <button
-                        onClick={clearLogs}
-                        title={t('logs.clear')}
-                        aria-label={t('logs.clear')}
-                        className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!readOnly && (
+                        <button
+                            onClick={clearLogs}
+                            title={t('logs.clear')}
+                            aria-label={t('logs.clear')}
+                            className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             </div>
 

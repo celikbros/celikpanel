@@ -223,17 +223,392 @@ func TestNewServiceMutationManagerRejectsMissingLedgerWithoutCreatingIt(t *testi
 }
 
 func beginMutationTestJob(t *testing.T, manager *serviceMutationManager) *ServiceMutationJob {
+	return beginMutationTestJobWithIdentity(t, manager, "service_install", "nginx", "")
+}
+
+func beginMutationTestJobWithIdentity(
+	t *testing.T,
+	manager *serviceMutationManager,
+	kind, target, packageName string,
+) *ServiceMutationJob {
 	t.Helper()
 	job, err := manager.begin(&ServiceMutationBeginRequest{
-		RequestID: testMutationRequestID,
-		OwnerID:   testMutationOwnerID,
-		Kind:      "service_install",
-		Target:    "nginx",
+		RequestID:   testMutationRequestID,
+		OwnerID:     testMutationOwnerID,
+		Kind:        kind,
+		Target:      target,
+		PackageName: packageName,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return job
+}
+
+type payloadBoundDirectMutationReceiptTestCase struct {
+	name           string
+	kind           string
+	target         string
+	qualifier      string
+	publishedPhase string
+}
+
+func payloadBoundDirectMutationReceiptTestCases() []payloadBoundDirectMutationReceiptTestCase {
+	vpnQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("a", 64)
+	firewallQualifier := "firewall-apply/v1:sha256:" + strings.Repeat("b", 64)
+	mailTLSQualifier := "mail-tls-sync/v1:sha256:" + strings.Repeat("c", 64)
+	dnsClusterQualifier := "dns-cluster-config/v1:sha256:" + strings.Repeat("d", 64)
+	dnsZoneQualifier := "dns-zone-sync/v1:sha256:" + strings.Repeat("e", 64)
+	panelCertificateQualifier := "panel-certificate-issue/v1:sha256:" + strings.Repeat("f", 64)
+	return []payloadBoundDirectMutationReceiptTestCase{
+		{
+			name: "VPN peer sync", kind: "vpn_peer_sync", target: "wireguard",
+			qualifier: vpnQualifier,
+			publishedPhase: "commit/vpn-peer-sync/v1/published/" +
+				testMutationRequestID + "/" + vpnQualifier,
+		},
+		{
+			name: "firewall apply", kind: "firewall_apply", target: "nftables",
+			qualifier: firewallQualifier,
+			publishedPhase: "commit/firewall-apply/v1/published/" +
+				testMutationRequestID + "/" + firewallQualifier,
+		},
+		{
+			name: "firewall sync", kind: "firewall_sync", target: "nftables",
+			qualifier: firewallQualifier,
+			publishedPhase: "commit/firewall-apply/v1/published/" +
+				testMutationRequestID + "/" + firewallQualifier,
+		},
+		{
+			name: "mail TLS sync", kind: "mail_tls_sync", target: "mail-tls",
+			qualifier: mailTLSQualifier,
+			publishedPhase: "commit/mail-tls-sync/v1/published/" +
+				testMutationRequestID + "/" + mailTLSQualifier,
+		},
+		{
+			name: "DNS cluster configure", kind: "dns_cluster_configure", target: "pdns",
+			qualifier: dnsClusterQualifier,
+			publishedPhase: "commit/dns-cluster-config/v1/published/" +
+				testMutationRequestID + "/" + dnsClusterQualifier,
+		},
+		{
+			name: "DNS zone sync", kind: "dns_zone_sync", target: "example.com",
+			qualifier: dnsZoneQualifier,
+			publishedPhase: "commit/dns-zone-sync/v1/published/" +
+				testMutationRequestID + "/example.com/" + dnsZoneQualifier,
+		},
+		{
+			name: "panel certificate issue", kind: "panel_certificate_issue", target: "panel.example.com",
+			qualifier: panelCertificateQualifier,
+			publishedPhase: "commit/panel-certificate-issue/v1/published/" +
+				testMutationRequestID + "/panel.example.com/" + panelCertificateQualifier,
+		},
+	}
+}
+
+func TestPayloadBoundDirectMutationGenericFinishCannotForgeSuccess(t *testing.T) {
+	for _, test := range payloadBoundDirectMutationReceiptTestCases() {
+		t.Run(test.name, func(t *testing.T) {
+			manager, _ := newMutationTestManager(t)
+			started := beginMutationTestJobWithIdentity(
+				t, manager, test.kind, test.target, test.qualifier,
+			)
+			ledgerBefore, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rejected, err := manager.finish(&ServiceMutationFinishRequest{
+				RequestID: testMutationRequestID,
+				OwnerID:   testMutationOwnerID,
+				Success:   true,
+			})
+			if err == nil || !strings.Contains(err.Error(), "canonical published receipt") {
+				t.Fatalf("generic success finish job=%+v err=%v", rejected, err)
+			}
+			if rejected == nil || rejected.Status != serviceMutationStatusRunning ||
+				rejected.Phase != started.Phase {
+				t.Fatalf("generic success finish changed running job: before=%+v after=%+v", started, rejected)
+			}
+			ledgerAfter, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(ledgerBefore, ledgerAfter) {
+				t.Fatal("rejected generic success finish rewrote the durable ledger")
+			}
+			persisted := manager.status(testMutationRequestID)
+			if persisted == nil || persisted.Status != serviceMutationStatusRunning ||
+				persisted.Phase != started.Phase {
+				t.Fatalf("rejected generic success finish mutated durable state: %+v", persisted)
+			}
+
+			failed, err := manager.finish(&ServiceMutationFinishRequest{
+				RequestID:   testMutationRequestID,
+				OwnerID:     testMutationOwnerID,
+				Success:     false,
+				FailureCode: "test_cleanup",
+				Message:     "release test mutation lease",
+			})
+			if err != nil || failed == nil || failed.Status != serviceMutationStatusFailed {
+				t.Fatalf("cleanup finish job=%+v err=%v", failed, err)
+			}
+		})
+	}
+}
+
+func TestPersistedPayloadBoundSuccessRequiresExactCanonicalPublishedReceipt(t *testing.T) {
+	for _, test := range payloadBoundDirectMutationReceiptTestCases() {
+		t.Run(test.name, func(t *testing.T) {
+			persist := func(t *testing.T, phase string) (string, []byte) {
+				t.Helper()
+				started := time.Date(2026, time.August, 12, 12, 0, 0, 0, time.UTC)
+				ledger := serviceMutationLedger{
+					Version: serviceMutationLedgerVersion,
+					Jobs: map[string]*ServiceMutationJob{
+						testMutationRequestID: {
+							RequestID:   testMutationRequestID,
+							OwnerID:     testMutationOwnerID,
+							Kind:        test.kind,
+							Target:      test.target,
+							PackageName: test.qualifier,
+							Status:      serviceMutationStatusSucceeded,
+							Phase:       phase,
+							Attempt:     1,
+							StartedAt:   started,
+							UpdatedAt:   started.Add(time.Minute),
+							DeadlineAt:  started.Add(time.Hour),
+							FinishedAt:  started.Add(2 * time.Minute),
+						},
+					},
+				}
+				raw, err := json.Marshal(&ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				root := mutationTestRoot(t)
+				stateDir := filepath.Join(root, "state")
+				if err := os.Mkdir(stateDir, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(
+					filepath.Join(stateDir, serviceMutationLedgerFileName), raw, 0o600,
+				); err != nil {
+					t.Fatal(err)
+				}
+				return root, raw
+			}
+
+			t.Run("completed is rejected", func(t *testing.T) {
+				root, raw := persist(t, "completed")
+				if _, err := decodeServiceMutationLedger(raw); err == nil ||
+					!strings.Contains(err.Error(), "canonical published receipt") {
+					t.Fatalf("completed succeeded ledger decode err=%v", err)
+				}
+				stateDir := filepath.Join(root, "state")
+				if _, err := newServiceMutationManager(
+					stateDir, filepath.Join(root, "service-mutation.lock"),
+				); err == nil || !strings.Contains(err.Error(), "canonical published receipt") {
+					t.Fatalf("completed succeeded ledger startup err=%v", err)
+				}
+				persisted, err := os.ReadFile(
+					filepath.Join(stateDir, serviceMutationLedgerFileName),
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(persisted, raw) {
+					t.Fatal("rejected completed receipt ledger was rewritten")
+				}
+			})
+
+			t.Run("exact published is accepted", func(t *testing.T) {
+				root, raw := persist(t, test.publishedPhase)
+				decoded, err := decodeServiceMutationLedger(raw)
+				if err != nil {
+					t.Fatalf("exact published ledger decode: %v", err)
+				}
+				if got := decoded.Jobs[testMutationRequestID]; got == nil ||
+					got.Phase != test.publishedPhase {
+					t.Fatalf("decoded exact published job=%+v", got)
+				}
+				manager, err := newServiceMutationManager(
+					filepath.Join(root, "state"),
+					filepath.Join(root, "service-mutation.lock"),
+				)
+				if err != nil {
+					t.Fatalf("exact published ledger startup: %v", err)
+				}
+				if got := manager.status(testMutationRequestID); got == nil ||
+					got.Status != serviceMutationStatusSucceeded ||
+					got.Phase != test.publishedPhase {
+					t.Fatalf("loaded exact published job=%+v", got)
+				}
+			})
+		})
+	}
+}
+
+func TestVPNPeerSyncBeginRequiresCanonicalPayloadQualifier(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	tests := []struct {
+		name        string
+		target      string
+		packageName string
+	}{
+		{name: "old panel omitted qualifier", target: "wireguard"},
+		{name: "wrong target", target: "nginx", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)},
+		{name: "malformed qualifier", target: "wireguard", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 63)},
+		{name: "uppercase digest", target: "wireguard", packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("A", 64)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			job, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID:   testMutationRequestID,
+				OwnerID:     testMutationOwnerID,
+				Kind:        "vpn_peer_sync",
+				Target:      test.target,
+				PackageName: test.packageName,
+			})
+			if err == nil || job != nil {
+				t.Fatalf("unsafe begin job=%+v err=%v", job, err)
+			}
+			if manager.active != nil || manager.ledger.ActiveRequestID != "" || len(manager.ledger.Jobs) != 0 {
+				t.Fatal("invalid VPN payload qualifier occupied or mutated the durable lease")
+			}
+		})
+	}
+}
+
+func TestFirewallBeginRequiresCanonicalPayloadQualifier(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	valid := "firewall-apply/v1:sha256:" + strings.Repeat("0", 64)
+	tests := []struct {
+		name        string
+		kind        string
+		target      string
+		packageName string
+	}{
+		{name: "old panel omitted qualifier", kind: "firewall_apply", target: "nftables"},
+		{name: "old sync omitted qualifier", kind: "firewall_sync", target: "nftables"},
+		{name: "wrong target", kind: "firewall_apply", target: "iptables", packageName: valid},
+		{name: "malformed qualifier", kind: "firewall_apply", target: "nftables", packageName: valid[:len(valid)-1]},
+		{name: "uppercase digest", kind: "firewall_apply", target: "nftables", packageName: "firewall-apply/v1:sha256:" + strings.Repeat("A", 64)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			job, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID:   testMutationRequestID,
+				OwnerID:     testMutationOwnerID,
+				Kind:        test.kind,
+				Target:      test.target,
+				PackageName: test.packageName,
+			})
+			if err == nil || job != nil {
+				t.Fatalf("unsafe begin job=%+v err=%v", job, err)
+			}
+			if manager.active != nil || manager.ledger.ActiveRequestID != "" ||
+				len(manager.ledger.Jobs) != 0 {
+				t.Fatal("invalid firewall qualifier occupied the durable lease")
+			}
+		})
+	}
+}
+
+func TestMailTLSSyncBeginRequiresCanonicalPayloadQualifierBeforeLease(t *testing.T) {
+	valid := "mail-tls-sync/v1:sha256:" + strings.Repeat("0", 64)
+	for _, test := range []struct {
+		name        string
+		target      string
+		packageName string
+	}{
+		{name: "old panel omitted qualifier", target: "mail-tls"},
+		{name: "wrong target", target: "postfix", packageName: valid},
+		{name: "malformed qualifier", target: "mail-tls", packageName: valid[:len(valid)-1]},
+		{name: "uppercase digest", target: "mail-tls", packageName: "mail-tls-sync/v1:sha256:" + strings.Repeat("A", 64)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			manager, _ := newMutationTestManager(t)
+			ledgerBefore, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			job, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID: testMutationRequestID, OwnerID: testMutationOwnerID,
+				Kind: "mail_tls_sync", Target: test.target, PackageName: test.packageName,
+			})
+			if err == nil || job != nil {
+				t.Fatalf("unsafe begin job=%+v err=%v", job, err)
+			}
+			if manager.active != nil || manager.ledger.ActiveRequestID != "" ||
+				len(manager.ledger.Jobs) != 0 {
+				t.Fatal("invalid mail TLS qualifier occupied the durable lease")
+			}
+			ledgerAfter, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(ledgerBefore, ledgerAfter) {
+				t.Fatal("invalid mail TLS begin rewrote the durable ledger")
+			}
+			if _, exists, err := readMailTLSSyncJournal(mailTLSSyncJournalPath(manager)); err != nil || exists {
+				t.Fatalf("invalid mail TLS begin touched journal: exists=%v err=%v", exists, err)
+			}
+		})
+	}
+}
+
+func TestDNSZoneSyncBeginRequiresCanonicalPayloadQualifierBeforeLease(t *testing.T) {
+	valid := "dns-zone-sync/v1:sha256:" + strings.Repeat("0", 64)
+	for _, test := range []struct {
+		name        string
+		target      string
+		packageName string
+	}{
+		{name: "old panel omitted qualifier", target: "example.com"},
+		{name: "wrong target", target: "not-a-domain", packageName: valid},
+		{name: "noncanonical target", target: "EXAMPLE.com", packageName: valid},
+		{name: "malformed qualifier", target: "example.com", packageName: valid[:len(valid)-1]},
+		{name: "uppercase digest", target: "example.com", packageName: "dns-zone-sync/v1:sha256:" + strings.Repeat("A", 64)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			manager, _ := newMutationTestManager(t)
+			ledgerBefore, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			job, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID:   testMutationRequestID,
+				OwnerID:     testMutationOwnerID,
+				Kind:        "dns_zone_sync",
+				Target:      test.target,
+				PackageName: test.packageName,
+			})
+			if err == nil || job != nil {
+				t.Fatalf("unsafe begin job=%+v err=%v", job, err)
+			}
+			if manager.active != nil || manager.ledger.ActiveRequestID != "" ||
+				len(manager.ledger.Jobs) != 0 {
+				t.Fatal("invalid DNS qualifier occupied the durable lease")
+			}
+			ledgerAfter, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(ledgerBefore, ledgerAfter) {
+				t.Fatal("invalid DNS begin rewrote the durable ledger")
+			}
+		})
+	}
+}
+
+func nginxInstallTestStepClaim() serviceMutationStepClaim {
+	return newServiceMutationStepClaim(
+		serviceMutationStepEnsureNginxReady,
+		"nginx",
+		"",
+		"ready",
+	)
 }
 
 func installGlobalMutationTestManager(t *testing.T, manager *serviceMutationManager) {
@@ -338,8 +713,8 @@ func TestRequiredServiceMutationStepRejectsMissingAndWrongBinding(t *testing.T) 
 
 func TestApplyFirewallRequiresDurableMutationBinding(t *testing.T) {
 	var response FirewallStatusResponse
-	if err := (&Agent{}).ApplyFirewall(
-		&ApplyFirewallRequest{Enabled: false},
+	if err := (&Agent{}).ApplyFirewallV2(
+		&ApplyFirewallRequest{Enabled: true},
 		&response,
 	); err != nil {
 		t.Fatal(err)
@@ -391,7 +766,7 @@ func TestRequiredServiceMutationStepHoldsJobUntilRelease(t *testing.T) {
 	ctx, release, err := (&Agent{}).requiredServiceMutationStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -625,7 +1000,7 @@ func TestServiceMutationLeaseIsDurableAndHeldUntilTerminalState(t *testing.T) {
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1042,7 +1417,7 @@ func TestServiceMutationCancellationKillsTrackedProcessGroup(t *testing.T) {
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}

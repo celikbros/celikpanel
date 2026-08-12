@@ -96,6 +96,48 @@ func TestRequireMatchingAgentBuildAcceptsExactProductionCommit(t *testing.T) {
 	}
 }
 
+func TestKnownAgentCapabilitiesUseRequiredSetSemantics(t *testing.T) {
+	accepted := []string{
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+		transport.AgentCapabilityFirewallApplyV2,
+	}
+	if err := requireKnownAgentCapabilities(
+		accepted,
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	); err != nil {
+		t.Fatalf("reordered known capability extension rejected: %v", err)
+	}
+	tests := []struct {
+		name         string
+		capabilities []string
+		required     []string
+	}{
+		{
+			name: "duplicate",
+			capabilities: []string{
+				transport.AgentCapabilityDNSZoneSyncV2,
+				transport.AgentCapabilityDNSZoneSyncV2,
+			},
+		},
+		{name: "unknown", capabilities: []string{"unreviewed_capability"}},
+		{name: "noncanonical", capabilities: []string{" dns_zone_sync_v2"}},
+		{
+			name:         "required missing",
+			capabilities: []string{transport.AgentCapabilityFirewallApplyV2},
+			required:     []string{transport.AgentCapabilityDNSZoneSyncV2},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := requireKnownAgentCapabilities(test.capabilities, test.required...); err == nil {
+				t.Fatalf("invalid capability set accepted: %#v", test.capabilities)
+			}
+		})
+	}
+}
+
 func TestRequireMatchingAgentBuildFailsClosed(t *testing.T) {
 	tests := []struct {
 		name        string

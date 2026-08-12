@@ -12,6 +12,19 @@ import type { CurrentUser } from '../lib/api';
 // alacak.
 export type Role = 'admin' | 'reseller' | 'customer' | 'additional_user';
 
+const ROLES: readonly Role[] = ['admin', 'reseller', 'customer', 'additional_user'];
+
+export function normalizeRole(role: string): Role {
+    if (ROLES.some((candidate) => candidate === role)) {
+        return role as Role;
+    }
+
+    // Authentication succeeded, but the server returned a role this client
+    // cannot authorize. Failing here keeps an unknown role from inheriting a
+    // customer's navigation and route access by accident.
+    throw new Error('The authenticated user has an unsupported role.');
+}
+
 interface AuthContextValue {
     user: CurrentUser;
     role: Role;
@@ -29,9 +42,7 @@ export function AuthProvider({
     onLogout: () => void;
     children: ReactNode;
 }) {
-    const role = (['admin', 'reseller', 'customer', 'additional_user'].includes(user.role)
-        ? user.role
-        : 'customer') as Role;
+    const role = normalizeRole(user.effective_role);
 
     return (
         <AuthContext.Provider value={{ user, role, logout: onLogout }}>

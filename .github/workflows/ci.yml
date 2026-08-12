@@ -59,6 +59,8 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      # Keep the RHEL preview probe blocked-only, default-dry-run and injection-safe.
+      - run: bash deploy/e2e/rhel9/test-contract.sh
       - run: bash deploy/test-install-localization-contract.sh
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
@@ -86,8 +88,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: A through M
-            pattern: '^Test($|[A-M]|[^A-Z])'
+          - shard: A through G
+            pattern: '^Test($|[A-G]|[^A-Z])'
+          - shard: H through M
+            pattern: '^Test[H-M]'
           - shard: N through R
             pattern: '^Test[N-R]'
           - shard: S
@@ -102,7 +106,7 @@ jobs:
           cache: true
       - name: Verify exact Go toolchain
         run: test "$(go env GOVERSION)" = go1.26.5
-      # cmd/panel has hundreds of SQLite-backed tests. These four matrix
+      # cmd/panel has hundreds of SQLite-backed tests. These five matrix
       # entries run concurrently, are disjoint and cover every valid Test*
       # suffix, including a future exact `Test` name or non-uppercase suffix.
       - name: Race-test panel boundaries
@@ -131,6 +135,24 @@ jobs:
         run: |
           go test ./cmd/panel -run '^TestReadDiskWindowsReportsUsableValues$' -count=1
           go test ./cmd/agent -run '^TestRequireRootOwnerFailsClosedOnUnsupportedPlatform$' -count=1
+
+  linux-arm64-compile:
+    name: Platform portability - Linux arm64 compile only
+    runs-on: ubuntu-latest
+    env:
+      GOOS: linux
+      GOARCH: arm64
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.5'
+          cache: true
+      - name: Verify exact Go toolchain
+        run: test "$(go env GOVERSION)" = go1.26.5
+      - name: Cross-compile all production packages
+        run: go build ./...
 
   freebsd-compile:
     name: Platform portability — FreeBSD compile only
@@ -187,7 +209,9 @@ jobs:
       # registry. Keep CI deterministic and non-disclosing; a networked audit
       # is a separate, explicitly authorised release-review action.
       - run: npm ci --no-audit --no-fund
-      - run: npm run test:router
+      # Run every UI contract: routing, tenant authorization, mailbox secrets,
+      # webmail fail-closed behavior, API errors and provider boundaries.
+      - run: npm test
       # `build` is `tsc && vite build` — tsc is the typecheck gate, so a type
       # error (e.g. the capabilities bool/string class of bug) fails CI here.
       # `build` = `tsc && vite build` — tsc tip denetimi kapısıdır; bir tip
@@ -197,7 +221,7 @@ jobs:
   package:
     name: Release — reproducible archive and checksum
     runs-on: ubuntu-latest
-    needs: [go, panel-race, web, windows-portability, freebsd-compile, darwin-compile]
+    needs: [go, panel-race, web, windows-portability, linux-arm64-compile, freebsd-compile, darwin-compile]
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:

@@ -162,6 +162,40 @@ func installPanelCertificateReconcileTestSeams(t *testing.T) {
 	}
 }
 
+func TestRenewalDeployHookPreservesSameDomainInteractiveIssuanceIntent(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
+	}
+	intent, err := newInteractivePanelCertificateActivationState(
+		"panel.example.test",
+		"abababababababababababababababab",
+		"panel-certificate-issue/v1:sha256:"+strings.Repeat("c", 64),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.seed(t, intent)
+
+	queued, err := enqueueRenewedPanelCertificateActivation(
+		panelCertLineageName(intent.Domain),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if queued {
+		t.Fatal("renewal deploy hook replaced an active interactive issuance intent")
+	}
+	retained, found := store.snapshot()
+	if !found || retained != intent {
+		t.Fatalf("interactive intent changed: retained=%+v found=%v want=%+v", retained, found, intent)
+	}
+	if len(store.writes) != 0 {
+		t.Fatalf("renewal deploy hook wrote phases %v", store.writes)
+	}
+}
+
 func TestBeginPanelCertificateIssuanceReclaimsSameDomainPendingSource(t *testing.T) {
 	store := installPanelCertificateActivationMemoryStore(t)
 	existing, err := newPanelCertificateActivationState("panel.example.test")

@@ -61,6 +61,7 @@ The agent creates a trusted host profile, for example:
 
 ```text
 os_family=linux
+distro_family=debian
 distro_id=ubuntu
 distro_like=debian
 version=24.04
@@ -74,17 +75,19 @@ Recipes are selected from most to least specific:
 1. exact distro, version range, and architecture
 2. exact distro and version range
 3. exact distro
-4. `ID_LIKE` and version range
-5. `ID_LIKE`
-6. package manager and service manager
-7. explicit OS-family default
+4. distro family and version range
+5. distro family
+6. `ID_LIKE` and version range
+7. `ID_LIKE`
+8. package manager and service manager
+9. explicit OS-family default
 
 Two matches at the same specificity are an error. Untested new OS versions do
 not match unless the selector explicitly permits an open-ended version range.
 Every recipe must name an explicit audited `os_family`; a distro or package
-manager without that boundary is rejected. The current schema validator accepts
-`linux` and `windows` recipe data and rejects every other family until its path
-and adapter contract has been audited.
+manager without that boundary is rejected. The managed-server schema accepts
+only `linux` recipe data. Every non-Linux family is rejected because it has no
+supported mutation or activation contract.
 
 ## Minimum schema domains
 
@@ -171,9 +174,9 @@ chain.
   inode, and sync the cleanup; report when a destination may remain. An existing
   destination is never modified.
 - Building and opening fail closed on every non-Linux GOOS. Linux is the only
-  audited filesystem-activation target today. Catalogs may still contain and
-  validate Windows-selected recipe data on Linux; this restriction is on
-  filesystem activation, not on the data model.
+  managed-server and filesystem-activation target. `!linux` files exist only
+  for build portability and preserve a no-mutation, fail-closed contract; they
+  do not authorize non-Linux recipe data or promise product support.
 - Keep prior verified releases for forensic or explicit emergency recovery.
   Normal rollback may select only a release whose sequence is not below
   `highest_accepted_catalog_sequence`; lowering the floor requires a separate,
@@ -206,16 +209,27 @@ below.
 
 ## Platform adapters
 
-Additional distributions that share existing adapters can normally be added by
-catalog data alone. A completely new OS family still requires a one-time trusted
-adapter implementation for host probing, process execution, files, services,
-firewall, permissions, and readiness probes.
+CelikPanel's target architecture defines three first-class Linux distro-family
+adapters. Distribution names are compatibility fixtures, not separate
+installer engines:
 
-- Linux: package managers, systemd, nftables, Unix permissions
-- FreeBSD: pkg, rc.d/sysrc, pf or ipfw
-- Windows: native process API, SCM, Windows Firewall, ACLs
+- `debian`: Debian and Ubuntu; `apt`/`dpkg`, systemd, AppArmor, and nftables
+- `rhel`: RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora, and CloudLinux;
+  `dnf`/RPM, systemd, SELinux, and firewalld/nftables
+- `arch`: Arch Linux; `pacman`, systemd, and nftables
 
-After the adapter exists, component and release differences belong in recipes.
+The trusted host profile derives `distro_family` from `ID` and `ID_LIKE` in
+`/etc/os-release`. A name alone never authorizes mutation: the adapter first
+verifies the package manager, service manager, and required security
+capabilities and fails closed on a mismatch. Genuine distribution differences
+in packages, repositories, services, security policy, or paths use narrow
+recipe overrides. `ID_LIKE` may identify a compatibility candidate but never
+enables mutation until that distribution identity and the requested capability
+have explicit certification evidence.
+
+openSUSE/SLES, Alpine, and NixOS require distinct future family adapters if
+proven demand justifies them. Kali Linux is explicitly refused despite its
+Debian ancestry. FreeBSD and Windows are not managed-server targets.
 
 Schema validation is not execution authorization. Before runtime activation,
 the trusted adapter must bind each item id and typed step to compiled component
@@ -228,11 +242,11 @@ by the current package, so V2 remains a verified dry-run foundation only.
 
 1. Implement HostProfile, schema validation, signature verification, and dry-run plans.
 2. Add the agent-owned durable job ledger, heartbeat/deadline recovery, and cross-process lock.
-3. Move Memcached first for Debian/Ubuntu and Arch, including lifecycle and TCP readiness.
-4. Compare legacy and V2 plans in shadow mode without executing V2.
-5. Move simple package-backed services.
-6. Move web, DNS, mail, VPN, and database tools with typed configuration steps.
-7. Move runtimes, vendor repositories, version selection, and Roundcube.
-8. Add and test the FreeBSD adapter.
-9. Add and test the Windows adapter.
+3. Move Memcached first through the `debian` family adapter, then certify Debian and Ubuntu fixtures, including lifecycle and TCP readiness.
+4. Add the `rhel` family adapter and certify representative RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora, and CloudLinux fixtures.
+5. Add the `arch` family adapter and certify the current Arch Linux fixture.
+6. Compare legacy and V2 plans in shadow mode without executing V2.
+7. Move simple package-backed services across the three families.
+8. Move web, DNS, mail, VPN, and database tools with typed configuration steps.
+9. Move runtimes, vendor repositories, version selection, and Roundcube.
 10. Remove legacy OS branches only after verified parity.

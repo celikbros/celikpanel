@@ -49,12 +49,16 @@ type nginxReadyConfigWriter func(string, []byte, os.FileMode) error
 var nginxReadyMu sync.Mutex
 
 func (a *Agent) EnsureNginxReady(req *ServiceMutationRequest, resp *EnsureNginxReadyResponse) error {
+	*resp = EnsureNginxReadyResponse{}
 	if req == nil {
 		return fmt.Errorf("nginx readiness request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = EnsureNginxReadyResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

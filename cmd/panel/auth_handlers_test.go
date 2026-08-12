@@ -10,11 +10,38 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/auth"
+	"github.com/alicelik/celikpanel/internal/core"
 	paneldb "github.com/alicelik/celikpanel/internal/db"
 	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 const authHandlerTestUserID = 7601
+
+type authMeResponse struct {
+	Username      string          `json:"username"`
+	Role          string          `json:"role"`
+	EffectiveRole string          `json:"effective_role"`
+	AccountType   string          `json:"account_type"`
+	Email         string          `json:"email"`
+	Impersonating bool            `json:"impersonating"`
+	Features      map[string]bool `json:"features"`
+}
+
+type authMeUserRepositoryOverride struct {
+	repositories.UserRepository
+	users map[int]*core.User
+}
+
+func (r *authMeUserRepositoryOverride) GetByID(ctx context.Context, id int) (*core.User, error) {
+	if user, ok := r.users[id]; ok {
+		if user == nil {
+			return nil, nil
+		}
+		clone := *user
+		return &clone, nil
+	}
+	return r.UserRepository.GetByID(ctx, id)
+}
 
 func newAuthHandlerTestPanel(t *testing.T, secureCookies bool) (*Panel, string) {
 	t.Helper()
@@ -321,19 +348,185 @@ func TestHandleMeReturnsAuthenticatedProfileAndImpersonationState(t *testing.T) 
 			if recorder.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
 			}
-			var response struct {
-				Username      string `json:"username"`
-				Role          string `json:"role"`
-				Email         string `json:"email"`
-				Impersonating bool   `json:"impersonating"`
-			}
+			var response authMeResponse
 			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 				t.Fatalf("decode /me response: %v", err)
 			}
 			if response.Username != "session-admin" || response.Role != roleAdmin ||
+				response.EffectiveRole != roleAdmin ||
+				response.AccountType != string(core.AccountTypeAccount) ||
 				response.Email != "admin@example.test" ||
 				response.Impersonating != testCase.wantImpersonating {
 				t.Fatalf("/me response = %+v", response)
+			}
+			if teamMembers, ok := response.Features["team_members"]; !ok || teamMembers {
+				t.Fatalf("/me team_members feature = %v, present=%v; want false and present", teamMembers, ok)
+			}
+		})
+	}
+}
+
+func TestHandleMeReturnsEffectiveIdentityContract(t *testing.T) {
+	parentID := 7610
+	for _, testCase := range []struct {
+		name            string
+		user            core.User
+		caller          Caller
+		wantRole        string
+		wantAccountType core.AccountType
+		wantTeamMembers bool
+	}{
+		{
+			name: "customer account can manage team members",
+			user: core.User{
+				ID: 7611, Username: "customer", Email: "customer@example.test",
+				Role: roleCustomer, AccountType: core.AccountTypeAccount, Status: "active",
+			},
+			caller: Caller{
+				ID: 7611, Role: roleCustomer, AccountType: core.AccountTypeAccount, CustomerID: 7611,
+			},
+			wantRole:        roleCustomer,
+			wantAccountType: core.AccountTypeAccount,
+			wantTeamMembers: true,
+		},
+		{
+			name: "additional user receives restricted effective identity",
+			user: core.User{
+				ID: 7612, Username: "team-member", Email: "member@example.test",
+				Role: roleCustomer, AccountType: core.AccountTypeAdditionalUser,
+				ParentID: &parentID, Status: "active",
+			},
+			caller: Caller{
+				ID: 7612, Role: core.EffectiveRoleAdditionalUser,
+				AccountType: core.AccountTypeAdditionalUser, CustomerID: parentID,
+			},
+			wantRole:        core.EffectiveRoleAdditionalUser,
+			wantAccountType: core.AccountTypeAdditionalUser,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			panel, _ := newAuthHandlerTestPanel(t, true)
+			users := map[int]*core.User{testCase.user.ID: &testCase.user}
+			if testCase.user.AccountType == core.AccountTypeAdditionalUser {
+				users[parentID] = &core.User{
+					ID: parentID, Username: "owner", Email: "owner@example.test",
+					Role: roleCustomer, AccountType: core.AccountTypeAccount, Status: "active",
+				}
+			}
+			panel.users = &authMeUserRepositoryOverride{
+				UserRepository: panel.users,
+				users:          users,
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+			request = request.WithContext(context.WithValue(request.Context(), callerKey, &testCase.caller))
+			recorder := httptest.NewRecorder()
+
+			panel.handleMe(recorder, request)
+
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+			}
+			var response authMeResponse
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatalf("decode /me response: %v", err)
+			}
+			if response.Username != testCase.user.Username || response.Email != testCase.user.Email ||
+				response.Role != testCase.wantRole || response.EffectiveRole != testCase.wantRole ||
+				response.AccountType != string(testCase.wantAccountType) {
+				t.Fatalf("/me response = %+v", response)
+			}
+			if teamMembers, ok := response.Features["team_members"]; !ok || teamMembers != testCase.wantTeamMembers {
+				t.Fatalf("/me team_members feature = %v, present=%v; want %v", teamMembers, ok, testCase.wantTeamMembers)
+			}
+		})
+	}
+}
+
+func TestHandleMeFailsClosedForCorruptOrMismatchedIdentity(t *testing.T) {
+	validParentID := 7620
+	otherParentID := 7621
+	for _, testCase := range []struct {
+		name   string
+		user   *core.User
+		parent *core.User
+		caller Caller
+	}{
+		{
+			name:   "missing identity row",
+			caller: Caller{ID: 7622, Role: roleAdmin},
+		},
+		{
+			name: "inactive identity",
+			user: &core.User{
+				ID: 7623, Username: "suspended", Role: roleAdmin,
+				AccountType: core.AccountTypeAccount, Status: "suspended",
+			},
+			caller: Caller{ID: 7623, Role: roleAdmin},
+		},
+		{
+			name: "unknown account type",
+			user: &core.User{
+				ID: 7624, Username: "corrupt", Role: roleAdmin,
+				AccountType: core.AccountType("unknown"), Status: "active",
+			},
+			caller: Caller{ID: 7624, Role: roleAdmin},
+		},
+		{
+			name: "additional user without parent",
+			user: &core.User{
+				ID: 7625, Username: "orphan", Role: roleCustomer,
+				AccountType: core.AccountTypeAdditionalUser, Status: "active",
+			},
+			caller: Caller{
+				ID: 7625, Role: core.EffectiveRoleAdditionalUser,
+				AccountType: core.AccountTypeAdditionalUser, CustomerID: validParentID,
+			},
+		},
+		{
+			name: "caller role differs from stored identity",
+			user: &core.User{
+				ID: 7626, Username: "customer", Role: roleCustomer,
+				AccountType: core.AccountTypeAccount, Status: "active",
+			},
+			caller: Caller{ID: 7626, Role: roleAdmin},
+		},
+		{
+			name: "caller customer scope differs from parent",
+			user: &core.User{
+				ID: 7627, Username: "member", Role: roleCustomer,
+				AccountType: core.AccountTypeAdditionalUser,
+				ParentID:    &validParentID, Status: "active",
+			},
+			caller: Caller{
+				ID: 7627, Role: core.EffectiveRoleAdditionalUser,
+				AccountType: core.AccountTypeAdditionalUser, CustomerID: otherParentID,
+			},
+			parent: &core.User{
+				ID: validParentID, Username: "owner", Role: roleCustomer,
+				AccountType: core.AccountTypeAccount, Status: "active",
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			panel, _ := newAuthHandlerTestPanel(t, true)
+			users := map[int]*core.User{testCase.caller.ID: testCase.user}
+			if testCase.parent != nil {
+				users[testCase.parent.ID] = testCase.parent
+			}
+			panel.users = &authMeUserRepositoryOverride{
+				UserRepository: panel.users,
+				users:          users,
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+			request = request.WithContext(context.WithValue(request.Context(), callerKey, &testCase.caller))
+			recorder := httptest.NewRecorder()
+
+			panel.handleMe(recorder, request)
+
+			if recorder.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusUnauthorized, recorder.Body.String())
 			}
 		})
 	}

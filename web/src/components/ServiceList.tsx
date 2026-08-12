@@ -5,7 +5,11 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
-import { useComponentOperation } from './ComponentOperation';
+import {
+    decodeManagedMailProfiles,
+    useComponentOperation,
+    type ManagedMailProfile,
+} from './ComponentOperation';
 import { useNavigate } from '../router';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
@@ -53,6 +57,7 @@ interface ManagedService {
 
 interface ManagedServicesSnapshot {
     services: ManagedService[];
+    profiles: ManagedMailProfile[];
     scannedAt: string | null;
 }
 
@@ -104,6 +109,19 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     if (!value || typeof value !== 'object') return null;
     const payload = value as Record<string, unknown>;
     if (!Array.isArray(payload.services) || !payload.services.every(isManagedService)) return null;
+    const serviceIDs = new Set<string>();
+    for (const service of payload.services) {
+        if (
+            service.id.trim() !== service.id
+            || service.id === ''
+            || serviceIDs.has(service.id)
+        ) {
+            return null;
+        }
+        serviceIDs.add(service.id);
+    }
+    const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
+    if (profiles === null) return null;
     if (
         payload.scanned_at !== undefined
         && payload.scanned_at !== null
@@ -116,6 +134,7 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     }
     return {
         services: payload.services,
+        profiles,
         scannedAt: typeof payload.scanned_at === 'string' ? payload.scanned_at : null,
     };
 }
@@ -248,6 +267,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const navigate = useNavigate();
     const { startInstall, catalogSnapshot } = useComponentOperation();
     const [services, setServices] = useState<ManagedService[]>([]);
+    const [profiles, setProfiles] = useState<ManagedMailProfile[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
@@ -295,6 +315,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         }
         latestScannedAtRef.current = snapshot.scannedAt;
         setServices(snapshot.services);
+        setProfiles(snapshot.profiles);
         setScannedAt(snapshot.scannedAt);
 
         // A cached load may still be the exact pre-mutation snapshot retained
@@ -411,21 +432,25 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // Eksik veya bayat snapshot daha sonra koşullu taramayla doğrulanır:
     // backend StrictMode'u, çoklu sekmeleri ve eşzamanlı açılışları en fazla
     // tek sistem geneli yoklamada birleştirir.
-    const loadServices = async (): Promise<boolean> => {
+    const loadServices = async (
+        { markUnverifiedOnFailure = true }: { markUnverifiedOnFailure?: boolean } = {},
+    ): Promise<boolean> => {
+        const failVerification = (): false => {
+            if (markUnverifiedOnFailure) markStateUnverified();
+            return false;
+        };
         setLoading(true);
         try {
             const res = await fetch('/api/v1/managed-services');
             if (!res.ok) {
                 showToast('error', apiErrorText(await readApiError(res), t));
-                markStateUnverified();
-                return false;
+                return failVerification();
             }
             const data: unknown = await res.json();
             const snapshot = parseManagedServicesSnapshot(data);
             if (!snapshot || !applySnapshot(data, 'load')) {
                 showToast('error', t('services.scanFailed'));
-                markStateUnverified();
-                return false;
+                return failVerification();
             }
 
             const scannedTimestamp = Date.parse(snapshot.scannedAt ?? '');
@@ -450,27 +475,23 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 );
                 if (!scanResponse.ok) {
                     showToast('error', apiErrorText(await readApiError(scanResponse), t, 'services.scanFailed'));
-                    markStateUnverified();
-                    return false;
+                    return failVerification();
                 }
                 const refreshed: unknown = await scanResponse.json();
                 if (!applySnapshot(refreshed, 'scan')) {
                     showToast('error', t('services.scanFailed'));
-                    markStateUnverified();
-                    return false;
+                    return failVerification();
                 }
             } catch {
                 showToast('error', t('services.scanFailed'));
-                markStateUnverified();
-                return false;
+                return failVerification();
             } finally {
                 setScanning(false);
             }
             return true;
         } catch {
             showToast('error', t('common.error'));
-            markStateUnverified();
-            return false;
+            return failVerification();
         } finally {
             setLoading(false);
         }
@@ -549,11 +570,38 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // engellediğini — kararın verildiği yerde çizer. Eskiden önce kapanıyordu;
     // 409 ancak toast olarak parlayıp sönebiliyordu.
     const [uninstallError, setUninstallError] = useState<ApiError | null>(null);
+    const [retryCleanup, setRetryCleanup] = useState(false);
+    const [cleanupAttempt, setCleanupAttempt] = useState<'initial' | 'retry' | null>(null);
+    const openUninstallDialog = (service: ManagedService) => {
+        setUninstallTarget(service);
+        setUninstallError(null);
+        setRetryCleanup(false);
+        setCleanupAttempt(null);
+    };
+    const openWebmailCleanupDialog = (service: ManagedService) => {
+        setUninstallTarget(service);
+        setUninstallError(null);
+        setRetryCleanup(true);
+        setCleanupAttempt(null);
+    };
+    const closeUninstallDialog = () => {
+        setUninstallTarget(null);
+        setUninstallError(null);
+        setRetryCleanup(false);
+        setCleanupAttempt(null);
+    };
     const doUninstall = async (service: ManagedService) => {
         if (stateUnverified) {
             showToast('error', t('services.stateUnverifiedHint'));
             return;
         }
+        // Capture whether the operator clicked the post-error Retry action before
+        // clearing that error. The busy label must describe this request for its
+        // entire lifetime, including the verified-cache reload below.
+        const nextCleanupAttempt = retryCleanup
+            ? (uninstallError ? 'retry' : 'initial')
+            : null;
+        setCleanupAttempt(nextCleanupAttempt);
         setBusy(service.id);
         setUninstallError(null);
         try {
@@ -565,8 +613,32 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             if (!res.ok) {
                 const error = await readApiError(res);
                 if (error.code === 'SERVICE_STATE_REFRESH_FAILED') {
-                    setUninstallTarget(null);
+                    closeUninstallDialog();
                     handleStateRefreshFailure(error);
+                    return;
+                }
+                // Package removal has already succeeded, but the idempotent webmail
+                // cleanup still needs another attempt. Keep this stale target only as
+                // the retry handle while the verified cache updates the service row.
+                if (error.code === 'WEBMAIL_UNINSTALL_PARTIAL') {
+                    // An ordinary uninstall can enter cleanup mode here. It is still
+                    // the initial cleanup attempt, never a user-requested retry.
+                    if (nextCleanupAttempt === null) setCleanupAttempt('initial');
+                    const verified = await loadServices({ markUnverifiedOnFailure: false });
+                    if (!verified) {
+                        // Closing also resets the stale retry error/label. Do this
+                        // before the fail-closed Rescan lock disables the fieldset,
+                        // otherwise the operator can be trapped in this modal.
+                        closeUninstallDialog();
+                        markStateUnverified();
+                        return;
+                    }
+                    // The partial-success copy directs the operator back to this
+                    // dialog, so expose it only after a verified reload proves the
+                    // dialog can safely stay open and its Retry action is reachable.
+                    setUninstallError(error);
+                    setRetryCleanup(true);
+                    showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                     return;
                 }
                 // The removal and fresh scan succeeded; reload that verified cache while
@@ -578,7 +650,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     error.code === 'MAIL_FILTER_SYNC_FAILED' ||
                     error.code === 'SERVICE_UNINSTALL_PARTIAL'
                 ) {
-                    setUninstallTarget(null);
+                    closeUninstallDialog();
                     showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                     if (!(await loadServices())) markStateUnverified();
                     return;
@@ -586,14 +658,25 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 setUninstallError(error);
                 return;
             }
-            setUninstallTarget(null);
-            showToast('success', t('services.uninstalled', { name: service.name }));
+            closeUninstallDialog();
+            showToast(
+                'success',
+                nextCleanupAttempt !== null
+                    ? t('services.webmailCleanupCompleted')
+                    : t('services.uninstalled', { name: service.name }),
+            );
             if (!(await loadServices())) markStateUnverified();
         } catch {
+            // A transport/read exception can happen after the server has already
+            // removed Roundcube. Reset the stale retry handle before the
+            // fail-closed lock disables this fieldset, otherwise the dialog's
+            // Cancel and Retry controls become unreachable.
+            closeUninstallDialog();
             markStateUnverified();
             showToast('error', t('services.actionFailed'));
         } finally {
             setBusy(null);
+            setCleanupAttempt(null);
         }
     };
 
@@ -700,6 +783,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
     const pageControlsBusy = scanning || busy !== null;
     const mutationControlsDisabled = pageControlsBusy || stateUnverified;
+    const installProfile = async (profile: ManagedMailProfile) => {
+        if (stateUnverified || !profile.available) return;
+        await startInstall({
+            serviceId: profile.id,
+            name: profile.name,
+            operationKind: 'mail_profile_install',
+        });
+    };
 
     return (
         <div className="p-6 md:p-8">
@@ -780,6 +871,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         <p className="text-sm text-fg-muted">{t('services.stateUnverifiedHint')}</p>
                     </div>
                 </div>
+            )}
+
+            {!loading && profiles.length > 0 && (
+                <MailProfileCards
+                    profiles={profiles}
+                    services={services}
+                    disabled={mutationControlsDisabled}
+                    onInstall={installProfile}
+                />
             )}
 
             {loading ? (
@@ -930,7 +1030,12 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         className="ml-auto flex min-w-0 items-center justify-end gap-1 border-0 p-0"
                                                     >
                                                     {!s.is_installed ? (
-                                                        s.conflict_with ? (
+                                                    <>
+                                                    {/* An interrupted uninstall can leave Roundcube application
+                                                        data after the package scan says it is not installed. Keep
+                                                        cleanup reachable across reloads, independently of install
+                                                        and repair availability. */}
+                                                    {s.conflict_with ? (
                                                             <span
                                                                 title={t('services.conflictHint', { name: s.conflict_with })}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
@@ -989,6 +1094,20 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             {busy === s.id ? t('services.installing') : t('services.install')}
                                                         </button>
                                                         )
+                                                    }
+                                                    {s.id === 'roundcube' && (
+                                                    <button
+                                                        type={'button'}
+                                                        onClick={() => openWebmailCleanupDialog(s)}
+                                                        disabled={mutationControlsDisabled || busy === s.id}
+                                                        title={t('services.cleanupWebmailHint')}
+                                                        className={'inline-flex items-center gap-1.5 rounded-lg border border-danger/30 bg-danger/5 px-2.5 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 disabled:opacity-50'}
+                                                    >
+                                                        <Trash2 className={'h-3.5 w-3.5'} />
+                                                        {t('services.cleanupWebmail')}
+                                                    </button>
+                                                    )}
+                                                    </>
                                                     ) : (
                                                     <>
                                                     {/* Inline start/stop belongs to `service` alone. A tool
@@ -1056,6 +1175,23 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         <RotateCw className="h-4 w-4" />
                                                     </ActionIcon>
                                                     ))}
+                                                    {/* Roundcube repair reuses the durable install operation. */}
+                                                    {s.kind === 'tool' && s.id === 'roundcube' && (
+                                                    <button
+                                                        type={'button'}
+                                                        onClick={() => startInstall({
+                                                            serviceId: s.id,
+                                                            name: s.name,
+                                                            ...(s.repair_package ? { package: s.repair_package } : {}),
+                                                        })}
+                                                        disabled={mutationControlsDisabled || busy === s.id || !s.repair_available}
+                                                        title={s.repair_available ? t('services.repairWebmail') : t('services.repairUnavailable')}
+                                                        className={'inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-xs font-semibold text-warning disabled:opacity-50'}
+                                                    >
+                                                        <RotateCw className={'h-3.5 w-3.5'} />
+                                                        {t('services.repairWebmail')}
+                                                    </button>
+                                                    )}
                                                     {/* The version drawer is where a runtime's per-version
                                                         state and controls live (B3b) — and, for a tarball
                                                         runtime, where installing a version lives too.
@@ -1094,7 +1230,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         silme sunulmaz. */}
                                                     {!isTarballRuntime(s) && (
                                                     <button
-                                                        onClick={() => setUninstallTarget(s)}
+                                                        onClick={() => openUninstallDialog(s)}
                                                         title={t('services.uninstall')}
                                                         className="inline-flex items-center rounded-lg border border-border-strong bg-surface p-1.5 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
                                                     >
@@ -1161,7 +1297,9 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         service={uninstallTarget}
                         busy={busy === uninstallTarget.id}
                         error={uninstallError}
-                        onCancel={() => { setUninstallTarget(null); setUninstallError(null); }}
+                        retryCleanup={retryCleanup}
+                        cleanupAttempt={cleanupAttempt}
+                        onCancel={closeUninstallDialog}
                         onConfirm={() => doUninstall(uninstallTarget)}
                     />
                 )}
@@ -1178,6 +1316,95 @@ export function ServiceList({ onManageService }: ServiceListProps) {
 // tam olarak ne ineceğini (dağıtım paketleri) gösterir; kurulum asla kör bir
 // "yallah" değildir. PHP için dağıtım varsayılan sürümünün kurulacağı,
 // ek sürümlerin site başına başka yerde yönetildiği belirtilir.
+function MailProfileCards({ profiles, services, disabled, onInstall }: {
+    profiles: ManagedMailProfile[];
+    services: ManagedService[];
+    disabled: boolean;
+    onInstall: (profile: ManagedMailProfile) => Promise<void>;
+}) {
+    const { t } = useI18n();
+    const actionLabel = (profile: ManagedMailProfile) => {
+        if (profile.status === 'available') return t('services.mailProfiles.install');
+        if (profile.status === 'partial') return t('services.mailProfiles.continue');
+        if (profile.status === 'complete') return t('services.mailProfiles.repair');
+        return t('services.mailProfiles.unavailable');
+    };
+    const serviceName = (id: string) => services.find((service) => service.id === id)?.name ?? id;
+    return (
+        <section aria-labelledby='mail-profile-heading' className='mb-6'>
+            <div className='mb-3 flex items-start gap-3'>
+                <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                    <Layers className='h-5 w-5' />
+                </span>
+                <div>
+                    <h2 id='mail-profile-heading' className='text-lg font-semibold text-fg'>
+                        {t('services.mailProfiles.title')}
+                    </h2>
+                    <p className='text-sm text-fg-muted'>{t('services.mailProfiles.subtitle')}</p>
+                </div>
+            </div>
+            <div className='grid gap-3 lg:grid-cols-3'>
+                {profiles.map((profile) => {
+                    const actionable = profile.available && (
+                        profile.status === 'available'
+                        || profile.status === 'partial'
+                        || profile.status === 'complete'
+                    );
+                    const detail = profile.status === 'complete' && profile.warning
+                        ? t('services.mailProfiles.profileComponentsNeedRepair')
+                        : profile.status === 'blocked'
+                            ? profile.blocked_reason
+                            : profile.warning;
+                    const ActionIcon = profile.status === 'available' ? DownloadCloud : RotateCw;
+                    return (
+                        <article key={profile.id} className='flex min-w-0 flex-col rounded-xl border border-border bg-surface p-4 shadow-card'>
+                            <div className='flex items-start gap-3'>
+                                <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
+                                    {profile.id === 'protected-mail'
+                                        ? <ShieldCheck className='h-5 w-5' />
+                                        : <Mail className='h-5 w-5' />}
+                                </span>
+                                <div className='min-w-0'>
+                                    <h3 className='font-semibold text-fg'>{profile.name}</h3>
+                                    <p className='mt-1 text-xs leading-5 text-fg-muted'>{profile.description}</p>
+                                </div>
+                            </div>
+                            <div className='mt-4 flex flex-wrap gap-1.5' aria-label={t('services.mailProfiles.includes')}>
+                                {profile.services.map((id) => (
+                                    <span key={id} className='rounded-md bg-surface-2 px-2 py-1 text-[11px] font-medium text-fg-muted'>
+                                        {serviceName(id)}
+                                    </span>
+                                ))}
+                            </div>
+                            {detail && (
+                                <p className={`mt-3 text-xs leading-5 ${profile.status === 'blocked' ? 'text-danger' : 'text-warning'}`}>
+                                    {detail}
+                                </p>
+                            )}
+                            <div className='mt-auto flex items-center justify-between gap-3 pt-4'>
+                                <span className='inline-flex items-center gap-1.5 text-xs font-medium text-fg-muted'>
+                                    <StatusDot ok={profile.status === 'complete'} />
+                                    {t(`services.mailProfiles.status.${profile.status}` as Parameters<typeof t>[0])}
+                                </span>
+                                <button
+                                    type='button'
+                                    onClick={() => void onInstall(profile)}
+                                    disabled={disabled || !actionable}
+                                    title={detail || actionLabel(profile)}
+                                    className='inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
+                                >
+                                    <ActionIcon className='h-3.5 w-3.5' />
+                                    {actionLabel(profile)}
+                                </button>
+                            </div>
+                        </article>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 function InstallServiceDialog({
     service,
     busy,
@@ -1897,12 +2124,16 @@ function UninstallServiceDialog({
     service,
     busy,
     error,
+    retryCleanup,
+    cleanupAttempt,
     onCancel,
     onConfirm,
 }: {
     service: ManagedService;
     busy: boolean;
     error: ApiError | null;
+    retryCleanup: boolean;
+    cleanupAttempt: 'initial' | 'retry' | null;
     onCancel: () => void;
     onConfirm: () => void;
 }) {
@@ -1918,17 +2149,25 @@ function UninstallServiceDialog({
                         <Trash2 className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-fg">{t('services.uninstallTitle', { name: service.name })}</h3>
+                        <h3 className="text-lg font-semibold text-fg">
+                            {retryCleanup
+                                ? t('services.cleanupWebmailTitle')
+                                : t('services.uninstallTitle', { name: service.name })}
+                        </h3>
                         <p className="text-sm text-fg-muted">{service.description}</p>
                     </div>
                 </div>
                 <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-fg-muted">
-                    <p className="mb-2">{t('services.uninstallWarn')}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                        {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (
-                            <span key={pkg} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg">{pkg}</span>
-                        ))}
-                    </div>
+                    <p className={retryCleanup ? '' : 'mb-2'}>
+                        {t(retryCleanup ? 'services.cleanupWebmailWarn' : 'services.uninstallWarn')}
+                    </p>
+                    {!retryCleanup && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {(service.packages && service.packages.length > 0 ? service.packages : [service.id]).map((pkg) => (
+                                <span key={pkg} className="rounded bg-surface-2 px-2 py-0.5 font-mono text-xs text-fg">{pkg}</span>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 {/* A refusal shows its evidence HERE, where the decision is
                     made — who blocks, line by line (B3d).
@@ -1938,7 +2177,13 @@ function UninstallServiceDialog({
                 <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
                     <Button variant="danger" onClick={onConfirm} disabled={busy} icon={Trash2}>
-                        {busy ? t('services.uninstalling') : t('services.uninstall')}
+                        {busy
+                            ? t(retryCleanup
+                                ? (cleanupAttempt === 'retry' ? 'services.retryingWebmailCleanup' : 'services.cleaningWebmail')
+                                : 'services.uninstalling')
+                            : t(retryCleanup
+                                ? (error ? 'services.retryWebmailCleanup' : 'services.cleanupWebmail')
+                                : 'services.uninstall')}
                     </Button>
                 </div>
             </div>

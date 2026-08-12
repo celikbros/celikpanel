@@ -114,6 +114,9 @@ func (a *Agent) SyncMailConfig(req *MailConfigSyncRequest, resp *transport.MailM
 		return fmt.Errorf("mail sync request and response are required")
 	}
 	resp.Applied = false
+	if err := validateDovecotUsersFileMetadata(dovecotUsersPath, true); err != nil {
+		return err
+	}
 
 	vmailboxLines := make([]string, 0, len(req.Accounts))
 	domainSet := make(map[string]struct{}, len(req.Domains)+len(req.Accounts))
@@ -236,18 +239,21 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *transport.MailMutationRes
 	if err != nil {
 		return err
 	}
-	if len(req.Password) < transport.MinMailboxPasswordBytes || len(req.Password) > transport.MaxMailboxPasswordBytes {
-		return fmt.Errorf("mailbox password must be between %d and %d bytes", transport.MinMailboxPasswordBytes, transport.MaxMailboxPasswordBytes)
+	if err := transport.ValidateMailboxPassword(req.Password); err != nil {
+		return err
 	}
 	if err := validateAgentQuota(req.QuotaMB); err != nil {
+		return err
+	}
+	if err := validateDovecotUsersFileMetadata(dovecotUsersPath, true); err != nil {
 		return err
 	}
 
 	ctx, cancel := newMailMutationContext()
 	defer cancel()
-	hash, err := mailHashGenerator(ctx, req.Password)
+	hash, err := generateMailboxPasswordHash(ctx, req.Password)
 	if err != nil {
-		return fmt.Errorf("generate mailbox password hash: %w", err)
+		return err
 	}
 	users, err := readMailFile(dovecotUsersPath)
 	if err != nil {
@@ -275,6 +281,64 @@ func (a *Agent) AddMailAccount(req *MailAccount, resp *transport.MailMutationRes
 	}, []string{postfixVBoxPath, postfixDomainsPath}, func() (func() error, error) {
 		return ensureMailboxDirectory(domain, local)
 	}); err != nil {
+		return err
+	}
+	resp.Applied = true
+	return nil
+}
+
+// UpdateMailPassword rotates exactly one Dovecot password field. TryLock keeps
+// password RPCs from queuing behind an older mutation and applying after their
+// panel caller has timed out. The bounded hash generation remains under that
+// lease so two password handlers cannot finish out of order.
+func (a *Agent) UpdateMailPassword(req *transport.UpdateMailPasswordRequest, resp *transport.MailMutationResponse) error {
+	if req == nil || resp == nil {
+		return fmt.Errorf("mail password request and response are required")
+	}
+	resp.Applied = false
+	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "updating a mailbox password"); err != nil {
+		return err
+	}
+	email, _, _, err := canonicalAgentMailbox(req.Email)
+	if err != nil {
+		return err
+	}
+	if err := transport.ValidateMailboxPassword(req.NewPassword); err != nil {
+		return err
+	}
+
+	if !mailMutex.TryLock() {
+		return fmt.Errorf("mail configuration is busy; retry the mailbox password update")
+	}
+	defer mailMutex.Unlock()
+	if err := validateDovecotUsersFileMetadata(dovecotUsersPath, true); err != nil {
+		return err
+	}
+
+	ctx, cancel := newMailMutationContext()
+	defer cancel()
+	hash, err := generateMailboxPasswordHash(ctx, req.NewPassword)
+	if err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("mailbox password update expired after hashing: %w", err)
+	}
+
+	users, err := readMailFile(dovecotUsersPath)
+	if err != nil {
+		return err
+	}
+	updatedUsers, err := replaceDovecotPasswordHash(users, email, hash)
+	if err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("mailbox password update expired before publication: %w", err)
+	}
+	if err := applyMailFileMutation(ctx, []mailFileWrite{{
+		path: dovecotUsersPath, content: updatedUsers, mode: 0o640,
+	}}, nil, nil); err != nil {
 		return err
 	}
 	resp.Applied = true
@@ -699,4 +763,143 @@ func generateDovecotHashContext(ctx context.Context, password string) (string, e
 	}
 	// Output format: {SHA512-CRYPT}$6$....
 	return strings.TrimSpace(string(output)), nil
+}
+
+func generateMailboxPasswordHash(ctx context.Context, password string) (string, error) {
+	hash, err := mailHashGenerator(ctx, password)
+	if err != nil {
+		// The hashing command deliberately returns a generic error too. Do not
+		// propagate third-party error text across this secret-bearing boundary.
+		return "", fmt.Errorf("generate mailbox password hash")
+	}
+	if err := validateGeneratedDovecotHash(hash); err != nil {
+		return "", err
+	}
+	return hash, nil
+}
+
+func validateGeneratedDovecotHash(hash string) error {
+	const prefix = "{SHA512-CRYPT}$6$"
+	invalid := func() error {
+		return fmt.Errorf("mailbox password hash generator returned an invalid format")
+	}
+	if !strings.HasPrefix(hash, prefix) {
+		return invalid()
+	}
+	parts := strings.Split(strings.TrimPrefix(hash, prefix), "$")
+	if len(parts) == 3 {
+		if !strings.HasPrefix(parts[0], "rounds=") {
+			return invalid()
+		}
+		rounds, err := strconv.ParseUint(strings.TrimPrefix(parts[0], "rounds="), 10, 32)
+		if err != nil || rounds < 1000 || rounds > 999999999 {
+			return invalid()
+		}
+		parts = parts[1:]
+	}
+	if len(parts) != 2 || len(parts[0]) == 0 || len(parts[0]) > 16 || len(parts[1]) != 86 {
+		return invalid()
+	}
+	if !isSHA512CryptAlphabet(parts[0]) || !isSHA512CryptAlphabet(parts[1]) {
+		return invalid()
+	}
+	return nil
+}
+
+func isSHA512CryptAlphabet(value string) bool {
+	for index := 0; index < len(value); index++ {
+		character := value[index]
+		if character != '.' && character != '/' &&
+			(character < '0' || character > '9') &&
+			(character < 'A' || character > 'Z') &&
+			(character < 'a' || character > 'z') {
+			return false
+		}
+	}
+	return true
+}
+
+func validateStoredDovecotHash(hash string) error {
+	switch {
+	case strings.HasPrefix(hash, "{SHA512-CRYPT}"):
+		return validateGeneratedDovecotHash(hash)
+	case strings.HasPrefix(hash, "{CRYPT}"):
+		if err := validateImportedCryptHash(strings.TrimPrefix(hash, "{CRYPT}")); err != nil {
+			return fmt.Errorf("mail account has an invalid password field")
+		}
+		return nil
+	default:
+		return fmt.Errorf("mail account has an unsupported password scheme")
+	}
+}
+
+// replaceDovecotPasswordHash preserves every byte outside the one password
+// field, including comments, unrelated users, the quota tail, and the
+// original final-newline state.
+func replaceDovecotPasswordHash(content []byte, email, newHash string) ([]byte, error) {
+	if err := validateGeneratedDovecotHash(newHash); err != nil {
+		return nil, err
+	}
+
+	text := string(content)
+	matchCount := 0
+	hashStart := -1
+	hashEnd := -1
+	for lineStart := 0; lineStart <= len(text); {
+		relativeLineEnd := strings.IndexByte(text[lineStart:], '\n')
+		lineEnd := len(text)
+		if relativeLineEnd >= 0 {
+			lineEnd = lineStart + relativeLineEnd
+		}
+		line := text[lineStart:lineEnd]
+
+		colon := strings.IndexByte(line, ':')
+		if colon < 0 {
+			fields := strings.Fields(line)
+			if len(fields) > 0 && strings.EqualFold(fields[0], email) {
+				return nil, fmt.Errorf("mail account has a malformed dovecot row")
+			}
+		} else {
+			key := line[:colon]
+			canonicalKey, canonicalErr := transport.CanonicalMailAddress(key)
+			targetsMailbox := canonicalErr == nil && canonicalKey == email
+			if !targetsMailbox && strings.EqualFold(strings.TrimSpace(key), email) {
+				targetsMailbox = true
+			}
+			if targetsMailbox {
+				if key != email || strings.ContainsRune(line, '\r') {
+					return nil, fmt.Errorf("mail account has a malformed dovecot row")
+				}
+				fieldStart := colon + 1
+				relativeFieldEnd := strings.IndexByte(line[fieldStart:], ':')
+				fieldEnd := len(line)
+				if relativeFieldEnd >= 0 {
+					fieldEnd = fieldStart + relativeFieldEnd
+				}
+				if err := validateStoredDovecotHash(line[fieldStart:fieldEnd]); err != nil {
+					return nil, err
+				}
+				matchCount++
+				if matchCount > 1 {
+					return nil, fmt.Errorf("mail account has duplicate dovecot rows")
+				}
+				hashStart = lineStart + fieldStart
+				hashEnd = lineStart + fieldEnd
+			}
+		}
+
+		if relativeLineEnd < 0 {
+			break
+		}
+		lineStart = lineEnd + 1
+	}
+	if matchCount == 0 {
+		return nil, fmt.Errorf("mail account not found")
+	}
+
+	updated := make([]byte, 0, len(content)-hashEnd+hashStart+len(newHash))
+	updated = append(updated, content[:hashStart]...)
+	updated = append(updated, newHash...)
+	updated = append(updated, content[hashEnd:]...)
+	return updated, nil
 }

@@ -35,6 +35,32 @@ type DeleteMailAccountRequest struct {
 	Email string `json:"email"`
 }
 
+// UpdateMailPasswordRequest carries a password only for the lifetime of one
+// privileged panel-to-agent mutation. Callers must never log or persist the
+// NewPassword field.
+type UpdateMailPasswordRequest struct {
+	ExpectedBuildCommit string `json:"expected_build_commit"`
+	Email               string `json:"email"`
+	NewPassword         string `json:"new_password"`
+}
+
+// DeleteMailDomainRequest identifies one immutable domain deletion. The
+// privileged agent independently validates the canonical domain and binds the
+// filesystem mutation to the exact panel build that authorized it.
+type DeleteMailDomainRequest struct {
+	ExpectedBuildCommit string `json:"expected_build_commit"`
+	DomainID            int    `json:"domain_id"`
+	Domain              string `json:"domain"`
+}
+
+// DeleteMailDomainResponse confirms convergence, not merely that this call
+// changed bytes. Applied is therefore true on a safe idempotent retry too.
+// Quarantined reports whether a current or previous call preserved a Maildir.
+type DeleteMailDomainResponse struct {
+	Applied     bool `json:"applied"`
+	Quarantined bool `json:"quarantined"`
+}
+
 type UpdateMailForwardingRequest struct {
 	Forwardings []MailForwarding `json:"forwardings"`
 }
@@ -55,6 +81,19 @@ type UpdateMailQuotaRequest struct {
 // mutation was published.
 type MailMutationResponse struct {
 	Applied bool `json:"applied"`
+}
+
+// ValidateMailboxPassword enforces the shared panel/agent wire boundary. The
+// length is measured in bytes because that is what doveadm receives. Line
+// protocol delimiters are rejected before the password is written to stdin.
+func ValidateMailboxPassword(password string) error {
+	if len(password) < MinMailboxPasswordBytes || len(password) > MaxMailboxPasswordBytes {
+		return fmt.Errorf("mailbox password must be between %d and %d bytes", MinMailboxPasswordBytes, MaxMailboxPasswordBytes)
+	}
+	if strings.ContainsAny(password, "\r\n\x00") {
+		return fmt.Errorf("mailbox password contains an unsupported control character")
+	}
+	return nil
 }
 
 // CanonicalMailAddress accepts the deliberately conservative address syntax
@@ -165,7 +204,33 @@ type MailSNIEntry struct {
 	KeyPath  string   `json:"key_path"`
 }
 
+// DefaultMailTLSCertificatePath is the fixed agent-owned fallback certificate
+// published when no trusted per-domain mail certificate is available.
+const DefaultMailTLSCertificatePath = "/etc/ssl/celikpanel/_mail/default-cert.pem"
+
 type SecureMailTLSRequest struct {
+	ExpectedBuildCommit string         `json:"expected_build_commit"`
+	Myhostname          string         `json:"myhostname"`
+	SNI                 []MailSNIEntry `json:"sni"`
+}
+
+// ReconcileMailTLSMutationRequest binds the mail TLS reconciliation to the
+// durable service mutation that authorized it. SecureMailTLSRequest remains
+// the legacy lifecycle contract; new multi-service orchestration must use this
+// request so the privileged agent can prove lease ownership for the whole
+// step.
+type ReconcileMailTLSMutationRequest struct {
+	ServiceMutationBinding
+	ExpectedBuildCommit string         `json:"expected_build_commit"`
+	Myhostname          string         `json:"myhostname"`
+	SNI                 []MailSNIEntry `json:"sni"`
+}
+
+// SyncMailTLSV2Request carries the complete canonical mail TLS snapshot under
+// a fresh direct payload-bound mutation. Package/profile operations must
+// terminalize before opening this independent lease.
+type SyncMailTLSV2Request struct {
+	ServiceMutationBinding
 	ExpectedBuildCommit string         `json:"expected_build_commit"`
 	Myhostname          string         `json:"myhostname"`
 	SNI                 []MailSNIEntry `json:"sni"`

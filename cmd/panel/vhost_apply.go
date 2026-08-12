@@ -44,7 +44,7 @@ func (p *Panel) applyVhostForDomainWithACMEChallengeNames(
 	}
 
 	var resp transport.ApplyVhostResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ApplyVhost", &req, &resp); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ApplyVhost", &req, &resp); err != nil {
 		return err
 	}
 	if resp.Error != "" {

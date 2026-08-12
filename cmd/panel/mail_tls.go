@@ -12,10 +12,15 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 var mailTLSSyncMu sync.Mutex
+var readMailTLSHostname = os.Hostname
+
+const panelMailTLSManagedRoot = "/etc/ssl/celikpanel"
 
 type mailTLSReconcileMode uint8
 
@@ -55,17 +60,136 @@ func (p *Panel) resyncMailTLS(ctx context.Context) error {
 // hedefi durdurmak yerine güvenli snapshot'tan çıkarılır; bu çıkarma,
 // kullanılamaz sertifikayı canlı SNI haritasından da düşürür.
 func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) error {
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	_, err := p.resyncMailTLSForTargetLocked(ctx, strictDomainID, "", "")
+	return err
+}
+
+// resyncMailTLSForTargetLocked requires serviceMutationMu. It takes the inner
+// snapshot mutex second, preserving one lock order for every lifecycle path.
+func (p *Panel) resyncMailTLSForTargetLocked(
+	ctx context.Context,
+	strictDomainID int,
+	requestID, ownerID string,
+) (transport.SecureMailTLSResponse, error) {
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return transport.SecureMailTLSResponse{},
+			errors.New("direct mail TLS synchronization cannot reuse a bound mutation context")
+	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncMailTLSV2"); err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	if err := p.requireMailTLSSyncV2Agent(ctx); err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
 	// The SNI request is a full-state snapshot. Serialize snapshot + RPC so a
 	// slower stale push for one domain cannot erase another domain's change.
 	mailTLSSyncMu.Lock()
 	defer mailTLSSyncMu.Unlock()
 
+	host, sni, err := p.loadMailTLSSnapshotLocked(ctx, strictDomainID)
+	if err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	commitment, err := mutationpayload.CanonicalMailTLSSync(
+		panelMailTLSManagedRoot, host, sni,
+	)
+	if err != nil {
+		return transport.SecureMailTLSResponse{},
+			fmt.Errorf("canonicalize mail TLS snapshot: %w", err)
+	}
+	return p.applyCanonicalMailTLSV2Identity(ctx, commitment, requestID, ownerID)
+}
+
+type mailTLSAgentResponseError struct {
+	message string
+}
+
+func (e *mailTLSAgentResponseError) Error() string { return e.message }
+
+func (p *Panel) applyCanonicalMailTLSV2Identity(
+	ctx context.Context,
+	commitment mutationpayload.MailTLSSyncCommitment,
+	requestID, ownerID string,
+) (transport.SecureMailTLSResponse, error) {
+	canonical, err := mutationpayload.CanonicalMailTLSSync(
+		commitment.ManagedRoot, commitment.Myhostname, commitment.SNI,
+	)
+	if err != nil || canonical.Qualifier != commitment.Qualifier ||
+		canonical.ManagedRoot != panelMailTLSManagedRoot {
+		return transport.SecureMailTLSResponse{},
+			errors.New("invalid canonical mail TLS commitment")
+	}
+	commitment = canonical
+	var response transport.SecureMailTLSResponse
+	responseConfirmed := false
+	call := func(callCtx context.Context, binding agentMutationBinding) error {
+		request := transport.SyncMailTLSV2Request{
+			ServiceMutationBinding: binding,
+			ExpectedBuildCommit:    strings.TrimSpace(buildCommit),
+			Myhostname:             commitment.Myhostname,
+			SNI:                    append([]transport.MailSNIEntry(nil), commitment.SNI...),
+		}
+		for index := range request.SNI {
+			request.SNI[index].Names = append([]string(nil), request.SNI[index].Names...)
+		}
+		if err := p.callAgentContext(
+			callCtx, "Agent.SyncMailTLSV2", &request, &response,
+		); err != nil {
+			return err
+		}
+		if response.Error != "" {
+			return &mailTLSAgentResponseError{message: response.Error}
+		}
+		if err := validateMailTLSResponse(response, len(commitment.SNI)); err != nil {
+			return err
+		}
+		responseConfirmed = true
+		return nil
+	}
+	if requestID == "" && ownerID == "" {
+		err = p.withStandaloneAgentMutation(
+			ctx, "mail_tls_sync", "mail-tls", commitment.Qualifier, call,
+		)
+	} else {
+		err = p.withStandaloneAgentMutationIdentity(
+			ctx,
+			serviceOperation{
+				RequestID: requestID, Kind: "mail_tls_sync",
+				ServiceID: "mail-tls", PackageName: commitment.Qualifier,
+			},
+			ownerID,
+			call,
+		)
+	}
+	if err == nil && !responseConfirmed {
+		// Exact terminal success for this request/owner/kind/target/qualifier is
+		// authoritative even when the net/rpc response was lost.
+		response = transport.SecureMailTLSResponse{
+			Configured: true, DefaultCert: transport.DefaultMailTLSCertificatePath,
+			SNICount: len(commitment.SNI),
+			Detail:   "mail TLS synchronization committed; RPC response was lost",
+		}
+	}
+	if err != nil {
+		return transport.SecureMailTLSResponse{}, err
+	}
+	return response, err
+}
+
+// loadMailTLSSnapshotLocked builds the safe full-state payload. Callers must hold
+// mailTLSSyncMu continuously from this read through their publication RPC.
+func (p *Panel) loadMailTLSSnapshotLocked(
+	ctx context.Context,
+	strictDomainID int,
+) (string, []transport.MailSNIEntry, error) {
 	rows, err := p.db.GetDB().QueryContext(ctx, `
 		SELECT sc.domain_id, d.name, sc.cert_path, sc.key_path
 		FROM ssl_certificates sc JOIN domains d ON d.id = sc.domain_id
 		WHERE sc.status = 'active' AND sc.secure_mail = 1`)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 	defer rows.Close()
 	var sni []transport.MailSNIEntry
@@ -74,7 +198,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		var domainID int
 		var name, cert, key string
 		if err := rows.Scan(&domainID, &name, &cert, &key); err != nil {
-			return err
+			return "", nil, err
 		}
 		isStrictTarget := strictDomainID > 0 && domainID == strictDomainID
 		if isStrictTarget {
@@ -82,7 +206,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		}
 		if strings.TrimSpace(cert) == "" || strings.TrimSpace(key) == "" {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s has an empty certificate or private-key path", name)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s has an empty certificate or private-key path", name)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated domain %s (%d): empty certificate or private-key path",
 				name, domainID)
@@ -92,11 +216,11 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		if infoErr != nil {
 			// A transport failure means the panel could not safely inspect the
 			// full snapshot at all. Do not publish a destructive partial map.
-			return fmt.Errorf("inspect mail TLS certificate for %s: %w", name, infoErr)
+			return "", nil, fmt.Errorf("inspect mail TLS certificate for %s: %w", name, infoErr)
 		}
 		if !info.Valid {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s is invalid: %s", name, info.Error)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s is invalid: %s", name, info.Error)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated invalid certificate for %s (%d): %s",
 				name, domainID, strings.TrimSpace(info.Error))
@@ -104,7 +228,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		}
 		if !info.TrustChecked || !info.Trusted {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate for %s is not trusted", name)
+				return "", nil, fmt.Errorf("mail TLS certificate for %s is not trusted", name)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated untrusted certificate for %s (%d)", name, domainID)
 			continue
@@ -112,7 +236,7 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		mailName := "mail." + name
 		if !certificateCoversHostname(info.DNSNames, mailName) {
 			if isStrictTarget {
-				return fmt.Errorf("mail TLS certificate does not cover %s", mailName)
+				return "", nil, fmt.Errorf("mail TLS certificate does not cover %s", mailName)
 			}
 			log.Printf("mail TLS snapshot: omit unrelated certificate for %s (%d): it does not cover %s",
 				name, domainID, mailName)
@@ -129,29 +253,37 @@ func (p *Panel) resyncMailTLSForTarget(ctx context.Context, strictDomainID int) 
 		})
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return "", nil, err
 	}
 	if strictDomainID > 0 && !strictTargetSeen {
-		return fmt.Errorf("target domain %d is not active in the secure-mail ledger", strictDomainID)
+		return "", nil, fmt.Errorf("target domain %d is not active in the secure-mail ledger", strictDomainID)
 	}
 
-	host, err := os.Hostname()
+	host, err := readMailTLSHostname()
 	if err != nil {
-		return fmt.Errorf("read mail server hostname: %w", err)
+		return "", nil, fmt.Errorf("read mail server hostname: %w", err)
 	}
-	var resp transport.SecureMailTLSResponse
-	if err := p.callAgentContext(ctx, "Agent.SecureMailTLS", &transport.SecureMailTLSRequest{
-		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
-		Myhostname:          host, SNI: sni}, &resp); err != nil {
-		return err
+	canonicalHost, err := hostname.CanonicalFQDN(host)
+	if err != nil {
+		return "", nil, fmt.Errorf("mail server hostname is not a valid FQDN: %w", err)
 	}
+	return canonicalHost, sni, nil
+}
+
+func validateMailTLSResponse(resp transport.SecureMailTLSResponse, expectedSNICount int) error {
 	if resp.Error != "" {
 		return &backupError{resp.Error}
 	}
-	if !resp.Configured || resp.SNICount != len(sni) {
+	if !resp.Configured || resp.SNICount != expectedSNICount {
 		return fmt.Errorf(
 			"mail TLS agent applied %d of %d SNI entries",
-			resp.SNICount, len(sni),
+			resp.SNICount, expectedSNICount,
+		)
+	}
+	if resp.DefaultCert != transport.DefaultMailTLSCertificatePath {
+		return fmt.Errorf(
+			"mail TLS agent reported unexpected default certificate path %q",
+			resp.DefaultCert,
 		)
 	}
 	return nil
@@ -244,6 +376,12 @@ func (p *Panel) prepareDomainMailTLSRemoval(
 	if len(certificateIDs) == 0 {
 		return &domainMailTLSRemoval{DomainID: domainID}, nil
 	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncMailTLSV2"); err != nil {
+		return nil, fmt.Errorf("authorize Mail TLS V2 before domain removal: %w", err)
+	}
+	if err := p.requireMailTLSSyncV2Agent(ctx); err != nil {
+		return nil, fmt.Errorf("verify Mail TLS V2 before domain removal: %w", err)
+	}
 
 	removal := &domainMailTLSRemoval{
 		DomainID:       domainID,
@@ -257,14 +395,25 @@ func (p *Panel) prepareDomainMailTLSRemoval(
 		return nil, err
 	}
 	if err := p.resyncMailTLS(ctx); err != nil {
+		if mutationTerminalUncertain(err) {
+			return nil, fmt.Errorf(
+				"remove domain from mail TLS: %w; the requested secure_mail=0 state was retained for exact agent recovery",
+				err,
+			)
+		}
 		rollbackCtx, cancel := sslCompensationContext()
 		defer cancel()
-		rollbackErr := p.rollbackDomainMailTLSRemoval(rollbackCtx, removal)
-		if rollbackErr != nil {
+		if rollbackErr := p.setDomainMailTLSRemovalLedger(
+			rollbackCtx, removal, true,
+		); rollbackErr != nil {
+			return nil, fmt.Errorf("remove domain from mail TLS: %v; restore ledger: %w", err, rollbackErr)
+		}
+		if rollbackErr := p.resyncMailTLSForTarget(
+			rollbackCtx, removal.DomainID,
+		); rollbackErr != nil {
 			return nil, fmt.Errorf(
-				"remove domain from mail TLS: %v; rollback failed: %w",
-				err,
-				rollbackErr,
+				"remove domain from mail TLS: %v; publish restored snapshot: %w",
+				err, rollbackErr,
 			)
 		}
 		return nil, fmt.Errorf("remove domain from mail TLS: %w", err)
@@ -279,6 +428,45 @@ func (p *Panel) rollbackDomainMailTLSRemoval(
 	if removal == nil || len(removal.CertificateIDs) == 0 {
 		return nil
 	}
+	if err := p.setDomainMailTLSRemovalLedger(ctx, removal, true); err != nil {
+		return err
+	}
+	if err := p.resyncMailTLSForTarget(ctx, removal.DomainID); err != nil {
+		if mutationTerminalUncertain(err) {
+			return fmt.Errorf("restore domain Mail TLS publication: %w; secure_mail=1 retained for exact agent recovery", err)
+		}
+		reinstateErr := p.setDomainMailTLSRemovalLedger(ctx, removal, false)
+		var republishErr error
+		if reinstateErr == nil {
+			republishErr = p.resyncMailTLS(ctx)
+		}
+		return errors.Join(
+			fmt.Errorf("restore domain Mail TLS publication: %w", err),
+			func() error {
+				if reinstateErr == nil {
+					return nil
+				}
+				return fmt.Errorf("reinstate requested secure_mail=0 ledger: %w", reinstateErr)
+			}(),
+			func() error {
+				if republishErr == nil {
+					return nil
+				}
+				return fmt.Errorf("republish requested secure_mail=0 snapshot: %w", republishErr)
+			}(),
+		)
+	}
+	return nil
+}
+
+func (p *Panel) setDomainMailTLSRemovalLedger(
+	ctx context.Context,
+	removal *domainMailTLSRemoval,
+	enabled bool,
+) error {
+	if removal == nil || len(removal.CertificateIDs) == 0 {
+		return nil
+	}
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -286,8 +474,9 @@ func (p *Panel) rollbackDomainMailTLSRemoval(
 	defer tx.Rollback()
 	for _, certificateID := range removal.CertificateIDs {
 		result, err := tx.ExecContext(ctx, `
-			UPDATE ssl_certificates SET secure_mail = 1, updated_at = datetime('now')
+			UPDATE ssl_certificates SET secure_mail = ?, updated_at = datetime('now')
 			WHERE id = ? AND domain_id = ? AND status = 'active'`,
+			enabled,
 			certificateID,
 			removal.DomainID,
 		)
@@ -301,7 +490,7 @@ func (p *Panel) rollbackDomainMailTLSRemoval(
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	return p.resyncMailTLSForTarget(ctx, removal.DomainID)
+	return nil
 }
 
 // handleDomainSSLMail toggles "secure mail with this certificate" for a
@@ -369,6 +558,14 @@ func (p *Panel) handleDomainSSLMail(w http.ResponseWriter, r *http.Request, doma
 				return
 			}
 		}
+		if err := p.authorizeAgentRPCContext(r.Context(), "Agent.SyncMailTLSV2"); err != nil {
+			writeAgentError(w, err, "mail TLS V2 platform preflight")
+			return
+		}
+		if err := p.requireMailTLSSyncV2Agent(r.Context()); err != nil {
+			writeAgentError(w, err, "mail TLS V2 capability preflight")
+			return
+		}
 		val := 0
 		if req.SecureMail {
 			val = 1
@@ -385,16 +582,25 @@ func (p *Panel) handleDomainSSLMail(w http.ResponseWriter, r *http.Request, doma
 			return
 		}
 		if err := p.resyncMailTLSForState(r.Context(), domainID, req.SecureMail); err != nil {
+			if mutationTerminalUncertain(err) {
+				writeServerError(w, fmt.Errorf(
+					"mail TLS terminal receipt is pending; requested secure_mail=%t was retained: %w",
+					req.SecureMail, err,
+				))
+				return
+			}
 			rollbackCtx, cancel := sslCompensationContext()
 			defer cancel()
 			_, rollbackErr := p.db.GetDB().ExecContext(rollbackCtx, `
 				UPDATE ssl_certificates SET secure_mail = ?
 				WHERE domain_id = ? AND status = 'active'`, previousEnabled, domainID)
 			if rollbackErr == nil {
-				rollbackErr = p.resyncMailTLSForState(rollbackCtx, domainID, previousEnabled == 1)
+				rollbackErr = p.resyncMailTLSForState(
+					rollbackCtx, domainID, previousEnabled == 1,
+				)
 			}
 			if rollbackErr != nil {
-				writeServerError(w, fmt.Errorf("mail TLS apply failed: %v; rollback failed: %w", err, rollbackErr))
+				writeServerError(w, fmt.Errorf("mail TLS apply failed: %v; restore snapshot failed: %w", err, rollbackErr))
 				return
 			}
 			writeServerError(w, err)
@@ -408,13 +614,29 @@ func (p *Panel) handleDomainSSLMail(w http.ResponseWriter, r *http.Request, doma
 			_, rollbackErr := p.db.GetDB().ExecContext(rollbackCtx, `
 				UPDATE ssl_certificates SET secure_mail = ?
 				WHERE domain_id = ? AND status = 'active'`, previousEnabled, domainID)
+			mailRollbackPublished := false
 			if rollbackErr == nil {
 				rollbackErr = p.resyncMailTLSForState(rollbackCtx, domainID, previousEnabled == 1)
+				mailRollbackPublished = rollbackErr == nil
 			}
 			if rollbackErr == nil {
 				rollbackErr = p.refreshTLSARecords(rollbackCtx, domainID)
 			}
 			if rollbackErr != nil {
+				if !mailRollbackPublished && !mutationTerminalUncertain(rollbackErr) {
+					requested := 0
+					if req.SecureMail {
+						requested = 1
+					}
+					_, reinstateErr := p.db.GetDB().ExecContext(rollbackCtx, `
+						UPDATE ssl_certificates SET secure_mail = ?
+						WHERE domain_id = ? AND status = 'active'`, requested, domainID)
+					if reinstateErr != nil {
+						rollbackErr = errors.Join(rollbackErr, fmt.Errorf(
+							"reinstate requested secure-mail ledger: %w", reinstateErr,
+						))
+					}
+				}
 				writeServerError(w, fmt.Errorf(
 					"TLSA publish failed: %v; secure-mail rollback failed: %w",
 					err, rollbackErr,

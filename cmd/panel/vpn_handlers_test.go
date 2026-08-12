@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -15,11 +17,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 var vpnTestPeerSequence atomic.Int64
+
+func vpnTestCanonicalKey(sequence int64, purpose byte) string {
+	raw := make([]byte, 32)
+	raw[0] = purpose
+	binary.BigEndian.PutUint64(raw[24:], uint64(sequence))
+	return base64.StdEncoding.EncodeToString(raw)
+}
 
 func newVPNSecurityFixture(
 	t *testing.T,
@@ -92,9 +102,9 @@ func insertVPNTestPeer(
 			 desired_state, sync_state, provisioning_state, delivery_token_hash,
 			 delivery_expires_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, 'active', 'applied', ?, ?, ?, datetime('now'))`,
-		subscriptionID, name, fmt.Sprintf("public-%d", sequence),
-		fmt.Sprintf("psk-%d", sequence),
-		fmt.Sprintf("10.8.0.%d", 2+sequence), createdBy,
+		subscriptionID, name, vpnTestCanonicalKey(sequence, 1),
+		vpnTestCanonicalKey(sequence, 2),
+		fmt.Sprintf("10.8.0.%d", 2+(sequence-1)%253), createdBy,
 		provisioningState, tokenHash, expiresAt,
 	)
 	if err != nil {
@@ -409,6 +419,520 @@ func TestRevokeUndeliveredVPNPeerKeepsErrorTombstoneWhenAgentFails(t *testing.T)
 	}
 }
 
+type vpnCommitmentTestAgent struct {
+	*serviceOperationTestAgent
+
+	captureMu          sync.Mutex
+	beginRequests      []ServiceOperationMutationBeginRequest
+	peerRequests       []ServiceOperationPeerRequest
+	responseGeneration func(int64) int64
+}
+
+func (a *vpnCommitmentTestAgent) BeginServiceMutation(
+	request *ServiceOperationMutationBeginRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	a.captureMu.Lock()
+	a.beginRequests = append(a.beginRequests, *request)
+	a.captureMu.Unlock()
+	return a.serviceOperationTestAgent.BeginServiceMutation(request, response)
+}
+
+func (a *vpnCommitmentTestAgent) SyncVPNPeersV2(
+	request *ServiceOperationPeerRequest,
+	response *ServiceOperationPeerResponse,
+) error {
+	requestCopy := *request
+	requestCopy.Peers = append([]ServiceOperationPeerSpec(nil), request.Peers...)
+	a.captureMu.Lock()
+	a.peerRequests = append(a.peerRequests, requestCopy)
+	a.captureMu.Unlock()
+
+	response.Applied = true
+	response.AppliedGeneration = request.DesiredGeneration
+	if a.responseGeneration != nil {
+		response.AppliedGeneration = a.responseGeneration(request.DesiredGeneration)
+	}
+	return nil
+}
+
+func (a *vpnCommitmentTestAgent) capturedRequests() (
+	[]ServiceOperationMutationBeginRequest,
+	[]ServiceOperationPeerRequest,
+) {
+	a.captureMu.Lock()
+	defer a.captureMu.Unlock()
+	begins := append([]ServiceOperationMutationBeginRequest(nil), a.beginRequests...)
+	peers := make([]ServiceOperationPeerRequest, len(a.peerRequests))
+	for index, request := range a.peerRequests {
+		peers[index] = request
+		peers[index].Peers = append(
+			[]ServiceOperationPeerSpec(nil),
+			request.Peers...,
+		)
+	}
+	return begins, peers
+}
+
+func TestVPNSyncCommitsCanonicalSnapshotAndGeneration(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	firstPeerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "later-address", "", time.Time{},
+	)
+	secondPeerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "earlier-address", "", time.Time{},
+	)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE vpn_peers SET ip = ? WHERE id = ?", "10.8.0.200", firstPeerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE vpn_peers SET ip = ? WHERE id = ?", "10.8.0.3", secondPeerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	var desiredGeneration int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT desired_generation FROM vpn_sync_state WHERE id = 1",
+	).Scan(&desiredGeneration); err != nil {
+		t.Fatal(err)
+	}
+
+	agent := &vpnCommitmentTestAgent{
+		serviceOperationTestAgent: newServiceOperationTestAgent(),
+	}
+	attachVPNTestAgent(t, fixture.panel, agent)
+	if err := fixture.panel.syncVPNPeers(context.Background()); err != nil {
+		t.Fatalf("sync canonical VPN snapshot: %v", err)
+	}
+
+	begins, peerRequests := agent.capturedRequests()
+	if len(begins) != 1 || len(peerRequests) != 1 {
+		t.Fatalf(
+			"mutation begins=%d peer requests=%d, want 1/1",
+			len(begins),
+			len(peerRequests),
+		)
+	}
+	begin := begins[0]
+	request := peerRequests[0]
+	if begin.Kind != "vpn_peer_sync" || begin.Target != "wireguard" {
+		t.Fatalf("mutation identity=%q/%q", begin.Kind, begin.Target)
+	}
+	if request.DesiredGeneration != desiredGeneration {
+		t.Fatalf(
+			"request generation=%d, want %d",
+			request.DesiredGeneration,
+			desiredGeneration,
+		)
+	}
+	if len(request.Peers) != 2 ||
+		request.Peers[0].IP != "10.8.0.3" ||
+		request.Peers[1].IP != "10.8.0.200" {
+		t.Fatalf("canonical peer order=%v", request.Peers)
+	}
+	transportPeers := make([]transport.VPNPeerSpec, len(request.Peers))
+	for index, peer := range request.Peers {
+		transportPeers[index] = transport.VPNPeerSpec{
+			PublicKey:    peer.PublicKey,
+			PresharedKey: peer.PresharedKey,
+			IP:           peer.IP,
+		}
+	}
+	commitment, err := mutationpayload.CanonicalVPNPeerSync(
+		request.DesiredGeneration,
+		transportPeers,
+	)
+	if err != nil {
+		t.Fatalf("recompute VPN peer commitment: %v", err)
+	}
+	if !mutationpayload.ValidVPNPeerSyncQualifier(begin.PackageName) {
+		t.Fatalf("invalid VPN peer qualifier %q", begin.PackageName)
+	}
+	if begin.PackageName != commitment.Qualifier {
+		t.Fatalf(
+			"mutation qualifier=%q, want %q",
+			begin.PackageName,
+			commitment.Qualifier,
+		)
+	}
+
+	var status string
+	var appliedGeneration int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT status, applied_generation FROM vpn_sync_state WHERE id = 1",
+	).Scan(&status, &appliedGeneration); err != nil {
+		t.Fatal(err)
+	}
+	if status != "applied" || appliedGeneration != desiredGeneration {
+		t.Fatalf(
+			"committed sync state=%q generation=%d, want applied/%d",
+			status,
+			appliedGeneration,
+			desiredGeneration,
+		)
+	}
+}
+
+type vpnCommittedResponseLossAgent struct {
+	*serviceOperationTestAgent
+	committedGeneration atomic.Int64
+	finishSawFailure    atomic.Bool
+	cancelPanelContext  context.CancelFunc
+}
+
+func (a *vpnCommittedResponseLossAgent) SyncVPNPeersV2(
+	request *ServiceOperationPeerRequest,
+	_ *ServiceOperationPeerResponse,
+) error {
+	a.mu.Lock()
+	job := a.mutationJobs[a.mutationActive]
+	if job != nil {
+		job.Status = agentMutationSucceeded
+		job.Phase = "commit/vpn-peer-sync/v1/published/" +
+			job.RequestID + "/" + job.PackageName
+		a.mutationActive = ""
+	}
+	a.mu.Unlock()
+	a.committedGeneration.Store(request.DesiredGeneration)
+	if a.cancelPanelContext != nil {
+		a.cancelPanelContext()
+	}
+	return errors.New("simulated VPN response loss after durable commit")
+}
+
+func (a *vpnCommittedResponseLossAgent) FinishServiceMutation(
+	request *ServiceOperationMutationFinishRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	a.finishSawFailure.Store(!request.Success)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	job := a.mutationJobs[request.RequestID]
+	if job == nil || job.OwnerID != request.OwnerID {
+		response.Error = "service mutation owner mismatch"
+		response.Job = cloneServiceOperationMutationJob(job)
+		return nil
+	}
+	response.Job = cloneServiceOperationMutationJob(job)
+	return nil
+}
+
+func TestVPNSyncFinalizesGenerationAfterCommittedResponseLoss(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	peerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "response-loss", "", time.Time{},
+	)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE vpn_peers SET sync_state = 'pending' WHERE id = ?",
+		peerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	var desiredGeneration int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT desired_generation FROM vpn_sync_state WHERE id = 1",
+	).Scan(&desiredGeneration); err != nil {
+		t.Fatal(err)
+	}
+
+	agent := &vpnCommittedResponseLossAgent{
+		serviceOperationTestAgent: newServiceOperationTestAgent(),
+	}
+	requestCtx, cancelRequest := context.WithCancel(context.Background())
+	defer cancelRequest()
+	agent.cancelPanelContext = cancelRequest
+	attachVPNTestAgent(t, fixture.panel, agent)
+	if err := fixture.panel.syncVPNPeers(requestCtx); err != nil {
+		t.Fatalf("sync after committed response loss: %v", err)
+	}
+	if !errors.Is(requestCtx.Err(), context.Canceled) {
+		t.Fatalf("request context error=%v, want canceled", requestCtx.Err())
+	}
+	if got := agent.committedGeneration.Load(); got != desiredGeneration {
+		t.Fatalf("agent committed generation=%d, want %d", got, desiredGeneration)
+	}
+	if !agent.finishSawFailure.Load() {
+		t.Fatal("test did not exercise the failed-RPC Finish race")
+	}
+
+	var status string
+	var leaseToken *string
+	var appliedGeneration int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT status, lease_token, applied_generation FROM vpn_sync_state WHERE id = 1",
+	).Scan(&status, &leaseToken, &appliedGeneration); err != nil {
+		t.Fatal(err)
+	}
+	if status != "applied" || leaseToken != nil ||
+		appliedGeneration != desiredGeneration {
+		t.Fatalf(
+			"sync state=%q lease=%v applied=%d, want applied/nil/%d",
+			status,
+			leaseToken,
+			appliedGeneration,
+			desiredGeneration,
+		)
+	}
+	var peerState string
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT sync_state FROM vpn_peers WHERE id = ?",
+		peerID,
+	).Scan(&peerState); err != nil {
+		t.Fatal(err)
+	}
+	if peerState != "applied" {
+		t.Fatalf("peer sync state=%q, want applied", peerState)
+	}
+}
+
+func TestVPNSyncRejectsMismatchedAppliedGeneration(t *testing.T) {
+	tests := []struct {
+		name               string
+		responseGeneration func(int64) int64
+	}{
+		{
+			name: "omitted",
+			responseGeneration: func(int64) int64 {
+				return 0
+			},
+		},
+		{
+			name: "wrong",
+			responseGeneration: func(generation int64) int64 {
+				return generation + 1
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+			peerID := insertVPNTestPeer(
+				t, fixture, subscriptionID, ownerID,
+				"generation-mismatch", "", time.Time{},
+			)
+			if _, err := fixture.database.GetDB().Exec(
+				"UPDATE vpn_peers SET sync_state = 'pending' WHERE id = ?",
+				peerID,
+			); err != nil {
+				t.Fatal(err)
+			}
+			var desiredGeneration int64
+			if err := fixture.database.GetDB().QueryRow(
+				"SELECT desired_generation FROM vpn_sync_state WHERE id = 1",
+			).Scan(&desiredGeneration); err != nil {
+				t.Fatal(err)
+			}
+			if desiredGeneration == 0 {
+				t.Fatal("test requires a non-zero desired generation")
+			}
+
+			agent := &vpnCommitmentTestAgent{
+				serviceOperationTestAgent: newServiceOperationTestAgent(),
+				responseGeneration:        test.responseGeneration,
+			}
+			attachVPNTestAgent(t, fixture.panel, agent)
+			err := fixture.panel.syncVPNPeers(context.Background())
+			if err == nil || !strings.Contains(err.Error(), "generation") {
+				t.Fatalf("generation mismatch error=%v", err)
+			}
+
+			begins, peerRequests := agent.capturedRequests()
+			if len(begins) != 1 || len(peerRequests) != 1 {
+				t.Fatalf(
+					"mutation begins=%d peer requests=%d, want 1/1",
+					len(begins),
+					len(peerRequests),
+				)
+			}
+			if !mutationpayload.ValidVPNPeerSyncQualifier(begins[0].PackageName) {
+				t.Fatalf("invalid VPN peer qualifier %q", begins[0].PackageName)
+			}
+
+			var status string
+			var leaseToken *string
+			var appliedGeneration int64
+			if err := fixture.database.GetDB().QueryRow(
+				"SELECT status, lease_token, applied_generation "+
+					"FROM vpn_sync_state WHERE id = 1",
+			).Scan(&status, &leaseToken, &appliedGeneration); err != nil {
+				t.Fatal(err)
+			}
+			if status != "error" || leaseToken != nil ||
+				appliedGeneration == desiredGeneration {
+				t.Fatalf(
+					"sync state=%q lease=%v applied=%d desired=%d",
+					status,
+					leaseToken,
+					appliedGeneration,
+					desiredGeneration,
+				)
+			}
+			var peerState string
+			var peerError *string
+			if err := fixture.database.GetDB().QueryRow(
+				"SELECT sync_state, sync_error FROM vpn_peers WHERE id = ?",
+				peerID,
+			).Scan(&peerState, &peerError); err != nil {
+				t.Fatal(err)
+			}
+			if peerState != "error" || peerError == nil {
+				t.Fatalf("peer failure state=%q error=%v", peerState, peerError)
+			}
+		})
+	}
+}
+
+func TestVPNSyncRejectsInvalidSnapshotBeforeAgentLease(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	peerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "invalid-key", "", time.Time{},
+	)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE vpn_peers SET public_key = 'not-base64' WHERE id = ?",
+		peerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	agent := &vpnCommitmentTestAgent{
+		serviceOperationTestAgent: newServiceOperationTestAgent(),
+	}
+	attachVPNTestAgent(t, fixture.panel, agent)
+	err := fixture.panel.syncVPNPeers(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "canonicalize VPN peer snapshot") {
+		t.Fatalf("invalid snapshot error=%v", err)
+	}
+	begins, peerRequests := agent.capturedRequests()
+	if len(begins) != 0 || len(peerRequests) != 0 {
+		t.Fatalf(
+			"invalid snapshot reached agent: begins=%d peer requests=%d",
+			len(begins),
+			len(peerRequests),
+		)
+	}
+	var leaseToken *string
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT lease_token FROM vpn_sync_state WHERE id = 1",
+	).Scan(&leaseToken); err != nil {
+		t.Fatal(err)
+	}
+	if leaseToken != nil {
+		t.Fatalf("invalid snapshot retained VPN sync lease %q", *leaseToken)
+	}
+}
+
+type vpnLegacySyncMethodTestAgent struct {
+	base    *serviceOperationTestAgent
+	v1Calls atomic.Int32
+}
+
+func (a *vpnLegacySyncMethodTestAgent) PkgFamily(
+	request *transport.Empty,
+	response *string,
+) error {
+	return a.base.PkgFamily(request, response)
+}
+
+func (a *vpnLegacySyncMethodTestAgent) BeginServiceMutation(
+	request *ServiceOperationMutationBeginRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	return a.base.BeginServiceMutation(request, response)
+}
+
+func (a *vpnLegacySyncMethodTestAgent) FinishServiceMutation(
+	request *ServiceOperationMutationFinishRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	return a.base.FinishServiceMutation(request, response)
+}
+
+func (a *vpnLegacySyncMethodTestAgent) SyncVPNPeers(
+	request *ServiceOperationPeerRequest,
+	response *ServiceOperationPeerResponse,
+) error {
+	a.v1Calls.Add(1)
+	response.Applied = true
+	response.AppliedGeneration = request.DesiredGeneration
+	return nil
+}
+
+func TestVPNSyncV2RejectsLegacyAgentWithoutStateCAS(t *testing.T) {
+	fixture, ownerID, _, subscriptionID := newVPNSecurityFixture(t)
+	peerID := insertVPNTestPeer(
+		t, fixture, subscriptionID, ownerID, "legacy-agent", "", time.Time{},
+	)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE vpn_peers SET sync_state = 'pending' WHERE id = ?",
+		peerID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	var desiredGeneration, appliedBefore int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT desired_generation, applied_generation "+
+			"FROM vpn_sync_state WHERE id = 1",
+	).Scan(&desiredGeneration, &appliedBefore); err != nil {
+		t.Fatal(err)
+	}
+	if desiredGeneration <= appliedBefore {
+		t.Fatalf(
+			"test requires unapplied generation: desired=%d applied=%d",
+			desiredGeneration,
+			appliedBefore,
+		)
+	}
+
+	agent := &vpnLegacySyncMethodTestAgent{
+		base: newServiceOperationTestAgent(),
+	}
+	attachVPNTestAgent(t, fixture.panel, agent)
+	err := fixture.panel.syncVPNPeers(context.Background())
+	if err == nil ||
+		!strings.Contains(err.Error(), "rpc: can't find method Agent.SyncVPNPeersV2") {
+		t.Fatalf("legacy agent error=%v", err)
+	}
+	if calls := agent.v1Calls.Load(); calls != 0 {
+		t.Fatalf("legacy SyncVPNPeers fallback calls=%d, want 0", calls)
+	}
+
+	var status string
+	var leaseToken *string
+	var desiredAfter, appliedAfter int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT status, lease_token, desired_generation, applied_generation "+
+			"FROM vpn_sync_state WHERE id = 1",
+	).Scan(&status, &leaseToken, &desiredAfter, &appliedAfter); err != nil {
+		t.Fatal(err)
+	}
+	if status != "error" || leaseToken != nil ||
+		desiredAfter != desiredGeneration || appliedAfter != appliedBefore {
+		t.Fatalf(
+			"legacy agent sync state=%q lease=%v desired=%d applied=%d, "+
+				"want error/nil/%d/%d",
+			status,
+			leaseToken,
+			desiredAfter,
+			appliedAfter,
+			desiredGeneration,
+			appliedBefore,
+		)
+	}
+	var peerState string
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT sync_state FROM vpn_peers WHERE id = ?",
+		peerID,
+	).Scan(&peerState); err != nil {
+		t.Fatal(err)
+	}
+	if peerState != "error" {
+		t.Fatalf("legacy agent peer state=%q, want error", peerState)
+	}
+}
+
 type vpnBlockingTestAgent struct {
 	*serviceOperationTestAgent
 	started  chan struct{}
@@ -419,7 +943,7 @@ type vpnBlockingTestAgent struct {
 	snapshots  []int
 }
 
-func (a *vpnBlockingTestAgent) SyncVPNPeers(
+func (a *vpnBlockingTestAgent) SyncVPNPeersV2(
 	request *ServiceOperationPeerRequest,
 	response *ServiceOperationPeerResponse,
 ) error {
@@ -432,18 +956,15 @@ func (a *vpnBlockingTestAgent) SyncVPNPeers(
 		<-a.release
 	}
 	response.Applied = true
+	response.AppliedGeneration = request.DesiredGeneration
 	return nil
 }
 
-func attachVPNBlockingTestAgent(
-	t *testing.T,
-	panel *Panel,
-	agent *vpnBlockingTestAgent,
-) {
+func attachVPNTestAgent(t *testing.T, panel *Panel, agent any) {
 	t.Helper()
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
-		t.Fatalf("register VPN blocking agent: %v", err)
+		t.Fatalf("register VPN test agent: %v", err)
 	}
 	connector := func(ctx context.Context) (*rpc.Client, error) {
 		if err := ctx.Err(); err != nil {
@@ -459,6 +980,15 @@ func attachVPNBlockingTestAgent(
 	}
 	panel.agentClient = transport.NewReconnectingClientWithContextConnector(client, connector)
 	t.Cleanup(func() { _ = client.Close() })
+}
+
+func attachVPNBlockingTestAgent(
+	t *testing.T,
+	panel *Panel,
+	agent *vpnBlockingTestAgent,
+) {
+	t.Helper()
+	attachVPNTestAgent(t, panel, agent)
 }
 
 func TestVPNSyncRetriesStaleGenerationAfterConcurrentRevoke(t *testing.T) {

@@ -19,6 +19,7 @@ interface CronJob {
 interface DomainCronManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
 const schedulePresets: { labelKey: TranslationKey; value: string }[] = [
@@ -39,7 +40,7 @@ const schedulePresets: { labelKey: TranslationKey; value: string }[] = [
 // Agent üzerinden gerçek crontab yönetimi: domain kullanıcısının zamanlanmış
 // görevlerini ekle, düzenle, etkinleştir/devre dışı bırak ve sil; insan-okur
 // hazır kalıplarla.
-export function DomainCronManager({ domainId }: DomainCronManagerProps) {
+export function DomainCronManager({ domainId, readOnly = false }: DomainCronManagerProps) {
     const { t } = useI18n();
     const [jobs, setJobs] = useState<CronJob[]>([]);
     const [loading, setLoading] = useState(true);
@@ -78,6 +79,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
     };
 
     const submitForm = async () => {
+        if (readOnly) return;
         if (!command.trim()) {
             showToast('error', t('cron.commandRequired'));
             return;
@@ -106,6 +108,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
     };
 
     const toggleJob = async (job: CronJob) => {
+        if (readOnly) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron`, {
                 method: 'PUT',
@@ -122,6 +125,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
     };
 
     const deleteJob = async (job: CronJob) => {
+        if (readOnly) return;
         if (!confirm(`${t('cron.deleteConfirm')}\n${job.command}`)) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron?id=${encodeURIComponent(job.id)}`, {
@@ -137,6 +141,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
     };
 
     const startEdit = (job: CronJob) => {
+        if (readOnly) return;
         setEditingJob(job);
         setSchedule(job.schedule);
         setCommand(job.command);
@@ -156,7 +161,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
     return (
         <div className="space-y-5">
             {/* Add / edit form */}
-            {showForm && (
+            {!readOnly && showForm && (
                 <div className="rounded-xl border border-border bg-surface-2/50 p-4">
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-fg">
@@ -230,7 +235,7 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                 <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-fg">{t('cron.title')}</h3>
                     <div className="flex items-center gap-2">
-                        {!showForm && (
+                        {!readOnly && !showForm && (
                             <Button variant="primary" icon={Plus} onClick={() => setShowForm(true)}>
                                 {t('cron.add')}
                             </Button>
@@ -276,29 +281,31 @@ export function DomainCronManager({ domainId }: DomainCronManagerProps) {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-0.5">
-                                        <button
-                                            onClick={() => toggleJob(job)}
-                                            title={job.enabled ? t('cron.disable') : t('cron.enable')}
-                                            className={`rounded-md p-2 hover:bg-surface-2 ${job.enabled ? 'text-success' : 'text-fg-muted hover:text-fg'}`}
-                                        >
-                                            {job.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                                        </button>
-                                        <button
-                                            onClick={() => startEdit(job)}
-                                            title={t('cron.edit')}
-                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-fg"
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => deleteJob(job)}
-                                            title={t('cron.delete')}
-                                            className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                                    {!readOnly && (
+                                        <div className="flex items-center gap-0.5">
+                                            <button
+                                                onClick={() => toggleJob(job)}
+                                                title={job.enabled ? t('cron.disable') : t('cron.enable')}
+                                                className={`rounded-md p-2 hover:bg-surface-2 ${job.enabled ? 'text-success' : 'text-fg-muted hover:text-fg'}`}
+                                            >
+                                                {job.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                            </button>
+                                            <button
+                                                onClick={() => startEdit(job)}
+                                                title={t('cron.edit')}
+                                                className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteJob(job)}
+                                                title={t('cron.delete')}
+                                                className="rounded-md p-2 text-fg-muted hover:bg-surface-2 hover:text-danger"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}

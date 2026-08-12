@@ -10,32 +10,108 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
 func bindPanelCertificateMutation(
 	t *testing.T,
-	req *IssuePanelCertRequest,
+	req *IssuePanelCertV2Request,
 ) {
 	t.Helper()
+	if req.Email == "" {
+		req.Email = "admin@example.test"
+	}
+	commitment, err := mutationpayload.CanonicalPanelCertificateIssue(
+		req.Domain,
+		req.Email,
+		req.TLSDir,
+		req.ExpectedBuildCommit,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	manager, _ := newMutationTestManager(t)
 	installGlobalMutationTestManager(t, manager)
-	beginMutationTestJob(t, manager)
+	beginMutationTestJobWithIdentity(
+		t,
+		manager,
+		"panel_certificate_issue",
+		commitment.Domain,
+		commitment.Qualifier,
+	)
 	req.MutationRequestID = testMutationRequestID
 	req.MutationOwnerID = testMutationOwnerID
 }
 
+func bridgePanelCertificateIssueStageToLegacyPublishTest(t *testing.T) {
+	t.Helper()
+	original := panelCertStageIssue
+	originalVerify := panelCertificateIssueVerifyPublished
+	panelCertStageIssue = func(
+		domain, tlsDir string,
+		certificate, privateKey []byte,
+		_ panelCertificateIssueReceipt,
+	) (*panelCertificateIssueStage, error) {
+		return &panelCertificateIssueStage{
+			publishAction: func() (bool, error) {
+				err := panelCertificateActivationPublishMaterial(
+					domain,
+					tlsDir,
+					certificate,
+					privateKey,
+				)
+				return err == nil, err
+			},
+			cleanupAction: func(bool) error { return nil },
+		}, nil
+	}
+	panelCertificateIssueVerifyPublished = func(
+		string, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+	t.Cleanup(func() {
+		panelCertStageIssue = original
+		panelCertificateIssueVerifyPublished = originalVerify
+	})
+}
+
 func TestIssuePanelCertificateRequiresDurableMutationBinding(t *testing.T) {
-	req := &IssuePanelCertRequest{
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
+		Email:               "admin@example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
-	var resp IssuePanelCertResponse
-	if err := (&Agent{}).IssuePanelCertificate(req, &resp); err != nil {
-		t.Fatalf("IssuePanelCertificate returned RPC error: %v", err)
+	var resp IssuePanelCertV2Response
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
+		t.Fatalf("IssuePanelCertificateV2 returned RPC error: %v", err)
 	}
 	if !strings.Contains(resp.Error, "durable service mutation lease is required") {
 		t.Fatalf("response error = %q, want missing durable lease rejection", resp.Error)
+	}
+}
+
+func TestIssuePanelCertificateLegacyEndpointIsStableZeroTouchStub(t *testing.T) {
+	var resp IssuePanelCertResponse
+	if err := (&Agent{}).IssuePanelCertificate(
+		&IssuePanelCertRequest{
+			MutationRequestID:   testMutationRequestID,
+			MutationOwnerID:     testMutationOwnerID,
+			Domain:              "panel.example.test",
+			Email:               "admin@example.test",
+			TLSDir:              managedPanelTLSDir,
+			ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+		},
+		&resp,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if resp != (IssuePanelCertResponse{
+		Error: issuePanelCertificateLegacyUnsupportedError,
+	}) {
+		t.Fatalf("legacy response = %#v", resp)
 	}
 }
 
@@ -45,18 +121,136 @@ func TestIssuePanelCertificateRejectsConcurrentOperation(t *testing.T) {
 	}
 	defer releaseSiteCertbot()
 
-	req := &IssuePanelCertRequest{
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
 	bindPanelCertificateMutation(t, req)
-	var resp IssuePanelCertResponse
-	if err := (&Agent{}).IssuePanelCertificate(req, &resp); err != nil {
-		t.Fatalf("IssuePanelCertificate returned RPC error: %v", err)
+	var resp IssuePanelCertV2Response
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
+		t.Fatalf("IssuePanelCertificateV2 returned RPC error: %v", err)
 	}
 	if !strings.Contains(resp.Error, "already in progress") {
 		t.Fatalf("response error = %q, want concurrent-operation rejection", resp.Error)
+	}
+}
+
+func TestIssuePanelCertificateV2RejectsPayloadSubstitutionBeforeHostAccess(
+	t *testing.T,
+) {
+	req := &IssuePanelCertV2Request{
+		Domain:              "panel.example.test",
+		Email:               "admin@example.test",
+		TLSDir:              managedPanelTLSDir,
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+	}
+	bindPanelCertificateMutation(t, req)
+	req.Email = "other@example.test"
+
+	originalLookPath := panelCertLookPath
+	hostTouched := false
+	panelCertLookPath = func(string) (string, error) {
+		hostTouched = true
+		return "", errors.New("must not run")
+	}
+	t.Cleanup(func() { panelCertLookPath = originalLookPath })
+
+	var resp IssuePanelCertV2Response
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error == "" ||
+		!strings.Contains(resp.Error, "does not authorize") {
+		t.Fatalf("payload substitution response = %#v", resp)
+	}
+	if hostTouched {
+		t.Fatal("payload substitution reached host inspection")
+	}
+}
+
+func TestIssuePanelCertificateV2RejectsUnsupportedDNFBeforeHostAccess(
+	t *testing.T,
+) {
+	req := &IssuePanelCertV2Request{
+		Domain:              "panel.example.test",
+		Email:               "admin@example.test",
+		TLSDir:              managedPanelTLSDir,
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+	}
+	bindPanelCertificateMutation(t, req)
+
+	originalDetect := panelCertDetectPkgFamily
+	originalLookPath := panelCertLookPath
+	originalInstall := panelCertInstallPackages
+	panelCertDetectPkgFamily = func() string { return "dnf" }
+	hostTouched := false
+	panelCertLookPath = func(string) (string, error) {
+		hostTouched = true
+		return "", errors.New("must not run")
+	}
+	panelCertInstallPackages = func(
+		context.Context, string, []string,
+	) (string, error) {
+		hostTouched = true
+		return "", errors.New("must not run")
+	}
+	t.Cleanup(func() {
+		panelCertDetectPkgFamily = originalDetect
+		panelCertLookPath = originalLookPath
+		panelCertInstallPackages = originalInstall
+	})
+
+	var resp IssuePanelCertV2Response
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error == "" || hostTouched {
+		t.Fatalf("DNF response=%#v hostTouched=%v", resp, hostTouched)
+	}
+}
+
+func TestIssuePanelCertificateV2UsesExactCataloguedCertbotPackage(
+	t *testing.T,
+) {
+	req := &IssuePanelCertV2Request{
+		Domain:              "panel.example.test",
+		Email:               "admin@example.test",
+		TLSDir:              managedPanelTLSDir,
+		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
+	}
+	bindPanelCertificateMutation(t, req)
+
+	originalDetect := panelCertDetectPkgFamily
+	originalLookPath := panelCertLookPath
+	originalInstall := panelCertInstallPackages
+	panelCertDetectPkgFamily = func() string { return "apt" }
+	panelCertLookPath = func(string) (string, error) {
+		return "", exec.ErrNotFound
+	}
+	panelCertInstallPackages = func(
+		_ context.Context,
+		family string,
+		packages []string,
+	) (string, error) {
+		if family != "apt" ||
+			!reflect.DeepEqual(packages, []string{"certbot"}) {
+			t.Fatalf("install family=%q packages=%#v", family, packages)
+		}
+		return "", errors.New("stop after catalog assertion")
+	}
+	t.Cleanup(func() {
+		panelCertDetectPkgFamily = originalDetect
+		panelCertLookPath = originalLookPath
+		panelCertInstallPackages = originalInstall
+	})
+
+	var resp IssuePanelCertV2Response
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(resp.Error, "stop after catalog assertion") {
+		t.Fatalf("response=%#v", resp)
 	}
 }
 
@@ -184,6 +378,7 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 	originalHook := panelCertWriteDeployHook
 	originalRenewal := panelCertEnsureRenewal
 	originalLock := panelCertWithPublishLock
+	originalActiveIdentity := panelCertActiveIdentity
 	originalReadSource := panelCertificateActivationReadSource
 	originalPublish := panelCertificateActivationPublishMaterial
 	t.Cleanup(func() {
@@ -192,6 +387,7 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 		panelCertWriteDeployHook = originalHook
 		panelCertEnsureRenewal = originalRenewal
 		panelCertWithPublishLock = originalLock
+		panelCertActiveIdentity = originalActiveIdentity
 		panelCertificateActivationReadSource = originalReadSource
 		panelCertificateActivationPublishMaterial = originalPublish
 	})
@@ -205,6 +401,9 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 		context.Context, time.Duration, string, ...string,
 	) ([]byte, error) {
 		return nil, nil
+	}
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
 	}
 	panelCertWithPublishLock = func(action func() error) error { return action() }
 	expiry := time.Now().UTC().Add(24 * time.Hour)
@@ -229,14 +428,14 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 		return nil
 	}
 
-	var resp IssuePanelCertResponse
-	req := &IssuePanelCertRequest{
+	var resp IssuePanelCertV2Response
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
 	bindPanelCertificateMutation(t, req)
-	err := (&Agent{}).IssuePanelCertificate(req, &resp)
+	err := (&Agent{}).IssuePanelCertificateV2(req, &resp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,19 +448,20 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 	if !strings.Contains(resp.Error, "renewal scheduler") {
 		t.Fatalf("response error = %q", resp.Error)
 	}
-	state, present := store.snapshot()
-	if !present || state.Phase != panelCertificateActivationPendingPublish {
-		t.Fatalf("activation state = %+v present=%v", state, present)
+	if state, present := store.snapshot(); present {
+		t.Fatalf("pre-commit activation state was retained: %+v", state)
 	}
 }
 
 func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *testing.T) {
 	store := installPanelCertificateActivationMemoryStore(t)
+	bridgePanelCertificateIssueStageToLegacyPublishTest(t)
 	originalLookPath := panelCertLookPath
 	originalRun := panelCertRunMutationCommand
 	originalHook := panelCertWriteDeployHook
 	originalRenewal := panelCertEnsureRenewal
 	originalLock := panelCertWithPublishLock
+	originalActiveIdentity := panelCertActiveIdentity
 	originalReadSource := panelCertificateActivationReadSource
 	originalPublish := panelCertificateActivationPublishMaterial
 	t.Cleanup(func() {
@@ -270,6 +470,7 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 		panelCertWriteDeployHook = originalHook
 		panelCertEnsureRenewal = originalRenewal
 		panelCertWithPublishLock = originalLock
+		panelCertActiveIdentity = originalActiveIdentity
 		panelCertificateActivationReadSource = originalReadSource
 		panelCertificateActivationPublishMaterial = originalPublish
 	})
@@ -303,7 +504,19 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 			t.Fatal("certbot was run while the publication lock was held")
 		}
 		certbotArgs = append([]string(nil), args...)
+		queued, err := enqueueRenewedPanelCertificateActivation(
+			panelCertLineageName("panel.example.test"),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if queued {
+			t.Fatal("certbot deploy hook overwrote the exact interactive activation intent")
+		}
 		return nil, nil
+	}
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
 	}
 	expiry := time.Now().UTC().Truncate(time.Second).Add(48 * time.Hour)
 	leafDER := []byte("exact-leaf-der")
@@ -338,14 +551,14 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 		return nil
 	}
 
-	var resp IssuePanelCertResponse
-	req := &IssuePanelCertRequest{
+	var resp IssuePanelCertV2Response
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
 	bindPanelCertificateMutation(t, req)
-	if err := (&Agent{}).IssuePanelCertificate(req, &resp); err != nil {
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
 		t.Fatal(err)
 	}
 	if !resp.Issued || resp.Error != "" {
@@ -355,7 +568,10 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 		t.Fatalf("commit order = %#v", order)
 	}
 	state, present := store.snapshot()
-	if !present || state.Phase != panelCertificateActivationPendingRestart {
+	if !present ||
+		state.Origin != panelCertificateActivationOriginInteractive ||
+		state.RequestID != testMutationRequestID ||
+		state.Phase != panelCertificateActivationPendingPublish {
 		t.Fatalf("activation state = %+v present=%v", state, present)
 	}
 	if state.LeafSHA256 != panelCertificateLeafSHA256(leafDER) ||
@@ -377,7 +593,7 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 	}
 }
 
-func TestIssuePanelCertificateRetainsBoundIntentWhenDeployHookFails(t *testing.T) {
+func TestIssuePanelCertificateCleansBoundIntentWhenDeployHookFails(t *testing.T) {
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
 	originalRun := panelCertRunMutationCommand
@@ -425,14 +641,14 @@ func TestIssuePanelCertificateRetainsBoundIntentWhenDeployHookFails(t *testing.T
 		return nil
 	}
 
-	var resp IssuePanelCertResponse
-	req := &IssuePanelCertRequest{
+	var resp IssuePanelCertV2Response
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
 	bindPanelCertificateMutation(t, req)
-	if err := (&Agent{}).IssuePanelCertificate(req, &resp); err != nil {
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
 		t.Fatal(err)
 	}
 	if published {
@@ -441,9 +657,8 @@ func TestIssuePanelCertificateRetainsBoundIntentWhenDeployHookFails(t *testing.T
 	if !strings.Contains(resp.Error, "deploy hook unavailable") {
 		t.Fatalf("response error = %q", resp.Error)
 	}
-	state, present := store.snapshot()
-	if !present || state.Phase != panelCertificateActivationPendingPublish {
-		t.Fatalf("activation state = %+v present=%v", state, present)
+	if state, present := store.snapshot(); present {
+		t.Fatalf("pre-commit activation state was retained: %+v", state)
 	}
 }
 
@@ -491,14 +706,14 @@ func TestIssuePanelCertificateCleansUnchangedIntentAfterCertbotFailure(t *testin
 		return nil, nil, nil, time.Time{}, nil
 	}
 
-	var resp IssuePanelCertResponse
-	req := &IssuePanelCertRequest{
+	var resp IssuePanelCertV2Response
+	req := &IssuePanelCertV2Request{
 		Domain:              "panel.example.test",
 		TLSDir:              managedPanelTLSDir,
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 	}
 	bindPanelCertificateMutation(t, req)
-	if err := (&Agent{}).IssuePanelCertificate(req, &resp); err != nil {
+	if err := (&Agent{}).IssuePanelCertificateV2(req, &resp); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(resp.Error, "challenge failed") {

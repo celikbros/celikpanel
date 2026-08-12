@@ -152,7 +152,7 @@ func (p *Panel) handleListBackups(w http.ResponseWriter, r *http.Request, d back
 		DomainID: d.ID, DomainName: d.Name,
 	}
 	var resp backupspec.ListResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.ListBackups", &req, &resp); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.ListBackups", &req, &resp); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -205,7 +205,7 @@ func (p *Panel) handleCreateBackup(w http.ResponseWriter, r *http.Request, d bac
 		return
 	}
 	var resp backupspec.CreateResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.CreateBackup", &req, &resp); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.CreateBackup", &req, &resp); err != nil {
 		p.auditBackupFailure(r, "create", body.Type, d.ID, err.Error())
 		writeServerError(w, err)
 		return
@@ -231,7 +231,7 @@ func (p *Panel) handleDeleteBackup(w http.ResponseWriter, r *http.Request, d bac
 		DomainID: d.ID, DomainName: d.Name, BackupName: name,
 	}
 	var success bool
-	if err := p.agentClient.CallContext(r.Context(), "Agent.DeleteBackup", &req, &success); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.DeleteBackup", &req, &success); err != nil {
 		p.auditBackupFailure(r, "delete", "", d.ID, err.Error())
 		writeServerError(w, err)
 		return
@@ -282,7 +282,7 @@ func (p *Panel) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 		DomainID: d.ID, DomainName: d.Name, BackupName: body.BackupName,
 	}
 	var inspection backupspec.InspectResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
 		p.auditBackupFailure(r, "restore", "", d.ID, err.Error())
 		writeServerError(w, err)
 		return
@@ -314,7 +314,7 @@ func (p *Panel) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var resp backupspec.RestoreResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.RestoreBackup", &restoreReq, &resp); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.RestoreBackup", &restoreReq, &resp); err != nil {
 		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, err.Error())
 		writeServerError(w, err)
 		return
@@ -438,7 +438,7 @@ func (p *Panel) handleDownloadBackup(w http.ResponseWriter, r *http.Request) {
 		DomainID: d.ID, DomainName: d.Name, BackupName: name,
 	}
 	var inspection backupspec.InspectResponse
-	if err := p.agentClient.CallContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
+	if err := p.callAgentContext(r.Context(), "Agent.InspectBackup", &inspectReq, &inspection); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -494,7 +494,7 @@ func (p *Panel) readBackupChunk(ctx context.Context, d backupDomain, name string
 		Offset: offset, MaxBytes: backupspec.MaxChunkBytes,
 	}
 	var resp backupspec.ReadChunkResponse
-	err := p.agentClient.CallContext(ctx, "Agent.ReadBackupChunk", &req, &resp)
+	err := p.callAgentContext(ctx, "Agent.ReadBackupChunk", &req, &resp)
 	return resp, err
 }
 

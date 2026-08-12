@@ -13,7 +13,7 @@ const (
 
 	// AgentSchemaVersion identifies the typed executor capabilities, not a Git release.
 	// AgentSchemaVersion, bir Git sürümünü değil türü belirlenmiş yürütücü yeteneklerini tanımlar.
-	AgentSchemaVersion = 1
+	AgentSchemaVersion = 2
 
 	DefaultCatalogPath   = "/usr/share/celikpanel/manifests/components-v2.db"
 	DefaultSignaturePath = DefaultCatalogPath + ".sig"
@@ -82,6 +82,7 @@ type CatalogDocument struct {
 
 type HostProfile struct {
 	OSFamily       string
+	DistroFamily   string
 	DistroID       string
 	DistroLike     []string
 	Version        string
@@ -92,6 +93,7 @@ type HostProfile struct {
 
 type PlatformSelector struct {
 	OSFamily       string   `json:"os_family,omitempty"`
+	DistroFamily   string   `json:"distro_family,omitempty"`
 	DistroID       string   `json:"distro_id,omitempty"`
 	DistroLike     string   `json:"distro_like,omitempty"`
 	Version        string   `json:"version,omitempty"`

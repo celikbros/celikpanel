@@ -6,6 +6,14 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { PageHeader, Button, SearchInput, EmptyState, StatusDot, UsageBar } from './ui';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { useAuth } from '../auth/AuthContext';
+import {
+    hasAnyDomainAccess,
+    hasDomainAccess,
+    normalizeDomainAccess,
+    type DomainAccess,
+    type DomainCapability,
+} from '../auth/domainAccess';
 
 // Type badge colours: categorical, readable in both themes.
 // Tip rozeti renkleri: kategorik, iki temada da okunur.
@@ -21,14 +29,15 @@ const typeBadge: Record<string, string> = {
 interface Domain {
     id: number;
     domain_name: string;
-    php_version: string;
-    ssl_enabled: boolean;
+    php_version?: string;
+    ssl_enabled?: boolean;
     status: string;
     project_type?: string;
     created_at: string;
     disk_usage?: number;
     bandwidth?: number;
     parent_id?: number | null;
+    access?: DomainAccess;
 }
 
 const API_BASE = '/api/v1';
@@ -43,11 +52,14 @@ const API_BASE = '/api/v1';
 export function Domains() {
     const navigate = useNavigate();
     const { t } = useI18n();
+    const { role } = useAuth();
+    const isTeamMember = role === 'additional_user';
     const [domains, setDomains] = useState<Domain[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<number[]>([]);
+    const [accessError, setAccessError] = useState('');
 
     // D-009 on the page itself, not only inside the dialog: with no DNS
     // server installed, the Add buttons are disabled and the empty state
@@ -61,24 +73,53 @@ export function Domains() {
     // hiçbir şey sızamaz).
     const [dnsServer, setDnsServer] = useState<string | null>(null);
     useEffect(() => {
+        if (isTeamMember) return;
         fetch(`${API_BASE}/hosting/capabilities`)
             .then((r) => (r.ok ? r.json() : null))
             .then((c) => setDnsServer(c ? (c.dns_server ?? '') : null))
             .catch(() => setDnsServer(null));
-    }, []);
+    }, [isTeamMember]);
     const dnsMissing = dnsServer === '';
 
     useEffect(() => {
         loadDomains();
-    }, []);
+    }, [isTeamMember]);
 
     const loadDomains = async () => {
         setLoading(true);
+        setAccessError('');
         try {
             const res = await fetch(`${API_BASE}/domains`);
             if (!res.ok) throw new Error();
-            setDomains((await res.json()) || []);
+            const payload: unknown = await res.json();
+            if (!Array.isArray(payload)) throw new Error();
+            if (!isTeamMember) {
+                setDomains(payload as Domain[]);
+                return;
+            }
+
+            let rejected = false;
+            const allowed: Domain[] = [];
+            for (const item of payload) {
+                if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                    rejected = true;
+                    continue;
+                }
+                const row = item as Domain & { access?: unknown };
+                const access = normalizeDomainAccess(row.access);
+                if (!access || !hasAnyDomainAccess(access)) {
+                    rejected = true;
+                    continue;
+                }
+                allowed.push({ ...row, access });
+            }
+            setDomains(allowed);
+            if (rejected) {
+                setAccessError('One or more domains were hidden because their access information was invalid. / Bir veya daha fazla alan adı, erişim bilgisi geçersiz olduğu için gizlendi.');
+            }
         } catch {
+            setDomains([]);
+            setAccessError('Domains could not be loaded. Your existing access was not changed. / Alan adları yüklenemedi. Mevcut erişiminiz değiştirilmedi.');
             showToast('error', t('domains.loadFailed'));
         } finally {
             setLoading(false);
@@ -103,22 +144,24 @@ export function Domains() {
     };
 
     const filtered = domains.filter((d) => d.domain_name.toLowerCase().includes(query.toLowerCase()));
-    const allSelected = filtered.length > 0 && selected.length === filtered.length;
+    const allSelected = !isTeamMember && filtered.length > 0 && selected.length === filtered.length;
+    const canView = (domain: Domain, capability: DomainCapability) =>
+        !isTeamMember || Boolean(domain.access && hasDomainAccess(domain.access, capability, 'view'));
 
     return (
         <div className="p-6 md:p-8">
-            <SubscriptionUsage />
+            {!isTeamMember && <SubscriptionUsage />}
             <PageHeader
                 title={t('nav.domains')}
-                subtitle={t('domains.subtitle')}
+                subtitle={accessError || t('domains.subtitle')}
                 breadcrumb={[t('common.home'), t('nav.domains')]}
-                actions={
+                actions={!isTeamMember && (
                     <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
                         <Button variant="primary" icon={Plus} disabled={dnsMissing} onClick={() => setShowAddModal(true)}>
                             {t('domains.add')}
                         </Button>
                     </span>
-                }
+                )}
             />
 
             {loading ? (
@@ -130,7 +173,7 @@ export function Domains() {
                     icon={Globe}
                     title={t('domains.empty')}
                     hint={dnsMissing ? t('domains.add.needsDns') : t('domains.emptyHint')}
-                    action={
+                    action={!isTeamMember && (
                         dnsMissing ? (
                             // The honest next step is not a dead Add button but
                             // the page where the requirement is met.
@@ -144,12 +187,12 @@ export function Domains() {
                                 {t('domains.add')}
                             </Button>
                         )
-                    }
+                    )}
                 />
             ) : (
                 <div className="rounded-xl border border-border bg-surface shadow-card">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
-                        <div className="flex items-center gap-2">
+                        {!isTeamMember && <div className="flex items-center gap-2">
                             <span title={dnsMissing ? t('domains.add.needsDns') : undefined}>
                                 <Button variant="primary" icon={Plus} disabled={dnsMissing} onClick={() => setShowAddModal(true)}>
                                     {t('domains.add')}
@@ -169,7 +212,7 @@ export function Domains() {
                                     {t('common.remove')} ({selected.length})
                                 </Button>
                             )}
-                        </div>
+                        </div>}
                         <SearchInput value={query} onChange={setQuery} placeholder={t('domains.search')} />
                     </div>
 
@@ -181,7 +224,7 @@ export function Domains() {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                    <th className="w-10 px-4 py-2.5">
+                                    {!isTeamMember && <th className="w-10 px-4 py-2.5">
                                         <input
                                             type="checkbox"
                                             checked={allSelected}
@@ -190,7 +233,7 @@ export function Domains() {
                                             }
                                             className="h-4 w-4 accent-primary"
                                         />
-                                    </th>
+                                    </th>}
                                     <th className="px-4 py-2.5">{t('domains.col.name')}</th>
                                     <th className="px-4 py-2.5">{t('domains.col.php')}</th>
                                     <th className="px-4 py-2.5 text-right">{t('domains.col.disk')}</th>
@@ -202,7 +245,7 @@ export function Domains() {
                             <tbody>
                                 {filtered.map((d) => (
                                     <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                        <td className="px-4 py-3">
+                                        {!isTeamMember && <td className="px-4 py-3">
                                             <input
                                                 type="checkbox"
                                                 checked={selected.includes(d.id)}
@@ -213,10 +256,10 @@ export function Domains() {
                                                 }
                                                 className="h-4 w-4 accent-primary"
                                             />
-                                        </td>
+                                        </td>}
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                {d.ssl_enabled ? (
+                                                {canView(d, 'ssl') && d.ssl_enabled ? (
                                                     <Lock className="h-4 w-4 shrink-0 text-success" />
                                                 ) : (
                                                     <Globe className="h-4 w-4 shrink-0 text-fg-subtle" />
@@ -237,16 +280,22 @@ export function Domains() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${typeBadge[d.project_type || 'php'] ?? 'bg-surface-2 text-fg-muted'}`}>
-                                                {d.project_type || 'php'}
-                                            </span>
-                                            {(d.project_type || 'php') === 'php' && d.php_version && (
-                                                <span className="ml-1.5 text-xs text-fg-subtle">{d.php_version}</span>
-                                            )}
+                                            {canView(d, 'php') ? (
+                                                <>
+                                                    <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${typeBadge[d.project_type || 'php'] ?? 'bg-surface-2 text-fg-muted'}`}>
+                                                        {d.project_type || 'php'}
+                                                    </span>
+                                                    {(d.project_type || 'php') === 'php' && d.php_version && (
+                                                        <span className="ml-1.5 text-xs text-fg-subtle">{d.php_version}</span>
+                                                    )}
+                                                </>
+                                            ) : '—'}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-fg-muted">{fmtBytes(d.disk_usage)}</td>
                                         <td className="px-4 py-3 text-right text-fg-muted">
-                                            {fmtBytes(d.bandwidth)}/mo
+                                            {canView(d, 'statistics') ? fmtBytes(d.disk_usage) : '—'}
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-fg-muted">
+                                            {canView(d, 'statistics') ? `${fmtBytes(d.bandwidth)}/mo` : '—'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="inline-flex items-center gap-1.5 text-fg-muted">
@@ -256,12 +305,12 @@ export function Domains() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-end gap-0.5">
-                                                <IconAction
+                                                {canView(d, 'files') && <IconAction
                                                     href={`https://${d.domain_name}`}
                                                     title={t('domains.action.visit')}
                                                 >
                                                     <ExternalLink className="h-4 w-4" />
-                                                </IconAction>
+                                                </IconAction>}
                                                 <IconAction
                                                     onClick={() =>
                                                         navigate(`/domains/${encodeURIComponent(d.domain_name)}`)
@@ -270,13 +319,13 @@ export function Domains() {
                                                 >
                                                     <Settings className="h-4 w-4" />
                                                 </IconAction>
-                                                <IconAction
+                                                {!isTeamMember && <IconAction
                                                     onClick={() => handleDelete(d.id, d.domain_name)}
                                                     title={t('domains.action.delete')}
                                                     danger
                                                 >
                                                     <Trash2 className="h-4 w-4" />
-                                                </IconAction>
+                                                </IconAction>}
                                             </div>
                                         </td>
                                     </tr>
@@ -291,7 +340,7 @@ export function Domains() {
                 </div>
             )}
 
-            {showAddModal && (
+            {!isTeamMember && showAddModal && (
                 <AddDomainModal
                     onClose={() => setShowAddModal(false)}
                     onSuccess={() => {

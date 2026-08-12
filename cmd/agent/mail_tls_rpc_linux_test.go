@@ -46,7 +46,7 @@ func TestValidateMailSNIEntriesRejectsSymlinkedSnapshotPaths(t *testing.T) {
 		if err := os.Chmod(domainDir, 0o750); err != nil {
 			t.Fatal(err)
 		}
-		versionDir := filepath.Join(domainDir, testCertificateVersion)
+		versionDir := filepath.Join(domainDir, filepath.Base(outside.versionDir))
 		if err := os.Symlink(outside.versionDir, versionDir); err != nil {
 			t.Fatal(err)
 		}
@@ -67,8 +67,8 @@ func TestValidateMailSNIEntriesRejectsSymlinkedSnapshotPaths(t *testing.T) {
 		}
 		t.Setenv("CELIKPANEL_CUSTOM_CERT_ROOT", linkRoot)
 		entry := validMailSNIEntry(snapshot)
-		entry.CertPath = filepath.Join(linkRoot, "example.test", testCertificateVersion, "fullchain.pem")
-		entry.KeyPath = filepath.Join(linkRoot, "example.test", testCertificateVersion, "privkey.pem")
+		entry.CertPath = filepath.Join(linkRoot, "example.test", filepath.Base(snapshot.versionDir), "fullchain.pem")
+		entry.KeyPath = filepath.Join(linkRoot, "example.test", filepath.Base(snapshot.versionDir), "privkey.pem")
 		requireMailTLSEntryRejected(t, entry, "managed certificate root")
 	})
 }

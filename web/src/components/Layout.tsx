@@ -3,7 +3,7 @@ import { Server, LogOut, ChevronDown, Menu, KeyRound, UserCheck } from 'lucide-r
 import { api } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
-import { navItemsForRole, navGroups, type NavItem } from '../nav';
+import { navItemsForRole, navGroups, type NavAccessContext, type NavItem } from '../nav';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -26,7 +26,11 @@ interface LayoutProps {
 type Counts = Partial<Record<'domains' | 'databases' | 'services', number>>;
 
 export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
-    const { role } = useAuth();
+    const { role, user } = useAuth();
+    const navAccess: NavAccessContext = {
+        accountType: typeof user?.account_type === 'string' ? user.account_type : undefined,
+        teamMembers: user?.features?.team_members === true,
+    };
     const [counts, setCounts] = useState<Counts>({});
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -52,6 +56,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         <div className="flex h-screen bg-bg text-fg">
             <Sidebar
                 role={role}
+                access={navAccess}
                 counts={counts}
                 currentPage={currentPage}
                 onPageChange={(id) => {
@@ -90,6 +95,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
 
 function Sidebar({
     role,
+    access,
     counts,
     currentPage,
     onPageChange,
@@ -97,6 +103,7 @@ function Sidebar({
     onCloseMobile,
 }: {
     role: ReturnType<typeof useAuth>['role'];
+    access: NavAccessContext;
     counts: Counts;
     currentPage: string;
     onPageChange: (id: string) => void;
@@ -104,7 +111,7 @@ function Sidebar({
     onCloseMobile: () => void;
 }) {
     const { t } = useI18n();
-    const items = navItemsForRole(role);
+    const items = navItemsForRole(role, access);
 
     const content = (
         <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-fg">

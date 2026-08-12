@@ -27,8 +27,9 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, s
 		return errors.New("unknown managed service")
 	}
 
-	family := p.packageFamily()
-	if reason := core.ManagedServiceInstallDisabledReason(managed, family); reason != "" {
+	host := p.managedServiceHostProfile()
+	family := host.PackageFamily
+	if _, reason := core.ManagedServiceInstallBlockForHost(managed, host); reason != "" {
 		return fmt.Errorf("%s: %s", managed.Name, reason)
 	}
 
@@ -51,6 +52,15 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, s
 			managed.Name, taken)
 	}
 
+	return p.preflightManagedServiceRepository(ctx, managed, family, selectedPackage)
+}
+
+func (p *Panel) preflightManagedServiceRepository(
+	ctx context.Context,
+	managed *core.ManagedService,
+	family string,
+	selectedPackage string,
+) error {
 	requiresRepo, err := core.InstallRequiresManagedRepository(managed, selectedPackage)
 	if err != nil {
 		return fmt.Errorf("%s repository policy: %w", managed.Name, err)

@@ -18,6 +18,7 @@ func TestMatchDomainSubrouteExactRoutes(t *testing.T) {
 		{http.MethodDelete, "/api/v1/domains/7/aliases/www.example.test", "aliases"},
 		{http.MethodPut, "/api/v1/domains/7/dns/records", "dns"},
 		{http.MethodPost, "/api/v1/domains/7/mail/auth/dkim", "mail"},
+		{http.MethodPut, "/api/v1/domains/7/mail/accounts/password", "mail"},
 		{http.MethodDelete, "/api/v1/domains/7/databases/19", "database-delete"},
 	}
 	for _, test := range tests {
@@ -29,6 +30,22 @@ func TestMatchDomainSubrouteExactRoutes(t *testing.T) {
 			}
 			if !routeAllows(test.method, match.methods) {
 				t.Fatalf("method %s not allowed by %#v", test.method, match.methods)
+			}
+		})
+	}
+}
+
+func TestMailPasswordRouteAllowsOnlyPut(t *testing.T) {
+	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions} {
+		t.Run(method, func(t *testing.T) {
+			r := httptest.NewRequest(method, "/api/v1/domains/7/mail/accounts/password", nil)
+			w := httptest.NewRecorder()
+			(&Panel{}).handleDomainSubroute(w, r)
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("status=%d, want 405", w.Code)
+			}
+			if allow := w.Header().Get("Allow"); allow != http.MethodPut {
+				t.Fatalf("Allow=%q, want PUT", allow)
 			}
 		})
 	}

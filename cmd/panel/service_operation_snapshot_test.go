@@ -1335,6 +1335,49 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP TRIGGER pdns_records_dns_sync_update;
+		DROP TRIGGER pdns_records_dns_sync_delete;
+		DROP TRIGGER pdns_records_dns_sync_insert;
+		DROP TRIGGER pdns_domains_dns_sync_delete;
+		DROP TRIGGER pdns_domains_dns_sync_update;
+		DROP TRIGGER pdns_domains_dns_sync_rename;
+		DROP TRIGGER pdns_domains_dns_sync_insert;
+		DROP TRIGGER dns_zone_deletion_marker_delete_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_update_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_insert_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_pending_delete_guard;
+		DROP TRIGGER dns_zone_deletion_marker_reject_live_update;
+		DROP TRIGGER dns_zone_deletion_marker_name_immutable;
+		DROP TRIGGER dns_zone_deletion_marker_reject_live_insert;
+		DROP INDEX idx_dns_zone_sync_state_pending;
+		DROP INDEX idx_dns_zone_sync_state_lease_request;
+		DROP INDEX idx_dns_zone_sync_state_source_domain;
+		DROP TABLE dns_zone_deletion_markers;
+		DROP TABLE dns_zone_sync_state;
+
+		DROP TABLE domain_deletion_operations;
+
+		DROP TRIGGER guard_additional_user_owner_role;
+		DROP TRIGGER guard_additional_user_owner_with_granted_scope;
+		DROP TRIGGER guard_domain_subscription_with_additional_user_grants;
+		DROP TRIGGER guard_subscription_owner_with_additional_user_domain_grants;
+		DROP TRIGGER guard_subscription_owner_with_additional_user_grants;
+		DROP TRIGGER validate_additional_user_domain_permission_update;
+		DROP TRIGGER validate_additional_user_domain_permission_insert;
+		DROP TRIGGER validate_additional_user_subscription_permission_update;
+		DROP TRIGGER validate_additional_user_subscription_permission_insert;
+		DROP TRIGGER reject_additional_user_subscription_owner_update;
+		DROP TRIGGER reject_additional_user_subscription_owner_insert;
+		DROP TRIGGER validate_additional_user_identity_update;
+		DROP TRIGGER validate_additional_user_identity_insert;
+		DROP TRIGGER validate_user_account_type_immutable;
+		DROP INDEX idx_additional_user_domain_permissions_scope;
+		DROP TABLE additional_user_domain_permissions;
+		DROP INDEX idx_additional_user_subscription_permissions_scope;
+		DROP TABLE additional_user_subscription_permissions;
+		DROP INDEX idx_users_parent_account_type;
+		ALTER TABLE users DROP COLUMN account_type;
+
 		DROP INDEX idx_application_install_operations_domain;
 		DROP INDEX idx_application_install_operations_status;
 		DROP TABLE application_install_operations;

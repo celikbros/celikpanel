@@ -25,7 +25,7 @@ func (p *Panel) handleNodeRuntimes(w http.ResponseWriter, r *http.Request) {
 		var resp transport.NodeVersionsResponse
 		callCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 		defer cancel()
-		if err := p.agentClient.CallContext(callCtx, "Agent.ListNodeVersions", &transport.Empty{}, &resp); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ListNodeVersions", &transport.Empty{}, &resp); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -144,7 +144,7 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 		var resp transport.NodeLTSResponse
 		callCtx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		if err := p.agentClient.CallContext(callCtx, "Agent.ListNodeLTS", &transport.Empty{}, &resp); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ListNodeLTS", &transport.Empty{}, &resp); err != nil {
 			writeServerError(w, err)
 			return
 		}
@@ -195,7 +195,7 @@ func (p *Panel) handleNodeRuntimeSub(w http.ResponseWriter, r *http.Request) {
 		}
 		var resp transport.NodeRemoveResponse
 		err = p.withStandaloneAgentMutation(r.Context(), "runtime_remove", "node:"+version, "", func(callCtx context.Context, binding agentMutationBinding) error {
-			if err := p.agentClient.CallContext(callCtx, "Agent.RemoveNodeVersion", &transport.NodeRemoveRequest{
+			if err := p.callAgentContext(callCtx, "Agent.RemoveNodeVersion", &transport.NodeRemoveRequest{
 				ServiceMutationBinding: transport.ServiceMutationBinding{
 					MutationRequestID: binding.MutationRequestID,
 					MutationOwnerID:   binding.MutationOwnerID,

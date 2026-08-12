@@ -82,12 +82,17 @@ type CustomGuardSecureMailRequest struct {
 }
 
 type CustomGuardSecureMailResponse struct {
-	Configured bool
-	SNICount   int
-	Error      string
+	Configured  bool
+	DefaultCert string
+	SNICount    int
+	Error       string
 }
 
+const customGuardCertificateVersionRoot = "/etc/ssl/celikpanel/ssl-state.example/sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 type customCertificateGuardAgent struct {
+	*serviceOperationTestAgent
+
 	mu sync.Mutex
 
 	trustChecked bool
@@ -138,8 +143,8 @@ func (a *customCertificateGuardAgent) InstallCustomCertificate(
 	}
 	*resp = CustomGuardInstallResponse{
 		Success:   true,
-		CertPath:  "/certs/replacement/fullchain.pem",
-		KeyPath:   "/certs/replacement/privkey.pem",
+		CertPath:  customGuardCertificateVersionRoot + "/fullchain.pem",
+		KeyPath:   customGuardCertificateVersionRoot + "/privkey.pem",
 		ChainPath: chainPath,
 	}
 	return nil
@@ -190,6 +195,24 @@ func (a *customCertificateGuardAgent) SecureMailTLS(
 		return nil
 	}
 	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
+	resp.SNICount = len(req.SNI)
+	return nil
+}
+
+func (a *customCertificateGuardAgent) SyncMailTLSV2(
+	req *transport.SyncMailTLSV2Request,
+	resp *transport.SecureMailTLSResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.mailCalls++
+	if a.secureMailError != "" {
+		resp.Error = a.secureMailError
+		return nil
+	}
+	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
 	resp.SNICount = len(req.SNI)
 	return nil
 }
@@ -200,6 +223,12 @@ func attachCustomCertificateGuardAgent(
 	agent *customCertificateGuardAgent,
 ) {
 	t.Helper()
+	if agent.serviceOperationTestAgent == nil {
+		agent.serviceOperationTestAgent = newServiceOperationTestAgent()
+	}
+	p.pkgFamilyVal = "apt"
+	previousHostname := readMailTLSHostname
+	readMailTLSHostname = func() (string, error) { return "guard.panel.test", nil }
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register custom-certificate guard agent: %v", err)
@@ -218,6 +247,7 @@ func attachCustomCertificateGuardAgent(
 	}
 	p.agentClient = transport.NewReconnectingClientWithContextConnector(client, connector)
 	t.Cleanup(func() {
+		readMailTLSHostname = previousHostname
 		_ = client.Close()
 	})
 }
@@ -493,7 +523,7 @@ func TestCustomCertificateReplacementStrictGuard(t *testing.T) {
 				)
 			}
 			if after.activeID == before.activeID ||
-				after.activePath != "/certs/replacement/fullchain.pem" ||
+				after.activePath != customGuardCertificateVersionRoot+"/fullchain.pem" ||
 				after.activeSecureMail != testCase.secureMail {
 				t.Fatalf("trusted replacement active state = %+v", after)
 			}
@@ -586,7 +616,7 @@ func TestCustomCertificateActivationFailureKeepsDurablePendingSnapshot(
 				t.Fatalf("read pending custom certificate state: %v", err)
 			}
 			if activeID == oldCertificateID ||
-				activePath != "/certs/replacement/fullchain.pem" ||
+				activePath != customGuardCertificateVersionRoot+"/fullchain.pem" ||
 				pending != testCase.wantPending ||
 				siteEnabled != testCase.wantSiteEnabled ||
 				activeCount != 1 {

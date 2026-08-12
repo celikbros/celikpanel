@@ -61,6 +61,7 @@ func (a *repoHandlerTestAgent) ServiceMutationStatus(_ *ServiceOperationMutation
 
 func attachRepoHandlerTestAgent(t *testing.T, panel *Panel, agent *repoHandlerTestAgent) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register repo test agent: %v", err)

@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/user"
@@ -16,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -99,10 +102,18 @@ var (
 	panelCertEnsureRenewal   = ensurePanelCertRenewalScheduler
 	panelCertActiveIdentity  = activePanelCertificateIdentity
 	panelCertWithPublishLock = withPanelCertPublishLock
+	panelCertStageIssue      = stagePanelCertificateIssueMaterial
+	panelCertCommitIssue     = commitStandalonePanelCertificateIssueStep
+	panelCertDetectPkgFamily = detectPkgFamily
+	panelCertInstallPackages = installPackagesContext
 )
 
 type IssuePanelCertRequest = transport.IssuePanelCertificateRequest
 type IssuePanelCertResponse = transport.IssuePanelCertificateResponse
+type IssuePanelCertV2Request = transport.IssuePanelCertificateV2Request
+type IssuePanelCertV2Response = transport.IssuePanelCertificateV2Response
+
+const issuePanelCertificateLegacyUnsupportedError = "Agent.IssuePanelCertificate is unsupported; use Agent.IssuePanelCertificateV2"
 
 func validatePanelCertTLSDir(raw string) (string, error) {
 	if raw != managedPanelTLSDir {
@@ -111,34 +122,64 @@ func validatePanelCertTLSDir(raw string) (string, error) {
 	return managedPanelTLSDir, nil
 }
 
-func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePanelCertResponse) error {
+// IssuePanelCertificate is a zero-touch mixed-version compatibility endpoint.
+func (a *Agent) IssuePanelCertificate(
+	_ *IssuePanelCertRequest,
+	resp *IssuePanelCertResponse,
+) error {
+	*resp = IssuePanelCertResponse{
+		Error: issuePanelCertificateLegacyUnsupportedError,
+	}
+	return nil
+}
+
+func (a *Agent) IssuePanelCertificateV2(
+	req *IssuePanelCertV2Request,
+	resp *IssuePanelCertV2Response,
+) error {
+	*resp = IssuePanelCertV2Response{}
 	if req == nil {
 		resp.Error = "panel certificate request is required"
 		return nil
 	}
-	if err := requireExpectedBuildCommit(req.ExpectedBuildCommit, "issue panel certificate"); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	domain := strings.ToLower(strings.TrimSpace(req.Domain))
-	if !validPanelCertDomain.MatchString(domain) {
-		resp.Error = "invalid domain name"
-		return nil
-	}
-	tlsDir, err := validatePanelCertTLSDir(req.TLSDir)
+	commitment, err := mutationpayload.CanonicalPanelCertificateIssue(
+		req.Domain,
+		req.Email,
+		req.TLSDir,
+		req.ExpectedBuildCommit,
+	)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	req.TLSDir = tlsDir
+	if err := requireExpectedBuildCommit(
+		commitment.ExpectedBuildCommit,
+		"issue panel certificate",
+	); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	authorizedReq := *req
+	authorizedReq.Domain = commitment.Domain
+	authorizedReq.Email = commitment.Email
+	authorizedReq.TLSDir = commitment.TLSDir
+	authorizedReq.ExpectedBuildCommit = commitment.ExpectedBuildCommit
+	req = &authorizedReq
+	domain := commitment.Domain
 	stepCtx, finishStep, err := a.requiredServiceMutationStep(
 		ServiceMutationBinding{
 			MutationRequestID: req.MutationRequestID,
 			MutationOwnerID:   req.MutationOwnerID,
 		},
+		newServiceMutationStepClaim(
+			serviceMutationStepIssuePanelCertificate,
+			commitment.Domain,
+			commitment.Qualifier,
+			"issue",
+		),
 	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = IssuePanelCertV2Response{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
@@ -152,11 +193,23 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	// (the button says so), consistent with the minimal-install principle.
 	// certbot ilk kullanımda kurulur — bilinçli, kullanıcı-tetikli bir kurulum
 	// (düğme bunu söyler); minimal kurulum ilkesiyle tutarlı.
+	family := panelCertDetectPkgFamily()
+	certbotService := core.GetManagedServiceByID("certbot")
+	if block, reason := core.ManagedServiceInstallBlock(
+		certbotService, family,
+	); block != core.ManagedServiceInstallBlockNone {
+		resp.Error = reason
+		return nil
+	}
+	certbotPackages := append([]string(nil), certbotService.Packages[family]...)
+	if len(certbotPackages) == 0 {
+		resp.Error = "certbot is not supported on this Linux distribution"
+		return nil
+	}
 	installedCertbot := false
 	if _, err := panelCertLookPath("certbot"); err != nil {
-		family := detectPkgFamily()
-		if _, err := installPackagesContext(
-			stepCtx, family, []string{"certbot"},
+		if _, err := panelCertInstallPackages(
+			stepCtx, family, certbotPackages,
 		); err != nil {
 			resp.Error = fmt.Sprintf("certbot install failed: %v", err)
 			return nil
@@ -181,11 +234,7 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		"-d", domain,
 		"--agree-tos", "--non-interactive", "--force-renewal",
 	)
-	if req.Email != "" {
-		args = append(args, "--email", req.Email)
-	} else {
-		args = append(args, "--register-unsafely-without-email")
-	}
+	args = append(args, "--email", req.Email)
 	// Persist the source intent before Certbot starts, but do not hold the
 	// publication lock while Certbot invokes deploy hooks. A previously
 	// installed synchronous hook also takes this lock; holding it here would
@@ -194,7 +243,11 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 	var intent panelCertificateActivationState
 	if err := panelCertWithPublishLock(func() error {
 		var err error
-		intent, err = beginPanelCertificateIssuanceLocked(domain)
+		intent, err = beginInteractivePanelCertificateIssuanceLocked(
+			domain,
+			req.MutationRequestID,
+			commitment.Qualifier,
+		)
 		return err
 	}); err != nil {
 		if errors.Is(err, errPanelCertificateActivationPending) {
@@ -218,8 +271,11 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		return nil
 	}
 
-	var issuedNotAfter time.Time
-	if err := panelCertWithPublishLock(func() error {
+	var (
+		issuedNotAfter time.Time
+		hostPublished  bool
+	)
+	publishErr := panelCertWithPublishLock(func() (operationErr error) {
 		if err := requirePanelCertificateIssuanceIntentLocked(intent); err != nil {
 			return err
 		}
@@ -239,36 +295,90 @@ func (a *Agent) IssuePanelCertificate(req *IssuePanelCertRequest, resp *IssuePan
 		if err := panelCertificateActivationWriteState(state); err != nil {
 			return fmt.Errorf("bind issued panel certificate activation: %w", err)
 		}
+		cleanupState := true
+		defer func() {
+			if cleanupState || !hostPublished {
+				operationErr = errors.Join(
+					operationErr,
+					clearInterruptedPanelCertificateActivation(
+						req.MutationRequestID,
+						commitment.Qualifier,
+						domain,
+					),
+				)
+			}
+		}()
 		if err := panelCertEnsureRenewal(stepCtx); err != nil {
 			return err
 		}
 		if err := panelCertWriteDeployHook(domain, req.TLSDir); err != nil {
 			return fmt.Errorf("install certbot deploy hook: %w", err)
 		}
-		if err := panelCertificateActivationPublishMaterial(
+		receipt, err := newPanelCertificateIssueReceipt(
+			req.MutationRequestID,
+			commitment.Qualifier,
 			domain,
-			req.TLSDir,
-			certificate,
-			privateKey,
-		); err != nil {
-			return err
-		}
-		state, err = panelCertificateActivationNextPhase(
-			state,
-			panelCertificateActivationPendingRestart,
+			leafDER,
 		)
 		if err != nil {
 			return err
 		}
-		if err := panelCertificateActivationWriteState(state); err != nil {
-			return fmt.Errorf("persist pending panel restart: %w", err)
+		stage, err := panelCertStageIssue(
+			domain,
+			req.TLSDir,
+			certificate,
+			privateKey,
+			receipt,
+		)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			operationErr = errors.Join(operationErr, stage.close())
+		}()
+
+		hostPublished, err = panelCertCommitIssue(stepCtx, stage.publish)
+		if err != nil {
+			if hostPublished {
+				// Publication won the commit race. The manager either persisted
+				// terminal success or retained the host lock for startup recovery.
+				log.Printf(
+					"Panel certificate host publication completed with receipt error: %v",
+					err,
+				)
+				issuedNotAfter = notAfter
+				cleanupState = false
+				return nil
+			}
+			return err
+		}
+		if !hostPublished {
+			return errors.New(
+				"panel certificate commit completed without host publication",
+			)
 		}
 		issuedNotAfter = notAfter
+		cleanupState = false
 		return nil
-	}); err != nil {
-		resp.Error = fmt.Sprintf("issue and publish panel certificate: %v", err)
+	})
+	if publishErr != nil {
+		var cleanupErr error
+		if !hostPublished {
+			cleanupErr = panelCertWithPublishLock(func() error {
+				return clearInterruptedPanelCertificateActivation(
+					req.MutationRequestID,
+					commitment.Qualifier,
+					domain,
+				)
+			})
+		}
+		resp.Error = fmt.Sprintf(
+			"issue and publish panel certificate: %v",
+			errors.Join(publishErr, cleanupErr),
+		)
 		return nil
 	}
+	wakePanelCertificateActivationReconciler()
 
 	// Deploy hook: certbot's own timer renews the certificate; this hook
 	// copies each renewal into the panel's TLS dir and restarts the panel, so

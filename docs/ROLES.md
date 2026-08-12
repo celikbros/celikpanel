@@ -53,8 +53,10 @@ The person who actually runs websites. Equivalent to a *cPanel account* / Plesk 
 
 A customer manages, **within their quota**: domains & sites, DNS records, email accounts, databases, files, backups, cron jobs, SSL, PHP settings, logs and statistics — but only for their own subscriptions.
 
-### 4. Additional User (`additional_user`)
+### 4. Additional User (effective role `additional_user`)
 A **scoped** login that belongs to a single customer, for delegating part of the work without sharing the master password. Equivalent to cPanel *sub-accounts / User Manager* and Plesk *Additional Users*.
+
+For schema compatibility, this identity is stored with `users.role = 'customer'` and the immutable marker `users.account_type = 'additional_user'`. Authentication derives the effective `additional_user` role from that pair and the owning `parent_id`; malformed combinations fail closed.
 
 Examples:
 - A developer who may edit files and databases but not email or billing
@@ -116,10 +118,10 @@ The UI simply hides what the API would reject — that is how "services you didn
 
 The current schema already has the backbone: `users(role)` and `subscriptions(owner_id)`. To realize this design:
 
-- Extend `users.role` CHECK to include `additional_user`.
-- Add `users.parent_id` (nullable, references `users.id`) — who created/owns this user. This is the hierarchy edge: reseller→customer, customer→additional_user.
+- Add an immutable `users.account_type` marker (`account` or `additional_user`). Additional users retain the stored `customer` role; authorization uses the derived effective role instead of trusting either column alone.
+- Use `users.parent_id` (nullable, references `users.id`) for who created/owns the user. For an additional user this must identify one active, real customer account.
 - Add a `reseller_pools` concept (or columns on the reseller's own record) for the resource pool a reseller distributes.
-- Add a `user_permissions` table: `(user_id, capability, scope_domain_id nullable, mode: view|manage)` for additional users.
+- Store grants in two explicit scope tables: `additional_user_subscription_permissions` and `additional_user_domain_permissions`, each with a closed capability set and `view|manage` mode. A domain's effective access is the additive union of its direct-domain and subscription grants; `manage` outranks `view`.
 - Every data-access repository gains an ownership filter; no handler queries by raw ID without an ownership check.
 
 These changes are **additive** and land alongside authentication in Phase 0.2, so the model and its enforcement ship together — never a login without the rules behind it.

@@ -445,7 +445,7 @@ func TestServiceMutationLedgerPostPublishFailuresPoisonAndRetainLock(t *testing.
 			_, _, stepErr := manager.acquireStep(ServiceMutationBinding{
 				MutationRequestID: testMutationRequestID,
 				MutationOwnerID:   testMutationOwnerID,
-			})
+			}, nginxInstallTestStepClaim())
 			refused = append(refused, stepErr)
 			for index, refusal := range refused {
 				if !errors.Is(refusal, errServiceMutationManagerPoisoned) {
@@ -523,7 +523,7 @@ func TestServiceMutationCancelWinsDeterministicFinishRace(t *testing.T) {
 	_, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,7 +596,7 @@ func TestServiceMutationSupervisorRetainsLockAcrossStartRegisterCrashGap(t *test
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -655,7 +655,7 @@ func TestServiceMutationCommandTerminalMethodsUseTrackedSupervisorAndPreserveEnv
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -733,7 +733,7 @@ func TestEnableServiceMutationReconcilesWithUntrackedProbeAfterCancellation(t *t
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -778,7 +778,7 @@ esac
 	}
 	t.Cleanup(func() { serviceMutationWorkerFaultHook = previousHook })
 
-	if err := enableServiceForMutation(ctx, "celikpanel-test.service", true); err != nil {
+	if err := enableServiceForMutationWithExecutable(ctx, systemctl, "celikpanel-test.service", true); err != nil {
 		t.Fatalf("verified systemd state did not reconcile the cancelled client: %v", err)
 	}
 	if hookCalls != 1 {
@@ -799,7 +799,7 @@ func TestServiceMutationSupervisorDoesNotLeakLockFDToWorker(t *testing.T) {
 	ctx, done, err := manager.acquireStep(ServiceMutationBinding{
 		MutationRequestID: testMutationRequestID,
 		MutationOwnerID:   testMutationOwnerID,
-	})
+	}, nginxInstallTestStepClaim())
 	if err != nil {
 		t.Fatal(err)
 	}

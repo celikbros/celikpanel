@@ -141,3 +141,14 @@ func TestParseOSReleaseValue(t *testing.T) {
 		t.Fatalf("VERSION_CODENAME = %q, want noble", got)
 	}
 }
+
+func TestParseOSReleaseValueFailsClosedOnDuplicateOrMalformedData(t *testing.T) {
+	for _, data := range [][]byte{
+		[]byte("ID=debian\nID=ubuntu\nVERSION_CODENAME=noble\n"),
+		[]byte("ID=ubuntu;echo-owned\nVERSION_CODENAME=noble\n"),
+	} {
+		if got := parseOSReleaseValue(data, "ID"); got != "" {
+			t.Fatalf("malformed os-release produced ID %q", got)
+		}
+	}
+}

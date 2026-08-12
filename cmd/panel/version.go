@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -33,8 +34,11 @@ import (
 // söylüyordu. Güvenmesi istenen tek işaret, tam da güvenlik düzeltmesi taşıyan
 // dağıtımlara kördü.
 var (
-	buildVersion = "dev"
-	buildCommit  = "unknown"
+	buildVersion                      = "dev"
+	buildCommit                       = "unknown"
+	errDNSZoneSyncV2AgentIncompatible = errors.New(
+		"DNS Zone Sync V2 agent is permanently incompatible with this panel",
+	)
 )
 
 // requireMatchingAgentBuild fails closed for privileged mutations whenever
@@ -56,6 +60,185 @@ func (p *Panel) requireMatchingAgentBuild(ctx context.Context) error {
 			"panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before privileged changes",
 			panelCommit, agentCommit,
 		)
+	}
+	return nil
+}
+
+func (p *Panel) requirePanelCertificateSagaAgentCapabilities(ctx context.Context) error {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
+		return fmt.Errorf("verify panel certificate saga agent capabilities: %w", err)
+	}
+	want := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	}
+	if err := requireKnownAgentCapabilities(agent.Capabilities, want...); err != nil {
+		return fmt.Errorf(
+			"panel certificate saga agent capabilities are missing, duplicate, unknown, or noncanonical; finish the paired upgrade: %w",
+			err,
+		)
+	}
+	return nil
+}
+
+func requireKnownAgentCapabilities(capabilities []string, required ...string) error {
+	known := map[string]struct{}{
+		transport.AgentCapabilityFirewallApplyV2:         {},
+		transport.AgentCapabilityPanelCertificateIssueV2: {},
+		transport.AgentCapabilityDNSZoneSyncV2:           {},
+		transport.AgentCapabilityDNSSECSecureV2:          {},
+		transport.AgentCapabilityDNSClusterConfigureV2:   {},
+		transport.AgentCapabilityMailTLSSyncV2:           {},
+	}
+	seen := make(map[string]struct{}, len(capabilities))
+	for _, raw := range capabilities {
+		capability := strings.TrimSpace(raw)
+		if capability == "" || capability != raw {
+			return fmt.Errorf("agent capability is not canonical")
+		}
+		if _, ok := known[capability]; !ok {
+			return fmt.Errorf("agent capability %q is unknown", capability)
+		}
+		if _, duplicate := seen[capability]; duplicate {
+			return fmt.Errorf("agent capability %q is duplicated", capability)
+		}
+		seen[capability] = struct{}{}
+	}
+	for _, capability := range required {
+		if _, ok := seen[capability]; !ok {
+			return fmt.Errorf("agent capability %q is missing", capability)
+		}
+	}
+	return nil
+}
+
+// requireMailTLSSyncV2Agent gates the complete snapshot before any database
+// read, durable child identity, host lease, or Mail TLS mutation. Even dev
+// builds must advertise the exact V2 surface; production also requires the
+// paired build commit.
+func (p *Panel) requireMailTLSSyncV2Agent(ctx context.Context) error {
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncMailTLSV2"); err != nil {
+		return fmt.Errorf("authorize Mail TLS V2 host mutation before snapshot preparation: %w", err)
+	}
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
+		return fmt.Errorf("verify Mail TLS V2 agent capability: %w", err)
+	}
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit != "" && panelCommit != "unknown" {
+		agentCommit := strings.TrimSpace(agent.Commit)
+		if agentCommit == "" || agentCommit != panelCommit {
+			return fmt.Errorf(
+				"panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before Mail TLS publication",
+				panelCommit,
+				agentCommit,
+			)
+		}
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityMailTLSSyncV2,
+	); err != nil {
+		return fmt.Errorf("Mail TLS V2 requires the paired agent capability: %w", err)
+	}
+	return nil
+}
+
+// requireDNSZoneSyncV2Agent gates every direct publication before SOA/state
+// preparation or lease persistence. Production requires the exact paired
+// build; every build, including development, must advertise the V2 method.
+func (p *Panel) requireDNSZoneSyncV2Agent(ctx context.Context) error {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
+		return fmt.Errorf("verify DNS V2 agent capability: %w", err)
+	}
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit != "" && panelCommit != "unknown" {
+		agentCommit := strings.TrimSpace(agent.Commit)
+		if agentCommit == "" || agentCommit != panelCommit {
+			return fmt.Errorf(
+				"%w: panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before DNS publication",
+				errDNSZoneSyncV2AgentIncompatible,
+				panelCommit,
+				agentCommit,
+			)
+		}
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityDNSZoneSyncV2,
+	); err != nil {
+		return fmt.Errorf(
+			"%w: DNS V2 requires the paired agent capability: %v",
+			errDNSZoneSyncV2AgentIncompatible, err,
+		)
+	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncDNSZoneV2"); err != nil {
+		return fmt.Errorf("authorize DNS V2 host mutation before snapshot preparation: %w", err)
+	}
+	return nil
+}
+
+func (p *Panel) requireDNSSECSecureV2Agent(ctx context.Context) error {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(
+		ctx, "Agent.Version", &transport.Empty{}, &agent,
+	); err != nil {
+		return fmt.Errorf("verify DNSSEC V2 agent capability: %w", err)
+	}
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit != "" && panelCommit != "unknown" {
+		agentCommit := strings.TrimSpace(agent.Commit)
+		if agentCommit == "" || agentCommit != panelCommit {
+			return fmt.Errorf(
+				"%w: panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before DNSSEC signing",
+				errDNSZoneSyncV2AgentIncompatible, panelCommit, agentCommit,
+			)
+		}
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSSECSecureV2,
+	); err != nil {
+		return fmt.Errorf(
+			"%w: DNSSEC V2 requires the paired agent capabilities: %v",
+			errDNSZoneSyncV2AgentIncompatible, err,
+		)
+	}
+	if err := p.authorizeAgentRPCContext(
+		ctx, "Agent.SecureDNSZoneV2",
+	); err != nil {
+		return fmt.Errorf("authorize DNSSEC V2 host mutation: %w", err)
+	}
+	if err := p.authorizeAgentRPCContext(
+		ctx, "Agent.SyncDNSZoneV2",
+	); err != nil {
+		return fmt.Errorf("authorize DNSSEC V2 publication: %w", err)
+	}
+	return nil
+}
+
+// requireDNSClusterConfigureV2Agent gates the desired topology ledger and
+// both host-side phases before any mutation is prepared.
+func (p *Panel) requireDNSClusterConfigureV2Agent(ctx context.Context) error {
+	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
+		return fmt.Errorf("verify DNS cluster V2 publication capability: %w", err)
+	}
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
+		return fmt.Errorf("verify DNS cluster V2 agent capability: %w", err)
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSClusterConfigureV2,
+	); err != nil {
+		return fmt.Errorf("DNS cluster V2 requires the paired agent capability: %w", err)
+	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.ConfigureDNSClusterV2"); err != nil {
+		return fmt.Errorf("authorize DNS cluster V2 host mutation: %w", err)
 	}
 	return nil
 }

@@ -36,7 +36,8 @@ const requiredServiceOperationTableSQL = `CREATE TABLE service_operations (
 	finished_at TEXT,
 	created_at TEXT NOT NULL,
 	updated_at TEXT NOT NULL,
-	request_id TEXT
+	request_id TEXT,
+	operation_data TEXT
 )`
 
 type serviceOperationColumnContract struct {
@@ -49,23 +50,24 @@ type serviceOperationColumnContract struct {
 }
 
 var requiredServiceOperationColumns = map[string]serviceOperationColumnContract{
-	"id":            {position: 0, declaredType: "TEXT", notNull: false, primaryKey: 1, hasDefault: false, defaultSQL: ""},
-	"kind":          {position: 1, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"service_id":    {position: 2, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"package_name":  {position: 3, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"status":        {position: 4, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"phase":         {position: 5, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"result_json":   {position: 6, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"error_code":    {position: 7, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"error_message": {position: 8, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"requested_by":  {position: 9, declaredType: "INTEGER", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"request_ip":    {position: 10, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"user_agent":    {position: 11, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"started_at":    {position: 12, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"finished_at":   {position: 13, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"created_at":    {position: 14, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"updated_at":    {position: 15, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
-	"request_id":    {position: 16, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"id":             {position: 0, declaredType: "TEXT", notNull: false, primaryKey: 1, hasDefault: false, defaultSQL: ""},
+	"kind":           {position: 1, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"service_id":     {position: 2, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"package_name":   {position: 3, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"status":         {position: 4, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"phase":          {position: 5, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"result_json":    {position: 6, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"error_code":     {position: 7, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"error_message":  {position: 8, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"requested_by":   {position: 9, declaredType: "INTEGER", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"request_ip":     {position: 10, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"user_agent":     {position: 11, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"started_at":     {position: 12, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"finished_at":    {position: 13, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"created_at":     {position: 14, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"updated_at":     {position: 15, declaredType: "TEXT", notNull: true, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"request_id":     {position: 16, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
+	"operation_data": {position: 17, declaredType: "TEXT", notNull: false, primaryKey: 0, hasDefault: false, defaultSQL: ""},
 }
 
 type serviceOperationIndexKeyContract struct {

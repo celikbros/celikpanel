@@ -1,60 +1,48 @@
 package transport
 
-import "testing"
+import (
+	"encoding/json"
+	"reflect"
+	"strings"
+	"testing"
+)
 
-func TestCanonicalMailAddressRejectsAmbiguousInput(t *testing.T) {
-	t.Parallel()
-	invalid := []string{
-		"",
-		"user",
-		"user@@example.com",
-		"user@example.com@evil.test",
-		"user name@example.com",
-		".user@example.com",
-		"user..name@example.com",
-		"user@example..com",
-		"user@-example.com",
-		"user@example.com.",
+func TestSyncMailTLSV2RequestWireRoundTripExcludesManagedRoot(t *testing.T) {
+	request := SyncMailTLSV2Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: "11111111111111111111111111111111",
+			MutationOwnerID:   "22222222222222222222222222222222",
+		},
+		ExpectedBuildCommit: "paired-build",
+		Myhostname:          "mx.example.test",
+		SNI: []MailSNIEntry{{
+			Names: []string{"example.test", "mail.example.test"},
+			CertPath: "/etc/ssl/celikpanel/example.test/sha256-" +
+				strings.Repeat("a", 64) + "/fullchain.pem",
+			KeyPath: "/etc/ssl/celikpanel/example.test/sha256-" +
+				strings.Repeat("a", 64) + "/privkey.pem",
+		}},
 	}
-	for _, input := range invalid {
-		input := input
-		t.Run(input, func(t *testing.T) {
-			t.Parallel()
-			if _, err := CanonicalMailAddress(input); err == nil {
-				t.Fatalf("CanonicalMailAddress(%q) unexpectedly succeeded", input)
-			}
-		})
-	}
-}
-
-func TestCanonicalMailboxForDomainIsTenantBound(t *testing.T) {
-	t.Parallel()
-	got, err := CanonicalMailboxForDomain("Alice", "Example.COM")
+	wire, err := json.Marshal(request)
 	if err != nil {
-		t.Fatalf("canonical local mailbox: %v", err)
+		t.Fatal(err)
 	}
-	if got != "alice@example.com" {
-		t.Fatalf("canonical mailbox = %q", got)
+	if strings.Contains(string(wire), "managed_root") {
+		t.Fatalf("client-controlled managed root leaked onto Mail TLS V2 wire: %s", wire)
 	}
-	for _, input := range []string{"alice@evil.test", "alice@example.com@evil.test"} {
-		if _, err := CanonicalMailboxForDomain(input, "example.com"); err == nil {
-			t.Fatalf("cross-tenant mailbox %q unexpectedly accepted", input)
+	for _, field := range []string{
+		`"mutation_request_id"`, `"mutation_owner_id"`,
+		`"expected_build_commit"`, `"myhostname"`, `"sni"`,
+	} {
+		if !strings.Contains(string(wire), field) {
+			t.Fatalf("Mail TLS V2 wire is missing %s: %s", field, wire)
 		}
 	}
-}
-
-func TestCanonicalForwardSourceSupportsOnlyExplicitCatchAll(t *testing.T) {
-	t.Parallel()
-	got, err := CanonicalForwardSource("@Example.COM")
-	if err != nil {
-		t.Fatalf("canonical catch-all: %v", err)
+	var decoded SyncMailTLSV2Request
+	if err := json.Unmarshal(wire, &decoded); err != nil {
+		t.Fatal(err)
 	}
-	if got != "@example.com" {
-		t.Fatalf("canonical catch-all = %q", got)
-	}
-	for _, input := range []string{"@", "@example.com@evil.test", "@.example.com"} {
-		if _, err := CanonicalForwardSource(input); err == nil {
-			t.Fatalf("invalid catch-all %q unexpectedly accepted", input)
-		}
+	if !reflect.DeepEqual(decoded, request) {
+		t.Fatalf("Mail TLS V2 roundtrip = %+v, want %+v", decoded, request)
 	}
 }

@@ -38,13 +38,14 @@ type ManagedServiceResponse struct {
 	// ("installed means working" cannot be promised; see docs/DISTRO-SUPPORT).
 	// The UI shows an honest badge instead of an Install button that would
 	// only fail late in the agent. Portable components (empty Packages map —
-	// node, roundcube) are never marked: their install path works everywhere.
+	// node, roundcube) still need a certified host lifecycle boundary; the
+	// RHEL preview therefore keeps them closed too.
 	// NotOffered: bu bileşen dağıtım paketinden kurulur ve BU sunucunun ailesi
 	// için paket eşlemesi yok — burada bilerek sunulmuyor ("kurulunca çalışır"
 	// sözü verilemiyor; bkz. docs/DISTRO-SUPPORT). Arayüz, agent'ta geç
 	// patlayacak bir Kur düğmesi yerine dürüst bir rozet gösterir. Taşınabilir
-	// bileşenler (boş Packages — node, roundcube) asla işaretlenmez: onların
-	// kurulum yolu her yerde çalışır.
+	// bileşenler (boş Packages — node, roundcube) de sertifikalı bir host yaşam
+	// döngüsü sınırı ister; RHEL önizlemesinde onlar da kapalıdır.
 	NotOffered       bool                                `json:"not_offered,omitempty"`
 	NotOfferedKind   core.ManagedServiceInstallBlockKind `json:"not_offered_kind,omitempty"`
 	NotOfferedReason string                              `json:"not_offered_reason,omitempty"`
@@ -83,12 +84,14 @@ type ManagedServiceResponse struct {
 	// yeniden calistirmak dagitim meta-paketine sessizce donmek yerine tam bu
 	// surumu onarir.
 	RepairPackage string `json:"repair_package,omitempty"`
-	// RepairAvailable is false only when a version-specific apt service cannot
-	// be tied to exactly one installed, catalogue-matching package. The UI must
-	// not fall back to a distro meta-package in that case.
-	// RepairAvailable, surume ozel apt servisi kurulu ve katalogla eslesen tam
-	// bir pakete baglanamiyorsa false olur. UI bu durumda dagitim meta-paketine
-	// geri donmemelidir.
+	// RepairAvailable is false when a version-specific apt service cannot be
+	// tied to exactly one installed, catalogue-matching package, or when this
+	// host family has no certified repair lifecycle. The UI must not turn an
+	// observed package into an unsupported mutation.
+	// RepairAvailable, surume ozel apt servisi katalogla eslesen tek bir kurulu
+	// pakete baglanamiyorsa ya da bu host ailesinin sertifikali onarim yasam
+	// dongusu yoksa false olur. UI, gozlenen paketi desteklenmeyen bir
+	// mutasyona cevirmemelidir.
 	RepairAvailable bool              `json:"repair_available"`
 	ConfigFiles     []core.ConfigFile `json:"config_files"` // Detected config files
 	// Ports: the inbound ports this component exposes ("443/tcp"), from the
@@ -109,6 +112,7 @@ type ManagedServiceResponse struct {
 type managedServicesPayload struct {
 	ScannedAt *time.Time               `json:"scanned_at"`
 	Services  []ManagedServiceResponse `json:"services"`
+	Profiles  []MailProfileResponse    `json:"profiles"`
 }
 
 // serviceObservation is everything a scan can DISCOVER about this host: is the
@@ -187,6 +191,13 @@ type serviceObservation struct {
 // diye çıplak dizi değil nesnedir.
 type scanCacheDoc struct {
 	Observations []serviceObservation `json:"observations"`
+	WebmailReady *bool                `json:"webmail_ready,omitempty"`
+}
+
+type decodedScanCache struct {
+	Observations  []serviceObservation
+	WebmailReady  bool
+	WebmailProven bool
 }
 
 // These wire types mirror Agent.InstalledRepoPackages. Only ServiceID crosses
@@ -208,11 +219,16 @@ type installedRepoPackagesResp = transport.InstalledRepoPackagesResponse
 // yüzden güncellenen panel, operatör yeniden tarama koşturana dek sayfayı
 // boşaltmak yerine doğru durumu göstermeyi sürdürür.
 func decodeScanCache(data string) ([]serviceObservation, error) {
+	decoded, err := decodeScanCacheSnapshot(data)
+	return decoded.Observations, err
+}
+
+func decodeScanCacheSnapshot(data string) (decodedScanCache, error) {
 	trimmed := strings.TrimSpace(data)
 	if strings.HasPrefix(trimmed, "[") {
 		var legacy []ManagedServiceResponse
 		if err := json.Unmarshal([]byte(trimmed), &legacy); err != nil {
-			return nil, fmt.Errorf("decode legacy service scan cache: %w", err)
+			return decodedScanCache{}, fmt.Errorf("decode legacy service scan cache: %w", err)
 		}
 		obs := make([]serviceObservation, 0, len(legacy))
 		for _, l := range legacy {
@@ -224,22 +240,28 @@ func decodeScanCache(data string) ([]serviceObservation, error) {
 				ConfigFiles: l.ConfigFiles,
 			})
 		}
-		return obs, nil
+		return decodedScanCache{Observations: obs}, nil
 	}
 	var envelope struct {
 		Observations json.RawMessage `json:"observations"`
+		WebmailReady *bool           `json:"webmail_ready"`
 	}
 	if err := json.Unmarshal([]byte(trimmed), &envelope); err != nil {
-		return nil, fmt.Errorf("decode service scan cache: %w", err)
+		return decodedScanCache{}, fmt.Errorf("decode service scan cache: %w", err)
 	}
 	if len(envelope.Observations) == 0 || string(envelope.Observations) == "null" {
-		return nil, fmt.Errorf("decode service scan cache: observations are missing")
+		return decodedScanCache{}, fmt.Errorf("decode service scan cache: observations are missing")
 	}
 	var observations []serviceObservation
 	if err := json.Unmarshal(envelope.Observations, &observations); err != nil {
-		return nil, fmt.Errorf("decode service scan observations: %w", err)
+		return decodedScanCache{}, fmt.Errorf("decode service scan observations: %w", err)
 	}
-	return observations, nil
+	decoded := decodedScanCache{Observations: observations}
+	if envelope.WebmailReady != nil {
+		decoded.WebmailReady = *envelope.WebmailReady
+		decoded.WebmailProven = true
+	}
+	return decoded, nil
 }
 
 // safeRepairPackage returns observed package identity only when it is
@@ -275,23 +297,30 @@ func safeRepairPackage(managed *core.ManagedService, o serviceObservation, pkgFa
 	return ""
 }
 
-// repairSelection makes the fail-closed choice explicit. Ordinary catalogue
-// services can safely repair through their fixed Packages mapping. An apt
-// service with a versioned repository pattern must reuse exactly one observed
-// installed package or Repair is unavailable.
-// repairSelection, guvenli-kapali secimi acik eder. Siradan katalog servisleri
-// sabit Packages eslemesiyle onarilabilir. Surumlu depo deseni olan apt servisi
-// tam bir gozlenen kurulu paketi yeniden kullanmalidir; aksi halde Onarim
-// kullanilamaz.
+// repairSelection makes the fail-closed choice explicit. Established apt and
+// pacman lifecycles preserve their current repair behavior. An apt service
+// with a versioned repository pattern must reuse exactly one observed package.
+// Every other family, including the still-uncertified dnf preview, is blocked.
+// repairSelection, guvenli-kapali secimi acik eder. Yerlesik apt ve pacman
+// yasam donguleri mevcut onarim davranislarini korur. Surumlu depo deseni olan
+// apt servisi tam bir gozlenen kurulu paketi yeniden kullanmalidir. Henuz
+// sertifikali olmayan dnf onizlemesi dahil diger her aile kapali kalir.
 func repairSelection(managed *core.ManagedService, o serviceObservation, pkgFamily string) (string, bool) {
 	if managed == nil {
 		return "", false
 	}
-	if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
-		pkg := safeRepairPackage(managed, o, pkgFamily)
-		return pkg, pkg != ""
+	switch pkgFamily {
+	case "apt":
+		if managed.Repo != nil && managed.Repo.PackagePattern != "" {
+			pkg := safeRepairPackage(managed, o, pkgFamily)
+			return pkg, pkg != ""
+		}
+		return "", true
+	case "pacman":
+		return "", true
+	default:
+		return "", false
 	}
-	return "", true
 }
 
 // catalogView joins observations onto the catalogue and derives what depends
@@ -303,6 +332,11 @@ func repairSelection(managed *core.ManagedService, o serviceObservation, pkgFami
 // ManagedServiceResponse'un kurulduğu tek yer burasıdır; böylece önbellekten
 // okuma ile taze tarama farklı yanıt veremez.
 func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceResponse {
+	return catalogViewForHost(obs, core.ManagedServiceHostProfile{PackageFamily: pkgFamily})
+}
+
+func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostProfile) []ManagedServiceResponse {
+	pkgFamily := host.PackageFamily
 	byID := make(map[string]serviceObservation, len(obs))
 	installedSet := map[string]bool{}
 	for _, o := range obs {
@@ -394,7 +428,7 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
 			// dürüstçe sunulmuyor. Arayüz mevcut bir rakip servis çakışmasını
 			// bu rozetten önce gösterir; böylece BIND/Exim için asıl engel
 			// kaybolmaz. Gereksinimlerse ancak kurulum sunulduğunda anlamlıdır.
-			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlock(&managed, pkgFamily)
+			notOfferedKind, notOfferedReason = core.ManagedServiceInstallBlockForHost(&managed, host)
 			notOffered = notOfferedReason != ""
 		}
 
@@ -437,14 +471,20 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	// A fresh installation has no observation row yet, but its installable
 	// catalogue is still known. Never render an empty Components page merely
 	// because the first scan has not completed.
-	payload := managedServicesPayload{Services: catalogView(nil, p.packageFamily())}
+	host := p.managedServiceHostProfile()
+	packageFamily := host.PackageFamily
+	payload := managedServicesPayload{
+		Services: catalogViewForHost(nil, host),
+		Profiles: mailProfilesView(nil, false, packageFamily, false, false),
+	}
 
 	var data string
 	var scannedAt string
+	profilesVerified := false
 	err := p.db.GetDB().QueryRowContext(r.Context(),
 		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
 	if err == nil {
-		observations, decodeErr := decodeScanCache(data)
+		snapshot, decodeErr := decodeScanCacheSnapshot(data)
 		if decodeErr != nil {
 			log.Printf("cached service state is unverified: %v", decodeErr)
 			writeCodedError(w, http.StatusServiceUnavailable, errCodeServiceStateUnverified,
@@ -453,6 +493,8 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		}
 		if t, terr := time.Parse(time.RFC3339, scannedAt); terr == nil {
 			payload.ScannedAt = &t
+			age := time.Since(t)
+			profilesVerified = age >= 0 && age <= 5*time.Minute
 		}
 		// The catalogue is joined on at read time, so an upgraded panel tells
 		// the truth about its own catalogue immediately — no rescan needed to
@@ -460,7 +502,14 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 		// Katalog okuma anında birleştirilir; böylece güncellenen panel kendi
 		// kataloğu hakkında anında doğruyu söyler — adı değişen bir servisi,
 		// yenisini ya da düzeltilmiş bir açıklamayı görmek için tarama gerekmez.
-		payload.Services = catalogView(observations, p.packageFamily())
+		payload.Services = catalogViewForHost(snapshot.Observations, host)
+		payload.Profiles = mailProfilesView(
+			payload.Services,
+			profilesVerified,
+			packageFamily,
+			snapshot.WebmailReady,
+			snapshot.WebmailProven,
+		)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		writeServerError(w, fmt.Errorf("read service scan cache: %w", err))
 		return
@@ -470,15 +519,15 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 }
 
 // packageFamily returns the host's package-manager family, asked from the
-// agent once and kept. This is the one cheap fact the cached GET may fetch:
-// it is a single RPC that reads the distro id, not the system-wide probe the
-// cache exists to avoid. A failed call returns an empty family without
+// agent once and kept. This is one bounded identity/readiness preflight, not a
+// service-state inventory; caching prevents repeating its executable and
+// systemd verification on every GET. A failed call returns an empty family without
 // memoising it. Callers then fail closed for package-backed services instead
 // of presenting apt operations on an unknown host.
 // packageFamily, makinenin paket-yöneticisi ailesini döndürür; agent'a bir kez
-// sorulup saklanır. Önbellekli GET'in çekmesine izin verilen tek ucuz gerçek
-// budur: dağıtım kimliğini okuyan tek bir RPC'dir, önbelleğin var olma sebebi
-// olan sistem geneli yoklama değil. Başarısız çağrı, belleğe yazmadan boş aile
+// sorulup saklanır. Bu, servis durumu envanteri değil; sınırlı bir kimlik ve
+// hazır-oluş ön kontrolüdür. Önbellek, executable ve systemd doğrulamasının her
+// GET'te tekrarlanmasını önler. Başarısız çağrı, belleğe yazmadan boş aile
 // döndürür. Böylece bilinmeyen bir makinede apt işlemleri sunulmaz ve anlık
 // düşmüş bir agent yanlış yanıtı süreç boyunca dondurmaz.
 func (p *Panel) packageFamily() string {
@@ -540,9 +589,18 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		writeServerError(w, err)
 		return
 	}
+	webmailReady, webmailProven, err := p.cachedWebmailReadinessProof(r.Context())
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	now := time.Now().UTC()
-	json.NewEncoder(w).Encode(managedServicesPayload{ScannedAt: &now, Services: services})
+	json.NewEncoder(w).Encode(managedServicesPayload{
+		ScannedAt: &now,
+		Services:  services,
+		Profiles:  mailProfilesView(services, true, p.packageFamily(), webmailReady, webmailProven),
+	})
 }
 
 // managedServiceScanMaxAge distinguishes automatic conditional refreshes from
@@ -584,13 +642,17 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 		return managedServicesPayload{}, false, nil
 	}
 
-	observations, err := decodeScanCache(data)
+	snapshot, err := decodeScanCacheSnapshot(data)
 	if err != nil {
 		return managedServicesPayload{}, false, nil
 	}
+	host := p.managedServiceHostProfile()
+	packageFamily := host.PackageFamily
+	services := catalogViewForHost(snapshot.Observations, host)
 	return managedServicesPayload{
 		ScannedAt: &scanned,
-		Services:  catalogView(observations, p.packageFamily()),
+		Services:  services,
+		Profiles:  mailProfilesView(services, true, packageFamily, snapshot.WebmailReady, snapshot.WebmailProven),
 	}, true, nil
 }
 
@@ -600,15 +662,16 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 // kataloğa işler ve sonucu kalıcılaştırır.
 func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceResponse, error) {
 	var allServices []core.Service
-	if err := p.agentClient.CallContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
 		return nil, err
 	}
-	pkgFamily := p.packageFamily()
+	host := p.managedServiceHostProfile()
+	pkgFamily := host.PackageFamily
 
 	// Which catalogue packages are present (installed but maybe not running).
 	// Hangi katalog paketleri var (kurulu ama belki çalışmıyor).
 	var installedIDs []string
-	if err := p.agentClient.CallContext(ctx, "Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.InstalledServiceIDs", &transport.Empty{}, &installedIDs); err != nil {
 		return nil, fmt.Errorf("probe installed service ids: %w", err)
 	}
 	installedSet := map[string]bool{}
@@ -630,7 +693,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		if pkgFamily == "apt" && managed.Repo != nil && managed.Repo.PackagePattern != "" {
 			var packageResult installedRepoPackagesResp
 			request := installedRepoPackagesReq{ServiceID: managed.ID}
-			if err := p.agentClient.CallContext(ctx, "Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
+			if err := p.callAgentContext(ctx, "Agent.InstalledRepoPackages", &request, &packageResult); err != nil {
 				return nil, fmt.Errorf("probe installed repository packages for %s: %w", managed.ID, err)
 			}
 			if packageResult.Error != "" {
@@ -727,7 +790,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		if managed.Kind == core.KindRuntime {
 			var ir transport.ServiceInstancesResponse
 			req := transport.ServiceInstancesRequest{ID: managed.ID}
-			if err := p.agentClient.CallContext(ctx, "Agent.ListServiceInstances", &req, &ir); err != nil {
+			if err := p.callAgentContext(ctx, "Agent.ListServiceInstances", &req, &ir); err != nil {
 				return nil, fmt.Errorf("probe service instances for %s: %w", managed.ID, err)
 			}
 			if ir.Error != "" {
@@ -781,7 +844,14 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 		})
 	}
 
-	data, err := json.Marshal(scanCacheDoc{Observations: observations})
+	webmailReady := false
+	if installedSet["roundcube"] {
+		webmailReady = p.webmailAvailable(ctx)
+	}
+	data, err := json.Marshal(scanCacheDoc{
+		Observations: observations,
+		WebmailReady: &webmailReady,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -792,7 +862,22 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 	if err != nil {
 		return nil, err
 	}
-	return catalogView(observations, pkgFamily), nil
+	return catalogViewForHost(observations, host), nil
+}
+
+func (p *Panel) cachedWebmailReadinessProof(ctx context.Context) (bool, bool, error) {
+	var data string
+	if err := p.db.GetDB().QueryRowContext(
+		ctx,
+		`SELECT data FROM service_scan_cache WHERE id = 1`,
+	).Scan(&data); err != nil {
+		return false, false, fmt.Errorf("read cached webmail readiness proof: %w", err)
+	}
+	snapshot, err := decodeScanCacheSnapshot(data)
+	if err != nil {
+		return false, false, err
+	}
+	return snapshot.WebmailReady, snapshot.WebmailProven, nil
 }
 
 // managedServiceUnitReady decides whether one active unit proves that the

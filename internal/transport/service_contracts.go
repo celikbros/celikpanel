@@ -160,8 +160,9 @@ type InstallRoundcubeResponse struct {
 }
 
 type RemoveRoundcubeResponse struct {
-	Removed bool   `json:"removed"`
-	Error   string `json:"error,omitempty"`
+	Removed         bool   `json:"removed"`
+	MutationApplied bool   `json:"mutation_applied,omitempty"`
+	Error           string `json:"error,omitempty"`
 }
 
 type ConfigureWebmailResponse struct {

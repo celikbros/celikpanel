@@ -183,6 +183,7 @@ func (agent *systemSQLitePanelAgent) ReleaseSystemSQLiteSnapshot(
 
 func attachSystemSQLitePanelAgent(t *testing.T, panel *Panel, agent *systemSQLitePanelAgent) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register system SQLite agent: %v", err)

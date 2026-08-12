@@ -19,10 +19,10 @@ import (
 // kendi derlenmiş kataloğundan çözer.
 type InstalledRepoPackagesRequest = transport.InstalledRepoPackagesRequest
 
-// InstalledRepoPackagesResponse reports installed apt packages which exactly
+// InstalledRepoPackagesResponse reports installed packages which exactly
 // match the selected service's catalogue PackagePattern.
 // InstalledRepoPackagesResponse, seçilen servisin katalog PackagePattern
-// değeriyle tam eşleşen kurulu apt paketlerini bildirir.
+// değeriyle tam eşleşen kurulu paketleri bildirir.
 type InstalledRepoPackagesResponse = transport.InstalledRepoPackagesResponse
 
 // InstalledRepoPackages gives the panel a package-level repair identity even
@@ -39,8 +39,9 @@ func (a *Agent) InstalledRepoPackages(req *InstalledRepoPackagesRequest, resp *I
 		resp.Error = "missing request"
 		return nil
 	}
-	if detectPkgFamily() != "apt" {
-		resp.Error = "installed version packages are only supported on apt systems"
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		resp.Error = fmt.Sprintf("detect host platform: %v", err)
 		return nil
 	}
 	service := core.GetManagedServiceByID(strings.TrimSpace(req.ServiceID))
@@ -48,7 +49,22 @@ func (a *Agent) InstalledRepoPackages(req *InstalledRepoPackagesRequest, resp *I
 		resp.Error = "service has no versioned package catalogue"
 		return nil
 	}
-	packages, err := installedRepoPackagesForService(service)
+	family := string(profile.PackageManager)
+	var executable string
+	switch family {
+	case "apt":
+		executable, err = executableForProfile(profile, family, "dpkg-query")
+	case "dnf":
+		executable, err = executableForProfile(profile, family, "rpm")
+	default:
+		resp.Error = fmt.Sprintf("installed version package discovery is not supported on %s systems", family)
+		return nil
+	}
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	packages, err := installedRepoPackagesForServiceWithFamilyExecutable(context.Background(), service, family, executable)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -70,6 +86,31 @@ func installedRepoPackagesForService(service *core.ManagedService) ([]string, er
 }
 
 func installedRepoPackagesForServiceContext(ctx context.Context, service *core.ManagedService) ([]string, error) {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return nil, err
+	}
+	family := string(profile.PackageManager)
+	var executable string
+	switch family {
+	case "apt":
+		executable, err = executableForProfile(profile, family, "dpkg-query")
+	case "dnf":
+		executable, err = executableForProfile(profile, family, "rpm")
+	default:
+		return nil, fmt.Errorf("installed version package discovery is not supported on %s systems", family)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return installedRepoPackagesForServiceWithFamilyExecutable(ctx, service, family, executable)
+}
+
+func installedRepoPackagesForServiceWithExecutable(ctx context.Context, service *core.ManagedService, dpkgQuery string) ([]string, error) {
+	return installedRepoPackagesForServiceWithFamilyExecutable(ctx, service, "apt", dpkgQuery)
+}
+
+func installedRepoPackagesForServiceWithFamilyExecutable(ctx context.Context, service *core.ManagedService, family, executable string) ([]string, error) {
 	if service == nil || service.Repo == nil || service.Repo.PackagePattern == "" {
 		return nil, fmt.Errorf("service has no versioned package catalogue")
 	}
@@ -77,15 +118,69 @@ func installedRepoPackagesForServiceContext(ctx context.Context, service *core.M
 	if err != nil {
 		return nil, fmt.Errorf("invalid catalogue package pattern")
 	}
-	out, err := serviceMutationCommand(ctx,
-		"dpkg-query",
-		"-W",
-		"-f=${Package}\t${db:Status-Abbrev}\n",
-	).Output()
-	if err != nil {
-		return nil, fmt.Errorf("dpkg-query failed: %v", err)
+	switch family {
+	case "apt":
+		out, err := serviceMutationCommand(ctx,
+			executable,
+			"-W",
+			"-f=${Package}\t${db:Status-Abbrev}\n",
+		).Output()
+		if err != nil {
+			return nil, fmt.Errorf("dpkg-query failed: %v", err)
+		}
+		return installedPackagesMatchingPattern(string(out), pattern), nil
+	case "dnf":
+		out, err := serviceMutationCommand(ctx,
+			executable,
+			rpmInventoryArgs()...,
+		).CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("rpm inventory failed: %v: %s", err, firstLine(string(out)))
+		}
+		return installedRPMPackagesMatchingPattern(string(out), pattern), nil
+	default:
+		return nil, fmt.Errorf("installed version package discovery is not supported on %s systems", family)
 	}
-	return installedPackagesMatchingPattern(string(out), pattern), nil
+}
+
+func rpmInventoryArgs() []string {
+	return []string{
+		"-qa",
+		"--qf",
+		"CELIKPANEL_PACKAGE:%{NAME}\n",
+	}
+}
+
+func installedRPMPackagesMatchingPattern(output string, pattern *regexp.Regexp) []string {
+	if pattern == nil {
+		return []string{}
+	}
+	const prefix = "CELIKPANEL_PACKAGE:"
+	seen := make(map[string]struct{})
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		name := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+		if !validPackageName(name) || pattern.FindString(name) != name {
+			continue
+		}
+		seen[name] = struct{}{}
+	}
+	packages := make([]string, 0, len(seen))
+	for name := range seen {
+		packages = append(packages, name)
+	}
+	sort.Slice(packages, func(i, j int) bool {
+		ai, an := versionOf(packages[i])
+		bi, bn := versionOf(packages[j])
+		if ai != bi {
+			return ai > bi
+		}
+		return an > bn
+	})
+	return packages
 }
 
 // installedPackagesMatchingPattern parses dpkg-query's package/status rows,

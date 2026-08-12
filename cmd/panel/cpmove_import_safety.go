@@ -213,15 +213,23 @@ func setCpmoveImportStatus(ctx context.Context, db *sql.DB, domainID, siteID int
 		return fmt.Errorf("begin import status update: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	domainQuery := `UPDATE domains SET status = ? WHERE id = ?`
+	domainArgs := []any{status, domainID}
+	if status == "active" {
+		domainQuery += ` AND NOT EXISTS (
+			SELECT 1 FROM domain_deletion_operations WHERE domain_id = ?
+		)`
+		domainArgs = append(domainArgs, domainID)
+	}
 	for _, mutation := range []struct {
 		query string
-		id    int
+		args  []any
 		name  string
 	}{
-		{`UPDATE domains SET status = ? WHERE id = ?`, domainID, "domain"},
-		{`UPDATE sites SET status = ? WHERE id = ?`, siteID, "site"},
+		{domainQuery, domainArgs, "domain"},
+		{`UPDATE sites SET status = ? WHERE id = ?`, []any{status, siteID}, "site"},
 	} {
-		result, err := tx.ExecContext(ctx, mutation.query, status, mutation.id)
+		result, err := tx.ExecContext(ctx, mutation.query, mutation.args...)
 		if err != nil {
 			return fmt.Errorf("update %s import status: %w", mutation.name, err)
 		}

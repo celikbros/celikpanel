@@ -35,6 +35,26 @@ type ConfigFile struct {
 
 // --- Multi-Tenant Entities ---
 
+// AccountType distinguishes a real account from a restricted additional user.
+// The stored Role remains one of admin, reseller or customer for schema
+// compatibility; callers must use EffectiveRole for authorization decisions.
+type AccountType string
+
+const (
+	AccountTypeAccount        AccountType = "account"
+	AccountTypeAdditionalUser AccountType = "additional_user"
+
+	EffectiveRoleAdditionalUser string = "additional_user"
+)
+
+// EffectiveIdentity is the fail-closed authorization identity derived from a
+// persisted user. CustomerID is populated only for customer-scoped identities.
+type EffectiveIdentity struct {
+	UserID     int
+	Role       string
+	CustomerID int
+}
+
 // User represents a panel user
 type User struct {
 	ID           int
@@ -42,10 +62,72 @@ type User struct {
 	PasswordHash string
 	Email        string
 	Role         string // admin, reseller, customer
+	AccountType  AccountType
 	ParentID     *int   // who created/owns this user (reseller→customer edge)
 	Status       string // active, suspended
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// IsAdditionalUser reports the immutable account marker. It deliberately does
+// not imply that the record is valid or authorized; use EffectiveIdentity for
+// authorization.
+func (u User) IsAdditionalUser() bool {
+	return u.AccountType == AccountTypeAdditionalUser
+}
+
+// EffectiveRole returns the role callers may use for authorization. Empty
+// account_type is accepted only for pre-migration account rows. Unknown or
+// internally inconsistent records fail closed by returning an empty role.
+func (u User) EffectiveRole() string {
+	accountType := u.AccountType
+	if len(accountType) == 0 {
+		accountType = AccountTypeAccount
+	}
+
+	switch accountType {
+	case AccountTypeAccount:
+		switch u.Role {
+		case "admin", "reseller", "customer":
+			return u.Role
+		default:
+			return ""
+		}
+	case AccountTypeAdditionalUser:
+		if u.Role != "customer" || u.ParentID == nil || *u.ParentID <= 0 || (u.ID > 0 && *u.ParentID == u.ID) {
+			return ""
+		}
+		return EffectiveRoleAdditionalUser
+	default:
+		return ""
+	}
+}
+
+// EffectiveIdentity derives the authorization subject and customer scope from
+// a persisted user. Additional users act within their owning customer's scope
+// but retain their own UserID for grants, auditing and session revocation.
+func (u User) EffectiveIdentity() (EffectiveIdentity, bool) {
+	if u.ID <= 0 {
+		return EffectiveIdentity{}, false
+	}
+
+	role := u.EffectiveRole()
+	if len(role) == 0 {
+		return EffectiveIdentity{}, false
+	}
+
+	identity := EffectiveIdentity{UserID: u.ID, Role: role}
+	switch role {
+	case "customer":
+		identity.CustomerID = u.ID
+	case EffectiveRoleAdditionalUser:
+		if u.ParentID == nil || *u.ParentID <= 0 || *u.ParentID == u.ID {
+			return EffectiveIdentity{}, false
+		}
+		identity.CustomerID = *u.ParentID
+	}
+
+	return identity, true
 }
 
 // ServicePlan is a reusable quota template subscriptions can be created from.

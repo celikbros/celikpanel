@@ -3,7 +3,7 @@ import { Component, lazy, Suspense, useState, useEffect, useRef, type ErrorInfo,
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
-import { navItems, navItemsForRole, canAccessPath } from './nav';
+import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
@@ -257,7 +257,11 @@ function ServicesPage() {
 // ve erişim role göre korunur.
 function MainLayout({ children, currentPath }: { children: React.ReactNode; currentPath: string }) {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  const navAccess: NavAccessContext = {
+    accountType: typeof user?.account_type === 'string' ? user.account_type : undefined,
+    teamMembers: user?.features?.team_members === true,
+  };
 
   // Longest matching path wins so "/domains/x" resolves to the domains item.
   // En uzun eşleşen yol kazanır; böylece "/domains/x" domains öğesine çözülür.
@@ -275,7 +279,7 @@ function MainLayout({ children, currentPath }: { children: React.ReactNode; curr
   // reject the calls anyway; this keeps the UI honest.
   // Bu bölümü göremeyen bir rol eve geri gönderilir. API zaten çağrıları
   // reddederdi; bu, arayüzü dürüst tutar.
-  if (!canAccessPath(role, currentPath) && !navItemsForRole(role).some((i) => currentPath.startsWith(i.path) && i.path !== '/')) {
+  if (!canAccessPath(role, currentPath, navAccess)) {
     return <Navigate to="/" replace />;
   }
 

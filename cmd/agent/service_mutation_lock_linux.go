@@ -385,16 +385,47 @@ func syncServiceMutationDirectory(path string) error {
 	return dir.Sync()
 }
 
+// syncDNSClusterConfigDirectory durably publishes changes in PowerDNS' managed
+// include directory. Unlike the service-mutation state directory, pdns.d is
+// normally mode 0755 and need not use the CelikPanel service group; it must
+// still be a trusted, non-writable real directory owned by the required UID.
+func validateDNSClusterConfigDirectory(dirPath string) error {
+	dirPath = filepath.Clean(dirPath)
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		return err
+	}
+	return secureRequiredOwnerDirectoryStat(
+		dirPath,
+		info,
+		dnsClusterConfigRequiredOwnerUID,
+	)
+}
+
+func syncDNSClusterConfigDirectory(path string) error {
+	dirPath := filepath.Dir(path)
+	if err := validateDNSClusterConfigDirectory(dirPath); err != nil {
+		return err
+	}
+	fd, err := unix.Open(dirPath, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_DIRECTORY, 0)
+	if err != nil {
+		return err
+	}
+	dir := os.NewFile(uintptr(fd), dirPath)
+	if dir == nil {
+		_ = unix.Close(fd)
+		return errors.New("open DNS cluster configuration directory handle")
+	}
+	defer dir.Close()
+	return dir.Sync()
+}
+
 func realPackageManagerMutationBusy() (bool, error) {
 	busy, err := linuxPackageProcessBusy()
 	if err != nil || busy {
 		return busy, err
 	}
-	for _, path := range []string{
-		"/var/lib/dpkg/lock-frontend",
-		"/var/lib/dpkg/lock",
-		"/var/cache/apt/archives/lock",
-	} {
+	for _, path := range linuxPackageManagerFcntlLockPaths() {
 		busy, err = linuxFcntlLockBusy(path)
 		if err != nil || busy {
 			return busy, err
@@ -406,6 +437,19 @@ func realPackageManagerMutationBusy() (bool, error) {
 		return false, fmt.Errorf("inspect pacman lock: %w", err)
 	}
 	return false, nil
+}
+
+func linuxPackageManagerFcntlLockPaths() []string {
+	return []string{
+		"/var/lib/dpkg/lock-frontend",
+		"/var/lib/dpkg/lock",
+		"/var/cache/apt/archives/lock",
+		// Upstream RPM/DNF reports identify the historical and newer database
+		// locations below. The RHEL preview remains unreachable until live
+		// distro certification; absence is harmless and contention fails closed.
+		"/var/lib/rpm/.rpm.lock",
+		"/usr/lib/sysimage/rpm/.rpm.lock",
+	}
 }
 
 func linuxFcntlLockBusy(path string) (bool, error) {
@@ -437,13 +481,23 @@ func linuxFcntlLockBusy(path string) (bool, error) {
 }
 
 func linuxPackageProcessBusy() (bool, error) {
-	entries, err := os.ReadDir("/proc")
+	return linuxPackageProcessBusyAt("/proc")
+}
+
+func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
+	entries, err := os.ReadDir(procRoot)
 	if err != nil {
-		return false, fmt.Errorf("read /proc: %w", err)
+		return false, fmt.Errorf("read process table: %w", err)
 	}
 	packageProcesses := map[string]struct{}{
 		"apt": {}, "apt-get": {}, "dpkg": {}, "dpkg-deb": {},
 		"pacman": {}, "makepkg": {},
+		"dnf": {}, "dnf5": {}, "yum": {}, "microdnf": {},
+		"rpm": {}, "rpmdb": {},
+		"packagekitd": {}, "packagekit": {}, "pkcon": {},
+		// Linux comm names are limited to 15 bytes, so dnfdaemon-server may
+		// be observed in either its full or kernel-truncated spelling.
+		"dnfdaemon-server": {}, "dnfdaemon-serve": {},
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -453,7 +507,7 @@ func linuxPackageProcessBusy() (bool, error) {
 		if name == "" || name[0] < '0' || name[0] > '9' {
 			continue
 		}
-		raw, readErr := os.ReadFile(filepath.Join("/proc", name, "comm"))
+		raw, readErr := os.ReadFile(filepath.Join(procRoot, name, "comm"))
 		if readErr != nil {
 			if os.IsNotExist(readErr) {
 				continue

@@ -327,6 +327,9 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 // ledger transaction. The served PowerDNS copies are published afterwards;
 // syncZoneToDNS advances each SOA serial before sending it.
 func (p *Panel) saveNameservers(ctx context.Context, ns1, ns2 string) error {
+	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
+		return fmt.Errorf("verify nameserver publisher: %w", err)
+	}
 	if _, err := p.saveNameserversLedger(ctx, ns1, ns2, serverPrimaryIP()); err != nil {
 		return err
 	}

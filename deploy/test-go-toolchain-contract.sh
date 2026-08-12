@@ -123,13 +123,15 @@ require_literal "$REBUILD" 'actual_go_version=$(run_go_clean "$GO_BIN" env GOVER
 require_count "$REBUILD" 'run_go_clean "$GO_BIN" build' 2
 
 require_literal "$CI" 'GOTOOLCHAIN: local'
-require_count "$CI" 'actions/setup-go@v6' 6
-require_count "$CI" "go-version: '1.26.5'" 6
-require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 5
+require_count "$CI" 'actions/setup-go@v6' 7
+require_count "$CI" "go-version: '1.26.5'" 7
+require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 6
 require_literal "$CI" "if ((go env GOVERSION) -ne 'go1.26.5')"
-require_literal "$CI" 'needs: [go, panel-race, web, windows-portability, freebsd-compile, darwin-compile]'
+require_literal "$CI" 'needs: [go, panel-race, web, windows-portability, linux-arm64-compile, freebsd-compile, darwin-compile]'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
-require_literal "$CI" "pattern: '^Test($|[A-M]|[^A-Z])'"
+require_count "$CI" 'pattern:' 5
+require_literal "$CI" "pattern: '^Test($|[A-G]|[^A-Z])'"
+require_literal "$CI" "pattern: '^Test[H-M]'"
 require_literal "$CI" "pattern: '^Test[N-R]'"
 require_literal "$CI" "pattern: '^TestS'"
 require_literal "$CI" "pattern: '^Test[T-Z]'"
@@ -143,14 +145,15 @@ reject_literal "$CI" 'go-version-file:'
 # sufficient proof that the empty suffix remains covered.
 panel_shard_membership_count() {
     local test_name=$1 count=0
-    [[ "$test_name" =~ ^Test($|[A-M]|[^A-Z]) ]] && ((count += 1))
+    [[ "$test_name" =~ ^Test($|[A-G]|[^A-Z]) ]] && ((count += 1))
+    [[ "$test_name" =~ ^Test[H-M] ]] && ((count += 1))
     [[ "$test_name" =~ ^Test[N-R] ]] && ((count += 1))
     [[ "$test_name" =~ ^TestS ]] && ((count += 1))
     [[ "$test_name" =~ ^Test[T-Z] ]] && ((count += 1))
     printf '%s\n' "$count"
 }
 
-for boundary_name in Test TestA TestM TestN TestR TestS TestT TestZ Test_ Test9; do
+for boundary_name in Test TestA TestG TestH TestM TestN TestR TestS TestT TestZ Test_ Test9; do
     [[ "$(panel_shard_membership_count "$boundary_name")" == 1 ]] ||
         die "panel race shard boundary is not disjoint and exhaustive: $boundary_name"
 done

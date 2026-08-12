@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -64,11 +64,14 @@ func validateRepoPackageSelection(svc *core.ManagedService, packageName string) 
 // çalışır (ve reboot'tan sağ çıkar). Zaten kurulu servisler dürüstçe
 // bildirilen bir no-op'tur.
 func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceResponse) error {
+	*resp = InstallServiceResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	svc := core.GetManagedServiceByID(req.ID)
+	serviceID := req.ID
+	packageName := req.Package
+	svc := core.GetManagedServiceByID(serviceID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
@@ -79,23 +82,40 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// Keyfi ya da sürümlü olmayan paketi detectPkgFamily veya packageInstalled
 	// bir paket-yöneticisi komutu çalıştırmadan önce reddet.
 	var selectedPackageMatch []string
-	if req.Package != "" {
+	if packageName != "" {
 		var err error
-		selectedPackageMatch, err = validateRepoPackageSelection(svc, req.Package)
+		selectedPackageMatch, err = validateRepoPackageSelection(svc, packageName)
 		if err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
 	}
 
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.ID = svc.ID
+	authorizedReq.Package = packageName
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepInstallService, svc.ID, packageName, "install"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = InstallServiceResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
 
-	family := detectPkgFamily()
+	profile, err := detectHostPlatform()
+	if err != nil {
+		resp.Error = fmt.Sprintf("detect host platform: %v", err)
+		return nil
+	}
+	family := string(profile.PackageManager)
+	systemctl, err := executableForProfile(profile, family, "systemctl")
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
 	if reason := core.ManagedServiceInstallDisabledReason(svc, family); reason != "" {
 		resp.Error = reason
 		return nil
@@ -135,9 +155,9 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// kılan şeydi: 8.4 varken 8.3 isteği "PHP-FPM zaten kurulu" diye
 	// reddediliyordu — Sury açık olsa bile admin, müşterinin ihtiyacı olan
 	// sürümü veremiyordu; D-014'ün zincirinin tüm amacı buydu.
-	alreadyPresent := a.serviceInstalled(svc)
+	alreadyPresent := a.serviceInstalledWithProfile(svc, profile)
 	if req.Package != "" {
-		alreadyPresent = packageInstalled(req.Package)
+		alreadyPresent = packageInstalledForProfile(profile, req.Package)
 	}
 
 	// Requirements first: a dependent tool without its parent service would
@@ -146,7 +166,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// Önce gereksinimler: üst servisi olmayan bağımlı araç bozuk kurulur
 	// (MariaDB'siz, web sunucususuz, PHP'siz phpMyAdmin). UI da engeller;
 	// atlatılamayan uygulayıcı agent'tır.
-	installed := a.installedServiceSet()
+	installed := a.installedServiceSetWithProfile(profile)
 	if missing := core.RequirementsMissing(svc, installed); len(missing) > 0 {
 		resp.Error = fmt.Sprintf("%s requires %s — install that first from Services",
 			svc.Name, strings.Join(missing, ", "))
@@ -198,9 +218,14 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		// süzülür, kalanı raporlanır: Sury php8.5-opcache yayınlamıyor ve katı
 		// bir kurulum tek bir uzantı yüzünden PHP 8.5'i tümüyle reddederdi.
 		if versionPrefix != "" && len(svc.Repo.VersionCompanions) > 0 {
+			aptCache, err := executableForProfile(profile, family, "apt-cache")
+			if err != nil {
+				resp.Error = err.Error()
+				return nil
+			}
 			for _, tpl := range svc.Repo.VersionCompanions {
 				name := strings.ReplaceAll(tpl, "{v}", versionPrefix)
-				if packageAvailable(name) {
+				if packageAvailableWithExecutable(name, aptCache) {
 					pkgs = append(pkgs, name)
 				} else {
 					skipped = append(skipped, name)
@@ -231,7 +256,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 
 	missingPackages := make([]string, 0, len(pkgs))
 	for _, pkg := range pkgs {
-		if !packageInstalled(pkg) {
+		if !packageInstalledForProfile(profile, pkg) {
 			missingPackages = append(missingPackages, pkg)
 		}
 	}
@@ -265,20 +290,20 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		// major'una, postgresql.service'e veya başka PG cluster'ına asla düşme;
 		// aksi hâlde operatörün seçtiğinden farklı sürüm başlatılıp başarı
 		// bildirilirdi.
-		if exactUnit == "" || !unitExists(exactUnit) {
+		if exactUnit == "" || !unitExistsWithExecutable(systemctl, exactUnit) {
 			resp.Error = fmt.Sprintf("selected package %s did not provide its exact service unit", req.Package)
 			return nil
 		}
 		unit = exactUnit
 	} else {
-		unit = a.firstPresentUnit(svc)
+		unit = a.firstPresentUnitWithExecutable(svc, systemctl)
 	}
 	if unit != "" {
 		var err error
 		if serviceStartsAfterPanelSetup(req.ID) {
-			err = enableServiceForMutation(ctx, unit, false)
+			err = enableServiceForMutationWithExecutable(ctx, systemctl, unit, false)
 		} else {
-			err = enableServiceForMutation(ctx, unit, true)
+			err = enableServiceForMutationWithExecutable(ctx, systemctl, unit, true)
 		}
 		if err != nil {
 			resp.Error = fmt.Sprintf("service did not become ready: %v", err)
@@ -295,8 +320,8 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	// iletiyi puanlar ama Postfix'in postasını uzatan spamass-milter'dır. Onu
 	// durmuş bırakmak "kurulu", "Çalışıyor", süzülen posta sıfır üretiyordu.
 	for _, h := range svc.HelperUnits {
-		if unitExists(h) {
-			if err := enableServiceForMutation(ctx, h, true); err != nil {
+		if unitExistsWithExecutable(systemctl, h) {
+			if err := enableServiceForMutationWithExecutable(ctx, systemctl, h, true); err != nil {
 				resp.Error = fmt.Sprintf("helper service did not become ready: %v", err)
 				return nil
 			}
@@ -331,7 +356,19 @@ func serviceStartsAfterPanelSetup(serviceID string) bool {
 // böylece vendor'ın bir sürüm için yayınlamadığı isteğe bağlı bir companion,
 // tüm kurulumu düşürmek yerine atlanır.
 func packageAvailable(name string) bool {
-	out, err := exec.Command("apt-cache", "policy", name).Output()
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		return false
+	}
+	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	if err != nil {
+		return false
+	}
+	return packageAvailableWithExecutable(name, aptCache)
+}
+
+func packageAvailableWithExecutable(name, aptCache string) bool {
+	out, err := serviceMutationCommand(context.Background(), aptCache, "policy", name).Output()
 	if err != nil {
 		return false
 	}
@@ -358,7 +395,19 @@ func packageAvailable(name string) bool {
 // sorar. Düz bir unit için cevap kendisidir; takma ad için hedeftir
 // ("redis.service" -> "valkey.service"). systemd söyleyemezse "" döner.
 func unitCanonicalName(unit string) string {
-	out, err := exec.Command("systemctl", "show", unit+".service", "-p", "Id", "--value").Output()
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return ""
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return ""
+	}
+	return unitCanonicalNameWithExecutable(systemctl, unit)
+}
+
+func unitCanonicalNameWithExecutable(systemctl, unit string) string {
+	out, err := serviceMutationCommand(context.Background(), systemctl, "show", unit+".service", "-p", "Id", "--value").Output()
 	if err != nil {
 		return ""
 	}
@@ -397,7 +446,19 @@ func containsString(list []string, want string) bool {
 // unitExists reports whether systemd knows a unit by exactly this name.
 // unitExists, systemd'nin tam bu adda bir unit tanıyıp tanımadığını bildirir.
 func unitExists(name string) bool {
-	out, err := exec.Command("systemctl", "list-unit-files", name+".service", "--no-legend").Output()
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return false
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return false
+	}
+	return unitExistsWithExecutable(systemctl, name)
+}
+
+func unitExistsWithExecutable(systemctl, name string) bool {
+	out, err := serviceMutationCommand(context.Background(), systemctl, "list-unit-files", name+".service", "--no-legend").Output()
 	return err == nil && strings.TrimSpace(string(out)) != ""
 }
 
@@ -421,23 +482,39 @@ type serviceUninstallOps struct {
 	installedRepoPackages func(*core.ManagedService) ([]string, error)
 }
 
-func defaultServiceUninstallOps(ctx context.Context) serviceUninstallOps {
+func defaultServiceUninstallOps(ctx context.Context) (serviceUninstallOps, error) {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return serviceUninstallOps{}, err
+	}
+	family := string(profile.PackageManager)
+	systemctl, err := executableForProfile(profile, family, "systemctl")
+	if err != nil {
+		return serviceUninstallOps{}, err
+	}
 	return serviceUninstallOps{
-		detectPackageFamily: detectPkgFamily,
-		packageInstalled:    packageInstalled,
-		unitExists:          unitExists,
-		unitsMatching:       unitsMatching,
+		detectPackageFamily: func() string { return family },
+		packageInstalled:    func(pkg string) bool { return packageInstalledForProfile(profile, pkg) },
+		unitExists:          func(unit string) bool { return unitExistsWithExecutable(systemctl, unit) },
+		unitsMatching:       func(pattern string) []string { return unitsMatchingWithExecutable(systemctl, pattern) },
 		disableUnit: func(unit string) error {
-			_, err := runServiceMutationCombinedOutput(ctx, "systemctl", "disable", "--now", unit)
+			_, err := runServiceMutationCombinedOutput(ctx, systemctl, "disable", "--now", unit)
 			return err
 		},
 		removePackages: func(family string, packages []string) (string, error) {
 			return removePackagesContext(ctx, family, packages)
 		},
 		installedRepoPackages: func(service *core.ManagedService) ([]string, error) {
-			return installedRepoPackagesForServiceContext(ctx, service)
+			if family != "apt" {
+				return nil, fmt.Errorf("installed repo package discovery requires apt")
+			}
+			dpkgQuery, err := executableForProfile(profile, family, "dpkg-query")
+			if err != nil {
+				return nil, err
+			}
+			return installedRepoPackagesForServiceWithExecutable(ctx, service, dpkgQuery)
 		},
-	}
+	}, nil
 }
 
 // failUninstallRemoval preserves the critical distinction between a refusal
@@ -495,11 +572,14 @@ func uniquePackageNames(packages []string) []string {
 // küçültmek için. Kurulu her servis sömürülebilir koddur; operatör bir
 // servisi yalnız ekleyebilmemeli, geri de alabilmeli.
 func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServiceResponse) error {
+	*resp = UninstallServiceResponse{}
 	if req == nil {
 		resp.Error = "missing request"
 		return nil
 	}
-	svc := core.GetManagedServiceByID(req.ID)
+	serviceID := req.ID
+	packageName := req.Package
+	svc := core.GetManagedServiceByID(serviceID)
 	if svc == nil {
 		resp.Error = "unknown service"
 		return nil
@@ -508,19 +588,31 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 	// privileged lease. This is pure input validation and mirrors InstallService.
 	// Geçersiz katalog/paket seçimini ayrıcalıklı lease istemeden önce reddet.
 	// Bu yalnızca girdi doğrulamasıdır ve InstallService akışını yansıtır.
-	if req.Package != "" {
-		if _, err := validateRepoPackageSelection(svc, req.Package); err != nil {
+	if packageName != "" {
+		if _, err := validateRepoPackageSelection(svc, packageName); err != nil {
 			resp.Error = err.Error()
 			return nil
 		}
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	authorizedReq := *req
+	authorizedReq.ID = svc.ID
+	authorizedReq.Package = packageName
+	req = &authorizedReq
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepUninstallService, svc.ID, packageName, "uninstall"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = UninstallServiceResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()
-	return a.uninstallServiceWithOps(req, resp, defaultServiceUninstallOps(ctx))
+	ops, err := defaultServiceUninstallOps(ctx)
+	if err != nil {
+		resp.Error = fmt.Sprintf("detect host platform: %v", err)
+		return nil
+	}
+	return a.uninstallServiceWithOps(req, resp, ops)
 }
 
 func (a *Agent) uninstallServiceWithOps(
@@ -704,6 +796,11 @@ func (a *Agent) uninstallServiceWithOps(
 // unit'i varsa unit'inden, yoksa paketinden (phpMyAdmin gibi daemon'suz
 // araçlar unit değil dosyadır).
 func (a *Agent) serviceInstalled(svc *core.ManagedService) bool {
+	profile, err := detectHostPlatform()
+	return err == nil && a.serviceInstalledWithProfile(svc, profile)
+}
+
+func (a *Agent) serviceInstalledWithProfile(svc *core.ManagedService, profile hostplatform.Profile) bool {
 	// Roundcube is a tarball tree, not a unit or a package (D-004): presence
 	// is the tree on disk, the same way Node's is. Without this it has no
 	// SystemNames and no Packages, so the loops below both say "not
@@ -716,10 +813,10 @@ func (a *Agent) serviceInstalled(svc *core.ManagedService) bool {
 		return roundcubeInstalled()
 	}
 	if len(svc.SystemNames) > 0 {
-		return a.firstPresentUnit(svc) != ""
+		return a.firstPresentUnitWithProfile(svc, profile) != ""
 	}
-	for _, pkg := range svc.Packages[detectPkgFamily()] {
-		if packageInstalled(pkg) {
+	for _, pkg := range svc.Packages[string(profile.PackageManager)] {
+		if packageInstalledForProfile(profile, pkg) {
 			return true
 		}
 	}
@@ -731,9 +828,17 @@ func (a *Agent) serviceInstalled(svc *core.ManagedService) bool {
 // installedServiceSet, gereksinim ve çakışma kararları için katalog çapında
 // kurulu haritasıdır.
 func (a *Agent) installedServiceSet() map[string]bool {
+	profile, err := detectHostPlatform()
+	if err != nil {
+		return map[string]bool{}
+	}
+	return a.installedServiceSetWithProfile(profile)
+}
+
+func (a *Agent) installedServiceSetWithProfile(profile hostplatform.Profile) map[string]bool {
 	set := map[string]bool{}
 	for i := range core.ManagedServices {
-		if a.serviceInstalled(&core.ManagedServices[i]) {
+		if a.serviceInstalledWithProfile(&core.ManagedServices[i], profile) {
 			set[core.ManagedServices[i].ID] = true
 		}
 	}
@@ -753,6 +858,18 @@ func (a *Agent) installedServiceSet() map[string]bool {
 // runtime'ları katalogdaki elle yazılmış ad listesinden kurtaran şeydir —
 // panel hangi PHP sürümlerinin var olduğunu bu dosyadan değil makineden öğrenir.
 func unitsMatching(pattern string) []string {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return nil
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return nil
+	}
+	return unitsMatchingWithExecutable(systemctl, pattern)
+}
+
+func unitsMatchingWithExecutable(systemctl, pattern string) []string {
 	if pattern == "" {
 		return nil
 	}
@@ -760,7 +877,7 @@ func unitsMatching(pattern string) []string {
 	if err != nil {
 		return nil
 	}
-	out, err := exec.Command("systemctl", "list-unit-files", "--type=service", "--no-legend", "--no-pager").Output()
+	out, err := serviceMutationCommand(context.Background(), systemctl, "list-unit-files", "--type=service", "--no-legend", "--no-pager").Output()
 	if err != nil {
 		return nil
 	}
@@ -787,6 +904,22 @@ func unitsMatching(pattern string) []string {
 }
 
 func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return ""
+	}
+	return a.firstPresentUnitWithProfile(svc, profile)
+}
+
+func (a *Agent) firstPresentUnitWithProfile(svc *core.ManagedService, profile hostplatform.Profile) string {
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return ""
+	}
+	return a.firstPresentUnitWithExecutable(svc, systemctl)
+}
+
+func (a *Agent) firstPresentUnitWithExecutable(svc *core.ManagedService, systemctl string) string {
 	// Pattern matches are consulted after the explicit names but count just as
 	// much: with only php8.3-fpm installed there is no plain `php-fpm` unit, and
 	// without this the runtime would read as not installed at all.
@@ -802,7 +935,7 @@ func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
 		if at := strings.IndexByte(unit, '@'); at >= 0 {
 			lookup = unit[:at+1]
 		}
-		out, err := exec.Command("systemctl", "list-unit-files", lookup+".service", "--no-legend").Output()
+		out, err := serviceMutationCommand(context.Background(), systemctl, "list-unit-files", lookup+".service", "--no-legend").Output()
 		if err == nil && strings.TrimSpace(string(out)) != "" {
 			// A unit name that is an ALIAS of some other component's unit does
 			// not prove this component is installed. Arch's valkey package
@@ -818,13 +951,13 @@ func (a *Agent) firstPresentUnit(svc *core.ManagedService) string {
 			// paneli "Redis: kurulu, ölü" demeye itiyordu — hiç kurulmamış bir
 			// bileşen, başkasının adını taşıyarak. Bağa güvenmek yerine asıl
 			// adı systemd'ye sor.
-			if !unitProvesInstalled(unit, unitCanonicalName(unit), svc.SystemNames) {
+			if !unitProvesInstalled(unit, unitCanonicalNameWithExecutable(systemctl, unit), svc.SystemNames) {
 				continue
 			}
 			return unit
 		}
 	}
-	if units := unitsMatching(svc.SystemNamePattern); len(units) > 0 {
+	if units := unitsMatchingWithExecutable(systemctl, svc.SystemNamePattern); len(units) > 0 {
 		return units[0] // newest version present
 	}
 	return ""

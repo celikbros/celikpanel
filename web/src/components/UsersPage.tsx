@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { type PanelUser, type ServicePlan } from '../lib/api';
 import { PageHeader, Button, EmptyState, StatusDot, inputClass } from './ui';
 import { readApiError, apiErrorText } from '../lib/apiError';
+import { TeamMembersPage } from './TeamMembersPage';
 
 // Account management: the admin/reseller view over the role hierarchy.
 // Everything here mirrors what the API enforces — role options, visibility
@@ -16,8 +17,17 @@ import { readApiError, apiErrorText } from '../lib/apiError';
 // şey API'nin uyguladığını yansıtır — rol seçenekleri, görünürlük ve kota
 // hataları sunucudan gelir.
 export function UsersPage() {
+    const { role, user } = useAuth();
+    if (role === 'customer') {
+        if (user?.account_type !== 'account' || user.features.team_members !== true) return null;
+        return <TeamMembersPage />;
+    }
+    if (role !== 'admin' && role !== 'reseller') return null;
+    return <AccountUsersPage role={role} />;
+}
+
+function AccountUsersPage({ role }: { role: 'admin' | 'reseller' }) {
     const { t } = useI18n();
-    const { role } = useAuth();
     const isAdmin = role === 'admin';
     const [tab, setTab] = useState<'accounts' | 'plans'>('accounts');
 

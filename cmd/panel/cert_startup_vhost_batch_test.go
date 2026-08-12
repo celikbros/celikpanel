@@ -374,6 +374,7 @@ func attachStartupVhostBatchAgent(
 	agent any,
 ) {
 	t.Helper()
+	panel.pkgFamilyVal = "apt"
 	socketFile, err := os.CreateTemp("", "cp-startup-vhosts-*.sock")
 	if err != nil {
 		t.Fatalf("reserve startup vhost agent socket: %v", err)

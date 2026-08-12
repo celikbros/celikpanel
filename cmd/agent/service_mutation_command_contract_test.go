@@ -28,6 +28,7 @@ func TestDurableServiceMutationHandlersDoNotBypassTrackedCommands(t *testing.T) 
 		"installed_repo_packages_rpc.go",
 		"mail_stack_rpc.go",
 		"mail_submission_rpc.go",
+		"mail_tls_rpc.go",
 		"main.go",
 		"nginx_ready.go",
 		"pkg_rpc.go",

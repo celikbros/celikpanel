@@ -13,6 +13,25 @@ func okHandler() http.Handler {
 	})
 }
 
+func TestRequireAuthTerminatesAPIPreflightBeforeHandler(t *testing.T) {
+	reached := false
+	handler := (&Panel{}).requireAuth(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/system/stats", nil)
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d; body=%s", recorder.Code, http.StatusNoContent, recorder.Body.String())
+	}
+	if reached {
+		t.Fatal("API preflight reached the protected handler")
+	}
+}
+
 func TestNewPanelHTTPServer(t *testing.T) {
 	server := newPanelHTTPServer(`127.0.0.1:0`, okHandler())
 	if server.Addr != `127.0.0.1:0` {

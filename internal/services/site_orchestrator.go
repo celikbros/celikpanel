@@ -19,9 +19,21 @@ import (
 type SiteOrchestrator struct {
 	db                  *sql.DB
 	domainRepo          repositories.DomainRepository
-	agentClient         *transport.ReconnectingClient
+	agentClient         siteAgentRPCClient
 	basePath            string
 	expectedBuildCommit string
+}
+
+// siteAgentRPCClient keeps the orchestrator behind the panel's reviewed Agent
+// RPC boundary. Production injects the guarded panel adapter; tests may still
+// use the reconnecting transport directly because it implements this narrow
+// interface.
+type siteAgentRPCClient interface {
+	CallContext(context.Context, string, any, any) error
+}
+
+type siteAgentRPCPreflighter interface {
+	AuthorizeContext(context.Context, string, any) error
 }
 
 const (
@@ -47,7 +59,7 @@ type deleteCreatedSiteResponse struct {
 
 func NewSiteOrchestrator(
 	db *sql.DB,
-	agentClient *transport.ReconnectingClient,
+	agentClient siteAgentRPCClient,
 	expectedBuildCommit ...string,
 ) *SiteOrchestrator {
 	commit := ""
@@ -213,6 +225,12 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	}
 
 	var agentReply transport.CreateSiteResponse
+	if preflighter, ok := so.agentClient.(siteAgentRPCPreflighter); ok {
+		if err := preflighter.AuthorizeContext(ctx, "Agent.CreateSite", &agentReq); err != nil {
+			cause := fmt.Errorf("agent RPC preflight failed: %w", err)
+			return nil, errors.Join(cause, so.rollbackCreatedSiteMetadata(domain.ID, siteID))
+		}
+	}
 	err = so.agentClient.CallContext(ctx, "Agent.CreateSite", agentReq, &agentReply)
 	if err != nil {
 		cause := fmt.Errorf("agent RPC failed: %w", err)

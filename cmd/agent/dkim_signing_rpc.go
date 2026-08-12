@@ -48,12 +48,16 @@ type ConfigureDKIMSigningResponse = transport.ConfigureDKIMSigningResponse
 // dizininden yeniden üretir ve milter'ı Postfix'e bağlar. Idempotent —
 // yeni bir domain anahtarı üretildiğinde de aynı yol yeniden senkronlar.
 func (a *Agent) ConfigureDKIMSigning(req *ServiceMutationRequest, resp *ConfigureDKIMSigningResponse) error {
+	*resp = ConfigureDKIMSigningResponse{}
 	if req == nil {
 		return fmt.Errorf("DKIM signing configuration request is required")
 	}
-	ctx, finishStep, err := a.requiredServiceMutationStep(req.ServiceMutationBinding)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(serviceMutationStepConfigureDKIMSigning, "opendkim", "", "configure"),
+	)
 	if err != nil {
-		resp.Error = err.Error()
+		*resp = ConfigureDKIMSigningResponse{Error: err.Error()}
 		return nil
 	}
 	defer finishStep()

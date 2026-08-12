@@ -320,7 +320,7 @@ func (p *Panel) issueAliasCertificateSnapshot(
 		CurrentLineageName:  current.LineageName,
 		ACMEServer:          provider.Directory,
 	}
-	issueErr := p.agentClient.CallContext(
+	issueErr := p.callAgentContext(
 		ctx, "Agent.IssueLetsEncryptCertificate", agentReq, &agentResp,
 	)
 	stagedLineage := strings.TrimSpace(agentResp.LineageName)

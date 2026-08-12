@@ -53,6 +53,10 @@ type Panel struct {
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
+	// webmailReadinessProbe is injectable only so handler tests never need a
+	// real Roundcube process. Production leaves it nil and uses the fixed,
+	// Unix-socket-backed probe.
+	webmailReadinessProbe func(context.Context) bool
 	// pkgFamily caches the host's package-manager family ("apt", "pacman").
 	// It is a property of the machine and never changes while the panel runs,
 	// so it is asked once instead of being persisted with the service scan —
@@ -63,6 +67,16 @@ type Panel struct {
 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
 	pkgFamilyMu  sync.Mutex
 	pkgFamilyVal string
+	// hostPlatformResolutionMu guards the context-aware shared identity flight.
+	// Mutating callers authorize against one published result without holding
+	// a mutex across the HostPlatform RPC.
+	hostPlatformResolutionMu sync.Mutex
+	hostPlatformResolution   *agentRPCHostIdentityResolution
+	// hostPlatformVal is the verified identity behind distribution-specific
+	// capability decisions. PkgFamily remains for backward-compatible package
+	// code, but dnf alone can never qualify a preview target.
+	hostPlatformVal   transport.HostPlatformResponse
+	hostPlatformKnown bool
 	// serviceScanMu coalesces page-triggered service scans. A first visit,
 	// React StrictMode and multiple open tabs must not probe the host in
 	// parallel.
@@ -206,6 +220,8 @@ func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
 		match.kind, match.methods = "cron", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
 	case "mail/health":
 		match.kind, match.methods = "mail-health", []string{http.MethodGet}
+	case "mail/accounts/password":
+		match.kind, match.methods = "mail", []string{http.MethodPut}
 	case "mail/accounts":
 		match.kind, match.methods = "mail", []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions}
 	case "mail/quota", "mail/rbl", "mail/setup", "mail/auth":
@@ -251,7 +267,7 @@ func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
 		rejectRouteMethod(w, match.methods)
 		return
 	}
-	if !p.authorizeDomain(w, r, match.domainID) {
+	if !p.authorizeDomainSubroute(w, r, match.domainID, match.kind) {
 		return
 	}
 	switch match.kind {
@@ -608,13 +624,6 @@ func main() {
 	client := transport.NewReconnectingClient(rawClient)
 	log.Println("Connected to Agent RPC")
 
-	// Initialize Site Orchestrator
-	orchestrator := services.NewSiteOrchestrator(
-		database.GetDB(),
-		client,
-		buildCommit,
-	)
-
 	sessions := auth.NewSessionStore(database.GetDB())
 
 	// Load (or on first boot, create) the key that seals stored credentials
@@ -633,7 +642,6 @@ func main() {
 	panel := &Panel{
 		agentClient:   client,
 		db:            database,
-		orchestrator:  orchestrator,
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
 		secrets:       secretBox,
@@ -645,6 +653,11 @@ func main() {
 		loginLimiter: newRateLimiter(10, 5*time.Minute),
 		demoMode:     *demo,
 	}
+	panel.orchestrator = services.NewSiteOrchestrator(
+		database.GetDB(),
+		panelSiteAgentClient{panel: panel},
+		buildCommit,
+	)
 
 	// Development demo accounts (gated behind --demo).
 	// Geliştirme demo hesapları (--demo bayrağının arkasında).
@@ -661,6 +674,37 @@ func main() {
 	} else if n == 0 {
 		log.Fatal("No users exist. Create the first admin with:  ./bin/panel --create-admin")
 	}
+
+	// Bind and serve TLS before durable mutation recovery. Certificate
+	// activation restarts the panel and then verifies the published leaf over
+	// this listener; an atomic gate returns 503 for every application request
+	// until all startup recovery and route registration is complete.
+	applicationHandler := csrfProtect(
+		panel.requireAuth(http.DefaultServeMux),
+	)
+	startupGate := newPanelHTTPStartupGate(applicationHandler)
+	handler := securityHeaders(panel.secureCookies, startupGate)
+	addr := listenAddr()
+	server := newPanelHTTPServer(addr, handler)
+	tlsOn, certPath, keyPath, err := tlsSettings()
+	if err != nil {
+		log.Fatalf("TLS setup failed: %v", err)
+	}
+	// Plain HTTP with Secure cookies would hand the browser a cookie it
+	// silently drops. Refuse it before publishing the listener.
+	if !tlsOn && panel.secureCookies {
+		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
+	}
+	runningServer, err := startPanelHTTP(server, certPath, keyPath)
+	if err != nil {
+		log.Fatalf("Failed to start panel listener: %v", err)
+	}
+	if tlsOn {
+		log.Printf("Panel startup listener active on %s (HTTPS; application gated)", addr)
+	} else {
+		log.Printf("Panel startup listener active on %s (HTTP; application gated)", addr)
+	}
+
 	if recovered, err := panel.recoverInterruptedServiceOperations(context.Background()); err != nil {
 		log.Fatalf("Failed to recover interrupted service operations: %v", err)
 	} else if recovered > 0 {
@@ -691,7 +735,51 @@ func main() {
 	// Repair only derived certificate runtime state from the durable ledger.
 	// This removes crash-left staging lineages/validation names; it never
 	// changes a user's panel setting.
+	//
+	// A resumed durable operation owns serviceMutationMu until its panel row is
+	// terminal. Consume that barrier before startup maintenance, then release
+	// it: the maintenance helpers own their component/direct mutation locks and
+	// may legitimately acquire serviceMutationMu themselves.
+	panel.serviceMutationMu.Lock()
+	panel.serviceMutationMu.Unlock()
+	activationCtx, activationCancel := context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
+		activationCancel()
+		log.Fatalf("wait for startup mutation lease before certificate reconcile: %v", err)
+	}
+	activationCancel()
 	panel.reconcileCertificateRuntimeAtStartup()
+
+	// Fail closed before accepting HTTP: a peer whose one-time private config
+	// was interrupted must not survive a process restart as ghost access.
+	activationCtx, activationCancel = context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
+		activationCancel()
+		log.Fatalf("wait for startup mutation lease before VPN recovery: %v", err)
+	}
+	activationCancel()
+	recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 45*time.Second)
+	if err := panel.recoverVPNProvisioningState(recoveryCtx); err != nil {
+		recoveryCancel()
+		log.Fatalf("recover incomplete VPN provisioning: %v", err)
+	}
+	recoveryCancel()
+	activationCtx, activationCancel = context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	if err := panel.requireStartupAgentMutationSlot(activationCtx); err != nil {
+		activationCancel()
+		log.Fatalf("wait for startup mutation lease before mail repair: %v", err)
+	}
+	activationCancel()
+	panel.wireMailFiltersSynchronouslyAtStartup()
 
 	// Purge expired sessions on startup and then hourly.
 	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.
@@ -701,29 +789,6 @@ func main() {
 			_ = sessions.DeleteExpired(context.Background())
 		}
 	}()
-
-	// Run scheduled backups in the background from here on.
-	// Buradan itibaren zamanlanmış yedekleri arka planda koştur.
-	panel.startBackupScheduler()
-
-	// Renew expiring certificates automatically.
-	// Süresi yaklaşan sertifikaları otomatik yenile.
-	panel.startCertRenewalScheduler()
-
-	// Fail closed before accepting HTTP: a peer whose one-time private config
-	// was interrupted must not survive a process restart as ghost access.
-	// HTTP kabulünden önce kapalı kal: tek kullanımlık özel config'i yarıda kalan
-	// bir peer süreç yeniden başladığında hayalet erişim olarak yaşamamalıdır.
-	recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 45*time.Second)
-	if err := panel.recoverVPNProvisioningState(recoveryCtx); err != nil {
-		recoveryCancel()
-		log.Fatalf("recover incomplete VPN provisioning: %v", err)
-	}
-	recoveryCancel()
-
-	// Revoke expired or suspended subscription VPN peers in the background.
-	// Süresi dolan veya askıya alınan abonelik VPN peer'larını arka planda kaldır.
-	panel.startVPNEntitlementReconciler()
 
 	// Authentication routes (login is public; logout/me require a session).
 	// Kimlik doğrulama rotaları (giriş herkese açık; çıkış/me oturum ister).
@@ -740,6 +805,8 @@ func main() {
 	// Hesap yönetimi (admin + bayi; rol kuralları işleyicilerin içinde).
 	http.HandleFunc("/api/v1/users", panel.handleUsers)
 	http.HandleFunc("/api/v1/users/", panel.handleUserByID)
+	http.HandleFunc("/api/v1/team-members", panel.handleTeamMembers)
+	http.HandleFunc("/api/v1/team-members/", panel.handleTeamMemberByID)
 	http.HandleFunc("/api/v1/plans", panel.handlePlans)
 	http.HandleFunc("/api/v1/plans/", panel.handlePlanByID)
 	http.HandleFunc("/api/v1/subscriptions", panel.handleSubscriptions)
@@ -771,23 +838,6 @@ func main() {
 	// History needs a historian: sample for as long as the panel lives.
 	// Geçmiş, tarihçi ister: panel yaşadıkça örnekle.
 	panel.startMetricsSampler()
-
-	// A fix that only helps FUTURE installs leaves every existing server
-	// broken until someone happens to press the right button — and nobody
-	// knows which button, because the symptom is invisible: a spam filter that
-	// runs and filters nothing. Servers that installed Rspamd before the milter
-	// chain existed are in exactly that state right now. Re-composing the chain
-	// once at startup makes the upgrade itself the repair. It is idempotent
-	// (same inputs, same two settings) and a no-op where postfix is absent.
-	//
-	// Yalnız GELECEKTEKİ kurulumlara yarayan bir düzeltme, mevcut her sunucuyu,
-	// biri doğru düğmeye basana dek bozuk bırakır — ve kimse hangi düğme
-	// olduğunu bilmez, çünkü belirti görünmezdir: koşan ama hiçbir şey süzmeyen
-	// bir spam filtresi. Milter zinciri var olmadan önce Rspamd kurmuş
-	// sunucular şu anda tam olarak bu durumdadır. Zinciri açılışta bir kez
-	// yeniden bestelemek, yükseltmenin kendisini onarım hâline getirir.
-	// Etkisi değişmezdir (aynı girdi, aynı iki ayar) ve postfix yoksa boş işlem.
-	panel.wireMailFiltersAtStartup()
 
 	// PHP Management
 	http.HandleFunc("/api/v1/php/pools", panel.handlePHPPools)
@@ -826,6 +876,7 @@ func main() {
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
+	http.HandleFunc(mailProfileInstallPath, panel.handleMailProfileInstall)
 	http.HandleFunc("/api/v1/service/operation", panel.handleServiceOperation)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
 	http.HandleFunc("/api/v1/service/uninstall", panel.handleServiceUninstall)
@@ -938,42 +989,18 @@ func main() {
 	webRoot := webDir()
 	http.Handle("/", frontendHandler(webRoot))
 
-	// Middleware chain, outermost first: security headers on everything →
-	// CSRF block on cross-origin writes → auth gate → handlers.
-	// Ara katman zinciri, en dıştan içe: her şeyde güvenlik başlıkları →
-	// köken-dışı yazmalarda CSRF engeli → kimlik doğrulama kapısı → işleyici.
-	handler := securityHeaders(panel.secureCookies,
-		csrfProtect(
-			panel.requireAuth(http.DefaultServeMux)))
-
-	addr := listenAddr()
-	server := newPanelHTTPServer(addr, handler)
-
-	// Serve HTTPS when a certificate is configured (or self-sign one on
-	// request); fall back to plain HTTP for development.
-	// Sertifika yapılandırıldığında (ya da talep üzerine kendinden-imzalı
-	// üretilince) HTTPS sun; geliştirme için düz HTTP'ye düş.
-	tlsOn, certPath, keyPath, err := tlsSettings()
-	if err != nil {
-		log.Fatalf("TLS setup failed: %v", err)
-	}
+	startupGate.Open()
+	// Immediate background host mutators are started only after recovery,
+	// route registration, and admission of normal application traffic.
+	panel.startBackupScheduler()
+	panel.startCertRenewalScheduler()
+	panel.startVPNEntitlementReconciler()
+	protocol := "HTTP"
 	if tlsOn {
-		log.Printf("Panel listening on %s (HTTPS)", addr)
-		if err := servePanelHTTP(server, certPath, keyPath); err != nil {
-			log.Fatal(err)
-		}
-		return
+		protocol = "HTTPS"
 	}
-
-	// Plain HTTP with Secure cookies would hand the browser a cookie it
-	// silently drops — refuse the footgun unless --insecure-cookies is set.
-	// Secure çerezli düz HTTP, tarayıcıya sessizce düşürdüğü bir çerez verir
-	// — --insecure-cookies verilmedikçe bu tuzağı reddet.
-	if panel.secureCookies {
-		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
-	}
-	log.Printf("Panel listening on %s (HTTP)", addr)
-	if err := servePanelHTTP(server, "", ""); err != nil {
+	log.Printf("Panel ready on %s (%s)", addr, protocol)
+	if err := waitPanelHTTP(runningServer); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -984,6 +1011,44 @@ func (p *Panel) countUsers() (int, error) {
 	var n int
 	err := p.db.GetDB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM users").Scan(&n)
 	return n, err
+}
+
+// wireMailFiltersSynchronouslyAtStartup is the bounded startup form of the
+// legacy background repair. The recovery barrier has already drained; this
+// helper owns a durable agent lease and finishes before HTTP admission.
+func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
+	var response transport.WireMailFiltersResponse
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	err := p.withStandaloneAgentMutation(
+		ctx,
+		"mail_filter_wire",
+		"startup",
+		"",
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			request := transport.ServiceMutationRequest{
+				ServiceMutationBinding: binding,
+			}
+			if err := p.callAgentContext(
+				callCtx,
+				"Agent.WireMailFilters",
+				&request,
+				&response,
+			); err != nil {
+				return err
+			}
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return
+	}
+	if response.Detail != "" {
+		log.Printf("milter chain: %s", response.Detail)
+	}
 }
 
 func (p *Panel) handleServices(w http.ResponseWriter, r *http.Request) {
@@ -1047,6 +1112,11 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	if serviceName == "" {
 		serviceName = req.Name
 	}
+	serviceName = strings.TrimSuffix(strings.TrimSpace(serviceName), ".service")
+	if serviceName == "" || core.ServiceForUnit(serviceName) == nil {
+		writeClientError(w, http.StatusBadRequest, "unknown managed service")
+		return
+	}
 
 	switch req.Action {
 	case "start", "stop", "restart", "reload":
@@ -1061,7 +1131,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 			ServiceName:            serviceName,
 			Action:                 req.Action,
 		}
-		if err := p.agentClient.CallContext(callCtx, "Agent.ServiceMutationAction", &request, &reply); err != nil {
+		if err := p.callAgentContext(callCtx, "Agent.ServiceMutationAction", &request, &reply); err != nil {
 			return err
 		}
 		if reply.Error != "" {

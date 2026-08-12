@@ -197,6 +197,681 @@ reject_literal "$INSTALL" 's|^ExecStart=/opt/celikpanel/bin/panel'
 require_literal "$INSTALL" 'pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables'
 reject_literal "$INSTALL" 'pacman -Sy --noconfirm'
 
+# Fresh-install authorization comes from an exact distro/version/architecture
+# tuple, never from ID_LIKE or whichever package manager happens to be on PATH.
+platform_defs=
+for function_name in \
+    validate_vendor_directory_chain \
+    validate_rhel_vendor_tool \
+    vendor_machine_architecture \
+    parse_bootstrap_os_release_scalar \
+    parse_bootstrap_os_release \
+    classify_bootstrap_platform \
+    verify_rhel_preview_host \
+    rhel_preview_prerequisite_command \
+    preflight_bootstrap_platform
+do
+    function_source=$(extract_function_source "$INSTALL" "$function_name") \
+        || die "install.sh has no complete function: $function_name"
+    platform_defs+=$'\n'"$function_source"
+done
+
+platform_tmp=$(mktemp -d)
+cleanup_platform_contract() {
+    rm -rf -- "$platform_tmp"
+}
+trap cleanup_platform_contract EXIT
+
+run_platform_classifier() (
+    local release_data=$1 machine=$2 fixture=$platform_tmp/os-release
+    eval "$platform_defs"
+    printf '%s' "$release_data" > "$fixture"
+    classify_bootstrap_platform "$fixture" "$machine"
+    printf '%s %s\n' "$PKG_FAMILY" "$BOOTSTRAP_ARCH"
+)
+
+assert_platform_accepts() {
+    local name=$1 release_data=$2 machine=$3 expected=$4 actual
+    if ! actual=$(run_platform_classifier "$release_data" "$machine"); then
+        die "$name was rejected"
+    fi
+    [[ "$actual" == "$expected" ]] \
+        || die "$name classified as '$actual', want '$expected'"
+}
+
+assert_platform_rejects() {
+    local name=$1 release_data=$2 machine=$3
+    if run_platform_classifier "$release_data" "$machine" >/dev/null 2>&1; then
+        die "$name was accepted"
+    fi
+}
+
+assert_platform_accepts debian-13 \
+    $'ID=debian\nVERSION_ID="13"\n' x86_64 'apt amd64'
+assert_platform_accepts ubuntu-24.04 \
+    $'ID=ubuntu\nID_LIKE=debian\nVERSION_ID="24.04"\n' aarch64 'apt arm64'
+assert_platform_accepts arch-rolling \
+    $'ID=arch\nBUILD_ID=rolling\n' x86_64 'pacman amd64'
+assert_platform_accepts almalinux-9 \
+    $'ID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.6"\n' x86_64 'dnf-preview amd64'
+assert_platform_accepts rocky-9 \
+    $'ID=rocky\nID_LIKE="rhel centos fedora"\nVERSION_ID=9.5\n' aarch64 'dnf-preview arm64'
+
+assert_platform_rejects almalinux-8 $'ID=almalinux\nVERSION_ID=8.10\n' x86_64
+assert_platform_rejects rocky-10 $'ID=rocky\nVERSION_ID=10.0\n' x86_64
+assert_platform_rejects rocky-missing-version $'ID=rocky\n' x86_64
+assert_platform_rejects missing-id $'VERSION_ID=9.6\n' x86_64
+assert_platform_rejects malformed-quote $'ID="rocky\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects rocky-duplicate-version \
+    $'ID=rocky\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects rhel-9 $'ID=rhel\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects centos-stream-9 $'ID=centos\nVERSION_ID=9\n' x86_64
+assert_platform_rejects fedora-42 $'ID=fedora\nVERSION_ID=42\n' x86_64
+assert_platform_rejects cloudlinux-9 $'ID=cloudlinux\nVERSION_ID=9.6\n' x86_64
+assert_platform_rejects compatible-amazon \
+    $'ID=amzn\nID_LIKE="fedora rhel centos"\nVERSION_ID=2023\n' x86_64
+assert_platform_rejects unsupported-architecture \
+    $'ID=almalinux\nVERSION_ID=9.6\n' s390x
+assert_platform_rejects arch-arm-derivative \
+    $'ID=arch\n' aarch64
+assert_platform_rejects duplicate-id \
+    $'ID=rocky\nID=almalinux\nVERSION_ID=9.6\n' x86_64
+injection_marker=$platform_tmp/os-release-injection
+assert_platform_rejects executable-id \
+    "ID=\"\$(touch $injection_marker)\""$'\nVERSION_ID=9.6\n' x86_64
+[[ ! -e "$injection_marker" ]] \
+    || die 'os-release parser executed untrusted data'
+rm -f -- "$platform_tmp/missing-os-release"
+if (
+    eval "$platform_defs"
+    classify_bootstrap_platform "$platform_tmp/missing-os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'bootstrap accepted a missing os-release file'
+fi
+printf 'ID=rocky\0\nVERSION_ID=9.6\n' > "$platform_tmp/os-release"
+if (
+    eval "$platform_defs"
+    classify_bootstrap_platform "$platform_tmp/os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'os-release parser accepted a NUL byte'
+fi
+
+dnf_command=$(
+    eval "$platform_defs"
+    rhel_preview_prerequisite_command
+)
+expected_dnf_command=$'/usr/bin/dnf\n--assumeyes\n--setopt=install_weak_deps=False\ninstall\ntar\nxz\ncurl\nca-certificates\nselinux-policy-targeted\npolicycoreutils\nlibselinux-utils'
+[[ "$dnf_command" == "$expected_dnf_command" ]] \
+    || die "RHEL preview prerequisite command is not the exact reviewed dry-run argv"
+
+selinux_enforce=$platform_tmp/selinux-enforce
+vendor_root=$platform_tmp/vendor-root
+mkdir -p "$vendor_root/usr/bin" "$vendor_root/usr/sbin"
+chmod 0755 "$vendor_root" "$vendor_root/usr" "$vendor_root/usr/bin" "$vendor_root/usr/sbin"
+fake_dnf=$vendor_root/usr/bin/dnf
+fake_uname=$vendor_root/usr/bin/uname
+dnf_invoked=$platform_tmp/dnf-invoked
+fake_restorecon=$vendor_root/usr/sbin/restorecon
+fake_matchpathcon=$vendor_root/usr/sbin/matchpathcon
+fake_getenforce=$vendor_root/usr/sbin/getenforce
+selinux_mutator_invoked=$platform_tmp/selinux-mutator-invoked
+after_preflight=$platform_tmp/after-preflight
+apply_only_systemctl_invoked=$platform_tmp/apply-only-systemctl-invoked
+apply_only_guard_invoked=$platform_tmp/apply-only-guard-invoked
+printf '1\n' > "$selinux_enforce"
+cat > "$fake_dnf" <<FAKE_DNF
+#!/bin/bash
+: > "$dnf_invoked"
+exit 97
+FAKE_DNF
+chmod 0700 "$fake_dnf"
+cat > "$fake_uname" <<'FAKE_UNAME'
+#!/bin/bash
+printf 'x86_64\n'
+FAKE_UNAME
+chmod 0700 "$fake_uname"
+cat > "$fake_restorecon" <<FAKE_RESTORECON
+#!/bin/bash
+: > "$selinux_mutator_invoked"
+exit 96
+FAKE_RESTORECON
+cat > "$fake_matchpathcon" <<FAKE_MATCHPATHCON
+#!/bin/bash
+: > "$selinux_mutator_invoked"
+exit 95
+FAKE_MATCHPATHCON
+cat > "$fake_getenforce" <<'FAKE_GETENFORCE'
+#!/bin/bash
+printf 'Enforcing\n'
+FAKE_GETENFORCE
+chmod 0700 "$fake_restorecon" "$fake_matchpathcon" "$fake_getenforce"
+printf 'ID=almalinux\nVERSION_ID=9.6\n' > "$platform_tmp/os-release"
+
+run_rhel_preview_preflight() (
+    local missing_role=${1:-} apply_only=${2:-0}
+    eval "$platform_defs"
+    APPLY_ONLY=$apply_only
+    SELINUX_ENFORCE_FILE=$selinux_enforce
+    RHEL_DNF_BIN=$fake_dnf
+    UNAME_BIN=$fake_uname
+    RHEL_DNF_CANONICAL_ALT=$vendor_root/usr/bin/dnf-3
+    SELINUX_RESTORECON_BIN=$fake_restorecon
+    SELINUX_MATCHPATHCON_BIN=$fake_matchpathcon
+    SELINUX_GETENFORCE_BIN=$fake_getenforce
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$vendor_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    case "$missing_role" in
+        '') ;;
+        dnf) RHEL_DNF_BIN=$vendor_root/usr/bin/missing-dnf ;;
+        restorecon) SELINUX_RESTORECON_BIN=$vendor_root/usr/sbin/missing-restorecon ;;
+        matchpathcon) SELINUX_MATCHPATHCON_BIN=$vendor_root/usr/sbin/missing-matchpathcon ;;
+        getenforce) SELINUX_GETENFORCE_BIN=$vendor_root/usr/sbin/missing-getenforce ;;
+        *) die "unknown missing vendor test role: $missing_role" ;;
+    esac
+    preflight_bootstrap_platform "$platform_tmp/os-release" x86_64
+    systemctl() {
+        : > "$apply_only_systemctl_invoked"
+    }
+    install_release_transaction_guards_with_label_barrier() {
+        : > "$apply_only_guard_invoked"
+    }
+    : > "$after_preflight"
+    systemctl daemon-reload
+    install_release_transaction_guards_with_label_barrier fixture
+    "$SELINUX_RESTORECON_BIN" -xRF -- "$platform_tmp"
+)
+
+if run_rhel_preview_preflight >/dev/null 2>&1; then
+    die 'RHEL preview preflight returned to the mutating installer path'
+fi
+[[ ! -e "$dnf_invoked" && ! -e "$selinux_mutator_invoked" && ! -e "$after_preflight" ]] \
+    || die 'RHEL preview preflight reached a command after its certification blocker'
+
+for missing_vendor_role in dnf restorecon matchpathcon getenforce; do
+    if run_rhel_preview_preflight "$missing_vendor_role" >/dev/null 2>&1; then
+        die "RHEL preview accepted missing vendor tool: $missing_vendor_role"
+    fi
+done
+
+run_vendor_validator() (
+    local role=$1 expected_uid=${2:-$(id -u)}
+    eval "$platform_defs"
+    UNAME_BIN=$fake_uname
+    RHEL_DNF_BIN=$fake_dnf
+    RHEL_DNF_CANONICAL_ALT=$vendor_root/usr/bin/dnf-3
+    SELINUX_RESTORECON_BIN=$fake_restorecon
+    SELINUX_MATCHPATHCON_BIN=$fake_matchpathcon
+    SELINUX_GETENFORCE_BIN=$fake_getenforce
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$vendor_root
+    VENDOR_EXPECTED_UID=$expected_uid
+    VENDOR_EXPECTED_GID=$(id -g)
+    validate_rhel_vendor_tool "$role"
+)
+run_vendor_machine_architecture() (
+    eval "$platform_defs"
+    UNAME_BIN=$fake_uname
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$vendor_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    vendor_machine_architecture
+)
+poisoned_path=$platform_tmp/poisoned-path
+mkdir -p "$poisoned_path"
+cat > "$poisoned_path/uname" <<'POISONED_UNAME'
+#!/bin/bash
+printf 's390x\n'
+POISONED_UNAME
+chmod 0700 "$poisoned_path/uname"
+[[ "$(PATH="$poisoned_path:$PATH" run_vendor_machine_architecture)" == x86_64 ]] \
+    || die 'vendor architecture helper selected uname through PATH'
+for valid_vendor_role in uname dnf restorecon matchpathcon getenforce; do
+    run_vendor_validator "$valid_vendor_role" \
+        || die "valid vendor fixture was rejected: $valid_vendor_role"
+done
+mv -- "$fake_uname" "$fake_uname.missing"
+if run_vendor_validator uname >/dev/null 2>&1; then
+    die 'vendor architecture helper accepted a missing exact uname'
+fi
+mv -- "$fake_uname.missing" "$fake_uname"
+if run_vendor_validator restorecon 99999 >/dev/null 2>&1; then
+    die 'vendor validator accepted a non-root-owned target model'
+fi
+chmod 0775 "$fake_matchpathcon"
+if run_vendor_validator matchpathcon >/dev/null 2>&1; then
+    die 'vendor validator accepted a group-writable target'
+fi
+chmod 0700 "$fake_matchpathcon"
+chmod 0777 "$vendor_root/usr/sbin"
+if run_vendor_validator getenforce >/dev/null 2>&1; then
+    die 'vendor validator accepted a writable ancestor'
+fi
+chmod 0755 "$vendor_root/usr/sbin"
+mv -- "$vendor_root/usr/sbin" "$vendor_root/usr/sbin.real"
+ln -s sbin.real "$vendor_root/usr/sbin"
+if run_vendor_validator getenforce >/dev/null 2>&1; then
+    die 'vendor validator accepted a symbolic ancestor'
+fi
+rm -f -- "$vendor_root/usr/sbin"
+mv -- "$vendor_root/usr/sbin.real" "$vendor_root/usr/sbin"
+ln -- "$fake_getenforce" "$vendor_root/usr/sbin/getenforce.hardlink"
+if run_vendor_validator getenforce >/dev/null 2>&1; then
+    die 'vendor validator accepted a multiply-linked executable target'
+fi
+rm -f -- "$vendor_root/usr/sbin/getenforce.hardlink"
+mv -- "$fake_restorecon" "$vendor_root/usr/sbin/restorecon.real"
+ln -s restorecon.real "$fake_restorecon"
+if run_vendor_validator restorecon >/dev/null 2>&1; then
+    die 'vendor validator accepted a symbolic SELinux tool'
+fi
+rm -f -- "$fake_restorecon"
+mv -- "$vendor_root/usr/sbin/restorecon.real" "$fake_restorecon"
+mv -- "$fake_dnf" "$vendor_root/usr/bin/dnf-3"
+ln -s dnf-3 "$fake_dnf"
+run_vendor_validator dnf || die 'vendor validator rejected pinned dnf-3 symlink'
+rm -f -- "$fake_dnf"
+mv -- "$vendor_root/usr/bin/dnf-3" "$vendor_root/usr/bin/dnf-unpinned"
+ln -s dnf-unpinned "$fake_dnf"
+if run_vendor_validator dnf >/dev/null 2>&1; then
+    die 'vendor validator accepted an unpinned dnf symlink target'
+fi
+rm -f -- "$fake_dnf"
+mv -- "$vendor_root/usr/bin/dnf-unpinned" "$fake_dnf"
+
+rm -f -- "$after_preflight" "$apply_only_systemctl_invoked" \
+    "$apply_only_guard_invoked" "$selinux_mutator_invoked"
+if run_rhel_preview_preflight '' 1 >/dev/null 2>&1; then
+    die 'RHEL preview certification gate allowed apply-only continuation'
+fi
+[[ ! -e "$after_preflight" && ! -e "$apply_only_systemctl_invoked" && \
+   ! -e "$apply_only_guard_invoked" && ! -e "$selinux_mutator_invoked" && \
+   ! -e "$dnf_invoked" ]] \
+    || die 'RHEL apply-only preview gate dispatched mutation, guard, systemctl or restorecon'
+
+assert_inert_apply_only_preflight() (
+    local label=$1 contents=$2 machine=$3 os_release
+    os_release=$platform_tmp/$label-os-release
+    printf '%s' "$contents" > "$os_release"
+    eval "$platform_defs"
+    APPLY_ONLY=1
+    preflight_bootstrap_platform "$os_release" "$machine"
+    [[ "$SELINUX_PLATFORM_MODE $PKG_FAMILY" == 'inert apply-only' ]]
+)
+assert_inert_apply_only_preflight debian-apply-only \
+    $'ID=debian\nVERSION_ID=13\n' x86_64
+assert_inert_apply_only_preflight ubuntu-apply-only \
+    $'ID=ubuntu\nVERSION_ID=24.04\n' aarch64
+assert_inert_apply_only_preflight arch-apply-only \
+    $'ID=arch\n' x86_64
+
+printf '0\n' > "$selinux_enforce"
+if run_rhel_preview_preflight >/dev/null 2>&1; then
+    die 'RHEL preview accepted SELinux permissive mode'
+fi
+
+require_sequence "$INSTALL" \
+    'bootstrap_machine=$(vendor_machine_architecture)' \
+    'preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"' \
+    'command -v systemctl >/dev/null' \
+    'validate_apply_only_transaction' \
+    'apt-get update -qq' \
+    'useradd --system' \
+    'install -d -m 0750 -o root -g "$SVC_GROUP" "$CONF_DIR"'
+require_function_literal "$INSTALL" preflight_bootstrap_platform \
+    'die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"'
+require_function_sequence "$INSTALL" preflight_bootstrap_platform \
+    'verify_rhel_preview_host' \
+    'die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only:' \
+    'if [[ $APPLY_ONLY -eq 1 ]]; then'
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'systemctl '
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'useradd '
+reject_function_literal "$INSTALL" preflight_bootstrap_platform 'mkdir '
+require_function_sequence "$INSTALL" verify_rhel_preview_host \
+    'validate_rhel_vendor_tool dnf' \
+    'validate_rhel_vendor_tool restorecon' \
+    'validate_rhel_vendor_tool matchpathcon' \
+    'validate_rhel_vendor_tool getenforce' \
+    'reported_state=$("$SELINUX_GETENFORCE_BIN")'
+reject_function_literal "$INSTALL" preflight_bootstrap_platform '"$RHEL_DNF_BIN" --'
+require_count "$INSTALL" 'rhel_preview_prerequisite_command' 1
+reject_function_literal "$INSTALL" rhel_preview_prerequisite_command ' audit'
+reject_literal "$INSTALL" 'subscription-manager'
+reject_literal "$INSTALL" 'setenforce'
+reject_literal "$INSTALL" 'SELINUX=permissive'
+reject_literal "$INSTALL" 'SELINUX=disabled'
+reject_literal "$INSTALL" 'dnf-automatic'
+reject_literal "$INSTALL" 'upgrade --security'
+
+# Archive and cp -a labels are never authoritative. On Alma/Rocky only, every
+# publication is force-restored from host policy and then checked read-only.
+for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
+    require_literal "$lifecycle_script" 'UNAME_BIN=/usr/bin/uname'
+    require_literal "$lifecycle_script" 'VENDOR_READLINK_BIN=/usr/bin/readlink'
+    require_literal "$lifecycle_script" 'VENDOR_STAT_BIN=/usr/bin/stat'
+    require_literal "$lifecycle_script" 'VENDOR_DIRNAME_BIN=/usr/bin/dirname'
+    require_literal "$lifecycle_script" 'SYSTEMCTL_BIN=/usr/bin/systemctl'
+    require_literal "$lifecycle_script" 'VENDOR_TRUST_ANCHOR=/'
+    require_literal "$lifecycle_script" 'VENDOR_EXPECTED_UID=0'
+    require_literal "$lifecycle_script" 'VENDOR_EXPECTED_GID=0'
+    require_literal "$lifecycle_script" 'Bootstrap trust boundary: these fixed inspection helpers perform the first'
+    require_literal "$lifecycle_script" 'SELINUX_RESTORECON_BIN=/usr/sbin/restorecon'
+    require_literal "$lifecycle_script" 'SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon'
+    require_literal "$lifecycle_script" 'SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce'
+    require_literal "$lifecycle_script" 'readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \'
+    require_literal "$lifecycle_script" 'SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \'
+    require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN VENDOR_TRUST_ANCHOR \'
+    require_literal "$lifecycle_script" 'VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID'
+    require_literal "$lifecycle_script" 'RUNTIME_DIR=/run/celikpanel'
+    require_literal "$lifecycle_script" 'BACKUP_ROOT=/var/backups/celikpanel'
+    require_literal "$lifecycle_script" 'LIBEXEC_DIR=/usr/libexec/celikpanel'
+    require_literal "$lifecycle_script" 'UNIT_DIR=/etc/systemd/system'
+    require_function_literal "$lifecycle_script" validate_vendor_directory_chain \
+        'vendor tool ancestor is group/other writable'
+    require_function_literal "$lifecycle_script" validate_rhel_vendor_tool \
+        'vendor $role canonical target is not pinned'
+    require_function_literal "$lifecycle_script" validate_rhel_vendor_tool \
+        'vendor $role target must have exactly one hard link'
+    require_function_sequence "$lifecycle_script" vendor_machine_architecture \
+        'validate_rhel_vendor_tool uname' \
+        'machine=$("$UNAME_BIN" -m)'
+    require_function_sequence "$lifecycle_script" restore_celikpanel_selinux_labels \
+        'rhel9) ;;' \
+        'validate_rhel_vendor_tool restorecon' \
+        'validate_rhel_vendor_tool matchpathcon' \
+        'validate_rhel_vendor_tool getenforce' \
+        'state=$("$SELINUX_GETENFORCE_BIN")' \
+        '"$SELINUX_RESTORECON_BIN" -xRF -- "${paths[@]}"' \
+        'drift=$("$SELINUX_RESTORECON_BIN" -nxRFv -- "${paths[@]}")' \
+        '[[ -z "$drift" ]]' \
+        '"$SELINUX_MATCHPATHCON_BIN" -V -- "$candidate"'
+    require_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"$RUNTIME_DIR"'
+    require_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"$BACKUP_ROOT"'
+    require_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"$LIBEXEC_DIR"'
+    require_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"$UNIT_DIR/celikpanel-agent.service.d"'
+    require_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"$UNIT_DIR/celikpanel-panel.service.d"'
+    reject_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"/etc"'
+    reject_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"/var/lib"'
+    reject_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"/run"'
+    reject_function_literal "$lifecycle_script" restore_celikpanel_selinux_labels \
+        '"/var/backups"'
+    for forbidden_selinux_mutation in chcon setenforce semanage audit2allow; do
+        reject_literal "$lifecycle_script" "$forbidden_selinux_mutation"
+    done
+    require_function_sequence "$lifecycle_script" \
+        install_release_transaction_guards_with_label_barrier \
+        'if [[ $# -eq 1 && "$1" == daemon-reload ]]; then' \
+        'restore_celikpanel_selinux_labels' \
+        '"$SYSTEMCTL_BIN" "$@"' \
+        'release_txn_install_and_verify_unit_guards "$@"'
+    reject_literal "$lifecycle_script" 'release_txn_install_and_verify_unit_guards "$RELEASE_TRANSACTION_ROOT"'
+    reject_literal "$lifecycle_script" '$(uname -m)'
+done
+require_function_literal "$INSTALL" dl_arch 'machine=$(vendor_machine_architecture)'
+require_sequence "$INSTALL" \
+    'cp -a "$SRC/web/dist/." "$installed_web_root/"' \
+    'install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/' \
+    'restore_celikpanel_selinux_labels' \
+    'systemctl daemon-reload'
+require_sequence "$ROLLBACK" \
+    'cp -a "$snap/bin" "$BIN_DIR"' \
+    'cp -a "$snap/web" "$WEB_DIR"' \
+    'cp -a "$snap/units/." "$UNIT_DIR/"' \
+    'restore_celikpanel_selinux_labels' \
+    'systemctl daemon-reload' \
+    'install_release_transaction_guards_with_label_barrier'
+
+guard_barrier_tmp=$platform_tmp/guard-barrier
+mkdir -p "$guard_barrier_tmp"
+guard_barrier_trace=$guard_barrier_tmp/trace
+cat > "$guard_barrier_tmp/systemctl" <<'FAKE_GUARD_SYSTEMCTL'
+#!/bin/bash
+printf 'systemctl %s\n' "$*" >> "$GUARD_BARRIER_TRACE"
+FAKE_GUARD_SYSTEMCTL
+chmod 0700 "$guard_barrier_tmp/systemctl"
+(
+    eval "$(extract_function_source \
+        "$INSTALL" install_release_transaction_guards_with_label_barrier)"
+    export GUARD_BARRIER_TRACE=$guard_barrier_trace
+    SYSTEMCTL_BIN=$guard_barrier_tmp/systemctl
+    restore_celikpanel_selinux_labels() {
+        printf 'relabel\n' >> "$GUARD_BARRIER_TRACE"
+    }
+    release_txn_install_and_verify_unit_guards() {
+        printf 'publish\n' >> "$GUARD_BARRIER_TRACE"
+        systemctl daemon-reload
+        printf 'after-reload\n' >> "$GUARD_BARRIER_TRACE"
+        systemctl show celikpanel-panel.service
+    }
+    install_release_transaction_guards_with_label_barrier fixture
+)
+expected_guard_barrier_trace=$'publish\nrelabel\nsystemctl daemon-reload\nafter-reload\nsystemctl show celikpanel-panel.service'
+[[ "$(cat "$guard_barrier_trace")" == "$expected_guard_barrier_trace" ]] \
+    || die 'guard publication was not relabeled immediately before internal daemon-reload'
+
+# Control-flow/argv model only: real xattr behavior remains an Alma/Rocky VM
+# certification gate. This model proves cp -a publication is followed by
+# forced, xdev-bounded policy restore, dry-run drift proof and matchpathcon.
+selinux_lifecycle_defs=
+for lifecycle_function in validate_vendor_directory_chain validate_rhel_vendor_tool \
+    restore_celikpanel_selinux_labels
+do
+    selinux_lifecycle_defs+=$'\n'"$(extract_function_source "$INSTALL" "$lifecycle_function")"
+done
+selinux_lifecycle_tmp=$platform_tmp/selinux-lifecycle
+selinux_lifecycle_vendor_root=$selinux_lifecycle_tmp/vendor-root
+mkdir -p "$selinux_lifecycle_tmp/source" \
+    "$selinux_lifecycle_vendor_root/usr/bin" "$selinux_lifecycle_vendor_root/usr/sbin"
+chmod 0755 "$selinux_lifecycle_vendor_root" "$selinux_lifecycle_vendor_root/usr" \
+    "$selinux_lifecycle_vendor_root/usr/bin" "$selinux_lifecycle_vendor_root/usr/sbin"
+printf 'source-archive-label\n' > "$selinux_lifecycle_tmp/source/copied-label"
+cp -a "$selinux_lifecycle_tmp/source/." "$selinux_lifecycle_tmp/product/"
+selinux_label_state=$selinux_lifecycle_tmp/product/copied-label
+selinux_restore_trace=$selinux_lifecycle_tmp/restore.trace
+cat > "$selinux_lifecycle_vendor_root/usr/sbin/restorecon" <<'FAKE_LIFECYCLE_RESTORECON'
+#!/bin/bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$SELINUX_TEST_TRACE"
+case "$1" in
+    -xRF) printf 'filesystem-policy-label\n' > "$SELINUX_TEST_LABEL" ;;
+    -nxRFv)
+        if [[ "${SELINUX_TEST_DRIFT:-0}" == 1 || \
+              "$(cat "$SELINUX_TEST_LABEL")" != filesystem-policy-label ]]; then
+            printf 'label drift\n'
+        fi
+        ;;
+    *) exit 91 ;;
+esac
+FAKE_LIFECYCLE_RESTORECON
+cat > "$selinux_lifecycle_vendor_root/usr/sbin/getenforce" <<'FAKE_LIFECYCLE_GETENFORCE'
+#!/bin/bash
+printf '%s\n' "${SELINUX_TEST_ENFORCEMENT:-Enforcing}"
+FAKE_LIFECYCLE_GETENFORCE
+cat > "$selinux_lifecycle_vendor_root/usr/sbin/matchpathcon" <<'FAKE_LIFECYCLE_MATCHPATHCON'
+#!/bin/bash
+printf 'matchpathcon %s\n' "$*" >> "$SELINUX_TEST_TRACE"
+[[ "${SELINUX_TEST_MATCH_FAIL:-0}" != 1 ]]
+FAKE_LIFECYCLE_MATCHPATHCON
+chmod 0700 "$selinux_lifecycle_vendor_root/usr/sbin/restorecon" \
+    "$selinux_lifecycle_vendor_root/usr/sbin/getenforce" \
+    "$selinux_lifecycle_vendor_root/usr/sbin/matchpathcon"
+printf 'ID=almalinux\nVERSION_ID=9.6\n' > "$selinux_lifecycle_tmp/os-release"
+
+run_selinux_lifecycle_contract() (
+    local missing_role=${1:-} enforcement=${2:-Enforcing} mode=${3:-rhel9}
+    local drift=${4:-0} match_fail=${5:-0}
+    eval "$selinux_lifecycle_defs"
+    SELINUX_PLATFORM_MODE=$mode
+    RHEL_DNF_BIN=$selinux_lifecycle_vendor_root/usr/bin/dnf
+    RHEL_DNF_CANONICAL_ALT=$selinux_lifecycle_vendor_root/usr/bin/dnf-3
+    SELINUX_RESTORECON_BIN=$selinux_lifecycle_vendor_root/usr/sbin/restorecon
+    SELINUX_MATCHPATHCON_BIN=$selinux_lifecycle_vendor_root/usr/sbin/matchpathcon
+    SELINUX_GETENFORCE_BIN=$selinux_lifecycle_vendor_root/usr/sbin/getenforce
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$selinux_lifecycle_vendor_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    case "$missing_role" in
+        '') ;;
+        restorecon) SELINUX_RESTORECON_BIN=$selinux_lifecycle_vendor_root/usr/sbin/missing-restorecon ;;
+        matchpathcon) SELINUX_MATCHPATHCON_BIN=$selinux_lifecycle_vendor_root/usr/sbin/missing-matchpathcon ;;
+        getenforce) SELINUX_GETENFORCE_BIN=$selinux_lifecycle_vendor_root/usr/sbin/missing-getenforce ;;
+        *) die "unknown missing lifecycle role: $missing_role" ;;
+    esac
+    PREFIX=$selinux_lifecycle_tmp/product
+    CONF_DIR=$selinux_lifecycle_tmp/absent-conf
+    DATA_DIR=$selinux_lifecycle_tmp/absent-data
+    IMPORT_DIR=$selinux_lifecycle_tmp/absent-import
+    AGENT_STATE_DIR=$selinux_lifecycle_tmp/absent-agent
+    RELEASE_TRANSACTION_ROOT=$selinux_lifecycle_tmp/absent-transaction
+    RELEASE_TRANSACTION_RUNTIME_ROOT=$selinux_lifecycle_tmp/absent-runtime
+    RELEASE_TRANSACTION_HELPER=$selinux_lifecycle_tmp/absent-helper
+    LIBEXEC_DIR=$selinux_lifecycle_tmp/absent-libexec
+    RUNTIME_DIR=$selinux_lifecycle_tmp/absent-celikpanel-runtime
+    BACKUP_ROOT=$selinux_lifecycle_tmp/absent-celikpanel-backups
+    PANEL_CERT_HOOK=$selinux_lifecycle_tmp/absent-hook
+    UNIT_DIR=$selinux_lifecycle_tmp/absent-units
+    export SELINUX_TEST_TRACE=$selinux_restore_trace
+    export SELINUX_TEST_LABEL=$selinux_label_state
+    export SELINUX_TEST_ENFORCEMENT=$enforcement
+    export SELINUX_TEST_DRIFT=$drift
+    export SELINUX_TEST_MATCH_FAIL=$match_fail
+    restore_celikpanel_selinux_labels
+)
+
+run_selinux_lifecycle_contract
+[[ "$(cat "$selinux_label_state")" == filesystem-policy-label ]] \
+    || die 'control-flow model did not replace copied label state'
+[[ "$(wc -l < "$selinux_restore_trace")" == 3 ]] \
+    || die 'SELinux lifecycle did not run restore, dry-run and top-level proof'
+sed -n '1p' "$selinux_restore_trace" | grep -Fq -- '-xRF --' \
+    || die 'SELinux lifecycle restore is not forced and xdev-bounded'
+sed -n '2p' "$selinux_restore_trace" | grep -Fq -- '-nxRFv --' \
+    || die 'SELinux lifecycle verification is not read-only'
+sed -n '3p' "$selinux_restore_trace" | grep -Fq -- 'matchpathcon -V --' \
+    || die 'SELinux lifecycle did not verify top-level policy context'
+
+for inert_platform in debian ubuntu arch; do
+    : > "$selinux_restore_trace"
+    printf 'source-archive-label\n' > "$selinux_label_state"
+    run_selinux_lifecycle_contract '' Enforcing inert
+    [[ ! -s "$selinux_restore_trace" && "$(cat "$selinux_label_state")" == source-archive-label ]] \
+        || die "SELinux lifecycle changed inert $inert_platform behavior"
+done
+
+for missing_lifecycle_role in restorecon matchpathcon getenforce; do
+    : > "$selinux_restore_trace"
+    if run_selinux_lifecycle_contract "$missing_lifecycle_role" >/dev/null 2>&1; then
+        die "SELinux lifecycle accepted missing tool: $missing_lifecycle_role"
+    fi
+    [[ ! -s "$selinux_restore_trace" ]] \
+        || die "SELinux lifecycle invoked a tool before validating all roles: $missing_lifecycle_role"
+done
+if run_selinux_lifecycle_contract '' Permissive \
+    >/dev/null 2>&1; then
+    die 'SELinux lifecycle accepted a permissive AlmaLinux host'
+fi
+: > "$selinux_restore_trace"
+if run_selinux_lifecycle_contract '' Enforcing rhel9 1 >/dev/null 2>&1; then
+    die 'SELinux lifecycle accepted recursive label drift'
+fi
+[[ "$(wc -l < "$selinux_restore_trace")" == 2 ]] \
+    || die 'SELinux drift failure reached matchpathcon or skipped dry-run'
+: > "$selinux_restore_trace"
+if run_selinux_lifecycle_contract '' Enforcing rhel9 0 1 >/dev/null 2>&1; then
+    die 'SELinux lifecycle accepted matchpathcon top-level mismatch'
+fi
+
+rollback_platform_defs=
+for rollback_platform_function in parse_lifecycle_os_release_scalar \
+    parse_lifecycle_os_release classify_lifecycle_platform
+do
+    rollback_platform_defs+=$'\n'"$(extract_function_source \
+        "$ROLLBACK" "$rollback_platform_function")"
+done
+run_rollback_classifier() (
+    local release_data=$1 machine=$2 fixture=$platform_tmp/rollback-os-release
+    eval "$rollback_platform_defs"
+    printf '%s' "$release_data" > "$fixture"
+    classify_lifecycle_platform "$fixture" "$machine"
+    printf '%s\n' "$SELINUX_PLATFORM_MODE"
+)
+assert_rollback_platform() {
+    local name=$1 release_data=$2 machine=$3 expected=$4 actual
+    actual=$(run_rollback_classifier "$release_data" "$machine") \
+        || die "rollback rejected valid platform: $name"
+    [[ "$actual" == "$expected" ]] \
+        || die "rollback classified $name as $actual, want $expected"
+}
+reject_rollback_platform() {
+    local name=$1 release_data=$2 machine=$3
+    if run_rollback_classifier "$release_data" "$machine" >/dev/null 2>&1; then
+        die "rollback accepted invalid platform: $name"
+    fi
+}
+assert_rollback_platform debian $'ID=debian\nVERSION_ID=13\n' x86_64 inert
+assert_rollback_platform ubuntu $'ID=ubuntu\nVERSION_ID=24.04.3\n' aarch64 inert
+assert_rollback_platform arch $'ID=arch\n' x86_64 inert
+assert_rollback_platform alma9 $'ID=almalinux\nVERSION_ID=9.6\n' x86_64 rhel9
+assert_rollback_platform rocky9 $'ID="rocky"\nVERSION_ID="9.5"\n' aarch64 rhel9
+reject_rollback_platform rocky8 $'ID=rocky\nVERSION_ID=8.10\n' x86_64
+reject_rollback_platform rocky10 $'ID=rocky\nVERSION_ID=10\n' x86_64
+reject_rollback_platform missing-version $'ID=rocky\n' x86_64
+reject_rollback_platform missing-id $'VERSION_ID=9\n' x86_64
+reject_rollback_platform duplicate-version $'ID=rocky\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64
+reject_rollback_platform unknown $'ID=amzn\nVERSION_ID=2023\n' x86_64
+reject_rollback_platform fedora $'ID=fedora\nVERSION_ID=42\n' x86_64
+reject_rollback_platform centos $'ID=centos\nVERSION_ID=9\n' x86_64
+reject_rollback_platform cloudlinux $'ID=cloudlinux\nVERSION_ID=9\n' x86_64
+reject_rollback_platform rhel $'ID=rhel\nVERSION_ID=9\n' x86_64
+reject_rollback_platform malformed $'ID="rocky\nVERSION_ID=9\n' x86_64
+rm -f -- "$platform_tmp/missing-rollback-os-release"
+if (
+    eval "$rollback_platform_defs"
+    classify_lifecycle_platform "$platform_tmp/missing-rollback-os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'rollback accepted a missing os-release file'
+fi
+printf 'ID=rocky\0\nVERSION_ID=9\n' > "$platform_tmp/rollback-os-release"
+if (
+    eval "$rollback_platform_defs"
+    classify_lifecycle_platform "$platform_tmp/rollback-os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'rollback accepted NUL-bearing os-release'
+fi
+
+require_sequence "$ROLLBACK" \
+    'rollback_machine=$(vendor_machine_architecture)' \
+    'preflight_rollback_platform "$SELINUX_OS_RELEASE" "$rollback_machine"' \
+    'prepare_and_acquire_release_transaction_lock'
+require_function_sequence "$ROLLBACK" verify_rhel_preview_host \
+    'validate_rhel_vendor_tool dnf' \
+    'validate_rhel_vendor_tool restorecon' \
+    'validate_rhel_vendor_tool matchpathcon' \
+    'validate_rhel_vendor_tool getenforce' \
+    'reported_state=$("$SELINUX_GETENFORCE_BIN")'
+
+cleanup_platform_contract
+trap - EXIT
+
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
 require_literal "$MAKEFILE" 'build: panel agent schema17-bridge web'
@@ -819,6 +1494,10 @@ require_sequence "$UPDATE" \
 # başlatmadan önce ledger'ı root:celikpanel 0600 yayımlar.
 require_literal "$INSTALL" '#!/bin/bash'
 require_literal "$INSTALL" 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+require_literal "$INSTALL" 'SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"'
+require_literal "$INSTALL" '[ "$(/usr/bin/id -u)" -eq 0 ] || die'
+reject_literal "$INSTALL" 'SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"'
+reject_literal "$INSTALL" '[ "$(id -u)" -eq 0 ] || die'
 require_literal "$INSTALL" 'INITIALIZE_SERVICE_MUTATION_LEDGER'
 require_literal "$INSTALL" '! -e "$DATA_DIR/celikpanel.db"'
 require_literal "$INSTALL" '! -e "$AGENT_STATE_DIR"'

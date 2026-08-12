@@ -9,6 +9,16 @@ import (
 
 const serviceMutationUnitWait = 8 * time.Second
 
+var serviceMutationSystemctlResolver = resolveVerifiedSystemctlExecutable
+
+func resolveVerifiedSystemctlExecutable() (string, error) {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return "", err
+	}
+	return executableForProfile(profile, string(profile.PackageManager), "systemctl")
+}
+
 // enableServiceForMutation runs the systemctl client in the mutation process
 // group, then verifies the durable systemd state before the ledger step is
 // released. Verification deliberately uses a fresh bounded context: PID 1 may
@@ -18,12 +28,20 @@ const serviceMutationUnitWait = 8 * time.Second
 // Doğrulama bilerek yeni ve sınırlı bir bağlam kullanır: iptal istemciyi
 // öldürmeden hemen önce PID 1 isteği kabul etmiş olabilir.
 func enableServiceForMutation(ctx context.Context, serviceName string, start bool) error {
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		return fmt.Errorf("resolve verified systemctl: %w", err)
+	}
+	return enableServiceForMutationWithExecutable(ctx, systemctl, serviceName, start)
+}
+
+func enableServiceForMutationWithExecutable(ctx context.Context, systemctl, serviceName string, start bool) error {
 	args := []string{"enable", serviceName}
 	if start {
 		args = []string{"enable", "--now", serviceName}
 	}
-	out, commandErr := runServiceMutationCombinedOutput(ctx, "systemctl", args...)
-	verifyErr := verifyServiceMutationUnit(ctx, serviceName, start)
+	out, commandErr := runServiceMutationCombinedOutput(ctx, systemctl, args...)
+	verifyErr := verifyServiceMutationUnitWithExecutable(ctx, systemctl, serviceName, start)
 	if verifyErr == nil {
 		return nil
 	}
@@ -35,6 +53,14 @@ func enableServiceForMutation(ctx context.Context, serviceName string, start boo
 }
 
 func verifyServiceMutationUnit(ctx context.Context, serviceName string, wantActive bool) error {
+	systemctl, err := serviceMutationSystemctlResolver()
+	if err != nil {
+		return fmt.Errorf("resolve verified systemctl: %w", err)
+	}
+	return verifyServiceMutationUnitWithExecutable(ctx, systemctl, serviceName, wantActive)
+}
+
+func verifyServiceMutationUnitWithExecutable(ctx context.Context, systemctl, serviceName string, wantActive bool) error {
 	deadline := time.Now().Add(serviceMutationUnitWait)
 	if ctx == nil {
 		ctx = context.Background()
@@ -55,7 +81,7 @@ func verifyServiceMutationUnit(ctx context.Context, serviceName string, wantActi
 	for {
 		probeCtx, cancel := context.WithTimeout(reconcileCtx, 2*time.Second)
 		if !wantActive {
-			out, err := runServiceMutationCombinedOutput(probeCtx, "systemctl", "is-enabled", serviceName)
+			out, err := runServiceMutationCombinedOutput(probeCtx, systemctl, "is-enabled", serviceName)
 			cancel()
 			if err == nil && strings.TrimSpace(string(out)) == "enabled" {
 				return nil
@@ -65,7 +91,7 @@ func verifyServiceMutationUnit(ctx context.Context, serviceName string, wantActi
 
 		out, err := runServiceMutationCombinedOutput(
 			probeCtx,
-			"systemctl", "show", serviceName,
+			systemctl, "show", serviceName,
 			"--property=ActiveState,SubState,Result,ConditionResult",
 			"--no-pager",
 		)

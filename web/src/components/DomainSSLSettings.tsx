@@ -11,6 +11,7 @@ interface DomainSSLSettingsProps {
     domainId: number;
     domainName: string;
     mailAvailable: boolean | null;
+    readOnly?: boolean;
     onCertificateChange?: (status: SSLRuntimeSummary) => void;
 }
 
@@ -74,7 +75,13 @@ const HSTS_PRESETS = [
 
 const INITIAL_HSTS_MAX_AGE = 300;
 
-export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCertificateChange }: DomainSSLSettingsProps) {
+export function DomainSSLSettings({
+    domainId,
+    domainName,
+    mailAvailable,
+    readOnly = false,
+    onCertificateChange,
+}: DomainSSLSettingsProps) {
     const { t, locale } = useI18n();
     const [data, setData] = useState<SSLData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -256,6 +263,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleIssue = async () => {
+        if (readOnly) return;
         if (!email) return showToast('error', t('ssl.emailRequired'));
         const isReissue = data?.has_certificate === true;
         if (isReissue && mailAvailable !== false && secureMail === null) {
@@ -324,6 +332,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (readOnly) return;
         if (!certFile || !keyFile) return showToast('error', t('ssl.certKeyRequired'));
         const isReplacement = data?.has_certificate === true;
         if (isReplacement && mailAvailable !== false && secureMail === null) {
@@ -376,7 +385,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleUpdateSettings = async (updates: Partial<SSLSettings>) => {
-        if (!data || settingsMutationBusyRef.current) return;
+        if (readOnly || !data || settingsMutationBusyRef.current) return;
         const targetDomainId = domainId;
         const nextSettings = { ...data.settings, ...updates };
         const settingsRequest = {
@@ -414,7 +423,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleSecureMailChange = async (nextSecureMail: boolean) => {
-        if (secureMailMutationBusyRef.current || secureMail === null || mailAvailable !== true) return;
+        if (readOnly || secureMailMutationBusyRef.current || secureMail === null || mailAvailable !== true) return;
         const targetDomainId = domainId;
         secureMailMutationBusyRef.current = true;
         setSecureMailBusy(true);
@@ -447,7 +456,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleAutoRenewChange = async (nextAutoRenew: boolean) => {
-        if (renewalMutationBusyRef.current) return;
+        if (readOnly || renewalMutationBusyRef.current) return;
         const targetDomainId = domainId;
         renewalMutationBusyRef.current = true;
         setRenewalBusy(true);
@@ -480,6 +489,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleRetryActivation = async () => {
+        if (readOnly) return;
         setRetrying(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/retry`, { method: 'POST' });
@@ -498,6 +508,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
     };
 
     const handleDelete = async () => {
+        if (readOnly) return;
         if (data?.settings.hsts_enabled) {
             showToast('warning', t('ssl.removeBlockedByHsts'));
             return;
@@ -633,16 +644,18 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                                 {t(cert.activation_pending ? 'ssl.activationPending' : 'ssl.dependentsPending')}
                                             </span>
                                         </span>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            icon={RefreshCw}
-                                            onClick={handleRetryActivation}
-                                            disabled={retrying}
-                                            className="shrink-0"
-                                        >
-                                            {t(retrying ? 'ssl.retrying' : 'ssl.retryActivation')}
-                                        </Button>
+                                        {!readOnly && (
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                icon={RefreshCw}
+                                                onClick={handleRetryActivation}
+                                                disabled={readOnly || retrying}
+                                                className="shrink-0"
+                                            >
+                                                {t(retrying ? 'ssl.retrying' : 'ssl.retryActivation')}
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                                 {cert.trust_status !== 'trusted' && cert.trust_error && (
@@ -663,7 +676,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                             onChange={handleAutoRenewChange}
                                             label={t('ssl.autoRenewOn')}
                                             hint={t('ssl.autoRenewHint')}
-                                            disabled={renewalBusy}
+                                            disabled={readOnly || renewalBusy}
                                         />
                                     </div>
                                 )}
@@ -676,7 +689,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                                 setCertSource('letsencrypt');
                                                 setShowReissue((current) => !current);
                                             }}
-                                            disabled={issuing}
+                                            disabled={readOnly || issuing}
                                         >
                                             {showReissue ? t('common.cancel') : t('ssl.reissue')}
                                         </Button>
@@ -688,7 +701,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                                 setCertSource('custom');
                                                 setShowReissue((current) => !current);
                                             }}
-                                            disabled={uploading}
+                                            disabled={readOnly || uploading}
                                         >
                                             {showReissue ? t('common.cancel') : t('ssl.replaceCustom')}
                                         </Button>
@@ -697,7 +710,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                         variant="danger"
                                         icon={Unlink}
                                         onClick={handleDelete}
-                                        disabled={issuing || data.settings.hsts_enabled || hstsRetirementUntil !== null}
+                                        disabled={readOnly || issuing || data.settings.hsts_enabled || hstsRetirementUntil !== null}
                                     >
                                         {t('ssl.remove')}
                                     </Button>
@@ -728,7 +741,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
 
             {/* Issuance and replacement are always explicit. Opening the page
                 never renews or replaces a certificate on its own. */}
-            {(!data.has_certificate || showReissue) && (
+            {!readOnly && (!data.has_certificate || showReissue) && (
                 <FormSection
                     title={
                         data.has_certificate
@@ -894,6 +907,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                               : t('ssl.forceHttpsHint')
                     }
                     disabled={
+                        readOnly ||
                         settingsBusy ||
                         (!certificateReady && !data.settings.force_https) ||
                         (data.settings.hsts_enabled && data.settings.force_https)
@@ -921,7 +935,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                   })
                               : t('ssl.hstsHint')
                     }
-                    disabled={settingsBusy || (!certificateReady && !data.settings.hsts_enabled)}
+                    disabled={readOnly || settingsBusy || (!certificateReady && !data.settings.hsts_enabled)}
                 />
                 {data.has_certificate && data.settings.hsts_enabled && (
                     <div className="ml-7 space-y-2">
@@ -930,7 +944,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                 value={data.settings.hsts_max_age}
                                 onChange={(event) => handleUpdateSettings({ hsts_max_age: Number(event.target.value) })}
                                 className={inputClass}
-                                disabled={settingsBusy}
+                                disabled={readOnly || settingsBusy}
                             >
                                 {!HSTS_PRESETS.some((preset) => preset.seconds === data.settings.hsts_max_age) && (
                                     <option value={data.settings.hsts_max_age}>
@@ -967,6 +981,7 @@ export function DomainSSLSettings({ domainId, domainName, mailAvailable, onCerti
                                   : t('ssl.secureMailNotCovered', { name: mailName })
                         }
                         disabled={
+                            readOnly ||
                             secureMailBusy ||
                             secureMail === null ||
                             (secureMail !== true && (!certificateReady || !mailCovered))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -15,6 +16,13 @@ func candidateTestService(t *testing.T) *core.ManagedService {
 		t.Fatal("nginx is missing from the managed-service catalog")
 	}
 	return svc
+}
+
+func candidateDNFTestService() *core.ManagedService {
+	return &core.ManagedService{
+		ID:       "nginx",
+		Packages: map[string][]string{"dnf": {"nginx"}},
+	}
 }
 
 func TestCandidateVersionForServiceReturnsVerifiedAptCandidate(t *testing.T) {
@@ -32,8 +40,23 @@ func TestCandidateVersionForServiceReturnsVerifiedAptCandidate(t *testing.T) {
 	}
 }
 
+func TestCandidateVersionForServiceReturnsVerifiedDNFCandidate(t *testing.T) {
+	version, err := candidateVersionForService(candidateDNFTestService(), "dnf", func(name string, args ...string) ([]byte, error) {
+		if name != "dnf" || !reflect.DeepEqual(args, dnfCandidateQueryArgs("nginx")) {
+			t.Fatalf("unexpected command: %s %q", name, args)
+		}
+		return []byte("CELIKPANEL_EVR:1:1.24.0-6.el9_5\n"), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != "1.24.0" {
+		t.Fatalf("version = %q, want 1.24.0", version)
+	}
+}
+
 func TestCandidateVersionForServiceFailsClosedForUnsupportedFamily(t *testing.T) {
-	for _, family := range []string{"", "dnf", "pacman", "windows"} {
+	for _, family := range []string{"", "pacman", "windows"} {
 		t.Run(family, func(t *testing.T) {
 			called := false
 			_, err := candidateVersionForService(candidateTestService(t), family, func(string, ...string) ([]byte, error) {
@@ -44,6 +67,35 @@ func TestCandidateVersionForServiceFailsClosedForUnsupportedFamily(t *testing.T)
 				t.Fatalf("family %q: err=%v commandCalled=%v", family, err, called)
 			}
 		})
+	}
+}
+
+func TestCandidateVersionForServiceFailsClosedForDNFResponse(t *testing.T) {
+	for name, output := range map[string]string{
+		"missing":   "repository notice\n",
+		"ambiguous": "CELIKPANEL_EVR:1.24.0-1.el9\nCELIKPANEL_EVR:1.26.0-1.el9\n",
+		"invalid":   "CELIKPANEL_EVR:bad candidate\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := candidateVersionForService(candidateDNFTestService(), "dnf", func(string, ...string) ([]byte, error) {
+				return []byte(output), nil
+			})
+			if err == nil {
+				t.Fatal("invalid DNF response returned nil error")
+			}
+		})
+	}
+}
+
+func TestCleanRPMVersion(t *testing.T) {
+	for raw, want := range map[string]string{
+		"1:1.24.0-6.el9_5": "1.24.0",
+		"2.10.0-1.fc42":    "2.10.0",
+		"3.0.0~rc1-0.el9":  "3.0.0~rc1",
+	} {
+		if got := cleanRPMVersion(raw); got != want {
+			t.Fatalf("cleanRPMVersion(%q) = %q, want %q", raw, got, want)
+		}
 	}
 }
 

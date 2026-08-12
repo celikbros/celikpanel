@@ -5,9 +5,16 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 )
+
+var errRoundcubeLifecycleUnsupported = errors.New(
+	"Roundcube filesystem lifecycle mutations are unsupported on non-Linux hosts",
+)
+
+func ensureRoundcubeLifecycleSupported() error {
+	return errRoundcubeLifecycleUnsupported
+}
 
 func validateRoundcubeTreePath(path string) (string, error) {
 	clean, err := filepath.Abs(path)
@@ -22,37 +29,44 @@ func validateRoundcubeTreePath(path string) (string, error) {
 }
 
 func publishRoundcubeStage(stage, final string) error {
-	stage, err := validateRoundcubeTreePath(stage)
-	if err != nil {
+	if _, err := validateRoundcubeTreePath(stage); err != nil {
 		return err
 	}
-	final, err = validateRoundcubeTreePath(final)
-	if err != nil {
+	if _, err := validateRoundcubeTreePath(final); err != nil {
 		return err
 	}
-	if _, err := os.Lstat(final); !errors.Is(err, os.ErrNotExist) {
-		if err == nil {
-			return fmt.Errorf("Roundcube destination already exists")
-		}
-		return err
-	}
-	return os.Rename(stage, final)
+	return errRoundcubeLifecycleUnsupported
 }
 
-func retireRoundcubeTree(path string) error {
+func retireRoundcubeTree(path string) (roundcubeRetirementResult, error) {
+	if _, err := validateRoundcubeTreePath(path); err != nil {
+		return roundcubeRetirementResult{}, err
+	}
+	return roundcubeRetirementResult{}, errRoundcubeLifecycleUnsupported
+}
+
+func reconcileRoundcubeArtifacts(path, _ string) error {
+	if _, err := validateRoundcubeTreePath(path); err != nil {
+		return err
+	}
+	return errRoundcubeLifecycleUnsupported
+}
+
+func roundcubeInstallStagePath(path string) (string, error) {
 	clean, err := validateRoundcubeTreePath(path)
 	if err != nil {
-		return err
+		return "", err
 	}
-	info, err := os.Lstat(clean)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
+	return filepath.Join(filepath.Dir(clean), roundcubeStageName(filepath.Base(clean))), nil
+}
+
+func createRoundcubeInstallStage(path string) (string, error) {
+	if _, err := roundcubeInstallStagePath(path); err != nil {
+		return "", err
 	}
-	if err != nil {
-		return err
-	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-		return fmt.Errorf("refuse to remove non-directory Roundcube path: %s", clean)
-	}
-	return os.RemoveAll(clean)
+	return "", errRoundcubeLifecycleUnsupported
+}
+
+func roundcubeStageName(base string) string {
+	return "." + base + ".stage"
 }

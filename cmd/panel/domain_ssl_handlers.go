@@ -575,7 +575,7 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		EABHMACKey:         req.EABHMACKey,
 	}
 
-	err = p.agentClient.CallContext(ctx, "Agent.IssueLetsEncryptCertificate", agentReq, &agentResp)
+	err = p.callAgentContext(ctx, "Agent.IssueLetsEncryptCertificate", agentReq, &agentResp)
 	if err != nil || !agentResp.Success {
 		cleanupCtx, cleanupCancel := sslCompensationContext()
 		defer cleanupCancel()
@@ -845,7 +845,7 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 		Domain:       domain.Name,
 	}
 
-	err = p.agentClient.CallContext(ctx, "Agent.ValidateCertificate", validateReq, &validateResp)
+	err = p.callAgentContext(ctx, "Agent.ValidateCertificate", validateReq, &validateResp)
 	if err != nil {
 		writeAgentError(w, err, "custom certificate validation RPC")
 		return
@@ -923,7 +923,7 @@ func (p *Panel) handleUploadCertificate(w http.ResponseWriter, r *http.Request) 
 			},
 		)
 	}()
-	err = p.agentClient.CallContext(ctx, "Agent.InstallCustomCertificate", installReq, &installResp)
+	err = p.callAgentContext(ctx, "Agent.InstallCustomCertificate", installReq, &installResp)
 	if err != nil || !installResp.Success {
 		writeAgentError(w, err, installResp.Error)
 		return

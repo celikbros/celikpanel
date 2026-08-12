@@ -20,6 +20,7 @@ interface FileItem {
 interface DomainFileManagerProps {
     domainId: number;
     domainName: string;
+    readOnly?: boolean;
 }
 
 // Real file manager over the agent's file API: browse, edit small text files
@@ -30,7 +31,7 @@ interface DomainFileManagerProps {
 // dosyalarını yerinde düzenle, yükle, oluştur, sil, indir. Tamamen i18n'li;
 // oluşturma diyaloğu modal değil, satır içi bir paneldir (DNS ekleme-formu
 // kalıbıyla uyumlu).
-export function DomainFileManager({ domainId }: DomainFileManagerProps) {
+export function DomainFileManager({ domainId, readOnly = false }: DomainFileManagerProps) {
     const { t } = useI18n();
     const [currentPath, setCurrentPath] = useState('/');
     const [files, setFiles] = useState<FileItem[]>([]);
@@ -79,6 +80,12 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
             navigateTo(file.path);
             return;
         }
+        // The file-content API is a POST action and therefore intentionally
+        // requires manage access. View access still has a safe GET download.
+        if (readOnly) {
+            window.open(`/api/v1/domains/${domainId}/files/download?path=${encodeURIComponent(file.path)}`, '_blank');
+            return;
+        }
         if (file.size > 1024 * 1024) {
             showToast('error', t('files.tooLarge'));
             return;
@@ -103,7 +110,7 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
     };
 
     const saveFile = async () => {
-        if (!editingFile) return;
+        if (readOnly || !editingFile) return;
         setSaving(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/files?path=${encodeURIComponent(editingFile)}`, {
@@ -122,7 +129,7 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
     };
 
     const createItem = async () => {
-        if (!newName.trim() || !createType) return;
+        if (readOnly || !newName.trim() || !createType) return;
         const path = currentPath === '/' ? `/${newName}` : `${currentPath}/${newName}`;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/files?path=${encodeURIComponent(path)}`, {
@@ -141,6 +148,7 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
     };
 
     const deleteItem = async (file: FileItem) => {
+        if (readOnly) return;
         if (!confirm(t('files.deleteConfirm', { name: file.name }))) return;
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/files?path=${encodeURIComponent(file.path)}`, {
@@ -161,6 +169,7 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
     };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly) return;
         const file = e.target.files?.[0];
         if (!file) return;
         setUploading(true);
@@ -201,13 +210,16 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
                             <p className="truncate font-mono text-xs text-fg-subtle">{editingFile}</p>
                         </div>
                     </div>
-                    <Button variant="primary" icon={Save} onClick={saveFile} disabled={saving}>
-                        {saving ? t('files.saving') : t('files.save')}
-                    </Button>
+                    {!readOnly && (
+                        <Button variant="primary" icon={Save} onClick={saveFile} disabled={saving}>
+                            {saving ? t('files.saving') : t('files.save')}
+                        </Button>
+                    )}
                 </div>
                 <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
+                    readOnly={readOnly}
                     className="flex-1 w-full resize-none rounded-lg border border-border bg-surface-2 p-4 font-mono text-sm text-fg outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                     spellCheck={false}
                 />
@@ -241,18 +253,22 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    <ToolButton icon={FolderPlus} title={t('files.newFolder')} onClick={() => { setCreateType('folder'); setNewName(''); }} />
-                    <ToolButton icon={FilePlus} title={t('files.newFile')} onClick={() => { setCreateType('file'); setNewName(''); }} />
-                    <label title={t('files.upload')} className="cursor-pointer rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg">
-                        <Upload className="h-4 w-4" />
-                        <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
-                    </label>
+                    {!readOnly && (
+                        <>
+                            <ToolButton icon={FolderPlus} title={t('files.newFolder')} onClick={() => { setCreateType('folder'); setNewName(''); }} />
+                            <ToolButton icon={FilePlus} title={t('files.newFile')} onClick={() => { setCreateType('file'); setNewName(''); }} />
+                            <label title={t('files.upload')} className="cursor-pointer rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg">
+                                <Upload className="h-4 w-4" />
+                                <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+                            </label>
+                        </>
+                    )}
                     <ToolButton icon={RefreshCw} title={t('files.refresh')} onClick={loadFiles} spin={loading} />
                 </div>
             </div>
 
             {/* Inline create panel */}
-            {createType && (
+            {!readOnly && createType && (
                 <div className="mb-4 rounded-xl border border-border bg-surface-2/50 p-4">
                     <h4 className="mb-3 text-sm font-semibold text-fg">
                         {createType === 'folder' ? t('files.createFolderTitle') : t('files.createFileTitle')}
@@ -318,11 +334,11 @@ export function DomainFileManager({ domainId }: DomainFileManagerProps) {
                                         <div className="flex items-center justify-end gap-0.5">
                                             {!file.is_dir && (
                                                 <>
-                                                    <ToolButton icon={Edit} title={t('files.edit')} onClick={() => openFile(file)} small />
+                                                    {!readOnly && <ToolButton icon={Edit} title={t('files.edit')} onClick={() => openFile(file)} small />}
                                                     <ToolButton icon={Download} title={t('files.download')} onClick={() => downloadFile(file)} small />
                                                 </>
                                             )}
-                                            <ToolButton icon={Trash2} title={t('files.delete')} onClick={() => deleteItem(file)} small danger />
+                                            {!readOnly && <ToolButton icon={Trash2} title={t('files.delete')} onClick={() => deleteItem(file)} small danger />}
                                         </div>
                                     </td>
                                 </tr>
@@ -354,6 +370,7 @@ function ToolButton({
         <button
             onClick={(e) => { e.stopPropagation(); onClick(); }}
             title={title}
+            aria-label={title}
             className={`rounded-md p-1.5 text-fg-muted transition-colors hover:bg-surface-2 ${danger ? 'hover:text-danger' : 'hover:text-fg'}`}
         >
             <Icon className={`${small ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${spin ? 'animate-spin' : ''}`} />

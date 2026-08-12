@@ -14,6 +14,15 @@ type DNSClusterResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type ConfigureDNSClusterV2Request struct {
+	ServiceMutationBinding
+	Role   string `json:"role"`
+	PeerIP string `json:"peer_ip"`
+	PeerNS string `json:"peer_ns"`
+}
+
+type ConfigureDNSClusterV2Response = DNSClusterResponse
+
 type DNSClusterReadinessResponse struct {
 	Ready  bool   `json:"ready"`
 	Detail string `json:"detail,omitempty"`
@@ -30,18 +39,32 @@ type ZoneRecord struct {
 
 type SyncDNSZoneRequest struct {
 	ServiceMutationBinding
-	Domain   string       `json:"domain"`
-	Delete   bool         `json:"delete"`
-	ZoneType string       `json:"zone_type,omitempty"`
-	Records  []ZoneRecord `json:"records"`
+	DesiredGeneration int64        `json:"desired_generation"`
+	Domain            string       `json:"domain"`
+	Delete            bool         `json:"delete"`
+	ZoneType          string       `json:"zone_type"`
+	Records           []ZoneRecord `json:"records"`
 }
 
 type SyncDNSZoneResponse struct {
-	Synced bool   `json:"synced"`
-	Error  string `json:"error,omitempty"`
+	Synced            bool   `json:"synced"`
+	AppliedGeneration int64  `json:"applied_generation"`
+	Error             string `json:"error,omitempty"`
 }
 
+// V2 binds the complete effective full-zone snapshot and its generation into
+// the surrounding durable service-mutation qualifier. Keeping the wire shape
+// shared with V1 makes mixed binaries fail by RPC method name instead of
+// silently dropping a security-critical field during gob decoding.
+type SyncDNSZoneV2Request = SyncDNSZoneRequest
+type SyncDNSZoneV2Response = SyncDNSZoneResponse
+
 type DNSSECRequest struct {
+	Zone string `json:"zone"`
+}
+
+type SecureDNSZoneV2Request struct {
+	ServiceMutationBinding
 	Zone string `json:"zone"`
 }
 
@@ -50,6 +73,8 @@ type DNSSECStatusResponse struct {
 	DS      []string `json:"ds,omitempty"`
 	Error   string   `json:"error,omitempty"`
 }
+
+type SecureDNSZoneV2Response = DNSSECStatusResponse
 
 type TLSARequest struct {
 	CertPath string `json:"cert_path"`

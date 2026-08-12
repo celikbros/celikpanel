@@ -113,6 +113,7 @@ func (a *includeMailRPCAgent) InspectInstalledCertificate(
 
 func attachIncludeMailAgent(t *testing.T, p *Panel, agent *includeMailRPCAgent) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register include-mail agent: %v", err)

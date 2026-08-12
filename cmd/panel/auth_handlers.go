@@ -82,6 +82,11 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusForbidden, "account suspended")
 		return
 	}
+	identity, err := p.canonicalAuthIdentity(r.Context(), user.ID)
+	if err != nil || !state.matchesCanonical(identity) {
+		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
+		return
+	}
 	if state.totpEnabled {
 		pendingToken, err := newPendingToken(state)
 		if err != nil {
@@ -115,10 +120,7 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 	p.auditAs(r, user.ID, "auth.login", "", 0)
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"username": state.username,
-		"role":     state.role,
-	})
+	_ = json.NewEncoder(w).Encode(identity.response(false))
 }
 
 // handleLogout deletes the current session and clears the cookie.
@@ -155,8 +157,21 @@ func (p *Panel) handleMe(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	user, err := p.users.GetByID(r.Context(), currentUserID(r))
+
+	caller := currentCaller(r)
+	if caller == nil || !caller.validAuthorizationIdentity() {
+		writeClientError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	identity, err := p.canonicalAuthIdentity(r.Context(), caller.ID)
 	if err != nil {
+		writeClientError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if identity.identity.UserID != caller.ID || identity.identity.Role != caller.Role ||
+		identity.accountType != caller.normalizedAccountType() ||
+		identity.identity.CustomerID != caller.CustomerID {
 		writeClientError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
@@ -170,12 +185,7 @@ func (p *Panel) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"username":      user.Username,
-		"role":          user.Role,
-		"email":         user.Email,
-		"impersonating": impersonating,
-	})
+	_ = json.NewEncoder(w).Encode(identity.response(impersonating))
 }
 
 // sessionCookie builds the session cookie with security attributes. Secure

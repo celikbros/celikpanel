@@ -34,6 +34,7 @@ func TestBuildSignOpenAndResolveJSONRecipe(t *testing.T) {
 
 	resolved, err := catalog.Resolve(context.Background(), "memcached", "install", HostProfile{
 		OSFamily:       "linux",
+		DistroFamily:   "debian",
 		DistroID:       "debian",
 		DistroLike:     []string{"debian"},
 		Version:        "12",
@@ -47,8 +48,8 @@ func TestBuildSignOpenAndResolveJSONRecipe(t *testing.T) {
 	if resolved.Recipe.ID != "memcached.debian12.install" {
 		t.Fatalf("recipe = %q, want exact Debian recipe", resolved.Recipe.ID)
 	}
-	if resolved.Specificity != 630 {
-		t.Fatalf("specificity = %d, want 630", resolved.Specificity)
+	if resolved.Specificity != 730 {
+		t.Fatalf("specificity = %d, want 730", resolved.Specificity)
 	}
 	if resolved.Digest == "" || resolved.Digest != catalog.Digest() {
 		t.Fatalf("resolved digest = %q, catalog digest = %q", resolved.Digest, catalog.Digest())
@@ -59,6 +60,7 @@ func TestBuildSignOpenAndResolveJSONRecipe(t *testing.T) {
 
 	unsupported, err := catalog.Resolve(context.Background(), "memcached", "install", HostProfile{
 		OSFamily:       "linux",
+		DistroFamily:   "debian",
 		DistroID:       "ubuntu",
 		Version:        "24.04",
 		Architecture:   "amd64",
@@ -270,6 +272,7 @@ func TestOpenVerifiedUsesPrivateSnapshot(t *testing.T) {
 				"install",
 				HostProfile{
 					OSFamily:       "linux",
+					DistroFamily:   "debian",
 					DistroID:       "debian",
 					Version:        "12",
 					Architecture:   "amd64",
@@ -564,6 +567,7 @@ func TestResolveRejectsEqualSpecificity(t *testing.T) {
 
 	_, err = catalog.Resolve(context.Background(), "memcached", "install", HostProfile{
 		OSFamily:       "linux",
+		DistroFamily:   "debian",
 		DistroID:       "debian",
 		Version:        "12",
 		Architecture:   "amd64",
@@ -761,6 +765,7 @@ func testCatalogDocument(keyID string) CatalogDocument {
 				Support:     SupportSupported,
 				Selector: PlatformSelector{
 					OSFamily:       "linux",
+					DistroFamily:   "debian",
 					DistroID:       "debian",
 					Version:        ">=12,<13",
 					Architectures:  []string{"amd64", "arm64"},
@@ -797,6 +802,7 @@ func testCatalogDocument(keyID string) CatalogDocument {
 				UnsupportedReason: "recipe has not passed the Ubuntu integration suite",
 				Selector: PlatformSelector{
 					OSFamily:       "linux",
+					DistroFamily:   "debian",
 					DistroID:       "ubuntu",
 					PackageManager: "apt",
 					ServiceManager: "systemd",

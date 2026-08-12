@@ -60,7 +60,8 @@ func newConfigHandlerPanel(t *testing.T, agent *configHandlerRPCAgent) *Panel {
 	t.Cleanup(func() { _ = client.Close() })
 
 	return &Panel{
-		db: database,
+		db:           database,
+		pkgFamilyVal: "apt",
 		agentClient: transport.NewReconnectingClientWithContextConnector(
 			client,
 			connector,

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	startupCertificateDependentTimeout     = 2 * time.Minute
+	startupCertificateDependentTimeout     = panelMailTLSSyncTimeout
 	maxStartupSecureMailCertificateDomains = 4096
 	maxStartupHostedVhosts                 = 4096
 )
@@ -456,7 +456,7 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 	}
 
 	var resp transport.ApplyVhostsResponse
-	err = p.agentClient.CallContext(
+	err = p.callAgentContext(
 		ctx,
 		"Agent.ApplyVhosts",
 		&transport.ApplyVhostsRequest{

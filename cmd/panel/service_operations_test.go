@@ -18,6 +18,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	paneldb "github.com/alicelik/celikpanel/internal/db"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -135,12 +136,14 @@ type ServiceOperationPeerSpec struct {
 }
 
 type ServiceOperationPeerRequest struct {
-	Peers []ServiceOperationPeerSpec
+	DesiredGeneration int64
+	Peers             []ServiceOperationPeerSpec
 }
 
 type ServiceOperationPeerResponse struct {
-	Applied bool
-	Error   string
+	Applied           bool
+	AppliedGeneration int64
+	Error             string
 }
 
 type serviceOperationTestAgent struct {
@@ -166,19 +169,62 @@ type serviceOperationTestAgent struct {
 	nodeError                   string
 	nodeNoop                    bool
 	dnsError                    string
+	dnsV2Requests               []transport.SyncDNSZoneV2Request
+	versionCapabilities         *[]string
+	versionCommit               string
 	serviceError                string
 	serviceSuccess              bool
 	vpnError                    string
 	vpnCreated                  bool
 	peerError                   string
+	peerStarted                 chan struct{}
+	releasePeer                 <-chan struct{}
+	peerStartOnce               sync.Once
+	firewallEnabled             bool
+	firewallError               string
+	firewallCalls               int
+	legacyFirewallCalls         int
+	firewallRequests            []transport.ApplyFirewallRequest
+	firewallStarted             chan struct{}
+	releaseFirewall             <-chan struct{}
+	firewallStartOnce           sync.Once
 
 	installed    map[string]bool
 	active       map[string]bool
 	nodeVersions map[string]bool
 
-	mutationActive   string
-	mutationJobs     map[string]*ServiceOperationMutationJob
-	mutationDeadline time.Time
+	mutationActive        string
+	mutationJobs          map[string]*ServiceOperationMutationJob
+	mutationDeadlineAfter time.Duration
+	mutationEvents        []string
+	finishLossKind        string
+	finishLossUsed        bool
+
+	activateAfterGlobalStatus *ServiceOperationMutationJob
+	activationTriggered       bool
+	activationStarted         chan struct{}
+	releaseActivation         <-chan struct{}
+}
+
+func (a *serviceOperationTestAgent) Version(
+	_ *transport.Empty,
+	resp *transport.AgentVersionResponse,
+) error {
+	resp.Commit = strings.TrimSpace(buildCommit)
+	if a.versionCommit != "" {
+		resp.Commit = a.versionCommit
+	}
+	capabilities := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityMailTLSSyncV2,
+	}
+	if a.versionCapabilities != nil {
+		capabilities = append([]string(nil), (*a.versionCapabilities)...)
+	}
+	resp.Capabilities = capabilities
+	return nil
 }
 
 func newServiceOperationTestAgent() *serviceOperationTestAgent {
@@ -221,8 +267,8 @@ func (a *serviceOperationTestAgent) BeginServiceMutation(
 	}
 	now := time.Now().UTC()
 	deadline := now.Add(time.Hour)
-	if !a.mutationDeadline.IsZero() {
-		deadline = a.mutationDeadline
+	if a.mutationDeadlineAfter > 0 {
+		deadline = now.Add(a.mutationDeadlineAfter)
 	}
 	job := &ServiceOperationMutationJob{
 		RequestID: req.RequestID, OwnerID: req.OwnerID, Kind: req.Kind,
@@ -232,6 +278,7 @@ func (a *serviceOperationTestAgent) BeginServiceMutation(
 	}
 	a.mutationJobs[req.RequestID] = job
 	a.mutationActive = req.RequestID
+	a.mutationEvents = append(a.mutationEvents, "begin:"+req.Kind)
 	resp.Job = cloneServiceOperationMutationJob(job)
 	return nil
 }
@@ -264,9 +311,43 @@ func (a *serviceOperationTestAgent) ServiceMutationStatus(
 	defer a.mu.Unlock()
 	if req.RequestID != "" {
 		resp.Job = cloneServiceOperationMutationJob(a.mutationJobs[req.RequestID])
+		if resp.Job != nil {
+			a.mutationEvents = append(
+				a.mutationEvents,
+				"status:"+resp.Job.Kind+":"+resp.Job.Status,
+			)
+		}
 		return nil
 	}
 	resp.Job = cloneServiceOperationMutationJob(a.mutationJobs[a.mutationActive])
+	if !a.activationTriggered && a.activateAfterGlobalStatus != nil {
+		a.activationTriggered = true
+		activation := cloneServiceOperationMutationJob(a.activateAfterGlobalStatus)
+		a.mutationJobs[activation.RequestID] = activation
+		a.mutationActive = activation.RequestID
+		a.mutationEvents = append(a.mutationEvents, "activation:started")
+		if a.activationStarted != nil {
+			closeOnce(a.activationStarted)
+		}
+		release := a.releaseActivation
+		go func() {
+			if release != nil {
+				<-release
+			}
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			job := a.mutationJobs[activation.RequestID]
+			if job == nil || !agentMutationActive(job.Status) {
+				return
+			}
+			job.Status = agentMutationSucceeded
+			job.Phase = "completed"
+			if a.mutationActive == activation.RequestID {
+				a.mutationActive = ""
+			}
+			a.mutationEvents = append(a.mutationEvents, "activation:succeeded")
+		}()
+	}
 	return nil
 }
 
@@ -289,6 +370,7 @@ func (a *serviceOperationTestAgent) CancelServiceMutation(
 	if a.mutationActive == req.RequestID {
 		a.mutationActive = ""
 	}
+	a.mutationEvents = append(a.mutationEvents, "cancel:"+job.Kind)
 	resp.Job = cloneServiceOperationMutationJob(job)
 	return nil
 }
@@ -307,7 +389,19 @@ func (a *serviceOperationTestAgent) FinishServiceMutation(
 	}
 	if req.Success {
 		job.Status = agentMutationSucceeded
-		job.Phase = "completed"
+		identity := agentMutationIdentity{
+			RequestID:   job.RequestID,
+			OwnerID:     job.OwnerID,
+			Kind:        job.Kind,
+			Target:      job.Target,
+			PackageName: job.PackageName,
+		}
+		phase, required, err := payloadBoundMutationPublishedPhase(identity)
+		if required && err == nil {
+			job.Phase = phase
+		} else {
+			job.Phase = "completed"
+		}
 	} else {
 		job.Status = agentMutationFailed
 		job.Phase = "failed"
@@ -317,7 +411,12 @@ func (a *serviceOperationTestAgent) FinishServiceMutation(
 	if a.mutationActive == req.RequestID {
 		a.mutationActive = ""
 	}
+	a.mutationEvents = append(a.mutationEvents, "finish:"+job.Kind+":"+job.Status)
 	resp.Job = cloneServiceOperationMutationJob(job)
+	if !a.finishLossUsed && job.Kind == a.finishLossKind {
+		a.finishLossUsed = true
+		return errors.New("simulated FinishServiceMutation response loss")
+	}
 	return nil
 }
 
@@ -434,8 +533,68 @@ func (a *serviceOperationTestAgent) PkgFamily(_ *transport.Empty, out *string) e
 	return nil
 }
 
-func (a *serviceOperationTestAgent) FirewallStatus(_ *struct{}, out *FirewallStatusResp) error {
-	out.Enabled = false
+func (a *serviceOperationTestAgent) FirewallStatus(_ *transport.Empty, out *FirewallStatusResp) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out.Enabled = a.firewallEnabled
+	out.EngineAvailable = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) InstalledServiceIDsStrict(
+	_ *transport.Empty,
+	out *[]string,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	*out = (*out)[:0]
+	for id, installed := range a.installed {
+		if installed {
+			*out = append(*out, id)
+		}
+	}
+	return nil
+}
+
+func (a *serviceOperationTestAgent) ApplyFirewallV2(
+	req *transport.ApplyFirewallRequest,
+	out *FirewallStatusResp,
+) error {
+	if a.firewallStarted != nil {
+		a.firewallStartOnce.Do(func() { close(a.firewallStarted) })
+	}
+	if a.releaseFirewall != nil {
+		<-a.releaseFirewall
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.firewallCalls++
+	a.firewallRequests = append(a.firewallRequests, transport.ApplyFirewallRequest{
+		ServiceMutationBinding: req.ServiceMutationBinding,
+		Enabled:                req.Enabled,
+		Persist:                req.Persist,
+		TCPPorts:               append([]int(nil), req.TCPPorts...),
+		UDPPorts:               append([]int(nil), req.UDPPorts...),
+	})
+	a.mutationEvents = append(a.mutationEvents, "call:firewall_sync")
+	if a.firewallError != "" {
+		out.Error = a.firewallError
+		return nil
+	}
+	a.firewallEnabled = req.Enabled
+	out.Enabled = req.Enabled
+	out.EngineAvailable = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) ApplyFirewall(
+	_ *transport.ApplyFirewallRequest,
+	out *FirewallStatusResp,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.legacyFirewallCalls++
+	out.Error = "legacy firewall RPC must not be called"
 	return nil
 }
 
@@ -447,6 +606,25 @@ func (a *serviceOperationTestAgent) ConfigurePowerDNSSQLite(_ *struct{}, resp *S
 		return nil
 	}
 	resp.Synced = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) SyncDNSZoneV2(
+	req *transport.SyncDNSZoneV2Request,
+	resp *transport.SyncDNSZoneV2Response,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	copy := *req
+	copy.Records = append([]transport.ZoneRecord(nil), req.Records...)
+	a.dnsV2Requests = append(a.dnsV2Requests, copy)
+	a.mutationEvents = append(a.mutationEvents, "call:dns_zone_sync")
+	if a.dnsError != "" {
+		resp.Error = a.dnsError
+		return nil
+	}
+	resp.Synced = true
+	resp.AppliedGeneration = req.DesiredGeneration
 	return nil
 }
 
@@ -488,18 +666,32 @@ func (a *serviceOperationTestAgent) SetupVPN(
 	return nil
 }
 
-func (a *serviceOperationTestAgent) SyncVPNPeers(
-	_ *ServiceOperationPeerRequest,
+func (a *serviceOperationTestAgent) SyncVPNPeersV2(
+	req *ServiceOperationPeerRequest,
 	resp *ServiceOperationPeerResponse,
 ) error {
+	if a.peerStarted != nil {
+		a.peerStartOnce.Do(func() { close(a.peerStarted) })
+	}
+	if a.releasePeer != nil {
+		<-a.releasePeer
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.mutationEvents = append(a.mutationEvents, "call:vpn_peer_sync")
 	if a.peerError != "" {
 		resp.Error = a.peerError
 		return nil
 	}
 	resp.Applied = true
+	resp.AppliedGeneration = req.DesiredGeneration
 	return nil
+}
+
+func (a *serviceOperationTestAgent) capturedMutationEvents() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]string(nil), a.mutationEvents...)
 }
 
 func attachServiceOperationTestAgent(t *testing.T, p *Panel, agent *serviceOperationTestAgent) {
@@ -1155,7 +1347,7 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	if failure != nil || result["success"] != true {
 		t.Fatalf("PowerDNS idempotent setup result=%v failure=%+v", result, failure)
 	}
-	if strings.Join(phases, ",") != "configuring,starting,syncing,scanning,firewall" {
+	if strings.Join(phases, ",") != "configuring,starting,scanning" {
 		t.Fatalf("PowerDNS phases=%v", phases)
 	}
 
@@ -1167,8 +1359,982 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	if failure != nil || result["success"] != true {
 		t.Fatalf("WireGuard idempotent setup result=%v failure=%+v", result, failure)
 	}
-	if strings.Join(phases, ",") != "configuring,starting,syncing,scanning,firewall" {
+	if strings.Join(phases, ",") != "configuring,starting,scanning" {
 		t.Fatalf("WireGuard phases=%v", phases)
+	}
+	for _, event := range f.agent.capturedMutationEvents() {
+		if event == "call:vpn_peer_sync" {
+			t.Fatal("runServiceInstall performed a nested VPN peer sync")
+		}
+	}
+}
+
+func TestPowerDNSInstallPublishesV2OnlyAfterOuterTerminal(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	setDNSIdentityForTest(t, f.panel, "standalone")
+	seedStrictDNSZone(t, f.panel, "post-install.example")
+	f.agent.installNoop = true
+	f.agent.installed["pdns"] = true
+
+	recorder, started := postServiceInstall(t, f, "pdns")
+	if recorder.Code != http.StatusAccepted || started == nil {
+		t.Fatalf("start status=%d operation=%+v body=%s", recorder.Code, started, recorder.Body.String())
+	}
+	terminal, _ := waitForServiceOperation(t, f.panel, f.userID, started.ID, serviceOperationSucceeded)
+	if terminal.Phase != "completed" {
+		t.Fatalf("terminal phase=%q", terminal.Phase)
+	}
+
+	f.agent.mu.Lock()
+	requests := append([]transport.SyncDNSZoneV2Request(nil), f.agent.dnsV2Requests...)
+	events := append([]string(nil), f.agent.mutationEvents...)
+	f.agent.mu.Unlock()
+	if len(requests) != 1 || requests[0].Domain != "post-install.example" ||
+		requests[0].Delete || requests[0].DesiredGeneration <= 0 || len(requests[0].Records) == 0 {
+		t.Fatalf("post-install V2 requests=%+v", requests)
+	}
+	outerFinish, dnsBegin := -1, -1
+	for index, event := range events {
+		if event == "finish:service_install:succeeded" {
+			outerFinish = index
+		}
+		if event == "begin:dns_zone_sync" && dnsBegin == -1 {
+			dnsBegin = index
+		}
+	}
+	if outerFinish < 0 || dnsBegin <= outerFinish {
+		t.Fatalf("mutation event order=%v, want outer terminal before DNS child", events)
+	}
+}
+
+func TestPowerDNSInstallCapabilityGateCreatesNoRowAndTouchesNoHost(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	legacy := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	}
+	f.agent.versionCapabilities = &legacy
+
+	recorder, operation := postServiceInstall(t, f, "pdns")
+	if recorder.Code != http.StatusInternalServerError || operation != nil {
+		t.Fatalf("legacy pdns response=%d operation=%+v body=%s", recorder.Code, operation, recorder.Body.String())
+	}
+	var rows int
+	if err := f.database.GetDB().QueryRow(`SELECT COUNT(*) FROM service_operations`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 || f.agent.installCalls.Load() != 0 {
+		t.Fatalf("legacy DNS agent created rows=%d install calls=%d", rows, f.agent.installCalls.Load())
+	}
+}
+
+func prepareWireGuardOperationFixture(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+) {
+	t.Helper()
+	box, err := secrets.LoadOrCreate(filepath.Join(t.TempDir(), "vpn-secrets.key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.panel.secrets = box
+	fixture.agent.mu.Lock()
+	fixture.agent.active["wireguard"] = true
+	fixture.agent.mu.Unlock()
+}
+
+func mutationEventIndex(events []string, expected string) int {
+	for index, event := range events {
+		if event == expected {
+			return index
+		}
+	}
+	return -1
+}
+
+func TestServiceInstallUsesExactPostTerminalFirewallChildAndKeepsProcessLock(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	fixture.agent.mu.Lock()
+	fixture.agent.firewallEnabled = true
+	fixture.agent.firewallStarted = started
+	fixture.agent.releaseFirewall = release
+	fixture.agent.mu.Unlock()
+
+	recorder, queued := postServiceInstall(t, fixture, "certbot")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("post-terminal firewall child did not start")
+	}
+	if fixture.panel.serviceMutationMu.TryLock() {
+		fixture.panel.serviceMutationMu.Unlock()
+		t.Fatal("process mutation lock was released during firewall child")
+	}
+
+	running, err := fixture.panel.serviceOperationByID(context.Background(), queued.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, ok := parseFirewallChildPhase(running.Phase)
+	if !ok {
+		t.Fatalf("running firewall child phase = %q", running.Phase)
+	}
+	fixture.agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(fixture.agent.mutationJobs[child.RequestID])
+	fixture.agent.mu.Unlock()
+	if job == nil || job.OwnerID != child.OwnerID ||
+		job.Kind != "firewall_sync" || job.Target != "nftables" ||
+		job.PackageName != child.Qualifier || job.Status != agentMutationRunning {
+		t.Fatalf("persisted child=%+v agent job=%+v", child, job)
+	}
+
+	close(release)
+	completed, _ := waitForServiceOperation(
+		t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded,
+	)
+	if completed.Error != nil {
+		t.Fatalf("completed install = %+v", completed)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:service_install:succeeded")
+	childBegin := mutationEventIndex(events, "begin:firewall_sync")
+	childCall := mutationEventIndex(events, "call:firewall_sync")
+	childFinish := mutationEventIndex(events, "finish:firewall_sync:succeeded")
+	if outerFinish < 0 || childBegin <= outerFinish || childCall <= childBegin ||
+		childFinish <= childCall {
+		t.Fatalf("mutation events=%v", events)
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.firewallCalls != 1 || fixture.agent.legacyFirewallCalls != 0 ||
+		len(fixture.agent.firewallRequests) != 1 {
+		t.Fatalf(
+			"firewall V2/V1/requests = %d/%d/%d",
+			fixture.agent.firewallCalls,
+			fixture.agent.legacyFirewallCalls,
+			len(fixture.agent.firewallRequests),
+		)
+	}
+	request := fixture.agent.firewallRequests[0]
+	if request.MutationRequestID != child.RequestID ||
+		request.MutationOwnerID != child.OwnerID {
+		t.Fatalf("firewall request binding=%+v child=%+v", request.ServiceMutationBinding, child)
+	}
+}
+
+func TestWireGuardInstallUsesSequentialOuterAndPayloadBoundPeerLeases(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	recorder, queued := postServiceInstall(t, fixture, "wireguard")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	completed, _ := waitForServiceOperation(
+		t,
+		fixture.panel,
+		fixture.userID,
+		queued.ID,
+		serviceOperationSucceeded,
+	)
+	if completed.Error != nil {
+		t.Fatalf("WireGuard install failed: %+v", completed)
+	}
+
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:service_install:succeeded")
+	peerBegin := mutationEventIndex(events, "begin:vpn_peer_sync")
+	peerCall := mutationEventIndex(events, "call:vpn_peer_sync")
+	peerFinish := mutationEventIndex(events, "finish:vpn_peer_sync:succeeded")
+	if outerFinish < 0 || peerBegin <= outerFinish || peerCall <= peerBegin ||
+		peerFinish <= peerCall {
+		t.Fatalf("mutation events=%v", events)
+	}
+
+	fixture.agent.mu.Lock()
+	jobs := make([]*ServiceOperationMutationJob, 0, len(fixture.agent.mutationJobs))
+	for _, job := range fixture.agent.mutationJobs {
+		jobs = append(jobs, cloneServiceOperationMutationJob(job))
+	}
+	fixture.agent.mu.Unlock()
+	var outerJob, peerJob *ServiceOperationMutationJob
+	for _, job := range jobs {
+		switch job.Kind {
+		case serviceOperationKindInstall:
+			outerJob = job
+		case "vpn_peer_sync":
+			peerJob = job
+		}
+	}
+	if outerJob == nil || peerJob == nil || outerJob.RequestID == peerJob.RequestID ||
+		outerJob.Status != agentMutationSucceeded ||
+		peerJob.Status != agentMutationSucceeded ||
+		peerJob.Target != "wireguard" ||
+		!mutationpayload.ValidVPNPeerSyncQualifier(peerJob.PackageName) {
+		t.Fatalf("outer job=%+v peer job=%+v", outerJob, peerJob)
+	}
+}
+
+func TestWireGuardOuterFinishResponseLossReconcilesBeforePeerLease(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	fixture.agent.finishLossKind = serviceOperationKindInstall
+	recorder, queued := postServiceInstall(t, fixture, "wireguard")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	completed, _ := waitForServiceOperation(
+		t,
+		fixture.panel,
+		fixture.userID,
+		queued.ID,
+		serviceOperationSucceeded,
+	)
+	if completed.Error != nil {
+		t.Fatalf("response-loss install failed: %+v", completed)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:service_install:succeeded")
+	outerStatus := mutationEventIndex(events, "status:service_install:succeeded")
+	peerBegin := mutationEventIndex(events, "begin:vpn_peer_sync")
+	peerFinish := mutationEventIndex(events, "finish:vpn_peer_sync:succeeded")
+	if outerFinish < 0 || outerStatus <= outerFinish || peerBegin <= outerStatus ||
+		peerFinish <= peerBegin {
+		t.Fatalf("response-loss mutation events=%v", events)
+	}
+	if !fixture.agent.finishLossUsed {
+		t.Fatal("test did not lose the outer Finish response")
+	}
+}
+
+func TestWireGuardPostInstallPeerSyncKeepsProcessLockUntilPanelTerminal(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	fixture.agent.peerStarted = started
+	fixture.agent.releasePeer = release
+	recorder, queued := postServiceInstall(t, fixture, "wireguard")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("post-install peer sync did not start")
+	}
+	if fixture.panel.serviceMutationMu.TryLock() {
+		fixture.panel.serviceMutationMu.Unlock()
+		t.Fatal("process mutation lock was released during post-install peer sync")
+	}
+	running, err := fixture.panel.serviceOperationByID(context.Background(), queued.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if running.Status != serviceOperationRunning || running.Phase != "syncing" {
+		t.Fatalf("operation during peer sync=%+v", running)
+	}
+	fixture.agent.mu.Lock()
+	outer := fixture.agent.mutationJobs[queued.RequestID]
+	direct := fixture.agent.mutationJobs[fixture.agent.mutationActive]
+	outerStatus := ""
+	if outer != nil {
+		outerStatus = outer.Status
+	}
+	directKind := ""
+	if direct != nil {
+		directKind = direct.Kind
+	}
+	fixture.agent.mu.Unlock()
+	if outerStatus != agentMutationSucceeded || directKind != "vpn_peer_sync" {
+		t.Fatalf("outer status=%q active direct kind=%q", outerStatus, directKind)
+	}
+	close(release)
+	waitForServiceOperation(
+		t,
+		fixture.panel,
+		fixture.userID,
+		queued.ID,
+		serviceOperationSucceeded,
+	)
+	if !fixture.panel.serviceMutationMu.TryLock() {
+		t.Fatal("process mutation lock remained held after panel terminal success")
+	}
+	fixture.panel.serviceMutationMu.Unlock()
+}
+
+func TestWireGuardPostInstallPeerSyncFailureFailsPanelOperation(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	fixture.agent.peerError = "simulated post-install peer failure"
+	recorder, queued := postServiceInstall(t, fixture, "wireguard")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	failed, _ := waitForServiceOperation(
+		t,
+		fixture.panel,
+		fixture.userID,
+		queued.ID,
+		serviceOperationFailed,
+	)
+	if failed.Phase != "syncing" || failed.Error == nil ||
+		failed.Error.Code != "service_install_failed" {
+		t.Fatalf("failed operation=%+v", failed)
+	}
+	var result serviceOperationResult
+	if err := json.Unmarshal(failed.Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result["success"] != false {
+		t.Fatalf("failed result=%v", result)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:service_install:succeeded")
+	peerBegin := mutationEventIndex(events, "begin:vpn_peer_sync")
+	peerFinish := mutationEventIndex(events, "finish:vpn_peer_sync:failed")
+	if outerFinish < 0 || peerBegin <= outerFinish || peerFinish <= peerBegin {
+		t.Fatalf("mutation events=%v", events)
+	}
+	if !fixture.panel.serviceMutationMu.TryLock() {
+		t.Fatal("process mutation lock was released before panel failure became terminal")
+	}
+	fixture.panel.serviceMutationMu.Unlock()
+}
+
+func seedSucceededWireGuardOuterOperation(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+) serviceOperation {
+	t.Helper()
+	op, err := fixture.panel.createServiceOperation(
+		context.Background(),
+		serviceOperationKindInstall,
+		"wireguard",
+		"",
+		serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.panel.markServiceOperationRunning(
+		context.Background(),
+		op.ID,
+		"installing",
+	); err != nil {
+		t.Fatal(err)
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.mutationJobs[op.RequestID] = &ServiceOperationMutationJob{
+		RequestID: op.RequestID,
+		OwnerID:   strings.Repeat("7", 32),
+		Kind:      op.Kind,
+		Target:    op.ServiceID,
+		Status:    agentMutationSucceeded,
+		Phase:     "completed",
+		Attempt:   1,
+	}
+	fixture.agent.mu.Unlock()
+	return op
+}
+
+func seedSucceededFirewallOuterOperation(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+) serviceOperation {
+	t.Helper()
+	op, err := fixture.panel.createServiceOperation(
+		context.Background(),
+		serviceOperationKindInstall,
+		"nginx",
+		"",
+		serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.panel.markServiceOperationRunning(
+		context.Background(), op.ID, "firewall",
+	); err != nil {
+		t.Fatal(err)
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.installed["nginx"] = true
+	fixture.agent.firewallEnabled = true
+	fixture.agent.mutationJobs[op.RequestID] = &ServiceOperationMutationJob{
+		RequestID: op.RequestID,
+		OwnerID:   strings.Repeat("7", 32),
+		Kind:      op.Kind,
+		Target:    op.ServiceID,
+		Status:    agentMutationSucceeded,
+		Phase:     "completed",
+		Attempt:   1,
+	}
+	fixture.agent.mu.Unlock()
+	return op
+}
+
+func seedActiveFirewallChild(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+	op serviceOperation,
+) firewallChildIdentity {
+	t.Helper()
+	commitment, err := mutationpayload.CanonicalFirewallApply(
+		true, false, []int{80, 2083}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := firewallChildIdentity{
+		RequestID: strings.Repeat("8", 32),
+		OwnerID:   strings.Repeat("9", 32),
+		Qualifier: commitment.Qualifier,
+	}
+	phase, err := encodeFirewallChildPhase(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.ID != "" {
+		if err := fixture.panel.updateServiceOperationPhase(
+			context.Background(), op.ID, phase,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.mutationJobs[identity.RequestID] = &ServiceOperationMutationJob{
+		RequestID:      identity.RequestID,
+		OwnerID:        identity.OwnerID,
+		Kind:           "firewall_sync",
+		Target:         "nftables",
+		PackageName:    identity.Qualifier,
+		Status:         agentMutationRunning,
+		Phase:          "starting",
+		Attempt:        1,
+		LeaseExpiresAt: time.Now().UTC().Add(time.Minute),
+		DeadlineAt:     time.Now().UTC().Add(time.Hour),
+	}
+	fixture.agent.mutationActive = identity.RequestID
+	fixture.agent.mu.Unlock()
+	return identity
+}
+
+func TestStartupRecoveryWaitsForActivationStartedAfterInitialStatusBeforeFirewallChild(
+	t *testing.T,
+) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	activation := &ServiceOperationMutationJob{
+		RequestID: strings.Repeat("a", 32),
+		OwnerID:   strings.Repeat("b", 32),
+		Kind:      "panel-certificate-activation",
+		Target:    "renewing-panel.example.test",
+		Status:    agentMutationRunning,
+		Phase:     "panel-certificate-activation",
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.activateAfterGlobalStatus = activation
+	fixture.agent.activationStarted = started
+	fixture.agent.releaseActivation = release
+	fixture.agent.mu.Unlock()
+
+	type recoveryResult struct {
+		recovered int64
+		err       error
+	}
+	result := make(chan recoveryResult, 1)
+	go func() {
+		recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+			context.Background(),
+		)
+		result <- recoveryResult{recovered: recovered, err: err}
+	}()
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("activation was not injected after the first global status")
+	}
+	select {
+	case got := <-result:
+		t.Fatalf("recovery returned before activation terminalized: %+v", got)
+	case <-time.After(100 * time.Millisecond):
+	}
+	fixture.agent.mu.Lock()
+	statusBeforeRelease := fixture.agent.mutationJobs[activation.RequestID].Status
+	fixture.agent.mu.Unlock()
+	if statusBeforeRelease != agentMutationRunning {
+		t.Fatalf("activation status before listener release=%q", statusBeforeRelease)
+	}
+	close(release)
+
+	var got recoveryResult
+	select {
+	case got = <-result:
+	case <-time.After(5 * time.Second):
+		t.Fatal("recovery did not finish after activation terminalized")
+	}
+	if got.err != nil || got.recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", got.recovered, got.err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	fixture.agent.mu.Lock()
+	activationAfter := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[activation.RequestID],
+	)
+	firewallCalls := fixture.agent.firewallCalls
+	fixture.agent.mu.Unlock()
+	if activationAfter == nil || activationAfter.Status != agentMutationSucceeded {
+		t.Fatalf("activation was cancelled or lost: %+v", activationAfter)
+	}
+	if firewallCalls != 1 {
+		t.Fatalf("fresh firewall calls=%d, want 1", firewallCalls)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	activationDone := mutationEventIndex(events, "activation:succeeded")
+	firewallBegin := mutationEventIndex(events, "begin:firewall_sync")
+	if activationDone < 0 || firewallBegin <= activationDone {
+		t.Fatalf("startup recovery events=%v", events)
+	}
+}
+
+func TestStartupRecoveryTerminalizesExactFirewallChildThenReplaysDesiredWork(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	interrupted := seedActiveFirewallChild(t, fixture, op)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded || loaded.Phase != "completed" {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	fixture.agent.mu.Lock()
+	interruptedJob := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[interrupted.RequestID],
+	)
+	firewallCalls := fixture.agent.firewallCalls
+	legacyCalls := fixture.agent.legacyFirewallCalls
+	fixture.agent.mu.Unlock()
+	if interruptedJob == nil || interruptedJob.Status != agentMutationFailed {
+		t.Fatalf("interrupted child=%+v", interruptedJob)
+	}
+	if firewallCalls != 1 || legacyCalls != 0 {
+		t.Fatalf("fresh V2/V1 calls=%d/%d", firewallCalls, legacyCalls)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	cancelled := mutationEventIndex(events, "cancel:firewall_sync")
+	freshBegin := mutationEventIndex(events, "begin:firewall_sync")
+	freshCall := mutationEventIndex(events, "call:firewall_sync")
+	if cancelled < 0 || freshBegin <= cancelled || freshCall <= freshBegin {
+		t.Fatalf("recovery events=%v", events)
+	}
+}
+
+func TestStartupRecoveryOrphanFirewallChildDoesNotFabricatePayload(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	fixture.agent.mu.Lock()
+	fixture.agent.firewallEnabled = true
+	fixture.agent.mu.Unlock()
+	interrupted := seedActiveFirewallChild(t, fixture, serviceOperation{})
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil || recovered != 0 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(fixture.agent.mutationJobs[interrupted.RequestID])
+	firewallCalls := fixture.agent.firewallCalls
+	legacyCalls := fixture.agent.legacyFirewallCalls
+	fixture.agent.mu.Unlock()
+	if job == nil || job.Status != agentMutationFailed {
+		t.Fatalf("orphan child=%+v", job)
+	}
+	if firewallCalls != 0 || legacyCalls != 0 {
+		t.Fatalf("orphan recovery fabricated V2/V1 payload: %d/%d", firewallCalls, legacyCalls)
+	}
+}
+
+func TestStartupRecoveryRejectsFirewallChildNotMatchingPersistedIdentity(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	seedActiveFirewallChild(t, fixture, op)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE service_operations SET phase=? WHERE id=?",
+		firewallChildPhasePrefix+strings.Repeat("a", 32)+"|"+
+			strings.Repeat("b", 32)+"|"+
+			mustFirewallQualifier(t),
+		op.ID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err == nil || recovered != 0 || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.firewallCalls != 0 {
+		t.Fatalf("identity mismatch applied firewall %d times", fixture.agent.firewallCalls)
+	}
+}
+
+func mustFirewallQualifier(t *testing.T) string {
+	t.Helper()
+	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, []int{2083}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return commitment.Qualifier
+}
+
+func vpnRecoveryQualifier(t *testing.T, fixture serviceOperationTestFixture) string {
+	t.Helper()
+	var generation int64
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT desired_generation FROM vpn_sync_state WHERE id = 1",
+	).Scan(&generation); err != nil {
+		t.Fatal(err)
+	}
+	commitment, err := mutationpayload.CanonicalVPNPeerSync(generation, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return commitment.Qualifier
+}
+
+func seedActiveDirectVPNRecoveryJob(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+	qualifier string,
+) *ServiceOperationMutationJob {
+	t.Helper()
+	job := &ServiceOperationMutationJob{
+		RequestID:      strings.Repeat("8", 32),
+		OwnerID:        strings.Repeat("9", 32),
+		Kind:           "vpn_peer_sync",
+		Target:         "wireguard",
+		PackageName:    qualifier,
+		Status:         agentMutationRunning,
+		Phase:          "syncing",
+		Attempt:        1,
+		LeaseExpiresAt: time.Now().UTC().Add(time.Minute),
+		DeadlineAt:     time.Now().UTC().Add(time.Hour),
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.mutationJobs[job.RequestID] = job
+	fixture.agent.mutationActive = job.RequestID
+	fixture.agent.mu.Unlock()
+	if _, err := fixture.database.GetDB().Exec(`
+		UPDATE vpn_sync_state
+		SET status = 'pending', lease_token = 'crashed-panel-token',
+		    lease_expires_at = datetime('now', '+2 minutes')
+		WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	return cloneServiceOperationMutationJob(job)
+}
+
+func assertRecoveredVPNStateApplied(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+) {
+	t.Helper()
+	var status string
+	var leaseToken *string
+	var desiredGeneration, appliedGeneration int64
+	if err := fixture.database.GetDB().QueryRow(`
+		SELECT status, lease_token, desired_generation, applied_generation
+		FROM vpn_sync_state WHERE id = 1`).Scan(
+		&status,
+		&leaseToken,
+		&desiredGeneration,
+		&appliedGeneration,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if status != "applied" || leaseToken != nil ||
+		appliedGeneration != desiredGeneration {
+		t.Fatalf(
+			"VPN state=%q lease=%v desired=%d applied=%d",
+			status,
+			leaseToken,
+			desiredGeneration,
+			appliedGeneration,
+		)
+	}
+}
+
+func TestValidDirectVPNPeerSyncRequiresExactRecoveryIdentity(t *testing.T) {
+	valid := &agentMutationJob{
+		RequestID:   strings.Repeat("a", 32),
+		OwnerID:     strings.Repeat("b", 32),
+		Kind:        "vpn_peer_sync",
+		Target:      "wireguard",
+		PackageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("c", 64),
+		Status:      agentMutationRunning,
+	}
+	if !validDirectVPNPeerSync(valid) {
+		t.Fatal("exact direct VPN recovery identity was rejected")
+	}
+	tests := []struct {
+		name   string
+		mutate func(*agentMutationJob)
+	}{
+		{"request", func(job *agentMutationJob) { job.RequestID = "short" }},
+		{"owner", func(job *agentMutationJob) { job.OwnerID = "short" }},
+		{"kind", func(job *agentMutationJob) { job.Kind = serviceOperationKindInstall }},
+		{"target", func(job *agentMutationJob) { job.Target = "wg1" }},
+		{"qualifier", func(job *agentMutationJob) { job.PackageName = "unbound" }},
+		{"terminal", func(job *agentMutationJob) { job.Status = agentMutationSucceeded }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			job := cloneAgentMutationJob(valid)
+			test.mutate(job)
+			if validDirectVPNPeerSync(job) {
+				t.Fatalf("invalid recovery identity accepted: %+v", job)
+			}
+		})
+	}
+}
+
+func TestStartupRecoveryFreshSyncsSucceededWireGuardInstall(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	op := seedSucceededWireGuardOuterOperation(t, fixture)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded || loaded.Phase != "completed" {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	if mutationEventIndex(events, "begin:vpn_peer_sync") < 0 ||
+		mutationEventIndex(events, "call:vpn_peer_sync") < 0 ||
+		mutationEventIndex(events, "finish:vpn_peer_sync:succeeded") < 0 {
+		t.Fatalf("recovery events=%v", events)
+	}
+	assertRecoveredVPNStateApplied(t, fixture)
+}
+
+func TestStartupRecoveryFailsSucceededWireGuardInstallWhenFreshSyncFails(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	fixture.agent.peerError = "simulated recovery peer failure"
+	op := seedSucceededWireGuardOuterOperation(t, fixture)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationFailed || loaded.Phase != "syncing" ||
+		loaded.Error == nil || loaded.Error.Code != "service_install_failed" {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+}
+
+func TestStartupRecoveryTerminalizesDirectVPNJobClearsLeaseAndFreshSyncs(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	op := seedSucceededWireGuardOuterOperation(t, fixture)
+	interrupted := seedActiveDirectVPNRecoveryJob(
+		t,
+		fixture,
+		vpnRecoveryQualifier(t, fixture),
+	)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	fixture.agent.mu.Lock()
+	interruptedAfter := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[interrupted.RequestID],
+	)
+	var freshPeerJobs int
+	for requestID, job := range fixture.agent.mutationJobs {
+		if requestID != interrupted.RequestID && job.Kind == "vpn_peer_sync" {
+			freshPeerJobs++
+		}
+	}
+	fixture.agent.mu.Unlock()
+	if interruptedAfter == nil || interruptedAfter.Status != agentMutationFailed ||
+		freshPeerJobs != 1 {
+		t.Fatalf(
+			"interrupted=%+v fresh peer jobs=%d",
+			interruptedAfter,
+			freshPeerJobs,
+		)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	cancelled := mutationEventIndex(events, "cancel:vpn_peer_sync")
+	freshBegin := mutationEventIndex(events, "begin:vpn_peer_sync")
+	freshCall := mutationEventIndex(events, "call:vpn_peer_sync")
+	if cancelled < 0 || freshBegin <= cancelled || freshCall <= freshBegin {
+		t.Fatalf("recovery events=%v", events)
+	}
+	assertRecoveredVPNStateApplied(t, fixture)
+}
+
+func TestStartupRecoveryFreshSyncsDirectVPNJobWithoutPanelOperation(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	interrupted := seedActiveDirectVPNRecoveryJob(
+		t,
+		fixture,
+		vpnRecoveryQualifier(t, fixture),
+	)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 0 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	interruptedAfter := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[interrupted.RequestID],
+	)
+	var freshPeerJobs int
+	for requestID, job := range fixture.agent.mutationJobs {
+		if requestID != interrupted.RequestID && job.Kind == "vpn_peer_sync" {
+			freshPeerJobs++
+		}
+	}
+	fixture.agent.mu.Unlock()
+	if interruptedAfter == nil || interruptedAfter.Status != agentMutationFailed ||
+		freshPeerJobs != 1 {
+		t.Fatalf(
+			"interrupted=%+v fresh peer jobs=%d",
+			interruptedAfter,
+			freshPeerJobs,
+		)
+	}
+	assertRecoveredVPNStateApplied(t, fixture)
+}
+
+func TestStartupRecoveryFreshSyncsOrphanedDBLeaseAfterAgentAlreadyTerminal(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	terminal := seedActiveDirectVPNRecoveryJob(
+		t,
+		fixture,
+		vpnRecoveryQualifier(t, fixture),
+	)
+	fixture.agent.mu.Lock()
+	fixture.agent.mutationJobs[terminal.RequestID].Status = agentMutationSucceeded
+	fixture.agent.mutationJobs[terminal.RequestID].Phase =
+		"commit/vpn-peer-sync/v1/published/" + terminal.RequestID + "/" + terminal.PackageName
+	fixture.agent.mutationActive = ""
+	fixture.agent.mu.Unlock()
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 0 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	var freshPeerJobs int
+	for requestID, job := range fixture.agent.mutationJobs {
+		if requestID != terminal.RequestID && job.Kind == "vpn_peer_sync" {
+			freshPeerJobs++
+		}
+	}
+	fixture.agent.mu.Unlock()
+	if freshPeerJobs != 1 {
+		t.Fatalf("fresh peer jobs=%d, want 1", freshPeerJobs)
+	}
+	assertRecoveredVPNStateApplied(t, fixture)
+}
+
+func TestStartupRecoveryDoesNotSyncWithoutPanelOperationOrStaleVPNLease(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err != nil || recovered != 0 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	if events := fixture.agent.capturedMutationEvents(); len(events) != 0 {
+		t.Fatalf("unexpected recovery mutations=%v", events)
+	}
+}
+
+func TestStartupRecoveryRejectsUnqualifiedDirectVPNMismatch(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	prepareWireGuardOperationFixture(t, fixture)
+	seedSucceededWireGuardOuterOperation(t, fixture)
+	interrupted := seedActiveDirectVPNRecoveryJob(
+		t,
+		fixture,
+		"unbound-vpn-payload",
+	)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+		context.Background(),
+	)
+	if err == nil || recovered != 0 ||
+		!strings.Contains(err.Error(), "does not match active panel operation") {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	status := fixture.agent.mutationJobs[interrupted.RequestID].Status
+	fixture.agent.mu.Unlock()
+	if status != agentMutationRunning {
+		t.Fatalf("unqualified job status=%q, want running fail-closed", status)
+	}
+	var leaseToken *string
+	if err := fixture.database.GetDB().QueryRow(
+		"SELECT lease_token FROM vpn_sync_state WHERE id = 1",
+	).Scan(&leaseToken); err != nil {
+		t.Fatal(err)
+	}
+	if leaseToken == nil || *leaseToken != "crashed-panel-token" {
+		t.Fatalf("unqualified job cleared DB lease: %v", leaseToken)
 	}
 }
 
@@ -1333,7 +2499,7 @@ func TestStartupRecoveryCancelsAndResumesMatchingActiveAgentMutation(t *testing.
 
 func TestWorkerDeadlineStillPersistsTerminalOperation(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
-	f.agent.mutationDeadline = time.Now().UTC().Add(250 * time.Millisecond)
+	f.agent.mutationDeadlineAfter = time.Second
 	op, err := f.panel.createServiceOperation(
 		context.Background(), serviceOperationKindInstall, "certbot", "", serviceOperationActor{},
 	)

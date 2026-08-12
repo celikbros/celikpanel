@@ -17,7 +17,7 @@ import { ErrorBanner } from './ui';
 const OPERATION_ID_KEY = 'celikpanel.components.operation-id';
 const OPERATION_LABEL_KEY = 'celikpanel.components.operation-label';
 const OPERATION_RECOVERY_KEY = 'celikpanel.components.operation-recovery';
-const OPERATION_RECOVERY_VERSION = 2;
+const OPERATION_RECOVERY_VERSION = 3;
 const POLL_DELAY_MS = 1500;
 const RETRY_DELAY_MS = 3000;
 const RECOVERY_LOOKUP_GRACE_MS = 15000;
@@ -28,6 +28,26 @@ const ERROR_CODE_OPERATION_BUSY = 'service_operation_busy';
 const OPERATION_ID_RE = /^[a-f0-9]{32}$/;
 
 type OperationStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+type InstallOperationKind = 'service_install' | 'runtime_install' | 'mail_profile_install';
+type MailProfileStatus = 'unknown' | 'available' | 'partial' | 'complete' | 'blocked';
+
+const MAIL_PROFILE_IDS = ['core-mail', 'webmail', 'protected-mail'] as const;
+const MAIL_PROFILE_ID_SET: ReadonlySet<string> = new Set(MAIL_PROFILE_IDS);
+
+function isMailProfileID(value: unknown): value is (typeof MAIL_PROFILE_IDS)[number] {
+    return typeof value === 'string' && MAIL_PROFILE_ID_SET.has(value);
+}
+
+export interface ManagedMailProfile {
+    id: (typeof MAIL_PROFILE_IDS)[number];
+    name: string;
+    description: string;
+    services: string[];
+    status: MailProfileStatus;
+    available: boolean;
+    blocked_reason?: string;
+    warning?: string;
+}
 
 export interface ComponentOperation {
     id: string;
@@ -45,18 +65,21 @@ export interface ComponentOperation {
 
 export interface ManagedServicesSnapshot {
     services: Record<string, unknown>[];
+    profiles: ManagedMailProfile[];
     scanned_at?: string | null;
 }
 
 export interface InstallOperationRequest {
     serviceId: string;
     name: string;
+    operationKind?: InstallOperationKind;
     package?: string;
     version?: string;
 }
 
 export interface OperationRecoveryMarker {
-    version: 2;
+    version: 3;
+    operation_kind: InstallOperationKind;
     request_id: string;
     service_id: string;
     label: string;
@@ -75,6 +98,69 @@ interface ComponentOperationContextValue {
 }
 
 const ComponentOperationContext = createContext<ComponentOperationContextValue | null>(null);
+
+export function decodeManagedMailProfiles(
+    value: unknown,
+    serviceIDs: ReadonlySet<string>,
+): ManagedMailProfile[] | null {
+    if (!Array.isArray(value) || value.length !== MAIL_PROFILE_IDS.length) return null;
+    const expectedIDs = new Set<string>(MAIL_PROFILE_IDS);
+    const profileIDs = new Set<string>();
+    const profiles: ManagedMailProfile[] = [];
+
+    for (const candidate of value) {
+        if (!candidate || typeof candidate !== 'object') return null;
+        const profile = candidate as Record<string, unknown>;
+        const id = profile.id;
+        const status = profile.status;
+        if (
+            typeof id !== 'string'
+            || !expectedIDs.has(id)
+            || profileIDs.has(id)
+            || typeof profile.name !== 'string'
+            || profile.name.trim() === ''
+            || typeof profile.description !== 'string'
+            || profile.description.trim() === ''
+            || (
+                status !== 'unknown'
+                && status !== 'available'
+                && status !== 'partial'
+                && status !== 'complete'
+                && status !== 'blocked'
+            )
+            || typeof profile.available !== 'boolean'
+            || profile.available !== (
+                status === 'available' || status === 'partial' || status === 'complete'
+            )
+            || !Array.isArray(profile.services)
+            || profile.services.length === 0
+            || !profile.services.every((serviceID) => (
+                typeof serviceID === 'string'
+                && serviceID.trim() === serviceID
+                && serviceID !== ''
+                && serviceIDs.has(serviceID)
+            ))
+            || new Set(profile.services).size !== profile.services.length
+            || (
+                profile.blocked_reason !== undefined
+                && (typeof profile.blocked_reason !== 'string' || profile.blocked_reason.trim() === '')
+            )
+            || (
+                status === 'blocked'
+                && (typeof profile.blocked_reason !== 'string' || profile.blocked_reason.trim() === '')
+            )
+            || (
+                profile.warning !== undefined
+                && (typeof profile.warning !== 'string' || profile.warning.trim() === '')
+            )
+        ) {
+            return null;
+        }
+        profileIDs.add(id);
+        profiles.push(profile as unknown as ManagedMailProfile);
+    }
+    return profileIDs.size === expectedIDs.size ? profiles : null;
+}
 
 // A terminal operation may unlock the page only after every field consumed by
 // the Components screen has a valid shape. A bare array is not verification.
@@ -154,8 +240,18 @@ function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot 
     ) {
         return null;
     }
+    const services = payload.services as Record<string, unknown>[];
+    const serviceIDs = new Set<string>();
+    for (const service of services) {
+        const id = service.id as string;
+        if (id.trim() !== id || id === '' || serviceIDs.has(id)) return null;
+        serviceIDs.add(id);
+    }
+    const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
+    if (profiles === null) return null;
     return {
-        services: payload.services as Record<string, unknown>[],
+        services,
+        profiles,
         scanned_at: payload.scanned_at,
     };
 }
@@ -172,6 +268,10 @@ function snapshotConfirmsTerminalOperation(
     if (operation.status === 'failed') return true;
     if (operation.status !== 'succeeded') return false;
 
+    if (operation.kind === 'mail_profile_install') {
+        return decodeVerifiedMailProfileResult(snapshot, operation) !== null;
+    }
+
     const service = snapshot.services.find((candidate) => candidate.id === operation.service_id);
     if (!service || service.is_installed !== true) return false;
     if (operation.kind !== 'runtime_install') return operation.kind === 'service_install';
@@ -186,6 +286,52 @@ function snapshotConfirmsTerminalOperation(
             && typeof candidate === 'object'
             && (candidate as Record<string, unknown>).version === expectedVersion
         ));
+}
+
+interface VerifiedMailProfileResult {
+    fallbackOnly: boolean;
+}
+
+function stringArrayMatchesSet(value: unknown, expected: readonly string[]): boolean {
+    if (!Array.isArray(value) || value.length !== expected.length) return false;
+    if (!value.every((entry) => typeof entry === 'string' && entry !== '')) return false;
+    const actual = new Set(value as string[]);
+    return actual.size === value.length && expected.every((entry) => actual.has(entry));
+}
+
+function decodeVerifiedMailProfileResult(
+    snapshot: ManagedServicesSnapshot,
+    operation: ComponentOperation,
+): VerifiedMailProfileResult | null {
+    if (operation.kind !== 'mail_profile_install' || operation.status !== 'succeeded') return null;
+    const profile = snapshot.profiles.find((candidate) => candidate.id === operation.service_id);
+    if (!profile || profile.status !== 'complete') return null;
+    if (!operation.result || typeof operation.result !== 'object') return null;
+
+    const result = operation.result as Record<string, unknown>;
+    const mailTLS = result.mail_tls;
+    if (!mailTLS || typeof mailTLS !== 'object') return null;
+    const tls = mailTLS as Record<string, unknown>;
+    const warnings = result.warnings;
+    if (
+        result.success !== true
+        || result.profile_id !== operation.service_id
+        || !stringArrayMatchesSet(result.services, profile.services)
+        || !stringArrayMatchesSet(result.completed_services, profile.services)
+        || tls.configured !== true
+        || typeof tls.sni_count !== 'number'
+        || !Number.isSafeInteger(tls.sni_count)
+        || tls.sni_count < 0
+        || typeof tls.fallback_only !== 'boolean'
+        || tls.fallback_only !== (tls.sni_count === 0)
+        || result.submission_configured !== true
+        || !Array.isArray(warnings)
+        || !warnings.every((warning) => typeof warning === 'string' && warning.trim() !== '')
+        || (tls.fallback_only && warnings.length === 0)
+    ) {
+        return null;
+    }
+    return { fallbackOnly: tls.fallback_only };
 }
 
 function readSessionValue(key: string): string {
@@ -244,6 +390,8 @@ export function createOperationRecoveryMarker(
     createdAt = Date.now(),
     requestID = createOperationRequestID(),
 ): OperationRecoveryMarker | null {
+    const operationKind = request.operationKind
+        ?? (request.version ? 'runtime_install' : 'service_install');
     const serviceID = boundedMarkerString(request.serviceId, 128, true);
     const label = boundedMarkerString(request.name, 256, true);
     const packageName = boundedMarkerString(request.package, 256);
@@ -256,6 +404,17 @@ export function createOperationRecoveryMarker(
         || packageName === null
         || runtimeVersion === null
         || (packageName && runtimeVersion)
+        || (
+            operationKind !== 'service_install'
+            && operationKind !== 'runtime_install'
+            && operationKind !== 'mail_profile_install'
+        )
+        || (operationKind === 'service_install' && Boolean(runtimeVersion))
+        || (operationKind === 'runtime_install' && (!runtimeVersion || Boolean(packageName)))
+        || (
+            operationKind === 'mail_profile_install'
+            && (!isMailProfileID(serviceID) || Boolean(packageName || runtimeVersion))
+        )
         || !Number.isFinite(createdAt)
         || createdAt <= 0
     ) {
@@ -263,6 +422,7 @@ export function createOperationRecoveryMarker(
     }
     return {
         version: OPERATION_RECOVERY_VERSION,
+        operation_kind: operationKind,
         request_id: requestID,
         service_id: serviceID,
         label,
@@ -281,16 +441,37 @@ export function decodeOperationRecoveryMarker(raw: string): OperationRecoveryMar
     }
     if (!candidate || typeof candidate !== 'object') return null;
     const value = candidate as Record<string, unknown>;
-    if (value.version !== OPERATION_RECOVERY_VERSION) return null;
+    if (value.version !== 2 && value.version !== OPERATION_RECOVERY_VERSION) return null;
     if (
         (value.package_name !== undefined && typeof value.package_name !== 'string')
         || (value.runtime_version !== undefined && typeof value.runtime_version !== 'string')
     ) {
         return null;
     }
+    const operationKind = value.version === 2
+        ? (value.runtime_version ? 'runtime_install' : 'service_install')
+        : value.operation_kind;
+    if (
+        (value.version === 2 && value.operation_kind !== undefined)
+        || (
+            operationKind !== 'service_install'
+            && operationKind !== 'runtime_install'
+            && operationKind !== 'mail_profile_install'
+        )
+    ) {
+        return null;
+    }
+    if (
+        value.version === OPERATION_RECOVERY_VERSION
+        && operationKind === 'mail_profile_install'
+        && !isMailProfileID(value.service_id)
+    ) {
+        return null;
+    }
     return createOperationRecoveryMarker({
         serviceId: typeof value.service_id === 'string' ? value.service_id : '',
         name: typeof value.label === 'string' ? value.label : '',
+        operationKind,
         package: typeof value.package_name === 'string' ? value.package_name : undefined,
         version: typeof value.runtime_version === 'string' ? value.runtime_version : undefined,
     }, typeof value.created_at === 'number' ? value.created_at : Number.NaN,
@@ -325,6 +506,7 @@ function requestFromRecoveryMarker(marker: OperationRecoveryMarker): InstallOper
     return {
         serviceId: marker.service_id,
         name: marker.label,
+        operationKind: marker.operation_kind,
         package: marker.package_name,
         version: marker.runtime_version,
     };
@@ -396,7 +578,7 @@ export function operationMatchesRecoveryMarker(
 ): boolean {
     const expectedTarget = marker.runtime_version || marker.package_name || '';
     return operation.request_id === marker.request_id
-        && operation.kind === (marker.runtime_version ? 'runtime_install' : 'service_install')
+        && operation.kind === marker.operation_kind
         && operation.service_id === marker.service_id
         && (operation.package_name || '') === expectedTarget;
 }
@@ -420,9 +602,17 @@ function recoveryMarkerForOperation(operation: ComponentOperation): OperationRec
     if (
         !operation.request_id
         || !OPERATION_ID_RE.test(operation.request_id)
-        || (operation.kind !== 'service_install' && operation.kind !== 'runtime_install')
+        || (
+            operation.kind !== 'service_install'
+            && operation.kind !== 'runtime_install'
+            && operation.kind !== 'mail_profile_install'
+        )
         || !operation.service_id
         || (operation.kind === 'runtime_install' && !operation.package_name)
+        || (
+            operation.kind === 'mail_profile_install'
+            && (!isMailProfileID(operation.service_id) || Boolean(operation.package_name))
+        )
     ) {
         return null;
     }
@@ -431,9 +621,12 @@ function recoveryMarkerForOperation(operation: ComponentOperation): OperationRec
         {
             serviceId: operation.service_id,
             name: operationDisplayLabel(operation),
+            operationKind: operation.kind,
             ...(operation.kind === 'runtime_install'
                 ? { version: operation.package_name }
-                : { package: operation.package_name }),
+                : operation.kind === 'service_install'
+                    ? { package: operation.package_name }
+                    : {}),
         },
         Number.isFinite(startedAt) && startedAt > 0 ? startedAt : Date.now(),
         operation.request_id,
@@ -1018,15 +1211,20 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
         setRecoveringRequest(false);
         setConnectionInterrupted(false);
 
-        const isNodeRuntime = Boolean(request.version);
-        const endpoint = isNodeRuntime ? '/api/v1/runtimes/node' : '/api/v1/service/install';
-        const body = isNodeRuntime
+        const endpoint = marker.operation_kind === 'runtime_install'
+            ? '/api/v1/runtimes/node'
+            : marker.operation_kind === 'mail_profile_install'
+                ? '/api/v1/service/profile/install'
+                : '/api/v1/service/install';
+        const body = marker.operation_kind === 'runtime_install'
             ? { version: request.version, request_id: marker.request_id }
-            : {
-                  service_id: request.serviceId,
-                  ...(request.package ? { package: request.package } : {}),
-                  request_id: marker.request_id,
-              };
+            : marker.operation_kind === 'mail_profile_install'
+                ? { profile_id: request.serviceId, request_id: marker.request_id }
+                : {
+                      service_id: request.serviceId,
+                      ...(request.package ? { package: request.package } : {}),
+                      request_id: marker.request_id,
+                  };
 
         try {
             const response = await fetch(endpoint, {
@@ -1320,6 +1518,9 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     schedule(poll, RETRY_DELAY_MS);
                     return;
                 }
+                const verifiedProfileResult = next.kind === 'mail_profile_install'
+                    ? decodeVerifiedMailProfileResult(freshSnapshot, next)
+                    : null;
 
                 setCatalogSnapshot(freshSnapshot);
                 clearStoredOperation();
@@ -1330,9 +1531,14 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 setRefreshingCatalog(false);
                 setConnectionInterrupted(false);
                 setFailure(null);
-                showToast('success', t('services.installed', {
-                    name: label || next.service_id || t('services.install'),
-                }));
+                const installedName = label || next.service_id || t('services.install');
+                if (verifiedProfileResult?.fallbackOnly) {
+                    showToast('warning', t('services.mailProfiles.fallbackWarning', {
+                        name: installedName,
+                    }));
+                } else {
+                    showToast('success', t('services.installed', { name: installedName }));
+                }
             } catch {
                 // Network errors and 5xx/429 responses are transient. Never
                 // unlock here: the server may still be changing packages.

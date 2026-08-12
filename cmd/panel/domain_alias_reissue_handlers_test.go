@@ -166,6 +166,7 @@ func attachAliasReissueAgent(
 	agent *aliasReissueAgent,
 ) {
 	t.Helper()
+	p.pkgFamilyVal = "apt"
 
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {

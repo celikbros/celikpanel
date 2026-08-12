@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/x509"
 	"database/sql"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -33,10 +35,21 @@ type DNSSECRequest = transport.DNSSECRequest
 
 type DNSSECStatusResponse = transport.DNSSECStatusResponse
 
+type SecureDNSZoneV2Request = transport.SecureDNSZoneV2Request
+
+type SecureDNSZoneV2Response = transport.SecureDNSZoneV2Response
+
+const secureDNSZoneLegacyUnsupportedError = "legacy DNSSEC signing is unsupported; use Agent.SecureDNSZoneV2"
+
 var (
 	dnssecLookPath = exec.LookPath
 	dnssecCommand  = func(name string, args ...string) ([]byte, error) {
 		return exec.Command(name, args...).CombinedOutput()
+	}
+	dnssecV2Command = func(
+		ctx context.Context, name string, args ...string,
+	) ([]byte, error) {
+		return serviceMutationCommand(ctx, name, args...).CombinedOutput()
 	}
 )
 
@@ -45,9 +58,40 @@ var (
 // SecureDNSZone bir zone'u imzalar (idempotent) ve NSEC sıralaması doğru
 // olsun diye düzeltir. DS kayıtları registrar için geri döner.
 func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) error {
-	zone := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(req.Zone)), ".")
-	if zone == "" || strings.ContainsAny(zone, " \t/;") {
-		resp.Error = "invalid zone"
+	*resp = DNSSECStatusResponse{Error: secureDNSZoneLegacyUnsupportedError}
+	return nil
+}
+
+func (a *Agent) SecureDNSZoneV2(
+	req *SecureDNSZoneV2Request,
+	resp *SecureDNSZoneV2Response,
+) error {
+	*resp = SecureDNSZoneV2Response{}
+	if req == nil {
+		resp.Error = "DNSSEC V2 request is required"
+		return nil
+	}
+	zone, err := hostname.CanonicalFQDN(req.Zone)
+	if err != nil {
+		resp.Error = "invalid DNSSEC zone"
+		return nil
+	}
+	ctx, finish, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(
+			serviceMutationStepSecureDNSZone, zone, "", "secure",
+		),
+	)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	defer finish()
+	// Signing must operate on the exact CelikPanel database served by the
+	// effective PowerDNS configuration. Fail before any pdnsutil invocation
+	// when that host binding is missing or ambiguous.
+	if err := requireManagedDNSClusterReady(); err != nil {
+		resp.Error = fmt.Sprintf("PowerDNS is not ready for DNSSEC signing: %v", err)
 		return nil
 	}
 	kind, err := localDNSZoneKind(zone)
@@ -64,13 +108,13 @@ func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) er
 		return nil
 	}
 
-	secured, _, out, err := zoneDNSSECState(zone)
+	secured, _, out, err := zoneDNSSECStateContext(ctx, zone)
 	if err != nil {
 		resp.Error = dnssecCommandError("show zone", out, err)
 		return nil
 	}
 	if !secured {
-		if out, err := runPDNSUtil(
+		if out, err := runPDNSUtilContext(ctx,
 			[]string{"zone", "secure", zone},
 			[]string{"secure-zone", zone},
 		); err != nil {
@@ -78,7 +122,7 @@ func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) er
 			return nil
 		}
 	}
-	if out, err := runPDNSUtil(
+	if out, err := runPDNSUtilContext(ctx,
 		[]string{"zone", "rectify", zone},
 		[]string{"rectify-zone", zone},
 	); err != nil {
@@ -86,7 +130,7 @@ func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) er
 		return nil
 	}
 
-	secured, ds, out, err := zoneDNSSECState(zone)
+	secured, ds, out, err := zoneDNSSECStateContext(ctx, zone)
 	if err != nil {
 		resp.Error = dnssecCommandError("show signed zone", out, err)
 		return nil
@@ -103,10 +147,36 @@ func (a *Agent) SecureDNSZone(req *DNSSECRequest, resp *DNSSECStatusResponse) er
 	// imzalanan zone bir süre imzasız cevap verebilir (canlı görüldü: RRSIG
 	// ancak restart sonrası göründü). Zone önbelleğini boşaltmak imzaları
 	// hemen görünür kılar; pdns_control yoksa zararsız.
-	_, _ = dnssecCommand("pdns_control", "purge", zone+"$")
+	_, _ = dnssecV2Command(ctx, "pdns_control", "purge", zone+"$")
 	resp.Secured = true
 	resp.DS = ds
 	return nil
+}
+
+func zoneDNSSECStateContext(
+	ctx context.Context, zone string,
+) (bool, []string, []byte, error) {
+	out, err := runPDNSUtilContext(
+		ctx,
+		[]string{"zone", "show", zone},
+		[]string{"show-zone", zone},
+	)
+	if err != nil {
+		return false, nil, out, err
+	}
+	s := string(out)
+	secured := strings.Contains(s, "DS = ") || strings.Contains(s, "tag = ")
+	return secured, parseZoneDSRecords(s), out, nil
+}
+
+func runPDNSUtilContext(
+	ctx context.Context, current, legacy []string,
+) ([]byte, error) {
+	out, err := dnssecV2Command(ctx, "pdnsutil", current...)
+	if err == nil || len(legacy) == 0 || !pdnsutilSyntaxMismatch(out) {
+		return out, err
+	}
+	return dnssecV2Command(ctx, "pdnsutil", legacy...)
 }
 
 // DNSSECStatus reports whether a zone is signed and its DS records.

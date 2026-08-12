@@ -148,6 +148,116 @@ func requireSessionValidForUser(t *testing.T, panel *Panel, token string, userID
 	}
 }
 
+func makeTOTPSecurityAdditionalUser(t *testing.T, panel *Panel, database *paneldb.SQLiteDB, user *core.User) {
+	t.Helper()
+	parent := &core.User{
+		Username:     "totp-owner",
+		PasswordHash: user.PasswordHash,
+		Email:        "totp-owner@example.test",
+		Role:         roleCustomer,
+		AccountType:  core.AccountTypeAccount,
+		Status:       "active",
+	}
+	if err := panel.users.Create(t.Context(), parent); err != nil {
+		t.Fatalf("create TOTP owner: %v", err)
+	}
+	if _, err := database.GetDB().Exec(`DELETE FROM users WHERE id = ?`, user.ID); err != nil {
+		t.Fatalf("remove account fixture before additional-user creation: %v", err)
+	}
+	member, err := repositories.NewTeamMemberRepository(database.GetDB()).Create(
+		t.Context(),
+		parent.ID,
+		repositories.TeamMemberCreate{
+			Username:     user.Username,
+			PasswordHash: user.PasswordHash,
+			Email:        user.Email,
+			Status:       "active",
+			Access: core.TeamMemberAccess{
+				SubscriptionPermissions: []core.TeamSubscriptionPermission{},
+				DomainPermissions:       []core.TeamDomainPermission{},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("create TOTP additional user: %v", err)
+	}
+	user.ID = member.ID
+	user.Role = roleCustomer
+	user.AccountType = core.AccountTypeAdditionalUser
+	user.ParentID = &parent.ID
+	user.Status = member.Status
+}
+
+func requireCanonicalAdditionalUserResponse(t *testing.T, recorder *httptest.ResponseRecorder) {
+	t.Helper()
+	var response authIdentityResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode authentication response: %v; body=%s", err, recorder.Body.String())
+	}
+	if response.Username != "totp-user" ||
+		response.Role != core.EffectiveRoleAdditionalUser ||
+		response.EffectiveRole != core.EffectiveRoleAdditionalUser ||
+		response.AccountType != core.AccountTypeAdditionalUser ||
+		response.Email != "totp-user@example.test" || response.Impersonating {
+		t.Fatalf("authentication identity = %+v", response)
+	}
+	if teamMembers, ok := response.Features["team_members"]; !ok || teamMembers {
+		t.Fatalf("team_members feature = %v, present=%v; want false and present", teamMembers, ok)
+	}
+}
+
+func TestPasswordAndTOTPLoginReturnCanonicalEffectiveIdentity(t *testing.T) {
+	t.Run("password", func(t *testing.T) {
+		panel, database, user := newTOTPSecurityPanel(t)
+		makeTOTPSecurityAdditionalUser(t, panel, database, user)
+
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(
+			`{"username":"totp-user","password":"correct horse battery staple"}`,
+		))
+		panel.handleLogin(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("password login status = %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+		}
+		requireCanonicalAdditionalUserResponse(t, recorder)
+	})
+
+	t.Run("TOTP", func(t *testing.T) {
+		isolatePendingLogins(t)
+		panel, database, user := newTOTPSecurityPanel(t)
+		makeTOTPSecurityAdditionalUser(t, panel, database, user)
+		_, secret := enableTOTPForSecurityTest(t, panel, database, user.ID)
+
+		loginRecorder := httptest.NewRecorder()
+		loginRequest := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(
+			`{"username":"totp-user","password":"correct horse battery staple"}`,
+		))
+		panel.handleLogin(loginRecorder, loginRequest)
+		if loginRecorder.Code != http.StatusOK {
+			t.Fatalf("TOTP challenge status = %d, want %d; body=%s", loginRecorder.Code, http.StatusOK, loginRecorder.Body.String())
+		}
+		var challenge struct {
+			TOTPRequired bool   `json:"totp_required"`
+			PendingToken string `json:"pending_token"`
+		}
+		if err := json.Unmarshal(loginRecorder.Body.Bytes(), &challenge); err != nil {
+			t.Fatalf("decode TOTP challenge: %v", err)
+		}
+		if !challenge.TOTPRequired || challenge.PendingToken == "" {
+			t.Fatalf("invalid TOTP challenge: %+v", challenge)
+		}
+
+		completeRecorder := completePendingTOTPForSecurityTest(
+			panel, challenge.PendingToken, totpCodeForSecurityTest(t, secret),
+		)
+		if completeRecorder.Code != http.StatusOK {
+			t.Fatalf("TOTP completion status = %d, want %d; body=%s", completeRecorder.Code, http.StatusOK, completeRecorder.Body.String())
+		}
+		requireCanonicalAdditionalUserResponse(t, completeRecorder)
+	})
+}
+
 func TestUserTOTPLegacyPlaintextIsReadAndSealed(t *testing.T) {
 	panel, database, user := newTOTPSecurityPanel(t)
 	secret, err := auth.GenerateTOTPSecret()
@@ -483,6 +593,43 @@ func TestPendingTOTPLoginCompletesOnlyForUnchangedAuthEpoch(t *testing.T) {
 		}
 		if sessions != 0 {
 			t.Fatalf(`suspended completion created %d sessions`, sessions)
+		}
+	})
+
+	t.Run(`parent suspension invalidates additional-user pending login`, func(t *testing.T) {
+		isolatePendingLogins(t)
+		panel, database, user := newTOTPSecurityPanel(t)
+		makeTOTPSecurityAdditionalUser(t, panel, database, user)
+		state, secret := enableTOTPForSecurityTest(t, panel, database, user.ID)
+		token, err := newPendingToken(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		owner, err := panel.users.GetByID(t.Context(), *user.ParentID)
+		if err != nil {
+			t.Fatalf(`load additional-user owner: %v`, err)
+		}
+		owner.Status = "suspended"
+		if err := panel.users.UpdateAndRevokeSessions(t.Context(), owner); err != nil {
+			t.Fatalf(`suspend additional-user owner: %v`, err)
+		}
+		owner.Status = "active"
+		if err := panel.users.Update(t.Context(), owner); err != nil {
+			t.Fatalf(`reactivate additional-user owner: %v`, err)
+		}
+
+		recorder := completePendingTOTPForSecurityTest(panel, token, totpCodeForSecurityTest(t, secret))
+		if recorder.Code != http.StatusUnauthorized {
+			t.Fatalf(`parent-suspension completion status = %d, want 401; body=%s`,
+				recorder.Code, recorder.Body.String())
+		}
+		var sessions int
+		if err := database.GetDB().QueryRow(`SELECT COUNT(*) FROM sessions WHERE user_id = ?`, user.ID).Scan(&sessions); err != nil {
+			t.Fatal(err)
+		}
+		if sessions != 0 {
+			t.Fatalf(`parent-suspension completion created %d sessions`, sessions)
 		}
 	})
 }

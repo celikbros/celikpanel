@@ -308,7 +308,7 @@ func (p *Panel) runScheduledBackup(
 		return err
 	}
 	var resp backupspec.CreateResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.CreateBackup", &req, &resp); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.CreateBackup", &req, &resp); err != nil {
 		p.auditBackupSystem(ctx, "backup.create.failed:scheduled — "+auditReason(err.Error()), d.ID)
 		return err
 	}
@@ -342,7 +342,7 @@ func (p *Panel) pruneBackups(ctx context.Context, d backupDomain, retention int)
 		DomainID: d.ID, DomainName: d.Name,
 	}
 	var resp backupspec.ListResponse
-	if err := p.agentClient.CallContext(ctx, "Agent.ListBackups", &req, &resp); err != nil {
+	if err := p.callAgentContext(ctx, "Agent.ListBackups", &req, &resp); err != nil {
 		return err
 	}
 	var scheduled []backupspec.Info
@@ -367,7 +367,7 @@ func (p *Panel) pruneBackups(ctx context.Context, d backupDomain, retention int)
 			DomainID: d.ID, DomainName: d.Name, BackupName: backup.Name,
 		}
 		var ok bool
-		if err := p.agentClient.CallContext(ctx, "Agent.DeleteBackup", &deleteReq, &ok); err != nil {
+		if err := p.callAgentContext(ctx, "Agent.DeleteBackup", &deleteReq, &ok); err != nil {
 			p.auditBackupSystem(ctx, "backup.delete.failed:retention — "+auditReason(err.Error()), d.ID)
 			return err
 		}
