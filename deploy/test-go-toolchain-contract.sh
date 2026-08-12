@@ -128,6 +128,7 @@ require_count "$CI" 'actions/setup-go@v6' 4
 require_count "$CI" "go-version: '1.26.5'" 4
 require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 4
 require_literal "$CI" 'needs: [go, panel-race, web, linux-arm64-compile]'
+require_literal "$CI" 'sudo bash deploy/test-signed-release-manifest-contract.sh'
 reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'
 reject_literal "$CI" 'darwin-compile:'
