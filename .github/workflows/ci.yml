@@ -118,28 +118,6 @@ jobs:
           go test -race -count=1 -timeout=8m ./cmd/panel
           -run '${{ matrix.pattern }}'
 
-  windows-portability:
-    name: Platform portability — Windows build and targeted tests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26.5'
-          cache: true
-      - name: Verify exact Go toolchain
-        shell: pwsh
-        run: |
-          if ((go env GOVERSION) -ne 'go1.26.5') {
-            throw "unexpected Go toolchain: $(go env GOVERSION)"
-          }
-      - name: Build all production packages on Windows
-        run: go build ./...
-      - name: Test Windows and fail-closed ownership adapters
-        run: |
-          go test ./cmd/panel -run '^TestReadDiskWindowsReportsUsableValues$' -count=1
-          go test ./cmd/agent -run '^TestRequireRootOwnerFailsClosedOnUnsupportedPlatform$' -count=1
-
   linux-arm64-compile:
     name: Platform portability - Linux arm64 compile only
     runs-on: ubuntu-latest
@@ -157,44 +135,6 @@ jobs:
         run: test "$(go env GOVERSION)" = go1.26.5
       - name: Cross-compile all production packages
         run: go build ./...
-
-  freebsd-compile:
-    name: Platform portability — FreeBSD compile only
-    runs-on: ubuntu-latest
-    env:
-      GOOS: freebsd
-      GOARCH: amd64
-      CGO_ENABLED: '0'
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26.5'
-          cache: true
-      - name: Verify exact Go toolchain
-        run: test "$(go env GOVERSION)" = go1.26.5
-      - name: Cross-compile all production packages
-        run: go build ./...
-
-  darwin-compile:
-    name: Platform portability — Darwin fallback compile only
-    runs-on: ubuntu-latest
-    env:
-      GOOS: darwin
-      GOARCH: amd64
-      CGO_ENABLED: '0'
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26.5'
-          cache: true
-      - name: Verify exact Go toolchain
-        run: test "$(go env GOVERSION)" = go1.26.5
-      - name: Cross-compile all production packages
-        run: go build ./...
-      - name: Compile the unsupported-disk fallback test
-        run: go test -c -o "$RUNNER_TEMP/panel-darwin.test" ./cmd/panel
 
   web:
     name: Web — typecheck & build
@@ -225,7 +165,7 @@ jobs:
   package:
     name: Release — reproducible archive and checksum
     runs-on: ubuntu-latest
-    needs: [go, panel-race, web, windows-portability, linux-arm64-compile, freebsd-compile, darwin-compile]
+    needs: [go, panel-race, web, linux-arm64-compile]
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:

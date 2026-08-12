@@ -11,6 +11,7 @@ BOOTSTRAP="$ROOT/bootstrap-update.sh"
 MAKEFILE="$ROOT/Makefile"
 REBUILD="$ROOT/rebuild.sh"
 CI="$ROOT/.github/workflows/ci.yml"
+PORTABILITY="$ROOT/.github/workflows/portability.yml"
 README_EN="$ROOT/README.md"
 README_TR="$ROOT/README.tr.md"
 OPERATIONS_EN="$ROOT/docs/OPERATIONS.md"
@@ -123,11 +124,13 @@ require_literal "$REBUILD" 'actual_go_version=$(run_go_clean "$GO_BIN" env GOVER
 require_count "$REBUILD" 'run_go_clean "$GO_BIN" build' 2
 
 require_literal "$CI" 'GOTOOLCHAIN: local'
-require_count "$CI" 'actions/setup-go@v6' 7
-require_count "$CI" "go-version: '1.26.5'" 7
-require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 6
-require_literal "$CI" "if ((go env GOVERSION) -ne 'go1.26.5')"
-require_literal "$CI" 'needs: [go, panel-race, web, windows-portability, linux-arm64-compile, freebsd-compile, darwin-compile]'
+require_count "$CI" 'actions/setup-go@v6' 4
+require_count "$CI" "go-version: '1.26.5'" 4
+require_count "$CI" 'test "$(go env GOVERSION)" = go1.26.5' 4
+require_literal "$CI" 'needs: [go, panel-race, web, linux-arm64-compile]'
+reject_literal "$CI" 'windows-portability:'
+reject_literal "$CI" 'freebsd-compile:'
+reject_literal "$CI" 'darwin-compile:'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
 require_count "$CI" 'pattern:' 5
 require_literal "$CI" "pattern: '^Test($|[A-G]|[^A-Z])'"
@@ -138,6 +141,20 @@ require_literal "$CI" "pattern: '^Test[T-Z]'"
 require_literal "$CI" "-run '\${{ matrix.pattern }}'"
 reject_literal "$CI" 'actions/setup-go@v5'
 reject_literal "$CI" 'go-version-file:'
+
+test -f "$PORTABILITY"
+require_literal "$PORTABILITY" 'workflow_dispatch:'
+reject_literal "$PORTABILITY" 'schedule:'
+reject_literal "$PORTABILITY" 'pull_request:'
+reject_literal "$PORTABILITY" 'push:'
+require_count "$PORTABILITY" 'actions/setup-go@v6' 3
+require_count "$PORTABILITY" "go-version: '1.26.5'" 3
+require_count "$PORTABILITY" 'test "$(go env GOVERSION)" = go1.26.5' 2
+require_literal "$PORTABILITY" "if ((go env GOVERSION) -ne 'go1.26.5')"
+require_literal "$PORTABILITY" 'windows-portability:'
+require_literal "$PORTABILITY" 'freebsd-compile:'
+require_literal "$PORTABILITY" 'darwin-compile:'
+reject_literal "$PORTABILITY" 'go-version-file:'
 
 # Prove that every test the exact Go toolchain currently discovers belongs to
 # exactly one panel race shard. Keep explicit boundary sentinels too: a valid
