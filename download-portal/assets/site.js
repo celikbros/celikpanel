@@ -12,6 +12,8 @@ const englishText = new Map([
   ["Paneli keşfet", "Explore the panel"],
   ["Kurulum", "Install"],
   ["Sürüm", "Release"],
+  ["Destek", "Support"],
+  ["Güvenlik", "Security"],
   ["Ücretsiz kur", "Install free"],
   [
     "Linux sunucular için modern hosting paneli",
@@ -200,6 +202,40 @@ const englishText = new Map([
   ["Kaynak commit", "Source commit"],
   ["Paketi indir", "Download package"],
   ["SHA-256 dosyası", "SHA-256 file"],
+  ["GERİ BİLDİRİM VE DESTEK", "FEEDBACK AND SUPPORT"],
+  [
+    "Bir fikriniz veya karşılaştığınız bir sorun mu var?",
+    "Have an idea or found a problem?",
+  ],
+  [
+    "CelikPanel’i birlikte geliştirelim. Hataları ve özellik önerilerini herkese açık formlarla, güvenlik açıklarını ise gizli kanaldan bildirin.",
+    "Help us improve CelikPanel. Use the public forms for bugs and feature requests, and the private channel for vulnerabilities.",
+  ],
+  ["HATA BİLDİR", "REPORT A BUG"],
+  ["Bir sorun mu buldunuz?", "Found a problem?"],
+  [
+    "Sürümünüzü, yeniden üretme adımlarını ve temizlenmiş hata çıktısını paylaşın.",
+    "Share your version, reproduction steps and sanitized error output.",
+  ],
+  ["Hata formunu aç →", "Open the bug form →"],
+  ["ÖZELLİK ÖNER", "REQUEST A FEATURE"],
+  ["Paneli nasıl iyileştirebiliriz?", "How can we improve the panel?"],
+  [
+    "İhtiyacınızı ve beklediğiniz kullanıcı deneyimini kısa ve net biçimde anlatın.",
+    "Briefly describe your need and the experience you expect.",
+  ],
+  ["Öneri formunu aç →", "Open the feature form →"],
+  ["GİZLİ GÜVENLİK BİLDİRİMİ", "PRIVATE SECURITY REPORT"],
+  ["Bir güvenlik açığı mı buldunuz?", "Found a vulnerability?"],
+  [
+    "Açığı herkese açık issue olarak yazmayın. GitHub üzerinden yalnız bakım ekibinin görebileceği şekilde bildirin.",
+    "Do not post it as a public issue. Report it privately to the maintainers through GitHub.",
+  ],
+  ["Gizli bildirim aç →", "Open a private report →"],
+  [
+    "Parola, token, özel anahtar, müşteri verisi, gerçek IP adresi veya özel alan adı paylaşmayın.",
+    "Never share passwords, tokens, private keys, customer data, real IP addresses or private domains.",
+  ],
   ["YENİ NESİL HOSTING PANELİ", "A NEW-GENERATION HOSTING PANEL"],
   [
     "Sunucunuzu daha kolay yönetmeye başlayın.",
@@ -413,6 +449,11 @@ const applyLanguage = (language) => {
   });
   document.querySelectorAll("[data-copy-label]").forEach((label) => {
     label.textContent = uiText[currentLanguage].copy;
+  });
+  document.querySelectorAll("[data-localized-href]").forEach((link) => {
+    const target =
+      currentLanguage === "en" ? link.dataset.hrefEn : link.dataset.hrefTr;
+    if (target) link.setAttribute("href", target);
   });
   try {
     window.localStorage.setItem("celikpanel-language", currentLanguage);

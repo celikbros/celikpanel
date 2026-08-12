@@ -27,6 +27,7 @@ bash "$builder" "$version" "$commit" "$published_at" \
 
 [[ -f "$tmp/site/index.html" ]] || fail "home page was not generated"
 [[ -f "$tmp/site/assets/site.js" ]] || fail "home page script was not generated"
+[[ -f "$tmp/site/.well-known/security.txt" ]] || fail "security.txt was not generated"
 [[ -x "$tmp/site/get.sh" ]] || fail "bootstrap is not executable"
 [[ -f "$tmp/site/releases/$version/$archive" ]] || fail "versioned archive is missing"
 [[ "$(cat "$tmp/site/releases/latest.txt")" == "$version" ]] || fail "latest pointer is wrong"
@@ -83,6 +84,22 @@ grep -Fq 'Simple and Modern Hosting Control Panel' "$tmp/site/assets/site.js" \
   || fail "English product copy is missing"
 grep -Fq 'document.documentElement.lang = currentLanguage' "$tmp/site/assets/site.js" \
   || fail "document language is not updated"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_tr.yml' "$tmp/site/index.html" \
+  || fail "Turkish bug report link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=bug_en.yml' "$tmp/site/index.html" \
+  || fail "English bug report link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=feature_tr.yml' "$tmp/site/index.html" \
+  || fail "Turkish feature request link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/issues/new?template=feature_en.yml' "$tmp/site/index.html" \
+  || fail "English feature request link is missing"
+grep -Fq 'celikbros/celikpanel-feedback/security/advisories/new' "$tmp/site/index.html" \
+  || fail "private security report link is missing"
+grep -Fq 'data-localized-href' "$tmp/site/assets/site.js" \
+  || fail "localized feedback link behavior is missing"
+grep -Fq 'Canonical: https://celikpanel.net/.well-known/security.txt' "$tmp/site/.well-known/security.txt" \
+  || fail "security.txt canonical URL is missing"
+grep -Fq 'Preferred-Languages: tr, en' "$tmp/site/.well-known/security.txt" \
+  || fail "security.txt language preference is missing"
 if grep -Eq '<button[^>]*>(+ Yeni site|×|Devam et)' "$tmp/site/index.html"; then
   fail "illustrative product controls must not enter the keyboard tab order"
 fi

@@ -68,9 +68,10 @@ template="$repo_root/download-portal"
 }
 
 umask 022
-mkdir -p -- "$output/assets" "$output/releases/$version"
+mkdir -p -- "$output/assets" "$output/releases/$version" "$output/.well-known"
 cp -- "$template/index.html" "$template/.htaccess" "$template/get.sh" "$output/"
 cp -- "$template/assets/site.css" "$template/assets/site.js" "$output/assets/"
+cp -- "$template/security.txt" "$output/.well-known/security.txt"
 cp -- "$archive" "$checksum" "$output/releases/$version/"
 
 archive_url="/releases/$version/$expected_archive"
