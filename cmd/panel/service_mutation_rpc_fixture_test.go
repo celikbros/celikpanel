@@ -76,7 +76,19 @@ func (f *durableMutationRPCFixture) FinishServiceMutation(
 	}
 	if req.Success {
 		job.Status = agentMutationSucceeded
-		job.Phase = "completed"
+		identity := agentMutationIdentity{
+			RequestID:   job.RequestID,
+			OwnerID:     job.OwnerID,
+			Kind:        job.Kind,
+			Target:      job.Target,
+			PackageName: job.PackageName,
+		}
+		phase, required, err := payloadBoundMutationPublishedPhase(identity)
+		if required && err == nil {
+			job.Phase = phase
+		} else {
+			job.Phase = "completed"
+		}
 	} else {
 		job.Status = agentMutationFailed
 		job.Phase = "failed"

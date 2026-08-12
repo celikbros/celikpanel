@@ -154,10 +154,15 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
-			name: "IssuePanelCertificate",
+			name: "IssuePanelCertificateV2",
 			run: func(expected string) string {
-				var response IssuePanelCertResponse
-				_ = agent.IssuePanelCertificate(&IssuePanelCertRequest{ExpectedBuildCommit: expected}, &response)
+				var response IssuePanelCertV2Response
+				_ = agent.IssuePanelCertificateV2(&IssuePanelCertV2Request{
+					Domain:              "panel.example.test",
+					Email:               "admin@example.test",
+					TLSDir:              managedPanelTLSDir,
+					ExpectedBuildCommit: expected,
+				}, &response)
 				return response.Error
 			},
 		},
@@ -167,17 +172,6 @@ func protectedBuildGateOperations() []buildGateOperation {
 				var response ReconcileSiteCertLineagesResponse
 				_ = agent.ReconcileSiteCertLineages(
 					&ReconcileSiteCertLineagesRequest{ExpectedBuildCommit: expected},
-					&response,
-				)
-				return response.Error
-			},
-		},
-		{
-			name: "ReconcileMailTLSMutation",
-			run: func(expected string) string {
-				var response SecureMailTLSResponse
-				_ = agent.ReconcileMailTLSMutation(
-					&ReconcileMailTLSMutationRequest{ExpectedBuildCommit: expected},
 					&response,
 				)
 				return response.Error
@@ -206,10 +200,13 @@ func protectedBuildGateOperations() []buildGateOperation {
 			},
 		},
 		{
-			name: "SecureMailTLS",
+			name: "SyncMailTLSV2",
 			run: func(expected string) string {
 				var response SecureMailTLSResponse
-				_ = agent.SecureMailTLS(&SecureMailTLSRequest{ExpectedBuildCommit: expected}, &response)
+				_ = agent.SyncMailTLSV2(&SyncMailTLSV2Request{
+					ExpectedBuildCommit: expected,
+					Myhostname:          "mail.example.test",
+				}, &response)
 				return response.Error
 			},
 		},
@@ -223,6 +220,13 @@ func agentRPCMethodsWithBuildCommitField(t *testing.T) []string {
 	methods := make([]string, 0)
 	for index := 0; index < agentType.NumMethod(); index++ {
 		method := agentType.Method(index)
+		// V1 is a stable zero-touch mixed-version stub. It deliberately keeps
+		// the old wire request shape but never reaches the build gate or host.
+		if method.Name == "IssuePanelCertificate" ||
+			method.Name == "ReconcileMailTLSMutation" ||
+			method.Name == "SecureMailTLS" {
+			continue
+		}
 		if method.Type.NumIn() != 3 {
 			continue
 		}

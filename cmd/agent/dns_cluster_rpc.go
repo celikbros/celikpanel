@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -32,16 +36,27 @@ const (
 
 var (
 	dnsClusterConf = "/etc/powerdns/pdns.d/celikpanel-cluster.conf"
+	dnsManagedConf = "/etc/powerdns/pdns.d/celikpanel.conf"
+	dnsMainConf    = "/etc/powerdns/pdns.conf"
 
 	dnsClusterLookPath = exec.LookPath
-	dnsClusterRestart  = func() ([]byte, error) {
-		return exec.Command("systemctl", "restart", "pdns").CombinedOutput()
+	dnsClusterReadFile = os.ReadFile
+	dnsClusterStat     = os.Lstat
+	dnsClusterReadDir  = os.ReadDir
+
+	// Managed PowerDNS drop-ins are root-owned in production. Focused tests
+	// replace this with the current euid because their temporary directories
+	// cannot be root-owned.
+	dnsClusterConfigRequiredOwnerUID = uint32(0)
+	dnsClusterConfigOwnerUID         = platformRepoFileOwnerUID
+	dnsClusterRestart                = func(ctx context.Context) ([]byte, error) {
+		return serviceMutationCommand(ctx, "systemctl", "restart", "pdns").CombinedOutput()
 	}
-	dnsClusterRetrieve = func(zone string) ([]byte, error) {
-		return exec.Command("pdns_control", "retrieve", zone).CombinedOutput()
+	dnsClusterRetrieve = func(ctx context.Context, zone string) ([]byte, error) {
+		return serviceMutationCommand(ctx, "pdns_control", "retrieve", zone).CombinedOutput()
 	}
-	dnsClusterPurge = func(zone string) ([]byte, error) {
-		return exec.Command("pdns_control", "purge", zone+"$").CombinedOutput()
+	dnsClusterPurge = func(ctx context.Context, zone string) ([]byte, error) {
+		return serviceMutationCommand(ctx, "pdns_control", "purge", zone+"$").CombinedOutput()
 	}
 	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
@@ -51,18 +66,301 @@ type DNSClusterRequest = transport.DNSClusterRequest
 
 type DNSClusterResponse = transport.DNSClusterResponse
 
+type ConfigureDNSClusterV2Request = transport.ConfigureDNSClusterV2Request
+
+type ConfigureDNSClusterV2Response = transport.ConfigureDNSClusterV2Response
+
 type DNSClusterReadinessResponse = transport.DNSClusterReadinessResponse
 
 // DNSClusterReadiness is a read-only preflight. It lets the panel explain the
 // exact missing prerequisite before the operator reaches the save action.
 func (a *Agent) DNSClusterReadiness(_ *transport.Empty, resp *DNSClusterReadinessResponse) error {
-	if _, err := dnsClusterLookPath("pdns_server"); err != nil {
-		resp.Detail = "PowerDNS is not installed on this server"
+	return inspectDNSClusterReadiness(resp)
+}
+
+func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
+	if resp == nil {
+		return errors.New("DNS cluster readiness response is required")
+	}
+	*resp = DNSClusterReadinessResponse{}
+	for _, binary := range []string{"pdns_server", "pdnsutil", "pdns_control"} {
+		if _, err := dnsClusterLookPath(binary); err != nil {
+			resp.Detail = "PowerDNS tooling is not installed on this server"
+			return nil
+		}
+	}
+	info, err := dnsClusterStat(dnsManagedConf)
+	if errors.Is(err, os.ErrNotExist) {
+		resp.Detail = "PowerDNS is installed but has not been configured by CelikPanel"
 		return nil
 	}
+	if err != nil {
+		return fmt.Errorf("inspect CelikPanel PowerDNS configuration: %w", err)
+	}
+	if !info.Mode().IsRegular() ||
+		(runtime.GOOS != "windows" && info.Mode().Perm()&0o022 != 0) ||
+		!dnsClusterConfigOwnerTrusted(info) {
+		return errors.New("CelikPanel PowerDNS configuration has unsafe file permissions")
+	}
+	data, err := dnsClusterReadFile(dnsManagedConf)
+	if errors.Is(err, os.ErrNotExist) {
+		resp.Detail = "PowerDNS is installed but has not been configured by CelikPanel"
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read CelikPanel PowerDNS configuration: %w", err)
+	}
+	if !validManagedPowerDNSConfig(string(data), pdnsDBPath()) {
+		return errors.New("CelikPanel PowerDNS configuration is incomplete or ambiguous")
+	}
+	effective, detail, err := effectiveManagedPowerDNSConfig()
+	if err != nil {
+		return err
+	}
+	if !effective {
+		resp.Detail = detail
+		return nil
+	}
+	dbInfo, err := dnsClusterStat(pdnsDBPath())
+	if errors.Is(err, os.ErrNotExist) {
+		resp.Detail = "PowerDNS is configured but its managed database is missing"
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect managed PowerDNS database: %w", err)
+	}
+	if !dbInfo.Mode().IsRegular() {
+		return errors.New("managed PowerDNS database path is not a regular file")
+	}
 	resp.Ready = true
-	resp.Detail = "PowerDNS is installed on this server"
+	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
 	return nil
+}
+
+func requireManagedDNSClusterReady() error {
+	var readiness DNSClusterReadinessResponse
+	if err := inspectDNSClusterReadiness(&readiness); err != nil {
+		return err
+	}
+	if !readiness.Ready {
+		detail := strings.TrimSpace(readiness.Detail)
+		if detail == "" {
+			detail = "PowerDNS is not ready for CelikPanel cluster convergence"
+		}
+		return errors.New(detail)
+	}
+	return nil
+}
+
+func dnsClusterConfigOwnerTrusted(info os.FileInfo) bool {
+	ownerUID, enforceOwner := dnsClusterConfigOwnerUID(info)
+	return !enforceOwner || ownerUID == dnsClusterConfigRequiredOwnerUID
+}
+
+func powerDNSConfigDirective(line string) (key, value string, found bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return "", "", false
+	}
+	key, value, found = strings.Cut(line, "=")
+	if !found {
+		return "", "", false
+	}
+	return strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value), true
+}
+
+func effectiveManagedPowerDNSConfig() (bool, string, error) {
+	mainInfo, err := dnsClusterStat(dnsMainConf)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, "PowerDNS is installed but its main configuration is missing", nil
+	}
+	if err != nil {
+		return false, "", fmt.Errorf("inspect PowerDNS main configuration: %w", err)
+	}
+	if !mainInfo.Mode().IsRegular() ||
+		(runtime.GOOS != "windows" && mainInfo.Mode().Perm()&0o022 != 0) ||
+		!dnsClusterConfigOwnerTrusted(mainInfo) {
+		return false, "", errors.New("PowerDNS main configuration has unsafe file permissions")
+	}
+	mainData, err := dnsClusterReadFile(dnsMainConf)
+	if err != nil {
+		return false, "", fmt.Errorf("read PowerDNS main configuration: %w", err)
+	}
+	wantDir := filepath.Clean(filepath.Dir(dnsManagedConf))
+	includeCount := 0
+	for _, line := range strings.Split(string(mainData), "\n") {
+		key, value, found := powerDNSConfigDirective(line)
+		if !found {
+			continue
+		}
+		switch key {
+		case "include-dir":
+			includeCount++
+			if filepath.Clean(value) != wantDir {
+				return false, "", errors.New("PowerDNS loads an unexpected include directory")
+			}
+		case "launch", "gsqlite3-database", "gsqlite3-dnssec",
+			"local-address", "zone-cache-refresh-interval", "webserver", "api",
+			"primary", "secondary", "autosecondary",
+			"allow-axfr-ips", "also-notify",
+			"master", "slave", "supermaster", "autoprimary":
+			return false, "", errors.New("PowerDNS main configuration overrides managed DNS state")
+		}
+	}
+	if includeCount == 0 {
+		return false, "PowerDNS is installed but does not load the CelikPanel configuration directory", nil
+	}
+	if includeCount != 1 {
+		return false, "", errors.New("PowerDNS include directory is configured ambiguously")
+	}
+	includeInfo, err := dnsClusterStat(wantDir)
+	if err != nil {
+		return false, "", fmt.Errorf("inspect PowerDNS include directory: %w", err)
+	}
+	if !includeInfo.IsDir() || includeInfo.Mode()&os.ModeSymlink != 0 {
+		return false, "", errors.New("PowerDNS include path is not a trusted directory")
+	}
+	if ownerUID, enforceOwner := dnsClusterConfigOwnerUID(includeInfo); enforceOwner {
+		if includeInfo.Mode().Perm()&0o022 != 0 {
+			return false, "", errors.New("PowerDNS include directory is group/other writable")
+		}
+		if ownerUID != dnsClusterConfigRequiredOwnerUID {
+			return false, "", errors.New("PowerDNS include directory has an unexpected owner")
+		}
+	}
+	entries, err := dnsClusterReadDir(wantDir)
+	if err != nil {
+		return false, "", fmt.Errorf("inspect PowerDNS include directory: %w", err)
+	}
+	managedBase := filepath.Base(dnsManagedConf)
+	clusterBase := filepath.Base(dnsClusterConf)
+	for _, entry := range entries {
+		name := entry.Name()
+		entryPath := filepath.Join(wantDir, name)
+		if filepath.Ext(name) != ".conf" || name == managedBase ||
+			filepath.Clean(entryPath) == filepath.Clean(dnsMainConf) {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil || !info.Mode().IsRegular() ||
+			(runtime.GOOS != "windows" && info.Mode().Perm()&0o022 != 0) ||
+			!dnsClusterConfigOwnerTrusted(info) {
+			return false, "", errors.New("PowerDNS include directory contains an unsafe configuration entry")
+		}
+		other, err := dnsClusterReadFile(entryPath)
+		if err != nil {
+			return false, "", fmt.Errorf("read PowerDNS include %s: %w", name, err)
+		}
+		if name == clusterBase {
+			if !validDNSClusterPowerDNSConfig(string(other)) {
+				return false, "", errors.New("PowerDNS cluster configuration is malformed or ambiguous")
+			}
+			continue
+		}
+		for _, line := range strings.Split(string(other), "\n") {
+			key, _, found := powerDNSConfigDirective(line)
+			if !found {
+				continue
+			}
+			switch key {
+			case "launch", "gsqlite3-database", "gsqlite3-dnssec", "include-dir",
+				"local-address", "zone-cache-refresh-interval", "webserver", "api",
+				"primary", "secondary", "autosecondary",
+				"allow-axfr-ips", "also-notify",
+				"master", "slave", "supermaster", "autoprimary":
+				return false, "", fmt.Errorf("PowerDNS include %s conflicts with the managed backend", name)
+			}
+		}
+	}
+	return true, "", nil
+}
+
+func validManagedPowerDNSConfig(config, databasePath string) bool {
+	want := map[string]string{
+		"launch":                      "gsqlite3",
+		"gsqlite3-dnssec":             "yes",
+		"gsqlite3-database":           filepath.Clean(databasePath),
+		"local-address":               "",
+		"zone-cache-refresh-interval": "0",
+		"webserver":                   "no",
+		"api":                         "no",
+	}
+	seen := make(map[string]string, len(want))
+	for _, raw := range strings.Split(config, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, found := strings.Cut(line, "=")
+		key, value = strings.TrimSpace(key), strings.TrimSpace(value)
+		if !found {
+			continue
+		}
+		if _, required := want[key]; !required {
+			return false
+		}
+		if _, duplicate := seen[key]; duplicate || value == "" {
+			return false
+		}
+		seen[key] = value
+	}
+	for key, expected := range want {
+		actual, ok := seen[key]
+		if !ok {
+			return false
+		}
+		if key == "gsqlite3-database" {
+			actual = filepath.Clean(actual)
+		}
+		if expected == "" {
+			if actual == "" {
+				return false
+			}
+		} else if actual != expected {
+			return false
+		}
+	}
+	return true
+}
+
+func validDNSClusterPowerDNSConfig(config string) bool {
+	want := map[string]string{
+		"primary": "yes", "secondary": "yes", "autosecondary": "yes",
+		"allow-axfr-ips": "", "also-notify": "",
+	}
+	seen := make(map[string]string, len(want))
+	for _, raw := range strings.Split(config, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, found := powerDNSConfigDirective(line)
+		if !found {
+			return false
+		}
+		expected, allowed := want[key]
+		if !allowed || value == "" {
+			return false
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return false
+		}
+		if expected != "" && value != expected {
+			return false
+		}
+		seen[key] = value
+	}
+	for key := range want {
+		if _, ok := seen[key]; !ok {
+			return false
+		}
+	}
+	parsed := net.ParseIP(seen["allow-axfr-ips"])
+	if parsed == nil || parsed.To4() == nil {
+		return false
+	}
+	peer := parsed.To4().String()
+	return seen["allow-axfr-ips"] == peer && seen["also-notify"] == peer
 }
 
 func normalizeAgentDNSRole(role string) string {
@@ -91,154 +389,348 @@ also-notify=%s
 `, req.PeerIP, req.PeerIP, req.PeerIP, req.PeerIP)
 }
 
-func (a *Agent) ConfigureDNSCluster(req *DNSClusterRequest, resp *DNSClusterResponse) error {
-	if _, err := dnsClusterLookPath("pdns_server"); err != nil {
-		resp.Error = "PowerDNS is not installed on this server"
+const configureDNSClusterLegacyUnsupportedError = "legacy DNS cluster configuration is unsupported; use Agent.ConfigureDNSClusterV2"
+
+func (a *Agent) ConfigureDNSCluster(_ *DNSClusterRequest, resp *DNSClusterResponse) error {
+	*resp = DNSClusterResponse{Error: configureDNSClusterLegacyUnsupportedError}
+	return nil
+}
+
+func (a *Agent) ConfigureDNSClusterV2(
+	req *ConfigureDNSClusterV2Request,
+	resp *ConfigureDNSClusterV2Response,
+) error {
+	*resp = ConfigureDNSClusterV2Response{}
+	if req == nil {
+		resp.Error = "DNS cluster V2 request is required"
 		return nil
 	}
-	// Migrate the first machine-wide primary/secondary model. PowerDNS roles
-	// belong to zones, so a paired server can own its local zones while keeping
-	// secondary copies of zones created on its peer.
-	req.Role = normalizeAgentDNSRole(req.Role)
-	switch req.Role {
-	case dnsRoleStandalone, dnsRolePaired:
-	default:
-		resp.Error = "role must be standalone or paired"
-		return nil
-	}
-	if req.Role != dnsRoleStandalone {
-		if net.ParseIP(req.PeerIP) == nil {
-			resp.Error = "the other server's IP address is required"
-			return nil
-		}
-		if req.PeerNS == "" {
-			resp.Error = "the other server's nameserver name is required"
-			return nil
-		}
-	}
-
-	// Keep the old drop-in so a PowerDNS that refuses to start can be undone —
-	// the same write→validate→roll back rule the config editor learned the hard
-	// way. A DNS server that will not start takes every hosted domain with it.
-	// Eski drop-in'i sakla ki başlamayı reddeden bir PowerDNS geri alınabilsin —
-	// yapılandırma editörünün zor yoldan öğrendiği yaz→doğrula→geri al kuralının
-	// aynısı. Başlamayan bir DNS sunucusu, barındırılan her alan adını yanında
-	// götürür.
-	previous, hadPrevious := []byte(nil), false
-	if b, err := os.ReadFile(dnsClusterConf); err == nil {
-		previous, hadPrevious = b, true
-	}
-	restoreConfig := func(restart bool) error {
-		var restoreErr error
-		if hadPrevious {
-			if err := os.WriteFile(dnsClusterConf, previous, 0o644); err != nil {
-				restoreErr = fmt.Errorf("restore cluster configuration: %w", err)
-			}
-		} else {
-			if err := os.Remove(dnsClusterConf); err != nil && !os.IsNotExist(err) {
-				restoreErr = fmt.Errorf("remove cluster configuration: %w", err)
-			}
-		}
-		if restart {
-			if out, err := dnsClusterRestart(); err != nil {
-				restartErr := fmt.Errorf("restart restored PowerDNS configuration: %s", firstLine(string(out)))
-				if restoreErr != nil {
-					return fmt.Errorf("%v; %w", restoreErr, restartErr)
-				}
-				return restartErr
-			}
-		}
-		return restoreErr
-	}
-
-	db, err := openPdnsDB()
+	commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+		req.Role, req.PeerIP, req.PeerNS,
+	)
 	if err != nil {
-		resp.Error = fmt.Sprintf("powerdns database: %v", err)
+		resp.Error = err.Error()
 		return nil
 	}
-	defer db.Close()
-	tx, err := db.Begin()
+	ctx, finish, err := a.requiredServiceMutationStep(
+		req.ServiceMutationBinding,
+		newServiceMutationStepClaim(
+			serviceMutationStepConfigureDNSCluster,
+			"pdns",
+			commitment.Qualifier,
+			"configure",
+		),
+	)
 	if err != nil {
-		resp.Error = fmt.Sprintf("powerdns database: %v", err)
+		resp.Error = err.Error()
 		return nil
 	}
-	defer tx.Rollback()
-	fail := func(problem error, restart bool) {
-		_ = tx.Rollback()
-		if rollbackErr := restoreConfig(restart); rollbackErr != nil {
-			resp.Error = fmt.Sprintf("%v; rollback failed: %v", problem, rollbackErr)
-			return
-		}
-		resp.Error = problem.Error()
-	}
+	defer finish()
+	return configureDNSClusterV2(ctx, commitment, resp)
+}
 
-	conf := dnsClusterConfig(req)
-
-	if conf == "" {
-		if err := os.Remove(dnsClusterConf); err != nil && !os.IsNotExist(err) {
-			fail(err, false)
-			return nil
-		}
-	} else {
-		if err := os.MkdirAll(filepath.Dir(dnsClusterConf), 0o755); err != nil {
-			fail(err, false)
-			return nil
-		}
-		if err := os.WriteFile(dnsClusterConf, []byte(conf), 0o644); err != nil {
-			fail(err, false)
-			return nil
-		}
-		if err := os.Chmod(dnsClusterConf, 0o644); err != nil {
-			fail(fmt.Errorf("set cluster configuration permissions: %w", err), false)
-			return nil
-		}
-	}
-
-	if err := dnsClusterApplyAutoprimaryTx(tx, req); err != nil {
-		fail(err, false)
+func configureDNSClusterV2(
+	ctx context.Context,
+	commitment mutationpayload.DNSClusterConfigCommitment,
+	resp *ConfigureDNSClusterV2Response,
+) error {
+	// Readiness is checked before the durable intent/journal and before the
+	// cluster config or database can change. Once intent exists recovery is
+	// forward-only, so an unconfigured/ambiguous backend must fail zero-touch.
+	if err := requireManagedDNSClusterReady(); err != nil {
+		resp.Error = fmt.Sprintf("PowerDNS is not ready for DNS cluster convergence: %v", err)
 		return nil
 	}
-	peerZones, err := dnsClusterSetLocalZoneTypeTx(tx, req)
+	if err := validateDNSClusterConfigTarget(); err != nil {
+		resp.Error = fmt.Sprintf("inspect existing DNS cluster configuration: %v", err)
+		return nil
+	}
+	journal, err := commitDNSClusterConfigIntent(ctx, commitment)
 	if err != nil {
-		fail(err, false)
+		resp.Error = err.Error()
 		return nil
 	}
-
-	if out, err := dnsClusterRestart(); err != nil {
-		fail(fmt.Errorf("PowerDNS refused the new configuration and it was rolled back: %s", firstLine(string(out))), true)
+	commitCtx, cancelCommit := context.WithTimeout(
+		context.WithoutCancel(ctx), dnsClusterConfigRecoveryTimeout,
+	)
+	defer cancelCommit()
+	peerZones, err := convergeDNSClusterConfig(commitCtx, commitment)
+	if err != nil {
+		resp.Error = poisonDNSClusterConfigConvergence(ctx, err).Error()
 		return nil
-	}
-	if err := tx.Commit(); err != nil {
-		fail(fmt.Errorf("commit powerdns database: %w", err), true)
-		return nil
-	}
-
-	resp.Applied = true
-	switch req.Role {
-	case dnsRolePaired:
-		resp.Detail = "DNS pairing enabled; local zones are copied to " + req.PeerIP + " and peer zones are copied here"
-	default:
-		resp.Detail = "this server serves DNS on its own"
 	}
 	var refreshFailures []string
 	for _, zone := range peerZones {
 		var out []byte
-		var err error
-		if req.Role == dnsRoleStandalone {
-			out, err = dnsClusterPurge(zone)
+		var refreshErr error
+		if commitment.Role == dnsRoleStandalone {
+			out, refreshErr = dnsClusterPurge(commitCtx, zone)
 		} else {
-			out, err = dnsClusterRetrieve(zone)
+			out, refreshErr = dnsClusterRetrieve(commitCtx, zone)
 		}
-		if err != nil {
+		if refreshErr != nil {
 			detail := firstLine(string(out))
 			if detail == "" {
-				detail = err.Error()
+				detail = refreshErr.Error()
 			}
 			refreshFailures = append(refreshFailures, zone+": "+detail)
 		}
 	}
+	if err := publishDNSClusterConfig(commitCtx, journal); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	resp.Applied = true
+	if commitment.Role == dnsRolePaired {
+		resp.Detail = "DNS pairing enabled; local zones are copied to " + commitment.PeerIP + " and peer zones are copied here"
+	} else {
+		resp.Detail = "this server serves DNS on its own"
+	}
 	if len(refreshFailures) > 0 {
 		resp.Detail += "; DNS cache/peer refresh needs attention for " + strings.Join(refreshFailures, ", ")
+	}
+	return nil
+}
+
+const dnsClusterConfigMaxSize = 64 << 10
+
+var (
+	dnsClusterConfigLstat    = os.Lstat
+	dnsClusterConfigReadFile = os.ReadFile
+)
+
+func validateDNSClusterConfigTarget() error {
+	path := filepath.Clean(dnsClusterConf)
+	if !filepath.IsAbs(path) || path != dnsClusterConf {
+		return errors.New("DNS cluster configuration path must be canonical and absolute")
+	}
+	info, err := dnsClusterConfigLstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+		info.Size() < 0 || info.Size() > dnsClusterConfigMaxSize {
+		return errors.New("existing DNS cluster configuration is not a safe regular file")
+	}
+	data, err := dnsClusterConfigReadFile(path)
+	if err != nil {
+		return err
+	}
+	if len(data) > dnsClusterConfigMaxSize {
+		return errors.New("existing DNS cluster configuration exceeds the size limit")
+	}
+	return nil
+}
+
+func publishDNSClusterConfigFile(config string) error {
+	if err := validateDNSClusterConfigTarget(); err != nil {
+		return err
+	}
+	path := filepath.Clean(dnsClusterConf)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	if err := cleanupAbandonedDNSClusterConfigStages(dir); err != nil {
+		return err
+	}
+	if config == "" {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return syncDNSClusterConfigDirectory(path)
+	}
+	// Never stage with a .conf suffix inside pdns.d. PowerDNS may load every
+	// matching drop-in after a crash, before recovery can rename or remove it.
+	stage, err := os.CreateTemp(dir, ".celikpanel-cluster-stage-*.tmp")
+	if err != nil {
+		return err
+	}
+	stagePath := stage.Name()
+	published := false
+	defer func() {
+		_ = stage.Close()
+		if !published {
+			_ = os.Remove(stagePath)
+		}
+	}()
+	if err := stage.Chmod(0o644); err != nil {
+		return err
+	}
+	if _, err := stage.WriteString(config); err != nil {
+		return err
+	}
+	if err := stage.Sync(); err != nil {
+		return err
+	}
+	if err := stage.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(stagePath, path); err != nil {
+		return err
+	}
+	published = true
+	return syncDNSClusterConfigDirectory(path)
+}
+
+func cleanupAbandonedDNSClusterConfigStages(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var stages []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".celikpanel-cluster-stage-") &&
+			strings.HasSuffix(name, ".tmp") {
+			stages = append(stages, filepath.Join(dir, name))
+		}
+	}
+	if len(stages) > dnsClusterConfigJournalStageLimit {
+		return errors.New("abandoned DNS cluster config stage count exceeds the limit")
+	}
+	for _, stage := range stages {
+		info, err := os.Lstat(stage)
+		if err != nil || !info.Mode().IsRegular() ||
+			info.Mode()&os.ModeSymlink != 0 || info.Size() > dnsClusterConfigMaxSize {
+			return errors.New("abandoned DNS cluster config stage is unsafe")
+		}
+	}
+	for _, stage := range stages {
+		if err := os.Remove(stage); err != nil {
+			return err
+		}
+	}
+	if len(stages) != 0 {
+		return syncDNSClusterConfigDirectory(dnsClusterConf)
+	}
+	return nil
+}
+
+func convergeDNSClusterConfig(
+	ctx context.Context,
+	commitment mutationpayload.DNSClusterConfigCommitment,
+) ([]string, error) {
+	recomputed, err := mutationpayload.CanonicalDNSClusterConfig(
+		commitment.Role, commitment.PeerIP, commitment.PeerNS,
+	)
+	if err != nil || recomputed.Qualifier != commitment.Qualifier {
+		return nil, errors.New("DNS cluster convergence payload is not canonical")
+	}
+	req := &DNSClusterRequest{
+		Role: commitment.Role, PeerIP: commitment.PeerIP, PeerNS: commitment.PeerNS,
+	}
+	config := dnsClusterConfig(req)
+	if err := publishDNSClusterConfigFile(config); err != nil {
+		return nil, fmt.Errorf("publish DNS cluster configuration: %w", err)
+	}
+	db, err := openPdnsDB()
+	if err != nil {
+		return nil, fmt.Errorf("open PowerDNS database: %w", err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("begin PowerDNS cluster transaction: %w", err)
+	}
+	defer tx.Rollback()
+	if err := dnsClusterApplyAutoprimaryTx(tx, req); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	peerZones, err := dnsClusterSetLocalZoneTypeTx(tx, req)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("commit PowerDNS cluster transaction: %w", err)
+	}
+	if err := db.Close(); err != nil {
+		return nil, fmt.Errorf("close PowerDNS cluster database: %w", err)
+	}
+	if out, err := dnsClusterRestart(ctx); err != nil {
+		return nil, fmt.Errorf("restart PowerDNS after cluster convergence: %v: %s", err, firstLine(string(out)))
+	}
+	if err := verifyDNSClusterConfig(commitment, config); err != nil {
+		return nil, err
+	}
+	return peerZones, nil
+}
+
+func verifyDNSClusterConfig(
+	commitment mutationpayload.DNSClusterConfigCommitment,
+	expectedConfig string,
+) error {
+	if expectedConfig == "" {
+		if _, err := dnsClusterConfigLstat(dnsClusterConf); !errors.Is(err, os.ErrNotExist) {
+			if err == nil {
+				return errors.New("standalone DNS cluster configuration file still exists")
+			}
+			return fmt.Errorf("verify absent DNS cluster configuration: %w", err)
+		}
+	} else {
+		if err := validateDNSClusterConfigTarget(); err != nil {
+			return err
+		}
+		actual, err := dnsClusterConfigReadFile(dnsClusterConf)
+		if err != nil || string(actual) != expectedConfig {
+			return errors.New("DNS cluster configuration readback does not match the committed plan")
+		}
+	}
+	if err := requireManagedDNSClusterReady(); err != nil {
+		return fmt.Errorf("verify effective managed PowerDNS state: %w", err)
+	}
+	db, err := openRawDNSZoneReceiptDB()
+	if err != nil {
+		return fmt.Errorf("open PowerDNS cluster readback: %w", err)
+	}
+	defer db.Close()
+	var bad int
+	if commitment.Role == dnsRolePaired {
+		if err := db.QueryRow(`
+			SELECT
+			 (SELECT COUNT(*) FROM domains
+			   WHERE UPPER(type) IN ('NATIVE','MASTER')
+			     AND (UPPER(type) <> 'MASTER' OR master IS NOT NULL)) +
+			 (SELECT COUNT(*) FROM domains WHERE account = 'celikpanel'
+			   AND UPPER(type) IN ('SLAVE','SECONDARY')
+			   AND COALESCE(master, '') <> ?)
+		`, commitment.PeerIP).Scan(&bad); err != nil {
+			return err
+		}
+		var managed, exact int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM supermasters WHERE account = 'celikpanel'`).Scan(&managed); err != nil {
+			return err
+		}
+		if err := db.QueryRow(`SELECT COUNT(*) FROM supermasters WHERE account = 'celikpanel' AND ip = ? AND nameserver = ?`, commitment.PeerIP, commitment.PeerNS).Scan(&exact); err != nil {
+			return err
+		}
+		if managed != 1 || exact != 1 || bad != 0 {
+			return errors.New("PowerDNS paired-state readback does not match the committed plan")
+		}
+		return nil
+	}
+	if err := db.QueryRow(`
+		SELECT
+		 (SELECT COUNT(*) FROM supermasters WHERE account = 'celikpanel') +
+		 (SELECT COUNT(*) FROM domains
+		   WHERE UPPER(type) IN ('NATIVE','MASTER')
+		     AND (UPPER(type) <> 'NATIVE' OR master IS NOT NULL)) +
+		 (SELECT COUNT(*) FROM domains WHERE account = 'celikpanel'
+		   AND UPPER(type) IN ('SLAVE','SECONDARY'))
+	`).Scan(&bad); err != nil {
+		return err
+	}
+	if bad != 0 {
+		return errors.New("PowerDNS standalone-state readback does not match the committed plan")
 	}
 	return nil
 }
@@ -294,7 +786,10 @@ func applyAutoprimaryTx(tx *sql.Tx, req *DNSClusterRequest) error {
 func setLocalZoneTypeTx(tx *sql.Tx, req *DNSClusterRequest) ([]string, error) {
 	switch req.Role {
 	case dnsRolePaired, dnsRolePrimary:
-		if _, err := tx.Exec(`UPDATE domains SET type = 'MASTER', master = NULL WHERE UPPER(type) = 'NATIVE'`); err != nil {
+		if _, err := tx.Exec(`
+			UPDATE domains
+			SET type = 'MASTER', master = NULL, last_check = NULL
+			WHERE UPPER(type) IN ('NATIVE', 'MASTER')`); err != nil {
 			return nil, fmt.Errorf("powerdns database: %w", err)
 		}
 		rows, err := tx.Query(`
@@ -333,7 +828,10 @@ func setLocalZoneTypeTx(tx *sql.Tx, req *DNSClusterRequest) ([]string, error) {
 		}
 		return changed, nil
 	case dnsRoleStandalone:
-		if _, err := tx.Exec(`UPDATE domains SET type = 'NATIVE', master = NULL WHERE UPPER(type) = 'MASTER'`); err != nil {
+		if _, err := tx.Exec(`
+			UPDATE domains
+			SET type = 'NATIVE', master = NULL, last_check = NULL
+			WHERE UPPER(type) IN ('NATIVE', 'MASTER')`); err != nil {
 			return nil, fmt.Errorf("powerdns database: %w", err)
 		}
 		rows, err := tx.Query(`

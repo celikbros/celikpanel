@@ -32,7 +32,20 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 	if serviceMutationStepSyncVPNPeers != "Agent.SyncVPNPeersV2" {
 		t.Fatalf("VPN peer mutation method=%q", serviceMutationStepSyncVPNPeers)
 	}
+	if serviceMutationStepApplyFirewall != "Agent.ApplyFirewallV2" {
+		t.Fatalf("firewall mutation method=%q", serviceMutationStepApplyFirewall)
+	}
+	if serviceMutationStepSyncDNSZone != "Agent.SyncDNSZoneV2" {
+		t.Fatalf("DNS zone mutation method=%q", serviceMutationStepSyncDNSZone)
+	}
+	if serviceMutationStepIssuePanelCertificate != "Agent.IssuePanelCertificateV2" {
+		t.Fatalf("panel certificate mutation method=%q", serviceMutationStepIssuePanelCertificate)
+	}
 	vpnQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)
+	firewallQualifier := "firewall-apply/v1:sha256:" + strings.Repeat("0", 64)
+	certificateQualifier := "panel-certificate-issue/v1:sha256:" + strings.Repeat("0", 64)
+	mailTLSQualifier := "mail-tls-sync/v1:sha256:" + strings.Repeat("0", 64)
+	dnsQualifier := "dns-zone-sync/v1:sha256:" + strings.Repeat("0", 64)
 	tests := []struct {
 		name  string
 		job   *ServiceMutationJob
@@ -62,9 +75,8 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"reset postfix in profile", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepResetFailedUnit, "postfix", "", "reset-failed")},
 		{"configure pdns standalone", mutationPolicyJob("pdns_configure", "pdns", ""), mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
 		{"configure pdns after install", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
-		{"sync dns zone", mutationPolicyJob("dns_zone_sync", "example.com", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", "", "sync")},
-		{"delete dns zone", mutationPolicyJob("dns_zone_sync", "example.com", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", "", "delete")},
-		{"sync all zones after pdns install", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", "", "sync")},
+		{"sync dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "sync")},
+		{"delete dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "delete")},
 		{"nginx ready after install", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"nginx ready in webmail profile", mutationPolicyJob("mail_profile_install", core.MailProfileWebmail, ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"configure mail standalone", mutationPolicyJob("mail_configure", "mail-stack", ""), mutationPolicyClaim(serviceMutationStepConfigureMailStack, "mail-stack", "", "configure")},
@@ -77,7 +89,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"wire protected profile", mutationPolicyJob("mail_profile_install", core.MailProfileProtected, ""), mutationPolicyClaim(serviceMutationStepWireMailFilters, "mail-filters", "", "wire")},
 		{"configure mail submission", mutationPolicyJob("mail_submission_configure", "postfix", ""), mutationPolicyClaim(serviceMutationStepConfigureMailSubmission, "postfix", "", "configure")},
 		{"configure profile submission", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepConfigureMailSubmission, "postfix", "", "configure")},
-		{"reconcile profile tls", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepReconcileMailTLS, "mail-tls", "", "reconcile")},
+		{"sync mail tls", mutationPolicyJob("mail_tls_sync", "mail-tls", mailTLSQualifier), mutationPolicyClaim(serviceMutationStepSyncMailTLS, "mail-tls", mailTLSQualifier, "sync")},
 		{"configure dkim", mutationPolicyJob("dkim_signing_configure", "opendkim", ""), mutationPolicyClaim(serviceMutationStepConfigureDKIMSigning, "opendkim", "", "configure")},
 		{"configure phpmyadmin after install", mutationPolicyJob("service_install", "phpmyadmin", ""), mutationPolicyClaim(serviceMutationStepConfigureDBTools, "dbtools", "", "configure")},
 		{"configure phppgadmin after install", mutationPolicyJob("service_install", "phppgadmin", ""), mutationPolicyClaim(serviceMutationStepConfigureDBTools, "dbtools", "", "configure")},
@@ -86,15 +98,11 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"setup vpn", mutationPolicyJob("vpn_setup", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup")},
 		{"setup vpn after install", mutationPolicyJob("service_install", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSetupVPN, "wireguard", "", "setup")},
 		{"sync vpn peers", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", vpnQualifier, "sync")},
-		{"firewall live apply", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"firewall persisted apply", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnablePersisted)},
-		{"firewall persisted disable", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallDisablePersisted)},
-		{"firewall sync", mutationPolicyJob("firewall_sync", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"firewall after service install", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"firewall after versioned service install", mutationPolicyJob("service_install", "php-fpm", "php8.3-fpm"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"firewall after profile install", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"firewall before certificate issue", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"issue panel certificate", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com", "certbot", "issue")},
+		{"firewall live apply", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
+		{"firewall persisted apply", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnablePersisted)},
+		{"firewall persisted disable", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallDisablePersisted)},
+		{"firewall sync", mutationPolicyJob("firewall_sync", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
+		{"issue panel certificate", mutationPolicyJob("panel_certificate_issue", "panel.example.com", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com", certificateQualifier, "issue")},
 		{"activate panel certificate", mutationPolicyJob(panelCertificateActivationKind, "panel.example.com", ""), mutationPolicyClaim(serviceMutationStepActivatePanelCertificate, "panel.example.com", "", "activate")},
 	}
 
@@ -119,7 +127,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		serviceMutationStepConfigureMailStack,
 		serviceMutationStepWireMailFilters,
 		serviceMutationStepConfigureMailSubmission,
-		serviceMutationStepReconcileMailTLS,
+		serviceMutationStepSyncMailTLS,
 		serviceMutationStepServiceAction,
 		serviceMutationStepStartService,
 		serviceMutationStepResetFailedUnit,
@@ -211,6 +219,12 @@ func TestServiceMutationMailProfilesAllowOnlyExactCompiledMembership(t *testing.
 func TestServiceMutationStepPolicyRejectsMismatchesAndConfusedDeputies(t *testing.T) {
 	vpnQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("0", 64)
 	otherVPNQualifier := "vpn-peer-sync/v1:sha256:" + strings.Repeat("1", 64)
+	firewallQualifier := "firewall-apply/v1:sha256:" + strings.Repeat("0", 64)
+	otherFirewallQualifier := "firewall-apply/v1:sha256:" + strings.Repeat("1", 64)
+	certificateQualifier := "panel-certificate-issue/v1:sha256:" + strings.Repeat("0", 64)
+	otherCertificateQualifier := "panel-certificate-issue/v1:sha256:" + strings.Repeat("1", 64)
+	dnsQualifier := "dns-zone-sync/v1:sha256:" + strings.Repeat("0", 64)
+	otherDNSQualifier := "dns-zone-sync/v1:sha256:" + strings.Repeat("1", 64)
 	tests := []struct {
 		name  string
 		job   *ServiceMutationJob
@@ -233,17 +247,29 @@ func TestServiceMutationStepPolicyRejectsMismatchesAndConfusedDeputies(t *testin
 		{"legacy direct vpn sync has no commitment", mutationPolicyJob("vpn_peer_sync", "wireguard", ""), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", vpnQualifier, "sync")},
 		{"direct vpn sync digest mismatch", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", otherVPNQualifier, "sync")},
 		{"direct vpn sync malformed digest", mutationPolicyJob("vpn_peer_sync", "wireguard", vpnQualifier), mutationPolicyClaim(serviceMutationStepSyncVPNPeers, "wireguard", "not-a-qualifier", "sync")},
-		{"certificate domain mismatch", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "other.example.com", "certbot", "issue")},
-		{"noncanonical certificate issue target", mutationPolicyJob("panel_certificate_issue", "panel.example.com.", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com.", "certbot", "issue")},
-		{"invalid certificate issue target", mutationPolicyJob("panel_certificate_issue", "not-a-domain", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "not-a-domain", "certbot", "issue")},
+		{"legacy certificate job cannot authorize V2", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com", certificateQualifier, "issue")},
+		{"certificate qualifier mismatch", mutationPolicyJob("panel_certificate_issue", "panel.example.com", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com", otherCertificateQualifier, "issue")},
+		{"certificate malformed qualifier", mutationPolicyJob("panel_certificate_issue", "panel.example.com", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com", "certbot", "issue")},
+		{"certificate domain mismatch", mutationPolicyJob("panel_certificate_issue", "panel.example.com", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "other.example.com", certificateQualifier, "issue")},
+		{"noncanonical certificate issue target", mutationPolicyJob("panel_certificate_issue", "panel.example.com.", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "panel.example.com.", certificateQualifier, "issue")},
+		{"invalid certificate issue target", mutationPolicyJob("panel_certificate_issue", "not-a-domain", certificateQualifier), mutationPolicyClaim(serviceMutationStepIssuePanelCertificate, "not-a-domain", certificateQualifier, "issue")},
 		{"noncanonical certificate activation target", mutationPolicyJob(panelCertificateActivationKind, "panel.example.com.", ""), mutationPolicyClaim(serviceMutationStepActivatePanelCertificate, "panel.example.com.", "", "activate")},
 		{"invalid certificate activation target", mutationPolicyJob(panelCertificateActivationKind, "not-a-domain", ""), mutationPolicyClaim(serviceMutationStepActivatePanelCertificate, "not-a-domain", "", "activate")},
-		{"pdns install cannot delete zone", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", "", "delete")},
-		{"service install cannot persist firewall", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnablePersisted)},
-		{"firewall sync cannot persist firewall", mutationPolicyJob("firewall_sync", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnablePersisted)},
-		{"certificate issue cannot persist firewall", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnablePersisted)},
-		{"noncanonical certificate target cannot open firewall", mutationPolicyJob("panel_certificate_issue", "Panel.Example.COM.", "certbot"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
-		{"invalid certificate target cannot open firewall", mutationPolicyJob("panel_certificate_issue", "not a domain", "certbot"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "", serviceMutationFirewallEnableLive)},
+		{"pdns install cannot sync zone", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "sync")},
+		{"pdns install cannot delete zone", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "delete")},
+		{"legacy direct DNS sync has no commitment", mutationPolicyJob("dns_zone_sync", "example.com", ""), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "sync")},
+		{"direct DNS sync digest mismatch", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", otherDNSQualifier, "sync")},
+		{"direct DNS sync malformed digest", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", "not-a-qualifier", "sync")},
+		{"direct DNS sync domain mismatch", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "other.example.com", dnsQualifier, "sync")},
+		{"legacy direct firewall has no commitment", mutationPolicyJob("firewall_apply", "nftables", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
+		{"direct firewall digest mismatch", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", otherFirewallQualifier, serviceMutationFirewallEnableLive)},
+		{"direct firewall malformed digest", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", "not-a-qualifier", serviceMutationFirewallEnableLive)},
+		{"direct firewall live disable forbidden", mutationPolicyJob("firewall_apply", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallDisableLive)},
+		{"firewall sync cannot persist enable", mutationPolicyJob("firewall_sync", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnablePersisted)},
+		{"firewall sync cannot persist disable", mutationPolicyJob("firewall_sync", "nftables", firewallQualifier), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallDisablePersisted)},
+		{"service install cannot borrow firewall", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
+		{"profile cannot borrow firewall", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
+		{"certificate issue cannot borrow firewall", mutationPolicyJob("panel_certificate_issue", "panel.example.com", "certbot"), mutationPolicyClaim(serviceMutationStepApplyFirewall, "nftables", firewallQualifier, serviceMutationFirewallEnableLive)},
 		{"noncanonical job kind", mutationPolicyJob("Service_Install", "nginx", ""), mutationPolicyClaim(serviceMutationStepInstallService, "nginx", "", "install")},
 		{"noncanonical job target", mutationPolicyJob("service_install", "Nginx", ""), mutationPolicyClaim(serviceMutationStepInstallService, "nginx", "", "install")},
 		{"noncanonical job package", mutationPolicyJob("runtime_install", "node", " 22.14.0 "), mutationPolicyClaim(serviceMutationStepInstallNodeVersion, "node", "22.14.0", "install")},
@@ -272,6 +298,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		"serviceMutationStepConfigureDBTools":        true,
 		"serviceMutationStepConfigureDKIMSigning":    true,
 		"serviceMutationStepSyncDNSZone":             true,
+		"serviceMutationStepSecureDNSZone":           true,
+		"serviceMutationStepConfigureDNSCluster":     true,
 		"serviceMutationStepConfigurePowerDNSSQLite": true,
 		"serviceMutationStepApplyFirewall":           true,
 		"serviceMutationStepInstallService":          true,
@@ -279,7 +307,7 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		"serviceMutationStepConfigureMailStack":      true,
 		"serviceMutationStepWireMailFilters":         true,
 		"serviceMutationStepConfigureMailSubmission": true,
-		"serviceMutationStepReconcileMailTLS":        true,
+		"serviceMutationStepSyncMailTLS":             true,
 		"serviceMutationStepServiceAction":           true,
 		"serviceMutationStepStartService":            true,
 		"serviceMutationStepResetFailedUnit":         true,
@@ -353,8 +381,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		}
 	}
 
-	if len(seenMethods) != 25 {
-		t.Errorf("production requiredServiceMutationStep claim count=%d want=25", len(seenMethods))
+	if len(seenMethods) != 27 {
+		t.Errorf("production requiredServiceMutationStep claim count=%d want=27", len(seenMethods))
 	}
 	for method := range expectedMethods {
 		if seenMethods[method] == "" {

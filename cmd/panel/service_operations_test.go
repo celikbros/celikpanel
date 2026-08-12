@@ -169,6 +169,9 @@ type serviceOperationTestAgent struct {
 	nodeError                   string
 	nodeNoop                    bool
 	dnsError                    string
+	dnsV2Requests               []transport.SyncDNSZoneV2Request
+	versionCapabilities         *[]string
+	versionCommit               string
 	serviceError                string
 	serviceSuccess              bool
 	vpnError                    string
@@ -177,6 +180,14 @@ type serviceOperationTestAgent struct {
 	peerStarted                 chan struct{}
 	releasePeer                 <-chan struct{}
 	peerStartOnce               sync.Once
+	firewallEnabled             bool
+	firewallError               string
+	firewallCalls               int
+	legacyFirewallCalls         int
+	firewallRequests            []transport.ApplyFirewallRequest
+	firewallStarted             chan struct{}
+	releaseFirewall             <-chan struct{}
+	firewallStartOnce           sync.Once
 
 	installed    map[string]bool
 	active       map[string]bool
@@ -188,6 +199,32 @@ type serviceOperationTestAgent struct {
 	mutationEvents   []string
 	finishLossKind   string
 	finishLossUsed   bool
+
+	activateAfterGlobalStatus *ServiceOperationMutationJob
+	activationTriggered       bool
+	activationStarted         chan struct{}
+	releaseActivation         <-chan struct{}
+}
+
+func (a *serviceOperationTestAgent) Version(
+	_ *transport.Empty,
+	resp *transport.AgentVersionResponse,
+) error {
+	resp.Commit = strings.TrimSpace(buildCommit)
+	if a.versionCommit != "" {
+		resp.Commit = a.versionCommit
+	}
+	capabilities := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityMailTLSSyncV2,
+	}
+	if a.versionCapabilities != nil {
+		capabilities = append([]string(nil), (*a.versionCapabilities)...)
+	}
+	resp.Capabilities = capabilities
+	return nil
 }
 
 func newServiceOperationTestAgent() *serviceOperationTestAgent {
@@ -283,6 +320,34 @@ func (a *serviceOperationTestAgent) ServiceMutationStatus(
 		return nil
 	}
 	resp.Job = cloneServiceOperationMutationJob(a.mutationJobs[a.mutationActive])
+	if !a.activationTriggered && a.activateAfterGlobalStatus != nil {
+		a.activationTriggered = true
+		activation := cloneServiceOperationMutationJob(a.activateAfterGlobalStatus)
+		a.mutationJobs[activation.RequestID] = activation
+		a.mutationActive = activation.RequestID
+		a.mutationEvents = append(a.mutationEvents, "activation:started")
+		if a.activationStarted != nil {
+			closeOnce(a.activationStarted)
+		}
+		release := a.releaseActivation
+		go func() {
+			if release != nil {
+				<-release
+			}
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			job := a.mutationJobs[activation.RequestID]
+			if job == nil || !agentMutationActive(job.Status) {
+				return
+			}
+			job.Status = agentMutationSucceeded
+			job.Phase = "completed"
+			if a.mutationActive == activation.RequestID {
+				a.mutationActive = ""
+			}
+			a.mutationEvents = append(a.mutationEvents, "activation:succeeded")
+		}()
+	}
 	return nil
 }
 
@@ -324,7 +389,19 @@ func (a *serviceOperationTestAgent) FinishServiceMutation(
 	}
 	if req.Success {
 		job.Status = agentMutationSucceeded
-		job.Phase = "completed"
+		identity := agentMutationIdentity{
+			RequestID:   job.RequestID,
+			OwnerID:     job.OwnerID,
+			Kind:        job.Kind,
+			Target:      job.Target,
+			PackageName: job.PackageName,
+		}
+		phase, required, err := payloadBoundMutationPublishedPhase(identity)
+		if required && err == nil {
+			job.Phase = phase
+		} else {
+			job.Phase = "completed"
+		}
 	} else {
 		job.Status = agentMutationFailed
 		job.Phase = "failed"
@@ -456,8 +533,68 @@ func (a *serviceOperationTestAgent) PkgFamily(_ *transport.Empty, out *string) e
 	return nil
 }
 
-func (a *serviceOperationTestAgent) FirewallStatus(_ *struct{}, out *FirewallStatusResp) error {
-	out.Enabled = false
+func (a *serviceOperationTestAgent) FirewallStatus(_ *transport.Empty, out *FirewallStatusResp) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out.Enabled = a.firewallEnabled
+	out.EngineAvailable = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) InstalledServiceIDsStrict(
+	_ *transport.Empty,
+	out *[]string,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	*out = (*out)[:0]
+	for id, installed := range a.installed {
+		if installed {
+			*out = append(*out, id)
+		}
+	}
+	return nil
+}
+
+func (a *serviceOperationTestAgent) ApplyFirewallV2(
+	req *transport.ApplyFirewallRequest,
+	out *FirewallStatusResp,
+) error {
+	if a.firewallStarted != nil {
+		a.firewallStartOnce.Do(func() { close(a.firewallStarted) })
+	}
+	if a.releaseFirewall != nil {
+		<-a.releaseFirewall
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.firewallCalls++
+	a.firewallRequests = append(a.firewallRequests, transport.ApplyFirewallRequest{
+		ServiceMutationBinding: req.ServiceMutationBinding,
+		Enabled:                req.Enabled,
+		Persist:                req.Persist,
+		TCPPorts:               append([]int(nil), req.TCPPorts...),
+		UDPPorts:               append([]int(nil), req.UDPPorts...),
+	})
+	a.mutationEvents = append(a.mutationEvents, "call:firewall_sync")
+	if a.firewallError != "" {
+		out.Error = a.firewallError
+		return nil
+	}
+	a.firewallEnabled = req.Enabled
+	out.Enabled = req.Enabled
+	out.EngineAvailable = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) ApplyFirewall(
+	_ *transport.ApplyFirewallRequest,
+	out *FirewallStatusResp,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.legacyFirewallCalls++
+	out.Error = "legacy firewall RPC must not be called"
 	return nil
 }
 
@@ -469,6 +606,25 @@ func (a *serviceOperationTestAgent) ConfigurePowerDNSSQLite(_ *struct{}, resp *S
 		return nil
 	}
 	resp.Synced = true
+	return nil
+}
+
+func (a *serviceOperationTestAgent) SyncDNSZoneV2(
+	req *transport.SyncDNSZoneV2Request,
+	resp *transport.SyncDNSZoneV2Response,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	copy := *req
+	copy.Records = append([]transport.ZoneRecord(nil), req.Records...)
+	a.dnsV2Requests = append(a.dnsV2Requests, copy)
+	a.mutationEvents = append(a.mutationEvents, "call:dns_zone_sync")
+	if a.dnsError != "" {
+		resp.Error = a.dnsError
+		return nil
+	}
+	resp.Synced = true
+	resp.AppliedGeneration = req.DesiredGeneration
 	return nil
 }
 
@@ -1191,7 +1347,7 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	if failure != nil || result["success"] != true {
 		t.Fatalf("PowerDNS idempotent setup result=%v failure=%+v", result, failure)
 	}
-	if strings.Join(phases, ",") != "configuring,starting,syncing,scanning,firewall" {
+	if strings.Join(phases, ",") != "configuring,starting,scanning" {
 		t.Fatalf("PowerDNS phases=%v", phases)
 	}
 
@@ -1203,13 +1359,72 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	if failure != nil || result["success"] != true {
 		t.Fatalf("WireGuard idempotent setup result=%v failure=%+v", result, failure)
 	}
-	if strings.Join(phases, ",") != "configuring,starting,scanning,firewall" {
+	if strings.Join(phases, ",") != "configuring,starting,scanning" {
 		t.Fatalf("WireGuard phases=%v", phases)
 	}
 	for _, event := range f.agent.capturedMutationEvents() {
 		if event == "call:vpn_peer_sync" {
 			t.Fatal("runServiceInstall performed a nested VPN peer sync")
 		}
+	}
+}
+
+func TestPowerDNSInstallPublishesV2OnlyAfterOuterTerminal(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	setDNSIdentityForTest(t, f.panel, "standalone")
+	seedStrictDNSZone(t, f.panel, "post-install.example")
+	f.agent.installNoop = true
+	f.agent.installed["pdns"] = true
+
+	recorder, started := postServiceInstall(t, f, "pdns")
+	if recorder.Code != http.StatusAccepted || started == nil {
+		t.Fatalf("start status=%d operation=%+v body=%s", recorder.Code, started, recorder.Body.String())
+	}
+	terminal, _ := waitForServiceOperation(t, f.panel, f.userID, started.ID, serviceOperationSucceeded)
+	if terminal.Phase != "completed" {
+		t.Fatalf("terminal phase=%q", terminal.Phase)
+	}
+
+	f.agent.mu.Lock()
+	requests := append([]transport.SyncDNSZoneV2Request(nil), f.agent.dnsV2Requests...)
+	events := append([]string(nil), f.agent.mutationEvents...)
+	f.agent.mu.Unlock()
+	if len(requests) != 1 || requests[0].Domain != "post-install.example" ||
+		requests[0].Delete || requests[0].DesiredGeneration <= 0 || len(requests[0].Records) == 0 {
+		t.Fatalf("post-install V2 requests=%+v", requests)
+	}
+	outerFinish, dnsBegin := -1, -1
+	for index, event := range events {
+		if event == "finish:service_install:succeeded" {
+			outerFinish = index
+		}
+		if event == "begin:dns_zone_sync" && dnsBegin == -1 {
+			dnsBegin = index
+		}
+	}
+	if outerFinish < 0 || dnsBegin <= outerFinish {
+		t.Fatalf("mutation event order=%v, want outer terminal before DNS child", events)
+	}
+}
+
+func TestPowerDNSInstallCapabilityGateCreatesNoRowAndTouchesNoHost(t *testing.T) {
+	f := newServiceOperationTestFixture(t)
+	legacy := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	}
+	f.agent.versionCapabilities = &legacy
+
+	recorder, operation := postServiceInstall(t, f, "pdns")
+	if recorder.Code != http.StatusInternalServerError || operation != nil {
+		t.Fatalf("legacy pdns response=%d operation=%+v body=%s", recorder.Code, operation, recorder.Body.String())
+	}
+	var rows int
+	if err := f.database.GetDB().QueryRow(`SELECT COUNT(*) FROM service_operations`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 || f.agent.installCalls.Load() != 0 {
+		t.Fatalf("legacy DNS agent created rows=%d install calls=%d", rows, f.agent.installCalls.Load())
 	}
 }
 
@@ -1235,6 +1450,81 @@ func mutationEventIndex(events []string, expected string) int {
 		}
 	}
 	return -1
+}
+
+func TestServiceInstallUsesExactPostTerminalFirewallChildAndKeepsProcessLock(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	fixture.agent.mu.Lock()
+	fixture.agent.firewallEnabled = true
+	fixture.agent.firewallStarted = started
+	fixture.agent.releaseFirewall = release
+	fixture.agent.mu.Unlock()
+
+	recorder, queued := postServiceInstall(t, fixture, "certbot")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("install status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("post-terminal firewall child did not start")
+	}
+	if fixture.panel.serviceMutationMu.TryLock() {
+		fixture.panel.serviceMutationMu.Unlock()
+		t.Fatal("process mutation lock was released during firewall child")
+	}
+
+	running, err := fixture.panel.serviceOperationByID(context.Background(), queued.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, ok := parseFirewallChildPhase(running.Phase)
+	if !ok {
+		t.Fatalf("running firewall child phase = %q", running.Phase)
+	}
+	fixture.agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(fixture.agent.mutationJobs[child.RequestID])
+	fixture.agent.mu.Unlock()
+	if job == nil || job.OwnerID != child.OwnerID ||
+		job.Kind != "firewall_sync" || job.Target != "nftables" ||
+		job.PackageName != child.Qualifier || job.Status != agentMutationRunning {
+		t.Fatalf("persisted child=%+v agent job=%+v", child, job)
+	}
+
+	close(release)
+	completed, _ := waitForServiceOperation(
+		t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded,
+	)
+	if completed.Error != nil {
+		t.Fatalf("completed install = %+v", completed)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:service_install:succeeded")
+	childBegin := mutationEventIndex(events, "begin:firewall_sync")
+	childCall := mutationEventIndex(events, "call:firewall_sync")
+	childFinish := mutationEventIndex(events, "finish:firewall_sync:succeeded")
+	if outerFinish < 0 || childBegin <= outerFinish || childCall <= childBegin ||
+		childFinish <= childCall {
+		t.Fatalf("mutation events=%v", events)
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.firewallCalls != 1 || fixture.agent.legacyFirewallCalls != 0 ||
+		len(fixture.agent.firewallRequests) != 1 {
+		t.Fatalf(
+			"firewall V2/V1/requests = %d/%d/%d",
+			fixture.agent.firewallCalls,
+			fixture.agent.legacyFirewallCalls,
+			len(fixture.agent.firewallRequests),
+		)
+	}
+	request := fixture.agent.firewallRequests[0]
+	if request.MutationRequestID != child.RequestID ||
+		request.MutationOwnerID != child.OwnerID {
+		t.Fatalf("firewall request binding=%+v child=%+v", request.ServiceMutationBinding, child)
+	}
 }
 
 func TestWireGuardInstallUsesSequentialOuterAndPayloadBoundPeerLeases(t *testing.T) {
@@ -1450,6 +1740,270 @@ func seedSucceededWireGuardOuterOperation(
 	}
 	fixture.agent.mu.Unlock()
 	return op
+}
+
+func seedSucceededFirewallOuterOperation(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+) serviceOperation {
+	t.Helper()
+	op, err := fixture.panel.createServiceOperation(
+		context.Background(),
+		serviceOperationKindInstall,
+		"nginx",
+		"",
+		serviceOperationActor{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.panel.markServiceOperationRunning(
+		context.Background(), op.ID, "firewall",
+	); err != nil {
+		t.Fatal(err)
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.installed["nginx"] = true
+	fixture.agent.firewallEnabled = true
+	fixture.agent.mutationJobs[op.RequestID] = &ServiceOperationMutationJob{
+		RequestID: op.RequestID,
+		OwnerID:   strings.Repeat("7", 32),
+		Kind:      op.Kind,
+		Target:    op.ServiceID,
+		Status:    agentMutationSucceeded,
+		Phase:     "completed",
+		Attempt:   1,
+	}
+	fixture.agent.mu.Unlock()
+	return op
+}
+
+func seedActiveFirewallChild(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+	op serviceOperation,
+) firewallChildIdentity {
+	t.Helper()
+	commitment, err := mutationpayload.CanonicalFirewallApply(
+		true, false, []int{80, 2083}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := firewallChildIdentity{
+		RequestID: strings.Repeat("8", 32),
+		OwnerID:   strings.Repeat("9", 32),
+		Qualifier: commitment.Qualifier,
+	}
+	phase, err := encodeFirewallChildPhase(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.ID != "" {
+		if err := fixture.panel.updateServiceOperationPhase(
+			context.Background(), op.ID, phase,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.mutationJobs[identity.RequestID] = &ServiceOperationMutationJob{
+		RequestID:      identity.RequestID,
+		OwnerID:        identity.OwnerID,
+		Kind:           "firewall_sync",
+		Target:         "nftables",
+		PackageName:    identity.Qualifier,
+		Status:         agentMutationRunning,
+		Phase:          "starting",
+		Attempt:        1,
+		LeaseExpiresAt: time.Now().UTC().Add(time.Minute),
+		DeadlineAt:     time.Now().UTC().Add(time.Hour),
+	}
+	fixture.agent.mutationActive = identity.RequestID
+	fixture.agent.mu.Unlock()
+	return identity
+}
+
+func TestStartupRecoveryWaitsForActivationStartedAfterInitialStatusBeforeFirewallChild(
+	t *testing.T,
+) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	started := make(chan struct{})
+	release := make(chan struct{})
+	activation := &ServiceOperationMutationJob{
+		RequestID: strings.Repeat("a", 32),
+		OwnerID:   strings.Repeat("b", 32),
+		Kind:      "panel-certificate-activation",
+		Target:    "renewing-panel.example.test",
+		Status:    agentMutationRunning,
+		Phase:     "panel-certificate-activation",
+	}
+	fixture.agent.mu.Lock()
+	fixture.agent.activateAfterGlobalStatus = activation
+	fixture.agent.activationStarted = started
+	fixture.agent.releaseActivation = release
+	fixture.agent.mu.Unlock()
+
+	type recoveryResult struct {
+		recovered int64
+		err       error
+	}
+	result := make(chan recoveryResult, 1)
+	go func() {
+		recovered, err := fixture.panel.recoverInterruptedServiceOperations(
+			context.Background(),
+		)
+		result <- recoveryResult{recovered: recovered, err: err}
+	}()
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("activation was not injected after the first global status")
+	}
+	select {
+	case got := <-result:
+		t.Fatalf("recovery returned before activation terminalized: %+v", got)
+	case <-time.After(100 * time.Millisecond):
+	}
+	fixture.agent.mu.Lock()
+	statusBeforeRelease := fixture.agent.mutationJobs[activation.RequestID].Status
+	fixture.agent.mu.Unlock()
+	if statusBeforeRelease != agentMutationRunning {
+		t.Fatalf("activation status before listener release=%q", statusBeforeRelease)
+	}
+	close(release)
+
+	var got recoveryResult
+	select {
+	case got = <-result:
+	case <-time.After(5 * time.Second):
+		t.Fatal("recovery did not finish after activation terminalized")
+	}
+	if got.err != nil || got.recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", got.recovered, got.err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	fixture.agent.mu.Lock()
+	activationAfter := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[activation.RequestID],
+	)
+	firewallCalls := fixture.agent.firewallCalls
+	fixture.agent.mu.Unlock()
+	if activationAfter == nil || activationAfter.Status != agentMutationSucceeded {
+		t.Fatalf("activation was cancelled or lost: %+v", activationAfter)
+	}
+	if firewallCalls != 1 {
+		t.Fatalf("fresh firewall calls=%d, want 1", firewallCalls)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	activationDone := mutationEventIndex(events, "activation:succeeded")
+	firewallBegin := mutationEventIndex(events, "begin:firewall_sync")
+	if activationDone < 0 || firewallBegin <= activationDone {
+		t.Fatalf("startup recovery events=%v", events)
+	}
+}
+
+func TestStartupRecoveryTerminalizesExactFirewallChildThenReplaysDesiredWork(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	interrupted := seedActiveFirewallChild(t, fixture, op)
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	loaded, err := fixture.panel.serviceOperationByID(context.Background(), op.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != serviceOperationSucceeded || loaded.Phase != "completed" {
+		t.Fatalf("recovered operation=%+v", loaded)
+	}
+	fixture.agent.mu.Lock()
+	interruptedJob := cloneServiceOperationMutationJob(
+		fixture.agent.mutationJobs[interrupted.RequestID],
+	)
+	firewallCalls := fixture.agent.firewallCalls
+	legacyCalls := fixture.agent.legacyFirewallCalls
+	fixture.agent.mu.Unlock()
+	if interruptedJob == nil || interruptedJob.Status != agentMutationFailed {
+		t.Fatalf("interrupted child=%+v", interruptedJob)
+	}
+	if firewallCalls != 1 || legacyCalls != 0 {
+		t.Fatalf("fresh V2/V1 calls=%d/%d", firewallCalls, legacyCalls)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	cancelled := mutationEventIndex(events, "cancel:firewall_sync")
+	freshBegin := mutationEventIndex(events, "begin:firewall_sync")
+	freshCall := mutationEventIndex(events, "call:firewall_sync")
+	if cancelled < 0 || freshBegin <= cancelled || freshCall <= freshBegin {
+		t.Fatalf("recovery events=%v", events)
+	}
+}
+
+func TestStartupRecoveryOrphanFirewallChildDoesNotFabricatePayload(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	fixture.agent.mu.Lock()
+	fixture.agent.firewallEnabled = true
+	fixture.agent.mu.Unlock()
+	interrupted := seedActiveFirewallChild(t, fixture, serviceOperation{})
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err != nil || recovered != 0 {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(fixture.agent.mutationJobs[interrupted.RequestID])
+	firewallCalls := fixture.agent.firewallCalls
+	legacyCalls := fixture.agent.legacyFirewallCalls
+	fixture.agent.mu.Unlock()
+	if job == nil || job.Status != agentMutationFailed {
+		t.Fatalf("orphan child=%+v", job)
+	}
+	if firewallCalls != 0 || legacyCalls != 0 {
+		t.Fatalf("orphan recovery fabricated V2/V1 payload: %d/%d", firewallCalls, legacyCalls)
+	}
+}
+
+func TestStartupRecoveryRejectsFirewallChildNotMatchingPersistedIdentity(t *testing.T) {
+	fixture := newServiceOperationTestFixture(t)
+	op := seedSucceededFirewallOuterOperation(t, fixture)
+	seedActiveFirewallChild(t, fixture, op)
+	if _, err := fixture.database.GetDB().Exec(
+		"UPDATE service_operations SET phase=? WHERE id=?",
+		firewallChildPhasePrefix+strings.Repeat("a", 32)+"|"+
+			strings.Repeat("b", 32)+"|"+
+			mustFirewallQualifier(t),
+		op.ID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	recovered, err := fixture.panel.recoverInterruptedServiceOperations(context.Background())
+	if err == nil || recovered != 0 || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("recovered=%d err=%v", recovered, err)
+	}
+	fixture.agent.mu.Lock()
+	defer fixture.agent.mu.Unlock()
+	if fixture.agent.firewallCalls != 0 {
+		t.Fatalf("identity mismatch applied firewall %d times", fixture.agent.firewallCalls)
+	}
+}
+
+func mustFirewallQualifier(t *testing.T) string {
+	t.Helper()
+	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, []int{2083}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return commitment.Qualifier
 }
 
 func vpnRecoveryQualifier(t *testing.T, fixture serviceOperationTestFixture) string {
@@ -1711,7 +2265,8 @@ func TestStartupRecoveryFreshSyncsOrphanedDBLeaseAfterAgentAlreadyTerminal(t *te
 	)
 	fixture.agent.mu.Lock()
 	fixture.agent.mutationJobs[terminal.RequestID].Status = agentMutationSucceeded
-	fixture.agent.mutationJobs[terminal.RequestID].Phase = "completed"
+	fixture.agent.mutationJobs[terminal.RequestID].Phase =
+		"commit/vpn-peer-sync/v1/published/" + terminal.RequestID + "/" + terminal.PackageName
 	fixture.agent.mutationActive = ""
 	fixture.agent.mu.Unlock()
 

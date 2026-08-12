@@ -69,17 +69,18 @@ type serviceOperationError struct {
 }
 
 type serviceOperation struct {
-	ID          string                 `json:"id"`
-	RequestID   string                 `json:"request_id,omitempty"`
-	Kind        string                 `json:"kind"`
-	ServiceID   string                 `json:"service_id"`
-	PackageName string                 `json:"package_name,omitempty"`
-	Status      string                 `json:"status"`
-	Phase       string                 `json:"phase"`
-	StartedAt   string                 `json:"started_at"`
-	FinishedAt  string                 `json:"finished_at,omitempty"`
-	Result      json.RawMessage        `json:"result,omitempty"`
-	Error       *serviceOperationError `json:"error,omitempty"`
+	ID            string                 `json:"id"`
+	RequestID     string                 `json:"request_id,omitempty"`
+	Kind          string                 `json:"kind"`
+	ServiceID     string                 `json:"service_id"`
+	PackageName   string                 `json:"package_name,omitempty"`
+	Status        string                 `json:"status"`
+	Phase         string                 `json:"phase"`
+	StartedAt     string                 `json:"started_at"`
+	FinishedAt    string                 `json:"finished_at,omitempty"`
+	Result        json.RawMessage        `json:"result,omitempty"`
+	Error         *serviceOperationError `json:"error,omitempty"`
+	OperationData string                 `json:"-"`
 }
 
 type serviceOperationActor struct {
@@ -161,6 +162,20 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		writeAcceptedServiceOperation(w, existing)
 		return
 	}
+	if req.ServiceID == "pdns" {
+		if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
+			writeClientError(w, http.StatusConflict,
+				"DNS cluster topology is pending recovery; PowerDNS installation is blocked")
+			return
+		}
+		// A pdns install promises the post-terminal V2 full-zone child. Reject
+		// an old/mismatched agent before creating the outer durable row or
+		// touching the package manager.
+		if err := p.requireDNSZoneSyncV2Agent(r.Context()); err != nil {
+			writeServerError(w, err)
+			return
+		}
+	}
 	release, busy := p.beginServiceMutation(w, r)
 	if busy {
 		return
@@ -171,6 +186,13 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			release()
 		}
 	}()
+	if req.ServiceID == "pdns" {
+		if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
+			writeClientError(w, http.StatusConflict,
+				"DNS cluster topology is pending recovery; PowerDNS installation is blocked")
+			return
+		}
+	}
 
 	actor := captureServiceOperationActor(r)
 	op, err := p.createServiceOperationRequest(
@@ -302,6 +324,17 @@ func (p *Panel) createServiceOperationRequest(
 	kind, serviceID, packageName, requestID string,
 	actor serviceOperationActor,
 ) (serviceOperation, error) {
+	return p.createServiceOperationRequestWithState(
+		ctx, kind, serviceID, packageName, requestID, actor, "queued", "",
+	)
+}
+
+func (p *Panel) createServiceOperationRequestWithState(
+	ctx context.Context,
+	kind, serviceID, packageName, requestID string,
+	actor serviceOperationActor,
+	initialPhase, operationData string,
+) (serviceOperation, error) {
 	id, err := newServiceOperationID()
 	if err != nil {
 		return serviceOperation{}, err
@@ -318,16 +351,18 @@ func (p *Panel) createServiceOperationRequest(
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	op := serviceOperation{
 		ID: id, RequestID: requestID, Kind: kind, ServiceID: serviceID, PackageName: packageName,
-		Status: serviceOperationQueued, Phase: "queued", StartedAt: now,
+		Status: serviceOperationQueued, Phase: initialPhase, StartedAt: now,
+		OperationData: operationData,
 	}
 	_, err = p.db.GetDB().ExecContext(ctx, `
 		INSERT INTO service_operations (
 			id, request_id, kind, service_id, package_name, status, phase,
+			operation_data,
 			requested_by, request_ip, user_agent,
 			started_at, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		id, requestID, kind, serviceID, nullableNonEmpty(packageName),
-		serviceOperationQueued, "queued",
+		serviceOperationQueued, initialPhase, nullableNonEmpty(operationData),
 		nullablePositiveInt(actor.UserID), nullableNonEmpty(actor.IP), nullableNonEmpty(actor.UserAgent),
 		now, now, now,
 	)
@@ -391,6 +426,186 @@ func wireGuardInstallNeedsPeerSync(op serviceOperation) bool {
 	return op.Kind == serviceOperationKindInstall && op.ServiceID == "wireguard"
 }
 
+func powerDNSInstallNeedsZoneSync(op serviceOperation) bool {
+	return op.Kind == serviceOperationKindInstall && op.ServiceID == "pdns"
+}
+
+const firewallChildPhasePrefix = "firewall-child/v1|"
+const mailTLSChildPhasePrefix = "mail-tls-child/v1|"
+
+type firewallChildIdentity struct {
+	RequestID string
+	OwnerID   string
+	Qualifier string
+}
+
+type mailTLSChildIdentity struct {
+	RequestID string
+	OwnerID   string
+	Qualifier string
+}
+
+func mailProfileNeedsMailTLSSync(op serviceOperation) bool {
+	return op.Kind == serviceOperationKindMailProfileInstall
+}
+
+func encodeMailTLSChildPhase(identity mailTLSChildIdentity) (string, error) {
+	if !validServiceOperationID(identity.RequestID) ||
+		!validServiceOperationID(identity.OwnerID) ||
+		!mutationpayload.ValidMailTLSSyncQualifier(identity.Qualifier) {
+		return "", errors.New("invalid mail TLS child identity")
+	}
+	return mailTLSChildPhasePrefix + identity.RequestID + "|" +
+		identity.OwnerID + "|" + identity.Qualifier, nil
+}
+
+func parseMailTLSChildPhase(phase string) (mailTLSChildIdentity, bool) {
+	if !strings.HasPrefix(phase, mailTLSChildPhasePrefix) {
+		return mailTLSChildIdentity{}, false
+	}
+	parts := strings.Split(strings.TrimPrefix(phase, mailTLSChildPhasePrefix), "|")
+	if len(parts) != 3 {
+		return mailTLSChildIdentity{}, false
+	}
+	identity := mailTLSChildIdentity{
+		RequestID: parts[0], OwnerID: parts[1], Qualifier: parts[2],
+	}
+	if !validServiceOperationID(identity.RequestID) ||
+		!validServiceOperationID(identity.OwnerID) ||
+		!mutationpayload.ValidMailTLSSyncQualifier(identity.Qualifier) {
+		return mailTLSChildIdentity{}, false
+	}
+	return identity, true
+}
+
+func serviceOperationNeedsFirewallSync(op serviceOperation) bool {
+	return op.Kind == serviceOperationKindInstall ||
+		op.Kind == serviceOperationKindMailProfileInstall
+}
+
+func serviceOperationFirewallPhase(op serviceOperation) string {
+	if op.Kind == serviceOperationKindMailProfileInstall {
+		return mailProfilePhase(op.ServiceID, "firewall")
+	}
+	return "firewall"
+}
+
+func encodeFirewallChildPhase(identity firewallChildIdentity) (string, error) {
+	if !validServiceOperationID(identity.RequestID) ||
+		!validServiceOperationID(identity.OwnerID) ||
+		!mutationpayload.ValidFirewallApplyQualifier(identity.Qualifier) {
+		return "", errors.New("invalid firewall child identity")
+	}
+	return firewallChildPhasePrefix + identity.RequestID + "|" +
+		identity.OwnerID + "|" + identity.Qualifier, nil
+}
+
+func parseFirewallChildPhase(phase string) (firewallChildIdentity, bool) {
+	if !strings.HasPrefix(phase, firewallChildPhasePrefix) {
+		return firewallChildIdentity{}, false
+	}
+	parts := strings.Split(strings.TrimPrefix(phase, firewallChildPhasePrefix), "|")
+	if len(parts) != 3 {
+		return firewallChildIdentity{}, false
+	}
+	identity := firewallChildIdentity{
+		RequestID: parts[0],
+		OwnerID:   parts[1],
+		Qualifier: parts[2],
+	}
+	if !validServiceOperationID(identity.RequestID) ||
+		!validServiceOperationID(identity.OwnerID) ||
+		!mutationpayload.ValidFirewallApplyQualifier(identity.Qualifier) {
+		return firewallChildIdentity{}, false
+	}
+	return identity, true
+}
+
+// syncFirewallAfterOperation opens the direct firewall child only after the
+// outer agent job is exact terminal success. The process mutation lock remains
+// held by launchServiceOperationWithAuditMode through this call and panel-row
+// terminalization.
+func (p *Panel) syncFirewallAfterOperation(op serviceOperation) *serviceOperationFailure {
+	if !serviceOperationNeedsFirewallSync(op) {
+		return nil
+	}
+	syncCtx, cancelSync := context.WithTimeout(
+		context.Background(),
+		panelMutationRecoveryTimeout,
+	)
+	defer cancelSync()
+	if err := p.syncFirewallForServiceOperation(syncCtx, op); err != nil {
+		return firewallSyncFailure(err)
+	}
+	return nil
+}
+
+// syncMailTLSAfterOperation runs only after the mail-profile agent job is
+// exact terminal success. serviceMutationMu remains held by the launcher while
+// the helper takes mailTLSSyncMu and opens a fresh direct payload-bound lease.
+func (p *Panel) syncMailTLSAfterOperation(
+	op serviceOperation,
+	result serviceOperationResult,
+) *serviceOperationFailure {
+	if !mailProfileNeedsMailTLSSync(op) {
+		return nil
+	}
+	syncCtx, cancelSync := context.WithTimeout(
+		context.Background(), panelMailTLSSyncTimeout,
+	)
+	defer cancelSync()
+	if err := p.authorizeAgentRPCContext(syncCtx, "Agent.SyncMailTLSV2"); err != nil {
+		return mailProfileInstallFailure(err)
+	}
+	if err := p.requireMailTLSSyncV2Agent(syncCtx); err != nil {
+		return mailProfileInstallFailure(err)
+	}
+	mailTLSSyncMu.Lock()
+	defer mailTLSSyncMu.Unlock()
+	host, sni, err := p.loadMailTLSSnapshotLocked(syncCtx, 0)
+	if err != nil {
+		return mailProfileInstallFailure(fmt.Errorf("build mail TLS snapshot: %w", err))
+	}
+	commitment, err := mutationpayload.CanonicalMailTLSSync(
+		panelMailTLSManagedRoot, host, sni,
+	)
+	if err != nil {
+		return mailProfileInstallFailure(fmt.Errorf("canonicalize mail TLS snapshot: %w", err))
+	}
+	requestID, err := newServiceOperationID()
+	if err != nil {
+		return operationStartFailure(err)
+	}
+	ownerID, err := newServiceOperationID()
+	if err != nil {
+		return operationStartFailure(err)
+	}
+	phase, err := encodeMailTLSChildPhase(mailTLSChildIdentity{
+		RequestID: requestID, OwnerID: ownerID, Qualifier: commitment.Qualifier,
+	})
+	if err != nil {
+		return operationStartFailure(err)
+	}
+	if err := p.updateServiceOperationPhase(syncCtx, op.ID, phase); err != nil {
+		return operationAdvanceFailure(err)
+	}
+	response, err := p.applyCanonicalMailTLSV2Identity(
+		syncCtx, commitment, requestID, ownerID,
+	)
+	if err != nil {
+		return mailProfileInstallFailure(fmt.Errorf("mail TLS synchronization: %w", err))
+	}
+	tlsResult := mailProfileTLSResult{
+		Configured: true, SNICount: response.SNICount,
+		FallbackOnly: response.SNICount == 0,
+	}
+	result["mail_tls"] = tlsResult
+	if tlsResult.FallbackOnly {
+		result["warnings"] = []string{mailProfileFallbackWarning}
+	}
+	return nil
+}
+
 // syncWireGuardPeersAfterInstall opens a fresh, unbound durable mutation only
 // after the outer service_install job is terminal. The process mutation lock
 // remains owned by the caller until this step and the panel row are terminal.
@@ -411,6 +626,41 @@ func (p *Panel) syncWireGuardPeersAfterInstall(
 	if err := p.syncVPNPeers(syncCtx); err != nil {
 		return serviceInstallFailure(fmt.Errorf(
 			"WireGuard peer synchronization: %w",
+			err,
+		))
+	}
+	return nil
+}
+
+// syncPowerDNSZonesAfterInstall opens fresh direct V2 children only after the
+// outer pdns install is exact terminal success. The caller still owns
+// serviceMutationMu, so this helper takes only dnsPublicationMu.
+func (p *Panel) syncPowerDNSZonesAfterInstall(
+	op serviceOperation,
+) *serviceOperationFailure {
+	syncCtx, cancelSync := dnsZoneBatchContext(context.Background())
+	defer cancelSync()
+	return p.syncPowerDNSZonesAfterInstallContext(syncCtx, op)
+}
+
+func (p *Panel) syncPowerDNSZonesAfterInstallContext(
+	syncCtx context.Context,
+	op serviceOperation,
+) *serviceOperationFailure {
+	if !powerDNSInstallNeedsZoneSync(op) {
+		return nil
+	}
+	if err := p.updateServiceOperationPhase(syncCtx, op.ID, "syncing_dns"); err != nil {
+		return operationAdvanceFailure(err)
+	}
+	dnsPublicationMu.Lock()
+	result, err := p.syncAllZonesLocked(syncCtx)
+	dnsPublicationMu.Unlock()
+	if err != nil {
+		return serviceInstallFailure(fmt.Errorf(
+			"PowerDNS V2 zone synchronization (%d/%d applied): %w",
+			result.Synced,
+			result.Attempted,
 			err,
 		))
 	}
@@ -535,6 +785,36 @@ func (p *Panel) launchServiceOperationWithAuditMode(
 				"The privileged agent did not commit the package operation as successful.",
 				fmt.Errorf("agent terminal status is %s", agentTerminal.Status),
 			)
+		}
+		if failure == nil && serviceOperationNeedsFirewallSync(op) {
+			phase = serviceOperationFirewallPhase(op)
+			if syncFailure := p.syncFirewallAfterOperation(op); syncFailure != nil {
+				if result == nil {
+					result = serviceOperationResult{}
+				}
+				result["success"] = false
+				failure = syncFailure
+			}
+		}
+		if failure == nil && mailProfileNeedsMailTLSSync(op) {
+			phase = mailProfilePhase(op.ServiceID, "mail-tls")
+			if result == nil {
+				result = serviceOperationResult{}
+			}
+			if syncFailure := p.syncMailTLSAfterOperation(op, result); syncFailure != nil {
+				result["success"] = false
+				failure = syncFailure
+			}
+		}
+		if failure == nil && powerDNSInstallNeedsZoneSync(op) {
+			phase = "syncing_dns"
+			if syncFailure := p.syncPowerDNSZonesAfterInstall(op); syncFailure != nil {
+				if result == nil {
+					result = serviceOperationResult{}
+				}
+				result["success"] = false
+				failure = syncFailure
+			}
 		}
 		if failure == nil && wireGuardInstallNeedsPeerSync(op) {
 			phase = "syncing"
@@ -752,10 +1032,10 @@ type serviceOperationScanner interface {
 
 func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, error) {
 	var op serviceOperation
-	var requestID, packageName, finishedAt, resultJSON, errorCode, errorMessage sql.NullString
+	var requestID, packageName, finishedAt, resultJSON, errorCode, errorMessage, operationData sql.NullString
 	err := scanner.Scan(
 		&op.ID, &requestID, &op.Kind, &op.ServiceID, &packageName, &op.Status, &op.Phase, &op.StartedAt,
-		&finishedAt, &resultJSON, &errorCode, &errorMessage,
+		&finishedAt, &resultJSON, &errorCode, &errorMessage, &operationData,
 	)
 	if err != nil {
 		return serviceOperation{}, err
@@ -775,12 +1055,15 @@ func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, er
 	if errorCode.Valid || errorMessage.Valid {
 		op.Error = &serviceOperationError{Code: errorCode.String, Message: errorMessage.String}
 	}
+	if operationData.Valid {
+		op.OperationData = operationData.String
+	}
 	return op, nil
 }
 
 const serviceOperationSelect = `
 	SELECT id, request_id, kind, service_id, package_name, status, phase, started_at,
-	       finished_at, result_json, error_code, error_message
+	       finished_at, result_json, error_code, error_message, operation_data
 	FROM service_operations`
 
 func (p *Panel) serviceOperationByID(ctx context.Context, id string) (serviceOperation, error) {
@@ -945,12 +1228,106 @@ func validDirectVPNPeerSync(job *agentMutationJob) bool {
 		mutationpayload.ValidVPNPeerSyncQualifier(job.PackageName)
 }
 
+func validDirectFirewallMutation(job *agentMutationJob) bool {
+	return job != nil && agentMutationActive(job.Status) &&
+		validServiceOperationID(job.RequestID) &&
+		validServiceOperationID(job.OwnerID) &&
+		(job.Kind == "firewall_apply" || job.Kind == "firewall_sync") &&
+		job.Target == "nftables" &&
+		mutationpayload.ValidFirewallApplyQualifier(job.PackageName)
+}
+
+func validDirectMailTLSSync(job *agentMutationJob) bool {
+	return job != nil && agentMutationActive(job.Status) &&
+		validServiceOperationID(job.RequestID) &&
+		validServiceOperationID(job.OwnerID) &&
+		job.Kind == "mail_tls_sync" &&
+		job.Target == "mail-tls" &&
+		mutationpayload.ValidMailTLSSyncQualifier(job.PackageName)
+}
+
+func recoverableFirewallChild(
+	op *serviceOperation,
+	job *agentMutationJob,
+) bool {
+	if op == nil || !serviceOperationNeedsFirewallSync(*op) ||
+		!validDirectFirewallMutation(job) || job.Kind != "firewall_sync" {
+		return false
+	}
+	persisted, ok := parseFirewallChildPhase(op.Phase)
+	return ok && job.RequestID == persisted.RequestID &&
+		job.OwnerID == persisted.OwnerID &&
+		job.PackageName == persisted.Qualifier
+}
+
+func recoverableMailTLSChild(
+	op *serviceOperation,
+	job *agentMutationJob,
+) bool {
+	if op == nil || !mailProfileNeedsMailTLSSync(*op) ||
+		!validDirectMailTLSSync(job) {
+		return false
+	}
+	persisted, ok := parseMailTLSChildPhase(op.Phase)
+	return ok && job.RequestID == persisted.RequestID &&
+		job.OwnerID == persisted.OwnerID &&
+		job.PackageName == persisted.Qualifier
+}
+
+func (p *Panel) persistedMailTLSChildSucceeded(
+	ctx context.Context,
+	op serviceOperation,
+) (bool, error) {
+	identity, ok := parseMailTLSChildPhase(op.Phase)
+	if !ok {
+		return false, nil
+	}
+	job, err := p.statusAgentMutation(ctx, identity.RequestID)
+	if err != nil {
+		return false, err
+	}
+	if job == nil {
+		// The child identity is persisted before BeginServiceMutation. A crash in
+		// that narrow window is safe to retry because no agent-owned work exists.
+		return false, nil
+	}
+	if job.RequestID != identity.RequestID || job.OwnerID != identity.OwnerID ||
+		job.Kind != "mail_tls_sync" || job.Target != "mail-tls" ||
+		job.PackageName != identity.Qualifier {
+		return false, errors.New("persisted mail TLS child identity disagrees with the agent ledger")
+	}
+	if job.Status != agentMutationSucceeded {
+		return false, nil
+	}
+	mutationIdentity := agentMutationIdentity{
+		RequestID: identity.RequestID, OwnerID: identity.OwnerID,
+		Kind: "mail_tls_sync", Target: "mail-tls",
+		PackageName: identity.Qualifier,
+	}
+	if err := validateAgentMutationSucceededReceipt(job, mutationIdentity); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func recoverableWireGuardPeerSync(
 	op *serviceOperation,
 	job *agentMutationJob,
 ) bool {
 	return op != nil && wireGuardInstallNeedsPeerSync(*op) &&
 		validDirectVPNPeerSync(job)
+}
+
+func (p *Panel) recoverablePowerDNSZoneSync(
+	ctx context.Context,
+	op *serviceOperation,
+	job *agentMutationJob,
+) bool {
+	if op == nil || !powerDNSInstallNeedsZoneSync(*op) || !validDirectDNSZoneSync(job) {
+		return false
+	}
+	_, err := p.exactDNSZoneLeaseForJob(ctx, job)
+	return err == nil
 }
 
 func agentMutationJobIdentity(job *agentMutationJob) agentMutationIdentity {
@@ -964,6 +1341,74 @@ func agentMutationJobIdentity(job *agentMutationJob) agentMutationIdentity {
 		Target:      job.Target,
 		PackageName: job.PackageName,
 	}
+}
+
+// waitIndependentPanelCertificateActivations consumes only the exact,
+// agent-owned activation that can restart this process while verifying the
+// newly published TLS leaf. The listener is already serving behind the startup
+// HTTP gate when this runs, so the activation can finish without being
+// cancelled and without admitting application traffic. Reloading the global
+// slot after every terminal receipt also handles a queued activation retry.
+func (p *Panel) waitIndependentPanelCertificateActivations(
+	ctx context.Context,
+	observed *agentMutationJob,
+) (*agentMutationJob, error) {
+	current := observed
+	for current != nil && agentMutationActive(current.Status) &&
+		current.Kind == "panel-certificate-activation" {
+		if !validIndependentPanelCertificateActivation(current) {
+			return current, errors.New(
+				"active panel certificate activation has an invalid durable identity",
+			)
+		}
+		identity := agentMutationJobIdentity(current)
+		terminal, err := p.waitExpectedAgentMutationTerminal(ctx, identity)
+		if err != nil {
+			return terminal, fmt.Errorf(
+				"wait for independent panel certificate activation: %w",
+				err,
+			)
+		}
+		if !identity.matches(terminal) ||
+			(terminal.Status != agentMutationSucceeded &&
+				terminal.Status != agentMutationFailed) {
+			return terminal, errors.New(
+				"independent panel certificate activation did not return an exact terminal receipt",
+			)
+		}
+		current, err = p.statusAgentMutation(ctx, "")
+		if err != nil {
+			return current, fmt.Errorf(
+				"reload privileged mutation ledger after panel certificate activation: %w",
+				err,
+			)
+		}
+	}
+	return current, nil
+}
+
+func (p *Panel) refreshStartupGlobalMutation(
+	ctx context.Context,
+) (*agentMutationJob, error) {
+	job, err := p.statusAgentMutation(ctx, "")
+	if err != nil {
+		return job, fmt.Errorf("read privileged mutation ledger during startup: %w", err)
+	}
+	return p.waitIndependentPanelCertificateActivations(ctx, job)
+}
+
+func (p *Panel) requireStartupAgentMutationSlot(ctx context.Context) error {
+	job, err := p.refreshStartupGlobalMutation(ctx)
+	if err != nil {
+		return err
+	}
+	if job != nil && agentMutationActive(job.Status) {
+		return fmt.Errorf(
+			"agent mutation %s acquired the host lease during startup recovery",
+			job.RequestID,
+		)
+	}
+	return nil
 }
 
 func (p *Panel) terminalizeInterruptedWireGuardPeerSync(
@@ -1015,6 +1460,101 @@ func (p *Panel) terminalizeInterruptedWireGuardPeerSync(
 	return nil
 }
 
+func (p *Panel) terminalizeInterruptedFirewallMutation(
+	ctx context.Context,
+	job *agentMutationJob,
+) error {
+	identity := agentMutationJobIdentity(job)
+	if !validDirectFirewallMutation(job) || !identity.matches(job) {
+		return errors.New("interrupted direct firewall mutation has an invalid durable identity")
+	}
+	current := job
+	if current.Status == agentMutationRunning {
+		cancelErr := p.cancelAgentMutation(
+			ctx,
+			current,
+			"panel_restarted_during_firewall_mutation",
+			"Panel restarted before direct firewall synchronization was reconciled.",
+		)
+		if cancelErr != nil {
+			observed, statusErr := p.statusAgentMutation(ctx, identity.RequestID)
+			if statusErr != nil {
+				return errors.Join(
+					fmt.Errorf("cancel interrupted firewall mutation: %w", cancelErr),
+					fmt.Errorf("verify interrupted firewall mutation: %w", statusErr),
+				)
+			}
+			if err := validateAgentMutationIdentity(observed, identity); err != nil {
+				return err
+			}
+			current = observed
+			if current.Status == agentMutationRunning {
+				return fmt.Errorf("cancel interrupted firewall mutation: %w", cancelErr)
+			}
+		}
+	}
+	if agentMutationActive(current.Status) {
+		terminal, err := p.waitAgentMutationTerminal(ctx, identity.RequestID)
+		if err != nil {
+			return fmt.Errorf("wait for interrupted firewall mutation: %w", err)
+		}
+		if err := validateAgentMutationIdentity(terminal, identity); err != nil {
+			return err
+		}
+		current = terminal
+	}
+	if current == nil || agentMutationActive(current.Status) {
+		return errors.New("interrupted firewall mutation did not reach a terminal state")
+	}
+	return nil
+}
+
+func (p *Panel) terminalizeInterruptedMailTLSSync(
+	ctx context.Context,
+	job *agentMutationJob,
+) (*agentMutationJob, error) {
+	identity := agentMutationJobIdentity(job)
+	if !validDirectMailTLSSync(job) || !identity.matches(job) {
+		return job, errors.New("interrupted direct mail TLS sync has an invalid durable identity")
+	}
+	current := job
+	if current.Status == agentMutationRunning {
+		cancelErr := p.cancelAgentMutation(
+			ctx,
+			current,
+			"panel_restarted_during_mail_tls_sync",
+			"The panel restarted before direct mail TLS synchronization was reconciled.",
+		)
+		if cancelErr != nil {
+			observed, statusErr := p.statusAgentMutation(ctx, identity.RequestID)
+			if statusErr != nil {
+				return observed, errors.Join(cancelErr, statusErr)
+			}
+			if err := validateAgentMutationIdentity(observed, identity); err != nil {
+				return observed, err
+			}
+			current = observed
+			if agentMutationActive(current.Status) && current.Status != agentMutationCancelling {
+				return current, cancelErr
+			}
+		}
+	}
+	if agentMutationActive(current.Status) {
+		terminal, err := p.waitAgentMutationTerminal(ctx, identity.RequestID)
+		if err != nil {
+			return terminal, fmt.Errorf("wait for interrupted mail TLS sync: %w", err)
+		}
+		if err := validateAgentMutationIdentity(terminal, identity); err != nil {
+			return terminal, err
+		}
+		current = terminal
+	}
+	if current == nil || agentMutationActive(current.Status) {
+		return current, errors.New("interrupted mail TLS sync did not reach a terminal state")
+	}
+	return current, nil
+}
+
 func (p *Panel) clearInterruptedVPNSyncLease(ctx context.Context) (bool, error) {
 	result, err := p.db.GetDB().ExecContext(ctx, `
 		UPDATE vpn_sync_state
@@ -1057,19 +1597,113 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	recoveryCtx, cancel := context.WithTimeout(ctx, panelMutationRecoveryTimeout)
 	defer cancel()
 
-	globalJob, err := p.statusAgentMutation(recoveryCtx, "")
+	globalJob, err := p.refreshStartupGlobalMutation(recoveryCtx)
 	if err != nil {
-		return 0, fmt.Errorf("read privileged mutation ledger during startup: %w", err)
+		return 0, err
+	}
+	if op != nil && op.Kind == serviceOperationKindPanelCertificate {
+		if !validServiceOperationID(op.RequestID) {
+			return 0, errors.New("active panel certificate operation has no durable request identity")
+		}
+		if _, err := decodePanelCertificateSagaData(*op); err != nil {
+			return 0, fmt.Errorf("validate active panel certificate operation: %w", err)
+		}
+		globalJob, err = p.refreshStartupGlobalMutation(recoveryCtx)
+		if err != nil {
+			return 0, err
+		}
+		if globalJob != nil && agentMutationActive(globalJob.Status) &&
+			!recoverablePanelCertificateSagaChild(*op, globalJob) {
+			return 0, fmt.Errorf(
+				"active agent mutation %s does not match the persisted panel certificate operation",
+				globalJob.RequestID,
+			)
+		}
+		if err := p.resumePanelCertificateSagaLocked(*op); err != nil {
+			return 0, err
+		}
+		lockTransferred = true
+		return 0, nil
 	}
 	if op == nil {
+		dnsClusterPending, observeErr := p.observeDNSClusterSagaStartup(
+			recoveryCtx, globalJob,
+		)
+		if observeErr != nil {
+			return 0, observeErr
+		}
+		if validDirectDNSClusterConfigure(globalJob) {
+			globalJob, err = p.refreshStartupGlobalMutation(recoveryCtx)
+			if err != nil {
+				return 0, err
+			}
+		}
 		if globalJob == nil || !agentMutationActive(globalJob.Status) {
 			cleared, clearErr := p.clearInterruptedVPNSyncLease(recoveryCtx)
 			if clearErr != nil {
 				return 0, clearErr
 			}
 			if cleared {
+				if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+					return 0, err
+				}
 				if err := p.syncVPNPeersAfterRecovery(); err != nil {
 					return 0, fmt.Errorf("resynchronize orphaned WireGuard peers: %w", err)
+				}
+			}
+			if !dnsClusterPending {
+				if err := p.recoverDNSZoneSyncStateLocked(recoveryCtx); err != nil {
+					return 0, fmt.Errorf("reconcile pending DNS publications: %w", err)
+				}
+			}
+			return 0, nil
+		}
+		if validDirectDNSZoneSync(globalJob) {
+			if dnsClusterPending {
+				return 0, nil
+			}
+			if err := p.recoverDirectDNSZoneSyncLocked(recoveryCtx, globalJob); err != nil {
+				return 0, fmt.Errorf("reconcile interrupted DNS publication: %w", err)
+			}
+			return 0, nil
+		}
+		if validDirectDNSSECSecure(globalJob) {
+			if dnsClusterPending {
+				return 0, nil
+			}
+			if err := p.recoverDirectDNSSECSecureLocked(
+				recoveryCtx, globalJob,
+			); err != nil {
+				return 0, fmt.Errorf("reconcile interrupted DNSSEC signing: %w", err)
+			}
+			return 0, nil
+		}
+		if validDirectFirewallMutation(globalJob) {
+			if err := p.terminalizeInterruptedFirewallMutation(
+				recoveryCtx,
+				globalJob,
+			); err != nil {
+				return 0, err
+			}
+			// There is no active panel row carrying desired firewall work.
+			// Reconstructing a payload from a digest would fabricate authority;
+			// exact agent terminalization is the complete orphan recovery.
+			if !dnsClusterPending {
+				if err := p.recoverDNSZoneSyncStateLocked(recoveryCtx); err != nil {
+					return 0, fmt.Errorf("reconcile pending DNS publications: %w", err)
+				}
+			}
+			return 0, nil
+		}
+		if validDirectMailTLSSync(globalJob) {
+			if _, err := p.terminalizeInterruptedMailTLSSync(
+				recoveryCtx, globalJob,
+			); err != nil {
+				return 0, err
+			}
+			if !dnsClusterPending {
+				if err := p.recoverDNSZoneSyncStateLocked(recoveryCtx); err != nil {
+					return 0, fmt.Errorf("reconcile pending DNS publications: %w", err)
 				}
 			}
 			return 0, nil
@@ -1084,8 +1718,16 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 			if _, err := p.clearInterruptedVPNSyncLease(recoveryCtx); err != nil {
 				return 0, err
 			}
+			if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+				return 0, err
+			}
 			if err := p.syncVPNPeersAfterRecovery(); err != nil {
 				return 0, fmt.Errorf("resynchronize interrupted WireGuard peers: %w", err)
+			}
+			if !dnsClusterPending {
+				if err := p.recoverDNSZoneSyncStateLocked(recoveryCtx); err != nil {
+					return 0, fmt.Errorf("reconcile pending DNS publications: %w", err)
+				}
 			}
 			return 0, nil
 		}
@@ -1102,10 +1744,25 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 		if _, err := p.waitAgentMutationTerminal(recoveryCtx, globalJob.RequestID); err != nil {
 			return 0, fmt.Errorf("wait for unmatched privileged mutation: %w", err)
 		}
+		if !dnsClusterPending {
+			if err := p.recoverDNSZoneSyncStateLocked(recoveryCtx); err != nil {
+				return 0, fmt.Errorf("reconcile pending DNS publications: %w", err)
+			}
+		}
 		return 0, nil
 	}
 	if !validServiceOperationID(op.RequestID) {
 		return 0, errors.New("active panel operation has no durable request identity")
+	}
+	if strings.HasPrefix(op.Phase, firewallChildPhasePrefix) {
+		if _, ok := parseFirewallChildPhase(op.Phase); !ok {
+			return 0, errors.New("active panel operation has a malformed firewall child identity")
+		}
+	}
+	if strings.HasPrefix(op.Phase, mailTLSChildPhasePrefix) {
+		if _, ok := parseMailTLSChildPhase(op.Phase); !ok {
+			return 0, errors.New("active panel operation has a malformed mail TLS child identity")
+		}
 	}
 	var recoveryProfile mailProfileDefinition
 	if op.Kind == serviceOperationKindMailProfileInstall {
@@ -1118,20 +1775,72 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 			return 0, errors.New("interrupted mail profile operation has an unknown profile target")
 		}
 	}
+	recoveredPowerDNSChild := false
+	recoveredMailTLSChild := false
+	globalJob, err = p.refreshStartupGlobalMutation(recoveryCtx)
+	if err != nil {
+		return 0, err
+	}
 	if globalJob != nil && agentMutationActive(globalJob.Status) &&
 		globalJob.RequestID != op.RequestID {
-		if !recoverableWireGuardPeerSync(op, globalJob) {
+		switch {
+		case recoverableFirewallChild(op, globalJob):
+			if err := p.terminalizeInterruptedFirewallMutation(
+				recoveryCtx,
+				globalJob,
+			); err != nil {
+				return 0, err
+			}
+		case recoverableMailTLSChild(op, globalJob):
+			terminal, err := p.terminalizeInterruptedMailTLSSync(
+				recoveryCtx, globalJob,
+			)
+			if err != nil {
+				return 0, err
+			}
+			recoveredMailTLSChild = false
+			if terminal != nil && terminal.Status == agentMutationSucceeded {
+				persisted, ok := parseMailTLSChildPhase(op.Phase)
+				if !ok {
+					return 0, errors.New("persisted mail TLS child identity is invalid")
+				}
+				identity := agentMutationIdentity{
+					RequestID: persisted.RequestID, OwnerID: persisted.OwnerID,
+					Kind: "mail_tls_sync", Target: "mail-tls",
+					PackageName: persisted.Qualifier,
+				}
+				if err := validateAgentMutationSucceededReceipt(terminal, identity); err != nil {
+					return 0, err
+				}
+				recoveredMailTLSChild = true
+			}
+		case recoverableWireGuardPeerSync(op, globalJob):
+			if err := p.terminalizeInterruptedWireGuardPeerSync(
+				recoveryCtx,
+				globalJob,
+			); err != nil {
+				return 0, err
+			}
+		case p.recoverablePowerDNSZoneSync(recoveryCtx, op, globalJob):
+			if err := p.recoverDirectDNSZoneSyncLocked(
+				recoveryCtx,
+				globalJob,
+			); err != nil {
+				return 0, err
+			}
+			recoveredPowerDNSChild = true
+		default:
 			return 0, fmt.Errorf(
 				"agent mutation %s does not match active panel operation %s",
 				globalJob.RequestID,
 				op.RequestID,
 			)
 		}
-		if err := p.terminalizeInterruptedWireGuardPeerSync(
-			recoveryCtx,
-			globalJob,
-		); err != nil {
-			return 0, err
+	}
+	if !recoveredMailTLSChild && mailProfileNeedsMailTLSSync(*op) {
+		recoveredMailTLSChild, err = p.persistedMailTLSChildSucceeded(recoveryCtx, *op)
+		if err != nil {
+			return 0, fmt.Errorf("reconcile persisted mail TLS child: %w", err)
 		}
 	}
 
@@ -1193,6 +1902,89 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 				return 0, err
 			}
 		}
+		if serviceOperationNeedsFirewallSync(*op) {
+			if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+				return 0, err
+			}
+		}
+		if syncFailure := p.syncFirewallAfterOperation(*op); syncFailure != nil {
+			if result == nil {
+				result = serviceOperationResult{}
+			}
+			result["success"] = false
+			terminalCtx, cancelTerminal := context.WithTimeout(
+				context.Background(),
+				panelMutationFinishTimeout,
+			)
+			defer cancelTerminal()
+			if err := p.finishServiceOperationFailed(
+				terminalCtx,
+				op.ID,
+				serviceOperationFirewallPhase(*op),
+				result,
+				syncFailure,
+			); err != nil {
+				return 0, err
+			}
+			return 1, nil
+		}
+		if mailProfileNeedsMailTLSSync(*op) && !recoveredMailTLSChild {
+			if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+				return 0, err
+			}
+			if syncFailure := p.syncMailTLSAfterOperation(*op, result); syncFailure != nil {
+				if result == nil {
+					result = serviceOperationResult{}
+				}
+				result["success"] = false
+				terminalCtx, cancelTerminal := context.WithTimeout(
+					context.Background(), panelMutationFinishTimeout,
+				)
+				defer cancelTerminal()
+				if err := p.finishServiceOperationFailed(
+					terminalCtx, op.ID, mailProfilePhase(op.ServiceID, "mail-tls"),
+					result, syncFailure,
+				); err != nil {
+					return 0, err
+				}
+				return 1, nil
+			}
+		}
+		if powerDNSInstallNeedsZoneSync(*op) && !recoveredPowerDNSChild {
+			dnsBatchCtx, cancelDNSBatch := dnsZoneBatchContext(recoveryCtx)
+			if err := p.requireStartupAgentMutationSlot(dnsBatchCtx); err != nil {
+				cancelDNSBatch()
+				return 0, err
+			}
+			syncFailure := p.syncPowerDNSZonesAfterInstallContext(dnsBatchCtx, *op)
+			cancelDNSBatch()
+			if syncFailure != nil {
+				if result == nil {
+					result = serviceOperationResult{}
+				}
+				result["success"] = false
+				terminalCtx, cancelTerminal := context.WithTimeout(
+					context.Background(),
+					panelMutationFinishTimeout,
+				)
+				defer cancelTerminal()
+				if err := p.finishServiceOperationFailed(
+					terminalCtx,
+					op.ID,
+					"syncing_dns",
+					result,
+					syncFailure,
+				); err != nil {
+					return 0, err
+				}
+				return 1, nil
+			}
+		}
+		if wireGuardInstallNeedsPeerSync(*op) {
+			if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+				return 0, err
+			}
+		}
 		if syncFailure := p.syncWireGuardPeersAfterInstall(*op); syncFailure != nil {
 			if result == nil {
 				result = serviceOperationResult{}
@@ -1233,6 +2025,9 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 			return 0, err
 		}
 		return 1, nil
+	}
+	if err := p.requireStartupAgentMutationSlot(recoveryCtx); err != nil {
+		return 0, err
 	}
 	if err := p.resumeInterruptedServiceOperationLocked(*op); err != nil {
 		return 0, err

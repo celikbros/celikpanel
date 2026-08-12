@@ -63,6 +63,14 @@ type compensationDNSAgent struct {
 	readinessDetail string
 }
 
+func (a *compensationDNSAgent) Version(
+	_ *transport.Empty,
+	resp *transport.AgentVersionResponse,
+) error {
+	resp.Capabilities = []string{transport.AgentCapabilityDNSZoneSyncV2}
+	return nil
+}
+
 func (a *compensationDNSAgent) ConfigureDNSCluster(
 	req *CompensationDNSClusterRequest,
 	resp *CompensationDNSClusterResponse,
@@ -110,14 +118,14 @@ func attachCompensationDNSAgent(t *testing.T, p *Panel, agent *compensationDNSAg
 func rejectDNSClusterSettingWrites(t *testing.T, p *Panel) {
 	t.Helper()
 	if _, err := p.db.GetDB().Exec(`
-		CREATE TRIGGER reject_dns_role_insert
-		BEFORE INSERT ON panel_settings WHEN NEW.key = 'dns_role'
-		BEGIN SELECT RAISE(ABORT, 'forced DNS role save failure'); END;
-		CREATE TRIGGER reject_dns_role_update
-		BEFORE UPDATE ON panel_settings WHEN NEW.key = 'dns_role'
-		BEGIN SELECT RAISE(ABORT, 'forced DNS role save failure'); END;
+		CREATE TRIGGER reject_dns_cluster_saga_insert
+		BEFORE INSERT ON panel_settings WHEN NEW.key = 'dns_cluster_saga_v1'
+		BEGIN SELECT RAISE(ABORT, 'forced DNS saga save failure'); END;
+		CREATE TRIGGER reject_dns_cluster_saga_update
+		BEFORE UPDATE ON panel_settings WHEN NEW.key = 'dns_cluster_saga_v1'
+		BEGIN SELECT RAISE(ABORT, 'forced DNS saga save failure'); END;
 	`); err != nil {
-		t.Fatalf("install DNS role failure trigger: %v", err)
+		t.Fatalf("install DNS saga failure trigger: %v", err)
 	}
 }
 

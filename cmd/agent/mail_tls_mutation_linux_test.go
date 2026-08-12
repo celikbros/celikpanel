@@ -3,13 +3,14 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
-func TestReconcileMailTLSMutationCanceledWhileBusyDoesNotRun(t *testing.T) {
+func TestLegacyReconcileMailTLSMutationReturnsBeforeLeaseOrMailLock(t *testing.T) {
 	manager, _ := newMutationTestManager(t)
 	manager.leaseDuration = time.Minute
 	installGlobalMutationTestManager(t, manager)
@@ -19,70 +20,26 @@ func TestReconcileMailTLSMutationCanceledWhileBusyDoesNotRun(t *testing.T) {
 	lookupCalled := false
 	lookupMailTLSCommand = func(name string) (string, error) {
 		lookupCalled = true
-		return "", fmt.Errorf("unexpected lookup for %s", name)
+		return name, nil
 	}
 	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
 
 	mailMutex.Lock()
-	locked := true
-	t.Cleanup(func() {
-		if locked {
-			mailMutex.Unlock()
-		}
-	})
-
-	type callResult struct {
-		response SecureMailTLSResponse
-		err      error
-	}
-	result := make(chan callResult, 1)
-	go func() {
-		var response SecureMailTLSResponse
-		err := (&Agent{}).ReconcileMailTLSMutation(
-			&ReconcileMailTLSMutationRequest{
-				ServiceMutationBinding: ServiceMutationBinding{
-					MutationRequestID: testMutationRequestID,
-					MutationOwnerID:   testMutationOwnerID,
-				},
-				Myhostname: "mail.example.test",
+	defer mailMutex.Unlock()
+	var response SecureMailTLSResponse
+	err := (&Agent{}).ReconcileMailTLSMutation(
+		&ReconcileMailTLSMutationRequest{
+			ServiceMutationBinding: ServiceMutationBinding{
+				MutationRequestID: testMutationRequestID,
+				MutationOwnerID:   testMutationOwnerID,
 			},
-			&response,
-		)
-		result <- callResult{response: response, err: err}
-	}()
-
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		manager.mu.Lock()
-		steps := 0
-		if manager.active != nil {
-			steps = manager.active.steps
-		}
-		manager.mu.Unlock()
-		if steps == 1 {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("mail TLS reconciliation did not acquire its durable mutation step")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	if _, err := manager.cancelJob(&ServiceMutationCancelRequest{
-		RequestID:     testMutationRequestID,
-		ExpectedOwner: testMutationOwnerID,
-		Reason:        "test_cancel_while_waiting_for_mail_lock",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case call := <-result:
-		if call.err != nil || call.response.Configured ||
-			!strings.Contains(call.response.Error, "service mutation lease expired") {
-			t.Fatalf("response=%+v err=%v", call.response, call.err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("canceled mail TLS reconciliation remained blocked on mailMutex")
+			Myhostname: "mail.example.test",
+		},
+		&response,
+	)
+	if err != nil || response.Configured ||
+		!strings.Contains(response.Error, "legacy mail TLS mutation is unsupported") {
+		t.Fatalf("response=%+v err=%v", response, err)
 	}
 
 	manager.mu.Lock()
@@ -92,16 +49,63 @@ func TestReconcileMailTLSMutationCanceledWhileBusyDoesNotRun(t *testing.T) {
 	}
 	manager.mu.Unlock()
 	if steps != 0 {
-		t.Fatalf("canceled mail TLS reconciliation leaked %d active steps", steps)
+		t.Fatalf("legacy mail TLS reconciliation acquired %d mutation steps", steps)
 	}
 	if lookupCalled {
-		t.Fatal("canceled busy mail TLS reconciliation reached host preflight")
+		t.Fatal("legacy mail TLS reconciliation reached host preflight")
 	}
+}
 
-	mailMutex.Unlock()
-	locked = false
-	if !mailMutex.TryLock() {
-		t.Fatal("canceled busy mail TLS reconciliation wedged mailMutex")
+func TestSyncMailTLSV2RejectsPanelRootQualifierWhenAgentTrustsAnotherRoot(t *testing.T) {
+	panelCommitment, err := mutationpayload.CanonicalMailTLSSync(
+		"/etc/ssl/celikpanel",
+		"mail.panel.test",
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
-	mailMutex.Unlock()
+	manager, _ := newMutationTestManager(t)
+	manager.leaseDuration = time.Minute
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t,
+		manager,
+		"mail_tls_sync",
+		"mail-tls",
+		panelCommitment.Qualifier,
+	)
+	t.Setenv("CELIKPANEL_CUSTOM_CERT_ROOT", t.TempDir())
+
+	previousLookup := lookupMailTLSCommand
+	lookupCalled := false
+	lookupMailTLSCommand = func(name string) (string, error) {
+		lookupCalled = true
+		return name, nil
+	}
+	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
+
+	var response SecureMailTLSResponse
+	err = (&Agent{}).SyncMailTLSV2(&SyncMailTLSV2Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: testMutationRequestID,
+			MutationOwnerID:   testMutationOwnerID,
+		},
+		Myhostname: "mail.panel.test",
+	}, &response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Configured || !strings.Contains(response.Error, "does not authorize") {
+		t.Fatalf("root-mismatched response = %+v", response)
+	}
+	manager.mu.Lock()
+	steps := manager.active.steps
+	manager.mu.Unlock()
+	if steps != 0 {
+		t.Fatalf("root-mismatched call acquired %d mutation steps", steps)
+	}
+	if lookupCalled {
+		t.Fatal("root-mismatched call reached host preflight")
+	}
 }

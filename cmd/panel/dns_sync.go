@@ -2,13 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -27,6 +32,69 @@ import (
 // panel düzenlemelerini engellememeli; hatalar günlüğe düşer.
 
 type zoneRecord = transport.ZoneRecord
+
+const (
+	dnsZoneSyncMaxAttempts  = 4
+	dnsZoneSyncLeaseTimeout = 2 * time.Minute
+	dnsZoneSyncBatchTimeout = 45 * time.Minute
+)
+
+// dnsPublicationMu is always taken after serviceMutationMu. The database
+// lease is the durable cross-restart authority; this process lock prevents
+// two local publishers from racing while either one is constructing the
+// exact full-zone snapshot that will be committed before BeginServiceMutation.
+var dnsPublicationMu sync.Mutex
+
+type dnsZoneSyncState struct {
+	ZoneName          string
+	SourceDomainID    sql.NullInt64
+	DesiredGeneration int64
+	AppliedGeneration int64
+	DesiredAction     string
+	DesiredZoneType   string
+	Status            string
+	LastError         sql.NullString
+	LeaseRequestID    sql.NullString
+	LeaseOwnerID      sql.NullString
+	LeaseGeneration   sql.NullInt64
+	LeaseAction       sql.NullString
+	LeaseZoneType     sql.NullString
+	LeaseQualifier    sql.NullString
+	LeaseExpiresAt    sql.NullString
+}
+
+func (state dnsZoneSyncState) hasLease() bool {
+	return state.LeaseRequestID.Valid && state.LeaseOwnerID.Valid &&
+		state.LeaseGeneration.Valid && state.LeaseAction.Valid &&
+		state.LeaseZoneType.Valid && state.LeaseQualifier.Valid &&
+		state.LeaseExpiresAt.Valid
+}
+
+func (state dnsZoneSyncState) leaseIdentity() agentMutationIdentity {
+	return agentMutationIdentity{
+		RequestID: state.LeaseRequestID.String,
+		OwnerID:   state.LeaseOwnerID.String,
+		Kind:      "dns_zone_sync", Target: state.ZoneName,
+		PackageName: state.LeaseQualifier.String,
+	}
+}
+
+type dnsZoneSyncPlan struct {
+	State      dnsZoneSyncState
+	Commitment mutationpayload.DNSZoneSyncCommitment
+	RequestID  string
+	OwnerID    string
+}
+
+type dnsZoneExistingLeaseError struct {
+	State dnsZoneSyncState
+}
+
+func (e *dnsZoneExistingLeaseError) Error() string {
+	return fmt.Sprintf("DNS zone %s already has a durable publication lease", e.State.ZoneName)
+}
+
+var errDNSZoneAlreadyAbsent = errors.New("DNS zone and deletion marker are already absent")
 
 type dnsZoneSyncFailure struct {
 	Zone string
@@ -109,72 +177,1027 @@ func writeDNSPublicationConflict(w http.ResponseWriter, err error, safeMessage s
 	return true
 }
 
-// syncZoneToDNS pushes one domain's current record set from the ledger to
-// the pdns database (or removes the zone when deleted is true).
-// syncZoneToDNS, bir domain'in defterdeki güncel kayıt setini pdns
-// veritabanına iter (deleted true ise zone'u kaldırır).
+// syncZoneToDNS publishes one exact desired generation. The in-process lock
+// order is serviceMutationMu -> dnsPublicationMu; the durable per-zone lease
+// is committed before the agent mutation is begun.
 func (p *Panel) syncZoneToDNS(ctx context.Context, domain string, deleted bool) error {
-	req := transport.SyncDNSZoneRequest{
-		Domain: domain, Delete: deleted, ZoneType: p.dnsZoneType(ctx),
-	}
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	return p.syncZoneToDNSLocked(ctx, domain, deleted)
+}
 
-	if !deleted {
-		if err := p.prepareZoneForSync(ctx, domain); err != nil {
-			log.Printf("dns sync %s: prepare zone: %v", domain, err)
-			return fmt.Errorf("prepare zone: %w", err)
-		}
-		rows, err := p.db.GetDB().QueryContext(ctx, `
-			SELECT r.name, r.type, r.content, COALESCE(r.ttl, 3600), COALESCE(r.prio, 0), r.disabled
-			FROM pdns_records r JOIN pdns_domains d ON d.id = r.domain_id
-			WHERE d.name = ?`, domain)
-		if err != nil {
-			log.Printf("dns sync %s: read zone: %v", domain, err)
-			return fmt.Errorf("read zone: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var rec zoneRecord
-			if err := rows.Scan(&rec.Name, &rec.Type, &rec.Content, &rec.TTL, &rec.Prio, &rec.Disabled); err != nil {
-				return fmt.Errorf("scan zone record: %w", err)
-			}
-			req.Records = append(req.Records, rec)
-		}
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("read zone rows: %w", err)
-		}
-		// A zone with no ledger rows means it was never created — nothing
-		// to serve, nothing to push.
-		// Defterde satırı olmayan zone hiç oluşturulmamış demektir — sunacak
-		// da itecek de bir şey yok.
-		if len(req.Records) == 0 {
-			return fmt.Errorf("zone has no records")
-		}
-	}
-
-	var resp transport.SyncDNSZoneResponse
-	err := p.withStandaloneAgentMutation(ctx, "dns_zone_sync", domain, "", func(callCtx context.Context, binding agentMutationBinding) error {
-		req.ServiceMutationBinding = binding
-		if err := p.callAgentContext(callCtx, "Agent.SyncDNSZone", &req, &resp); err != nil {
-			return err
-		}
-		if resp.Error != "" {
-			return errors.New(resp.Error)
-		}
-		if !resp.Synced {
-			return errors.New("agent did not confirm DNS publication")
-		}
-		return nil
-	})
-	if err != nil {
-		log.Printf("dns sync %s: %v", domain, err)
+func (p *Panel) syncZoneToDNSLocked(ctx context.Context, domain string, deleted bool) error {
+	if err := p.requireNoPendingDNSClusterSaga(ctx); err != nil {
 		return &dnsAgentPublicationError{Err: err}
 	}
-	if resp.Error != "" {
-		log.Printf("dns sync %s: %s", domain, resp.Error)
-		return &dnsAgentPublicationError{Err: errors.New(resp.Error)}
+	canonicalDomain, err := hostname.CanonicalFQDN(domain)
+	if err != nil {
+		return fmt.Errorf("canonicalize DNS zone: %w", err)
 	}
-	if !resp.Synced {
-		return &dnsAgentPublicationError{Err: errors.New("agent did not confirm DNS publication")}
+	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
+		return &dnsAgentPublicationError{Err: err}
+	}
+	for attempt := 0; attempt < dnsZoneSyncMaxAttempts; attempt++ {
+		plan, err := p.prepareDNSZoneSyncPlan(ctx, canonicalDomain, deleted)
+		if errors.Is(err, errDNSZoneAlreadyAbsent) && deleted {
+			return nil
+		}
+		var existing *dnsZoneExistingLeaseError
+		if errors.As(err, &existing) {
+			done, reconcileErr := p.reconcileDNSZoneLease(ctx, existing.State, false)
+			if reconcileErr != nil {
+				return reconcileErr
+			}
+			if done {
+				return nil
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		req := transport.SyncDNSZoneV2Request{
+			DesiredGeneration: plan.Commitment.DesiredGeneration,
+			Domain:            plan.Commitment.Domain,
+			Delete:            plan.Commitment.Delete,
+			ZoneType:          plan.Commitment.ZoneType,
+			Records:           append([]zoneRecord(nil), plan.Commitment.Records...),
+		}
+		var resp transport.SyncDNSZoneV2Response
+		op := serviceOperation{
+			RequestID:   plan.RequestID,
+			Kind:        "dns_zone_sync",
+			ServiceID:   plan.Commitment.Domain,
+			PackageName: plan.Commitment.Qualifier,
+		}
+		callErr := p.withStandaloneAgentMutationIdentity(
+			ctx,
+			op,
+			plan.OwnerID,
+			func(callCtx context.Context, binding agentMutationBinding) error {
+				req.ServiceMutationBinding = binding
+				if err := p.callAgentContext(callCtx, "Agent.SyncDNSZoneV2", &req, &resp); err != nil {
+					return err
+				}
+				if resp.Error != "" {
+					return errors.New(resp.Error)
+				}
+				if !resp.Synced {
+					return errors.New("agent did not confirm DNS publication")
+				}
+				if resp.AppliedGeneration != plan.Commitment.DesiredGeneration {
+					return errors.New("agent confirmed a different DNS generation")
+				}
+				return nil
+			},
+		)
+		if callErr != nil {
+			done, retry, settleErr := p.settleDNSZoneSyncCallError(ctx, plan.State, callErr)
+			if settleErr != nil {
+				return settleErr
+			}
+			if done {
+				return nil
+			}
+			if retry {
+				continue
+			}
+			log.Printf("dns sync %s generation %d: %v", canonicalDomain, plan.Commitment.DesiredGeneration, callErr)
+			return &dnsAgentPublicationError{Err: callErr}
+		}
+		// A nil lifecycle result is itself the authority. If the RPC response
+		// was lost (or a late heartbeat observed success), the exact terminal
+		// job identity still binds this generation and complete payload.
+		finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+		exact, finalizeErr := p.recordDNSZoneSyncSuccess(finalizeCtx, plan.State)
+		cancel()
+		if finalizeErr != nil {
+			return fmt.Errorf("record DNS publication success: %w", finalizeErr)
+		}
+		if exact {
+			return nil
+		}
+		// The desired generation advanced while this detached snapshot was in
+		// flight. The exact old lease is now released; retry a fresh snapshot.
+	}
+	return &dnsAgentPublicationError{Err: errors.New("DNS zone changed during every bounded publication attempt")}
+}
+
+// prepareDNSZoneSyncPlanReconciledLocked prepares a fresh exact publication
+// lease while preserving the authority of any earlier lease. Callers hold
+// serviceMutationMu followed by dnsPublicationMu. An active or unqueryable
+// earlier child is returned as a retryable publication error and remains
+// byte-for-byte persisted; terminal and proven-never-begun children are
+// reconciled before a fresh snapshot is prepared.
+func (p *Panel) prepareDNSZoneSyncPlanReconciledLocked(
+	ctx context.Context,
+	domain string,
+	deleted bool,
+) (dnsZoneSyncPlan, error) {
+	for attempt := 0; attempt < dnsZoneSyncMaxAttempts; attempt++ {
+		plan, err := p.prepareDNSZoneSyncPlan(ctx, domain, deleted)
+		var existing *dnsZoneExistingLeaseError
+		if !errors.As(err, &existing) {
+			return plan, err
+		}
+		if _, reconcileErr := p.reconcileDNSZoneLease(
+			ctx, existing.State, false,
+		); reconcileErr != nil {
+			return dnsZoneSyncPlan{}, reconcileErr
+		}
+	}
+	return dnsZoneSyncPlan{}, errors.New(
+		"DNS publication lease changed during every bounded preparation attempt",
+	)
+}
+
+// publishPreparedDNSZoneSyncPlanLocked consumes the exact already-persisted
+// panel lease without preparing (or briefly releasing) a replacement. DNSSEC
+// uses this after signing so a process crash at every boundary leaves startup
+// with the authoritative publication lease created before the host mutation.
+func (p *Panel) publishPreparedDNSZoneSyncPlanLocked(
+	ctx context.Context,
+	plan dnsZoneSyncPlan,
+) (bool, error) {
+	req := transport.SyncDNSZoneV2Request{
+		DesiredGeneration: plan.Commitment.DesiredGeneration,
+		Domain:            plan.Commitment.Domain,
+		Delete:            plan.Commitment.Delete,
+		ZoneType:          plan.Commitment.ZoneType,
+		Records:           append([]zoneRecord(nil), plan.Commitment.Records...),
+	}
+	var resp transport.SyncDNSZoneV2Response
+	op := serviceOperation{
+		RequestID:   plan.RequestID,
+		Kind:        "dns_zone_sync",
+		ServiceID:   plan.Commitment.Domain,
+		PackageName: plan.Commitment.Qualifier,
+	}
+	callErr := p.withStandaloneAgentMutationIdentity(
+		ctx,
+		op,
+		plan.OwnerID,
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			req.ServiceMutationBinding = binding
+			if err := p.callAgentContext(
+				callCtx, "Agent.SyncDNSZoneV2", &req, &resp,
+			); err != nil {
+				return err
+			}
+			if resp.Error != "" {
+				return errors.New(resp.Error)
+			}
+			if !resp.Synced {
+				return errors.New("agent did not confirm DNS publication")
+			}
+			if resp.AppliedGeneration != plan.Commitment.DesiredGeneration {
+				return errors.New("agent confirmed a different DNS generation")
+			}
+			return nil
+		},
+	)
+	if callErr != nil {
+		done, retry, settleErr := p.settleDNSZoneSyncCallError(
+			ctx, plan.State, callErr,
+		)
+		if settleErr != nil {
+			return false, settleErr
+		}
+		if done {
+			return true, nil
+		}
+		if retry {
+			return false, errors.New(
+				"DNS zone changed while its prepared publication was in flight",
+			)
+		}
+		return false, &dnsAgentPublicationError{Err: callErr}
+	}
+	finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+	exact, err := p.recordDNSZoneSyncSuccess(finalizeCtx, plan.State)
+	cancel()
+	if err != nil {
+		return false, fmt.Errorf("record prepared DNS publication success: %w", err)
+	}
+	if !exact {
+		return false, errors.New(
+			"DNS zone changed while its prepared publication was in flight",
+		)
+	}
+	return true, nil
+}
+
+// settleDNSZoneSyncCallError separates a proven host failure from an
+// ambiguous transport/finish failure. An active or unqueryable exact job keeps
+// its DB lease for startup recovery; only a proven terminal result or proven
+// pre-Begin no-job outcome may clear it.
+func (p *Panel) settleDNSZoneSyncCallError(
+	ctx context.Context,
+	state dnsZoneSyncState,
+	callErr error,
+) (done bool, retry bool, err error) {
+	statusCtx, statusCancel := dnsZoneFinalizeContext(ctx)
+	job, statusErr := p.statusAgentMutation(statusCtx, state.LeaseRequestID.String)
+	statusCancel()
+	if statusErr != nil {
+		return false, false, &dnsAgentPublicationError{Err: errors.Join(
+			callErr,
+			fmt.Errorf("DNS publication terminal status is ambiguous: %w", statusErr),
+		)}
+	}
+	if job == nil {
+		// A successful exact Status lookup returning nil proves this durable
+		// request identity has no agent job, regardless of whether Begin failed
+		// locally, by response, or by transport. Clear only the exact DB CAS.
+		finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+		finalizeErr := p.recordDNSZoneSyncFailure(finalizeCtx, state, callErr)
+		cancel()
+		if finalizeErr != nil {
+			return false, false, fmt.Errorf("record pre-Begin DNS publication failure: %w", finalizeErr)
+		}
+		return false, false, nil
+	}
+	if identityErr := validateAgentMutationIdentity(job, state.leaseIdentity()); identityErr != nil {
+		return false, false, identityErr
+	}
+	if agentMutationActive(job.Status) {
+		return false, false, &dnsAgentPublicationError{Err: errors.Join(
+			callErr,
+			errors.New("exact DNS publication remains active for startup recovery"),
+		)}
+	}
+	finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+	defer cancel()
+	if job.Status == agentMutationSucceeded {
+		if err := validateAgentMutationSucceededReceipt(job, state.leaseIdentity()); err != nil {
+			return false, false, err
+		}
+		exact, finalizeErr := p.recordDNSZoneSyncSuccess(finalizeCtx, state)
+		return exact, !exact, finalizeErr
+	}
+	if finalizeErr := p.recordDNSZoneSyncFailure(finalizeCtx, state, callErr); finalizeErr != nil {
+		return false, false, fmt.Errorf("record terminal DNS publication failure: %w", finalizeErr)
+	}
+	return false, false, nil
+}
+
+func (p *Panel) prepareDNSZoneSyncPlan(
+	ctx context.Context,
+	domain string,
+	deleted bool,
+) (dnsZoneSyncPlan, error) {
+	requestID, err := newServiceOperationID()
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("create DNS publication request identity: %w", err)
+	}
+	ownerID, err := newServiceOperationID()
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("create DNS publication owner identity: %w", err)
+	}
+	zoneType := ""
+	if !deleted {
+		zoneType = p.dnsZoneType(ctx)
+	}
+
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("begin DNS publication snapshot: %w", err)
+	}
+	defer tx.Rollback()
+
+	state, err := readDNSZoneSyncState(ctx, tx, domain)
+	if errors.Is(err, sql.ErrNoRows) && deleted {
+		return dnsZoneSyncPlan{}, errDNSZoneAlreadyAbsent
+	}
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("read DNS publication state: %w", err)
+	}
+	if state.hasLease() {
+		return dnsZoneSyncPlan{}, &dnsZoneExistingLeaseError{State: state}
+	}
+
+	var records []zoneRecord
+	if deleted {
+		if state.DesiredAction != "delete" || state.SourceDomainID.Valid {
+			return dnsZoneSyncPlan{}, errors.New("DNS deletion does not match the durable desired action")
+		}
+	} else {
+		if state.DesiredAction != "sync" || !state.SourceDomainID.Valid {
+			return dnsZoneSyncPlan{}, errors.New("DNS publication does not match the durable desired action")
+		}
+		var zoneID, soaRecordID int64
+		var soa string
+		if err := tx.QueryRowContext(ctx, `
+			SELECT d.id, r.id, r.content
+			FROM pdns_domains d
+			JOIN pdns_records r
+			  ON r.domain_id = d.id AND r.type = 'SOA' AND r.name = d.name
+			WHERE d.name = ?
+			LIMIT 1`, domain).Scan(&zoneID, &soaRecordID, &soa); err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("zone %s has no valid SOA: %w", domain, err)
+		}
+		next, err := nextSOASerial(soa, time.Now())
+		if err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("zone %s: %w", domain, err)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE pdns_records SET content = ? WHERE id = ?`,
+			next, soaRecordID,
+		); err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("advance zone SOA: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE pdns_domains SET type = ? WHERE id = ? AND type IS NOT ?`,
+			zoneType, zoneID, zoneType,
+		); err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("align zone type: %w", err)
+		}
+		state, err = readDNSZoneSyncState(ctx, tx, domain)
+		if err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("reload DNS publication state: %w", err)
+		}
+		rows, err := tx.QueryContext(ctx, `
+			SELECT r.name, r.type, r.content,
+			       COALESCE(r.ttl, 3600), COALESCE(r.prio, 0), r.disabled
+			FROM pdns_records r
+			JOIN pdns_domains d ON d.id = r.domain_id
+			WHERE d.name = ?`, domain)
+		if err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("read DNS zone snapshot: %w", err)
+		}
+		for rows.Next() {
+			var record zoneRecord
+			if err := rows.Scan(
+				&record.Name, &record.Type, &record.Content,
+				&record.TTL, &record.Prio, &record.Disabled,
+			); err != nil {
+				rows.Close()
+				return dnsZoneSyncPlan{}, fmt.Errorf("scan DNS zone snapshot: %w", err)
+			}
+			records = append(records, record)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return dnsZoneSyncPlan{}, fmt.Errorf("read DNS zone snapshot rows: %w", err)
+		}
+		if err := rows.Close(); err != nil {
+			return dnsZoneSyncPlan{}, fmt.Errorf("close DNS zone snapshot: %w", err)
+		}
+	}
+
+	commitment, err := mutationpayload.CanonicalDNSZoneSync(
+		state.DesiredGeneration,
+		state.ZoneName,
+		state.DesiredAction == "delete",
+		state.DesiredZoneType,
+		records,
+	)
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("canonicalize DNS publication snapshot: %w", err)
+	}
+	expiresAt := time.Now().UTC().Add(dnsZoneSyncLeaseTimeout).Format(time.RFC3339Nano)
+	result, err := tx.ExecContext(ctx, `
+		UPDATE dns_zone_sync_state
+		SET status = 'pending', last_error = NULL,
+		    lease_request_id = ?, lease_owner_id = ?,
+		    lease_generation = ?, lease_action = ?, lease_zone_type = ?,
+		    lease_qualifier = ?, lease_expires_at = ?, updated_at = datetime('now')
+		WHERE zone_name = ?
+		  AND desired_generation = ?
+		  AND desired_action = ?
+		  AND desired_zone_type = ?
+		  AND lease_request_id IS NULL`,
+		requestID, ownerID,
+		commitment.DesiredGeneration,
+		state.DesiredAction,
+		commitment.ZoneType,
+		commitment.Qualifier,
+		expiresAt,
+		state.ZoneName,
+		state.DesiredGeneration,
+		state.DesiredAction,
+		state.DesiredZoneType,
+	)
+	if err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("persist DNS publication lease: %w", err)
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return dnsZoneSyncPlan{}, errors.New("DNS publication state changed before its lease was persisted")
+	}
+	if err := tx.Commit(); err != nil {
+		return dnsZoneSyncPlan{}, fmt.Errorf("commit DNS publication lease: %w", err)
+	}
+	state.LeaseRequestID = sql.NullString{String: requestID, Valid: true}
+	state.LeaseOwnerID = sql.NullString{String: ownerID, Valid: true}
+	state.LeaseGeneration = sql.NullInt64{Int64: commitment.DesiredGeneration, Valid: true}
+	state.LeaseAction = sql.NullString{String: state.DesiredAction, Valid: true}
+	state.LeaseZoneType = sql.NullString{String: commitment.ZoneType, Valid: true}
+	state.LeaseQualifier = sql.NullString{String: commitment.Qualifier, Valid: true}
+	state.LeaseExpiresAt = sql.NullString{String: expiresAt, Valid: true}
+	return dnsZoneSyncPlan{
+		State: state, Commitment: commitment,
+		RequestID: requestID, OwnerID: ownerID,
+	}, nil
+}
+
+type dnsZoneStateQuery interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func readDNSZoneSyncState(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+	zone string,
+) (dnsZoneSyncState, error) {
+	var state dnsZoneSyncState
+	err := query.QueryRowContext(ctx, `
+		SELECT zone_name, source_domain_id,
+		       desired_generation, applied_generation,
+		       desired_action, desired_zone_type, status, last_error,
+		       lease_request_id, lease_owner_id, lease_generation,
+		       lease_action, lease_zone_type, lease_qualifier, lease_expires_at
+		FROM dns_zone_sync_state
+		WHERE zone_name = ?`, zone).Scan(
+		&state.ZoneName, &state.SourceDomainID,
+		&state.DesiredGeneration, &state.AppliedGeneration,
+		&state.DesiredAction, &state.DesiredZoneType,
+		&state.Status, &state.LastError,
+		&state.LeaseRequestID, &state.LeaseOwnerID, &state.LeaseGeneration,
+		&state.LeaseAction, &state.LeaseZoneType,
+		&state.LeaseQualifier, &state.LeaseExpiresAt,
+	)
+	return state, err
+}
+
+func dnsZoneFinalizeContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), panelMutationFinishTimeout)
+}
+
+func dnsZoneBatchContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), dnsZoneSyncBatchTimeout)
+}
+
+func dnsZoneLeaseWhere(state dnsZoneSyncState) []any {
+	return []any{
+		state.ZoneName,
+		state.LeaseRequestID.String,
+		state.LeaseOwnerID.String,
+		state.LeaseGeneration.Int64,
+		state.LeaseAction.String,
+		state.LeaseZoneType.String,
+		state.LeaseQualifier.String,
+		state.LeaseExpiresAt.String,
+	}
+}
+
+func (p *Panel) recordDNSZoneSyncSuccess(
+	ctx context.Context,
+	lease dnsZoneSyncState,
+) (bool, error) {
+	if !lease.hasLease() {
+		return false, errors.New("DNS publication success has no exact lease")
+	}
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	args := []any{
+		lease.LeaseGeneration.Int64,
+		lease.LeaseGeneration.Int64,
+		lease.LeaseAction.String,
+		lease.LeaseZoneType.String,
+	}
+	args = append(args, dnsZoneLeaseWhere(lease)...)
+	result, err := tx.ExecContext(ctx, `
+		UPDATE dns_zone_sync_state
+		SET applied_generation = max(applied_generation, ?),
+		    status = CASE
+		      WHEN desired_generation = ?
+		       AND desired_action = ?
+		       AND desired_zone_type = ? THEN 'applied'
+		      ELSE 'pending'
+		    END,
+		    last_error = NULL,
+		    lease_request_id = NULL, lease_owner_id = NULL,
+		    lease_generation = NULL, lease_action = NULL,
+		    lease_zone_type = NULL, lease_qualifier = NULL,
+		    lease_expires_at = NULL, updated_at = datetime('now')
+		WHERE zone_name = ?
+		  AND lease_request_id = ? AND lease_owner_id = ?
+		  AND lease_generation = ? AND lease_action = ?
+		  AND lease_zone_type = ? AND lease_qualifier = ?
+		  AND lease_expires_at = ?`, args...)
+	if err != nil {
+		return false, err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return false, errors.New("DNS publication success lost its exact lease CAS")
+	}
+	state, err := readDNSZoneSyncState(ctx, tx, lease.ZoneName)
+	if err != nil {
+		return false, err
+	}
+	exact := state.Status == "applied" &&
+		state.DesiredGeneration == lease.LeaseGeneration.Int64 &&
+		state.DesiredAction == lease.LeaseAction.String &&
+		state.DesiredZoneType == lease.LeaseZoneType.String
+	if exact && state.DesiredAction == "delete" {
+		result, err := tx.ExecContext(ctx,
+			`DELETE FROM dns_zone_deletion_markers WHERE zone_name = ?`,
+			lease.ZoneName,
+		)
+		if err != nil {
+			return false, fmt.Errorf("retire applied DNS deletion marker: %w", err)
+		}
+		retired, err := result.RowsAffected()
+		if err != nil || retired != 1 {
+			return false, errors.New("applied DNS deletion marker was not retired exactly once")
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return exact, nil
+}
+
+func (p *Panel) recordDNSZoneSyncFailure(
+	ctx context.Context,
+	lease dnsZoneSyncState,
+	failure error,
+) error {
+	if !lease.hasLease() {
+		return errors.New("DNS publication failure has no exact lease")
+	}
+	message := boundedDNSZoneError(failure)
+	where := dnsZoneLeaseWhere(lease)
+	args := []any{
+		lease.LeaseGeneration.Int64,
+		lease.LeaseAction.String,
+		lease.LeaseZoneType.String,
+		lease.LeaseGeneration.Int64,
+		lease.LeaseAction.String,
+		lease.LeaseZoneType.String,
+		message,
+	}
+	args = append(args, where...)
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE dns_zone_sync_state
+		SET status = CASE
+		      WHEN desired_generation = ?
+		       AND desired_action = ?
+		       AND desired_zone_type = ? THEN 'error'
+		      ELSE 'pending'
+		    END,
+		    last_error = CASE
+		      WHEN desired_generation = ?
+		       AND desired_action = ?
+		       AND desired_zone_type = ? THEN ?
+		      ELSE NULL
+		    END,
+		    lease_request_id = NULL, lease_owner_id = NULL,
+		    lease_generation = NULL, lease_action = NULL,
+		    lease_zone_type = NULL, lease_qualifier = NULL,
+		    lease_expires_at = NULL, updated_at = datetime('now')
+		WHERE zone_name = ?
+		  AND lease_request_id = ? AND lease_owner_id = ?
+		  AND lease_generation = ? AND lease_action = ?
+		  AND lease_zone_type = ? AND lease_qualifier = ?
+		  AND lease_expires_at = ?`, args...)
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return errors.New("DNS publication failure lost its exact lease CAS")
+	}
+	return nil
+}
+
+func boundedDNSZoneError(err error) string {
+	message := strings.TrimSpace(err.Error())
+	if message == "" {
+		message = "DNS publication failed"
+	}
+	runes := []rune(message)
+	if len(runes) > 2048 {
+		message = string(runes[:2048])
+	}
+	return message
+}
+
+func (p *Panel) releaseDNSZoneLease(ctx context.Context, lease dnsZoneSyncState) error {
+	if !lease.hasLease() {
+		return errors.New("DNS publication release has no exact lease")
+	}
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE dns_zone_sync_state
+		SET status = 'pending', last_error = NULL,
+		    lease_request_id = NULL, lease_owner_id = NULL,
+		    lease_generation = NULL, lease_action = NULL,
+		    lease_zone_type = NULL, lease_qualifier = NULL,
+		    lease_expires_at = NULL, updated_at = datetime('now')
+		WHERE zone_name = ?
+		  AND lease_request_id = ? AND lease_owner_id = ?
+		  AND lease_generation = ? AND lease_action = ?
+		  AND lease_zone_type = ? AND lease_qualifier = ?
+		  AND lease_expires_at = ?`, dnsZoneLeaseWhere(lease)...)
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return errors.New("DNS publication release lost its exact lease CAS")
+	}
+	return nil
+}
+
+func (p *Panel) reconcileDNSZoneLease(
+	ctx context.Context,
+	state dnsZoneSyncState,
+	waitActive bool,
+) (bool, error) {
+	if !state.hasLease() || !mutationpayload.ValidDNSZoneSyncQualifier(state.LeaseQualifier.String) {
+		return false, errors.New("DNS publication state contains an invalid durable lease")
+	}
+	identity := state.leaseIdentity()
+	job, err := p.statusAgentMutation(ctx, identity.RequestID)
+	if err != nil {
+		return false, &dnsAgentPublicationError{Err: fmt.Errorf("read durable DNS publication status: %w", err)}
+	}
+	if job == nil {
+		// A successful exact Status lookup returning no job proves Begin never
+		// durably created this identity. Release immediately even when the DB
+		// expiry is still in the future; retaining it would wedge startup.
+		finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+		releaseErr := p.releaseDNSZoneLease(finalizeCtx, state)
+		cancel()
+		return false, releaseErr
+	}
+	if err := validateAgentMutationIdentity(job, identity); err != nil {
+		return false, err
+	}
+	if agentMutationActive(job.Status) {
+		if !waitActive {
+			return false, &dnsAgentPublicationError{Err: errors.New("DNS publication is already in progress")}
+		}
+		job, err = p.waitExpectedAgentMutationTerminal(ctx, identity)
+		if err != nil && (job == nil || agentMutationActive(job.Status)) {
+			return false, &dnsAgentPublicationError{Err: fmt.Errorf("wait for durable DNS publication: %w", err)}
+		}
+		if job == nil {
+			return false, errors.New("durable DNS publication disappeared during recovery")
+		}
+	}
+	finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
+	defer cancel()
+	if job.Status == agentMutationSucceeded {
+		if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+			return false, err
+		}
+		return p.recordDNSZoneSyncSuccess(finalizeCtx, state)
+	}
+	failure := errors.New(strings.TrimSpace(job.ErrorMessage))
+	if strings.TrimSpace(job.ErrorMessage) == "" {
+		failure = fmt.Errorf("durable DNS publication ended with status %s", job.Status)
+	}
+	if err := p.recordDNSZoneSyncFailure(finalizeCtx, state, failure); err != nil {
+		return false, err
+	}
+	return false, nil
+}
+
+func validDirectDNSZoneSync(job *agentMutationJob) bool {
+	if job == nil || !agentMutationActive(job.Status) ||
+		!validServiceOperationID(job.RequestID) ||
+		!validServiceOperationID(job.OwnerID) ||
+		job.Kind != "dns_zone_sync" ||
+		!mutationpayload.ValidDNSZoneSyncQualifier(job.PackageName) {
+		return false
+	}
+	canonical, err := hostname.CanonicalFQDN(job.Target)
+	return err == nil && canonical == job.Target
+}
+
+func validDirectDNSSECSecure(job *agentMutationJob) bool {
+	if job == nil || !agentMutationActive(job.Status) ||
+		!validServiceOperationID(job.RequestID) ||
+		!validServiceOperationID(job.OwnerID) ||
+		job.Kind != "dnssec_secure" || job.PackageName != "" {
+		return false
+	}
+	canonical, err := hostname.CanonicalFQDN(job.Target)
+	return err == nil && canonical == job.Target
+}
+
+func (p *Panel) terminalizeInterruptedDNSSECSecure(
+	ctx context.Context,
+	job *agentMutationJob,
+) (*agentMutationJob, error) {
+	identity := agentMutationJobIdentity(job)
+	if !validDirectDNSSECSecure(job) || !identity.matches(job) {
+		return job, errors.New("interrupted DNSSEC signing has an invalid durable identity")
+	}
+	current := job
+	if current.Status == agentMutationRunning {
+		cancelErr := p.cancelAgentMutation(
+			ctx,
+			current,
+			"panel_restarted_during_dnssec_signing",
+			"The panel restarted before DNSSEC signing was reconciled.",
+		)
+		if cancelErr != nil {
+			observed, statusErr := p.statusAgentMutation(ctx, identity.RequestID)
+			if statusErr != nil {
+				return observed, errors.Join(cancelErr, statusErr)
+			}
+			if err := validateAgentMutationIdentity(observed, identity); err != nil {
+				return observed, err
+			}
+			current = observed
+			if current.Status == agentMutationRunning {
+				return current, cancelErr
+			}
+		}
+	}
+	if agentMutationActive(current.Status) {
+		terminal, err := p.waitExpectedAgentMutationTerminal(ctx, identity)
+		if err != nil {
+			return terminal, fmt.Errorf("wait for interrupted DNSSEC signing: %w", err)
+		}
+		if err := validateAgentMutationIdentity(terminal, identity); err != nil {
+			return terminal, err
+		}
+		current = terminal
+	}
+	if current == nil || agentMutationActive(current.Status) {
+		return current, errors.New("interrupted DNSSEC signing did not reach a terminal state")
+	}
+	return current, nil
+}
+
+// recoverDirectDNSSECSecureLocked requires serviceMutationMu. The pre-sign
+// publication lease is verified before the orphan is touched, then signing is
+// idempotently retried under a fresh durable identity and that exact snapshot
+// is published. Any mismatch or terminal ambiguity retains the lease and
+// blocks startup instead of fabricating recovery authority.
+func (p *Panel) recoverDirectDNSSECSecureLocked(
+	ctx context.Context,
+	job *agentMutationJob,
+) error {
+	batchCtx, cancelBatch := dnsZoneBatchContext(ctx)
+	defer cancelBatch()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	if !validDirectDNSSECSecure(job) {
+		return errors.New("direct DNSSEC signing has an invalid durable identity")
+	}
+	state, err := readDNSZoneSyncState(batchCtx, p.db.GetDB(), job.Target)
+	if err != nil {
+		return fmt.Errorf("read interrupted DNSSEC publication bridge: %w", err)
+	}
+	if !state.hasLease() || state.LeaseAction.String != "sync" ||
+		!state.SourceDomainID.Valid ||
+		!mutationpayload.ValidDNSZoneSyncQualifier(state.LeaseQualifier.String) ||
+		(state.LeaseZoneType.String != "NATIVE" &&
+			state.LeaseZoneType.String != "MASTER") {
+		return errors.New(
+			"interrupted DNSSEC signing has no valid same-domain publication bridge",
+		)
+	}
+	if _, err := p.terminalizeInterruptedDNSSECSecure(batchCtx, job); err != nil {
+		return err
+	}
+	if err := p.requireDNSSECSecureV2Agent(batchCtx); err != nil {
+		return fmt.Errorf("verify DNSSEC recovery capability: %w", err)
+	}
+	var response transport.SecureDNSZoneV2Response
+	request := transport.SecureDNSZoneV2Request{Zone: job.Target}
+	requestID, err := newServiceOperationID()
+	if err != nil {
+		return fmt.Errorf("create DNSSEC recovery request identity: %w", err)
+	}
+	ownerID, err := newServiceOperationID()
+	if err != nil {
+		return fmt.Errorf("create DNSSEC recovery owner identity: %w", err)
+	}
+	op := serviceOperation{
+		RequestID: requestID, Kind: "dnssec_secure", ServiceID: job.Target,
+	}
+	identity := agentMutationIdentityForOperation(op, ownerID)
+	secureErr := p.withStandaloneAgentMutationIdentity(
+		batchCtx, op, ownerID,
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			request.ServiceMutationBinding = binding
+			if err := p.callAgentContext(
+				callCtx, "Agent.SecureDNSZoneV2", &request, &response,
+			); err != nil {
+				return err
+			}
+			if problem := dnssecResultError(response, true); problem != "" {
+				return errors.New(problem)
+			}
+			return nil
+		},
+	)
+	_, settleErr := p.dnssecSecureTerminalKnown(batchCtx, identity, secureErr)
+	if settleErr != nil {
+		// An exact active or unqueryable retry may already be changing the
+		// signed database. Preserve the bridge until a later recovery can
+		// prove a terminal result.
+		return fmt.Errorf("retry interrupted DNSSEC signing: %w", settleErr)
+	}
+	// No DNS child can coexist with the global direct DNSSEC job. Reconcile
+	// the pre-sign lease as proven-never-begun, then publish the current ledger
+	// generation. This also handles a record edit committed while signing held
+	// the global host lock: current desired state remains recovery authority.
+	if _, err := p.reconcileDNSZoneLease(batchCtx, state, false); err != nil {
+		return fmt.Errorf("reconcile DNSSEC publication bridge: %w", err)
+	}
+	if err := p.syncZoneToDNSLocked(batchCtx, job.Target, false); err != nil {
+		return fmt.Errorf("publish current DNSSEC recovery snapshot: %w", err)
+	}
+	if err := p.recoverDNSZoneSyncStateAlreadyLocked(batchCtx); err != nil {
+		return err
+	}
+	if secureErr != nil {
+		// A terminal signing failure may follow partial key creation. The
+		// current ledger is now published, so startup can safely remain live
+		// and let the operator retry DNSSEC explicitly.
+		log.Printf("dnssec recovery for %s reached a known terminal failure after publication: %v",
+			job.Target, secureErr)
+	}
+	return nil
+}
+
+func (p *Panel) exactDNSZoneLeaseForJob(
+	ctx context.Context,
+	job *agentMutationJob,
+) (dnsZoneSyncState, error) {
+	if !validDirectDNSZoneSync(job) {
+		return dnsZoneSyncState{}, errors.New("direct DNS publication has an invalid durable identity")
+	}
+	state, err := readDNSZoneSyncState(ctx, p.db.GetDB(), job.Target)
+	if err != nil {
+		return dnsZoneSyncState{}, fmt.Errorf("read direct DNS publication lease: %w", err)
+	}
+	if !state.hasLease() || !state.leaseIdentity().matches(job) {
+		return dnsZoneSyncState{}, errors.New("direct DNS publication does not match the exact persisted zone lease")
+	}
+	return state, nil
+}
+
+// recoverDirectDNSZoneSyncLocked requires serviceMutationMu and consumes only
+// a global active job whose complete identity matches migration 032 state.
+func (p *Panel) recoverDirectDNSZoneSyncLocked(
+	ctx context.Context,
+	job *agentMutationJob,
+) error {
+	batchCtx, cancelBatch := dnsZoneBatchContext(ctx)
+	defer cancelBatch()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	state, err := p.exactDNSZoneLeaseForJob(batchCtx, job)
+	if err != nil {
+		return err
+	}
+	done, err := p.reconcileDNSZoneLease(batchCtx, state, true)
+	if err != nil {
+		return err
+	}
+	if !done {
+		if err := p.syncZoneToDNSLocked(batchCtx, state.ZoneName, state.DesiredAction == "delete"); err != nil {
+			return err
+		}
+	}
+	return p.recoverDNSZoneSyncStateAlreadyLocked(batchCtx)
+}
+
+// recoverDNSZoneSyncStateLocked requires serviceMutationMu. It repairs every
+// pending/error generation and reconciles any exact stale/crash lease before
+// the startup HTTP gate is opened.
+func (p *Panel) recoverDNSZoneSyncStateLocked(ctx context.Context) error {
+	batchCtx, cancelBatch := dnsZoneBatchContext(ctx)
+	defer cancelBatch()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	return p.recoverDNSZoneSyncStateAlreadyLocked(batchCtx)
+}
+
+func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error {
+	rows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT zone_name
+		FROM dns_zone_sync_state
+		WHERE status IN ('pending', 'error') OR lease_request_id IS NOT NULL
+		ORDER BY zone_name`)
+	if err != nil {
+		return fmt.Errorf("list recoverable DNS publications: %w", err)
+	}
+	var zones []string
+	for rows.Next() {
+		var zone string
+		if err := rows.Scan(&zone); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan recoverable DNS publication: %w", err)
+		}
+		zones = append(zones, zone)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("list recoverable DNS publication rows: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return fmt.Errorf("close recoverable DNS publication list: %w", err)
+	}
+	// Reconcile every exact durable lease before consulting host readiness.
+	// A committed/crashed child is authority and must never be hidden by a
+	// currently missing PowerDNS binary or a permanent platform denial.
+	for _, zone := range zones {
+		state, err := readDNSZoneSyncState(ctx, p.db.GetDB(), zone)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("read recoverable DNS publication %s: %w", zone, err)
+		}
+		if state.hasLease() {
+			done, err := p.reconcileDNSZoneLease(ctx, state, true)
+			if err != nil {
+				return fmt.Errorf("reconcile DNS publication %s: %w", zone, err)
+			}
+			if done {
+				continue
+			}
+		}
+	}
+
+	var pending []dnsZoneSyncState
+	for _, zone := range zones {
+		state, err := readDNSZoneSyncState(ctx, p.db.GetDB(), zone)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("reload recoverable DNS publication %s: %w", zone, err)
+		}
+		if state.hasLease() {
+			return fmt.Errorf(
+				"DNS publication %s retained a lease after exact reconciliation",
+				zone,
+			)
+		}
+		if state.Status == "pending" || state.Status == "error" {
+			pending = append(pending, state)
+		}
+	}
+	if len(pending) == 0 {
+		return nil
+	}
+
+	// Migration 032 intentionally seeds old zones as pending. A host where
+	// PowerDNS is not installed yet, or where this V2 mutation is permanently
+	// unsupported, must still boot so the operator can install/upgrade it.
+	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
+		if errors.Is(err, errDNSZoneSyncV2AgentIncompatible) ||
+			errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+			log.Printf(
+				"deferring %d pending DNS publication(s) until V2 is available: %v",
+				len(pending), err,
+			)
+			return nil
+		}
+		return fmt.Errorf("verify pending DNS publication capability: %w", err)
+	}
+	var readiness dnsClusterReadinessResponse
+	if err := p.callAgentContext(
+		ctx,
+		"Agent.DNSClusterReadiness",
+		&transport.Empty{},
+		&readiness,
+	); err != nil {
+		return fmt.Errorf("read PowerDNS startup readiness: %w", err)
+	}
+	if !readiness.Ready {
+		log.Printf(
+			"deferring %d pending DNS publication(s): %s",
+			len(pending), strings.TrimSpace(readiness.Detail),
+		)
+		return nil
+	}
+	for _, state := range pending {
+		if err := p.syncZoneToDNSLocked(
+			ctx, state.ZoneName, state.DesiredAction == "delete",
+		); err != nil {
+			return fmt.Errorf(
+				"republish recoverable DNS zone %s: %w",
+				state.ZoneName, err,
+			)
+		}
 	}
 	return nil
 }
@@ -189,6 +1212,22 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
+		writeClientError(w, http.StatusConflict,
+			"DNS cluster topology is pending recovery; PowerDNS configuration is blocked")
+		return
+	}
+	if err := p.requireDNSZoneSyncV2Agent(r.Context()); err != nil {
+		writeServerError(w, err)
+		return
+	}
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
+		writeClientError(w, http.StatusConflict,
+			"DNS cluster topology is pending recovery; PowerDNS configuration is blocked")
 		return
 	}
 
@@ -219,7 +1258,9 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := p.syncAllZonesStrict(r.Context())
+	dnsPublicationMu.Lock()
+	result, err := p.syncAllZonesLocked(r.Context())
+	dnsPublicationMu.Unlock()
 	if err != nil {
 		err = fmt.Errorf("publish PowerDNS zones: %w", err)
 		if writeDNSPublicationConflict(w, err,
@@ -274,9 +1315,61 @@ func (p *Panel) syncAllZonesResult(
 // the new topology is already published. It still attempts every zone so one
 // bad zone does not prevent healthy zones from receiving the update.
 func (p *Panel) syncAllZonesStrict(ctx context.Context) (dnsSyncAllResult, error) {
-	result, err := p.syncAllZonesResult(ctx, p.syncZoneToDNS)
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	return p.syncAllZonesLocked(ctx)
+}
+
+// syncAllZonesLocked requires serviceMutationMu and dnsPublicationMu. It
+// includes durable deletion tombstones as well as live zones, so repair and
+// post-install runs cannot silently strand a pending remote deletion.
+func (p *Panel) syncAllZonesLocked(ctx context.Context) (dnsSyncAllResult, error) {
+	if err := p.requireNoPendingDNSClusterSaga(ctx); err != nil {
+		return dnsSyncAllResult{}, err
+	}
+	rows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT zone_name, desired_action
+		FROM dns_zone_sync_state
+		ORDER BY zone_name`)
 	if err != nil {
-		return result, err
+		return dnsSyncAllResult{}, fmt.Errorf("list desired DNS publications: %w", err)
+	}
+	type desiredZone struct {
+		name   string
+		delete bool
+	}
+	var zones []desiredZone
+	for rows.Next() {
+		var zone desiredZone
+		var action string
+		if err := rows.Scan(&zone.name, &action); err != nil {
+			rows.Close()
+			return dnsSyncAllResult{}, fmt.Errorf("scan desired DNS publication: %w", err)
+		}
+		if action != "sync" && action != "delete" {
+			rows.Close()
+			return dnsSyncAllResult{}, errors.New("invalid durable DNS desired action")
+		}
+		zone.delete = action == "delete"
+		zones = append(zones, zone)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return dnsSyncAllResult{}, fmt.Errorf("list desired DNS publication rows: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return dnsSyncAllResult{}, fmt.Errorf("close desired DNS publication list: %w", err)
+	}
+
+	result := dnsSyncAllResult{Attempted: len(zones)}
+	for _, zone := range zones {
+		if err := p.syncZoneToDNSLocked(ctx, zone.name, zone.delete); err != nil {
+			result.Failures = append(result.Failures, dnsZoneSyncFailure{Zone: zone.name, Err: err})
+			continue
+		}
+		result.Synced++
 	}
 	return result, result.err()
 }
@@ -284,13 +1377,10 @@ func (p *Panel) syncAllZonesStrict(ctx context.Context) (dnsSyncAllResult, error
 // syncAllZones is the legacy best-effort wrapper used by repair/install
 // flows. It logs partial failure and returns the number actually published.
 func (p *Panel) syncAllZones(ctx context.Context) int {
-	result, err := p.syncAllZonesResult(ctx, p.syncZoneToDNS)
+	result, err := p.syncAllZonesStrict(ctx)
 	if err != nil {
 		log.Printf("dns sync all: %v", err)
 		return result.Synced
-	}
-	if err := result.err(); err != nil {
-		log.Printf("dns sync all: %v", err)
 	}
 	return result.Synced
 }

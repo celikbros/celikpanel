@@ -30,16 +30,17 @@ type mailProfileTestAgent struct {
 	profileMu sync.Mutex
 	calls     []mailProfileMutationCall
 
-	agentCommit     string
-	tlsError        string
-	tlsCountOffset  int
-	submissionError string
-	failScanAt      int
-	scanCalls       int
-	phpInactive     bool
-	firewallEnabled bool
-	firewallError   string
-	firewallCalls   int
+	agentCommit         string
+	versionCapabilities *[]string
+	tlsError            string
+	tlsCountOffset      int
+	submissionError     string
+	failScanAt          int
+	scanCalls           int
+	phpInactive         bool
+	firewallEnabled     bool
+	firewallError       string
+	firewallCalls       int
 }
 
 func (a *mailProfileTestAgent) record(name, serviceID string, binding transport.ServiceMutationBinding) {
@@ -56,6 +57,16 @@ func (a *mailProfileTestAgent) callsSnapshot() []mailProfileMutationCall {
 
 func (a *mailProfileTestAgent) Version(_ *transport.Empty, response *transport.AgentVersionResponse) error {
 	response.Commit = a.agentCommit
+	capabilities := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityMailTLSSyncV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	}
+	if a.versionCapabilities != nil {
+		capabilities = append([]string(nil), (*a.versionCapabilities)...)
+	}
+	response.Capabilities = capabilities
 	return nil
 }
 
@@ -196,11 +207,17 @@ func (a *mailProfileTestAgent) WireMailFilters(
 	return nil
 }
 
-func (a *mailProfileTestAgent) ReconcileMailTLSMutation(
-	request *transport.ReconcileMailTLSMutationRequest,
+func (a *mailProfileTestAgent) SyncMailTLSV2(
+	request *transport.SyncMailTLSV2Request,
 	response *transport.SecureMailTLSResponse,
 ) error {
 	a.record("mail-tls", "", request.ServiceMutationBinding)
+	a.serviceOperationTestAgent.mu.Lock()
+	a.serviceOperationTestAgent.mutationEvents = append(
+		a.serviceOperationTestAgent.mutationEvents,
+		"call:mail_tls_sync",
+	)
+	a.serviceOperationTestAgent.mu.Unlock()
 	if a.tlsError != "" {
 		response.Error = a.tlsError
 		return nil
@@ -236,11 +253,28 @@ func (a *mailProfileTestAgent) InstalledServiceIDsStrict(_ *transport.Empty, res
 	return a.serviceOperationTestAgent.InstalledServiceIDs(&transport.Empty{}, response)
 }
 
-func (a *mailProfileTestAgent) ApplyFirewall(
+func (a *mailProfileTestAgent) ApplyFirewallV2(
 	request *transport.ApplyFirewallRequest,
 	response *transport.FirewallStatusResponse,
 ) error {
 	a.record("firewall", "", request.ServiceMutationBinding)
+	a.serviceOperationTestAgent.mu.Lock()
+	a.serviceOperationTestAgent.firewallCalls++
+	a.serviceOperationTestAgent.firewallRequests = append(
+		a.serviceOperationTestAgent.firewallRequests,
+		transport.ApplyFirewallRequest{
+			ServiceMutationBinding: request.ServiceMutationBinding,
+			Enabled:                request.Enabled,
+			Persist:                request.Persist,
+			TCPPorts:               append([]int(nil), request.TCPPorts...),
+			UDPPorts:               append([]int(nil), request.UDPPorts...),
+		},
+	)
+	a.serviceOperationTestAgent.mutationEvents = append(
+		a.serviceOperationTestAgent.mutationEvents,
+		"call:firewall_sync",
+	)
+	a.serviceOperationTestAgent.mu.Unlock()
 	if a.firewallError != "" {
 		response.Error = a.firewallError
 		return nil
@@ -283,7 +317,12 @@ func newMailProfileTestFixture(t *testing.T) (serviceOperationTestFixture, *mail
 	fixture.panel.webmailReadinessProbe = func(context.Context) bool { return true }
 	previousHostname := readMailProfileHostname
 	readMailProfileHostname = func() (string, error) { return "mail.profile.test", nil }
-	t.Cleanup(func() { readMailProfileHostname = previousHostname })
+	previousTLSHostname := readMailTLSHostname
+	readMailTLSHostname = func() (string, error) { return "MAIL.PROFILE.TEST.", nil }
+	t.Cleanup(func() {
+		readMailProfileHostname = previousHostname
+		readMailTLSHostname = previousTLSHostname
+	})
 	return fixture, agent
 }
 
@@ -474,7 +513,59 @@ func TestMailProfileBuildMismatchBlocksBeforeMutation(t *testing.T) {
 	}
 }
 
-func TestMailProfileRunnerUsesExactOrderOneBindingAndFinalFirewall(t *testing.T) {
+func TestMailProfileAdmissionRejectsUnavailableMailTLSV2BeforeRowOrHostMutation(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*serviceOperationTestFixture, *mailProfileTestAgent)
+	}{
+		{
+			name: "agent capability missing",
+			setup: func(_ *serviceOperationTestFixture, agent *mailProfileTestAgent) {
+				capabilities := []string{
+					transport.AgentCapabilityFirewallApplyV2,
+					transport.AgentCapabilityDNSZoneSyncV2,
+					transport.AgentCapabilityPanelCertificateIssueV2,
+				}
+				agent.versionCapabilities = &capabilities
+			},
+		},
+		{
+			name: "RHEL preview remains closed",
+			setup: func(fixture *serviceOperationTestFixture, _ *mailProfileTestAgent) {
+				fixture.panel.pkgFamilyVal = "dnf"
+				fixture.panel.hostPlatformKnown = true
+				fixture.panel.hostPlatformVal = rhelPolicyTestIdentity()
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fixture, agent := newMailProfileTestFixture(t)
+			test.setup(&fixture, agent)
+			recorder, queued := postMailProfile(
+				t, fixture, "core-mail", mustServiceOperationRequestID(t),
+			)
+			if recorder.Code == http.StatusAccepted || queued != nil {
+				t.Fatalf("unsafe admission status=%d operation=%+v body=%s", recorder.Code, queued, recorder.Body.String())
+			}
+			var rows int
+			if err := fixture.database.GetDB().QueryRow(
+				`SELECT COUNT(*) FROM service_operations`,
+			).Scan(&rows); err != nil {
+				t.Fatal(err)
+			}
+			agent.serviceOperationTestAgent.mu.Lock()
+			jobs := len(agent.mutationJobs)
+			agent.serviceOperationTestAgent.mu.Unlock()
+			if rows != 0 || jobs != 0 || agent.installCalls.Load() != 0 || len(agent.callsSnapshot()) != 0 {
+				t.Fatalf("rejected admission touched state: rows=%d jobs=%d installs=%d calls=%v",
+					rows, jobs, agent.installCalls.Load(), agent.callsSnapshot())
+			}
+		})
+	}
+}
+
+func TestMailProfileRunnerUsesExactOrderOneBindingWithoutNestedChildren(t *testing.T) {
 	for _, profileID := range []string{"core-mail", "webmail", "protected-mail"} {
 		t.Run(profileID, func(t *testing.T) {
 			fixture, agent := newMailProfileTestFixture(t)
@@ -501,37 +592,99 @@ func TestMailProfileRunnerUsesExactOrderOneBindingAndFinalFirewall(t *testing.T)
 			agent.profileMu.Lock()
 			firewallCalls := agent.firewallCalls
 			agent.profileMu.Unlock()
-			if firewallCalls != 1 {
-				t.Fatalf("firewall status calls = %d, want one final sync", firewallCalls)
+			if firewallCalls != 0 {
+				t.Fatalf("nested firewall status calls = %d, want 0", firewallCalls)
 			}
-			last := map[string]int{"mail-stack": -1, "mail-tls": -1, "submission": -1, "firewall": -1}
+			last := map[string]int{"mail-stack": -1, "submission": -1}
 			for i, call := range calls {
+				if call.Name == "firewall" || call.Name == "mail-tls" {
+					t.Fatalf("mail profile runner reused outer binding for a direct child: %+v", call)
+				}
 				if _, ok := last[call.Name]; ok {
 					last[call.Name] = i
 				}
 			}
-			if !(last["mail-stack"] < last["mail-tls"] && last["mail-tls"] < last["submission"] && last["submission"] < last["firewall"]) {
+			if last["mail-stack"] < 0 || last["mail-stack"] >= last["submission"] {
 				t.Fatalf("final order is wrong: %v calls=%v", last, calls)
 			}
 		})
 	}
 }
 
-func TestMailProfileTLSFailureNeverConfiguresSubmission(t *testing.T) {
+func TestMailProfileFirewallFailureOccursInFreshPostTerminalChild(t *testing.T) {
+	fixture, agent := newMailProfileTestFixture(t)
+	agent.firewallEnabled = true
+	agent.firewallError = "firewall failed"
+	recorder, queued := postMailProfile(
+		t, fixture, "core-mail", mustServiceOperationRequestID(t),
+	)
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("profile status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	failed, _ := waitForServiceOperation(
+		t, fixture.panel, fixture.userID, queued.ID, serviceOperationFailed,
+	)
+	if failed.Phase != mailProfilePhase("core-mail", "firewall") ||
+		failed.Error == nil || failed.Error.Code != "firewall_sync_failed" {
+		t.Fatalf("failed profile=%+v", failed)
+	}
+	events := fixture.agent.capturedMutationEvents()
+	outerFinish := mutationEventIndex(events, "finish:mail_profile_install:succeeded")
+	childBegin := mutationEventIndex(events, "begin:firewall_sync")
+	childCall := mutationEventIndex(events, "call:firewall_sync")
+	childFinish := mutationEventIndex(events, "finish:firewall_sync:failed")
+	if outerFinish < 0 || childBegin <= outerFinish || childCall <= childBegin ||
+		childFinish <= childCall {
+		t.Fatalf("mutation events=%v", events)
+	}
+	calls := agent.callsSnapshot()
+	var firewallCall *mailProfileMutationCall
+	for index := range calls {
+		if calls[index].Name == "firewall" {
+			firewallCall = &calls[index]
+		}
+	}
+	if firewallCall == nil ||
+		!validServiceOperationID(firewallCall.Binding.MutationRequestID) ||
+		!validServiceOperationID(firewallCall.Binding.MutationOwnerID) ||
+		firewallCall.Binding.MutationRequestID == queued.RequestID {
+		t.Fatalf("fresh firewall child binding=%+v outer=%s", firewallCall, queued.RequestID)
+	}
+	agent.serviceOperationTestAgent.mu.Lock()
+	legacyCalls := agent.serviceOperationTestAgent.legacyFirewallCalls
+	agent.serviceOperationTestAgent.mu.Unlock()
+	if legacyCalls != 0 {
+		t.Fatalf("legacy firewall calls=%d", legacyCalls)
+	}
+}
+
+func TestMailProfileTLSFailureOccursInFreshPostTerminalChild(t *testing.T) {
 	for _, setup := range []func(*mailProfileTestAgent){
 		func(agent *mailProfileTestAgent) { agent.tlsError = "TLS failed" },
 		func(agent *mailProfileTestAgent) { agent.tlsCountOffset = 1 },
 	} {
 		fixture, agent := newMailProfileTestFixture(t)
 		setup(agent)
-		result, failure := runMailProfileForTest(t, fixture, "core-mail")
-		if failure == nil || result["success"] != false {
-			t.Fatalf("result=%v failure=%+v", result, failure)
+		recorder, queued := postMailProfile(
+			t, fixture, "core-mail", mustServiceOperationRequestID(t),
+		)
+		if recorder.Code != http.StatusAccepted {
+			t.Fatalf("profile status=%d body=%s", recorder.Code, recorder.Body.String())
 		}
-		for _, call := range agent.callsSnapshot() {
-			if call.Name == "submission" {
-				t.Fatal("submission ran after TLS failure")
-			}
+		failed, _ := waitForServiceOperation(
+			t, fixture.panel, fixture.userID, queued.ID, serviceOperationFailed,
+		)
+		if failed.Phase != mailProfilePhase("core-mail", "mail-tls") || failed.Error == nil {
+			t.Fatalf("failed profile=%+v", failed)
+		}
+		events := fixture.agent.capturedMutationEvents()
+		outerFinish := mutationEventIndex(events, "finish:mail_profile_install:succeeded")
+		childBegin := mutationEventIndex(events, "begin:mail_tls_sync")
+		childCall := mutationEventIndex(events, "call:mail_tls_sync")
+		childFinish := mutationEventIndex(events, "finish:mail_tls_sync:failed")
+		if outerFinish < 0 || childBegin <= outerFinish || childCall <= childBegin ||
+			childFinish <= childCall {
+			t.Fatalf("mutation events=%v", events)
 		}
 	}
 }
@@ -539,15 +692,27 @@ func TestMailProfileTLSFailureNeverConfiguresSubmission(t *testing.T) {
 func TestMailProfileFallbackWarningAndFinalGates(t *testing.T) {
 	t.Run("zero SNI is explicit fallback success", func(t *testing.T) {
 		fixture, _ := newMailProfileTestFixture(t)
-		result, failure := runMailProfileForTest(t, fixture, "core-mail")
-		if failure != nil || result["success"] != true {
-			t.Fatalf("result=%v failure=%+v", result, failure)
+		recorder, queued := postMailProfile(
+			t, fixture, "core-mail", mustServiceOperationRequestID(t),
+		)
+		if recorder.Code != http.StatusAccepted {
+			t.Fatalf("profile status=%d body=%s", recorder.Code, recorder.Body.String())
 		}
-		tlsResult := result["mail_tls"].(mailProfileTLSResult)
+		completed, _ := waitForServiceOperation(
+			t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded,
+		)
+		var result struct {
+			MailTLS  mailProfileTLSResult `json:"mail_tls"`
+			Warnings []string             `json:"warnings"`
+		}
+		if err := json.Unmarshal(completed.Result, &result); err != nil {
+			t.Fatal(err)
+		}
+		tlsResult := result.MailTLS
 		if !tlsResult.Configured || tlsResult.SNICount != 0 || !tlsResult.FallbackOnly {
 			t.Fatalf("mail_tls = %+v", tlsResult)
 		}
-		warnings := result["warnings"].([]string)
+		warnings := result.Warnings
 		if len(warnings) != 1 || warnings[0] != mailProfileFallbackWarning {
 			t.Fatalf("warnings = %v", warnings)
 		}
@@ -562,13 +727,16 @@ func TestMailProfileFallbackWarningAndFinalGates(t *testing.T) {
 		}
 	})
 
-	t.Run("final firewall failure", func(t *testing.T) {
+	t.Run("runner defers firewall failure to direct child", func(t *testing.T) {
 		fixture, agent := newMailProfileTestFixture(t)
 		agent.firewallEnabled = true
 		agent.firewallError = "firewall failed"
 		result, failure := runMailProfileForTest(t, fixture, "core-mail")
-		if failure == nil || failure.Code != "firewall_sync_failed" || result["success"] != false {
+		if failure != nil || result["success"] != true {
 			t.Fatalf("result=%v failure=%+v", result, failure)
+		}
+		if calls := agent.callsSnapshot(); len(calls) == 0 || calls[len(calls)-1].Name == "firewall" {
+			t.Fatalf("runner unexpectedly called nested firewall: %v", calls)
 		}
 	})
 
@@ -860,8 +1028,9 @@ func TestSucceededMailProfileRecoveryReconstructsFullResult(t *testing.T) {
 		!result.SubmissionConfigured || len(result.Warnings) != 1 {
 		t.Fatalf("reconstructed result = %+v", result)
 	}
-	if len(agent.callsSnapshot()) != 0 {
-		t.Fatal("succeeded recovery reran privileged mutations")
+	calls := agent.callsSnapshot()
+	if len(calls) != 1 || calls[0].Name != "mail-tls" {
+		t.Fatalf("succeeded recovery child calls=%v, want one fresh mail TLS child", calls)
 	}
 }
 

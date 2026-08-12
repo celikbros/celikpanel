@@ -67,6 +67,10 @@ func syncServiceMutationDirectory(string) error {
 	return nil
 }
 
+func syncDNSClusterConfigDirectory(string) error {
+	return nil
+}
+
 func realPackageManagerMutationBusy() (bool, error) {
 	return false, nil
 }

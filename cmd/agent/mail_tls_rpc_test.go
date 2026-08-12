@@ -200,7 +200,7 @@ func TestReconcileMailTLSRejectsUnsupportedSNIMapBeforeSnapshot(t *testing.T) {
 	}
 }
 
-func TestReconcileMailTLSMutationRequiresRequestAndDurableBinding(t *testing.T) {
+func TestLegacyMailTLSMutationsAreStableZeroTouchStubs(t *testing.T) {
 	agent := &Agent{}
 	if err := agent.SecureMailTLS(nil, nil); err == nil ||
 		!strings.Contains(err.Error(), "response is required") {
@@ -210,34 +210,38 @@ func TestReconcileMailTLSMutationRequiresRequestAndDurableBinding(t *testing.T) 
 		!strings.Contains(err.Error(), "response is required") {
 		t.Fatalf("nil response error = %v", err)
 	}
-	var missingRequest SecureMailTLSResponse
-	if err := agent.ReconcileMailTLSMutation(nil, &missingRequest); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(missingRequest.Error, "request is required") {
-		t.Fatalf("nil request error = %q", missingRequest.Error)
-	}
-
-	var missingBinding SecureMailTLSResponse
-	if err := agent.ReconcileMailTLSMutation(
-		&ReconcileMailTLSMutationRequest{Myhostname: "mail.example.test"},
-		&missingBinding,
-	); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(missingBinding.Error, "durable service mutation lease") {
-		t.Fatalf("missing binding error = %q", missingBinding.Error)
-	}
-
-	var missingHostname SecureMailTLSResponse
-	if err := agent.ReconcileMailTLSMutation(
-		&ReconcileMailTLSMutationRequest{},
-		&missingHostname,
-	); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(missingHostname.Error, "requires a server hostname") {
-		t.Fatalf("missing hostname error = %q", missingHostname.Error)
+	for _, call := range []struct {
+		name string
+		run  func(*SecureMailTLSResponse) error
+	}{
+		{name: "secure nil", run: func(response *SecureMailTLSResponse) error {
+			return agent.SecureMailTLS(nil, response)
+		}},
+		{name: "secure populated", run: func(response *SecureMailTLSResponse) error {
+			return agent.SecureMailTLS(&SecureMailTLSRequest{
+				ExpectedBuildCommit: "mismatch",
+				Myhostname:          "mail.example.test",
+			}, response)
+		}},
+		{name: "reconcile nil", run: func(response *SecureMailTLSResponse) error {
+			return agent.ReconcileMailTLSMutation(nil, response)
+		}},
+		{name: "reconcile populated", run: func(response *SecureMailTLSResponse) error {
+			return agent.ReconcileMailTLSMutation(&ReconcileMailTLSMutationRequest{
+				ExpectedBuildCommit: "mismatch",
+				Myhostname:          "mail.example.test",
+			}, response)
+		}},
+	} {
+		t.Run(call.name, func(t *testing.T) {
+			var response SecureMailTLSResponse
+			if err := call.run(&response); err != nil {
+				t.Fatal(err)
+			}
+			if response != (SecureMailTLSResponse{Error: mailTLSLegacyUnsupportedError}) {
+				t.Fatalf("legacy response = %+v", response)
+			}
+		})
 	}
 }
 
@@ -256,39 +260,44 @@ func createManagedMailTLSSnapshot(t *testing.T, root, domain, version string) te
 	if root == "" {
 		root = t.TempDir()
 	}
-	if version == "" {
-		version = testCertificateVersion
-	}
+	cert, key := makeCertificatePair(t, "ed25519", []string{domain, "mail." + domain})
 	domainDir := filepath.Join(root, domain)
-	versionDir := filepath.Join(domainDir, version)
-	if err := os.MkdirAll(versionDir, 0o750); err != nil {
+	if err := os.MkdirAll(domainDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{domainDir, versionDir} {
-		if err := os.Chmod(path, 0o750); err != nil {
-			t.Fatal(err)
-		}
-	}
-	certPath := filepath.Join(versionDir, "fullchain.pem")
-	keyPath := filepath.Join(versionDir, "privkey.pem")
-	if err := os.WriteFile(certPath, []byte("certificate"), 0o644); err != nil {
+	if err := os.Chmod(domainDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(certPath, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(keyPath, []byte("private key"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(keyPath, 0o600); err != nil {
+	paths, err := publishCertificateVersion(
+		domainDir,
+		newCertificateVersionContent(cert, key, ""),
+		writeCertificateFile,
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
 	return testManagedMailTLSSnapshot{
 		root:       root,
 		domain:     domain,
-		versionDir: versionDir,
-		certPath:   certPath,
-		keyPath:    keyPath,
+		versionDir: filepath.Dir(paths.Fullchain),
+		certPath:   paths.Fullchain,
+		keyPath:    paths.Key,
+	}
+}
+
+func TestValidateMailSNIEntriesRejectsSnapshotContentTamper(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CELIKPANEL_CUSTOM_CERT_ROOT", root)
+	snapshot := createManagedMailTLSSnapshot(t, root, "example.test", "")
+	if _, err := validateMailSNIEntries([]MailSNIEntry{validMailSNIEntry(snapshot)}); err != nil {
+		t.Fatalf("valid immutable snapshot was rejected: %v", err)
+	}
+	if err := os.WriteFile(snapshot.keyPath, []byte("tampered"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateMailSNIEntries([]MailSNIEntry{validMailSNIEntry(snapshot)}); err == nil ||
+		!strings.Contains(err.Error(), "fingerprint") {
+		t.Fatalf("tampered immutable snapshot error = %v", err)
 	}
 }
 

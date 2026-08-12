@@ -233,6 +233,12 @@ type IssuePanelCertificateResponse struct {
 	Error     string    `json:"error,omitempty"`
 }
 
+// V2 binds the complete effective issuance payload into the surrounding
+// service-mutation qualifier. The wire fields intentionally remain identical
+// to V1 so mixed binaries fail by RPC method name rather than partial decoding.
+type IssuePanelCertificateV2Request = IssuePanelCertificateRequest
+type IssuePanelCertificateV2Response = IssuePanelCertificateResponse
+
 type RestartPanelSoonRequest struct {
 	ExpectedBuildCommit string `json:"expected_build_commit,omitempty"`
 }

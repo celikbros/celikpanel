@@ -91,14 +91,6 @@ func (p *Panel) runServiceInstall(
 			return result, serviceInstallFailure(errors.New("post-install scan did not find Roundcube"))
 		}
 		result["installed"] = true
-		if !serviceInstallFirewallDeferred(ctx) {
-			if err := advance("firewall"); err != nil {
-				return result, operationAdvanceFailure(err)
-			}
-			if err := p.syncFirewall(ctx); err != nil {
-				return result, firewallSyncFailure(err)
-			}
-		}
 		result["success"] = true
 		return result, nil
 	}
@@ -183,12 +175,9 @@ func (p *Panel) runServiceInstall(
 		if !lifecycle.Success {
 			return result, serviceInstallFailure(errors.New("agent did not confirm PowerDNS restart"))
 		}
-		if err := advance("syncing"); err != nil {
-			return result, operationAdvanceFailure(err)
-		}
-		if _, err := p.syncAllZonesStrict(ctx); err != nil {
-			return result, serviceInstallFailure(fmt.Errorf("PowerDNS zone synchronization: %w", err))
-		}
+		// Zone publication is a fresh direct V2 child after this outer install
+		// reaches an exact terminal success. It must not reuse the install
+		// binding or run while the outer agent lease is active.
 	}
 
 	// Installing a web server is only half done until it can actually serve
@@ -387,16 +376,6 @@ func (p *Panel) runServiceInstall(
 	}
 	result["installed"] = true
 
-	// New service may expose new ports; if the firewall is on, open them.
-	// Yeni servis yeni port açabilir; güvenlik duvarı açıksa onları aç.
-	if !serviceInstallFirewallDeferred(ctx) {
-		if err := advance("firewall"); err != nil {
-			return result, operationAdvanceFailure(err)
-		}
-		if err := p.syncFirewall(ctx); err != nil {
-			return result, firewallSyncFailure(err)
-		}
-	}
 	result["success"] = true
 	return result, nil
 }
@@ -750,7 +729,7 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	// Removed service's ports should close; re-sync the firewall.
 	// Kaldırılan servisin portları kapanmalı; güvenlik duvarını yeniden senkronla.
-	firewallErr := p.syncFirewall(r.Context())
+	firewallErr := p.syncFirewallLocked(r.Context())
 	// Refresh the scan cache so the page tells the truth immediately — the
 	// install path always did this; uninstall silently skipped it and the
 	// removed service kept its old row until someone pressed Scan.

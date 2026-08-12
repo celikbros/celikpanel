@@ -1,41 +1,103 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+func prepareManagedDNSReadinessTest(t *testing.T, databasePath string) string {
+	t.Helper()
+	oldLookPath := dnsClusterLookPath
+	oldManagedConf := dnsManagedConf
+	oldMainConf := dnsMainConf
+	oldClusterConf := dnsClusterConf
+	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
+	oldOwnerUID := dnsClusterConfigOwnerUID
+	dir := t.TempDir()
+	dnsManagedConf = filepath.Join(dir, "celikpanel.conf")
+	dnsMainConf = filepath.Join(dir, "pdns.conf")
+	dnsClusterConf = filepath.Join(dir, "celikpanel-cluster.conf")
+	dnsClusterLookPath = func(name string) (string, error) { return name, nil }
+	if runtime.GOOS == "linux" {
+		dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid())
+	}
+	managed := "launch=gsqlite3\ngsqlite3-dnssec=yes\ngsqlite3-database=" +
+		databasePath +
+		"\nlocal-address=192.0.2.10\nzone-cache-refresh-interval=0\nwebserver=no\napi=no\n"
+	if err := os.WriteFile(dnsManagedConf, []byte(managed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dnsMainConf, []byte("include-dir="+dir+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		dnsClusterLookPath = oldLookPath
+		dnsManagedConf = oldManagedConf
+		dnsMainConf = oldMainConf
+		dnsClusterConf = oldClusterConf
+		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
+		dnsClusterConfigOwnerUID = oldOwnerUID
+	})
+	return dir
+}
 
 func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	t.Helper()
 	oldConf := dnsClusterConf
+	oldManagedConf := dnsManagedConf
+	oldMainConf := dnsMainConf
 	oldLookPath := dnsClusterLookPath
 	oldRestart := dnsClusterRestart
 	oldRetrieve := dnsClusterRetrieve
 	oldPurge := dnsClusterPurge
 	oldApply := dnsClusterApplyAutoprimaryTx
 	oldSetType := dnsClusterSetLocalZoneTypeTx
+	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
+	oldOwnerUID := dnsClusterConfigOwnerUID
 	t.Cleanup(func() {
 		dnsClusterConf = oldConf
+		dnsManagedConf = oldManagedConf
+		dnsMainConf = oldMainConf
 		dnsClusterLookPath = oldLookPath
 		dnsClusterRestart = oldRestart
 		dnsClusterRetrieve = oldRetrieve
 		dnsClusterPurge = oldPurge
 		dnsClusterApplyAutoprimaryTx = oldApply
 		dnsClusterSetLocalZoneTypeTx = oldSetType
+		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
+		dnsClusterConfigOwnerUID = oldOwnerUID
 	})
 
-	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
+	dir := t.TempDir()
+	if runtime.GOOS == "linux" {
+		dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid())
+	}
+	dnsClusterConf = filepath.Join(dir, "celikpanel-cluster.conf")
+	dnsManagedConf = filepath.Join(dir, "celikpanel.conf")
+	dnsMainConf = filepath.Join(dir, "pdns.conf")
+	managed := "launch=gsqlite3\ngsqlite3-dnssec=yes\ngsqlite3-database=" +
+		pdnsDBPath() +
+		"\nlocal-address=192.0.2.10\nzone-cache-refresh-interval=0\nwebserver=no\napi=no\n"
+	if err := os.WriteFile(dnsManagedConf, []byte(managed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dnsMainConf, []byte("include-dir="+dir+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	dnsClusterLookPath = func(string) (string, error) { return "pdns_server", nil }
-	dnsClusterRestart = func() ([]byte, error) { return nil, nil }
-	dnsClusterRetrieve = func(string) ([]byte, error) { return nil, nil }
-	dnsClusterPurge = func(string) ([]byte, error) { return nil, nil }
+	dnsClusterRestart = func(context.Context) ([]byte, error) { return nil, nil }
+	dnsClusterRetrieve = func(context.Context, string) ([]byte, error) { return nil, nil }
+	dnsClusterPurge = func(context.Context, string) ([]byte, error) { return nil, nil }
 	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
 	return dnsClusterConf
@@ -130,38 +192,358 @@ func TestNormalizeAgentDNSRoleMigratesLegacyValues(t *testing.T) {
 
 func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 	oldLookPath := dnsClusterLookPath
-	t.Cleanup(func() { dnsClusterLookPath = oldLookPath })
+	oldReadFile := dnsClusterReadFile
+	oldStat := dnsClusterStat
+	oldReadDir := dnsClusterReadDir
+	oldManagedConf := dnsManagedConf
+	oldMainConf := dnsMainConf
+	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
+	oldOwnerUID := dnsClusterConfigOwnerUID
+	t.Cleanup(func() {
+		dnsClusterLookPath = oldLookPath
+		dnsClusterReadFile = oldReadFile
+		dnsClusterStat = oldStat
+		dnsClusterReadDir = oldReadDir
+		dnsManagedConf = oldManagedConf
+		dnsMainConf = oldMainConf
+		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
+		dnsClusterConfigOwnerUID = oldOwnerUID
+	})
+	dir := t.TempDir()
+	if runtime.GOOS == "linux" {
+		dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid())
+	}
+	databasePath := filepath.Join(dir, "pdns.sqlite3")
+	dnsManagedConf = filepath.Join(dir, "celikpanel.conf")
+	dnsMainConf = filepath.Join(dir, "pdns.conf")
+	t.Setenv("CELIKPANEL_PDNS_DB", databasePath)
+	dnsClusterReadFile = os.ReadFile
+	dnsClusterStat = os.Lstat
+	dnsClusterReadDir = os.ReadDir
 
-	for _, tc := range []struct {
+	t.Run("missing tooling", func(t *testing.T) {
+		dnsClusterLookPath = func(string) (string, error) { return "", errors.New("not found") }
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Ready || !strings.Contains(got.Detail, "not installed") {
+			t.Fatalf("missing tooling readiness = %+v", got)
+		}
+	})
+
+	dnsClusterLookPath = func(name string) (string, error) { return "/usr/sbin/" + name, nil }
+	t.Run("installed but unconfigured", func(t *testing.T) {
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Ready || !strings.Contains(got.Detail, "not been configured") {
+			t.Fatalf("unconfigured readiness = %+v", got)
+		}
+	})
+
+	if err := os.WriteFile(dnsManagedConf, []byte(
+		"launch=gsqlite3\ngsqlite3-dnssec=yes\ngsqlite3-database="+databasePath+
+			"\nlocal-address=192.0.2.10\nzone-cache-refresh-interval=0\nwebserver=no\napi=no\n",
+	), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dnsMainConf, []byte(
+		"include-dir="+dir+"\n",
+	), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(databasePath, []byte("sqlite"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Run("configured", func(t *testing.T) {
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err != nil {
+			t.Fatal(err)
+		}
+		if !got.Ready || !strings.Contains(got.Detail, "ready") {
+			t.Fatalf("configured readiness = %+v", got)
+		}
+	})
+
+	for _, test := range []struct {
 		name       string
-		lookupPath func(string) (string, error)
-		wantReady  bool
-		wantDetail string
+		targetBase string
+		prepare    func(t *testing.T)
 	}{
 		{
-			name:       "installed",
-			lookupPath: func(string) (string, error) { return "/usr/sbin/pdns_server", nil },
-			wantReady:  true,
-			wantDetail: "PowerDNS is installed on this server",
+			name:       "unexpected managed configuration owner is hard",
+			targetBase: filepath.Base(dnsManagedConf),
 		},
 		{
-			name:       "missing",
-			lookupPath: func(string) (string, error) { return "", errors.New("not found") },
-			wantReady:  false,
-			wantDetail: "PowerDNS is not installed on this server",
+			name:       "unexpected main configuration owner is hard",
+			targetBase: filepath.Base(dnsMainConf),
+		},
+		{
+			name:       "unexpected loaded configuration owner is hard",
+			targetBase: "owner-override.conf",
+			prepare: func(t *testing.T) {
+				if err := os.WriteFile(
+					filepath.Join(dir, "owner-override.conf"),
+					[]byte("# owner trust probe\n"),
+					0o644,
+				); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					_ = os.Remove(filepath.Join(dir, "owner-override.conf"))
+				})
+			},
 		},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			dnsClusterLookPath = tc.lookupPath
-			var got DNSClusterReadinessResponse
-			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err != nil {
-				t.Fatal(err)
+		t.Run(test.name, func(t *testing.T) {
+			if test.prepare != nil {
+				test.prepare(t)
 			}
-			if got.Ready != tc.wantReady || got.Detail != tc.wantDetail {
-				t.Fatalf("readiness = %+v, want ready=%v detail=%q", got, tc.wantReady, tc.wantDetail)
+			oldOwner := dnsClusterConfigOwnerUID
+			dnsClusterConfigOwnerUID = func(
+				info os.FileInfo,
+			) (uint32, bool) {
+				if info.Name() == test.targetBase {
+					return dnsClusterConfigRequiredOwnerUID + 1, true
+				}
+				return dnsClusterConfigRequiredOwnerUID, true
+			}
+			defer func() { dnsClusterConfigOwnerUID = oldOwner }()
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &got,
+			); err == nil {
+				t.Fatalf("unexpected owner readiness=%+v", got)
+			}
+			if got.Ready {
+				t.Fatal("unexpected configuration owner reported ready")
 			}
 		})
 	}
+
+	if runtime.GOOS != "windows" {
+		t.Run("group writable include directory is hard before enumeration", func(t *testing.T) {
+			if err := os.Chmod(dir, 0o770); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Chmod(dir, 0o700)
+			readDirCalls := 0
+			dnsClusterReadDir = func(path string) ([]os.DirEntry, error) {
+				readDirCalls++
+				return os.ReadDir(path)
+			}
+			defer func() { dnsClusterReadDir = os.ReadDir }()
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &got,
+			); err == nil {
+				t.Fatalf("writable include directory readiness=%+v", got)
+			}
+			if got.Ready || readDirCalls != 0 {
+				t.Fatalf("writable include directory ready=%v read-dir calls=%d",
+					got.Ready, readDirCalls)
+			}
+		})
+
+		t.Run("symlinked include directory is hard before enumeration", func(t *testing.T) {
+			linkDir := filepath.Join(t.TempDir(), "pdns.d")
+			if err := os.Symlink(dir, linkDir); err != nil {
+				t.Fatal(err)
+			}
+			oldManaged, oldCluster := dnsManagedConf, dnsClusterConf
+			dnsManagedConf = filepath.Join(linkDir, filepath.Base(oldManaged))
+			dnsClusterConf = filepath.Join(linkDir, filepath.Base(dnsClusterConf))
+			if err := os.WriteFile(
+				dnsMainConf,
+				[]byte("include-dir="+linkDir+"\n"),
+				0o644,
+			); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				dnsManagedConf, dnsClusterConf = oldManaged, oldCluster
+				_ = os.WriteFile(
+					dnsMainConf,
+					[]byte("include-dir="+dir+"\n"),
+					0o644,
+				)
+			}()
+			readDirCalls := 0
+			dnsClusterReadDir = func(path string) ([]os.DirEntry, error) {
+				readDirCalls++
+				return os.ReadDir(path)
+			}
+			defer func() { dnsClusterReadDir = os.ReadDir }()
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &got,
+			); err == nil {
+				t.Fatalf("symlinked include directory readiness=%+v", got)
+			}
+			if got.Ready || readDirCalls != 0 {
+				t.Fatalf("symlinked include directory ready=%v read-dir calls=%d",
+					got.Ready, readDirCalls)
+			}
+		})
+
+		t.Run("world writable main configuration is hard", func(t *testing.T) {
+			if err := os.Chmod(dnsMainConf, 0o666); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Chmod(dnsMainConf, 0o644)
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+				t.Fatalf("world-writable main configuration readiness=%+v", got)
+			}
+		})
+
+		if runtime.GOOS == "linux" {
+			t.Run("unexpected include directory owner is hard before enumeration", func(t *testing.T) {
+				oldExpected := dnsClusterConfigRequiredOwnerUID
+				dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid() + 1)
+				defer func() {
+					dnsClusterConfigRequiredOwnerUID = oldExpected
+				}()
+				readDirCalls := 0
+				dnsClusterReadDir = func(path string) ([]os.DirEntry, error) {
+					readDirCalls++
+					return os.ReadDir(path)
+				}
+				defer func() { dnsClusterReadDir = os.ReadDir }()
+				var got DNSClusterReadinessResponse
+				if err := (&Agent{}).DNSClusterReadiness(
+					&transport.Empty{}, &got,
+				); err == nil {
+					t.Fatalf("unexpected include owner readiness=%+v", got)
+				}
+				if got.Ready || readDirCalls != 0 {
+					t.Fatalf("unexpected include owner ready=%v read-dir calls=%d",
+						got.Ready, readDirCalls)
+				}
+			})
+		}
+
+		t.Run("world writable loaded include is hard", func(t *testing.T) {
+			unsafe := filepath.Join(dir, "unsafe.conf")
+			if err := os.WriteFile(unsafe, []byte("# loaded include\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(unsafe, 0o666); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(unsafe)
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+				t.Fatalf("world-writable loaded include readiness=%+v", got)
+			}
+		})
+
+		t.Run("symlinked main configuration is hard", func(t *testing.T) {
+			realMain := dnsMainConf + ".real"
+			if err := os.Rename(dnsMainConf, realMain); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(realMain, dnsMainConf); err != nil {
+				_ = os.Rename(realMain, dnsMainConf)
+				t.Fatal(err)
+			}
+			defer func() {
+				_ = os.Remove(dnsMainConf)
+				_ = os.Rename(realMain, dnsMainConf)
+			}()
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+				t.Fatalf("symlinked main configuration readiness=%+v", got)
+			}
+		})
+
+		t.Run("symlinked loaded include is hard", func(t *testing.T) {
+			target := filepath.Join(dir, "include-target")
+			if err := os.WriteFile(target, []byte("# target\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			link := filepath.Join(dir, "symlink.conf")
+			if err := os.Symlink(target, link); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(link)
+			defer os.Remove(target)
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+				t.Fatalf("symlinked loaded include readiness=%+v", got)
+			}
+		})
+	}
+
+	t.Run("configuration read ambiguity is hard", func(t *testing.T) {
+		dnsClusterReadFile = func(string) ([]byte, error) {
+			return nil, errors.New("forced read ambiguity")
+		}
+		defer func() { dnsClusterReadFile = os.ReadFile }()
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+			t.Fatal("ambiguous managed configuration read reported ordinary not-ready")
+		}
+	})
+
+	t.Run("later topology override is hard", func(t *testing.T) {
+		override := filepath.Join(dir, "zz-override.conf")
+		if err := os.WriteFile(override, []byte("also-notify=198.51.100.7\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(override)
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+			t.Fatalf("loaded topology override readiness=%+v", got)
+		}
+	})
+
+	for _, test := range []struct {
+		name      string
+		directive string
+	}{
+		{
+			name:      "loaded local address override is hard",
+			directive: "local-address=0.0.0.0\n",
+		},
+		{
+			name:      "loaded zone cache override is hard",
+			directive: "zone-cache-refresh-interval=60\n",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			override := filepath.Join(dir, "zz-managed-override.conf")
+			if err := os.WriteFile(
+				override, []byte(test.directive), 0o644,
+			); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(override)
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &got,
+			); err == nil {
+				t.Fatalf("loaded managed override readiness=%+v", got)
+			}
+			if got.Ready {
+				t.Fatal("loaded managed override reported ready")
+			}
+		})
+	}
+
+	t.Run("standalone stray topology is hard", func(t *testing.T) {
+		stray := filepath.Join(dir, "stray.conf")
+		if err := os.WriteFile(stray, []byte("primary=yes\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(stray)
+		var got DNSClusterReadinessResponse
+		if err := (&Agent{}).DNSClusterReadiness(&transport.Empty{}, &got); err == nil {
+			t.Fatalf("stray topology readiness=%+v", got)
+		}
+	})
 }
 
 func TestApplyAutoprimaryTrustsOnlyTheConfiguredPeer(t *testing.T) {
@@ -207,7 +589,7 @@ func TestApplyAutoprimaryTrustsOnlyTheConfiguredPeer(t *testing.T) {
 	}
 }
 
-func TestConfigureDNSClusterRollsBackDatabaseOnEveryFailureStage(t *testing.T) {
+func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(t *testing.T) {
 	for _, stage := range []string{"apply-autoprimary", "set-zone-types", "restart"} {
 		t.Run(stage, func(t *testing.T) {
 			t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(t.TempDir(), "pdns.sqlite3"))
@@ -263,7 +645,7 @@ func TestConfigureDNSClusterRollsBackDatabaseOnEveryFailureStage(t *testing.T) {
 					return nil, errors.New("injected set-zone-types failure")
 				}
 			case "restart":
-				dnsClusterRestart = func() ([]byte, error) {
+				dnsClusterRestart = func(context.Context) ([]byte, error) {
 					restartCalls++
 					if restartCalls == 1 {
 						return []byte("new configuration rejected\n"), errors.New("exit status 1")
@@ -272,27 +654,35 @@ func TestConfigureDNSClusterRollsBackDatabaseOnEveryFailureStage(t *testing.T) {
 				}
 			}
 
-			var resp DNSClusterResponse
-			if err := (&Agent{}).ConfigureDNSCluster(&DNSClusterRequest{
+			req := &DNSClusterRequest{
 				Role: dnsRolePaired, PeerIP: "203.0.113.9", PeerNS: "new-peer.example",
-			}, &resp); err != nil {
+			}
+			commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+				req.Role, req.PeerIP, req.PeerNS,
+			)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if resp.Applied || resp.Error == "" {
-				t.Fatalf("failure stage %q was reported as success: %+v", stage, resp)
+			if _, err := convergeDNSClusterConfig(context.Background(), commitment); err == nil {
+				t.Fatalf("failure stage %q was reported as success", stage)
 			}
-			if after := dnsClusterDatabaseSnapshot(t); after != before {
-				t.Fatalf("database was not rolled back\nbefore: %s\n after: %s", before, after)
+			after := dnsClusterDatabaseSnapshot(t)
+			if stage == "restart" {
+				if after == before {
+					t.Fatal("restart failure lost the committed forward database state")
+				}
+			} else if after != before {
+				t.Fatalf("precommit database failure leaked rows\nbefore: %s\n after: %s", before, after)
 			}
 			gotConfig, err := os.ReadFile(confPath)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if string(gotConfig) != string(oldConfig) {
-				t.Fatalf("configuration was not restored: %q", gotConfig)
+			if string(gotConfig) != dnsClusterConfig(req) {
+				t.Fatalf("desired forward configuration was not retained: %q", gotConfig)
 			}
-			if stage == "restart" && restartCalls != 2 {
-				t.Fatalf("restart calls = %d, want failed new start plus restored start", restartCalls)
+			if stage == "restart" && restartCalls != 1 {
+				t.Fatalf("restart calls = %d, want one failed convergence start", restartCalls)
 			}
 			if stage != "restart" && restartCalls != 0 {
 				t.Fatalf("restart called before database preparation completed: %d", restartCalls)
@@ -322,7 +712,7 @@ func TestConfigureDNSClusterRetargetsOnlyManagedSecondariesAfterCommit(t *testin
 	db.Close()
 
 	var calls []string
-	dnsClusterRestart = func() ([]byte, error) {
+	dnsClusterRestart = func(context.Context) ([]byte, error) {
 		calls = append(calls, "restart")
 		readDB, err := sql.Open("sqlite", "file:"+dbPath+"?_busy_timeout=100")
 		if err != nil {
@@ -333,24 +723,31 @@ func TestConfigureDNSClusterRetargetsOnlyManagedSecondariesAfterCommit(t *testin
 		if err := readDB.QueryRow(`SELECT master FROM domains WHERE id = 2`).Scan(&master); err != nil {
 			return nil, err
 		}
-		if master != "192.0.2.1" {
-			return nil, fmt.Errorf("uncommitted master became visible during restart: %s", master)
+		if master != "203.0.113.9" {
+			return nil, fmt.Errorf("committed master was not visible during restart: %s", master)
 		}
 		return nil, nil
 	}
-	dnsClusterRetrieve = func(zone string) ([]byte, error) {
+	dnsClusterRetrieve = func(_ context.Context, zone string) ([]byte, error) {
 		calls = append(calls, "retrieve "+zone)
 		return nil, nil
 	}
 
-	var resp DNSClusterResponse
-	if err := (&Agent{}).ConfigureDNSCluster(&DNSClusterRequest{
+	req := &DNSClusterRequest{
 		Role: dnsRolePaired, PeerIP: "203.0.113.9", PeerNS: "new-peer.example",
-	}, &resp); err != nil {
+	}
+	commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+		req.Role, req.PeerIP, req.PeerNS,
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Applied || resp.Error != "" {
-		t.Fatalf("pairing failed: %+v", resp)
+	peerZones, err := convergeDNSClusterConfig(context.Background(), commitment)
+	if err != nil {
+		t.Fatalf("pairing failed: %v", err)
+	}
+	for _, zone := range peerZones {
+		_, _ = dnsClusterRetrieve(context.Background(), zone)
 	}
 	if got := strings.Join(calls, "|"); got != "restart|retrieve managed.example" {
 		t.Fatalf("post-commit calls = %q", got)
@@ -426,20 +823,26 @@ func TestConfigureDNSClusterStandaloneRemovesOnlyManagedSecondaries(t *testing.T
 	db.Close()
 
 	var calls []string
-	dnsClusterRestart = func() ([]byte, error) {
+	dnsClusterRestart = func(context.Context) ([]byte, error) {
 		calls = append(calls, "restart")
 		return nil, nil
 	}
-	dnsClusterPurge = func(zone string) ([]byte, error) {
+	dnsClusterPurge = func(_ context.Context, zone string) ([]byte, error) {
 		calls = append(calls, "purge "+zone+"$")
 		return nil, nil
 	}
-	var resp DNSClusterResponse
-	if err := (&Agent{}).ConfigureDNSCluster(&DNSClusterRequest{Role: dnsRoleStandalone}, &resp); err != nil {
+	commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+		dnsRoleStandalone, "", "",
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Applied || resp.Error != "" {
-		t.Fatalf("standalone transition failed: %+v", resp)
+	peerZones, err := convergeDNSClusterConfig(context.Background(), commitment)
+	if err != nil {
+		t.Fatalf("standalone transition failed: %v", err)
+	}
+	for _, zone := range peerZones {
+		_, _ = dnsClusterPurge(context.Background(), zone)
 	}
 	if got := strings.Join(calls, "|"); got != "restart|purge managed-a.example$|purge managed-b.example$" {
 		t.Fatalf("post-commit calls = %q", got)

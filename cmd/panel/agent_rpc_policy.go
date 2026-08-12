@@ -159,21 +159,21 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityCertificate, `
 		Agent.DeleteCertLineage Agent.InstallCustomCertificate Agent.IssueLetsEncryptCertificate
-		Agent.IssuePanelCertificate Agent.ReconcileSiteCertLineages
+		Agent.IssuePanelCertificateV2 Agent.ReconcileSiteCertLineages
 		Agent.RenewLetsEncryptCertificate Agent.ValidateCertificate
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityFirewall, `
-		Agent.ApplyFirewall Agent.Fail2banToggleJail Agent.Fail2banUnban
+		Agent.ApplyFirewallV2 Agent.Fail2banToggleJail Agent.Fail2banUnban
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityDNS, `
-		Agent.ConfigureDNSCluster Agent.ConfigurePowerDNSSQLite Agent.SecureDNSZone
-		Agent.SyncDNSZone
+		Agent.ConfigureDNSClusterV2 Agent.ConfigurePowerDNSSQLite Agent.SecureDNSZoneV2
+		Agent.SyncDNSZoneV2
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityMail, `
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
 		Agent.ConfigureMailSubmission Agent.DeleteMailAccount Agent.DeleteMailDomain
 		Agent.EnsureDKIMKey Agent.ImportMailAccount Agent.PostfixQueueAction
-		Agent.ReconcileMailTLSMutation Agent.SecureMailTLS Agent.SetMailPolicy
+		Agent.SetMailPolicy Agent.SyncMailTLSV2
 		Agent.UpdateMailForwarding Agent.UpdateMailPassword Agent.UpdateMailQuota
 		Agent.WireMailFilters
 	`),
@@ -286,11 +286,11 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.ServiceMutationStatus":       agentRPCMutationTimeout,
 	"Agent.AddCronJob":                  agentRPCMutationTimeout,
 	"Agent.AddMailAccount":              agentRPCMutationTimeout,
-	"Agent.ApplyFirewall":               agentRPCMutationTimeout,
+	"Agent.ApplyFirewallV2":             agentRPCMutationTimeout,
 	"Agent.ApplyVhost":                  agentRPCMutationTimeout,
 	"Agent.ChmodFile":                   agentRPCMutationTimeout,
 	"Agent.ClearLogs":                   agentRPCMutationTimeout,
-	"Agent.ConfigureDNSCluster":         agentRPCMutationTimeout,
+	"Agent.ConfigureDNSClusterV2":       agentRPCMutationTimeout,
 	"Agent.ConfigureDKIMSigning":        agentRPCMutationTimeout,
 	"Agent.ConfigurePowerDNSSQLite":     agentRPCMutationTimeout,
 	"Agent.CreateFileOrDir":             agentRPCMutationTimeout,
@@ -343,10 +343,9 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.EnsureDKIMKey":                agentRPCDatabaseTimeout,
 	"Agent.ImportMailAccount":            agentRPCDatabaseTimeout,
 	"Agent.MigratePHPPool":               agentRPCDatabaseTimeout,
-	"Agent.ReconcileMailTLSMutation":     agentRPCDatabaseTimeout,
-	"Agent.SecureDNSZone":                agentRPCDatabaseTimeout,
-	"Agent.SecureMailTLS":                agentRPCDatabaseTimeout,
-	"Agent.SyncDNSZone":                  agentRPCDatabaseTimeout,
+	"Agent.SecureDNSZoneV2":              agentRPCDatabaseTimeout,
+	"Agent.SyncDNSZoneV2":                agentRPCDatabaseTimeout,
+	"Agent.SyncMailTLSV2":                agentRPCMutationTimeout,
 	"Agent.CreateSystemSQLiteSnapshot":   agentRPCDatabaseTimeout,
 	"Agent.OptimizeSystemSQLiteDatabase": agentRPCDatabaseTimeout,
 
@@ -363,7 +362,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.InstallService":              agentRPCDeploymentTimeout,
 	"Agent.InstallWordPress":            agentRPCDeploymentTimeout,
 	"Agent.IssueLetsEncryptCertificate": agentRPCDeploymentTimeout,
-	"Agent.IssuePanelCertificate":       agentRPCDeploymentTimeout,
+	"Agent.IssuePanelCertificateV2":     agentRPCDeploymentTimeout,
 	"Agent.RemoveNodeVersion":           agentRPCDeploymentTimeout,
 	"Agent.RemoveRoundcube":             agentRPCDeploymentTimeout,
 	"Agent.RenewLetsEncryptCertificate": agentRPCDeploymentTimeout,

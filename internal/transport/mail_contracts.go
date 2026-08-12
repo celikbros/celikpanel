@@ -226,6 +226,16 @@ type ReconcileMailTLSMutationRequest struct {
 	SNI                 []MailSNIEntry `json:"sni"`
 }
 
+// SyncMailTLSV2Request carries the complete canonical mail TLS snapshot under
+// a fresh direct payload-bound mutation. Package/profile operations must
+// terminalize before opening this independent lease.
+type SyncMailTLSV2Request struct {
+	ServiceMutationBinding
+	ExpectedBuildCommit string         `json:"expected_build_commit"`
+	Myhostname          string         `json:"myhostname"`
+	SNI                 []MailSNIEntry `json:"sni"`
+}
+
 type SecureMailTLSResponse struct {
 	Configured  bool   `json:"configured"`
 	DefaultCert string `json:"default_cert"`

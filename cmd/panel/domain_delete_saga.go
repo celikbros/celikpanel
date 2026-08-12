@@ -224,9 +224,10 @@ func (p *Panel) writeDomainDeletionPending(
 	})
 }
 
-// removeDomainDNSForDeletion reconciles the public DNS copy before the domain
-// ledger row is finalized. Every step is idempotent, so a retry is safe after
-// a timeout or process crash with an ambiguous remote result.
+// removeDomainDNSForDeletion first commits the local PowerDNS-zone removal.
+// Migration 032 turns that ledger delete into a durable tombstone/generation;
+// only the exact V2 receipt may retire it. The tenant domain and deletion
+// operation rows remain intact until the later saga finalize stage.
 func (p *Panel) removeDomainDNSForDeletion(
 	ctx context.Context,
 	domain string,
@@ -236,49 +237,63 @@ func (p *Panel) removeDomainDNSForDeletion(
 		_, err := p.removeSubdomainFromParentZone(ctx, parentDomain, domain)
 		return err
 	}
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	dnsPublicationMu.Lock()
+	defer dnsPublicationMu.Unlock()
+	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
+		return fmt.Errorf("verify DNS deletion publisher: %w", err)
+	}
 
 	var zoneID int
 	err := p.db.GetDB().QueryRowContext(ctx,
 		`SELECT id FROM pdns_domains WHERE name = ?`, domain,
 	).Scan(&zoneID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
+	zoneExists := err == nil
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("find DNS zone: %w", err)
 	}
 
-	// Publish the remote deletion while the local zone remains a durable retry
-	// handle. If the RPC is ambiguous, the next DELETE repeats it safely.
-	if err := p.syncZoneToDNS(ctx, domain, true); err != nil {
-		return fmt.Errorf("publish DNS zone deletion: %w", err)
+	if zoneExists {
+		tx, err := p.db.GetDB().BeginTx(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("begin DNS ledger cleanup: %w", err)
+		}
+		defer tx.Rollback()
+		result, err := tx.ExecContext(ctx,
+			`DELETE FROM pdns_domains WHERE id = ? AND name = ?`, zoneID, domain,
+		)
+		if err != nil {
+			return fmt.Errorf("remove DNS zone from ledger: %w", err)
+		}
+		changed, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("confirm DNS zone ledger cleanup: %w", err)
+		}
+		if changed != 1 {
+			return fmt.Errorf("remove DNS zone from ledger: expected one zone, changed %d", changed)
+		}
+		var markerType, desiredAction string
+		if err := tx.QueryRowContext(ctx, `
+			SELECT marker.zone_type, state.desired_action
+			FROM dns_zone_deletion_markers marker
+			JOIN dns_zone_sync_state state ON state.zone_name = marker.zone_name
+			WHERE marker.zone_name = ?`, domain).Scan(&markerType, &desiredAction); err != nil {
+			return fmt.Errorf("verify durable DNS deletion tombstone: %w", err)
+		}
+		if desiredAction != "delete" || (markerType != "NATIVE" && markerType != "MASTER") {
+			return errors.New("durable DNS deletion tombstone has invalid semantics")
+		}
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("commit DNS ledger cleanup: %w", err)
+		}
 	}
 
-	tx, err := p.db.GetDB().BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin DNS ledger cleanup: %w", err)
-	}
-	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx,
-		`DELETE FROM pdns_records WHERE domain_id = ?`, zoneID,
-	); err != nil {
-		return fmt.Errorf("remove DNS records from ledger: %w", err)
-	}
-	result, err := tx.ExecContext(ctx,
-		`DELETE FROM pdns_domains WHERE id = ? AND name = ?`, zoneID, domain,
-	)
-	if err != nil {
-		return fmt.Errorf("remove DNS zone from ledger: %w", err)
-	}
-	changed, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("confirm DNS zone ledger cleanup: %w", err)
-	}
-	if changed != 1 {
-		return fmt.Errorf("remove DNS zone from ledger: expected one zone, changed %d", changed)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit DNS ledger cleanup: %w", err)
+	// A crash at any point after the ledger commit resumes from the persisted
+	// lease/tombstone. If the exact delete was already CAS-applied, the state is
+	// absent and syncZoneToDNSLocked returns idempotent success.
+	if err := p.syncZoneToDNSLocked(ctx, domain, true); err != nil {
+		return fmt.Errorf("publish DNS zone deletion: %w", err)
 	}
 	return nil
 }

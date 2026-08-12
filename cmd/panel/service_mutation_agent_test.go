@@ -127,10 +127,86 @@ func (a *terminalAuthorityTestAgent) markSucceededLocked(requestID string) *Serv
 	}
 	job.Status = agentMutationSucceeded
 	job.Phase = "completed"
+	identity := agentMutationIdentity{
+		RequestID: job.RequestID, OwnerID: job.OwnerID,
+		Kind: job.Kind, Target: job.Target, PackageName: job.PackageName,
+	}
+	if phase, required, err := payloadBoundMutationPublishedPhase(identity); err == nil && required {
+		job.Phase = phase
+	}
 	if a.active == requestID {
 		a.active = ""
 	}
 	return job
+}
+
+func TestPayloadBoundMutationSuccessRequiresExactPublishedReceipt(t *testing.T) {
+	requestID := strings.Repeat("a", 32)
+	ownerID := strings.Repeat("b", 32)
+	tests := []struct {
+		name        string
+		kind        string
+		target      string
+		packageName string
+	}{
+		{
+			name: "VPN peer", kind: "vpn_peer_sync", target: "wireguard",
+			packageName: "vpn-peer-sync/v1:sha256:" + strings.Repeat("1", 64),
+		},
+		{
+			name: "firewall apply", kind: "firewall_apply", target: "nftables",
+			packageName: "firewall-apply/v1:sha256:" + strings.Repeat("2", 64),
+		},
+		{
+			name: "firewall sync", kind: "firewall_sync", target: "nftables",
+			packageName: "firewall-apply/v1:sha256:" + strings.Repeat("3", 64),
+		},
+		{
+			name: "mail TLS", kind: "mail_tls_sync", target: "mail-tls",
+			packageName: "mail-tls-sync/v1:sha256:" + strings.Repeat("4", 64),
+		},
+		{
+			name: "DNS cluster", kind: "dns_cluster_configure", target: "pdns",
+			packageName: "dns-cluster-config/v1:sha256:" + strings.Repeat("5", 64),
+		},
+		{
+			name: "DNS zone", kind: "dns_zone_sync", target: "example.test",
+			packageName: "dns-zone-sync/v1:sha256:" + strings.Repeat("6", 64),
+		},
+		{
+			name: "panel certificate", kind: "panel_certificate_issue", target: "panel.example.test",
+			packageName: "panel-certificate-issue/v1:sha256:" + strings.Repeat("7", 64),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			identity := agentMutationIdentity{
+				RequestID: requestID, OwnerID: ownerID,
+				Kind: test.kind, Target: test.target, PackageName: test.packageName,
+			}
+			phase, required, err := payloadBoundMutationPublishedPhase(identity)
+			if err != nil {
+				t.Fatalf("published phase: %v", err)
+			}
+			if !required {
+				t.Fatal("payload-bound mutation did not require a published receipt")
+			}
+			job := &agentMutationJob{
+				RequestID: requestID, OwnerID: ownerID,
+				Kind: test.kind, Target: test.target, PackageName: test.packageName,
+				Status: agentMutationSucceeded, Phase: phase,
+			}
+			if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+				t.Fatalf("exact published receipt rejected: %v", err)
+			}
+
+			job.Phase = "completed"
+			if err := validateAgentMutationSucceededReceipt(job, identity); !errors.Is(err, errAgentMutationPublishedReceiptMismatch) {
+				t.Fatalf("completed success error = %v, want published receipt mismatch", err)
+			}
+		})
+	}
 }
 
 func (a *terminalAuthorityTestAgent) markActiveSucceeded() {

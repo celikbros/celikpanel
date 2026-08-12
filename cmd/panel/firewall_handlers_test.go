@@ -15,6 +15,7 @@ import (
 	"time"
 
 	paneldb "github.com/alicelik/celikpanel/internal/db"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -25,33 +26,69 @@ type firewallSyncTestAgent struct {
 
 	mu sync.Mutex
 
-	status             FirewallStatusResp
-	statusErr          error
-	installed          []string
-	installedErr       error
-	applyResponseError string
-	applyErr           error
-	applyCalls         int
-	applyRequests      []FirewallSyncApplyRequest
-	installedCalls     int
-	issueCalls         int
-	issueRequests      []transport.IssuePanelCertificateRequest
-	issueResponse      transport.IssuePanelCertificateResponse
-	issueErr           error
-	beginCalls         int
-	finishCalls        int
-	finishErrOnce      error
-	callOrder          []string
-	discoveryStarted   chan struct{}
-	releaseDiscovery   chan struct{}
-	discoveryOnce      sync.Once
+	status              FirewallStatusResp
+	statusErr           error
+	installed           []string
+	installedErr        error
+	applyResponseError  string
+	applyErr            error
+	applyCommitThenErr  error
+	applyCalls          int
+	legacyApplyCalls    int
+	applyRequests       []FirewallSyncApplyRequest
+	installedCalls      int
+	issueCalls          int
+	legacyIssueCalls    int
+	issueRequests       []transport.IssuePanelCertificateRequest
+	issueResponse       transport.IssuePanelCertificateResponse
+	issueErr            error
+	beginCalls          int
+	beginRequests       []ServiceOperationMutationBeginRequest
+	finishCalls         int
+	finishErrOnce       error
+	mutationStatusCalls int
+	callOrder           []string
+	mutationEvents      []string
+	statusStarted       chan struct{}
+	releaseStatus       chan struct{}
+	statusOnce          sync.Once
+	versionCapabilities *[]string
+	discoveryStarted    chan struct{}
+	releaseDiscovery    chan struct{}
+	discoveryOnce       sync.Once
+}
+
+func (a *firewallSyncTestAgent) Version(
+	_ *transport.Empty,
+	out *transport.AgentVersionResponse,
+) error {
+	out.Version = "test"
+	out.Commit = strings.TrimSpace(buildCommit)
+	capabilities := []string{
+		transport.AgentCapabilityFirewallApplyV2,
+		transport.AgentCapabilityPanelCertificateIssueV2,
+	}
+	if a.versionCapabilities != nil {
+		capabilities = append([]string(nil), (*a.versionCapabilities)...)
+	}
+	out.Capabilities = capabilities
+	return nil
 }
 
 func (a *firewallSyncTestAgent) FirewallStatus(_ *transport.Empty, out *FirewallStatusResp) error {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	*out = a.status
-	return a.statusErr
+	err := a.statusErr
+	started := a.statusStarted
+	release := a.releaseStatus
+	a.mu.Unlock()
+	if started != nil {
+		a.statusOnce.Do(func() { close(started) })
+	}
+	if release != nil {
+		<-release
+	}
+	return err
 }
 
 func (a *firewallSyncTestAgent) InstalledServiceIDsStrict(_ *transport.Empty, out *[]string) error {
@@ -61,6 +98,7 @@ func (a *firewallSyncTestAgent) InstalledServiceIDsStrict(_ *transport.Empty, ou
 	started := a.discoveryStarted
 	release := a.releaseDiscovery
 	a.installedCalls++
+	a.mutationEvents = append(a.mutationEvents, "discovery")
 	a.mu.Unlock()
 	if started != nil {
 		a.discoveryOnce.Do(func() { close(started) })
@@ -71,10 +109,10 @@ func (a *firewallSyncTestAgent) InstalledServiceIDsStrict(_ *transport.Empty, ou
 	return err
 }
 
-func (a *firewallSyncTestAgent) ApplyFirewall(req *FirewallSyncApplyRequest, out *FirewallStatusResp) error {
+func (a *firewallSyncTestAgent) ApplyFirewallV2(req *FirewallSyncApplyRequest, out *FirewallStatusResp) error {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	a.callOrder = append(a.callOrder, "firewall")
+	a.mutationEvents = append(a.mutationEvents, "apply-v2")
 	a.applyCalls++
 	a.applyRequests = append(a.applyRequests, FirewallSyncApplyRequest{
 		ServiceMutationBinding: req.ServiceMutationBinding,
@@ -91,12 +129,54 @@ func (a *firewallSyncTestAgent) ApplyFirewall(req *FirewallSyncApplyRequest, out
 	}
 	*out = a.status
 	out.Error = a.applyResponseError
-	return a.applyErr
+	applyErr := a.applyErr
+	commitThenErr := a.applyCommitThenErr
+	a.mu.Unlock()
+	if commitThenErr != nil {
+		var terminal ServiceOperationMutationResponse
+		if err := a.durableMutationRPCFixture.FinishServiceMutation(
+			&ServiceOperationMutationFinishRequest{
+				RequestID: req.MutationRequestID,
+				OwnerID:   req.MutationOwnerID,
+				Success:   true,
+			},
+			&terminal,
+		); err != nil {
+			return err
+		}
+		return commitThenErr
+	}
+	return applyErr
+}
+
+func (a *firewallSyncTestAgent) ApplyFirewall(
+	_ *FirewallSyncApplyRequest,
+	out *FirewallStatusResp,
+) error {
+	a.mu.Lock()
+	a.legacyApplyCalls++
+	a.mutationEvents = append(a.mutationEvents, "apply-v1")
+	a.mu.Unlock()
+	*out = FirewallStatusResp{Error: "legacy firewall RPC must not be called"}
+	return nil
 }
 
 func (a *firewallSyncTestAgent) IssuePanelCertificate(
 	req *transport.IssuePanelCertificateRequest,
 	out *transport.IssuePanelCertificateResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.legacyIssueCalls++
+	*out = transport.IssuePanelCertificateResponse{
+		Error: "legacy certificate RPC must not be called",
+	}
+	return nil
+}
+
+func (a *firewallSyncTestAgent) IssuePanelCertificateV2(
+	req *transport.IssuePanelCertificateV2Request,
+	out *transport.IssuePanelCertificateV2Response,
 ) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -113,6 +193,8 @@ func (a *firewallSyncTestAgent) BeginServiceMutation(
 ) error {
 	a.mu.Lock()
 	a.beginCalls++
+	a.beginRequests = append(a.beginRequests, *req)
+	a.mutationEvents = append(a.mutationEvents, "begin")
 	a.mu.Unlock()
 	return a.durableMutationRPCFixture.BeginServiceMutation(req, out)
 }
@@ -126,10 +208,41 @@ func (a *firewallSyncTestAgent) FinishServiceMutation(
 	forcedErr := a.finishErrOnce
 	a.finishErrOnce = nil
 	a.mu.Unlock()
+	a.durableMutationRPCFixture.mu.Lock()
+	existing := cloneServiceOperationMutationJob(
+		a.durableMutationRPCFixture.jobs[req.RequestID],
+	)
+	a.durableMutationRPCFixture.mu.Unlock()
+	if existing != nil && existing.OwnerID == req.OwnerID &&
+		existing.Status == agentMutationSucceeded {
+		out.Job = existing
+		return forcedErr
+	}
 	if err := a.durableMutationRPCFixture.FinishServiceMutation(req, out); err != nil {
 		return err
 	}
 	return forcedErr
+}
+
+func (a *firewallSyncTestAgent) ServiceMutationStatus(
+	req *ServiceOperationMutationStatusRequest,
+	out *ServiceOperationMutationResponse,
+) error {
+	a.mu.Lock()
+	a.mutationStatusCalls++
+	a.mu.Unlock()
+	a.durableMutationRPCFixture.mu.Lock()
+	defer a.durableMutationRPCFixture.mu.Unlock()
+	if req.RequestID != "" {
+		out.Job = cloneServiceOperationMutationJob(
+			a.durableMutationRPCFixture.jobs[req.RequestID],
+		)
+		return nil
+	}
+	out.Job = cloneServiceOperationMutationJob(
+		a.durableMutationRPCFixture.jobs[a.durableMutationRPCFixture.active],
+	)
+	return nil
 }
 
 func attachFirewallSyncTestAgent(t *testing.T, panel *Panel, agent *firewallSyncTestAgent) {
@@ -218,6 +331,97 @@ func TestSyncFirewallUpdatesWithoutCreatingPersistence(t *testing.T) {
 	}
 }
 
+func TestSyncFirewallCommitsFrozenPayloadBeforeV2Begin(t *testing.T) {
+	agent := &firewallSyncTestAgent{
+		status:    FirewallStatusResp{Enabled: true, EngineAvailable: true},
+		installed: []string{"nginx"},
+	}
+	panel := &Panel{}
+	attachFirewallSyncTestAgent(t, panel, agent)
+	if err := panel.syncFirewall(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	agent.mu.Lock()
+	if len(agent.beginRequests) != 1 || len(agent.applyRequests) != 1 {
+		agent.mu.Unlock()
+		t.Fatalf("begin/apply counts = %d/%d", len(agent.beginRequests), len(agent.applyRequests))
+	}
+	begin := agent.beginRequests[0]
+	request := agent.applyRequests[0]
+	events := append([]string(nil), agent.mutationEvents...)
+	legacyCalls := agent.legacyApplyCalls
+	agent.mu.Unlock()
+
+	commitment, err := mutationpayload.CanonicalFirewallApply(
+		request.Enabled, request.Persist, request.TCPPorts, request.UDPPorts,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if begin.Kind != "firewall_sync" || begin.Target != "nftables" ||
+		begin.PackageName != commitment.Qualifier {
+		t.Fatalf("begin = %+v, qualifier = %q", begin, commitment.Qualifier)
+	}
+	if request.MutationRequestID != begin.RequestID ||
+		request.MutationOwnerID != begin.OwnerID {
+		t.Fatalf("V2 binding = %+v, begin = %+v", request.ServiceMutationBinding, begin)
+	}
+	if !reflect.DeepEqual(events, []string{"discovery", "begin", "apply-v2"}) {
+		t.Fatalf("firewall events = %v", events)
+	}
+	if legacyCalls != 0 {
+		t.Fatalf("legacy ApplyFirewall calls = %d", legacyCalls)
+	}
+}
+
+func TestApplyFirewallV2ResponseLossUsesExactTerminalSuccess(t *testing.T) {
+	agent := &firewallSyncTestAgent{
+		status:             FirewallStatusResp{Enabled: false, EngineAvailable: true},
+		applyCommitThenErr: errors.New("lost V2 response"),
+	}
+	panel := &Panel{}
+	attachFirewallSyncTestAgent(t, panel, agent)
+	status, err := panel.applyFirewallSetting(true, false)
+	if err != nil {
+		t.Fatalf("apply after committed response loss: %v", err)
+	}
+	if !status.Enabled || !status.EngineAvailable {
+		t.Fatalf("refreshed committed status = %+v", status)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.applyCalls != 1 || agent.legacyApplyCalls != 0 {
+		t.Fatalf("V2/V1 calls = %d/%d", agent.applyCalls, agent.legacyApplyCalls)
+	}
+}
+
+func TestApplyCanonicalFirewallV2RejectsTamperedPayloadBeforeBegin(t *testing.T) {
+	commitment, err := mutationpayload.CanonicalFirewallApply(
+		true, false, []int{80, 443}, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitment.TCPPorts = append(commitment.TCPPorts, 2083)
+	agent := &firewallSyncTestAgent{}
+	panel := &Panel{}
+	attachFirewallSyncTestAgent(t, panel, agent)
+	if _, err := panel.applyCanonicalFirewallV2(
+		context.Background(), "firewall_sync", commitment,
+	); err == nil || !strings.Contains(err.Error(), "qualifier") {
+		t.Fatalf("tampered commitment error = %v", err)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.beginCalls != 0 || agent.applyCalls != 0 || agent.legacyApplyCalls != 0 {
+		t.Fatalf(
+			"tampered commitment reached mutation: begin=%d V2=%d V1=%d",
+			agent.beginCalls, agent.applyCalls, agent.legacyApplyCalls,
+		)
+	}
+}
+
 func TestSyncFirewallWithExtraTCPIncludesACMEPort(t *testing.T) {
 	agent := &firewallSyncTestAgent{
 		status: FirewallStatusResp{Enabled: true, EngineAvailable: true},
@@ -234,7 +438,34 @@ func TestSyncFirewallWithExtraTCPIncludesACMEPort(t *testing.T) {
 	}
 }
 
+func useFastPanelCertificateSagaRetry(t *testing.T) {
+	t.Helper()
+	previous := panelCertificateSagaRetryDelay
+	panelCertificateSagaRetryDelay = 5 * time.Millisecond
+	t.Cleanup(func() { panelCertificateSagaRetryDelay = previous })
+}
+
+func waitPanelCertificateOperation(
+	t *testing.T,
+	panel *Panel,
+	requestID, wantStatus string,
+) serviceOperation {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		op, err := panel.serviceOperationByRequestID(context.Background(), requestID)
+		if err == nil && op.Status == wantStatus {
+			return op
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	op, err := panel.serviceOperationByRequestID(context.Background(), requestID)
+	t.Fatalf("panel certificate operation status = %+v, err=%v, want %s", op, err, wantStatus)
+	return serviceOperation{}
+}
+
 func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
+	useFastPanelCertificateSagaRetry(t)
 	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
 	if err != nil {
 		t.Fatal(err)
@@ -265,19 +496,21 @@ func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
 	req := httptest.NewRequest(
 		http.MethodPost,
 		"/api/v1/settings/panel-certificate",
-		strings.NewReader(`{"domain":"panel.example.test"}`),
+		strings.NewReader(`{"domain":"panel.example.test","request_id":"11111111111111111111111111111111"}`),
 	)
 	req = req.WithContext(context.WithValue(
 		req.Context(), callerKey, &Caller{ID: int(userID), Role: roleAdmin},
 	))
 	recorder := httptest.NewRecorder()
 	panel.handlePanelCertificate(recorder, req)
-	if recorder.Code != http.StatusConflict {
+	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("response = %d %s", recorder.Code, recorder.Body.String())
 	}
-	if !strings.Contains(recorder.Body.String(), `"code":"panel_certificate_activation_pending"`) ||
-		strings.Contains(recorder.Body.String(), "forced internal activation detail") {
-		t.Fatalf("coded certificate refusal leaked internal detail: %s", recorder.Body.String())
+	op := waitPanelCertificateOperation(
+		t, panel, "11111111111111111111111111111111", serviceOperationFailed,
+	)
+	if op.Error == nil || op.Error.Message == "forced internal activation detail" {
+		t.Fatalf("terminal operation leaked internal detail: %+v", op)
 	}
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
@@ -289,8 +522,8 @@ func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
 		containsInt(agent.applyRequests[1].TCPPorts, 80) {
 		t.Fatalf("preflight/rollback policies = %+v", agent.applyRequests)
 	}
-	if agent.beginCalls != 1 || agent.finishCalls != 1 {
-		t.Fatalf("durable lifecycle calls = begin %d finish %d, want 1/1", agent.beginCalls, agent.finishCalls)
+	if agent.beginCalls != 3 || agent.finishCalls != 3 {
+		t.Fatalf("durable lifecycle calls = begin %d finish %d, want three direct children", agent.beginCalls, agent.finishCalls)
 	}
 	if len(agent.issueRequests) != 1 {
 		t.Fatalf("certificate requests = %d, want 1", len(agent.issueRequests))
@@ -301,10 +534,12 @@ func TestPanelCertificateFailureRollsBackACMEFirewallAfterIssue(t *testing.T) {
 		t.Fatalf("certificate mutation binding is empty: %+v", agent.issueRequests[0])
 	}
 	for i, apply := range agent.applyRequests {
-		if apply.MutationRequestID != requestID || apply.MutationOwnerID != ownerID {
-			t.Fatalf("firewall binding[%d] = %s/%s, certificate binding = %s/%s",
-				i, apply.MutationRequestID, apply.MutationOwnerID, requestID, ownerID)
+		if apply.MutationRequestID == requestID || apply.MutationOwnerID == ownerID {
+			t.Fatalf("firewall child[%d] reused certificate lease: %+v", i, apply)
 		}
+	}
+	if agent.legacyIssueCalls != 0 {
+		t.Fatalf("legacy certificate RPC calls = %d", agent.legacyIssueCalls)
 	}
 }
 
@@ -335,7 +570,7 @@ func TestPanelCertificateRejectsInvalidStoredContactEmailBeforeMutation(t *testi
 	req := httptest.NewRequest(
 		http.MethodPost,
 		"/api/v1/settings/panel-certificate",
-		strings.NewReader(`{"domain":"panel.example.test"}`),
+		strings.NewReader(`{"domain":"panel.example.test","request_id":"22222222222222222222222222222222"}`),
 	)
 	req = req.WithContext(context.WithValue(
 		req.Context(), callerKey, &Caller{ID: int(userID), Role: roleAdmin},
@@ -356,6 +591,7 @@ func TestPanelCertificateRejectsInvalidStoredContactEmailBeforeMutation(t *testi
 }
 
 func TestPanelCertificateFinalizeFailureRunsStandaloneCompensationAndAudits(t *testing.T) {
+	useFastPanelCertificateSagaRetry(t)
 	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
 	if err != nil {
 		t.Fatal(err)
@@ -385,62 +621,59 @@ func TestPanelCertificateFinalizeFailureRunsStandaloneCompensationAndAudits(t *t
 	req := httptest.NewRequest(
 		http.MethodPost,
 		"/api/v1/settings/panel-certificate",
-		strings.NewReader(`{"domain":" PANEL.Example.TEST. "}`),
+		strings.NewReader(`{"domain":" PANEL.Example.TEST. ","request_id":"33333333333333333333333333333333"}`),
 	)
 	req = req.WithContext(context.WithValue(
 		req.Context(), callerKey, &Caller{ID: int(userID), Role: roleAdmin},
 	))
 	recorder := httptest.NewRecorder()
 	panel.handlePanelCertificate(recorder, req)
-	if recorder.Code != http.StatusInternalServerError ||
-		!strings.Contains(recorder.Body.String(), `"code":"panel_certificate_mutation_finalize_failed"`) {
+	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("response = %d %s", recorder.Code, recorder.Body.String())
+	}
+	op := waitPanelCertificateOperation(
+		t, panel, "33333333333333333333333333333333", serviceOperationSucceeded,
+	)
+	if op.Error != nil {
+		t.Fatalf("response-loss reconciled operation error = %+v", op.Error)
 	}
 
 	agent.mu.Lock()
-	if agent.beginCalls != 2 || agent.finishCalls != 2 {
+	if agent.beginCalls != 3 || agent.finishCalls != 3 {
 		agent.mu.Unlock()
-		t.Fatalf("durable lifecycle calls = begin %d finish %d, want outer + compensation", agent.beginCalls, agent.finishCalls)
+		t.Fatalf("durable lifecycle calls = begin %d finish %d, want three direct children", agent.beginCalls, agent.finishCalls)
 	}
 	if len(agent.issueRequests) != 1 || agent.issueRequests[0].Domain != "panel.example.test" {
 		requests := append([]transport.IssuePanelCertificateRequest(nil), agent.issueRequests...)
 		agent.mu.Unlock()
 		t.Fatalf("canonical certificate request = %+v", requests)
 	}
-	if len(agent.applyRequests) != 3 {
+	if len(agent.applyRequests) != 2 {
 		requests := append([]FirewallSyncApplyRequest(nil), agent.applyRequests...)
 		agent.mu.Unlock()
-		t.Fatalf("firewall applications = %+v, want preflight/final/standalone compensation", requests)
+		t.Fatalf("firewall applications = %+v, want preflight/final", requests)
+	}
+	if !containsInt(agent.applyRequests[0].TCPPorts, 80) ||
+		containsInt(agent.applyRequests[1].TCPPorts, 80) {
+		agent.mu.Unlock()
+		t.Fatalf("preflight/final firewall policies = %+v", agent.applyRequests)
 	}
 	issueRequestID := agent.issueRequests[0].MutationRequestID
 	issueOwnerID := agent.issueRequests[0].MutationOwnerID
-	if agent.applyRequests[0].MutationRequestID != issueRequestID ||
-		agent.applyRequests[0].MutationOwnerID != issueOwnerID ||
-		agent.applyRequests[1].MutationRequestID != issueRequestID ||
-		agent.applyRequests[1].MutationOwnerID != issueOwnerID {
+	if agent.applyRequests[0].MutationRequestID == issueRequestID ||
+		agent.applyRequests[0].MutationOwnerID == issueOwnerID ||
+		agent.applyRequests[1].MutationRequestID == issueRequestID ||
+		agent.applyRequests[1].MutationOwnerID == issueOwnerID ||
+		agent.applyRequests[0].MutationRequestID == agent.applyRequests[1].MutationRequestID {
 		requests := append([]FirewallSyncApplyRequest(nil), agent.applyRequests...)
 		agent.mu.Unlock()
-		t.Fatalf("outer firewall/certificate bindings differ: issue=%s/%s firewall=%+v",
+		t.Fatalf("child leases were not distinct: issue=%s/%s firewall=%+v",
 			issueRequestID, issueOwnerID, requests[:2])
 	}
-	if agent.applyRequests[2].MutationRequestID == "" ||
-		agent.applyRequests[2].MutationOwnerID == "" ||
-		agent.applyRequests[2].MutationRequestID == issueRequestID ||
-		agent.applyRequests[2].MutationOwnerID == issueOwnerID {
-		request := agent.applyRequests[2]
-		agent.mu.Unlock()
-		t.Fatalf("standalone compensation did not receive a fresh binding: %+v", request)
-	}
+	legacyIssueCalls := agent.legacyIssueCalls
 	agent.mu.Unlock()
-
-	var action string
-	if err := database.GetDB().QueryRow(`
-		SELECT action FROM audit_logs ORDER BY id DESC LIMIT 1`).Scan(&action); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(action, "panel.certificate.finalization_failed:panel.example.test") ||
-		!strings.Contains(action, "forced finish transport failure") {
-		t.Fatalf("finalization audit = %q", action)
+	if legacyIssueCalls != 0 {
+		t.Fatalf("legacy certificate RPC calls = %d", legacyIssueCalls)
 	}
 }
 
@@ -453,7 +686,7 @@ func containsInt(values []int, want int) bool {
 	return false
 }
 
-func TestSyncFirewallCarriesDurableMutationBindingWhenPresent(t *testing.T) {
+func TestSyncFirewallRejectsNestedMutationBindingBeforeHostAccess(t *testing.T) {
 	agent := &firewallSyncTestAgent{
 		status: FirewallStatusResp{Enabled: true, EngineAvailable: true},
 	}
@@ -463,15 +696,16 @@ func TestSyncFirewallCarriesDurableMutationBindingWhenPresent(t *testing.T) {
 		MutationRequestID: "11111111111111111111111111111111",
 		MutationOwnerID:   "22222222222222222222222222222222",
 	})
-	if err := panel.syncFirewall(ctx); err != nil {
-		t.Fatal(err)
+	if err := panel.syncFirewall(ctx); !errors.Is(err, errFirewallNestedMutation) {
+		t.Fatalf("syncFirewall nested error = %v", err)
 	}
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
-	if len(agent.applyRequests) != 1 ||
-		agent.applyRequests[0].MutationRequestID != "11111111111111111111111111111111" ||
-		agent.applyRequests[0].MutationOwnerID != "22222222222222222222222222222222" {
-		t.Fatalf("firewall sync binding = %+v", agent.applyRequests)
+	if agent.applyCalls != 0 || agent.installedCalls != 0 || agent.beginCalls != 0 {
+		t.Fatalf(
+			"nested firewall reached host access: apply=%d discovery=%d begin=%d",
+			agent.applyCalls, agent.installedCalls, agent.beginCalls,
+		)
 	}
 }
 
@@ -669,5 +903,75 @@ func TestManualOffWinsAgainstInFlightServiceSync(t *testing.T) {
 	}
 	if agent.applyRequests[0].Persist || !agent.applyRequests[1].Persist {
 		t.Fatalf("persistence flags = %+v", agent.applyRequests)
+	}
+}
+
+func TestFirewallPOSTHoldsGlobalMutationLockBeforeDiscovery(t *testing.T) {
+	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(database.Close)
+	result, err := database.GetDB().Exec(`
+		INSERT INTO users (username,password_hash,email,role)
+		VALUES ('firewall-lock-admin','x','firewall-lock@example.test','admin')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	userID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	agent := &firewallSyncTestAgent{
+		status:           FirewallStatusResp{Enabled: false, EngineAvailable: true},
+		discoveryStarted: started,
+		releaseDiscovery: release,
+	}
+	panel := &Panel{db: database}
+	attachFirewallSyncTestAgent(t, panel, agent)
+
+	manualDone := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/v1/firewall",
+			strings.NewReader(`{"enabled":true}`),
+		)
+		req = req.WithContext(context.WithValue(
+			req.Context(), callerKey, &Caller{ID: int(userID), Role: roleAdmin},
+		))
+		panel.handleFirewall(recorder, req)
+		manualDone <- recorder
+	}()
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("manual firewall POST did not reach desired-port discovery")
+	}
+	if panel.serviceMutationMu.TryLock() {
+		panel.serviceMutationMu.Unlock()
+		t.Fatal("manual firewall discovery did not hold the global mutation lock")
+	}
+
+	competing := httptest.NewRecorder()
+	competingReq := httptest.NewRequest(http.MethodPost, "/api/v1/service/install", nil)
+	if releaseCompeting, busy := panel.beginServiceMutation(competing, competingReq); !busy {
+		releaseCompeting()
+		t.Fatal("competing service operation crossed manual firewall snapshot")
+	}
+	if competing.Code != http.StatusConflict {
+		t.Fatalf("competing admission status=%d body=%s", competing.Code, competing.Body.String())
+	}
+	close(release)
+	select {
+	case recorder := <-manualDone:
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("manual firewall response=%d body=%s", recorder.Code, recorder.Body.String())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("manual firewall POST deadlocked after discovery release")
 	}
 }

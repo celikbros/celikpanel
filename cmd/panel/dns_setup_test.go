@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func assertDNSSetupRequired(t *testing.T, recorder *httptest.ResponseRecorder) {
@@ -170,7 +172,7 @@ func TestDNSSetupRejectsInvalidPairedTupleBeforeAgent(t *testing.T) {
 	}
 }
 
-func TestDNSSetupAgentFailureLeavesLedgerUntouched(t *testing.T) {
+func TestDNSSetupKnownTerminalFailureRetainsDesiredLedgerAndSaga(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "paired")
@@ -191,14 +193,106 @@ func TestDNSSetupAgentFailureLeavesLedgerUntouched(t *testing.T) {
 		settingDNSPeerIP: "2.25.80.4",
 		settingDNSPeerNS: "ns2.celikhost.com",
 	})
+	pending, err := readPendingDNSClusterSaga(context.Background(), p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending == nil || pending.Desired.Role != "paired" ||
+		pending.Desired.PeerIP != "198.51.100.20" ||
+		pending.Desired.PeerNS != "ns4.example.net" {
+		t.Fatalf("known terminal failure lost desired recovery saga=%+v", pending)
+	}
+	agent.mu.Lock()
+	clusterCalls, syncCalls := agent.clusterCalls, len(agent.syncRequests)
+	agent.mu.Unlock()
+	if clusterCalls != 1 || syncCalls != 0 {
+		t.Fatalf("terminal failure cluster/sync calls=%d/%d, want 1/0",
+			clusterCalls, syncCalls)
+	}
 }
 
-func TestDNSSetupDatabaseFailureRestoresAgentAndLedger(t *testing.T) {
+func TestDNSSetupV2PreflightRejectsBeforeHostOrLedgerMutation(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		capabilities []string
+		rhel         bool
+		wantStatus   int
+	}{
+		{name: "legacy agent", capabilities: []string{}, wantStatus: http.StatusInternalServerError},
+		{
+			name: "RHEL policy denial", capabilities: []string{transport.AgentCapabilityDNSZoneSyncV2},
+			rhel: true, wantStatus: http.StatusConflict,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, p, "paired")
+			zoneID := seedReconcileZone(t, p, "preflight.example")
+			beforeState, err := readDNSZoneSyncState(context.Background(), p.db.GetDB(), "preflight.example")
+			if err != nil {
+				t.Fatal(err)
+			}
+			beforeSOA := recordContent(t, p, zoneID, "preflight.example", "SOA")
+			capabilities := append([]string(nil), tc.capabilities...)
+			agent := &strictDNSRPCAgent{versionCapabilities: &capabilities}
+			attachStrictDNSRPCAgent(t, p, agent)
+			if tc.rhel {
+				p.pkgFamilyMu.Lock()
+				p.pkgFamilyVal = "dnf"
+				p.hostPlatformVal = rhelPolicyTestIdentity()
+				p.hostPlatformKnown = true
+				p.pkgFamilyMu.Unlock()
+			}
+
+			recorder := httptest.NewRecorder()
+			p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+				`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"198.51.100.20","peer_ns":"ns4.example.net"}`,
+			))
+			if recorder.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", recorder.Code, tc.wantStatus, recorder.Body.String())
+			}
+			assertDNSSetupSettings(t, p, map[string]string{
+				settingNS1:       "ns1.celikhost.com",
+				settingNS2:       "ns2.celikhost.com",
+				settingDNSRole:   "paired",
+				settingDNSPeerIP: "2.25.80.4",
+				settingDNSPeerNS: "ns2.celikhost.com",
+			})
+			if got := recordContent(t, p, zoneID, "preflight.example", "SOA"); got != beforeSOA {
+				t.Fatalf("preflight rejection rewrote SOA: before=%q after=%q", beforeSOA, got)
+			}
+			afterState, err := readDNSZoneSyncState(context.Background(), p.db.GetDB(), "preflight.example")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if afterState.hasLease() || afterState.DesiredGeneration != beforeState.DesiredGeneration ||
+				afterState.AppliedGeneration != beforeState.AppliedGeneration || afterState.Status != beforeState.Status {
+				t.Fatalf("preflight rejection mutated DNS ledger: before=%+v after=%+v", beforeState, afterState)
+			}
+
+			agent.mu.Lock()
+			clusterCalls := agent.clusterCalls
+			beginCalls := agent.beginCalls
+			syncCalls := len(agent.syncCalls)
+			agent.mu.Unlock()
+			agent.durableMutationRPCFixture.mu.Lock()
+			jobs := len(agent.durableMutationRPCFixture.jobs)
+			agent.durableMutationRPCFixture.mu.Unlock()
+			if clusterCalls != 0 || beginCalls != 0 || syncCalls != 0 || jobs != 0 {
+				t.Fatalf("preflight rejection reached host: configure=%d begin=%d V2=%d jobs=%d",
+					clusterCalls, beginCalls, syncCalls, jobs)
+			}
+		})
+	}
+}
+
+func TestDNSSetupDesiredPersistenceFailurePrecedesAgentBegin(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "paired")
-	agent := &compensationDNSAgent{}
-	attachCompensationDNSAgent(t, p, agent)
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgent(t, p, agent)
 	rejectDNSClusterSettingWrites(t, p)
 
 	recorder := httptest.NewRecorder()
@@ -209,16 +303,11 @@ func TestDNSSetupDatabaseFailureRestoresAgentAndLedger(t *testing.T) {
 		t.Fatalf("status = %d, want 500; body=%s", recorder.Code, recorder.Body.String())
 	}
 	agent.mu.Lock()
-	calls := append([]CompensationDNSClusterRequest(nil), agent.calls...)
+	beginCalls, clusterCalls := agent.beginCalls, agent.clusterCalls
 	agent.mu.Unlock()
-	if len(calls) != 2 {
-		t.Fatalf("agent calls = %+v, want apply plus rollback", calls)
-	}
-	if calls[0].Role != "paired" || calls[0].PeerIP != "198.51.100.20" || calls[0].PeerNS != "ns4.example.net" {
-		t.Fatalf("desired agent state = %+v", calls[0])
-	}
-	if calls[1].Role != "paired" || calls[1].PeerIP != "2.25.80.4" || calls[1].PeerNS != "ns2.celikhost.com" {
-		t.Fatalf("rollback agent state = %+v", calls[1])
+	if beginCalls != 0 || clusterCalls != 0 {
+		t.Fatalf("failed desired transaction reached host begin/cluster=%d/%d",
+			beginCalls, clusterCalls)
 	}
 	assertDNSSetupSettings(t, p, map[string]string{
 		settingNS1:       "ns1.celikhost.com",
@@ -227,6 +316,11 @@ func TestDNSSetupDatabaseFailureRestoresAgentAndLedger(t *testing.T) {
 		settingDNSPeerIP: "2.25.80.4",
 		settingDNSPeerNS: "ns2.celikhost.com",
 	})
+	if pending, err := readPendingDNSClusterSaga(context.Background(), p); err != nil {
+		t.Fatal(err)
+	} else if pending != nil {
+		t.Fatalf("rolled-back desired transaction retained saga=%+v", pending)
+	}
 }
 
 func TestDNSSetupPublicationFailureCanRetrySameMutation(t *testing.T) {

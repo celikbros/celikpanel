@@ -52,11 +52,26 @@ func (a *domainDeletionRPCAgent) FinishServiceMutation(
 	return a.durableMutationRPCFixture.FinishServiceMutation(req, resp)
 }
 
+func (a *domainDeletionRPCAgent) ServiceMutationStatus(
+	req *ServiceOperationMutationStatusRequest,
+	resp *ServiceOperationMutationResponse,
+) error {
+	a.durableMutationRPCFixture.mu.Lock()
+	defer a.durableMutationRPCFixture.mu.Unlock()
+	requestID := req.RequestID
+	if requestID == "" {
+		requestID = a.durableMutationRPCFixture.active
+	}
+	resp.Job = cloneServiceOperationMutationJob(a.durableMutationRPCFixture.jobs[requestID])
+	return nil
+}
+
 func (a *domainDeletionRPCAgent) Version(
 	_ *transport.Empty,
 	resp *transport.AgentVersionResponse,
 ) error {
 	resp.Commit = a.commit
+	resp.Capabilities = []string{transport.AgentCapabilityDNSZoneSyncV2}
 	return nil
 }
 
@@ -86,7 +101,7 @@ func (a *domainDeletionRPCAgent) DeleteMailDomain(
 	return nil
 }
 
-func (a *domainDeletionRPCAgent) SyncDNSZone(
+func (a *domainDeletionRPCAgent) SyncDNSZoneV2(
 	req *transport.SyncDNSZoneRequest,
 	resp *transport.SyncDNSZoneResponse,
 ) error {
@@ -102,6 +117,7 @@ func (a *domainDeletionRPCAgent) SyncDNSZone(
 		return nil
 	}
 	resp.Synced = true
+	resp.AppliedGeneration = req.DesiredGeneration
 	return nil
 }
 
@@ -479,7 +495,7 @@ func TestDeleteDomainFinalLedgerFailureIsDurableAndRetryable(t *testing.T) {
 	}
 }
 
-func TestDeleteDomainDNSFailureRetainsZoneAndRetryHandle(t *testing.T) {
+func TestDeleteDomainDNSFailureRetainsTombstoneAndRetryHandle(t *testing.T) {
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "standalone")
 	domain := "dns-retry.example"
@@ -507,8 +523,27 @@ func TestDeleteDomainDNSFailureRetainsZoneAndRetryHandle(t *testing.T) {
 	).Scan(&zoneCount); err != nil {
 		t.Fatalf("count retained DNS zone: %v", err)
 	}
-	if zoneCount != 1 {
-		t.Fatalf("DNS zone rows after failed publication = %d, want 1", zoneCount)
+	if zoneCount != 0 {
+		t.Fatalf("DNS zone rows after failed publication = %d, want 0", zoneCount)
+	}
+	var markerCount, stateCount int
+	var desiredAction, stateStatus string
+	if err := p.db.GetDB().QueryRow(`
+		SELECT COUNT(*) FROM dns_zone_deletion_markers WHERE zone_name = ?`, domain,
+	).Scan(&markerCount); err != nil {
+		t.Fatalf("count retained DNS tombstone: %v", err)
+	}
+	if markerCount != 1 {
+		t.Fatalf("DNS tombstones after failed publication = %d, want 1", markerCount)
+	}
+	if err := p.db.GetDB().QueryRow(`
+		SELECT COUNT(*), desired_action, status
+		FROM dns_zone_sync_state WHERE zone_name = ?`, domain,
+	).Scan(&stateCount, &desiredAction, &stateStatus); err != nil {
+		t.Fatalf("read retained DNS delete state: %v", err)
+	}
+	if stateCount != 1 || desiredAction != "delete" || stateStatus != "error" {
+		t.Fatalf("retained DNS delete state = count %d action %q status %q", stateCount, desiredAction, stateStatus)
 	}
 
 	second := deleteDomainForSagaTest(t, p, domainID)
@@ -529,6 +564,14 @@ func TestDeleteDomainDNSFailureRetainsZoneAndRetryHandle(t *testing.T) {
 	}
 	if zoneCount != 0 {
 		t.Fatalf("DNS zone rows after retry = %d, want 0", zoneCount)
+	}
+	if err := p.db.GetDB().QueryRow(`
+		SELECT COUNT(*) FROM dns_zone_deletion_markers WHERE zone_name = ?`, domain,
+	).Scan(&markerCount); err != nil {
+		t.Fatalf("count retired DNS tombstone: %v", err)
+	}
+	if markerCount != 0 {
+		t.Fatalf("DNS tombstones after exact retry = %d, want 0", markerCount)
 	}
 }
 

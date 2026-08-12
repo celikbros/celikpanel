@@ -40,17 +40,15 @@ const (
 	settingDNSPeerNS = "dns_peer_ns"
 )
 
-type dnsClusterAgentState = transport.DNSClusterRequest
+type dnsClusterAgentState struct {
+	Role   string
+	PeerIP string
+	PeerNS string
+}
 
-type dnsClusterAgentResponse = transport.DNSClusterResponse
+type dnsClusterAgentResponse = transport.ConfigureDNSClusterV2Response
 
 type dnsClusterReadinessResponse = transport.DNSClusterReadinessResponse
-
-func (p *Panel) applyDNSClusterAgent(state dnsClusterAgentState) (dnsClusterAgentResponse, error) {
-	var resp dnsClusterAgentResponse
-	err := p.callAgent("Agent.ConfigureDNSCluster", &state, &resp)
-	return resp, err
-}
 
 // dnsClusterAgentSnapshot reads the three related settings consistently before
 // the agent is changed. An empty role is the pre-configuration state and maps

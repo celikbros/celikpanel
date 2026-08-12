@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -68,7 +69,10 @@ var lookupMailTLSCommand = exec.LookPath
 type MailSNIEntry = transport.MailSNIEntry
 type SecureMailTLSRequest = transport.SecureMailTLSRequest
 type ReconcileMailTLSMutationRequest = transport.ReconcileMailTLSMutationRequest
+type SyncMailTLSV2Request = transport.SyncMailTLSV2Request
 type SecureMailTLSResponse = transport.SecureMailTLSResponse
+
+const mailTLSLegacyUnsupportedError = "legacy mail TLS mutation is unsupported; use Agent.SyncMailTLSV2 with a payload-bound direct mutation lease"
 
 type mailTLSCommandRunner func(name string, args ...string) ([]byte, error)
 type defaultMailTLSWriter func(path string, content []byte, mode os.FileMode) error
@@ -103,6 +107,22 @@ type mailTLSStateSnapshot struct {
 	dovecotFile     mailTLSFileSnapshot
 }
 
+func configuredMailTLSManagedRoot() (string, error) {
+	raw := os.Getenv("CELIKPANEL_CUSTOM_CERT_ROOT")
+	if raw == "" {
+		return "/etc/ssl/celikpanel", nil
+	}
+	root := strings.TrimSpace(raw)
+	if root != raw {
+		return "", errors.New("managed certificate root is not canonical")
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root ||
+		root == string(filepath.Separator) {
+		return "", errors.New("managed certificate root is not a canonical absolute path")
+	}
+	return filepath.ToSlash(root), nil
+}
+
 // SecureMailTLS wires TLS into the whole mail stack: default certificate,
 // per-domain SNI on both daemons, modern protocol floor, opportunistic
 // outbound TLS and a fixed HELO name. Safe to re-run; it converges.
@@ -114,21 +134,8 @@ func (a *Agent) SecureMailTLS(req *SecureMailTLSRequest, resp *SecureMailTLSResp
 		return fmt.Errorf("mail TLS response is required")
 	}
 	*resp = SecureMailTLSResponse{}
-	if req == nil {
-		resp.Error = "mail TLS request is required"
-		return nil
-	}
-	if err := requireExpectedBuildCommit(
-		req.ExpectedBuildCommit,
-		"securing the mail TLS stack",
-	); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-
-	mailMutex.Lock()
-	defer mailMutex.Unlock()
-	return reconcileMailTLS(req, resp, runMailTLSCommand)
+	resp.Error = mailTLSLegacyUnsupportedError
+	return nil
 }
 
 // ReconcileMailTLSMutation is the durable, lease-bound entry point used by
@@ -143,24 +150,53 @@ func (a *Agent) ReconcileMailTLSMutation(
 		return fmt.Errorf("mail TLS reconciliation response is required")
 	}
 	*resp = SecureMailTLSResponse{}
+	resp.Error = mailTLSLegacyUnsupportedError
+	return nil
+}
+
+// SyncMailTLSV2 freezes the full snapshot before touching the mutation ledger
+// or host, then executes it only under the exact direct payload-bound lease.
+func (a *Agent) SyncMailTLSV2(
+	req *SyncMailTLSV2Request,
+	resp *SecureMailTLSResponse,
+) error {
+	if resp == nil {
+		return fmt.Errorf("mail TLS V2 response is required")
+	}
+	*resp = SecureMailTLSResponse{}
 	if req == nil {
-		resp.Error = "mail TLS reconciliation request is required"
+		resp.Error = "mail TLS V2 request is required"
+		return nil
+	}
+	managedRoot, err := configuredMailTLSManagedRoot()
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	commitment, err := mutationpayload.CanonicalMailTLSSync(
+		managedRoot,
+		req.Myhostname,
+		req.SNI,
+	)
+	if err != nil {
+		resp.Error = fmt.Sprintf("mail TLS V2 validation: %v", err)
 		return nil
 	}
 	if err := requireExpectedBuildCommit(
 		req.ExpectedBuildCommit,
-		"reconciling the mail TLS stack",
+		"synchronizing the mail TLS stack",
 	); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	if strings.TrimSpace(req.Myhostname) == "" {
-		resp.Error = "mail TLS reconciliation requires a server hostname"
-		return nil
-	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		req.ServiceMutationBinding,
-		newServiceMutationStepClaim(serviceMutationStepReconcileMailTLS, "mail-tls", "", "reconcile"),
+		newServiceMutationStepClaim(
+			serviceMutationStepSyncMailTLS,
+			"mail-tls",
+			commitment.Qualifier,
+			"sync",
+		),
 	)
 	if err != nil {
 		*resp = SecureMailTLSResponse{Error: err.Error()}
@@ -177,19 +213,10 @@ func (a *Agent) ReconcileMailTLSMutation(
 	}
 	defer mailMutex.Unlock()
 	if err := ctx.Err(); err != nil {
-		resp.Error = fmt.Sprintf("service mutation lease expired before mail TLS reconciliation: %v", err)
+		resp.Error = fmt.Sprintf("service mutation lease expired before mail TLS V2 synchronization: %v", err)
 		return nil
 	}
-
-	legacyRequest := &SecureMailTLSRequest{
-		ExpectedBuildCommit: req.ExpectedBuildCommit,
-		Myhostname:          req.Myhostname,
-		SNI:                 req.SNI,
-	}
-	runner := func(name string, args ...string) ([]byte, error) {
-		return runMailTLSMutationCommand(ctx, name, args...)
-	}
-	return reconcileMailTLS(legacyRequest, resp, runner)
+	return syncMailTLSV2(ctx, commitment, resp)
 }
 
 func reconcileMailTLS(
@@ -392,6 +419,11 @@ func validateMailSNIEntries(entries []MailSNIEntry) ([]MailSNIEntry, error) {
 		}
 		if certDomain != keyDomain || filepath.Dir(certPath) != filepath.Dir(keyPath) {
 			return nil, fmt.Errorf("entry %d certificate and private key are not from the same managed snapshot", entryIndex+1)
+		}
+		if err := verifyManagedCertificateSnapshot(
+			certDomain, certPath, keyPath, "",
+		); err != nil {
+			return nil, fmt.Errorf("entry %d immutable certificate snapshot: %w", entryIndex+1, err)
 		}
 
 		mailName, err := hostname.MailFQDN(certDomain)

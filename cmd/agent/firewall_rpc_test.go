@@ -35,6 +35,7 @@ type fakeFirewallCommandRunner struct {
 	configuredSocketErr   error
 	applyErr              error
 	systemctlErr          error
+	unitEnabled           bool
 	commands              []recordedFirewallCommand
 	outputCalls           []string
 }
@@ -78,6 +79,16 @@ func (f *fakeFirewallCommandRunner) Output(name string, args ...string) ([]byte,
 		}
 		return []byte("LISTEN 0 128 0.0.0.0:22 0.0.0.0:* users:((sshd,pid=7,fd=3))\n"), nil
 	}
+	if name == "systemctl" &&
+		strings.Join(args, " ") == "show --no-pager --property=UnitFileState --value "+firewallRestoreUnitName {
+		if f.systemctlErr != nil {
+			return nil, f.systemctlErr
+		}
+		if f.unitEnabled {
+			return []byte("enabled\n"), nil
+		}
+		return []byte("disabled\n"), nil
+	}
 	return nil, fmt.Errorf("unexpected output command: %s %s", name, strings.Join(args, " "))
 }
 
@@ -94,6 +105,7 @@ func (f *fakeFirewallCommandRunner) CombinedOutput(name string, args []string, s
 		if f.systemctlErr != nil {
 			return []byte("forced systemctl failure"), f.systemctlErr
 		}
+		f.unitEnabled = len(args) > 0 && args[0] == "enable"
 		return nil, nil
 	}
 	if strings.Join(args, " ") == "--check -f -" {

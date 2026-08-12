@@ -104,13 +104,19 @@ type ServiceMutationFinishRequest = transport.ServiceMutationFinishRequest
 type ServiceMutationResponse = transport.ServiceMutationResponse
 
 type serviceMutationRuntime struct {
-	job                       *ServiceMutationJob
-	lock                      *serviceMutationFileLock
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	stepMu                    sync.Mutex
-	steps                     int
-	vpnPeerSyncPublishedPhase string
+	job                                 *ServiceMutationJob
+	lock                                *serviceMutationFileLock
+	ctx                                 context.Context
+	cancel                              context.CancelFunc
+	stepMu                              sync.Mutex
+	steps                               int
+	vpnPeerSyncPublishedPhase           string
+	firewallApplyCommittedPhase         string
+	mailTLSSyncCommittedPhase           string
+	dnsClusterConfigCommittedPhase      string
+	dnsZoneSyncAppliedPhase             string
+	dnsZoneSyncPublishedPhase           string
+	panelCertificateIssuePublishedPhase string
 }
 
 type serviceMutationManager struct {
@@ -376,6 +382,91 @@ func decodeServiceMutationLedger(raw []byte) (serviceMutationLedger, error) {
 	return ledger, nil
 }
 
+func payloadBoundDirectMutationPublishedPhase(
+	job *ServiceMutationJob,
+) (string, bool, error) {
+	if job == nil {
+		return "", false, errors.New("payload-bound mutation job is required")
+	}
+	var phase string
+	var err error
+	switch job.Kind {
+	case "vpn_peer_sync":
+		if job.Target != "wireguard" ||
+			!mutationpayload.ValidVPNPeerSyncQualifier(job.PackageName) {
+			return "", true, errors.New("invalid VPN peer sync publication identity")
+		}
+		phase, err = formatVPNPeerSyncCommitPhase(
+			vpnPeerSyncCommitPublished, job.RequestID, job.PackageName,
+		)
+	case "firewall_apply", "firewall_sync":
+		if job.Target != "nftables" ||
+			!mutationpayload.ValidFirewallApplyQualifier(job.PackageName) {
+			return "", true, errors.New("invalid firewall publication identity")
+		}
+		phase, err = formatFirewallApplyCommitPhase(
+			firewallApplyCommitPublished, job.RequestID, job.PackageName,
+		)
+	case "mail_tls_sync":
+		if job.Target != "mail-tls" ||
+			!mutationpayload.ValidMailTLSSyncQualifier(job.PackageName) {
+			return "", true, errors.New("invalid mail TLS publication identity")
+		}
+		phase, err = formatMailTLSSyncCommitPhase(
+			mailTLSSyncCommitPublished, job.RequestID, job.PackageName,
+		)
+	case "dns_cluster_configure":
+		if job.Target != "pdns" ||
+			!mutationpayload.ValidDNSClusterConfigQualifier(job.PackageName) {
+			return "", true, errors.New("invalid DNS cluster publication identity")
+		}
+		phase, err = formatDNSClusterConfigCommitPhase(
+			dnsClusterConfigCommitPublished, job.RequestID, job.PackageName,
+		)
+	case "dns_zone_sync":
+		if !serviceMutationCanonicalFQDN(job.Target) ||
+			!mutationpayload.ValidDNSZoneSyncQualifier(job.PackageName) {
+			return "", true, errors.New("invalid DNS zone publication identity")
+		}
+		phase, err = formatDNSZoneSyncCommitPhase(
+			dnsZoneSyncCommitPublished, job.RequestID, job.Target, job.PackageName,
+		)
+	case "panel_certificate_issue":
+		if !serviceMutationCanonicalFQDN(job.Target) ||
+			!mutationpayload.ValidPanelCertificateIssueQualifier(job.PackageName) {
+			return "", true, errors.New("invalid panel certificate publication identity")
+		}
+		phase, err = formatPanelCertificateIssueCommitPhase(
+			panelCertificateIssueCommitPublished,
+			job.RequestID,
+			job.Target,
+			job.PackageName,
+		)
+	default:
+		return "", false, nil
+	}
+	if err != nil {
+		return "", true, err
+	}
+	return phase, true, nil
+}
+
+func validatePayloadBoundDirectMutationSuccess(job *ServiceMutationJob) error {
+	if job == nil || job.Status != serviceMutationStatusSucceeded {
+		return nil
+	}
+	expected, direct, err := payloadBoundDirectMutationPublishedPhase(job)
+	if err != nil {
+		return err
+	}
+	if direct && job.Phase != expected {
+		return errors.New(
+			"payload-bound direct mutation success lacks its exact canonical published receipt",
+		)
+	}
+	return nil
+}
+
 // validateServiceMutationLedger enforces identity and bidirectional active-pointer invariants for the complete ledger.
 // validateServiceMutationLedger, ledger'ın tamamı için kimlik ve çift yönlü aktif işaretçi değişmezlerini uygular.
 func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
@@ -393,6 +484,9 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 			job.Attempt <= 0 {
 			return errors.New("service mutation ledger job metadata is incomplete")
 		}
+		if err := validatePayloadBoundDirectMutationSuccess(job); err != nil {
+			return fmt.Errorf("service mutation ledger job %s: %w", requestID, err)
+		}
 		if strings.HasPrefix(job.Phase, vpnPeerSyncCommitPhasePrefix) {
 			state, requestID, qualifier, err := parseVPNPeerSyncCommitPhase(job.Phase)
 			if err != nil || requestID != job.RequestID || qualifier != job.PackageName ||
@@ -404,6 +498,83 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 				job.Status != serviceMutationStatusCancelling) ||
 				(state == vpnPeerSyncCommitPublished && job.Status != serviceMutationStatusSucceeded) {
 				return errors.New("service mutation ledger VPN peer commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, firewallApplyCommitPhasePrefix) {
+			state, requestID, qualifier, err := parseFirewallApplyCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID || qualifier != job.PackageName ||
+				(job.Kind != "firewall_apply" && job.Kind != "firewall_sync") ||
+				job.Target != "nftables" {
+				return errors.New("service mutation ledger has an invalid firewall commit receipt")
+			}
+			if (state == firewallApplyCommitIntent &&
+				!serviceMutationStatusActive(job.Status)) ||
+				(state == firewallApplyCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger firewall commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, mailTLSSyncCommitPhasePrefix) {
+			state, requestID, qualifier, err := parseMailTLSSyncCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID ||
+				qualifier != job.PackageName ||
+				job.Kind != "mail_tls_sync" || job.Target != "mail-tls" {
+				return errors.New("service mutation ledger has an invalid mail TLS commit receipt")
+			}
+			if (state == mailTLSSyncCommitIntent &&
+				!serviceMutationStatusActive(job.Status)) ||
+				(state == mailTLSSyncCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger mail TLS commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, dnsClusterConfigCommitPhasePrefix) {
+			state, requestID, qualifier, err :=
+				parseDNSClusterConfigCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID ||
+				qualifier != job.PackageName ||
+				job.Kind != "dns_cluster_configure" || job.Target != "pdns" {
+				return errors.New("service mutation ledger has an invalid DNS cluster commit receipt")
+			}
+			if (state == dnsClusterConfigCommitIntent &&
+				!serviceMutationStatusActive(job.Status)) ||
+				(state == dnsClusterConfigCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger DNS cluster commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, dnsZoneSyncCommitPhasePrefix) {
+			state, requestID, domain, qualifier, err :=
+				parseDNSZoneSyncCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID ||
+				domain != job.Target || qualifier != job.PackageName ||
+				job.Kind != "dns_zone_sync" ||
+				!serviceMutationCanonicalFQDN(job.Target) {
+				return errors.New("service mutation ledger has an invalid DNS zone commit receipt")
+			}
+			if ((state == dnsZoneSyncCommitIntent ||
+				state == dnsZoneSyncCommitApplied) &&
+				!serviceMutationStatusActive(job.Status)) ||
+				(state == dnsZoneSyncCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger DNS zone commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, panelCertificateIssueCommitPhasePrefix) {
+			state, requestID, domain, qualifier, err :=
+				parsePanelCertificateIssueCommitPhase(job.Phase)
+			if err != nil || requestID != job.RequestID ||
+				domain != job.Target || qualifier != job.PackageName ||
+				job.Kind != "panel_certificate_issue" ||
+				!serviceMutationCanonicalFQDN(job.Target) {
+				return errors.New("service mutation ledger has an invalid panel certificate commit receipt")
+			}
+			if (state == panelCertificateIssueCommitIntent &&
+				job.Status != serviceMutationStatusRunning &&
+				job.Status != serviceMutationStatusCancelling) ||
+				(state == panelCertificateIssueCommitPublished &&
+					job.Status != serviceMutationStatusSucceeded) {
+				return errors.New("service mutation ledger panel certificate commit receipt conflicts with job status")
 			}
 		}
 		hasWorkerPID := job.WorkerPID > 0
@@ -557,6 +728,44 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		}
 		return err
 	}
+	if err := cleanupAbandonedFirewallApplyJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate firewall journal stages during startup: %w",
+			err,
+		))
+	}
+	if err := cleanupAbandonedMailTLSSyncJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate mail TLS journal stages during startup: %w", err,
+		))
+	}
+	if err := cleanupAbandonedDNSClusterConfigJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate DNS cluster journal stages during startup: %w", err,
+		))
+	}
+	if _, _, err := readMailTLSSyncJournal(mailTLSSyncJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate mail TLS journal during startup: %w", err,
+		))
+	}
+	if _, _, err := readFirewallApplyJournal(firewallApplyJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate firewall journal during startup: %w",
+			err,
+		))
+	}
+	if _, _, err := readDNSClusterConfigJournal(dnsClusterConfigJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate DNS cluster journal during startup: %w", err,
+		))
+	}
 	if m.ledger.ActiveRequestID == "" {
 		return lock.Close()
 	}
@@ -566,9 +775,25 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		return errors.New("service mutation ledger lost its active job")
 	}
 
+	if handled, recoveryErr := m.recoverPersistedFirewallApplyLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedMailTLSSyncLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncLocked(job, lock); handled {
+		return recoveryErr
+	}
 	workerAlive := serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted)
 	if !workerAlive {
-		handled, recoveryErr := m.recoverPersistedVPNPeerSyncLocked(job, lock)
+		handled, recoveryErr := m.recoverPersistedPanelCertificateIssueLocked(job, lock)
+		if handled {
+			return recoveryErr
+		}
+		handled, recoveryErr = m.recoverPersistedVPNPeerSyncLocked(job, lock)
 		if handled {
 			return recoveryErr
 		}
@@ -649,13 +874,66 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
 		return errors.Join(fmt.Errorf("reload service mutation ledger under orphan lock: %w", err), lock.Close())
 	}
+	if err := cleanupAbandonedFirewallApplyJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate firewall journal stages during orphan recovery: %w",
+			err,
+		))
+	}
+	if err := cleanupAbandonedMailTLSSyncJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate mail TLS journal stages during orphan recovery: %w", err,
+		))
+	}
+	if err := cleanupAbandonedDNSClusterConfigJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate DNS cluster journal stages during orphan recovery: %w", err,
+		))
+	}
+	if _, _, err := readMailTLSSyncJournal(mailTLSSyncJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate mail TLS journal during orphan recovery: %w", err,
+		))
+	}
+	if _, _, err := readFirewallApplyJournal(firewallApplyJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate firewall journal during orphan recovery: %w",
+			err,
+		))
+	}
+	if _, _, err := readDNSClusterConfigJournal(dnsClusterConfigJournalPath(m)); err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(fmt.Errorf(
+			"validate DNS cluster journal during orphan recovery: %w", err,
+		))
+	}
 	requestID := m.ledger.ActiveRequestID
 	job := m.ledger.Jobs[requestID]
 	if requestID == "" || job == nil || job.Status != serviceMutationStatusOrphaned {
 		return lock.Close()
 	}
+	if handled, recoveryErr := m.recoverPersistedFirewallApplyLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedMailTLSSyncLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncLocked(job, lock); handled {
+		return recoveryErr
+	}
 	if serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted) {
 		return errors.Join(errServiceMutationHostBusy, lock.Close())
+	}
+	if handled, recoveryErr := m.recoverPersistedPanelCertificateIssueLocked(job, lock); handled {
+		return recoveryErr
 	}
 	if handled, recoveryErr := m.recoverPersistedVPNPeerSyncLocked(job, lock); handled {
 		return recoveryErr
@@ -748,6 +1026,35 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		(request.Target != "wireguard" ||
 			!mutationpayload.ValidVPNPeerSyncQualifier(request.PackageName)) {
 		return nil, errors.New("invalid VPN peer mutation payload qualifier")
+	}
+	if (request.Kind == "firewall_apply" || request.Kind == "firewall_sync") &&
+		(request.Target != "nftables" ||
+			!mutationpayload.ValidFirewallApplyQualifier(request.PackageName)) {
+		return nil, errors.New("invalid firewall mutation payload qualifier")
+	}
+	if request.Kind == "panel_certificate_issue" &&
+		(!serviceMutationCanonicalFQDN(request.Target) ||
+			!mutationpayload.ValidPanelCertificateIssueQualifier(request.PackageName)) {
+		return nil, errors.New("invalid panel certificate mutation payload qualifier")
+	}
+	if request.Kind == "mail_tls_sync" &&
+		(request.Target != "mail-tls" ||
+			!mutationpayload.ValidMailTLSSyncQualifier(request.PackageName)) {
+		return nil, errors.New("invalid mail TLS mutation payload qualifier")
+	}
+	if request.Kind == "dns_zone_sync" &&
+		(!serviceMutationCanonicalFQDN(request.Target) ||
+			!mutationpayload.ValidDNSZoneSyncQualifier(request.PackageName)) {
+		return nil, errors.New("invalid DNS zone mutation payload qualifier")
+	}
+	if request.Kind == "dnssec_secure" &&
+		(!serviceMutationCanonicalFQDN(request.Target) || request.PackageName != "") {
+		return nil, errors.New("invalid DNSSEC secure mutation identity")
+	}
+	if request.Kind == "dns_cluster_configure" &&
+		(request.Target != "pdns" ||
+			!mutationpayload.ValidDNSClusterConfigQualifier(request.PackageName)) {
+		return nil, errors.New("invalid DNS cluster mutation payload qualifier")
 	}
 	if err := m.tryResolvePersistedOrphan(); err != nil &&
 		!errors.Is(err, errServiceMutationHostBusy) {
@@ -905,10 +1212,48 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 		m.mu.Unlock()
 		return
 	}
+	if runtime.panelCertificateIssuePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.panelCertificateIssuePublishedPhase, "", "",
+		)
+		if err != nil && m.poisoned == nil {
+			_ = m.poisonLocked(err)
+		}
+		m.mu.Unlock()
+		return
+	}
+	if runtime.firewallApplyCommittedPhase != "" {
+		m.mu.Unlock()
+		return
+	}
+	if runtime.mailTLSSyncCommittedPhase != "" {
+		m.mu.Unlock()
+		return
+	}
+	if runtime.dnsClusterConfigCommittedPhase != "" {
+		m.mu.Unlock()
+		return
+	}
+	if runtime.dnsZoneSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.dnsZoneSyncPublishedPhase, "", "",
+		)
+		if err != nil && m.poisoned == nil {
+			_ = m.poisonLocked(err)
+		}
+		m.mu.Unlock()
+		return
+	}
+	if runtime.dnsZoneSyncAppliedPhase != "" {
+		m.mu.Unlock()
+		return
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusCancelling
-	runtime.job.Phase = "cancelling_expired_lease"
+	if !strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
+		runtime.job.Phase = "cancelling_expired_lease"
+	}
 	runtime.job.ErrorCode = "service_mutation_lease_expired"
 	runtime.job.ErrorMessage = "The panel stopped heartbeating before the service mutation completed."
 	runtime.job.UpdatedAt = now
@@ -968,13 +1313,42 @@ func (m *serviceMutationManager) heartbeat(
 		)
 		return m.jobLocked(request.RequestID), err
 	}
+	if runtime.panelCertificateIssuePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.panelCertificateIssuePublishedPhase, "", "",
+		)
+		return m.jobLocked(request.RequestID), err
+	}
+	if runtime.firewallApplyCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), nil
+	}
+	if runtime.mailTLSSyncCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), nil
+	}
+	if runtime.dnsClusterConfigCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), nil
+	}
+	if runtime.dnsZoneSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.dnsZoneSyncPublishedPhase, "", "",
+		)
+		return m.jobLocked(request.RequestID), err
+	}
+	if runtime.dnsZoneSyncAppliedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), nil
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	if !now.Before(runtime.job.DeadlineAt) {
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation deadline has expired")
 	}
 	if phase := strings.TrimSpace(request.Phase); phase != "" &&
-		!strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) {
+		!strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, firewallApplyCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, mailTLSSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsClusterConfigCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
 		runtime.job.Phase = phase
 	}
 	runtime.job.UpdatedAt = now
@@ -1038,6 +1412,42 @@ func (m *serviceMutationManager) cancelJob(
 		m.mu.Unlock()
 		return job, err
 	}
+	if runtime.panelCertificateIssuePublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.panelCertificateIssuePublishedPhase, "", "",
+		)
+		job := m.jobLocked(request.RequestID)
+		m.mu.Unlock()
+		return job, err
+	}
+	if runtime.firewallApplyCommittedPhase != "" {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
+	}
+	if runtime.mailTLSSyncCommittedPhase != "" {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
+	}
+	if runtime.dnsClusterConfigCommittedPhase != "" {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
+	}
+	if runtime.dnsZoneSyncPublishedPhase != "" {
+		err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.dnsZoneSyncPublishedPhase, "", "",
+		)
+		job := m.jobLocked(request.RequestID)
+		m.mu.Unlock()
+		return job, err
+	}
+	if runtime.dnsZoneSyncAppliedPhase != "" {
+		job := cloneServiceMutationJob(runtime.job)
+		m.mu.Unlock()
+		return job, nil
+	}
 	if runtime.job.Status != serviceMutationStatusRunning {
 		job := cloneServiceMutationJob(runtime.job)
 		m.mu.Unlock()
@@ -1053,7 +1463,12 @@ func (m *serviceMutationManager) cancelJob(
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	runtime.job.Status = serviceMutationStatusCancelling
-	if !strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) {
+	if !strings.HasPrefix(runtime.job.Phase, vpnPeerSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, firewallApplyCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, mailTLSSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsClusterConfigCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
 		runtime.job.Phase = "cancelling"
 		if reason := strings.TrimSpace(request.Reason); reason != "" {
 			runtime.job.Phase = reason
@@ -1110,6 +1525,42 @@ func (m *serviceMutationManager) finish(
 		}
 		return m.jobLocked(request.RequestID), nil
 	}
+	if runtime.panelCertificateIssuePublishedPhase != "" {
+		if err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.panelCertificateIssuePublishedPhase, "", "",
+		); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
+		return m.jobLocked(request.RequestID), nil
+	}
+	if runtime.firewallApplyCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"committed firewall mutation is still converging",
+		)
+	}
+	if runtime.mailTLSSyncCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"committed mail TLS mutation is still converging",
+		)
+	}
+	if runtime.dnsClusterConfigCommittedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"committed DNS cluster mutation is still converging",
+		)
+	}
+	if runtime.dnsZoneSyncPublishedPhase != "" {
+		if err := m.finishRuntimeTerminalLocked(
+			runtime, true, runtime.dnsZoneSyncPublishedPhase, "", "",
+		); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		}
+		return m.jobLocked(request.RequestID), nil
+	}
+	if runtime.dnsZoneSyncAppliedPhase != "" {
+		return cloneServiceMutationJob(runtime.job), errors.New(
+			"applied DNS zone mutation is still finalizing",
+		)
+	}
 	if runtime.job.Status != serviceMutationStatusRunning {
 		return cloneServiceMutationJob(runtime.job), errors.New("only a running service mutation may be finished")
 	}
@@ -1118,6 +1569,15 @@ func (m *serviceMutationManager) finish(
 	}
 	if runtime.job.WorkerPID != 0 {
 		return cloneServiceMutationJob(runtime.job), errors.New("service mutation still has a recorded privileged worker")
+	}
+	if request.Success {
+		if _, direct, err := payloadBoundDirectMutationPublishedPhase(runtime.job); err != nil {
+			return cloneServiceMutationJob(runtime.job), err
+		} else if direct {
+			return cloneServiceMutationJob(runtime.job), errors.New(
+				"payload-bound direct mutation cannot succeed without its exact canonical published receipt",
+			)
+		}
 	}
 	if err := m.finishRuntimeLocked(
 		runtime,

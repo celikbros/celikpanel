@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from '../router';
 import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network } from 'lucide-react';
 import { showToast } from './Toast';
@@ -216,6 +216,135 @@ function SettingsSectionTabs({
 // imzalıdır (her tarayıcı uyarır); tek tık, panelin alan adı için Let's
 // Encrypt sertifikası alır ve sunması için paneli yeniden başlatır. Sonrası
 // otomatik yenilenir (certbot zamanlayıcısı + deploy kancası).
+const PANEL_CERTIFICATE_OPERATION_KEY = 'celikpanel.panel-certificate-operation.v1';
+const PANEL_CERTIFICATE_POLL_MS = 1500;
+const PANEL_CERTIFICATE_MISSING_GRACE_MS = 10 * 60 * 1000;
+
+type PanelCertificateOperationMarker = {
+    version: 1;
+    request_id: string;
+    domain: string;
+    created_at: number;
+};
+
+type PanelCertificateOperation = {
+    id: string;
+    request_id: string;
+    kind: 'panel_certificate_issue';
+    service_id: string;
+    status: 'queued' | 'running' | 'succeeded' | 'failed';
+    error?: { code: string; message: string };
+};
+
+function createPanelCertificateRequestID(): string | null {
+    try {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    } catch {
+        return null;
+    }
+}
+
+function canonicalPanelCertificateMarkerDomain(raw: string): string {
+    const trimmed = raw.trim().toLowerCase();
+    return trimmed.endsWith('.') ? trimmed.slice(0, -1) : trimmed;
+}
+
+function decodePanelCertificateMarker(raw: string | null): PanelCertificateOperationMarker | null {
+    if (!raw || raw.length > 1024) return null;
+    try {
+        const value = JSON.parse(raw) as Record<string, unknown>;
+        if (
+            value.version !== 1
+            || typeof value.request_id !== 'string'
+            || !/^[a-f0-9]{32}$/.test(value.request_id)
+            || typeof value.domain !== 'string'
+            || value.domain !== canonicalPanelCertificateMarkerDomain(value.domain)
+            || !value.domain
+            || value.domain.length > 253
+            || typeof value.created_at !== 'number'
+            || !Number.isFinite(value.created_at)
+            || value.created_at <= 0
+        ) return null;
+        return {
+            version: 1,
+            request_id: value.request_id,
+            domain: value.domain,
+            created_at: value.created_at,
+        };
+    } catch {
+        return null;
+    }
+}
+
+function readPanelCertificateMarker(): PanelCertificateOperationMarker | null {
+    try {
+        const marker = decodePanelCertificateMarker(
+            localStorage.getItem(PANEL_CERTIFICATE_OPERATION_KEY),
+        );
+        if (marker === null) localStorage.removeItem(PANEL_CERTIFICATE_OPERATION_KEY);
+        return marker;
+    } catch {
+        return null;
+    }
+}
+
+function storePanelCertificateMarker(marker: PanelCertificateOperationMarker): boolean {
+    try {
+        localStorage.setItem(PANEL_CERTIFICATE_OPERATION_KEY, JSON.stringify(marker));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function clearPanelCertificateMarker() {
+    try {
+        localStorage.removeItem(PANEL_CERTIFICATE_OPERATION_KEY);
+    } catch {
+        // The in-memory marker still gives this tab an authoritative poll key.
+    }
+}
+
+function decodePanelCertificateOperation(
+    payload: unknown,
+    marker: PanelCertificateOperationMarker,
+): PanelCertificateOperation | null {
+    if (!payload || typeof payload !== 'object') return null;
+    const operation = (payload as { operation?: unknown }).operation;
+    if (!operation || typeof operation !== 'object') return null;
+    const value = operation as Record<string, unknown>;
+    if (
+        typeof value.id !== 'string'
+        || !/^[a-f0-9]{32}$/.test(value.id)
+        || value.request_id !== marker.request_id
+        || value.kind !== 'panel_certificate_issue'
+        || value.service_id !== marker.domain
+        || (
+            value.status !== 'queued'
+            && value.status !== 'running'
+            && value.status !== 'succeeded'
+            && value.status !== 'failed'
+        )
+    ) return null;
+    let operationError: PanelCertificateOperation['error'];
+    if (value.error !== undefined) {
+        if (!value.error || typeof value.error !== 'object') return null;
+        const errorValue = value.error as Record<string, unknown>;
+        if (typeof errorValue.code !== 'string' || typeof errorValue.message !== 'string') return null;
+        operationError = { code: errorValue.code, message: errorValue.message };
+    }
+    return {
+        id: value.id,
+        request_id: marker.request_id,
+        kind: 'panel_certificate_issue',
+        service_id: marker.domain,
+        status: value.status,
+        ...(operationError ? { error: operationError } : {}),
+    };
+}
+
 function PanelCertificatePanel() {
     const { t } = useI18n();
     const [info, setInfo] = useState<{
@@ -230,6 +359,10 @@ function PanelCertificatePanel() {
     );
     const [busy, setBusy] = useState(false);
     const [restarting, setRestarting] = useState(false);
+    const [pendingOperation, setPendingOperation] = useState<PanelCertificateOperationMarker | null>(
+        () => readPanelCertificateMarker(),
+    );
+    const issueInFlightRef = useRef(pendingOperation !== null);
 
     useEffect(() => {
         fetch('/api/v1/panel/certificate')
@@ -238,33 +371,142 @@ function PanelCertificatePanel() {
             .catch(() => setInfo(null));
     }, []);
 
-    const issue = async () => {
+    useEffect(() => {
+        const marker = pendingOperation;
+        if (marker === null || restarting) return undefined;
+        const exactMarker: PanelCertificateOperationMarker = marker;
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
         setBusy(true);
+
+        function schedule() {
+            if (!cancelled) timer = setTimeout(() => void poll(), PANEL_CERTIFICATE_POLL_MS);
+        }
+        async function poll() {
+            let response: Response;
+            try {
+                response = await fetch(
+                    `/api/v1/service/operation?request_id=${encodeURIComponent(exactMarker.request_id)}`,
+                    { cache: 'no-store' },
+                );
+            } catch {
+                schedule();
+                return;
+            }
+            if (cancelled) return;
+            if (response.status === 404) {
+                if (Date.now() - exactMarker.created_at > PANEL_CERTIFICATE_MISSING_GRACE_MS) {
+                    clearPanelCertificateMarker();
+                    issueInFlightRef.current = false;
+                    setPendingOperation(null);
+                    setBusy(false);
+                    showToast('error', t('panelCert.failed'));
+                    return;
+                }
+                schedule();
+                return;
+            }
+            if (!response.ok) {
+                schedule();
+                return;
+            }
+            let payload: unknown;
+            try {
+                payload = await response.json();
+            } catch {
+                schedule();
+                return;
+            }
+            const operation = decodePanelCertificateOperation(payload, exactMarker);
+            if (operation === null) {
+                // A mismatched privileged operation can never authorize
+                // clearing or replacing this exact request-id marker.
+                schedule();
+                return;
+            }
+            if (operation.status === 'failed') {
+                clearPanelCertificateMarker();
+                issueInFlightRef.current = false;
+                setPendingOperation(null);
+                setBusy(false);
+                showToast('error', operation.error?.message || t('panelCert.failed'));
+                return;
+            }
+            if (operation.status !== 'succeeded') {
+                schedule();
+                return;
+            }
+            clearPanelCertificateMarker();
+            issueInFlightRef.current = false;
+            setPendingOperation(null);
+            showToast('success', t('panelCert.issued'));
+            setRestarting(true);
+            setTimeout(() => {
+                window.location.href = `https://${exactMarker.domain}:${window.location.port || '2083'}/`;
+            }, 6000);
+        }
+        void poll();
+        return () => {
+            cancelled = true;
+            if (timer !== undefined) clearTimeout(timer);
+        };
+    }, [pendingOperation, restarting, t]);
+
+    const issue = async () => {
+        // The ref closes the pre-render double-click window. A marker loaded
+        // during the initial render is authoritative and must never be
+        // overwritten by a new request id while exact polling is in flight.
+        if (issueInFlightRef.current || pendingOperation !== null || restarting || !domain) return;
+        issueInFlightRef.current = true;
+        const requestID = createPanelCertificateRequestID();
+        const marker: PanelCertificateOperationMarker | null = requestID === null
+            ? null
+            : {
+                version: 1,
+                request_id: requestID,
+                domain: canonicalPanelCertificateMarkerDomain(domain),
+                created_at: Date.now(),
+            };
+        if (marker === null || !marker.domain || !storePanelCertificateMarker(marker)) {
+            issueInFlightRef.current = false;
+            showToast('error', t('panelCert.failed'));
+            return;
+        }
+        setBusy(true);
+        setPendingOperation(marker);
         try {
             const res = await fetch('/api/v1/panel/certificate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domain }),
+                body: JSON.stringify({ domain, request_id: marker.request_id }),
             });
             if (!res.ok) {
-                showToast('error', apiErrorText(await readApiError(res), t, 'panelCert.failed'));
-                setBusy(false);
+                // 408/429/5xx and an auth-gate response do not prove the
+                // durable operation was rejected: a proxy can lose or replace
+                // the response after the row is committed. Keep the exact
+                // marker and reconcile through the operation endpoint.
+                const rejectionIsDefinitive = res.status >= 400
+                    && res.status < 500
+                    && res.status !== 401
+                    && res.status !== 408
+                    && res.status !== 429;
+                if (rejectionIsDefinitive) {
+                    clearPanelCertificateMarker();
+                    issueInFlightRef.current = false;
+                    setPendingOperation(null);
+                    showToast('error', apiErrorText(await readApiError(res), t, 'panelCert.failed'));
+                    setBusy(false);
+                }
                 return;
             }
-            const data = await res.json();
-            if (data.error) throw new Error(data.error || t('panelCert.failed'));
-            showToast('success', t('panelCert.issued'));
-            setRestarting(true);
-            // The panel restarts to serve the new certificate; move the
-            // browser to the domain the certificate is actually valid for.
-            // Panel yeni sertifikayı sunmak için yeniden başlar; tarayıcıyı
-            // sertifikanın gerçekten geçerli olduğu alan adına taşı.
-            setTimeout(() => {
-                window.location.href = `https://${domain}:${window.location.port || '2083'}/`;
-            }, 6000);
+            const operation = decodePanelCertificateOperation(await res.json(), marker);
+            if (operation === null) throw new Error(t('panelCert.failed'));
         } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('panelCert.failed'));
-            setBusy(false);
+            // A lost POST response is not proof that the durable row was not
+            // created. Keep the exact marker and let polling reconcile it.
+            if (!(e instanceof TypeError)) {
+                showToast('error', e instanceof Error && e.message ? e.message : t('panelCert.failed'));
+            }
         }
     };
 
@@ -309,7 +551,12 @@ function PanelCertificatePanel() {
                             autoComplete="url"
                             className={inputClass + ' min-w-0 flex-1'}
                         />
-                        <Button className="w-full sm:w-auto" variant="primary" onClick={issue} disabled={busy || !domain}>
+                        <Button
+                            className="w-full sm:w-auto"
+                            variant="primary"
+                            onClick={issue}
+                            disabled={busy || pendingOperation !== null || restarting || !domain}
+                        >
                             {busy ? t('panelCert.issuing') : t('panelCert.issue')}
                         </Button>
                     </div>

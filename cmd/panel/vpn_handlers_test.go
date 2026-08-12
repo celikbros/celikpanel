@@ -590,7 +590,8 @@ func (a *vpnCommittedResponseLossAgent) SyncVPNPeersV2(
 	job := a.mutationJobs[a.mutationActive]
 	if job != nil {
 		job.Status = agentMutationSucceeded
-		job.Phase = "completed"
+		job.Phase = "commit/vpn-peer-sync/v1/published/" +
+			job.RequestID + "/" + job.PackageName
 		a.mutationActive = ""
 	}
 	a.mu.Unlock()

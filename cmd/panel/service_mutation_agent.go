@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -21,7 +23,39 @@ const (
 	panelMutationHeartbeatInterval = 5 * time.Second
 	panelMutationFinishTimeout     = 15 * time.Second
 	panelMutationRecoveryTimeout   = 90 * time.Second
+	// The agent may spend two minutes forward-converging a committed Mail TLS
+	// plan. Keep a separate end-to-end budget with room for capability checks,
+	// snapshot inspection, durable lease publication, and terminal receipt.
+	panelMailTLSSyncTimeout = 5 * time.Minute
+	// These kinds also make a durable forward-only decision before their RPC
+	// response is authoritative. Their exact terminal receipt must outlive the
+	// generic 15-second control-RPC reconciliation window.
+	panelFirewallCommitReconcileTimeout = 90 * time.Second
+	panelDNSCommitReconcileTimeout      = 5 * time.Minute
 )
+
+var waitExpectedAgentMutationTerminalFn = func(
+	panel *Panel,
+	ctx context.Context,
+	identity agentMutationIdentity,
+) (*agentMutationJob, error) {
+	return panel.waitExpectedAgentMutationTerminal(ctx, identity)
+}
+
+func panelMutationTerminalReconcileTimeout(identity agentMutationIdentity) time.Duration {
+	switch identity.Kind {
+	case "mail_tls_sync":
+		return panelMailTLSSyncTimeout
+	case "firewall_apply", "firewall_sync":
+		return panelFirewallCommitReconcileTimeout
+	case "dns_zone_sync":
+		return panelDNSCommitReconcileTimeout
+	case "dns_cluster_configure":
+		return 5 * time.Minute
+	default:
+		return panelMutationFinishTimeout
+	}
+}
 
 type agentMutationBinding = transport.ServiceMutationBinding
 
@@ -34,6 +68,47 @@ type panelMutationContextKey struct{}
 var errAgentMutationIdentityMismatch = errors.New(
 	"agent service mutation response identity does not match the requested durable operation",
 )
+
+var errAgentMutationPublishedReceiptMismatch = errors.New(
+	"agent service mutation success lacks its exact canonical published receipt",
+)
+
+// agentMutationTerminalUncertainError means an exact forward-only payload may
+// already have a durable intent but its terminal receipt could not be observed.
+// Callers must retain the newly requested database state; rolling it back could
+// make the ledger disagree with the plan the agent will finish after recovery.
+type agentMutationTerminalUncertainError struct {
+	kind string
+	err  error
+}
+
+func (e *agentMutationTerminalUncertainError) Error() string {
+	return "durable " + e.kind + " terminal state is uncertain: " + e.err.Error()
+}
+
+func (e *agentMutationTerminalUncertainError) Unwrap() error { return e.err }
+
+func payloadBoundMutationTerminalError(
+	identity agentMutationIdentity,
+	observed *agentMutationJob,
+	err error,
+) error {
+	if err == nil {
+		return nil
+	}
+	switch identity.Kind {
+	case "mail_tls_sync", "firewall_apply", "firewall_sync", "dns_zone_sync", "dns_cluster_configure":
+		if observed == nil || !identity.matches(observed) || agentMutationActive(observed.Status) {
+			return &agentMutationTerminalUncertainError{kind: identity.Kind, err: err}
+		}
+	}
+	return err
+}
+
+func mutationTerminalUncertain(err error) bool {
+	var target *agentMutationTerminalUncertainError
+	return errors.As(err, &target)
+}
 
 type agentMutationIdentity struct {
 	RequestID   string
@@ -73,6 +148,78 @@ func validateAgentMutationIdentity(
 		return nil
 	}
 	return errAgentMutationIdentityMismatch
+}
+
+func payloadBoundMutationPublishedPhase(
+	identity agentMutationIdentity,
+) (string, bool, error) {
+	switch identity.Kind {
+	case "vpn_peer_sync":
+		if identity.Target != "wireguard" ||
+			!mutationpayload.ValidVPNPeerSyncQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/vpn-peer-sync/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
+	case "firewall_apply", "firewall_sync":
+		if identity.Target != "nftables" ||
+			!mutationpayload.ValidFirewallApplyQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/firewall-apply/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
+	case "mail_tls_sync":
+		if identity.Target != "mail-tls" ||
+			!mutationpayload.ValidMailTLSSyncQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/mail-tls-sync/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
+	case "dns_cluster_configure":
+		if identity.Target != "pdns" ||
+			!mutationpayload.ValidDNSClusterConfigQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/dns-cluster-config/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
+	case "dns_zone_sync":
+		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
+		if err != nil || canonicalTarget != identity.Target ||
+			!mutationpayload.ValidDNSZoneSyncQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/dns-zone-sync/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+	case "panel_certificate_issue":
+		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
+		if err != nil || canonicalTarget != identity.Target ||
+			!mutationpayload.ValidPanelCertificateIssueQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/panel-certificate-issue/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+	default:
+		return "", false, nil
+	}
+}
+
+func validateAgentMutationSucceededReceipt(
+	job *agentMutationJob,
+	identity agentMutationIdentity,
+) error {
+	if err := validateAgentMutationIdentity(job, identity); err != nil {
+		return err
+	}
+	if job.Status != agentMutationSucceeded {
+		return fmt.Errorf("agent service mutation is not successful: %s", job.Status)
+	}
+	expected, required, err := payloadBoundMutationPublishedPhase(identity)
+	if err != nil {
+		return err
+	}
+	if required && job.Phase != expected {
+		return fmt.Errorf(
+			"%w: got %q, want %q",
+			errAgentMutationPublishedReceiptMismatch,
+			job.Phase,
+			expected,
+		)
+	}
+	return nil
 }
 
 func cloneAgentMutationJob(job *agentMutationJob) *agentMutationJob {
@@ -283,6 +430,11 @@ func (p *Panel) startObservedAgentMutationHeartbeat(
 						return
 					}
 					if job.Status == agentMutationSucceeded {
+						if receiptErr := validateAgentMutationSucceededReceipt(job, *expected); receiptErr != nil {
+							observedErr = receiptErr
+							cancel()
+							return
+						}
 						observedTerminal = cloneAgentMutationJob(job)
 						return
 					}
@@ -323,6 +475,9 @@ func (p *Panel) waitExpectedAgentMutationTerminal(
 				return job, identityErr
 			}
 			if job.Status == agentMutationSucceeded {
+				if receiptErr := validateAgentMutationSucceededReceipt(job, identity); receiptErr != nil {
+					return job, receiptErr
+				}
 				return job, nil
 			}
 			if !agentMutationActive(job.Status) {
@@ -352,9 +507,14 @@ func (p *Panel) finishExpectedAgentMutation(
 	terminal, finishErr := p.finishAgentMutation(binding, success, failure)
 	if terminal != nil {
 		if identityErr := validateAgentMutationIdentity(terminal, identity); identityErr != nil {
-			return terminal, identityErr
+			return terminal, payloadBoundMutationTerminalError(
+				identity, terminal, identityErr,
+			)
 		}
 		if terminal.Status == agentMutationSucceeded {
+			if receiptErr := validateAgentMutationSucceededReceipt(terminal, identity); receiptErr != nil {
+				return terminal, receiptErr
+			}
 			return terminal, nil
 		}
 	}
@@ -363,30 +523,40 @@ func (p *Panel) finishExpectedAgentMutation(
 	}
 	statusCtx, statusCancel := context.WithTimeout(
 		context.Background(),
-		panelMutationFinishTimeout,
+		panelMutationTerminalReconcileTimeout(identity),
 	)
-	reconciled, statusErr := p.waitExpectedAgentMutationTerminal(statusCtx, identity)
+	reconciled, statusErr := waitExpectedAgentMutationTerminalFn(
+		p, statusCtx, identity,
+	)
 	statusCancel()
 	if reconciled != nil && identity.matches(reconciled) &&
 		reconciled.Status == agentMutationSucceeded {
+		if receiptErr := validateAgentMutationSucceededReceipt(reconciled, identity); receiptErr != nil {
+			return reconciled, receiptErr
+		}
 		return reconciled, nil
 	}
 	if statusErr != nil {
-		return reconciled, fmt.Errorf(
+		return reconciled, payloadBoundMutationTerminalError(identity, reconciled, fmt.Errorf(
 			"finish durable agent mutation: %w",
 			errors.Join(
 				finishErr,
 				fmt.Errorf("reconcile terminal status: %w", statusErr),
 			),
-		)
+		))
 	}
-	return reconciled, fmt.Errorf("finish durable agent mutation: %w", finishErr)
+	return reconciled, payloadBoundMutationTerminalError(
+		identity, reconciled,
+		fmt.Errorf("finish durable agent mutation: %w", finishErr),
+	)
 }
 
 // withStandaloneAgentMutation gives a synchronous privileged RPC the same
 // durable host lease used by asynchronous installs. If the panel dies, startup
 // recovery sees the unmatched agent job and waits for its active step to stop
-// before admitting another mutation.
+// before admitting another mutation. It intentionally does not acquire
+// serviceMutationMu: HTTP handlers and composite runners own that process lock
+// before entering component-specific locks, preventing inverse lock order.
 // withStandaloneAgentMutation, eşzamanlı ayrıcalıklı RPC'ye asenkron
 // kurulumlarla aynı kalıcı makine kirasını verir. Panel ölürse başlangıç
 // kurtarması eşleşmeyen agent işini görür ve başka değişiklik kabul etmeden
@@ -413,6 +583,29 @@ func (p *Panel) withStandaloneAgentMutation(
 		ServiceID:   strings.TrimSpace(target),
 		PackageName: strings.TrimSpace(packageName),
 	}
+	return p.withStandaloneAgentMutationIdentity(ctx, op, ownerID, call)
+}
+
+// withStandaloneAgentMutationIdentity runs the ordinary standalone lifecycle
+// with caller-selected, already persisted identities. It is used by composite
+// panel operations whose direct child must be correlated exactly after a
+// process restart. The public wrapper above remains the only path that may
+// reuse an existing bound context.
+func (p *Panel) withStandaloneAgentMutationIdentity(
+	ctx context.Context,
+	op serviceOperation,
+	ownerID string,
+	call func(context.Context, agentMutationBinding) error,
+) error {
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return errors.New("preselected standalone mutation cannot reuse a bound context")
+	}
+	if !validServiceOperationID(op.RequestID) || !validServiceOperationID(ownerID) {
+		return errors.New("invalid preselected standalone mutation identity")
+	}
+	op.Kind = strings.TrimSpace(op.Kind)
+	op.ServiceID = strings.TrimSpace(op.ServiceID)
+	op.PackageName = strings.TrimSpace(op.PackageName)
 	identity := agentMutationIdentityForOperation(op, ownerID)
 	beginCtx, beginCancel := context.WithTimeout(ctx, panelMutationFinishTimeout)
 	job, err := p.beginAgentMutation(beginCtx, op, ownerID, false)
@@ -421,7 +614,7 @@ func (p *Panel) withStandaloneAgentMutation(
 		return err
 	}
 	binding := agentMutationBinding{
-		MutationRequestID: requestID,
+		MutationRequestID: op.RequestID,
 		MutationOwnerID:   ownerID,
 	}
 	deadline := job.DeadlineAt
@@ -453,6 +646,9 @@ func (p *Panel) withStandaloneAgentMutation(
 		)
 	}
 	if heartbeatTerminal != nil {
+		if receiptErr := validateAgentMutationSucceededReceipt(heartbeatTerminal, identity); receiptErr != nil {
+			return receiptErr
+		}
 		return nil
 	}
 	heartbeatIdentityMismatch := errors.Is(

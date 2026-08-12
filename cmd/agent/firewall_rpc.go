@@ -14,7 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -40,7 +42,6 @@ import (
 
 const (
 	fwTable                 = "celikpanel_fw"
-	firewallSnapshotPath    = "/etc/celikpanel/firewall.nft"
 	maxFirewallSnapshotSize = 64 << 10
 	firewallSnapshotVersion = 2
 	firewallRestoreUnitName = "celikpanel-firewall-restore.service"
@@ -52,6 +53,9 @@ const (
 	firewallPersistenceInvalid    = "invalid"
 	firewallPersistenceUnverified = "unverified"
 )
+
+// The production path is replaceable only by focused crash-recovery tests.
+var firewallSnapshotPath = "/etc/celikpanel/firewall.nft"
 
 // firewallMu serializes status, apply and boot restore. nft itself applies a
 // batch atomically, but without this process lock a Status→Apply sequence could
@@ -428,38 +432,63 @@ type FirewallStatusResponse = transport.FirewallStatusResponse
 // ApplyFirewall, nftables tablomuzu kurar (ya da kaldırır).
 func (a *Agent) ApplyFirewall(req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
 	*resp = FirewallStatusResponse{}
+	resp.PersistenceState = firewallPersistenceUnverified
+	resp.Error = "Agent.ApplyFirewall is unsupported; use Agent.ApplyFirewallV2 with a payload-bound mutation lease"
+	resp.PersistenceError = resp.Error
+	return nil
+}
+
+// ApplyFirewallV2 commits one canonical direct firewall plan. The durable
+// intent is the linearization point; after it, cancellation cannot turn a
+// partially converged host into a reported failure.
+func (a *Agent) ApplyFirewallV2(req *ApplyFirewallRequest, resp *FirewallStatusResponse) error {
+	*resp = FirewallStatusResponse{}
 	if req == nil {
-		*resp = FirewallStatusResponse{Error: "missing firewall request"}
+		resp.Error = "missing firewall request"
 		return nil
 	}
-	enabled := req.Enabled
-	persist := req.Persist
-	authorizedReq := *req
-	authorizedReq.Enabled = enabled
-	authorizedReq.Persist = persist
-	req = &authorizedReq
-	binding := req.ServiceMutationBinding
-	action := serviceMutationFirewallAction(enabled, persist)
-	// Every firewall write must join the durable global service mutation lease.
-	// This prevents UI actions and post-install synchronization from racing
-	// release updates, rollbacks, or another privileged component operation.
-	// Her güvenlik duvarı yazımı kalıcı küresel servis mutation lease'ine
-	// katılmalıdır. Böylece UI işlemleri ve kurulum sonrası eşitleme; sürüm
-	// güncellemesi, geri alma veya başka ayrıcalıklı bileşen işlemiyle yarışmaz.
-	ctx, finishStep, err := a.requiredServiceMutationStep(
-		binding,
-		newServiceMutationStepClaim(serviceMutationStepApplyFirewall, "nftables", "", action),
+	commitment, err := mutationpayload.CanonicalFirewallApply(
+		req.Enabled,
+		req.Persist,
+		req.TCPPorts,
+		req.UDPPorts,
 	)
 	if err != nil {
-		*resp = FirewallStatusResponse{
-			PersistenceState: firewallPersistenceUnverified,
-			PersistenceError: err.Error(),
-			Error:            "firewall mutation is blocked: " + err.Error(),
-		}
+		resp.Error = err.Error()
+		return nil
+	}
+	authorized := *req
+	authorized.Enabled = commitment.Enabled
+	authorized.Persist = commitment.Persist
+	authorized.TCPPorts = commitment.TCPPorts
+	authorized.UDPPorts = commitment.UDPPorts
+	action := serviceMutationFirewallAction(commitment.Enabled, commitment.Persist)
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		authorized.ServiceMutationBinding,
+		newServiceMutationStepClaim(
+			serviceMutationStepApplyFirewall,
+			"nftables",
+			commitment.Qualifier,
+			action,
+		),
+	)
+	if err != nil {
+		resp.PersistenceState = firewallPersistenceUnverified
+		resp.PersistenceError = err.Error()
+		resp.Error = "firewall mutation is blocked: " + err.Error()
 		return nil
 	}
 	defer finishStep()
-	return applyFirewallWithRunner(hostFirewallCommandRunner{ctx: ctx}, req, resp)
+
+	prepareCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	return applyStandaloneFirewallV2(
+		prepareCtx,
+		commitment,
+		hostFirewallCommandRunner{ctx: prepareCtx},
+		fileFirewallStateStore{path: firewallSnapshotPath},
+		resp,
+	)
 }
 
 // applyFirewallWithRunner contains the transaction boundary separately from

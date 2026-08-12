@@ -246,6 +246,39 @@ func reconcilePanelCertificateActivationLocked(ctx context.Context) error {
 	) {
 		return nil
 	}
+	if state.Origin == panelCertificateActivationOriginInteractive &&
+		(state.Phase == panelCertificateActivationPendingSource ||
+			state.Phase == panelCertificateActivationPendingPublish) {
+		published, verifyErr := verifyPublishedPanelCertificateIssueReceipt(
+			state.RequestID,
+			state.Qualifier,
+			state.Domain,
+		)
+		if verifyErr != nil {
+			return verifyErr
+		}
+		if !published {
+			// Interactive publication belongs only to its exact mutation gate.
+			return nil
+		}
+		if state.Phase != panelCertificateActivationPendingPublish {
+			return errors.New(
+				"published interactive panel certificate requires startup recovery",
+			)
+		}
+		state, err = panelCertificateActivationNextPhase(
+			state,
+			panelCertificateActivationPendingRestart,
+		)
+		if err != nil {
+			return err
+		}
+		if err := panelCertificateActivationWriteState(state); err != nil {
+			return fmt.Errorf(
+				"persist published interactive panel certificate: %w", err,
+			)
+		}
+	}
 
 	if state.Phase == panelCertificateActivationPendingSource ||
 		state.Phase == panelCertificateActivationPendingPublish {
@@ -425,6 +458,40 @@ func beginPanelCertificateIssuanceLocked(
 	return state, nil
 }
 
+func beginInteractivePanelCertificateIssuanceLocked(
+	domain, requestID, qualifier string,
+) (panelCertificateActivationState, error) {
+	state, err := newInteractivePanelCertificateActivationState(
+		domain, requestID, qualifier,
+	)
+	if err != nil {
+		return panelCertificateActivationState{}, err
+	}
+	existing, found, err := panelCertificateActivationReadState()
+	if err != nil {
+		return panelCertificateActivationState{}, err
+	}
+	if found && (existing.Origin != state.Origin ||
+		existing.RequestID != state.RequestID ||
+		existing.Qualifier != state.Qualifier ||
+		existing.Domain != state.Domain ||
+		existing.LineageName != state.LineageName ||
+		existing.Phase != panelCertificateActivationPendingSource) {
+		return panelCertificateActivationState{}, fmt.Errorf(
+			"%w for %s in phase %s",
+			errPanelCertificateActivationPending,
+			existing.Domain,
+			existing.Phase,
+		)
+	}
+	if err := panelCertificateActivationWriteState(state); err != nil {
+		return panelCertificateActivationState{}, fmt.Errorf(
+			"persist pending interactive panel certificate source: %w", err,
+		)
+	}
+	return state, nil
+}
+
 func clearPanelCertificateIssuanceIntentLocked(
 	expected panelCertificateActivationState,
 ) error {
@@ -448,6 +515,9 @@ func requirePanelCertificateIssuanceIntentLocked(
 		return errors.New("failed panel certificate intent disappeared")
 	}
 	if state.Version != expected.Version ||
+		state.Origin != expected.Origin ||
+		state.RequestID != expected.RequestID ||
+		state.Qualifier != expected.Qualifier ||
 		state.Domain != expected.Domain ||
 		state.LineageName != expected.LineageName ||
 		state.Phase != panelCertificateActivationPendingSource ||
@@ -486,6 +556,12 @@ func enqueueRenewedPanelCertificateActivation(
 		existing, exists, err := panelCertificateActivationReadState()
 		if err != nil {
 			return err
+		}
+		// Certbot runs the deploy hook during an interactive V2 issuance too.
+		// That hook must not replace the exact request/qualifier-bound intent
+		// which the in-flight issuer will bind to the newly issued leaf.
+		if exists && existing.Origin == panelCertificateActivationOriginInteractive {
+			return nil
 		}
 		if exists && existing.Domain != domain {
 			return nil

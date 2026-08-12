@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"math/big"
@@ -131,6 +132,46 @@ func TestPanelCertificateActivationStateCanonicalJSON(t *testing.T) {
 	trailer := append(append([]byte{}, raw...), []byte("{}\n")...)
 	if _, err := decodePanelCertificateActivationState(trailer); err == nil {
 		t.Fatal("expected multiple JSON values to fail")
+	}
+}
+
+func TestPanelCertificateActivationStateStrictlyReadsCanonicalV1(t *testing.T) {
+	legacy := panelCertificateActivationStateV1{
+		Version:     panelCertificateActivationLegacyVersion,
+		Domain:      "panel.example.test",
+		LineageName: panelCertLineageName("panel.example.test"),
+		Phase:       panelCertificateActivationPendingSource,
+	}
+	raw, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, '\n')
+	got, err := decodePanelCertificateActivationState(raw)
+	if err != nil {
+		t.Fatalf("decode canonical V1 state: %v", err)
+	}
+	want, err := newPanelCertificateActivationState("panel.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("V1 upgrade = %#v, want %#v", got, want)
+	}
+
+	unknown := append([]byte{}, raw[:len(raw)-2]...)
+	unknown = append(unknown, []byte(`,"origin":"renewal"}`)...)
+	unknown = append(unknown, '\n')
+	for name, invalid := range map[string][]byte{
+		"leading whitespace": append([]byte(" "), raw...),
+		"unknown V2 field":   unknown,
+		"trailing value":     append(append([]byte{}, raw...), []byte("{}\n")...),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := decodePanelCertificateActivationState(invalid); err == nil {
+				t.Fatal("non-canonical or extended V1 state was accepted")
+			}
+		})
 	}
 }
 

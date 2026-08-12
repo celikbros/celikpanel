@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -24,6 +25,8 @@ import (
 var panelFirewallMu sync.Mutex
 
 var errFirewallNoEngine = errors.New("firewall engine is not installed")
+
+var errFirewallNestedMutation = errors.New("firewall apply requires a fresh direct mutation lease")
 
 // Firewall, panel side. The panel decides policy — which ports should be open
 // — and the agent enforces it in nftables. The desired set is derived, never
@@ -105,7 +108,16 @@ func (p *Panel) desiredFirewallPorts(extraTCP ...int) (tcp []int, udp []int, err
 // yeniden uygular — yalnız zaten etkinken (asla sürpriz açmaz). Kurulum/
 // kaldırma sonrası çağrılır.
 func (p *Panel) syncFirewall(ctx context.Context) error {
-	return p.syncFirewallWithExtraTCP(ctx)
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	return p.syncFirewallWithExtraTCPLocked(ctx)
+}
+
+// syncFirewallLocked is the composite/uninstall entry point. Its caller owns
+// serviceMutationMu and this helper takes only the component lock, preserving
+// the global -> firewall lock order.
+func (p *Panel) syncFirewallLocked(ctx context.Context) error {
+	return p.syncFirewallWithExtraTCPLocked(ctx)
 }
 
 // syncFirewallWithExtraTCP temporarily extends the derived live policy for
@@ -114,44 +126,47 @@ func (p *Panel) syncFirewall(ctx context.Context) error {
 // self-signed installation, :80 must be open before certbot can prove the
 // hostname. Disabled firewalls remain disabled.
 func (p *Panel) syncFirewallWithExtraTCP(ctx context.Context, extraTCP ...int) error {
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	return p.syncFirewallWithExtraTCPLocked(ctx, extraTCP...)
+}
+
+func (p *Panel) syncFirewallWithExtraTCPLocked(ctx context.Context, extraTCP ...int) error {
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return errFirewallNestedMutation
+	}
 	panelFirewallMu.Lock()
 	defer panelFirewallMu.Unlock()
-	return p.withStandaloneAgentMutation(
-		ctx,
-		"firewall_sync",
-		"nftables",
-		"",
-		func(_ context.Context, binding agentMutationBinding) error {
-			var st FirewallStatusResp
-			if err := p.callAgent("Agent.FirewallStatus", &transport.Empty{}, &st); err != nil {
-				return fmt.Errorf("read firewall status: %w", err)
-			}
-			if st.Error != "" {
-				return fmt.Errorf("read firewall status: %s", st.Error)
-			}
-			if !st.Enabled {
-				return nil
-			}
-			tcp, udp, err := p.desiredFirewallPorts(extraTCP...)
-			if err != nil {
-				return err
-			}
-			call := applyFirewallReq{
-				ServiceMutationBinding: binding,
-				Enabled:                true,
-				TCPPorts:               tcp,
-				UDPPorts:               udp,
-			}
-			var out FirewallStatusResp
-			if err := p.callAgent("Agent.ApplyFirewall", &call, &out); err != nil {
-				return fmt.Errorf("apply firewall policy: %w", err)
-			}
-			if out.Error != "" {
-				return fmt.Errorf("apply firewall policy: %s", out.Error)
-			}
-			return nil
-		},
-	)
+
+	// Freeze the complete caller-controlled policy before BeginServiceMutation.
+	// The qualifier stored in the durable job therefore commits to exactly the
+	// same detached slices later sent to ApplyFirewallV2.
+	var st FirewallStatusResp
+	if err := p.callAgentContext(ctx, "Agent.FirewallStatus", &transport.Empty{}, &st); err != nil {
+		return fmt.Errorf("read firewall status: %w", err)
+	}
+	if st.Error != "" {
+		return fmt.Errorf("read firewall status: %s", st.Error)
+	}
+	if !st.Enabled {
+		return nil
+	}
+	tcp, udp, err := p.desiredFirewallPorts(extraTCP...)
+	if err != nil {
+		return err
+	}
+	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, tcp, udp)
+	if err != nil {
+		return fmt.Errorf("canonicalize firewall policy: %w", err)
+	}
+	out, err := p.applyCanonicalFirewallV2(ctx, "firewall_sync", commitment)
+	if err != nil {
+		return fmt.Errorf("apply firewall policy: %w", err)
+	}
+	if out.Error != "" {
+		return fmt.Errorf("apply firewall policy: %s", out.Error)
+	}
+	return nil
 }
 
 type applyFirewallReq = transport.ApplyFirewallRequest
@@ -199,54 +214,219 @@ func (p *Panel) applyFirewallSettingContext(
 	ctx context.Context,
 	enabled, persist bool,
 ) (FirewallStatusResp, error) {
+	// Non-HTTP callers acquire the process-wide mutation lock here. Production
+	// HTTP admission uses beginServiceMutation and calls the locked helper below
+	// so the invariant is always serviceMutationMu -> panelFirewallMu.
+	p.serviceMutationMu.Lock()
+	defer p.serviceMutationMu.Unlock()
+	return p.applyFirewallSettingContextLocked(ctx, enabled, persist)
+}
+
+func (p *Panel) applyFirewallSettingContextLocked(
+	ctx context.Context,
+	enabled, persist bool,
+) (FirewallStatusResp, error) {
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return FirewallStatusResp{}, errFirewallNestedMutation
+	}
 	panelFirewallMu.Lock()
 	defer panelFirewallMu.Unlock()
-	var st FirewallStatusResp
-	err := p.withStandaloneAgentMutation(
-		ctx,
-		"firewall_apply",
-		"nftables",
-		"",
-		func(_ context.Context, binding agentMutationBinding) error {
-			if enabled {
-				var cur FirewallStatusResp
-				if err := p.callAgent("Agent.FirewallStatus", &transport.Empty{}, &cur); err != nil {
-					return err
-				}
-				if cur.Error != "" {
-					st = FirewallStatusResp{Error: cur.Error}
-					return &firewallAgentResponseError{message: cur.Error}
-				}
-				if !cur.EngineAvailable {
-					return errFirewallNoEngine
-				}
-			}
-			call := applyFirewallReq{
-				ServiceMutationBinding: binding,
-				Enabled:                enabled,
-				Persist:                persist,
-			}
-			if enabled {
-				var err error
-				call.TCPPorts, call.UDPPorts, err = p.desiredFirewallPorts()
-				if err != nil {
-					return err
-				}
-			}
-			if err := p.callAgent("Agent.ApplyFirewall", &call, &st); err != nil {
-				return err
-			}
-			if st.Error != "" {
-				return &firewallAgentResponseError{message: st.Error}
-			}
-			return nil
-		},
-	)
+
+	var tcp, udp []int
+	if enabled {
+		var cur FirewallStatusResp
+		if err := p.callAgentContext(ctx, "Agent.FirewallStatus", &transport.Empty{}, &cur); err != nil {
+			return FirewallStatusResp{}, err
+		}
+		if cur.Error != "" {
+			return FirewallStatusResp{Error: cur.Error}, nil
+		}
+		if !cur.EngineAvailable {
+			return FirewallStatusResp{}, errFirewallNoEngine
+		}
+		var err error
+		tcp, udp, err = p.desiredFirewallPorts()
+		if err != nil {
+			return FirewallStatusResp{}, err
+		}
+	}
+	commitment, err := mutationpayload.CanonicalFirewallApply(enabled, persist, tcp, udp)
+	if err != nil {
+		return FirewallStatusResp{}, fmt.Errorf("canonicalize firewall policy: %w", err)
+	}
+	st, err := p.applyCanonicalFirewallV2(ctx, "firewall_apply", commitment)
 	var responseErr *firewallAgentResponseError
 	if errors.As(err, &responseErr) {
 		return st, nil
 	}
 	return st, err
+}
+
+// applyCanonicalFirewallV2 opens a fresh direct lease for an already frozen
+// firewall payload. Callers must hold panelFirewallMu from discovery through
+// this function so another local firewall decision cannot overtake the
+// commitment. A bound context is deliberately rejected: direct firewall jobs
+// never borrow a package/profile/certificate mutation identity.
+func (p *Panel) applyCanonicalFirewallV2(
+	ctx context.Context,
+	kind string,
+	commitment mutationpayload.FirewallApplyCommitment,
+) (FirewallStatusResp, error) {
+	return p.applyCanonicalFirewallV2Identity(ctx, kind, commitment, "", "")
+}
+
+func (p *Panel) applyCanonicalFirewallV2Identity(
+	ctx context.Context,
+	kind string,
+	commitment mutationpayload.FirewallApplyCommitment,
+	requestID, ownerID string,
+) (FirewallStatusResp, error) {
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return FirewallStatusResp{}, errFirewallNestedMutation
+	}
+	if kind != "firewall_apply" && kind != "firewall_sync" {
+		return FirewallStatusResp{}, errors.New("invalid direct firewall mutation kind")
+	}
+	canonical, err := mutationpayload.CanonicalFirewallApply(
+		commitment.Enabled,
+		commitment.Persist,
+		commitment.TCPPorts,
+		commitment.UDPPorts,
+	)
+	if err != nil {
+		return FirewallStatusResp{}, fmt.Errorf("validate canonical firewall payload: %w", err)
+	}
+	if !mutationpayload.ValidFirewallApplyQualifier(commitment.Qualifier) ||
+		canonical.Qualifier != commitment.Qualifier {
+		return FirewallStatusResp{}, errors.New("invalid canonical firewall qualifier")
+	}
+	commitment = canonical
+
+	var response FirewallStatusResp
+	rpcResponseObserved := false
+	call := func(callCtx context.Context, binding agentMutationBinding) error {
+		request := applyFirewallReq{
+			ServiceMutationBinding: binding,
+			Enabled:                commitment.Enabled,
+			Persist:                commitment.Persist,
+			TCPPorts:               append([]int(nil), commitment.TCPPorts...),
+			UDPPorts:               append([]int(nil), commitment.UDPPorts...),
+		}
+		if err := p.callAgentContext(
+			callCtx,
+			"Agent.ApplyFirewallV2",
+			&request,
+			&response,
+		); err != nil {
+			return err
+		}
+		rpcResponseObserved = true
+		if response.Error != "" {
+			return &firewallAgentResponseError{message: response.Error}
+		}
+		return nil
+	}
+	err = nil
+	if requestID == "" && ownerID == "" {
+		err = p.withStandaloneAgentMutation(
+			ctx, kind, "nftables", commitment.Qualifier, call,
+		)
+	} else {
+		err = p.withStandaloneAgentMutationIdentity(
+			ctx,
+			serviceOperation{
+				RequestID:   requestID,
+				Kind:        kind,
+				ServiceID:   "nftables",
+				PackageName: commitment.Qualifier,
+			},
+			ownerID,
+			call,
+		)
+	}
+	if err == nil && !rpcResponseObserved {
+		// The agent may have durably committed success before the RPC response
+		// was lost. withStandaloneAgentMutationIdentity proved the exact
+		// terminal receipt; refresh only the display/status fields here.
+		if statusErr := p.callAgentContext(
+			ctx, "Agent.FirewallStatus", &transport.Empty{}, &response,
+		); statusErr != nil {
+			return response, fmt.Errorf("read committed firewall status: %w", statusErr)
+		}
+		if response.Error != "" {
+			return response, fmt.Errorf("read committed firewall status: %s", response.Error)
+		}
+		if response.Enabled != commitment.Enabled {
+			return response, errors.New("committed firewall status does not match the exact payload")
+		}
+	}
+	return response, err
+}
+
+// syncFirewallForServiceOperation derives and freezes the desired live policy,
+// persists the exact child identity in the active panel row, and only then
+// begins the direct firewall_sync job. A persisted phase without an active
+// child is intentional recoverable desired work after a process crash.
+func (p *Panel) syncFirewallForServiceOperation(
+	ctx context.Context,
+	op serviceOperation,
+) error {
+	if !serviceOperationNeedsFirewallSync(op) {
+		return errors.New("service operation does not require firewall synchronization")
+	}
+	if _, err := panelMutationBinding(ctx); err == nil {
+		return errFirewallNestedMutation
+	}
+	panelFirewallMu.Lock()
+	defer panelFirewallMu.Unlock()
+
+	var status FirewallStatusResp
+	if err := p.callAgentContext(ctx, "Agent.FirewallStatus", &transport.Empty{}, &status); err != nil {
+		return fmt.Errorf("read firewall status: %w", err)
+	}
+	if status.Error != "" {
+		return fmt.Errorf("read firewall status: %s", status.Error)
+	}
+	if !status.Enabled {
+		return p.updateServiceOperationPhase(ctx, op.ID, serviceOperationFirewallPhase(op))
+	}
+	tcp, udp, err := p.desiredFirewallPorts()
+	if err != nil {
+		return err
+	}
+	commitment, err := mutationpayload.CanonicalFirewallApply(true, false, tcp, udp)
+	if err != nil {
+		return fmt.Errorf("canonicalize firewall policy: %w", err)
+	}
+	requestID, err := newServiceOperationID()
+	if err != nil {
+		return fmt.Errorf("create firewall child request identity: %w", err)
+	}
+	ownerID, err := newServiceOperationID()
+	if err != nil {
+		return fmt.Errorf("create firewall child owner identity: %w", err)
+	}
+	phase, err := encodeFirewallChildPhase(firewallChildIdentity{
+		RequestID: requestID,
+		OwnerID:   ownerID,
+		Qualifier: commitment.Qualifier,
+	})
+	if err != nil {
+		return err
+	}
+	if err := p.updateServiceOperationPhase(ctx, op.ID, phase); err != nil {
+		return err
+	}
+	response, err := p.applyCanonicalFirewallV2Identity(
+		ctx, "firewall_sync", commitment, requestID, ownerID,
+	)
+	if err != nil {
+		return err
+	}
+	if response.Error != "" {
+		return &firewallAgentResponseError{message: response.Error}
+	}
+	return nil
 }
 
 // handleFirewall: GET status; POST {enabled} turns on/off and the explicit
@@ -286,6 +466,11 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusBadRequest, "enabled is required")
 			return
 		}
+		releaseMutation, busy := p.beginServiceMutation(w, r)
+		if busy {
+			return
+		}
+		defer releaseMutation()
 		enabled := saveForReboot || *req.Enabled
 		if saveForReboot {
 			current, statusErr := p.readFirewallStatus()
@@ -299,7 +484,7 @@ func (p *Panel) handleFirewall(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		persist := saveForReboot || !enabled
-		st, err := p.applyFirewallSettingContext(r.Context(), enabled, persist)
+		st, err := p.applyFirewallSettingContextLocked(r.Context(), enabled, persist)
 		if errors.Is(err, errFirewallNoEngine) {
 			writeCodedError(w, http.StatusConflict, errCodeFirewallNoEngine,
 				"the firewall engine (nftables) is not installed — install it from Services first", "/services")

@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
-	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 	_ "modernc.org/sqlite"
 )
@@ -51,9 +52,15 @@ type SyncDNSZoneRequest = transport.SyncDNSZoneRequest
 
 type SyncDNSZoneResponse = transport.SyncDNSZoneResponse
 
+type SyncDNSZoneV2Request = transport.SyncDNSZoneV2Request
+
+type SyncDNSZoneV2Response = transport.SyncDNSZoneV2Response
+
 var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]byte, error) {
 	return serviceMutationCommand(ctx, name, args...).CombinedOutput()
 }
+
+const syncDNSZoneLegacyUnsupportedError = "Agent.SyncDNSZone is unsupported; use Agent.SyncDNSZoneV2 with a payload-bound mutation lease"
 
 // SyncDNSZone replaces one zone in the pdns database with the given record
 // set (or removes it entirely when Delete is set), then flushes the pdns
@@ -63,157 +70,55 @@ var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]b
 // değişsin diye o adın pdns önbelleğini boşaltır.
 func (a *Agent) SyncDNSZone(req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
 	*resp = SyncDNSZoneResponse{}
+	resp.Error = syncDNSZoneLegacyUnsupportedError
+	return nil
+}
+
+func (a *Agent) SyncDNSZoneV2(req *SyncDNSZoneV2Request, resp *SyncDNSZoneV2Response) error {
+	*resp = SyncDNSZoneV2Response{}
 	if req == nil {
-		return fmt.Errorf("DNS zone sync request is required")
-	}
-	domain, err := hostname.CanonicalFQDN(req.Domain)
-	if err != nil {
-		*resp = SyncDNSZoneResponse{Error: "invalid domain"}
+		resp.Error = "DNS zone V2 sync request is required"
 		return nil
 	}
-	deleteZone := req.Delete
-	action := "sync"
-	if deleteZone {
-		action = "delete"
+	commitment, err := mutationpayload.CanonicalDNSZoneSync(
+		req.DesiredGeneration,
+		req.Domain,
+		req.Delete,
+		req.ZoneType,
+		req.Records,
+	)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	action := dnsZoneSyncActionSync
+	if commitment.Delete {
+		action = dnsZoneSyncActionDelete
 	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		req.ServiceMutationBinding,
-		newServiceMutationStepClaim(serviceMutationStepSyncDNSZone, domain, "", action),
+		newServiceMutationStepClaim(
+			serviceMutationStepSyncDNSZone,
+			commitment.Domain,
+			commitment.Qualifier,
+			action,
+		),
 	)
 	if err != nil {
-		*resp = SyncDNSZoneResponse{Error: err.Error()}
+		resp.Error = err.Error()
 		return nil
 	}
 	defer finishStep()
-	authorizedReq := *req
-	authorizedReq.Domain = domain
-	authorizedReq.Delete = deleteZone
-	return a.syncDNSZone(ctx, &authorizedReq, resp)
-}
-
-func (a *Agent) syncDNSZone(ctx context.Context, req *SyncDNSZoneRequest, resp *SyncDNSZoneResponse) error {
-	if req.Domain == "" {
-		resp.Error = "domain is required"
+	// The receipt is authority only for the database the running PowerDNS
+	// configuration actually serves. Prove that binding before the durable
+	// step can prepare a transaction or create receipt authority.
+	if err := requireManagedDNSClusterReady(); err != nil {
+		resp.Error = fmt.Sprintf("PowerDNS is not ready for DNS zone publication: %v", err)
 		return nil
 	}
-
-	db, err := openPdnsDB()
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	defer db.Close()
-
-	tx, err := db.Begin()
-	if err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-	defer tx.Rollback()
-
-	zoneType := strings.ToUpper(strings.TrimSpace(req.ZoneType))
-	if zoneType == "" {
-		zoneType = "NATIVE"
-	}
-	if zoneType != "NATIVE" && zoneType != "MASTER" {
-		resp.Error = "zone type must be NATIVE or MASTER"
-		return nil
-	}
-
-	var zoneID int64
-	var existingType string
-	err = tx.QueryRow(`SELECT id, type FROM domains WHERE name = ?`, req.Domain).Scan(&zoneID, &existingType)
-	if err == nil && (strings.EqualFold(existingType, "SLAVE") || strings.EqualFold(existingType, "SECONDARY")) {
-		resp.Error = "this zone is owned by the peer and is read-only on this server"
-		return nil
-	}
-	switch {
-	case err == sql.ErrNoRows && req.Delete:
-		// Already absent: deletion is idempotent.
-	case err == sql.ErrNoRows:
-		res, insertErr := tx.Exec(`INSERT INTO domains (name, type) VALUES (?, ?)`, req.Domain, zoneType)
-		if insertErr != nil {
-			resp.Error = insertErr.Error()
-			return nil
-		}
-		zoneID, err = res.LastInsertId()
-		if err != nil {
-			resp.Error = fmt.Sprintf("read inserted zone identity: %v", err)
-			return nil
-		}
-	case err != nil:
-		resp.Error = err.Error()
-		return nil
-	case req.Delete:
-		for _, table := range []string{"records", "comments", "domainmetadata", "cryptokeys"} {
-			if _, err := tx.Exec(`DELETE FROM `+table+` WHERE domain_id = ?`, zoneID); err != nil {
-				resp.Error = err.Error()
-				return nil
-			}
-		}
-		if _, err := tx.Exec(`DELETE FROM domains WHERE id = ?`, zoneID); err != nil {
-			resp.Error = err.Error()
-			return nil
-		}
-	default:
-		if _, err := tx.Exec(`UPDATE domains SET type = ?, master = NULL WHERE id = ?`, zoneType, zoneID); err != nil {
-			resp.Error = err.Error()
-			return nil
-		}
-	}
-
-	if !req.Delete {
-		if _, err := tx.Exec(`DELETE FROM records WHERE domain_id = ?`, zoneID); err != nil {
-			resp.Error = err.Error()
-			return nil
-		}
-		for _, rec := range req.Records {
-			disabled := 0
-			if rec.Disabled {
-				disabled = 1
-			}
-			if _, err := tx.Exec(
-				`INSERT INTO records (domain_id, name, type, content, ttl, prio, disabled, auth) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-				zoneID, rec.Name, rec.Type, rec.Content, rec.TTL, rec.Prio, disabled); err != nil {
-				resp.Error = fmt.Sprintf("insert %s %s: %v", rec.Type, rec.Name, err)
-				return nil
-			}
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		resp.Error = err.Error()
-		return nil
-	}
-
-	// A full-zone rewrite clears the ordername/auth columns DNSSEC relies
-	// on; rectify restores them on signed zones.
-	// Tam-zone yazımı, DNSSEC'in dayandığı ordername/auth kolonlarını siler;
-	// rectify imzalı zone'larda onları geri kurar.
-	if zoneSecured(req.Domain) {
-		if out, err := runPDNSUtil(
-			[]string{"zone", "rectify", req.Domain},
-			[]string{"rectify-zone", req.Domain},
-		); err != nil {
-			resp.Error = dnssecCommandError("rectify synced zone", out, err)
-			return nil
-		}
-	}
-
-	// Rectification must complete before a primary sends NOTIFY; otherwise a
-	// fast secondary can AXFR a signed zone whose denial-of-existence ordering
-	// is not ready yet. Cache control remains best-effort after the durable DB
-	// work has succeeded.
-	_, _ = dnsSyncCommand(ctx, "pdns_control", "purge", req.Domain+"$")
-	if !req.Delete && zoneType == "MASTER" {
-		if out, err := dnsSyncCommand(ctx, "pdns_control", "notify", req.Domain); err != nil {
-			resp.Error = dnssecCommandError("notify peer", out, err)
-			return nil
-		}
-	}
-
-	resp.Synced = true
-	return nil
+	operationCtx, cancel := context.WithTimeout(ctx, dnsZoneSyncPreparationTimeout)
+	defer cancel()
+	return syncDNSZoneV2(operationCtx, commitment, resp)
 }
 
 // ConfigurePowerDNSSQLite points pdns at our dedicated sqlite database and
@@ -307,7 +212,7 @@ api=no
 	// pdns.conf'ta etkin bir include-dir satırı getirir. Birini oluştur,
 	// diğerini aç — Arch'ta canlıda yakalandı: yazma "no such file or
 	// directory" ile düştü ve pdns backend'siz stok config'le çevrimde kaldı.
-	confDir := "/etc/powerdns/pdns.d"
+	confDir := filepath.Clean(filepath.Dir(dnsManagedConf))
 	if err := os.MkdirAll(confDir, 0o755); err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -324,25 +229,26 @@ api=no
 		resp.Error = err.Error()
 		return nil
 	}
-	mainConf := "/etc/powerdns/pdns.conf"
-	if data, err := os.ReadFile(mainConf); err == nil {
-		hasInclude := false
-		for _, line := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "include-dir=") {
-				hasInclude = true
-				break
-			}
-		}
-		if !hasInclude {
-			addition := "\n# Managed by CelikPanel / CelikPanel yönetir\ninclude-dir=" + confDir + "\n"
-			if err := os.WriteFile(mainConf, append(data, []byte(addition)...), 0o644); err != nil {
-				resp.Error = err.Error()
-				return nil
-			}
+	mainConf := dnsMainConf
+	data, err := os.ReadFile(mainConf)
+	if err != nil {
+		resp.Error = fmt.Sprintf("read PowerDNS main configuration: %v", err)
+		return nil
+	}
+	hasInclude, err := validateManagedPowerDNSMainConfig(string(data), confDir)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	if !hasInclude {
+		addition := "\n# Managed by CelikPanel / CelikPanel yönetir\ninclude-dir=" + confDir + "\n"
+		if err := os.WriteFile(mainConf, append(data, []byte(addition)...), 0o644); err != nil {
+			resp.Error = err.Error()
+			return nil
 		}
 	}
 
-	confPath := filepath.Join(confDir, "celikpanel.conf")
+	confPath := dnsManagedConf
 	if err := os.WriteFile(confPath, []byte(config), 0o644); err != nil {
 		resp.Error = err.Error()
 		return nil
@@ -359,14 +265,59 @@ api=no
 		resp.Error = err.Error()
 		return nil
 	}
+	if effective, detail, err := effectiveManagedPowerDNSConfig(); err != nil {
+		resp.Error = fmt.Sprintf("verify effective PowerDNS configuration: %v", err)
+		return nil
+	} else if !effective {
+		resp.Error = "verify effective PowerDNS configuration: " + detail
+		return nil
+	}
 
 	if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "restart", "pdns"); err != nil {
 		resp.Error = fmt.Sprintf("pdns restart: %v: %s", err, firstLine(string(out)))
 		return nil
 	}
+	if effective, detail, err := effectiveManagedPowerDNSConfig(); err != nil {
+		resp.Error = fmt.Sprintf("verify effective PowerDNS configuration after restart: %v", err)
+		return nil
+	} else if !effective {
+		resp.Error = "verify effective PowerDNS configuration after restart: " + detail
+		return nil
+	}
 
 	resp.Synced = true
 	return nil
+}
+
+// validateManagedPowerDNSMainConfig proves that the managed drop-in directory
+// is the only effective include and that the main file cannot override the
+// backend CelikPanel owns. A missing include is repairable; a conflicting or
+// ambiguous include is not silently rewritten.
+func validateManagedPowerDNSMainConfig(config, managedDir string) (bool, error) {
+	wantDir := filepath.Clean(managedDir)
+	includeCount := 0
+	for _, line := range strings.Split(config, "\n") {
+		key, value, found := powerDNSConfigDirective(line)
+		if !found {
+			continue
+		}
+		switch key {
+		case "include-dir":
+			includeCount++
+			if filepath.Clean(value) != wantDir {
+				return false, errors.New("PowerDNS loads an unexpected include directory")
+			}
+		case "launch", "gsqlite3-database", "gsqlite3-dnssec",
+			"primary", "secondary", "autosecondary",
+			"allow-axfr-ips", "also-notify",
+			"master", "slave", "supermaster", "autoprimary":
+			return false, errors.New("PowerDNS main configuration overrides managed DNS state")
+		}
+	}
+	if includeCount > 1 {
+		return false, errors.New("PowerDNS include directory is configured ambiguously")
+	}
+	return includeCount == 1, nil
 }
 
 // openPdnsDB opens (creating if needed) the dedicated pdns database and
@@ -468,6 +419,16 @@ CREATE TABLE IF NOT EXISTS tsigkeys (
   secret VARCHAR(255)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS namealgoindex ON tsigkeys(name, algorithm);
+
+CREATE TABLE IF NOT EXISTS celikpanel_dns_zone_sync_receipts (
+  domain TEXT NOT NULL PRIMARY KEY,
+  request_id TEXT NOT NULL,
+  qualifier TEXT NOT NULL,
+  desired_generation INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  zone_type TEXT NOT NULL,
+  schema TEXT NOT NULL
+) STRICT, WITHOUT ROWID;
 `
 
 // publicListenAddresses returns the machine's global (non-loopback, non-

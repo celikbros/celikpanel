@@ -1335,6 +1335,26 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		DROP TRIGGER pdns_records_dns_sync_update;
+		DROP TRIGGER pdns_records_dns_sync_delete;
+		DROP TRIGGER pdns_records_dns_sync_insert;
+		DROP TRIGGER pdns_domains_dns_sync_delete;
+		DROP TRIGGER pdns_domains_dns_sync_update;
+		DROP TRIGGER pdns_domains_dns_sync_rename;
+		DROP TRIGGER pdns_domains_dns_sync_insert;
+		DROP TRIGGER dns_zone_deletion_marker_delete_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_update_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_insert_sync_state;
+		DROP TRIGGER dns_zone_deletion_marker_pending_delete_guard;
+		DROP TRIGGER dns_zone_deletion_marker_reject_live_update;
+		DROP TRIGGER dns_zone_deletion_marker_name_immutable;
+		DROP TRIGGER dns_zone_deletion_marker_reject_live_insert;
+		DROP INDEX idx_dns_zone_sync_state_pending;
+		DROP INDEX idx_dns_zone_sync_state_lease_request;
+		DROP INDEX idx_dns_zone_sync_state_source_domain;
+		DROP TABLE dns_zone_deletion_markers;
+		DROP TABLE dns_zone_sync_state;
+
 		DROP TABLE domain_deletion_operations;
 
 		DROP TRIGGER guard_additional_user_owner_role;

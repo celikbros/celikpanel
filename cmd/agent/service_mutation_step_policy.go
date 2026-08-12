@@ -14,20 +14,22 @@ type serviceMutationStepMethod string
 const (
 	serviceMutationStepConfigureDBTools         serviceMutationStepMethod = "Agent.ConfigureDBTools"
 	serviceMutationStepConfigureDKIMSigning     serviceMutationStepMethod = "Agent.ConfigureDKIMSigning"
-	serviceMutationStepSyncDNSZone              serviceMutationStepMethod = "Agent.SyncDNSZone"
+	serviceMutationStepSyncDNSZone              serviceMutationStepMethod = "Agent.SyncDNSZoneV2"
+	serviceMutationStepSecureDNSZone            serviceMutationStepMethod = "Agent.SecureDNSZoneV2"
+	serviceMutationStepConfigureDNSCluster      serviceMutationStepMethod = "Agent.ConfigureDNSClusterV2"
 	serviceMutationStepConfigurePowerDNSSQLite  serviceMutationStepMethod = "Agent.ConfigurePowerDNSSQLite"
-	serviceMutationStepApplyFirewall            serviceMutationStepMethod = "Agent.ApplyFirewall"
+	serviceMutationStepApplyFirewall            serviceMutationStepMethod = "Agent.ApplyFirewallV2"
 	serviceMutationStepInstallService           serviceMutationStepMethod = "Agent.InstallService"
 	serviceMutationStepUninstallService         serviceMutationStepMethod = "Agent.UninstallService"
 	serviceMutationStepConfigureMailStack       serviceMutationStepMethod = "Agent.ConfigureMailStack"
 	serviceMutationStepWireMailFilters          serviceMutationStepMethod = "Agent.WireMailFilters"
 	serviceMutationStepConfigureMailSubmission  serviceMutationStepMethod = "Agent.ConfigureMailSubmission"
-	serviceMutationStepReconcileMailTLS         serviceMutationStepMethod = "Agent.ReconcileMailTLSMutation"
+	serviceMutationStepSyncMailTLS              serviceMutationStepMethod = "Agent.SyncMailTLSV2"
 	serviceMutationStepServiceAction            serviceMutationStepMethod = "Agent.ServiceMutationAction"
 	serviceMutationStepStartService             serviceMutationStepMethod = "Agent.StartServiceMutation"
 	serviceMutationStepResetFailedUnit          serviceMutationStepMethod = "Agent.ResetFailedUnitMutation"
 	serviceMutationStepEnsureNginxReady         serviceMutationStepMethod = "Agent.EnsureNginxReady"
-	serviceMutationStepIssuePanelCertificate    serviceMutationStepMethod = "Agent.IssuePanelCertificate"
+	serviceMutationStepIssuePanelCertificate    serviceMutationStepMethod = "Agent.IssuePanelCertificateV2"
 	serviceMutationStepEnableRepo               serviceMutationStepMethod = "Agent.EnableRepo"
 	serviceMutationStepDisableRepo              serviceMutationStepMethod = "Agent.DisableRepo"
 	serviceMutationStepInstallNodeVersion       serviceMutationStepMethod = "Agent.InstallNodeVersion"
@@ -212,13 +214,28 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 				serviceMutationJobMatches(job, "service_install", "pdns", ""))
 
 	case serviceMutationStepSyncDNSZone:
-		if claim.target == "" || claim.packageName != "" ||
+		if !serviceMutationCanonicalFQDN(claim.target) ||
+			!mutationpayload.ValidDNSZoneSyncQualifier(claim.packageName) ||
 			(claim.action != "sync" && claim.action != "delete") {
 			return false
 		}
-		return serviceMutationJobMatches(job, "dns_zone_sync", claim.target, "") ||
-			(claim.action == "sync" &&
-				serviceMutationJobMatches(job, "service_install", "pdns", ""))
+		return serviceMutationJobMatches(
+			job, "dns_zone_sync", claim.target, claim.packageName,
+		)
+
+	case serviceMutationStepSecureDNSZone:
+		return serviceMutationCanonicalFQDN(claim.target) &&
+			claim.packageName == "" && claim.action == "secure" &&
+			serviceMutationJobMatches(
+				job, "dnssec_secure", claim.target, "",
+			)
+
+	case serviceMutationStepConfigureDNSCluster:
+		return claim.target == "pdns" && claim.action == "configure" &&
+			mutationpayload.ValidDNSClusterConfigQualifier(claim.packageName) &&
+			serviceMutationJobMatches(
+				job, "dns_cluster_configure", "pdns", claim.packageName,
+			)
 
 	case serviceMutationStepEnsureNginxReady:
 		return claim.target == "nginx" && claim.packageName == "" && claim.action == "ready" &&
@@ -251,10 +268,16 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 				(serviceMutationMailProfileContains(job, "postfix") &&
 					serviceMutationMailProfileContains(job, "dovecot")))
 
-	case serviceMutationStepReconcileMailTLS:
-		return claim.target == "mail-tls" && claim.packageName == "" && claim.action == "reconcile" &&
-			serviceMutationMailProfileContains(job, "postfix") &&
-			serviceMutationMailProfileContains(job, "dovecot")
+	case serviceMutationStepSyncMailTLS:
+		return claim.target == "mail-tls" &&
+			claim.action == "sync" &&
+			mutationpayload.ValidMailTLSSyncQualifier(claim.packageName) &&
+			serviceMutationJobMatches(
+				job,
+				"mail_tls_sync",
+				"mail-tls",
+				claim.packageName,
+			)
 
 	case serviceMutationStepConfigureDKIMSigning:
 		return claim.target == "opendkim" && claim.packageName == "" && claim.action == "configure" &&
@@ -281,28 +304,37 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 		return serviceMutationJobMatches(job, "vpn_peer_sync", "wireguard", claim.packageName)
 
 	case serviceMutationStepApplyFirewall:
-		if claim.target != "nftables" || claim.packageName != "" {
+		if claim.target != "nftables" ||
+			!mutationpayload.ValidFirewallApplyQualifier(claim.packageName) {
 			return false
 		}
-		if serviceMutationJobMatches(job, "firewall_apply", "nftables", "") {
-			return claim.action == serviceMutationFirewallEnableLive ||
-				claim.action == serviceMutationFirewallEnablePersisted ||
-				claim.action == serviceMutationFirewallDisablePersisted
+		if serviceMutationJobMatches(
+			job,
+			"firewall_sync",
+			"nftables",
+			claim.packageName,
+		) {
+			return claim.action == serviceMutationFirewallEnableLive
 		}
-		if claim.action != serviceMutationFirewallEnableLive {
-			return false
-		}
-		return serviceMutationJobMatches(job, "firewall_sync", "nftables", "") ||
-			serviceMutationValidInstallJob(job) ||
-			serviceMutationMailProfileKnown(job) ||
-			(job.Kind == "panel_certificate_issue" &&
-				serviceMutationCanonicalFQDN(job.Target) &&
-				job.PackageName == "certbot")
+		return serviceMutationJobMatches(
+			job,
+			"firewall_apply",
+			"nftables",
+			claim.packageName,
+		) && (claim.action == serviceMutationFirewallEnableLive ||
+			claim.action == serviceMutationFirewallEnablePersisted ||
+			claim.action == serviceMutationFirewallDisablePersisted)
 
 	case serviceMutationStepIssuePanelCertificate:
 		return serviceMutationCanonicalFQDN(claim.target) &&
-			claim.packageName == "certbot" && claim.action == "issue" &&
-			serviceMutationJobMatches(job, "panel_certificate_issue", claim.target, "certbot")
+			mutationpayload.ValidPanelCertificateIssueQualifier(claim.packageName) &&
+			claim.action == "issue" &&
+			serviceMutationJobMatches(
+				job,
+				"panel_certificate_issue",
+				claim.target,
+				claim.packageName,
+			)
 
 	case serviceMutationStepActivatePanelCertificate:
 		return serviceMutationCanonicalFQDN(claim.target) &&

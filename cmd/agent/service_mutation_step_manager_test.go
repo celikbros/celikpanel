@@ -257,9 +257,12 @@ func TestUnrelatedRPCsCannotBorrowNginxInstallLease(t *testing.T) {
 			name: "sync dns zone",
 			call: func(t *testing.T, binding ServiceMutationBinding) (string, bool) {
 				response := SyncDNSZoneResponse{Synced: true}
-				if err := (&Agent{}).SyncDNSZone(&SyncDNSZoneRequest{
+				if err := (&Agent{}).SyncDNSZoneV2(&SyncDNSZoneV2Request{
 					ServiceMutationBinding: binding,
+					DesiredGeneration:      1,
 					Domain:                 "example.test",
+					Delete:                 true,
+					ZoneType:               "NATIVE",
 				}, &response); err != nil {
 					t.Fatal(err)
 				}
@@ -273,7 +276,7 @@ func TestUnrelatedRPCsCannotBorrowNginxInstallLease(t *testing.T) {
 					Enabled: true, TCPPorts: []int{1}, UDPPorts: []int{2},
 					SSHPorts: []int{3}, SnapshotVersion: 99,
 				}
-				if err := (&Agent{}).ApplyFirewall(&ApplyFirewallRequest{
+				if err := (&Agent{}).ApplyFirewallV2(&ApplyFirewallRequest{
 					ServiceMutationBinding: binding,
 					Enabled:                true,
 					Persist:                true,
@@ -290,13 +293,14 @@ func TestUnrelatedRPCsCannotBorrowNginxInstallLease(t *testing.T) {
 		{
 			name: "issue certificate",
 			call: func(t *testing.T, binding ServiceMutationBinding) (string, bool) {
-				response := IssuePanelCertResponse{
+				response := IssuePanelCertV2Response{
 					Issued: true, ExpiresAt: time.Now(), Detail: "stale", ErrorCode: "stale",
 				}
-				if err := (&Agent{}).IssuePanelCertificate(&IssuePanelCertRequest{
+				if err := (&Agent{}).IssuePanelCertificateV2(&IssuePanelCertV2Request{
 					MutationRequestID:   binding.MutationRequestID,
 					MutationOwnerID:     binding.MutationOwnerID,
 					Domain:              "panel.example.test",
+					Email:               "admin@example.test",
 					TLSDir:              managedPanelTLSDir,
 					ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 				}, &response); err != nil {

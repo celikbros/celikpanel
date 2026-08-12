@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	startupCertificateDependentTimeout     = 2 * time.Minute
+	startupCertificateDependentTimeout     = panelMailTLSSyncTimeout
 	maxStartupSecureMailCertificateDomains = 4096
 	maxStartupHostedVhosts                 = 4096
 )

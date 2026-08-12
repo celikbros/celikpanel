@@ -78,17 +78,6 @@ type mailProfileTLSResult struct {
 	FallbackOnly bool `json:"fallback_only"`
 }
 
-type deferServiceInstallFirewallKey struct{}
-
-func withDeferredServiceInstallFirewall(ctx context.Context) context.Context {
-	return context.WithValue(ctx, deferServiceInstallFirewallKey{}, true)
-}
-
-func serviceInstallFirewallDeferred(ctx context.Context) bool {
-	deferred, _ := ctx.Value(deferServiceInstallFirewallKey{}).(bool)
-	return deferred
-}
-
 // MailProfileResponse is derived entirely on the server. Clients choose one
 // profile id; they can never supply or reorder the privileged service plan.
 type MailProfileResponse struct {
@@ -164,6 +153,17 @@ func (p *Panel) handleMailProfileInstall(w http.ResponseWriter, r *http.Request)
 	}
 	if found {
 		writeAcceptedServiceOperation(w, existing)
+		return
+	}
+	if err := p.authorizeAgentRPCContext(r.Context(), "Agent.SyncMailTLSV2"); err != nil {
+		writeAgentError(w, err, "mail profile Mail TLS V2 platform preflight")
+		return
+	}
+	// Fail closed before taking the process slot or creating the outer row: an
+	// older agent must never install the mail stack and discover only afterward
+	// that it cannot commit the required direct Mail TLS child.
+	if err := p.requireMailTLSSyncV2Agent(r.Context()); err != nil {
+		writeAgentError(w, err, "mail profile Mail TLS V2 preflight")
 		return
 	}
 
@@ -268,7 +268,6 @@ func (p *Panel) runMailProfileInstall(
 	}
 
 	completed := make([]string, 0, len(profile.Services))
-	componentCtx := withDeferredServiceInstallFirewall(ctx)
 	for _, serviceID := range profile.Services {
 		if err := advance(mailProfilePhase(profile.ID, serviceID, "installing")); err != nil {
 			return result, operationAdvanceFailure(err)
@@ -276,7 +275,7 @@ func (p *Panel) runMailProfileInstall(
 		serviceAdvance := func(phase string) error {
 			return advance(mailProfilePhase(profile.ID, serviceID, phase))
 		}
-		_, failure := p.runServiceInstall(componentCtx, serviceInstallRequest{
+		_, failure := p.runServiceInstall(ctx, serviceInstallRequest{
 			ServiceID: serviceID,
 			RequestID: binding.MutationRequestID,
 		}, serviceAdvance)
@@ -303,23 +302,6 @@ func (p *Panel) runMailProfileInstall(
 	}
 	if !mailStack.Configured {
 		return result, mailProfileInstallFailure(errors.New("agent did not confirm final mail stack configuration"))
-	}
-
-	if err := advance(mailProfilePhase(profile.ID, "mail-tls")); err != nil {
-		return result, operationAdvanceFailure(err)
-	}
-	mailTLS, err := p.reconcileMailTLSMutation(ctx)
-	if err != nil {
-		return result, mailProfileInstallFailure(fmt.Errorf("mail TLS reconciliation: %w", err))
-	}
-	tlsResult := mailProfileTLSResult{
-		Configured:   true,
-		SNICount:     mailTLS.SNICount,
-		FallbackOnly: mailTLS.SNICount == 0,
-	}
-	result["mail_tls"] = tlsResult
-	if tlsResult.FallbackOnly {
-		result["warnings"] = []string{mailProfileFallbackWarning}
 	}
 
 	if err := advance(mailProfilePhase(profile.ID, "submission")); err != nil {
@@ -351,12 +333,6 @@ func (p *Panel) runMailProfileInstall(
 		return result, mailProfileInstallFailure(err)
 	}
 
-	if err := advance(mailProfilePhase(profile.ID, "firewall")); err != nil {
-		return result, operationAdvanceFailure(err)
-	}
-	if err := p.syncFirewall(ctx); err != nil {
-		return result, firewallSyncFailure(err)
-	}
 	result["success"] = true
 	return result, nil
 }
@@ -409,7 +385,10 @@ func (p *Panel) preflightMailProfileInstall(
 }
 
 func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile mailProfileDefinition) error {
-	if err := p.requireMatchingAgentBuild(ctx); err != nil {
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncMailTLSV2"); err != nil {
+		return err
+	}
+	if err := p.requireMailTLSSyncV2Agent(ctx); err != nil {
 		return err
 	}
 	rawHostname, err := readMailProfileHostname()

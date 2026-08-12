@@ -76,6 +76,70 @@ func TestVPNSyncRPCPolicyRequiresV2(t *testing.T) {
 	}
 }
 
+func TestFirewallApplyRPCPolicyRequiresV2(t *testing.T) {
+	policy, err := agentRPCPolicyForMethod("Agent.ApplyFirewallV2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.timeout != agentRPCMutationTimeout ||
+		policy.effect != agentRPCEffectHostMutation ||
+		policy.capability != agentRPCCapabilityFirewall {
+		t.Fatalf("ApplyFirewallV2 policy = %+v", policy)
+	}
+	if _, err := agentRPCPolicyForMethod("Agent.ApplyFirewall"); !errors.Is(
+		err,
+		errAgentRPCPolicyMissing,
+	) {
+		t.Fatalf("legacy ApplyFirewall policy error = %v, want missing", err)
+	}
+}
+
+func TestDNSZoneSyncRPCPolicyRequiresV2(t *testing.T) {
+	policy, err := agentRPCPolicyForMethod("Agent.SyncDNSZoneV2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.timeout != agentRPCDatabaseTimeout ||
+		policy.effect != agentRPCEffectHostMutation ||
+		policy.capability != agentRPCCapabilityDNS {
+		t.Fatalf("SyncDNSZoneV2 policy = %+v", policy)
+	}
+	if _, err := agentRPCPolicyForMethod("Agent.SyncDNSZone"); !errors.Is(
+		err,
+		errAgentRPCPolicyMissing,
+	) {
+		t.Fatalf("legacy SyncDNSZone policy error = %v, want missing", err)
+	}
+	if len(rhelPreviewAgentRPCMethodGrants) != 0 {
+		t.Fatalf("DNS V2 changed dormant RHEL grants: %v", rhelPreviewAgentRPCMethodGrants)
+	}
+}
+
+func TestMailTLSSyncRPCPolicyRequiresV2(t *testing.T) {
+	policy, err := agentRPCPolicyForMethod("Agent.SyncMailTLSV2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.timeout != agentRPCMutationTimeout ||
+		policy.effect != agentRPCEffectHostMutation ||
+		policy.capability != agentRPCCapabilityMail {
+		t.Fatalf("SyncMailTLSV2 policy = %+v", policy)
+	}
+	for _, legacy := range []string{
+		"Agent.SecureMailTLS",
+		"Agent.ReconcileMailTLSMutation",
+	} {
+		if _, err := agentRPCPolicyForMethod(legacy); !errors.Is(
+			err, errAgentRPCPolicyMissing,
+		) {
+			t.Fatalf("legacy %s policy error = %v, want missing", legacy, err)
+		}
+	}
+	if len(rhelPreviewAgentRPCMethodGrants) != 0 {
+		t.Fatalf("Mail TLS V2 changed dormant RHEL grants: %v", rhelPreviewAgentRPCMethodGrants)
+	}
+}
+
 func TestProductionAgentRPCLiteralsHavePolicies(t *testing.T) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

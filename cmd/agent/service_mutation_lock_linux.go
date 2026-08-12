@@ -385,6 +385,32 @@ func syncServiceMutationDirectory(path string) error {
 	return dir.Sync()
 }
 
+// syncDNSClusterConfigDirectory durably publishes changes in PowerDNS' managed
+// include directory. Unlike the service-mutation state directory, pdns.d is
+// normally mode 0755 and need not use the CelikPanel service group; it must
+// still be a trusted, non-writable real directory owned by the required UID.
+func syncDNSClusterConfigDirectory(path string) error {
+	dirPath := filepath.Dir(path)
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		return err
+	}
+	if err := secureServiceMutationParentDirectoryStat(dirPath, info); err != nil {
+		return err
+	}
+	fd, err := unix.Open(dirPath, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_DIRECTORY, 0)
+	if err != nil {
+		return err
+	}
+	dir := os.NewFile(uintptr(fd), dirPath)
+	if dir == nil {
+		_ = unix.Close(fd)
+		return errors.New("open DNS cluster configuration directory handle")
+	}
+	defer dir.Close()
+	return dir.Sync()
+}
+
 func realPackageManagerMutationBusy() (bool, error) {
 	busy, err := linuxPackageProcessBusy()
 	if err != nil || busy {

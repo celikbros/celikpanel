@@ -46,6 +46,8 @@ type StartupPendingReconcileResponse struct {
 }
 
 type startupPendingAgent struct {
+	*serviceOperationTestAgent
+
 	mu sync.Mutex
 
 	certificates map[string]StartupPendingInspectResponse
@@ -109,9 +111,29 @@ func (a *startupPendingAgent) SecureMailTLS(
 	return nil
 }
 
+func (a *startupPendingAgent) SyncMailTLSV2(
+	req *transport.SyncMailTLSV2Request,
+	resp *transport.SecureMailTLSResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.secureCalls++
+	if a.mailError != "" {
+		resp.Error = a.mailError
+		return nil
+	}
+	resp.Configured = true
+	resp.DefaultCert = transport.DefaultMailTLSCertificatePath
+	resp.SNICount = len(req.SNI)
+	return nil
+}
+
 func TestStartupPendingCertificateOutboxIsAcknowledgedOnlyAfterRuntimeSuccess(
 	t *testing.T,
 ) {
+	previousHostname := readMailTLSHostname
+	readMailTLSHostname = func() (string, error) { return "startup.panel.test", nil }
+	t.Cleanup(func() { readMailTLSHostname = previousHostname })
 	for _, testCase := range []struct {
 		name            string
 		applyError      string
@@ -185,6 +207,7 @@ func TestStartupPendingCertificateOutboxIsAcknowledgedOnlyAfterRuntimeSuccess(
 			}
 
 			agent := &startupPendingAgent{
+				serviceOperationTestAgent: newServiceOperationTestAgent(),
 				certificates: map[string]StartupPendingInspectResponse{
 					certPath: {
 						Valid:        true,
@@ -290,6 +313,7 @@ func TestStartupInvalidPendingCertificateStaysDisabledAndPending(t *testing.T) {
 	}
 
 	agent := &startupPendingAgent{
+		serviceOperationTestAgent: newServiceOperationTestAgent(),
 		certificates: map[string]StartupPendingInspectResponse{
 			certPath: {
 				Valid:        true,
