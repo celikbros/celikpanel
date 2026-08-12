@@ -69,11 +69,12 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	# İlk kurulum için incelenmiş yardımcıların tamamını taşı. Yetkili güncellemeler
 	# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
 	rm -rf dist/$(DIST)
-	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy
+	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy dist/$(DIST)/libexec
 	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
+	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
 	echo 1 > dist/$(DIST)/release.version
 	echo $(COMMIT) > dist/$(DIST)/release.commit
 	echo $(TREE) > dist/$(DIST)/release.tree
@@ -82,6 +83,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/bin/panel dist/$(DIST)/bin/agent dist/$(DIST)/bin/schema17-bridge
 	chmod 0755 dist/$(DIST)/install.sh dist/$(DIST)/bootstrap-update.sh dist/$(DIST)/bootstrap-prebuilt-update.sh
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
+	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
 	bash dist/$(DIST)/deploy/write-release-manifest.sh dist/$(DIST)
 	# Normalize archive modes as well as time/order/ownership. Plain cp applies

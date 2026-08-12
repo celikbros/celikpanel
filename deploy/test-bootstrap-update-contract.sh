@@ -745,6 +745,8 @@ run_selinux_lifecycle_contract() (
     RELEASE_TRANSACTION_RUNTIME_ROOT=$selinux_lifecycle_tmp/absent-runtime
     RELEASE_TRANSACTION_HELPER=$selinux_lifecycle_tmp/absent-helper
     LIBEXEC_DIR=$selinux_lifecycle_tmp/absent-libexec
+    RELEASE_UPDATER=$selinux_lifecycle_tmp/absent-libexec/get.sh
+    RELEASE_PUBLIC_KEY=$selinux_lifecycle_tmp/absent-conf/release-signing-ed25519.pem
     RUNTIME_DIR=$selinux_lifecycle_tmp/absent-celikpanel-runtime
     BACKUP_ROOT=$selinux_lifecycle_tmp/absent-celikpanel-backups
     PANEL_CERT_HOOK=$selinux_lifecycle_tmp/absent-hook

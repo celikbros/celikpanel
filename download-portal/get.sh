@@ -5,6 +5,15 @@ umask 077
 base_url=https://celikpanel.net
 requested_version=latest
 requested_action=auto
+require_signed_manifest=0
+expected_sequence=
+minimum_sequence=
+expected_commit=
+expected_archive_sha256=
+expected_archive_size=
+release_public_key=/etc/celikpanel/release-signing-ed25519.pem
+release_sequence_floor=/var/lib/celikpanel-release-state/sequence.floor
+signed_update_lock=/var/lib/celikpanel-release-state/update.lock
 releases_root=/var/backups/celikpanel/releases
 workdir=
 
@@ -19,8 +28,8 @@ fail() {
 
 usage() {
   message \
-    "Usage: $0 [--version vX.Y.Z[-prerelease]] [--install|--update]" \
-    "Kullanım: $0 [--version vX.Y.Z[-önsürüm]] [--install|--update]"
+    "Usage: $0 [--version VERSION] [--install|--update] [--require-signed-manifest --expected-sequence N [--minimum-sequence N] --expected-commit COMMIT --expected-archive-sha256 SHA256 --expected-archive-size BYTES]" \
+    "Kullanım: $0 [--version SÜRÜM] [--install|--update] [--require-signed-manifest --expected-sequence N [--minimum-sequence N] --expected-commit COMMIT --expected-archive-sha256 SHA256 --expected-archive-size BAYT]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -38,6 +47,35 @@ while [ "$#" -gt 0 ]; do
       requested_action=${1#--}
       shift
       ;;
+    --require-signed-manifest)
+      require_signed_manifest=1
+      shift
+      ;;
+    --expected-sequence)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      expected_sequence=$2
+      shift 2
+      ;;
+    --minimum-sequence)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      minimum_sequence=$2
+      shift 2
+      ;;
+    --expected-commit)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      expected_commit=$2
+      shift 2
+      ;;
+    --expected-archive-sha256)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      expected_archive_sha256=$2
+      shift 2
+      ;;
+    --expected-archive-size)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      expected_archive_size=$2
+      shift 2
+      ;;
     --help|-h)
       usage
       exit 0
@@ -49,9 +87,35 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+if [ "$require_signed_manifest" -eq 1 ]; then
+  [ "$requested_action" = update ] || fail \
+    "Signed-manifest mode is reserved for explicit updates." \
+    "İmzalı-manifest modu yalnız açık güncellemeler içindir."
+  [ "$requested_version" != latest ] || fail \
+    "Signed-manifest updates require an exact release version." \
+    "İmzalı-manifest güncellemeleri kesin bir sürüm gerektirir."
+  [ -n "$expected_sequence" ] || fail \
+    "Signed-manifest updates require an explicit expected release sequence." \
+    "İmzalı güncellemeler açık bir beklenen sürüm sırası gerektirir."
+else
+  [ -z "$expected_sequence" ] && [ -z "$minimum_sequence" ] || fail \
+    "Release sequence options require signed-manifest mode." \
+    "Sürüm sırası seçenekleri imzalı-manifest modu gerektirir."
+fi
+
 [ "$(id -u)" -eq 0 ] || fail \
   "CelikPanel installation and updates must run as root." \
   "CelikPanel kurulumu ve güncellemeleri root olarak çalıştırılmalıdır."
+
+if [ "$require_signed_manifest" -eq 1 ]; then
+  [ -n "$expected_commit" ] && [ -n "$expected_archive_sha256" ] && [ -n "$expected_archive_size" ] || fail \
+    "Signed-manifest updates require the exact approved commit, archive digest, and archive size." \
+    "Signed update target identity is incomplete."
+else
+  [ -z "$expected_commit" ] && [ -z "$expected_archive_sha256" ] && [ -z "$expected_archive_size" ] || fail \
+    "Release identity options require signed-manifest mode." \
+    "Release identity options require signed-manifest mode."
+fi
 
 for required_command in awk bash chmod chown cmp curl dirname env find grep id install \
   mkdir mktemp mv od readlink rm sha256sum sort stat sync tar tr xargs; do
@@ -59,11 +123,38 @@ for required_command in awk bash chmod chown cmp curl dirname env find grep id i
     "$required_command is required. Install it with your operating system package manager." \
     "$required_command gereklidir. İşletim sisteminizin paket yöneticisiyle kurun."
 done
+if [ "$require_signed_manifest" -eq 1 ]; then
+  for signed_required_command in flock openssl uname; do
+    command -v "$signed_required_command" >/dev/null 2>&1 || fail \
+      "$signed_required_command is required for signed release verification." \
+      "İmzalı sürüm doğrulaması için $signed_required_command gereklidir."
+  done
+fi
 
 curl_fetch() {
   curl --fail --show-error --silent --location \
     --proto '=https' --tlsv1.2 --connect-timeout 20 --retry 3 \
     "$1" -o "$2"
+}
+
+# Signed assets are immutable exact-origin objects. Redirects are rejected;
+# the legacy unsigned bootstrap retains its historical redirect behavior.
+signed_fetch() {
+  [ "$#" -eq 3 ] || return 2
+  signed_fetch_limit=$3
+  printf '%s\n' "$signed_fetch_limit" | LC_ALL=C grep -Eq '^[1-9][0-9]*$' || return 2
+  [ "${#signed_fetch_limit}" -le 10 ] && [ "$signed_fetch_limit" -le 2147483648 ] || return 2
+  signed_http_status=$(curl --fail --show-error --silent \
+    --proto '=https' --tlsv1.2 --connect-timeout 20 --retry 3 \
+    --max-filesize "$signed_fetch_limit" \
+    --write-out '%{http_code}' "$1" -o "$2") || {
+      rm -f -- "$2"
+      return 1
+    }
+  [ "$signed_http_status" = 200 ] || {
+    rm -f -- "$2"
+    return 1
+  }
 }
 
 cleanup() {
@@ -109,6 +200,338 @@ validate_root_directory_chain() {
     current=$(dirname -- "$current")
   done
 }
+
+# BEGIN SIGNED RELEASE MANIFEST POLICY
+release_key_directory_metadata_allowed() {
+  metadata_direct=$1
+  metadata_owner=$2
+  metadata_group=$3
+  metadata_mode=$4
+  [ "$metadata_owner" -eq 0 ] || return 1
+  metadata_permissions=$((0$metadata_mode))
+  [ $((metadata_permissions & 0022)) -eq 0 ] || return 1
+  [ "$metadata_direct" -eq 1 ] || [ "$metadata_group" -eq 0 ]
+}
+
+validate_release_key_directory_chain() {
+  key_directory=$1
+  key_canonical=$(readlink -e -- "$key_directory") || return 1
+  [ "$key_canonical" = "$key_directory" ] || return 1
+  key_current=$key_directory
+  key_direct_parent=1
+  while :; do
+    [ -d "$key_current" ] && [ ! -L "$key_current" ] || return 1
+    set -- $(stat -Lc '%u %g %a' -- "$key_current") || return 1
+    release_key_directory_metadata_allowed \
+      "$key_direct_parent" "$1" "$2" "$3" || return 1
+    [ "$key_current" = / ] && break
+    key_current=$(dirname -- "$key_current")
+    key_direct_parent=0
+  done
+}
+
+acquire_signed_update_lock() {
+  signed_lock_directory=$(dirname -- "$signed_update_lock")
+  validate_root_directory_chain "$signed_lock_directory"
+  [ "$(stat -Lc '%u:%g:%a' -- "$signed_lock_directory")" = 0:0:700 ] || return 1
+  # Provisioning is installer-owned. Never create or replace this pathname
+  # here: concurrent first-use creators could flock different inodes.
+  [ -f "$signed_update_lock" ] && [ ! -L "$signed_update_lock" ] || return 1
+  [ "$(readlink -e -- "$signed_update_lock")" = "$signed_update_lock" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$signed_update_lock")" = 0:0:600:1:0 ] || return 1
+  exec 9<>"$signed_update_lock" || return 1
+  signed_lock_path_identity=$(stat -Lc '%d:%i' -- "$signed_update_lock") || return 1
+  signed_lock_fd_identity=$(stat -Lc '%d:%i' -- /proc/self/fd/9) || return 1
+  [ "$signed_lock_path_identity" = "$signed_lock_fd_identity" ] || return 1
+  flock -n 9 || return 1
+  [ "$(stat -Lc '%d:%i' -- "$signed_update_lock")" = "$signed_lock_fd_identity" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' -- /proc/self/fd/9)" = 0:0:600:1:0 ] || return 1
+}
+
+validate_release_public_key() {
+  release_key_path=$1
+  [ -f "$release_key_path" ] && [ ! -L "$release_key_path" ] || return 1
+  release_key_canonical=$(readlink -e -- "$release_key_path") || return 1
+  [ "$release_key_canonical" = "$release_key_path" ] || return 1
+  validate_release_key_directory_chain "$(dirname -- "$release_key_path")"
+
+  set -- $(stat -Lc '%u %g %a %h %s' -- "$release_key_path") || return 1
+  [ "$1:$2:$4" = 0:0:1 ] || return 1
+  release_key_permissions=$((0$3))
+  [ $((release_key_permissions & 07133)) -eq 0 ] || return 1
+  [ "$5" -ge 1 ] && [ "$5" -le 16384 ] || return 1
+
+  openssl pkey -pubin -passin pass: -in "$release_key_path" \
+    -pubout 2>/dev/null | cmp -s - "$release_key_path" || return 1
+  openssl pkey -pubin -passin pass: -in "$release_key_path" \
+    -text -noout 2>/dev/null \
+    | LC_ALL=C grep -Eq '^ED25519 Public-Key:'
+}
+
+runtime_release_identity() {
+  runtime_release_os=
+  runtime_release_arch=
+  [ "$(uname -s 2>/dev/null)" = Linux ] || return 1
+  case "$(uname -m 2>/dev/null)" in
+    x86_64)
+      runtime_release_arch=amd64
+      ;;
+    aarch64|arm64)
+      runtime_release_arch=arm64
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  runtime_release_os=linux
+}
+
+valid_release_version() {
+  release_version_value=$1
+  case "$release_version_value" in *+*) return 1 ;; esac
+  printf '%s\n' "$release_version_value" | LC_ALL=C grep -Eq \
+    '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$' \
+    || return 1
+  case "$release_version_value" in
+    *-*) release_prerelease=${release_version_value#*-} ;;
+    *) return 0 ;;
+  esac
+  release_old_ifs=$IFS
+  IFS=.
+  set -- $release_prerelease
+  IFS=$release_old_ifs
+  for release_identifier do
+    if printf '%s\n' "$release_identifier" | LC_ALL=C grep -Eq '^[0-9]+$'; then
+      [ "$release_identifier" = 0 ] || case "$release_identifier" in 0*) return 1 ;; esac
+    fi
+  done
+}
+
+valid_release_sequence() {
+  release_sequence_value=$1
+  printf '%s\n' "$release_sequence_value" | LC_ALL=C grep -Eq '^[1-9][0-9]*$' \
+    || return 1
+  [ "${#release_sequence_value}" -le 19 ] || return 1
+  [ "${#release_sequence_value}" -lt 19 ] || \
+    [ "$release_sequence_value" -le 9223372036854775807 ]
+}
+
+inspect_release_sequence_floor() {
+  floor_present=0
+  floor_sequence=
+  floor_version=
+  floor_state_dir=$(dirname -- "$release_sequence_floor")
+  validate_root_directory_chain /var/lib
+  if [ ! -e "$floor_state_dir" ] && [ ! -L "$floor_state_dir" ]; then
+    return 0
+  fi
+  validate_root_directory_chain "$floor_state_dir"
+  [ "$(stat -Lc '%u:%g:%a' -- "$floor_state_dir")" = 0:0:700 ] || return 1
+  if [ ! -e "$release_sequence_floor" ] && [ ! -L "$release_sequence_floor" ]; then
+    return 0
+  fi
+  [ -f "$release_sequence_floor" ] && [ ! -L "$release_sequence_floor" ] || return 1
+  [ "$(readlink -e -- "$release_sequence_floor")" = "$release_sequence_floor" ] || return 1
+  set -- $(stat -Lc '%u %g %a %h %s' -- "$release_sequence_floor") || return 1
+  [ "$1:$2:$3:$4" = 0:0:600:1 ] && [ "$5" -ge 1 ] && [ "$5" -le 512 ] || return 1
+  floor_format=
+  floor_sequence_line=
+  floor_version_line=
+  floor_extra=
+  {
+    IFS= read -r floor_format || return 1
+    IFS= read -r floor_sequence_line || return 1
+    IFS= read -r floor_version_line || return 1
+    if IFS= read -r floor_extra || [ -n "$floor_extra" ]; then return 1; fi
+  } < "$release_sequence_floor"
+  [ "$floor_format" = format=celikpanel-release-sequence-floor-v1 ] || return 1
+  floor_sequence=${floor_sequence_line#sequence=}
+  floor_version=${floor_version_line#version=}
+  [ "$floor_sequence_line" = "sequence=$floor_sequence" ] || return 1
+  [ "$floor_version_line" = "version=$floor_version" ] || return 1
+  valid_release_sequence "$floor_sequence" && valid_release_version "$floor_version" || return 1
+  printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+    "sequence=$floor_sequence" "version=$floor_version" \
+    | cmp -s -- "$release_sequence_floor" - || return 1
+  floor_present=1
+}
+
+enforce_release_sequence_floor() {
+  enforce_sequence=$1
+  enforce_version=$2
+  valid_release_sequence "$expected_sequence" || return 1
+  [ "$enforce_sequence" = "$expected_sequence" ] || return 1
+  if [ -n "$minimum_sequence" ]; then
+    valid_release_sequence "$minimum_sequence" || return 1
+    [ "$enforce_sequence" -ge "$minimum_sequence" ] || return 1
+  fi
+  inspect_release_sequence_floor || return 1
+  [ "$floor_present" -eq 1 ] || [ -n "$minimum_sequence" ] || return 1
+  if [ "$floor_present" -eq 1 ]; then
+    [ "$enforce_sequence" -ge "$floor_sequence" ] || return 1
+    [ "$enforce_sequence" -ne "$floor_sequence" ] || \
+      [ "$enforce_version" = "$floor_version" ] || return 1
+  fi
+}
+
+persist_release_sequence_floor() {
+  persist_sequence=$1
+  persist_version=$2
+  inspect_release_sequence_floor || return 1
+  if [ "$floor_present" -eq 1 ] && [ "$persist_sequence" -eq "$floor_sequence" ]; then
+    [ "$persist_version" = "$floor_version" ]
+    return
+  fi
+  floor_state_dir=$(dirname -- "$release_sequence_floor")
+  if [ ! -e "$floor_state_dir" ] && [ ! -L "$floor_state_dir" ]; then
+    install -d -m 0700 -o root -g root -- "$floor_state_dir" || return 1
+    sync -f -- /var/lib || return 1
+  fi
+  validate_root_directory_chain "$floor_state_dir"
+  [ "$(stat -Lc '%u:%g:%a' -- "$floor_state_dir")" = 0:0:700 ] || return 1
+  floor_tmp=$(mktemp "$floor_state_dir/.sequence.floor.XXXXXXXX") || return 1
+  if ! printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+      "sequence=$persist_sequence" "version=$persist_version" > "$floor_tmp" ||
+     ! chown root:root -- "$floor_tmp" || ! chmod 0600 -- "$floor_tmp" ||
+     ! sync -f -- "$floor_tmp" || ! mv -T -- "$floor_tmp" "$release_sequence_floor" ||
+     ! sync -f -- "$floor_state_dir"; then
+    rm -f -- "$floor_tmp"
+    return 1
+  fi
+  inspect_release_sequence_floor && [ "$floor_present" -eq 1 ] &&
+    [ "$floor_sequence" = "$persist_sequence" ] && [ "$floor_version" = "$persist_version" ]
+}
+
+verify_signed_release_manifest() {
+  [ "$#" -eq 11 ] || return 1
+  signed_manifest_path=$1
+  signed_signature_path=$2
+  signed_public_key_path=$3
+  signed_expected_version=$4
+  signed_expected_sequence=$5
+  signed_expected_os=$6
+  signed_expected_arch=$7
+  signed_expected_archive=$8
+  signed_expected_commit=$9
+  signed_expected_archive_sha256=${10}
+  signed_expected_archive_size=${11}
+  signed_release_sequence=
+  signed_commit=
+  signed_archive_sha256=
+  signed_archive_size=
+
+  [ -f "$signed_manifest_path" ] && [ ! -L "$signed_manifest_path" ] || return 1
+  [ -f "$signed_signature_path" ] && [ ! -L "$signed_signature_path" ] || return 1
+  set -- $(stat -Lc '%s %h' -- "$signed_manifest_path") || return 1
+  [ "$1" -ge 1 ] && [ "$1" -le 4096 ] && [ "$2" -eq 1 ] || return 1
+  set -- $(stat -Lc '%s %h' -- "$signed_signature_path") || return 1
+  [ "$1:$2" = 64:1 ] || return 1
+
+  openssl pkeyutl -verify -rawin -pubin -passin pass: \
+    -inkey "$signed_public_key_path" -in "$signed_manifest_path" \
+    -sigfile "$signed_signature_path" >/dev/null 2>&1 || return 1
+
+  signed_line_format=
+  signed_line_sequence=
+  signed_line_version=
+  signed_line_commit=
+  signed_line_published_at=
+  signed_line_os=
+  signed_line_arch=
+  signed_line_archive=
+  signed_line_archive_sha256=
+  signed_line_archive_size=
+  signed_line_extra=
+  {
+    IFS= read -r signed_line_format || return 1
+    IFS= read -r signed_line_sequence || return 1
+    IFS= read -r signed_line_version || return 1
+    IFS= read -r signed_line_commit || return 1
+    IFS= read -r signed_line_published_at || return 1
+    IFS= read -r signed_line_os || return 1
+    IFS= read -r signed_line_arch || return 1
+    IFS= read -r signed_line_archive || return 1
+    IFS= read -r signed_line_archive_sha256 || return 1
+    IFS= read -r signed_line_archive_size || return 1
+    if IFS= read -r signed_line_extra || [ -n "$signed_line_extra" ]; then
+      return 1
+    fi
+  } < "$signed_manifest_path"
+
+  [ "$signed_line_format" = format=celikpanel-release-manifest-v2 ] || return 1
+  signed_sequence=${signed_line_sequence#sequence=}
+  signed_version=${signed_line_version#version=}
+  signed_manifest_commit=${signed_line_commit#commit=}
+  signed_published_at=${signed_line_published_at#published_at=}
+  signed_os=${signed_line_os#os=}
+  signed_arch=${signed_line_arch#arch=}
+  signed_archive=${signed_line_archive#archive=}
+  signed_manifest_archive_sha256=${signed_line_archive_sha256#archive_sha256=}
+  signed_manifest_archive_size=${signed_line_archive_size#archive_size=}
+  [ "$signed_line_sequence" = "sequence=$signed_sequence" ] || return 1
+  [ "$signed_line_version" = "version=$signed_version" ] || return 1
+  [ "$signed_line_commit" = "commit=$signed_manifest_commit" ] || return 1
+  [ "$signed_line_published_at" = "published_at=$signed_published_at" ] || return 1
+  [ "$signed_line_os" = "os=$signed_os" ] || return 1
+  [ "$signed_line_arch" = "arch=$signed_arch" ] || return 1
+  [ "$signed_line_archive" = "archive=$signed_archive" ] || return 1
+  [ "$signed_line_archive_sha256" = "archive_sha256=$signed_manifest_archive_sha256" ] || return 1
+  [ "$signed_line_archive_size" = "archive_size=$signed_manifest_archive_size" ] || return 1
+
+  valid_release_sequence "$signed_sequence" || return 1
+  valid_release_version "$signed_version" || return 1
+  printf '%s\n' "$signed_manifest_commit" | LC_ALL=C grep -Eq '^[0-9a-f]{40}$' || return 1
+  printf '%s\n' "$signed_published_at" | LC_ALL=C grep -Eq \
+    '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || return 1
+  [ "$signed_os" = linux ] || return 1
+  case "$signed_arch" in amd64|arm64) ;; *) return 1 ;; esac
+  [ "$signed_archive" = "celikpanel-$signed_version-$signed_os-$signed_arch.tar.gz" ] || return 1
+  printf '%s\n' "$signed_manifest_archive_sha256" | LC_ALL=C grep -Eq \
+    '^[0-9a-f]{64}$' || return 1
+  printf '%s\n' "$signed_manifest_archive_size" | LC_ALL=C grep -Eq \
+    '^[1-9][0-9]*$' || return 1
+  [ "${#signed_manifest_archive_size}" -le 10 ] &&
+    [ "$signed_manifest_archive_size" -le 2147483648 ] || return 1
+  [ "$signed_version" = "$signed_expected_version" ] || return 1
+  [ "$signed_sequence" = "$signed_expected_sequence" ] || return 1
+  [ "$signed_os" = "$signed_expected_os" ] || return 1
+  [ "$signed_arch" = "$signed_expected_arch" ] || return 1
+  [ "$signed_archive" = "$signed_expected_archive" ] || return 1
+  [ "$signed_manifest_commit" = "$signed_expected_commit" ] || return 1
+  [ "$signed_manifest_archive_sha256" = "$signed_expected_archive_sha256" ] || return 1
+  [ "$signed_manifest_archive_size" = "$signed_expected_archive_size" ] || return 1
+
+  signed_manifest_canonical=$(mktemp \
+    "$(dirname -- "$signed_manifest_path")/.release-manifest-v2.canonical.XXXXXXXX") \
+    || return 1
+  if ! printf '%s\n' \
+    format=celikpanel-release-manifest-v2 \
+    "sequence=$signed_sequence" \
+    "version=$signed_version" \
+    "commit=$signed_manifest_commit" \
+    "published_at=$signed_published_at" \
+    "os=$signed_os" \
+    "arch=$signed_arch" \
+    "archive=$signed_archive" \
+    "archive_sha256=$signed_manifest_archive_sha256" \
+    "archive_size=$signed_manifest_archive_size" \
+      > "$signed_manifest_canonical"; then
+    rm -f -- "$signed_manifest_canonical"
+    return 1
+  fi
+  if ! cmp -s -- "$signed_manifest_path" "$signed_manifest_canonical"; then
+    rm -f -- "$signed_manifest_canonical"
+    return 1
+  fi
+  rm -f -- "$signed_manifest_canonical"
+
+  signed_commit=$signed_manifest_commit
+  signed_release_sequence=$signed_sequence
+  signed_archive_sha256=$signed_manifest_archive_sha256
+  signed_archive_size=$signed_manifest_archive_size
+}
+
+# END SIGNED RELEASE MANIFEST POLICY
 
 # BEGIN DOWNLOAD OPERATION POLICY
 interrupted_update_directory_chain_is_safe() {
@@ -311,14 +734,42 @@ else
   version=$requested_version
 fi
 
-printf '%s\n' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || fail \
+valid_release_version "$version" || fail \
   "Unsafe or invalid release version: $version" \
   "Güvensiz veya geçersiz sürüm: $version"
 
 archive=celikpanel-$version.tar.gz
 release_url=$base_url/releases/$version
-curl_fetch "$release_url/$archive" "$workdir/$archive"
-curl_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256"
+if [ "$require_signed_manifest" -eq 1 ]; then
+  acquire_signed_update_lock || fail \
+    "Another signed update is active or the root-owned update lock is unsafe." \
+    "Başka bir imzalı güncelleme etkin veya root sahipli güncelleme kilidi güvensiz."
+  validate_release_public_key "$release_public_key" || fail \
+    "The installed release-signing public key is unsafe or invalid." \
+    "Kurulu sürüm imzalama açık anahtarı güvensiz veya geçersiz."
+  runtime_release_identity || fail \
+    "This operating system or architecture has no signed CelikPanel release channel." \
+    "Bu işletim sistemi veya mimari için imzalı CelikPanel sürüm kanalı yok."
+  archive=celikpanel-$version-$runtime_release_os-$runtime_release_arch.tar.gz
+  release_url=$base_url/releases/$version/$runtime_release_os/$runtime_release_arch
+  signed_fetch "$release_url/release-manifest-v2" "$workdir/release-manifest-v2" 4096
+  signed_fetch "$release_url/release-manifest-v2.sig" "$workdir/release-manifest-v2.sig" 64
+  verify_signed_release_manifest \
+    "$workdir/release-manifest-v2" "$workdir/release-manifest-v2.sig" \
+    "$release_public_key" "$version" "$expected_sequence" "$runtime_release_os" \
+    "$runtime_release_arch" "$archive" "$expected_commit" \
+    "$expected_archive_sha256" "$expected_archive_size" || fail \
+      "The signed release manifest is invalid or targets another system." \
+      "İmzalı sürüm manifesti geçersiz veya başka bir sistemi hedefliyor."
+  enforce_release_sequence_floor "$signed_release_sequence" "$version" || fail \
+    "The signed release sequence is stale, unexpected, or lacks a trusted rollback floor." \
+    "İmzalı sürüm sırası eski, beklenmeyen veya güvenilir geri-alma tabanından yoksun."
+  signed_fetch "$release_url/$archive" "$workdir/$archive" "$signed_archive_size"
+  signed_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256" 256
+else
+  curl_fetch "$release_url/$archive" "$workdir/$archive"
+  curl_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256"
+fi
 
 expected_line=$(tr -d '\r' < "$workdir/$archive.sha256")
 set -- $expected_line
@@ -336,6 +787,15 @@ case "$checksum_value" in
     "Sağlama toplamı dosyası beklenmeyen biçimde." ;;
 esac
 (cd "$workdir" && sha256sum -c "$archive.sha256")
+if [ "$require_signed_manifest" -eq 1 ]; then
+  [ "$(stat -Lc '%s' -- "$workdir/$archive")" = "$signed_archive_size" ] || fail \
+    "The archive size does not match the signed release manifest." \
+    "Arşiv boyutu imzalı sürüm manifestiyle eşleşmiyor."
+  [ "$(sha256sum "$workdir/$archive" | awk '{print $1}')" = "$signed_archive_sha256" ] || fail \
+    "The archive digest does not match the signed release manifest." \
+    "Arşiv özeti imzalı sürüm manifestiyle eşleşmiyor."
+fi
+
 
 root=celikpanel-$version
 tar -tzf "$workdir/$archive" | awk -v root="$root" '
@@ -403,6 +863,19 @@ for metadata_name in release.commit release.tree; do
     "The extracted release contains invalid provenance metadata." \
     "Çıkarılan sürüm geçersiz köken bilgisi içeriyor."
 done
+if [ "$require_signed_manifest" -eq 1 ]; then
+  extracted_release_commit=$(tr -d '\r\n\t ' < "$extracted_root/release.commit")
+  [ "$extracted_release_commit" = "$signed_commit" ] || fail \
+    "The extracted release commit does not match the signed release manifest." \
+    "Çıkarılan sürüm commit bilgisi imzalı sürüm manifestiyle eşleşmiyor."
+  # Consume the authenticated sequence only after the entire archive and its
+  # provenance are verified, but before the updater can mutate host services.
+  # A failed update can safely retry the same sequence/version; lower or same
+  # sequence with different version remains permanently rejected.
+  persist_release_sequence_floor "$signed_release_sequence" "$version" || fail \
+    "The durable signed-release rollback floor could not be published safely." \
+    "Kalıcı imzalı sürüm geri-alma tabanı güvenle yayımlanamadı."
+fi
 
 if [ "$operation" = install ]; then
   installer=$extracted_root/install.sh

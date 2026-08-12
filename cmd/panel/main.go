@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -41,6 +42,14 @@ func newPanelHTTPServer(addr string, handler http.Handler) *http.Server {
 		WriteTimeout:      panelHTTPWriteTimeout,
 		IdleTimeout:       panelHTTPIdleTimeout,
 	}
+}
+
+func emitPanelBuildIdentity(args []string, output io.Writer) bool {
+	if len(args) != 1 || args[0] != "--inspect-build-identity" {
+		return false
+	}
+	_, _ = fmt.Fprintf(output, "version=%s\ncommit=%s\n", buildVersion, buildCommit)
+	return true
 }
 
 type Panel struct {
@@ -434,6 +443,12 @@ func (p *Panel) handleDatabaseSubroute(w http.ResponseWriter, r *http.Request, p
 }
 
 func main() {
+	// This hidden read-only probe exits before flag parsing, database access,
+	// RPC setup, sockets, or background work. The enrollment tool uses it to
+	// prove the installed panel and agent are the exact same trusted build.
+	if emitPanelBuildIdentity(os.Args[1:], os.Stdout) {
+		return
+	}
 	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
 	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")
@@ -874,6 +889,9 @@ func main() {
 	// Version: one truth for "which build is this server running?"
 	// Sürüm: "bu sunucu hangi yapıyı koşuyor?" sorusunun tek doğrusu.
 	http.HandleFunc("/api/v1/panel/version", panel.handleVersion)
+	http.HandleFunc(panelUpdateCheckPath, panel.handlePanelUpdateCheck)
+	http.HandleFunc(panelUpdateStartPath, panel.handlePanelUpdateStart)
+	http.HandleFunc(panelUpdateStatusPath, panel.handlePanelUpdateStatus)
 	http.HandleFunc("/api/v1/service/status", panel.handleServiceStatus)
 	http.HandleFunc("/api/v1/service/install", panel.handleServiceInstall)
 	http.HandleFunc(mailProfileInstallPath, panel.handleMailProfileInstall)

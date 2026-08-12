@@ -65,6 +65,10 @@ jobs:
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
       - run: bash deploy/test-download-portal-contract.sh
+      - run: bash deploy/test-signed-release-manifest-contract.sh
+      - run: sudo bash deploy/test-release-foundation-root-contract.sh
+      - run: sudo bash deploy/test-signed-release-enrollment-contract.sh
+      - run: bash deploy/test-release-updater-rollback-contract.sh
       - run: sudo bash deploy/test-download-portal-operation-selection.sh
       - run: sudo bash deploy/test-prebuilt-update-contract.sh
       - run: bash deploy/test-go-toolchain-contract.sh
@@ -232,10 +236,20 @@ jobs:
         run: |
           if [[ "${GITHUB_REF_TYPE}" == tag ]]; then
             version="${GITHUB_REF_NAME}"
-            [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || {
+            [[ "$version" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$ ]] || {
               printf 'release tag is not valid semver: %s\n' "$version" >&2
               exit 1
             }
+            prerelease=${version#*-}
+            if [[ "$prerelease" != "$version" ]]; then
+              IFS=. read -r -a identifiers <<< "$prerelease"
+              for identifier in "${identifiers[@]}"; do
+                if [[ "$identifier" =~ ^[0-9]+$ && "$identifier" != 0 && "$identifier" == 0* ]]; then
+                  printf 'release tag has a non-canonical numeric prerelease identifier: %s\n' "$version" >&2
+                  exit 1
+                fi
+              done
+            fi
             git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
             [[ "$(git rev-parse refs/remotes/origin/main)" == "${GITHUB_SHA}" ]] || {
               printf 'release tag must point to the current main commit\n' >&2
@@ -286,12 +300,54 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
         run: sha256sum -c "celikpanel-${RELEASE_VERSION}.tar.gz.sha256"
+      - name: Build optional operator-authorized signed linux/amd64 assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.CELIKPANEL_RELEASE_SIGNING_ED25519_PEM }}
+          RELEASE_SEQUENCE: ${{ vars.CELIKPANEL_RELEASE_SEQUENCE }}
+        run: |
+          if [[ -z "${RELEASE_SIGNING_PRIVATE_KEY}" ]]; then
+            printf '%s\n' 'signed assets skipped: release signing key is not configured'
+            exit 0
+          fi
+          [[ "${RELEASE_SEQUENCE}" =~ ^[1-9][0-9]*$ ]] || {
+            printf '%s\n' 'CELIKPANEL_RELEASE_SEQUENCE must be configured when the signing key is present' >&2
+            exit 1
+          }
+          source_archive="dist/celikpanel-${RELEASE_VERSION}.tar.gz"
+          platform_archive="dist/celikpanel-${RELEASE_VERSION}-linux-amd64.tar.gz"
+          platform_checksum="${platform_archive}.sha256"
+          cp -- "$source_archive" "$platform_archive"
+          cmp -s -- "$source_archive" "$platform_archive"
+          (cd dist && sha256sum "$(basename -- "$platform_archive")" > "$(basename -- "$platform_checksum")")
+          key_file=$(mktemp "${RUNNER_TEMP}/celikpanel-release-key.XXXXXXXX")
+          sign_dir=$(mktemp -d "${RUNNER_TEMP}/celikpanel-release-sign.XXXXXXXX")
+          cleanup_signing() { rm -rf -- "$key_file" "$sign_dir"; }
+          trap cleanup_signing EXIT HUP INT TERM
+          printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY" > "$key_file"
+          chmod 0600 "$key_file"
+          CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$key_file" \
+            bash deploy/write-signed-release-manifest.sh \
+              "$RELEASE_VERSION" "$RELEASE_SEQUENCE" "$GITHUB_SHA" \
+              "$(date -u -d "@$(git show -s --format=%ct "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%SZ)" \
+              linux amd64 "$platform_archive" "$sign_dir"
+          mv -- "$sign_dir/release-manifest-v2" \
+            "dist/celikpanel-${RELEASE_VERSION}-linux-amd64.release-manifest-v2"
+          mv -- "$sign_dir/release-manifest-v2.sig" \
+            "dist/celikpanel-${RELEASE_VERSION}-linux-amd64.release-manifest-v2.sig"
+          cleanup_signing
+          trap - EXIT HUP INT TERM
       - uses: actions/upload-artifact@v7
         with:
           name: celikpanel-${{ steps.release_version.outputs.value }}
           path: |
             dist/celikpanel-${{ steps.release_version.outputs.value }}.tar.gz
             dist/celikpanel-${{ steps.release_version.outputs.value }}.tar.gz.sha256
+            dist/celikpanel-${{ steps.release_version.outputs.value }}-linux-amd64.tar.gz
+            dist/celikpanel-${{ steps.release_version.outputs.value }}-linux-amd64.tar.gz.sha256
+            dist/celikpanel-${{ steps.release_version.outputs.value }}-linux-amd64.release-manifest-v2
+            dist/celikpanel-${{ steps.release_version.outputs.value }}-linux-amd64.release-manifest-v2.sig
           if-no-files-found: error
           retention-days: 14
 
@@ -320,6 +376,23 @@ jobs:
         run: |
           archive="celikpanel-${RELEASE_VERSION}.tar.gz"
           checksum="${archive}.sha256"
+          assets=("$archive" "$checksum")
+          signed_archive="celikpanel-${RELEASE_VERSION}-linux-amd64.tar.gz"
+          signed_checksum="${signed_archive}.sha256"
+          signed_manifest="celikpanel-${RELEASE_VERSION}-linux-amd64.release-manifest-v2"
+          signed_signature="${signed_manifest}.sig"
+          signed_count=0
+          for signed_asset in "$signed_archive" "$signed_checksum" "$signed_manifest" "$signed_signature"; do
+            [[ ! -e "$signed_asset" ]] || signed_count=$((signed_count + 1))
+          done
+          [[ "$signed_count" -eq 0 || "$signed_count" -eq 4 ]] || {
+            printf '%s\n' 'signed release asset set is incomplete' >&2
+            exit 1
+          }
+          if [[ "$signed_count" -eq 4 ]]; then
+            sha256sum -c "$signed_checksum"
+            assets+=("$signed_archive" "$signed_checksum" "$signed_manifest" "$signed_signature")
+          fi
           prerelease=()
           [[ "${GITHUB_REF_NAME}" =~ -(alpha|beta|rc) ]] && prerelease=(--prerelease)
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
@@ -327,6 +400,6 @@ jobs:
               "${GITHUB_REF_NAME}" >&2
             exit 1
           fi
-          gh release create "${GITHUB_REF_NAME}" "$archive" "$checksum" \
+          gh release create "${GITHUB_REF_NAME}" "${assets[@]}" \
             --repo "${GITHUB_REPOSITORY}" --verify-tag --generate-notes \
             --title "CelikPanel ${GITHUB_REF_NAME}" "${prerelease[@]}"

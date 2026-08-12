@@ -8,7 +8,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-SNAPSHOT_VERSION=5
+SNAPSHOT_VERSION=6
 RELEASES_ROOT=/var/backups/celikpanel/releases
 SNAPSHOT_ROOT=/var/backups/celikpanel/update-snapshots
 TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction

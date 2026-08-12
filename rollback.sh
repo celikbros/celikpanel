@@ -14,7 +14,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-SUPPORTED_SNAPSHOT_VERSION=5
+SUPPORTED_SNAPSHOT_VERSION=6
 SNAP_ROOT=/var/backups/celikpanel/update-snapshots
 RELEASES_ROOT=/var/backups/celikpanel/releases
 PREFIX=/opt/celikpanel
@@ -37,9 +37,10 @@ RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 LIBEXEC_DIR=/usr/libexec/celikpanel
+RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
-    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR
+    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR RELEASE_UPDATER
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -331,6 +332,7 @@ restore_celikpanel_selinux_labels() {
         "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
         "$LIBEXEC_DIR" \
         "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_UPDATER" \
         "$PANEL_CERT_HOOK" \
         "$UNIT_DIR/celikpanel-agent.service" \
         "$UNIT_DIR/celikpanel-firewall-restore.service" \
@@ -1118,8 +1120,11 @@ outer_manifest_verified=1
 version=$(tr -d '[:space:]' < "$snap/snapshot.version")
 case "$version" in
     "$SUPPORTED_SNAPSHOT_VERSION") ;;
+    5)
+        die "snapshot version 5 predates exact installed updater rollback state; use its matching historical recovery release or create a fresh version 6 snapshot"
+        ;;
     4)
-        die "snapshot version 4 predates exact panel TLS rollback state; use its matching historical recovery release or create a fresh version 5 snapshot"
+        die "snapshot version 4 predates exact panel TLS rollback state; use its matching historical recovery release or create a fresh version 6 snapshot"
         ;;
     *) die "unsupported snapshot version: $version" ;;
 esac
@@ -1146,6 +1151,25 @@ esac
 [[ -d "$snap/agent-state" ]] || die "agent state payload directory is missing"
 [[ -f "$snap/service-states.tsv" ]] || die "service state ledger is missing"
 [[ -f "$snap/snapshot-transition.state" ]] || die "snapshot transition state is missing"
+[[ -f "$snap/release-updater.state" && ! -L "$snap/release-updater.state" ]] \
+    || die "release updater presence marker is missing or unsafe"
+release_updater_state=$(tr -d '[:space:]' < "$snap/release-updater.state")
+case "$release_updater_state" in
+    present)
+        [[ -f "$snap/libexec/get.sh" && ! -L "$snap/libexec/get.sh" ]] \
+            || die "snapshot release updater is missing or unsafe"
+        read -r updater_owner updater_group updater_mode updater_links < <(
+            stat -Lc '%u %g %a %h' -- "$snap/libexec/get.sh"
+        ) || die "cannot inspect snapshot release updater"
+        [[ "$updater_owner:$updater_group:$updater_mode:$updater_links" == 0:0:755:1 ]] \
+            || die "snapshot release updater metadata is unsafe"
+        ;;
+    absent)
+        [[ ! -e "$snap/libexec/get.sh" && ! -L "$snap/libexec/get.sh" ]] \
+            || die "snapshot marks release updater absent but includes bytes"
+        ;;
+    *) die "invalid release updater presence marker" ;;
+esac
 
 firewall_state=$(tr -d '[:space:]' < "$snap/firewall-unit.state")
 case "$firewall_state" in
@@ -1184,9 +1208,9 @@ panel_tls_snapshot_validate "$snap/panel-tls" \
     || die "panel TLS compatibility snapshot is missing or invalid"
 
 # Interpret transition metadata only after the exact outer manifest has been
-# verified. Normal v5 snapshots must not carry bootstrap-only payloads.
+# verified. Normal v6 snapshots must not carry bootstrap-only payloads.
 # Geçiş metadata'sını yalnız tam dış manifest doğrulandıktan sonra yorumla.
-# Normal v5 snapshotlar yalnız bootstrap'a ait ürünleri taşımamalıdır.
+# Normal v6 snapshotlar yalnız bootstrap'a ait ürünleri taşımamalıdır.
 snapshot_commit=$(cat "$snap/commit")
 snapshot_created_at=$(cat "$snap/created-at-utc")
 target_release_commit=$(cat "$snap/target-release.commit")
@@ -1209,22 +1233,22 @@ case "$transition_state" in
         printf 'normal\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "normal transition state marker is not exact"
         [[ "$agent_ledger_state" == present ]] \
-            || die "normal v5 snapshot must contain the durable agent ledger"
+            || die "normal v6 snapshot must contain the durable agent ledger"
         [[ ! -e "$snap/pre-ledger-transition.tsv" && \
            ! -e "$snap/pre-ledger-transition.sha256" && \
            ! -e "$snap/schema17-transition.tsv" && \
            ! -e "$snap/schema17-transition.sha256" && \
            ! -e "$snap/transition-preflight" ]] \
-            || die "normal v5 snapshot contains bootstrap transition payloads"
+            || die "normal v6 snapshot contains bootstrap transition payloads"
         ;;
     pre-ledger)
         printf 'pre-ledger\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "pre-ledger transition state marker is not exact"
         [[ "$agent_ledger_state" == absent ]] \
-            || die "pre-ledger v5 snapshot must not contain the durable agent ledger"
+            || die "pre-ledger v6 snapshot must not contain the durable agent ledger"
         [[ ! -e "$snap/schema17-transition.tsv" && \
            ! -e "$snap/schema17-transition.sha256" ]] \
-            || die "pre-ledger v5 snapshot contains schema17 transition payloads"
+            || die "pre-ledger v6 snapshot contains schema17 transition payloads"
         [[ -f "$snap/pre-ledger-transition.tsv" && ! -L "$snap/pre-ledger-transition.tsv" ]] \
             || die "pre-ledger transition marker is missing or unsafe"
         [[ -f "$snap/pre-ledger-transition.sha256" && ! -L "$snap/pre-ledger-transition.sha256" ]] \
@@ -1291,10 +1315,10 @@ case "$transition_state" in
         printf 'schema17\n' | cmp -s - "$snap/snapshot-transition.state" \
             || die "schema17 transition state marker is not exact"
         [[ "$agent_ledger_state" == absent ]] \
-            || die "schema17 v5 snapshot must not contain the durable agent ledger"
+            || die "schema17 v6 snapshot must not contain the durable agent ledger"
         [[ ! -e "$snap/pre-ledger-transition.tsv" && \
            ! -e "$snap/pre-ledger-transition.sha256" ]] \
-            || die "schema17 v5 snapshot contains pre-ledger transition payloads"
+            || die "schema17 v6 snapshot contains pre-ledger transition payloads"
         [[ -f "$snap/schema17-transition.tsv" && ! -L "$snap/schema17-transition.tsv" ]] \
             || die "schema17 transition marker is missing or unsafe"
         [[ -f "$snap/schema17-transition.sha256" && ! -L "$snap/schema17-transition.sha256" ]] \
@@ -1605,6 +1629,26 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     rm -rf -- "$WEB_DIR"
     cp -a "$snap/web" "$WEB_DIR"
 
+    validate_root_trusted_dir_chain "$LIBEXEC_DIR"
+    if [[ -e "$RELEASE_UPDATER" || -L "$RELEASE_UPDATER" ]]; then
+        [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+            || die "current installed release updater is unsafe"
+    fi
+    if [[ "$release_updater_state" == present ]]; then
+        updater_tmp=$(mktemp "$LIBEXEC_DIR/.get.sh.rollback.XXXXXXXX") \
+            || die "cannot stage snapshot release updater"
+        if ! cp --no-preserve=mode,ownership,timestamps -- "$snap/libexec/get.sh" "$updater_tmp" ||
+           ! chown root:root -- "$updater_tmp" || ! chmod 0755 -- "$updater_tmp" ||
+           ! cmp -s -- "$snap/libexec/get.sh" "$updater_tmp" || ! sync -f -- "$updater_tmp" ||
+           ! mv -T -- "$updater_tmp" "$RELEASE_UPDATER" || ! sync -f -- "$LIBEXEC_DIR"; then
+            [[ ! -e "$updater_tmp" && ! -L "$updater_tmp" ]] || rm -f -- "$updater_tmp"
+            die "snapshot release updater could not be restored exactly"
+        fi
+    else
+        rm -f -- "$RELEASE_UPDATER"
+        sync -f -- "$LIBEXEC_DIR" || die "release updater removal could not be made durable"
+    fi
+
     # A manifest-verified release helper performs the SQLite restore, including
     # sidecar handling and atomic durable replacement. Shell never copies DB bytes.
     # SQLite geri yüklemesini sidecar yönetimi ve atomik dayanıklı değiştirme dahil
@@ -1698,6 +1742,20 @@ done
     || die "restored binaries are missing or unsafe"
 cmp -s "$snap/bin/panel" "$BIN_DIR/panel" || die "restored panel bytes differ from snapshot"
 cmp -s "$snap/bin/agent" "$BIN_DIR/agent" || die "restored agent bytes differ from snapshot"
+case "$release_updater_state" in
+    present)
+        [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+            || die "restored release updater is missing or unsafe"
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]] \
+            || die "restored release updater metadata differs from snapshot policy"
+        cmp -s "$snap/libexec/get.sh" "$RELEASE_UPDATER" \
+            || die "restored release updater bytes differ from snapshot"
+        ;;
+    absent)
+        [[ ! -e "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+            || die "release updater exists although snapshot marks it absent"
+        ;;
+esac
 if find "$BIN_DIR" "$WEB_DIR" -type l -print -quit | grep -q .; then
     die "restored binary/web tree contains a symbolic link"
 fi

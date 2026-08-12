@@ -12,7 +12,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-SNAPSHOT_VERSION=5
+SNAPSHOT_VERSION=6
 SNAP_ROOT=/var/backups/celikpanel/update-snapshots
 RECOVERY_SNAPSHOT_ROOT=/var/backups/celikpanel/recovery-snapshots
 RELEASES_ROOT=/var/backups/celikpanel/releases
@@ -31,6 +31,7 @@ MUTATION_LOCK_IDENTITY=
 RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
+RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
 PREFLIGHT_PANEL="${CELIKPANEL_PREFLIGHT_PANEL:-$BIN_DIR/panel}"
 PREFLIGHT_AGENT="${CELIKPANEL_PREFLIGHT_AGENT:-$BIN_DIR/agent}"
 SCHEMA17_BRIDGE="${CELIKPANEL_SCHEMA17_BRIDGE:-}"
@@ -1042,6 +1043,12 @@ verify_installed_release_artifacts() {
         <(cd "$WEB_DIR" && \
             LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
         || die "installed web tree does not match the trusted release"
+    [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+        || die "installed reviewed release updater is missing or unsafe"
+    [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]] \
+        || die "installed reviewed release updater metadata is unsafe"
+    cmp -s "$TRUSTED_RELEASE_ROOT/libexec/get.sh" "$RELEASE_UPDATER" \
+        || die "installed reviewed release updater does not match the trusted release"
 }
 # Retention may delete only a complete direct-child snapshot whose payload
 # still matches the versioned checksum contract.
@@ -2418,6 +2425,21 @@ else
 fi
 cp -a "$BIN_DIR" "$tmp_snap/bin"
 cp -a "$WEB_DIR" "$tmp_snap/web"
+mkdir "$tmp_snap/libexec"
+if [[ -e "$RELEASE_UPDATER" || -L "$RELEASE_UPDATER" ]]; then
+    [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+        || die "installed release updater is unsafe before snapshot"
+    read -r updater_owner updater_group updater_mode updater_links < <(
+        stat -Lc '%u %g %a %h' -- "$RELEASE_UPDATER"
+    ) || die "cannot inspect installed release updater before snapshot"
+    [[ "$updater_owner:$updater_group:$updater_mode:$updater_links" == 0:0:755:1 ]] \
+        || die "installed release updater metadata is unsafe before snapshot"
+    validate_root_trusted_dir_chain "$(dirname -- "$RELEASE_UPDATER")"
+    cp -a "$RELEASE_UPDATER" "$tmp_snap/libexec/get.sh"
+    printf 'present\n' > "$tmp_snap/release-updater.state"
+else
+    printf 'absent\n' > "$tmp_snap/release-updater.state"
+fi
 mkdir "$tmp_snap/units"
 cp -a "$UNIT_DIR/celikpanel-agent.service" "$tmp_snap/units/"
 cp -a "$UNIT_DIR/celikpanel-panel.service" "$tmp_snap/units/"
@@ -2481,15 +2503,15 @@ if [[ $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
 fi
 echo "==> Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap"
 
-# Retain five complete v5 snapshots. Older snapshot formats remain untouched
+# Retain five complete v6 snapshots. Older snapshot formats remain untouched
 # for their matching immutable historical recovery release and for manual
-# recovery. The v5 rollback helper intentionally refuses v4: those snapshots
-# do not contain the exact panel TLS/hook/pending-activation boundary, so
-# pretending they are compatible would make automated rollback unsafe.
-# Beş eksiksiz v5 snapshot sakla. Eski snapshot biçimleri, eşleşen değişmez
-# tarihsel kurtarma sürümü ve elle kurtarma için korunur. v5 geri alma yardımcısı
-# v4'ü bilinçli olarak reddeder; v4 snapshotlar tam panel TLS/hook/bekleyen
-# aktivasyon sınırını taşımadığından otomatik geri alma güvenli değildir.
+# recovery. The v6 rollback helper intentionally refuses v5, which lacks the
+# installed updater boundary, and v4, which also lacks the exact panel
+# TLS/hook/pending-activation boundary.
+# Beş eksiksiz v6 snapshot sakla. Eski snapshot biçimleri, eşleşen değişmez
+# tarihsel kurtarma sürümü ve elle kurtarma için korunur. v6 geri alma yardımcısı
+# kurulu updater sınırını taşımayan v5'i ve ayrıca tam panel
+# TLS/hook/bekleyen-aktivasyon sınırını taşımayan v4'ü bilinçli olarak reddeder.
 mapfile -t snapshot_candidates < <(
     find "$SNAP_ROOT" -mindepth 1 -maxdepth 1 -type d ! -name '.*' \
         -printf '%T@ %p\n' | LC_ALL=C sort -nr | cut -d' ' -f2-

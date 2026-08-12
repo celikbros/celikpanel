@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { PageHeader, Button, inputClass } from './ui';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
+import { PanelUpdateCard } from './PanelUpdateCard';
 
 type SettingsSectionID = 'account' | 'panel' | 'dns';
 type SettingsSection = {
@@ -145,6 +146,7 @@ function SettingsWorkspace({
                     <>
                         <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
                             <PanelCertificatePanel />
+                            <PanelUpdateCard />
                         </div>
                         <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
                             <DNSServerSettings />

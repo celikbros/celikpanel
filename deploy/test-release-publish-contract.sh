@@ -35,7 +35,8 @@ test -f "$WORKFLOW"
 require_literal "tags: ['v*']"
 require_literal 'needs: [go, panel-race, web, windows-portability, linux-arm64-compile, freebsd-compile, darwin-compile]'
 require_literal 'release_version: ${{ steps.release_version.outputs.value }}'
-require_literal '[[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]'
+require_literal '[[ "$version" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$ ]]'
+require_literal 'release tag has a non-canonical numeric prerelease identifier'
 require_literal 'git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main'
 require_literal '[[ "$(git rev-parse refs/remotes/origin/main)" == "${GITHUB_SHA}" ]]'
 
@@ -51,7 +52,11 @@ require_literal 'permissions:'
 require_literal 'contents: write'
 require_literal 'gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}"'
 require_literal 'immutable assets will not be replaced'
-require_literal 'gh release create "${GITHUB_REF_NAME}" "$archive" "$checksum"'
+require_literal 'gh release create "${GITHUB_REF_NAME}" "${assets[@]}"'
+require_literal '[[ "$signed_count" -eq 0 || "$signed_count" -eq 4 ]]'
+require_literal 'secrets.CELIKPANEL_RELEASE_SIGNING_ED25519_PEM'
+require_literal 'vars.CELIKPANEL_RELEASE_SEQUENCE'
+require_literal 'signed assets skipped: release signing key is not configured'
 require_literal '--repo "${GITHUB_REPOSITORY}" --verify-tag --generate-notes'
 reject_literal '--clobber'
 

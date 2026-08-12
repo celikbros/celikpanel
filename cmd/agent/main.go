@@ -342,6 +342,18 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 }
 
 func main() {
+	// Hidden system-update modes exit before managers, RPC, sockets, or
+	// background tasks. The worker accepts only one canonical request ID.
+	if len(os.Args) == 2 && os.Args[1] == "--inspect-build-identity" {
+		fmt.Printf("version=%s\ncommit=%s\n", buildVersion, buildCommit)
+		return
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--self-update-worker" {
+		if err := runSystemUpdateWorker(os.Args[2]); err != nil {
+			log.Fatalf("System update worker failed: %v", err)
+		}
+		return
+	}
 	// The hidden owner worker exits before any root-only manager, socket, or background task starts.
 	// Gizli sahip çalışanı, root'a özel yönetici, soket veya arka plan görevi başlamadan çıkar.
 	if handled, err := handleSystemSQLiteOwnerWorker(); handled {
@@ -454,6 +466,9 @@ func main() {
 	mutationManager, err := agentServiceMutationManager()
 	if err != nil {
 		log.Fatalf("Failed to initialize service mutation ledger: %v", err)
+	}
+	if err := reconcileSystemUpdatesAtStartup(); err != nil {
+		log.Fatalf("Failed to reconcile system update state: %v", err)
 	}
 
 	// Initialize Systemd Manager
