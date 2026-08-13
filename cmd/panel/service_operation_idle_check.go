@@ -17,7 +17,30 @@ import (
 
 var errServiceOperationsNotIdle = errors.New("service operations are not idle")
 
-const durableServiceOperationSchemaVersion = 22
+const (
+	durableServiceOperationSchemaVersion = 22
+	serviceOperationDataSchemaVersion    = 31
+)
+
+const requiredPreOperationDataServiceOperationTableSQL = `CREATE TABLE service_operations (
+	id TEXT PRIMARY KEY,
+	kind TEXT NOT NULL,
+	service_id TEXT NOT NULL,
+	package_name TEXT,
+	status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'succeeded', 'failed')),
+	phase TEXT NOT NULL,
+	result_json TEXT,
+	error_code TEXT,
+	error_message TEXT,
+	requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	request_ip TEXT,
+	user_agent TEXT,
+	started_at TEXT NOT NULL,
+	finished_at TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	request_id TEXT
+)`
 
 const requiredServiceOperationTableSQL = `CREATE TABLE service_operations (
 	id TEXT PRIMARY KEY,
@@ -192,7 +215,14 @@ func checkServiceOperationsIdle(databasePath string) error {
 	if err := migrationRows.Close(); err != nil {
 		return fmt.Errorf("%w: close migration history: %v", errServiceOperationsNotIdle, err)
 	}
-	if expectedVersion-1 < durableServiceOperationSchemaVersion {
+	schemaVersion := expectedVersion - 1
+	requiredTableSQL := requiredServiceOperationTableSQL
+	requiredColumnCount := len(requiredServiceOperationColumns)
+	if schemaVersion < serviceOperationDataSchemaVersion {
+		requiredTableSQL = requiredPreOperationDataServiceOperationTableSQL
+		requiredColumnCount--
+	}
+	if schemaVersion < durableServiceOperationSchemaVersion {
 		return fmt.Errorf("%w: expected schema version %d or newer", errServiceOperationsNotIdle, durableServiceOperationSchemaVersion)
 	}
 
@@ -206,17 +236,20 @@ func checkServiceOperationsIdle(databasePath string) error {
 	if tableCount != 1 {
 		return fmt.Errorf("%w: service operation schema is unavailable", errServiceOperationsNotIdle)
 	}
-	if err := validateServiceOperationTableSQL(ctx, database); err != nil {
+	if err := validateServiceOperationTableSQL(ctx, database, requiredTableSQL); err != nil {
 		return fmt.Errorf("%w: inspect service operation table SQL: %v", errServiceOperationsNotIdle, err)
 	}
 	columns, err := readServiceOperationColumns(ctx, database)
 	if err != nil {
 		return fmt.Errorf("%w: inspect service operation columns: %v", errServiceOperationsNotIdle, err)
 	}
-	if len(columns) != len(requiredServiceOperationColumns) {
+	if len(columns) != requiredColumnCount {
 		return fmt.Errorf("%w: service operation column count has an invalid contract", errServiceOperationsNotIdle)
 	}
 	for requiredColumn, requiredContract := range requiredServiceOperationColumns {
+		if requiredColumn == "operation_data" && schemaVersion < serviceOperationDataSchemaVersion {
+			continue
+		}
 		contract, ok := columns[requiredColumn]
 		if !ok {
 			return fmt.Errorf("%w: service operation column %s is unavailable", errServiceOperationsNotIdle, requiredColumn)
@@ -295,7 +328,11 @@ func readServiceOperationColumns(
 	return columns, nil
 }
 
-func validateServiceOperationTableSQL(ctx context.Context, database *sql.DB) error {
+func validateServiceOperationTableSQL(
+	ctx context.Context,
+	database *sql.DB,
+	requiredTableSQL string,
+) error {
 	var schemaSQL string
 	if err := database.QueryRowContext(
 		ctx,
@@ -305,7 +342,7 @@ func validateServiceOperationTableSQL(ctx context.Context, database *sql.DB) err
 		return err
 	}
 	normalized := normalizeSQLiteSchemaSQL(schemaSQL)
-	expected := normalizeSQLiteSchemaSQL(requiredServiceOperationTableSQL)
+	expected := normalizeSQLiteSchemaSQL(requiredTableSQL)
 	if normalized != expected {
 		return fmt.Errorf(
 			"service operation table SQL does not match the required contract: actual=%q expected=%q",

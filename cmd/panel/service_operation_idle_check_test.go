@@ -244,6 +244,174 @@ func TestServiceOperationsIdleCheckIsReadOnlyAndFailClosed(t *testing.T) {
 	})
 }
 
+func TestServiceOperationsIdleAcceptsExactVersionedTableContracts(t *testing.T) {
+	tests := []struct {
+		name              string
+		schemaVersion     int
+		withOperationData bool
+	}{
+		{name: "schema 28 legacy", schemaVersion: 28},
+		{name: "schema 30 legacy", schemaVersion: 30},
+		{name: "schema 31 current", schemaVersion: 31, withOperationData: true},
+		{name: "schema 32 current", schemaVersion: 32, withOperationData: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := createServiceOperationIdleContractDatabase(
+				t,
+				test.schemaVersion,
+				test.withOperationData,
+			)
+			if err := checkServiceOperationsIdle(path); err != nil {
+				t.Fatalf("exact schema %d idle database rejected: %v", test.schemaVersion, err)
+			}
+		})
+	}
+}
+
+func TestServiceOperationsIdleRejectsVersionedTableContractMismatch(t *testing.T) {
+	tests := []struct {
+		name              string
+		schemaVersion     int
+		withOperationData bool
+	}{
+		{name: "legacy ledger with current table", schemaVersion: 28, withOperationData: true},
+		{name: "current ledger with legacy table", schemaVersion: 32},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := createServiceOperationIdleContractDatabase(
+				t,
+				test.schemaVersion,
+				test.withOperationData,
+			)
+			if err := checkServiceOperationsIdle(path); !errors.Is(err, errServiceOperationsNotIdle) {
+				t.Fatalf("schema/table mismatch err=%v, want not idle", err)
+			}
+		})
+	}
+}
+
+func TestServiceOperationsIdleLegacyContractStillChecksActiveRows(t *testing.T) {
+	t.Run("terminal", func(t *testing.T) {
+		path := createServiceOperationIdleContractDatabase(t, 28, false)
+		insertServiceOperationIdleContractRow(t, path, "terminal", serviceOperationSucceeded)
+		if err := checkServiceOperationsIdle(path); err != nil {
+			t.Fatalf("legacy terminal operation rejected: %v", err)
+		}
+	})
+
+	for _, status := range []string{serviceOperationQueued, serviceOperationRunning} {
+		t.Run(status, func(t *testing.T) {
+			path := createServiceOperationIdleContractDatabase(t, 28, false)
+			insertServiceOperationIdleContractRow(t, path, "active-"+status, status)
+			if err := checkServiceOperationsIdle(path); !errors.Is(err, errServiceOperationsNotIdle) {
+				t.Fatalf("legacy %s operation err=%v, want not idle", status, err)
+			}
+		})
+	}
+}
+
+func createServiceOperationIdleContractDatabase(
+	t *testing.T,
+	schemaVersion int,
+	withOperationData bool,
+) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "panel.sqlite")
+	database, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.SetMaxOpenConns(1)
+	database.SetMaxIdleConns(1)
+	tableSQL := requiredPreOperationDataServiceOperationTableSQL
+	if withOperationData {
+		tableSQL = requiredServiceOperationTableSQL
+	}
+	if _, err := database.Exec(`
+		CREATE TABLE schema_migrations (
+			version INTEGER PRIMARY KEY,
+			filename TEXT,
+			sha256 TEXT,
+			applied_at TEXT DEFAULT (datetime('now'))
+		);
+	` + tableSQL); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	for _, contract := range requiredServiceOperationIndexes {
+		if _, err := database.Exec(contract.schemaSQL); err != nil {
+			database.Close()
+			t.Fatal(err)
+		}
+	}
+	transaction, err := database.Begin()
+	if err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	statement, err := transaction.Prepare(`INSERT INTO schema_migrations(version) VALUES (?)`)
+	if err != nil {
+		_ = transaction.Rollback()
+		database.Close()
+		t.Fatal(err)
+	}
+	for version := 1; version <= schemaVersion; version++ {
+		if _, err := statement.Exec(version); err != nil {
+			_ = statement.Close()
+			_ = transaction.Rollback()
+			database.Close()
+			t.Fatal(err)
+		}
+	}
+	if err := statement.Close(); err != nil {
+		_ = transaction.Rollback()
+		database.Close()
+		t.Fatal(err)
+	}
+	if err := transaction.Commit(); err != nil {
+		database.Close()
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func insertServiceOperationIdleContractRow(
+	t *testing.T,
+	path string,
+	id string,
+	status string,
+) {
+	t.Helper()
+	database, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	insertServiceOperationIdleContractRowDB(t, database, id, status)
+}
+
+func insertServiceOperationIdleContractRowDB(
+	t *testing.T,
+	database *sql.DB,
+	id string,
+	status string,
+) {
+	t.Helper()
+	const timestamp = "2026-08-13T00:00:00Z"
+	if _, err := database.Exec(`
+		INSERT INTO service_operations (
+			id, kind, service_id, status, phase, started_at, created_at, updated_at
+		) VALUES (?, 'install', 'certbot', ?, 'test', ?, ?, ?)
+	`, id, status, timestamp, timestamp, timestamp); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func replaceServiceOperationsTableForIdleCheck(
 	t *testing.T,
 	database *sql.DB,
