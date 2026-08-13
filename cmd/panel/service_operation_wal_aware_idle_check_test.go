@@ -61,6 +61,56 @@ func TestWALAwareServiceOperationsIdleRejectsActiveRowOnlyInWAL(t *testing.T) {
 	}
 }
 
+func TestWALAwareServiceOperationsIdleSupportsExactSchema28Contract(t *testing.T) {
+	t.Run("terminal row only in WAL is idle", func(t *testing.T) {
+		path := createServiceOperationIdleContractDatabase(t, 28, false)
+		database, err := sql.Open(
+			"sqlite",
+			fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer database.Close()
+		prepareWALAwareConnection(t, database)
+		insertServiceOperationIdleContractRowDB(
+			t,
+			database,
+			"schema28-terminal-in-wal",
+			serviceOperationSucceeded,
+		)
+		requireNonEmptyWAL(t, path)
+
+		if err := checkWALAwareServiceOperationsIdle(path); err != nil {
+			t.Fatalf("exact schema28 terminal WAL rejected: %v", err)
+		}
+	})
+
+	t.Run("active row only in WAL is not idle", func(t *testing.T) {
+		path := createServiceOperationIdleContractDatabase(t, 28, false)
+		database, err := sql.Open(
+			"sqlite",
+			fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer database.Close()
+		prepareWALAwareConnection(t, database)
+		insertServiceOperationIdleContractRowDB(
+			t,
+			database,
+			"schema28-active-in-wal",
+			serviceOperationQueued,
+		)
+		requireNonEmptyWAL(t, path)
+
+		if err := checkWALAwareServiceOperationsIdle(path); !errors.Is(err, errServiceOperationsNotIdle) {
+			t.Fatalf("exact schema28 active WAL err=%v, want not idle", err)
+		}
+	})
+}
+
 func TestWALAwarePreLedgerServiceOperationsIdleAcceptsValidWAL(t *testing.T) {
 	path := createPreLedgerPanelDatabase(t)
 	database, err := sql.Open(
