@@ -3,7 +3,7 @@ import { useNavigate } from '../router';
 import {
     Cpu, MemoryStick, HardDrive, Server, Globe, Database, Activity, Bell,
     Shield, ShieldOff, Users, Mail, Rocket, Check, ArrowRight,
-    DownloadCloud, UserPlus, Plus, Lock,
+    DownloadCloud, UserPlus, Plus, Lock, Layers,
 } from 'lucide-react';
 import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
@@ -11,6 +11,10 @@ import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
 import { PageHeader, UsageBar, StatusDot, Card } from './ui';
 import { showToast } from './Toast';
+import {
+    decodeManagedMailProfiles,
+    type ManagedMailProfile,
+} from './ComponentOperation';
 
 // Admin dashboard (Claude Design'dan uyarlandı): one glance answers "is my
 // server healthy?" and "does anything need me?". Every number is real — the
@@ -59,6 +63,42 @@ interface Extras {
     expiring_certs: { domain_name: string; days_left: number }[];
 }
 
+function decodeDashboardServices(value: unknown): {
+    services: SvcLite[];
+    profiles: ManagedMailProfile[];
+} | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (!Array.isArray(payload.services)) return null;
+
+    const serviceIDs = new Set<string>();
+    const services: SvcLite[] = [];
+    for (const candidate of payload.services) {
+        if (!candidate || typeof candidate !== 'object') return null;
+        const service = candidate as Record<string, unknown>;
+        if (
+            typeof service.id !== 'string'
+            || service.id.trim() !== service.id
+            || service.id === ''
+            || serviceIDs.has(service.id)
+            || typeof service.name !== 'string'
+            || typeof service.status !== 'string'
+            || typeof service.is_installed !== 'boolean'
+            || (
+                service.kind !== undefined
+                && service.kind !== 'service'
+                && service.kind !== 'runtime'
+                && service.kind !== 'tool'
+            )
+        ) return null;
+        serviceIDs.add(service.id);
+        services.push(service as unknown as SvcLite);
+    }
+
+    const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
+    return profiles ? { services, profiles } : null;
+}
+
 export function Dashboard() {
     const { role } = useAuth();
     if (role === 'admin') return <AdminDashboard />;
@@ -71,6 +111,7 @@ function AdminDashboard() {
     const navigate = useNavigate();
     const [stats, setStats] = useState<SystemStats | null>(null);
     const [services, setServices] = useState<SvcLite[]>([]);
+    const [mailProfiles, setMailProfiles] = useState<ManagedMailProfile[] | null>(null);
     const [fw, setFw] = useState<FwState | null>(null);
     const [domains, setDomains] = useState<DomainLite[]>([]);
     const [audit, setAudit] = useState<AuditLite[]>([]);
@@ -93,7 +134,15 @@ function AdminDashboard() {
         loadStats();
         const timer = setInterval(loadStats, 5000);
 
-        fetch('/api/v1/managed-services').then((r) => r.json()).then((d) => setServices(d?.services || [])).catch(() => {});
+        fetch('/api/v1/managed-services')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((value: unknown) => {
+                const snapshot = decodeDashboardServices(value);
+                if (!snapshot) return;
+                setServices(snapshot.services);
+                setMailProfiles(snapshot.profiles);
+            })
+            .catch(() => {});
         fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
         fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
         fetch('/api/v1/audit-logs?limit=7').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
@@ -336,6 +385,13 @@ function AdminDashboard() {
                 </button>
             </div>
 
+            {mailProfiles && (
+                <MailStackSummary
+                    profiles={mailProfiles}
+                    onOpen={() => navigate('/services#mail-stacks')}
+                />
+            )}
+
             {/* Needs attention BEFORE the journey: an active problem outranks
                 guidance. Operator feedback (Jul 17): the alert list lived below
                 the fold while the top of the page stayed calm.
@@ -562,6 +618,61 @@ function AdminDashboard() {
     );
 }
 
+function MailStackSummary({ profiles, onOpen }: {
+    profiles: ManagedMailProfile[];
+    onOpen: () => void;
+}) {
+    const { t } = useI18n();
+    const needsAttention = profiles.some((profile) =>
+        profile.status === 'blocked' || profile.status === 'unknown');
+    const partial = !needsAttention && profiles.some((profile) => profile.status === 'partial');
+    const complete = profiles.some((profile) => profile.status === 'complete');
+    const availableOnly = profiles.every((profile) => profile.status === 'available');
+
+    const statusKey: TranslationKey = needsAttention
+        ? 'dashboard.mailStacks.status.attention'
+        : partial
+            ? 'dashboard.mailStacks.status.partial'
+            : availableOnly
+                ? 'dashboard.mailStacks.status.available'
+                : 'dashboard.mailStacks.status.ready';
+    const hintKey: TranslationKey = needsAttention
+        ? 'dashboard.mailStacks.attentionHint'
+        : partial
+            ? 'dashboard.mailStacks.partialHint'
+            : complete
+                ? 'dashboard.mailStacks.completeHint'
+                : 'dashboard.mailStacks.availableHint';
+    const statusClass = needsAttention || partial
+        ? 'bg-warning/15 text-warning'
+        : availableOnly
+            ? 'bg-surface-2 text-fg-muted'
+            : 'bg-success/15 text-success';
+
+    return (
+        <section className='mt-6' aria-labelledby='dashboard-mail-stacks-heading'>
+            <div className='rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5'>
+                <div className='flex flex-col gap-4 lg:flex-row lg:items-center'>
+                    <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
+                        <Layers className='h-5 w-5' />
+                    </span>
+                    <div className='min-w-0 flex-1'>
+                        <div className='flex flex-wrap items-center gap-2'>
+                            <h2 id='dashboard-mail-stacks-heading' className='font-semibold text-fg'>{t('dashboard.mailStacks.title')}</h2>
+                            <span className={'rounded-full px-2.5 py-1 text-xs font-semibold ' + statusClass}>{t(statusKey)}</span>
+                        </div>
+                        <p className='mt-1 text-sm text-fg-muted'>{t(hintKey)}</p>
+                    </div>
+                    <button type='button' onClick={onOpen} className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90'>
+                        {t('dashboard.mailStacks.open')} <ArrowRight className='h-4 w-4' />
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// Dashboard mail-stack summary remains read-only; installation stays in Components.
 // Additional users get no server telemetry or account-level actions here.
 function AdditionalUserDashboard() {
     const { t } = useI18n();

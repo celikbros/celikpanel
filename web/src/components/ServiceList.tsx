@@ -10,7 +10,7 @@ import {
     useComponentOperation,
     type ManagedMailProfile,
 } from './ComponentOperation';
-import { useNavigate } from '../router';
+import { useLocation, useNavigate } from '../router';
 
 // One installed copy of a runtime (B3b): php8.3-fpm is an instance, a Node
 // tree under /opt/celikpanel/runtimes is an instance. `unit` empty means the
@@ -265,6 +265,7 @@ function unknownCategories(list: ManagedService[]) {
 export function ServiceList({ onManageService }: ServiceListProps) {
     const { t } = useI18n();
     const navigate = useNavigate();
+    const location = useLocation();
     const { startInstall, catalogSnapshot } = useComponentOperation();
     const [services, setServices] = useState<ManagedService[]>([]);
     const [profiles, setProfiles] = useState<ManagedMailProfile[]>([]);
@@ -400,6 +401,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         }
         setLoading(false);
     }, [catalogSnapshot]);
+
+    useLayoutEffect(() => {
+        if (location.hash !== '#mail-stacks' || loading || profiles.length === 0) return;
+        const target = document.getElementById('mail-stacks');
+        if (!target) return;
+        target.scrollIntoView({ block: 'start' });
+        target.focus({ preventScroll: true });
+    }, [loading, location.hash, profiles.length]);
 
     // Client-side filter: text search over name/description/id plus the
     // "hide not installed" switch. A live search overrides collapse so
@@ -1331,7 +1340,7 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
     };
     const serviceName = (id: string) => services.find((service) => service.id === id)?.name ?? id;
     return (
-        <section aria-labelledby='mail-profile-heading' className='mb-6'>
+        <section id='mail-stacks' tabIndex={-1} aria-labelledby='mail-profile-heading' className='mb-6 scroll-mt-24 focus:outline-none'>
             <div className='mb-3 flex items-start gap-3'>
                 <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400'>
                     <Layers className='h-5 w-5' />
