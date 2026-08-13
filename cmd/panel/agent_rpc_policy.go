@@ -52,6 +52,7 @@ const (
 	agentRPCCapabilityVPN              agentRPCCapability = "vpn"
 	agentRPCCapabilityDatabase         agentRPCCapability = "database"
 	agentRPCCapabilitySystemSQLite     agentRPCCapability = "system-sqlite"
+	agentRPCCapabilitySystemUpdate     agentRPCCapability = "system-update"
 )
 
 var validAgentRPCCapabilities = map[agentRPCCapability]struct{}{
@@ -72,6 +73,7 @@ var validAgentRPCCapabilities = map[agentRPCCapability]struct{}{
 	agentRPCCapabilityVPN:              {},
 	agentRPCCapabilityDatabase:         {},
 	agentRPCCapabilitySystemSQLite:     {},
+	agentRPCCapabilitySystemUpdate:     {},
 }
 
 type agentRPCPolicy struct {
@@ -127,6 +129,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.SiteUsage Agent.Version Agent.VPNStatus
+		Agent.CheckSystemUpdate Agent.SystemUpdateStatus
 	`),
 	agentRPCAuthGroup(agentRPCEffectControl, "", `
 		Agent.BeginServiceMutation Agent.CancelServiceMutation Agent.FinishServiceMutation
@@ -200,6 +203,9 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.CreateSystemSQLiteSnapshot Agent.OptimizeSystemSQLiteDatabase
 		Agent.ReleaseSystemSQLiteSnapshot
 	`),
+	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilitySystemUpdate, `
+		Agent.StartSystemUpdate
+	`),
 }
 
 var (
@@ -220,6 +226,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	// Small local status/configuration reads.
 	"Agent.AppUnitStatus":               agentRPCQuickReadTimeout,
 	"Agent.CheckInstalledServices":      agentRPCQuickReadTimeout,
+	"Agent.CheckSystemUpdate":           agentRPCNetworkReadTimeout,
 	"Agent.DNSSECStatus":                agentRPCQuickReadTimeout,
 	"Agent.DovecotStats":                agentRPCQuickReadTimeout,
 	"Agent.Fail2banConfig":              agentRPCQuickReadTimeout,
@@ -248,6 +255,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.RepoStatus":                  agentRPCDeploymentTimeout,
 	"Agent.SiteUsage":                   agentRPCQuickReadTimeout,
 	"Agent.Version":                     agentRPCQuickReadTimeout,
+	"Agent.SystemUpdateStatus":          agentRPCQuickReadTimeout,
 	"Agent.VPNStatus":                   agentRPCQuickReadTimeout,
 	"Agent.CheckSystemSQLiteDatabase":   agentRPCQuickReadTimeout,
 	"Agent.InspectInstalledCertificate": agentRPCQuickReadTimeout,
@@ -360,6 +368,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.InstallNodeVersion":          agentRPCDeploymentTimeout,
 	"Agent.InstallRoundcube":            agentRPCDeploymentTimeout,
 	"Agent.InstallService":              agentRPCDeploymentTimeout,
+	"Agent.StartSystemUpdate":           agentRPCDeploymentTimeout,
 	"Agent.InstallWordPress":            agentRPCDeploymentTimeout,
 	"Agent.IssueLetsEncryptCertificate": agentRPCDeploymentTimeout,
 	"Agent.IssuePanelCertificateV2":     agentRPCDeploymentTimeout,

@@ -44,9 +44,14 @@ RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 LIBEXEC_DIR=/usr/libexec/celikpanel
+RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
+RELEASE_PUBLIC_KEY=/etc/celikpanel/release-signing-ed25519.pem
+RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
+SIGNED_UPDATE_LOCK="$RELEASE_STATE_DIR/update.lock"
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
-    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR
+    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR \
+    RELEASE_UPDATER RELEASE_PUBLIC_KEY RELEASE_STATE_DIR SIGNED_UPDATE_LOCK
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -107,6 +112,218 @@ step() { c '1;36' "==> $(bilingual "$@")"; }
 ok() { c '32' "    ✓ $(bilingual "$@")"; }
 warn() { c '33' "    $(bilingual "$@")"; }
 die() { c '1;31' "ERROR / HATA: $(bilingual "$@")" >&2; exit 1; }
+
+validate_release_key_source_directory_chain() {
+    local current=$1 canonical owner group mode permissions
+    canonical=$(readlink -e -- "$current") \
+        || die "operator release-key source directory is unavailable"
+    [[ "$canonical" == "$current" ]] \
+        || die "operator release-key source directory is not canonical"
+    while true; do
+        [[ -d "$current" && ! -L "$current" ]] \
+            || die "operator release-key source ancestor is unsafe: $current"
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$current") \
+            || die "cannot inspect operator release-key source ancestor"
+        permissions=$((8#$mode))
+        [[ "$owner:$group" == 0:0 ]] && (( (permissions & 0022) == 0 )) \
+            || die "operator release-key source ancestors must be root:root and group/other non-writable"
+        [[ "$current" == / ]] && break
+        current=$(dirname -- "$current")
+    done
+}
+
+install_reviewed_release_updater() {
+    local source=$SRC/libexec/get.sh tmp owner group mode links key_source key_tmp \
+        key_size key_permissions permissions key_source_fd key_fd_path path_identity fd_identity
+    if [[ ! -e "$SRC/release.version" && ! -L "$SRC/release.version" &&
+          -f "$SRC/download-portal/get.sh" && ! -L "$SRC/download-portal/get.sh" ]]; then
+        source=$SRC/download-portal/get.sh
+    fi
+    [[ -f "$source" && ! -L "$source" ]] \
+        || die "reviewed release updater is missing from the verified release"
+    [[ ! -L "$LIBEXEC_DIR" ]] \
+        || die "release updater directory must not be a symbolic link"
+    if [[ -e "$LIBEXEC_DIR" ]]; then
+        [[ -d "$LIBEXEC_DIR" ]] || die "release updater directory target is not a directory"
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$LIBEXEC_DIR") \
+            || die "cannot inspect the release updater directory"
+        permissions=$((8#$mode))
+        [[ "$owner" == 0 && "$group" == 0 ]] && (( (permissions & 0022) == 0 )) \
+            || die "existing release updater directory metadata is unsafe"
+    fi
+    install -d -m 0755 -o root -g root -- "$LIBEXEC_DIR"
+    if [[ -e "$RELEASE_UPDATER" || -L "$RELEASE_UPDATER" ]]; then
+        [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
+            || die "installed release updater target is unsafe"
+    fi
+    tmp=$(mktemp "$LIBEXEC_DIR/.get.sh.XXXXXXXX") \
+        || die "cannot stage the reviewed release updater"
+    if ! cp --no-preserve=mode,ownership,timestamps -- "$source" "$tmp" ||
+       ! chown root:root -- "$tmp" || ! chmod 0755 -- "$tmp" ||
+       ! cmp -s -- "$source" "$tmp" || ! sync -f -- "$tmp" ||
+       ! mv -T -- "$tmp" "$RELEASE_UPDATER" || ! sync -f -- "$LIBEXEC_DIR" ||
+       ! cmp -s -- "$source" "$RELEASE_UPDATER"; then
+        [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+        die "reviewed release updater could not be published exactly"
+    fi
+    read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$RELEASE_UPDATER") \
+        || die "cannot inspect the installed release updater"
+    [[ "$owner:$group:$mode:$links" == 0:0:755:1 ]] \
+        || die "installed release updater metadata is unsafe"
+
+    key_source=${CELIKPANEL_RELEASE_PUBLIC_KEY_FILE:-}
+    [[ -n "$key_source" ]] || return 0
+    [[ -f "$key_source" && ! -L "$key_source" ]] \
+        || die "operator-provided release public key is not a regular file"
+    [[ "$(readlink -e -- "$key_source")" == "$key_source" ]] \
+        || die "operator-provided release public key path is not canonical"
+    validate_release_key_source_directory_chain "$(dirname -- "$key_source")"
+    exec {key_source_fd}<"$key_source" \
+        || die "cannot open operator-provided release public key"
+    key_fd_path=/proc/self/fd/$key_source_fd
+    path_identity=$(stat -Lc '%d:%i' -- "$key_source") \
+        || die "cannot identify operator-provided release public key path"
+    fd_identity=$(stat -Lc '%d:%i' -- "$key_fd_path") \
+        || die "cannot identify opened release public key"
+    [[ "$path_identity" == "$fd_identity" ]] \
+        || die "operator-provided release public key changed while opening"
+    read -r owner group mode links key_size < <(stat -Lc '%u %g %a %h %s' -- "$key_fd_path") \
+        || die "cannot inspect operator-provided release public key"
+    [[ "$owner" == 0 && "$links" == 1 && "$key_size" -ge 1 && "$key_size" -le 16384 ]] \
+        || die "operator-provided release public key metadata is unsafe"
+    key_permissions=$((8#$mode))
+    (( (key_permissions & 0022) == 0 )) \
+        || die "operator-provided release public key must not be group/other writable"
+    command -v openssl >/dev/null 2>&1 \
+        || die "openssl is required to provision a release public key"
+    key_tmp=$(mktemp "$CONF_DIR/.release-signing-ed25519.pem.XXXXXXXX") \
+        || die "cannot stage the release public key"
+    if ! cp --no-preserve=mode,ownership,timestamps -- "$key_fd_path" "$key_tmp" ||
+       ! chown root:root -- "$key_tmp" || ! chmod 0644 -- "$key_tmp" ||
+       ! cmp -s -- "$key_fd_path" "$key_tmp" || ! sync -f -- "$key_tmp"; then
+        [[ ! -e "$key_tmp" && ! -L "$key_tmp" ]] || rm -f -- "$key_tmp"
+        die "operator-provided release public key could not be staged exactly"
+    fi
+    openssl pkey -pubin -passin pass: -in "$key_tmp" -pubout 2>/dev/null \
+        | cmp -s - "$key_tmp" \
+        || die "operator-provided release public key must be canonical PEM"
+    openssl pkey -pubin -passin pass: -in "$key_tmp" -text -noout 2>/dev/null \
+        | LC_ALL=C grep -Eq '^ED25519 Public-Key:' \
+        || die "operator-provided release public key must be Ed25519"
+    if [[ -e "$RELEASE_PUBLIC_KEY" || -L "$RELEASE_PUBLIC_KEY" ]]; then
+        [[ -f "$RELEASE_PUBLIC_KEY" && ! -L "$RELEASE_PUBLIC_KEY" ]] \
+            || die "installed release public key target is unsafe"
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_PUBLIC_KEY")" == 0:0:644:1 ]] \
+            || die "installed release public key metadata is unsafe"
+        cmp -s -- "$key_tmp" "$RELEASE_PUBLIC_KEY" \
+            || die "installed release public key differs; automatic replacement is refused"
+        rm -f -- "$key_tmp"
+        exec {key_source_fd}<&-
+        return 0
+    fi
+    if ! mv -T -- "$key_tmp" "$RELEASE_PUBLIC_KEY" || ! sync -f -- "$CONF_DIR" ||
+       ! cmp -s -- "$key_fd_path" "$RELEASE_PUBLIC_KEY"; then
+        [[ ! -e "$key_tmp" && ! -L "$key_tmp" ]] || rm -f -- "$key_tmp"
+        die "operator-provided release public key could not be published exactly"
+    fi
+    exec {key_source_fd}<&-
+}
+
+validate_release_state_parent_chain() {
+    local current=/var/lib canonical owner group mode permissions
+    canonical=$(readlink -e -- "$current") \
+        || die "release state parent directory is unavailable"
+    [[ "$canonical" == "$current" ]] \
+        || die "release state parent directory is not canonical"
+    while true; do
+        [[ -d "$current" && ! -L "$current" ]] \
+            || die "release state parent ancestor is unsafe: $current"
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$current") \
+            || die "cannot inspect release state parent ancestor"
+        permissions=$((8#$mode))
+        [[ "$owner:$group" == 0:0 ]] && (( (permissions & 0022) == 0 )) \
+            || die "release state parent ancestors must be root:root and group/other non-writable"
+        [[ "$current" == / ]] && break
+        current=$(dirname -- "$current")
+    done
+}
+
+provision_signed_update_lock() {
+    local owner group mode links size lock_fd lock_fd_path path_identity fd_identity \
+        effective_gid state_created=0 lock_created=0
+    effective_gid=$(id -g) || die "cannot determine effective group for lock provisioning"
+    validate_release_state_parent_chain
+
+    if [[ ! -e "$RELEASE_STATE_DIR" && ! -L "$RELEASE_STATE_DIR" ]]; then
+        if mkdir -m 0700 -- "$RELEASE_STATE_DIR" 2>/dev/null; then
+            state_created=1
+        elif [[ ! -d "$RELEASE_STATE_DIR" || -L "$RELEASE_STATE_DIR" ]]; then
+            die "cannot provision release state directory"
+        fi
+    fi
+    [[ -d "$RELEASE_STATE_DIR" && ! -L "$RELEASE_STATE_DIR" ]] \
+        || die "release state directory is unsafe"
+    [[ "$(readlink -e -- "$RELEASE_STATE_DIR")" == "$RELEASE_STATE_DIR" ]] \
+        || die "release state directory is not canonical"
+    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$RELEASE_STATE_DIR") \
+        || die "cannot inspect release state directory"
+    [[ "$owner" == 0 && "$mode" == 700 &&
+       ( "$group" == 0 || "$group" == "$effective_gid" ) ]] \
+        || die "release state directory metadata is unsafe"
+    if [[ "$group" != 0 ]]; then
+        chown root:root -- "$RELEASE_STATE_DIR" \
+            || die "cannot recover release state directory ownership"
+        state_created=1
+    fi
+    [[ "$(stat -Lc '%u:%g:%a' -- "$RELEASE_STATE_DIR")" == 0:0:700 ]] \
+        || die "release state directory metadata could not be normalized"
+    if (( state_created )); then
+        sync -f -- "$RELEASE_STATE_DIR" \
+            || die "cannot make release state directory durable"
+        sync -f -- "$(dirname -- "$RELEASE_STATE_DIR")" \
+            || die "cannot make release state directory entry durable"
+    fi
+
+    if [[ ! -e "$SIGNED_UPDATE_LOCK" && ! -L "$SIGNED_UPDATE_LOCK" ]]; then
+        if (umask 077; set -o noclobber; : > "$SIGNED_UPDATE_LOCK") 2>/dev/null; then
+            lock_created=1
+        elif [[ ! -e "$SIGNED_UPDATE_LOCK" && ! -L "$SIGNED_UPDATE_LOCK" ]]; then
+            die "cannot atomically provision signed update lock"
+        fi
+    fi
+    [[ -f "$SIGNED_UPDATE_LOCK" && ! -L "$SIGNED_UPDATE_LOCK" ]] \
+        || die "signed update lock is unsafe"
+    [[ "$(readlink -e -- "$SIGNED_UPDATE_LOCK")" == "$SIGNED_UPDATE_LOCK" ]] \
+        || die "signed update lock is not canonical"
+
+    exec {lock_fd}<>"$SIGNED_UPDATE_LOCK" || die "cannot open signed update lock"
+    lock_fd_path=/proc/self/fd/$lock_fd
+    path_identity=$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK") \
+        || die "cannot identify signed update lock path"
+    fd_identity=$(stat -Lc '%d:%i' -- "$lock_fd_path") \
+        || die "cannot identify opened signed update lock"
+    [[ "$path_identity" == "$fd_identity" ]] \
+        || die "signed update lock changed while opening"
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$lock_fd_path") \
+        || die "cannot inspect signed update lock"
+    [[ "$owner" == 0 && "$mode" == 600 && "$links" == 1 && "$size" == 0 &&
+       ( "$group" == 0 || "$group" == "$effective_gid" ) ]] \
+        || die "signed update lock metadata is unsafe"
+    if [[ "$group" != 0 ]]; then
+        [[ "$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK")" == "$fd_identity" ]] \
+            || die "signed update lock changed before ownership recovery"
+        chown root:root -- "$SIGNED_UPDATE_LOCK" \
+            || die "cannot recover signed update lock ownership"
+        lock_created=1
+    fi
+    sync -f -- "$SIGNED_UPDATE_LOCK" || die "cannot make signed update lock durable"
+    sync -f -- "$RELEASE_STATE_DIR" || die "cannot make signed update lock entry durable"
+    [[ "$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK")" == "$fd_identity" ]] \
+        || die "signed update lock changed while provisioning"
+    [[ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$lock_fd_path")" == 0:0:600:1:0 ]] \
+        || die "signed update lock metadata could not be normalized"
+    exec {lock_fd}>&-
+}
 
 validate_vendor_directory_chain() {
     local path=$1 current parent canonical owner group mode permissions
@@ -380,6 +597,8 @@ restore_celikpanel_selinux_labels() {
         "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
         "$LIBEXEC_DIR" \
         "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_UPDATER" \
+        "$RELEASE_PUBLIC_KEY" \
         "$PANEL_CERT_HOOK" \
         "$UNIT_DIR/celikpanel-agent.service" \
         "$UNIT_DIR/celikpanel-firewall-restore.service" \
@@ -643,6 +862,10 @@ run_panel_as_service_user_with_private_umask() {
 bootstrap_machine=$(vendor_machine_architecture)
 preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"
 command -v systemctl >/dev/null || die "systemd gerekli"
+for installer_command in chown chmod cmp cp flock install mktemp mv stat sync; do
+    command -v "$installer_command" >/dev/null \
+        || die "required installer command is unavailable: $installer_command"
+done
 
 # Apply-only is accepted solely from a completely verified immutable release
 # while the inherited persistent lock and exact active update marker are live.
@@ -1429,6 +1652,8 @@ step "systemd services" "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
+provision_signed_update_lock
+install_reviewed_release_updater
 # Operator choices live in root-only /etc/celikpanel/panel.env. Reinstall and
 # update always replace the vendor unit, never that durable configuration.
 # Operatör seçimleri root-only /etc/celikpanel/panel.env içindedir. Yeniden

@@ -41,9 +41,9 @@ for script in "$HELPER" "$INSTALL" "$UPDATE" "$ROLLBACK" "$FINALIZER"; do
     bash -n "$script" || fail "syntax: $script"
 done
 
-grep -Fq 'SNAPSHOT_VERSION=5' "$UPDATE" || fail 'update snapshot version is not 5'
-grep -Fq 'SUPPORTED_SNAPSHOT_VERSION=5' "$ROLLBACK" || fail 'rollback snapshot version is not 5'
-grep -Fq 'SNAPSHOT_VERSION=5' "$FINALIZER" || fail 'finalizer snapshot version is not 5'
+grep -Fq 'SNAPSHOT_VERSION=6' "$UPDATE" || fail 'update snapshot version is not 6'
+grep -Fq 'SUPPORTED_SNAPSHOT_VERSION=6' "$ROLLBACK" || fail 'rollback snapshot version is not 6'
+grep -Fq 'SNAPSHOT_VERSION=6' "$FINALIZER" || fail 'finalizer snapshot version is not 6'
 grep -Fq 'panel_tls_snapshot_capture' "$UPDATE" || fail 'update does not capture panel TLS state'
 grep -Fq 'panel_tls_normalize_legacy_self_signed' "$INSTALL" || fail 'install does not protect its initial self-signed TLS pair'
 grep -Fq 'panel_tls_normalize_legacy_self_signed' "$UPDATE" || fail 'update does not normalize the narrowly defined legacy TLS pair'

@@ -28,6 +28,7 @@ func (a *Agent) Version(_ *transport.Empty, resp *AgentVersionResponse) error {
 		transport.AgentCapabilityDNSClusterConfigureV2,
 		transport.AgentCapabilityMailTLSSyncV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
+		transport.AgentCapabilitySystemUpdateV1,
 	}
 	return nil
 }
