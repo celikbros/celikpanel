@@ -89,6 +89,58 @@ func TestWALAwarePreLedgerServiceOperationsIdleAcceptsValidWAL(t *testing.T) {
 	}
 }
 
+func TestWALAwarePreLedgerSnapshotLogicalEquivalenceAcceptsCommittedWALWithoutChangingSource(t *testing.T) {
+	root := newSecureSnapshotTestRoot(t)
+	path := createPreLedgerPanelDatabaseInDirectory(t, filepath.Join(root, "source"))
+	database, err := sql.Open(
+		"sqlite",
+		fmt.Sprintf("%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if err := database.Ping(); err != nil {
+		t.Fatal(err)
+	}
+	prepareWALAwareConnection(t, database)
+	if _, err := database.Exec(
+		`INSERT OR REPLACE INTO panel_settings(key, value) VALUES (?, ?)`,
+		"wal-aware-equivalence",
+		"committed-only-in-wal",
+	); err != nil {
+		t.Fatal(err)
+	}
+	requireNonEmptyWAL(t, path)
+
+	snapshotDirectory := filepath.Join(root, "snapshot")
+	mustMkdirSnapshotTestDirectory(t, snapshotDirectory, 0o700)
+	snapshotPath := filepath.Join(snapshotDirectory, serviceOperationSnapshotBasename)
+	if err := createServiceOperationSnapshot(
+		path,
+		snapshotPath,
+		serviceOperationSnapshotSchemaPreLedger,
+	); err != nil {
+		t.Fatalf("create standalone pre-ledger snapshot: %v", err)
+	}
+
+	before := captureSQLiteSourceStates(t, path)
+	if err := proveWALAwarePreLedgerSnapshotLogicalEquivalence(path, snapshotPath); err != nil {
+		t.Fatalf("equivalent WAL-aware pre-ledger snapshot rejected: %v", err)
+	}
+	after := captureSQLiteSourceStates(t, path)
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		if before[suffix] != after[suffix] {
+			t.Fatalf(
+				"source SQLite file %q changed\\nbefore: %#v\\nafter:  %#v",
+				path+suffix,
+				before[suffix],
+				after[suffix],
+			)
+		}
+	}
+}
+
 func TestWALAwareServiceOperationsIdleRejectsCorruptWALChecksums(t *testing.T) {
 	for _, testCase := range []struct {
 		name   string

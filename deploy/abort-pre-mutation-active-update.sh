@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Abort one exact active update only when it is still the legacy pre-ledger
-# scaffold and every installed byte still equals the operator-reviewed previous
+# Abort one exact active update only when it is still either the legacy
+# pre-ledger scaffold or the explicitly opted-in pre-ledger database-snapshot
+# state, and every installed byte still equals the operator-reviewed previous
 # release. This is an incident recovery tool, not a generic rollback path.
 set -euo pipefail
 
@@ -20,6 +21,9 @@ INSTALLED_ROOT=/opt/celikpanel
 BIN_DIR=$INSTALLED_ROOT/bin
 WEB_DIR=$INSTALLED_ROOT/web
 PREVIOUS_RELEASES_ROOT=$INSTALLED_ROOT/releases
+PANEL_DATA_DIR=/var/lib/celikpanel
+PANEL_DB=$PANEL_DATA_DIR/celikpanel.db
+AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
 
 ACTIVE_TARGET=
 ACTIVE_TOKEN=
@@ -29,14 +33,17 @@ PREVIOUS_RELEASE_COMMIT=
 PREVIOUS_AGENT_SHA256=
 PREVIOUS_PANEL_SHA256=
 PREVIOUS_WEB_SHA256=
+EXPECTED_STAGE_DATABASE_SHA256=
 RECOVERY_COMMIT=
 TRUSTED_RELEASE_ROOT=
 PREVIOUS_RELEASE_ROOT=
+RECOVERY_PROFILE=legacy-scaffold
 RELEASE_TRANSACTION_FD=
 MUTATION_LOCK_FD=
 MUTATION_LOCK_IDENTITY=
 active_marker_identity=
 active_marker_digest=
+stage_database_identity=
 verification_tmp=
 marker_removal_begun=0
 recovery_succeeded=0
@@ -54,7 +61,7 @@ die() {
 
 usage() {
     printf '%s\n' \
-        "usage: $0 --active-target=<40-lowercase-hex> --active-token=<64-lowercase-hex> --active-snapshot=<canonical-snapshot-name> --expected-stage=<absolute-canonical-stage> --previous-release-commit=<40-lowercase-hex> --previous-agent-sha256=<64-lowercase-hex> --previous-panel-sha256=<64-lowercase-hex> --previous-web-sha256=<64-lowercase-hex> --recovery-commit=<40-lowercase-hex> --trusted-release=<absolute-immutable-release-root>" >&2
+        "usage: $0 --active-target=<40-lowercase-hex> --active-token=<64-lowercase-hex> --active-snapshot=<canonical-snapshot-name> --expected-stage=<absolute-canonical-stage> --previous-release-commit=<40-lowercase-hex> --previous-agent-sha256=<64-lowercase-hex> --previous-panel-sha256=<64-lowercase-hex> --previous-web-sha256=<64-lowercase-hex> [--expected-stage-database-sha256=<64-lowercase-hex>] --recovery-commit=<40-lowercase-hex> --trusted-release=<absolute-immutable-release-root>" >&2
     exit 2
 }
 
@@ -92,6 +99,10 @@ for argument in "$@"; do
             [[ -z "$PREVIOUS_WEB_SHA256" ]] || usage
             PREVIOUS_WEB_SHA256=${argument#--previous-web-sha256=}
             ;;
+        --expected-stage-database-sha256=*)
+            [[ -z "$EXPECTED_STAGE_DATABASE_SHA256" ]] || usage
+            EXPECTED_STAGE_DATABASE_SHA256=${argument#--expected-stage-database-sha256=}
+            ;;
         --recovery-commit=*)
             [[ -z "$RECOVERY_COMMIT" ]] || usage
             RECOVERY_COMMIT=${argument#--recovery-commit=}
@@ -104,7 +115,14 @@ for argument in "$@"; do
     esac
 done
 
-[[ $# -eq 10 &&
+if [[ -n "$EXPECTED_STAGE_DATABASE_SHA256" ]]; then
+    [[ $# -eq 11 && "$EXPECTED_STAGE_DATABASE_SHA256" =~ ^[0-9a-f]{64}$ ]] || usage
+    RECOVERY_PROFILE=preledger-database-snapshot
+else
+    [[ $# -eq 10 ]] || usage
+fi
+
+[[
    "$ACTIVE_TARGET" =~ ^[0-9a-f]{40}$ &&
    "$ACTIVE_TOKEN" =~ ^[0-9a-f]{64}$ &&
    "$ACTIVE_SNAPSHOT" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ &&
@@ -463,15 +481,26 @@ coordinator_process_start_time() {
 }
 
 load_exact_incident_service_state() {
-    local ledger=$1 coordinators=$2 current_start
+    local ledger=$1 coordinators=$2 current_start agent_pid agent_start panel_pid panel_start
     cmp -s "$ledger" <(printf '%s\n' \
         $'celikpanel-agent.service\tenabled\tactive' \
         $'celikpanel-panel.service\tenabled\tactive' \
         $'celikpanel-firewall-restore.service\tnot-found\tinactive') \
         || die "service-state ledger differs from the reviewed pre-mutation incident"
-    cmp -s "$coordinators" <(printf '%s\n' \
-        $'celikpanel-agent.service\tactive\t748468\t121952692' \
-        $'celikpanel-panel.service\tactive\t748470\t121952692') \
+    if [[ "$RECOVERY_PROFILE" == preledger-database-snapshot ]]; then
+        agent_pid=798561
+        agent_start=123306380
+        panel_pid=798573
+        panel_start=123306383
+    else
+        agent_pid=748468
+        agent_start=121952692
+        panel_pid=748470
+        panel_start=121952692
+    fi
+    cmp -s "$coordinators" <(printf \
+        'celikpanel-agent.service\tactive\t%s\t%s\ncelikpanel-panel.service\tactive\t%s\t%s\n' \
+        "$agent_pid" "$agent_start" "$panel_pid" "$panel_start") \
         || die "coordinator ledger differs from the reviewed pre-mutation incident"
 
     saved_enabled_states[celikpanel-agent.service]=enabled
@@ -482,10 +511,10 @@ load_exact_incident_service_state() {
     saved_active_states[celikpanel-firewall-restore.service]=inactive
     quiesce_active_states[celikpanel-agent.service]=active
     quiesce_active_states[celikpanel-panel.service]=active
-    quiesce_main_pids[celikpanel-agent.service]=748468
-    quiesce_main_pids[celikpanel-panel.service]=748470
-    quiesce_start_times[celikpanel-agent.service]=121952692
-    quiesce_start_times[celikpanel-panel.service]=121952692
+    quiesce_main_pids[celikpanel-agent.service]=$agent_pid
+    quiesce_main_pids[celikpanel-panel.service]=$panel_pid
+    quiesce_start_times[celikpanel-agent.service]=$agent_start
+    quiesce_start_times[celikpanel-panel.service]=$panel_start
 
     for unit in celikpanel-agent.service celikpanel-panel.service; do
         if current_start=$(coordinator_process_start_time "${quiesce_main_pids[$unit]}" 2>/dev/null); then
@@ -515,8 +544,44 @@ verify_saved_runtime_states() {
     fi
 }
 
+verify_expected_stage_database() {
+    [[ "$RECOVERY_PROFILE" == preledger-database-snapshot ]] || return 0
+    local database="$EXPECTED_STAGE/$ACTIVE_SNAPSHOT/celikpanel.db"
+    local owner group mode links size digest identity suffix
+    [[ -f "$database" && ! -L "$database" ]] || die "expected staged panel database is missing or unsafe"
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$database") || die "cannot inspect staged panel database"
+    if ! [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 &&
+           "$links" == 1 && "$size" -gt 0 && "$size" -le 2147483648 ]]; then
+        die "staged panel database metadata or bounded size is unsafe"
+    fi
+    for suffix in -wal -shm -journal; do
+        [[ ! -e "$database$suffix" && ! -L "$database$suffix" ]] || die "staged panel database has a SQLite sidecar"
+    done
+    digest=$(sha256sum "$database" | awk '{print $1}')
+    [[ "$digest" == "$EXPECTED_STAGE_DATABASE_SHA256" ]] || die "staged panel database differs from the operator-reviewed digest"
+    identity=$(stat -Lc '%d:%i' -- "$database") || die "cannot identify staged panel database"
+    if [[ -z "$stage_database_identity" ]]; then stage_database_identity=$identity; fi
+    [[ "$identity" == "$stage_database_identity" ]] || die "staged panel database identity changed during recovery"
+}
+
+verify_exact_preledger_stage_payload() {
+    local child=$1 entries expected_entries
+    entries=$(find "$child" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+    expected_entries=$'quiesce-coordinators.tsv\nservice-states.tsv\nsnapshot-transition.state'
+    if [[ "$RECOVERY_PROFILE" == preledger-database-snapshot ]]; then
+        expected_entries=$'celikpanel.db\nquiesce-coordinators.tsv\nservice-states.tsv\nsnapshot-transition.state'
+    fi
+    [[ "$entries" == "$expected_entries" ]] \
+        || die "pre-ledger stage contains payload beyond the exact reviewed allowlist"
+    [[ -z "$(find "$child" -mindepth 2 -print -quit)" ]] \
+        || die "pre-ledger stage contains nested payload"
+    cmp -s "$child/snapshot-transition.state" <(printf 'pre-ledger\n') \
+        || die "snapshot transition is not the exact pre-ledger state"
+    verify_expected_stage_database
+}
+
 verify_exact_preledger_stage() {
-    local found entries incomplete_entries created target nonce child
+    local found incomplete_entries created target nonce child
     release_txn_validate_update_snapshot_stage \
         "$SNAPSHOT_ROOT" "$ACTIVE_SNAPSHOT" "$EXPECTED_STAGE" \
         || die "expected snapshot stage failed canonical guard validation"
@@ -539,15 +604,49 @@ verify_exact_preledger_stage() {
     [[ "$target" == "$ACTIVE_TARGET" ]] \
         || die "active snapshot target differs from the explicit active target"
     child=$EXPECTED_STAGE/$ACTIVE_SNAPSHOT
-    entries=$(find "$child" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
-    [[ "$entries" == $'quiesce-coordinators.tsv\nservice-states.tsv\nsnapshot-transition.state' ]] \
-        || die "pre-ledger stage contains payload beyond the exact reviewed allowlist"
-    [[ -z "$(find "$child" -mindepth 2 -print -quit)" ]] \
-        || die "pre-ledger stage contains nested payload"
-    cmp -s "$child/snapshot-transition.state" <(printf 'pre-ledger\n') \
-        || die "snapshot transition is not the exact pre-ledger state"
+    verify_exact_preledger_stage_payload "$child"
     load_exact_incident_service_state \
         "$child/service-states.tsv" "$child/quiesce-coordinators.tsv"
+}
+
+verify_preledger_database_snapshot_under_lock() {
+    [[ "$RECOVERY_PROFILE" == preledger-database-snapshot ]] || return 0
+    local database=$EXPECTED_STAGE/$ACTIVE_SNAPSHOT/celikpanel.db
+    verify_mutation_lock_held
+    verify_both_units_stopped
+    verify_active_evidence
+    verify_expected_stage_database
+    [[ ! -e "$AGENT_STATE_DIR/service-mutations.json" &&
+       ! -L "$AGENT_STATE_DIR/service-mutations.json" ]] \
+        || die "durable agent ledger exists in the reviewed pre-ledger database-snapshot state"
+    verify_empty_preledger_agent_state
+    env -i PATH="$PATH" \
+        CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
+        CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+        "$TRUSTED_RELEASE_ROOT/bin/agent" \
+        --check-pre-ledger-service-mutation-idle-under-external-lock \
+        || die "pre-ledger agent state is not exact and idle under the mutation lock"
+    env -i PATH="$PATH" CELIKPANEL_DATA_DIR="$PANEL_DATA_DIR" \
+        "$TRUSTED_RELEASE_ROOT/bin/panel" \
+        --prove-pre-ledger-snapshot-equivalence="$database" \
+        --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
+        --release-transaction-token="$ACTIVE_TOKEN" \
+        --release-transaction-operation=update \
+        --release-transaction-snapshot="$ACTIVE_SNAPSHOT" \
+        || die "staged database is not logically equivalent to the canonical pre-ledger database"
+    verify_empty_preledger_agent_state
+    verify_expected_stage_database
+    verify_active_evidence
+    verify_mutation_lock_held
+}
+
+verify_empty_preledger_agent_state() {
+    [[ ! -e "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]] && return 0
+    [[ -d "$AGENT_STATE_DIR" && ! -L "$AGENT_STATE_DIR" ]] \
+        || die "pre-ledger agent state path is unsafe"
+    [[ -z "$(find "$AGENT_STATE_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]] \
+        || die "pre-ledger agent state contains a mutation-boundary artifact"
 }
 
 capture_active_marker_evidence() {
@@ -944,9 +1043,15 @@ verify_active_evidence
 
 open_mutation_lock
 verify_mutation_lock_held
+# First locked proof binds the reviewed DB and both pre-ledger states before
+# any stale runtime artifact is removed.
+verify_preledger_database_snapshot_under_lock
 remove_stale_agent_socket_under_lock
 verify_mutation_lock_held
 verify_active_evidence
+# Final locked proof repeats every DB/agent/transaction binding after the
+# intervening runtime cleanup and immediately before terminal marker removal.
+verify_preledger_database_snapshot_under_lock
 
 # Terminal ordering is deliberate: the exact active marker is removed and its
 # directory fsynced first. Only then may either coordinator accept traffic.

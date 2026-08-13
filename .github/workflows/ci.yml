@@ -80,6 +80,7 @@ jobs:
       - run: bash deploy/test-finalize-pending-update-contract.sh
       - run: sudo bash deploy/test-panel-tls-snapshot-contract.sh
       - run: bash deploy/test-abort-pre-mutation-active-update-contract.sh
+      - run: sudo bash deploy/test-abort-pre-mutation-active-update-behavior.sh
       - run: bash deploy/test-recover-active-update-database-contract.sh
       # Prove exact coordinator identity and crash-safe quiesce recovery.
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.

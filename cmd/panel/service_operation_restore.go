@@ -64,6 +64,7 @@ type panelCommandModes struct {
 	checkWALAwarePreLedgerIdle bool
 	createOrRestore            bool
 	rescueSnapshot             bool
+	proveSnapshotEquivalence   bool
 	migrateOnly                bool
 	demo                       bool
 	insecureCookies            bool
@@ -407,7 +408,7 @@ func validateMigrateOnlyRequest(enabled bool, conflictingMode bool) error {
 }
 
 func validatePanelCommandModes(modes panelCommandModes) error {
-	oneShotModes := make([]string, 0, 9)
+	oneShotModes := make([]string, 0, 10)
 	for _, mode := range []struct {
 		name    string
 		enabled bool
@@ -420,6 +421,7 @@ func validatePanelCommandModes(modes panelCommandModes) error {
 		{name: "check-pre-ledger-service-operations-idle-wal-aware", enabled: modes.checkWALAwarePreLedgerIdle},
 		{name: "service-operation-snapshot-create-or-restore", enabled: modes.createOrRestore},
 		{name: "ensure-service-operation-rescue-snapshot", enabled: modes.rescueSnapshot},
+		{name: "prove-pre-ledger-snapshot-equivalence", enabled: modes.proveSnapshotEquivalence},
 		{name: "migrate-only", enabled: modes.migrateOnly},
 	} {
 		if mode.enabled {
