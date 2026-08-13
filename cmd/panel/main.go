@@ -931,6 +931,7 @@ func main() {
 	http.HandleFunc("/api/v1/repo", panel.handleRepo)
 	http.HandleFunc("/api/v1/hosting/capabilities", panel.handleHostingCapabilities)
 	http.HandleFunc("/api/v1/panel/certificate", panel.handlePanelCertificate)
+	http.HandleFunc(securityAuditPath, panel.handleSecurityAudit)
 	http.HandleFunc("/dbtool/", panel.handleDBToolProxy)
 	http.HandleFunc("/webmail/", panel.handleWebmailProxy)
 

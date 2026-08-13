@@ -129,7 +129,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
 		Agent.ServiceJournal Agent.SiteUsage Agent.Version Agent.VPNStatus
-		Agent.CheckSystemUpdate Agent.SystemUpdateStatus
+		Agent.CheckSystemUpdate Agent.SecurityAudit Agent.SystemUpdateStatus
 	`),
 	agentRPCAuthGroup(agentRPCEffectControl, "", `
 		Agent.BeginServiceMutation Agent.CancelServiceMutation Agent.FinishServiceMutation
@@ -256,6 +256,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.SiteUsage":                   agentRPCQuickReadTimeout,
 	"Agent.Version":                     agentRPCQuickReadTimeout,
 	"Agent.SystemUpdateStatus":          agentRPCQuickReadTimeout,
+	"Agent.SecurityAudit":               agentRPCStandardReadTimeout,
 	"Agent.VPNStatus":                   agentRPCQuickReadTimeout,
 	"Agent.CheckSystemSQLiteDatabase":   agentRPCQuickReadTimeout,
 	"Agent.InspectInstalledCertificate": agentRPCQuickReadTimeout,

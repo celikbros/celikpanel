@@ -65,11 +65,19 @@ func runServiceMutationCombinedOutputEnv(
 }
 
 func runTrackedServiceMutationCommand(ctx context.Context, cmd *exec.Cmd, name string) ([]byte, error) {
-	return runTrackedServiceMutationCommandOutput(ctx, cmd, name, true)
+	return runTrackedServiceMutationCommandLimited(ctx, cmd, name, 0)
 }
 
 func runTrackedServiceMutationOutput(ctx context.Context, cmd *exec.Cmd, name string) ([]byte, error) {
-	return runTrackedServiceMutationCommandOutput(ctx, cmd, name, false)
+	return runTrackedServiceMutationOutputLimited(ctx, cmd, name, 0)
+}
+
+func runTrackedServiceMutationCommandLimited(ctx context.Context, cmd *exec.Cmd, name string, outputLimit int) ([]byte, error) {
+	return runTrackedServiceMutationCommandOutput(ctx, cmd, name, true, outputLimit)
+}
+
+func runTrackedServiceMutationOutputLimited(ctx context.Context, cmd *exec.Cmd, name string, outputLimit int) ([]byte, error) {
+	return runTrackedServiceMutationCommandOutput(ctx, cmd, name, false, outputLimit)
 }
 
 func runTrackedServiceMutationCommandOutput(
@@ -77,6 +85,7 @@ func runTrackedServiceMutationCommandOutput(
 	cmd *exec.Cmd,
 	name string,
 	combined bool,
+	outputLimit int,
 ) ([]byte, error) {
 	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 	if tracker != nil {
@@ -86,16 +95,16 @@ func runTrackedServiceMutationCommandOutput(
 			return nil, err
 		}
 	}
-	var output bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &output
+	output := newServiceMutationOutputBuffer(outputLimit)
+	stderr := newServiceMutationOutputBuffer(outputLimit)
+	cmd.Stdout = output
 	if combined {
-		cmd.Stderr = &output
+		cmd.Stderr = output
 	} else {
-		cmd.Stderr = &stderr
+		cmd.Stderr = stderr
 	}
 	if err := cmd.Start(); err != nil {
-		return output.Bytes(), err
+		return output.result(err)
 	}
 	if tracker != nil && serviceMutationWorkerFaultHook != nil {
 		if err := serviceMutationWorkerFaultHook(
@@ -104,7 +113,7 @@ func runTrackedServiceMutationCommandOutput(
 		); err != nil {
 			_ = cmd.Cancel()
 			_ = cmd.Wait()
-			return output.Bytes(), fmt.Errorf("injected privileged worker start failure: %w", err)
+			return output.result(fmt.Errorf("injected privileged worker start failure: %w", err))
 		}
 	}
 
@@ -114,7 +123,7 @@ func runTrackedServiceMutationCommandOutput(
 		if err != nil {
 			_ = cmd.Cancel()
 			_ = cmd.Wait()
-			return output.Bytes(), fmt.Errorf("identify privileged worker: %w", err)
+			return output.result(fmt.Errorf("identify privileged worker: %w", err))
 		}
 		command := filepath.Base(strings.TrimSpace(name))
 		if len(command) > 64 {
@@ -123,7 +132,7 @@ func runTrackedServiceMutationCommandOutput(
 		if err := tracker.register(cmd.Process.Pid, started, command); err != nil {
 			_ = cmd.Cancel()
 			_ = cmd.Wait()
-			return output.Bytes(), fmt.Errorf("persist privileged worker identity: %w", err)
+			return output.result(fmt.Errorf("persist privileged worker identity: %w", err))
 		}
 		registered = true
 	}
@@ -138,12 +147,56 @@ func runTrackedServiceMutationCommandOutput(
 	if registered {
 		if clearErr := tracker.clear(cmd.Process.Pid); clearErr != nil {
 			if waitErr != nil {
-				return output.Bytes(), errors.Join(waitErr, clearErr)
+				return output.result(errors.Join(waitErr, clearErr))
 			}
-			return output.Bytes(), clearErr
+			return output.result(clearErr)
 		}
 	}
-	return output.Bytes(), waitErr
+	return output.result(waitErr)
+}
+
+type serviceMutationOutputBuffer struct {
+	buffer   bytes.Buffer
+	limit    int
+	exceeded bool
+}
+
+func newServiceMutationOutputBuffer(limit int) *serviceMutationOutputBuffer {
+	return &serviceMutationOutputBuffer{limit: limit}
+}
+
+func (buffer *serviceMutationOutputBuffer) Write(value []byte) (int, error) {
+	written := len(value)
+	if buffer.limit <= 0 {
+		_, _ = buffer.buffer.Write(value)
+		return written, nil
+	}
+	remaining := buffer.limit - buffer.buffer.Len()
+	if remaining <= 0 {
+		buffer.exceeded = true
+		return written, nil
+	}
+	if len(value) > remaining {
+		buffer.exceeded = true
+		value = value[:remaining]
+	}
+	_, _ = buffer.buffer.Write(value)
+	return written, nil
+}
+
+func (buffer *serviceMutationOutputBuffer) result(err error) ([]byte, error) {
+	if buffer.exceeded {
+		err = errors.Join(err, fmt.Errorf("command output exceeded the fixed limit"))
+	}
+	return append([]byte(nil), buffer.buffer.Bytes()...), err
+}
+
+func (buffer *serviceMutationOutputBuffer) Bytes() []byte {
+	return buffer.buffer.Bytes()
+}
+
+func (buffer *serviceMutationOutputBuffer) String() string {
+	return buffer.buffer.String()
 }
 
 func (t *serviceMutationExecutionTracker) register(pid int, started, command string) error {

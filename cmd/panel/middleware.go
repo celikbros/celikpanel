@@ -229,6 +229,7 @@ func isAdminOnlyPath(path string) bool {
 		"/api/v1/postfix/",
 		"/api/v1/repo",
 		"/api/v1/service/",
+		"/api/v1/security/",
 		"/api/v1/system/check",
 	}
 	for _, prefix := range adminPrefixes {
