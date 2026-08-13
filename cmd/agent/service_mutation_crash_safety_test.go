@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -724,6 +725,26 @@ func TestServiceMutationCommandTerminalMethodsUseTrackedSupervisorAndPreserveEnv
 		Success:   true,
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestServiceMutationCommandOutputLimitDrainsAndFailsClosed(t *testing.T) {
+	direct := newServiceMutationOutputBuffer(4)
+	_, _ = direct.Write([]byte("123456789"))
+	if !direct.exceeded || direct.String() != "1234" {
+		t.Fatalf("direct bounded writer limit=%d exceeded=%v output=%q", direct.limit, direct.exceeded, direct.String())
+	}
+	cmd := serviceMutationCommand(context.Background(), "/bin/sh", "-c", "printf 123456789")
+	output, err := cmd.CombinedOutputLimited(4)
+	if err == nil || !strings.Contains(err.Error(), "command output exceeded the fixed limit") {
+		t.Fatalf("bounded command error=%v output=%q", err, output)
+	}
+	if string(output) != "1234" {
+		t.Fatalf("bounded command output=%q want %q", output, "1234")
+	}
+	unbounded, err := serviceMutationCommand(context.Background(), "/bin/sh", "-c", "printf 123456789").CombinedOutput()
+	if err != nil || string(unbounded) != "123456789" {
+		t.Fatalf("legacy unbounded behavior changed: output=%q err=%v", unbounded, err)
 	}
 }
 

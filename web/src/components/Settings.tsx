@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from '../router';
-import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
@@ -8,8 +8,9 @@ import { PageHeader, Button, inputClass } from './ui';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
 import { PanelUpdateCard } from './PanelUpdateCard';
+import { SecurityAuditCard } from './SecurityAuditCard';
 
-type SettingsSectionID = 'account' | 'panel' | 'dns';
+type SettingsSectionID = 'account' | 'panel' | 'security' | 'dns';
 type SettingsSection = {
     id: SettingsSectionID;
     icon: React.ComponentType<{ className?: string }>;
@@ -39,6 +40,12 @@ export function Settings() {
                     icon: Lock,
                     title: t('settings.section.panel'),
                     description: t('settings.section.panel.desc'),
+                },
+                {
+                    id: 'security' as const,
+                    icon: ScanSearch,
+                    title: t('settings.section.security'),
+                    description: t('settings.section.security.desc'),
                 },
                 {
                     id: 'dns' as const,
@@ -147,6 +154,9 @@ function SettingsWorkspace({
                         <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
                             <PanelCertificatePanel />
                             <PanelUpdateCard />
+                        </div>
+                        <div id="settings-security-panel" role="tabpanel" aria-labelledby="settings-security-tab" hidden={activeID !== 'security'}>
+                            {activeID === 'security' && <SecurityAuditCard />}
                         </div>
                         <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
                             <DNSServerSettings />

@@ -20,6 +20,7 @@ func TestAgentVersionPublishesClosedPanelCertificateSagaCapabilities(t *testing.
 		transport.AgentCapabilityMailTLSSyncV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilitySystemUpdateV1,
+		transport.AgentCapabilitySecurityAuditV1,
 	}
 	if !reflect.DeepEqual(response.Capabilities, want) {
 		t.Fatalf("agent capabilities = %#v, want %#v", response.Capabilities, want)
