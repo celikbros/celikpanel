@@ -58,7 +58,9 @@ require_text 'set -euo pipefail' "strict shell mode is missing"
 require_text 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
     "fixed privileged PATH is missing"
 require_text 'umask 077' "private umask is missing"
-require_text '[[ $# -eq 10 &&' "exact ten-argument gate is missing"
+require_text '[[ $# -eq 10 ]] || usage' "legacy exact ten-argument gate is missing"
+require_text '[[ $# -eq 11 && "$EXPECTED_STAGE_DATABASE_SHA256" =~ ^[0-9a-f]{64}$ ]] || usage' \
+    "database-snapshot exact eleven-argument gate is missing"
 require_text '"$ACTIVE_TARGET" =~ ^[0-9a-f]{40}$' \
     "active target is not exactly 40 lowercase hex"
 require_text '"$ACTIVE_TOKEN" =~ ^[0-9a-f]{64}$' \
@@ -115,10 +117,22 @@ require_text 'celikpanel-panel.service\tenabled\tactive' \
     "exact incident panel service state is missing"
 require_text 'celikpanel-firewall-restore.service\tnot-found\tinactive' \
     "exact incident firewall service state is missing"
-require_text 'celikpanel-agent.service\tactive\t748468\t121952692' \
-    "exact incident agent coordinator identity is missing"
-require_text 'celikpanel-panel.service\tactive\t748470\t121952692' \
-    "exact incident panel coordinator identity is missing"
+require_text 'agent_pid=748468' \
+    "exact legacy incident agent coordinator PID is missing"
+require_text 'agent_start=121952692' \
+    "exact legacy incident agent coordinator start time is missing"
+require_text 'panel_pid=748470' \
+    "exact legacy incident panel coordinator PID is missing"
+require_text 'panel_start=121952692' \
+    "exact legacy incident panel coordinator start time is missing"
+require_text 'agent_pid=798561' \
+    "Frankfurt database-snapshot agent coordinator PID is missing"
+require_text 'agent_start=123306380' \
+    "Frankfurt database-snapshot agent coordinator start time is missing"
+require_text 'panel_pid=798573' \
+    "Frankfurt database-snapshot panel coordinator PID is missing"
+require_text 'panel_start=123306383' \
+    "Frankfurt database-snapshot panel coordinator start time is missing"
 require_text 'captured pre-mutation coordinator process still exists' \
     "captured coordinator PID/start-time reuse proof is missing"
 require_text 'snapshot storage contains another incomplete release stage' \
@@ -127,6 +141,30 @@ require_text 'final snapshot exists; pre-mutation abort is forbidden' \
     "final-snapshot absence proof is missing"
 require_text 'pre-ledger stage contains payload beyond the exact reviewed allowlist' \
     "exact pre-ledger payload allowlist is missing"
+require_text "expected_entries=\$'celikpanel.db\\nquiesce-coordinators.tsv\\nservice-states.tsv\\nsnapshot-transition.state'" \
+    "exact database-snapshot four-file allowlist is missing"
+require_text '"$links" == 1 && "$size" -gt 0 && "$size" -le 2147483648 ]]; then' \
+    "staged database exact metadata and bounded-size proof is missing"
+require_text '[[ "$digest" == "$EXPECTED_STAGE_DATABASE_SHA256" ]]' \
+    "staged database is not bound to the explicit digest"
+require_text '[[ "$identity" == "$stage_database_identity" ]]' \
+    "staged database inode is not repeatedly bound"
+require_text '--check-pre-ledger-service-mutation-idle-under-external-lock' \
+    "trusted agent pre-ledger external-lock proof is missing"
+require_text 'verify_empty_preledger_agent_state()' \
+    "exact empty pre-ledger agent-state proof is missing"
+[[ "$(grep -Fc 'verify_empty_preledger_agent_state' "$candidate")" -eq 3 ]] \
+    || fail "empty agent-state proof must be defined once and repeated before/after trusted checks"
+require_text 'pre-ledger agent state contains a mutation-boundary artifact' \
+    "partial initial mutation-stage rejection is missing"
+require_text '--prove-pre-ledger-snapshot-equivalence="$database"' \
+    "trusted panel logical snapshot equivalence proof is missing"
+[[ "$(grep -Fc 'verify_preledger_database_snapshot_under_lock' "$candidate")" -eq 3 ]] \
+    || fail "database-snapshot proof must be defined once and repeated twice before marker removal"
+require_text 'First locked proof binds the reviewed DB' \
+    "initial locked database proof boundary is undocumented"
+require_text 'Final locked proof repeats every DB/agent/transaction binding' \
+    "final locked database reproof boundary is undocumented"
 require_text 'snapshot transition is not the exact pre-ledger state' \
     "exact pre-ledger transition proof is missing"
 
@@ -157,7 +195,8 @@ reject_text '"$TRUSTED_RELEASE_ROOT/rollback.sh"' \
     "incident abort helper must not invoke rollback"
 reject_text 'create-service-operation-snapshot' \
     "incident abort helper must not mutate the service-operation database"
-reject_text 'panel.db' "incident abort helper must not access the panel database"
+require_text 'PANEL_DB=$PANEL_DATA_DIR/celikpanel.db' \
+    "canonical panel database path is not fixed for the reviewed snapshot proof"
 
 transaction_lock=$(line_of_last 'acquire_release_transaction_lock')
 release_validation=$(line_after "$transaction_lock" 'validate_trusted_recovery_release')
@@ -175,8 +214,11 @@ unit_guards=$(line_after "$artifact_proof" \
     'release_txn_install_and_verify_unit_guards \')
 active_reproof=$(line_after "$unit_guards" 'verify_active_evidence')
 mutation_lock=$(line_after "$active_reproof" 'open_mutation_lock')
-locked_active_reproof=$(line_after "$mutation_lock" 'verify_active_evidence')
-removal_begun=$(line_after "$locked_active_reproof" 'marker_removal_begun=1')
+initial_database_proof=$(line_after "$mutation_lock" 'verify_preledger_database_snapshot_under_lock')
+socket_cleanup=$(line_after "$initial_database_proof" 'remove_stale_agent_socket_under_lock')
+locked_active_reproof=$(line_after "$socket_cleanup" 'verify_active_evidence')
+final_database_proof=$(line_after "$locked_active_reproof" 'verify_preledger_database_snapshot_under_lock')
+removal_begun=$(line_after "$final_database_proof" 'marker_removal_begun=1')
 marker_remove=$(line_after "$removal_begun" \
     'release_txn_remove_pre_mutation_active_marker \')
 markerless_prestart=$(line_after "$marker_remove" \
@@ -207,10 +249,16 @@ assert_before "$unit_guards" "$active_reproof" \
     "active evidence must be reproved after persistent guard installation"
 assert_before "$active_reproof" "$mutation_lock" \
     "active evidence must be proved before mutation-lock acquisition"
-assert_before "$mutation_lock" "$locked_active_reproof" \
-    "active evidence must be reproved while the mutation lock is held"
-assert_before "$locked_active_reproof" "$removal_begun" \
-    "locked active proof must precede the terminal-removal state"
+assert_before "$mutation_lock" "$initial_database_proof" \
+    "initial database proof must follow mutation-lock acquisition"
+assert_before "$initial_database_proof" "$socket_cleanup" \
+    "initial database proof must precede stale runtime cleanup"
+assert_before "$socket_cleanup" "$locked_active_reproof" \
+    "active evidence must be reproved after stale runtime cleanup"
+assert_before "$locked_active_reproof" "$final_database_proof" \
+    "final database proof must follow the intervening active reproof"
+assert_before "$final_database_proof" "$removal_begun" \
+    "final database proof must immediately precede the terminal-removal state"
 assert_before "$removal_begun" "$marker_remove" \
     "terminal-removal state must precede durable marker removal"
 assert_before "$marker_remove" "$markerless_prestart" \

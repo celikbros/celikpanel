@@ -18,6 +18,7 @@ func TestValidatePanelCommandModesRejectsEveryOneShotPair(t *testing.T) {
 		{name: "check-pre-ledger-service-operations-idle-wal-aware", enable: func(m *panelCommandModes) { m.checkWALAwarePreLedgerIdle = true }},
 		{name: "snapshot-create-or-restore", enable: func(m *panelCommandModes) { m.createOrRestore = true }},
 		{name: "rescue-snapshot", enable: func(m *panelCommandModes) { m.rescueSnapshot = true }},
+		{name: "prove-snapshot-equivalence", enable: func(m *panelCommandModes) { m.proveSnapshotEquivalence = true }},
 		{name: "migrate-only", enable: func(m *panelCommandModes) { m.migrateOnly = true }},
 	}
 	for leftIndex, left := range tests {
