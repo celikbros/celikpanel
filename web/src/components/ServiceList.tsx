@@ -47,6 +47,7 @@ interface ManagedService {
     requires_missing?: string[];
     kind?: 'service' | 'runtime' | 'tool';
     packages?: string[];
+    ports?: string[];
     /** Exact installed version package to reuse for a safe idempotent repair. */
     /** Güvenli ve idempotent onarımda yeniden kullanılacak tam kurulu sürüm paketi. */
     repair_package?: string;
@@ -96,6 +97,8 @@ function isManagedService(value: unknown): value is ManagedService {
         service.versions.every((version) => typeof version === 'string') &&
         (service.instances === undefined ||
             (Array.isArray(service.instances) && service.instances.every(isServiceInstance))) &&
+        (service.ports === undefined ||
+            (Array.isArray(service.ports) && service.ports.every((port) => typeof port === 'string'))) &&
         (service.repair_available === undefined || typeof service.repair_available === 'boolean')
     );
 }
@@ -274,6 +277,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
+    const [profileTarget, setProfileTarget] = useState<ManagedMailProfile | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
     const [verification, setVerification] = useState<ServiceVerificationState>(readServiceVerificationState);
     const latestScannedAtRef = useRef<string | null>(null);
@@ -792,8 +796,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
     const pageControlsBusy = scanning || busy !== null;
     const mutationControlsDisabled = pageControlsBusy || stateUnverified;
-    const installProfile = async (profile: ManagedMailProfile) => {
+    const openProfilePlan = (profile: ManagedMailProfile) => {
         if (stateUnverified || !profile.available) return;
+        setProfileTarget(profile);
+    };
+    const installProfile = async () => {
+        const profile = profileTarget;
+        if (!profile || stateUnverified || !profile.available) return;
+        setProfileTarget(null);
         await startInstall({
             serviceId: profile.id,
             name: profile.name,
@@ -887,7 +897,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     profiles={profiles}
                     services={services}
                     disabled={mutationControlsDisabled}
-                    onInstall={installProfile}
+                    onInstall={openProfilePlan}
                 />
             )}
 
@@ -1301,6 +1311,14 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                         onConfirm={(pkg) => doInstall(installTarget, pkg)}
                     />
                 )}
+                {profileTarget && (
+                    <MailProfileInstallDialog
+                        profile={profileTarget}
+                        services={services}
+                        onCancel={() => setProfileTarget(null)}
+                        onConfirm={() => void installProfile()}
+                    />
+                )}
                 {uninstallTarget && (
                     <UninstallServiceDialog
                         service={uninstallTarget}
@@ -1329,7 +1347,7 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
     profiles: ManagedMailProfile[];
     services: ManagedService[];
     disabled: boolean;
-    onInstall: (profile: ManagedMailProfile) => Promise<void>;
+    onInstall: (profile: ManagedMailProfile) => void;
 }) {
     const { t } = useI18n();
     const actionLabel = (profile: ManagedMailProfile) => {
@@ -1397,7 +1415,7 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
                                 </span>
                                 <button
                                     type='button'
-                                    onClick={() => void onInstall(profile)}
+                                    onClick={() => onInstall(profile)}
                                     disabled={disabled || !actionable}
                                     title={detail || actionLabel(profile)}
                                     className='inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
@@ -1411,6 +1429,190 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
                 })}
             </div>
         </section>
+    );
+}
+
+function MailProfileInstallDialog({
+    profile,
+    services,
+    onCancel,
+    onConfirm,
+}: {
+    profile: ManagedMailProfile;
+    services: ManagedService[];
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const [acknowledged, setAcknowledged] = useState(false);
+    const [candidateVersions, setCandidateVersions] = useState<Record<string, string>>({});
+    const [candidatesLoading, setCandidatesLoading] = useState(true);
+    const acknowledgementRef = useRef<HTMLInputElement>(null);
+    const components = profile.services
+        .map((id) => services.find((service) => service.id === id))
+        .filter((service): service is ManagedService => Boolean(service));
+    const mode = profile.status === 'available'
+        ? 'install'
+        : profile.status === 'partial'
+            ? 'continue'
+            : 'repair';
+    const ports = Array.from(new Set(components.flatMap((service) => service.ports ?? []))).sort();
+    const restarted = components
+        .filter((service) => service.kind === 'service')
+        .map((service) => service.name);
+
+    useEffect(() => {
+        acknowledgementRef.current?.focus();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const packageComponents = components.filter((service) =>
+            !service.is_installed && (service.packages?.length ?? 0) > 0);
+        if (packageComponents.length === 0) {
+            setCandidateVersions({});
+            setCandidatesLoading(false);
+            return () => {
+                cancelled = true;
+            };
+        }
+        setCandidatesLoading(true);
+        void Promise.all(packageComponents.map(async (service) => {
+            try {
+                const response = await fetch(`/api/v1/service/candidate?id=${encodeURIComponent(service.id)}`);
+                if (!response.ok) return [service.id, ''] as const;
+                const value: unknown = await response.json();
+                if (!value || typeof value !== 'object') return [service.id, ''] as const;
+                const version = (value as Record<string, unknown>).version;
+                return [service.id, typeof version === 'string' ? version : ''] as const;
+            } catch {
+                return [service.id, ''] as const;
+            }
+        })).then((entries) => {
+            if (!cancelled) setCandidateVersions(Object.fromEntries(entries));
+        }).finally(() => {
+            if (!cancelled) setCandidatesLoading(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+        // The dialog is bound to one immutable verified catalogue snapshot.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profile.id]);
+
+    const componentVersion = (service: ManagedService) => {
+        if (service.is_installed) {
+            return service.versions.length > 0
+                ? service.versions.join(', ')
+                : t('services.mailProfiles.plan.installed');
+        }
+        if (service.id === 'roundcube') return '1.6.15';
+        if (candidatesLoading) return '…';
+        return candidateVersions[service.id] || t('services.mailProfiles.plan.repositoryCandidate');
+    };
+    const componentPackages = (service: ManagedService) => {
+        if ((service.packages?.length ?? 0) > 0) return service.packages!.join(', ');
+        if (service.id === 'roundcube') return 'Roundcube 1.6.15';
+        return service.id;
+    };
+
+    return (
+        <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+            onClick={onCancel}
+        >
+            <div
+                role='dialog'
+                aria-modal='true'
+                aria-labelledby='mail-profile-confirm-title'
+                aria-describedby='mail-profile-confirm-description'
+                className='max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl'
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className='mb-5'>
+                    <h3 id='mail-profile-confirm-title' className='text-lg font-semibold text-fg'>
+                        {t(`services.mailProfiles.plan.title.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
+                    </h3>
+                    <p id='mail-profile-confirm-description' className='mt-1 text-sm text-fg-muted'>
+                        {t('services.mailProfiles.plan.description')}
+                    </p>
+                </div>
+
+                <div className='mb-4 overflow-hidden rounded-xl border border-border'>
+                    <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 bg-surface-2 px-4 py-2 text-xs font-semibold text-fg-subtle'>
+                        <span>{t('services.mailProfiles.plan.component')}</span>
+                        <span>{t('services.mailProfiles.plan.version')}</span>
+                    </div>
+                    {components.map((service) => (
+                        <div key={service.id} className='grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-border px-4 py-3'>
+                            <div className='min-w-0'>
+                                <p className='text-sm font-medium text-fg'>{service.name}</p>
+                                <p className='break-words font-mono text-xs text-fg-subtle'>{componentPackages(service)}</p>
+                            </div>
+                            <span className='max-w-52 text-right font-mono text-xs font-medium text-fg'>
+                                {componentVersion(service)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className='mb-4 grid gap-3 sm:grid-cols-2'>
+                    <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
+                        <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.serviceImpact')}</p>
+                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                            {restarted.length > 0
+                                ? t('services.mailProfiles.plan.restarts', { services: restarted.join(', ') })
+                                : t('services.mailProfiles.plan.noRestarts')}
+                        </p>
+                    </div>
+                    <div className='rounded-lg border border-border bg-surface-2/50 p-3'>
+                        <p className='text-xs font-semibold text-fg'>{t('services.mailProfiles.plan.firewallImpact')}</p>
+                        <p className='mt-1 text-xs leading-5 text-fg-muted'>
+                            {ports.length > 0
+                                ? t('services.mailProfiles.plan.ports', { ports: ports.join(', ') })
+                                : t('services.mailProfiles.plan.noPorts')}
+                        </p>
+                    </div>
+                </div>
+
+                <div className='mb-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs leading-5 text-fg-muted'>
+                    <p>{t('services.mailProfiles.plan.tls')}</p>
+                    <p className='mt-1'>{t('services.mailProfiles.plan.partialProgress')}</p>
+                </div>
+
+                <label className='mb-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3'>
+                    <input
+                        ref={acknowledgementRef}
+                        type='checkbox'
+                        checked={acknowledged}
+                        onChange={(event) => setAcknowledged(event.target.checked)}
+                        className='mt-0.5 h-4 w-4 rounded border-border-strong text-primary'
+                    />
+                    <span className='text-sm leading-5 text-fg'>
+                        {t('services.mailProfiles.plan.acknowledgement')}
+                    </span>
+                </label>
+
+                <div className='flex justify-end gap-2'>
+                    <Button variant='secondary' onClick={onCancel}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        variant='primary'
+                        icon={mode === 'install' ? DownloadCloud : RotateCw}
+                        disabled={!acknowledged}
+                        onClick={onConfirm}
+                    >
+                        {t(`services.mailProfiles.plan.confirm.${mode}` as Parameters<typeof t>[0], { name: profile.name })}
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }
 

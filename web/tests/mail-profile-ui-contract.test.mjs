@@ -54,6 +54,7 @@ test('profile recovery markers are v3 kind-bound with a safe v2 migration', asyn
   assert.match(operationSource, /!isMailProfileID\(serviceID\) \|\| Boolean\(packageName \|\| runtimeVersion\)/);
   assert.match(operationSource, /'\/api\/v1\/service\/profile\/install'/);
   assert.match(operationSource, /profile_id: request\.serviceId/);
+  assert.match(operationSource, /profile_id: request\.serviceId, request_id: marker\.request_id, confirmed: true/);
 
   const { createOperationRecoveryMarker, decodeOperationRecoveryMarker } = await loadMarkerRuntime();
   const requestID = 'a'.repeat(32);
@@ -112,6 +113,14 @@ test('profile cards preserve individual services and use server membership', () 
   assert.match(serviceSource, /disabled=\{disabled \|\| !actionable\}/);
   assert.match(serviceSource, /profile\.status === 'complete' && profile\.warning/);
   assert.match(serviceSource, /services\.mailProfiles\.profileComponentsNeedRepair/);
+  assert.match(serviceSource, /setProfileTarget\(profile\)/);
+  assert.match(serviceSource, /role='dialog'/);
+  assert.match(serviceSource, /aria-modal='true'/);
+  assert.match(serviceSource, /type='checkbox'/);
+  assert.match(serviceSource, /disabled=\{!acknowledged\}/);
+  assert.match(serviceSource, /\/api\/v1\/service\/candidate\?id=/);
+  assert.match(serviceSource, /service\.packages/);
+  assert.match(serviceSource, /service\.ports/);
   assert.match(serviceSource, /\{loading \? \(/, 'existing individual service catalogue remains rendered');
 });
 
@@ -140,7 +149,28 @@ test('mail profile copy stays in EN/TR parity', () => {
     'services.mailProfiles.status.blocked',
     'services.mailProfiles.profileComponentsNeedRepair',
     'services.mailProfiles.fallbackWarning',
+    'services.mailProfiles.plan.title.install',
+    'services.mailProfiles.plan.title.continue',
+    'services.mailProfiles.plan.title.repair',
+    'services.mailProfiles.plan.description',
+    'services.mailProfiles.plan.component',
+    'services.mailProfiles.plan.version',
+    'services.mailProfiles.plan.installed',
+    'services.mailProfiles.plan.repositoryCandidate',
+    'services.mailProfiles.plan.serviceImpact',
+    'services.mailProfiles.plan.restarts',
+    'services.mailProfiles.plan.noRestarts',
+    'services.mailProfiles.plan.firewallImpact',
+    'services.mailProfiles.plan.ports',
+    'services.mailProfiles.plan.noPorts',
+    'services.mailProfiles.plan.tls',
+    'services.mailProfiles.plan.partialProgress',
+    'services.mailProfiles.plan.acknowledgement',
+    'services.mailProfiles.plan.confirm.install',
+    'services.mailProfiles.plan.confirm.continue',
+    'services.mailProfiles.plan.confirm.repair',
     'err.mail_profile_install_failed',
+    'err.mail_profile_confirmation_required',
     'err.mail_profile_server_hostname_invalid',
   ];
   for (const key of keys) {

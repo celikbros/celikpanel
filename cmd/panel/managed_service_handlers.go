@@ -475,7 +475,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	packageFamily := host.PackageFamily
 	payload := managedServicesPayload{
 		Services: catalogViewForHost(nil, host),
-		Profiles: mailProfilesView(nil, false, packageFamily, false, false),
+		Profiles: mailProfilesView(nil, false, packageFamily, mailProfileHostBlockedReason(), false, false),
 	}
 
 	var data string
@@ -507,6 +507,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 			payload.Services,
 			profilesVerified,
 			packageFamily,
+			mailProfileHostBlockedReason(),
 			snapshot.WebmailReady,
 			snapshot.WebmailProven,
 		)
@@ -599,7 +600,7 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(managedServicesPayload{
 		ScannedAt: &now,
 		Services:  services,
-		Profiles:  mailProfilesView(services, true, p.packageFamily(), webmailReady, webmailProven),
+		Profiles:  mailProfilesView(services, true, p.packageFamily(), mailProfileHostBlockedReason(), webmailReady, webmailProven),
 	})
 }
 
@@ -652,7 +653,7 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 	return managedServicesPayload{
 		ScannedAt: &scanned,
 		Services:  services,
-		Profiles:  mailProfilesView(services, true, packageFamily, snapshot.WebmailReady, snapshot.WebmailProven),
+		Profiles:  mailProfilesView(services, true, packageFamily, mailProfileHostBlockedReason(), snapshot.WebmailReady, snapshot.WebmailProven),
 	}, true, nil
 }
 

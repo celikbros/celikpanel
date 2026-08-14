@@ -332,7 +332,11 @@ func postMailProfile(
 	profileID, requestID string,
 ) (*httptest.ResponseRecorder, *serviceOperation) {
 	t.Helper()
-	body, err := json.Marshal(mailProfileInstallRequest{ProfileID: profileID, RequestID: requestID})
+	body, err := json.Marshal(mailProfileInstallRequest{
+		ProfileID: profileID,
+		RequestID: requestID,
+		Confirmed: true,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,6 +415,15 @@ func TestMailProfileInstallRouteIsStrictAndAdminOnly(t *testing.T) {
 				t.Fatalf("status = %d body=%s", recorder.Code, recorder.Body.String())
 			}
 		})
+	}
+	unconfirmed := httptest.NewRecorder()
+	fixture.panel.handleMailProfileInstall(unconfirmed, serviceOperationAdminRequest(
+		t, http.MethodPost, mailProfileInstallPath,
+		`{"profile_id":"core-mail","request_id":"`+requestID+`"}`, fixture.userID,
+	))
+	if unconfirmed.Code != http.StatusBadRequest ||
+		!strings.Contains(unconfirmed.Body.String(), errCodeMailProfileConfirmationRequired) {
+		t.Fatalf("unconfirmed status=%d body=%s", unconfirmed.Code, unconfirmed.Body.String())
 	}
 	if !isAdminOnlyPath(mailProfileInstallPath) {
 		t.Fatal("mail profile route is not covered by the admin middleware")
@@ -855,17 +868,23 @@ func profileViewByID(t *testing.T, profiles []MailProfileResponse, id string) Ma
 }
 
 func TestMailProfileManagedViewStatusesFailClosed(t *testing.T) {
-	if profile := profileViewByID(t, mailProfilesView(nil, false, "apt", false, false), "core-mail"); profile.Status != mailProfileStatusUnknown || profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(nil, false, "apt", "", false, false), "core-mail"); profile.Status != mailProfileStatusUnknown || profile.Available {
 		t.Fatalf("unknown profile = %+v", profile)
 	}
 
 	availableServices := catalogView(nil, "apt")
-	if profile := profileViewByID(t, mailProfilesView(availableServices, true, "apt", false, true), "core-mail"); profile.Status != mailProfileStatusAvailable || !profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(availableServices, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusAvailable || !profile.Available {
 		t.Fatalf("available profile = %+v", profile)
+	}
+	if profile := profileViewByID(t, mailProfilesView(
+		availableServices, true, "apt", mailProfileServerHostnameMessage, false, true,
+	), "core-mail"); profile.Status != mailProfileStatusBlocked ||
+		profile.Available || profile.BlockedReason != mailProfileServerHostnameMessage {
+		t.Fatalf("hostname-blocked profile = %+v", profile)
 	}
 
 	partial := catalogView([]serviceObservation{{ID: "postfix", IsInstalled: true, Status: "active (running)"}}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(partial, true, "apt", false, true), "core-mail"); profile.Status != mailProfileStatusPartial || !profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(partial, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusPartial || !profile.Available {
 		t.Fatalf("partial profile = %+v", profile)
 	}
 
@@ -873,12 +892,12 @@ func TestMailProfileManagedViewStatusesFailClosed(t *testing.T) {
 		{ID: "postfix", IsInstalled: true, Status: "active (running)"},
 		{ID: "dovecot", IsInstalled: true, Status: "active (running)"},
 	}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(complete, true, "apt", false, true), "core-mail"); profile.Status != mailProfileStatusComplete || !profile.Available || profile.Warning != mailProfileReconciliationWarning {
+	if profile := profileViewByID(t, mailProfilesView(complete, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusComplete || !profile.Available || profile.Warning != mailProfileReconciliationWarning {
 		t.Fatalf("complete profile = %+v", profile)
 	}
 
 	blocked := catalogView([]serviceObservation{{ID: "exim", IsInstalled: true, Status: "active (running)"}}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(blocked, true, "apt", false, true), "core-mail"); profile.Status != mailProfileStatusBlocked || profile.Available || profile.BlockedReason == "" {
+	if profile := profileViewByID(t, mailProfilesView(blocked, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusBlocked || profile.Available || profile.BlockedReason == "" {
 		t.Fatalf("blocked profile = %+v", profile)
 	}
 
@@ -890,16 +909,34 @@ func TestMailProfileManagedViewStatusesFailClosed(t *testing.T) {
 		{ID: "roundcube", IsInstalled: true, Status: "installed"},
 	}
 	webmailServices := catalogView(webmailObservations, "apt")
-	if profile := profileViewByID(t, mailProfilesView(webmailServices, true, "apt", true, true), "webmail"); profile.Status != mailProfileStatusComplete || profile.Warning != mailProfileReconciliationWarning {
+	if profile := profileViewByID(t, mailProfilesView(webmailServices, true, "apt", "", true, true), "webmail"); profile.Status != mailProfileStatusComplete || profile.Warning != mailProfileReconciliationWarning {
 		t.Fatalf("ready webmail = %+v", profile)
 	}
 	for name, profiles := range map[string][]MailProfileResponse{
-		"missing proof": mailProfilesView(webmailServices, true, "apt", false, false),
-		"dead socket":   mailProfilesView(webmailServices, true, "apt", false, true),
+		"missing proof": mailProfilesView(webmailServices, true, "apt", "", false, false),
+		"dead socket":   mailProfilesView(webmailServices, true, "apt", "", false, true),
 	} {
 		if profile := profileViewByID(t, profiles, "webmail"); profile.Status != mailProfileStatusPartial || profile.Warning == "" {
 			t.Fatalf("%s webmail = %+v", name, profile)
 		}
+	}
+}
+
+func TestMailProfileHostBlockedReasonIsActionable(t *testing.T) {
+	previous := readMailProfileHostname
+	t.Cleanup(func() { readMailProfileHostname = previous })
+
+	readMailProfileHostname = func() (string, error) { return "mail.example.test", nil }
+	if reason := mailProfileHostBlockedReason(); reason != "" {
+		t.Fatalf("valid FQDN blocked: %q", reason)
+	}
+	readMailProfileHostname = func() (string, error) { return "localhost", nil }
+	if reason := mailProfileHostBlockedReason(); reason != mailProfileServerHostnameMessage {
+		t.Fatalf("invalid FQDN reason = %q", reason)
+	}
+	readMailProfileHostname = func() (string, error) { return "", errors.New("unavailable") }
+	if reason := mailProfileHostBlockedReason(); reason == "" {
+		t.Fatal("hostname read failure did not block profiles")
 	}
 }
 

@@ -72,14 +72,34 @@ export function Domains() {
     // yükleniyor (düğmeler açık kalır; pencere ve backend zaten koruyor,
     // hiçbir şey sızamaz).
     const [dnsServer, setDnsServer] = useState<string | null>(null);
+    const [dnsIdentityReady, setDNSIdentityReady] = useState<boolean | null>(null);
     useEffect(() => {
         if (isTeamMember) return;
         fetch(`${API_BASE}/hosting/capabilities`)
             .then((r) => (r.ok ? r.json() : null))
-            .then((c) => setDnsServer(c ? (c.dns_server ?? '') : null))
-            .catch(() => setDnsServer(null));
+            .then((c) => {
+                if (
+                    !c
+                    || typeof c.dns_server !== 'string'
+                    || typeof c.dns_identity_ready !== 'boolean'
+                ) {
+                    setDnsServer(null);
+                    setDNSIdentityReady(null);
+                    return;
+                }
+                setDnsServer(c.dns_server);
+                setDNSIdentityReady(c.dns_identity_ready);
+            })
+            .catch(() => {
+                setDnsServer(null);
+                setDNSIdentityReady(null);
+            });
     }, [isTeamMember]);
-    const dnsMissing = dnsServer === '';
+    const dnsReadinessKnown = dnsServer !== null && dnsIdentityReady !== null;
+    const dnsMissing = !dnsReadinessKnown || dnsServer === '' || dnsIdentityReady !== true;
+    const openDNSRequirement = () => navigate(
+        dnsServer === '' ? '/services' : '/settings?section=dns',
+    );
 
     useEffect(() => {
         loadDomains();
@@ -173,14 +193,16 @@ export function Domains() {
                     icon={Globe}
                     title={t('domains.empty')}
                     hint={dnsMissing ? t('domains.add.needsDns') : t('domains.emptyHint')}
-                    action={!isTeamMember && (
+                    action={!isTeamMember && dnsReadinessKnown && (
                         dnsMissing ? (
                             // The honest next step is not a dead Add button but
                             // the page where the requirement is met.
                             // Dürüst sonraki adım ölü bir Ekle düğmesi değil,
                             // gereksinimin karşılandığı sayfadır.
-                            <Button variant="primary" icon={Settings} onClick={() => navigate('/services')}>
-                                {t('domains.goServices')}
+                            <Button variant="primary" icon={Settings} onClick={openDNSRequirement}>
+                                {dnsServer === ''
+                                    ? t('domains.goServices')
+                                    : t('err.DNS_SETTINGS_REQUIRED.action')}
                             </Button>
                         ) : (
                             <Button variant="primary" icon={Plus} onClick={() => setShowAddModal(true)}>

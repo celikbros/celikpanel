@@ -381,6 +381,9 @@ func validateMailSNIEntries(entries []MailSNIEntry) ([]MailSNIEntry, error) {
 	if len(entries) > maxMailSNIEntries {
 		return nil, fmt.Errorf("too many entries")
 	}
+	if len(entries) == 0 {
+		return nil, nil
+	}
 	validated := make([]MailSNIEntry, 0, len(entries))
 	claimedNames := make(map[string]int)
 	for entryIndex, entry := range entries {

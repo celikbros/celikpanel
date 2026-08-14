@@ -23,6 +23,7 @@ interface HostingCapabilities {
     web_server: string;
     php_versions: string[];
     dns_server: string;
+    dns_identity_ready: boolean;
     mail_server: boolean;
 }
 
@@ -147,7 +148,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     // null hem "hâlâ yükleniyor" hem "çekme başarısız oldu"yu kapsar: her iki
     // durumda da hiçbir şeyin uygun olduğu bilinmiyordur, o yüzden hiçbiri
     // sunulmaz.
-    const dnsMissing = !caps || caps.dns_server === '';
+    const dnsMissing = !caps || caps.dns_server === '' || caps.dns_identity_ready !== true;
     // A website needs a web server — and ONLY a web server. PHP is no longer a
     // precondition here (D-013): a site is created first, its PHP switch is a
     // setting afterwards, so a server without PHP can still host websites.
@@ -168,6 +169,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (dnsMissing) return;
         setLoading(true);
         setError(null);
 
@@ -245,8 +247,17 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                 <ErrorBanner error={error} className="mb-6" />
 
                 {dnsMissing && (
-                    <div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg text-sm text-fg">
-                        {t('domains.add.needsDns')}
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
+                        <span>{t('domains.add.needsDns')}</span>
+                        <button
+                            type='button'
+                            onClick={() => navigate(caps?.dns_server ? '/settings?section=dns' : '/services')}
+                            className='rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg'
+                        >
+                            {caps?.dns_server
+                                ? t('err.DNS_SETTINGS_REQUIRED.action')
+                                : t('domains.goServices')}
+                        </button>
                     </div>
                 )}
 

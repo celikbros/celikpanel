@@ -1219,7 +1219,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
         const body = marker.operation_kind === 'runtime_install'
             ? { version: request.version, request_id: marker.request_id }
             : marker.operation_kind === 'mail_profile_install'
-                ? { profile_id: request.serviceId, request_id: marker.request_id }
+                ? { profile_id: request.serviceId, request_id: marker.request_id, confirmed: true }
                 : {
                       service_id: request.serviceId,
                       ...(request.package ? { package: request.package } : {}),

@@ -309,6 +309,18 @@ func validMailSNIEntry(snapshot testManagedMailTLSSnapshot) MailSNIEntry {
 	}
 }
 
+func TestValidateMailSNIEntriesCanonicalisesEmptySnapshot(t *testing.T) {
+	for _, entries := range [][]MailSNIEntry{nil, []MailSNIEntry{}} {
+		validated, err := validateMailSNIEntries(entries)
+		if err != nil {
+			t.Fatalf("validate empty mail SNI snapshot: %v", err)
+		}
+		if validated != nil {
+			t.Fatalf("empty mail SNI snapshot = %#v, want canonical nil", validated)
+		}
+	}
+}
+
 func TestValidateMailSNIEntriesRejectsInvalidInput(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("CELIKPANEL_CUSTOM_CERT_ROOT", root)
