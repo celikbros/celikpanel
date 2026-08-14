@@ -55,10 +55,13 @@ test('server payloads and bounded summaries fail closed at the browser boundary'
     assert.match(card, /value\.target !== undefined/);
 });
 
-test('operator must explicitly type the discovered version and rapid clicks are blocked', () => {
-    assert.match(card, /confirmation !== target\.version/);
+test('the exact discovered target is visible and rapid clicks are blocked', () => {
     assert.match(card, /actionInFlight\.current \|\| marker/);
-    assert.match(card, /disabled=\{starting \|\| confirmation !== target\.version\}/);
+    assert.match(card, /disabled=\{starting\}/);
+    assert.match(card, /t\('panelUpdate\.start', \{ version: target\.version \}\)/);
+    assert.match(card, /\{t\('panelUpdate\.targetVersion'\)\}.*\{target\.version\}/s);
+    assert.match(card, /\{t\('panelUpdate\.sequence'\)\}.*\{target\.sequence\}/s);
+    assert.doesNotMatch(card, /confirmation|panel-update-confirmation|panelUpdate\.confirm/);
     assert.equal(card.match(/\bstartUpdate\(\)/g)?.length, 2, 'startUpdate may only be declared and invoked by the final button');
 });
 
