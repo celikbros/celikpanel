@@ -215,7 +215,6 @@ export function PanelUpdateCard() {
     const [check, setCheck] = useState<UpdateCheck | null>(null);
     const [marker, setMarker] = useState<UpdateMarker | null>(() => readMarker());
     const [operation, setOperation] = useState<UpdateStatus | null>(null);
-    const [confirmation, setConfirmation] = useState('');
     const [checking, setChecking] = useState(false);
     const [starting, setStarting] = useState(false);
     const [message, setMessage] = useState('');
@@ -334,7 +333,7 @@ export function PanelUpdateCard() {
 
     async function startUpdate() {
         const target = check?.target;
-        if (actionInFlight.current || marker || !check?.available || !target || confirmation !== target.version) return;
+        if (actionInFlight.current || marker || !check?.available || !target) return;
         const requestID = createRequestID();
         if (!requestID) {
             setMessage(t('panelUpdate.randomFailed'));
@@ -433,15 +432,10 @@ export function PanelUpdateCard() {
             )}
 
             {target && check?.available && !active && (
-                <div className="mt-4 space-y-3">
-                    <label className="block text-sm font-medium text-fg" htmlFor="panel-update-confirmation">
-                        {t('panelUpdate.confirm', { version: target.version })}
-                    </label>
-                    <input id="panel-update-confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
-                        autoComplete="off" spellCheck={false} className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm text-fg outline-none focus:ring-2 focus:ring-primary" />
-                    <Button type="button" onClick={() => void startUpdate()} disabled={starting || confirmation !== target.version}>
+                <div className="mt-4">
+                    <Button type="button" onClick={() => void startUpdate()} disabled={starting}>
                         {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
-                        {starting ? t('panelUpdate.starting') : t('panelUpdate.start')}
+                        {starting ? t('panelUpdate.starting') : t('panelUpdate.start', { version: target.version })}
                     </Button>
                 </div>
             )}
