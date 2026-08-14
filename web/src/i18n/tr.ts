@@ -456,6 +456,8 @@ export const tr: Record<TranslationKey, string> = {
     'err.service_install_failed': 'Servis kurulamadı ve doğrulanamadı.',
     'err.firewall_sync_failed': 'Servis değişti ancak etkin güvenlik duvarı politikası senkronlanamadı.',
     'err.node_runtime_install_failed': 'Node.js çalışma ortamı kurulamadı ve doğrulanamadı.',
+    'err.mail_profile_install_failed': 'Posta profili kurulamadı ve doğrulanamadı.',
+    'err.mail_profile_server_hostname_invalid': 'Sunucunun işletim sistemi ana bilgisayar adı (hostname) tam nitelikli bir alan adı (FQDN) değil. server.example.com biçiminde ayarlayıp yeniden deneyin.',
     'err.RUNTIME_VERSION_REQUIRED': 'Panelin kurduğu bir Node.js sürümü seçin.',
     'err.RUNTIME_VERSION_REQUIRED.action': 'Sürüm kur',
     'err.GENERAL_VHOST_APPLY_FAILED': 'Ayar web sunucusu tarafından reddedildi. Önceki veritabanı ve çalışma zamanı yapılandırması geri yüklendi.',

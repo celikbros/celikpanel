@@ -140,9 +140,21 @@ test('mail profile copy stays in EN/TR parity', () => {
     'services.mailProfiles.status.blocked',
     'services.mailProfiles.profileComponentsNeedRepair',
     'services.mailProfiles.fallbackWarning',
+    'err.mail_profile_install_failed',
+    'err.mail_profile_server_hostname_invalid',
   ];
   for (const key of keys) {
     assert.ok(enSource.includes(`'${key}':`), 'missing EN key ' + key);
     assert.ok(trSource.includes(`'${key}':`), 'missing TR key ' + key);
   }
+});
+
+test('mail profile terminal errors preserve the safe code for the shared localized banner', () => {
+  const start = operationSource.indexOf('function operationError(');
+  const end = operationSource.indexOf('function restoredOperation(', start);
+  assert.ok(start >= 0 && end > start);
+  const transport = operationSource.slice(start, end);
+  assert.match(transport, /code: typeof raw\.code === 'string' \? raw\.code : undefined/);
+  assert.match(operationSource, /finishFailure\(terminalFailure\)/);
+  assert.match(operationSource, /<ErrorBanner error=\{failure\}/);
 });

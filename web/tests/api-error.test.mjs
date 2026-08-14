@@ -50,3 +50,18 @@ test('platform refusal codes have localized operator-safe text', () => {
     assert.ok(!turkish.includes('hiçbir değişiklik yapılmadı'));
   }
 });
+
+test('mail profile hostname refusal replaces untrusted transport text in EN and TR', () => {
+  const translate = (catalog) => (key) => catalog[key] ?? key;
+  const code = 'mail_profile_server_hostname_invalid';
+  const remoteText = '/etc/private: hostnamectl failed with secret command output';
+
+  const english = apiErrorText({ code, message: remoteText }, translate(en));
+  const turkish = apiErrorText({ code, message: remoteText }, translate(tr));
+
+  assert.equal(english, en['err.' + code]);
+  assert.equal(turkish, tr['err.' + code]);
+  assert.match(english, /fully qualified domain name \(FQDN\)/);
+  assert.match(turkish, /tam nitelikli bir alan adı \(FQDN\)/);
+  assert.ok(!english.includes(remoteText) && !turkish.includes(remoteText));
+});
