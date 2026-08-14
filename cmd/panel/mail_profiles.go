@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	serviceOperationKindMailProfileInstall = "mail_profile_install"
-	mailProfileInstallPath                 = "/api/v1/service/profile/install"
+	serviceOperationKindMailProfileInstall  = "mail_profile_install"
+	mailProfileInstallPath                  = "/api/v1/service/profile/install"
+	errCodeMailProfileServerHostnameInvalid = "mail_profile_server_hostname_invalid"
 
 	mailProfileStatusUnknown   = "unknown"
 	mailProfileStatusAvailable = "available"
@@ -25,7 +26,10 @@ const (
 
 	mailProfileFallbackWarning       = "No active trusted Secure Mail certificate was found. Mail submission is using the local self-signed fallback; activate a trusted certificate with Secure Mail enabled."
 	mailProfileReconciliationWarning = "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+	mailProfileServerHostnameMessage = "The server's operating-system hostname is not a fully qualified domain name (FQDN). Set it to a name such as server.example.com, then try again."
 )
+
+var errMailProfileServerHostnameInvalid = errors.New("mail profile server hostname is not a canonical FQDN")
 
 // readMailProfileHostname is a test seam around the host fact used by the
 // production preflight. It always points at os.Hostname outside tests.
@@ -235,6 +239,13 @@ func newMailProfileResult(profile mailProfileDefinition) serviceOperationResult 
 }
 
 func mailProfileInstallFailure(cause error) *serviceOperationFailure {
+	if errors.Is(cause, errMailProfileServerHostnameInvalid) {
+		return operationFailure(
+			errCodeMailProfileServerHostnameInvalid,
+			mailProfileServerHostnameMessage,
+			cause,
+		)
+	}
 	if failure := platformServiceOperationFailure(cause); failure != nil {
 		return failure
 	}
@@ -396,7 +407,10 @@ func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile m
 		return fmt.Errorf("read mail profile server hostname: %w", err)
 	}
 	if _, err := hostname.CanonicalFQDN(rawHostname); err != nil {
-		return fmt.Errorf("mail profile requires a canonical server FQDN: %w", err)
+		// Keep the rejected host and parser detail in the server-only cause while
+		// exposing only the stable category and remediation through the durable
+		// operation error contract.
+		return fmt.Errorf("%w: %v", errMailProfileServerHostnameInvalid, err)
 	}
 	family := p.packageFamily()
 	for _, id := range profile.Services {

@@ -506,6 +506,8 @@ export const en = {
     'err.service_install_failed': 'The service could not be installed and verified.',
     'err.firewall_sync_failed': 'The service changed, but the active firewall policy could not be synchronized.',
     'err.node_runtime_install_failed': 'The Node.js runtime could not be installed and verified.',
+    'err.mail_profile_install_failed': 'The mail profile could not be installed and verified.',
+    'err.mail_profile_server_hostname_invalid': 'The server’s operating-system hostname is not a fully qualified domain name (FQDN). Set it to a name such as server.example.com, then try again.',
     'err.RUNTIME_VERSION_REQUIRED': 'Pick a Node.js version installed by the panel.',
     'err.RUNTIME_VERSION_REQUIRED.action': 'Install a version',
     'err.GENERAL_VHOST_APPLY_FAILED': 'The setting was rejected by the web server. The previous database and runtime configuration were restored.',

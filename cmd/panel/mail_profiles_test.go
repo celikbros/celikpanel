@@ -500,6 +500,46 @@ func TestMailProfileWholePlanPreflightBlocksBeforeMutation(t *testing.T) {
 	}
 }
 
+func TestMailProfileInvalidServerHostnameIsActionableAndSanitized(t *testing.T) {
+	fixture, agent := newMailProfileTestFixture(t)
+	const rejectedHostname = "private-boston-host"
+	readMailProfileHostname = func() (string, error) { return rejectedHostname, nil }
+
+	profile, _ := mailProfileByID(core.MailProfileCore)
+	if _, err := fixture.panel.preflightMailProfileInstall(
+		serviceOperationBoundContext(), profile,
+	); !errors.Is(err, errMailProfileServerHostnameInvalid) {
+		t.Fatalf("preflight error = %v, want invalid hostname category", err)
+	}
+
+	recorder, queued := postMailProfile(
+		t, fixture, core.MailProfileCore, mustServiceOperationRequestID(t),
+	)
+	if recorder.Code != http.StatusAccepted || queued == nil {
+		t.Fatalf("profile status=%d operation=%+v body=%s", recorder.Code, queued, recorder.Body.String())
+	}
+	failed, body := waitForServiceOperation(
+		t, fixture.panel, fixture.userID, queued.ID, serviceOperationFailed,
+	)
+	if failed.Error == nil ||
+		failed.Error.Code != errCodeMailProfileServerHostnameInvalid ||
+		failed.Error.Message != mailProfileServerHostnameMessage {
+		t.Fatalf("failed profile=%+v", failed)
+	}
+	for _, leaked := range []string{
+		rejectedHostname,
+		"invalid hostname",
+		"mail profile server hostname is not a canonical FQDN",
+	} {
+		if strings.Contains(body, leaked) {
+			t.Fatalf("server-only hostname detail %q leaked in response: %s", leaked, body)
+		}
+	}
+	if agent.installCalls.Load() != 0 {
+		t.Fatal("invalid hostname reached InstallService")
+	}
+}
+
 func TestMailProfileBuildMismatchBlocksBeforeMutation(t *testing.T) {
 	withPanelBuildCommit(t, "profile-panel-build")
 	fixture, agent := newMailProfileTestFixture(t)
