@@ -14,6 +14,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/services"
@@ -172,23 +173,27 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = err.Error()
 		return nil
 	}
-	if installed {
-		resp.Installed = true
-		return nil
-	}
 	// PHP-FPM presence is the socket's existence — portable across distros,
 	// unlike the /etc/php version read. phpVer may still be "" on Arch and
-	// that is fine: it is only used to name Debian's per-version sqlite
-	// package, and Arch's sqlite package is unversioned.
+	// that is fine: it is only used to name Debian's per-version extension
+	// packages, while Arch's extension packages are unversioned.
 	// PHP-FPM varlığı soketin varlığıdır — /etc/php sürüm okumasının aksine
 	// dağıtımlar arası taşınabilir. phpVer Arch'ta yine "" olabilir ve bu
-	// sorun değil: yalnız Debian'ın sürüm-başına sqlite paketini adlandırmak
-	// için kullanılır, Arch'ın sqlite paketi sürümsüzdür.
+	// sorun değil: yalnız Debian'ın sürüm-başına uzantı paketlerini adlandırmak
+	// için kullanılır, Arch'ın uzantı paketleri sürümsüzdür.
 	if detectFPMSocket() == "" {
 		resp.Error = "PHP-FPM is not installed"
 		return nil
 	}
 	phpVer := services.DetectInstalledPHPVersion()
+	if err := a.ensureRoundcubePHPDependencies(ctx, phpVer); err != nil {
+		resp.Error = fmt.Sprintf("PHP extensions required by Roundcube could not be prepared: %v", err)
+		return nil
+	}
+	if installed {
+		resp.Installed = true
+		return nil
+	}
 
 	url := fmt.Sprintf("https://github.com/roundcube/roundcubemail/releases/download/%s/roundcubemail-%s-complete.tar.gz",
 		roundcubeVersion, roundcubeVersion)
@@ -280,25 +285,6 @@ func (a *Agent) InstallRoundcube(req *WebmailMutationRequest, resp *InstallRound
 		resp.Error = err.Error()
 		return nil
 	}
-	// Roundcube's SQLite store needs PHP's pdo_sqlite, which neither distro
-	// bundles with PHP and our PHP-FPM install did not pull in. This is where
-	// a portable tarball still touches distro packages (the honest limit of
-	// "one path on every Linux"): the app is distro-agnostic, its runtime
-	// extension is not. Provide it distro-aware — the package name is the only
-	// per-distro fact, and the agent already owns that.
-	// Roundcube'un SQLite deposu PHP'nin pdo_sqlite'ına muhtaç; ne dağıtım onu
-	// PHP'yle paketliyor ne de bizim PHP-FPM kurulumumuz çekti. Taşınabilir bir
-	// tarball'ın yine de dağıtım paketlerine değdiği yer burası ("her Linux'ta
-	// tek yol"un dürüst sınırı): uygulama dağıtımdan bağımsız, çalışma-zamanı
-	// uzantısı değil. Dağıtım-farkındalıklı sağla — dağıtıma özgü tek gerçek
-	// paket adıdır ve o bilgi zaten agent'ta.
-	if !phpHasSQLite(ctx) {
-		if err := a.ensurePHPSQLite(ctx, phpVer); err != nil {
-			resp.Error = fmt.Sprintf("PHP SQLite extension is required for webmail and could not be installed: %v", err)
-			return nil
-		}
-	}
-
 	// Build the database and apply permissions inside the staging tree. The
 	// generated config points at the final database path, while the schema
 	// loader below explicitly opens the staging database. The final rename
@@ -469,99 +455,201 @@ $config['enable_installer'] = false;
 	return secureWriteConfig(filepath.Join(root, "config", "config.inc.php"), []byte(conf), 0o640)
 }
 
-// phpHasSQLite reports whether the PHP CLI can open a SQLite PDO — the exact
-// capability Roundcube's initdb needs. Asking PHP itself (not guessing from a
-// package name) is the honest check: it is true the moment the extension is
-// loadable, whatever installed it.
-// phpHasSQLite, PHP CLI'ın bir SQLite PDO açıp açamadığını bildirir —
-// Roundcube'un initdb'sinin tam ihtiyacı. Paket adından tahmin etmek yerine
-// PHP'nin kendisine sormak dürüst denetimdir: uzantı yüklenebilir olduğu an
-// doğrudur, onu ne kurmuş olursa olsun.
-func phpHasSQLite(ctx context.Context) bool {
-	out, err := serviceMutationCommand(ctx, "php", "-r", `echo in_array("sqlite", PDO::getAvailableDrivers()) ? "yes" : "no";`).Output()
-	return err == nil && string(out) == "yes"
+const roundcubePHPCapabilityProbe = "$missing=[];if(!function_exists('mb_internal_encoding')){$missing[]='mbstring';}if(!class_exists('DOMDocument')){$missing[]='dom';}if(!extension_loaded('intl')){$missing[]='intl';}if(!class_exists('PDO')||!in_array('sqlite',PDO::getAvailableDrivers(),true)){$missing[]='pdo_sqlite';}if(!class_exists('ZipArchive')){$missing[]='zip';}echo count($missing)===0?'ok':'missing:'.implode(',',$missing);"
+const pacmanRoundcubePHPConfigFile = "celikpanel-sqlite.ini"
+const pacmanRoundcubePHPConfig = "# Managed by CelikPanel for Roundcube.\nextension=intl\nextension=pdo_sqlite\nextension=sqlite3\nextension=zip\n"
+
+var roundcubePHPCapabilities = []string{"mbstring", "dom", "intl", "pdo_sqlite", "zip"}
+
+type roundcubePHPDependencyOps struct {
+	probe        func(context.Context) ([]string, error)
+	install      func(context.Context, string, []string) (string, error)
+	enablePacman func() error
+	reload       func(context.Context, string) ([]byte, error)
 }
 
-// ensurePHPSQLite installs PHP's SQLite extension for the running PHP. The
-// package name is the one distro-specific fact: Debian/Sury ships a
-// per-version php<ver>-sqlite3; Arch has a single php-sqlite. dnf mirrors
-// Debian's shape. After install, php-fpm is reloaded so a served request sees
-// the new extension too (the CLI initdb would see it without a reload, but the
-// webmail that follows runs under FPM).
-// ensurePHPSQLite, çalışan PHP için PHP'nin SQLite uzantısını kurar. Paket adı
-// dağıtıma özgü tek gerçektir: Debian/Sury sürüm-başına php<ver>-sqlite3
-// taşır; Arch'ta tek php-sqlite. dnf, Debian'ın biçimini yansıtır. Kurulumdan
-// sonra php-fpm yeniden yüklenir ki sunulan bir istek de yeni uzantıyı görsün
-// (CLI initdb reload olmadan görürdü ama ardından gelen webmail FPM altında
-// çalışır).
-func (a *Agent) ensurePHPSQLite(ctx context.Context, phpVer string) error {
-	family := detectPkgFamily()
+// inspectRoundcubePHPCapabilities asks PHP for the capabilities Roundcube and
+// its enabled zipdownload plugin actually use. A package can be installed but
+// disabled, so package presence alone is not a readiness check.
+func inspectRoundcubePHPCapabilities(ctx context.Context) ([]string, error) {
+	out, err := serviceMutationCommand(ctx, "php", "-r", roundcubePHPCapabilityProbe).Output()
+	if err != nil {
+		return nil, fmt.Errorf("inspect PHP capabilities: %w", err)
+	}
+	result := strings.TrimSpace(string(out))
+	if result == "ok" {
+		return nil, nil
+	}
+	if !strings.HasPrefix(result, "missing:") {
+		return nil, fmt.Errorf("inspect PHP capabilities returned an invalid result")
+	}
+	payload := strings.TrimPrefix(result, "missing:")
+	if payload == "" {
+		return nil, fmt.Errorf("inspect PHP capabilities returned an empty result")
+	}
+	missing := strings.Split(payload, ",")
+	known := make(map[string]bool, len(roundcubePHPCapabilities))
+	for _, capability := range roundcubePHPCapabilities {
+		known[capability] = true
+	}
+	seen := make(map[string]bool, len(missing))
+	for _, capability := range missing {
+		if !known[capability] || seen[capability] {
+			return nil, fmt.Errorf("inspect PHP capabilities returned an invalid capability")
+		}
+		seen[capability] = true
+	}
+	return missing, nil
+}
+
+func roundcubePHPExtensionPackages(family, phpVer string, missing []string) ([]string, error) {
+	if len(missing) == 0 {
+		return nil, nil
+	}
 	switch family {
-	case "apt", "dnf":
+	case "apt":
 		if phpVer == "" {
-			return fmt.Errorf("PHP version could not be detected")
+			return nil, fmt.Errorf("PHP version could not be detected")
 		}
-		// Debian/RHEL: the per-version package auto-enables via conf.d.
-		// Debian/RHEL: sürüm-başına paket conf.d ile kendini etkinleştirir.
-		if _, err := installPackagesContext(ctx, family, []string{fmt.Sprintf("php%s-sqlite3", phpVer)}); err != nil {
-			return err
+		suffixes := map[string]string{
+			"mbstring":   "mbstring",
+			"dom":        "xml",
+			"intl":       "intl",
+			"pdo_sqlite": "sqlite3",
+			"zip":        "zip",
 		}
+		packages := make([]string, 0, len(missing))
+		for _, capability := range missing {
+			suffix, ok := suffixes[capability]
+			if !ok {
+				return nil, fmt.Errorf("unsupported PHP capability %q", capability)
+			}
+			packages = append(packages, fmt.Sprintf("php%s-%s", phpVer, suffix))
+		}
+		return packages, nil
+	case "dnf":
+		// RHEL/Fedora PHP streams expose unversioned subpackage names. The
+		// enabled stream selects the ABI-compatible build; embedding phpVer in
+		// the RPM name would produce Debian-style names that do not exist.
+		names := map[string]string{
+			"mbstring":   "php-mbstring",
+			"dom":        "php-xml",
+			"intl":       "php-intl",
+			"pdo_sqlite": "php-pdo",
+			"zip":        "php-pecl-zip",
+		}
+		packages := make([]string, 0, len(missing))
+		for _, capability := range missing {
+			name, ok := names[capability]
+			if !ok {
+				return nil, fmt.Errorf("unsupported PHP capability %q", capability)
+			}
+			packages = append(packages, name)
+		}
+		return packages, nil
 	case "pacman":
-		// Arch ships the .so but does NOT enable it — its philosophy leaves
-		// that to the operator (caught live: package installed, `php -m` still
-		// had no sqlite). Enable it ourselves via a scanned conf.d drop-in.
-		// Arch .so'yu getirir ama etkinleştirMEZ — felsefesi bunu operatöre
-		// bırakır (canlıda yakalandı: paket kurulu, `php -m`'de hâlâ sqlite
-		// yok). Taranan bir conf.d drop-in ile kendimiz etkinleştiririz.
-		if _, err := installPackagesContext(ctx, family, []string{"php-sqlite"}); err != nil {
+		packages := make([]string, 0, 1)
+		for _, capability := range missing {
+			switch capability {
+			case "pdo_sqlite":
+				packages = append(packages, "php-sqlite")
+			case "mbstring", "dom", "intl", "zip":
+				// These capabilities ship in Arch's main php package. intl
+				// and zip are enabled below; mbstring and DOM are built in.
+			default:
+				return nil, fmt.Errorf("unsupported PHP capability %q", capability)
+			}
+		}
+		return packages, nil
+	default:
+		return nil, fmt.Errorf("unsupported package manager for this distro")
+	}
+}
+
+func enablePacmanRoundcubePHPExtensions() error {
+	for _, dir := range []string{"/etc/php/conf.d", "/etc/php8/conf.d", "/etc/php/php.d"} {
+		fi, err := os.Lstat(dir)
+		if err != nil || fi.Mode()&os.ModeSymlink != 0 || !fi.IsDir() {
+			continue
+		}
+		if err := secureWriteConfig(
+			// Keep the previous SQLite-only managed filename so an upgrade
+			// replaces that drop-in instead of loading SQLite twice.
+			filepath.Join(dir, pacmanRoundcubePHPConfigFile),
+			[]byte(pacmanRoundcubePHPConfig),
+			0o644,
+		); err != nil {
+			return fmt.Errorf("enable PHP extensions for Roundcube: %w", err)
+		}
+		return nil
+	}
+	return fmt.Errorf("PHP configuration directory could not be found")
+}
+
+func ensureRoundcubePHPDependenciesWithOps(
+	ctx context.Context,
+	family string,
+	phpVer string,
+	ops roundcubePHPDependencyOps,
+) error {
+	if ops.probe == nil || ops.install == nil || ops.enablePacman == nil || ops.reload == nil {
+		return fmt.Errorf("PHP dependency operations are incomplete")
+	}
+	missing, err := ops.probe(ctx)
+	if err != nil {
+		return err
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	packages, err := roundcubePHPExtensionPackages(family, phpVer, missing)
+	if err != nil {
+		return err
+	}
+	if len(packages) > 0 {
+		if _, err := ops.install(ctx, family, packages); err != nil {
+			return fmt.Errorf("install PHP extensions for Roundcube: %w", err)
+		}
+	}
+	if family == "pacman" {
+		if err := ops.enablePacman(); err != nil {
 			return err
 		}
-		configured := false
-		for _, dir := range []string{"/etc/php/conf.d", "/etc/php8/conf.d", "/etc/php/php.d"} {
-			fi, err := os.Lstat(dir)
-			if err != nil || fi.Mode()&os.ModeSymlink != 0 || !fi.IsDir() {
-				continue
-			}
-			if err := secureWriteConfig(
-				filepath.Join(dir, "celikpanel-sqlite.ini"),
-				[]byte("extension=pdo_sqlite\nextension=sqlite3\n"),
-				0o644,
-			); err != nil {
-				return fmt.Errorf("enable PHP SQLite extension: %w", err)
-			}
-			configured = true
-			break
-		}
-		if !configured {
-			return fmt.Errorf("PHP configuration directory could not be found")
-		}
-	default:
-		return fmt.Errorf("unsupported package manager for this distro")
 	}
-
-	// Reload FPM so a served request sees the new extension. Best-effort — the
-	// CLI initdb that follows picks it up regardless of the reload.
-	// Sunulan istek yeni uzantıyı görsün diye FPM'i yeniden yükle. En-iyi-çaba
-	// — ardından gelen CLI initdb reload'dan bağımsız uzantıyı alır.
-	if phpVer != "" && family == "apt" {
-		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "php"+phpVer+"-fpm"); err != nil {
-			return fmt.Errorf("PHP-FPM reload failed: %s", commandFailureDetail("systemctl reload", out, err))
-		}
-	} else {
-		if out, err := runServiceMutationCombinedOutput(ctx, "systemctl", "reload", "php-fpm"); err != nil {
-			return fmt.Errorf("PHP-FPM reload failed: %s", commandFailureDetail("systemctl reload", out, err))
-		}
+	unit := "php-fpm"
+	if family == "apt" {
+		unit = "php" + phpVer + "-fpm"
 	}
-
-	// Verify the driver is actually loadable now — better a clear failure here
-	// than a cryptic "could not find driver" from initdb two steps later.
-	// Sürücünün artık gerçekten yüklenebilir olduğunu doğrula — iki adım sonra
-	// initdb'den gelen anlaşılmaz "could not find driver" yerine burada net
-	// bir başarısızlık iyidir.
-	if !phpHasSQLite(ctx) {
-		return fmt.Errorf("installed but the pdo_sqlite driver is still not loadable")
+	if out, err := ops.reload(ctx, unit); err != nil {
+		return fmt.Errorf("PHP-FPM reload failed: %s", commandFailureDetail("systemctl reload", out, err))
+	}
+	missing, err = ops.probe(ctx)
+	if err != nil {
+		return err
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"PHP extensions are installed but Roundcube capabilities are still unavailable: %s",
+			strings.Join(missing, ", "),
+		)
 	}
 	return nil
+}
+
+func (a *Agent) ensureRoundcubePHPDependencies(ctx context.Context, phpVer string) error {
+	return ensureRoundcubePHPDependenciesWithOps(
+		ctx,
+		detectPkgFamily(),
+		phpVer,
+		roundcubePHPDependencyOps{
+			probe:        inspectRoundcubePHPCapabilities,
+			install:      installPackagesContext,
+			enablePacman: enablePacmanRoundcubePHPExtensions,
+			reload: func(ctx context.Context, unit string) ([]byte, error) {
+				return runServiceMutationCombinedOutput(ctx, "systemctl", "reload", unit)
+			},
+		},
+	)
 }
 
 type RemoveRoundcubeResponse = transport.RemoveRoundcubeResponse

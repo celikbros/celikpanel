@@ -25,10 +25,11 @@ import (
 // değil.
 
 type hostingCapabilities struct {
-	WebServer   string   `json:"web_server"`   // "nginx" or "" when no supported adapter is available
-	PHPVersions []string `json:"php_versions"` // installed FPM versions, newest first
-	DNSServer   string   `json:"dns_server"`   // "pdns", "bind" or ""
-	MailServer  bool     `json:"mail_server"`  // postfix present
+	WebServer        string   `json:"web_server"`         // "nginx" or "" when no supported adapter is available
+	PHPVersions      []string `json:"php_versions"`       // installed FPM versions, newest first
+	DNSServer        string   `json:"dns_server"`         // "pdns", "bind" or ""
+	DNSIdentityReady bool     `json:"dns_identity_ready"` // saved nameserver pair and operating mode
+	MailServer       bool     `json:"mail_server"`        // postfix present
 	// All installed database engines — a server can legitimately run both
 	// MariaDB and PostgreSQL side by side (no conflict group).
 	// Kurulu tüm veritabanı motorları — bir sunucu MariaDB ve PostgreSQL'i
@@ -110,6 +111,7 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 		}
 		caps.PHPVersions = versions
 	}
+	caps.DNSIdentityReady = caps.DNSServer != "" && p.dnsIdentityConfigured(ctx)
 	return caps, nil
 }
 

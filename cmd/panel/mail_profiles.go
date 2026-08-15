@@ -16,6 +16,7 @@ import (
 const (
 	serviceOperationKindMailProfileInstall  = "mail_profile_install"
 	mailProfileInstallPath                  = "/api/v1/service/profile/install"
+	errCodeMailProfileConfirmationRequired  = "mail_profile_confirmation_required"
 	errCodeMailProfileServerHostnameInvalid = "mail_profile_server_hostname_invalid"
 
 	mailProfileStatusUnknown   = "unknown"
@@ -74,6 +75,7 @@ func mustMailProfileServiceIDs(profileID string) []string {
 type mailProfileInstallRequest struct {
 	ProfileID string `json:"profile_id"`
 	RequestID string `json:"request_id"`
+	Confirmed bool   `json:"confirmed"`
 }
 
 type mailProfileTLSResult struct {
@@ -137,6 +139,11 @@ func (p *Panel) handleMailProfileInstall(w http.ResponseWriter, r *http.Request)
 	request.ProfileID = strings.TrimSpace(request.ProfileID)
 	if _, ok := mailProfileByID(request.ProfileID); !ok {
 		writeClientError(w, http.StatusBadRequest, "unknown mail profile")
+		return
+	}
+	if !request.Confirmed {
+		writeCodedError(w, http.StatusBadRequest, errCodeMailProfileConfirmationRequired,
+			"confirm the reviewed mail profile plan before starting", "")
 		return
 	}
 	if !validServiceOperationID(request.RequestID) {
@@ -428,6 +435,20 @@ func (p *Panel) validateMailProfileHostAndCatalog(ctx context.Context, profile m
 	return nil
 }
 
+// mailProfileHostBlockedReason exposes the safe, actionable hostname gate in
+// the read-only catalogue. An invalid host must disable the action before the
+// operator can start an operation that is guaranteed to fail.
+func mailProfileHostBlockedReason() string {
+	rawHostname, err := readMailProfileHostname()
+	if err != nil {
+		return "The server hostname could not be verified."
+	}
+	if _, err := hostname.CanonicalFQDN(rawHostname); err != nil {
+		return mailProfileServerHostnameMessage
+	}
+	return ""
+}
+
 func verifyMailProfileReady(profile mailProfileDefinition, services []ManagedServiceResponse) error {
 	for _, serviceID := range profile.Services {
 		managed := core.GetManagedServiceByID(serviceID)
@@ -512,6 +533,7 @@ func mailProfilesView(
 	services []ManagedServiceResponse,
 	verified bool,
 	packageFamily string,
+	hostBlockedReason string,
 	webmailReady bool,
 	webmailProven bool,
 ) []MailProfileResponse {
@@ -536,6 +558,12 @@ func mailProfilesView(
 		}
 		if !verified {
 			view.BlockedReason = "Service state is unverified; run a fresh scan."
+			profiles = append(profiles, view)
+			continue
+		}
+		if hostBlockedReason != "" {
+			view.Status = mailProfileStatusBlocked
+			view.BlockedReason = hostBlockedReason
 			profiles = append(profiles, view)
 			continue
 		}
