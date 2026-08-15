@@ -3,9 +3,8 @@ CelikPanel technical and third-party notice
 
 This NOTICE records distribution and supply-chain facts. It is not a license
 and does not grant permission to use, copy, modify or distribute CelikPanel.
-The project license is currently undecided, as stated in README.md. A project
-owner must choose and publish a license before any public distribution terms
-can be inferred.
+The CELIKBROS Commercial License in LICENSE governs the CELIKBROS-owned
+portions of CelikPanel.
 
 CelikPanel builds use third-party Go modules and npm packages. Those components
 remain subject to their respective licenses, copyright notices and source or

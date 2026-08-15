@@ -156,4 +156,8 @@ yayımlamadan açık veya ticari bir sürüm, imzalı kaynak iddiasında bulunma
 
 ## Lisans
 
-Henüz kararlaştırılmadı; lisans modeli (açık kaynak / open core / ticari) değerlendirilirken depo private tutuluyor.
+CelikPanel, CELIKBROS'a ait kaynak-görünür fakat proprietary bir yazılımdır.
+Her türlü kullanım, CELIKBROS'un ayrı bir ticari lisans sözleşmesi
+kapsamındaki önceden verilmiş yazılı iznine bağlıdır. Deponun public
+olması CelikPanel'i kullanma, kopyalama, değiştirme, dağıtma, barındırma
+veya fork etme izni vermez. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
