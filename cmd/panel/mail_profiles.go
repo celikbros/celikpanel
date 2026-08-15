@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -15,6 +17,7 @@ import (
 
 const (
 	serviceOperationKindMailProfileInstall  = "mail_profile_install"
+	mailProfileProofVersion                 = 1
 	mailProfileInstallPath                  = "/api/v1/service/profile/install"
 	errCodeMailProfileConfirmationRequired  = "mail_profile_confirmation_required"
 	errCodeMailProfileServerHostnameInvalid = "mail_profile_server_hostname_invalid"
@@ -24,6 +27,11 @@ const (
 	mailProfileStatusPartial   = "partial"
 	mailProfileStatusComplete  = "complete"
 	mailProfileStatusBlocked   = "blocked"
+
+	mailProfileAttemptNone       = "none"
+	mailProfileAttemptInProgress = "in_progress"
+	mailProfileAttemptSucceeded  = "succeeded"
+	mailProfileAttemptFailed     = "failed"
 
 	mailProfileFallbackWarning       = "No active trusted Secure Mail certificate was found. Mail submission is using the local self-signed fallback; activate a trusted certificate with Secure Mail enabled."
 	mailProfileReconciliationWarning = "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
@@ -84,17 +92,117 @@ type mailProfileTLSResult struct {
 	FallbackOnly bool `json:"fallback_only"`
 }
 
+type mailProfileProofReceipt struct {
+	Success              bool                       `json:"success"`
+	ProofVersion         int                        `json:"proof_version"`
+	ProfileID            string                     `json:"profile_id"`
+	Services             []string                   `json:"services"`
+	CompletedServices    []string                   `json:"completed_services"`
+	MailTLS              mailProfileTLSProofReceipt `json:"mail_tls"`
+	SubmissionConfigured bool                       `json:"submission_configured"`
+}
+
+type mailProfileTLSProofReceipt struct {
+	Configured   bool  `json:"configured"`
+	SNICount     *int  `json:"sni_count"`
+	FallbackOnly *bool `json:"fallback_only"`
+}
+
 // MailProfileResponse is derived entirely on the server. Clients choose one
 // profile id; they can never supply or reorder the privileged service plan.
 type MailProfileResponse struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Services      []string `json:"services"`
-	Status        string   `json:"status"`
-	Available     bool     `json:"available"`
-	BlockedReason string   `json:"blocked_reason,omitempty"`
-	Warning       string   `json:"warning,omitempty"`
+	Verified            bool     `json:"verified"`
+	LatestAttemptStatus string   `json:"latest_attempt_status"`
+	LatestAttemptError  string   `json:"latest_attempt_error,omitempty"`
+	ID                  string   `json:"id"`
+	Name                string   `json:"name"`
+	Description         string   `json:"description"`
+	Services            []string `json:"services"`
+	Status              string   `json:"status"`
+	Available           bool     `json:"available"`
+	BlockedReason       string   `json:"blocked_reason,omitempty"`
+	Warning             string   `json:"warning,omitempty"`
+}
+
+type mailProfileAttemptProof struct {
+	Status   string
+	Error    string
+	Verified bool
+}
+
+// latestMailProfileAttemptProofs reads only the newest durable attempt for
+// each profile. The current scan still has to prove every component ready
+// before a profile may expose Verified; a receipt alone never makes a stopped
+// profile healthy.
+func (p *Panel) latestMailProfileAttemptProofs(ctx context.Context) (map[string]mailProfileAttemptProof, error) {
+	rows, err := p.db.GetDB().QueryContext(ctx, `
+		SELECT service_id, status, COALESCE(result_json, ''), COALESCE(error_message, '')
+		FROM service_operations
+		WHERE kind=?
+		ORDER BY started_at DESC, updated_at DESC, created_at DESC, id DESC`,
+		serviceOperationKindMailProfileInstall,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("read verified mail profiles: %w", err)
+	}
+	defer rows.Close()
+
+	proofs := make(map[string]mailProfileAttemptProof, len(mailProfileDefinitions))
+	seen := make(map[string]bool, len(mailProfileDefinitions))
+	for rows.Next() {
+		var profileID, status, resultJSON, errorMessage string
+		if err := rows.Scan(&profileID, &status, &resultJSON, &errorMessage); err != nil {
+			return nil, fmt.Errorf("decode verified mail profile: %w", err)
+		}
+		if seen[profileID] {
+			continue
+		}
+		if profile, known := mailProfileByID(profileID); known {
+			seen[profileID] = true
+			proof := mailProfileAttemptProof{}
+			switch status {
+			case serviceOperationQueued, serviceOperationRunning:
+				proof.Status = mailProfileAttemptInProgress
+			case serviceOperationSucceeded:
+				proof.Status = mailProfileAttemptSucceeded
+				proof.Verified = mailProfileReceiptVerified(profile, resultJSON)
+			case serviceOperationFailed:
+				proof.Status = mailProfileAttemptFailed
+				proof.Error = strings.TrimSpace(errorMessage)
+			default:
+				// The database status constraint should make this impossible. If
+				// storage is corrupted, fail closed as an unresolved attempt.
+				proof.Status = mailProfileAttemptInProgress
+			}
+			proofs[profileID] = proof
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read verified mail profiles: %w", err)
+	}
+	return proofs, nil
+}
+
+// mailProfileReceiptVerified accepts only the versioned proof emitted after
+// every server-owned profile phase completed. Legacy or malformed success
+// rows remain useful history, but cannot silently acquire today's stronger
+// meaning and mark the Dashboard journey done.
+func mailProfileReceiptVerified(profile mailProfileDefinition, resultJSON string) bool {
+	var receipt mailProfileProofReceipt
+	if err := json.Unmarshal([]byte(resultJSON), &receipt); err != nil {
+		return false
+	}
+	return receipt.Success &&
+		receipt.ProofVersion == mailProfileProofVersion &&
+		receipt.ProfileID == profile.ID &&
+		slices.Equal(receipt.Services, profile.Services) &&
+		slices.Equal(receipt.CompletedServices, profile.Services) &&
+		receipt.SubmissionConfigured &&
+		receipt.MailTLS.Configured &&
+		receipt.MailTLS.SNICount != nil &&
+		*receipt.MailTLS.SNICount >= 0 &&
+		receipt.MailTLS.FallbackOnly != nil &&
+		*receipt.MailTLS.FallbackOnly == (*receipt.MailTLS.SNICount == 0)
 }
 
 func mailProfileByID(id string) (mailProfileDefinition, bool) {
@@ -236,6 +344,7 @@ func mailProfilePhase(profileID string, parts ...string) string {
 func newMailProfileResult(profile mailProfileDefinition) serviceOperationResult {
 	return serviceOperationResult{
 		"success":               false,
+		"proof_version":         mailProfileProofVersion,
 		"profile_id":            profile.ID,
 		"services":              append([]string(nil), profile.Services...),
 		"completed_services":    []string{},
@@ -546,6 +655,7 @@ func mailProfilesView(
 	hostBlockedReason string,
 	webmailReady bool,
 	webmailProven bool,
+	profileAttemptProofs map[string]mailProfileAttemptProof,
 ) []MailProfileResponse {
 	byID := make(map[string]ManagedServiceResponse, len(services))
 	installed := make(map[string]bool, len(services))
@@ -558,13 +668,19 @@ func mailProfilesView(
 
 	profiles := make([]MailProfileResponse, 0, len(mailProfileDefinitions))
 	for _, definition := range allMailProfiles() {
+		proof, attempted := profileAttemptProofs[definition.ID]
+		if !attempted {
+			proof.Status = mailProfileAttemptNone
+		}
 		view := MailProfileResponse{
-			ID:          definition.ID,
-			Name:        definition.Name,
-			Description: definition.Description,
-			Services:    append([]string(nil), definition.Services...),
-			Status:      mailProfileStatusUnknown,
-			Available:   false,
+			ID:                  definition.ID,
+			Name:                definition.Name,
+			Description:         definition.Description,
+			Services:            append([]string(nil), definition.Services...),
+			LatestAttemptStatus: proof.Status,
+			LatestAttemptError:  proof.Error,
+			Status:              mailProfileStatusUnknown,
+			Available:           false,
 		}
 		if !verified {
 			view.BlockedReason = "Service state is unverified; run a fresh scan."
@@ -648,11 +764,14 @@ func mailProfilesView(
 		switch {
 		case allReady:
 			view.Status = mailProfileStatusComplete
-			// A service scan can prove component membership and runtime state, but
-			// only the bound profile operation proves its final MailStack, TLS and
-			// submission reconciliations. Keep that distinction visible instead of
-			// over-claiming a complete mail setup from component state alone.
-			view.Warning = mailProfileReconciliationWarning
+			view.Verified = proof.Verified
+			if !view.Verified {
+				// A service scan can prove component membership and runtime state, but
+				// only the bound profile operation proves its final MailStack, TLS and
+				// submission reconciliations. Keep that distinction visible instead of
+				// over-claiming a complete mail setup from component state alone.
+				view.Warning = mailProfileReconciliationWarning
+			}
 		case anyInstalled:
 			view.Status = mailProfileStatusPartial
 			if webmailWarning != "" {

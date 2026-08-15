@@ -765,14 +765,16 @@ func TestMailProfileFallbackWarningAndFinalGates(t *testing.T) {
 			t, fixture.panel, fixture.userID, queued.ID, serviceOperationSucceeded,
 		)
 		var result struct {
-			MailTLS  mailProfileTLSResult `json:"mail_tls"`
-			Warnings []string             `json:"warnings"`
+			ProofVersion int                  `json:"proof_version"`
+			MailTLS      mailProfileTLSResult `json:"mail_tls"`
+			Warnings     []string             `json:"warnings"`
 		}
 		if err := json.Unmarshal(completed.Result, &result); err != nil {
 			t.Fatal(err)
 		}
 		tlsResult := result.MailTLS
-		if !tlsResult.Configured || tlsResult.SNICount != 0 || !tlsResult.FallbackOnly {
+		if result.ProofVersion != mailProfileProofVersion ||
+			!tlsResult.Configured || tlsResult.SNICount != 0 || !tlsResult.FallbackOnly {
 			t.Fatalf("mail_tls = %+v", tlsResult)
 		}
 		warnings := result.Warnings
@@ -878,36 +880,52 @@ func profileViewByID(t *testing.T, profiles []MailProfileResponse, id string) Ma
 }
 
 func TestMailProfileManagedViewStatusesFailClosed(t *testing.T) {
-	if profile := profileViewByID(t, mailProfilesView(nil, false, "apt", "", false, false), "core-mail"); profile.Status != mailProfileStatusUnknown || profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(nil, false, "apt", "", false, false, nil), "core-mail"); profile.Status != mailProfileStatusUnknown || profile.Available {
 		t.Fatalf("unknown profile = %+v", profile)
 	}
 
 	availableServices := catalogView(nil, "apt")
-	if profile := profileViewByID(t, mailProfilesView(availableServices, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusAvailable || !profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(availableServices, true, "apt", "", false, true, nil), "core-mail"); profile.Status != mailProfileStatusAvailable || !profile.Available {
 		t.Fatalf("available profile = %+v", profile)
 	}
 	if profile := profileViewByID(t, mailProfilesView(
-		availableServices, true, "apt", mailProfileServerHostnameMessage, false, true,
+		availableServices, true, "apt", mailProfileServerHostnameMessage, false, true, nil,
 	), "core-mail"); profile.Status != mailProfileStatusBlocked ||
 		profile.Available || profile.BlockedReason != mailProfileServerHostnameMessage {
 		t.Fatalf("hostname-blocked profile = %+v", profile)
 	}
 
 	partial := catalogView([]serviceObservation{{ID: "postfix", IsInstalled: true, Status: "active (running)"}}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(partial, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusPartial || !profile.Available {
+	if profile := profileViewByID(t, mailProfilesView(partial, true, "apt", "", false, true, nil), "core-mail"); profile.Status != mailProfileStatusPartial || !profile.Available || profile.LatestAttemptStatus != mailProfileAttemptNone {
 		t.Fatalf("partial profile = %+v", profile)
+	}
+	if profile := profileViewByID(t, mailProfilesView(
+		partial, true, "apt", "", false, true, map[string]mailProfileAttemptProof{
+			"core-mail": {Status: mailProfileAttemptFailed, Error: "submission verification failed"},
+		},
+	), "core-mail"); profile.Status != mailProfileStatusPartial ||
+		profile.LatestAttemptStatus != mailProfileAttemptFailed ||
+		profile.LatestAttemptError != "submission verification failed" {
+		t.Fatalf("failed partial profile = %+v", profile)
 	}
 
 	complete := catalogView([]serviceObservation{
 		{ID: "postfix", IsInstalled: true, Status: "active (running)"},
 		{ID: "dovecot", IsInstalled: true, Status: "active (running)"},
 	}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(complete, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusComplete || !profile.Available || profile.Warning != mailProfileReconciliationWarning {
+	if profile := profileViewByID(t, mailProfilesView(complete, true, "apt", "", false, true, nil), "core-mail"); profile.Status != mailProfileStatusComplete || !profile.Available || profile.Warning != mailProfileReconciliationWarning || profile.Verified {
 		t.Fatalf("complete profile = %+v", profile)
+	}
+	if profile := profileViewByID(t, mailProfilesView(
+		complete, true, "apt", "", false, true, map[string]mailProfileAttemptProof{
+			"core-mail": {Status: mailProfileAttemptSucceeded, Verified: true},
+		},
+	), "core-mail"); profile.Status != mailProfileStatusComplete || !profile.Verified || profile.Warning != "" || profile.LatestAttemptStatus != mailProfileAttemptSucceeded {
+		t.Fatalf("verified complete profile = %+v", profile)
 	}
 
 	blocked := catalogView([]serviceObservation{{ID: "exim", IsInstalled: true, Status: "active (running)"}}, "apt")
-	if profile := profileViewByID(t, mailProfilesView(blocked, true, "apt", "", false, true), "core-mail"); profile.Status != mailProfileStatusBlocked || profile.Available || profile.BlockedReason == "" {
+	if profile := profileViewByID(t, mailProfilesView(blocked, true, "apt", "", false, true, nil), "core-mail"); profile.Status != mailProfileStatusBlocked || profile.Available || profile.BlockedReason == "" {
 		t.Fatalf("blocked profile = %+v", profile)
 	}
 
@@ -919,16 +937,141 @@ func TestMailProfileManagedViewStatusesFailClosed(t *testing.T) {
 		{ID: "roundcube", IsInstalled: true, Status: "installed"},
 	}
 	webmailServices := catalogView(webmailObservations, "apt")
-	if profile := profileViewByID(t, mailProfilesView(webmailServices, true, "apt", "", true, true), "webmail"); profile.Status != mailProfileStatusComplete || profile.Warning != mailProfileReconciliationWarning {
+	if profile := profileViewByID(t, mailProfilesView(webmailServices, true, "apt", "", true, true, nil), "webmail"); profile.Status != mailProfileStatusComplete || profile.Warning != mailProfileReconciliationWarning {
 		t.Fatalf("ready webmail = %+v", profile)
 	}
 	for name, profiles := range map[string][]MailProfileResponse{
-		"missing proof": mailProfilesView(webmailServices, true, "apt", "", false, false),
-		"dead socket":   mailProfilesView(webmailServices, true, "apt", "", false, true),
+		"missing proof": mailProfilesView(webmailServices, true, "apt", "", false, false, nil),
+		"dead socket":   mailProfilesView(webmailServices, true, "apt", "", false, true, nil),
 	} {
 		if profile := profileViewByID(t, profiles, "webmail"); profile.Status != mailProfileStatusPartial || profile.Warning == "" {
 			t.Fatalf("%s webmail = %+v", name, profile)
 		}
+	}
+}
+
+func TestLatestMailProfileAttemptProofsUseNewestAttempt(t *testing.T) {
+	fixture, _ := newMailProfileTestFixture(t)
+	validReceipt := func(profileID string) string {
+		t.Helper()
+		profile, ok := mailProfileByID(profileID)
+		if !ok {
+			t.Fatalf("unknown profile %q", profileID)
+		}
+		result := newMailProfileResult(profile)
+		result["success"] = true
+		result["completed_services"] = append([]string(nil), profile.Services...)
+		result["submission_configured"] = true
+		result["mail_tls"] = mailProfileTLSResult{Configured: true, SNICount: 0, FallbackOnly: true}
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(encoded)
+	}
+	insert := func(profileID, status, startedAt, resultJSON, errorMessage string) {
+		t.Helper()
+		op, err := fixture.panel.createServiceOperationRequest(
+			context.Background(), serviceOperationKindMailProfileInstall, profileID, "",
+			mustServiceOperationRequestID(t), serviceOperationActor{},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := fixture.database.GetDB().Exec(
+			`UPDATE service_operations SET status=?, result_json=?, error_message=?, started_at=?, created_at=?, updated_at=? WHERE id=?`,
+			status, resultJSON, errorMessage, startedAt, startedAt, startedAt, op.ID,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	insert("core-mail", serviceOperationSucceeded, "2026-08-15T10:00:00Z", validReceipt("core-mail"), "")
+	insert("core-mail", serviceOperationFailed, "2026-08-15T11:00:00Z", `{"success":false}`, "submission verification failed")
+	insert("protected-mail", serviceOperationSucceeded, "2026-08-15T12:00:00Z", validReceipt("protected-mail"), "")
+	legacy := validReceipt("webmail")
+	var legacyResult map[string]any
+	if err := json.Unmarshal([]byte(legacy), &legacyResult); err != nil {
+		t.Fatal(err)
+	}
+	delete(legacyResult, "proof_version")
+	legacyBytes, err := json.Marshal(legacyResult)
+	if err != nil {
+		t.Fatal(err)
+	}
+	insert("webmail", serviceOperationSucceeded, "2026-08-15T13:00:00Z", string(legacyBytes), "")
+
+	proofs, err := fixture.panel.latestMailProfileAttemptProofs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proof := proofs["core-mail"]; proof.Verified || proof.Status != mailProfileAttemptFailed || proof.Error != "submission verification failed" {
+		t.Fatalf("newer failed core-mail attempt = %+v", proof)
+	}
+	if proof := proofs["protected-mail"]; !proof.Verified || proof.Status != mailProfileAttemptSucceeded {
+		t.Fatalf("latest successful protected-mail attempt = %+v", proof)
+	}
+	if proof := proofs["webmail"]; proof.Verified || proof.Status != mailProfileAttemptSucceeded {
+		t.Fatalf("legacy success without proof version = %+v", proof)
+	}
+}
+
+func TestMailProfileReceiptVerifiedRequiresExactVersionedProof(t *testing.T) {
+	profile, ok := mailProfileByID("core-mail")
+	if !ok {
+		t.Fatal("core-mail profile missing")
+	}
+	valid := func() serviceOperationResult {
+		result := newMailProfileResult(profile)
+		result["success"] = true
+		result["completed_services"] = append([]string(nil), profile.Services...)
+		result["submission_configured"] = true
+		result["mail_tls"] = mailProfileTLSResult{Configured: true, SNICount: 0, FallbackOnly: true}
+		return result
+	}
+	encode := func(result serviceOperationResult) string {
+		t.Helper()
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(encoded)
+	}
+
+	if !mailProfileReceiptVerified(profile, encode(valid())) {
+		t.Fatal("exact versioned receipt was not verified")
+	}
+	for name, mutate := range map[string]func(serviceOperationResult){
+		"missing version": func(result serviceOperationResult) { delete(result, "proof_version") },
+		"wrong profile":   func(result serviceOperationResult) { result["profile_id"] = "webmail" },
+		"wrong service order": func(result serviceOperationResult) {
+			result["services"] = []string{"dovecot", "postfix"}
+		},
+		"incomplete services": func(result serviceOperationResult) {
+			result["completed_services"] = []string{"postfix"}
+		},
+		"submission missing": func(result serviceOperationResult) { result["submission_configured"] = false },
+		"TLS missing":        func(result serviceOperationResult) { result["mail_tls"] = mailProfileTLSResult{} },
+		"negative SNI": func(result serviceOperationResult) {
+			result["mail_tls"] = mailProfileTLSResult{Configured: true, SNICount: -1}
+		},
+		"fallback mismatch": func(result serviceOperationResult) {
+			result["mail_tls"] = mailProfileTLSResult{Configured: true, SNICount: 1, FallbackOnly: true}
+		},
+		"fallback missing": func(result serviceOperationResult) {
+			result["mail_tls"] = map[string]any{"configured": true, "sni_count": 1}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			result := valid()
+			mutate(result)
+			if mailProfileReceiptVerified(profile, encode(result)) {
+				t.Fatalf("invalid %s receipt was verified", name)
+			}
+		})
+	}
+	if mailProfileReceiptVerified(profile, `{"success":`) {
+		t.Fatal("malformed receipt was verified")
 	}
 }
 
@@ -1098,6 +1241,7 @@ func TestSucceededMailProfileRecoveryReconstructsFullResult(t *testing.T) {
 	loaded, _ := getServiceOperation(t, fixture.panel, fixture.userID, op.ID)
 	var result struct {
 		Success              bool                 `json:"success"`
+		ProofVersion         int                  `json:"proof_version"`
 		ProfileID            string               `json:"profile_id"`
 		Services             []string             `json:"services"`
 		CompletedServices    []string             `json:"completed_services"`
@@ -1108,7 +1252,7 @@ func TestSucceededMailProfileRecoveryReconstructsFullResult(t *testing.T) {
 	if err := json.Unmarshal(loaded.Result, &result); err != nil {
 		t.Fatal(err)
 	}
-	if !result.Success || result.ProfileID != "core-mail" ||
+	if !result.Success || result.ProofVersion != mailProfileProofVersion || result.ProfileID != "core-mail" ||
 		!reflect.DeepEqual(result.Services, []string{"postfix", "dovecot"}) ||
 		!reflect.DeepEqual(result.CompletedServices, result.Services) ||
 		!result.MailTLS.Configured || !result.MailTLS.FallbackOnly ||

@@ -47,7 +47,13 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         // Servisler yalnızca yönetici görünümüdür; rozeti yalnızca yönetici çubuğu gösterir.
         if (role === 'admin') {
             api.getServices()
-                .then((s) => setCounts((c) => ({ ...c, services: s.length })))
+                // The badge answers "how many components are installed?".
+                // Catalogue size belongs on the Components page and made a
+                // fresh server look as though 26 services were already present.
+                .then((s) => setCounts((c) => ({
+                    ...c,
+                    services: s.filter((service) => service.is_installed).length,
+                })))
                 .catch(() => {});
         }
     }, [role]);

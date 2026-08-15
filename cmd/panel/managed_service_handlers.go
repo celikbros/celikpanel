@@ -468,6 +468,11 @@ func catalogViewForHost(obs []serviceObservation, host core.ManagedServiceHostPr
 // tarama uç noktası üzerinden koşullu olarak yeniler.
 func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	profileAttempts, proofErr := p.latestMailProfileAttemptProofs(r.Context())
+	if proofErr != nil {
+		writeServerError(w, proofErr)
+		return
+	}
 
 	// A fresh installation has no observation row yet, but its installable
 	// catalogue is still known. Never render an empty Components page merely
@@ -477,7 +482,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	dnsIdentityReady := p.managedServicesDNSIdentityReady(r.Context())
 	payload := managedServicesPayload{
 		Services:         catalogViewForHost(nil, host),
-		Profiles:         mailProfilesView(nil, false, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), false, false),
+		Profiles:         mailProfilesView(nil, false, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), false, false, profileAttempts),
 		DNSIdentityReady: dnsIdentityReady,
 	}
 
@@ -513,6 +518,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 			mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady),
 			snapshot.WebmailReady,
 			snapshot.WebmailProven,
+			profileAttempts,
 		)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		writeServerError(w, fmt.Errorf("read service scan cache: %w", err))
@@ -598,13 +604,18 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 		writeServerError(w, err)
 		return
 	}
+	profileAttempts, err := p.latestMailProfileAttemptProofs(r.Context())
+	if err != nil {
+		writeServerError(w, err)
+		return
+	}
 
 	now := time.Now().UTC()
 	dnsIdentityReady := p.managedServicesDNSIdentityReady(r.Context())
 	json.NewEncoder(w).Encode(managedServicesPayload{
 		ScannedAt:        &now,
 		Services:         services,
-		Profiles:         mailProfilesView(services, true, p.packageFamily(), mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), webmailReady, webmailProven),
+		Profiles:         mailProfilesView(services, true, p.packageFamily(), mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), webmailReady, webmailProven, profileAttempts),
 		DNSIdentityReady: dnsIdentityReady,
 	})
 }
@@ -642,7 +653,9 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 	}
 	age := time.Since(scanned)
 	if age < 0 {
-		age = 0
+		// A future cache timestamp cannot prove freshness. Treat it exactly like
+		// a missing/stale observation and force the conditional caller to rescan.
+		return managedServicesPayload{}, false, nil
 	}
 	if age > maxAge {
 		return managedServicesPayload{}, false, nil
@@ -656,10 +669,14 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 	packageFamily := host.PackageFamily
 	services := catalogViewForHost(snapshot.Observations, host)
 	dnsIdentityReady := p.managedServicesDNSIdentityReady(ctx)
+	profileAttempts, err := p.latestMailProfileAttemptProofs(ctx)
+	if err != nil {
+		return managedServicesPayload{}, false, err
+	}
 	return managedServicesPayload{
 		ScannedAt:        &scanned,
 		Services:         services,
-		Profiles:         mailProfilesView(services, true, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), snapshot.WebmailReady, snapshot.WebmailProven),
+		Profiles:         mailProfilesView(services, true, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), snapshot.WebmailReady, snapshot.WebmailProven, profileAttempts),
 		DNSIdentityReady: dnsIdentityReady,
 	}, true, nil
 }

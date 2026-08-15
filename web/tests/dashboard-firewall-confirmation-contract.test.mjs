@@ -7,7 +7,7 @@ const dashboardSource = readFileSync(
   'utf8',
 );
 
-test('both dashboard firewall CTAs only request confirmation on first click', () => {
+test('dashboard firewall enable CTA requests confirmation and persistence stays explicit', () => {
   const requestStart = dashboardSource.indexOf('const requestTurnOnFirewall = () => {');
   const requestEnd = dashboardSource.indexOf('\n    };', requestStart);
   assert.ok(requestStart >= 0 && requestEnd > requestStart);
@@ -17,9 +17,12 @@ test('both dashboard firewall CTAs only request confirmation on first click', ()
   assert.doesNotMatch(requestBody, /fetch\('\/api\/v1\/firewall'/);
   assert.equal(
     dashboardSource.match(/onAct: requestTurnOnFirewall/g)?.length,
-    2,
-    'attention and setup-journey CTAs must share the confirmation request',
+    1,
+    'the attention CTA must request confirmation instead of mutating directly',
   );
+  assert.match(dashboardSource, /done: fw\?\.enabled === true && fw\.persistence_state === 'ready'/);
+  assert.match(dashboardSource, /cta: fw\?\.enabled \? 'dashboard\.saveFirewall' : 'firewall\.turnOn'/);
+  assert.match(dashboardSource, /onAct: fw\?\.enabled \? undefined : requestTurnOnFirewall/);
 });
 
 test('dashboard firewall confirmation fails closed on host mutation readiness', () => {
