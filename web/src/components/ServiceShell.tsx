@@ -14,6 +14,43 @@ interface ManagedService {
     status: string;
 }
 
+interface HostMutationReadiness {
+    ready: boolean;
+    code?: 'HOST_MUTATION_BUSY' | 'HOST_MUTATION_UNAVAILABLE';
+    reason?: 'panel_operation_active' | 'agent_mutation_active' | 'host_lock_busy' | 'package_manager_active' | 'state_unverified';
+}
+
+function parseHostMutationReadiness(value: unknown): HostMutationReadiness | null {
+    if (!value) return null;
+    if (typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (typeof payload.ready !== 'boolean') return null;
+    if (payload.ready) {
+        return payload.code === undefined && payload.reason === undefined ? { ready: true } : null;
+    }
+    if (payload.code !== 'HOST_MUTATION_BUSY' && payload.code !== 'HOST_MUTATION_UNAVAILABLE') return null;
+    if (
+        payload.reason !== 'panel_operation_active'
+        && payload.reason !== 'agent_mutation_active'
+        && payload.reason !== 'host_lock_busy'
+        && payload.reason !== 'package_manager_active'
+        && payload.reason !== 'state_unverified'
+    ) return null;
+    return {
+        ready: false,
+        code: payload.code,
+        reason: payload.reason,
+    };
+}
+
+function unverifiedHostMutationReadiness(): HostMutationReadiness {
+    return {
+        ready: false,
+        code: 'HOST_MUTATION_UNAVAILABLE',
+        reason: 'state_unverified',
+    };
+}
+
 // One honest shell for every service-management page: a header with the
 // real status (sourced from managed-services, not the unreliable per-unit
 // status endpoint) and start/stop/restart. When a service isn't installed,
@@ -44,6 +81,9 @@ export function ServiceShell({
     const [svc, setSvc] = useState<ManagedService | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    const [installConfirmationOpen, setInstallConfirmationOpen] = useState(false);
+    const [installReadiness, setInstallReadiness] = useState<HostMutationReadiness | null>(null);
+    const [installReadinessLoading, setInstallReadinessLoading] = useState(false);
 
     const load = () =>
         fetch('/api/v1/managed-services')
@@ -63,6 +103,36 @@ export function ServiceShell({
         setLoading(false);
     }, [catalogSnapshot, serviceId]);
 
+    useEffect(() => {
+        if (!installConfirmationOpen) return;
+        let cancelled = false;
+        setInstallReadiness(null);
+        setInstallReadinessLoading(true);
+
+        const checkReadiness = async () => {
+            let readiness = unverifiedHostMutationReadiness();
+            try {
+                const response = await fetch('/api/v1/host-mutation-readiness', {
+                    cache: 'no-store',
+                });
+                if (response.ok) {
+                    readiness = parseHostMutationReadiness(await response.json())
+                        ?? unverifiedHostMutationReadiness();
+                }
+            } catch {
+                // Fail closed: an unreadable readiness response never unlocks install.
+            }
+            if (cancelled) return;
+            setInstallReadiness(readiness);
+            setInstallReadinessLoading(false);
+        };
+
+        void checkReadiness();
+        return () => {
+            cancelled = true;
+        };
+    }, [installConfirmationOpen, serviceId]);
+
     const running = svc?.status?.includes('running') ?? false;
     const installed = svc?.is_installed ?? false;
 
@@ -74,7 +144,15 @@ export function ServiceShell({
     // gelmez; agent bu makine için whitelist'teki paketleri kurar ve unit'i
     // başlatır. Dürüst hatalar (root değil, dağıtım desteklenmiyor) gerçek
     // hata olarak görünür.
+    const requestInstall = () => {
+        setInstallReadiness(null);
+        setInstallConfirmationOpen(true);
+    };
+
     const install = async () => {
+        if (installReadiness?.ready !== true) return;
+        if (installLocked) return;
+        setInstallConfirmationOpen(false);
         await startInstall({ serviceId, name });
     };
 
@@ -163,7 +241,7 @@ export function ServiceShell({
                                 label={installLocked ? t('svc.installing') : t('svc.install', { name })}
                                 tone="success"
                                 disabled={installLocked}
-                                onClick={install}
+                                onClick={requestInstall}
                             />
                         ) : undefined
                     }
@@ -171,6 +249,120 @@ export function ServiceShell({
             ) : (
                 children
             )}
+
+            {installConfirmationOpen && (
+                <ServiceInstallConfirmationDialog
+                    name={name}
+                    readiness={installReadiness}
+                    readinessLoading={installReadinessLoading}
+                    confirmDisabled={
+                        installLocked
+                            ? true
+                            : installReadiness?.ready !== true
+                    }
+                    onCancel={() => setInstallConfirmationOpen(false)}
+                    onConfirm={() => void install()}
+                />
+            )}
+        </div>
+    );
+}
+
+function ServiceInstallConfirmationDialog({
+    name,
+    readiness,
+    readinessLoading,
+    confirmDisabled,
+    onCancel,
+    onConfirm,
+}: {
+    name: string;
+    readiness: HostMutationReadiness | null;
+    readinessLoading: boolean;
+    confirmDisabled: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const readinessMessage = readinessLoading
+        ? t('services.mutationReadiness.checking')
+        : readiness === null
+            ? t('services.mutationReadiness.checking')
+            : readiness.ready
+                ? null
+                : t(
+                    `services.mutationReadiness.${readiness.reason ?? 'state_unverified'}` as Parameters<typeof t>[0],
+                );
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target) onCancel();
+            }}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="service-install-confirm-title"
+                aria-describedby="service-install-confirm-description"
+                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
+            >
+                <div className="mb-4 flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Download className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <h3 id="service-install-confirm-title" className="text-lg font-semibold text-fg">
+                            {t('services.confirm.install.title', { name })}
+                        </h3>
+                        <p id="service-install-confirm-description" className="mt-1 text-sm leading-5 text-fg-muted">
+                            {t('services.confirm.install.description', { name })}
+                        </p>
+                    </div>
+                </div>
+
+                {readinessMessage && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
+                    >
+                        {readiness?.ready === false && (
+                            <span className="font-semibold">{t('services.mutationReadiness.title')} </span>
+                        )}
+                        {readinessMessage}
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        autoFocus
+                        onClick={onCancel}
+                        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-fg hover:bg-surface-subtle"
+                    >
+                        {t('common.cancel')}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={confirmDisabled}
+                        onClick={onConfirm}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <Download className="h-4 w-4" />
+                        {t('services.confirm.install.button', { name })}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

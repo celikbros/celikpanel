@@ -66,6 +66,7 @@ export interface ComponentOperation {
 export interface ManagedServicesSnapshot {
     services: Record<string, unknown>[];
     profiles: ManagedMailProfile[];
+    dns_identity_ready: boolean;
     scanned_at?: string | null;
 }
 
@@ -235,6 +236,7 @@ function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot 
                 && (service.repair_available === undefined || typeof service.repair_available === 'boolean')
             );
         })
+        || typeof payload.dns_identity_ready !== 'boolean'
         || typeof payload.scanned_at !== 'string'
         || !Number.isFinite(Date.parse(payload.scanned_at))
     ) {
@@ -252,6 +254,7 @@ function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot 
     return {
         services,
         profiles,
+        dns_identity_ready: payload.dns_identity_ready,
         scanned_at: payload.scanned_at,
     };
 }

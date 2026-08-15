@@ -246,6 +246,13 @@ func newMailProfileResult(profile mailProfileDefinition) serviceOperationResult 
 }
 
 func mailProfileInstallFailure(cause error) *serviceOperationFailure {
+	if errors.Is(cause, errMailProfileDNSIdentityNotReady) {
+		return operationFailure(
+			errCodeMailProfileDNSIdentityNotReady,
+			mailProfileDNSIdentityMessage,
+			cause,
+		)
+	}
 	if errors.Is(cause, errMailProfileServerHostnameInvalid) {
 		return operationFailure(
 			errCodeMailProfileServerHostnameInvalid,
@@ -363,6 +370,9 @@ func (p *Panel) preflightMailProfileInstall(
 	profile mailProfileDefinition,
 ) ([]ManagedServiceResponse, error) {
 	if _, err := panelMutationBinding(ctx); err != nil {
+		return nil, err
+	}
+	if err := p.requireMailProfileDNSIdentity(ctx); err != nil {
 		return nil, err
 	}
 	if err := p.validateMailProfileHostAndCatalog(ctx, profile); err != nil {

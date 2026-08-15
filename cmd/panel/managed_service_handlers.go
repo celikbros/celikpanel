@@ -110,9 +110,10 @@ type ManagedServiceResponse struct {
 // managedServicesPayload iki uç noktanın da döndürdüğüdür: önbellekteki
 // tarama ve ne zaman koştuğu. scanned_at null ise hiç tarama koşmamıştır.
 type managedServicesPayload struct {
-	ScannedAt *time.Time               `json:"scanned_at"`
-	Services  []ManagedServiceResponse `json:"services"`
-	Profiles  []MailProfileResponse    `json:"profiles"`
+	ScannedAt        *time.Time               `json:"scanned_at"`
+	Services         []ManagedServiceResponse `json:"services"`
+	Profiles         []MailProfileResponse    `json:"profiles"`
+	DNSIdentityReady bool                     `json:"dns_identity_ready"`
 }
 
 // serviceObservation is everything a scan can DISCOVER about this host: is the
@@ -473,9 +474,11 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 	// because the first scan has not completed.
 	host := p.managedServiceHostProfile()
 	packageFamily := host.PackageFamily
+	dnsIdentityReady := p.managedServicesDNSIdentityReady(r.Context())
 	payload := managedServicesPayload{
-		Services: catalogViewForHost(nil, host),
-		Profiles: mailProfilesView(nil, false, packageFamily, mailProfileHostBlockedReason(), false, false),
+		Services:         catalogViewForHost(nil, host),
+		Profiles:         mailProfilesView(nil, false, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), false, false),
+		DNSIdentityReady: dnsIdentityReady,
 	}
 
 	var data string
@@ -507,7 +510,7 @@ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
 			payload.Services,
 			profilesVerified,
 			packageFamily,
-			mailProfileHostBlockedReason(),
+			mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady),
 			snapshot.WebmailReady,
 			snapshot.WebmailProven,
 		)
@@ -597,10 +600,12 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
+	dnsIdentityReady := p.managedServicesDNSIdentityReady(r.Context())
 	json.NewEncoder(w).Encode(managedServicesPayload{
-		ScannedAt: &now,
-		Services:  services,
-		Profiles:  mailProfilesView(services, true, p.packageFamily(), mailProfileHostBlockedReason(), webmailReady, webmailProven),
+		ScannedAt:        &now,
+		Services:         services,
+		Profiles:         mailProfilesView(services, true, p.packageFamily(), mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), webmailReady, webmailProven),
+		DNSIdentityReady: dnsIdentityReady,
 	})
 }
 
@@ -650,10 +655,12 @@ func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Dura
 	host := p.managedServiceHostProfile()
 	packageFamily := host.PackageFamily
 	services := catalogViewForHost(snapshot.Observations, host)
+	dnsIdentityReady := p.managedServicesDNSIdentityReady(ctx)
 	return managedServicesPayload{
-		ScannedAt: &scanned,
-		Services:  services,
-		Profiles:  mailProfilesView(services, true, packageFamily, mailProfileHostBlockedReason(), snapshot.WebmailReady, snapshot.WebmailProven),
+		ScannedAt:        &scanned,
+		Services:         services,
+		Profiles:         mailProfilesView(services, true, packageFamily, mailProfileCatalogBlockedReason(mailProfileHostBlockedReason(), dnsIdentityReady), snapshot.WebmailReady, snapshot.WebmailProven),
+		DNSIdentityReady: dnsIdentityReady,
 	}, true, nil
 }
 

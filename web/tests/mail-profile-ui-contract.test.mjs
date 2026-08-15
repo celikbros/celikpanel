@@ -45,6 +45,8 @@ test('mail profile snapshots accept only the closed server-defined graph', () =>
   assert.match(operationSource, /profile\.available !== \(/);
   assert.match(operationSource, /status === 'blocked'/);
   assert.match(serviceSource, /decodeManagedMailProfiles\(payload\.profiles, serviceIDs\)/);
+  assert.match(operationSource, /typeof payload\.dns_identity_ready !== 'boolean'/);
+  assert.match(serviceSource, /typeof payload\.dns_identity_ready !== 'boolean'/);
 });
 
 test('profile recovery markers are v3 kind-bound with a safe v2 migration', async () => {
@@ -110,7 +112,9 @@ test('profile cards preserve individual services and use server membership', () 
   assert.match(serviceSource, /profile\.status === 'available'/);
   assert.match(serviceSource, /profile\.status === 'partial'/);
   assert.match(serviceSource, /profile\.status === 'complete'/);
-  assert.match(serviceSource, /disabled=\{disabled \|\| !actionable\}/);
+  assert.match(serviceSource, /disabled=\{disabled \|\| !dnsIdentityReady \|\| !actionable\}/);
+  assert.match(serviceSource, /dnsIdentityReady && profile\.available/);
+  assert.match(serviceSource, /navigate\('\/settings\?section=dns'\)/);
   assert.match(serviceSource, /profile\.status === 'complete' && profile\.warning/);
   assert.match(serviceSource, /services\.mailProfiles\.profileComponentsNeedRepair/);
   assert.match(serviceSource, /setProfileTarget\(profile\)/);
@@ -142,6 +146,9 @@ test('mail profile copy stays in EN/TR parity', () => {
     'services.mailProfiles.continue',
     'services.mailProfiles.repair',
     'services.mailProfiles.unavailable',
+    'services.mailProfiles.configureDNS',
+    'services.mailProfiles.dnsRequired',
+    'services.mailProfiles.dnsRequiredShort',
     'services.mailProfiles.status.unknown',
     'services.mailProfiles.status.available',
     'services.mailProfiles.status.partial',
@@ -172,6 +179,7 @@ test('mail profile copy stays in EN/TR parity', () => {
     'err.mail_profile_install_failed',
     'err.mail_profile_confirmation_required',
     'err.mail_profile_server_hostname_invalid',
+    'err.mail_profile_dns_identity_not_ready',
   ];
   for (const key of keys) {
     assert.ok(enSource.includes(`'${key}':`), 'missing EN key ' + key);
