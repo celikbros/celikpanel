@@ -165,4 +165,8 @@ has provisioned the CI signing identity and published its verification key.
 
 ## License
 
-Not decided yet; the repository is private while the licensing model (open source / open core / commercial) is being evaluated.
+CelikPanel is proprietary, source-available software owned by CELIKBROS.
+Every use requires CELIKBROS's prior written authorization under a separate
+commercial license agreement. Public availability of this repository does not
+grant permission to use, copy, modify, distribute, host, or fork CelikPanel.
+See [LICENSE](LICENSE).
