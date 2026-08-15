@@ -76,8 +76,29 @@ type ServiceMutationFinishRequest struct {
 }
 
 type ServiceMutationResponse struct {
-	Job   *ServiceMutationJob `json:"job,omitempty"`
-	Error string              `json:"error,omitempty"`
+	Job       *ServiceMutationJob `json:"job,omitempty"`
+	ErrorCode string              `json:"error_code,omitempty"`
+	Error     string              `json:"error,omitempty"`
+}
+
+const (
+	HostMutationBusy        = "HOST_MUTATION_BUSY"
+	HostMutationUnavailable = "HOST_MUTATION_UNAVAILABLE"
+
+	HostMutationReasonPanelOperation  = "panel_operation_active"
+	HostMutationReasonAgentMutation   = "agent_mutation_active"
+	HostMutationReasonHostLock        = "host_lock_busy"
+	HostMutationReasonPackageManager  = "package_manager_active"
+	HostMutationReasonStateUnverified = "state_unverified"
+)
+
+// HostMutationReadinessResponse is an advisory, read-only snapshot for
+// disabling controls that cannot currently start. It never grants a mutation;
+// BeginServiceMutation remains the authoritative admission boundary.
+type HostMutationReadinessResponse struct {
+	Ready  bool   `json:"ready"`
+	Code   string `json:"code,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 type ServiceMutationActionRequest struct {

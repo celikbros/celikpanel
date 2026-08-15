@@ -7,10 +7,54 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 var errServiceMutationNotIdle = errors.New("service mutation state is not idle")
 var errInitialServiceMutationLedgerInvalid = errors.New("initial service mutation ledger is not exact")
+
+type serviceMutationReadinessError struct {
+	reason string
+	err    error
+}
+
+func (e *serviceMutationReadinessError) Error() string { return e.err.Error() }
+func (e *serviceMutationReadinessError) Unwrap() error { return e.err }
+
+func markServiceMutationNotIdle(reason string, err error) error {
+	return &serviceMutationReadinessError{reason: reason, err: err}
+}
+
+func serviceMutationReadinessReason(err error) (string, bool) {
+	var readinessErr *serviceMutationReadinessError
+	if !errors.As(err, &readinessErr) {
+		return "", false
+	}
+	return readinessErr.reason, true
+}
+
+func serviceMutationLockProbeError(err error) error {
+	wrapped := fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
+	if errors.Is(err, errServiceMutationHostBusy) {
+		return markServiceMutationNotIdle(transport.HostMutationReasonHostLock, wrapped)
+	}
+	return wrapped
+}
+
+func serviceMutationPackageManagerBusyError() error {
+	return markServiceMutationNotIdle(
+		transport.HostMutationReasonPackageManager,
+		fmt.Errorf("%w: the host package manager is active", errServiceMutationNotIdle),
+	)
+}
+
+func serviceMutationActiveError(format string, args ...any) error {
+	return markServiceMutationNotIdle(
+		transport.HostMutationReasonAgentMutation,
+		fmt.Errorf("%w: "+format, append([]any{errServiceMutationNotIdle}, args...)...),
+	)
+}
 
 // checkServiceMutationIdle is intentionally read-only. Release tooling calls it
 // after stopping the panel, before pairing a panel database snapshot with the
@@ -149,7 +193,7 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 		if _, err := os.Lstat(stateDir); os.IsNotExist(err) {
 			if probeMutationLock {
 				if err := probePreLedgerServiceMutationFileLockIdle(lockPath); err != nil {
-					return fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
+					return serviceMutationLockProbeError(err)
 				}
 			}
 			busy, err := packageManagerMutationBusy()
@@ -157,7 +201,7 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 				return fmt.Errorf("%w: inspect package manager activity: %v", errServiceMutationNotIdle, err)
 			}
 			if busy {
-				return fmt.Errorf("%w: the host package manager is active", errServiceMutationNotIdle)
+				return serviceMutationPackageManagerBusyError()
 			}
 			return nil
 		} else if err != nil {
@@ -202,20 +246,22 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 			return fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
 		}
 		if ledger.ActiveRequestID != "" {
-			return fmt.Errorf("%w: privileged mutation %s is active", errServiceMutationNotIdle, ledger.ActiveRequestID)
+			return serviceMutationActiveError("privileged mutation %s is active", ledger.ActiveRequestID)
 		}
 		for requestID, job := range ledger.Jobs {
 			if job == nil || job.RequestID != requestID {
 				return fmt.Errorf("%w: service mutation ledger identity is inconsistent", errServiceMutationNotIdle)
 			}
 			if serviceMutationStatusActive(job.Status) {
-				return fmt.Errorf("%w: privileged mutation %s has active status %s", errServiceMutationNotIdle, requestID, job.Status)
+				return serviceMutationActiveError(
+					"privileged mutation %s has active status %s", requestID, job.Status,
+				)
 			}
 		}
 	}
 	if probeMutationLock {
 		if err := probeServiceMutationFileLockIdle(lockPath); err != nil {
-			return fmt.Errorf("%w: %v", errServiceMutationNotIdle, err)
+			return serviceMutationLockProbeError(err)
 		}
 	}
 	busy, err := packageManagerMutationBusy()
@@ -223,7 +269,7 @@ func checkServiceMutationIdlePolicy(stateDir, lockPath string, allowMissingState
 		return fmt.Errorf("%w: inspect package manager activity: %v", errServiceMutationNotIdle, err)
 	}
 	if busy {
-		return fmt.Errorf("%w: the host package manager is active", errServiceMutationNotIdle)
+		return serviceMutationPackageManagerBusyError()
 	}
 	return nil
 }

@@ -128,7 +128,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 		Agent.ListSystemSQLiteDatabases Agent.MailHealth Agent.NginxInspect Agent.PkgFamily
 		Agent.PostfixQueue Agent.ReadBackupChunk Agent.ReadFile
 		Agent.ReadSystemSQLiteSnapshotChunk Agent.RepoPackages Agent.ServiceCandidateVersion
-		Agent.ServiceJournal Agent.SiteUsage Agent.Version Agent.VPNStatus
+		Agent.ServiceJournal Agent.ServiceMutationReadiness Agent.SiteUsage Agent.Version Agent.VPNStatus
 		Agent.CheckSystemUpdate Agent.SecurityAudit Agent.SystemUpdateStatus
 	`),
 	agentRPCAuthGroup(agentRPCEffectControl, "", `
@@ -264,6 +264,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.InstalledServiceIDs":         agentRPCQuickReadTimeout,
 	"Agent.ListNodeVersions":            agentRPCQuickReadTimeout,
 	"Agent.ListSystemSQLiteDatabases":   agentRPCQuickReadTimeout,
+	"Agent.ServiceMutationReadiness":    agentRPCQuickReadTimeout,
 
 	// Bounded disk/log reads.
 	"Agent.AppUnitLogs":                   agentRPCStandardReadTimeout,

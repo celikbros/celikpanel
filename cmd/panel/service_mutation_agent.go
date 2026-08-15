@@ -73,6 +73,27 @@ var errAgentMutationPublishedReceiptMismatch = errors.New(
 	"agent service mutation success lacks its exact canonical published receipt",
 )
 
+var errHostMutationBusy = errors.New(
+	"another server change or package-manager task is still running",
+)
+
+func serviceMutationResponseError(response agentMutationResponse) error {
+	switch response.ErrorCode {
+	case transport.HostMutationBusy:
+		return errHostMutationBusy
+	case "":
+		if response.Error != "" {
+			return errors.New(response.Error)
+		}
+		return nil
+	default:
+		return fmt.Errorf(
+			"agent returned unsupported service mutation error code %q",
+			response.ErrorCode,
+		)
+	}
+}
+
 // agentMutationTerminalUncertainError means an exact forward-only payload may
 // already have a durable intent but its terminal receipt could not be observed.
 // Callers must retain the newly requested database state; rolling it back could
@@ -263,8 +284,8 @@ func (p *Panel) beginAgentMutation(
 	if err != nil {
 		return nil, fmt.Errorf("begin agent service mutation: %w", err)
 	}
-	if response.Error != "" {
-		return response.Job, errors.New(response.Error)
+	if responseErr := serviceMutationResponseError(response); responseErr != nil {
+		return response.Job, responseErr
 	}
 	if response.Job == nil || response.Job.RequestID != op.RequestID ||
 		response.Job.OwnerID != ownerID || response.Job.Kind != op.Kind ||
@@ -289,8 +310,8 @@ func (p *Panel) heartbeatAgentMutation(
 	if err != nil {
 		return response.Job, err
 	}
-	if response.Error != "" {
-		return response.Job, errors.New(response.Error)
+	if responseErr := serviceMutationResponseError(response); responseErr != nil {
+		return response.Job, responseErr
 	}
 	if response.Job == nil ||
 		response.Job.RequestID != binding.MutationRequestID ||
@@ -311,8 +332,8 @@ func (p *Panel) statusAgentMutation(
 	}, &response); err != nil {
 		return response.Job, err
 	}
-	if response.Error != "" {
-		return response.Job, errors.New(response.Error)
+	if responseErr := serviceMutationResponseError(response); responseErr != nil {
+		return response.Job, responseErr
 	}
 	return response.Job, nil
 }

@@ -1885,18 +1885,35 @@ func cleanupAbandonedServiceMutationWriteStages(stateDir string) error {
 	return nil
 }
 
+const hostMutationBusyMessage = "another server change or package-manager task is still running"
+
+func setHostMutationBusyResponse(response *ServiceMutationResponse, err error) bool {
+	if !errors.Is(err, errServiceMutationBusy) &&
+		!errors.Is(err, errServiceMutationHostBusy) {
+		return false
+	}
+	response.ErrorCode = transport.HostMutationBusy
+	response.Error = hostMutationBusyMessage
+	return true
+}
+
 func (a *Agent) BeginServiceMutation(
 	request *ServiceMutationBeginRequest,
 	response *ServiceMutationResponse,
 ) error {
 	manager, managerErr := agentServiceMutationManager()
 	if managerErr != nil {
+		if setHostMutationBusyResponse(response, managerErr) {
+			return nil
+		}
 		return managerErr
 	}
 	job, err := manager.begin(request)
 	response.Job = job
 	if err != nil {
-		response.Error = err.Error()
+		if !setHostMutationBusyResponse(response, err) {
+			response.Error = err.Error()
+		}
 	}
 	return nil
 }
@@ -1923,6 +1940,9 @@ func (a *Agent) ServiceMutationStatus(
 ) error {
 	manager, managerErr := agentServiceMutationManager()
 	if managerErr != nil {
+		if setHostMutationBusyResponse(response, managerErr) {
+			return nil
+		}
 		return managerErr
 	}
 	response.Job = manager.status(strings.TrimSpace(request.RequestID))

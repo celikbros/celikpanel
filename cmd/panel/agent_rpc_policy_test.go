@@ -58,6 +58,17 @@ func TestAgentRPCPoliciesAreExplicitAndValid(t *testing.T) {
 	}
 }
 
+func TestServiceMutationReadinessRPCPolicyIsBoundedRead(t *testing.T) {
+	policy, err := agentRPCPolicyForMethod("Agent.ServiceMutationReadiness")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.timeout != agentRPCQuickReadTimeout ||
+		policy.effect != agentRPCEffectRead || policy.capability != "" {
+		t.Fatalf("ServiceMutationReadiness policy = %+v", policy)
+	}
+}
+
 func TestVPNSyncRPCPolicyRequiresV2(t *testing.T) {
 	policy, err := agentRPCPolicyForMethod("Agent.SyncVPNPeersV2")
 	if err != nil {

@@ -2149,6 +2149,9 @@ func operationAdvanceFailure(err error) *serviceOperationFailure {
 }
 
 func operationStartFailure(err error) *serviceOperationFailure {
+	if classification, ok := classifyHostMutationError(err); ok {
+		return operationFailure(classification.Code, classification.Message, err)
+	}
 	return operationFailure(
 		"operation_start_failed",
 		"The package operation could not be started.",
