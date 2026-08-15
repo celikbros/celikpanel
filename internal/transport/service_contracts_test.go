@@ -29,7 +29,7 @@ func TestServiceMutationResponseGobRoundTripPreservesEveryJobField(t *testing.T)
 		WorkerPID:      1234,
 		WorkerStarted:  "987654",
 		WorkerCommand:  "/usr/bin/apt-get install nginx",
-	}, Error: "operation still running"}
+	}, ErrorCode: HostMutationBusy, Error: "operation still running"}
 
 	var wire bytes.Buffer
 	if err := gob.NewEncoder(&wire).Encode(want); err != nil {

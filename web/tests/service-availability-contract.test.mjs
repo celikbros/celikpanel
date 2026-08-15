@@ -38,9 +38,10 @@ test('installed Roundcube exposes the durable repair path under fail-closed gate
 
   assert.ok(roundcubeStart >= 0, 'installed tool controls must include an explicit Roundcube repair action');
   const repairAction = installedBranch.slice(roundcubeStart, installedBranch.indexOf('</button>', roundcubeStart));
-  assert.match(repairAction, /startInstall\(\{/);
-  assert.match(repairAction, /serviceId: s\.id/);
-  assert.match(repairAction, /s\.repair_package \? \{ package: s\.repair_package \} : \{\}/);
+  assert.match(repairAction, /requestComponentAction\(\{ kind: 'repair', service: s \}\)/);
+  assert.match(serviceList, /case 'repair':[\s\S]*startInstall\(\{/);
+  assert.match(serviceList, /serviceId: action\.service\.id/);
+  assert.match(serviceList, /action\.service\.repair_package \? \{ package: action\.service\.repair_package \} : \{\}/);
   assert.match(repairAction, /disabled=\{mutationControlsDisabled \|\| busy === s\.id \|\| !s\.repair_available\}/);
   assert.match(repairAction, /t\('services\.repairWebmail'\)/);
   assert.match(english, /'services\.repairWebmail': 'Repair webmail'/);

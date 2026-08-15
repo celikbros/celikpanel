@@ -60,7 +60,23 @@ interface ManagedServicesSnapshot {
     services: ManagedService[];
     profiles: ManagedMailProfile[];
     scannedAt: string | null;
+    dnsIdentityReady: boolean;
 }
+
+type ServiceLifecycleAction = 'start' | 'stop' | 'restart';
+
+interface HostMutationReadiness {
+    ready: boolean;
+    code?: 'HOST_MUTATION_BUSY' | 'HOST_MUTATION_UNAVAILABLE';
+    reason?: 'panel_operation_active' | 'agent_mutation_active' | 'host_lock_busy' | 'package_manager_active' | 'state_unverified';
+}
+
+type PendingComponentAction =
+    | { kind: 'service'; service: ManagedService; action: ServiceLifecycleAction }
+    | { kind: 'instance'; service: ManagedService; unit: string; action: ServiceLifecycleAction }
+    | { kind: 'repair'; service: ManagedService }
+    | { kind: 'install-package'; service: ManagedService; pkg: string; version: string }
+    | { kind: 'install-node'; service: ManagedService; version: string };
 
 interface ServiceVerificationState {
     unverified: boolean;
@@ -126,6 +142,8 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
     const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
     if (profiles === null) return null;
     if (
+        typeof payload.dns_identity_ready !== 'boolean'
+        ||
         payload.scanned_at !== undefined
         && payload.scanned_at !== null
         && (
@@ -139,6 +157,29 @@ function parseManagedServicesSnapshot(value: unknown): ManagedServicesSnapshot |
         services: payload.services,
         profiles,
         scannedAt: typeof payload.scanned_at === 'string' ? payload.scanned_at : null,
+        dnsIdentityReady: payload.dns_identity_ready,
+    };
+}
+
+function parseHostMutationReadiness(value: unknown): HostMutationReadiness | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (typeof payload.ready !== 'boolean') return null;
+    if (payload.ready) {
+        return payload.code === undefined && payload.reason === undefined ? { ready: true } : null;
+    }
+    if (payload.code !== 'HOST_MUTATION_BUSY' && payload.code !== 'HOST_MUTATION_UNAVAILABLE') return null;
+    if (
+        payload.reason !== 'panel_operation_active'
+        && payload.reason !== 'agent_mutation_active'
+        && payload.reason !== 'host_lock_busy'
+        && payload.reason !== 'package_manager_active'
+        && payload.reason !== 'state_unverified'
+    ) return null;
+    return {
+        ready: false,
+        code: payload.code,
+        reason: payload.reason,
     };
 }
 
@@ -273,12 +314,15 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [services, setServices] = useState<ManagedService[]>([]);
     const [profiles, setProfiles] = useState<ManagedMailProfile[]>([]);
     const [scannedAt, setScannedAt] = useState<string | null>(null);
+    const [dnsIdentityReady, setDNSIdentityReady] = useState(false);
+    const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [profileTarget, setProfileTarget] = useState<ManagedMailProfile | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
+    const [pendingAction, setPendingAction] = useState<PendingComponentAction | null>(null);
     const [verification, setVerification] = useState<ServiceVerificationState>(readServiceVerificationState);
     const latestScannedAtRef = useRef<string | null>(null);
     const stateUnverified = verification.unverified;
@@ -322,6 +366,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         setServices(snapshot.services);
         setProfiles(snapshot.profiles);
         setScannedAt(snapshot.scannedAt);
+        setDNSIdentityReady(snapshot.dnsIdentityReady);
 
         // A cached load may still be the exact pre-mutation snapshot retained
         // after an atomic scan failure. Only a fresh scan, or a load carrying
@@ -368,7 +413,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     const [query, setQuery] = useState('');
     const viewKey = 'celikpanel.components.view';
     const [hideNotInstalled, setHideNotInstalled] = useState(
-        () => (typeof localStorage === 'undefined' ? true : localStorage.getItem(viewKey) !== 'catalog'),
+        () => (typeof localStorage === 'undefined' ? false : localStorage.getItem(viewKey) === 'installed'),
     );
 
     // Collapse follows the view, not a fixed default: the installed list is
@@ -387,8 +432,47 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         setCollapsed(installedOnly ? new Set() : new Set(categoryOrder.map((c) => c.id)));
     };
 
+    const loadHostMutationReadiness = async (): Promise<boolean> => {
+        try {
+            const response = await fetch('/api/v1/host-mutation-readiness', {
+                cache: 'no-store',
+            });
+            if (!response.ok) {
+                setHostMutationReadiness({
+                    ready: false,
+                    code: 'HOST_MUTATION_UNAVAILABLE',
+                    reason: 'state_unverified',
+                });
+                return false;
+            }
+            const readiness = parseHostMutationReadiness(await response.json());
+            if (!readiness) {
+                setHostMutationReadiness({
+                    ready: false,
+                    code: 'HOST_MUTATION_UNAVAILABLE',
+                    reason: 'state_unverified',
+                });
+                return false;
+            }
+            setHostMutationReadiness(readiness);
+            return readiness.ready;
+        } catch {
+            setHostMutationReadiness({
+                ready: false,
+                code: 'HOST_MUTATION_UNAVAILABLE',
+                reason: 'state_unverified',
+            });
+            return false;
+        }
+    };
+
     useEffect(() => {
         void loadServices();
+        void loadHostMutationReadiness();
+        const timer = window.setInterval(() => {
+            void loadHostMutationReadiness();
+        }, 5000);
+        return () => window.clearInterval(timer);
     }, []);
 
     // The operation controller keeps the panel locked through its mandatory
@@ -795,7 +879,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     };
     const reqNames = (tokens?: string[]) => (tokens ?? []).map(reqLabel).join(', ');
     const pageControlsBusy = scanning || busy !== null;
-    const mutationControlsDisabled = pageControlsBusy || stateUnverified;
+    const readinessMessage = hostMutationReadiness === null
+        ? t('services.mutationReadiness.checking')
+        : hostMutationReadiness.ready
+            ? ''
+            : t(
+                `services.mutationReadiness.${hostMutationReadiness.reason ?? 'state_unverified'}` as Parameters<typeof t>[0],
+            );
+    const mutationControlsDisabled =
+        pageControlsBusy
+        || stateUnverified
+        || hostMutationReadiness?.ready !== true;
     const openProfilePlan = (profile: ManagedMailProfile) => {
         if (stateUnverified || !profile.available) return;
         setProfileTarget(profile);
@@ -811,6 +905,50 @@ export function ServiceList({ onManageService }: ServiceListProps) {
         });
     };
 
+    const requestComponentAction = (action: PendingComponentAction) => {
+        if (mutationControlsDisabled) {
+            showToast('warning', stateUnverified ? t('services.stateUnverifiedHint') : readinessMessage);
+            return;
+        }
+        setPendingAction(action);
+    };
+
+    const confirmComponentAction = async () => {
+        const action = pendingAction;
+        if (!action || hostMutationReadiness?.ready !== true || stateUnverified) return;
+        setPendingAction(null);
+        switch (action.kind) {
+        case 'service':
+            await handleAction(action.service, action.action);
+            break;
+        case 'instance':
+            await handleInstanceAction(action.service.id, action.unit, action.action);
+            break;
+        case 'repair':
+            await startInstall({
+                serviceId: action.service.id,
+                name: action.service.name,
+                ...(action.service.repair_package ? { package: action.service.repair_package } : {}),
+            });
+            break;
+        case 'install-package':
+            await startInstall({
+                serviceId: action.service.id,
+                package: action.pkg,
+                name: `${action.service.name} ${action.version}`,
+            });
+            break;
+        case 'install-node':
+            await startInstall({
+                serviceId: action.service.id,
+                version: action.version,
+                name: `Node ${action.version}`,
+            });
+            break;
+        }
+        void loadHostMutationReadiness();
+    };
+
     return (
         <div className="p-6 md:p-8">
             <PageHeader
@@ -819,7 +957,18 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 breadcrumb={[t('common.home'), t('nav.services')]}
             />
 
-            <FirewallBar />
+            <FirewallBar
+                readiness={hostMutationReadiness}
+                readinessMessage={readinessMessage}
+                onRefreshReadiness={loadHostMutationReadiness}
+            />
+
+            {hostMutationReadiness?.ready === false && (
+                <section role='status' className='mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-fg'>
+                    <span className='font-semibold'>{t('services.mutationReadiness.title')}</span>{' '}
+                    {readinessMessage}
+                </section>
+            )}
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <button
@@ -897,6 +1046,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     profiles={profiles}
                     services={services}
                     disabled={mutationControlsDisabled}
+                    dnsIdentityReady={dnsIdentityReady}
                     onInstall={openProfilePlan}
                 />
             )}
@@ -1149,7 +1299,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     <>
                                                     <ActionIcon
                                                         title={t('services.restart')}
-                                                        onClick={() => handleAction(s, 'restart')}
+                                                        onClick={() => requestComponentAction({ kind: 'service', service: s, action: 'restart' })}
                                                         disabled={busy === s.id}
                                                         tone="warning"
                                                     >
@@ -1157,7 +1307,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     </ActionIcon>
                                                     <ActionIcon
                                                         title={t('services.stop')}
-                                                        onClick={() => handleAction(s, 'stop')}
+                                                        onClick={() => requestComponentAction({ kind: 'service', service: s, action: 'stop' })}
                                                         disabled={busy === s.id}
                                                         tone="danger"
                                                     >
@@ -1170,7 +1320,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                        is the only honest action because Repair is not supported. */
                                                     <ActionIcon
                                                         title={t('services.start')}
-                                                        onClick={() => handleAction(s, 'start')}
+                                                        onClick={() => requestComponentAction({ kind: 'service', service: s, action: 'start' })}
                                                         disabled={busy === s.id}
                                                         tone="success"
                                                     >
@@ -1183,11 +1333,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                        same full-page operation lock. */
                                                     <ActionIcon
                                                         title={s.repair_available ? t('services.repair') : t('services.repairUnavailable')}
-                                                        onClick={() => startInstall({
-                                                            serviceId: s.id,
-                                                            name: s.name,
-                                                            ...(s.repair_package ? { package: s.repair_package } : {}),
-                                                        })}
+                                                        onClick={() => requestComponentAction({ kind: 'repair', service: s })}
                                                         disabled={busy === s.id || !s.repair_available}
                                                         tone="warning"
                                                     >
@@ -1198,11 +1344,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     {s.kind === 'tool' && s.id === 'roundcube' && (
                                                     <button
                                                         type={'button'}
-                                                        onClick={() => startInstall({
-                                                            serviceId: s.id,
-                                                            name: s.name,
-                                                            ...(s.repair_package ? { package: s.repair_package } : {}),
-                                                        })}
+                                                        onClick={() => requestComponentAction({ kind: 'repair', service: s })}
                                                         disabled={mutationControlsDisabled || busy === s.id || !s.repair_available}
                                                         title={s.repair_available ? t('services.repairWebmail') : t('services.repairUnavailable')}
                                                         className={'inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-xs font-semibold text-warning disabled:opacity-50'}
@@ -1264,24 +1406,19 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                             service={s}
                                                             busy={busy}
                                                             mutationDisabled={mutationControlsDisabled}
-                                                            onInstanceAction={handleInstanceAction}
+                                                            onInstanceAction={(serviceId, unit, action) => {
+                                                                const target = services.find((candidate) => candidate.id === serviceId);
+                                                                if (target) requestComponentAction({ kind: 'instance', service: target, unit, action });
+                                                            }}
                                                             onVersionInstalled={scan}
                                                             onStateUnverified={handleStateRefreshFailure}
                                                             onInstallPackage={(pkg, version) => {
-                                                                if (stateUnverified) return Promise.resolve(false);
-                                                                return startInstall({
-                                                                    serviceId: s.id,
-                                                                    package: pkg,
-                                                                    name: `${s.name} ${version}`,
-                                                                });
+                                                                requestComponentAction({ kind: 'install-package', service: s, pkg, version });
+                                                                return Promise.resolve(false);
                                                             }}
                                                             onInstallNode={(version) => {
-                                                                if (stateUnverified) return Promise.resolve(false);
-                                                                return startInstall({
-                                                                    serviceId: s.id,
-                                                                    version,
-                                                                    name: `Node ${version}`,
-                                                                });
+                                                                requestComponentAction({ kind: 'install-node', service: s, version });
+                                                                return Promise.resolve(false);
                                                             }}
                                                         />
                                                     )}
@@ -1331,26 +1468,123 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     />
                 )}
             </fieldset>
+            {pendingAction && (
+                <ComponentActionConfirmationDialog
+                    action={pendingAction}
+                    confirmDisabled={hostMutationReadiness?.ready !== true || stateUnverified}
+                    onCancel={() => setPendingAction(null)}
+                    onConfirm={() => void confirmComponentAction()}
+                />
+            )}
         </div>
     );
 }
 
-// Themed install confirmation — replaces the browser's native confirm().
-// Shows exactly what will land on the server (the distro packages) so an
-// install is never a blind "yallah". PHP notes that the distro default
-// version is installed; extra versions are managed per-site elsewhere.
-// Temalı kurulum onayı — tarayıcının native confirm()'ünün yerine. Sunucuya
-// tam olarak ne ineceğini (dağıtım paketleri) gösterir; kurulum asla kör bir
-// "yallah" değildir. PHP için dağıtım varsayılan sürümünün kurulacağı,
-// ek sürümlerin site başına başka yerde yönetildiği belirtilir.
-function MailProfileCards({ profiles, services, disabled, onInstall }: {
+// Lifecycle, repair and extra-runtime changes never run from the first click.
+// This dialog names the target and immediate effect; package installs that
+// need richer package/version detail keep their dedicated dialogs.
+// Yaşam döngüsü, onarım ve ek runtime değişiklikleri ilk tıklamayla çalışmaz.
+// Bu pencere hedefi ve doğrudan etkiyi açıklar; paket/sürüm ayrıntısı gereken
+// kurulumlar kendi ayrıntılı pencerelerini kullanmaya devam eder.
+function ComponentActionConfirmationDialog({
+    action,
+    confirmDisabled,
+    onCancel,
+    onConfirm,
+}: {
+    action: PendingComponentAction;
+    confirmDisabled: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const actionName = action.kind === 'service' || action.kind === 'instance'
+        ? action.action
+        : action.kind === 'repair'
+            ? 'repair'
+            : 'install';
+    const targetName = action.kind === 'instance'
+        ? `${action.service.name} (${action.unit})`
+        : action.kind === 'install-package'
+            ? `${action.service.name} ${action.version}`
+            : action.kind === 'install-node'
+                ? `Node ${action.version}`
+                : action.service.name;
+    const icon = actionName === 'start'
+        ? Play
+        : actionName === 'stop'
+            ? Square
+            : actionName === 'install'
+                ? DownloadCloud
+                : RotateCw;
+    const Icon = icon;
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+
+    return (
+        <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target) onCancel();
+            }}
+        >
+            <div
+                role='dialog'
+                aria-modal='true'
+                aria-labelledby='component-action-confirm-title'
+                aria-describedby='component-action-confirm-description'
+                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
+            >
+                <div className='mb-4 flex items-start gap-3'>
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                        actionName === 'stop' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
+                    }`}>
+                        <Icon className='h-5 w-5' fill={actionName === 'start' || actionName === 'stop' ? 'currentColor' : 'none'} />
+                    </span>
+                    <div className='min-w-0'>
+                        <h3 id='component-action-confirm-title' className='text-lg font-semibold text-fg'>
+                            {t(`services.confirm.${actionName}.title` as Parameters<typeof t>[0], { name: targetName })}
+                        </h3>
+                        <p id='component-action-confirm-description' className='mt-1 text-sm leading-5 text-fg-muted'>
+                            {t(`services.confirm.${actionName}.description` as Parameters<typeof t>[0], { name: targetName })}
+                        </p>
+                    </div>
+                </div>
+                <div className='flex justify-end gap-2'>
+                    <Button variant='secondary' autoFocus onClick={onCancel}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        variant={actionName === 'stop' ? 'danger' : 'primary'}
+                        icon={icon}
+                        disabled={confirmDisabled}
+                        onClick={onConfirm}
+                    >
+                        {t(`services.confirm.${actionName}.button` as Parameters<typeof t>[0], { name: targetName })}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MailProfileCards({ profiles, services, disabled, dnsIdentityReady, onInstall }: {
     profiles: ManagedMailProfile[];
     services: ManagedService[];
     disabled: boolean;
+    dnsIdentityReady: boolean;
     onInstall: (profile: ManagedMailProfile) => void;
 }) {
     const { t } = useI18n();
+    const navigate = useNavigate();
     const actionLabel = (profile: ManagedMailProfile) => {
+        if (!dnsIdentityReady) return t('services.mailProfiles.configureDNS');
         if (profile.status === 'available') return t('services.mailProfiles.install');
         if (profile.status === 'partial') return t('services.mailProfiles.continue');
         if (profile.status === 'complete') return t('services.mailProfiles.repair');
@@ -1370,14 +1604,26 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
                     <p className='text-sm text-fg-muted'>{t('services.mailProfiles.subtitle')}</p>
                 </div>
             </div>
+            {!dnsIdentityReady && (
+                <div role='status' className='mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-3'>
+                    <p className='min-w-0 flex-1 text-sm text-fg'>
+                        {t('services.mailProfiles.dnsRequired')}
+                    </p>
+                    <Button variant='secondary' onClick={() => navigate('/settings?section=dns')}>
+                        {t('services.mailProfiles.configureDNS')}
+                    </Button>
+                </div>
+            )}
             <div className='grid gap-3 lg:grid-cols-3'>
                 {profiles.map((profile) => {
-                    const actionable = profile.available && (
+                    const actionable = dnsIdentityReady && profile.available && (
                         profile.status === 'available'
                         || profile.status === 'partial'
                         || profile.status === 'complete'
                     );
-                    const detail = profile.status === 'complete' && profile.warning
+                    const detail = !dnsIdentityReady
+                        ? t('services.mailProfiles.dnsRequiredShort')
+                        : profile.status === 'complete' && profile.warning
                         ? t('services.mailProfiles.profileComponentsNeedRepair')
                         : profile.status === 'blocked'
                             ? profile.blocked_reason
@@ -1416,7 +1662,7 @@ function MailProfileCards({ profiles, services, disabled, onInstall }: {
                                 <button
                                     type='button'
                                     onClick={() => onInstall(profile)}
-                                    disabled={disabled || !actionable}
+                                    disabled={disabled || !dnsIdentityReady || !actionable}
                                     title={detail || actionLabel(profile)}
                                     className='inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
                                 >
@@ -1641,6 +1887,7 @@ function InstallServiceDialog({
     // varsayılanı" (OS deposundan kur).
     const [repo, setRepo] = useState<RepoInfo | null>(null);
     const [repoBusy, setRepoBusy] = useState(false);
+    const [repoAction, setRepoAction] = useState<'enable' | 'disable' | null>(null);
     const [selectedPkg, setSelectedPkg] = useState<string>('');
     const repoError = repo?.error_code ? apiErrorText({ message: '', code: repo.error_code }, t, 'services.actionFailed') : '';
 
@@ -1758,7 +2005,7 @@ function InstallServiceDialog({
                                 {repoError && <p className="mb-2 text-xs text-danger">{repoError}</p>}
                                 <Button
                                     variant="secondary"
-                                    onClick={() => toggleRepo('enable')}
+                                    onClick={() => setRepoAction('enable')}
                                     disabled={repoBusy || busy || Boolean(repo.error_code && !repo.repairable)}
                                     icon={Layers}
                                 >
@@ -1798,7 +2045,7 @@ function InstallServiceDialog({
                                     ))}
                                 </div>
                                 <button
-                                    onClick={() => toggleRepo('disable')}
+                                    onClick={() => setRepoAction('disable')}
                                     disabled={repoBusy || busy}
                                     className="mt-2 text-xs text-fg-subtle underline decoration-dotted underline-offset-2 hover:text-fg disabled:opacity-40"
                                 >
@@ -1821,6 +2068,19 @@ function InstallServiceDialog({
                     </Button>
                 </div>
             </div>
+            {repoAction && repo && (
+                <RepositoryActionConfirmationDialog
+                    action={repoAction}
+                    repositoryName={repo.name || service.name}
+                    confirmDisabled={repoBusy ? true : busy}
+                    onCancel={() => setRepoAction(null)}
+                    onConfirm={() => {
+                        const action = repoAction;
+                        setRepoAction(null);
+                        void toggleRepo(action);
+                    }}
+                />
+            )}
         </div>
     );
 }
@@ -1923,6 +2183,7 @@ function VersionDrawer({
     const [repo, setRepo] = useState<RepoInfo | null>(null);
     const [repoBusy, setRepoBusy] = useState(false);
     const repoError = repo?.error_code ? apiErrorText({ message: '', code: repo.error_code }, t, 'services.actionFailed') : '';
+    const [repoAction, setRepoAction] = useState<'enable' | null>(null);
     useEffect(() => {
         if (tarball || service.kind !== 'runtime') return;
         fetch(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`)
@@ -2181,7 +2442,7 @@ function VersionDrawer({
                             <span className={`text-xs ${repoError ? 'text-danger' : 'text-fg-subtle'}`}>
                                 {repoError || t('services.repo.note')}
                             </span>
-                            <Button variant="secondary" onClick={enableRepo} disabled={repoBusy || Boolean(repo.error_code && !repo.repairable)}>
+                            <Button variant="secondary" onClick={() => setRepoAction('enable')} disabled={repoBusy || Boolean(repo.error_code && !repo.repairable)}>
                                 {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
                             </Button>
                         </div>
@@ -2275,6 +2536,18 @@ function VersionDrawer({
                     )}
                 </div>
             )}
+            {repoAction && repo && (
+                <RepositoryActionConfirmationDialog
+                    action={repoAction}
+                    repositoryName={repo.name || service.name}
+                    confirmDisabled={repoBusy}
+                    onCancel={() => setRepoAction(null)}
+                    onConfirm={() => {
+                        setRepoAction(null);
+                        void enableRepo();
+                    }}
+                />
+            )}
                 {/* No backdrop dismissal on a DESTRUCTIVE dialog. The operator
                     pressed Uninstall on BIND, clicked next to the box, and the
                     dialog vanished without a trace — which reads exactly like
@@ -2322,6 +2595,68 @@ function VersionDrawer({
                 </div>
             )}
         </fieldset>
+    );
+}
+
+function RepositoryActionConfirmationDialog({
+    action,
+    repositoryName,
+    confirmDisabled,
+    onCancel,
+    onConfirm,
+}: {
+    action: 'enable' | 'disable';
+    repositoryName: string;
+    confirmDisabled: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const key = (suffix: 'title' | 'description' | 'button') => (
+        ('services.repo.confirm.' + action + '.' + suffix) as Parameters<typeof t>[0]
+    );
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+    return (
+        <div
+            className='fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4'
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target) onCancel();
+            }}
+        >
+            <div
+                role='dialog'
+                aria-modal='true'
+                aria-labelledby='repository-action-confirm-title'
+                aria-describedby='repository-action-confirm-description'
+                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
+            >
+                <h3 id='repository-action-confirm-title' className='text-lg font-semibold text-fg'>
+                    {t(key('title'), { name: repositoryName })}
+                </h3>
+                <p id='repository-action-confirm-description' className='mt-2 text-sm leading-5 text-fg-muted'>
+                    {t(key('description'), { name: repositoryName })}
+                </p>
+                <div className='mt-5 flex justify-end gap-2'>
+                    <Button variant='secondary' autoFocus onClick={onCancel}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        variant={action === 'disable' ? 'danger' : 'primary'}
+                        icon={Layers}
+                        disabled={confirmDisabled}
+                        onClick={onConfirm}
+                    >
+                        {t(key('button'))}
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -2409,7 +2744,15 @@ function UninstallServiceDialog({
 // Güvenlik duvarı durumu + anahtar. Varsayılan-reddet gelen: yalnız panel
 // portu, SSH (otomatik tespit, asla kapatılamaz) ve kurulu servis portları
 // açık. Açık küme koşan servisleri izler; kutu yalnız koşturduğunu açar.
-function FirewallBar() {
+function FirewallBar({
+    readiness,
+    readinessMessage,
+    onRefreshReadiness,
+}: {
+    readiness: HostMutationReadiness | null;
+    readinessMessage: string;
+    onRefreshReadiness: () => Promise<boolean>;
+}) {
     const { t } = useI18n();
     type FirewallViewStatus = {
         enabled: boolean;
@@ -2424,6 +2767,7 @@ function FirewallBar() {
     const [st, setSt] = useState<FirewallViewStatus | null>(null);
     const [statusError, setStatusError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'enable' | 'disable' | 'save' | null>(null);
 
     // A failed status read is neither "on" nor "off". Preserve that distinction
     // so an agent/permission/network failure can never be mistaken for an open firewall.
@@ -2479,8 +2823,6 @@ function FirewallBar() {
 
     const toggle = async () => {
         if (!st) return;
-        const turningOff = st.enabled;
-        if (turningOff && !confirm(t('firewall.offConfirm'))) return;
         setBusy(true);
         try {
             const r = await fetch('/api/v1/firewall', {
@@ -2488,14 +2830,19 @@ function FirewallBar() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: !st.enabled }),
             });
+            if (!r.ok) {
+                showToast('error', apiErrorText(await readApiError(r), t, 'firewall.changeFailed'));
+                return;
+            }
             const d = await r.json();
-            if (!r.ok || d.error) throw new Error(d.error);
+            if (d.error) throw new Error(t('firewall.changeFailed'));
             setSt(d);
             showToast('success', d.enabled ? t('firewall.onDone') : t('firewall.offDone'));
         } catch (e) {
             showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
         } finally {
             setBusy(false);
+            void onRefreshReadiness();
         }
     };
 
@@ -2507,8 +2854,12 @@ function FirewallBar() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'save_for_reboot' }),
             });
+            if (!r.ok) {
+                showToast('error', apiErrorText(await readApiError(r), t, 'firewall.persistenceSaveFailed'));
+                return;
+            }
             const d = await r.json();
-            if (!r.ok || d.error) throw new Error(d.error || t('firewall.persistenceSaveFailed'));
+            if (d.error) throw new Error(t('firewall.persistenceSaveFailed'));
             if (d.persistence_state !== 'ready') throw new Error(d.persistence_error || t('firewall.persistenceSaveFailed'));
             setSt(d);
             showToast('success', t('firewall.persistenceSaved'));
@@ -2516,7 +2867,24 @@ function FirewallBar() {
             showToast('error', e instanceof Error && e.message ? e.message : t('firewall.persistenceSaveFailed'));
         } finally {
             setBusy(false);
+            void onRefreshReadiness();
         }
+    };
+
+    const requestAction = (action: 'enable' | 'disable' | 'save') => {
+        if (readiness?.ready !== true) {
+            showToast('warning', readinessMessage || t('services.mutationReadiness.checking'));
+            return;
+        }
+        setPendingAction(action);
+    };
+
+    const confirmAction = async () => {
+        const action = pendingAction;
+        if (!action || readiness?.ready !== true) return;
+        setPendingAction(null);
+        if (action === 'save') await saveForReboot();
+        else await toggle();
     };
 
     if (statusError) {
@@ -2582,6 +2950,7 @@ function FirewallBar() {
     // Kapalı hal sakin GÖRÜNMEMESİ gereken haldir: tüm portlar açıktır, bu
     // yüzden bandın tamamı ambere döner. Açık hal sessiz yeşil tondadır.
     return (
+        <>
         <section
             className={`mb-4 rounded-xl border p-4 ${
                 st.enabled ? 'border-success/30 bg-success/5' : 'border-warning/50 bg-warning/10'
@@ -2611,16 +2980,16 @@ function FirewallBar() {
                 </div>
                 {st.enabled && st.persistence_state === 'missing' && (
                     <button
-                        onClick={saveForReboot}
-                        disabled={busy}
+                        onClick={() => requestAction('save')}
+                        disabled={busy || readiness?.ready !== true}
                         className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
                     >
                         {t('firewall.saveForReboot')}
                     </button>
                 )}
                 <button
-                    onClick={toggle}
-                    disabled={busy}
+                    onClick={() => requestAction(st.enabled ? 'disable' : 'enable')}
+                    disabled={busy || readiness?.ready !== true}
                     className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
                         st.enabled
                             ? 'border border-border-strong bg-surface text-fg hover:bg-surface-2'
@@ -2643,5 +3012,82 @@ function FirewallBar() {
                 </div>
             )}
         </section>
+        {pendingAction && (
+            <FirewallActionConfirmationDialog
+                action={pendingAction}
+                confirmDisabled={busy || readiness?.ready !== true}
+                onCancel={() => setPendingAction(null)}
+                onConfirm={() => void confirmAction()}
+            />
+        )}
+        </>
+    );
+}
+
+function FirewallActionConfirmationDialog({
+    action,
+    confirmDisabled,
+    onCancel,
+    onConfirm,
+}: {
+    action: 'enable' | 'disable' | 'save';
+    confirmDisabled: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const destructive = action === 'disable';
+    const Icon = action === 'enable' ? ShieldCheck : action === 'disable' ? ShieldOff : DownloadCloud;
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+    return (
+        <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target) onCancel();
+            }}
+        >
+            <div
+                role='dialog'
+                aria-modal='true'
+                aria-labelledby='firewall-action-confirm-title'
+                aria-describedby='firewall-action-confirm-description'
+                className='w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl'
+            >
+                <div className='mb-4 flex items-start gap-3'>
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                        destructive ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'
+                    }`}>
+                        <Icon className='h-5 w-5' />
+                    </span>
+                    <div className='min-w-0'>
+                        <h3 id='firewall-action-confirm-title' className='text-lg font-semibold text-fg'>
+                            {t(`firewall.confirm.${action}.title` as Parameters<typeof t>[0])}
+                        </h3>
+                        <p id='firewall-action-confirm-description' className='mt-1 text-sm leading-5 text-fg-muted'>
+                            {t(`firewall.confirm.${action}.description` as Parameters<typeof t>[0])}
+                        </p>
+                    </div>
+                </div>
+                <div className='flex justify-end gap-2'>
+                    <Button variant='secondary' autoFocus onClick={onCancel}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        variant={destructive ? 'danger' : 'primary'}
+                        icon={Icon}
+                        disabled={confirmDisabled}
+                        onClick={onConfirm}
+                    >
+                        {t(`firewall.confirm.${action}.button` as Parameters<typeof t>[0])}
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }

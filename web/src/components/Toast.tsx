@@ -53,10 +53,10 @@ export function ToastContainer() {
 
     const getStyles = (type: ToastType) => {
         switch (type) {
-            case 'success': return 'bg-success/90 border-success text-success';
-            case 'error': return 'bg-danger/90 border-danger text-danger';
-            case 'warning': return 'bg-warning/90 border-warning text-warning';
-            case 'info': return 'bg-primary/90 border-primary text-primary';
+            case 'success': return 'bg-success/90 border-success text-success-fg';
+            case 'error': return 'bg-danger/90 border-danger text-danger-fg';
+            case 'warning': return 'bg-warning/90 border-warning text-warning-fg';
+            case 'info': return 'bg-primary/90 border-primary text-primary-fg';
         }
     };
 
@@ -73,8 +73,10 @@ export function ToastContainer() {
                     {getIcon(toast.type)}
                     <p className="flex-1 text-sm font-medium">{toast.message}</p>
                     <button
+                        type={'button'}
+                        aria-label={'Dismiss notification'}
                         onClick={() => removeToast(toast.id)}
-                        className="p-1 hover:bg-surface/10 rounded transition-colors"
+                        className={'rounded p-1 text-inherit transition-colors hover:bg-black/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current'}
                     >
                         <X className="w-4 h-4" />
                     </button>

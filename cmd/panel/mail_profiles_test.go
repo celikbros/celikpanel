@@ -315,6 +315,16 @@ func newMailProfileTestFixture(t *testing.T) (serviceOperationTestFixture, *mail
 	attachMailProfileTestAgent(t, fixture.panel, agent)
 	fixture.panel.pkgFamilyVal = "apt"
 	fixture.panel.webmailReadinessProbe = func(context.Context) bool { return true }
+	seedInstalledServices(agent.serviceOperationTestAgent, "pdns")
+	for key, value := range map[string]string{
+		settingNS1:     "ns1.profile.test",
+		settingNS2:     "ns2.profile.test",
+		settingDNSRole: "standalone",
+	} {
+		if err := fixture.panel.setSetting(context.Background(), key, value); err != nil {
+			t.Fatalf("seed mail profile DNS identity %s: %v", key, err)
+		}
+	}
 	previousHostname := readMailProfileHostname
 	readMailProfileHostname = func() (string, error) { return "mail.profile.test", nil }
 	previousTLSHostname := readMailTLSHostname

@@ -143,7 +143,9 @@ func TestMailProfileCardsUseServerMembershipAndClosedActions(t *testing.T) {
 		`profile.status === 'available'`,
 		`profile.status === 'partial'`,
 		`profile.status === 'complete'`,
-		`disabled={disabled || !actionable}`,
+		`dnsIdentityReady && profile.available`,
+		`disabled={disabled || !dnsIdentityReady || !actionable}`,
+		`navigate('/settings?section=dns')`,
 		`profile.status === 'complete' && profile.warning`,
 		`services.mailProfiles.profileComponentsNeedRepair`,
 	} {

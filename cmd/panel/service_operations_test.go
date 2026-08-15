@@ -96,8 +96,9 @@ type ServiceOperationMutationJob struct {
 }
 
 type ServiceOperationMutationResponse struct {
-	Job   *ServiceOperationMutationJob
-	Error string
+	Job       *ServiceOperationMutationJob
+	ErrorCode string
+	Error     string
 }
 
 type ServiceOperationNodeResponse struct {
@@ -197,6 +198,8 @@ type serviceOperationTestAgent struct {
 	mutationJobs          map[string]*ServiceOperationMutationJob
 	mutationDeadlineAfter time.Duration
 	mutationEvents        []string
+	mutationReadiness     transport.HostMutationReadinessResponse
+	mutationReadinessErr  error
 	finishLossKind        string
 	finishLossUsed        bool
 
@@ -229,14 +232,25 @@ func (a *serviceOperationTestAgent) Version(
 
 func newServiceOperationTestAgent() *serviceOperationTestAgent {
 	return &serviceOperationTestAgent{
-		serviceSuccess: true,
-		vpnCreated:     true,
-		repoEnabled:    true,
-		installed:      map[string]bool{},
-		active:         map[string]bool{},
-		nodeVersions:   map[string]bool{},
-		mutationJobs:   map[string]*ServiceOperationMutationJob{},
+		serviceSuccess:    true,
+		vpnCreated:        true,
+		repoEnabled:       true,
+		installed:         map[string]bool{},
+		active:            map[string]bool{},
+		nodeVersions:      map[string]bool{},
+		mutationJobs:      map[string]*ServiceOperationMutationJob{},
+		mutationReadiness: transport.HostMutationReadinessResponse{Ready: true},
 	}
+}
+
+func (a *serviceOperationTestAgent) ServiceMutationReadiness(
+	_ *transport.Empty,
+	response *transport.HostMutationReadinessResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	*response = a.mutationReadiness
+	return a.mutationReadinessErr
 }
 
 func cloneServiceOperationMutationJob(job *ServiceOperationMutationJob) *ServiceOperationMutationJob {

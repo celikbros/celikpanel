@@ -927,6 +927,7 @@ func main() {
 	http.HandleFunc("/api/v1/service/operation", panel.handleServiceOperation)
 	http.HandleFunc("/api/v1/service/candidate", panel.handleServiceCandidate)
 	http.HandleFunc("/api/v1/service/uninstall", panel.handleServiceUninstall)
+	http.HandleFunc(hostMutationReadinessPath, panel.handleHostMutationReadiness)
 	http.HandleFunc("/api/v1/firewall", panel.handleFirewall)
 	http.HandleFunc("/api/v1/repo", panel.handleRepo)
 	http.HandleFunc("/api/v1/hosting/capabilities", panel.handleHostingCapabilities)

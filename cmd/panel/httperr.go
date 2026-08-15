@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // HTTP handlers must never hand internal error text to the client: those
@@ -50,6 +52,7 @@ type apiErrorBody struct {
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
 	errCodeInternal                      = "INTERNAL"
+	errCodeHostMutationBusy              = transport.HostMutationBusy
 	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
 	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"
 	errCodeAuthRequired                  = "AUTH_REQUIRED"
@@ -213,6 +216,24 @@ func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassificati
 	}
 }
 
+func classifyHostMutationError(err error) (agentRPCPlatformErrorClassification, bool) {
+	if !isPureWrappedError(err, errHostMutationBusy) {
+		return agentRPCPlatformErrorClassification{}, false
+	}
+	return agentRPCPlatformErrorClassification{
+		Status:  http.StatusConflict,
+		Code:    errCodeHostMutationBusy,
+		Message: "another server change or package-manager task is still running; wait and try again",
+	}, true
+}
+
+func classifyStableAgentError(err error) (agentRPCPlatformErrorClassification, bool) {
+	if classification, ok := classifyHostMutationError(err); ok {
+		return classification, true
+	}
+	return classifyAgentRPCPlatformError(err)
+}
+
 // writeCodedError is the single writer of the contract. action, when
 // non-empty, is an in-panel path that fixes the refusal (e.g. "/services").
 // writeCodedError, sözleşmenin tek yazıcısıdır. action boş değilse reti
@@ -330,7 +351,7 @@ func writeWebmailUninstallPartial(w http.ResponseWriter, mutationApplied bool) {
 // receive stable operator-facing codes; every other error remains a generic
 // INTERNAL response.
 func writeServerError(w http.ResponseWriter, err error) {
-	if classification, ok := classifyAgentRPCPlatformError(err); ok {
+	if classification, ok := classifyStableAgentError(err); ok {
 		log.Printf("[%d] %v", classification.Status, err)
 		writeCodedError(
 			w,
@@ -362,7 +383,7 @@ func writeClientError(w http.ResponseWriter, status int, message string) {
 func writeAgentError(w http.ResponseWriter, err error, agentDetail string) {
 	if agentDetail != "" {
 		status := http.StatusInternalServerError
-		if classification, ok := classifyAgentRPCPlatformError(err); ok {
+		if classification, ok := classifyStableAgentError(err); ok {
 			status = classification.Status
 		}
 		log.Printf("[%d][agent] %s", status, agentDetail)

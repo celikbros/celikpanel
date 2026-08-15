@@ -11,6 +11,7 @@ import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
 import { PageHeader, UsageBar, StatusDot, Card } from './ui';
 import { showToast } from './Toast';
+import { apiErrorText, readApiError } from '../lib/apiError';
 import {
     decodeManagedMailProfiles,
     type ManagedMailProfile,
@@ -41,6 +42,11 @@ interface FwState {
     enabled: boolean;
     tcp_ports?: number[];
     udp_ports?: number[];
+}
+interface HostMutationReadiness {
+    ready: boolean;
+    code?: 'HOST_MUTATION_BUSY' | 'HOST_MUTATION_UNAVAILABLE';
+    reason?: 'panel_operation_active' | 'agent_mutation_active' | 'host_lock_busy' | 'package_manager_active' | 'state_unverified';
 }
 interface DomainLite {
     id: number;
@@ -99,6 +105,44 @@ function decodeDashboardServices(value: unknown): {
     return profiles ? { services, profiles } : null;
 }
 
+function decodeHostMutationReadiness(value: unknown): HostMutationReadiness | null {
+    if (!value || typeof value !== 'object') return null;
+    const payload = value as Record<string, unknown>;
+    if (typeof payload.ready !== 'boolean') return null;
+    if (payload.ready) {
+        return payload.code === undefined && payload.reason === undefined ? { ready: true } : null;
+    }
+    if (payload.code !== 'HOST_MUTATION_BUSY' && payload.code !== 'HOST_MUTATION_UNAVAILABLE') return null;
+    if (
+        payload.reason !== 'panel_operation_active'
+        && payload.reason !== 'agent_mutation_active'
+        && payload.reason !== 'host_lock_busy'
+        && payload.reason !== 'package_manager_active'
+        && payload.reason !== 'state_unverified'
+    ) return null;
+    return {
+        ready: false,
+        code: payload.code,
+        reason: payload.reason,
+    };
+}
+
+async function fetchHostMutationReadiness(): Promise<HostMutationReadiness> {
+    try {
+        const response = await fetch('/api/v1/host-mutation-readiness', {
+            method: 'GET',
+            cache: 'no-store',
+        });
+        if (!response.ok) {
+            return { ready: false, code: 'HOST_MUTATION_UNAVAILABLE', reason: 'state_unverified' };
+        }
+        return decodeHostMutationReadiness(await response.json())
+            ?? { ready: false, code: 'HOST_MUTATION_UNAVAILABLE', reason: 'state_unverified' };
+    } catch {
+        return { ready: false, code: 'HOST_MUTATION_UNAVAILABLE', reason: 'state_unverified' };
+    }
+}
+
 export function Dashboard() {
     const { role } = useAuth();
     if (role === 'admin') return <AdminDashboard />;
@@ -128,6 +172,9 @@ function AdminDashboard() {
     // sayılır — operatör gerçekten bir sertifika aldı, hiçbir sitede olmasa da.
     const [panelSecured, setPanelSecured] = useState(false);
     const [extras, setExtras] = useState<Extras | null>(null);
+    const [fwBusy, setFwBusy] = useState(false);
+    const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
+    const [hostMutationReadiness, setHostMutationReadiness] = useState<HostMutationReadiness | null>(null);
 
     useEffect(() => {
         const loadStats = () => api.getSystemStats().then(setStats).catch(() => {});
@@ -157,6 +204,20 @@ function AdminDashboard() {
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        let mounted = true;
+        const refresh = async () => {
+            const readiness = await fetchHostMutationReadiness();
+            if (mounted) setHostMutationReadiness(readiness);
+        };
+        void refresh();
+        const timer = window.setInterval(() => void refresh(), 5000);
+        return () => {
+            mounted = false;
+            window.clearInterval(timer);
+        };
+    }, []);
+
     const installed = services.filter((s) => s.is_installed);
     // A `tool` can never be "stopped" — it has no daemon of ours, so counting
     // phpMyAdmin as a dead service was a false alarm the operator could not act
@@ -182,8 +243,19 @@ function AdminDashboard() {
     // (17 Tem): yolculuk "firewall'u aç" diyordu ama düğmesi başka sayfaya
     // götürüyordu ve operatör anahtarı hiç bulamadı — bu önemde bir eylem
     // yerinde yapılır, adres tarif etmez.
-    const [fwBusy, setFwBusy] = useState(false);
+    const refreshHostMutationReadiness = async () => {
+        const readiness = await fetchHostMutationReadiness();
+        setHostMutationReadiness(readiness);
+        return readiness.ready;
+    };
+
+    const requestTurnOnFirewall = () => {
+        setFirewallConfirmationOpen(true);
+        void refreshHostMutationReadiness();
+    };
+
     const turnOnFirewall = async () => {
+        if (hostMutationReadiness?.ready !== true || fwBusy) return;
         setFwBusy(true);
         try {
             const r = await fetch('/api/v1/firewall', {
@@ -191,14 +263,23 @@ function AdminDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: true }),
             });
-            const d = await r.json();
-            if (!r.ok || d.error) throw new Error(d.error);
-            setFw(d);
+            if (!r.ok) {
+                showToast('error', apiErrorText(await readApiError(r), t, 'firewall.changeFailed'));
+                return;
+            }
+            const value: unknown = await r.json();
+            if (!value || typeof value !== 'object' || typeof (value as Record<string, unknown>).enabled !== 'boolean') {
+                showToast('error', apiErrorText({ message: '' }, t, 'firewall.changeFailed'));
+                return;
+            }
+            setFw(value as FwState);
+            setFirewallConfirmationOpen(false);
             showToast('success', t('firewall.onDone'));
-        } catch (e) {
-            showToast('error', e instanceof Error && e.message ? e.message : t('common.error'));
+        } catch {
+            showToast('error', apiErrorText({ message: '' }, t, 'firewall.changeFailed'));
         } finally {
             setFwBusy(false);
+            void refreshHostMutationReadiness();
         }
     };
 
@@ -234,7 +315,7 @@ function AdminDashboard() {
             action: t('firewall.turnOn'),
             to: '/services',
             danger: true,
-            onAct: turnOnFirewall,
+            onAct: requestTurnOnFirewall,
         });
     }
     // Security posture suggestions — surfaced only when they actually apply,
@@ -313,7 +394,7 @@ function AdminDashboard() {
         // so "turn on" is one honest click, not a scavenger hunt.
         // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
         // dürüst tıktır, define avı değil.
-        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services', cta: 'firewall.turnOn', onAct: turnOnFirewall },
+        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services', cta: 'firewall.turnOn', onAct: requestTurnOnFirewall },
         { key: 'dashboard.step.mail', done: mailInstalled && serviceRunning('postfix'), to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
@@ -613,6 +694,102 @@ function AdminDashboard() {
                         <InfoRow label={t('dashboard.uptime')} value={stats ? fmtUptime(stats.uptime_seconds, t) : '—'} />
                     </dl>
                 </Card>
+            </div>
+            {firewallConfirmationOpen && (
+                <DashboardFirewallConfirmationDialog
+                    readiness={hostMutationReadiness}
+                    busy={fwBusy}
+                    onCancel={() => {
+                        if (!fwBusy) setFirewallConfirmationOpen(false);
+                    }}
+                    onConfirm={() => void turnOnFirewall()}
+                />
+            )}
+        </div>
+    );
+}
+
+function DashboardFirewallConfirmationDialog({
+    readiness,
+    busy,
+    onCancel,
+    onConfirm,
+}: {
+    readiness: HostMutationReadiness | null;
+    busy: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    const { t } = useI18n();
+    const readinessMessage = readiness === null
+        ? t('services.mutationReadiness.checking')
+        : readiness.ready
+            ? ''
+            : t(
+                `services.mutationReadiness.${readiness.reason ?? 'state_unverified'}` as Parameters<typeof t>[0],
+            );
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !busy) onCancel();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [busy, onCancel]);
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onMouseDown={(event) => {
+                if (event.currentTarget === event.target && !busy) onCancel();
+            }}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="dashboard-firewall-confirm-title"
+                aria-describedby="dashboard-firewall-confirm-description"
+                aria-busy={busy}
+                className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
+            >
+                <div className="mb-4 flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Shield className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <h3 id="dashboard-firewall-confirm-title" className="text-lg font-semibold text-fg">
+                            {t('firewall.confirm.enable.title')}
+                        </h3>
+                        <p id="dashboard-firewall-confirm-description" className="mt-1 text-sm leading-5 text-fg-muted">
+                            {t('firewall.confirm.enable.description')}
+                        </p>
+                    </div>
+                </div>
+                {readiness?.ready !== true && (
+                    <p role="status" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-fg">
+                        <span className="font-semibold">{t('services.mutationReadiness.title')}</span>{' '}
+                        {readinessMessage}
+                    </p>
+                )}
+                <div className="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        autoFocus
+                        disabled={busy}
+                        onClick={onCancel}
+                        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2 disabled:opacity-50"
+                    >
+                        {t('common.cancel')}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={busy || readiness?.ready !== true}
+                        onClick={onConfirm}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {t('firewall.confirm.enable.button')}
+                    </button>
+                </div>
             </div>
         </div>
     );
