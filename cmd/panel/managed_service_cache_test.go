@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -82,6 +83,30 @@ func TestManagedServicesConditionalScanReusesFreshCache(t *testing.T) {
 	}
 	if payload.ScannedAt == nil || !payload.ScannedAt.Equal(scannedAt) {
 		t.Fatalf("conditional scan timestamp = %v, want cached %v", payload.ScannedAt, scannedAt)
+	}
+}
+
+func TestManagedServicesConditionalCacheRejectsFutureTimestamp(t *testing.T) {
+	panel := newManagedServiceCachePanel(t)
+	raw, err := json.Marshal(scanCacheDoc{Observations: []serviceObservation{{
+		ID: "nftables", IsInstalled: true, Status: "installed",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := panel.db.GetDB().Exec(
+		`INSERT INTO service_scan_cache (id, data, scanned_at) VALUES (1, ?, ?)`,
+		string(raw), time.Now().UTC().Add(time.Minute).Format(time.RFC3339),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, fresh, err := panel.managedServicesCacheWithin(
+		context.Background(), 5*time.Minute,
+	); err != nil {
+		t.Fatal(err)
+	} else if fresh {
+		t.Fatal("future-dated service cache was accepted as fresh")
 	}
 }
 

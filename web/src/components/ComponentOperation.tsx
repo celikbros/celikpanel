@@ -30,6 +30,7 @@ const OPERATION_ID_RE = /^[a-f0-9]{32}$/;
 type OperationStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 type InstallOperationKind = 'service_install' | 'runtime_install' | 'mail_profile_install';
 type MailProfileStatus = 'unknown' | 'available' | 'partial' | 'complete' | 'blocked';
+type MailProfileAttemptStatus = 'none' | 'in_progress' | 'succeeded' | 'failed';
 
 const MAIL_PROFILE_IDS = ['core-mail', 'webmail', 'protected-mail'] as const;
 const MAIL_PROFILE_ID_SET: ReadonlySet<string> = new Set(MAIL_PROFILE_IDS);
@@ -45,6 +46,12 @@ export interface ManagedMailProfile {
     services: string[];
     status: MailProfileStatus;
     available: boolean;
+    // True only when a durable successful profile operation proves the full
+    // mail-stack, TLS, submission and runtime reconciliation. A fresh service
+    // scan alone can prove component health, but it cannot invent this proof.
+    verified: boolean;
+    latest_attempt_status: MailProfileAttemptStatus;
+    latest_attempt_error?: string;
     blocked_reason?: string;
     warning?: string;
 }
@@ -114,6 +121,7 @@ export function decodeManagedMailProfiles(
         const profile = candidate as Record<string, unknown>;
         const id = profile.id;
         const status = profile.status;
+        const latestAttemptStatus = profile.latest_attempt_status;
         if (
             typeof id !== 'string'
             || !expectedIDs.has(id)
@@ -130,6 +138,23 @@ export function decodeManagedMailProfiles(
                 && status !== 'blocked'
             )
             || typeof profile.available !== 'boolean'
+            || typeof profile.verified !== 'boolean'
+            || (profile.verified && status !== 'complete')
+            || (
+                latestAttemptStatus !== 'none'
+                && latestAttemptStatus !== 'in_progress'
+                && latestAttemptStatus !== 'succeeded'
+                && latestAttemptStatus !== 'failed'
+            )
+            || (profile.verified && latestAttemptStatus !== 'succeeded')
+            || (
+                profile.latest_attempt_error !== undefined
+                && (
+                    latestAttemptStatus !== 'failed'
+                    || typeof profile.latest_attempt_error !== 'string'
+                    || profile.latest_attempt_error.trim() === ''
+                )
+            )
             || profile.available !== (
                 status === 'available' || status === 'partial' || status === 'complete'
             )

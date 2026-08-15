@@ -9,9 +9,10 @@ import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
-import { PageHeader, UsageBar, StatusDot, Card } from './ui';
+import { PageHeader, UsageBar, Card } from './ui';
 import { showToast } from './Toast';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { summarizeDashboardMailTruth } from '../lib/dashboardMailTruth';
 import {
     decodeManagedMailProfiles,
     type ManagedMailProfile,
@@ -42,6 +43,7 @@ interface FwState {
     enabled: boolean;
     tcp_ports?: number[];
     udp_ports?: number[];
+    persistence_state?: 'disabled' | 'missing' | 'ready' | 'stale' | 'invalid' | 'unverified';
 }
 interface HostMutationReadiness {
     ready: boolean;
@@ -61,7 +63,12 @@ interface AuditLite {
     username: string;
     action: string;
     ip_address?: string;
+    resource_type?: string;
+    resource_id?: number;
     created_at: string;
+}
+interface AuditGroup extends AuditLite {
+    count: number;
 }
 interface Extras {
     databases: number;
@@ -69,9 +76,54 @@ interface Extras {
     expiring_certs: { domain_name: string; days_left: number }[];
 }
 
+type Translate = ReturnType<typeof useI18n>['t'];
+
+function groupAuditEntries(entries: AuditLite[]): AuditGroup[] {
+    const groups = new Map<string, AuditGroup>();
+    for (const entry of entries) {
+        const key = [
+            entry.username,
+            entry.action,
+            entry.ip_address ?? '',
+            entry.resource_type ?? '',
+            entry.resource_id ?? '',
+        ].join('\u0000');
+        const current = groups.get(key);
+        if (current) {
+            current.count += 1;
+        } else {
+            groups.set(key, { ...entry, count: 1 });
+        }
+    }
+    return [...groups.values()];
+}
+
+function auditActionText(action: string, t: Translate): string {
+    const event = action.split(' — ', 1)[0];
+    if (event === 'auth.login' || event === 'auth.login.2fa') {
+        return t('dashboard.audit.login');
+    }
+    const profileEvent = event.match(/^mail\.profile\.install(?:\.recovered)?(\.failed)?:([^\s]+)$/);
+    if (profileEvent) {
+        const profileKey = ({
+            'core-mail': 'dashboard.audit.profile.coreMail',
+            webmail: 'dashboard.audit.profile.webmail',
+            'protected-mail': 'dashboard.audit.profile.protectedMail',
+        } as const)[profileEvent[2] as 'core-mail' | 'webmail' | 'protected-mail'];
+        const profile = profileKey ? t(profileKey) : profileEvent[2];
+        return t(
+            profileEvent[1] ? 'dashboard.audit.mailProfileFailed' : 'dashboard.audit.mailProfileInstalled',
+            { profile },
+        );
+    }
+    return action;
+}
+
 function decodeDashboardServices(value: unknown): {
     services: SvcLite[];
     profiles: ManagedMailProfile[];
+    scannedAt: string | null;
+    dnsIdentityReady: boolean;
 } | null {
     if (!value || typeof value !== 'object') return null;
     const payload = value as Record<string, unknown>;
@@ -102,7 +154,33 @@ function decodeDashboardServices(value: unknown): {
     }
 
     const profiles = decodeManagedMailProfiles(payload.profiles, serviceIDs);
-    return profiles ? { services, profiles } : null;
+    const scannedAt = payload.scanned_at;
+    if (
+        profiles === null
+        || typeof payload.dns_identity_ready !== 'boolean'
+        || (
+            scannedAt !== null
+            && (typeof scannedAt !== 'string' || !Number.isFinite(Date.parse(scannedAt)))
+        )
+    ) return null;
+    return {
+        services,
+        profiles,
+        scannedAt: scannedAt as string | null,
+        dnsIdentityReady: payload.dns_identity_ready,
+    };
+}
+
+function freshScanTimestamp(value: string | null, now = Date.now()): boolean {
+    if (!value) return false;
+    const scannedAt = Date.parse(value);
+    if (!Number.isFinite(scannedAt) || scannedAt > now) return false;
+    return now - scannedAt <= 5 * 60 * 1000;
+}
+
+function serviceStatusRunning(status: string): boolean {
+    const normalized = status.trim().toLowerCase();
+    return normalized === 'running' || normalized.startsWith('active');
 }
 
 function decodeHostMutationReadiness(value: unknown): HostMutationReadiness | null {
@@ -161,11 +239,13 @@ function AdminDashboard() {
     const [audit, setAudit] = useState<AuditLite[]>([]);
     const [usersCount, setUsersCount] = useState(0);
     const [dnsServer, setDnsServer] = useState('');
+    const [dnsIdentityReady, setDNSIdentityReady] = useState(false);
+    const [serviceScannedAt, setServiceScannedAt] = useState<string | null>(null);
+    const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
     // capabilities.mail_server is a BOOL in the API (dns_server is a string) —
     // treating it like a string silently marks the step done when it is false.
     // capabilities.mail_server API'de BOOL'dur (dns_server metindir) — metin
     // gibi ele almak false iken adımı sessizce 'tamamlandı' işaretler.
-    const [mailInstalled, setMailInstalled] = useState(false);
     // A real CA cert on the panel (self_signed === false) counts as "got an
     // SSL certificate" — the operator did obtain one, even if no site has one.
     // Panelde gerçek CA sertifikası (self_signed === false) "SSL aldın"
@@ -188,15 +268,17 @@ function AdminDashboard() {
                 if (!snapshot) return;
                 setServices(snapshot.services);
                 setMailProfiles(snapshot.profiles);
+                setServiceScannedAt(snapshot.scannedAt);
+                setDNSIdentityReady(snapshot.dnsIdentityReady);
             })
             .catch(() => {});
         fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
         fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
-        fetch('/api/v1/audit-logs?limit=7').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
+        fetch('/api/v1/audit-logs?limit=28').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
         fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
         fetch('/api/v1/hosting/capabilities')
             .then((r) => (r.ok ? r.json() : null))
-            .then((c) => { setDnsServer(c?.dns_server ?? ''); setMailInstalled(Boolean(c?.mail_server)); })
+            .then((c) => { setDnsServer(c?.dns_server ?? ''); })
             .catch(() => {});
         fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
         fetch('/api/v1/panel/certificate').then((r) => (r.ok ? r.json() : null)).then((c) => setPanelSecured(c ? c.self_signed === false : false)).catch(() => {});
@@ -218,6 +300,23 @@ function AdminDashboard() {
         };
     }, []);
 
+    useEffect(() => {
+        const timer = window.setInterval(() => setFreshnessNow(Date.now()), 30_000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    const serviceScanFresh = freshScanTimestamp(serviceScannedAt, freshnessNow);
+
+    const serviceRunning = (id: string) => {
+        if (!serviceScanFresh) return false;
+        const svc = services.find((s) => s.id === id);
+        return Boolean(
+            svc?.is_installed
+            && svc.kind === 'service'
+            && serviceStatusRunning(svc.status),
+        );
+    };
+
     const installed = services.filter((s) => s.is_installed);
     // A `tool` can never be "stopped" — it has no daemon of ours, so counting
     // phpMyAdmin as a dead service was a false alarm the operator could not act
@@ -231,9 +330,14 @@ function AdminDashboard() {
     // başına uygulamalar çalıştırır). php-fpm sayılmaya devam eder: gerçek
     // unit'leri var ve ölüsü her PHP sitesini kırar, bu listeye ulaşmalıdır
     // (D-010/B3b).
-    const cannotStop = (s: SvcLite) => s.kind === 'tool' || s.status === 'installed';
-    const running = installed.filter((s) => cannotStop(s) || s.status?.toLowerCase().includes('running'));
-    const stoppedSvcs = installed.filter((s) => !cannotStop(s) && !s.status?.toLowerCase().includes('running'));
+    // This card is specifically systemd service truth. Tools (Roundcube) and
+    // unit-less runtimes are installed components, never fabricated as
+    // "running services" merely to make the ratio green.
+    const systemServices = serviceScanFresh
+        ? installed.filter((s) => s.kind === 'service')
+        : [];
+    const running = systemServices.filter((s) => serviceStatusRunning(s.status));
+    const stoppedSvcs = systemServices.filter((s) => !serviceStatusRunning(s.status));
 
     // Turn the firewall on right where the operator reads about it. Field
     // finding (Jul 17): the journey said "turn on the firewall" but its button
@@ -317,6 +421,14 @@ function AdminDashboard() {
             danger: true,
             onAct: requestTurnOnFirewall,
         });
+    } else if (fw?.enabled && fw.persistence_state !== 'ready') {
+        attention.push({
+            key: 'fw-persistence',
+            icon: Shield,
+            text: t('dashboard.fwPersistenceItem'),
+            action: t('dashboard.saveFirewall'),
+            to: '/services',
+        });
     }
     // Security posture suggestions — surfaced only when they actually apply,
     // so they guide rather than nag: antivirus once there is content to scan,
@@ -324,14 +436,25 @@ function AdminDashboard() {
     // Güvenlik duruşu önerileri — yalnız gerçekten geçerliyken çıkar, böylece
     // dırdır değil yol gösterir: taranacak içerik varken antivirüs, posta
     // çalışırken spam filtresi.
-    const hasClamAV = services.some((s) => s.id === 'clamav' && s.is_installed);
-    const hasSpam = services.some((s) => s.id === 'spamassassin' && s.is_installed);
+    const hasClamAV = serviceRunning('clamav');
+    const verifiedMailProfiles = serviceScanFresh
+        ? (mailProfiles?.filter((profile) => (
+            profile.status === 'complete'
+            && profile.verified
+            && !profile.warning
+        )) ?? [])
+        : [];
+    const mailProfileVerified = verifiedMailProfiles.length > 0;
+    // This suppresses only the "install a spam filter" suggestion. It does
+    // not claim filter wiring or a verified protected profile; that separate
+    // truth stays visible in the mail-stack summary.
+    const hasSpam = serviceRunning('spamassassin') || serviceRunning('rspamd');
     // "Content to scan" means a hosted site — a DNS-only domain serves
     // records, not files, so it must not trigger the antivirus nag.
     // "Taranacak içerik" barındırılan site demektir — yalnız-DNS domain dosya
     // değil kayıt sunar; antivirüs dırdırını tetiklememeli.
     const hostsContent = domains.some((d) => d.project_type !== 'dnsonly');
-    if (hostsContent && !hasClamAV) {
+    if (serviceScanFresh && hostsContent && !hasClamAV) {
         attention.push({
             key: 'no-av',
             icon: Shield,
@@ -340,7 +463,7 @@ function AdminDashboard() {
             to: '/services',
         });
     }
-    if (mailInstalled && !hasSpam) {
+    if (mailProfileVerified && !hasSpam) {
         attention.push({
             key: 'no-spam',
             icon: Mail,
@@ -350,23 +473,6 @@ function AdminDashboard() {
         });
     }
 
-    // serviceRunning: is this catalogue service actually up right now? The
-    // journey asks it because "installed" and "working" are different facts,
-    // and only the second one earns a tick.
-    // serviceRunning: bu katalog servisi şu an gerçekten ayakta mı? Yolculuk
-    // bunu sorar çünkü "kurulu" ile "çalışıyor" farklı gerçeklerdir ve tiki
-    // yalnız ikincisi hak eder.
-    const serviceRunning = (id: string) => {
-        const svc = services.find((s) => s.id === id);
-        if (!svc || !svc.is_installed) return false;
-        // A tool or a unit-less runtime has no daemon of ours: "installed" IS
-        // its working state (D-010) — never demand a running dot from it.
-        // Bir tool'un ya da unit'siz runtime'ın bize ait daemon'ı yoktur:
-        // "kurulu" onun çalışma hâlidir (D-010) — ondan koşan nokta beklenmez.
-        if (svc.kind === 'tool' || svc.status === 'installed') return true;
-        return svc.status?.toLowerCase().includes('running') === true;
-    };
-
     // Setup journey — live completion; the card disappears when all done.
     // Kurulum yolculuğu — canlı tamamlanma; hepsi bitince kart kaybolur.
     const steps: { key: TranslationKey; hint?: TranslationKey; done: boolean; to: string; cta?: TranslationKey; onAct?: () => void }[] = [
@@ -375,6 +481,13 @@ function AdminDashboard() {
         // Her düğme gerçekten yaptığını söyler — Domains sayfasını açan
         // düğmede "Go to services" yazması operatörün yakaladığı bir yalandı.
         { key: 'dashboard.step.panel', done: true, to: '/' },
+        {
+            key: 'dashboard.step.serviceScan',
+            hint: 'dashboard.step.serviceScanHint',
+            done: serviceScanFresh,
+            to: '/services',
+            cta: 'dashboard.rescanComponents',
+        },
         // "Done" means WORKING, not merely present. A DNS server that is
         // installed but not running serves no zone, so ticking that step was a
         // lie — Hostinger's Arch image ships a disabled named.service and the
@@ -387,15 +500,23 @@ function AdminDashboard() {
         // geliyor ve yolculuk keyifle "DNS kuruldu: Tamam" diyordu, Bileşenler
         // sayfası 0/0 gösterirken (16 Tem). Aynı dürüstlük posta için de:
         // kurulu ama ölü bir Postfix hiçbir şey teslim etmez.
-        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: dnsServer !== '' && serviceRunning(dnsServer), to: '/services' },
+        { key: 'dashboard.step.dns', hint: 'dashboard.step.dnsHint', done: serviceScanFresh && dnsServer !== '' && serviceRunning(dnsServer), to: '/services' },
+        { key: 'dashboard.step.dnsIdentity', hint: 'dashboard.step.dnsIdentityHint', done: dnsIdentityReady, to: '/settings?section=dns', cta: 'dashboard.configureDNSIdentity' },
         { key: 'dashboard.step.domain', done: domains.length > 0, to: '/domains', cta: 'dashboard.addDomain' },
         { key: 'dashboard.step.ssl', hint: 'dashboard.step.sslHint', done: panelSecured || domains.some((d) => d.ssl_enabled), to: '/settings', cta: 'dashboard.goSettings' },
         // The firewall step acts in place: the engine ships with install.sh,
         // so "turn on" is one honest click, not a scavenger hunt.
         // Firewall adımı yerinde eyler: motor install.sh ile gelir, "aç" tek
         // dürüst tıktır, define avı değil.
-        { key: 'dashboard.step.firewall', hint: 'dashboard.step.firewallHint', done: fw?.enabled === true, to: '/services', cta: 'firewall.turnOn', onAct: requestTurnOnFirewall },
-        { key: 'dashboard.step.mail', done: mailInstalled && serviceRunning('postfix'), to: '/services' },
+        {
+            key: 'dashboard.step.firewall',
+            hint: 'dashboard.step.firewallHint',
+            done: fw?.enabled === true && fw.persistence_state === 'ready',
+            to: '/services',
+            cta: fw?.enabled ? 'dashboard.saveFirewall' : 'firewall.turnOn',
+            onAct: fw?.enabled ? undefined : requestTurnOnFirewall,
+        },
+        { key: 'dashboard.step.mail', done: mailProfileVerified, to: '/services' },
     ];
     const doneCount = steps.filter((s) => s.done).length;
     const journeyOpen = doneCount < steps.length;
@@ -405,6 +526,7 @@ function AdminDashboard() {
     const recentDomains = [...domains]
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
         .slice(0, 4);
+    const recentActivity = groupAuditEntries(audit).slice(0, 7);
 
 
     return (
@@ -425,21 +547,21 @@ function AdminDashboard() {
                     icon={Cpu}
                     label={t('dashboard.cpuUsage')}
                     percent={stats?.cpu_percent ?? 0}
-                    value={stats ? `%${Math.round(stats.cpu_percent)}` : '—'}
-                    hint={stats ? `${t('dashboard.cores', { n: stats.cpu_cores })} · ${stats.load_avg[0]?.toFixed(2) ?? ''}` : ''}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(stats.cpu_percent) }) : '—'}
+                    hint={stats ? `${t('dashboard.cores', { n: stats.cpu_cores })} · ${t('dashboard.loadValue', { n: stats.load_avg[0]?.toFixed(2) ?? '—' })}` : ''}
                 />
                 <GaugeCard
                     icon={MemoryStick}
                     label={t('dashboard.memoryUsage')}
                     percent={pct(stats?.mem_used_bytes, stats?.mem_total_bytes)}
-                    value={stats ? `%${Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes))}` : '—'}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes)) }) : '—'}
                     hint={stats ? `${fmtBytes(stats.mem_used_bytes)} / ${fmtBytes(stats.mem_total_bytes)}` : ''}
                 />
                 <GaugeCard
                     icon={HardDrive}
                     label={t('dashboard.diskUsage')}
                     percent={pct(stats?.disk_used_bytes, stats?.disk_total_bytes)}
-                    value={stats ? `%${Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes))}` : '—'}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes)) }) : '—'}
                     hint={stats ? `${fmtBytes(stats.disk_used_bytes)} / ${fmtBytes(stats.disk_total_bytes)}` : ''}
                 />
                 <button
@@ -447,28 +569,32 @@ function AdminDashboard() {
                     className="rounded-xl border border-border bg-surface p-5 text-left shadow-card transition-colors hover:bg-surface-2/60"
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-fg-muted">{t('dashboard.services')}</span>
+                        <span className="text-sm font-medium text-fg-muted">{t('dashboard.systemServices')}</span>
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Activity className="h-4 w-4" />
                         </span>
                     </div>
                     <p className="mt-2 text-3xl font-bold tracking-tight text-fg">
-                        {installed.length > 0 ? `${running.length} / ${installed.length}` : '0 / 0'}
+                        {!serviceScanFresh
+                            ? t('dashboard.statusUnknown')
+                            : `${running.length} / ${systemServices.length}`}
                     </p>
-                    {stoppedSvcs.length > 0 ? (
+                    {!serviceScanFresh ? (
+                        <p className="mt-2 text-xs text-fg-subtle">{t('dashboard.systemServicesScanStale')}</p>
+                    ) : stoppedSvcs.length > 0 ? (
                         <p className="mt-2 text-xs font-medium text-warning">{t('dashboard.svcStopped', { n: stoppedSvcs.length })}</p>
                     ) : (
                         <p className="mt-2 text-xs text-fg-subtle">
-                            {installed.length > 0 ? t('dashboard.svcRunningHint') : t('dashboard.svcNone')}
+                            {systemServices.length > 0 ? t('dashboard.svcRunningHint') : t('dashboard.svcNone')}
                         </p>
                     )}
-                    {installed.length === 0 && <p className="mt-1 text-xs text-fg-subtle">{t('dashboard.svcReady')}</p>}
                 </button>
             </div>
 
             {mailProfiles && (
                 <MailStackSummary
                     profiles={mailProfiles}
+                    scanFresh={serviceScanFresh}
                     onOpen={() => navigate('/services#mail-stacks')}
                 />
             )}
@@ -479,7 +605,7 @@ function AdminDashboard() {
                 Needs attention yolculuktan ÖNCE: aktif sorun, rehberlikten
                 önce gelir. Operatör geri bildirimi (17 Tem): uyarı listesi
                 sayfanın altında kalırken üst taraf sakin görünüyordu. */}
-            {hasContent && (
+            {attention.length > 0 && (
                 <section className="mt-6">
                     <SectionTitle
                         icon={Bell}
@@ -488,19 +614,16 @@ function AdminDashboard() {
                         right={
                             attention.length > 0 ? (
                                 <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
-                                    {t('dashboard.warnCount', { n: attention.length })}
+                                    {attention.length === 1
+                                        ? t('dashboard.warnCountOne')
+                                        : t('dashboard.warnCount', { n: attention.length })}
                                 </span>
                             ) : undefined
                         }
                     />
                     <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-                        {attention.length === 0 ? (
-                            <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-fg-muted">
-                                <StatusDot ok /> {t('dashboard.allGood')}
-                            </div>
-                        ) : (
-                            <ul>
-                                {attention.map((a) => (
+                        <ul>
+                            {attention.map((a) => (
                                     <li key={a.key} className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0">
                                         <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
                                         <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
@@ -525,9 +648,8 @@ function AdminDashboard() {
                                             </button>
                                         )}
                                     </li>
-                                ))}
-                            </ul>
-                        )}
+                            ))}
+                        </ul>
                     </div>
                 </section>
             )}
@@ -645,18 +767,23 @@ function AdminDashboard() {
 
                     <section>
                         <SectionTitle icon={Activity} tint="bg-violet-500/10 text-violet-600 dark:text-violet-400" title={t('dashboard.activity')} />
-                        {audit.length === 0 ? (
+                        {recentActivity.length === 0 ? (
                             <Card><p className="p-4 text-sm text-fg-subtle">—</p></Card>
                         ) : (
                             <ul className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-                                {audit.map((e) => (
+                                {recentActivity.map((e) => (
                                     <li key={e.id} className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-2.5 last:border-0">
                                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold uppercase text-fg-muted">
                                             {e.username.slice(0, 1) || '?'}
                                         </span>
                                         <span className="min-w-0 flex-1 text-sm text-fg">
                                             <span className="font-semibold">{e.username}</span>{' '}
-                                            <span className="font-mono text-xs text-fg-muted">{e.action}</span>
+                                            <span className="text-fg-muted">{auditActionText(e.action, t)}</span>
+                                            {e.count > 1 && (
+                                                <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-fg-muted">
+                                                    {t('dashboard.audit.repeated', { n: e.count })}
+                                                </span>
+                                            )}
                                         </span>
                                         {e.ip_address && <span className="font-mono text-xs text-fg-subtle">{e.ip_address}</span>}
                                         <span className="text-xs text-fg-subtle">{fmtRelative(e.created_at, t)}</span>
@@ -795,34 +922,47 @@ function DashboardFirewallConfirmationDialog({
     );
 }
 
-function MailStackSummary({ profiles, onOpen }: {
+function MailStackSummary({ profiles, scanFresh, onOpen }: {
     profiles: ManagedMailProfile[];
+    scanFresh: boolean;
     onOpen: () => void;
 }) {
     const { t } = useI18n();
-    const needsAttention = profiles.some((profile) =>
-        profile.status === 'blocked' || profile.status === 'unknown');
-    const partial = !needsAttention && profiles.some((profile) => profile.status === 'partial');
-    const complete = profiles.some((profile) => profile.status === 'complete');
-    const availableOnly = profiles.every((profile) => profile.status === 'available');
+    const { complete, problem, partial, needsAttention, availableOnly } =
+        summarizeDashboardMailTruth(profiles, scanFresh);
 
-    const statusKey: TranslationKey = needsAttention
-        ? 'dashboard.mailStacks.status.attention'
+    const statusKey: TranslationKey = !scanFresh
+        ? 'dashboard.mailStacks.status.stale'
         : partial
             ? 'dashboard.mailStacks.status.partial'
+        : needsAttention
+            ? 'dashboard.mailStacks.status.attention'
             : availableOnly
                 ? 'dashboard.mailStacks.status.available'
                 : 'dashboard.mailStacks.status.ready';
-    const hintKey: TranslationKey = needsAttention
-        ? 'dashboard.mailStacks.attentionHint'
-        : partial
-            ? 'dashboard.mailStacks.partialHint'
-            : complete
-                ? 'dashboard.mailStacks.completeHint'
-                : 'dashboard.mailStacks.availableHint';
+    const detail = !scanFresh
+        ? t('dashboard.mailStacks.scanStale')
+        : problem?.latest_attempt_error || problem?.blocked_reason || problem?.warning
+            ? t('dashboard.mailStacks.reason', {
+                name: problem?.name ?? t('dashboard.mailStacks.title'),
+                reason: problem?.latest_attempt_error ?? problem?.blocked_reason ?? problem?.warning ?? '',
+            })
+            : problem?.latest_attempt_status === 'failed'
+                ? t('dashboard.mailStacks.reconciliationFailed', { name: problem.name })
+                : problem?.latest_attempt_status === 'in_progress'
+                    ? t('dashboard.mailStacks.reconciliationInProgress', { name: problem.name })
+                    : problem?.latest_attempt_status === 'succeeded' && !problem.verified
+                        ? t('dashboard.mailStacks.reconciliationUnverified', { name: problem.name })
+                        : partial
+                            ? t('dashboard.mailStacks.partialHint')
+                            : problem
+                                ? t('dashboard.mailStacks.attentionHint')
+                                : complete
+                                    ? t('dashboard.mailStacks.completeHint')
+                                    : t('dashboard.mailStacks.availableHint');
     const statusClass = needsAttention || partial
         ? 'bg-warning/15 text-warning'
-        : availableOnly
+        : !scanFresh || availableOnly
             ? 'bg-surface-2 text-fg-muted'
             : 'bg-success/15 text-success';
 
@@ -838,10 +978,10 @@ function MailStackSummary({ profiles, onOpen }: {
                             <h2 id='dashboard-mail-stacks-heading' className='font-semibold text-fg'>{t('dashboard.mailStacks.title')}</h2>
                             <span className={'rounded-full px-2.5 py-1 text-xs font-semibold ' + statusClass}>{t(statusKey)}</span>
                         </div>
-                        <p className='mt-1 text-sm text-fg-muted'>{t(hintKey)}</p>
+                        <p className='mt-1 text-sm text-fg-muted'>{detail}</p>
                     </div>
                     <button type='button' onClick={onOpen} className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-fg hover:bg-primary/90'>
-                        {t('dashboard.mailStacks.open')} <ArrowRight className='h-4 w-4' />
+                        {t(scanFresh ? 'dashboard.mailStacks.open' : 'dashboard.mailStacks.rescan')} <ArrowRight className='h-4 w-4' />
                     </button>
                 </div>
             </div>
@@ -960,21 +1100,21 @@ function CustomerDashboard() {
                     icon={Cpu}
                     label={t('dashboard.cpuUsage')}
                     percent={stats?.cpu_percent ?? 0}
-                    value={stats ? `%${Math.round(stats.cpu_percent)}` : '—'}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(stats.cpu_percent) }) : '—'}
                     hint={stats ? t('dashboard.cores', { n: stats.cpu_cores }) : ''}
                 />
                 <GaugeCard
                     icon={MemoryStick}
                     label={t('dashboard.memoryUsage')}
                     percent={pct(stats?.mem_used_bytes, stats?.mem_total_bytes)}
-                    value={stats ? `%${Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes))}` : '—'}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(pct(stats.mem_used_bytes, stats.mem_total_bytes)) }) : '—'}
                     hint={stats ? t('dashboard.usedOfTotal', { used: fmtBytes(stats.mem_used_bytes), total: fmtBytes(stats.mem_total_bytes) }) : ''}
                 />
                 <GaugeCard
                     icon={HardDrive}
                     label={t('dashboard.diskUsage')}
                     percent={pct(stats?.disk_used_bytes, stats?.disk_total_bytes)}
-                    value={stats ? `%${Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes))}` : '—'}
+                    value={stats ? t('dashboard.percentValue', { n: Math.round(pct(stats.disk_used_bytes, stats.disk_total_bytes)) }) : '—'}
                     hint={stats ? t('dashboard.usedOfTotal', { used: fmtBytes(stats.disk_used_bytes), total: fmtBytes(stats.disk_total_bytes) }) : ''}
                 />
             </div>
