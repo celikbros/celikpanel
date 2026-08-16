@@ -511,6 +511,36 @@ func TestPublisherFirstSwitchFailureUsesExplicitEmptyRecovery(t *testing.T) {
 	}
 }
 
+func TestPublisherRestorePointerIsExactAndIdempotent(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	for _, generation := range []Generation{first, second} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := publisher.Activate(second.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := publisher.RestorePointer(second.ID, first.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := publisher.RestorePointer(second.ID, first.ID, true); err != nil {
+		t.Fatalf("idempotent recovery failed: %v", err)
+	}
+	if current, exists, err := publisher.Current(); err != nil || !exists || current != first.ID {
+		t.Fatalf("current=%q exists=%v err=%v", current, exists, err)
+	}
+	if err := publisher.RestorePointer(second.ID, strings.Repeat("f", 64), true); err == nil {
+		t.Fatal("unrelated previous generation was accepted after exact recovery")
+	}
+}
+
 func TestPublisherStopsOrEmptiesWhenPriorGenerationCannotBeReapplied(t *testing.T) {
 	filesystem := newMemoryFS()
 	publisher := newTestPublisher(t, filesystem, &recordingRunner{})

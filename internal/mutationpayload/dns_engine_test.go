@@ -69,6 +69,7 @@ func TestCanonicalDNSEngineSwitchManifestIsStableAndTransitive(t *testing.T) {
 		},
 	}
 	commitment, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
 		transport.DNSEnginePowerDNS, transport.DNSEngineBIND,
 		2, 3, 7, transport.DNSTopologyStandalone, zones,
 	)
@@ -76,6 +77,7 @@ func TestCanonicalDNSEngineSwitchManifestIsStableAndTransitive(t *testing.T) {
 		t.Fatal(err)
 	}
 	reordered, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
 		transport.DNSEnginePowerDNS, transport.DNSEngineBIND,
 		2, 3, 7, transport.DNSTopologyStandalone,
 		[]transport.DNSEngineSwitchZoneSnapshot{zones[1], zones[0]},
@@ -107,6 +109,7 @@ func TestCanonicalDNSEngineSwitchManifestIsStableAndTransitive(t *testing.T) {
 	changed := append([]transport.DNSEngineSwitchZoneSnapshot(nil), zones...)
 	changed[0].Records = []transport.ZoneRecord{{Name: "z.example.test", Type: "A", Content: "192.0.2.5"}}
 	mutated, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
 		transport.DNSEnginePowerDNS, transport.DNSEngineBIND,
 		2, 3, 7, transport.DNSTopologyStandalone, changed,
 	)
@@ -132,5 +135,55 @@ func TestDNSEngineSwitchSnapshotByteLimitIsFailClosed(t *testing.T) {
 		DNSEngineSwitchMaxSnapshotBytes-1, 2,
 	); err == nil {
 		t.Fatal("snapshot larger than 64 MiB was accepted")
+	}
+}
+
+func TestCanonicalDNSEngineSwitchManifestBindsExplicitMode(t *testing.T) {
+	switchManifest, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyStandalone, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adoptManifest, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyStandalone, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if switchManifest.Qualifier == adoptManifest.Qualifier {
+		t.Fatal("DNS engine qualifier did not bind switch versus adopt mode")
+	}
+	if _, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeAdopt,
+		transport.DNSEngineBIND, transport.DNSEnginePowerDNS, 1, 2, 4,
+		transport.DNSTopologyStandalone, nil,
+	); err == nil {
+		t.Fatal("adopt accepted a resolved source engine")
+	}
+	if _, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEngineBIND, 0, 1, 4,
+		transport.DNSTopologyStandalone, nil,
+	); err == nil {
+		t.Fatal("adopt accepted a BIND target")
+	}
+	if _, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEnginePowerDNS, transport.DNSEngineBIND, 1, 2, 4,
+		transport.DNSTopologyPaired, nil,
+	); err == nil {
+		t.Fatal("normal switch accepted paired topology")
+	}
+	if _, err := CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyPaired, nil,
+	); err != nil {
+		t.Fatalf("paired managed PowerDNS adoption was rejected: %v", err)
 	}
 }

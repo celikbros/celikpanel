@@ -19,6 +19,14 @@ type SwitchDNSEngineV1Request = transport.SwitchDNSEngineV1Request
 type SwitchDNSEngineV1Response = transport.SwitchDNSEngineV1Response
 type DNSBackendReadinessResponse = transport.DNSBackendReadinessResponse
 
+type dnsEngineSwitchRecoveryOutcome string
+
+const (
+	dnsEngineSwitchRecoveryAbsent     dnsEngineSwitchRecoveryOutcome = "absent"
+	dnsEngineSwitchRecoveryRolledBack dnsEngineSwitchRecoveryOutcome = "rolled-back"
+	dnsEngineSwitchRecoveryCommitted  dnsEngineSwitchRecoveryOutcome = "committed"
+)
+
 const dnsEngineSwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
 
 const dnsZoneSyncV3PublishedPhasePrefix = "commit/dns-zone-sync/v3/published/"
@@ -41,6 +49,18 @@ type dnsEngineBackend interface {
 		mutationpayload.DNSEngineSwitchManifestCommitment,
 		transport.ServiceMutationBinding,
 	) (transport.SwitchDNSEngineV1Response, error)
+	RecoverSwitch(
+		context.Context,
+		transport.DNSEngine,
+		string,
+		transport.ServiceMutationBinding,
+	) (dnsEngineSwitchRecoveryOutcome, error)
+	FinalizeSwitch(
+		context.Context,
+		transport.DNSEngine,
+		string,
+		transport.ServiceMutationBinding,
+	) error
 }
 
 var agentDNSEngineBackend dnsEngineBackend = hostDNSEngineBackend{}
@@ -268,6 +288,114 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 	return true, errors.Join(writeErr, lock.Close())
 }
 
+// recoverPersistedDNSEngineSwitchLocked reconciles the durable host switch
+// journal before the common orphan path is allowed to discard the mutation.
+// The caller owns m.mu and the common host mutation lock. An ambiguous host
+// result poisons the manager and deliberately retains that lock.
+func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
+	job *ServiceMutationJob,
+	lock *serviceMutationFileLock,
+) (bool, error) {
+	if job == nil || job.Kind != "dns_engine_switch" {
+		return false, nil
+	}
+	target := transport.DNSEngine(job.Target)
+	if !transport.ValidDNSEngine(target) || !mutationpayload.ValidDNSEngineSwitchQualifier(job.PackageName) {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New("active DNS engine switch has an invalid durable identity"))
+	}
+	if serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted) {
+		before := cloneServiceMutationLedger(m.ledger)
+		job.Status = serviceMutationStatusOrphaned
+		job.Phase = "waiting_for_orphaned_process"
+		job.ErrorCode = "agent_restart_worker_alive"
+		job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+		job.UpdatedAt = m.now()
+		writeErr := m.persistLedgerMutationLocked(before)
+		if m.poisoned != nil {
+			m.poisonLock = lock
+			return true, writeErr
+		}
+		return true, errors.Join(writeErr, lock.Close())
+	}
+
+	binding := transport.ServiceMutationBinding{
+		MutationRequestID: job.RequestID,
+		MutationOwnerID:   job.OwnerID,
+	}
+	recoveryCtx, cancel := context.WithTimeout(context.Background(), dnsEngineSwitchRecoveryLimit)
+	m.mu.Unlock()
+	outcome, recoveryErr := agentDNSEngineBackend.RecoverSwitch(
+		recoveryCtx, target, job.PackageName, binding,
+	)
+	cancel()
+	m.mu.Lock()
+	if recoveryErr != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf("recover DNS engine switch host transaction: %w", recoveryErr))
+	}
+	if outcome != dnsEngineSwitchRecoveryCommitted {
+		code := "agent_restarted_before_dns_engine_switch_commit"
+		message := "The agent restarted before the DNS engine switch reached a verified target."
+		if outcome == dnsEngineSwitchRecoveryRolledBack {
+			code = "dns_engine_switch_rolled_back_after_restart"
+			message = "The interrupted DNS engine switch was rolled back to the verified previous state."
+		} else if outcome != dnsEngineSwitchRecoveryAbsent {
+			m.poisonLock = lock
+			return true, m.poisonLocked(errors.New("DNS engine switch recovery returned an unsupported outcome"))
+		}
+		writeErr := m.finishPersistedOrphanLocked(job, code, message)
+		if m.poisoned != nil {
+			m.poisonLock = lock
+			return true, writeErr
+		}
+		return true, errors.Join(writeErr, lock.Close())
+	}
+
+	phase, err := formatDNSEngineSwitchPublishedPhase(job.RequestID, job.PackageName)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
+	job.Status = serviceMutationStatusSucceeded
+	job.Phase = phase
+	job.ErrorCode = ""
+	job.ErrorMessage = ""
+	job.UpdatedAt = now
+	job.FinishedAt = now
+	job.LeaseExpiresAt = time.Time{}
+	job.WorkerPID = 0
+	job.WorkerStarted = ""
+	job.WorkerCommand = ""
+	m.ledger.ActiveRequestID = ""
+	writeErr := m.persistLedgerMutationLocked(before)
+	if m.poisoned != nil {
+		m.poisonLock = lock
+		return true, writeErr
+	}
+	closeErr := lock.Close()
+	if writeErr != nil || closeErr != nil {
+		return true, errors.Join(writeErr, closeErr)
+	}
+
+	// Cleanup follows terminal ledger publication. A failure leaves the exact
+	// committed journal for the next bounded reconciliation; it must not turn a
+	// verified and durably published switch into a false client-side failure.
+	finalizeCtx, finalizeCancel := context.WithTimeout(context.Background(), dnsEngineSwitchRecoveryLimit)
+	m.mu.Unlock()
+	finalizeErr := agentDNSEngineBackend.FinalizeSwitch(
+		finalizeCtx, target, job.PackageName, binding,
+	)
+	finalizeCancel()
+	m.mu.Lock()
+	if finalizeErr != nil {
+		log.Printf("DNS engine switch recovery journal cleanup deferred: %v", finalizeErr)
+	}
+	return true, nil
+}
+
 // SwitchDNSEngineV1 stages the complete target snapshot before touching the
 // active port-53 authority. The host backend owns service/config rollback; the
 // terminal phase below is published only after exact target verification.
@@ -281,6 +409,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		return nil
 	}
 	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		request.Mode,
 		request.SourceEngine,
 		request.TargetEngine,
 		request.SourceEpoch,
@@ -305,7 +434,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 			serviceMutationStepSwitchDNSEngine,
 			string(commitment.TargetEngine),
 			commitment.Qualifier,
-			"switch",
+			commitment.Mode,
 		),
 	)
 	if err != nil {
@@ -319,7 +448,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 	)
 	if err != nil {
 		log.Printf("DNS engine switch to %s at epoch %d failed: %v", commitment.TargetEngine, commitment.TargetEpoch, err)
-		response.Error = "DNS engine switch failed; the previous DNS service was restored"
+		response.Error = "DNS engine switch did not complete; inspect the agent log"
 		return nil
 	}
 	if !result.Applied || result.ActiveEngine != commitment.TargetEngine ||
@@ -334,6 +463,12 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		log.Printf("DNS engine switch terminal receipt publication failed: %v", err)
 		response.Error = "DNS engine switch finished but its durable receipt could not be verified"
 		return nil
+	}
+	if err := agentDNSEngineBackend.FinalizeSwitch(
+		context.WithoutCancel(ctx), commitment.TargetEngine,
+		commitment.Qualifier, request.ServiceMutationBinding,
+	); err != nil {
+		log.Printf("DNS engine switch journal cleanup deferred: %v", err)
 	}
 	*response = result
 	return nil

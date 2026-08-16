@@ -36,6 +36,7 @@ type bindHostLayout struct {
 
 type dnsEngineStateReceipt struct {
 	Schema            string              `json:"schema"`
+	Mode              string              `json:"mode"`
 	Engine            transport.DNSEngine `json:"engine"`
 	EngineEpoch       int64               `json:"engine_epoch"`
 	Generation        string              `json:"generation,omitempty"`
@@ -61,9 +62,10 @@ type dnsUnitIdentity struct {
 }
 
 type bindConfigMutation struct {
-	paths    []string
-	original map[string][]byte
-	desired  map[string][]byte
+	paths     []string
+	original  map[string][]byte
+	desired   map[string][]byte
+	snapshots map[string]dnsFileSnapshot
 }
 
 type trackedBINDValidator struct {
@@ -154,6 +156,8 @@ func decodeDNSEngineState(data []byte) (dnsEngineStateReceipt, error) {
 
 func validateDNSEngineState(state dnsEngineStateReceipt) error {
 	if state.Schema != dnsEngineStateSchema || !transport.ValidDNSEngine(state.Engine) ||
+		(state.Mode != transport.DNSEngineSwitchModeSwitch &&
+			state.Mode != transport.DNSEngineSwitchModeAdopt) ||
 		state.EngineEpoch < 1 || state.SourceRevision < 0 ||
 		!mutationpayload.ValidDNSEngineSwitchQualifier(state.ManifestQualifier) ||
 		!validMutationIdentity(state.MutationRequestID) ||
@@ -296,6 +300,9 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
+	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
+		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
+	}
 	if commitment.Engine == string(transport.DNSEnginePowerDNS) {
 		return syncPDNSV3Zone(ctx, commitment, binding)
 	}
@@ -433,18 +440,15 @@ func (hostDNSEngineBackend) RecoverZone(
 	if receipt.EngineEpoch != state.EngineEpoch {
 		return false, errors.New("BIND current tree epoch differs from the active engine receipt")
 	}
-	exact := false
-	for _, zone := range receipt.Zones {
-		if zone.Domain != domain {
-			continue
-		}
-		exact = zone.Qualifier == qualifier &&
-			zone.MutationRequestID == binding.MutationRequestID &&
-			zone.MutationOwnerID == binding.MutationOwnerID
-		break
-	}
-	if !exact {
+	zone, zoneData, found := tree.Zone(domain)
+	if !found || zone.Qualifier != qualifier ||
+		zone.MutationRequestID != binding.MutationRequestID ||
+		zone.MutationOwnerID != binding.MutationOwnerID {
 		return false, nil
+	}
+	expected, err := expectedDNSZoneAuthorityFromBINDTree(zone, zoneData)
+	if err != nil {
+		return false, err
 	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
@@ -462,10 +466,9 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
 		return false, err
 	}
-	// A receipt is authoritative only after the exact changed zone is served.
-	// Recovery does not have the snapshot bytes, so LoadCurrent's verified zone
-	// file plus the receipt binding is followed by a live SOA probe below when
-	// the panel retries the exact V3 request.
+	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -474,9 +477,15 @@ func (hostDNSEngineBackend) Switch(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) (transport.SwitchDNSEngineV1Response, error) {
+	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if manifest.TargetEngine == transport.DNSEnginePowerDNS {
+		return switchToPDNS(ctx, manifest, binding)
+	}
 	if manifest.TargetEngine != transport.DNSEngineBIND {
 		return transport.SwitchDNSEngineV1Response{},
-			errors.New("switching to PowerDNS is not enabled by this agent build")
+			errors.New("DNS engine switch target is unsupported")
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
@@ -508,6 +517,12 @@ func (hostDNSEngineBackend) Switch(
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if _, exists, err := readDNSEngineSwitchJournal(); err != nil || exists {
+		if err == nil {
+			err = errors.New("a DNS engine switch recovery journal requires reconciliation")
+		}
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -515,11 +530,22 @@ func (hostDNSEngineBackend) Switch(
 	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	targetBefore, err := captureDNSUnitStates(ctx, systemctl, []string{"named.service"})
+	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
+	targetBefore, err := captureDNSUnitStates(
+		ctx, systemctl, []string{"bind9.service", "named.service"},
+	)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	sourceBefore, err := captureDNSUnitStates(ctx, systemctl, []string{"pdns.service"})
+	sourceUnits := []string{}
+	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+		sourceUnits = []string{"pdns.service"}
+	}
+	sourceBefore, err := captureDNSUnitStates(ctx, systemctl, sourceUnits)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -551,13 +577,48 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	stateBefore, err := captureDNSFileSnapshot(dnsEngineStatePath(), 0o600, true)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	previousGeneration, hadPrevious, err := publisher.Current()
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	journal := dnsEngineSwitchJournal{
+		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
+		Mode:              manifest.Mode,
+		MutationRequestID: binding.MutationRequestID, MutationOwnerID: binding.MutationOwnerID,
+		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
+		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
+		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
+		Topology: manifest.Topology, SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		TargetGeneration: generation.ID, PreviousGeneration: previousGeneration,
+		HadPrevious: hadPrevious, StateBefore: stateBefore,
+		ConfigBefore:      bindConfigMutationSnapshots(configs),
+		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore),
+		SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
+	}
+	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	rollbackAndJournal := func(rollbackCtx context.Context) error {
+		journal.Phase = dnsSwitchPhaseRollingBack
+		journalErr := writeDNSEngineSwitchJournal(journal)
+		rollbackErr := rollbackBINDActivation(
+			rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
+		)
+		if rollbackErr == nil {
+			journal.Phase = dnsSwitchPhaseRolledBack
+			journalErr = errors.Join(journalErr, writeDNSEngineSwitchJournal(journal), removeDNSEngineSwitchJournal())
+		}
+		return errors.Join(journalErr, rollbackErr)
+	}
 	attempt := 0
 	apply := func(applyCtx context.Context) error {
 		attempt++
 		if attempt > 1 {
-			return rollbackBINDActivation(
-				applyCtx, systemctl, configs, targetBefore, sourceBefore,
-			)
+			return rollbackAndJournal(applyCtx)
 		}
 		if err := configs.apply(); err != nil {
 			return err
@@ -565,10 +626,18 @@ func (hostDNSEngineBackend) Switch(
 		if _, err := validator.Run(applyCtx, "named-checkconf", "-z", layout.MainConfig); err != nil {
 			return err
 		}
+		journal.Phase = dnsSwitchPhaseTargetStaged
+		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+			return err
+		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
 			if output, err := runDNSSystemctl(applyCtx, systemctl, "disable", "--now", "pdns.service"); err != nil {
 				return fmt.Errorf("stop source PowerDNS: %w: %s", err, firstLine(string(output)))
 			}
+		}
+		journal.Phase = dnsSwitchPhaseSourceStopped
+		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+			return err
 		}
 		for _, unit := range []string{"bind9.service", "named.service"} {
 			if output, err := runDNSSystemctl(applyCtx, systemctl, "unmask", unit); err != nil {
@@ -576,6 +645,10 @@ func (hostDNSEngineBackend) Switch(
 			}
 		}
 		if err := enableServiceForMutationWithExecutable(applyCtx, systemctl, layout.Unit, true); err != nil {
+			return err
+		}
+		journal.Phase = dnsSwitchPhaseTargetStarted
+		if err := writeDNSEngineSwitchJournal(journal); err != nil {
 			return err
 		}
 		if err := verifyOnlyBINDActive(applyCtx, systemctl); err != nil {
@@ -586,6 +659,7 @@ func (hostDNSEngineBackend) Switch(
 		}
 		nextState := dnsEngineStateReceipt{
 			Schema: dnsEngineStateSchema,
+			Mode:   manifest.Mode,
 			Engine: transport.DNSEngineBIND, EngineEpoch: manifest.TargetEpoch,
 			Generation: generation.ID, SourceRevision: manifest.SourceRevision,
 			ManifestQualifier: manifest.Qualifier,
@@ -593,14 +667,19 @@ func (hostDNSEngineBackend) Switch(
 			MutationOwnerID:   binding.MutationOwnerID,
 		}
 		if err := writeDNSEngineState(nextState); err != nil {
-			return fmt.Errorf("publish active DNS engine state: %w", err)
+			actual, exists, readErr := readDNSEngineState()
+			if readErr != nil || !exists || actual != nextState {
+				return fmt.Errorf("publish active DNS engine state: %w", errors.Join(err, readErr))
+			}
+		}
+		journal.Phase = dnsSwitchPhaseTargetVerified
+		if err := writeDNSEngineSwitchJournal(journal); err != nil {
+			return err
 		}
 		return nil
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
-		return rollbackBINDActivation(
-			recoveryCtx, systemctl, configs, targetBefore, sourceBefore,
-		)
+		return rollbackAndJournal(recoveryCtx)
 	}
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -613,11 +692,43 @@ func (hostDNSEngineBackend) Switch(
 		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	journal.Phase = dnsSwitchPhaseCommitted
+	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	return transport.SwitchDNSEngineV1Response{
 		Applied: true, ActiveEngine: transport.DNSEngineBIND,
 		ActiveEpoch: manifest.TargetEpoch, AppliedZones: len(manifest.Zones),
 		Detail: "BIND is the verified active authoritative DNS engine",
 	}, nil
+}
+
+func bindConfigMutationSnapshots(configs bindConfigMutation) []dnsFileSnapshot {
+	snapshots := make([]dnsFileSnapshot, 0, len(configs.paths))
+	for _, path := range configs.paths {
+		snapshot := configs.snapshots[path]
+		snapshot.Data = append([]byte(nil), snapshot.Data...)
+		snapshots = append(snapshots, snapshot)
+	}
+	sort.Slice(snapshots, func(left, right int) bool { return snapshots[left].Path < snapshots[right].Path })
+	return snapshots
+}
+
+func dnsUnitStateMapSnapshots(states map[string]dnsUnitState) []dnsUnitSnapshot {
+	units := make([]string, 0, len(states))
+	for unit := range states {
+		units = append(units, unit)
+	}
+	sort.Strings(units)
+	snapshots := make([]dnsUnitSnapshot, 0, len(units))
+	for _, unit := range units {
+		state := states[unit]
+		snapshots = append(snapshots, dnsUnitSnapshot{
+			Name: state.Name, LoadState: state.LoadState,
+			ActiveState: state.ActiveState, UnitFileState: state.UnitFileState,
+		})
+	}
+	return snapshots
 }
 
 func bindSwitchTreePlan(
@@ -697,27 +808,68 @@ func verifyDNSEngineSwitchSource(
 	if err != nil {
 		return err
 	}
+	bindAliasUnit, err := captureDNSUnitState(ctx, systemctl, "bind9.service")
+	if err != nil {
+		return err
+	}
+	if manifest.Mode == transport.DNSEngineSwitchModeAdopt {
+		if stateExists || manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
+			manifest.TargetEngine != transport.DNSEnginePowerDNS ||
+			bindUnit.active() || bindAliasUnit.active() || !pdnsUnit.active() {
+			return errors.New("PowerDNS adoption requires the sole unreceipted managed PowerDNS authority")
+		}
+		if err := requireManagedDNSClusterReady(); err != nil {
+			return errors.New("PowerDNS adoption requires a managed PowerDNS authority")
+		}
+		return verifyOnlyPDNSActive(ctx, systemctl)
+	}
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch {
+		return errors.New("DNS engine operation mode is unsupported")
+	}
 	if stateExists {
 		if state.Engine != manifest.SourceEngine || state.EngineEpoch != manifest.SourceEpoch {
 			return errors.New("DNS engine switch source does not match the active engine receipt")
 		}
-		if manifest.SourceEngine == transport.DNSEnginePowerDNS && (!pdnsUnit.active() || bindUnit.active()) {
-			return errors.New("PowerDNS receipt does not match the active port-53 authority")
+		switch manifest.SourceEngine {
+		case transport.DNSEnginePowerDNS:
+			if !pdnsUnit.active() || bindUnit.active() || bindAliasUnit.active() {
+				return errors.New("PowerDNS receipt does not match the active port-53 authority")
+			}
+			return verifyOnlyPDNSActive(ctx, systemctl)
+		case transport.DNSEngineBIND:
+			if !bindUnit.active() || pdnsUnit.active() ||
+				(bindAliasUnit.LoadState == "not-found" && bindAliasUnit.active()) {
+				return errors.New("BIND receipt does not match the active port-53 authority")
+			}
+			layout, err := bindLayout(profile)
+			if err != nil {
+				return err
+			}
+			publisher, _, err := newHostBINDPublisher(layout)
+			if err != nil {
+				return err
+			}
+			tree, err := publisher.LoadCurrent()
+			if err != nil {
+				return err
+			}
+			receipt := tree.CurrentReceipt()
+			if receipt.Generation != state.Generation || receipt.EngineEpoch != state.EngineEpoch {
+				return errors.New("BIND source receipt differs from its immutable current generation")
+			}
+			return verifyOnlyBINDActive(ctx, systemctl)
+		default:
+			return errors.New("DNS engine switch source receipt names an unsupported engine")
 		}
-		return nil
 	}
 	switch manifest.SourceEngine {
 	case "":
-		if manifest.SourceEpoch != 0 || bindUnit.active() || pdnsUnit.active() {
+		if manifest.SourceEpoch != 0 || bindUnit.active() ||
+			bindAliasUnit.active() || pdnsUnit.active() {
 			return errors.New("uninitialized DNS source requires no running authoritative DNS engine")
 		}
-	case transport.DNSEnginePowerDNS:
-		if manifest.SourceEpoch != 1 || !pdnsUnit.active() || bindUnit.active() ||
-			requireManagedDNSClusterReady() != nil {
-			return errors.New("legacy PowerDNS adoption requires the exact managed standalone source at epoch 1")
-		}
 	default:
-		return errors.New("an unreceipted BIND source cannot be adopted implicitly")
+		return errors.New("an unreceipted DNS source cannot be switched implicitly")
 	}
 	return nil
 }
@@ -730,13 +882,16 @@ func prepareBINDConfigMutation(layout bindHostLayout) (bindConfigMutation, error
 	}
 	mutation := bindConfigMutation{
 		paths: paths, original: make(map[string][]byte, len(paths)),
-		desired: make(map[string][]byte, len(paths)),
+		desired:   make(map[string][]byte, len(paths)),
+		snapshots: make(map[string]dnsFileSnapshot, len(paths)),
 	}
 	for _, path := range paths {
-		data, err := secureReadConfig(path)
+		snapshot, err := captureDNSFileSnapshot(path, 0o644, false)
 		if err != nil {
 			return bindConfigMutation{}, fmt.Errorf("read BIND configuration %s: %w", path, err)
 		}
+		data := snapshot.Data
+		mutation.snapshots[path] = snapshot
 		mutation.original[path] = append([]byte(nil), data...)
 		content := string(data)
 		if path == layout.OptionsConfig {
@@ -764,9 +919,13 @@ func (mutation bindConfigMutation) apply() error {
 		if bytes.Equal(mutation.original[path], mutation.desired[path]) {
 			continue
 		}
-		if err := secureWriteConfig(path, mutation.desired[path], 0o644); err != nil {
+		mode := os.FileMode(mutation.snapshots[path].Mode)
+		if mode == 0 {
+			return errors.New("BIND config mutation lost its exact file snapshot")
+		}
+		if err := secureWriteConfig(path, mutation.desired[path], mode); err != nil {
 			for index := len(written) - 1; index >= 0; index-- {
-				_ = secureWriteConfig(written[index], mutation.original[written[index]], 0o644)
+				_ = restoreDNSFileSnapshot(mutation.snapshots[written[index]])
 			}
 			return fmt.Errorf("write managed BIND configuration %s: %w", path, err)
 		}
@@ -779,7 +938,7 @@ func (mutation bindConfigMutation) restore() error {
 	var restoreErr error
 	for index := len(mutation.paths) - 1; index >= 0; index-- {
 		path := mutation.paths[index]
-		if err := secureWriteConfig(path, mutation.original[path], 0o644); err != nil {
+		if err := restoreDNSFileSnapshot(mutation.snapshots[path]); err != nil {
 			restoreErr = errors.Join(restoreErr, fmt.Errorf("restore BIND configuration %s: %w", path, err))
 		}
 	}
@@ -862,12 +1021,14 @@ func rollbackBINDActivation(
 	ctx context.Context,
 	systemctl string,
 	configs bindConfigMutation,
+	stateBefore dnsFileSnapshot,
 	targetBefore, sourceBefore map[string]dnsUnitState,
 ) error {
 	rollbackCtx := context.WithoutCancel(ctx)
 	return errors.Join(
 		restoreDNSUnitStates(rollbackCtx, systemctl, targetBefore, true),
 		configs.restore(),
+		restoreDNSFileSnapshot(stateBefore),
 		restoreDNSUnitStates(rollbackCtx, systemctl, sourceBefore, false),
 	)
 }
@@ -880,11 +1041,16 @@ func verifyOnlyBINDActive(ctx context.Context, systemctl string) error {
 	if err != nil {
 		return err
 	}
+	bindAliasState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "bind9.service")
+	if err != nil {
+		return err
+	}
 	pdnsState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "pdns.service")
 	if err != nil {
 		return err
 	}
-	if !bindState.active() || pdnsState.active() {
+	if !bindState.active() || pdnsState.active() ||
+		(bindAliasState.loadState == "not-found" && bindAliasState.active()) {
 		return errors.New("DNS activation did not leave exactly BIND as the active authority")
 	}
 	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
@@ -1119,6 +1285,9 @@ func verifyBINDUnitTopology(ctx context.Context, systemctl string) error {
 		return err
 	}
 	if bind9.loadState == "not-found" && bind9.unitFileState == "" {
+		if bind9.active() {
+			return errors.New("bind9.service is independently active without a loadable unit")
+		}
 		return nil
 	}
 	namedIdentity, err := inspectDNSUnitIdentity(ctx, systemctl, "named.service")

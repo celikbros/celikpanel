@@ -124,6 +124,7 @@ func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
 		ServiceMutationBinding: ServiceMutationBinding{
 			MutationRequestID: "request", MutationOwnerID: "owner",
 		},
+		Mode:         DNSEngineSwitchModeSwitch,
 		SourceEngine: DNSEnginePowerDNS, TargetEngine: DNSEngineBIND,
 		SourceEpoch: 2, TargetEpoch: 3, SourceRevision: 7,
 		Topology:      DNSTopologyStandalone,

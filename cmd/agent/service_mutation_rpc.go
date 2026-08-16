@@ -801,6 +801,9 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
 		return recoveryErr
 	}
+	if handled, recoveryErr := m.recoverPersistedDNSEngineSwitchLocked(job, lock); handled {
+		return recoveryErr
+	}
 	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncV3Locked(job, lock); handled {
 		return recoveryErr
 	}
@@ -944,6 +947,9 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 		return recoveryErr
 	}
 	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSEngineSwitchLocked(job, lock); handled {
 		return recoveryErr
 	}
 	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncV3Locked(job, lock); handled {

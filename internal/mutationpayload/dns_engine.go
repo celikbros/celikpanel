@@ -108,6 +108,7 @@ func qualifyDNSZoneSyncV3(commitment DNSZoneSyncV3Commitment) string {
 // DNSEngineSwitchManifestCommitment is a detached, canonical whole-server DNS
 // publication snapshot. Each zone qualifier commits its full record snapshot.
 type DNSEngineSwitchManifestCommitment struct {
+	Mode           string
 	SourceEngine   transport.DNSEngine
 	TargetEngine   transport.DNSEngine
 	SourceEpoch    int64
@@ -120,11 +121,16 @@ type DNSEngineSwitchManifestCommitment struct {
 }
 
 func CanonicalDNSEngineSwitchManifest(
+	mode string,
 	sourceEngine, targetEngine transport.DNSEngine,
 	sourceEpoch, targetEpoch, sourceRevision int64,
 	topology string,
 	zones []transport.DNSEngineSwitchZoneSnapshot,
 ) (DNSEngineSwitchManifestCommitment, error) {
+	if mode != transport.DNSEngineSwitchModeSwitch &&
+		mode != transport.DNSEngineSwitchModeAdopt {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine operation mode must be switch or adopt")
+	}
 	if sourceEngine == "" {
 		if sourceEpoch != 0 {
 			return DNSEngineSwitchManifestCommitment{}, errors.New("unresolved DNS engine must use epoch zero")
@@ -138,14 +144,22 @@ func CanonicalDNSEngineSwitchManifest(
 	if sourceEngine == targetEngine {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch target must differ from source")
 	}
+	if mode == transport.DNSEngineSwitchModeAdopt &&
+		(sourceEngine != "" || targetEngine != transport.DNSEnginePowerDNS) {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine adoption requires an unresolved PowerDNS source")
+	}
 	if targetEpoch != sourceEpoch+1 || targetEpoch < 1 {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("target DNS engine epoch must immediately follow source epoch")
 	}
 	if sourceRevision < 0 {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine source revision must not be negative")
 	}
-	if topology != transport.DNSTopologyStandalone {
+	if mode == transport.DNSEngineSwitchModeSwitch && topology != transport.DNSTopologyStandalone {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switching currently requires standalone topology")
+	}
+	if mode == transport.DNSEngineSwitchModeAdopt &&
+		topology != transport.DNSTopologyStandalone && topology != transport.DNSTopologyPaired {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("PowerDNS adoption topology must be standalone or paired")
 	}
 	if len(zones) > dnsEngineSwitchMaxZones {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch manifest exceeds the zone limit")
@@ -189,6 +203,7 @@ func CanonicalDNSEngineSwitchManifest(
 	}
 
 	commitment := DNSEngineSwitchManifestCommitment{
+		Mode:         mode,
 		SourceEngine: sourceEngine, TargetEngine: targetEngine,
 		SourceEpoch: sourceEpoch, TargetEpoch: targetEpoch,
 		SourceRevision: sourceRevision, Topology: topology, Zones: frozen,
@@ -227,6 +242,7 @@ func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string
 		[]byte(dnsEngineSwitchSchema),
 		[]byte("dns_engine_switch"),
 		[]byte("Agent.SwitchDNSEngineV1"),
+		[]byte(commitment.Mode),
 	} {
 		writeDNSEngineDigestFrame(digest, frame)
 	}

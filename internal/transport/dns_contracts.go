@@ -7,6 +7,10 @@ const (
 	DNSEngineBIND     DNSEngine = "bind"
 
 	DNSTopologyStandalone = "standalone"
+	DNSTopologyPaired     = "paired"
+
+	DNSEngineSwitchModeSwitch = "switch"
+	DNSEngineSwitchModeAdopt  = "adopt"
 
 	DNSEngineSwitchPhasePlanned     = "planned"
 	DNSEngineSwitchPhaseStaging     = "staging"
@@ -120,6 +124,7 @@ type DNSEngineSwitchZoneSnapshot struct {
 // SourceEngine is empty only while resolving a legacy/uninitialized host.
 type SwitchDNSEngineV1Request struct {
 	ServiceMutationBinding
+	Mode              string                        `json:"mode"`
 	SourceEngine      DNSEngine                     `json:"source_engine,omitempty"`
 	TargetEngine      DNSEngine                     `json:"target_engine"`
 	SourceEpoch       int64                         `json:"source_epoch"`

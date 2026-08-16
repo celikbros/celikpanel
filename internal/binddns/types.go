@@ -105,3 +105,27 @@ func (plan TreePlan) EngineEpoch() int64 { return plan.engineEpoch }
 
 // CurrentReceipt returns a value copy of the verified current receipt.
 func (tree VerifiedTree) CurrentReceipt() Receipt { return cloneReceipt(tree.receipt) }
+
+// Zone returns one zone from a tree that has already passed VerifyTree or a
+// Publisher LoadCurrent verification. The domain must be in canonical panel
+// form. Both the receipt and bytes are defensive copies; deletion tombstones
+// deliberately return nil bytes.
+func (tree VerifiedTree) Zone(domain string) (ZoneReceipt, []byte, bool) {
+	if _, err := requireCanonicalDomain(domain); err != nil {
+		return ZoneReceipt{}, nil, false
+	}
+	for _, zone := range tree.zones {
+		if zone.receipt.Domain != domain {
+			continue
+		}
+		if err := validateTreeZone(zone); err != nil {
+			return ZoneReceipt{}, nil, false
+		}
+		receipt := zone.receipt
+		if receipt.Delete {
+			return receipt, nil, true
+		}
+		return receipt, append([]byte(nil), zone.data...), true
+	}
+	return ZoneReceipt{}, nil, false
+}

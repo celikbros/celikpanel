@@ -45,6 +45,7 @@ func testPDNSSwitchManifest(t *testing.T) mutationpayload.DNSEngineSwitchManifes
 		t.Fatal(err)
 	}
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
 		"", transport.DNSEnginePowerDNS, 0, 1, 11,
 		transport.DNSTopologyStandalone,
 		[]transport.DNSEngineSwitchZoneSnapshot{

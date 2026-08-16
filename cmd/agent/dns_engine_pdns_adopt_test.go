@@ -1,0 +1,205 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/transport"
+)
+
+func testPDNSAdoptionManifest(
+	t *testing.T,
+	topology string,
+	domain string,
+	records []transport.ZoneRecord,
+) mutationpayload.DNSEngineSwitchManifestCommitment {
+	t.Helper()
+	zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
+		transport.DNSEnginePowerDNS, 1, 9, domain, false, "NATIVE", records,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 17, topology,
+		[]transport.DNSEngineSwitchZoneSnapshot{{
+			Domain: domain, DesiredGeneration: 9, ZoneType: "NATIVE",
+			Records: zone.Records, ZoneQualifier: zone.Qualifier,
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
+
+func createPDNSAdoptionDatabase(
+	t *testing.T,
+	path, domain string,
+	records []transport.ZoneRecord,
+	paired, signed bool,
+) {
+	t.Helper()
+	db, err := initializePDNSEngineDB(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := db.Exec(`INSERT INTO domains (name, type) VALUES (?, 'NATIVE')`, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domainID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range records {
+		disabled := 0
+		if record.Disabled {
+			disabled = 1
+		}
+		if _, err := db.Exec(`
+			INSERT INTO records
+			(domain_id, name, type, content, ttl, prio, disabled, auth)
+			VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+		`, domainID, record.Name, record.Type, record.Content,
+			record.TTL, record.Prio, disabled); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if signed {
+		for _, statement := range []string{
+			`INSERT INTO domainmetadata (domain_id, kind, content) VALUES (?, 'PRESIGNED', '1')`,
+			`INSERT INTO cryptokeys (domain_id, flags, active, published, content) VALUES (?, 257, 1, 1, 'private-key-material')`,
+		} {
+			if _, err := db.Exec(statement, domainID); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if paired {
+		if _, err := db.Exec(`
+			INSERT INTO domains (name, type, master)
+			VALUES ('peer-owned.test', 'SLAVE', '192.0.2.53')
+		`); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVerifyPDNSAdoptionPreservesSignedPairedDatabaseBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	domain := "secure.test"
+	records := testPDNSEngineRecords(domain)
+	createPDNSAdoptionDatabase(t, path, domain, records, true, true)
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyPaired, domain, records,
+	)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionDatabase(context.Background(), path, manifest); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("read-only adoption changed the signed paired PowerDNS database")
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, table := range []string{"cryptokeys", "domainmetadata"} {
+		var count int
+		if err := db.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("%s count=%d, want preserved", table, count)
+		}
+	}
+}
+
+func TestVerifyPDNSAdoptionRejectsExtraStandaloneAndTamperedZone(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	domain := "example.test"
+	records := testPDNSEngineRecords(domain)
+	createPDNSAdoptionDatabase(t, path, domain, records, true, false)
+	standalone := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, domain, records,
+	)
+	if err := verifyPDNSAdoptionDatabase(context.Background(), path, standalone); err == nil {
+		t.Fatal("standalone adoption accepted an unowned extra zone")
+	}
+	paired := testPDNSAdoptionManifest(t, transport.DNSTopologyPaired, domain, records)
+	db, err := openPDNSEngineDB(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE records SET content = '192.0.2.99' WHERE type = 'A'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionDatabase(context.Background(), path, paired); err == nil {
+		t.Fatal("adoption accepted runtime records that differ from the ledger")
+	}
+}
+
+func TestPDNSAdoptionUnitEvidenceRejectsAnotherRunningEngine(t *testing.T) {
+	before := []dnsUnitSnapshot{
+		{Name: "bind9.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"},
+		{Name: "named.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"},
+		{Name: "pdns.service", LoadState: "loaded", ActiveState: "active", UnitFileState: "enabled"},
+	}
+	if err := validatePDNSAdoptionUnitEvidence(before); err != nil {
+		t.Fatal(err)
+	}
+	after := append([]dnsUnitSnapshot(nil), before...)
+	if !exactDNSUnitSnapshotSet(before, after) {
+		t.Fatal("identical unit snapshots were not exact")
+	}
+	after[1].ActiveState = "active"
+	if err := validatePDNSAdoptionUnitEvidence(after); err == nil {
+		t.Fatal("adoption accepted BIND running beside PowerDNS")
+	}
+	if exactDNSUnitSnapshotSet(before, after) {
+		t.Fatal("unit state mutation was not detected")
+	}
+}
+
+func TestPDNSAdoptionConfigEvidenceIsByteAndModeExact(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.conf")
+	if err := os.WriteFile(path, []byte("launch=gsqlite3\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := captureDNSFileSnapshotPreserve(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyDNSFileSnapshotsExact([]dnsFileSnapshot{snapshot}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("launch=bind\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyDNSFileSnapshotsExact([]dnsFileSnapshot{snapshot}); err == nil {
+		t.Fatal("adoption config evidence missed a byte change")
+	}
+}

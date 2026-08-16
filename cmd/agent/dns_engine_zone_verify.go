@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -86,6 +87,57 @@ func verifyDNSZoneManifestAuthority(
 	if err != nil {
 		return err
 	}
+	return verifyDNSZoneAuthorities(ctx, expected)
+}
+
+func expectedDNSZoneAuthorityFromBINDTree(
+	receipt binddns.ZoneReceipt,
+	data []byte,
+) (expectedDNSZoneAuthority, error) {
+	expected := expectedDNSZoneAuthority{Domain: receipt.Domain, Delete: receipt.Delete}
+	if receipt.Delete {
+		if data != nil {
+			return expectedDNSZoneAuthority{}, errors.New("BIND deletion tombstone unexpectedly has zone bytes")
+		}
+		return expected, nil
+	}
+	lines := strings.Split(string(data), "\n")
+	if len(lines) < 3 ||
+		lines[0] != "; Managed by CelikPanel. DO NOT EDIT." ||
+		lines[1] != "$ORIGIN "+receipt.Domain+"." ||
+		lines[len(lines)-1] != "" {
+		return expectedDNSZoneAuthority{}, errors.New("verified BIND zone has an unsupported master-file shape")
+	}
+	soaCount := 0
+	for _, line := range lines[2 : len(lines)-1] {
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			return expectedDNSZoneAuthority{}, errors.New("verified BIND zone contains a malformed record")
+		}
+		if fields[3] != "SOA" {
+			continue
+		}
+		if len(fields) != 11 || fields[0] != receipt.Domain+"." ||
+			fields[2] != "IN" {
+			return expectedDNSZoneAuthority{}, errors.New("verified BIND zone contains an invalid apex SOA")
+		}
+		serial, err := strconv.ParseUint(fields[6], 10, 32)
+		if err != nil {
+			return expectedDNSZoneAuthority{}, errors.New("verified BIND zone contains an invalid SOA serial")
+		}
+		soaCount++
+		expected.Serial = uint32(serial)
+	}
+	if soaCount != 1 {
+		return expectedDNSZoneAuthority{}, errors.New("verified BIND zone must contain exactly one apex SOA")
+	}
+	return expected, nil
+}
+
+func verifyDNSZoneAuthorities(
+	ctx context.Context,
+	expected []expectedDNSZoneAuthority,
+) error {
 	addresses := strings.Split(publicListenAddresses(), ",")
 	if len(addresses) == 0 || strings.TrimSpace(addresses[0]) == "" {
 		return errors.New("no public address is available for authoritative DNS verification")

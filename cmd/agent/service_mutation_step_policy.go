@@ -7,6 +7,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type serviceMutationStepMethod string
@@ -237,7 +238,8 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 
 	case serviceMutationStepSwitchDNSEngine:
 		return (claim.target == "bind" || claim.target == "pdns") &&
-			claim.action == "switch" &&
+			(claim.action == transport.DNSEngineSwitchModeSwitch ||
+				claim.action == transport.DNSEngineSwitchModeAdopt) &&
 			mutationpayload.ValidDNSEngineSwitchQualifier(claim.packageName) &&
 			serviceMutationJobMatches(
 				job, "dns_engine_switch", claim.target, claim.packageName,

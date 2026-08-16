@@ -89,6 +89,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"delete BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "delete")},
 		{"switch DNS engine to BIND", mutationPolicyJob("dns_engine_switch", "bind", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "bind", dnsSwitchQualifier, "switch")},
 		{"switch DNS engine to PowerDNS", mutationPolicyJob("dns_engine_switch", "pdns", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "pdns", dnsSwitchQualifier, "switch")},
+		{"adopt managed PowerDNS", mutationPolicyJob("dns_engine_switch", "pdns", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "pdns", dnsSwitchQualifier, "adopt")},
 		{"nginx ready after install", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"nginx ready in webmail profile", mutationPolicyJob("mail_profile_install", core.MailProfileWebmail, ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"configure mail standalone", mutationPolicyJob("mail_configure", "mail-stack", ""), mutationPolicyClaim(serviceMutationStepConfigureMailStack, "mail-stack", "", "configure")},

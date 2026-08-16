@@ -134,7 +134,8 @@ func buildPDNSSwitchCandidate(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) error {
-	if manifest.TargetEngine != transport.DNSEnginePowerDNS ||
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		manifest.TargetEngine != transport.DNSEnginePowerDNS ||
 		!validMutationIdentity(binding.MutationRequestID) ||
 		!validMutationIdentity(binding.MutationOwnerID) {
 		return errors.New("invalid PowerDNS switch candidate identity")
@@ -640,7 +641,8 @@ func verifyPDNSSwitchDatabase(
 		&sourceRevision, &zoneCount, &snapshotBytes, &schema); err != nil {
 		return err
 	}
-	if engine != string(transport.DNSEnginePowerDNS) || epoch != manifest.TargetEpoch ||
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		engine != string(transport.DNSEnginePowerDNS) || epoch != manifest.TargetEpoch ||
 		requestID != binding.MutationRequestID || ownerID != binding.MutationOwnerID ||
 		qualifier != manifest.Qualifier || sourceRevision != manifest.SourceRevision ||
 		zoneCount != int64(len(manifest.Zones)) || snapshotBytes != manifest.SnapshotBytes ||

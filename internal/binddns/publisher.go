@@ -395,6 +395,38 @@ func (publisher *Publisher) Activate(generationID string) error {
 	return publisher.activateLocked(generationID)
 }
 
+// RestorePointer is the crash-recovery counterpart of Switch. It changes the
+// pointer only when it is still on expectedTarget, while also accepting an
+// already-restored exact state. It never reloads a daemon; the caller must
+// restore/stop services under its own durable transaction journal.
+func (publisher *Publisher) RestorePointer(
+	expectedTarget, previous string,
+	hadPrevious bool,
+) error {
+	if !validDigest(expectedTarget) || (hadPrevious && !validDigest(previous)) ||
+		(!hadPrevious && previous != "") {
+		return errors.New("invalid BIND pointer recovery identity")
+	}
+	publisher.transactionMu.Lock()
+	defer publisher.transactionMu.Unlock()
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	current, exists, err := publisher.currentLocked()
+	if err != nil {
+		return err
+	}
+	if hadPrevious && exists && current == previous {
+		return nil
+	}
+	if !hadPrevious && !exists {
+		return nil
+	}
+	if !exists || current != expectedTarget {
+		return errors.New("BIND current pointer changed outside the recovery transaction")
+	}
+	return publisher.restoreSwitchPointerLocked(expectedTarget, previous, hadPrevious)
+}
+
 func (publisher *Publisher) activateLocked(generationID string) error {
 	if !validDigest(generationID) {
 		return errors.New("invalid BIND generation ID")

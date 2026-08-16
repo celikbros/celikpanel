@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,11 +14,15 @@ import (
 )
 
 type fakeDNSEngineBackend struct {
-	readiness []transport.DNSBackendRuntimeState
-	readyErr  error
-	syncErr   error
-	switchErr error
-	result    transport.SwitchDNSEngineV1Response
+	readiness     []transport.DNSBackendRuntimeState
+	readyErr      error
+	syncErr       error
+	switchErr     error
+	result        transport.SwitchDNSEngineV1Response
+	recovery      dnsEngineSwitchRecoveryOutcome
+	recoverErr    error
+	recoverCalls  int
+	finalizeCalls int
 }
 
 func (backend *fakeDNSEngineBackend) Readiness(context.Context) ([]transport.DNSBackendRuntimeState, error) {
@@ -49,6 +54,26 @@ func (backend *fakeDNSEngineBackend) Switch(
 	return backend.result, backend.switchErr
 }
 
+func (backend *fakeDNSEngineBackend) RecoverSwitch(
+	context.Context,
+	transport.DNSEngine,
+	string,
+	transport.ServiceMutationBinding,
+) (dnsEngineSwitchRecoveryOutcome, error) {
+	backend.recoverCalls++
+	return backend.recovery, backend.recoverErr
+}
+
+func (backend *fakeDNSEngineBackend) FinalizeSwitch(
+	context.Context,
+	transport.DNSEngine,
+	string,
+	transport.ServiceMutationBinding,
+) error {
+	backend.finalizeCalls++
+	return nil
+}
+
 func useFakeDNSEngineBackend(t *testing.T, backend dnsEngineBackend) {
 	t.Helper()
 	previous := agentDNSEngineBackend
@@ -59,6 +84,7 @@ func useFakeDNSEngineBackend(t *testing.T, backend dnsEngineBackend) {
 func canonicalSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 	t.Helper()
 	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
 		"", transport.DNSEngineBIND, 0, 1, 0,
 		transport.DNSTopologyStandalone,
 		[]transport.DNSEngineSwitchZoneSnapshot{},
@@ -68,6 +94,7 @@ func canonicalSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 	}
 	return SwitchDNSEngineV1Request{
 		ServiceMutationBinding: mutationTestBinding(),
+		Mode:                   commitment.Mode,
 		SourceEngine:           commitment.SourceEngine, TargetEngine: commitment.TargetEngine,
 		SourceEpoch: commitment.SourceEpoch, TargetEpoch: commitment.TargetEpoch,
 		SourceRevision: commitment.SourceRevision, Topology: commitment.Topology,
@@ -117,7 +144,7 @@ func TestSwitchDNSEngineHidesBackendCommandDetail(t *testing.T) {
 	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
 		t.Fatal(err)
 	}
-	if response.Error != "DNS engine switch failed; the previous DNS service was restored" ||
+	if response.Error != "DNS engine switch did not complete; inspect the agent log" ||
 		strings.Contains(response.Error, "do-not-leak") || strings.Contains(response.Error, "/etc/bind") {
 		t.Fatalf("unsafe client error %q", response.Error)
 	}
@@ -151,9 +178,58 @@ func TestSwitchDNSEngineRejectsNoncanonicalManifestBeforeLease(t *testing.T) {
 	}
 }
 
+func TestDNSEngineSwitchStartupForwardCompletesExactCommittedJournal(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	abandonFirewallApplyTestRuntime(t, manager)
+	backend := &fakeDNSEngineBackend{recovery: dnsEngineSwitchRecoveryCommitted}
+	useFakeDNSEngineBackend(t, backend)
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	wantPhase := dnsEngineSwitchPublishedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 || job == nil ||
+		job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
+		t.Fatalf("recover=%d finalize=%d job=%+v", backend.recoverCalls, backend.finalizeCalls, job)
+	}
+}
+
+func TestDNSEngineSwitchStartupClosesVerifiedRollbackAsFailure(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	abandonFirewallApplyTestRuntime(t, manager)
+	backend := &fakeDNSEngineBackend{recovery: dnsEngineSwitchRecoveryRolledBack}
+	useFakeDNSEngineBackend(t, backend)
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 0 || job == nil ||
+		job.Status != serviceMutationStatusFailed ||
+		job.ErrorCode != "dns_engine_switch_rolled_back_after_restart" {
+		t.Fatalf("recover=%d finalize=%d job=%+v", backend.recoverCalls, backend.finalizeCalls, job)
+	}
+}
+
 func TestDNSEngineStateCanonicalBinding(t *testing.T) {
 	state := dnsEngineStateReceipt{
-		Schema: dnsEngineStateSchema, Engine: transport.DNSEngineBIND,
+		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
+		Engine:      transport.DNSEngineBIND,
 		EngineEpoch: 7, Generation: strings.Repeat("b", 64), SourceRevision: 12,
 		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("c", 64),
 		MutationRequestID: strings.Repeat("d", 32),

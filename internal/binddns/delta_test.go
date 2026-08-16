@@ -138,6 +138,44 @@ func TestVerifyTreeAndApplyDeltaPreserveUnchangedZoneExactly(t *testing.T) {
 	}
 }
 
+func TestVerifiedTreeZoneAccessorIsCanonicalAndDefensive(t *testing.T) {
+	live := boundSnapshot("live.example", 3, testZoneRecords("live.example", "192.0.2.3"))
+	deleted := boundSnapshot("gone.example", 4, nil)
+	deleted.Delete = true
+	generation, err := RenderManifest("/var/lib/celikpanel/bind", Manifest{
+		EngineEpoch: 9, Zones: []ZoneSnapshot{deleted, live},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree, err := VerifyTree(generation.Receipt, generation.Config, filesForGeneration(generation))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, data, ok := tree.Zone("live.example")
+	if !ok || receipt.Domain != "live.example" || len(data) == 0 {
+		t.Fatalf("live lookup receipt=%+v bytes=%d ok=%v", receipt, len(data), ok)
+	}
+	receipt.Domain = "mutated.example"
+	data[0] ^= 0xff
+	again, againData, ok := tree.Zone("live.example")
+	if !ok || again.Domain != "live.example" || bytes.Equal(data, againData) {
+		t.Fatal("verified tree accessor leaked mutable receipt or byte aliases")
+	}
+	tombstone, tombstoneData, ok := tree.Zone("gone.example")
+	if !ok || !tombstone.Delete || tombstoneData != nil {
+		t.Fatalf("delete lookup receipt=%+v data=%v ok=%v", tombstone, tombstoneData, ok)
+	}
+	for _, invalid := range []string{"LIVE.example", "live.example.", "../live.example"} {
+		if _, _, ok := tree.Zone(invalid); ok {
+			t.Fatalf("noncanonical domain %q was accepted", invalid)
+		}
+	}
+	if _, _, ok := tree.Zone("missing.example"); ok {
+		t.Fatal("missing zone was reported present")
+	}
+}
+
 func TestVerifyTreeFailsClosedOnAnyMismatch(t *testing.T) {
 	snapshot := boundSnapshot("example.com", 1, testZoneRecords("example.com", "192.0.2.1"))
 	generation, err := RenderManifest("/var/lib/celikpanel/bind", Manifest{EngineEpoch: 1, Zones: []ZoneSnapshot{snapshot}})
