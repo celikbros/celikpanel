@@ -1523,6 +1523,8 @@ export const tr: Record<TranslationKey, string> = {
     'services.notOfferedHint': 'Panel bu Linux dağıtımında bu bileşen için "kurulunca çalışır" sözünü veremiyor; kurulumdan sonra patlamak yerine satır dürüstçe kapalı.',
     'services.integrationPending': 'Panel entegrasyonu bekliyor',
     'services.integrationPendingHint': 'Bu işletim sistemi paketi sunuyor; ancak CelikPanel güvenli kurulum, yapılandırma ve kaldırma yaşam döngüsünün tamamını henüz yönetemiyor.',
+    'services.manageDNSEngine': 'DNS motorunu yönet',
+    'services.manageDNSEngineHint': 'BIND ile PowerDNS arasında kurulum, etkinleştirme, bekleme durumu veya güvenli geçiş ayrıntılarını inceleyin.',
     'services.useBuiltInSFTP': 'Yerleşik SFTP’yi kullanın',
     'services.useBuiltInSFTPHint': 'Ayrı bir FTP servisi gerekmez. CelikPanel web siteleri için SSH (22 numaralı port) üzerinden şifreli SFTP kullanan yalıtılmış hesaplar oluşturur; özel kimlik bilgileri yönetim ekranı henüz tamamlanmaktadır.',
     'services.eolBadge': 'EOL',

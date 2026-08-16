@@ -1571,6 +1571,8 @@ export const en = {
     'services.notOfferedHint': 'The panel cannot promise "installed means working" for this component on this Linux distribution, so the row is honestly closed instead of failing after install.',
     'services.integrationPending': 'Panel integration pending',
     'services.integrationPendingHint': 'This operating system provides the package, but CelikPanel cannot yet safely manage its complete installation, configuration and removal lifecycle.',
+    'services.manageDNSEngine': 'Manage DNS engine',
+    'services.manageDNSEngineHint': 'Review installation, activation, standby state, or a safe switch between BIND and PowerDNS.',
     'services.useBuiltInSFTP': 'Use built-in SFTP',
     'services.useBuiltInSFTPHint': 'A separate FTP daemon is not required. CelikPanel uses isolated website accounts with encrypted SFTP over SSH (port 22); the dedicated credentials-management screen is still being completed.',
     'services.eolBadge': 'EOL',
