@@ -1185,6 +1185,9 @@ func persistEmptyDNSEngineSwitchForTest(
 	mode := transport.DNSEngineSwitchModeSwitch
 	action := "install"
 	topology := state.Topology
+	if state.ActiveEngine != "" {
+		action = "switch"
+	}
 	if target == transport.DNSEnginePowerDNS &&
 		state.ActiveEngine == "" &&
 		normalizeDNSRole(panel.setting(

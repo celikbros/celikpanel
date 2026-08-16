@@ -399,6 +399,11 @@ func seedMailProfileActiveDNSEngine(
 	); err != nil {
 		t.Fatalf("seed active DNS engine %s: %v", engine, err)
 	}
+	if err := fixture.panel.clearDNSEnginePostCommitMarker(
+		context.Background(), persisted,
+	); err != nil {
+		t.Fatalf("finalize seeded DNS engine follow-up: %v", err)
+	}
 }
 
 func postMailProfile(
