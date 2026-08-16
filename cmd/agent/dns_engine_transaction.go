@@ -193,6 +193,9 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		(journal.StateBefore.Exists && journal.StateBefore.Mode != 0o600) {
 		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
+	if _, _, err := sourceStateFromDNSSwitchJournal(journal); err != nil {
+		return err
+	}
 	for _, snapshots := range [][]dnsFileSnapshot{journal.ConfigBefore} {
 		previous := ""
 		for _, snapshot := range snapshots {

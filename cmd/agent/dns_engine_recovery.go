@@ -71,6 +71,9 @@ func verifyDNSSwitchJournalTarget(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
 ) error {
+	if err := verifyDNSSwitchSourceOwnership(journal); err != nil {
+		return err
+	}
 	manifest, err := switchJournalManifest(journal)
 	if err != nil {
 		return err
@@ -352,6 +355,9 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 		if err := syncAtomicParentDirectory(filepath.Dir(pdnsDBPath())); err != nil {
 			return err
 		}
+	}
+	if err := retireDNSEngineInstallOwnership(journal); err != nil {
+		return err
 	}
 	return removeDNSEngineSwitchJournal()
 }

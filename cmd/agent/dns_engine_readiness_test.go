@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -134,5 +136,83 @@ func TestExactActiveDNSBackendManagedRejectsIncompleteOrConflictingRuntime(t *te
 				t.Fatalf("managed=%v want=%v", got, test.want)
 			}
 		})
+	}
+}
+
+func TestStandbyDNSBackendManagedRequiresExactOwnership(t *testing.T) {
+	stopped := transport.DNSBackendRuntimeState{Installed: true}
+	pdns := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	if !powerDNSStandbyManagedForBackendReadiness(
+		stopped, pdns, true, func() error { return nil },
+	) {
+		t.Fatal("exact stopped PowerDNS ownership was not recognized")
+	}
+	if powerDNSStandbyManagedForBackendReadiness(
+		stopped, pdns, false, func() error { return nil },
+	) || powerDNSStandbyManagedForBackendReadiness(
+		stopped, pdns, true, func() error { return errors.New("tampered config") },
+	) {
+		t.Fatal("unowned or tampered PowerDNS standby was accepted")
+	}
+	bind := legacyDurableDNSState(transport.DNSEngineBIND)
+	if !bindStandbyManagedForBackendReadiness(
+		stopped, bind, true, bind.EngineEpoch, bind.Generation,
+	) {
+		t.Fatal("exact stopped BIND ownership was not recognized")
+	}
+	if bindStandbyManagedForBackendReadiness(
+		stopped, bind, true, bind.EngineEpoch, strings.Repeat("e", 64),
+	) || bindStandbyManagedForBackendReadiness(
+		transport.DNSBackendRuntimeState{Installed: true, Running: true},
+		bind, true, bind.EngineEpoch, bind.Generation,
+	) {
+		t.Fatal("stale or running BIND standby was accepted")
+	}
+}
+
+func TestInstallOwnedStandbyRequiresExactHostPackageReceipt(t *testing.T) {
+	stopped := transport.DNSBackendRuntimeState{Installed: true}
+	receipt := dnsEngineInstallOwnershipReceipt{
+		Schema:            dnsEngineInstallOwnershipSchema,
+		Engine:            transport.DNSEngineBIND,
+		PackageManager:    string(hostplatform.PackageManagerAPT),
+		Packages:          []string{"bind9"},
+		MissingBefore:     []string{"bind9"},
+		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("a", 64),
+		MutationRequestID: strings.Repeat("b", 32),
+		MutationOwnerID:   strings.Repeat("c", 32),
+	}
+	if !installOwnedStandbyManagedForBackendReadiness(
+		stopped, receipt, true, transport.DNSEngineBIND,
+		hostplatform.PackageManagerAPT, []string{"bind9"},
+	) {
+		t.Fatal("exact panel install ownership was not recognized")
+	}
+	if installOwnedStandbyManagedForBackendReadiness(
+		stopped, receipt, false, transport.DNSEngineBIND,
+		hostplatform.PackageManagerAPT, []string{"bind9"},
+	) || installOwnedStandbyManagedForBackendReadiness(
+		stopped, receipt, true, transport.DNSEngineBIND,
+		hostplatform.PackageManagerPacman, []string{"bind"},
+	) {
+		t.Fatal("missing or cross-platform install ownership was accepted")
+	}
+	if installOwnershipFallbackAllowed(true, nil) ||
+		installOwnershipFallbackAllowed(false, errors.New("tampered receipt")) ||
+		!installOwnershipFallbackAllowed(false, nil) {
+		t.Fatal("install ownership fallback did not fail closed around engine ownership")
+	}
+	managed := bindStandbyManagedForBackendReadiness(
+		stopped, legacyDurableDNSState(transport.DNSEngineBIND), true,
+		1, strings.Repeat("f", 64),
+	)
+	if !managed && installOwnershipFallbackAllowed(true, nil) {
+		managed = installOwnedStandbyManagedForBackendReadiness(
+			stopped, receipt, true, transport.DNSEngineBIND,
+			hostplatform.PackageManagerAPT, []string{"bind9"},
+		)
+	}
+	if managed {
+		t.Fatal("stale engine ownership fell through to install ownership")
 	}
 }

@@ -100,6 +100,20 @@ func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 		{Path: filepath.Clean(dnsClusterConf)},
 	}
 	sort.Slice(configs, func(left, right int) bool { return configs[left].Path < configs[right].Path })
+	sourceState := legacyDurableDNSState(transport.DNSEngineBIND)
+	sourceState.EngineEpoch = manifest.SourceEpoch
+	sourceStateBytes, err := encodeDNSEngineState(sourceState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateBefore := dnsFileSnapshot{
+		Path:   filepath.Join(root, "dns-engine-state.json"),
+		Exists: true, Mode: 0o600,
+		SHA256: digestDNSBytes(sourceStateBytes), Data: sourceStateBytes,
+	}
+	if dnsSnapshotOwnerRequired() {
+		stateBefore.OwnerKnown = true
+	}
 	journal := dnsEngineSwitchJournal{
 		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
 		Mode:              transport.DNSEngineSwitchModeSwitch,
@@ -108,7 +122,7 @@ func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
 		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
 		Topology: manifest.Topology, SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
-		StateBefore:       dnsFileSnapshot{Path: filepath.Join(root, "dns-engine-state.json")},
+		StateBefore:       stateBefore,
 		ConfigBefore:      configs,
 		TargetUnitsBefore: []dnsUnitSnapshot{{Name: "pdns.service", LoadState: "not-found", ActiveState: "inactive"}},
 		SourceUnitsBefore: []dnsUnitSnapshot{
@@ -121,6 +135,11 @@ func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 	if _, err := encodeDNSEngineSwitchJournal(journal); err != nil {
 		t.Fatal(err)
 	}
+	journal.StateBefore = dnsFileSnapshot{Path: filepath.Join(root, "dns-engine-state.json")}
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("received source engine without exact state snapshot was accepted")
+	}
+	journal.StateBefore = stateBefore
 	journal.PDNSCandidatePath = filepath.Join(root, "attacker.sqlite3")
 	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
 		t.Fatal("unmanaged PowerDNS candidate path was accepted")

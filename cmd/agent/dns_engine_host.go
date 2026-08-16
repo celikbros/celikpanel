@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -257,7 +258,14 @@ func (hostDNSEngineBackend) Readiness(
 	if layoutErr == nil {
 		states[0].Installed = packagesInstalled(profile, layout.Packages)
 	}
-	states[1].Installed = managedServicePackagesInstalled(profile, "pdns")
+	pdnsPackages := []string(nil)
+	if service := core.GetManagedServiceByID("pdns"); service != nil {
+		pdnsPackages = append(
+			pdnsPackages,
+			service.Packages[string(profile.PackageManager)]...,
+		)
+	}
+	states[1].Installed = packagesInstalled(profile, pdnsPackages)
 	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil && states[0].Installed {
 		return transport.DNSBackendReadinessResponse{}, err
 	}
@@ -286,14 +294,76 @@ func (hostDNSEngineBackend) Readiness(
 				)
 			}
 		}
+	} else if layoutErr == nil && states[0].Installed && !states[0].Running {
+		ownership, ownershipExists, ownershipErr := readDNSEngineOwnership(
+			transport.DNSEngineBIND,
+		)
+		if ownershipErr != nil {
+			log.Printf("BIND standby ownership proof failed: %v", ownershipErr)
+		} else if ownershipExists {
+			publisher, _, publisherErr := newHostBINDPublisher(layout)
+			if publisherErr == nil {
+				tree, treeErr := publisher.LoadCurrent()
+				if treeErr == nil {
+					receipt := tree.CurrentReceipt()
+					states[0].Managed = bindStandbyManagedForBackendReadiness(
+						states[0], ownership, ownershipExists,
+						receipt.EngineEpoch, receipt.Generation,
+					)
+				}
+			}
+		}
+		if !states[0].Managed &&
+			installOwnershipFallbackAllowed(ownershipExists, ownershipErr) {
+			installReceipt, installExists, installErr := readDNSEngineInstallOwnership(
+				transport.DNSEngineBIND,
+			)
+			if installErr != nil {
+				log.Printf("BIND install ownership proof failed: %v", installErr)
+			} else {
+				states[0].Managed = installOwnedStandbyManagedForBackendReadiness(
+					states[0], installReceipt, installExists,
+					transport.DNSEngineBIND, profile.PackageManager, layout.Packages,
+				)
+			}
+		}
 	}
-	states[1].Managed = powerDNSManagedForBackendReadiness(
-		state,
-		exists,
-		states[1],
-		requireManagedDNSClusterReady,
-		func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
-	)
+	if (!exists || state.Engine != transport.DNSEnginePowerDNS) &&
+		states[1].Installed && !states[1].Running {
+		ownership, ownershipExists, ownershipErr := readDNSEngineOwnership(
+			transport.DNSEnginePowerDNS,
+		)
+		if ownershipErr != nil {
+			log.Printf("PowerDNS standby ownership proof failed: %v", ownershipErr)
+		} else {
+			states[1].Managed = powerDNSStandbyManagedForBackendReadiness(
+				states[1], ownership, ownershipExists,
+				requireManagedPowerDNSArtifacts,
+			)
+		}
+		if !states[1].Managed &&
+			installOwnershipFallbackAllowed(ownershipExists, ownershipErr) {
+			installReceipt, installExists, installErr := readDNSEngineInstallOwnership(
+				transport.DNSEnginePowerDNS,
+			)
+			if installErr != nil {
+				log.Printf("PowerDNS install ownership proof failed: %v", installErr)
+			} else {
+				states[1].Managed = installOwnedStandbyManagedForBackendReadiness(
+					states[1], installReceipt, installExists,
+					transport.DNSEnginePowerDNS, profile.PackageManager, pdnsPackages,
+				)
+			}
+		}
+	} else {
+		states[1].Managed = powerDNSManagedForBackendReadiness(
+			state,
+			exists,
+			states[1],
+			requireManagedDNSClusterReady,
+			func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
+		)
+	}
 	port53Conflict, err := dnsPort53ConflictCheck(
 		ctx, states[0].Running, states[1].Running,
 	)
@@ -337,6 +407,51 @@ func exactActiveDNSBackendManaged(
 ) bool {
 	return managedEvidence && runtimeState.Installed && runtimeState.Running &&
 		exactActiveRuntimeReady != nil && exactActiveRuntimeReady() == nil
+}
+
+func powerDNSStandbyManagedForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	ownership dnsEngineStateReceipt,
+	ownershipExists bool,
+	managedArtifactsReady func() error,
+) bool {
+	return runtimeState.Installed && !runtimeState.Running &&
+		ownershipExists && ownership.Engine == transport.DNSEnginePowerDNS &&
+		managedArtifactsReady != nil && managedArtifactsReady() == nil
+}
+
+func bindStandbyManagedForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	ownership dnsEngineStateReceipt,
+	ownershipExists bool,
+	treeEpoch int64,
+	treeGeneration string,
+) bool {
+	return runtimeState.Installed && !runtimeState.Running &&
+		ownershipExists && ownership.Engine == transport.DNSEngineBIND &&
+		ownership.EngineEpoch == treeEpoch &&
+		ownership.Generation == treeGeneration
+}
+
+func installOwnedStandbyManagedForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	receipt dnsEngineInstallOwnershipReceipt,
+	receiptExists bool,
+	engine transport.DNSEngine,
+	manager hostplatform.PackageManager,
+	packages []string,
+) bool {
+	return runtimeState.Installed && !runtimeState.Running &&
+		exactDNSEngineInstallOwnership(
+			receipt, receiptExists, engine, manager, packages,
+		)
+}
+
+func installOwnershipFallbackAllowed(
+	engineOwnershipExists bool,
+	engineOwnershipErr error,
+) bool {
+	return engineOwnershipErr == nil && !engineOwnershipExists
 }
 
 func packagesInstalled(profile hostplatform.Profile, packages []string) bool {
@@ -613,28 +728,47 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if err := publishDNSEngineSourceOwnership(
+		manifest, state, stateExists,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	missing := make([]string, 0, len(layout.Packages))
 	for _, packageName := range layout.Packages {
 		if !packageInstalledForProfile(profile, packageName) {
 			missing = append(missing, packageName)
 		}
 	}
+	installMutation := func() error {
+		_, installErr := installBINDPackagesWithGuard(ctx, systemctl, func() (string, error) {
+			if len(missing) == 0 {
+				return "", nil
+			}
+			return installPackagesWithCandidateContext(
+				ctx, string(profile.PackageManager), missing, "",
+			)
+		})
+		if installErr != nil {
+			return fmt.Errorf("install BIND in no-start mode: %w", installErr)
+		}
+		return nil
+	}
+	if len(missing) != 0 {
+		installReceipt, receiptErr := newDNSEngineInstallOwnership(
+			transport.DNSEngineBIND, profile.PackageManager,
+			layout.Packages, missing, manifest, binding,
+		)
+		if receiptErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, receiptErr
+		}
+		plainInstall := installMutation
+		installMutation = func() error {
+			return installOwnedDNSEnginePackages(installReceipt, plainInstall)
+		}
+	}
 	if err := runDNSPort53PreMutationGuard(
 		ctx, !stateExists && manifest.SourceEngine == "",
-		func() error {
-			_, installErr := installBINDPackagesWithGuard(ctx, systemctl, func() (string, error) {
-				if len(missing) == 0 {
-					return "", nil
-				}
-				return installPackagesWithCandidateContext(
-					ctx, string(profile.PackageManager), missing, "",
-				)
-			})
-			if installErr != nil {
-				return fmt.Errorf("install BIND in no-start mode: %w", installErr)
-			}
-			return nil
-		},
+		installMutation,
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}

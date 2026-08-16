@@ -87,6 +87,25 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 	if !legacyPowerDNSReadinessAuthorized(resp) {
 		return nil
 	}
+	if err := inspectManagedPowerDNSArtifacts(resp); err != nil || !resp.Ready {
+		return err
+	}
+	if !legacyPowerDNSReadinessAuthorized(resp) {
+		return nil
+	}
+	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
+	return nil
+}
+
+// inspectManagedPowerDNSArtifacts proves only CelikPanel ownership of the
+// configuration and database. It deliberately does not grant active DNS
+// authority; callers that mutate or publish must separately verify the durable
+// engine state and live port-53 owner.
+func inspectManagedPowerDNSArtifacts(resp *DNSClusterReadinessResponse) error {
+	if resp == nil {
+		return errors.New("PowerDNS artifact readiness response is required")
+	}
+	*resp = DNSClusterReadinessResponse{}
 	for _, binary := range []string{"pdns_server", "pdnsutil", "pdns_control"} {
 		if _, err := dnsClusterLookPath(binary); err != nil {
 			resp.Detail = "PowerDNS tooling is not installed on this server"
@@ -136,11 +155,8 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 	if !dbInfo.Mode().IsRegular() {
 		return errors.New("managed PowerDNS database path is not a regular file")
 	}
-	if !legacyPowerDNSReadinessAuthorized(resp) {
-		return nil
-	}
 	resp.Ready = true
-	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
+	resp.Detail = "PowerDNS configuration and database are managed by CelikPanel"
 	return nil
 }
 
@@ -163,6 +179,21 @@ func requireManagedDNSClusterReady() error {
 		detail := strings.TrimSpace(readiness.Detail)
 		if detail == "" {
 			detail = "PowerDNS is not ready for CelikPanel cluster convergence"
+		}
+		return errors.New(detail)
+	}
+	return nil
+}
+
+func requireManagedPowerDNSArtifacts() error {
+	var readiness DNSClusterReadinessResponse
+	if err := inspectManagedPowerDNSArtifacts(&readiness); err != nil {
+		return err
+	}
+	if !readiness.Ready {
+		detail := strings.TrimSpace(readiness.Detail)
+		if detail == "" {
+			detail = "PowerDNS managed artifacts could not be verified"
 		}
 		return errors.New(detail)
 	}

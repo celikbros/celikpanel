@@ -396,6 +396,11 @@ func switchToPDNS(
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if err := publishDNSEngineSourceOwnership(
+		manifest, state, stateExists,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if manifest.SourceEngine == transport.DNSEnginePowerDNS ||
 		(manifest.SourceEngine == "" && capturePDNSActive(ctx, systemctl)) {
 		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
@@ -417,15 +422,24 @@ func switchToPDNS(
 		}
 	}
 	if len(missing) != 0 {
+		installReceipt, receiptErr := newDNSEngineInstallOwnership(
+			transport.DNSEnginePowerDNS, profile.PackageManager,
+			packages, missing, manifest, binding,
+		)
+		if receiptErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, receiptErr
+		}
 		if err := runDNSPort53PreMutationGuard(
 			ctx, !stateExists && manifest.SourceEngine == "",
 			func() error {
-				_, installErr := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
-					return installPackagesWithCandidateContext(
-						ctx, string(profile.PackageManager), missing, "",
-					)
+				return installOwnedDNSEnginePackages(installReceipt, func() error {
+					_, installErr := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
+						return installPackagesWithCandidateContext(
+							ctx, string(profile.PackageManager), missing, "",
+						)
+					})
+					return installErr
 				})
-				return installErr
 			},
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
