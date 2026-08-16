@@ -60,7 +60,7 @@ Kurallar:
 
 | Bileşen | Tür | Debian/Ubuntu (apt) | Arch (pacman) | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
-| 🌐 BIND | Servis | — | — | DNS sunucusu | — |
+| 🌐 BIND | Servis | `bind9` | `bind` | DNS sunucusu | — |
 | ⚡ PowerDNS | Servis | `pdns-server` `pdns-backend-sqlite3` | `powerdns` | DNS sunucusu | — |
 
 ### FTP

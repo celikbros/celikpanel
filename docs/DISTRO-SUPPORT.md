@@ -62,7 +62,7 @@ Rules:
 
 | Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
 |---|---|---|---|---|---|
-| 🌐 BIND | Service | — | — | DNS server | — |
+| 🌐 BIND | Service | `bind9` | `bind` | DNS server | — |
 | ⚡ PowerDNS | Service | `pdns-server` `pdns-backend-sqlite3` | `powerdns` | DNS server | — |
 
 ### FTP
