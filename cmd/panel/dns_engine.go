@@ -521,16 +521,6 @@ func (p *Panel) requireActivePowerDNSPublisher(ctx context.Context) error {
 	return nil
 }
 
-func writeDNSEngineWorkflowRequired(w http.ResponseWriter) {
-	writeCodedError(
-		w,
-		http.StatusConflict,
-		errCodeDNSEngineWorkflowRequired,
-		"this PowerDNS action is unavailable for the active DNS engine; use the DNS engine workflow",
-		"/settings?section=dns",
-	)
-}
-
 // callSyncDNSZoneV3 is the reviewed engine-bound publication boundary. The
 // surrounding durable mutation owns request/owner binding and recovery; this
 // helper rejects a response for any authority other than the exact request.

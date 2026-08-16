@@ -66,7 +66,6 @@ const (
 	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"
 	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
 	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
-	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"
 	errCodeDNSSECEngineUnsupported       = "DNSSEC_ENGINE_UNSUPPORTED"
 	errCodeWebServerRequired             = "WEB_SERVER_REQUIRED"
 	errCodePHPRequired                   = "PHP_REQUIRED"

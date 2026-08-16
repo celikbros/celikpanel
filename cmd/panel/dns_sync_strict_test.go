@@ -379,26 +379,6 @@ func (a *strictDNSRPCAgent) DNSClusterReadiness(
 	return nil
 }
 
-func (a *strictDNSRPCAgent) DNSBackendReadiness(
-	_ *transport.Empty,
-	resp *transport.DNSBackendReadinessResponse,
-) error {
-	resp.Engines = []transport.DNSBackendRuntimeState{
-		{
-			Engine:    transport.DNSEnginePowerDNS,
-			Installed: true,
-			Running:   true,
-			Managed:   true,
-			Unit:      "pdns.service",
-		},
-		{
-			Engine: transport.DNSEngineBIND,
-			Unit:   "bind9.service",
-		},
-	}
-	return nil
-}
-
 func attachStrictDNSRPCAgent(t *testing.T, p *Panel, agent *strictDNSRPCAgent) {
 	attachStrictDNSRPCAgentForEngine(
 		t, p, agent, transport.DNSEnginePowerDNS,
