@@ -91,6 +91,60 @@ func releasePoisonedDNSClusterConfigTestManager(manager *serviceMutationManager)
 	}
 }
 
+func TestConfigureDNSClusterV2RejectsDurableNonPDNSAuthorityBeforeMutation(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "standby-pdns.sqlite3")
+			t.Setenv("CELIKPANEL_PDNS_DB", path)
+			commitment := dnsClusterConfigTestCommitment(t)
+			manager, _ := newMutationTestManager(t)
+			beginMutationTestJobWithIdentity(
+				t, manager, "dns_cluster_configure", "pdns",
+				commitment.Qualifier,
+			)
+			installGlobalMutationTestManager(t, manager)
+			t.Cleanup(func() { releasePoisonedDNSClusterConfigTestManager(manager) })
+
+			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldRuntime := legacyPowerDNSRuntimeSafetyCheck
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			runtimeCalls := 0
+			legacyPowerDNSRuntimeSafetyCheck = func(context.Context, bool) error {
+				runtimeCalls++
+				return nil
+			}
+			t.Cleanup(func() {
+				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				legacyPowerDNSRuntimeSafetyCheck = oldRuntime
+			})
+
+			request := &ConfigureDNSClusterV2Request{
+				ServiceMutationBinding: ServiceMutationBinding{
+					MutationRequestID: testMutationRequestID,
+					MutationOwnerID:   testMutationOwnerID,
+				},
+				Role: commitment.Role, PeerIP: commitment.PeerIP,
+				PeerNS: commitment.PeerNS,
+			}
+			response := ConfigureDNSClusterV2Response{Applied: true, Error: "stale"}
+			if err := (&Agent{}).ConfigureDNSClusterV2(request, &response); err != nil {
+				t.Fatal(err)
+			}
+			expected := "PowerDNS cluster configuration is blocked because PowerDNS is not the sole active DNS engine"
+			if response.Applied || response.Error != expected ||
+				strings.Contains(response.Error, raw) || runtimeCalls != 0 {
+				t.Fatalf("response=%+v runtimeCalls=%d", response, runtimeCalls)
+			}
+			if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("durable guard touched standby PowerDNS DB: %v", err)
+			}
+		})
+	}
+}
+
 func TestDNSClusterIntentPersistsExactJournalAndPhase(t *testing.T) {
 	commitment := dnsClusterConfigTestCommitment(t)
 	manager, _, ctx, finish := beginDNSClusterConfigTestStep(t, commitment)

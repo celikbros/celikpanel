@@ -546,6 +546,42 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 	})
 }
 
+func TestDNSClusterReadinessHidesStandbyPowerDNSDuringDurableEngineAuthority(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldLookPath := dnsClusterLookPath
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			hostCalls := 0
+			dnsClusterLookPath = func(string) (string, error) {
+				hostCalls++
+				return "", errors.New("unexpected host lookup")
+			}
+			t.Cleanup(func() {
+				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				dnsClusterLookPath = oldLookPath
+			})
+			response := DNSClusterReadinessResponse{
+				Ready: true, Detail: "stale authority",
+			}
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &response,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if response.Ready ||
+				response.Detail != "PowerDNS is not the active DNS engine on this server" ||
+				strings.Contains(response.Detail, raw) ||
+				hostCalls != 0 {
+				t.Fatalf("readiness=%+v hostCalls=%d", response, hostCalls)
+			}
+		})
+	}
+}
+
 func TestApplyAutoprimaryTrustsOnlyTheConfiguredPeer(t *testing.T) {
 	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(t.TempDir(), "pdns.sqlite3"))
 	db, err := openPdnsDB()

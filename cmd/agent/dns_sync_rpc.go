@@ -110,6 +110,11 @@ func (a *Agent) SyncDNSZoneV2(req *SyncDNSZoneV2Request, resp *SyncDNSZoneV2Resp
 		return nil
 	}
 	defer finishStep()
+	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+		log.Printf("legacy PowerDNS zone publication blocked by durable DNS engine authority: %v", err)
+		resp.Error = "DNS zone publication is blocked because PowerDNS is not the active DNS engine"
+		return nil
+	}
 	// The receipt is authority only for the database the running PowerDNS
 	// configuration actually serves. Prove that binding before the durable
 	// step can prepare a transaction or create receipt authority.
@@ -142,7 +147,7 @@ func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncD
 	}
 	defer finishStep()
 	if err := requireLegacyPowerDNSMutationSafe(ctx, false); err != nil {
-		log.Printf("legacy PowerDNS configuration blocked by DNS engine guard: %v", err)
+		log.Printf("legacy PowerDNS configuration blocked by durable DNS engine guard: %v", err)
 		resp.Error = "PowerDNS configuration is blocked because the DNS engine state is not safe"
 		return nil
 	}

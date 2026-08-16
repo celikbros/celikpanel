@@ -84,6 +84,9 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 		return errors.New("DNS cluster readiness response is required")
 	}
 	*resp = DNSClusterReadinessResponse{}
+	if !legacyPowerDNSReadinessAuthorized(resp) {
+		return nil
+	}
 	for _, binary := range []string{"pdns_server", "pdnsutil", "pdns_control"} {
 		if _, err := dnsClusterLookPath(binary); err != nil {
 			resp.Detail = "PowerDNS tooling is not installed on this server"
@@ -133,9 +136,22 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 	if !dbInfo.Mode().IsRegular() {
 		return errors.New("managed PowerDNS database path is not a regular file")
 	}
+	if !legacyPowerDNSReadinessAuthorized(resp) {
+		return nil
+	}
 	resp.Ready = true
 	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
 	return nil
+}
+
+func legacyPowerDNSReadinessAuthorized(resp *DNSClusterReadinessResponse) bool {
+	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+		log.Printf("PowerDNS readiness blocked by durable DNS engine authority: %v", err)
+		resp.Ready = false
+		resp.Detail = "PowerDNS is not the active DNS engine on this server"
+		return false
+	}
+	return true
 }
 
 func requireManagedDNSClusterReady() error {
@@ -428,7 +444,7 @@ func (a *Agent) ConfigureDNSClusterV2(
 	}
 	defer finish()
 	if err := requireLegacyPowerDNSMutationSafe(ctx, true); err != nil {
-		log.Printf("legacy PowerDNS cluster configuration blocked by DNS engine guard: %v", err)
+		log.Printf("legacy PowerDNS cluster configuration blocked by durable DNS engine guard: %v", err)
 		resp.Error = "PowerDNS cluster configuration is blocked because PowerDNS is not the sole active DNS engine"
 		return nil
 	}

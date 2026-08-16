@@ -6,9 +6,38 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const legacyPowerDNSGuardTimeout = 15 * time.Second
+
+var (
+	legacyPowerDNSDurableAuthorityCheck = inspectLegacyPowerDNSDurableAuthorityOnHost
+	legacyPowerDNSRuntimeSafetyCheck    = inspectLegacyPowerDNSRuntimeSafety
+)
+
+func validateLegacyPowerDNSDurableAuthority(
+	state dnsEngineStateReceipt,
+	stateExists, journalExists, requireResolved bool,
+) error {
+	if journalExists {
+		return errors.New("a DNS engine switch transaction is active")
+	}
+	if stateExists {
+		if err := validateDNSEngineState(state); err != nil {
+			return errors.New("the durable DNS engine state is invalid")
+		}
+		if state.Engine != transport.DNSEnginePowerDNS {
+			return errors.New("the durable DNS engine state does not authorize PowerDNS")
+		}
+		return nil
+	}
+	if requireResolved {
+		return errors.New("the durable DNS engine state is unresolved")
+	}
+	return nil
+}
 
 func validateLegacyPowerDNSUnitStates(
 	named, bindAlias, pdns dnsUnitState,
@@ -32,6 +61,25 @@ func validateLegacyPowerDNSUnitStates(
 // requireLegacyPowerDNSMutationSafe prevents older configuration RPCs from
 // bypassing the engine switch transaction. It is intentionally read-only.
 func requireLegacyPowerDNSMutationSafe(
+	parent context.Context,
+	requireActive bool,
+) error {
+	return requireLegacyPowerDNSMutationSafeWithAuthority(
+		parent, requireActive, false,
+	)
+}
+
+func requireLegacyPowerDNSMutationSafeWithAuthority(
+	parent context.Context,
+	requireActive, requireResolved bool,
+) error {
+	if err := legacyPowerDNSDurableAuthorityCheck(requireResolved); err != nil {
+		return err
+	}
+	return legacyPowerDNSRuntimeSafetyCheck(parent, requireActive)
+}
+
+func inspectLegacyPowerDNSRuntimeSafety(
 	parent context.Context,
 	requireActive bool,
 ) error {
