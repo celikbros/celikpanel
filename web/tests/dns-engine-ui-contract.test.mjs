@@ -83,6 +83,23 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(settings, /engine\?\.state === 'switching'/);
 });
 
+test('ready BIND exposes only the standalone identity wizard and one final mutation', () => {
+  assert.match(settings, /const activeEngine: ActiveDNSEngine \| null = engine\?\.state === 'ready'/);
+  assert.match(settings, /engine\.active_engine === 'pdns' \|\| engine\.active_engine === 'bind'/);
+  assert.match(settings, /<DNSInfrastructureSettings[\s\S]*activeEngine=\{activeEngine\}/);
+  assert.match(settings, /const role = activeEngine === 'bind' \? 'standalone' : normalizeRole\(cluster\.role\)/);
+  assert.match(settings, /role: activeEngine === 'bind'[\s\S]*\? 'standalone'/);
+  assert.match(settings, /const effectiveRole: DNSRole = activeEngine === 'bind' \? 'standalone' : draft\.role/);
+  assert.match(settings, /role: effectiveRole/);
+  assert.match(settings, /aria-disabled=\{activeEngine === 'bind' && role === 'paired'\}/);
+  assert.match(settings, /disabled=\{activeEngine === 'bind' && role === 'paired'\}/);
+  assert.match(settings, /if \(activeEngine === 'bind' && role === 'paired'\) return/);
+  assert.match(settings, /dnsEngine\.identity\.bindPairedUnsupported/);
+  assert.match(settings, /bind-standalone-identity-note/);
+  assert.equal((settings.match(/fetch\('\/api\/v1\/settings\/dns-setup'/g) || []).length, 1);
+  assert.equal((settings.match(/dns-wizard-save/g) || []).length, 1);
+});
+
 test('DNS engine copy has English and Turkish key parity', () => {
   const english = copy.slice(copy.indexOf('export const dnsEngineEn'), copy.indexOf('} as const;'));
   const turkish = copy.slice(copy.indexOf('export const dnsEngineTr'), copy.indexOf('\n};', copy.indexOf('export const dnsEngineTr')));
