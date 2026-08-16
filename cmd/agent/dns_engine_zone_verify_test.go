@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"strings"
 	"testing"
@@ -8,6 +9,45 @@ import (
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+func testNegativeSOAResponse(
+	t *testing.T,
+	domain, authorityOwner string,
+	rcode int,
+) dnsSOAProbeResult {
+	t.Helper()
+	query, id, err := buildDNSZoneSOAQuery(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := make([]byte, 12)
+	binary.BigEndian.PutUint16(response[0:2], id)
+	binary.BigEndian.PutUint16(
+		response[2:4], uint16(dnsResponseQR|dnsResponseAA|rcode),
+	)
+	binary.BigEndian.PutUint16(response[4:6], 1)
+	binary.BigEndian.PutUint16(response[8:10], 1)
+	response = append(response, query[12:]...)
+	owner, err := encodeDNSName(authorityOwner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response = append(response, owner...)
+	response = append(response, 0, dnsTypeSOA, 0, dnsClassIN, 0, 0, 0, 60)
+	mname, _ := encodeDNSName("ns1.example.net")
+	rname, _ := encodeDNSName("hostmaster.example.net")
+	rdata := append(append([]byte{}, mname...), rname...)
+	numbers := make([]byte, 20)
+	binary.BigEndian.PutUint32(numbers[0:4], 2026081601)
+	rdata = append(rdata, numbers...)
+	response = append(response, byte(len(rdata)>>8), byte(len(rdata)))
+	response = append(response, rdata...)
+	result, err := parseDNSZoneSOAResponse(response, id, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
 
 func TestExpectedDNSZoneAuthoritiesRequiresOneEnabledApexSOA(t *testing.T) {
 	zones := []transport.DNSEngineSwitchZoneSnapshot{{
@@ -79,5 +119,47 @@ func TestExpectedDNSZoneAuthorityFromVerifiedBINDBytes(t *testing.T) {
 	expected, err = expectedDNSZoneAuthorityFromBINDTree(receipt, nil)
 	if err != nil || !expected.Delete {
 		t.Fatalf("delete expected=%+v err=%v", expected, err)
+	}
+}
+
+func TestDeletedChildAcceptsAuthoritativeParentNegativeOverUDPAndTCP(t *testing.T) {
+	domain := "mail.example.test"
+	expected := []expectedDNSZoneAuthority{{Domain: domain, Delete: true}}
+	for _, rcode := range []int{dnsRCodeNameError, dnsRCodeNoError} {
+		result := testNegativeSOAResponse(t, domain, "Example.Test", rcode)
+		if len(result.AuthoritySOAOwners) != 1 ||
+			result.AuthoritySOAOwners[0] != "example.test" {
+			t.Fatalf("authority SOA owner was not canonical: %+v", result)
+		}
+		var networks []string
+		err := verifyDNSZoneAuthoritiesAt(
+			context.Background(), "192.0.2.10", expected,
+			func(_ context.Context, network, _, queried string) (dnsSOAProbeResult, error) {
+				networks = append(networks, network)
+				if queried != domain {
+					t.Fatalf("queried domain=%q", queried)
+				}
+				return result, nil
+			},
+		)
+		if err != nil {
+			t.Fatalf("rcode=%d parent negative rejected: %v", rcode, err)
+		}
+		if strings.Join(networks, ",") != "udp,tcp" {
+			t.Fatalf("rcode=%d networks=%v", rcode, networks)
+		}
+	}
+}
+
+func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
+	domain := "mail.example.test"
+	for _, rcode := range []int{dnsRCodeNameError, dnsRCodeNoError} {
+		result := testNegativeSOAResponse(t, domain, domain, rcode)
+		if validDeletedDNSZoneProof(domain, result) {
+			t.Fatalf("rcode=%d child-apex negative authority was accepted", rcode)
+		}
+	}
+	if !validDeletedDNSZoneProof(domain, dnsSOAProbeResult{RCode: dnsRCodeRefused}) {
+		t.Fatal("non-authoritative REFUSED deletion proof regressed")
 	}
 }

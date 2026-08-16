@@ -36,12 +36,18 @@ type expectedDNSZoneAuthority struct {
 }
 
 type dnsSOAProbeResult struct {
-	Authoritative bool
-	RCode         int
-	SOASerials    []uint32
+	Authoritative      bool
+	RCode              int
+	SOASerials         []uint32
+	AnswerSOAOwners    []string
+	AuthoritySOAOwners []string
 }
 
-var probeDNSZoneSOA = queryDNSZoneSOA
+type dnsZoneSOAProbe func(
+	context.Context, string, string, string,
+) (dnsSOAProbeResult, error)
+
+var probeDNSZoneSOA dnsZoneSOAProbe = queryDNSZoneSOA
 
 func expectedDNSZoneAuthorities(
 	zones []transport.DNSEngineSwitchZoneSnapshot,
@@ -146,17 +152,28 @@ func verifyDNSZoneAuthorities(
 	if ip := net.ParseIP(address); ip == nil || ip.IsUnspecified() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
 		return errors.New("authoritative DNS verification selected an unsafe address")
 	}
+	return verifyDNSZoneAuthoritiesAt(ctx, address, expected, probeDNSZoneSOA)
+}
+
+func verifyDNSZoneAuthoritiesAt(
+	ctx context.Context,
+	address string,
+	expected []expectedDNSZoneAuthority,
+	probe dnsZoneSOAProbe,
+) error {
+	if probe == nil {
+		return errors.New("authoritative DNS probe is unavailable")
+	}
 	for _, zone := range expected {
 		for _, network := range []string{"udp", "tcp"} {
 			probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
-			result, err := probeDNSZoneSOA(probeCtx, network, address, zone.Domain)
+			result, err := probe(probeCtx, network, address, zone.Domain)
 			cancel()
 			if err != nil {
 				return fmt.Errorf("verify %s SOA for %s: %w", network, zone.Domain, err)
 			}
 			if zone.Delete {
-				if result.Authoritative || len(result.SOASerials) != 0 ||
-					(result.RCode != dnsRCodeNameError && result.RCode != dnsRCodeRefused) {
+				if !validDeletedDNSZoneProof(zone.Domain, result) {
 					return fmt.Errorf("deleted zone %s remains authoritative over %s", zone.Domain, network)
 				}
 				continue
@@ -168,6 +185,24 @@ func verifyDNSZoneAuthorities(
 		}
 	}
 	return nil
+}
+
+func validDeletedDNSZoneProof(domain string, result dnsSOAProbeResult) bool {
+	if len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
+		return false
+	}
+	if !result.Authoritative {
+		return result.RCode == dnsRCodeNameError || result.RCode == dnsRCodeRefused
+	}
+	if result.RCode != dnsRCodeNameError && result.RCode != dnsRCodeNoError {
+		return false
+	}
+	return len(result.AuthoritySOAOwners) == 1 &&
+		strictDNSAncestor(result.AuthoritySOAOwners[0], domain)
+}
+
+func strictDNSAncestor(parent, child string) bool {
+	return parent != child && strings.HasSuffix(child, "."+parent)
 }
 
 func queryDNSZoneSOA(
@@ -268,6 +303,9 @@ func encodeDNSName(domain string) ([]byte, error) {
 }
 
 func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAProbeResult, error) {
+	if !serviceMutationCanonicalFQDN(domain) {
+		return dnsSOAProbeResult{}, errors.New("DNS response query domain is not canonical")
+	}
 	if len(message) < 12 || binary.BigEndian.Uint16(message[0:2]) != id {
 		return dnsSOAProbeResult{}, errors.New("DNS response identity mismatch")
 	}
@@ -278,6 +316,8 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 	offset := 12
 	questions := int(binary.BigEndian.Uint16(message[4:6]))
 	answers := int(binary.BigEndian.Uint16(message[6:8]))
+	authorities := int(binary.BigEndian.Uint16(message[8:10]))
+	additionals := int(binary.BigEndian.Uint16(message[10:12]))
 	for range questions {
 		_, next, err := decodeDNSName(message, offset)
 		if err != nil || next+4 > len(message) {
@@ -289,32 +329,61 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 		Authoritative: flags&dnsResponseAA != 0,
 		RCode:         int(flags & dnsResponseRCode),
 	}
-	for range answers {
-		name, next, err := decodeDNSName(message, offset)
-		if err != nil || next+10 > len(message) {
-			return dnsSOAProbeResult{}, errors.New("DNS response has an invalid answer")
-		}
-		recordType := binary.BigEndian.Uint16(message[next : next+2])
-		recordClass := binary.BigEndian.Uint16(message[next+2 : next+4])
-		rdataLength := int(binary.BigEndian.Uint16(message[next+8 : next+10]))
-		rdataOffset := next + 10
-		end := rdataOffset + rdataLength
-		if end < rdataOffset || end > len(message) {
-			return dnsSOAProbeResult{}, errors.New("DNS response answer exceeds its packet")
-		}
-		if recordType == dnsTypeSOA && recordClass == dnsClassIN &&
-			strings.EqualFold(strings.TrimSuffix(name, "."), domain) {
-			_, serialOffset, err := decodeDNSName(message, rdataOffset)
-			if err != nil {
-				return dnsSOAProbeResult{}, errors.New("DNS SOA primary name is invalid")
+	parseRecords := func(count, section int) error {
+		for range count {
+			name, next, err := decodeDNSName(message, offset)
+			if err != nil || next+10 > len(message) {
+				return errors.New("DNS response has an invalid resource record")
 			}
-			_, serialOffset, err = decodeDNSName(message, serialOffset)
-			if err != nil || serialOffset+20 != end {
-				return dnsSOAProbeResult{}, errors.New("DNS SOA payload is invalid")
+			recordType := binary.BigEndian.Uint16(message[next : next+2])
+			recordClass := binary.BigEndian.Uint16(message[next+2 : next+4])
+			rdataLength := int(binary.BigEndian.Uint16(message[next+8 : next+10]))
+			rdataOffset := next + 10
+			end := rdataOffset + rdataLength
+			if end < rdataOffset || end > len(message) {
+				return errors.New("DNS response resource record exceeds its packet")
 			}
-			result.SOASerials = append(result.SOASerials, binary.BigEndian.Uint32(message[serialOffset:serialOffset+4]))
+			if recordType == dnsTypeSOA && recordClass == dnsClassIN {
+				owner := strings.ToLower(strings.TrimSuffix(name, "."))
+				if !serviceMutationCanonicalFQDN(owner) {
+					return errors.New("DNS SOA owner is not canonical")
+				}
+				_, serialOffset, err := decodeDNSName(message, rdataOffset)
+				if err != nil {
+					return errors.New("DNS SOA primary name is invalid")
+				}
+				_, serialOffset, err = decodeDNSName(message, serialOffset)
+				if err != nil || serialOffset+20 != end {
+					return errors.New("DNS SOA payload is invalid")
+				}
+				switch section {
+				case 0:
+					result.AnswerSOAOwners = append(result.AnswerSOAOwners, owner)
+					if owner == domain {
+						result.SOASerials = append(
+							result.SOASerials,
+							binary.BigEndian.Uint32(message[serialOffset:serialOffset+4]),
+						)
+					}
+				case 1:
+					result.AuthoritySOAOwners = append(result.AuthoritySOAOwners, owner)
+				}
+			}
+			offset = end
 		}
-		offset = end
+		return nil
+	}
+	if err := parseRecords(answers, 0); err != nil {
+		return dnsSOAProbeResult{}, err
+	}
+	if err := parseRecords(authorities, 1); err != nil {
+		return dnsSOAProbeResult{}, err
+	}
+	if err := parseRecords(additionals, 2); err != nil {
+		return dnsSOAProbeResult{}, err
+	}
+	if offset != len(message) {
+		return dnsSOAProbeResult{}, errors.New("DNS response contains trailing bytes")
 	}
 	return result, nil
 }
