@@ -318,7 +318,59 @@ snapshot but never grants initial enablement. Explicit **Turn off** removes the
 snapshot and disables restore. GET, rescan, monitoring, update, bootstrap, and
 rollback must not reinterpret unit presence as user consent.
 
-## 7. Development checks
+## 7. Authoritative DNS engine lifecycle
+
+PowerDNS and BIND are selected from the panel's dedicated authoritative-DNS
+card. Do not use generic component start, stop, uninstall or direct systemd
+commands to change which daemon owns port 53.
+
+The first engine action is always read-only. It obtains a server-generated
+preview of the exact operation type, source and target engines, state revision,
+topology, zone and DNSSEC counts, expected interruption, impacts and blockers.
+It does not install, start, stop or rewrite anything. A separate **Start this
+DNS change** action must present the same one-use preview authority. A blocked,
+expired or stale preview cannot start an operation. A live-engine cutover also
+requires the explicit interruption checkbox; no typed phrase is used. A
+registration-only legacy PowerDNS adoption expects no interruption because it
+only proves and records existing state.
+
+Normal PowerDNS↔BIND switching currently requires **Standalone** topology.
+Paired topology, any DNSSEC zone, pending zone publication, unmanaged DNS, a
+TCP/UDP port-53 conflict, a degraded source or another server/DNS operation
+blocks confirmation. BIND identity is standalone-only; Paired DNS remains a
+PowerDNS capability. Resolve blockers through their explicit panel workflows
+and request a fresh preview. Do not edit cluster, DNSSEC or daemon state, or
+clear operation rows, by hand to bypass a blocker.
+
+During an allowed install or switch, the complete desired zone set is frozen
+against the selected target engine and its next activation epoch. The target
+package is installed under a no-start guard when necessary, its complete zone
+state is staged and validated, and the current source is stopped only for the
+final cutover. Success requires the target to be the sole managed public
+authority and every zone to answer the expected SOA over both UDP and TCP. When
+there is a source engine, its package remains installed but stopped as the
+rollback standby; it is not silently removed.
+
+An older installation whose durable engine identity is unresolved may offer
+**Adopt existing installation** only for an existing panel-managed PowerDNS
+authority. Adoption is registration-only: it byte- and mode-checks managed
+configuration, verifies exact unit state and topology, reads and verifies the
+SQLite database and every panel-owned zone, and proves TCP/UDP authority. It
+does not install packages, rewrite configuration or DNS data, restart services,
+or change DNSSEC. Exact Standalone and Paired PowerDNS installations may be
+adopted; another running DNS engine, unowned or divergent data, missing paired
+configuration, or any changed evidence fails closed. BIND cannot be adopted.
+
+The panel ledger and the agent's root-owned host journal bind the same operation
+identity, manifest and phase. If the response is lost, refresh the DNS engine
+state; do not invent a new request identity or repeat the operation through
+SSH. Startup recovery first tries to prove the exact target. If that proof
+fails, it restores and proves the exact pre-operation files, database,
+generation pointer and systemd state. If neither outcome can be proved, DNS
+mutations remain locked for explicit recovery instead of guessing or allowing a
+second authority to start.
+
+## 8. Development checks
 
 - **Builds:** `make test vet web` (including the exact Go 1.26.5 gate).
 - **Release contracts:** `bash deploy/test-bootstrap-update-contract.sh` and
@@ -331,7 +383,7 @@ rollback must not reinterpret unit presence as user consent.
 - **Design loop:** `.design-sync/NOTES.md` records the design-system workflow
   and the required CSS-entry hash refresh.
 
-## 8. Secrets policy
+## 9. Secrets policy
 
 Secrets never belong in the repository, runbook, release evidence, or command
 output shared in chat. The operator retains panel credentials and SSH keys.

@@ -47,7 +47,7 @@ Panel — Go HTTP server (port 2083), unprivileged user, SQLite
 Agent — root daemon; the only component allowed to touch the OS
    ▼
 Managed services: Nginx · PHP-FPM 8.x · MariaDB · PostgreSQL ·
-Postfix · Dovecot · PowerDNS · Fail2ban · vsftpd · Redis · …
+Postfix · Dovecot · PowerDNS · BIND · Fail2ban · vsftpd · Redis · …
 ```
 
 The privilege split is deliberate: the web-facing Panel never runs as root. Only the Agent — reachable exclusively from the local machine — holds root, which structurally blocks the classic "web layer to root" panel exploit.
@@ -56,7 +56,7 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 > ⚠️ **Not production ready.** The Phase 0 security sprint (authentication, agent lockdown, injection fixes) is in progress. Do not expose this panel to the internet yet.
 
-**Working today** (functional, being hardened): domain & site management · PHP version selection and FPM pools · SSL (Let's Encrypt + custom certificates) · DNS (PowerDNS) · e-mail accounts and forwarding · database management with multi-server support (MariaDB/PostgreSQL) · file manager · backup/restore · cron jobs · log viewer · service control for 14 services.
+**Working today** (functional, being hardened): domain & site management · PHP version selection and FPM pools · SSL (Let's Encrypt + custom certificates) · authoritative DNS (panel-selected PowerDNS or BIND, with previewed and recoverable standalone switching) · e-mail accounts and forwarding · database management with multi-server support (MariaDB/PostgreSQL) · file manager · backup/restore · cron jobs · log viewer · service control for 14 services.
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 

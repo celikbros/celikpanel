@@ -822,6 +822,43 @@ cevap verir. İki panel aynı ortak ad çiftini taşır; adlardan tam biri yerel
 diğeri eş IP'ye çözülür. Glue yalnız bu adların sahibi olan üst domain'de bir kez
 kaydedilir; müşteri domain'i altında child nameserver üretilmez.
 
+**Ek (16 Ağustos 2026 — yetkili DNS motoru sahipliği).** PowerDNS ile BIND,
+operatörün bağımsız olarak başlatıp durdurduğu veya kaldırdığı sıradan bileşen
+satırları değil, panelin sahip olduğu tek DNS-motoru yaşam döngüsünün iki
+seçeneğidir. TCP ve UDP 53 numaralı portun sahibi aynı anda yalnız bir motordur.
+Etkin olmayan alternatif kurulu kalabilir; geri dönüş için durmuş bekleme
+kopyasıdır.
+
+Motor seçimi bilinçli olarak iki adımdır. İlk eylem; kesin işlem türünü,
+topolojiyi, zone ve DNSSEC sayılarını, beklenen kesintiyi, etkileri ve kodlu
+engelleri gösteren salt-okunur bir önizleme alır. Ayrı onay aynı tek-kullanımlık
+önizleme yetkisini, kaynağı, hedefi ve durum revizyonunu sunmak zorundadır; bayat
+veya engelli önizleme sunucuyu değiştiremez. Canlı motor geçişinde ayrıca anlamlı
+bir kesinti onayı gerekir; sürüm ya da ürün adını yazdıran bir parola oyunu yoktur.
+
+Normal PowerDNS↔BIND değişimi yalnız **Tek sunucu** topolojisinde desteklenir.
+Eşli topoloji, DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu
+çakışması, bozuk kaynak veya başka bir işlem geçişi engeller. İşlem; motor ve
+etkinleştirme dönemine bağlanmış tam zone görüntüsünü dondurur, kaynağı
+durdurmadan önce hedefi hazırlar ve doğrular, her zone'u hem UDP hem TCP
+üzerinden sınar ve eski paketi durmuş bekleme kopyası olarak tutar.
+
+Eski sürümden kalan ve motor durumu henüz çözümlenmemiş bir host için tek dar
+istisna vardır: **mevcut panel-yönetimli PowerDNS otoritesini yalnız kayıt
+amacıyla devralma**. Devralma yeniden yazmak yerine doğruladığı için, mevcut
+DNSSEC verisi dahil birebir Tek sunucu veya Eşli PowerDNS durumunu koruyabilir.
+Yalnız yapılandırma baytları ve kipleri, unit durumu, SQLite veritabanı, panelin
+sahibi olduğu her zone, topoloji ve TCP/UDP otoritesi panel defteriyle eşleşirse
+ve çalışan bir BIND otoritesi yoksa başarır. Paket, yapılandırma, servis durumu,
+DNS verisi veya DNSSEC durumunu değiştirmez. BIND için devralma kestirmesi ve
+Eşli BIND modu yoktur.
+
+Hem panel defteri hem agent'ın sahip olduğu host günlüğü işlem kimliğini ve
+aşamasını taşır. Kesinti sonrasında kurtarma kesin hedefi kanıtlayıp tamamlar
+veya işlem öncesi durumu birebir geri getirip kanıtlar. İkisi de kanıtlanamazsa
+DNS mutasyonları kurtarma için kilitli kalır; panel hangi daemon'ın otorite
+olduğunu tahmin etmez.
+
 ---
 
 ## D-008 · Alfa: paneli operatör sürer; her boşluk bir ürün özelliğine dönüşür
@@ -1090,14 +1127,21 @@ kurulumu engelleyen tek şey **gerçek bir çakışma**dır.
 gereksiz karmaşıklık. Asıl kısıt, iki servisin yan yana çalışıp
 çalışamayacağıdır.
 - **Çakışma grupları** (katalogda `ConflictGroup`): aynı rol/portu tutanlar
-  karşılıklı dışlar — :80'de web sunucusu (Nginx ↔ Apache), :53'te DNS (BIND ↔
-  PowerDNS). Biri kuruluysa diğerinin Kur düğmesi "X ile çakışır" olur.
+  karşılıklı dışlar — :80'de web sunucusu (Nginx ↔ Apache), :53'te etkin DNS
+  otoritesi (BIND ↔ PowerDNS). Genel bileşen kurulumu bu çakışmayı yine
+  reddeder. Dar istisna olan özel DNS-motoru akışı, alternatifi başlamama
+  bekçisi altında kurup doğrulanmış geri dönüş kopyası olarak durmuş tutabilir;
+  iki motorun 53 numaralı portu birlikte sunmasına asla izin vermez.
 - **Grup yoksa = yan yana**: MariaDB + PostgreSQL birlikte koşar (farklı
   portlar), ikisi de kurulabilir. Redis + Memcached de öyle.
 
 **Sonuç.** Her kurulum admin'in açık, tek-tıklık onayıdır ("yalnız izinle kur"
 ilkesine uygun). Katalog kategoriye göre akordiyonla gruplu (tümünü aç/kapat);
 düzinelerce servise doğru büyüdükçe taranabilir kalır.
+
+DNS motoru kurulumu ve değişimi bu genel kuraldan bilinçli olarak daha güçlüdür:
+ilk tıklama salt-okunur incelemedir; kalıcı işlemi ayrı açık onay başlatır.
+Bkz. D-009.
 
 ---
 
