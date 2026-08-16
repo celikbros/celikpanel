@@ -73,7 +73,6 @@ const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
 const previewActions = new Set<string>(['install', 'switch', 'adopt']);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
-const previewTokenPattern = /^[A-Za-z0-9._~-]{32,512}$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -105,8 +104,10 @@ function decodeEngineEntry(value: unknown): DNSEngineEntry | null {
     }
 
     if (value.status === 'active' && (!value.installed || !value.running || !value.managed)) return null;
-    if (value.status === 'installed_standby' && (!value.installed || value.running)) return null;
-    if (value.status === 'available' && (value.installed || value.running)) return null;
+    if (value.status === 'installed_standby'
+        && (!value.installed || value.running || !value.managed)) return null;
+    if (value.status === 'available'
+        && (value.installed || value.running || value.managed)) return null;
 
     return {
         id: value.id,
@@ -132,6 +133,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || !isNonNegativeInteger(value.dnssec_zone_count)
         || !isNonNegativeInteger(value.zone_count)
         || !isNonNegativeInteger(value.pending_zone_count)
+        || value.dnssec_zone_count > value.zone_count
         || value.pending_zone_count > value.zone_count
         || !Array.isArray(value.engines)
         || value.engines.length !== DNS_ENGINE_IDS.length
@@ -157,7 +159,10 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         return null;
     }
     if (activeEntries.some((entry) => entry.id !== value.active_engine)) return null;
+    if ((value.active_engine === null) !== (value.engine_epoch === 0)) return null;
+    if (value.state === 'ready' && value.active_engine === null) return null;
     if (value.state === 'switching' && typeof value.operation_id !== 'string') return null;
+    if (value.state !== 'switching' && value.operation_id !== undefined) return null;
 
     return {
         revision: value.revision,
@@ -191,7 +196,7 @@ export function decodeDNSEngineSwitchPreview(
 ): DNSEngineSwitchPreview | null {
     if (!isRecord(value)
         || typeof value.preview_token !== 'string'
-        || !previewTokenPattern.test(value.preview_token)
+        || !operationIDPattern.test(value.preview_token)
         || value.source_engine !== source
         || value.target_engine !== target
         || value.expected_revision !== revision
@@ -202,6 +207,7 @@ export function decodeDNSEngineSwitchPreview(
         || !isNonNegativeInteger(value.pending_zone_count)
         || value.pending_zone_count > value.zone_count
         || !isNonNegativeInteger(value.dnssec_zone_count)
+        || value.dnssec_zone_count > value.zone_count
         || !isNonNegativeInteger(value.estimated_downtime_seconds)
         || value.estimated_downtime_seconds > 86400
         || typeof value.requires_downtime_acknowledgement !== 'boolean'

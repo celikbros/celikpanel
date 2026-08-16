@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import ts from 'typescript';
 
 const card = readFileSync(
   new URL('../src/components/DNSEngineCard.tsx', import.meta.url),
@@ -16,6 +17,32 @@ const settings = readFileSync(
 );
 const copy = readFileSync(new URL('../src/i18n/dnsEngine.ts', import.meta.url), 'utf8');
 
+async function loadContractRuntime() {
+  const javascript = ts.transpileModule(contract, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const url = `data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`;
+  return import(url);
+}
+
+function readySnapshot(overrides = {}) {
+  return {
+    revision: 4,
+    engine_epoch: 2,
+    active_engine: 'pdns',
+    state: 'ready',
+    topology: 'standalone',
+    dnssec_zone_count: 0,
+    zone_count: 1,
+    pending_zone_count: 0,
+    engines: [
+      { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
+      { id: 'bind', installed: true, running: false, managed: true, status: 'installed_standby' },
+    ],
+    ...overrides,
+  };
+}
+
 test('DNS engine state decoder fails closed on malformed or contradictory state', () => {
   assert.match(contract, /DNS_ENGINE_IDS = \['pdns', 'bind'\] as const/);
   assert.match(contract, /'unconfigured',[\s\S]*'ready',[\s\S]*'unmanaged',[\s\S]*'conflict',[\s\S]*'switching',[\s\S]*'degraded'/);
@@ -27,6 +54,50 @@ test('DNS engine state decoder fails closed on malformed or contradictory state'
   assert.match(contract, /return null;/);
   assert.match(card, /const decoded = decodeDNSEngineSnapshot\(payload\)/);
   assert.match(card, /if \(decoded === null\)[\s\S]*onSnapshotChange\?\.\(null\)/);
+});
+
+test('DNS engine decoder rejects impossible authority tuples', async () => {
+  const { decodeDNSEngineSnapshot } = await loadContractRuntime();
+  assert.ok(decodeDNSEngineSnapshot(readySnapshot()));
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({ engine_epoch: 0 })), null);
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({ active_engine: null })), null);
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({ operation_id: 'a'.repeat(32) })), null);
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({ dnssec_zone_count: 2 })), null);
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+    engines: [
+      { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
+      { id: 'bind', installed: true, running: false, managed: false, status: 'installed_standby' },
+    ],
+  })), null);
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+    engines: [
+      { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
+      { id: 'bind', installed: false, running: false, managed: true, status: 'available' },
+    ],
+  })), null);
+});
+
+test('DNS engine preview token and counts mirror the commit contract', async () => {
+  const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
+  const preview = {
+    preview_token: 'b'.repeat(32),
+    source_engine: 'pdns',
+    target_engine: 'bind',
+    expected_revision: 4,
+    action: 'switch',
+    topology: 'standalone',
+    zone_count: 1,
+    pending_zone_count: 0,
+    dnssec_zone_count: 0,
+    estimated_downtime_seconds: 5,
+    requires_downtime_acknowledgement: true,
+    blockers: [],
+    impacts: ['validate_target'],
+  };
+  assert.ok(decodeDNSEngineSwitchPreview(preview, 'pdns', 'bind', 4));
+  assert.equal(decodeDNSEngineSwitchPreview({ ...preview, preview_token: 'A'.repeat(32) }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({ ...preview, preview_token: 'b'.repeat(33) }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({ ...preview, dnssec_zone_count: 2 }, 'pdns', 'bind', 4), null);
 });
 
 test('first DNS engine click requests a read-only preview and cannot mutate', () => {
