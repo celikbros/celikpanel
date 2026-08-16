@@ -281,10 +281,36 @@ func (hostDNSEngineBackend) Readiness(ctx context.Context) ([]transport.DNSBacke
 			}
 		}
 	}
-	if exists && state.Engine == transport.DNSEnginePowerDNS && requireManagedDNSClusterReady() == nil {
-		states[1].Managed = true
-	}
+	states[1].Managed = powerDNSManagedForBackendReadiness(
+		state,
+		exists,
+		states[1],
+		requireManagedDNSClusterReady,
+		func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
+	)
 	return states, nil
+}
+
+func powerDNSManagedForBackendReadiness(
+	state dnsEngineStateReceipt,
+	stateExists bool,
+	runtimeState transport.DNSBackendRuntimeState,
+	managedConfigReady func() error,
+	exactActiveRuntimeReady func() error,
+) bool {
+	if managedConfigReady == nil {
+		return false
+	}
+	if stateExists {
+		return state.Engine == transport.DNSEnginePowerDNS && managedConfigReady() == nil
+	}
+	if !runtimeState.Installed || !runtimeState.Running || exactActiveRuntimeReady == nil {
+		return false
+	}
+	if err := managedConfigReady(); err != nil {
+		return false
+	}
+	return exactActiveRuntimeReady() == nil
 }
 
 func packagesInstalled(profile hostplatform.Profile, packages []string) bool {
