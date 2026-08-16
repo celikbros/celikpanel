@@ -1275,14 +1275,26 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if resp.Error != "" {
-			writeClientError(w, http.StatusConflict, resp.Error)
+			log.Printf("PowerDNS repair agent detail: %s",
+				boundedAgentDiagnostic(resp.Error))
+			writeCodedError(
+				w, http.StatusConflict, errCodeDNSPublicationFailed,
+				"PowerDNS configuration could not be repaired; check the DNS service and retry",
+				"",
+			)
 			return
 		}
 		writeServerError(w, err)
 		return
 	}
 	if resp.Error != "" {
-		writeClientError(w, http.StatusConflict, resp.Error)
+		log.Printf("PowerDNS repair agent detail: %s",
+			boundedAgentDiagnostic(resp.Error))
+		writeCodedError(
+			w, http.StatusConflict, errCodeDNSPublicationFailed,
+			"PowerDNS configuration could not be repaired; check the DNS service and retry",
+			"",
+		)
 		return
 	}
 

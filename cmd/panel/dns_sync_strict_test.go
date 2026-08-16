@@ -36,6 +36,7 @@ type strictDNSRPCAgent struct {
 	mu                  sync.Mutex
 	failZone            string
 	clusterError        string
+	powerDNSError       string
 	clusterRequests     []transport.ConfigureDNSClusterV2Request
 	clusterHook         func(transport.ConfigureDNSClusterV2Request, *transport.ConfigureDNSClusterV2Response) error
 	clusterEntered      chan struct{}
@@ -324,6 +325,10 @@ func (a *strictDNSRPCAgent) ConfigurePowerDNSSQLite(_ *StrictDNSRPCEmpty, resp *
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.powerDNSCalls++
+	if a.powerDNSError != "" {
+		resp.Error = a.powerDNSError
+		return nil
+	}
 	resp.Synced = true
 	return nil
 }
@@ -1156,6 +1161,33 @@ func TestPDNSEnableRefusesSuccessWhenAnyZonePublicationFails(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	p.handlePDNSEnable(recorder, req)
 	assertPublicationConflict(t, recorder)
+}
+
+func TestPDNSEnableNeverExposesAgentConfigurationDetail(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{
+		powerDNSError: "restart /etc/powerdns/pdns.d/celikpanel.conf: systemctl stderr secret",
+	}
+	attachStrictDNSRPCAgent(t, p, agent)
+
+	recorder := httptest.NewRecorder()
+	p.handlePDNSEnable(
+		recorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/pdns/enable", nil),
+	)
+	var body apiErrorBody
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusConflict ||
+		body.Code != errCodeDNSPublicationFailed ||
+		strings.Contains(recorder.Body.String(), "/etc/powerdns") ||
+		strings.Contains(recorder.Body.String(), "systemctl stderr") ||
+		strings.Contains(recorder.Body.String(), "secret") {
+		t.Fatalf("unsafe PowerDNS repair error status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
 }
 
 func TestPDNSEnableRejectsActiveBINDWithoutAgentMutation(t *testing.T) {
