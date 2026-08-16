@@ -89,7 +89,7 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
     zone_count: 1,
     pending_zone_count: 0,
     dnssec_zone_count: 0,
-    estimated_downtime_seconds: 5,
+    estimated_downtime_seconds: 15,
     requires_downtime_acknowledgement: true,
     blockers: [],
     impacts: ['validate_target'],
@@ -98,6 +98,21 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
   assert.equal(decodeDNSEngineSwitchPreview({ ...preview, preview_token: 'A'.repeat(32) }, 'pdns', 'bind', 4), null);
   assert.equal(decodeDNSEngineSwitchPreview({ ...preview, preview_token: 'b'.repeat(33) }, 'pdns', 'bind', 4), null);
   assert.equal(decodeDNSEngineSwitchPreview({ ...preview, dnssec_zone_count: 2 }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({ ...preview, requires_downtime_acknowledgement: false }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({ ...preview, estimated_downtime_seconds: 0 }, 'pdns', 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    action: 'install',
+    requires_downtime_acknowledgement: false,
+  }, null, 'bind', 4), null);
+  assert.ok(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    action: 'install',
+    estimated_downtime_seconds: 0,
+    requires_downtime_acknowledgement: false,
+  }, null, 'bind', 4));
 });
 
 test('first DNS engine click requests a read-only preview and cannot mutate', () => {

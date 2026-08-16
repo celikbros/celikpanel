@@ -73,6 +73,7 @@ const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
 const previewActions = new Set<string>(['install', 'switch', 'adopt']);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
+const dnsEngineEstimatedDowntimeSeconds = 15;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -211,6 +212,10 @@ export function decodeDNSEngineSwitchPreview(
         || !isNonNegativeInteger(value.estimated_downtime_seconds)
         || value.estimated_downtime_seconds > 86400
         || typeof value.requires_downtime_acknowledgement !== 'boolean'
+        || value.requires_downtime_acknowledgement !== (source !== null)
+        || value.estimated_downtime_seconds !== (source !== null
+            ? dnsEngineEstimatedDowntimeSeconds
+            : 0)
         || !Array.isArray(value.blockers)
         || value.blockers.length > 32) {
         return null;
