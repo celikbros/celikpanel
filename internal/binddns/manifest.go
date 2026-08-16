@@ -7,7 +7,8 @@ import (
 	"path"
 	"sort"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 )
 
 type manifestDigestZone struct {
@@ -219,15 +220,14 @@ func validateRoot(root string) error {
 }
 
 func validateQualifier(value string) error {
-	const prefix = "dns-zone-sync/v3:sha256:"
-	if !strings.HasPrefix(value, prefix) || !validDigest(strings.TrimPrefix(value, prefix)) {
+	if !mutationpayload.ValidDNSZoneSyncV3Qualifier(value) {
 		return errors.New("BIND qualifier is not a canonical DNS zone sync v3 commitment")
 	}
 	return nil
 }
 
 func validateMutationIdentity(label, value string) error {
-	if len(value) != 32 || !utf8.ValidString(value) {
+	if len(value) != 32 {
 		return fmt.Errorf("BIND %s must be 32 lowercase hexadecimal characters", label)
 	}
 	for _, character := range value {

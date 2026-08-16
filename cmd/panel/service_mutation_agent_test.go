@@ -174,6 +174,10 @@ func TestPayloadBoundMutationSuccessRequiresExactPublishedReceipt(t *testing.T) 
 			packageName: "dns-zone-sync/v1:sha256:" + strings.Repeat("6", 64),
 		},
 		{
+			name: "DNS zone V3", kind: "dns_zone_sync", target: "v3.example.test",
+			packageName: "dns-zone-sync/v3:sha256:" + strings.Repeat("8", 64),
+		},
+		{
 			name: "panel certificate", kind: "panel_certificate_issue", target: "panel.example.test",
 			packageName: "panel-certificate-issue/v1:sha256:" + strings.Repeat("7", 64),
 		},

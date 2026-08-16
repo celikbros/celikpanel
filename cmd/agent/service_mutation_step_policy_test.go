@@ -38,6 +38,12 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 	if serviceMutationStepSyncDNSZone != "Agent.SyncDNSZoneV2" {
 		t.Fatalf("DNS zone mutation method=%q", serviceMutationStepSyncDNSZone)
 	}
+	if serviceMutationStepSyncDNSZoneV3 != "Agent.SyncDNSZoneV3" {
+		t.Fatalf("DNS zone V3 mutation method=%q", serviceMutationStepSyncDNSZoneV3)
+	}
+	if serviceMutationStepSwitchDNSEngine != "Agent.SwitchDNSEngineV1" {
+		t.Fatalf("DNS engine switch mutation method=%q", serviceMutationStepSwitchDNSEngine)
+	}
 	if serviceMutationStepIssuePanelCertificate != "Agent.IssuePanelCertificateV2" {
 		t.Fatalf("panel certificate mutation method=%q", serviceMutationStepIssuePanelCertificate)
 	}
@@ -46,6 +52,8 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 	certificateQualifier := "panel-certificate-issue/v1:sha256:" + strings.Repeat("0", 64)
 	mailTLSQualifier := "mail-tls-sync/v1:sha256:" + strings.Repeat("0", 64)
 	dnsQualifier := "dns-zone-sync/v1:sha256:" + strings.Repeat("0", 64)
+	dnsV3Qualifier := "dns-zone-sync/v3:sha256:" + strings.Repeat("0", 64)
+	dnsSwitchQualifier := "dns-engine-switch/v1:sha256:" + strings.Repeat("0", 64)
 	tests := []struct {
 		name  string
 		job   *ServiceMutationJob
@@ -77,6 +85,10 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"configure pdns after install", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
 		{"sync dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "sync")},
 		{"delete dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "delete")},
+		{"sync BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "sync")},
+		{"delete BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "delete")},
+		{"switch DNS engine to BIND", mutationPolicyJob("dns_engine_switch", "bind", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "bind", dnsSwitchQualifier, "switch")},
+		{"switch DNS engine to PowerDNS", mutationPolicyJob("dns_engine_switch", "pdns", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "pdns", dnsSwitchQualifier, "switch")},
 		{"nginx ready after install", mutationPolicyJob("service_install", "nginx", ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"nginx ready in webmail profile", mutationPolicyJob("mail_profile_install", core.MailProfileWebmail, ""), mutationPolicyClaim(serviceMutationStepEnsureNginxReady, "nginx", "", "ready")},
 		{"configure mail standalone", mutationPolicyJob("mail_configure", "mail-stack", ""), mutationPolicyClaim(serviceMutationStepConfigureMailStack, "mail-stack", "", "configure")},
@@ -120,6 +132,8 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		serviceMutationStepConfigureDBTools,
 		serviceMutationStepConfigureDKIMSigning,
 		serviceMutationStepSyncDNSZone,
+		serviceMutationStepSyncDNSZoneV3,
+		serviceMutationStepSwitchDNSEngine,
 		serviceMutationStepConfigurePowerDNSSQLite,
 		serviceMutationStepApplyFirewall,
 		serviceMutationStepInstallService,
@@ -298,6 +312,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		"serviceMutationStepConfigureDBTools":        true,
 		"serviceMutationStepConfigureDKIMSigning":    true,
 		"serviceMutationStepSyncDNSZone":             true,
+		"serviceMutationStepSyncDNSZoneV3":           true,
+		"serviceMutationStepSwitchDNSEngine":         true,
 		"serviceMutationStepSecureDNSZone":           true,
 		"serviceMutationStepConfigureDNSCluster":     true,
 		"serviceMutationStepConfigurePowerDNSSQLite": true,
@@ -381,8 +397,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		}
 	}
 
-	if len(seenMethods) != 27 {
-		t.Errorf("production requiredServiceMutationStep claim count=%d want=27", len(seenMethods))
+	if len(seenMethods) != 29 {
+		t.Errorf("production requiredServiceMutationStep claim count=%d want=29", len(seenMethods))
 	}
 	for method := range expectedMethods {
 		if seenMethods[method] == "" {
