@@ -14,19 +14,24 @@ import (
 )
 
 type fakeDNSEngineBackend struct {
-	readiness     []transport.DNSBackendRuntimeState
-	readyErr      error
-	syncErr       error
-	switchErr     error
-	result        transport.SwitchDNSEngineV1Response
-	recovery      dnsEngineSwitchRecoveryOutcome
-	recoverErr    error
-	recoverCalls  int
-	finalizeCalls int
+	readiness      []transport.DNSBackendRuntimeState
+	port53Conflict bool
+	readyErr       error
+	syncErr        error
+	switchErr      error
+	result         transport.SwitchDNSEngineV1Response
+	recovery       dnsEngineSwitchRecoveryOutcome
+	recoverErr     error
+	recoverCalls   int
+	finalizeCalls  int
 }
 
-func (backend *fakeDNSEngineBackend) Readiness(context.Context) ([]transport.DNSBackendRuntimeState, error) {
-	return backend.readiness, backend.readyErr
+func (backend *fakeDNSEngineBackend) Readiness(
+	context.Context,
+) (transport.DNSBackendReadinessResponse, error) {
+	return transport.DNSBackendReadinessResponse{
+		Engines: backend.readiness, Port53Conflict: backend.port53Conflict,
+	}, backend.readyErr
 }
 
 func (backend *fakeDNSEngineBackend) Sync(
@@ -161,6 +166,23 @@ func TestDNSBackendReadinessHidesProbeDetail(t *testing.T) {
 	if response.Error != "DNS backend readiness could not be verified" ||
 		strings.Contains(response.Error, "/root") {
 		t.Fatalf("unsafe readiness response %+v", response)
+	}
+}
+
+func TestDNSBackendReadinessReportsOnlyBoundedPort53Conflict(t *testing.T) {
+	useFakeDNSEngineBackend(t, &fakeDNSEngineBackend{
+		readiness: []transport.DNSBackendRuntimeState{
+			{Engine: transport.DNSEngineBIND, Unit: "named.service"},
+			{Engine: transport.DNSEnginePowerDNS, Unit: "pdns.service"},
+		},
+		port53Conflict: true,
+	})
+	var response DNSBackendReadinessResponse
+	if err := (&Agent{}).DNSBackendReadiness(&transport.Empty{}, &response); err != nil {
+		t.Fatal(err)
+	}
+	if !response.Port53Conflict || response.Error != "" || len(response.Engines) != 2 {
+		t.Fatalf("unexpected readiness response: %+v", response)
 	}
 }
 

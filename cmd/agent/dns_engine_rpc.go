@@ -32,7 +32,7 @@ const dnsEngineSwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/publish
 const dnsZoneSyncV3PublishedPhasePrefix = "commit/dns-zone-sync/v3/published/"
 
 type dnsEngineBackend interface {
-	Readiness(context.Context) ([]transport.DNSBackendRuntimeState, error)
+	Readiness(context.Context) (transport.DNSBackendReadinessResponse, error)
 	Sync(
 		context.Context,
 		mutationpayload.DNSZoneSyncV3Commitment,
@@ -73,12 +73,14 @@ func (a *Agent) DNSBackendReadiness(_ *transport.Empty, response *DNSBackendRead
 		return errors.New("DNS backend readiness response is required")
 	}
 	*response = DNSBackendReadinessResponse{}
-	states, err := agentDNSEngineBackend.Readiness(context.Background())
+	readiness, err := agentDNSEngineBackend.Readiness(context.Background())
 	if err != nil {
+		log.Printf("DNS backend readiness probe failed: %v", err)
 		response.Error = "DNS backend readiness could not be verified"
 		return nil
 	}
-	response.Engines = states
+	readiness.Error = ""
+	*response = readiness
 	return nil
 }
 

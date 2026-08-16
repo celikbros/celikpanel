@@ -15,6 +15,7 @@ const legacyPowerDNSGuardTimeout = 15 * time.Second
 var (
 	legacyPowerDNSDurableAuthorityCheck = inspectLegacyPowerDNSDurableAuthorityOnHost
 	legacyPowerDNSRuntimeSafetyCheck    = inspectLegacyPowerDNSRuntimeSafety
+	dnsPort53ConflictCheck              = inspectDNSPort53Conflict
 )
 
 func validateLegacyPowerDNSDurableAuthority(
@@ -112,33 +113,103 @@ func inspectLegacyPowerDNSRuntimeSafety(
 	if active {
 		return verifyOnlyPDNSActive(ctx, systemctl)
 	}
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	conflict, err := dnsPort53ConflictCheck(ctx, false, false)
 	if err != nil {
 		return err
+	}
+	if conflict {
+		return errors.New("another public port-53 authority is active")
+	}
+	return nil
+}
+
+func rejectLegacyPublicDNSListeners(output string) error {
+	conflict := hasUnrelatedPublicDNSListener(output, false, false)
+	if conflict {
+		return errors.New("another public port-53 authority is active")
+	}
+	return nil
+}
+
+func inspectDNSPort53Conflict(
+	parent context.Context,
+	allowBIND, allowPowerDNS bool,
+) (bool, error) {
+	ctx, cancel := context.WithTimeout(parent, legacyPowerDNSGuardTimeout)
+	defer cancel()
+	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	if err != nil {
+		return false, err
 	}
 	output, err := serviceMutationCommand(
 		ctx, ss, "-H", "-lntup", "sport = :53",
 	).CombinedOutputLimited(64 << 10)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return rejectLegacyPublicDNSListeners(string(output))
+	return hasUnrelatedPublicDNSListener(
+		string(output), allowBIND, allowPowerDNS,
+	), nil
 }
 
-func rejectLegacyPublicDNSListeners(output string) error {
+func hasUnrelatedPublicDNSListener(
+	output string,
+	allowBIND, allowPowerDNS bool,
+) bool {
 	for _, line := range strings.Split(output, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 5 {
+			if strings.Contains(line, ":53") {
+				return true
+			}
+			continue
+		}
+		protocol := strings.ToLower(fields[0])
+		if protocol != "tcp" && protocol != "udp" {
 			continue
 		}
 		host, port, splitErr := net.SplitHostPort(fields[4])
-		if splitErr != nil || port != "53" {
+		if splitErr != nil {
+			if strings.Contains(fields[4], ":53") {
+				return true
+			}
+			continue
+		}
+		if port != "53" {
 			continue
 		}
 		address := net.ParseIP(strings.Trim(host, "[]"))
-		if address == nil || (!address.IsLoopback() && !address.IsLinkLocalUnicast()) {
+		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
+			continue
+		}
+		lower := strings.ToLower(line)
+		bindOwner := strings.Contains(lower, `("named",`)
+		pdnsOwner := strings.Contains(lower, `("pdns_server",`)
+		if bindOwner == pdnsOwner ||
+			(bindOwner && !allowBIND) ||
+			(pdnsOwner && !allowPowerDNS) {
+			return true
+		}
+	}
+	return false
+}
+
+func runDNSPort53PreMutationGuard(
+	ctx context.Context,
+	requireEmptyAuthority bool,
+	mutation func() error,
+) error {
+	if mutation == nil {
+		return errors.New("DNS engine mutation callback is required")
+	}
+	if requireEmptyAuthority {
+		conflict, err := dnsPort53ConflictCheck(ctx, false, false)
+		if err != nil {
+			return err
+		}
+		if conflict {
 			return errors.New("another public port-53 authority is active")
 		}
 	}
-	return nil
+	return mutation()
 }

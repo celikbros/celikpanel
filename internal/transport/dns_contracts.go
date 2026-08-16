@@ -156,8 +156,9 @@ type DNSBackendRuntimeState struct {
 }
 
 type DNSBackendReadinessResponse struct {
-	Engines []DNSBackendRuntimeState `json:"engines"`
-	Error   string                   `json:"error,omitempty"`
+	Engines        []DNSBackendRuntimeState `json:"engines"`
+	Port53Conflict bool                     `json:"port_53_conflict"`
+	Error          string                   `json:"error,omitempty"`
 }
 
 type DNSSECRequest struct {

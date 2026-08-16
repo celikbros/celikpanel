@@ -90,6 +90,7 @@ type dnsEngineSnapshot struct {
 	OperationID      string               `json:"operation_id,omitempty"`
 	Engines          []dnsEngineEntry     `json:"engines"`
 	runtime          map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict   bool
 	runtimeErr       error
 	dnssecErr        error
 }
@@ -194,43 +195,43 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 
 func validateDNSBackendReadiness(
 	response transport.DNSBackendReadinessResponse,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
 	if response.Error != "" || len(response.Engines) != 2 {
-		return nil, errors.New("DNS backend readiness is unavailable")
+		return nil, false, errors.New("DNS backend readiness is unavailable")
 	}
 	result := make(map[transport.DNSEngine]transport.DNSBackendRuntimeState, 2)
 	for _, runtime := range response.Engines {
 		if !transport.ValidDNSEngine(runtime.Engine) {
-			return nil, errors.New("DNS backend readiness contains an unknown engine")
+			return nil, false, errors.New("DNS backend readiness contains an unknown engine")
 		}
 		if _, duplicate := result[runtime.Engine]; duplicate {
-			return nil, errors.New("DNS backend readiness contains a duplicate engine")
+			return nil, false, errors.New("DNS backend readiness contains a duplicate engine")
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
-			return nil, errors.New("DNS backend readiness is internally inconsistent")
+			return nil, false, errors.New("DNS backend readiness is internally inconsistent")
 		}
 		result[runtime.Engine] = runtime
 	}
 	if _, ok := result[transport.DNSEnginePowerDNS]; !ok {
-		return nil, errors.New("PowerDNS readiness is missing")
+		return nil, false, errors.New("PowerDNS readiness is missing")
 	}
 	if _, ok := result[transport.DNSEngineBIND]; !ok {
-		return nil, errors.New("BIND readiness is missing")
+		return nil, false, errors.New("BIND readiness is missing")
 	}
-	return result, nil
+	return result, response.Port53Conflict, nil
 }
 
 func (p *Panel) readDNSBackendRuntime(
 	ctx context.Context,
-) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, error) {
+) (map[transport.DNSEngine]transport.DNSBackendRuntimeState, bool, error) {
 	var response transport.DNSBackendReadinessResponse
 	if err := p.callAgentContext(
 		ctx, "Agent.DNSBackendReadiness", &transport.Empty{}, &response,
 	); err != nil {
-		return nil, fmt.Errorf("read DNS backend readiness: %w", err)
+		return nil, false, fmt.Errorf("read DNS backend readiness: %w", err)
 	}
 	return validateDNSBackendReadiness(response)
 }
@@ -449,7 +450,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if err != nil {
 		return dnsEngineSnapshot{}, fmt.Errorf("read DNS engine zone counts: %w", err)
 	}
-	runtimes, runtimeErr := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, runtimeErr := p.readDNSBackendRuntime(ctx)
 	dnssecCount := 0
 	var dnssecErr error
 	// BIND is currently activated only by an exact unsigned-zone switch
@@ -475,8 +476,9 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		State:        presentationState, Topology: topology,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
-		Engines: entries, runtime: runtimes, runtimeErr: runtimeErr,
-		dnssecErr: dnssecErr,
+		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,
+		runtimeErr: runtimeErr,
+		dnssecErr:  dnssecErr,
 	}, nil
 }
 
@@ -498,9 +500,12 @@ func (p *Panel) activeDNSPublisher(
 	if state.ActiveEngine == "" || state.CurrentSwitchID != "" {
 		return dnsPublisherIdentity{}, false, nil
 	}
-	runtimes, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return dnsPublisherIdentity{}, false, err
+	}
+	if port53Conflict {
+		return dnsPublisherIdentity{}, false, nil
 	}
 	runtime := runtimes[state.ActiveEngine]
 	if !runtime.Installed || !runtime.Running || !runtime.Managed {
@@ -642,6 +647,9 @@ func dnsEnginePreviewBlockers(
 	}
 	if snapshot.runtimeErr != nil {
 		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+	}
+	if snapshot.port53Conflict {
+		blockers = addDNSEngineBlocker(blockers, "port_53_conflict")
 	}
 	if snapshot.ActiveEngine != nil && *snapshot.ActiveEngine == target {
 		blockers = addDNSEngineBlocker(blockers, "target_already_active")
@@ -1185,9 +1193,12 @@ func (p *Panel) verifyDNSEngineRuntimeTarget(
 	ctx context.Context,
 	target transport.DNSEngine,
 ) error {
-	runtimes, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
+	}
+	if port53Conflict {
+		return errors.New("another process owns public port 53")
 	}
 	for engine, runtime := range runtimes {
 		if engine == target {
@@ -1480,9 +1491,12 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
 ) error {
-	runtimes, err := p.readDNSBackendRuntime(ctx)
+	runtimes, port53Conflict, err := p.readDNSBackendRuntime(ctx)
 	if err != nil {
 		return err
+	}
+	if port53Conflict {
+		return errors.New("another process owns public port 53")
 	}
 	if persisted.Mode == transport.DNSEngineSwitchModeAdopt {
 		target := runtimes[persisted.TargetEngine]

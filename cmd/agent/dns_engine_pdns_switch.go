@@ -417,9 +417,17 @@ func switchToPDNS(
 		}
 	}
 	if len(missing) != 0 {
-		if _, err := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
-			return installPackagesWithCandidateContext(ctx, string(profile.PackageManager), missing, "")
-		}); err != nil {
+		if err := runDNSPort53PreMutationGuard(
+			ctx, !stateExists && manifest.SourceEngine == "",
+			func() error {
+				_, installErr := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
+					return installPackagesWithCandidateContext(
+						ctx, string(profile.PackageManager), missing, "",
+					)
+				})
+				return installErr
+			},
+		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
@@ -472,7 +480,14 @@ func switchToPDNS(
 	if liveExists {
 		journal.PDNSBackupSHA256, journal.PDNSBackupSize = liveHash, liveSize
 	}
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	writeIntent := func() error { return writeDNSEngineSwitchJournal(journal) }
+	if len(missing) == 0 {
+		if err := runDNSPort53PreMutationGuard(
+			ctx, !stateExists && manifest.SourceEngine == "", writeIntent,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	} else if err := writeIntent(); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {

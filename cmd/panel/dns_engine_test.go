@@ -23,6 +23,7 @@ type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
 	mu               sync.Mutex
 	runtimes         map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict   bool
 	dnssec           bool
 	dnssecCalls      int
 	switchCalls      int
@@ -184,6 +185,7 @@ func (agent *dnsEngineTestAgent) DNSBackendReadiness(
 		agent.runtimes[transport.DNSEnginePowerDNS],
 		agent.runtimes[transport.DNSEngineBIND],
 	}
+	response.Port53Conflict = agent.port53Conflict
 	return nil
 }
 
@@ -881,6 +883,26 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 	if status != dnsEngineStateConflict {
 		t.Fatalf("two running backends state=%s", status)
 	}
+}
+
+func TestDNSEnginePreviewBlocksUnrelatedPublicPort53Listener(t *testing.T) {
+	snapshot := dnsEngineSnapshot{
+		Revision: 3, Topology: transport.DNSTopologyStandalone,
+		State: dnsEngineStateUnconfigured, port53Conflict: true,
+		runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+			transport.DNSEnginePowerDNS: {Engine: transport.DNSEnginePowerDNS},
+			transport.DNSEngineBIND:     {Engine: transport.DNSEngineBIND},
+		},
+	}
+	blockers := dnsEnginePreviewBlockers(
+		snapshot, transport.DNSEngineBIND, "", snapshot.Revision,
+	)
+	for _, blocker := range blockers {
+		if blocker.Code == "port_53_conflict" {
+			return
+		}
+	}
+	t.Fatalf("preview blockers omit public port-53 conflict: %+v", blockers)
 }
 
 func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {

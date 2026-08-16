@@ -75,6 +75,65 @@ func TestRejectLegacyPublicDNSListenersAllowsOnlyLocalStub(t *testing.T) {
 	}
 }
 
+func TestDNSPort53ConflictParserAllowsOnlyDeclaredEngineOwners(t *testing.T) {
+	const (
+		bindTCP = `tcp LISTEN 0 128 192.0.2.10:53 0.0.0.0:* users:(("named",pid=10,fd=1))`
+		pdnsUDP = `udp UNCONN 0 0 [2001:db8::10]:53 [::]:* users:(("pdns_server",pid=11,fd=2))`
+		foreign = `udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:(("dnsmasq",pid=12,fd=3))`
+		local   = `udp UNCONN 0 0 127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=13,fd=4))`
+	)
+	for _, test := range []struct {
+		name                 string
+		output               string
+		allowBIND, allowPDNS bool
+		wantConflict         bool
+	}{
+		{name: "local stub", output: local},
+		{name: "declared BIND", output: bindTCP, allowBIND: true},
+		{name: "undeclared BIND", output: bindTCP, wantConflict: true},
+		{name: "declared PowerDNS", output: pdnsUDP, allowPDNS: true},
+		{name: "undeclared PowerDNS", output: pdnsUDP, wantConflict: true},
+		{name: "foreign listener", output: foreign, allowBIND: true, wantConflict: true},
+		{name: "missing owner evidence", output: "tcp LISTEN 0 128 *:53 *:*", allowBIND: true, wantConflict: true},
+		{name: "mixed owner output", output: bindTCP + "\n" + foreign, allowBIND: true, wantConflict: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := hasUnrelatedPublicDNSListener(
+				test.output, test.allowBIND, test.allowPDNS,
+			); got != test.wantConflict {
+				t.Fatalf("conflict=%v want=%v", got, test.wantConflict)
+			}
+		})
+	}
+}
+
+func TestDNSPort53PreMutationGuardRejectsBeforeAnyMutationCallback(t *testing.T) {
+	previous := dnsPort53ConflictCheck
+	t.Cleanup(func() { dnsPort53ConflictCheck = previous })
+	probeCalls, mutationCalls := 0, 0
+	dnsPort53ConflictCheck = func(context.Context, bool, bool) (bool, error) {
+		probeCalls++
+		return true, nil
+	}
+	err := runDNSPort53PreMutationGuard(context.Background(), true, func() error {
+		mutationCalls++
+		return nil
+	})
+	if err == nil || probeCalls != 1 || mutationCalls != 0 {
+		t.Fatalf("err=%v probeCalls=%d mutationCalls=%d", err, probeCalls, mutationCalls)
+	}
+	dnsPort53ConflictCheck = func(context.Context, bool, bool) (bool, error) {
+		probeCalls++
+		return false, nil
+	}
+	if err := runDNSPort53PreMutationGuard(context.Background(), true, func() error {
+		mutationCalls++
+		return nil
+	}); err != nil || mutationCalls != 1 {
+		t.Fatalf("safe callback err=%v mutationCalls=%d", err, mutationCalls)
+	}
+}
+
 func legacyDurableDNSState(engine transport.DNSEngine) dnsEngineStateReceipt {
 	state := dnsEngineStateReceipt{
 		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,

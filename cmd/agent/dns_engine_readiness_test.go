@@ -39,7 +39,7 @@ func TestPowerDNSManagedForBackendReadinessRequiresExactLegacyProof(t *testing.T
 			name:  "existing exact PowerDNS receipt remains managed",
 			state: legacyDurableDNSState(transport.DNSEnginePowerDNS), stateExists: true,
 			runtime: ready, exactActiveProof: func() error { return nil }, wantManaged: true,
-			wantConfigCalls: 1,
+			wantConfigCalls: 1, wantActiveCalls: 1,
 		},
 		{
 			name:    "manual PowerDNS configuration stays unmanaged",
@@ -107,5 +107,32 @@ func TestPowerDNSManagedForBackendReadinessRejectsMissingProofs(t *testing.T) {
 	if powerDNSManagedForBackendReadiness(dnsEngineStateReceipt{}, false, runtimeState, nil, func() error { return nil }) ||
 		powerDNSManagedForBackendReadiness(dnsEngineStateReceipt{}, false, runtimeState, func() error { return nil }, nil) {
 		t.Fatal("readiness accepted an incomplete managed PowerDNS proof")
+	}
+}
+
+func TestExactActiveDNSBackendManagedRejectsIncompleteOrConflictingRuntime(t *testing.T) {
+	ready := transport.DNSBackendRuntimeState{
+		Installed: true, Running: true,
+	}
+	for _, test := range []struct {
+		name     string
+		runtime  transport.DNSBackendRuntimeState
+		evidence bool
+		proof    func() error
+		want     bool
+	}{
+		{name: "exact active authority", runtime: ready, evidence: true, proof: func() error { return nil }, want: true},
+		{name: "missing immutable evidence", runtime: ready, proof: func() error { return nil }},
+		{name: "stopped service", runtime: transport.DNSBackendRuntimeState{Installed: true}, evidence: true, proof: func() error { return nil }},
+		{name: "mixed or incomplete listeners", runtime: ready, evidence: true, proof: func() error { return errors.New("listener conflict") }},
+		{name: "missing runtime proof", runtime: ready, evidence: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := exactActiveDNSBackendManaged(
+				test.runtime, test.evidence, test.proof,
+			); got != test.want {
+				t.Fatalf("managed=%v want=%v", got, test.want)
+			}
+		})
 	}
 }

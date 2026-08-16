@@ -238,15 +238,17 @@ func newHostBINDPublisher(layout bindHostLayout) (*binddns.Publisher, trackedBIN
 	return publisher, runner, err
 }
 
-func (hostDNSEngineBackend) Readiness(ctx context.Context) ([]transport.DNSBackendRuntimeState, error) {
+func (hostDNSEngineBackend) Readiness(
+	ctx context.Context,
+) (transport.DNSBackendReadinessResponse, error) {
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
-		return nil, err
+		return transport.DNSBackendReadinessResponse{}, err
 	}
 	layout, layoutErr := bindLayout(profile)
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
-		return nil, err
+		return transport.DNSBackendReadinessResponse{}, err
 	}
 	states := []transport.DNSBackendRuntimeState{
 		{Engine: transport.DNSEngineBIND, Unit: "named.service"},
@@ -257,18 +259,18 @@ func (hostDNSEngineBackend) Readiness(ctx context.Context) ([]transport.DNSBacke
 	}
 	states[1].Installed = managedServicePackagesInstalled(profile, "pdns")
 	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil && states[0].Installed {
-		return nil, err
+		return transport.DNSBackendReadinessResponse{}, err
 	}
 	for index := range states {
 		unit, captureErr := captureDNSUnitState(ctx, systemctl, states[index].Unit)
 		if captureErr != nil {
-			return nil, captureErr
+			return transport.DNSBackendReadinessResponse{}, captureErr
 		}
 		states[index].Running = unit.active()
 	}
 	state, exists, stateErr := readDNSEngineState()
 	if stateErr != nil {
-		return nil, stateErr
+		return transport.DNSBackendReadinessResponse{}, stateErr
 	}
 	if exists && state.Engine == transport.DNSEngineBIND && layoutErr == nil {
 		publisher, _, publisherErr := newHostBINDPublisher(layout)
@@ -276,8 +278,12 @@ func (hostDNSEngineBackend) Readiness(ctx context.Context) ([]transport.DNSBacke
 			tree, treeErr := publisher.LoadCurrent()
 			if treeErr == nil {
 				receipt := tree.CurrentReceipt()
-				states[0].Managed = receipt.EngineEpoch == state.EngineEpoch &&
+				managedEvidence := receipt.EngineEpoch == state.EngineEpoch &&
 					receipt.Generation == state.Generation
+				states[0].Managed = exactActiveDNSBackendManaged(
+					states[0], managedEvidence,
+					func() error { return verifyOnlyBINDActive(ctx, systemctl) },
+				)
 			}
 		}
 	}
@@ -288,7 +294,15 @@ func (hostDNSEngineBackend) Readiness(ctx context.Context) ([]transport.DNSBacke
 		requireManagedDNSClusterReady,
 		func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
 	)
-	return states, nil
+	port53Conflict, err := dnsPort53ConflictCheck(
+		ctx, states[0].Running, states[1].Running,
+	)
+	if err != nil {
+		return transport.DNSBackendReadinessResponse{}, err
+	}
+	return transport.DNSBackendReadinessResponse{
+		Engines: states, Port53Conflict: port53Conflict,
+	}, nil
 }
 
 func powerDNSManagedForBackendReadiness(
@@ -301,16 +315,28 @@ func powerDNSManagedForBackendReadiness(
 	if managedConfigReady == nil {
 		return false
 	}
-	if stateExists {
-		return state.Engine == transport.DNSEnginePowerDNS && managedConfigReady() == nil
+	if stateExists && state.Engine != transport.DNSEnginePowerDNS {
+		return false
 	}
-	if !runtimeState.Installed || !runtimeState.Running || exactActiveRuntimeReady == nil {
+	if !runtimeState.Installed || !runtimeState.Running ||
+		exactActiveRuntimeReady == nil {
 		return false
 	}
 	if err := managedConfigReady(); err != nil {
 		return false
 	}
-	return exactActiveRuntimeReady() == nil
+	return exactActiveDNSBackendManaged(
+		runtimeState, true, exactActiveRuntimeReady,
+	)
+}
+
+func exactActiveDNSBackendManaged(
+	runtimeState transport.DNSBackendRuntimeState,
+	managedEvidence bool,
+	exactActiveRuntimeReady func() error,
+) bool {
+	return managedEvidence && runtimeState.Installed && runtimeState.Running &&
+		exactActiveRuntimeReady != nil && exactActiveRuntimeReady() == nil
 }
 
 func packagesInstalled(profile hostplatform.Profile, packages []string) bool {
@@ -593,15 +619,24 @@ func (hostDNSEngineBackend) Switch(
 			missing = append(missing, packageName)
 		}
 	}
-	if _, err := installBINDPackagesWithGuard(ctx, systemctl, func() (string, error) {
-		if len(missing) == 0 {
-			return "", nil
-		}
-		return installPackagesWithCandidateContext(
-			ctx, string(profile.PackageManager), missing, "",
-		)
-	}); err != nil {
-		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf("install BIND in no-start mode: %w", err)
+	if err := runDNSPort53PreMutationGuard(
+		ctx, !stateExists && manifest.SourceEngine == "",
+		func() error {
+			_, installErr := installBINDPackagesWithGuard(ctx, systemctl, func() (string, error) {
+				if len(missing) == 0 {
+					return "", nil
+				}
+				return installPackagesWithCandidateContext(
+					ctx, string(profile.PackageManager), missing, "",
+				)
+			})
+			if installErr != nil {
+				return fmt.Errorf("install BIND in no-start mode: %w", installErr)
+			}
+			return nil
+		},
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	publisher, validator, err := newHostBINDPublisher(layout)
 	if err != nil {
@@ -908,6 +943,13 @@ func verifyDNSEngineSwitchSource(
 		if manifest.SourceEpoch != 0 || bindUnit.active() ||
 			bindAliasUnit.active() || pdnsUnit.active() {
 			return errors.New("uninitialized DNS source requires no running authoritative DNS engine")
+		}
+		conflict, err := dnsPort53ConflictCheck(ctx, false, false)
+		if err != nil {
+			return err
+		}
+		if conflict {
+			return errors.New("uninitialized DNS source has another public port-53 authority")
 		}
 	default:
 		return errors.New("an unreceipted DNS source cannot be switched implicitly")

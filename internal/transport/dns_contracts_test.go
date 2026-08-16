@@ -92,7 +92,7 @@ func TestDNSZoneSyncV3WireContractBindsEngineAndEpoch(t *testing.T) {
 }
 
 func TestDNSBackendReadinessWireContractIsBounded(t *testing.T) {
-	want := DNSBackendReadinessResponse{Engines: []DNSBackendRuntimeState{
+	want := DNSBackendReadinessResponse{Port53Conflict: true, Engines: []DNSBackendRuntimeState{
 		{Engine: DNSEnginePowerDNS, Installed: true, Running: true, Managed: true, Unit: "pdns.service"},
 		{Engine: DNSEngineBIND, Installed: true, Unit: "named.service"},
 	}}
