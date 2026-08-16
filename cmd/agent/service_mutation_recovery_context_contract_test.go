@@ -22,7 +22,7 @@ func TestCancellingRecoveryContextRequiresDurableTracker(t *testing.T) {
 	}
 }
 
-func TestCancellingRecoveryContextIsRestrictedToVPNPeerRollback(t *testing.T) {
+func TestCancellingRecoveryContextIsRestrictedToExplicitRollbackPaths(t *testing.T) {
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)
@@ -53,9 +53,11 @@ func TestCancellingRecoveryContextIsRestrictedToVPNPeerRollback(t *testing.T) {
 					return true
 				}
 				uses++
-				if filepath.Base(name) != "vpn_rpc.go" || function.Name.Name != "SyncVPNPeersV2" {
+				allowed := (filepath.Base(name) == "vpn_rpc.go" && function.Name.Name == "SyncVPNPeersV2") ||
+					(filepath.Base(name) == "bind_install_guard.go" && function.Name.Name == "installBINDPackagesWithGuard")
+				if !allowed {
 					t.Errorf(
-						"cancelling recovery context used outside VPN peer rollback at %s:%d in %s",
+						"cancelling recovery context used outside an explicit rollback path at %s:%d in %s",
 						name,
 						set.Position(call.Pos()).Line,
 						function.Name.Name,
@@ -65,7 +67,7 @@ func TestCancellingRecoveryContextIsRestrictedToVPNPeerRollback(t *testing.T) {
 			})
 		}
 	}
-	if uses != 3 {
-		t.Fatalf("cancelling recovery context uses=%d want=3 VPN rollback paths", uses)
+	if uses != 4 {
+		t.Fatalf("cancelling recovery context uses=%d want=4 explicit rollback paths", uses)
 	}
 }

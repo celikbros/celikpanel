@@ -40,3 +40,14 @@ func TestServiceStartsAfterPanelSetup(t *testing.T) {
 		}
 	}
 }
+
+func TestBINDPackageAutoStartGuardDoesNotAffectOtherServices(t *testing.T) {
+	if !serviceUsesBINDPackageInstallGuard("bind") {
+		t.Fatal("BIND must use the package-maintainer auto-start guard")
+	}
+	for _, id := range []string{"pdns", "nginx", "postfix", "dovecot", "wireguard"} {
+		if serviceUsesBINDPackageInstallGuard(id) {
+			t.Errorf("%s unexpectedly uses the BIND package install guard", id)
+		}
+	}
+}
