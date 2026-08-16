@@ -53,6 +53,11 @@ func TestDNSEngineSwitchJournalCanonicalRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tamperedPeer := journal
+	tamperedPeer.PeerIP = "192.0.2.54"
+	if _, err := encodeDNSEngineSwitchJournal(tamperedPeer); err == nil {
+		t.Fatal("adoption journal accepted a peer tuple outside its manifest qualifier")
+	}
 	decoded, err := decodeDNSEngineSwitchJournal(encoded)
 	if err != nil {
 		t.Fatal(err)
@@ -157,10 +162,11 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 	t.Cleanup(func() {
 		dnsMainConf, dnsManagedConf, dnsClusterConf = previousMain, previousManaged, previousCluster
 	})
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		transport.DNSEngineSwitchModeAdopt,
 		"", transport.DNSEnginePowerDNS, 0, 1, 12,
-		transport.DNSTopologyPaired, nil,
+		transport.DNSTopologyPaired,
+		testPDNSAdoptionPeerIP, testPDNSAdoptionPeerNS, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -184,6 +190,7 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 		ManifestQualifier: manifest.Qualifier,
 		TargetEngine:      manifest.TargetEngine, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 		StateBefore:  dnsFileSnapshot{Path: filepath.Join(root, "dns-engine-state.json")},
 		ConfigBefore: configs,

@@ -127,7 +127,9 @@ func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
 		Mode:         DNSEngineSwitchModeSwitch,
 		SourceEngine: DNSEnginePowerDNS, TargetEngine: DNSEngineBIND,
 		SourceEpoch: 2, TargetEpoch: 3, SourceRevision: 7,
-		Topology:      DNSTopologyStandalone,
+		Topology:      DNSTopologyPaired,
+		PeerIP:        "192.0.2.53",
+		PeerNS:        "ns2.example.test",
 		SnapshotBytes: 123,
 		Zones: []DNSEngineSwitchZoneSnapshot{{
 			Ordinal: 0, Domain: "example.test", DesiredGeneration: 11,

@@ -273,10 +273,11 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		return errors.New("PowerDNS rollback found an unexpected database backup")
 	}
 	if liveExists {
-		manifest, canonicalErr := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		manifest, canonicalErr := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 			journal.Mode,
 			journal.SourceEngine, journal.TargetEngine, journal.SourceEpoch,
-			journal.TargetEpoch, journal.SourceRevision, journal.Topology, journal.Zones,
+			journal.TargetEpoch, journal.SourceRevision, journal.Topology,
+			journal.PeerIP, journal.PeerNS, journal.Zones,
 		)
 		binding := transport.ServiceMutationBinding{
 			MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
@@ -486,7 +487,8 @@ func switchToPDNS(
 		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
 		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
 		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
-		Topology: manifest.Topology, SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		Topology: manifest.Topology, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 		StateBefore: stateBefore, ConfigBefore: configs.before,
 		TargetUnitsBefore: targetBefore, SourceUnitsBefore: sourceBefore,
 		PDNSCandidatePath: candidate, PDNSBackupPath: backup,

@@ -115,6 +115,8 @@ type DNSEngineSwitchManifestCommitment struct {
 	TargetEpoch    int64
 	SourceRevision int64
 	Topology       string
+	PeerIP         string
+	PeerNS         string
 	Zones          []transport.DNSEngineSwitchZoneSnapshot
 	SnapshotBytes  int64
 	Qualifier      string
@@ -125,6 +127,23 @@ func CanonicalDNSEngineSwitchManifest(
 	sourceEngine, targetEngine transport.DNSEngine,
 	sourceEpoch, targetEpoch, sourceRevision int64,
 	topology string,
+	zones []transport.DNSEngineSwitchZoneSnapshot,
+) (DNSEngineSwitchManifestCommitment, error) {
+	return CanonicalDNSEngineSwitchManifestWithPeer(
+		mode, sourceEngine, targetEngine,
+		sourceEpoch, targetEpoch, sourceRevision,
+		topology, "", "", zones,
+	)
+}
+
+// CanonicalDNSEngineSwitchManifestWithPeer binds the exact managed peer tuple
+// used by paired PowerDNS adoption. Standalone operations must use an empty
+// tuple, so crash recovery never needs to consult mutable panel settings.
+func CanonicalDNSEngineSwitchManifestWithPeer(
+	mode string,
+	sourceEngine, targetEngine transport.DNSEngine,
+	sourceEpoch, targetEpoch, sourceRevision int64,
+	topology, peerIP, peerNS string,
 	zones []transport.DNSEngineSwitchZoneSnapshot,
 ) (DNSEngineSwitchManifestCommitment, error) {
 	if mode != transport.DNSEngineSwitchModeSwitch &&
@@ -160,6 +179,10 @@ func CanonicalDNSEngineSwitchManifest(
 	if mode == transport.DNSEngineSwitchModeAdopt &&
 		topology != transport.DNSTopologyStandalone && topology != transport.DNSTopologyPaired {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("PowerDNS adoption topology must be standalone or paired")
+	}
+	cluster, err := CanonicalDNSClusterConfig(topology, peerIP, peerNS)
+	if err != nil {
+		return DNSEngineSwitchManifestCommitment{}, err
 	}
 	if len(zones) > dnsEngineSwitchMaxZones {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch manifest exceeds the zone limit")
@@ -206,7 +229,8 @@ func CanonicalDNSEngineSwitchManifest(
 		Mode:         mode,
 		SourceEngine: sourceEngine, TargetEngine: targetEngine,
 		SourceEpoch: sourceEpoch, TargetEpoch: targetEpoch,
-		SourceRevision: sourceRevision, Topology: topology, Zones: frozen,
+		SourceRevision: sourceRevision, Topology: cluster.Role,
+		PeerIP: cluster.PeerIP, PeerNS: cluster.PeerNS, Zones: frozen,
 		SnapshotBytes: snapshotBytes,
 	}
 	commitment.Qualifier = qualifyDNSEngineSwitch(commitment)
@@ -252,6 +276,8 @@ func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string
 	writeDNSEngineUint64(digest, commitment.TargetEpoch)
 	writeDNSEngineUint64(digest, commitment.SourceRevision)
 	writeDNSEngineDigestFrame(digest, []byte(commitment.Topology))
+	writeDNSEngineDigestFrame(digest, []byte(commitment.PeerIP))
+	writeDNSEngineDigestFrame(digest, []byte(commitment.PeerNS))
 	writeDNSEngineUint64(digest, commitment.SnapshotBytes)
 	writeDNSEngineUint32(digest, len(commitment.Zones))
 	for _, zone := range commitment.Zones {

@@ -68,6 +68,8 @@ type dnsEngineSwitchJournal struct {
 	TargetEpoch        int64                                   `json:"target_epoch"`
 	SourceRevision     int64                                   `json:"source_revision"`
 	Topology           string                                  `json:"topology"`
+	PeerIP             string                                  `json:"peer_ip,omitempty"`
+	PeerNS             string                                  `json:"peer_ns,omitempty"`
 	SnapshotBytes      int64                                   `json:"snapshot_bytes"`
 	Zones              []transport.DNSEngineSwitchZoneSnapshot `json:"zones"`
 	TargetGeneration   string                                  `json:"target_generation,omitempty"`
@@ -175,11 +177,11 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		!mutationpayload.ValidDNSEngineSwitchQualifier(journal.ManifestQualifier) {
 		return errors.New("DNS engine switch journal identity is invalid")
 	}
-	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		journal.Mode,
 		journal.SourceEngine, journal.TargetEngine,
 		journal.SourceEpoch, journal.TargetEpoch, journal.SourceRevision,
-		journal.Topology, journal.Zones,
+		journal.Topology, journal.PeerIP, journal.PeerNS, journal.Zones,
 	)
 	if err != nil || commitment.Qualifier != journal.ManifestQualifier ||
 		commitment.SnapshotBytes != journal.SnapshotBytes ||

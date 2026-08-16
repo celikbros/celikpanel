@@ -24,6 +24,8 @@ CREATE TABLE dns_engine_switch_snapshots (
     target_epoch INTEGER NOT NULL CHECK (target_epoch = source_epoch + 1),
     source_state_revision INTEGER NOT NULL CHECK (source_state_revision >= 0),
     topology TEXT NOT NULL CHECK (topology IN ('standalone', 'paired')),
+    peer_ip TEXT NOT NULL DEFAULT '',
+    peer_ns TEXT NOT NULL DEFAULT '',
     phase TEXT NOT NULL DEFAULT 'planned'
         CHECK (phase IN (
             'planned', 'staging', 'staged', 'activating', 'verifying',
@@ -52,6 +54,26 @@ CREATE TABLE dns_engine_switch_snapshots (
         OR (source_engine IS NOT NULL AND source_epoch >= 1)
     ),
     CHECK (source_engine IS NULL OR source_engine <> target_engine),
+    CHECK (
+        (topology = 'standalone' AND peer_ip = '' AND peer_ns = '')
+        OR (
+            mode = 'adopt'
+            AND topology = 'paired'
+            AND length(peer_ip) BETWEEN 7 AND 15
+            AND peer_ip NOT GLOB '*[^0-9.]*'
+            AND length(peer_ip) - length(replace(peer_ip, '.', '')) = 3
+            AND substr(peer_ip, 1, 1) <> '.'
+            AND substr(peer_ip, -1, 1) <> '.'
+            AND length(peer_ns) BETWEEN 3 AND 253
+            AND peer_ns = lower(peer_ns)
+            AND peer_ns = trim(peer_ns)
+            AND peer_ns NOT GLOB '*[^a-z0-9.-]*'
+            AND instr(peer_ns, '.') > 1
+            AND substr(peer_ns, 1, 1) NOT IN ('.', '-')
+            AND substr(peer_ns, -1, 1) NOT IN ('.', '-')
+            AND instr(peer_ns, '..') = 0
+        )
+    ),
     CHECK (
         (mode = 'switch' AND topology = 'standalone')
         OR (
@@ -397,6 +419,8 @@ WHEN NEW.switch_id <> OLD.switch_id
   OR NEW.target_epoch <> OLD.target_epoch
   OR NEW.source_state_revision <> OLD.source_state_revision
   OR NEW.topology <> OLD.topology
+  OR NEW.peer_ip <> OLD.peer_ip
+  OR NEW.peer_ns <> OLD.peer_ns
   OR NEW.manifest_qualifier <> OLD.manifest_qualifier
   OR NEW.zone_count <> OLD.zone_count
   OR NEW.snapshot_bytes <> OLD.snapshot_bytes
@@ -567,6 +591,40 @@ WHEN (NEW.active_engine IS NOT OLD.active_engine
  )
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine identity or topology lacks durable authority');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_peer_setting_insert
+BEFORE INSERT ON panel_settings
+WHEN NEW.key IN ('dns_role', 'dns_peer_ip', 'dns_peer_ns')
+ AND EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'DNS peer identity is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_peer_setting_update
+BEFORE UPDATE ON panel_settings
+WHEN (OLD.key IN ('dns_role', 'dns_peer_ip', 'dns_peer_ns')
+      OR NEW.key IN ('dns_role', 'dns_peer_ip', 'dns_peer_ns'))
+ AND EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'DNS peer identity is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_peer_setting_delete
+BEFORE DELETE ON panel_settings
+WHEN OLD.key IN ('dns_role', 'dns_peer_ip', 'dns_peer_ns')
+ AND EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'DNS peer identity is frozen during engine switch');
 END;
 
 -- The switch snapshot is authoritative from attachment through terminal

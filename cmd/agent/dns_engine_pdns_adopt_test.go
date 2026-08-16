@@ -12,6 +12,11 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
+const (
+	testPDNSAdoptionPeerIP = "192.0.2.53"
+	testPDNSAdoptionPeerNS = "ns2.example.test"
+)
+
 func testPDNSAdoptionManifest(
 	t *testing.T,
 	topology string,
@@ -25,9 +30,14 @@ func testPDNSAdoptionManifest(
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+	peerIP, peerNS := "", ""
+	if topology == transport.DNSTopologyPaired {
+		peerIP, peerNS = testPDNSAdoptionPeerIP, testPDNSAdoptionPeerNS
+	}
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		transport.DNSEngineSwitchModeAdopt,
 		"", transport.DNSEnginePowerDNS, 0, 1, 17, topology,
+		peerIP, peerNS,
 		[]transport.DNSEngineSwitchZoneSnapshot{{
 			Domain: domain, DesiredGeneration: 9, ZoneType: "NATIVE",
 			Records: zone.Records, ZoneQualifier: zone.Qualifier,
@@ -84,9 +94,15 @@ func createPDNSAdoptionDatabase(
 	}
 	if paired {
 		if _, err := db.Exec(`
-			INSERT INTO domains (name, type, master)
-			VALUES ('peer-owned.test', 'SLAVE', '192.0.2.53')
-		`); err != nil {
+			INSERT INTO domains (name, type, master, account)
+			VALUES ('peer-owned.test', 'SLAVE', ?, 'celikpanel')
+		`, testPDNSAdoptionPeerIP); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`
+			INSERT INTO supermasters (ip, nameserver, account)
+			VALUES (?, ?, 'celikpanel')
+		`, testPDNSAdoptionPeerIP, testPDNSAdoptionPeerNS); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -160,6 +176,53 @@ func TestVerifyPDNSAdoptionRejectsExtraStandaloneAndTamperedZone(t *testing.T) {
 	}
 }
 
+func TestVerifyPDNSAdoptionRejectsMismatchedPairedOwnership(t *testing.T) {
+	domain := "example.test"
+	records := testPDNSEngineRecords(domain)
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyPaired, domain, records,
+	)
+	tests := []struct {
+		name   string
+		mutate string
+	}{
+		{name: "secondary master", mutate: `
+			UPDATE domains SET master = '192.0.2.54'
+			WHERE name = 'peer-owned.test'`},
+		{name: "secondary owner", mutate: `
+			UPDATE domains SET account = 'manual'
+			WHERE name = 'peer-owned.test'`},
+		{name: "autoprimary ip", mutate: `
+			UPDATE supermasters SET ip = '192.0.2.54'`},
+		{name: "autoprimary nameserver", mutate: `
+			UPDATE supermasters SET nameserver = 'other.example.test'`},
+		{name: "autoprimary owner", mutate: `
+			UPDATE supermasters SET account = 'manual'`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+			createPDNSAdoptionDatabase(t, path, domain, records, true, false)
+			db, err := openPDNSEngineDB(path, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(test.mutate); err != nil {
+				db.Close()
+				t.Fatal(err)
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := verifyPDNSAdoptionDatabase(
+				context.Background(), path, manifest,
+			); err == nil {
+				t.Fatal("paired adoption accepted mismatched peer ownership")
+			}
+		})
+	}
+}
+
 func TestPDNSAdoptionUnitEvidenceRejectsAnotherRunningEngine(t *testing.T) {
 	before := []dnsUnitSnapshot{
 		{Name: "bind9.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"},
@@ -209,20 +272,37 @@ func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
 	previous := dnsClusterConf
 	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
 	t.Cleanup(func() { dnsClusterConf = previous })
-	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyStandalone); err != nil {
+	standalone := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, "example.test",
+		testPDNSEngineRecords("example.test"),
+	)
+	paired := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyPaired, "example.test",
+		testPDNSEngineRecords("example.test"),
+	)
+	if err := verifyPDNSAdoptionTopology(standalone); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyPaired); err == nil {
+	if err := verifyPDNSAdoptionTopology(paired); err == nil {
 		t.Fatal("paired adoption accepted an absent cluster config")
 	}
-	if err := os.WriteFile(dnsClusterConf, []byte("paired\n"), 0o640); err != nil {
+	expected := dnsClusterConfig(&DNSClusterRequest{
+		Role: dnsRolePaired, PeerIP: testPDNSAdoptionPeerIP,
+		PeerNS: testPDNSAdoptionPeerNS,
+	})
+	if err := os.WriteFile(dnsClusterConf, []byte(expected), 0o640); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyPaired); err != nil {
+	if err := verifyPDNSAdoptionTopology(paired); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyStandalone); err == nil {
+	if err := verifyPDNSAdoptionTopology(standalone); err == nil {
 		t.Fatal("standalone adoption accepted an active paired config")
+	}
+	tampered := paired
+	tampered.PeerIP = "192.0.2.54"
+	if err := verifyPDNSAdoptionTopology(tampered); err == nil {
+		t.Fatal("paired adoption accepted a different managed peer")
 	}
 }
 
@@ -238,6 +318,7 @@ func TestPDNSAdoptionTransactionBindingAcceptsOnlyExactSelfJournal(t *testing.T)
 		ManifestQualifier: manifest.Qualifier,
 		TargetEngine:      manifest.TargetEngine, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 	}
 	exactState := dnsEngineStateReceipt{

@@ -1364,6 +1364,9 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		DROP TRIGGER dns_engine_state_attach_switch_guard;
 		DROP TRIGGER dns_engine_state_detach_switch_guard;
 		DROP TRIGGER dns_engine_state_engine_change_guard;
+		DROP TRIGGER dns_engine_switch_freeze_peer_setting_insert;
+		DROP TRIGGER dns_engine_switch_freeze_peer_setting_update;
+		DROP TRIGGER dns_engine_switch_freeze_peer_setting_delete;
 		DROP TRIGGER dns_engine_switch_freeze_domain_insert;
 		DROP TRIGGER dns_engine_switch_freeze_domain_update;
 		DROP TRIGGER dns_engine_switch_freeze_domain_delete;

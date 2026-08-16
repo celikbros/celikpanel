@@ -667,14 +667,18 @@ func insertDNSEngineSnapshotForTest(
 	sourceEpoch, targetEpoch, sourceRevision int64,
 	topology string,
 ) error {
+	peerIP, peerNS := "", ""
+	if topology == "paired" {
+		peerIP, peerNS = "192.0.2.53", "ns2.example.test"
+	}
 	_, err := database.Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
 			switch_id, request_id, owner_id, mode, source_engine, target_engine,
-			source_epoch, target_epoch, source_state_revision, topology,
+			source_epoch, target_epoch, source_state_revision, topology, peer_ip, peer_ns,
 			phase, manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, 0, 0)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, 0, 0)`,
 		switchID, requestID, ownerID, mode, sourceEngine, targetEngine,
-		sourceEpoch, targetEpoch, sourceRevision, topology,
+		sourceEpoch, targetEpoch, sourceRevision, topology, peerIP, peerNS,
 		testDNSSwitchQualifier,
 	)
 	return err
@@ -721,7 +725,7 @@ func requireDNSEngineSQLFailure(
 }
 
 func TestDNSEngineMigrationParticipatesInReferenceSchemaContract(t *testing.T) {
-	objects, err := ReferenceSQLiteUserSchema(context.Background(), 33)
+	objects, err := ReferenceSQLiteUserSchema(context.Background(), 35)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -736,6 +740,9 @@ func TestDNSEngineMigrationParticipatesInReferenceSchemaContract(t *testing.T) {
 		"trigger/dns_zone_sync_state_legacy_lease_conflict_guard": false,
 		"trigger/dns_engine_switch_freeze_domain_insert":          false,
 		"trigger/dns_engine_switch_freeze_record_update":          false,
+		"trigger/dns_engine_switch_freeze_peer_setting_insert":    false,
+		"trigger/dns_engine_switch_freeze_peer_setting_update":    false,
+		"trigger/dns_engine_switch_freeze_peer_setting_delete":    false,
 	}
 	for _, object := range objects {
 		key := object.Type + "/" + object.Name
@@ -748,6 +755,64 @@ func TestDNSEngineMigrationParticipatesInReferenceSchemaContract(t *testing.T) {
 			t.Errorf("reference/rescue schema contract is missing %s", key)
 		}
 	}
+}
+
+func TestDNSEnginePeerSnapshotMigratesReleased032ToCurrent(t *testing.T) {
+	database := newPreDNSEngineMigrationDB(t)
+	for _, version := range []int{33, 34, 35} {
+		applyEmbeddedMigrationVersion(t, database, version)
+	}
+
+	requireDNSEngineSQLFailure(t, database, "paired snapshot without peer tuple", `
+		INSERT INTO dns_engine_switch_snapshots (
+			switch_id, request_id, owner_id, mode, source_engine, target_engine,
+			source_epoch, target_epoch, source_state_revision, topology,
+			phase, manifest_qualifier, zone_count, snapshot_bytes
+		) VALUES (?, ?, ?, 'adopt', NULL, 'pdns', 0, 1, 0, 'paired',
+		          'planned', ?, 0, 0)`,
+		strings.Repeat("1", 32), strings.Repeat("2", 32),
+		strings.Repeat("3", 32), testDNSSwitchQualifier,
+	)
+
+	switchID := strings.Repeat("4", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("5", 32), strings.Repeat("6", 32),
+		"adopt", nil, "pdns", 0, 1, 0, "paired",
+	); err != nil {
+		t.Fatalf("insert exact paired snapshot after released-032 migration: %v", err)
+	}
+	var peerIP, peerNS string
+	if err := database.QueryRow(`
+		SELECT peer_ip, peer_ns FROM dns_engine_switch_snapshots
+		WHERE switch_id = ?`, switchID,
+	).Scan(&peerIP, &peerNS); err != nil {
+		t.Fatal(err)
+	}
+	if peerIP != "192.0.2.53" || peerNS != "ns2.example.test" {
+		t.Fatalf("persisted peer tuple=%q/%q", peerIP, peerNS)
+	}
+	if _, err := database.Exec(`
+		INSERT INTO panel_settings(key, value) VALUES
+		('dns_role', 'paired'), ('dns_peer_ip', '192.0.2.53')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state SET current_switch_id = ?, revision = 1,
+		       updated_at = datetime('now') WHERE singleton_id = 1`, switchID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "peer setting update while attached", `
+		UPDATE panel_settings SET value = '192.0.2.54' WHERE key = 'dns_peer_ip'`)
+	requireDNSEngineSQLFailure(t, database, "peer setting delete while attached", `
+		DELETE FROM panel_settings WHERE key = 'dns_role'`)
+	requireDNSEngineSQLFailure(t, database, "peer setting insert while attached", `
+		INSERT INTO panel_settings(key, value) VALUES ('dns_peer_ns', 'other.test')`)
+	requireDNSEngineSQLFailure(t, database, "peer tuple identity mutation", `
+		UPDATE dns_engine_switch_snapshots SET peer_ip = '192.0.2.54'
+		WHERE switch_id = ?`, switchID)
+	assertForeignKeyCheckClean(t, database)
 }
 
 func TestDNSEngineMigration034RetainsModeAwareAttachmentGuard(t *testing.T) {

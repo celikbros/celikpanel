@@ -1042,11 +1042,82 @@ func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T)
 		t.Fatalf("paired adopted state=%+v", state)
 	}
 	agent.mu.Lock()
-	defer agent.mu.Unlock()
 	if len(agent.switchRequests) != 1 ||
 		agent.switchRequests[0].Mode != transport.DNSEngineSwitchModeAdopt ||
-		agent.switchRequests[0].Topology != transport.DNSTopologyPaired {
+		agent.switchRequests[0].Topology != transport.DNSTopologyPaired ||
+		agent.switchRequests[0].PeerIP != "2.25.80.4" ||
+		agent.switchRequests[0].PeerNS != "ns2.celikhost.com" {
+		agent.mu.Unlock()
 		t.Fatalf("paired adoption request=%+v", agent.switchRequests)
+	}
+	agent.mu.Unlock()
+	persisted, err := readDNSEngineSwitchByRequest(
+		context.Background(), panel.db.GetDB(), strings.Repeat("6", 32),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persisted.PeerIP != "2.25.80.4" || persisted.PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("persisted peer tuple=%q/%q", persisted.PeerIP, persisted.PeerNS)
+	}
+	if err := panel.setSetting(
+		context.Background(), settingDNSPeerIP, "192.0.2.99",
+	); err != nil {
+		t.Fatal(err)
+	}
+	reconstructed, err := panel.reconstructPersistedDNSEngineManifest(
+		context.Background(), persisted,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reconstructed.PeerIP != "2.25.80.4" ||
+		reconstructed.PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("recovery reread mutable settings: %+v", reconstructed)
+	}
+}
+
+func TestDNSEnginePairedPeerChangeBeforePersistenceIsZeroTouch(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "paired")
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := panel.buildDNSEngineManifest(
+		context.Background(), state, transport.DNSEnginePowerDNS,
+		"adopt", transport.DNSTopologyPaired,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.setSetting(
+		context.Background(), settingDNSPeerIP, "192.0.2.99",
+	); err != nil {
+		t.Fatal(err)
+	}
+	request := dnsEngineSwitchRequest{
+		RequestID:      strings.Repeat("7", 32),
+		TargetEngine:   transport.DNSEnginePowerDNS,
+		ExpectedSource: nullableDNSEngine{Set: true}, ExpectedRevision: 0,
+	}
+	if _, err := panel.persistDNSEngineSwitch(
+		context.Background(), request, strings.Repeat("8", 32),
+		strings.Repeat("9", 32), "adopt", manifest,
+	); err == nil {
+		t.Fatal("paired adoption persisted after the peer identity changed")
+	}
+	var snapshots int
+	var attached sql.NullString
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT (SELECT count(*) FROM dns_engine_switch_snapshots), current_switch_id
+		FROM dns_engine_state WHERE singleton_id = 1
+	`).Scan(&snapshots, &attached); err != nil {
+		t.Fatal(err)
+	}
+	if snapshots != 0 || attached.Valid {
+		t.Fatalf("peer mismatch mutated durable state: snapshots=%d attached=%v",
+			snapshots, attached)
 	}
 }
 
@@ -1271,10 +1342,18 @@ func persistEmptyDNSEngineSwitchForTest(
 		action = "adopt"
 		topology = transport.DNSTopologyPaired
 	}
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+	peerIP, peerNS := "", ""
+	if topology == transport.DNSTopologyPaired {
+		snapshot, snapshotErr := panel.dnsClusterAgentSnapshot(context.Background())
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		peerIP, peerNS = snapshot.PeerIP, snapshot.PeerNS
+	}
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		mode,
 		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
-		state.Revision, topology, nil,
+		state.Revision, topology, peerIP, peerNS, nil,
 	)
 	if err != nil {
 		t.Fatal(err)

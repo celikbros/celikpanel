@@ -718,6 +718,46 @@ func (cache *dnsEnginePreviewCache) consume(
 	return entry, true
 }
 
+func canonicalDNSEnginePeerSnapshotTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	topology string,
+) (string, string, error) {
+	rawRole, err := settingTx(ctx, tx, settingDNSRole)
+	if err != nil {
+		return "", "", err
+	}
+	storedRole := normalizeDNSRole(strings.TrimSpace(rawRole))
+	if strings.TrimSpace(rawRole) == "" {
+		storedRole = transport.DNSTopologyStandalone
+	}
+	if storedRole != topology {
+		return "", "", errors.New(
+			"stored DNS peer topology differs from the observed authority",
+		)
+	}
+	if topology == transport.DNSTopologyStandalone {
+		return "", "", nil
+	}
+	peerIP, err := settingTx(ctx, tx, settingDNSPeerIP)
+	if err != nil {
+		return "", "", err
+	}
+	peerNS, err := settingTx(ctx, tx, settingDNSPeerNS)
+	if err != nil {
+		return "", "", err
+	}
+	peer, err := mutationpayload.CanonicalDNSClusterConfig(
+		topology,
+		strings.TrimSpace(peerIP),
+		strings.ToLower(strings.TrimSpace(strings.TrimSuffix(peerNS, "."))),
+	)
+	if err != nil {
+		return "", "", err
+	}
+	return peer.PeerIP, peer.PeerNS, nil
+}
+
 func (p *Panel) buildDNSEngineManifest(
 	ctx context.Context,
 	state dnsEngineDBState,
@@ -750,6 +790,10 @@ func (p *Panel) buildDNSEngineManifest(
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
 	}
 	defer tx.Rollback()
+	peerIP, peerNS, err := canonicalDNSEnginePeerSnapshotTx(ctx, tx, topology)
+	if err != nil {
+		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
+	}
 	var leases int
 	if err := tx.QueryRowContext(ctx, `
 		SELECT
@@ -844,10 +888,10 @@ func (p *Panel) buildDNSEngineManifest(
 	if err := tx.Commit(); err != nil {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
 	}
-	return mutationpayload.CanonicalDNSEngineSwitchManifest(
+	return mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		mode,
 		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
-		state.Revision, topology, zones,
+		state.Revision, topology, peerIP, peerNS, zones,
 	)
 }
 
@@ -981,6 +1025,8 @@ type persistedDNSEngineSwitch struct {
 	Action         string
 	Mode           string
 	Topology       string
+	PeerIP         string
+	PeerNS         string
 	Phase          string
 	Qualifier      string
 	ZoneCount      int
@@ -997,13 +1043,14 @@ func readDNSEngineSwitchByRequest(
 	err := query.QueryRowContext(ctx, `
 		SELECT switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		       source_epoch, target_epoch, source_state_revision, phase,
-		       topology, manifest_qualifier, zone_count, snapshot_bytes
+		       topology, peer_ip, peer_ns, manifest_qualifier, zone_count, snapshot_bytes
 		FROM dns_engine_switch_snapshots WHERE request_id = ?`,
 		requestID,
 	).Scan(
 		&result.SwitchID, &result.RequestID, &result.OwnerID, &result.Mode, &source,
 		&result.TargetEngine, &result.SourceEpoch, &result.TargetEpoch,
-		&result.SourceRevision, &result.Phase, &result.Topology, &result.Qualifier,
+		&result.SourceRevision, &result.Phase, &result.Topology,
+		&result.PeerIP, &result.PeerNS, &result.Qualifier,
 		&result.ZoneCount, &result.SnapshotBytes,
 	)
 	if source.Valid {
@@ -1017,6 +1064,16 @@ func readDNSEngineSwitchByRequest(
 		return persistedDNSEngineSwitch{}, errors.New(
 			"persisted DNS engine switch identity is invalid",
 		)
+	}
+	if err == nil {
+		peer, peerErr := mutationpayload.CanonicalDNSClusterConfig(
+			result.Topology, result.PeerIP, result.PeerNS,
+		)
+		if peerErr != nil || peer.PeerIP != result.PeerIP || peer.PeerNS != result.PeerNS {
+			return persistedDNSEngineSwitch{}, errors.New(
+				"persisted DNS engine peer identity is invalid",
+			)
+		}
 	}
 	return result, err
 }
@@ -1069,6 +1126,17 @@ func (p *Panel) persistDNSEngineSwitch(
 		state.Revision != manifest.SourceRevision {
 		return persistedDNSEngineSwitch{}, errors.New("DNS engine state changed before switch persistence")
 	}
+	peerIP, peerNS, err := canonicalDNSEnginePeerSnapshotTx(
+		ctx, tx, manifest.Topology,
+	)
+	if err != nil {
+		return persistedDNSEngineSwitch{}, err
+	}
+	if peerIP != manifest.PeerIP || peerNS != manifest.PeerNS {
+		return persistedDNSEngineSwitch{}, errors.New(
+			"DNS peer identity changed before switch persistence",
+		)
+	}
 	var source any
 	if manifest.SourceEngine != "" {
 		source = string(manifest.SourceEngine)
@@ -1076,12 +1144,14 @@ func (p *Panel) persistDNSEngineSwitch(
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dns_engine_switch_snapshots (
 		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
-		  source_epoch, target_epoch, source_state_revision, topology, phase,
+		  source_epoch, target_epoch, source_state_revision, topology,
+		  peer_ip, peer_ns, phase,
 		  manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?)`,
 		switchID, request.RequestID, ownerID, manifest.Mode, source,
 		manifest.TargetEngine, manifest.SourceEpoch, manifest.TargetEpoch,
-		manifest.SourceRevision, manifest.Topology, manifest.Qualifier,
+		manifest.SourceRevision, manifest.Topology, manifest.PeerIP, manifest.PeerNS,
+		manifest.Qualifier,
 		len(manifest.Zones), manifest.SnapshotBytes,
 	); err != nil {
 		return persistedDNSEngineSwitch{}, err
@@ -1183,6 +1253,7 @@ func (p *Panel) persistDNSEngineSwitch(
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision,
 		Action:         action, Mode: mode, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		Phase:     "activating",
 		Qualifier: manifest.Qualifier, ZoneCount: len(manifest.Zones),
 		SnapshotBytes: manifest.SnapshotBytes,
@@ -1588,11 +1659,12 @@ func (p *Panel) reconstructPersistedDNSEngineManifest(
 		return mutationpayload.DNSEngineSwitchManifestCommitment{},
 			errors.New("persisted DNS engine snapshot size or count mismatch")
 	}
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
 		persisted.Mode,
 		persisted.SourceEngine, persisted.TargetEngine,
 		persisted.SourceEpoch, persisted.TargetEpoch,
-		persisted.SourceRevision, persisted.Topology, zones,
+		persisted.SourceRevision, persisted.Topology,
+		persisted.PeerIP, persisted.PeerNS, zones,
 	)
 	if err != nil {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
@@ -1613,6 +1685,7 @@ func dnsEngineSwitchRequestForManifest(
 		SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		Zones: manifest.Zones, SnapshotBytes: manifest.SnapshotBytes,
 		ManifestQualifier: manifest.Qualifier,
 	}

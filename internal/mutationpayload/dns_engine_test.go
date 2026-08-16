@@ -183,7 +183,33 @@ func TestCanonicalDNSEngineSwitchManifestBindsExplicitMode(t *testing.T) {
 		transport.DNSEngineSwitchModeAdopt,
 		"", transport.DNSEnginePowerDNS, 0, 1, 4,
 		transport.DNSTopologyPaired, nil,
-	); err != nil {
+	); err == nil {
+		t.Fatal("paired managed PowerDNS adoption accepted a missing peer tuple")
+	}
+	paired, err := CanonicalDNSEngineSwitchManifestWithPeer(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyPaired, "192.0.2.53", "ns2.example.test", nil,
+	)
+	if err != nil {
 		t.Fatalf("paired managed PowerDNS adoption was rejected: %v", err)
+	}
+	changed, err := CanonicalDNSEngineSwitchManifestWithPeer(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyPaired, "192.0.2.54", "ns2.example.test", nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paired.Qualifier == changed.Qualifier {
+		t.Fatal("paired manifest qualifier did not bind the peer tuple")
+	}
+	if _, err := CanonicalDNSEngineSwitchManifestWithPeer(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 4,
+		transport.DNSTopologyStandalone, "192.0.2.53", "ns2.example.test", nil,
+	); err == nil {
+		t.Fatal("standalone manifest accepted a peer tuple")
 	}
 }

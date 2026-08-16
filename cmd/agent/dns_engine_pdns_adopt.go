@@ -68,7 +68,7 @@ func verifyPDNSAdoptionDatabase(
 	}
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT name, type FROM domains
+		SELECT name, type, COALESCE(master, ''), COALESCE(account, '') FROM domains
 		ORDER BY name COLLATE BINARY, type COLLATE BINARY, id
 	`)
 	if err != nil {
@@ -77,8 +77,8 @@ func verifyPDNSAdoptionDatabase(
 	defer rows.Close()
 	seen := make(map[string]struct{})
 	for rows.Next() {
-		var name, zoneType string
-		if err := rows.Scan(&name, &zoneType); err != nil {
+		var name, zoneType, master, account string
+		if err := rows.Scan(&name, &zoneType, &master, &account); err != nil {
 			return err
 		}
 		if !serviceMutationCanonicalFQDN(name) {
@@ -96,12 +96,32 @@ func verifyPDNSAdoptionDatabase(
 		}
 		if manifest.Topology != transport.DNSTopologyPaired ||
 			(strings.ToUpper(zoneType) != "SLAVE" &&
-				strings.ToUpper(zoneType) != "SECONDARY") {
+				strings.ToUpper(zoneType) != "SECONDARY") ||
+			master != manifest.PeerIP || account != "celikpanel" {
 			return errors.New("PowerDNS adoption found an unowned extra zone")
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return err
+	}
+	var supermasters, exactSupermasters int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
+		&supermasters,
+	); err != nil {
+		return err
+	}
+	if manifest.Topology == transport.DNSTopologyPaired {
+		if err := tx.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM supermasters
+			WHERE ip = ? AND nameserver = ? AND account = 'celikpanel'
+		`, manifest.PeerIP, manifest.PeerNS).Scan(&exactSupermasters); err != nil {
+			return err
+		}
+		if supermasters != 1 || exactSupermasters != 1 {
+			return errors.New("PowerDNS adoption autoprimary peer differs from the manifest")
+		}
+	} else if supermasters != 0 {
+		return errors.New("PowerDNS standalone adoption found an autoprimary peer")
 	}
 	var integrity string
 	if err := tx.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(&integrity); err != nil ||
@@ -133,17 +153,30 @@ func capturePDNSAdoptionConfigs() ([]dnsFileSnapshot, error) {
 	return snapshots, nil
 }
 
-func verifyPDNSAdoptionTopology(topology string) error {
+func verifyPDNSAdoptionTopology(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	peer, err := mutationpayload.CanonicalDNSClusterConfig(
+		manifest.Topology, manifest.PeerIP, manifest.PeerNS,
+	)
+	if err != nil {
+		return err
+	}
 	cluster, err := captureDNSFileSnapshotPreserve(dnsClusterConf, true)
 	if err != nil {
 		return err
 	}
-	wantCluster := topology == transport.DNSTopologyPaired
-	if topology != transport.DNSTopologyStandalone && !wantCluster {
-		return errors.New("PowerDNS adoption topology is unsupported")
-	}
+	wantCluster := manifest.Topology == transport.DNSTopologyPaired
 	if cluster.Exists != wantCluster {
 		return errors.New("PowerDNS managed topology differs from the adoption receipt")
+	}
+	if wantCluster {
+		expected := dnsClusterConfig(&DNSClusterRequest{
+			Role: peer.Role, PeerIP: peer.PeerIP, PeerNS: peer.PeerNS,
+		})
+		if string(cluster.Data) != expected {
+			return errors.New("PowerDNS managed peer differs from the adoption receipt")
+		}
 	}
 	return nil
 }
@@ -302,6 +335,9 @@ func verifyPDNSAdoptionEvidence(
 	if err := verifyDNSFileSnapshotsExact(journal.ConfigBefore); err != nil {
 		return err
 	}
+	if err := verifyPDNSAdoptionTopology(manifest); err != nil {
+		return err
+	}
 	if err := validatePDNSAdoptionUnitEvidence(journal.TargetUnitsBefore); err != nil {
 		return err
 	}
@@ -374,7 +410,7 @@ func adoptPDNS(
 		if err := verifyPDNSAdoptionDatabase(ctx, pdnsDBPath(), manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		if err := verifyPDNSAdoptionTopology(manifest.Topology); err != nil {
+		if err := verifyPDNSAdoptionTopology(manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		if err := requireManagedDNSClusterReady(); err != nil {
@@ -434,6 +470,7 @@ func adoptPDNS(
 		SourceEngine:      manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 		StateBefore: stateBefore, ConfigBefore: configs,
 		TargetUnitsBefore: units, SourceUnitsBefore: []dnsUnitSnapshot{},

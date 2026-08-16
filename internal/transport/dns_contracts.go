@@ -131,6 +131,8 @@ type SwitchDNSEngineV1Request struct {
 	TargetEpoch       int64                         `json:"target_epoch"`
 	SourceRevision    int64                         `json:"source_revision"`
 	Topology          string                        `json:"topology"`
+	PeerIP            string                        `json:"peer_ip,omitempty"`
+	PeerNS            string                        `json:"peer_ns,omitempty"`
 	Zones             []DNSEngineSwitchZoneSnapshot `json:"zones"`
 	SnapshotBytes     int64                         `json:"snapshot_bytes"`
 	ManifestQualifier string                        `json:"manifest_qualifier"`
