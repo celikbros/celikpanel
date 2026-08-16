@@ -491,6 +491,12 @@ func captureDNSFileSnapshot(path string, mode os.FileMode, allowAbsent bool) (dn
 // exactly without normalizing its safe permission bits. Adoption is a
 // read-only operation, so even a harmless chmod would violate its contract.
 func captureDNSFileSnapshotPreserve(path string, allowAbsent bool) (dnsFileSnapshot, error) {
+	return captureDNSFileSnapshotPreserveForOwner(path, allowAbsent, 0, 0)
+}
+
+func captureDNSFileSnapshotPreserveForOwner(
+	path string, allowAbsent bool, requiredUID, requiredGID uint32,
+) (dnsFileSnapshot, error) {
 	path = filepath.Clean(path)
 	if !filepath.IsAbs(path) {
 		return dnsFileSnapshot{}, errors.New("invalid DNS adoption snapshot path")
@@ -506,7 +512,7 @@ func captureDNSFileSnapshotPreserve(path string, allowAbsent bool) (dnsFileSnaps
 	if mode == 0 || (dnsSnapshotOwnerRequired() && mode&0o022 != 0) {
 		return dnsFileSnapshot{}, errors.New("DNS adoption config is group/other writable")
 	}
-	if metadata.OwnerKnown && (metadata.UID != 0 || metadata.GID != 0) {
+	if metadata.OwnerKnown && (metadata.UID != requiredUID || metadata.GID != requiredGID) {
 		return dnsFileSnapshot{}, errors.New("DNS adoption config is not root-owned")
 	}
 	if dnsSnapshotOwnerRequired() && !metadata.OwnerKnown {
@@ -520,8 +526,16 @@ func captureDNSFileSnapshotPreserve(path string, allowAbsent bool) (dnsFileSnaps
 }
 
 func verifyDNSFileSnapshotsExact(snapshots []dnsFileSnapshot) error {
+	return verifyDNSFileSnapshotsExactForOwner(snapshots, 0, 0)
+}
+
+func verifyDNSFileSnapshotsExactForOwner(
+	snapshots []dnsFileSnapshot, requiredUID, requiredGID uint32,
+) error {
 	for _, expected := range snapshots {
-		actual, err := captureDNSFileSnapshotPreserve(expected.Path, true)
+		actual, err := captureDNSFileSnapshotPreserveForOwner(
+			expected.Path, true, requiredUID, requiredGID,
+		)
 		if err != nil {
 			return err
 		}

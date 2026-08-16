@@ -156,13 +156,22 @@ func capturePDNSAdoptionConfigs() ([]dnsFileSnapshot, error) {
 func verifyPDNSAdoptionTopology(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) error {
+	return verifyPDNSAdoptionTopologyForOwner(manifest, 0, 0)
+}
+
+func verifyPDNSAdoptionTopologyForOwner(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	requiredUID, requiredGID uint32,
+) error {
 	peer, err := mutationpayload.CanonicalDNSClusterConfig(
 		manifest.Topology, manifest.PeerIP, manifest.PeerNS,
 	)
 	if err != nil {
 		return err
 	}
-	cluster, err := captureDNSFileSnapshotPreserve(dnsClusterConf, true)
+	cluster, err := captureDNSFileSnapshotPreserveForOwner(
+		dnsClusterConf, true, requiredUID, requiredGID,
+	)
 	if err != nil {
 		return err
 	}

@@ -253,17 +253,27 @@ func TestPDNSAdoptionConfigEvidenceIsByteAndModeExact(t *testing.T) {
 	if err := os.Chmod(path, 0o640); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := captureDNSFileSnapshotPreserve(path, false)
+	_, owner, err := readDNSFileForSnapshot(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyDNSFileSnapshotsExact([]dnsFileSnapshot{snapshot}); err != nil {
+	snapshot, err := captureDNSFileSnapshotPreserveForOwner(
+		path, false, owner.UID, owner.GID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyDNSFileSnapshotsExactForOwner(
+		[]dnsFileSnapshot{snapshot}, owner.UID, owner.GID,
+	); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, []byte("launch=bind\n"), 0o640); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyDNSFileSnapshotsExact([]dnsFileSnapshot{snapshot}); err == nil {
+	if err := verifyDNSFileSnapshotsExactForOwner(
+		[]dnsFileSnapshot{snapshot}, owner.UID, owner.GID,
+	); err == nil {
 		t.Fatal("adoption config evidence missed a byte change")
 	}
 }
@@ -293,15 +303,25 @@ func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
 	if err := os.WriteFile(dnsClusterConf, []byte(expected), 0o640); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopology(paired); err != nil {
+	_, owner, err := readDNSFileForSnapshot(dnsClusterConf)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopology(standalone); err == nil {
+	if err := verifyPDNSAdoptionTopologyForOwner(
+		paired, owner.UID, owner.GID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionTopologyForOwner(
+		standalone, owner.UID, owner.GID,
+	); err == nil {
 		t.Fatal("standalone adoption accepted an active paired config")
 	}
 	tampered := paired
 	tampered.PeerIP = "192.0.2.54"
-	if err := verifyPDNSAdoptionTopology(tampered); err == nil {
+	if err := verifyPDNSAdoptionTopologyForOwner(
+		tampered, owner.UID, owner.GID,
+	); err == nil {
 		t.Fatal("paired adoption accepted a different managed peer")
 	}
 }
