@@ -3,9 +3,12 @@ import { Link } from '../router';
 import { Network, Server, Check, AlertTriangle, Circle, Loader2 } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { dnsEngineText } from '../i18n/dnsEngine';
 import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
 import { HelpButton } from './HelpDrawer';
+import { DNSEngineCard } from './DNSEngineCard';
 
 type DNSRole = 'standalone' | 'paired';
 type DraftDNSRole = DNSRole | '';
@@ -164,6 +167,42 @@ function SetupStep({ number, title, description, complete = false }: {
 }
 
 export function DNSServerSettings() {
+    const { locale } = useI18n();
+    const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
+    const [engine, setEngine] = useState<DNSEngineSnapshot | null>(null);
+    const powerDNSReady = engine?.state === 'ready' && engine.active_engine === 'pdns';
+
+    return (
+        <div>
+            <DNSEngineCard onSnapshotChange={setEngine} />
+            {powerDNSReady ? (
+                <PowerDNSInfrastructureSettings />
+            ) : (
+                <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                            <AlertTriangle className="h-4.5 w-4.5" />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-semibold text-fg">{et('dnsEngine.topologyEditorTitle')}</h2>
+                            <p className="mt-1 text-sm leading-relaxed text-fg-muted">
+                                {engine?.active_engine === 'bind'
+                                    ? et('dnsEngine.topologyEditorBind')
+                                    : engine?.state === 'switching'
+                                      ? et('dnsEngine.topologyEditorSwitching')
+                                      : engine?.state === 'unmanaged' || engine?.state === 'conflict' || engine?.state === 'degraded'
+                                        ? et('dnsEngine.topologyEditorUnsafe')
+                                        : et('dnsEngine.topologyEditorUnconfigured')}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
+        </div>
+    );
+}
+
+function PowerDNSInfrastructureSettings() {
     const { t } = useI18n();
     const [saved, setSaved] = useState<SavedSettings | null>(null);
     const [draft, setDraft] = useState<SettingsDraft | null>(null);
