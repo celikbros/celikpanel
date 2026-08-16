@@ -49,6 +49,240 @@ func TestDNSEngineMigrationStartsUnresolvedWithoutGuessingAuthority(t *testing.T
 		WHERE singleton_id = 1`)
 }
 
+func TestDNSEngineMigrationEnforcesOperationModeAndTopology(t *testing.T) {
+	tests := []struct {
+		name                     string
+		mode                     string
+		source, target           any
+		sourceEpoch, targetEpoch int64
+		topology                 string
+		wantValid                bool
+	}{
+		{
+			name: "fresh standalone switch", mode: "switch",
+			source: nil, target: "bind", sourceEpoch: 0, targetEpoch: 1,
+			topology: "standalone", wantValid: true,
+		},
+		{
+			name: "standalone PowerDNS adoption", mode: "adopt",
+			source: nil, target: "pdns", sourceEpoch: 0, targetEpoch: 1,
+			topology: "standalone", wantValid: true,
+		},
+		{
+			name: "paired PowerDNS adoption", mode: "adopt",
+			source: nil, target: "pdns", sourceEpoch: 0, targetEpoch: 1,
+			topology: "paired", wantValid: true,
+		},
+		{
+			name: "unknown mode", mode: "repair",
+			source: nil, target: "pdns", sourceEpoch: 0, targetEpoch: 1,
+			topology: "standalone",
+		},
+		{
+			name: "paired switch", mode: "switch",
+			source: nil, target: "bind", sourceEpoch: 0, targetEpoch: 1,
+			topology: "paired",
+		},
+		{
+			name: "adopt BIND", mode: "adopt",
+			source: nil, target: "bind", sourceEpoch: 0, targetEpoch: 1,
+			topology: "standalone",
+		},
+		{
+			name: "adopt from resolved source", mode: "adopt",
+			source: "bind", target: "pdns", sourceEpoch: 1, targetEpoch: 2,
+			topology: "standalone",
+		},
+		{
+			name: "adopt nonzero source epoch", mode: "adopt",
+			source: nil, target: "pdns", sourceEpoch: 1, targetEpoch: 2,
+			topology: "standalone",
+		},
+		{
+			name: "adopt skips target epoch", mode: "adopt",
+			source: nil, target: "pdns", sourceEpoch: 0, targetEpoch: 2,
+			topology: "standalone",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			database := newDNSZoneSyncMigrationDB(t)
+			err := insertDNSEngineSnapshotForTest(
+				database, strings.Repeat("1", 32), strings.Repeat("2", 32),
+				strings.Repeat("3", 32), test.mode, test.source, test.target,
+				test.sourceEpoch, test.targetEpoch, 0, test.topology,
+			)
+			if test.wantValid && err != nil {
+				t.Fatalf("valid snapshot rejected: %v", err)
+			}
+			if !test.wantValid && err == nil {
+				t.Fatal("invalid snapshot unexpectedly accepted")
+			}
+		})
+	}
+}
+
+func TestDNSEngineMigrationCommitsPairedPowerDNSAdoption(t *testing.T) {
+	database := newDNSZoneSyncMigrationDB(t)
+	if _, err := database.Exec(
+		`INSERT INTO pdns_domains(name, type) VALUES ('adopt.example', 'NATIVE')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	switchID := strings.Repeat("4", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("5", 32), strings.Repeat("6", 32),
+		"adopt", nil, "pdns", 0, 1, 0, "paired",
+	); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "operation mode mutation", `
+		UPDATE dns_engine_switch_snapshots SET mode = 'switch'
+		WHERE switch_id = ?`, switchID)
+	requireDNSEngineSQLFailure(t, database, "unattached phase transition", `
+		UPDATE dns_engine_switch_snapshots
+		SET phase = 'staging', updated_at = datetime('now')
+		WHERE switch_id = ?`, switchID)
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 1, updated_at = datetime('now')
+		WHERE singleton_id = 1`, switchID); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "early topology mutation", `
+		UPDATE dns_engine_state
+		SET topology = 'paired', revision = 2, updated_at = datetime('now')
+		WHERE singleton_id = 1`)
+	requireDNSEngineSQLFailure(t, database, "adoption ledger freeze",
+		`INSERT INTO pdns_domains(name, type) VALUES ('blocked.example', 'NATIVE')`)
+	for _, phase := range []string{
+		"staging", "staged", "activating", "verifying", "committed",
+	} {
+		if _, err := database.Exec(`
+			UPDATE dns_engine_switch_snapshots
+			SET phase = ?, updated_at = datetime('now')
+			WHERE switch_id = ?`, phase, switchID); err != nil {
+			t.Fatalf("advance adoption to %s: %v", phase, err)
+		}
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET active_engine = 'pdns', active_epoch = 1, topology = 'paired',
+		    current_switch_id = NULL, revision = 2, updated_at = datetime('now')
+		WHERE singleton_id = 1`); err != nil {
+		t.Fatalf("commit paired adoption: %v", err)
+	}
+	var engine, topology string
+	var epoch, revision int64
+	if err := database.QueryRow(`
+		SELECT active_engine, active_epoch, revision, topology
+		FROM dns_engine_state WHERE singleton_id = 1`,
+	).Scan(&engine, &epoch, &revision, &topology); err != nil {
+		t.Fatal(err)
+	}
+	if engine != "pdns" || epoch != 1 || revision != 2 || topology != "paired" {
+		t.Fatalf("adopted state=%s/%d/%d/%s", engine, epoch, revision, topology)
+	}
+	requireDNSEngineSQLFailure(t, database, "direct topology downgrade", `
+		UPDATE dns_engine_state
+		SET topology = 'standalone', revision = 3, updated_at = datetime('now')
+		WHERE singleton_id = 1`)
+
+	secondSwitchID := strings.Repeat("7", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, secondSwitchID, strings.Repeat("8", 32), strings.Repeat("9", 32),
+		"switch", "pdns", "bind", 1, 2, 2, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "switch from paired topology", `
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 3, updated_at = datetime('now')
+		WHERE singleton_id = 1`, secondSwitchID)
+}
+
+func TestDNSEngineMigration033AttachesModeBoundPairedAdoption(t *testing.T) {
+	database := newPreDNSEngineMigrationDB(t)
+	applyEmbeddedMigrationVersion(t, database, 33)
+	switchID := strings.Repeat("f", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("1", 32), strings.Repeat("2", 32),
+		"adopt", nil, "pdns", 0, 1, 0, "paired",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 1, updated_at = datetime('now')
+		WHERE singleton_id = 1`, switchID); err != nil {
+		t.Fatalf("migration 033 rejected exact paired adoption: %v", err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_switch_snapshots
+		SET phase = 'staging', updated_at = datetime('now')
+		WHERE switch_id = ?`, switchID); err != nil {
+		t.Fatalf("migration 033 phase guard rejected attached adoption: %v", err)
+	}
+}
+
+func TestDNSEngineMigration034PreservesPreEngineLedgerAdoption(t *testing.T) {
+	database := newPreDNSEngineMigrationDB(t)
+	if _, err := database.Exec(
+		`INSERT INTO pdns_domains(name, type) VALUES ('legacy.example', 'NATIVE')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	applyEmbeddedMigrationVersion(t, database, 33)
+	applyEmbeddedMigrationVersion(t, database, 34)
+
+	var desiredGeneration int64
+	if err := database.QueryRow(`
+		SELECT desired_generation FROM dns_zone_sync_state
+		WHERE zone_name = 'legacy.example'`,
+	).Scan(&desiredGeneration); err != nil {
+		t.Fatalf("pre-engine zone ledger was not preserved: %v", err)
+	}
+	if desiredGeneration != 1 {
+		t.Fatalf("legacy desired generation=%d want=1", desiredGeneration)
+	}
+
+	switchID := strings.Repeat("a", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("b", 32), strings.Repeat("c", 32),
+		"adopt", nil, "pdns", 0, 1, 0, "paired",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		INSERT INTO dns_zone_engine_leases (
+			zone_name, engine, engine_epoch, request_id, owner_id,
+			desired_generation, desired_action, desired_zone_type,
+			qualifier, expires_at
+		) VALUES (
+			'legacy.example', 'pdns', 1, ?, ?, 1, 'sync', 'NATIVE', ?,
+			datetime('now', '+2 minutes')
+		)`, strings.Repeat("d", 32), strings.Repeat("e", 32),
+		testDNSV3Qualifier); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "034 publication lease gate", `
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 1, updated_at = datetime('now')
+		WHERE singleton_id = 1`, switchID)
+	if _, err := database.Exec(
+		`DELETE FROM dns_zone_engine_leases WHERE zone_name = 'legacy.example'`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 1, updated_at = datetime('now')
+		WHERE singleton_id = 1`, switchID); err != nil {
+		t.Fatalf("034 rejected exact paired adoption after lease release: %v", err)
+	}
+	assertForeignKeyCheckClean(t, database)
+}
+
 func TestDNSEngineMigrationCommitsOnlyAnExactFrozenSwitch(t *testing.T) {
 	database := newDNSZoneSyncMigrationDB(t)
 	switchID := strings.Repeat("1", 32)
@@ -57,10 +291,10 @@ func TestDNSEngineMigrationCommitsOnlyAnExactFrozenSwitch(t *testing.T) {
 	recordsJSON := `[{"name":"example.test","type":"A","content":"192.0.2.2","ttl":300,"prio":0,"disabled":false}]`
 	if _, err := database.Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
-			switch_id, request_id, owner_id, source_engine, target_engine,
+			switch_id, request_id, owner_id, mode, source_engine, target_engine,
 			source_epoch, target_epoch, source_state_revision, topology,
 			phase, manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
+		) VALUES (?, ?, ?, 'switch', NULL, 'bind', 0, 1, 0, 'standalone',
 		          'planned', ?, 1, ?)`, switchID, requestID, ownerID,
 		testDNSSwitchQualifier, len([]byte(recordsJSON))); err != nil {
 		t.Fatal(err)
@@ -201,10 +435,10 @@ func TestDNSEngineMigrationFreezesZoneLedgerUntilTerminalDetach(t *testing.T) {
 	recordsJSON := `[{"name":"freeze.example","type":"A","content":"192.0.2.10","ttl":300,"prio":0,"disabled":false}]`
 	if _, err := database.Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
-		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		  source_epoch, target_epoch, source_state_revision, topology, phase,
 		  manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
+		) VALUES (?, ?, ?, 'switch', NULL, 'bind', 0, 1, 0, 'standalone',
 		          'planned', ?, 1, ?)`,
 		switchID, requestID, ownerID, testDNSSwitchQualifier,
 		len([]byte(recordsJSON)),
@@ -301,10 +535,10 @@ func TestDNSEngineMigrationUnfreezesAfterRollbackOrFailureDetach(t *testing.T) {
 			ownerID := strings.Repeat("f", 32)
 			if _, err := database.Exec(`
 				INSERT INTO dns_engine_switch_snapshots (
-				  switch_id, request_id, owner_id, source_engine, target_engine,
+				  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 				  source_epoch, target_epoch, source_state_revision, topology,
 				  phase, manifest_qualifier, zone_count, snapshot_bytes
-				) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
+				) VALUES (?, ?, ?, 'switch', NULL, 'bind', 0, 1, 0, 'standalone',
 				          'planned', ?, 0, 0)`,
 				switchID, requestID, ownerID, testDNSSwitchQualifier,
 			); err != nil {
@@ -366,6 +600,57 @@ func TestDNSEngineMigrationUnfreezesAfterRollbackOrFailureDetach(t *testing.T) {
 	}
 }
 
+func insertDNSEngineSnapshotForTest(
+	database *sql.DB,
+	switchID, requestID, ownerID, mode string,
+	sourceEngine, targetEngine any,
+	sourceEpoch, targetEpoch, sourceRevision int64,
+	topology string,
+) error {
+	_, err := database.Exec(`
+		INSERT INTO dns_engine_switch_snapshots (
+			switch_id, request_id, owner_id, mode, source_engine, target_engine,
+			source_epoch, target_epoch, source_state_revision, topology,
+			phase, manifest_qualifier, zone_count, snapshot_bytes
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, 0, 0)`,
+		switchID, requestID, ownerID, mode, sourceEngine, targetEngine,
+		sourceEpoch, targetEpoch, sourceRevision, topology,
+		testDNSSwitchQualifier,
+	)
+	return err
+}
+
+func newPreDNSEngineMigrationDB(t *testing.T) *sql.DB {
+	t.Helper()
+	path := t.TempDir() + "/pre-dns-engine.sqlite"
+	database, err := sql.Open(
+		"sqlite",
+		path+"?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
+	)
+	if err != nil {
+		t.Fatalf("open pre-DNS-engine database: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := database.Close(); err != nil {
+			t.Errorf("close pre-DNS-engine database: %v", err)
+		}
+	})
+	migrations, err := loadEmbeddedMigrations()
+	if err != nil {
+		t.Fatalf("load embedded migrations: %v", err)
+	}
+	for _, migration := range migrations {
+		if migration.version >= 33 {
+			break
+		}
+		if _, err := database.Exec(string(migration.content)); err != nil {
+			t.Fatalf("apply pre-DNS-engine migration %s: %v",
+				migration.filename, err)
+		}
+	}
+	return database
+}
+
 func requireDNSEngineSQLFailure(
 	t *testing.T, database *sql.DB, name, query string, args ...any,
 ) {
@@ -403,4 +688,29 @@ func TestDNSEngineMigrationParticipatesInReferenceSchemaContract(t *testing.T) {
 			t.Errorf("reference/rescue schema contract is missing %s", key)
 		}
 	}
+}
+
+func TestDNSEngineMigration034RetainsModeAwareAttachmentGuard(t *testing.T) {
+	objects, err := ReferenceSQLiteUserSchema(context.Background(), 34)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, object := range objects {
+		if object.Type != "trigger" ||
+			object.Name != "dns_engine_state_attach_switch_guard" {
+			continue
+		}
+		for _, fragment := range []string{
+			"snapshot.mode = 'switch'",
+			"snapshot.mode = 'adopt'",
+			"snapshot.topology IN ('standalone', 'paired')",
+			"EXISTS (SELECT 1 FROM dns_zone_engine_leases)",
+		} {
+			if !strings.Contains(object.SQL, fragment) {
+				t.Errorf("migration 034 attachment guard is missing %q", fragment)
+			}
+		}
+		return
+	}
+	t.Fatal("migration 034 attachment guard is unavailable")
 }

@@ -17,12 +17,13 @@ CREATE TABLE dns_engine_switch_snapshots (
             length(owner_id) = 32
             AND owner_id NOT GLOB '*[^a-f0-9]*'
         ),
+    mode TEXT NOT NULL CHECK (mode IN ('switch', 'adopt')),
     source_engine TEXT CHECK (source_engine IN ('pdns', 'bind')),
     target_engine TEXT NOT NULL CHECK (target_engine IN ('pdns', 'bind')),
     source_epoch INTEGER NOT NULL CHECK (source_epoch >= 0),
     target_epoch INTEGER NOT NULL CHECK (target_epoch = source_epoch + 1),
     source_state_revision INTEGER NOT NULL CHECK (source_state_revision >= 0),
-    topology TEXT NOT NULL CHECK (topology = 'standalone'),
+    topology TEXT NOT NULL CHECK (topology IN ('standalone', 'paired')),
     phase TEXT NOT NULL DEFAULT 'planned'
         CHECK (phase IN (
             'planned', 'staging', 'staged', 'activating', 'verifying',
@@ -52,6 +53,17 @@ CREATE TABLE dns_engine_switch_snapshots (
     ),
     CHECK (source_engine IS NULL OR source_engine <> target_engine),
     CHECK (
+        (mode = 'switch' AND topology = 'standalone')
+        OR (
+            mode = 'adopt'
+            AND source_engine IS NULL
+            AND target_engine = 'pdns'
+            AND source_epoch = 0
+            AND target_epoch = 1
+            AND topology IN ('standalone', 'paired')
+        )
+    ),
+    CHECK (
         (phase IN ('rolling_back', 'rolled_back', 'failed')
             AND last_error IS NOT NULL
             AND length(last_error) BETWEEN 1 AND 2048)
@@ -68,7 +80,8 @@ CREATE TABLE dns_engine_state (
     active_engine TEXT CHECK (active_engine IN ('pdns', 'bind')),
     active_epoch INTEGER NOT NULL DEFAULT 0 CHECK (active_epoch >= 0),
     revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
-    topology TEXT NOT NULL DEFAULT 'standalone' CHECK (topology = 'standalone'),
+    topology TEXT NOT NULL DEFAULT 'standalone'
+        CHECK (topology IN ('standalone', 'paired')),
     current_switch_id TEXT REFERENCES dns_engine_switch_snapshots(switch_id),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
         CHECK (length(created_at) BETWEEN 1 AND 64 AND julianday(created_at) IS NOT NULL),
@@ -77,7 +90,8 @@ CREATE TABLE dns_engine_state (
     CHECK (
         (active_engine IS NULL AND active_epoch = 0)
         OR (active_engine IS NOT NULL AND active_epoch >= 1)
-    )
+    ),
+    CHECK (topology = 'standalone' OR active_engine = 'pdns')
 );
 
 INSERT INTO dns_engine_state (
@@ -376,6 +390,7 @@ BEFORE UPDATE ON dns_engine_switch_snapshots
 WHEN NEW.switch_id <> OLD.switch_id
   OR NEW.request_id <> OLD.request_id
   OR NEW.owner_id <> OLD.owner_id
+  OR NEW.mode <> OLD.mode
   OR NEW.source_engine IS NOT OLD.source_engine
   OR NEW.target_engine <> OLD.target_engine
   OR NEW.source_epoch <> OLD.source_epoch
@@ -393,13 +408,34 @@ END;
 CREATE TRIGGER dns_engine_switch_snapshot_phase_guard
 BEFORE UPDATE OF phase ON dns_engine_switch_snapshots
 WHEN NEW.phase <> OLD.phase
- AND NOT (
-    (OLD.phase = 'planned' AND NEW.phase IN ('staging', 'failed'))
-    OR (OLD.phase = 'staging' AND NEW.phase IN ('staged', 'rolling_back', 'failed'))
-    OR (OLD.phase = 'staged' AND NEW.phase IN ('activating', 'rolling_back', 'failed'))
-    OR (OLD.phase = 'activating' AND NEW.phase IN ('verifying', 'rolling_back'))
-    OR (OLD.phase = 'verifying' AND NEW.phase IN ('committed', 'rolling_back'))
-    OR (OLD.phase = 'rolling_back' AND NEW.phase IN ('rolled_back', 'failed'))
+ AND (
+    NOT (
+        (OLD.phase = 'planned' AND NEW.phase IN ('staging', 'failed'))
+        OR (OLD.phase = 'staging' AND NEW.phase IN ('staged', 'rolling_back', 'failed'))
+        OR (OLD.phase = 'staged' AND NEW.phase IN ('activating', 'rolling_back', 'failed'))
+        OR (OLD.phase = 'activating' AND NEW.phase IN ('verifying', 'rolling_back'))
+        OR (OLD.phase = 'verifying' AND NEW.phase IN ('committed', 'rolling_back'))
+        OR (OLD.phase = 'rolling_back' AND NEW.phase IN ('rolled_back', 'failed'))
+    )
+    OR NOT EXISTS (
+        SELECT 1 FROM dns_engine_state AS state
+        WHERE state.singleton_id = 1
+          AND state.current_switch_id = OLD.switch_id
+          AND state.active_engine IS OLD.source_engine
+          AND state.active_epoch = OLD.source_epoch
+          AND state.revision = OLD.source_state_revision + 1
+          AND (
+            (OLD.mode = 'switch'
+              AND OLD.topology = 'standalone'
+              AND state.topology = 'standalone')
+            OR (OLD.mode = 'adopt'
+              AND OLD.source_engine IS NULL
+              AND OLD.target_engine = 'pdns'
+              AND OLD.source_epoch = 0
+              AND OLD.target_epoch = 1
+              AND state.topology = 'standalone')
+          )
+    )
  )
 BEGIN
     SELECT RAISE(ABORT, 'invalid DNS engine switch phase transition');
@@ -423,6 +459,20 @@ WHEN OLD.current_switch_id IS NULL
       AND snapshot.source_epoch = OLD.active_epoch
       AND snapshot.source_state_revision = OLD.revision
       AND snapshot.target_epoch = OLD.active_epoch + 1
+      AND (
+        (snapshot.mode = 'switch'
+          AND OLD.topology = 'standalone'
+          AND snapshot.topology = 'standalone')
+        OR (snapshot.mode = 'adopt'
+          AND OLD.active_engine IS NULL
+          AND OLD.active_epoch = 0
+          AND OLD.topology = 'standalone'
+          AND snapshot.source_engine IS NULL
+          AND snapshot.target_engine = 'pdns'
+          AND snapshot.source_epoch = 0
+          AND snapshot.target_epoch = 1
+          AND snapshot.topology IN ('standalone', 'paired'))
+      )
  )
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine switch does not match singleton state');
@@ -438,10 +488,21 @@ WHEN OLD.current_switch_id IS NOT NULL
       AND (
         (snapshot.phase = 'committed'
           AND NEW.active_engine = snapshot.target_engine
-          AND NEW.active_epoch = snapshot.target_epoch)
+          AND NEW.active_epoch = snapshot.target_epoch
+          AND NEW.topology = snapshot.topology
+          AND (
+            (snapshot.mode = 'switch' AND snapshot.topology = 'standalone')
+            OR (snapshot.mode = 'adopt'
+              AND snapshot.source_engine IS NULL
+              AND snapshot.target_engine = 'pdns'
+              AND snapshot.source_epoch = 0
+              AND snapshot.target_epoch = 1
+              AND snapshot.topology IN ('standalone', 'paired'))
+          ))
         OR (snapshot.phase IN ('rolled_back', 'failed')
           AND NEW.active_engine IS OLD.active_engine
-          AND NEW.active_epoch = OLD.active_epoch)
+          AND NEW.active_epoch = OLD.active_epoch
+          AND NEW.topology = OLD.topology)
       )
  )
 BEGIN
@@ -449,8 +510,10 @@ BEGIN
 END;
 
 CREATE TRIGGER dns_engine_state_engine_change_guard
-BEFORE UPDATE OF active_engine, active_epoch ON dns_engine_state
-WHEN (NEW.active_engine IS NOT OLD.active_engine OR NEW.active_epoch <> OLD.active_epoch)
+BEFORE UPDATE OF active_engine, active_epoch, topology ON dns_engine_state
+WHEN (NEW.active_engine IS NOT OLD.active_engine
+      OR NEW.active_epoch <> OLD.active_epoch
+      OR NEW.topology <> OLD.topology)
  AND NOT (
     OLD.current_switch_id IS NOT NULL
     AND NEW.current_switch_id IS NULL
@@ -460,6 +523,16 @@ WHEN (NEW.active_engine IS NOT OLD.active_engine OR NEW.active_epoch <> OLD.acti
           AND snapshot.phase = 'committed'
           AND snapshot.target_engine = NEW.active_engine
           AND snapshot.target_epoch = NEW.active_epoch
+          AND snapshot.topology = NEW.topology
+          AND (
+            (snapshot.mode = 'switch' AND snapshot.topology = 'standalone')
+            OR (snapshot.mode = 'adopt'
+              AND snapshot.source_engine IS NULL
+              AND snapshot.target_engine = 'pdns'
+              AND snapshot.source_epoch = 0
+              AND snapshot.target_epoch = 1
+              AND snapshot.topology IN ('standalone', 'paired'))
+          )
     )
  )
 BEGIN
