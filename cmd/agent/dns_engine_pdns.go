@@ -267,7 +267,11 @@ func applyPDNSV3ZoneTx(
 		return errors.New("PowerDNS V3 cannot replace a peer-owned secondary zone")
 	}
 	if domainID != 0 {
-		for _, table := range []string{"records", "comments", "domainmetadata", "cryptokeys"} {
+		tables := []string{"records"}
+		if commitment.Delete {
+			tables = append(tables, "comments", "domainmetadata", "cryptokeys")
+		}
+		for _, table := range tables {
 			if _, err := tx.ExecContext(ctx, "DELETE FROM "+table+" WHERE domain_id = ?", domainID); err != nil {
 				return err
 			}
@@ -331,6 +335,186 @@ func applyPDNSV3ZoneTx(
 		return err
 	}
 	return verifyPDNSV3ZoneTx(ctx, tx, commitment)
+}
+
+func initializePDNSEngineReceipts(ctx context.Context, db *sql.DB) error {
+	if db == nil {
+		return errors.New("PowerDNS engine database is required")
+	}
+	if _, err := db.ExecContext(ctx, pdnsEngineV3Schema); err != nil {
+		return fmt.Errorf("initialize PowerDNS engine receipts: %w", err)
+	}
+	return validatePDNSEngineReceiptSchema(ctx, db)
+}
+
+type pdnsReceiptColumn struct {
+	name     string
+	typeName string
+	notNull  int
+	pk       int
+}
+
+func validatePDNSEngineReceiptSchema(ctx context.Context, db *sql.DB) error {
+	want := map[string][]pdnsReceiptColumn{
+		pdnsV3ReceiptTable: {
+			{name: "domain", typeName: "TEXT", notNull: 1, pk: 1},
+			{name: "engine", typeName: "TEXT", notNull: 1},
+			{name: "engine_epoch", typeName: "INTEGER", notNull: 1},
+			{name: "request_id", typeName: "TEXT", notNull: 1},
+			{name: "owner_id", typeName: "TEXT", notNull: 1},
+			{name: "qualifier", typeName: "TEXT", notNull: 1},
+			{name: "desired_generation", typeName: "INTEGER", notNull: 1},
+			{name: "action", typeName: "TEXT", notNull: 1},
+			{name: "zone_type", typeName: "TEXT", notNull: 1},
+			{name: "schema", typeName: "TEXT", notNull: 1},
+		},
+		"celikpanel_dns_engine_manifest_receipt": {
+			{name: "singleton", typeName: "INTEGER", notNull: 1, pk: 1},
+			{name: "engine", typeName: "TEXT", notNull: 1},
+			{name: "engine_epoch", typeName: "INTEGER", notNull: 1},
+			{name: "request_id", typeName: "TEXT", notNull: 1},
+			{name: "owner_id", typeName: "TEXT", notNull: 1},
+			{name: "qualifier", typeName: "TEXT", notNull: 1},
+			{name: "source_revision", typeName: "INTEGER", notNull: 1},
+			{name: "zone_count", typeName: "INTEGER", notNull: 1},
+			{name: "snapshot_bytes", typeName: "INTEGER", notNull: 1},
+			{name: "schema", typeName: "TEXT", notNull: 1},
+		},
+	}
+	for table, columns := range want {
+		var tableType string
+		var columnCount, withoutRowID, strict int
+		if err := db.QueryRowContext(ctx, `
+			SELECT type, ncol, wr, strict FROM pragma_table_list WHERE name = ?
+		`, table).Scan(&tableType, &columnCount, &withoutRowID, &strict); err != nil {
+			return fmt.Errorf("inspect PowerDNS receipt table %s: %w", table, err)
+		}
+		if tableType != "table" || columnCount != len(columns) || withoutRowID != 1 || strict != 1 {
+			return errors.New("PowerDNS engine receipt table is not strict canonical authority")
+		}
+		rows, err := db.QueryContext(ctx, "PRAGMA table_xinfo("+table+")")
+		if err != nil {
+			return err
+		}
+		index := 0
+		for rows.Next() {
+			var cid, notNull, pk, hidden int
+			var name, typeName string
+			var defaultValue any
+			if err := rows.Scan(&cid, &name, &typeName, &notNull, &defaultValue, &pk, &hidden); err != nil {
+				rows.Close()
+				return err
+			}
+			if index >= len(columns) || cid != index || hidden != 0 || defaultValue != nil ||
+				name != columns[index].name || strings.ToUpper(typeName) != columns[index].typeName ||
+				notNull != columns[index].notNull || pk != columns[index].pk {
+				rows.Close()
+				return errors.New("PowerDNS engine receipt table has a noncanonical column layout")
+			}
+			index++
+		}
+		if err := rows.Close(); err != nil {
+			return err
+		}
+		if index != len(columns) {
+			return errors.New("PowerDNS engine receipt table is incomplete")
+		}
+		var triggerCount int
+		if err := db.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM sqlite_schema WHERE type = 'trigger' AND tbl_name = ?
+		`, table).Scan(&triggerCount); err != nil || triggerCount != 0 {
+			if err == nil {
+				err = errors.New("PowerDNS engine receipt table has unsafe triggers")
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func applyPDNSV3ZoneDatabase(
+	ctx context.Context,
+	path string,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	db, err := openPDNSEngineDB(path, false)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	if err := initializePDNSEngineReceipts(ctx, db); err != nil {
+		return err
+	}
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	if err := applyPDNSV3ZoneTx(ctx, tx, commitment, binding, true); err != nil {
+		return err
+	}
+	commitErr := tx.Commit()
+	committed = commitErr == nil
+	verified, verifyErr := verifyPDNSV3ZoneDatabase(
+		context.WithoutCancel(ctx), path, commitment, binding,
+	)
+	if verifyErr != nil {
+		return errors.Join(commitErr, verifyErr)
+	}
+	if !verified {
+		if commitErr != nil {
+			return commitErr
+		}
+		return errors.New("PowerDNS V3 transaction committed without its exact receipt")
+	}
+	return nil
+}
+
+func verifyPDNSV3ZoneDatabase(
+	ctx context.Context,
+	path string,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	binding transport.ServiceMutationBinding,
+) (bool, error) {
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
+	if err := validatePDNSEngineReceiptSchema(ctx, db); err != nil {
+		return false, err
+	}
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	receipt, found, err := readPDNSV3ReceiptTx(ctx, tx, commitment.Domain)
+	if err != nil || !found {
+		return false, err
+	}
+	action := dnsZoneSyncActionSync
+	if commitment.Delete {
+		action = dnsZoneSyncActionDelete
+	}
+	if receipt.EngineEpoch != commitment.EngineEpoch ||
+		receipt.RequestID != binding.MutationRequestID ||
+		receipt.OwnerID != binding.MutationOwnerID ||
+		receipt.Qualifier != commitment.Qualifier ||
+		receipt.DesiredGeneration != commitment.DesiredGeneration ||
+		receipt.Action != action || receipt.ZoneType != commitment.ZoneType {
+		return false, nil
+	}
+	if err := verifyPDNSV3ZoneTx(ctx, tx, commitment); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func readPDNSV3ReceiptTx(ctx context.Context, tx *sql.Tx, domain string) (pdnsV3ZoneReceipt, bool, error) {
@@ -508,7 +692,9 @@ func verifyPDNSSwitchDatabase(
 
 func readPDNSV3ZoneSnapshot(
 	ctx context.Context,
-	path, domain, qualifier string,
+	path string,
+	engineEpoch int64,
+	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (transport.DNSEngineSwitchZoneSnapshot, bool, error) {
 	db, err := openPDNSEngineDB(path, true)
@@ -516,6 +702,9 @@ func readPDNSV3ZoneSnapshot(
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
 	}
 	defer db.Close()
+	if err := validatePDNSEngineReceiptSchema(ctx, db); err != nil {
+		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
+	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
@@ -525,7 +714,8 @@ func readPDNSV3ZoneSnapshot(
 	if err != nil || !found {
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
 	}
-	if receipt.Qualifier != qualifier || receipt.RequestID != binding.MutationRequestID ||
+	if receipt.EngineEpoch != engineEpoch || receipt.Qualifier != qualifier ||
+		receipt.RequestID != binding.MutationRequestID ||
 		receipt.OwnerID != binding.MutationOwnerID {
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, nil
 	}

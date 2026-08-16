@@ -151,3 +151,87 @@ func TestApplyPDNSV3ZoneRejectsGenerationBindingReuse(t *testing.T) {
 	}
 	_ = tx.Rollback()
 }
+
+func TestApplyPDNSV3ZoneDatabasePreservesDNSSECStateOnSync(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "live.sqlite3")
+	db, err := initializePDNSEngineDB(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := db.Exec(`INSERT INTO domains (name, type) VALUES ('secure.test', 'NATIVE')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domainID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`INSERT INTO domainmetadata (domain_id, kind, content) VALUES (?, 'PRESIGNED', '1')`,
+		`INSERT INTO cryptokeys (domain_id, flags, active, published, content) VALUES (?, 257, 1, 1, 'private-key')`,
+		`INSERT INTO comments (domain_id, name, type, modified_at, account, comment) VALUES (?, 'secure.test', 'SOA', 1, 'test', 'keep')`,
+	} {
+		if _, err := db.Exec(statement, domainID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	commitment, err := mutationpayload.CanonicalDNSZoneSyncV3(
+		transport.DNSEnginePowerDNS, 3, 4, "secure.test", false, "NATIVE",
+		testPDNSEngineRecords("secure.test"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := applyPDNSV3ZoneDatabase(
+		context.Background(), path, commitment, testPDNSEngineBinding(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	db, err = openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, table := range []string{"domainmetadata", "cryptokeys", "comments"} {
+		var count int
+		if err := db.QueryRow("SELECT COUNT(*) FROM "+table+" WHERE domain_id = ?", domainID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("%s rows = %d, want preserved", table, count)
+		}
+	}
+	exact, err := verifyPDNSV3ZoneDatabase(
+		context.Background(), path, commitment, testPDNSEngineBinding(),
+	)
+	if err != nil || !exact {
+		t.Fatalf("exact=%t err=%v", exact, err)
+	}
+}
+
+func TestValidatePDNSEngineReceiptSchemaRejectsLooseAuthority(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "loose.sqlite3")
+	db, err := initializePDNSEngineDB(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DROP TABLE celikpanel_dns_zone_sync_v3_receipts`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		CREATE TABLE celikpanel_dns_zone_sync_v3_receipts (
+			domain TEXT PRIMARY KEY, engine TEXT, engine_epoch INTEGER,
+			request_id TEXT, owner_id TEXT, qualifier TEXT,
+			desired_generation INTEGER, action TEXT, zone_type TEXT, schema TEXT
+		)
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePDNSEngineReceiptSchema(context.Background(), db); err == nil {
+		t.Fatal("loose rowid receipt authority was accepted")
+	}
+	_ = db.Close()
+}

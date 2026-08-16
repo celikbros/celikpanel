@@ -296,8 +296,11 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
+	if commitment.Engine == string(transport.DNSEnginePowerDNS) {
+		return syncPDNSV3Zone(ctx, commitment, binding)
+	}
 	if commitment.Engine != string(transport.DNSEngineBIND) {
-		return "", errors.New("PowerDNS V3 publication is not initialized")
+		return "", errors.New("DNS V3 publication engine is unsupported")
 	}
 	state, exists, err := readDNSEngineState()
 	if err != nil || !exists {
@@ -404,8 +407,11 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err != nil || !exists {
 		return false, err
 	}
+	if state.Engine == transport.DNSEnginePowerDNS {
+		return recoverPDNSV3Zone(ctx, state, domain, qualifier, binding)
+	}
 	if state.Engine != transport.DNSEngineBIND {
-		return false, errors.New("PowerDNS V3 recovery is not initialized")
+		return false, errors.New("DNS V3 recovery engine is unsupported")
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
@@ -893,6 +899,177 @@ func verifyOnlyBINDActive(ctx context.Context, systemctl string) error {
 	}
 	if err := verifyBINDPublicListeners(string(output)); err != nil {
 		return err
+	}
+	return nil
+}
+
+func syncPDNSV3Zone(
+	ctx context.Context,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	binding transport.ServiceMutationBinding,
+) (string, error) {
+	state, exists, err := readDNSEngineState()
+	if err != nil || !exists {
+		if err == nil {
+			err = errors.New("DNS engine state is not initialized")
+		}
+		return "", err
+	}
+	if state.Engine != transport.DNSEnginePowerDNS || state.EngineEpoch != commitment.EngineEpoch {
+		return "", errors.New("PowerDNS zone publication does not match the active engine epoch")
+	}
+	if err := requireManagedDNSClusterReady(); err != nil {
+		return "", err
+	}
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return "", err
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return "", err
+	}
+	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
+		return "", err
+	}
+	if err := applyPDNSV3ZoneDatabase(ctx, pdnsDBPath(), commitment, binding); err != nil {
+		return "", err
+	}
+	after, afterExists, err := readDNSEngineState()
+	if err != nil || !afterExists || !reflect.DeepEqual(after, state) {
+		if err == nil {
+			err = errors.New("PowerDNS engine state changed during zone publication")
+		}
+		return "", err
+	}
+	if err := purgePDNSZone(ctx, commitment.Domain); err != nil {
+		return "", err
+	}
+	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
+		return "", err
+	}
+	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{{
+		Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
+		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
+		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
+	}}); err != nil {
+		return "", err
+	}
+	return commitment.Qualifier, nil
+}
+
+func recoverPDNSV3Zone(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+	domain, qualifier string,
+	binding transport.ServiceMutationBinding,
+) (bool, error) {
+	if err := requireManagedDNSClusterReady(); err != nil {
+		return false, err
+	}
+	snapshot, exact, err := readPDNSV3ZoneSnapshot(
+		ctx, pdnsDBPath(), state.EngineEpoch, domain, qualifier, binding,
+	)
+	if err != nil || !exact {
+		return false, err
+	}
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return false, err
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return false, err
+	}
+	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
+		return false, err
+	}
+	if err := purgePDNSZone(ctx, domain); err != nil {
+		return false, err
+	}
+	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func purgePDNSZone(ctx context.Context, domain string) error {
+	control, err := firstTrustedExecutable(
+		[]string{"/usr/bin/pdns_control", "/usr/sbin/pdns_control"}, "pdns_control",
+	)
+	if err != nil {
+		return err
+	}
+	output, err := serviceMutationCommand(
+		context.WithoutCancel(ctx), control, "purge", domain+"$",
+	).CombinedOutputLimited(64 << 10)
+	if err != nil {
+		return fmt.Errorf("purge PowerDNS zone cache: %w: %s", err, firstLine(string(output)))
+	}
+	return nil
+}
+
+func verifyOnlyPDNSActive(ctx context.Context, systemctl string) error {
+	bindState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "named.service")
+	if err != nil {
+		return err
+	}
+	bindAliasState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "bind9.service")
+	if err != nil {
+		return err
+	}
+	pdnsState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "pdns.service")
+	if err != nil {
+		return err
+	}
+	if bindState.active() || bindAliasState.active() || !pdnsState.active() {
+		return errors.New("DNS activation did not leave exactly PowerDNS as the active authority")
+	}
+	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	if err != nil {
+		return err
+	}
+	output, err := serviceMutationCommand(
+		context.WithoutCancel(ctx), ss, "-H", "-lntup", "sport = :53",
+	).CombinedOutputLimited(64 << 10)
+	if err != nil {
+		return fmt.Errorf("inspect active DNS listeners: %w: %s", err, firstLine(string(output)))
+	}
+	return verifyPDNSPublicListeners(string(output))
+}
+
+func verifyPDNSPublicListeners(output string) error {
+	foundTCP, foundUDP := false, false
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 5 {
+			continue
+		}
+		protocol := strings.ToLower(fields[0])
+		if protocol != "tcp" && protocol != "udp" {
+			continue
+		}
+		host, port, err := net.SplitHostPort(fields[4])
+		if err != nil || port != "53" {
+			continue
+		}
+		host = strings.Trim(host, "[]")
+		address := net.ParseIP(host)
+		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
+			continue
+		}
+		lower := strings.ToLower(line)
+		if !strings.Contains(lower, "pdns_server") || strings.Contains(lower, "named") {
+			return errors.New("a non-PowerDNS process is holding a public DNS listener")
+		}
+		if protocol == "tcp" {
+			foundTCP = true
+		} else {
+			foundUDP = true
+		}
+	}
+	if !foundTCP || !foundUDP {
+		return errors.New("PowerDNS does not own both public TCP and UDP port 53 listeners")
 	}
 	return nil
 }
