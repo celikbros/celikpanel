@@ -945,7 +945,6 @@ var ManagedServices = []ManagedService{
 		SystemNames:           []string{"bind9", "named"},
 		ConflictGroup:         "dns-server",
 		Packages:              map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
-		InstallDisabledReason: "BIND zone synchronization is not available in CelikPanel yet; use PowerDNS.",
 		FirewallPorts:         []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{

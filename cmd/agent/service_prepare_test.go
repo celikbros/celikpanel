@@ -29,7 +29,7 @@ func TestClamAVSignaturesReady(t *testing.T) {
 }
 
 func TestServiceStartsAfterPanelSetup(t *testing.T) {
-	for _, id := range []string{"pdns", "postfix", "dovecot", "wireguard"} {
+	for _, id := range []string{"pdns", "bind", "postfix", "dovecot", "wireguard"} {
 		if !serviceStartsAfterPanelSetup(id) {
 			t.Errorf("%s must wait for panel configuration before start", id)
 		}

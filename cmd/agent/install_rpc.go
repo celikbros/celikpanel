@@ -342,7 +342,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 
 func serviceStartsAfterPanelSetup(serviceID string) bool {
 	switch serviceID {
-	case "pdns", "postfix", "dovecot", "wireguard":
+	case "pdns", "bind", "postfix", "dovecot", "wireguard":
 		return true
 	default:
 		return false
