@@ -104,9 +104,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         setDomain(null);
         fetch('/api/v1/domains')
             .then(async (response) => {
-                if (!response.ok) throw new Error('domains request failed');
+                if (!response.ok) throw new Error();
                 const payload: unknown = await response.json();
-                if (!Array.isArray(payload)) throw new Error('invalid domains response');
+                if (!Array.isArray(payload)) throw new Error();
                 const found = payload.find((item) => (
                     item !== null
                     && typeof item === 'object'
@@ -114,14 +114,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     && Number((item as { id?: unknown }).id) === domainId
                 ));
                 if (!found || typeof found !== 'object' || Array.isArray(found)) {
-                    throw new Error('domain not found');
+                    throw new Error();
                 }
                 if (!isTeamMember) return found as Domain;
 
                 const row = found as Domain & { access?: unknown };
                 const access = normalizeDomainAccess(row.access);
                 if (!access || !hasAnyDomainAccess(access)) {
-                    throw new Error('invalid domain access');
+                    throw new Error();
                 }
                 return { ...row, access };
             })
