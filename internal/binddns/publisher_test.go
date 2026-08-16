@@ -511,6 +511,49 @@ func TestPublisherFirstSwitchFailureUsesExplicitEmptyRecovery(t *testing.T) {
 	}
 }
 
+func TestPublisherStopsOrEmptiesWhenPriorGenerationCannotBeReapplied(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	for _, generation := range []Generation{first, second} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	applyCalls := 0
+	emptyCalls := 0
+	err := publisher.Switch(context.Background(), second.ID, func(context.Context) error {
+		applyCalls++
+		if applyCalls == 1 {
+			return errors.New("target reload failed")
+		}
+		return errors.New("prior reload failed")
+	}, func(recoveryCtx context.Context) error {
+		emptyCalls++
+		if recoveryCtx.Err() != nil {
+			return recoveryCtx.Err()
+		}
+		if _, ok := recoveryCtx.Deadline(); !ok {
+			return errors.New("empty recovery context is unbounded")
+		}
+		id, exists, currentErr := publisher.Current()
+		if currentErr != nil || !exists || id != first.ID {
+			return fmt.Errorf("current before empty recovery = %q, %v, %v", id, exists, currentErr)
+		}
+		return nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "explicit empty recovery applied after restored generation reload failed") {
+		t.Fatalf("Switch error = %v", err)
+	}
+	if applyCalls != 2 || emptyCalls != 1 {
+		t.Fatalf("apply=%d empty=%d, want 2/1", applyCalls, emptyCalls)
+	}
+}
+
 func TestPublisherSerializesWholeSwitchTransactionsWithoutHoldingStateLock(t *testing.T) {
 	filesystem := newMemoryFS()
 	publisher := newTestPublisher(t, filesystem, &recordingRunner{})

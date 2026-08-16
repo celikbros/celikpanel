@@ -526,7 +526,26 @@ func (publisher *Publisher) Switch(
 		}
 		rollbackErr := apply(recoveryCtx)
 		if rollbackErr != nil {
-			return errors.Join(activationErr, fmt.Errorf("reload restored BIND generation: %w", rollbackErr))
+			// A failed reapply leaves the daemon's in-memory view ambiguous even
+			// though the durable pointer is back on the prior generation. Give the
+			// explicit fail-closed action its own detached bounded window; the
+			// reapply may already have consumed the first recovery deadline.
+			cancel()
+			emptyCtx, emptyCancel := context.WithTimeout(context.WithoutCancel(ctx), switchRecoveryTimeout)
+			defer emptyCancel()
+			emptyErr := recoverEmpty(emptyCtx)
+			if emptyErr != nil {
+				return errors.Join(
+					activationErr,
+					fmt.Errorf("reload restored BIND generation: %w", rollbackErr),
+					fmt.Errorf("stop or empty BIND after restored generation reload failed: %w", emptyErr),
+				)
+			}
+			return errors.Join(
+				activationErr,
+				fmt.Errorf("reload restored BIND generation: %w", rollbackErr),
+				errors.New("explicit empty recovery applied after restored generation reload failed"),
+			)
 		}
 		return errors.Join(activationErr, errors.New("previous BIND generation restored and applied"))
 	}
