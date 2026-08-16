@@ -66,3 +66,83 @@ func TestDNSZoneSyncV2DeleteWireContractKeepsExplicitZoneType(t *testing.T) {
 		t.Fatalf("delete request lost an effective field: %#v", request)
 	}
 }
+
+func TestDNSZoneSyncV3WireContractBindsEngineAndEpoch(t *testing.T) {
+	want := SyncDNSZoneV3Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: "request", MutationOwnerID: "owner",
+		},
+		Engine: DNSEngineBIND, EngineEpoch: 4, DesiredGeneration: 19,
+		Domain: "example.test", ZoneType: "MASTER",
+		Records: []ZoneRecord{{
+			Name: "example.test", Type: "A", Content: "192.0.2.10", TTL: 300,
+		}},
+	}
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(want); err != nil {
+		t.Fatal(err)
+	}
+	var got SyncDNSZoneV3Request
+	if err := gob.NewDecoder(&wire).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("request round trip got=%#v want=%#v", got, want)
+	}
+}
+
+func TestDNSBackendReadinessWireContractIsBounded(t *testing.T) {
+	want := DNSBackendReadinessResponse{Engines: []DNSBackendRuntimeState{
+		{Engine: DNSEnginePowerDNS, Installed: true, Running: true, Managed: true, Unit: "pdns.service"},
+		{Engine: DNSEngineBIND, Installed: true, Unit: "named.service"},
+	}}
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(want); err != nil {
+		t.Fatal(err)
+	}
+	var got DNSBackendReadinessResponse
+	if err := gob.NewDecoder(&wire).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("readiness round trip got=%#v want=%#v", got, want)
+	}
+	for _, value := range []DNSEngine{DNSEnginePowerDNS, DNSEngineBIND} {
+		if !ValidDNSEngine(value) {
+			t.Fatalf("valid engine rejected: %q", value)
+		}
+	}
+	for _, value := range []DNSEngine{"", "powerdns", "BIND", " bind"} {
+		if ValidDNSEngine(value) {
+			t.Fatalf("invalid engine accepted: %q", value)
+		}
+	}
+}
+
+func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
+	want := SwitchDNSEngineV1Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: "request", MutationOwnerID: "owner",
+		},
+		SourceEngine: DNSEnginePowerDNS, TargetEngine: DNSEngineBIND,
+		SourceEpoch: 2, TargetEpoch: 3, SourceRevision: 7,
+		Topology: DNSTopologyStandalone,
+		Zones: []DNSEngineSwitchZoneSnapshot{{
+			Ordinal: 0, Domain: "example.test", DesiredGeneration: 11,
+			ZoneType: "NATIVE", ZoneQualifier: "dns-zone-sync/v3:sha256:digest",
+			Records: []ZoneRecord{{Name: "example.test", Type: "A", Content: "192.0.2.2"}},
+		}},
+		ManifestQualifier: "dns-engine-switch/v1:sha256:digest",
+	}
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(want); err != nil {
+		t.Fatal(err)
+	}
+	var got SwitchDNSEngineV1Request
+	if err := gob.NewDecoder(&wire).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("switch round trip got=%#v want=%#v", got, want)
+	}
+}
