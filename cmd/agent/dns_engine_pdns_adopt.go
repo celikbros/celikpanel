@@ -169,20 +169,134 @@ func validatePDNSAdoptionUnitEvidence(units []dnsUnitSnapshot) error {
 	return nil
 }
 
+type pdnsAdoptionEvidenceStage uint8
+
+const (
+	pdnsAdoptionEvidencePreflight pdnsAdoptionEvidenceStage = iota + 1
+	pdnsAdoptionEvidenceTarget
+	pdnsAdoptionEvidenceRollback
+)
+
+func validatePDNSAdoptionTransactionBinding(
+	expectedJournal dnsEngineSwitchJournal,
+	actualJournal dnsEngineSwitchJournal,
+	journalExists bool,
+	state dnsEngineStateReceipt,
+	stateExists bool,
+	stage pdnsAdoptionEvidenceStage,
+) error {
+	if expectedJournal.Mode != transport.DNSEngineSwitchModeAdopt ||
+		expectedJournal.SourceEngine != "" ||
+		expectedJournal.TargetEngine != transport.DNSEnginePowerDNS {
+		return errors.New("PowerDNS adoption transaction identity is invalid")
+	}
+	switch stage {
+	case pdnsAdoptionEvidencePreflight:
+		if expectedJournal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("PowerDNS adoption preflight journal phase is invalid")
+		}
+		if journalExists {
+			return errors.New("PowerDNS adoption preflight found an attached journal")
+		}
+		if stateExists {
+			return errors.New("PowerDNS adoption preflight found an active engine receipt")
+		}
+	case pdnsAdoptionEvidenceTarget:
+		if expectedJournal.Phase != dnsSwitchPhaseIntent &&
+			expectedJournal.Phase != dnsSwitchPhaseTargetVerified &&
+			expectedJournal.Phase != dnsSwitchPhaseCommitted {
+			return errors.New("PowerDNS adoption target journal phase is invalid")
+		}
+		if !journalExists || !reflect.DeepEqual(actualJournal, expectedJournal) {
+			return errors.New("PowerDNS adoption target journal identity changed")
+		}
+		if !stateExists || !exactDNSEngineStateForJournal(state, expectedJournal) {
+			return errors.New("PowerDNS adoption target receipt is absent or different")
+		}
+	case pdnsAdoptionEvidenceRollback:
+		if expectedJournal.Phase != dnsSwitchPhaseRollingBack {
+			return errors.New("PowerDNS adoption rollback journal phase is invalid")
+		}
+		if !journalExists || !reflect.DeepEqual(actualJournal, expectedJournal) {
+			return errors.New("PowerDNS adoption rollback journal identity changed")
+		}
+		if stateExists {
+			return errors.New("PowerDNS adoption rollback did not restore the empty source receipt")
+		}
+	default:
+		return errors.New("PowerDNS adoption evidence stage is unsupported")
+	}
+	return nil
+}
+
+func verifyPDNSAdoptionTransactionBinding(
+	expectedJournal dnsEngineSwitchJournal,
+	stage pdnsAdoptionEvidenceStage,
+) error {
+	actualJournal, journalExists, err := readDNSEngineSwitchJournal()
+	if err != nil {
+		return err
+	}
+	state, stateExists, err := readDNSEngineState()
+	if err != nil {
+		return err
+	}
+	return validatePDNSAdoptionTransactionBinding(
+		expectedJournal, actualJournal, journalExists, state, stateExists, stage,
+	)
+}
+
+func transitionPDNSAdoptionJournalToRollback(
+	expected dnsEngineSwitchJournal,
+	read func() (dnsEngineSwitchJournal, bool, error),
+	write func(dnsEngineSwitchJournal) error,
+) (dnsEngineSwitchJournal, error) {
+	if read == nil || write == nil {
+		return dnsEngineSwitchJournal{},
+			errors.New("PowerDNS adoption rollback journal access is unavailable")
+	}
+	if expected.Phase != dnsSwitchPhaseIntent {
+		return dnsEngineSwitchJournal{},
+			errors.New("PowerDNS adoption rollback can start only from intent")
+	}
+	actual, exists, err := read()
+	if err != nil {
+		return dnsEngineSwitchJournal{}, err
+	}
+	if !exists || !reflect.DeepEqual(actual, expected) {
+		return dnsEngineSwitchJournal{},
+			errors.New("PowerDNS adoption rollback journal identity changed")
+	}
+	next := expected
+	next.Phase = dnsSwitchPhaseRollingBack
+	if err := write(next); err != nil {
+		return dnsEngineSwitchJournal{}, err
+	}
+	return next, nil
+}
+
 func verifyPDNSAdoptionEvidence(
 	ctx context.Context,
 	systemctl string,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	journal dnsEngineSwitchJournal,
+	stage pdnsAdoptionEvidenceStage,
 ) error {
 	if manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
 		journal.Mode != transport.DNSEngineSwitchModeAdopt {
 		return errors.New("PowerDNS adoption evidence received a switch transaction")
 	}
+	journalManifest, err := switchJournalManifest(journal)
+	if err != nil || !reflect.DeepEqual(journalManifest, manifest) {
+		return errors.New("PowerDNS adoption evidence differs from its journal manifest")
+	}
+	if err := verifyPDNSAdoptionTransactionBinding(journal, stage); err != nil {
+		return err
+	}
 	if err := assertPDNSAdoptionArtifactsAbsent(journal); err != nil {
 		return err
 	}
-	if err := requireManagedDNSClusterReady(); err != nil {
+	if err := requireManagedPowerDNSArtifacts(); err != nil {
 		return err
 	}
 	if err := verifyDNSFileSnapshotsExact(journal.ConfigBefore); err != nil {
@@ -221,7 +335,10 @@ func rollbackPDNSAdoption(
 	if restoreErr != nil {
 		return restoreErr
 	}
-	return verifyPDNSAdoptionEvidence(context.WithoutCancel(ctx), systemctl, manifest, journal)
+	return verifyPDNSAdoptionEvidence(
+		context.WithoutCancel(ctx), systemctl, manifest, journal,
+		pdnsAdoptionEvidenceRollback,
+	)
 }
 
 func adoptPDNS(
@@ -325,15 +442,23 @@ func adoptPDNS(
 	if err := validatePDNSAdoptionJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyPDNSAdoptionEvidence(ctx, systemctl, manifest, journal); err != nil {
+	if err := verifyPDNSAdoptionEvidence(
+		ctx, systemctl, manifest, journal, pdnsAdoptionEvidencePreflight,
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
-		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeDNSEngineSwitchJournal(journal)
+		rollingBack, transitionErr := transitionPDNSAdoptionJournalToRollback(
+			journal, readDNSEngineSwitchJournal, writeDNSEngineSwitchJournal,
+		)
+		if transitionErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, transitionErr)
+		}
+		journal = rollingBack
+		var journalErr error
 		recoveryCtx, cancel := context.WithTimeout(
 			context.WithoutCancel(ctx), dnsEngineSwitchRecoveryLimit,
 		)
@@ -341,10 +466,10 @@ func adoptPDNS(
 		rollbackErr := rollbackPDNSAdoption(recoveryCtx, systemctl, manifest, journal)
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = errors.Join(
-				journalErr, writeDNSEngineSwitchJournal(journal),
-				removeDNSEngineSwitchJournal(),
-			)
+			journalErr = writeDNSEngineSwitchJournal(journal)
+			if journalErr == nil {
+				journalErr = removeDNSEngineSwitchJournal()
+			}
 		}
 		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}
@@ -354,7 +479,9 @@ func adoptPDNS(
 			return rollback(errors.Join(err, readErr))
 		}
 	}
-	if err := verifyPDNSAdoptionEvidence(ctx, systemctl, manifest, journal); err != nil {
+	if err := verifyPDNSAdoptionEvidence(
+		ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
+	); err != nil {
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified

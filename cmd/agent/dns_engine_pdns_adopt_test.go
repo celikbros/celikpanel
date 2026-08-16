@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -222,5 +223,112 @@ func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
 	}
 	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyStandalone); err == nil {
 		t.Fatal("standalone adoption accepted an active paired config")
+	}
+}
+
+func TestPDNSAdoptionTransactionBindingAcceptsOnlyExactSelfJournal(t *testing.T) {
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, "example.test",
+		testPDNSEngineRecords("example.test"),
+	)
+	journal := dnsEngineSwitchJournal{
+		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
+		Mode: manifest.Mode, MutationRequestID: strings.Repeat("a", 32),
+		MutationOwnerID:   strings.Repeat("b", 32),
+		ManifestQualifier: manifest.Qualifier,
+		TargetEngine:      manifest.TargetEngine, TargetEpoch: manifest.TargetEpoch,
+		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+	}
+	exactState := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: manifest.Mode,
+		Engine: manifest.TargetEngine, EngineEpoch: manifest.TargetEpoch,
+		SourceRevision:    manifest.SourceRevision,
+		ManifestQualifier: manifest.Qualifier,
+		MutationRequestID: journal.MutationRequestID,
+		MutationOwnerID:   journal.MutationOwnerID,
+	}
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, dnsEngineSwitchJournal{}, false,
+		dnsEngineStateReceipt{}, false, pdnsAdoptionEvidencePreflight,
+	); err != nil {
+		t.Fatalf("clean adoption preflight rejected: %v", err)
+	}
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, journal, true, exactState, true, pdnsAdoptionEvidenceTarget,
+	); err != nil {
+		t.Fatalf("exact attached adoption journal rejected: %v", err)
+	}
+	different := journal
+	different.Phase = dnsSwitchPhaseTargetVerified
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, different, true, exactState, true, pdnsAdoptionEvidenceTarget,
+	); err == nil {
+		t.Fatal("different adoption journal was accepted as the current transaction")
+	}
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, journal, true, dnsEngineStateReceipt{}, false,
+		pdnsAdoptionEvidenceTarget,
+	); err == nil {
+		t.Fatal("adoption target proof accepted an absent state receipt")
+	}
+	journal.Phase = dnsSwitchPhaseRollingBack
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, journal, true, exactState, true, pdnsAdoptionEvidenceTarget,
+	); err == nil {
+		t.Fatal("recovery rolled forward after the rollback decision was durable")
+	}
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, journal, true, dnsEngineStateReceipt{}, false,
+		pdnsAdoptionEvidenceRollback,
+	); err != nil {
+		t.Fatalf("exact rollback after state restoration rejected: %v", err)
+	}
+	if err := validatePDNSAdoptionTransactionBinding(
+		journal, journal, true, exactState, true, pdnsAdoptionEvidenceRollback,
+	); err == nil {
+		t.Fatal("rollback accepted the target receipt instead of restored empty source")
+	}
+}
+
+func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
+	expected := dnsEngineSwitchJournal{
+		Mode:              transport.DNSEngineSwitchModeAdopt,
+		Phase:             dnsSwitchPhaseIntent,
+		MutationRequestID: strings.Repeat("c", 32),
+		MutationOwnerID:   strings.Repeat("d", 32),
+		TargetEngine:      transport.DNSEnginePowerDNS,
+	}
+	foreign := expected
+	foreign.MutationOwnerID = strings.Repeat("e", 32)
+	writes := 0
+	write := func(dnsEngineSwitchJournal) error {
+		writes++
+		return nil
+	}
+	if _, err := transitionPDNSAdoptionJournalToRollback(
+		expected,
+		func() (dnsEngineSwitchJournal, bool, error) { return foreign, true, nil },
+		write,
+	); err == nil {
+		t.Fatal("rollback accepted a different current adoption journal")
+	}
+	if writes != 0 || foreign.MutationOwnerID != strings.Repeat("e", 32) {
+		t.Fatal("rollback overwrote or mutated the different current journal")
+	}
+	next, err := transitionPDNSAdoptionJournalToRollback(
+		expected,
+		func() (dnsEngineSwitchJournal, bool, error) { return expected, true, nil },
+		func(actual dnsEngineSwitchJournal) error {
+			writes++
+			if actual.Phase != dnsSwitchPhaseRollingBack ||
+				actual.MutationRequestID != expected.MutationRequestID {
+				t.Fatal("rollback transition wrote the wrong journal identity")
+			}
+			return nil
+		},
+	)
+	if err != nil || next.Phase != dnsSwitchPhaseRollingBack || writes != 1 {
+		t.Fatalf("exact rollback transition failed: next=%+v writes=%d err=%v", next, writes, err)
 	}
 }

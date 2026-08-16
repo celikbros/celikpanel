@@ -112,7 +112,9 @@ func verifyDNSSwitchJournalTarget(
 		return err
 	case transport.DNSEnginePowerDNS:
 		if journal.Mode == transport.DNSEngineSwitchModeAdopt {
-			return verifyPDNSAdoptionEvidence(ctx, systemctl, manifest, journal)
+			return verifyPDNSAdoptionEvidence(
+				ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
+			)
 		}
 		if err := verifyPDNSSwitchDatabase(ctx, pdnsDBPath(), manifest, binding); err != nil {
 			return err
