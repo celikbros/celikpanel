@@ -31,10 +31,20 @@ require_before() {
 
 test -f "$WORKFLOW"
 
-# A tag is built only after the same commit passed every supported Linux and
-# web gate. Unsupported platform checks are operator-invoked and non-gating.
+# Pull requests and the nightly run exercise the expensive race/contract suite.
+# Main keeps a short build/test/package gate. A tag skips duplicate tests only
+# after proving that the exact immutable commit has a successful main CI run.
 require_literal "tags: ['v*']"
+require_literal "cron: '55 20 * * *'"
+require_literal "cancel-in-progress: \${{ !startsWith(github.ref, 'refs/tags/v') }}"
 require_literal 'needs: [go, panel-race, web, linux-arm64-compile]'
+require_literal "github.ref == 'refs/heads/main'"
+require_literal "needs.panel-race.result == 'skipped'"
+require_literal 'Verify exact successful main CI provenance'
+require_literal '"repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs"'
+require_literal '-f branch=main -f event=push -f status=success -f per_page=100'
+require_literal '.workflow_runs | any(.head_sha == $sha and .conclusion == "success")'
+require_literal 'release tag commit has no successful main CI run'
 require_literal 'release_version: ${{ steps.release_version.outputs.value }}'
 require_literal '[[ "$version" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$ ]]'
 require_literal 'release tag has a non-canonical numeric prerelease identifier'
