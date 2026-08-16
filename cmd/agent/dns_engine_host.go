@@ -73,6 +73,18 @@ type trackedBINDValidator struct {
 	checkConf string
 }
 
+func runTrackedBINDValidation(
+	ctx context.Context,
+	path, name string,
+	args ...string,
+) ([]byte, error) {
+	output, err := serviceMutationCommand(ctx, path, args...).CombinedOutputLimited(64 << 10)
+	if err != nil {
+		return output, fmt.Errorf("%s failed: %w: %s", name, err, firstLine(string(output)))
+	}
+	return output, nil
+}
+
 func (runner trackedBINDValidator) Run(ctx context.Context, name string, args ...string) ([]byte, error) {
 	path := ""
 	switch name {
@@ -83,11 +95,7 @@ func (runner trackedBINDValidator) Run(ctx context.Context, name string, args ..
 	default:
 		return nil, fmt.Errorf("unsupported BIND validation command %q", name)
 	}
-	output, err := serviceMutationCommand(ctx, path, args...).CombinedOutputLimited(64 << 10)
-	if err != nil {
-		return output, fmt.Errorf("%s failed: %w: %s", name, err, firstLine(string(output)))
-	}
-	return output, nil
+	return runTrackedBINDValidation(ctx, path, name, args...)
 }
 
 func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
@@ -627,7 +635,10 @@ func (hostDNSEngineBackend) Switch(
 		if err := configs.apply(); err != nil {
 			return err
 		}
-		if _, err := validator.Run(applyCtx, "named-checkconf", "-z", layout.MainConfig); err != nil {
+		if _, err := runTrackedBINDValidation(
+			applyCtx, validator.checkConf, "named-checkconf",
+			"-z", layout.MainConfig,
+		); err != nil {
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStaged
