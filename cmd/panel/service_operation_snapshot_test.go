@@ -1335,6 +1335,42 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		-- Reverse migration 033 before removing migration 032. In particular,
+		-- leases and cross-table triggers still resolve dns_zone_sync_state
+		-- while SQLite prepares later DDL statements.
+		DROP TRIGGER dns_engine_state_reject_insert;
+		DROP TRIGGER dns_engine_state_reject_delete;
+		DROP TRIGGER dns_engine_state_monotonic_update;
+		DROP TRIGGER dns_engine_switch_zone_insert_guard;
+		DROP TRIGGER dns_engine_switch_zone_identity_immutable;
+		DROP TRIGGER dns_engine_switch_zone_delete_guard;
+		DROP TRIGGER dns_engine_switch_snapshot_count_guard;
+		DROP TRIGGER dns_zone_engine_lease_exact_insert;
+		DROP TRIGGER dns_zone_engine_lease_exact_update;
+		DROP TRIGGER dns_zone_sync_state_engine_lease_delete_guard;
+		DROP TRIGGER dns_zone_sync_state_legacy_lease_conflict_guard;
+		DROP TRIGGER dns_zone_engine_application_monotonic_update;
+		DROP TRIGGER dns_engine_switch_snapshot_identity_immutable;
+		DROP TRIGGER dns_engine_switch_snapshot_phase_guard;
+		DROP TRIGGER dns_engine_switch_snapshot_reject_delete;
+		DROP TRIGGER dns_engine_state_attach_switch_guard;
+		DROP TRIGGER dns_engine_state_detach_switch_guard;
+		DROP TRIGGER dns_engine_state_engine_change_guard;
+		DROP TRIGGER dns_engine_switch_freeze_domain_insert;
+		DROP TRIGGER dns_engine_switch_freeze_domain_update;
+		DROP TRIGGER dns_engine_switch_freeze_domain_delete;
+		DROP TRIGGER dns_engine_switch_freeze_record_insert;
+		DROP TRIGGER dns_engine_switch_freeze_record_update;
+		DROP TRIGGER dns_engine_switch_freeze_record_delete;
+		DROP INDEX idx_dns_engine_switch_one_active;
+		DROP INDEX idx_dns_zone_engine_applications_epoch;
+		DROP INDEX idx_dns_zone_engine_applications_request;
+		DROP TABLE dns_zone_engine_leases;
+		DROP TABLE dns_zone_engine_applications;
+		DROP TABLE dns_engine_switch_zones;
+		DROP TABLE dns_engine_state;
+		DROP TABLE dns_engine_switch_snapshots;
+
 		DROP TRIGGER pdns_records_dns_sync_update;
 		DROP TRIGGER pdns_records_dns_sync_delete;
 		DROP TRIGGER pdns_records_dns_sync_insert;
