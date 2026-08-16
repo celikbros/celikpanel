@@ -164,6 +164,10 @@ func validateDNSEngineState(state dnsEngineStateReceipt) error {
 		!validMutationIdentity(state.MutationOwnerID) {
 		return errors.New("DNS engine state has an unsupported identity")
 	}
+	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
+		state.Engine != transport.DNSEnginePowerDNS {
+		return errors.New("DNS engine adoption state must name PowerDNS")
+	}
 	if state.Engine == transport.DNSEngineBIND {
 		if !validDNSGeneration(state.Generation) {
 			return errors.New("BIND engine state has an invalid generation")

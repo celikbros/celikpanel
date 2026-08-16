@@ -203,3 +203,24 @@ func TestPDNSAdoptionConfigEvidenceIsByteAndModeExact(t *testing.T) {
 		t.Fatal("adoption config evidence missed a byte change")
 	}
 }
+
+func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
+	previous := dnsClusterConf
+	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
+	t.Cleanup(func() { dnsClusterConf = previous })
+	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyStandalone); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyPaired); err == nil {
+		t.Fatal("paired adoption accepted an absent cluster config")
+	}
+	if err := os.WriteFile(dnsClusterConf, []byte("paired\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyPaired); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSAdoptionTopology(transport.DNSTopologyStandalone); err == nil {
+		t.Fatal("standalone adoption accepted an active paired config")
+	}
+}

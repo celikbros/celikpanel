@@ -133,6 +133,21 @@ func capturePDNSAdoptionConfigs() ([]dnsFileSnapshot, error) {
 	return snapshots, nil
 }
 
+func verifyPDNSAdoptionTopology(topology string) error {
+	cluster, err := captureDNSFileSnapshotPreserve(dnsClusterConf, true)
+	if err != nil {
+		return err
+	}
+	wantCluster := topology == transport.DNSTopologyPaired
+	if topology != transport.DNSTopologyStandalone && !wantCluster {
+		return errors.New("PowerDNS adoption topology is unsupported")
+	}
+	if cluster.Exists != wantCluster {
+		return errors.New("PowerDNS managed topology differs from the adoption receipt")
+	}
+	return nil
+}
+
 func validatePDNSAdoptionUnitEvidence(units []dnsUnitSnapshot) error {
 	if !dnsUnitSnapshotNamesEqual(
 		units, []string{"bind9.service", "named.service", "pdns.service"},
@@ -240,6 +255,9 @@ func adoptPDNS(
 			return transport.SwitchDNSEngineV1Response{}, errors.New("PowerDNS adoption conflicts with an existing DNS engine receipt")
 		}
 		if err := verifyPDNSAdoptionDatabase(ctx, pdnsDBPath(), manifest); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if err := verifyPDNSAdoptionTopology(manifest.Topology); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		if err := requireManagedDNSClusterReady(); err != nil {

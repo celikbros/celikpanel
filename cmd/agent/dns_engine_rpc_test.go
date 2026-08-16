@@ -252,6 +252,20 @@ func TestDNSEngineStateCanonicalBinding(t *testing.T) {
 	}
 }
 
+func TestDNSEngineStateRejectsAdoptedBIND(t *testing.T) {
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeAdopt,
+		Engine: transport.DNSEngineBIND, EngineEpoch: 1,
+		Generation: strings.Repeat("b", 64), SourceRevision: 1,
+		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("a", 64),
+		MutationRequestID: strings.Repeat("c", 32),
+		MutationOwnerID:   strings.Repeat("d", 32),
+	}
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("adopt mode accepted a BIND engine state")
+	}
+}
+
 func TestVerifyBINDPublicListenersRequiresNamedTCPAndUDP(t *testing.T) {
 	valid := strings.Join([]string{
 		`udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:(("named",pid=10,fd=1))`,
