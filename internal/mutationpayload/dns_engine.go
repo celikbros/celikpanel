@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"hash"
+	"net"
 	"sort"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -115,6 +117,9 @@ type DNSEngineSwitchManifestCommitment struct {
 	TargetEpoch    int64
 	SourceRevision int64
 	Topology       string
+	PairRole       string
+	LocalIP        string
+	LocalNS        string
 	PeerIP         string
 	PeerNS         string
 	Zones          []transport.DNSEngineSwitchZoneSnapshot
@@ -146,6 +151,23 @@ func CanonicalDNSEngineSwitchManifestWithPeer(
 	topology, peerIP, peerNS string,
 	zones []transport.DNSEngineSwitchZoneSnapshot,
 ) (DNSEngineSwitchManifestCommitment, error) {
+	return CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		mode, sourceEngine, targetEngine,
+		sourceEpoch, targetEpoch, sourceRevision,
+		topology, "", "", "", peerIP, peerNS, zones,
+	)
+}
+
+// CanonicalDNSEngineSwitchManifestWithPairIdentity extends the released
+// standalone/adoption contract only for a directional paired BIND target.
+// Empty fields preserve the exact alpha.24 standalone commitment.
+func CanonicalDNSEngineSwitchManifestWithPairIdentity(
+	mode string,
+	sourceEngine, targetEngine transport.DNSEngine,
+	sourceEpoch, targetEpoch, sourceRevision int64,
+	topology, pairRole, localIP, localNS, peerIP, peerNS string,
+	zones []transport.DNSEngineSwitchZoneSnapshot,
+) (DNSEngineSwitchManifestCommitment, error) {
 	if mode != transport.DNSEngineSwitchModeSwitch &&
 		mode != transport.DNSEngineSwitchModeAdopt {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine operation mode must be switch or adopt")
@@ -173,8 +195,10 @@ func CanonicalDNSEngineSwitchManifestWithPeer(
 	if sourceRevision < 0 {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine source revision must not be negative")
 	}
-	if mode == transport.DNSEngineSwitchModeSwitch && topology != transport.DNSTopologyStandalone {
-		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switching currently requires standalone topology")
+	if mode == transport.DNSEngineSwitchModeSwitch &&
+		topology != transport.DNSTopologyStandalone &&
+		!(topology == transport.DNSTopologyPaired && targetEngine == transport.DNSEngineBIND) {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("paired DNS engine switching requires a BIND target")
 	}
 	if mode == transport.DNSEngineSwitchModeAdopt &&
 		topology != transport.DNSTopologyStandalone && topology != transport.DNSTopologyPaired {
@@ -183,6 +207,16 @@ func CanonicalDNSEngineSwitchManifestWithPeer(
 	cluster, err := CanonicalDNSClusterConfig(topology, peerIP, peerNS)
 	if err != nil {
 		return DNSEngineSwitchManifestCommitment{}, err
+	}
+	canonicalRole, canonicalLocalIP, canonicalLocalNS := "", "", ""
+	if mode == transport.DNSEngineSwitchModeSwitch && topology == transport.DNSTopologyPaired {
+		canonicalRole, canonicalLocalIP, canonicalLocalNS, err =
+			canonicalBINDPairIdentity(pairRole, localIP, localNS, cluster.PeerIP, cluster.PeerNS)
+		if err != nil {
+			return DNSEngineSwitchManifestCommitment{}, err
+		}
+	} else if pairRole != "" || localIP != "" || localNS != "" {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("standalone or adoption DNS engine payload contains a BIND pair identity")
 	}
 	if len(zones) > dnsEngineSwitchMaxZones {
 		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switch manifest exceeds the zone limit")
@@ -230,6 +264,7 @@ func CanonicalDNSEngineSwitchManifestWithPeer(
 		SourceEngine: sourceEngine, TargetEngine: targetEngine,
 		SourceEpoch: sourceEpoch, TargetEpoch: targetEpoch,
 		SourceRevision: sourceRevision, Topology: cluster.Role,
+		PairRole: canonicalRole, LocalIP: canonicalLocalIP, LocalNS: canonicalLocalNS,
 		PeerIP: cluster.PeerIP, PeerNS: cluster.PeerNS, Zones: frozen,
 		SnapshotBytes: snapshotBytes,
 	}
@@ -259,6 +294,29 @@ func checkedDNSEngineSnapshotBytes(current int64, additional int) (int64, error)
 	return current + int64(additional), nil
 }
 
+func canonicalBINDPairIdentity(
+	pairRole, localIP, localNS, peerIP, peerNS string,
+) (string, string, string, error) {
+	if pairRole != transport.DNSPairRolePrimary &&
+		pairRole != transport.DNSPairRoleSecondary {
+		return "", "", "", errors.New("BIND pair role must be primary or secondary")
+	}
+	parsedLocal := net.ParseIP(localIP)
+	parsedPeer := net.ParseIP(peerIP)
+	if parsedLocal == nil || parsedLocal.To4() == nil ||
+		parsedLocal.String() != localIP || !parsedLocal.IsGlobalUnicast() {
+		return "", "", "", errors.New("BIND pair local IPv4 address must be canonical")
+	}
+	if parsedPeer == nil || parsedPeer.To4() == nil || parsedPeer.Equal(parsedLocal) {
+		return "", "", "", errors.New("BIND pair peer IPv4 address must be distinct")
+	}
+	canonicalLocalNS, err := hostname.CanonicalFQDN(localNS)
+	if err != nil || canonicalLocalNS != localNS || canonicalLocalNS == peerNS {
+		return "", "", "", errors.New("BIND pair local nameserver must be canonical and distinct")
+	}
+	return pairRole, localIP, canonicalLocalNS, nil
+}
+
 func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string {
 	digest := sha256.New()
 	for _, frame := range [][]byte{
@@ -276,6 +334,12 @@ func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string
 	writeDNSEngineUint64(digest, commitment.TargetEpoch)
 	writeDNSEngineUint64(digest, commitment.SourceRevision)
 	writeDNSEngineDigestFrame(digest, []byte(commitment.Topology))
+	if commitment.PairRole != "" {
+		writeDNSEngineDigestFrame(digest, []byte("bind-pair/v1"))
+		writeDNSEngineDigestFrame(digest, []byte(commitment.PairRole))
+		writeDNSEngineDigestFrame(digest, []byte(commitment.LocalIP))
+		writeDNSEngineDigestFrame(digest, []byte(commitment.LocalNS))
+	}
 	writeDNSEngineDigestFrame(digest, []byte(commitment.PeerIP))
 	writeDNSEngineDigestFrame(digest, []byte(commitment.PeerNS))
 	writeDNSEngineUint64(digest, commitment.SnapshotBytes)

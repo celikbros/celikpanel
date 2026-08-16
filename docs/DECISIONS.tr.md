@@ -836,8 +836,12 @@ engelleri gösteren salt-okunur bir önizleme alır. Ayrı onay aynı tek-kullan
 veya engelli önizleme sunucuyu değiştiremez. Canlı motor geçişinde ayrıca anlamlı
 bir kesinti onayı gerekir; sürüm ya da ürün adını yazdıran bir parola oyunu yoktur.
 
-Normal PowerDNS↔BIND değişimi yalnız **Tek sunucu** topolojisinde desteklenir.
-Eşli topoloji, DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu
+Normal PowerDNS↔BIND değişimi **Tek sunucu** topolojisinde çift yönlüdür. Ek
+olarak doğrulanmış Eşli PowerDNS, kayıtlı NS kimliğinden kesin birincil/ikincil
+rolü türetilerek Eşli BIND'e geçirilebilir. BIND birincil katalog zonu yayınlar;
+BIND ikincil katalog serisini ve her üye zonun SOA'sını hem UDP hem TCP ile
+kanıtlamadan geçiş tamamlanmaz. BIND etkinken eş kimliği salt-okunurdur; ters
+eşli dönüşüm henüz engellidir. DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu
 çakışması, bozuk kaynak veya başka bir işlem geçişi engeller. İşlem; motor ve
 etkinleştirme dönemine bağlanmış tam zone görüntüsünü dondurur, kaynağı
 durdurmadan önce hedefi hazırlar ve doğrular, her zone'u hem UDP hem TCP
@@ -850,8 +854,7 @@ DNSSEC verisi dahil birebir Tek sunucu veya Eşli PowerDNS durumunu koruyabilir.
 Yalnız yapılandırma baytları ve kipleri, unit durumu, SQLite veritabanı, panelin
 sahibi olduğu her zone, topoloji ve TCP/UDP otoritesi panel defteriyle eşleşirse
 ve çalışan bir BIND otoritesi yoksa başarır. Paket, yapılandırma, servis durumu,
-DNS verisi veya DNSSEC durumunu değiştirmez. BIND için devralma kestirmesi ve
-Eşli BIND modu yoktur.
+DNS verisi veya DNSSEC durumunu değiştirmez. BIND için devralma kestirmesi yoktur.
 
 Hem panel defteri hem agent'ın sahip olduğu host günlüğü işlem kimliğini ve
 aşamasını taşır. Kesinti sonrasında kurtarma kesin hedefi kanıtlayıp tamamlar

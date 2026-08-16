@@ -562,6 +562,15 @@ func (hostDNSEngineBackend) Sync(
 		}}); err != nil {
 			return err
 		}
+		currentTree, err := publisher.LoadCurrent()
+		if err != nil {
+			return err
+		}
+		if err := verifyBINDPairingAuthority(
+			applyCtx, currentTree.CurrentReceipt(),
+		); err != nil {
+			return err
+		}
 		if attempt > 1 {
 			return restoreDNSFileSnapshot(stateBefore)
 		}
@@ -710,7 +719,7 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
-		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
+		if err := verifyUnsignedPowerDNSForManifest(ctx, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
@@ -799,7 +808,9 @@ func (hostDNSEngineBackend) Switch(
 		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
 		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
 		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
-		Topology: manifest.Topology, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		Topology: manifest.Topology,
+		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 		TargetGeneration: generation.ID, PreviousGeneration: previousGeneration,
 		HadPrevious: hadPrevious, StateBefore: stateBefore,
@@ -866,6 +877,15 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		if err := verifyDNSZoneManifestAuthority(applyCtx, manifest.Zones); err != nil {
+			return err
+		}
+		currentTree, err := publisher.LoadCurrent()
+		if err != nil {
+			return err
+		}
+		if err := verifyBINDPairingAuthority(
+			applyCtx, currentTree.CurrentReceipt(),
+		); err != nil {
 			return err
 		}
 		nextState := dnsEngineStateReceipt{
@@ -957,7 +977,16 @@ func bindSwitchTreePlan(
 			Records:           zone.Records,
 		}
 	}
-	return binddns.NewTreePlan(binddns.Manifest{EngineEpoch: manifest.TargetEpoch, Zones: zones})
+	var pairing *binddns.Pairing
+	if manifest.Topology == transport.DNSTopologyPaired {
+		pairing = &binddns.Pairing{
+			Role: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+			PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		}
+	}
+	return binddns.NewTreePlan(binddns.Manifest{
+		EngineEpoch: manifest.TargetEpoch, Pairing: pairing, Zones: zones,
+	})
 }
 
 func verifyCompletedBINDEngineSwitch(
@@ -991,6 +1020,9 @@ func verifyCompletedBINDEngineSwitch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, zones); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if err := verifyBINDPairingAuthority(ctx, receipt); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{

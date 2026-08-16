@@ -1335,6 +1335,18 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		-- Reverse migration 036 before removing the engine switch ledger it
+		-- references. Migration 036 replaces the migration-034 attach trigger.
+		DROP TRIGGER dns_bind_pair_state_reject_delete;
+		DROP TRIGGER dns_bind_pair_state_reject_update;
+		DROP TRIGGER dns_bind_pair_state_insert_guard;
+		DROP TRIGGER dns_bind_pair_switch_reject_delete;
+		DROP TRIGGER dns_bind_pair_switch_immutable;
+		DROP TRIGGER dns_bind_pair_switch_insert_guard;
+		DROP TRIGGER dns_engine_state_attach_switch_guard;
+		DROP TABLE dns_bind_pair_state;
+		DROP TABLE dns_bind_pair_switches;
+
 		-- Reverse migration 035 before removing the desired-state ledger it
 		-- observes. The high-water row itself remains permanent in production.
 		DROP TRIGGER dns_zone_sync_state_high_water_update;
@@ -1361,7 +1373,6 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		DROP TRIGGER dns_engine_switch_snapshot_identity_immutable;
 		DROP TRIGGER dns_engine_switch_snapshot_phase_guard;
 		DROP TRIGGER dns_engine_switch_snapshot_reject_delete;
-		DROP TRIGGER dns_engine_state_attach_switch_guard;
 		DROP TRIGGER dns_engine_state_detach_switch_guard;
 		DROP TRIGGER dns_engine_state_engine_change_guard;
 		DROP TRIGGER dns_engine_switch_freeze_peer_setting_insert;

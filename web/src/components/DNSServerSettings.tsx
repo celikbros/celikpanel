@@ -237,7 +237,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
             const names = await namesResponse.json() as NameserverResponse;
             const cluster = await clusterResponse.json() as ClusterResponse;
 
-            const role = activeEngine === 'bind' ? 'standalone' : normalizeRole(cluster.role);
+            const role = normalizeRole(cluster.role);
             const ns1 = cleanHostname(names.ns1 || cluster.ns1 || '');
             const ns2 = cleanHostname(names.ns2 || cluster.ns2 || '');
             const snapshot: SavedSettings = {
@@ -298,9 +298,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
             setDraft({
                 ns1,
                 ns2,
-                role: activeEngine === 'bind'
-                    ? 'standalone'
-                    : preserveCluster?.role ?? (snapshot.configured ? role : ''),
+                role: preserveCluster?.role ?? (snapshot.configured ? role : ''),
                 peer_ip: preserveCluster?.peer_ip ?? (autoStageDetectedPeer ? suggestedPeerIPv4 : cluster.peer_ip ?? ''),
                 peer_ns: draftPeerNS,
             });
@@ -325,7 +323,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
         try {
             const draftNS1 = cleanHostname(draft.ns1);
             const draftNS2 = cleanHostname(draft.ns2);
-            const effectiveRole: DNSRole = activeEngine === 'bind' ? 'standalone' : draft.role;
+            const effectiveRole: DNSRole = draft.role;
             const paired = effectiveRole === 'paired';
             const setupResponse = await fetch('/api/v1/settings/dns-setup', {
                 method: 'PUT',
@@ -488,8 +486,13 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                 ? t('dnssrv.blocker.peerNs')
                 : t('dnssrv.stepContinueReady');
 
+    const bindPairedIdentityLocked = activeEngine === 'bind'
+        && saved.configured
+        && saved.role === 'paired';
+    const bindRoleDisabled = (role: DNSRole) => bindPairedIdentityLocked
+        || (activeEngine === 'bind' && role === 'paired');
     const selectRole = (role: DNSRole) => {
-        if (activeEngine === 'bind' && role === 'paired') return;
+        if (bindRoleDisabled(role)) return;
         setNeedsClusterRetry(false);
         setApiError(null);
         if (role === 'standalone') {
@@ -636,9 +639,9 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                         {(['standalone', 'paired'] as const).map((role) => (
                             <label
                                 key={role}
-                                aria-disabled={activeEngine === 'bind' && role === 'paired'}
+                                aria-disabled={bindRoleDisabled(role)}
                                 className={`flex items-start gap-3 rounded-xl border p-4 transition-colors ${
-                                    activeEngine === 'bind' && role === 'paired'
+                                    bindRoleDisabled(role)
                                         ? 'cursor-not-allowed border-border bg-surface-2/50 opacity-70'
                                         : draft.role === role
                                         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
@@ -651,7 +654,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                                     className="mt-0.5"
                                     checked={draft.role === role}
                                     data-testid={`dns-role-${role}`}
-                                    disabled={activeEngine === 'bind' && role === 'paired'}
+                                    disabled={bindRoleDisabled(role)}
                                     onChange={() => selectRole(role)}
                                 />
                                 <span className="min-w-0">
@@ -659,7 +662,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                                         {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
                                     </span>
                                     <span className="mt-1 block text-xs leading-relaxed text-fg-muted">
-                                        {activeEngine === 'bind' && role === 'paired'
+                                        {activeEngine === 'bind' && role === 'paired' && !bindPairedIdentityLocked
                                             ? et('dnsEngine.identity.bindPairedUnsupported')
                                             : t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
                                     </span>
@@ -672,10 +675,14 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                         <div
                             className={'mt-4 rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs leading-relaxed text-fg-muted'}
                             role={'note'}
-                            data-testid={'bind-standalone-identity-note'}
+                            data-testid={'bind-identity-note'}
                         >
                             <p className={'font-semibold text-fg'}>{et('dnsEngine.identity.bindTitle')}</p>
-                            <p className={'mt-1'}>{et('dnsEngine.identity.bindDescription')}</p>
+                            <p className={'mt-1'}>
+                                {draft.role === 'paired'
+                                    ? et('dnsEngine.identity.bindPairedLocked')
+                                    : et('dnsEngine.identity.bindDescription')}
+                            </p>
                         </div>
                     )}
 
@@ -1027,7 +1034,7 @@ function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEn
                             data-testid="dns-wizard-save"
                             className="justify-center py-2.5 sm:min-w-64"
                             onClick={saveAndPublish}
-                            disabled={clusterBlocker !== null}
+                            disabled={clusterBlocker !== null || bindPairedIdentityLocked}
                             aria-describedby="dns-setup-readiness"
                         >
                             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}

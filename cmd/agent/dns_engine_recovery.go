@@ -17,11 +17,12 @@ import (
 func switchJournalManifest(
 	journal dnsEngineSwitchJournal,
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		journal.Mode,
 		journal.SourceEngine, journal.TargetEngine,
 		journal.SourceEpoch, journal.TargetEpoch, journal.SourceRevision,
-		journal.Topology, journal.PeerIP, journal.PeerNS, journal.Zones,
+		journal.Topology, journal.PairRole, journal.LocalIP, journal.LocalNS,
+		journal.PeerIP, journal.PeerNS, journal.Zones,
 	)
 	if err != nil || manifest.Qualifier != journal.ManifestQualifier ||
 		manifest.SnapshotBytes != journal.SnapshotBytes {

@@ -63,6 +63,24 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({ active_engine: null })), null);
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({ operation_id: 'a'.repeat(32) })), null);
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({ dnssec_zone_count: 2 })), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({ pair_role: 'primary' })), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		active_engine: 'bind',
+		topology: 'paired',
+		engines: [
+			{ id: 'pdns', installed: true, running: false, managed: true, status: 'installed_standby' },
+			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
+		],
+	})), null);
+	assert.ok(decodeDNSEngineSnapshot(readySnapshot({
+		active_engine: 'bind',
+		topology: 'paired',
+		pair_role: 'secondary',
+		engines: [
+			{ id: 'pdns', installed: true, running: false, managed: true, status: 'installed_standby' },
+			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
+		],
+	})));
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({
     engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
@@ -169,19 +187,20 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(settings, /engine\?\.state === 'switching'/);
 });
 
-test('ready BIND exposes only the standalone identity wizard and one final mutation', () => {
+test('ready BIND locks only inherited paired identity and keeps standalone editable', () => {
   assert.match(settings, /const activeEngine: ActiveDNSEngine \| null = engine\?\.state === 'ready'/);
   assert.match(settings, /engine\.active_engine === 'pdns' \|\| engine\.active_engine === 'bind'/);
   assert.match(settings, /<DNSInfrastructureSettings[\s\S]*activeEngine=\{activeEngine\}/);
-  assert.match(settings, /const role = activeEngine === 'bind' \? 'standalone' : normalizeRole\(cluster\.role\)/);
-  assert.match(settings, /role: activeEngine === 'bind'[\s\S]*\? 'standalone'/);
-  assert.match(settings, /const effectiveRole: DNSRole = activeEngine === 'bind' \? 'standalone' : draft\.role/);
-  assert.match(settings, /role: effectiveRole/);
-  assert.match(settings, /aria-disabled=\{activeEngine === 'bind' && role === 'paired'\}/);
-  assert.match(settings, /disabled=\{activeEngine === 'bind' && role === 'paired'\}/);
-  assert.match(settings, /if \(activeEngine === 'bind' && role === 'paired'\) return/);
-  assert.match(settings, /dnsEngine\.identity\.bindPairedUnsupported/);
-  assert.match(settings, /bind-standalone-identity-note/);
+  assert.match(settings, /const role = normalizeRole\(cluster\.role\)/);
+  assert.match(settings, /const bindPairedIdentityLocked = activeEngine === 'bind'[\s\S]*saved\.role === 'paired'/);
+  assert.match(settings, /const bindRoleDisabled = \(role: DNSRole\) => bindPairedIdentityLocked[\s\S]*role === 'paired'/);
+  assert.match(settings, /const effectiveRole: DNSRole = draft\.role/);
+	assert.match(settings, /role: effectiveRole/);
+  assert.match(settings, /aria-disabled=\{bindRoleDisabled\(role\)\}/);
+  assert.match(settings, /disabled=\{bindRoleDisabled\(role\)\}/);
+  assert.match(settings, /if \(bindRoleDisabled\(role\)\) return/);
+  assert.match(settings, /dnsEngine\.identity\.bindPairedLocked/);
+  assert.match(settings, /bind-identity-note/);
   assert.equal((settings.match(/fetch\('\/api\/v1\/settings\/dns-setup'/g) || []).length, 1);
   assert.equal((settings.match(/dns-wizard-save/g) || []).length, 1);
 });

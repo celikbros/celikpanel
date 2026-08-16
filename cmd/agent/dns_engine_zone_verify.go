@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,12 +28,141 @@ const (
 	dnsRCodeNameError = 3
 	dnsRCodeRefused   = 5
 	dnsProbeTimeout   = 4 * time.Second
+	dnsPairProofLimit = 15 * time.Second
 )
 
 type expectedDNSZoneAuthority struct {
 	Domain string
 	Delete bool
 	Serial uint32
+}
+
+func exactDNSZoneSerialAt(
+	ctx context.Context,
+	address, domain string,
+) (uint32, error) {
+	return exactDNSZoneSerialAtWithProbe(
+		ctx, address, domain, probeDNSZoneSOA,
+	)
+}
+
+func exactDNSZoneSerialAtWithProbe(
+	ctx context.Context,
+	address, domain string,
+	probe dnsZoneSOAProbe,
+) (uint32, error) {
+	var serial uint32
+	for index, network := range []string{"udp", "tcp"} {
+		probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
+		result, err := probe(probeCtx, network, address, domain)
+		cancel()
+		if err != nil || !result.Authoritative || result.RCode != dnsRCodeNoError ||
+			len(result.SOASerials) != 1 {
+			if err == nil {
+				err = errors.New("catalog zone did not return one authoritative SOA")
+			}
+			return 0, fmt.Errorf("verify %s catalog SOA: %w", network, err)
+		}
+		if index == 0 {
+			serial = result.SOASerials[0]
+		} else if result.SOASerials[0] != serial {
+			return 0, errors.New("catalog zone UDP and TCP serials differ")
+		}
+	}
+	return serial, nil
+}
+
+func bindLocalProofAddress() (string, error) {
+	for _, candidate := range strings.Split(publicListenAddresses(), ",") {
+		address := strings.TrimSpace(candidate)
+		ip := net.ParseIP(address)
+		if ip != nil && !ip.IsUnspecified() && !ip.IsLoopback() && !ip.IsLinkLocalUnicast() {
+			return address, nil
+		}
+	}
+	return "", errors.New("no safe public address is available for BIND pair verification")
+}
+
+func verifyBINDPairingAuthority(
+	ctx context.Context,
+	receipt binddns.Receipt,
+) error {
+	pairing := receipt.Pairing
+	if pairing == nil {
+		return nil
+	}
+	localAddress, err := bindLocalProofAddress()
+	if err != nil {
+		return err
+	}
+	return verifyBINDPairingAuthorityAt(
+		ctx, receipt, localAddress, probeDNSZoneSOA, probeDNSCatalogAXFR,
+	)
+}
+
+func verifyBINDPairingAuthorityAt(
+	ctx context.Context,
+	receipt binddns.Receipt,
+	localAddress string,
+	probe dnsZoneSOAProbe,
+	axfr dnsCatalogAXFRProbe,
+) error {
+	pairing := receipt.Pairing
+	if pairing == nil {
+		return nil
+	}
+	exactSerial := func(address, domain string) (uint32, error) {
+		return exactDNSZoneSerialAtWithProbe(ctx, address, domain, probe)
+	}
+	if pairing.Role == binddns.PairRolePrimary {
+		catalog, err := axfr(ctx, localAddress, pairing.LocalCatalog)
+		if err != nil {
+			return err
+		}
+		if catalog.Serial != pairing.CatalogSerial {
+			return errors.New("BIND primary catalog serial differs from its receipt")
+		}
+		expected := make([]string, 0, len(receipt.Zones))
+		for _, zone := range receipt.Zones {
+			if !zone.Delete {
+				expected = append(expected, zone.Domain)
+			}
+		}
+		sort.Strings(expected)
+		if strings.Join(expected, "\x00") != strings.Join(catalog.Members, "\x00") {
+			return errors.New("BIND primary catalog members differ from its receipt")
+		}
+		return nil
+	}
+	if pairing.Role != binddns.PairRoleSecondary {
+		return errors.New("BIND pair receipt has an unknown role")
+	}
+	peerCatalog, err := axfr(ctx, pairing.PeerIP, pairing.PeerCatalog)
+	if err != nil {
+		return errors.New("BIND peer catalog is not available")
+	}
+	deadline := time.Now().Add(dnsPairProofLimit)
+	for {
+		localSerial, localErr := exactSerial(localAddress, pairing.PeerCatalog)
+		if localErr == nil && localSerial == peerCatalog.Serial {
+			for _, member := range peerCatalog.Members {
+				peerZoneSerial, peerErr := exactSerial(pairing.PeerIP, member)
+				localZoneSerial, localErr := exactSerial(localAddress, member)
+				if peerErr != nil || localErr != nil || peerZoneSerial != localZoneSerial {
+					return errors.New("BIND secondary did not receive every exact peer zone")
+				}
+			}
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return errors.New("BIND secondary did not receive the exact peer catalog")
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
 }
 
 type dnsSOAProbeResult struct {

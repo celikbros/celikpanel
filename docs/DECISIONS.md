@@ -874,12 +874,18 @@ revision; a stale or blocked preview cannot mutate the server. A live-engine
 cutover also requires a meaningful interruption acknowledgement, never a typed
 version or product-name phrase.
 
-Normal PowerDNS↔BIND switching is supported only in **Standalone** topology.
-Paired topology, DNSSEC zones, pending zone publication, unmanaged DNS, a
-port-53 conflict, a degraded source or another operation block the switch. The
-transaction freezes the complete engine-and-epoch-bound zone snapshot, stages
-and validates the target before stopping the source, verifies every zone over
-both UDP and TCP, and retains the old package as the stopped standby.
+Normal PowerDNS↔BIND switching is bidirectional in **Standalone** topology. In
+addition, an exact verified Paired PowerDNS authority may migrate to directional
+Paired BIND. The saved nameserver identity deterministically selects the primary
+or secondary role. The primary publishes a BIND catalog zone; the secondary
+must prove the exact catalog and every member zone over UDP and TCP before the
+cutover commits. Paired identity is read-only while BIND is active and reverse
+paired conversion remains blocked. DNSSEC zones, pending zone publication,
+unmanaged DNS, a port-53 conflict, a degraded source or another operation block
+the switch. The transaction freezes the complete engine-and-epoch-bound zone
+snapshot, stages and validates the target before stopping the source, verifies
+every zone over both UDP and TCP, and retains the old package as the stopped
+standby.
 
 An unresolved host left by an older release has one narrower exception:
 **registration-only adoption of an existing panel-managed PowerDNS authority**.

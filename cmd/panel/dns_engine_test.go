@@ -774,18 +774,19 @@ func TestDNSEngineGETMatchesUIWireContract(t *testing.T) {
 	}
 }
 
-func TestDNSEnginePairedAndDNSSECPreviewBlockWithoutMutation(t *testing.T) {
+func TestDNSEnginePairedBINDPreviewAndDNSSECBlockerWithoutMutation(t *testing.T) {
 	tests := []struct {
 		name        string
 		paired      bool
 		dnssec      bool
 		wantBlocker string
 	}{
-		{name: "paired", paired: true, wantBlocker: "paired_topology_unsupported"},
+		{name: "paired BIND", paired: true},
 		{name: "dnssec", dnssec: true, wantBlocker: "dnssec_unsupported"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 			panel := newDNSPanelForTest(t)
 			if test.paired {
 				setDNSIdentityForTest(t, panel, "paired")
@@ -802,7 +803,8 @@ func TestDNSEnginePairedAndDNSSECPreviewBlockWithoutMutation(t *testing.T) {
 				t, panel, transport.DNSEngineBIND, nil, 0,
 			)
 			if recorder.Code != http.StatusOK ||
-				!hasDNSEngineBlocker(preview, test.wantBlocker) {
+				(test.wantBlocker != "" && !hasDNSEngineBlocker(preview, test.wantBlocker)) ||
+				(test.wantBlocker == "" && len(preview.Blockers) != 0) {
 				t.Fatalf("preview=%+v status=%d body=%s",
 					preview, recorder.Code, recorder.Body.String())
 			}
@@ -814,6 +816,82 @@ func TestDNSEnginePairedAndDNSSECPreviewBlockWithoutMutation(t *testing.T) {
 			agent.mu.Unlock()
 			if calls != 0 {
 				t.Fatalf("blocked preview performed %d host switches", calls)
+			}
+		})
+	}
+}
+
+func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
+	for index, test := range []struct {
+		name, localIP, peerIP, peerNS, wantRole, wantLocalNS string
+	}{
+		{
+			name: "primary", localIP: "192.0.2.10", peerIP: "192.0.2.20",
+			peerNS: "ns2.celikhost.com", wantRole: transport.DNSPairRolePrimary,
+			wantLocalNS: "ns1.celikhost.com",
+		},
+		{
+			name: "secondary", localIP: "192.0.2.20", peerIP: "192.0.2.10",
+			peerNS: "ns1.celikhost.com", wantRole: transport.DNSPairRoleSecondary,
+			wantLocalNS: "ns2.celikhost.com",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", test.localIP)
+			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, "paired")
+			if err := panel.setSetting(context.Background(), settingDNSPeerIP, test.peerIP); err != nil {
+				t.Fatal(err)
+			}
+			if err := panel.setSetting(context.Background(), settingDNSPeerNS, test.peerNS); err != nil {
+				t.Fatal(err)
+			}
+			agent := newDNSEngineTestAgent()
+			attachDNSEngineTestAgent(t, panel, agent)
+			preview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEngineBIND, nil, 0,
+			)
+			if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+				preview.Topology != transport.DNSTopologyPaired {
+				t.Fatalf("preview status=%d value=%+v body=%s",
+					recorder.Code, preview, recorder.Body.String())
+			}
+			requestID := strings.Repeat(string(rune('4'+index)), 32)
+			commit := commitDNSEngineSwitch(
+				t, panel, requestID, transport.DNSEngineBIND,
+				nil, 0, preview.PreviewToken, false,
+			)
+			if commit.Code != http.StatusOK {
+				t.Fatalf("commit status=%d body=%s", commit.Code, commit.Body.String())
+			}
+			agent.mu.Lock()
+			if len(agent.switchRequests) != 1 {
+				agent.mu.Unlock()
+				t.Fatalf("switch requests=%d", len(agent.switchRequests))
+			}
+			request := agent.switchRequests[0]
+			agent.mu.Unlock()
+			if request.Topology != transport.DNSTopologyPaired ||
+				request.PairRole != test.wantRole || request.LocalIP != test.localIP ||
+				request.LocalNS != test.wantLocalNS || request.PeerIP != test.peerIP ||
+				request.PeerNS != test.peerNS {
+				t.Fatalf("directional request=%+v", request)
+			}
+			state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state.ActiveEngine != transport.DNSEngineBIND ||
+				state.Topology != transport.DNSTopologyPaired ||
+				state.PairRole != test.wantRole || state.LocalIP != test.localIP ||
+				state.LocalNS != test.wantLocalNS || state.PeerIP != test.peerIP ||
+				state.PeerNS != test.peerNS {
+				t.Fatalf("durable directional state=%+v", state)
+			}
+			identity, ready, err := panel.activeDNSPublisher(context.Background())
+			if err != nil || identity.PairRole != test.wantRole ||
+				ready != (test.wantRole == transport.DNSPairRolePrimary) {
+				t.Fatalf("publisher identity=%+v ready=%v err=%v", identity, ready, err)
 			}
 		})
 	}

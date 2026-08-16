@@ -134,6 +134,38 @@ func verifyStandaloneUnsignedPowerDNS(ctx context.Context) error {
 	if err := requireManagedDNSClusterReady(); err != nil {
 		return err
 	}
+	return verifyUnsignedPowerDNSData(ctx)
+}
+
+func verifyUnsignedPowerDNSForManifest(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	if manifest.Topology == transport.DNSTopologyStandalone {
+		return verifyStandaloneUnsignedPowerDNS(ctx)
+	}
+	if manifest.Topology != transport.DNSTopologyPaired ||
+		manifest.TargetEngine != transport.DNSEngineBIND {
+		return errors.New("PowerDNS source topology is not supported for this switch")
+	}
+	commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+		manifest.Topology, manifest.PeerIP, manifest.PeerNS,
+	)
+	if err != nil {
+		return err
+	}
+	if err := verifyDNSClusterConfig(
+		commitment,
+		dnsClusterConfig(&DNSClusterRequest{
+			Role: commitment.Role, PeerIP: commitment.PeerIP, PeerNS: commitment.PeerNS,
+		}),
+	); err != nil {
+		return fmt.Errorf("verify paired PowerDNS source: %w", err)
+	}
+	return verifyUnsignedPowerDNSData(ctx)
+}
+
+func verifyUnsignedPowerDNSData(ctx context.Context) error {
 	db, err := openPDNSEngineDB(pdnsDBPath(), true)
 	if err != nil {
 		return err
@@ -273,10 +305,11 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		return errors.New("PowerDNS rollback found an unexpected database backup")
 	}
 	if liveExists {
-		manifest, canonicalErr := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+		manifest, canonicalErr := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 			journal.Mode,
 			journal.SourceEngine, journal.TargetEngine, journal.SourceEpoch,
 			journal.TargetEpoch, journal.SourceRevision, journal.Topology,
+			journal.PairRole, journal.LocalIP, journal.LocalNS,
 			journal.PeerIP, journal.PeerNS, journal.Zones,
 		)
 		binding := transport.ServiceMutationBinding{

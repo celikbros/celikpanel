@@ -839,3 +839,98 @@ func TestDNSEngineMigration034RetainsModeAwareAttachmentGuard(t *testing.T) {
 	}
 	t.Fatal("migration 034 attachment guard is unavailable")
 }
+
+func TestBINDPairedMigrationBindsExactSwitchAndActiveEpoch(t *testing.T) {
+	database := newDNSZoneSyncMigrationDB(t)
+	switchID := strings.Repeat("7", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("8", 32), strings.Repeat("9", 32),
+		"switch", nil, "bind", 0, 1, 0, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		INSERT INTO dns_bind_pair_switches (
+		  switch_id, pair_role, local_ip, local_ns, peer_ip, peer_ns
+		) VALUES (?, 'primary', '192.0.2.10', 'ns1.example.test',
+		          '192.0.2.20', 'ns2.example.test')`, switchID,
+	); err != nil {
+		t.Fatalf("insert exact BIND pair identity: %v", err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state SET current_switch_id = ?, revision = 1,
+		       updated_at = datetime('now') WHERE singleton_id = 1`, switchID,
+	); err != nil {
+		t.Fatalf("attach exact BIND pair switch: %v", err)
+	}
+	requireDNSEngineSQLFailure(t, database, "pair identity mutation", `
+		UPDATE dns_bind_pair_switches SET peer_ip = '192.0.2.21'
+		WHERE switch_id = ?`, switchID)
+	for _, phase := range []string{"staging", "staged", "activating", "verifying", "committed"} {
+		if _, err := database.Exec(`
+			UPDATE dns_engine_switch_snapshots SET phase = ?,
+			       updated_at = datetime('now') WHERE switch_id = ?`, phase, switchID,
+		); err != nil {
+			t.Fatalf("advance %s: %v", phase, err)
+		}
+	}
+	if _, err := database.Exec(`
+		INSERT INTO dns_bind_pair_state (
+		  singleton_id, active_epoch, pair_role, local_ip, local_ns,
+		  peer_ip, peer_ns, source_switch_id
+		) VALUES (1, 1, 'primary', '192.0.2.10', 'ns1.example.test',
+		          '192.0.2.20', 'ns2.example.test', ?)`, switchID,
+	); err != nil {
+		t.Fatalf("publish exact BIND pair state: %v", err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET active_engine = 'bind', active_epoch = 1,
+		    current_switch_id = NULL, revision = 2,
+		    updated_at = datetime('now')
+		WHERE singleton_id = 1`,
+	); err != nil {
+		t.Fatalf("finalize paired BIND engine: %v", err)
+	}
+	var role, localNS, peerNS string
+	var epoch int64
+	if err := database.QueryRow(`
+		SELECT active_epoch, pair_role, local_ns, peer_ns
+		FROM dns_bind_pair_state WHERE singleton_id = 1`,
+	).Scan(&epoch, &role, &localNS, &peerNS); err != nil {
+		t.Fatal(err)
+	}
+	if epoch != 1 || role != "primary" || localNS != "ns1.example.test" ||
+		peerNS != "ns2.example.test" {
+		t.Fatalf("paired state=%d/%s/%s/%s", epoch, role, localNS, peerNS)
+	}
+	requireDNSEngineSQLFailure(t, database, "active pair state mutation", `
+		UPDATE dns_bind_pair_state SET pair_role = 'secondary' WHERE singleton_id = 1`)
+	assertForeignKeyCheckClean(t, database)
+}
+
+func TestBINDPairedMigrationParticipatesInReferenceSchema(t *testing.T) {
+	objects, err := ReferenceSQLiteUserSchema(context.Background(), 36)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{
+		"table/dns_bind_pair_switches":                 false,
+		"table/dns_bind_pair_state":                    false,
+		"trigger/dns_bind_pair_switch_insert_guard":    false,
+		"trigger/dns_bind_pair_switch_immutable":       false,
+		"trigger/dns_bind_pair_state_insert_guard":     false,
+		"trigger/dns_engine_state_attach_switch_guard": false,
+	}
+	for _, object := range objects {
+		key := object.Type + "/" + object.Name
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("reference schema is missing %s", key)
+		}
+	}
+}

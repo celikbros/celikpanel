@@ -66,6 +66,11 @@ type dnsEngineDBState struct {
 	EngineEpoch     int64
 	Revision        int64
 	Topology        string
+	PairRole        string
+	LocalIP         string
+	LocalNS         string
+	PeerIP          string
+	PeerNS          string
 	CurrentSwitchID string
 }
 
@@ -84,6 +89,7 @@ type dnsEngineSnapshot struct {
 	ActiveEngine     *transport.DNSEngine `json:"active_engine"`
 	State            string               `json:"state"`
 	Topology         string               `json:"topology"`
+	PairRole         string               `json:"pair_role,omitempty"`
 	DNSSECZoneCount  int                  `json:"dnssec_zone_count"`
 	ZoneCount        int                  `json:"zone_count"`
 	PendingZoneCount int                  `json:"pending_zone_count"`
@@ -181,12 +187,37 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 	if current.Valid {
 		state.CurrentSwitchID = current.String
 	}
+	var pairRole, localIP, localNS, peerIP, peerNS sql.NullString
+	var pairEpoch int64
+	pairErr := query.QueryRowContext(ctx, `
+		SELECT active_epoch, pair_role, local_ip, local_ns, peer_ip, peer_ns
+		FROM dns_bind_pair_state WHERE singleton_id = 1`).Scan(
+		&pairEpoch, &pairRole, &localIP, &localNS, &peerIP, &peerNS,
+	)
+	if pairErr != nil && !errors.Is(pairErr, sql.ErrNoRows) {
+		return dnsEngineDBState{}, pairErr
+	}
+	if pairErr == nil {
+		if state.ActiveEngine != transport.DNSEngineBIND ||
+			state.Topology != transport.DNSTopologyStandalone ||
+			pairEpoch != state.EngineEpoch || !pairRole.Valid || !localIP.Valid ||
+			!localNS.Valid || !peerIP.Valid || !peerNS.Valid {
+			return dnsEngineDBState{}, errors.New("persisted BIND pair state is inconsistent")
+		}
+		state.Topology = transport.DNSTopologyPaired
+		state.PairRole = pairRole.String
+		state.LocalIP, state.LocalNS = localIP.String, localNS.String
+		state.PeerIP, state.PeerNS = peerIP.String, peerNS.String
+	}
 	if (state.ActiveEngine != "" && !transport.ValidDNSEngine(state.ActiveEngine)) ||
 		state.EngineEpoch < 0 || state.Revision < 0 ||
 		(state.Topology != transport.DNSTopologyStandalone &&
 			state.Topology != transport.DNSTopologyPaired) ||
 		(state.Topology == transport.DNSTopologyPaired &&
-			state.ActiveEngine != transport.DNSEnginePowerDNS) ||
+			state.ActiveEngine != transport.DNSEnginePowerDNS &&
+			(state.ActiveEngine != transport.DNSEngineBIND ||
+				(state.PairRole != transport.DNSPairRolePrimary &&
+					state.PairRole != transport.DNSPairRoleSecondary))) ||
 		(state.CurrentSwitchID != "" && !validServiceOperationID(state.CurrentSwitchID)) {
 		return dnsEngineDBState{}, errors.New("persisted DNS engine state is invalid")
 	}
@@ -473,7 +504,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
-		State:        presentationState, Topology: topology,
+		State:        presentationState, Topology: topology, PairRole: state.PairRole,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,
@@ -483,8 +514,9 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 }
 
 type dnsPublisherIdentity struct {
-	Engine transport.DNSEngine
-	Epoch  int64
+	Engine   transport.DNSEngine
+	Epoch    int64
+	PairRole string
 }
 
 // activeDNSPublisher authorizes engine-aware publication only when durable
@@ -516,10 +548,19 @@ func (p *Panel) activeDNSPublisher(
 			return dnsPublisherIdentity{}, false, nil
 		}
 	}
-	return dnsPublisherIdentity{
+	identity := dnsPublisherIdentity{
 		Engine: state.ActiveEngine,
-		Epoch:  state.EngineEpoch,
-	}, true, nil
+		Epoch:  state.EngineEpoch, PairRole: state.PairRole,
+	}
+	// A directional BIND secondary serves transferred zones but must never
+	// accept panel-local domain or record mutations.  Returning the exact
+	// identity with ready=false keeps read-only engine truth visible while all
+	// hosting publication paths fail closed before acquiring a V3 lease.
+	if identity.Engine == transport.DNSEngineBIND &&
+		identity.PairRole == transport.DNSPairRoleSecondary {
+		return identity, false, nil
+	}
+	return identity, true, nil
 }
 
 func (p *Panel) requireActivePowerDNSPublisher(ctx context.Context) error {
@@ -629,7 +670,8 @@ func dnsEnginePreviewBlockers(
 	if snapshot.Revision != expectedRevision || actualSource != expectedSource {
 		blockers = addDNSEngineBlocker(blockers, "stale_revision")
 	}
-	if action != "adopt" && snapshot.Topology == "paired" {
+	if action != "adopt" && snapshot.Topology == "paired" &&
+		target != transport.DNSEngineBIND {
 		blockers = addDNSEngineBlocker(blockers, "paired_topology_unsupported")
 	}
 	if snapshot.State == dnsEngineStateSwitching {
@@ -758,6 +800,41 @@ func canonicalDNSEnginePeerSnapshotTx(
 	return peer.PeerIP, peer.PeerNS, nil
 }
 
+func canonicalBINDEnginePairIdentityTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	peerNS string,
+) (string, string, string, error) {
+	ns1Raw, err := settingTx(ctx, tx, settingNS1)
+	if err != nil {
+		return "", "", "", err
+	}
+	ns2Raw, err := settingTx(ctx, tx, settingNS2)
+	if err != nil {
+		return "", "", "", err
+	}
+	ns1 := canonicalDNSName(ns1Raw)
+	ns2 := canonicalDNSName(ns2Raw)
+	if ns1 == "" || ns2 == "" || ns1 == ns2 {
+		return "", "", "", errors.New("BIND pairing requires two distinct saved nameservers")
+	}
+	localNS := ""
+	role := ""
+	switch peerNS {
+	case ns2:
+		localNS, role = ns1, transport.DNSPairRolePrimary
+	case ns1:
+		localNS, role = ns2, transport.DNSPairRoleSecondary
+	default:
+		return "", "", "", errors.New("BIND peer nameserver does not match the saved identity")
+	}
+	localIP := strings.TrimSpace(serverPrimaryIP())
+	if localIP == "" {
+		return "", "", "", errors.New("BIND pairing requires a verified local IPv4 address")
+	}
+	return role, localIP, localNS, nil
+}
+
 func (p *Panel) buildDNSEngineManifest(
 	ctx context.Context,
 	state dnsEngineDBState,
@@ -766,11 +843,18 @@ func (p *Panel) buildDNSEngineManifest(
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
 	mode := dnsEngineMutationMode(action)
 	topology := state.Topology
+	if mode == transport.DNSEngineSwitchModeSwitch &&
+		state.ActiveEngine == "" && target == transport.DNSEngineBIND &&
+		observedTopology == transport.DNSTopologyPaired {
+		topology = transport.DNSTopologyPaired
+	}
 	switch mode {
 	case transport.DNSEngineSwitchModeSwitch:
-		if state.Topology != transport.DNSTopologyStandalone {
+		if topology != transport.DNSTopologyStandalone &&
+			(topology != transport.DNSTopologyPaired ||
+				target != transport.DNSEngineBIND) {
 			return mutationpayload.DNSEngineSwitchManifestCommitment{},
-				errors.New("durable DNS engine topology is not standalone")
+				errors.New("durable DNS engine topology is unsupported for the target")
 		}
 	case transport.DNSEngineSwitchModeAdopt:
 		topology = observedTopology
@@ -793,6 +877,15 @@ func (p *Panel) buildDNSEngineManifest(
 	peerIP, peerNS, err := canonicalDNSEnginePeerSnapshotTx(ctx, tx, topology)
 	if err != nil {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
+	}
+	pairRole, localIP, localNS := "", "", ""
+	if mode == transport.DNSEngineSwitchModeSwitch &&
+		target == transport.DNSEngineBIND &&
+		topology == transport.DNSTopologyPaired {
+		pairRole, localIP, localNS, err = canonicalBINDEnginePairIdentityTx(ctx, tx, peerNS)
+		if err != nil {
+			return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
+		}
 	}
 	var leases int
 	if err := tx.QueryRowContext(ctx, `
@@ -885,13 +978,21 @@ func (p *Panel) buildDNSEngineManifest(
 			Delete: deleteZone, ZoneType: desiredZone.zoneType, Records: records,
 		})
 	}
+	if pairRole == transport.DNSPairRoleSecondary {
+		for _, zone := range zones {
+			if !zone.Delete {
+				return mutationpayload.DNSEngineSwitchManifestCommitment{},
+					errors.New("a BIND secondary cannot retain locally owned live zones")
+			}
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
 	}
-	return mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+	return mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		mode,
 		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
-		state.Revision, topology, peerIP, peerNS, zones,
+		state.Revision, topology, pairRole, localIP, localNS, peerIP, peerNS, zones,
 	)
 }
 
@@ -1027,6 +1128,9 @@ type persistedDNSEngineSwitch struct {
 	Topology       string
 	PeerIP         string
 	PeerNS         string
+	PairRole       string
+	LocalIP        string
+	LocalNS        string
 	Phase          string
 	Qualifier      string
 	ZoneCount      int
@@ -1039,12 +1143,20 @@ func readDNSEngineSwitchByRequest(
 	requestID string,
 ) (persistedDNSEngineSwitch, error) {
 	var result persistedDNSEngineSwitch
-	var source sql.NullString
+	var source, pairRole, localIP, localNS, pairPeerIP, pairPeerNS sql.NullString
 	err := query.QueryRowContext(ctx, `
-		SELECT switch_id, request_id, owner_id, mode, source_engine, target_engine,
-		       source_epoch, target_epoch, source_state_revision, phase,
-		       topology, peer_ip, peer_ns, manifest_qualifier, zone_count, snapshot_bytes
-		FROM dns_engine_switch_snapshots WHERE request_id = ?`,
+		SELECT snapshot.switch_id, snapshot.request_id, snapshot.owner_id,
+		       snapshot.mode, snapshot.source_engine, snapshot.target_engine,
+		       snapshot.source_epoch, snapshot.target_epoch,
+		       snapshot.source_state_revision, snapshot.phase,
+		       snapshot.topology, snapshot.peer_ip, snapshot.peer_ns,
+		       snapshot.manifest_qualifier, snapshot.zone_count, snapshot.snapshot_bytes,
+		       pairing.pair_role, pairing.local_ip, pairing.local_ns,
+		       pairing.peer_ip, pairing.peer_ns
+		FROM dns_engine_switch_snapshots AS snapshot
+		LEFT JOIN dns_bind_pair_switches AS pairing
+		  ON pairing.switch_id = snapshot.switch_id
+		WHERE snapshot.request_id = ?`,
 		requestID,
 	).Scan(
 		&result.SwitchID, &result.RequestID, &result.OwnerID, &result.Mode, &source,
@@ -1052,9 +1164,21 @@ func readDNSEngineSwitchByRequest(
 		&result.SourceRevision, &result.Phase, &result.Topology,
 		&result.PeerIP, &result.PeerNS, &result.Qualifier,
 		&result.ZoneCount, &result.SnapshotBytes,
+		&pairRole, &localIP, &localNS, &pairPeerIP, &pairPeerNS,
 	)
 	if source.Valid {
 		result.SourceEngine = transport.DNSEngine(source.String)
+	}
+	if pairRole.Valid {
+		if !localIP.Valid || !localNS.Valid || !pairPeerIP.Valid || !pairPeerNS.Valid ||
+			result.TargetEngine != transport.DNSEngineBIND ||
+			result.Mode != transport.DNSEngineSwitchModeSwitch ||
+			result.Topology != transport.DNSTopologyStandalone {
+			return persistedDNSEngineSwitch{}, errors.New("persisted BIND pair switch is invalid")
+		}
+		result.Topology = transport.DNSTopologyPaired
+		result.PairRole, result.LocalIP, result.LocalNS = pairRole.String, localIP.String, localNS.String
+		result.PeerIP, result.PeerNS = pairPeerIP.String, pairPeerNS.String
 	}
 	if err == nil &&
 		(result.Mode != transport.DNSEngineSwitchModeSwitch &&
@@ -1141,6 +1265,13 @@ func (p *Panel) persistDNSEngineSwitch(
 	if manifest.SourceEngine != "" {
 		source = string(manifest.SourceEngine)
 	}
+	storageTopology := manifest.Topology
+	storagePeerIP, storagePeerNS := manifest.PeerIP, manifest.PeerNS
+	if manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.Topology == transport.DNSTopologyPaired {
+		storageTopology = transport.DNSTopologyStandalone
+		storagePeerIP, storagePeerNS = "", ""
+	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dns_engine_switch_snapshots (
 		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
@@ -1150,11 +1281,23 @@ func (p *Panel) persistDNSEngineSwitch(
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?)`,
 		switchID, request.RequestID, ownerID, manifest.Mode, source,
 		manifest.TargetEngine, manifest.SourceEpoch, manifest.TargetEpoch,
-		manifest.SourceRevision, manifest.Topology, manifest.PeerIP, manifest.PeerNS,
+		manifest.SourceRevision, storageTopology, storagePeerIP, storagePeerNS,
 		manifest.Qualifier,
 		len(manifest.Zones), manifest.SnapshotBytes,
 	); err != nil {
 		return persistedDNSEngineSwitch{}, err
+	}
+	if manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.Topology == transport.DNSTopologyPaired {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dns_bind_pair_switches (
+			  switch_id, pair_role, local_ip, local_ns, peer_ip, peer_ns
+			) VALUES (?, ?, ?, ?, ?, ?)`,
+			switchID, manifest.PairRole, manifest.LocalIP, manifest.LocalNS,
+			manifest.PeerIP, manifest.PeerNS,
+		); err != nil {
+			return persistedDNSEngineSwitch{}, err
+		}
 	}
 	for _, zone := range manifest.Zones {
 		recordsJSON, err := mutationpayload.MarshalDNSZoneSnapshotRecords(zone.Records)
@@ -1254,6 +1397,7 @@ func (p *Panel) persistDNSEngineSwitch(
 		SourceRevision: manifest.SourceRevision,
 		Action:         action, Mode: mode, Topology: manifest.Topology,
 		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
 		Phase:     "activating",
 		Qualifier: manifest.Qualifier, ZoneCount: len(manifest.Zones),
 		SnapshotBytes: manifest.SnapshotBytes,
@@ -1447,13 +1591,29 @@ func (p *Panel) finalizeDNSEngineSwitchSuccess(
 	); err != nil {
 		return err
 	}
+	storageTopology := persisted.Topology
+	if persisted.TargetEngine == transport.DNSEngineBIND &&
+		persisted.Topology == transport.DNSTopologyPaired {
+		storageTopology = transport.DNSTopologyStandalone
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dns_bind_pair_state (
+			  singleton_id, active_epoch, pair_role, local_ip, local_ns,
+			  peer_ip, peer_ns, source_switch_id
+			) VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
+			persisted.TargetEpoch, persisted.PairRole, persisted.LocalIP,
+			persisted.LocalNS, persisted.PeerIP, persisted.PeerNS,
+			persisted.SwitchID,
+		); err != nil {
+			return err
+		}
+	}
 	detached, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_state
 		SET active_engine = ?, active_epoch = ?, topology = ?,
 		    current_switch_id = NULL,
 		    revision = revision + 1, updated_at = datetime('now')
 		WHERE singleton_id = 1 AND current_switch_id = ?`,
-		persisted.TargetEngine, persisted.TargetEpoch, persisted.Topology,
+		persisted.TargetEngine, persisted.TargetEpoch, storageTopology,
 		persisted.SwitchID,
 	)
 	if err != nil {
@@ -1659,11 +1819,12 @@ func (p *Panel) reconstructPersistedDNSEngineManifest(
 		return mutationpayload.DNSEngineSwitchManifestCommitment{},
 			errors.New("persisted DNS engine snapshot size or count mismatch")
 	}
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		persisted.Mode,
 		persisted.SourceEngine, persisted.TargetEngine,
 		persisted.SourceEpoch, persisted.TargetEpoch,
 		persisted.SourceRevision, persisted.Topology,
+		persisted.PairRole, persisted.LocalIP, persisted.LocalNS,
 		persisted.PeerIP, persisted.PeerNS, zones,
 	)
 	if err != nil {
@@ -1685,6 +1846,7 @@ func dnsEngineSwitchRequestForManifest(
 		SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
 		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		Zones: manifest.Zones, SnapshotBytes: manifest.SnapshotBytes,
 		ManifestQualifier: manifest.Qualifier,
