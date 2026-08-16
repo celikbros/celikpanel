@@ -457,6 +457,66 @@ func TestDNSZoneV3BINDCreateUpdateDeletePreservesOtherZones(t *testing.T) {
 		t.Fatalf("delete application generation=%d action=%s revision=%d",
 			appliedGeneration, appliedAction, revision)
 	}
+	deleteGeneration := requests[2].DesiredGeneration
+	deleteRequestID := requests[2].MutationRequestID
+	deleteOwnerID := requests[2].MutationOwnerID
+	deleteZoneType := requests[2].ZoneType
+	deleteQualifier := qualifier
+
+	seedStrictDNSZone(t, panel, "bind-publish.example")
+	seedV3ZoneRecord(t, panel, "bind-publish.example", "A", "192.0.2.30")
+	if err := panel.syncZoneToDNS(
+		context.Background(), "bind-publish.example", false,
+	); err != nil {
+		t.Fatalf("republish same-name zone after applied deletion: %v", err)
+	}
+	agent.mu.Lock()
+	requests = append([]transport.SyncDNSZoneV3Request(nil), agent.requests...)
+	_, recreatedOnAgent := agent.zones["bind-publish.example"]
+	agent.mu.Unlock()
+	if len(requests) != 4 || requests[3].Delete || !recreatedOnAgent ||
+		requests[3].DesiredGeneration <= deleteGeneration {
+		t.Fatalf("resurrected BIND V3 requests=%+v recreated=%v delete_generation=%d",
+			requests, recreatedOnAgent, deleteGeneration)
+	}
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT applied_generation, applied_action, qualifier, revision
+		FROM dns_zone_engine_applications
+		WHERE zone_name = 'bind-publish.example' AND engine = 'bind'`).Scan(
+		&appliedGeneration, &appliedAction, &qualifier, &revision,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if appliedAction != "sync" ||
+		appliedGeneration != requests[3].DesiredGeneration || revision != 4 {
+		t.Fatalf("resurrected application generation=%d action=%s revision=%d",
+			appliedGeneration, appliedAction, revision)
+	}
+	staleDelete := dnsZoneEngineLease{
+		ZoneName: "bind-publish.example", Engine: transport.DNSEngineBIND,
+		EngineEpoch: 1, RequestID: deleteRequestID, OwnerID: deleteOwnerID,
+		DesiredGeneration: deleteGeneration, DesiredAction: "delete",
+		DesiredZoneType: deleteZoneType, Qualifier: deleteQualifier,
+		ExpiresAt: "2099-01-01T00:00:00Z",
+	}
+	if exact, err := panel.recordDNSZoneSyncV3Success(
+		context.Background(), staleDelete,
+	); err == nil || exact {
+		t.Fatalf("stale delete receipt exact=%v err=%v", exact, err)
+	}
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT applied_generation, applied_action, revision
+		FROM dns_zone_engine_applications
+		WHERE zone_name = 'bind-publish.example' AND engine = 'bind'`).Scan(
+		&appliedGeneration, &appliedAction, &revision,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if appliedGeneration != requests[3].DesiredGeneration ||
+		appliedAction != "sync" || revision != 4 {
+		t.Fatalf("stale delete changed application generation=%d action=%s revision=%d",
+			appliedGeneration, appliedAction, revision)
+	}
 }
 
 func TestDNSZoneV3RejectsStaleEngineEpochBeforeSnapshotMutation(t *testing.T) {

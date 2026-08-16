@@ -1335,6 +1335,14 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+		-- Reverse migration 035 before removing the desired-state ledger it
+		-- observes. The high-water row itself remains permanent in production.
+		DROP TRIGGER dns_zone_sync_state_high_water_update;
+		DROP TRIGGER dns_zone_sync_state_high_water_insert;
+		DROP TRIGGER dns_zone_generation_high_water_delete_guard;
+		DROP TRIGGER dns_zone_generation_high_water_identity_guard;
+		DROP TABLE dns_zone_generation_high_water;
+
 		-- Reverse migration 033 before removing migration 032. In particular,
 		-- leases and cross-table triggers still resolve dns_zone_sync_state
 		-- while SQLite prepares later DDL statements.
