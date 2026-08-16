@@ -89,6 +89,8 @@ func requireKnownAgentCapabilities(capabilities []string, required ...string) er
 		transport.AgentCapabilityDNSZoneSyncV2:           {},
 		transport.AgentCapabilityDNSSECSecureV2:          {},
 		transport.AgentCapabilityDNSClusterConfigureV2:   {},
+		transport.AgentCapabilityDNSZoneSyncV3:           {},
+		transport.AgentCapabilityDNSEngineSwitchV1:       {},
 		transport.AgentCapabilityMailTLSSyncV2:           {},
 		transport.AgentCapabilitySystemUpdateV1:          {},
 		transport.AgentCapabilitySecurityAuditV1:         {},
@@ -178,6 +180,37 @@ func (p *Panel) requireDNSZoneSyncV2Agent(ctx context.Context) error {
 	}
 	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncDNSZoneV2"); err != nil {
 		return fmt.Errorf("authorize DNS V2 host mutation before snapshot preparation: %w", err)
+	}
+	return nil
+}
+
+func (p *Panel) requireDNSEngineSwitchV1Agent(ctx context.Context) error {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(
+		ctx, "Agent.Version", &transport.Empty{}, &agent,
+	); err != nil {
+		return fmt.Errorf("verify DNS engine switch agent capability: %w", err)
+	}
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit != "" && panelCommit != "unknown" {
+		agentCommit := strings.TrimSpace(agent.Commit)
+		if agentCommit == "" || agentCommit != panelCommit {
+			return fmt.Errorf(
+				"panel/agent build mismatch; finish the paired upgrade before DNS engine switching",
+			)
+		}
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSEngineSwitchV1,
+	); err != nil {
+		return fmt.Errorf("DNS engine switching requires the paired agent capability: %w", err)
+	}
+	if err := p.authorizeAgentRPCContext(
+		ctx, "Agent.SwitchDNSEngineV1",
+	); err != nil {
+		return fmt.Errorf("authorize DNS engine host mutation before snapshot persistence: %w", err)
 	}
 	return nil
 }

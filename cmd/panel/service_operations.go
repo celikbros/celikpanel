@@ -1601,6 +1601,14 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	if err != nil {
 		return 0, err
 	}
+	if handled, engineErr := p.recoverDNSEngineSwitchLocked(
+		recoveryCtx, globalJob,
+	); handled || engineErr != nil {
+		if engineErr != nil {
+			return 0, engineErr
+		}
+		return 0, nil
+	}
 	if op != nil && op.Kind == serviceOperationKindPanelCertificate {
 		if !validServiceOperationID(op.RequestID) {
 			return 0, errors.New("active panel certificate operation has no durable request identity")

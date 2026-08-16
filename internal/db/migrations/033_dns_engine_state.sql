@@ -465,3 +465,66 @@ WHEN (NEW.active_engine IS NOT OLD.active_engine OR NEW.active_epoch <> OLD.acti
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine identity can change only through a committed switch');
 END;
+
+-- The switch snapshot is authoritative from attachment through terminal
+-- verification. No domain/record writer may change the ledger behind that
+-- frozen manifest while the host cutover is in flight.
+CREATE TRIGGER dns_engine_switch_freeze_domain_insert
+BEFORE INSERT ON pdns_domains
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_domain_update
+BEFORE UPDATE ON pdns_domains
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_domain_delete
+BEFORE DELETE ON pdns_domains
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_record_insert
+BEFORE INSERT ON pdns_records
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_record_update
+BEFORE UPDATE ON pdns_records
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;
+
+CREATE TRIGGER dns_engine_switch_freeze_record_delete
+BEFORE DELETE ON pdns_records
+WHEN EXISTS (
+    SELECT 1 FROM dns_engine_state
+    WHERE singleton_id = 1 AND current_switch_id IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'DNS zone ledger is frozen during engine switch');
+END;

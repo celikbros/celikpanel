@@ -104,6 +104,9 @@ type Panel struct {
 	// Postfix maps are global files, so two tenants must not snapshot and
 	// publish overlapping forwarding or mailbox states concurrently.
 	mailMutationMu sync.Mutex
+	// dnsEnginePreviews holds short-lived, one-use authorizations for the
+	// separately confirmed DNS engine cutover endpoint.
+	dnsEnginePreviews dnsEnginePreviewCache
 }
 
 type domainSubroute struct {
@@ -965,6 +968,9 @@ func main() {
 	http.HandleFunc("/api/v1/vpn/peers", panel.handleVPNPeers)
 	http.HandleFunc("/api/v1/vpn/peers/", panel.handleVPNPeerByID)
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
+	http.HandleFunc("/api/v1/dns/engine", panel.handleDNSEngine)
+	http.HandleFunc("/api/v1/dns/engine/switch/preview", panel.handleDNSEngineSwitchPreview)
+	http.HandleFunc("/api/v1/dns/engine/switch", panel.handleDNSEngineSwitch)
 	http.HandleFunc("/api/v1/mail/configure", panel.handleMailConfigure)
 	http.HandleFunc("/api/v1/mail/policy", panel.handleMailPolicy)
 	http.HandleFunc("/api/v1/apps", panel.handleAppCatalog)

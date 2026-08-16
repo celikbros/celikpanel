@@ -181,6 +181,191 @@ func TestDNSEngineMigrationSeparatesLegacyAndV3LeaseAuthority(t *testing.T) {
 	}
 }
 
+func TestDNSEngineMigrationFreezesZoneLedgerUntilTerminalDetach(t *testing.T) {
+	database := newDNSZoneSyncMigrationDB(t)
+	domainResult, err := database.Exec(`
+		INSERT INTO pdns_domains(name, type) VALUES ('freeze.example', 'NATIVE')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domainID, _ := domainResult.LastInsertId()
+	recordResult, err := database.Exec(`
+		INSERT INTO pdns_records(domain_id, name, type, content, ttl, prio, disabled)
+		VALUES (?, 'freeze.example', 'A', '192.0.2.10', 300, 0, 0)`, domainID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recordID, _ := recordResult.LastInsertId()
+	switchID, requestID, ownerID := strings.Repeat("9", 32),
+		strings.Repeat("a", 32), strings.Repeat("b", 32)
+	recordsJSON := `[{"name":"freeze.example","type":"A","content":"192.0.2.10","ttl":300,"prio":0,"disabled":false}]`
+	if _, err := database.Exec(`
+		INSERT INTO dns_engine_switch_snapshots (
+		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  source_epoch, target_epoch, source_state_revision, topology, phase,
+		  manifest_qualifier, zone_count, snapshot_bytes
+		) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
+		          'planned', ?, 1, ?)`,
+		switchID, requestID, ownerID, testDNSSwitchQualifier,
+		len([]byte(recordsJSON)),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		INSERT INTO dns_engine_switch_zones (
+		  switch_id, ordinal, zone_name, desired_generation, desired_action,
+		  desired_zone_type, zone_qualifier, records_json, records_bytes
+		) VALUES (?, 0, 'freeze.example', 2, 'sync', 'NATIVE', ?, ?, ?)`,
+		switchID, testDNSV3Qualifier, recordsJSON, len([]byte(recordsJSON)),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state SET current_switch_id = ?, revision = 1,
+		       updated_at = datetime('now') WHERE singleton_id = 1`,
+		switchID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	assertFrozen := func(phase string) {
+		t.Helper()
+		requireDNSEngineSQLFailure(t, database, phase+" domain insert",
+			`INSERT INTO pdns_domains(name, type) VALUES ('blocked.example', 'NATIVE')`)
+		requireDNSEngineSQLFailure(t, database, phase+" domain update",
+			`UPDATE pdns_domains SET type = 'MASTER' WHERE id = ?`, domainID)
+		requireDNSEngineSQLFailure(t, database, phase+" domain delete",
+			`DELETE FROM pdns_domains WHERE id = ?`, domainID)
+		requireDNSEngineSQLFailure(t, database, phase+" record insert",
+			`INSERT INTO pdns_records(domain_id, name, type, content, ttl)
+			 VALUES (?, 'freeze.example', 'TXT', 'blocked', 300)`, domainID)
+		requireDNSEngineSQLFailure(t, database, phase+" record update",
+			`UPDATE pdns_records SET content = '192.0.2.11' WHERE id = ?`, recordID)
+		requireDNSEngineSQLFailure(t, database, phase+" record delete",
+			`DELETE FROM pdns_records WHERE id = ?`, recordID)
+	}
+	assertFrozen("planned")
+	for _, phase := range []string{"staging", "staged", "activating", "verifying"} {
+		if _, err := database.Exec(`
+			UPDATE dns_engine_switch_snapshots SET phase = ?,
+			       updated_at = datetime('now') WHERE switch_id = ?`,
+			phase, switchID,
+		); err != nil {
+			t.Fatalf("advance %s: %v", phase, err)
+		}
+		assertFrozen(phase)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_switch_snapshots SET phase = 'committed',
+		       updated_at = datetime('now') WHERE switch_id = ?`, switchID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET active_engine = 'bind', active_epoch = 1, current_switch_id = NULL,
+		    revision = 2, updated_at = datetime('now')
+		WHERE singleton_id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(
+		`UPDATE pdns_records SET content = '192.0.2.12' WHERE id = ?`, recordID,
+	); err != nil {
+		t.Fatalf("record remained frozen after terminal detach: %v", err)
+	}
+	if _, err := database.Exec(
+		`INSERT INTO pdns_domains(name, type) VALUES ('allowed.example', 'NATIVE')`,
+	); err != nil {
+		t.Fatalf("domain remained frozen after terminal detach: %v", err)
+	}
+}
+
+func TestDNSEngineMigrationUnfreezesAfterRollbackOrFailureDetach(t *testing.T) {
+	for _, terminal := range []string{"rolled_back", "failed"} {
+		t.Run(terminal, func(t *testing.T) {
+			database := newDNSZoneSyncMigrationDB(t)
+			result, err := database.Exec(`
+				INSERT INTO pdns_domains(name, type)
+				VALUES ('terminal.example', 'NATIVE')`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			domainID, _ := result.LastInsertId()
+			if _, err := database.Exec(`
+				INSERT INTO pdns_records(domain_id, name, type, content, ttl)
+				VALUES (?, 'terminal.example', 'A', '192.0.2.20', 300)`,
+				domainID,
+			); err != nil {
+				t.Fatal(err)
+			}
+			switchID := strings.Repeat("d", 32)
+			requestID := strings.Repeat("e", 32)
+			ownerID := strings.Repeat("f", 32)
+			if _, err := database.Exec(`
+				INSERT INTO dns_engine_switch_snapshots (
+				  switch_id, request_id, owner_id, source_engine, target_engine,
+				  source_epoch, target_epoch, source_state_revision, topology,
+				  phase, manifest_qualifier, zone_count, snapshot_bytes
+				) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
+				          'planned', ?, 0, 0)`,
+				switchID, requestID, ownerID, testDNSSwitchQualifier,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := database.Exec(`
+				UPDATE dns_engine_state SET current_switch_id = ?, revision = 1,
+				       updated_at = datetime('now') WHERE singleton_id = 1`,
+				switchID,
+			); err != nil {
+				t.Fatal(err)
+			}
+			requireDNSEngineSQLFailure(t, database, terminal+" attached",
+				`UPDATE pdns_records SET content = '192.0.2.21' WHERE domain_id = ?`,
+				domainID)
+			if terminal == "rolled_back" {
+				for _, transition := range []struct {
+					phase     string
+					lastError any
+				}{
+					{phase: "staging"},
+					{phase: "rolling_back", lastError: "switch failed"},
+					{phase: "rolled_back", lastError: "switch failed"},
+				} {
+					if _, err := database.Exec(`
+						UPDATE dns_engine_switch_snapshots
+						SET phase = ?, last_error = ?, updated_at = datetime('now')
+						WHERE switch_id = ?`,
+						transition.phase, transition.lastError, switchID,
+					); err != nil {
+						t.Fatalf("advance %s: %v", transition.phase, err)
+					}
+				}
+			} else {
+				if _, err := database.Exec(`
+					UPDATE dns_engine_switch_snapshots
+					SET phase = 'failed', last_error = 'switch failed',
+					    updated_at = datetime('now')
+					WHERE switch_id = ?`, switchID,
+				); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := database.Exec(`
+				UPDATE dns_engine_state
+				SET current_switch_id = NULL, revision = 2,
+				    updated_at = datetime('now')
+				WHERE singleton_id = 1`); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := database.Exec(`
+				UPDATE pdns_records SET content = '192.0.2.22'
+				WHERE domain_id = ?`, domainID,
+			); err != nil {
+				t.Fatalf("record remained frozen after %s detach: %v",
+					terminal, err)
+			}
+		})
+	}
+}
+
 func requireDNSEngineSQLFailure(
 	t *testing.T, database *sql.DB, name, query string, args ...any,
 ) {
@@ -204,6 +389,8 @@ func TestDNSEngineMigrationParticipatesInReferenceSchemaContract(t *testing.T) {
 		"index/idx_dns_engine_switch_one_active":                  false,
 		"trigger/dns_engine_state_engine_change_guard":            false,
 		"trigger/dns_zone_sync_state_legacy_lease_conflict_guard": false,
+		"trigger/dns_engine_switch_freeze_domain_insert":          false,
+		"trigger/dns_engine_switch_freeze_record_update":          false,
 	}
 	for _, object := range objects {
 		key := object.Type + "/" + object.Name
