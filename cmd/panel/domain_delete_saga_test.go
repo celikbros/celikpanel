@@ -75,6 +75,20 @@ func (a *domainDeletionRPCAgent) Version(
 	return nil
 }
 
+func (a *domainDeletionRPCAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine: transport.DNSEnginePowerDNS, Installed: true,
+			Running: true, Managed: true, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
+	return nil
+}
+
 func (a *domainDeletionRPCAgent) DeleteSite(
 	_ *transport.DeleteSiteRequest,
 	resp *transport.DeleteSiteResponse,
@@ -148,6 +162,7 @@ func attachDomainDeletionRPCAgent(
 	agent *domainDeletionRPCAgent,
 ) {
 	t.Helper()
+	ensureActiveDNSEngineForTest(t, p, transport.DNSEnginePowerDNS)
 	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {

@@ -387,6 +387,9 @@ func (p *Panel) upsertTXT(ctx context.Context, zoneID int, name, value string) e
 // handleMailAuthApply, istenen kaydı zone'a yazar.
 func (p *Panel) handleMailAuthApply(w http.ResponseWriter, r *http.Request, domain string) {
 	w.Header().Set("Content-Type", "application/json")
+	if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
+		return
+	}
 
 	var req struct {
 		Record      string `json:"record"` // spf | dkim | dmarc

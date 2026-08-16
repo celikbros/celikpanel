@@ -105,6 +105,20 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		})
 
 	case http.MethodPost:
+		publisher, ready := p.requireActiveDNSPublisherForMutation(w, r.Context())
+		if !ready {
+			return
+		}
+		if publisher.Engine != transport.DNSEnginePowerDNS {
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeDNSSECEngineUnsupported,
+				"DNSSEC management currently requires PowerDNS as the active engine",
+				"/settings?section=dns",
+			)
+			return
+		}
 		// Lock order is the global host mutation gate followed by DNS
 		// publication. The exact SOA/snapshot lease is committed before signing;
 		// a crash or response loss therefore leaves startup enough authority to

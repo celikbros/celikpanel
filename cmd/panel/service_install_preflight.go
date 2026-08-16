@@ -26,6 +26,9 @@ func (p *Panel) preflightManagedServiceInstall(ctx context.Context, serviceID, s
 	if managed == nil {
 		return errors.New("unknown managed service")
 	}
+	if managedDNSEngineService(managed) {
+		return errDNSEngineWorkflowRequired
+	}
 
 	host := p.managedServiceHostProfile()
 	family := host.PackageFamily

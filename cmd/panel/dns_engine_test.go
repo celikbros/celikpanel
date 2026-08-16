@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -575,8 +576,9 @@ func persistEmptyDNSEngineSwitchForTest(
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, err := panel.buildDNSEngineManifest(
-		context.Background(), state, target,
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
+		state.Revision, state.Topology, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -595,6 +597,36 @@ func persistEmptyDNSEngineSwitchForTest(
 		t.Fatal(err)
 	}
 	return persisted
+}
+
+func ensureActiveDNSEngineForTest(
+	t *testing.T,
+	panel *Panel,
+	engine transport.DNSEngine,
+) {
+	t.Helper()
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine == engine && state.CurrentSwitchID == "" {
+		return
+	}
+	if state.ActiveEngine != "" || state.CurrentSwitchID != "" {
+		t.Fatalf("cannot seed DNS engine %q from state %+v", engine, state)
+	}
+	requestChar := "4"
+	if engine == transport.DNSEngineBIND {
+		requestChar = "5"
+	}
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, engine, strings.Repeat(requestChar, 32),
+	)
+	if err := panel.finalizeDNSEngineSwitchSuccess(
+		context.Background(), persisted,
+	); err != nil {
+		t.Fatalf("seed active DNS engine %q: %v", engine, err)
+	}
 }
 
 func terminalDNSEngineJob(

@@ -1146,12 +1146,6 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	release, busy := p.beginServiceMutation(w, r)
-	if busy {
-		return
-	}
-	defer release()
-
 	var req struct {
 		ServiceName string `json:"service_name"`
 		Name        string `json:"name"`   // Support 'name' from frontend
@@ -1168,7 +1162,8 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		serviceName = req.Name
 	}
 	serviceName = strings.TrimSuffix(strings.TrimSpace(serviceName), ".service")
-	if serviceName == "" || core.ServiceForUnit(serviceName) == nil {
+	service := core.ServiceForUnit(serviceName)
+	if serviceName == "" || service == nil {
 		writeClientError(w, http.StatusBadRequest, "unknown managed service")
 		return
 	}
@@ -1179,6 +1174,15 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "invalid action")
 		return
 	}
+	if managedDNSEngineService(service) {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
+	release, busy := p.beginServiceMutation(w, r)
+	if busy {
+		return
+	}
+	defer release()
 	var reply transport.ServiceActionResult
 	err := p.withStandaloneAgentMutation(r.Context(), "service_"+req.Action, serviceName, "", func(callCtx context.Context, binding agentMutationBinding) error {
 		request := transport.ServiceMutationActionRequest{

@@ -124,8 +124,16 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		writeAgentError(w, err, "hosting capabilities")
 		return
 	}
-	if caps.DNSServer == "" || !p.dnsIdentityConfigured(ctx) {
-		writeClientError(w, http.StatusConflict, "DNS server identity must be configured before importing a domain")
+	if caps.DNSServer == "" {
+		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
+			"choose and activate a managed BIND or PowerDNS engine before importing a domain",
+			"/settings?section=dns")
+		return
+	}
+	if !caps.DNSIdentityReady {
+		writeCodedError(w, http.StatusConflict, errCodeDNSSettingsRequired,
+			"DNS identity must be configured before importing a domain",
+			"/settings?section=dns")
 		return
 	}
 	if caps.WebServer == "" || len(caps.PHPVersions) == 0 {

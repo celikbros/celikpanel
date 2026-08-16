@@ -303,8 +303,23 @@ func (a *mailTLSIsolationRPCAgent) DeleteMailDomain(
 	return nil
 }
 
+func (a *mailTLSIsolationRPCAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine: transport.DNSEnginePowerDNS, Installed: true,
+			Running: true, Managed: true, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
+	return nil
+}
+
 func attachMailTLSIsolationAgent(t *testing.T, p *Panel, agent *mailTLSIsolationRPCAgent) {
 	t.Helper()
+	ensureActiveDNSEngineForTest(t, p, transport.DNSEnginePowerDNS)
 	if agent.serviceOperationTestAgent == nil {
 		agent.serviceOperationTestAgent = newServiceOperationTestAgent()
 	}

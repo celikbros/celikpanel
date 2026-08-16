@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-
-	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
@@ -23,16 +21,6 @@ var mailProfileDNSIdentitySettingKeys = [...]string{
 	settingDNSRole,
 	settingDNSPeerIP,
 	settingDNSPeerNS,
-}
-
-func supportedMailProfileDNSServerInstalled(installed []string) bool {
-	for _, id := range installed {
-		switch strings.TrimSpace(id) {
-		case "pdns", "bind":
-			return true
-		}
-	}
-	return false
 }
 
 // savedDNSIdentityConfiguredStrict reads the complete saved tuple in one SQL
@@ -86,18 +74,17 @@ func (p *Panel) savedDNSIdentityConfiguredStrict(ctx context.Context) (bool, err
 }
 
 // mailProfileDNSIdentityReady is the one strict prerequisite used by both the
-// read-only Components contract and the mutation preflight: a supported DNS
-// package must be observed by the privileged agent and the complete identity
-// must already be saved. Public delegation is deliberately not required here;
-// that is a later operational readiness check, not authority to mutate packages.
+// read-only Components contract and the mutation preflight: durable engine
+// identity and strict runtime readiness must agree on exactly one managed
+// publisher, and the complete identity must already be saved. Package presence
+// alone is never publication authority. Public delegation is deliberately not
+// required here; that is a later operational readiness check.
 func (p *Panel) mailProfileDNSIdentityReady(ctx context.Context) (bool, error) {
-	var installed []string
-	if err := p.callAgentContext(
-		ctx, "Agent.InstalledServiceIDsStrict", &transport.Empty{}, &installed,
-	); err != nil {
-		return false, fmt.Errorf("discover installed DNS services: %w", err)
+	_, ready, err := p.activeDNSPublisher(ctx)
+	if err != nil {
+		return false, fmt.Errorf("verify active DNS publisher: %w", err)
 	}
-	if !supportedMailProfileDNSServerInstalled(installed) {
+	if !ready {
 		return false, nil
 	}
 	return p.savedDNSIdentityConfiguredStrict(ctx)

@@ -432,11 +432,6 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	release, busy := p.beginServiceMutation(w, r)
-	if busy {
-		return
-	}
-	defer release()
 	var req struct {
 		ServiceID string `json:"service_id"`
 		// Package: remove ONE version of a runtime (php8.3-fpm) instead of
@@ -449,6 +444,15 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "service_id is required")
 		return
 	}
+	if managedDNSEngineServiceID(req.ServiceID) {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
+	release, busy := p.beginServiceMutation(w, r)
+	if busy {
+		return
+	}
+	defer release()
 
 	// Deletion protection (B3d): nothing is removed while something the
 	// panel knows about depends on it. The refusal names WHO blocks (D-014)
