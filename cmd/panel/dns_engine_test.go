@@ -605,6 +605,11 @@ func ensureActiveDNSEngineForTest(
 	engine transport.DNSEngine,
 ) {
 	t.Helper()
+	// A few transport-only unit tests intentionally construct a Panel without
+	// a database. They do not exercise DNS authority and need no durable seed.
+	if panel == nil || panel.db == nil || panel.db.GetDB() == nil {
+		return
+	}
 	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
 	if err != nil {
 		t.Fatal(err)
