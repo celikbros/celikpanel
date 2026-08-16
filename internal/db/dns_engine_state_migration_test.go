@@ -201,6 +201,66 @@ func TestDNSEngineMigrationCommitsPairedPowerDNSAdoption(t *testing.T) {
 		WHERE singleton_id = 1`, secondSwitchID)
 }
 
+func TestDNSEngineMigrationRequiresPublishedSagaForPowerDNSTopology(t *testing.T) {
+	database := newDNSZoneSyncMigrationDB(t)
+	switchID := strings.Repeat("a", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, switchID, strings.Repeat("b", 32), strings.Repeat("c", 32),
+		"switch", nil, "pdns", 0, 1, 0, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET current_switch_id = ?, revision = 1, updated_at = datetime('now')
+		WHERE singleton_id = 1`, switchID); err != nil {
+		t.Fatal(err)
+	}
+	for _, phase := range []string{
+		"staging", "staged", "activating", "verifying", "committed",
+	} {
+		if _, err := database.Exec(`
+			UPDATE dns_engine_switch_snapshots
+			SET phase = ?, updated_at = datetime('now')
+			WHERE switch_id = ?`, phase, switchID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET active_engine = 'pdns', active_epoch = 1,
+		    current_switch_id = NULL, revision = 2,
+		    updated_at = datetime('now')
+		WHERE singleton_id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "topology without saga", `
+		UPDATE dns_engine_state
+		SET topology = 'paired', revision = 3, updated_at = datetime('now')
+		WHERE singleton_id = 1`)
+	if _, err := database.Exec(`
+		INSERT INTO panel_settings(key, value)
+		VALUES ('dns_cluster_saga_v1',
+		        '{"version":1,"phase":"published","previous":{"role":"standalone"},"desired":{"role":"paired"}}')
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		UPDATE dns_engine_state
+		SET topology = 'paired', revision = 3, updated_at = datetime('now')
+		WHERE singleton_id = 1`); err != nil {
+		t.Fatalf("published topology transition rejected: %v", err)
+	}
+	if _, err := database.Exec(`
+		UPDATE panel_settings SET value = '' WHERE key = 'dns_cluster_saga_v1'`); err != nil {
+		t.Fatal(err)
+	}
+	requireDNSEngineSQLFailure(t, database, "topology after saga clear", `
+		UPDATE dns_engine_state
+		SET topology = 'standalone', revision = 4, updated_at = datetime('now')
+		WHERE singleton_id = 1`)
+}
+
 func TestDNSEngineMigration033AttachesModeBoundPairedAdoption(t *testing.T) {
 	database := newPreDNSEngineMigrationDB(t)
 	applyEmbeddedMigrationVersion(t, database, 33)

@@ -40,9 +40,9 @@ func validDNSEngineSwitchAction(action string) bool {
 
 func dnsEngineMutationMode(action string) string {
 	if action == "adopt" {
-		return "adopt"
+		return transport.DNSEngineSwitchModeAdopt
 	}
-	return "switch"
+	return transport.DNSEngineSwitchModeSwitch
 }
 
 func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
@@ -248,8 +248,10 @@ func attachDNSEngineOperationAction(
 		marker.TargetEngine != persisted.TargetEngine {
 		return errors.New("DNS engine switch has no exact operation marker")
 	}
+	if persisted.Mode != dnsEngineMutationMode(marker.Action) {
+		return errors.New("DNS engine action does not match its persisted mode")
+	}
 	persisted.Action = marker.Action
-	persisted.Mode = dnsEngineMutationMode(marker.Action)
 	return nil
 }
 
@@ -270,7 +272,11 @@ func (p *Panel) reconcileDNSEnginePostCommitLocked(
 	persisted persistedDNSEngineSwitch,
 ) dnsEnginePostCommitResult {
 	result := dnsEnginePostCommitResult{}
-	result.FirewallErr = p.syncFirewallLocked(ctx)
+	// Registration-only adoption proves and records an already-running
+	// panel-managed PowerDNS authority. It must not alter host firewall state.
+	if persisted.Action != "adopt" {
+		result.FirewallErr = p.syncFirewallLocked(ctx)
+	}
 	if _, err := p.scanManagedServices(ctx); err != nil {
 		result.ScanErr = err
 	}

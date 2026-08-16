@@ -9,12 +9,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/rpc"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 
-	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -26,6 +27,7 @@ type dnsEngineTestAgent struct {
 	dnssecCalls      int
 	switchCalls      int
 	switchRequests   []transport.SwitchDNSEngineV1Request
+	switchError      string
 	onSwitch         func()
 	firewallEnabled  bool
 	firewallError    string
@@ -212,6 +214,10 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	copy := *request
 	copy.Zones = append([]transport.DNSEngineSwitchZoneSnapshot(nil), request.Zones...)
 	agent.switchRequests = append(agent.switchRequests, copy)
+	if agent.switchError != "" {
+		response.Error = agent.switchError
+		return nil
+	}
 	for engine, runtime := range agent.runtimes {
 		if engine == request.TargetEngine {
 			runtime.Installed, runtime.Running, runtime.Managed = true, true, true
@@ -879,6 +885,7 @@ func TestDNSEngineUnresolvedRuntimePresentationRequiresExplicitAdopt(t *testing.
 
 func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
 	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
@@ -890,13 +897,14 @@ func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {
 	)
 	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
 		preview.Action != "adopt" ||
-		!preview.RequiresDowntimeAcknowledgement {
+		preview.RequiresDowntimeAcknowledgement ||
+		!slices.Equal(preview.Impacts, []string{"validate_target", "adopt_existing"}) {
 		t.Fatalf("managed PDNS adoption preview=%+v status=%d body=%s",
 			preview, recorder.Code, recorder.Body.String())
 	}
 	commit := commitDNSEngineSwitch(
 		t, panel, strings.Repeat("1", 32), transport.DNSEnginePowerDNS,
-		nil, 0, preview.PreviewToken, true,
+		nil, 0, preview.PreviewToken, false,
 	)
 	if commit.Code != http.StatusOK {
 		t.Fatalf("managed PDNS adoption status=%d body=%s",
@@ -907,8 +915,103 @@ func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
-		state.EngineEpoch != 1 || state.CurrentSwitchID != "" {
+		state.EngineEpoch != 1 || state.Topology != transport.DNSTopologyStandalone ||
+		state.CurrentSwitchID != "" {
 		t.Fatalf("adopted state=%+v", state)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.switchRequests) != 1 ||
+		agent.switchRequests[0].Mode != transport.DNSEngineSwitchModeAdopt ||
+		agent.switchRequests[0].Topology != transport.DNSTopologyStandalone ||
+		agent.firewallCalls != 0 {
+		t.Fatalf("adoption request=%+v firewall_calls=%d",
+			agent.switchRequests, agent.firewallCalls)
+	}
+}
+
+func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "paired")
+	seedStrictDNSZone(t, panel, "signed-adopt.example")
+	agent := newDNSEngineTestAgent()
+	agent.dnssec = true
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+		preview.Action != "adopt" || preview.Topology != transport.DNSTopologyPaired ||
+		preview.DNSSECZoneCount != 1 || preview.RequiresDowntimeAcknowledgement {
+		t.Fatalf("paired signed adoption preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("6", 32), transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("paired signed adoption status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
+		state.EngineEpoch != 1 || state.Topology != transport.DNSTopologyPaired ||
+		state.CurrentSwitchID != "" {
+		t.Fatalf("paired adopted state=%+v", state)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.switchRequests) != 1 ||
+		agent.switchRequests[0].Mode != transport.DNSEngineSwitchModeAdopt ||
+		agent.switchRequests[0].Topology != transport.DNSTopologyPaired {
+		t.Fatalf("paired adoption request=%+v", agent.switchRequests)
+	}
+}
+
+func TestDNSEngineAdoptionFailureProvesUnchangedRuntimeAndDetaches(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	agent.switchError = "private adoption validation detail"
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf("adoption preview status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("7", 32), transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusConflict ||
+		strings.Contains(commit.Body.String(), "private adoption") {
+		t.Fatalf("failed adoption status=%d body=%s", commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+		state.CurrentSwitchID != "" {
+		t.Fatalf("failed adoption state=%+v", state)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if !agent.runtimes[transport.DNSEnginePowerDNS].Running {
+		t.Fatalf("failed registration-only adoption stopped PowerDNS")
 	}
 }
 
@@ -923,7 +1026,7 @@ func TestDNSEngineUnmanagedBINDCannotBeAdopted(t *testing.T) {
 	preview, recorder := requestDNSEnginePreview(
 		t, panel, transport.DNSEngineBIND, nil, 0,
 	)
-	if recorder.Code != http.StatusOK || preview.Action != "adopt" ||
+	if recorder.Code != http.StatusOK || preview.Action != "switch" ||
 		!hasDNSEngineBlocker(preview, "unmanaged_dns_detected") {
 		t.Fatalf("unmanaged BIND preview=%+v status=%d body=%s",
 			preview, recorder.Code, recorder.Body.String())
@@ -932,6 +1035,51 @@ func TestDNSEngineUnmanagedBINDCannotBeAdopted(t *testing.T) {
 	defer agent.mu.Unlock()
 	if agent.switchCalls != 0 {
 		t.Fatalf("unmanaged BIND preview performed %d switches", agent.switchCalls)
+	}
+}
+
+func TestDNSEngineActiveSourceCannotRegistrationAdoptUnmanagedStandby(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	first, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(first.Blockers) != 0 {
+		t.Fatalf("first PowerDNS preview status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("8", 32), transport.DNSEnginePowerDNS,
+		nil, 0, first.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("first PowerDNS commit status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	agent.mu.Lock()
+	bind := agent.runtimes[transport.DNSEngineBIND]
+	bind.Installed, bind.Running, bind.Managed = true, false, false
+	agent.runtimes[transport.DNSEngineBIND] = bind
+	beforeCalls := agent.switchCalls
+	agent.mu.Unlock()
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND,
+		transport.DNSEnginePowerDNS, state.Revision,
+	)
+	if recorder.Code != http.StatusOK || preview.Action != "switch" ||
+		!hasDNSEngineBlocker(preview, "unmanaged_dns_detected") {
+		t.Fatalf("unmanaged standby preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.switchCalls != beforeCalls {
+		t.Fatalf("blocked unmanaged standby performed a host mutation")
 	}
 }
 
@@ -1034,9 +1182,22 @@ func persistEmptyDNSEngineSwitchForTest(
 	if err != nil {
 		t.Fatal(err)
 	}
+	mode := transport.DNSEngineSwitchModeSwitch
+	action := "install"
+	topology := state.Topology
+	if target == transport.DNSEnginePowerDNS &&
+		state.ActiveEngine == "" &&
+		normalizeDNSRole(panel.setting(
+			context.Background(), settingDNSRole,
+		)) == transport.DNSTopologyPaired {
+		mode = transport.DNSEngineSwitchModeAdopt
+		action = "adopt"
+		topology = transport.DNSTopologyPaired
+	}
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		mode,
 		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
-		state.Revision, state.Topology, nil,
+		state.Revision, topology, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1049,7 +1210,7 @@ func persistEmptyDNSEngineSwitchForTest(
 	ownerID, _ := newServiceOperationID()
 	switchID, _ := newServiceOperationID()
 	persisted, err := panel.persistDNSEngineSwitch(
-		context.Background(), request, ownerID, switchID, "install", manifest,
+		context.Background(), request, ownerID, switchID, action, manifest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1073,6 +1234,7 @@ func ensureActiveDNSEngineForTest(
 		t.Fatal(err)
 	}
 	if state.ActiveEngine == engine && state.CurrentSwitchID == "" {
+		alignActivePowerDNSTopologyForTest(t, panel, engine)
 		return
 	}
 	if state.ActiveEngine != "" || state.CurrentSwitchID != "" {
@@ -1089,6 +1251,82 @@ func ensureActiveDNSEngineForTest(
 		context.Background(), persisted,
 	); err != nil {
 		t.Fatalf("seed active DNS engine %q: %v", engine, err)
+	}
+	if err := panel.clearDNSEnginePostCommitMarker(
+		context.Background(), persisted,
+	); err != nil {
+		t.Fatalf("finalize test DNS engine follow-up: %v", err)
+	}
+	alignActivePowerDNSTopologyForTest(t, panel, engine)
+}
+
+func alignActivePowerDNSTopologyForTest(
+	t *testing.T,
+	panel *Panel,
+	engine transport.DNSEngine,
+) {
+	t.Helper()
+	if engine != transport.DNSEnginePowerDNS {
+		return
+	}
+	role := normalizeDNSRole(panel.setting(context.Background(), settingDNSRole))
+	if role == "" {
+		role = transport.DNSTopologyStandalone
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Topology == role {
+		return
+	}
+	if pending := panel.setting(
+		context.Background(), dnsClusterSagaSetting,
+	); pending != "" {
+		t.Fatalf("pending DNS cluster saga conflicts with test topology %q -> %q",
+			state.Topology, role)
+	}
+	if role != transport.DNSTopologyPaired ||
+		state.Topology != transport.DNSTopologyStandalone {
+		t.Fatalf("cannot align test PowerDNS topology %q -> %q",
+			state.Topology, role)
+	}
+	marker, err := json.Marshal(map[string]any{
+		"version": 1,
+		"phase":   dnsClusterSagaPublished,
+		"previous": map[string]any{
+			"role": state.Topology,
+		},
+		"desired": map[string]any{
+			"role": role,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.setSetting(
+		context.Background(), dnsClusterSagaSetting, string(marker),
+	); err != nil {
+		t.Fatal(err)
+	}
+	result, err := panel.db.GetDB().Exec(`
+		UPDATE dns_engine_state
+		SET topology = ?, revision = revision + 1,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE singleton_id = 1 AND active_engine = 'pdns'
+		  AND topology = ? AND current_switch_id IS NULL`,
+		role, state.Topology,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := result.RowsAffected(); err != nil || changed != 1 {
+		t.Fatalf("align test PowerDNS topology rows=%d err=%v", changed, err)
+	}
+	if err := panel.setSetting(
+		context.Background(), dnsClusterSagaSetting, "",
+	); err != nil {
+		t.Fatal(err)
 	}
 }
 

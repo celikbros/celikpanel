@@ -515,28 +515,58 @@ WHEN (NEW.active_engine IS NOT OLD.active_engine
       OR NEW.active_epoch <> OLD.active_epoch
       OR NEW.topology <> OLD.topology)
  AND NOT (
-    OLD.current_switch_id IS NOT NULL
-    AND NEW.current_switch_id IS NULL
-    AND EXISTS (
-        SELECT 1 FROM dns_engine_switch_snapshots AS snapshot
-        WHERE snapshot.switch_id = OLD.current_switch_id
-          AND snapshot.phase = 'committed'
-          AND snapshot.target_engine = NEW.active_engine
-          AND snapshot.target_epoch = NEW.active_epoch
-          AND snapshot.topology = NEW.topology
-          AND (
-            (snapshot.mode = 'switch' AND snapshot.topology = 'standalone')
-            OR (snapshot.mode = 'adopt'
-              AND snapshot.source_engine IS NULL
-              AND snapshot.target_engine = 'pdns'
-              AND snapshot.source_epoch = 0
-              AND snapshot.target_epoch = 1
-              AND snapshot.topology IN ('standalone', 'paired'))
-          )
+    (
+      OLD.current_switch_id IS NOT NULL
+      AND NEW.current_switch_id IS NULL
+      AND EXISTS (
+          SELECT 1 FROM dns_engine_switch_snapshots AS snapshot
+          WHERE snapshot.switch_id = OLD.current_switch_id
+            AND snapshot.phase = 'committed'
+            AND snapshot.target_engine = NEW.active_engine
+            AND snapshot.target_epoch = NEW.active_epoch
+            AND snapshot.topology = NEW.topology
+            AND (
+              (snapshot.mode = 'switch' AND snapshot.topology = 'standalone')
+              OR (snapshot.mode = 'adopt'
+                AND snapshot.source_engine IS NULL
+                AND snapshot.target_engine = 'pdns'
+                AND snapshot.source_epoch = 0
+                AND snapshot.target_epoch = 1
+                AND snapshot.topology IN ('standalone', 'paired'))
+            )
+      )
+    )
+    OR (
+      OLD.current_switch_id IS NULL
+      AND NEW.current_switch_id IS NULL
+      AND OLD.active_engine = 'pdns'
+      AND NEW.active_engine = 'pdns'
+      AND NEW.active_epoch = OLD.active_epoch
+      AND NEW.topology <> OLD.topology
+      AND EXISTS (
+          SELECT 1 FROM panel_settings AS setting
+          WHERE setting.key = 'dns_cluster_saga_v1'
+            AND json_extract(
+                  CASE WHEN json_valid(setting.value)
+                       THEN setting.value ELSE '{}' END,
+                  '$.version') = 1
+            AND json_extract(
+                  CASE WHEN json_valid(setting.value)
+                       THEN setting.value ELSE '{}' END,
+                  '$.phase') = 'published'
+            AND json_extract(
+                  CASE WHEN json_valid(setting.value)
+                       THEN setting.value ELSE '{}' END,
+                  '$.previous.role') = OLD.topology
+            AND json_extract(
+                  CASE WHEN json_valid(setting.value)
+                       THEN setting.value ELSE '{}' END,
+                  '$.desired.role') = NEW.topology
+      )
     )
  )
 BEGIN
-    SELECT RAISE(ABORT, 'DNS engine identity can change only through a committed switch');
+    SELECT RAISE(ABORT, 'DNS engine identity or topology lacks durable authority');
 END;
 
 -- The switch snapshot is authoritative from attachment through terminal

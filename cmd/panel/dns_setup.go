@@ -21,6 +21,7 @@ const (
 	dnsClusterSagaSetting      = "dns_cluster_saga_v1"
 	dnsClusterSagaVersion      = 1
 	dnsClusterSagaDesired      = "desired"
+	dnsClusterSagaPublished    = "published"
 	dnsClusterSagaCompensating = "compensating"
 
 	dnsClusterCommitPhasePrefix    = "commit/dns-cluster-config/v1/"
@@ -111,6 +112,7 @@ func validDNSClusterTopology(topology dnsClusterTopology, desired bool) bool {
 func validateDNSClusterSaga(saga dnsClusterSaga) error {
 	if saga.Version != dnsClusterSagaVersion ||
 		(saga.Phase != dnsClusterSagaDesired &&
+			saga.Phase != dnsClusterSagaPublished &&
 			saga.Phase != dnsClusterSagaCompensating) ||
 		!validServiceOperationID(saga.RequestID) ||
 		!validServiceOperationID(saga.OwnerID) ||
@@ -294,6 +296,49 @@ func clearDNSClusterSaga(ctx context.Context, p *Panel, saga dnsClusterSaga) err
 	return nil
 }
 
+// markDNSClusterSagaPublished records that the exact privileged child reached
+// its canonical terminal receipt. The marker authorizes only the following
+// atomic panel-ledger/topology commit; it is never inferred from an RPC return.
+func markDNSClusterSagaPublished(
+	ctx context.Context,
+	p *Panel,
+	saga dnsClusterSaga,
+) (dnsClusterSaga, error) {
+	if saga.Phase == dnsClusterSagaPublished {
+		return saga, nil
+	}
+	if saga.Phase != dnsClusterSagaDesired {
+		return dnsClusterSaga{}, errors.New(
+			"DNS cluster saga is not eligible for published finalization",
+		)
+	}
+	desiredRaw, err := encodeDNSClusterSaga(saga)
+	if err != nil {
+		return dnsClusterSaga{}, err
+	}
+	saga.Phase = dnsClusterSagaPublished
+	publishedRaw, err := encodeDNSClusterSaga(saga)
+	if err != nil {
+		return dnsClusterSaga{}, err
+	}
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE panel_settings
+		SET value = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE key = ? AND value = ?`,
+		publishedRaw, dnsClusterSagaSetting, desiredRaw,
+	)
+	if err != nil {
+		return dnsClusterSaga{}, err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return dnsClusterSaga{}, errors.New(
+			"DNS cluster published marker lost its exact desired CAS",
+		)
+	}
+	return saga, nil
+}
+
 func (p *Panel) applyDNSClusterSagaV2(
 	ctx context.Context,
 	saga dnsClusterSaga,
@@ -430,6 +475,11 @@ func (p *Panel) finalizeDNSClusterSagaStartup(
 	dnsPublicationMu.Lock()
 	defer dnsPublicationMu.Unlock()
 
+	var err error
+	saga, err = markDNSClusterSagaPublished(ctx, p, saga)
+	if err != nil {
+		return fmt.Errorf("mark succeeded DNS cluster topology: %w", err)
+	}
 	desired := saga.Desired
 	if err := p.saveDNSClusterSettingsAndReconcile(
 		ctx,
@@ -868,6 +918,13 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		// or explicit operator repair.
 		writeClientError(w, http.StatusConflict,
 			"DNS topology was not fully confirmed and remains pending recovery")
+		return
+	}
+	saga, err = markDNSClusterSagaPublished(r.Context(), p, saga)
+	if err != nil {
+		writeServerError(w, fmt.Errorf(
+			"mark confirmed DNS topology for ledger finalization: %w", err,
+		))
 		return
 	}
 

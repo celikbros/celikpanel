@@ -132,6 +132,7 @@ type dnsEngineSwitchRequest struct {
 type dnsEnginePreviewAuthority struct {
 	Target            transport.DNSEngine
 	Source            transport.DNSEngine
+	Action            string
 	Revision          int64
 	ManifestQualifier string
 	SnapshotBytes     int64
@@ -181,7 +182,10 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 	}
 	if (state.ActiveEngine != "" && !transport.ValidDNSEngine(state.ActiveEngine)) ||
 		state.EngineEpoch < 0 || state.Revision < 0 ||
-		state.Topology != transport.DNSTopologyStandalone ||
+		(state.Topology != transport.DNSTopologyStandalone &&
+			state.Topology != transport.DNSTopologyPaired) ||
+		(state.Topology == transport.DNSTopologyPaired &&
+			state.ActiveEngine != transport.DNSEnginePowerDNS) ||
 		(state.CurrentSwitchID != "" && !validServiceOperationID(state.CurrentSwitchID)) {
 		return dnsEngineDBState{}, errors.New("persisted DNS engine state is invalid")
 	}
@@ -461,10 +465,14 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if dnssecErr != nil && presentationState != dnsEngineStateSwitching {
 		presentationState = dnsEngineStateDegraded
 	}
+	topology := p.dnsEngineTopology(ctx)
+	if state.ActiveEngine != "" {
+		topology = state.Topology
+	}
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
-		State:        presentationState, Topology: p.dnsEngineTopology(ctx),
+		State:        presentationState, Topology: topology,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Engines: entries, runtime: runtimes, runtimeErr: runtimeErr,
@@ -555,26 +563,33 @@ func dnsEngineAction(
 	if !runtime.Installed {
 		return "install"
 	}
-	if snapshot.ActiveEngine == nil || runtime.Running || !runtime.Managed {
+	if snapshot.ActiveEngine == nil &&
+		target == transport.DNSEnginePowerDNS &&
+		runtime.Running && runtime.Managed {
+		for engine, candidate := range snapshot.runtime {
+			if engine != target && candidate.Running {
+				return "switch"
+			}
+		}
 		return "adopt"
 	}
 	return "switch"
 }
 
 func dnsEngineImpacts(action string, hasSource bool) []string {
+	if action == "adopt" {
+		return []string{"validate_target", "adopt_existing"}
+	}
 	impacts := make([]string, 0, 8)
 	if action == "install" {
 		impacts = append(impacts, "install_target")
-	}
-	if action == "adopt" {
-		impacts = append(impacts, "adopt_existing")
 	}
 	impacts = append(impacts, "validate_target", "publish_zones")
 	if hasSource {
 		impacts = append(impacts, "stop_source")
 	}
 	impacts = append(impacts, "start_target")
-	if hasSource || action == "adopt" {
+	if hasSource {
 		impacts = append(impacts, "brief_dns_interruption")
 	}
 	if hasSource {
@@ -601,6 +616,7 @@ func dnsEnginePreviewBlockers(
 	expectedRevision int64,
 ) []dnsEnginePreviewBlocker {
 	blockers := make([]dnsEnginePreviewBlocker, 0, 8)
+	action := dnsEngineAction(snapshot, target)
 	actualSource := transport.DNSEngine("")
 	if snapshot.ActiveEngine != nil {
 		actualSource = *snapshot.ActiveEngine
@@ -608,16 +624,20 @@ func dnsEnginePreviewBlockers(
 	if snapshot.Revision != expectedRevision || actualSource != expectedSource {
 		blockers = addDNSEngineBlocker(blockers, "stale_revision")
 	}
-	if snapshot.Topology == "paired" {
+	if action != "adopt" && snapshot.Topology == "paired" {
 		blockers = addDNSEngineBlocker(blockers, "paired_topology_unsupported")
 	}
 	if snapshot.State == dnsEngineStateSwitching {
 		blockers = addDNSEngineBlocker(blockers, "operation_running")
 	}
-	if snapshot.PendingZoneCount > 0 {
+	// Registration-only adoption verifies the exact full runtime zone set and
+	// may therefore reconcile legacy pending generations without publishing.
+	// A live lease is still rejected by buildDNSEngineManifest.
+	if action != "adopt" && snapshot.PendingZoneCount > 0 {
 		blockers = addDNSEngineBlocker(blockers, "pending_zone_sync")
 	}
-	if snapshot.DNSSECZoneCount > 0 || snapshot.dnssecErr != nil {
+	if action != "adopt" &&
+		(snapshot.DNSSECZoneCount > 0 || snapshot.dnssecErr != nil) {
 		blockers = addDNSEngineBlocker(blockers, "dnssec_unsupported")
 	}
 	if snapshot.runtimeErr != nil {
@@ -626,13 +646,24 @@ func dnsEnginePreviewBlockers(
 	if snapshot.ActiveEngine != nil && *snapshot.ActiveEngine == target {
 		blockers = addDNSEngineBlocker(blockers, "target_already_active")
 	}
+	targetRuntime := snapshot.runtime[target]
+	if targetRuntime.Installed && !targetRuntime.Managed {
+		blockers = addDNSEngineBlocker(blockers, "unmanaged_dns_detected")
+	}
+	if action == "adopt" &&
+		(target != transport.DNSEnginePowerDNS || snapshot.ActiveEngine != nil ||
+			!targetRuntime.Installed || !targetRuntime.Running ||
+			!targetRuntime.Managed ||
+			(snapshot.Topology != transport.DNSTopologyStandalone &&
+				snapshot.Topology != transport.DNSTopologyPaired)) {
+		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+	}
 	switch snapshot.State {
 	case dnsEngineStateConflict:
 		blockers = addDNSEngineBlocker(blockers, "port_53_conflict")
 	case dnsEngineStateDegraded:
 		blockers = addDNSEngineBlocker(blockers, "source_degraded")
 	case dnsEngineStateUnmanaged:
-		targetRuntime := snapshot.runtime[target]
 		runningOther := false
 		for id, runtime := range snapshot.runtime {
 			if id != target && runtime.Running {
@@ -683,10 +714,28 @@ func (p *Panel) buildDNSEngineManifest(
 	ctx context.Context,
 	state dnsEngineDBState,
 	target transport.DNSEngine,
+	action, observedTopology string,
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
-	if state.Topology != transport.DNSTopologyStandalone {
+	mode := dnsEngineMutationMode(action)
+	topology := state.Topology
+	switch mode {
+	case transport.DNSEngineSwitchModeSwitch:
+		if state.Topology != transport.DNSTopologyStandalone {
+			return mutationpayload.DNSEngineSwitchManifestCommitment{},
+				errors.New("durable DNS engine topology is not standalone")
+		}
+	case transport.DNSEngineSwitchModeAdopt:
+		topology = observedTopology
+		if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+			target != transport.DNSEnginePowerDNS ||
+			(topology != transport.DNSTopologyStandalone &&
+				topology != transport.DNSTopologyPaired) {
+			return mutationpayload.DNSEngineSwitchManifestCommitment{},
+				errors.New("legacy PowerDNS adoption identity is invalid")
+		}
+	default:
 		return mutationpayload.DNSEngineSwitchManifestCommitment{},
-			errors.New("durable DNS engine topology is not standalone")
+			errors.New("DNS engine operation mode is invalid")
 	}
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
@@ -788,8 +837,9 @@ func (p *Panel) buildDNSEngineManifest(
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
 	}
 	return mutationpayload.CanonicalDNSEngineSwitchManifest(
+		mode,
 		state.ActiveEngine, target, state.EngineEpoch, state.EngineEpoch+1,
-		state.Revision, state.Topology, zones,
+		state.Revision, topology, zones,
 	)
 }
 
@@ -823,7 +873,7 @@ func (p *Panel) makeDNSEnginePreview(
 		return dnsEngineSwitchPreview{}, err
 	}
 	hasSource := source != ""
-	requiresAck := hasSource || action == "adopt"
+	requiresAck := hasSource
 	preview := dnsEngineSwitchPreview{
 		PreviewToken: token, SourceEngine: enginePointer(source),
 		TargetEngine:     request.TargetEngine,
@@ -845,7 +895,9 @@ func (p *Panel) makeDNSEnginePreview(
 	if err != nil {
 		return dnsEngineSwitchPreview{}, err
 	}
-	manifest, err := p.buildDNSEngineManifest(ctx, state, request.TargetEngine)
+	manifest, err := p.buildDNSEngineManifest(
+		ctx, state, request.TargetEngine, action, snapshot.Topology,
+	)
 	if err != nil {
 		preview.Blockers = addDNSEngineBlocker(
 			preview.Blockers, "operation_running",
@@ -854,6 +906,7 @@ func (p *Panel) makeDNSEnginePreview(
 	}
 	p.dnsEnginePreviews.put(token, dnsEnginePreviewAuthority{
 		Target: request.TargetEngine, Source: source,
+		Action:            action,
 		Revision:          request.ExpectedRevision,
 		ManifestQualifier: manifest.Qualifier,
 		SnapshotBytes:     manifest.SnapshotBytes,
@@ -919,6 +972,7 @@ type persistedDNSEngineSwitch struct {
 	SourceRevision int64
 	Action         string
 	Mode           string
+	Topology       string
 	Phase          string
 	Qualifier      string
 	ZoneCount      int
@@ -933,19 +987,28 @@ func readDNSEngineSwitchByRequest(
 	var result persistedDNSEngineSwitch
 	var source sql.NullString
 	err := query.QueryRowContext(ctx, `
-		SELECT switch_id, request_id, owner_id, source_engine, target_engine,
+		SELECT switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		       source_epoch, target_epoch, source_state_revision, phase,
-		       manifest_qualifier, zone_count, snapshot_bytes
+		       topology, manifest_qualifier, zone_count, snapshot_bytes
 		FROM dns_engine_switch_snapshots WHERE request_id = ?`,
 		requestID,
 	).Scan(
-		&result.SwitchID, &result.RequestID, &result.OwnerID, &source,
+		&result.SwitchID, &result.RequestID, &result.OwnerID, &result.Mode, &source,
 		&result.TargetEngine, &result.SourceEpoch, &result.TargetEpoch,
-		&result.SourceRevision, &result.Phase, &result.Qualifier,
+		&result.SourceRevision, &result.Phase, &result.Topology, &result.Qualifier,
 		&result.ZoneCount, &result.SnapshotBytes,
 	)
 	if source.Valid {
 		result.SourceEngine = transport.DNSEngine(source.String)
+	}
+	if err == nil &&
+		(result.Mode != transport.DNSEngineSwitchModeSwitch &&
+			result.Mode != transport.DNSEngineSwitchModeAdopt ||
+			(result.Topology != transport.DNSTopologyStandalone &&
+				result.Topology != transport.DNSTopologyPaired)) {
+		return persistedDNSEngineSwitch{}, errors.New(
+			"persisted DNS engine switch identity is invalid",
+		)
 	}
 	return result, err
 }
@@ -978,6 +1041,11 @@ func (p *Panel) persistDNSEngineSwitch(
 		)
 	}
 	mode := dnsEngineMutationMode(action)
+	if mode != manifest.Mode {
+		return persistedDNSEngineSwitch{}, errors.New(
+			"DNS engine action does not match its durable mode",
+		)
+	}
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return persistedDNSEngineSwitch{}, err
@@ -999,11 +1067,11 @@ func (p *Panel) persistDNSEngineSwitch(
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dns_engine_switch_snapshots (
-		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		  source_epoch, target_epoch, source_state_revision, topology, phase,
 		  manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?)`,
-		switchID, request.RequestID, ownerID, source,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?)`,
+		switchID, request.RequestID, ownerID, manifest.Mode, source,
 		manifest.TargetEngine, manifest.SourceEpoch, manifest.TargetEpoch,
 		manifest.SourceRevision, manifest.Topology, manifest.Qualifier,
 		len(manifest.Zones), manifest.SnapshotBytes,
@@ -1106,7 +1174,8 @@ func (p *Panel) persistDNSEngineSwitch(
 		SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision,
-		Action:         action, Mode: mode, Phase: "activating",
+		Action:         action, Mode: mode, Topology: manifest.Topology,
+		Phase:     "activating",
 		Qualifier: manifest.Qualifier, ZoneCount: len(manifest.Zones),
 		SnapshotBytes: manifest.SnapshotBytes,
 	}, nil
@@ -1281,10 +1350,12 @@ func (p *Panel) finalizeDNSEngineSwitchSuccess(
 	}
 	detached, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_state
-		SET active_engine = ?, active_epoch = ?, current_switch_id = NULL,
+		SET active_engine = ?, active_epoch = ?, topology = ?,
+		    current_switch_id = NULL,
 		    revision = revision + 1, updated_at = datetime('now')
 		WHERE singleton_id = 1 AND current_switch_id = ?`,
-		persisted.TargetEngine, persisted.TargetEpoch, persisted.SwitchID,
+		persisted.TargetEngine, persisted.TargetEpoch, persisted.Topology,
+		persisted.SwitchID,
 	)
 	if err != nil {
 		return err
@@ -1396,6 +1467,20 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 	if err != nil {
 		return err
 	}
+	if persisted.Mode == transport.DNSEngineSwitchModeAdopt {
+		target := runtimes[persisted.TargetEngine]
+		if persisted.SourceEngine != "" ||
+			persisted.TargetEngine != transport.DNSEnginePowerDNS ||
+			!target.Installed || !target.Running || !target.Managed {
+			return errors.New("registration-only PowerDNS adoption rollback is not proven")
+		}
+		for engine, runtime := range runtimes {
+			if engine != persisted.TargetEngine && runtime.Running {
+				return errors.New("another DNS engine is running after adoption failure")
+			}
+		}
+		return nil
+	}
 	if persisted.SourceEngine == "" {
 		for _, runtime := range runtimes {
 			if runtime.Running {
@@ -1473,9 +1558,10 @@ func (p *Panel) reconstructPersistedDNSEngineManifest(
 			errors.New("persisted DNS engine snapshot size or count mismatch")
 	}
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		persisted.Mode,
 		persisted.SourceEngine, persisted.TargetEngine,
 		persisted.SourceEpoch, persisted.TargetEpoch,
-		persisted.SourceRevision, transport.DNSTopologyStandalone, zones,
+		persisted.SourceRevision, persisted.Topology, zones,
 	)
 	if err != nil {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{}, err
@@ -1492,6 +1578,7 @@ func dnsEngineSwitchRequestForManifest(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) transport.SwitchDNSEngineV1Request {
 	return transport.SwitchDNSEngineV1Request{
+		Mode:         manifest.Mode,
 		SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
@@ -1631,8 +1718,12 @@ func (p *Panel) handleDNSEngineSwitch(
 		if marker != nil && marker.RequestID == persisted.RequestID &&
 			marker.SwitchID == persisted.SwitchID &&
 			marker.Phase == dnsEngineOperationPostCommit {
-			persisted.Action = marker.Action
-			persisted.Mode = dnsEngineMutationMode(marker.Action)
+			if err := attachDNSEngineOperationAction(
+				r.Context(), p.db.GetDB(), &persisted,
+			); err != nil {
+				writeServerError(w, err)
+				return
+			}
 			result := p.reconcileDNSEnginePostCommitLocked(
 				r.Context(), persisted,
 			)
@@ -1697,7 +1788,12 @@ func (p *Panel) handleDNSEngineSwitch(
 		return
 	}
 	action := dnsEngineAction(snapshot, request.TargetEngine)
-	if (request.ExpectedSource.Valid || action == "adopt") &&
+	if action != authority.Action {
+		writeClientError(w, http.StatusConflict,
+			"DNS engine state changed after preview; review the change again")
+		return
+	}
+	if request.ExpectedSource.Valid &&
 		!request.DowntimeAcknowledged {
 		writeClientError(w, http.StatusBadRequest,
 			"downtime acknowledgement is required")
@@ -1709,7 +1805,7 @@ func (p *Panel) handleDNSEngineSwitch(
 		return
 	}
 	manifest, err := p.buildDNSEngineManifest(
-		r.Context(), state, request.TargetEngine,
+		r.Context(), state, request.TargetEngine, action, snapshot.Topology,
 	)
 	if err != nil {
 		writeClientError(w, http.StatusConflict,
@@ -1826,14 +1922,18 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 			if readErr != nil {
 				return true, readErr
 			}
-			persisted.Action = marker.Action
-			persisted.Mode = dnsEngineMutationMode(marker.Action)
+			if err := attachDNSEngineOperationAction(
+				ctx, p.db.GetDB(), &persisted,
+			); err != nil {
+				return true, err
+			}
 			if persisted.RequestID != marker.RequestID ||
 				persisted.SourceEngine != marker.SourceEngine ||
 				persisted.TargetEngine != marker.TargetEngine ||
 				persisted.Phase != "committed" ||
 				state.ActiveEngine != persisted.TargetEngine ||
-				state.EngineEpoch != persisted.TargetEpoch {
+				state.EngineEpoch != persisted.TargetEpoch ||
+				state.Topology != persisted.Topology {
 				return true, errors.New(
 					"DNS engine post-commit marker does not match active authority",
 				)
@@ -1892,8 +1992,11 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 			"active DNS engine switch has no exact accepted marker",
 		)
 	}
-	persisted.Action = marker.Action
-	persisted.Mode = dnsEngineMutationMode(marker.Action)
+	if err := attachDNSEngineOperationAction(
+		ctx, p.db.GetDB(), &persisted,
+	); err != nil {
+		return true, err
+	}
 	if _, err := p.reconstructPersistedDNSEngineManifest(ctx, persisted); err != nil {
 		return true, fmt.Errorf("verify persisted DNS engine manifest: %w", err)
 	}

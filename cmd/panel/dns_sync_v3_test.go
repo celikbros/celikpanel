@@ -231,10 +231,10 @@ func switchDNSEngineIdentityForTest(
 	}
 	if _, err := panel.db.GetDB().Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
-		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		  source_epoch, target_epoch, source_state_revision, topology,
 		  phase, manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'standalone', 'planned', ?, 0, 0)`,
+		) VALUES (?, ?, ?, 'switch', ?, ?, ?, ?, ?, 'standalone', 'planned', ?, 0, 0)`,
 		switchID, requestID, ownerID, source, target,
 		state.EngineEpoch, nextEpoch, state.Revision,
 		"dns-engine-switch/v1:sha256:"+strings.Repeat("d", 64),
@@ -697,10 +697,10 @@ func TestDNSEngineSwitchCannotAttachWhileV3ZoneLeaseExists(t *testing.T) {
 	switchID := strings.Repeat("e", 32)
 	if _, err := panel.db.GetDB().Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
-		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		  source_epoch, target_epoch, source_state_revision, topology,
 		  phase, manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, 'bind', 'pdns', 1, 2, ?, 'standalone',
+		) VALUES (?, ?, ?, 'switch', 'bind', 'pdns', 1, 2, ?, 'standalone',
 		          'planned', ?, 0, 0)`,
 		switchID, strings.Repeat("f", 32), strings.Repeat("0", 32),
 		revision, "dns-engine-switch/v1:sha256:"+strings.Repeat("1", 64),

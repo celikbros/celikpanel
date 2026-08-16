@@ -185,6 +185,60 @@ func TestDNSSetupPairedRenameCommitsOneTopology(t *testing.T) {
 	assertSingleReconciledA(t, p, zoneID, "ns4.biovision.health", "198.51.100.20")
 }
 
+func TestDNSSetupCommitsPowerDNSTopologyWithIdentity(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgent(t, p, agent)
+	before, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Topology != transport.DNSTopologyStandalone {
+		t.Fatalf("initial durable topology=%q", before.Topology)
+	}
+
+	paired := httptest.NewRecorder()
+	p.handleDNSSetup(paired, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"198.51.100.20","peer_ns":"ns4.example.net"}`,
+	))
+	if paired.Code != http.StatusOK {
+		t.Fatalf("paired status=%d body=%s", paired.Code, paired.Body.String())
+	}
+	pairedState, err := readDNSEngineDBState(
+		context.Background(), p.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pairedState.ActiveEngine != transport.DNSEnginePowerDNS ||
+		pairedState.Topology != transport.DNSTopologyPaired ||
+		pairedState.Revision != before.Revision+1 {
+		t.Fatalf("paired durable state=%+v before=%+v", pairedState, before)
+	}
+
+	standalone := httptest.NewRecorder()
+	p.handleDNSSetup(standalone, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if standalone.Code != http.StatusOK {
+		t.Fatalf("standalone status=%d body=%s",
+			standalone.Code, standalone.Body.String())
+	}
+	standaloneState, err := readDNSEngineDBState(
+		context.Background(), p.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if standaloneState.Topology != transport.DNSTopologyStandalone ||
+		standaloneState.Revision != pairedState.Revision+1 {
+		t.Fatalf("standalone durable state=%+v paired=%+v",
+			standaloneState, pairedState)
+	}
+}
+
 func TestDNSSetupRejectsInvalidPairedTupleBeforeAgent(t *testing.T) {
 	for _, tc := range []struct {
 		name string

@@ -51,10 +51,10 @@ func activateDNSEngineForTest(t *testing.T, p *Panel, engine string) {
 	manifest := "dns-engine-switch/v1:sha256:" + strings.Repeat("d", 64)
 	if _, err := p.db.GetDB().Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
-		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  switch_id, request_id, owner_id, mode, source_engine, target_engine,
 		  source_epoch, target_epoch, source_state_revision, topology,
 		  phase, manifest_qualifier, zone_count, snapshot_bytes
-		) VALUES (?, ?, ?, NULL, ?, 0, 1, 0, 'standalone',
+		) VALUES (?, ?, ?, 'switch', NULL, ?, 0, 1, 0, 'standalone',
 		          'planned', ?, 0, 0)`,
 		switchID, requestID, ownerID, engine, manifest,
 	); err != nil {
