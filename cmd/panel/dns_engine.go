@@ -1314,6 +1314,23 @@ func (p *Panel) finalizeDNSEngineSwitchSuccess(
 				"frozen DNS zone state changed before switch finalization",
 			)
 		}
+		if zone.action == "delete" {
+			retired, err := tx.ExecContext(ctx, `
+				DELETE FROM dns_zone_deletion_markers WHERE zone_name = ?`,
+				zone.name,
+			)
+			if err != nil {
+				return fmt.Errorf(
+					"retire applied DNS engine deletion marker: %w", err,
+				)
+			}
+			if err := requireExactRows(
+				retired, 1,
+				"applied DNS engine deletion marker was not retired exactly once",
+			); err != nil {
+				return err
+			}
+		}
 	}
 	verified, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_switch_zones

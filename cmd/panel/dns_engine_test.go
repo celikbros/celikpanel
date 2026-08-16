@@ -930,6 +930,58 @@ func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {
 	}
 }
 
+func TestDNSEngineManagedPDNSAdoptionRetiresAppliedDeletionMarker(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	if _, err := panel.db.GetDB().Exec(`
+		INSERT INTO dns_zone_deletion_markers (zone_name, zone_type)
+		VALUES ('retired-adopt.example', 'NATIVE')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+		preview.Action != "adopt" || preview.ZoneCount != 1 ||
+		preview.PendingZoneCount != 1 {
+		t.Fatalf("delete adoption preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("b", 32), transport.DNSEnginePowerDNS,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("delete adoption status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	var markerCount, stateCount, applicationCount int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT
+		  (SELECT count(*) FROM dns_zone_deletion_markers
+		   WHERE zone_name = 'retired-adopt.example'),
+		  (SELECT count(*) FROM dns_zone_sync_state
+		   WHERE zone_name = 'retired-adopt.example'),
+		  (SELECT count(*) FROM dns_zone_engine_applications
+		   WHERE zone_name = 'retired-adopt.example'
+		     AND engine = 'pdns' AND engine_epoch = 1
+		     AND applied_action = 'delete')
+	`).Scan(&markerCount, &stateCount, &applicationCount); err != nil {
+		t.Fatal(err)
+	}
+	if markerCount != 0 || stateCount != 0 || applicationCount != 1 {
+		t.Fatalf("retired delete marker=%d state=%d application=%d",
+			markerCount, stateCount, applicationCount)
+	}
+}
+
 func TestDNSEnginePairedSignedManagedPDNSAdoptionPreservesTopology(t *testing.T) {
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "paired")
