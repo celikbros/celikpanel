@@ -22,6 +22,14 @@ test('integration blocks are distinct from missing distro packages', () => {
   assert.match(serviceList, /services\.notOffered/);
 });
 
+test('DNS engines always use the dedicated reviewed engine workflow', () => {
+  assert.match(serviceList, /s\.id === 'pdns' \|\| s\.id === 'bind'/);
+  assert.match(serviceList, /navigate\('\/settings\?section=dns'\)/);
+  assert.match(serviceList, /services\.manageDNSEngine/);
+  assert.match(english, /'services\.manageDNSEngine': 'Manage DNS engine'/);
+  assert.match(turkish, /'services\.manageDNSEngine': 'DNS motorunu yönet'/);
+});
+
 test('vsftpd points operators to the built-in encrypted SFTP path', () => {
   assert.match(serviceList, /s\.id === 'vsftpd'/);
   assert.match(serviceList, /services\.useBuiltInSFTP/);

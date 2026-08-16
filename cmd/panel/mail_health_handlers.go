@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -24,6 +25,25 @@ type healthCheck struct {
 	ID     string `json:"id"`
 	Status string `json:"status"` // ok | warn | fail | unknown
 	Detail string `json:"detail,omitempty"`
+}
+
+// mailDNSSECSecured reports PowerDNS signing state only when PowerDNS is the
+// exact durable active publisher. A retained standby database must never make
+// an active BIND zone look DNSSEC-secured.
+func (p *Panel) mailDNSSECSecured(ctx context.Context, domain string) bool {
+	publisher, ready, err := p.activeDNSPublisher(ctx)
+	if err != nil || !ready || publisher.Engine != transport.DNSEnginePowerDNS ||
+		publisher.Epoch < 1 {
+		return false
+	}
+	var status transport.DNSSECStatusResponse
+	if err := p.callAgentContext(
+		ctx, "Agent.DNSSECStatus",
+		&transport.DNSSECRequest{Zone: domain}, &status,
+	); err != nil || status.Error != "" {
+		return false
+	}
+	return status.Secured
 }
 
 func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainID int) {
@@ -123,8 +143,7 @@ func (p *Panel) handleMailHealth(w http.ResponseWriter, r *http.Request, domainI
 	}
 
 	// --- DNSSEC
-	var ds transport.DNSSECStatusResponse
-	if p.callAgent("Agent.DNSSECStatus", &transport.DNSSECRequest{Zone: domain}, &ds) == nil && ds.Secured {
+	if p.mailDNSSECSecured(ctx, domain) {
 		add("dnssec", "ok", "")
 	} else {
 		add("dnssec", "warn", "")

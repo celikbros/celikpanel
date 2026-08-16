@@ -261,8 +261,17 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		}
 	}
 	if len(missingPackages) > 0 {
-		if _, err := installPackagesWithCandidateContext(ctx, family, missingPackages, strings.TrimSpace(req.Package)); err != nil {
-			resp.Error = fmt.Sprintf("package install failed: %v", err)
+		installMissingPackages := func() (string, error) {
+			return installPackagesWithCandidateContext(ctx, family, missingPackages, strings.TrimSpace(req.Package))
+		}
+		var installErr error
+		if serviceUsesBINDPackageInstallGuard(req.ID) {
+			_, installErr = installBINDPackagesWithGuard(ctx, systemctl, installMissingPackages)
+		} else {
+			_, installErr = installMissingPackages()
+		}
+		if installErr != nil {
+			resp.Error = fmt.Sprintf("package install failed: %v", installErr)
 			return nil
 		}
 	}
@@ -300,7 +309,12 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	}
 	if unit != "" {
 		var err error
-		if serviceStartsAfterPanelSetup(req.ID) {
+		if serviceUsesBINDPackageInstallGuard(req.ID) {
+			// BIND's package-maintainer auto-start guard deliberately leaves both
+			// distro unit names masked. The explicit panel configuration/switch
+			// operation owns unmask + enable + start after publishing valid zones.
+			err = nil
+		} else if serviceStartsAfterPanelSetup(req.ID) {
 			err = enableServiceForMutationWithExecutable(ctx, systemctl, unit, false)
 		} else {
 			err = enableServiceForMutationWithExecutable(ctx, systemctl, unit, true)
@@ -342,11 +356,15 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 
 func serviceStartsAfterPanelSetup(serviceID string) bool {
 	switch serviceID {
-	case "pdns", "postfix", "dovecot", "wireguard":
+	case "pdns", "bind", "postfix", "dovecot", "wireguard":
 		return true
 	default:
 		return false
 	}
+}
+
+func serviceUsesBINDPackageInstallGuard(serviceID string) bool {
+	return serviceID == "bind"
 }
 
 // packageAvailable reports whether apt knows a package name at all, so an

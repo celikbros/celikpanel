@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -87,6 +88,13 @@ func (a *Agent) SecureDNSZoneV2(
 		return nil
 	}
 	defer finish()
+	if err := requireLegacyPowerDNSMutationSafeWithAuthority(
+		ctx, true, true,
+	); err != nil {
+		log.Printf("PowerDNS DNSSEC signing blocked by durable DNS engine authority: %v", err)
+		resp.Error = "DNSSEC signing is blocked because PowerDNS is not the active DNS engine"
+		return nil
+	}
 	// Signing must operate on the exact CelikPanel database served by the
 	// effective PowerDNS configuration. Fail before any pdnsutil invocation
 	// when that host binding is missing or ambiguous.
@@ -182,9 +190,19 @@ func runPDNSUtilContext(
 // DNSSECStatus reports whether a zone is signed and its DS records.
 // DNSSECStatus, bir zone'un imzalı olup olmadığını ve DS kayıtlarını bildirir.
 func (a *Agent) DNSSECStatus(req *DNSSECRequest, resp *DNSSECStatusResponse) error {
+	*resp = DNSSECStatusResponse{}
+	if req == nil {
+		resp.Error = "invalid zone"
+		return nil
+	}
 	zone := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(req.Zone)), ".")
 	if zone == "" {
 		resp.Error = "invalid zone"
+		return nil
+	}
+	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+		log.Printf("PowerDNS DNSSEC status blocked by durable DNS engine authority: %v", err)
+		resp.Error = "DNSSEC status is unavailable because PowerDNS is not the active DNS engine"
 		return nil
 	}
 	if _, err := dnssecLookPath("pdnsutil"); err != nil {
@@ -192,6 +210,14 @@ func (a *Agent) DNSSECStatus(req *DNSSECRequest, resp *DNSSECStatusResponse) err
 		return nil
 	}
 	secured, ds, out, err := zoneDNSSECState(zone)
+	if authorityErr := legacyPowerDNSDurableAuthorityCheck(false); authorityErr != nil {
+		log.Printf("PowerDNS DNSSEC status changed authority during inspection: %v", authorityErr)
+		if err != nil {
+			log.Printf("PowerDNS DNSSEC status command also failed during authority change: %v", err)
+		}
+		resp.Error = "DNSSEC status is unavailable because PowerDNS is not the active DNS engine"
+		return nil
+	}
 	if err != nil {
 		resp.Error = dnssecCommandError("show zone", out, err)
 		return nil

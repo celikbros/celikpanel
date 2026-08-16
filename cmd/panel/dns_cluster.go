@@ -388,6 +388,40 @@ func safeDNSClusterPeerIPv4(value, localIPv4 string) bool {
 	return ip != nil && ip.To4() != nil && ip.To4().IsGlobalUnicast()
 }
 
+func (p *Panel) dnsSetupServiceReadiness(
+	ctx context.Context,
+) (known, ready bool, detail string) {
+	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil || state.ActiveEngine == "" || p.agentClient == nil {
+		return false, false, ""
+	}
+	publisher, publisherReady, err := p.activeDNSPublisher(ctx)
+	if err != nil {
+		return false, false, ""
+	}
+	if !publisherReady || publisher.Engine != state.ActiveEngine ||
+		publisher.Epoch != state.EngineEpoch {
+		return true, false, "The active DNS engine readiness could not be verified"
+	}
+	switch publisher.Engine {
+	case transport.DNSEngineBIND:
+		return true, true, "BIND is ready for standalone DNS identity"
+	case transport.DNSEnginePowerDNS:
+		var readiness dnsClusterReadinessResponse
+		if err := p.callAgentContext(
+			ctx, "Agent.DNSClusterReadiness", &transport.Empty{}, &readiness,
+		); err != nil {
+			return false, false, ""
+		}
+		if readiness.Ready {
+			return true, true, "PowerDNS is ready for DNS identity"
+		}
+		return true, false, "PowerDNS is not ready for DNS identity"
+	default:
+		return true, false, "The active DNS engine is unsupported"
+	}
+}
+
 func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if c := currentCaller(r); c == nil || c.Role != roleAdmin {
@@ -406,14 +440,8 @@ func (p *Panel) handleDNSCluster(w http.ResponseWriter, r *http.Request) {
 			ServerIP:   serverPrimaryIP(),
 			Steps:      make([]clusterStep, 0),
 		}
-		if p.agentClient != nil {
-			var readiness dnsClusterReadinessResponse
-			if err := p.callAgent("Agent.DNSClusterReadiness", &transport.Empty{}, &readiness); err == nil {
-				v.DNSServiceKnown = true
-				v.DNSServiceReady = readiness.Ready
-				v.DNSServiceDetail = readiness.Detail
-			}
-		}
+		v.DNSServiceKnown, v.DNSServiceReady, v.DNSServiceDetail =
+			p.dnsSetupServiceReadiness(r.Context())
 		if v.PeerIP != "" {
 			v.PeerReachable = dnsPortAnswers(v.PeerIP)
 		}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -83,6 +84,28 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 		return errors.New("DNS cluster readiness response is required")
 	}
 	*resp = DNSClusterReadinessResponse{}
+	if !legacyPowerDNSReadinessAuthorized(resp) {
+		return nil
+	}
+	if err := inspectManagedPowerDNSArtifacts(resp); err != nil || !resp.Ready {
+		return err
+	}
+	if !legacyPowerDNSReadinessAuthorized(resp) {
+		return nil
+	}
+	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
+	return nil
+}
+
+// inspectManagedPowerDNSArtifacts proves only CelikPanel ownership of the
+// configuration and database. It deliberately does not grant active DNS
+// authority; callers that mutate or publish must separately verify the durable
+// engine state and live port-53 owner.
+func inspectManagedPowerDNSArtifacts(resp *DNSClusterReadinessResponse) error {
+	if resp == nil {
+		return errors.New("PowerDNS artifact readiness response is required")
+	}
+	*resp = DNSClusterReadinessResponse{}
 	for _, binary := range []string{"pdns_server", "pdnsutil", "pdns_control"} {
 		if _, err := dnsClusterLookPath(binary); err != nil {
 			resp.Detail = "PowerDNS tooling is not installed on this server"
@@ -133,8 +156,18 @@ func inspectDNSClusterReadiness(resp *DNSClusterReadinessResponse) error {
 		return errors.New("managed PowerDNS database path is not a regular file")
 	}
 	resp.Ready = true
-	resp.Detail = "PowerDNS is configured and ready for CelikPanel DNS publication"
+	resp.Detail = "PowerDNS configuration and database are managed by CelikPanel"
 	return nil
+}
+
+func legacyPowerDNSReadinessAuthorized(resp *DNSClusterReadinessResponse) bool {
+	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+		log.Printf("PowerDNS readiness blocked by durable DNS engine authority: %v", err)
+		resp.Ready = false
+		resp.Detail = "PowerDNS is not the active DNS engine on this server"
+		return false
+	}
+	return true
 }
 
 func requireManagedDNSClusterReady() error {
@@ -146,6 +179,21 @@ func requireManagedDNSClusterReady() error {
 		detail := strings.TrimSpace(readiness.Detail)
 		if detail == "" {
 			detail = "PowerDNS is not ready for CelikPanel cluster convergence"
+		}
+		return errors.New(detail)
+	}
+	return nil
+}
+
+func requireManagedPowerDNSArtifacts() error {
+	var readiness DNSClusterReadinessResponse
+	if err := inspectManagedPowerDNSArtifacts(&readiness); err != nil {
+		return err
+	}
+	if !readiness.Ready {
+		detail := strings.TrimSpace(readiness.Detail)
+		if detail == "" {
+			detail = "PowerDNS managed artifacts could not be verified"
 		}
 		return errors.New(detail)
 	}
@@ -426,6 +474,11 @@ func (a *Agent) ConfigureDNSClusterV2(
 		return nil
 	}
 	defer finish()
+	if err := requireLegacyPowerDNSMutationSafe(ctx, true); err != nil {
+		log.Printf("legacy PowerDNS cluster configuration blocked by durable DNS engine guard: %v", err)
+		resp.Error = "PowerDNS cluster configuration is blocked because PowerDNS is not the sole active DNS engine"
+		return nil
+	}
 	return configureDNSClusterV2(ctx, commitment, resp)
 }
 

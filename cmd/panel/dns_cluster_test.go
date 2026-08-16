@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/rpc"
+	"strings"
 	"sync"
 	"testing"
 
@@ -184,10 +185,11 @@ func TestDNSClusterGETExposesPowerDNSReadiness(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 			p := newDNSPanelForTest(t)
-			attachCompensationDNSAgent(t, p, &compensationDNSAgent{
+			agent := &strictDNSRPCAgent{
 				readinessReady:  tc.ready,
 				readinessDetail: tc.detail,
-			})
+			}
+			attachStrictDNSRPCAgent(t, p, agent)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/dns-cluster", nil)
 			req = req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin}))
@@ -204,11 +206,52 @@ func TestDNSClusterGETExposesPowerDNSReadiness(t *testing.T) {
 			if !got.DNSServiceKnown {
 				t.Fatal("successful readiness RPC was reported as unknown")
 			}
-			if got.DNSServiceReady != tc.wantReady || got.DNSServiceDetail != tc.detail {
-				t.Fatalf("DNS service = ready:%v detail:%q, want ready:%v detail:%q",
-					got.DNSServiceReady, got.DNSServiceDetail, tc.wantReady, tc.detail)
+			if got.DNSServiceReady != tc.wantReady ||
+				!strings.Contains(got.DNSServiceDetail, "PowerDNS") {
+				t.Fatalf("DNS service = ready:%v detail:%q, want safe PowerDNS readiness %v",
+					got.DNSServiceReady, got.DNSServiceDetail, tc.wantReady)
+			}
+			if got.DNSServiceDetail == tc.detail {
+				t.Fatalf("raw agent readiness detail reached client: %q", got.DNSServiceDetail)
 			}
 		})
+	}
+}
+
+func TestDNSClusterGETExposesExactActiveBINDWithoutPDNSReadiness(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := &strictDNSRPCAgent{
+		readinessDetail: "secret standby PowerDNS path /etc/pdns/pdns.conf",
+	}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/dns-cluster", nil)
+	req = req.WithContext(context.WithValue(
+		req.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin},
+	))
+	recorder := httptest.NewRecorder()
+	p.handleDNSCluster(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	var got dnsClusterView
+	if err := json.NewDecoder(recorder.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.DNSServiceKnown || !got.DNSServiceReady ||
+		!strings.Contains(got.DNSServiceDetail, "BIND") ||
+		strings.Contains(recorder.Body.String(), "/etc/pdns") {
+		t.Fatalf("active BIND readiness is unsafe or incomplete: %+v", got)
+	}
+	agent.mu.Lock()
+	readinessCalls := agent.readinessCalls
+	agent.mu.Unlock()
+	if readinessCalls != 0 {
+		t.Fatalf("active BIND queried standby PowerDNS readiness %d time(s)", readinessCalls)
 	}
 }
 

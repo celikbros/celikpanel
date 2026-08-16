@@ -162,19 +162,9 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 		writeAcceptedServiceOperation(w, existing)
 		return
 	}
-	if req.ServiceID == "pdns" {
-		if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
-			writeClientError(w, http.StatusConflict,
-				"DNS cluster topology is pending recovery; PowerDNS installation is blocked")
-			return
-		}
-		// A pdns install promises the post-terminal V2 full-zone child. Reject
-		// an old/mismatched agent before creating the outer durable row or
-		// touching the package manager.
-		if err := p.requireDNSZoneSyncV2Agent(r.Context()); err != nil {
-			writeServerError(w, err)
-			return
-		}
+	if managedDNSEngineServiceID(req.ServiceID) {
+		writeDNSEngineWorkflowRequired(w)
+		return
 	}
 	release, busy := p.beginServiceMutation(w, r)
 	if busy {
@@ -186,14 +176,6 @@ func (p *Panel) handleServiceInstall(w http.ResponseWriter, r *http.Request) {
 			release()
 		}
 	}()
-	if req.ServiceID == "pdns" {
-		if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
-			writeClientError(w, http.StatusConflict,
-				"DNS cluster topology is pending recovery; PowerDNS installation is blocked")
-			return
-		}
-	}
-
 	actor := captureServiceOperationActor(r)
 	op, err := p.createServiceOperationRequest(
 		r.Context(), serviceOperationKindInstall, req.ServiceID, req.Package, req.RequestID, actor,
@@ -1600,6 +1582,14 @@ func (p *Panel) recoverInterruptedServiceOperations(ctx context.Context) (int64,
 	globalJob, err := p.refreshStartupGlobalMutation(recoveryCtx)
 	if err != nil {
 		return 0, err
+	}
+	if handled, engineErr := p.recoverDNSEngineSwitchLocked(
+		recoveryCtx, globalJob,
+	); handled || engineErr != nil {
+		if engineErr != nil {
+			return 0, engineErr
+		}
+		return 0, nil
 	}
 	if op != nil && op.Kind == serviceOperationKindPanelCertificate {
 		if !validServiceOperationID(op.RequestID) {

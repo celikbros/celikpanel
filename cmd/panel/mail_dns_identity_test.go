@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func clearMailProfileDNSIdentity(t *testing.T, fixture serviceOperationTestFixture) {
@@ -27,6 +28,8 @@ func removeMailProfileDNSServers(agent *mailProfileTestAgent) {
 	defer agent.serviceOperationTestAgent.mu.Unlock()
 	delete(agent.serviceOperationTestAgent.installed, "pdns")
 	delete(agent.serviceOperationTestAgent.installed, "bind")
+	delete(agent.serviceOperationTestAgent.active, "pdns")
+	delete(agent.serviceOperationTestAgent.active, "bind")
 }
 
 func TestMailProfileDNSIdentityReadinessRequiresServerAndSavedIdentity(t *testing.T) {
@@ -44,8 +47,16 @@ func TestMailProfileDNSIdentityReadinessRequiresServerAndSavedIdentity(t *testin
 
 	seedInstalledServices(agent.serviceOperationTestAgent, "bind")
 	ready, err = fixture.panel.mailProfileDNSIdentityReady(context.Background())
+	if err != nil || ready {
+		t.Fatalf("unselected BIND package ready=%v err=%v", ready, err)
+	}
+
+	seedMailProfileActiveDNSEngine(
+		t, fixture, agent, transport.DNSEngineBIND,
+	)
+	ready, err = fixture.panel.mailProfileDNSIdentityReady(context.Background())
 	if err != nil || !ready {
-		t.Fatalf("BIND-backed DNS identity ready=%v err=%v", ready, err)
+		t.Fatalf("active BIND-backed DNS identity ready=%v err=%v", ready, err)
 	}
 
 	clearMailProfileDNSIdentity(t, fixture)

@@ -36,12 +36,14 @@ type strictDNSRPCAgent struct {
 	mu                  sync.Mutex
 	failZone            string
 	clusterError        string
+	powerDNSError       string
 	clusterRequests     []transport.ConfigureDNSClusterV2Request
 	clusterHook         func(transport.ConfigureDNSClusterV2Request, *transport.ConfigureDNSClusterV2Response) error
 	clusterEntered      chan struct{}
 	clusterRelease      <-chan struct{}
 	syncCalls           []string
 	syncRequests        []transport.SyncDNSZoneV2Request
+	syncV3Requests      []transport.SyncDNSZoneV3Request
 	syncHook            func(transport.SyncDNSZoneV2Request)
 	secureRequests      []transport.SecureDNSZoneV2Request
 	secureHook          func(transport.SecureDNSZoneV2Request, *transport.SecureDNSZoneV2Response) error
@@ -58,11 +60,13 @@ type strictDNSRPCAgent struct {
 	powerDNSCalls       int
 	secureDNSCalls      int
 	dnssecStatusCalls   int
+	dnssecStatusError   string
 	cancelCalls         int
 	readinessCalls      int
 	readinessReady      bool
 	readinessDetail     string
 	readinessError      error
+	publisher           transport.DNSEngine
 }
 
 func (a *strictDNSRPCAgent) Version(
@@ -75,6 +79,7 @@ func (a *strictDNSRPCAgent) Version(
 	resp.Commit = a.versionCommit
 	capabilities := []string{
 		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSZoneSyncV3,
 		transport.AgentCapabilityDNSSECSecureV2,
 		transport.AgentCapabilityDNSClusterConfigureV2,
 	}
@@ -82,6 +87,35 @@ func (a *strictDNSRPCAgent) Version(
 		capabilities = append([]string(nil), (*a.versionCapabilities)...)
 	}
 	resp.Capabilities = capabilities
+	return nil
+}
+
+func (a *strictDNSRPCAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	publisher := a.publisher
+	if publisher == "" {
+		publisher = transport.DNSEnginePowerDNS
+	}
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine:    transport.DNSEnginePowerDNS,
+			Installed: publisher == transport.DNSEnginePowerDNS,
+			Running:   publisher == transport.DNSEnginePowerDNS,
+			Managed:   publisher == transport.DNSEnginePowerDNS,
+			Unit:      "pdns.service",
+		},
+		{
+			Engine:    transport.DNSEngineBIND,
+			Installed: publisher == transport.DNSEngineBIND,
+			Running:   publisher == transport.DNSEngineBIND,
+			Managed:   publisher == transport.DNSEngineBIND,
+			Unit:      "bind9.service",
+		},
+	}
 	return nil
 }
 
@@ -202,6 +236,43 @@ func (a *strictDNSRPCAgent) SyncDNSZoneV2(req *StrictDNSRPCSyncRequest, resp *St
 	return nil
 }
 
+func (a *strictDNSRPCAgent) SyncDNSZoneV3(
+	req *transport.SyncDNSZoneV3Request,
+	resp *transport.SyncDNSZoneV3Response,
+) error {
+	copy := *req
+	copy.Records = append([]transport.ZoneRecord(nil), req.Records...)
+	legacy := transport.SyncDNSZoneV2Request{
+		ServiceMutationBinding: req.ServiceMutationBinding,
+		DesiredGeneration:      req.DesiredGeneration,
+		Domain:                 req.Domain,
+		Delete:                 req.Delete,
+		ZoneType:               req.ZoneType,
+		Records:                append([]transport.ZoneRecord(nil), req.Records...),
+	}
+	a.mu.Lock()
+	a.syncCalls = append(a.syncCalls, req.Domain)
+	a.syncV3Requests = append(a.syncV3Requests, copy)
+	a.syncRequests = append(a.syncRequests, legacy)
+	hook := a.syncHook
+	delta := a.generationDelta
+	a.mu.Unlock()
+	if hook != nil {
+		hook(legacy)
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if req.Domain == a.failZone {
+		resp.Error = "forced publication failure with internal detail"
+		return nil
+	}
+	resp.Synced = true
+	resp.Engine = req.Engine
+	resp.EngineEpoch = req.EngineEpoch
+	resp.AppliedGeneration = req.DesiredGeneration + delta
+	return nil
+}
+
 func (a *strictDNSRPCAgent) ConfigureDNSClusterV2(req *StrictDNSRPCClusterRequest, resp *StrictDNSRPCClusterResponse) error {
 	a.mu.Lock()
 	a.clusterCalls++
@@ -254,6 +325,10 @@ func (a *strictDNSRPCAgent) ConfigurePowerDNSSQLite(_ *StrictDNSRPCEmpty, resp *
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.powerDNSCalls++
+	if a.powerDNSError != "" {
+		resp.Error = a.powerDNSError
+		return nil
+	}
 	resp.Synced = true
 	return nil
 }
@@ -290,6 +365,10 @@ func (a *strictDNSRPCAgent) DNSSECStatus(
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.dnssecStatusCalls++
+	if a.dnssecStatusError != "" {
+		resp.Error = a.dnssecStatusError
+		return nil
+	}
 	resp.Secured = true
 	resp.DS = []string{"12345 13 2 AABBCC"}
 	return nil
@@ -311,7 +390,22 @@ func (a *strictDNSRPCAgent) DNSClusterReadiness(
 }
 
 func attachStrictDNSRPCAgent(t *testing.T, p *Panel, agent *strictDNSRPCAgent) {
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEnginePowerDNS,
+	)
+}
+
+func attachStrictDNSRPCAgentForEngine(
+	t *testing.T,
+	p *Panel,
+	agent *strictDNSRPCAgent,
+	engine transport.DNSEngine,
+) {
 	t.Helper()
+	ensureActiveDNSEngineForTest(t, p, engine)
+	agent.mu.Lock()
+	agent.publisher = engine
+	agent.mu.Unlock()
 	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
@@ -437,7 +531,7 @@ func TestSyncZoneScanFailureNeverPublishesPartialZone(t *testing.T) {
 	}
 }
 
-func TestDNSZoneV2LeaseIsPersistedBeforeAgentBegin(t *testing.T) {
+func TestDNSZoneV3LeaseIsPersistedBeforeAgentBegin(t *testing.T) {
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "standalone")
 	seedStrictDNSZone(t, p, "lease-before-begin.example")
@@ -451,8 +545,8 @@ func TestDNSZoneV2LeaseIsPersistedBeforeAgentBegin(t *testing.T) {
 		var requestID, ownerID, qualifier string
 		var generation int64
 		if err := p.db.GetDB().QueryRow(`
-			SELECT lease_request_id, lease_owner_id, lease_qualifier, lease_generation
-			FROM dns_zone_sync_state WHERE zone_name = ?`, req.Target).Scan(
+			SELECT request_id, owner_id, qualifier, desired_generation
+			FROM dns_zone_engine_leases WHERE zone_name = ?`, req.Target).Scan(
 			&requestID, &ownerID, &qualifier, &generation,
 		); err != nil {
 			return fmt.Errorf("read persisted DNS lease at Begin: %w", err)
@@ -642,8 +736,15 @@ func TestDNSZoneV2AmbiguousStatusRetainsExactLease(t *testing.T) {
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
-	if !state.hasLease() || state.Status != "pending" || state.LastError.Valid {
-		t.Fatalf("ambiguous publication did not retain exact pending lease: %+v", state)
+	lease, leaseErr := readDNSZoneEngineLease(
+		context.Background(), p.db.GetDB(), "ambiguous.example",
+	)
+	if leaseErr != nil || !lease.valid() || state.hasLease() ||
+		state.Status != "pending" || state.LastError.Valid {
+		t.Fatalf(
+			"ambiguous publication did not retain exact V3 lease: state=%+v lease=%+v err=%v",
+			state, lease, leaseErr,
+		)
 	}
 }
 
@@ -934,7 +1035,7 @@ func TestDNSStartupReadinessAmbiguityIsHardError(t *testing.T) {
 	}
 }
 
-func TestDNSStartupExactLeaseReconcilesBeforePowerDNSReadiness(t *testing.T) {
+func TestDNSStartupLegacyReceiptDefersV3UntilPowerDNSReadiness(t *testing.T) {
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "standalone")
 	seedStrictDNSZone(t, p, "startup-exact-before-readiness.example")
@@ -972,15 +1073,15 @@ func TestDNSStartupExactLeaseReconcilesBeforePowerDNSReadiness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.hasLease() || state.Status != "applied" ||
-		state.AppliedGeneration != state.DesiredGeneration {
+	if state.hasLease() || state.Status != "pending" ||
+		state.AppliedGeneration == state.DesiredGeneration {
 		t.Fatalf("exact lease state=%+v", state)
 	}
 	agent.mu.Lock()
 	readinessCalls := agent.readinessCalls
 	syncCalls := len(agent.syncCalls)
 	agent.mu.Unlock()
-	if readinessCalls != 0 || syncCalls != 0 {
+	if readinessCalls != 1 || syncCalls != 0 {
 		t.Fatalf(
 			"exact terminal child readiness/sync=%d/%d",
 			readinessCalls, syncCalls,
@@ -1060,6 +1161,66 @@ func TestPDNSEnableRefusesSuccessWhenAnyZonePublicationFails(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	p.handlePDNSEnable(recorder, req)
 	assertPublicationConflict(t, recorder)
+}
+
+func TestPDNSEnableNeverExposesAgentConfigurationDetail(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{
+		powerDNSError: "restart /etc/powerdns/pdns.d/celikpanel.conf: systemctl stderr secret",
+	}
+	attachStrictDNSRPCAgent(t, p, agent)
+
+	recorder := httptest.NewRecorder()
+	p.handlePDNSEnable(
+		recorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/pdns/enable", nil),
+	)
+	var body apiErrorBody
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusConflict ||
+		body.Code != errCodeDNSPublicationFailed ||
+		strings.Contains(recorder.Body.String(), "/etc/powerdns") ||
+		strings.Contains(recorder.Body.String(), "systemctl stderr") ||
+		strings.Contains(recorder.Body.String(), "secret") {
+		t.Fatalf("unsafe PowerDNS repair error status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestPDNSEnableRejectsActiveBINDWithoutAgentMutation(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	recorder := httptest.NewRecorder()
+	p.handlePDNSEnable(
+		recorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/pdns/enable", nil),
+	)
+	if recorder.Code != http.StatusConflict ||
+		!strings.Contains(
+			recorder.Body.String(),
+			`"code":"`+errCodeDNSEngineWorkflowRequired+`"`,
+		) {
+		t.Fatalf("active BIND PowerDNS enable status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	agent.mu.Lock()
+	beginCalls, powerCalls, versionCalls :=
+		agent.beginCalls, agent.powerDNSCalls, agent.versionCalls
+	agent.mu.Unlock()
+	if beginCalls != 0 || powerCalls != 0 || versionCalls != 0 {
+		t.Fatalf(
+			"active BIND reached PowerDNS mutation path: begin=%d power=%d version=%d",
+			beginCalls, powerCalls, versionCalls,
+		)
+	}
 }
 
 func TestPDNSEnableReportsLedgerReadFailureAsInternalError(t *testing.T) {

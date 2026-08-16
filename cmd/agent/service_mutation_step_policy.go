@@ -7,6 +7,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type serviceMutationStepMethod string
@@ -15,6 +16,8 @@ const (
 	serviceMutationStepConfigureDBTools         serviceMutationStepMethod = "Agent.ConfigureDBTools"
 	serviceMutationStepConfigureDKIMSigning     serviceMutationStepMethod = "Agent.ConfigureDKIMSigning"
 	serviceMutationStepSyncDNSZone              serviceMutationStepMethod = "Agent.SyncDNSZoneV2"
+	serviceMutationStepSyncDNSZoneV3            serviceMutationStepMethod = "Agent.SyncDNSZoneV3"
+	serviceMutationStepSwitchDNSEngine          serviceMutationStepMethod = "Agent.SwitchDNSEngineV1"
 	serviceMutationStepSecureDNSZone            serviceMutationStepMethod = "Agent.SecureDNSZoneV2"
 	serviceMutationStepConfigureDNSCluster      serviceMutationStepMethod = "Agent.ConfigureDNSClusterV2"
 	serviceMutationStepConfigurePowerDNSSQLite  serviceMutationStepMethod = "Agent.ConfigurePowerDNSSQLite"
@@ -222,6 +225,25 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 		return serviceMutationJobMatches(
 			job, "dns_zone_sync", claim.target, claim.packageName,
 		)
+
+	case serviceMutationStepSyncDNSZoneV3:
+		if !serviceMutationCanonicalFQDN(claim.target) ||
+			!mutationpayload.ValidDNSZoneSyncV3Qualifier(claim.packageName) ||
+			(claim.action != "sync" && claim.action != "delete") {
+			return false
+		}
+		return serviceMutationJobMatches(
+			job, "dns_zone_sync", claim.target, claim.packageName,
+		)
+
+	case serviceMutationStepSwitchDNSEngine:
+		return (claim.target == "bind" || claim.target == "pdns") &&
+			(claim.action == transport.DNSEngineSwitchModeSwitch ||
+				claim.action == transport.DNSEngineSwitchModeAdopt) &&
+			mutationpayload.ValidDNSEngineSwitchQualifier(claim.packageName) &&
+			serviceMutationJobMatches(
+				job, "dns_engine_switch", claim.target, claim.packageName,
+			)
 
 	case serviceMutationStepSecureDNSZone:
 		return serviceMutationCanonicalFQDN(claim.target) &&

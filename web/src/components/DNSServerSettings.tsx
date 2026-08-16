@@ -3,12 +3,16 @@ import { Link } from '../router';
 import { Network, Server, Check, AlertTriangle, Circle, Loader2 } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
+import { dnsEngineText } from '../i18n/dnsEngine';
 import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
 import { HelpButton } from './HelpDrawer';
+import { DNSEngineCard } from './DNSEngineCard';
 
 type DNSRole = 'standalone' | 'paired';
 type DraftDNSRole = DNSRole | '';
+type ActiveDNSEngine = 'pdns' | 'bind';
 
 interface NSFact {
     host: string;
@@ -164,7 +168,50 @@ function SetupStep({ number, title, description, complete = false }: {
 }
 
 export function DNSServerSettings() {
-    const { t } = useI18n();
+    const { locale } = useI18n();
+    const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
+    const [engine, setEngine] = useState<DNSEngineSnapshot | null>(null);
+    const activeEngine: ActiveDNSEngine | null = engine?.state === 'ready' &&
+        (engine.active_engine === 'pdns' || engine.active_engine === 'bind')
+        ? engine.active_engine
+        : null;
+
+    return (
+        <div>
+            <DNSEngineCard onSnapshotChange={setEngine} />
+            {activeEngine ? (
+                <DNSInfrastructureSettings
+                    key={activeEngine}
+                    activeEngine={activeEngine}
+                />
+            ) : (
+                <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                            <AlertTriangle className="h-4.5 w-4.5" />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-semibold text-fg">{et('dnsEngine.topologyEditorTitle')}</h2>
+                            <p className="mt-1 text-sm leading-relaxed text-fg-muted">
+                                {engine?.active_engine === 'bind'
+                                    ? et('dnsEngine.topologyEditorBind')
+                                    : engine?.state === 'switching'
+                                      ? et('dnsEngine.topologyEditorSwitching')
+                                      : engine?.state === 'unmanaged' || engine?.state === 'conflict' || engine?.state === 'degraded'
+                                        ? et('dnsEngine.topologyEditorUnsafe')
+                                        : et('dnsEngine.topologyEditorUnconfigured')}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
+        </div>
+    );
+}
+
+function DNSInfrastructureSettings({ activeEngine }: { activeEngine: ActiveDNSEngine }) {
+    const { t, locale } = useI18n();
+    const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
     const [saved, setSaved] = useState<SavedSettings | null>(null);
     const [draft, setDraft] = useState<SettingsDraft | null>(null);
     const [busy, setBusy] = useState(false);
@@ -190,7 +237,7 @@ export function DNSServerSettings() {
             const names = await namesResponse.json() as NameserverResponse;
             const cluster = await clusterResponse.json() as ClusterResponse;
 
-            const role = normalizeRole(cluster.role);
+            const role = activeEngine === 'bind' ? 'standalone' : normalizeRole(cluster.role);
             const ns1 = cleanHostname(names.ns1 || cluster.ns1 || '');
             const ns2 = cleanHostname(names.ns2 || cluster.ns2 || '');
             const snapshot: SavedSettings = {
@@ -251,7 +298,9 @@ export function DNSServerSettings() {
             setDraft({
                 ns1,
                 ns2,
-                role: preserveCluster?.role ?? (snapshot.configured ? role : ''),
+                role: activeEngine === 'bind'
+                    ? 'standalone'
+                    : preserveCluster?.role ?? (snapshot.configured ? role : ''),
                 peer_ip: preserveCluster?.peer_ip ?? (autoStageDetectedPeer ? suggestedPeerIPv4 : cluster.peer_ip ?? ''),
                 peer_ns: draftPeerNS,
             });
@@ -263,7 +312,7 @@ export function DNSServerSettings() {
             showToast('error', error.message);
             return false;
         }
-    }, [t]);
+    }, [activeEngine, t]);
 
     useEffect(() => {
         void load();
@@ -276,14 +325,15 @@ export function DNSServerSettings() {
         try {
             const draftNS1 = cleanHostname(draft.ns1);
             const draftNS2 = cleanHostname(draft.ns2);
-            const paired = draft.role === 'paired';
+            const effectiveRole: DNSRole = activeEngine === 'bind' ? 'standalone' : draft.role;
+            const paired = effectiveRole === 'paired';
             const setupResponse = await fetch('/api/v1/settings/dns-setup', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ns1: draftNS1,
                     ns2: draftNS2,
-                    role: draft.role,
+                    role: effectiveRole,
                     peer_ip: paired ? canonicalIPv4(draft.peer_ip) || draft.peer_ip.trim() : '',
                     peer_ns: paired ? cleanHostname(draft.peer_ns) : '',
                 }),
@@ -358,8 +408,11 @@ export function DNSServerSettings() {
     const peerIPSame =
         draft.role === 'paired' && effectivePeerIPv4 !== '' && serverIPv4 !== '' && effectivePeerIPv4 === serverIPv4;
     const hasChanges = namesDirty || saved.namesDerived || clusterDirty || !saved.configured;
-    const dnsServiceKnown = saved.dns_service_known === true;
-    const dnsServiceReady = saved.dns_service_ready === true;
+    // This editor is rendered for BIND only from an exact `state=ready`
+    // engine snapshot. A legacy PowerDNS-only readiness response must not turn
+    // that already-proven authority back into a false missing-service state.
+    const dnsServiceKnown = activeEngine === 'bind' || saved.dns_service_known === true;
+    const dnsServiceReady = activeEngine === 'bind' || saved.dns_service_ready === true;
     const dnsServiceMissing = dnsServiceKnown && !dnsServiceReady;
 
     const savedNameserverNames = [saved.ns1, saved.ns2].filter(Boolean);
@@ -436,6 +489,7 @@ export function DNSServerSettings() {
                 : t('dnssrv.stepContinueReady');
 
     const selectRole = (role: DNSRole) => {
+        if (activeEngine === 'bind' && role === 'paired') return;
         setNeedsClusterRetry(false);
         setApiError(null);
         if (role === 'standalone') {
@@ -582,10 +636,13 @@ export function DNSServerSettings() {
                         {(['standalone', 'paired'] as const).map((role) => (
                             <label
                                 key={role}
-                                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                                    draft.role === role
+                                aria-disabled={activeEngine === 'bind' && role === 'paired'}
+                                className={`flex items-start gap-3 rounded-xl border p-4 transition-colors ${
+                                    activeEngine === 'bind' && role === 'paired'
+                                        ? 'cursor-not-allowed border-border bg-surface-2/50 opacity-70'
+                                        : draft.role === role
                                         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                        : 'border-border bg-surface hover:border-primary/40'
+                                        : 'cursor-pointer border-border bg-surface hover:border-primary/40'
                                 }`}
                             >
                                 <input
@@ -593,6 +650,8 @@ export function DNSServerSettings() {
                                     name="dns-role"
                                     className="mt-0.5"
                                     checked={draft.role === role}
+                                    data-testid={`dns-role-${role}`}
+                                    disabled={activeEngine === 'bind' && role === 'paired'}
                                     onChange={() => selectRole(role)}
                                 />
                                 <span className="min-w-0">
@@ -600,12 +659,25 @@ export function DNSServerSettings() {
                                         {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
                                     </span>
                                     <span className="mt-1 block text-xs leading-relaxed text-fg-muted">
-                                        {t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
+                                        {activeEngine === 'bind' && role === 'paired'
+                                            ? et('dnsEngine.identity.bindPairedUnsupported')
+                                            : t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
                                     </span>
                                 </span>
                             </label>
                         ))}
                     </fieldset>
+
+                    {activeEngine === 'bind' && (
+                        <div
+                            className={'mt-4 rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs leading-relaxed text-fg-muted'}
+                            role={'note'}
+                            data-testid={'bind-standalone-identity-note'}
+                        >
+                            <p className={'font-semibold text-fg'}>{et('dnsEngine.identity.bindTitle')}</p>
+                            <p className={'mt-1'}>{et('dnsEngine.identity.bindDescription')}</p>
+                        </div>
+                    )}
 
                     {dnsServiceKnown && (
                         <div className={`mt-4 rounded-xl border p-3 ${
@@ -620,7 +692,9 @@ export function DNSServerSettings() {
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold text-fg">
                                         {dnsServiceReady
-                                            ? t('dnssrv.requirement.powerdnsReady')
+                                            ? activeEngine === 'bind'
+                                                ? et('dnsEngine.identity.bindReady')
+                                                : t('dnssrv.requirement.powerdnsReady')
                                             : t('dnssrv.requirement.powerdnsTitle')}
                                     </p>
                                     {!dnsServiceReady && (

@@ -71,6 +71,16 @@ var forbiddenPrefixes = []string{
 	"/etc/ld.so.preload",
 	"/etc/apt/sources.list.d/",
 	"/etc/apt/trusted.gpg.d/",
+	// DNS engine configuration, zone generations, and runtime databases are
+	// published only through the epoch-bound DNS engine workflows. The generic
+	// root config editor must never bypass their journal/rollback invariants.
+	"/etc/powerdns/",
+	"/etc/bind/",
+	"/etc/named.conf",
+	"/etc/named/",
+	"/var/lib/powerdns/",
+	"/var/cache/bind/celikpanel/",
+	"/var/named/celikpanel/",
 }
 
 // configWriteAllowed reports whether the agent may write this path, and why not

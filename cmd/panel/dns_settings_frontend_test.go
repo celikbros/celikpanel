@@ -162,7 +162,8 @@ func TestDNSSettingsUnconfiguredRoleRequiresExplicitSelection(t *testing.T) {
 	source := dnsSettingsFrontendSource(t)
 	for _, required := range []string{
 		`type DraftDNSRole = DNSRole | '';`,
-		`role: preserveCluster?.role ?? (snapshot.configured ? role : ''),`,
+		`role: activeEngine === 'bind'`,
+		`: preserveCluster?.role ?? (snapshot.configured ? role : ''),`,
 		`if (!draft || draft.role === '') return;`,
 		`const savedDraftRole: DraftDNSRole = saved.configured ? saved.role : '';`,
 		`draft.role !== savedDraftRole`,

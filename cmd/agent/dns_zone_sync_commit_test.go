@@ -1313,6 +1313,121 @@ func TestSyncDNSZoneV2RejectsPayloadBeforeDBOrCommands(t *testing.T) {
 	}
 }
 
+func TestSyncDNSZoneV2RejectsDurableNonPDNSAuthorityBeforeDBOrCommands(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "standby-pdns.sqlite3")
+			t.Setenv("CELIKPANEL_PDNS_DB", path)
+			commitment := dnsZoneSyncTestCommitment(
+				t, "standby.example", 4, false, "NATIVE",
+			)
+			manager, _ := newMutationTestManager(t)
+			beginMutationTestJobWithIdentity(
+				t, manager, "dns_zone_sync",
+				commitment.Domain, commitment.Qualifier,
+			)
+			installGlobalMutationTestManager(t, manager)
+			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
+
+			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldCommand := dnsSyncCommand
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			commandCalls := 0
+			dnsSyncCommand = func(context.Context, string, ...string) ([]byte, error) {
+				commandCalls++
+				return nil, errors.New("unexpected command")
+			}
+			t.Cleanup(func() {
+				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				dnsSyncCommand = oldCommand
+			})
+
+			response := SyncDNSZoneV2Response{
+				Synced: true, AppliedGeneration: 99, Error: "stale",
+			}
+			if err := (&Agent{}).SyncDNSZoneV2(
+				&SyncDNSZoneV2Request{
+					ServiceMutationBinding: transport.ServiceMutationBinding{
+						MutationRequestID: testMutationRequestID,
+						MutationOwnerID:   testMutationOwnerID,
+					},
+					DesiredGeneration: commitment.DesiredGeneration,
+					Domain:            commitment.Domain,
+					ZoneType:          commitment.ZoneType,
+					Records:           commitment.Records,
+				},
+				&response,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if response.Synced || response.AppliedGeneration != 0 ||
+				response.Error != "DNS zone publication is blocked because PowerDNS is not the active DNS engine" ||
+				strings.Contains(response.Error, raw) || commandCalls != 0 {
+				t.Fatalf("response=%+v commandCalls=%d", response, commandCalls)
+			}
+			if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("durable guard touched standby PowerDNS DB: %v", err)
+			}
+			manager.mu.Lock()
+			steps := manager.active.steps
+			phase := manager.active.job.Phase
+			manager.mu.Unlock()
+			if steps != 0 || phase != "leased" {
+				t.Fatalf("durable guard retained step=%d phase=%q", steps, phase)
+			}
+		})
+	}
+}
+
+func TestConfigurePowerDNSSQLiteRejectsDurableNonPDNSAuthorityBeforeMutation(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "standby-pdns.sqlite3")
+			t.Setenv("CELIKPANEL_PDNS_DB", path)
+			manager, _ := newMutationTestManager(t)
+			beginMutationTestJobWithIdentity(
+				t, manager, "pdns_configure", "pdns", "",
+			)
+			installGlobalMutationTestManager(t, manager)
+			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
+			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldRuntime := legacyPowerDNSRuntimeSafetyCheck
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			runtimeCalls := 0
+			legacyPowerDNSRuntimeSafetyCheck = func(context.Context, bool) error {
+				runtimeCalls++
+				return nil
+			}
+			t.Cleanup(func() {
+				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				legacyPowerDNSRuntimeSafetyCheck = oldRuntime
+			})
+			request := &ServiceMutationRequest{ServiceMutationBinding: transport.ServiceMutationBinding{
+				MutationRequestID: testMutationRequestID,
+				MutationOwnerID:   testMutationOwnerID,
+			}}
+			response := SyncDNSZoneResponse{Synced: true, Error: "stale"}
+			if err := (&Agent{}).ConfigurePowerDNSSQLite(request, &response); err != nil {
+				t.Fatal(err)
+			}
+			expected := "PowerDNS configuration is blocked because the DNS engine state is not safe"
+			if response.Synced || response.Error != expected ||
+				strings.Contains(response.Error, raw) || runtimeCalls != 0 {
+				t.Fatalf("response=%+v runtimeCalls=%d", response, runtimeCalls)
+			}
+			if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("durable guard touched standby PowerDNS DB: %v", err)
+			}
+		})
+	}
+}
+
 func TestSyncDNSZoneV2ReadinessDriftRejectsDeleteBeforeDBOrCommands(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "detached-pdns.sqlite3")
 	t.Setenv("CELIKPANEL_PDNS_DB", path)

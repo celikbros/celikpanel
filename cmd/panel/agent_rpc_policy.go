@@ -115,7 +115,7 @@ func agentRPCAuthGroup(effect agentRPCEffect, capability agentRPCCapability, met
 var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	agentRPCAuthGroup(agentRPCEffectRead, "", `
 		Agent.AppUnitLogs Agent.AppUnitStatus Agent.CheckInstalledServices Agent.CheckRBL
-		Agent.CheckSystemSQLiteDatabase Agent.DNSClusterReadiness
+		Agent.CheckSystemSQLiteDatabase Agent.DNSBackendReadiness Agent.DNSClusterReadiness
 		Agent.DNSSECStatus Agent.DovecotStats Agent.Fail2banConfig Agent.Fail2banStatus
 		Agent.FirewallStatus Agent.GetAccessLogs Agent.GetCertificateInfo Agent.GetConfig
 		Agent.GetDKIMStatus Agent.GetErrorLogs Agent.GetExtendedPHPConfig Agent.GetMailPolicy
@@ -170,7 +170,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityDNS, `
 		Agent.ConfigureDNSClusterV2 Agent.ConfigurePowerDNSSQLite Agent.SecureDNSZoneV2
-		Agent.SyncDNSZoneV2
+		Agent.SwitchDNSEngineV1 Agent.SyncDNSZoneV2 Agent.SyncDNSZoneV3
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityMail, `
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
@@ -228,6 +228,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.CheckInstalledServices":      agentRPCQuickReadTimeout,
 	"Agent.CheckSystemUpdate":           agentRPCNetworkReadTimeout,
 	"Agent.DNSSECStatus":                agentRPCQuickReadTimeout,
+	"Agent.DNSBackendReadiness":         agentRPCQuickReadTimeout,
 	"Agent.DovecotStats":                agentRPCQuickReadTimeout,
 	"Agent.Fail2banConfig":              agentRPCQuickReadTimeout,
 	"Agent.Fail2banStatus":              agentRPCQuickReadTimeout,
@@ -355,6 +356,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.MigratePHPPool":               agentRPCDatabaseTimeout,
 	"Agent.SecureDNSZoneV2":              agentRPCDatabaseTimeout,
 	"Agent.SyncDNSZoneV2":                agentRPCDatabaseTimeout,
+	"Agent.SyncDNSZoneV3":                agentRPCDatabaseTimeout,
 	"Agent.SyncMailTLSV2":                agentRPCMutationTimeout,
 	"Agent.CreateSystemSQLiteSnapshot":   agentRPCDatabaseTimeout,
 	"Agent.OptimizeSystemSQLiteDatabase": agentRPCDatabaseTimeout,
@@ -381,6 +383,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.SetupVPN":                    agentRPCDeploymentTimeout,
 	"Agent.UninstallService":            agentRPCDeploymentTimeout,
 	"Agent.WireMailFilters":             agentRPCDeploymentTimeout,
+	"Agent.SwitchDNSEngineV1":           agentRPCDeploymentTimeout,
 
 	// Large archive/database imports may process customer-sized data sets.
 	"Agent.ExtractCpmoveFiles":   agentRPCBulkImportTimeout,

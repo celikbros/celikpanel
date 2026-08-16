@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -68,6 +69,15 @@ type importStep struct {
 	Step   string `json:"step"`
 	OK     bool   `json:"ok"`
 	Detail string `json:"detail"`
+	Code   string `json:"code,omitempty"`
+}
+
+func safeImportDNSFailure(err error) (code, detail string) {
+	var publicationErr *dnsAgentPublicationError
+	if errors.As(err, &publicationErr) {
+		return errCodeDNSPublicationFailed, "DNS publication failed"
+	}
+	return errCodeInternal, "DNS state could not be published"
 }
 
 func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +123,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		complete = false
 		steps = append(steps, importStep{Step: step, OK: false, Detail: err.Error()})
 	}
+	failCoded := func(step, code, detail string) {
+		complete = false
+		steps = append(steps, importStep{
+			Step: step, OK: false, Detail: detail, Code: code,
+		})
+	}
 	ok := func(step, detail string) {
 		steps = append(steps, importStep{Step: step, OK: true, Detail: detail})
 	}
@@ -124,8 +140,16 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		writeAgentError(w, err, "hosting capabilities")
 		return
 	}
-	if caps.DNSServer == "" || !p.dnsIdentityConfigured(ctx) {
-		writeClientError(w, http.StatusConflict, "DNS server identity must be configured before importing a domain")
+	if caps.DNSServer == "" {
+		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
+			"choose and activate a managed BIND or PowerDNS engine before importing a domain",
+			"/settings?section=dns")
+		return
+	}
+	if !caps.DNSIdentityReady {
+		writeCodedError(w, http.StatusConflict, errCodeDNSSettingsRequired,
+			"DNS identity must be configured before importing a domain",
+			"/settings?section=dns")
 		return
 	}
 	if caps.WebServer == "" || len(caps.PHPVersions) == 0 {
@@ -353,7 +377,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		cancelPublish()
 	}
 	if dnsErr != nil {
-		fail("dns", dnsErr)
+		log.Printf(
+			"cPanel import DNS publication %s: %s",
+			req.Domain, boundedAgentDiagnostic(dnsErr.Error()),
+		)
+		code, detail := safeImportDNSFailure(dnsErr)
+		failCoded("dns", code, detail)
 	} else {
 		ok("dns", dnsDetail)
 	}

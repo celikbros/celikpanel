@@ -29,8 +29,23 @@ func (a *versionPairAgent) Version(
 	return nil
 }
 
+func (a *versionPairAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine: transport.DNSEnginePowerDNS, Installed: true,
+			Running: true, Managed: true, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
+	return nil
+}
+
 func attachVersionPairAgent(t *testing.T, p *Panel, commit string) {
 	t.Helper()
+	ensureActiveDNSEngineForTest(t, p, transport.DNSEnginePowerDNS)
 
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", &versionPairAgent{commit: commit}); err != nil {

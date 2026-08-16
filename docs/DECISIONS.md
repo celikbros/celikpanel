@@ -860,6 +860,42 @@ the local IP and the other to the peer IP. Glue is registered once under the
 domain that owns those names; no child nameservers are created under customer
 domains.
 
+**Addendum (August 16, 2026 — authoritative DNS engine ownership).** PowerDNS
+and BIND are alternatives behind one panel-owned DNS-engine lifecycle, not
+ordinary component rows that an operator starts, stops or removes independently.
+Exactly one engine owns TCP and UDP port 53. The inactive alternative may remain
+installed, but it stays stopped as a rollback standby.
+
+Selecting an engine is deliberately two-step. The first action obtains a
+read-only preview containing the exact action, topology, zone and DNSSEC counts,
+expected interruption, impacts and coded blockers. A separate confirmation
+must present the same one-use preview authority, source, target and state
+revision; a stale or blocked preview cannot mutate the server. A live-engine
+cutover also requires a meaningful interruption acknowledgement, never a typed
+version or product-name phrase.
+
+Normal PowerDNS↔BIND switching is supported only in **Standalone** topology.
+Paired topology, DNSSEC zones, pending zone publication, unmanaged DNS, a
+port-53 conflict, a degraded source or another operation block the switch. The
+transaction freezes the complete engine-and-epoch-bound zone snapshot, stages
+and validates the target before stopping the source, verifies every zone over
+both UDP and TCP, and retains the old package as the stopped standby.
+
+An unresolved host left by an older release has one narrower exception:
+**registration-only adoption of an existing panel-managed PowerDNS authority**.
+Adoption may preserve exact Standalone or Paired PowerDNS state, including
+existing DNSSEC data, because it verifies rather than rewrites it. It succeeds
+only when config bytes and modes, unit state, the SQLite database, every owned
+zone, topology and TCP/UDP authority all match the panel ledger and no BIND
+authority is running. It changes no package, configuration, service state, DNS
+data or DNSSEC state. There is no BIND-adoption shortcut and no Paired BIND mode.
+
+Both the panel ledger and an agent-owned host journal carry the operation
+identity and phase. After interruption, recovery proves the exact target and
+commits it or restores and proves the exact pre-operation state. If neither can
+be proved, DNS mutations remain locked for recovery; the panel never guesses
+which daemon owns authority.
+
 ---
 
 ## D-008 · Alpha: the operator drives the panel; every gap becomes a product feature
@@ -1127,8 +1163,11 @@ The only thing that blocks an install is a **real conflict**.
 complexity. The real constraint is whether two services can coexist.
 - **Conflict groups** (`ConflictGroup` in the catalogue): services that hold
   the same role/port are mutually exclusive — a web server on :80 (Nginx ↔
-  Apache), a DNS server on :53 (BIND ↔ PowerDNS). If one is installed, the
-  other's Install button becomes "Conflicts with X".
+  Apache), an active DNS authority on :53 (BIND ↔ PowerDNS). Generic component
+  installation still refuses this conflict. The dedicated DNS-engine flow is
+  the narrow exception: it may install the alternative under a no-start guard
+  and keep it stopped as a verified rollback standby; it never lets both serve
+  port 53.
 - **No group = coexists**: MariaDB + PostgreSQL run side by side (different
   ports), so both are installable. Redis + Memcached likewise.
 
@@ -1136,6 +1175,10 @@ complexity. The real constraint is whether two services can coexist.
 (honouring the "install only with permission" principle). The catalogue is
 grouped by category with an accordion (expand/collapse all) so it stays
 scannable as it grows toward dozens of services.
+
+DNS-engine installation and switching are intentionally stronger than this
+generic rule: the first click is read-only review and a separate explicit
+confirmation starts the durable operation. See D-009.
 
 ---
 

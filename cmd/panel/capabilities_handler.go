@@ -27,7 +27,7 @@ import (
 type hostingCapabilities struct {
 	WebServer        string   `json:"web_server"`         // "nginx" or "" when no supported adapter is available
 	PHPVersions      []string `json:"php_versions"`       // installed FPM versions, newest first
-	DNSServer        string   `json:"dns_server"`         // "pdns", "bind" or ""
+	DNSServer        string   `json:"dns_server"`         // proven active "pdns", "bind" or ""
 	DNSIdentityReady bool     `json:"dns_identity_ready"` // saved nameserver pair and operating mode
 	MailServer       bool     `json:"mail_server"`        // postfix present
 	// All installed database engines — a server can legitimately run both
@@ -88,10 +88,6 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 		switch id {
 		case "php-fpm":
 			phpInstalled = true
-		case "pdns", "bind":
-			if caps.DNSServer == "" {
-				caps.DNSServer = id
-			}
 		case "postfix":
 			caps.MailServer = true
 		case "mariadb", "postgresql":
@@ -99,6 +95,19 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 		case "phpmyadmin", "phppgadmin":
 			caps.DBTools = append(caps.DBTools, id)
 		}
+	}
+
+	publisher, publisherReady, err := p.activeDNSPublisher(ctx)
+	if err != nil {
+		return hostingCapabilities{}, fmt.Errorf("verify active DNS publisher: %w", err)
+	}
+	if publisherReady {
+		caps.DNSServer = string(publisher.Engine)
+		identityReady, err := p.savedDNSIdentityConfiguredStrict(ctx)
+		if err != nil {
+			return hostingCapabilities{}, err
+		}
+		caps.DNSIdentityReady = identityReady
 	}
 
 	if phpInstalled {
@@ -111,7 +120,6 @@ func (p *Panel) hostingCaps(ctx context.Context) (hostingCapabilities, error) {
 		}
 		caps.PHPVersions = versions
 	}
-	caps.DNSIdentityReady = caps.DNSServer != "" && p.dnsIdentityConfigured(ctx)
 	return caps, nil
 }
 

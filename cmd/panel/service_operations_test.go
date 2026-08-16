@@ -171,6 +171,7 @@ type serviceOperationTestAgent struct {
 	nodeNoop                    bool
 	dnsError                    string
 	dnsV2Requests               []transport.SyncDNSZoneV2Request
+	dnsV3Requests               []transport.SyncDNSZoneV3Request
 	versionCapabilities         *[]string
 	versionCommit               string
 	serviceError                string
@@ -221,6 +222,7 @@ func (a *serviceOperationTestAgent) Version(
 		transport.AgentCapabilityFirewallApplyV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSZoneSyncV3,
 		transport.AgentCapabilityMailTLSSyncV2,
 	}
 	if a.versionCapabilities != nil {
@@ -639,6 +641,45 @@ func (a *serviceOperationTestAgent) SyncDNSZoneV2(
 	}
 	resp.Synced = true
 	resp.AppliedGeneration = req.DesiredGeneration
+	return nil
+}
+
+func (a *serviceOperationTestAgent) SyncDNSZoneV3(
+	req *transport.SyncDNSZoneV3Request,
+	resp *transport.SyncDNSZoneV3Response,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	copy := *req
+	copy.Records = append([]transport.ZoneRecord(nil), req.Records...)
+	a.dnsV3Requests = append(a.dnsV3Requests, copy)
+	a.mutationEvents = append(a.mutationEvents, "call:dns_zone_sync")
+	if a.dnsError != "" {
+		resp.Error = a.dnsError
+		return nil
+	}
+	resp.Synced = true
+	resp.Engine = req.Engine
+	resp.EngineEpoch = req.EngineEpoch
+	resp.AppliedGeneration = req.DesiredGeneration
+	return nil
+}
+
+func (a *serviceOperationTestAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	pdnsInstalled := a.installed["pdns"]
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine:    transport.DNSEnginePowerDNS,
+			Installed: pdnsInstalled, Running: a.active["pdns"],
+			Managed: pdnsInstalled, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
 	return nil
 }
 
@@ -1340,7 +1381,7 @@ func TestPostgreSQLVersionInstallFailsWhenExactClusterStopsBeforeFinalScan(t *te
 	}
 }
 
-func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
+func TestWireGuardIdempotentPostConfiguration(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
 	box, err := secrets.LoadOrCreate(filepath.Join(t.TempDir(), "secrets.key"))
 	if err != nil {
@@ -1349,24 +1390,11 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	f.panel.secrets = box
 	f.agent.installNoop = true
 	f.agent.vpnCreated = false
-	f.agent.installed["pdns"] = true
 	f.agent.installed["wireguard"] = true
 	f.agent.active["wireguard"] = true
 
 	phases := []string{}
-	result, failure := f.panel.runServiceInstall(serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "pdns"}, func(phase string) error {
-		phases = append(phases, phase)
-		return nil
-	})
-	if failure != nil || result["success"] != true {
-		t.Fatalf("PowerDNS idempotent setup result=%v failure=%+v", result, failure)
-	}
-	if strings.Join(phases, ",") != "configuring,starting,scanning" {
-		t.Fatalf("PowerDNS phases=%v", phases)
-	}
-
-	phases = nil
-	result, failure = f.panel.runServiceInstall(serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "wireguard"}, func(phase string) error {
+	result, failure := f.panel.runServiceInstall(serviceOperationBoundContext(), serviceInstallRequest{ServiceID: "wireguard"}, func(phase string) error {
 		phases = append(phases, phase)
 		return nil
 	})
@@ -1383,45 +1411,28 @@ func TestPowerDNSAndWireGuardIdempotentPostConfiguration(t *testing.T) {
 	}
 }
 
-func TestPowerDNSInstallPublishesV2OnlyAfterOuterTerminal(t *testing.T) {
+func TestPowerDNSGenericInstallRoutesToReviewedEngineWorkflowWithoutMutation(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
 	setDNSIdentityForTest(t, f.panel, "standalone")
 	seedStrictDNSZone(t, f.panel, "post-install.example")
-	f.agent.installNoop = true
-	f.agent.installed["pdns"] = true
 
 	recorder, started := postServiceInstall(t, f, "pdns")
-	if recorder.Code != http.StatusAccepted || started == nil {
+	if recorder.Code != http.StatusConflict || started != nil {
 		t.Fatalf("start status=%d operation=%+v body=%s", recorder.Code, started, recorder.Body.String())
 	}
-	terminal, _ := waitForServiceOperation(t, f.panel, f.userID, started.ID, serviceOperationSucceeded)
-	if terminal.Phase != "completed" {
-		t.Fatalf("terminal phase=%q", terminal.Phase)
+	if !strings.Contains(recorder.Body.String(), `"code":"`+errCodeDNSEngineWorkflowRequired+`"`) {
+		t.Fatalf("response did not route to DNS workflow: %s", recorder.Body.String())
 	}
-
-	f.agent.mu.Lock()
-	requests := append([]transport.SyncDNSZoneV2Request(nil), f.agent.dnsV2Requests...)
-	events := append([]string(nil), f.agent.mutationEvents...)
-	f.agent.mu.Unlock()
-	if len(requests) != 1 || requests[0].Domain != "post-install.example" ||
-		requests[0].Delete || requests[0].DesiredGeneration <= 0 || len(requests[0].Records) == 0 {
-		t.Fatalf("post-install V2 requests=%+v", requests)
+	var rows int
+	if err := f.database.GetDB().QueryRow(`SELECT COUNT(*) FROM service_operations`).Scan(&rows); err != nil {
+		t.Fatal(err)
 	}
-	outerFinish, dnsBegin := -1, -1
-	for index, event := range events {
-		if event == "finish:service_install:succeeded" {
-			outerFinish = index
-		}
-		if event == "begin:dns_zone_sync" && dnsBegin == -1 {
-			dnsBegin = index
-		}
-	}
-	if outerFinish < 0 || dnsBegin <= outerFinish {
-		t.Fatalf("mutation event order=%v, want outer terminal before DNS child", events)
+	if rows != 0 || f.agent.installCalls.Load() != 0 {
+		t.Fatalf("generic DNS install created rows=%d install calls=%d", rows, f.agent.installCalls.Load())
 	}
 }
 
-func TestPowerDNSInstallCapabilityGateCreatesNoRowAndTouchesNoHost(t *testing.T) {
+func TestPowerDNSGenericInstallRefusalPrecedesAgentCapabilityCheck(t *testing.T) {
 	f := newServiceOperationTestFixture(t)
 	legacy := []string{
 		transport.AgentCapabilityFirewallApplyV2,
@@ -1430,7 +1441,7 @@ func TestPowerDNSInstallCapabilityGateCreatesNoRowAndTouchesNoHost(t *testing.T)
 	f.agent.versionCapabilities = &legacy
 
 	recorder, operation := postServiceInstall(t, f, "pdns")
-	if recorder.Code != http.StatusInternalServerError || operation != nil {
+	if recorder.Code != http.StatusConflict || operation != nil {
 		t.Fatalf("legacy pdns response=%d operation=%+v body=%s", recorder.Code, operation, recorder.Body.String())
 	}
 	var rows int

@@ -29,7 +29,7 @@ func TestClamAVSignaturesReady(t *testing.T) {
 }
 
 func TestServiceStartsAfterPanelSetup(t *testing.T) {
-	for _, id := range []string{"pdns", "postfix", "dovecot", "wireguard"} {
+	for _, id := range []string{"pdns", "bind", "postfix", "dovecot", "wireguard"} {
 		if !serviceStartsAfterPanelSetup(id) {
 			t.Errorf("%s must wait for panel configuration before start", id)
 		}
@@ -37,6 +37,17 @@ func TestServiceStartsAfterPanelSetup(t *testing.T) {
 	for _, id := range []string{"nginx", "postgresql", "mariadb", "clamav"} {
 		if serviceStartsAfterPanelSetup(id) {
 			t.Errorf("%s must be started and verified by the install RPC", id)
+		}
+	}
+}
+
+func TestBINDPackageAutoStartGuardDoesNotAffectOtherServices(t *testing.T) {
+	if !serviceUsesBINDPackageInstallGuard("bind") {
+		t.Fatal("BIND must use the package-maintainer auto-start guard")
+	}
+	for _, id := range []string{"pdns", "nginx", "postfix", "dovecot", "wireguard"} {
+		if serviceUsesBINDPackageInstallGuard(id) {
+			t.Errorf("%s unexpectedly uses the BIND package install guard", id)
 		}
 	}
 }

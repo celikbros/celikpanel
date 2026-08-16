@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type nameserverAddressPlan struct {
@@ -253,6 +255,10 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 	}
 	defer tx.Rollback()
 
+	if err := reconcileDNSEngineTopologyTx(ctx, tx, role); err != nil {
+		return err
+	}
+
 	settings := []struct{ key, value string }{
 		{settingNS1, ns1},
 		{settingNS2, ns2},
@@ -321,6 +327,79 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 		return err
 	}
 	return tx.Commit()
+}
+
+// reconcileDNSEngineTopologyTx keeps the durable publisher topology and the
+// operator-owned DNS identity in the same transaction. A PowerDNS topology
+// transition is authorized only by the exact published cluster saga. BIND is
+// standalone-only, while an unresolved legacy PowerDNS installation retains
+// its settings for explicit adoption without guessing authority.
+func reconcileDNSEngineTopologyTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	role string,
+) error {
+	var active sql.NullString
+	var currentSwitch sql.NullString
+	var epoch, revision int64
+	var topology string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT active_engine, active_epoch, revision, topology, current_switch_id
+		FROM dns_engine_state WHERE singleton_id = 1`,
+	).Scan(&active, &epoch, &revision, &topology, &currentSwitch); err != nil {
+		return fmt.Errorf("read durable DNS engine topology: %w", err)
+	}
+	if currentSwitch.Valid {
+		return errors.New("DNS engine switch is attached during topology reconciliation")
+	}
+	if !active.Valid {
+		if epoch != 0 || topology != transport.DNSTopologyStandalone {
+			return errors.New("unresolved DNS engine state is not canonical")
+		}
+		return nil
+	}
+	if active.String == string(transport.DNSEngineBIND) {
+		if topology != transport.DNSTopologyStandalone || role != "standalone" {
+			return errors.New("BIND DNS topology must remain standalone")
+		}
+		return nil
+	}
+	if active.String != string(transport.DNSEnginePowerDNS) || epoch < 1 {
+		return errors.New("durable DNS engine topology is invalid")
+	}
+	if role != transport.DNSTopologyStandalone &&
+		role != transport.DNSTopologyPaired {
+		return errors.New("PowerDNS topology is invalid")
+	}
+	if topology == role {
+		return nil
+	}
+	raw, err := settingTx(ctx, tx, dnsClusterSagaSetting)
+	if err != nil {
+		return fmt.Errorf("read DNS topology finalization authority: %w", err)
+	}
+	saga, err := decodeDNSClusterSaga(raw)
+	if err != nil || saga == nil || saga.Phase != dnsClusterSagaPublished ||
+		saga.Previous.Role != topology || saga.Desired.Role != role {
+		return errors.New("DNS topology change lacks its exact published saga")
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE dns_engine_state
+		SET topology = ?, revision = revision + 1,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE singleton_id = 1 AND active_engine = 'pdns'
+		  AND active_epoch = ? AND revision = ? AND topology = ?
+		  AND current_switch_id IS NULL`,
+		role, epoch, revision, topology,
+	)
+	if err != nil {
+		return fmt.Errorf("advance durable PowerDNS topology: %w", err)
+	}
+	changed, err := result.RowsAffected()
+	if err != nil || changed != 1 {
+		return errors.New("durable PowerDNS topology lost its exact state CAS")
+	}
+	return nil
 }
 
 // saveNameservers changes the server identity and every existing zone in one

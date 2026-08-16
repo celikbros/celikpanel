@@ -1204,7 +1204,17 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                         data after the package scan says it is not installed. Keep
                                                         cleanup reachable across reloads, independently of install
                                                         and repair availability. */}
-                                                    {s.conflict_with ? (
+                                                    {(s.id === 'pdns' || s.id === 'bind') ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => navigate('/settings?section=dns')}
+                                                                title={t('services.manageDNSEngineHint')}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                                                            >
+                                                                {t('services.manageDNSEngine')}
+                                                                <ChevronRight className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        ) : s.conflict_with ? (
                                                             <span
                                                                 title={t('services.conflictHint', { name: s.conflict_with })}
                                                                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg-subtle"
@@ -1277,6 +1287,16 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                                                     </button>
                                                     )}
                                                     </>
+                                                    ) : (s.id === 'pdns' || s.id === 'bind') ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate('/settings?section=dns')}
+                                                        title={t('services.manageDNSEngineHint')}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                                                    >
+                                                        <Settings className="h-3.5 w-3.5" />
+                                                        {t('services.manageDNSEngine')}
+                                                    </button>
                                                     ) : (
                                                     <>
                                                     {/* Inline start/stop belongs to `service` alone. A tool

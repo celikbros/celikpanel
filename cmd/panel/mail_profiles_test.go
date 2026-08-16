@@ -70,6 +70,31 @@ func (a *mailProfileTestAgent) Version(_ *transport.Empty, response *transport.A
 	return nil
 }
 
+func (a *mailProfileTestAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	response *transport.DNSBackendReadinessResponse,
+) error {
+	a.serviceOperationTestAgent.mu.Lock()
+	defer a.serviceOperationTestAgent.mu.Unlock()
+	response.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine:    transport.DNSEnginePowerDNS,
+			Unit:      "pdns.service",
+			Installed: a.serviceOperationTestAgent.installed["pdns"],
+			Running:   a.serviceOperationTestAgent.active["pdns"],
+			Managed:   a.serviceOperationTestAgent.installed["pdns"],
+		},
+		{
+			Engine:    transport.DNSEngineBIND,
+			Unit:      "bind9.service",
+			Installed: a.serviceOperationTestAgent.installed["bind"],
+			Running:   a.serviceOperationTestAgent.active["bind"],
+			Managed:   a.serviceOperationTestAgent.installed["bind"],
+		},
+	}
+	return nil
+}
+
 func (a *mailProfileTestAgent) InstallService(
 	request *transport.InstallServiceRequest,
 	response *transport.InstallServiceResponse,
@@ -316,6 +341,7 @@ func newMailProfileTestFixture(t *testing.T) (serviceOperationTestFixture, *mail
 	fixture.panel.pkgFamilyVal = "apt"
 	fixture.panel.webmailReadinessProbe = func(context.Context) bool { return true }
 	seedInstalledServices(agent.serviceOperationTestAgent, "pdns")
+	seedMailProfileActiveDNSEngine(t, fixture, agent, transport.DNSEnginePowerDNS)
 	for key, value := range map[string]string{
 		settingNS1:     "ns1.profile.test",
 		settingNS2:     "ns2.profile.test",
@@ -334,6 +360,50 @@ func newMailProfileTestFixture(t *testing.T) (serviceOperationTestFixture, *mail
 		readMailTLSHostname = previousTLSHostname
 	})
 	return fixture, agent
+}
+
+func seedMailProfileActiveDNSEngine(
+	t *testing.T,
+	fixture serviceOperationTestFixture,
+	agent *mailProfileTestAgent,
+	engine transport.DNSEngine,
+) {
+	t.Helper()
+	agent.serviceOperationTestAgent.mu.Lock()
+	for _, id := range []string{"pdns", "bind"} {
+		agent.serviceOperationTestAgent.active[id] = id == string(engine)
+	}
+	agent.serviceOperationTestAgent.installed[string(engine)] = true
+	agent.serviceOperationTestAgent.mu.Unlock()
+
+	state, err := readDNSEngineDBState(context.Background(), fixture.database.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine == engine {
+		return
+	}
+	requestByte := "1"
+	if engine == transport.DNSEngineBIND {
+		requestByte = "2"
+	}
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t,
+		fixture.panel,
+		engine,
+		strings.Repeat(requestByte, 32),
+	)
+	if err := fixture.panel.finalizeDNSEngineSwitchSuccess(
+		context.Background(),
+		persisted,
+	); err != nil {
+		t.Fatalf("seed active DNS engine %s: %v", engine, err)
+	}
+	if err := fixture.panel.clearDNSEnginePostCommitMarker(
+		context.Background(), persisted,
+	); err != nil {
+		t.Fatalf("finalize seeded DNS engine follow-up: %v", err)
+	}
 }
 
 func postMailProfile(

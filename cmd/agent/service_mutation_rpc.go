@@ -424,13 +424,21 @@ func payloadBoundDirectMutationPublishedPhase(
 			dnsClusterConfigCommitPublished, job.RequestID, job.PackageName,
 		)
 	case "dns_zone_sync":
-		if !serviceMutationCanonicalFQDN(job.Target) ||
-			!mutationpayload.ValidDNSZoneSyncQualifier(job.PackageName) {
+		if !serviceMutationCanonicalFQDN(job.Target) {
 			return "", true, errors.New("invalid DNS zone publication identity")
 		}
-		phase, err = formatDNSZoneSyncCommitPhase(
-			dnsZoneSyncCommitPublished, job.RequestID, job.Target, job.PackageName,
-		)
+		switch {
+		case mutationpayload.ValidDNSZoneSyncQualifier(job.PackageName):
+			phase, err = formatDNSZoneSyncCommitPhase(
+				dnsZoneSyncCommitPublished, job.RequestID, job.Target, job.PackageName,
+			)
+		case mutationpayload.ValidDNSZoneSyncV3Qualifier(job.PackageName):
+			phase, err = formatDNSZoneSyncV3PublishedPhase(
+				job.RequestID, job.Target, job.PackageName,
+			)
+		default:
+			return "", true, errors.New("invalid DNS zone publication identity")
+		}
 	case "panel_certificate_issue":
 		if !serviceMutationCanonicalFQDN(job.Target) ||
 			!mutationpayload.ValidPanelCertificateIssueQualifier(job.PackageName) {
@@ -558,6 +566,15 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 				(state == dnsZoneSyncCommitPublished &&
 					job.Status != serviceMutationStatusSucceeded) {
 				return errors.New("service mutation ledger DNS zone commit receipt conflicts with job status")
+			}
+		}
+		if strings.HasPrefix(job.Phase, dnsZoneSyncV3PublishedPhasePrefix) {
+			requestID, domain, qualifier, err := parseDNSZoneSyncV3PublishedPhase(job.Phase)
+			if err != nil || requestID != job.RequestID || domain != job.Target ||
+				qualifier != job.PackageName || job.Kind != "dns_zone_sync" ||
+				!serviceMutationCanonicalFQDN(job.Target) ||
+				job.Status != serviceMutationStatusSucceeded {
+				return errors.New("service mutation ledger has an invalid DNS zone V3 published receipt")
 			}
 		}
 		if strings.HasPrefix(job.Phase, panelCertificateIssueCommitPhasePrefix) {
@@ -784,6 +801,12 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
 		return recoveryErr
 	}
+	if handled, recoveryErr := m.recoverPersistedDNSEngineSwitchLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncV3Locked(job, lock); handled {
+		return recoveryErr
+	}
 	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncLocked(job, lock); handled {
 		return recoveryErr
 	}
@@ -926,6 +949,12 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if handled, recoveryErr := m.recoverPersistedDNSClusterConfigLocked(job, lock); handled {
 		return recoveryErr
 	}
+	if handled, recoveryErr := m.recoverPersistedDNSEngineSwitchLocked(job, lock); handled {
+		return recoveryErr
+	}
+	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncV3Locked(job, lock); handled {
+		return recoveryErr
+	}
 	if handled, recoveryErr := m.recoverPersistedDNSZoneSyncLocked(job, lock); handled {
 		return recoveryErr
 	}
@@ -1044,7 +1073,8 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	}
 	if request.Kind == "dns_zone_sync" &&
 		(!serviceMutationCanonicalFQDN(request.Target) ||
-			!mutationpayload.ValidDNSZoneSyncQualifier(request.PackageName)) {
+			(!mutationpayload.ValidDNSZoneSyncQualifier(request.PackageName) &&
+				!mutationpayload.ValidDNSZoneSyncV3Qualifier(request.PackageName))) {
 		return nil, errors.New("invalid DNS zone mutation payload qualifier")
 	}
 	if request.Kind == "dnssec_secure" &&

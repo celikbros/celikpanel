@@ -263,14 +263,14 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	if caps.DNSServer == "" {
 		writeCodedError(w, http.StatusConflict, errCodeDNSServerRequired,
-			"no DNS server is installed — install PowerDNS or BIND from Services first; a domain cannot exist here without its zone being served",
-			"/services")
+			"no managed authoritative DNS engine is active; choose and activate BIND or PowerDNS first",
+			"/settings?section=dns")
 		return
 	}
-	if !p.dnsIdentityConfigured(r.Context()) {
+	if !caps.DNSIdentityReady {
 		writeCodedError(w, http.StatusConflict, errCodeDNSSettingsRequired,
 			"DNS identity is not configured — save the shared nameserver names and operating mode under Settings before adding a domain",
-			"/settings")
+			"/settings?section=dns")
 		return
 	}
 	if req.ProjectType == "php" || req.ProjectType == "static" {
@@ -484,6 +484,9 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "DELETE" {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if _, ready := p.requireActiveDNSPublisherForMutation(w, r.Context()); !ready {
 		return
 	}
 

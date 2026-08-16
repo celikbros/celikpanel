@@ -43,6 +43,65 @@ func dnsSetupSystemAdminRequest(body string) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), callerKey, &Caller{Role: roleAdmin}))
 }
 
+func TestDNSSetupRejectsUnknownFieldsAndTrailingJSONWithoutMutation(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "unknown field",
+			body: `{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"198.51.100.20","peer_ns":"ns4.example.net","unexpected":true}`,
+		},
+		{
+			name: "trailing JSON value",
+			body: pairedDNSSetupBody + ` {"second":true}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, p, "standalone")
+			before, err := readDNSClusterTopology(context.Background(), p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			agent := &strictDNSRPCAgent{}
+			attachStrictDNSRPCAgent(t, p, agent)
+
+			recorder := httptest.NewRecorder()
+			p.handleDNSSetup(recorder, dnsSetupAdminRequest(test.body))
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+			}
+			if pending, err := readPendingDNSClusterSaga(
+				context.Background(), p,
+			); err != nil {
+				t.Fatal(err)
+			} else if pending != nil {
+				t.Fatalf("invalid JSON persisted DNS saga: %+v", pending)
+			}
+			after, err := readDNSClusterTopology(context.Background(), p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(after, before) {
+				t.Fatalf("invalid JSON changed topology: before=%+v after=%+v", before, after)
+			}
+			agent.mu.Lock()
+			beginCalls, clusterCalls, versionCalls :=
+				agent.beginCalls, agent.clusterCalls, agent.versionCalls
+			agent.mu.Unlock()
+			if beginCalls != 0 || clusterCalls != 0 || versionCalls != 0 {
+				t.Fatalf(
+					"invalid JSON reached agent: begin=%d cluster=%d version=%d",
+					beginCalls, clusterCalls, versionCalls,
+				)
+			}
+		})
+	}
+}
+
 func assertDNSSetupSettings(t *testing.T, p *Panel, want map[string]string) {
 	t.Helper()
 	for key, value := range want {
@@ -124,6 +183,60 @@ func TestDNSSetupPairedRenameCommitsOneTopology(t *testing.T) {
 	}
 	assertSingleReconciledA(t, p, zoneID, "ns3.biovision.health", "192.0.2.10")
 	assertSingleReconciledA(t, p, zoneID, "ns4.biovision.health", "198.51.100.20")
+}
+
+func TestDNSSetupCommitsPowerDNSTopologyWithIdentity(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgent(t, p, agent)
+	before, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Topology != transport.DNSTopologyStandalone {
+		t.Fatalf("initial durable topology=%q", before.Topology)
+	}
+
+	paired := httptest.NewRecorder()
+	p.handleDNSSetup(paired, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"198.51.100.20","peer_ns":"ns4.example.net"}`,
+	))
+	if paired.Code != http.StatusOK {
+		t.Fatalf("paired status=%d body=%s", paired.Code, paired.Body.String())
+	}
+	pairedState, err := readDNSEngineDBState(
+		context.Background(), p.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pairedState.ActiveEngine != transport.DNSEnginePowerDNS ||
+		pairedState.Topology != transport.DNSTopologyPaired ||
+		pairedState.Revision != before.Revision+1 {
+		t.Fatalf("paired durable state=%+v before=%+v", pairedState, before)
+	}
+
+	standalone := httptest.NewRecorder()
+	p.handleDNSSetup(standalone, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if standalone.Code != http.StatusOK {
+		t.Fatalf("standalone status=%d body=%s",
+			standalone.Code, standalone.Body.String())
+	}
+	standaloneState, err := readDNSEngineDBState(
+		context.Background(), p.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if standaloneState.Topology != transport.DNSTopologyStandalone ||
+		standaloneState.Revision != pairedState.Revision+1 {
+		t.Fatalf("standalone durable state=%+v paired=%+v",
+			standaloneState, pairedState)
+	}
 }
 
 func TestDNSSetupRejectsInvalidPairedTupleBeforeAgent(t *testing.T) {
@@ -320,6 +433,59 @@ func TestDNSSetupDesiredPersistenceFailurePrecedesAgentBegin(t *testing.T) {
 		t.Fatal(err)
 	} else if pending != nil {
 		t.Fatalf("rolled-back desired transaction retained saga=%+v", pending)
+	}
+}
+
+func TestDNSSetupActiveBINDPublishesStandaloneIdentityWithoutPDNSRPC(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	zoneID := seedReconcileZone(t, p, "bind-identity.example")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1:       "ns3.example.net",
+		settingNS2:       "ns4.example.net",
+		settingDNSRole:   "standalone",
+		settingDNSPeerIP: "",
+		settingDNSPeerNS: "",
+	})
+	if soa := recordContent(
+		t, p, zoneID, "bind-identity.example", "SOA",
+	); !strings.HasPrefix(soa, "ns3.example.net ") {
+		t.Fatalf("BIND identity SOA=%q, want ns3 MNAME", soa)
+	}
+	agent.mu.Lock()
+	clusterCalls := agent.clusterCalls
+	beginCalls := agent.beginCalls
+	readinessCalls := agent.readinessCalls
+	powerDNSCalls := agent.powerDNSCalls
+	requests := append(
+		[]transport.SyncDNSZoneV3Request(nil),
+		agent.syncV3Requests...,
+	)
+	agent.mu.Unlock()
+	if clusterCalls != 0 || readinessCalls != 0 || powerDNSCalls != 0 ||
+		beginCalls != 1 {
+		t.Fatalf(
+			"BIND identity RPCs cluster=%d begin=%d readiness=%d pdns=%d",
+			clusterCalls, beginCalls, readinessCalls, powerDNSCalls,
+		)
+	}
+	if len(requests) != 1 ||
+		requests[0].Engine != transport.DNSEngineBIND ||
+		requests[0].EngineEpoch != 1 ||
+		requests[0].Domain != "bind-identity.example" {
+		t.Fatalf("BIND V3 identity publication=%+v", requests)
 	}
 }
 

@@ -255,7 +255,7 @@ func TestNotOfferedFollowsThePackageMapping(t *testing.T) {
 		{"pacman", "roundcube", false, "taşınabilir (tarball) — her dağıtımda kurulur"},
 		{"apt", "node", false, "taşınabilir (resmi sürüm) — her dağıtımda kurulur"},
 		{"apt", "apache", true, "paket var ama panel vhost adaptörü yok"},
-		{"pacman", "bind", true, "paket var ama panel zone adaptörü yok"},
+		{"pacman", "bind", false, "BIND panel zone motoru tarafından yönetilir"},
 		{"apt", "exim", true, "paket var ama panel mail adaptörü yok"},
 	} {
 		var got *ManagedServiceResponse
@@ -282,7 +282,7 @@ func TestNotOfferedKindDistinguishesIntegrationFromDistribution(t *testing.T) {
 		want   core.ManagedServiceInstallBlockKind
 	}{
 		{"apt", "apache", core.ManagedServiceInstallBlockIntegration},
-		{"apt", "bind", core.ManagedServiceInstallBlockIntegration},
+		{"apt", "bind", core.ManagedServiceInstallBlockNone},
 		{"apt", "exim", core.ManagedServiceInstallBlockIntegration},
 		{"apt", "vsftpd", core.ManagedServiceInstallBlockIntegration},
 		{"pacman", "spamassassin", core.ManagedServiceInstallBlockDistribution},

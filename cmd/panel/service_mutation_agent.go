@@ -50,6 +50,8 @@ func panelMutationTerminalReconcileTimeout(identity agentMutationIdentity) time.
 		return panelFirewallCommitReconcileTimeout
 	case "dns_zone_sync":
 		return panelDNSCommitReconcileTimeout
+	case dnsEngineSwitchKind:
+		return dnsEngineSwitchTimeout
 	case "dns_cluster_configure":
 		return 5 * time.Minute
 	default:
@@ -118,7 +120,7 @@ func payloadBoundMutationTerminalError(
 		return nil
 	}
 	switch identity.Kind {
-	case "mail_tls_sync", "firewall_apply", "firewall_sync", "dns_zone_sync", "dns_cluster_configure":
+	case "mail_tls_sync", "firewall_apply", "firewall_sync", "dns_zone_sync", "dns_cluster_configure", dnsEngineSwitchKind:
 		if observed == nil || !identity.matches(observed) || agentMutationActive(observed.Status) {
 			return &agentMutationTerminalUncertainError{kind: identity.Kind, err: err}
 		}
@@ -201,11 +203,24 @@ func payloadBoundMutationPublishedPhase(
 		return "commit/dns-cluster-config/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
 	case "dns_zone_sync":
 		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
-		if err != nil || canonicalTarget != identity.Target ||
-			!mutationpayload.ValidDNSZoneSyncQualifier(identity.PackageName) {
+		if err != nil || canonicalTarget != identity.Target {
 			return "", true, errAgentMutationPublishedReceiptMismatch
 		}
-		return "commit/dns-zone-sync/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		switch {
+		case mutationpayload.ValidDNSZoneSyncQualifier(identity.PackageName):
+			return "commit/dns-zone-sync/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		case mutationpayload.ValidDNSZoneSyncV3Qualifier(identity.PackageName):
+			return "commit/dns-zone-sync/v3/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		default:
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+	case dnsEngineSwitchKind:
+		if !transport.ValidDNSEngine(transport.DNSEngine(identity.Target)) ||
+			!mutationpayload.ValidDNSEngineSwitchQualifier(identity.PackageName) {
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
+		return "commit/dns-engine-switch/v1/published/" +
+			identity.RequestID + "/" + identity.PackageName, true, nil
 	case "panel_certificate_issue":
 		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
 		if err != nil || canonicalTarget != identity.Target ||

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -63,8 +64,12 @@ const (
 	errCodeDNSServerRequired             = "DNS_SERVER_REQUIRED"
 	errCodeDNSSettingsRequired           = "DNS_SETTINGS_REQUIRED"
 	errCodeDNSSetupRequired              = "DNS_SETUP_REQUIRED"
+	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"
+	errCodeDNSTopologyUnsupported        = "DNS_TOPOLOGY_UNSUPPORTED"
 	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
 	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
+	errCodeDNSSECEngineUnsupported       = "DNSSEC_ENGINE_UNSUPPORTED"
+	errCodeDNSSECStatusUnavailable       = "DNSSEC_STATUS_UNAVAILABLE"
 	errCodeWebServerRequired             = "WEB_SERVER_REQUIRED"
 	errCodePHPRequired                   = "PHP_REQUIRED"
 	errCodeNoSubscription                = "NO_SUBSCRIPTION"
@@ -386,7 +391,26 @@ func writeAgentError(w http.ResponseWriter, err error, agentDetail string) {
 		if classification, ok := classifyStableAgentError(err); ok {
 			status = classification.Status
 		}
-		log.Printf("[%d][agent] %s", status, agentDetail)
+		log.Printf("[%d][agent] %s", status, boundedAgentDiagnostic(agentDetail))
 	}
 	writeServerError(w, err)
+}
+
+// boundedAgentDiagnostic is for server logs only. Agent strings can contain
+// subprocess stderr, paths and terminal control characters; keep enough text
+// for diagnosis without allowing one response to forge or flood log lines.
+func boundedAgentDiagnostic(detail string) string {
+	detail = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, detail)
+	detail = strings.TrimSpace(detail)
+	const maximum = 512
+	runes := []rune(detail)
+	if len(runes) > maximum {
+		detail = string(runes[:maximum]) + "…"
+	}
+	return detail
 }

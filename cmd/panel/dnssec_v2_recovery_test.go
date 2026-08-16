@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -107,7 +108,7 @@ func TestDNSSECV2PersistsBridgeBeforeSigningAndPublishesAfterTerminalSuccess(t *
 
 	var mu sync.Mutex
 	var beginKinds []string
-	var bridge dnsZoneSyncState
+	var bridge dnsZoneEngineLease
 	var hookErr error
 	secureCompleted := false
 	agent.beginHook = func(req *ServiceOperationMutationBeginRequest) error {
@@ -116,17 +117,19 @@ func TestDNSSECV2PersistsBridgeBeforeSigningAndPublishesAfterTerminalSuccess(t *
 		beginKinds = append(beginKinds, req.Kind)
 		switch req.Kind {
 		case "dnssec_secure":
-			state, err := readDNSZoneSyncState(
+			lease, err := readDNSZoneEngineLease(
 				context.Background(), p.db.GetDB(), domain,
 			)
 			if err != nil {
 				return err
 			}
-			if !state.hasLease() || state.LeaseAction.String != "sync" ||
-				state.ZoneName != req.Target {
-				return fmt.Errorf("DNSSEC Begin observed no exact pre-sign bridge: %+v", state)
+			if !lease.valid() || lease.DesiredAction != "sync" ||
+				lease.ZoneName != req.Target ||
+				lease.Engine != transport.DNSEnginePowerDNS ||
+				lease.EngineEpoch != 1 {
+				return fmt.Errorf("DNSSEC Begin observed no exact V3 pre-sign bridge: %+v", lease)
 			}
-			bridge = state
+			bridge = lease
 		case "dns_zone_sync":
 			if !secureCompleted {
 				return errors.New("DNS publication began before signing completed")
@@ -167,7 +170,7 @@ func TestDNSSECV2PersistsBridgeBeforeSigningAndPublishesAfterTerminalSuccess(t *
 	if !reflect.DeepEqual(beginKinds, []string{"dnssec_secure", "dns_zone_sync"}) {
 		t.Fatalf("durable child order=%v", beginKinds)
 	}
-	if !bridge.hasLease() {
+	if !bridge.valid() {
 		t.Fatalf("signing bridge was not captured: %+v", bridge)
 	}
 	agent.mu.Lock()
@@ -177,9 +180,9 @@ func TestDNSSECV2PersistsBridgeBeforeSigningAndPublishesAfterTerminalSuccess(t *
 	if len(secureRequests) != 1 || len(syncRequests) != 1 {
 		t.Fatalf("secure/sync requests=%d/%d", len(secureRequests), len(syncRequests))
 	}
-	if syncRequests[0].DesiredGeneration != bridge.LeaseGeneration.Int64 ||
-		syncRequests[0].MutationRequestID != bridge.LeaseRequestID.String ||
-		syncRequests[0].MutationOwnerID != bridge.LeaseOwnerID.String {
+	if syncRequests[0].DesiredGeneration != bridge.DesiredGeneration ||
+		syncRequests[0].MutationRequestID != bridge.RequestID ||
+		syncRequests[0].MutationOwnerID != bridge.OwnerID {
 		t.Fatalf("published request does not consume pre-sign bridge: request=%+v bridge=%+v",
 			syncRequests[0], bridge)
 	}
@@ -187,6 +190,11 @@ func TestDNSSECV2PersistsBridgeBeforeSigningAndPublishesAfterTerminalSuccess(t *
 	if state.hasLease() || state.Status != "applied" ||
 		state.AppliedGeneration != state.DesiredGeneration {
 		t.Fatalf("final DNSSEC publication state=%+v", state)
+	}
+	if _, err := readDNSZoneEngineLease(
+		context.Background(), p.db.GetDB(), domain,
+	); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("final DNSSEC V3 lease was not retired: %v", err)
 	}
 }
 
@@ -198,13 +206,13 @@ func TestDNSSECV2ActiveAmbiguityRetainsExactBridgeAndNeverPublishes(t *testing.T
 	agent := &strictDNSRPCAgent{
 		finishError: errors.New("injected FinishServiceMutation response loss"),
 	}
-	var bridge dnsZoneSyncState
+	var bridge dnsZoneEngineLease
 	var bridgeErr error
 	agent.secureHook = func(
 		_ transport.SecureDNSZoneV2Request,
 		_ *transport.SecureDNSZoneV2Response,
 	) error {
-		bridge, bridgeErr = readDNSZoneSyncState(
+		bridge, bridgeErr = readDNSZoneEngineLease(
 			context.Background(), p.db.GetDB(), domain,
 		)
 		return errors.New("injected SecureDNSZoneV2 response loss")
@@ -228,10 +236,15 @@ func TestDNSSECV2ActiveAmbiguityRetainsExactBridgeAndNeverPublishes(t *testing.T
 	if bridgeErr != nil {
 		t.Fatal(bridgeErr)
 	}
-	if !bridge.hasLease() {
+	if !bridge.valid() {
 		t.Fatalf("SecureDNSZoneV2 did not observe a persisted bridge: %+v", bridge)
 	}
-	after := strictDNSState(t, p, domain)
+	after, afterErr := readDNSZoneEngineLease(
+		context.Background(), p.db.GetDB(), domain,
+	)
+	if afterErr != nil {
+		t.Fatal(afterErr)
+	}
 	if !reflect.DeepEqual(after, bridge) {
 		t.Fatalf("ambiguous DNSSEC mutated exact bridge: before=%+v after=%+v", bridge, after)
 	}

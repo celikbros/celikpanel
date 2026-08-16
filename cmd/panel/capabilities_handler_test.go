@@ -45,6 +45,33 @@ func (a *hostingCapabilitiesTestAgent) ListServiceInstances(
 	return nil
 }
 
+func (a *hostingCapabilitiesTestAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	reply *transport.DNSBackendReadinessResponse,
+) error {
+	installed := make(map[string]bool, len(a.installed))
+	for _, id := range a.installed {
+		installed[id] = true
+	}
+	reply.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine:    transport.DNSEnginePowerDNS,
+			Unit:      "pdns.service",
+			Installed: installed["pdns"],
+			Running:   installed["pdns"],
+			Managed:   installed["pdns"],
+		},
+		{
+			Engine:    transport.DNSEngineBIND,
+			Unit:      "bind9.service",
+			Installed: installed["bind"],
+			Running:   installed["bind"],
+			Managed:   installed["bind"],
+		},
+	}
+	return nil
+}
+
 func newHostingCapabilitiesTestPanel(t *testing.T, agent *hostingCapabilitiesTestAgent) *Panel {
 	t.Helper()
 	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
@@ -169,6 +196,18 @@ func TestHostingCapabilitiesReportsDNSIdentityReadiness(t *testing.T) {
 	panel := newHostingCapabilitiesTestPanel(t, &hostingCapabilitiesTestAgent{
 		installed: []string{"pdns"},
 	})
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t,
+		panel,
+		transport.DNSEnginePowerDNS,
+		strings.Repeat("3", 32),
+	)
+	if err := panel.finalizeDNSEngineSwitchSuccess(
+		context.Background(),
+		persisted,
+	); err != nil {
+		t.Fatalf("seed active PowerDNS: %v", err)
+	}
 	caps, err := panel.hostingCaps(context.Background())
 	if err != nil {
 		t.Fatalf("hosting capabilities: %v", err)

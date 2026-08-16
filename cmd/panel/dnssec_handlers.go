@@ -56,13 +56,15 @@ func daneMutationSafetyPrerequisitesAvailable() bool {
 
 type dnssecAgentResponse = transport.DNSSECStatusResponse
 
-// dnssecResultError keeps failures returned inside an otherwise successful
-// RPC response visible to the operator. It also protects a newer panel from an
-// older agent that used to report signing success even when pdnsutil produced
-// no DS record to publish at the registrar.
+// dnssecResultError turns untrusted agent results into developer-authored
+// messages. pdnsutil stderr and filesystem detail are logged separately and
+// never become tenant-visible JSON.
 func dnssecResultError(resp dnssecAgentResponse, signing bool) string {
 	if resp.Error != "" {
-		return resp.Error
+		if signing {
+			return "DNSSEC signing did not complete"
+		}
+		return "DNSSEC status is unavailable"
 	}
 	if resp.Secured && len(resp.DS) == 0 {
 		return "DNSSEC is not ready: the signed zone produced no DS records"
@@ -71,6 +73,32 @@ func dnssecResultError(resp dnssecAgentResponse, signing bool) string {
 		return "DNSSEC signing did not complete"
 	}
 	return ""
+}
+
+func writeDNSSECEngineUnsupported(w http.ResponseWriter) {
+	writeCodedError(
+		w, http.StatusConflict, errCodeDNSSECEngineUnsupported,
+		"DNSSEC is unavailable for the active DNS engine",
+		"/settings?section=dns",
+	)
+}
+
+func writeDNSSECStatusUnavailable(w http.ResponseWriter, status int) {
+	writeCodedError(
+		w, status, errCodeDNSSECStatusUnavailable,
+		"DNSSEC status could not be verified",
+		"/settings?section=dns",
+	)
+}
+
+func logDNSSECDetail(zone, operation, detail string) {
+	if detail == "" {
+		return
+	}
+	log.Printf(
+		"DNSSEC %s %s: %s",
+		operation, zone, boundedAgentDiagnostic(detail),
+	)
 }
 
 // handleDomainDNSSEC: GET returns signing status + DS records; POST signs
@@ -90,12 +118,31 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 	var resp dnssecAgentResponse
 	switch r.Method {
 	case http.MethodGet:
-		if err := p.callAgent("Agent.DNSSECStatus", &transport.DNSSECRequest{Zone: domain}, &resp); err != nil {
-			writeAgentError(w, err, "DNSSEC")
+		publisher, ready, err := p.activeDNSPublisher(r.Context())
+		if err != nil {
+			log.Printf("DNSSEC status publisher %s: %v", domain, err)
+			writeDNSSECStatusUnavailable(w, http.StatusBadGateway)
 			return
 		}
+		if !ready || publisher.Epoch < 1 {
+			writeDNSSECStatusUnavailable(w, http.StatusConflict)
+			return
+		}
+		if publisher.Engine != transport.DNSEnginePowerDNS {
+			writeDNSSECEngineUnsupported(w)
+			return
+		}
+		if err := p.callAgentContext(
+			r.Context(), "Agent.DNSSECStatus",
+			&transport.DNSSECRequest{Zone: domain}, &resp,
+		); err != nil {
+			log.Printf("DNSSEC status %s: %v", domain, err)
+			writeDNSSECStatusUnavailable(w, http.StatusBadGateway)
+			return
+		}
+		logDNSSECDetail(domain, "status", resp.Error)
 		if problem := dnssecResultError(resp, false); problem != "" {
-			writeClientError(w, http.StatusConflict, problem)
+			writeDNSSECStatusUnavailable(w, http.StatusConflict)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{
@@ -105,6 +152,20 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		})
 
 	case http.MethodPost:
+		publisher, ready := p.requireActiveDNSPublisherForMutation(w, r.Context())
+		if !ready {
+			return
+		}
+		if publisher.Engine != transport.DNSEnginePowerDNS {
+			writeCodedError(
+				w,
+				http.StatusConflict,
+				errCodeDNSSECEngineUnsupported,
+				"DNSSEC management currently requires PowerDNS as the active engine",
+				"/settings?section=dns",
+			)
+			return
+		}
 		// Lock order is the global host mutation gate followed by DNS
 		// publication. The exact SOA/snapshot lease is committed before signing;
 		// a crash or response loss therefore leaves startup enough authority to
@@ -118,12 +179,31 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 				"DNS topology recovery must finish before DNSSEC signing")
 			return
 		}
+		publisher, publisherReady, err := p.activeDNSPublisher(r.Context())
+		if err != nil {
+			writeServerError(w, fmt.Errorf("verify DNSSEC publisher identity: %w", err))
+			return
+		}
+		if !publisherReady ||
+			publisher.Engine != transport.DNSEnginePowerDNS ||
+			publisher.Epoch < 1 {
+			if publisherReady && publisher.Engine != transport.DNSEnginePowerDNS {
+				writeDNSSECEngineUnsupported(w)
+			} else {
+				writeDNSSECStatusUnavailable(w, http.StatusConflict)
+			}
+			return
+		}
+		if err := p.requireDNSZoneSyncV3Agent(r.Context()); err != nil {
+			writeServerError(w, fmt.Errorf("verify engine-bound DNSSEC publication: %w", err))
+			return
+		}
 		if err := p.requireDNSSECSecureV2Agent(r.Context()); err != nil {
 			writeServerError(w, fmt.Errorf("verify DNSSEC publisher: %w", err))
 			return
 		}
-		plan, err := p.prepareDNSZoneSyncPlanReconciledLocked(
-			r.Context(), domain, false,
+		plan, err := p.prepareDNSZoneSyncV3PlanReconciledLocked(
+			r.Context(), domain, false, publisher,
 		)
 		if err != nil {
 			var publicationErr *dnsAgentPublicationError
@@ -160,6 +240,7 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 				); err != nil {
 					return err
 				}
+				logDNSSECDetail(domain, "sign", resp.Error)
 				if problem := dnssecResultError(resp, true); problem != "" {
 					return errors.New(problem)
 				}
@@ -183,7 +264,9 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			// not create host authority. Release only this exact publication lease;
 			// the desired generation remains pending for ordinary startup repair.
 			finalizeCtx, cancel := dnsZoneFinalizeContext(r.Context())
-			recordErr := p.recordDNSZoneSyncFailure(finalizeCtx, plan.State, secureErr)
+			recordErr := p.recordDNSZoneSyncV3Failure(
+				finalizeCtx, plan.Lease, secureErr,
+			)
 			cancel()
 			if recordErr != nil {
 				writeServerError(w, fmt.Errorf("release unstarted DNSSEC publication: %w", recordErr))
@@ -196,7 +279,9 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		// Even a known terminal signing failure may have created keys before
 		// stopping. Consume the pre-sign publication lease while both global
 		// locks remain held so the served zone converges to the exact snapshot.
-		_, publishErr := p.publishPreparedDNSZoneSyncPlanLocked(r.Context(), plan)
+		_, publishErr := p.publishPreparedDNSZoneSyncV3PlanLocked(
+			r.Context(), plan,
+		)
 		if secureErr != nil {
 			if publishErr != nil {
 				log.Printf("dnssec secure %s: %v; repair publication: %v", domain, secureErr, publishErr)
@@ -216,6 +301,8 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			); err == nil && dnssecResultError(recovered, true) == "" {
 				resp = recovered
 				problem = ""
+			} else {
+				logDNSSECDetail(domain, "recovered status", recovered.Error)
 			}
 			if problem != "" {
 				writeClientError(w, http.StatusConflict, problem)

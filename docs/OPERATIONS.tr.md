@@ -335,7 +335,60 @@ ancak ilk etkinleştirme yetkisi vermez. Açık **Turn off** snapshot'ı kaldır
 restore'u devre dışı bırakır. GET, rescan, monitoring, update, bootstrap ve
 rollback unit'in yalnız var olmasını kullanıcı onayı olarak yorumlayamaz.
 
-## 7. Geliştirme kontrolleri
+## 7. Yetkili DNS motoru yaşam döngüsü
+
+PowerDNS ile BIND, paneldeki özel yetkili-DNS kartından seçilir. 53 numaralı
+portun hangi daemon'a ait olduğunu değiştirmek için genel bileşen
+başlat/durdur/kaldır eylemlerini veya doğrudan systemd komutlarını kullanmayın.
+
+İlk motor eylemi her zaman salt-okunurdur. Sunucudan; kesin işlem türünü, kaynak
+ve hedef motorları, durum revizyonunu, topolojiyi, zone ve DNSSEC sayılarını,
+beklenen kesintiyi, etkileri ve engelleri içeren bir önizleme alır. Hiçbir şey
+kurmaz, başlatmaz, durdurmaz veya yeniden yazmaz. Ayrı **Bu DNS değişikliğini
+başlat** eylemi aynı tek-kullanımlık önizleme yetkisini sunmak zorundadır.
+Engelli, süresi dolmuş veya bayat önizleme işlem başlatamaz. Canlı motor geçişi
+ayrıca açık kesinti onay kutusunu gerektirir; yazdırılan parola cümlesi yoktur.
+Eski PowerDNS'i yalnız kayıt amacıyla devralmada kesinti beklenmez; işlem sadece
+mevcut durumu kanıtlayıp kaydeder.
+
+Normal PowerDNS↔BIND değişimi şu anda **Tek sunucu** topolojisini gerektirir.
+Eşli topoloji, herhangi bir DNSSEC zone'u, bekleyen zone yayını, panel dışı DNS,
+TCP/UDP 53 portu çakışması, bozuk kaynak veya başka bir sunucu/DNS işlemi onayı
+engeller. BIND kimliği yalnız tek sunucudur; Eşli DNS bir PowerDNS yeteneği
+olarak kalır. Engelleri kendi açık panel akışlarından giderip yeni önizleme
+alın. Bir engeli aşmak için cluster, DNSSEC veya daemon durumunu ya da işlem
+satırlarını elle değiştirmeyin.
+
+İzin verilen kurulum veya değişim sırasında istenen tam zone kümesi, seçilen
+hedef motora ve onun bir sonraki etkinleştirme dönemine bağlanarak dondurulur.
+Gerekirse hedef paket başlamama bekçisi altında kurulur, tam zone durumu
+hazırlanıp doğrulanır ve mevcut kaynak yalnız son geçiş için durdurulur. Başarı;
+hedefin tek yönetilen genel otorite olmasını ve her zone'un beklenen SOA
+yanıtını hem UDP hem TCP üzerinden vermesini gerektirir. Bir kaynak motor varsa
+paketi kaldırılmaz; geri dönüş için kurulu fakat durmuş bekleme kopyası olarak
+kalır.
+
+Kalıcı motor kimliği eski sürümden dolayı çözümlenmemiş bir kurulum, yalnız
+mevcut panel-yönetimli PowerDNS otoritesi için **Mevcut kurulumu devral**
+seçeneğini sunabilir. Devralma yalnız kayıt amaçlıdır: yönetilen yapılandırmanın
+baytlarını ve kiplerini, kesin unit durumunu ve topolojiyi doğrular; SQLite
+veritabanını ve panelin sahibi olduğu her zone'u salt-okur sınar; TCP/UDP
+otoritesini kanıtlar. Paket kurmaz, yapılandırma veya DNS verisini yeniden
+yazmaz, servis başlatmaz ve DNSSEC'i değiştirmez. Birebir Tek sunucu ve Eşli
+PowerDNS kurulumu devralınabilir; çalışan başka DNS motoru, sahipsiz ya da farklı
+veri, eksik eşli yapılandırma veya değişen herhangi bir kanıt işlemi kapalı
+tutar. BIND devralınamaz.
+
+Panel defteri ile agent'ın root sahipli host günlüğü aynı işlem kimliğini,
+manifesti ve aşamayı taşır. Yanıt kaybolursa DNS motoru durumunu yenileyin; yeni
+istek kimliği uydurmayın ve işlemi SSH üzerinden tekrarlamayın. Başlangıç
+kurtarması önce kesin hedefi kanıtlamaya çalışır. Bu kanıt başarısızsa işlem
+öncesi dosyaları, veritabanını, nesil işaretçisini ve systemd durumunu geri
+getirip birebir kanıtlar. İki sonuç da kanıtlanamazsa ikinci bir otoriteyi
+başlatmak veya tahmin yürütmek yerine DNS mutasyonları açık kurtarma için kilitli
+kalır.
+
+## 8. Geliştirme kontrolleri
 
 - **Derleme:** `make test vet web` (tam Go 1.26.5 kapısı dahil).
 - **Release sözleşmeleri:** `bash deploy/test-bootstrap-update-contract.sh` ve
@@ -348,7 +401,7 @@ rollback unit'in yalnız var olmasını kullanıcı onayı olarak yorumlayamaz.
 - **Tasarım döngüsü:** `.design-sync/NOTES.md`, tasarım sistemi iş akışını ve
   zorunlu CSS-entry hash yenilemesini açıklar.
 
-## 8. Gizli bilgiler politikası
+## 9. Gizli bilgiler politikası
 
 Gizli bilgiler repoya, runbook'a, sürüm kanıtına veya sohbette paylaşılan komut
 çıktısına girmez. Panel kimlik bilgileri ve SSH anahtarları operatörde kalır.

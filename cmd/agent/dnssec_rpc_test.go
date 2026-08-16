@@ -40,6 +40,21 @@ func installDNSSECV2TestLease(
 	t *testing.T, zone string,
 ) (*serviceMutationManager, transport.ServiceMutationBinding) {
 	t.Helper()
+	oldAuthority := legacyPowerDNSDurableAuthorityCheck
+	oldRuntime := legacyPowerDNSRuntimeSafetyCheck
+	legacyPowerDNSDurableAuthorityCheck = func(requireResolved bool) error {
+		return validateLegacyPowerDNSDurableAuthority(
+			legacyDurableDNSState(transport.DNSEnginePowerDNS),
+			true, false, requireResolved,
+		)
+	}
+	legacyPowerDNSRuntimeSafetyCheck = func(context.Context, bool) error {
+		return nil
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSDurableAuthorityCheck = oldAuthority
+		legacyPowerDNSRuntimeSafetyCheck = oldRuntime
+	})
 	manager, _ := newMutationTestManager(t)
 	beginMutationTestJobWithIdentity(t, manager, "dnssec_secure", zone, "")
 	installGlobalMutationTestManager(t, manager)
@@ -160,6 +175,50 @@ func TestSecureDNSZoneV2ReadinessDriftRejectsBeforeHostCommand(t *testing.T) {
 	manager.mu.Unlock()
 	if steps != 0 {
 		t.Fatalf("readiness retained %d active steps", steps)
+	}
+}
+
+func TestSecureDNSZoneV2RejectsDurableNonPDNSAuthorityBeforeHostMutation(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			manager, binding := installDNSSECV2TestLease(t, "example.test")
+			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			oldLookPath, oldCommand := dnssecLookPath, dnssecV2Command
+			hostCalls := 0
+			dnssecLookPath = func(string) (string, error) {
+				hostCalls++
+				return "", errors.New("unexpected host lookup")
+			}
+			dnssecV2Command = func(
+				context.Context, string, ...string,
+			) ([]byte, error) {
+				hostCalls++
+				return nil, errors.New("unexpected host command")
+			}
+			t.Cleanup(func() {
+				dnssecLookPath, dnssecV2Command = oldLookPath, oldCommand
+			})
+			response := SecureDNSZoneV2Response{
+				Secured: true, DS: []string{"stale"}, Error: "stale",
+			}
+			if err := (&Agent{}).SecureDNSZoneV2(
+				&SecureDNSZoneV2Request{
+					ServiceMutationBinding: binding, Zone: "example.test",
+				},
+				&response,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if response.Secured || len(response.DS) != 0 ||
+				response.Error != "DNSSEC signing is blocked because PowerDNS is not the active DNS engine" ||
+				strings.Contains(response.Error, raw) || hostCalls != 0 {
+				t.Fatalf("response=%+v hostCalls=%d", response, hostCalls)
+			}
+		})
 	}
 }
 
@@ -315,5 +374,112 @@ func TestDNSSECStatusReportsMissingPDNSUtil(t *testing.T) {
 	}
 	if response.Error != "pdnsutil is not installed" {
 		t.Fatalf("status response=%+v", response)
+	}
+}
+
+func TestDNSSECStatusRejectsDurableNonPDNSAuthorityWithoutStaleDS(t *testing.T) {
+	for _, authority := range []string{"bind-state", "switch-journal"} {
+		t.Run(authority, func(t *testing.T) {
+			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldLookPath, oldCommand := dnssecLookPath, dnssecCommand
+			raw := "raw " + authority + " detail must stay in logs"
+			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+				return errors.New(raw)
+			}
+			hostCalls := 0
+			dnssecLookPath = func(string) (string, error) {
+				hostCalls++
+				return "", errors.New("unexpected host lookup")
+			}
+			dnssecCommand = func(string, ...string) ([]byte, error) {
+				hostCalls++
+				return nil, errors.New("unexpected host command")
+			}
+			t.Cleanup(func() {
+				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				dnssecLookPath, dnssecCommand = oldLookPath, oldCommand
+			})
+			response := DNSSECStatusResponse{
+				Secured: true, DS: []string{"stale"}, Error: "stale",
+			}
+			if err := (&Agent{}).DNSSECStatus(
+				&DNSSECRequest{Zone: "example.test"}, &response,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if response.Secured || len(response.DS) != 0 ||
+				response.Error != "DNSSEC status is unavailable because PowerDNS is not the active DNS engine" ||
+				strings.Contains(response.Error, raw) || hostCalls != 0 {
+				t.Fatalf("response=%+v hostCalls=%d", response, hostCalls)
+			}
+		})
+	}
+}
+
+func TestDNSSECStatusRechecksAuthorityBeforePublishingDS(t *testing.T) {
+	oldAuthority := legacyPowerDNSDurableAuthorityCheck
+	oldLookPath, oldCommand := dnssecLookPath, dnssecCommand
+	authorityChecks := 0
+	legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+		authorityChecks++
+		if authorityChecks == 1 {
+			return nil
+		}
+		return errors.New("authority changed to BIND")
+	}
+	dnssecLookPath = func(string) (string, error) { return "pdnsutil", nil }
+	dnssecCommand = func(string, ...string) ([]byte, error) {
+		return []byte(
+			"ID = 1, tag = 12345\n" +
+				"DS = example.test. IN DS 12345 13 2 AABBCC\n",
+		), nil
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSDurableAuthorityCheck = oldAuthority
+		dnssecLookPath, dnssecCommand = oldLookPath, oldCommand
+	})
+	response := DNSSECStatusResponse{Secured: true, DS: []string{"stale"}}
+	if err := (&Agent{}).DNSSECStatus(
+		&DNSSECRequest{Zone: "example.test"}, &response,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if response.Secured || len(response.DS) != 0 ||
+		response.Error != "DNSSEC status is unavailable because PowerDNS is not the active DNS engine" ||
+		authorityChecks != 2 {
+		t.Fatalf("response=%+v checks=%d", response, authorityChecks)
+	}
+}
+
+func TestDNSSECStatusAuthorityChangeMasksConcurrentCommandFailure(t *testing.T) {
+	oldAuthority := legacyPowerDNSDurableAuthorityCheck
+	oldLookPath, oldCommand := dnssecLookPath, dnssecCommand
+	authorityChecks := 0
+	legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+		authorityChecks++
+		if authorityChecks == 1 {
+			return nil
+		}
+		return errors.New("raw switch journal detail")
+	}
+	dnssecLookPath = func(string) (string, error) { return "pdnsutil", nil }
+	dnssecCommand = func(string, ...string) ([]byte, error) {
+		return []byte("raw pdnsutil output"), errors.New("raw pdnsutil failure")
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSDurableAuthorityCheck = oldAuthority
+		dnssecLookPath, dnssecCommand = oldLookPath, oldCommand
+	})
+	response := DNSSECStatusResponse{Secured: true, DS: []string{"stale"}}
+	if err := (&Agent{}).DNSSECStatus(
+		&DNSSECRequest{Zone: "example.test"}, &response,
+	); err != nil {
+		t.Fatal(err)
+	}
+	expected := "DNSSEC status is unavailable because PowerDNS is not the active DNS engine"
+	if response.Secured || len(response.DS) != 0 || response.Error != expected ||
+		strings.Contains(response.Error, "pdnsutil") ||
+		strings.Contains(response.Error, "raw") || authorityChecks != 2 {
+		t.Fatalf("response=%+v checks=%d", response, authorityChecks)
 	}
 }

@@ -12,8 +12,8 @@ func TestManagedServiceInstallDisabledReason(t *testing.T) {
 	}{
 		{"apache", "apt", ManagedServiceInstallBlockIntegration},
 		{"apache", "pacman", ManagedServiceInstallBlockIntegration},
-		{"bind", "apt", ManagedServiceInstallBlockIntegration},
-		{"bind", "pacman", ManagedServiceInstallBlockIntegration},
+		{"bind", "apt", ManagedServiceInstallBlockNone},
+		{"bind", "pacman", ManagedServiceInstallBlockNone},
 		{"exim", "apt", ManagedServiceInstallBlockIntegration},
 		{"exim", "pacman", ManagedServiceInstallBlockIntegration},
 		{"vsftpd", "apt", ManagedServiceInstallBlockIntegration},

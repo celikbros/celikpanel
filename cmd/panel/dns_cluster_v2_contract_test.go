@@ -141,6 +141,44 @@ func TestDNSClusterV2DesiredAndIdentityPersistBeforeBegin(t *testing.T) {
 	}
 }
 
+func TestDNSSetupRejectsActiveBINDWithoutAgentMutation(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, p, "standalone")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(pairedDNSSetupBody))
+	if recorder.Code != http.StatusConflict ||
+		!strings.Contains(
+			recorder.Body.String(),
+			`"code":"`+errCodeDNSTopologyUnsupported+`"`,
+		) {
+		t.Fatalf("active BIND DNS setup status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	if pending, err := readPendingDNSClusterSaga(
+		context.Background(), p,
+	); err != nil {
+		t.Fatal(err)
+	} else if pending != nil {
+		t.Fatalf("active BIND DNS setup persisted saga: %+v", pending)
+	}
+	agent.mu.Lock()
+	beginCalls, clusterCalls, versionCalls :=
+		agent.beginCalls, agent.clusterCalls, agent.versionCalls
+	agent.mu.Unlock()
+	if beginCalls != 0 || clusterCalls != 0 || versionCalls != 0 {
+		t.Fatalf(
+			"active BIND reached PowerDNS topology mutation: begin=%d cluster=%d version=%d",
+			beginCalls, clusterCalls, versionCalls,
+		)
+	}
+}
+
 func TestDNSClusterPendingIntentKeepsPreviousTopologyForZoneCreation(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	p := newDNSPanelForTest(t)
