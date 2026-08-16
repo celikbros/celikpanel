@@ -93,6 +93,17 @@ func TestCanonicalDNSEngineSwitchManifestIsStableAndTransitive(t *testing.T) {
 	if !ValidDNSEngineSwitchQualifier(commitment.Qualifier) {
 		t.Fatalf("invalid switch qualifier: %q", commitment.Qualifier)
 	}
+	var wantBytes int64
+	for _, zone := range commitment.Zones {
+		encoded, err := MarshalDNSZoneSnapshotRecords(zone.Records)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantBytes += int64(len(encoded))
+	}
+	if commitment.SnapshotBytes != wantBytes {
+		t.Fatalf("snapshot bytes=%d want=%d", commitment.SnapshotBytes, wantBytes)
+	}
 	changed := append([]transport.DNSEngineSwitchZoneSnapshot(nil), zones...)
 	changed[0].Records = []transport.ZoneRecord{{Name: "z.example.test", Type: "A", Content: "192.0.2.5"}}
 	mutated, err := CanonicalDNSEngineSwitchManifest(
@@ -104,5 +115,22 @@ func TestCanonicalDNSEngineSwitchManifestIsStableAndTransitive(t *testing.T) {
 	}
 	if commitment.Qualifier == mutated.Qualifier {
 		t.Fatal("switch manifest did not transitively bind zone records")
+	}
+}
+
+func TestDNSEngineSwitchSnapshotByteLimitIsFailClosed(t *testing.T) {
+	empty, err := MarshalDNSZoneSnapshotRecords(nil)
+	if err != nil || string(empty) != "[]" {
+		t.Fatalf("empty snapshot encoding=%q err=%v", empty, err)
+	}
+	if got, err := checkedDNSEngineSnapshotBytes(
+		DNSEngineSwitchMaxSnapshotBytes-2, 2,
+	); err != nil || got != DNSEngineSwitchMaxSnapshotBytes {
+		t.Fatalf("exact cap result=%d err=%v", got, err)
+	}
+	if _, err := checkedDNSEngineSnapshotBytes(
+		DNSEngineSwitchMaxSnapshotBytes-1, 2,
+	); err == nil {
+		t.Fatal("snapshot larger than 64 MiB was accepted")
 	}
 }

@@ -39,6 +39,8 @@ CREATE TABLE dns_engine_switch_snapshots (
             ) NOT GLOB '*[^a-f0-9]*'
         ),
     zone_count INTEGER NOT NULL CHECK (zone_count >= 0 AND zone_count <= 65536),
+    snapshot_bytes INTEGER NOT NULL
+        CHECK (snapshot_bytes >= 0 AND snapshot_bytes <= 67108864),
     last_error TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
         CHECK (length(created_at) BETWEEN 1 AND 64 AND julianday(created_at) IS NOT NULL),
@@ -144,6 +146,12 @@ CREATE TABLE dns_engine_switch_zones (
             AND json_valid(records_json)
             AND json_type(records_json) = 'array'
         ),
+    records_bytes INTEGER NOT NULL
+        CHECK (
+            records_bytes >= 2
+            AND records_bytes <= 8388608
+            AND records_bytes = length(CAST(records_json AS BLOB))
+        ),
     phase TEXT NOT NULL DEFAULT 'pending'
         CHECK (phase IN ('pending', 'staged', 'verified', 'error')),
     last_error TEXT,
@@ -183,6 +191,7 @@ WHEN NEW.switch_id <> OLD.switch_id
   OR NEW.desired_zone_type <> OLD.desired_zone_type
   OR NEW.zone_qualifier <> OLD.zone_qualifier
   OR NEW.records_json <> OLD.records_json
+  OR NEW.records_bytes <> OLD.records_bytes
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine switch zone identity is immutable');
 END;
@@ -212,6 +221,9 @@ WHEN OLD.phase = 'planned'
                 <> OLD.zone_count - 1
         )
     )
+    OR (SELECT COALESCE(sum(records_bytes), 0)
+        FROM dns_engine_switch_zones WHERE switch_id = OLD.switch_id)
+        <> OLD.snapshot_bytes
  )
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine switch snapshot zone count mismatch');
@@ -313,7 +325,7 @@ CREATE TABLE dns_zone_engine_applications (
             AND substr(qualifier, length('dns-zone-sync/v3:sha256:') + 1)
                 NOT GLOB '*[^a-f0-9]*'
         ),
-    mutation_request_id TEXT NOT NULL UNIQUE
+    mutation_request_id TEXT NOT NULL
         CHECK (
             length(mutation_request_id) = 32
             AND mutation_request_id NOT GLOB '*[^a-f0-9]*'
@@ -345,6 +357,9 @@ CREATE TABLE dns_zone_engine_applications (
 CREATE INDEX idx_dns_zone_engine_applications_epoch
     ON dns_zone_engine_applications(engine, engine_epoch, zone_name);
 
+CREATE INDEX idx_dns_zone_engine_applications_request
+    ON dns_zone_engine_applications(mutation_request_id, zone_name, engine);
+
 CREATE TRIGGER dns_zone_engine_application_monotonic_update
 BEFORE UPDATE ON dns_zone_engine_applications
 WHEN NEW.zone_name <> OLD.zone_name
@@ -369,6 +384,7 @@ WHEN NEW.switch_id <> OLD.switch_id
   OR NEW.topology <> OLD.topology
   OR NEW.manifest_qualifier <> OLD.manifest_qualifier
   OR NEW.zone_count <> OLD.zone_count
+  OR NEW.snapshot_bytes <> OLD.snapshot_bytes
   OR NEW.created_at <> OLD.created_at
 BEGIN
     SELECT RAISE(ABORT, 'DNS engine switch snapshot identity is immutable');

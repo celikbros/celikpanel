@@ -54,13 +54,15 @@ func TestDNSEngineMigrationCommitsOnlyAnExactFrozenSwitch(t *testing.T) {
 	switchID := strings.Repeat("1", 32)
 	requestID := strings.Repeat("2", 32)
 	ownerID := strings.Repeat("3", 32)
+	recordsJSON := `[{"name":"example.test","type":"A","content":"192.0.2.2","ttl":300,"prio":0,"disabled":false}]`
 	if _, err := database.Exec(`
 		INSERT INTO dns_engine_switch_snapshots (
 			switch_id, request_id, owner_id, source_engine, target_engine,
 			source_epoch, target_epoch, source_state_revision, topology,
-			phase, manifest_qualifier, zone_count
+			phase, manifest_qualifier, zone_count, snapshot_bytes
 		) VALUES (?, ?, ?, NULL, 'bind', 0, 1, 0, 'standalone',
-		          'planned', ?, 1)`, switchID, requestID, ownerID, testDNSSwitchQualifier); err != nil {
+		          'planned', ?, 1, ?)`, switchID, requestID, ownerID,
+		testDNSSwitchQualifier, len([]byte(recordsJSON))); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := database.Exec(`
@@ -76,10 +78,10 @@ func TestDNSEngineMigrationCommitsOnlyAnExactFrozenSwitch(t *testing.T) {
 	if _, err := database.Exec(`
 		INSERT INTO dns_engine_switch_zones (
 			switch_id, ordinal, zone_name, desired_generation,
-			desired_action, desired_zone_type, zone_qualifier, records_json
-		) VALUES (?, 0, 'example.test', 7, 'sync', 'NATIVE', ?,
-		          '[{"name":"example.test","type":"A","content":"192.0.2.2","ttl":300,"prio":0,"disabled":false}]')`,
-		switchID, testDNSV3Qualifier); err != nil {
+			desired_action, desired_zone_type, zone_qualifier,
+			records_json, records_bytes
+		) VALUES (?, 0, 'example.test', 7, 'sync', 'NATIVE', ?, ?, ?)`,
+		switchID, testDNSV3Qualifier, recordsJSON, len([]byte(recordsJSON))); err != nil {
 		t.Fatal(err)
 	}
 	for _, phase := range []string{"staging", "staged", "activating", "verifying", "committed"} {
@@ -115,6 +117,16 @@ func TestDNSEngineMigrationCommitsOnlyAnExactFrozenSwitch(t *testing.T) {
 			'example.test', 'bind', 1, 7, 'sync', 'NATIVE', ?, ?, ?, ?, 1
 		)`, testDNSV3Qualifier, strings.Repeat("8", 32), ownerID, switchID); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := database.Exec(`
+		INSERT INTO dns_zone_engine_applications (
+			zone_name, engine, engine_epoch, applied_generation,
+			applied_action, applied_zone_type, qualifier,
+			mutation_request_id, mutation_owner_id, switch_id, revision
+		) VALUES (
+			'second.example.test', 'bind', 1, 3, 'delete', 'MASTER', ?, ?, ?, ?, 1
+		)`, testDNSV3Qualifier, strings.Repeat("8", 32), ownerID, switchID); err != nil {
+		t.Fatalf("reuse one switch request across zones: %v", err)
 	}
 	requireDNSEngineSQLFailure(t, database, "application generation rollback", `
 		UPDATE dns_zone_engine_applications

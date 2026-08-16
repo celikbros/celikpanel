@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"hash"
 	"sort"
@@ -13,11 +14,12 @@ import (
 )
 
 const (
-	dnsZoneSyncV3Schema            = "dns-zone-sync/v3"
-	dnsZoneSyncV3QualifierPrefix   = dnsZoneSyncV3Schema + ":sha256:"
-	dnsEngineSwitchSchema          = "dns-engine-switch/v1"
-	dnsEngineSwitchQualifierPrefix = dnsEngineSwitchSchema + ":sha256:"
-	dnsEngineSwitchMaxZones        = 65536
+	dnsZoneSyncV3Schema                   = "dns-zone-sync/v3"
+	dnsZoneSyncV3QualifierPrefix          = dnsZoneSyncV3Schema + ":sha256:"
+	dnsEngineSwitchSchema                 = "dns-engine-switch/v1"
+	dnsEngineSwitchQualifierPrefix        = dnsEngineSwitchSchema + ":sha256:"
+	dnsEngineSwitchMaxZones               = 65536
+	DNSEngineSwitchMaxSnapshotBytes int64 = 64 << 20
 )
 
 // DNSZoneSyncV3Commitment is an engine- and epoch-bound full-zone snapshot.
@@ -113,6 +115,7 @@ type DNSEngineSwitchManifestCommitment struct {
 	SourceRevision int64
 	Topology       string
 	Zones          []transport.DNSEngineSwitchZoneSnapshot
+	SnapshotBytes  int64
 	Qualifier      string
 }
 
@@ -149,6 +152,7 @@ func CanonicalDNSEngineSwitchManifest(
 	}
 
 	frozen := make([]transport.DNSEngineSwitchZoneSnapshot, len(zones))
+	var snapshotBytes int64
 	for index, zone := range zones {
 		commitment, err := CanonicalDNSZoneSyncV3(
 			targetEngine, targetEpoch, zone.DesiredGeneration,
@@ -165,6 +169,14 @@ func CanonicalDNSEngineSwitchManifest(
 			Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 			Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
 		}
+		recordsJSON, err := MarshalDNSZoneSnapshotRecords(commitment.Records)
+		if err != nil {
+			return DNSEngineSwitchManifestCommitment{}, err
+		}
+		snapshotBytes, err = checkedDNSEngineSnapshotBytes(snapshotBytes, len(recordsJSON))
+		if err != nil {
+			return DNSEngineSwitchManifestCommitment{}, err
+		}
 	}
 	sort.Slice(frozen, func(left, right int) bool {
 		return frozen[left].Domain < frozen[right].Domain
@@ -180,9 +192,32 @@ func CanonicalDNSEngineSwitchManifest(
 		SourceEngine: sourceEngine, TargetEngine: targetEngine,
 		SourceEpoch: sourceEpoch, TargetEpoch: targetEpoch,
 		SourceRevision: sourceRevision, Topology: topology, Zones: frozen,
+		SnapshotBytes: snapshotBytes,
 	}
 	commitment.Qualifier = qualifyDNSEngineSwitch(commitment)
 	return commitment, nil
+}
+
+// MarshalDNSZoneSnapshotRecords returns the exact compact JSON stored in a
+// durable switch-zone row. Empty deletion snapshots are always [] rather than
+// null so SQL constraints and RPC canonicalization share one representation.
+func MarshalDNSZoneSnapshotRecords(records []transport.ZoneRecord) ([]byte, error) {
+	if len(records) == 0 {
+		return []byte("[]"), nil
+	}
+	encoded, err := json.Marshal(records)
+	if err != nil {
+		return nil, errors.New("encode DNS zone snapshot records")
+	}
+	return encoded, nil
+}
+
+func checkedDNSEngineSnapshotBytes(current int64, additional int) (int64, error) {
+	if current < 0 || additional < 0 ||
+		int64(additional) > DNSEngineSwitchMaxSnapshotBytes-current {
+		return 0, errors.New("DNS engine switch snapshot exceeds the 64 MiB limit")
+	}
+	return current + int64(additional), nil
 }
 
 func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string {
@@ -201,6 +236,7 @@ func qualifyDNSEngineSwitch(commitment DNSEngineSwitchManifestCommitment) string
 	writeDNSEngineUint64(digest, commitment.TargetEpoch)
 	writeDNSEngineUint64(digest, commitment.SourceRevision)
 	writeDNSEngineDigestFrame(digest, []byte(commitment.Topology))
+	writeDNSEngineUint64(digest, commitment.SnapshotBytes)
 	writeDNSEngineUint32(digest, len(commitment.Zones))
 	for _, zone := range commitment.Zones {
 		writeDNSEngineUint32(digest, zone.Ordinal)

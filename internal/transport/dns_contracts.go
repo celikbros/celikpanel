@@ -127,6 +127,7 @@ type SwitchDNSEngineV1Request struct {
 	SourceRevision    int64                         `json:"source_revision"`
 	Topology          string                        `json:"topology"`
 	Zones             []DNSEngineSwitchZoneSnapshot `json:"zones"`
+	SnapshotBytes     int64                         `json:"snapshot_bytes"`
 	ManifestQualifier string                        `json:"manifest_qualifier"`
 }
 

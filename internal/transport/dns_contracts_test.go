@@ -126,7 +126,8 @@ func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
 		},
 		SourceEngine: DNSEnginePowerDNS, TargetEngine: DNSEngineBIND,
 		SourceEpoch: 2, TargetEpoch: 3, SourceRevision: 7,
-		Topology: DNSTopologyStandalone,
+		Topology:      DNSTopologyStandalone,
+		SnapshotBytes: 123,
 		Zones: []DNSEngineSwitchZoneSnapshot{{
 			Ordinal: 0, Domain: "example.test", DesiredGeneration: 11,
 			ZoneType: "NATIVE", ZoneQualifier: "dns-zone-sync/v3:sha256:digest",
