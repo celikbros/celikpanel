@@ -21,6 +21,7 @@ export const DNS_ENGINE_STATUSES = [
 export type DNSEngineStatus = (typeof DNS_ENGINE_STATUSES)[number];
 
 export type DNSTopology = 'unconfigured' | 'standalone' | 'paired';
+export type DNSPairRole = 'primary' | 'secondary';
 
 export interface DNSEngineEntry {
     id: DNSEngineID;
@@ -37,6 +38,7 @@ export interface DNSEngineSnapshot {
     active_engine: DNSEngineID | null;
     state: DNSEngineState;
     topology: DNSTopology;
+    pair_role?: DNSPairRole;
     dnssec_zone_count: number;
     zone_count: number;
     pending_zone_count: number;
@@ -131,6 +133,8 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || typeof value.state !== 'string'
         || !engineStates.has(value.state)
         || !isTopology(value.topology)
+        || (value.pair_role !== undefined
+            && value.pair_role !== 'primary' && value.pair_role !== 'secondary')
         || !isNonNegativeInteger(value.dnssec_zone_count)
         || !isNonNegativeInteger(value.zone_count)
         || !isNonNegativeInteger(value.pending_zone_count)
@@ -164,6 +168,10 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (value.state === 'ready' && value.active_engine === null) return null;
     if (value.state === 'switching' && typeof value.operation_id !== 'string') return null;
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
+    if (value.active_engine === 'bind' && value.topology === 'paired'
+        && value.pair_role !== 'primary' && value.pair_role !== 'secondary') return null;
+    if ((value.active_engine === null || value.topology !== 'paired')
+        && value.pair_role !== undefined) return null;
 
     return {
         revision: value.revision,
@@ -171,6 +179,9 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         active_engine: value.active_engine as DNSEngineID | null,
         state: value.state as DNSEngineState,
         topology: value.topology,
+        ...(value.pair_role === 'primary' || value.pair_role === 'secondary'
+            ? { pair_role: value.pair_role }
+            : {}),
         dnssec_zone_count: value.dnssec_zone_count,
         zone_count: value.zone_count,
         pending_zone_count: value.pending_zone_count,

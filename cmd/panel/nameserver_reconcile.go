@@ -331,9 +331,10 @@ func (p *Panel) saveDNSClusterSettingsAndReconcile(ctx context.Context, role, pe
 
 // reconcileDNSEngineTopologyTx keeps the durable publisher topology and the
 // operator-owned DNS identity in the same transaction. A PowerDNS topology
-// transition is authorized only by the exact published cluster saga. BIND is
-// standalone-only, while an unresolved legacy PowerDNS installation retains
-// its settings for explicit adoption without guessing authority.
+// transition is authorized only by the exact published cluster saga. An active
+// BIND pair keeps its inherited topology in the separate epoch-bound pair
+// ledger and is read-only here; unresolved legacy PowerDNS retains its settings
+// for explicit adoption without guessing authority.
 func reconcileDNSEngineTopologyTx(
 	ctx context.Context,
 	tx *sql.Tx,

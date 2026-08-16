@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -27,12 +29,237 @@ const (
 	dnsRCodeNameError = 3
 	dnsRCodeRefused   = 5
 	dnsProbeTimeout   = 4 * time.Second
+	dnsPairProofLimit = 15 * time.Second
 )
 
 type expectedDNSZoneAuthority struct {
 	Domain string
 	Delete bool
 	Serial uint32
+}
+
+func exactDNSZoneSerialAt(
+	ctx context.Context,
+	address, domain string,
+) (uint32, error) {
+	return exactDNSZoneSerialAtWithProbe(
+		ctx, address, domain, probeDNSZoneSOA,
+	)
+}
+
+func exactDNSZoneSerialAtWithProbe(
+	ctx context.Context,
+	address, domain string,
+	probe dnsZoneSOAProbe,
+) (uint32, error) {
+	var serial uint32
+	for index, network := range []string{"udp", "tcp"} {
+		probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
+		result, err := probe(probeCtx, network, address, domain)
+		cancel()
+		if err != nil || !result.Authoritative || result.RCode != dnsRCodeNoError ||
+			len(result.SOASerials) != 1 {
+			if err == nil {
+				err = errors.New("DNS zone did not return one authoritative SOA")
+			}
+			return 0, fmt.Errorf("verify %s DNS SOA: %w", network, err)
+		}
+		if index == 0 {
+			serial = result.SOASerials[0]
+		} else if result.SOASerials[0] != serial {
+			return 0, errors.New("DNS zone UDP and TCP serials differ")
+		}
+	}
+	return serial, nil
+}
+
+func bindLocalProofAddress() (string, error) {
+	for _, candidate := range strings.Split(publicListenAddresses(), ",") {
+		address := strings.TrimSpace(candidate)
+		ip := net.ParseIP(address)
+		if ip != nil && !ip.IsUnspecified() && !ip.IsLoopback() && !ip.IsLinkLocalUnicast() {
+			return address, nil
+		}
+	}
+	return "", errors.New("no safe public address is available for BIND pair verification")
+}
+
+var dnsPairLocalProofAddress = bindLocalProofAddress
+
+func verifyBINDPairingAuthority(
+	ctx context.Context,
+	receipt binddns.Receipt,
+) error {
+	pairing := receipt.Pairing
+	if pairing == nil {
+		return nil
+	}
+	localAddress, err := dnsPairLocalProofAddress()
+	if err != nil {
+		return err
+	}
+	return verifyBINDPairingAuthorityAt(
+		ctx, receipt, localAddress, probeDNSZoneSOA, probeDNSCatalogAXFR,
+	)
+}
+
+func verifyBINDPairingAuthorityAt(
+	ctx context.Context,
+	receipt binddns.Receipt,
+	localAddress string,
+	probe dnsZoneSOAProbe,
+	axfr dnsCatalogAXFRProbe,
+) error {
+	pairing := receipt.Pairing
+	if pairing == nil {
+		return nil
+	}
+	if pairing.Role == binddns.PairRolePrimary {
+		catalog, err := axfr(ctx, localAddress, pairing.LocalCatalog)
+		if err != nil {
+			return err
+		}
+		if catalog.Serial != pairing.CatalogSerial {
+			return errors.New("BIND primary catalog serial differs from its receipt")
+		}
+		expected := make([]string, 0, len(receipt.Zones))
+		for _, zone := range receipt.Zones {
+			if !zone.Delete {
+				expected = append(expected, zone.Domain)
+			}
+		}
+		sort.Strings(expected)
+		if strings.Join(expected, "\x00") != strings.Join(catalog.Members, "\x00") {
+			return errors.New("BIND primary catalog members differ from its receipt")
+		}
+		if err := waitForExactBINDPairZoneSet(
+			ctx, localAddress, pairing.PeerIP, expected, probe,
+		); err != nil {
+			return errors.New("BIND primary zones did not converge on the paired peer")
+		}
+		return nil
+	}
+	if pairing.Role != binddns.PairRoleSecondary {
+		return errors.New("BIND pair receipt has an unknown role")
+	}
+	peerCatalog, err := axfr(ctx, pairing.PeerIP, pairing.PeerCatalog)
+	if err != nil {
+		return errors.New("BIND peer catalog is not available")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	for {
+		localSerial, localErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, localAddress, pairing.PeerCatalog, probe,
+		)
+		if localErr == nil && localSerial == peerCatalog.Serial {
+			if err := waitForExactBINDPairZoneSet(
+				proofCtx, localAddress, pairing.PeerIP, peerCatalog.Members, probe,
+			); err != nil {
+				return errors.New("BIND secondary did not receive every exact peer zone")
+			}
+			return nil
+		}
+		select {
+		case <-proofCtx.Done():
+			return errors.New("BIND secondary did not receive the exact peer catalog")
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+}
+
+func waitForExactBINDPairZoneSet(
+	ctx context.Context,
+	localAddress, peerAddress string,
+	members []string,
+	probe dnsZoneSOAProbe,
+) error {
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	for {
+		exact := true
+		for _, member := range members {
+			peerSerial, peerErr := exactDNSZoneSerialAtWithProbe(
+				proofCtx, peerAddress, member, probe,
+			)
+			localSerial, localErr := exactDNSZoneSerialAtWithProbe(
+				proofCtx, localAddress, member, probe,
+			)
+			if peerErr != nil || localErr != nil || peerSerial != localSerial {
+				exact = false
+				break
+			}
+		}
+		if exact {
+			return nil
+		}
+		select {
+		case <-proofCtx.Done():
+			return proofCtx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+}
+
+func verifyPDNSPairingAuthority(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	if manifest.Topology != transport.DNSTopologyPaired {
+		return nil
+	}
+	localAddress, err := dnsPairLocalProofAddress()
+	if err != nil {
+		return err
+	}
+	if manifest.PairRole == transport.DNSPairRolePrimary {
+		domain, err := binddns.CatalogDomain(manifest.LocalIP)
+		if err != nil {
+			return err
+		}
+		catalog, err := probeDNSCatalogAXFR(ctx, localAddress, domain)
+		if err != nil {
+			return errors.New("PowerDNS primary catalog is unavailable")
+		}
+		expected := make([]string, 0, len(manifest.Zones))
+		for _, zone := range manifest.Zones {
+			if !zone.Delete {
+				expected = append(expected, zone.Domain)
+			}
+		}
+		sort.Strings(expected)
+		if strings.Join(expected, "\x00") != strings.Join(catalog.Members, "\x00") {
+			return errors.New("PowerDNS primary catalog members differ from the switch manifest")
+		}
+		return waitForExactBINDPairZoneSet(
+			ctx, localAddress, manifest.PeerIP, expected, probeDNSZoneSOA,
+		)
+	}
+	if manifest.PairRole != transport.DNSPairRoleSecondary {
+		return errors.New("PowerDNS pair role is invalid")
+	}
+	catalog, domain, err := peerPDNSCatalog(ctx, manifest)
+	if err != nil {
+		return err
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	for {
+		serial, localErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, localAddress, domain, probeDNSZoneSOA,
+		)
+		if localErr == nil && serial == catalog.Serial {
+			return waitForExactBINDPairZoneSet(
+				proofCtx, localAddress, manifest.PeerIP,
+				catalog.Members, probeDNSZoneSOA,
+			)
+		}
+		select {
+		case <-proofCtx.Done():
+			return errors.New("PowerDNS secondary did not receive the exact peer catalog")
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
 }
 
 type dnsSOAProbeResult struct {

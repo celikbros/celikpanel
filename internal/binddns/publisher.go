@@ -115,6 +115,17 @@ func (publisher *Publisher) Stage(ctx context.Context, generation Generation) er
 			return fmt.Errorf("validate BIND zone %s: %w", zone.Domain, err)
 		}
 	}
+	if canonical.Catalog != nil {
+		catalogPath := path.Join(zonesPath, canonical.Catalog.FileName)
+		if err := publisher.writeImmutableFile(catalogPath, canonical.Catalog.Data); err != nil {
+			return fmt.Errorf("stage BIND catalog zone: %w", err)
+		}
+		if _, err := publisher.runner.Run(
+			ctx, publisher.checkZone, canonical.Catalog.Domain, catalogPath,
+		); err != nil {
+			return fmt.Errorf("validate BIND catalog zone: %w", err)
+		}
+	}
 	configPath := path.Join(stagePath, "zones.conf")
 	if err := publisher.writeImmutableFile(configPath, canonical.Config); err != nil {
 		return fmt.Errorf("stage BIND zone configuration: %w", err)
@@ -151,7 +162,7 @@ func (publisher *Publisher) Stage(ctx context.Context, generation Generation) er
 }
 
 func (publisher *Publisher) canonicalGeneration(generation Generation) (Generation, error) {
-	files := make(map[string][]byte, len(generation.Zones))
+	files := make(map[string][]byte, len(generation.Zones)+1)
 	for _, zone := range generation.Zones {
 		file := path.Join("zones", zone.FileName)
 		if _, exists := files[file]; exists {
@@ -159,14 +170,18 @@ func (publisher *Publisher) canonicalGeneration(generation Generation) (Generati
 		}
 		files[file] = append([]byte(nil), zone.Data...)
 	}
+	if generation.Catalog != nil {
+		file := path.Join("zones", generation.Catalog.FileName)
+		if _, exists := files[file]; exists {
+			return Generation{}, fmt.Errorf("BIND generation repeats catalog file %q", file)
+		}
+		files[file] = append([]byte(nil), generation.Catalog.Data...)
+	}
 	tree, err := VerifyTree(generation.Receipt, generation.Config, files)
 	if err != nil {
 		return Generation{}, err
 	}
-	canonical, err := RenderTree(publisher.root, TreePlan{
-		engineEpoch: tree.receipt.EngineEpoch,
-		zones:       cloneTreeZones(tree.zones),
-	})
+	canonical, err := RenderTree(publisher.root, planFromVerifiedTree(tree))
 	if err != nil {
 		return Generation{}, err
 	}
@@ -267,10 +282,7 @@ func (publisher *Publisher) verifyExistingMatches(finalPath string, expected Gen
 	if !bytes.Equal(receiptBytes, expected.Receipt) || !bytes.Equal(configBytes, expected.Config) {
 		return errors.New("existing BIND generation ID has different immutable content")
 	}
-	canonical, err := RenderTree(publisher.root, TreePlan{
-		engineEpoch: tree.receipt.EngineEpoch,
-		zones:       cloneTreeZones(tree.zones),
-	})
+	canonical, err := RenderTree(publisher.root, planFromVerifiedTree(tree))
 	if err != nil || canonical.ID != expected.ID {
 		return errors.New("existing BIND generation cannot be reconstructed exactly")
 	}
@@ -313,8 +325,8 @@ func (publisher *Publisher) readGeneration(generationPath, expectedID string) (V
 	if err != nil {
 		return VerifiedTree{}, nil, nil, err
 	}
-	expectedNames := make([]string, 0, len(receipt.Zones))
-	files := make(map[string][]byte, len(receipt.Zones))
+	expectedNames := make([]string, 0, len(receipt.Zones)+1)
+	files := make(map[string][]byte, len(receipt.Zones)+1)
 	for _, zone := range receipt.Zones {
 		if zone.Delete {
 			continue
@@ -326,6 +338,15 @@ func (publisher *Publisher) readGeneration(generationPath, expectedID string) (V
 			return VerifiedTree{}, nil, nil, err
 		}
 		files[zone.File] = data
+	}
+	if receipt.Pairing != nil && receipt.Pairing.Role == PairRolePrimary {
+		name := path.Base(receipt.Pairing.CatalogFile)
+		expectedNames = append(expectedNames, name)
+		data, err := publisher.readImmutableFile(path.Join(zonesPath, name))
+		if err != nil {
+			return VerifiedTree{}, nil, nil, err
+		}
+		files[receipt.Pairing.CatalogFile] = data
 	}
 	if !equalNames(zoneNames, expectedNames) {
 		return VerifiedTree{}, nil, nil, errors.New("BIND generation zone directory does not match its receipt")

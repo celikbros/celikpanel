@@ -562,6 +562,15 @@ func (hostDNSEngineBackend) Sync(
 		}}); err != nil {
 			return err
 		}
+		currentTree, err := publisher.LoadCurrent()
+		if err != nil {
+			return err
+		}
+		if err := verifyBINDPairingAuthority(
+			applyCtx, currentTree.CurrentReceipt(),
+		); err != nil {
+			return err
+		}
 		if attempt > 1 {
 			return restoreDNSFileSnapshot(stateBefore)
 		}
@@ -710,8 +719,19 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
-		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
+		if err := verifyUnsignedPowerDNSForManifest(ctx, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if _, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
+			return transport.SwitchDNSEngineV1Response{},
+				errors.New("paired primary catalog is unavailable")
 		}
 	}
 	targetBefore, err := captureDNSUnitStates(
@@ -799,7 +819,9 @@ func (hostDNSEngineBackend) Switch(
 		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
 		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
 		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
-		Topology: manifest.Topology, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		Topology: manifest.Topology,
+		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
 		TargetGeneration: generation.ID, PreviousGeneration: previousGeneration,
 		HadPrevious: hadPrevious, StateBefore: stateBefore,
@@ -866,6 +888,15 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		if err := verifyDNSZoneManifestAuthority(applyCtx, manifest.Zones); err != nil {
+			return err
+		}
+		currentTree, err := publisher.LoadCurrent()
+		if err != nil {
+			return err
+		}
+		if err := verifyBINDPairingAuthority(
+			applyCtx, currentTree.CurrentReceipt(),
+		); err != nil {
 			return err
 		}
 		nextState := dnsEngineStateReceipt{
@@ -957,7 +988,16 @@ func bindSwitchTreePlan(
 			Records:           zone.Records,
 		}
 	}
-	return binddns.NewTreePlan(binddns.Manifest{EngineEpoch: manifest.TargetEpoch, Zones: zones})
+	var pairing *binddns.Pairing
+	if manifest.Topology == transport.DNSTopologyPaired {
+		pairing = &binddns.Pairing{
+			Role: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+			PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		}
+	}
+	return binddns.NewTreePlan(binddns.Manifest{
+		EngineEpoch: manifest.TargetEpoch, Pairing: pairing, Zones: zones,
+	})
 }
 
 func verifyCompletedBINDEngineSwitch(
@@ -991,6 +1031,9 @@ func verifyCompletedBINDEngineSwitch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, zones); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if err := verifyBINDPairingAuthority(ctx, receipt); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{
@@ -1067,6 +1110,16 @@ func verifyDNSEngineSwitchSource(
 			receipt := tree.CurrentReceipt()
 			if receipt.Generation != state.Generation || receipt.EngineEpoch != state.EngineEpoch {
 				return errors.New("BIND source receipt differs from its immutable current generation")
+			}
+			if manifest.Topology == transport.DNSTopologyPaired {
+				pairing := receipt.Pairing
+				if pairing == nil || pairing.Role != manifest.PairRole ||
+					pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
+					pairing.PeerIP != manifest.PeerIP || pairing.PeerNS != manifest.PeerNS {
+					return errors.New("BIND source pair identity differs from the switch manifest")
+				}
+			} else if receipt.Pairing != nil {
+				return errors.New("standalone switch found a paired BIND source")
 			}
 			return verifyOnlyBINDActive(ctx, systemctl)
 		default:
@@ -1339,6 +1392,9 @@ func syncPDNSV3Zone(
 	}}); err != nil {
 		return "", err
 	}
+	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
+		return "", err
+	}
 	return commitment.Qualifier, nil
 }
 
@@ -1372,6 +1428,9 @@ func recoverPDNSV3Zone(
 		return false, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
+		return false, err
+	}
+	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
 		return false, err
 	}
 	return true, nil

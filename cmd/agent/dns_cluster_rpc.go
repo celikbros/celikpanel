@@ -708,6 +708,20 @@ func convergeDNSClusterConfig(
 		_ = db.Close()
 		return nil, err
 	}
+	localIP := ""
+	if commitment.Role == dnsRolePaired {
+		localIP, err = dnsPairLocalProofAddress()
+		if err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("resolve PowerDNS catalog identity: %w", err)
+		}
+	}
+	if _, err := reconcilePDNSBINDCatalogTx(
+		ctx, tx, commitment.Role == dnsRolePaired, localIP,
+	); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("reconcile PowerDNS pair catalog: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("commit PowerDNS cluster transaction: %w", err)
@@ -720,6 +734,11 @@ func convergeDNSClusterConfig(
 	}
 	if err := verifyDNSClusterConfig(commitment, config); err != nil {
 		return nil, err
+	}
+	if commitment.Role == dnsRolePaired {
+		if err := verifyManagedPDNSBINDCatalogLive(ctx); err != nil {
+			return nil, fmt.Errorf("verify PowerDNS pair catalog: %w", err)
+		}
 	}
 	return peerZones, nil
 }

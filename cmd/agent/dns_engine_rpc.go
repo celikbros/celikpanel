@@ -410,7 +410,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		response.Error = "DNS engine switch request is required"
 		return nil
 	}
-	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		request.Mode,
 		request.SourceEngine,
 		request.TargetEngine,
@@ -418,6 +418,9 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		request.TargetEpoch,
 		request.SourceRevision,
 		request.Topology,
+		request.PairRole,
+		request.LocalIP,
+		request.LocalNS,
 		request.PeerIP,
 		request.PeerNS,
 		request.Zones,

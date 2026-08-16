@@ -60,6 +60,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	oldRestart := dnsClusterRestart
 	oldRetrieve := dnsClusterRetrieve
 	oldPurge := dnsClusterPurge
+	oldCatalogProbe := probeDNSCatalogAXFR
 	oldApply := dnsClusterApplyAutoprimaryTx
 	oldSetType := dnsClusterSetLocalZoneTypeTx
 	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
@@ -72,6 +73,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 		dnsClusterRestart = oldRestart
 		dnsClusterRetrieve = oldRetrieve
 		dnsClusterPurge = oldPurge
+		probeDNSCatalogAXFR = oldCatalogProbe
 		dnsClusterApplyAutoprimaryTx = oldApply
 		dnsClusterSetLocalZoneTypeTx = oldSetType
 		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
@@ -98,6 +100,30 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	dnsClusterRestart = func(context.Context) ([]byte, error) { return nil, nil }
 	dnsClusterRetrieve = func(context.Context, string) ([]byte, error) { return nil, nil }
 	dnsClusterPurge = func(context.Context, string) ([]byte, error) { return nil, nil }
+	probeDNSCatalogAXFR = func(_ context.Context, _ string, domain string) (dnsCatalogAXFRResult, error) {
+		db, err := openPDNSEngineDB(pdnsDBPath(), true)
+		if err != nil {
+			return dnsCatalogAXFRResult{}, err
+		}
+		defer db.Close()
+		rows, err := db.Query(`
+			SELECT name FROM domains WHERE catalog = ? COLLATE NOCASE
+			ORDER BY name COLLATE BINARY
+		`, domain)
+		if err != nil {
+			return dnsCatalogAXFRResult{}, err
+		}
+		defer rows.Close()
+		result := dnsCatalogAXFRResult{Serial: 1}
+		for rows.Next() {
+			var member string
+			if err := rows.Scan(&member); err != nil {
+				return dnsCatalogAXFRResult{}, err
+			}
+			result.Members = append(result.Members, member)
+		}
+		return result, rows.Err()
+	}
 	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
 	return dnsClusterConf

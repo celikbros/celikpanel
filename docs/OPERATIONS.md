@@ -334,12 +334,20 @@ requires the explicit interruption checkbox; no typed phrase is used. A
 registration-only legacy PowerDNS adoption expects no interruption because it
 only proves and records existing state.
 
-Normal PowerDNS↔BIND switching currently requires **Standalone** topology.
-Paired topology, any DNSSEC zone, pending zone publication, unmanaged DNS, a
-TCP/UDP port-53 conflict, a degraded source or another server/DNS operation
-blocks confirmation. BIND identity is standalone-only; Paired DNS remains a
-PowerDNS capability. Resolve blockers through their explicit panel workflows
-and request a fresh preview. Do not edit cluster, DNSSEC or daemon state, or
+PowerDNS↔BIND switching is bidirectional in both **Standalone** and verified
+**Paired** topology. The saved NS pair determines the server roles:
+Frankfurt/NS1 is primary and Boston/NS2 is secondary. Engine choice is
+independent per node, so PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS and
+PowerDNS/BIND are all supported. The primary publishes an engine-neutral
+Catalog Zone v2; the secondary consumes it through standard AXFR/NOTIFY and
+must prove the exact catalog serial and every member SOA over UDP and TCP before
+a cutover commits. The paired identity is read-only while either node uses
+BIND. Any DNSSEC zone, pending zone publication,
+unmanaged DNS, a TCP/UDP port-53 conflict, a degraded source or another
+server/DNS operation blocks confirmation. Resolve blockers through their explicit panel workflows
+and request a fresh preview. Establish or repair the pair on the primary first,
+then change engines on one node at a time; never cut over both authorities
+simultaneously. Do not edit cluster, DNSSEC or daemon state, or
 clear operation rows, by hand to bypass a blocker.
 
 During an allowed install or switch, the complete desired zone set is frozen

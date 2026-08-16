@@ -29,6 +29,7 @@ type manifestDigestDocument struct {
 	Schema      string               `json:"schema"`
 	Engine      string               `json:"engine"`
 	EngineEpoch int64                `json:"engine_epoch"`
+	Pairing     *PairingReceipt      `json:"pairing,omitempty"`
 	Zones       []manifestDigestZone `json:"zones"`
 }
 
@@ -37,6 +38,16 @@ type manifestDigestDocument struct {
 func NewTreePlan(manifest Manifest) (TreePlan, error) {
 	if manifest.EngineEpoch <= 0 {
 		return TreePlan{}, errors.New("BIND engine epoch must be positive")
+	}
+	var pairing *Pairing
+	var catalogSerial uint32
+	if manifest.Pairing != nil {
+		canonical, err := canonicalPairing(*manifest.Pairing)
+		if err != nil {
+			return TreePlan{}, err
+		}
+		pairing = &canonical
+		catalogSerial = 1
 	}
 	zones := make([]treeZone, len(manifest.Zones))
 	for index, snapshot := range manifest.Zones {
@@ -49,7 +60,17 @@ func NewTreePlan(manifest Manifest) (TreePlan, error) {
 	if err := sortAndValidateTreeZones(zones); err != nil {
 		return TreePlan{}, err
 	}
-	return TreePlan{engineEpoch: manifest.EngineEpoch, zones: cloneTreeZones(zones)}, nil
+	if pairing != nil && pairing.Role == PairRoleSecondary {
+		for _, zone := range zones {
+			if !zone.receipt.Delete {
+				return TreePlan{}, errors.New("BIND secondary cannot publish panel-owned primary zones")
+			}
+		}
+	}
+	return TreePlan{
+		engineEpoch: manifest.EngineEpoch, pairing: clonePairing(pairing),
+		catalogSerial: catalogSerial, zones: cloneTreeZones(zones),
+	}, nil
 }
 
 // RenderManifest freezes an order-independent manifest into a deterministic
@@ -74,8 +95,29 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 	if err := sortAndValidateTreeZones(zones); err != nil {
 		return Generation{}, err
 	}
+	var pairing *Pairing
+	var catalog []byte
+	var pairingValue *PairingReceipt
+	if plan.pairing != nil {
+		canonical, err := canonicalPairing(*plan.pairing)
+		if err != nil {
+			return Generation{}, err
+		}
+		if plan.catalogSerial == 0 {
+			return Generation{}, errors.New("BIND paired tree has no catalog serial")
+		}
+		pairing = &canonical
+		catalog, err = renderCatalogZone(canonical, plan.catalogSerial, zones)
+		if err != nil {
+			return Generation{}, err
+		}
+		receipt := pairingReceipt(root, canonical, plan.catalogSerial, catalog)
+		pairingValue = &receipt
+	}
 
-	generationID, err := manifestGenerationID(plan.engineEpoch, receiptsFromTreeZones(zones))
+	generationID, err := manifestGenerationID(
+		plan.engineEpoch, root, pairingValue, receiptsFromTreeZones(zones),
+	)
 	if err != nil {
 		return Generation{}, err
 	}
@@ -95,11 +137,15 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 			continue
 		}
 		absoluteFile := path.Join(root, "generations", generationID, zone.receipt.File)
-		config.WriteString("zone \"")
-		config.WriteString(zone.receipt.Domain)
-		config.WriteString("\" {\n\ttype master;\n\tfile \"")
-		config.WriteString(absoluteFile)
-		config.WriteString("\";\n};\n")
+		if pairing != nil && pairing.Role == PairRolePrimary {
+			appendPrimaryZoneConfig(&config, zone.receipt.Domain, absoluteFile, *pairing)
+		} else {
+			config.WriteString("zone \"")
+			config.WriteString(zone.receipt.Domain)
+			config.WriteString("\" {\n\ttype master;\n\tfile \"")
+			config.WriteString(absoluteFile)
+			config.WriteString("\";\n};\n")
+		}
 		rendered = append(rendered, RenderedZone{
 			Domain:         zone.receipt.Domain,
 			FileName:       path.Base(zone.receipt.File),
@@ -110,14 +156,33 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 			EnabledRecords: zone.receipt.EnabledRecords,
 		})
 	}
+	var renderedCatalog *RenderedZone
+	if pairing != nil {
+		if pairing.Role == PairRolePrimary {
+			appendPrimaryCatalogConfig(&config, root, generationID, *pairing)
+			renderedCatalog = &RenderedZone{
+				Domain:         pairingValue.LocalCatalog,
+				FileName:       path.Base(pairingValue.CatalogFile),
+				Data:           append([]byte(nil), catalog...),
+				RenderedSHA256: pairingValue.CatalogSHA256,
+			}
+		} else {
+			appendSecondaryCatalogConfig(&config, root, *pairing)
+		}
+	}
 	configBytes := []byte(config.String())
+	schema := receiptSchemaV1
+	if pairingValue != nil {
+		schema = receiptSchemaV2
+	}
 	receiptValue := Receipt{
 		EngineEpoch:    plan.engineEpoch,
-		Schema:         receiptSchema,
+		Schema:         schema,
 		Engine:         engineName,
 		Generation:     generationID,
 		ManifestSHA256: generationID,
 		ConfigSHA256:   sha256Hex(configBytes),
+		Pairing:        pairingValue,
 		Zones:          receiptZones,
 	}
 	if receiptValue.Zones == nil {
@@ -130,6 +195,7 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 	return Generation{
 		ID:           generationID,
 		Zones:        rendered,
+		Catalog:      renderedCatalog,
 		Config:       append([]byte(nil), configBytes...),
 		Receipt:      receiptBytes,
 		ReceiptValue: cloneReceipt(receiptValue),
@@ -176,7 +242,12 @@ func snapshotToTreeZone(snapshot ZoneSnapshot) (treeZone, error) {
 	return treeZone{receipt: receipt, data: data}, nil
 }
 
-func manifestGenerationID(engineEpoch int64, zones []ZoneReceipt) (string, error) {
+func manifestGenerationID(
+	engineEpoch int64,
+	root string,
+	pairing *PairingReceipt,
+	zones []ZoneReceipt,
+) (string, error) {
 	digestZones := make([]manifestDigestZone, len(zones))
 	for index, zone := range zones {
 		digestZones[index] = manifestDigestZone{
@@ -193,10 +264,18 @@ func manifestGenerationID(engineEpoch int64, zones []ZoneReceipt) (string, error
 			EnabledRecords:    zone.EnabledRecords,
 		}
 	}
+	schema := manifestSchemaV1
+	if pairing != nil {
+		if err := validatePairingReceipt(root, pairing); err != nil {
+			return "", err
+		}
+		schema = manifestSchemaV2
+	}
 	encoded, err := json.Marshal(manifestDigestDocument{
-		Schema:      manifestSchema,
+		Schema:      schema,
 		Engine:      engineName,
 		EngineEpoch: engineEpoch,
+		Pairing:     pairing,
 		Zones:       digestZones,
 	})
 	if err != nil {

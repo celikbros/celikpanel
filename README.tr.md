@@ -56,7 +56,7 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 > ⚠️ **Üretime hazır değildir.** Faz 0 güvenlik sprinti (kimlik doğrulama, agent kilitleme, injection düzeltmeleri) devam ediyor. Paneli henüz internete açmayın.
 
-**Bugün çalışanlar** (işlevsel, sertleştirme sürüyor): domain ve site yönetimi · PHP sürüm seçimi ve FPM havuzları · SSL (Let's Encrypt + özel sertifika) · yetkili DNS (panelden seçilen PowerDNS veya BIND; önizlemeli ve kurtarılabilir tek-sunucu değişimi) · e-posta hesapları ve yönlendirme · çoklu sunucu destekli veritabanı yönetimi (MariaDB/PostgreSQL) · dosya yöneticisi · yedekleme/geri yükleme · cron · log görüntüleme · 14 servis için servis kontrolü.
+**Bugün çalışanlar** (işlevsel, sertleştirme sürüyor): domain ve site yönetimi · PHP sürüm seçimi ve FPM havuzları · SSL (Let's Encrypt + özel sertifika) · yetkili DNS (her düğümde bağımsız seçilen PowerDNS veya BIND; önizlemeli ve kurtarılabilir tek-sunucu ya da eşli değişim) · e-posta hesapları ve yönlendirme · çoklu sunucu destekli veritabanı yönetimi (MariaDB/PostgreSQL) · dosya yöneticisi · yedekleme/geri yükleme · cron · log görüntüleme · 14 servis için servis kontrolü.
 
 **Sırada ne var:** [Yol Haritası](ROADMAP.tr.md) — Faz 0 güvenlik sprinti → Faz 1 altın yolun sertleştirilmesi → Faz 2 60 saniyelik kurulum → Faz 3 WordPress toolkit + cPanel importer.
 

@@ -6,10 +6,31 @@ package binddns
 import "github.com/alicelik/celikpanel/internal/transport"
 
 const (
-	manifestSchema = "celikpanel-bind-manifest/v1"
-	receiptSchema  = "celikpanel-bind-generation-receipt/v1"
-	engineName     = "bind"
+	manifestSchema   = "celikpanel-bind-manifest/v1"
+	manifestSchemaV1 = "celikpanel-bind-manifest/v1"
+	manifestSchemaV2 = "celikpanel-bind-manifest/v2"
+	receiptSchemaV1  = "celikpanel-bind-generation-receipt/v1"
+	receiptSchemaV2  = "celikpanel-bind-generation-receipt/v2"
+	engineName       = "bind"
 )
+
+const (
+	PairRolePrimary   = "primary"
+	PairRoleSecondary = "secondary"
+)
+
+// Pairing is the immutable directional identity for a BIND pair. The server
+// owning NS1 is the primary and publishes a catalog zone; the server owning
+// NS2 is the secondary and subscribes to that catalog. Keeping this identity
+// inside each generation prevents mutable panel settings from changing AXFR
+// authority during recovery.
+type Pairing struct {
+	Role    string
+	LocalIP string
+	LocalNS string
+	PeerIP  string
+	PeerNS  string
+}
 
 // ZoneSnapshot is one complete desired zone image. Delete is a tombstone and
 // therefore requires Records to be empty. DesiredGeneration is the panel
@@ -28,6 +49,7 @@ type ZoneSnapshot struct {
 // generation. Zone order is intentionally insignificant.
 type Manifest struct {
 	EngineEpoch int64
+	Pairing     *Pairing
 	Zones       []ZoneSnapshot
 }
 
@@ -61,19 +83,38 @@ type ZoneReceipt struct {
 
 // Receipt is written as canonical JSON inside every immutable generation.
 type Receipt struct {
-	EngineEpoch    int64         `json:"engine_epoch"`
-	Schema         string        `json:"schema"`
-	Engine         string        `json:"engine"`
-	Generation     string        `json:"generation"`
-	ManifestSHA256 string        `json:"manifest_sha256"`
-	ConfigSHA256   string        `json:"config_sha256"`
-	Zones          []ZoneReceipt `json:"zones"`
+	EngineEpoch    int64           `json:"engine_epoch"`
+	Schema         string          `json:"schema"`
+	Engine         string          `json:"engine"`
+	Generation     string          `json:"generation"`
+	ManifestSHA256 string          `json:"manifest_sha256"`
+	ConfigSHA256   string          `json:"config_sha256"`
+	Pairing        *PairingReceipt `json:"pairing,omitempty"`
+	Zones          []ZoneReceipt   `json:"zones"`
+}
+
+// PairingReceipt binds both sides of the AXFR relationship and the exact
+// catalog bytes. Secondary generations have no local catalog file: they bind
+// the expected peer catalog name and memory-only transfer policy instead.
+type PairingReceipt struct {
+	Role          string `json:"role"`
+	LocalIP       string `json:"local_ip"`
+	LocalNS       string `json:"local_ns"`
+	PeerIP        string `json:"peer_ip"`
+	PeerNS        string `json:"peer_ns"`
+	LocalCatalog  string `json:"local_catalog"`
+	PeerCatalog   string `json:"peer_catalog"`
+	CatalogSerial uint32 `json:"catalog_serial"`
+	CatalogFile   string `json:"catalog_file,omitempty"`
+	CatalogSHA256 string `json:"catalog_sha256,omitempty"`
+	InMemory      bool   `json:"in_memory,omitempty"`
 }
 
 // Generation is a fully rendered immutable tree before it is written.
 type Generation struct {
 	ID           string
 	Zones        []RenderedZone
+	Catalog      *RenderedZone
 	Config       []byte
 	Receipt      []byte
 	ReceiptValue Receipt
@@ -86,13 +127,16 @@ type Generation struct {
 type VerifiedTree struct {
 	receipt Receipt
 	zones   []treeZone
+	catalog []byte
 }
 
 // TreePlan is a path- and runner-independent complete generation plan. It can
 // be built from a full Manifest or by applying one delta to a VerifiedTree.
 type TreePlan struct {
-	engineEpoch int64
-	zones       []treeZone
+	engineEpoch   int64
+	pairing       *Pairing
+	catalogSerial uint32
+	zones         []treeZone
 }
 
 type treeZone struct {
@@ -102,6 +146,9 @@ type treeZone struct {
 
 // EngineEpoch reports the engine selection epoch bound into this plan.
 func (plan TreePlan) EngineEpoch() int64 { return plan.engineEpoch }
+
+// Pairing returns a defensive copy of the directional BIND pair identity.
+func (plan TreePlan) Pairing() *Pairing { return clonePairing(plan.pairing) }
 
 // CurrentReceipt returns a value copy of the verified current receipt.
 func (tree VerifiedTree) CurrentReceipt() Receipt { return cloneReceipt(tree.receipt) }

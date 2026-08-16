@@ -8,6 +8,8 @@ const (
 
 	DNSTopologyStandalone = "standalone"
 	DNSTopologyPaired     = "paired"
+	DNSPairRolePrimary    = "primary"
+	DNSPairRoleSecondary  = "secondary"
 
 	DNSEngineSwitchModeSwitch = "switch"
 	DNSEngineSwitchModeAdopt  = "adopt"
@@ -131,6 +133,9 @@ type SwitchDNSEngineV1Request struct {
 	TargetEpoch       int64                         `json:"target_epoch"`
 	SourceRevision    int64                         `json:"source_revision"`
 	Topology          string                        `json:"topology"`
+	PairRole          string                        `json:"pair_role,omitempty"`
+	LocalIP           string                        `json:"local_ip,omitempty"`
+	LocalNS           string                        `json:"local_ns,omitempty"`
 	PeerIP            string                        `json:"peer_ip,omitempty"`
 	PeerNS            string                        `json:"peer_ns,omitempty"`
 	Zones             []DNSEngineSwitchZoneSnapshot `json:"zones"`

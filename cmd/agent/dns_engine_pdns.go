@@ -150,6 +150,15 @@ func buildPDNSSwitchCandidate(
 			_ = db.Close()
 		}
 	}()
+	var peerCatalog dnsCatalogAXFRResult
+	peerCatalogDomain := ""
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		peerCatalog, peerCatalogDomain, err = peerPDNSCatalog(ctx, manifest)
+		if err != nil {
+			return err
+		}
+	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
@@ -170,6 +179,20 @@ func buildPDNSSwitchCandidate(
 		}
 		if err := applyPDNSV3ZoneTx(ctx, tx, commitment, binding, false); err != nil {
 			return err
+		}
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary {
+		if _, err := reconcilePDNSBINDCatalogTx(ctx, tx, true, manifest.LocalIP); err != nil {
+			return fmt.Errorf("stage PowerDNS pair catalog: %w", err)
+		}
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		if err := stagePDNSPairSecondaryTx(
+			ctx, tx, manifest, peerCatalog, peerCatalogDomain,
+		); err != nil {
+			return fmt.Errorf("stage PowerDNS secondary zones: %w", err)
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `
@@ -460,6 +483,9 @@ func applyPDNSV3ZoneDatabase(
 	if err := applyPDNSV3ZoneTx(ctx, tx, commitment, binding, true); err != nil {
 		return err
 	}
+	if _, _, err := reconcileManagedPDNSBINDCatalogTx(ctx, tx); err != nil {
+		return fmt.Errorf("reconcile managed PowerDNS catalog: %w", err)
+	}
 	commitErr := tx.Commit()
 	committed = commitErr == nil
 	verified, verifyErr := verifyPDNSV3ZoneDatabase(
@@ -630,6 +656,15 @@ func verifyPDNSSwitchDatabase(
 		return err
 	}
 	defer tx.Rollback()
+	var peerCatalog dnsCatalogAXFRResult
+	peerCatalogDomain := ""
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		peerCatalog, peerCatalogDomain, err = peerPDNSCatalog(ctx, manifest)
+		if err != nil {
+			return err
+		}
+	}
 	var engine string
 	var epoch, sourceRevision, zoneCount, snapshotBytes int64
 	var requestID, ownerID, qualifier, schema string
@@ -685,6 +720,30 @@ func verifyPDNSSwitchDatabase(
 		if !zone.Delete {
 			expectedDomains++
 		}
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary {
+		expectedMembers := make([]string, 0, len(manifest.Zones))
+		for _, zone := range manifest.Zones {
+			if !zone.Delete {
+				expectedMembers = append(expectedMembers, zone.Domain)
+			}
+		}
+		if err := verifyPDNSProducerMembershipTx(
+			ctx, tx, manifest.LocalIP, expectedMembers,
+		); err != nil {
+			return fmt.Errorf("verify PowerDNS pair catalog: %w", err)
+		}
+		expectedDomains++
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		if err := verifyPDNSPairSecondaryTx(
+			ctx, tx, manifest, peerCatalog, peerCatalogDomain,
+		); err != nil {
+			return err
+		}
+		expectedDomains++
 	}
 	if receiptCount != len(manifest.Zones) || domainCount != expectedDomains {
 		return errors.New("PowerDNS switch database contains unreceipted zones")
