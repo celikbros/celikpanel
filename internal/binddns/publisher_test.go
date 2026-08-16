@@ -3,11 +3,13 @@ package binddns
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"path"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 )
 
 type memoryNode struct {
@@ -19,12 +21,13 @@ type memoryNode struct {
 }
 
 type memoryFS struct {
-	nodes map[string]*memoryNode
-	syncs []string
+	nodes      map[string]*memoryNode
+	syncs      []string
+	syncErrors map[string]error
 }
 
 func newMemoryFS() *memoryFS {
-	filesystem := &memoryFS{nodes: map[string]*memoryNode{}}
+	filesystem := &memoryFS{nodes: map[string]*memoryNode{}, syncErrors: map[string]error{}}
 	for _, name := range []string{"/", "/var", "/var/lib", "/var/lib/celikpanel"} {
 		filesystem.nodes[name] = &memoryNode{mode: fs.ModeDir | 0o755}
 	}
@@ -205,10 +208,14 @@ func (filesystem *memoryFS) RemoveAll(name string) error {
 }
 
 func (filesystem *memoryFS) Sync(name string) error {
-	if _, ok := filesystem.nodes[cleanMemoryPath(name)]; !ok {
+	name = cleanMemoryPath(name)
+	if _, ok := filesystem.nodes[name]; !ok {
 		return fs.ErrNotExist
 	}
-	filesystem.syncs = append(filesystem.syncs, cleanMemoryPath(name))
+	if err := filesystem.syncErrors[name]; err != nil {
+		return err
+	}
+	filesystem.syncs = append(filesystem.syncs, name)
 	return nil
 }
 
@@ -272,6 +279,7 @@ func TestPublisherStagesRootOwnedImmutableTreeAndActivatesAtomically(t *testing.
 		t.Fatalf("validator calls = %#v", runner.calls)
 	}
 	base := "/var/lib/celikpanel/bind/generations/" + generation.ID
+	zoneName := zoneFileName("example.com")
 	for _, check := range []struct {
 		name string
 		mode fs.FileMode
@@ -280,7 +288,7 @@ func TestPublisherStagesRootOwnedImmutableTreeAndActivatesAtomically(t *testing.
 		{base + "/zones", fs.ModeDir | 0o555},
 		{base + "/zones.conf", 0o444},
 		{base + "/receipt.json", 0o444},
-		{base + "/zones/example.com.zone", 0o444},
+		{base + "/zones/" + zoneName, 0o444},
 	} {
 		node := filesystem.nodes[check.name]
 		if node == nil || node.mode != check.mode || node.uid != 0 || node.gid != 0 {
@@ -304,6 +312,38 @@ func TestPublisherStagesRootOwnedImmutableTreeAndActivatesAtomically(t *testing.
 	}
 	if len(runner.calls) != before {
 		t.Fatal("idempotent stage reran validators")
+	}
+	for _, parent := range []string{
+		"/var/lib/celikpanel",
+		"/var/lib/celikpanel/bind",
+		"/var/lib/celikpanel/bind/generations",
+		"/var/lib/celikpanel/bind/.stage-" + generation.ID[:16] + "-1111111111111111",
+	} {
+		if !containsString(filesystem.syncs, parent) {
+			t.Errorf("created directory parent %s was not fsynced: %v", parent, filesystem.syncs)
+		}
+	}
+}
+
+func TestPublisherFailsWhenCreatedDirectoryParentCannotBeDurablySynced(t *testing.T) {
+	filesystem := newMemoryFS()
+	filesystem.syncErrors["/var/lib/celikpanel"] = errors.New("injected parent fsync failure")
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	err := publisher.Stage(context.Background(), publisherGeneration(t, 1, "192.0.2.1"))
+	if err == nil || !strings.Contains(err.Error(), "sync BIND directory parent") {
+		t.Fatalf("Stage error = %v, want parent fsync failure", err)
+	}
+}
+
+func TestPublisherRejectsUnsafeDirectoryParentBeforeMkdir(t *testing.T) {
+	filesystem := newMemoryFS()
+	filesystem.nodes["/var/lib/celikpanel"].mode = fs.ModeDir | 0o777
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	if err := publisher.Stage(context.Background(), publisherGeneration(t, 1, "192.0.2.1")); err == nil {
+		t.Fatal("unsafe writable parent was accepted")
+	}
+	if _, exists := filesystem.nodes["/var/lib/celikpanel/bind"]; exists {
+		t.Fatal("publisher created a directory below an unsafe parent")
 	}
 }
 
@@ -334,7 +374,7 @@ func TestPublisherFailsClosedOnTamperedImmutableGeneration(t *testing.T) {
 	if err := publisher.Stage(context.Background(), generation); err != nil {
 		t.Fatal(err)
 	}
-	zonePath := "/var/lib/celikpanel/bind/generations/" + generation.ID + "/zones/example.com.zone"
+	zonePath := "/var/lib/celikpanel/bind/generations/" + generation.ID + "/zones/" + zoneFileName("example.com")
 	filesystem.nodes[zonePath].data = []byte("tampered")
 	if err := publisher.Stage(context.Background(), generation); err == nil {
 		t.Fatal("tampered existing generation was accepted")
@@ -365,6 +405,9 @@ func TestPublisherSwitchRestoresPriorPointerAndReappliesIt(t *testing.T) {
 			return errors.New("reload failed")
 		}
 		return nil
+	}, func(context.Context) error {
+		t.Fatal("empty recovery ran despite a prior generation")
+		return nil
 	})
 	if err == nil || !strings.Contains(err.Error(), "previous BIND generation restored") {
 		t.Fatalf("Switch error = %v", err)
@@ -375,6 +418,157 @@ func TestPublisherSwitchRestoresPriorPointerAndReappliesIt(t *testing.T) {
 	id, exists, currentErr := publisher.Current()
 	if currentErr != nil || !exists || id != first.ID {
 		t.Fatalf("rollback current = %q, %v, %v", id, exists, currentErr)
+	}
+}
+
+func TestPublisherSwitchRecoveryIsDetachedBoundedAndDoesNotDeadlockCurrent(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	for _, generation := range []Generation{first, second} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	applyCalls := 0
+	done := make(chan error, 1)
+	go func() {
+		done <- publisher.Switch(cancelled, second.ID, func(callbackCtx context.Context) error {
+			applyCalls++
+			id, exists, err := publisher.Current()
+			if err != nil || !exists {
+				return fmt.Errorf("current from callback = %q, %v, %v", id, exists, err)
+			}
+			if applyCalls == 1 {
+				if id != second.ID || !errors.Is(callbackCtx.Err(), context.Canceled) {
+					return fmt.Errorf("initial callback current=%q context=%v", id, callbackCtx.Err())
+				}
+				return callbackCtx.Err()
+			}
+			if id != first.ID || callbackCtx.Err() != nil {
+				return fmt.Errorf("recovery callback current=%q context=%v", id, callbackCtx.Err())
+			}
+			deadline, ok := callbackCtx.Deadline()
+			remaining := time.Until(deadline)
+			if !ok || remaining <= 0 || remaining > switchRecoveryTimeout {
+				return fmt.Errorf("recovery context deadline ok=%v remaining=%v", ok, remaining)
+			}
+			return nil
+		}, func(context.Context) error {
+			return errors.New("unexpected empty recovery")
+		})
+	}()
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "previous BIND generation restored") {
+			t.Fatalf("Switch error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Switch callback deadlocked while reading Current")
+	}
+	if applyCalls != 2 {
+		t.Fatalf("apply calls = %d, want initial and detached recovery", applyCalls)
+	}
+}
+
+func TestPublisherFirstSwitchFailureUsesExplicitEmptyRecovery(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	applyCalls := 0
+	emptyCalls := 0
+	err := publisher.Switch(context.Background(), generation.ID, func(context.Context) error {
+		applyCalls++
+		return errors.New("start failed")
+	}, func(recoveryCtx context.Context) error {
+		emptyCalls++
+		if recoveryCtx.Err() != nil {
+			return recoveryCtx.Err()
+		}
+		id, exists, currentErr := publisher.Current()
+		if currentErr != nil || exists || id != "" {
+			return fmt.Errorf("current after first rollback = %q, %v, %v", id, exists, currentErr)
+		}
+		return nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "explicit empty recovery applied") {
+		t.Fatalf("Switch error = %v", err)
+	}
+	if applyCalls != 1 || emptyCalls != 1 {
+		t.Fatalf("apply=%d empty=%d, want 1/1", applyCalls, emptyCalls)
+	}
+	if _, exists, currentErr := publisher.Current(); currentErr != nil || exists {
+		t.Fatalf("first failed switch left current pointer: exists=%v err=%v", exists, currentErr)
+	}
+}
+
+func TestPublisherSerializesWholeSwitchTransactionsWithoutHoldingStateLock(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	third := publisherGeneration(t, 3, "192.0.2.3")
+	for _, generation := range []Generation{first, second, third} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	firstEntered := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- publisher.Switch(context.Background(), second.ID, func(context.Context) error {
+			close(firstEntered)
+			<-releaseFirst
+			return nil
+		}, func(context.Context) error { return errors.New("unexpected empty recovery") })
+	}()
+	<-firstEntered
+	secondAttempted := make(chan struct{})
+	secondEntered := make(chan struct{})
+	secondDone := make(chan error, 1)
+	go func() {
+		close(secondAttempted)
+		secondDone <- publisher.Switch(context.Background(), third.ID, func(context.Context) error {
+			close(secondEntered)
+			return nil
+		}, func(context.Context) error { return errors.New("unexpected empty recovery") })
+	}()
+	<-secondAttempted
+	select {
+	case <-secondEntered:
+		t.Fatal("second switch entered while the first transaction callback was active")
+	case <-time.After(25 * time.Millisecond):
+	}
+	if id, exists, err := publisher.Current(); err != nil || !exists || id != second.ID {
+		t.Fatalf("Current during first callback = %q, %v, %v", id, exists, err)
+	}
+	close(releaseFirst)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first switch: %v", err)
+	}
+	select {
+	case <-secondEntered:
+	case <-time.After(time.Second):
+		t.Fatal("second switch did not enter after the first transaction completed")
+	}
+	if err := <-secondDone; err != nil {
+		t.Fatalf("second switch: %v", err)
+	}
+	if id, exists, err := publisher.Current(); err != nil || !exists || id != third.ID {
+		t.Fatalf("final Current = %q, %v, %v", id, exists, err)
 	}
 }
 
@@ -391,4 +585,13 @@ func TestPublisherRejectsHostileCurrentPointer(t *testing.T) {
 	if _, _, err := publisher.Current(); err == nil {
 		t.Fatal("escaping current symlink was accepted")
 	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

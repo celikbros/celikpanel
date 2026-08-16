@@ -294,7 +294,7 @@ func validateZoneReceipt(zone ZoneReceipt) error {
 		}
 		return nil
 	}
-	if zone.File != path.Join("zones", domain+".zone") || !validDigest(zone.RenderedSHA256) {
+	if zone.File != path.Join("zones", zoneFileName(domain)) || !validDigest(zone.RenderedSHA256) {
 		return errors.New("BIND generation receipt contains an invalid zone file")
 	}
 	return nil

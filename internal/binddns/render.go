@@ -105,13 +105,21 @@ func RenderZone(domain string, records []transport.ZoneRecord) (RenderedZone, er
 
 	return RenderedZone{
 		Domain:         canonicalDomain,
-		FileName:       canonicalDomain + ".zone",
+		FileName:       zoneFileName(canonicalDomain),
 		Data:           data,
 		RecordsSHA256:  sha256Hex(digestBytes),
 		RenderedSHA256: sha256Hex(data),
 		TotalRecords:   len(canonical),
 		EnabledRecords: enabled,
 	}, nil
+}
+
+// zoneFileName deliberately hides attacker-controlled domain length and labels
+// behind one fixed-width digest. The receipt validator recomputes this value
+// from Domain, so a filename is both path-safe and cryptographically bound to
+// the zone identity rather than merely trusted because it looks like a digest.
+func zoneFileName(canonicalDomain string) string {
+	return sha256Hex([]byte(manifestSchema+"/zone-file\n"+canonicalDomain)) + ".zone"
 }
 
 func requireCanonicalDomain(domain string) (string, error) {

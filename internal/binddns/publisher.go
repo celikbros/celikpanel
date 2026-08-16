@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -19,19 +20,24 @@ const (
 	immutableDirectoryMode = fs.FileMode(0o555)
 	immutableFileMode      = fs.FileMode(0o444)
 	maxGenerationFileBytes = int64(16 << 20)
+	switchRecoveryTimeout  = 30 * time.Second
 )
 
 // Publisher stages immutable, root-owned BIND generations and atomically
 // changes the current symlink. Cross-process serialization remains the agent's
 // service-mutation lock responsibility; mu protects callers sharing an object.
 type Publisher struct {
-	mu        sync.Mutex
-	fs        FileSystem
-	runner    CommandRunner
-	root      string
-	nonce     func() (string, error)
-	checkZone string
-	checkConf string
+	// transactionMu serializes pointer-changing transactions without keeping
+	// mu held while service callbacks run. Callbacks may therefore verify the
+	// current receipt through Current/LoadCurrent without self-deadlocking.
+	transactionMu sync.Mutex
+	mu            sync.Mutex
+	fs            FileSystem
+	runner        CommandRunner
+	root          string
+	nonce         func() (string, error)
+	checkZone     string
+	checkConf     string
 }
 
 func NewPublisher(root string, filesystem FileSystem, runner CommandRunner) (*Publisher, error) {
@@ -193,6 +199,14 @@ func (publisher *Publisher) ensureDirectory(name string, mode fs.FileMode, immut
 }
 
 func (publisher *Publisher) createDirectory(name string, mode fs.FileMode) error {
+	parent := path.Dir(name)
+	parentEntry, err := publisher.fs.Lstat(parent)
+	if err != nil {
+		return fmt.Errorf("inspect BIND directory parent %s: %w", parent, err)
+	}
+	if err := verifyDirectoryEntry(parent, parentEntry, false); err != nil {
+		return err
+	}
 	if _, err := publisher.fs.Lstat(name); err == nil {
 		return fs.ErrExist
 	} else if !errors.Is(err, fs.ErrNotExist) {
@@ -204,7 +218,29 @@ func (publisher *Publisher) createDirectory(name string, mode fs.FileMode) error
 	if err := publisher.fs.Chown(name, 0, 0); err != nil {
 		return err
 	}
-	return publisher.fs.Chmod(name, mode)
+	if err := publisher.fs.Chmod(name, mode); err != nil {
+		return err
+	}
+	createdEntry, err := publisher.fs.Lstat(name)
+	if err != nil {
+		return fmt.Errorf("verify created BIND directory %s: %w", name, err)
+	}
+	if err := verifyDirectoryEntry(name, createdEntry, mode.Perm()&0o222 == 0); err != nil {
+		return err
+	}
+	// Re-verify the parent after mkdir and before fsync. Publication must not
+	// claim durability through a symlinked, foreign-owned or writable parent.
+	parentEntry, err = publisher.fs.Lstat(parent)
+	if err != nil {
+		return fmt.Errorf("reinspect BIND directory parent %s: %w", parent, err)
+	}
+	if err := verifyDirectoryEntry(parent, parentEntry, false); err != nil {
+		return err
+	}
+	if err := publisher.fs.Sync(parent); err != nil {
+		return fmt.Errorf("sync BIND directory parent %s: %w", parent, err)
+	}
+	return nil
 }
 
 func (publisher *Publisher) writeImmutableFile(name string, content []byte) error {
@@ -352,6 +388,8 @@ func (publisher *Publisher) Current() (string, bool, error) {
 
 // Activate atomically points current at an already verified immutable tree.
 func (publisher *Publisher) Activate(generationID string) error {
+	publisher.transactionMu.Lock()
+	defer publisher.transactionMu.Unlock()
 	publisher.mu.Lock()
 	defer publisher.mu.Unlock()
 	return publisher.activateLocked(generationID)
@@ -433,51 +471,89 @@ func (publisher *Publisher) currentLocked() (string, bool, error) {
 }
 
 // Switch atomically selects generationID and calls apply (normally rndc
-// reconfig or a unit start). On failure it restores the prior pointer and calls
-// apply again, surfacing both activation and rollback errors.
-func (publisher *Publisher) Switch(ctx context.Context, generationID string, apply func(context.Context) error) error {
-	if apply == nil {
-		return errors.New("BIND switch requires an activation callback")
+// reconfig or a unit start). On failure it restores the prior pointer and
+// reapplies it under a detached, bounded recovery context. If no prior
+// generation existed, recoverEmpty is mandatory and must explicitly stop BIND
+// or apply a known-empty configuration; reloading with no current pointer is
+// deliberately never inferred as safe.
+func (publisher *Publisher) Switch(
+	ctx context.Context,
+	generationID string,
+	apply func(context.Context) error,
+	recoverEmpty func(context.Context) error,
+) error {
+	if ctx == nil || apply == nil || recoverEmpty == nil {
+		return errors.New("BIND switch requires a context, activation callback and explicit empty recovery callback")
 	}
+	publisher.transactionMu.Lock()
+	defer publisher.transactionMu.Unlock()
+
 	publisher.mu.Lock()
-	defer publisher.mu.Unlock()
 	previous, hadPrevious, err := publisher.currentLocked()
-	if err != nil {
-		return err
+	if err == nil {
+		err = publisher.activateLocked(generationID)
 	}
-	if err := publisher.activateLocked(generationID); err != nil {
+	publisher.mu.Unlock()
+	if err != nil {
 		return err
 	}
 	if err := apply(ctx); err == nil {
 		return nil
 	} else {
 		activationErr := fmt.Errorf("activate BIND generation %s: %w", generationID, err)
-		var pointerErr error
-		if hadPrevious {
-			pointerErr = publisher.activateLocked(previous)
-		} else {
-			current, exists, inspectErr := publisher.currentLocked()
-			switch {
-			case inspectErr != nil:
-				pointerErr = inspectErr
-			case !exists || current != generationID:
-				pointerErr = errors.New("BIND current pointer changed during rollback")
-			default:
-				pointerErr = publisher.fs.Remove(path.Join(publisher.root, "current"))
-				if pointerErr == nil {
-					pointerErr = publisher.fs.Sync(publisher.root)
-				}
-			}
-		}
+		recoveryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), switchRecoveryTimeout)
+		defer cancel()
+
+		publisher.mu.Lock()
+		pointerErr := publisher.restoreSwitchPointerLocked(generationID, previous, hadPrevious)
+		publisher.mu.Unlock()
 		if pointerErr != nil {
-			return errors.Join(activationErr, fmt.Errorf("restore BIND generation pointer: %w", pointerErr))
+			// Pointer state is ambiguous. Stopping or emptying the daemon is the
+			// only fail-closed recovery which does not guess what BIND serves.
+			emptyErr := recoverEmpty(recoveryCtx)
+			return errors.Join(
+				activationErr,
+				fmt.Errorf("restore BIND generation pointer: %w", pointerErr),
+				wrapOptionalError("stop or empty BIND after pointer recovery failure", emptyErr),
+			)
 		}
-		rollbackErr := apply(ctx)
+		if !hadPrevious {
+			emptyErr := recoverEmpty(recoveryCtx)
+			if emptyErr != nil {
+				return errors.Join(activationErr, fmt.Errorf("stop or empty BIND after removing the first pointer: %w", emptyErr))
+			}
+			return errors.Join(activationErr, errors.New("first BIND generation pointer removed and explicit empty recovery applied"))
+		}
+		rollbackErr := apply(recoveryCtx)
 		if rollbackErr != nil {
 			return errors.Join(activationErr, fmt.Errorf("reload restored BIND generation: %w", rollbackErr))
 		}
 		return errors.Join(activationErr, errors.New("previous BIND generation restored and applied"))
 	}
+}
+
+func (publisher *Publisher) restoreSwitchPointerLocked(target, previous string, hadPrevious bool) error {
+	current, exists, err := publisher.currentLocked()
+	if err != nil {
+		return err
+	}
+	if !exists || current != target {
+		return errors.New("BIND current pointer changed during rollback")
+	}
+	if hadPrevious {
+		return publisher.activateLocked(previous)
+	}
+	if err := publisher.fs.Remove(path.Join(publisher.root, "current")); err != nil {
+		return err
+	}
+	return publisher.fs.Sync(publisher.root)
+}
+
+func wrapOptionalError(label string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", label, err)
 }
 
 func randomNonce() (string, error) {

@@ -112,10 +112,12 @@ func TestVerifyTreeAndApplyDeltaPreserveUnchangedZoneExactly(t *testing.T) {
 	}
 	initialFiles := filesForGeneration(initial)
 	nextFiles := filesForGeneration(next)
-	if !bytes.Equal(initialFiles["zones/beta.example.zone"], nextFiles["zones/beta.example.zone"]) {
+	betaFile := "zones/" + zoneFileName("beta.example")
+	alphaFile := "zones/" + zoneFileName("alpha.example")
+	if !bytes.Equal(initialFiles[betaFile], nextFiles[betaFile]) {
 		t.Fatal("unmodified beta zone was not preserved byte-for-byte")
 	}
-	if bytes.Equal(initialFiles["zones/alpha.example.zone"], nextFiles["zones/alpha.example.zone"]) {
+	if bytes.Equal(initialFiles[alphaFile], nextFiles[alphaFile]) {
 		t.Fatal("alpha delta did not change alpha zone")
 	}
 	if next.ReceiptValue.EngineEpoch != 3 {
@@ -151,11 +153,11 @@ func TestVerifyTreeFailsClosedOnAnyMismatch(t *testing.T) {
 		{"config", generation.Receipt, []byte("changed"), filesForGeneration(generation)},
 		{"missing file", generation.Receipt, generation.Config, map[string][]byte{}},
 		{"extra file", generation.Receipt, generation.Config, map[string][]byte{
-			"zones/example.com.zone": generation.Zones[0].Data,
-			"zones/extra.zone":       []byte("extra"),
+			"zones/" + zoneFileName("example.com"):       generation.Zones[0].Data,
+			"zones/" + strings.Repeat("f", 64) + ".zone": []byte("extra"),
 		}},
 		{"changed file", generation.Receipt, generation.Config, map[string][]byte{
-			"zones/example.com.zone": []byte("changed"),
+			"zones/" + zoneFileName("example.com"): []byte("changed"),
 		}},
 		{"noncanonical receipt", append(bytes.TrimSuffix(generation.Receipt, []byte("\n")), ' '), generation.Config, filesForGeneration(generation)},
 	}
@@ -165,6 +167,33 @@ func TestVerifyTreeFailsClosedOnAnyMismatch(t *testing.T) {
 				t.Fatal("mismatched tree was accepted")
 			}
 		})
+	}
+}
+
+func TestZoneFilenameIsFixedLengthDigestBoundToReceiptDomain(t *testing.T) {
+	generation, err := RenderManifest("/var/lib/celikpanel/bind", Manifest{
+		EngineEpoch: 1,
+		Zones: []ZoneSnapshot{
+			boundSnapshot("a.example", 1, testZoneRecords("a.example", "192.0.2.1")),
+			boundSnapshot(strings.Repeat("x", 60)+".example", 1, testZoneRecords(strings.Repeat("x", 60)+".example", "192.0.2.2")),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, zone := range generation.ReceiptValue.Zones {
+		name := strings.TrimPrefix(zone.File, "zones/")
+		if len(name) != 69 || !strings.HasSuffix(name, ".zone") || !validDigest(strings.TrimSuffix(name, ".zone")) {
+			t.Fatalf("zone %s filename %q is not a fixed-length digest", zone.Domain, name)
+		}
+		if zone.File != "zones/"+zoneFileName(zone.Domain) {
+			t.Fatalf("zone %s receipt file %q is not domain-bound", zone.Domain, zone.File)
+		}
+	}
+	tampered := generation.ReceiptValue.Zones[0]
+	tampered.File = "zones/" + strings.Repeat("0", 64) + ".zone"
+	if err := validateZoneReceipt(tampered); err == nil {
+		t.Fatal("receipt accepted a digest filename not derived from its domain")
 	}
 }
 
