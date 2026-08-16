@@ -565,6 +565,60 @@ func writeDNSSetupRequired(w http.ResponseWriter) {
 	)
 }
 
+func writeDNSTopologyUnsupported(w http.ResponseWriter) {
+	writeCodedError(
+		w,
+		http.StatusConflict,
+		errCodeDNSTopologyUnsupported,
+		"paired DNS topology is not supported by the active DNS engine",
+		"/settings?section=dns",
+	)
+}
+
+// handleBINDDNSSetupLocked commits only panel-owned standalone identity and
+// publishes the rewritten full snapshots through engine+epoch-bound V3. BIND
+// has no PowerDNS cluster configuration RPC and must never enter that saga.
+// The caller owns serviceMutationMu, dnsTopologyMu and dnsPublicationMu and
+// has re-proven the exact active BIND publisher.
+func (p *Panel) handleBINDDNSSetupLocked(
+	w http.ResponseWriter,
+	r *http.Request,
+	req dnsSetupRequest,
+	localIPv4 string,
+) {
+	if req.Role != "standalone" {
+		writeDNSTopologyUnsupported(w)
+		return
+	}
+	if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
+		writeClientError(
+			w, http.StatusConflict,
+			"a previous DNS topology operation must finish first",
+		)
+		return
+	}
+	if err := p.saveDNSClusterSettingsAndReconcile(
+		r.Context(), "standalone", "", "", req.NS1, req.NS2, localIPv4,
+	); err != nil {
+		writeServerError(w, fmt.Errorf("reconcile standalone BIND identity: %w", err))
+		return
+	}
+	p.audit(r, "settings.dns_setup_saved:standalone engine=bind", "settings", 0)
+	if _, err := p.syncAllZonesLocked(r.Context()); err != nil {
+		err = fmt.Errorf("publish standalone BIND identity: %w", err)
+		if writeDNSPublicationConflict(
+			w, err,
+			"DNS setup was saved, but one or more zones could not be published; retry the same setup",
+		) {
+			return
+		}
+		writeServerError(w, err)
+		return
+	}
+	p.audit(r, "settings.dns_setup_published:standalone engine=bind", "settings", 0)
+	_ = json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 // handleDNSSetup applies the complete DNS identity as a forward-only durable
 // saga. The desired tuple and exact V2 child identity commit before Begin; an
 // active or unqueryable child therefore retains recovery authority rather than
@@ -633,14 +687,31 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "role must be standalone or paired")
 		return
 	}
-	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+	publisher, publisherReady, err := p.activeDNSPublisher(r.Context())
+	if err != nil {
+		writeServerError(w, fmt.Errorf("verify active DNS setup publisher: %w", err))
+		return
+	}
+	if !publisherReady || publisher.Epoch < 1 {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
-	// Capability, platform policy and installed/configured PowerDNS are all
-	// preconditions. Mixed binaries and an unready host touch neither DB nor K.
-	if err := p.requireDNSClusterConfigureV2Agent(r.Context()); err != nil {
-		writeServerError(w, fmt.Errorf("verify DNS setup V2 agent: %w", err))
+	switch publisher.Engine {
+	case transport.DNSEngineBIND:
+		if req.Role != "standalone" {
+			writeDNSTopologyUnsupported(w)
+			return
+		}
+	case transport.DNSEnginePowerDNS:
+		// Capability, platform policy and configured PowerDNS are all
+		// preconditions. Mixed binaries and an unready host touch neither DB
+		// nor the privileged mutation ledger.
+		if err := p.requireDNSClusterConfigureV2Agent(r.Context()); err != nil {
+			writeServerError(w, fmt.Errorf("verify DNS setup V2 agent: %w", err))
+			return
+		}
+	default:
+		writeDNSEngineWorkflowRequired(w)
 		return
 	}
 	p.serviceMutationMu.Lock()
@@ -650,7 +721,20 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 	dnsPublicationMu.Lock()
 	defer dnsPublicationMu.Unlock()
 
-	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+	lockedPublisher, lockedReady, err := p.activeDNSPublisher(r.Context())
+	if err != nil {
+		writeServerError(w, fmt.Errorf("recheck active DNS setup publisher: %w", err))
+		return
+	}
+	if !lockedReady || lockedPublisher != publisher {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
+	if lockedPublisher.Engine == transport.DNSEngineBIND {
+		p.handleBINDDNSSetupLocked(w, r, req, localIPv4)
+		return
+	}
+	if lockedPublisher.Engine != transport.DNSEnginePowerDNS {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}

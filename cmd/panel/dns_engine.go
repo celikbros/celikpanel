@@ -917,6 +917,8 @@ type persistedDNSEngineSwitch struct {
 	SourceEpoch    int64
 	TargetEpoch    int64
 	SourceRevision int64
+	Action         string
+	Mode           string
 	Phase          string
 	Qualifier      string
 	ZoneCount      int
@@ -967,8 +969,15 @@ func (p *Panel) persistDNSEngineSwitch(
 	ctx context.Context,
 	request dnsEngineSwitchRequest,
 	ownerID, switchID string,
+	action string,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) (persistedDNSEngineSwitch, error) {
+	if !validDNSEngineSwitchAction(action) {
+		return persistedDNSEngineSwitch{}, errors.New(
+			"DNS engine switch action is invalid",
+		)
+	}
+	mode := dnsEngineMutationMode(action)
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
 		return persistedDNSEngineSwitch{}, err
@@ -1022,6 +1031,18 @@ func (p *Panel) persistDNSEngineSwitch(
 		); err != nil {
 			return persistedDNSEngineSwitch{}, err
 		}
+	}
+	if err := persistDNSEngineOperationMarkerTx(
+		ctx, tx, dnsEngineOperationMarker{
+			Version:   dnsEngineOperationVersion,
+			RequestID: request.RequestID, SwitchID: switchID,
+			SourceEngine: manifest.SourceEngine,
+			TargetEngine: manifest.TargetEngine,
+			Action:       action,
+			Phase:        dnsEngineOperationAccepted,
+		},
+	); err != nil {
+		return persistedDNSEngineSwitch{}, err
 	}
 	attached, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_state
@@ -1084,7 +1105,8 @@ func (p *Panel) persistDNSEngineSwitch(
 		SwitchID: switchID, RequestID: request.RequestID, OwnerID: ownerID,
 		SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
 		SourceEpoch: manifest.SourceEpoch, TargetEpoch: manifest.TargetEpoch,
-		SourceRevision: manifest.SourceRevision, Phase: "activating",
+		SourceRevision: manifest.SourceRevision,
+		Action:         action, Mode: mode, Phase: "activating",
 		Qualifier: manifest.Qualifier, ZoneCount: len(manifest.Zones),
 		SnapshotBytes: manifest.SnapshotBytes,
 	}, nil
@@ -1237,6 +1259,12 @@ func (p *Panel) finalizeDNSEngineSwitchSuccess(
 	); err != nil {
 		return err
 	}
+	if err := advanceDNSEngineOperationMarkerTx(
+		ctx, tx, persisted,
+		dnsEngineOperationAccepted, dnsEngineOperationPostCommit,
+	); err != nil {
+		return err
+	}
 	committed, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_switch_snapshots
 		SET phase = 'committed', updated_at = datetime('now')
@@ -1278,6 +1306,9 @@ func (p *Panel) rollbackDNSEngineSwitch(
 	defer tx.Rollback()
 	current, err := readDNSEngineSwitchByRequest(ctx, tx, persisted.RequestID)
 	if err != nil {
+		return err
+	}
+	if err := attachDNSEngineOperationAction(ctx, tx, &current); err != nil {
 		return err
 	}
 	const safeFailure = "DNS engine switch did not complete"
@@ -1348,6 +1379,11 @@ func (p *Panel) rollbackDNSEngineSwitch(
 	}
 	if changed, err := detached.RowsAffected(); err != nil || changed != 1 {
 		return errors.New("DNS engine rollback singleton finalization was not exact")
+	}
+	if err := clearDNSEngineOperationMarkerTx(
+		ctx, tx, current, dnsEngineOperationAccepted,
+	); err != nil {
+		return err
 	}
 	return tx.Commit()
 }
@@ -1559,6 +1595,7 @@ func (p *Panel) handleDNSEngineSwitch(
 		writeClientError(w, http.StatusBadRequest, "invalid DNS engine switch request")
 		return
 	}
+	actor := dnsEngineActorFromRequest(r)
 	found, matching, err := p.matchingDNSEngineSwitchReplay(r.Context(), request)
 	if err != nil {
 		writeServerError(w, err)
@@ -1569,6 +1606,46 @@ func (p *Panel) handleDNSEngineSwitch(
 			writeClientError(w, http.StatusConflict,
 				"request_id was already used for a different DNS engine change")
 			return
+		}
+		p.serviceMutationMu.Lock()
+		defer p.serviceMutationMu.Unlock()
+		p.dnsTopologyMu.Lock()
+		defer p.dnsTopologyMu.Unlock()
+		dnsPublicationMu.Lock()
+		defer dnsPublicationMu.Unlock()
+
+		persisted, err := readDNSEngineSwitchByRequest(
+			r.Context(), p.db.GetDB(), request.RequestID,
+		)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		marker, err := readDNSEngineOperationMarker(
+			r.Context(), p.db.GetDB(),
+		)
+		if err != nil {
+			writeServerError(w, err)
+			return
+		}
+		if marker != nil && marker.RequestID == persisted.RequestID &&
+			marker.SwitchID == persisted.SwitchID &&
+			marker.Phase == dnsEngineOperationPostCommit {
+			persisted.Action = marker.Action
+			persisted.Mode = dnsEngineMutationMode(marker.Action)
+			result := p.reconcileDNSEnginePostCommitLocked(
+				r.Context(), persisted,
+			)
+			if result.failed() {
+				log.Printf(
+					"DNS engine replay post-commit %s: firewall=%v scan=%v",
+					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				)
+				p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
+				writeDNSEnginePostCommitFailed(w, result)
+				return
+			}
+			p.auditDNSEngineBounded(actor, "post_commit.recovered", persisted)
 		}
 		snapshot, err := p.dnsEngineSnapshot(r.Context())
 		if err != nil {
@@ -1656,18 +1733,20 @@ func (p *Panel) handleDNSEngineSwitch(
 		return
 	}
 	persisted, err := p.persistDNSEngineSwitch(
-		r.Context(), request, ownerID, switchID, manifest,
+		r.Context(), request, ownerID, switchID, action, manifest,
 	)
 	if err != nil {
 		writeServerError(w, fmt.Errorf("persist DNS engine switch: %w", err))
 		return
 	}
+	p.auditDNSEngineBounded(actor, "accepted", persisted)
 	workerCtx, cancel := context.WithTimeout(
 		context.Background(), dnsEngineSwitchTimeout,
 	)
 	defer cancel()
 	err = p.executeDNSEngineSwitch(workerCtx, persisted, manifest)
 	if err != nil {
+		p.auditDNSEngineBounded(actor, "failed", persisted)
 		var uncertain *dnsEngineFinalizeUncertainError
 		if !mutationTerminalUncertain(err) && !errors.As(err, &uncertain) {
 			proofErr := p.verifyDNSEngineRollbackRuntime(workerCtx, persisted)
@@ -1675,17 +1754,34 @@ func (p *Panel) handleDNSEngineSwitch(
 				proofErr = p.rollbackDNSEngineSwitch(workerCtx, persisted)
 			}
 			if proofErr != nil {
+				p.auditDNSEngineBounded(actor, "uncertain", persisted)
 				log.Printf(
 					"DNS engine switch %s failed and rollback finalization failed: %v / %v",
 					persisted.SwitchID, err, proofErr,
 				)
+			} else {
+				p.auditDNSEngineBounded(actor, "rolled_back", persisted)
 			}
+		} else {
+			p.auditDNSEngineBounded(actor, "uncertain", persisted)
 		}
 		log.Printf("DNS engine switch %s did not finalize: %v", persisted.SwitchID, err)
 		writeClientError(w, http.StatusConflict,
 			"DNS engine change did not complete; refresh to see its verified state")
 		return
 	}
+	p.auditDNSEngineBounded(actor, "succeeded", persisted)
+	postCommit := p.reconcileDNSEnginePostCommitLocked(workerCtx, persisted)
+	if postCommit.failed() {
+		log.Printf(
+			"DNS engine switch %s committed with pending follow-up: firewall=%v scan=%v",
+			persisted.SwitchID, postCommit.FirewallErr, postCommit.ScanErr,
+		)
+		p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
+		writeDNSEnginePostCommitFailed(w, postCommit)
+		return
+	}
+	p.auditDNSEngineBounded(actor, "post_commit.completed", persisted)
 	finalSnapshot, err := p.dnsEngineSnapshot(workerCtx)
 	if err != nil {
 		writeServerError(w, err)
@@ -1713,7 +1809,68 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 	if err != nil {
 		return false, err
 	}
+	marker, err := readDNSEngineOperationMarker(ctx, p.db.GetDB())
+	if err != nil {
+		return false, fmt.Errorf("read DNS engine recovery marker: %w", err)
+	}
 	if state.CurrentSwitchID == "" {
+		if marker != nil {
+			if marker.Phase != dnsEngineOperationPostCommit {
+				return true, errors.New(
+					"detached DNS engine operation has not reached post-commit",
+				)
+			}
+			persisted, readErr := readDNSEngineSwitchByID(
+				ctx, p.db.GetDB(), marker.SwitchID,
+			)
+			if readErr != nil {
+				return true, readErr
+			}
+			persisted.Action = marker.Action
+			persisted.Mode = dnsEngineMutationMode(marker.Action)
+			if persisted.RequestID != marker.RequestID ||
+				persisted.SourceEngine != marker.SourceEngine ||
+				persisted.TargetEngine != marker.TargetEngine ||
+				persisted.Phase != "committed" ||
+				state.ActiveEngine != persisted.TargetEngine ||
+				state.EngineEpoch != persisted.TargetEpoch {
+				return true, errors.New(
+					"DNS engine post-commit marker does not match active authority",
+				)
+			}
+			if globalJob != nil && agentMutationActive(globalJob.Status) {
+				if !validDirectFirewallMutation(globalJob) {
+					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
+					return true, errors.New(
+						"active mutation does not match DNS engine post-commit recovery",
+					)
+				}
+				if err := p.terminalizeInterruptedFirewallMutation(
+					ctx, globalJob,
+				); err != nil {
+					p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
+					return true, err
+				}
+			}
+			result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+			if result.failed() {
+				log.Printf(
+					"DNS engine startup post-commit %s remains pending: firewall=%v scan=%v",
+					persisted.SwitchID, result.FirewallErr, result.ScanErr,
+				)
+				p.auditDNSEngineSystem(
+					ctx, "recovered.post_commit.pending", persisted,
+				)
+				// The engine is already committed and serving. Keep the durable
+				// marker for the next replay/startup without preventing the
+				// panel from starting.
+				return true, nil
+			}
+			p.auditDNSEngineSystem(
+				ctx, "recovered.post_commit.completed", persisted,
+			)
+			return true, nil
+		}
 		if globalJob != nil && agentMutationActive(globalJob.Status) &&
 			validDirectDNSEngineSwitch(globalJob) {
 			return true, errors.New(
@@ -1728,6 +1885,15 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 	if err != nil {
 		return true, err
 	}
+	if marker == nil || marker.Phase != dnsEngineOperationAccepted ||
+		marker.SwitchID != persisted.SwitchID ||
+		marker.RequestID != persisted.RequestID {
+		return true, errors.New(
+			"active DNS engine switch has no exact accepted marker",
+		)
+	}
+	persisted.Action = marker.Action
+	persisted.Mode = dnsEngineMutationMode(marker.Action)
 	if _, err := p.reconstructPersistedDNSEngineManifest(ctx, persisted); err != nil {
 		return true, fmt.Errorf("verify persisted DNS engine manifest: %w", err)
 	}
@@ -1765,18 +1931,38 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 			return true, fmt.Errorf("verify recovered DNS engine runtime: %w", err)
 		}
 		if err := p.finalizeDNSEngineSwitchSuccess(ctx, persisted); err != nil {
+			p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 			return true, fmt.Errorf("finalize recovered DNS engine switch: %w", err)
 		}
+		p.auditDNSEngineSystem(ctx, "recovered.succeeded", persisted)
+		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		if result.failed() {
+			log.Printf(
+				"recovered DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
+				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+			)
+			p.auditDNSEngineSystem(
+				ctx, "recovered.post_commit.pending", persisted,
+			)
+			return true, nil
+		}
+		p.auditDNSEngineSystem(
+			ctx, "recovered.post_commit.completed", persisted,
+		)
 		return true, nil
 	}
 	if job != nil && agentMutationActive(job.Status) {
 		return true, errors.New("DNS engine mutation remained active after recovery wait")
 	}
 	if err := p.verifyDNSEngineRollbackRuntime(ctx, persisted); err != nil {
+		p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 		return true, fmt.Errorf("verify DNS engine rollback during recovery: %w", err)
 	}
+	p.auditDNSEngineSystem(ctx, "recovered.failed", persisted)
 	if err := p.rollbackDNSEngineSwitch(ctx, persisted); err != nil {
+		p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 		return true, fmt.Errorf("finalize DNS engine rollback during recovery: %w", err)
 	}
+	p.auditDNSEngineSystem(ctx, "recovered.rolled_back", persisted)
 	return true, nil
 }

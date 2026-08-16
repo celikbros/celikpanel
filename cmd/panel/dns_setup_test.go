@@ -382,6 +382,59 @@ func TestDNSSetupDesiredPersistenceFailurePrecedesAgentBegin(t *testing.T) {
 	}
 }
 
+func TestDNSSetupActiveBINDPublishesStandaloneIdentityWithoutPDNSRPC(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	zoneID := seedReconcileZone(t, p, "bind-identity.example")
+	agent := &strictDNSRPCAgent{}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1:       "ns3.example.net",
+		settingNS2:       "ns4.example.net",
+		settingDNSRole:   "standalone",
+		settingDNSPeerIP: "",
+		settingDNSPeerNS: "",
+	})
+	if soa := recordContent(
+		t, p, zoneID, "bind-identity.example", "SOA",
+	); !strings.HasPrefix(soa, "ns3.example.net ") {
+		t.Fatalf("BIND identity SOA=%q, want ns3 MNAME", soa)
+	}
+	agent.mu.Lock()
+	clusterCalls := agent.clusterCalls
+	beginCalls := agent.beginCalls
+	readinessCalls := agent.readinessCalls
+	powerDNSCalls := agent.powerDNSCalls
+	requests := append(
+		[]transport.SyncDNSZoneV3Request(nil),
+		agent.syncV3Requests...,
+	)
+	agent.mu.Unlock()
+	if clusterCalls != 0 || readinessCalls != 0 || powerDNSCalls != 0 ||
+		beginCalls != 1 {
+		t.Fatalf(
+			"BIND identity RPCs cluster=%d begin=%d readiness=%d pdns=%d",
+			clusterCalls, beginCalls, readinessCalls, powerDNSCalls,
+		)
+	}
+	if len(requests) != 1 ||
+		requests[0].Engine != transport.DNSEngineBIND ||
+		requests[0].EngineEpoch != 1 ||
+		requests[0].Domain != "bind-identity.example" {
+		t.Fatalf("BIND V3 identity publication=%+v", requests)
+	}
+}
+
 func TestDNSSetupPublicationFailureCanRetrySameMutation(t *testing.T) {
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	p := newDNSPanelForTest(t)

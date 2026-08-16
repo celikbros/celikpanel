@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -12,18 +14,24 @@ import (
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu             sync.Mutex
-	runtimes       map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	dnssec         bool
-	dnssecCalls    int
-	switchCalls    int
-	switchRequests []transport.SwitchDNSEngineV1Request
-	onSwitch       func()
+	mu               sync.Mutex
+	runtimes         map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	dnssec           bool
+	dnssecCalls      int
+	switchCalls      int
+	switchRequests   []transport.SwitchDNSEngineV1Request
+	onSwitch         func()
+	firewallEnabled  bool
+	firewallError    string
+	firewallCalls    int
+	firewallRequests []transport.ApplyFirewallRequest
+	scanError        error
 }
 
 func newDNSEngineTestAgent() *dnsEngineTestAgent {
@@ -44,7 +52,123 @@ func (agent *dnsEngineTestAgent) Version(
 	response.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV3,
 		transport.AgentCapabilityDNSEngineSwitchV1,
+		transport.AgentCapabilityFirewallApplyV2,
 	}
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) installedServiceIDsLocked() []string {
+	var installed []string
+	for engine, runtime := range agent.runtimes {
+		if runtime.Installed {
+			installed = append(installed, string(engine))
+		}
+	}
+	return installed
+}
+
+func (agent *dnsEngineTestAgent) GetServices(
+	_ *transport.Empty,
+	response *[]core.Service,
+) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.scanError != nil {
+		return agent.scanError
+	}
+	*response = (*response)[:0]
+	for engine, runtime := range agent.runtimes {
+		if !runtime.Running {
+			continue
+		}
+		unit := runtime.Unit
+		if unit == "" {
+			unit = string(engine)
+		}
+		*response = append(*response, core.Service{
+			Name:   strings.TrimSuffix(unit, ".service"),
+			Status: "active (running)",
+		})
+	}
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) InstalledServiceIDs(
+	_ *transport.Empty,
+	response *[]string,
+) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.scanError != nil {
+		return agent.scanError
+	}
+	*response = append((*response)[:0], agent.installedServiceIDsLocked()...)
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) InstalledServiceIDsStrict(
+	_ *transport.Empty,
+	response *[]string,
+) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	*response = append((*response)[:0], agent.installedServiceIDsLocked()...)
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) InstalledRepoPackages(
+	_ *transport.InstalledRepoPackagesRequest,
+	response *transport.InstalledRepoPackagesResponse,
+) error {
+	response.Packages = []string{}
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) ListServiceInstances(
+	_ *transport.ServiceInstancesRequest,
+	response *transport.ServiceInstancesResponse,
+) error {
+	response.Instances = []core.ServiceInstance{}
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) FirewallStatus(
+	_ *transport.Empty,
+	response *FirewallStatusResp,
+) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	response.Enabled = agent.firewallEnabled
+	response.EngineAvailable = true
+	return nil
+}
+
+func (agent *dnsEngineTestAgent) ApplyFirewallV2(
+	request *transport.ApplyFirewallRequest,
+	response *FirewallStatusResp,
+) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	agent.firewallCalls++
+	agent.firewallRequests = append(
+		agent.firewallRequests,
+		transport.ApplyFirewallRequest{
+			ServiceMutationBinding: request.ServiceMutationBinding,
+			Enabled:                request.Enabled, Persist: request.Persist,
+			TCPPorts: append([]int(nil), request.TCPPorts...),
+			UDPPorts: append([]int(nil), request.UDPPorts...),
+		},
+	)
+	response.Enabled = request.Enabled
+	response.EngineAvailable = true
+	response.Error = agent.firewallError
+	if response.Error != "" {
+		return nil
+	}
+	if !request.Enabled {
+		return errors.New("DNS engine post-commit unexpectedly disabled firewall")
+	}
+	agent.firewallEnabled = true
 	return nil
 }
 
@@ -189,6 +313,14 @@ func commitDNSEngineSwitch(
 	acknowledged bool,
 ) *httptest.ResponseRecorder {
 	t.Helper()
+	if _, err := panel.db.GetDB().Exec(`
+		INSERT OR IGNORE INTO users (
+		  id, username, password_hash, email, role
+		) VALUES (1, 'dns-engine-admin', 'hash',
+		          'dns-engine-admin@example.test', 'admin')
+	`); err != nil {
+		t.Fatal(err)
+	}
 	body, _ := json.Marshal(map[string]any{
 		"request_id": requestID, "target_engine": target,
 		"expected_source": source, "expected_revision": revision,
@@ -200,8 +332,334 @@ func commitDNSEngineSwitch(
 		http.MethodPost, "/api/v1/dns/engine/switch",
 		strings.NewReader(string(body)),
 	)
+	request.RemoteAddr = "198.51.100.44:54321"
+	request.Header.Set("User-Agent", "dns-engine-test-client")
+	request = request.WithContext(context.WithValue(
+		request.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin},
+	))
 	panel.handleDNSEngineSwitch(recorder, request)
 	return recorder
+}
+
+func intSliceContains(values []int, want int) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func assertCachedDNSEngineInstalled(
+	t *testing.T,
+	panel *Panel,
+	engine transport.DNSEngine,
+) {
+	t.Helper()
+	var raw string
+	if err := panel.db.GetDB().QueryRow(
+		`SELECT data FROM service_scan_cache WHERE id = 1`,
+	).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := decodeScanCacheSnapshot(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, observation := range snapshot.Observations {
+		if observation.ID == string(engine) {
+			if !observation.IsInstalled ||
+				!strings.HasPrefix(observation.Status, "active") {
+				t.Fatalf(
+					"cached %s observation=%+v, want installed active",
+					engine, observation,
+				)
+			}
+			return
+		}
+	}
+	t.Fatalf("cached scan has no %s observation", engine)
+}
+
+func TestDNSEngineFreshInstallPostCommitSyncsFirewallAndCache(t *testing.T) {
+	for index, target := range []transport.DNSEngine{
+		transport.DNSEngineBIND,
+		transport.DNSEnginePowerDNS,
+	} {
+		t.Run(string(target), func(t *testing.T) {
+			panel := newDNSPanelForTest(t)
+			agent := newDNSEngineTestAgent()
+			agent.firewallEnabled = true
+			attachDNSEngineTestAgent(t, panel, agent)
+			preview, recorder := requestDNSEnginePreview(
+				t, panel, target, nil, 0,
+			)
+			if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+				t.Fatalf(
+					"preview status=%d body=%s",
+					recorder.Code, recorder.Body.String(),
+				)
+			}
+			commit := commitDNSEngineSwitch(
+				t, panel, strings.Repeat(string(rune('a'+index)), 32),
+				target, nil, 0, preview.PreviewToken, false,
+			)
+			if commit.Code != http.StatusOK {
+				t.Fatalf(
+					"commit status=%d body=%s",
+					commit.Code, commit.Body.String(),
+				)
+			}
+			agent.mu.Lock()
+			calls := agent.firewallCalls
+			requests := append(
+				[]transport.ApplyFirewallRequest(nil),
+				agent.firewallRequests...,
+			)
+			agent.mu.Unlock()
+			if calls != 1 || len(requests) != 1 ||
+				!requests[0].Enabled ||
+				!intSliceContains(requests[0].TCPPorts, 53) ||
+				!intSliceContains(requests[0].UDPPorts, 53) {
+				t.Fatalf(
+					"firewall calls=%d requests=%+v, want exact TCP+UDP 53",
+					calls, requests,
+				)
+			}
+			assertCachedDNSEngineInstalled(t, panel, target)
+		})
+	}
+}
+
+func TestDNSEnginePostCommitNeverEnablesDisabledFirewall(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	preview, _ := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("9", 32),
+		transport.DNSEngineBIND, nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("commit status=%d body=%s", commit.Code, commit.Body.String())
+	}
+	agent.mu.Lock()
+	firewallCalls := agent.firewallCalls
+	agent.mu.Unlock()
+	if firewallCalls != 0 {
+		t.Fatalf("disabled firewall received %d apply calls", firewallCalls)
+	}
+	assertCachedDNSEngineInstalled(t, panel, transport.DNSEngineBIND)
+}
+
+func TestDNSEngineExistingSourceSwitchRetainsPostCommitBehavior(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.firewallEnabled = true
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	firstPreview, _ := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
+	)
+	first := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("6", 32),
+		transport.DNSEnginePowerDNS, nil, 0,
+		firstPreview.PreviewToken, false,
+	)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first install status=%d body=%s", first.Code, first.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondPreview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND,
+		transport.DNSEnginePowerDNS, state.Revision,
+	)
+	if recorder.Code != http.StatusOK || len(secondPreview.Blockers) != 0 {
+		t.Fatalf(
+			"switch preview=%+v status=%d body=%s",
+			secondPreview, recorder.Code, recorder.Body.String(),
+		)
+	}
+	second := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("7", 32),
+		transport.DNSEngineBIND, transport.DNSEnginePowerDNS,
+		state.Revision, secondPreview.PreviewToken, true,
+	)
+	if second.Code != http.StatusOK {
+		t.Fatalf("switch status=%d body=%s", second.Code, second.Body.String())
+	}
+	state, err = readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND ||
+		state.EngineEpoch != 2 {
+		t.Fatalf("switched state=%+v", state)
+	}
+	agent.mu.Lock()
+	firewallCalls := agent.firewallCalls
+	requests := append(
+		[]transport.ApplyFirewallRequest(nil), agent.firewallRequests...,
+	)
+	agent.mu.Unlock()
+	if firewallCalls != 2 || len(requests) != 2 ||
+		!intSliceContains(requests[1].TCPPorts, 53) ||
+		!intSliceContains(requests[1].UDPPorts, 53) {
+		t.Fatalf(
+			"existing-source firewall calls=%d requests=%+v",
+			firewallCalls, requests,
+		)
+	}
+	assertCachedDNSEngineInstalled(t, panel, transport.DNSEngineBIND)
+}
+
+func TestDNSEnginePostCommitFailureIsRetryableWithoutRollbackOrReplay(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.firewallEnabled = true
+	agent.firewallError = "secret nftables stderr /etc/nftables.conf"
+	attachDNSEngineTestAgent(t, panel, agent)
+	preview, _ := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	requestID := strings.Repeat("8", 32)
+	first := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if first.Code != http.StatusBadGateway {
+		t.Fatalf("first status=%d body=%s", first.Code, first.Body.String())
+	}
+	var body apiErrorBody
+	if err := json.Unmarshal(first.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != errCodeFirewallSyncFailed ||
+		body.Action != "/services" ||
+		!body.PartialSuccess || !body.MutationApplied ||
+		strings.Contains(first.Body.String(), "nftables.conf") {
+		t.Fatalf("unsafe/non-actionable partial response=%+v body=%s", body, first.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND ||
+		state.EngineEpoch != 1 || state.CurrentSwitchID != "" {
+		t.Fatalf("firewall failure rolled engine back: %+v", state)
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker == nil ||
+		marker.Phase != dnsEngineOperationPostCommit {
+		t.Fatalf("pending post-commit marker=%+v err=%v", marker, err)
+	}
+	agent.mu.Lock()
+	agent.firewallError = ""
+	switchCallsBefore := agent.switchCalls
+	agent.mu.Unlock()
+	second := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if second.Code != http.StatusOK {
+		t.Fatalf("retry status=%d body=%s", second.Code, second.Body.String())
+	}
+	agent.mu.Lock()
+	switchCallsAfter := agent.switchCalls
+	firewallCalls := agent.firewallCalls
+	agent.mu.Unlock()
+	if switchCallsBefore != 1 || switchCallsAfter != 1 ||
+		firewallCalls != 2 {
+		t.Fatalf(
+			"retry switch before/after=%d/%d firewall=%d",
+			switchCallsBefore, switchCallsAfter, firewallCalls,
+		)
+	}
+	marker, err = readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker != nil {
+		t.Fatalf("successful retry retained marker=%+v err=%v", marker, err)
+	}
+	var accepted, succeeded, recovered int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT
+		  COALESCE(SUM(action LIKE 'dns.engine.switch.accepted %'), 0),
+		  COALESCE(SUM(action LIKE 'dns.engine.switch.succeeded %'), 0),
+		  COALESCE(SUM(action LIKE 'dns.engine.switch.post_commit.recovered %'), 0)
+		FROM audit_logs
+	`).Scan(&accepted, &succeeded, &recovered); err != nil {
+		t.Fatal(err)
+	}
+	if accepted != 1 || succeeded != 1 || recovered != 1 {
+		t.Fatalf(
+			"audit accepted/succeeded/recovered=%d/%d/%d",
+			accepted, succeeded, recovered,
+		)
+	}
+	var userID int
+	var ip, userAgent string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT user_id, ip_address, user_agent
+		FROM audit_logs
+		WHERE action LIKE 'dns.engine.switch.accepted %'
+	`).Scan(&userID, &ip, &userAgent); err != nil {
+		t.Fatal(err)
+	}
+	if userID != 1 || ip != "198.51.100.44" ||
+		userAgent != "dns-engine-test-client" {
+		t.Fatalf("accepted actor=%d/%q/%q", userID, ip, userAgent)
+	}
+}
+
+func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.scanError = errors.New("secret service probe /proc/999/fd")
+	attachDNSEngineTestAgent(t, panel, agent)
+	preview, _ := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	requestID := strings.Repeat("5", 32)
+	first := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	var body apiErrorBody
+	if first.Code != http.StatusBadGateway ||
+		json.Unmarshal(first.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeServiceStateRefreshFailed ||
+		body.Action != "/services" ||
+		!body.PartialSuccess || !body.MutationApplied ||
+		strings.Contains(first.Body.String(), "/proc/999") {
+		t.Fatalf("scan partial status=%d body=%s", first.Code, first.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND ||
+		state.CurrentSwitchID != "" {
+		t.Fatalf("scan failure rolled engine back: %+v", state)
+	}
+	agent.mu.Lock()
+	agent.scanError = nil
+	agent.mu.Unlock()
+	second := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if second.Code != http.StatusOK {
+		t.Fatalf("scan retry status=%d body=%s", second.Code, second.Body.String())
+	}
+	assertCachedDNSEngineInstalled(t, panel, transport.DNSEngineBIND)
 }
 
 func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
@@ -591,7 +1049,7 @@ func persistEmptyDNSEngineSwitchForTest(
 	ownerID, _ := newServiceOperationID()
 	switchID, _ := newServiceOperationID()
 	persisted, err := panel.persistDNSEngineSwitch(
-		context.Background(), request, ownerID, switchID, manifest,
+		context.Background(), request, ownerID, switchID, "install", manifest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -677,6 +1135,21 @@ func TestDNSEngineRecoveryForwardFinalizesLostResponse(t *testing.T) {
 	if state.ActiveEngine != transport.DNSEngineBIND ||
 		state.EngineEpoch != 1 || state.CurrentSwitchID != "" {
 		t.Fatalf("recovered state=%+v", state)
+	}
+	var userID sql.NullInt64
+	var ip, userAgent sql.NullString
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT user_id, ip_address, user_agent
+		FROM audit_logs
+		WHERE action LIKE 'dns.engine.switch.recovered.succeeded %'
+	`).Scan(&userID, &ip, &userAgent); err != nil {
+		t.Fatal(err)
+	}
+	if userID.Valid || ip.Valid || userAgent.Valid {
+		t.Fatalf(
+			"startup recovery audit was not system-attributed: user=%v ip=%v ua=%v",
+			userID, ip, userAgent,
+		)
 	}
 }
 

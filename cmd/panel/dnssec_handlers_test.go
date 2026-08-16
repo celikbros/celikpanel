@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,11 +34,11 @@ func TestRefreshTLSARecordsIsNoOpWhileGateDisabled(t *testing.T) {
 	}
 }
 
-func TestDNSSECResultErrorPreservesAgentFailure(t *testing.T) {
-	const want = "rectify zone: backend refused the update"
-	got := dnssecResultError(dnssecAgentResponse{Error: want}, true)
-	if got != want {
-		t.Fatalf("dnssecResultError() = %q, want exact agent error %q", got, want)
+func TestDNSSECResultErrorHidesAgentFailure(t *testing.T) {
+	const raw = "rectify zone: backend refused /etc/pdns/private.conf"
+	got := dnssecResultError(dnssecAgentResponse{Error: raw}, true)
+	if got != "DNSSEC signing did not complete" || strings.Contains(got, raw) {
+		t.Fatalf("dnssecResultError() leaked agent error: %q", got)
 	}
 }
 
@@ -51,6 +52,105 @@ func TestDNSSECResultErrorRejectsSuccessWithoutDS(t *testing.T) {
 func TestDNSSECResultErrorAllowsUnsignedStatus(t *testing.T) {
 	if got := dnssecResultError(dnssecAgentResponse{}, false); got != "" {
 		t.Fatalf("unsigned status returned error %q", got)
+	}
+}
+
+func seedDNSSECHandlerDomain(t *testing.T, p *Panel, domain string) int {
+	t.Helper()
+	setDNSIdentityForTest(t, p, "standalone")
+	if _, err := p.db.GetDB().Exec(`
+		INSERT INTO users (username, password_hash, email, role)
+		VALUES ('dnssec-handler-owner', 'hash',
+		        'dnssec-handler-owner@example.test', 'customer')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	result, err := p.db.GetDB().Exec(`
+		INSERT INTO subscriptions (owner_id, name)
+		SELECT id, 'DNSSEC handler' FROM users
+		WHERE username = 'dnssec-handler-owner'
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptionID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err = p.db.GetDB().Exec(
+		`INSERT INTO domains (subscription_id, name) VALUES (?, ?)`,
+		subscriptionID, domain,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domainID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedStrictDNSZone(t, p, domain)
+	return int(domainID)
+}
+
+func TestDNSSECGETFailsClosedForActiveBINDWithoutStandbyPDNSRead(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	domainID := seedDNSSECHandlerDomain(t, p, "bind-dnssec.example")
+	agent := &strictDNSRPCAgent{
+		dnssecStatusError: "secret standby pdnsutil /var/lib/powerdns",
+	}
+	attachStrictDNSRPCAgentForEngine(
+		t, p, agent, transport.DNSEngineBIND,
+	)
+
+	recorder := httptest.NewRecorder()
+	p.handleDomainDNSSEC(
+		recorder,
+		httptest.NewRequest(http.MethodGet, "/api/v1/domains/1/dnssec", nil),
+		domainID,
+	)
+	var body apiErrorBody
+	if recorder.Code != http.StatusConflict ||
+		json.Unmarshal(recorder.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeDNSSECEngineUnsupported ||
+		strings.Contains(recorder.Body.String(), "pdnsutil") {
+		t.Fatalf("active BIND DNSSEC response status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	agent.mu.Lock()
+	calls := agent.dnssecStatusCalls
+	agent.mu.Unlock()
+	if calls != 0 {
+		t.Fatalf("active BIND queried standby PDNS DNSSEC %d time(s)", calls)
+	}
+}
+
+func TestDNSSECGETHidesRawAgentStatusFailure(t *testing.T) {
+	p := newDNSPanelForTest(t)
+	domainID := seedDNSSECHandlerDomain(t, p, "pdns-status.example")
+	const raw = "pdnsutil failed: /etc/powerdns/secret.conf token=private"
+	agent := &strictDNSRPCAgent{dnssecStatusError: raw}
+	attachStrictDNSRPCAgent(t, p, agent)
+
+	recorder := httptest.NewRecorder()
+	p.handleDomainDNSSEC(
+		recorder,
+		httptest.NewRequest(http.MethodGet, "/api/v1/domains/1/dnssec", nil),
+		domainID,
+	)
+	var body apiErrorBody
+	if recorder.Code != http.StatusConflict ||
+		json.Unmarshal(recorder.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeDNSSECStatusUnavailable ||
+		strings.Contains(recorder.Body.String(), raw) ||
+		strings.Contains(recorder.Body.String(), "secret.conf") {
+		t.Fatalf("unsafe DNSSEC status response status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	agent.mu.Lock()
+	calls := agent.dnssecStatusCalls
+	agent.mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("PDNS DNSSEC status calls=%d, want 1", calls)
 	}
 }
 

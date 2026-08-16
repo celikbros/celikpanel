@@ -59,6 +59,7 @@ type strictDNSRPCAgent struct {
 	powerDNSCalls       int
 	secureDNSCalls      int
 	dnssecStatusCalls   int
+	dnssecStatusError   string
 	cancelCalls         int
 	readinessCalls      int
 	readinessReady      bool
@@ -359,6 +360,10 @@ func (a *strictDNSRPCAgent) DNSSECStatus(
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.dnssecStatusCalls++
+	if a.dnssecStatusError != "" {
+		resp.Error = a.dnssecStatusError
+		return nil
+	}
 	resp.Secured = true
 	resp.DS = []string{"12345 13 2 AABBCC"}
 	return nil

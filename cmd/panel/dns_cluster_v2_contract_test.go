@@ -155,7 +155,7 @@ func TestDNSSetupRejectsActiveBINDWithoutAgentMutation(t *testing.T) {
 	if recorder.Code != http.StatusConflict ||
 		!strings.Contains(
 			recorder.Body.String(),
-			`"code":"`+errCodeDNSEngineWorkflowRequired+`"`,
+			`"code":"`+errCodeDNSTopologyUnsupported+`"`,
 		) {
 		t.Fatalf("active BIND DNS setup status=%d body=%s",
 			recorder.Code, recorder.Body.String())

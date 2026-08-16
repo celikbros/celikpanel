@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -21,6 +23,33 @@ func TestCanonicalCpmoveImportDomainMustBeDeclared(t *testing.T) {
 	}
 	if _, err := canonicalCpmoveImportDomain(preview, "unrelated.example"); err == nil {
 		t.Fatal("undeclared import domain was accepted")
+	}
+}
+
+func TestSafeImportDNSFailureNeverSerializesRawAgentDetail(t *testing.T) {
+	const raw = "named-checkzone stderr /etc/bind/private.key token=secret"
+	code, detail := safeImportDNSFailure(&dnsAgentPublicationError{
+		Err: errors.New(raw),
+	})
+	step := importStep{
+		Step: "dns", OK: false, Code: code, Detail: detail,
+	}
+	encoded, err := json.Marshal(step)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code != errCodeDNSPublicationFailed ||
+		detail != "DNS publication failed" ||
+		strings.Contains(string(encoded), raw) ||
+		strings.Contains(string(encoded), "private.key") {
+		t.Fatalf("unsafe import DNS failure JSON: %s", encoded)
+	}
+
+	code, detail = safeImportDNSFailure(errors.New(raw))
+	if code != errCodeInternal ||
+		detail != "DNS state could not be published" ||
+		strings.Contains(detail, raw) {
+		t.Fatalf("unsafe internal import DNS failure: %q/%q", code, detail)
 	}
 }
 
