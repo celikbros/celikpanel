@@ -36,10 +36,6 @@ func (s bindInstallUnitState) active() bool {
 	return s.activeState == "active"
 }
 
-func (s bindInstallUnitState) enabled() bool {
-	return s.unitFileState == "enabled" || s.unitFileState == "enabled-runtime"
-}
-
 type bindPackageInstallGuard struct {
 	systemctl string
 	ops       bindInstallGuardOps
@@ -95,7 +91,7 @@ func installBINDPackagesWithGuardOps(
 		}
 		return output, installErr
 	}
-	if err := guard.sealSuccessfulInstall(ctx); err != nil {
+	if err := sealSuccessfulBINDPackageInstall(ctx, guard); err != nil {
 		return output, fmt.Errorf("BIND packages were installed but their units could not be left safely stopped: %w", err)
 	}
 	return output, nil
@@ -153,6 +149,18 @@ func restoreBINDPackageInstallGuard(ctx context.Context, guard *bindPackageInsta
 	return guard.restore(recoveryCtx)
 }
 
+func sealSuccessfulBINDPackageInstall(ctx context.Context, guard *bindPackageInstallGuard) error {
+	if guard == nil {
+		return errors.New("missing BIND package install guard")
+	}
+	recoveryCtx, cancel, err := guard.ops.recoveryContext(ctx)
+	if err != nil {
+		return fmt.Errorf("create bounded recovery context: %w", err)
+	}
+	defer cancel()
+	return guard.sealSuccessfulInstall(recoveryCtx)
+}
+
 func (g *bindPackageInstallGuard) restore(ctx context.Context) error {
 	var restoreErrors []error
 	// A failed package transaction may still have unpacked and started a unit.
@@ -174,17 +182,32 @@ func (g *bindPackageInstallGuard) restore(ctx context.Context) error {
 		}
 	}
 	// Package hooks may have changed enablement underneath the temporary mask.
-	// Reconcile the exact enabled-vs-disabled class captured before installation.
+	// Reconcile only unit-file states for which systemd exposes an exact inverse.
 	for _, state := range g.before {
 		if state.masked() {
 			continue
 		}
-		if err := g.restoreEnabledState(ctx, state); err != nil {
+		if err := g.restoreUnitFileState(ctx, state); err != nil {
+			restoreErrors = append(restoreErrors, err)
+		}
+	}
+	// Preexisting masks are not owned by the guard. Reassert their exact
+	// persistent-vs-runtime class in case a package hook replaced it.
+	for _, state := range g.before {
+		if !state.masked() {
+			continue
+		}
+		if err := g.restoreExactMaskState(ctx, state); err != nil {
 			restoreErrors = append(restoreErrors, err)
 		}
 	}
 	for _, state := range g.before {
 		if err := g.restoreActiveState(ctx, state); err != nil {
+			restoreErrors = append(restoreErrors, err)
+		}
+	}
+	for _, state := range g.before {
+		if err := g.verifyRestoredState(ctx, state); err != nil {
 			restoreErrors = append(restoreErrors, err)
 		}
 	}
@@ -196,7 +219,7 @@ func (g *bindPackageInstallGuard) sealSuccessfulInstall(ctx context.Context) err
 	// Package hooks are untrusted to preserve the pre-install mask. Re-assert it
 	// before stopping, so no dependency or preset can race a restart afterward.
 	for _, state := range g.before {
-		if err := g.ensureMasked(ctx, state.name); err != nil {
+		if err := g.ensurePersistentMasked(ctx, state.name); err != nil {
 			sealErrors = append(sealErrors, fmt.Errorf("mask %s: %w", state.name, err))
 		}
 	}
@@ -205,28 +228,100 @@ func (g *bindPackageInstallGuard) sealSuccessfulInstall(ctx context.Context) err
 			sealErrors = append(sealErrors, fmt.Errorf("stop %s: %w", state.name, err))
 		}
 	}
+	for _, state := range g.before {
+		after, err := g.inspect(ctx, state.name)
+		if err != nil {
+			sealErrors = append(sealErrors, fmt.Errorf("prove %s sealed: %w", state.name, err))
+			continue
+		}
+		if after.loadState != "masked" || after.unitFileState != "masked" || after.activeState != "inactive" {
+			sealErrors = append(sealErrors, fmt.Errorf(
+				"prove %s sealed: load=%s active=%s unit-file=%s, want masked/inactive/masked",
+				state.name, after.loadState, after.activeState, after.unitFileState,
+			))
+		}
+	}
 	return errors.Join(sealErrors...)
 }
 
-func (g *bindPackageInstallGuard) restoreEnabledState(ctx context.Context, before bindInstallUnitState) error {
-	args := []string{"disable", before.name}
-	if before.enabled() {
-		args = []string{"enable", before.name}
-		if before.unitFileState == "enabled-runtime" {
-			args = []string{"enable", "--runtime", before.name}
+func (g *bindPackageInstallGuard) restoreUnitFileState(ctx context.Context, before bindInstallUnitState) error {
+	if before.loadState == "not-found" && before.unitFileState == "" {
+		after, inspectErr := g.inspect(ctx, before.name)
+		if inspectErr == nil && after.loadState == "not-found" && after.unitFileState == "" {
+			return nil
 		}
+		// A failed package manager may have left a newly unpacked unit behind.
+		// Package absence cannot be reconstructed here; the explicit safe
+		// compensation is exact stopped+disabled+unmasked state.
+		args := []string{"disable", before.name}
+		output, commandErr := g.ops.runSystemd(ctx, g.systemctl, args...)
+		after, inspectErr = g.inspect(ctx, before.name)
+		if inspectErr == nil && after.unitFileState == "disabled" && !after.masked() {
+			return nil
+		}
+		return reconciledBINDSystemdError(args, output, commandErr, inspectErr, after)
+	}
+	var args []string
+	switch before.unitFileState {
+	case "enabled":
+		args = []string{"enable", before.name}
+	case "enabled-runtime":
+		args = []string{"enable", "--runtime", before.name}
+	case "disabled":
+		args = []string{"disable", before.name}
+	default:
+		return fmt.Errorf("restore %s: unit-file state %q has no exact inverse", before.name, before.unitFileState)
 	}
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, args...)
 	after, inspectErr := g.inspect(ctx, before.name)
-	if inspectErr == nil {
-		if before.enabled() && after.unitFileState == before.unitFileState {
-			return nil
-		}
-		if !before.enabled() && !after.enabled() {
-			return nil
-		}
+	if inspectErr == nil && after.unitFileState == before.unitFileState && !after.masked() {
+		return nil
 	}
 	return reconciledBINDSystemdError(args, output, commandErr, inspectErr, after)
+}
+
+func (g *bindPackageInstallGuard) restoreExactMaskState(ctx context.Context, before bindInstallUnitState) error {
+	switch before.unitFileState {
+	case "masked":
+		return g.ensurePersistentMasked(ctx, before.name)
+	case "masked-runtime":
+		// Establish the runtime mask before removing any persistent mask so the
+		// unit is never exposed between commands.
+		firstOutput, firstErr := g.ops.runSystemd(ctx, g.systemctl, "mask", "--runtime", before.name)
+		secondOutput, secondErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", before.name)
+		after, inspectErr := g.inspect(ctx, before.name)
+		if inspectErr == nil && after.loadState == "masked" && after.unitFileState == "masked-runtime" {
+			return nil
+		}
+		return errors.Join(
+			reconciledBINDSystemdError([]string{"mask", "--runtime", before.name}, firstOutput, firstErr, inspectErr, after),
+			reconciledBINDSystemdError([]string{"unmask", before.name}, secondOutput, secondErr, inspectErr, after),
+		)
+	default:
+		return fmt.Errorf("restore %s: invalid preexisting mask state %q", before.name, before.unitFileState)
+	}
+}
+
+func (g *bindPackageInstallGuard) verifyRestoredState(ctx context.Context, before bindInstallUnitState) error {
+	after, err := g.inspect(ctx, before.name)
+	if err != nil {
+		return fmt.Errorf("verify restored %s: %w", before.name, err)
+	}
+	wantActive := before.activeState
+	if after.activeState != wantActive {
+		return fmt.Errorf("verify restored %s: active=%s, want %s", before.name, after.activeState, wantActive)
+	}
+	if before.loadState == "not-found" && before.unitFileState == "" {
+		if (after.loadState == "not-found" && after.unitFileState == "") ||
+			(after.unitFileState == "disabled" && !after.masked()) {
+			return nil
+		}
+		return fmt.Errorf("verify safe compensation for %s: load=%s unit-file=%s", before.name, after.loadState, after.unitFileState)
+	}
+	if after.unitFileState != before.unitFileState {
+		return fmt.Errorf("verify restored %s: unit-file=%s, want %s", before.name, after.unitFileState, before.unitFileState)
+	}
+	return nil
 }
 
 func (g *bindPackageInstallGuard) restoreActiveState(ctx context.Context, before bindInstallUnitState) error {
@@ -253,13 +348,32 @@ func (g *bindPackageInstallGuard) ensureMasked(ctx context.Context, unit string)
 	return reconciledBINDSystemdError([]string{"mask", unit}, output, commandErr, inspectErr, after)
 }
 
+func (g *bindPackageInstallGuard) ensurePersistentMasked(ctx context.Context, unit string) error {
+	// Create the persistent mask first, then remove a possible runtime mask.
+	// At least one mask therefore exists throughout the normalization.
+	firstOutput, firstErr := g.ops.runSystemd(ctx, g.systemctl, "mask", unit)
+	secondOutput, secondErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", "--runtime", unit)
+	after, inspectErr := g.inspect(ctx, unit)
+	if inspectErr == nil && after.loadState == "masked" && after.unitFileState == "masked" {
+		return nil
+	}
+	return errors.Join(
+		reconciledBINDSystemdError([]string{"mask", unit}, firstOutput, firstErr, inspectErr, after),
+		reconciledBINDSystemdError([]string{"unmask", "--runtime", unit}, secondOutput, secondErr, inspectErr, after),
+	)
+}
+
 func (g *bindPackageInstallGuard) ensureUnmasked(ctx context.Context, unit string) error {
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", unit)
+	runtimeOutput, runtimeErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", "--runtime", unit)
 	after, inspectErr := g.inspect(ctx, unit)
 	if inspectErr == nil && !after.masked() {
 		return nil
 	}
-	return reconciledBINDSystemdError([]string{"unmask", unit}, output, commandErr, inspectErr, after)
+	return errors.Join(
+		reconciledBINDSystemdError([]string{"unmask", unit}, output, commandErr, inspectErr, after),
+		reconciledBINDSystemdError([]string{"unmask", "--runtime", unit}, runtimeOutput, runtimeErr, inspectErr, after),
+	)
 }
 
 func (g *bindPackageInstallGuard) ensureStopped(ctx context.Context, unit string) error {
@@ -327,7 +441,7 @@ func (g *bindPackageInstallGuard) inspect(ctx context.Context, unit string) (bin
 
 func validBINDInstallLoadState(state string) bool {
 	switch state {
-	case "loaded", "not-found", "masked", "merged", "stub":
+	case "loaded", "not-found", "masked":
 		return true
 	default:
 		return false
@@ -349,9 +463,10 @@ func validBINDInstallUnitFileState(loadState, state string) bool {
 		return loadState == "not-found"
 	}
 	switch state {
-	case "enabled", "enabled-runtime", "linked", "linked-runtime", "alias",
-		"masked", "masked-runtime", "static", "disabled", "indirect", "generated", "transient":
-		return true
+	case "enabled", "enabled-runtime", "disabled":
+		return loadState == "loaded"
+	case "masked", "masked-runtime":
+		return loadState == "masked"
 	default:
 		return false
 	}

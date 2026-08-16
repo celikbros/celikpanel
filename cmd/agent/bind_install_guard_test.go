@@ -13,7 +13,8 @@ type fakeBINDInstallUnit struct {
 	loadState     string
 	active        bool
 	unitFileState string
-	masked        bool
+	masked        bool // persistent mask
+	runtimeMasked bool
 }
 
 type fakeBINDInstallSystemd struct {
@@ -35,11 +36,13 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 	}
 	command := args[0]
 	unitName := args[1]
-	if command == "enable" && args[1] == "--runtime" {
+	runtime := false
+	if (command == "enable" || command == "mask" || command == "unmask") && args[1] == "--runtime" {
 		if len(args) != 3 {
-			return nil, errors.New("incomplete runtime enable")
+			return nil, errors.New("incomplete runtime systemctl command")
 		}
 		unitName = args[2]
+		runtime = true
 	}
 	unit := f.units[unitName]
 	if unit == nil {
@@ -49,7 +52,10 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 	case "show":
 		loadState := unit.loadState
 		unitFileState := unit.unitFileState
-		if unit.masked {
+		if unit.runtimeMasked {
+			loadState = "masked"
+			unitFileState = "masked-runtime"
+		} else if unit.masked {
 			loadState = "masked"
 			unitFileState = "masked"
 		}
@@ -62,10 +68,18 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 			loadState, activeState, unitFileState,
 		)), nil
 	case "mask":
-		unit.masked = true
+		if runtime {
+			unit.runtimeMasked = true
+		} else {
+			unit.masked = true
+		}
 		return nil, nil
 	case "unmask":
-		unit.masked = false
+		if runtime {
+			unit.runtimeMasked = false
+		} else {
+			unit.masked = false
+		}
 		return nil, nil
 	case "stop":
 		unit.active = false
@@ -74,7 +88,7 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 		unit.active = false
 		return nil, nil
 	case "start":
-		if unit.masked {
+		if unit.masked || unit.runtimeMasked {
 			return []byte("unit is masked"), errors.New("start refused")
 		}
 		unit.active = true
@@ -84,7 +98,7 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 		return nil, nil
 	case "enable":
 		unit.unitFileState = "enabled"
-		if len(args) == 3 && args[1] == "--runtime" {
+		if runtime {
 			unit.unitFileState = "enabled-runtime"
 		}
 		return nil, nil
@@ -131,7 +145,7 @@ func TestBINDPackageInstallMasksBothDistroUnitsBeforeFreshInstall(t *testing.T) 
 	if err != nil {
 		t.Fatalf("guarded install failed: %v", err)
 	}
-	if output != "installed bind" || !installCalled || recoveries != 0 {
+	if output != "installed bind" || !installCalled || recoveries != 1 {
 		t.Fatalf("output=%q installCalled=%v recoveries=%d", output, installCalled, recoveries)
 	}
 	packageIndex := commandIndex(systemd.commands, "PACKAGE_INSTALL")
@@ -142,8 +156,8 @@ func TestBINDPackageInstallMasksBothDistroUnitsBeforeFreshInstall(t *testing.T) 
 		}
 	}
 	for name, unit := range systemd.units {
-		if !unit.masked || unit.active {
-			t.Errorf("%s terminal state masked=%v active=%v, want masked and stopped", name, unit.masked, unit.active)
+		if !unit.masked || unit.runtimeMasked || unit.active {
+			t.Errorf("%s terminal state persistent=%v runtime=%v active=%v, want exact persistent mask and stopped", name, unit.masked, unit.runtimeMasked, unit.active)
 		}
 	}
 	for _, command := range systemd.commands {
@@ -180,11 +194,11 @@ func TestBINDPackageInstallFailureRestoresPriorUnitState(t *testing.T) {
 		t.Fatalf("recovery contexts=%d, want 1", recoveries)
 	}
 	bind9 := systemd.units["bind9.service"]
-	if bind9.masked || bind9.active || bind9.unitFileState == "enabled" || bind9.unitFileState == "enabled-runtime" {
-		t.Fatalf("partially unpacked bind9 state=%+v, want unmasked, stopped and not enabled", bind9)
+	if bind9.masked || bind9.runtimeMasked || bind9.active || bind9.unitFileState != "disabled" {
+		t.Fatalf("partially unpacked bind9 state=%+v, want explicit unmasked+stopped+disabled compensation", bind9)
 	}
 	named := systemd.units["named.service"]
-	if named.masked || !named.active || named.unitFileState != "enabled" {
+	if named.masked || named.runtimeMasked || !named.active || named.unitFileState != "enabled" {
 		t.Fatalf("named rollback state=%+v, want original active+enabled state", named)
 	}
 	for _, command := range []string{"unmask named.service", "unmask bind9.service", "enable named.service", "start named.service"} {
@@ -214,6 +228,120 @@ func TestBINDPackageInstallFailurePreservesPreexistingMask(t *testing.T) {
 	}
 	if commandIndex(systemd.commands, "unmask bind9.service") >= 0 {
 		t.Fatalf("preexisting mask was unmasked: %v", systemd.commands)
+	}
+}
+
+func TestBINDPackageInstallFailureRestoresExactRuntimeMask(t *testing.T) {
+	systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+		"bind9.service": {loadState: "loaded", unitFileState: "disabled", runtimeMasked: true},
+		"named.service": {loadState: "not-found", unitFileState: ""},
+	})
+	recoveries := 0
+	wantErr := errors.New("apt failed")
+	_, err := installBINDPackagesWithGuardOps(
+		context.Background(),
+		"/usr/bin/systemctl",
+		func() (string, error) {
+			// Simulate a hostile package hook replacing the runtime mask with a
+			// persistent one; rollback must recover the exact original class.
+			unit := systemd.units["bind9.service"]
+			unit.runtimeMasked = false
+			unit.masked = true
+			return "partial", wantErr
+		},
+		fakeBINDInstallGuardOps(systemd, &recoveries),
+	)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error=%v, want package failure", err)
+	}
+	unit := systemd.units["bind9.service"]
+	if unit.masked || !unit.runtimeMasked || unit.active {
+		t.Fatalf("runtime mask rollback state=%+v, want exact masked-runtime+inactive", unit)
+	}
+	for _, command := range []string{"mask --runtime bind9.service", "unmask bind9.service"} {
+		if commandIndex(systemd.commands, command) < 0 {
+			t.Errorf("exact runtime mask recovery command %q missing: %v", command, systemd.commands)
+		}
+	}
+}
+
+func TestBINDPackageInstallSuccessSealUsesDetachedTrackedContext(t *testing.T) {
+	systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+		"bind9.service": {loadState: "not-found", unitFileState: ""},
+		"named.service": {loadState: "not-found", unitFileState: ""},
+	})
+	requestCtx, cancelRequest := context.WithCancel(context.Background())
+	recoveries := 0
+	sealStarted := false
+	ops := fakeBINDInstallGuardOps(systemd, &recoveries)
+	baseRun := ops.runSystemd
+	installReturned := false
+	ops.runSystemd = func(ctx context.Context, executable string, args ...string) ([]byte, error) {
+		if installReturned {
+			sealStarted = true
+			if ctx.Err() != nil {
+				return nil, fmt.Errorf("seal inherited canceled request: %w", ctx.Err())
+			}
+			if _, ok := ctx.Deadline(); !ok {
+				return nil, errors.New("seal context is not bounded")
+			}
+		}
+		return baseRun(ctx, executable, args...)
+	}
+	_, err := installBINDPackagesWithGuardOps(
+		requestCtx,
+		"/usr/bin/systemctl",
+		func() (string, error) {
+			for _, unit := range systemd.units {
+				unit.loadState = "loaded"
+				unit.unitFileState = "enabled"
+			}
+			cancelRequest()
+			installReturned = true
+			return "installed", nil
+		},
+		ops,
+	)
+	if err != nil {
+		t.Fatalf("detached success seal failed: %v", err)
+	}
+	if recoveries != 1 || !sealStarted {
+		t.Fatalf("recoveries=%d sealStarted=%v, want tracked seal context", recoveries, sealStarted)
+	}
+}
+
+func TestBINDPackageInstallSuccessRejectsUnprovenSeal(t *testing.T) {
+	systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+		"bind9.service": {loadState: "not-found", unitFileState: ""},
+		"named.service": {loadState: "not-found", unitFileState: ""},
+	})
+	recoveries := 0
+	ops := fakeBINDInstallGuardOps(systemd, &recoveries)
+	baseRun := ops.runSystemd
+	installReturned := false
+	ops.runSystemd = func(ctx context.Context, executable string, args ...string) ([]byte, error) {
+		output, err := baseRun(ctx, executable, args...)
+		if installReturned && len(args) == 3 && args[0] == "unmask" && args[1] == "--runtime" {
+			// Model state changing immediately after systemctl claimed success.
+			systemd.units[args[2]].masked = false
+		}
+		return output, err
+	}
+	_, err := installBINDPackagesWithGuardOps(
+		context.Background(),
+		"/usr/bin/systemctl",
+		func() (string, error) {
+			for _, unit := range systemd.units {
+				unit.loadState = "loaded"
+				unit.unitFileState = "enabled"
+			}
+			installReturned = true
+			return "installed", nil
+		},
+		ops,
+	)
+	if err == nil || !strings.Contains(err.Error(), "could not be left safely stopped") {
+		t.Fatalf("error=%v, want exact seal proof failure", err)
 	}
 }
 
@@ -248,6 +376,30 @@ func TestBINDPackageInstallFailsClosedBeforePackageMutationOnUnstableState(t *te
 	}
 	if installCalled {
 		t.Fatal("package manager ran after the BIND unit state became untrustworthy")
+	}
+}
+
+func TestBINDPackageInstallRejectsUnrestorableUnitFileStatesBeforeMutation(t *testing.T) {
+	for _, state := range []string{"alias", "linked", "linked-runtime", "static", "indirect", "generated", "transient"} {
+		t.Run(state, func(t *testing.T) {
+			systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+				"bind9.service": {loadState: "loaded", unitFileState: state},
+				"named.service": {loadState: "not-found", unitFileState: ""},
+			})
+			recoveries := 0
+			installCalled := false
+			_, err := installBINDPackagesWithGuardOps(
+				context.Background(), "/usr/bin/systemctl",
+				func() (string, error) { installCalled = true; return "", nil },
+				fakeBINDInstallGuardOps(systemd, &recoveries),
+			)
+			if err == nil || !strings.Contains(err.Error(), "unsupported unit state") {
+				t.Fatalf("state %q error=%v, want fail-closed rejection", state, err)
+			}
+			if installCalled {
+				t.Fatalf("package manager ran for unrestorable state %q", state)
+			}
+		})
 	}
 }
 
