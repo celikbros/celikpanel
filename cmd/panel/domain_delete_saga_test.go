@@ -71,7 +71,24 @@ func (a *domainDeletionRPCAgent) Version(
 	resp *transport.AgentVersionResponse,
 ) error {
 	resp.Commit = a.commit
-	resp.Capabilities = []string{transport.AgentCapabilityDNSZoneSyncV2}
+	resp.Capabilities = []string{
+		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSZoneSyncV3,
+	}
+	return nil
+}
+
+func (a *domainDeletionRPCAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine: transport.DNSEnginePowerDNS, Installed: true,
+			Running: true, Managed: true, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
 	return nil
 }
 
@@ -131,6 +148,38 @@ func (a *domainDeletionRPCAgent) SyncDNSZoneV2(
 		return nil
 	}
 	resp.Synced = true
+	resp.AppliedGeneration = req.DesiredGeneration
+	return nil
+}
+
+func (a *domainDeletionRPCAgent) SyncDNSZoneV3(
+	req *transport.SyncDNSZoneV3Request,
+	resp *transport.SyncDNSZoneV3Response,
+) error {
+	normalized := transport.SyncDNSZoneRequest{
+		ServiceMutationBinding: req.ServiceMutationBinding,
+		DesiredGeneration:      req.DesiredGeneration,
+		Domain:                 req.Domain,
+		Delete:                 req.Delete,
+		ZoneType:               req.ZoneType,
+		Records: append(
+			[]transport.ZoneRecord(nil), req.Records...,
+		),
+	}
+	a.callsMu.Lock()
+	a.syncRequests = append(a.syncRequests, normalized)
+	fail := a.syncErrorsRemaining > 0
+	if fail {
+		a.syncErrorsRemaining--
+	}
+	a.callsMu.Unlock()
+	if fail {
+		resp.Error = "forced DNS deletion failure"
+		return nil
+	}
+	resp.Synced = true
+	resp.Engine = req.Engine
+	resp.EngineEpoch = req.EngineEpoch
 	resp.AppliedGeneration = req.DesiredGeneration
 	return nil
 }

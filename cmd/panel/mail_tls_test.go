@@ -1444,16 +1444,22 @@ func TestSyncCertificateDependentsHistoricalSecureMailTriggersCleanup(t *testing
 
 func TestDeleteDomainRemovesSecureMailFromPublishedSNISnapshot(t *testing.T) {
 	p, subscriptionID := newMailTLSIsolationFixture(t)
+	activateDNSEngineForTest(t, p, string(transport.DNSEnginePowerDNS))
 	targetID := addMailTLSIsolationDomain(
 		t, p, subscriptionID, "delete-mail.example", "/certs/delete-mail", "active", true,
 	)
 	addMailTLSIsolationDomain(
 		t, p, subscriptionID, "remaining-mail.example", "/certs/remaining-mail", "active", true,
 	)
-	agent := &mailTLSIsolationRPCAgent{certificates: map[string]MailTLSInspectRPCResponse{
-		"/certs/delete-mail":    validMailTLSCertificate("delete-mail.example"),
-		"/certs/remaining-mail": validMailTLSCertificate("remaining-mail.example"),
-	}}
+	agent := &mailTLSIsolationRPCAgent{
+		serviceOperationTestAgent: newServiceOperationTestAgent(),
+		certificates: map[string]MailTLSInspectRPCResponse{
+			"/certs/delete-mail":    validMailTLSCertificate("delete-mail.example"),
+			"/certs/remaining-mail": validMailTLSCertificate("remaining-mail.example"),
+		},
+	}
+	agent.serviceOperationTestAgent.installed["pdns"] = true
+	agent.serviceOperationTestAgent.active["pdns"] = true
 	attachMailTLSIsolationAgent(t, p, agent)
 
 	request := httptest.NewRequest(

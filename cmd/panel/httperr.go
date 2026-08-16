@@ -63,6 +63,7 @@ const (
 	errCodeDNSServerRequired             = "DNS_SERVER_REQUIRED"
 	errCodeDNSSettingsRequired           = "DNS_SETTINGS_REQUIRED"
 	errCodeDNSSetupRequired              = "DNS_SETUP_REQUIRED"
+	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"
 	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
 	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
 	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"

@@ -132,12 +132,28 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 				"DNS topology recovery must finish before DNSSEC signing")
 			return
 		}
+		publisher, publisherReady, err := p.activeDNSPublisher(r.Context())
+		if err != nil {
+			writeServerError(w, fmt.Errorf("verify DNSSEC publisher identity: %w", err))
+			return
+		}
+		if !publisherReady ||
+			publisher.Engine != transport.DNSEnginePowerDNS ||
+			publisher.Epoch < 1 {
+			writeClientError(w, http.StatusConflict,
+				"DNSSEC signing requires the proven active PowerDNS publisher")
+			return
+		}
+		if err := p.requireDNSZoneSyncV3Agent(r.Context()); err != nil {
+			writeServerError(w, fmt.Errorf("verify engine-bound DNSSEC publication: %w", err))
+			return
+		}
 		if err := p.requireDNSSECSecureV2Agent(r.Context()); err != nil {
 			writeServerError(w, fmt.Errorf("verify DNSSEC publisher: %w", err))
 			return
 		}
-		plan, err := p.prepareDNSZoneSyncPlanReconciledLocked(
-			r.Context(), domain, false,
+		plan, err := p.prepareDNSZoneSyncV3PlanReconciledLocked(
+			r.Context(), domain, false, publisher,
 		)
 		if err != nil {
 			var publicationErr *dnsAgentPublicationError
@@ -197,7 +213,9 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 			// not create host authority. Release only this exact publication lease;
 			// the desired generation remains pending for ordinary startup repair.
 			finalizeCtx, cancel := dnsZoneFinalizeContext(r.Context())
-			recordErr := p.recordDNSZoneSyncFailure(finalizeCtx, plan.State, secureErr)
+			recordErr := p.recordDNSZoneSyncV3Failure(
+				finalizeCtx, plan.Lease, secureErr,
+			)
 			cancel()
 			if recordErr != nil {
 				writeServerError(w, fmt.Errorf("release unstarted DNSSEC publication: %w", recordErr))
@@ -210,7 +228,9 @@ func (p *Panel) handleDomainDNSSEC(w http.ResponseWriter, r *http.Request, domai
 		// Even a known terminal signing failure may have created keys before
 		// stopping. Consume the pre-sign publication lease while both global
 		// locks remain held so the served zone converges to the exact snapshot.
-		_, publishErr := p.publishPreparedDNSZoneSyncPlanLocked(r.Context(), plan)
+		_, publishErr := p.publishPreparedDNSZoneSyncV3PlanLocked(
+			r.Context(), plan,
+		)
 		if secureErr != nil {
 			if publishErr != nil {
 				log.Printf("dnssec secure %s: %v; repair publication: %v", domain, secureErr, publishErr)

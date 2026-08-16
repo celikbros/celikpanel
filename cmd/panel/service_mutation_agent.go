@@ -203,11 +203,17 @@ func payloadBoundMutationPublishedPhase(
 		return "commit/dns-cluster-config/v1/published/" + identity.RequestID + "/" + identity.PackageName, true, nil
 	case "dns_zone_sync":
 		canonicalTarget, err := hostname.CanonicalFQDN(identity.Target)
-		if err != nil || canonicalTarget != identity.Target ||
-			!mutationpayload.ValidDNSZoneSyncQualifier(identity.PackageName) {
+		if err != nil || canonicalTarget != identity.Target {
 			return "", true, errAgentMutationPublishedReceiptMismatch
 		}
-		return "commit/dns-zone-sync/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		switch {
+		case mutationpayload.ValidDNSZoneSyncQualifier(identity.PackageName):
+			return "commit/dns-zone-sync/v1/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		case mutationpayload.ValidDNSZoneSyncV3Qualifier(identity.PackageName):
+			return "commit/dns-zone-sync/v3/published/" + identity.RequestID + "/" + identity.Target + "/" + identity.PackageName, true, nil
+		default:
+			return "", true, errAgentMutationPublishedReceiptMismatch
+		}
 	case dnsEngineSwitchKind:
 		if !transport.ValidDNSEngine(transport.DNSEngine(identity.Target)) ||
 			!mutationpayload.ValidDNSEngineSwitchQualifier(identity.PackageName) {

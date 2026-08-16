@@ -580,7 +580,7 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req dnsSetupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeStrictJSON(w, r, &req); err != nil {
 		writeClientError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
@@ -633,6 +633,10 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, "role must be standalone or paired")
 		return
 	}
+	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
 	// Capability, platform policy and installed/configured PowerDNS are all
 	// preconditions. Mixed binaries and an unready host touch neither DB nor K.
 	if err := p.requireDNSClusterConfigureV2Agent(r.Context()); err != nil {
@@ -645,6 +649,11 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 	defer p.dnsTopologyMu.Unlock()
 	dnsPublicationMu.Lock()
 	defer dnsPublicationMu.Unlock()
+
+	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
 
 	// Readiness is deliberately checked while holding the complete topology
 	// lock chain. A request may have waited behind another host mutation after
@@ -751,7 +760,7 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	resp, applyErr := p.applyDNSClusterSagaV2(r.Context(), saga)
+	_, applyErr := p.applyDNSClusterSagaV2(r.Context(), saga)
 	if applyErr != nil {
 		var preBegin *dnsClusterPreBeginError
 		if errors.As(applyErr, &preBegin) {
@@ -805,5 +814,5 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.audit(r, "settings.dns_setup_published:"+req.Role+" peer="+req.PeerIP, "settings", 0)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "detail": resp.Detail})
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }

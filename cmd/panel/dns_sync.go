@@ -196,94 +196,17 @@ func (p *Panel) syncZoneToDNSLocked(ctx context.Context, domain string, deleted 
 	if err != nil {
 		return fmt.Errorf("canonicalize DNS zone: %w", err)
 	}
-	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
-		return &dnsAgentPublicationError{Err: err}
+	publisher, ready, err := p.activeDNSPublisher(ctx)
+	if err != nil {
+		return &dnsAgentPublicationError{Err: fmt.Errorf("verify active DNS publisher: %w", err)}
 	}
-	for attempt := 0; attempt < dnsZoneSyncMaxAttempts; attempt++ {
-		plan, err := p.prepareDNSZoneSyncPlan(ctx, canonicalDomain, deleted)
-		if errors.Is(err, errDNSZoneAlreadyAbsent) && deleted {
-			return nil
-		}
-		var existing *dnsZoneExistingLeaseError
-		if errors.As(err, &existing) {
-			done, reconcileErr := p.reconcileDNSZoneLease(ctx, existing.State, false)
-			if reconcileErr != nil {
-				return reconcileErr
-			}
-			if done {
-				return nil
-			}
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		req := transport.SyncDNSZoneV2Request{
-			DesiredGeneration: plan.Commitment.DesiredGeneration,
-			Domain:            plan.Commitment.Domain,
-			Delete:            plan.Commitment.Delete,
-			ZoneType:          plan.Commitment.ZoneType,
-			Records:           append([]zoneRecord(nil), plan.Commitment.Records...),
-		}
-		var resp transport.SyncDNSZoneV2Response
-		op := serviceOperation{
-			RequestID:   plan.RequestID,
-			Kind:        "dns_zone_sync",
-			ServiceID:   plan.Commitment.Domain,
-			PackageName: plan.Commitment.Qualifier,
-		}
-		callErr := p.withStandaloneAgentMutationIdentity(
-			ctx,
-			op,
-			plan.OwnerID,
-			func(callCtx context.Context, binding agentMutationBinding) error {
-				req.ServiceMutationBinding = binding
-				if err := p.callAgentContext(callCtx, "Agent.SyncDNSZoneV2", &req, &resp); err != nil {
-					return err
-				}
-				if resp.Error != "" {
-					return errors.New(resp.Error)
-				}
-				if !resp.Synced {
-					return errors.New("agent did not confirm DNS publication")
-				}
-				if resp.AppliedGeneration != plan.Commitment.DesiredGeneration {
-					return errors.New("agent confirmed a different DNS generation")
-				}
-				return nil
-			},
-		)
-		if callErr != nil {
-			done, retry, settleErr := p.settleDNSZoneSyncCallError(ctx, plan.State, callErr)
-			if settleErr != nil {
-				return settleErr
-			}
-			if done {
-				return nil
-			}
-			if retry {
-				continue
-			}
-			log.Printf("dns sync %s generation %d: %v", canonicalDomain, plan.Commitment.DesiredGeneration, callErr)
-			return &dnsAgentPublicationError{Err: callErr}
-		}
-		// A nil lifecycle result is itself the authority. If the RPC response
-		// was lost (or a late heartbeat observed success), the exact terminal
-		// job identity still binds this generation and complete payload.
-		finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
-		exact, finalizeErr := p.recordDNSZoneSyncSuccess(finalizeCtx, plan.State)
-		cancel()
-		if finalizeErr != nil {
-			return fmt.Errorf("record DNS publication success: %w", finalizeErr)
-		}
-		if exact {
-			return nil
-		}
-		// The desired generation advanced while this detached snapshot was in
-		// flight. The exact old lease is now released; retry a fresh snapshot.
+	if !ready {
+		return &dnsAgentPublicationError{Err: errors.New("no proven active DNS publisher is ready")}
 	}
-	return &dnsAgentPublicationError{Err: errors.New("DNS zone changed during every bounded publication attempt")}
+	if !transport.ValidDNSEngine(publisher.Engine) || publisher.Epoch < 1 {
+		return &dnsAgentPublicationError{Err: errors.New("active DNS publisher identity is invalid")}
+	}
+	return p.syncZoneToDNSV3Locked(ctx, canonicalDomain, deleted, publisher)
 }
 
 // prepareDNSZoneSyncPlanReconciledLocked prepares a fresh exact publication
@@ -666,6 +589,43 @@ func (p *Panel) recordDNSZoneSyncSuccess(
 		return false, err
 	}
 	defer tx.Rollback()
+	engineState, err := readDNSEngineDBState(ctx, tx)
+	if err != nil {
+		return false, fmt.Errorf("read DNS engine authority for legacy receipt: %w", err)
+	}
+	// V2 has no engine or epoch in either its request or receipt. It is safe to
+	// consume only while the host still has no durable publisher identity. Once
+	// an engine has been adopted, a delayed V2 success could otherwise cross a
+	// PDNS -> BIND -> PDNS epoch and falsely mark the new authority as applied.
+	// Retire that exact legacy lease as pending; the active engine is republished
+	// through V3 by the caller/startup recovery.
+	if engineState.ActiveEngine != "" || engineState.EngineEpoch != 0 ||
+		engineState.CurrentSwitchID != "" {
+		result, releaseErr := tx.ExecContext(ctx, `
+			UPDATE dns_zone_sync_state
+			SET status = 'pending', last_error = NULL,
+			    lease_request_id = NULL, lease_owner_id = NULL,
+			    lease_generation = NULL, lease_action = NULL,
+			    lease_zone_type = NULL, lease_qualifier = NULL,
+			    lease_expires_at = NULL, updated_at = datetime('now')
+			WHERE zone_name = ?
+			  AND lease_request_id = ? AND lease_owner_id = ?
+			  AND lease_generation = ? AND lease_action = ?
+			  AND lease_zone_type = ? AND lease_qualifier = ?
+			  AND lease_expires_at = ?`, dnsZoneLeaseWhere(lease)...)
+		if releaseErr != nil {
+			return false, releaseErr
+		}
+		if err := requireExactRows(
+			result, 1, "legacy DNS receipt lost its exact lease CAS",
+		); err != nil {
+			return false, err
+		}
+		if err := tx.Commit(); err != nil {
+			return false, err
+		}
+		return false, nil
+	}
 	args := []any{
 		lease.LeaseGeneration.Int64,
 		lease.LeaseGeneration.Int64,
@@ -872,7 +832,7 @@ func (p *Panel) reconcileDNSZoneLease(
 	return false, nil
 }
 
-func validDirectDNSZoneSync(job *agentMutationJob) bool {
+func validDirectDNSZoneSyncV2(job *agentMutationJob) bool {
 	if job == nil || !agentMutationActive(job.Status) ||
 		!validServiceOperationID(job.RequestID) ||
 		!validServiceOperationID(job.OwnerID) ||
@@ -882,6 +842,10 @@ func validDirectDNSZoneSync(job *agentMutationJob) bool {
 	}
 	canonical, err := hostname.CanonicalFQDN(job.Target)
 	return err == nil && canonical == job.Target
+}
+
+func validDirectDNSZoneSync(job *agentMutationJob) bool {
+	return validDirectDNSZoneSyncV2(job) || validDirectDNSZoneSyncV3(job)
 }
 
 func validDirectDNSSECSecure(job *agentMutationJob) bool {
@@ -961,11 +925,22 @@ func (p *Panel) recoverDirectDNSSECSecureLocked(
 	if err != nil {
 		return fmt.Errorf("read interrupted DNSSEC publication bridge: %w", err)
 	}
-	if !state.hasLease() || state.LeaseAction.String != "sync" ||
-		!state.SourceDomainID.Valid ||
-		!mutationpayload.ValidDNSZoneSyncQualifier(state.LeaseQualifier.String) ||
-		(state.LeaseZoneType.String != "NATIVE" &&
-			state.LeaseZoneType.String != "MASTER") {
+	var engineLease dnsZoneEngineLease
+	legacyBridge := state.hasLease()
+	if !legacyBridge {
+		engineLease, err = readDNSZoneEngineLease(
+			batchCtx, p.db.GetDB(), job.Target,
+		)
+	}
+	validLegacy := legacyBridge &&
+		state.LeaseAction.String == "sync" &&
+		mutationpayload.ValidDNSZoneSyncQualifier(state.LeaseQualifier.String) &&
+		(state.LeaseZoneType.String == "NATIVE" ||
+			state.LeaseZoneType.String == "MASTER")
+	validV3 := !legacyBridge && err == nil && engineLease.valid() &&
+		engineLease.ZoneName == job.Target &&
+		engineLease.DesiredAction == "sync"
+	if !state.SourceDomainID.Valid || (!validLegacy && !validV3) {
 		return errors.New(
 			"interrupted DNSSEC signing has no valid same-domain publication bridge",
 		)
@@ -1016,8 +991,16 @@ func (p *Panel) recoverDirectDNSSECSecureLocked(
 	// the pre-sign lease as proven-never-begun, then publish the current ledger
 	// generation. This also handles a record edit committed while signing held
 	// the global host lock: current desired state remains recovery authority.
-	if _, err := p.reconcileDNSZoneLease(batchCtx, state, false); err != nil {
-		return fmt.Errorf("reconcile DNSSEC publication bridge: %w", err)
+	if legacyBridge {
+		if _, err := p.reconcileDNSZoneLease(batchCtx, state, false); err != nil {
+			return fmt.Errorf("reconcile legacy DNSSEC publication bridge: %w", err)
+		}
+	} else {
+		if _, err := p.reconcileDNSZoneEngineLease(
+			batchCtx, engineLease, false,
+		); err != nil {
+			return fmt.Errorf("reconcile DNSSEC V3 publication bridge: %w", err)
+		}
 	}
 	if err := p.syncZoneToDNSLocked(batchCtx, job.Target, false); err != nil {
 		return fmt.Errorf("publish current DNSSEC recovery snapshot: %w", err)
@@ -1039,7 +1022,7 @@ func (p *Panel) exactDNSZoneLeaseForJob(
 	ctx context.Context,
 	job *agentMutationJob,
 ) (dnsZoneSyncState, error) {
-	if !validDirectDNSZoneSync(job) {
+	if !validDirectDNSZoneSyncV2(job) {
 		return dnsZoneSyncState{}, errors.New("direct DNS publication has an invalid durable identity")
 	}
 	state, err := readDNSZoneSyncState(ctx, p.db.GetDB(), job.Target)
@@ -1058,6 +1041,9 @@ func (p *Panel) recoverDirectDNSZoneSyncLocked(
 	ctx context.Context,
 	job *agentMutationJob,
 ) error {
+	if validDirectDNSZoneSyncV3(job) {
+		return p.recoverDirectDNSZoneSyncV3Locked(ctx, job)
+	}
 	batchCtx, cancelBatch := dnsZoneBatchContext(ctx)
 	defer cancelBatch()
 	dnsPublicationMu.Lock()
@@ -1094,6 +1080,10 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 		SELECT zone_name
 		FROM dns_zone_sync_state
 		WHERE status IN ('pending', 'error') OR lease_request_id IS NOT NULL
+		   OR EXISTS (
+		     SELECT 1 FROM dns_zone_engine_leases AS engine_lease
+		     WHERE engine_lease.zone_name = dns_zone_sync_state.zone_name
+		   )
 		ORDER BY zone_name`)
 	if err != nil {
 		return fmt.Errorf("list recoverable DNS publications: %w", err)
@@ -1134,6 +1124,18 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 				continue
 			}
 		}
+		engineLease, leaseErr := readDNSZoneEngineLease(ctx, p.db.GetDB(), zone)
+		if leaseErr == nil {
+			done, err := p.reconcileDNSZoneEngineLease(ctx, engineLease, true)
+			if err != nil {
+				return fmt.Errorf("reconcile DNS V3 publication %s: %w", zone, err)
+			}
+			if done {
+				continue
+			}
+		} else if !errors.Is(leaseErr, sql.ErrNoRows) {
+			return fmt.Errorf("read recoverable DNS V3 publication %s: %w", zone, leaseErr)
+		}
 	}
 
 	var pending []dnsZoneSyncState
@@ -1151,6 +1153,14 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 				zone,
 			)
 		}
+		if _, leaseErr := readDNSZoneEngineLease(ctx, p.db.GetDB(), zone); leaseErr == nil {
+			return fmt.Errorf(
+				"DNS V3 publication %s retained a lease after exact reconciliation",
+				zone,
+			)
+		} else if !errors.Is(leaseErr, sql.ErrNoRows) {
+			return fmt.Errorf("reload recoverable DNS V3 lease %s: %w", zone, leaseErr)
+		}
 		if state.Status == "pending" || state.Status == "error" {
 			pending = append(pending, state)
 		}
@@ -1159,35 +1169,45 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 		return nil
 	}
 
-	// Migration 032 intentionally seeds old zones as pending. A host where
-	// PowerDNS is not installed yet, or where this V2 mutation is permanently
-	// unsupported, must still boot so the operator can install/upgrade it.
-	if err := p.requireDNSZoneSyncV2Agent(ctx); err != nil {
-		if errors.Is(err, errDNSZoneSyncV2AgentIncompatible) ||
+	// Migration 032 intentionally seeds old zones as pending. An unconfigured
+	// host must still boot so the operator can choose an engine; no pending row
+	// is published until durable identity and runtime readiness agree exactly.
+	publisher, ready, publisherErr := p.activeDNSPublisher(ctx)
+	if publisherErr != nil || !ready {
+		log.Printf(
+			"deferring %d pending DNS publication(s) until an active publisher is ready: %v",
+			len(pending), publisherErr,
+		)
+		return nil
+	}
+	if !transport.ValidDNSEngine(publisher.Engine) || publisher.Epoch < 1 {
+		return errors.New("active DNS publisher has an invalid durable identity")
+	}
+	if err := p.requireDNSZoneSyncV3Agent(ctx); err != nil {
+		if errors.Is(err, errDNSZoneSyncV3AgentIncompatible) ||
 			errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
 			log.Printf(
-				"deferring %d pending DNS publication(s) until V2 is available: %v",
+				"deferring %d pending DNS publication(s) until V3 is available: %v",
 				len(pending), err,
 			)
 			return nil
 		}
-		return fmt.Errorf("verify pending DNS publication capability: %w", err)
+		return fmt.Errorf("verify pending DNS V3 publication capability: %w", err)
 	}
-	var readiness dnsClusterReadinessResponse
-	if err := p.callAgentContext(
-		ctx,
-		"Agent.DNSClusterReadiness",
-		&transport.Empty{},
-		&readiness,
-	); err != nil {
-		return fmt.Errorf("read PowerDNS startup readiness: %w", err)
-	}
-	if !readiness.Ready {
-		log.Printf(
-			"deferring %d pending DNS publication(s): %s",
-			len(pending), strings.TrimSpace(readiness.Detail),
-		)
-		return nil
+	if publisher.Engine == transport.DNSEnginePowerDNS {
+		var readiness dnsClusterReadinessResponse
+		if err := p.callAgentContext(
+			ctx, "Agent.DNSClusterReadiness", &transport.Empty{}, &readiness,
+		); err != nil {
+			return fmt.Errorf("read PowerDNS startup readiness: %w", err)
+		}
+		if !readiness.Ready {
+			log.Printf(
+				"deferring %d pending DNS publication(s): %s",
+				len(pending), strings.TrimSpace(readiness.Detail),
+			)
+			return nil
+		}
 	}
 	for _, state := range pending {
 		if err := p.syncZoneToDNSLocked(
@@ -1214,6 +1234,10 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+		writeDNSEngineWorkflowRequired(w)
+		return
+	}
 	if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
 		writeClientError(w, http.StatusConflict,
 			"DNS cluster topology is pending recovery; PowerDNS configuration is blocked")
@@ -1228,6 +1252,10 @@ func (p *Panel) handlePDNSEnable(w http.ResponseWriter, r *http.Request) {
 	if err := p.requireNoPendingDNSClusterSaga(r.Context()); err != nil {
 		writeClientError(w, http.StatusConflict,
 			"DNS cluster topology is pending recovery; PowerDNS configuration is blocked")
+		return
+	}
+	if err := p.requireActivePowerDNSPublisher(r.Context()); err != nil {
+		writeDNSEngineWorkflowRequired(w)
 		return
 	}
 

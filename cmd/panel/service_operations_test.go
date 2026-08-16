@@ -171,6 +171,7 @@ type serviceOperationTestAgent struct {
 	nodeNoop                    bool
 	dnsError                    string
 	dnsV2Requests               []transport.SyncDNSZoneV2Request
+	dnsV3Requests               []transport.SyncDNSZoneV3Request
 	versionCapabilities         *[]string
 	versionCommit               string
 	serviceError                string
@@ -221,6 +222,7 @@ func (a *serviceOperationTestAgent) Version(
 		transport.AgentCapabilityFirewallApplyV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilityDNSZoneSyncV2,
+		transport.AgentCapabilityDNSZoneSyncV3,
 		transport.AgentCapabilityMailTLSSyncV2,
 	}
 	if a.versionCapabilities != nil {
@@ -639,6 +641,45 @@ func (a *serviceOperationTestAgent) SyncDNSZoneV2(
 	}
 	resp.Synced = true
 	resp.AppliedGeneration = req.DesiredGeneration
+	return nil
+}
+
+func (a *serviceOperationTestAgent) SyncDNSZoneV3(
+	req *transport.SyncDNSZoneV3Request,
+	resp *transport.SyncDNSZoneV3Response,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	copy := *req
+	copy.Records = append([]transport.ZoneRecord(nil), req.Records...)
+	a.dnsV3Requests = append(a.dnsV3Requests, copy)
+	a.mutationEvents = append(a.mutationEvents, "call:dns_zone_sync")
+	if a.dnsError != "" {
+		resp.Error = a.dnsError
+		return nil
+	}
+	resp.Synced = true
+	resp.Engine = req.Engine
+	resp.EngineEpoch = req.EngineEpoch
+	resp.AppliedGeneration = req.DesiredGeneration
+	return nil
+}
+
+func (a *serviceOperationTestAgent) DNSBackendReadiness(
+	_ *transport.Empty,
+	resp *transport.DNSBackendReadinessResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	pdnsInstalled := a.installed["pdns"]
+	resp.Engines = []transport.DNSBackendRuntimeState{
+		{
+			Engine:    transport.DNSEnginePowerDNS,
+			Installed: pdnsInstalled, Running: a.active["pdns"],
+			Managed: pdnsInstalled, Unit: "pdns.service",
+		},
+		{Engine: transport.DNSEngineBIND, Unit: "bind9.service"},
+	}
 	return nil
 }
 

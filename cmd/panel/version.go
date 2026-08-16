@@ -39,6 +39,9 @@ var (
 	errDNSZoneSyncV2AgentIncompatible = errors.New(
 		"DNS Zone Sync V2 agent is permanently incompatible with this panel",
 	)
+	errDNSZoneSyncV3AgentIncompatible = errors.New(
+		"DNS Zone Sync V3 agent is permanently incompatible with this panel",
+	)
 )
 
 // requireMatchingAgentBuild fails closed for privileged mutations whenever
@@ -180,6 +183,40 @@ func (p *Panel) requireDNSZoneSyncV2Agent(ctx context.Context) error {
 	}
 	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncDNSZoneV2"); err != nil {
 		return fmt.Errorf("authorize DNS V2 host mutation before snapshot preparation: %w", err)
+	}
+	return nil
+}
+
+// requireDNSZoneSyncV3Agent verifies the exact paired engine-bound mutation
+// before the panel advances SOA, snapshots a zone or persists a V3 lease.
+func (p *Panel) requireDNSZoneSyncV3Agent(ctx context.Context) error {
+	var agent transport.AgentVersionResponse
+	if err := p.callAgentContext(ctx, "Agent.Version", &transport.Empty{}, &agent); err != nil {
+		return fmt.Errorf("verify DNS V3 agent capability: %w", err)
+	}
+	panelCommit := strings.TrimSpace(buildCommit)
+	if panelCommit != "" && panelCommit != "unknown" {
+		agentCommit := strings.TrimSpace(agent.Commit)
+		if agentCommit == "" || agentCommit != panelCommit {
+			return fmt.Errorf(
+				"%w: panel/agent build mismatch (panel %s, agent %s); finish the paired upgrade before DNS publication",
+				errDNSZoneSyncV3AgentIncompatible,
+				panelCommit,
+				agentCommit,
+			)
+		}
+	}
+	if err := requireKnownAgentCapabilities(
+		agent.Capabilities,
+		transport.AgentCapabilityDNSZoneSyncV3,
+	); err != nil {
+		return fmt.Errorf(
+			"%w: DNS V3 requires the paired agent capability: %v",
+			errDNSZoneSyncV3AgentIncompatible, err,
+		)
+	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncDNSZoneV3"); err != nil {
+		return fmt.Errorf("authorize DNS V3 host mutation before snapshot preparation: %w", err)
 	}
 	return nil
 }

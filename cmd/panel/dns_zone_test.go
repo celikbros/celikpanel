@@ -40,6 +40,59 @@ func setDNSIdentityForTest(t *testing.T, p *Panel, role string) {
 	}
 }
 
+// activateDNSEngineForTest follows the same migration-enforced state machine
+// as a zero-zone first engine selection; tests must not infer authority from a
+// fake running process alone.
+func activateDNSEngineForTest(t *testing.T, p *Panel, engine string) {
+	t.Helper()
+	switchID := strings.Repeat("a", 32)
+	requestID := strings.Repeat("b", 32)
+	ownerID := strings.Repeat("c", 32)
+	manifest := "dns-engine-switch/v1:sha256:" + strings.Repeat("d", 64)
+	if _, err := p.db.GetDB().Exec(`
+		INSERT INTO dns_engine_switch_snapshots (
+		  switch_id, request_id, owner_id, source_engine, target_engine,
+		  source_epoch, target_epoch, source_state_revision, topology,
+		  phase, manifest_qualifier, zone_count, snapshot_bytes
+		) VALUES (?, ?, ?, NULL, ?, 0, 1, 0, 'standalone',
+		          'planned', ?, 0, 0)`,
+		switchID, requestID, ownerID, engine, manifest,
+	); err != nil {
+		t.Fatalf("seed DNS engine switch: %v", err)
+	}
+	statements := []struct {
+		query string
+		args  []any
+	}{
+		{`UPDATE dns_engine_state
+		  SET current_switch_id = ?, revision = revision + 1
+		  WHERE singleton_id = 1`, []any{switchID}},
+		{`UPDATE dns_engine_switch_snapshots SET phase = 'staging'
+		  WHERE switch_id = ? AND phase = 'planned'`, []any{switchID}},
+		{`UPDATE dns_engine_switch_snapshots SET phase = 'staged'
+		  WHERE switch_id = ? AND phase = 'staging'`, []any{switchID}},
+		{`UPDATE dns_engine_switch_snapshots SET phase = 'activating'
+		  WHERE switch_id = ? AND phase = 'staged'`, []any{switchID}},
+		{`UPDATE dns_engine_switch_snapshots SET phase = 'verifying'
+		  WHERE switch_id = ? AND phase = 'activating'`, []any{switchID}},
+		{`UPDATE dns_engine_switch_snapshots SET phase = 'committed'
+		  WHERE switch_id = ? AND phase = 'verifying'`, []any{switchID}},
+		{`UPDATE dns_engine_state
+		  SET active_engine = ?, active_epoch = 1, current_switch_id = NULL,
+		      revision = revision + 1
+		  WHERE singleton_id = 1 AND current_switch_id = ?`, []any{engine, switchID}},
+	}
+	for _, statement := range statements {
+		result, err := p.db.GetDB().Exec(statement.query, statement.args...)
+		if err != nil {
+			t.Fatalf("advance DNS engine fixture: %v", err)
+		}
+		if changed, err := result.RowsAffected(); err != nil || changed != 1 {
+			t.Fatalf("advance DNS engine fixture rows=%d err=%v", changed, err)
+		}
+	}
+}
+
 func TestEnsureZoneUsesSharedNameserversAndCurrentKind(t *testing.T) {
 	p := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, p, "paired")
