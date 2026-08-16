@@ -723,6 +723,17 @@ func (hostDNSEngineBackend) Switch(
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if _, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
+			return transport.SwitchDNSEngineV1Response{},
+				errors.New("paired primary catalog is unavailable")
+		}
+	}
 	targetBefore, err := captureDNSUnitStates(
 		ctx, systemctl, []string{"bind9.service", "named.service"},
 	)
@@ -1100,6 +1111,16 @@ func verifyDNSEngineSwitchSource(
 			if receipt.Generation != state.Generation || receipt.EngineEpoch != state.EngineEpoch {
 				return errors.New("BIND source receipt differs from its immutable current generation")
 			}
+			if manifest.Topology == transport.DNSTopologyPaired {
+				pairing := receipt.Pairing
+				if pairing == nil || pairing.Role != manifest.PairRole ||
+					pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
+					pairing.PeerIP != manifest.PeerIP || pairing.PeerNS != manifest.PeerNS {
+					return errors.New("BIND source pair identity differs from the switch manifest")
+				}
+			} else if receipt.Pairing != nil {
+				return errors.New("standalone switch found a paired BIND source")
+			}
 			return verifyOnlyBINDActive(ctx, systemctl)
 		default:
 			return errors.New("DNS engine switch source receipt names an unsupported engine")
@@ -1371,6 +1392,9 @@ func syncPDNSV3Zone(
 	}}); err != nil {
 		return "", err
 	}
+	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
+		return "", err
+	}
 	return commitment.Qualifier, nil
 }
 
@@ -1404,6 +1428,9 @@ func recoverPDNSV3Zone(
 		return false, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
+		return false, err
+	}
+	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
 		return false, err
 	}
 	return true, nil

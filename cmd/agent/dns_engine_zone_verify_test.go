@@ -6,8 +6,10 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -20,7 +22,7 @@ func TestVerifyBINDPairingAuthorityRequiresExactCatalogAndMemberProof(t *testing
 		{
 			name: "primary exact local catalog",
 			pairing: binddns.PairingReceipt{
-				Role: binddns.PairRolePrimary, LocalCatalog: "celikpanel-catalog.ns1.example.test",
+				Role: binddns.PairRolePrimary, LocalCatalog: "catalog-c000020a.celikpanel.invalid",
 				CatalogSerial: 7,
 			},
 		},
@@ -28,13 +30,13 @@ func TestVerifyBINDPairingAuthorityRequiresExactCatalogAndMemberProof(t *testing
 			name: "secondary exact peer catalog received locally",
 			pairing: binddns.PairingReceipt{
 				Role: binddns.PairRoleSecondary, PeerIP: "192.0.2.20",
-				PeerCatalog: "celikpanel-catalog.ns1.example.test", CatalogSerial: 1,
+				PeerCatalog: "catalog-c0000214.celikpanel.invalid", CatalogSerial: 1,
 			},
 		},
 		{
 			name: "udp tcp mismatch",
 			pairing: binddns.PairingReceipt{
-				Role: binddns.PairRolePrimary, LocalCatalog: "celikpanel-catalog.ns1.example.test",
+				Role: binddns.PairRolePrimary, LocalCatalog: "catalog-c000020a.celikpanel.invalid",
 				CatalogSerial: 7,
 			},
 			wantErr: true,
@@ -92,7 +94,7 @@ func TestVerifyBINDSecondaryProvesEveryCatalogMemberOnPeerAndLocal(t *testing.T)
 	const (
 		peerIP  = "192.0.2.20"
 		localIP = "192.0.2.10"
-		catalog = "celikpanel-catalog.ns1.example.test"
+		catalog = "catalog-c0000214.celikpanel.invalid"
 		member  = "example.test"
 	)
 	pairing := binddns.PairingReceipt{
@@ -135,8 +137,14 @@ func TestVerifyBINDSecondaryProvesEveryCatalogMemberOnPeerAndLocal(t *testing.T)
 				}
 				return dnsCatalogAXFRResult{Serial: 9, Members: []string{member}}, nil
 			}
+			proofCtx := context.Background()
+			if test.wantErr {
+				var cancel context.CancelFunc
+				proofCtx, cancel = context.WithTimeout(proofCtx, 20*time.Millisecond)
+				defer cancel()
+			}
 			err := verifyBINDPairingAuthorityAt(
-				context.Background(), binddns.Receipt{Pairing: &pairing},
+				proofCtx, binddns.Receipt{Pairing: &pairing},
 				localIP, probe, axfr,
 			)
 			if test.wantErr && err == nil {
@@ -152,6 +160,93 @@ func TestVerifyBINDSecondaryProvesEveryCatalogMemberOnPeerAndLocal(t *testing.T)
 				if memberCalls[key] != 1 {
 					t.Fatalf("member proof calls=%v; want one %s proof", memberCalls, key)
 				}
+			}
+		})
+	}
+}
+
+func TestVerifyBINDPrimaryProvesPowerDNSSecondaryMembers(t *testing.T) {
+	const (
+		peerIP  = "192.0.2.20"
+		localIP = "192.0.2.10"
+		catalog = "catalog-c000020a.celikpanel.invalid"
+		member  = "example.test"
+	)
+	pairing := binddns.PairingReceipt{
+		Role: binddns.PairRolePrimary, PeerIP: peerIP,
+		LocalCatalog: catalog, CatalogSerial: 12,
+	}
+	probe := func(_ context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+		if domain != member || (address != peerIP && address != localIP) ||
+			(network != "udp" && network != "tcp") {
+			return dnsSOAProbeResult{}, errors.New("unexpected mixed-engine proof")
+		}
+		return dnsSOAProbeResult{
+			Authoritative: true, RCode: dnsRCodeNoError,
+			SOASerials: []uint32{73},
+		}, nil
+	}
+	axfr := func(_ context.Context, address, domain string) (dnsCatalogAXFRResult, error) {
+		if address != localIP || domain != catalog {
+			return dnsCatalogAXFRResult{}, errors.New("unexpected local catalog proof")
+		}
+		return dnsCatalogAXFRResult{Serial: 12, Members: []string{member}}, nil
+	}
+	err := verifyBINDPairingAuthorityAt(
+		context.Background(),
+		binddns.Receipt{
+			Pairing: &pairing,
+			Zones:   []binddns.ZoneReceipt{{Domain: member}},
+		},
+		localIP, probe, axfr,
+	)
+	if err != nil {
+		t.Fatalf("BIND primary to PowerDNS secondary proof rejected: %v", err)
+	}
+}
+
+func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
+	previousSOA := probeDNSZoneSOA
+	previousAXFR := probeDNSCatalogAXFR
+	previousLocal := dnsPairLocalProofAddress
+	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
+	probeDNSCatalogAXFR = func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
+		if address != "192.0.2.10" && address != "192.0.2.20" {
+			t.Fatalf("catalog address=%q", address)
+		}
+		return dnsCatalogAXFRResult{Serial: 11, Members: []string{"example.test"}}, nil
+	}
+	probeDNSZoneSOA = func(_ context.Context, _, _, domain string) (dnsSOAProbeResult, error) {
+		serial := uint32(2026081601)
+		if strings.HasPrefix(domain, "catalog-") {
+			serial = 11
+		}
+		return dnsSOAProbeResult{
+			Authoritative: true, RCode: dnsRCodeNoError, SOASerials: []uint32{serial},
+		}, nil
+	}
+	t.Cleanup(func() {
+		probeDNSZoneSOA = previousSOA
+		probeDNSCatalogAXFR = previousAXFR
+		dnsPairLocalProofAddress = previousLocal
+	})
+	for _, role := range []string{
+		transport.DNSPairRolePrimary,
+		transport.DNSPairRoleSecondary,
+	} {
+		t.Run(role, func(t *testing.T) {
+			zones := []transport.DNSEngineSwitchZoneSnapshot(nil)
+			if role == transport.DNSPairRolePrimary {
+				zones = []transport.DNSEngineSwitchZoneSnapshot{{
+					Domain: "example.test", Records: testPDNSEngineRecords("example.test"),
+				}}
+			}
+			manifest := mutationpayload.DNSEngineSwitchManifestCommitment{
+				Topology: transport.DNSTopologyPaired, PairRole: role,
+				LocalIP: "192.0.2.10", PeerIP: "192.0.2.20", Zones: zones,
+			}
+			if err := verifyPDNSPairingAuthority(context.Background(), manifest); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
@@ -198,7 +293,7 @@ func testNegativeSOAResponse(
 
 func testCatalogAXFRMessage(t *testing.T, foreignPTR bool) ([]byte, uint16, string) {
 	t.Helper()
-	catalog := "celikpanel-catalog.ns1.example.test"
+	catalog := "catalog-c000020a.celikpanel.invalid"
 	query, id, err := buildDNSCatalogAXFRQuery(catalog)
 	if err != nil {
 		t.Fatal(err)

@@ -48,7 +48,7 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 	for _, want := range []string{
 		"allow-transfer { 192.0.2.20; };",
 		"also-notify { 192.0.2.20; };",
-		"zone \"celikpanel-catalog.ns1.example.test\"",
+		"zone \"catalog-c000020a.celikpanel.invalid\"",
 	} {
 		if !strings.Contains(config, want) {
 			t.Errorf("primary config missing %q:\n%s", want, config)
@@ -81,7 +81,7 @@ func TestSecondaryPairingRendersCatalogSubscriptionAndRejectsOwnedZones(t *testi
 	config := string(generation.Config)
 	for _, want := range []string{
 		"catalog-zones {",
-		"zone \"celikpanel-catalog.ns2.example.test\"",
+		"zone \"catalog-c0000214.celikpanel.invalid\"",
 		"default-primaries { 192.0.2.20; };",
 		"in-memory yes;",
 	} {
@@ -96,6 +96,26 @@ func TestSecondaryPairingRendersCatalogSubscriptionAndRejectsOwnedZones(t *testi
 		},
 	}); err == nil {
 		t.Fatal("secondary accepted a panel-owned primary zone")
+	}
+}
+
+func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
+	domain, records, err := CatalogZoneRecords(
+		"192.0.2.10", 17, []string{"z.example.test", "a.example.test"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if domain != "catalog-c000020a.celikpanel.invalid" || len(records) != 5 ||
+		records[0].Type != "SOA" || records[2].Content != "\"2\"" ||
+		records[3].Content != "a.example.test" ||
+		records[4].Content != "z.example.test" {
+		t.Fatalf("domain=%q records=%#v", domain, records)
+	}
+	if _, _, err := CatalogZoneRecords(
+		"192.0.2.10", 17, []string{"a.example.test", "a.example.test"},
+	); err == nil {
+		t.Fatal("duplicate catalog member was accepted")
 	}
 }
 

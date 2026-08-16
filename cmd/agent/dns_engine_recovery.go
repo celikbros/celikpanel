@@ -123,7 +123,10 @@ func verifyDNSSwitchJournalTarget(
 		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 			return err
 		}
-		return verifyDNSZoneManifestAuthority(ctx, manifest.Zones)
+		if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
+			return err
+		}
+		return verifyPDNSPairingAuthority(ctx, manifest)
 	default:
 		return errors.New("DNS engine switch journal target is unsupported")
 	}

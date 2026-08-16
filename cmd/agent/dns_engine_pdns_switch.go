@@ -39,7 +39,9 @@ api=no
 `, pdnsDBPath(), listen))
 }
 
-func preparePDNSConfigMutation() (pdnsConfigMutation, error) {
+func preparePDNSConfigMutation(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (pdnsConfigMutation, error) {
 	mainBefore, err := captureDNSFileSnapshot(dnsMainConf, 0o644, false)
 	if err != nil {
 		return pdnsConfigMutation{}, err
@@ -52,9 +54,6 @@ func preparePDNSConfigMutation() (pdnsConfigMutation, error) {
 	if err != nil {
 		return pdnsConfigMutation{}, err
 	}
-	if clusterBefore.Exists {
-		return pdnsConfigMutation{}, errors.New("paired PowerDNS topology must be disabled before switching DNS engines")
-	}
 	managedDir := filepath.Clean(filepath.Dir(dnsManagedConf))
 	hasInclude, err := validateManagedPowerDNSMainConfig(string(mainBefore.Data), managedDir)
 	if err != nil {
@@ -66,12 +65,17 @@ func preparePDNSConfigMutation() (pdnsConfigMutation, error) {
 	}
 	before := []dnsFileSnapshot{mainBefore, managedBefore, clusterBefore}
 	sort.Slice(before, func(left, right int) bool { return before[left].Path < before[right].Path })
+	desired := map[string][]byte{
+		dnsMainConf: mainDesired, dnsManagedConf: managedPowerDNSStandaloneConfig(),
+	}
+	if manifest.Topology == transport.DNSTopologyPaired {
+		desired[dnsClusterConf] = []byte(dnsClusterConfig(&DNSClusterRequest{
+			Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		}))
+	}
 	return pdnsConfigMutation{
-		before: before,
-		desired: map[string][]byte{
-			dnsMainConf:    mainDesired,
-			dnsManagedConf: managedPowerDNSStandaloneConfig(),
-		},
+		before:  before,
+		desired: desired,
 	}, nil
 }
 
@@ -103,8 +107,10 @@ func (mutation pdnsConfigMutation) apply() error {
 			return err
 		}
 	}
-	if err := secureRemoveConfig(dnsClusterConf); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+	if _, paired := mutation.desired[dnsClusterConf]; !paired {
+		if err := secureRemoveConfig(dnsClusterConf); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
 	}
 	effective, detail, err := effectiveManagedPowerDNSConfig()
 	if err != nil {
@@ -419,6 +425,9 @@ func switchToPDNS(
 		if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
+		if err := verifyPDNSPairingAuthority(ctx, manifest); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 		return transport.SwitchDNSEngineV1Response{Applied: true, ActiveEngine: transport.DNSEnginePowerDNS, ActiveEpoch: manifest.TargetEpoch, AppliedZones: len(manifest.Zones), Detail: "the exact PowerDNS engine switch was already completed and verified"}, nil
 	}
 	if _, exists, err := readDNSEngineSwitchJournal(); err != nil || exists {
@@ -429,6 +438,12 @@ func switchToPDNS(
 	}
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		if _, _, err := peerPDNSCatalog(ctx, manifest); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
@@ -479,7 +494,7 @@ func switchToPDNS(
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
-	configs, err := preparePDNSConfigMutation()
+	configs, err := preparePDNSConfigMutation(manifest)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -575,6 +590,12 @@ func switchToPDNS(
 	if err := startPDNSTarget(ctx, systemctl); err != nil {
 		return rollback(err)
 	}
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		if err := retrievePDNSPairSecondaryZones(ctx, manifest); err != nil {
+			return rollback(err)
+		}
+	}
 	journal.Phase = dnsSwitchPhaseTargetStarted
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return rollback(err)
@@ -586,6 +607,9 @@ func switchToPDNS(
 		return rollback(err)
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
+		return rollback(err)
+	}
+	if err := verifyPDNSPairingAuthority(ctx, manifest); err != nil {
 		return rollback(err)
 	}
 	nextState := dnsEngineStateReceipt{

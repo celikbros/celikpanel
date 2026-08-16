@@ -56,7 +56,7 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 > ⚠️ **Not production ready.** The Phase 0 security sprint (authentication, agent lockdown, injection fixes) is in progress. Do not expose this panel to the internet yet.
 
-**Working today** (functional, being hardened): domain & site management · PHP version selection and FPM pools · SSL (Let's Encrypt + custom certificates) · authoritative DNS (panel-selected PowerDNS or BIND, with previewed and recoverable standalone switching) · e-mail accounts and forwarding · database management with multi-server support (MariaDB/PostgreSQL) · file manager · backup/restore · cron jobs · log viewer · service control for 14 services.
+**Working today** (functional, being hardened): domain & site management · PHP version selection and FPM pools · SSL (Let's Encrypt + custom certificates) · authoritative DNS (independently selected PowerDNS or BIND on each node, with previewed and recoverable standalone or paired switching) · e-mail accounts and forwarding · database management with multi-server support (MariaDB/PostgreSQL) · file manager · backup/restore · cron jobs · log viewer · service control for 14 services.
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 

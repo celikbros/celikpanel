@@ -934,3 +934,80 @@ func TestBINDPairedMigrationParticipatesInReferenceSchema(t *testing.T) {
 		}
 	}
 }
+
+func TestPairedMigrationAllowsEngineChangeWithoutLosingIdentity(t *testing.T) {
+	database := newDNSZoneSyncMigrationDB(t)
+	first := strings.Repeat("a", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		database, first, strings.Repeat("b", 32), strings.Repeat("c", 32),
+		"switch", nil, "bind", 0, 1, 0, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	insertPair := func(id string) {
+		t.Helper()
+		if _, err := database.Exec(`
+			INSERT INTO dns_bind_pair_switches
+			(switch_id,pair_role,local_ip,local_ns,peer_ip,peer_ns)
+			VALUES(?, 'primary', '192.0.2.10', 'ns1.example.test',
+			       '192.0.2.20', 'ns2.example.test')`, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	advance := func(id string) {
+		t.Helper()
+		for _, phase := range []string{"staging", "staged", "activating", "verifying", "committed"} {
+			if _, err := database.Exec(`UPDATE dns_engine_switch_snapshots SET phase=? WHERE switch_id=?`, phase, id); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	insertPair(first)
+	if _, err := database.Exec(`UPDATE dns_engine_state SET current_switch_id=?,revision=1 WHERE singleton_id=1`, first); err != nil {
+		t.Fatal(err)
+	}
+	advance(first)
+	if _, err := database.Exec(`
+		INSERT INTO dns_bind_pair_state
+		(singleton_id,active_epoch,pair_role,local_ip,local_ns,peer_ip,peer_ns,source_switch_id)
+		VALUES(1,1,'primary','192.0.2.10','ns1.example.test','192.0.2.20','ns2.example.test',?)`, first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`UPDATE dns_engine_state SET active_engine='bind',active_epoch=1,current_switch_id=NULL,revision=2 WHERE singleton_id=1`); err != nil {
+		t.Fatal(err)
+	}
+	second := strings.Repeat("d", 32)
+	source := "bind"
+	if err := insertDNSEngineSnapshotForTest(
+		database, second, strings.Repeat("e", 32), strings.Repeat("f", 32),
+		"switch", &source, "pdns", 1, 2, 2, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	insertPair(second)
+	if _, err := database.Exec(`UPDATE dns_engine_state SET current_switch_id=?,revision=3 WHERE singleton_id=1`, second); err != nil {
+		t.Fatal(err)
+	}
+	advance(second)
+	if _, err := database.Exec(`
+		UPDATE dns_bind_pair_state
+		SET active_epoch=2, source_switch_id=?, updated_at=datetime('now')
+		WHERE singleton_id=1`, second); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`UPDATE dns_engine_state SET active_engine='pdns',active_epoch=2,current_switch_id=NULL,revision=4 WHERE singleton_id=1`); err != nil {
+		t.Fatal(err)
+	}
+	var engine, role, sourceSwitch string
+	var epoch int64
+	if err := database.QueryRow(`
+		SELECT state.active_engine,pairing.active_epoch,pairing.pair_role,pairing.source_switch_id
+		FROM dns_engine_state state JOIN dns_bind_pair_state pairing ON pairing.singleton_id=state.singleton_id
+	`).Scan(&engine, &epoch, &role, &sourceSwitch); err != nil {
+		t.Fatal(err)
+	}
+	if engine != "pdns" || epoch != 2 || role != "primary" || sourceSwitch != second {
+		t.Fatalf("reverse pair=%s/%d/%s/%s", engine, epoch, role, sourceSwitch)
+	}
+	assertForeignKeyCheckClean(t, database)
+}

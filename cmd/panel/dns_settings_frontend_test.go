@@ -163,7 +163,7 @@ func TestDNSSettingsUnconfiguredRoleRequiresExplicitSelection(t *testing.T) {
 	for _, required := range []string{
 		`type DraftDNSRole = DNSRole | '';`,
 		`const role = normalizeRole(cluster.role);`,
-		`const bindIdentityLocked = activeEngine === 'bind' && saved.configured;`,
+		`const pairedIdentityLocked = pairRole !== undefined`,
 		`: preserveCluster?.role ?? (snapshot.configured ? role : ''),`,
 		`if (!draft || draft.role === '') return;`,
 		`const savedDraftRole: DraftDNSRole = saved.configured ? saved.role : '';`,

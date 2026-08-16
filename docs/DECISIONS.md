@@ -874,13 +874,15 @@ revision; a stale or blocked preview cannot mutate the server. A live-engine
 cutover also requires a meaningful interruption acknowledgement, never a typed
 version or product-name phrase.
 
-Normal PowerDNS↔BIND switching is bidirectional in **Standalone** topology. In
-addition, an exact verified Paired PowerDNS authority may migrate to directional
-Paired BIND. The saved nameserver identity deterministically selects the primary
-or secondary role. The primary publishes a BIND catalog zone; the secondary
-must prove the exact catalog and every member zone over UDP and TCP before the
-cutover commits. Paired identity is read-only while BIND is active and reverse
-paired conversion remains blocked. DNSSEC zones, pending zone publication,
+PowerDNS↔BIND switching is bidirectional in both **Standalone** and verified
+**Paired** topology. Topology and engine selection are independent: the primary
+and secondary may use PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS, or
+PowerDNS/BIND. The saved nameserver identity deterministically selects the
+primary and secondary roles. The primary publishes an engine-neutral Catalog
+Zone v2; the secondary transfers the exact catalog and every member zone using
+standard AXFR/NOTIFY. A paired cutover commits only after local and peer SOA
+serials match over UDP and TCP. The paired identity remains read-only while
+either node uses BIND. DNSSEC zones, pending zone publication,
 unmanaged DNS, a port-53 conflict, a degraded source or another operation block
 the switch. The transaction freezes the complete engine-and-epoch-bound zone
 snapshot, stages and validates the target before stopping the source, verifies
@@ -894,7 +896,9 @@ existing DNSSEC data, because it verifies rather than rewrites it. It succeeds
 only when config bytes and modes, unit state, the SQLite database, every owned
 zone, topology and TCP/UDP authority all match the panel ledger and no BIND
 authority is running. It changes no package, configuration, service state, DNS
-data or DNSSEC state. There is no BIND-adoption shortcut and no Paired BIND mode.
+data or DNSSEC state. There is no BIND-adoption shortcut. A new pair is
+established under verified PowerDNS first; after that, either node can switch
+engines independently, one node at a time.
 
 Both the panel ledger and an agent-owned host journal carry the operation
 identity and phase. After interruption, recovery proves the exact target and

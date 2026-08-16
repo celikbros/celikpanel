@@ -351,16 +351,18 @@ ayrıca açık kesinti onay kutusunu gerektirir; yazdırılan parola cümlesi yo
 Eski PowerDNS'i yalnız kayıt amacıyla devralmada kesinti beklenmez; işlem sadece
 mevcut durumu kanıtlayıp kaydeder.
 
-Normal PowerDNS↔BIND değişimi **Tek sunucu** topolojisini gerektirir. Buna ek
-olarak doğrulanmış Eşli PowerDNS otoritesi, yönlü Eşli BIND'e geçirilebilir.
-Kayıtlı NS çifti yerel rolü belirler: Frankfurt/NS1 birincil, Boston/NS2
-ikincildir. Birincil catalog-zone v2 yayınlar; ikincil kataloğu bellekte izler
-ve geçiş tamamlanmadan kesin katalog serisi ile her katalog üyesinin SOA'sını
-UDP ve TCP üzerinden kanıtlar. BIND etkinken eş kimliği salt-okunurdur ve ters
-yöndeki eşli motor dönüşümü engelli kalır. Herhangi bir DNSSEC zone'u, bekleyen
+PowerDNS↔BIND değişimi hem **Tek sunucu** hem doğrulanmış **Eşli** topolojide
+çift yönlüdür. Kayıtlı NS çifti sunucu rollerini belirler: Frankfurt/NS1
+birincil, Boston/NS2 ikincildir. Her düğümün motoru bağımsızdır; dolayısıyla
+PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND desteklenir.
+Birincil motor-bağımsız Catalog Zone v2 yayınlar; ikincil bunu standart
+AXFR/NOTIFY ile alır ve geçiş tamamlanmadan kesin katalog serisini ve her üye
+SOA'yı UDP ile TCP üzerinden kanıtlamalıdır. Sunuculardan biri BIND kullanırken
+eş kimliği salt-okunurdur. Herhangi bir DNSSEC zone'u, bekleyen
 zone yayını, panel dışı DNS, TCP/UDP 53 portu çakışması, bozuk kaynak veya başka
 bir sunucu/DNS işlemi onayı engeller. Engelleri kendi açık panel akışlarından giderip yeni önizleme
-alın. Bir engeli aşmak için cluster, DNSSEC veya daemon durumunu ya da işlem
+alın. Eşlemeyi önce birincilde kurun veya onarın; sonra iki sunucunun motorunu
+aynı anda değil, sırayla değiştirin. Bir engeli aşmak için cluster, DNSSEC veya daemon durumunu ya da işlem
 satırlarını elle değiştirmeyin.
 
 İzin verilen kurulum veya değişim sırasında istenen tam zone kümesi, seçilen

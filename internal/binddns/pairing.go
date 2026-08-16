@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-const catalogPrefix = "celikpanel-catalog."
+const catalogSuffix = ".celikpanel.invalid"
 
 func clonePairing(pairing *Pairing) *Pairing {
 	if pairing == nil {
@@ -54,23 +55,84 @@ func canonicalPairing(pairing Pairing) (Pairing, error) {
 	if err != nil || peerNS != pairing.PeerNS || peerNS == localNS {
 		return Pairing{}, errors.New("BIND peer nameserver must be canonical and distinct")
 	}
-	if len(catalogPrefix+localNS) > 253 || len(catalogPrefix+peerNS) > 253 {
-		return Pairing{}, errors.New("BIND pair nameserver is too long for its catalog zone")
-	}
 	return Pairing{
 		Role: pairing.Role, LocalIP: pairing.LocalIP, LocalNS: localNS,
 		PeerIP: pairing.PeerIP, PeerNS: peerNS,
 	}, nil
 }
 
-func catalogDomain(nameserver string) string { return catalogPrefix + nameserver }
+func catalogDomain(address string) string {
+	ip := net.ParseIP(address).To4()
+	return fmt.Sprintf(
+		"catalog-%02x%02x%02x%02x%s",
+		ip[0], ip[1], ip[2], ip[3], catalogSuffix,
+	)
+}
+
+// CatalogDomain returns the deterministic catalog zone used by either BIND or
+// PowerDNS when it is the primary side of a mixed-engine DNS pair.
+func CatalogDomain(address string) (string, error) {
+	ip := net.ParseIP(address)
+	if ip == nil || ip.To4() == nil || ip.String() != address || !ip.IsGlobalUnicast() {
+		return "", errors.New("catalog primary IPv4 address must be canonical")
+	}
+	return catalogDomain(address), nil
+}
+
+// CatalogZoneRecords renders the RFC 9432 catalog-zone v2 records that a
+// PowerDNS primary publishes for a BIND secondary. The catalog identity uses
+// only the primary address, so both panels derive it without a private API.
+func CatalogZoneRecords(
+	address string,
+	serial uint32,
+	members []string,
+) (string, []transport.ZoneRecord, error) {
+	domain, err := CatalogDomain(address)
+	if err != nil {
+		return "", nil, err
+	}
+	if serial == 0 {
+		return "", nil, errors.New("catalog serial must be positive")
+	}
+	canonicalMembers := make([]string, len(members))
+	seen := make(map[string]bool, len(members))
+	for index, member := range members {
+		canonical, canonicalErr := hostname.CanonicalFQDN(member)
+		if canonicalErr != nil || canonical != member || canonical == domain || seen[canonical] {
+			return "", nil, errors.New("catalog member set is not canonical")
+		}
+		seen[canonical] = true
+		canonicalMembers[index] = canonical
+	}
+	sort.Strings(canonicalMembers)
+	records := []transport.ZoneRecord{
+		{
+			Name: domain, Type: "SOA",
+			Content: fmt.Sprintf(
+				"%s hostmaster.%s %d 60 30 3600 30",
+				domain, domain, serial,
+			),
+			TTL: 60,
+		},
+		{Name: domain, Type: "NS", Content: domain, TTL: 60},
+		{Name: "version." + domain, Type: "TXT", Content: "\"2\"", TTL: 60},
+	}
+	for _, member := range canonicalMembers {
+		digest := sha256.Sum256([]byte(member))
+		records = append(records, transport.ZoneRecord{
+			Name: fmt.Sprintf("%x.zones.%s", digest, domain),
+			Type: "PTR", Content: member, TTL: 60,
+		})
+	}
+	return domain, records, nil
+}
 
 func pairingReceipt(_ string, pairing Pairing, serial uint32, catalog []byte) PairingReceipt {
 	receipt := PairingReceipt{
 		Role: pairing.Role, LocalIP: pairing.LocalIP, LocalNS: pairing.LocalNS,
 		PeerIP: pairing.PeerIP, PeerNS: pairing.PeerNS,
-		LocalCatalog:  catalogDomain(pairing.LocalNS),
-		PeerCatalog:   catalogDomain(pairing.PeerNS),
+		LocalCatalog:  catalogDomain(pairing.LocalIP),
+		PeerCatalog:   catalogDomain(pairing.PeerIP),
 		CatalogSerial: serial,
 	}
 	if pairing.Role == PairRolePrimary {
@@ -98,16 +160,17 @@ func renderCatalogZone(pairing Pairing, serial uint32, zones []treeZone) ([]byte
 	sort.Strings(members)
 	var output strings.Builder
 	output.WriteString("$ORIGIN ")
-	output.WriteString(catalogDomain(pairing.LocalNS))
+	catalog := catalogDomain(pairing.LocalIP)
+	output.WriteString(catalog)
 	output.WriteString(".\n$TTL 60\n")
 	output.WriteString("@ IN SOA ")
-	output.WriteString(pairing.LocalNS)
+	output.WriteString(catalog)
 	output.WriteString(". hostmaster.")
-	output.WriteString(pairing.LocalNS)
+	output.WriteString(catalog)
 	output.WriteString(". ")
 	output.WriteString(fmt.Sprintf("%d 60 30 3600 30\n", serial))
 	output.WriteString("@ IN NS ")
-	output.WriteString(pairing.LocalNS)
+	output.WriteString(catalog)
 	output.WriteString(".\nversion IN TXT \"2\"\n")
 	for _, domain := range members {
 		digest := sha256.Sum256([]byte(domain))
@@ -137,7 +200,7 @@ func appendPrimaryCatalogConfig(
 	root, generationID string,
 	pairing Pairing,
 ) {
-	domain := catalogDomain(pairing.LocalNS)
+	domain := catalogDomain(pairing.LocalIP)
 	file := path.Join(root, "generations", generationID, "zones", zoneFileName(domain))
 	appendPrimaryZoneConfig(config, domain, file, pairing)
 }
@@ -148,7 +211,7 @@ func appendSecondaryCatalogConfig(
 	pairing Pairing,
 ) {
 	config.WriteString("catalog-zones {\n\tzone \"")
-	config.WriteString(catalogDomain(pairing.PeerNS))
+	config.WriteString(catalogDomain(pairing.PeerIP))
 	config.WriteString("\" {\n\t\tdefault-primaries { ")
 	config.WriteString(pairing.PeerIP)
 	config.WriteString("; };\n\t\tin-memory yes;\n\t};\n};\n")
@@ -165,8 +228,8 @@ func validatePairingReceipt(root string, receipt *PairingReceipt) error {
 	if err != nil {
 		return err
 	}
-	if receipt.LocalCatalog != catalogDomain(pairing.LocalNS) ||
-		receipt.PeerCatalog != catalogDomain(pairing.PeerNS) ||
+	if receipt.LocalCatalog != catalogDomain(pairing.LocalIP) ||
+		receipt.PeerCatalog != catalogDomain(pairing.PeerIP) ||
 		receipt.CatalogSerial == 0 {
 		return errors.New("BIND paired receipt catalog identity is invalid")
 	}

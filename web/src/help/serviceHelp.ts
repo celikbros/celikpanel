@@ -39,7 +39,7 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
                 'Mümkün oldukça kayıtları DNS sayfasından yönetin — DNS kazalarının çoğu bölge (zone) dosyalarını elle düzenlerken olur.',
                 'Listeden bir yapılandırma ya da bölge dosyası düzenlediyseniz, yeniden başlattıktan hemen sonra aşağıdaki günlükten tüm bölgelerin sorunsuz yüklendiğini doğrulayın.',
                 'Bölge dosyasındaki tek bir yazım hatası o alan adını tamamen erişilmez yapabilir; bu yüzden her seferinde tek bir şeyi değiştirin.',
-                'BIND ile PowerDNS\'in birlikte çalışamayacağını unutmayın — birini kurmak, diğerinin kaldırılması demektir.',
+                'BIND ile PowerDNS aynı anda 53 numaralı portu kullanamaz. Panel yalnızca birini etkin tutar; diğeri güvenli geri dönüş için kurulu ve durdurulmuş bekleyebilir.',
             ],
             troubleshoot: [
                 { symptom: 'Bir yapılandırma değişikliğinden sonra başlamıyor (ya da bir alan adı kayboldu).', fix: 'Aşağıdaki günlük, takıldığı dosyayı ve satırı tam olarak yazar. Düzenleyicide son değişikliğinizi geri alın ve yeniden başlatın. Mesaj anlaşılmazsa tahmin yürütmeyin — bir uzmana danışmak için doğru an.' },
@@ -53,7 +53,7 @@ export const SERVICE_HELP: Record<string, LocalizedHelp> = {
                 'Manage records on the DNS page whenever possible — hand-editing zone files is where most DNS accidents happen.',
                 'If you do edit a config or zone file from the list, restart afterwards and immediately check the log below to confirm every zone loaded cleanly.',
                 'One typo in a zone file can take that whole domain offline, so change one thing at a time.',
-                'Remember that BIND and PowerDNS can\'t run together — installing one means the other has to go.',
+                'BIND and PowerDNS cannot serve port 53 at the same time. The panel keeps only one active; the other may remain installed and stopped as a safe rollback standby.',
             ],
             troubleshoot: [
                 { symptom: 'It won\'t start (or a domain vanished) after a config edit.', fix: 'The log below names the exact file and line it choked on. Undo your last change in the editor and restart. If the message is cryptic, don\'t guess — this is a reasonable moment to involve an expert.' },

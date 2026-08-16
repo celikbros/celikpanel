@@ -1,4 +1,4 @@
--- BIND pairing is additive so the released engine tables and their historical
+-- Directional pairing is additive so the released engine tables and their historical
 -- receipts remain byte-for-byte compatible.  The core engine singleton keeps
 -- its released standalone storage topology while these epoch-bound rows carry
 -- the stronger primary/secondary identity.
@@ -43,7 +43,7 @@ WHEN NOT EXISTS (
     SELECT 1 FROM dns_engine_switch_snapshots AS snapshot
     WHERE snapshot.switch_id = NEW.switch_id
       AND snapshot.mode = 'switch'
-      AND snapshot.target_engine = 'bind'
+      AND snapshot.target_engine IN ('bind', 'pdns')
       AND snapshot.topology = 'standalone'
       AND snapshot.phase = 'planned'
 )
@@ -91,7 +91,7 @@ WHEN NOT EXISTS (
     WHERE state.singleton_id = 1
       AND snapshot.switch_id = NEW.source_switch_id
       AND snapshot.phase = 'committed'
-      AND snapshot.target_engine = 'bind'
+      AND snapshot.target_engine IN ('bind', 'pdns')
       AND snapshot.target_epoch = NEW.active_epoch
       AND pairing.pair_role = NEW.pair_role
       AND pairing.local_ip = NEW.local_ip
@@ -105,8 +105,26 @@ END;
 
 CREATE TRIGGER dns_bind_pair_state_reject_update
 BEFORE UPDATE ON dns_bind_pair_state
+WHEN NOT EXISTS (
+    SELECT 1
+    FROM dns_engine_state AS state
+    JOIN dns_engine_switch_snapshots AS snapshot
+      ON snapshot.switch_id = state.current_switch_id
+    JOIN dns_bind_pair_switches AS pairing
+      ON pairing.switch_id = snapshot.switch_id
+    WHERE state.singleton_id = 1
+      AND snapshot.switch_id = NEW.source_switch_id
+      AND snapshot.phase = 'committed'
+      AND snapshot.target_engine IN ('bind', 'pdns')
+      AND snapshot.target_epoch = NEW.active_epoch
+      AND pairing.pair_role = NEW.pair_role
+      AND pairing.local_ip = NEW.local_ip
+      AND pairing.local_ns = NEW.local_ns
+      AND pairing.peer_ip = NEW.peer_ip
+      AND pairing.peer_ns = NEW.peer_ns
+)
 BEGIN
-    SELECT RAISE(ABORT, 'BIND pair state is immutable');
+    SELECT RAISE(ABORT, 'DNS pair state update lacks an exact committed switch');
 END;
 
 CREATE TRIGGER dns_bind_pair_state_reject_delete
@@ -143,7 +161,7 @@ WHEN OLD.current_switch_id IS NULL
                   WHERE pairing.switch_id = snapshot.switch_id
               ))
             OR (snapshot.mode = 'switch'
-              AND snapshot.target_engine = 'bind'
+              AND snapshot.target_engine IN ('bind', 'pdns')
               AND snapshot.topology = 'standalone'
               AND EXISTS (
                   SELECT 1 FROM dns_bind_pair_switches AS pairing
@@ -152,6 +170,9 @@ WHEN OLD.current_switch_id IS NULL
               AND (
                   (OLD.active_engine IS NULL AND OLD.topology = 'standalone')
                   OR (OLD.active_engine = 'pdns' AND OLD.topology = 'paired')
+                  OR (OLD.active_engine IN ('pdns', 'bind')
+                    AND OLD.topology = 'standalone'
+                    AND EXISTS (SELECT 1 FROM dns_bind_pair_state))
               ))
             OR (snapshot.mode = 'adopt'
               AND OLD.active_engine IS NULL

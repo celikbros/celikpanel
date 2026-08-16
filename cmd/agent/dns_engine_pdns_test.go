@@ -90,6 +90,96 @@ func TestBuildPDNSSwitchCandidatePreservesExactSnapshotAndReceipts(t *testing.T)
 	}
 }
 
+func testPairedPDNSSwitchManifest(
+	t *testing.T,
+	role string,
+	zones []transport.DNSEngineSwitchZoneSnapshot,
+) mutationpayload.DNSEngineSwitchManifestCommitment {
+	t.Helper()
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEngineBIND, transport.DNSEnginePowerDNS,
+		3, 4, 9, transport.DNSTopologyPaired,
+		role, "192.0.2.10", "ns1.example.test",
+		"192.0.2.20", "ns2.example.test", zones,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
+
+func TestBuildPDNSPairedPrimaryPublishesEngineNeutralCatalog(t *testing.T) {
+	domain := "primary.test"
+	zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
+		transport.DNSEnginePowerDNS, 4, 1, domain, false, "MASTER",
+		testPDNSEngineRecords(domain),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := testPairedPDNSSwitchManifest(t, transport.DNSPairRolePrimary,
+		[]transport.DNSEngineSwitchZoneSnapshot{{
+			Domain: domain, DesiredGeneration: 1, ZoneType: "MASTER",
+			Records: zone.Records, ZoneQualifier: zone.Qualifier,
+		}})
+	path := filepath.Join(t.TempDir(), "paired-primary.sqlite3")
+	if err := buildPDNSSwitchCandidate(
+		context.Background(), path, manifest, testPDNSEngineBinding(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var catalogs int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM domains WHERE account=?`, pdnsBINDCatalogAccount).Scan(&catalogs); err != nil {
+		t.Fatal(err)
+	}
+	if catalogs != 1 {
+		t.Fatalf("managed primary catalogs=%d", catalogs)
+	}
+}
+
+func TestBuildPDNSPairedSecondaryStagesExactPeerCatalog(t *testing.T) {
+	previous := probeDNSCatalogAXFR
+	probeDNSCatalogAXFR = func(_ context.Context, address, domain string) (dnsCatalogAXFRResult, error) {
+		if address != "192.0.2.20" {
+			t.Fatalf("catalog address=%q", address)
+		}
+		return dnsCatalogAXFRResult{Serial: 7, Members: []string{"one.test", "two.test"}}, nil
+	}
+	t.Cleanup(func() { probeDNSCatalogAXFR = previous })
+	manifest := testPairedPDNSSwitchManifest(t, transport.DNSPairRoleSecondary, nil)
+	path := filepath.Join(t.TempDir(), "paired-secondary.sqlite3")
+	if err := buildPDNSSwitchCandidate(
+		context.Background(), path, manifest, testPDNSEngineBinding(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var total, exact int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM domains`).Scan(&total); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM domains
+		WHERE UPPER(type)='CONSUMER' AND master='192.0.2.20'
+		  AND account=? AND catalog IS NULL
+	`, pdnsPeerCatalogAccount).Scan(&exact); err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || exact != 1 {
+		t.Fatalf("secondary total=%d exact=%d", total, exact)
+	}
+}
+
 func TestVerifyPDNSSwitchDatabaseRejectsTamperedRows(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "candidate.sqlite3")
 	manifest := testPDNSSwitchManifest(t)

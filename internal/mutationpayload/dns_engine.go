@@ -159,7 +159,7 @@ func CanonicalDNSEngineSwitchManifestWithPeer(
 }
 
 // CanonicalDNSEngineSwitchManifestWithPairIdentity extends the released
-// standalone/adoption contract only for a directional paired BIND target.
+// standalone/adoption contract with an engine-neutral directional pair.
 // Empty fields preserve the exact alpha.24 standalone commitment.
 func CanonicalDNSEngineSwitchManifestWithPairIdentity(
 	mode string,
@@ -197,8 +197,8 @@ func CanonicalDNSEngineSwitchManifestWithPairIdentity(
 	}
 	if mode == transport.DNSEngineSwitchModeSwitch &&
 		topology != transport.DNSTopologyStandalone &&
-		!(topology == transport.DNSTopologyPaired && targetEngine == transport.DNSEngineBIND) {
-		return DNSEngineSwitchManifestCommitment{}, errors.New("paired DNS engine switching requires a BIND target")
+		topology != transport.DNSTopologyPaired {
+		return DNSEngineSwitchManifestCommitment{}, errors.New("DNS engine switching topology must be standalone or paired")
 	}
 	if mode == transport.DNSEngineSwitchModeAdopt &&
 		topology != transport.DNSTopologyStandalone && topology != transport.DNSTopologyPaired {
@@ -211,7 +211,7 @@ func CanonicalDNSEngineSwitchManifestWithPairIdentity(
 	canonicalRole, canonicalLocalIP, canonicalLocalNS := "", "", ""
 	if mode == transport.DNSEngineSwitchModeSwitch && topology == transport.DNSTopologyPaired {
 		canonicalRole, canonicalLocalIP, canonicalLocalNS, err =
-			canonicalBINDPairIdentity(pairRole, localIP, localNS, cluster.PeerIP, cluster.PeerNS)
+			canonicalDNSPairIdentity(pairRole, localIP, localNS, cluster.PeerIP, cluster.PeerNS)
 		if err != nil {
 			return DNSEngineSwitchManifestCommitment{}, err
 		}
@@ -294,18 +294,18 @@ func checkedDNSEngineSnapshotBytes(current int64, additional int) (int64, error)
 	return current + int64(additional), nil
 }
 
-func canonicalBINDPairIdentity(
+func canonicalDNSPairIdentity(
 	pairRole, localIP, localNS, peerIP, peerNS string,
 ) (string, string, string, error) {
 	if pairRole != transport.DNSPairRolePrimary &&
 		pairRole != transport.DNSPairRoleSecondary {
-		return "", "", "", errors.New("BIND pair role must be primary or secondary")
+		return "", "", "", errors.New("DNS pair role must be primary or secondary")
 	}
 	parsedLocal := net.ParseIP(localIP)
 	parsedPeer := net.ParseIP(peerIP)
 	if parsedLocal == nil || parsedLocal.To4() == nil ||
 		parsedLocal.String() != localIP || !parsedLocal.IsGlobalUnicast() {
-		return "", "", "", errors.New("BIND pair local IPv4 address must be canonical")
+		return "", "", "", errors.New("DNS pair local IPv4 address must be canonical")
 	}
 	if parsedPeer == nil || parsedPeer.To4() == nil || parsedPeer.Equal(parsedLocal) {
 		return "", "", "", errors.New("BIND pair peer IPv4 address must be distinct")

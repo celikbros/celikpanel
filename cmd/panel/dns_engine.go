@@ -198,7 +198,7 @@ func readDNSEngineDBState(ctx context.Context, query dnsZoneStateQuery) (dnsEngi
 		return dnsEngineDBState{}, pairErr
 	}
 	if pairErr == nil {
-		if state.ActiveEngine != transport.DNSEngineBIND ||
+		if !transport.ValidDNSEngine(state.ActiveEngine) ||
 			state.Topology != transport.DNSTopologyStandalone ||
 			pairEpoch != state.EngineEpoch || !pairRole.Valid || !localIP.Valid ||
 			!localNS.Valid || !peerIP.Valid || !peerNS.Valid {
@@ -556,8 +556,7 @@ func (p *Panel) activeDNSPublisher(
 	// accept panel-local domain or record mutations.  Returning the exact
 	// identity with ready=false keeps read-only engine truth visible while all
 	// hosting publication paths fail closed before acquiring a V3 lease.
-	if identity.Engine == transport.DNSEngineBIND &&
-		identity.PairRole == transport.DNSPairRoleSecondary {
+	if identity.PairRole == transport.DNSPairRoleSecondary {
 		return identity, false, nil
 	}
 	return identity, true, nil
@@ -669,10 +668,6 @@ func dnsEnginePreviewBlockers(
 	}
 	if snapshot.Revision != expectedRevision || actualSource != expectedSource {
 		blockers = addDNSEngineBlocker(blockers, "stale_revision")
-	}
-	if action != "adopt" && snapshot.Topology == "paired" &&
-		target != transport.DNSEngineBIND {
-		blockers = addDNSEngineBlocker(blockers, "paired_topology_unsupported")
 	}
 	if snapshot.State == dnsEngineStateSwitching {
 		blockers = addDNSEngineBlocker(blockers, "operation_running")
@@ -851,8 +846,7 @@ func (p *Panel) buildDNSEngineManifest(
 	switch mode {
 	case transport.DNSEngineSwitchModeSwitch:
 		if topology != transport.DNSTopologyStandalone &&
-			(topology != transport.DNSTopologyPaired ||
-				target != transport.DNSEngineBIND) {
+			topology != transport.DNSTopologyPaired {
 			return mutationpayload.DNSEngineSwitchManifestCommitment{},
 				errors.New("durable DNS engine topology is unsupported for the target")
 		}
@@ -880,7 +874,6 @@ func (p *Panel) buildDNSEngineManifest(
 	}
 	pairRole, localIP, localNS := "", "", ""
 	if mode == transport.DNSEngineSwitchModeSwitch &&
-		target == transport.DNSEngineBIND &&
 		topology == transport.DNSTopologyPaired {
 		pairRole, localIP, localNS, err = canonicalBINDEnginePairIdentityTx(ctx, tx, peerNS)
 		if err != nil {
@@ -1171,10 +1164,10 @@ func readDNSEngineSwitchByRequest(
 	}
 	if pairRole.Valid {
 		if !localIP.Valid || !localNS.Valid || !pairPeerIP.Valid || !pairPeerNS.Valid ||
-			result.TargetEngine != transport.DNSEngineBIND ||
+			!transport.ValidDNSEngine(result.TargetEngine) ||
 			result.Mode != transport.DNSEngineSwitchModeSwitch ||
 			result.Topology != transport.DNSTopologyStandalone {
-			return persistedDNSEngineSwitch{}, errors.New("persisted BIND pair switch is invalid")
+			return persistedDNSEngineSwitch{}, errors.New("persisted DNS pair switch is invalid")
 		}
 		result.Topology = transport.DNSTopologyPaired
 		result.PairRole, result.LocalIP, result.LocalNS = pairRole.String, localIP.String, localNS.String
@@ -1267,7 +1260,7 @@ func (p *Panel) persistDNSEngineSwitch(
 	}
 	storageTopology := manifest.Topology
 	storagePeerIP, storagePeerNS := manifest.PeerIP, manifest.PeerNS
-	if manifest.TargetEngine == transport.DNSEngineBIND &&
+	if manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
 		manifest.Topology == transport.DNSTopologyPaired {
 		storageTopology = transport.DNSTopologyStandalone
 		storagePeerIP, storagePeerNS = "", ""
@@ -1287,7 +1280,7 @@ func (p *Panel) persistDNSEngineSwitch(
 	); err != nil {
 		return persistedDNSEngineSwitch{}, err
 	}
-	if manifest.TargetEngine == transport.DNSEngineBIND &&
+	if manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
 		manifest.Topology == transport.DNSTopologyPaired {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dns_bind_pair_switches (
@@ -1592,14 +1585,23 @@ func (p *Panel) finalizeDNSEngineSwitchSuccess(
 		return err
 	}
 	storageTopology := persisted.Topology
-	if persisted.TargetEngine == transport.DNSEngineBIND &&
+	if persisted.Mode == transport.DNSEngineSwitchModeSwitch &&
 		persisted.Topology == transport.DNSTopologyPaired {
 		storageTopology = transport.DNSTopologyStandalone
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dns_bind_pair_state (
 			  singleton_id, active_epoch, pair_role, local_ip, local_ns,
 			  peer_ip, peer_ns, source_switch_id
-			) VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
+			) VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(singleton_id) DO UPDATE SET
+			  active_epoch = excluded.active_epoch,
+			  pair_role = excluded.pair_role,
+			  local_ip = excluded.local_ip,
+			  local_ns = excluded.local_ns,
+			  peer_ip = excluded.peer_ip,
+			  peer_ns = excluded.peer_ns,
+			  source_switch_id = excluded.source_switch_id,
+			  updated_at = datetime('now')`,
 			persisted.TargetEpoch, persisted.PairRole, persisted.LocalIP,
 			persisted.LocalNS, persisted.PeerIP, persisted.PeerNS,
 			persisted.SwitchID,

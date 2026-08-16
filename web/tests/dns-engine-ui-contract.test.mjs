@@ -81,6 +81,10 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
 		],
 	})));
+	assert.ok(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired',
+		pair_role: 'primary',
+	})));
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({
     engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
@@ -187,20 +191,21 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(settings, /engine\?\.state === 'switching'/);
 });
 
-test('ready BIND locks only inherited paired identity and keeps standalone editable', () => {
+test('paired identity remains locked across independent BIND or PowerDNS choices', () => {
   assert.match(settings, /const activeEngine: ActiveDNSEngine \| null = engine\?\.state === 'ready'/);
   assert.match(settings, /engine\.active_engine === 'pdns' \|\| engine\.active_engine === 'bind'/);
   assert.match(settings, /<DNSInfrastructureSettings[\s\S]*activeEngine=\{activeEngine\}/);
   assert.match(settings, /const role = normalizeRole\(cluster\.role\)/);
-  assert.match(settings, /const bindPairedIdentityLocked = activeEngine === 'bind'[\s\S]*saved\.role === 'paired'/);
-  assert.match(settings, /const bindRoleDisabled = \(role: DNSRole\) => bindPairedIdentityLocked[\s\S]*role === 'paired'/);
+  assert.match(settings, /pairRole=\{engine\?\.pair_role\}/);
+  assert.match(settings, /const pairedIdentityLocked = pairRole !== undefined[\s\S]*saved\.role === 'paired'/);
+  assert.match(settings, /const roleSelectionDisabled = \(role: DNSRole\) => pairedIdentityLocked[\s\S]*role === 'paired'/);
   assert.match(settings, /const effectiveRole: DNSRole = draft\.role/);
 	assert.match(settings, /role: effectiveRole/);
-  assert.match(settings, /aria-disabled=\{bindRoleDisabled\(role\)\}/);
-  assert.match(settings, /disabled=\{bindRoleDisabled\(role\)\}/);
-  assert.match(settings, /if \(bindRoleDisabled\(role\)\) return/);
-  assert.match(settings, /dnsEngine\.identity\.bindPairedLocked/);
-  assert.match(settings, /bind-identity-note/);
+  assert.match(settings, /aria-disabled=\{roleSelectionDisabled\(role\)\}/);
+  assert.match(settings, /disabled=\{roleSelectionDisabled\(role\)\}/);
+  assert.match(settings, /if \(roleSelectionDisabled\(role\)\) return/);
+  assert.match(settings, /dnsEngine\.identity\.pairedLocked/);
+  assert.match(settings, /paired-identity-note/);
   assert.equal((settings.match(/fetch\('\/api\/v1\/settings\/dns-setup'/g) || []).length, 1);
   assert.equal((settings.match(/dns-wizard-save/g) || []).length, 1);
 });

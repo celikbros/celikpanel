@@ -897,6 +897,71 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 	}
 }
 
+func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "paired")
+	if err := panel.setSetting(context.Background(), settingDNSPeerIP, "192.0.2.20"); err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.setSetting(context.Background(), settingDNSPeerNS, "ns2.celikhost.com"); err != nil {
+		t.Fatal(err)
+	}
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	bindPreview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(bindPreview.Blockers) != 0 {
+		t.Fatalf("BIND preview=%+v status=%d", bindPreview, recorder.Code)
+	}
+	if commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("6", 32), transport.DNSEngineBIND,
+		nil, 0, bindPreview.PreviewToken, false,
+	); commit.Code != http.StatusOK {
+		t.Fatalf("BIND commit status=%d body=%s", commit.Code, commit.Body.String())
+	}
+	bindState, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	pdnsPreview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS,
+		string(transport.DNSEngineBIND), bindState.Revision,
+	)
+	if recorder.Code != http.StatusOK || len(pdnsPreview.Blockers) != 0 ||
+		pdnsPreview.Topology != transport.DNSTopologyPaired {
+		t.Fatalf("PowerDNS preview=%+v status=%d body=%s",
+			pdnsPreview, recorder.Code, recorder.Body.String())
+	}
+	if commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("7", 32), transport.DNSEnginePowerDNS,
+		string(transport.DNSEngineBIND), bindState.Revision,
+		pdnsPreview.PreviewToken, true,
+	); commit.Code != http.StatusOK {
+		t.Fatalf("PowerDNS commit status=%d body=%s", commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
+		state.Topology != transport.DNSTopologyPaired ||
+		state.PairRole != transport.DNSPairRolePrimary ||
+		state.LocalIP != "192.0.2.10" || state.PeerIP != "192.0.2.20" ||
+		state.LocalNS != "ns1.celikhost.com" || state.PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("reverse paired state=%+v", state)
+	}
+	agent.mu.Lock()
+	last := agent.switchRequests[len(agent.switchRequests)-1]
+	agent.mu.Unlock()
+	if last.TargetEngine != transport.DNSEnginePowerDNS ||
+		last.Topology != transport.DNSTopologyPaired ||
+		last.PairRole != transport.DNSPairRolePrimary {
+		t.Fatalf("reverse paired request=%+v", last)
+	}
+}
+
 func TestDNSEngineStalePreviewCannotStartMutation(t *testing.T) {
 	panel := newDNSPanelForTest(t)
 	agent := newDNSEngineTestAgent()

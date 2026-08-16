@@ -170,7 +170,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
     if (value.active_engine === 'bind' && value.topology === 'paired'
         && value.pair_role !== 'primary' && value.pair_role !== 'secondary') return null;
-    if ((value.active_engine !== 'bind' || value.topology !== 'paired')
+    if ((value.active_engine === null || value.topology !== 'paired')
         && value.pair_role !== undefined) return null;
 
     return {
