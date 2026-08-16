@@ -60,6 +60,40 @@ func TestConfigWriteRefusesBroadDirectoryPrefixes(t *testing.T) {
 	}
 }
 
+func TestConfigWriteRefusesDNSManagedPathsEvenWhenDiscovered(t *testing.T) {
+	for _, path := range []string{
+		"/etc/powerdns/pdns.conf",
+		"/etc/powerdns/pdns.d/celikpanel.conf",
+		"/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+		"/etc/bind/named.conf.local",
+		"/etc/bind/named.conf.options",
+		"/etc/named.conf",
+		"/var/lib/powerdns/pdns.sqlite3",
+		"/var/cache/bind/celikpanel/current",
+		"/var/named/celikpanel/current",
+	} {
+		if _, err := configWriteAllowedFrom(
+			path,
+			func() []string { return []string{path} },
+			func(string) error { return nil },
+		); err == nil {
+			t.Errorf("DNS managed path %q bypassed its engine workflow", path)
+		}
+	}
+}
+
+func TestConfigWriteStillAllowsDiscoveredNonDNSServiceConfig(t *testing.T) {
+	path := "/etc/nginx/nginx.conf"
+	got, err := configWriteAllowedFrom(
+		path,
+		func() []string { return []string{path} },
+		func(string) error { return nil },
+	)
+	if err != nil || got != filepath.Clean(path) {
+		t.Fatalf("non-DNS managed config got=%q err=%v", got, err)
+	}
+}
+
 // filepath.Clean must be applied before authorization; neither a normalized
 // web path nor a path that escapes it receives blanket write permission.
 func TestConfigWriteJudgesTheCleanedPath(t *testing.T) {

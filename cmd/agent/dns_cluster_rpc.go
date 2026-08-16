@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -426,6 +427,11 @@ func (a *Agent) ConfigureDNSClusterV2(
 		return nil
 	}
 	defer finish()
+	if err := requireLegacyPowerDNSMutationSafe(ctx, true); err != nil {
+		log.Printf("legacy PowerDNS cluster configuration blocked by DNS engine guard: %v", err)
+		resp.Error = "PowerDNS cluster configuration is blocked because PowerDNS is not the sole active DNS engine"
+		return nil
+	}
 	return configureDNSClusterV2(ctx, commitment, resp)
 }
 

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -140,6 +141,11 @@ func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncD
 		return nil
 	}
 	defer finishStep()
+	if err := requireLegacyPowerDNSMutationSafe(ctx, false); err != nil {
+		log.Printf("legacy PowerDNS configuration blocked by DNS engine guard: %v", err)
+		resp.Error = "PowerDNS configuration is blocked because the DNS engine state is not safe"
+		return nil
+	}
 	dbPath := pdnsDBPath()
 
 	// Create the database with the pdns schema before pdns first reads it.
