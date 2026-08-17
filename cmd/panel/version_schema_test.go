@@ -26,6 +26,12 @@ func TestHandleVersionReportsAppliedSchemaVersion(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
 	}
+	if got := recorder.Header().Get(`Cache-Control`); got != `no-store` {
+		t.Fatalf(`Cache-Control = %q, want no-store`, got)
+	}
+	if got := recorder.Header().Get(`Pragma`); got != `no-cache` {
+		t.Fatalf(`Pragma = %q, want no-cache`, got)
+	}
 	var response struct {
 		SchemaVersion int64 `json:"schema_version"`
 	}

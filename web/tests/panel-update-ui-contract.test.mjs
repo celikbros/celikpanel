@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const card = readFileSync(new URL('../src/components/PanelUpdateCard.tsx', import.meta.url), 'utf8');
+const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const settings = readFileSync(new URL('../src/components/Settings.tsx', import.meta.url), 'utf8');
 const tr = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
 const en = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
@@ -33,6 +34,32 @@ test('polling survives restart and accepts only the exact request and target', (
     assert.match(card, /Math\.min\(POLL_MAX_MS, Math\.round\(delay \* 1\.6\)\)/);
     assert.match(card, /clearExactMarker\(exactMarker\)/);
     assert.match(card, /payload\.status === 'succeeded' \|\| payload\.status === 'failed'/);
+});
+
+test('an exact successful update politely reloads once with a cache-busting identity', () => {
+    const terminal = card.slice(card.indexOf(`payload.status === 'succeeded' || payload.status === 'failed'`));
+    const successStart = terminal.indexOf(`if (payload.status === 'succeeded')`);
+    const failureStart = terminal.indexOf('} else {', successStart);
+    const terminalReturn = terminal.indexOf(`return 'terminal'`, failureStart);
+    const success = terminal.slice(successStart, failureStart);
+    const failure = terminal.slice(failureStart, terminalReturn);
+
+    assert.match(success, /schedulePostUpdateReload\(exactMarker\)/);
+    assert.match(success, /panelUpdate\.reloading/);
+    assert.doesNotMatch(failure, /schedulePostUpdateReload/);
+    assert.match(card, /const POST_UPDATE_RELOAD_MS = 1500/);
+    assert.match(card, /reloadTimerRef\.current !== null/);
+    assert.match(card, /searchParams\.get\(POST_UPDATE_RELOAD_PARAM\) === exactMarker\.request_id/);
+    assert.match(card, /searchParams\.set\(POST_UPDATE_RELOAD_PARAM, exactMarker\.request_id\)/);
+    assert.match(card, /searchParams\.delete\(POST_UPDATE_RELOAD_PARAM\)/);
+    assert.match(card, /window\.history\.replaceState\(/);
+    assert.match(card, /window\.location\.replace\(next\.toString\(\)\)/);
+    assert.doesNotMatch(card, /window\.location\.reload\(/);
+    assert.equal(card.match(/\bschedulePostUpdateReload\(/g)?.length, 1, 'reload may only be scheduled from exact success');
+});
+
+test('build identity reads bypass browser caches after a completed update', () => {
+    assert.match(layout, /fetch\('\/api\/v1\/panel\/version', \{ cache: 'no-store', credentials: 'same-origin' \}\)/);
 });
 
 test('definitive refusal, durable absence and identity mismatch cannot wedge the browser', () => {

@@ -2078,6 +2078,7 @@ export const tr: Record<TranslationKey, string> = {
     'panelUpdate.identityMismatch': 'Agent farklı ve etkin bir işlem kimliği bildirdi. Bu ekran açılmadan önce işlem terminal duruma kadar izlenecek.',
     'panelUpdate.identityMismatchCleared': 'Farklı işlem kimliği terminal durumda. Yerel bekleme işaretçisi temizlendi; yeniden kontrol edin.',
     'panelUpdate.succeeded': 'Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı.',
+    'panelUpdate.reloading': 'Güncelleme tamamlandı. Sayfa {version} ile yeniden yükleniyor…',
     'panelUpdate.failed': 'Güncelleme başarısız oldu; güvenli geri alma sonucu agent tarafından kaydedildi.',
     'panelUpdate.running': 'Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.',
     'panelUpdate.queued': 'Güncelleme sırada.',

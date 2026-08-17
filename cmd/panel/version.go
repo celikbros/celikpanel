@@ -328,6 +328,8 @@ func (p *Panel) requireDNSClusterConfigureV2Agent(ctx context.Context) error {
 // kör nokta budur. Arayüz, eşleşmezlikte güven veren bir damga yerine uyarı
 // gösterir.
 func (p *Panel) handleVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(`Cache-Control`, `no-store`)
+	w.Header().Set(`Pragma`, `no-cache`)
 	w.Header().Set("Content-Type", "application/json")
 
 	if p.db == nil {
