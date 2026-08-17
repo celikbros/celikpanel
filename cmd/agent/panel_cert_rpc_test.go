@@ -44,6 +44,13 @@ func bindPanelCertificateMutation(
 	req.MutationOwnerID = testMutationOwnerID
 }
 
+func installPanelCertificateAPTPackageFamily(t *testing.T) {
+	t.Helper()
+	originalDetect := panelCertDetectPkgFamily
+	panelCertDetectPkgFamily = func() string { return `apt` }
+	t.Cleanup(func() { panelCertDetectPkgFamily = originalDetect })
+}
+
 func bridgePanelCertificateIssueStageToLegacyPublishTest(t *testing.T) {
 	t.Helper()
 	original := panelCertStageIssue
@@ -372,6 +379,7 @@ func TestPanelCertificateChallengeRefusesInactiveNginx(t *testing.T) {
 }
 
 func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal(t *testing.T) {
+	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
 	originalRun := panelCertRunMutationCommand
@@ -454,6 +462,7 @@ func TestIssuePanelCertificateDoesNotInstallHookOrPublishWithoutAutomaticRenewal
 }
 
 func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *testing.T) {
+	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	bridgePanelCertificateIssueStageToLegacyPublishTest(t)
 	originalLookPath := panelCertLookPath
@@ -594,6 +603,7 @@ func TestIssuePanelCertificatePublishesExactMaterialAndPersistsRestartIntent(t *
 }
 
 func TestIssuePanelCertificateCleansBoundIntentWhenDeployHookFails(t *testing.T) {
+	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
 	originalRun := panelCertRunMutationCommand
@@ -663,6 +673,7 @@ func TestIssuePanelCertificateCleansBoundIntentWhenDeployHookFails(t *testing.T)
 }
 
 func TestIssuePanelCertificateCleansUnchangedIntentAfterCertbotFailure(t *testing.T) {
+	installPanelCertificateAPTPackageFamily(t)
 	store := installPanelCertificateActivationMemoryStore(t)
 	originalLookPath := panelCertLookPath
 	originalRun := panelCertRunMutationCommand
