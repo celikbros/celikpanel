@@ -21,20 +21,21 @@ import (
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu               sync.Mutex
-	runtimes         map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	port53Conflict   bool
-	dnssec           bool
-	dnssecCalls      int
-	switchCalls      int
-	switchRequests   []transport.SwitchDNSEngineV1Request
-	switchError      string
-	onSwitch         func()
-	firewallEnabled  bool
-	firewallError    string
-	firewallCalls    int
-	firewallRequests []transport.ApplyFirewallRequest
-	scanError        error
+	mu                  sync.Mutex
+	runtimes            map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict      bool
+	dnssec              bool
+	dnssecCalls         int
+	switchCalls         int
+	switchRequests      []transport.SwitchDNSEngineV1Request
+	switchError         string
+	onSwitch            func()
+	firewallEnabled     bool
+	firewallError       string
+	firewallCalls       int
+	firewallRequests    []transport.ApplyFirewallRequest
+	scanError           error
+	omitDNSCapabilities bool
 }
 
 func newDNSEngineTestAgent() *dnsEngineTestAgent {
@@ -52,6 +53,10 @@ func (agent *dnsEngineTestAgent) Version(
 	_ *transport.Empty,
 	response *transport.AgentVersionResponse,
 ) error {
+	if agent.omitDNSCapabilities {
+		response.Capabilities = []string{transport.AgentCapabilityFirewallApplyV2}
+		return nil
+	}
 	response.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV3,
 		transport.AgentCapabilityDNSEngineSwitchV1,
@@ -1046,6 +1051,23 @@ func TestDNSEnginePreviewBlocksUnrelatedPublicPort53Listener(t *testing.T) {
 		}
 	}
 	t.Fatalf("preview blockers omit public port-53 conflict: %+v", blockers)
+}
+
+func TestDNSEnginePreviewReportsIncompatibleAgentSeparatelyFromTargetAvailability(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	agent.omitDNSCapabilities = true
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK ||
+		!hasDNSEngineBlocker(preview, "agent_incompatible") ||
+		hasDNSEngineBlocker(preview, "target_unavailable") {
+		t.Fatalf("incompatible agent preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
 }
 
 func TestDNSEngineManagedPDNSRequiresAndCompletesExplicitAdopt(t *testing.T) {

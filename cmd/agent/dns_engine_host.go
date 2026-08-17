@@ -1496,8 +1496,7 @@ func verifyPDNSPublicListeners(output string) error {
 		if err != nil || port != "53" {
 			continue
 		}
-		host = strings.Trim(host, "[]")
-		address := net.ParseIP(host)
+		address := parseDNSListenerAddress(host)
 		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
 			continue
 		}
@@ -1598,8 +1597,7 @@ func verifyBINDPublicListeners(output string) error {
 		if err != nil || port != "53" {
 			continue
 		}
-		host = strings.Trim(host, "[]")
-		address := net.ParseIP(host)
+		address := parseDNSListenerAddress(host)
 		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
 			continue
 		}
