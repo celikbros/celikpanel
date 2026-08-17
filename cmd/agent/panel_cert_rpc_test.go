@@ -47,7 +47,7 @@ func bindPanelCertificateMutation(
 func installPanelCertificateAPTPackageFamily(t *testing.T) {
 	t.Helper()
 	originalDetect := panelCertDetectPkgFamily
-	panelCertDetectPkgFamily = func() string { return apt }
+	panelCertDetectPkgFamily = func() string { return `apt` }
 	t.Cleanup(func() { panelCertDetectPkgFamily = originalDetect })
 }
 
