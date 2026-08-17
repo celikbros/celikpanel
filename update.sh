@@ -464,16 +464,21 @@ terminate_frozen_release_service() {
     if [[ "${!flag_name}" -eq 1 ]]; then
         systemctl stop --no-block "$unit" \
             || die "$label stop could not be queued"
-        systemctl kill --kill-whom=all --signal=SIGKILL "$unit" \
-            || die "frozen $label could not be terminated"
+        # A frozen service may complete its ordinary stop before SIGKILL.
+        # Accept that race only after the captured PID and cgroup are gone.
+        # Askidaki servis SIGKILL'den once normal durusunu tamamlayabilir. Bu
+        # yarisi yalniz kaydedilmis PID ve cgroup tamamen gittiyse kabul et.
+        if ! systemctl kill --kill-whom=all --signal=SIGKILL "$unit" >/dev/null 2>&1; then
+            wait_for_quiesce_coordinator_stopped "$unit" \
+                || die "frozen $label could not be terminated"
+        fi
         printf -v "$flag_name" '%s' 0
     fi
-    systemctl stop "$unit" || die "$label could not be stopped"
-    if systemctl is-active --quiet "$unit"; then
-        die "$label is still active after stop"
+    if ! systemctl stop "$unit"; then
+        wait_for_quiesce_coordinator_stopped "$unit" \
+            || die "$label could not be stopped"
     fi
-    reject_extra_service_cgroup_processes "$unit" 0
-    verify_quiesce_coordinator_stopped "$unit" \
+    wait_for_quiesce_coordinator_stopped "$unit" \
         || die "$label identity was not fully removed after stop"
 }
 
@@ -843,6 +848,17 @@ verify_quiesce_coordinator_stopped() {
     if [[ "$prior_pid" -gt 1 ]] && current_start=$(coordinator_process_start_time "$prior_pid" 2>/dev/null); then
         [[ "$current_start" != "$prior_start" ]] || return 1
     fi
+}
+
+# Poll only briefly and accept success solely through the exact stopped proof.
+# Yalniz kisa sure bekle ve basariyi tam durdurulmus kimlik kanitiyla kabul et.
+wait_for_quiesce_coordinator_stopped() {
+    local unit=$1 attempt
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        verify_quiesce_coordinator_stopped "$unit" && return 0
+        sleep 0.02
+    done
+    return 1
 }
 
 # Active recovery never recreates a historical process. It accepts only a

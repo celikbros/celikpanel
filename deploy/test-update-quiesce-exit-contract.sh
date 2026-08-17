@@ -214,6 +214,7 @@ source <(extract_function service_state_is_active_like)
 source <(extract_function coordinator_cgroup_matches_pid)
 source <(extract_function verify_quiesce_coordinator_identity)
 source <(extract_function verify_quiesce_coordinator_stopped)
+source <(extract_function wait_for_quiesce_coordinator_stopped)
 source <(extract_function reject_extra_service_cgroup_processes)
 source <(extract_function terminate_frozen_release_service)
 source <(extract_function recover_active_release_service)
@@ -235,6 +236,8 @@ declare -A mock_pid=()
 declare -A mock_start=()
 declare -A mock_process_state=()
 declare -A mock_cgroup=()
+declare -A mock_stop_before_kill=()
+declare -A mock_sigkill_fail=()
 
 mock_log="$tmp_root/mock.log"
 RELEASE_TRANSACTION_ROOT="$tmp_root/transaction"
@@ -274,6 +277,10 @@ reset_active_identities() {
     mock_process_state[celikpanel-agent.service]=T
     mock_cgroup[celikpanel-panel.service]=111
     mock_cgroup[celikpanel-agent.service]=222
+    mock_stop_before_kill[celikpanel-panel.service]=0
+    mock_stop_before_kill[celikpanel-agent.service]=0
+    mock_sigkill_fail[celikpanel-panel.service]=0
+    mock_sigkill_fail[celikpanel-agent.service]=0
 }
 
 reset_inactive_identities() {
@@ -306,6 +313,17 @@ systemctl() {
     local unit
     printf 'systemctl %s\n' "$*" >> "$mock_log"
     case "$1" in
+        stop)
+            unit=${!#}
+            if [[ "$*" == *--no-block* &&
+                  "${mock_stop_before_kill[$unit]:-0}" -eq 1 ]]; then
+                mock_state[$unit]=inactive
+                mock_pid[$unit]=0
+                mock_start[$unit]=0
+                mock_process_state[$unit]=none
+                mock_cgroup[$unit]=
+            fi
+            ;;
         show)
             unit=${!#}
             if [[ "$*" == *ActiveState* ]]; then
@@ -319,6 +337,10 @@ systemctl() {
             if [[ "$*" == *SIGCONT* ]] && service_state_is_active_like "${mock_state[$unit]}"; then
                 mock_process_state[$unit]=S
             elif [[ "$*" == *SIGKILL* ]]; then
+                if [[ "${mock_sigkill_fail[$unit]:-0}" -eq 1 ]] ||
+                   ! service_state_is_active_like "${mock_state[$unit]}"; then
+                    return 1
+                fi
                 mock_state[$unit]=inactive
                 mock_pid[$unit]=0
                 mock_start[$unit]=0
@@ -597,6 +619,29 @@ if abort_quiesce_before_active; then
 fi
 assert_fail_closed_abort
 ! grep -Fq 'SIGCONT' "$mock_log" || fail "replacement starttime was signalled before fail-closed stop"
+
+# A queued stop may complete before SIGKILL. The signal then fails because the
+# process is already gone, but the exact stopped proof makes that race safe.
+reset_active_identities
+: > "$mock_log"
+panel_frozen=1
+mock_stop_before_kill[celikpanel-panel.service]=1
+terminate_frozen_release_service celikpanel-panel.service panel panel_frozen
+[[ "${mock_state[celikpanel-panel.service]}" == inactive && "$panel_frozen" -eq 0 ]] \
+    || fail "graceful stop-before-kill race was not accepted after exact stopped proof"
+grep -Fq 'SIGKILL celikpanel-panel.service' "$mock_log" \
+    || fail "stop-before-kill regression did not exercise the failing signal boundary"
+
+# A failed signal with the captured PID still alive must remain fail-closed.
+reset_active_identities
+: > "$mock_log"
+panel_frozen=1
+mock_sigkill_fail[celikpanel-panel.service]=1
+if (terminate_frozen_release_service celikpanel-panel.service panel panel_frozen); then
+    fail "SIGKILL failure with a live coordinator unexpectedly succeeded"
+fi
+[[ "${mock_state[celikpanel-panel.service]}" == active ]] \
+    || fail "fail-closed signal regression changed the live coordinator"
 
 # Simulate a crash after only the panel was terminated in the active phase.
 # Active aşamada yalnız panel sonlandırıldıktan sonraki çökmeyi benzet.
