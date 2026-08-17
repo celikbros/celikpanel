@@ -1011,7 +1011,7 @@ func (p *Panel) makeDNSEnginePreview(
 			blockers = addDNSEngineBlocker(blockers, "operation_running")
 		}
 		if err := p.requireDNSEngineSwitchV1Agent(ctx); err != nil {
-			blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+			blockers = addDNSEngineBlocker(blockers, "agent_incompatible")
 		}
 	}
 	token, err := newServiceOperationID()

@@ -254,7 +254,7 @@ func verifyNoManagedDNSAuthority(
 		if splitErr != nil || port != "53" {
 			continue
 		}
-		address := net.ParseIP(strings.Trim(host, "[]"))
+		address := parseDNSListenerAddress(host)
 		if address == nil || (!address.IsLoopback() && !address.IsLinkLocalUnicast()) {
 			return errors.New("DNS rollback left a public port-53 authority active")
 		}

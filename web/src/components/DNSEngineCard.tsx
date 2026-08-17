@@ -49,6 +49,7 @@ const knownBlockerKeys = {
     port_53_conflict: 'dnsEngine.blocker.portConflict',
     source_degraded: 'dnsEngine.blocker.sourceDegraded',
     target_unavailable: 'dnsEngine.blocker.targetUnavailable',
+    agent_incompatible: 'dnsEngine.blocker.agentIncompatible',
     target_already_active: 'dnsEngine.blocker.alreadyActive',
     stale_revision: 'dnsEngine.blocker.staleRevision',
 } as const;

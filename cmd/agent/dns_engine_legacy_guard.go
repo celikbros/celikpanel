@@ -178,7 +178,7 @@ func hasUnrelatedPublicDNSListener(
 		if port != "53" {
 			continue
 		}
-		address := net.ParseIP(strings.Trim(host, "[]"))
+		address := parseDNSListenerAddress(host)
 		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
 			continue
 		}
@@ -192,6 +192,14 @@ func hasUnrelatedPublicDNSListener(
 		}
 	}
 	return false
+}
+
+func parseDNSListenerAddress(host string) net.IP {
+	host = strings.Trim(host, "[]")
+	if zone := strings.LastIndexByte(host, '%'); zone >= 0 {
+		host = host[:zone]
+	}
+	return net.ParseIP(host)
 }
 
 func runDNSPort53PreMutationGuard(

@@ -75,6 +75,14 @@ func TestRejectLegacyPublicDNSListenersAllowsOnlyLocalStub(t *testing.T) {
 	}
 }
 
+func TestDNSPort53ConflictParserAllowsScopedLocalStubs(t *testing.T) {
+	output := "udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:* users:((\"systemd-resolve\",pid=13,fd=4))\n" +
+		"tcp LISTEN 0 4096 [fe80::1%eth0]:53 [::]:* users:((\"systemd-resolve\",pid=13,fd=5))"
+	if hasUnrelatedPublicDNSListener(output, false, false) {
+		t.Fatal("scoped loopback and link-local resolver stubs were rejected")
+	}
+}
+
 func TestDNSPort53ConflictParserAllowsOnlyDeclaredEngineOwners(t *testing.T) {
 	const (
 		bindTCP = `tcp LISTEN 0 128 192.0.2.10:53 0.0.0.0:* users:(("named",pid=10,fd=1))`

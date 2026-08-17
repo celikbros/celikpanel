@@ -7,7 +7,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-func TestAgentVersionPublishesClosedPanelCertificateSagaCapabilities(t *testing.T) {
+func TestAgentVersionPublishesClosedMutationCapabilities(t *testing.T) {
 	var response AgentVersionResponse
 	if err := (&Agent{}).Version(&transport.Empty{}, &response); err != nil {
 		t.Fatal(err)
@@ -17,6 +17,8 @@ func TestAgentVersionPublishesClosedPanelCertificateSagaCapabilities(t *testing.
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSSECSecureV2,
 		transport.AgentCapabilityDNSClusterConfigureV2,
+		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSEngineSwitchV1,
 		transport.AgentCapabilityMailTLSSyncV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilitySystemUpdateV1,

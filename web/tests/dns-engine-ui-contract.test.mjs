@@ -186,6 +186,7 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.doesNotMatch(card, /blocker\.message/);
   assert.match(card, /paired_topology_unsupported/);
   assert.match(card, /dnssec_unsupported/);
+  assert.match(card, /agent_incompatible/);
   assert.match(settings, /engine\?\.active_engine === 'bind'/);
   assert.match(settings, /dnsEngine\.topologyEditorBind/);
   assert.match(settings, /engine\?\.state === 'switching'/);
