@@ -291,6 +291,7 @@ export const en = {
     'panelUpdate.identityMismatch': 'The agent reported a different active operation identity. It will be monitored until terminal before this screen is released.',
     'panelUpdate.identityMismatchCleared': 'The different operation identity is terminal. The local pending marker was cleared; check again.',
     'panelUpdate.succeeded': 'The update completed. The panel and agent restarted on the new version.',
+    'panelUpdate.reloading': 'The update completed. Reloading this page with {version}…',
     'panelUpdate.failed': 'The update failed; the agent recorded the safe rollback result.',
     'panelUpdate.running': 'The update is being applied; the panel may be unavailable briefly.',
     'panelUpdate.queued': 'The update is queued.',

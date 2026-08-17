@@ -6,6 +6,8 @@ import { useI18n } from '../i18n';
 type Translate = ReturnType<typeof useI18n>['t'];
 
 const UPDATE_MARKER_KEY = 'celikpanel.system-update-operation.v1';
+const POST_UPDATE_RELOAD_PARAM = '_cp_update';
+const POST_UPDATE_RELOAD_MS = 1500;
 const POLL_MIN_MS = 1500;
 const POLL_MAX_MS = 15000;
 const NOT_FOUND_GRACE_MS = 120000;
@@ -219,6 +221,7 @@ export function PanelUpdateCard() {
     const [starting, setStarting] = useState(false);
     const [message, setMessage] = useState('');
     const actionInFlight = useRef(false);
+    const reloadTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -233,6 +236,36 @@ export function PanelUpdateCard() {
             })
             .catch(() => undefined);
         return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+        if (marker) return;
+        try {
+            const current = new URL(window.location.href);
+            if (!current.searchParams.has(POST_UPDATE_RELOAD_PARAM)) return;
+            current.searchParams.delete(POST_UPDATE_RELOAD_PARAM);
+            window.history.replaceState(
+                window.history.state,
+                '',
+                `${current.pathname}${current.search}${current.hash}`,
+            );
+        } catch {
+            // A stale cache-buster is harmless; it is same-origin and carries
+            // no authority. Never turn URL cleanup into an update failure.
+        }
+    }, [marker]);
+
+    const schedulePostUpdateReload = useCallback((exactMarker: UpdateMarker): boolean => {
+        if (reloadTimerRef.current !== null) return true;
+        const next = new URL(window.location.href);
+        if (next.searchParams.get(POST_UPDATE_RELOAD_PARAM) === exactMarker.request_id) return false;
+        next.searchParams.set(POST_UPDATE_RELOAD_PARAM, exactMarker.request_id);
+        // Intentionally survive a component unmount caused by SPA navigation:
+        // the installed frontend must replace the old in-memory application.
+        reloadTimerRef.current = window.setTimeout(() => {
+            window.location.replace(next.toString());
+        }, POST_UPDATE_RELOAD_MS);
+        return true;
     }, []);
 
     const pollExact = useCallback(async (exactMarker: UpdateMarker): Promise<'terminal' | 'retry'> => {
@@ -274,9 +307,13 @@ export function PanelUpdateCard() {
             if (payload.status === 'succeeded' || payload.status === 'failed') {
                 clearExactMarker(exactMarker);
                 setMarker(null);
-                setMessage(payload.status === 'succeeded'
-                    ? t('panelUpdate.succeeded')
-                    : (payload.summary || t('panelUpdate.failed')));
+                if (payload.status === 'succeeded') {
+                    setMessage(schedulePostUpdateReload(exactMarker)
+                        ? t('panelUpdate.reloading', { version: payload.target.version })
+                        : t('panelUpdate.succeeded'));
+                } else {
+                    setMessage(payload.summary || t('panelUpdate.failed'));
+                }
                 return 'terminal';
             }
             setMessage(payload.status === 'running' ? t('panelUpdate.running') : t('panelUpdate.queued'));
@@ -285,7 +322,7 @@ export function PanelUpdateCard() {
             setMessage(t('panelUpdate.connectionLost'));
             return 'retry';
         }
-    }, [t]);
+    }, [schedulePostUpdateReload, t]);
 
     useEffect(() => {
         if (!marker) return undefined;

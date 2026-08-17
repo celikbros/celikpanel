@@ -323,7 +323,7 @@ function BuildStamp() {
     const [v, setV] = useState<{ version: string; commit: string; agent_commit: string; agent_matches: boolean } | null>(null);
 
     useEffect(() => {
-        fetch('/api/v1/panel/version')
+        fetch('/api/v1/panel/version', { cache: 'no-store', credentials: 'same-origin' })
             .then((r) => (r.ok ? r.json() : null))
             .then(setV)
             .catch(() => {});
