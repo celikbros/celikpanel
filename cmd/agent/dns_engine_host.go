@@ -292,6 +292,12 @@ func (hostDNSEngineBackend) Readiness(
 					states[0], managedEvidence,
 					func() error { return verifyOnlyBINDActive(ctx, systemctl) },
 				)
+				if states[0].Managed {
+					states[0].PairReady, err = bindPrimaryPairReady(ctx, receipt)
+					if err != nil {
+						log.Printf("BIND primary peer readiness proof failed: %v", err)
+					}
+				}
 			}
 		}
 	} else if layoutErr == nil && states[0].Installed && !states[0].Running {
@@ -363,6 +369,12 @@ func (hostDNSEngineBackend) Readiness(
 			requireManagedDNSClusterReady,
 			func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
 		)
+		if states[1].Managed {
+			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx)
+			if err != nil {
+				log.Printf("PowerDNS primary peer readiness proof failed: %v", err)
+			}
+		}
 	}
 	port53Conflict, err := dnsPort53ConflictCheck(
 		ctx, states[0].Running, states[1].Running,

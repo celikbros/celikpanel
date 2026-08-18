@@ -159,6 +159,7 @@ type DNSBackendRuntimeState struct {
 	Installed bool      `json:"installed"`
 	Running   bool      `json:"running"`
 	Managed   bool      `json:"managed"`
+	PairReady bool      `json:"pair_ready"`
 	Unit      string    `json:"unit"`
 }
 

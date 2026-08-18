@@ -240,6 +240,7 @@ func validateDNSBackendReadiness(
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
+			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
 			return nil, false, errors.New("DNS backend readiness is internally inconsistent")
@@ -552,11 +553,17 @@ func (p *Panel) activeDNSPublisher(
 		Engine: state.ActiveEngine,
 		Epoch:  state.EngineEpoch, PairRole: state.PairRole,
 	}
-	// A directional BIND secondary serves transferred zones but must never
+	// A directional secondary serves transferred zones but must never
 	// accept panel-local domain or record mutations.  Returning the exact
 	// identity with ready=false keeps read-only engine truth visible while all
 	// hosting publication paths fail closed before acquiring a V3 lease.
 	if identity.PairRole == transport.DNSPairRoleSecondary {
+		return identity, false, nil
+	}
+	// A directional primary becomes a panel-local publisher only after the
+	// agent proves that the peer serves the exact primary catalog and every
+	// catalog member. Engine ownership remains managed while a peer is absent.
+	if identity.PairRole == transport.DNSPairRolePrimary && !runtime.PairReady {
 		return identity, false, nil
 	}
 	return identity, true, nil

@@ -236,8 +236,11 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	for engine, runtime := range agent.runtimes {
 		if engine == request.TargetEngine {
 			runtime.Installed, runtime.Running, runtime.Managed = true, true, true
+			runtime.PairReady = request.Topology == transport.DNSTopologyPaired &&
+				request.PairRole == transport.DNSPairRolePrimary
 		} else {
 			runtime.Running = false
+			runtime.PairReady = false
 		}
 		agent.runtimes[engine] = runtime
 	}
@@ -948,6 +951,25 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 			if err != nil || identity.PairRole != test.wantRole ||
 				ready != (test.wantRole == transport.DNSPairRolePrimary) {
 				t.Fatalf("publisher identity=%+v ready=%v err=%v", identity, ready, err)
+			}
+			if test.wantRole == transport.DNSPairRolePrimary {
+				agent.mu.Lock()
+				runtime := agent.runtimes[transport.DNSEngineBIND]
+				runtime.PairReady = false
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+				identity, ready, err = panel.activeDNSPublisher(context.Background())
+				if err != nil || ready || identity.PairRole != transport.DNSPairRolePrimary ||
+					!runtime.Installed || !runtime.Running || !runtime.Managed {
+					t.Fatalf(
+						"unproven primary identity=%+v runtime=%+v ready=%v err=%v",
+						identity, runtime, ready, err,
+					)
+				}
+				agent.mu.Lock()
+				runtime.PairReady = true
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
 			}
 		})
 	}
