@@ -179,11 +179,8 @@ func managedPDNSPrimaryCatalogEvidence(
 		return dnsPrimaryCatalogEvidence{}, false,
 			errors.New("PowerDNS producer ownership is ambiguous")
 	}
-	if err := verifyPDNSProducerBaseTx(ctx, tx, domainID, identity.Domain); err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	_, serial, err := readPDNSBINDCatalogRecordsTx(
-		ctx, tx, domainID, identity.Domain,
+	serial, err := verifyPDNSProducerBaseTx(
+		ctx, tx, domainID, identity.Domain, identity.LocalIP,
 	)
 	if err != nil {
 		return dnsPrimaryCatalogEvidence{}, false, err
