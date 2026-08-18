@@ -22,7 +22,11 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-const dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
+const (
+	dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
+
+	pdnsSecondaryWriteDeniedError = "directional secondary PowerDNS cannot publish panel-local zones"
+)
 
 type hostDNSEngineBackend struct{}
 
@@ -513,11 +517,11 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
-	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
-		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
-	}
 	if commitment.Engine == string(transport.DNSEnginePowerDNS) {
 		return syncPDNSV3Zone(ctx, commitment, binding)
+	}
+	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
+		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
 	}
 	if commitment.Engine != string(transport.DNSEngineBIND) {
 		return "", errors.New("DNS V3 publication engine is unsupported")
@@ -1488,6 +1492,25 @@ func syncPDNSV3Zone(
 	if state.Engine != transport.DNSEnginePowerDNS || state.EngineEpoch != commitment.EngineEpoch {
 		return "", errors.New("PowerDNS zone publication does not match the active engine epoch")
 	}
+	if err := requirePDNSPanelWriteAuthority(state); err != nil {
+		return "", err
+	}
+	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
+		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
+	}
+	state, exists, err = readDNSEngineState()
+	if err != nil || !exists {
+		if err == nil {
+			err = errors.New("DNS engine state is not initialized")
+		}
+		return "", err
+	}
+	if state.Engine != transport.DNSEnginePowerDNS || state.EngineEpoch != commitment.EngineEpoch {
+		return "", errors.New("PowerDNS zone publication does not match the active engine epoch")
+	}
+	if err := requirePDNSPanelWriteAuthority(state); err != nil {
+		return "", err
+	}
 	if err := requireManagedDNSClusterReady(); err != nil {
 		return "", err
 	}
@@ -1541,6 +1564,9 @@ func recoverPDNSV3Zone(
 	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (bool, error) {
+	if err := requirePDNSPanelWriteAuthority(state); err != nil {
+		return false, err
+	}
 	if err := requireManagedDNSClusterReady(); err != nil {
 		return false, err
 	}
@@ -1572,6 +1598,13 @@ func recoverPDNSV3Zone(
 		return false, err
 	}
 	return true, nil
+}
+
+func requirePDNSPanelWriteAuthority(state dnsEngineStateReceipt) error {
+	if state.PairRole == transport.DNSPairRoleSecondary {
+		return errors.New(pdnsSecondaryWriteDeniedError)
+	}
+	return nil
 }
 
 func verifyOnlyPDNSActive(ctx context.Context, systemctl string) error {
