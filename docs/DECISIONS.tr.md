@@ -813,16 +813,19 @@ kaldırılmasını reddeder — yoksa her domain sessizce kararırdı; kuralın
 önlediği tuzağın ta kendisi. Tüm "ya da dışarıda yönet" metinleri kaldırıldı.
 Canlı kanıt: DNS'siz oluşturma → 409.
 
-**Ek (26 Temmuz 2026 — iki sunuculu yetki).** DNS rolü makine çapında tek
-birincil/tek ikincil değildir; PowerDNS'te sahiplik zone başınadır. İki
-CelikPanel **Eşli** modda hem birincil hem ikincil yeteneğini açar: bir panelde
-oluşturulan zone orada `MASTER`, diğer makinede otomatik ikincil kopyadır. Bu
-sayede site hangi panelde oluşturulursa oluşturulsun iki ad sunucusu da yetkili
-cevap verir. İki panel aynı ortak ad çiftini taşır; adlardan tam biri yerel IP'ye,
-diğeri eş IP'ye çözülür. Glue yalnız bu adların sahibi olan üst domain'de bir kez
-kaydedilir; müşteri domain'i altında child nameserver üretilmez.
+**Ek (26 Temmuz 2026; 18 Ağustos'ta geçersiz kılındı — iki sunuculu yetki).**
+Eski, yalnız-PowerDNS ve zone-başına çift-yazarlı model reddedildi; çünkü karışık
+BIND/PowerDNS eşinde yönlü ikincilde oluşturulan bir zone birincile geri
+yakınsayamaz. **Eşli** artık makine yönlüdür: bir birincil paneldeki tüm yerel DNS
+mutasyonlarının sahibidir ve motor-bağımsız Catalog Zone v2 yayınlar; bir ikincil
+bu kataloğu tüketir ve yerel yazılara kapalıdır. Oluşan zone'lar için iki
+nameserver da yetkili cevap verir. İki panel aynı ortak ad çiftini taşır; adlardan
+tam biri yerel IP'ye, diğeri eş IP'ye çözülür. Glue yalnız bu adların sahibi olan
+üst domain'de bir kez kaydedilir; müşteri domain'i altında child nameserver
+üretilmez. Kesin NS adları, adresleri ve yönlü roller motor kurulmadan önce
+hazırlanır ve ilk motor etkinleştirildiğinde değişmez olur.
 
-**Ek (16 Ağustos 2026 — yetkili DNS motoru sahipliği).** PowerDNS ile BIND,
+**Ek (18 Ağustos 2026 — doğrudan yönlü DNS motoru sahipliği).** PowerDNS ile BIND,
 operatörün bağımsız olarak başlatıp durdurduğu veya kaldırdığı sıradan bileşen
 satırları değil, panelin sahip olduğu tek DNS-motoru yaşam döngüsünün iki
 seçeneğidir. TCP ve UDP 53 numaralı portun sahibi aynı anda yalnız bir motordur.
@@ -838,33 +841,50 @@ bir kesinti onayı gerekir; sürüm ya da ürün adını yazdıran bir parola oy
 
 PowerDNS↔BIND değişimi hem **Tek sunucu** hem doğrulanmış **Eşli** topolojide
 çift yönlüdür. Topoloji ile motor seçimi bağımsızdır: birincil ve ikincil
-PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS veya PowerDNS/BIND kullanabilir.
-Kayıtlı NS kimliği yönlü rolleri belirler. Birincil motor-bağımsız Catalog Zone
-v2 yayınlar; ikincil kesin kataloğu ve her üye zonu standart AXFR/NOTIFY ile
-aktarır. Geçiş, yerel ve eş SOA serileri UDP ile TCP üzerinde eşleşmeden
-tamamlanmaz. Sunuculardan biri BIND kullanırken eş kimliği salt-okunurdur.
-DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu
-çakışması, bozuk kaynak veya başka bir işlem geçişi engeller. İşlem; motor ve
-etkinleştirme dönemine bağlanmış tam zone görüntüsünü dondurur, kaynağı
-durdurmadan önce hedefi hazırlar ve doğrular, her zone'u hem UDP hem TCP
-üzerinden sınar ve eski paketi durmuş bekleme kopyası olarak tutar.
+PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS veya PowerDNS/BIND kullanabilir ve
+iki rolde de ilk etkin motor doğrudan ikisinden biri olabilir. Önce PowerDNS ile
+bootstrap ya da geçici motor adımı yasaktır. Kayıtlı NS kimliği değişmez birincil
+ve ikincil rolleri kesin olarak belirler. Birincil motor-bağımsız Catalog Zone v2
+yayınlar; ikincil kesin kataloğu ve her üye zone'u standart AXFR/NOTIFY ile
+aktarır.
 
-Eski sürümden kalan ve motor durumu henüz çözümlenmemiş bir host için tek dar
-istisna vardır: **mevcut panel-yönetimli PowerDNS otoritesini yalnız kayıt
-amacıyla devralma**. Devralma yeniden yazmak yerine doğruladığı için, mevcut
-DNSSEC verisi dahil birebir Tek sunucu veya Eşli PowerDNS durumunu koruyabilir.
-Yalnız yapılandırma baytları ve kipleri, unit durumu, SQLite veritabanı, panelin
-sahibi olduğu her zone, topoloji ve TCP/UDP otoritesi panel defteriyle eşleşirse
-ve çalışan bir BIND otoritesi yoksa başarır. Paket, yapılandırma, servis durumu,
-DNS verisi veya DNSSEC durumunu değiştirmez. BIND için devralma kestirmesi
-yoktur. Yeni eşleme önce doğrulanmış PowerDNS altında kurulur; ardından iki
-sunucunun motoru birbirinden bağımsız ve sırayla değiştirilebilir.
+Birincil motorun eş henüz yokken etkinleşmesine izin verilir; fakat sahiplik ile
+yayına hazır olma ayrı gerçeklerdir: motor kesin yönetilen ve çalışır halde
+**eş-bekliyor** kalır, paneldeki tüm yerel zone yazıları engellenir. Yayın ancak
+birincildeki yerel AXFR kalıcı katalog serisi ve üyeleriyle eşleştiğinde, eş aynı
+katalog serisini UDP ve TCP üzerinden tek yetkili SOA olarak verdiğinde ve her
+katalog üyesinin yerel/eş yetkili SOA serileri birebir olduğunda açılır. Bu kanıt
+üye zone sayısı sıfırken de boşuna doğru olamaz. İkincile hiçbir zaman panelde
+yerel yazma yetkisi verilmez. Sabit ve özel eş IPv4 zorunludur; transfer ve
+notify ACL'sindeki tek adres kesin `/32` eştir. TSIG henüz yoktur; paylaşılan veya
+dinamik NAT uçları desteklenmez.
 
-Hem panel defteri hem agent'ın sahip olduğu host günlüğü işlem kimliğini ve
-aşamasını taşır. Kesinti sonrasında kurtarma kesin hedefi kanıtlayıp tamamlar
-veya işlem öncesi durumu birebir geri getirip kanıtlar. İkisi de kanıtlanamazsa
-DNS mutasyonları kurtarma için kilitli kalır; panel hangi daemon'ın otorite
-olduğunu tahmin etmez.
+DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu çakışması, bozuk
+kaynak veya başka bir işlem değişimi ya da yeniden yapılandırmayı engeller.
+İşlem; motor ve etkinleştirme dönemine bağlanmış tam zone görüntüsünü dondurur,
+kaynağı durdurmadan önce hedefi hazırlar ve doğrular, uygulanabilir her zone'u
+hem UDP hem TCP üzerinden sınar ve eski paketi durmuş bekleme kopyası olarak
+tutar.
+
+Eski sürümden kalan ve motor durumu henüz çözümlenmemiş bir host için dar
+**mevcut panel-yönetimli PowerDNS otoritesini yalnız kayıt amacıyla devralma**
+yolu kalır. Devralma; kesin config baytları ve kipleri, unit durumu, SQLite
+verisi, sahip olunan zone'lar, topoloji ve TCP/UDP otoritesini değiştirmeden
+doğrular; BIND için devralma kestirmesi yoktur. Sabit Boston akışı daha sonra
+mevcut **boş, yönetilen Tek-sunucu PowerDNS** durumunu inceler ve aynı motoru
+doğrudan yönlü ikincil olarak yeniden yapılandırır. Kesin veritabanı/config/unit
+anlık görüntüsünü alır, katalog-tüketici hedefini yazar, sınırlı yeniden
+başlatmayı yapar, hedefi kanıtlayıp tamamlar veya anlık görüntüyü geri getirip
+kanıtlar. Geçici BIND otoritesi kurmaz veya etkinleştirmez. Boş olmayan, DNSSEC
+taşıyan, yönetilmeyen ya da farklı eski durum sessizce yeniden amaçlandırılmak
+yerine fail-closed reddedilir.
+
+Hem panel defteri hem agent'ın sahip olduğu host günlüğü işlem kimliğini,
+değişmez eş kimliğini, anlık görüntüyü ve aşamayı taşır. Kesinti sonrasında
+kurtarma kesin hedefi kanıtlayıp tamamlar veya işlem öncesi dosyaları,
+veritabanını, nesil işaretçisini ve unit durumunu birebir geri getirip kanıtlar.
+İkisi de kanıtlanamazsa DNS mutasyonları kurtarma için kilitli kalır; panel hangi
+daemon'ın otorite olduğunu tahmin etmez.
 
 ---
 

@@ -324,6 +324,28 @@ PowerDNS and BIND are selected from the panel's dedicated authoritative-DNS
 card. Do not use generic component start, stop, uninstall or direct systemd
 commands to change which daemon owns port 53.
 
+On a new or unresolved node, first stage the exact shared NS names, local and
+peer IPv4 addresses, **Primary/Secondary** role and **Paired** topology. This is
+a database-only reviewed step: it installs or restarts nothing. The first engine
+preview is blocked until that identity exists, and the identity becomes
+immutable when an engine is activated. Either role can then install BIND or
+PowerDNS directly; never install a temporary engine to establish the pair.
+
+For the frozen Frankfurt/Boston deployment, use this order:
+
+1. Stage Frankfurt/NS1 as the primary with Boston's fixed peer IPv4, then review
+   and activate BIND directly. It may become managed and running before Boston
+   is ready, but it must show pair-pending and must not accept panel-local zone
+   writes yet.
+2. On Boston/NS2, review the detected empty, panel-managed Standalone PowerDNS
+   authority. Start the dedicated direct reconfiguration to directional
+   secondary. The operation snapshots the exact PowerDNS database,
+   configuration and unit state, writes the catalog consumer, performs one
+   bounded restart and proves the target. Do not install or activate BIND on
+   Boston as an intermediate step.
+3. Refresh Frankfurt. Publication becomes ready only after the agent proves the
+   exact peer catalog and member serials. Only then create or change zones.
+
 The first engine action is always read-only. It obtains a server-generated
 preview of the exact operation type, source and target engines, state revision,
 topology, zone and DNSSEC counts, expected interruption, impacts and blockers.
@@ -335,20 +357,32 @@ registration-only legacy PowerDNS adoption expects no interruption because it
 only proves and records existing state.
 
 PowerDNS↔BIND switching is bidirectional in both **Standalone** and verified
-**Paired** topology. The saved NS pair determines the server roles:
-Frankfurt/NS1 is primary and Boston/NS2 is secondary. Engine choice is
-independent per node, so PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS and
-PowerDNS/BIND are all supported. The primary publishes an engine-neutral
-Catalog Zone v2; the secondary consumes it through standard AXFR/NOTIFY and
-must prove the exact catalog serial and every member SOA over UDP and TCP before
-a cutover commits. The paired identity is read-only while either node uses
-BIND. Any DNSSEC zone, pending zone publication,
-unmanaged DNS, a TCP/UDP port-53 conflict, a degraded source or another
-server/DNS operation blocks confirmation. Resolve blockers through their explicit panel workflows
-and request a fresh preview. Establish or repair the pair on the primary first,
-then change engines on one node at a time; never cut over both authorities
-simultaneously. Do not edit cluster, DNSSEC or daemon state, or
-clear operation rows, by hand to bypass a blocker.
+**Paired** topology. Engine choice is independent per node, so
+PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS and PowerDNS/BIND are all supported.
+The primary publishes an engine-neutral Catalog Zone v2 and the secondary
+consumes it through standard AXFR/NOTIFY. The secondary is always locally
+read-only. The primary remains pair-pending until all of these exact checks pass:
+
+- its local AXFR serial and sorted membership match the durable catalog;
+- the peer returns one authoritative SOA for that catalog with the same serial
+  over both UDP and TCP; and
+- every member zone returns the same authoritative SOA serial locally and from
+  the peer over UDP and TCP.
+
+The peer-catalog check is required even when the catalog has zero members, so an
+absent peer cannot pass vacuously. A failed proof does not make the primary
+engine unmanaged or stop it; it only keeps panel-local DNS publication closed.
+Use fixed, dedicated peer IPv4 addresses. Each transfer and notify ACL contains
+only the exact peer `/32`. TSIG is not implemented yet, and shared or dynamic
+NAT endpoints are unsupported.
+
+Any DNSSEC zone, pending zone publication, unmanaged DNS, a TCP/UDP port-53
+conflict, a degraded source or another server/DNS operation blocks confirmation.
+Resolve blockers through their explicit panel workflows and request a fresh
+preview. Activate or repair the primary first, then the secondary, and change
+engines on one node at a time; never cut over both authorities simultaneously.
+Do not edit pair identity, cluster, DNSSEC, daemon state or operation rows by hand
+to bypass a blocker.
 
 During an allowed install or switch, the complete desired zone set is frozen
 against the selected target engine and its next activation epoch. The target
@@ -365,18 +399,23 @@ authority. Adoption is registration-only: it byte- and mode-checks managed
 configuration, verifies exact unit state and topology, reads and verifies the
 SQLite database and every panel-owned zone, and proves TCP/UDP authority. It
 does not install packages, rewrite configuration or DNS data, restart services,
-or change DNSSEC. Exact Standalone and Paired PowerDNS installations may be
-adopted; another running DNS engine, unowned or divergent data, missing paired
-configuration, or any changed evidence fails closed. BIND cannot be adopted.
+or change DNSSEC. BIND cannot be adopted.
+
+The separate Boston reconfiguration is allowed only after that review proves an
+empty, exact managed Standalone PowerDNS state. It is a durable same-engine
+operation, not ordinary adoption: snapshot first, write the exact directional
+consumer, restart, prove, then commit. On any failure it restores and proves the
+database, config and unit snapshot. Non-empty, DNSSEC-bearing, unowned,
+divergent or concurrently changing state fails closed.
 
 The panel ledger and the agent's root-owned host journal bind the same operation
-identity, manifest and phase. If the response is lost, refresh the DNS engine
-state; do not invent a new request identity or repeat the operation through
-SSH. Startup recovery first tries to prove the exact target. If that proof
-fails, it restores and proves the exact pre-operation files, database,
-generation pointer and systemd state. If neither outcome can be proved, DNS
-mutations remain locked for explicit recovery instead of guessing or allowing a
-second authority to start.
+identity, immutable pair identity, manifest, pre-operation snapshot and phase.
+If the response is lost, refresh the DNS engine state; do not invent a new
+request identity or repeat the operation through SSH. Startup recovery first
+tries to prove the exact target. If that proof fails, it restores and proves the
+exact pre-operation files, database, generation pointer and systemd state. If
+neither outcome can be proved, DNS mutations remain locked for explicit
+recovery instead of guessing or allowing a second authority to start.
 
 ## 8. Development checks
 

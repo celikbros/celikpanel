@@ -58,6 +58,24 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 **Working today** (functional, being hardened): domain & site management · PHP version selection and FPM pools · SSL (Let's Encrypt + custom certificates) · authoritative DNS (independently selected PowerDNS or BIND on each node, with previewed and recoverable standalone or paired switching) · e-mail accounts and forwarding · database management with multi-server support (MariaDB/PostgreSQL) · file manager · backup/restore · cron jobs · log viewer · service control for 14 services.
 
+### Direct paired authoritative DNS
+
+Paired identity and topology are staged before the first DNS engine is
+installed. Either node may then activate BIND or PowerDNS directly; no
+PowerDNS-first bootstrap or temporary engine is required. The frozen deployment
+is Frankfurt/NS1 as a direct BIND primary and Boston/NS2 as the directional
+PowerDNS secondary. Boston's existing empty, panel-managed standalone PowerDNS
+is reviewed and reconfigured in place through a snapshotted, restartable and
+rollback-safe operation.
+
+The primary remains pair-pending and panel-local zone writes fail closed until
+the agent proves the exact local catalog, the peer's authoritative catalog SOA
+over UDP and TCP, and matching serials for every member zone. The secondary is
+always locally read-only. Pair identity is immutable after activation. Pairing
+currently requires fixed dedicated peer IPv4 addresses allowed as exact `/32`
+peers; TSIG is not implemented yet, and shared or dynamic NAT endpoints are not
+supported.
+
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 
 ## Installing or updating a tagged release

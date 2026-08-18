@@ -58,6 +58,22 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 **Bugün çalışanlar** (işlevsel, sertleştirme sürüyor): domain ve site yönetimi · PHP sürüm seçimi ve FPM havuzları · SSL (Let's Encrypt + özel sertifika) · yetkili DNS (her düğümde bağımsız seçilen PowerDNS veya BIND; önizlemeli ve kurtarılabilir tek-sunucu ya da eşli değişim) · e-posta hesapları ve yönlendirme · çoklu sunucu destekli veritabanı yönetimi (MariaDB/PostgreSQL) · dosya yöneticisi · yedekleme/geri yükleme · cron · log görüntüleme · 14 servis için servis kontrolü.
 
+### Doğrudan eşli yetkili DNS
+
+Eş kimliği ve topoloji, ilk DNS motoru kurulmadan önce hazırlanır. Ardından her
+düğüm BIND veya PowerDNS'i doğrudan etkinleştirebilir; önce PowerDNS ile kurulum
+ya da geçici motor gerekmez. Sabit dağıtım Frankfurt/NS1'in doğrudan BIND
+birincil, Boston/NS2'nin ise yönlü PowerDNS ikincil olmasıdır. Boston'daki mevcut
+boş, panel-yönetimli tek-sunucu PowerDNS; anlık görüntülü, yeniden başlatılabilir
+ve güvenli geri dönüşlü bir işlemle yerinde incelenip yeniden yapılandırılır.
+
+Agent yerel kesin kataloğu, eşteki yetkili katalog SOA'sını UDP ve TCP üzerinden
+ve her üye zone'un eşleşen seri numarasını kanıtlayana kadar birincil eş-bekliyor
+durumunda kalır; panelde yerel zone yazıları fail-closed engellenir. İkincil her
+zaman yerel yazılara kapalıdır. Etkinleştirmeden sonra eş kimliği değişmezdir.
+Eşleme şimdilik kesin `/32` olarak izin verilen sabit ve özel eş IPv4 adresleri
+gerektirir; TSIG henüz yoktur, paylaşılan veya dinamik NAT uçları desteklenmez.
+
 **Sırada ne var:** [Yol Haritası](ROADMAP.tr.md) — Faz 0 güvenlik sprinti → Faz 1 altın yolun sertleştirilmesi → Faz 2 60 saniyelik kurulum → Faz 3 WordPress toolkit + cPanel importer.
 
 ## Etiketli sürüm kurulumu
