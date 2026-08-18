@@ -16,6 +16,14 @@ type pdnsV3PropagationPlan struct {
 	Changed  expectedDNSZoneAuthority
 }
 
+// dnsV3PrimaryPropagationPlan is engine-neutral durable authority evidence for
+// one primary-side V3 mutation. Both managed BIND and PowerDNS must prove this
+// exact catalog/member state at the peer before reporting terminal success.
+type dnsV3PrimaryPropagationPlan struct {
+	Evidence dnsPrimaryCatalogEvidence
+	Changed  expectedDNSZoneAuthority
+}
+
 func trustedPDNSControl(ctx context.Context, args ...string) error {
 	control, err := firstTrustedExecutable(
 		[]string{"/usr/bin/pdns_control", "/usr/sbin/pdns_control"}, "pdns_control",
@@ -108,8 +116,20 @@ func preparePDNSV3PropagationAt(
 }
 
 func validatePDNSPrimaryPropagationPlan(plan pdnsV3PropagationPlan) error {
+	return validateDNSV3PrimaryPropagationPlan(dnsV3PrimaryPropagationPlan{
+		Evidence: plan.Evidence,
+		Changed:  plan.Changed,
+	})
+}
+
+func validateDNSV3PrimaryPropagationPlan(plan dnsV3PrimaryPropagationPlan) error {
 	if err := validateDNSPrimaryCatalogEvidence(plan.Evidence); err != nil {
-		return errors.New("PowerDNS primary propagation evidence is invalid")
+		return errors.New("DNS primary propagation evidence is invalid")
+	}
+	if !serviceMutationCanonicalFQDN(plan.Changed.Domain) ||
+		plan.Changed.Domain == plan.Evidence.Domain ||
+		(!plan.Changed.Delete && plan.Changed.Serial == 0) {
+		return errors.New("changed DNS authority identity is invalid")
 	}
 	index := -1
 	for memberIndex, member := range plan.Evidence.Members {
@@ -120,12 +140,12 @@ func validatePDNSPrimaryPropagationPlan(plan pdnsV3PropagationPlan) error {
 	}
 	if plan.Changed.Delete {
 		if index >= 0 || plan.Changed.Serial != 0 {
-			return errors.New("PowerDNS deleted member remains in durable catalog evidence")
+			return errors.New("deleted DNS member remains in durable catalog evidence")
 		}
 		return nil
 	}
 	if index < 0 || plan.Evidence.MemberSerials[index] != plan.Changed.Serial {
-		return errors.New("PowerDNS changed member differs from durable catalog evidence")
+		return errors.New("changed DNS member differs from durable catalog evidence")
 	}
 	return nil
 }
@@ -137,10 +157,20 @@ func completePDNSV3Propagation(
 	if !plan.Primary {
 		return nil
 	}
+	return completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
+		Evidence: plan.Evidence,
+		Changed:  plan.Changed,
+	})
+}
+
+func completeDNSV3PrimaryPropagation(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+) error {
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
 	for {
-		err := verifyPDNSV3PropagationAt(
+		err := verifyDNSV3PrimaryPropagationAt(
 			proofCtx, plan, probeDNSZoneSOA, probeDNSCatalogAXFR,
 			probeDNSBoundCatalogAXFR, probeDNSBoundZoneAXFR,
 		)
@@ -150,9 +180,9 @@ func completePDNSV3Propagation(
 		select {
 		case <-proofCtx.Done():
 			if plan.Changed.Delete {
-				return errors.New("PowerDNS paired deletion did not converge")
+				return errors.New("paired DNS deletion did not converge")
 			}
-			return errors.New("PowerDNS paired primary propagation did not converge")
+			return errors.New("paired DNS primary propagation did not converge")
 		case <-time.After(250 * time.Millisecond):
 		}
 	}
@@ -169,7 +199,25 @@ func verifyPDNSV3PropagationAt(
 	if !plan.Primary {
 		return nil
 	}
-	if err := validatePDNSPrimaryPropagationPlan(plan); err != nil {
+	return verifyDNSV3PrimaryPropagationAt(
+		ctx,
+		dnsV3PrimaryPropagationPlan{
+			Evidence: plan.Evidence,
+			Changed:  plan.Changed,
+		},
+		soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
+	)
+}
+
+func verifyDNSV3PrimaryPropagationAt(
+	ctx context.Context,
+	plan dnsV3PrimaryPropagationPlan,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
+) error {
+	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
 		return err
 	}
 	authority, err := verifyDNSPrimaryPairReadyAuthorityAt(
@@ -203,13 +251,13 @@ func verifyPeerDeletedDNSZoneAt(
 		!serviceMutationCanonicalFQDN(authority.catalog) ||
 		!serviceMutationCanonicalFQDN(domain) ||
 		domain == authority.catalog {
-		return errors.New("PowerDNS peer deletion AXFR authority is invalid")
+		return errors.New("DNS peer deletion AXFR authority is invalid")
 	}
 	state, err := probe(
 		ctx, authority.sourceIP, authority.peerIP, domain,
 	)
 	if err != nil || state != dnsZoneAXFRAbsent {
-		return errors.New("PowerDNS deleted zone remains served by the peer")
+		return errors.New("deleted DNS zone remains served by the peer")
 	}
 	return nil
 }
@@ -221,14 +269,14 @@ func verifyDeletedDNSZoneAt(
 ) error {
 	if probe == nil || !canonicalPairReadinessIPv4(address) ||
 		!serviceMutationCanonicalFQDN(domain) {
-		return errors.New("PowerDNS deleted-zone proof identity is invalid")
+		return errors.New("deleted DNS zone proof identity is invalid")
 	}
 	for _, network := range []string{"udp", "tcp"} {
 		probeCtx, cancel := context.WithTimeout(ctx, dnsProbeTimeout)
 		result, err := probe(probeCtx, network, address, domain)
 		cancel()
 		if err != nil || !validDeletedDNSZoneProof(domain, result) {
-			return errors.New("PowerDNS deleted zone remains served by the peer")
+			return errors.New("deleted DNS zone remains served by the peer")
 		}
 	}
 	return nil

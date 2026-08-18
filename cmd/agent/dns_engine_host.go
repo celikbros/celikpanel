@@ -585,38 +585,33 @@ func (hostDNSEngineBackend) Sync(
 		if output, commandErr := runDNSSystemctl(applyCtx, systemctl, "reload", layout.Unit); commandErr != nil {
 			return fmt.Errorf("reload BIND: %w: %s", commandErr, firstLine(string(output)))
 		}
-		unit, inspectErr := captureDNSUnitState(applyCtx, systemctl, layout.Unit)
-		if inspectErr != nil || !unit.active() {
-			if inspectErr == nil {
-				inspectErr = errors.New("BIND is not active after reload")
-			}
-			return inspectErr
-		}
-		if err := verifyDNSZoneManifestAuthority(applyCtx, []transport.DNSEngineSwitchZoneSnapshot{{
-			Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
-			Delete: commitment.Delete, ZoneType: commitment.ZoneType,
-			Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
-		}}); err != nil {
+		if err := verifyOnlyBINDActive(applyCtx, systemctl); err != nil {
 			return err
 		}
 		currentTree, err := publisher.LoadCurrent()
 		if err != nil {
 			return err
 		}
-		if err := verifyBINDPairingAuthority(
-			applyCtx, currentTree.CurrentReceipt(),
-		); err != nil {
-			return err
-		}
-		if attempt > 1 {
-			return restoreDNSFileSnapshot(stateBefore)
-		}
 		nextState := state
 		nextState.Generation = generation.ID
-		if err := writeDNSEngineState(nextState); err != nil {
-			return fmt.Errorf("publish BIND engine generation state: %w", err)
-		}
-		return nil
+		return applyVerifiedBINDV3GenerationAt(
+			applyCtx, attempt, currentTree, receipt, generation.ReceiptValue,
+			func(verifyCtx context.Context) error {
+				return verifyDNSZoneManifestAuthority(verifyCtx, []transport.DNSEngineSwitchZoneSnapshot{{
+					Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
+					Delete: commitment.Delete, ZoneType: commitment.ZoneType,
+					Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
+				}})
+			},
+			verifyRestoredBINDV3Generation,
+			func() error {
+				if err := writeDNSEngineState(nextState); err != nil {
+					return fmt.Errorf("publish BIND engine generation state: %w", err)
+				}
+				return nil
+			},
+			func() error { return restoreDNSFileSnapshot(stateBefore) },
+		)
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
 		return errors.Join(
@@ -625,6 +620,18 @@ func (hostDNSEngineBackend) Sync(
 		)
 	}
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
+		return "", err
+	}
+	publishedTree, err := publisher.LoadCurrent()
+	if err != nil {
+		return "", fmt.Errorf("load published BIND generation: %w", err)
+	}
+	if !reflect.DeepEqual(publishedTree.CurrentReceipt(), generation.ReceiptValue) {
+		return "", errors.New("BIND published receipt changed before peer propagation")
+	}
+	if err := completeManagedBINDV3Propagation(
+		ctx, publishedTree, commitment.Domain,
+	); err != nil {
 		return "", err
 	}
 	return generation.ID, nil
@@ -695,6 +702,9 @@ func (hostDNSEngineBackend) RecoverZone(
 		return false, err
 	}
 	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
+		return false, err
+	}
+	if err := completeManagedBINDV3Propagation(ctx, tree, domain); err != nil {
 		return false, err
 	}
 	return true, nil
