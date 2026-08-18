@@ -890,14 +890,37 @@ AXFR/NOTIFY.
 Initial primary activation is permitted before the peer exists, but ownership
 and publication readiness are separate facts: the engine remains exactly
 managed and running in **pair-pending**, while every panel-local zone write is
-blocked. Publication opens only after a local primary AXFR matches the durable
-catalog serial and membership, the peer answers one authoritative SOA with that
-same catalog serial over both UDP and TCP, and every catalog member has the same
-authoritative SOA serial locally and on the peer. This proof is non-vacuous even
-when there are zero member zones. The secondary never receives panel-local write
-authority. A fixed dedicated peer IPv4 is required and is the only address in
-the transfer and notify ACL (`/32`). TSIG is not implemented yet; shared or
+blocked. PairReady opens publication only after all of these independent
+authorities agree:
+
+- a local catalog AXFR exactly matches the durable serial and sorted membership;
+- a peer catalog AXFR, bound to the configured local paired address as its
+  source, returns the same serial and membership;
+- the peer catalog returns that authoritative SOA serial over both UDP and TCP;
+  and
+- every member zone returns its durable expected authoritative SOA serial
+  locally and on the peer over UDP and TCP.
+
+This proof is non-vacuous even with zero member zones. A deletion is complete
+only when the peer zone AXFR is absent; if transfer still succeeds, the peer is
+serving a stale copy and PairReady fails. The secondary never receives
+panel-local write authority.
+
+Managed BIND options default to `allow-transfer { none; };`. Only a paired BIND
+secondary changes that default, and then only for its exact primary `/32`.
+PowerDNS transfer and notify peer ACLs contain only the exact configured peer.
+A fixed dedicated peer IPv4 is required. TSIG is not implemented; shared or
 dynamic NAT endpoints are unsupported.
+
+The catalog serial is topology authority, not engine-local state. A primary
+BIND↔PowerDNS switch preserves it exactly. A membership add, delete or re-add
+advances it once; a record-only update does not. Advancing the maximum serial
+would wrap stale state into an apparently current value, so overflow fails
+closed before publication. A released `v0.1.0-alpha.27` source receipt predates
+the serial field. Such a receipt can be upgraded only when exact durable state
+and the live source backend independently yield the same positive catalog
+serial and membership; the derived value is then bound into the new switch
+journal and target receipt. Missing or divergent evidence blocks the switch.
 
 DNSSEC zones, pending zone publication, unmanaged DNS, a port-53 conflict, a
 degraded source or another operation block a switch or reconfiguration. The

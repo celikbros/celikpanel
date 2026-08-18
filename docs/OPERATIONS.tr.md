@@ -380,17 +380,39 @@ Catalog Zone v2 yayınlar; ikincil bunu standart AXFR/NOTIFY ile tüketir. İkin
 her zaman yerel yazılara kapalıdır. Aşağıdaki kesin kontrollerin tümü geçene kadar
 birincil eş-bekliyor kalır:
 
-- yerel AXFR seri numarası ve sıralı üyeleri kalıcı katalogla eşleşir;
-- eş aynı katalog için aynı seri numarasını UDP ve TCP üzerinden tek yetkili SOA
-  olarak döndürür; ve
-- her üye zone yerelde ve eşte UDP/TCP üzerinden aynı yetkili SOA serisini verir.
+- yerel katalog AXFR serisi ve sıralı üyeleri kalıcı katalogla eşleşir;
+- eş katalog AXFR'si kaynak olarak yapılandırılmış yerel eş IPv4 adresine
+  bağlanır ve birebir aynı seri ile üyeliği döndürür;
+- eş, kataloğun bu serideki yetkili SOA'sını hem UDP hem TCP üzerinden döndürür;
+  ve
+- her üye zone kalıcı beklenen yetkili SOA serisini yerelde ve eşte UDP/TCP
+  üzerinden döndürür.
 
 Katalogda üye olmasa bile eş-katalog kontrolü zorunludur; böylece olmayan eş
 boşuna doğru sonuç veremez. Başarısız kanıt birincil motoru yönetilmeyen yapmaz
-veya durdurmaz; yalnız panelde yerel DNS yayınını kapalı tutar. Sabit ve özel eş
-IPv4 adresleri kullanın. Her transfer ve notify ACL'si yalnız kesin eş `/32`
-adresini içerir. TSIG henüz yoktur; paylaşılan veya dinamik NAT uçları
-desteklenmez.
+veya durdurmaz; yalnız panelde yerel DNS yayınını kapalı tutar. Silme sonrasında
+tamamlama ayrıca silinen zone'un eşteki AXFR'sinin bulunmamasını gerektirir. Bu
+aktarım başarılıysa eşte hâlâ bayat kopya vardır; işlem ve PairReady fail-closed
+kalır.
+
+Sabit ve özel eş IPv4 adresleri kullanın. Yönetilen BIND seçenekleri normalde
+`allow-transfer { none; };` içerir. Yalnız eşli BIND ikincil transfere izin verir
+ve tek girdisi kesin birincil `/32` adresidir. PowerDNS'in panel-yönetimli
+transfer ve notify eş listeleri yalnız yapılandırılmış kesin eşi içerir. TSIG
+henüz yoktur; paylaşılan veya dinamik NAT uçları desteklenmez.
+
+Katalog serisini motor-bağımsız topoloji durumu olarak ele alın. Birincili BIND
+ile PowerDNS arasında değiştirirken değeri birebir koruyun. Üye ekleme, silme
+veya yeniden eklemede bir kez ilerletin; yalnız kayıt güncellemesinde
+ilerletmeyin. En büyük değerdeki üyelik değişikliği sarılmak yerine mutasyondan
+önce reddedilir.
+
+Yayımlanmış `v0.1.0-alpha.27` kaynak receipt'inde katalog-serisi alanı yoktur.
+Daha sonraki motor geçişinde bu değeri yalnız kesin kalıcı katalog ile canlı
+kaynak backend bağımsız olarak aynı pozitif seri ve üyeliği kanıtlarsa türetin.
+Geçişi kabul etmeden önce türetilen seriyi yeni geçiş günlüğüne ve hedef
+receipt'ine bağlayın. Taraflardan biri yoksa veya farklıysa durup kanıtı çözün;
+seriyi tahmin etmeyin ya da sıfırlamayın.
 
 Herhangi bir DNSSEC zone'u, bekleyen zone yayını, panel dışı DNS, TCP/UDP 53
 portu çakışması, bozuk kaynak veya başka bir sunucu/DNS işlemi onayı engeller.

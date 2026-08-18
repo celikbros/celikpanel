@@ -62,19 +62,33 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 Paired identity and topology are staged before the first DNS engine is
 installed. Either node may then activate BIND or PowerDNS directly; no
-PowerDNS-first bootstrap or temporary engine is required. The frozen deployment
-is Frankfurt/NS1 as a direct BIND primary and Boston/NS2 as the directional
-PowerDNS secondary. Boston's existing empty, panel-managed standalone PowerDNS
-is reviewed and reconfigured in place through a snapshotted, restartable and
-rollback-safe operation.
+PowerDNS-first bootstrap or temporary engine is required. The frozen target
+topology is Frankfurt/NS1 as a direct BIND primary and Boston/NS2 as the
+directional PowerDNS secondary. Boston's existing empty, panel-managed
+standalone PowerDNS is reviewed and reconfigured in place through a snapshotted,
+restartable and rollback-safe operation.
 
 The primary remains pair-pending and panel-local zone writes fail closed until
-the agent proves the exact local catalog, the peer's authoritative catalog SOA
-over UDP and TCP, and matching serials for every member zone. The secondary is
-always locally read-only. Pair identity is immutable after activation. Pairing
-currently requires fixed dedicated peer IPv4 addresses allowed as exact `/32`
-peers; TSIG is not implemented yet, and shared or dynamic NAT endpoints are not
-supported.
+PairReady proves all four authorities: the local catalog AXFR exactly matches
+the durable serial and sorted membership; a source-bound AXFR from the peer
+catalog returns that same serial and membership; the peer catalog returns the
+same authoritative SOA over UDP and TCP; and every member returns its durable
+expected SOA serial locally and from the peer. Deletion additionally requires
+the deleted zone's peer AXFR to be absent — a successful transfer is a stale
+copy and rejects readiness. The secondary is always locally read-only.
+
+Managed BIND options default to `allow-transfer { none; };`; only a paired BIND
+secondary admits the exact primary `/32`. PowerDNS transfer/notify peer lists
+contain only the exact configured peer. Pair identity is immutable after
+activation and requires fixed dedicated peer IPv4 addresses; TSIG is not
+implemented, and shared or dynamic NAT endpoints are unsupported. The catalog
+serial is engine-neutral and survives a BIND↔PowerDNS primary switch. Only a
+membership add, delete or re-add advances it; a record-only update does not, and
+maximum-value overflow fails closed. For a released `v0.1.0-alpha.27` source
+receipt without that serial, the value may be derived only from matching exact
+durable and live backend evidence and is then bound into the new journal and
+receipt. These are source-tree contracts, not a release or live-deployment
+claim.
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 

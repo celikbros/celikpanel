@@ -62,17 +62,32 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 Eş kimliği ve topoloji, ilk DNS motoru kurulmadan önce hazırlanır. Ardından her
 düğüm BIND veya PowerDNS'i doğrudan etkinleştirebilir; önce PowerDNS ile kurulum
-ya da geçici motor gerekmez. Sabit dağıtım Frankfurt/NS1'in doğrudan BIND
+ya da geçici motor gerekmez. Sabit hedef topoloji Frankfurt/NS1'in doğrudan BIND
 birincil, Boston/NS2'nin ise yönlü PowerDNS ikincil olmasıdır. Boston'daki mevcut
 boş, panel-yönetimli tek-sunucu PowerDNS; anlık görüntülü, yeniden başlatılabilir
 ve güvenli geri dönüşlü bir işlemle yerinde incelenip yeniden yapılandırılır.
 
-Agent yerel kesin kataloğu, eşteki yetkili katalog SOA'sını UDP ve TCP üzerinden
-ve her üye zone'un eşleşen seri numarasını kanıtlayana kadar birincil eş-bekliyor
-durumunda kalır; panelde yerel zone yazıları fail-closed engellenir. İkincil her
-zaman yerel yazılara kapalıdır. Etkinleştirmeden sonra eş kimliği değişmezdir.
-Eşleme şimdilik kesin `/32` olarak izin verilen sabit ve özel eş IPv4 adresleri
-gerektirir; TSIG henüz yoktur, paylaşılan veya dinamik NAT uçları desteklenmez.
+PairReady dört otoriteyi de kanıtlayana kadar birincil eş-bekliyor durumunda
+kalır ve panelde yerel zone yazıları fail-closed engellenir: yerel katalog AXFR'si
+kalıcı seri ve sıralı üyelikle birebir eşleşir; kaynak adresi bağlanmış eş katalog
+AXFR'si aynı seri ve üyeliği döndürür; eş kataloğu UDP ve TCP üzerinden aynı
+yetkili SOA'yı verir; her üye de kalıcı beklenen SOA serisini yerelde ve eşte
+döndürür. Silme işlemi ayrıca silinen zone'un eş AXFR'sinde bulunmadığını
+kanıtlar; başarılı aktarım bayat kopya demektir ve hazır olmayı reddettirir.
+İkincil her zaman yerel yazılara kapalıdır.
+
+Yönetilen BIND seçenekleri varsayılan olarak `allow-transfer { none; };`
+kullanır; yalnız eşli BIND ikincil kesin birincil `/32` adresine izin verir.
+PowerDNS transfer/notify eş listeleri yalnız yapılandırılmış kesin eşi içerir.
+Etkinleştirmeden sonra eş kimliği değişmezdir ve sabit, özel eş IPv4 adresleri
+gerekir; TSIG henüz yoktur, paylaşılan veya dinamik NAT uçları desteklenmez.
+Katalog serisi motor-bağımsızdır ve BIND↔PowerDNS birincil geçişinde korunur.
+Yalnız üyelik ekleme, silme veya yeniden ekleme seriyi ilerletir; yalnız kayıt
+değişikliği ilerletmez ve en büyük değerde taşma fail-closed reddedilir. Bu seri
+alanı bulunmayan yayımlanmış `v0.1.0-alpha.27` kaynak receipt'i, değeri yalnız
+birebir eşleşen kesin kalıcı ve canlı backend kanıtından türetebilir; ardından
+yeni günlük ve receipt bu değere bağlanır. Bunlar kaynak-ağaç sözleşmeleridir;
+sürüm veya canlı dağıtım kanıtı değildir.
 
 **Sırada ne var:** [Yol Haritası](ROADMAP.tr.md) — Faz 0 güvenlik sprinti → Faz 1 altın yolun sertleştirilmesi → Faz 2 60 saniyelik kurulum → Faz 3 WordPress toolkit + cPanel importer.
 

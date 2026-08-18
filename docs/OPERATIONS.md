@@ -363,18 +363,38 @@ The primary publishes an engine-neutral Catalog Zone v2 and the secondary
 consumes it through standard AXFR/NOTIFY. The secondary is always locally
 read-only. The primary remains pair-pending until all of these exact checks pass:
 
-- its local AXFR serial and sorted membership match the durable catalog;
-- the peer returns one authoritative SOA for that catalog with the same serial
-  over both UDP and TCP; and
-- every member zone returns the same authoritative SOA serial locally and from
-  the peer over UDP and TCP.
+- its local catalog AXFR serial and sorted membership match the durable catalog;
+- the peer catalog AXFR is bound to the configured local paired IPv4 as its
+  source and returns that exact same serial and membership;
+- the peer returns the catalog's authoritative SOA with that serial over both
+  UDP and TCP; and
+- every member zone returns its durable expected authoritative SOA serial
+  locally and from the peer over UDP and TCP.
 
 The peer-catalog check is required even when the catalog has zero members, so an
 absent peer cannot pass vacuously. A failed proof does not make the primary
 engine unmanaged or stop it; it only keeps panel-local DNS publication closed.
-Use fixed, dedicated peer IPv4 addresses. Each transfer and notify ACL contains
-only the exact peer `/32`. TSIG is not implemented yet, and shared or dynamic
-NAT endpoints are unsupported.
+After a deletion, completion additionally requires the deleted zone's AXFR to be
+absent at the peer. If that transfer succeeds, the peer still has a stale copy;
+the operation and PairReady stay fail-closed.
+
+Use fixed, dedicated peer IPv4 addresses. Managed BIND options normally contain
+`allow-transfer { none; };`. Only a paired BIND secondary permits a transfer,
+and its sole entry is the exact primary `/32`. PowerDNS's panel-managed transfer
+and notify peer lists contain only the exact configured peer. TSIG is not
+implemented, and shared or dynamic NAT endpoints are unsupported.
+
+Treat the catalog serial as engine-neutral topology state. Preserve it exactly
+when switching a primary between BIND and PowerDNS. Advance it once for a member
+add, delete or re-add; do not advance it for a record-only update. A membership
+change at the maximum value is rejected before mutation instead of wrapping.
+
+A released `v0.1.0-alpha.27` source receipt has no catalog-serial field. During
+a later engine switch, derive that value only when the exact durable catalog and
+the live source backend independently prove the same positive serial and
+membership. Bind the derived serial into the new switch journal and target
+receipt before accepting the transition. If either side is absent or differs,
+stop and resolve the evidence; do not guess or reset the serial.
 
 Any DNSSEC zone, pending zone publication, unmanaged DNS, a TCP/UDP port-53
 conflict, a degraded source or another server/DNS operation blocks confirmation.

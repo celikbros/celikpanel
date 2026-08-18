@@ -850,14 +850,37 @@ aktarır.
 
 Birincil motorun eş henüz yokken etkinleşmesine izin verilir; fakat sahiplik ile
 yayına hazır olma ayrı gerçeklerdir: motor kesin yönetilen ve çalışır halde
-**eş-bekliyor** kalır, paneldeki tüm yerel zone yazıları engellenir. Yayın ancak
-birincildeki yerel AXFR kalıcı katalog serisi ve üyeleriyle eşleştiğinde, eş aynı
-katalog serisini UDP ve TCP üzerinden tek yetkili SOA olarak verdiğinde ve her
-katalog üyesinin yerel/eş yetkili SOA serileri birebir olduğunda açılır. Bu kanıt
-üye zone sayısı sıfırken de boşuna doğru olamaz. İkincile hiçbir zaman panelde
-yerel yazma yetkisi verilmez. Sabit ve özel eş IPv4 zorunludur; transfer ve
-notify ACL'sindeki tek adres kesin `/32` eştir. TSIG henüz yoktur; paylaşılan veya
-dinamik NAT uçları desteklenmez.
+**eş-bekliyor** kalır, paneldeki tüm yerel zone yazıları engellenir. PairReady
+ancak şu bağımsız otoritelerin tümü uyuştuğunda yayını açar:
+
+- yerel katalog AXFR'si kalıcı seri ve sıralı üyelikle birebir eşleşir;
+- yapılandırılmış yerel eş adresine kaynak olarak bağlanan eş katalog AXFR'si
+  aynı seri ve üyeliği döndürür;
+- eş kataloğu bu yetkili SOA serisini hem UDP hem TCP üzerinden döndürür; ve
+- her üye zone kalıcı beklenen yetkili SOA serisini yerelde ve eşte UDP ve TCP
+  üzerinden döndürür.
+
+Bu kanıt üye zone sayısı sıfırken de boşuna doğru olamaz. Silme ancak eşteki zone
+AXFR'si bulunmadığında tamamlanır; aktarım hâlâ başarılıysa eş bayat kopya
+sunuyordur ve PairReady başarısız olur. İkincile hiçbir zaman panelde yerel yazma
+yetkisi verilmez.
+
+Yönetilen BIND seçenekleri varsayılan olarak `allow-transfer { none; };`
+kullanır. Yalnız eşli BIND ikincil bu varsayılanı değiştirir ve yalnız kesin
+birincil `/32` adresine izin verir. PowerDNS transfer ve notify eş ACL'leri yalnız
+yapılandırılmış kesin eşi içerir. Sabit ve özel eş IPv4 zorunludur. TSIG henüz
+yoktur; paylaşılan veya dinamik NAT uçları desteklenmez.
+
+Katalog serisi motora yerel durum değil, topoloji otoritesidir. Birincil
+BIND↔PowerDNS geçişi bu değeri birebir korur. Üyelik ekleme, silme veya yeniden
+ekleme seriyi bir kez ilerletir; yalnız kayıt güncellemesi ilerletmez. En büyük
+seriyi ilerletmek bayat durumu güncelmiş gibi gösterecek biçimde saracağı için
+taşma yayından önce fail-closed reddedilir. Yayımlanmış
+`v0.1.0-alpha.27` kaynak receipt'i seri alanından eskidir. Böyle bir receipt
+yalnız kesin kalıcı durum ile canlı kaynak backend bağımsız olarak aynı pozitif
+katalog serisini ve üyeliği verdiğinde yükseltilebilir; türetilen değer yeni
+geçiş günlüğüne ve hedef receipt'ine bağlanır. Eksik veya farklı kanıt geçişi
+engeller.
 
 DNSSEC zone'ları, bekleyen zone yayını, panel dışı DNS, 53 portu çakışması, bozuk
 kaynak veya başka bir işlem değişimi ya da yeniden yapılandırmayı engeller.
