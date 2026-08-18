@@ -104,10 +104,26 @@ type SyncDNSZoneV3Request struct {
 
 type SyncDNSZoneV3Response struct {
 	Synced            bool      `json:"synced"`
+	RecoveryPending   bool      `json:"recovery_pending,omitempty"`
 	Engine            DNSEngine `json:"engine"`
 	EngineEpoch       int64     `json:"engine_epoch"`
 	AppliedGeneration int64     `json:"applied_generation"`
 	Error             string    `json:"error,omitempty"`
+}
+
+// RecoverDNSZoneV3 re-drives peer propagation from the immutable host receipt
+// of an exact engine-bound publication. It never accepts a replacement zone
+// snapshot: the original request/owner/domain/qualifier remain the authority.
+type RecoverDNSZoneV3Request struct {
+	ServiceMutationBinding
+	Domain    string `json:"domain"`
+	Qualifier string `json:"qualifier"`
+}
+
+type RecoverDNSZoneV3Response struct {
+	Recovered       bool   `json:"recovered"`
+	RecoveryPending bool   `json:"recovery_pending,omitempty"`
+	Error           string `json:"error,omitempty"`
 }
 
 // DNSEngineSwitchZoneSnapshot is one canonical full-zone member of a durable
@@ -159,6 +175,7 @@ type DNSBackendRuntimeState struct {
 	Installed bool      `json:"installed"`
 	Running   bool      `json:"running"`
 	Managed   bool      `json:"managed"`
+	PairReady bool      `json:"pair_ready"`
 	Unit      string    `json:"unit"`
 }
 

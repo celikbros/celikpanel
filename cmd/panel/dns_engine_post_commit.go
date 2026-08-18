@@ -35,7 +35,8 @@ type dnsEngineOperationMarker struct {
 }
 
 func validDNSEngineSwitchAction(action string) bool {
-	return action == "install" || action == "adopt" || action == "switch"
+	return action == "install" || action == "adopt" ||
+		action == "switch" || action == "reconfigure"
 }
 
 func dnsEngineMutationMode(action string) string {
@@ -64,6 +65,10 @@ func validateDNSEngineOperationMarker(marker dnsEngineOperationMarker) error {
 		}
 	} else if marker.Action == "adopt" && marker.SourceEngine != "" {
 		return errors.New("DNS engine adopt marker has a source")
+	} else if marker.Action == "reconfigure" &&
+		(marker.SourceEngine != "" ||
+			marker.TargetEngine != transport.DNSEnginePowerDNS) {
+		return errors.New("DNS engine reconfigure marker has invalid identity")
 	}
 	return nil
 }

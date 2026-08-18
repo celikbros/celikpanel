@@ -44,6 +44,7 @@ const (
 	AgentCapabilityDNSSECSecureV2          = "dnssec_secure_v2"
 	AgentCapabilityDNSClusterConfigureV2   = "dns_cluster_configure_v2"
 	AgentCapabilityDNSZoneSyncV3           = "dns_zone_sync_v3"
+	AgentCapabilityDNSZoneRecoverV1        = "dns_zone_recover_v1"
 	AgentCapabilityDNSEngineSwitchV1       = "dns_engine_switch_v1"
 	AgentCapabilityMailTLSSyncV2           = "mail_tls_sync_v2"
 )

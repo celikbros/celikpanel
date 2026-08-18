@@ -44,6 +44,19 @@ func TestPowerDNSManagedForBackendReadinessRequiresExactLegacyProof(t *testing.T
 			wantConfigCalls: 1, wantActiveCalls: 1,
 		},
 		{
+			name: "paired secondary PowerDNS remains managed and readable",
+			state: func() dnsEngineStateReceipt {
+				state := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+				state.PairRole = transport.DNSPairRoleSecondary
+				state.PairLocalIP = "192.0.2.20"
+				state.PairPeerIP = "192.0.2.10"
+				return state
+			}(),
+			stateExists: true, runtime: ready,
+			exactActiveProof: func() error { return nil }, wantManaged: true,
+			wantConfigCalls: 1, wantActiveCalls: 1,
+		},
+		{
 			name:    "manual PowerDNS configuration stays unmanaged",
 			runtime: ready, managedConfigError: errors.New("not panel-managed"),
 			exactActiveProof: missingState, wantConfigCalls: 1,

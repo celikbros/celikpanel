@@ -341,6 +341,28 @@ PowerDNS ile BIND, paneldeki özel yetkili-DNS kartından seçilir. 53 numaralı
 portun hangi daemon'a ait olduğunu değiştirmek için genel bileşen
 başlat/durdur/kaldır eylemlerini veya doğrudan systemd komutlarını kullanmayın.
 
+Yeni veya motor kimliği çözülmemiş bir düğümde önce kesin ortak NS adlarını,
+yerel/eş IPv4 adreslerini, **Birincil/İkincil** rolünü ve **Eşli** topolojiyi
+hazırlayın. Bu, yalnız veritabanını etkileyen incelenmiş bir adımdır; hiçbir şey
+kurmaz veya yeniden başlatmaz. Bu kimlik olmadan ilk motor önizlemesi engellenir
+ve kimlik motor etkinleşince değişmez olur. İki rol de BIND veya PowerDNS'i
+doğrudan kurabilir; eş kurmak için geçici motor kullanmayın.
+
+Sabit Frankfurt/Boston dağıtımında şu sırayı kullanın:
+
+1. Frankfurt/NS1'i Boston'un sabit eş IPv4 adresiyle birincil olarak hazırlayın;
+   ardından BIND'i inceleyip doğrudan etkinleştirin. Boston hazır olmadan kesin
+   yönetilen ve çalışır olabilir; fakat eş-bekliyor görünmeli ve panelde yerel
+   zone yazılarını henüz kabul etmemelidir.
+2. Boston/NS2'de algılanan boş, panel-yönetimli Tek-sunucu PowerDNS otoritesini
+   inceleyin. Yönlü ikincile özel doğrudan yeniden yapılandırmayı başlatın. İşlem
+   kesin PowerDNS veritabanı, config ve unit durumunun anlık görüntüsünü alır,
+   katalog tüketicisini yazar, tek sınırlı yeniden başlatma yapar ve hedefi
+   kanıtlar. Ara adım olarak Boston'a BIND kurmayın veya etkinleştirmeyin.
+3. Frankfurt durumunu yenileyin. Yayın ancak agent kesin eş kataloğunu ve üye
+   serilerini kanıtladığında hazır olur. Zone'ları yalnız bundan sonra oluşturun
+   veya değiştirin.
+
 İlk motor eylemi her zaman salt-okunurdur. Sunucudan; kesin işlem türünü, kaynak
 ve hedef motorları, durum revizyonunu, topolojiyi, zone ve DNSSEC sayılarını,
 beklenen kesintiyi, etkileri ve engelleri içeren bir önizleme alır. Hiçbir şey
@@ -352,18 +374,64 @@ Eski PowerDNS'i yalnız kayıt amacıyla devralmada kesinti beklenmez; işlem sa
 mevcut durumu kanıtlayıp kaydeder.
 
 PowerDNS↔BIND değişimi hem **Tek sunucu** hem doğrulanmış **Eşli** topolojide
-çift yönlüdür. Kayıtlı NS çifti sunucu rollerini belirler: Frankfurt/NS1
-birincil, Boston/NS2 ikincildir. Her düğümün motoru bağımsızdır; dolayısıyla
-PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND desteklenir.
-Birincil motor-bağımsız Catalog Zone v2 yayınlar; ikincil bunu standart
-AXFR/NOTIFY ile alır ve geçiş tamamlanmadan kesin katalog serisini ve her üye
-SOA'yı UDP ile TCP üzerinden kanıtlamalıdır. Sunuculardan biri BIND kullanırken
-eş kimliği salt-okunurdur. Herhangi bir DNSSEC zone'u, bekleyen
-zone yayını, panel dışı DNS, TCP/UDP 53 portu çakışması, bozuk kaynak veya başka
-bir sunucu/DNS işlemi onayı engeller. Engelleri kendi açık panel akışlarından giderip yeni önizleme
-alın. Eşlemeyi önce birincilde kurun veya onarın; sonra iki sunucunun motorunu
-aynı anda değil, sırayla değiştirin. Bir engeli aşmak için cluster, DNSSEC veya daemon durumunu ya da işlem
-satırlarını elle değiştirmeyin.
+çift yönlüdür. Her düğümün motoru bağımsızdır; dolayısıyla PowerDNS/PowerDNS,
+BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND desteklenir. Birincil motor-bağımsız
+Catalog Zone v2 yayınlar; ikincil bunu standart AXFR/NOTIFY ile tüketir. İkincil
+her zaman yerel yazılara kapalıdır. Aşağıdaki kesin kontrollerin tümü geçene kadar
+birincil eş-bekliyor kalır:
+
+- yerel katalog AXFR serisi ve sıralı üyeleri kalıcı katalogla eşleşir;
+- eş katalog AXFR'si kaynak olarak yapılandırılmış yerel eş IPv4 adresine
+  bağlanır ve birebir aynı seri ile üyeliği döndürür;
+- eş, kataloğun bu serideki yetkili SOA'sını hem UDP hem TCP üzerinden döndürür;
+  ve
+- her üye zone kalıcı beklenen yetkili SOA serisini yerelde ve eşte UDP/TCP
+  üzerinden döndürür.
+
+Katalogda üye olmasa bile eş-katalog kontrolü zorunludur; böylece olmayan eş
+boşuna doğru sonuç veremez. Başarısız kanıt birincil motoru yönetilmeyen yapmaz
+veya durdurmaz; yalnız panelde yerel DNS yayınını kapalı tutar. Silme sonrasında
+tamamlama ayrıca silinen zone'un eşteki AXFR'sinin bulunmamasını gerektirir. Bu
+aktarım başarılıysa eşte hâlâ bayat kopya vardır; işlem ve PairReady fail-closed
+kalır.
+
+Sabit ve özel eş IPv4 adresleri kullanın. Yönetilen BIND genel seçenekleri
+normalde `allow-transfer { none; };` içerir. Yönlü birincilin panelce üretilen
+katalog/üye zone'ları yalnız kesin yerel `LocalIP` ile kesin eşten AXFR kabul
+eder ve yalnız o eşi bilgilendirir; ikincilin tek transfer girdisi kesin birincil
+`/32` adresidir. Yönlü PowerDNS birincil exact
+`allow-axfr-ips=LocalIP,PeerIP` ile `also-notify=PeerIP` kullanır; ikincil yalnız
+eş AXFR'sine izin verir ve `also-notify` içermez. Yayımlanmış eski eşli politika
+yalnız dar eski sürüm kanıtında bayt-birebir peer-only-plus-notify olarak kalır.
+İlk BIND V3 yayını bunu kurtarılabilir pointer/durum işlemi içinde taşır. Eski
+PowerDNS'i örtük biçimde yeniden yazmayın; açıkça incelenmiş switch veya yeniden
+yapılandırmaya kadar uyumlulukta tutun.
+Eski V2 mutasyonlarına yalnız exact tuple'sız üretici/standalone uyumluluğunda
+izin verilir; yönlü receipt'ler ile tuple'sız consumer'lar salt okunurdur ve
+incelenmiş V3 switch/yeniden yapılandırma yolunu kullanmalıdır. Yayımlanmış dolu
+bir consumer, PowerDNS'ten ancak exact katalog-bağlı üye kümesi ile yerel/eş SOA
+serileri kanıtlandıktan sonra ayrılabilir. TSIG
+henüz yoktur; paylaşılan veya dinamik NAT uçları desteklenmez.
+
+Katalog serisini motor-bağımsız topoloji durumu olarak ele alın. Birincili BIND
+ile PowerDNS arasında değiştirirken değeri birebir koruyun. Üye ekleme, silme
+veya yeniden eklemede bir kez ilerletin; yalnız kayıt güncellemesinde
+ilerletmeyin. En büyük değerdeki üyelik değişikliği sarılmak yerine mutasyondan
+önce reddedilir.
+
+Yayımlanmış `v0.1.0-alpha.27` kaynak receipt'inde katalog-serisi alanı yoktur.
+Daha sonraki motor geçişinde bu değeri yalnız kesin kalıcı katalog ile canlı
+kaynak backend bağımsız olarak aynı pozitif seri ve üyeliği kanıtlarsa türetin.
+Geçişi kabul etmeden önce türetilen seriyi yeni geçiş günlüğüne ve hedef
+receipt'ine bağlayın. Taraflardan biri yoksa veya farklıysa durup kanıtı çözün;
+seriyi tahmin etmeyin ya da sıfırlamayın.
+
+Herhangi bir DNSSEC zone'u, bekleyen zone yayını, panel dışı DNS, TCP/UDP 53
+portu çakışması, bozuk kaynak veya başka bir sunucu/DNS işlemi onayı engeller.
+Engelleri kendi açık panel akışlarından giderip yeni önizleme alın. Önce
+birincili, sonra ikincili etkinleştirin veya onarın; iki sunucunun motorunu aynı
+anda değil sırayla değiştirin. Bir engeli aşmak için eş kimliğini, cluster,
+DNSSEC, daemon durumunu veya işlem satırlarını elle değiştirmeyin.
 
 İzin verilen kurulum veya değişim sırasında istenen tam zone kümesi, seçilen
 hedef motora ve onun bir sonraki etkinleştirme dönemine bağlanarak dondurulur.
@@ -380,19 +448,23 @@ seçeneğini sunabilir. Devralma yalnız kayıt amaçlıdır: yönetilen yapıla
 baytlarını ve kiplerini, kesin unit durumunu ve topolojiyi doğrular; SQLite
 veritabanını ve panelin sahibi olduğu her zone'u salt-okur sınar; TCP/UDP
 otoritesini kanıtlar. Paket kurmaz, yapılandırma veya DNS verisini yeniden
-yazmaz, servis başlatmaz ve DNSSEC'i değiştirmez. Birebir Tek sunucu ve Eşli
-PowerDNS kurulumu devralınabilir; çalışan başka DNS motoru, sahipsiz ya da farklı
-veri, eksik eşli yapılandırma veya değişen herhangi bir kanıt işlemi kapalı
-tutar. BIND devralınamaz.
+yazmaz, servis başlatmaz ve DNSSEC'i değiştirmez. BIND devralınamaz.
+
+Ayrı Boston yeniden yapılandırmasına ancak bu inceleme boş ve kesin yönetilen
+Tek-sunucu PowerDNS durumunu kanıtlarsa izin verilir. Bu sıradan devralma değil,
+kalıcı bir aynı-motor işlemidir: önce anlık görüntü alır, kesin yönlü tüketiciyi
+yazar, yeniden başlatır, kanıtlar ve sonra tamamlar. Her hatada veritabanı,
+config ve unit anlık görüntüsünü geri getirip kanıtlar. Boş olmayan, DNSSEC
+taşıyan, sahipsiz, farklı veya eşzamanlı değişen durum fail-closed reddedilir.
 
 Panel defteri ile agent'ın root sahipli host günlüğü aynı işlem kimliğini,
-manifesti ve aşamayı taşır. Yanıt kaybolursa DNS motoru durumunu yenileyin; yeni
-istek kimliği uydurmayın ve işlemi SSH üzerinden tekrarlamayın. Başlangıç
-kurtarması önce kesin hedefi kanıtlamaya çalışır. Bu kanıt başarısızsa işlem
-öncesi dosyaları, veritabanını, nesil işaretçisini ve systemd durumunu geri
-getirip birebir kanıtlar. İki sonuç da kanıtlanamazsa ikinci bir otoriteyi
-başlatmak veya tahmin yürütmek yerine DNS mutasyonları açık kurtarma için kilitli
-kalır.
+değişmez eş kimliğini, manifesti, işlem-öncesi anlık görüntüyü ve aşamayı taşır.
+Yanıt kaybolursa DNS motoru durumunu yenileyin; yeni istek kimliği uydurmayın ve
+işlemi SSH üzerinden tekrarlamayın. Başlangıç kurtarması önce kesin hedefi
+kanıtlamaya çalışır. Bu kanıt başarısızsa işlem öncesi dosyaları, veritabanını,
+nesil işaretçisini ve systemd durumunu geri getirip birebir kanıtlar. İki sonuç
+da kanıtlanamazsa ikinci bir otoriteyi başlatmak veya tahmin yürütmek yerine DNS
+mutasyonları açık kurtarma için kilitli kalır.
 
 ## 8. Geliştirme kontrolleri
 

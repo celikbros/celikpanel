@@ -171,19 +171,31 @@ export function DNSServerSettings() {
     const { locale } = useI18n();
     const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
     const [engine, setEngine] = useState<DNSEngineSnapshot | null>(null);
+    const [engineRefreshKey, setEngineRefreshKey] = useState(0);
     const activeEngine: ActiveDNSEngine | null = engine?.state === 'ready' &&
         (engine.active_engine === 'pdns' || engine.active_engine === 'bind')
         ? engine.active_engine
         : null;
+    const legacyPowerDNSEntry = engine?.engines.find((entry) => entry.id === 'pdns');
+    const legacyPowerDNSReconfigureStaging = engine?.state === 'unmanaged' &&
+        engine.active_engine === null &&
+        legacyPowerDNSEntry?.status === 'unmanaged' &&
+        legacyPowerDNSEntry.installed && legacyPowerDNSEntry.running && legacyPowerDNSEntry.managed &&
+        engine.engines.every((entry) => entry.id === 'pdns' || !entry.running);
+    const identityStaging = (engine?.state === 'unconfigured' && engine.active_engine === null) ||
+        legacyPowerDNSReconfigureStaging;
 
     return (
         <div>
-            <DNSEngineCard onSnapshotChange={setEngine} />
-            {activeEngine ? (
+            <DNSEngineCard key={engineRefreshKey} onSnapshotChange={setEngine} />
+            {activeEngine || identityStaging ? (
                 <DNSInfrastructureSettings
-                    key={activeEngine}
+                    key={activeEngine ?? (legacyPowerDNSReconfigureStaging ? 'legacy-pdns' : 'unconfigured')}
                     activeEngine={activeEngine}
-					pairRole={engine?.pair_role}
+                    stagingOnly={identityStaging}
+                    legacyPowerDNSReconfigure={legacyPowerDNSReconfigureStaging}
+                    pairRole={engine?.pair_role}
+                    onIdentityStaged={() => setEngineRefreshKey((current) => current + 1)}
                 />
             ) : (
                 <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
@@ -212,10 +224,16 @@ export function DNSServerSettings() {
 
 function DNSInfrastructureSettings({
 	activeEngine,
+	stagingOnly,
+	legacyPowerDNSReconfigure,
 	pairRole,
+	onIdentityStaged,
 }: {
-	activeEngine: ActiveDNSEngine;
+	activeEngine: ActiveDNSEngine | null;
+	stagingOnly: boolean;
+	legacyPowerDNSReconfigure: boolean;
 	pairRole?: 'primary' | 'secondary';
+	onIdentityStaged: () => void;
 }) {
     const { t, locale } = useI18n();
     const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
@@ -358,10 +376,32 @@ function DNSInfrastructureSettings({
                 }
                 return;
             }
+            if (stagingOnly) {
+                let payload: unknown;
+                try {
+                    payload = await setupResponse.json();
+                } catch {
+                    payload = null;
+                }
+                if (!payload || typeof payload !== 'object' ||
+                    (payload as { success?: unknown }).success !== true ||
+                    (payload as { staged?: unknown }).staged !== true) {
+                    const error = { message: et('dnsEngine.identity.stageInvalid') };
+                    setNeedsClusterRetry(false);
+                    setApiError(error);
+                    showToast('error', error.message);
+                    return;
+                }
+            }
             setNeedsClusterRetry(false);
             if (await load()) {
                 setActiveStep(3);
-                showToast('success', t('dnssrv.setupSaved'));
+                if (stagingOnly) {
+                    onIdentityStaged();
+                    showToast('success', et('dnsEngine.identity.stageSuccess'));
+                } else {
+                    showToast('success', t('dnssrv.setupSaved'));
+                }
             }
         } catch {
             const error = { message: t('dnssrv.applyIncomplete') };
@@ -571,9 +611,14 @@ function DNSInfrastructureSettings({
         } : current);
     };
 
-    const primaryActionLabel = needsClusterRetry
-        ? t('dnssrv.retryPublication')
-        : t('dnssrv.saveAndPublish');
+    const stagedIdentityCurrent = stagingOnly && saved.configured && !hasChanges;
+    const primaryActionLabel = stagingOnly
+        ? stagedIdentityCurrent
+            ? et('dnsEngine.identity.stageSavedAction')
+            : et('dnsEngine.identity.stageAction')
+        : needsClusterRetry
+          ? t('dnssrv.retryPublication')
+          : t('dnssrv.saveAndPublish');
     const assignmentRows = draft.role === 'standalone'
         ? [
             { label: t('dnssrv.thisServer'), ip: saved.server_ip, name: draftNS1 },
@@ -598,6 +643,25 @@ function DNSInfrastructureSettings({
                     <HelpButton serviceId="dns-server-settings" name={t('dnssrv.title')} />
                 </div>
             </div>
+
+            {stagingOnly && (
+                <div
+                    className="mb-5 rounded-xl border border-primary/25 bg-primary/5 p-4"
+                    data-testid="dns-identity-staging-note"
+                    role="note"
+                >
+                    <p className="text-sm font-semibold text-fg">
+                        {legacyPowerDNSReconfigure
+                            ? et('dnsEngine.identity.legacyReconfigureTitle')
+                            : et('dnsEngine.identity.stageTitle')}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-fg-muted">
+                        {legacyPowerDNSReconfigure
+                            ? et('dnsEngine.identity.legacyReconfigureDescription')
+                            : et('dnsEngine.identity.stageDescription')}
+                    </p>
+                </div>
+            )}
 
             <ol className="mb-5 grid gap-2 sm:grid-cols-3" aria-label={t('dnssrv.wizardProgress')}>
                 {([1, 2, 3] as const).map((step) => {
@@ -669,7 +733,9 @@ function DNSInfrastructureSettings({
                                         {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
                                     </span>
                                     <span className="mt-1 block text-xs leading-relaxed text-fg-muted">
-                                        {activeEngine === 'bind' && role === 'paired' && !pairedIdentityLocked
+                                        {legacyPowerDNSReconfigure && role === 'paired'
+                                            ? et('dnsEngine.identity.legacyPairedDirect')
+                                            : activeEngine === 'bind' && role === 'paired' && !pairedIdentityLocked
                                             ? et('dnsEngine.identity.bindPairedUnsupported')
                                             : t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}
                                     </span>
@@ -1039,7 +1105,7 @@ function DNSInfrastructureSettings({
                             data-testid="dns-wizard-save"
                             className="justify-center py-2.5 sm:min-w-64"
                             onClick={saveAndPublish}
-                            disabled={clusterBlocker !== null || pairedIdentityLocked}
+                            disabled={clusterBlocker !== null || pairedIdentityLocked || stagedIdentityCurrent}
                             aria-describedby="dns-setup-readiness"
                         >
                             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -1049,7 +1115,9 @@ function DNSInfrastructureSettings({
 
                     {!checksCurrent && (
                         <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-fg-muted">
-                            {t('dnssrv.verificationPrevious')}
+                            {stagingOnly
+                                ? et('dnsEngine.identity.stageDraft')
+                                : t('dnssrv.verificationPrevious')}
                         </div>
                     )}
 

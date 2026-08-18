@@ -11,3 +11,9 @@ func inspectLegacyPowerDNSDurableAuthorityOnHost(requireResolved bool) error {
 		dnsEngineStateReceipt{}, false, false, requireResolved,
 	)
 }
+
+func inspectLegacyPowerDNSMutationAuthorityOnHost(requireResolved bool) error {
+	return validateLegacyPowerDNSMutationAuthority(
+		dnsEngineStateReceipt{}, false, false, requireResolved,
+	)
+}

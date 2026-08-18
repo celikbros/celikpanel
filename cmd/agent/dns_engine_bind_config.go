@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -31,7 +32,12 @@ func managedBINDZoneInclude(config, includePath string) (string, error) {
 		if endStart < 0 {
 			return "", errors.New("BIND zone include marker is incomplete")
 		}
-		end := start + endStart + len(bindZonesMarkerEnd)
+		endStart += start
+		if !bindMarkerStartsActiveComment(config, start) ||
+			!bindMarkerStartsActiveComment(config, endStart) {
+			return "", errors.New("BIND zone include markers are not active configuration comments")
+		}
+		end := endStart + len(bindZonesMarkerEnd)
 		if end < len(config) && config[end] == '\r' {
 			end++
 		}
@@ -55,8 +61,23 @@ func managedBINDZoneInclude(config, includePath string) (string, error) {
 	return config + block, nil
 }
 
-func managedBINDOptions(config string) (string, error) {
+func managedBINDOptions(config, transferPeer string) (string, error) {
+	transferACL := "none"
+	if transferPeer != "" {
+		peer := net.ParseIP(transferPeer)
+		if peer == nil || peer.To4() == nil || peer.To4().String() != transferPeer ||
+			!peer.IsGlobalUnicast() {
+			return "", errors.New("BIND transfer peer must be a canonical public IPv4 address")
+		}
+		transferACL = transferPeer + "/32"
+	}
 	block := "\n\t" + bindOptionsMarkerBegin +
+		"\n\trecursion no;" +
+		"\n\tallow-recursion { none; };" +
+		"\n\tallow-query-cache { none; };" +
+		"\n\tallow-transfer { " + transferACL + "; };" +
+		"\n\t" + bindOptionsMarkerEnd + "\n"
+	legacyBlock := "\n\t" + bindOptionsMarkerBegin +
 		"\n\trecursion no;" +
 		"\n\tallow-recursion { none; };" +
 		"\n\tallow-query-cache { none; };" +
@@ -72,25 +93,114 @@ func managedBINDOptions(config string) (string, error) {
 	}
 	if beginCount == 1 {
 		start := strings.Index(config, bindOptionsMarkerBegin)
-		end := strings.Index(config[start:], bindOptionsMarkerEnd)
-		if start < open || end < 0 || start+end+len(bindOptionsMarkerEnd) > close {
+		endOffset := strings.Index(config[start:], bindOptionsMarkerEnd)
+		endStart := start + endOffset
+		if start < open || endOffset < 0 ||
+			!bindMarkerStartsActiveComment(config, start) ||
+			!bindMarkerStartsActiveComment(config, endStart) ||
+			endStart+len(bindOptionsMarkerEnd) > close {
 			return "", errors.New("managed BIND options markers escape the options block")
 		}
-		canonical := strings.TrimPrefix(block, "\n\t")
-		canonical = strings.TrimSuffix(canonical, "\n")
-		actualEnd := start + end + len(bindOptionsMarkerEnd)
-		if config[start:actualEnd] != canonical {
+		actualEnd := endStart + len(bindOptionsMarkerEnd)
+		canonical := strings.TrimSuffix(strings.TrimPrefix(block, "\n\t"), "\n")
+		legacy := strings.TrimSuffix(strings.TrimPrefix(legacyBlock, "\n\t"), "\n")
+		actual := config[start:actualEnd]
+		if actual != canonical && actual != legacy {
 			return "", errors.New("existing CelikPanel BIND options were modified")
 		}
-		return config, nil
+		body := bindOptionsBodyWithoutManagedSpan(
+			config, open, close, start, actualEnd,
+		)
+		for _, directive := range []string{
+			"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+		} {
+			if bindContainsDirective(body, directive) {
+				return "", fmt.Errorf(
+					"BIND options already define %s outside CelikPanel ownership", directive,
+				)
+			}
+		}
+		if actual == canonical {
+			return config, nil
+		}
+		return config[:start] + canonical + config[actualEnd:], nil
 	}
 	body := stripBINDCommentsAndStrings(config[open+1 : close])
-	for _, directive := range []string{"recursion", "allow-recursion", "allow-query-cache"} {
+	for _, directive := range []string{
+		"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+	} {
 		if bindContainsDirective(body, directive) {
 			return "", fmt.Errorf("BIND options already define %s outside CelikPanel ownership", directive)
 		}
 	}
 	return config[:close] + block + config[close:], nil
+}
+
+func exactLegacyManagedBINDOptions(config string) bool {
+	if strings.Count(config, bindOptionsMarkerBegin) != 1 ||
+		strings.Count(config, bindOptionsMarkerEnd) != 1 {
+		return false
+	}
+	open, close, err := bindOptionsBlock(config)
+	if err != nil {
+		return false
+	}
+	start := strings.Index(config, bindOptionsMarkerBegin)
+	endOffset := strings.Index(config[start:], bindOptionsMarkerEnd)
+	if start < open || endOffset < 0 {
+		return false
+	}
+	endStart := start + endOffset
+	if !bindMarkerStartsActiveComment(config, start) ||
+		!bindMarkerStartsActiveComment(config, endStart) {
+		return false
+	}
+	end := endStart + len(bindOptionsMarkerEnd)
+	if end > close {
+		return false
+	}
+	legacy := bindOptionsMarkerBegin +
+		"\n\trecursion no;" +
+		"\n\tallow-recursion { none; };" +
+		"\n\tallow-query-cache { none; };" +
+		"\n\t" + bindOptionsMarkerEnd
+	if config[start:end] != legacy {
+		return false
+	}
+	outside := bindOptionsBodyWithoutManagedSpan(config, open, close, start, end)
+	for _, directive := range []string{
+		"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+	} {
+		if bindContainsDirective(outside, directive) {
+			return false
+		}
+	}
+	return true
+}
+
+func managedBINDLegacyOptions(config string) (string, error) {
+	if exactLegacyManagedBINDOptions(config) {
+		return config, nil
+	}
+	canonical, err := managedBINDOptions(config, "")
+	if err != nil || canonical != config {
+		if err == nil {
+			err = errors.New("BIND options are not the exact managed directional policy")
+		}
+		return "", err
+	}
+	start := strings.Index(config, bindOptionsMarkerBegin)
+	endOffset := strings.Index(config[start:], bindOptionsMarkerEnd)
+	if start < 0 || endOffset < 0 {
+		return "", errors.New("managed BIND options markers are unavailable")
+	}
+	end := start + endOffset + len(bindOptionsMarkerEnd)
+	legacy := bindOptionsMarkerBegin +
+		"\n\trecursion no;" +
+		"\n\tallow-recursion { none; };" +
+		"\n\tallow-query-cache { none; };" +
+		"\n\t" + bindOptionsMarkerEnd
+	return config[:start] + legacy + config[end:], nil
 }
 
 func bindContainsDirective(body, directive string) bool {
@@ -107,6 +217,78 @@ func bindContainsDirective(body, directive string) bool {
 		}
 	}
 	return false
+}
+
+func bindOptionsBodyWithoutManagedSpan(
+	config string,
+	open, close, managedStart, managedEnd int,
+) string {
+	clean := []byte(stripBINDCommentsAndStrings(config))
+	for index := managedStart; index < managedEnd && index < len(clean); index++ {
+		clean[index] = ' '
+	}
+	return string(clean[open+1 : close])
+}
+
+// bindMarkerStartsActiveComment proves that a CelikPanel marker begins a real
+// line comment in configuration syntax. Raw substring matching is insufficient:
+// an exact marker wrapped in a block comment, line comment, or quoted string is
+// inert even though its bytes are otherwise unchanged.
+func bindMarkerStartsActiveComment(config string, markerStart int) bool {
+	if markerStart < 0 || markerStart+1 >= len(config) ||
+		config[markerStart] != '/' || config[markerStart+1] != '/' {
+		return false
+	}
+	const (
+		bindLexCode = iota
+		bindLexString
+		bindLexLineComment
+		bindLexBlockComment
+	)
+	state := bindLexCode
+	for index := 0; index < markerStart; {
+		switch state {
+		case bindLexCode:
+			switch {
+			case config[index] == '"':
+				state = bindLexString
+				index++
+			case config[index] == '#':
+				state = bindLexLineComment
+				index++
+			case config[index] == '/' && index+1 < markerStart && config[index+1] == '/':
+				state = bindLexLineComment
+				index += 2
+			case config[index] == '/' && index+1 < markerStart && config[index+1] == '*':
+				state = bindLexBlockComment
+				index += 2
+			default:
+				index++
+			}
+		case bindLexString:
+			if config[index] == '\\' && index+1 < markerStart {
+				index += 2
+				continue
+			}
+			if config[index] == '"' {
+				state = bindLexCode
+			}
+			index++
+		case bindLexLineComment:
+			if config[index] == '\n' {
+				state = bindLexCode
+			}
+			index++
+		case bindLexBlockComment:
+			if config[index] == '*' && index+1 < markerStart && config[index+1] == '/' {
+				state = bindLexCode
+				index += 2
+				continue
+			}
+			index++
+		}
+	}
+	return state == bindLexCode
 }
 
 func bindOptionsBlock(config string) (int, int, error) {

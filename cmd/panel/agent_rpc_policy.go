@@ -170,7 +170,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityDNS, `
 		Agent.ConfigureDNSClusterV2 Agent.ConfigurePowerDNSSQLite Agent.SecureDNSZoneV2
-		Agent.SwitchDNSEngineV1 Agent.SyncDNSZoneV2 Agent.SyncDNSZoneV3
+		Agent.RecoverDNSZoneV3 Agent.SwitchDNSEngineV1 Agent.SyncDNSZoneV2 Agent.SyncDNSZoneV3
 	`),
 	agentRPCAuthGroup(agentRPCEffectHostMutation, agentRPCCapabilityMail, `
 		Agent.AddMailAccount Agent.ConfigureDKIMSigning Agent.ConfigureMailStack
@@ -357,6 +357,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.SecureDNSZoneV2":              agentRPCDatabaseTimeout,
 	"Agent.SyncDNSZoneV2":                agentRPCDatabaseTimeout,
 	"Agent.SyncDNSZoneV3":                agentRPCDatabaseTimeout,
+	"Agent.RecoverDNSZoneV3":             agentRPCDatabaseTimeout,
 	"Agent.SyncMailTLSV2":                agentRPCMutationTimeout,
 	"Agent.CreateSystemSQLiteSnapshot":   agentRPCDatabaseTimeout,
 	"Agent.OptimizeSystemSQLiteDatabase": agentRPCDatabaseTimeout,

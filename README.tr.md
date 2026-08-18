@@ -58,6 +58,50 @@ Yetki ayrımı bilinçli bir karar: internete bakan Panel asla root çalışmaz.
 
 **Bugün çalışanlar** (işlevsel, sertleştirme sürüyor): domain ve site yönetimi · PHP sürüm seçimi ve FPM havuzları · SSL (Let's Encrypt + özel sertifika) · yetkili DNS (her düğümde bağımsız seçilen PowerDNS veya BIND; önizlemeli ve kurtarılabilir tek-sunucu ya da eşli değişim) · e-posta hesapları ve yönlendirme · çoklu sunucu destekli veritabanı yönetimi (MariaDB/PostgreSQL) · dosya yöneticisi · yedekleme/geri yükleme · cron · log görüntüleme · 14 servis için servis kontrolü.
 
+### Doğrudan eşli yetkili DNS
+
+Eş kimliği ve topoloji, ilk DNS motoru kurulmadan önce hazırlanır. Ardından her
+düğüm BIND veya PowerDNS'i doğrudan etkinleştirebilir; önce PowerDNS ile kurulum
+ya da geçici motor gerekmez. Sabit hedef topoloji Frankfurt/NS1'in doğrudan BIND
+birincil, Boston/NS2'nin ise yönlü PowerDNS ikincil olmasıdır. Boston'daki mevcut
+boş, panel-yönetimli tek-sunucu PowerDNS; anlık görüntülü, yeniden başlatılabilir
+ve güvenli geri dönüşlü bir işlemle yerinde incelenip yeniden yapılandırılır.
+
+PairReady dört otoriteyi de kanıtlayana kadar birincil eş-bekliyor durumunda
+kalır ve panelde yerel zone yazıları fail-closed engellenir: yerel katalog AXFR'si
+kalıcı seri ve sıralı üyelikle birebir eşleşir; kaynak adresi bağlanmış eş katalog
+AXFR'si aynı seri ve üyeliği döndürür; eş kataloğu UDP ve TCP üzerinden aynı
+yetkili SOA'yı verir; her üye de kalıcı beklenen SOA serisini yerelde ve eşte
+döndürür. Silme işlemi ayrıca silinen zone'un eş AXFR'sinde bulunmadığını
+kanıtlar; başarılı aktarım bayat kopya demektir ve hazır olmayı reddettirir.
+İkincil her zaman yerel yazılara kapalıdır.
+
+Yönetilen BIND genel seçenekleri varsayılan olarak `allow-transfer { none; };`
+kullanır. Yönlü BIND birincilin panelce üretilen katalog ve üye zone'ları AXFR'ye
+yalnız güvenilir yerel kanıt için kesin `LocalIP` ile kesin eşten izin verir ve
+yalnız o eşi bilgilendirir; BIND ikincil yalnız kesin birincil `/32` adresini
+kabul eder. Yönlü PowerDNS birincilde `allow-axfr-ips` tam olarak
+`LocalIP,PeerIP`, `also-notify` ise `PeerIP` olur; ikincil yalnız `PeerIP` AXFR'sine
+izin verir ve `also-notify` içermez. Yayımlanmış eski eşli config, yalnız dar eski
+sürüm kanıtında bayt-birebir peer-only-plus-notify uyumluluğu olarak kalır. İlk
+başarılı BIND V3 yayını bu politikayı pointer/durum geri dönüş işlemi içinde
+taşır; eski PowerDNS sessizce taşınmaz ve açıkça incelenmiş switch ya da yeniden
+yapılandırmaya kadar uyumluluk kanıtında kalır.
+Eski V2 mutasyonları yalnız exact tuple'sız üretici/standalone uyumluluğuna
+açıktır; yönlü receipt'ler ile tuple'sız consumer'lar salt okunurdur ve
+incelenmiş V3 switch/yeniden yapılandırma yolunu gerektirir.
+Yayımlanmış dolu bir consumer, PowerDNS'ten ancak exact katalog-bağlı üye kümesi
+ile yerel/eş SOA serileri kanıtlandıktan sonra ayrılabilir.
+Etkinleştirmeden sonra eş kimliği değişmezdir ve sabit, özel eş IPv4 adresleri
+gerekir; TSIG henüz yoktur, paylaşılan veya dinamik NAT uçları desteklenmez.
+Katalog serisi motor-bağımsızdır ve BIND↔PowerDNS birincil geçişinde korunur.
+Yalnız üyelik ekleme, silme veya yeniden ekleme seriyi ilerletir; yalnız kayıt
+değişikliği ilerletmez ve en büyük değerde taşma fail-closed reddedilir. Bu seri
+alanı bulunmayan yayımlanmış `v0.1.0-alpha.27` kaynak receipt'i, değeri yalnız
+birebir eşleşen kesin kalıcı ve canlı backend kanıtından türetebilir; ardından
+yeni günlük ve receipt bu değere bağlanır. Bunlar kaynak-ağaç sözleşmeleridir;
+sürüm veya canlı dağıtım kanıtı değildir.
+
 **Sırada ne var:** [Yol Haritası](ROADMAP.tr.md) — Faz 0 güvenlik sprinti → Faz 1 altın yolun sertleştirilmesi → Faz 2 60 saniyelik kurulum → Faz 3 WordPress toolkit + cPanel importer.
 
 ## Etiketli sürüm kurulumu

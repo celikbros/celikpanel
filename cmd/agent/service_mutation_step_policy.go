@@ -17,6 +17,7 @@ const (
 	serviceMutationStepConfigureDKIMSigning     serviceMutationStepMethod = "Agent.ConfigureDKIMSigning"
 	serviceMutationStepSyncDNSZone              serviceMutationStepMethod = "Agent.SyncDNSZoneV2"
 	serviceMutationStepSyncDNSZoneV3            serviceMutationStepMethod = "Agent.SyncDNSZoneV3"
+	serviceMutationStepRecoverDNSZoneV3         serviceMutationStepMethod = "Agent.RecoverDNSZoneV3"
 	serviceMutationStepSwitchDNSEngine          serviceMutationStepMethod = "Agent.SwitchDNSEngineV1"
 	serviceMutationStepSecureDNSZone            serviceMutationStepMethod = "Agent.SecureDNSZoneV2"
 	serviceMutationStepConfigureDNSCluster      serviceMutationStepMethod = "Agent.ConfigureDNSClusterV2"
@@ -235,6 +236,14 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 		return serviceMutationJobMatches(
 			job, "dns_zone_sync", claim.target, claim.packageName,
 		)
+
+	case serviceMutationStepRecoverDNSZoneV3:
+		return serviceMutationCanonicalFQDN(claim.target) &&
+			mutationpayload.ValidDNSZoneSyncV3Qualifier(claim.packageName) &&
+			claim.action == "recover" &&
+			serviceMutationJobMatches(
+				job, "dns_zone_sync", claim.target, claim.packageName,
+			)
 
 	case serviceMutationStepSwitchDNSEngine:
 		return (claim.target == "bind" || claim.target == "pdns") &&

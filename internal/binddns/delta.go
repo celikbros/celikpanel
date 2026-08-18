@@ -78,8 +78,8 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 		return TreePlan{}, err
 	}
 	if current.receipt.Pairing != nil &&
-		current.receipt.Pairing.Role == PairRoleSecondary && !next.receipt.Delete {
-		return TreePlan{}, errors.New("BIND secondary cannot publish a panel-owned zone")
+		current.receipt.Pairing.Role == PairRoleSecondary {
+		return TreePlan{}, errors.New("BIND secondary cannot mutate a panel-owned zone")
 	}
 	pairing := pairingFromReceipt(current.receipt.Pairing)
 	serial := uint32(0)
@@ -94,8 +94,10 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 			break
 		}
 	}
+	wasMember := false
 	if found >= 0 {
 		previous := zones[found]
+		wasMember = !previous.receipt.Delete
 		if next.receipt.DesiredGeneration < previous.receipt.DesiredGeneration {
 			return TreePlan{}, errors.New("BIND zone delta is older than the current generation")
 		}
@@ -115,11 +117,12 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 	if err := sortAndValidateTreeZones(zones); err != nil {
 		return TreePlan{}, err
 	}
-	if pairing != nil && pairing.Role == PairRolePrimary {
-		serial++
-		if serial == 0 {
-			serial = 1
+	membershipChanged := wasMember != !next.receipt.Delete
+	if pairing != nil && pairing.Role == PairRolePrimary && membershipChanged {
+		if serial == ^uint32(0) {
+			return TreePlan{}, errors.New("BIND catalog serial is exhausted")
 		}
+		serial++
 	}
 	return TreePlan{
 		engineEpoch: current.receipt.EngineEpoch,
@@ -163,10 +166,10 @@ func ReconfigurePairing(current VerifiedTree, desired *Pairing) (TreePlan, error
 		serial = current.receipt.Pairing.CatalogSerial
 		currentPairing := pairingFromReceipt(current.receipt.Pairing)
 		if currentPairing == nil || *currentPairing != pairing {
-			serial++
-			if serial == 0 {
-				serial = 1
+			if serial == ^uint32(0) {
+				return TreePlan{}, errors.New("BIND catalog serial is exhausted")
 			}
+			serial++
 		}
 	}
 	return TreePlan{
@@ -301,7 +304,11 @@ func planFromVerifiedTree(tree VerifiedTree) TreePlan {
 }
 
 func cloneReceipt(receipt Receipt) Receipt {
-	receipt.Zones = append([]ZoneReceipt(nil), receipt.Zones...)
+	if receipt.Zones != nil {
+		zones := make([]ZoneReceipt, len(receipt.Zones))
+		copy(zones, receipt.Zones)
+		receipt.Zones = zones
+	}
 	if receipt.Pairing != nil {
 		pairing := *receipt.Pairing
 		receipt.Pairing = &pairing

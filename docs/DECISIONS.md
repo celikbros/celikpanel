@@ -850,17 +850,20 @@ domain exists — otherwise every domain would silently go dark, the exact trap
 the rule prevents. All "or manage externally" copy removed. Proven live:
 creation without DNS → 409.
 
-**Addendum (July 26, 2026 — two-server authority).** DNS ownership is not one
-machine-wide primary and one machine-wide secondary; PowerDNS assigns roles per
-zone. Two CelikPanels in **Paired** mode enable both capabilities: a zone created
-on either panel is `MASTER` there and an automatic secondary copy on the peer.
-Thus both nameservers remain authoritative regardless of which panel created the
-site. Both panels carry the same shared name pair; exactly one name resolves to
-the local IP and the other to the peer IP. Glue is registered once under the
-domain that owns those names; no child nameservers are created under customer
-domains.
+**Addendum (July 26, 2026; superseded August 18 — two-server authority).** The
+old PowerDNS-only, per-zone dual-writer model is rejected because a mixed
+BIND/PowerDNS pair cannot make a zone created on the directional secondary
+converge back to the primary. **Paired** is now machine-directional: one primary
+owns every panel-local DNS mutation and publishes an engine-neutral Catalog Zone
+v2; one secondary consumes that catalog and is locally read-only. Both
+nameservers remain authoritative for the resulting zones. Both panels carry the
+same shared name pair; exactly one name resolves to the local IP and the other to
+the peer IP. Glue is registered once under the domain that owns those names; no
+child nameservers are created under customer domains. The exact NS names,
+addresses and directional roles are staged before either engine is installed and
+become immutable when the first engine is activated.
 
-**Addendum (August 16, 2026 — authoritative DNS engine ownership).** PowerDNS
+**Addendum (August 18, 2026 — direct directional DNS engine ownership).** PowerDNS
 and BIND are alternatives behind one panel-owned DNS-engine lifecycle, not
 ordinary component rows that an operator starts, stops or removes independently.
 Exactly one engine owns TCP and UDP port 53. The inactive alternative may remain
@@ -877,32 +880,83 @@ version or product-name phrase.
 PowerDNS↔BIND switching is bidirectional in both **Standalone** and verified
 **Paired** topology. Topology and engine selection are independent: the primary
 and secondary may use PowerDNS/PowerDNS, BIND/BIND, BIND/PowerDNS, or
-PowerDNS/BIND. The saved nameserver identity deterministically selects the
-primary and secondary roles. The primary publishes an engine-neutral Catalog
-Zone v2; the secondary transfers the exact catalog and every member zone using
-standard AXFR/NOTIFY. A paired cutover commits only after local and peer SOA
-serials match over UDP and TCP. The paired identity remains read-only while
-either node uses BIND. DNSSEC zones, pending zone publication,
-unmanaged DNS, a port-53 conflict, a degraded source or another operation block
-the switch. The transaction freezes the complete engine-and-epoch-bound zone
-snapshot, stages and validates the target before stopping the source, verifies
-every zone over both UDP and TCP, and retains the old package as the stopped
-standby.
+PowerDNS/BIND, and either engine may be the first engine activated on either
+role. No PowerDNS-first bootstrap and no temporary-engine hop is allowed. The
+saved nameserver identity deterministically selects the immutable primary and
+secondary roles. The primary publishes an engine-neutral Catalog Zone v2; the
+secondary transfers the exact catalog and every member zone using standard
+AXFR/NOTIFY.
 
-An unresolved host left by an older release has one narrower exception:
+Initial primary activation is permitted before the peer exists, but ownership
+and publication readiness are separate facts: the engine remains exactly
+managed and running in **pair-pending**, while every panel-local zone write is
+blocked. PairReady opens publication only after all of these independent
+authorities agree:
+
+- a local catalog AXFR exactly matches the durable serial and sorted membership;
+- a peer catalog AXFR, bound to the configured local paired address as its
+  source, returns the same serial and membership;
+- the peer catalog returns that authoritative SOA serial over both UDP and TCP;
+  and
+- every member zone returns its durable expected authoritative SOA serial
+  locally and on the peer over UDP and TCP.
+
+This proof is non-vacuous even with zero member zones. A deletion is complete
+only when the peer zone AXFR is absent; if transfer still succeeds, the peer is
+serving a stale copy and PairReady fails. The secondary never receives
+panel-local write authority.
+
+Managed BIND global options default to `allow-transfer { none; };`. A
+directional BIND primary's generated catalog and member zones permit AXFR only
+from exact self `LocalIP` for trusted local proof plus the exact peer, and notify
+only that peer. A BIND secondary permits only its exact primary `/32`.
+Directional PowerDNS primary uses exact `allow-axfr-ips=LocalIP,PeerIP` and
+`also-notify=PeerIP`; directional secondary uses peer-only AXFR and omits
+`also-notify`. Released legacy paired policy is accepted only as byte-exact
+peer-only-plus-notify compatibility under its narrow proof. The first successful
+BIND V3 publication migrates that policy transactionally with generation pointer
+and state rollback. Legacy PowerDNS is not silently migrated; it stays on the
+compatibility proof until an explicit reviewed switch or reconfiguration.
+Legacy V2 mutation entrypoints are restricted to exact tuple-less
+producer/standalone compatibility. Directional receipts and tuple-less
+consumers are read-only and require the reviewed V3 switch/reconfiguration path.
+A released populated consumer may leave PowerDNS only after its exact
+catalog-bound member set and local/peer SOA serials are proven.
+A fixed dedicated peer IPv4 is required. TSIG is not implemented; shared or
+dynamic NAT endpoints are unsupported.
+
+The catalog serial is topology authority, not engine-local state. A primary
+BIND↔PowerDNS switch preserves it exactly. A membership add, delete or re-add
+advances it once; a record-only update does not. Advancing the maximum serial
+would wrap stale state into an apparently current value, so overflow fails
+closed before publication. A released `v0.1.0-alpha.27` source receipt predates
+the serial field. Such a receipt can be upgraded only when exact durable state
+and the live source backend independently yield the same positive catalog
+serial and membership; the derived value is then bound into the new switch
+journal and target receipt. Missing or divergent evidence blocks the switch.
+
+DNSSEC zones, pending zone publication, unmanaged DNS, a port-53 conflict, a
+degraded source or another operation block a switch or reconfiguration. The
+transaction freezes the complete engine-and-epoch-bound zone snapshot, stages
+and validates the target before stopping the source, verifies every applicable
+zone over both UDP and TCP, and retains the old package as the stopped standby.
+
+An unresolved host left by an older release still has the narrow
 **registration-only adoption of an existing panel-managed PowerDNS authority**.
-Adoption may preserve exact Standalone or Paired PowerDNS state, including
-existing DNSSEC data, because it verifies rather than rewrites it. It succeeds
-only when config bytes and modes, unit state, the SQLite database, every owned
-zone, topology and TCP/UDP authority all match the panel ledger and no BIND
-authority is running. It changes no package, configuration, service state, DNS
-data or DNSSEC state. There is no BIND-adoption shortcut. A new pair is
-established under verified PowerDNS first; after that, either node can switch
-engines independently, one node at a time.
+Adoption verifies exact config bytes and modes, unit state, SQLite data, owned
+zones, topology and TCP/UDP authority without changing them; there is no BIND
+adoption shortcut. The frozen Boston path then reviews its existing **empty,
+managed Standalone PowerDNS** and reconfigures that same engine directly as the
+directional secondary. It takes an exact database/config/unit snapshot, writes
+the catalog-consumer target, performs the bounded restart, proves the target and
+commits, or restores and proves the snapshot. It never installs or activates a
+temporary BIND authority. Non-empty, DNSSEC-bearing, unmanaged or divergent
+legacy state fails closed instead of being silently repurposed.
 
 Both the panel ledger and an agent-owned host journal carry the operation
-identity and phase. After interruption, recovery proves the exact target and
-commits it or restores and proves the exact pre-operation state. If neither can
+identity, immutable pair identity, snapshot and phase. After interruption,
+recovery proves the exact target and commits it or restores and proves the exact
+pre-operation files, database, generation pointer and unit state. If neither can
 be proved, DNS mutations remain locked for recovery; the panel never guesses
 which daemon owns authority.
 

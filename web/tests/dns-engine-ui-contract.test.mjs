@@ -43,6 +43,25 @@ function readySnapshot(overrides = {}) {
   };
 }
 
+function stagedPairSnapshot(overrides = {}) {
+  return {
+    revision: 1,
+    engine_epoch: 0,
+    active_engine: null,
+    state: 'unconfigured',
+    topology: 'paired',
+    pair_role: 'primary',
+    dnssec_zone_count: 0,
+    zone_count: 0,
+    pending_zone_count: 0,
+    engines: [
+      { id: 'pdns', installed: false, running: false, managed: false, status: 'available' },
+      { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+    ],
+    ...overrides,
+  };
+}
+
 test('DNS engine state decoder fails closed on malformed or contradictory state', () => {
   assert.match(contract, /DNS_ENGINE_IDS = \['pdns', 'bind'\] as const/);
   assert.match(contract, /'unconfigured',[\s\S]*'ready',[\s\S]*'unmanaged',[\s\S]*'conflict',[\s\S]*'switching',[\s\S]*'degraded'/);
@@ -76,6 +95,7 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 		active_engine: 'bind',
 		topology: 'paired',
 		pair_role: 'secondary',
+		pair_ready: false,
 		engines: [
 			{ id: 'pdns', installed: true, running: false, managed: true, status: 'installed_standby' },
 			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
@@ -84,7 +104,18 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 	assert.ok(decodeDNSEngineSnapshot(readySnapshot({
 		topology: 'paired',
 		pair_role: 'primary',
+		pair_ready: true,
 	})));
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired',
+		pair_role: 'primary',
+	})), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired',
+		pair_role: 'secondary',
+		pair_ready: true,
+	})), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({ pair_ready: false })), null);
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({
     engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
@@ -97,6 +128,38 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
       { id: 'bind', installed: false, running: false, managed: true, status: 'available' },
     ],
   })), null);
+});
+
+test('DNS engine decoder accepts only exact staged paired authority tuples', async () => {
+  const { decodeDNSEngineSnapshot } = await loadContractRuntime();
+
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot()));
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_role: 'secondary' })));
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot({
+    state: 'unmanaged',
+    pair_role: 'secondary',
+    engines: [
+      {
+        id: 'pdns',
+        installed: true,
+        running: true,
+        managed: true,
+        status: 'unmanaged',
+        detail_code: 'unmanaged_dns_detected',
+      },
+      { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+    ],
+  })));
+
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_role: undefined })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_ready: false })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_ready: true })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ topology: 'standalone' })), null);
+
+  const standalone = stagedPairSnapshot({ topology: 'standalone' });
+  delete standalone.pair_role;
+  assert.ok(decodeDNSEngineSnapshot(standalone));
+  assert.equal(decodeDNSEngineSnapshot({ ...standalone, pair_ready: false }), null);
 });
 
 test('DNS engine preview token and counts mirror the commit contract', async () => {
@@ -135,6 +198,25 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
     estimated_downtime_seconds: 0,
     requires_downtime_acknowledgement: false,
   }, null, 'bind', 4));
+  assert.ok(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'pdns',
+    action: 'reconfigure',
+  }, null, 'pdns', 4));
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'bind',
+    action: 'reconfigure',
+  }, null, 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'pdns',
+    action: 'reconfigure',
+    requires_downtime_acknowledgement: false,
+  }, null, 'pdns', 4), null);
 });
 
 test('first DNS engine click requests a read-only preview and cannot mutate', () => {
@@ -187,9 +269,52 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(card, /paired_topology_unsupported/);
   assert.match(card, /dnssec_unsupported/);
   assert.match(card, /agent_incompatible/);
+  assert.match(card, /dns_identity_required: 'dnsEngine\.blocker\.identityRequired'/);
   assert.match(settings, /engine\?\.active_engine === 'bind'/);
   assert.match(settings, /dnsEngine\.topologyEditorBind/);
   assert.match(settings, /engine\?\.state === 'switching'/);
+});
+
+test('fresh servers stage an exact DNS identity before the first engine install', () => {
+  assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
+  assert.match(settings, /const legacyPowerDNSEntry = engine\?\.engines\.find\(\(entry\) => entry\.id === 'pdns'\)/);
+  assert.match(settings, /const legacyPowerDNSReconfigureStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
+  assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSReconfigureStaging/);
+  assert.match(settings, /<DNSEngineCard key=\{engineRefreshKey\}/);
+  assert.match(settings, /activeEngine \|\| identityStaging/);
+  assert.match(settings, /activeEngine=\{activeEngine\}/);
+  assert.match(settings, /stagingOnly=\{identityStaging\}/);
+  assert.match(settings, /legacyPowerDNSReconfigure=\{legacyPowerDNSReconfigureStaging\}/);
+  assert.match(settings, /onIdentityStaged=\{\(\) => setEngineRefreshKey/);
+  assert.match(settings, /activeEngine: ActiveDNSEngine \| null/);
+  assert.match(settings, /data-testid="dns-identity-staging-note"/);
+  assert.match(settings, /\(payload as \{ success\?: unknown \}\)\.success !== true/);
+  assert.match(settings, /\(payload as \{ staged\?: unknown \}\)\.staged !== true/);
+  assert.match(settings, /dnsEngine\.identity\.stageInvalid/);
+  assert.match(settings, /dnsEngine\.identity\.stageSuccess/);
+  assert.match(settings, /onIdentityStaged\(\)/);
+  assert.match(settings, /stagedIdentityCurrent/);
+  assert.match(copy, /dnsEngine\.identity\.stageDescription/);
+  assert.match(copy, /This step does not install, start, or publish a DNS server/);
+  assert.match(copy, /Bu adım DNS sunucusu kurmaz, başlatmaz veya yayın yapmaz/);
+  assert.match(copy, /reconfigure it directly as the secondary/);
+  assert.match(copy, /doğrudan ikincil olarak yapılandıracak/);
+  assert.match(settings, /dnsEngine\.identity\.legacyPairedDirect/);
+  assert.match(contract, /'install' \| 'switch' \| 'adopt' \| 'reconfigure'/);
+  assert.match(card, /dnsEngine\.reviewReconfigure/);
+  assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
+});
+
+test('paired engines expose exact peer readiness without granting secondary writes', () => {
+  assert.match(contract, /pair_ready\?: boolean/);
+  assert.match(contract, /value\.active_engine !== null && value\.topology === 'paired'[\s\S]*typeof value\.pair_ready !== 'boolean'/);
+  assert.match(contract, /value\.pair_role === 'secondary' && value\.pair_ready !== false/);
+  assert.match(card, /data-testid="dns-pair-readiness"/);
+  assert.match(card, /dnsEngine\.pair\.primaryWaiting/);
+  assert.match(card, /dnsEngine\.pair\.primaryReady/);
+  assert.match(card, /dnsEngine\.pair\.secondaryReadOnly/);
+  assert.match(copy, /waiting for the secondary to prove the exact catalog/);
+  assert.match(copy, /ikincilin kesin kataloğu kanıtlaması bekleniyor/);
 });
 
 test('paired identity remains locked across independent BIND or PowerDNS choices', () => {
@@ -200,6 +325,7 @@ test('paired identity remains locked across independent BIND or PowerDNS choices
   assert.match(settings, /pairRole=\{engine\?\.pair_role\}/);
   assert.match(settings, /const pairedIdentityLocked = pairRole !== undefined[\s\S]*saved\.role === 'paired'/);
   assert.match(settings, /const roleSelectionDisabled = \(role: DNSRole\) => pairedIdentityLocked[\s\S]*role === 'paired'/);
+  assert.match(settings, /activeEngine === 'bind' && role === 'paired'/);
   assert.match(settings, /const effectiveRole: DNSRole = draft\.role/);
 	assert.match(settings, /role: effectiveRole/);
   assert.match(settings, /aria-disabled=\{roleSelectionDisabled\(role\)\}/);

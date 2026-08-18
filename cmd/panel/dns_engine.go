@@ -90,6 +90,7 @@ type dnsEngineSnapshot struct {
 	State            string               `json:"state"`
 	Topology         string               `json:"topology"`
 	PairRole         string               `json:"pair_role,omitempty"`
+	PairReady        *bool                `json:"pair_ready,omitempty"`
 	DNSSECZoneCount  int                  `json:"dnssec_zone_count"`
 	ZoneCount        int                  `json:"zone_count"`
 	PendingZoneCount int                  `json:"pending_zone_count"`
@@ -99,6 +100,7 @@ type dnsEngineSnapshot struct {
 	port53Conflict   bool
 	runtimeErr       error
 	dnssecErr        error
+	pairIdentityErr  error
 }
 
 type dnsEnginePreviewBlocker struct {
@@ -240,6 +242,7 @@ func validateDNSBackendReadiness(
 		}
 		if runtime.Running && !runtime.Installed ||
 			runtime.Managed && !runtime.Installed ||
+			runtime.PairReady && (!runtime.Installed || !runtime.Running || !runtime.Managed) ||
 			len(runtime.Unit) > 128 ||
 			strings.ContainsAny(runtime.Unit, "\r\n\x00") {
 			return nil, false, errors.New("DNS backend readiness is internally inconsistent")
@@ -501,15 +504,27 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine != "" {
 		topology = state.Topology
 	}
+	pairRole := state.PairRole
+	var pairIdentityErr error
+	if state.ActiveEngine == "" && topology == transport.DNSTopologyPaired {
+		pairRole, pairIdentityErr = p.unresolvedDNSPairRole(ctx)
+	}
+	var pairReady *bool
+	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
+		ready := runtimes[state.ActiveEngine].PairReady
+		pairReady = &ready
+	}
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
-		State:        presentationState, Topology: topology, PairRole: state.PairRole,
+		State:        presentationState, Topology: topology, PairRole: pairRole,
+		PairReady:       pairReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,
-		runtimeErr: runtimeErr,
-		dnssecErr:  dnssecErr,
+		runtimeErr:      runtimeErr,
+		dnssecErr:       dnssecErr,
+		pairIdentityErr: pairIdentityErr,
 	}, nil
 }
 
@@ -552,11 +567,17 @@ func (p *Panel) activeDNSPublisher(
 		Engine: state.ActiveEngine,
 		Epoch:  state.EngineEpoch, PairRole: state.PairRole,
 	}
-	// A directional BIND secondary serves transferred zones but must never
+	// A directional secondary serves transferred zones but must never
 	// accept panel-local domain or record mutations.  Returning the exact
 	// identity with ready=false keeps read-only engine truth visible while all
 	// hosting publication paths fail closed before acquiring a V3 lease.
 	if identity.PairRole == transport.DNSPairRoleSecondary {
+		return identity, false, nil
+	}
+	// A directional primary becomes a panel-local publisher only after the
+	// agent proves that the peer serves the exact primary catalog and every
+	// catalog member. Engine ownership remains managed while a peer is absent.
+	if identity.PairRole == transport.DNSPairRolePrimary && !runtime.PairReady {
 		return identity, false, nil
 	}
 	return identity, true, nil
@@ -591,11 +612,66 @@ func (p *Panel) callSyncDNSZoneV3(
 	); err != nil {
 		return err
 	}
-	if response.Error != "" || !response.Synced ||
+	if response.Error != "" {
+		if response.Synced || response.RecoveryPending ||
+			response.Engine != "" || response.EngineEpoch != 0 ||
+			response.AppliedGeneration != 0 {
+			return errors.New("agent returned a mixed DNS publication failure response")
+		}
+		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	if response.RecoveryPending {
+		if response.Synced || response.Engine != request.Engine ||
+			response.EngineEpoch != request.EngineEpoch ||
+			response.AppliedGeneration != request.DesiredGeneration {
+			return errors.New("agent returned an invalid pending DNS publication receipt")
+		}
+		return &dnsZoneV3PropagationPendingError{}
+	}
+	if !response.Synced ||
 		response.Engine != request.Engine ||
 		response.EngineEpoch != request.EngineEpoch ||
 		response.AppliedGeneration != request.DesiredGeneration {
 		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	return nil
+}
+
+func (p *Panel) callRecoverDNSZoneV3(
+	ctx context.Context,
+	lease dnsZoneEngineLease,
+	binding agentMutationBinding,
+	response *transport.RecoverDNSZoneV3Response,
+) error {
+	if !lease.valid() || response == nil ||
+		binding.MutationRequestID != lease.RequestID ||
+		binding.MutationOwnerID != lease.OwnerID {
+		return errors.New("invalid exact DNS zone V3 recovery binding")
+	}
+	request := transport.RecoverDNSZoneV3Request{
+		ServiceMutationBinding: binding,
+		Domain:                 lease.ZoneName,
+		Qualifier:              lease.Qualifier,
+	}
+	if err := p.callAgentContext(
+		ctx, "Agent.RecoverDNSZoneV3", &request, response,
+	); err != nil {
+		return err
+	}
+	if response.Error != "" {
+		if response.Recovered || response.RecoveryPending {
+			return errors.New("agent returned a mixed DNS zone recovery failure response")
+		}
+		return errors.New("agent could not verify the exact DNS zone recovery")
+	}
+	if response.RecoveryPending {
+		if response.Recovered {
+			return errors.New("agent returned a mixed DNS zone recovery response")
+		}
+		return &dnsZoneV3PropagationPendingError{}
+	}
+	if !response.Recovered {
+		return errors.New("agent did not confirm the exact DNS zone recovery")
 	}
 	return nil
 }
@@ -616,6 +692,14 @@ func dnsEngineAction(
 				return "switch"
 			}
 		}
+		// Revision zero is the released legacy adoption contract: the running
+		// PowerDNS may already implement a signed paired topology and must be
+		// registered without replacement. A DB-staged plan advances revision
+		// first; only that explicit authority selects destructive reconfigure.
+		if snapshot.Topology == transport.DNSTopologyPaired &&
+			snapshot.Revision > 0 {
+			return "reconfigure"
+		}
 		return "adopt"
 	}
 	return "switch"
@@ -624,6 +708,15 @@ func dnsEngineAction(
 func dnsEngineImpacts(action string, hasSource bool) []string {
 	if action == "adopt" {
 		return []string{"validate_target", "adopt_existing"}
+	}
+	if action == "reconfigure" {
+		return []string{
+			"validate_target",
+			"replace_existing",
+			"restart_target",
+			"configure_secondary",
+			"brief_dns_interruption",
+		}
 	}
 	impacts := make([]string, 0, 8)
 	if action == "install" {
@@ -672,6 +765,10 @@ func dnsEnginePreviewBlockers(
 	if snapshot.State == dnsEngineStateSwitching {
 		blockers = addDNSEngineBlocker(blockers, "operation_running")
 	}
+	if snapshot.ActiveEngine == nil &&
+		snapshot.Topology == dnsEngineStateUnconfigured {
+		blockers = addDNSEngineBlocker(blockers, "dns_identity_required")
+	}
 	// Registration-only adoption verifies the exact full runtime zone set and
 	// may therefore reconcile legacy pending generations without publishing.
 	// A live lease is still rejected by buildDNSEngineManifest.
@@ -701,6 +798,17 @@ func dnsEnginePreviewBlockers(
 			!targetRuntime.Managed ||
 			(snapshot.Topology != transport.DNSTopologyStandalone &&
 				snapshot.Topology != transport.DNSTopologyPaired)) {
+		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+	}
+	if action == "reconfigure" &&
+		(target != transport.DNSEnginePowerDNS ||
+			snapshot.ActiveEngine != nil ||
+			snapshot.Topology != transport.DNSTopologyPaired ||
+			snapshot.PairRole != transport.DNSPairRoleSecondary ||
+			snapshot.pairIdentityErr != nil ||
+			snapshot.ZoneCount != 0 ||
+			!targetRuntime.Installed || !targetRuntime.Running ||
+			!targetRuntime.Managed) {
 		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
 	}
 	switch snapshot.State {
@@ -830,6 +938,25 @@ func canonicalBINDEnginePairIdentityTx(
 	return role, localIP, localNS, nil
 }
 
+func (p *Panel) unresolvedDNSPairRole(ctx context.Context) (string, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	_, peerNS, err := canonicalDNSEnginePeerSnapshotTx(
+		ctx, tx, transport.DNSTopologyPaired,
+	)
+	if err != nil {
+		return "", err
+	}
+	role, _, _, err := canonicalBINDEnginePairIdentityTx(ctx, tx, peerNS)
+	if err != nil {
+		return "", err
+	}
+	return role, nil
+}
+
 func (p *Panel) buildDNSEngineManifest(
 	ctx context.Context,
 	state dnsEngineDBState,
@@ -839,7 +966,7 @@ func (p *Panel) buildDNSEngineManifest(
 	mode := dnsEngineMutationMode(action)
 	topology := state.Topology
 	if mode == transport.DNSEngineSwitchModeSwitch &&
-		state.ActiveEngine == "" && target == transport.DNSEngineBIND &&
+		state.ActiveEngine == "" &&
 		observedTopology == transport.DNSTopologyPaired {
 		topology = transport.DNSTopologyPaired
 	}
@@ -1019,7 +1146,7 @@ func (p *Panel) makeDNSEnginePreview(
 		return dnsEngineSwitchPreview{}, err
 	}
 	hasSource := source != ""
-	requiresAck := hasSource
+	requiresAck := hasSource || action == "reconfigure"
 	preview := dnsEngineSwitchPreview{
 		PreviewToken: token, SourceEngine: enginePointer(source),
 		TargetEngine:     request.TargetEngine,
@@ -2061,7 +2188,7 @@ func (p *Panel) handleDNSEngineSwitch(
 			"DNS engine state changed after preview; review the change again")
 		return
 	}
-	if request.ExpectedSource.Valid &&
+	if (request.ExpectedSource.Valid || action == "reconfigure") &&
 		!request.DowntimeAcknowledged {
 		writeClientError(w, http.StatusBadRequest,
 			"downtime acknowledgement is required")

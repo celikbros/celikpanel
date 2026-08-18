@@ -111,6 +111,523 @@ func assertDNSSetupSettings(t *testing.T, p *Panel, want map[string]string) {
 	}
 }
 
+func seedDNSSetupAuditUser(t *testing.T, p *Panel) {
+	t.Helper()
+	if _, err := p.db.GetDB().Exec(`
+		INSERT OR IGNORE INTO users (
+		  id, username, password_hash, email, role
+		) VALUES (1, 'dns-setup-admin', 'hash',
+		          'dns-setup-admin@example.test', 'admin')
+	`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func stagePairedDNSIdentityForTest(
+	t *testing.T,
+	p *Panel,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	seedDNSSetupAuditUser(t, p)
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.example.net"}`,
+	))
+	return recorder
+}
+
+func TestDNSSetupStagesFreshPairedIdentityWithoutHostMutation(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, p, agent)
+
+	recorder := stagePairedDNSIdentityForTest(t, p)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("stage status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Success bool   `json:"success"`
+		Staged  bool   `json:"staged"`
+		Result  string `json:"result"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil ||
+		!response.Success || !response.Staged ||
+		response.Result != dnsSetupResultIdentityStaged {
+		t.Fatalf("staging response=%+v err=%v body=%s",
+			response, err, recorder.Body.String())
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1:       "ns1.example.net",
+		settingNS2:       "ns2.example.net",
+		settingDNSRole:   "paired",
+		settingDNSPeerIP: "192.0.2.20",
+		settingDNSPeerNS: "ns2.example.net",
+	})
+	state, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+		state.Revision != 1 || state.Topology != transport.DNSTopologyStandalone ||
+		state.CurrentSwitchID != "" {
+		t.Fatalf("staged engine state=%+v", state)
+	}
+	snapshot, err := p.dnsEngineSnapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Topology != transport.DNSTopologyPaired ||
+		snapshot.State != dnsEngineStateUnconfigured {
+		t.Fatalf("staged snapshot=%+v", snapshot)
+	}
+	agent.mu.Lock()
+	switchCalls, readinessCalls := agent.switchCalls, agent.readinessCalls
+	agent.mu.Unlock()
+	agent.durableMutationRPCFixture.mu.Lock()
+	jobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
+	if switchCalls != 0 || jobs != 0 || readinessCalls != 3 {
+		t.Fatalf("staging host observations switch=%d jobs=%d readiness=%d",
+			switchCalls, jobs, readinessCalls)
+	}
+	var audits int
+	if err := p.db.GetDB().QueryRow(`
+		SELECT count(*) FROM audit_logs
+		WHERE action = 'settings.dns_identity_staged:paired runtime=fresh'
+	`).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Fatalf("staging audits=%d, want 1", audits)
+	}
+}
+
+func TestStagedPairedIdentityBuildsExactFirstInstallManifest(t *testing.T) {
+	for directionIndex, direction := range []struct {
+		name, localIP, peerIP, peerNS, pairRole, localNS string
+	}{
+		{
+			name: "primary", localIP: "192.0.2.10",
+			peerIP: "192.0.2.20", peerNS: "ns2.example.net",
+			pairRole: transport.DNSPairRolePrimary, localNS: "ns1.example.net",
+		},
+		{
+			name: "secondary", localIP: "192.0.2.20",
+			peerIP: "192.0.2.10", peerNS: "ns1.example.net",
+			pairRole: transport.DNSPairRoleSecondary, localNS: "ns2.example.net",
+		},
+	} {
+		for targetIndex, target := range []transport.DNSEngine{
+			transport.DNSEngineBIND,
+			transport.DNSEnginePowerDNS,
+		} {
+			t.Run(direction.name+"/"+string(target), func(t *testing.T) {
+				t.Setenv("CELIKPANEL_SERVER_IP", direction.localIP)
+				p := newDNSPanelForTest(t)
+				agent := newDNSEngineTestAgent()
+				attachDNSEngineTestAgent(t, p, agent)
+				seedDNSSetupAuditUser(t, p)
+				stage := httptest.NewRecorder()
+				body := `{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"` +
+					direction.peerIP + `","peer_ns":"` + direction.peerNS + `"}`
+				p.handleDNSSetup(stage, dnsSetupAdminRequest(body))
+				if stage.Code != http.StatusOK {
+					t.Fatalf("stage status=%d body=%s", stage.Code, stage.Body.String())
+				}
+				preview, recorder := requestDNSEnginePreview(t, p, target, nil, 1)
+				if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+					preview.Topology != transport.DNSTopologyPaired {
+					t.Fatalf("preview=%+v status=%d body=%s",
+						preview, recorder.Code, recorder.Body.String())
+				}
+				commit := commitDNSEngineSwitch(
+					t, p,
+					strings.Repeat(
+						string(rune('1'+directionIndex*2+targetIndex)), 32,
+					),
+					target, nil, 1, preview.PreviewToken, false,
+				)
+				if commit.Code != http.StatusOK {
+					t.Fatalf("commit status=%d body=%s", commit.Code, commit.Body.String())
+				}
+				agent.mu.Lock()
+				requests := append(
+					[]transport.SwitchDNSEngineV1Request(nil),
+					agent.switchRequests...,
+				)
+				agent.mu.Unlock()
+				if len(requests) != 1 ||
+					requests[0].TargetEngine != target ||
+					requests[0].Topology != transport.DNSTopologyPaired ||
+					requests[0].PairRole != direction.pairRole ||
+					requests[0].LocalIP != direction.localIP ||
+					requests[0].LocalNS != direction.localNS ||
+					requests[0].PeerIP != direction.peerIP ||
+					requests[0].PeerNS != direction.peerNS {
+					t.Fatalf(
+						"exact staged %s/%s manifest=%+v",
+						direction.name, target, requests,
+					)
+				}
+			})
+		}
+	}
+}
+
+func TestDNSSetupStagesStandaloneIdentityForLegacyPowerDNSAdoption(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, p, agent)
+	seedDNSSetupAuditUser(t, p)
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("legacy stage status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	preview, previewRecorder := requestDNSEnginePreview(
+		t, p, transport.DNSEnginePowerDNS, nil, 1,
+	)
+	if previewRecorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+		preview.Action != "adopt" || preview.Topology != transport.DNSTopologyStandalone {
+		t.Fatalf("legacy adoption preview=%+v status=%d body=%s",
+			preview, previewRecorder.Code, previewRecorder.Body.String())
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	agent.durableMutationRPCFixture.mu.Lock()
+	jobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
+	if switchCalls != 0 || jobs != 0 {
+		t.Fatalf("legacy staging mutated host switch=%d jobs=%d", switchCalls, jobs)
+	}
+}
+
+func TestDNSSetupStagesEmptyLegacyPowerDNSAsPairedSecondary(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.20")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, p, agent)
+
+	seedDNSSetupAuditUser(t, p)
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.10","peer_ns":"ns1.example.net"}`,
+	))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("legacy secondary stage status=%d body=%s",
+			recorder.Code, recorder.Body.String())
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1:       "ns1.example.net",
+		settingNS2:       "ns2.example.net",
+		settingDNSRole:   "paired",
+		settingDNSPeerIP: "192.0.2.10",
+		settingDNSPeerNS: "ns1.example.net",
+	})
+	state, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+		state.Revision != 1 {
+		t.Fatalf("legacy secondary staged state=%+v", state)
+	}
+}
+
+func TestDNSSetupRejectsLegacyPowerDNSPairedPrimaryOrNonemptyLedger(
+	t *testing.T,
+) {
+	for _, test := range []struct {
+		name      string
+		localIP   string
+		body      string
+		seedZones bool
+	}{
+		{
+			name: "primary", localIP: "192.0.2.10",
+			body: `{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.example.net"}`,
+		},
+		{
+			name: "nonempty secondary", localIP: "192.0.2.20",
+			body:      `{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.10","peer_ns":"ns1.example.net"}`,
+			seedZones: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", test.localIP)
+			p := newDNSPanelForTest(t)
+			if test.seedZones {
+				if _, err := p.db.GetDB().Exec(`
+					INSERT INTO dns_zone_sync_state (
+					  zone_name, desired_generation, applied_generation,
+					  desired_action, desired_zone_type, status
+					) VALUES ('existing.example', 1, 1, 'delete', 'NATIVE', 'applied')
+				`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			agent := newDNSEngineTestAgent()
+			pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+			pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+			agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+			attachDNSEngineTestAgent(t, p, agent)
+			recorder := httptest.NewRecorder()
+			p.handleDNSSetup(recorder, dnsSetupAdminRequest(test.body))
+			if recorder.Code != http.StatusConflict ||
+				!strings.Contains(recorder.Body.String(), errCodeDNSEngineWorkflowRequired) {
+				t.Fatalf("unsafe legacy stage status=%d body=%s",
+					recorder.Code, recorder.Body.String())
+			}
+			assertDNSSetupSettings(t, p, map[string]string{
+				settingNS1: "", settingNS2: "", settingDNSRole: "",
+			})
+		})
+	}
+}
+
+func TestDNSSetupStagedIdentityRetryAndEditAreRevisionExact(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, p, agent)
+	body := `{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.example.net"}`
+	seedDNSSetupAuditUser(t, p)
+	for attempt := 0; attempt < 2; attempt++ {
+		recorder := httptest.NewRecorder()
+		p.handleDNSSetup(recorder, dnsSetupAdminRequest(body))
+		if recorder.Code != http.StatusOK ||
+			!strings.Contains(recorder.Body.String(), `"staged":true`) {
+			t.Fatalf("stage attempt %d status=%d body=%s",
+				attempt+1, recorder.Code, recorder.Body.String())
+		}
+	}
+	state, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Revision != 1 {
+		t.Fatalf("exact retry advanced revision to %d", state.Revision)
+	}
+	var audits int
+	if err := p.db.GetDB().QueryRow(`
+		SELECT count(*) FROM audit_logs
+		WHERE action = 'settings.dns_identity_staged:paired runtime=fresh'
+	`).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Fatalf("exact retry audit count=%d, want 1", audits)
+	}
+	edit := httptest.NewRecorder()
+	p.handleDNSSetup(edit, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if edit.Code != http.StatusOK {
+		t.Fatalf("staged edit status=%d body=%s", edit.Code, edit.Body.String())
+	}
+	state, err = readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Revision != 2 {
+		t.Fatalf("staged edit revision=%d, want 2", state.Revision)
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1: "ns3.example.net", settingNS2: "ns4.example.net",
+		settingDNSRole: "standalone", settingDNSPeerIP: "",
+		settingDNSPeerNS: "",
+	})
+}
+
+func TestDNSSetupStagingRechecksDBAndRuntimeUnderLock(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		hook func(*Panel, *dnsEngineTestAgent, int)
+	}{
+		{
+			name: "database revision",
+			hook: func(p *Panel, _ *dnsEngineTestAgent, call int) {
+				if call == 1 {
+					if _, err := p.db.GetDB().Exec(`
+						UPDATE dns_engine_state SET revision = revision + 1
+						WHERE singleton_id = 1
+					`); err != nil {
+						panic(err)
+					}
+				}
+			},
+		},
+		{
+			name: "runtime identity",
+			hook: func(_ *Panel, agent *dnsEngineTestAgent, call int) {
+				if call == 1 {
+					agent.mu.Lock()
+					pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+					pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+					agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+					agent.mu.Unlock()
+				}
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			agent := newDNSEngineTestAgent()
+			agent.onReadiness = func(call int) { test.hook(p, agent, call) }
+			attachDNSEngineTestAgent(t, p, agent)
+			seedDNSSetupAuditUser(t, p)
+			recorder := httptest.NewRecorder()
+			p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+				`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+			))
+			if recorder.Code != http.StatusConflict {
+				t.Fatalf("race status=%d body=%s", recorder.Code, recorder.Body.String())
+			}
+			assertDNSSetupSettings(t, p, map[string]string{
+				settingNS1: "", settingNS2: "", settingDNSRole: "",
+			})
+			agent.mu.Lock()
+			switchCalls := agent.switchCalls
+			agent.mu.Unlock()
+			if switchCalls != 0 {
+				t.Fatalf("race performed %d host switches", switchCalls)
+			}
+		})
+	}
+}
+
+func TestDNSSetupStagingTransactionRollsBackRevisionOnLedgerFailure(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	p := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, p, agent)
+	seedDNSSetupAuditUser(t, p)
+	if _, err := p.db.GetDB().Exec(`
+		CREATE TRIGGER reject_staged_dns_role
+		BEFORE INSERT ON panel_settings
+		WHEN NEW.key = 'dns_role'
+		BEGIN
+		  SELECT RAISE(ABORT, 'injected DNS identity ledger failure');
+		END
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+	))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("failed stage status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), p.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exactUninitializedDNSEngineState(state) {
+		t.Fatalf("failed staging advanced engine revision: %+v", state)
+	}
+	assertDNSSetupSettings(t, p, map[string]string{
+		settingNS1: "", settingNS2: "", settingDNSRole: "",
+	})
+}
+
+func TestDNSSetupStagingRejectsDurableDNSAmbiguity(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		prepare func(*testing.T, *Panel)
+	}{
+		{
+			name: "engine operation marker",
+			prepare: func(t *testing.T, p *Panel) {
+				raw, err := encodeDNSEngineOperationMarker(dnsEngineOperationMarker{
+					Version:      dnsEngineOperationVersion,
+					RequestID:    strings.Repeat("a", 32),
+					SwitchID:     strings.Repeat("b", 32),
+					TargetEngine: transport.DNSEngineBIND,
+					Action:       "install", Phase: dnsEngineOperationAccepted,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := p.setSetting(
+					context.Background(), dnsEngineOperationSetting, raw,
+				); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "topology operation marker",
+			prepare: func(t *testing.T, p *Panel) {
+				if err := p.setSetting(
+					context.Background(), dnsClusterSagaSetting, `{"pending":true}`,
+				); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "pending publication",
+			prepare: func(t *testing.T, p *Panel) {
+				if _, err := p.db.GetDB().Exec(`
+					INSERT INTO dns_zone_sync_state (
+					  zone_name, desired_generation, applied_generation,
+					  desired_action, desired_zone_type, status
+					) VALUES ('pending.example', 1, 0, 'delete', 'NATIVE', 'pending')
+				`); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+			p := newDNSPanelForTest(t)
+			test.prepare(t, p)
+			agent := newDNSEngineTestAgent()
+			attachDNSEngineTestAgent(t, p, agent)
+			seedDNSSetupAuditUser(t, p)
+			recorder := httptest.NewRecorder()
+			p.handleDNSSetup(recorder, dnsSetupAdminRequest(
+				`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"standalone","peer_ip":"","peer_ns":""}`,
+			))
+			if recorder.Code != http.StatusConflict {
+				t.Fatalf("ambiguity status=%d body=%s",
+					recorder.Code, recorder.Body.String())
+			}
+			state, err := readDNSEngineDBState(
+				context.Background(), p.db.GetDB(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !exactUninitializedDNSEngineState(state) {
+				t.Fatalf("ambiguity advanced engine state: %+v", state)
+			}
+			agent.mu.Lock()
+			switchCalls := agent.switchCalls
+			agent.mu.Unlock()
+			if switchCalls != 0 {
+				t.Fatalf("ambiguity performed %d host switches", switchCalls)
+			}
+		})
+	}
+}
+
 func TestDNSSetupRequiresAdminAndPUT(t *testing.T) {
 	p := newDNSPanelForTest(t)
 

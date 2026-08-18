@@ -223,6 +223,7 @@ func (a *serviceOperationTestAgent) Version(
 		transport.AgentCapabilityPanelCertificateIssueV2,
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityMailTLSSyncV2,
 	}
 	if a.versionCapabilities != nil {

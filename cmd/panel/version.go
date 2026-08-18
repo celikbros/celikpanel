@@ -93,6 +93,7 @@ func requireKnownAgentCapabilities(capabilities []string, required ...string) er
 		transport.AgentCapabilityDNSSECSecureV2:          {},
 		transport.AgentCapabilityDNSClusterConfigureV2:   {},
 		transport.AgentCapabilityDNSZoneSyncV3:           {},
+		transport.AgentCapabilityDNSZoneRecoverV1:        {},
 		transport.AgentCapabilityDNSEngineSwitchV1:       {},
 		transport.AgentCapabilityMailTLSSyncV2:           {},
 		transport.AgentCapabilitySystemUpdateV1:          {},
@@ -209,6 +210,7 @@ func (p *Panel) requireDNSZoneSyncV3Agent(ctx context.Context) error {
 	if err := requireKnownAgentCapabilities(
 		agent.Capabilities,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 	); err != nil {
 		return fmt.Errorf(
 			"%w: DNS V3 requires the paired agent capability: %v",
@@ -217,6 +219,9 @@ func (p *Panel) requireDNSZoneSyncV3Agent(ctx context.Context) error {
 	}
 	if err := p.authorizeAgentRPCContext(ctx, "Agent.SyncDNSZoneV3"); err != nil {
 		return fmt.Errorf("authorize DNS V3 host mutation before snapshot preparation: %w", err)
+	}
+	if err := p.authorizeAgentRPCContext(ctx, "Agent.RecoverDNSZoneV3"); err != nil {
+		return fmt.Errorf("authorize DNS V3 recovery before snapshot preparation: %w", err)
 	}
 	return nil
 }
@@ -240,6 +245,7 @@ func (p *Panel) requireDNSEngineSwitchV1Agent(ctx context.Context) error {
 	if err := requireKnownAgentCapabilities(
 		agent.Capabilities,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityDNSEngineSwitchV1,
 	); err != nil {
 		return fmt.Errorf("DNS engine switching requires the paired agent capability: %w", err)

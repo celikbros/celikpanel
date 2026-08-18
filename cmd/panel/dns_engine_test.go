@@ -24,6 +24,8 @@ type dnsEngineTestAgent struct {
 	mu                  sync.Mutex
 	runtimes            map[transport.DNSEngine]transport.DNSBackendRuntimeState
 	port53Conflict      bool
+	readinessCalls      int
+	onReadiness         func(int)
 	dnssec              bool
 	dnssecCalls         int
 	switchCalls         int
@@ -59,6 +61,7 @@ func (agent *dnsEngineTestAgent) Version(
 	}
 	response.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityDNSEngineSwitchV1,
 		transport.AgentCapabilityFirewallApplyV2,
 	}
@@ -185,12 +188,18 @@ func (agent *dnsEngineTestAgent) DNSBackendReadiness(
 	response *transport.DNSBackendReadinessResponse,
 ) error {
 	agent.mu.Lock()
-	defer agent.mu.Unlock()
+	agent.readinessCalls++
+	call := agent.readinessCalls
 	response.Engines = []transport.DNSBackendRuntimeState{
 		agent.runtimes[transport.DNSEnginePowerDNS],
 		agent.runtimes[transport.DNSEngineBIND],
 	}
 	response.Port53Conflict = agent.port53Conflict
+	hook := agent.onReadiness
+	agent.mu.Unlock()
+	if hook != nil {
+		hook(call)
+	}
 	return nil
 }
 
@@ -228,8 +237,11 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	for engine, runtime := range agent.runtimes {
 		if engine == request.TargetEngine {
 			runtime.Installed, runtime.Running, runtime.Managed = true, true, true
+			runtime.PairReady = request.Topology == transport.DNSTopologyPaired &&
+				request.PairRole == transport.DNSPairRolePrimary
 		} else {
 			runtime.Running = false
+			runtime.PairReady = false
 		}
 		agent.runtimes[engine] = runtime
 	}
@@ -401,6 +413,7 @@ func TestDNSEngineFreshInstallPostCommitSyncsFirewallAndCache(t *testing.T) {
 	} {
 		t.Run(string(target), func(t *testing.T) {
 			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, "standalone")
 			agent := newDNSEngineTestAgent()
 			agent.firewallEnabled = true
 			attachDNSEngineTestAgent(t, panel, agent)
@@ -446,6 +459,7 @@ func TestDNSEngineFreshInstallPostCommitSyncsFirewallAndCache(t *testing.T) {
 
 func TestDNSEnginePostCommitNeverEnablesDisabledFirewall(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, _ := requestDNSEnginePreview(
@@ -469,6 +483,7 @@ func TestDNSEnginePostCommitNeverEnablesDisabledFirewall(t *testing.T) {
 
 func TestDNSEngineExistingSourceSwitchRetainsPostCommitBehavior(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.firewallEnabled = true
 	attachDNSEngineTestAgent(t, panel, agent)
@@ -533,6 +548,7 @@ func TestDNSEngineExistingSourceSwitchRetainsPostCommitBehavior(t *testing.T) {
 
 func TestDNSEnginePostCommitFailureIsRetryableWithoutRollbackOrReplay(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.firewallEnabled = true
 	agent.firewallError = "secret nftables stderr /etc/nftables.conf"
@@ -634,6 +650,7 @@ func TestDNSEnginePostCommitFailureIsRetryableWithoutRollbackOrReplay(t *testing
 
 func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.scanError = errors.New("secret service probe /proc/999/fd")
 	attachDNSEngineTestAgent(t, panel, agent)
@@ -677,6 +694,7 @@ func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
 
 func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 
@@ -776,6 +794,43 @@ func TestDNSEngineGETMatchesUIWireContract(t *testing.T) {
 				t.Fatalf("GET engine missing %q: %s", key, payload["engines"])
 			}
 		}
+	}
+}
+
+func TestDNSEngineFirstInstallRequiresStagedDNSIdentity(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK ||
+		!hasDNSEngineBlocker(preview, "dns_identity_required") ||
+		!validServiceOperationID(preview.PreviewToken) {
+		t.Fatalf("identity blocker preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("0", 32), transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusConflict {
+		t.Fatalf("uncached blocked commit status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exactUninitializedDNSEngineState(state) {
+		t.Fatalf("blocked preview changed engine state: %+v", state)
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	if switchCalls != 0 {
+		t.Fatalf("blocked identity preview performed %d host switches", switchCalls)
 	}
 }
 
@@ -893,10 +948,42 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 				state.PeerNS != test.peerNS {
 				t.Fatalf("durable directional state=%+v", state)
 			}
+			snapshot, err := panel.dnsEngineSnapshot(context.Background())
+			if err != nil || snapshot.PairReady == nil ||
+				*snapshot.PairReady != (test.wantRole == transport.DNSPairRolePrimary) {
+				t.Fatalf("paired readiness snapshot=%+v err=%v", snapshot, err)
+			}
 			identity, ready, err := panel.activeDNSPublisher(context.Background())
 			if err != nil || identity.PairRole != test.wantRole ||
 				ready != (test.wantRole == transport.DNSPairRolePrimary) {
 				t.Fatalf("publisher identity=%+v ready=%v err=%v", identity, ready, err)
+			}
+			if test.wantRole == transport.DNSPairRolePrimary {
+				agent.mu.Lock()
+				runtime := agent.runtimes[transport.DNSEngineBIND]
+				runtime.PairReady = false
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+				identity, ready, err = panel.activeDNSPublisher(context.Background())
+				if err != nil || ready || identity.PairRole != transport.DNSPairRolePrimary ||
+					!runtime.Installed || !runtime.Running || !runtime.Managed {
+					t.Fatalf(
+						"unproven primary identity=%+v runtime=%+v ready=%v err=%v",
+						identity, runtime, ready, err,
+					)
+				}
+				snapshot, err = panel.dnsEngineSnapshot(context.Background())
+				if err != nil || snapshot.PairReady == nil || *snapshot.PairReady {
+					t.Fatalf("unproven primary snapshot=%+v err=%v", snapshot, err)
+				}
+				agent.mu.Lock()
+				runtime.PairReady = true
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+				snapshot, err = panel.dnsEngineSnapshot(context.Background())
+				if err != nil || snapshot.PairReady == nil || !*snapshot.PairReady {
+					t.Fatalf("proven primary snapshot=%+v err=%v", snapshot, err)
+				}
 			}
 		})
 	}
@@ -965,10 +1052,152 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 		last.PairRole != transport.DNSPairRolePrimary {
 		t.Fatalf("reverse paired request=%+v", last)
 	}
+	noop := httptest.NewRecorder()
+	panel.handleDNSSetup(noop, dnsSetupAdminRequest(
+		`{"ns1":"ns1.celikhost.com","ns2":"ns2.celikhost.com","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.celikhost.com"}`,
+	))
+	if noop.Code != http.StatusOK {
+		t.Fatalf("exact paired identity retry status=%d body=%s",
+			noop.Code, noop.Body.String())
+	}
+	afterNoop, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterNoop != state {
+		t.Fatalf("exact paired identity retry changed state: before=%+v after=%+v",
+			state, afterNoop)
+	}
+	locked := httptest.NewRecorder()
+	panel.handleDNSSetup(locked, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"192.0.2.30","peer_ns":"ns4.example.net"}`,
+	))
+	if locked.Code != http.StatusConflict {
+		t.Fatalf("paired identity mutation status=%d body=%s",
+			locked.Code, locked.Body.String())
+	}
+	var lockedBody apiErrorBody
+	if err := json.Unmarshal(locked.Body.Bytes(), &lockedBody); err != nil ||
+		lockedBody.Code != errCodeDNSPairIdentityLocked {
+		t.Fatalf("paired identity refusal=%+v err=%v body=%s",
+			lockedBody, err, locked.Body.String())
+	}
+	afterLocked, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterLocked != state {
+		t.Fatalf("paired identity refusal changed state: before=%+v after=%+v",
+			state, afterLocked)
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	if switchCalls != 2 {
+		t.Fatalf("paired identity refusal changed host: switch calls=%d", switchCalls)
+	}
+}
+
+func TestDNSEngineReconfiguresEmptyLegacyPowerDNSAsPairedSecondary(
+	t *testing.T,
+) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.20")
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+	seedDNSSetupAuditUser(t, panel)
+	stage := httptest.NewRecorder()
+	panel.handleDNSSetup(stage, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.10","peer_ns":"ns1.example.net"}`,
+	))
+	if stage.Code != http.StatusOK {
+		t.Fatalf("secondary stage status=%d body=%s",
+			stage.Code, stage.Body.String())
+	}
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 1,
+	)
+	wantImpacts := []string{
+		"validate_target",
+		"replace_existing",
+		"restart_target",
+		"configure_secondary",
+		"brief_dns_interruption",
+	}
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+		preview.Action != "reconfigure" || preview.SourceEngine != nil ||
+		preview.TargetEngine != transport.DNSEnginePowerDNS ||
+		preview.Topology != transport.DNSTopologyPaired ||
+		!preview.RequiresDowntimeAcknowledgement ||
+		preview.EstimatedDowntimeSeconds != 15 ||
+		!slices.Equal(preview.Impacts, wantImpacts) {
+		t.Fatalf("reconfigure preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	withoutAck := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("8", 32),
+		transport.DNSEnginePowerDNS, nil, 1,
+		preview.PreviewToken, false,
+	)
+	if withoutAck.Code != http.StatusBadRequest {
+		t.Fatalf("reconfigure without ack status=%d body=%s",
+			withoutAck.Code, withoutAck.Body.String())
+	}
+	preview, recorder = requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 1,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf("second reconfigure preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("9", 32),
+		transport.DNSEnginePowerDNS, nil, 1,
+		preview.PreviewToken, true,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("reconfigure commit status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	agent.mu.Lock()
+	if len(agent.switchRequests) != 1 {
+		agent.mu.Unlock()
+		t.Fatalf("reconfigure switch requests=%d", len(agent.switchRequests))
+	}
+	request := agent.switchRequests[0]
+	agent.mu.Unlock()
+	if request.Mode != transport.DNSEngineSwitchModeSwitch ||
+		request.SourceEngine != "" ||
+		request.TargetEngine != transport.DNSEnginePowerDNS ||
+		request.Topology != transport.DNSTopologyPaired ||
+		request.PairRole != transport.DNSPairRoleSecondary ||
+		request.LocalIP != "192.0.2.20" ||
+		request.LocalNS != "ns2.example.net" ||
+		request.PeerIP != "192.0.2.10" ||
+		request.PeerNS != "ns1.example.net" ||
+		len(request.Zones) != 0 {
+		t.Fatalf("reconfigure request=%+v", request)
+	}
+	state, err := readDNSEngineDBState(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
+		state.Topology != transport.DNSTopologyPaired ||
+		state.PairRole != transport.DNSPairRoleSecondary ||
+		state.EngineEpoch != 1 {
+		t.Fatalf("reconfigured durable state=%+v", state)
+	}
 }
 
 func TestDNSEngineStalePreviewCannotStartMutation(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(
@@ -1350,6 +1579,7 @@ func TestDNSEngineUnmanagedBINDCannotBeAdopted(t *testing.T) {
 
 func TestDNSEngineActiveSourceCannotRegistrationAdoptUnmanagedStandby(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	first, recorder := requestDNSEnginePreview(
@@ -1395,6 +1625,7 @@ func TestDNSEngineActiveSourceCannotRegistrationAdoptUnmanagedStandby(t *testing
 
 func TestActiveDNSPublisherBindsEpochAndFailsClosed(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(
@@ -1443,6 +1674,7 @@ func TestActiveDNSPublisherBindsEpochAndFailsClosed(t *testing.T) {
 
 func TestDNSEngineBrowserCancellationDoesNotStrandSwitch(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(

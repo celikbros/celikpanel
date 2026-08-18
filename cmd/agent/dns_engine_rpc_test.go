@@ -288,6 +288,70 @@ func TestDNSEngineStateRejectsAdoptedBIND(t *testing.T) {
 	}
 }
 
+func TestDNSEngineStateBindsPrimaryCatalogSerialToPairRole(t *testing.T) {
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
+		Engine: transport.DNSEnginePowerDNS, EngineEpoch: 3,
+		SourceRevision:    2,
+		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("a", 64),
+		MutationRequestID: strings.Repeat("b", 32),
+		MutationOwnerID:   strings.Repeat("c", 32),
+	}
+	state.PairRole = transport.DNSPairRolePrimary
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired primary state accepted a missing address tuple")
+	}
+	state.PairLocalIP = "192.0.2.10"
+	state.PairPeerIP = "192.0.2.20"
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired primary state accepted a missing catalog serial")
+	}
+	state.PrimaryCatalogSerial = 41
+	if err := validateDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	state.PairRole = transport.DNSPairRoleSecondary
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired secondary state accepted a primary catalog serial")
+	}
+	state.PairRole = ""
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("standalone state accepted directional pair identity")
+	}
+	state.PrimaryCatalogSerial = 0
+	state.PairLocalIP = ""
+	state.PairPeerIP = ""
+	if err := validateDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	state.PairLocalIP = "192.0.2.10"
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("standalone state accepted a partial pair address tuple")
+	}
+	state.PairRole = transport.DNSPairRoleSecondary
+	state.PairPeerIP = "192.0.2.10"
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired state accepted identical local and peer addresses")
+	}
+	state.PairLocalIP = "192.0.2.010"
+	state.PairPeerIP = "192.0.2.20"
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired state accepted a noncanonical local address")
+	}
+	state.PairLocalIP = "127.0.0.1"
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired state accepted a non-global local address")
+	}
+	state.Mode = transport.DNSEngineSwitchModeAdopt
+	state.PairRole = transport.DNSPairRolePrimary
+	state.PairLocalIP = "192.0.2.10"
+	state.PairPeerIP = "192.0.2.20"
+	state.PrimaryCatalogSerial = 41
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("legacy adoption state claimed directional primary catalog authority")
+	}
+}
+
 func TestVerifyBINDPublicListenersRequiresNamedTCPAndUDP(t *testing.T) {
 	valid := strings.Join([]string{
 		`udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:(("named",pid=10,fd=1))`,

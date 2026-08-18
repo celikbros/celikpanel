@@ -110,7 +110,7 @@ func (a *Agent) SyncDNSZoneV2(req *SyncDNSZoneV2Request, resp *SyncDNSZoneV2Resp
 		return nil
 	}
 	defer finishStep()
-	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+	if err := legacyPowerDNSMutationAuthorityCheck(false); err != nil {
 		log.Printf("legacy PowerDNS zone publication blocked by durable DNS engine authority: %v", err)
 		resp.Error = "DNS zone publication is blocked because PowerDNS is not the active DNS engine"
 		return nil

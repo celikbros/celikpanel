@@ -935,6 +935,163 @@ func TestBINDPairedMigrationParticipatesInReferenceSchema(t *testing.T) {
 	}
 }
 
+func TestDNSPairIdentityMigration037UpgradesReleasedAlpha27Schema(t *testing.T) {
+	database := newDatabaseAtMigrationVersion(t, 27)
+	if err := database.RunMigrations(); err != nil {
+		t.Fatalf("upgrade released alpha.27 schema: %v", err)
+	}
+
+	var version int
+	if err := database.db.QueryRow(
+		`SELECT max(version) FROM schema_migrations`,
+	).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if version != 37 {
+		t.Fatalf("upgraded schema version=%d, want 37", version)
+	}
+
+	for _, trigger := range []string{
+		"dns_bind_pair_switch_preserve_active_identity",
+		"dns_bind_pair_state_identity_immutable",
+	} {
+		var count int
+		if err := database.db.QueryRow(`
+			SELECT count(*) FROM sqlite_schema
+			WHERE type = 'trigger' AND name = ?`, trigger,
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("upgraded schema trigger %s count=%d, want 1", trigger, count)
+		}
+	}
+	assertForeignKeyCheckClean(t, database.db)
+}
+
+func TestDNSPairIdentityMigration037ParticipatesInReferenceSchema(t *testing.T) {
+	objects, err := ReferenceSQLiteUserSchema(context.Background(), 37)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{
+		"trigger/dns_bind_pair_switch_preserve_active_identity": false,
+		"trigger/dns_bind_pair_state_identity_immutable":        false,
+	}
+	for _, object := range objects {
+		key := object.Type + "/" + object.Name
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("reference schema is missing %s", key)
+		}
+	}
+}
+
+func TestDNSPairIdentityMigration037RejectsPreUpgradeChangedSwitch(t *testing.T) {
+	database := newDatabaseAtMigrationVersion(t, 36)
+	raw := database.db
+	advance := func(id string) {
+		t.Helper()
+		for _, phase := range []string{"staging", "staged", "activating", "verifying", "committed"} {
+			if _, err := raw.Exec(
+				`UPDATE dns_engine_switch_snapshots SET phase=? WHERE switch_id=?`,
+				phase, id,
+			); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	first := strings.Repeat("1", 32)
+	if err := insertDNSEngineSnapshotForTest(
+		raw, first, strings.Repeat("2", 32), strings.Repeat("3", 32),
+		"switch", nil, "bind", 0, 1, 0, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`
+		INSERT INTO dns_bind_pair_switches
+		(switch_id,pair_role,local_ip,local_ns,peer_ip,peer_ns)
+		VALUES(?, 'primary', '192.0.2.10', 'ns1.example.test',
+		       '192.0.2.20', 'ns2.example.test')`, first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(
+		`UPDATE dns_engine_state SET current_switch_id=?,revision=1 WHERE singleton_id=1`,
+		first,
+	); err != nil {
+		t.Fatal(err)
+	}
+	advance(first)
+	if _, err := raw.Exec(`
+		INSERT INTO dns_bind_pair_state
+		(singleton_id,active_epoch,pair_role,local_ip,local_ns,peer_ip,peer_ns,source_switch_id)
+		VALUES(1,1,'primary','192.0.2.10','ns1.example.test',
+		       '192.0.2.20','ns2.example.test',?)`, first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`
+		UPDATE dns_engine_state
+		SET active_engine='bind',active_epoch=1,current_switch_id=NULL,revision=2
+		WHERE singleton_id=1`); err != nil {
+		t.Fatal(err)
+	}
+
+	second := strings.Repeat("4", 32)
+	source := "bind"
+	if err := insertDNSEngineSnapshotForTest(
+		raw, second, strings.Repeat("5", 32), strings.Repeat("6", 32),
+		"switch", &source, "pdns", 1, 2, 2, "standalone",
+	); err != nil {
+		t.Fatal(err)
+	}
+	// Migration 036 allowed this conflicting planned receipt. Migration 037
+	// must also protect a host that upgrades while such a switch is attached.
+	if _, err := raw.Exec(`
+		INSERT INTO dns_bind_pair_switches
+		(switch_id,pair_role,local_ip,local_ns,peer_ip,peer_ns)
+		VALUES(?, 'secondary', '192.0.2.20', 'ns2.example.test',
+		       '192.0.2.10', 'ns1.example.test')`, second); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(
+		`UPDATE dns_engine_state SET current_switch_id=?,revision=3 WHERE singleton_id=1`,
+		second,
+	); err != nil {
+		t.Fatal(err)
+	}
+	advance(second)
+
+	if err := database.RunMigrations(); err != nil {
+		t.Fatalf("apply migration 037 over attached switch: %v", err)
+	}
+	requireDNSEngineSQLFailure(t, raw, "pre-upgrade changed pair finalization", `
+		UPDATE dns_bind_pair_state
+		SET active_epoch=2,pair_role='secondary',
+		    local_ip='192.0.2.20',local_ns='ns2.example.test',
+		    peer_ip='192.0.2.10',peer_ns='ns1.example.test',
+		    source_switch_id=?
+		WHERE singleton_id=1`, second)
+
+	var epoch int64
+	var role, sourceSwitch string
+	if err := raw.QueryRow(`
+		SELECT active_epoch,pair_role,source_switch_id
+		FROM dns_bind_pair_state WHERE singleton_id=1`,
+	).Scan(&epoch, &role, &sourceSwitch); err != nil {
+		t.Fatal(err)
+	}
+	if epoch != 1 || role != "primary" || sourceSwitch != first {
+		t.Fatalf("pair identity changed after rejected upgrade finalization: %d/%s/%s",
+			epoch, role, sourceSwitch)
+	}
+	assertForeignKeyCheckClean(t, raw)
+}
+
 func TestPairedMigrationAllowsEngineChangeWithoutLosingIdentity(t *testing.T) {
 	database := newDNSZoneSyncMigrationDB(t)
 	first := strings.Repeat("a", 32)
@@ -983,6 +1140,42 @@ func TestPairedMigrationAllowsEngineChangeWithoutLosingIdentity(t *testing.T) {
 		"switch", &source, "pdns", 1, 2, 2, "standalone",
 	); err != nil {
 		t.Fatal(err)
+	}
+	for _, changed := range []struct {
+		name                   string
+		role, localIP, localNS string
+		peerIP, peerNS         string
+	}{
+		{
+			name: "role", role: "secondary", localIP: "192.0.2.10",
+			localNS: "ns1.example.test", peerIP: "192.0.2.20", peerNS: "ns2.example.test",
+		},
+		{
+			name: "local IP", role: "primary", localIP: "192.0.2.11",
+			localNS: "ns1.example.test", peerIP: "192.0.2.20", peerNS: "ns2.example.test",
+		},
+		{
+			name: "local NS", role: "primary", localIP: "192.0.2.10",
+			localNS: "ns3.example.test", peerIP: "192.0.2.20", peerNS: "ns2.example.test",
+		},
+		{
+			name: "peer IP", role: "primary", localIP: "192.0.2.10",
+			localNS: "ns1.example.test", peerIP: "192.0.2.21", peerNS: "ns2.example.test",
+		},
+		{
+			name: "peer NS", role: "primary", localIP: "192.0.2.10",
+			localNS: "ns1.example.test", peerIP: "192.0.2.20", peerNS: "ns3.example.test",
+		},
+	} {
+		t.Run("reject changed "+changed.name, func(t *testing.T) {
+			requireDNSEngineSQLFailure(t, database, changed.name, `
+				INSERT INTO dns_bind_pair_switches
+				(switch_id,pair_role,local_ip,local_ns,peer_ip,peer_ns)
+				VALUES(?, ?, ?, ?, ?, ?)`,
+				second, changed.role, changed.localIP, changed.localNS,
+				changed.peerIP, changed.peerNS,
+			)
+		})
 	}
 	insertPair(second)
 	if _, err := database.Exec(`UPDATE dns_engine_state SET current_switch_id=?,revision=3 WHERE singleton_id=1`, second); err != nil {

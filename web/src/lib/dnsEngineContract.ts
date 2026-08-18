@@ -39,6 +39,7 @@ export interface DNSEngineSnapshot {
     state: DNSEngineState;
     topology: DNSTopology;
     pair_role?: DNSPairRole;
+    pair_ready?: boolean;
     dnssec_zone_count: number;
     zone_count: number;
     pending_zone_count: number;
@@ -46,7 +47,7 @@ export interface DNSEngineSnapshot {
     engines: DNSEngineEntry[];
 }
 
-export type DNSEnginePreviewAction = 'install' | 'switch' | 'adopt';
+export type DNSEnginePreviewAction = 'install' | 'switch' | 'adopt' | 'reconfigure';
 
 export interface DNSEnginePreviewBlocker {
     code: string;
@@ -72,7 +73,7 @@ const engineIDs = new Set<string>(DNS_ENGINE_IDS);
 const engineStates = new Set<string>(DNS_ENGINE_STATES);
 const engineStatuses = new Set<string>(DNS_ENGINE_STATUSES);
 const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
-const previewActions = new Set<string>(['install', 'switch', 'adopt']);
+const previewActions = new Set<string>(['install', 'switch', 'adopt', 'reconfigure']);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
 const dnsEngineEstimatedDowntimeSeconds = 15;
@@ -135,6 +136,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || !isTopology(value.topology)
         || (value.pair_role !== undefined
             && value.pair_role !== 'primary' && value.pair_role !== 'secondary')
+        || (value.pair_ready !== undefined && typeof value.pair_ready !== 'boolean')
         || !isNonNegativeInteger(value.dnssec_zone_count)
         || !isNonNegativeInteger(value.zone_count)
         || !isNonNegativeInteger(value.pending_zone_count)
@@ -168,10 +170,18 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (value.state === 'ready' && value.active_engine === null) return null;
     if (value.state === 'switching' && typeof value.operation_id !== 'string') return null;
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
-    if (value.active_engine === 'bind' && value.topology === 'paired'
+    const stagedPair = value.active_engine === null && value.topology === 'paired';
+    const activePair = value.active_engine !== null && value.topology === 'paired';
+    if (stagedPair
+        && ((value.pair_role !== 'primary' && value.pair_role !== 'secondary')
+            || value.pair_ready !== undefined)) return null;
+    if (value.active_engine === 'bind' && activePair
         && value.pair_role !== 'primary' && value.pair_role !== 'secondary') return null;
-    if ((value.active_engine === null || value.topology !== 'paired')
-        && value.pair_role !== undefined) return null;
+    if (activePair && typeof value.pair_ready !== 'boolean') return null;
+    if (!stagedPair && !activePair
+        && (value.pair_role !== undefined || value.pair_ready !== undefined)) return null;
+    if (value.pair_ready === true && value.pair_role !== 'primary') return null;
+    if (activePair && value.pair_role === 'secondary' && value.pair_ready !== false) return null;
 
     return {
         revision: value.revision,
@@ -182,6 +192,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         ...(value.pair_role === 'primary' || value.pair_role === 'secondary'
             ? { pair_role: value.pair_role }
             : {}),
+        ...(typeof value.pair_ready === 'boolean' ? { pair_ready: value.pair_ready } : {}),
         dnssec_zone_count: value.dnssec_zone_count,
         zone_count: value.zone_count,
         pending_zone_count: value.pending_zone_count,
@@ -206,6 +217,8 @@ export function decodeDNSEngineSwitchPreview(
     target: DNSEngineID,
     revision: number,
 ): DNSEngineSwitchPreview | null {
+    const reconfigure = isRecord(value) && value.action === 'reconfigure';
+    const requiresInterruption = source !== null || reconfigure;
     if (!isRecord(value)
         || typeof value.preview_token !== 'string'
         || !operationIDPattern.test(value.preview_token)
@@ -223,8 +236,9 @@ export function decodeDNSEngineSwitchPreview(
         || !isNonNegativeInteger(value.estimated_downtime_seconds)
         || value.estimated_downtime_seconds > 86400
         || typeof value.requires_downtime_acknowledgement !== 'boolean'
-        || value.requires_downtime_acknowledgement !== (source !== null)
-        || value.estimated_downtime_seconds !== (source !== null
+        || (reconfigure && (source !== null || target !== 'pdns'))
+        || value.requires_downtime_acknowledgement !== requiresInterruption
+        || value.estimated_downtime_seconds !== (requiresInterruption
             ? dnsEngineEstimatedDowntimeSeconds
             : 0)
         || !Array.isArray(value.blockers)

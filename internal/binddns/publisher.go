@@ -494,7 +494,34 @@ func (publisher *Publisher) activateLocked(generationID string) error {
 		return fmt.Errorf("activate BIND generation pointer: %w", err)
 	}
 	cleanup = false
-	return publisher.fs.Sync(publisher.root)
+	if err := publisher.fs.Sync(publisher.root); err != nil {
+		// RenameReplace is atomic and may have become visible before the parent
+		// directory fsync reported an error. Do not abandon the transaction with
+		// a target pointer and an old daemon/state. Accept only an exact,
+		// root-owned pointer readback whose immutable generation still verifies;
+		// every absent, changed, or ambiguous readback remains an error.
+		current, exists, readErr := publisher.currentLocked()
+		if readErr != nil || !exists || current != generationID {
+			if readErr == nil {
+				readErr = errors.New("BIND activation pointer did not read back exactly")
+			}
+			return errors.Join(err, readErr)
+		}
+		if _, _, _, verifyErr := publisher.readGeneration(
+			path.Join(publisher.root, "generations", generationID), generationID,
+		); verifyErr != nil {
+			return errors.Join(err, fmt.Errorf(
+				"verify BIND generation after ambiguous pointer activation: %w", verifyErr,
+			))
+		}
+		if retryErr := publisher.fs.Sync(publisher.root); retryErr != nil {
+			return errors.Join(
+				err,
+				fmt.Errorf("retry BIND activation pointer durability barrier: %w", retryErr),
+			)
+		}
+	}
+	return nil
 }
 
 func (publisher *Publisher) currentLocked() (string, bool, error) {
@@ -548,7 +575,39 @@ func (publisher *Publisher) Switch(
 	}
 	publisher.mu.Unlock()
 	if err != nil {
-		return err
+		activationErr := err
+		recoveryCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx), switchRecoveryTimeout,
+		)
+		defer cancel()
+		pointerErr := error(nil)
+		publisher.mu.Lock()
+		current, exists, currentErr := publisher.currentLocked()
+		switch {
+		case currentErr != nil:
+			pointerErr = currentErr
+		case hadPrevious && exists && current == previous:
+			// Activation failed before the pointer changed, or its exact prior
+			// pointer was already durably restored. The daemon was never applied.
+		case !hadPrevious && !exists:
+			// Exact empty prior state; the daemon was never applied.
+		case exists && current == generationID:
+			pointerErr = publisher.restoreSwitchPointerLocked(
+				generationID, previous, hadPrevious,
+			)
+		default:
+			pointerErr = errors.New("BIND activation failure left an ambiguous current pointer")
+		}
+		publisher.mu.Unlock()
+		if pointerErr == nil {
+			return activationErr
+		}
+		emptyErr := recoverEmpty(recoveryCtx)
+		return errors.Join(
+			activationErr,
+			fmt.Errorf("restore BIND pointer after activation durability failure: %w", pointerErr),
+			wrapOptionalError("stop or empty BIND after activation pointer ambiguity", emptyErr),
+		)
 	}
 	if err := apply(ctx); err == nil {
 		return nil

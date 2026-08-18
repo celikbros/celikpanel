@@ -196,6 +196,19 @@ func (p *Panel) syncZoneToDNSLocked(ctx context.Context, domain string, deleted 
 	if err != nil {
 		return fmt.Errorf("canonicalize DNS zone: %w", err)
 	}
+	if lease, leaseErr := readDNSZoneEngineLease(
+		ctx, p.db.GetDB(), canonicalDomain,
+	); leaseErr == nil {
+		done, reconcileErr := p.reconcileDNSZoneEngineLease(ctx, lease, false)
+		if reconcileErr != nil {
+			return reconcileErr
+		}
+		if done {
+			return nil
+		}
+	} else if !errors.Is(leaseErr, sql.ErrNoRows) {
+		return fmt.Errorf("read existing DNS V3 publication lease: %w", leaseErr)
+	}
 	publisher, ready, err := p.activeDNSPublisher(ctx)
 	if err != nil {
 		return &dnsAgentPublicationError{Err: fmt.Errorf("verify active DNS publisher: %w", err)}
@@ -1107,6 +1120,7 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 	// Reconcile every exact durable lease before consulting host readiness.
 	// A committed/crashed child is authority and must never be hidden by a
 	// currently missing PowerDNS binary or a permanent platform denial.
+	deferredV3 := make(map[string]dnsZoneEngineLease)
 	for _, zone := range zones {
 		state, err := readDNSZoneSyncState(ctx, p.db.GetDB(), zone)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1128,6 +1142,14 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 		if leaseErr == nil {
 			done, err := p.reconcileDNSZoneEngineLease(ctx, engineLease, true)
 			if err != nil {
+				if errors.Is(err, errDNSZoneV3PropagationDeferred) {
+					deferredV3[zone] = engineLease
+					log.Printf(
+						"deferring exact DNS V3 publication %s until paired propagation is ready: %v",
+						zone, err,
+					)
+					continue
+				}
 				return fmt.Errorf("reconcile DNS V3 publication %s: %w", zone, err)
 			}
 			if done {
@@ -1153,7 +1175,66 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 				zone,
 			)
 		}
-		if _, leaseErr := readDNSZoneEngineLease(ctx, p.db.GetDB(), zone); leaseErr == nil {
+		if currentLease, leaseErr := readDNSZoneEngineLease(ctx, p.db.GetDB(), zone); leaseErr == nil {
+			if deferredLease, deferred := deferredV3[zone]; deferred {
+				if currentLease != deferredLease {
+					return errors.New(
+						"deferred DNS V3 publication lease identity changed during startup",
+					)
+				}
+				job, statusErr := p.statusAgentMutation(ctx, deferredLease.RequestID)
+				if statusErr != nil {
+					return fmt.Errorf(
+						"revalidate deferred DNS V3 publication %s: %w",
+						zone, statusErr,
+					)
+				}
+				identity := deferredLease.identity()
+				switch {
+				case job != nil && job.Status == agentMutationPending:
+					if err := validateDNSZoneSyncV3PendingJob(job, identity); err != nil {
+						return err
+					}
+				case job != nil && agentMutationActive(job.Status):
+					if err := validateDNSZoneSyncV3RecoveringJob(job, identity); err != nil {
+						return err
+					}
+				case job != nil && job.Status == agentMutationSucceeded:
+					if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+						return err
+					}
+					caughtUp, finalizeErr := p.recordDNSZoneSyncV3Success(
+						ctx, deferredLease,
+					)
+					if finalizeErr != nil {
+						return fmt.Errorf(
+							"finalize deferred DNS V3 publication %s: %w",
+							zone, finalizeErr,
+						)
+					}
+					if !caughtUp {
+						latest, reloadErr := readDNSZoneSyncState(
+							ctx, p.db.GetDB(), zone,
+						)
+						if reloadErr != nil {
+							return fmt.Errorf(
+								"reload advanced DNS publication %s: %w",
+								zone, reloadErr,
+							)
+						}
+						if latest.Status == "pending" || latest.Status == "error" {
+							pending = append(pending, latest)
+						}
+					}
+					delete(deferredV3, zone)
+					continue
+				default:
+					return errors.New(
+						"deferred DNS V3 agent receipt changed during startup",
+					)
+				}
+				continue
+			}
 			return fmt.Errorf(
 				"DNS V3 publication %s retained a lease after exact reconciliation",
 				zone,
@@ -1164,6 +1245,13 @@ func (p *Panel) recoverDNSZoneSyncStateAlreadyLocked(ctx context.Context) error 
 		if state.Status == "pending" || state.Status == "error" {
 			pending = append(pending, state)
 		}
+	}
+	if len(deferredV3) > 0 {
+		log.Printf(
+			"deferring %d fresh DNS publication(s) behind %d exact V3 recovery lease(s)",
+			len(pending), len(deferredV3),
+		)
+		return nil
 	}
 	if len(pending) == 0 {
 		return nil

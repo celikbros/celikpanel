@@ -1248,6 +1248,12 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncLocked(
 		}
 		return true, errors.Join(writeErr, lock.Close())
 	}
+	if err := legacyPowerDNSMutationAuthorityCheck(false); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(
+			errors.New("persisted DNS zone mutation is blocked by the durable DNS engine authority"),
+		)
+	}
 	verifyCtx, verifyCancel := context.WithTimeout(
 		context.Background(), 10*time.Second,
 	)

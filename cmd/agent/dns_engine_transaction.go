@@ -56,38 +56,39 @@ type dnsUnitSnapshot struct {
 }
 
 type dnsEngineSwitchJournal struct {
-	Schema             string                                  `json:"schema"`
-	Phase              string                                  `json:"phase"`
-	Mode               string                                  `json:"mode"`
-	MutationRequestID  string                                  `json:"mutation_request_id"`
-	MutationOwnerID    string                                  `json:"mutation_owner_id"`
-	ManifestQualifier  string                                  `json:"manifest_qualifier"`
-	SourceEngine       transport.DNSEngine                     `json:"source_engine,omitempty"`
-	TargetEngine       transport.DNSEngine                     `json:"target_engine"`
-	SourceEpoch        int64                                   `json:"source_epoch"`
-	TargetEpoch        int64                                   `json:"target_epoch"`
-	SourceRevision     int64                                   `json:"source_revision"`
-	Topology           string                                  `json:"topology"`
-	PairRole           string                                  `json:"pair_role,omitempty"`
-	LocalIP            string                                  `json:"local_ip,omitempty"`
-	LocalNS            string                                  `json:"local_ns,omitempty"`
-	PeerIP             string                                  `json:"peer_ip,omitempty"`
-	PeerNS             string                                  `json:"peer_ns,omitempty"`
-	SnapshotBytes      int64                                   `json:"snapshot_bytes"`
-	Zones              []transport.DNSEngineSwitchZoneSnapshot `json:"zones"`
-	TargetGeneration   string                                  `json:"target_generation,omitempty"`
-	PreviousGeneration string                                  `json:"previous_generation,omitempty"`
-	HadPrevious        bool                                    `json:"had_previous_generation"`
-	StateBefore        dnsFileSnapshot                         `json:"state_before"`
-	ConfigBefore       []dnsFileSnapshot                       `json:"config_before"`
-	TargetUnitsBefore  []dnsUnitSnapshot                       `json:"target_units_before"`
-	SourceUnitsBefore  []dnsUnitSnapshot                       `json:"source_units_before"`
-	PDNSCandidatePath  string                                  `json:"pdns_candidate_path,omitempty"`
-	PDNSBackupPath     string                                  `json:"pdns_backup_path,omitempty"`
-	PDNSBackupSHA256   string                                  `json:"pdns_backup_sha256,omitempty"`
-	PDNSBackupSize     int64                                   `json:"pdns_backup_size,omitempty"`
-	PDNSLiveSHA256     string                                  `json:"pdns_live_sha256,omitempty"`
-	PDNSLiveSize       int64                                   `json:"pdns_live_size,omitempty"`
+	Schema               string                                  `json:"schema"`
+	Phase                string                                  `json:"phase"`
+	Mode                 string                                  `json:"mode"`
+	MutationRequestID    string                                  `json:"mutation_request_id"`
+	MutationOwnerID      string                                  `json:"mutation_owner_id"`
+	ManifestQualifier    string                                  `json:"manifest_qualifier"`
+	SourceEngine         transport.DNSEngine                     `json:"source_engine,omitempty"`
+	TargetEngine         transport.DNSEngine                     `json:"target_engine"`
+	SourceEpoch          int64                                   `json:"source_epoch"`
+	TargetEpoch          int64                                   `json:"target_epoch"`
+	SourceRevision       int64                                   `json:"source_revision"`
+	Topology             string                                  `json:"topology"`
+	PairRole             string                                  `json:"pair_role,omitempty"`
+	LocalIP              string                                  `json:"local_ip,omitempty"`
+	LocalNS              string                                  `json:"local_ns,omitempty"`
+	PeerIP               string                                  `json:"peer_ip,omitempty"`
+	PeerNS               string                                  `json:"peer_ns,omitempty"`
+	PrimaryCatalogSerial uint32                                  `json:"primary_catalog_serial,omitempty"`
+	SnapshotBytes        int64                                   `json:"snapshot_bytes"`
+	Zones                []transport.DNSEngineSwitchZoneSnapshot `json:"zones"`
+	TargetGeneration     string                                  `json:"target_generation,omitempty"`
+	PreviousGeneration   string                                  `json:"previous_generation,omitempty"`
+	HadPrevious          bool                                    `json:"had_previous_generation"`
+	StateBefore          dnsFileSnapshot                         `json:"state_before"`
+	ConfigBefore         []dnsFileSnapshot                       `json:"config_before"`
+	TargetUnitsBefore    []dnsUnitSnapshot                       `json:"target_units_before"`
+	SourceUnitsBefore    []dnsUnitSnapshot                       `json:"source_units_before"`
+	PDNSCandidatePath    string                                  `json:"pdns_candidate_path,omitempty"`
+	PDNSBackupPath       string                                  `json:"pdns_backup_path,omitempty"`
+	PDNSBackupSHA256     string                                  `json:"pdns_backup_sha256,omitempty"`
+	PDNSBackupSize       int64                                   `json:"pdns_backup_size,omitempty"`
+	PDNSLiveSHA256       string                                  `json:"pdns_live_sha256,omitempty"`
+	PDNSLiveSize         int64                                   `json:"pdns_live_size,omitempty"`
 }
 
 func dnsEngineSwitchJournalPath() string {
@@ -192,6 +193,9 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		!reflect.DeepEqual(commitment.Zones, journal.Zones) {
 		return errors.New("DNS engine switch journal manifest is not canonical")
 	}
+	if err := validatePrimaryCatalogSerialContract(commitment, journal.PrimaryCatalogSerial); err != nil {
+		return err
+	}
 	if err := validateDNSFileSnapshot(journal.StateBefore); err != nil {
 		return err
 	}
@@ -199,8 +203,29 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		(journal.StateBefore.Exists && journal.StateBefore.Mode != 0o600) {
 		return errors.New("DNS engine switch journal state snapshot path is invalid")
 	}
-	if _, _, err := sourceStateFromDNSSwitchJournal(journal); err != nil {
+	sourceState, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
+	if err != nil {
 		return err
+	}
+	if requiresPrimaryCatalogSerial(commitment) {
+		if journal.SourceEngine == "" {
+			if sourceExists || journal.PrimaryCatalogSerial != 1 {
+				return errors.New("initial primary catalog journal is not fresh")
+			}
+		} else {
+			legacySource := sourceExists &&
+				sourceState.Mode == transport.DNSEngineSwitchModeSwitch &&
+				sourceState.PairRole == "" &&
+				sourceState.PrimaryCatalogSerial == 0
+			boundSource := sourceExists &&
+				sourceState.Mode == transport.DNSEngineSwitchModeSwitch &&
+				sourceState.PairRole == transport.DNSPairRolePrimary &&
+				sourceState.PrimaryCatalogSerial != 0 &&
+				sourceState.PrimaryCatalogSerial <= journal.PrimaryCatalogSerial
+			if !legacySource && !boundSource {
+				return errors.New("primary catalog journal differs from its source receipt")
+			}
+		}
 	}
 	for _, snapshots := range [][]dnsFileSnapshot{journal.ConfigBefore} {
 		previous := ""

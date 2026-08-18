@@ -184,11 +184,36 @@ func appendPrimaryZoneConfig(
 	domain, absoluteFile string,
 	pairing Pairing,
 ) {
+	appendPrimaryZoneConfigWithTransferPolicy(
+		config, domain, absoluteFile, pairing, false,
+	)
+}
+
+func appendLegacyPrimaryZoneConfig(
+	config *strings.Builder,
+	domain, absoluteFile string,
+	pairing Pairing,
+) {
+	appendPrimaryZoneConfigWithTransferPolicy(
+		config, domain, absoluteFile, pairing, true,
+	)
+}
+
+func appendPrimaryZoneConfigWithTransferPolicy(
+	config *strings.Builder,
+	domain, absoluteFile string,
+	pairing Pairing,
+	legacyPeerOnly bool,
+) {
 	config.WriteString("zone \"")
 	config.WriteString(domain)
 	config.WriteString("\" {\n\ttype master;\n\tfile \"")
 	config.WriteString(absoluteFile)
 	config.WriteString("\";\n\tallow-transfer { ")
+	if !legacyPeerOnly {
+		config.WriteString(pairing.LocalIP)
+		config.WriteString(`; `)
+	}
 	config.WriteString(pairing.PeerIP)
 	config.WriteString("; };\n\talso-notify { ")
 	config.WriteString(pairing.PeerIP)
@@ -200,8 +225,33 @@ func appendPrimaryCatalogConfig(
 	root, generationID string,
 	pairing Pairing,
 ) {
+	appendPrimaryCatalogConfigWithTransferPolicy(
+		config, root, generationID, pairing, false,
+	)
+}
+
+func appendLegacyPrimaryCatalogConfig(
+	config *strings.Builder,
+	root, generationID string,
+	pairing Pairing,
+) {
+	appendPrimaryCatalogConfigWithTransferPolicy(
+		config, root, generationID, pairing, true,
+	)
+}
+
+func appendPrimaryCatalogConfigWithTransferPolicy(
+	config *strings.Builder,
+	root, generationID string,
+	pairing Pairing,
+	legacyPeerOnly bool,
+) {
 	domain := catalogDomain(pairing.LocalIP)
 	file := path.Join(root, "generations", generationID, "zones", zoneFileName(domain))
+	if legacyPeerOnly {
+		appendLegacyPrimaryZoneConfig(config, domain, file, pairing)
+		return
+	}
 	appendPrimaryZoneConfig(config, domain, file, pairing)
 }
 

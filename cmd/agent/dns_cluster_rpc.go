@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -300,7 +301,7 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 			return false, "", fmt.Errorf("read PowerDNS include %s: %w", name, err)
 		}
 		if name == clusterBase {
-			if !validDNSClusterPowerDNSConfig(string(other)) {
+			if !validManagedDNSClusterPowerDNSConfig(string(other)) {
 				return false, "", errors.New("PowerDNS cluster configuration is malformed or ambiguous")
 			}
 			continue
@@ -411,6 +412,80 @@ func validDNSClusterPowerDNSConfig(config string) bool {
 	return seen["allow-axfr-ips"] == peer && seen["also-notify"] == peer
 }
 
+type managedDNSClusterPowerDNSConfig struct {
+	AllowAXFRIPs []string
+	NotifyIP     string
+}
+
+func parseManagedDNSClusterPowerDNSConfig(
+	config string,
+) (managedDNSClusterPowerDNSConfig, bool) {
+	want := map[string]string{
+		`primary`: `yes`, `secondary`: `yes`, `autosecondary`: `yes`,
+		`allow-axfr-ips`: ``,
+	}
+	seen := make(map[string]string, len(want)+1)
+	for _, raw := range strings.Split(config, string('\n')) {
+		line := strings.TrimSpace(raw)
+		if line == `` || strings.HasPrefix(line, `#`) {
+			continue
+		}
+		key, value, found := powerDNSConfigDirective(line)
+		if !found || value == `` {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+		expected, required := want[key]
+		if !required && key != `also-notify` {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+		if required && expected != `` && value != expected {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+		seen[key] = value
+	}
+	for key := range want {
+		if _, ok := seen[key]; !ok {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+	}
+	rawAddresses := strings.Split(seen[`allow-axfr-ips`], `,`)
+	if len(rawAddresses) < 1 || len(rawAddresses) > 2 {
+		return managedDNSClusterPowerDNSConfig{}, false
+	}
+	addresses := make([]string, len(rawAddresses))
+	for index, address := range rawAddresses {
+		parsed := net.ParseIP(address)
+		if parsed == nil || parsed.To4() == nil || parsed.String() != address ||
+			!parsed.IsGlobalUnicast() || (index > 0 && address == addresses[0]) {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+		addresses[index] = address
+	}
+	notify := seen[`also-notify`]
+	switch len(addresses) {
+	case 1:
+		if notify != `` && notify != addresses[0] {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+	case 2:
+		if notify != addresses[1] {
+			return managedDNSClusterPowerDNSConfig{}, false
+		}
+	}
+	return managedDNSClusterPowerDNSConfig{
+		AllowAXFRIPs: addresses,
+		NotifyIP:     notify,
+	}, true
+}
+
+func validManagedDNSClusterPowerDNSConfig(config string) bool {
+	_, ok := parseManagedDNSClusterPowerDNSConfig(config)
+	return ok
+}
+
 func normalizeAgentDNSRole(role string) string {
 	switch role {
 	case dnsRolePaired, dnsRolePrimary, dnsRoleSecondary:
@@ -438,6 +513,79 @@ also-notify=%s
 }
 
 const configureDNSClusterLegacyUnsupportedError = "legacy DNS cluster configuration is unsupported; use Agent.ConfigureDNSClusterV2"
+
+func dnsDirectionalClusterConfig(
+	pairRole, localIP, peerIP string,
+) (string, error) {
+	if pairRole != transport.DNSPairRolePrimary &&
+		pairRole != transport.DNSPairRoleSecondary {
+		return ``, errors.New(`PowerDNS pair role must be primary or secondary`)
+	}
+	parsedLocal := net.ParseIP(localIP)
+	parsedPeer := net.ParseIP(peerIP)
+	if parsedLocal == nil || parsedLocal.To4() == nil || parsedLocal.String() != localIP ||
+		!parsedLocal.IsGlobalUnicast() || parsedPeer == nil || parsedPeer.To4() == nil ||
+		parsedPeer.String() != peerIP || !parsedPeer.IsGlobalUnicast() ||
+		parsedLocal.Equal(parsedPeer) {
+		return ``, errors.New(`PowerDNS pair addresses must be canonical and distinct`)
+	}
+	allowAXFR := peerIP
+	notify := ``
+	if pairRole == transport.DNSPairRolePrimary {
+		allowAXFR = localIP + `,` + peerIP
+		notify = `also-notify=` + peerIP + string('\n')
+	}
+	return fmt.Sprintf(`# Managed by CelikPanel - do not edit by hand / elle duzenlemeyin
+# Directional DNS pair: AXFR is restricted to the trusted local proof and exact peer.
+# Yonlu DNS cifti: AXFR guvenilir yerel kanit ve tam es ile sinirlidir.
+primary=yes
+secondary=yes
+autosecondary=yes
+allow-axfr-ips=%s
+%s`, allowAXFR, notify), nil
+}
+
+func dnsClusterConfigForSwitchManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (string, error) {
+	if manifest.Topology != transport.DNSTopologyPaired {
+		return ``, nil
+	}
+	if manifest.PairRole == `` {
+		return dnsClusterConfig(&DNSClusterRequest{
+			Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		}), nil
+	}
+	return dnsDirectionalClusterConfig(
+		manifest.PairRole, manifest.LocalIP, manifest.PeerIP,
+	)
+}
+
+func dnsClusterConfigForEngineState(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
+) (string, error) {
+	switch state.PairRole {
+	case transport.DNSPairRolePrimary, transport.DNSPairRoleSecondary:
+		if state.PairRole != manifest.PairRole ||
+			state.PairLocalIP != manifest.LocalIP ||
+			state.PairPeerIP != manifest.PeerIP {
+			return ``, errors.New(`PowerDNS pair role differs from the switch manifest`)
+		}
+		return dnsDirectionalClusterConfig(
+			state.PairRole, state.PairLocalIP, state.PairPeerIP,
+		)
+	case ``:
+		if state.PrimaryCatalogSerial != 0 {
+			return ``, errors.New(`legacy PowerDNS pair receipt has a catalog serial`)
+		}
+		return dnsClusterConfig(&DNSClusterRequest{
+			Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		}), nil
+	default:
+		return ``, errors.New(`PowerDNS pair role is invalid`)
+	}
+}
 
 func (a *Agent) ConfigureDNSCluster(_ *DNSClusterRequest, resp *DNSClusterResponse) error {
 	*resp = DNSClusterResponse{Error: configureDNSClusterLegacyUnsupportedError}
@@ -685,6 +833,13 @@ func convergeDNSClusterConfig(
 	req := &DNSClusterRequest{
 		Role: commitment.Role, PeerIP: commitment.PeerIP, PeerNS: commitment.PeerNS,
 	}
+	localIP := ""
+	if commitment.Role == dnsRolePaired {
+		localIP, err = resolveDNSClusterConvergenceLocalIP(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("resolve PowerDNS catalog identity: %w", err)
+		}
+	}
 	config := dnsClusterConfig(req)
 	if err := publishDNSClusterConfigFile(config); err != nil {
 		return nil, fmt.Errorf("publish DNS cluster configuration: %w", err)
@@ -707,14 +862,6 @@ func convergeDNSClusterConfig(
 	if err != nil {
 		_ = db.Close()
 		return nil, err
-	}
-	localIP := ""
-	if commitment.Role == dnsRolePaired {
-		localIP, err = dnsPairLocalProofAddress()
-		if err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("resolve PowerDNS catalog identity: %w", err)
-		}
 	}
 	if _, err := reconcilePDNSBINDCatalogTx(
 		ctx, tx, commitment.Role == dnsRolePaired, localIP,
@@ -741,6 +888,93 @@ func convergeDNSClusterConfig(
 		}
 	}
 	return peerZones, nil
+}
+
+func resolveDNSClusterConvergenceLocalIP(ctx context.Context) (string, error) {
+	if err := validateDNSClusterConfigTarget(); err != nil {
+		return "", err
+	}
+	hostAddresses := make(map[string]bool)
+	for _, candidate := range dnsPairHostOwnedAddresses() {
+		parsed := net.ParseIP(candidate)
+		if parsed == nil || parsed.To4() == nil ||
+			parsed.To4().String() != candidate || !parsed.IsGlobalUnicast() {
+			continue
+		}
+		hostAddresses[candidate] = true
+	}
+	configExists := false
+	if config, err := dnsClusterConfigReadFile(dnsClusterConf); err == nil {
+		parsed, ok := parseManagedDNSClusterPowerDNSConfig(string(config))
+		if !ok || len(parsed.AllowAXFRIPs) != 1 ||
+			parsed.NotifyIP != parsed.AllowAXFRIPs[0] ||
+			string(config) != dnsClusterConfig(&DNSClusterRequest{
+				Role: dnsRolePaired, PeerIP: parsed.AllowAXFRIPs[0],
+			}) {
+			return "", errors.New("existing PowerDNS pair configuration is not exact legacy authority")
+		}
+		configExists = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	db, err := openPDNSEngineDB(pdnsDBPath(), true)
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+	rows, err := db.QueryContext(ctx, `
+		SELECT name, UPPER(type) FROM domains
+		WHERE account = ? ORDER BY name COLLATE BINARY
+	`, pdnsBINDCatalogAccount)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	producerDomain := ""
+	producerCount := 0
+	for rows.Next() {
+		var domain, zoneType string
+		if err := rows.Scan(&domain, &zoneType); err != nil {
+			return "", err
+		}
+		if zoneType != "PRODUCER" {
+			return "", errors.New("existing PowerDNS catalog identity is not an exact producer")
+		}
+		producerDomain = domain
+		producerCount++
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if producerCount > 1 {
+		return "", errors.New("existing PowerDNS producer catalog identity is ambiguous")
+	}
+	if producerCount == 1 {
+		if !configExists {
+			return "", errors.New("PowerDNS producer catalog has no exact legacy pair configuration")
+		}
+		localIP := ""
+		for candidate := range hostAddresses {
+			domain, domainErr := binddns.CatalogDomain(candidate)
+			if domainErr == nil && domain == producerDomain {
+				if localIP != "" {
+					return "", errors.New("PowerDNS producer local identity is ambiguous")
+				}
+				localIP = candidate
+			}
+		}
+		if localIP == "" {
+			return "", errors.New("PowerDNS producer catalog is not bound to a host address")
+		}
+		return localIP, nil
+	}
+	if len(hostAddresses) != 1 {
+		return "", errors.New("PowerDNS pair bootstrap requires exactly one host-owned public IPv4 address")
+	}
+	for address := range hostAddresses {
+		return address, nil
+	}
+	return "", errors.New("PowerDNS pair bootstrap local identity is unavailable")
 }
 
 func verifyDNSClusterConfig(
