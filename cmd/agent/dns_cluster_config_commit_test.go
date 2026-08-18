@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func dnsClusterConfigTestCommitment(t *testing.T) mutationpayload.DNSClusterConfigCommitment {
@@ -105,10 +107,10 @@ func TestConfigureDNSClusterV2RejectsDurableNonPDNSAuthorityBeforeMutation(t *te
 			installGlobalMutationTestManager(t, manager)
 			t.Cleanup(func() { releasePoisonedDNSClusterConfigTestManager(manager) })
 
-			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldAuthority := legacyPowerDNSMutationAuthorityCheck
 			oldRuntime := legacyPowerDNSRuntimeSafetyCheck
 			raw := "raw " + authority + " detail must stay in logs"
-			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+			legacyPowerDNSMutationAuthorityCheck = func(bool) error {
 				return errors.New(raw)
 			}
 			runtimeCalls := 0
@@ -117,7 +119,7 @@ func TestConfigureDNSClusterV2RejectsDurableNonPDNSAuthorityBeforeMutation(t *te
 				return nil
 			}
 			t.Cleanup(func() {
-				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				legacyPowerDNSMutationAuthorityCheck = oldAuthority
 				legacyPowerDNSRuntimeSafetyCheck = oldRuntime
 			})
 
@@ -244,6 +246,82 @@ func TestDNSClusterStartupRecoversCommittedJournalForward(t *testing.T) {
 		!strings.HasPrefix(job.Phase, dnsClusterConfigCommitPhasePrefix+dnsClusterConfigCommitPublished+"/") {
 		t.Fatalf("calls=%d job=%+v", calls, job)
 	}
+}
+
+func TestDNSClusterStartupSecondaryAuthorityBlocksBeforeJournalAndHostRecovery(t *testing.T) {
+	surfaceRoot := t.TempDir()
+	oldClusterConf := dnsClusterConf
+	dnsClusterConf = filepath.Join(surfaceRoot, "celikpanel-cluster.conf")
+	dbPath := filepath.Join(surfaceRoot, "pdns.sqlite3")
+	t.Setenv("CELIKPANEL_PDNS_DB", dbPath)
+	t.Cleanup(func() { dnsClusterConf = oldClusterConf })
+	surfaceBefore := map[string][]byte{
+		dnsClusterConf: []byte("cluster config must not change\n"),
+		dbPath:         []byte("PowerDNS database must not change\n"),
+	}
+	for path, data := range surfaceBefore {
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	commitment := dnsClusterConfigTestCommitment(t)
+	manager, root, ctx, finish := beginDNSClusterConfigTestStep(t, commitment)
+	if _, err := commitDNSClusterConfigIntent(ctx, commitment); err != nil {
+		t.Fatal(err)
+	}
+	finish()
+	journalPath := dnsClusterConfigJournalPath(manager)
+	journalBefore, err := os.ReadFile(journalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	abandonDNSClusterConfigTestRuntime(t, manager)
+
+	secondary := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	secondary.PairRole = transport.DNSPairRoleSecondary
+	oldAuthority := legacyPowerDNSMutationAuthorityCheck
+	oldJournalReader := recoverDNSClusterConfigJournal
+	oldRecover := recoverDNSClusterConfigHost
+	authorityCalls, journalCalls, recoverCalls := 0, 0, 0
+	legacyPowerDNSMutationAuthorityCheck = func(requireResolved bool) error {
+		authorityCalls++
+		return validateLegacyPowerDNSMutationAuthority(
+			secondary, true, false, requireResolved,
+		)
+	}
+	recoverDNSClusterConfigJournal = func(string) (*dnsClusterConfigJournal, bool, error) {
+		journalCalls++
+		return nil, false, errors.New("recovery journal inspection must not start")
+	}
+	recoverDNSClusterConfigHost = func(context.Context, *dnsClusterConfigJournal) error {
+		recoverCalls++
+		return errors.New("host recovery must not start")
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSMutationAuthorityCheck = oldAuthority
+		recoverDNSClusterConfigJournal = oldJournalReader
+		recoverDNSClusterConfigHost = oldRecover
+	})
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err == nil || reloaded == nil || reloaded.poisoned == nil ||
+		authorityCalls != 1 || journalCalls != 0 || recoverCalls != 0 ||
+		!strings.Contains(err.Error(), "blocked by the durable DNS engine authority") {
+		t.Fatalf(
+			"secondary cluster recovery manager=%v err=%v authority=%d journal=%d recover=%d",
+			reloaded, err, authorityCalls, journalCalls, recoverCalls,
+		)
+	}
+	if after, readErr := os.ReadFile(journalPath); readErr != nil || !bytes.Equal(after, journalBefore) {
+		t.Fatalf("secondary recovery changed journal=%q err=%v", after, readErr)
+	}
+	for path, before := range surfaceBefore {
+		if after, readErr := os.ReadFile(path); readErr != nil || !bytes.Equal(after, before) {
+			t.Fatalf("secondary recovery changed %s=%q err=%v", path, after, readErr)
+		}
+	}
+	t.Cleanup(func() { releasePoisonedDNSClusterConfigTestManager(reloaded) })
 }
 
 func TestDNSClusterStartupJournalMismatchPoisonsAndRetainsLock(t *testing.T) {

@@ -13,9 +13,10 @@ import (
 const legacyPowerDNSGuardTimeout = 15 * time.Second
 
 var (
-	legacyPowerDNSDurableAuthorityCheck = inspectLegacyPowerDNSDurableAuthorityOnHost
-	legacyPowerDNSRuntimeSafetyCheck    = inspectLegacyPowerDNSRuntimeSafety
-	dnsPort53ConflictCheck              = inspectDNSPort53Conflict
+	legacyPowerDNSDurableAuthorityCheck  = inspectLegacyPowerDNSDurableAuthorityOnHost
+	legacyPowerDNSMutationAuthorityCheck = inspectLegacyPowerDNSMutationAuthorityOnHost
+	legacyPowerDNSRuntimeSafetyCheck     = inspectLegacyPowerDNSRuntimeSafety
+	dnsPort53ConflictCheck               = inspectDNSPort53Conflict
 )
 
 func validateLegacyPowerDNSDurableAuthority(
@@ -36,6 +37,21 @@ func validateLegacyPowerDNSDurableAuthority(
 	}
 	if requireResolved {
 		return errors.New("the durable DNS engine state is unresolved")
+	}
+	return nil
+}
+
+func validateLegacyPowerDNSMutationAuthority(
+	state dnsEngineStateReceipt,
+	stateExists, journalExists, requireResolved bool,
+) error {
+	if err := validateLegacyPowerDNSDurableAuthority(
+		state, stateExists, journalExists, requireResolved,
+	); err != nil {
+		return err
+	}
+	if stateExists {
+		return requireDNSPanelWriteAuthority(state)
 	}
 	return nil
 }
@@ -70,11 +86,25 @@ func requireLegacyPowerDNSMutationSafe(
 	)
 }
 
+// requireLegacyPowerDNSReadSafe proves that PowerDNS is the durable engine
+// and the sole compatible runtime without requiring panel-local write
+// authority. A paired secondary remains a managed, readable backend even
+// though every legacy mutation endpoint must reject it.
+func requireLegacyPowerDNSReadSafe(
+	parent context.Context,
+	requireActive bool,
+) error {
+	if err := legacyPowerDNSDurableAuthorityCheck(false); err != nil {
+		return err
+	}
+	return legacyPowerDNSRuntimeSafetyCheck(parent, requireActive)
+}
+
 func requireLegacyPowerDNSMutationSafeWithAuthority(
 	parent context.Context,
 	requireActive, requireResolved bool,
 ) error {
-	if err := legacyPowerDNSDurableAuthorityCheck(requireResolved); err != nil {
+	if err := legacyPowerDNSMutationAuthorityCheck(requireResolved); err != nil {
 		return err
 	}
 	return legacyPowerDNSRuntimeSafetyCheck(parent, requireActive)

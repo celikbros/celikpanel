@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -158,6 +159,8 @@ func legacyDurableDNSState(engine transport.DNSEngine) dnsEngineStateReceipt {
 
 func TestValidateLegacyPowerDNSDurableAuthority(t *testing.T) {
 	pdns := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	secondary := pdns
+	secondary.PairRole = transport.DNSPairRoleSecondary
 	bind := legacyDurableDNSState(transport.DNSEngineBIND)
 	for _, test := range []struct {
 		name            string
@@ -168,6 +171,7 @@ func TestValidateLegacyPowerDNSDurableAuthority(t *testing.T) {
 		wantError       bool
 	}{
 		{name: "exact PowerDNS state", state: pdns, stateExists: true},
+		{name: "secondary PowerDNS remains readable", state: secondary, stateExists: true},
 		{
 			name:  "stopped BIND state remains authoritative",
 			state: bind, stateExists: true, wantError: true,
@@ -204,6 +208,73 @@ func TestValidateLegacyPowerDNSDurableAuthority(t *testing.T) {
 	}
 }
 
+func TestValidateLegacyPowerDNSMutationAuthorityRejectsSecondaryOnly(t *testing.T) {
+	standalone := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	primary := standalone
+	primary.PairRole = transport.DNSPairRolePrimary
+	primary.PrimaryCatalogSerial = 7
+	secondary := standalone
+	secondary.PairRole = transport.DNSPairRoleSecondary
+	for _, test := range []struct {
+		name      string
+		state     dnsEngineStateReceipt
+		wantError bool
+	}{
+		{name: "standalone", state: standalone},
+		{name: "primary", state: primary},
+		{name: "secondary", state: secondary, wantError: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateLegacyPowerDNSMutationAuthority(
+				test.state, true, false, true,
+			)
+			if test.wantError && (err == nil || err.Error() != dnsSecondaryWriteDeniedError) {
+				t.Fatalf("secondary mutation authority error=%v", err)
+			}
+			if !test.wantError && err != nil {
+				t.Fatalf("write-authoritative PowerDNS rejected: %v", err)
+			}
+		})
+	}
+}
+
+func TestLegacyPowerDNSReadSafetyKeepsSecondaryManagedWithoutWriteAuthority(t *testing.T) {
+	secondary := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	secondary.PairRole = transport.DNSPairRoleSecondary
+	oldDurable := legacyPowerDNSDurableAuthorityCheck
+	oldMutation := legacyPowerDNSMutationAuthorityCheck
+	oldRuntime := legacyPowerDNSRuntimeSafetyCheck
+	durableCalls, mutationCalls, runtimeCalls := 0, 0, 0
+	legacyPowerDNSDurableAuthorityCheck = func(requireResolved bool) error {
+		durableCalls++
+		return validateLegacyPowerDNSDurableAuthority(
+			secondary, true, false, requireResolved,
+		)
+	}
+	legacyPowerDNSMutationAuthorityCheck = func(bool) error {
+		mutationCalls++
+		return errors.New("readiness must not request write authority")
+	}
+	legacyPowerDNSRuntimeSafetyCheck = func(context.Context, bool) error {
+		runtimeCalls++
+		return nil
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSDurableAuthorityCheck = oldDurable
+		legacyPowerDNSMutationAuthorityCheck = oldMutation
+		legacyPowerDNSRuntimeSafetyCheck = oldRuntime
+	})
+	if err := requireLegacyPowerDNSReadSafe(context.Background(), true); err != nil {
+		t.Fatalf("secondary read safety rejected: %v", err)
+	}
+	if durableCalls != 1 || mutationCalls != 0 || runtimeCalls != 1 {
+		t.Fatalf(
+			"read proof calls durable=%d mutation=%d runtime=%d",
+			durableCalls, mutationCalls, runtimeCalls,
+		)
+	}
+}
+
 func TestLegacyPowerDNSDurableAuthorityPrecedesRuntimeInspection(t *testing.T) {
 	for _, test := range []struct {
 		name          string
@@ -230,16 +301,16 @@ func TestLegacyPowerDNSDurableAuthorityPrecedesRuntimeInspection(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			oldDurable := legacyPowerDNSDurableAuthorityCheck
+			oldMutation := legacyPowerDNSMutationAuthorityCheck
 			oldRuntime := legacyPowerDNSRuntimeSafetyCheck
-			legacyPowerDNSDurableAuthorityCheck = test.durable
+			legacyPowerDNSMutationAuthorityCheck = test.durable
 			runtimeCalls := 0
 			legacyPowerDNSRuntimeSafetyCheck = func(context.Context, bool) error {
 				runtimeCalls++
 				return nil
 			}
 			t.Cleanup(func() {
-				legacyPowerDNSDurableAuthorityCheck = oldDurable
+				legacyPowerDNSMutationAuthorityCheck = oldMutation
 				legacyPowerDNSRuntimeSafetyCheck = oldRuntime
 			})
 			if err := requireLegacyPowerDNSMutationSafe(
@@ -255,17 +326,17 @@ func TestLegacyPowerDNSDurableAuthorityPrecedesRuntimeInspection(t *testing.T) {
 }
 
 func TestLegacyPowerDNSDurableAuthorityAllowsExactPDNSAndIntentionalLegacy(t *testing.T) {
-	oldDurable := legacyPowerDNSDurableAuthorityCheck
+	oldMutation := legacyPowerDNSMutationAuthorityCheck
 	oldRuntime := legacyPowerDNSRuntimeSafetyCheck
 	stateExists := true
-	legacyPowerDNSDurableAuthorityCheck = func(requireResolved bool) error {
+	legacyPowerDNSMutationAuthorityCheck = func(requireResolved bool) error {
 		if stateExists {
-			return validateLegacyPowerDNSDurableAuthority(
+			return validateLegacyPowerDNSMutationAuthority(
 				legacyDurableDNSState(transport.DNSEnginePowerDNS),
 				true, false, requireResolved,
 			)
 		}
-		return validateLegacyPowerDNSDurableAuthority(
+		return validateLegacyPowerDNSMutationAuthority(
 			dnsEngineStateReceipt{}, false, false, requireResolved,
 		)
 	}
@@ -275,7 +346,7 @@ func TestLegacyPowerDNSDurableAuthorityAllowsExactPDNSAndIntentionalLegacy(t *te
 		return nil
 	}
 	t.Cleanup(func() {
-		legacyPowerDNSDurableAuthorityCheck = oldDurable
+		legacyPowerDNSMutationAuthorityCheck = oldMutation
 		legacyPowerDNSRuntimeSafetyCheck = oldRuntime
 	})
 	if err := requireLegacyPowerDNSMutationSafe(

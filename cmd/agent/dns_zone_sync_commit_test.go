@@ -629,6 +629,51 @@ func TestDNSZoneStartupRecoveryPublishesExactReceipt(t *testing.T) {
 	}
 }
 
+func TestDNSZoneStartupSecondaryAuthorityBlocksBeforeReceiptInspection(t *testing.T) {
+	commitment := dnsZoneSyncTestCommitment(
+		t, "secondary-recovery.example", 19, false, "NATIVE",
+	)
+	manager, root := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_zone_sync", commitment.Domain, commitment.Qualifier,
+	)
+	abandonDNSZoneSyncTestRuntime(t, manager)
+
+	secondary := legacyDurableDNSState(transport.DNSEnginePowerDNS)
+	secondary.PairRole = transport.DNSPairRoleSecondary
+	oldAuthority := legacyPowerDNSMutationAuthorityCheck
+	oldInspector := dnsZoneSyncReceiptInspector
+	authorityCalls, inspectorCalls := 0, 0
+	legacyPowerDNSMutationAuthorityCheck = func(requireResolved bool) error {
+		authorityCalls++
+		return validateLegacyPowerDNSMutationAuthority(
+			secondary, true, false, requireResolved,
+		)
+	}
+	dnsZoneSyncReceiptInspector = func(
+		context.Context, string, string, string,
+	) (dnsZoneSyncReceiptResult, *verifiedDNSZoneSyncReceipt, error) {
+		inspectorCalls++
+		return dnsZoneSyncReceiptAbsent, nil, errors.New("receipt inspection must not start")
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSMutationAuthorityCheck = oldAuthority
+		dnsZoneSyncReceiptInspector = oldInspector
+	})
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err == nil || reloaded == nil || reloaded.poisoned == nil ||
+		authorityCalls != 1 || inspectorCalls != 0 ||
+		!strings.Contains(err.Error(), "blocked by the durable DNS engine authority") {
+		t.Fatalf(
+			"secondary recovery manager=%v err=%v authority=%d inspector=%d",
+			reloaded, err, authorityCalls, inspectorCalls,
+		)
+	}
+	t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(reloaded) })
+}
+
 func TestDNSZoneStartupIntentWithoutReceiptFailsPrecommit(t *testing.T) {
 	useDNSZoneSyncTestDB(t)
 	// Create a valid readable table; absence must be distinguishable from
@@ -1329,10 +1374,10 @@ func TestSyncDNSZoneV2RejectsDurableNonPDNSAuthorityBeforeDBOrCommands(t *testin
 			installGlobalMutationTestManager(t, manager)
 			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
 
-			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldAuthority := legacyPowerDNSMutationAuthorityCheck
 			oldCommand := dnsSyncCommand
 			raw := "raw " + authority + " detail must stay in logs"
-			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+			legacyPowerDNSMutationAuthorityCheck = func(bool) error {
 				return errors.New(raw)
 			}
 			commandCalls := 0
@@ -1341,7 +1386,7 @@ func TestSyncDNSZoneV2RejectsDurableNonPDNSAuthorityBeforeDBOrCommands(t *testin
 				return nil, errors.New("unexpected command")
 			}
 			t.Cleanup(func() {
-				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				legacyPowerDNSMutationAuthorityCheck = oldAuthority
 				dnsSyncCommand = oldCommand
 			})
 
@@ -1393,10 +1438,10 @@ func TestConfigurePowerDNSSQLiteRejectsDurableNonPDNSAuthorityBeforeMutation(t *
 			)
 			installGlobalMutationTestManager(t, manager)
 			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
-			oldAuthority := legacyPowerDNSDurableAuthorityCheck
+			oldAuthority := legacyPowerDNSMutationAuthorityCheck
 			oldRuntime := legacyPowerDNSRuntimeSafetyCheck
 			raw := "raw " + authority + " detail must stay in logs"
-			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+			legacyPowerDNSMutationAuthorityCheck = func(bool) error {
 				return errors.New(raw)
 			}
 			runtimeCalls := 0
@@ -1405,7 +1450,7 @@ func TestConfigurePowerDNSSQLiteRejectsDurableNonPDNSAuthorityBeforeMutation(t *
 				return nil
 			}
 			t.Cleanup(func() {
-				legacyPowerDNSDurableAuthorityCheck = oldAuthority
+				legacyPowerDNSMutationAuthorityCheck = oldAuthority
 				legacyPowerDNSRuntimeSafetyCheck = oldRuntime
 			})
 			request := &ServiceMutationRequest{ServiceMutationBinding: transport.ServiceMutationBinding{

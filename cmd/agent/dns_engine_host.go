@@ -25,7 +25,7 @@ import (
 const (
 	dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
 
-	pdnsSecondaryWriteDeniedError = "directional secondary PowerDNS cannot publish panel-local zones"
+	dnsSecondaryWriteDeniedError = "directional secondary DNS cannot publish panel-local zones"
 )
 
 type hostDNSEngineBackend struct{}
@@ -393,7 +393,7 @@ func (hostDNSEngineBackend) Readiness(
 			exists,
 			states[1],
 			requireManagedDNSClusterReady,
-			func() error { return requireLegacyPowerDNSMutationSafe(ctx, true) },
+			func() error { return requireLegacyPowerDNSReadSafe(ctx, true) },
 		)
 		if states[1].Managed {
 			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx)
@@ -517,24 +517,23 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
-	if commitment.Engine == string(transport.DNSEnginePowerDNS) {
-		return syncPDNSV3Zone(ctx, commitment, binding)
+	engine := transport.DNSEngine(commitment.Engine)
+	if engine != transport.DNSEngineBIND && engine != transport.DNSEnginePowerDNS {
+		return "", errors.New("DNS V3 publication engine is unsupported")
+	}
+	state, err := readExactDNSPanelWriteState(engine, commitment.EngineEpoch)
+	if err != nil {
+		return "", err
 	}
 	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
 		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
 	}
-	if commitment.Engine != string(transport.DNSEngineBIND) {
-		return "", errors.New("DNS V3 publication engine is unsupported")
-	}
-	state, exists, err := readDNSEngineState()
-	if err != nil || !exists {
-		if err == nil {
-			err = errors.New("DNS engine state is not initialized")
-		}
+	state, err = readExactDNSPanelWriteState(engine, commitment.EngineEpoch)
+	if err != nil {
 		return "", err
 	}
-	if state.Engine != transport.DNSEngineBIND || state.EngineEpoch != commitment.EngineEpoch {
-		return "", errors.New("BIND zone publication does not match the active engine epoch")
+	if engine == transport.DNSEnginePowerDNS {
+		return syncPDNSV3Zone(ctx, state, commitment, binding)
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
@@ -638,6 +637,9 @@ func (hostDNSEngineBackend) RecoverZone(
 ) (bool, error) {
 	state, exists, err := readDNSEngineState()
 	if err != nil || !exists {
+		return false, err
+	}
+	if err := requireDNSPanelWriteAuthority(state); err != nil {
 		return false, err
 	}
 	if state.Engine == transport.DNSEnginePowerDNS {
@@ -1479,36 +1481,11 @@ func verifyOnlyBINDActive(ctx context.Context, systemctl string) error {
 
 func syncPDNSV3Zone(
 	ctx context.Context,
+	state dnsEngineStateReceipt,
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
-	state, exists, err := readDNSEngineState()
-	if err != nil || !exists {
-		if err == nil {
-			err = errors.New("DNS engine state is not initialized")
-		}
-		return "", err
-	}
-	if state.Engine != transport.DNSEnginePowerDNS || state.EngineEpoch != commitment.EngineEpoch {
-		return "", errors.New("PowerDNS zone publication does not match the active engine epoch")
-	}
-	if err := requirePDNSPanelWriteAuthority(state); err != nil {
-		return "", err
-	}
-	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
-		return "", fmt.Errorf("reconcile prior DNS engine transaction: %w", err)
-	}
-	state, exists, err = readDNSEngineState()
-	if err != nil || !exists {
-		if err == nil {
-			err = errors.New("DNS engine state is not initialized")
-		}
-		return "", err
-	}
-	if state.Engine != transport.DNSEnginePowerDNS || state.EngineEpoch != commitment.EngineEpoch {
-		return "", errors.New("PowerDNS zone publication does not match the active engine epoch")
-	}
-	if err := requirePDNSPanelWriteAuthority(state); err != nil {
+	if err := requireDNSPanelWriteAuthority(state); err != nil {
 		return "", err
 	}
 	if err := requireManagedDNSClusterReady(); err != nil {
@@ -1564,7 +1541,7 @@ func recoverPDNSV3Zone(
 	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (bool, error) {
-	if err := requirePDNSPanelWriteAuthority(state); err != nil {
+	if err := requireDNSPanelWriteAuthority(state); err != nil {
 		return false, err
 	}
 	if err := requireManagedDNSClusterReady(); err != nil {
@@ -1600,9 +1577,36 @@ func recoverPDNSV3Zone(
 	return true, nil
 }
 
-func requirePDNSPanelWriteAuthority(state dnsEngineStateReceipt) error {
+func readExactDNSPanelWriteState(
+	engine transport.DNSEngine,
+	epoch int64,
+) (dnsEngineStateReceipt, error) {
+	state, exists, err := readDNSEngineState()
+	if err != nil || !exists {
+		if err == nil {
+			err = errors.New("DNS engine state is not initialized")
+		}
+		return dnsEngineStateReceipt{}, err
+	}
+	if state.Engine != engine || state.EngineEpoch != epoch {
+		switch engine {
+		case transport.DNSEngineBIND:
+			return dnsEngineStateReceipt{}, errors.New("BIND zone publication does not match the active engine epoch")
+		case transport.DNSEnginePowerDNS:
+			return dnsEngineStateReceipt{}, errors.New("PowerDNS zone publication does not match the active engine epoch")
+		default:
+			return dnsEngineStateReceipt{}, errors.New("DNS V3 publication engine is unsupported")
+		}
+	}
+	if err := requireDNSPanelWriteAuthority(state); err != nil {
+		return dnsEngineStateReceipt{}, err
+	}
+	return state, nil
+}
+
+func requireDNSPanelWriteAuthority(state dnsEngineStateReceipt) error {
 	if state.PairRole == transport.DNSPairRoleSecondary {
-		return errors.New(pdnsSecondaryWriteDeniedError)
+		return errors.New(dnsSecondaryWriteDeniedError)
 	}
 	return nil
 }

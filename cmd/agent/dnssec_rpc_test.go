@@ -40,10 +40,10 @@ func installDNSSECV2TestLease(
 	t *testing.T, zone string,
 ) (*serviceMutationManager, transport.ServiceMutationBinding) {
 	t.Helper()
-	oldAuthority := legacyPowerDNSDurableAuthorityCheck
+	oldAuthority := legacyPowerDNSMutationAuthorityCheck
 	oldRuntime := legacyPowerDNSRuntimeSafetyCheck
-	legacyPowerDNSDurableAuthorityCheck = func(requireResolved bool) error {
-		return validateLegacyPowerDNSDurableAuthority(
+	legacyPowerDNSMutationAuthorityCheck = func(requireResolved bool) error {
+		return validateLegacyPowerDNSMutationAuthority(
 			legacyDurableDNSState(transport.DNSEnginePowerDNS),
 			true, false, requireResolved,
 		)
@@ -52,7 +52,7 @@ func installDNSSECV2TestLease(
 		return nil
 	}
 	t.Cleanup(func() {
-		legacyPowerDNSDurableAuthorityCheck = oldAuthority
+		legacyPowerDNSMutationAuthorityCheck = oldAuthority
 		legacyPowerDNSRuntimeSafetyCheck = oldRuntime
 	})
 	manager, _ := newMutationTestManager(t)
@@ -184,7 +184,7 @@ func TestSecureDNSZoneV2RejectsDurableNonPDNSAuthorityBeforeHostMutation(t *test
 			manager, binding := installDNSSECV2TestLease(t, "example.test")
 			t.Cleanup(func() { releasePoisonedDNSZoneSyncTestManager(manager) })
 			raw := "raw " + authority + " detail must stay in logs"
-			legacyPowerDNSDurableAuthorityCheck = func(bool) error {
+			legacyPowerDNSMutationAuthorityCheck = func(bool) error {
 				return errors.New(raw)
 			}
 			oldLookPath, oldCommand := dnssecLookPath, dnssecV2Command

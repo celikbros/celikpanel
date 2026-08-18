@@ -342,6 +342,8 @@ func publishDNSClusterConfig(ctx context.Context, journal *dnsClusterConfigJourn
 	return nil
 }
 
+var recoverDNSClusterConfigJournal = readDNSClusterConfigJournal
+
 var recoverDNSClusterConfigHost = func(
 	ctx context.Context,
 	journal *dnsClusterConfigJournal,
@@ -393,7 +395,13 @@ func (m *serviceMutationManager) recoverPersistedDNSClusterConfigLocked(
 		}
 		return true, errors.Join(err, lock.Close())
 	}
-	journal, exists, err := readDNSClusterConfigJournal(dnsClusterConfigJournalPath(m))
+	if err := legacyPowerDNSMutationAuthorityCheck(false); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(
+			errors.New("persisted DNS cluster mutation is blocked by the durable DNS engine authority"),
+		)
+	}
+	journal, exists, err := recoverDNSClusterConfigJournal(dnsClusterConfigJournalPath(m))
 	if err != nil {
 		m.poisonLock = lock
 		return true, m.poisonLocked(err)

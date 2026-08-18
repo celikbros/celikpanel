@@ -1,6 +1,7 @@
 package binddns
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -185,6 +186,42 @@ func TestPrimaryDeltaAdvancesCatalogSerialOnlyForMembershipChanges(t *testing.T)
 	}
 	if standalone.ReceiptValue.Schema != receiptSchemaV1 || standalone.ReceiptValue.Pairing != nil {
 		t.Fatalf("standalone compatibility changed: %#v", standalone.ReceiptValue)
+	}
+}
+
+func TestSecondaryDeltaRejectsCreateUpdateAndDelete(t *testing.T) {
+	generation, err := RenderManifest(pairingTestRoot, Manifest{
+		EngineEpoch: 9, Pairing: testPairing(PairRoleSecondary),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree := verifyPairingGeneration(t, generation)
+	if err := validateReceipt(tree.receipt); err != nil {
+		t.Fatalf("secondary fixture receipt invalid: %v", err)
+	}
+	before := tree.CurrentReceipt()
+	for _, test := range []struct {
+		name  string
+		delta ZoneSnapshot
+	}{
+		{name: "create", delta: boundSnapshot("new.example.test", 1, testZoneRecords("new.example.test", "192.0.2.40"))},
+		{name: "update", delta: boundSnapshot("existing.example.test", 2, testZoneRecords("existing.example.test", "192.0.2.41"))},
+		{name: "delete", delta: func() ZoneSnapshot {
+			delta := boundSnapshot("existing.example.test", 3, nil)
+			delta.Delete = true
+			return delta
+		}()},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := ApplyDelta(tree, test.delta); err == nil ||
+				err.Error() != "BIND secondary cannot mutate a panel-owned zone" {
+				t.Fatalf("secondary delta error=%v", err)
+			}
+			if after := tree.CurrentReceipt(); !reflect.DeepEqual(before, after) {
+				t.Fatalf("rejected delta mutated source receipt: before=%+v after=%+v", before, after)
+			}
+		})
 	}
 }
 

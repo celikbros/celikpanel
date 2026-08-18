@@ -78,8 +78,8 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 		return TreePlan{}, err
 	}
 	if current.receipt.Pairing != nil &&
-		current.receipt.Pairing.Role == PairRoleSecondary && !next.receipt.Delete {
-		return TreePlan{}, errors.New("BIND secondary cannot publish a panel-owned zone")
+		current.receipt.Pairing.Role == PairRoleSecondary {
+		return TreePlan{}, errors.New("BIND secondary cannot mutate a panel-owned zone")
 	}
 	pairing := pairingFromReceipt(current.receipt.Pairing)
 	serial := uint32(0)
@@ -304,7 +304,11 @@ func planFromVerifiedTree(tree VerifiedTree) TreePlan {
 }
 
 func cloneReceipt(receipt Receipt) Receipt {
-	receipt.Zones = append([]ZoneReceipt(nil), receipt.Zones...)
+	if receipt.Zones != nil {
+		zones := make([]ZoneReceipt, len(receipt.Zones))
+		copy(zones, receipt.Zones)
+		receipt.Zones = zones
+	}
 	if receipt.Pairing != nil {
 		pairing := *receipt.Pairing
 		receipt.Pairing = &pairing
