@@ -24,6 +24,8 @@ type dnsEngineTestAgent struct {
 	mu                  sync.Mutex
 	runtimes            map[transport.DNSEngine]transport.DNSBackendRuntimeState
 	port53Conflict      bool
+	readinessCalls      int
+	onReadiness         func(int)
 	dnssec              bool
 	dnssecCalls         int
 	switchCalls         int
@@ -185,12 +187,18 @@ func (agent *dnsEngineTestAgent) DNSBackendReadiness(
 	response *transport.DNSBackendReadinessResponse,
 ) error {
 	agent.mu.Lock()
-	defer agent.mu.Unlock()
+	agent.readinessCalls++
+	call := agent.readinessCalls
 	response.Engines = []transport.DNSBackendRuntimeState{
 		agent.runtimes[transport.DNSEnginePowerDNS],
 		agent.runtimes[transport.DNSEngineBIND],
 	}
 	response.Port53Conflict = agent.port53Conflict
+	hook := agent.onReadiness
+	agent.mu.Unlock()
+	if hook != nil {
+		hook(call)
+	}
 	return nil
 }
 
@@ -401,6 +409,7 @@ func TestDNSEngineFreshInstallPostCommitSyncsFirewallAndCache(t *testing.T) {
 	} {
 		t.Run(string(target), func(t *testing.T) {
 			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, "standalone")
 			agent := newDNSEngineTestAgent()
 			agent.firewallEnabled = true
 			attachDNSEngineTestAgent(t, panel, agent)
@@ -446,6 +455,7 @@ func TestDNSEngineFreshInstallPostCommitSyncsFirewallAndCache(t *testing.T) {
 
 func TestDNSEnginePostCommitNeverEnablesDisabledFirewall(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, _ := requestDNSEnginePreview(
@@ -469,6 +479,7 @@ func TestDNSEnginePostCommitNeverEnablesDisabledFirewall(t *testing.T) {
 
 func TestDNSEngineExistingSourceSwitchRetainsPostCommitBehavior(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.firewallEnabled = true
 	attachDNSEngineTestAgent(t, panel, agent)
@@ -533,6 +544,7 @@ func TestDNSEngineExistingSourceSwitchRetainsPostCommitBehavior(t *testing.T) {
 
 func TestDNSEnginePostCommitFailureIsRetryableWithoutRollbackOrReplay(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.firewallEnabled = true
 	agent.firewallError = "secret nftables stderr /etc/nftables.conf"
@@ -634,6 +646,7 @@ func TestDNSEnginePostCommitFailureIsRetryableWithoutRollbackOrReplay(t *testing
 
 func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	agent.scanError = errors.New("secret service probe /proc/999/fd")
 	attachDNSEngineTestAgent(t, panel, agent)
@@ -677,6 +690,7 @@ func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
 
 func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 
@@ -776,6 +790,43 @@ func TestDNSEngineGETMatchesUIWireContract(t *testing.T) {
 				t.Fatalf("GET engine missing %q: %s", key, payload["engines"])
 			}
 		}
+	}
+}
+
+func TestDNSEngineFirstInstallRequiresStagedDNSIdentity(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK ||
+		!hasDNSEngineBlocker(preview, "dns_identity_required") ||
+		!validServiceOperationID(preview.PreviewToken) {
+		t.Fatalf("identity blocker preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("0", 32), transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusConflict {
+		t.Fatalf("uncached blocked commit status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exactUninitializedDNSEngineState(state) {
+		t.Fatalf("blocked preview changed engine state: %+v", state)
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	if switchCalls != 0 {
+		t.Fatalf("blocked identity preview performed %d host switches", switchCalls)
 	}
 }
 
@@ -965,10 +1016,39 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 		last.PairRole != transport.DNSPairRolePrimary {
 		t.Fatalf("reverse paired request=%+v", last)
 	}
+	locked := httptest.NewRecorder()
+	panel.handleDNSSetup(locked, dnsSetupAdminRequest(
+		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"192.0.2.30","peer_ns":"ns4.example.net"}`,
+	))
+	if locked.Code != http.StatusConflict {
+		t.Fatalf("paired identity mutation status=%d body=%s",
+			locked.Code, locked.Body.String())
+	}
+	var lockedBody apiErrorBody
+	if err := json.Unmarshal(locked.Body.Bytes(), &lockedBody); err != nil ||
+		lockedBody.Code != errCodeDNSPairIdentityLocked {
+		t.Fatalf("paired identity refusal=%+v err=%v body=%s",
+			lockedBody, err, locked.Body.String())
+	}
+	afterLocked, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterLocked != state {
+		t.Fatalf("paired identity refusal changed state: before=%+v after=%+v",
+			state, afterLocked)
+	}
+	agent.mu.Lock()
+	switchCalls := agent.switchCalls
+	agent.mu.Unlock()
+	if switchCalls != 2 {
+		t.Fatalf("paired identity refusal changed host: switch calls=%d", switchCalls)
+	}
 }
 
 func TestDNSEngineStalePreviewCannotStartMutation(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(
@@ -1350,6 +1430,7 @@ func TestDNSEngineUnmanagedBINDCannotBeAdopted(t *testing.T) {
 
 func TestDNSEngineActiveSourceCannotRegistrationAdoptUnmanagedStandby(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	first, recorder := requestDNSEnginePreview(
@@ -1395,6 +1476,7 @@ func TestDNSEngineActiveSourceCannotRegistrationAdoptUnmanagedStandby(t *testing
 
 func TestActiveDNSPublisherBindsEpochAndFailsClosed(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(
@@ -1443,6 +1525,7 @@ func TestActiveDNSPublisherBindsEpochAndFailsClosed(t *testing.T) {
 
 func TestDNSEngineBrowserCancellationDoesNotStrandSwitch(t *testing.T) {
 	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 	preview, recorder := requestDNSEnginePreview(

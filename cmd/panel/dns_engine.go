@@ -672,6 +672,10 @@ func dnsEnginePreviewBlockers(
 	if snapshot.State == dnsEngineStateSwitching {
 		blockers = addDNSEngineBlocker(blockers, "operation_running")
 	}
+	if snapshot.ActiveEngine == nil &&
+		snapshot.Topology == dnsEngineStateUnconfigured {
+		blockers = addDNSEngineBlocker(blockers, "dns_identity_required")
+	}
 	// Registration-only adoption verifies the exact full runtime zone set and
 	// may therefore reconcile legacy pending generations without publishing.
 	// A live lease is still rejected by buildDNSEngineManifest.
@@ -839,7 +843,7 @@ func (p *Panel) buildDNSEngineManifest(
 	mode := dnsEngineMutationMode(action)
 	topology := state.Topology
 	if mode == transport.DNSEngineSwitchModeSwitch &&
-		state.ActiveEngine == "" && target == transport.DNSEngineBIND &&
+		state.ActiveEngine == "" &&
 		observedTopology == transport.DNSTopologyPaired {
 		topology = transport.DNSTopologyPaired
 	}
