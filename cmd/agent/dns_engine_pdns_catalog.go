@@ -633,7 +633,7 @@ func verifyManagedPDNSBINDCatalog(
 			LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
 			Domain: identity.Domain, Serial: identity.Serial,
 			Members: identity.Members, MemberSerials: identity.MemberSerials,
-		}, probeDNSZoneSOA, probeDNSCatalogAXFR); err != nil {
+		}, probeDNSZoneSOA, probeDNSCatalogAXFR, probeDNSBoundCatalogAXFR); err != nil {
 			return errors.New("PowerDNS primary catalog did not converge on the paired peer")
 		}
 	}

@@ -28,6 +28,7 @@ const (
 	dnsRCodeNoError   = 0
 	dnsRCodeNameError = 3
 	dnsRCodeRefused   = 5
+	dnsRCodeNotAuth   = 9
 	dnsProbeTimeout   = 4 * time.Second
 	dnsPairProofLimit = 15 * time.Second
 )

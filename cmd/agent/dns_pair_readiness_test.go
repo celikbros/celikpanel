@@ -23,6 +23,15 @@ func TestDNSPrimaryPairReadyRequiresPeerCatalogSOAEvenWithoutMembers(t *testing.
 		}
 		return dnsCatalogAXFRResult{Serial: evidence.Serial, Members: []string{}}, nil
 	}
+	peerAXFR := func(
+		_ context.Context, source, address, domain string,
+	) (dnsCatalogAXFRResult, error) {
+		if source != evidence.LocalIP || address != evidence.PeerIP ||
+			domain != evidence.Domain {
+			return dnsCatalogAXFRResult{}, errors.New("unexpected peer catalog query")
+		}
+		return dnsCatalogAXFRResult{Serial: evidence.Serial, Members: []string{}}, nil
+	}
 	for _, test := range []struct {
 		name       string
 		peerSerial uint32
@@ -49,7 +58,7 @@ func TestDNSPrimaryPairReadyRequiresPeerCatalogSOAEvenWithoutMembers(t *testing.
 				}, nil
 			}
 			err := verifyDNSPrimaryPairReadyAt(
-				context.Background(), evidence, soa, axfr,
+				context.Background(), evidence, soa, axfr, peerAXFR,
 			)
 			if (err == nil) != test.wantReady {
 				t.Fatalf("ready=%v err=%v", err == nil, err)
@@ -72,6 +81,17 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 			return dnsCatalogAXFRResult{}, errors.New("unexpected catalog query")
 		}
 		return dnsCatalogAXFRResult{Serial: 9, Members: []string{"example.test"}}, nil
+	}
+	peerAXFR := func(
+		_ context.Context, source, address, domain string,
+	) (dnsCatalogAXFRResult, error) {
+		if source != evidence.LocalIP || address != evidence.PeerIP ||
+			domain != evidence.Domain {
+			return dnsCatalogAXFRResult{}, errors.New("unexpected peer catalog query")
+		}
+		return dnsCatalogAXFRResult{
+			Serial: 9, Members: []string{"example.test"},
+		}, nil
 	}
 	for _, test := range []struct {
 		name                    string
@@ -99,7 +119,7 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 				}, nil
 			}
 			err := verifyDNSPrimaryPairReadyAt(
-				context.Background(), evidence, soa, axfr,
+				context.Background(), evidence, soa, axfr, peerAXFR,
 			)
 			if (err == nil) != test.wantReady {
 				t.Fatalf("ready=%v err=%v calls=%v", err == nil, err, calls)
@@ -113,6 +133,72 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestDNSPrimaryPairReadyRequiresSourceBoundExactPeerCatalog(t *testing.T) {
+	evidence := dnsPrimaryCatalogEvidence{
+		LocalIP: "192.0.2.10", PeerIP: "192.0.2.20",
+		Domain: "catalog-c000020a.celikpanel.invalid", Serial: 7,
+	}
+	localAXFR := func(
+		context.Context, string, string,
+	) (dnsCatalogAXFRResult, error) {
+		return dnsCatalogAXFRResult{Serial: 7, Members: []string{}}, nil
+	}
+	soa := func(
+		context.Context, string, string, string,
+	) (dnsSOAProbeResult, error) {
+		return dnsSOAProbeResult{
+			Authoritative: true, RCode: dnsRCodeNoError,
+			SOASerials: []uint32{7},
+		}, nil
+	}
+	for _, test := range []struct {
+		name   string
+		result dnsCatalogAXFRResult
+		err    error
+		wantOK bool
+	}{
+		{
+			name: "exact", result: dnsCatalogAXFRResult{
+				Serial: 7, Members: []string{},
+			}, wantOK: true,
+		},
+		{
+			name: "stale serial", result: dnsCatalogAXFRResult{
+				Serial: 6, Members: []string{},
+			},
+		},
+		{
+			name: "foreign member", result: dnsCatalogAXFRResult{
+				Serial: 7, Members: []string{"foreign.test"},
+			},
+		},
+		{name: "refused", err: errors.New("refused")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			calls := 0
+			peerAXFR := func(
+				_ context.Context, source, address, domain string,
+			) (dnsCatalogAXFRResult, error) {
+				calls++
+				if source != evidence.LocalIP || address != evidence.PeerIP ||
+					domain != evidence.Domain {
+					t.Fatalf(
+						"peer catalog identity=%s/%s/%s",
+						source, address, domain,
+					)
+				}
+				return test.result, test.err
+			}
+			err := verifyDNSPrimaryPairReadyAt(
+				context.Background(), evidence, soa, localAXFR, peerAXFR,
+			)
+			if (err == nil) != test.wantOK || calls != 1 {
+				t.Fatalf("ready=%v calls=%d err=%v", err == nil, calls, err)
 			}
 		})
 	}

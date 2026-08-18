@@ -20,6 +20,36 @@ func testPDNSPrimaryPropagationEvidence(
 	}
 }
 
+func exactTestPeerCatalogAXFR(
+	evidence dnsPrimaryCatalogEvidence,
+) dnsBoundCatalogAXFRProbe {
+	return func(
+		_ context.Context, source, address, domain string,
+	) (dnsCatalogAXFRResult, error) {
+		if source != evidence.LocalIP || address != evidence.PeerIP ||
+			domain != evidence.Domain {
+			return dnsCatalogAXFRResult{}, errors.New("unexpected peer catalog AXFR")
+		}
+		return dnsCatalogAXFRResult{
+			Serial:  evidence.Serial,
+			Members: append([]string(nil), evidence.Members...),
+		}, nil
+	}
+}
+
+func absentTestPeerZoneAXFR(
+	evidence dnsPrimaryCatalogEvidence,
+) dnsBoundZoneAXFRProbe {
+	return func(
+		_ context.Context, source, address, _ string,
+	) (dnsZoneAXFRState, error) {
+		if source != evidence.LocalIP || address != evidence.PeerIP {
+			return dnsZoneAXFRIndeterminate, errors.New("unexpected peer zone AXFR")
+		}
+		return dnsZoneAXFRAbsent, nil
+	}
+}
+
 func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) {
 	for _, test := range []struct {
 		name string
@@ -165,6 +195,8 @@ func TestPDNSV3PropagationRecoveryRepeatsNotificationsIdempotently(t *testing.T)
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan, soa, axfr,
+		exactTestPeerCatalogAXFR(plan.Evidence),
+		absentTestPeerZoneAXFR(plan.Evidence),
 	); err == nil {
 		t.Fatal("stale first transfer unexpectedly passed")
 	}
@@ -174,6 +206,8 @@ func TestPDNSV3PropagationRecoveryRepeatsNotificationsIdempotently(t *testing.T)
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan, soa, axfr,
+		exactTestPeerCatalogAXFR(plan.Evidence),
+		absentTestPeerZoneAXFR(plan.Evidence),
 	); err != nil {
 		t.Fatalf("recovery proof did not converge: %v", err)
 	}
@@ -217,6 +251,8 @@ func TestVerifyPDNSV3PropagationProvesZeroMemberCatalog(t *testing.T) {
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan, soa, axfr,
+		exactTestPeerCatalogAXFR(plan.Evidence),
+		absentTestPeerZoneAXFR(plan.Evidence),
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -248,6 +284,8 @@ func TestVerifyPDNSV3PropagationRejectsStalePeerCatalogSerial(t *testing.T) {
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan, soa, axfr,
+		exactTestPeerCatalogAXFR(plan.Evidence),
+		absentTestPeerZoneAXFR(plan.Evidence),
 	); err == nil {
 		t.Fatal("stale peer catalog serial passed propagation proof")
 	}
@@ -276,7 +314,126 @@ func TestVerifyPDNSV3PropagationRejectsDeletedMemberStillServed(t *testing.T) {
 	}
 	if err := verifyPDNSV3PropagationAt(
 		context.Background(), plan, soa, axfr,
+		exactTestPeerCatalogAXFR(plan.Evidence),
+		func(
+			context.Context, string, string, string,
+		) (dnsZoneAXFRState, error) {
+			return dnsZoneAXFRPresent, nil
+		},
 	); err == nil {
 		t.Fatal("deleted member still served by peer passed propagation proof")
+	}
+}
+
+func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
+	for _, engines := range []string{
+		"bind-to-bind",
+		"bind-to-pdns",
+		"pdns-to-bind",
+		"pdns-to-pdns",
+	} {
+		t.Run(engines, func(t *testing.T) {
+			evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
+			plan := pdnsV3PropagationPlan{
+				Primary: true, Evidence: evidence,
+				Changed: expectedDNSZoneAuthority{
+					Domain: "gone.example.test", Delete: true,
+				},
+			}
+			localAXFR := func(
+				_ context.Context, address, domain string,
+			) (dnsCatalogAXFRResult, error) {
+				if address != evidence.LocalIP || domain != evidence.Domain {
+					return dnsCatalogAXFRResult{}, errors.New("unexpected local AXFR")
+				}
+				return dnsCatalogAXFRResult{Serial: 8, Members: []string{}}, nil
+			}
+			peerCatalogCalls := 0
+			peerCatalogAXFR := func(
+				_ context.Context, source, address, domain string,
+			) (dnsCatalogAXFRResult, error) {
+				peerCatalogCalls++
+				if source != evidence.LocalIP || address != evidence.PeerIP ||
+					domain != evidence.Domain {
+					return dnsCatalogAXFRResult{}, errors.New("unexpected peer catalog AXFR")
+				}
+				return dnsCatalogAXFRResult{Serial: 8, Members: []string{}}, nil
+			}
+			soaCalls := 0
+			soa := func(
+				_ context.Context, network, address, domain string,
+			) (dnsSOAProbeResult, error) {
+				soaCalls++
+				if address != evidence.PeerIP || domain != evidence.Domain ||
+					(network != "udp" && network != "tcp") {
+					return dnsSOAProbeResult{}, errors.New("unexpected SOA proof")
+				}
+				return dnsSOAProbeResult{
+					Authoritative: true, RCode: dnsRCodeNoError,
+					SOASerials: []uint32{8},
+				}, nil
+			}
+			zoneCalls := 0
+			zoneAXFR := func(
+				_ context.Context, source, address, domain string,
+			) (dnsZoneAXFRState, error) {
+				zoneCalls++
+				if source != evidence.LocalIP || address != evidence.PeerIP ||
+					domain != plan.Changed.Domain {
+					return dnsZoneAXFRIndeterminate, errors.New("unexpected zone AXFR")
+				}
+				return dnsZoneAXFRAbsent, nil
+			}
+			if err := verifyPDNSV3PropagationAt(
+				context.Background(), plan, soa, localAXFR,
+				peerCatalogAXFR, zoneAXFR,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if peerCatalogCalls != 1 || soaCalls != 2 || zoneCalls != 1 {
+				t.Fatalf(
+					"catalog=%d soa=%d zone=%d",
+					peerCatalogCalls, soaCalls, zoneCalls,
+				)
+			}
+		})
+	}
+}
+
+func TestVerifyPDNSV3DeletionNeverProbesZoneWithoutPeerCatalogAuthority(t *testing.T) {
+	evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
+	plan := pdnsV3PropagationPlan{
+		Primary: true, Evidence: evidence,
+		Changed: expectedDNSZoneAuthority{
+			Domain: "gone.example.test", Delete: true,
+		},
+	}
+	localAXFR := func(
+		context.Context, string, string,
+	) (dnsCatalogAXFRResult, error) {
+		return dnsCatalogAXFRResult{Serial: 8, Members: []string{}}, nil
+	}
+	peerCatalogAXFR := func(
+		context.Context, string, string, string,
+	) (dnsCatalogAXFRResult, error) {
+		return dnsCatalogAXFRResult{}, errors.New("peer transfer ACL unavailable")
+	}
+	zoneCalled := false
+	zoneAXFR := func(
+		context.Context, string, string, string,
+	) (dnsZoneAXFRState, error) {
+		zoneCalled = true
+		return dnsZoneAXFRAbsent, nil
+	}
+	if err := verifyPDNSV3PropagationAt(
+		context.Background(), plan,
+		func(
+			context.Context, string, string, string,
+		) (dnsSOAProbeResult, error) {
+			return dnsSOAProbeResult{}, nil
+		},
+		localAXFR, peerCatalogAXFR, zoneAXFR,
+	); err == nil || zoneCalled {
+		t.Fatalf("err=%v zoneCalled=%v", err, zoneCalled)
 	}
 }

@@ -22,40 +22,77 @@ type dnsPrimaryCatalogEvidence struct {
 	MemberSerials []uint32
 }
 
+type dnsPeerAXFRAuthority struct {
+	sourceIP      string
+	peerIP        string
+	catalog       string
+	catalogSerial uint32
+}
+
 // verifyDNSPrimaryPairReadyAt proves that the configured peer has consumed the
-// primary's exact catalog. The peer is queried only for ordinary authoritative
-// SOA answers: a secondary is not expected to permit outgoing AXFR.
+// primary's exact catalog and exposes the managed peer transfer contract.
 func verifyDNSPrimaryPairReadyAt(
 	ctx context.Context,
 	evidence dnsPrimaryCatalogEvidence,
 	soa dnsZoneSOAProbe,
-	axfr dnsCatalogAXFRProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerAXFR dnsBoundCatalogAXFRProbe,
 ) error {
+	_, err := verifyDNSPrimaryPairReadyAuthorityAt(
+		ctx, evidence, soa, localAXFR, peerAXFR,
+	)
+	return err
+}
+
+func verifyDNSPrimaryPairReadyAuthorityAt(
+	ctx context.Context,
+	evidence dnsPrimaryCatalogEvidence,
+	soa dnsZoneSOAProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerAXFR dnsBoundCatalogAXFRProbe,
+) (dnsPeerAXFRAuthority, error) {
 	if err := validateDNSPrimaryCatalogEvidence(evidence); err != nil {
-		return err
+		return dnsPeerAXFRAuthority{}, err
 	}
-	if soa == nil || axfr == nil {
-		return errors.New("DNS primary pair readiness identity is invalid")
+	if soa == nil || localAXFR == nil || peerAXFR == nil {
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS primary pair readiness identity is invalid")
 	}
 	members := append([]string(nil), evidence.Members...)
 
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
-	live, err := axfr(proofCtx, evidence.LocalIP, evidence.Domain)
+	live, err := localAXFR(proofCtx, evidence.LocalIP, evidence.Domain)
 	if err != nil {
-		return errors.New("DNS primary catalog AXFR is unavailable")
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS primary catalog AXFR is unavailable")
 	}
 	if live.Serial != evidence.Serial || !slices.Equal(live.Members, members) {
-		return errors.New("DNS primary catalog differs from its durable evidence")
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS primary catalog differs from its durable evidence")
+	}
+	peerLive, err := peerAXFR(
+		proofCtx, evidence.LocalIP, evidence.PeerIP, evidence.Domain,
+	)
+	if err != nil {
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS peer catalog AXFR is unavailable")
+	}
+	if peerLive.Serial != evidence.Serial ||
+		!slices.Equal(peerLive.Members, members) {
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS peer catalog differs from the primary")
 	}
 	peerCatalogSerial, err := exactDNSZoneSerialAtWithProbe(
 		proofCtx, evidence.PeerIP, evidence.Domain, soa,
 	)
 	if err != nil {
-		return errors.New("DNS peer catalog SOA is unavailable")
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS peer catalog SOA is unavailable")
 	}
 	if peerCatalogSerial != evidence.Serial {
-		return errors.New("DNS peer catalog SOA serial differs from the primary")
+		return dnsPeerAXFRAuthority{},
+			errors.New("DNS peer catalog SOA serial differs from the primary")
 	}
 	for index, member := range members {
 		localSerial, localErr := exactDNSZoneSerialAtWithProbe(
@@ -67,10 +104,14 @@ func verifyDNSPrimaryPairReadyAt(
 		expectedSerial := evidence.MemberSerials[index]
 		if localErr != nil || peerErr != nil ||
 			localSerial != expectedSerial || peerSerial != expectedSerial {
-			return errors.New("DNS catalog member did not converge on the peer")
+			return dnsPeerAXFRAuthority{},
+				errors.New("DNS catalog member did not converge on the peer")
 		}
 	}
-	return nil
+	return dnsPeerAXFRAuthority{
+		sourceIP: evidence.LocalIP, peerIP: evidence.PeerIP,
+		catalog: evidence.Domain, catalogSerial: evidence.Serial,
+	}, nil
 }
 
 func validateDNSPrimaryCatalogEvidence(evidence dnsPrimaryCatalogEvidence) error {
@@ -152,6 +193,7 @@ func bindPrimaryPairReady(
 	}
 	if err := verifyDNSPrimaryPairReadyAt(
 		ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		probeDNSBoundCatalogAXFR,
 	); err != nil {
 		return false, err
 	}
@@ -182,6 +224,7 @@ func powerDNSPrimaryPairReady(ctx context.Context) (bool, error) {
 	}
 	if err := verifyDNSPrimaryPairReadyAt(
 		ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		probeDNSBoundCatalogAXFR,
 	); err != nil {
 		return false, err
 	}

@@ -291,7 +291,11 @@ func testNegativeSOAResponse(
 	return result
 }
 
-func testCatalogAXFRMessage(t *testing.T, foreignPTR bool) ([]byte, uint16, string) {
+func testCatalogAXFRMessage(
+	t *testing.T,
+	foreignPTR bool,
+	memberTypes ...uint16,
+) ([]byte, uint16, string) {
 	t.Helper()
 	catalog := "catalog-c000020a.celikpanel.invalid"
 	query, id, err := buildDNSCatalogAXFRQuery(catalog)
@@ -332,7 +336,11 @@ func testCatalogAXFRMessage(t *testing.T, foreignPTR bool) ([]byte, uint16, stri
 		ptrOwner = "member.other." + catalog
 	}
 	member, _ := encodeDNSName("example.test")
-	appendRecord(ptrOwner, dnsTypePTR, member)
+	memberType := uint16(dnsTypePTR)
+	if len(memberTypes) != 0 {
+		memberType = memberTypes[0]
+	}
+	appendRecord(ptrOwner, memberType, member)
 	appendRecord(catalog, dnsTypeSOA, soa(9))
 	return message, id, catalog
 }
@@ -349,6 +357,106 @@ func TestParseDNSCatalogAXFRBindsSOAEnvelopeAndMembers(t *testing.T) {
 		foreign, foreignID, foreignCatalog,
 	); err == nil {
 		t.Fatal("catalog PTR outside the member namespace was accepted")
+	}
+	withACL, aclID, aclCatalog := testCatalogAXFRMessage(t, false, dnsTypeAPL)
+	if _, _, err := parseDNSCatalogAXFRMessage(
+		withACL, aclID, aclCatalog,
+	); err == nil {
+		t.Fatal("catalog custom transfer ACL was accepted")
+	}
+}
+
+func testZoneAXFRMessage(
+	t *testing.T,
+	domain string,
+	rcode uint16,
+	withSOA bool,
+) ([]byte, uint16) {
+	t.Helper()
+	query, id, err := buildDNSCatalogAXFRQuery(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := make([]byte, 12)
+	binary.BigEndian.PutUint16(message[0:2], id)
+	binary.BigEndian.PutUint16(message[2:4], dnsResponseQR|rcode)
+	binary.BigEndian.PutUint16(message[4:6], 1)
+	if withSOA {
+		binary.BigEndian.PutUint16(message[6:8], 1)
+	}
+	message = append(message, query[12:]...)
+	if !withSOA {
+		return message, id
+	}
+	owner, _ := encodeDNSName(domain)
+	message = append(message, owner...)
+	header := make([]byte, 10)
+	binary.BigEndian.PutUint16(header[0:2], dnsTypeSOA)
+	binary.BigEndian.PutUint16(header[2:4], dnsClassIN)
+	binary.BigEndian.PutUint32(header[4:8], 60)
+	mname, _ := encodeDNSName("ns1.example.test")
+	rname, _ := encodeDNSName("hostmaster.example.test")
+	rdata := append(append([]byte{}, mname...), rname...)
+	numbers := make([]byte, 20)
+	binary.BigEndian.PutUint32(numbers[0:4], 41)
+	rdata = append(rdata, numbers...)
+	binary.BigEndian.PutUint16(header[8:10], uint16(len(rdata)))
+	message = append(message, header...)
+	message = append(message, rdata...)
+	return message, id
+}
+
+func TestParseDNSZoneAXFRStateAcceptsOnlyExactNegativeAbsence(t *testing.T) {
+	const domain = "gone.example.test"
+	for _, rcode := range []uint16{
+		dnsRCodeRefused, dnsRCodeNotAuth, dnsRCodeNameError,
+	} {
+		message, id := testZoneAXFRMessage(t, domain, rcode, false)
+		state, err := parseDNSZoneAXFRState(message, id, domain)
+		if err != nil || state != dnsZoneAXFRAbsent {
+			t.Fatalf("rcode=%d state=%d err=%v", rcode, state, err)
+		}
+	}
+	for _, test := range []struct {
+		name    string
+		rcode   uint16
+		withSOA bool
+	}{
+		{name: "servfail", rcode: 2},
+		{name: "refused with answer", rcode: dnsRCodeRefused, withSOA: true},
+		{name: "empty success", rcode: dnsRCodeNoError},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			message, id := testZoneAXFRMessage(
+				t, domain, test.rcode, test.withSOA,
+			)
+			if state, err := parseDNSZoneAXFRState(
+				message, id, domain,
+			); err == nil || state != dnsZoneAXFRIndeterminate {
+				t.Fatalf("state=%d err=%v", state, err)
+			}
+		})
+	}
+}
+
+func TestParseDNSZoneAXFRStateClassifiesExactTransferAsPresent(t *testing.T) {
+	const domain = "gone.example.test"
+	message, id := testZoneAXFRMessage(t, domain, dnsRCodeNoError, true)
+	state, err := parseDNSZoneAXFRState(message, id, domain)
+	if err != nil || state != dnsZoneAXFRPresent {
+		t.Fatalf("state=%d err=%v", state, err)
+	}
+	message = message[:len(message)-1]
+	if state, err := parseDNSZoneAXFRState(
+		message, id, domain,
+	); err == nil || state != dnsZoneAXFRIndeterminate {
+		t.Fatalf("truncated state=%d err=%v", state, err)
+	}
+	wrongID := id + 1
+	if state, err := parseDNSZoneAXFRState(
+		message, wrongID, domain,
+	); err == nil || state != dnsZoneAXFRIndeterminate {
+		t.Fatalf("wrong-ID state=%d err=%v", state, err)
 	}
 }
 

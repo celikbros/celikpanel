@@ -812,7 +812,12 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	configs, err := prepareBINDConfigMutation(layout)
+	transferPeer := ""
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary {
+		transferPeer = manifest.PeerIP
+	}
+	configs, err := prepareBINDConfigMutation(layout, transferPeer)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1177,7 +1182,10 @@ func verifyDNSEngineSwitchSource(
 	return nil
 }
 
-func prepareBINDConfigMutation(layout bindHostLayout) (bindConfigMutation, error) {
+func prepareBINDConfigMutation(
+	layout bindHostLayout,
+	transferPeer string,
+) (bindConfigMutation, error) {
 	paths := []string{layout.OptionsConfig, layout.AnchorConfig}
 	sort.Strings(paths)
 	if len(paths) == 2 && paths[0] == paths[1] {
@@ -1198,7 +1206,7 @@ func prepareBINDConfigMutation(layout bindHostLayout) (bindConfigMutation, error
 		mutation.original[path] = append([]byte(nil), data...)
 		content := string(data)
 		if path == layout.OptionsConfig {
-			content, err = managedBINDOptions(content)
+			content, err = managedBINDOptions(content, transferPeer)
 			if err != nil {
 				return bindConfigMutation{}, fmt.Errorf("prepare BIND authoritative options: %w", err)
 			}

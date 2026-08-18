@@ -14,6 +14,7 @@ import (
 
 const (
 	dnsTypePTR                = 12
+	dnsTypeAPL                = 42
 	dnsTypeAXFR               = 252
 	dnsCatalogAXFRMaxBytes    = 16 << 20
 	dnsCatalogAXFRMaxMessages = 4096
@@ -30,6 +31,27 @@ type dnsCatalogAXFRProbe func(
 ) (dnsCatalogAXFRResult, error)
 
 var probeDNSCatalogAXFR dnsCatalogAXFRProbe = queryDNSCatalogAXFR
+
+type dnsBoundCatalogAXFRProbe func(
+	context.Context, string, string, string,
+) (dnsCatalogAXFRResult, error)
+
+type dnsZoneAXFRState uint8
+
+const (
+	dnsZoneAXFRIndeterminate dnsZoneAXFRState = iota
+	dnsZoneAXFRPresent
+	dnsZoneAXFRAbsent
+)
+
+type dnsBoundZoneAXFRProbe func(
+	context.Context, string, string, string,
+) (dnsZoneAXFRState, error)
+
+var (
+	probeDNSBoundCatalogAXFR dnsBoundCatalogAXFRProbe = queryDNSBoundCatalogAXFR
+	probeDNSBoundZoneAXFR    dnsBoundZoneAXFRProbe    = queryDNSBoundZoneAXFR
+)
 
 func buildDNSCatalogAXFRQuery(domain string) ([]byte, uint16, error) {
 	encodedName, err := encodeDNSName(domain)
@@ -53,30 +75,31 @@ func queryDNSCatalogAXFR(
 	ctx context.Context,
 	address, catalog string,
 ) (dnsCatalogAXFRResult, error) {
-	query, id, err := buildDNSCatalogAXFRQuery(catalog)
-	if err != nil {
-		return dnsCatalogAXFRResult{}, err
+	return queryDNSCatalogAXFRFrom(ctx, "", address, catalog)
+}
+
+func queryDNSBoundCatalogAXFR(
+	ctx context.Context,
+	source, address, catalog string,
+) (dnsCatalogAXFRResult, error) {
+	if !canonicalPairReadinessIPv4(source) ||
+		!canonicalPairReadinessIPv4(address) || source == address {
+		return dnsCatalogAXFRResult{}, errors.New("peer catalog AXFR identity is invalid")
 	}
-	connection, err := (&net.Dialer{}).DialContext(
-		ctx, "tcp", net.JoinHostPort(address, "53"),
+	return queryDNSCatalogAXFRFrom(ctx, source, address, catalog)
+}
+
+func queryDNSCatalogAXFRFrom(
+	ctx context.Context,
+	source, address, catalog string,
+) (dnsCatalogAXFRResult, error) {
+	connection, id, err := dialDNSAXFR(
+		ctx, source, address, catalog, dnsPairProofLimit,
 	)
 	if err != nil {
 		return dnsCatalogAXFRResult{}, err
 	}
 	defer connection.Close()
-	deadline := time.Now().Add(dnsPairProofLimit)
-	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(deadline) {
-		deadline = contextDeadline
-	}
-	if err := connection.SetDeadline(deadline); err != nil {
-		return dnsCatalogAXFRResult{}, err
-	}
-	frame := make([]byte, len(query)+2)
-	binary.BigEndian.PutUint16(frame[:2], uint16(len(query)))
-	copy(frame[2:], query)
-	if _, err := connection.Write(frame); err != nil {
-		return dnsCatalogAXFRResult{}, err
-	}
 	seen := map[string]bool{}
 	var soaSerials []uint32
 	var totalBytes int
@@ -121,6 +144,181 @@ func queryDNSCatalogAXFR(
 		}
 	}
 	return dnsCatalogAXFRResult{}, errors.New("BIND catalog AXFR did not terminate")
+}
+
+func dialDNSAXFR(
+	ctx context.Context,
+	source, address, domain string,
+	timeout time.Duration,
+) (net.Conn, uint16, error) {
+	query, id, err := buildDNSCatalogAXFRQuery(domain)
+	if err != nil {
+		return nil, 0, err
+	}
+	dialer := &net.Dialer{}
+	if source != "" {
+		parsed := net.ParseIP(source)
+		if parsed == nil || parsed.To4() == nil || parsed.To4().String() != source {
+			return nil, 0, errors.New("AXFR source address is invalid")
+		}
+		dialer.LocalAddr = &net.TCPAddr{IP: parsed.To4()}
+	}
+	connection, err := dialer.DialContext(
+		ctx, "tcp", net.JoinHostPort(address, "53"),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	deadline := time.Now().Add(timeout)
+	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(deadline) {
+		deadline = contextDeadline
+	}
+	if err := connection.SetDeadline(deadline); err != nil {
+		connection.Close()
+		return nil, 0, err
+	}
+	frame := make([]byte, len(query)+2)
+	binary.BigEndian.PutUint16(frame[:2], uint16(len(query)))
+	copy(frame[2:], query)
+	if _, err := connection.Write(frame); err != nil {
+		connection.Close()
+		return nil, 0, err
+	}
+	return connection, id, nil
+}
+
+func queryDNSBoundZoneAXFR(
+	ctx context.Context,
+	source, address, domain string,
+) (dnsZoneAXFRState, error) {
+	if !canonicalPairReadinessIPv4(source) ||
+		!canonicalPairReadinessIPv4(address) || source == address ||
+		!serviceMutationCanonicalFQDN(domain) {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR identity is invalid")
+	}
+	connection, id, err := dialDNSAXFR(
+		ctx, source, address, domain, dnsProbeTimeout,
+	)
+	if err != nil {
+		return dnsZoneAXFRIndeterminate, err
+	}
+	defer connection.Close()
+	message, err := readDNSAXFRMessage(connection, 0)
+	if err != nil {
+		return dnsZoneAXFRIndeterminate, err
+	}
+	return parseDNSZoneAXFRState(message, id, domain)
+}
+
+func readDNSAXFRMessage(connection net.Conn, totalBytes int) ([]byte, error) {
+	var length [2]byte
+	if _, err := io.ReadFull(connection, length[:]); err != nil {
+		return nil, err
+	}
+	size := int(binary.BigEndian.Uint16(length[:]))
+	if size < 12 || totalBytes+size > dnsCatalogAXFRMaxBytes {
+		return nil, errors.New("DNS AXFR exceeded its safe response bound")
+	}
+	message := make([]byte, size)
+	if _, err := io.ReadFull(connection, message); err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+func parseDNSZoneAXFRState(
+	message []byte,
+	id uint16,
+	domain string,
+) (dnsZoneAXFRState, error) {
+	if len(message) < 12 || binary.BigEndian.Uint16(message[:2]) != id {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR response identity mismatch")
+	}
+	flags := binary.BigEndian.Uint16(message[2:4])
+	if flags&dnsResponseQR == 0 || flags&dnsResponseTC != 0 || flags&0x7800 != 0 {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR response flags are invalid")
+	}
+	if binary.BigEndian.Uint16(message[4:6]) != 1 {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR question count is invalid")
+	}
+	offset := 12
+	name, next, err := decodeDNSName(message, offset)
+	if err != nil || next+4 > len(message) ||
+		strings.ToLower(strings.TrimSuffix(name, ".")) != domain ||
+		binary.BigEndian.Uint16(message[next:next+2]) != dnsTypeAXFR ||
+		binary.BigEndian.Uint16(message[next+2:next+4]) != dnsClassIN {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR question is invalid")
+	}
+	offset = next + 4
+	answers := int(binary.BigEndian.Uint16(message[6:8]))
+	rcode := int(flags & dnsResponseRCode)
+	if rcode == dnsRCodeNoError {
+		if answers == 0 {
+			return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR success has no answers")
+		}
+		ownerRaw, recordHeader, recordErr := decodeDNSName(message, offset)
+		owner := strings.ToLower(strings.TrimSuffix(ownerRaw, "."))
+		if recordErr != nil || recordHeader+10 > len(message) ||
+			owner != domain ||
+			binary.BigEndian.Uint16(message[recordHeader:recordHeader+2]) != dnsTypeSOA ||
+			binary.BigEndian.Uint16(message[recordHeader+2:recordHeader+4]) != dnsClassIN {
+			return dnsZoneAXFRIndeterminate,
+				errors.New("peer zone AXFR does not start with its apex SOA")
+		}
+		rdataOffset := recordHeader + 10
+		rdataLength := int(binary.BigEndian.Uint16(
+			message[recordHeader+8 : recordHeader+10],
+		))
+		rdataEnd := rdataOffset + rdataLength
+		if rdataEnd < rdataOffset || rdataEnd > len(message) {
+			return dnsZoneAXFRIndeterminate,
+				errors.New("peer zone AXFR SOA exceeds its message")
+		}
+		_, serialOffset, recordErr := decodeDNSName(message, rdataOffset)
+		if recordErr == nil {
+			_, serialOffset, recordErr = decodeDNSName(message, serialOffset)
+		}
+		if recordErr != nil || serialOffset+20 != rdataEnd ||
+			binary.BigEndian.Uint32(message[serialOffset:serialOffset+4]) == 0 {
+			return dnsZoneAXFRIndeterminate,
+				errors.New("peer zone AXFR SOA payload is invalid")
+		}
+		return dnsZoneAXFRPresent, nil
+	}
+	if answers != 0 ||
+		(rcode != dnsRCodeRefused && rcode != dnsRCodeNotAuth &&
+			rcode != dnsRCodeNameError) {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR absence is not exact")
+	}
+	for _, count := range []int{
+		int(binary.BigEndian.Uint16(message[8:10])),
+		int(binary.BigEndian.Uint16(message[10:12])),
+	} {
+		for range count {
+			_, recordEnd, recordErr := skipDNSResourceRecord(message, offset)
+			if recordErr != nil {
+				return dnsZoneAXFRIndeterminate, recordErr
+			}
+			offset = recordEnd
+		}
+	}
+	if offset != len(message) {
+		return dnsZoneAXFRIndeterminate, errors.New("peer zone AXFR response contains trailing bytes")
+	}
+	return dnsZoneAXFRAbsent, nil
+}
+
+func skipDNSResourceRecord(message []byte, offset int) (string, int, error) {
+	owner, next, err := decodeDNSName(message, offset)
+	if err != nil || next+10 > len(message) {
+		return "", 0, errors.New("DNS AXFR auxiliary record is invalid")
+	}
+	length := int(binary.BigEndian.Uint16(message[next+8 : next+10]))
+	end := next + 10 + length
+	if end < next+10 || end > len(message) {
+		return "", 0, errors.New("DNS AXFR auxiliary record exceeds its message")
+	}
+	return owner, end, nil
 }
 
 func parseDNSCatalogAXFRMessage(
@@ -192,6 +390,10 @@ func parseDNSCatalogAXFRMessage(
 				return nil, nil, errors.New("BIND catalog AXFR member is invalid")
 			}
 			members = append(members, member)
+		case dnsTypeAPL:
+			return nil, nil, errors.New(
+				"BIND catalog AXFR contains an unsupported transfer ACL property",
+			)
 		}
 		offset = end
 	}

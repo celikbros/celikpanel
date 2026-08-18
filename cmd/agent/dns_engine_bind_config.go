@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -55,8 +56,23 @@ func managedBINDZoneInclude(config, includePath string) (string, error) {
 	return config + block, nil
 }
 
-func managedBINDOptions(config string) (string, error) {
+func managedBINDOptions(config, transferPeer string) (string, error) {
+	transferACL := "none"
+	if transferPeer != "" {
+		peer := net.ParseIP(transferPeer)
+		if peer == nil || peer.To4() == nil || peer.To4().String() != transferPeer ||
+			!peer.IsGlobalUnicast() {
+			return "", errors.New("BIND transfer peer must be a canonical public IPv4 address")
+		}
+		transferACL = transferPeer + "/32"
+	}
 	block := "\n\t" + bindOptionsMarkerBegin +
+		"\n\trecursion no;" +
+		"\n\tallow-recursion { none; };" +
+		"\n\tallow-query-cache { none; };" +
+		"\n\tallow-transfer { " + transferACL + "; };" +
+		"\n\t" + bindOptionsMarkerEnd + "\n"
+	legacyBlock := "\n\t" + bindOptionsMarkerBegin +
 		"\n\trecursion no;" +
 		"\n\tallow-recursion { none; };" +
 		"\n\tallow-query-cache { none; };" +
@@ -76,16 +92,33 @@ func managedBINDOptions(config string) (string, error) {
 		if start < open || end < 0 || start+end+len(bindOptionsMarkerEnd) > close {
 			return "", errors.New("managed BIND options markers escape the options block")
 		}
-		canonical := strings.TrimPrefix(block, "\n\t")
-		canonical = strings.TrimSuffix(canonical, "\n")
 		actualEnd := start + end + len(bindOptionsMarkerEnd)
-		if config[start:actualEnd] != canonical {
+		canonical := strings.TrimSuffix(strings.TrimPrefix(block, "\n\t"), "\n")
+		legacy := strings.TrimSuffix(strings.TrimPrefix(legacyBlock, "\n\t"), "\n")
+		actual := config[start:actualEnd]
+		if actual != canonical && actual != legacy {
 			return "", errors.New("existing CelikPanel BIND options were modified")
 		}
-		return config, nil
+		outside := config[open+1:start] + config[actualEnd:close]
+		body := stripBINDCommentsAndStrings(outside)
+		for _, directive := range []string{
+			"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+		} {
+			if bindContainsDirective(body, directive) {
+				return "", fmt.Errorf(
+					"BIND options already define %s outside CelikPanel ownership", directive,
+				)
+			}
+		}
+		if actual == canonical {
+			return config, nil
+		}
+		return config[:start] + canonical + config[actualEnd:], nil
 	}
 	body := stripBINDCommentsAndStrings(config[open+1 : close])
-	for _, directive := range []string{"recursion", "allow-recursion", "allow-query-cache"} {
+	for _, directive := range []string{
+		"recursion", "allow-recursion", "allow-query-cache", "allow-transfer",
+	} {
 		if bindContainsDirective(body, directive) {
 			return "", fmt.Errorf("BIND options already define %s outside CelikPanel ownership", directive)
 		}

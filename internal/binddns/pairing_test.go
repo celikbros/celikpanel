@@ -59,6 +59,9 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 		!strings.Contains(catalog, " IN PTR example.test.") {
 		t.Fatalf("catalog does not contain version/member records:\n%s", catalog)
 	}
+	if strings.Contains(catalog, " IN APL ") {
+		t.Fatalf("managed producer catalog contains a custom transfer ACL:\n%s", catalog)
+	}
 	files := map[string][]byte{
 		generation.ReceiptValue.Zones[0].File:       generation.Zones[0].Data,
 		generation.ReceiptValue.Pairing.CatalogFile: generation.Catalog.Data,
@@ -111,6 +114,11 @@ func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
 		records[3].Content != "a.example.test" ||
 		records[4].Content != "z.example.test" {
 		t.Fatalf("domain=%q records=%#v", domain, records)
+	}
+	for _, record := range records {
+		if record.Type == "APL" {
+			t.Fatalf("engine-neutral catalog emitted a custom transfer ACL: %#v", records)
+		}
 	}
 	if _, _, err := CatalogZoneRecords(
 		"192.0.2.10", 17, []string{"a.example.test", "a.example.test"},

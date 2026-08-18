@@ -142,6 +142,7 @@ func completePDNSV3Propagation(
 	for {
 		err := verifyPDNSV3PropagationAt(
 			proofCtx, plan, probeDNSZoneSOA, probeDNSCatalogAXFR,
+			probeDNSBoundCatalogAXFR, probeDNSBoundZoneAXFR,
 		)
 		if err == nil {
 			return nil
@@ -161,7 +162,9 @@ func verifyPDNSV3PropagationAt(
 	ctx context.Context,
 	plan pdnsV3PropagationPlan,
 	soa dnsZoneSOAProbe,
-	axfr dnsCatalogAXFRProbe,
+	localAXFR dnsCatalogAXFRProbe,
+	peerCatalogAXFR dnsBoundCatalogAXFRProbe,
+	peerZoneAXFR dnsBoundZoneAXFRProbe,
 ) error {
 	if !plan.Primary {
 		return nil
@@ -169,15 +172,46 @@ func verifyPDNSV3PropagationAt(
 	if err := validatePDNSPrimaryPropagationPlan(plan); err != nil {
 		return err
 	}
-	if err := verifyDNSPrimaryPairReadyAt(ctx, plan.Evidence, soa, axfr); err != nil {
+	authority, err := verifyDNSPrimaryPairReadyAuthorityAt(
+		ctx, plan.Evidence, soa, localAXFR, peerCatalogAXFR,
+	)
+	if err != nil {
 		return err
 	}
 	if !plan.Changed.Delete {
 		return nil
 	}
-	return verifyDeletedDNSZoneAt(
-		ctx, plan.Evidence.PeerIP, plan.Changed.Domain, soa,
+	return verifyPeerDeletedDNSZoneAt(
+		ctx, authority, plan.Changed.Domain, peerZoneAXFR,
 	)
+}
+
+func verifyPeerDeletedDNSZoneAt(
+	ctx context.Context,
+	authority dnsPeerAXFRAuthority,
+	domain string,
+	probe dnsBoundZoneAXFRProbe,
+) error {
+	// The opaque authority is issued only after this source address completed
+	// an exact AXFR of the same peer's catalog. Managed BIND secondaries expose
+	// that catalog and every member through one inherited peer-only ACL;
+	// managed PowerDNS consumers use the same peer-only allow-axfr-ips value.
+	if probe == nil || authority.catalogSerial == 0 ||
+		!canonicalPairReadinessIPv4(authority.sourceIP) ||
+		!canonicalPairReadinessIPv4(authority.peerIP) ||
+		authority.sourceIP == authority.peerIP ||
+		!serviceMutationCanonicalFQDN(authority.catalog) ||
+		!serviceMutationCanonicalFQDN(domain) ||
+		domain == authority.catalog {
+		return errors.New("PowerDNS peer deletion AXFR authority is invalid")
+	}
+	state, err := probe(
+		ctx, authority.sourceIP, authority.peerIP, domain,
+	)
+	if err != nil || state != dnsZoneAXFRAbsent {
+		return errors.New("PowerDNS deleted zone remains served by the peer")
+	}
+	return nil
 }
 
 func verifyDeletedDNSZoneAt(
