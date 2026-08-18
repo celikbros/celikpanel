@@ -48,9 +48,10 @@ type ZoneSnapshot struct {
 // Manifest is the complete set of zone changes staged as one immutable BIND
 // generation. Zone order is intentionally insignificant.
 type Manifest struct {
-	EngineEpoch int64
-	Pairing     *Pairing
-	Zones       []ZoneSnapshot
+	EngineEpoch          int64
+	Pairing              *Pairing
+	PrimaryCatalogSerial uint32
+	Zones                []ZoneSnapshot
 }
 
 // RenderedZone contains a safe BIND master file and the hashes recorded in the

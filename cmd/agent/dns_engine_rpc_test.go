@@ -288,6 +288,43 @@ func TestDNSEngineStateRejectsAdoptedBIND(t *testing.T) {
 	}
 }
 
+func TestDNSEngineStateBindsPrimaryCatalogSerialToPairRole(t *testing.T) {
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
+		Engine: transport.DNSEnginePowerDNS, EngineEpoch: 3,
+		SourceRevision:    2,
+		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("a", 64),
+		MutationRequestID: strings.Repeat("b", 32),
+		MutationOwnerID:   strings.Repeat("c", 32),
+	}
+	state.PairRole = transport.DNSPairRolePrimary
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired primary state accepted a missing catalog serial")
+	}
+	state.PrimaryCatalogSerial = 41
+	if err := validateDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	state.PairRole = transport.DNSPairRoleSecondary
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("paired secondary state accepted a primary catalog serial")
+	}
+	state.PairRole = ""
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("standalone state accepted a primary catalog serial")
+	}
+	state.PrimaryCatalogSerial = 0
+	if err := validateDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	state.Mode = transport.DNSEngineSwitchModeAdopt
+	state.PairRole = transport.DNSPairRolePrimary
+	state.PrimaryCatalogSerial = 41
+	if err := validateDNSEngineState(state); err == nil {
+		t.Fatal("legacy adoption state claimed directional primary catalog authority")
+	}
+}
+
 func TestVerifyBINDPublicListenersRequiresNamedTCPAndUDP(t *testing.T) {
 	valid := strings.Join([]string{
 		`udp UNCONN 0 0 0.0.0.0:53 0.0.0.0:* users:(("named",pid=10,fd=1))`,

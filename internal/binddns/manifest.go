@@ -48,6 +48,13 @@ func NewTreePlan(manifest Manifest) (TreePlan, error) {
 		}
 		pairing = &canonical
 		catalogSerial = 1
+		if pairing.Role == PairRolePrimary && manifest.PrimaryCatalogSerial != 0 {
+			catalogSerial = manifest.PrimaryCatalogSerial
+		} else if pairing.Role != PairRolePrimary && manifest.PrimaryCatalogSerial != 0 {
+			return TreePlan{}, errors.New("only a BIND primary may inherit a catalog serial")
+		}
+	} else if manifest.PrimaryCatalogSerial != 0 {
+		return TreePlan{}, errors.New("standalone BIND cannot inherit a catalog serial")
 	}
 	zones := make([]treeZone, len(manifest.Zones))
 	for index, snapshot := range manifest.Zones {

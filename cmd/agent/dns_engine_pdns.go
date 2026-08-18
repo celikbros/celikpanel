@@ -134,11 +134,31 @@ func buildPDNSSwitchCandidate(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) error {
+	if requiresPrimaryCatalogSerial(manifest) {
+		return errors.New("paired primary PowerDNS candidate requires an explicit catalog serial")
+	}
+	return buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		ctx, path, manifest, binding, 0,
+	)
+}
+
+func buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+	ctx context.Context,
+	path string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+	primaryCatalogSerial uint32,
+) error {
 	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 		manifest.TargetEngine != transport.DNSEnginePowerDNS ||
 		!validMutationIdentity(binding.MutationRequestID) ||
 		!validMutationIdentity(binding.MutationOwnerID) {
 		return errors.New("invalid PowerDNS switch candidate identity")
+	}
+	if err := validatePrimaryCatalogSerialContract(
+		manifest, primaryCatalogSerial,
+	); err != nil {
+		return err
 	}
 	db, err := initializePDNSEngineDB(ctx, path)
 	if err != nil {
@@ -183,7 +203,9 @@ func buildPDNSSwitchCandidate(
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRolePrimary {
-		if _, err := reconcilePDNSBINDCatalogTx(ctx, tx, true, manifest.LocalIP); err != nil {
+		if _, err := reconcilePDNSBINDCatalogWithInitialSerialTx(
+			ctx, tx, manifest.LocalIP, primaryCatalogSerial,
+		); err != nil {
 			return fmt.Errorf("stage PowerDNS pair catalog: %w", err)
 		}
 	}
@@ -228,7 +250,9 @@ func buildPDNSSwitchCandidate(
 			return err
 		}
 	}
-	return verifyPDNSSwitchDatabase(ctx, path, manifest, binding)
+	return verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		ctx, path, manifest, binding, primaryCatalogSerial,
+	)
 }
 
 func syncRegularFile(path string) error {
@@ -661,6 +685,26 @@ func verifyPDNSSwitchDatabase(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) error {
+	if requiresPrimaryCatalogSerial(manifest) {
+		return errors.New("paired primary PowerDNS verification requires an explicit catalog serial")
+	}
+	return verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		ctx, path, manifest, binding, 0,
+	)
+}
+
+func verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+	ctx context.Context,
+	path string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+	primaryCatalogSerial uint32,
+) error {
+	if err := validatePrimaryCatalogSerialContract(
+		manifest, primaryCatalogSerial,
+	); err != nil {
+		return err
+	}
 	db, err := openPDNSEngineDB(path, true)
 	if err != nil {
 		return err
@@ -748,6 +792,11 @@ func verifyPDNSSwitchDatabase(
 			ctx, tx, manifest.LocalIP, expectedMembers,
 		); err != nil {
 			return fmt.Errorf("verify PowerDNS pair catalog: %w", err)
+		}
+		if err := verifyPDNSProducerSerialTx(
+			ctx, tx, manifest.LocalIP, primaryCatalogSerial,
+		); err != nil {
+			return fmt.Errorf("verify PowerDNS pair catalog serial: %w", err)
 		}
 		expectedDomains++
 	}

@@ -36,15 +36,17 @@ type bindHostLayout struct {
 }
 
 type dnsEngineStateReceipt struct {
-	Schema            string              `json:"schema"`
-	Mode              string              `json:"mode"`
-	Engine            transport.DNSEngine `json:"engine"`
-	EngineEpoch       int64               `json:"engine_epoch"`
-	Generation        string              `json:"generation,omitempty"`
-	SourceRevision    int64               `json:"source_revision"`
-	ManifestQualifier string              `json:"manifest_qualifier"`
-	MutationRequestID string              `json:"mutation_request_id"`
-	MutationOwnerID   string              `json:"mutation_owner_id"`
+	Schema               string              `json:"schema"`
+	Mode                 string              `json:"mode"`
+	Engine               transport.DNSEngine `json:"engine"`
+	EngineEpoch          int64               `json:"engine_epoch"`
+	Generation           string              `json:"generation,omitempty"`
+	PairRole             string              `json:"pair_role,omitempty"`
+	PrimaryCatalogSerial uint32              `json:"primary_catalog_serial,omitempty"`
+	SourceRevision       int64               `json:"source_revision"`
+	ManifestQualifier    string              `json:"manifest_qualifier"`
+	MutationRequestID    string              `json:"mutation_request_id"`
+	MutationOwnerID      string              `json:"mutation_owner_id"`
 }
 
 type dnsUnitState struct {
@@ -176,6 +178,26 @@ func validateDNSEngineState(state dnsEngineStateReceipt) error {
 	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
 		state.Engine != transport.DNSEnginePowerDNS {
 		return errors.New("DNS engine adoption state must name PowerDNS")
+	}
+	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
+		(state.PairRole != "" || state.PrimaryCatalogSerial != 0) {
+		return errors.New("legacy PowerDNS adoption state cannot claim directional primary identity")
+	}
+	switch state.PairRole {
+	case transport.DNSPairRolePrimary:
+		if state.PrimaryCatalogSerial == 0 {
+			return errors.New("paired primary DNS engine state is missing its catalog serial")
+		}
+	case transport.DNSPairRoleSecondary:
+		if state.PrimaryCatalogSerial != 0 {
+			return errors.New("paired secondary DNS engine state contains a primary catalog serial")
+		}
+	case "":
+		if state.PrimaryCatalogSerial != 0 {
+			return errors.New("standalone DNS engine state contains a primary catalog serial")
+		}
+	default:
+		return errors.New("DNS engine state has an unsupported pair role")
 	}
 	if state.Engine == transport.DNSEngineBIND {
 		if !validDNSGeneration(state.Generation) {
@@ -695,14 +717,6 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	plan, err := bindSwitchTreePlan(manifest, binding)
-	if err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
-	expected, err := binddns.RenderTree(layout.GenerationRoot, plan)
-	if err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
 	state, stateExists, err := readDNSEngineState()
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -712,9 +726,45 @@ func (hostDNSEngineBackend) Switch(
 		state.ManifestQualifier == manifest.Qualifier &&
 		state.MutationRequestID == binding.MutationRequestID &&
 		state.MutationOwnerID == binding.MutationOwnerID {
-		return verifyCompletedBINDEngineSwitch(ctx, profile, layout, expected, state, manifest.Zones)
+		if err := validateEngineStateCatalogContract(manifest, state); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		plan, err := bindSwitchTreePlanWithPrimaryCatalogSerial(
+			manifest, binding, state.PrimaryCatalogSerial,
+		)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		expected, err := binddns.RenderTree(layout.GenerationRoot, plan)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		response, err := verifyCompletedBINDEngineSwitch(
+			ctx, profile, layout, expected, state, manifest.Zones,
+		)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if err := verifyCompletedPrimaryCatalogTarget(
+			ctx, profile, manifest, state,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		return response, nil
 	}
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	primaryCatalogSerial, err := primaryCatalogSerialFromSource(
+		ctx, profile, manifest, state, stateExists,
+	)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	plan, err := bindSwitchTreePlanWithPrimaryCatalogSerial(
+		manifest, binding, primaryCatalogSerial,
+	)
+	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if _, exists, err := readDNSEngineSwitchJournal(); err != nil || exists {
@@ -829,6 +879,29 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	actualState, actualStateExists, err := readDNSEngineState()
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if actualStateExists != stateExists ||
+		(actualStateExists && actualState != state) {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New("DNS source state changed before the switch journal")
+	}
+	if err := verifyDNSEngineSwitchSource(
+		ctx, profile, manifest, actualState, actualStateExists,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	actualCatalogSerial, err := primaryCatalogSerialFromSource(
+		ctx, profile, manifest, actualState, actualStateExists,
+	)
+	if err != nil || actualCatalogSerial != primaryCatalogSerial {
+		if err == nil {
+			err = errors.New("primary catalog source changed before the switch journal")
+		}
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	journal := dnsEngineSwitchJournal{
 		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
 		Mode:              manifest.Mode,
@@ -839,7 +912,8 @@ func (hostDNSEngineBackend) Switch(
 		Topology: manifest.Topology,
 		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
 		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
-		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		PrimaryCatalogSerial: primaryCatalogSerial,
+		SnapshotBytes:        manifest.SnapshotBytes, Zones: manifest.Zones,
 		TargetGeneration: generation.ID, PreviousGeneration: previousGeneration,
 		HadPrevious: hadPrevious, StateBefore: stateBefore,
 		ConfigBefore:      bindConfigMutationSnapshots(configs),
@@ -855,6 +929,11 @@ func (hostDNSEngineBackend) Switch(
 		rollbackErr := rollbackBINDActivation(
 			rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
 		)
+		if rollbackErr == nil {
+			rollbackErr = verifyRestoredDNSSwitchSource(
+				context.WithoutCancel(rollbackCtx), profile, systemctl, manifest, journal,
+			)
+		}
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
 			journalErr = errors.Join(journalErr, writeDNSEngineSwitchJournal(journal), removeDNSEngineSwitchJournal())
@@ -920,10 +999,17 @@ func (hostDNSEngineBackend) Switch(
 			Schema: dnsEngineStateSchema,
 			Mode:   manifest.Mode,
 			Engine: transport.DNSEngineBIND, EngineEpoch: manifest.TargetEpoch,
-			Generation: generation.ID, SourceRevision: manifest.SourceRevision,
-			ManifestQualifier: manifest.Qualifier,
-			MutationRequestID: binding.MutationRequestID,
-			MutationOwnerID:   binding.MutationOwnerID,
+			Generation: generation.ID, PairRole: pairRoleForEngineState(manifest),
+			PrimaryCatalogSerial: primaryCatalogSerial,
+			SourceRevision:       manifest.SourceRevision,
+			ManifestQualifier:    manifest.Qualifier,
+			MutationRequestID:    binding.MutationRequestID,
+			MutationOwnerID:      binding.MutationOwnerID,
+		}
+		if err := verifyCompletedPrimaryCatalogTarget(
+			applyCtx, profile, manifest, nextState,
+		); err != nil {
+			return err
 		}
 		if err := writeDNSEngineState(nextState); err != nil {
 			actual, exists, readErr := readDNSEngineState()
@@ -990,10 +1076,16 @@ func dnsUnitStateMapSnapshots(states map[string]dnsUnitState) []dnsUnitSnapshot 
 	return snapshots
 }
 
-func bindSwitchTreePlan(
+func bindSwitchTreePlanWithPrimaryCatalogSerial(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
+	primaryCatalogSerial uint32,
 ) (binddns.TreePlan, error) {
+	if err := validatePrimaryCatalogSerialContract(
+		manifest, primaryCatalogSerial,
+	); err != nil {
+		return binddns.TreePlan{}, err
+	}
 	zones := make([]binddns.ZoneSnapshot, len(manifest.Zones))
 	for index, zone := range manifest.Zones {
 		zones[index] = binddns.ZoneSnapshot{
@@ -1013,7 +1105,8 @@ func bindSwitchTreePlan(
 		}
 	}
 	return binddns.NewTreePlan(binddns.Manifest{
-		EngineEpoch: manifest.TargetEpoch, Pairing: pairing, Zones: zones,
+		EngineEpoch: manifest.TargetEpoch, Pairing: pairing,
+		PrimaryCatalogSerial: primaryCatalogSerial, Zones: zones,
 	})
 }
 

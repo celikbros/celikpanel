@@ -478,7 +478,10 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		binding := transport.ServiceMutationBinding{
 			MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
 		}
-		if canonicalErr != nil || verifyPDNSSwitchDatabase(context.Background(), live, manifest, binding) != nil {
+		if canonicalErr != nil || verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+			context.Background(), live, manifest, binding,
+			journal.PrimaryCatalogSerial,
+		) != nil {
 			return errors.New("PowerDNS rollback live database is not the staged target")
 		}
 	}
@@ -574,7 +577,12 @@ func switchToPDNS(
 	if stateExists && state.Engine == transport.DNSEnginePowerDNS &&
 		state.EngineEpoch == manifest.TargetEpoch && state.ManifestQualifier == manifest.Qualifier &&
 		state.MutationRequestID == binding.MutationRequestID && state.MutationOwnerID == binding.MutationOwnerID {
-		if err := verifyPDNSSwitchDatabase(ctx, pdnsDBPath(), manifest, binding); err != nil {
+		if err := validateEngineStateCatalogContract(manifest, state); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+			ctx, pdnsDBPath(), manifest, binding, state.PrimaryCatalogSerial,
+		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
@@ -586,6 +594,11 @@ func switchToPDNS(
 		if err := verifyPDNSPairingAuthority(ctx, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
+		if err := verifyCompletedPrimaryCatalogTarget(
+			ctx, profile, manifest, state,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 		return transport.SwitchDNSEngineV1Response{Applied: true, ActiveEngine: transport.DNSEnginePowerDNS, ActiveEpoch: manifest.TargetEpoch, AppliedZones: len(manifest.Zones), Detail: "the exact PowerDNS engine switch was already completed and verified"}, nil
 	}
 	if _, exists, err := readDNSEngineSwitchJournal(); err != nil || exists {
@@ -595,6 +608,12 @@ func switchToPDNS(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	primaryCatalogSerial, err := primaryCatalogSerialFromSource(
+		ctx, profile, manifest, state, stateExists,
+	)
+	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&
@@ -703,8 +722,11 @@ func switchToPDNS(
 		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
 		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
 		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
-		Topology: manifest.Topology, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
-		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		Topology: manifest.Topology,
+		PairRole: manifest.PairRole, LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		PrimaryCatalogSerial: primaryCatalogSerial,
+		SnapshotBytes:        manifest.SnapshotBytes, Zones: manifest.Zones,
 		StateBefore: stateBefore, ConfigBefore: configs.before,
 		TargetUnitsBefore: targetBefore, SourceUnitsBefore: sourceBefore,
 		PDNSCandidatePath: candidate, PDNSBackupPath: backup,
@@ -713,16 +735,28 @@ func switchToPDNS(
 		journal.PDNSBackupSHA256, journal.PDNSBackupSize = liveHash, liveSize
 	}
 	writeIntent := func() error {
+		actualState, actualExists, err := readDNSEngineState()
+		if err != nil {
+			return err
+		}
+		if actualExists != stateExists || (actualExists && actualState != state) {
+			return errors.New("DNS source state changed before the switch journal")
+		}
+		if err := verifyDNSEngineSwitchSource(
+			ctx, profile, manifest, actualState, actualExists,
+		); err != nil {
+			return err
+		}
+		actualCatalogSerial, err := primaryCatalogSerialFromSource(
+			ctx, profile, manifest, actualState, actualExists,
+		)
+		if err != nil {
+			return err
+		}
+		if actualCatalogSerial != primaryCatalogSerial {
+			return errors.New("primary catalog source changed before the switch journal")
+		}
 		if reconfigureSecondary {
-			actualState, actualExists, err := readDNSEngineState()
-			if err != nil {
-				return err
-			}
-			if err := verifyDNSEngineSwitchSource(
-				ctx, profile, manifest, actualState, actualExists,
-			); err != nil {
-				return err
-			}
 			exists, size, digest, err := inspectPDNSDatabaseFile(
 				pdnsDBPath(), false,
 			)
@@ -754,15 +788,24 @@ func switchToPDNS(
 		journalErr := writeDNSEngineSwitchJournal(journal)
 		rollbackErr := rollbackPDNSSwitch(ctx, systemctl, journal, configs)
 		if rollbackErr == nil {
+			rollbackErr = verifyRestoredDNSSwitchSource(
+				context.WithoutCancel(ctx), profile, systemctl, manifest, journal,
+			)
+		}
+		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
 			journalErr = errors.Join(journalErr, writeDNSEngineSwitchJournal(journal), removeDNSEngineSwitchJournal())
 		}
 		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}
-	if err := buildPDNSSwitchCandidate(ctx, candidate, manifest, binding); err != nil {
+	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		ctx, candidate, manifest, binding, primaryCatalogSerial,
+	); err != nil {
 		return rollback(err)
 	}
-	if err := verifyPDNSSwitchDatabase(ctx, candidate, manifest, binding); err != nil {
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		ctx, candidate, manifest, binding, primaryCatalogSerial,
+	); err != nil {
 		return rollback(err)
 	}
 	if err := configs.apply(); err != nil {
@@ -795,7 +838,9 @@ func switchToPDNS(
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return rollback(err)
 	}
-	if err := verifyPDNSSwitchDatabase(ctx, pdnsDBPath(), manifest, binding); err != nil {
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		ctx, pdnsDBPath(), manifest, binding, primaryCatalogSerial,
+	); err != nil {
 		return rollback(err)
 	}
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
@@ -809,10 +854,18 @@ func switchToPDNS(
 	}
 	nextState := dnsEngineStateReceipt{
 		Schema: dnsEngineStateSchema, Mode: manifest.Mode,
-		Engine:      transport.DNSEnginePowerDNS,
-		EngineEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
-		ManifestQualifier: manifest.Qualifier, MutationRequestID: binding.MutationRequestID,
+		Engine:               transport.DNSEnginePowerDNS,
+		EngineEpoch:          manifest.TargetEpoch,
+		PairRole:             pairRoleForEngineState(manifest),
+		PrimaryCatalogSerial: primaryCatalogSerial,
+		SourceRevision:       manifest.SourceRevision,
+		ManifestQualifier:    manifest.Qualifier, MutationRequestID: binding.MutationRequestID,
 		MutationOwnerID: binding.MutationOwnerID,
+	}
+	if err := verifyCompletedPrimaryCatalogTarget(
+		ctx, profile, manifest, nextState,
+	); err != nil {
+		return rollback(err)
 	}
 	if err := writeDNSEngineState(nextState); err != nil {
 		if actual, exists, readErr := readDNSEngineState(); readErr != nil || !exists || actual != nextState {

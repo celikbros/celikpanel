@@ -54,10 +54,15 @@ func exactDNSEngineStateForJournal(
 	state dnsEngineStateReceipt,
 	journal dnsEngineSwitchJournal,
 ) bool {
+	pairRoleMatches := state.PairRole == journal.PairRole ||
+		(journal.PairRole == transport.DNSPairRoleSecondary &&
+			state.PairRole == "" && state.PrimaryCatalogSerial == 0)
 	if state.Schema != dnsEngineStateSchema || state.Engine != journal.TargetEngine ||
 		state.Mode != journal.Mode ||
 		state.EngineEpoch != journal.TargetEpoch || state.SourceRevision != journal.SourceRevision ||
 		state.ManifestQualifier != journal.ManifestQualifier ||
+		!pairRoleMatches ||
+		state.PrimaryCatalogSerial != journal.PrimaryCatalogSerial ||
 		state.MutationRequestID != journal.MutationRequestID ||
 		state.MutationOwnerID != journal.MutationOwnerID {
 		return false
@@ -101,7 +106,9 @@ func verifyDNSSwitchJournalTarget(
 		if err != nil {
 			return err
 		}
-		plan, err := bindSwitchTreePlan(manifest, binding)
+		plan, err := bindSwitchTreePlanWithPrimaryCatalogSerial(
+			manifest, binding, journal.PrimaryCatalogSerial,
+		)
 		if err != nil {
 			return err
 		}
@@ -109,15 +116,23 @@ func verifyDNSSwitchJournalTarget(
 		if err != nil || expected.ID != journal.TargetGeneration {
 			return errors.New("BIND recovery generation differs from the journal")
 		}
-		_, err = verifyCompletedBINDEngineSwitch(ctx, profile, layout, expected, state, manifest.Zones)
-		return err
+		if _, err = verifyCompletedBINDEngineSwitch(
+			ctx, profile, layout, expected, state, manifest.Zones,
+		); err != nil {
+			return err
+		}
+		return verifyCompletedPrimaryCatalogTarget(
+			ctx, profile, manifest, state,
+		)
 	case transport.DNSEnginePowerDNS:
 		if journal.Mode == transport.DNSEngineSwitchModeAdopt {
 			return verifyPDNSAdoptionEvidence(
 				ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
 			)
 		}
-		if err := verifyPDNSSwitchDatabase(ctx, pdnsDBPath(), manifest, binding); err != nil {
+		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+			ctx, pdnsDBPath(), manifest, binding, journal.PrimaryCatalogSerial,
+		); err != nil {
 			return err
 		}
 		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
@@ -126,7 +141,12 @@ func verifyDNSSwitchJournalTarget(
 		if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
 			return err
 		}
-		return verifyPDNSPairingAuthority(ctx, manifest)
+		if err := verifyPDNSPairingAuthority(ctx, manifest); err != nil {
+			return err
+		}
+		return verifyCompletedPrimaryCatalogTarget(
+			ctx, profile, manifest, state,
+		)
 	default:
 		return errors.New("DNS engine switch journal target is unsupported")
 	}
@@ -207,13 +227,9 @@ func rollbackDNSSwitchJournal(
 	default:
 		return errors.New("DNS engine rollback target is unsupported")
 	}
-	if journal.SourceEngine == transport.DNSEnginePowerDNS {
-		return verifyOnlyPDNSActive(ctx, systemctl)
-	}
-	if journal.SourceEngine == transport.DNSEngineBIND {
-		return verifyOnlyBINDActive(ctx, systemctl)
-	}
-	return verifyNoManagedDNSAuthority(ctx, systemctl, journal)
+	return verifyRestoredDNSSwitchSource(
+		ctx, profile, systemctl, manifest, journal,
+	)
 }
 
 func verifyNoManagedDNSAuthority(

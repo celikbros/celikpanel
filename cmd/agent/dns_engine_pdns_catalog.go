@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -200,8 +201,38 @@ func reconcilePDNSBINDCatalogFromSnapshotTx(
 	localIP string,
 	previous *managedPDNSCatalog,
 ) (managedPDNSCatalog, error) {
+	return reconcilePDNSBINDCatalogWithSeedTx(
+		ctx, tx, enabled, localIP, previous, 0,
+	)
+}
+
+func reconcilePDNSBINDCatalogWithInitialSerialTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	localIP string,
+	serial uint32,
+) (managedPDNSCatalog, error) {
+	if serial == 0 {
+		return managedPDNSCatalog{}, errors.New("PowerDNS initial catalog serial is required")
+	}
+	return reconcilePDNSBINDCatalogWithSeedTx(
+		ctx, tx, true, localIP, nil, serial,
+	)
+}
+
+func reconcilePDNSBINDCatalogWithSeedTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	enabled bool,
+	localIP string,
+	previous *managedPDNSCatalog,
+	initialSerial uint32,
+) (managedPDNSCatalog, error) {
 	if tx == nil {
 		return managedPDNSCatalog{}, errors.New("PowerDNS catalog transaction is required")
+	}
+	if initialSerial != 0 && (!enabled || previous != nil) {
+		return managedPDNSCatalog{}, errors.New("PowerDNS catalog serial seed has an invalid context")
 	}
 	if !enabled && previous != nil {
 		return managedPDNSCatalog{}, errors.New("disabled PowerDNS catalog cannot have a membership snapshot")
@@ -322,6 +353,9 @@ func reconcilePDNSBINDCatalogFromSnapshotTx(
 		}
 	}
 	serial := uint32(1)
+	if initialSerial != 0 {
+		serial = initialSerial
+	}
 	if !exists {
 		if previous != nil {
 			return managedPDNSCatalog{}, errors.New("PowerDNS catalog membership snapshot has no producer")
@@ -357,6 +391,9 @@ func reconcilePDNSBINDCatalogFromSnapshotTx(
 			return managedPDNSCatalog{}, errors.New("PowerDNS catalog base records are not canonical")
 		}
 		serial = currentSerial
+		if initialSerial != 0 && serial != initialSerial {
+			return managedPDNSCatalog{}, errors.New("PowerDNS catalog serial differs from its handoff receipt")
+		}
 	}
 
 	// A delete removes the only row that proves the old membership. V3 callers
@@ -374,7 +411,7 @@ func reconcilePDNSBINDCatalogFromSnapshotTx(
 		previousMembers = append([]string(nil), previous.Members...)
 		sort.Strings(previousMembers)
 	}
-	membershipChanged := exists && !reflect.DeepEqual(previousMembers, members)
+	membershipChanged := exists && !slices.Equal(previousMembers, members)
 	if membershipChanged {
 		// Wrapping a catalog serial could make a stale secondary appear current.
 		// Refuse the whole transaction instead; the caller rolls back both the
@@ -625,7 +662,7 @@ func verifyManagedPDNSBINDCatalog(
 	}
 	live, err := probeDNSCatalogAXFR(ctx, identity.LocalIP, identity.Domain)
 	if err != nil || live.Serial != identity.Serial ||
-		!reflect.DeepEqual(live.Members, identity.Members) {
+		!slices.Equal(live.Members, identity.Members) {
 		return errors.New("PowerDNS live catalog differs from its database")
 	}
 	if requirePeer {
@@ -838,6 +875,42 @@ func verifyPDNSProducerMembershipTx(
 	sort.Strings(expected)
 	if !reflect.DeepEqual(actual, expected) {
 		return errors.New("PowerDNS producer membership differs from the switch manifest")
+	}
+	return nil
+}
+
+func verifyPDNSProducerSerialTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	localIP string,
+	expected uint32,
+) error {
+	if tx == nil || expected == 0 {
+		return errors.New("PowerDNS producer serial proof is invalid")
+	}
+	domain, err := binddns.CatalogDomain(localIP)
+	if err != nil {
+		return err
+	}
+	var domainID int64
+	var zoneType, account string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT id, UPPER(type), COALESCE(account, '')
+		FROM domains WHERE name = ? COLLATE NOCASE
+	`, domain).Scan(&domainID, &zoneType, &account); err != nil {
+		return err
+	}
+	if zoneType != "PRODUCER" || account != pdnsBINDCatalogAccount {
+		return errors.New("PowerDNS producer row is not exact panel authority")
+	}
+	serial, err := verifyPDNSProducerBaseTx(
+		ctx, tx, domainID, domain, localIP,
+	)
+	if err != nil {
+		return err
+	}
+	if serial != expected {
+		return errors.New("PowerDNS producer catalog serial differs from its handoff receipt")
 	}
 	return nil
 }

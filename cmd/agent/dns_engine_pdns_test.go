@@ -325,10 +325,44 @@ func TestBuildPDNSPairedPrimaryPublishesEngineNeutralCatalog(t *testing.T) {
 			Records: zone.Records, ZoneQualifier: zone.Qualifier,
 		}})
 	path := filepath.Join(t.TempDir(), "paired-primary.sqlite3")
+	binding := testPDNSEngineBinding()
 	if err := buildPDNSSwitchCandidate(
-		context.Background(), path, manifest, testPDNSEngineBinding(),
+		context.Background(), path, manifest, binding,
+	); err == nil {
+		t.Fatal("paired primary candidate accepted an implicit catalog serial")
+	}
+	const catalogSerial = uint32(41)
+	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		context.Background(), path, manifest, binding, catalogSerial,
 	); err != nil {
 		t.Fatal(err)
+	}
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		context.Background(), path, manifest, binding, catalogSerial,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CELIKPANEL_PDNS_DB", path)
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: manifest.Mode,
+		Engine: transport.DNSEnginePowerDNS, EngineEpoch: manifest.TargetEpoch,
+		PairRole: manifest.PairRole, PrimaryCatalogSerial: catalogSerial,
+		SourceRevision:    manifest.SourceRevision,
+		ManifestQualifier: manifest.Qualifier,
+		MutationRequestID: binding.MutationRequestID,
+		MutationOwnerID:   binding.MutationOwnerID,
+	}
+	if err := verifyPDNSStateManifestReceipt(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+	state.ManifestQualifier = "dns-engine-switch/v1:sha256:" + strings.Repeat("0", 64)
+	if err := verifyPDNSStateManifestReceipt(context.Background(), state); err == nil {
+		t.Fatal("PowerDNS database receipt accepted a different active state")
+	}
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		context.Background(), path, manifest, binding, catalogSerial+1,
+	); err == nil {
+		t.Fatal("PowerDNS candidate accepted a different catalog handoff serial")
 	}
 	db, err := openPDNSEngineDB(path, true)
 	if err != nil {
@@ -341,6 +375,49 @@ func TestBuildPDNSPairedPrimaryPublishesEngineNeutralCatalog(t *testing.T) {
 	}
 	if catalogs != 1 {
 		t.Fatalf("managed primary catalogs=%d", catalogs)
+	}
+}
+
+func TestPDNSPrimaryCatalogMaximumSwitchThenMembershipFailsClosed(t *testing.T) {
+	prepareManagedPDNSCatalogConfig(t)
+	domain := "existing.test"
+	zone, err := mutationpayload.CanonicalDNSZoneSyncV3(
+		transport.DNSEnginePowerDNS, 4, 1, domain, false, "MASTER",
+		testPDNSEngineRecords(domain),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := testPairedPDNSSwitchManifest(
+		t, transport.DNSPairRolePrimary,
+		[]transport.DNSEngineSwitchZoneSnapshot{{
+			Domain: domain, DesiredGeneration: 1, ZoneType: "MASTER",
+			Records: zone.Records, ZoneQualifier: zone.Qualifier,
+		}},
+	)
+	path := filepath.Join(t.TempDir(), "paired-primary-max.sqlite3")
+	binding := testPDNSEngineBinding()
+	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+		context.Background(), path, manifest, binding, ^uint32(0),
+	); err != nil {
+		t.Fatal(err)
+	}
+	added, err := mutationpayload.CanonicalDNSZoneSyncV3(
+		transport.DNSEnginePowerDNS, manifest.TargetEpoch,
+		1, "new.test", false, "MASTER", testPDNSEngineRecords("new.test"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := applyPDNSV3ZoneDatabase(
+		context.Background(), path, added, binding,
+	); err == nil {
+		t.Fatal("PowerDNS membership change wrapped an exhausted catalog serial")
+	}
+	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		context.Background(), path, manifest, binding, ^uint32(0),
+	); err != nil {
+		t.Fatalf("failed membership transaction changed prior catalog: %v", err)
 	}
 }
 

@@ -94,8 +94,10 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 			break
 		}
 	}
+	wasMember := false
 	if found >= 0 {
 		previous := zones[found]
+		wasMember = !previous.receipt.Delete
 		if next.receipt.DesiredGeneration < previous.receipt.DesiredGeneration {
 			return TreePlan{}, errors.New("BIND zone delta is older than the current generation")
 		}
@@ -115,11 +117,12 @@ func ApplyDelta(current VerifiedTree, delta ZoneSnapshot) (TreePlan, error) {
 	if err := sortAndValidateTreeZones(zones); err != nil {
 		return TreePlan{}, err
 	}
-	if pairing != nil && pairing.Role == PairRolePrimary {
-		serial++
-		if serial == 0 {
-			serial = 1
+	membershipChanged := wasMember != !next.receipt.Delete
+	if pairing != nil && pairing.Role == PairRolePrimary && membershipChanged {
+		if serial == ^uint32(0) {
+			return TreePlan{}, errors.New("BIND catalog serial is exhausted")
 		}
+		serial++
 	}
 	return TreePlan{
 		engineEpoch: current.receipt.EngineEpoch,
@@ -163,10 +166,10 @@ func ReconfigurePairing(current VerifiedTree, desired *Pairing) (TreePlan, error
 		serial = current.receipt.Pairing.CatalogSerial
 		currentPairing := pairingFromReceipt(current.receipt.Pairing)
 		if currentPairing == nil || *currentPairing != pairing {
-			serial++
-			if serial == 0 {
-				serial = 1
+			if serial == ^uint32(0) {
+				return TreePlan{}, errors.New("BIND catalog serial is exhausted")
 			}
+			serial++
 		}
 	}
 	return TreePlan{

@@ -127,7 +127,7 @@ func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
 	}
 }
 
-func TestPrimaryDeltaAdvancesCatalogSerialAndKeepsLegacyStandaloneV1(t *testing.T) {
+func TestPrimaryDeltaAdvancesCatalogSerialOnlyForMembershipChanges(t *testing.T) {
 	primary, err := RenderManifest(pairingTestRoot, Manifest{
 		EngineEpoch: 2, Pairing: testPairing(PairRolePrimary),
 		Zones: []ZoneSnapshot{
@@ -147,8 +147,37 @@ func TestPrimaryDeltaAdvancesCatalogSerialAndKeepsLegacyStandaloneV1(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next.ReceiptValue.Pairing.CatalogSerial != 2 || next.ID == primary.ID {
-		t.Fatalf("catalog serial/generation did not advance: %#v", next.ReceiptValue.Pairing)
+	if next.ReceiptValue.Pairing.CatalogSerial != 1 || next.ID == primary.ID {
+		t.Fatalf("record-only update changed catalog membership serial or not generation: %#v", next.ReceiptValue.Pairing)
+	}
+
+	deleteDelta := boundSnapshot("example.test", 3, nil)
+	deleteDelta.Delete = true
+	deletedPlan, err := ApplyDelta(verifyPairingGeneration(t, next), deleteDelta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleted, err := RenderTree(pairingTestRoot, deletedPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleted.ReceiptValue.Pairing.CatalogSerial != 2 {
+		t.Fatalf("member deletion did not advance catalog serial: %#v", deleted.ReceiptValue.Pairing)
+	}
+
+	readdedPlan, err := ApplyDelta(
+		verifyPairingGeneration(t, deleted),
+		boundSnapshot("example.test", 4, testZoneRecords("example.test", "192.0.2.32")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readded, err := RenderTree(pairingTestRoot, readdedPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if readded.ReceiptValue.Pairing.CatalogSerial != 3 {
+		t.Fatalf("member re-add did not advance catalog serial: %#v", readded.ReceiptValue.Pairing)
 	}
 	standalone, err := RenderManifest(pairingTestRoot, Manifest{EngineEpoch: 2})
 	if err != nil {
@@ -156,5 +185,75 @@ func TestPrimaryDeltaAdvancesCatalogSerialAndKeepsLegacyStandaloneV1(t *testing.
 	}
 	if standalone.ReceiptValue.Schema != receiptSchemaV1 || standalone.ReceiptValue.Pairing != nil {
 		t.Fatalf("standalone compatibility changed: %#v", standalone.ReceiptValue)
+	}
+}
+
+func TestPrimaryCatalogSerialHandoffAndExhaustion(t *testing.T) {
+	seeded, err := RenderManifest(pairingTestRoot, Manifest{
+		EngineEpoch: 11, Pairing: testPairing(PairRolePrimary),
+		PrimaryCatalogSerial: 41,
+		Zones: []ZoneSnapshot{
+			boundSnapshot("example.test", 1, testZoneRecords("example.test", "192.0.2.30")),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seeded.ReceiptValue.Pairing == nil ||
+		seeded.ReceiptValue.Pairing.CatalogSerial != 41 {
+		t.Fatalf("seeded pairing receipt=%+v", seeded.ReceiptValue.Pairing)
+	}
+
+	maximum, err := RenderManifest(pairingTestRoot, Manifest{
+		EngineEpoch: 12, Pairing: testPairing(PairRolePrimary),
+		PrimaryCatalogSerial: ^uint32(0),
+		Zones: []ZoneSnapshot{
+			boundSnapshot("example.test", 1, testZoneRecords("example.test", "192.0.2.30")),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree := verifyPairingGeneration(t, maximum)
+	recordPlan, err := ApplyDelta(
+		tree,
+		boundSnapshot("example.test", 2, testZoneRecords("example.test", "192.0.2.31")),
+	)
+	if err != nil {
+		t.Fatalf("record-only update at maximum catalog serial failed: %v", err)
+	}
+	recordUpdated, err := RenderTree(pairingTestRoot, recordPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recordUpdated.ReceiptValue.Pairing.CatalogSerial != ^uint32(0) {
+		t.Fatal("record-only update changed maximum catalog serial")
+	}
+	tree = verifyPairingGeneration(t, recordUpdated)
+	if _, err := ApplyDelta(
+		tree,
+		boundSnapshot("new.test", 1, testZoneRecords("new.test", "192.0.2.31")),
+	); err == nil {
+		t.Fatal("catalog membership change wrapped an exhausted serial")
+	}
+	if tree.CurrentReceipt().Pairing.CatalogSerial != ^uint32(0) {
+		t.Fatal("failed membership delta mutated the verified source tree")
+	}
+	changedPairing := testPairing(PairRolePrimary)
+	changedPairing.PeerNS = "ns3.example.test"
+	if _, err := ReconfigurePairing(tree, changedPairing); err == nil {
+		t.Fatal("pair reconfiguration wrapped an exhausted catalog serial")
+	}
+
+	if _, err := NewTreePlan(Manifest{
+		EngineEpoch: 1, PrimaryCatalogSerial: 7,
+	}); err == nil {
+		t.Fatal("standalone BIND accepted a primary catalog serial")
+	}
+	if _, err := NewTreePlan(Manifest{
+		EngineEpoch: 1, Pairing: testPairing(PairRoleSecondary),
+		PrimaryCatalogSerial: 7,
+	}); err == nil {
+		t.Fatal("secondary BIND accepted a primary catalog serial")
 	}
 }

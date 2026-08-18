@@ -80,6 +80,136 @@ func TestDNSEngineSwitchJournalCanonicalRoundTrip(t *testing.T) {
 	}
 }
 
+func TestPairedPrimarySwitchJournalBindsFreshCatalogSerial(t *testing.T) {
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		transport.DNSEngineSwitchModeSwitch,
+		"", transport.DNSEngineBIND, 0, 1, 0,
+		transport.DNSTopologyPaired,
+		transport.DNSPairRolePrimary,
+		"192.0.2.10", "ns1.example.test",
+		"192.0.2.20", "ns2.example.test", nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal := testBINDSwitchJournal(t)
+	journal.ManifestQualifier = manifest.Qualifier
+	journal.Topology = manifest.Topology
+	journal.PairRole = manifest.PairRole
+	journal.LocalIP = manifest.LocalIP
+	journal.LocalNS = manifest.LocalNS
+	journal.PeerIP = manifest.PeerIP
+	journal.PeerNS = manifest.PeerNS
+	journal.SnapshotBytes = manifest.SnapshotBytes
+	journal.Zones = manifest.Zones
+	journal.PrimaryCatalogSerial = 1
+	encoded, err := encodeDNSEngineSwitchJournal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decodeDNSEngineSwitchJournal(encoded)
+	if err != nil || decoded.PrimaryCatalogSerial != 1 {
+		t.Fatalf("decoded serial=%d err=%v", decoded.PrimaryCatalogSerial, err)
+	}
+	journal.PrimaryCatalogSerial = 0
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("paired primary journal accepted a missing catalog serial")
+	}
+	journal.PrimaryCatalogSerial = 2
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("fresh primary journal accepted a non-initial catalog serial")
+	}
+}
+
+func TestPairedPrimarySwitchJournalAcceptsVerifiedLegacySourceReceipt(t *testing.T) {
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEnginePowerDNS, transport.DNSEngineBIND, 3, 4, 5,
+		transport.DNSTopologyPaired,
+		transport.DNSPairRolePrimary,
+		"192.0.2.10", "ns1.example.test",
+		"192.0.2.20", "ns2.example.test", nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal := testBINDSwitchJournal(t)
+	legacySource := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
+		Engine: transport.DNSEnginePowerDNS, EngineEpoch: manifest.SourceEpoch,
+		SourceRevision:    4,
+		ManifestQualifier: "dns-engine-switch/v1:sha256:" + strings.Repeat("d", 64),
+		MutationRequestID: strings.Repeat("e", 32),
+		MutationOwnerID:   strings.Repeat("f", 32),
+	}
+	legacyBytes, err := encodeDNSEngineState(legacySource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.StateBefore = dnsFileSnapshot{
+		Path: dnsEngineStatePath(), Exists: true, Mode: 0o600,
+		SHA256: digestDNSBytes(legacyBytes), Data: legacyBytes,
+	}
+	if dnsSnapshotOwnerRequired() {
+		journal.StateBefore.OwnerKnown = true
+	}
+	journal.ManifestQualifier = manifest.Qualifier
+	journal.SourceEngine = manifest.SourceEngine
+	journal.TargetEngine = manifest.TargetEngine
+	journal.SourceEpoch = manifest.SourceEpoch
+	journal.TargetEpoch = manifest.TargetEpoch
+	journal.SourceRevision = manifest.SourceRevision
+	journal.Topology = manifest.Topology
+	journal.PairRole = manifest.PairRole
+	journal.LocalIP = manifest.LocalIP
+	journal.LocalNS = manifest.LocalNS
+	journal.PeerIP = manifest.PeerIP
+	journal.PeerNS = manifest.PeerNS
+	journal.PrimaryCatalogSerial = 41
+	journal.SnapshotBytes = manifest.SnapshotBytes
+	journal.Zones = manifest.Zones
+	journal.SourceUnitsBefore = []dnsUnitSnapshot{{
+		Name: "pdns.service", LoadState: "loaded",
+		ActiveState: "active", UnitFileState: "enabled",
+	}}
+	if _, err := encodeDNSEngineSwitchJournal(journal); err != nil {
+		t.Fatal(err)
+	}
+	journal.PrimaryCatalogSerial = 0
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("legacy primary source journal accepted a missing target handoff serial")
+	}
+
+	boundSource := legacySource
+	boundSource.PairRole = transport.DNSPairRolePrimary
+	boundSource.PrimaryCatalogSerial = 40
+	boundBytes, err := encodeDNSEngineState(boundSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.StateBefore = dnsFileSnapshot{
+		Path: dnsEngineStatePath(), Exists: true, Mode: 0o600,
+		SHA256: digestDNSBytes(boundBytes), Data: boundBytes,
+	}
+	if dnsSnapshotOwnerRequired() {
+		journal.StateBefore.OwnerKnown = true
+	}
+	journal.PrimaryCatalogSerial = 41
+	if _, err := encodeDNSEngineSwitchJournal(journal); err != nil {
+		t.Fatalf("advanced durable serial was not accepted above its source anchor: %v", err)
+	}
+	boundSource.PrimaryCatalogSerial = 42
+	boundBytes, err = encodeDNSEngineState(boundSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.StateBefore.SHA256 = digestDNSBytes(boundBytes)
+	journal.StateBefore.Data = boundBytes
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("journal accepted a catalog serial below its source anchor")
+	}
+}
+
 func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", root)
@@ -209,6 +339,11 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 	if _, err := decodeDNSEngineSwitchJournal(encoded); err != nil {
 		t.Fatal(err)
 	}
+	journal.PrimaryCatalogSerial = 1
+	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
+		t.Fatal("legacy PowerDNS adoption accepted a primary catalog serial")
+	}
+	journal.PrimaryCatalogSerial = 0
 	journal.TargetUnitsBefore[1].ActiveState = "active"
 	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {
 		t.Fatal("adoption journal accepted another active DNS engine")
