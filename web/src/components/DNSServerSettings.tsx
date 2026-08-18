@@ -177,23 +177,23 @@ export function DNSServerSettings() {
         ? engine.active_engine
         : null;
     const legacyPowerDNSEntry = engine?.engines.find((entry) => entry.id === 'pdns');
-    const legacyPowerDNSAdoptionStaging = engine?.state === 'unmanaged' &&
+    const legacyPowerDNSReconfigureStaging = engine?.state === 'unmanaged' &&
         engine.active_engine === null &&
         legacyPowerDNSEntry?.status === 'unmanaged' &&
         legacyPowerDNSEntry.installed && legacyPowerDNSEntry.running && legacyPowerDNSEntry.managed &&
         engine.engines.every((entry) => entry.id === 'pdns' || !entry.running);
     const identityStaging = (engine?.state === 'unconfigured' && engine.active_engine === null) ||
-        legacyPowerDNSAdoptionStaging;
+        legacyPowerDNSReconfigureStaging;
 
     return (
         <div>
             <DNSEngineCard key={engineRefreshKey} onSnapshotChange={setEngine} />
             {activeEngine || identityStaging ? (
                 <DNSInfrastructureSettings
-                    key={activeEngine ?? (legacyPowerDNSAdoptionStaging ? 'legacy-pdns' : 'unconfigured')}
+                    key={activeEngine ?? (legacyPowerDNSReconfigureStaging ? 'legacy-pdns' : 'unconfigured')}
                     activeEngine={activeEngine}
                     stagingOnly={identityStaging}
-                    legacyPowerDNSAdoption={legacyPowerDNSAdoptionStaging}
+                    legacyPowerDNSReconfigure={legacyPowerDNSReconfigureStaging}
                     pairRole={engine?.pair_role}
                     onIdentityStaged={() => setEngineRefreshKey((current) => current + 1)}
                 />
@@ -225,13 +225,13 @@ export function DNSServerSettings() {
 function DNSInfrastructureSettings({
 	activeEngine,
 	stagingOnly,
-	legacyPowerDNSAdoption,
+	legacyPowerDNSReconfigure,
 	pairRole,
 	onIdentityStaged,
 }: {
 	activeEngine: ActiveDNSEngine | null;
 	stagingOnly: boolean;
-	legacyPowerDNSAdoption: boolean;
+	legacyPowerDNSReconfigure: boolean;
 	pairRole?: 'primary' | 'secondary';
 	onIdentityStaged: () => void;
 }) {
@@ -537,7 +537,6 @@ function DNSInfrastructureSettings({
 		&& saved.configured
         && saved.role === 'paired';
     const roleSelectionDisabled = (role: DNSRole) => pairedIdentityLocked
-        || (legacyPowerDNSAdoption && role === 'paired')
         || (activeEngine === 'bind' && role === 'paired');
     const selectRole = (role: DNSRole) => {
         if (roleSelectionDisabled(role)) return;
@@ -652,13 +651,13 @@ function DNSInfrastructureSettings({
                     role="note"
                 >
                     <p className="text-sm font-semibold text-fg">
-                        {legacyPowerDNSAdoption
-                            ? et('dnsEngine.identity.legacyStageTitle')
+                        {legacyPowerDNSReconfigure
+                            ? et('dnsEngine.identity.legacyReconfigureTitle')
                             : et('dnsEngine.identity.stageTitle')}
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-fg-muted">
-                        {legacyPowerDNSAdoption
-                            ? et('dnsEngine.identity.legacyStageDescription')
+                        {legacyPowerDNSReconfigure
+                            ? et('dnsEngine.identity.legacyReconfigureDescription')
                             : et('dnsEngine.identity.stageDescription')}
                     </p>
                 </div>
@@ -734,8 +733,8 @@ function DNSInfrastructureSettings({
                                         {t(`dnssrv.role.${role}` as Parameters<typeof t>[0])}
                                     </span>
                                     <span className="mt-1 block text-xs leading-relaxed text-fg-muted">
-                                        {legacyPowerDNSAdoption && role === 'paired'
-                                            ? et('dnsEngine.identity.legacyPairedDeferred')
+                                        {legacyPowerDNSReconfigure && role === 'paired'
+                                            ? et('dnsEngine.identity.legacyPairedDirect')
                                             : activeEngine === 'bind' && role === 'paired' && !pairedIdentityLocked
                                             ? et('dnsEngine.identity.bindPairedUnsupported')
                                             : t(`dnssrv.role.${role}.desc` as Parameters<typeof t>[0])}

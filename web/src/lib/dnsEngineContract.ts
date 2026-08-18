@@ -46,7 +46,7 @@ export interface DNSEngineSnapshot {
     engines: DNSEngineEntry[];
 }
 
-export type DNSEnginePreviewAction = 'install' | 'switch' | 'adopt';
+export type DNSEnginePreviewAction = 'install' | 'switch' | 'adopt' | 'reconfigure';
 
 export interface DNSEnginePreviewBlocker {
     code: string;
@@ -72,7 +72,7 @@ const engineIDs = new Set<string>(DNS_ENGINE_IDS);
 const engineStates = new Set<string>(DNS_ENGINE_STATES);
 const engineStatuses = new Set<string>(DNS_ENGINE_STATUSES);
 const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
-const previewActions = new Set<string>(['install', 'switch', 'adopt']);
+const previewActions = new Set<string>(['install', 'switch', 'adopt', 'reconfigure']);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
 const dnsEngineEstimatedDowntimeSeconds = 15;
@@ -206,6 +206,8 @@ export function decodeDNSEngineSwitchPreview(
     target: DNSEngineID,
     revision: number,
 ): DNSEngineSwitchPreview | null {
+    const reconfigure = isRecord(value) && value.action === 'reconfigure';
+    const requiresInterruption = source !== null || reconfigure;
     if (!isRecord(value)
         || typeof value.preview_token !== 'string'
         || !operationIDPattern.test(value.preview_token)
@@ -223,8 +225,9 @@ export function decodeDNSEngineSwitchPreview(
         || !isNonNegativeInteger(value.estimated_downtime_seconds)
         || value.estimated_downtime_seconds > 86400
         || typeof value.requires_downtime_acknowledgement !== 'boolean'
-        || value.requires_downtime_acknowledgement !== (source !== null)
-        || value.estimated_downtime_seconds !== (source !== null
+        || (reconfigure && (source !== null || target !== 'pdns'))
+        || value.requires_downtime_acknowledgement !== requiresInterruption
+        || value.estimated_downtime_seconds !== (requiresInterruption
             ? dnsEngineEstimatedDowntimeSeconds
             : 0)
         || !Array.isArray(value.blockers)

@@ -135,6 +135,25 @@ test('DNS engine preview token and counts mirror the commit contract', async () 
     estimated_downtime_seconds: 0,
     requires_downtime_acknowledgement: false,
   }, null, 'bind', 4));
+  assert.ok(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'pdns',
+    action: 'reconfigure',
+  }, null, 'pdns', 4));
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'bind',
+    action: 'reconfigure',
+  }, null, 'bind', 4), null);
+  assert.equal(decodeDNSEngineSwitchPreview({
+    ...preview,
+    source_engine: null,
+    target_engine: 'pdns',
+    action: 'reconfigure',
+    requires_downtime_acknowledgement: false,
+  }, null, 'pdns', 4), null);
 });
 
 test('first DNS engine click requests a read-only preview and cannot mutate', () => {
@@ -196,13 +215,13 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
 test('fresh servers stage an exact DNS identity before the first engine install', () => {
   assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
   assert.match(settings, /const legacyPowerDNSEntry = engine\?\.engines\.find\(\(entry\) => entry\.id === 'pdns'\)/);
-  assert.match(settings, /const legacyPowerDNSAdoptionStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
-  assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSAdoptionStaging/);
+  assert.match(settings, /const legacyPowerDNSReconfigureStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
+  assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSReconfigureStaging/);
   assert.match(settings, /<DNSEngineCard key=\{engineRefreshKey\}/);
   assert.match(settings, /activeEngine \|\| identityStaging/);
   assert.match(settings, /activeEngine=\{activeEngine\}/);
   assert.match(settings, /stagingOnly=\{identityStaging\}/);
-  assert.match(settings, /legacyPowerDNSAdoption=\{legacyPowerDNSAdoptionStaging\}/);
+  assert.match(settings, /legacyPowerDNSReconfigure=\{legacyPowerDNSReconfigureStaging\}/);
   assert.match(settings, /onIdentityStaged=\{\(\) => setEngineRefreshKey/);
   assert.match(settings, /activeEngine: ActiveDNSEngine \| null/);
   assert.match(settings, /data-testid="dns-identity-staging-note"/);
@@ -215,10 +234,11 @@ test('fresh servers stage an exact DNS identity before the first engine install'
   assert.match(copy, /dnsEngine\.identity\.stageDescription/);
   assert.match(copy, /This step does not install, start, or publish a DNS server/);
   assert.match(copy, /Bu adım DNS sunucusu kurmaz, başlatmaz veya yayın yapmaz/);
-  assert.match(copy, /existing panel-managed PowerDNS must first be adopted with its current standalone topology/);
-  assert.match(copy, /mevcut PowerDNS önce şimdiki tek sunuculu topolojisiyle devralınmalıdır/);
-  assert.match(settings, /legacyPowerDNSAdoption && role === 'paired'/);
-  assert.match(settings, /dnsEngine\.identity\.legacyPairedDeferred/);
+  assert.match(copy, /reconfigure it directly as the secondary/);
+  assert.match(copy, /doğrudan ikincil olarak yapılandıracak/);
+  assert.match(settings, /dnsEngine\.identity\.legacyPairedDirect/);
+  assert.match(contract, /'install' \| 'switch' \| 'adopt' \| 'reconfigure'/);
+  assert.match(card, /dnsEngine\.reviewReconfigure/);
   assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
 });
 

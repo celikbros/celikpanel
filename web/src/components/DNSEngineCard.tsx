@@ -64,6 +64,9 @@ const knownImpactKeys = {
     brief_dns_interruption: 'dnsEngine.impact.briefInterruption',
     keep_source_standby: 'dnsEngine.impact.keepStandby',
     adopt_existing: 'dnsEngine.impact.adoptExisting',
+    replace_existing: 'dnsEngine.impact.replaceExisting',
+    restart_target: 'dnsEngine.impact.restartTarget',
+    configure_secondary: 'dnsEngine.impact.configureSecondary',
 } as const;
 
 function createRequestID(): string | null {
@@ -302,7 +305,11 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
                                 const reviewLabel = engine.status === 'available'
                                     ? et('dnsEngine.reviewInstall')
                                     : engine.status === 'unmanaged'
-                                      ? et('dnsEngine.reviewAdopt')
+                                      ? snapshot.active_engine === null
+                                        && snapshot.topology === 'paired'
+                                        && id === 'pdns'
+                                          ? et('dnsEngine.reviewReconfigure')
+                                          : et('dnsEngine.reviewAdopt')
                                       : et('dnsEngine.reviewSwitch');
                                 return (
                                     <article key={id} className="rounded-xl border border-border bg-surface-2/30 p-4">
