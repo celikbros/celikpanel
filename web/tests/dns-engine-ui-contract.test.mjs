@@ -76,6 +76,7 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 		active_engine: 'bind',
 		topology: 'paired',
 		pair_role: 'secondary',
+		pair_ready: false,
 		engines: [
 			{ id: 'pdns', installed: true, running: false, managed: true, status: 'installed_standby' },
 			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
@@ -84,7 +85,18 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 	assert.ok(decodeDNSEngineSnapshot(readySnapshot({
 		topology: 'paired',
 		pair_role: 'primary',
+		pair_ready: true,
 	})));
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired',
+		pair_role: 'primary',
+	})), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired',
+		pair_role: 'secondary',
+		pair_ready: true,
+	})), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({ pair_ready: false })), null);
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({
     engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
@@ -240,6 +252,18 @@ test('fresh servers stage an exact DNS identity before the first engine install'
   assert.match(contract, /'install' \| 'switch' \| 'adopt' \| 'reconfigure'/);
   assert.match(card, /dnsEngine\.reviewReconfigure/);
   assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
+});
+
+test('paired engines expose exact peer readiness without granting secondary writes', () => {
+  assert.match(contract, /pair_ready\?: boolean/);
+  assert.match(contract, /value\.active_engine !== null && value\.topology === 'paired'[\s\S]*typeof value\.pair_ready !== 'boolean'/);
+  assert.match(contract, /value\.pair_role === 'secondary' && value\.pair_ready !== false/);
+  assert.match(card, /data-testid="dns-pair-readiness"/);
+  assert.match(card, /dnsEngine\.pair\.primaryWaiting/);
+  assert.match(card, /dnsEngine\.pair\.primaryReady/);
+  assert.match(card, /dnsEngine\.pair\.secondaryReadOnly/);
+  assert.match(copy, /waiting for the secondary to prove the exact catalog/);
+  assert.match(copy, /ikincilin kesin kataloğu kanıtlaması bekleniyor/);
 });
 
 test('paired identity remains locked across independent BIND or PowerDNS choices', () => {

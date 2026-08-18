@@ -292,6 +292,26 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
                                     dnssec: snapshot.dnssec_zone_count,
                                 })}
                             </span>
+                            {snapshot.topology === 'paired' && snapshot.active_engine !== null && (
+                                <span
+                                    data-testid="dns-pair-readiness"
+                                    className={`rounded-full border px-2.5 py-1 font-semibold ${
+                                        snapshot.pair_role === 'primary' && snapshot.pair_ready
+                                            ? 'border-success/30 bg-success/10 text-success'
+                                            : snapshot.pair_role === 'secondary'
+                                              ? 'border-primary/25 bg-primary/5 text-primary'
+                                              : 'border-warning/35 bg-warning/10 text-warning'
+                                    }`}
+                                >
+                                    {snapshot.pair_role === 'secondary'
+                                        ? et('dnsEngine.pair.secondaryReadOnly')
+                                        : snapshot.pair_role === 'primary' && snapshot.pair_ready
+                                          ? et('dnsEngine.pair.primaryReady')
+                                          : snapshot.pair_role === 'primary'
+                                            ? et('dnsEngine.pair.primaryWaiting')
+                                            : et('dnsEngine.pair.roleUnresolved')}
+                                </span>
+                            )}
                         </div>
 
                         <div className="mt-4 grid gap-3 md:grid-cols-2">

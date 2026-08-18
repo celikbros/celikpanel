@@ -90,6 +90,7 @@ type dnsEngineSnapshot struct {
 	State            string               `json:"state"`
 	Topology         string               `json:"topology"`
 	PairRole         string               `json:"pair_role,omitempty"`
+	PairReady        *bool                `json:"pair_ready,omitempty"`
 	DNSSECZoneCount  int                  `json:"dnssec_zone_count"`
 	ZoneCount        int                  `json:"zone_count"`
 	PendingZoneCount int                  `json:"pending_zone_count"`
@@ -502,10 +503,16 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine != "" {
 		topology = state.Topology
 	}
+	var pairReady *bool
+	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
+		ready := runtimes[state.ActiveEngine].PairReady
+		pairReady = &ready
+	}
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
 		State:        presentationState, Topology: topology, PairRole: state.PairRole,
+		PairReady:       pairReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,

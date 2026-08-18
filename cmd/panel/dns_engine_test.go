@@ -947,6 +947,11 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 				state.PeerNS != test.peerNS {
 				t.Fatalf("durable directional state=%+v", state)
 			}
+			snapshot, err := panel.dnsEngineSnapshot(context.Background())
+			if err != nil || snapshot.PairReady == nil ||
+				*snapshot.PairReady != (test.wantRole == transport.DNSPairRolePrimary) {
+				t.Fatalf("paired readiness snapshot=%+v err=%v", snapshot, err)
+			}
 			identity, ready, err := panel.activeDNSPublisher(context.Background())
 			if err != nil || identity.PairRole != test.wantRole ||
 				ready != (test.wantRole == transport.DNSPairRolePrimary) {
@@ -966,10 +971,18 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 						identity, runtime, ready, err,
 					)
 				}
+				snapshot, err = panel.dnsEngineSnapshot(context.Background())
+				if err != nil || snapshot.PairReady == nil || *snapshot.PairReady {
+					t.Fatalf("unproven primary snapshot=%+v err=%v", snapshot, err)
+				}
 				agent.mu.Lock()
 				runtime.PairReady = true
 				agent.runtimes[transport.DNSEngineBIND] = runtime
 				agent.mu.Unlock()
+				snapshot, err = panel.dnsEngineSnapshot(context.Background())
+				if err != nil || snapshot.PairReady == nil || !*snapshot.PairReady {
+					t.Fatalf("proven primary snapshot=%+v err=%v", snapshot, err)
+				}
 			}
 		})
 	}

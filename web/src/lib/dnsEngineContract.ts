@@ -39,6 +39,7 @@ export interface DNSEngineSnapshot {
     state: DNSEngineState;
     topology: DNSTopology;
     pair_role?: DNSPairRole;
+    pair_ready?: boolean;
     dnssec_zone_count: number;
     zone_count: number;
     pending_zone_count: number;
@@ -135,6 +136,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || !isTopology(value.topology)
         || (value.pair_role !== undefined
             && value.pair_role !== 'primary' && value.pair_role !== 'secondary')
+        || (value.pair_ready !== undefined && typeof value.pair_ready !== 'boolean')
         || !isNonNegativeInteger(value.dnssec_zone_count)
         || !isNonNegativeInteger(value.zone_count)
         || !isNonNegativeInteger(value.pending_zone_count)
@@ -170,8 +172,12 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
     if (value.active_engine === 'bind' && value.topology === 'paired'
         && value.pair_role !== 'primary' && value.pair_role !== 'secondary') return null;
+    if (value.active_engine !== null && value.topology === 'paired'
+        && typeof value.pair_ready !== 'boolean') return null;
     if ((value.active_engine === null || value.topology !== 'paired')
-        && value.pair_role !== undefined) return null;
+        && (value.pair_role !== undefined || value.pair_ready !== undefined)) return null;
+    if (value.pair_ready === true && value.pair_role !== 'primary') return null;
+    if (value.pair_role === 'secondary' && value.pair_ready !== false) return null;
 
     return {
         revision: value.revision,
@@ -182,6 +188,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         ...(value.pair_role === 'primary' || value.pair_role === 'secondary'
             ? { pair_role: value.pair_role }
             : {}),
+        ...(typeof value.pair_ready === 'boolean' ? { pair_ready: value.pair_ready } : {}),
         dnssec_zone_count: value.dnssec_zone_count,
         zone_count: value.zone_count,
         pending_zone_count: value.pending_zone_count,
