@@ -378,10 +378,21 @@ After a deletion, completion additionally requires the deleted zone's AXFR to be
 absent at the peer. If that transfer succeeds, the peer still has a stale copy;
 the operation and PairReady stay fail-closed.
 
-Use fixed, dedicated peer IPv4 addresses. Managed BIND options normally contain
-`allow-transfer { none; };`. Only a paired BIND secondary permits a transfer,
-and its sole entry is the exact primary `/32`. PowerDNS's panel-managed transfer
-and notify peer lists contain only the exact configured peer. TSIG is not
+Use fixed, dedicated peer IPv4 addresses. Managed BIND global options normally
+contain `allow-transfer { none; };`. A directional primary's panel-generated
+catalog/member zones allow only exact self `LocalIP` plus exact peer and notify
+only that peer; a secondary's sole transfer entry is the exact primary `/32`.
+Directional PowerDNS primary uses exact `allow-axfr-ips=LocalIP,PeerIP` and
+`also-notify=PeerIP`; secondary uses peer-only AXFR and no `also-notify`.
+Released legacy paired policy must remain byte-exact peer-only-plus-notify and
+may pass only the narrow legacy proof. A first BIND V3 publication migrates it
+inside the recoverable pointer/state transaction. Do not rewrite legacy
+PowerDNS implicitly; retain compatibility until an explicit reviewed switch or
+reconfiguration. Legacy V2 mutations are permitted only for exact tuple-less
+producer/standalone compatibility; directional receipts and tuple-less
+consumers are read-only and must use the reviewed V3 switch/reconfiguration
+path. A released populated consumer may leave PowerDNS only after its exact
+catalog-bound member set and local/peer SOA serials are proven. TSIG is not
 implemented, and shared or dynamic NAT endpoints are unsupported.
 
 Treat the catalog serial as engine-neutral topology state. Preserve it exactly

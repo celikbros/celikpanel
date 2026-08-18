@@ -906,9 +906,22 @@ only when the peer zone AXFR is absent; if transfer still succeeds, the peer is
 serving a stale copy and PairReady fails. The secondary never receives
 panel-local write authority.
 
-Managed BIND options default to `allow-transfer { none; };`. Only a paired BIND
-secondary changes that default, and then only for its exact primary `/32`.
-PowerDNS transfer and notify peer ACLs contain only the exact configured peer.
+Managed BIND global options default to `allow-transfer { none; };`. A
+directional BIND primary's generated catalog and member zones permit AXFR only
+from exact self `LocalIP` for trusted local proof plus the exact peer, and notify
+only that peer. A BIND secondary permits only its exact primary `/32`.
+Directional PowerDNS primary uses exact `allow-axfr-ips=LocalIP,PeerIP` and
+`also-notify=PeerIP`; directional secondary uses peer-only AXFR and omits
+`also-notify`. Released legacy paired policy is accepted only as byte-exact
+peer-only-plus-notify compatibility under its narrow proof. The first successful
+BIND V3 publication migrates that policy transactionally with generation pointer
+and state rollback. Legacy PowerDNS is not silently migrated; it stays on the
+compatibility proof until an explicit reviewed switch or reconfiguration.
+Legacy V2 mutation entrypoints are restricted to exact tuple-less
+producer/standalone compatibility. Directional receipts and tuple-less
+consumers are read-only and require the reviewed V3 switch/reconfiguration path.
+A released populated consumer may leave PowerDNS only after its exact
+catalog-bound member set and local/peer SOA serials are proven.
 A fixed dedicated peer IPv4 is required. TSIG is not implemented; shared or
 dynamic NAT endpoints are unsupported.
 

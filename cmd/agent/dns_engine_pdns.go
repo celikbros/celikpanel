@@ -486,12 +486,47 @@ func applyPDNSV3ZoneDatabase(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) error {
+	return applyPDNSV3ZoneDatabaseForRole(
+		ctx, path, commitment, binding, ``,
+	)
+}
+
+func applyPDNSV3ZoneDatabaseForRole(
+	ctx context.Context,
+	path string,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	binding transport.ServiceMutationBinding,
+	pairRole string,
+) error {
+	return applyPDNSV3ZoneDatabaseForState(
+		ctx, path, commitment, binding,
+		dnsEngineStateReceipt{PairRole: pairRole},
+	)
+}
+
+func applyPDNSV3ZoneDatabaseForState(
+	ctx context.Context,
+	path string,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	binding transport.ServiceMutationBinding,
+	state dnsEngineStateReceipt,
+) error {
+	identity, catalogEnabled, err := resolveManagedPDNSCatalogIdentityForState(
+		ctx, state, path,
+	)
+	if err != nil {
+		return err
+	}
 	db, err := openPDNSEngineDB(path, false)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	if err := initializePDNSEngineReceipts(ctx, db); err != nil {
+	if state.Mode == transport.DNSEngineSwitchModeSwitch {
+		if err := validatePDNSEngineReceiptSchema(ctx, db); err != nil {
+			return err
+		}
+	} else if err := initializePDNSEngineReceipts(ctx, db); err != nil {
 		return err
 	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
@@ -504,12 +539,33 @@ func applyPDNSV3ZoneDatabase(
 			_ = tx.Rollback()
 		}
 	}()
+	if state.Mode == transport.DNSEngineSwitchModeSwitch {
+		if err := verifyPDNSStateManifestReceiptTx(ctx, tx, state); err != nil {
+			return err
+		}
+		if state.PairRole == transport.DNSPairRolePrimary {
+			serial, err := readExactPDNSProducerSerialTx(
+				ctx, tx, state.PairLocalIP,
+			)
+			if err != nil || serial < state.PrimaryCatalogSerial {
+				if err == nil {
+					err = errors.New("PowerDNS producer catalog serial predates its active state")
+				}
+				return err
+			}
+		}
+	}
 	// Snapshot before apply: deleting a zone also deletes the row that carries
 	// its catalog membership, so post-state alone cannot decide whether the
 	// producer SOA serial must advance.
-	previousCatalog, catalogEnabled, err := reconcileManagedPDNSBINDCatalogTx(ctx, tx)
+	previousCatalog, err := reconcilePDNSBINDCatalogFromSnapshotTx(
+		ctx, tx, catalogEnabled, identity.LocalIP, nil,
+	)
 	if err != nil {
 		return fmt.Errorf("snapshot managed PowerDNS catalog: %w", err)
+	}
+	if catalogEnabled {
+		previousCatalog.PeerIP = identity.PeerIP
 	}
 	if err := applyPDNSV3ZoneTx(ctx, tx, commitment, binding, true); err != nil {
 		return err
@@ -518,12 +574,26 @@ func applyPDNSV3ZoneDatabase(
 	if catalogEnabled {
 		previous = &previousCatalog
 	}
-	if _, enabledAfter, err := reconcileManagedPDNSBINDCatalogFromSnapshotTx(
-		ctx, tx, previous,
-	); err != nil {
+	after, err := reconcilePDNSBINDCatalogFromSnapshotTx(
+		ctx, tx, catalogEnabled, identity.LocalIP, previous,
+	)
+	if err != nil {
 		return fmt.Errorf("reconcile managed PowerDNS catalog: %w", err)
-	} else if enabledAfter != catalogEnabled {
-		return errors.New("managed PowerDNS catalog mode changed during zone mutation")
+	}
+	if catalogEnabled {
+		after.PeerIP = identity.PeerIP
+	}
+	currentIdentity, currentEnabled, err :=
+		resolveManagedPDNSCatalogIdentityForState(ctx, state, path)
+	if err != nil {
+		return err
+	}
+	if currentEnabled != catalogEnabled ||
+		(currentEnabled &&
+			(currentIdentity.Domain != identity.Domain ||
+				currentIdentity.LocalIP != identity.LocalIP ||
+				currentIdentity.PeerIP != identity.PeerIP)) {
+		return errors.New("managed PowerDNS pair identity changed during zone mutation")
 	}
 	commitErr := tx.Commit()
 	committed = commitErr == nil
@@ -818,7 +888,7 @@ func verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 func readPDNSV3ZoneSnapshot(
 	ctx context.Context,
 	path string,
-	engineEpoch int64,
+	state dnsEngineStateReceipt,
 	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (transport.DNSEngineSwitchZoneSnapshot, bool, error) {
@@ -835,11 +905,27 @@ func readPDNSV3ZoneSnapshot(
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
 	}
 	defer tx.Rollback()
+	if state.Mode == transport.DNSEngineSwitchModeSwitch {
+		if err := verifyPDNSStateManifestReceiptTx(ctx, tx, state); err != nil {
+			return transport.DNSEngineSwitchZoneSnapshot{}, false, err
+		}
+		if state.PairRole == transport.DNSPairRolePrimary {
+			serial, err := readExactPDNSProducerSerialTx(
+				ctx, tx, state.PairLocalIP,
+			)
+			if err != nil || serial < state.PrimaryCatalogSerial {
+				if err == nil {
+					err = errors.New("PowerDNS producer catalog serial predates its active state")
+				}
+				return transport.DNSEngineSwitchZoneSnapshot{}, false, err
+			}
+		}
+	}
 	receipt, found, err := readPDNSV3ReceiptTx(ctx, tx, domain)
 	if err != nil || !found {
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, err
 	}
-	if receipt.EngineEpoch != engineEpoch || receipt.Qualifier != qualifier ||
+	if receipt.EngineEpoch != state.EngineEpoch || receipt.Qualifier != qualifier ||
 		receipt.RequestID != binding.MutationRequestID ||
 		receipt.OwnerID != binding.MutationOwnerID {
 		return transport.DNSEngineSwitchZoneSnapshot{}, false, nil

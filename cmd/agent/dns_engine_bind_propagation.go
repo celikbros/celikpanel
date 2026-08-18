@@ -105,6 +105,25 @@ func completeManagedBINDV3Propagation(
 	)
 }
 
+func completeManagedBINDV3PropagationForState(
+	ctx context.Context,
+	root string,
+	tree binddns.VerifiedTree,
+	domain string,
+	state dnsEngineStateReceipt,
+) error {
+	legacy, err := bindStateTreePairContract(
+		root, state, tree, false, false, false,
+	)
+	if err != nil {
+		return err
+	}
+	return completeManagedBINDV3PropagationAtWithLegacy(
+		ctx, tree, domain, legacy, trustedBINDControl,
+		completeDNSV3PrimaryPropagation,
+	)
+}
+
 type bindPrimaryPropagationCompleter func(
 	context.Context, dnsV3PrimaryPropagationPlan,
 ) error
@@ -116,10 +135,24 @@ func completeManagedBINDV3PropagationAt(
 	run bindControlRunner,
 	complete bindPrimaryPropagationCompleter,
 ) error {
+	return completeManagedBINDV3PropagationAtWithLegacy(
+		ctx, tree, domain, false, run, complete,
+	)
+}
+
+func completeManagedBINDV3PropagationAtWithLegacy(
+	ctx context.Context,
+	tree binddns.VerifiedTree,
+	domain string,
+	legacy bool,
+	run bindControlRunner,
+	complete bindPrimaryPropagationCompleter,
+) error {
 	plan, primary, err := bindV3PrimaryPropagationPlan(tree, domain)
 	if err != nil || !primary {
 		return err
 	}
+	plan.Legacy = legacy
 	if complete == nil {
 		return errors.New("BIND peer propagation proof is unavailable")
 	}
@@ -252,5 +285,20 @@ func verifyRestoredBINDV3Generation(
 ) error {
 	return verifyRestoredBINDV3GenerationAt(
 		ctx, tree, previous, verifyDNSZoneAuthorities, bindPrimaryPairReady,
+	)
+}
+
+func verifyRestoredBINDV3GenerationForState(
+	ctx context.Context,
+	root string,
+	tree binddns.VerifiedTree,
+	previous binddns.Receipt,
+	state dnsEngineStateReceipt,
+) error {
+	return verifyRestoredBINDV3GenerationAt(
+		ctx, tree, previous, verifyDNSZoneAuthorities,
+		func(verifyCtx context.Context, verified binddns.VerifiedTree) (bool, error) {
+			return bindPrimaryPairReadyForState(verifyCtx, root, verified, state)
+		},
 	)
 }

@@ -48,6 +48,8 @@ func TestPowerDNSManagedForBackendReadinessRequiresExactLegacyProof(t *testing.T
 			state: func() dnsEngineStateReceipt {
 				state := legacyDurableDNSState(transport.DNSEnginePowerDNS)
 				state.PairRole = transport.DNSPairRoleSecondary
+				state.PairLocalIP = "192.0.2.20"
+				state.PairPeerIP = "192.0.2.10"
 				return state
 			}(),
 			stateExists: true, runtime: ready,

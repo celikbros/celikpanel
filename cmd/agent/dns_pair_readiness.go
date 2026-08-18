@@ -114,6 +114,64 @@ func verifyDNSPrimaryPairReadyAuthorityAt(
 	}, nil
 }
 
+func verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+	ctx context.Context,
+	evidence dnsPrimaryCatalogEvidence,
+	soa dnsZoneSOAProbe,
+	peerAXFR dnsBoundCatalogAXFRProbe,
+) (dnsPeerAXFRAuthority, error) {
+	if err := validateDNSPrimaryCatalogEvidence(evidence); err != nil {
+		return dnsPeerAXFRAuthority{}, err
+	}
+	if soa == nil || peerAXFR == nil {
+		return dnsPeerAXFRAuthority{},
+			errors.New(`legacy DNS primary pair proof is unavailable`)
+	}
+	members := append([]string(nil), evidence.Members...)
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	localCatalogSerial, err := exactDNSZoneSerialAtWithProbe(
+		proofCtx, evidence.LocalIP, evidence.Domain, soa,
+	)
+	if err != nil || localCatalogSerial != evidence.Serial {
+		return dnsPeerAXFRAuthority{},
+			errors.New(`legacy DNS primary catalog local SOA differs from durable evidence`)
+	}
+	peerLive, err := peerAXFR(
+		proofCtx, evidence.LocalIP, evidence.PeerIP, evidence.Domain,
+	)
+	if err != nil || peerLive.Serial != evidence.Serial ||
+		!slices.Equal(peerLive.Members, members) {
+		return dnsPeerAXFRAuthority{},
+			errors.New(`legacy DNS peer catalog AXFR differs from durable evidence`)
+	}
+	peerCatalogSerial, err := exactDNSZoneSerialAtWithProbe(
+		proofCtx, evidence.PeerIP, evidence.Domain, soa,
+	)
+	if err != nil || peerCatalogSerial != evidence.Serial {
+		return dnsPeerAXFRAuthority{},
+			errors.New(`legacy DNS peer catalog SOA differs from durable evidence`)
+	}
+	for index, member := range members {
+		localSerial, localErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, evidence.LocalIP, member, soa,
+		)
+		peerSerial, peerErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, evidence.PeerIP, member, soa,
+		)
+		expectedSerial := evidence.MemberSerials[index]
+		if localErr != nil || peerErr != nil ||
+			localSerial != expectedSerial || peerSerial != expectedSerial {
+			return dnsPeerAXFRAuthority{},
+				errors.New(`legacy DNS catalog member did not converge on the peer`)
+		}
+	}
+	return dnsPeerAXFRAuthority{
+		sourceIP: evidence.LocalIP, peerIP: evidence.PeerIP,
+		catalog: evidence.Domain, catalogSerial: evidence.Serial,
+	}, nil
+}
+
 func validateDNSPrimaryCatalogEvidence(evidence dnsPrimaryCatalogEvidence) error {
 	if evidence.Serial == 0 ||
 		!canonicalPairReadinessIPv4(evidence.LocalIP) ||
@@ -200,13 +258,175 @@ func bindPrimaryPairReady(
 	return true, nil
 }
 
+func bindStateTreePairContract(
+	root string,
+	state dnsEngineStateReceipt,
+	tree binddns.VerifiedTree,
+	allowGenerationLag bool,
+	allowLegacySecondary bool,
+	allowDirectionalTupleRepair bool,
+) (bool, error) {
+	receipt := tree.CurrentReceipt()
+	if state.Engine != "bind" || receipt.EngineEpoch != state.EngineEpoch ||
+		(!allowGenerationLag && receipt.Generation != state.Generation) {
+		return false, errors.New("BIND tree differs from its durable engine state")
+	}
+	pairing := receipt.Pairing
+	if pairing == nil {
+		if state.PairRole != "" || state.PairLocalIP != "" ||
+			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0 {
+			return false, errors.New("standalone BIND tree conflicts with directional state")
+		}
+		if err := binddns.VerifyCurrentConfig(root, tree); err != nil {
+			return false, err
+		}
+		return false, nil
+	}
+	if err := requireHostOwnedDNSPairAddress(pairing.LocalIP); err != nil {
+		return false, err
+	}
+	primaryACLStyle := binddns.PrimaryTransferACLNone
+	if pairing.Role == binddns.PairRolePrimary {
+		var err error
+		primaryACLStyle, err = binddns.ClassifyPrimaryTransferACL(root, tree)
+		if err != nil {
+			return false, err
+		}
+	} else if err := binddns.VerifyCurrentConfig(root, tree); err != nil {
+		return false, err
+	}
+	missingTuple := state.PairLocalIP == "" && state.PairPeerIP == ""
+	if missingTuple {
+		if state.PairRole != "" || state.PrimaryCatalogSerial != 0 {
+			return false, errors.New("legacy BIND state contains directional identity")
+		}
+		switch pairing.Role {
+		case binddns.PairRolePrimary:
+			switch primaryACLStyle {
+			case binddns.PrimaryTransferACLLegacyPeerOnly:
+				return true, nil
+			case binddns.PrimaryTransferACLDirectionalSelfPeer:
+				if allowDirectionalTupleRepair {
+					return false, nil
+				}
+				return false, errors.New("directional BIND tree has no durable pair identity")
+			default:
+				return false, errors.New("legacy BIND primary transfer policy is invalid")
+			}
+		case binddns.PairRoleSecondary:
+			if allowLegacySecondary {
+				return true, nil
+			}
+			return false, errors.New("BIND secondary has no panel-local write authority")
+		default:
+			return false, errors.New("BIND tree has an invalid pair role")
+		}
+	}
+	if state.PairRole != pairing.Role ||
+		state.PairLocalIP != pairing.LocalIP ||
+		state.PairPeerIP != pairing.PeerIP {
+		return false, errors.New("BIND pair tree differs from its durable state")
+	}
+	switch pairing.Role {
+	case binddns.PairRolePrimary:
+		if state.PrimaryCatalogSerial == 0 ||
+			state.PrimaryCatalogSerial > pairing.CatalogSerial {
+			return false, errors.New("BIND catalog serial differs from durable state")
+		}
+		if primaryACLStyle != binddns.PrimaryTransferACLDirectionalSelfPeer {
+			return false, errors.New("BIND primary transfer policy differs from directional state")
+		}
+		if state.Generation == receipt.Generation &&
+			state.PrimaryCatalogSerial != pairing.CatalogSerial {
+			return false, errors.New("BIND catalog serial differs from the current generation")
+		}
+	case binddns.PairRoleSecondary:
+		if state.PrimaryCatalogSerial != 0 {
+			return false, errors.New("BIND secondary state claims a primary catalog")
+		}
+	default:
+		return false, errors.New("BIND tree has an invalid pair role")
+	}
+	return false, nil
+}
+
+func bindStateForPublishedReceipt(
+	state dnsEngineStateReceipt,
+	receipt binddns.Receipt,
+) (dnsEngineStateReceipt, error) {
+	if receipt.EngineEpoch != state.EngineEpoch {
+		return dnsEngineStateReceipt{},
+			errors.New("BIND target receipt differs from the active engine epoch")
+	}
+	next := state
+	next.Generation = receipt.Generation
+	if receipt.Pairing == nil {
+		next.PairRole = ""
+		next.PairLocalIP = ""
+		next.PairPeerIP = ""
+		next.PrimaryCatalogSerial = 0
+	} else {
+		next.PairRole = receipt.Pairing.Role
+		next.PairLocalIP = receipt.Pairing.LocalIP
+		next.PairPeerIP = receipt.Pairing.PeerIP
+		if receipt.Pairing.Role == binddns.PairRolePrimary {
+			next.PrimaryCatalogSerial = receipt.Pairing.CatalogSerial
+		} else {
+			next.PrimaryCatalogSerial = 0
+		}
+	}
+	if err := validateDNSEngineState(next); err != nil {
+		return dnsEngineStateReceipt{}, err
+	}
+	return next, nil
+}
+
+func bindPrimaryPairReadyForState(
+	ctx context.Context,
+	root string,
+	tree binddns.VerifiedTree,
+	state dnsEngineStateReceipt,
+) (bool, error) {
+	legacy, err := bindStateTreePairContract(
+		root, state, tree, false, true, false,
+	)
+	if err != nil {
+		return false, err
+	}
+	evidence, primary, err := bindPrimaryCatalogEvidence(tree)
+	if err != nil || !primary {
+		return false, err
+	}
+	if legacy {
+		_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		)
+	} else {
+		err = verifyDNSPrimaryPairReadyAt(
+			ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
+			probeDNSBoundCatalogAXFR,
+		)
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // managedPDNSPrimaryCatalogEvidence is read-only. It recognizes a primary
 // only from the exact panel-managed producer config and database identity; a
 // standalone server or a directional consumer never becomes pair-ready.
 func managedPDNSPrimaryCatalogEvidence(
 	ctx context.Context,
 ) (dnsPrimaryCatalogEvidence, bool, error) {
-	identity, primary, err := readManagedPDNSPrimaryCatalog(ctx)
+	return managedPDNSPrimaryCatalogEvidenceForRole(ctx, ``)
+}
+
+func managedPDNSPrimaryCatalogEvidenceForRole(
+	ctx context.Context,
+	pairRole string,
+) (dnsPrimaryCatalogEvidence, bool, error) {
+	identity, primary, err := readManagedPDNSPrimaryCatalogForRole(ctx, pairRole)
 	if err != nil || !primary {
 		return dnsPrimaryCatalogEvidence{}, primary, err
 	}
@@ -217,15 +437,40 @@ func managedPDNSPrimaryCatalogEvidence(
 	}, true, nil
 }
 
-func powerDNSPrimaryPairReady(ctx context.Context) (bool, error) {
-	evidence, primary, err := managedPDNSPrimaryCatalogEvidence(ctx)
+func managedPDNSPrimaryCatalogEvidenceForState(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+) (dnsPrimaryCatalogEvidence, bool, error) {
+	identity, primary, err := readManagedPDNSPrimaryCatalogForState(ctx, state)
+	if err != nil || !primary {
+		return dnsPrimaryCatalogEvidence{}, primary, err
+	}
+	return dnsPrimaryCatalogEvidence{
+		LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
+		Domain: identity.Domain, Serial: identity.Serial,
+		Members: identity.Members, MemberSerials: identity.MemberSerials,
+	}, true, nil
+}
+
+func powerDNSPrimaryPairReady(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+) (bool, error) {
+	evidence, primary, err := managedPDNSPrimaryCatalogEvidenceForState(ctx, state)
 	if err != nil || !primary {
 		return false, err
 	}
-	if err := verifyDNSPrimaryPairReadyAt(
-		ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
-		probeDNSBoundCatalogAXFR,
-	); err != nil {
+	if state.PairRole == "" && state.PrimaryCatalogSerial == 0 {
+		_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		)
+	} else {
+		err = verifyDNSPrimaryPairReadyAt(
+			ctx, evidence, probeDNSZoneSOA, probeDNSCatalogAXFR,
+			probeDNSBoundCatalogAXFR,
+		)
+	}
+	if err != nil {
 		return false, err
 	}
 	return true, nil

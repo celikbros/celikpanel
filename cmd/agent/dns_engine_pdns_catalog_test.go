@@ -20,12 +20,16 @@ func prepareManagedPDNSCatalogConfig(t *testing.T) {
 	oldConf := dnsClusterConf
 	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
 	oldLocalProof := dnsPairLocalProofAddress
+	oldHostAddresses := dnsPairHostOwnedAddresses
 	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
 	if runtime.GOOS == "linux" {
 		dnsClusterConfigRequiredOwnerUID = uint32(os.Geteuid())
 	}
 	dnsPairLocalProofAddress = func() (string, error) {
 		return "192.0.2.10", nil
+	}
+	dnsPairHostOwnedAddresses = func() []string {
+		return []string{"192.0.2.10"}
 	}
 	config := dnsClusterConfig(&DNSClusterRequest{
 		Role: dnsRolePaired, PeerIP: "192.0.2.20", PeerNS: "ns2.example.test",
@@ -37,7 +41,30 @@ func prepareManagedPDNSCatalogConfig(t *testing.T) {
 		dnsClusterConf = oldConf
 		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
 		dnsPairLocalProofAddress = oldLocalProof
+		dnsPairHostOwnedAddresses = oldHostAddresses
 	})
+}
+
+func seedManagedPDNSCatalog(t *testing.T, path, localIP string) {
+	t.Helper()
+	db, err := openPDNSEngineDB(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reconcilePDNSBINDCatalogTx(
+		context.Background(), tx, true, localIP,
+	); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func readPDNSTestCatalogTx(
@@ -274,6 +301,7 @@ func TestApplyPDNSV3ZoneDatabaseAdvancesCatalogSerialOnlyForMembership(t *testin
 		t.Fatal(err)
 	}
 	prepareManagedPDNSCatalogConfig(t)
+	seedManagedPDNSCatalog(t, path, "192.0.2.10")
 	binding := testPDNSEngineBinding()
 
 	first := pdnsCatalogTestCommitment(
@@ -357,6 +385,7 @@ func TestVerifyManagedPDNSCatalogRequiresExactLiveSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 	prepareManagedPDNSCatalogConfig(t)
+	seedManagedPDNSCatalog(t, path, "192.0.2.10")
 	t.Setenv("CELIKPANEL_PDNS_DB", path)
 	commitment := pdnsCatalogTestCommitment(
 		t, "one.test", 1, false, testPDNSEngineRecords("one.test"),

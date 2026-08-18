@@ -279,6 +279,8 @@ func TestDNSClusterStartupSecondaryAuthorityBlocksBeforeJournalAndHostRecovery(t
 
 	secondary := legacyDurableDNSState(transport.DNSEnginePowerDNS)
 	secondary.PairRole = transport.DNSPairRoleSecondary
+	secondary.PairLocalIP = "192.0.2.20"
+	secondary.PairPeerIP = "192.0.2.10"
 	oldAuthority := legacyPowerDNSMutationAuthorityCheck
 	oldJournalReader := recoverDNSClusterConfigJournal
 	oldRecover := recoverDNSClusterConfigHost

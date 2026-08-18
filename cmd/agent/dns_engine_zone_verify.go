@@ -86,6 +86,50 @@ func bindLocalProofAddress() (string, error) {
 }
 
 var dnsPairLocalProofAddress = bindLocalProofAddress
+var dnsPairHostOwnedAddresses = hostOwnedDNSPairAddresses
+var dnsPairHostAddressOwned = hostOwnsDNSPairAddress
+
+func hostOwnedDNSPairAddresses() []string {
+	var addresses []string
+	seen := map[string]struct{}{}
+	for _, candidate := range strings.Split(publicListenAddresses(), ",") {
+		address := strings.TrimSpace(candidate)
+		parsed := net.ParseIP(address)
+		if parsed == nil || parsed.To4() == nil ||
+			parsed.To4().String() != address || !parsed.IsGlobalUnicast() {
+			continue
+		}
+		if _, duplicate := seen[address]; duplicate {
+			continue
+		}
+		seen[address] = struct{}{}
+		addresses = append(addresses, address)
+	}
+	sort.Strings(addresses)
+	return addresses
+}
+
+func hostOwnsDNSPairAddress(address string) bool {
+	expected := net.ParseIP(address)
+	if expected == nil || expected.To4() == nil ||
+		expected.To4().String() != address || !expected.IsGlobalUnicast() {
+		return false
+	}
+	for _, candidate := range dnsPairHostOwnedAddresses() {
+		actual := net.ParseIP(candidate)
+		if actual != nil && actual.Equal(expected) {
+			return true
+		}
+	}
+	return false
+}
+
+func requireHostOwnedDNSPairAddress(address string) error {
+	if !dnsPairHostAddressOwned(address) {
+		return errors.New("DNS pair local address is not owned by this host")
+	}
+	return nil
+}
 
 func verifyBINDPairingAuthority(
 	ctx context.Context,
@@ -95,12 +139,11 @@ func verifyBINDPairingAuthority(
 	if pairing == nil {
 		return nil
 	}
-	localAddress, err := dnsPairLocalProofAddress()
-	if err != nil {
+	if err := requireHostOwnedDNSPairAddress(pairing.LocalIP); err != nil {
 		return err
 	}
 	return verifyBINDPairingAuthorityAt(
-		ctx, receipt, localAddress, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		ctx, receipt, pairing.LocalIP, probeDNSZoneSOA, probeDNSCatalogAXFR,
 	)
 }
 
@@ -209,10 +252,10 @@ func verifyPDNSPairingAuthority(
 	if manifest.Topology != transport.DNSTopologyPaired {
 		return nil
 	}
-	localAddress, err := dnsPairLocalProofAddress()
-	if err != nil {
+	if err := requireHostOwnedDNSPairAddress(manifest.LocalIP); err != nil {
 		return err
 	}
+	localAddress := manifest.LocalIP
 	if manifest.PairRole == transport.DNSPairRolePrimary {
 		domain, err := binddns.CatalogDomain(manifest.LocalIP)
 		if err != nil {

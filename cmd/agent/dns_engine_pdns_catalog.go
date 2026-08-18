@@ -147,6 +147,22 @@ func retrievePDNSPairSecondaryZones(
 }
 
 func managedPDNSCatalogIdentity() (managedPDNSCatalog, bool, error) {
+	return managedPDNSCatalogIdentityForRole("")
+}
+
+func managedPDNSCatalogIdentityForRole(
+	pairRole string,
+) (managedPDNSCatalog, bool, error) {
+	localIP, err := dnsPairLocalProofAddress()
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	return managedPDNSCatalogIdentityForRoleAt(pairRole, localIP)
+}
+
+func managedPDNSCatalogIdentityForRoleAt(
+	pairRole, localIP string,
+) (managedPDNSCatalog, bool, error) {
 	if err := validateDNSClusterConfigTarget(); err != nil {
 		return managedPDNSCatalog{}, false, err
 	}
@@ -157,24 +173,52 @@ func managedPDNSCatalogIdentity() (managedPDNSCatalog, bool, error) {
 	if err != nil {
 		return managedPDNSCatalog{}, false, err
 	}
-	if !validDNSClusterPowerDNSConfig(string(config)) {
+	parsed, ok := parseManagedDNSClusterPowerDNSConfig(string(config))
+	if !ok {
 		return managedPDNSCatalog{}, false,
-			errors.New("managed PowerDNS pair configuration is not canonical")
+			errors.New(`managed PowerDNS pair configuration is not canonical`)
 	}
-	peerIP := ""
-	for _, raw := range strings.Split(string(config), "\n") {
-		key, value, found := powerDNSConfigDirective(raw)
-		if found && key == "allow-axfr-ips" {
-			peerIP = value
+	peerIP := ``
+	switch pairRole {
+	case transport.DNSPairRolePrimary:
+		if len(parsed.AllowAXFRIPs) != 2 ||
+			parsed.AllowAXFRIPs[0] != localIP ||
+			parsed.NotifyIP != parsed.AllowAXFRIPs[1] {
+			return managedPDNSCatalog{}, false,
+				errors.New(`managed PowerDNS primary transfer ACL is not exact`)
+		}
+		peerIP = parsed.AllowAXFRIPs[1]
+	case transport.DNSPairRoleSecondary:
+		if len(parsed.AllowAXFRIPs) != 1 || parsed.NotifyIP != `` {
+			return managedPDNSCatalog{}, false,
+				errors.New(`managed PowerDNS secondary transfer ACL is not exact`)
+		}
+		peerIP = parsed.AllowAXFRIPs[0]
+	case ``:
+		if len(parsed.AllowAXFRIPs) != 1 ||
+			parsed.NotifyIP != parsed.AllowAXFRIPs[0] {
+			return managedPDNSCatalog{}, false,
+				errors.New(`managed legacy PowerDNS transfer ACL is not exact`)
+		}
+		peerIP = parsed.AllowAXFRIPs[0]
+	default:
+		return managedPDNSCatalog{}, false,
+			errors.New(`managed PowerDNS pair role is invalid`)
+	}
+	expected := ``
+	if pairRole == `` {
+		expected = dnsClusterConfig(&DNSClusterRequest{
+			Role: dnsRolePaired, PeerIP: peerIP,
+		})
+	} else {
+		expected, err = dnsDirectionalClusterConfig(pairRole, localIP, peerIP)
+		if err != nil {
+			return managedPDNSCatalog{}, false, err
 		}
 	}
-	if peerIP == "" {
+	if string(config) != expected {
 		return managedPDNSCatalog{}, false,
-			errors.New("managed PowerDNS pair has no exact peer address")
-	}
-	localIP, err := dnsPairLocalProofAddress()
-	if err != nil {
-		return managedPDNSCatalog{}, false, err
+			errors.New(`managed PowerDNS pair configuration bytes are not exact`)
 	}
 	domain, err := binddns.CatalogDomain(localIP)
 	if err != nil {
@@ -183,6 +227,125 @@ func managedPDNSCatalogIdentity() (managedPDNSCatalog, bool, error) {
 	return managedPDNSCatalog{
 		Domain: domain, LocalIP: localIP, PeerIP: peerIP,
 	}, true, nil
+}
+
+func managedPDNSCatalogIdentityForState(
+	state dnsEngineStateReceipt,
+) (managedPDNSCatalog, bool, error) {
+	if state.PairRole == "" {
+		return managedPDNSCatalogIdentityForRole("")
+	}
+	if state.PairLocalIP == "" || state.PairPeerIP == "" {
+		return managedPDNSCatalog{}, false,
+			errors.New("directional PowerDNS state is missing its pair addresses")
+	}
+	if err := requireHostOwnedDNSPairAddress(state.PairLocalIP); err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	identity, enabled, err := managedPDNSCatalogIdentityForRoleAt(
+		state.PairRole, state.PairLocalIP,
+	)
+	if err != nil || !enabled {
+		return managedPDNSCatalog{}, enabled, err
+	}
+	if identity.PeerIP != state.PairPeerIP {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed PowerDNS pair configuration differs from its durable state")
+	}
+	return identity, true, nil
+}
+
+func managedPDNSLegacyCatalogIdentity(
+	ctx context.Context,
+	path string,
+) (managedPDNSCatalog, bool, error) {
+	if err := validateDNSClusterConfigTarget(); err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	config, err := dnsClusterConfigReadFile(dnsClusterConf)
+	if errors.Is(err, os.ErrNotExist) {
+		return managedPDNSCatalog{}, false, nil
+	}
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	parsed, ok := parseManagedDNSClusterPowerDNSConfig(string(config))
+	if !ok || len(parsed.AllowAXFRIPs) != 1 ||
+		parsed.NotifyIP != parsed.AllowAXFRIPs[0] {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed legacy PowerDNS transfer ACL is not exact")
+	}
+	expected := dnsClusterConfig(&DNSClusterRequest{
+		Role: dnsRolePaired, PeerIP: parsed.AllowAXFRIPs[0],
+	})
+	if string(config) != expected {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed legacy PowerDNS configuration bytes are not exact")
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	defer db.Close()
+	rows, err := db.QueryContext(ctx, `
+		SELECT name, UPPER(type) FROM domains
+		WHERE account = ? ORDER BY name
+	`, pdnsBINDCatalogAccount)
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	defer rows.Close()
+	var producerDomain string
+	count := 0
+	for rows.Next() {
+		var domain, zoneType string
+		if err := rows.Scan(&domain, &zoneType); err != nil {
+			return managedPDNSCatalog{}, false, err
+		}
+		if zoneType != "PRODUCER" {
+			return managedPDNSCatalog{}, false,
+				errors.New("managed legacy PowerDNS catalog is not a producer")
+		}
+		producerDomain = domain
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	if count != 1 {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed legacy PowerDNS producer catalog is ambiguous")
+	}
+	localIP := ""
+	for _, candidate := range dnsPairHostOwnedAddresses() {
+		domain, domainErr := binddns.CatalogDomain(candidate)
+		if domainErr == nil && domain == producerDomain {
+			if localIP != "" {
+				return managedPDNSCatalog{}, false,
+					errors.New("managed legacy PowerDNS local identity is ambiguous")
+			}
+			localIP = candidate
+		}
+	}
+	if localIP == "" {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed legacy PowerDNS catalog is not bound to a host address")
+	}
+	return managedPDNSCatalog{
+		Domain: producerDomain, LocalIP: localIP,
+		PeerIP: parsed.AllowAXFRIPs[0],
+	}, true, nil
+}
+
+func resolveManagedPDNSCatalogIdentityForState(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+	path string,
+) (managedPDNSCatalog, bool, error) {
+	if state.PairRole == "" {
+		return managedPDNSLegacyCatalogIdentity(ctx, path)
+	}
+	return managedPDNSCatalogIdentityForState(state)
 }
 
 func reconcilePDNSBINDCatalogTx(
@@ -621,7 +784,27 @@ func reconcileManagedPDNSBINDCatalogTx(
 	ctx context.Context,
 	tx *sql.Tx,
 ) (managedPDNSCatalog, bool, error) {
-	return reconcileManagedPDNSBINDCatalogFromSnapshotTx(ctx, tx, nil)
+	return reconcileManagedPDNSBINDCatalogForRoleTx(ctx, tx, ``)
+}
+
+func reconcileManagedPDNSBINDCatalogForRoleTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	pairRole string,
+) (managedPDNSCatalog, bool, error) {
+	return reconcileManagedPDNSBINDCatalogFromSnapshotForRoleTx(
+		ctx, tx, pairRole, nil,
+	)
+}
+
+func reconcileManagedPDNSBINDCatalogForStateTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	state dnsEngineStateReceipt,
+) (managedPDNSCatalog, bool, error) {
+	return reconcileManagedPDNSBINDCatalogFromSnapshotForStateTx(
+		ctx, tx, state, nil,
+	)
 }
 
 func reconcileManagedPDNSBINDCatalogFromSnapshotTx(
@@ -629,7 +812,44 @@ func reconcileManagedPDNSBINDCatalogFromSnapshotTx(
 	tx *sql.Tx,
 	previous *managedPDNSCatalog,
 ) (managedPDNSCatalog, bool, error) {
-	identity, enabled, err := managedPDNSCatalogIdentity()
+	return reconcileManagedPDNSBINDCatalogFromSnapshotForRoleTx(
+		ctx, tx, ``, previous,
+	)
+}
+
+func reconcileManagedPDNSBINDCatalogFromSnapshotForRoleTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	pairRole string,
+	previous *managedPDNSCatalog,
+) (managedPDNSCatalog, bool, error) {
+	identity, enabled, err := managedPDNSCatalogIdentityForRole(pairRole)
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	if previous != nil && enabled && previous.PeerIP != identity.PeerIP {
+		return managedPDNSCatalog{}, false,
+			errors.New("managed PowerDNS catalog peer changed during zone mutation")
+	}
+	result, err := reconcilePDNSBINDCatalogFromSnapshotTx(
+		ctx, tx, enabled, identity.LocalIP, previous,
+	)
+	if err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	if enabled {
+		result.PeerIP = identity.PeerIP
+	}
+	return result, enabled, nil
+}
+
+func reconcileManagedPDNSBINDCatalogFromSnapshotForStateTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	state dnsEngineStateReceipt,
+	previous *managedPDNSCatalog,
+) (managedPDNSCatalog, bool, error) {
+	identity, enabled, err := managedPDNSCatalogIdentityForState(state)
 	if err != nil {
 		return managedPDNSCatalog{}, false, err
 	}
@@ -683,10 +903,33 @@ func verifyManagedPDNSBINDCatalog(
 func readManagedPDNSPrimaryCatalog(
 	ctx context.Context,
 ) (managedPDNSCatalog, bool, error) {
-	identity, enabled, err := managedPDNSCatalogIdentity()
+	return readManagedPDNSPrimaryCatalogForRole(ctx, ``)
+}
+
+func readManagedPDNSPrimaryCatalogForRole(
+	ctx context.Context,
+	pairRole string,
+) (managedPDNSCatalog, bool, error) {
+	var identity managedPDNSCatalog
+	var enabled bool
+	var err error
+	if pairRole == "" {
+		identity, enabled, err = managedPDNSLegacyCatalogIdentity(
+			ctx, pdnsDBPath(),
+		)
+	} else {
+		identity, enabled, err = managedPDNSCatalogIdentityForRole(pairRole)
+	}
 	if err != nil || !enabled {
 		return managedPDNSCatalog{}, enabled, err
 	}
+	return readManagedPDNSPrimaryCatalogWithIdentity(ctx, identity)
+}
+
+func readManagedPDNSPrimaryCatalogWithIdentity(
+	ctx context.Context,
+	identity managedPDNSCatalog,
+) (managedPDNSCatalog, bool, error) {
 	db, err := openPDNSEngineDB(pdnsDBPath(), true)
 	if err != nil {
 		return managedPDNSCatalog{}, false, err
@@ -790,6 +1033,60 @@ func readManagedPDNSPrimaryCatalog(
 	identity.Members = members
 	identity.MemberSerials = memberSerials
 	return identity, true, nil
+}
+
+func readManagedPDNSPrimaryCatalogForState(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+) (managedPDNSCatalog, bool, error) {
+	if state.Mode == transport.DNSEngineSwitchModeSwitch {
+		if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+			return managedPDNSCatalog{}, false, err
+		}
+	}
+	identity, enabled, err := resolveManagedPDNSCatalogIdentityForState(
+		ctx, state, pdnsDBPath(),
+	)
+	if err != nil || !enabled {
+		return managedPDNSCatalog{}, enabled, err
+	}
+	catalog, primary, err := readManagedPDNSPrimaryCatalogWithIdentity(ctx, identity)
+	if err != nil || !primary {
+		return managedPDNSCatalog{}, primary, err
+	}
+	if state.Mode == transport.DNSEngineSwitchModeSwitch &&
+		state.PairRole == transport.DNSPairRolePrimary &&
+		catalog.Serial < state.PrimaryCatalogSerial {
+		return managedPDNSCatalog{}, false,
+			errors.New("PowerDNS producer catalog serial predates its active state")
+	}
+	return catalog, true, nil
+}
+
+func readExactPDNSProducerSerialTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	localIP string,
+) (uint32, error) {
+	if tx == nil {
+		return 0, errors.New("PowerDNS producer serial transaction is required")
+	}
+	domain, err := binddns.CatalogDomain(localIP)
+	if err != nil {
+		return 0, err
+	}
+	var domainID int64
+	var zoneType, account string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT id, UPPER(type), COALESCE(account, '')
+		FROM domains WHERE name = ? COLLATE NOCASE
+	`, domain).Scan(&domainID, &zoneType, &account); err != nil {
+		return 0, err
+	}
+	if zoneType != "PRODUCER" || account != pdnsBINDCatalogAccount {
+		return 0, errors.New("PowerDNS producer row is not exact panel authority")
+	}
+	return verifyPDNSProducerBaseTx(ctx, tx, domainID, domain, localIP)
 }
 
 func verifyPDNSProducerBaseTx(

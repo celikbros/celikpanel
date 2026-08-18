@@ -47,7 +47,7 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 	}
 	config := string(generation.Config)
 	for _, want := range []string{
-		"allow-transfer { 192.0.2.20; };",
+		"allow-transfer { 192.0.2.10; 192.0.2.20; };",
 		"also-notify { 192.0.2.20; };",
 		"zone \"catalog-c000020a.celikpanel.invalid\"",
 	} {
@@ -69,6 +69,87 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 	}
 	if _, err := VerifyTree(generation.Receipt, generation.Config, files); err != nil {
 		t.Fatalf("verify primary tree: %v", err)
+	}
+}
+
+func TestPrimaryTransferACLClassifierAcceptsOnlyExactManagedPolicies(t *testing.T) {
+	plan, err := NewTreePlan(Manifest{
+		EngineEpoch: 4, Pairing: testPairing(PairRolePrimary),
+		Zones: []ZoneSnapshot{
+			boundSnapshot("example.test", 9, testZoneRecords("example.test", "192.0.2.30")),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	directional, err := RenderTree(pairingTestRoot, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directionalTree := verifyPairingGeneration(t, directional)
+	if style, err := ClassifyPrimaryTransferACL(
+		pairingTestRoot, directionalTree,
+	); err != nil || style != PrimaryTransferACLDirectionalSelfPeer {
+		t.Fatalf("directional style=%v err=%v", style, err)
+	}
+	legacy, err := renderLegacyPrimaryTransferTree(pairingTestRoot, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyTree := verifyPairingGeneration(t, legacy)
+	if style, err := ClassifyPrimaryTransferACL(
+		pairingTestRoot, legacyTree,
+	); err != nil || style != PrimaryTransferACLLegacyPeerOnly {
+		t.Fatalf("legacy style=%v err=%v", style, err)
+	}
+	customConfig := append(append([]byte(nil), directional.Config...), []byte("// extra\n")...)
+	customReceipt := directional.ReceiptValue
+	customReceipt.ConfigSHA256 = sha256Hex(customConfig)
+	customReceiptBytes, err := encodeReceipt(customReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string][]byte{
+		customReceipt.Zones[0].File:       directional.Zones[0].Data,
+		customReceipt.Pairing.CatalogFile: directional.Catalog.Data,
+	}
+	customTree, err := VerifyTree(customReceiptBytes, customConfig, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ClassifyPrimaryTransferACL(pairingTestRoot, customTree); err == nil {
+		t.Fatal("self-consistent custom primary config was accepted")
+	}
+}
+
+func TestCurrentConfigVerifierRejectsCustomSecondaryAndStandalone(t *testing.T) {
+	for _, manifest := range []Manifest{
+		{EngineEpoch: 5, Pairing: testPairing(PairRoleSecondary)},
+		{EngineEpoch: 5},
+	} {
+		generation, err := RenderManifest(pairingTestRoot, manifest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tree := verifyPairingGeneration(t, generation)
+		if err := VerifyCurrentConfig(pairingTestRoot, tree); err != nil {
+			t.Fatal(err)
+		}
+		customConfig := append(append([]byte(nil), generation.Config...), []byte("// extra\n")...)
+		customReceipt := generation.ReceiptValue
+		customReceipt.ConfigSHA256 = sha256Hex(customConfig)
+		encoded, err := encodeReceipt(customReceipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files := make(map[string][]byte)
+		customTree, err := VerifyTree(encoded, customConfig, files)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := VerifyCurrentConfig(pairingTestRoot, customTree); err == nil {
+			t.Fatal("self-consistent custom non-primary config was accepted")
+		}
 	}
 }
 

@@ -137,6 +137,8 @@ func TestLegacyPrimarySourceReceiptDerivesDurableCatalogSerial(t *testing.T) {
 	}
 	bound := legacy
 	bound.PairRole = transport.DNSPairRolePrimary
+	bound.PairLocalIP = "192.0.2.10"
+	bound.PairPeerIP = "192.0.2.20"
 	bound.PrimaryCatalogSerial = 41
 	if serial, err := primaryCatalogSerialBoundBySourceState(bound, 41); err != nil || serial != 41 {
 		t.Fatalf("bound serial=%d err=%v", serial, err)
@@ -149,6 +151,8 @@ func TestLegacyPrimarySourceReceiptDerivesDurableCatalogSerial(t *testing.T) {
 	}
 	secondary := legacy
 	secondary.PairRole = transport.DNSPairRoleSecondary
+	secondary.PairLocalIP = "192.0.2.20"
+	secondary.PairPeerIP = "192.0.2.10"
 	if _, err := primaryCatalogSerialBoundBySourceState(secondary, 41); err == nil {
 		t.Fatal("secondary receipt entered the primary compatibility path")
 	}
@@ -203,11 +207,12 @@ func TestPrimaryCatalogHandoffEvidenceAcceptsCanonicalEmptyMembership(t *testing
 func TestManagedPDNSPairIdentityUsesExactDirectionalConfig(t *testing.T) {
 	prepareManagedPDNSCatalogConfig(t)
 	manifest := testPrimaryCatalogHandoffManifest(t)
-	if err := verifyManagedPDNSPairIdentity(manifest); err != nil {
+	state := dnsEngineStateReceipt{}
+	if err := verifyManagedPDNSPairIdentity(manifest, state); err != nil {
 		t.Fatal(err)
 	}
 	manifest.PeerIP = "192.0.2.21"
-	if err := verifyManagedPDNSPairIdentity(manifest); err == nil {
+	if err := verifyManagedPDNSPairIdentity(manifest, state); err == nil {
 		t.Fatal("PowerDNS pair identity accepted a different peer address")
 	}
 }

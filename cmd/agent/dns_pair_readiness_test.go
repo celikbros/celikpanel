@@ -302,12 +302,15 @@ func TestManagedPDNSPrimaryCatalogEvidenceRequiresExactProducer(t *testing.T) {
 
 	oldConf := dnsClusterConf
 	oldProof := dnsPairLocalProofAddress
+	oldHostAddresses := dnsPairHostOwnedAddresses
 	t.Cleanup(func() {
 		dnsClusterConf = oldConf
 		dnsPairLocalProofAddress = oldProof
+		dnsPairHostOwnedAddresses = oldHostAddresses
 	})
 	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
+	dnsPairHostOwnedAddresses = func() []string { return []string{"192.0.2.10"} }
 	config := dnsClusterConfig(&transport.DNSClusterRequest{
 		Role: dnsRolePaired, PeerIP: "192.0.2.20",
 	})
@@ -350,7 +353,7 @@ func TestManagedPDNSPrimaryCatalogEvidenceRequiresExactProducer(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if _, primary, err := managedPDNSPrimaryCatalogEvidence(context.Background()); err != nil || primary {
-		t.Fatalf("PowerDNS consumer primary=%v err=%v", primary, err)
+	if _, primary, err := managedPDNSPrimaryCatalogEvidence(context.Background()); err == nil || primary {
+		t.Fatalf("PowerDNS consumer authority was not rejected: primary=%v err=%v", primary, err)
 	}
 }

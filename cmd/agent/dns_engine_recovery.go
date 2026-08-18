@@ -54,15 +54,26 @@ func exactDNSEngineStateForJournal(
 	state dnsEngineStateReceipt,
 	journal dnsEngineSwitchJournal,
 ) bool {
+	legacyTarget := isLegacyDNSEngineState(state) &&
+		(journal.Phase == dnsSwitchPhaseTargetVerified ||
+			journal.Phase == dnsSwitchPhaseCommitted) &&
+		(journal.PairRole == transport.DNSPairRolePrimary ||
+			journal.PairRole == transport.DNSPairRoleSecondary)
 	pairRoleMatches := state.PairRole == journal.PairRole ||
-		(journal.PairRole == transport.DNSPairRoleSecondary &&
-			state.PairRole == "" && state.PrimaryCatalogSerial == 0)
+		legacyTarget
+	pairAddressesMatch := state.PairLocalIP == journal.LocalIP &&
+		state.PairPeerIP == journal.PeerIP
+	if legacyTarget || (state.PairRole == "" && state.PrimaryCatalogSerial == 0) {
+		pairAddressesMatch = state.PairLocalIP == "" && state.PairPeerIP == ""
+	}
+	catalogSerialMatches := state.PrimaryCatalogSerial == journal.PrimaryCatalogSerial ||
+		(legacyTarget && state.PrimaryCatalogSerial == 0)
 	if state.Schema != dnsEngineStateSchema || state.Engine != journal.TargetEngine ||
 		state.Mode != journal.Mode ||
 		state.EngineEpoch != journal.TargetEpoch || state.SourceRevision != journal.SourceRevision ||
 		state.ManifestQualifier != journal.ManifestQualifier ||
-		!pairRoleMatches ||
-		state.PrimaryCatalogSerial != journal.PrimaryCatalogSerial ||
+		!pairRoleMatches || !pairAddressesMatch ||
+		!catalogSerialMatches ||
 		state.MutationRequestID != journal.MutationRequestID ||
 		state.MutationOwnerID != journal.MutationOwnerID {
 		return false
@@ -71,6 +82,34 @@ func exactDNSEngineStateForJournal(
 		return state.Generation == journal.TargetGeneration
 	}
 	return state.Generation == ""
+}
+
+func exactBINDPairingForSwitchJournal(
+	receipt binddns.Receipt,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	journal dnsEngineSwitchJournal,
+) bool {
+	if manifest.Topology != transport.DNSTopologyPaired {
+		return receipt.Pairing == nil && journal.PairRole == "" &&
+			journal.LocalIP == "" && journal.LocalNS == "" &&
+			journal.PeerIP == "" && journal.PeerNS == "" &&
+			journal.PrimaryCatalogSerial == 0
+	}
+	pairing := receipt.Pairing
+	if pairing == nil || pairing.Role != manifest.PairRole ||
+		pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
+		pairing.PeerIP != manifest.PeerIP || pairing.PeerNS != manifest.PeerNS ||
+		journal.PairRole != manifest.PairRole ||
+		journal.LocalIP != manifest.LocalIP || journal.LocalNS != manifest.LocalNS ||
+		journal.PeerIP != manifest.PeerIP || journal.PeerNS != manifest.PeerNS {
+		return false
+	}
+	if pairing.Role == binddns.PairRolePrimary {
+		return journal.PrimaryCatalogSerial > 0 &&
+			pairing.CatalogSerial == journal.PrimaryCatalogSerial
+	}
+	return pairing.Role == binddns.PairRoleSecondary &&
+		journal.PrimaryCatalogSerial == 0 && pairing.CatalogSerial == 1
 }
 
 func verifyDNSSwitchJournalTarget(
@@ -106,24 +145,87 @@ func verifyDNSSwitchJournalTarget(
 		if err != nil {
 			return err
 		}
-		plan, err := bindSwitchTreePlanWithPrimaryCatalogSerial(
-			manifest, binding, journal.PrimaryCatalogSerial,
-		)
+		publisher, _, err := newHostBINDPublisher(layout)
 		if err != nil {
 			return err
 		}
-		expected, err := binddns.RenderTree(layout.GenerationRoot, plan)
-		if err != nil || expected.ID != journal.TargetGeneration {
-			return errors.New("BIND recovery generation differs from the journal")
+		tree, err := publisher.LoadCurrent()
+		if err != nil {
+			return err
+		}
+		receipt := tree.CurrentReceipt()
+		if receipt.Generation != journal.TargetGeneration ||
+			receipt.EngineEpoch != journal.TargetEpoch ||
+			!exactBINDPairingForSwitchJournal(receipt, manifest, journal) {
+			return errors.New("BIND recovery target pairing differs from the journal")
+		}
+		legacyPairedTarget := isLegacyDNSEngineState(state) &&
+			manifest.Topology == transport.DNSTopologyPaired
+		transferPeer := ""
+		if manifest.Topology == transport.DNSTopologyPaired &&
+			manifest.PairRole == transport.DNSPairRoleSecondary {
+			transferPeer = manifest.PeerIP
+		}
+		if err := verifyManagedBINDConfigExact(
+			layout, transferPeer, legacyPairedTarget,
+		); err != nil {
+			return err
+		}
+		expected := binddns.Generation{ID: journal.TargetGeneration}
+		if !legacyPairedTarget {
+			plan, planErr := bindSwitchTreePlanWithPrimaryCatalogSerial(
+				manifest, binding, journal.PrimaryCatalogSerial,
+			)
+			if planErr != nil {
+				return planErr
+			}
+			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			if err != nil || expected.ID != journal.TargetGeneration {
+				return errors.New("BIND recovery generation differs from the journal")
+			}
+		}
+		if legacyPairedTarget && receipt.Pairing != nil &&
+			receipt.Pairing.Role == binddns.PairRoleSecondary {
+			plan, planErr := bindSwitchTreePlanWithPrimaryCatalogSerial(
+				manifest, binding, journal.PrimaryCatalogSerial,
+			)
+			if planErr != nil {
+				return planErr
+			}
+			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			if err != nil || expected.ID != receipt.Generation ||
+				expected.ReceiptValue.ConfigSHA256 != receipt.ConfigSHA256 {
+				return errors.New("legacy BIND secondary config differs from the journal")
+			}
+		}
+		if legacyPairedTarget && receipt.Pairing != nil &&
+			receipt.Pairing.Role == binddns.PairRolePrimary {
+			style, styleErr := binddns.ClassifyPrimaryTransferACL(
+				layout.GenerationRoot, tree,
+			)
+			if styleErr != nil {
+				return styleErr
+			}
+			switch style {
+			case binddns.PrimaryTransferACLLegacyPeerOnly:
+				// Exact released target: preserve the all-empty state receipt.
+			case binddns.PrimaryTransferACLDirectionalSelfPeer:
+				return errors.New("directional BIND target has an all-empty legacy state receipt")
+			default:
+				return errors.New("BIND recovery target has an unknown transfer policy")
+			}
 		}
 		if _, err = verifyCompletedBINDEngineSwitch(
 			ctx, profile, layout, expected, state, manifest.Zones,
 		); err != nil {
 			return err
 		}
-		return verifyCompletedPrimaryCatalogTarget(
-			ctx, profile, manifest, state,
-		)
+		if legacyPairedTarget {
+			return verifyLegacyCompletedPrimaryCatalogTarget(
+				ctx, profile, manifest, state, journal.PrimaryCatalogSerial,
+			)
+		}
+		return verifyCompletedPrimaryCatalogTarget(ctx, profile, manifest, state)
 	case transport.DNSEnginePowerDNS:
 		if journal.Mode == transport.DNSEngineSwitchModeAdopt {
 			return verifyPDNSAdoptionEvidence(
@@ -141,12 +243,26 @@ func verifyDNSSwitchJournalTarget(
 		if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
 			return err
 		}
+		if manifest.Topology == transport.DNSTopologyPaired {
+			if err := verifyManagedPDNSPairIdentity(manifest, state); err != nil {
+				return err
+			}
+		}
+		legacyPairedTarget := isLegacyDNSEngineState(state) &&
+			manifest.Topology == transport.DNSTopologyPaired
+		if legacyPairedTarget &&
+			manifest.PairRole == transport.DNSPairRolePrimary {
+			return verifyLegacyCompletedPrimaryCatalogTarget(
+				ctx, profile, manifest, state, journal.PrimaryCatalogSerial,
+			)
+		}
 		if err := verifyPDNSPairingAuthority(ctx, manifest); err != nil {
 			return err
 		}
-		return verifyCompletedPrimaryCatalogTarget(
-			ctx, profile, manifest, state,
-		)
+		if legacyPairedTarget {
+			return nil
+		}
+		return verifyCompletedPrimaryCatalogTarget(ctx, profile, manifest, state)
 	default:
 		return errors.New("DNS engine switch journal target is unsupported")
 	}

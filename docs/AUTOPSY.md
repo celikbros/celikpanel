@@ -74,7 +74,11 @@ behavior (the Netscape mistake).
   Boston's existing empty, panel-managed standalone PowerDNS is reviewed and reconfigured in place with an exact database/config/unit snapshot, bounded restart, target proof and rollback; it is not switched through BIND.
   Installing the primary before the peer is allowed, but it remains pair-pending and all panel-local zone writes fail closed until PairReady proves the durable local catalog by AXFR, a source-bound peer catalog AXFR with the exact same serial and membership, the peer catalog's authoritative SOA over UDP and TCP, and every member's durable expected SOA serial locally and on the peer.
   A deletion also requires the peer zone AXFR to be absent; a successful transfer proves a stale copy and is rejected. A secondary is always locally read-only.
-  Managed BIND defaults to `allow-transfer { none; };`; only a paired BIND secondary allows its exact primary `/32`, while PowerDNS peer ACLs name only the exact peer.
+  Managed BIND global options default to `allow-transfer { none; };`; a directional primary's panel-generated catalog/member zones allow AXFR only from exact self `LocalIP` plus exact peer and notify only that peer, while a secondary allows only its exact primary `/32`.
+  Directional PowerDNS primary uses exact `allow-axfr-ips=LocalIP,PeerIP` plus peer `also-notify`; its secondary uses peer-only AXFR and has no `also-notify` directive.
+  Released legacy paired policy remains exact peer-only-plus-notify compatibility under the narrow legacy proof. A first successful BIND V3 publication migrates it inside the generation-pointer/state rollback transaction; legacy PowerDNS stays byte-exact until an explicit reviewed switch or reconfiguration.
+  Legacy V2 mutations are limited to exact tuple-less producer/standalone compatibility; directional receipts and tuple-less consumers are read-only and require the reviewed V3 switch/reconfiguration path.
+  A released populated consumer may leave PowerDNS only after its exact catalog-bound member set and local/peer SOA serials are proven.
   The engine-neutral catalog serial survives primary BIND↔PowerDNS switches, advances only for membership add/delete/re-add, stays fixed for record-only changes and fails closed at maximum overflow.
   For a released `v0.1.0-alpha.27` source receipt that lacks the serial, the value may be derived only from exact matching durable and live backend evidence and must be bound into the new journal and receipt.
   TSIG is not implemented, and shared or dynamic NAT endpoints are unsupported.

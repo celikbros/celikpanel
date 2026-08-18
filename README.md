@@ -77,10 +77,23 @@ expected SOA serial locally and from the peer. Deletion additionally requires
 the deleted zone's peer AXFR to be absent — a successful transfer is a stale
 copy and rejects readiness. The secondary is always locally read-only.
 
-Managed BIND options default to `allow-transfer { none; };`; only a paired BIND
-secondary admits the exact primary `/32`. PowerDNS transfer/notify peer lists
-contain only the exact configured peer. Pair identity is immutable after
-activation and requires fixed dedicated peer IPv4 addresses; TSIG is not
+Managed BIND global options default to `allow-transfer { none; };`. A
+directional BIND primary permits AXFR for its panel-generated catalog and member
+zones only from the exact local `LocalIP` used for trusted self-proof and the
+exact peer, and notifies only that peer; a BIND secondary admits only the exact
+primary `/32`. Directional PowerDNS follows the same role boundary: a primary's
+`allow-axfr-ips` is exactly `LocalIP,PeerIP` with `also-notify=PeerIP`, while a
+secondary allows only `PeerIP` and omits `also-notify`. Released legacy paired
+config remains byte-exact peer-only-plus-notify compatibility under the narrow
+legacy proof. The first successful BIND V3 publication migrates that policy
+inside its pointer/state rollback transaction; legacy PowerDNS is not silently
+migrated and remains on the compatibility proof until an explicit reviewed
+switch or reconfiguration. Legacy V2 mutations are limited to exact tuple-less
+producer/standalone compatibility; directional receipts and tuple-less
+consumers are read-only and require the reviewed V3 switch/reconfiguration path.
+A released populated consumer may leave PowerDNS only after its exact
+catalog-bound member set and local/peer SOA serials are proven. Pair identity is
+immutable after activation and requires fixed dedicated peer IPv4 addresses; TSIG is not
 implemented, and shared or dynamic NAT endpoints are unsupported. The catalog
 serial is engine-neutral and survives a BIND↔PowerDNS primary switch. Only a
 membership add, delete or re-add advances it; a record-only update does not, and

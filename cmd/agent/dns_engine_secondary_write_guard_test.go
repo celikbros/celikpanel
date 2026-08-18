@@ -37,7 +37,9 @@ func preparePDNSSecondaryWriteGuardFixture(
 	state := dnsEngineStateReceipt{
 		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
 		Engine: transport.DNSEnginePowerDNS, EngineEpoch: manifest.TargetEpoch,
-		PairRole: transport.DNSPairRoleSecondary, SourceRevision: manifest.SourceRevision,
+		PairRole:    transport.DNSPairRoleSecondary,
+		PairLocalIP: manifest.LocalIP, PairPeerIP: manifest.PeerIP,
+		SourceRevision:    manifest.SourceRevision,
 		ManifestQualifier: manifest.Qualifier,
 		MutationRequestID: testMutationRequestID, MutationOwnerID: testMutationOwnerID,
 	}
@@ -269,6 +271,7 @@ func prepareBINDSecondaryWriteGuardFixture(
 		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,
 		Engine: transport.DNSEngineBIND, EngineEpoch: manifest.TargetEpoch,
 		Generation: strings.Repeat("d", 64), PairRole: transport.DNSPairRoleSecondary,
+		PairLocalIP: manifest.LocalIP, PairPeerIP: manifest.PeerIP,
 		SourceRevision: manifest.SourceRevision, ManifestQualifier: manifest.Qualifier,
 		MutationRequestID: testMutationRequestID, MutationOwnerID: testMutationOwnerID,
 	}

@@ -65,6 +65,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	oldSetType := dnsClusterSetLocalZoneTypeTx
 	oldRequiredOwnerUID := dnsClusterConfigRequiredOwnerUID
 	oldOwnerUID := dnsClusterConfigOwnerUID
+	oldHostAddresses := dnsPairHostOwnedAddresses
 	t.Cleanup(func() {
 		dnsClusterConf = oldConf
 		dnsManagedConf = oldManagedConf
@@ -78,6 +79,7 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 		dnsClusterSetLocalZoneTypeTx = oldSetType
 		dnsClusterConfigRequiredOwnerUID = oldRequiredOwnerUID
 		dnsClusterConfigOwnerUID = oldOwnerUID
+		dnsPairHostOwnedAddresses = oldHostAddresses
 	})
 
 	dir := t.TempDir()
@@ -126,6 +128,9 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	}
 	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
+	dnsPairHostOwnedAddresses = func() []string {
+		return []string{"192.0.2.10"}
+	}
 	return dnsClusterConf
 }
 
@@ -656,7 +661,9 @@ func TestConfigureDNSClusterV2LeavesForwardRecoveryAuthorityAtEveryFailureStage(
 		t.Run(stage, func(t *testing.T) {
 			t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(t.TempDir(), "pdns.sqlite3"))
 			confPath := prepareDNSClusterRuntimeTest(t)
-			oldConfig := []byte("old cluster configuration\n")
+			oldConfig := []byte(dnsClusterConfig(&DNSClusterRequest{
+				Role: dnsRolePaired, PeerIP: "192.0.2.1",
+			}))
 			if err := os.WriteFile(confPath, oldConfig, 0o644); err != nil {
 				t.Fatal(err)
 			}

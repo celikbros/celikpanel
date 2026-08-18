@@ -51,6 +51,10 @@ func validateLegacyPowerDNSMutationAuthority(
 		return err
 	}
 	if stateExists {
+		if state.PairRole != "" || state.PairLocalIP != "" ||
+			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0 {
+			return errors.New("directional PowerDNS state requires V3 mutation authority")
+		}
 		return requireDNSPanelWriteAuthority(state)
 	}
 	return nil

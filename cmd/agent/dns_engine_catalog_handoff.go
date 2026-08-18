@@ -56,6 +56,15 @@ func validateEngineStateCatalogContract(
 	if state.PairRole != expectedRole && !legacySecondary {
 		return errors.New("DNS engine state pair role differs from the switch manifest")
 	}
+	if !legacySecondary && expectedRole != "" &&
+		(state.PairLocalIP != manifest.LocalIP ||
+			state.PairPeerIP != manifest.PeerIP) {
+		return errors.New("DNS engine state pair addresses differ from the switch manifest")
+	}
+	if expectedRole == "" &&
+		(state.PairLocalIP != "" || state.PairPeerIP != "") {
+		return errors.New("standalone DNS engine state contains pair addresses")
+	}
 	return validatePrimaryCatalogSerialContract(
 		manifest, state.PrimaryCatalogSerial,
 	)
@@ -116,8 +125,40 @@ func verifyPrimaryCatalogHandoffEvidenceAt(
 	return nil
 }
 
+func verifyLegacyPrimaryCatalogHandoffEvidenceAt(
+	ctx context.Context,
+	evidence dnsPrimaryCatalogEvidence,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	serial uint32,
+	soa dnsZoneSOAProbe,
+	peerAXFR dnsBoundCatalogAXFRProbe,
+) error {
+	if err := validatePrimaryCatalogSerialContract(manifest, serial); err != nil {
+		return err
+	}
+	if err := validateDNSPrimaryCatalogEvidence(evidence); err != nil {
+		return err
+	}
+	domain, err := binddns.CatalogDomain(manifest.LocalIP)
+	if err != nil {
+		return err
+	}
+	if evidence.LocalIP != manifest.LocalIP || evidence.PeerIP != manifest.PeerIP ||
+		evidence.Domain != domain || evidence.Serial != serial ||
+		!slices.Equal(evidence.Members, primaryCatalogManifestMembers(manifest)) {
+		return errors.New(
+			`legacy primary catalog durable evidence differs from the engine switch manifest`,
+		)
+	}
+	_, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+		ctx, evidence, soa, peerAXFR,
+	)
+	return err
+}
+
 func verifyManagedPDNSPairIdentity(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
 ) error {
 	if manifest.Topology != transport.DNSTopologyPaired {
 		return nil
@@ -129,9 +170,10 @@ func verifyManagedPDNSPairIdentity(
 	if err != nil {
 		return err
 	}
-	expected := dnsClusterConfig(&DNSClusterRequest{
-		Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
-	})
+	expected, err := dnsClusterConfigForEngineState(manifest, state)
+	if err != nil {
+		return err
+	}
 	if string(actual) != expected {
 		return errors.New("PowerDNS managed pair configuration differs from the switch manifest")
 	}
@@ -167,6 +209,17 @@ func primaryCatalogEvidenceForEngine(
 			return dnsPrimaryCatalogEvidence{},
 				errors.New("BIND primary catalog receipt differs from its active engine state")
 		}
+		legacy, err := bindStateTreePairContract(
+			layout.GenerationRoot, state, tree, false, true, false,
+		)
+		if err != nil {
+			return dnsPrimaryCatalogEvidence{}, err
+		}
+		if err := verifyManagedBINDRuntimeConfigExact(
+			layout, receipt, legacy,
+		); err != nil {
+			return dnsPrimaryCatalogEvidence{}, err
+		}
 		pairing := receipt.Pairing
 		if pairing == nil || pairing.Role != binddns.PairRolePrimary ||
 			pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
@@ -186,10 +239,12 @@ func primaryCatalogEvidenceForEngine(
 		if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}
-		if err := verifyManagedPDNSPairIdentity(manifest); err != nil {
+		if err := verifyManagedPDNSPairIdentity(manifest, state); err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}
-		evidence, primary, err := managedPDNSPrimaryCatalogEvidence(ctx)
+		evidence, primary, err := managedPDNSPrimaryCatalogEvidenceForState(
+			ctx, state,
+		)
 		if err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}
@@ -214,11 +269,29 @@ func verifyPDNSStateManifestReceipt(
 		return err
 	}
 	defer db.Close()
+	if err := validatePDNSEngineReceiptSchema(ctx, db); err != nil {
+		return err
+	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+	if err := verifyPDNSStateManifestReceiptTx(ctx, tx, state); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func verifyPDNSStateManifestReceiptTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	state dnsEngineStateReceipt,
+) error {
+	if tx == nil || state.Engine != transport.DNSEnginePowerDNS ||
+		state.Generation != "" || state.Mode != transport.DNSEngineSwitchModeSwitch {
+		return errors.New("PowerDNS active engine state identity is invalid")
+	}
 	var engine, requestID, ownerID, qualifier, schema string
 	var epoch, sourceRevision int64
 	if err := tx.QueryRowContext(ctx, `
@@ -237,7 +310,7 @@ func verifyPDNSStateManifestReceipt(
 		sourceRevision != state.SourceRevision || schema != pdnsManifestSchema {
 		return errors.New("PowerDNS database manifest receipt differs from its active engine state")
 	}
-	return tx.Commit()
+	return nil
 }
 
 func primaryCatalogSerialBoundBySourceState(
@@ -312,11 +385,20 @@ func primaryCatalogSerialFromSource(
 	if err != nil {
 		return 0, err
 	}
-	if err := verifyPrimaryCatalogHandoffEvidenceAt(
-		ctx, evidence, manifest, serial,
-		probeDNSZoneSOA, probeDNSCatalogAXFR,
-	); err != nil {
-		return 0, err
+	var verifyErr error
+	if state.PairRole == `` && state.PrimaryCatalogSerial == 0 {
+		verifyErr = verifyLegacyPrimaryCatalogHandoffEvidenceAt(
+			ctx, evidence, manifest, serial,
+			probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		)
+	} else {
+		verifyErr = verifyPrimaryCatalogHandoffEvidenceAt(
+			ctx, evidence, manifest, serial,
+			probeDNSZoneSOA, probeDNSCatalogAXFR,
+		)
+	}
+	if verifyErr != nil {
+		return 0, verifyErr
 	}
 	return serial, nil
 }
@@ -342,6 +424,31 @@ func verifyCompletedPrimaryCatalogTarget(
 	return verifyPrimaryCatalogHandoffEvidenceAt(
 		ctx, evidence, manifest, state.PrimaryCatalogSerial,
 		probeDNSZoneSOA, probeDNSCatalogAXFR,
+	)
+}
+
+func verifyLegacyCompletedPrimaryCatalogTarget(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
+	serial uint32,
+) error {
+	if !isLegacyDNSEngineState(state) {
+		return errors.New("legacy primary target receipt is not all-empty")
+	}
+	if !requiresPrimaryCatalogSerial(manifest) {
+		return nil
+	}
+	evidence, err := primaryCatalogEvidenceForEngine(
+		ctx, profile, manifest.TargetEngine, state, manifest,
+	)
+	if err != nil {
+		return err
+	}
+	return verifyLegacyPrimaryCatalogHandoffEvidenceAt(
+		ctx, evidence, manifest, serial,
+		probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
 	)
 }
 

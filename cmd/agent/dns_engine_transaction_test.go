@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -121,6 +122,34 @@ func TestPairedPrimarySwitchJournalBindsFreshCatalogSerial(t *testing.T) {
 	}
 }
 
+func TestPersistExactDNSEngineStateAcceptsOnlyExactAfterRenameReadback(t *testing.T) {
+	want := legacyDurableDNSState(transport.DNSEngineBIND)
+	writeFailure := errors.New("directory fsync failed after rename")
+	var durable dnsEngineStateReceipt
+	exists := false
+	writeAfterRename := func(state dnsEngineStateReceipt) error {
+		durable, exists = state, true
+		return writeFailure
+	}
+	read := func() (dnsEngineStateReceipt, bool, error) {
+		return durable, exists, nil
+	}
+	if err := persistExactDNSEngineStateAt(want, writeAfterRename, read); err != nil {
+		t.Fatalf("exact durable rename was treated as failure: %v", err)
+	}
+	durable = dnsEngineStateReceipt{}
+	exists = false
+	writeBeforeRename := func(dnsEngineStateReceipt) error { return writeFailure }
+	if err := persistExactDNSEngineStateAt(want, writeBeforeRename, read); !errors.Is(err, writeFailure) {
+		t.Fatalf("pre-rename failure was accepted: %v", err)
+	}
+	durable, exists = want, true
+	durable.Generation = strings.Repeat("9", 64)
+	if err := persistExactDNSEngineStateAt(want, writeBeforeRename, read); err == nil {
+		t.Fatal("mismatched durable receipt was accepted")
+	}
+}
+
 func TestPairedPrimarySwitchJournalAcceptsVerifiedLegacySourceReceipt(t *testing.T) {
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
 		transport.DNSEngineSwitchModeSwitch,
@@ -182,6 +211,8 @@ func TestPairedPrimarySwitchJournalAcceptsVerifiedLegacySourceReceipt(t *testing
 
 	boundSource := legacySource
 	boundSource.PairRole = transport.DNSPairRolePrimary
+	boundSource.PairLocalIP = manifest.LocalIP
+	boundSource.PairPeerIP = manifest.PeerIP
 	boundSource.PrimaryCatalogSerial = 40
 	boundBytes, err := encodeDNSEngineState(boundSource)
 	if err != nil {

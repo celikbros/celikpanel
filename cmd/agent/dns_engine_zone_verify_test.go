@@ -209,7 +209,9 @@ func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	previousSOA := probeDNSZoneSOA
 	previousAXFR := probeDNSCatalogAXFR
 	previousLocal := dnsPairLocalProofAddress
+	previousHostAddresses := dnsPairHostOwnedAddresses
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
+	dnsPairHostOwnedAddresses = func() []string { return []string{"192.0.2.10"} }
 	probeDNSCatalogAXFR = func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
 		if address != "192.0.2.10" && address != "192.0.2.20" {
 			t.Fatalf("catalog address=%q", address)
@@ -229,6 +231,7 @@ func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 		probeDNSZoneSOA = previousSOA
 		probeDNSCatalogAXFR = previousAXFR
 		dnsPairLocalProofAddress = previousLocal
+		dnsPairHostOwnedAddresses = previousHostAddresses
 	})
 	for _, role := range []string{
 		transport.DNSPairRolePrimary,

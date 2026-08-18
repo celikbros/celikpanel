@@ -11,10 +11,12 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -45,6 +47,15 @@ var pdnsReconfigureDataTables = []string{
 	"celikpanel_dns_engine_manifest_receipt",
 }
 
+var pdnsReplacementIndexes = map[string]bool{
+	"name_index": true, "catalog_idx": true,
+	"records_lookup_idx": true, "records_lookup_id_idx": true,
+	"records_order_idx": true, "ip_nameserver_pk": true,
+	"comments_idx": true, "comments_order_idx": true,
+	"domainmetadata_idx": true, "domainidindex": true,
+	"namealgoindex": true,
+}
+
 func requireNoPDNSDatabaseSidecars(path string) error {
 	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
 		if _, err := os.Lstat(path + suffix); !errors.Is(err, os.ErrNotExist) {
@@ -57,6 +68,94 @@ func requireNoPDNSDatabaseSidecars(path string) error {
 		}
 	}
 	return nil
+}
+
+func verifyPDNSReplacementDatabaseEnvelope(ctx context.Context, path string) error {
+	if _, _, _, err := inspectPDNSDatabaseFile(path, false); err != nil {
+		return err
+	}
+	if err := requireNoPDNSDatabaseSidecars(path); err != nil {
+		return err
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var journalMode, integrity string
+	if err := tx.QueryRowContext(ctx, `PRAGMA journal_mode`).Scan(&journalMode); err != nil ||
+		!strings.EqualFold(journalMode, "delete") {
+		if err == nil {
+			err = errors.New("PowerDNS source database must use DELETE journaling")
+		}
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(&integrity); err != nil ||
+		integrity != "ok" {
+		if err == nil {
+			err = errors.New("PowerDNS source database failed quick_check")
+		}
+		return err
+	}
+	allowedTables := make(map[string]bool, len(pdnsReconfigureDataTables))
+	for _, table := range pdnsReconfigureDataTables {
+		allowedTables[table] = true
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT type, name FROM sqlite_master
+		WHERE type IN ('table','view','trigger','index')
+		  AND name NOT LIKE 'sqlite_autoindex_%'
+		  AND name NOT LIKE 'sqlite_%'
+		ORDER BY type, name COLLATE BINARY
+	`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	foundTables := make(map[string]bool, len(allowedTables))
+	foundIndexes := make(map[string]bool, len(pdnsReplacementIndexes))
+	for rows.Next() {
+		var objectType, name string
+		if err := rows.Scan(&objectType, &name); err != nil {
+			return err
+		}
+		switch objectType {
+		case "table":
+			if !allowedTables[name] {
+				return fmt.Errorf("PowerDNS source database contains unrecognized table %q", name)
+			}
+			foundTables[name] = true
+		case "index":
+			if !pdnsReplacementIndexes[name] {
+				return fmt.Errorf("PowerDNS source database contains unrecognized index %q", name)
+			}
+			foundIndexes[name] = true
+		default:
+			return fmt.Errorf("PowerDNS source database contains unsafe %s %q", objectType, name)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, table := range pdnsReconfigureDataTables {
+		if !foundTables[table] {
+			return fmt.Errorf("PowerDNS source database is missing table %q", table)
+		}
+	}
+	for index := range pdnsReplacementIndexes {
+		if !foundIndexes[index] {
+			return fmt.Errorf("PowerDNS source database is missing index %q", index)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return requireNoPDNSDatabaseSidecars(path)
 }
 
 // verifyEmptyStandalonePDNSDatabase proves that an unreceipted, already
@@ -226,9 +325,11 @@ func preparePDNSConfigMutation(
 		dnsMainConf: mainDesired, dnsManagedConf: managedPowerDNSStandaloneConfig(),
 	}
 	if manifest.Topology == transport.DNSTopologyPaired {
-		desired[dnsClusterConf] = []byte(dnsClusterConfig(&DNSClusterRequest{
-			Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
-		}))
+		clusterConfig, configErr := dnsClusterConfigForSwitchManifest(manifest)
+		if configErr != nil {
+			return pdnsConfigMutation{}, configErr
+		}
+		desired[dnsClusterConf] = []byte(clusterConfig)
 	}
 	return pdnsConfigMutation{
 		before:  before,
@@ -303,29 +404,545 @@ func verifyStandaloneUnsignedPowerDNS(ctx context.Context) error {
 func verifyUnsignedPowerDNSForManifest(
 	ctx context.Context,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
 ) error {
+	if state.Mode == transport.DNSEngineSwitchModeSwitch {
+		if err := verifyPDNSReplacementDatabaseEnvelope(ctx, pdnsDBPath()); err != nil {
+			return err
+		}
+		if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+			return err
+		}
+	}
 	if manifest.Topology == transport.DNSTopologyStandalone {
+		db, err := openPDNSEngineDB(pdnsDBPath(), true)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		if err := verifyPDNSSourceProjectionTx(ctx, tx, manifest); err != nil {
+			return err
+		}
+		var supermasters int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
+			&supermasters,
+		); err != nil {
+			return err
+		}
+		if supermasters != 0 {
+			return errors.New("standalone PowerDNS source retains autoprimary authority")
+		}
+		if err := tx.Commit(); err != nil {
+			return err
+		}
 		return verifyStandaloneUnsignedPowerDNS(ctx)
 	}
 	if manifest.Topology != transport.DNSTopologyPaired ||
 		manifest.TargetEngine != transport.DNSEngineBIND {
 		return errors.New("PowerDNS source topology is not supported for this switch")
 	}
-	commitment, err := mutationpayload.CanonicalDNSClusterConfig(
-		manifest.Topology, manifest.PeerIP, manifest.PeerNS,
-	)
+	if isLegacyDNSEngineState(state) {
+		expectedConfig, err := dnsClusterConfigForEngineState(manifest, state)
+		if err != nil {
+			return err
+		}
+		if err := verifyExactManagedPDNSClusterConfig(expectedConfig); err != nil {
+			return fmt.Errorf("verify paired PowerDNS source: %w", err)
+		}
+		if err := verifyLegacyPDNSSourceRole(ctx, manifest); err != nil {
+			return fmt.Errorf("verify paired PowerDNS source role: %w", err)
+		}
+		return verifyUnsignedPowerDNSData(ctx)
+	}
+	if state.Mode != transport.DNSEngineSwitchModeSwitch ||
+		state.PairRole != manifest.PairRole ||
+		state.PairLocalIP != manifest.LocalIP || state.PairPeerIP != manifest.PeerIP {
+		return errors.New("directional PowerDNS source state differs from the switch manifest")
+	}
+	_, primary, err := readManagedPDNSPrimaryCatalogForState(ctx, state)
 	if err != nil {
 		return err
 	}
-	if err := verifyDNSClusterConfig(
-		commitment,
-		dnsClusterConfig(&DNSClusterRequest{
-			Role: commitment.Role, PeerIP: commitment.PeerIP, PeerNS: commitment.PeerNS,
-		}),
-	); err != nil {
-		return fmt.Errorf("verify paired PowerDNS source: %w", err)
+	if (state.PairRole == transport.DNSPairRolePrimary) != primary {
+		return errors.New("directional PowerDNS catalog role differs from its active state")
+	}
+	db, err := openPDNSEngineDB(pdnsDBPath(), true)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if state.PairRole == transport.DNSPairRolePrimary {
+		if err := verifyPDNSSourceProjectionTx(ctx, tx, manifest); err != nil {
+			return err
+		}
+	}
+	var legacyRows int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM supermasters
+	`).Scan(&legacyRows); err != nil {
+		return err
+	}
+	if legacyRows != 0 {
+		return errors.New("directional PowerDNS source retains legacy supermaster authority")
+	}
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 	return verifyUnsignedPowerDNSData(ctx)
+}
+
+func verifyExactManagedPDNSClusterConfig(expected string) error {
+	if expected == "" {
+		return errors.New("paired PowerDNS source configuration is empty")
+	}
+	if err := validateDNSClusterConfigTarget(); err != nil {
+		return err
+	}
+	actual, err := dnsClusterConfigReadFile(dnsClusterConf)
+	if err != nil || string(actual) != expected {
+		if err == nil {
+			err = errors.New("PowerDNS pair configuration bytes changed")
+		}
+		return err
+	}
+	return requireManagedDNSClusterReady()
+}
+
+func verifyPDNSSourceProjectionTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	pairedPrimary := manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary
+	standalone := manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == ""
+	if tx == nil || manifest.SourceEngine != transport.DNSEnginePowerDNS ||
+		manifest.SourceEpoch < 1 || (!pairedPrimary && !standalone) {
+		return errors.New("PowerDNS source projection is invalid")
+	}
+	catalogDomain := ""
+	expectedDomains := 0
+	if pairedPrimary {
+		var err error
+		catalogDomain, err = binddns.CatalogDomain(manifest.LocalIP)
+		if err != nil {
+			return err
+		}
+		expectedDomains = 1
+	}
+	for _, zone := range manifest.Zones {
+		commitment, err := mutationpayload.CanonicalDNSZoneSyncV3(
+			transport.DNSEnginePowerDNS, manifest.SourceEpoch,
+			zone.DesiredGeneration, zone.Domain, zone.Delete, zone.ZoneType, zone.Records,
+		)
+		if err != nil {
+			return err
+		}
+		receipt, found, err := readPDNSV3ReceiptTx(ctx, tx, zone.Domain)
+		if err != nil || !found {
+			if err == nil {
+				err = errors.New("PowerDNS primary source zone receipt is missing")
+			}
+			return err
+		}
+		action := dnsZoneSyncActionSync
+		if zone.Delete {
+			action = dnsZoneSyncActionDelete
+		} else {
+			expectedDomains++
+		}
+		if receipt.EngineEpoch != manifest.SourceEpoch ||
+			receipt.Qualifier != commitment.Qualifier ||
+			receipt.DesiredGeneration != commitment.DesiredGeneration ||
+			receipt.Action != action || receipt.ZoneType != commitment.ZoneType {
+			return errors.New("PowerDNS primary source zone receipt differs from the switch manifest")
+		}
+		if err := verifyPDNSSourceZoneTx(
+			ctx, tx, commitment, catalogDomain, pairedPrimary,
+		); err != nil {
+			return err
+		}
+	}
+	var domainCount, receiptCount, auxiliaryAuthority int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM domains`).Scan(&domainCount); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(
+		ctx, `SELECT COUNT(*) FROM celikpanel_dns_zone_sync_v3_receipts`,
+	).Scan(&receiptCount); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT
+		 (SELECT COUNT(*) FROM comments) +
+		 (SELECT COUNT(*) FROM domainmetadata) +
+		 (SELECT COUNT(*) FROM cryptokeys) +
+		 (SELECT COUNT(*) FROM tsigkeys) +
+		 (SELECT COUNT(*) FROM celikpanel_dns_zone_sync_receipts) +
+		 (SELECT COUNT(*) FROM records
+		   WHERE domain_id IS NULL OR domain_id NOT IN (SELECT id FROM domains))
+	`).Scan(&auxiliaryAuthority); err != nil {
+		return err
+	}
+	if domainCount != expectedDomains || receiptCount != len(manifest.Zones) ||
+		auxiliaryAuthority != 0 {
+		return errors.New("PowerDNS primary source contains authority outside the switch manifest")
+	}
+	return nil
+}
+
+func verifyPDNSSourceZoneTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	commitment mutationpayload.DNSZoneSyncV3Commitment,
+	catalogDomain string,
+	requireCatalog bool,
+) error {
+	if commitment.Delete {
+		return verifyPDNSV3ZoneTx(ctx, tx, commitment)
+	}
+	var domainID int64
+	var name, zoneType string
+	var master, account, options, catalog sql.NullString
+	var lastCheck sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT id, name, UPPER(type), master, last_check, account, options, catalog
+		FROM domains WHERE name = ? COLLATE NOCASE
+	`, commitment.Domain).Scan(
+		&domainID, &name, &zoneType, &master, &lastCheck, &account, &options, &catalog,
+	); err != nil {
+		return err
+	}
+	catalogExact := !catalog.Valid
+	if requireCatalog {
+		catalogExact = catalog.Valid && catalog.String == catalogDomain
+	}
+	if name != commitment.Domain || zoneType != commitment.ZoneType ||
+		master.Valid || lastCheck.Valid || account.Valid || options.Valid || !catalogExact {
+		return errors.New("PowerDNS primary source zone identity is noncanonical")
+	}
+	var noncanonicalRecords int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM records
+		WHERE domain_id = ? AND
+		 (ordername IS NOT NULL OR auth IS NULL OR auth != 1)
+	`, domainID).Scan(&noncanonicalRecords); err != nil {
+		return err
+	}
+	if noncanonicalRecords != 0 {
+		return errors.New("PowerDNS primary source zone record authority is noncanonical")
+	}
+	return verifyPDNSV3ZoneTx(ctx, tx, commitment)
+}
+
+func verifyLegacyPDNSSourceRole(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	if manifest.Topology != transport.DNSTopologyPaired ||
+		(manifest.PairRole != transport.DNSPairRolePrimary &&
+			manifest.PairRole != transport.DNSPairRoleSecondary) {
+		return errors.New("legacy PowerDNS source manifest has no exact pair role")
+	}
+	if err := requireHostOwnedDNSPairAddress(manifest.LocalIP); err != nil {
+		return err
+	}
+	db, err := openPDNSEngineDB(pdnsDBPath(), true)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var ownedCatalogs, peerCatalogs int
+	if err := tx.QueryRowContext(
+		ctx, `SELECT COUNT(*) FROM domains WHERE account = ? AND UPPER(type) = 'PRODUCER'`,
+		pdnsBINDCatalogAccount,
+	).Scan(&ownedCatalogs); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(
+		ctx, `SELECT COUNT(*) FROM domains WHERE account = ? AND UPPER(type) = 'CONSUMER'`,
+		pdnsPeerCatalogAccount,
+	).Scan(&peerCatalogs); err != nil {
+		return err
+	}
+	if ownedCatalogs == 0 && peerCatalogs == 1 {
+		if manifest.PairRole != transport.DNSPairRoleSecondary {
+			return errors.New("legacy PowerDNS consumer cannot become a primary source")
+		}
+		peerCatalog, err := readLegacyPDNSPeerCatalogAuthority(ctx, manifest)
+		if err != nil {
+			return err
+		}
+		if err := verifyLegacyPDNSConsumerSourceTx(
+			ctx, tx, manifest, peerCatalog,
+		); err != nil {
+			return err
+		}
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+		return verifyLegacyPDNSConsumerMemberAuthority(
+			ctx, manifest, peerCatalog.Members,
+		)
+	}
+	if ownedCatalogs != 1 || peerCatalogs != 0 {
+		return errors.New("legacy PowerDNS catalog ownership is ambiguous")
+	}
+	identity, enabled, err := managedPDNSLegacyCatalogIdentity(ctx, pdnsDBPath())
+	if err != nil || !enabled {
+		if err == nil {
+			err = errors.New("legacy PowerDNS producer identity is unavailable")
+		}
+		return err
+	}
+	if identity.LocalIP != manifest.LocalIP || identity.PeerIP != manifest.PeerIP {
+		return errors.New("legacy PowerDNS producer identity differs from the switch manifest")
+	}
+	if manifest.PairRole == transport.DNSPairRolePrimary {
+		catalog, primary, err := readManagedPDNSPrimaryCatalogWithIdentity(ctx, identity)
+		if err != nil || !primary {
+			if err == nil {
+				err = errors.New("legacy PowerDNS producer evidence is unavailable")
+			}
+			return err
+		}
+		if !slices.Equal(catalog.Members, primaryCatalogManifestMembers(manifest)) {
+			return errors.New("legacy PowerDNS producer members differ from the switch manifest")
+		}
+		if err := verifyPDNSSourceProjectionTx(ctx, tx, manifest); err != nil {
+			return err
+		}
+		var totalSupermasters, exactSupermasters int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
+			&totalSupermasters,
+		); err != nil {
+			return err
+		}
+		if err := tx.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM supermasters
+			WHERE account = 'celikpanel' AND ip = ? AND nameserver = ?
+		`, manifest.PeerIP, strings.TrimSuffix(manifest.PeerNS, ".")).Scan(
+			&exactSupermasters,
+		); err != nil {
+			return err
+		}
+		validSupermasters := totalSupermasters == 0 ||
+			(totalSupermasters == 1 && exactSupermasters == 1)
+		if !validSupermasters {
+			return errors.New("legacy PowerDNS producer retains uncommitted authority")
+		}
+		return tx.Commit()
+	}
+	// Released paired PowerDNS was symmetric: both nodes owned a producer.
+	// Reclassifying a producer as secondary is safe only for the exact empty
+	// source used by the reviewed Boston bootstrap. Any local member or other
+	// authority would be discarded by the directional consumer target.
+	if len(manifest.Zones) != 0 || manifest.SnapshotBytes != 0 {
+		return errors.New("legacy PowerDNS secondary transition requires an empty source snapshot")
+	}
+	var domains, totalSupermasters, exactSupermasters, auxiliaryAuthority int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM domains`).Scan(&domains); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
+		&totalSupermasters,
+	); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM supermasters
+		WHERE account = 'celikpanel' AND ip = ? AND nameserver = ?
+	`, manifest.PeerIP, strings.TrimSuffix(manifest.PeerNS, ".")).Scan(
+		&exactSupermasters,
+	); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT
+		 (SELECT COUNT(*) FROM comments) +
+		 (SELECT COUNT(*) FROM domainmetadata) +
+		 (SELECT COUNT(*) FROM cryptokeys) +
+		 (SELECT COUNT(*) FROM tsigkeys) +
+		 (SELECT COUNT(*) FROM celikpanel_dns_zone_sync_receipts) +
+		 (SELECT COUNT(*) FROM celikpanel_dns_zone_sync_v3_receipts) +
+		 (SELECT COUNT(*) FROM records
+		   WHERE domain_id IS NULL OR domain_id NOT IN
+		     (SELECT id FROM domains WHERE account = ?))
+	`, pdnsBINDCatalogAccount).Scan(&auxiliaryAuthority); err != nil {
+		return err
+	}
+	if domains != 1 || totalSupermasters != 1 || exactSupermasters != 1 ||
+		auxiliaryAuthority != 0 {
+		return errors.New("legacy PowerDNS secondary source retains local or ambiguous authority")
+	}
+	catalog, primary, err := readManagedPDNSPrimaryCatalogWithIdentity(ctx, identity)
+	if err != nil || !primary {
+		if err == nil {
+			err = errors.New("legacy PowerDNS empty producer evidence is unavailable")
+		}
+		return err
+	}
+	if len(catalog.Members) != 0 || len(catalog.MemberSerials) != 0 {
+		return errors.New("legacy PowerDNS secondary source producer is not empty")
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	peerCatalog, err := readLegacyPDNSPeerCatalogAuthority(ctx, manifest)
+	if err != nil {
+		return err
+	}
+	if len(peerCatalog.Members) != 0 {
+		return errors.New("legacy PowerDNS peer producer catalog is not empty")
+	}
+	return nil
+}
+
+func verifyLegacyPDNSConsumerSourceTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	peerCatalog dnsCatalogAXFRResult,
+) error {
+	if tx == nil || peerCatalog.Serial == 0 {
+		return errors.New("legacy PowerDNS consumer source proof is incomplete")
+	}
+	peerDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT name, UPPER(type), COALESCE(master,''), COALESCE(account,''),
+		       COALESCE(catalog,''), COALESCE(options,'')
+		FROM domains ORDER BY name COLLATE BINARY
+	`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	members := make([]string, 0, len(peerCatalog.Members))
+	consumerSeen := 0
+	for rows.Next() {
+		var name, zoneType, master, account, catalog, options string
+		if err := rows.Scan(
+			&name, &zoneType, &master, &account, &catalog, &options,
+		); err != nil {
+			return err
+		}
+		if name == peerDomain {
+			if zoneType != "CONSUMER" || master != manifest.PeerIP ||
+				account != pdnsPeerCatalogAccount || catalog != "" || options != "" {
+				return errors.New("legacy PowerDNS consumer identity differs from the switch manifest")
+			}
+			consumerSeen++
+			continue
+		}
+		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
+			master != manifest.PeerIP || catalog != peerDomain || options != "" ||
+			(account != "" && account != pdnsPeerCatalogAccount) {
+			return errors.New("legacy PowerDNS consumer contains foreign member authority")
+		}
+		members = append(members, name)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if consumerSeen != 1 || !slices.Equal(members, peerCatalog.Members) {
+		return errors.New("legacy PowerDNS consumer members differ from the peer catalog")
+	}
+	var supermasters, auxiliaryAuthority int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
+		&supermasters,
+	); err != nil {
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `
+		SELECT
+		 (SELECT COUNT(*) FROM comments) +
+		 (SELECT COUNT(*) FROM domainmetadata) +
+		 (SELECT COUNT(*) FROM cryptokeys) +
+		 (SELECT COUNT(*) FROM tsigkeys) +
+		 (SELECT COUNT(*) FROM celikpanel_dns_zone_sync_receipts) +
+		 (SELECT COUNT(*) FROM celikpanel_dns_zone_sync_v3_receipts) +
+		 (SELECT COUNT(*) FROM records
+		   WHERE domain_id IS NULL OR domain_id NOT IN (SELECT id FROM domains))
+	`).Scan(&auxiliaryAuthority); err != nil {
+		return err
+	}
+	if supermasters != 0 || auxiliaryAuthority != 0 {
+		return errors.New("legacy PowerDNS consumer retains extra authority")
+	}
+	return nil
+}
+
+func readLegacyPDNSPeerCatalogAuthority(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (dnsCatalogAXFRResult, error) {
+	peerDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		return dnsCatalogAXFRResult{}, err
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	peerCatalog, err := probeDNSBoundCatalogAXFR(
+		proofCtx, manifest.LocalIP, manifest.PeerIP, peerDomain,
+	)
+	if err != nil || peerCatalog.Serial == 0 ||
+		!sort.StringsAreSorted(peerCatalog.Members) {
+		return dnsCatalogAXFRResult{}, errors.New("legacy PowerDNS peer producer catalog is not exact")
+	}
+	for index, member := range peerCatalog.Members {
+		if !serviceMutationCanonicalFQDN(member) || member == peerDomain ||
+			(index > 0 && member == peerCatalog.Members[index-1]) {
+			return dnsCatalogAXFRResult{}, errors.New("legacy PowerDNS peer producer members are invalid")
+		}
+	}
+	peerSerial, err := exactDNSZoneSerialAtWithProbe(
+		proofCtx, manifest.PeerIP, peerDomain, probeDNSZoneSOA,
+	)
+	if err != nil || peerSerial != peerCatalog.Serial {
+		return dnsCatalogAXFRResult{}, errors.New("legacy PowerDNS peer producer SOA differs from its catalog")
+	}
+	return peerCatalog, nil
+}
+
+func verifyLegacyPDNSConsumerMemberAuthority(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	members []string,
+) error {
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	defer cancel()
+	for _, member := range members {
+		localSerial, localErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, manifest.LocalIP, member, probeDNSZoneSOA,
+		)
+		peerSerial, peerErr := exactDNSZoneSerialAtWithProbe(
+			proofCtx, manifest.PeerIP, member, probeDNSZoneSOA,
+		)
+		if localErr != nil || peerErr != nil || localSerial == 0 ||
+			localSerial != peerSerial {
+			return errors.New("legacy PowerDNS consumer member differs from the peer")
+		}
+	}
+	return nil
 }
 
 func verifyUnsignedPowerDNSData(ctx context.Context) error {
@@ -627,8 +1244,7 @@ func switchToPDNS(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if manifest.SourceEngine == transport.DNSEnginePowerDNS ||
-		(manifest.SourceEngine == "" && capturePDNSActive(ctx, systemctl)) {
+	if manifest.SourceEngine == "" && capturePDNSActive(ctx, systemctl) {
 		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
@@ -857,6 +1473,8 @@ func switchToPDNS(
 		Engine:               transport.DNSEnginePowerDNS,
 		EngineEpoch:          manifest.TargetEpoch,
 		PairRole:             pairRoleForEngineState(manifest),
+		PairLocalIP:          manifest.LocalIP,
+		PairPeerIP:           manifest.PeerIP,
 		PrimaryCatalogSerial: primaryCatalogSerial,
 		SourceRevision:       manifest.SourceRevision,
 		ManifestQualifier:    manifest.Qualifier, MutationRequestID: binding.MutationRequestID,

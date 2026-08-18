@@ -76,9 +76,22 @@ döndürür. Silme işlemi ayrıca silinen zone'un eş AXFR'sinde bulunmadığı
 kanıtlar; başarılı aktarım bayat kopya demektir ve hazır olmayı reddettirir.
 İkincil her zaman yerel yazılara kapalıdır.
 
-Yönetilen BIND seçenekleri varsayılan olarak `allow-transfer { none; };`
-kullanır; yalnız eşli BIND ikincil kesin birincil `/32` adresine izin verir.
-PowerDNS transfer/notify eş listeleri yalnız yapılandırılmış kesin eşi içerir.
+Yönetilen BIND genel seçenekleri varsayılan olarak `allow-transfer { none; };`
+kullanır. Yönlü BIND birincilin panelce üretilen katalog ve üye zone'ları AXFR'ye
+yalnız güvenilir yerel kanıt için kesin `LocalIP` ile kesin eşten izin verir ve
+yalnız o eşi bilgilendirir; BIND ikincil yalnız kesin birincil `/32` adresini
+kabul eder. Yönlü PowerDNS birincilde `allow-axfr-ips` tam olarak
+`LocalIP,PeerIP`, `also-notify` ise `PeerIP` olur; ikincil yalnız `PeerIP` AXFR'sine
+izin verir ve `also-notify` içermez. Yayımlanmış eski eşli config, yalnız dar eski
+sürüm kanıtında bayt-birebir peer-only-plus-notify uyumluluğu olarak kalır. İlk
+başarılı BIND V3 yayını bu politikayı pointer/durum geri dönüş işlemi içinde
+taşır; eski PowerDNS sessizce taşınmaz ve açıkça incelenmiş switch ya da yeniden
+yapılandırmaya kadar uyumluluk kanıtında kalır.
+Eski V2 mutasyonları yalnız exact tuple'sız üretici/standalone uyumluluğuna
+açıktır; yönlü receipt'ler ile tuple'sız consumer'lar salt okunurdur ve
+incelenmiş V3 switch/yeniden yapılandırma yolunu gerektirir.
+Yayımlanmış dolu bir consumer, PowerDNS'ten ancak exact katalog-bağlı üye kümesi
+ile yerel/eş SOA serileri kanıtlandıktan sonra ayrılabilir.
 Etkinleştirmeden sonra eş kimliği değişmezdir ve sabit, özel eş IPv4 adresleri
 gerekir; TSIG henüz yoktur, paylaşılan veya dinamik NAT uçları desteklenmez.
 Katalog serisi motor-bağımsızdır ve BIND↔PowerDNS birincil geçişinde korunur.

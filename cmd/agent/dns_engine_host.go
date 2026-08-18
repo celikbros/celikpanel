@@ -46,6 +46,8 @@ type dnsEngineStateReceipt struct {
 	EngineEpoch          int64               `json:"engine_epoch"`
 	Generation           string              `json:"generation,omitempty"`
 	PairRole             string              `json:"pair_role,omitempty"`
+	PairLocalIP          string              `json:"pair_local_ip,omitempty"`
+	PairPeerIP           string              `json:"pair_peer_ip,omitempty"`
 	PrimaryCatalogSerial uint32              `json:"primary_catalog_serial,omitempty"`
 	SourceRevision       int64               `json:"source_revision"`
 	ManifestQualifier    string              `json:"manifest_qualifier"`
@@ -184,21 +186,37 @@ func validateDNSEngineState(state dnsEngineStateReceipt) error {
 		return errors.New("DNS engine adoption state must name PowerDNS")
 	}
 	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		(state.PairRole != "" || state.PrimaryCatalogSerial != 0) {
+		(state.PairRole != "" || state.PairLocalIP != "" ||
+			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0) {
 		return errors.New("legacy PowerDNS adoption state cannot claim directional primary identity")
+	}
+	if (state.PairLocalIP == "") != (state.PairPeerIP == "") {
+		return errors.New("DNS engine state contains a partial pair address identity")
+	}
+	hasPairAddresses := state.PairLocalIP != ""
+	if hasPairAddresses {
+		localIP := net.ParseIP(state.PairLocalIP)
+		peerIP := net.ParseIP(state.PairPeerIP)
+		if localIP == nil || localIP.To4() == nil ||
+			localIP.String() != state.PairLocalIP || !localIP.IsGlobalUnicast() ||
+			peerIP == nil || peerIP.To4() == nil ||
+			peerIP.String() != state.PairPeerIP || !peerIP.IsGlobalUnicast() ||
+			localIP.Equal(peerIP) {
+			return errors.New("DNS engine state pair addresses are not canonical and distinct")
+		}
 	}
 	switch state.PairRole {
 	case transport.DNSPairRolePrimary:
-		if state.PrimaryCatalogSerial == 0 {
+		if !hasPairAddresses || state.PrimaryCatalogSerial == 0 {
 			return errors.New("paired primary DNS engine state is missing its catalog serial")
 		}
 	case transport.DNSPairRoleSecondary:
-		if state.PrimaryCatalogSerial != 0 {
+		if !hasPairAddresses || state.PrimaryCatalogSerial != 0 {
 			return errors.New("paired secondary DNS engine state contains a primary catalog serial")
 		}
 	case "":
-		if state.PrimaryCatalogSerial != 0 {
-			return errors.New("standalone DNS engine state contains a primary catalog serial")
+		if state.PrimaryCatalogSerial != 0 || hasPairAddresses {
+			return errors.New("standalone DNS engine state contains directional pair identity")
 		}
 	default:
 		return errors.New("DNS engine state has an unsupported pair role")
@@ -211,6 +229,11 @@ func validateDNSEngineState(state dnsEngineStateReceipt) error {
 		return errors.New("PowerDNS engine state unexpectedly names a BIND generation")
 	}
 	return nil
+}
+
+func isLegacyDNSEngineState(state dnsEngineStateReceipt) bool {
+	return state.PairRole == "" && state.PairLocalIP == "" &&
+		state.PairPeerIP == "" && state.PrimaryCatalogSerial == 0
 }
 
 func validDNSGeneration(value string) bool {
@@ -243,6 +266,34 @@ func writeDNSEngineState(state dnsEngineStateReceipt) error {
 		return err
 	}
 	return secureWriteConfig(dnsEngineStatePath(), data, 0o600)
+}
+
+type dnsEngineStateWriter func(dnsEngineStateReceipt) error
+type dnsEngineStateReader func() (dnsEngineStateReceipt, bool, error)
+
+func persistExactDNSEngineStateAt(
+	state dnsEngineStateReceipt,
+	write dnsEngineStateWriter,
+	read dnsEngineStateReader,
+) error {
+	writeErr := write(state)
+	actual, exists, readErr := read()
+	if readErr != nil || !exists || actual != state {
+		if readErr == nil {
+			readErr = errors.New("DNS engine state did not persist exactly")
+		}
+		return errors.Join(writeErr, readErr)
+	}
+	// An atomic rename can be durable even when the final directory fsync or
+	// return path reports an error. Exact readback is authoritative and avoids
+	// rolling the live BIND pointer away from its matching durable receipt.
+	return nil
+}
+
+func persistExactDNSEngineState(state dnsEngineStateReceipt) error {
+	return persistExactDNSEngineStateAt(
+		state, writeDNSEngineState, readDNSEngineState,
+	)
 }
 
 func newHostBINDPublisher(layout bindHostLayout) (*binddns.Publisher, trackedBINDValidator, error) {
@@ -314,12 +365,21 @@ func (hostDNSEngineBackend) Readiness(
 				receipt := tree.CurrentReceipt()
 				managedEvidence := receipt.EngineEpoch == state.EngineEpoch &&
 					receipt.Generation == state.Generation
+				legacyOptions := isLegacyDNSEngineState(state) && receipt.Pairing != nil
+				if configErr := verifyManagedBINDRuntimeConfigExact(
+					layout, receipt, legacyOptions,
+				); configErr != nil {
+					managedEvidence = false
+					log.Printf("BIND managed configuration proof failed: %v", configErr)
+				}
 				states[0].Managed = exactActiveDNSBackendManaged(
 					states[0], managedEvidence,
 					func() error { return verifyOnlyBINDActive(ctx, systemctl) },
 				)
 				if states[0].Managed {
-					states[0].PairReady, err = bindPrimaryPairReady(ctx, tree)
+					states[0].PairReady, err = bindPrimaryPairReadyForState(
+						ctx, layout.GenerationRoot, tree, state,
+					)
 					if err != nil {
 						log.Printf("BIND primary peer readiness proof failed: %v", err)
 					}
@@ -396,7 +456,7 @@ func (hostDNSEngineBackend) Readiness(
 			func() error { return requireLegacyPowerDNSReadSafe(ctx, true) },
 		)
 		if states[1].Managed {
-			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx)
+			states[1].PairReady, err = powerDNSPrimaryPairReady(ctx, state)
 			if err != nil {
 				log.Printf("PowerDNS primary peer readiness proof failed: %v", err)
 			}
@@ -555,6 +615,39 @@ func (hostDNSEngineBackend) Sync(
 	if receipt.EngineEpoch != state.EngineEpoch || receipt.Generation != state.Generation {
 		return "", errors.New("BIND current pointer and engine state receipt disagree")
 	}
+	legacyBINDState, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, current, false, false, false,
+	)
+	if err != nil {
+		return "", err
+	}
+	if err := verifyManagedBINDRuntimeConfigExact(
+		layout, receipt, legacyBINDState,
+	); err != nil {
+		return "", err
+	}
+	if legacyBINDState {
+		evidence, primary, evidenceErr := bindPrimaryCatalogEvidence(current)
+		if evidenceErr != nil || !primary {
+			if evidenceErr == nil {
+				evidenceErr = errors.New("legacy BIND primary evidence is unavailable")
+			}
+			return "", evidenceErr
+		}
+		if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		); proofErr != nil {
+			return "", proofErr
+		}
+	}
+	var legacyConfigMigration *bindConfigMutation
+	if legacyBINDState {
+		migration, err := prepareBINDConfigMutation(layout, "")
+		if err != nil {
+			return "", err
+		}
+		legacyConfigMigration = &migration
+	}
 	plan, err := binddns.ApplyDelta(current, binddns.ZoneSnapshot{
 		DesiredGeneration: commitment.DesiredGeneration,
 		Domain:            commitment.Domain,
@@ -571,6 +664,10 @@ func (hostDNSEngineBackend) Sync(
 	if err != nil {
 		return "", err
 	}
+	nextState, err := bindStateForPublishedReceipt(state, generation.ReceiptValue)
+	if err != nil {
+		return "", err
+	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return "", err
@@ -582,6 +679,15 @@ func (hostDNSEngineBackend) Sync(
 	attempt := 0
 	apply := func(applyCtx context.Context) error {
 		attempt++
+		if legacyConfigMigration != nil {
+			if attempt == 1 {
+				if err := legacyConfigMigration.apply(); err != nil {
+					return err
+				}
+			} else if err := legacyConfigMigration.restore(); err != nil {
+				return err
+			}
+		}
 		if output, commandErr := runDNSSystemctl(applyCtx, systemctl, "reload", layout.Unit); commandErr != nil {
 			return fmt.Errorf("reload BIND: %w: %s", commandErr, firstLine(string(output)))
 		}
@@ -592,8 +698,6 @@ func (hostDNSEngineBackend) Sync(
 		if err != nil {
 			return err
 		}
-		nextState := state
-		nextState.Generation = generation.ID
 		return applyVerifiedBINDV3GenerationAt(
 			applyCtx, attempt, currentTree, receipt, generation.ReceiptValue,
 			func(verifyCtx context.Context) error {
@@ -603,9 +707,13 @@ func (hostDNSEngineBackend) Sync(
 					Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
 				}})
 			},
-			verifyRestoredBINDV3Generation,
+			func(verifyCtx context.Context, restored binddns.VerifiedTree, previous binddns.Receipt) error {
+				return verifyRestoredBINDV3GenerationForState(
+					verifyCtx, layout.GenerationRoot, restored, previous, state,
+				)
+			},
 			func() error {
-				if err := writeDNSEngineState(nextState); err != nil {
+				if err := persistExactDNSEngineState(nextState); err != nil {
 					return fmt.Errorf("publish BIND engine generation state: %w", err)
 				}
 				return nil
@@ -614,14 +722,20 @@ func (hostDNSEngineBackend) Sync(
 		)
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
+		var configErr error
+		if legacyConfigMigration != nil {
+			configErr = legacyConfigMigration.restore()
+		}
 		return errors.Join(
 			stopBINDUnitsFailClosed(recoveryCtx, systemctl),
 			restoreDNSFileSnapshot(stateBefore),
+			configErr,
 		)
 	}
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
 		return "", err
 	}
+	state = nextState
 	if err := markDNSZoneSyncV3Applied(
 		ctx, commitment.Domain, commitment.Qualifier,
 	); err != nil {
@@ -638,8 +752,13 @@ func (hostDNSEngineBackend) Sync(
 			errors.New("BIND published receipt changed before peer propagation"),
 		)
 	}
-	if err := completeManagedBINDV3Propagation(
-		ctx, publishedTree, commitment.Domain,
+	if _, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, publishedTree, false, false, false,
+	); err != nil {
+		return "", dnsZoneV3RecoveryAmbiguous(err)
+	}
+	if err := completeManagedBINDV3PropagationForState(
+		ctx, layout.GenerationRoot, publishedTree, commitment.Domain, state,
 	); err != nil {
 		var pending *dnsZoneV3RecoveryPendingError
 		if errors.As(err, &pending) {
@@ -688,6 +807,86 @@ func (hostDNSEngineBackend) RecoverZone(
 	if receipt.EngineEpoch != state.EngineEpoch {
 		return false, errors.New("BIND current tree epoch differs from the active engine receipt")
 	}
+	legacyBINDState, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, tree, true, false, true,
+	)
+	if err != nil {
+		return false, err
+	}
+	var recoveryConfigMigration *bindConfigMutation
+	directionalTupleRepair := isLegacyDNSEngineState(state) &&
+		!legacyBINDState && receipt.Pairing != nil &&
+		receipt.Pairing.Role == binddns.PairRolePrimary
+	if directionalTupleRepair {
+		if currentErr := verifyManagedBINDRuntimeConfigExact(
+			layout, receipt, false,
+		); currentErr != nil {
+			if legacyErr := verifyManagedBINDRuntimeConfigExact(
+				layout, receipt, true,
+			); legacyErr != nil {
+				return false, errors.Join(currentErr, legacyErr)
+			}
+			migration, migrationErr := prepareBINDConfigMutation(layout, "")
+			if migrationErr != nil {
+				return false, migrationErr
+			}
+			recoveryConfigMigration = &migration
+		}
+	} else if legacyBINDState {
+		if legacyErr := verifyManagedBINDRuntimeConfigExact(
+			layout, receipt, true,
+		); legacyErr != nil {
+			if currentErr := verifyManagedBINDRuntimeConfigExact(
+				layout, receipt, false,
+			); currentErr != nil {
+				return false, errors.Join(legacyErr, currentErr)
+			}
+			migration, migrationErr := prepareBINDLegacyConfigMutation(layout)
+			if migrationErr != nil {
+				return false, migrationErr
+			}
+			recoveryConfigMigration = &migration
+		}
+	} else if err := verifyManagedBINDRuntimeConfigExact(
+		layout, receipt, false,
+	); err != nil {
+		return false, err
+	}
+	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
+	if err != nil {
+		return false, err
+	}
+	if legacyBINDState && recoveryConfigMigration != nil {
+		if err := recoveryConfigMigration.apply(); err != nil {
+			return false, err
+		}
+		if output, commandErr := runDNSSystemctl(
+			ctx, systemctl, "reload", layout.Unit,
+		); commandErr != nil {
+			return false, fmt.Errorf(
+				"recover released BIND publication reload: %w: %s",
+				commandErr, firstLine(string(output)),
+			)
+		}
+		if err := verifyManagedBINDRuntimeConfigExact(
+			layout, receipt, true,
+		); err != nil {
+			return false, err
+		}
+		if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
+			return false, err
+		}
+		expectedTree, err := expectedBINDTreeAuthorities(tree)
+		if err != nil {
+			return false, err
+		}
+		if err := verifyDNSZoneAuthorities(ctx, expectedTree); err != nil {
+			return false, err
+		}
+		// The rollback hybrid is now repaired even when the restored old tree
+		// does not carry the failed target request. Do not apply it again below.
+		recoveryConfigMigration = nil
+	}
 	zone, zoneData, found := tree.Zone(domain)
 	if !found || zone.Qualifier != qualifier ||
 		zone.MutationRequestID != binding.MutationRequestID ||
@@ -698,16 +897,27 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err != nil {
 		return false, err
 	}
-	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
-	if err != nil {
-		return false, err
+	nextState := state
+	if legacyBINDState {
+		nextState.Generation = receipt.Generation
+	} else {
+		nextState, err = bindStateForPublishedReceipt(state, receipt)
+		if err != nil {
+			return false, err
+		}
 	}
-	if state.Generation != receipt.Generation {
+	if state != nextState || recoveryConfigMigration != nil {
+		if recoveryConfigMigration != nil {
+			if err := recoveryConfigMigration.apply(); err != nil {
+				return false, err
+			}
+		}
 		if output, commandErr := runDNSSystemctl(ctx, systemctl, "reload", layout.Unit); commandErr != nil {
 			return false, fmt.Errorf("recover BIND publication reload: %w: %s", commandErr, firstLine(string(output)))
 		}
-		state.Generation = receipt.Generation
-		if err := writeDNSEngineState(state); err != nil {
+		if err := verifyManagedBINDRuntimeConfigExact(
+			layout, receipt, legacyBINDState,
+		); err != nil {
 			return false, err
 		}
 	}
@@ -717,7 +927,15 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
 		return false, err
 	}
-	if err := completeManagedBINDV3Propagation(ctx, tree, domain); err != nil {
+	if state != nextState {
+		if err := persistExactDNSEngineState(nextState); err != nil {
+			return false, err
+		}
+		state = nextState
+	}
+	if err := completeManagedBINDV3PropagationForState(
+		ctx, layout.GenerationRoot, tree, domain, state,
+	); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -810,7 +1028,7 @@ func (hostDNSEngineBackend) Switch(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
-		if err := verifyUnsignedPowerDNSForManifest(ctx, manifest); err != nil {
+		if err := verifyUnsignedPowerDNSForManifest(ctx, manifest, state); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
@@ -1029,6 +1247,7 @@ func (hostDNSEngineBackend) Switch(
 			Mode:   manifest.Mode,
 			Engine: transport.DNSEngineBIND, EngineEpoch: manifest.TargetEpoch,
 			Generation: generation.ID, PairRole: pairRoleForEngineState(manifest),
+			PairLocalIP: manifest.LocalIP, PairPeerIP: manifest.PeerIP,
 			PrimaryCatalogSerial: primaryCatalogSerial,
 			SourceRevision:       manifest.SourceRevision,
 			ManifestQualifier:    manifest.Qualifier,
@@ -1040,11 +1259,8 @@ func (hostDNSEngineBackend) Switch(
 		); err != nil {
 			return err
 		}
-		if err := writeDNSEngineState(nextState); err != nil {
-			actual, exists, readErr := readDNSEngineState()
-			if readErr != nil || !exists || actual != nextState {
-				return fmt.Errorf("publish active DNS engine state: %w", errors.Join(err, readErr))
-			}
+		if err := persistExactDNSEngineState(nextState); err != nil {
+			return fmt.Errorf("publish active DNS engine state: %w", err)
 		}
 		journal.Phase = dnsSwitchPhaseTargetVerified
 		if err := writeDNSEngineSwitchJournal(journal); err != nil {
@@ -1162,6 +1378,15 @@ func verifyCompletedBINDEngineSwitch(
 	if receipt.Generation != expected.ID || receipt.EngineEpoch != state.EngineEpoch {
 		return transport.SwitchDNSEngineV1Response{}, errors.New("completed BIND switch current tree differs from its receipt")
 	}
+	legacy, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, tree, false, true, false,
+	)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if err := verifyManagedBINDRuntimeConfigExact(layout, receipt, legacy); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -1172,7 +1397,18 @@ func verifyCompletedBINDEngineSwitch(
 	if err := verifyDNSZoneManifestAuthority(ctx, zones); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyBINDPairingAuthority(ctx, receipt); err != nil {
+	if legacy && receipt.Pairing != nil &&
+		receipt.Pairing.Role == binddns.PairRolePrimary {
+		ready, readyErr := bindPrimaryPairReadyForState(
+			ctx, layout.GenerationRoot, tree, state,
+		)
+		if readyErr != nil || !ready {
+			if readyErr == nil {
+				readyErr = errors.New("legacy BIND primary pair is not ready")
+			}
+			return transport.SwitchDNSEngineV1Response{}, readyErr
+		}
+	} else if err := verifyBINDPairingAuthority(ctx, receipt); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{
@@ -1248,7 +1484,10 @@ func verifyDNSEngineSwitchSource(
 			if !pdnsUnit.active() || bindUnit.active() || bindAliasUnit.active() {
 				return errors.New("PowerDNS receipt does not match the active port-53 authority")
 			}
-			return verifyOnlyPDNSActive(ctx, systemctl)
+			if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
+				return err
+			}
+			return verifyUnsignedPowerDNSForManifest(ctx, manifest, state)
 		case transport.DNSEngineBIND:
 			if !bindUnit.active() || pdnsUnit.active() ||
 				(bindAliasUnit.LoadState == "not-found" && bindAliasUnit.active()) {
@@ -1269,6 +1508,17 @@ func verifyDNSEngineSwitchSource(
 			receipt := tree.CurrentReceipt()
 			if receipt.Generation != state.Generation || receipt.EngineEpoch != state.EngineEpoch {
 				return errors.New("BIND source receipt differs from its immutable current generation")
+			}
+			if _, err := bindStateTreePairContract(
+				layout.GenerationRoot, state, tree, false, true, false,
+			); err != nil {
+				return err
+			}
+			legacy := isLegacyDNSEngineState(state) && receipt.Pairing != nil
+			if err := verifyManagedBINDRuntimeConfigExact(
+				layout, receipt, legacy,
+			); err != nil {
+				return err
 			}
 			if manifest.Topology == transport.DNSTopologyPaired {
 				pairing := receipt.Pairing
@@ -1344,6 +1594,79 @@ func prepareBINDConfigMutation(
 		mutation.desired[path] = []byte(content)
 	}
 	return mutation, nil
+}
+
+func prepareBINDLegacyConfigMutation(
+	layout bindHostLayout,
+) (bindConfigMutation, error) {
+	mutation, err := prepareBINDConfigMutation(layout, "")
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	for _, path := range mutation.paths {
+		if path != layout.OptionsConfig {
+			continue
+		}
+		legacy, legacyErr := managedBINDLegacyOptions(
+			string(mutation.original[path]),
+		)
+		if legacyErr != nil {
+			return bindConfigMutation{}, fmt.Errorf(
+				"prepare released BIND options: %w", legacyErr,
+			)
+		}
+		mutation.desired[path] = []byte(legacy)
+	}
+	return mutation, nil
+}
+
+func verifyManagedBINDConfigExact(
+	layout bindHostLayout,
+	transferPeer string,
+	requireLegacyOptions bool,
+) error {
+	mutation, err := prepareBINDConfigMutation(layout, transferPeer)
+	if err != nil {
+		return err
+	}
+	for _, path := range mutation.paths {
+		if requireLegacyOptions && path == layout.OptionsConfig {
+			if !exactLegacyManagedBINDOptions(string(mutation.original[path])) {
+				return errors.New("legacy BIND options are not the exact released policy")
+			}
+			if path == layout.AnchorConfig {
+				includePath := filepath.ToSlash(filepath.Join(
+					layout.GenerationRoot, "current", "zones.conf",
+				))
+				anchor, anchorErr := managedBINDZoneInclude(
+					string(mutation.original[path]), includePath,
+				)
+				if anchorErr != nil || anchor != string(mutation.original[path]) {
+					return errors.New("legacy BIND options do not retain the exact managed zone include")
+				}
+			}
+			continue
+		}
+		if bytes.Equal(mutation.original[path], mutation.desired[path]) {
+			continue
+		}
+		return errors.New("managed BIND configuration differs from the active pair policy")
+	}
+	return nil
+}
+
+func verifyManagedBINDRuntimeConfigExact(
+	layout bindHostLayout,
+	receipt binddns.Receipt,
+	allowLegacyOptions bool,
+) error {
+	transferPeer := ""
+	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
+		transferPeer = receipt.Pairing.PeerIP
+	}
+	return verifyManagedBINDConfigExact(
+		layout, transferPeer, allowLegacyOptions,
+	)
 }
 
 func (mutation bindConfigMutation) apply() error {
@@ -1525,7 +1848,24 @@ func syncPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return "", err
 	}
-	if err := applyPDNSV3ZoneDatabase(ctx, pdnsDBPath(), commitment, binding); err != nil {
+	if state.PairRole == "" && state.PrimaryCatalogSerial == 0 {
+		evidence, primary, evidenceErr := managedPDNSPrimaryCatalogEvidenceForState(
+			ctx, state,
+		)
+		if evidenceErr != nil {
+			return "", evidenceErr
+		}
+		if primary {
+			if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+				ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			); proofErr != nil {
+				return "", proofErr
+			}
+		}
+	}
+	if err := applyPDNSV3ZoneDatabaseForState(
+		ctx, pdnsDBPath(), commitment, binding, state,
+	); err != nil {
 		return "", err
 	}
 	if err := markDNSZoneSyncV3Applied(
@@ -1545,7 +1885,7 @@ func syncPDNSV3Zone(
 		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone, state)
 	if err != nil {
 		var pending *dnsZoneV3RecoveryPendingError
 		if errors.As(err, &pending) {
@@ -1580,7 +1920,7 @@ func recoverPDNSV3Zone(
 		return false, err
 	}
 	snapshot, exact, err := readPDNSV3ZoneSnapshot(
-		ctx, pdnsDBPath(), state.EngineEpoch, domain, qualifier, binding,
+		ctx, pdnsDBPath(), state, domain, qualifier, binding,
 	)
 	if err != nil || !exact {
 		return false, err
@@ -1596,7 +1936,7 @@ func recoverPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return false, err
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot, state)
 	if err != nil {
 		return false, err
 	}

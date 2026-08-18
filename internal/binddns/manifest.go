@@ -92,6 +92,18 @@ func RenderManifest(root string, manifest Manifest) (Generation, error) {
 
 // RenderTree binds a verified path-independent plan to one host layout.
 func RenderTree(root string, plan TreePlan) (Generation, error) {
+	return renderTreeWithPrimaryTransferPolicy(root, plan, false)
+}
+
+func renderLegacyPrimaryTransferTree(root string, plan TreePlan) (Generation, error) {
+	return renderTreeWithPrimaryTransferPolicy(root, plan, true)
+}
+
+func renderTreeWithPrimaryTransferPolicy(
+	root string,
+	plan TreePlan,
+	legacyPeerOnly bool,
+) (Generation, error) {
 	if err := validateRoot(root); err != nil {
 		return Generation{}, err
 	}
@@ -145,7 +157,15 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 		}
 		absoluteFile := path.Join(root, "generations", generationID, zone.receipt.File)
 		if pairing != nil && pairing.Role == PairRolePrimary {
-			appendPrimaryZoneConfig(&config, zone.receipt.Domain, absoluteFile, *pairing)
+			if legacyPeerOnly {
+				appendLegacyPrimaryZoneConfig(
+					&config, zone.receipt.Domain, absoluteFile, *pairing,
+				)
+			} else {
+				appendPrimaryZoneConfig(
+					&config, zone.receipt.Domain, absoluteFile, *pairing,
+				)
+			}
 		} else {
 			config.WriteString("zone \"")
 			config.WriteString(zone.receipt.Domain)
@@ -166,7 +186,15 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 	var renderedCatalog *RenderedZone
 	if pairing != nil {
 		if pairing.Role == PairRolePrimary {
-			appendPrimaryCatalogConfig(&config, root, generationID, *pairing)
+			if legacyPeerOnly {
+				appendLegacyPrimaryCatalogConfig(
+					&config, root, generationID, *pairing,
+				)
+			} else {
+				appendPrimaryCatalogConfig(
+					&config, root, generationID, *pairing,
+				)
+			}
 			renderedCatalog = &RenderedZone{
 				Domain:         pairingValue.LocalCatalog,
 				FileName:       path.Base(pairingValue.CatalogFile),
@@ -207,6 +235,64 @@ func RenderTree(root string, plan TreePlan) (Generation, error) {
 		Receipt:      receiptBytes,
 		ReceiptValue: cloneReceipt(receiptValue),
 	}, nil
+}
+
+// PrimaryTransferACLStyle identifies the only two exact CelikPanel primary
+// transfer policies that can exist across the alpha-27 migration boundary.
+// A verified tree with any other configuration is rejected instead of being
+// treated as a compatible managed authority.
+type PrimaryTransferACLStyle uint8
+
+const (
+	PrimaryTransferACLNone PrimaryTransferACLStyle = iota
+	PrimaryTransferACLLegacyPeerOnly
+	PrimaryTransferACLDirectionalSelfPeer
+)
+
+// VerifyCurrentConfig proves that the verified tree's content-addressed
+// configuration is byte-for-byte the output of the current renderer.
+func VerifyCurrentConfig(root string, tree VerifiedTree) error {
+	receipt := tree.CurrentReceipt()
+	rendered, err := RenderTree(root, planFromVerifiedTree(tree))
+	if err != nil || rendered.ID != receipt.Generation ||
+		rendered.ReceiptValue.ConfigSHA256 != receipt.ConfigSHA256 {
+		return errors.New("BIND generation config is not the exact current managed policy")
+	}
+	return nil
+}
+
+// ClassifyPrimaryTransferACL re-renders the complete verified generation with
+// both known primary policies and compares their exact config digests. It does
+// not parse or normalize arbitrary BIND configuration.
+func ClassifyPrimaryTransferACL(
+	root string,
+	tree VerifiedTree,
+) (PrimaryTransferACLStyle, error) {
+	receipt := tree.CurrentReceipt()
+	if receipt.Pairing == nil || receipt.Pairing.Role != PairRolePrimary {
+		return PrimaryTransferACLNone, nil
+	}
+	plan := planFromVerifiedTree(tree)
+	directional, err := RenderTree(root, plan)
+	if err != nil || directional.ID != receipt.Generation {
+		return PrimaryTransferACLNone,
+			errors.New("BIND primary generation cannot be reconstructed")
+	}
+	legacy, err := renderLegacyPrimaryTransferTree(root, plan)
+	if err != nil || legacy.ID != receipt.Generation {
+		return PrimaryTransferACLNone,
+			errors.New("legacy BIND primary generation cannot be reconstructed")
+	}
+	directionalMatch := directional.ReceiptValue.ConfigSHA256 == receipt.ConfigSHA256
+	legacyMatch := legacy.ReceiptValue.ConfigSHA256 == receipt.ConfigSHA256
+	if directionalMatch == legacyMatch {
+		return PrimaryTransferACLNone,
+			errors.New("BIND primary transfer policy is not an exact managed policy")
+	}
+	if legacyMatch {
+		return PrimaryTransferACLLegacyPeerOnly, nil
+	}
+	return PrimaryTransferACLDirectionalSelfPeer, nil
 }
 
 func snapshotToTreeZone(snapshot ZoneSnapshot) (treeZone, error) {

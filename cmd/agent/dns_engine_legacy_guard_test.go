@@ -161,6 +161,8 @@ func TestValidateLegacyPowerDNSDurableAuthority(t *testing.T) {
 	pdns := legacyDurableDNSState(transport.DNSEnginePowerDNS)
 	secondary := pdns
 	secondary.PairRole = transport.DNSPairRoleSecondary
+	secondary.PairLocalIP = "192.0.2.10"
+	secondary.PairPeerIP = "192.0.2.20"
 	bind := legacyDurableDNSState(transport.DNSEngineBIND)
 	for _, test := range []struct {
 		name            string
@@ -208,28 +210,32 @@ func TestValidateLegacyPowerDNSDurableAuthority(t *testing.T) {
 	}
 }
 
-func TestValidateLegacyPowerDNSMutationAuthorityRejectsSecondaryOnly(t *testing.T) {
+func TestValidateLegacyPowerDNSMutationAuthorityRejectsDirectionalRoles(t *testing.T) {
 	standalone := legacyDurableDNSState(transport.DNSEnginePowerDNS)
 	primary := standalone
 	primary.PairRole = transport.DNSPairRolePrimary
+	primary.PairLocalIP = "192.0.2.10"
+	primary.PairPeerIP = "192.0.2.20"
 	primary.PrimaryCatalogSerial = 7
 	secondary := standalone
 	secondary.PairRole = transport.DNSPairRoleSecondary
+	secondary.PairLocalIP = "192.0.2.10"
+	secondary.PairPeerIP = "192.0.2.20"
 	for _, test := range []struct {
 		name      string
 		state     dnsEngineStateReceipt
 		wantError bool
 	}{
 		{name: "standalone", state: standalone},
-		{name: "primary", state: primary},
+		{name: "primary", state: primary, wantError: true},
 		{name: "secondary", state: secondary, wantError: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			err := validateLegacyPowerDNSMutationAuthority(
 				test.state, true, false, true,
 			)
-			if test.wantError && (err == nil || err.Error() != dnsSecondaryWriteDeniedError) {
-				t.Fatalf("secondary mutation authority error=%v", err)
+			if test.wantError && err == nil {
+				t.Fatalf("directional mutation authority error=%v", err)
 			}
 			if !test.wantError && err != nil {
 				t.Fatalf("write-authoritative PowerDNS rejected: %v", err)
@@ -241,6 +247,8 @@ func TestValidateLegacyPowerDNSMutationAuthorityRejectsSecondaryOnly(t *testing.
 func TestLegacyPowerDNSReadSafetyKeepsSecondaryManagedWithoutWriteAuthority(t *testing.T) {
 	secondary := legacyDurableDNSState(transport.DNSEnginePowerDNS)
 	secondary.PairRole = transport.DNSPairRoleSecondary
+	secondary.PairLocalIP = "192.0.2.10"
+	secondary.PairPeerIP = "192.0.2.20"
 	oldDurable := legacyPowerDNSDurableAuthorityCheck
 	oldMutation := legacyPowerDNSMutationAuthorityCheck
 	oldRuntime := legacyPowerDNSRuntimeSafetyCheck

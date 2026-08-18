@@ -12,6 +12,7 @@ type pdnsControlRunner func(context.Context, ...string) error
 
 type pdnsV3PropagationPlan struct {
 	Primary  bool
+	Legacy   bool
 	Evidence dnsPrimaryCatalogEvidence
 	Changed  expectedDNSZoneAuthority
 }
@@ -22,6 +23,7 @@ type pdnsV3PropagationPlan struct {
 type dnsV3PrimaryPropagationPlan struct {
 	Evidence dnsPrimaryCatalogEvidence
 	Changed  expectedDNSZoneAuthority
+	Legacy   bool
 }
 
 func trustedPDNSControl(ctx context.Context, args ...string) error {
@@ -44,6 +46,7 @@ func trustedPDNSControl(ctx context.Context, args ...string) error {
 func prepareManagedPDNSV3Propagation(
 	ctx context.Context,
 	zone transport.DNSEngineSwitchZoneSnapshot,
+	state dnsEngineStateReceipt,
 ) (pdnsV3PropagationPlan, error) {
 	expected, err := expectedDNSZoneAuthorities(
 		[]transport.DNSEngineSwitchZoneSnapshot{zone},
@@ -51,13 +54,20 @@ func prepareManagedPDNSV3Propagation(
 	if err != nil {
 		return pdnsV3PropagationPlan{}, err
 	}
-	evidence, primary, err := managedPDNSPrimaryCatalogEvidence(ctx)
+	evidence, primary, err := managedPDNSPrimaryCatalogEvidenceForState(ctx, state)
 	if err != nil {
 		return pdnsV3PropagationPlan{},
 			errors.New("PowerDNS paired primary evidence is unavailable")
 	}
 	plan := pdnsV3PropagationPlan{
 		Primary: primary, Evidence: evidence, Changed: expected[0],
+	}
+	if primary && state.PairRole == `` {
+		if state.PrimaryCatalogSerial != 0 {
+			return pdnsV3PropagationPlan{},
+				errors.New(`legacy PowerDNS primary receipt has an unexpected catalog serial`)
+		}
+		plan.Legacy = true
 	}
 	if err := preparePDNSV3PropagationAt(
 		ctx, plan, trustedPDNSControl,
@@ -119,6 +129,7 @@ func validatePDNSPrimaryPropagationPlan(plan pdnsV3PropagationPlan) error {
 	return validateDNSV3PrimaryPropagationPlan(dnsV3PrimaryPropagationPlan{
 		Evidence: plan.Evidence,
 		Changed:  plan.Changed,
+		Legacy:   plan.Legacy,
 	})
 }
 
@@ -160,6 +171,7 @@ func completePDNSV3Propagation(
 	err := completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
 		Evidence: plan.Evidence,
 		Changed:  plan.Changed,
+		Legacy:   plan.Legacy,
 	})
 	return dnsZoneV3RecoveryPending(err)
 }
@@ -205,6 +217,7 @@ func verifyPDNSV3PropagationAt(
 		dnsV3PrimaryPropagationPlan{
 			Evidence: plan.Evidence,
 			Changed:  plan.Changed,
+			Legacy:   plan.Legacy,
 		},
 		soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
 	)
@@ -221,9 +234,17 @@ func verifyDNSV3PrimaryPropagationAt(
 	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
 		return err
 	}
-	authority, err := verifyDNSPrimaryPairReadyAuthorityAt(
-		ctx, plan.Evidence, soa, localAXFR, peerCatalogAXFR,
-	)
+	var authority dnsPeerAXFRAuthority
+	var err error
+	if plan.Legacy {
+		authority, err = verifyDNSLegacyPrimaryPairReadyAuthorityAt(
+			ctx, plan.Evidence, soa, peerCatalogAXFR,
+		)
+	} else {
+		authority, err = verifyDNSPrimaryPairReadyAuthorityAt(
+			ctx, plan.Evidence, soa, localAXFR, peerCatalogAXFR,
+		)
+	}
 	if err != nil {
 		return err
 	}

@@ -21,13 +21,20 @@ type memoryNode struct {
 }
 
 type memoryFS struct {
-	nodes      map[string]*memoryNode
-	syncs      []string
-	syncErrors map[string]error
+	nodes       map[string]*memoryNode
+	syncs       []string
+	syncErrors  map[string]error
+	syncCounts  map[string]int
+	syncErrorAt map[string]map[int]error
+	syncHookAt  map[string]map[int]func()
 }
 
 func newMemoryFS() *memoryFS {
-	filesystem := &memoryFS{nodes: map[string]*memoryNode{}, syncErrors: map[string]error{}}
+	filesystem := &memoryFS{
+		nodes: map[string]*memoryNode{}, syncErrors: map[string]error{},
+		syncCounts: map[string]int{}, syncErrorAt: map[string]map[int]error{},
+		syncHookAt: map[string]map[int]func(){},
+	}
 	for _, name := range []string{"/", "/var", "/var/lib", "/var/lib/celikpanel"} {
 		filesystem.nodes[name] = &memoryNode{mode: fs.ModeDir | 0o755}
 	}
@@ -212,11 +219,109 @@ func (filesystem *memoryFS) Sync(name string) error {
 	if _, ok := filesystem.nodes[name]; !ok {
 		return fs.ErrNotExist
 	}
+	filesystem.syncCounts[name]++
+	if hooks := filesystem.syncHookAt[name]; hooks != nil {
+		if hook := hooks[filesystem.syncCounts[name]]; hook != nil {
+			hook()
+		}
+	}
+	if failures := filesystem.syncErrorAt[name]; failures != nil {
+		if err := failures[filesystem.syncCounts[name]]; err != nil {
+			return err
+		}
+	}
 	if err := filesystem.syncErrors[name]; err != nil {
 		return err
 	}
 	filesystem.syncs = append(filesystem.syncs, name)
 	return nil
+}
+
+func TestPublisherSwitchContinuesAfterExactPostRenameSyncReadback(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	root := "/var/lib/celikpanel/bind"
+	filesystem.syncErrorAt[root] = map[int]error{
+		filesystem.syncCounts[root] + 2: errors.New("post-rename fsync failed"),
+	}
+	applyCalls := 0
+	if err := publisher.Switch(
+		context.Background(), generation.ID,
+		func(context.Context) error { applyCalls++; return nil },
+		func(context.Context) error { return errors.New("unexpected empty recovery") },
+	); err != nil {
+		t.Fatal(err)
+	}
+	if applyCalls != 1 {
+		t.Fatalf("apply calls=%d; exact activated pointer was abandoned", applyCalls)
+	}
+	current, exists, err := publisher.Current()
+	if err != nil || !exists || current != generation.ID {
+		t.Fatalf("current=%q exists=%v err=%v", current, exists, err)
+	}
+	if filesystem.syncCounts[root] < 3 {
+		t.Fatalf("activation durability retry did not run: syncs=%d", filesystem.syncCounts[root])
+	}
+}
+
+func TestPublisherSwitchRestoresEmptyPointerWhenActivationBarrierKeepsFailing(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	root := "/var/lib/celikpanel/bind"
+	failureCall := filesystem.syncCounts[root] + 2
+	filesystem.syncErrorAt[root] = map[int]error{
+		failureCall:     errors.New("post-rename fsync failed"),
+		failureCall + 1: errors.New("durability retry failed"),
+	}
+	applyCalls := 0
+	err := publisher.Switch(
+		context.Background(), generation.ID,
+		func(context.Context) error { applyCalls++; return nil },
+		func(context.Context) error { return nil },
+	)
+	if err == nil || applyCalls != 0 {
+		t.Fatalf("durability failure err=%v applyCalls=%d", err, applyCalls)
+	}
+	if current, exists, currentErr := publisher.Current(); currentErr != nil || exists || current != "" {
+		t.Fatalf("empty prior pointer was not restored: current=%q exists=%v err=%v", current, exists, currentErr)
+	}
+}
+
+func TestPublisherSwitchRejectsAmbiguousPostRenameSyncReadback(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	root := "/var/lib/celikpanel/bind"
+	failureCall := filesystem.syncCounts[root] + 2
+	filesystem.syncHookAt[root] = map[int]func(){
+		failureCall: func() {
+			filesystem.nodes[root+"/current"].target = "generations/" + strings.Repeat("f", 64)
+		},
+	}
+	filesystem.syncErrorAt[root] = map[int]error{
+		failureCall: errors.New("post-rename fsync failed"),
+	}
+	applyCalls := 0
+	emptyCalls := 0
+	err := publisher.Switch(
+		context.Background(), generation.ID,
+		func(context.Context) error { applyCalls++; return nil },
+		func(context.Context) error { emptyCalls++; return nil },
+	)
+	if err == nil || applyCalls != 0 || emptyCalls != 1 {
+		t.Fatalf("ambiguous pointer err=%v applyCalls=%d emptyCalls=%d", err, applyCalls, emptyCalls)
+	}
 }
 
 type runnerCall struct {
