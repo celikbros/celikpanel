@@ -43,6 +43,25 @@ function readySnapshot(overrides = {}) {
   };
 }
 
+function stagedPairSnapshot(overrides = {}) {
+  return {
+    revision: 1,
+    engine_epoch: 0,
+    active_engine: null,
+    state: 'unconfigured',
+    topology: 'paired',
+    pair_role: 'primary',
+    dnssec_zone_count: 0,
+    zone_count: 0,
+    pending_zone_count: 0,
+    engines: [
+      { id: 'pdns', installed: false, running: false, managed: false, status: 'available' },
+      { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+    ],
+    ...overrides,
+  };
+}
+
 test('DNS engine state decoder fails closed on malformed or contradictory state', () => {
   assert.match(contract, /DNS_ENGINE_IDS = \['pdns', 'bind'\] as const/);
   assert.match(contract, /'unconfigured',[\s\S]*'ready',[\s\S]*'unmanaged',[\s\S]*'conflict',[\s\S]*'switching',[\s\S]*'degraded'/);
@@ -109,6 +128,38 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
       { id: 'bind', installed: false, running: false, managed: true, status: 'available' },
     ],
   })), null);
+});
+
+test('DNS engine decoder accepts only exact staged paired authority tuples', async () => {
+  const { decodeDNSEngineSnapshot } = await loadContractRuntime();
+
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot()));
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_role: 'secondary' })));
+  assert.ok(decodeDNSEngineSnapshot(stagedPairSnapshot({
+    state: 'unmanaged',
+    pair_role: 'secondary',
+    engines: [
+      {
+        id: 'pdns',
+        installed: true,
+        running: true,
+        managed: true,
+        status: 'unmanaged',
+        detail_code: 'unmanaged_dns_detected',
+      },
+      { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+    ],
+  })));
+
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_role: undefined })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_ready: false })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ pair_ready: true })), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ topology: 'standalone' })), null);
+
+  const standalone = stagedPairSnapshot({ topology: 'standalone' });
+  delete standalone.pair_role;
+  assert.ok(decodeDNSEngineSnapshot(standalone));
+  assert.equal(decodeDNSEngineSnapshot({ ...standalone, pair_ready: false }), null);
 });
 
 test('DNS engine preview token and counts mirror the commit contract', async () => {

@@ -170,14 +170,18 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (value.state === 'ready' && value.active_engine === null) return null;
     if (value.state === 'switching' && typeof value.operation_id !== 'string') return null;
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
-    if (value.active_engine === 'bind' && value.topology === 'paired'
+    const stagedPair = value.active_engine === null && value.topology === 'paired';
+    const activePair = value.active_engine !== null && value.topology === 'paired';
+    if (stagedPair
+        && ((value.pair_role !== 'primary' && value.pair_role !== 'secondary')
+            || value.pair_ready !== undefined)) return null;
+    if (value.active_engine === 'bind' && activePair
         && value.pair_role !== 'primary' && value.pair_role !== 'secondary') return null;
-    if (value.active_engine !== null && value.topology === 'paired'
-        && typeof value.pair_ready !== 'boolean') return null;
-    if ((value.active_engine === null || value.topology !== 'paired')
+    if (activePair && typeof value.pair_ready !== 'boolean') return null;
+    if (!stagedPair && !activePair
         && (value.pair_role !== undefined || value.pair_ready !== undefined)) return null;
     if (value.pair_ready === true && value.pair_role !== 'primary') return null;
-    if (value.pair_role === 'secondary' && value.pair_ready !== false) return null;
+    if (activePair && value.pair_role === 'secondary' && value.pair_ready !== false) return null;
 
     return {
         revision: value.revision,
