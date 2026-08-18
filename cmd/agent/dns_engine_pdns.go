@@ -480,11 +480,26 @@ func applyPDNSV3ZoneDatabase(
 			_ = tx.Rollback()
 		}
 	}()
+	// Snapshot before apply: deleting a zone also deletes the row that carries
+	// its catalog membership, so post-state alone cannot decide whether the
+	// producer SOA serial must advance.
+	previousCatalog, catalogEnabled, err := reconcileManagedPDNSBINDCatalogTx(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("snapshot managed PowerDNS catalog: %w", err)
+	}
 	if err := applyPDNSV3ZoneTx(ctx, tx, commitment, binding, true); err != nil {
 		return err
 	}
-	if _, _, err := reconcileManagedPDNSBINDCatalogTx(ctx, tx); err != nil {
+	var previous *managedPDNSCatalog
+	if catalogEnabled {
+		previous = &previousCatalog
+	}
+	if _, enabledAfter, err := reconcileManagedPDNSBINDCatalogFromSnapshotTx(
+		ctx, tx, previous,
+	); err != nil {
 		return fmt.Errorf("reconcile managed PowerDNS catalog: %w", err)
+	} else if enabledAfter != catalogEnabled {
+		return errors.New("managed PowerDNS catalog mode changed during zone mutation")
 	}
 	commitErr := tx.Commit()
 	committed = commitErr == nil
