@@ -187,9 +187,39 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(card, /paired_topology_unsupported/);
   assert.match(card, /dnssec_unsupported/);
   assert.match(card, /agent_incompatible/);
+  assert.match(card, /dns_identity_required: 'dnsEngine\.blocker\.identityRequired'/);
   assert.match(settings, /engine\?\.active_engine === 'bind'/);
   assert.match(settings, /dnsEngine\.topologyEditorBind/);
   assert.match(settings, /engine\?\.state === 'switching'/);
+});
+
+test('fresh servers stage an exact DNS identity before the first engine install', () => {
+  assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
+  assert.match(settings, /const legacyPowerDNSEntry = engine\?\.engines\.find\(\(entry\) => entry\.id === 'pdns'\)/);
+  assert.match(settings, /const legacyPowerDNSAdoptionStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
+  assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSAdoptionStaging/);
+  assert.match(settings, /<DNSEngineCard key=\{engineRefreshKey\}/);
+  assert.match(settings, /activeEngine \|\| identityStaging/);
+  assert.match(settings, /activeEngine=\{activeEngine\}/);
+  assert.match(settings, /stagingOnly=\{identityStaging\}/);
+  assert.match(settings, /legacyPowerDNSAdoption=\{legacyPowerDNSAdoptionStaging\}/);
+  assert.match(settings, /onIdentityStaged=\{\(\) => setEngineRefreshKey/);
+  assert.match(settings, /activeEngine: ActiveDNSEngine \| null/);
+  assert.match(settings, /data-testid="dns-identity-staging-note"/);
+  assert.match(settings, /\(payload as \{ success\?: unknown \}\)\.success !== true/);
+  assert.match(settings, /\(payload as \{ staged\?: unknown \}\)\.staged !== true/);
+  assert.match(settings, /dnsEngine\.identity\.stageInvalid/);
+  assert.match(settings, /dnsEngine\.identity\.stageSuccess/);
+  assert.match(settings, /onIdentityStaged\(\)/);
+  assert.match(settings, /stagedIdentityCurrent/);
+  assert.match(copy, /dnsEngine\.identity\.stageDescription/);
+  assert.match(copy, /This step does not install, start, or publish a DNS server/);
+  assert.match(copy, /Bu adım DNS sunucusu kurmaz, başlatmaz veya yayın yapmaz/);
+  assert.match(copy, /existing panel-managed PowerDNS must first be adopted with its current standalone topology/);
+  assert.match(copy, /mevcut PowerDNS önce şimdiki tek sunuculu topolojisiyle devralınmalıdır/);
+  assert.match(settings, /legacyPowerDNSAdoption && role === 'paired'/);
+  assert.match(settings, /dnsEngine\.identity\.legacyPairedDeferred/);
+  assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
 });
 
 test('paired identity remains locked across independent BIND or PowerDNS choices', () => {
@@ -200,6 +230,7 @@ test('paired identity remains locked across independent BIND or PowerDNS choices
   assert.match(settings, /pairRole=\{engine\?\.pair_role\}/);
   assert.match(settings, /const pairedIdentityLocked = pairRole !== undefined[\s\S]*saved\.role === 'paired'/);
   assert.match(settings, /const roleSelectionDisabled = \(role: DNSRole\) => pairedIdentityLocked[\s\S]*role === 'paired'/);
+  assert.match(settings, /activeEngine === 'bind' && role === 'paired'/);
   assert.match(settings, /const effectiveRole: DNSRole = draft\.role/);
 	assert.match(settings, /role: effectiveRole/);
   assert.match(settings, /aria-disabled=\{roleSelectionDisabled\(role\)\}/);

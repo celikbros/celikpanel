@@ -41,6 +41,7 @@ interface ReviewState {
 }
 
 const knownBlockerKeys = {
+    dns_identity_required: 'dnsEngine.blocker.identityRequired',
     paired_topology_unsupported: 'dnsEngine.blocker.pairedTopology',
     dnssec_unsupported: 'dnsEngine.blocker.dnssec',
     pending_zone_sync: 'dnsEngine.blocker.pendingZones',
