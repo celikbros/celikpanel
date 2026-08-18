@@ -781,6 +781,9 @@ func TestConfigureDNSClusterRetargetsOnlyManagedSecondariesAfterCommit(t *testin
 		  (2, 'managed.example', 'SLAVE', '192.0.2.1', 22, 'celikpanel'),
 		  (3, 'already-current.example', 'SECONDARY', '203.0.113.9', 33, 'celikpanel'),
 		  (4, 'manual.example', 'SLAVE', '192.0.2.1', 44, 'manual');
+		INSERT INTO records (domain_id, name, type, content, ttl, prio, auth) VALUES
+		  (1, 'local.example', 'SOA',
+		   'ns.local.example hostmaster.local.example 1 60 30 3600 30', 60, 0, 1);
 	`); err != nil {
 		db.Close()
 		t.Fatal(err)
