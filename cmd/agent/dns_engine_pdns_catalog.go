@@ -22,11 +22,12 @@ const pdnsBINDCatalogAccount = "celikpanel-bind-catalog-v1"
 const pdnsPeerCatalogAccount = "celikpanel-peer-catalog-v1"
 
 type managedPDNSCatalog struct {
-	Domain  string
-	LocalIP string
-	PeerIP  string
-	Serial  uint32
-	Members []string
+	Domain        string
+	LocalIP       string
+	PeerIP        string
+	Serial        uint32
+	Members       []string
+	MemberSerials []uint32
 }
 
 func peerPDNSCatalog(
@@ -628,10 +629,12 @@ func verifyManagedPDNSBINDCatalog(
 		return errors.New("PowerDNS live catalog differs from its database")
 	}
 	if requirePeer {
-		if err := waitForExactBINDPairZoneSet(
-			ctx, identity.LocalIP, identity.PeerIP, identity.Members, probeDNSZoneSOA,
-		); err != nil {
-			return errors.New("PowerDNS primary zones did not converge on the paired peer")
+		if err := verifyDNSPrimaryPairReadyAt(ctx, dnsPrimaryCatalogEvidence{
+			LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
+			Domain: identity.Domain, Serial: identity.Serial,
+			Members: identity.Members, MemberSerials: identity.MemberSerials,
+		}, probeDNSZoneSOA, probeDNSCatalogAXFR); err != nil {
+			return errors.New("PowerDNS primary catalog did not converge on the paired peer")
 		}
 	}
 	return nil
@@ -657,6 +660,47 @@ func readManagedPDNSPrimaryCatalog(
 		return managedPDNSCatalog{}, false, err
 	}
 	defer tx.Rollback()
+	var ownedCatalogs, peerCatalogs int
+	if err := tx.QueryRowContext(
+		ctx, `SELECT COUNT(*) FROM domains WHERE account = ?`,
+		pdnsBINDCatalogAccount,
+	).Scan(&ownedCatalogs); err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	if err := tx.QueryRowContext(
+		ctx, `SELECT COUNT(*) FROM domains WHERE account = ?`,
+		pdnsPeerCatalogAccount,
+	).Scan(&peerCatalogs); err != nil {
+		return managedPDNSCatalog{}, false, err
+	}
+	if ownedCatalogs == 0 && peerCatalogs == 1 {
+		peerDomain, domainErr := binddns.CatalogDomain(identity.PeerIP)
+		if domainErr != nil {
+			return managedPDNSCatalog{}, false, domainErr
+		}
+		var name, zoneType, master, catalog string
+		if err := tx.QueryRowContext(ctx, `
+			SELECT name, UPPER(type), COALESCE(master,''), COALESCE(catalog,'')
+			FROM domains WHERE account = ?
+		`, pdnsPeerCatalogAccount).Scan(
+			&name, &zoneType, &master, &catalog,
+		); err != nil {
+			return managedPDNSCatalog{}, false, err
+		}
+		if name != peerDomain || zoneType != "CONSUMER" ||
+			master != identity.PeerIP || catalog != "" {
+			return managedPDNSCatalog{}, false,
+				errors.New("PowerDNS managed consumer identity is not exact")
+		}
+		if err := tx.Commit(); err != nil {
+			return managedPDNSCatalog{}, false, err
+		}
+		return managedPDNSCatalog{}, false, nil
+	}
+	if ownedCatalogs != 1 || peerCatalogs != 0 {
+		return managedPDNSCatalog{}, false,
+			errors.New("PowerDNS managed catalog ownership is ambiguous")
+	}
 	var domainID int64
 	var account, zoneType string
 	if err := tx.QueryRowContext(ctx, `
@@ -683,11 +727,31 @@ func readManagedPDNSPrimaryCatalog(
 	); err != nil {
 		return managedPDNSCatalog{}, false, err
 	}
+	memberSerials := make([]uint32, len(members))
+	for index, member := range members {
+		zoneType, records, found, readErr := readPDNSV3ZoneTx(ctx, tx, member)
+		if readErr != nil || !found {
+			if readErr == nil {
+				readErr = errors.New("PowerDNS catalog member has no durable zone")
+			}
+			return managedPDNSCatalog{}, false, readErr
+		}
+		expected, expectedErr := expectedDNSZoneAuthorities(
+			[]transport.DNSEngineSwitchZoneSnapshot{{
+				Domain: member, ZoneType: zoneType, Records: records,
+			}},
+		)
+		if expectedErr != nil {
+			return managedPDNSCatalog{}, false, expectedErr
+		}
+		memberSerials[index] = expected[0].Serial
+	}
 	if err := tx.Commit(); err != nil {
 		return managedPDNSCatalog{}, false, err
 	}
 	identity.Serial = serial
 	identity.Members = members
+	identity.MemberSerials = memberSerials
 	return identity, true, nil
 }
 

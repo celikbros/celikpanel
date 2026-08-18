@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"net"
 	"slices"
@@ -17,6 +16,10 @@ type dnsPrimaryCatalogEvidence struct {
 	Domain  string
 	Serial  uint32
 	Members []string
+	// MemberSerials is aligned with Members and comes from durable,
+	// transactionally verified authority data. Live local/peer equality alone
+	// is insufficient: both servers may still be serving the same stale zone.
+	MemberSerials []uint32
 }
 
 // verifyDNSPrimaryPairReadyAt proves that the configured peer has consumed the
@@ -28,23 +31,13 @@ func verifyDNSPrimaryPairReadyAt(
 	soa dnsZoneSOAProbe,
 	axfr dnsCatalogAXFRProbe,
 ) error {
-	if soa == nil || axfr == nil || evidence.Serial == 0 ||
-		!canonicalPairReadinessIPv4(evidence.LocalIP) ||
-		!canonicalPairReadinessIPv4(evidence.PeerIP) ||
-		evidence.LocalIP == evidence.PeerIP ||
-		!serviceMutationCanonicalFQDN(evidence.Domain) {
+	if err := validateDNSPrimaryCatalogEvidence(evidence); err != nil {
+		return err
+	}
+	if soa == nil || axfr == nil {
 		return errors.New("DNS primary pair readiness identity is invalid")
 	}
 	members := append([]string(nil), evidence.Members...)
-	if !sort.StringsAreSorted(members) {
-		return errors.New("DNS primary catalog members are not canonical")
-	}
-	for index, member := range members {
-		if !serviceMutationCanonicalFQDN(member) || member == evidence.Domain ||
-			(index > 0 && member == members[index-1]) {
-			return errors.New("DNS primary catalog members are invalid")
-		}
-	}
 
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
@@ -64,15 +57,39 @@ func verifyDNSPrimaryPairReadyAt(
 	if peerCatalogSerial != evidence.Serial {
 		return errors.New("DNS peer catalog SOA serial differs from the primary")
 	}
-	for _, member := range members {
+	for index, member := range members {
 		localSerial, localErr := exactDNSZoneSerialAtWithProbe(
 			proofCtx, evidence.LocalIP, member, soa,
 		)
 		peerSerial, peerErr := exactDNSZoneSerialAtWithProbe(
 			proofCtx, evidence.PeerIP, member, soa,
 		)
-		if localErr != nil || peerErr != nil || localSerial != peerSerial {
+		expectedSerial := evidence.MemberSerials[index]
+		if localErr != nil || peerErr != nil ||
+			localSerial != expectedSerial || peerSerial != expectedSerial {
 			return errors.New("DNS catalog member did not converge on the peer")
+		}
+	}
+	return nil
+}
+
+func validateDNSPrimaryCatalogEvidence(evidence dnsPrimaryCatalogEvidence) error {
+	if evidence.Serial == 0 ||
+		!canonicalPairReadinessIPv4(evidence.LocalIP) ||
+		!canonicalPairReadinessIPv4(evidence.PeerIP) ||
+		evidence.LocalIP == evidence.PeerIP ||
+		!serviceMutationCanonicalFQDN(evidence.Domain) ||
+		len(evidence.Members) != len(evidence.MemberSerials) {
+		return errors.New("DNS primary pair readiness identity is invalid")
+	}
+	if !sort.StringsAreSorted(evidence.Members) {
+		return errors.New("DNS primary catalog members are not canonical")
+	}
+	for index, member := range evidence.Members {
+		if !serviceMutationCanonicalFQDN(member) || member == evidence.Domain ||
+			(index > 0 && member == evidence.Members[index-1]) ||
+			evidence.MemberSerials[index] == 0 {
+			return errors.New("DNS primary catalog members are invalid")
 		}
 	}
 	return nil
@@ -84,8 +101,9 @@ func canonicalPairReadinessIPv4(value string) bool {
 }
 
 func bindPrimaryCatalogEvidence(
-	receipt binddns.Receipt,
+	tree binddns.VerifiedTree,
 ) (dnsPrimaryCatalogEvidence, bool, error) {
+	receipt := tree.CurrentReceipt()
 	pairing := receipt.Pairing
 	if pairing == nil || pairing.Role != binddns.PairRolePrimary {
 		return dnsPrimaryCatalogEvidence{}, false, nil
@@ -96,24 +114,39 @@ func bindPrimaryCatalogEvidence(
 			errors.New("BIND primary catalog receipt is invalid")
 	}
 	members := make([]string, 0, len(receipt.Zones))
+	serialByMember := make(map[string]uint32, len(receipt.Zones))
 	for _, zone := range receipt.Zones {
-		if !zone.Delete {
-			members = append(members, zone.Domain)
+		verifiedReceipt, data, found := tree.Zone(zone.Domain)
+		if !found || verifiedReceipt != zone {
+			return dnsPrimaryCatalogEvidence{}, false,
+				errors.New("BIND primary zone receipt is unavailable")
+		}
+		expected, err := expectedDNSZoneAuthorityFromBINDTree(verifiedReceipt, data)
+		if err != nil {
+			return dnsPrimaryCatalogEvidence{}, false, err
+		}
+		if !expected.Delete {
+			members = append(members, expected.Domain)
+			serialByMember[expected.Domain] = expected.Serial
 		}
 	}
 	sort.Strings(members)
+	serials := make([]uint32, len(members))
+	for index, member := range members {
+		serials[index] = serialByMember[member]
+	}
 	return dnsPrimaryCatalogEvidence{
 		LocalIP: pairing.LocalIP, PeerIP: pairing.PeerIP,
 		Domain: pairing.LocalCatalog, Serial: pairing.CatalogSerial,
-		Members: members,
+		Members: members, MemberSerials: serials,
 	}, true, nil
 }
 
 func bindPrimaryPairReady(
 	ctx context.Context,
-	receipt binddns.Receipt,
+	tree binddns.VerifiedTree,
 ) (bool, error) {
-	evidence, primary, err := bindPrimaryCatalogEvidence(receipt)
+	evidence, primary, err := bindPrimaryCatalogEvidence(tree)
 	if err != nil || !primary {
 		return false, err
 	}
@@ -131,100 +164,14 @@ func bindPrimaryPairReady(
 func managedPDNSPrimaryCatalogEvidence(
 	ctx context.Context,
 ) (dnsPrimaryCatalogEvidence, bool, error) {
-	identity, configured, err := managedPDNSCatalogIdentity()
-	if err != nil || !configured {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	db, err := openPDNSEngineDB(pdnsDBPath(), true)
-	if err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	defer db.Close()
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	defer tx.Rollback()
-
-	var domainID int64
-	var name, zoneType, account, catalog string
-	if err := tx.QueryRowContext(ctx, `
-		SELECT id, name, UPPER(type), COALESCE(account,''), COALESCE(catalog,'')
-		FROM domains WHERE name = ? COLLATE NOCASE
-	`, identity.Domain).Scan(&domainID, &name, &zoneType, &account, &catalog); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return dnsPrimaryCatalogEvidence{}, false, nil
-		}
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if name != identity.Domain || zoneType != "PRODUCER" ||
-		account != pdnsBINDCatalogAccount || catalog != "" {
-		return dnsPrimaryCatalogEvidence{}, false,
-			errors.New("PowerDNS producer row is not exact panel authority")
-	}
-	var ownedCatalogs, peerCatalogs int
-	if err := tx.QueryRowContext(
-		ctx, `SELECT COUNT(*) FROM domains WHERE account = ?`,
-		pdnsBINDCatalogAccount,
-	).Scan(&ownedCatalogs); err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if err := tx.QueryRowContext(
-		ctx, `SELECT COUNT(*) FROM domains WHERE account = ?`,
-		pdnsPeerCatalogAccount,
-	).Scan(&peerCatalogs); err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if ownedCatalogs != 1 || peerCatalogs != 0 {
-		return dnsPrimaryCatalogEvidence{}, false,
-			errors.New("PowerDNS producer ownership is ambiguous")
-	}
-	serial, err := verifyPDNSProducerBaseTx(
-		ctx, tx, domainID, identity.Domain, identity.LocalIP,
-	)
-	if err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	rows, err := tx.QueryContext(ctx, `
-		SELECT name, UPPER(type) FROM domains
-		WHERE catalog = ? COLLATE NOCASE
-		ORDER BY name COLLATE BINARY
-	`, identity.Domain)
-	if err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	members := make([]string, 0)
-	for rows.Next() {
-		var member, memberType string
-		if err := rows.Scan(&member, &memberType); err != nil {
-			rows.Close()
-			return dnsPrimaryCatalogEvidence{}, false, err
-		}
-		if !serviceMutationCanonicalFQDN(member) || member == identity.Domain ||
-			(memberType != "NATIVE" && memberType != "MASTER" && memberType != "PRIMARY") {
-			rows.Close()
-			return dnsPrimaryCatalogEvidence{}, false,
-				errors.New("PowerDNS producer member is not canonical")
-		}
-		members = append(members, member)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if err := rows.Close(); err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if err := tx.Commit(); err != nil {
-		return dnsPrimaryCatalogEvidence{}, false, err
-	}
-	if !sort.StringsAreSorted(members) {
-		return dnsPrimaryCatalogEvidence{}, false,
-			errors.New("PowerDNS producer members are not canonical")
+	identity, primary, err := readManagedPDNSPrimaryCatalog(ctx)
+	if err != nil || !primary {
+		return dnsPrimaryCatalogEvidence{}, primary, err
 	}
 	return dnsPrimaryCatalogEvidence{
 		LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
-		Domain: identity.Domain, Serial: serial, Members: members,
+		Domain: identity.Domain, Serial: identity.Serial,
+		Members: identity.Members, MemberSerials: identity.MemberSerials,
 	}, true, nil
 }
 

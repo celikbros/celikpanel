@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
@@ -64,7 +65,7 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 	evidence := dnsPrimaryCatalogEvidence{
 		LocalIP: "192.0.2.10", PeerIP: "192.0.2.20",
 		Domain: "catalog-c000020a.celikpanel.invalid", Serial: 9,
-		Members: []string{"example.test"},
+		Members: []string{"example.test"}, MemberSerials: []uint32{41},
 	}
 	axfr := func(_ context.Context, address, domain string) (dnsCatalogAXFRResult, error) {
 		if address != evidence.LocalIP || domain != evidence.Domain {
@@ -73,12 +74,13 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 		return dnsCatalogAXFRResult{Serial: 9, Members: []string{"example.test"}}, nil
 	}
 	for _, test := range []struct {
-		name       string
-		peerSerial uint32
-		wantReady  bool
+		name                    string
+		localSerial, peerSerial uint32
+		wantReady               bool
 	}{
-		{name: "exact member", peerSerial: 41, wantReady: true},
-		{name: "stale member", peerSerial: 40},
+		{name: "exact member", localSerial: 41, peerSerial: 41, wantReady: true},
+		{name: "stale peer member", localSerial: 41, peerSerial: 40},
+		{name: "both authorities share stale serial", localSerial: 40, peerSerial: 40},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			calls := map[string]int{}
@@ -86,7 +88,7 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 				calls[address+"/"+network+"/"+domain]++
 				serial := uint32(9)
 				if domain == "example.test" {
-					serial = 41
+					serial = test.localSerial
 					if address == evidence.PeerIP {
 						serial = test.peerSerial
 					}
@@ -117,12 +119,66 @@ func TestDNSPrimaryPairReadyProvesEveryMemberOnBothAuthorities(t *testing.T) {
 }
 
 func TestBINDPrimaryCatalogEvidenceRejectsSecondaryRole(t *testing.T) {
-	receipt := binddns.Receipt{Pairing: &binddns.PairingReceipt{
-		Role: binddns.PairRoleSecondary, LocalIP: "192.0.2.20",
-		PeerIP: "192.0.2.10", CatalogSerial: 1,
-	}}
-	if _, primary, err := bindPrimaryCatalogEvidence(receipt); err != nil || primary {
+	generation, err := binddns.RenderManifest("/var/lib/celikpanel/bind", binddns.Manifest{
+		EngineEpoch: 1,
+		Pairing: &binddns.Pairing{
+			Role:    binddns.PairRoleSecondary,
+			LocalIP: "192.0.2.20", LocalNS: "ns2.example.test",
+			PeerIP: "192.0.2.10", PeerNS: "ns1.example.test",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := make(map[string][]byte, len(generation.Zones)+1)
+	for _, zone := range generation.Zones {
+		files["zones/"+zone.FileName] = zone.Data
+	}
+	if generation.Catalog != nil {
+		files[generation.ReceiptValue.Pairing.CatalogFile] = generation.Catalog.Data
+	}
+	tree, err := binddns.VerifyTree(generation.Receipt, generation.Config, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, primary, err := bindPrimaryCatalogEvidence(tree); err != nil || primary {
 		t.Fatalf("secondary evidence primary=%v err=%v", primary, err)
+	}
+}
+
+func TestBINDPrimaryCatalogEvidenceReadsMemberSerialFromVerifiedTree(t *testing.T) {
+	const serial = uint32(2026081601)
+	generation, err := binddns.RenderManifest("/var/lib/celikpanel/bind", binddns.Manifest{
+		EngineEpoch: 1,
+		Pairing: &binddns.Pairing{
+			Role:    binddns.PairRolePrimary,
+			LocalIP: "192.0.2.10", LocalNS: "ns1.example.test",
+			PeerIP: "192.0.2.20", PeerNS: "ns2.example.test",
+		},
+		Zones: []binddns.ZoneSnapshot{{
+			DesiredGeneration: 1, Domain: "example.test",
+			Qualifier:         "dns-zone-sync/v3:sha256:" + strings.Repeat("a", 64),
+			MutationRequestID: strings.Repeat("1", 32),
+			MutationOwnerID:   strings.Repeat("2", 32),
+			Records:           testPDNSEngineRecords("example.test"),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := make(map[string][]byte, len(generation.Zones)+1)
+	for _, zone := range generation.Zones {
+		files["zones/"+zone.FileName] = zone.Data
+	}
+	files[generation.ReceiptValue.Pairing.CatalogFile] = generation.Catalog.Data
+	tree, err := binddns.VerifyTree(generation.Receipt, generation.Config, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, primary, err := bindPrimaryCatalogEvidence(tree)
+	if err != nil || !primary || len(evidence.MemberSerials) != 1 ||
+		evidence.MemberSerials[0] != serial {
+		t.Fatalf("primary=%v evidence=%+v err=%v", primary, evidence, err)
 	}
 }
 
@@ -179,7 +235,9 @@ func TestManagedPDNSPrimaryCatalogEvidenceRequiresExactProducer(t *testing.T) {
 	}
 	if evidence.LocalIP != "192.0.2.10" || evidence.PeerIP != "192.0.2.20" ||
 		evidence.Serial != 1 || len(evidence.Members) != 1 ||
-		evidence.Members[0] != "example.test" {
+		evidence.Members[0] != "example.test" ||
+		len(evidence.MemberSerials) != 1 ||
+		evidence.MemberSerials[0] != 2026081601 {
 		t.Fatalf("unexpected producer evidence=%+v", evidence)
 	}
 

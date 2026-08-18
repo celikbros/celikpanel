@@ -293,7 +293,7 @@ func (hostDNSEngineBackend) Readiness(
 					func() error { return verifyOnlyBINDActive(ctx, systemctl) },
 				)
 				if states[0].Managed {
-					states[0].PairReady, err = bindPrimaryPairReady(ctx, receipt)
+					states[0].PairReady, err = bindPrimaryPairReady(ctx, tree)
 					if err != nil {
 						log.Printf("BIND primary peer readiness proof failed: %v", err)
 					}
@@ -1411,20 +1411,24 @@ func syncPDNSV3Zone(
 		}
 		return "", err
 	}
-	if err := purgePDNSZone(ctx, commitment.Domain); err != nil {
+	zone := transport.DNSEngineSwitchZoneSnapshot{
+		Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
+		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
+		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
+	}
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone)
+	if err != nil {
 		return "", err
 	}
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return "", err
 	}
-	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{{
-		Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
-		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
-		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
-	}}); err != nil {
+	if err := verifyDNSZoneManifestAuthority(
+		ctx, []transport.DNSEngineSwitchZoneSnapshot{zone},
+	); err != nil {
 		return "", err
 	}
-	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
+	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
 		return "", err
 	}
 	return commitment.Qualifier, nil
@@ -1456,32 +1460,17 @@ func recoverPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return false, err
 	}
-	if err := purgePDNSZone(ctx, domain); err != nil {
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot)
+	if err != nil {
 		return false, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
 		return false, err
 	}
-	if err := verifyManagedPDNSBINDCatalogPeer(ctx); err != nil {
+	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
 		return false, err
 	}
 	return true, nil
-}
-
-func purgePDNSZone(ctx context.Context, domain string) error {
-	control, err := firstTrustedExecutable(
-		[]string{"/usr/bin/pdns_control", "/usr/sbin/pdns_control"}, "pdns_control",
-	)
-	if err != nil {
-		return err
-	}
-	output, err := serviceMutationCommand(
-		context.WithoutCancel(ctx), control, "purge", domain+"$",
-	).CombinedOutputLimited(64 << 10)
-	if err != nil {
-		return fmt.Errorf("purge PowerDNS zone cache: %w: %s", err, firstLine(string(output)))
-	}
-	return nil
 }
 
 func verifyOnlyPDNSActive(ctx context.Context, systemctl string) error {
