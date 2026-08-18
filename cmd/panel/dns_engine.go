@@ -100,6 +100,7 @@ type dnsEngineSnapshot struct {
 	port53Conflict   bool
 	runtimeErr       error
 	dnssecErr        error
+	pairIdentityErr  error
 }
 
 type dnsEnginePreviewBlocker struct {
@@ -503,6 +504,11 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine != "" {
 		topology = state.Topology
 	}
+	pairRole := state.PairRole
+	var pairIdentityErr error
+	if state.ActiveEngine == "" && topology == transport.DNSTopologyPaired {
+		pairRole, pairIdentityErr = p.unresolvedDNSPairRole(ctx)
+	}
 	var pairReady *bool
 	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
 		ready := runtimes[state.ActiveEngine].PairReady
@@ -511,13 +517,14 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
-		State:        presentationState, Topology: topology, PairRole: state.PairRole,
+		State:        presentationState, Topology: topology, PairRole: pairRole,
 		PairReady:       pairReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,
-		runtimeErr: runtimeErr,
-		dnssecErr:  dnssecErr,
+		runtimeErr:      runtimeErr,
+		dnssecErr:       dnssecErr,
+		pairIdentityErr: pairIdentityErr,
 	}, nil
 }
 
@@ -630,6 +637,14 @@ func dnsEngineAction(
 				return "switch"
 			}
 		}
+		// Revision zero is the released legacy adoption contract: the running
+		// PowerDNS may already implement a signed paired topology and must be
+		// registered without replacement. A DB-staged plan advances revision
+		// first; only that explicit authority selects destructive reconfigure.
+		if snapshot.Topology == transport.DNSTopologyPaired &&
+			snapshot.Revision > 0 {
+			return "reconfigure"
+		}
 		return "adopt"
 	}
 	return "switch"
@@ -638,6 +653,15 @@ func dnsEngineAction(
 func dnsEngineImpacts(action string, hasSource bool) []string {
 	if action == "adopt" {
 		return []string{"validate_target", "adopt_existing"}
+	}
+	if action == "reconfigure" {
+		return []string{
+			"validate_target",
+			"replace_existing",
+			"restart_target",
+			"configure_secondary",
+			"brief_dns_interruption",
+		}
 	}
 	impacts := make([]string, 0, 8)
 	if action == "install" {
@@ -719,6 +743,17 @@ func dnsEnginePreviewBlockers(
 			!targetRuntime.Managed ||
 			(snapshot.Topology != transport.DNSTopologyStandalone &&
 				snapshot.Topology != transport.DNSTopologyPaired)) {
+		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+	}
+	if action == "reconfigure" &&
+		(target != transport.DNSEnginePowerDNS ||
+			snapshot.ActiveEngine != nil ||
+			snapshot.Topology != transport.DNSTopologyPaired ||
+			snapshot.PairRole != transport.DNSPairRoleSecondary ||
+			snapshot.pairIdentityErr != nil ||
+			snapshot.ZoneCount != 0 ||
+			!targetRuntime.Installed || !targetRuntime.Running ||
+			!targetRuntime.Managed) {
 		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
 	}
 	switch snapshot.State {
@@ -846,6 +881,25 @@ func canonicalBINDEnginePairIdentityTx(
 		return "", "", "", errors.New("BIND pairing requires a verified local IPv4 address")
 	}
 	return role, localIP, localNS, nil
+}
+
+func (p *Panel) unresolvedDNSPairRole(ctx context.Context) (string, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	_, peerNS, err := canonicalDNSEnginePeerSnapshotTx(
+		ctx, tx, transport.DNSTopologyPaired,
+	)
+	if err != nil {
+		return "", err
+	}
+	role, _, _, err := canonicalBINDEnginePairIdentityTx(ctx, tx, peerNS)
+	if err != nil {
+		return "", err
+	}
+	return role, nil
 }
 
 func (p *Panel) buildDNSEngineManifest(
@@ -1037,7 +1091,7 @@ func (p *Panel) makeDNSEnginePreview(
 		return dnsEngineSwitchPreview{}, err
 	}
 	hasSource := source != ""
-	requiresAck := hasSource
+	requiresAck := hasSource || action == "reconfigure"
 	preview := dnsEngineSwitchPreview{
 		PreviewToken: token, SourceEngine: enginePointer(source),
 		TargetEngine:     request.TargetEngine,
@@ -2079,7 +2133,7 @@ func (p *Panel) handleDNSEngineSwitch(
 			"DNS engine state changed after preview; review the change again")
 		return
 	}
-	if request.ExpectedSource.Valid &&
+	if (request.ExpectedSource.Valid || action == "reconfigure") &&
 		!request.DowntimeAcknowledged {
 		writeClientError(w, http.StatusBadRequest,
 			"downtime acknowledgement is required")

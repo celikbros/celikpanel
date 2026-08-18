@@ -180,7 +180,7 @@ func setSettingTx(ctx context.Context, tx *sql.Tx, key, value string) error {
 	return err
 }
 
-func settingTx(ctx context.Context, tx *sql.Tx, key string) (string, error) {
+func settingTx(ctx context.Context, tx dnsZoneStateQuery, key string) (string, error) {
 	var value string
 	err := tx.QueryRowContext(ctx, `SELECT value FROM panel_settings WHERE key = ?`, key).Scan(&value)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -349,47 +349,69 @@ func (p *Panel) stageDNSClusterSettingsAndReconcile(
 	ctx context.Context,
 	expected dnsEngineDBState,
 	role, peerIP, peerNS, ns1, ns2, localIPv4 string,
-) error {
+) (bool, error) {
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer tx.Rollback()
 
 	pairExists, err := hasPersistedDNSPairIdentity(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("read staged DNS pair identity: %w", err)
+		return false, fmt.Errorf("read staged DNS pair identity: %w", err)
 	}
 	if pairExists {
-		return fmt.Errorf("%w: paired identity is already epoch-bound", errDNSIdentityStagingConflict)
+		return false, fmt.Errorf("%w: paired identity is already epoch-bound", errDNSIdentityStagingConflict)
 	}
 	state, err := readDNSEngineDBState(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("read staged DNS engine state: %w", err)
+		return false, fmt.Errorf("read staged DNS engine state: %w", err)
 	}
-	if state != expected || !exactUninitializedDNSEngineState(state) {
-		return fmt.Errorf("%w: unresolved engine revision changed", errDNSIdentityStagingConflict)
+	if state != expected || !exactUnresolvedDNSEngineState(state) {
+		return false, fmt.Errorf("%w: unresolved engine revision changed", errDNSIdentityStagingConflict)
 	}
 	marker, err := readDNSEngineOperationMarker(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("read DNS engine operation marker: %w", err)
+		return false, fmt.Errorf("read DNS engine operation marker: %w", err)
 	}
 	if marker != nil {
-		return fmt.Errorf("%w: engine operation is pending", errDNSIdentityStagingConflict)
+		return false, fmt.Errorf("%w: engine operation is pending", errDNSIdentityStagingConflict)
 	}
 	rawSaga, err := settingTx(ctx, tx, dnsClusterSagaSetting)
 	if err != nil {
-		return fmt.Errorf("read DNS cluster operation marker: %w", err)
+		return false, fmt.Errorf("read DNS cluster operation marker: %w", err)
 	}
 	if rawSaga != "" {
-		return fmt.Errorf("%w: topology operation is pending", errDNSIdentityStagingConflict)
+		return false, fmt.Errorf("%w: topology operation is pending", errDNSIdentityStagingConflict)
 	}
 	pendingPublication, err := hasDNSPublicationPending(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("read DNS publication state: %w", err)
+		return false, fmt.Errorf("read DNS publication state: %w", err)
 	}
 	if pendingPublication {
-		return fmt.Errorf("%w: publication is pending", errDNSIdentityStagingConflict)
+		return false, fmt.Errorf("%w: publication is pending", errDNSIdentityStagingConflict)
+	}
+	requested := dnsSetupRequest{
+		NS1: ns1, NS2: ns2, Role: role, PeerIP: peerIP, PeerNS: peerNS,
+	}
+	saved, present, err := readSavedDNSSetupRequest(ctx, tx, localIPv4)
+	if err != nil {
+		return false, fmt.Errorf(
+			"%w: saved staged identity is invalid: %v",
+			errDNSIdentityStagingConflict, err,
+		)
+	}
+	if (state.Revision == 0 && present) ||
+		(state.Revision > 0 && !present) {
+		return false, fmt.Errorf(
+			"%w: staged identity does not match its revision",
+			errDNSIdentityStagingConflict,
+		)
+	}
+	if present && sameDNSSetupRequest(saved, requested) {
+		// An exact retry after a lost response is a DB-only no-op. Its revision
+		// remains the authority already returned by the first successful stage.
+		return false, nil
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE dns_engine_state
@@ -398,21 +420,24 @@ func (p *Panel) stageDNSClusterSettingsAndReconcile(
 		  AND active_epoch = 0 AND revision = ? AND topology = 'standalone'
 		  AND current_switch_id IS NULL`, expected.Revision)
 	if err != nil {
-		return fmt.Errorf("advance DNS identity staging revision: %w", err)
+		return false, fmt.Errorf("advance DNS identity staging revision: %w", err)
 	}
 	changed, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if changed != 1 {
-		return fmt.Errorf("%w: engine state CAS failed", errDNSIdentityStagingConflict)
+		return false, fmt.Errorf("%w: engine state CAS failed", errDNSIdentityStagingConflict)
 	}
 	if err := saveDNSClusterSettingsAndReconcileTx(
 		ctx, tx, role, peerIP, peerNS, ns1, ns2, localIPv4,
 	); err != nil {
-		return err
+		return false, err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // reconcileDNSEngineTopologyTx keeps the durable publisher topology and the

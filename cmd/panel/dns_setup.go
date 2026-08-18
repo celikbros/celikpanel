@@ -606,6 +606,7 @@ const (
 	dnsSetupResultIdentityStaged = "dns_identity_staged"
 	dnsIdentityStagingFresh      = "fresh"
 	dnsIdentityStagingPDNSAdopt  = "pdns_adoption"
+	dnsIdentityStagingPDNSPair   = "pdns_pair_secondary"
 )
 
 var errDNSIdentityStagingConflict = errors.New("DNS identity staging authority changed")
@@ -636,20 +637,39 @@ func hasPersistedDNSPairIdentity(
 }
 
 func exactUninitializedDNSEngineState(state dnsEngineDBState) bool {
+	return state.Revision == 0 && exactUnresolvedDNSEngineState(state)
+}
+
+func exactUnresolvedDNSEngineState(state dnsEngineDBState) bool {
 	return state.ActiveEngine == "" && state.EngineEpoch == 0 &&
-		state.Revision == 0 &&
+		state.Revision >= 0 &&
 		state.Topology == transport.DNSTopologyStandalone &&
 		state.PairRole == "" && state.LocalIP == "" && state.LocalNS == "" &&
 		state.PeerIP == "" && state.PeerNS == "" &&
 		state.CurrentSwitchID == ""
 }
 
+func dnsSetupPairRole(req dnsSetupRequest) string {
+	if req.Role != transport.DNSTopologyPaired {
+		return ""
+	}
+	switch req.PeerNS {
+	case req.NS2:
+		return transport.DNSPairRolePrimary
+	case req.NS1:
+		return transport.DNSPairRoleSecondary
+	default:
+		return ""
+	}
+}
+
 func dnsIdentityStagingKind(
 	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
 	port53Conflict bool,
-	role string,
+	role, pairRole string,
+	zoneCount int,
 ) string {
-	if port53Conflict || len(runtimes) != 2 {
+	if port53Conflict || len(runtimes) != 2 || zoneCount < 0 {
 		return ""
 	}
 	pdns, pdnsOK := runtimes[transport.DNSEnginePowerDNS]
@@ -664,7 +684,139 @@ func dnsIdentityStagingKind(
 		pdns.Installed && pdns.Running && pdns.Managed && !bind.Running {
 		return dnsIdentityStagingPDNSAdopt
 	}
+	// A legacy, already-running PowerDNS may be converted in place only as an
+	// empty directional secondary. The engine workflow proves the empty live
+	// database and replaces it transactionally; a primary or any panel zone
+	// remains an explicit migration problem rather than inferred authority.
+	if role == transport.DNSTopologyPaired &&
+		pairRole == transport.DNSPairRoleSecondary && zoneCount == 0 &&
+		pdns.Installed && pdns.Running && pdns.Managed && !bind.Running {
+		return dnsIdentityStagingPDNSPair
+	}
 	return ""
+}
+
+func dnsIdentityStagingZoneCount(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+) (int, error) {
+	var count int
+	err := query.QueryRowContext(
+		ctx, `SELECT count(*) FROM dns_zone_sync_state`,
+	).Scan(&count)
+	return count, err
+}
+
+func readSavedDNSSetupRequest(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+	localIPv4 string,
+) (dnsSetupRequest, bool, error) {
+	values := make(map[string]string, 5)
+	for _, key := range []string{
+		settingNS1, settingNS2, settingDNSRole,
+		settingDNSPeerIP, settingDNSPeerNS,
+	} {
+		value, err := settingTx(ctx, query, key)
+		if err != nil {
+			return dnsSetupRequest{}, false, err
+		}
+		values[key] = value
+	}
+	absent := true
+	for _, value := range values {
+		absent = absent && strings.TrimSpace(value) == ""
+	}
+	if absent {
+		return dnsSetupRequest{}, false, nil
+	}
+	req := dnsSetupRequest{
+		NS1:    canonicalDNSName(values[settingNS1]),
+		NS2:    canonicalDNSName(values[settingNS2]),
+		Role:   normalizeDNSRole(strings.TrimSpace(values[settingDNSRole])),
+		PeerIP: strings.TrimSpace(values[settingDNSPeerIP]),
+		PeerNS: canonicalDNSName(values[settingDNSPeerNS]),
+	}
+	if values[settingNS1] != req.NS1 || values[settingNS2] != req.NS2 ||
+		strings.TrimSpace(values[settingDNSRole]) != req.Role ||
+		values[settingDNSPeerIP] != req.PeerIP ||
+		values[settingDNSPeerNS] != req.PeerNS ||
+		!validDNSHostname(req.NS1) || !validDNSHostname(req.NS2) ||
+		req.NS1 == req.NS2 {
+		return dnsSetupRequest{}, false, errors.New("saved DNS identity is not canonical")
+	}
+	switch req.Role {
+	case transport.DNSTopologyStandalone:
+		if req.PeerIP != "" || req.PeerNS != "" {
+			return dnsSetupRequest{}, false, errors.New(
+				"saved standalone DNS identity contains a peer",
+			)
+		}
+	case transport.DNSTopologyPaired:
+		peer := net.ParseIP(req.PeerIP)
+		if peer == nil || peer.To4() == nil ||
+			peer.String() != req.PeerIP || !peer.IsGlobalUnicast() ||
+			req.PeerIP == localIPv4 ||
+			(req.PeerNS != req.NS1 && req.PeerNS != req.NS2) {
+			return dnsSetupRequest{}, false, errors.New(
+				"saved paired DNS identity is not canonical",
+			)
+		}
+	default:
+		return dnsSetupRequest{}, false, errors.New("saved DNS topology is invalid")
+	}
+	return req, true, nil
+}
+
+func sameDNSSetupRequest(left, right dnsSetupRequest) bool {
+	return left == right
+}
+
+func persistedDNSPairMatchesSetup(
+	state dnsEngineDBState,
+	saved, requested dnsSetupRequest,
+	localIPv4 string,
+) bool {
+	if state.Topology != transport.DNSTopologyPaired ||
+		!sameDNSSetupRequest(saved, requested) ||
+		requested.Role != transport.DNSTopologyPaired ||
+		state.PairRole != dnsSetupPairRole(requested) ||
+		state.LocalIP != localIPv4 || state.PeerIP != requested.PeerIP ||
+		state.LocalNS == "" || state.PeerNS != requested.PeerNS {
+		return false
+	}
+	if state.PairRole == transport.DNSPairRolePrimary {
+		return state.LocalNS == requested.NS1 && state.PeerNS == requested.NS2
+	}
+	return state.PairRole == transport.DNSPairRoleSecondary &&
+		state.LocalNS == requested.NS2 && state.PeerNS == requested.NS1
+}
+
+func (p *Panel) writePersistedDNSPairSetupResultLocked(
+	w http.ResponseWriter,
+	r *http.Request,
+	req dnsSetupRequest,
+	localIPv4 string,
+) {
+	state, err := readDNSEngineDBState(r.Context(), p.db.GetDB())
+	if err != nil {
+		writeServerError(w, fmt.Errorf("read paired DNS identity: %w", err))
+		return
+	}
+	saved, present, err := readSavedDNSSetupRequest(
+		r.Context(), p.db.GetDB(), localIPv4,
+	)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("read saved paired DNS identity: %w", err))
+		return
+	}
+	if !present || !persistedDNSPairMatchesSetup(state, saved, req, localIPv4) {
+		writeDNSPairIdentityLocked(w)
+		return
+	}
+	// This is an exact idempotent retry. It deliberately performs no ledger,
+	// saga, publication or agent mutation.
+	_ = json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
 
 func sameDNSBackendRuntime(
@@ -711,6 +863,7 @@ func (p *Panel) stageDNSIdentityLocked(
 	preRuntimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
 	prePort53Conflict bool,
 	preKind string,
+	preZoneCount int,
 ) {
 	pairExists, err := hasPersistedDNSPairIdentity(r.Context(), p.db.GetDB())
 	if err != nil {
@@ -726,7 +879,7 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeServerError(w, fmt.Errorf("recheck DNS engine identity staging state: %w", err))
 		return
 	}
-	if state != preState || !exactUninitializedDNSEngineState(state) {
+	if state != preState || !exactUnresolvedDNSEngineState(state) {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
@@ -752,21 +905,33 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
+	zoneCount, err := dnsIdentityStagingZoneCount(
+		r.Context(), p.db.GetDB(),
+	)
+	if err != nil {
+		writeServerError(w, fmt.Errorf("recheck DNS staging zone count: %w", err))
+		return
+	}
 	runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
 	if err != nil {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
 	if port53Conflict != prePort53Conflict ||
+		zoneCount != preZoneCount ||
 		!sameDNSBackendRuntime(runtimes, preRuntimes) ||
-		dnsIdentityStagingKind(runtimes, port53Conflict, req.Role) != preKind {
+		dnsIdentityStagingKind(
+			runtimes, port53Conflict, req.Role,
+			dnsSetupPairRole(req), zoneCount,
+		) != preKind {
 		writeDNSEngineWorkflowRequired(w)
 		return
 	}
-	if err := p.stageDNSClusterSettingsAndReconcile(
+	changed, err := p.stageDNSClusterSettingsAndReconcile(
 		r.Context(), preState, req.Role, req.PeerIP, req.PeerNS,
 		req.NS1, req.NS2, localIPv4,
-	); err != nil {
+	)
+	if err != nil {
 		if errors.Is(err, errDNSIdentityStagingConflict) {
 			writeDNSEngineWorkflowRequired(w)
 			return
@@ -774,14 +939,17 @@ func (p *Panel) stageDNSIdentityLocked(
 		writeServerError(w, fmt.Errorf("commit staged DNS identity: %w", err))
 		return
 	}
-	p.audit(
-		r,
-		"settings.dns_identity_staged:"+req.Role+" runtime="+preKind,
-		"settings",
-		0,
-	)
+	if changed {
+		p.audit(
+			r,
+			"settings.dns_identity_staged:"+req.Role+" runtime="+preKind,
+			"settings",
+			0,
+		)
+	}
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"success": true,
+		"staged":  true,
 		"result":  dnsSetupResultIdentityStaged,
 	})
 }
@@ -941,7 +1109,9 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if lockedPairExists {
-			writeDNSPairIdentityLocked(w)
+			p.writePersistedDNSPairSetupResultLocked(
+				w, r, req, localIPv4,
+			)
 			return
 		}
 		writeDNSEngineWorkflowRequired(w)
@@ -952,14 +1122,22 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, fmt.Errorf("read DNS engine identity staging state: %w", err))
 		return
 	}
-	if exactUninitializedDNSEngineState(engineState) {
+	if exactUnresolvedDNSEngineState(engineState) {
 		runtimes, port53Conflict, err := p.readDNSBackendRuntime(r.Context())
 		if err != nil {
 			writeDNSEngineWorkflowRequired(w)
 			return
 		}
+		zoneCount, err := dnsIdentityStagingZoneCount(
+			r.Context(), p.db.GetDB(),
+		)
+		if err != nil {
+			writeServerError(w, fmt.Errorf("read DNS staging zone count: %w", err))
+			return
+		}
 		stagingKind := dnsIdentityStagingKind(
 			runtimes, port53Conflict, req.Role,
+			dnsSetupPairRole(req), zoneCount,
 		)
 		if stagingKind == "" {
 			writeDNSEngineWorkflowRequired(w)
@@ -973,7 +1151,7 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		defer dnsPublicationMu.Unlock()
 		p.stageDNSIdentityLocked(
 			w, r, req, localIPv4, engineState, runtimes,
-			port53Conflict, stagingKind,
+			port53Conflict, stagingKind, zoneCount,
 		)
 		return
 	}
@@ -1018,7 +1196,9 @@ func (p *Panel) handleDNSSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if lockedPairExists {
-		writeDNSPairIdentityLocked(w)
+		p.writePersistedDNSPairSetupResultLocked(
+			w, r, req, localIPv4,
+		)
 		return
 	}
 

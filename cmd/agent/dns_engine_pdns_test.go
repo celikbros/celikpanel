@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,6 +12,205 @@ import (
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+func testPDNSPairSecondaryReconfigureManifest(
+	t *testing.T,
+) mutationpayload.DNSEngineSwitchManifestCommitment {
+	t.Helper()
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		transport.DNSEngineSwitchModeSwitch,
+		"", transport.DNSEnginePowerDNS,
+		0, 1, 7, transport.DNSTopologyPaired,
+		transport.DNSPairRoleSecondary,
+		"192.0.2.20", "ns2.example.test",
+		"192.0.2.10", "ns1.example.test", nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
+
+func TestPDNSPairSecondaryReconfigureManifestIsExact(t *testing.T) {
+	manifest := testPDNSPairSecondaryReconfigureManifest(t)
+	if !isPDNSPairSecondaryReconfigureManifest(manifest) {
+		t.Fatal("exact paired-secondary reconfigure manifest was rejected")
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*mutationpayload.DNSEngineSwitchManifestCommitment)
+	}{
+		{
+			name: "source engine",
+			mutate: func(value *mutationpayload.DNSEngineSwitchManifestCommitment) {
+				value.SourceEngine = transport.DNSEngineBIND
+				value.SourceEpoch = 1
+				value.TargetEpoch = 2
+			},
+		},
+		{
+			name: "primary",
+			mutate: func(value *mutationpayload.DNSEngineSwitchManifestCommitment) {
+				value.PairRole = transport.DNSPairRolePrimary
+			},
+		},
+		{
+			name: "zone",
+			mutate: func(value *mutationpayload.DNSEngineSwitchManifestCommitment) {
+				value.Zones = []transport.DNSEngineSwitchZoneSnapshot{{
+					Domain: "unexpected.test",
+				}}
+			},
+		},
+		{
+			name: "standalone",
+			mutate: func(value *mutationpayload.DNSEngineSwitchManifestCommitment) {
+				value.Topology = transport.DNSTopologyStandalone
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			changed := manifest
+			test.mutate(&changed)
+			if isPDNSPairSecondaryReconfigureManifest(changed) {
+				t.Fatal("non-exact reconfigure manifest was accepted")
+			}
+		})
+	}
+}
+
+func initializeEmptyPDNSReconfigureDB(t *testing.T, path string) {
+	t.Helper()
+	db, err := initializePDNSEngineDB(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVerifyEmptyStandalonePDNSDatabaseIsByteExact(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	initializeEmptyPDNSReconfigureDB(t, path)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyEmptyStandalonePDNSDatabase(
+		context.Background(), path,
+	); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("read-only empty PowerDNS proof changed database bytes")
+	}
+	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
+		if _, err := os.Lstat(path + suffix); !os.IsNotExist(err) {
+			t.Fatalf("read-only proof retained sidecar %s: %v", suffix, err)
+		}
+	}
+}
+
+func TestVerifyEmptyStandalonePDNSDatabaseRejectsEveryAuthorityTable(
+	t *testing.T,
+) {
+	tests := []struct {
+		table string
+		stmt  string
+	}{
+		{"domains", `INSERT INTO domains (name, type) VALUES ('zone.test', 'NATIVE')`},
+		{"records", `INSERT INTO records (name, type, content) VALUES ('zone.test', 'A', '192.0.2.10')`},
+		{"supermasters", `INSERT INTO supermasters (ip, nameserver, account) VALUES ('192.0.2.10', 'ns1.test', 'celikpanel')`},
+		{"comments", `INSERT INTO comments (domain_id, name, type, modified_at, comment) VALUES (1, 'zone.test', 'A', 1, 'comment')`},
+		{"domainmetadata", `INSERT INTO domainmetadata (domain_id, kind, content) VALUES (1, 'PRESIGNED', '1')`},
+		{"cryptokeys", `INSERT INTO cryptokeys (domain_id, flags, active, content) VALUES (1, 257, 1, 'key')`},
+		{"tsigkeys", `INSERT INTO tsigkeys (name, algorithm, secret) VALUES ('key', 'hmac-sha256', 'secret')`},
+		{"celikpanel_dns_zone_sync_receipts", `INSERT INTO celikpanel_dns_zone_sync_receipts (domain, request_id, qualifier, desired_generation, action, zone_type, schema) VALUES ('zone.test', 'request', 'qualifier', 1, 'sync', 'NATIVE', 'legacy')`},
+		{"celikpanel_dns_zone_sync_v3_receipts", `INSERT INTO celikpanel_dns_zone_sync_v3_receipts (domain, engine, engine_epoch, request_id, owner_id, qualifier, desired_generation, action, zone_type, schema) VALUES ('zone.test', 'pdns', 1, 'request', 'owner', 'qualifier', 1, 'sync', 'NATIVE', 'dns-zone-sync/v3')`},
+		{"celikpanel_dns_engine_manifest_receipt", `INSERT INTO celikpanel_dns_engine_manifest_receipt (singleton, engine, engine_epoch, request_id, owner_id, qualifier, source_revision, zone_count, snapshot_bytes, schema) VALUES (1, 'pdns', 1, 'request', 'owner', 'qualifier', 1, 0, 0, 'dns-engine-switch/v1')`},
+	}
+	for _, test := range tests {
+		t.Run(test.table, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+			initializeEmptyPDNSReconfigureDB(t, path)
+			db, err := openPDNSEngineDB(path, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(test.stmt); err != nil {
+				db.Close()
+				t.Fatal(err)
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := verifyEmptyStandalonePDNSDatabase(
+				context.Background(), path,
+			); err == nil || !strings.Contains(err.Error(), test.table) {
+				t.Fatalf("nonempty %s proof error=%v", test.table, err)
+			}
+		})
+	}
+}
+
+func TestVerifyEmptyStandalonePDNSDatabaseAcceptsLegacySchemaAndRejectsExtras(
+	t *testing.T,
+) {
+	path := filepath.Join(t.TempDir(), "legacy.sqlite3")
+	db, err := initializePDNSEngineDB(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		DROP TABLE celikpanel_dns_zone_sync_v3_receipts;
+		DROP TABLE celikpanel_dns_engine_manifest_receipt;
+	`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyEmptyStandalonePDNSDatabase(
+		context.Background(), path,
+	); err != nil {
+		t.Fatalf("legacy empty schema rejected: %v", err)
+	}
+	db, err = openPDNSEngineDB(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE manual_authority (value TEXT)`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyEmptyStandalonePDNSDatabase(
+		context.Background(), path,
+	); err == nil || !strings.Contains(err.Error(), "unrecognized table") {
+		t.Fatalf("unexpected table proof error=%v", err)
+	}
+}
+
+func TestVerifyEmptyStandalonePDNSDatabaseRejectsSidecar(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	initializeEmptyPDNSReconfigureDB(t, path)
+	if err := os.WriteFile(path+"-journal", []byte("pending"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyEmptyStandalonePDNSDatabase(
+		context.Background(), path,
+	); err == nil || !strings.Contains(err.Error(), "sidecar") {
+		t.Fatalf("sidecar proof error=%v", err)
+	}
+}
 
 func testPDNSEngineBinding() transport.ServiceMutationBinding {
 	return transport.ServiceMutationBinding{

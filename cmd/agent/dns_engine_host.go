@@ -1092,6 +1092,26 @@ func verifyDNSEngineSwitchSource(
 	if manifest.Mode != transport.DNSEngineSwitchModeSwitch {
 		return errors.New("DNS engine operation mode is unsupported")
 	}
+	if isPDNSPairSecondaryReconfigureManifest(manifest) {
+		if stateExists || bindUnit.active() || bindAliasUnit.active() ||
+			!pdnsUnit.active() {
+			return errors.New(
+				"PowerDNS secondary reconfiguration requires the sole unreceipted running PowerDNS authority",
+			)
+		}
+		if err := requireManagedDNSClusterReady(); err != nil {
+			return errors.New(
+				"PowerDNS secondary reconfiguration requires a managed PowerDNS authority",
+			)
+		}
+		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
+			return err
+		}
+		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
+			return err
+		}
+		return verifyEmptyStandalonePDNSDatabase(ctx, pdnsDBPath())
+	}
 	if stateExists {
 		if state.Engine != manifest.SourceEngine || state.EngineEpoch != manifest.SourceEpoch {
 			return errors.New("DNS engine switch source does not match the active engine receipt")

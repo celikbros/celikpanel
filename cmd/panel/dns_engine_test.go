@@ -1051,6 +1051,22 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 		last.PairRole != transport.DNSPairRolePrimary {
 		t.Fatalf("reverse paired request=%+v", last)
 	}
+	noop := httptest.NewRecorder()
+	panel.handleDNSSetup(noop, dnsSetupAdminRequest(
+		`{"ns1":"ns1.celikhost.com","ns2":"ns2.celikhost.com","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.celikhost.com"}`,
+	))
+	if noop.Code != http.StatusOK {
+		t.Fatalf("exact paired identity retry status=%d body=%s",
+			noop.Code, noop.Body.String())
+	}
+	afterNoop, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterNoop != state {
+		t.Fatalf("exact paired identity retry changed state: before=%+v after=%+v",
+			state, afterNoop)
+	}
 	locked := httptest.NewRecorder()
 	panel.handleDNSSetup(locked, dnsSetupAdminRequest(
 		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"192.0.2.30","peer_ns":"ns4.example.net"}`,
@@ -1078,6 +1094,103 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 	agent.mu.Unlock()
 	if switchCalls != 2 {
 		t.Fatalf("paired identity refusal changed host: switch calls=%d", switchCalls)
+	}
+}
+
+func TestDNSEngineReconfiguresEmptyLegacyPowerDNSAsPairedSecondary(
+	t *testing.T,
+) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.20")
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+	pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+	agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+	attachDNSEngineTestAgent(t, panel, agent)
+	seedDNSSetupAuditUser(t, panel)
+	stage := httptest.NewRecorder()
+	panel.handleDNSSetup(stage, dnsSetupAdminRequest(
+		`{"ns1":"ns1.example.net","ns2":"ns2.example.net","role":"paired","peer_ip":"192.0.2.10","peer_ns":"ns1.example.net"}`,
+	))
+	if stage.Code != http.StatusOK {
+		t.Fatalf("secondary stage status=%d body=%s",
+			stage.Code, stage.Body.String())
+	}
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 1,
+	)
+	wantImpacts := []string{
+		"validate_target",
+		"replace_existing",
+		"restart_target",
+		"configure_secondary",
+		"brief_dns_interruption",
+	}
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
+		preview.Action != "reconfigure" || preview.SourceEngine != nil ||
+		preview.TargetEngine != transport.DNSEnginePowerDNS ||
+		preview.Topology != transport.DNSTopologyPaired ||
+		!preview.RequiresDowntimeAcknowledgement ||
+		preview.EstimatedDowntimeSeconds != 15 ||
+		!slices.Equal(preview.Impacts, wantImpacts) {
+		t.Fatalf("reconfigure preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	withoutAck := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("8", 32),
+		transport.DNSEnginePowerDNS, nil, 1,
+		preview.PreviewToken, false,
+	)
+	if withoutAck.Code != http.StatusBadRequest {
+		t.Fatalf("reconfigure without ack status=%d body=%s",
+			withoutAck.Code, withoutAck.Body.String())
+	}
+	preview, recorder = requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, nil, 1,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf("second reconfigure preview=%+v status=%d body=%s",
+			preview, recorder.Code, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("9", 32),
+		transport.DNSEnginePowerDNS, nil, 1,
+		preview.PreviewToken, true,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf("reconfigure commit status=%d body=%s",
+			commit.Code, commit.Body.String())
+	}
+	agent.mu.Lock()
+	if len(agent.switchRequests) != 1 {
+		agent.mu.Unlock()
+		t.Fatalf("reconfigure switch requests=%d", len(agent.switchRequests))
+	}
+	request := agent.switchRequests[0]
+	agent.mu.Unlock()
+	if request.Mode != transport.DNSEngineSwitchModeSwitch ||
+		request.SourceEngine != "" ||
+		request.TargetEngine != transport.DNSEnginePowerDNS ||
+		request.Topology != transport.DNSTopologyPaired ||
+		request.PairRole != transport.DNSPairRoleSecondary ||
+		request.LocalIP != "192.0.2.20" ||
+		request.LocalNS != "ns2.example.net" ||
+		request.PeerIP != "192.0.2.10" ||
+		request.PeerNS != "ns1.example.net" ||
+		len(request.Zones) != 0 {
+		t.Fatalf("reconfigure request=%+v", request)
+	}
+	state, err := readDNSEngineDBState(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
+		state.Topology != transport.DNSTopologyPaired ||
+		state.PairRole != transport.DNSPairRoleSecondary ||
+		state.EngineEpoch != 1 {
+		t.Fatalf("reconfigured durable state=%+v", state)
 	}
 }
 

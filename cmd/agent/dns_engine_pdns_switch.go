@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,11 +13,167 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+func isPDNSPairSecondaryReconfigureManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.SourceEngine == "" && manifest.SourceEpoch == 0 &&
+		manifest.TargetEngine == transport.DNSEnginePowerDNS &&
+		manifest.TargetEpoch == 1 &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary &&
+		len(manifest.Zones) == 0 && manifest.SnapshotBytes == 0
+}
+
+var pdnsReconfigureDataTables = []string{
+	"domains",
+	"records",
+	"supermasters",
+	"comments",
+	"domainmetadata",
+	"cryptokeys",
+	"tsigkeys",
+	"celikpanel_dns_zone_sync_receipts",
+	"celikpanel_dns_zone_sync_v3_receipts",
+	"celikpanel_dns_engine_manifest_receipt",
+}
+
+func requireNoPDNSDatabaseSidecars(path string) error {
+	for _, suffix := range []string{"-journal", "-wal", "-shm"} {
+		if _, err := os.Lstat(path + suffix); !errors.Is(err, os.ErrNotExist) {
+			if err == nil {
+				err = errors.New(
+					"PowerDNS database has an unresolved SQLite sidecar",
+				)
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// verifyEmptyStandalonePDNSDatabase proves that an unreceipted, already
+// running PowerDNS contains no authority that could be destroyed by the
+// secondary candidate replacement. It is read-only and rejects unfamiliar
+// application tables, incomplete schemas, sidecars and non-DELETE journaling.
+func verifyEmptyStandalonePDNSDatabase(
+	ctx context.Context,
+	path string,
+) error {
+	if _, _, _, err := inspectPDNSDatabaseFile(path, false); err != nil {
+		return err
+	}
+	if err := requireNoPDNSDatabaseSidecars(path); err != nil {
+		return err
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		return err
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			_ = db.Close()
+		}
+	}()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var journalMode, integrity string
+	if err := tx.QueryRowContext(ctx, `PRAGMA journal_mode`).Scan(
+		&journalMode,
+	); err != nil || !strings.EqualFold(journalMode, "delete") {
+		if err == nil {
+			err = errors.New(
+				"PowerDNS database must use DELETE journaling before replacement",
+			)
+		}
+		return err
+	}
+	if err := tx.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(
+		&integrity,
+	); err != nil || integrity != "ok" {
+		if err == nil {
+			err = errors.New("PowerDNS database failed quick_check")
+		}
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT name FROM sqlite_master
+		WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+		ORDER BY name COLLATE BINARY
+	`)
+	if err != nil {
+		return err
+	}
+	found := make(map[string]bool, len(pdnsReconfigureDataTables))
+	allowed := make(map[string]bool, len(pdnsReconfigureDataTables))
+	for _, table := range pdnsReconfigureDataTables {
+		allowed[table] = true
+	}
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err != nil {
+			rows.Close()
+			return err
+		}
+		if !allowed[table] {
+			rows.Close()
+			return fmt.Errorf(
+				"PowerDNS database contains an unrecognized table %q", table,
+			)
+		}
+		found[table] = true
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, table := range pdnsReconfigureDataTables {
+		// The two V3 tables are absent on a legitimate legacy database.
+		optional := table == pdnsV3ReceiptTable ||
+			table == "celikpanel_dns_engine_manifest_receipt"
+		if !found[table] {
+			if optional {
+				continue
+			}
+			return fmt.Errorf(
+				"PowerDNS database is missing required table %q", table,
+			)
+		}
+		var count int
+		if err := tx.QueryRowContext(
+			ctx, "SELECT count(*) FROM "+table,
+		).Scan(&count); err != nil {
+			return err
+		}
+		if count != 0 {
+			return fmt.Errorf(
+				"PowerDNS database table %q is not empty", table,
+			)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if err := db.Close(); err != nil {
+		return err
+	}
+	closed = true
+	return requireNoPDNSDatabaseSidecars(path)
+}
 
 type pdnsConfigMutation struct {
 	before  []dnsFileSnapshot
@@ -401,6 +558,7 @@ func switchToPDNS(
 	if manifest.Mode != transport.DNSEngineSwitchModeSwitch {
 		return transport.SwitchDNSEngineV1Response{}, errors.New("PowerDNS engine operation mode is unsupported")
 	}
+	reconfigureSecondary := isPDNSPairSecondaryReconfigureManifest(manifest)
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -470,6 +628,11 @@ func switchToPDNS(
 			missing = append(missing, packageName)
 		}
 	}
+	if reconfigureSecondary && len(missing) != 0 {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"PowerDNS secondary reconfiguration cannot install missing packages",
+		)
+	}
 	if len(missing) != 0 {
 		installReceipt, receiptErr := newDNSEngineInstallOwnership(
 			transport.DNSEnginePowerDNS, profile.PackageManager,
@@ -528,6 +691,11 @@ func switchToPDNS(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if reconfigureSecondary && !liveExists {
+		return transport.SwitchDNSEngineV1Response{}, errors.New(
+			"PowerDNS secondary reconfiguration requires the existing live database",
+		)
+	}
 	journal := dnsEngineSwitchJournal{
 		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
 		Mode:              manifest.Mode,
@@ -544,10 +712,37 @@ func switchToPDNS(
 	if liveExists {
 		journal.PDNSBackupSHA256, journal.PDNSBackupSize = liveHash, liveSize
 	}
-	writeIntent := func() error { return writeDNSEngineSwitchJournal(journal) }
+	writeIntent := func() error {
+		if reconfigureSecondary {
+			actualState, actualExists, err := readDNSEngineState()
+			if err != nil {
+				return err
+			}
+			if err := verifyDNSEngineSwitchSource(
+				ctx, profile, manifest, actualState, actualExists,
+			); err != nil {
+				return err
+			}
+			exists, size, digest, err := inspectPDNSDatabaseFile(
+				pdnsDBPath(), false,
+			)
+			if err != nil {
+				return err
+			}
+			if !exists || size != liveSize || digest != liveHash {
+				return errors.New(
+					"PowerDNS database changed before the reconfiguration journal",
+				)
+			}
+		}
+		return writeDNSEngineSwitchJournal(journal)
+	}
 	if len(missing) == 0 {
 		if err := runDNSPort53PreMutationGuard(
-			ctx, !stateExists && manifest.SourceEngine == "", writeIntent,
+			ctx,
+			!stateExists && manifest.SourceEngine == "" &&
+				!reconfigureSecondary,
+			writeIntent,
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
