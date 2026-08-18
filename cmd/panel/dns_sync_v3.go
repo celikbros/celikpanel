@@ -67,6 +67,70 @@ type dnsZoneExistingLegacyLeaseError struct {
 	State dnsZoneSyncState
 }
 
+type dnsZoneV3PropagationPendingError struct{}
+
+func (*dnsZoneV3PropagationPendingError) Error() string {
+	return "DNS zone publication is waiting for exact paired propagation recovery"
+}
+
+var errDNSZoneV3PropagationDeferred = errors.New(
+	"DNS zone V3 paired propagation recovery is deferred",
+)
+
+func dnsZoneSyncV3PendingPhase(identity agentMutationIdentity) (string, error) {
+	return dnsZoneSyncV3CommitPhase(identity, "propagation-pending")
+}
+
+func dnsZoneSyncV3RecoveringPhase(identity agentMutationIdentity) (string, error) {
+	return dnsZoneSyncV3CommitPhase(identity, "recovering")
+}
+
+func dnsZoneSyncV3CommitPhase(
+	identity agentMutationIdentity,
+	state string,
+) (string, error) {
+	canonical, err := hostname.CanonicalFQDN(identity.Target)
+	if err != nil || canonical != identity.Target ||
+		!validServiceOperationID(identity.RequestID) ||
+		!validServiceOperationID(identity.OwnerID) ||
+		identity.Kind != "dns_zone_sync" ||
+		!mutationpayload.ValidDNSZoneSyncV3Qualifier(identity.PackageName) ||
+		(state != "propagation-pending" && state != "recovering") {
+		return "", errors.New("invalid DNS zone V3 commit identity")
+	}
+	return "commit/dns-zone-sync/v3/" + state + "/" +
+		identity.RequestID + "/" + identity.Target + "/" +
+		identity.PackageName, nil
+}
+
+func validateDNSZoneSyncV3PendingJob(
+	job *agentMutationJob,
+	identity agentMutationIdentity,
+) error {
+	if err := validateAgentMutationIdentity(job, identity); err != nil {
+		return err
+	}
+	want, err := dnsZoneSyncV3PendingPhase(identity)
+	if err != nil || job.Status != agentMutationPending || job.Phase != want {
+		return errors.New("agent DNS zone V3 pending receipt is not exact")
+	}
+	return nil
+}
+
+func validateDNSZoneSyncV3RecoveringJob(
+	job *agentMutationJob,
+	identity agentMutationIdentity,
+) error {
+	if err := validateAgentMutationIdentity(job, identity); err != nil {
+		return err
+	}
+	want, err := dnsZoneSyncV3RecoveringPhase(identity)
+	if err != nil || !agentMutationActive(job.Status) || job.Phase != want {
+		return errors.New("agent DNS zone V3 recovering receipt is not exact")
+	}
+	return nil
+}
+
 func (err *dnsZoneExistingLegacyLeaseError) Error() string {
 	return fmt.Sprintf("DNS zone %s retains a legacy PowerDNS publication lease", err.State.ZoneName)
 }
@@ -679,6 +743,128 @@ func (p *Panel) releaseDNSZoneEngineLease(
 	return tx.Commit()
 }
 
+func (p *Panel) recoverPendingDNSZoneV3(
+	ctx context.Context,
+	lease dnsZoneEngineLease,
+) (bool, error) {
+	if !lease.valid() {
+		return false, errors.New("DNS V3 recovery has no exact durable lease")
+	}
+	if err := p.requireDNSZoneSyncV3Agent(ctx); err != nil {
+		return false, &dnsAgentPublicationError{Err: fmt.Errorf(
+			"verify DNS V3 recovery capability: %w", err,
+		)}
+	}
+	op := serviceOperation{
+		RequestID:   lease.RequestID,
+		Kind:        "dns_zone_sync",
+		ServiceID:   lease.ZoneName,
+		PackageName: lease.Qualifier,
+	}
+	var response transport.RecoverDNSZoneV3Response
+	attemptCtx, cancelAttempt := context.WithTimeout(
+		ctx, panelMutationRecoveryTimeout,
+	)
+	callErr := p.withResumedStandaloneAgentMutationIdentity(
+		attemptCtx,
+		op,
+		lease.OwnerID,
+		func(callCtx context.Context, binding agentMutationBinding) error {
+			return p.callRecoverDNSZoneV3(
+				callCtx, lease, binding, &response,
+			)
+		},
+	)
+	cancelAttempt()
+
+	statusCtx, cancelStatus := dnsZoneFinalizeContext(ctx)
+	job, statusErr := p.statusAgentMutation(statusCtx, lease.RequestID)
+	cancelStatus()
+	if statusErr != nil {
+		return false, &dnsAgentPublicationError{Err: errors.Join(
+			callErr,
+			fmt.Errorf("read exact DNS V3 recovery status: %w", statusErr),
+		)}
+	}
+	identity := lease.identity()
+	if job == nil {
+		return false, &dnsAgentPublicationError{Err: errors.Join(
+			callErr,
+			errors.New("exact DNS V3 recovery job disappeared"),
+		)}
+	}
+	if err := validateAgentMutationIdentity(job, identity); err != nil {
+		return false, err
+	}
+	if agentMutationActive(job.Status) {
+		if err := validateDNSZoneSyncV3RecoveringJob(job, identity); err != nil {
+			return false, err
+		}
+		waitCtx, cancelWait := context.WithTimeout(
+			ctx, panelMutationRecoveryTimeout,
+		)
+		waited, waitErr := p.waitExpectedAgentMutationTerminal(
+			waitCtx, identity,
+		)
+		cancelWait()
+		if waited != nil {
+			job = waited
+		}
+		if waitErr != nil {
+			if job != nil &&
+				validateDNSZoneSyncV3RecoveringJob(job, identity) == nil {
+				return false, &dnsAgentPublicationError{Err: fmt.Errorf(
+					"%w: exact recovering attempt remains active: %v",
+					errDNSZoneV3PropagationDeferred,
+					errors.Join(callErr, waitErr),
+				)}
+			}
+			return false, &dnsAgentPublicationError{Err: errors.Join(
+				callErr,
+				fmt.Errorf("wait for exact DNS V3 recovery: %w", waitErr),
+			)}
+		}
+		if job == nil {
+			return false, errors.New("exact DNS V3 recovery disappeared while waiting")
+		}
+		if err := validateAgentMutationIdentity(job, identity); err != nil {
+			return false, err
+		}
+	}
+	if job.Status == agentMutationSucceeded {
+		if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+			return false, err
+		}
+		finalizeCtx, cancelFinalize := dnsZoneFinalizeContext(ctx)
+		exact, err := p.recordDNSZoneSyncV3Success(finalizeCtx, lease)
+		cancelFinalize()
+		return exact, err
+	}
+	if job.Status == agentMutationPending {
+		if err := validateDNSZoneSyncV3PendingJob(job, identity); err != nil {
+			return false, err
+		}
+		return false, &dnsAgentPublicationError{Err: fmt.Errorf(
+			"%w: %v",
+			errDNSZoneV3PropagationDeferred,
+			errors.Join(callErr, &dnsZoneV3PropagationPendingError{}),
+		)}
+	}
+	if agentMutationActive(job.Status) {
+		return false, &dnsAgentPublicationError{Err: errors.Join(
+			callErr,
+			errors.New("exact DNS V3 recovery remains active"),
+		)}
+	}
+	return false, &dnsAgentPublicationError{Err: errors.Join(
+		callErr,
+		fmt.Errorf(
+			"exact committed DNS V3 recovery ended with unsafe status %s",
+			job.Status,
+		),
+	)}
+}
+
 func (p *Panel) settleDNSZoneSyncV3CallError(
 	ctx context.Context,
 	lease dnsZoneEngineLease,
@@ -710,6 +896,18 @@ func (p *Panel) settleDNSZoneSyncV3CallError(
 			callErr,
 			errors.New("exact DNS V3 publication remains active for startup recovery"),
 		)}
+	}
+	if job.Status == agentMutationPending {
+		if err := validateDNSZoneSyncV3PendingJob(job, lease.identity()); err != nil {
+			return false, false, err
+		}
+		exact, recoverErr := p.recoverPendingDNSZoneV3(ctx, lease)
+		if recoverErr != nil {
+			return false, false, &dnsAgentPublicationError{Err: errors.Join(
+				callErr, recoverErr,
+			)}
+		}
+		return exact, !exact, nil
 	}
 	finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
 	defer cancel()
@@ -759,6 +957,12 @@ func (p *Panel) reconcileDNSZoneEngineLease(
 		if job == nil {
 			return false, errors.New("durable DNS V3 publication disappeared during recovery")
 		}
+	}
+	if job.Status == agentMutationPending {
+		if err := validateDNSZoneSyncV3PendingJob(job, identity); err != nil {
+			return false, err
+		}
+		return p.recoverPendingDNSZoneV3(ctx, lease)
 	}
 	finalizeCtx, cancel := dnsZoneFinalizeContext(ctx)
 	defer cancel()
@@ -823,6 +1027,13 @@ func (p *Panel) recoverDirectDNSZoneSyncV3Locked(
 	}
 	done, err := p.reconcileDNSZoneEngineLease(batchCtx, lease, true)
 	if err != nil {
+		if errors.Is(err, errDNSZoneV3PropagationDeferred) {
+			log.Printf(
+				"deferring exact DNS V3 publication %s until paired propagation is ready: %v",
+				lease.ZoneName, err,
+			)
+			return nil
+		}
 		return err
 	}
 	if !done {

@@ -41,6 +41,9 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 	if serviceMutationStepSyncDNSZoneV3 != "Agent.SyncDNSZoneV3" {
 		t.Fatalf("DNS zone V3 mutation method=%q", serviceMutationStepSyncDNSZoneV3)
 	}
+	if serviceMutationStepRecoverDNSZoneV3 != "Agent.RecoverDNSZoneV3" {
+		t.Fatalf("DNS zone V3 recovery method=%q", serviceMutationStepRecoverDNSZoneV3)
+	}
 	if serviceMutationStepSwitchDNSEngine != "Agent.SwitchDNSEngineV1" {
 		t.Fatalf("DNS engine switch mutation method=%q", serviceMutationStepSwitchDNSEngine)
 	}
@@ -87,6 +90,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"delete dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "delete")},
 		{"sync BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "sync")},
 		{"delete BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "delete")},
+		{"recover DNS zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepRecoverDNSZoneV3, "example.com", dnsV3Qualifier, "recover")},
 		{"switch DNS engine to BIND", mutationPolicyJob("dns_engine_switch", "bind", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "bind", dnsSwitchQualifier, "switch")},
 		{"switch DNS engine to PowerDNS", mutationPolicyJob("dns_engine_switch", "pdns", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "pdns", dnsSwitchQualifier, "switch")},
 		{"adopt managed PowerDNS", mutationPolicyJob("dns_engine_switch", "pdns", dnsSwitchQualifier), mutationPolicyClaim(serviceMutationStepSwitchDNSEngine, "pdns", dnsSwitchQualifier, "adopt")},
@@ -134,6 +138,7 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		serviceMutationStepConfigureDKIMSigning,
 		serviceMutationStepSyncDNSZone,
 		serviceMutationStepSyncDNSZoneV3,
+		serviceMutationStepRecoverDNSZoneV3,
 		serviceMutationStepSwitchDNSEngine,
 		serviceMutationStepConfigurePowerDNSSQLite,
 		serviceMutationStepApplyFirewall,
@@ -314,6 +319,7 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		"serviceMutationStepConfigureDKIMSigning":    true,
 		"serviceMutationStepSyncDNSZone":             true,
 		"serviceMutationStepSyncDNSZoneV3":           true,
+		"serviceMutationStepRecoverDNSZoneV3":        true,
 		"serviceMutationStepSwitchDNSEngine":         true,
 		"serviceMutationStepSecureDNSZone":           true,
 		"serviceMutationStepConfigureDNSCluster":     true,
@@ -398,8 +404,8 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 		}
 	}
 
-	if len(seenMethods) != 29 {
-		t.Errorf("production requiredServiceMutationStep claim count=%d want=29", len(seenMethods))
+	if len(seenMethods) != 30 {
+		t.Errorf("production requiredServiceMutationStep claim count=%d want=30", len(seenMethods))
 	}
 	for method := range expectedMethods {
 		if seenMethods[method] == "" {

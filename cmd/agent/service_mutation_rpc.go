@@ -27,6 +27,7 @@ const (
 	serviceMutationStatusRunning    = "running"
 	serviceMutationStatusCancelling = "cancelling"
 	serviceMutationStatusOrphaned   = "orphaned"
+	serviceMutationStatusPending    = "pending"
 	serviceMutationStatusSucceeded  = "succeeded"
 	serviceMutationStatusFailed     = "failed"
 
@@ -116,6 +117,9 @@ type serviceMutationRuntime struct {
 	dnsClusterConfigCommittedPhase      string
 	dnsZoneSyncAppliedPhase             string
 	dnsZoneSyncPublishedPhase           string
+	dnsZoneSyncV3AppliedPhase           string
+	dnsZoneSyncV3Recovery               bool
+	dnsZoneSyncV3PendingPhase           string
 	panelCertificateIssuePublishedPhase string
 }
 
@@ -568,14 +572,32 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 				return errors.New("service mutation ledger DNS zone commit receipt conflicts with job status")
 			}
 		}
-		if strings.HasPrefix(job.Phase, dnsZoneSyncV3PublishedPhasePrefix) {
-			requestID, domain, qualifier, err := parseDNSZoneSyncV3PublishedPhase(job.Phase)
+		if strings.HasPrefix(job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
+			state, requestID, domain, qualifier, err :=
+				parseDNSZoneSyncV3Phase(job.Phase)
 			if err != nil || requestID != job.RequestID || domain != job.Target ||
 				qualifier != job.PackageName || job.Kind != "dns_zone_sync" ||
-				!serviceMutationCanonicalFQDN(job.Target) ||
-				job.Status != serviceMutationStatusSucceeded {
-				return errors.New("service mutation ledger has an invalid DNS zone V3 published receipt")
+				!serviceMutationCanonicalFQDN(job.Target) {
+				return errors.New("service mutation ledger has an invalid DNS zone V3 receipt")
 			}
+			validStatus := false
+			switch state {
+			case dnsZoneSyncV3Applied:
+				validStatus = serviceMutationStatusActive(job.Status)
+			case dnsZoneSyncV3PropagationPending:
+				validStatus = job.Status == serviceMutationStatusPending
+			case dnsZoneSyncV3Recovering:
+				validStatus = serviceMutationStatusActive(job.Status)
+			case dnsZoneSyncV3Published:
+				validStatus = job.Status == serviceMutationStatusSucceeded
+			}
+			if !validStatus {
+				return errors.New("service mutation ledger DNS zone V3 receipt conflicts with job status")
+			}
+		}
+		if job.Status == serviceMutationStatusPending &&
+			!strings.HasPrefix(job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
+			return errors.New("pending service mutation lacks an exact DNS zone V3 receipt")
 		}
 		if strings.HasPrefix(job.Phase, panelCertificateIssueCommitPhasePrefix) {
 			state, requestID, domain, qualifier, err :=
@@ -628,7 +650,8 @@ func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
 				return errors.New("service mutation ledger contains multiple active jobs")
 			}
 			activeRequestID = requestID
-		case serviceMutationStatusSucceeded, serviceMutationStatusFailed:
+		case serviceMutationStatusPending,
+			serviceMutationStatusSucceeded, serviceMutationStatusFailed:
 			if hasWorkerPID {
 				return errors.New("terminal service mutation ledger job retains a worker")
 			}
@@ -703,7 +726,14 @@ func serviceMutationWriteMayHavePublished(err error) bool {
 func (m *serviceMutationManager) persistLedgerMutationLocked(
 	before serviceMutationLedger,
 ) error {
-	err := m.writeLocked()
+	return m.persistLedgerMutationProtectedLocked(before, "")
+}
+
+func (m *serviceMutationManager) persistLedgerMutationProtectedLocked(
+	before serviceMutationLedger,
+	protectedRequestID string,
+) error {
+	err := m.writeProtectedLocked(protectedRequestID)
 	if err != nil && m.poisoned == nil {
 		m.restoreLedgerLocked(before)
 	}
@@ -1040,6 +1070,16 @@ func serviceMutationIdentityMatches(job *ServiceMutationJob, request *ServiceMut
 		job.PackageName == request.PackageName
 }
 
+func serviceMutationDNSKind(kind string) bool {
+	switch kind {
+	case "dns_zone_sync", "dns_engine_switch", "dns_cluster_configure",
+		"dnssec_secure", "pdns_configure":
+		return true
+	default:
+		return false
+	}
+}
+
 func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*ServiceMutationJob, error) {
 	if request == nil || !validMutationIdentity(request.RequestID) ||
 		!validMutationIdentity(request.OwnerID) ||
@@ -1131,6 +1171,9 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		return closeLock(m.ledger.Jobs[m.ledger.ActiveRequestID], errServiceMutationBusy)
 	}
 	previous := m.ledger.Jobs[request.RequestID]
+	pendingRecovery := false
+	pendingPhase := ""
+	recoveringPhase := ""
 	if previous != nil {
 		if !serviceMutationIdentityMatches(previous, request) {
 			return closeLock(previous, errors.New("request_id belongs to another service mutation"))
@@ -1138,8 +1181,48 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		if !request.Resume {
 			return closeLock(previous, nil)
 		}
-		if previous.Status != serviceMutationStatusFailed {
-			return closeLock(previous, errors.New("only an interrupted failed mutation can be resumed"))
+		switch previous.Status {
+		case serviceMutationStatusFailed:
+		case serviceMutationStatusPending:
+			state, requestID, domain, qualifier, parseErr :=
+				parseDNSZoneSyncV3Phase(previous.Phase)
+			if parseErr != nil || state != dnsZoneSyncV3PropagationPending ||
+				requestID != previous.RequestID || previous.OwnerID != request.OwnerID ||
+				domain != previous.Target || qualifier != previous.PackageName ||
+				previous.Kind != "dns_zone_sync" {
+				return closeLock(previous, errors.New(
+					"only the exact pending DNS zone V3 mutation owner may resume recovery",
+				))
+			}
+			pendingRecovery = true
+			pendingPhase = previous.Phase
+			recoveringPhase, parseErr = formatDNSZoneSyncV3Phase(
+				dnsZoneSyncV3Recovering,
+				previous.RequestID,
+				previous.Target,
+				previous.PackageName,
+			)
+			if parseErr != nil {
+				return closeLock(previous, parseErr)
+			}
+		default:
+			return closeLock(previous, errors.New(
+				"only an interrupted failed or exact pending mutation can be resumed",
+			))
+		}
+	}
+	if !pendingRecovery && serviceMutationDNSKind(request.Kind) {
+		pending := false
+		for _, retained := range m.ledger.Jobs {
+			if retained != nil && retained.Status == serviceMutationStatusPending {
+				pending = true
+				break
+			}
+		}
+		if pending {
+			return closeLock(nil, errors.New(
+				"an exact DNS zone V3 publication is pending recovery",
+			))
 		}
 	}
 	busy, err := packageManagerMutationBusy()
@@ -1154,10 +1237,16 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	startedAt := now
 	if previous != nil {
 		attempt = previous.Attempt + 1
-		startedAt = previous.StartedAt
+		if !pendingRecovery {
+			startedAt = previous.StartedAt
+		}
 	}
 	deadline := now.Add(m.overallDuration)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	phase := "leased"
+	if pendingRecovery {
+		phase = recoveringPhase
+	}
 	job := &ServiceMutationJob{
 		RequestID:      request.RequestID,
 		OwnerID:        request.OwnerID,
@@ -1165,7 +1254,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		Target:         request.Target,
 		PackageName:    request.PackageName,
 		Status:         serviceMutationStatusRunning,
-		Phase:          "leased",
+		Phase:          phase,
 		Attempt:        attempt,
 		StartedAt:      startedAt,
 		UpdatedAt:      now,
@@ -1173,7 +1262,12 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		DeadlineAt:     deadline,
 	}
 	runtime := &serviceMutationRuntime{
-		job: job, lock: lock, ctx: ctx, cancel: cancel,
+		job:                       job,
+		lock:                      lock,
+		ctx:                       ctx,
+		cancel:                    cancel,
+		dnsZoneSyncV3Recovery:     pendingRecovery,
+		dnsZoneSyncV3PendingPhase: pendingPhase,
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	m.ledger.ActiveRequestID = job.RequestID
@@ -1281,7 +1375,8 @@ func (m *serviceMutationManager) expire(runtime *serviceMutationRuntime) {
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusCancelling
-	if !strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
+	if !strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
 		runtime.job.Phase = "cancelling_expired_lease"
 	}
 	runtime.job.ErrorCode = "service_mutation_lease_expired"
@@ -1309,9 +1404,8 @@ func (m *serviceMutationManager) finishExpired(runtime *serviceMutationRuntime) 
 		runtime.job.Status != serviceMutationStatusCancelling {
 		return
 	}
-	if err := m.finishRuntimeLocked(
+	if err := m.finishRuntimeAfterFailureLocked(
 		runtime,
-		false,
 		runtime.job.ErrorCode,
 		runtime.job.ErrorMessage,
 	); err != nil && m.poisoned == nil {
@@ -1378,6 +1472,7 @@ func (m *serviceMutationManager) heartbeat(
 		!strings.HasPrefix(runtime.job.Phase, mailTLSSyncCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsClusterConfigCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncV3CommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
 		runtime.job.Phase = phase
 	}
@@ -1498,6 +1593,7 @@ func (m *serviceMutationManager) cancelJob(
 		!strings.HasPrefix(runtime.job.Phase, mailTLSSyncCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsClusterConfigCommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncCommitPhasePrefix) &&
+		!strings.HasPrefix(runtime.job.Phase, dnsZoneSyncV3CommitPhasePrefix) &&
 		!strings.HasPrefix(runtime.job.Phase, panelCertificateIssueCommitPhasePrefix) {
 		runtime.job.Phase = "cancelling"
 		if reason := strings.TrimSpace(request.Reason); reason != "" {
@@ -1609,13 +1705,18 @@ func (m *serviceMutationManager) finish(
 			)
 		}
 	}
-	if err := m.finishRuntimeLocked(
-		runtime,
-		request.Success,
-		request.FailureCode,
-		request.Message,
-	); err != nil {
-		return cloneServiceMutationJob(runtime.job), err
+	var finishErr error
+	if request.Success {
+		finishErr = m.finishRuntimeLocked(
+			runtime, true, request.FailureCode, request.Message,
+		)
+	} else {
+		finishErr = m.finishRuntimeAfterFailureLocked(
+			runtime, request.FailureCode, request.Message,
+		)
+	}
+	if finishErr != nil {
+		return cloneServiceMutationJob(runtime.job), finishErr
 	}
 	return cloneServiceMutationJob(runtime.job), nil
 }
@@ -1630,6 +1731,86 @@ func (m *serviceMutationManager) finishRuntimeLocked(
 		phase = "failed"
 	}
 	return m.finishRuntimeTerminalLocked(runtime, success, phase, code, message)
+}
+
+func (m *serviceMutationManager) finishRuntimeAfterFailureLocked(
+	runtime *serviceMutationRuntime,
+	code, message string,
+) error {
+	if runtime != nil && (runtime.dnsZoneSyncV3Recovery ||
+		runtime.dnsZoneSyncV3AppliedPhase != "") {
+		phase := runtime.dnsZoneSyncV3PendingPhase
+		if phase == "" && runtime.job != nil {
+			var err error
+			phase, err = formatDNSZoneSyncV3Phase(
+				dnsZoneSyncV3PropagationPending,
+				runtime.job.RequestID,
+				runtime.job.Target,
+				runtime.job.PackageName,
+			)
+			if err != nil {
+				return err
+			}
+		}
+		return m.finishRuntimeDNSZoneV3PendingLocked(
+			runtime, phase,
+		)
+	}
+	return m.finishRuntimeLocked(runtime, false, code, message)
+}
+
+func (m *serviceMutationManager) finishRuntimeDNSZoneV3PendingLocked(
+	runtime *serviceMutationRuntime,
+	phase string,
+) error {
+	if runtime == nil || runtime.job == nil {
+		return errors.New("DNS zone V3 pending runtime is required")
+	}
+	if m.active != runtime {
+		if runtime.job.Status == serviceMutationStatusPending &&
+			runtime.job.Phase == phase {
+			return nil
+		}
+		return errors.New("service mutation runtime changed")
+	}
+	state, requestID, domain, qualifier, err := parseDNSZoneSyncV3Phase(phase)
+	if err != nil || state != dnsZoneSyncV3PropagationPending ||
+		requestID != runtime.job.RequestID || domain != runtime.job.Target ||
+		qualifier != runtime.job.PackageName ||
+		runtime.job.Kind != "dns_zone_sync" ||
+		(runtime.job.Status != serviceMutationStatusRunning &&
+			runtime.job.Status != serviceMutationStatusCancelling) ||
+		runtime.steps > 1 || runtime.job.WorkerPID != 0 {
+		return errors.New("DNS zone V3 pending receipt lost its exact runtime identity")
+	}
+	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
+	runtime.job.Status = serviceMutationStatusPending
+	runtime.job.Phase = phase
+	runtime.job.ErrorCode = "dns_zone_v3_propagation_pending"
+	runtime.job.ErrorMessage =
+		"The exact local DNS publication is waiting for paired propagation recovery."
+	runtime.job.UpdatedAt = now
+	runtime.job.FinishedAt = now
+	runtime.job.LeaseExpiresAt = time.Time{}
+	runtime.job.WorkerPID = 0
+	runtime.job.WorkerStarted = ""
+	runtime.job.WorkerCommand = ""
+	runtime.dnsZoneSyncV3PendingPhase = phase
+	m.ledger.ActiveRequestID = ""
+	if err := m.persistLedgerMutationProtectedLocked(
+		before, runtime.job.RequestID,
+	); err != nil {
+		return err
+	}
+	runtime.cancel()
+	lockErr := runtime.lock.Close()
+	m.active = nil
+	m.trimHistoryLocked(runtime.job.RequestID)
+	if lockErr != nil {
+		return fmt.Errorf("release service mutation host lock: %w", lockErr)
+	}
+	return nil
 }
 
 func (m *serviceMutationManager) finishRuntimeTerminalLocked(
@@ -1669,13 +1850,15 @@ func (m *serviceMutationManager) finishRuntimeTerminalLocked(
 	runtime.job.WorkerStarted = ""
 	runtime.job.WorkerCommand = ""
 	m.ledger.ActiveRequestID = ""
-	if err := m.persistLedgerMutationLocked(before); err != nil {
+	if err := m.persistLedgerMutationProtectedLocked(
+		before, runtime.job.RequestID,
+	); err != nil {
 		return err
 	}
 	runtime.cancel()
 	lockErr := runtime.lock.Close()
 	m.active = nil
-	m.trimHistoryLocked()
+	m.trimHistoryLocked(runtime.job.RequestID)
 	if lockErr != nil {
 		return fmt.Errorf("release service mutation host lock: %w", lockErr)
 	}
@@ -1746,9 +1929,15 @@ func (m *serviceMutationManager) acquireStep(
 	return ctx, done, nil
 }
 
-func (m *serviceMutationManager) trimHistoryLocked() {
+func (m *serviceMutationManager) trimHistoryLocked(
+	protectedRequestIDs ...string,
+) {
 	if len(m.ledger.Jobs) <= serviceMutationHistoryLimit {
 		return
+	}
+	protectedRequestID := ""
+	if len(protectedRequestIDs) > 0 {
+		protectedRequestID = protectedRequestIDs[0]
 	}
 	type finishedJob struct {
 		id   string
@@ -1756,7 +1945,10 @@ func (m *serviceMutationManager) trimHistoryLocked() {
 	}
 	var terminal []finishedJob
 	for id, job := range m.ledger.Jobs {
-		if id == m.ledger.ActiveRequestID || serviceMutationStatusActive(job.Status) {
+		if id == m.ledger.ActiveRequestID ||
+			id == protectedRequestID ||
+			serviceMutationStatusActive(job.Status) ||
+			job.Status == serviceMutationStatusPending {
 			continue
 		}
 		terminal = append(terminal, finishedJob{id: id, when: job.FinishedAt})
@@ -1769,10 +1961,16 @@ func (m *serviceMutationManager) trimHistoryLocked() {
 }
 
 func (m *serviceMutationManager) writeLocked() error {
+	return m.writeProtectedLocked("")
+}
+
+func (m *serviceMutationManager) writeProtectedLocked(
+	protectedRequestID string,
+) error {
 	if err := m.healthErrorLocked(); err != nil {
 		return err
 	}
-	m.trimHistoryLocked()
+	m.trimHistoryLocked(protectedRequestID)
 	if err := validateServiceMutationLedger(&m.ledger); err != nil {
 		return fmt.Errorf("validate service mutation ledger before write: %w", err)
 	}

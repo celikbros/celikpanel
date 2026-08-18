@@ -126,9 +126,12 @@ func completeManagedBINDV3PropagationAt(
 	if err := prepareBINDV3PrimaryPropagationAt(
 		ctx, plan, run,
 	); err != nil {
-		return err
+		return dnsZoneV3RecoveryPending(err)
 	}
-	return complete(ctx, plan)
+	if err := complete(ctx, plan); err != nil {
+		return dnsZoneV3RecoveryPending(err)
+	}
+	return nil
 }
 
 func expectedBINDTreeAuthorities(

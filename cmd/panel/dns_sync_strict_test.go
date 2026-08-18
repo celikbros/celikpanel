@@ -80,6 +80,7 @@ func (a *strictDNSRPCAgent) Version(
 	capabilities := []string{
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityDNSSECSecureV2,
 		transport.AgentCapabilityDNSClusterConfigureV2,
 	}

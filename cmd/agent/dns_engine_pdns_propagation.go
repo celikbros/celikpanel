@@ -92,24 +92,24 @@ func preparePDNSV3PropagationAt(
 		return run(commandCtx, args...)
 	}
 	if err := runBounded("purge", plan.Changed.Domain+"$"); err != nil {
-		return errors.New("PowerDNS zone cache purge failed")
+		return dnsZoneV3RecoveryPending(errors.New("PowerDNS zone cache purge failed"))
 	}
 	if !plan.Primary {
 		return nil
 	}
 	if err := runBounded("purge", plan.Evidence.Domain+"$"); err != nil {
-		return errors.New("PowerDNS catalog cache purge failed")
+		return dnsZoneV3RecoveryPending(errors.New("PowerDNS catalog cache purge failed"))
 	}
 	if err := runBounded(
 		"notify-host", plan.Evidence.Domain, plan.Evidence.PeerIP,
 	); err != nil {
-		return errors.New("PowerDNS paired catalog notification failed")
+		return dnsZoneV3RecoveryPending(errors.New("PowerDNS paired catalog notification failed"))
 	}
 	if !plan.Changed.Delete {
 		if err := runBounded(
 			"notify-host", plan.Changed.Domain, plan.Evidence.PeerIP,
 		); err != nil {
-			return errors.New("PowerDNS paired member notification failed")
+			return dnsZoneV3RecoveryPending(errors.New("PowerDNS paired member notification failed"))
 		}
 	}
 	return nil
@@ -157,10 +157,11 @@ func completePDNSV3Propagation(
 	if !plan.Primary {
 		return nil
 	}
-	return completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
+	err := completeDNSV3PrimaryPropagation(ctx, dnsV3PrimaryPropagationPlan{
 		Evidence: plan.Evidence,
 		Changed:  plan.Changed,
 	})
+	return dnsZoneV3RecoveryPending(err)
 }
 
 func completeDNSV3PrimaryPropagation(

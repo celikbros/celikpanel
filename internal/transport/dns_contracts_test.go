@@ -91,6 +91,55 @@ func TestDNSZoneSyncV3WireContractBindsEngineAndEpoch(t *testing.T) {
 	}
 }
 
+func TestDNSZoneV3PendingAndRecoveryWireContractsPreserveExactBinding(t *testing.T) {
+	pending := SyncDNSZoneV3Response{
+		RecoveryPending: true, Engine: DNSEngineBIND,
+		EngineEpoch: 4, AppliedGeneration: 19,
+	}
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(pending); err != nil {
+		t.Fatal(err)
+	}
+	var gotPending SyncDNSZoneV3Response
+	if err := gob.NewDecoder(&wire).Decode(&gotPending); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotPending, pending) {
+		t.Fatalf("pending response round trip got=%#v want=%#v", gotPending, pending)
+	}
+
+	recovery := RecoverDNSZoneV3Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: "request", MutationOwnerID: "owner",
+		},
+		Domain:    "example.test",
+		Qualifier: "dns-zone-sync/v3:sha256:digest",
+	}
+	wire.Reset()
+	if err := gob.NewEncoder(&wire).Encode(recovery); err != nil {
+		t.Fatal(err)
+	}
+	var gotRecovery RecoverDNSZoneV3Request
+	if err := gob.NewDecoder(&wire).Decode(&gotRecovery); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotRecovery, recovery) {
+		t.Fatalf("recovery request round trip got=%#v want=%#v", gotRecovery, recovery)
+	}
+	wantResponse := RecoverDNSZoneV3Response{RecoveryPending: true}
+	wire.Reset()
+	if err := gob.NewEncoder(&wire).Encode(wantResponse); err != nil {
+		t.Fatal(err)
+	}
+	var gotResponse RecoverDNSZoneV3Response
+	if err := gob.NewDecoder(&wire).Decode(&gotResponse); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotResponse, wantResponse) {
+		t.Fatalf("recovery response round trip got=%#v want=%#v", gotResponse, wantResponse)
+	}
+}
+
 func TestDNSBackendReadinessWireContractIsBounded(t *testing.T) {
 	want := DNSBackendReadinessResponse{Port53Conflict: true, Engines: []DNSBackendRuntimeState{
 		{Engine: DNSEnginePowerDNS, Installed: true, Running: true, Managed: true, PairReady: true, Unit: "pdns.service"},

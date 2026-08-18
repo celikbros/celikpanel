@@ -622,17 +622,30 @@ func (hostDNSEngineBackend) Sync(
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
 		return "", err
 	}
+	if err := markDNSZoneSyncV3Applied(
+		ctx, commitment.Domain, commitment.Qualifier,
+	); err != nil {
+		return "", err
+	}
 	publishedTree, err := publisher.LoadCurrent()
 	if err != nil {
-		return "", fmt.Errorf("load published BIND generation: %w", err)
+		return "", dnsZoneV3RecoveryAmbiguous(
+			fmt.Errorf("load published BIND generation: %w", err),
+		)
 	}
 	if !reflect.DeepEqual(publishedTree.CurrentReceipt(), generation.ReceiptValue) {
-		return "", errors.New("BIND published receipt changed before peer propagation")
+		return "", dnsZoneV3RecoveryAmbiguous(
+			errors.New("BIND published receipt changed before peer propagation"),
+		)
 	}
 	if err := completeManagedBINDV3Propagation(
 		ctx, publishedTree, commitment.Domain,
 	); err != nil {
-		return "", err
+		var pending *dnsZoneV3RecoveryPendingError
+		if errors.As(err, &pending) {
+			return "", err
+		}
+		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	return generation.ID, nil
 }
@@ -1515,12 +1528,17 @@ func syncPDNSV3Zone(
 	if err := applyPDNSV3ZoneDatabase(ctx, pdnsDBPath(), commitment, binding); err != nil {
 		return "", err
 	}
+	if err := markDNSZoneSyncV3Applied(
+		ctx, commitment.Domain, commitment.Qualifier,
+	); err != nil {
+		return "", err
+	}
 	after, afterExists, err := readDNSEngineState()
 	if err != nil || !afterExists || !reflect.DeepEqual(after, state) {
 		if err == nil {
 			err = errors.New("PowerDNS engine state changed during zone publication")
 		}
-		return "", err
+		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	zone := transport.DNSEngineSwitchZoneSnapshot{
 		Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
@@ -1529,15 +1547,19 @@ func syncPDNSV3Zone(
 	}
 	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone)
 	if err != nil {
-		return "", err
+		var pending *dnsZoneV3RecoveryPendingError
+		if errors.As(err, &pending) {
+			return "", err
+		}
+		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
-		return "", err
+		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	if err := verifyDNSZoneManifestAuthority(
 		ctx, []transport.DNSEngineSwitchZoneSnapshot{zone},
 	); err != nil {
-		return "", err
+		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
 		return "", err

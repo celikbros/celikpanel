@@ -41,6 +41,7 @@ func TestAgentVersionCapabilityExtensionIsGobBackwardCompatible(t *testing.T) {
 		Capabilities: []string{
 			AgentCapabilityFirewallApplyV2,
 			AgentCapabilityPanelCertificateIssueV2,
+			AgentCapabilityDNSZoneRecoverV1,
 		},
 	}
 	var wire bytes.Buffer

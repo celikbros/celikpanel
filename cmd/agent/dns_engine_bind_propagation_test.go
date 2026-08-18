@@ -14,6 +14,11 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
+const (
+	bindV3PropagationTestRequestID = "00112233445566778899aabbccddeeff"
+	bindV3PropagationTestOwnerID   = "ffeeddccbbaa99887766554433221100"
+)
+
 func testBINDV3Snapshot(
 	t *testing.T,
 	domain string,
@@ -41,8 +46,8 @@ func testBINDV3Snapshot(
 		Domain:            commitment.Domain,
 		Delete:            commitment.Delete,
 		Qualifier:         commitment.Qualifier,
-		MutationRequestID: testMutationRequestID,
-		MutationOwnerID:   testMutationOwnerID,
+		MutationRequestID: bindV3PropagationTestRequestID,
+		MutationOwnerID:   bindV3PropagationTestOwnerID,
 		Records:           commitment.Records,
 	}
 }

@@ -10,19 +10,27 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type dnsZoneV3TestAgent struct {
 	durableMutationRPCFixture
-	mu                 sync.Mutex
-	requests           []transport.SyncDNSZoneV3Request
-	v2Requests         []transport.SyncDNSZoneV2Request
-	zones              map[string][]transport.ZoneRecord
-	publisher          transport.DNSEngine
-	responseEpochDelta int64
-	syncHook           func(transport.SyncDNSZoneV3Request) error
+	mu                     sync.Mutex
+	requests               []transport.SyncDNSZoneV3Request
+	recoverRequests        []transport.RecoverDNSZoneV3Request
+	v2Requests             []transport.SyncDNSZoneV2Request
+	zones                  map[string][]transport.ZoneRecord
+	publisher              transport.DNSEngine
+	pairReady              bool
+	responseEpochDelta     int64
+	syncHook               func(transport.SyncDNSZoneV3Request) error
+	syncResponseHook       func(transport.SyncDNSZoneV3Request, *transport.SyncDNSZoneV3Response) error
+	recoverHook            func(transport.RecoverDNSZoneV3Request, *transport.RecoverDNSZoneV3Response) error
+	resumeBeginHook        func(transport.ServiceMutationBeginRequest) error
+	statusHook             func(string, *ServiceOperationMutationJob)
+	expireRecoveryOnStatus bool
 }
 
 func newDNSZoneV3TestAgent() *dnsZoneV3TestAgent {
@@ -39,6 +47,7 @@ func (agent *dnsZoneV3TestAgent) Version(
 	response.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 	}
 	return nil
 }
@@ -47,7 +56,10 @@ func (agent *dnsZoneV3TestAgent) DNSBackendReadiness(
 	_ *transport.Empty,
 	response *transport.DNSBackendReadinessResponse,
 ) error {
+	agent.mu.Lock()
 	publisher := agent.publisher
+	pairReady := agent.pairReady
+	agent.mu.Unlock()
 	response.Engines = []transport.DNSBackendRuntimeState{
 		{
 			Engine:    transport.DNSEnginePowerDNS,
@@ -61,6 +73,7 @@ func (agent *dnsZoneV3TestAgent) DNSBackendReadiness(
 			Installed: publisher == transport.DNSEngineBIND,
 			Running:   publisher == transport.DNSEngineBIND,
 			Managed:   publisher == transport.DNSEngineBIND,
+			PairReady: publisher == transport.DNSEngineBIND && pairReady,
 			Unit:      "bind9.service",
 		},
 	}
@@ -83,15 +96,128 @@ func (agent *dnsZoneV3TestAgent) SyncDNSZoneV3(
 		)
 	}
 	hook := agent.syncHook
+	responseHook := agent.syncResponseHook
 	delta := agent.responseEpochDelta
 	agent.mu.Unlock()
 	response.Synced = true
 	response.Engine = request.Engine
 	response.EngineEpoch = request.EngineEpoch + delta
 	response.AppliedGeneration = request.DesiredGeneration
+	if responseHook != nil {
+		if err := responseHook(copy, response); err != nil {
+			return err
+		}
+	}
 	if hook != nil {
 		return hook(copy)
 	}
+	return nil
+}
+
+func (agent *dnsZoneV3TestAgent) BeginServiceMutation(
+	request *ServiceOperationMutationBeginRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	if !request.Resume {
+		return agent.durableMutationRPCFixture.BeginServiceMutation(request, response)
+	}
+	agent.durableMutationRPCFixture.mu.Lock()
+	job := agent.durableMutationRPCFixture.jobs[request.RequestID]
+	identity := agentMutationIdentity{
+		RequestID: request.RequestID, OwnerID: request.OwnerID,
+		Kind: request.Kind, Target: request.Target,
+		PackageName: request.PackageName,
+	}
+	phase, phaseErr := dnsZoneSyncV3RecoveringPhase(identity)
+	if job == nil || phaseErr != nil || job.OwnerID != request.OwnerID ||
+		job.Kind != request.Kind || job.Target != request.Target ||
+		job.PackageName != request.PackageName || job.Status != agentMutationPending {
+		response.Error = "only the exact pending DNS V3 mutation may resume"
+		response.Job = cloneServiceOperationMutationJob(job)
+		agent.durableMutationRPCFixture.mu.Unlock()
+		return nil
+	}
+	now := time.Now().UTC()
+	job.Status = agentMutationRunning
+	job.Phase = phase
+	job.Attempt++
+	job.LeaseExpiresAt = now.Add(time.Minute)
+	job.DeadlineAt = now.Add(time.Hour)
+	agent.durableMutationRPCFixture.active = job.RequestID
+	response.Job = cloneServiceOperationMutationJob(job)
+	hook := agent.resumeBeginHook
+	agent.durableMutationRPCFixture.mu.Unlock()
+	if hook != nil {
+		return hook(transport.ServiceMutationBeginRequest(*request))
+	}
+	return nil
+}
+
+func (agent *dnsZoneV3TestAgent) markDNSZoneV3Pending(
+	requestID, ownerID, domain, qualifier string,
+) error {
+	agent.durableMutationRPCFixture.mu.Lock()
+	defer agent.durableMutationRPCFixture.mu.Unlock()
+	job := agent.durableMutationRPCFixture.jobs[requestID]
+	identity := agentMutationIdentity{
+		RequestID: requestID, OwnerID: ownerID, Kind: "dns_zone_sync",
+		Target: domain, PackageName: qualifier,
+	}
+	phase, err := dnsZoneSyncV3PendingPhase(identity)
+	if err != nil || job == nil || job.OwnerID != ownerID ||
+		job.Kind != identity.Kind || job.Target != domain ||
+		job.PackageName != qualifier {
+		return errors.New("pending fixture lost exact DNS V3 identity")
+	}
+	job.Status = agentMutationPending
+	job.Phase = phase
+	job.LeaseExpiresAt = time.Time{}
+	if agent.durableMutationRPCFixture.active == requestID {
+		agent.durableMutationRPCFixture.active = ""
+	}
+	return nil
+}
+
+func (agent *dnsZoneV3TestAgent) markDNSZoneV3Succeeded(
+	requestID, ownerID, domain, qualifier string,
+) error {
+	agent.durableMutationRPCFixture.mu.Lock()
+	defer agent.durableMutationRPCFixture.mu.Unlock()
+	job := agent.durableMutationRPCFixture.jobs[requestID]
+	if job == nil || job.OwnerID != ownerID || job.Kind != "dns_zone_sync" ||
+		job.Target != domain || job.PackageName != qualifier {
+		return errors.New("success fixture lost exact DNS V3 identity")
+	}
+	job.Status = agentMutationSucceeded
+	job.Phase = "commit/dns-zone-sync/v3/published/" + requestID + "/" +
+		domain + "/" + qualifier
+	job.LeaseExpiresAt = time.Time{}
+	if agent.durableMutationRPCFixture.active == requestID {
+		agent.durableMutationRPCFixture.active = ""
+	}
+	return nil
+}
+
+func (agent *dnsZoneV3TestAgent) RecoverDNSZoneV3(
+	request *transport.RecoverDNSZoneV3Request,
+	response *transport.RecoverDNSZoneV3Response,
+) error {
+	copy := *request
+	agent.mu.Lock()
+	agent.recoverRequests = append(agent.recoverRequests, copy)
+	hook := agent.recoverHook
+	agent.mu.Unlock()
+	if hook != nil {
+		return hook(copy, response)
+	}
+	if err := agent.markDNSZoneV3Succeeded(
+		request.MutationRequestID, request.MutationOwnerID,
+		request.Domain, request.Qualifier,
+	); err != nil {
+		response.Error = err.Error()
+		return nil
+	}
+	response.Recovered = true
 	return nil
 }
 
@@ -132,9 +258,25 @@ func (agent *dnsZoneV3TestAgent) ServiceMutationStatus(
 	if requestID == "" {
 		requestID = agent.durableMutationRPCFixture.active
 	}
-	response.Job = cloneServiceOperationMutationJob(
-		agent.durableMutationRPCFixture.jobs[requestID],
-	)
+	job := agent.durableMutationRPCFixture.jobs[requestID]
+	if agent.expireRecoveryOnStatus && job != nil &&
+		agentMutationActive(job.Status) {
+		identity := agentMutationIdentity{
+			RequestID: job.RequestID, OwnerID: job.OwnerID, Kind: job.Kind,
+			Target: job.Target, PackageName: job.PackageName,
+		}
+		if phase, err := dnsZoneSyncV3PendingPhase(identity); err == nil {
+			job.Status = agentMutationPending
+			job.Phase = phase
+			job.LeaseExpiresAt = time.Time{}
+			agent.durableMutationRPCFixture.active = ""
+			agent.expireRecoveryOnStatus = false
+		}
+	}
+	if agent.statusHook != nil {
+		agent.statusHook(requestID, job)
+	}
+	response.Job = cloneServiceOperationMutationJob(job)
 	return nil
 }
 
@@ -184,6 +326,109 @@ func setDNSZoneV3SucceededReceipt(
 		PackageName: lease.Qualifier, Status: agentMutationSucceeded,
 		Phase: "commit/dns-zone-sync/v3/published/" + lease.RequestID + "/" +
 			lease.ZoneName + "/" + lease.Qualifier,
+	}
+}
+
+func setDNSZoneV3PendingReceipt(
+	t *testing.T,
+	agent *dnsZoneV3TestAgent,
+	lease dnsZoneEngineLease,
+) {
+	t.Helper()
+	phase, err := dnsZoneSyncV3PendingPhase(lease.identity())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.durableMutationRPCFixture.mu.Lock()
+	defer agent.durableMutationRPCFixture.mu.Unlock()
+	if agent.durableMutationRPCFixture.jobs == nil {
+		agent.durableMutationRPCFixture.jobs = make(map[string]*ServiceOperationMutationJob)
+	}
+	agent.durableMutationRPCFixture.jobs[lease.RequestID] = &ServiceOperationMutationJob{
+		RequestID: lease.RequestID, OwnerID: lease.OwnerID,
+		Kind: "dns_zone_sync", Target: lease.ZoneName,
+		PackageName: lease.Qualifier, Status: agentMutationPending,
+		Phase: phase, Attempt: 1,
+	}
+}
+
+func configureDNSZoneV3PendingSync(agent *dnsZoneV3TestAgent, loseResponse bool) {
+	agent.syncResponseHook = func(
+		request transport.SyncDNSZoneV3Request,
+		response *transport.SyncDNSZoneV3Response,
+	) error {
+		agent.durableMutationRPCFixture.mu.Lock()
+		job := agent.durableMutationRPCFixture.jobs[request.MutationRequestID]
+		qualifier := ""
+		if job != nil {
+			qualifier = job.PackageName
+		}
+		agent.durableMutationRPCFixture.mu.Unlock()
+		if err := agent.markDNSZoneV3Pending(
+			request.MutationRequestID, request.MutationOwnerID,
+			request.Domain, qualifier,
+		); err != nil {
+			return err
+		}
+		*response = transport.SyncDNSZoneV3Response{
+			RecoveryPending:   true,
+			Engine:            request.Engine,
+			EngineEpoch:       request.EngineEpoch,
+			AppliedGeneration: request.DesiredGeneration,
+		}
+		if loseResponse {
+			return errors.New("injected response loss after durable pending receipt")
+		}
+		return nil
+	}
+}
+
+func configureDNSZoneV3PendingRecovery(agent *dnsZoneV3TestAgent) {
+	agent.recoverHook = func(
+		request transport.RecoverDNSZoneV3Request,
+		response *transport.RecoverDNSZoneV3Response,
+	) error {
+		if err := agent.markDNSZoneV3Pending(
+			request.MutationRequestID, request.MutationOwnerID,
+			request.Domain, request.Qualifier,
+		); err != nil {
+			response.Error = err.Error()
+			return nil
+		}
+		response.RecoveryPending = true
+		return nil
+	}
+}
+
+func activatePairedPrimaryBINDForV3Test(t *testing.T, panel *Panel) {
+	t.Helper()
+	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
+	setDNSIdentityForTest(t, panel, "paired")
+	if err := panel.setSetting(
+		context.Background(), settingDNSPeerIP, "192.0.2.20",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.setSetting(
+		context.Background(), settingDNSPeerNS, "ns2.celikhost.com",
+	); err != nil {
+		t.Fatal(err)
+	}
+	engineAgent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, engineAgent)
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != 200 || len(preview.Blockers) != 0 {
+		t.Fatalf("paired BIND preview status=%d preview=%+v body=%s",
+			recorder.Code, preview, recorder.Body.String())
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("7", 32), transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	if commit.Code != 200 {
+		t.Fatalf("paired BIND commit status=%d body=%s", commit.Code, commit.Body.String())
 	}
 }
 
@@ -628,6 +873,440 @@ func TestDNSZoneV3ResponseLossUsesExactSucceededReceipt(t *testing.T) {
 	}
 	if applications != 1 || leases != 0 {
 		t.Fatalf("response-loss applications=%d leases=%d", applications, leases)
+	}
+}
+
+func TestDNSZoneV3PendingAndLostPendingResponseRecoverExactLease(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		loseResponse bool
+	}{
+		{name: "pending response"},
+		{name: "pending response lost", loseResponse: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, "standalone")
+			activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+			seedStrictDNSZone(t, panel, "pending-recover-v3.example")
+			agent := newDNSZoneV3TestAgent()
+			configureDNSZoneV3PendingSync(agent, test.loseResponse)
+			var observedLease dnsZoneEngineLease
+			var observedLeaseErr error
+			agent.recoverHook = func(
+				request transport.RecoverDNSZoneV3Request,
+				response *transport.RecoverDNSZoneV3Response,
+			) error {
+				observedLease, observedLeaseErr = readDNSZoneEngineLease(
+					context.Background(), panel.db.GetDB(), request.Domain,
+				)
+				if observedLeaseErr != nil {
+					return observedLeaseErr
+				}
+				if err := agent.markDNSZoneV3Succeeded(
+					request.MutationRequestID, request.MutationOwnerID,
+					request.Domain, request.Qualifier,
+				); err != nil {
+					return err
+				}
+				response.Recovered = true
+				return nil
+			}
+			attachDNSZoneV3TestAgent(t, panel, agent)
+
+			if err := panel.syncZoneToDNS(
+				context.Background(), "pending-recover-v3.example", false,
+			); err != nil {
+				t.Fatalf("pending exact recovery: %v", err)
+			}
+			agent.mu.Lock()
+			requests := append([]transport.SyncDNSZoneV3Request(nil), agent.requests...)
+			recoveries := append([]transport.RecoverDNSZoneV3Request(nil), agent.recoverRequests...)
+			agent.mu.Unlock()
+			if len(requests) != 1 || len(recoveries) != 1 ||
+				recoveries[0].MutationRequestID != requests[0].MutationRequestID ||
+				recoveries[0].MutationOwnerID != requests[0].MutationOwnerID ||
+				recoveries[0].Domain != requests[0].Domain {
+				t.Fatalf("pending request=%+v recovery=%+v", requests, recoveries)
+			}
+			if observedLeaseErr != nil ||
+				observedLease.RequestID != requests[0].MutationRequestID ||
+				observedLease.OwnerID != requests[0].MutationOwnerID {
+				t.Fatalf("lease during exact recovery=%+v err=%v",
+					observedLease, observedLeaseErr)
+			}
+			state, err := readDNSZoneSyncState(
+				context.Background(), panel.db.GetDB(), "pending-recover-v3.example",
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var leases int
+			if err := panel.db.GetDB().QueryRow(`
+				SELECT count(*) FROM dns_zone_engine_leases
+				WHERE zone_name = 'pending-recover-v3.example'`).Scan(&leases); err != nil {
+				t.Fatal(err)
+			}
+			if state.Status != "applied" ||
+				state.AppliedGeneration != state.DesiredGeneration || leases != 0 {
+				t.Fatalf("recovered state=%+v leases=%d", state, leases)
+			}
+		})
+	}
+}
+
+func TestDNSZoneV3SameDomainRetryRecoversBeforePairReadiness(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	activatePairedPrimaryBINDForV3Test(t, panel)
+	seedStrictDNSZone(t, panel, "pair-retry-v3.example")
+	agent := newDNSZoneV3TestAgent()
+	agent.pairReady = true
+	configureDNSZoneV3PendingSync(agent, false)
+	baseSyncHook := agent.syncResponseHook
+	agent.syncResponseHook = func(
+		request transport.SyncDNSZoneV3Request,
+		response *transport.SyncDNSZoneV3Response,
+	) error {
+		err := baseSyncHook(request, response)
+		agent.mu.Lock()
+		agent.pairReady = false
+		agent.mu.Unlock()
+		return err
+	}
+	configureDNSZoneV3PendingRecovery(agent)
+	attachDNSZoneV3TestAgent(t, panel, agent)
+
+	err := panel.syncZoneToDNS(
+		context.Background(), "pair-retry-v3.example", false,
+	)
+	var publicationErr *dnsAgentPublicationError
+	if err == nil || !errors.Is(err, errDNSZoneV3PropagationDeferred) ||
+		!errors.As(err, &publicationErr) {
+		t.Fatalf("initial peer-pending error=%v", err)
+	}
+	lease, err := readDNSZoneEngineLease(
+		context.Background(), panel.db.GetDB(), "pair-retry-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.recoverDNSZoneSyncStateLocked(context.Background()); err != nil {
+		t.Fatalf("startup-style peer-down recovery must defer: %v", err)
+	}
+	retained, err := readDNSZoneEngineLease(
+		context.Background(), panel.db.GetDB(), lease.ZoneName,
+	)
+	if err != nil || retained != lease {
+		t.Fatalf("deferred lease=%+v err=%v want=%+v", retained, err, lease)
+	}
+	agent.recoverHook = nil
+	if err := panel.syncZoneToDNS(
+		context.Background(), "pair-retry-v3.example", false,
+	); err != nil {
+		t.Fatalf("same-domain retry did not recover before PairReady: %v", err)
+	}
+	agent.mu.Lock()
+	syncRequests := len(agent.requests)
+	recoveries := append([]transport.RecoverDNSZoneV3Request(nil), agent.recoverRequests...)
+	agent.mu.Unlock()
+	if syncRequests != 1 || len(recoveries) != 3 {
+		t.Fatalf("same-generation retry sync=%d recoveries=%+v", syncRequests, recoveries)
+	}
+	for _, recovery := range recoveries {
+		if recovery.MutationRequestID != lease.RequestID ||
+			recovery.MutationOwnerID != lease.OwnerID {
+			t.Fatalf("recovery changed exact binding: %+v want=%+v", recovery, lease)
+		}
+	}
+	var leases int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT count(*) FROM dns_zone_engine_leases
+		WHERE zone_name = 'pair-retry-v3.example'`).Scan(&leases); err != nil {
+		t.Fatal(err)
+	}
+	if leases != 0 {
+		t.Fatalf("same-domain recovery retained %d lease(s)", leases)
+	}
+}
+
+func TestDNSZoneV3RecoveryPublishesDesiredGenerationAdvancedWhilePending(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+	seedStrictDNSZone(t, panel, "advanced-pending-v3.example")
+	seedV3ZoneRecord(t, panel, "advanced-pending-v3.example", "TXT", "before")
+	agent := newDNSZoneV3TestAgent()
+	configureDNSZoneV3PendingSync(agent, false)
+	configureDNSZoneV3PendingRecovery(agent)
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	if err := panel.syncZoneToDNS(
+		context.Background(), "advanced-pending-v3.example", false,
+	); !errors.Is(err, errDNSZoneV3PropagationDeferred) {
+		t.Fatalf("initial pending err=%v", err)
+	}
+	if _, err := panel.db.GetDB().Exec(`
+		UPDATE pdns_records SET content = 'advanced'
+		WHERE name = 'advanced-pending-v3.example' AND type = 'TXT'`); err != nil {
+		t.Fatal(err)
+	}
+	agent.recoverHook = nil
+	agent.syncResponseHook = nil
+	if err := panel.syncZoneToDNS(
+		context.Background(), "advanced-pending-v3.example", false,
+	); err != nil {
+		t.Fatalf("publish advanced desired state after exact recovery: %v", err)
+	}
+	agent.mu.Lock()
+	requests := append([]transport.SyncDNSZoneV3Request(nil), agent.requests...)
+	agent.mu.Unlock()
+	if len(requests) != 2 ||
+		requests[1].DesiredGeneration <= requests[0].DesiredGeneration {
+		t.Fatalf("advanced pending requests=%+v", requests)
+	}
+}
+
+func TestDNSZoneV3StartupDeferredLeaseBlocksFreshPendingPublication(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+	seedStrictDNSZone(t, panel, "a-deferred-v3.example")
+	seedStrictDNSZone(t, panel, "b-fresh-v3.example")
+	agent := newDNSZoneV3TestAgent()
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	plan, err := panel.prepareDNSZoneSyncV3Plan(
+		context.Background(), "a-deferred-v3.example", false,
+		dnsPublisherIdentity{Engine: transport.DNSEngineBIND, Epoch: 1},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setDNSZoneV3PendingReceipt(t, agent, plan.Lease)
+	configureDNSZoneV3PendingRecovery(agent)
+	bBefore, err := readDNSZoneSyncState(
+		context.Background(), panel.db.GetDB(), "b-fresh-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := panel.recoverDNSZoneSyncStateLocked(context.Background()); err != nil {
+		t.Fatalf("deferred startup recovery: %v", err)
+	}
+	bAfter, err := readDNSZoneSyncState(
+		context.Background(), panel.db.GetDB(), "b-fresh-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retained, err := readDNSZoneEngineLease(
+		context.Background(), panel.db.GetDB(), plan.Lease.ZoneName,
+	)
+	if err != nil || retained != plan.Lease || !reflect.DeepEqual(bAfter, bBefore) {
+		t.Fatalf("startup A lease=%+v err=%v B before=%+v after=%+v",
+			retained, err, bBefore, bAfter)
+	}
+	agent.mu.Lock()
+	syncRequests := len(agent.requests)
+	agent.mu.Unlock()
+	if syncRequests != 0 {
+		t.Fatalf("startup attempted %d fresh Sync RPC(s) behind deferred lease", syncRequests)
+	}
+}
+
+func TestDNSZoneV3StartupConsumesLateSuccessBetweenDeferredPasses(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+	seedStrictDNSZone(t, panel, "late-success-v3.example")
+	seedStrictDNSZone(t, panel, "late-success-follower-v3.example")
+	agent := newDNSZoneV3TestAgent()
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	plan, err := panel.prepareDNSZoneSyncV3Plan(
+		context.Background(), "late-success-v3.example", false,
+		dnsPublisherIdentity{Engine: transport.DNSEngineBIND, Epoch: 1},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setDNSZoneV3PendingReceipt(t, agent, plan.Lease)
+	configureDNSZoneV3PendingRecovery(agent)
+	statusCalls := 0
+	agent.statusHook = func(requestID string, job *ServiceOperationMutationJob) {
+		if requestID != plan.Lease.RequestID || job == nil {
+			return
+		}
+		statusCalls++
+		if statusCalls == 3 {
+			job.Status = agentMutationSucceeded
+			job.Phase = "commit/dns-zone-sync/v3/published/" +
+				job.RequestID + "/" + job.Target + "/" + job.PackageName
+		}
+	}
+	if err := panel.recoverDNSZoneSyncStateLocked(context.Background()); err != nil {
+		t.Fatalf("consume late exact success: %v", err)
+	}
+	var leases int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT count(*) FROM dns_zone_engine_leases
+		WHERE zone_name = 'late-success-v3.example'`).Scan(&leases); err != nil {
+		t.Fatal(err)
+	}
+	state, err := readDNSZoneSyncState(
+		context.Background(), panel.db.GetDB(), "late-success-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if statusCalls < 3 || leases != 0 || state.Status != "applied" {
+		t.Fatalf("late success calls=%d leases=%d state=%+v", statusCalls, leases, state)
+	}
+	follower, err := readDNSZoneSyncState(
+		context.Background(), panel.db.GetDB(), "late-success-follower-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.mu.Lock()
+	requests := append([]transport.SyncDNSZoneV3Request(nil), agent.requests...)
+	agent.mu.Unlock()
+	if follower.Status != "applied" || len(requests) != 1 ||
+		requests[0].Domain != follower.ZoneName {
+		t.Fatalf("late-success follower=%+v requests=%+v", follower, requests)
+	}
+}
+
+func TestDNSZoneV3StartupBeginResumeResponseLossDefersAndLaterRecovers(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+	seedStrictDNSZone(t, panel, "begin-loss-v3.example")
+	agent := newDNSZoneV3TestAgent()
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	plan, err := panel.prepareDNSZoneSyncV3Plan(
+		context.Background(), "begin-loss-v3.example", false,
+		dnsPublisherIdentity{Engine: transport.DNSEngineBIND, Epoch: 1},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setDNSZoneV3PendingReceipt(t, agent, plan.Lease)
+	agent.expireRecoveryOnStatus = true
+	agent.resumeBeginHook = func(transport.ServiceMutationBeginRequest) error {
+		return errors.New("injected Begin response loss after recovering receipt")
+	}
+	started := time.Now()
+	if err := panel.recoverDNSZoneSyncStateLocked(context.Background()); err != nil {
+		t.Fatalf("Begin response loss must defer startup: %v", err)
+	}
+	if elapsed := time.Since(started); elapsed > 5*time.Second {
+		t.Fatalf("Begin response loss escaped bounded recovery handoff: %v", elapsed)
+	}
+	retained, err := readDNSZoneEngineLease(
+		context.Background(), panel.db.GetDB(), plan.Lease.ZoneName,
+	)
+	if err != nil || retained != plan.Lease {
+		t.Fatalf("Begin-loss lease=%+v err=%v want=%+v", retained, err, plan.Lease)
+	}
+	agent.mu.Lock()
+	recoverCalls := len(agent.recoverRequests)
+	agent.mu.Unlock()
+	if recoverCalls != 0 {
+		t.Fatalf("Begin response loss unexpectedly called Recover %d time(s)", recoverCalls)
+	}
+	agent.resumeBeginHook = nil
+	if err := panel.syncZoneToDNS(
+		context.Background(), "begin-loss-v3.example", false,
+	); err != nil {
+		t.Fatalf("later exact recovery after Begin loss: %v", err)
+	}
+}
+
+func TestDNSZoneV3PrecommitFailureRetiresExactPanelLease(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	activateDNSEngineForTest(t, panel, string(transport.DNSEngineBIND))
+	seedStrictDNSZone(t, panel, "precommit-failure-v3.example")
+	agent := newDNSZoneV3TestAgent()
+	agent.syncResponseHook = func(
+		transport.SyncDNSZoneV3Request,
+		*transport.SyncDNSZoneV3Response,
+	) error {
+		return errors.New("injected permanent precommit failure")
+	}
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	if err := panel.syncZoneToDNS(
+		context.Background(), "precommit-failure-v3.example", false,
+	); err == nil {
+		t.Fatal("precommit failure unexpectedly succeeded")
+	}
+	var leases int
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT count(*) FROM dns_zone_engine_leases
+		WHERE zone_name = 'precommit-failure-v3.example'`).Scan(&leases); err != nil {
+		t.Fatal(err)
+	}
+	state, err := readDNSZoneSyncState(
+		context.Background(), panel.db.GetDB(), "precommit-failure-v3.example",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leases != 0 || state.Status != "error" {
+		t.Fatalf("precommit leases=%d state=%+v", leases, state)
+	}
+}
+
+func TestDNSZoneV3RPCBoundariesRejectMixedFailureTuples(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSZoneV3TestAgent()
+	agent.syncResponseHook = func(
+		request transport.SyncDNSZoneV3Request,
+		response *transport.SyncDNSZoneV3Response,
+	) error {
+		*response = transport.SyncDNSZoneV3Response{
+			Error: "ordinary failure", Engine: request.Engine,
+			EngineEpoch: request.EngineEpoch,
+		}
+		return nil
+	}
+	agent.recoverHook = func(
+		_ transport.RecoverDNSZoneV3Request,
+		response *transport.RecoverDNSZoneV3Response,
+	) error {
+		*response = transport.RecoverDNSZoneV3Response{
+			Error: "ordinary recovery failure", RecoveryPending: true,
+		}
+		return nil
+	}
+	attachDNSZoneV3TestAgent(t, panel, agent)
+	request := transport.SyncDNSZoneV3Request{
+		Engine: transport.DNSEngineBIND, EngineEpoch: 1,
+		DesiredGeneration: 3, Domain: "mixed-v3.example",
+		ZoneType: "MASTER",
+	}
+	var syncResponse transport.SyncDNSZoneV3Response
+	if err := panel.callSyncDNSZoneV3(
+		context.Background(), &request, &syncResponse,
+	); err == nil || !strings.Contains(err.Error(), "mixed") {
+		t.Fatalf("mixed Sync tuple response=%+v err=%v", syncResponse, err)
+	}
+	lease := dnsZoneEngineLease{
+		ZoneName: "mixed-v3.example", Engine: transport.DNSEngineBIND,
+		EngineEpoch: 1, RequestID: strings.Repeat("8", 32),
+		OwnerID: strings.Repeat("9", 32), DesiredGeneration: 3,
+		DesiredAction: "sync", DesiredZoneType: "MASTER",
+		Qualifier: "dns-zone-sync/v3:sha256:" + strings.Repeat("a", 64),
+		ExpiresAt: "2099-01-01T00:00:00Z",
+	}
+	var recoverResponse transport.RecoverDNSZoneV3Response
+	if err := panel.callRecoverDNSZoneV3(
+		context.Background(), lease,
+		agentMutationBinding{
+			MutationRequestID: lease.RequestID,
+			MutationOwnerID:   lease.OwnerID,
+		},
+		&recoverResponse,
+	); err == nil || !strings.Contains(err.Error(), "mixed") {
+		t.Fatalf("mixed Recover tuple response=%+v err=%v", recoverResponse, err)
 	}
 }
 

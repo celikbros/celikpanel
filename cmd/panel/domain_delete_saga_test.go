@@ -74,6 +74,7 @@ func (a *domainDeletionRPCAgent) Version(
 	resp.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV2,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 	}
 	return nil
 }

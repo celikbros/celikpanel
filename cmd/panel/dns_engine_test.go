@@ -61,6 +61,7 @@ func (agent *dnsEngineTestAgent) Version(
 	}
 	response.Capabilities = []string{
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityDNSEngineSwitchV1,
 		transport.AgentCapabilityFirewallApplyV2,
 	}

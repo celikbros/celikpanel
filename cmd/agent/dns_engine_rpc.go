@@ -15,6 +15,8 @@ import (
 
 type SyncDNSZoneV3Request = transport.SyncDNSZoneV3Request
 type SyncDNSZoneV3Response = transport.SyncDNSZoneV3Response
+type RecoverDNSZoneV3Request = transport.RecoverDNSZoneV3Request
+type RecoverDNSZoneV3Response = transport.RecoverDNSZoneV3Response
 type SwitchDNSEngineV1Request = transport.SwitchDNSEngineV1Request
 type SwitchDNSEngineV1Response = transport.SwitchDNSEngineV1Response
 type DNSBackendReadinessResponse = transport.DNSBackendReadinessResponse
@@ -29,7 +31,42 @@ const (
 
 const dnsEngineSwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
 
-const dnsZoneSyncV3PublishedPhasePrefix = "commit/dns-zone-sync/v3/published/"
+const (
+	dnsZoneSyncV3CommitPhasePrefix    = "commit/dns-zone-sync/v3/"
+	dnsZoneSyncV3Applied              = "applied"
+	dnsZoneSyncV3PropagationPending   = "propagation-pending"
+	dnsZoneSyncV3Recovering           = "recovering"
+	dnsZoneSyncV3Published            = "published"
+	dnsZoneSyncV3PublishedPhasePrefix = dnsZoneSyncV3CommitPhasePrefix +
+		dnsZoneSyncV3Published + "/"
+)
+
+// dnsZoneV3RecoveryPendingError is emitted only after the exact local V3 host
+// receipt is durable. It is never used for staging, activation, or local
+// authority failures, which remain ordinary terminal attempt failures.
+type dnsZoneV3RecoveryPendingError struct{ err error }
+
+func (e *dnsZoneV3RecoveryPendingError) Error() string { return e.err.Error() }
+func (e *dnsZoneV3RecoveryPendingError) Unwrap() error { return e.err }
+
+func dnsZoneV3RecoveryPending(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &dnsZoneV3RecoveryPendingError{err: err}
+}
+
+type dnsZoneV3RecoveryAmbiguousError struct{ err error }
+
+func (e *dnsZoneV3RecoveryAmbiguousError) Error() string { return e.err.Error() }
+func (e *dnsZoneV3RecoveryAmbiguousError) Unwrap() error { return e.err }
+
+func dnsZoneV3RecoveryAmbiguous(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &dnsZoneV3RecoveryAmbiguousError{err: err}
+}
 
 type dnsEngineBackend interface {
 	Readiness(context.Context) (transport.DNSBackendReadinessResponse, error)
@@ -128,54 +165,370 @@ func (a *Agent) SyncDNSZoneV3(request *SyncDNSZoneV3Request, response *SyncDNSZo
 	}
 	defer finishStep()
 
-	response.Engine = request.Engine
-	response.EngineEpoch = request.EngineEpoch
 	generation, err := agentDNSEngineBackend.Sync(
 		ctx, commitment, request.ServiceMutationBinding,
 	)
 	if err != nil {
+		var pending *dnsZoneV3RecoveryPendingError
+		if errors.As(err, &pending) {
+			if pendingErr := publishDNSZoneSyncV3Pending(
+				ctx, commitment.Domain, commitment.Qualifier,
+			); pendingErr != nil {
+				poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
+					ctx, commitment.Domain, commitment.Qualifier, pendingErr,
+				)
+				log.Printf("%s zone publication pending receipt failed for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, errors.Join(pendingErr, poisonErr))
+				response.Error = "DNS zone publication became ambiguous; inspect the agent log"
+				return nil
+			}
+			log.Printf("%s zone publication remains pending for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, err)
+			response.RecoveryPending = true
+			response.Engine = request.Engine
+			response.EngineEpoch = request.EngineEpoch
+			response.AppliedGeneration = commitment.DesiredGeneration
+			return nil
+		}
+		var ambiguous *dnsZoneV3RecoveryAmbiguousError
+		if errors.As(err, &ambiguous) {
+			poisonErr := poisonDNSZoneSyncV3Runtime(
+				ctx, commitment.Domain, commitment.Qualifier, err,
+			)
+			log.Printf("%s zone publication became ambiguous for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, errors.Join(err, poisonErr))
+			response.Error = "DNS zone publication became ambiguous; inspect the agent log"
+			return nil
+		}
 		log.Printf("%s zone publication failed for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, err)
 		response.Error = "DNS zone publication failed; inspect the agent log"
 		return nil
 	}
 	if err := publishDNSZoneSyncV3Terminal(ctx, commitment.Domain, commitment.Qualifier); err != nil {
-		log.Printf("DNS zone V3 terminal receipt publication failed: %v", err)
+		poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
+			ctx, commitment.Domain, commitment.Qualifier, err,
+		)
+		log.Printf("DNS zone V3 terminal receipt publication failed: %v", errors.Join(err, poisonErr))
 		response.Error = "DNS zone publication finished but its durable receipt could not be verified"
 		return nil
 	}
 	response.Synced = true
+	response.Engine = request.Engine
+	response.EngineEpoch = request.EngineEpoch
 	response.AppliedGeneration = commitment.DesiredGeneration
 	_ = generation // Generation identity is retained in the immutable host receipt.
 	return nil
 }
 
-func formatDNSZoneSyncV3PublishedPhase(requestID, domain, qualifier string) (string, error) {
-	if !validMutationIdentity(requestID) ||
-		!serviceMutationCanonicalFQDN(domain) ||
-		!mutationpayload.ValidDNSZoneSyncV3Qualifier(qualifier) {
-		return "", errors.New("invalid DNS zone V3 terminal receipt identity")
+// RecoverDNSZoneV3 re-drives only the immutable host receipt selected by a
+// canonical propagation-pending attempt. Any non-success returns the attempt
+// to the same recoverable pending state; it can never retire that authority as
+// a pre-commit failure or accept a replacement binding.
+func (a *Agent) RecoverDNSZoneV3(
+	request *RecoverDNSZoneV3Request,
+	response *RecoverDNSZoneV3Response,
+) error {
+	if response == nil {
+		return errors.New("DNS zone V3 recovery response is required")
 	}
-	return dnsZoneSyncV3PublishedPhasePrefix + requestID + "/" + domain + "/" + qualifier, nil
+	*response = RecoverDNSZoneV3Response{}
+	if request == nil || !serviceMutationCanonicalFQDN(request.Domain) ||
+		!mutationpayload.ValidDNSZoneSyncV3Qualifier(request.Qualifier) {
+		response.Error = "DNS zone V3 recovery request is invalid"
+		return nil
+	}
+	ctx, finishStep, err := a.requiredServiceMutationStep(
+		request.ServiceMutationBinding,
+		newServiceMutationStepClaim(
+			serviceMutationStepRecoverDNSZoneV3,
+			request.Domain,
+			request.Qualifier,
+			"recover",
+		),
+	)
+	if err != nil {
+		response.Error = err.Error()
+		return nil
+	}
+	defer finishStep()
+	if err := requireDNSZoneSyncV3RecoveryRuntime(
+		ctx, request.Domain, request.Qualifier,
+	); err != nil {
+		response.Error = err.Error()
+		return nil
+	}
+	exact, recoverErr := agentDNSEngineBackend.RecoverZone(
+		ctx, request.Domain, request.Qualifier,
+		request.ServiceMutationBinding,
+	)
+	if recoverErr != nil {
+		var pending *dnsZoneV3RecoveryPendingError
+		if !errors.As(recoverErr, &pending) {
+			poisonErr := poisonDNSZoneSyncV3Runtime(
+				ctx, request.Domain, request.Qualifier, recoverErr,
+			)
+			log.Printf("DNS zone V3 recovery became ambiguous for %s: %v", request.Domain, errors.Join(recoverErr, poisonErr))
+			response.Error = "DNS zone recovery became ambiguous; inspect the agent log"
+			return nil
+		}
+		log.Printf("DNS zone V3 recovery remains pending for %s: %v", request.Domain, recoverErr)
+		if pendingErr := publishDNSZoneSyncV3Pending(
+			ctx, request.Domain, request.Qualifier,
+		); pendingErr != nil {
+			poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
+				ctx, request.Domain, request.Qualifier, pendingErr,
+			)
+			log.Printf("DNS zone V3 recovery pending receipt failed for %s: %v", request.Domain, errors.Join(pendingErr, poisonErr))
+			response.Error = "DNS zone recovery became ambiguous; inspect the agent log"
+			return nil
+		}
+		response.RecoveryPending = true
+		return nil
+	}
+	if !exact {
+		recoverErr = errors.New("exact DNS zone V3 host receipt is unavailable")
+		poisonErr := poisonDNSZoneSyncV3Runtime(
+			ctx, request.Domain, request.Qualifier, recoverErr,
+		)
+		log.Printf("DNS zone V3 recovery lost its exact host receipt for %s: %v", request.Domain, errors.Join(recoverErr, poisonErr))
+		response.Error = "DNS zone recovery became ambiguous; inspect the agent log"
+		return nil
+	}
+	if err := publishDNSZoneSyncV3Terminal(
+		ctx, request.Domain, request.Qualifier,
+	); err != nil {
+		poisonErr := poisonDNSZoneSyncV3ProtocolViolation(
+			ctx, request.Domain, request.Qualifier, err,
+		)
+		log.Printf("DNS zone V3 recovered terminal receipt publication failed: %v", errors.Join(err, poisonErr))
+		response.Error = "DNS zone recovery finished but its durable receipt could not be verified"
+		return nil
+	}
+	response.Recovered = true
+	return nil
 }
 
-func parseDNSZoneSyncV3PublishedPhase(value string) (requestID, domain, qualifier string, err error) {
-	if !strings.HasPrefix(value, dnsZoneSyncV3PublishedPhasePrefix) {
-		return "", "", "", errors.New("not a DNS zone V3 published phase")
+func formatDNSZoneSyncV3Phase(state, requestID, domain, qualifier string) (string, error) {
+	if (state != dnsZoneSyncV3Applied && state != dnsZoneSyncV3PropagationPending &&
+		state != dnsZoneSyncV3Recovering && state != dnsZoneSyncV3Published) ||
+		!validMutationIdentity(requestID) ||
+		!serviceMutationCanonicalFQDN(domain) ||
+		!mutationpayload.ValidDNSZoneSyncV3Qualifier(qualifier) {
+		return "", errors.New("invalid DNS zone V3 phase identity")
 	}
-	remainder := strings.TrimPrefix(value, dnsZoneSyncV3PublishedPhasePrefix)
-	requestID, remainder, found := strings.Cut(remainder, "/")
+	return dnsZoneSyncV3CommitPhasePrefix + state + "/" + requestID +
+		"/" + domain + "/" + qualifier, nil
+}
+
+func parseDNSZoneSyncV3Phase(value string) (state, requestID, domain, qualifier string, err error) {
+	if !strings.HasPrefix(value, dnsZoneSyncV3CommitPhasePrefix) {
+		return "", "", "", "", errors.New("not a DNS zone V3 phase")
+	}
+	remainder := strings.TrimPrefix(value, dnsZoneSyncV3CommitPhasePrefix)
+	state, remainder, found := strings.Cut(remainder, "/")
 	if !found {
-		return "", "", "", errors.New("invalid DNS zone V3 published phase")
+		return "", "", "", "", errors.New("invalid DNS zone V3 phase")
+	}
+	requestID, remainder, found = strings.Cut(remainder, "/")
+	if !found {
+		return "", "", "", "", errors.New("invalid DNS zone V3 phase")
 	}
 	domain, qualifier, found = strings.Cut(remainder, "/")
 	if !found {
-		return "", "", "", errors.New("invalid DNS zone V3 published phase")
+		return "", "", "", "", errors.New("invalid DNS zone V3 phase")
 	}
-	canonical, formatErr := formatDNSZoneSyncV3PublishedPhase(requestID, domain, qualifier)
+	canonical, formatErr := formatDNSZoneSyncV3Phase(state, requestID, domain, qualifier)
 	if formatErr != nil || canonical != value {
+		return "", "", "", "", errors.New("invalid DNS zone V3 phase")
+	}
+	return state, requestID, domain, qualifier, nil
+}
+
+func formatDNSZoneSyncV3PublishedPhase(requestID, domain, qualifier string) (string, error) {
+	return formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3Published, requestID, domain, qualifier,
+	)
+}
+
+func parseDNSZoneSyncV3PublishedPhase(value string) (requestID, domain, qualifier string, err error) {
+	state, requestID, domain, qualifier, err := parseDNSZoneSyncV3Phase(value)
+	if err != nil || state != dnsZoneSyncV3Published {
 		return "", "", "", errors.New("invalid DNS zone V3 published phase")
 	}
 	return requestID, domain, qualifier, nil
+}
+
+func markDNSZoneSyncV3Applied(ctx context.Context, domain, qualifier string) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("DNS zone V3 applied publication requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	job := runtime.job
+	if m.active != runtime || runtime.steps != 1 || job == nil ||
+		(job.Status != serviceMutationStatusRunning &&
+			job.Status != serviceMutationStatusCancelling) ||
+		job.WorkerPID != 0 || job.Kind != "dns_zone_sync" ||
+		job.Target != domain || job.PackageName != qualifier {
+		return errors.New("DNS zone V3 applied publication lost its exact mutation identity")
+	}
+	phase, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3Applied, job.RequestID, domain, qualifier,
+	)
+	if err != nil {
+		return err
+	}
+	if job.Phase == phase && runtime.dnsZoneSyncV3AppliedPhase == phase {
+		return nil
+	}
+	before := cloneServiceMutationLedger(m.ledger)
+	job.Phase = phase
+	job.UpdatedAt = m.now()
+	if err := m.persistLedgerMutationLocked(before); err != nil {
+		if m.poisoned == nil && m.active == runtime {
+			return m.poisonLocked(fmt.Errorf(
+				"persist applied DNS zone V3 receipt: %w", err,
+			))
+		}
+		return err
+	}
+	runtime.dnsZoneSyncV3AppliedPhase = phase
+	return nil
+}
+
+func poisonDNSZoneSyncV3Runtime(
+	ctx context.Context,
+	domain, qualifier string,
+	cause error,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil || cause == nil {
+		return errors.New("DNS zone V3 ambiguity lacks a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	job := runtime.job
+	appliedPhase := ""
+	if job != nil {
+		appliedPhase, _ = formatDNSZoneSyncV3Phase(
+			dnsZoneSyncV3Applied, job.RequestID, domain, qualifier,
+		)
+	}
+	if m.active != runtime || runtime.steps != 1 || job == nil ||
+		(job.Status != serviceMutationStatusRunning &&
+			job.Status != serviceMutationStatusCancelling) ||
+		job.Kind != "dns_zone_sync" || job.Target != domain ||
+		job.PackageName != qualifier ||
+		(!runtime.dnsZoneSyncV3Recovery &&
+			(runtime.dnsZoneSyncV3AppliedPhase != appliedPhase ||
+				job.Phase != appliedPhase)) {
+		return errors.New("DNS zone V3 ambiguity lost its exact committed identity")
+	}
+	return m.poisonLocked(fmt.Errorf(
+		"DNS zone V3 committed state is ambiguous: %w", cause,
+	))
+}
+
+func poisonDNSZoneSyncV3ProtocolViolation(
+	ctx context.Context,
+	domain, qualifier string,
+	cause error,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil || cause == nil {
+		return errors.New("DNS zone V3 protocol violation lacks a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	job := runtime.job
+	if m.active != runtime || job == nil || job.Kind != "dns_zone_sync" ||
+		job.Target != domain || job.PackageName != qualifier {
+		return errors.New("DNS zone V3 protocol violation lost its exact mutation identity")
+	}
+	if m.poisoned != nil {
+		return m.healthErrorLocked()
+	}
+	return m.poisonLocked(fmt.Errorf(
+		"DNS zone V3 publication protocol violated durable authority: %w", cause,
+	))
+}
+
+func publishDNSZoneSyncV3Pending(ctx context.Context, domain, qualifier string) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("DNS zone V3 pending publication requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	job := runtime.job
+	if m.active != runtime || runtime.steps != 1 || job == nil ||
+		(job.Status != serviceMutationStatusRunning &&
+			job.Status != serviceMutationStatusCancelling) ||
+		job.WorkerPID != 0 ||
+		job.Kind != "dns_zone_sync" || job.Target != domain ||
+		job.PackageName != qualifier {
+		return errors.New("DNS zone V3 pending publication lost its exact mutation identity")
+	}
+	appliedPhase, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3Applied, job.RequestID, domain, qualifier,
+	)
+	if err != nil || (!runtime.dnsZoneSyncV3Recovery &&
+		(runtime.dnsZoneSyncV3AppliedPhase != appliedPhase ||
+			job.Phase != appliedPhase)) {
+		return errors.New("DNS zone V3 pending publication lacks exact local commit authority")
+	}
+	phase, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3PropagationPending, job.RequestID, domain, qualifier,
+	)
+	if err != nil {
+		return err
+	}
+	if err := m.finishRuntimeDNSZoneV3PendingLocked(runtime, phase); err != nil {
+		if m.poisoned == nil && m.active == runtime {
+			return m.poisonLocked(fmt.Errorf(
+				"persist pending DNS zone V3 receipt: %w", err,
+			))
+		}
+		return err
+	}
+	return nil
+}
+
+func requireDNSZoneSyncV3RecoveryRuntime(
+	ctx context.Context, domain, qualifier string,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("DNS zone V3 recovery requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	job := runtime.job
+	if job == nil {
+		return errors.New("DNS zone V3 recovery lost its pending job")
+	}
+	want, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3Recovering, job.RequestID, domain, qualifier,
+	)
+	if err != nil || m.active != runtime || !runtime.dnsZoneSyncV3Recovery ||
+		runtime.steps != 1 || job.Status != serviceMutationStatusRunning ||
+		job.Kind != "dns_zone_sync" || job.Target != domain ||
+		job.PackageName != qualifier || job.Phase != want {
+		return errors.New("DNS zone V3 recovery lost its exact pending identity")
+	}
+	return nil
 }
 
 func publishDNSZoneSyncV3Terminal(ctx context.Context, domain, qualifier string) error {
@@ -191,10 +544,20 @@ func publishDNSZoneSyncV3Terminal(ctx context.Context, domain, qualifier string)
 	}
 	job := runtime.job
 	if m.active != runtime || runtime.steps != 1 || job == nil ||
-		job.Status != serviceMutationStatusRunning || job.WorkerPID != 0 ||
+		(job.Status != serviceMutationStatusRunning &&
+			job.Status != serviceMutationStatusCancelling) ||
+		job.WorkerPID != 0 ||
 		job.Kind != "dns_zone_sync" || job.Target != domain ||
 		job.PackageName != qualifier {
 		return errors.New("DNS zone V3 terminal publication lost its exact mutation identity")
+	}
+	appliedPhase, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3Applied, job.RequestID, domain, qualifier,
+	)
+	if err != nil || (!runtime.dnsZoneSyncV3Recovery &&
+		(runtime.dnsZoneSyncV3AppliedPhase != appliedPhase ||
+			job.Phase != appliedPhase)) {
+		return errors.New("DNS zone V3 terminal publication lacks exact local commit authority")
 	}
 	phase, err := formatDNSZoneSyncV3PublishedPhase(job.RequestID, domain, qualifier)
 	if err != nil {
@@ -222,10 +585,27 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 		m.poisonLock = lock
 		return true, m.poisonLocked(errors.New("active DNS zone V3 mutation has an invalid target"))
 	}
+	priorCommitted := false
+	if strings.HasPrefix(job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
+		state, requestID, domain, qualifier, phaseErr :=
+			parseDNSZoneSyncV3Phase(job.Phase)
+		if phaseErr != nil ||
+			(state != dnsZoneSyncV3Applied && state != dnsZoneSyncV3Recovering) ||
+			requestID != job.RequestID || domain != job.Target ||
+			qualifier != job.PackageName {
+			m.poisonLock = lock
+			return true, m.poisonLocked(errors.New(
+				"active DNS zone V3 recovery has an invalid durable phase",
+			))
+		}
+		priorCommitted = true
+	}
 	if serviceMutationWorkerMatches(job.WorkerPID, job.WorkerStarted) {
 		before := cloneServiceMutationLedger(m.ledger)
 		job.Status = serviceMutationStatusOrphaned
-		job.Phase = "waiting_for_orphaned_process"
+		if !priorCommitted {
+			job.Phase = "waiting_for_orphaned_process"
+		}
 		job.ErrorCode = "agent_restart_worker_alive"
 		job.ErrorMessage = "The previous DNS zone V3 worker is still alive."
 		job.UpdatedAt = m.now()
@@ -249,10 +629,20 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 	cancel()
 	m.mu.Lock()
 	if verifyErr != nil {
+		var pendingErr *dnsZoneV3RecoveryPendingError
+		if errors.As(verifyErr, &pendingErr) {
+			return true, m.finishPersistedDNSZoneSyncV3PendingLocked(job, lock)
+		}
 		m.poisonLock = lock
 		return true, m.poisonLocked(fmt.Errorf("recover DNS zone V3 host receipt: %w", verifyErr))
 	}
 	if !exact {
+		if priorCommitted {
+			m.poisonLock = lock
+			return true, m.poisonLocked(errors.New(
+				"recovering DNS zone V3 mutation lost its exact host receipt",
+			))
+		}
 		writeErr := m.finishPersistedOrphanLocked(
 			job,
 			"agent_restarted_before_dns_zone_v3_commit",
@@ -282,12 +672,61 @@ func (m *serviceMutationManager) recoverPersistedDNSZoneSyncV3Locked(
 	job.WorkerStarted = ""
 	job.WorkerCommand = ""
 	m.ledger.ActiveRequestID = ""
-	writeErr := m.persistLedgerMutationLocked(before)
+	writeErr := m.persistLedgerMutationProtectedLocked(before, job.RequestID)
 	if m.poisoned != nil {
 		m.poisonLock = lock
 		return true, writeErr
 	}
+	m.trimHistoryLocked(job.RequestID)
 	return true, errors.Join(writeErr, lock.Close())
+}
+
+func (m *serviceMutationManager) finishPersistedDNSZoneSyncV3PendingLocked(
+	job *ServiceMutationJob,
+	lock *serviceMutationFileLock,
+) error {
+	if job == nil || lock == nil || job.Kind != "dns_zone_sync" ||
+		!serviceMutationCanonicalFQDN(job.Target) ||
+		!mutationpayload.ValidDNSZoneSyncV3Qualifier(job.PackageName) {
+		m.poisonLock = lock
+		return m.poisonLocked(errors.New(
+			"persisted DNS zone V3 pending identity is invalid",
+		))
+	}
+	phase, err := formatDNSZoneSyncV3Phase(
+		dnsZoneSyncV3PropagationPending,
+		job.RequestID,
+		job.Target,
+		job.PackageName,
+	)
+	if err != nil {
+		m.poisonLock = lock
+		return m.poisonLocked(err)
+	}
+	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
+	job.Status = serviceMutationStatusPending
+	job.Phase = phase
+	job.ErrorCode = "dns_zone_v3_propagation_pending"
+	job.ErrorMessage =
+		"The exact local DNS publication is waiting for paired propagation recovery."
+	job.UpdatedAt = now
+	job.FinishedAt = now
+	job.LeaseExpiresAt = time.Time{}
+	job.WorkerPID = 0
+	job.WorkerStarted = ""
+	job.WorkerCommand = ""
+	m.ledger.ActiveRequestID = ""
+	writeErr := m.persistLedgerMutationLocked(before)
+	if m.poisoned != nil {
+		m.poisonLock = lock
+		return writeErr
+	}
+	closeErr := lock.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return closeErr
 }
 
 // recoverPersistedDNSEngineSwitchLocked reconciles the durable host switch

@@ -612,11 +612,66 @@ func (p *Panel) callSyncDNSZoneV3(
 	); err != nil {
 		return err
 	}
-	if response.Error != "" || !response.Synced ||
+	if response.Error != "" {
+		if response.Synced || response.RecoveryPending ||
+			response.Engine != "" || response.EngineEpoch != 0 ||
+			response.AppliedGeneration != 0 {
+			return errors.New("agent returned a mixed DNS publication failure response")
+		}
+		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	if response.RecoveryPending {
+		if response.Synced || response.Engine != request.Engine ||
+			response.EngineEpoch != request.EngineEpoch ||
+			response.AppliedGeneration != request.DesiredGeneration {
+			return errors.New("agent returned an invalid pending DNS publication receipt")
+		}
+		return &dnsZoneV3PropagationPendingError{}
+	}
+	if !response.Synced ||
 		response.Engine != request.Engine ||
 		response.EngineEpoch != request.EngineEpoch ||
 		response.AppliedGeneration != request.DesiredGeneration {
 		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	return nil
+}
+
+func (p *Panel) callRecoverDNSZoneV3(
+	ctx context.Context,
+	lease dnsZoneEngineLease,
+	binding agentMutationBinding,
+	response *transport.RecoverDNSZoneV3Response,
+) error {
+	if !lease.valid() || response == nil ||
+		binding.MutationRequestID != lease.RequestID ||
+		binding.MutationOwnerID != lease.OwnerID {
+		return errors.New("invalid exact DNS zone V3 recovery binding")
+	}
+	request := transport.RecoverDNSZoneV3Request{
+		ServiceMutationBinding: binding,
+		Domain:                 lease.ZoneName,
+		Qualifier:              lease.Qualifier,
+	}
+	if err := p.callAgentContext(
+		ctx, "Agent.RecoverDNSZoneV3", &request, response,
+	); err != nil {
+		return err
+	}
+	if response.Error != "" {
+		if response.Recovered || response.RecoveryPending {
+			return errors.New("agent returned a mixed DNS zone recovery failure response")
+		}
+		return errors.New("agent could not verify the exact DNS zone recovery")
+	}
+	if response.RecoveryPending {
+		if response.Recovered {
+			return errors.New("agent returned a mixed DNS zone recovery response")
+		}
+		return &dnsZoneV3PropagationPendingError{}
+	}
+	if !response.Recovered {
+		return errors.New("agent did not confirm the exact DNS zone recovery")
 	}
 	return nil
 }

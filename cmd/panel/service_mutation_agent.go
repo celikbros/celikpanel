@@ -17,6 +17,7 @@ const (
 	agentMutationRunning    = "running"
 	agentMutationCancelling = "cancelling"
 	agentMutationOrphaned   = "orphaned"
+	agentMutationPending    = "pending"
 	agentMutationSucceeded  = "succeeded"
 	agentMutationFailed     = "failed"
 
@@ -382,6 +383,15 @@ func (p *Panel) finishAgentMutation(
 ) (*agentMutationJob, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), panelMutationFinishTimeout)
 	defer cancel()
+	return p.finishAgentMutationContext(ctx, binding, success, failure)
+}
+
+func (p *Panel) finishAgentMutationContext(
+	ctx context.Context,
+	binding agentMutationBinding,
+	success bool,
+	failure *serviceOperationFailure,
+) (*agentMutationJob, error) {
 	request := transport.ServiceMutationFinishRequest{
 		RequestID: binding.MutationRequestID,
 		OwnerID:   binding.MutationOwnerID,
@@ -540,7 +550,30 @@ func (p *Panel) finishExpectedAgentMutation(
 	success bool,
 	failure *serviceOperationFailure,
 ) (*agentMutationJob, error) {
-	terminal, finishErr := p.finishAgentMutation(binding, success, failure)
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		panelMutationTerminalReconcileTimeout(identity),
+	)
+	defer cancel()
+	return p.finishExpectedAgentMutationWithin(
+		ctx, binding, identity, success, failure,
+	)
+}
+
+func (p *Panel) finishExpectedAgentMutationWithin(
+	ctx context.Context,
+	binding agentMutationBinding,
+	identity agentMutationIdentity,
+	success bool,
+	failure *serviceOperationFailure,
+) (*agentMutationJob, error) {
+	finishCtx, cancelFinish := context.WithTimeout(
+		ctx, panelMutationFinishTimeout,
+	)
+	terminal, finishErr := p.finishAgentMutationContext(
+		finishCtx, binding, success, failure,
+	)
+	cancelFinish()
 	if terminal != nil {
 		if identityErr := validateAgentMutationIdentity(terminal, identity); identityErr != nil {
 			return terminal, payloadBoundMutationTerminalError(
@@ -557,14 +590,9 @@ func (p *Panel) finishExpectedAgentMutation(
 	if finishErr == nil {
 		return terminal, nil
 	}
-	statusCtx, statusCancel := context.WithTimeout(
-		context.Background(),
-		panelMutationTerminalReconcileTimeout(identity),
-	)
 	reconciled, statusErr := waitExpectedAgentMutationTerminalFn(
-		p, statusCtx, identity,
+		p, ctx, identity,
 	)
-	statusCancel()
 	if reconciled != nil && identity.matches(reconciled) &&
 		reconciled.Status == agentMutationSucceeded {
 		if receiptErr := validateAgentMutationSucceededReceipt(reconciled, identity); receiptErr != nil {
@@ -633,6 +661,29 @@ func (p *Panel) withStandaloneAgentMutationIdentity(
 	ownerID string,
 	call func(context.Context, agentMutationBinding) error,
 ) error {
+	return p.withStandaloneAgentMutationIdentityMode(
+		ctx, op, ownerID, false, call,
+	)
+}
+
+func (p *Panel) withResumedStandaloneAgentMutationIdentity(
+	ctx context.Context,
+	op serviceOperation,
+	ownerID string,
+	call func(context.Context, agentMutationBinding) error,
+) error {
+	return p.withStandaloneAgentMutationIdentityMode(
+		ctx, op, ownerID, true, call,
+	)
+}
+
+func (p *Panel) withStandaloneAgentMutationIdentityMode(
+	ctx context.Context,
+	op serviceOperation,
+	ownerID string,
+	resume bool,
+	call func(context.Context, agentMutationBinding) error,
+) error {
 	if _, err := panelMutationBinding(ctx); err == nil {
 		return errors.New("preselected standalone mutation cannot reuse a bound context")
 	}
@@ -644,7 +695,7 @@ func (p *Panel) withStandaloneAgentMutationIdentity(
 	op.PackageName = strings.TrimSpace(op.PackageName)
 	identity := agentMutationIdentityForOperation(op, ownerID)
 	beginCtx, beginCancel := context.WithTimeout(ctx, panelMutationFinishTimeout)
-	job, err := p.beginAgentMutation(beginCtx, op, ownerID, false)
+	job, err := p.beginAgentMutation(beginCtx, op, ownerID, resume)
 	beginCancel()
 	if err != nil {
 		return err
@@ -691,12 +742,17 @@ func (p *Panel) withStandaloneAgentMutationIdentity(
 		heartbeatErr,
 		errAgentMutationIdentityMismatch,
 	)
-	terminal, finishErr := p.finishExpectedAgentMutation(
-		binding,
-		identity,
-		callErr == nil,
-		failure,
-	)
+	var terminal *agentMutationJob
+	var finishErr error
+	if resume {
+		terminal, finishErr = p.finishExpectedAgentMutationWithin(
+			ctx, binding, identity, callErr == nil, failure,
+		)
+	} else {
+		terminal, finishErr = p.finishExpectedAgentMutation(
+			binding, identity, callErr == nil, failure,
+		)
+	}
 	if finishErr != nil {
 		return finishErr
 	}
@@ -706,8 +762,12 @@ func (p *Panel) withStandaloneAgentMutationIdentity(
 	if terminal != nil && terminal.Status == agentMutationSucceeded {
 		return nil
 	}
-	if callErr == nil && terminal.Status != agentMutationSucceeded {
-		return fmt.Errorf("agent committed standalone mutation with status %s", terminal.Status)
+	if callErr == nil && (terminal == nil || terminal.Status != agentMutationSucceeded) {
+		status := "missing"
+		if terminal != nil {
+			status = terminal.Status
+		}
+		return fmt.Errorf("agent committed standalone mutation with status %s", status)
 	}
 	return callErr
 }

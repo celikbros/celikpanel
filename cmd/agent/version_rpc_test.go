@@ -18,6 +18,7 @@ func TestAgentVersionPublishesClosedMutationCapabilities(t *testing.T) {
 		transport.AgentCapabilityDNSSECSecureV2,
 		transport.AgentCapabilityDNSClusterConfigureV2,
 		transport.AgentCapabilityDNSZoneSyncV3,
+		transport.AgentCapabilityDNSZoneRecoverV1,
 		transport.AgentCapabilityDNSEngineSwitchV1,
 		transport.AgentCapabilityMailTLSSyncV2,
 		transport.AgentCapabilityPanelCertificateIssueV2,
