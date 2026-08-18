@@ -220,6 +220,9 @@ func TestPrepareBINDLegacyConfigMutationHandlesSplitAndCombinedLayouts(t *testin
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows does not preserve the exact Unix BIND config modes")
 	}
+	if os.Geteuid() != 0 {
+		t.Skip("requires root-owned BIND configuration fixtures")
+	}
 	for _, combined := range []bool{false, true} {
 		name := "split"
 		if combined {
