@@ -78,6 +78,13 @@ func (p *Panel) handleSecurityAudit(w http.ResponseWriter, r *http.Request) {
 		writeCodedError(w, http.StatusBadGateway, "security_audit_response_invalid", "the security audit response could not be verified", "")
 		return
 	}
+	// net/rpc's gob transport does not preserve the distinction between a nil
+	// slice and an empty slice. Canonicalize the browser-facing JSON boundary
+	// after validation so bounded empty collections are always encoded as []
+	// rather than null without changing the internal agent RPC contract.
+	agent.Firewall.TCPAllowlist = append([]int{}, agent.Firewall.TCPAllowlist...)
+	agent.Firewall.UDPAllowlist = append([]int{}, agent.Firewall.UDPAllowlist...)
+	agent.Listeners.Findings = append([]transport.SecurityAuditListenerFinding{}, agent.Listeners.Findings...)
 	tlsResult := inspectActivePanelTLS(r.Context(), time.Now().UTC())
 	if err := transport.ValidateSecurityAuditTLSResponse(tlsResult); err != nil {
 		writeCodedError(w, http.StatusInternalServerError, "security_audit_tls_invalid", "the local panel TLS audit could not be verified", "")

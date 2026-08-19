@@ -128,6 +128,29 @@ func TestSecurityAuditGETIsAdminOnlyNoStoreAndNoInput(t *testing.T) {
 	if recorder.Header().Get("Cache-Control") != "no-store, max-age=0" || recorder.Header().Get("Pragma") != "no-cache" {
 		t.Fatalf("cache headers = %#v", recorder.Header())
 	}
+	var wire struct {
+		Agent struct {
+			Firewall struct {
+				TCPAllowlist json.RawMessage `json:"tcp_allowlist"`
+				UDPAllowlist json.RawMessage `json:"udp_allowlist"`
+			} `json:"firewall"`
+			Listeners struct {
+				Findings json.RawMessage `json:"findings"`
+			} `json:"listeners"`
+		} `json:"agent"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &wire); err != nil {
+		t.Fatal(err)
+	}
+	for path, raw := range map[string]json.RawMessage{
+		"agent.firewall.tcp_allowlist": wire.Agent.Firewall.TCPAllowlist,
+		"agent.firewall.udp_allowlist": wire.Agent.Firewall.UDPAllowlist,
+		"agent.listeners.findings":     wire.Agent.Listeners.Findings,
+	} {
+		if string(raw) != "[]" {
+			t.Fatalf("%s JSON = %s, want canonical empty array", path, raw)
+		}
+	}
 	var response transport.SecurityAuditHTTPResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
