@@ -7,6 +7,7 @@ import { dnsEngineText } from '../i18n/dnsEngine';
 import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
+import { exactStagedIdentityIsCurrent } from '../lib/dnsIdentityPlan';
 import { HelpButton } from './HelpDrawer';
 import { DNSEngineCard } from './DNSEngineCard';
 
@@ -184,18 +185,48 @@ export function DNSServerSettings() {
         engine.engines.every((entry) => entry.id === 'pdns' || !entry.running);
     const identityStaging = (engine?.state === 'unconfigured' && engine.active_engine === null) ||
         legacyPowerDNSReconfigureStaging;
+    const identityPlanScope = identityStaging && engine
+        ? `${engine.revision}:${engine.state}:${engine.topology}:${engine.pair_role ?? ''}`
+        : '';
+    const [identityPlanGate, setIdentityPlanGate] = useState({ scope: '', current: false });
+    const identityPlanCurrent = identityPlanGate.scope === identityPlanScope && identityPlanGate.current;
+    const handleIdentityPlanCurrentChange = useCallback((current: boolean) => {
+        setIdentityPlanGate((previous) =>
+            previous.scope === identityPlanScope && previous.current === current
+                ? previous
+                : { scope: identityPlanScope, current },
+        );
+    }, [identityPlanScope]);
 
     return (
         <div>
-            <DNSEngineCard key={engineRefreshKey} onSnapshotChange={setEngine} />
-            {activeEngine || identityStaging ? (
+            {identityStaging && (
+                <div className="mb-4" data-testid="dns-identity-before-engine">
+                    <DNSInfrastructureSettings
+                        key={legacyPowerDNSReconfigureStaging ? 'legacy-pdns' : 'unconfigured'}
+                        activeEngine={activeEngine}
+                        stagingOnly
+                        legacyPowerDNSReconfigure={legacyPowerDNSReconfigureStaging}
+                        pairRole={engine?.pair_role}
+                        onIdentityStaged={() => setEngineRefreshKey((current) => current + 1)}
+                        onIdentityPlanCurrentChange={handleIdentityPlanCurrentChange}
+                    />
+                </div>
+            )}
+            <DNSEngineCard
+                key={engineRefreshKey}
+                onSnapshotChange={setEngine}
+                identityPlanCurrent={!identityStaging || identityPlanCurrent}
+            />
+            {engine && !identityStaging && (activeEngine ? (
                 <DNSInfrastructureSettings
-                    key={activeEngine ?? (legacyPowerDNSReconfigureStaging ? 'legacy-pdns' : 'unconfigured')}
+                    key={activeEngine}
                     activeEngine={activeEngine}
-                    stagingOnly={identityStaging}
-                    legacyPowerDNSReconfigure={legacyPowerDNSReconfigureStaging}
+                    stagingOnly={false}
+                    legacyPowerDNSReconfigure={false}
                     pairRole={engine?.pair_role}
                     onIdentityStaged={() => setEngineRefreshKey((current) => current + 1)}
+                    onIdentityPlanCurrentChange={handleIdentityPlanCurrentChange}
                 />
             ) : (
                 <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
@@ -217,7 +248,7 @@ export function DNSServerSettings() {
                         </div>
                     </div>
                 </section>
-            )}
+            ))}
         </div>
     );
 }
@@ -228,12 +259,14 @@ function DNSInfrastructureSettings({
 	legacyPowerDNSReconfigure,
 	pairRole,
 	onIdentityStaged,
+	onIdentityPlanCurrentChange,
 }: {
 	activeEngine: ActiveDNSEngine | null;
 	stagingOnly: boolean;
 	legacyPowerDNSReconfigure: boolean;
 	pairRole?: 'primary' | 'secondary';
 	onIdentityStaged: () => void;
+	onIdentityPlanCurrentChange: (current: boolean) => void;
 }) {
     const { t, locale } = useI18n();
     const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
@@ -412,6 +445,17 @@ function DNSInfrastructureSettings({
             setBusy(false);
         }
     };
+
+    const stagedIdentityCurrent = exactStagedIdentityIsCurrent(
+        stagingOnly,
+        saved,
+        draft,
+        needsClusterRetry,
+        pairRole,
+    );
+    useEffect(() => {
+        onIdentityPlanCurrentChange(stagedIdentityCurrent);
+    }, [onIdentityPlanCurrentChange, stagedIdentityCurrent]);
 
     if (!saved || !draft) {
         return (
@@ -611,7 +655,6 @@ function DNSInfrastructureSettings({
         } : current);
     };
 
-    const stagedIdentityCurrent = stagingOnly && saved.configured && !hasChanges;
     const primaryActionLabel = stagingOnly
         ? stagedIdentityCurrent
             ? et('dnsEngine.identity.stageSavedAction')

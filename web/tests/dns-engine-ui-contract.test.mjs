@@ -15,10 +15,22 @@ const settings = readFileSync(
   new URL('../src/components/DNSServerSettings.tsx', import.meta.url),
   'utf8',
 );
+const identityPlan = readFileSync(
+  new URL('../src/lib/dnsIdentityPlan.ts', import.meta.url),
+  'utf8',
+);
 const copy = readFileSync(new URL('../src/i18n/dnsEngine.ts', import.meta.url), 'utf8');
 
 async function loadContractRuntime() {
   const javascript = ts.transpileModule(contract, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const url = `data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`;
+  return import(url);
+}
+
+async function loadIdentityPlanRuntime() {
+  const javascript = ts.transpileModule(identityPlan, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const url = `data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`;
@@ -162,6 +174,100 @@ test('DNS engine decoder accepts only exact staged paired authority tuples', asy
   assert.equal(decodeDNSEngineSnapshot({ ...standalone, pair_ready: false }), null);
 });
 
+test('DNS identity review unlocks only for the exact saved plan', async () => {
+  const {
+    dnsEngineIdentityReviewLocked,
+    exactStagedIdentityIsCurrent,
+  } = await loadIdentityPlanRuntime();
+  const stagedEngine = { active_engine: null, topology: 'unconfigured' };
+
+  assert.equal(dnsEngineIdentityReviewLocked(true, stagedEngine), true,
+    'the initial unconfigured snapshot must disable engine review on its own');
+  assert.equal(exactStagedIdentityIsCurrent(true, null, null, false), false);
+
+  const standaloneSaved = {
+    configured: true,
+    namesDerived: false,
+    ns1: 'ns1.example.com',
+    ns2: 'ns2.example.com',
+    role: 'standalone',
+    peer_ip: '',
+    peer_ns: '',
+    server_ip: '72.62.38.15',
+  };
+  const standaloneDraft = {
+    ns1: standaloneSaved.ns1,
+    ns2: standaloneSaved.ns2,
+    role: 'standalone',
+    peer_ip: '',
+    peer_ns: '',
+  };
+  const standaloneCurrent = exactStagedIdentityIsCurrent(
+    true, standaloneSaved, standaloneDraft, false,
+  );
+  assert.equal(standaloneCurrent, true);
+  assert.equal(dnsEngineIdentityReviewLocked(
+    standaloneCurrent,
+    { active_engine: null, topology: 'standalone' },
+  ), false, 'an exact saved standalone plan unlocks review');
+
+  const editedDraft = { ...standaloneDraft, ns1: 'edited.example.com' };
+  const editedCurrent = exactStagedIdentityIsCurrent(
+    true, standaloneSaved, editedDraft, false,
+  );
+  assert.equal(editedCurrent, false);
+  assert.equal(dnsEngineIdentityReviewLocked(
+    editedCurrent,
+    { active_engine: null, topology: 'standalone' },
+  ), true, 'editing the staged draft must lock review again');
+  assert.equal(exactStagedIdentityIsCurrent(
+    true,
+    standaloneSaved,
+    { ...standaloneDraft, role: 'paired', peer_ip: '2.25.80.4', peer_ns: standaloneSaved.ns2 },
+    false,
+    'primary',
+  ), false, 'a draft role mismatch cannot reuse the saved plan');
+
+  const pairedPrimarySaved = {
+    ...standaloneSaved,
+    role: 'paired',
+    peer_ip: '2.25.80.4',
+    peer_ns: standaloneSaved.ns2,
+  };
+  const pairedPrimaryDraft = {
+    ...standaloneDraft,
+    role: 'paired',
+    peer_ip: pairedPrimarySaved.peer_ip,
+    peer_ns: pairedPrimarySaved.peer_ns,
+  };
+  assert.equal(exactStagedIdentityIsCurrent(
+    true, pairedPrimarySaved, pairedPrimaryDraft, false, 'primary',
+  ), true, 'an exact saved paired-primary plan unlocks review');
+  assert.equal(exactStagedIdentityIsCurrent(
+    true, pairedPrimarySaved, { ...pairedPrimaryDraft, peer_ip: '2.25.80.5' }, false, 'primary',
+  ), false, 'a peer mismatch must lock review');
+  assert.equal(exactStagedIdentityIsCurrent(
+    true, pairedPrimarySaved, pairedPrimaryDraft, false, 'secondary',
+  ), false, 'a snapshot role mismatch must lock review');
+
+  const pairedSecondarySaved = {
+    ...pairedPrimarySaved,
+    peer_ns: standaloneSaved.ns1,
+  };
+  const pairedSecondaryDraft = {
+    ...pairedPrimaryDraft,
+    peer_ns: pairedSecondarySaved.peer_ns,
+  };
+  const pairedSecondaryCurrent = exactStagedIdentityIsCurrent(
+    true, pairedSecondarySaved, pairedSecondaryDraft, false, 'secondary',
+  );
+  assert.equal(pairedSecondaryCurrent, true);
+  assert.equal(dnsEngineIdentityReviewLocked(
+    pairedSecondaryCurrent,
+    { active_engine: null, topology: 'paired' },
+  ), false, 'an exact saved paired-secondary plan unlocks review');
+});
+
 test('DNS engine preview token and counts mirror the commit contract', async () => {
   const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
   const preview = {
@@ -280,10 +386,10 @@ test('fresh servers stage an exact DNS identity before the first engine install'
   assert.match(settings, /const legacyPowerDNSEntry = engine\?\.engines\.find\(\(entry\) => entry\.id === 'pdns'\)/);
   assert.match(settings, /const legacyPowerDNSReconfigureStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
   assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSReconfigureStaging/);
-  assert.match(settings, /<DNSEngineCard key=\{engineRefreshKey\}/);
-  assert.match(settings, /activeEngine \|\| identityStaging/);
+  assert.match(settings, /<DNSEngineCard[\s\S]*key=\{engineRefreshKey\}/);
+  assert.match(settings, /data-testid=\x22dns-identity-before-engine\x22[\s\S]*<DNSInfrastructureSettings/);
   assert.match(settings, /activeEngine=\{activeEngine\}/);
-  assert.match(settings, /stagingOnly=\{identityStaging\}/);
+  assert.match(settings, /data-testid=\x22dns-identity-before-engine\x22[\s\S]*stagingOnly[\s\S]*<DNSEngineCard/);
   assert.match(settings, /legacyPowerDNSReconfigure=\{legacyPowerDNSReconfigureStaging\}/);
   assert.match(settings, /onIdentityStaged=\{\(\) => setEngineRefreshKey/);
   assert.match(settings, /activeEngine: ActiveDNSEngine \| null/);
@@ -303,6 +409,36 @@ test('fresh servers stage an exact DNS identity before the first engine install'
   assert.match(contract, /'install' \| 'switch' \| 'adopt' \| 'reconfigure'/);
   assert.match(card, /dnsEngine\.reviewReconfigure/);
   assert.match(copy, /dnsEngine\.blocker\.identityRequired/);
+});
+
+test('identity staging precedes engine choices and fail-closes every review path', () => {
+  const renderStart = settings.indexOf('return (', settings.indexOf('export function DNSServerSettings'));
+  const renderEnd = settings.indexOf('\n}\n\nfunction DNSInfrastructureSettings', renderStart);
+  const render = settings.slice(renderStart, renderEnd);
+  const stagingIndex = render.indexOf('dns-identity-before-engine');
+  const engineIndex = render.indexOf('<DNSEngineCard');
+  const activeEditorIndex = render.indexOf('{engine && !identityStaging && (activeEngine ? (');
+
+  assert.ok(stagingIndex >= 0 && stagingIndex < engineIndex,
+    'an unconfigured or legacy server must show identity setup before engine choices');
+  assert.ok(engineIndex < activeEditorIndex,
+    'an active engine must keep the existing engine-card-first layout');
+  assert.match(render, /\{engine && !identityStaging && \(activeEngine \? \(/,
+    'identity fallback must wait for a verified engine snapshot');
+  assert.match(settings, /identityPlanCurrent=\{!identityStaging \|\| identityPlanCurrent\}/);
+  assert.match(identityPlan, /function exactStagedIdentityIsCurrent\(/);
+  assert.match(identityPlan, /saved\.peer_ns === savedPeerNS/);
+  assert.match(identityPlan, /pairRole === expectedPairRole/);
+  assert.match(settings, /onIdentityPlanCurrentChange\(stagedIdentityCurrent\)/);
+
+  assert.match(card, /identityPlanCurrent = true/);
+  assert.match(card, /dnsEngineIdentityReviewLocked\(identityPlanCurrent, snapshot\)/);
+  assert.match(identityPlan, /snapshot\?\.active_engine === null && snapshot\.topology === 'unconfigured'/);
+  assert.match(card, /snapshot\.state === 'switching' \|\| identityReviewLocked/);
+  assert.match(card, /const canReview = !identityReviewLocked/);
+  assert.match(card, /disabled=\{!canReview \|\| review !== null\}/);
+  assert.match(card, /data-testid=\x22dns-engine-identity-lock\x22/);
+  assert.match(copy, /dnsEngine\.identity\.reviewLocked/);
 });
 
 test('paired engines expose exact peer readiness without granting secondary writes', () => {

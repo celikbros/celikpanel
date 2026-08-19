@@ -13,6 +13,7 @@ import {
 import { useI18n } from '../i18n';
 import { dnsEngineText, type DNSEngineCopyKey } from '../i18n/dnsEngine';
 import { readApiError } from '../lib/apiError';
+import { dnsEngineIdentityReviewLocked } from '../lib/dnsIdentityPlan';
 import {
     DNS_ENGINE_IDS,
     decodeDNSEngineSnapshot,
@@ -27,6 +28,7 @@ import { showToast } from './Toast';
 
 interface DNSEngineCardProps {
     onSnapshotChange?: (snapshot: DNSEngineSnapshot | null) => void;
+    identityPlanCurrent?: boolean;
 }
 
 interface ReviewState {
@@ -94,7 +96,10 @@ function statusStyle(status: DNSEngineEntry['status']): string {
     return 'border-warning/35 bg-warning/10 text-warning';
 }
 
-export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
+export function DNSEngineCard({
+    onSnapshotChange,
+    identityPlanCurrent = true,
+}: DNSEngineCardProps) {
     const { t, locale } = useI18n();
     const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
         dnsEngineText(locale, key, vars);
@@ -102,6 +107,7 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
     const [review, setReview] = useState<ReviewState | null>(null);
+    const identityReviewLocked = dnsEngineIdentityReviewLocked(identityPlanCurrent, snapshot);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -147,7 +153,7 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
     }, [refresh]);
 
     const requestPreview = async (target: DNSEngineID) => {
-        if (!snapshot || snapshot.state === 'switching') return;
+        if (!snapshot || snapshot.state === 'switching' || identityReviewLocked) return;
         const base = snapshot;
         const requestID = createRequestID();
         setReview({
@@ -318,7 +324,8 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
                             {DNS_ENGINE_IDS.map((id) => {
                                 const engine = snapshot.engines.find((candidate) => candidate.id === id)!;
                                 const Icon = engineIcon(id);
-                                const canReview = snapshot.state !== 'switching'
+                                const canReview = !identityReviewLocked
+                                    && snapshot.state !== 'switching'
                                     && (engine.status === 'available'
                                         || engine.status === 'installed_standby'
                                         || engine.status === 'unmanaged');
@@ -375,6 +382,16 @@ export function DNSEngineCard({ onSnapshotChange }: DNSEngineCardProps) {
                                 );
                             })}
                         </div>
+
+                        {identityReviewLocked && (
+                            <p
+                                className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-fg-muted"
+                                data-testid="dns-engine-identity-lock"
+                                role="note"
+                            >
+                                {et('dnsEngine.identity.reviewLocked')}
+                            </p>
+                        )}
 
                         <p className="mt-4 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
                             {et('dnsEngine.reviewSafety')}

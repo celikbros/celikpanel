@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from '../router';
-import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, Network, ScanSearch, DownloadCloud } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
@@ -10,7 +10,7 @@ import { DNSServerSettings } from './DNSServerSettings';
 import { PanelUpdateCard } from './PanelUpdateCard';
 import { SecurityAuditCard } from './SecurityAuditCard';
 
-type SettingsSectionID = 'account' | 'panel' | 'security' | 'dns';
+type SettingsSectionID = 'account' | 'panel' | 'updates' | 'security' | 'dns';
 type SettingsSection = {
     id: SettingsSectionID;
     icon: React.ComponentType<{ className?: string }>;
@@ -18,10 +18,10 @@ type SettingsSection = {
     description: string;
 };
 
-// Account settings. Today it hosts two-factor authentication; admins also
-// manage the panel's own certificate here.
-// Hesap ayarları. Bugün iki faktörlü doğrulamayı barındırır; yöneticiler
-// panelin kendi sertifikasını da buradan yönetir.
+// Each operational concern has its own URL-addressable section so navigation
+// and the visible workspace always describe the same task.
+// Her operasyonel alan URL ile adreslenebilen ayrı bir bölümdür; böylece
+// gezinme ile görünen çalışma alanı her zaman aynı işi anlatır.
 export function Settings() {
     const { t } = useI18n();
     const { role } = useAuth();
@@ -40,6 +40,12 @@ export function Settings() {
                     icon: Lock,
                     title: t('settings.section.panel'),
                     description: t('settings.section.panel.desc'),
+                },
+                {
+                    id: 'updates' as const,
+                    icon: DownloadCloud,
+                    title: t('settings.section.updates'),
+                    description: t('settings.section.updates.desc'),
                 },
                 {
                     id: 'security' as const,
@@ -67,9 +73,10 @@ export function Settings() {
     }, [activeSection.id, requestedSection, searchParams, setSearchParams]);
 
     const selectSection = (section: SettingsSectionID) => {
+        if (section === activeSection.id) return;
         const next = new URLSearchParams(searchParams);
         next.set('section', section);
-        setSearchParams(next, { replace: true });
+        setSearchParams(next);
     };
 
     const moveSection = (event: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
@@ -125,8 +132,6 @@ function SettingsWorkspace({
     onSelect: (section: SettingsSectionID) => void;
     onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => void;
 }) {
-    const activeSection = sections.find((section) => section.id === activeID) ?? sections[0];
-
     return (
         <div className="grid max-w-7xl gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
             <SettingsSectionTabs
@@ -137,15 +142,6 @@ function SettingsWorkspace({
                 onKeyDown={onKeyDown}
             />
             <div className="min-w-0">
-                <div className="mb-4 flex items-start gap-3 rounded-xl border border-border bg-surface px-5 py-4 shadow-card">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <activeSection.icon className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                        <h2 className="font-semibold text-fg">{activeSection.title}</h2>
-                        <p className="text-sm text-fg-muted">{activeSection.description}</p>
-                    </div>
-                </div>
                 <div id="settings-account-panel" role="tabpanel" aria-labelledby="settings-account-tab" hidden={activeID !== 'account'}>
                     <TwoFactorPanel />
                 </div>
@@ -153,6 +149,8 @@ function SettingsWorkspace({
                     <>
                         <div id="settings-panel-panel" role="tabpanel" aria-labelledby="settings-panel-tab" hidden={activeID !== 'panel'}>
                             <PanelCertificatePanel />
+                        </div>
+                        <div id="settings-updates-panel" role="tabpanel" aria-labelledby="settings-updates-tab" hidden={activeID !== 'updates'}>
                             <PanelUpdateCard />
                         </div>
                         <div id="settings-security-panel" role="tabpanel" aria-labelledby="settings-security-tab" hidden={activeID !== 'security'}>
@@ -181,6 +179,18 @@ function SettingsSectionTabs({
     onSelect: (section: SettingsSectionID) => void;
     onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => void;
 }) {
+    const tabRefs = useRef<Partial<Record<SettingsSectionID, HTMLButtonElement | null>>>({});
+
+    useEffect(() => {
+        const activeTab = tabRefs.current[activeID];
+        if (!activeTab || typeof window.matchMedia !== 'function' ||
+            !window.matchMedia('(max-width: 1023px)').matches) return undefined;
+        const frame = window.requestAnimationFrame(() => {
+            activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [activeID]);
+
     return (
         <nav
             aria-label={label}
@@ -193,6 +203,9 @@ function SettingsSectionTabs({
                 return (
                     <button
                         key={section.id}
+                        ref={(element) => {
+                            tabRefs.current[section.id] = element;
+                        }}
                         id={`settings-${section.id}-tab`}
                         type="button"
                         role="tab"
