@@ -187,7 +187,7 @@ func dnsClusterDatabaseSnapshot(t *testing.T) string {
 	return strings.Join(parts, "|")
 }
 
-func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *testing.T) {
+func TestManagedPowerDNSMainConfigAcceptsOnlyOneExactStockEmptyLaunch(t *testing.T) {
 	databasePath := filepath.Join(t.TempDir(), "pdns.sqlite3")
 	dir := prepareManagedDNSReadinessTest(t, databasePath)
 
@@ -212,8 +212,17 @@ func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *te
 			valid:  true,
 		},
 		{
-			name:   "empty launch after managed include",
-			config: "include-dir={managed}\nlaunch=\n",
+			name: "Debian stock empty launch after managed include",
+			config: "# include-dir=\n" +
+				"include-dir={managed}\n" +
+				"# launch=\n" +
+				"launch=\n",
+			valid: true,
+		},
+		{
+			name:   "Debian stock empty launch after managed include with CRLF",
+			config: "include-dir={managed}\r\nlaunch=\r\n",
+			valid:  true,
 		},
 		{
 			name:   "gsqlite3 launch override",
@@ -232,8 +241,40 @@ func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *te
 			config: "launch+=bind\ninclude-dir={managed}\n",
 		},
 		{
+			name:   "space before append launch separator",
+			config: "launch +=bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "tab before append launch separator",
+			config: "launch\t+=bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "empty append launch",
+			config: "launch +=\ninclude-dir={managed}\n",
+		},
+		{
 			name:   "duplicate empty launch",
 			config: "launch=\nlaunch=\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "duplicate empty launch around managed include",
+			config: "launch=\ninclude-dir={managed}\nlaunch=\n",
+		},
+		{
+			name:   "nonempty launch after managed include",
+			config: "include-dir={managed}\nlaunch=gsqlite3\n",
+		},
+		{
+			name:   "append launch after managed include",
+			config: "include-dir={managed}\nlaunch+=bind\n",
+		},
+		{
+			name:   "whitespace launch after managed include",
+			config: "include-dir={managed}\nlaunch= \n",
+		},
+		{
+			name:   "inline comment launch after managed include",
+			config: "include-dir={managed}\nlaunch=# not empty\n",
 		},
 		{
 			name:   "whitespace around separator",
@@ -248,6 +289,10 @@ func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *te
 			config: "launch=# not a stock empty directive\ninclude-dir={managed}\n",
 		},
 		{
+			name:   "spaced inline comment is not byte exact",
+			config: "launch= # not a stock empty directive\ninclude-dir={managed}\n",
+		},
+		{
 			name:   "malformed launch without separator",
 			config: "launch gsqlite3\ninclude-dir={managed}\n",
 		},
@@ -258,6 +303,138 @@ func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *te
 		{
 			name:   "other empty managed directive",
 			config: "gsqlite3-database=\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "gsqlite3 database append override",
+			config: "gsqlite3-database+=/evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "spaced gsqlite3 database append override",
+			config: "gsqlite3-database +=/evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "include directory append override",
+			config: "include-dir +=/evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "vertical tab before include directory value",
+			config: "include-dir=\v{managed}\n",
+		},
+		{
+			name:   "form feed before include directory value",
+			config: "include-dir=\f{managed}\n",
+		},
+		{
+			name:   "non-breaking space before include directory value",
+			config: "include-dir=\u00a0{managed}\n",
+		},
+		{
+			name:   "non-breaking space after include directory value",
+			config: "include-dir={managed}\u00a0\n",
+		},
+		{
+			name:   "non-breaking space before include directory key",
+			config: "\u00a0include-dir={managed}\n",
+		},
+		{
+			name:   "noncanonical include directory alias",
+			config: "include-dir={managed}/link/..\n",
+		},
+		{
+			name:   "bare api directive",
+			config: "api\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "bare primary directive with inline comment",
+			config: "primary # enabled\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "bare launch directive with inline comment",
+			config: "launch # enabled\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "local address override",
+			config: "local-address=0.0.0.0\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "zone cache override",
+			config: "zone-cache-refresh-interval=60\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "webserver override",
+			config: "webserver=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "api override",
+			config: "api=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "arbitrary gsqlite3 query override",
+			config: "gsqlite3-basic-query=select evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "local port override",
+			config: "local-port=5353\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "disable AXFR override",
+			config: "disable-axfr=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "DNS update override",
+			config: "dnsupdate=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "DNS update TSIG override",
+			config: "dnsupdate-require-tsig=no\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "DNS update source override",
+			config: "allow-dnsupdate-from=0.0.0.0/0\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "forward DNS update override",
+			config: "forward-dnsupdate=192.0.2.1\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "legacy superslave override",
+			config: "superslave=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "bare legacy superslave override",
+			config: "superslave # enabled\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "incremental legacy superslave override",
+			config: "superslave +=yes\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "uppercase launch is not canonical",
+			config: "LAUNCH=\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "uppercase include is not canonical",
+			config: "launch=\nINCLUDE-DIR={managed}\n",
+		},
+		{
+			name:   "split launch key continuation",
+			config: "laun\\\nch=bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "split database key continuation",
+			config: "gsqlite3-data\\\nbase=/evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "split include key continuation",
+			config: "include-\\\ndir=/evil\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "CRLF launch continuation",
+			config: "laun\\\r\nch=bind\r\ninclude-dir={managed}\r\n",
+		},
+		{
+			name:   "comment continuation",
+			config: "# comment\\\nlaunch=bind\ninclude-dir={managed}\n",
 		},
 	}
 
@@ -283,6 +460,227 @@ func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *te
 				}
 			} else if effectiveErr == nil {
 				t.Fatalf("effective config=(effective=%v, err=nil), want hard failure", effective)
+			}
+		})
+	}
+}
+
+func TestManagedPowerDNSConfigRejectsParserAmbiguity(t *testing.T) {
+	databasePath := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	databaseAlias := filepath.Join(filepath.Dir(databasePath), "link") +
+		"/../" + filepath.Base(databasePath)
+	baseline := "launch=gsqlite3\n" +
+		"gsqlite3-dnssec=yes\n" +
+		"gsqlite3-database=" + databasePath + "\n" +
+		"local-address=192.0.2.10\n" +
+		"zone-cache-refresh-interval=0\n" +
+		"webserver=no\n" +
+		"api=no\n"
+	if !validManagedPowerDNSConfig(baseline, databasePath) {
+		t.Fatal("canonical managed PowerDNS configuration was rejected")
+	}
+	tests := []struct {
+		name   string
+		config string
+	}{
+		{
+			name:   "bare launch appended",
+			config: baseline + "launch\n",
+		},
+		{
+			name:   "bare api with inline comment appended",
+			config: baseline + "api # enabled\n",
+		},
+		{
+			name: "comment continuation swallows required launch",
+			config: strings.Replace(
+				baseline, "launch=gsqlite3", "# comment\\\nlaunch=gsqlite3", 1,
+			),
+		},
+		{
+			name: "split required database key",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-data\\\nbase="+databasePath,
+				1,
+			),
+		},
+		{
+			name: "incremental launch",
+			config: strings.Replace(
+				baseline, "launch=gsqlite3", "launch +=gsqlite3", 1,
+			),
+		},
+		{
+			name: "incremental database",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database +=/evil",
+				1,
+			),
+		},
+		{
+			name: "uppercase launch",
+			config: strings.Replace(
+				baseline, "launch=gsqlite3", "LAUNCH=gsqlite3", 1,
+			),
+		},
+		{
+			name: "vertical tab before database path",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database=\v"+databasePath,
+				1,
+			),
+		},
+		{
+			name: "form feed before database path",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database=\f"+databasePath,
+				1,
+			),
+		},
+		{
+			name: "non-breaking space before database path",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database=\u00a0"+databasePath,
+				1,
+			),
+		},
+		{
+			name: "non-breaking space after database path",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database="+databasePath+"\u00a0",
+				1,
+			),
+		},
+		{
+			name: "non-breaking space before database key",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"\u00a0gsqlite3-database="+databasePath,
+				1,
+			),
+		},
+		{
+			name: "noncanonical database alias",
+			config: strings.Replace(
+				baseline,
+				"gsqlite3-database="+databasePath,
+				"gsqlite3-database="+databaseAlias,
+				1,
+			),
+		},
+		{
+			name: "local address with port",
+			config: strings.Replace(
+				baseline, "local-address=192.0.2.10", "local-address=192.0.2.10:5353", 1,
+			),
+		},
+		{
+			name: "invalid local address",
+			config: strings.Replace(
+				baseline, "local-address=192.0.2.10", "local-address=not-an-ip", 1,
+			),
+		},
+		{
+			name: "empty local address token",
+			config: strings.Replace(
+				baseline, "local-address=192.0.2.10", "local-address=192.0.2.10,", 1,
+			),
+		},
+		{
+			name: "duplicate local address",
+			config: strings.Replace(
+				baseline,
+				"local-address=192.0.2.10",
+				"local-address=192.0.2.10,192.0.2.10",
+				1,
+			),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if validManagedPowerDNSConfig(test.config, databasePath) {
+				t.Fatal("ambiguous managed PowerDNS configuration was accepted")
+			}
+		})
+	}
+}
+
+func TestManagedPowerDNSClusterConfigRejectsParserAmbiguity(t *testing.T) {
+	baseline := "primary=yes\n" +
+		"secondary=yes\n" +
+		"autosecondary=yes\n" +
+		"allow-axfr-ips=192.0.2.10\n" +
+		"also-notify=192.0.2.10\n"
+	if !validDNSClusterPowerDNSConfig(baseline) ||
+		!validManagedDNSClusterPowerDNSConfig(baseline) {
+		t.Fatal("canonical managed PowerDNS cluster configuration was rejected")
+	}
+	tests := []struct {
+		name   string
+		config string
+	}{
+		{
+			name:   "comment continuation swallows required primary",
+			config: "# comment\\\n" + baseline,
+		},
+		{
+			name: "split required primary key",
+			config: strings.Replace(
+				baseline, "primary=yes", "prim\\\nary=yes", 1,
+			),
+		},
+		{
+			name: "incremental primary",
+			config: strings.Replace(
+				baseline, "primary=yes", "primary +=yes", 1,
+			),
+		},
+		{
+			name: "incremental also-notify",
+			config: strings.Replace(
+				baseline,
+				"also-notify=192.0.2.10",
+				"also-notify +=192.0.2.10",
+				1,
+			),
+		},
+		{
+			name: "bare primary with inline comment",
+			config: strings.Replace(
+				baseline, "primary=yes", "primary # enabled", 1,
+			),
+		},
+		{
+			name:   "bare foreign setting",
+			config: baseline + "api # enabled\n",
+		},
+		{
+			name: "uppercase primary",
+			config: strings.Replace(
+				baseline, "primary=yes", "PRIMARY=yes", 1,
+			),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if validDNSClusterPowerDNSConfig(test.config) {
+				t.Fatal("ambiguous legacy cluster configuration was accepted")
+			}
+			if validManagedDNSClusterPowerDNSConfig(test.config) {
+				t.Fatal("ambiguous managed cluster configuration was accepted")
 			}
 		})
 	}
@@ -649,6 +1047,82 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 			directive: "launch+=bind\n",
 		},
 		{
+			name:      "loaded spaced append launch override is hard",
+			directive: "launch +=bind\n",
+		},
+		{
+			name:      "loaded append database override is hard",
+			directive: "gsqlite3-database+=/evil\n",
+		},
+		{
+			name:      "loaded spaced append database override is hard",
+			directive: "gsqlite3-database +=/evil\n",
+		},
+		{
+			name:      "loaded append include override is hard",
+			directive: "include-dir +=/evil\n",
+		},
+		{
+			name:      "loaded arbitrary gsqlite3 query override is hard",
+			directive: "gsqlite3-basic-query=select evil\n",
+		},
+		{
+			name:      "loaded local port override is hard",
+			directive: "local-port=5353\n",
+		},
+		{
+			name:      "loaded disable AXFR override is hard",
+			directive: "disable-axfr=yes\n",
+		},
+		{
+			name:      "loaded DNS update override is hard",
+			directive: "dnsupdate=yes\n",
+		},
+		{
+			name:      "loaded DNS update TSIG override is hard",
+			directive: "dnsupdate-require-tsig=no\n",
+		},
+		{
+			name:      "loaded DNS update source override is hard",
+			directive: "allow-dnsupdate-from=0.0.0.0/0\n",
+		},
+		{
+			name:      "loaded forward DNS update override is hard",
+			directive: "forward-dnsupdate=192.0.2.1\n",
+		},
+		{
+			name:      "loaded legacy superslave override is hard",
+			directive: "superslave=yes\n",
+		},
+		{
+			name:      "loaded bare legacy superslave override is hard",
+			directive: "superslave # enabled\n",
+		},
+		{
+			name:      "loaded incremental legacy superslave override is hard",
+			directive: "superslave +=yes\n",
+		},
+		{
+			name:      "loaded bare api override is hard",
+			directive: "api # enabled\n",
+		},
+		{
+			name:      "loaded bare primary override is hard",
+			directive: "primary # enabled\n",
+		},
+		{
+			name:      "loaded split launch continuation is hard",
+			directive: "laun\\\nch=bind\n",
+		},
+		{
+			name:      "loaded split database continuation is hard",
+			directive: "gsqlite3-data\\\nbase=/evil\n",
+		},
+		{
+			name:      "loaded comment continuation is hard",
+			directive: "# comment\\\nlaunch=bind\n",
+		},
+		{
 			name:      "loaded malformed launch override is hard",
 			directive: "launch bind\n",
 		},
@@ -673,6 +1147,46 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 			}
 			if got.Ready {
 				t.Fatal("loaded managed override reported ready")
+			}
+		})
+	}
+
+	clusterBaseline := "primary=yes\n" +
+		"secondary=yes\n" +
+		"autosecondary=yes\n" +
+		"allow-axfr-ips=192.0.2.10\n" +
+		"also-notify=192.0.2.10\n"
+	for _, test := range []struct {
+		name   string
+		config string
+	}{
+		{
+			name: "loaded cluster continuation is hard",
+			config: strings.Replace(
+				clusterBaseline, "primary=yes", "prim\\\nary=yes", 1,
+			),
+		},
+		{
+			name: "loaded cluster incremental directive is hard",
+			config: strings.Replace(
+				clusterBaseline, "primary=yes", "primary +=yes", 1,
+			),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cluster := filepath.Join(dir, filepath.Base(dnsClusterConf))
+			if err := os.WriteFile(cluster, []byte(test.config), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(cluster)
+			var got DNSClusterReadinessResponse
+			if err := (&Agent{}).DNSClusterReadiness(
+				&transport.Empty{}, &got,
+			); err == nil {
+				t.Fatalf("ambiguous loaded cluster readiness=%+v", got)
+			}
+			if got.Ready {
+				t.Fatal("ambiguous loaded cluster reported ready")
 			}
 		})
 	}

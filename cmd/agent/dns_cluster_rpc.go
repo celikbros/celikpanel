@@ -206,29 +206,99 @@ func dnsClusterConfigOwnerTrusted(info os.FileInfo) bool {
 	return !enforceOwner || ownerUID == dnsClusterConfigRequiredOwnerUID
 }
 
+const powerDNSConfigWhitespace = " \t\r\n\v\f"
+
 func powerDNSConfigDirective(line string) (key, value string, found bool) {
-	line = strings.TrimSpace(line)
-	if line == "" || strings.HasPrefix(line, "#") {
+	line = strings.TrimRight(line, powerDNSConfigWhitespace)
+	line = strings.TrimLeft(line, " \t\r\n")
+	if index := strings.IndexByte(line, '#'); index >= 0 &&
+		(index == 0 || isPowerDNSConfigSpace(line[index-1])) {
+		line = line[:index]
+	}
+	line = strings.TrimRight(line, powerDNSConfigWhitespace)
+	if line == "" {
 		return "", "", false
 	}
-	key, value, found = strings.Cut(line, "=")
-	if !found {
-		return "", "", false
+	separatorIndex := strings.Index(line, "+=")
+	incremental := separatorIndex >= 0
+	separatorLength := 2
+	if !incremental {
+		separatorIndex = strings.IndexByte(line, '=')
+		separatorLength = 1
 	}
-	return strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value), true
+	if separatorIndex < 0 {
+		key = strings.Trim(line, powerDNSConfigWhitespace)
+		return key, "", key != ""
+	}
+	key = strings.Trim(line[:separatorIndex], powerDNSConfigWhitespace)
+	// ArgvMap skips only ASCII space and tab at the start of a value. Do not
+	// erase VT, FF, NBSP, or other bytes that change the path/value PowerDNS
+	// will actually use.
+	value = strings.TrimLeft(line[separatorIndex+separatorLength:], " \t")
+	if incremental {
+		key += "+"
+	} else if strings.HasSuffix(key, "+") {
+		// Be conservative for whitespace-split forms such as launch + =bind.
+		// PowerDNS does not need to accept the form for it to be unsafe to
+		// silently treat the owned key as unrelated configuration.
+		key = strings.TrimSpace(strings.TrimSuffix(key, "+")) + "+"
+	}
+	return key, value, true
 }
 
-// Debian's stock pdns.conf contains one exact, active launch= line before its
-// include-dir. That line selects no backend and cannot override CelikPanel's
-// later managed drop-in. Keep the exception byte- and order-exact: whitespace,
-// a value, a duplicate, or a launch after the include remains ambiguous.
+func isPowerDNSConfigSpace(value byte) bool {
+	switch value {
+	case ' ', '\t', '\r', '\n', '\v', '\f':
+		return true
+	default:
+		return false
+	}
+}
+
+// PowerDNS right-trims and joins physical lines ending in a backslash before
+// it strips comments or parses directives. Static ownership checks must not
+// interpret those bytes line-by-line, so reject continuation syntax instead.
+func hasPowerDNSLineContinuation(config string) bool {
+	for _, line := range strings.Split(config, "\n") {
+		if strings.HasSuffix(strings.TrimRight(line, powerDNSConfigWhitespace), "\\") {
+			return true
+		}
+	}
+	return false
+}
+
+func managedPowerDNSDirectiveKey(key string) bool {
+	key = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(key)), "+")
+	if strings.HasPrefix(key, "gsqlite3-") {
+		return true
+	}
+	switch key {
+	case "launch", "include-dir",
+		"local-address", "local-port",
+		"zone-cache-refresh-interval", "webserver", "api",
+		"primary", "secondary", "autosecondary",
+		"allow-axfr-ips", "also-notify",
+		"master", "slave", "supermaster", "superslave", "autoprimary",
+		"disable-axfr",
+		"dnsupdate", "dnsupdate-require-tsig",
+		"allow-dnsupdate-from", "forward-dnsupdate":
+		return true
+	default:
+		return false
+	}
+}
+
+// PowerDNS parses the complete main file before it loads include-dir entries,
+// so Debian's stock, active launch= line may appear on either side of the
+// include-dir without overriding CelikPanel's later managed drop-in. Keep the
+// exception byte- and count-exact: whitespace, a value, or a duplicate remains
+// ambiguous.
 func acceptCanonicalEmptyLegacyPowerDNSLaunch(
 	line, value string,
-	includeCount int,
 	seen *bool,
 ) bool {
 	line = strings.TrimSuffix(line, "\r")
-	if seen == nil || *seen || includeCount != 0 || value != "" || line != "launch=" {
+	if seen == nil || *seen || value != "" || line != "launch=" {
 		return false
 	}
 	*seen = true
@@ -262,35 +332,36 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 	if err != nil {
 		return false, "", fmt.Errorf("read PowerDNS main configuration: %w", err)
 	}
+	if hasPowerDNSLineContinuation(string(mainData)) {
+		return false, "", errors.New("PowerDNS main configuration contains a line continuation")
+	}
 	wantDir := filepath.Clean(filepath.Dir(dnsManagedConf))
 	includeCount := 0
 	emptyLegacyLaunchSeen := false
 	for _, line := range strings.Split(string(mainData), "\n") {
+		if malformedPowerDNSLaunchDirective(line) {
+			return false, "", errors.New("PowerDNS main configuration contains a malformed launch directive")
+		}
 		key, value, found := powerDNSConfigDirective(line)
 		if !found {
-			if malformedPowerDNSLaunchDirective(line) {
-				return false, "", errors.New("PowerDNS main configuration contains a malformed launch directive")
-			}
 			continue
 		}
 		switch key {
 		case "include-dir":
 			includeCount++
-			if filepath.Clean(value) != wantDir {
+			if value != wantDir {
 				return false, "", errors.New("PowerDNS loads an unexpected include directory")
 			}
 		case "launch":
 			if !acceptCanonicalEmptyLegacyPowerDNSLaunch(
-				line, value, includeCount, &emptyLegacyLaunchSeen,
+				line, value, &emptyLegacyLaunchSeen,
 			) {
 				return false, "", errors.New("PowerDNS main configuration overrides managed DNS state")
 			}
-		case "launch+", "gsqlite3-database", "gsqlite3-dnssec",
-			"local-address", "zone-cache-refresh-interval", "webserver", "api",
-			"primary", "secondary", "autosecondary",
-			"allow-axfr-ips", "also-notify",
-			"master", "slave", "supermaster", "autoprimary":
-			return false, "", errors.New("PowerDNS main configuration overrides managed DNS state")
+		default:
+			if managedPowerDNSDirectiveKey(key) {
+				return false, "", errors.New("PowerDNS main configuration overrides managed DNS state")
+			}
 		}
 	}
 	if includeCount == 0 {
@@ -337,6 +408,9 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 		if err != nil {
 			return false, "", fmt.Errorf("read PowerDNS include %s: %w", name, err)
 		}
+		if hasPowerDNSLineContinuation(string(other)) {
+			return false, "", fmt.Errorf("PowerDNS include %s contains a line continuation", name)
+		}
 		if name == clusterBase {
 			if !validManagedDNSClusterPowerDNSConfig(string(other)) {
 				return false, "", errors.New("PowerDNS cluster configuration is malformed or ambiguous")
@@ -344,19 +418,14 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 			continue
 		}
 		for _, line := range strings.Split(string(other), "\n") {
+			if malformedPowerDNSLaunchDirective(line) {
+				return false, "", fmt.Errorf("PowerDNS include %s contains a malformed launch directive", name)
+			}
 			key, _, found := powerDNSConfigDirective(line)
 			if !found {
-				if malformedPowerDNSLaunchDirective(line) {
-					return false, "", fmt.Errorf("PowerDNS include %s contains a malformed launch directive", name)
-				}
 				continue
 			}
-			switch key {
-			case "launch", "launch+", "gsqlite3-database", "gsqlite3-dnssec", "include-dir",
-				"local-address", "zone-cache-refresh-interval", "webserver", "api",
-				"primary", "secondary", "autosecondary",
-				"allow-axfr-ips", "also-notify",
-				"master", "slave", "supermaster", "autoprimary":
+			if managedPowerDNSDirectiveKey(key) {
 				return false, "", fmt.Errorf("PowerDNS include %s conflicts with the managed backend", name)
 			}
 		}
@@ -365,6 +434,9 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 }
 
 func validManagedPowerDNSConfig(config, databasePath string) bool {
+	if hasPowerDNSLineContinuation(config) {
+		return false
+	}
 	want := map[string]string{
 		"launch":                      "gsqlite3",
 		"gsqlite3-dnssec":             "yes",
@@ -376,12 +448,7 @@ func validManagedPowerDNSConfig(config, databasePath string) bool {
 	}
 	seen := make(map[string]string, len(want))
 	for _, raw := range strings.Split(config, "\n") {
-		line := strings.TrimSpace(raw)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, found := strings.Cut(line, "=")
-		key, value = strings.TrimSpace(key), strings.TrimSpace(value)
+		key, value, found := powerDNSConfigDirective(raw)
 		if !found {
 			continue
 		}
@@ -398,34 +465,49 @@ func validManagedPowerDNSConfig(config, databasePath string) bool {
 		if !ok {
 			return false
 		}
-		if key == "gsqlite3-database" {
-			actual = filepath.Clean(actual)
-		}
-		if expected == "" {
-			if actual == "" {
+		switch key {
+		case "local-address":
+			if !validManagedPowerDNSLocalAddresses(actual) {
 				return false
 			}
-		} else if actual != expected {
-			return false
+		default:
+			if actual != expected {
+				return false
+			}
 		}
 	}
 	return true
 }
 
+func validManagedPowerDNSLocalAddresses(value string) bool {
+	addresses := strings.Split(value, ",")
+	if len(addresses) == 0 {
+		return false
+	}
+	seen := make(map[string]bool, len(addresses))
+	for _, address := range addresses {
+		parsed := net.ParseIP(address)
+		if parsed == nil || parsed.String() != address || seen[address] {
+			return false
+		}
+		seen[address] = true
+	}
+	return true
+}
+
 func validDNSClusterPowerDNSConfig(config string) bool {
+	if hasPowerDNSLineContinuation(config) {
+		return false
+	}
 	want := map[string]string{
 		"primary": "yes", "secondary": "yes", "autosecondary": "yes",
 		"allow-axfr-ips": "", "also-notify": "",
 	}
 	seen := make(map[string]string, len(want))
 	for _, raw := range strings.Split(config, "\n") {
-		line := strings.TrimSpace(raw)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, found := powerDNSConfigDirective(line)
+		key, value, found := powerDNSConfigDirective(raw)
 		if !found {
-			return false
+			continue
 		}
 		expected, allowed := want[key]
 		if !allowed || value == "" {
@@ -460,18 +542,20 @@ type managedDNSClusterPowerDNSConfig struct {
 func parseManagedDNSClusterPowerDNSConfig(
 	config string,
 ) (managedDNSClusterPowerDNSConfig, bool) {
+	if hasPowerDNSLineContinuation(config) {
+		return managedDNSClusterPowerDNSConfig{}, false
+	}
 	want := map[string]string{
 		`primary`: `yes`, `secondary`: `yes`, `autosecondary`: `yes`,
 		`allow-axfr-ips`: ``,
 	}
 	seen := make(map[string]string, len(want)+1)
 	for _, raw := range strings.Split(config, string('\n')) {
-		line := strings.TrimSpace(raw)
-		if line == `` || strings.HasPrefix(line, `#`) {
+		key, value, found := powerDNSConfigDirective(raw)
+		if !found {
 			continue
 		}
-		key, value, found := powerDNSConfigDirective(line)
-		if !found || value == `` {
+		if value == `` {
 			return managedDNSClusterPowerDNSConfig{}, false
 		}
 		expected, required := want[key]

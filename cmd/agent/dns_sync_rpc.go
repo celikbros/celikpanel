@@ -305,34 +305,36 @@ api=no
 // backend CelikPanel owns. A missing include is repairable; a conflicting or
 // ambiguous include is not silently rewritten.
 func validateManagedPowerDNSMainConfig(config, managedDir string) (bool, error) {
+	if hasPowerDNSLineContinuation(config) {
+		return false, errors.New("PowerDNS main configuration contains a line continuation")
+	}
 	wantDir := filepath.Clean(managedDir)
 	includeCount := 0
 	emptyLegacyLaunchSeen := false
 	for _, line := range strings.Split(config, "\n") {
+		if malformedPowerDNSLaunchDirective(line) {
+			return false, errors.New("PowerDNS main configuration contains a malformed launch directive")
+		}
 		key, value, found := powerDNSConfigDirective(line)
 		if !found {
-			if malformedPowerDNSLaunchDirective(line) {
-				return false, errors.New("PowerDNS main configuration contains a malformed launch directive")
-			}
 			continue
 		}
 		switch key {
 		case "include-dir":
 			includeCount++
-			if filepath.Clean(value) != wantDir {
+			if value != wantDir {
 				return false, errors.New("PowerDNS loads an unexpected include directory")
 			}
 		case "launch":
 			if !acceptCanonicalEmptyLegacyPowerDNSLaunch(
-				line, value, includeCount, &emptyLegacyLaunchSeen,
+				line, value, &emptyLegacyLaunchSeen,
 			) {
 				return false, errors.New("PowerDNS main configuration overrides managed DNS state")
 			}
-		case "launch+", "gsqlite3-database", "gsqlite3-dnssec",
-			"primary", "secondary", "autosecondary",
-			"allow-axfr-ips", "also-notify",
-			"master", "slave", "supermaster", "autoprimary":
-			return false, errors.New("PowerDNS main configuration overrides managed DNS state")
+		default:
+			if managedPowerDNSDirectiveKey(key) {
+				return false, errors.New("PowerDNS main configuration overrides managed DNS state")
+			}
 		}
 	}
 	if includeCount > 1 {
