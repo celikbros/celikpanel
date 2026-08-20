@@ -307,9 +307,13 @@ api=no
 func validateManagedPowerDNSMainConfig(config, managedDir string) (bool, error) {
 	wantDir := filepath.Clean(managedDir)
 	includeCount := 0
+	emptyLegacyLaunchSeen := false
 	for _, line := range strings.Split(config, "\n") {
 		key, value, found := powerDNSConfigDirective(line)
 		if !found {
+			if malformedPowerDNSLaunchDirective(line) {
+				return false, errors.New("PowerDNS main configuration contains a malformed launch directive")
+			}
 			continue
 		}
 		switch key {
@@ -318,7 +322,13 @@ func validateManagedPowerDNSMainConfig(config, managedDir string) (bool, error) 
 			if filepath.Clean(value) != wantDir {
 				return false, errors.New("PowerDNS loads an unexpected include directory")
 			}
-		case "launch", "gsqlite3-database", "gsqlite3-dnssec",
+		case "launch":
+			if !acceptCanonicalEmptyLegacyPowerDNSLaunch(
+				line, value, includeCount, &emptyLegacyLaunchSeen,
+			) {
+				return false, errors.New("PowerDNS main configuration overrides managed DNS state")
+			}
+		case "launch+", "gsqlite3-database", "gsqlite3-dnssec",
 			"primary", "secondary", "autosecondary",
 			"allow-axfr-ips", "also-notify",
 			"master", "slave", "supermaster", "autoprimary":

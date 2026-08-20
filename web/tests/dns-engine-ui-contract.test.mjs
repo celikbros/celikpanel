@@ -268,6 +268,53 @@ test('DNS identity review unlocks only for the exact saved plan', async () => {
   ), false, 'an exact saved paired-secondary plan unlocks review');
 });
 
+test('DNS settings flow separates fresh, exact legacy, active, and manual recovery states', async () => {
+  const { dnsEngineSettingsFlow } = await loadIdentityPlanRuntime();
+  const availableEngines = [
+    { id: 'pdns', installed: false, running: false, managed: false, status: 'available' },
+    { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+  ];
+  const unmanagedEngines = [
+    { id: 'pdns', installed: true, running: true, managed: false, status: 'unmanaged' },
+    { id: 'bind', installed: false, running: false, managed: false, status: 'available' },
+  ];
+
+  assert.equal(dnsEngineSettingsFlow(null), 'unavailable');
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'unconfigured', active_engine: null, topology: 'unconfigured', engines: availableEngines,
+  }), 'identityStaging');
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'ready', active_engine: 'pdns', topology: 'standalone', engines: [
+      { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
+      availableEngines[1],
+    ],
+  }), 'active');
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'unmanaged', active_engine: null, topology: 'paired', engines: [
+      { ...unmanagedEngines[0], managed: true },
+      unmanagedEngines[1],
+    ],
+  }), 'legacyPowerDNSReconfigure', 'the exact managed legacy PowerDNS exception remains staged');
+
+  for (const topology of ['unconfigured', 'standalone', 'paired']) {
+    assert.equal(dnsEngineSettingsFlow({
+      state: 'unmanaged', active_engine: null, topology, engines: unmanagedEngines,
+    }), 'manualRecovery', `unverified ${topology} ownership must be manual recovery`);
+  }
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'unmanaged', active_engine: null, topology: 'paired', engines: [
+      { ...unmanagedEngines[0], managed: true },
+      { ...unmanagedEngines[1], installed: true, running: true, status: 'unmanaged' },
+    ],
+  }), 'manualRecovery', 'a second running engine invalidates the managed legacy exception');
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'conflict', active_engine: null, topology: 'standalone', engines: unmanagedEngines,
+  }), 'locked');
+  assert.equal(dnsEngineSettingsFlow({
+    state: 'degraded', active_engine: 'pdns', topology: 'standalone', engines: unmanagedEngines,
+  }), 'locked');
+});
+
 test('DNS engine preview token and counts mirror the commit contract', async () => {
   const { decodeDNSEngineSwitchPreview } = await loadContractRuntime();
   const preview = {
@@ -383,9 +430,11 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
 
 test('fresh servers stage an exact DNS identity before the first engine install', () => {
   assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
-  assert.match(settings, /const legacyPowerDNSEntry = engine\?\.engines\.find\(\(entry\) => entry\.id === 'pdns'\)/);
-  assert.match(settings, /const legacyPowerDNSReconfigureStaging = engine\?\.state === 'unmanaged'[\s\S]*legacyPowerDNSEntry\.installed && legacyPowerDNSEntry\.running && legacyPowerDNSEntry\.managed[\s\S]*entry\.id === 'pdns' \|\| !entry\.running/);
-  assert.match(settings, /const identityStaging = \(engine\?\.state === 'unconfigured' && engine\.active_engine === null\) \|\|[\s\S]*legacyPowerDNSReconfigureStaging/);
+  assert.match(settings, /const settingsFlow = dnsEngineSettingsFlow\(engine\)/);
+  assert.match(settings, /const legacyPowerDNSReconfigureStaging = settingsFlow === 'legacyPowerDNSReconfigure'/);
+  assert.match(settings, /const identityStaging = settingsFlow === 'identityStaging' \|\| legacyPowerDNSReconfigureStaging/);
+  assert.match(identityPlan, /legacyPowerDNS\.installed && legacyPowerDNS\.running && legacyPowerDNS\.managed/);
+  assert.match(identityPlan, /snapshot\.engines\.every\(\(entry\) => entry\.id === 'pdns' \|\| !entry\.running\)/);
   assert.match(settings, /<DNSEngineCard[\s\S]*key=\{engineRefreshKey\}/);
   assert.match(settings, /data-testid=\x22dns-identity-before-engine\x22[\s\S]*<DNSInfrastructureSettings/);
   assert.match(settings, /activeEngine=\{activeEngine\}/);
@@ -425,7 +474,7 @@ test('identity staging precedes engine choices and fail-closes every review path
     'an active engine must keep the existing engine-card-first layout');
   assert.match(render, /\{engine && !identityStaging && \(activeEngine \? \(/,
     'identity fallback must wait for a verified engine snapshot');
-  assert.match(settings, /identityPlanCurrent=\{!identityStaging \|\| identityPlanCurrent\}/);
+  assert.match(settings, /identityPlanCurrent=\{!actionsLocked && \(!identityStaging \|\| identityPlanCurrent\)\}/);
   assert.match(identityPlan, /function exactStagedIdentityIsCurrent\(/);
   assert.match(identityPlan, /saved\.peer_ns === savedPeerNS/);
   assert.match(identityPlan, /pairRole === expectedPairRole/);
@@ -434,8 +483,8 @@ test('identity staging precedes engine choices and fail-closes every review path
   assert.match(card, /identityPlanCurrent = true/);
   assert.match(card, /dnsEngineIdentityReviewLocked\(identityPlanCurrent, snapshot\)/);
   assert.match(identityPlan, /snapshot\?\.active_engine === null && snapshot\.topology === 'unconfigured'/);
-  assert.match(card, /snapshot\.state === 'switching' \|\| identityReviewLocked/);
-  assert.match(card, /const canReview = !identityReviewLocked/);
+  assert.match(card, /actionsLocked \|\| !snapshot \|\| snapshot\.state === 'switching' \|\| identityReviewLocked/);
+  assert.match(card, /const canReview = !actionsLocked[\s\S]*&& !identityReviewLocked/);
   assert.match(card, /disabled=\{!canReview \|\| review !== null\}/);
   assert.match(card, /data-testid=\x22dns-engine-identity-lock\x22/);
   assert.match(copy, /dnsEngine\.identity\.reviewLocked/);
@@ -454,8 +503,8 @@ test('paired engines expose exact peer readiness without granting secondary writ
 });
 
 test('paired identity remains locked across independent BIND or PowerDNS choices', () => {
-  assert.match(settings, /const activeEngine: ActiveDNSEngine \| null = engine\?\.state === 'ready'/);
-  assert.match(settings, /engine\.active_engine === 'pdns' \|\| engine\.active_engine === 'bind'/);
+  assert.match(settings, /const activeEngine: ActiveDNSEngine \| null = settingsFlow === 'active'/);
+  assert.match(settings, /engine\?\.active_engine === 'pdns' \|\| engine\?\.active_engine === 'bind'/);
   assert.match(settings, /<DNSInfrastructureSettings[\s\S]*activeEngine=\{activeEngine\}/);
   assert.match(settings, /const role = normalizeRole\(cluster\.role\)/);
   assert.match(settings, /pairRole=\{engine\?\.pair_role\}/);
@@ -471,6 +520,29 @@ test('paired identity remains locked across independent BIND or PowerDNS choices
   assert.match(settings, /paired-identity-note/);
   assert.equal((settings.match(/fetch\('\/api\/v1\/settings\/dns-setup'/g) || []).length, 1);
   assert.equal((settings.match(/dns-wizard-save/g) || []).length, 1);
+});
+
+test('manual recovery and unsafe transitions expose Refresh only and invalidate stale review', () => {
+  assert.match(settings, /const manualRecovery = settingsFlow === 'manualRecovery'/);
+  assert.match(settings, /const actionsLocked = settingsFlow === 'unavailable' \|\| manualRecovery \|\| settingsFlow === 'locked'/);
+  assert.match(settings, /actionsLocked=\{actionsLocked\}/);
+  assert.match(settings, /data-testid=\{manualRecovery \? 'dns-manual-recovery' : undefined\}/);
+  assert.match(settings, /dnsEngine\.manualRecoveryTitle/);
+  assert.match(settings, /dnsEngine\.manualRecoveryDescription/);
+  assert.match(card, /if \(actionsLocked\) setReview\(null\)/,
+    'an unsafe parent snapshot must invalidate an already-open review');
+  assert.match(card, /if \(actionsLocked \|\| !snapshot/);
+  assert.match(card, /if \(actionsLocked \|\| !current \|\| !preview/);
+  assert.match(card, /\) : actionsLocked \? null : \(/,
+    'locked states must render neither install nor adoption review buttons');
+  assert.match(card, /\{review && !actionsLocked && \(/,
+    'a stale dialog must disappear before it can confirm an unsafe transition');
+  assert.match(card, /identityReviewLocked && !actionsLocked/,
+    'manual recovery must not show the impossible save-above instruction');
+  assert.match(copy, /DNS ownership could not be verified/);
+  assert.match(copy, /then use Refresh state/);
+  assert.match(copy, /DNS sahipliği doğrulanamadı/);
+  assert.match(copy, /ardından Durumu yenile düğmesini kullanın/);
 });
 
 test('DNS engine copy has English and Turkish key parity', () => {

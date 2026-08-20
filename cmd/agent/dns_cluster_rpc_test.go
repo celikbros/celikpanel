@@ -187,6 +187,107 @@ func dnsClusterDatabaseSnapshot(t *testing.T) string {
 	return strings.Join(parts, "|")
 }
 
+func TestManagedPowerDNSMainConfigAcceptsOnlyStockEmptyLaunchBeforeInclude(t *testing.T) {
+	databasePath := filepath.Join(t.TempDir(), "pdns.sqlite3")
+	dir := prepareManagedDNSReadinessTest(t, databasePath)
+
+	tests := []struct {
+		name   string
+		config string
+		valid  bool
+	}{
+		{
+			name:   "fresh main file without legacy launch",
+			config: "include-dir={managed}\n",
+			valid:  true,
+		},
+		{
+			name:   "stock empty launch before managed include",
+			config: "launch=\ninclude-dir={managed}\n",
+			valid:  true,
+		},
+		{
+			name:   "commented inactive launch does not override",
+			config: "# launch=bind\ninclude-dir={managed}\n",
+			valid:  true,
+		},
+		{
+			name:   "empty launch after managed include",
+			config: "include-dir={managed}\nlaunch=\n",
+		},
+		{
+			name:   "gsqlite3 launch override",
+			config: "launch=gsqlite3\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "bind launch override",
+			config: "launch=bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "custom launch override",
+			config: "launch=custom\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "alternate append launch key",
+			config: "launch+=bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "duplicate empty launch",
+			config: "launch=\nlaunch=\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "whitespace around separator",
+			config: "launch =\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "trailing whitespace",
+			config: "launch= \ninclude-dir={managed}\n",
+		},
+		{
+			name:   "inline comment is not empty",
+			config: "launch=# not a stock empty directive\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "malformed launch without separator",
+			config: "launch gsqlite3\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "malformed append launch without separator",
+			config: "launch+ bind\ninclude-dir={managed}\n",
+		},
+		{
+			name:   "other empty managed directive",
+			config: "gsqlite3-database=\ninclude-dir={managed}\n",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config := strings.ReplaceAll(test.config, "{managed}", dir)
+			hasInclude, validationErr := validateManagedPowerDNSMainConfig(config, dir)
+			if test.valid {
+				if validationErr != nil || !hasInclude {
+					t.Fatalf("main config validation=(include=%v, err=%v), want accepted", hasInclude, validationErr)
+				}
+			} else if validationErr == nil {
+				t.Fatalf("main config validation=(include=%v, err=nil), want hard failure", hasInclude)
+			}
+
+			if err := os.WriteFile(dnsMainConf, []byte(config), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			effective, _, effectiveErr := effectiveManagedPowerDNSConfig()
+			if test.valid {
+				if effectiveErr != nil || !effective {
+					t.Fatalf("effective config=(effective=%v, err=%v), want accepted", effective, effectiveErr)
+				}
+			} else if effectiveErr == nil {
+				t.Fatalf("effective config=(effective=%v, err=nil), want hard failure", effective)
+			}
+		})
+	}
+}
+
 func TestDNSClusterConfigUsesSymmetricPair(t *testing.T) {
 	req := &DNSClusterRequest{
 		Role:   dnsRolePaired,
@@ -281,7 +382,7 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(dnsMainConf, []byte(
-		"include-dir="+dir+"\n",
+		"launch=\ninclude-dir="+dir+"\n",
 	), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -542,6 +643,18 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 		{
 			name:      "loaded zone cache override is hard",
 			directive: "zone-cache-refresh-interval=60\n",
+		},
+		{
+			name:      "loaded append launch override is hard",
+			directive: "launch+=bind\n",
+		},
+		{
+			name:      "loaded malformed launch override is hard",
+			directive: "launch bind\n",
+		},
+		{
+			name:      "loaded malformed append launch override is hard",
+			directive: "launch+ bind\n",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

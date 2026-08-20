@@ -52,6 +52,22 @@ func TestSecurityAuditAgentResponseAcceptsExactBoundedContract(t *testing.T) {
 	}
 }
 
+func TestSecurityAuditAgentResponseKeepsBoundedLegacyListenerFailureCompatible(t *testing.T) {
+	response := validSecurityAuditAgentFixture()
+	response.Listeners = SecurityAuditListenersResponse{
+		Check: SecurityAuditCheck{Status: SecurityAuditStatusFail, Code: SecurityAuditListenerNotAllowed},
+		Findings: []SecurityAuditListenerFinding{{
+			Protocol: "tcp",
+			Port:     5355,
+			Status:   SecurityAuditStatusFail,
+			Code:     SecurityAuditListenerNotAllowed,
+		}},
+	}
+	if err := ValidateSecurityAuditAgentResponse(response); err != nil {
+		t.Fatalf("bounded v1 listener failure rejected during rolling compatibility: %v", err)
+	}
+}
+
 func TestSecurityAuditAgentResponseRejectsFalsePassAndUnboundedFindings(t *testing.T) {
 	tests := []struct {
 		name   string

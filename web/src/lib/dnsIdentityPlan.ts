@@ -25,6 +25,56 @@ interface DNSIdentityEngineEvidence {
     topology: string;
 }
 
+interface DNSEngineFlowEntryEvidence {
+    id: string;
+    installed: boolean;
+    running: boolean;
+    managed: boolean;
+    status: string;
+}
+
+interface DNSEngineFlowEvidence extends DNSIdentityEngineEvidence {
+    state: string;
+    engines: DNSEngineFlowEntryEvidence[];
+}
+
+export type DNSEngineSettingsFlow =
+    | 'unavailable'
+    | 'identityStaging'
+    | 'legacyPowerDNSReconfigure'
+    | 'active'
+    | 'manualRecovery'
+    | 'locked';
+
+// Keep rendering decisions for the no-authority states in one fail-closed
+// matrix. The legacy reconfigure exception is exact; an unmanaged service
+// whose ownership is not proven must never fall into the fresh-install flow.
+export function dnsEngineSettingsFlow(
+    snapshot: DNSEngineFlowEvidence | null,
+): DNSEngineSettingsFlow {
+    if (snapshot === null) return 'unavailable';
+
+    const legacyPowerDNS = snapshot.engines.find((entry) => entry.id === 'pdns');
+    const legacyPowerDNSReconfigure = snapshot.state === 'unmanaged' &&
+        snapshot.active_engine === null &&
+        legacyPowerDNS?.status === 'unmanaged' &&
+        legacyPowerDNS.installed && legacyPowerDNS.running && legacyPowerDNS.managed &&
+        snapshot.engines.every((entry) => entry.id === 'pdns' || !entry.running);
+    if (legacyPowerDNSReconfigure) return 'legacyPowerDNSReconfigure';
+
+    if (snapshot.state === 'unconfigured' && snapshot.active_engine === null) {
+        return 'identityStaging';
+    }
+    if (snapshot.state === 'ready' &&
+        (snapshot.active_engine === 'pdns' || snapshot.active_engine === 'bind')) {
+        return 'active';
+    }
+    if (snapshot.state === 'unmanaged' && snapshot.active_engine === null) {
+        return 'manualRecovery';
+    }
+    return 'locked';
+}
+
 function cleanHostname(value: string): string {
     return value.trim().toLowerCase().replace(/\.$/, '');
 }

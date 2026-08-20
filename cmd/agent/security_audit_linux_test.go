@@ -3,6 +3,8 @@
 package main
 
 import (
+	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -109,7 +111,88 @@ func TestSecurityAuditFirewallSnapshotClassificationFailsClosed(t *testing.T) {
 	}
 }
 
-func TestSecurityAuditListenersDistinguishLeakAndUnusedRule(t *testing.T) {
+func TestSecurityAuditFirewallSnapshotMetadataMatchesInstallerIdentity(t *testing.T) {
+	const celikpanelGID uint32 = 1234
+	if !securityAuditFirewallSnapshotPathSafe("/etc/celikpanel/firewall.nft") {
+		t.Fatal("canonical firewall snapshot path was rejected")
+	}
+	for _, path := range []string{
+		"/etc/celikpanel/../celikpanel/firewall.nft",
+		"/etc/celikpanel/firewall.nft/",
+		"/etc/celikpanel/other.nft",
+		"/tmp/firewall.nft",
+	} {
+		if securityAuditFirewallSnapshotPathSafe(path) {
+			t.Fatalf("noncanonical firewall snapshot path accepted: %q", path)
+		}
+	}
+
+	validDirectoryMode := os.ModeDir | 0o750
+	if !securityAuditFirewallDirectoryMetadataSafe(validDirectoryMode, 0, celikpanelGID, celikpanelGID) {
+		t.Fatal("installer root:celikpanel 0750 directory metadata was rejected")
+	}
+	for _, test := range []struct {
+		name        string
+		mode        os.FileMode
+		uid, gid    uint32
+		expectedGID uint32
+	}{
+		{name: "missing group identity", mode: validDirectoryMode, gid: celikpanelGID},
+		{name: "non-root owner", mode: validDirectoryMode, uid: 1000, gid: celikpanelGID, expectedGID: celikpanelGID},
+		{name: "root group instead of service group", mode: validDirectoryMode, expectedGID: celikpanelGID},
+		{name: "foreign group", mode: validDirectoryMode, gid: celikpanelGID + 1, expectedGID: celikpanelGID},
+		{name: "group writable", mode: os.ModeDir | 0o770, gid: celikpanelGID, expectedGID: celikpanelGID},
+		{name: "wrong safe mode", mode: os.ModeDir | 0o700, gid: celikpanelGID, expectedGID: celikpanelGID},
+		{name: "setgid directory", mode: os.ModeDir | os.ModeSetgid | 0o750, gid: celikpanelGID, expectedGID: celikpanelGID},
+		{name: "symlink", mode: os.ModeSymlink | 0o750, gid: celikpanelGID, expectedGID: celikpanelGID},
+		{name: "regular file", mode: 0o750, gid: celikpanelGID, expectedGID: celikpanelGID},
+	} {
+		t.Run("directory/"+test.name, func(t *testing.T) {
+			if securityAuditFirewallDirectoryMetadataSafe(test.mode, test.uid, test.gid, test.expectedGID) {
+				t.Fatal("unsafe firewall directory metadata was accepted")
+			}
+		})
+	}
+
+	fileSafe := func(mode os.FileMode, uid, gid uint32, links uint64, size int64) bool {
+		return securityAuditRegularFileMetadataSafe(
+			mode, uid, gid, links, size, 0o600, 1, maxFirewallSnapshotSize, 0, celikpanelGID,
+		)
+	}
+	if !fileSafe(0o600, 0, celikpanelGID, 1, 128) {
+		t.Fatal("installer root:celikpanel 0600 snapshot metadata was rejected")
+	}
+	for _, test := range []struct {
+		name     string
+		mode     os.FileMode
+		uid, gid uint32
+		links    uint64
+		size     int64
+	}{
+		{name: "non-root owner", mode: 0o600, uid: 1000, gid: celikpanelGID, links: 1, size: 128},
+		{name: "root group instead of service group", mode: 0o600, links: 1, size: 128},
+		{name: "foreign group", mode: 0o600, gid: celikpanelGID + 1, links: 1, size: 128},
+		{name: "group readable", mode: 0o640, gid: celikpanelGID, links: 1, size: 128},
+		{name: "other writable", mode: 0o602, gid: celikpanelGID, links: 1, size: 128},
+		{name: "setgid file", mode: os.ModeSetgid | 0o600, gid: celikpanelGID, links: 1, size: 128},
+		{name: "symlink", mode: os.ModeSymlink | 0o600, gid: celikpanelGID, links: 1, size: 128},
+		{name: "hardlink", mode: 0o600, gid: celikpanelGID, links: 2, size: 128},
+		{name: "empty", mode: 0o600, gid: celikpanelGID, links: 1},
+		{name: "oversized", mode: 0o600, gid: celikpanelGID, links: 1, size: maxFirewallSnapshotSize + 1},
+	} {
+		t.Run("file/"+test.name, func(t *testing.T) {
+			if fileSafe(test.mode, test.uid, test.gid, test.links, test.size) {
+				t.Fatal("unsafe firewall snapshot metadata was accepted")
+			}
+		})
+	}
+
+	if !securityAuditRegularFileMetadataSafe(0o600, 0, 0, 1, 64, 0o600, 1, 128, 0, 0) {
+		t.Fatal("root:root signed-update metadata contract was accidentally tightened")
+	}
+}
+
+func TestSecurityAuditListenersReportOnlyReachableGaps(t *testing.T) {
 	raw := []byte("tcp LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*\n" +
 		"tcp LISTEN 0 4096 127.0.0.1:9000 0.0.0.0:*\n" +
 		"tcp LISTEN 0 4096 [::]:8080 [::]:*\n" +
@@ -119,15 +202,74 @@ func TestSecurityAuditListenersDistinguishLeakAndUnusedRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := compareSecurityAuditListeners(listeners, []int{22, 443}, []int{53})
-	if result.Check.Status != transport.SecurityAuditStatusFail || len(result.Findings) != 2 {
+	if result.Check.Status != transport.SecurityAuditStatusWarning || len(result.Findings) != 1 {
 		t.Fatalf("listener result = %#v", result)
 	}
 	want := []transport.SecurityAuditListenerFinding{
 		{Protocol: "tcp", Port: 443, Status: transport.SecurityAuditStatusWarning, Code: transport.SecurityAuditAllowedNoListener},
-		{Protocol: "tcp", Port: 8080, Status: transport.SecurityAuditStatusFail, Code: transport.SecurityAuditListenerNotAllowed},
 	}
 	if !reflect.DeepEqual(result.Findings, want) {
 		t.Fatalf("findings = %#v, want %#v", result.Findings, want)
+	}
+}
+
+func TestSecurityAuditListenersUseVerifiedFirewallTruthWithoutPortWhitelist(t *testing.T) {
+	raw := []byte("tcp LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*\n" +
+		"tcp LISTEN 0 4096 0.0.0.0:5355 0.0.0.0:*\n" +
+		"tcp LISTEN 0 4096 [::]:5355 [::]:*\n" +
+		"udp UNCONN 0 0 0.0.0.0:5355 0.0.0.0:*\n" +
+		"udp UNCONN 0 0 [::]:5355 [::]:*\n" +
+		"tcp LISTEN 0 4096 0.0.0.0:8443 0.0.0.0:*\n")
+	listeners, err := parseSecurityAuditPublicListeners(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blocked := compareSecurityAuditListeners(listeners, []int{22}, []int{})
+	if blocked.Check.Status != transport.SecurityAuditStatusPass || len(blocked.Findings) != 0 {
+		t.Fatalf("verified blocked listeners were reported as public: %#v", blocked)
+	}
+
+	// 5355 receives no identity-based exemption. If the operator explicitly
+	// allows it, it follows the same reachable-listener rule as every port.
+	allowed := compareSecurityAuditListeners(listeners, []int{22, 5355}, []int{5355})
+	if allowed.Check.Status != transport.SecurityAuditStatusPass || len(allowed.Findings) != 0 {
+		t.Fatalf("allowed reachable listeners did not match the allowlist: %#v", allowed)
+	}
+}
+
+func TestSecurityAuditListenerClassificationStaysUnknownWithoutVerifiedPolicy(t *testing.T) {
+	for _, inspection := range []securityAuditFirewallInspection{
+		{engineKnown: true, engineReady: true, liveKnown: true, live: true},
+		{engineKnown: true, engineReady: true, liveKnown: true, live: true, policyKnown: true, defaultDrop: true},
+	} {
+		response := transport.SecurityAuditAgentResponse{}
+		classifyFirewallAndListenerAudit(
+			&response,
+			inspection,
+			[]securityAuditSocket{{protocol: "tcp", port: 5355}},
+			nil,
+		)
+		if response.Listeners.Check.Status != transport.SecurityAuditStatusUnknown ||
+			response.Listeners.Check.Code != "listener_state_ambiguous" ||
+			len(response.Listeners.Findings) != 0 {
+			t.Fatalf("unverified firewall produced an authoritative listener result: %#v", response.Listeners)
+		}
+	}
+
+	response := transport.SecurityAuditAgentResponse{}
+	classifyFirewallAndListenerAudit(
+		&response,
+		securityAuditFirewallInspection{
+			engineKnown: true, engineReady: true, liveKnown: true, live: true,
+			policyKnown: true, defaultDrop: true, allowKnown: true,
+		},
+		nil,
+		errors.New("bounded ss probe failed"),
+	)
+	if response.Listeners.Check.Status != transport.SecurityAuditStatusUnknown ||
+		response.Listeners.Check.Code != "listener_state_unreadable" ||
+		len(response.Listeners.Findings) != 0 {
+		t.Fatalf("unreadable listeners produced an authoritative result: %#v", response.Listeners)
 	}
 }
 
