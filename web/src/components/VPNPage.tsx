@@ -19,7 +19,8 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
-import { Button, EmptyState, ErrorBanner, PageHeader, StatusDot, inputClass } from './ui';
+import { Button, EmptyState, ErrorBanner, StatusDot, inputClass } from './ui';
+import { PageHeader } from './PageHeader';
 import { HelpButton } from './HelpDrawer';
 
 interface VPNSyncSummary {

@@ -34,10 +34,10 @@ import {
     Button,
     EmptyState,
     ErrorBanner,
-    PageHeader,
     StatusDot,
     inputClass,
 } from './ui';
+import { PageHeader } from './PageHeader';
 
 type ScopeKind = 'subscription' | 'domain';
 type PermissionChoice = TeamPermissionMode | 'none';

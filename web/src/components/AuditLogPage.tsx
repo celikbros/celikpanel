@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import { useI18n } from '../i18n';
-import { PageHeader, EmptyState } from './ui';
+import { EmptyState } from './ui';
+import { PageHeader } from './PageHeader';
 
 interface AuditEntry {
     id: number;

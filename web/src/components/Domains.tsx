@@ -4,7 +4,8 @@ import { Globe, Plus, Trash2, ExternalLink, Settings, Lock, HardDrive } from 'lu
 import { AddDomainModal } from './AddDomainModal';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, Button, SearchInput, EmptyState, StatusDot, UsageBar } from './ui';
+import { Button, SearchInput, EmptyState, StatusDot, UsageBar } from './ui';
+import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { useAuth } from '../auth/AuthContext';
 import {

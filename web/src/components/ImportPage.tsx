@@ -4,7 +4,8 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import type { TranslationKey } from '../i18n/en';
-import { PageHeader, Button, inputClass } from './ui';
+import { Button, inputClass } from './ui';
+import { PageHeader } from './PageHeader';
 
 // cPanel import wizard (roadmap 3B): source → preview → result. Nothing is
 // applied until the operator sees the honest preview and confirms; the

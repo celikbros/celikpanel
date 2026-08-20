@@ -4,6 +4,10 @@ import test from 'node:test';
 
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/components/ui.tsx', import.meta.url), 'utf8');
+const pageHeader = readFileSync(
+  new URL('../src/components/PageHeader.tsx', import.meta.url),
+  'utf8',
+);
 const slot = readFileSync(
   new URL('../src/components/pageHeaderSlot.ts', import.meta.url),
   'utf8',
@@ -20,13 +24,14 @@ test('desktop shell exposes a page-header target before the global controls', ()
 });
 
 test('PageHeader portals one heading and its actions only on wide desktop', () => {
-  assert.match(ui, /createPortal\(headerContent, desktopTarget\)/);
-  assert.match(ui, /matchMedia\('\(min-width: 1280px\)'\)/);
-  assert.match(ui, /const headerContent = \(/);
-  assert.equal((ui.match(/\{actions &&/g) ?? []).length, 1);
-  assert.match(ui, /<div className="min-w-0 flex-1">/);
-  assert.match(ui, /<h1 className="break-words/);
-  assert.match(ui, /flex shrink-0 items-center gap-2/);
+  assert.doesNotMatch(ui, /PageHeader/);
+  assert.match(pageHeader, /createPortal\(headerContent, desktopTarget\)/);
+  assert.match(pageHeader, /matchMedia\('\(min-width: 1280px\)'\)/);
+  assert.match(pageHeader, /const headerContent = \(/);
+  assert.equal((pageHeader.match(/\{actions &&/g) ?? []).length, 1);
+  assert.match(pageHeader, /<div className="min-w-0 flex-1">/);
+  assert.match(pageHeader, /<h1 className="break-words/);
+  assert.match(pageHeader, /flex shrink-0 items-center gap-2/);
 });
 
 test('narrow screens and pages outside the shell keep the in-page heading', () => {
@@ -35,10 +40,10 @@ test('narrow screens and pages outside the shell keep the in-page heading', () =
     /createContext<DesktopPageHeaderSlot \| undefined>\(undefined\)/,
   );
   assert.match(layout, /from '\.\/pageHeaderSlot'/);
-  assert.match(ui, /from '\.\/pageHeaderSlot'/);
-  assert.match(ui, /useLayoutEffect\(\(\) => desktopSlot\?\.register\(\)/);
-  assert.match(ui, /if \(isDesktop && desktopSlot && desktopTarget === null\) return null/);
-  assert.match(ui, /return <div className="mb-6">\{headerContent\}<\/div>/);
+  assert.match(pageHeader, /from '\.\/pageHeaderSlot'/);
+  assert.match(pageHeader, /useLayoutEffect\(\(\) => desktopSlot\?\.register\(\)/);
+  assert.match(pageHeader, /if \(isDesktop && desktopSlot && desktopTarget === null\) return null/);
+  assert.match(pageHeader, /return <div className="mb-6">\{headerContent\}<\/div>/);
   assert.match(layout, /className="hidden min-w-0 flex-1 self-stretch xl:flex xl:items-center"/);
 });
 

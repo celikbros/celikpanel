@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
 import { useI18n } from '../i18n';
-import { PageHeader } from './ui';
+import { PageHeader } from './PageHeader';
 
 // Server monitoring (operator request, 23 Jul: "we should have a monitoring
 // page"). The dashboard strip answers "how is it NOW"; this page answers

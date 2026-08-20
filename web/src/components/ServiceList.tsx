@@ -3,7 +3,8 @@ import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud,
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { PageHeader, StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
+import { StatusDot, EmptyState, Button, SearchInput, ErrorBanner } from './ui';
+import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import {
     decodeManagedMailProfiles,
