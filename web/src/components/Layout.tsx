@@ -8,7 +8,7 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChangePasswordModal } from './ChangePasswordModal';
-import { DesktopPageHeaderTargetContext } from './ui';
+import { DesktopPageHeaderTargetContext } from './pageHeaderSlot';
 import type { TranslationKey } from '../i18n/en';
 
 // The single inherited shell: a dark navigation rail (grouped, with live

@@ -4,6 +4,10 @@ import test from 'node:test';
 
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/components/ui.tsx', import.meta.url), 'utf8');
+const slot = readFileSync(
+  new URL('../src/components/pageHeaderSlot.ts', import.meta.url),
+  'utf8',
+);
 
 test('desktop shell exposes a page-header target before the global controls', () => {
   assert.match(layout, /DesktopPageHeaderTargetContext\.Provider value=\{desktopPageHeaderSlot\}/);
@@ -27,9 +31,11 @@ test('PageHeader portals one heading and its actions only on wide desktop', () =
 
 test('narrow screens and pages outside the shell keep the in-page heading', () => {
   assert.match(
-    ui,
+    slot,
     /createContext<DesktopPageHeaderSlot \| undefined>\(undefined\)/,
   );
+  assert.match(layout, /from '\.\/pageHeaderSlot'/);
+  assert.match(ui, /from '\.\/pageHeaderSlot'/);
   assert.match(ui, /useLayoutEffect\(\(\) => desktopSlot\?\.register\(\)/);
   assert.match(ui, /if \(isDesktop && desktopSlot && desktopTarget === null\) return null/);
   assert.match(ui, /return <div className="mb-6">\{headerContent\}<\/div>/);

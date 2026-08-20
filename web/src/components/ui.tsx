@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
+import { DesktopPageHeaderTargetContext } from './pageHeaderSlot';
 
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
@@ -12,13 +13,6 @@ import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiErro
 // Paylaşılan UI ilkelleri; böylece her sayfa tek bir görsel dil konuşur:
 // breadcrumb'lı sayfa başlığı, ikon+başlıklı yükseltilmiş kartlar ve
 // etiketli kullanım çubuğu.
-
-type DesktopPageHeaderSlot = {
-    target: HTMLElement | null;
-    register: () => () => void;
-};
-
-export const DesktopPageHeaderTargetContext = createContext<DesktopPageHeaderSlot | undefined>(undefined);
 
 export function PageHeader({
     title,
