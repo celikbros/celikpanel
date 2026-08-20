@@ -3,7 +3,6 @@ import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
-
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
 // usage bar. Reused across the panel to keep density consistent.
@@ -11,38 +10,6 @@ import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiErro
 // Paylaşılan UI ilkelleri; böylece her sayfa tek bir görsel dil konuşur:
 // breadcrumb'lı sayfa başlığı, ikon+başlıklı yükseltilmiş kartlar ve
 // etiketli kullanım çubuğu.
-
-export function PageHeader({
-    title,
-    subtitle,
-    breadcrumb,
-    actions,
-}: {
-    title: string;
-    subtitle?: string;
-    breadcrumb?: string[];
-    actions?: ReactNode;
-}) {
-    return (
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
-                {breadcrumb && breadcrumb.length > 0 && (
-                    <nav className="mb-1 flex items-center gap-1.5 text-xs text-fg-subtle">
-                        {breadcrumb.map((crumb, i) => (
-                            <span key={i} className="flex items-center gap-1.5">
-                                {i > 0 && <span>/</span>}
-                                <span>{crumb}</span>
-                            </span>
-                        ))}
-                    </nav>
-                )}
-                <h1 className="text-2xl font-bold tracking-tight text-fg">{title}</h1>
-                {subtitle && <p className="mt-0.5 text-sm text-fg-muted">{subtitle}</p>}
-            </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
-        </div>
-    );
-}
 
 export function Card({
     title,

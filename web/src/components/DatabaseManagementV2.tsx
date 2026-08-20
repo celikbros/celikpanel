@@ -6,7 +6,8 @@ import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { PageHeader, Button, EmptyState, StatusDot } from './ui';
+import { Button, EmptyState, StatusDot } from './ui';
+import { PageHeader } from './PageHeader';
 import { SystemSQLiteManager } from './SystemSQLiteManager';
 
 // One API surface (B1, Jul 18): the former /api/v2 lives under /api/v1 now.

@@ -4,7 +4,8 @@ import { ShieldCheck, ShieldOff, Copy, Check, Lock, BadgeCheck, AlertTriangle, N
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { PageHeader, Button, inputClass } from './ui';
+import { Button, inputClass } from './ui';
+import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { DNSServerSettings } from './DNSServerSettings';
 import { PanelUpdateCard } from './PanelUpdateCard';

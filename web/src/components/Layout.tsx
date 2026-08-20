@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Server, LogOut, ChevronDown, Menu, KeyRound, UserCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
@@ -8,6 +8,7 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { DesktopPageHeaderTargetContext } from './pageHeaderSlot';
 import type { TranslationKey } from '../i18n/en';
 
 // The single inherited shell: a dark navigation rail (grouped, with live
@@ -33,6 +34,17 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
     };
     const [counts, setCounts] = useState<Counts>({});
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [desktopPageHeaderTarget, setDesktopPageHeaderTarget] = useState<HTMLDivElement | null>(null);
+    const [desktopPageHeaderCount, setDesktopPageHeaderCount] = useState(0);
+    const registerDesktopPageHeader = useCallback(() => {
+        setDesktopPageHeaderCount((count) => count + 1);
+        return () => setDesktopPageHeaderCount((count) => Math.max(0, count - 1));
+    }, []);
+    const desktopPageHeaderSlot = useMemo(
+        () => ({ target: desktopPageHeaderTarget, register: registerDesktopPageHeader }),
+        [desktopPageHeaderTarget, registerDesktopPageHeader],
+    );
+    const hasDesktopPageHeader = desktopPageHeaderCount > 0;
 
     // Live counts feed the sidebar badges. Failures are silent — a missing
     // badge is better than a broken shell.
@@ -59,43 +71,54 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
     }, [role]);
 
     return (
-        <div className="flex h-screen bg-bg text-fg">
-            <Sidebar
-                role={role}
-                access={navAccess}
-                counts={counts}
-                currentPage={currentPage}
-                onPageChange={(id) => {
-                    onPageChange(id);
-                    setMobileOpen(false);
-                }}
-                mobileOpen={mobileOpen}
-                onCloseMobile={() => setMobileOpen(false)}
-            />
+        <DesktopPageHeaderTargetContext.Provider value={desktopPageHeaderSlot}>
+            <div className="flex h-screen bg-bg text-fg">
+                <Sidebar
+                    role={role}
+                    access={navAccess}
+                    counts={counts}
+                    currentPage={currentPage}
+                    onPageChange={(id) => {
+                        onPageChange(id);
+                        setMobileOpen(false);
+                    }}
+                    mobileOpen={mobileOpen}
+                    onCloseMobile={() => setMobileOpen(false)}
+                    expandedHeader={hasDesktopPageHeader}
+                />
 
-            <div className="flex min-w-0 flex-1 flex-col">
-                <ImpersonationBanner />
-                <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5 md:px-6">
-                    <button
-                        className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-2 md:hidden"
-                        onClick={() => setMobileOpen(true)}
-                        aria-label="Menu"
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <ImpersonationBanner />
+                    <header
+                        className={'flex h-14 items-center gap-3 border-b border-border bg-surface px-4 md:px-6 ' +
+                            (hasDesktopPageHeader ? 'xl:h-auto xl:min-h-[90px] xl:py-2' : '')}
                     >
-                        <Menu className="h-5 w-5" />
-                    </button>
-                    <div className="ml-auto flex items-center gap-2 sm:gap-3">
-                        <div className="hidden sm:block">
-                            <LanguageSwitcher />
+                        <button
+                            className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-2 md:hidden"
+                            onClick={() => setMobileOpen(true)}
+                            aria-label="Menu"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+                        <div
+                            ref={setDesktopPageHeaderTarget}
+                            className="hidden min-w-0 flex-1 self-stretch xl:flex xl:items-center"
+                            data-shell-page-header-target
+                        />
+                        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                            <div className="hidden sm:block">
+                                <LanguageSwitcher />
+                            </div>
+                            <SkinSwitcher />
+                            <ThemeSwitcher />
+                            <UserMenu />
                         </div>
-                        <SkinSwitcher />
-                        <ThemeSwitcher />
-                        <UserMenu />
-                    </div>
-                </header>
+                    </header>
 
-                <main className="flex-1 overflow-auto">{children}</main>
+                    <main className="flex-1 overflow-auto">{children}</main>
+                </div>
             </div>
-        </div>
+        </DesktopPageHeaderTargetContext.Provider>
     );
 }
 
@@ -107,6 +130,7 @@ function Sidebar({
     onPageChange,
     mobileOpen,
     onCloseMobile,
+    expandedHeader,
 }: {
     role: ReturnType<typeof useAuth>['role'];
     access: NavAccessContext;
@@ -115,13 +139,17 @@ function Sidebar({
     onPageChange: (id: string) => void;
     mobileOpen: boolean;
     onCloseMobile: () => void;
+    expandedHeader: boolean;
 }) {
     const { t } = useI18n();
     const items = navItemsForRole(role, access);
 
     const content = (
         <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-fg">
-            <div className="flex items-center gap-2.5 border-b border-sidebar-border px-5 py-4">
+            <div
+                className={'flex h-14 items-center gap-2.5 border-b border-sidebar-border px-5 ' +
+                    (expandedHeader ? 'xl:h-[90px]' : '')}
+            >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-fg">
                     <Server className="h-5 w-5" />
                 </div>

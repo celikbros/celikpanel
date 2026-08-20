@@ -4,7 +4,8 @@ import { useSearchParams } from '../router';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
-import { Button, Card, EmptyState, ErrorBanner, PageHeader, inputClass } from './ui';
+import { Button, Card, EmptyState, ErrorBanner, inputClass } from './ui';
+import { PageHeader } from './PageHeader';
 import { useAuth } from '../auth/AuthContext';
 import { StoreCatalogAdmin } from './StoreCatalogAdmin';
 import {

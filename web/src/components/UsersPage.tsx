@@ -5,7 +5,8 @@ import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import { type PanelUser, type ServicePlan } from '../lib/api';
-import { PageHeader, Button, EmptyState, StatusDot, inputClass } from './ui';
+import { Button, EmptyState, StatusDot, inputClass } from './ui';
+import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import { TeamMembersPage } from './TeamMembersPage';
 
