@@ -29,6 +29,8 @@ import (
 
 const (
 	securityAuditReleasePublicKey = "/etc/celikpanel/release-signing-ed25519.pem"
+	securityAuditFirewallSnapshot = "/etc/celikpanel/firewall.nft"
+	securityAuditConfigurationDir = "/etc/celikpanel"
 	securityAuditReleaseStateDir  = "/var/lib/celikpanel-release-state"
 	securityAuditReleaseFloor     = "/var/lib/celikpanel-release-state/sequence.floor"
 	securityAuditReleaseLock      = "/var/lib/celikpanel-release-state/update.lock"
@@ -96,6 +98,15 @@ func collectHostSecurityAudit(_ time.Time) transport.SecurityAuditAgentResponse 
 
 func collectFirewallAndListenerAudit(response *transport.SecurityAuditAgentResponse) {
 	inspection, listeners, listenersErr := inspectSecurityAuditFirewallAndListeners()
+	classifyFirewallAndListenerAudit(response, inspection, listeners, listenersErr)
+}
+
+func classifyFirewallAndListenerAudit(
+	response *transport.SecurityAuditAgentResponse,
+	inspection securityAuditFirewallInspection,
+	listeners []securityAuditSocket,
+	listenersErr error,
+) {
 	response.Firewall.TCPAllowlist = append([]int(nil), inspection.tcp...)
 	response.Firewall.UDPAllowlist = append([]int(nil), inspection.udp...)
 
@@ -207,12 +218,50 @@ func inspectSecurityAuditFirewallAndListeners() (result securityAuditFirewallIns
 }
 
 func inspectSecurityAuditFirewallSnapshot(path string, inspection securityAuditFirewallInspection) string {
-	state := inspectSecurityAuditRootDirectoryChain(filepath.Dir(path))
+	// The installer deliberately makes /etc/celikpanel root:celikpanel 0750,
+	// and the root agent runs with celikpanel as its service group. Files the
+	// agent creates there are therefore root:celikpanel, not root:root. Keep
+	// that one exception exact: no caller-selected path, no arbitrary group,
+	// and no relaxation for /etc or any other ancestor.
+	if !securityAuditFirewallSnapshotPathSafe(path) || serviceMutationRequiredOwnerGID == 0 {
+		return classifySecurityAuditFirewallSnapshot(nil, securityAuditObjectUnsafe, inspection)
+	}
+	state := inspectSecurityAuditFirewallDirectoryChain(filepath.Dir(path), serviceMutationRequiredOwnerGID)
 	if state != securityAuditObjectOK {
 		return classifySecurityAuditFirewallSnapshot(nil, state, inspection)
 	}
-	raw, state := readSecurityAuditRegularFile(path, 0o600, 1, maxFirewallSnapshotSize)
+	raw, state := readSecurityAuditRegularFileWithOwner(
+		path, 0o600, 1, maxFirewallSnapshotSize, 0, serviceMutationRequiredOwnerGID,
+	)
 	return classifySecurityAuditFirewallSnapshot(raw, state, inspection)
+}
+
+func securityAuditFirewallSnapshotPathSafe(path string) bool {
+	return path == securityAuditFirewallSnapshot
+}
+
+func inspectSecurityAuditFirewallDirectoryChain(path string, expectedGID uint32) securityAuditObjectState {
+	if path != securityAuditConfigurationDir || expectedGID == 0 {
+		return securityAuditObjectUnsafe
+	}
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return securityAuditObjectMissing
+	}
+	if err != nil {
+		return securityAuditObjectUnreadable
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || !securityAuditFirewallDirectoryMetadataSafe(info.Mode(), stat.Uid, stat.Gid, expectedGID) {
+		return securityAuditObjectUnsafe
+	}
+	return inspectSecurityAuditRootDirectoryChain(filepath.Dir(path))
+}
+
+func securityAuditFirewallDirectoryMetadataSafe(mode os.FileMode, uid, gid, expectedGID uint32) bool {
+	return expectedGID != 0 && mode.IsDir() && mode&os.ModeSymlink == 0 &&
+		mode&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) == 0 &&
+		mode.Perm() == 0o750 && uid == 0 && gid == expectedGID
 }
 
 func classifySecurityAuditFirewallSnapshot(
@@ -542,12 +591,15 @@ func compareSecurityAuditListeners(listeners []securityAuditSocket, tcpAllowlist
 	live := map[securityAuditSocket]bool{}
 	findings := []transport.SecurityAuditListenerFinding{}
 	for _, socket := range listeners {
-		live[socket] = true
-		if !allowed[socket] {
-			findings = append(findings, transport.SecurityAuditListenerFinding{
-				Protocol: socket.protocol, Port: socket.port,
-				Status: transport.SecurityAuditStatusFail, Code: transport.SecurityAuditListenerNotAllowed,
-			})
+		// This comparison is reached only after the effective default-drop
+		// policy and its exact allowlist have both been verified. A listener
+		// outside that allowlist is blocked at the host boundary and is not a
+		// public exposure. Do not infer an owning process from port numbers or
+		// special-case LLMNR/5355; the firewall truth applies to every blocked
+		// listener. The raw listener count remains bounded by the parser, so a
+		// hostile or unreadable socket table still fails closed before here.
+		if allowed[socket] {
+			live[socket] = true
 		}
 	}
 	for socket := range allowed {
@@ -575,11 +627,7 @@ func compareSecurityAuditListeners(listeners []securityAuditSocket, tcpAllowlist
 	})
 	status := transport.SecurityAuditStatusPass
 	code := "listeners_match_allowlist"
-	for _, finding := range findings {
-		if finding.Status == transport.SecurityAuditStatusFail {
-			status, code = transport.SecurityAuditStatusFail, transport.SecurityAuditListenerNotAllowed
-			break
-		}
+	if len(findings) != 0 {
 		status, code = transport.SecurityAuditStatusWarning, transport.SecurityAuditAllowedNoListener
 	}
 	return transport.SecurityAuditListenersResponse{
@@ -1011,6 +1059,15 @@ func inspectSecurityAuditRootDirectoryChain(path string) securityAuditObjectStat
 }
 
 func readSecurityAuditRegularFile(path string, mode os.FileMode, minimumSize, maximumSize int64) ([]byte, securityAuditObjectState) {
+	return readSecurityAuditRegularFileWithOwner(path, mode, minimumSize, maximumSize, 0, 0)
+}
+
+func readSecurityAuditRegularFileWithOwner(
+	path string,
+	mode os.FileMode,
+	minimumSize, maximumSize int64,
+	expectedUID, expectedGID uint32,
+) ([]byte, securityAuditObjectState) {
 	info, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, securityAuditObjectMissing
@@ -1018,9 +1075,11 @@ func readSecurityAuditRegularFile(path string, mode os.FileMode, minimumSize, ma
 	if err != nil {
 		return nil, securityAuditObjectUnreadable
 	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || !securityAuditRootOwned(info) ||
-		info.Mode().Perm() != mode || securityAuditLinkCount(info) != 1 ||
-		info.Size() < minimumSize || info.Size() > maximumSize {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || !securityAuditRegularFileMetadataSafe(
+		info.Mode(), stat.Uid, stat.Gid, uint64(stat.Nlink), info.Size(),
+		mode, minimumSize, maximumSize, expectedUID, expectedGID,
+	) {
 		return nil, securityAuditObjectUnsafe
 	}
 	raw, err := os.ReadFile(path)
@@ -1033,9 +1092,28 @@ func readSecurityAuditRegularFile(path string, mode os.FileMode, minimumSize, ma
 	return raw, securityAuditObjectOK
 }
 
-func securityAuditRootOwned(info os.FileInfo) bool {
+func securityAuditRegularFileMetadataSafe(
+	actualMode os.FileMode,
+	uid, gid uint32,
+	linkCount uint64,
+	size int64,
+	expectedMode os.FileMode,
+	minimumSize, maximumSize int64,
+	expectedUID, expectedGID uint32,
+) bool {
+	return actualMode.IsRegular() && actualMode&os.ModeSymlink == 0 &&
+		actualMode&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) == 0 &&
+		actualMode.Perm() == expectedMode && uid == expectedUID && gid == expectedGID &&
+		linkCount == 1 && size >= minimumSize && size <= maximumSize
+}
+
+func securityAuditOwnedBy(info os.FileInfo, expectedUID, expectedGID uint32) bool {
 	stat, ok := info.Sys().(*syscall.Stat_t)
-	return ok && stat.Uid == 0 && stat.Gid == 0
+	return ok && stat.Uid == expectedUID && stat.Gid == expectedGID
+}
+
+func securityAuditRootOwned(info os.FileInfo) bool {
+	return securityAuditOwnedBy(info, 0, 0)
 }
 
 func securityAuditLinkCount(info os.FileInfo) uint64 {

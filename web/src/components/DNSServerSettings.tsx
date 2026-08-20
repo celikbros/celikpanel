@@ -7,7 +7,7 @@ import { dnsEngineText } from '../i18n/dnsEngine';
 import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
-import { exactStagedIdentityIsCurrent } from '../lib/dnsIdentityPlan';
+import { dnsEngineSettingsFlow, exactStagedIdentityIsCurrent } from '../lib/dnsIdentityPlan';
 import { HelpButton } from './HelpDrawer';
 import { DNSEngineCard } from './DNSEngineCard';
 
@@ -173,18 +173,15 @@ export function DNSServerSettings() {
     const et = (key: Parameters<typeof dnsEngineText>[1]) => dnsEngineText(locale, key);
     const [engine, setEngine] = useState<DNSEngineSnapshot | null>(null);
     const [engineRefreshKey, setEngineRefreshKey] = useState(0);
-    const activeEngine: ActiveDNSEngine | null = engine?.state === 'ready' &&
-        (engine.active_engine === 'pdns' || engine.active_engine === 'bind')
+    const settingsFlow = dnsEngineSettingsFlow(engine);
+    const activeEngine: ActiveDNSEngine | null = settingsFlow === 'active' &&
+        (engine?.active_engine === 'pdns' || engine?.active_engine === 'bind')
         ? engine.active_engine
         : null;
-    const legacyPowerDNSEntry = engine?.engines.find((entry) => entry.id === 'pdns');
-    const legacyPowerDNSReconfigureStaging = engine?.state === 'unmanaged' &&
-        engine.active_engine === null &&
-        legacyPowerDNSEntry?.status === 'unmanaged' &&
-        legacyPowerDNSEntry.installed && legacyPowerDNSEntry.running && legacyPowerDNSEntry.managed &&
-        engine.engines.every((entry) => entry.id === 'pdns' || !entry.running);
-    const identityStaging = (engine?.state === 'unconfigured' && engine.active_engine === null) ||
-        legacyPowerDNSReconfigureStaging;
+    const legacyPowerDNSReconfigureStaging = settingsFlow === 'legacyPowerDNSReconfigure';
+    const identityStaging = settingsFlow === 'identityStaging' || legacyPowerDNSReconfigureStaging;
+    const manualRecovery = settingsFlow === 'manualRecovery';
+    const actionsLocked = settingsFlow === 'unavailable' || manualRecovery || settingsFlow === 'locked';
     const identityPlanScope = identityStaging && engine
         ? `${engine.revision}:${engine.state}:${engine.topology}:${engine.pair_role ?? ''}`
         : '';
@@ -216,7 +213,8 @@ export function DNSServerSettings() {
             <DNSEngineCard
                 key={engineRefreshKey}
                 onSnapshotChange={setEngine}
-                identityPlanCurrent={!identityStaging || identityPlanCurrent}
+                identityPlanCurrent={!actionsLocked && (!identityStaging || identityPlanCurrent)}
+                actionsLocked={actionsLocked}
             />
             {engine && !identityStaging && (activeEngine ? (
                 <DNSInfrastructureSettings
@@ -229,15 +227,24 @@ export function DNSServerSettings() {
                     onIdentityPlanCurrentChange={handleIdentityPlanCurrentChange}
                 />
             ) : (
-                <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
+                <section
+                    className="rounded-xl border border-border bg-surface p-4 sm:p-6"
+                    data-testid={manualRecovery ? 'dns-manual-recovery' : undefined}
+                >
                     <div className="flex items-start gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
                             <AlertTriangle className="h-4.5 w-4.5" />
                         </span>
                         <div className="min-w-0">
-                            <h2 className="text-base font-semibold text-fg">{et('dnsEngine.topologyEditorTitle')}</h2>
+                            <h2 className="text-base font-semibold text-fg">
+                                {manualRecovery
+                                    ? et('dnsEngine.manualRecoveryTitle')
+                                    : et('dnsEngine.topologyEditorTitle')}
+                            </h2>
                             <p className="mt-1 text-sm leading-relaxed text-fg-muted">
-                                {engine?.active_engine === 'bind'
+                                {manualRecovery
+                                    ? et('dnsEngine.manualRecoveryDescription')
+                                    : engine?.active_engine === 'bind'
                                     ? et('dnsEngine.topologyEditorBind')
                                     : engine?.state === 'switching'
                                       ? et('dnsEngine.topologyEditorSwitching')

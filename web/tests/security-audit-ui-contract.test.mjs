@@ -112,4 +112,8 @@ test('security audit labels ship in both English and Turkish', () => {
         assert.match(source, /'securityAudit\.code\.signedUpdateIdentityUnverified'/);
         assert.match(source, /'securityAudit\.code\.sshPolicyLiveUnverified'/);
     }
+	assert.match(english, /blocked listeners are not public exposure/);
+	assert.match(turkish, /engellenen dinleyiciler dışa açık değildir/);
+	assert.doesNotMatch(english, /A public service is listening on a port that the effective firewall does not allow/);
+	assert.doesNotMatch(turkish, /izin listesinde olmayan dışa açık bir portu dinliyor/);
 });

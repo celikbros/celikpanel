@@ -218,6 +218,33 @@ func powerDNSConfigDirective(line string) (key, value string, found bool) {
 	return strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value), true
 }
 
+// Debian's stock pdns.conf contains one exact, active launch= line before its
+// include-dir. That line selects no backend and cannot override CelikPanel's
+// later managed drop-in. Keep the exception byte- and order-exact: whitespace,
+// a value, a duplicate, or a launch after the include remains ambiguous.
+func acceptCanonicalEmptyLegacyPowerDNSLaunch(
+	line, value string,
+	includeCount int,
+	seen *bool,
+) bool {
+	line = strings.TrimSuffix(line, "\r")
+	if seen == nil || *seen || includeCount != 0 || value != "" || line != "launch=" {
+		return false
+	}
+	*seen = true
+	return true
+}
+
+func malformedPowerDNSLaunchDirective(line string) bool {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") || strings.Contains(line, "=") {
+		return false
+	}
+	fields := strings.Fields(line)
+	return len(fields) > 0 && (strings.EqualFold(fields[0], "launch") ||
+		strings.EqualFold(fields[0], "launch+"))
+}
+
 func effectiveManagedPowerDNSConfig() (bool, string, error) {
 	mainInfo, err := dnsClusterStat(dnsMainConf)
 	if errors.Is(err, os.ErrNotExist) {
@@ -237,9 +264,13 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 	}
 	wantDir := filepath.Clean(filepath.Dir(dnsManagedConf))
 	includeCount := 0
+	emptyLegacyLaunchSeen := false
 	for _, line := range strings.Split(string(mainData), "\n") {
 		key, value, found := powerDNSConfigDirective(line)
 		if !found {
+			if malformedPowerDNSLaunchDirective(line) {
+				return false, "", errors.New("PowerDNS main configuration contains a malformed launch directive")
+			}
 			continue
 		}
 		switch key {
@@ -248,7 +279,13 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 			if filepath.Clean(value) != wantDir {
 				return false, "", errors.New("PowerDNS loads an unexpected include directory")
 			}
-		case "launch", "gsqlite3-database", "gsqlite3-dnssec",
+		case "launch":
+			if !acceptCanonicalEmptyLegacyPowerDNSLaunch(
+				line, value, includeCount, &emptyLegacyLaunchSeen,
+			) {
+				return false, "", errors.New("PowerDNS main configuration overrides managed DNS state")
+			}
+		case "launch+", "gsqlite3-database", "gsqlite3-dnssec",
 			"local-address", "zone-cache-refresh-interval", "webserver", "api",
 			"primary", "secondary", "autosecondary",
 			"allow-axfr-ips", "also-notify",
@@ -309,10 +346,13 @@ func effectiveManagedPowerDNSConfig() (bool, string, error) {
 		for _, line := range strings.Split(string(other), "\n") {
 			key, _, found := powerDNSConfigDirective(line)
 			if !found {
+				if malformedPowerDNSLaunchDirective(line) {
+					return false, "", fmt.Errorf("PowerDNS include %s contains a malformed launch directive", name)
+				}
 				continue
 			}
 			switch key {
-			case "launch", "gsqlite3-database", "gsqlite3-dnssec", "include-dir",
+			case "launch", "launch+", "gsqlite3-database", "gsqlite3-dnssec", "include-dir",
 				"local-address", "zone-cache-refresh-interval", "webserver", "api",
 				"primary", "secondary", "autosecondary",
 				"allow-axfr-ips", "also-notify",

@@ -29,6 +29,7 @@ import { showToast } from './Toast';
 interface DNSEngineCardProps {
     onSnapshotChange?: (snapshot: DNSEngineSnapshot | null) => void;
     identityPlanCurrent?: boolean;
+    actionsLocked?: boolean;
 }
 
 interface ReviewState {
@@ -99,6 +100,7 @@ function statusStyle(status: DNSEngineEntry['status']): string {
 export function DNSEngineCard({
     onSnapshotChange,
     identityPlanCurrent = true,
+    actionsLocked = false,
 }: DNSEngineCardProps) {
     const { t, locale } = useI18n();
     const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
@@ -152,8 +154,12 @@ export function DNSEngineCard({
         void refresh();
     }, [refresh]);
 
+    useEffect(() => {
+        if (actionsLocked) setReview(null);
+    }, [actionsLocked]);
+
     const requestPreview = async (target: DNSEngineID) => {
-        if (!snapshot || snapshot.state === 'switching' || identityReviewLocked) return;
+        if (actionsLocked || !snapshot || snapshot.state === 'switching' || identityReviewLocked) return;
         const base = snapshot;
         const requestID = createRequestID();
         setReview({
@@ -212,7 +218,7 @@ export function DNSEngineCard({
     const commitSwitch = async () => {
         const current = review;
         const preview = current?.preview;
-        if (!current || !preview || current.loading || current.committing || preview.blockers.length > 0) return;
+        if (actionsLocked || !current || !preview || current.loading || current.committing || preview.blockers.length > 0) return;
         if (preview.requires_downtime_acknowledgement && !current.acknowledged) return;
         const requestID = current.requestID;
         if (requestID === null) return;
@@ -324,7 +330,8 @@ export function DNSEngineCard({
                             {DNS_ENGINE_IDS.map((id) => {
                                 const engine = snapshot.engines.find((candidate) => candidate.id === id)!;
                                 const Icon = engineIcon(id);
-                                const canReview = !identityReviewLocked
+                                const canReview = !actionsLocked
+                                    && !identityReviewLocked
                                     && snapshot.state !== 'switching'
                                     && (engine.status === 'available'
                                         || engine.status === 'installed_standby'
@@ -367,7 +374,7 @@ export function DNSEngineCard({
                                                     <AlertTriangle className="h-4 w-4" />
                                                     {et('dnsEngine.resolveConflict')}
                                                 </span>
-                                            ) : (
+                                            ) : actionsLocked ? null : (
                                                 <Button
                                                     variant="secondary"
                                                     icon={engine.status === 'available' ? DownloadCloud : ArrowRightLeft}
@@ -383,7 +390,7 @@ export function DNSEngineCard({
                             })}
                         </div>
 
-                        {identityReviewLocked && (
+                        {identityReviewLocked && !actionsLocked && (
                             <p
                                 className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-fg-muted"
                                 data-testid="dns-engine-identity-lock"
@@ -393,14 +400,16 @@ export function DNSEngineCard({
                             </p>
                         )}
 
-                        <p className="mt-4 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
-                            {et('dnsEngine.reviewSafety')}
-                        </p>
+                        {!actionsLocked && (
+                            <p className="mt-4 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-fg-muted">
+                                {et('dnsEngine.reviewSafety')}
+                            </p>
+                        )}
                     </>
                 )}
             </section>
 
-            {review && (
+            {review && !actionsLocked && (
                 <DNSEngineReviewDialog
                     review={review}
                     onAcknowledge={(acknowledged) => setReview((current) => current ? { ...current, acknowledged } : current)}
