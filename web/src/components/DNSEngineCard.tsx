@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { dnsEngineText, type DNSEngineCopyKey } from '../i18n/dnsEngine';
-import { readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError } from '../lib/apiError';
 import { dnsEngineIdentityReviewLocked } from '../lib/dnsIdentityPlan';
 import {
     DNS_ENGINE_IDS,
@@ -238,19 +238,39 @@ export function DNSEngineCard({
                 }),
             });
             if (!response.ok) {
-                await readApiError(response);
-                setReview((latest) => latest
-                    ? { ...latest, committing: false, error: et('dnsEngine.switchFailed') }
-                    : latest);
+                const apiError = await readApiError(response);
+                const mutationApplied = apiError.mutationApplied === true;
+                const partialSuccess = apiError.partialSuccess === true;
+                // The commit endpoint consumes the preview authority before it
+                // starts a mutation. Close the stale dialog for every terminal
+                // HTTP response; a retry must begin with a fresh state and
+                // preview instead of reusing the old token.
+                setReview(null);
+                if (mutationApplied) {
+                    showToast('warning', et('dnsEngine.switchAppliedNeedsRefresh'));
+                } else if (partialSuccess) {
+                    showToast('warning', et('dnsEngine.switchPartialUnverified'));
+                } else {
+                    showToast(
+                        'error',
+                        apiError.code
+                            ? apiErrorText(apiError, t)
+                            : et('dnsEngine.switchFailed'),
+                    );
+                }
+                await refresh();
                 return;
             }
             setReview(null);
             showToast('success', et('dnsEngine.switchAccepted'));
             await refresh();
         } catch {
-            setReview((latest) => latest
-                ? { ...latest, committing: false, error: et('dnsEngine.switchAmbiguous') }
-                : latest);
+            // A lost response can hide an accepted mutation and the preview
+            // token may already be consumed. Never leave a retryable confirm
+            // button on screen; refresh is the only truthful next step.
+            setReview(null);
+            showToast('warning', et('dnsEngine.switchAmbiguous'));
+            await refresh();
         }
     };
 

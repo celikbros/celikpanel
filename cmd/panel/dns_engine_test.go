@@ -21,23 +21,25 @@ import (
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu                  sync.Mutex
-	runtimes            map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	port53Conflict      bool
-	readinessCalls      int
-	onReadiness         func(int)
-	dnssec              bool
-	dnssecCalls         int
-	switchCalls         int
-	switchRequests      []transport.SwitchDNSEngineV1Request
-	switchError         string
-	onSwitch            func()
-	firewallEnabled     bool
-	firewallError       string
-	firewallCalls       int
-	firewallRequests    []transport.ApplyFirewallRequest
-	scanError           error
-	omitDNSCapabilities bool
+	mu                        sync.Mutex
+	runtimes                  map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict            bool
+	readinessCalls            int
+	onReadiness               func(int)
+	readinessAfterSwitchError string
+	dnssec                    bool
+	dnssecCalls               int
+	switchCalls               int
+	switchRequests            []transport.SwitchDNSEngineV1Request
+	switchError               string
+	switchErrorLeavesPackage  bool
+	onSwitch                  func()
+	firewallEnabled           bool
+	firewallError             string
+	firewallCalls             int
+	firewallRequests          []transport.ApplyFirewallRequest
+	scanError                 error
+	omitDNSCapabilities       bool
 }
 
 func newDNSEngineTestAgent() *dnsEngineTestAgent {
@@ -195,6 +197,9 @@ func (agent *dnsEngineTestAgent) DNSBackendReadiness(
 		agent.runtimes[transport.DNSEngineBIND],
 	}
 	response.Port53Conflict = agent.port53Conflict
+	if agent.switchCalls > 0 && agent.readinessAfterSwitchError != "" {
+		response.Error = agent.readinessAfterSwitchError
+	}
 	hook := agent.onReadiness
 	agent.mu.Unlock()
 	if hook != nil {
@@ -231,6 +236,11 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	copy.Zones = append([]transport.DNSEngineSwitchZoneSnapshot(nil), request.Zones...)
 	agent.switchRequests = append(agent.switchRequests, copy)
 	if agent.switchError != "" {
+		if agent.switchErrorLeavesPackage {
+			target := agent.runtimes[request.TargetEngine]
+			target.Installed, target.Running, target.Managed = true, false, true
+			agent.runtimes[request.TargetEngine] = target
+		}
 		response.Error = agent.switchError
 		return nil
 	}
@@ -690,6 +700,155 @@ func TestDNSEngineScanFailureIsCommittedAndSafelyRetryable(t *testing.T) {
 		t.Fatalf("scan retry status=%d body=%s", second.Code, second.Body.String())
 	}
 	assertCachedDNSEngineInstalled(t, panel, transport.DNSEngineBIND)
+}
+
+func TestDNSEngineAgentRejectionReturnsOnlyVerifiedOutcomeCodes(t *testing.T) {
+	tests := []struct {
+		name           string
+		agentDetail    string
+		wantCode       string
+		wantMessage    string
+		wantDiagnostic string
+		leavesPackage  bool
+	}{
+		{
+			name:           "canonical manifest mismatch",
+			agentDetail:    "DNS engine switch request is not the exact canonical manifest",
+			wantCode:       errCodeDNSEnginePlanRejected,
+			wantMessage:    "The DNS agent rejected the reviewed plan. The DNS engine change was not committed. Refresh state before creating a new review.",
+			wantDiagnostic: "canonical_manifest_mismatch",
+		},
+		{
+			name:           "unknown detail is omitted",
+			agentDetail:    "named-checkconf /etc/bind/private failed: token=do-not-leak",
+			wantCode:       errCodeDNSEngineChangeNotCommitted,
+			wantMessage:    "The DNS engine change was not committed. The pre-operation serving state was verified; packages or setup files may still have changed. Refresh state before creating a new review.",
+			wantDiagnostic: "unclassified_detail_omitted",
+			leavesPackage:  true,
+		},
+	}
+	for index, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			classified := newDNSEngineAgentRejectedError(test.agentDetail)
+			if classified.diagnosticCode != test.wantDiagnostic ||
+				strings.Contains(classified.diagnosticCode, "/etc/") ||
+				strings.Contains(classified.Error(), test.agentDetail) {
+				t.Fatalf("unsafe rejection classification=%+v", classified)
+			}
+
+			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, "standalone")
+			agent := newDNSEngineTestAgent()
+			agent.switchError = test.agentDetail
+			agent.switchErrorLeavesPackage = test.leavesPackage
+			attachDNSEngineTestAgent(t, panel, agent)
+			preview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEngineBIND, nil, 0,
+			)
+			if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+				t.Fatalf(
+					"preview status=%d body=%s",
+					recorder.Code, recorder.Body.String(),
+				)
+			}
+			requestID := strings.Repeat(string(rune('a'+index)), 32)
+			commit := commitDNSEngineSwitch(
+				t, panel, requestID, transport.DNSEngineBIND,
+				nil, 0, preview.PreviewToken, false,
+			)
+			var body apiErrorBody
+			if commit.Code != http.StatusConflict ||
+				json.Unmarshal(commit.Body.Bytes(), &body) != nil ||
+				body.Code != test.wantCode ||
+				body.Error != test.wantMessage ||
+				body.PartialSuccess || body.MutationApplied ||
+				strings.Contains(commit.Body.String(), test.agentDetail) ||
+				strings.Contains(commit.Body.String(), "do-not-leak") ||
+				strings.Contains(commit.Body.String(), "/etc/bind") {
+				t.Fatalf(
+					"unsafe rejection status=%d body=%s",
+					commit.Code, commit.Body.String(),
+				)
+			}
+			state, err := readDNSEngineDBState(
+				context.Background(), panel.db.GetDB(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state.ActiveEngine != "" || state.EngineEpoch != 0 ||
+				state.CurrentSwitchID != "" {
+				t.Fatalf("rejected switch retained an active authority state: %+v", state)
+			}
+			agent.mu.Lock()
+			targetRuntime := agent.runtimes[transport.DNSEngineBIND]
+			agent.mu.Unlock()
+			if test.leavesPackage &&
+				(!targetRuntime.Installed || targetRuntime.Running) {
+				t.Fatalf(
+					"test did not retain an inactive standby package: %+v",
+					targetRuntime,
+				)
+			}
+			var notCommittedAction string
+			if err := panel.db.GetDB().QueryRow(
+				"SELECT action FROM audit_logs WHERE action LIKE 'dns.engine.switch.change_not_committed %'",
+			).Scan(&notCommittedAction); err != nil {
+				t.Fatalf("change-not-committed audit missing: %v", err)
+			}
+			if strings.Contains(notCommittedAction, ".rolled_back ") ||
+				strings.Contains(notCommittedAction, ".activation_reverted ") {
+				t.Fatalf("audit overclaimed host outcome: %q", notCommittedAction)
+			}
+		})
+	}
+}
+
+func TestDNSEngineAppliedRefreshResponseCarriesProofFlags(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	writeDNSEngineChangeAppliedRefreshRequired(recorder)
+	var body apiErrorBody
+	if recorder.Code != http.StatusBadGateway ||
+		json.Unmarshal(recorder.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeDNSEngineChangeAppliedRefresh ||
+		!body.PartialSuccess || !body.MutationApplied {
+		t.Fatalf(
+			"applied refresh response status=%d body=%s",
+			recorder.Code, recorder.Body.String(),
+		)
+	}
+}
+
+func TestDNSEngineAppliedReceiptWithUnverifiedFollowupIsPartialSuccess(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	agent.readinessAfterSwitchError = "private readiness detail /proc/123"
+	attachDNSEngineTestAgent(t, panel, agent)
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf(
+			"preview status=%d body=%s",
+			recorder.Code, recorder.Body.String(),
+		)
+	}
+	commit := commitDNSEngineSwitch(
+		t, panel, strings.Repeat("e", 32), transport.DNSEngineBIND,
+		nil, 0, preview.PreviewToken, false,
+	)
+	var body apiErrorBody
+	if commit.Code != http.StatusBadGateway ||
+		json.Unmarshal(commit.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeDNSEngineChangeAppliedRefresh ||
+		!body.PartialSuccess || !body.MutationApplied ||
+		strings.Contains(commit.Body.String(), "/proc/123") {
+		t.Fatalf(
+			"applied follow-up status=%d body=%s",
+			commit.Code, commit.Body.String(),
+		)
+	}
 }
 
 func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
@@ -1535,7 +1694,13 @@ func TestDNSEngineAdoptionFailureProvesUnchangedRuntimeAndDetaches(t *testing.T)
 		t, panel, strings.Repeat("7", 32), transport.DNSEnginePowerDNS,
 		nil, 0, preview.PreviewToken, false,
 	)
+	var body apiErrorBody
 	if commit.Code != http.StatusConflict ||
+		json.Unmarshal(commit.Body.Bytes(), &body) != nil ||
+		body.Code != errCodeDNSEngineChangeNotCommitted ||
+		body.Error != "The DNS engine change was not committed. The pre-operation serving state was verified; packages or setup files may still have changed. Refresh state before creating a new review." ||
+		body.PartialSuccess || body.MutationApplied ||
+		strings.Contains(strings.ToLower(body.Error), "not serving") ||
 		strings.Contains(commit.Body.String(), "private adoption") {
 		t.Fatalf("failed adoption status=%d body=%s", commit.Code, commit.Body.String())
 	}
@@ -1548,9 +1713,19 @@ func TestDNSEngineAdoptionFailureProvesUnchangedRuntimeAndDetaches(t *testing.T)
 		t.Fatalf("failed adoption state=%+v", state)
 	}
 	agent.mu.Lock()
-	defer agent.mu.Unlock()
-	if !agent.runtimes[transport.DNSEnginePowerDNS].Running {
-		t.Fatalf("failed registration-only adoption stopped PowerDNS")
+	pdns = agent.runtimes[transport.DNSEnginePowerDNS]
+	agent.mu.Unlock()
+	if !pdns.Installed || !pdns.Running || !pdns.Managed {
+		t.Fatalf("failed registration-only adoption changed serving PowerDNS: %+v", pdns)
+	}
+	var notCommittedAction string
+	if err := panel.db.GetDB().QueryRow(
+		"SELECT action FROM audit_logs WHERE action LIKE 'dns.engine.switch.change_not_committed %'",
+	).Scan(&notCommittedAction); err != nil {
+		t.Fatalf("adoption change-not-committed audit missing: %v", err)
+	}
+	if strings.Contains(notCommittedAction, "activation_reverted") {
+		t.Fatalf("adoption audit falsely claimed activation reversion: %q", notCommittedAction)
 	}
 }
 

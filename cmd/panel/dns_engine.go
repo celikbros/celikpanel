@@ -2004,7 +2004,7 @@ func (p *Panel) executeDNSEngineSwitch(
 				return err
 			}
 			if response.Error != "" {
-				return errors.New("agent rejected DNS engine switch")
+				return newDNSEngineAgentRejectedError(response.Error)
 			}
 			if !response.Applied ||
 				response.ActiveEngine != manifest.TargetEngine ||
@@ -2019,24 +2019,109 @@ func (p *Panel) executeDNSEngineSwitch(
 		return err
 	}
 	if err := p.verifyDNSEngineRuntimeTarget(ctx, persisted.TargetEngine); err != nil {
-		return &dnsEngineFinalizeUncertainError{err: err}
+		return &dnsEngineMutationAppliedFollowupError{err: err}
 	}
 	if err := p.finalizeDNSEngineSwitchSuccess(ctx, persisted); err != nil {
-		return &dnsEngineFinalizeUncertainError{err: err}
+		return &dnsEngineMutationAppliedFollowupError{err: err}
 	}
 	return nil
 }
 
-type dnsEngineFinalizeUncertainError struct {
+type dnsEngineMutationAppliedFollowupError struct {
 	err error
 }
 
-func (err *dnsEngineFinalizeUncertainError) Error() string {
-	return "DNS engine host switch succeeded but panel finalization is pending"
+func (err *dnsEngineMutationAppliedFollowupError) Error() string {
+	return "DNS engine host switch was applied but panel follow-up is pending"
 }
 
-func (err *dnsEngineFinalizeUncertainError) Unwrap() error {
+func (err *dnsEngineMutationAppliedFollowupError) Unwrap() error {
 	return err.err
+}
+
+// dnsEngineAgentRejectedError keeps only an allowlisted classification. Raw
+// agent text can contain host paths or command output and never crosses into
+// either the HTTP response or the panel log.
+type dnsEngineAgentRejectedError struct {
+	diagnosticCode string
+	clientCode     string
+}
+
+func (err *dnsEngineAgentRejectedError) Error() string {
+	return "agent rejected DNS engine switch"
+}
+
+func logDNSEngineAgentRejection(switchID string, err error) {
+	var rejected *dnsEngineAgentRejectedError
+	if !errors.As(err, &rejected) {
+		return
+	}
+	log.Printf(
+		"DNS engine switch %s agent rejection code=%s",
+		switchID, rejected.diagnosticCode,
+	)
+}
+
+func newDNSEngineAgentRejectedError(detail string) *dnsEngineAgentRejectedError {
+	rejected := &dnsEngineAgentRejectedError{
+		diagnosticCode: "unclassified_detail_omitted",
+	}
+	switch detail {
+	case "DNS engine switch request is required":
+		rejected.diagnosticCode = "invalid_request"
+	case "DNS engine switch request is not the exact canonical manifest":
+		rejected.diagnosticCode = "canonical_manifest_mismatch"
+		rejected.clientCode = errCodeDNSEnginePlanRejected
+	case "DNS engine switch did not complete; inspect the agent log":
+		rejected.diagnosticCode = "backend_switch_failed"
+	case "DNS engine switch did not return the exact verified target receipt":
+		rejected.diagnosticCode = "target_receipt_mismatch"
+	case "DNS engine switch finished but its durable receipt could not be verified":
+		rejected.diagnosticCode = "terminal_receipt_unverified"
+	}
+	return rejected
+}
+
+func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
+	var rejected *dnsEngineAgentRejectedError
+	if errors.As(switchErr, &rejected) &&
+		rejected.clientCode == errCodeDNSEnginePlanRejected {
+		writeCodedError(
+			w,
+			http.StatusConflict,
+			errCodeDNSEnginePlanRejected,
+			"The DNS agent rejected the reviewed plan. The DNS engine change was not committed. Refresh state before creating a new review.",
+			"",
+		)
+		return
+	}
+	writeCodedError(
+		w,
+		http.StatusConflict,
+		errCodeDNSEngineChangeNotCommitted,
+		"The DNS engine change was not committed. The pre-operation serving state was verified; packages or setup files may still have changed. Refresh state before creating a new review.",
+		"",
+	)
+}
+
+func writeDNSEngineStateUnverified(w http.ResponseWriter) {
+	writeCodedError(
+		w,
+		http.StatusBadGateway,
+		errCodeDNSEngineStateUnverified,
+		"DNS engine change outcome could not be verified. Refresh state before reviewing another change",
+		"",
+	)
+}
+
+func writeDNSEngineChangeAppliedRefreshRequired(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:          "DNS engine change was applied, but panel finalization is incomplete. Refresh state before taking another action",
+		Code:           errCodeDNSEngineChangeAppliedRefresh,
+		PartialSuccess: true, MutationApplied: true,
+	})
 }
 
 func (p *Panel) matchingDNSEngineSwitchReplay(
@@ -2238,8 +2323,10 @@ func (p *Panel) handleDNSEngineSwitch(
 	err = p.executeDNSEngineSwitch(workerCtx, persisted, manifest)
 	if err != nil {
 		p.auditDNSEngineBounded(actor, "failed", persisted)
-		var uncertain *dnsEngineFinalizeUncertainError
-		if !mutationTerminalUncertain(err) && !errors.As(err, &uncertain) {
+		var appliedFollowup *dnsEngineMutationAppliedFollowupError
+		mutationApplied := errors.As(err, &appliedFollowup)
+		changeNotCommitted := false
+		if !mutationTerminalUncertain(err) && !mutationApplied {
 			proofErr := p.verifyDNSEngineRollbackRuntime(workerCtx, persisted)
 			if proofErr == nil {
 				proofErr = p.rollbackDNSEngineSwitch(workerCtx, persisted)
@@ -2251,14 +2338,22 @@ func (p *Panel) handleDNSEngineSwitch(
 					persisted.SwitchID, err, proofErr,
 				)
 			} else {
-				p.auditDNSEngineBounded(actor, "rolled_back", persisted)
+				changeNotCommitted = true
+				p.auditDNSEngineBounded(actor, "change_not_committed", persisted)
 			}
 		} else {
 			p.auditDNSEngineBounded(actor, "uncertain", persisted)
 		}
+		logDNSEngineAgentRejection(persisted.SwitchID, err)
 		log.Printf("DNS engine switch %s did not finalize: %v", persisted.SwitchID, err)
-		writeClientError(w, http.StatusConflict,
-			"DNS engine change did not complete; refresh to see its verified state")
+		switch {
+		case changeNotCommitted:
+			writeDNSEngineChangeNotCommitted(w, err)
+		case mutationApplied:
+			writeDNSEngineChangeAppliedRefreshRequired(w)
+		default:
+			writeDNSEngineStateUnverified(w)
+		}
 		return
 	}
 	p.auditDNSEngineBounded(actor, "succeeded", persisted)
@@ -2275,7 +2370,8 @@ func (p *Panel) handleDNSEngineSwitch(
 	p.auditDNSEngineBounded(actor, "post_commit.completed", persisted)
 	finalSnapshot, err := p.dnsEngineSnapshot(workerCtx)
 	if err != nil {
-		writeServerError(w, err)
+		log.Printf("DNS engine change completed but final state response failed: %v", err)
+		writeDNSEngineChangeAppliedRefreshRequired(w)
 		return
 	}
 	_ = json.NewEncoder(w).Encode(finalSnapshot)
@@ -2461,6 +2557,6 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 		p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 		return true, fmt.Errorf("finalize DNS engine rollback during recovery: %w", err)
 	}
-	p.auditDNSEngineSystem(ctx, "recovered.rolled_back", persisted)
+	p.auditDNSEngineSystem(ctx, "recovered.change_not_committed", persisted)
 	return true, nil
 }
