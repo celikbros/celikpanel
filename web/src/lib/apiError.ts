@@ -16,6 +16,12 @@ export interface ApiError {
     message: string;
     code?: string;
     action?: string;
+    // These flags are proof-bearing outcome fields, not synonyms. In
+    // particular, partial_success alone must never be treated as proof that a
+    // host mutation happened; only mutation_applied === true carries that
+    // meaning.
+    partialSuccess?: boolean;
+    mutationApplied?: boolean;
     // details: the refusal's evidence, one display line per item — e.g. the
     // sites that block removing a runtime version (B3d). Additive: absent on
     // older responses, safely ignored by older screens.
@@ -42,6 +48,8 @@ export async function readApiError(res: Response): Promise<ApiError> {
                     message: d.error || '',
                     code: d.code,
                     action: d.action,
+                    partialSuccess: d.partial_success === true ? true : undefined,
+                    mutationApplied: d.mutation_applied === true ? true : undefined,
                     details: Array.isArray(d.details)
                         ? d.details.filter((item: unknown): item is string => typeof item === 'string')
                         : undefined,

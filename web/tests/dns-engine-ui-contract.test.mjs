@@ -403,6 +403,45 @@ test('authoritative switch is isolated behind verified preview and explicit conf
   assert.match(commitBody, /downtime_acknowledged: current\.acknowledged/);
 });
 
+test('failed DNS commits discard consumed authority, distinguish proof flags, and refresh', () => {
+  const commitStart = card.indexOf('const commitSwitch = async');
+  const commitEnd = card.indexOf('\n    return (', commitStart);
+  const commitBody = card.slice(commitStart, commitEnd);
+
+  assert.match(commitBody, /const apiError = await readApiError\(response\)/);
+  assert.match(commitBody, /const mutationApplied = apiError\.mutationApplied === true/);
+  assert.match(commitBody, /const partialSuccess = apiError\.partialSuccess === true/);
+  assert.doesNotMatch(
+    commitBody,
+    /mutationApplied\s*=\s*apiError\.partialSuccess/,
+    'partial success alone must not prove a host mutation',
+  );
+  assert.match(commitBody, /if \(mutationApplied\)[\s\S]*dnsEngine\.switchAppliedNeedsRefresh/);
+  assert.match(commitBody, /else if \(partialSuccess\)[\s\S]*dnsEngine\.switchPartialUnverified/);
+  assert.match(commitBody, /apiError\.code[\s\S]*apiErrorText\(apiError, t\)/);
+
+  const failedResponse = commitBody.indexOf('if (!response.ok)');
+  const failedClose = commitBody.indexOf('setReview(null)', failedResponse);
+  const failedRefresh = commitBody.indexOf('await refresh()', failedClose);
+  assert.ok(failedResponse >= 0 && failedClose > failedResponse && failedRefresh > failedClose);
+
+  const catchStart = commitBody.indexOf('} catch {', failedRefresh);
+  const ambiguousClose = commitBody.indexOf('setReview(null)', catchStart);
+  const ambiguousRefresh = commitBody.indexOf('await refresh()', ambiguousClose);
+  assert.ok(catchStart > failedRefresh && ambiguousClose > catchStart && ambiguousRefresh > ambiguousClose);
+  assert.doesNotMatch(
+    commitBody,
+    /committing:\s*false,\s*error:\s*et\('dnsEngine\.switch/,
+    'a consumed or ambiguous preview must not leave a retry button in the old dialog',
+  );
+  assert.match(copy, /dnsEngine\.switchAppliedNeedsRefresh/);
+  assert.match(copy, /dnsEngine\.switchPartialUnverified/);
+  assert.match(copy, /Verify current DNS state before continuing/);
+  assert.match(copy, /Devam etmeden önce güncel DNS durumunu doğrulayın/);
+  assert.doesNotMatch(copy, /State was refreshed|Durum yenilendi/,
+    'a refresh attempt must not be described as a completed refresh');
+});
+
 test('review dialog is accessible and uses a meaningful acknowledgement, not a typed phrase', () => {
   assert.match(card, /role="dialog"/);
   assert.match(card, /aria-modal="true"/);

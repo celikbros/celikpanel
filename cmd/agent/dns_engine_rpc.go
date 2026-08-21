@@ -870,7 +870,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 	}
 	if request.ManifestQualifier != commitment.Qualifier ||
 		request.SnapshotBytes != commitment.SnapshotBytes ||
-		!reflect.DeepEqual(request.Zones, commitment.Zones) {
+		!equalDNSEngineSwitchWireZones(request.Zones, commitment.Zones) {
 		response.Error = "DNS engine switch request is not the exact canonical manifest"
 		return nil
 	}
@@ -918,6 +918,19 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 	}
 	*response = result
 	return nil
+}
+
+// equalDNSEngineSwitchWireZones preserves the exact canonical comparison while
+// accepting gob's wire representation for a zero-zone manifest: net/rpc
+// decodes its explicit empty top-level slice as nil. Nil and empty commit to
+// the same zero-zone manifest.
+func equalDNSEngineSwitchWireZones(
+	wire, canonical []transport.DNSEngineSwitchZoneSnapshot,
+) bool {
+	if len(wire) == 0 && len(canonical) == 0 {
+		return true
+	}
+	return reflect.DeepEqual(wire, canonical)
 }
 
 func formatDNSEngineSwitchPublishedPhase(requestID, qualifier string) (string, error) {

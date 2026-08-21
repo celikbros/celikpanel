@@ -5,6 +5,8 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
+	"net/rpc"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,6 +22,8 @@ type fakeDNSEngineBackend struct {
 	syncErr        error
 	switchErr      error
 	result         transport.SwitchDNSEngineV1Response
+	switchCalls    int
+	switchManifest mutationpayload.DNSEngineSwitchManifestCommitment
 	recovery       dnsEngineSwitchRecoveryOutcome
 	recoverErr     error
 	recoverCalls   int
@@ -52,10 +56,12 @@ func (backend *fakeDNSEngineBackend) RecoverZone(
 }
 
 func (backend *fakeDNSEngineBackend) Switch(
-	context.Context,
-	mutationpayload.DNSEngineSwitchManifestCommitment,
-	transport.ServiceMutationBinding,
+	_ context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	_ transport.ServiceMutationBinding,
 ) (transport.SwitchDNSEngineV1Response, error) {
+	backend.switchCalls++
+	backend.switchManifest = manifest
 	return backend.result, backend.switchErr
 }
 
@@ -108,6 +114,40 @@ func canonicalSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 	}
 }
 
+func pairedZeroZoneSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
+	t.Helper()
+	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
+		transport.DNSEngineSwitchModeSwitch,
+		"", transport.DNSEngineBIND, 0, 1, 1,
+		transport.DNSTopologyPaired,
+		transport.DNSPairRolePrimary,
+		"192.0.2.10", "ns1.example.test",
+		"198.51.100.20", "ns2.example.test",
+		[]transport.DNSEngineSwitchZoneSnapshot{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return SwitchDNSEngineV1Request{
+		ServiceMutationBinding: mutationTestBinding(),
+		Mode:                   commitment.Mode,
+		SourceEngine:           commitment.SourceEngine,
+		TargetEngine:           commitment.TargetEngine,
+		SourceEpoch:            commitment.SourceEpoch,
+		TargetEpoch:            commitment.TargetEpoch,
+		SourceRevision:         commitment.SourceRevision,
+		Topology:               commitment.Topology,
+		PairRole:               commitment.PairRole,
+		LocalIP:                commitment.LocalIP,
+		LocalNS:                commitment.LocalNS,
+		PeerIP:                 commitment.PeerIP,
+		PeerNS:                 commitment.PeerNS,
+		Zones:                  commitment.Zones,
+		SnapshotBytes:          commitment.SnapshotBytes,
+		ManifestQualifier:      commitment.Qualifier,
+	}
+}
+
 func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 	request := canonicalSwitchRequest(t)
 	manager, _ := newMutationTestManager(t)
@@ -132,6 +172,92 @@ func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 	wantPhase := dnsEngineSwitchPublishedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
 	if job == nil || job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
 		t.Fatalf("terminal job=%+v want phase %q", job, wantPhase)
+	}
+}
+
+func TestSwitchDNSEngineAcceptsGobCollapsedZeroZonesWithDurableLease(t *testing.T) {
+	request := pairedZeroZoneSwitchRequest(t)
+	if request.Zones == nil {
+		t.Fatal("canonical zero-zone manifest must use an explicit empty slice")
+	}
+	manager, root := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	backend := &fakeDNSEngineBackend{result: transport.SwitchDNSEngineV1Response{
+		Applied: true, ActiveEngine: transport.DNSEngineBIND,
+		ActiveEpoch: 1, AppliedZones: 0,
+	}}
+	useFakeDNSEngineBackend(t, backend)
+
+	server := rpc.NewServer()
+	if err := server.RegisterName("Agent", &Agent{}); err != nil {
+		t.Fatal(err)
+	}
+	serverConn, clientConn := net.Pipe()
+	t.Cleanup(func() {
+		_ = clientConn.Close()
+		_ = serverConn.Close()
+	})
+	go server.ServeConn(serverConn)
+	client := rpc.NewClient(clientConn)
+	t.Cleanup(func() { _ = client.Close() })
+
+	var response SwitchDNSEngineV1Response
+	if err := client.Call("Agent.SwitchDNSEngineV1", &request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != "" || !response.Applied ||
+		response.ActiveEngine != transport.DNSEngineBIND ||
+		response.ActiveEpoch != 1 || response.AppliedZones != 0 {
+		t.Fatalf("response=%+v", response)
+	}
+	if backend.switchCalls != 1 ||
+		backend.switchManifest.Qualifier != request.ManifestQualifier ||
+		backend.switchManifest.Topology != transport.DNSTopologyPaired ||
+		backend.switchManifest.PairRole != transport.DNSPairRolePrimary ||
+		len(backend.switchManifest.Zones) != 0 {
+		t.Fatalf(
+			"backend calls=%d manifest=%+v",
+			backend.switchCalls, backend.switchManifest,
+		)
+	}
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	wantPhase := dnsEngineSwitchPublishedPhasePrefix +
+		testMutationRequestID + "/" + request.ManifestQualifier
+	if job == nil || job.Status != serviceMutationStatusSucceeded ||
+		job.Phase != wantPhase {
+		t.Fatalf("durable terminal job=%+v want phase %q", job, wantPhase)
+	}
+}
+
+func TestEqualDNSEngineSwitchWireZonesRejectsNonEmptyTamper(t *testing.T) {
+	canonical := []transport.DNSEngineSwitchZoneSnapshot{{
+		Ordinal: 0, Domain: "example.test", DesiredGeneration: 7,
+		ZoneType: "PRIMARY",
+		Records: []transport.ZoneRecord{{
+			Name: "example.test", Type: "A", Content: "192.0.2.10", TTL: 300,
+		}},
+		ZoneQualifier: "dns-zone-sync/v3:sha256:" + strings.Repeat("a", 64),
+	}}
+	ordinalTamper := append([]transport.DNSEngineSwitchZoneSnapshot(nil), canonical...)
+	ordinalTamper[0].Ordinal = 1
+	if equalDNSEngineSwitchWireZones(ordinalTamper, canonical) {
+		t.Fatal("non-empty ordinal tamper was accepted")
+	}
+	recordTamper := append([]transport.DNSEngineSwitchZoneSnapshot(nil), canonical...)
+	recordTamper[0].Records = append([]transport.ZoneRecord(nil), canonical[0].Records...)
+	recordTamper[0].Records[0].Content = "192.0.2.11"
+	if equalDNSEngineSwitchWireZones(recordTamper, canonical) {
+		t.Fatal("non-empty record tamper was accepted")
 	}
 }
 

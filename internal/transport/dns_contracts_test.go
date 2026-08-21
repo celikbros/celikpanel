@@ -3,9 +3,24 @@ package transport
 import (
 	"bytes"
 	"encoding/gob"
+	"net"
+	"net/rpc"
 	"reflect"
 	"testing"
 )
+
+type DNSEngineSwitchWireProbe struct {
+	zonesNil bool
+}
+
+func (probe *DNSEngineSwitchWireProbe) Capture(
+	request *SwitchDNSEngineV1Request,
+	response *bool,
+) error {
+	probe.zonesNil = request.Zones == nil
+	*response = true
+	return nil
+}
 
 func TestDNSZoneSyncV2WireContractPreservesFullSnapshotAndGeneration(t *testing.T) {
 	wantRequest := SyncDNSZoneV2Request{
@@ -197,5 +212,41 @@ func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("switch round trip got=%#v want=%#v", got, want)
+	}
+}
+
+func TestDNSEngineSwitchZeroZoneSliceIsCollapsedByNetRPC(t *testing.T) {
+	request := &SwitchDNSEngineV1Request{
+		Mode:         DNSEngineSwitchModeSwitch,
+		TargetEngine: DNSEngineBIND,
+		Zones:        []DNSEngineSwitchZoneSnapshot{},
+	}
+	if request.Zones == nil {
+		t.Fatal("test request did not start with an explicit empty zone slice")
+	}
+
+	probe := &DNSEngineSwitchWireProbe{}
+	server := rpc.NewServer()
+	if err := server.RegisterName("Probe", probe); err != nil {
+		t.Fatal(err)
+	}
+	serverConn, clientConn := net.Pipe()
+	t.Cleanup(func() {
+		_ = clientConn.Close()
+		_ = serverConn.Close()
+	})
+	go server.ServeConn(serverConn)
+	client := rpc.NewClient(clientConn)
+	t.Cleanup(func() { _ = client.Close() })
+
+	var acknowledged bool
+	if err := client.Call("Probe.Capture", request, &acknowledged); err != nil {
+		t.Fatal(err)
+	}
+	if !acknowledged || !probe.zonesNil {
+		t.Fatalf(
+			"net/rpc did not expose gob's empty-slice collapse: acknowledged=%t zones_nil=%t",
+			acknowledged, probe.zonesNil,
+		)
 	}
 }
