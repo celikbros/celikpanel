@@ -126,6 +126,19 @@ test('hidden and initial DNS state load is read-only; explicit Refresh reconcile
   assert.match(card, /onClick=\{\(\) => void reconcileAndRefresh\(\)\}/);
 });
 
+test('only source-free BIND installed standby is labelled as an installation retry', () => {
+  const labelStart = card.indexOf('const reviewLabel =');
+  const labelEnd = card.indexOf('return (', labelStart);
+  assert.ok(labelStart >= 0 && labelEnd > labelStart);
+  const label = card.slice(labelStart, labelEnd);
+
+  assert.match(label,
+    /engine[.]status === 'available'[^]*[|][|] [(]engine[.]status === 'installed_standby'[^]*&& snapshot[.]active_engine === null[^]*&& snapshot[.]state === 'unconfigured'[^]*&& id === 'bind'[)][^]*[?] et[(]'dnsEngine[.]reviewInstall'[)]/,
+    'the initial managed stopped BIND retry must match the backend install action');
+  assert.match(label, /[:] et[(]'dnsEngine[.]reviewSwitch'[)]/,
+    'active-source standby engines must retain the switch label');
+});
+
 test('DNS engine decoder rejects impossible authority tuples', async () => {
   const { decodeDNSEngineSnapshot } = await loadContractRuntime();
   assert.ok(decodeDNSEngineSnapshot(readySnapshot()));

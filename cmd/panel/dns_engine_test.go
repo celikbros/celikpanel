@@ -960,6 +960,418 @@ func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
 	}
 }
 
+func TestDNSEngineInitialPairedBINDInstalledStandbyRetriesAsInstall(t *testing.T) {
+	t.Setenv(`CELIKPANEL_SERVER_IP`, `72.62.38.15`)
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	target.Installed, target.Running, target.Managed = true, false, true
+	agent.runtimes[transport.DNSEngineBIND] = target
+	attachDNSEngineTestAgent(t, panel, agent)
+	seedDNSSetupAuditUser(t, panel)
+	stageBody, err := json.Marshal(map[string]string{
+		`ns1`: `ns1.celikhost.com`, `ns2`: `ns2.celikhost.com`,
+		`role`: `paired`, `peer_ip`: `2.25.80.4`,
+		`peer_ns`: `ns2.celikhost.com`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := httptest.NewRecorder()
+	panel.handleDNSSetup(stage, dnsSetupAdminRequest(string(stageBody)))
+	if stage.Code != http.StatusOK {
+		t.Fatalf(`Frankfurt identity stage status=%d body=%s`,
+			stage.Code, stage.Body.String())
+	}
+	type acceptedBoundary struct {
+		marker                                            *dnsEngineOperationMarker
+		state                                             dnsEngineDBState
+		phase, pairRole, localIP, localNS, peerIP, peerNS string
+		err                                               error
+	}
+	accepted := make(chan acceptedBoundary, 1)
+	agent.onSwitch = func() {
+		boundary := acceptedBoundary{}
+		boundary.marker, boundary.err = readDNSEngineOperationMarker(
+			context.Background(), panel.db.GetDB(),
+		)
+		if boundary.err == nil {
+			boundary.state, boundary.err = readDNSEngineDBState(
+				context.Background(), panel.db.GetDB(),
+			)
+		}
+		if boundary.err == nil && boundary.marker != nil {
+			boundary.err = panel.db.GetDB().QueryRow(`
+				SELECT snapshot.phase, pairing.pair_role,
+				       pairing.local_ip, pairing.local_ns,
+				       pairing.peer_ip, pairing.peer_ns
+				FROM dns_engine_switch_snapshots AS snapshot
+				JOIN dns_bind_pair_switches AS pairing
+				  ON pairing.switch_id = snapshot.switch_id
+				WHERE snapshot.switch_id = ?`,
+				boundary.marker.SwitchID,
+			).Scan(
+				&boundary.phase, &boundary.pairRole,
+				&boundary.localIP, &boundary.localNS,
+				&boundary.peerIP, &boundary.peerNS,
+			)
+		}
+		accepted <- boundary
+	}
+
+	snapshot, err := panel.dnsEngineSnapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	startRevision := snapshot.Revision
+	if snapshot.ActiveEngine != nil || snapshot.EngineEpoch != 0 ||
+		startRevision <= 0 ||
+		snapshot.State != dnsEngineStateUnconfigured ||
+		snapshot.Topology != transport.DNSTopologyPaired ||
+		snapshot.PairRole != transport.DNSPairRolePrimary {
+		t.Fatalf(`initial Frankfurt snapshot=%+v`, snapshot)
+	}
+	var bindEntry *dnsEngineEntry
+	for index := range snapshot.Engines {
+		if snapshot.Engines[index].ID == transport.DNSEngineBIND {
+			bindEntry = &snapshot.Engines[index]
+			break
+		}
+	}
+	if bindEntry == nil || bindEntry.Status != `installed_standby` ||
+		!bindEntry.Installed || bindEntry.Running || !bindEntry.Managed {
+		t.Fatalf(`initial Frankfurt BIND entry=%+v`, bindEntry)
+	}
+
+	preview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, startRevision,
+	)
+	if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 {
+		t.Fatalf(`installed-standby preview status=%d body=%s`,
+			recorder.Code, recorder.Body.String())
+	}
+	if preview.Action != `install` || preview.SourceEngine != nil ||
+		preview.RequiresDowntimeAcknowledgement {
+		t.Errorf(`installed-standby preview=%+v, want source-free install`, preview)
+	}
+	if !slices.Equal(preview.Impacts, []string{
+		`install_target`, `validate_target`, `publish_zones`, `start_target`,
+	}) {
+		t.Errorf(`installed-standby impacts=%v`, preview.Impacts)
+	}
+	requestID := strings.Repeat(`7`, 32)
+	commit := commitDNSEngineSwitch(
+		t, panel, requestID, transport.DNSEngineBIND,
+		nil, startRevision, preview.PreviewToken, false,
+	)
+	if commit.Code != http.StatusOK {
+		t.Fatalf(`installed-standby commit status=%d body=%s`,
+			commit.Code, commit.Body.String())
+	}
+	boundary := <-accepted
+	if boundary.err != nil || boundary.marker == nil {
+		t.Fatalf(`accepted agent boundary marker=%+v err=%v`,
+			boundary.marker, boundary.err)
+	}
+	marker := boundary.marker
+	if marker.RequestID != requestID ||
+		!validServiceOperationID(marker.SwitchID) ||
+		marker.SourceEngine != `` ||
+		marker.TargetEngine != transport.DNSEngineBIND ||
+		marker.Action != `install` ||
+		marker.Phase != dnsEngineOperationAccepted {
+		t.Fatalf(`accepted operation marker=%+v`, marker)
+	}
+	if boundary.state.ActiveEngine != `` ||
+		boundary.state.EngineEpoch != 0 ||
+		boundary.state.Revision != startRevision+1 ||
+		boundary.state.CurrentSwitchID != marker.SwitchID ||
+		boundary.phase != `activating` {
+		t.Fatalf(`accepted durable boundary state=%+v phase=%s`,
+			boundary.state, boundary.phase)
+	}
+	if boundary.pairRole != transport.DNSPairRolePrimary ||
+		boundary.localIP != `72.62.38.15` ||
+		boundary.localNS != `ns1.celikhost.com` ||
+		boundary.peerIP != `2.25.80.4` ||
+		boundary.peerNS != `ns2.celikhost.com` {
+		t.Fatalf(`accepted paired identity=%s %s/%s %s/%s`,
+			boundary.pairRole, boundary.localIP, boundary.localNS,
+			boundary.peerIP, boundary.peerNS)
+	}
+	agent.mu.Lock()
+	if agent.switchCalls != 1 || len(agent.switchRequests) != 1 {
+		calls, requests := agent.switchCalls, len(agent.switchRequests)
+		agent.mu.Unlock()
+		t.Fatalf(`agent switch calls=%d requests=%d`, calls, requests)
+	}
+	request := agent.switchRequests[0]
+	agent.mu.Unlock()
+	if request.Mode != transport.DNSEngineSwitchModeSwitch ||
+		request.SourceEngine != `` ||
+		request.TargetEngine != transport.DNSEngineBIND ||
+		request.SourceEpoch != 0 || request.TargetEpoch != 1 ||
+		request.SourceRevision != startRevision ||
+		request.Topology != transport.DNSTopologyPaired ||
+		request.PairRole != transport.DNSPairRolePrimary ||
+		request.LocalIP != `72.62.38.15` ||
+		request.LocalNS != `ns1.celikhost.com` ||
+		request.PeerIP != `2.25.80.4` ||
+		request.PeerNS != `ns2.celikhost.com` {
+		t.Fatalf(`installed-standby agent request=%+v`, request)
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND ||
+		state.EngineEpoch != 1 || state.Revision != startRevision+2 ||
+		state.CurrentSwitchID != `` ||
+		state.Topology != transport.DNSTopologyPaired ||
+		state.PairRole != transport.DNSPairRolePrimary ||
+		state.LocalIP != `72.62.38.15` ||
+		state.LocalNS != `ns1.celikhost.com` ||
+		state.PeerIP != `2.25.80.4` ||
+		state.PeerNS != `ns2.celikhost.com` {
+		t.Fatalf(`installed-standby final state=%+v`, state)
+	}
+	finalMarker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || finalMarker != nil {
+		t.Fatalf(`installed-standby final marker=%+v err=%v`, finalMarker, err)
+	}
+	for _, outcome := range []string{`accepted`, `succeeded`} {
+		wantAction := `dns.engine.switch.` + outcome +
+			` request=` + requestID + ` switch=` + marker.SwitchID +
+			` source=none target=bind action=install mode=switch`
+		var count int
+		if err := panel.db.GetDB().QueryRow(
+			`SELECT count(*) FROM audit_logs WHERE action = ?`, wantAction,
+		).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Errorf(`audit %s count=%d want=1`, wantAction, count)
+		}
+	}
+}
+
+func TestDNSEngineInitialBINDStandbyClassificationIsExact(t *testing.T) {
+	pdns := transport.DNSEnginePowerDNS
+	standby := transport.DNSBackendRuntimeState{
+		Engine:    transport.DNSEngineBIND,
+		Installed: true, Managed: true,
+	}
+	tests := []struct {
+		name       string
+		snapshot   dnsEngineSnapshot
+		target     transport.DNSEngine
+		wantAction string
+	}{
+		{
+			name: `exact standalone initial BIND standby`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 0, State: dnsEngineStateUnconfigured,
+				Topology: transport.DNSTopologyStandalone,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: standby,
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `install`,
+		},
+		{
+			name: `exact paired initial BIND standby`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 0, State: dnsEngineStateUnconfigured,
+				Topology: transport.DNSTopologyPaired,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: standby,
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `install`,
+		},
+		{
+			name: `nonzero durable epoch`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 1, State: dnsEngineStateUnconfigured,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: standby,
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `switch`,
+		},
+		{
+			name: `runtime authority is not unconfigured`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 0, State: dnsEngineStateUnmanaged,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: standby,
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `switch`,
+		},
+		{
+			name: `durable source exists`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 1, ActiveEngine: &pdns, State: dnsEngineStateReady,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: standby,
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `switch`,
+		},
+		{
+			name: `BIND is already running`,
+			snapshot: dnsEngineSnapshot{
+				EngineEpoch: 0, State: dnsEngineStateUnmanaged,
+				runtime: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+					transport.DNSEngineBIND: {
+						Engine:    transport.DNSEngineBIND,
+						Installed: true, Running: true, Managed: true,
+					},
+				},
+			},
+			target: transport.DNSEngineBIND, wantAction: `switch`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := dnsEngineAction(test.snapshot, test.target); got != test.wantAction {
+				t.Fatalf(`action=%s want=%s snapshot=%+v`,
+					got, test.wantAction, test.snapshot)
+			}
+		})
+	}
+}
+
+func TestDNSEngineSourceFreeRuntimeAuthorityCannotStartMutation(t *testing.T) {
+	tests := []struct {
+		name       string
+		configure  func(*dnsEngineTestAgent)
+		wantAction string
+	}{
+		{
+			name: `running BIND`, wantAction: `switch`,
+			configure: func(agent *dnsEngineTestAgent) {
+				runtime := agent.runtimes[transport.DNSEngineBIND]
+				runtime.Installed, runtime.Running, runtime.Managed = true, true, true
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+			},
+		},
+		{
+			name: `other engine running with BIND standby`, wantAction: `switch`,
+			configure: func(agent *dnsEngineTestAgent) {
+				pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+				pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+				agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+				bind := agent.runtimes[transport.DNSEngineBIND]
+				bind.Installed, bind.Running, bind.Managed = true, false, true
+				agent.runtimes[transport.DNSEngineBIND] = bind
+			},
+		},
+		{
+			name: `other engine running with BIND absent`, wantAction: `install`,
+			configure: func(agent *dnsEngineTestAgent) {
+				pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+				pdns.Installed, pdns.Running, pdns.Managed = true, true, true
+				agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(`CELIKPANEL_SERVER_IP`, `72.62.38.15`)
+			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, `paired`)
+			agent := newDNSEngineTestAgent()
+			test.configure(agent)
+			attachDNSEngineTestAgent(t, panel, agent)
+			snapshot, err := panel.dnsEngineSnapshot(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if snapshot.ActiveEngine != nil ||
+				snapshot.State == dnsEngineStateUnconfigured {
+				t.Fatalf(`runtime authority snapshot=%+v`, snapshot)
+			}
+			preview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEngineBIND, nil, snapshot.Revision,
+			)
+			if recorder.Code != http.StatusOK ||
+				preview.Action != test.wantAction ||
+				!hasDNSEngineBlocker(preview, `target_unavailable`) {
+				t.Fatalf(`blocked preview=%+v status=%d body=%s`,
+					preview, recorder.Code, recorder.Body.String())
+			}
+			commit := commitDNSEngineSwitch(
+				t, panel, strings.Repeat(`8`, 32), transport.DNSEngineBIND,
+				nil, snapshot.Revision, preview.PreviewToken, false,
+			)
+			if commit.Code != http.StatusConflict {
+				t.Fatalf(`blocked commit status=%d body=%s`,
+					commit.Code, commit.Body.String())
+			}
+			agent.mu.Lock()
+			calls, requests := agent.switchCalls, len(agent.switchRequests)
+			agent.mu.Unlock()
+			if calls != 0 || requests != 0 {
+				t.Fatalf(`blocked runtime authority reached agent: %d/%d`,
+					calls, requests)
+			}
+			var switches int
+			var current sql.NullString
+			if err := panel.db.GetDB().QueryRow(`
+				SELECT (SELECT count(*) FROM dns_engine_switch_snapshots),
+				       current_switch_id
+				FROM dns_engine_state WHERE singleton_id = 1`,
+			).Scan(&switches, &current); err != nil {
+				t.Fatal(err)
+			}
+			marker, err := readDNSEngineOperationMarker(
+				context.Background(), panel.db.GetDB(),
+			)
+			if err != nil || marker != nil || switches != 0 || current.Valid {
+				t.Fatalf(`blocked mutation durable state marker=%+v switches=%d current=%+v err=%v`,
+					marker, switches, current, err)
+			}
+		})
+	}
+}
+
+func TestDNSEngineOperationMarkerPreservesSourceInvariant(t *testing.T) {
+	base := dnsEngineOperationMarker{
+		Version:      dnsEngineOperationVersion,
+		RequestID:    strings.Repeat(`9`, 32),
+		SwitchID:     strings.Repeat(`a`, 32),
+		TargetEngine: transport.DNSEngineBIND,
+		Phase:        dnsEngineOperationAccepted,
+	}
+	tests := []struct {
+		name, action string
+		source       transport.DNSEngine
+		wantError    bool
+	}{
+		{name: `source-free install`, action: `install`},
+		{name: `source-free switch`, action: `switch`, wantError: true},
+		{
+			name: `sourceful switch`, action: `switch`,
+			source: transport.DNSEnginePowerDNS,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			marker := base
+			marker.Action, marker.SourceEngine = test.action, test.source
+			err := validateDNSEngineOperationMarker(marker)
+			if (err != nil) != test.wantError {
+				t.Fatalf(`marker=%+v err=%v wantError=%v`,
+					marker, err, test.wantError)
+			}
+		})
+	}
+}
+
 func TestDNSEngineGETMatchesUIWireContract(t *testing.T) {
 	panel := newDNSPanelForTest(t)
 	agent := newDNSEngineTestAgent()

@@ -687,6 +687,16 @@ func dnsEngineAction(
 	if !runtime.Installed {
 		return "install"
 	}
+	// A failed initial BIND install may leave an exact panel-managed package
+	// stopped as a rollback standby. With no durable source and no running DNS
+	// backend, retrying is still the initial install/activation operation.
+	if snapshot.ActiveEngine == nil &&
+		snapshot.State == dnsEngineStateUnconfigured &&
+		snapshot.EngineEpoch == 0 &&
+		target == transport.DNSEngineBIND &&
+		!runtime.Running && runtime.Managed {
+		return "install"
+	}
 	if snapshot.ActiveEngine == nil &&
 		target == transport.DNSEnginePowerDNS &&
 		runtime.Running && runtime.Managed {
@@ -792,6 +802,14 @@ func dnsEnginePreviewBlockers(
 		blockers = addDNSEngineBlocker(blockers, "target_already_active")
 	}
 	targetRuntime := snapshot.runtime[target]
+	// A durable switch always has a source. Registration-only PowerDNS paths use
+	// adopt or reconfigure. Every other source-free switch, and an install while
+	// runtime state proves the server is not unconfigured, must stop at preview.
+	if snapshot.ActiveEngine == nil &&
+		action != "adopt" && action != "reconfigure" &&
+		(action == "switch" || snapshot.State != dnsEngineStateUnconfigured) {
+		blockers = addDNSEngineBlocker(blockers, "target_unavailable")
+	}
 	if targetRuntime.Installed && !targetRuntime.Managed {
 		blockers = addDNSEngineBlocker(blockers, "unmanaged_dns_detected")
 	}
