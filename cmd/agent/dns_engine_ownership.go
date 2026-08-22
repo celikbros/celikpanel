@@ -377,6 +377,68 @@ func installOwnedDNSEnginePackages(
 	return install()
 }
 
+type dnsEngineInstallOwnershipHandoffOps struct {
+	read  func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error)
+	write func(dnsEngineInstallOwnershipReceipt) error
+}
+
+func handoffExistingDNSEngineInstallOwnership(
+	engine transport.DNSEngine,
+	manager hostplatform.PackageManager,
+	packages []string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+) error {
+	return handoffExistingDNSEngineInstallOwnershipWithOps(
+		engine, manager, packages, manifest, binding,
+		dnsEngineInstallOwnershipHandoffOps{
+			read: readDNSEngineInstallOwnership, write: writeDNSEngineInstallOwnership,
+		},
+	)
+}
+
+func handoffExistingDNSEngineInstallOwnershipWithOps(
+	engine transport.DNSEngine,
+	manager hostplatform.PackageManager,
+	packages []string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+	ops dnsEngineInstallOwnershipHandoffOps,
+) error {
+	if ops.read == nil || ops.write == nil || manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		manifest.TargetEngine != engine {
+		return errors.New("invalid DNS engine install ownership handoff")
+	}
+	existing, exists, err := ops.read(engine)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	if !exactDNSEngineInstallOwnership(existing, true, engine, manager, packages) {
+		return errors.New("existing DNS engine install ownership differs from the retry target")
+	}
+	rebound := existing
+	rebound.ManifestQualifier = manifest.Qualifier
+	rebound.MutationRequestID = binding.MutationRequestID
+	rebound.MutationOwnerID = binding.MutationOwnerID
+	if err := validateDNSEngineInstallOwnership(rebound); err != nil {
+		return err
+	}
+	if err := ops.write(rebound); err != nil {
+		return err
+	}
+	actual, actualExists, err := ops.read(engine)
+	if err != nil {
+		return err
+	}
+	if !actualExists || !reflect.DeepEqual(actual, rebound) {
+		return errors.New("DNS engine install ownership handoff readback mismatch")
+	}
+	return nil
+}
+
 func exactDNSEngineInstallOwnership(
 	receipt dnsEngineInstallOwnershipReceipt,
 	exists bool,

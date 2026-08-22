@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -21,25 +22,32 @@ import (
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu                        sync.Mutex
-	runtimes                  map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	port53Conflict            bool
-	readinessCalls            int
-	onReadiness               func(int)
-	readinessAfterSwitchError string
-	dnssec                    bool
-	dnssecCalls               int
-	switchCalls               int
-	switchRequests            []transport.SwitchDNSEngineV1Request
-	switchError               string
-	switchErrorLeavesPackage  bool
-	onSwitch                  func()
-	firewallEnabled           bool
-	firewallError             string
-	firewallCalls             int
-	firewallRequests          []transport.ApplyFirewallRequest
-	scanError                 error
-	omitDNSCapabilities       bool
+	mu                         sync.Mutex
+	runtimes                   map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict             bool
+	readinessCalls             int
+	onReadiness                func(int)
+	readinessAfterSwitchError  string
+	dnssec                     bool
+	dnssecCalls                int
+	switchCalls                int
+	switchRequests             []transport.SwitchDNSEngineV1Request
+	switchError                string
+	switchErrorLeavesPackage   bool
+	onSwitch                   func()
+	firewallEnabled            bool
+	firewallError              string
+	firewallCalls              int
+	firewallRequests           []transport.ApplyFirewallRequest
+	scanError                  error
+	omitDNSCapabilities        bool
+	rollbackEvidenceOutcome    string
+	rollbackEvidenceOutcomes   map[int]string
+	rollbackEvidenceCommitment string
+	rollbackEvidenceCalls      int
+	rollbackEvidenceRequests   []transport.DNSEngineRollbackEvidenceRequest
+	onRollbackEvidence         func(int)
+	mutationStatusCalls        int
 }
 
 func newDNSEngineTestAgent() *dnsEngineTestAgent {
@@ -208,6 +216,41 @@ func (agent *dnsEngineTestAgent) DNSBackendReadiness(
 	return nil
 }
 
+func (agent *dnsEngineTestAgent) DNSEngineRollbackEvidenceV1(
+	request *transport.DNSEngineRollbackEvidenceRequest,
+	response *transport.DNSEngineRollbackEvidenceResponse,
+) error {
+	agent.mu.Lock()
+	agent.rollbackEvidenceCalls++
+	call := agent.rollbackEvidenceCalls
+	copy := *request
+	copy.Zones = append(
+		[]transport.DNSEngineSwitchZoneSnapshot(nil), request.Zones...,
+	)
+	agent.rollbackEvidenceRequests = append(
+		agent.rollbackEvidenceRequests, copy,
+	)
+	response.Outcome = agent.rollbackEvidenceOutcome
+	if outcome := agent.rollbackEvidenceOutcomes[call]; outcome != "" {
+		response.Outcome = outcome
+	}
+	if response.Outcome == "" {
+		response.Outcome = transport.DNSEngineRollbackSafe
+	}
+	if response.Outcome == transport.DNSEngineRollbackSafe {
+		response.ReceiptCommitment = agent.rollbackEvidenceCommitment
+		if response.ReceiptCommitment == "" {
+			response.ReceiptCommitment = strings.Repeat("a", 64)
+		}
+	}
+	hook := agent.onRollbackEvidence
+	agent.mu.Unlock()
+	if hook != nil {
+		hook(call)
+	}
+	return nil
+}
+
 func (agent *dnsEngineTestAgent) DNSSECStatus(
 	_ *transport.DNSSECRequest,
 	response *transport.DNSSECStatusResponse,
@@ -266,6 +309,9 @@ func (agent *dnsEngineTestAgent) ServiceMutationStatus(
 	request *ServiceOperationMutationStatusRequest,
 	response *ServiceOperationMutationResponse,
 ) error {
+	agent.mu.Lock()
+	agent.mutationStatusCalls++
+	agent.mu.Unlock()
 	agent.durableMutationRPCFixture.mu.Lock()
 	defer agent.durableMutationRPCFixture.mu.Unlock()
 	requestID := request.RequestID
@@ -2062,10 +2108,15 @@ func terminalDNSEngineJob(
 	persisted persistedDNSEngineSwitch,
 	status string,
 ) *agentMutationJob {
+	now := time.Now().UTC()
 	job := &agentMutationJob{
 		RequestID: persisted.RequestID, OwnerID: persisted.OwnerID,
 		Kind: dnsEngineSwitchKind, Target: string(persisted.TargetEngine),
-		PackageName: persisted.Qualifier, Status: status,
+		PackageName: persisted.Qualifier, Status: status, Attempt: 1,
+		StartedAt:  now.Add(-2 * time.Minute),
+		UpdatedAt:  now.Add(-time.Minute),
+		DeadlineAt: now.Add(time.Hour),
+		FinishedAt: now,
 	}
 	if status == agentMutationSucceeded {
 		job.Phase = "commit/dns-engine-switch/v1/published/" +
@@ -2143,5 +2194,872 @@ func TestDNSEngineRecoveryKeepsLockWithoutRollbackRuntimeProof(t *testing.T) {
 	}
 	if state.CurrentSwitchID != persisted.SwitchID || state.ActiveEngine != "" {
 		t.Fatalf("unproven rollback detached authority: %+v", state)
+	}
+}
+
+func setDNSEngineMutationJobForTest(
+	t *testing.T,
+	agent *dnsEngineTestAgent,
+	job *agentMutationJob,
+	active bool,
+) {
+	t.Helper()
+	agent.durableMutationRPCFixture.mu.Lock()
+	defer agent.durableMutationRPCFixture.mu.Unlock()
+	if agent.durableMutationRPCFixture.jobs == nil {
+		agent.durableMutationRPCFixture.jobs =
+			make(map[string]*ServiceOperationMutationJob)
+	}
+	agent.durableMutationRPCFixture.jobs[job.RequestID] =
+		serviceOperationMutationJobFromAgent(job)
+	agent.durableMutationRPCFixture.active = ""
+	if active {
+		agent.durableMutationRPCFixture.active = job.RequestID
+	}
+}
+
+func serviceOperationMutationJobFromAgent(
+	job *agentMutationJob,
+) *ServiceOperationMutationJob {
+	if job == nil {
+		return nil
+	}
+	return &ServiceOperationMutationJob{
+		RequestID: job.RequestID, OwnerID: job.OwnerID,
+		Kind: job.Kind, Target: job.Target, PackageName: job.PackageName,
+		Status: job.Status, Phase: job.Phase, Attempt: job.Attempt,
+		StartedAt: job.StartedAt, UpdatedAt: job.UpdatedAt,
+		LeaseExpiresAt: job.LeaseExpiresAt, DeadlineAt: job.DeadlineAt,
+		FinishedAt: job.FinishedAt,
+		ErrorCode:  job.ErrorCode, ErrorMessage: job.ErrorMessage,
+		WorkerPID: job.WorkerPID, WorkerStarted: job.WorkerStarted,
+		WorkerCommand: job.WorkerCommand,
+	}
+}
+
+func reconcileDNSEngineForTest(
+	t *testing.T,
+	panel *Panel,
+	method string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	if _, err := panel.db.GetDB().Exec(`
+		INSERT OR IGNORE INTO users (
+		  id, username, password_hash, email, role
+		) VALUES (1, 'dns-reconcile-admin', 'hash',
+		          'dns-reconcile-admin@example.test', 'admin')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(
+		method, "/api/v1/dns/engine/reconcile", nil,
+	)
+	request.RemoteAddr = "198.51.100.45:54321"
+	request.Header.Set("User-Agent", "dns-reconcile-test-client")
+	request = request.WithContext(context.WithValue(
+		request.Context(), callerKey, &Caller{ID: 1, Role: roleAdmin},
+	))
+	panel.handleDNSEngineReconcile(recorder, request)
+	return recorder
+}
+
+func newFailedBINDReconcileFixture(
+	t *testing.T,
+) (*Panel, *dnsEngineTestAgent, persistedDNSEngineSwitch, *agentMutationJob) {
+	t.Helper()
+	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "paired")
+	agent := newDNSEngineTestAgent()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	target.Installed, target.Running, target.Managed = true, false, true
+	agent.runtimes[transport.DNSEngineBIND] = target
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistInitialBINDReconcileSwitchForTest(
+		t, panel, strings.Repeat("6", 32),
+	)
+	job := terminalDNSEngineJob(persisted, agentMutationFailed)
+	job.ErrorCode = "service_operation_lease_lost"
+	job.ErrorMessage = "The privileged host operation lost its durable lease."
+	return panel, agent, persisted, job
+}
+
+func persistInitialBINDReconcileSwitchForTest(
+	t *testing.T,
+	panel *Panel,
+	requestID string,
+) persistedDNSEngineSwitch {
+	t.Helper()
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := panel.buildDNSEngineManifest(
+		context.Background(), state, transport.DNSEngineBIND,
+		"install", transport.DNSTopologyPaired,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerID, _ := newServiceOperationID()
+	switchID, _ := newServiceOperationID()
+	persisted, err := panel.persistDNSEngineSwitch(
+		context.Background(),
+		dnsEngineSwitchRequest{
+			RequestID: requestID, TargetEngine: transport.DNSEngineBIND,
+			ExpectedSource:   nullableDNSEngine{Set: true},
+			ExpectedRevision: state.Revision,
+		},
+		ownerID, switchID, "install", manifest,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return persisted
+}
+
+func TestDNSEngineReconcileClearsExactFrankfurtFailedInstallOnly(t *testing.T) {
+	panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+	if persisted.Topology != transport.DNSTopologyPaired ||
+		persisted.PairRole != transport.DNSPairRolePrimary ||
+		persisted.LocalIP != "72.62.38.15" ||
+		persisted.LocalNS != "ns1.celikhost.com" ||
+		persisted.PeerIP != "2.25.80.4" ||
+		persisted.PeerNS != "ns2.celikhost.com" {
+		t.Fatalf("Frankfurt frozen pair identity=%+v", persisted)
+	}
+	manifest, err := panel.reconstructPersistedDNSEngineManifest(
+		context.Background(), persisted,
+	)
+	if err != nil {
+		t.Fatalf("reconstruct Frankfurt manifest: %v", err)
+	}
+	if _, err := panel.verifyDNSEngineRollbackEvidence(
+		context.Background(), persisted, manifest,
+	); err != nil {
+		t.Fatalf("verify Frankfurt rollback evidence: %v", err)
+	}
+	if err := panel.verifyDNSEngineRollbackRuntime(
+		context.Background(), persisted,
+	); err != nil {
+		t.Fatalf("verify Frankfurt rollback runtime: %v", err)
+	}
+	agent.mu.Lock()
+	agent.rollbackEvidenceCalls = 0
+	agent.rollbackEvidenceRequests = nil
+	agent.readinessCalls = 0
+	agent.mu.Unlock()
+
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if response.Code != http.StatusOK {
+		t.Fatalf("reconcile status=%d body=%s", response.Code, response.Body.String())
+	}
+	var outcome map[string]bool
+	if err := json.Unmarshal(response.Body.Bytes(), &outcome); err != nil {
+		t.Fatal(err)
+	}
+	if len(outcome) != 1 || !outcome["reconciled"] {
+		t.Fatalf("reconcile outcome=%v body=%s", outcome, response.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.CurrentSwitchID != "" || state.ActiveEngine != "" ||
+		state.EngineEpoch != 0 || state.Revision != 2 {
+		t.Fatalf("reconciled state=%+v", state)
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker != nil {
+		t.Fatalf("reconciled marker=%+v err=%v", marker, err)
+	}
+	var phase string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT phase FROM dns_engine_switch_snapshots
+		WHERE switch_id = ?`, persisted.SwitchID,
+	).Scan(&phase); err != nil {
+		t.Fatal(err)
+	}
+	if phase != "rolled_back" {
+		t.Fatalf("reconciled switch phase=%q", phase)
+	}
+
+	agent.mu.Lock()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	evidenceCalls := agent.rollbackEvidenceCalls
+	evidenceRequests := append(
+		[]transport.DNSEngineRollbackEvidenceRequest(nil),
+		agent.rollbackEvidenceRequests...,
+	)
+	switchCalls := agent.switchCalls
+	statusCalls := agent.mutationStatusCalls
+	agent.mu.Unlock()
+	if !target.Installed || target.Running || !target.Managed {
+		t.Fatalf("transitional installed BIND artifact was not preserved: %+v", target)
+	}
+	if switchCalls != 0 || statusCalls != 0 ||
+		evidenceCalls != 2 || len(evidenceRequests) != 2 {
+		t.Fatalf("switch calls=%d status calls=%d evidence calls=%d requests=%d",
+			switchCalls, statusCalls, evidenceCalls, len(evidenceRequests))
+	}
+	for _, request := range evidenceRequests {
+		if request.MutationRequestID != persisted.RequestID ||
+			request.MutationOwnerID != persisted.OwnerID ||
+			request.TargetEngine != persisted.TargetEngine ||
+			request.SourceEpoch != persisted.SourceEpoch ||
+			request.TargetEpoch != persisted.TargetEpoch ||
+			request.ManifestQualifier != persisted.Qualifier {
+			t.Fatalf("evidence request lost frozen identity: %+v", request)
+		}
+	}
+	var auditUser int
+	var auditIP, auditAgent string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT user_id, ip_address, user_agent
+		FROM audit_logs
+		WHERE action LIKE 'dns.engine.switch.reconciled_failed_operation %'
+	`).Scan(&auditUser, &auditIP, &auditAgent); err != nil {
+		t.Fatal(err)
+	}
+	if auditUser != 1 || auditIP != "198.51.100.45" ||
+		auditAgent != "dns-reconcile-test-client" {
+		t.Fatalf("reconcile audit user=%d ip=%q agent=%q",
+			auditUser, auditIP, auditAgent)
+	}
+
+	second := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if second.Code != http.StatusOK {
+		t.Fatalf("idempotent reconcile status=%d body=%s",
+			second.Code, second.Body.String())
+	}
+	var secondOutcome map[string]bool
+	if err := json.Unmarshal(second.Body.Bytes(), &secondOutcome); err != nil {
+		t.Fatal(err)
+	}
+	if len(secondOutcome) != 1 || secondOutcome["reconciled"] {
+		t.Fatalf("idempotent reconcile outcome=%v body=%s",
+			secondOutcome, second.Body.String())
+	}
+	after, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.mu.Lock()
+	secondEvidenceCalls := agent.rollbackEvidenceCalls
+	agent.mu.Unlock()
+	if after.Revision != state.Revision || secondEvidenceCalls != evidenceCalls {
+		t.Fatalf("idempotent reconcile state=%+v evidence=%d",
+			after, secondEvidenceCalls)
+	}
+}
+
+func TestDNSEngineReconcileRetainsEveryUnprovenMarker(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*dnsEngineTestAgent, persistedDNSEngineSwitch, *ServiceOperationMutationJob)
+	}{
+		{
+			name: "missing exact terminal receipt",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackIdentityMismatch
+			},
+		},
+		{
+			name: "terminal success receipt",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackIdentityMismatch
+			},
+		},
+		{
+			name: "failed job with published phase",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackIdentityMismatch
+			},
+		},
+		{
+			name: "identity mismatch",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackIdentityMismatch
+			},
+		},
+		{
+			name: "terminal receipt retains lease",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackIdentityMismatch
+			},
+		},
+		{
+			name: "active global mutation",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackActiveOperation
+			},
+		},
+		{
+			name: "bounded agent evidence refuses journal",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceOutcome =
+					transport.DNSEngineRollbackJournalPresent
+			},
+		},
+		{
+			name: "terminal receipt commitment is malformed",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				agent.rollbackEvidenceCommitment = "raw-receipt-detail"
+			},
+		},
+		{
+			name: "target runtime still serving",
+			mutate: func(agent *dnsEngineTestAgent, _ persistedDNSEngineSwitch, _ *ServiceOperationMutationJob) {
+				target := agent.runtimes[transport.DNSEngineBIND]
+				target.Running = true
+				agent.runtimes[transport.DNSEngineBIND] = target
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			panel, agent, persisted, agentJob := newFailedBINDReconcileFixture(t)
+			job := serviceOperationMutationJobFromAgent(agentJob)
+			agent.durableMutationRPCFixture.mu.Lock()
+			agent.durableMutationRPCFixture.jobs =
+				map[string]*ServiceOperationMutationJob{job.RequestID: job}
+			test.mutate(agent, persisted, job)
+			agent.durableMutationRPCFixture.mu.Unlock()
+
+			response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+			if response.Code != http.StatusBadGateway {
+				t.Fatalf("unproven reconcile status=%d body=%s",
+					response.Code, response.Body.String())
+			}
+			if strings.Contains(response.Body.String(), persisted.RequestID) ||
+				strings.Contains(response.Body.String(), persisted.Qualifier) ||
+				strings.Contains(response.Body.String(), "journal_present") {
+				t.Fatalf("reconcile leaked proof detail: %s", response.Body.String())
+			}
+			state, err := readDNSEngineDBState(
+				context.Background(), panel.db.GetDB(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state.CurrentSwitchID != persisted.SwitchID ||
+				state.ActiveEngine != "" || state.Revision != 1 {
+				t.Fatalf("unproven reconcile changed state: %+v", state)
+			}
+			marker, err := readDNSEngineOperationMarker(
+				context.Background(), panel.db.GetDB(),
+			)
+			if err != nil || marker == nil ||
+				marker.SwitchID != persisted.SwitchID ||
+				marker.Phase != dnsEngineOperationAccepted {
+				t.Fatalf("unproven reconcile marker=%+v err=%v", marker, err)
+			}
+		})
+	}
+}
+
+func TestDNSEngineReconcileScopeIsInitialBINDInstallOnly(t *testing.T) {
+	base := persistedDNSEngineSwitch{
+		Mode:         transport.DNSEngineSwitchModeSwitch,
+		Action:       "install",
+		TargetEngine: transport.DNSEngineBIND,
+		TargetEpoch:  1,
+		Topology:     transport.DNSTopologyStandalone,
+	}
+	if err := validateInitialBINDInstallReconcileScope(base); err != nil {
+		t.Fatalf("exact Frankfurt scope rejected: %v", err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*persistedDNSEngineSwitch)
+	}{
+		{name: "source present", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.SourceEngine = transport.DNSEnginePowerDNS
+		}},
+		{name: "source epoch", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.SourceEpoch = 1
+		}},
+		{name: "adopt", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.Mode = transport.DNSEngineSwitchModeAdopt
+			persisted.Action = "adopt"
+		}},
+		{name: "reconfigure", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.Action = "reconfigure"
+		}},
+		{name: "PowerDNS target", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.TargetEngine = transport.DNSEnginePowerDNS
+		}},
+		{name: "later target epoch", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.TargetEpoch = 2
+		}},
+		{name: "paired secondary", mutate: func(persisted *persistedDNSEngineSwitch) {
+			persisted.Topology = transport.DNSTopologyPaired
+			persisted.PairRole = transport.DNSPairRoleSecondary
+			persisted.LocalIP, persisted.LocalNS = "192.0.2.10", "ns1.example.test"
+			persisted.PeerIP, persisted.PeerNS = "192.0.2.11", "ns2.example.test"
+		}},
+	}
+	paired := base
+	paired.Topology = transport.DNSTopologyPaired
+	paired.PairRole = transport.DNSPairRolePrimary
+	paired.LocalIP, paired.LocalNS = "192.0.2.10", "ns1.example.test"
+	paired.PeerIP, paired.PeerNS = "192.0.2.11", "ns2.example.test"
+	if err := validateInitialBINDInstallReconcileScope(paired); err != nil {
+		t.Fatalf("exact paired-primary Frankfurt scope rejected: %v", err)
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			persisted := base
+			test.mutate(&persisted)
+			if err := validateInitialBINDInstallReconcileScope(persisted); err == nil {
+				t.Fatalf("unsupported reconciliation scope was accepted: %+v", persisted)
+			}
+		})
+	}
+}
+
+func TestDNSEngineReconcileDoubleReadAndConcurrentLockFailClosed(t *testing.T) {
+	t.Run("terminal receipt changes after runtime proof", func(t *testing.T) {
+		panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+		setDNSEngineMutationJobForTest(t, agent, job, false)
+		agent.onReadiness = func(call int) {
+			if call != 1 {
+				return
+			}
+			agent.mu.Lock()
+			agent.rollbackEvidenceCommitment = strings.Repeat("b", 64)
+			agent.mu.Unlock()
+		}
+		response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+		if response.Code != http.StatusBadGateway {
+			t.Fatalf("changed receipt status=%d body=%s",
+				response.Code, response.Body.String())
+		}
+		state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if state.CurrentSwitchID != persisted.SwitchID {
+			t.Fatalf("changed receipt detached switch: %+v", state)
+		}
+	})
+
+	t.Run("PowerDNS appears after runtime proof", func(t *testing.T) {
+		panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+		setDNSEngineMutationJobForTest(t, agent, job, false)
+		agent.rollbackEvidenceOutcomes = map[int]string{
+			2: transport.DNSEngineRollbackRuntimeUnsealed,
+		}
+		agent.onReadiness = func(call int) {
+			if call != 1 {
+				return
+			}
+			agent.mu.Lock()
+			pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+			pdns.Running = true
+			agent.runtimes[transport.DNSEnginePowerDNS] = pdns
+			agent.mu.Unlock()
+		}
+		response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+		if response.Code != http.StatusBadGateway {
+			t.Fatalf("late PowerDNS status=%d body=%s",
+				response.Code, response.Body.String())
+		}
+		state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+		if err != nil {
+			t.Fatal(err)
+		}
+		agent.mu.Lock()
+		evidenceCalls := agent.rollbackEvidenceCalls
+		agent.mu.Unlock()
+		if state.CurrentSwitchID != persisted.SwitchID ||
+			state.Revision != 1 || evidenceCalls != 2 {
+			t.Fatalf("late PowerDNS detached switch: state=%+v evidence=%d",
+				state, evidenceCalls)
+		}
+	})
+
+	t.Run("malformed filtered listener appears before second evidence", func(t *testing.T) {
+		panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+		setDNSEngineMutationJobForTest(t, agent, job, false)
+		// The agent maps any malformed nonblank row returned by its
+		// sport=:53 probe to the bounded runtime_unsealed outcome. Simulate
+		// that result only on the second evidence read, after the panel's
+		// ordinary runtime proof was clean.
+		agent.rollbackEvidenceOutcomes = map[int]string{
+			2: transport.DNSEngineRollbackRuntimeUnsealed,
+		}
+		response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+		assertDNSEngineReconcileRetained(
+			t, panel, persisted, response, "activating",
+		)
+		agent.mu.Lock()
+		target := agent.runtimes[transport.DNSEngineBIND]
+		evidenceCalls := agent.rollbackEvidenceCalls
+		statusCalls := agent.mutationStatusCalls
+		agent.mu.Unlock()
+		if evidenceCalls != 2 || statusCalls != 0 {
+			t.Fatalf(
+				"malformed listener evidence calls=%d status calls=%d",
+				evidenceCalls, statusCalls,
+			)
+		}
+		if !target.Installed || target.Running || !target.Managed {
+			t.Fatalf(
+				"malformed listener proof changed transitional BIND artifact: %+v",
+				target,
+			)
+		}
+	})
+
+	t.Run("panel mutation lock is busy", func(t *testing.T) {
+		panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+		setDNSEngineMutationJobForTest(t, agent, job, false)
+		panel.serviceMutationMu.Lock()
+		response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+		panel.serviceMutationMu.Unlock()
+		if response.Code != http.StatusBadGateway {
+			t.Fatalf("busy reconcile status=%d body=%s",
+				response.Code, response.Body.String())
+		}
+		state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if state.CurrentSwitchID != persisted.SwitchID {
+			t.Fatalf("busy reconcile detached switch: %+v", state)
+		}
+	})
+}
+
+func assertDNSEngineReconcileRetained(
+	t *testing.T,
+	panel *Panel,
+	persisted persistedDNSEngineSwitch,
+	response *httptest.ResponseRecorder,
+	wantPhase string,
+) {
+	t.Helper()
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("drift reconcile status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	var current sql.NullString
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT current_switch_id FROM dns_engine_state
+		WHERE singleton_id = 1`).Scan(&current); err != nil {
+		t.Fatal(err)
+	}
+	if !current.Valid || current.String != persisted.SwitchID {
+		t.Fatalf("drift detached current switch: %+v", current)
+	}
+	var phase string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT phase FROM dns_engine_switch_snapshots
+		WHERE switch_id = ?`, persisted.SwitchID).Scan(&phase); err != nil {
+		t.Fatal(err)
+	}
+	if phase != wantPhase {
+		t.Fatalf("drift snapshot phase=%q want=%q", phase, wantPhase)
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker == nil ||
+		marker.SwitchID != persisted.SwitchID ||
+		marker.Phase != dnsEngineOperationAccepted {
+		t.Fatalf("drift marker=%+v err=%v", marker, err)
+	}
+}
+
+func TestDNSEngineReconcileExactCASRejectsConcurrentAuthorityDrift(t *testing.T) {
+	tests := []struct {
+		name      string
+		wantPhase string
+		mutate    func(*Panel, persistedDNSEngineSwitch) error
+	}{
+		{
+			name: "snapshot identity",
+			mutate: func(panel *Panel, persisted persistedDNSEngineSwitch) error {
+				if _, err := panel.db.GetDB().Exec(
+					"DROP TRIGGER dns_engine_switch_snapshot_identity_immutable",
+				); err != nil {
+					return err
+				}
+				_, err := panel.db.GetDB().Exec(`
+					UPDATE dns_engine_switch_snapshots SET owner_id = ?
+					WHERE switch_id = ?`,
+					strings.Repeat("7", 32), persisted.SwitchID,
+				)
+				return err
+			},
+		},
+		{
+			name:      "snapshot phase",
+			wantPhase: "verifying",
+			mutate: func(panel *Panel, persisted persistedDNSEngineSwitch) error {
+				_, err := panel.db.GetDB().Exec(`
+					UPDATE dns_engine_switch_snapshots SET phase = 'verifying'
+					WHERE switch_id = ? AND phase = 'activating'`,
+					persisted.SwitchID,
+				)
+				return err
+			},
+		},
+		{
+			name: "source authority",
+			mutate: func(panel *Panel, _ persistedDNSEngineSwitch) error {
+				_, err := panel.db.GetDB().Exec(`
+					UPDATE dns_engine_state SET revision = revision + 1
+					WHERE singleton_id = 1`)
+				return err
+			},
+		},
+		{
+			name: "frozen pair identity",
+			mutate: func(panel *Panel, persisted persistedDNSEngineSwitch) error {
+				if _, err := panel.db.GetDB().Exec(
+					"DROP TRIGGER dns_bind_pair_switch_immutable",
+				); err != nil {
+					return err
+				}
+				_, err := panel.db.GetDB().Exec(`
+					UPDATE dns_bind_pair_switches SET peer_ip = '2.25.80.5'
+					WHERE switch_id = ?`, persisted.SwitchID)
+				return err
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+			setDNSEngineMutationJobForTest(t, agent, job, false)
+			var mutationErr error
+			agent.onRollbackEvidence = func(call int) {
+				if call == 2 {
+					mutationErr = test.mutate(panel, persisted)
+				}
+			}
+			response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+			if mutationErr != nil {
+				t.Fatal(mutationErr)
+			}
+			wantPhase := test.wantPhase
+			if wantPhase == "" {
+				wantPhase = "activating"
+			}
+			assertDNSEngineReconcileRetained(
+				t, panel, persisted, response, wantPhase,
+			)
+		})
+	}
+}
+
+func TestDNSEngineReconcileExactCASRejectsSameSizeZoneContentDrift(t *testing.T) {
+	t.Setenv("CELIKPANEL_SERVER_IP", "72.62.38.15")
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "paired")
+	seedStrictDNSZone(t, panel, "drift.example")
+	agent := newDNSEngineTestAgent()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	target.Installed, target.Running, target.Managed = true, false, true
+	agent.runtimes[transport.DNSEngineBIND] = target
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistInitialBINDReconcileSwitchForTest(
+		t, panel, strings.Repeat("8", 32),
+	)
+	job := terminalDNSEngineJob(persisted, agentMutationFailed)
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+
+	var mutationErr error
+	agent.onRollbackEvidence = func(call int) {
+		if call != 2 {
+			return
+		}
+		var (
+			domain, action, zoneType, recordsJSON string
+			desiredGeneration                     int64
+		)
+		mutationErr = panel.db.GetDB().QueryRow(`
+			SELECT zone_name, desired_generation, desired_action,
+			       desired_zone_type, records_json
+			FROM dns_engine_switch_zones
+			WHERE switch_id = ? AND ordinal = 0`,
+			persisted.SwitchID,
+		).Scan(
+			&domain, &desiredGeneration, &action, &zoneType, &recordsJSON,
+		)
+		if mutationErr != nil {
+			return
+		}
+		var records []transport.ZoneRecord
+		if mutationErr = json.Unmarshal([]byte(recordsJSON), &records); mutationErr != nil {
+			return
+		}
+		if len(records) == 0 {
+			mutationErr = errors.New("zone drift fixture has no records")
+			return
+		}
+		records[0].TTL++
+		encoded, err := mutationpayload.MarshalDNSZoneSnapshotRecords(records)
+		if err != nil {
+			mutationErr = err
+			return
+		}
+		if len(encoded) != len([]byte(recordsJSON)) {
+			mutationErr = errors.New("zone drift changed snapshot byte length")
+			return
+		}
+		commitment, err := mutationpayload.CanonicalDNSZoneSyncV3(
+			transport.DNSEngineBIND, persisted.TargetEpoch,
+			desiredGeneration, domain, action == "delete", zoneType, records,
+		)
+		if err != nil {
+			mutationErr = err
+			return
+		}
+		if _, err := panel.db.GetDB().Exec(
+			"DROP TRIGGER dns_engine_switch_zone_identity_immutable",
+		); err != nil {
+			mutationErr = err
+			return
+		}
+		_, mutationErr = panel.db.GetDB().Exec(`
+			UPDATE dns_engine_switch_zones
+			SET records_json = ?, zone_qualifier = ?
+			WHERE switch_id = ? AND ordinal = 0`,
+			string(encoded), commitment.Qualifier, persisted.SwitchID,
+		)
+	}
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if mutationErr != nil {
+		t.Fatal(mutationErr)
+	}
+	assertDNSEngineReconcileRetained(
+		t, panel, persisted, response, "activating",
+	)
+	var count int
+	var bytes int64
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT count(*), COALESCE(sum(records_bytes), 0)
+		FROM dns_engine_switch_zones WHERE switch_id = ?`,
+		persisted.SwitchID,
+	).Scan(&count, &bytes); err != nil {
+		t.Fatal(err)
+	}
+	if count != persisted.ZoneCount || bytes != persisted.SnapshotBytes {
+		t.Fatalf("zone drift did not preserve count/bytes: count=%d bytes=%d",
+			count, bytes)
+	}
+}
+
+func TestDNSEngineReconcileExactCASRejectsConcurrentMarkerDrift(t *testing.T) {
+	panel, agent, persisted, job := newFailedBINDReconcileFixture(t)
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+	var mutationErr error
+	agent.onRollbackEvidence = func(call int) {
+		if call != 2 {
+			return
+		}
+		marker, err := readDNSEngineOperationMarker(
+			context.Background(), panel.db.GetDB(),
+		)
+		if err != nil || marker == nil {
+			mutationErr = errors.Join(
+				errors.New("missing marker drift fixture"), err,
+			)
+			return
+		}
+		marker.Phase = dnsEngineOperationPostCommit
+		raw, err := encodeDNSEngineOperationMarker(*marker)
+		if err != nil {
+			mutationErr = err
+			return
+		}
+		_, mutationErr = panel.db.GetDB().Exec(`
+			UPDATE panel_settings SET value = ?
+			WHERE key = ?`, raw, dnsEngineOperationSetting,
+		)
+	}
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if mutationErr != nil {
+		t.Fatal(mutationErr)
+	}
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("marker drift status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	var current sql.NullString
+	var phase string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT state.current_switch_id, snapshot.phase
+		FROM dns_engine_state AS state
+		JOIN dns_engine_switch_snapshots AS snapshot
+		  ON snapshot.switch_id = state.current_switch_id
+		WHERE state.singleton_id = 1`).Scan(&current, &phase); err != nil {
+		t.Fatal(err)
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || !current.Valid || current.String != persisted.SwitchID ||
+		phase != "activating" || marker == nil ||
+		marker.Phase != dnsEngineOperationPostCommit {
+		t.Fatalf("marker drift was not atomic: current=%v phase=%q marker=%+v err=%v",
+			current, phase, marker, err)
+	}
+}
+
+func TestDNSEngineReconcilePOSTDoesNotRenderSnapshot(t *testing.T) {
+	panel, agent, _, job := newFailedBINDReconcileFixture(t)
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if response.Code != http.StatusOK {
+		t.Fatalf("reconcile status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	var outcome map[string]bool
+	if err := json.Unmarshal(response.Body.Bytes(), &outcome); err != nil {
+		t.Fatal(err)
+	}
+	if len(outcome) != 1 || !outcome["reconciled"] {
+		t.Fatalf("reconcile outcome=%v body=%s", outcome, response.Body.String())
+	}
+	agent.mu.Lock()
+	readinessCalls := agent.readinessCalls
+	evidenceCalls := agent.rollbackEvidenceCalls
+	statusCalls := agent.mutationStatusCalls
+	agent.mu.Unlock()
+	if readinessCalls != 1 || evidenceCalls != 2 || statusCalls != 0 {
+		t.Fatalf("POST calls readiness=%d evidence=%d status=%d",
+			readinessCalls, evidenceCalls, statusCalls)
+	}
+	if !panel.serviceMutationMu.TryLock() {
+		t.Fatal("completed reconciliation retained the service mutation lock")
+	}
+	panel.serviceMutationMu.Unlock()
+}
+
+func TestDNSEngineReconcileRouteContractIsPOSTAndAdminOnly(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	response := reconcileDNSEngineForTest(t, panel, http.MethodGet)
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("GET reconcile status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	if !isAdminOnlyPath("/api/v1/dns/engine/reconcile") {
+		t.Fatal("DNS engine reconciliation route is not admin-only")
 	}
 }

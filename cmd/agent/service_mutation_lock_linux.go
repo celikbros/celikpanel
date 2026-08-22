@@ -24,6 +24,68 @@ type serviceMutationFileLock struct {
 	file *os.File
 }
 
+// acquireExistingServiceMutationFileLock obtains the common host flock without
+// creating or repairing any filesystem object. Comparison-only RPCs use this
+// lease so a missing or non-canonical lock fails closed instead of turning a
+// read into host mutation.
+func acquireExistingServiceMutationFileLock(path string) (*serviceMutationFileLock, error) {
+	path = filepath.Clean(path)
+	if !filepath.IsAbs(path) {
+		return nil, errors.New("service mutation lock path must be absolute")
+	}
+	lockDir := filepath.Dir(path)
+	dirInfo, err := os.Lstat(lockDir)
+	if err != nil {
+		return nil, fmt.Errorf("inspect service mutation lock directory: %w", err)
+	}
+	if err := secureServiceMutationStat(lockDir, dirInfo, true); err != nil {
+		return nil, err
+	}
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, fmt.Errorf("open existing service mutation lock: %w", err)
+	}
+	file := os.NewFile(uintptr(fd), path)
+	if file == nil {
+		_ = unix.Close(fd)
+		return nil, errors.New("open existing service mutation lock handle")
+	}
+	keepFile := false
+	defer func() {
+		if !keepFile {
+			_ = file.Close()
+		}
+	}()
+	verify := func() error {
+		info, statErr := file.Stat()
+		if statErr != nil {
+			return fmt.Errorf("inspect existing service mutation lock: %w", statErr)
+		}
+		if statErr := secureServiceMutationStat(path, info, false); statErr != nil {
+			return statErr
+		}
+		if info.Size() != 0 {
+			return fmt.Errorf("%s service mutation lock must be empty", path)
+		}
+		return verifyServiceMutationLockPathIdentity(path, info)
+	}
+	if err := verify(); err != nil {
+		return nil, err
+	}
+	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
+			return nil, errServiceMutationHostBusy
+		}
+		return nil, fmt.Errorf("lock existing service mutation file: %w", err)
+	}
+	if err := verify(); err != nil {
+		_ = unix.Flock(fd, unix.LOCK_UN)
+		return nil, err
+	}
+	keepFile = true
+	return &serviceMutationFileLock{file: file}, nil
+}
+
 func acquireServiceMutationFileLock(path string) (*serviceMutationFileLock, error) {
 	if !filepath.IsAbs(path) {
 		return nil, errors.New("service mutation lock path must be absolute")

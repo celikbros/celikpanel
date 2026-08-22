@@ -484,13 +484,13 @@ func TestVerifyBINDPublicListenersRequiresNamedTCPAndUDP(t *testing.T) {
 		`tcp LISTEN 0 4096 [::]:53 [::]:* users:(("named",pid=10,fd=2))`,
 		`udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=8,fd=3))`,
 	}, "\n")
-	if err := verifyBINDPublicListeners(valid); err != nil {
+	if err := verifyBINDPublicListeners(valid, 10); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyBINDPublicListeners(strings.Replace(valid, `"named"`, `"pdns_server"`, 1)); err == nil {
+	if err := verifyBINDPublicListeners(strings.Replace(valid, `"named"`, `"pdns_server"`, 1), 10); err == nil {
 		t.Fatal("public PowerDNS listener was accepted as BIND")
 	}
-	if err := verifyBINDPublicListeners(strings.Split(valid, "\n")[0]); err == nil {
+	if err := verifyBINDPublicListeners(strings.Split(valid, "\n")[0], 10); err == nil {
 		t.Fatal("UDP-only BIND listener set was accepted")
 	}
 }
@@ -501,13 +501,13 @@ func TestVerifyPDNSPublicListenersRequiresPDNSTCPAndUDP(t *testing.T) {
 		`tcp LISTEN 0 4096 [2001:db8::8]:53 [::]:* users:(("pdns_server",pid=10,fd=2))`,
 		`udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=8,fd=3))`,
 	}, "\n")
-	if err := verifyPDNSPublicListeners(valid); err != nil {
+	if err := verifyPDNSPublicListeners(valid, 10); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSPublicListeners(strings.Replace(valid, `"pdns_server"`, `"named"`, 1)); err == nil {
+	if err := verifyPDNSPublicListeners(strings.Replace(valid, `"pdns_server"`, `"named"`, 1), 10); err == nil {
 		t.Fatal("public BIND listener was accepted as PowerDNS")
 	}
-	if err := verifyPDNSPublicListeners(strings.Split(valid, "\n")[0]); err == nil {
+	if err := verifyPDNSPublicListeners(strings.Split(valid, "\n")[0], 10); err == nil {
 		t.Fatal("UDP-only PowerDNS listener set was accepted")
 	}
 }

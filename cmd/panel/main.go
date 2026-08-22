@@ -969,6 +969,7 @@ func main() {
 	http.HandleFunc("/api/v1/vpn/peers/", panel.handleVPNPeerByID)
 	http.HandleFunc("/api/v1/pdns/enable", panel.handlePDNSEnable)
 	http.HandleFunc("/api/v1/dns/engine", panel.handleDNSEngine)
+	http.HandleFunc("/api/v1/dns/engine/reconcile", panel.handleDNSEngineReconcile)
 	http.HandleFunc("/api/v1/dns/engine/switch/preview", panel.handleDNSEngineSwitchPreview)
 	http.HandleFunc("/api/v1/dns/engine/switch", panel.handleDNSEngineSwitch)
 	http.HandleFunc("/api/v1/mail/configure", panel.handleMailConfigure)

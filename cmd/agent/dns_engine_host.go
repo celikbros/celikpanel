@@ -10,10 +10,13 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
@@ -24,6 +27,13 @@ import (
 
 const (
 	dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
+
+	aptBINDGenerationRoot          = "/var/cache/bind/celikpanel"
+	aptBINDCacheParentPath         = "/var/cache/bind"
+	abandonedAPTBindGenerationRoot = "/etc/bind/celikpanel"
+	bindDaemonReloadTimeout        = 15 * time.Second
+	bindIdentityInspectionTimeout  = 15 * time.Second
+	dnsRuntimeInspectionTimeout    = 15 * time.Second
 
 	dnsSecondaryWriteDeniedError = "directional secondary DNS cannot publish panel-local zones"
 )
@@ -65,9 +75,26 @@ type dnsUnitState struct {
 func (state dnsUnitState) active() bool { return state.ActiveState == "active" }
 
 type dnsUnitIdentity struct {
-	ID           string
-	Names        []string
-	FragmentPath string
+	ID            string
+	Names         []string
+	FragmentPath  string
+	DropInPaths   []string
+	SourcePath    string
+	Transient     string
+	ExecStartPath string
+	ExecStartArgv string
+}
+
+type bindSecureFileIdentity struct {
+	Device uint64
+	Inode  uint64
+	Size   int64
+	Digest [32]byte
+}
+
+type bindVendorFilesIdentity struct {
+	Unit        bindSecureFileIdentity
+	Environment bindSecureFileIdentity
 }
 
 type bindConfigMutation struct {
@@ -76,6 +103,12 @@ type bindConfigMutation struct {
 	desired   map[string][]byte
 	snapshots map[string]dnsFileSnapshot
 }
+
+type bindConfigSnapshotReader func(
+	path string,
+	mode os.FileMode,
+	allowAbsent bool,
+) (dnsFileSnapshot, error)
 
 type trackedBINDValidator struct {
 	checkZone string
@@ -110,8 +143,11 @@ func (runner trackedBINDValidator) Run(ctx context.Context, name string, args ..
 func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 	switch profile.PackageManager {
 	case hostplatform.PackageManagerAPT:
+		if err := certifyAPTBINDProfile(profile); err != nil {
+			return bindHostLayout{}, err
+		}
 		return bindHostLayout{
-			GenerationRoot: "/var/cache/bind/celikpanel",
+			GenerationRoot: aptBINDGenerationRoot,
 			MainConfig:     "/etc/bind/named.conf",
 			OptionsConfig:  "/etc/bind/named.conf.options",
 			AnchorConfig:   "/etc/bind/named.conf.local",
@@ -130,6 +166,18 @@ func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 	default:
 		return bindHostLayout{}, errors.New("BIND switching is certified only for apt and pacman hosts")
 	}
+}
+
+func certifyAPTBINDProfile(profile hostplatform.Profile) error {
+	if profile.PackageManager != hostplatform.PackageManagerAPT ||
+		profile.DistroFamily != hostplatform.DistroFamilyDebian ||
+		profile.ID != "ubuntu" || profile.Version != "24.04" ||
+		profile.Codename != "noble" {
+		return errors.New(
+			"BIND switching is certified only for Ubuntu 24.04 (noble) APT hosts",
+		)
+	}
+	return nil
 }
 
 func dnsEngineStatePath() string {
@@ -296,7 +344,13 @@ func persistExactDNSEngineState(state dnsEngineStateReceipt) error {
 	)
 }
 
-func newHostBINDPublisher(layout bindHostLayout) (*binddns.Publisher, trackedBINDValidator, error) {
+func newHostBINDPublisher(
+	ctx context.Context,
+	layout bindHostLayout,
+) (*binddns.Publisher, trackedBINDValidator, error) {
+	if err := verifyHostBINDGenerationRoot(ctx, layout); err != nil {
+		return nil, trackedBINDValidator{}, err
+	}
 	checkZone, err := firstTrustedExecutable(
 		[]string{"/usr/sbin/named-checkzone", "/usr/bin/named-checkzone"},
 		"named-checkzone",
@@ -333,7 +387,12 @@ func (hostDNSEngineBackend) Readiness(
 		{Engine: transport.DNSEnginePowerDNS, Unit: "pdns.service"},
 	}
 	if layoutErr == nil {
-		states[0].Installed = packagesInstalled(profile, layout.Packages)
+		states[0].Installed, err = exactDNSReadinessPackagesInstalled(
+			ctx, profile, layout.Packages,
+		)
+		if err != nil {
+			return transport.DNSBackendReadinessResponse{}, err
+		}
 	}
 	pdnsPackages := []string(nil)
 	if service := core.GetManagedServiceByID("pdns"); service != nil {
@@ -342,8 +401,15 @@ func (hostDNSEngineBackend) Readiness(
 			service.Packages[string(profile.PackageManager)]...,
 		)
 	}
-	states[1].Installed = packagesInstalled(profile, pdnsPackages)
-	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil && states[0].Installed {
+	states[1].Installed, err = exactDNSReadinessPackagesInstalled(
+		ctx, profile, pdnsPackages,
+	)
+	if err != nil {
+		return transport.DNSBackendReadinessResponse{}, err
+	}
+	if err := verifyBINDReadinessUnitTopology(
+		ctx, profile, systemctl, states[0].Installed,
+	); err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
 	}
 	for index := range states {
@@ -358,7 +424,7 @@ func (hostDNSEngineBackend) Readiness(
 		return transport.DNSBackendReadinessResponse{}, stateErr
 	}
 	if exists && state.Engine == transport.DNSEngineBIND && layoutErr == nil {
-		publisher, _, publisherErr := newHostBINDPublisher(layout)
+		publisher, _, publisherErr := newHostBINDPublisher(ctx, layout)
 		if publisherErr == nil {
 			tree, treeErr := publisher.LoadCurrent()
 			if treeErr == nil {
@@ -374,7 +440,7 @@ func (hostDNSEngineBackend) Readiness(
 				}
 				states[0].Managed = exactActiveDNSBackendManaged(
 					states[0], managedEvidence,
-					func() error { return verifyOnlyBINDActive(ctx, systemctl) },
+					func() error { return verifyOnlyBINDActive(ctx, profile, systemctl) },
 				)
 				if states[0].Managed {
 					states[0].PairReady, err = bindPrimaryPairReadyForState(
@@ -393,7 +459,7 @@ func (hostDNSEngineBackend) Readiness(
 		if ownershipErr != nil {
 			log.Printf("BIND standby ownership proof failed: %v", ownershipErr)
 		} else if ownershipExists {
-			publisher, _, publisherErr := newHostBINDPublisher(layout)
+			publisher, _, publisherErr := newHostBINDPublisher(ctx, layout)
 			if publisherErr == nil {
 				tree, treeErr := publisher.LoadCurrent()
 				if treeErr == nil {
@@ -471,6 +537,98 @@ func (hostDNSEngineBackend) Readiness(
 	return transport.DNSBackendReadinessResponse{
 		Engines: states, Port53Conflict: port53Conflict,
 	}, nil
+}
+
+type bindReadinessUnitProofOps struct {
+	packageManager  hostplatform.PackageManager
+	inspectStates   func() (bindInstallUnitState, bindInstallUnitState, error)
+	verifySealed    func() error
+	verifyPreEnable func() error
+	verifyTopology  func() error
+}
+
+func verifyBINDReadinessUnitTopology(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+	installed bool,
+) error {
+	if ctx == nil {
+		return errors.New("BIND readiness unit proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyBINDReadinessUnitTopologyWithOps(installed, bindReadinessUnitProofOps{
+		packageManager: profile.PackageManager,
+		inspectStates: func() (bindInstallUnitState, bindInstallUnitState, error) {
+			return inspectBINDTargetStates(proofCtx, systemctl)
+		},
+		verifySealed: func() error {
+			return verifyBINDSealedTargetNotServing(proofCtx, systemctl)
+		},
+		verifyPreEnable: func() error {
+			return verifyBINDPreEnableIdentity(proofCtx, profile, systemctl)
+		},
+		verifyTopology: func() error {
+			return verifyBINDUnitTopology(proofCtx, profile, systemctl)
+		},
+	})
+}
+
+func verifyBINDReadinessUnitTopologyWithOps(
+	installed bool,
+	ops bindReadinessUnitProofOps,
+) error {
+	if !installed {
+		return nil
+	}
+	if ops.inspectStates == nil {
+		return errors.New("invalid BIND readiness unit proof")
+	}
+	named, alias, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	if named.masked() || alias.masked() {
+		sealed, err := classifyBINDTargetNotServingStates(named, alias)
+		if err != nil {
+			return err
+		}
+		if !sealed {
+			return errors.New("BIND readiness mask state is not exactly sealed")
+		}
+		if ops.verifySealed == nil {
+			return errors.New("BIND readiness sealed proof is unavailable")
+		}
+		return ops.verifySealed()
+	}
+	if named.activeState == "failed" || alias.activeState == "failed" {
+		return errors.New("BIND readiness found a failed unit")
+	}
+	if exactStockDisabledBINDTarget(named, alias) {
+		if ops.verifyPreEnable == nil {
+			return errors.New("BIND readiness stock-unit proof is unavailable")
+		}
+		return ops.verifyPreEnable()
+	}
+	switch ops.packageManager {
+	case hostplatform.PackageManagerAPT:
+		if !exactLoadedUnmaskedBINDUnit(named) ||
+			!exactLoadedUnmaskedBINDUnit(alias) {
+			return errors.New("APT BIND readiness unit topology is mixed or incomplete")
+		}
+	case hostplatform.PackageManagerPacman:
+		if !exactLoadedUnmaskedBINDUnit(named) ||
+			!exactAbsentInactiveBINDUnit(alias) {
+			return errors.New("pacman BIND readiness unit topology is mixed or incomplete")
+		}
+	default:
+		return errors.New("BIND readiness unit topology is unsupported on this package manager")
+	}
+	if ops.verifyTopology == nil {
+		return errors.New("BIND readiness runtime topology proof is unavailable")
+	}
+	return ops.verifyTopology()
 }
 
 func powerDNSManagedForBackendReadiness(
@@ -552,24 +710,26 @@ func installOwnershipFallbackAllowed(
 	return engineOwnershipErr == nil && !engineOwnershipExists
 }
 
-func packagesInstalled(profile hostplatform.Profile, packages []string) bool {
+func exactDNSReadinessPackagesInstalled(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	packages []string,
+) (bool, error) {
 	if len(packages) == 0 {
-		return false
+		return false, nil
 	}
 	for _, packageName := range packages {
-		if !packageInstalledForProfile(profile, packageName) {
-			return false
+		installed, err := exactDNSEnginePackageInstalled(
+			ctx, profile, packageName,
+		)
+		if err != nil {
+			return false, err
+		}
+		if !installed {
+			return false, nil
 		}
 	}
-	return true
-}
-
-func managedServicePackagesInstalled(profile hostplatform.Profile, serviceID string) bool {
-	service := core.GetManagedServiceByID(serviceID)
-	if service == nil {
-		return false
-	}
-	return packagesInstalled(profile, service.Packages[string(profile.PackageManager)])
+	return true, nil
 }
 
 func (hostDNSEngineBackend) Sync(
@@ -603,7 +763,7 @@ func (hostDNSEngineBackend) Sync(
 	if err != nil {
 		return "", err
 	}
-	publisher, _, err := newHostBINDPublisher(layout)
+	publisher, _, err := newHostBINDPublisher(ctx, layout)
 	if err != nil {
 		return "", err
 	}
@@ -691,7 +851,7 @@ func (hostDNSEngineBackend) Sync(
 		if output, commandErr := runDNSSystemctl(applyCtx, systemctl, "reload", layout.Unit); commandErr != nil {
 			return fmt.Errorf("reload BIND: %w: %s", commandErr, firstLine(string(output)))
 		}
-		if err := verifyOnlyBINDActive(applyCtx, systemctl); err != nil {
+		if err := verifyOnlyBINDActive(applyCtx, profile, systemctl); err != nil {
 			return err
 		}
 		currentTree, err := publisher.LoadCurrent()
@@ -795,7 +955,7 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err != nil {
 		return false, err
 	}
-	publisher, _, err := newHostBINDPublisher(layout)
+	publisher, _, err := newHostBINDPublisher(ctx, layout)
 	if err != nil {
 		return false, err
 	}
@@ -873,7 +1033,7 @@ func (hostDNSEngineBackend) RecoverZone(
 		); err != nil {
 			return false, err
 		}
-		if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
+		if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 			return false, err
 		}
 		expectedTree, err := expectedBINDTreeAuthorities(tree)
@@ -921,7 +1081,7 @@ func (hostDNSEngineBackend) RecoverZone(
 			return false, err
 		}
 	}
-	if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
+	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 		return false, err
 	}
 	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
@@ -1024,7 +1184,10 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil {
+	targetInstallProof, err := proveBINDTargetNotServing(
+		ctx, profile, systemctl,
+	)
+	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if manifest.SourceEngine == transport.DNSEnginePowerDNS {
@@ -1057,15 +1220,29 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	missing := make([]string, 0, len(layout.Packages))
+	for _, packageName := range layout.Packages {
+		installed, packageErr := exactDNSEnginePackageInstalled(
+			ctx, profile, packageName,
+		)
+		if packageErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, packageErr
+		}
+		if !installed {
+			missing = append(missing, packageName)
+		}
+	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	missing := make([]string, 0, len(layout.Packages))
-	for _, packageName := range layout.Packages {
-		if !packageInstalledForProfile(profile, packageName) {
-			missing = append(missing, packageName)
+	if len(missing) == 0 {
+		if err := handoffExistingDNSEngineInstallOwnership(
+			transport.DNSEngineBIND, profile.PackageManager,
+			layout.Packages, manifest, binding,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
 	installMutation := func() error {
@@ -1095,18 +1272,45 @@ func (hostDNSEngineBackend) Switch(
 			return installOwnedDNSEnginePackages(installReceipt, plainInstall)
 		}
 	}
-	if err := runDNSPort53PreMutationGuard(
-		ctx, !stateExists && manifest.SourceEngine == "",
-		installMutation,
+	if err := runVerifiedBINDTargetInstall(
+		targetInstallProof,
+		func() error {
+			return runDNSPort53PreMutationGuard(
+				ctx, !stateExists && manifest.SourceEngine == "",
+				installMutation,
+			)
+		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	publisher, validator, err := newHostBINDPublisher(layout)
-	if err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
-	generation, err := publisher.StagePlan(ctx, plan)
-	if err != nil {
+	var publisher *binddns.Publisher
+	var validator trackedBINDValidator
+	var generation binddns.Generation
+	if err := runBINDPostInstallContinuation(
+		!stateExists && manifest.SourceEngine == "",
+		bindPostInstallProofOps{
+			verifyGeneric: func() error {
+				return verifyBINDSealedTargetNotServing(ctx, systemctl)
+			},
+			verifyNoAuthority: func() error {
+				return verifyBINDSealedTargetNotServingWithoutManagedAuthority(
+					ctx, systemctl,
+				)
+			},
+		},
+		func() error {
+			if err := prepareHostBINDGenerationRoot(ctx, layout); err != nil {
+				return err
+			}
+			var err error
+			publisher, validator, err = newHostBINDPublisher(ctx, layout)
+			if err != nil {
+				return err
+			}
+			generation, err = publisher.StagePlan(ctx, plan)
+			return err
+		},
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	transferPeer := ""
@@ -1178,7 +1382,7 @@ func (hostDNSEngineBackend) Switch(
 		)
 		if rollbackErr == nil {
 			rollbackErr = verifyRestoredDNSSwitchSource(
-				context.WithoutCancel(rollbackCtx), profile, systemctl, manifest, journal,
+				rollbackCtx, profile, systemctl, manifest, journal,
 			)
 		}
 		if rollbackErr == nil {
@@ -1215,19 +1419,16 @@ func (hostDNSEngineBackend) Switch(
 		if err := writeDNSEngineSwitchJournal(journal); err != nil {
 			return err
 		}
-		for _, unit := range []string{"bind9.service", "named.service"} {
-			if output, err := runDNSSystemctl(applyCtx, systemctl, "unmask", unit); err != nil {
-				return fmt.Errorf("unmask BIND target %s: %w: %s", unit, err, firstLine(string(output)))
-			}
-		}
-		if err := enableServiceForMutationWithExecutable(applyCtx, systemctl, layout.Unit, true); err != nil {
+		if err := activateBINDTargetWithVerifiedIdentity(
+			applyCtx, profile, systemctl, layout.Unit,
+		); err != nil {
 			return err
 		}
 		journal.Phase = dnsSwitchPhaseTargetStarted
 		if err := writeDNSEngineSwitchJournal(journal); err != nil {
 			return err
 		}
-		if err := verifyOnlyBINDActive(applyCtx, systemctl); err != nil {
+		if err := verifyOnlyBINDActive(applyCtx, profile, systemctl); err != nil {
 			return err
 		}
 		if err := verifyDNSZoneManifestAuthority(applyCtx, manifest.Zones); err != nil {
@@ -1366,7 +1567,7 @@ func verifyCompletedBINDEngineSwitch(
 	if state.Generation != expected.ID {
 		return transport.SwitchDNSEngineV1Response{}, errors.New("completed BIND switch receipt differs from the resumed manifest")
 	}
-	publisher, _, err := newHostBINDPublisher(layout)
+	publisher, _, err := newHostBINDPublisher(ctx, layout)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1391,7 +1592,7 @@ func verifyCompletedBINDEngineSwitch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
+	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := verifyDNSZoneManifestAuthority(ctx, zones); err != nil {
@@ -1497,7 +1698,7 @@ func verifyDNSEngineSwitchSource(
 			if err != nil {
 				return err
 			}
-			publisher, _, err := newHostBINDPublisher(layout)
+			publisher, _, err := newHostBINDPublisher(ctx, layout)
 			if err != nil {
 				return err
 			}
@@ -1530,7 +1731,7 @@ func verifyDNSEngineSwitchSource(
 			} else if receipt.Pairing != nil {
 				return errors.New("standalone switch found a paired BIND source")
 			}
-			return verifyOnlyBINDActive(ctx, systemctl)
+			return verifyOnlyBINDActive(ctx, profile, systemctl)
 		default:
 			return errors.New("DNS engine switch source receipt names an unsupported engine")
 		}
@@ -1558,6 +1759,19 @@ func prepareBINDConfigMutation(
 	layout bindHostLayout,
 	transferPeer string,
 ) (bindConfigMutation, error) {
+	return prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer, captureDNSFileSnapshot,
+	)
+}
+
+func prepareBINDConfigMutationWithSnapshotReader(
+	layout bindHostLayout,
+	transferPeer string,
+	readSnapshot bindConfigSnapshotReader,
+) (bindConfigMutation, error) {
+	if readSnapshot == nil {
+		return bindConfigMutation{}, errors.New("BIND config snapshot reader is required")
+	}
 	paths := []string{layout.OptionsConfig, layout.AnchorConfig}
 	sort.Strings(paths)
 	if len(paths) == 2 && paths[0] == paths[1] {
@@ -1569,7 +1783,7 @@ func prepareBINDConfigMutation(
 		snapshots: make(map[string]dnsFileSnapshot, len(paths)),
 	}
 	for _, path := range paths {
-		snapshot, err := captureDNSFileSnapshot(path, 0o644, false)
+		snapshot, err := readSnapshot(path, 0o644, false)
 		if err != nil {
 			return bindConfigMutation{}, fmt.Errorf("read BIND configuration %s: %w", path, err)
 		}
@@ -1625,7 +1839,20 @@ func verifyManagedBINDConfigExact(
 	transferPeer string,
 	requireLegacyOptions bool,
 ) error {
-	mutation, err := prepareBINDConfigMutation(layout, transferPeer)
+	return verifyManagedBINDConfigExactWithSnapshotReader(
+		layout, transferPeer, requireLegacyOptions, captureDNSFileSnapshot,
+	)
+}
+
+func verifyManagedBINDConfigExactWithSnapshotReader(
+	layout bindHostLayout,
+	transferPeer string,
+	requireLegacyOptions bool,
+	readSnapshot bindConfigSnapshotReader,
+) error {
+	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer, readSnapshot,
+	)
 	if err != nil {
 		return err
 	}
@@ -1660,12 +1887,23 @@ func verifyManagedBINDRuntimeConfigExact(
 	receipt binddns.Receipt,
 	allowLegacyOptions bool,
 ) error {
+	return verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
+		layout, receipt, allowLegacyOptions, captureDNSFileSnapshot,
+	)
+}
+
+func verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
+	layout bindHostLayout,
+	receipt binddns.Receipt,
+	allowLegacyOptions bool,
+	readSnapshot bindConfigSnapshotReader,
+) error {
 	transferPeer := ""
 	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
 		transferPeer = receipt.Pairing.PeerIP
 	}
-	return verifyManagedBINDConfigExact(
-		layout, transferPeer, allowLegacyOptions,
+	return verifyManagedBINDConfigExactWithSnapshotReader(
+		layout, transferPeer, allowLegacyOptions, readSnapshot,
 	)
 }
 
@@ -1702,7 +1940,12 @@ func (mutation bindConfigMutation) restore() error {
 }
 
 func captureDNSUnitState(ctx context.Context, systemctl, unit string) (dnsUnitState, error) {
-	state, err := dnsSystemdStateGuard(systemctl).inspect(context.WithoutCancel(ctx), unit)
+	if ctx == nil {
+		return dnsUnitState{}, errors.New("inspect DNS unit requires a context")
+	}
+	inspectCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	state, err := dnsSystemdStateGuard(systemctl).inspect(inspectCtx, unit)
 	if err != nil {
 		return dnsUnitState{}, fmt.Errorf("inspect DNS unit %s: %w", unit, err)
 	}
@@ -1780,47 +2023,188 @@ func rollbackBINDActivation(
 	stateBefore dnsFileSnapshot,
 	targetBefore, sourceBefore map[string]dnsUnitState,
 ) error {
-	rollbackCtx := context.WithoutCancel(ctx)
+	if ctx == nil {
+		return errors.New("rollback BIND activation requires a bounded context")
+	}
+	return rollbackBINDActivationWithOps(ctx, bindRollbackActivationOps{
+		restoreTarget: func(commandCtx context.Context) error {
+			return restoreDNSUnitStates(
+				commandCtx, systemctl, targetBefore, true,
+			)
+		},
+		restoreConfigs: configs.restore,
+		restoreState: func() error {
+			return restoreDNSFileSnapshot(stateBefore)
+		},
+		restoreSource: func(commandCtx context.Context) error {
+			return restoreDNSUnitStates(
+				commandCtx, systemctl, sourceBefore, false,
+			)
+		},
+	})
+}
+
+type bindRollbackActivationOps struct {
+	restoreTarget  func(context.Context) error
+	restoreConfigs func() error
+	restoreState   func() error
+	restoreSource  func(context.Context) error
+}
+
+func rollbackBINDActivationWithOps(
+	ctx context.Context,
+	ops bindRollbackActivationOps,
+) error {
+	if ctx == nil || ops.restoreTarget == nil ||
+		ops.restoreConfigs == nil || ops.restoreState == nil ||
+		ops.restoreSource == nil {
+		return errors.New("invalid BIND activation rollback operations")
+	}
 	return errors.Join(
-		restoreDNSUnitStates(rollbackCtx, systemctl, targetBefore, true),
-		configs.restore(),
-		restoreDNSFileSnapshot(stateBefore),
-		restoreDNSUnitStates(rollbackCtx, systemctl, sourceBefore, false),
+		ops.restoreTarget(ctx),
+		ops.restoreConfigs(),
+		ops.restoreState(),
+		ops.restoreSource(ctx),
 	)
 }
 
-func verifyOnlyBINDActive(ctx context.Context, systemctl string) error {
-	if err := verifyBINDUnitTopology(ctx, systemctl); err != nil {
-		return err
+func verifyOnlyBINDActive(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
+	if ctx == nil {
+		return errors.New("verify active BIND requires a context")
 	}
-	bindState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "named.service")
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyOnlyBINDActiveWithOps(profile, bindActiveProofOps{
+		inspectTopology: func() (bindRuntimeTopologySnapshot, error) {
+			return inspectVerifiedBINDRuntimeTopology(proofCtx, profile, systemctl)
+		},
+		inspectPowerDNS: func() (bindInstallUnitState, error) {
+			return dnsSystemdStateGuard(systemctl).inspect(proofCtx, "pdns.service")
+		},
+		inspectListeners: func() (string, error) {
+			ss, err := firstTrustedExecutable(
+				[]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss",
+			)
+			if err != nil {
+				return "", err
+			}
+			output, err := serviceMutationCommand(
+				proofCtx, ss, "-H", "-lntup", "sport = :53",
+			).CombinedOutputLimited(64 << 10)
+			if err != nil {
+				return "", fmt.Errorf(
+					"inspect active DNS listeners: %w: %s",
+					err, firstLine(string(output)),
+				)
+			}
+			return string(output), nil
+		},
+	})
+}
+
+type bindActiveProofOps struct {
+	inspectTopology  func() (bindRuntimeTopologySnapshot, error)
+	inspectPowerDNS  func() (bindInstallUnitState, error)
+	inspectListeners func() (string, error)
+}
+
+func verifyOnlyBINDActiveWithOps(
+	profile hostplatform.Profile,
+	ops bindActiveProofOps,
+) error {
+	if ops.inspectTopology == nil || ops.inspectPowerDNS == nil ||
+		ops.inspectListeners == nil {
+		return errors.New("invalid active BIND proof operations")
+	}
+	topologyBefore, err := ops.inspectTopology()
 	if err != nil {
 		return err
 	}
-	bindAliasState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "bind9.service")
+	pdnsBefore, err := ops.inspectPowerDNS()
 	if err != nil {
 		return err
 	}
-	pdnsState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "pdns.service")
+	if err := verifyExactActiveBINDUnitStates(
+		profile, topologyBefore.namedState, topologyBefore.aliasState, pdnsBefore,
+	); err != nil {
+		return err
+	}
+	listenersBefore, err := ops.inspectListeners()
 	if err != nil {
 		return err
 	}
-	if !bindState.active() || pdnsState.active() ||
-		(bindAliasState.loadState == "not-found" && bindAliasState.active()) {
-		return errors.New("DNS activation did not leave exactly BIND as the active authority")
-	}
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	canonicalBefore, err := canonicalBINDPublicListeners(
+		listenersBefore, topologyBefore.namedProcesses.MainPID,
+	)
 	if err != nil {
 		return err
 	}
-	output, err := serviceMutationCommand(
-		context.WithoutCancel(ctx), ss, "-H", "-lntup", "sport = :53",
-	).CombinedOutputLimited(64 << 10)
+	listenersAfter, err := ops.inspectListeners()
 	if err != nil {
-		return fmt.Errorf("inspect active DNS listeners: %w: %s", err, firstLine(string(output)))
-	}
-	if err := verifyBINDPublicListeners(string(output)); err != nil {
 		return err
+	}
+	canonicalAfter, err := canonicalBINDPublicListeners(
+		listenersAfter, topologyBefore.namedProcesses.MainPID,
+	)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(canonicalAfter, canonicalBefore) {
+		return errors.New("BIND public listener snapshot changed during verification")
+	}
+	topologyAfter, err := ops.inspectTopology()
+	if err != nil {
+		return err
+	}
+	pdnsAfter, err := ops.inspectPowerDNS()
+	if err != nil {
+		return err
+	}
+	if err := verifyExactActiveBINDUnitStates(
+		profile, topologyAfter.namedState, topologyAfter.aliasState, pdnsAfter,
+	); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(topologyAfter, topologyBefore) || pdnsAfter != pdnsBefore {
+		return errors.New("DNS unit identity or state changed during active BIND verification")
+	}
+	return nil
+}
+
+func verifyExactActiveBINDUnitStates(
+	profile hostplatform.Profile,
+	named, alias, pdns bindInstallUnitState,
+) error {
+	exactNamed := named.loadState == "loaded" &&
+		named.activeState == "active" &&
+		named.unitFileState == "enabled"
+	if !exactNamed {
+		return errors.New("named.service is not exactly loaded, active, and enabled")
+	}
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT:
+		if alias.loadState != "loaded" ||
+			alias.activeState != "active" ||
+			alias.unitFileState != "enabled" {
+			return errors.New("bind9.service is not the exact active APT alias")
+		}
+	case hostplatform.PackageManagerPacman:
+		if !exactAbsentInactiveBINDUnit(alias) {
+			return errors.New("bind9.service unexpectedly exists on active pacman BIND")
+		}
+	default:
+		return errors.New("active BIND proof is unsupported on this package manager")
+	}
+	exactPowerDNSInactive := exactAbsentInactiveBINDUnit(pdns) ||
+		(pdns.loadState == "loaded" &&
+			pdns.activeState == "inactive" &&
+			pdns.unitFileState == "disabled")
+	if !exactPowerDNSInactive {
+		return errors.New("pdns.service is not exactly absent or loaded, inactive, and disabled")
 	}
 	return nil
 }
@@ -1984,166 +2368,1579 @@ func requireDNSPanelWriteAuthority(state dnsEngineStateReceipt) error {
 }
 
 func verifyOnlyPDNSActive(ctx context.Context, systemctl string) error {
-	bindState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "named.service")
+	if ctx == nil {
+		return errors.New("verify active PowerDNS requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return err
 	}
-	bindAliasState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "bind9.service")
+	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+		return err
+	}
+	ss, err := firstTrustedExecutable(
+		[]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss",
+	)
 	if err != nil {
 		return err
 	}
-	pdnsState, err := dnsSystemdStateGuard(systemctl).inspect(ctx, "pdns.service")
-	if err != nil {
-		return err
-	}
-	if bindState.active() || bindAliasState.active() || !pdnsState.active() {
-		return errors.New("DNS activation did not leave exactly PowerDNS as the active authority")
-	}
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
-	if err != nil {
-		return err
-	}
-	output, err := serviceMutationCommand(
-		context.WithoutCancel(ctx), ss, "-H", "-lntup", "sport = :53",
-	).CombinedOutputLimited(64 << 10)
-	if err != nil {
-		return fmt.Errorf("inspect active DNS listeners: %w: %s", err, firstLine(string(output)))
-	}
-	return verifyPDNSPublicListeners(string(output))
+	return verifyOnlyPDNSActiveWithOps(profile, pdnsActiveProofOps{
+		inspectTopology: func() (pdnsRuntimeTopologySnapshot, error) {
+			return inspectVerifiedPDNSRuntimeTopology(
+				proofCtx, profile, systemctl,
+			)
+		},
+		inspectListeners: func() (string, error) {
+			output, commandErr := serviceMutationCommand(
+				proofCtx, ss, "-H", "-lntup", "sport = :53",
+			).CombinedOutputLimited(64 << 10)
+			if commandErr != nil {
+				return "", fmt.Errorf(
+					"inspect active DNS listeners: %w: %s",
+					commandErr, firstLine(string(output)),
+				)
+			}
+			return string(output), nil
+		},
+	})
 }
 
-func verifyPDNSPublicListeners(output string) error {
-	foundTCP, foundUDP := false, false
-	for _, line := range strings.Split(output, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
-			continue
-		}
-		protocol := strings.ToLower(fields[0])
-		if protocol != "tcp" && protocol != "udp" {
-			continue
-		}
-		host, port, err := net.SplitHostPort(fields[4])
-		if err != nil || port != "53" {
-			continue
-		}
-		address := parseDNSListenerAddress(host)
-		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
-			continue
-		}
-		lower := strings.ToLower(line)
-		if !strings.Contains(lower, "pdns_server") || strings.Contains(lower, "named") {
-			return errors.New("a non-PowerDNS process is holding a public DNS listener")
-		}
-		if protocol == "tcp" {
-			foundTCP = true
-		} else {
-			foundUDP = true
-		}
+type pdnsRuntimeTopologySnapshot struct {
+	namedState, aliasState, pdnsState bindInstallUnitState
+	namedProcesses, aliasProcesses    dnsUnitProcesses
+	pdnsProcesses                     dnsUnitProcesses
+	pdnsIdentity                      dnsUnitIdentity
+	vendorUnit                        bindSecureFileIdentity
+}
+
+type pdnsRuntimeTopologyOps struct {
+	inspectStates    func() (bindInstallUnitState, bindInstallUnitState, bindInstallUnitState, error)
+	inspectIdentity  func() (dnsUnitIdentity, error)
+	inspectVendor    func() (bindSecureFileIdentity, error)
+	inspectProcesses func(string) (dnsUnitProcesses, error)
+}
+
+func inspectVerifiedPDNSRuntimeTopology(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) (pdnsRuntimeTopologySnapshot, error) {
+	if ctx == nil {
+		return pdnsRuntimeTopologySnapshot{},
+			errors.New("PowerDNS topology proof requires a context")
 	}
-	if !foundTCP || !foundUDP {
-		return errors.New("PowerDNS does not own both public TCP and UDP port 53 listeners")
+	guard := dnsSystemdStateGuard(systemctl)
+	return inspectVerifiedPDNSRuntimeTopologyWithOps(profile, pdnsRuntimeTopologyOps{
+		inspectStates: func() (bindInstallUnitState, bindInstallUnitState, bindInstallUnitState, error) {
+			named, err := guard.inspect(ctx, "named.service")
+			if err != nil {
+				return bindInstallUnitState{}, bindInstallUnitState{}, bindInstallUnitState{}, err
+			}
+			alias, err := guard.inspect(ctx, "bind9.service")
+			if err != nil {
+				return bindInstallUnitState{}, bindInstallUnitState{}, bindInstallUnitState{}, err
+			}
+			pdns, err := guard.inspect(ctx, "pdns.service")
+			return named, alias, pdns, err
+		},
+		inspectIdentity: func() (dnsUnitIdentity, error) {
+			return inspectDNSUnitIdentity(ctx, systemctl, "pdns.service")
+		},
+		inspectVendor: func() (bindSecureFileIdentity, error) {
+			return inspectHostPDNSVendorUnit(ctx, profile)
+		},
+		inspectProcesses: func(unit string) (dnsUnitProcesses, error) {
+			return inspectDNSUnitProcesses(ctx, systemctl, unit)
+		},
+	})
+}
+
+func inspectVerifiedPDNSRuntimeTopologyWithOps(
+	profile hostplatform.Profile,
+	ops pdnsRuntimeTopologyOps,
+) (pdnsRuntimeTopologySnapshot, error) {
+	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+		return pdnsRuntimeTopologySnapshot{}, err
+	}
+	if ops.inspectStates == nil || ops.inspectIdentity == nil ||
+		ops.inspectVendor == nil || ops.inspectProcesses == nil {
+		return pdnsRuntimeTopologySnapshot{},
+			errors.New("invalid PowerDNS topology proof operations")
+	}
+	capture := func() (pdnsRuntimeTopologySnapshot, error) {
+		namedState, aliasState, pdnsState, err := ops.inspectStates()
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		if err := verifyExactPDNSRuntimeUnitStates(
+			namedState, aliasState, pdnsState,
+		); err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		identity, err := ops.inspectIdentity()
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		if err := validatePDNSVendorUnitIdentity(identity); err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		vendor, err := ops.inspectVendor()
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		namedProcesses, err := ops.inspectProcesses("named.service")
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		if err := verifyDNSUnitProcessesStopped(namedProcesses); err != nil {
+			return pdnsRuntimeTopologySnapshot{}, fmt.Errorf("named.service is not stopped: %w", err)
+		}
+		aliasProcesses, err := ops.inspectProcesses("bind9.service")
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		if err := verifyDNSUnitProcessesStopped(aliasProcesses); err != nil {
+			return pdnsRuntimeTopologySnapshot{}, fmt.Errorf("bind9.service is not stopped: %w", err)
+		}
+		pdnsProcesses, err := ops.inspectProcesses("pdns.service")
+		if err != nil {
+			return pdnsRuntimeTopologySnapshot{}, err
+		}
+		if pdnsProcesses.MainPID == 0 || pdnsProcesses.ControlPID != 0 ||
+			pdnsProcesses.SubState != "running" {
+			return pdnsRuntimeTopologySnapshot{},
+				errors.New("pdns.service lacks an exact running process identity")
+		}
+		return pdnsRuntimeTopologySnapshot{
+			namedState: namedState, aliasState: aliasState, pdnsState: pdnsState,
+			namedProcesses: namedProcesses, aliasProcesses: aliasProcesses,
+			pdnsProcesses: pdnsProcesses, pdnsIdentity: identity,
+			vendorUnit: vendor,
+		}, nil
+	}
+	before, err := capture()
+	if err != nil {
+		return pdnsRuntimeTopologySnapshot{}, err
+	}
+	after, err := capture()
+	if err != nil {
+		return pdnsRuntimeTopologySnapshot{}, err
+	}
+	if !reflect.DeepEqual(after, before) {
+		return pdnsRuntimeTopologySnapshot{},
+			errors.New("PowerDNS runtime topology changed during exact verification")
+	}
+	return after, nil
+}
+
+func verifyExactPDNSRuntimeUnitStates(
+	named, alias, pdns bindInstallUnitState,
+) error {
+	exactStoppedBIND := func(state bindInstallUnitState) bool {
+		return exactAbsentInactiveBINDUnit(state) ||
+			(state.loadState == "loaded" && state.activeState == "inactive" &&
+				state.unitFileState == "disabled")
+	}
+	if !exactStoppedBIND(named) || !exactStoppedBIND(alias) {
+		return errors.New("BIND is not exactly absent or loaded, inactive, and disabled")
+	}
+	if pdns.loadState != "loaded" || pdns.activeState != "active" ||
+		pdns.unitFileState != "enabled" {
+		return errors.New("pdns.service is not exactly loaded, active, and enabled")
 	}
 	return nil
 }
 
+type pdnsActiveProofOps struct {
+	inspectTopology  func() (pdnsRuntimeTopologySnapshot, error)
+	inspectListeners func() (string, error)
+}
+
+func verifyOnlyPDNSActiveWithOps(
+	profile hostplatform.Profile,
+	ops pdnsActiveProofOps,
+) error {
+	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+		return err
+	}
+	if ops.inspectTopology == nil || ops.inspectListeners == nil {
+		return errors.New("invalid active PowerDNS proof operations")
+	}
+	topologyBefore, err := ops.inspectTopology()
+	if err != nil {
+		return err
+	}
+	listenersBefore, err := ops.inspectListeners()
+	if err != nil {
+		return err
+	}
+	canonicalBefore, err := canonicalDNSAuthorityPublicListeners(
+		listenersBefore, "pdns_server", topologyBefore.pdnsProcesses.MainPID,
+	)
+	if err != nil {
+		return err
+	}
+	listenersAfter, err := ops.inspectListeners()
+	if err != nil {
+		return err
+	}
+	canonicalAfter, err := canonicalDNSAuthorityPublicListeners(
+		listenersAfter, "pdns_server", topologyBefore.pdnsProcesses.MainPID,
+	)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(canonicalAfter, canonicalBefore) {
+		return errors.New("PowerDNS public listener snapshot changed during verification")
+	}
+	topologyAfter, err := ops.inspectTopology()
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(topologyAfter, topologyBefore) {
+		return errors.New("PowerDNS unit identity or state changed during active verification")
+	}
+	return nil
+}
+
+func verifyPDNSPublicListeners(output string, expectedMainPID uint64) error {
+	_, err := canonicalDNSAuthorityPublicListeners(
+		output, "pdns_server", expectedMainPID,
+	)
+	return err
+}
+
 func inspectDNSUnitIdentity(ctx context.Context, systemctl, unit string) (dnsUnitIdentity, error) {
-	output, err := runDNSSystemctl(
-		context.WithoutCancel(ctx), systemctl, "show", unit,
-		"--property=Id,Names,FragmentPath", "--no-pager",
+	return inspectDNSUnitIdentityWithRunner(ctx, systemctl, unit, runDNSSystemctl)
+}
+
+func inspectDNSUnitIdentityWithRunner(
+	ctx context.Context,
+	systemctl string,
+	unit string,
+	runner func(context.Context, string, ...string) ([]byte, error),
+) (dnsUnitIdentity, error) {
+	if ctx == nil || systemctl == "" || unit == "" || runner == nil {
+		return dnsUnitIdentity{}, errors.New("invalid DNS unit identity inspection")
+	}
+	inspectionCtx, cancel := context.WithTimeout(ctx, bindIdentityInspectionTimeout)
+	defer cancel()
+	output, err := runner(
+		inspectionCtx, systemctl, "show", unit,
+		"--property=Id,Names,FragmentPath,DropInPaths,SourcePath,Transient,ExecStart",
+		"--no-pager",
 	)
 	if err != nil {
 		return dnsUnitIdentity{}, fmt.Errorf("inspect DNS unit identity %s: %w: %s", unit, err, firstLine(string(output)))
 	}
-	identity := dnsUnitIdentity{}
-	seen := map[string]bool{}
-	for _, line := range strings.Split(string(output), "\n") {
-		key, value, found := strings.Cut(strings.TrimSpace(line), "=")
-		if !found {
-			continue
-		}
-		switch key {
-		case "Id":
-			identity.ID = value
-			seen[key] = true
-		case "Names":
-			identity.Names = strings.Fields(value)
-			sort.Strings(identity.Names)
-			seen[key] = true
-		case "FragmentPath":
-			identity.FragmentPath = value
-			seen[key] = true
-		}
-	}
-	if !seen["Id"] || !seen["Names"] || !seen["FragmentPath"] {
-		return dnsUnitIdentity{}, errors.New("systemctl returned incomplete DNS unit identity")
+	identity, parseErr := parseDNSUnitIdentity(string(output))
+	if parseErr != nil {
+		return dnsUnitIdentity{}, fmt.Errorf("inspect DNS unit identity %s: %w", unit, parseErr)
 	}
 	return identity, nil
 }
 
-func verifyBINDUnitTopology(ctx context.Context, systemctl string) error {
-	guard := dnsSystemdStateGuard(systemctl)
-	_, err := guard.inspect(ctx, "named.service")
-	if err != nil {
-		return err
-	}
-	bind9, err := guard.inspect(ctx, "bind9.service")
-	if err != nil {
-		return err
-	}
-	if bind9.loadState == "not-found" && bind9.unitFileState == "" {
-		if bind9.active() {
-			return errors.New("bind9.service is independently active without a loadable unit")
+func parseDNSUnitIdentity(output string) (dnsUnitIdentity, error) {
+	const expectedProperties = 7
+	values := map[string]string{}
+	for _, line := range strings.Split(output, "\n") {
+		if line == "" {
+			continue
 		}
-		return nil
+		key, value, found := strings.Cut(line, "=")
+		if !found {
+			return dnsUnitIdentity{}, errors.New("systemctl returned a malformed DNS unit identity")
+		}
+		switch key {
+		case "Id", "Names", "FragmentPath", "DropInPaths", "SourcePath", "Transient", "ExecStart":
+		default:
+			return dnsUnitIdentity{}, errors.New("systemctl returned an unexpected DNS unit identity property")
+		}
+		if _, duplicate := values[key]; duplicate {
+			return dnsUnitIdentity{}, errors.New("systemctl returned an ambiguous DNS unit identity")
+		}
+		values[key] = value
 	}
-	namedIdentity, err := inspectDNSUnitIdentity(ctx, systemctl, "named.service")
+	if len(values) != expectedProperties {
+		return dnsUnitIdentity{}, errors.New("systemctl returned incomplete DNS unit identity")
+	}
+	parseNames := func(property string, allowEmpty bool) ([]string, error) {
+		raw := values[property]
+		if raw == "" && allowEmpty {
+			return nil, nil
+		}
+		fields := strings.Fields(raw)
+		if len(fields) == 0 || strings.Join(fields, " ") != raw {
+			return nil, fmt.Errorf("systemctl returned non-canonical %s", property)
+		}
+		sort.Strings(fields)
+		for index := 1; index < len(fields); index++ {
+			if fields[index] == fields[index-1] {
+				return nil, fmt.Errorf("systemctl returned duplicate %s", property)
+			}
+		}
+		return fields, nil
+	}
+	names, err := parseNames("Names", false)
 	if err != nil {
-		return err
+		return dnsUnitIdentity{}, err
 	}
-	bindIdentity, err := inspectDNSUnitIdentity(ctx, systemctl, "bind9.service")
+	dropIns, err := parseNames("DropInPaths", true)
 	if err != nil {
-		return err
+		return dnsUnitIdentity{}, err
 	}
-	if namedIdentity.ID != bindIdentity.ID ||
-		namedIdentity.FragmentPath == "" || namedIdentity.FragmentPath != bindIdentity.FragmentPath ||
-		!reflect.DeepEqual(namedIdentity.Names, bindIdentity.Names) {
-		return errors.New("bind9.service does not resolve to the exact named.service unit identity")
+	execPath, execArgv, err := parseSystemdExecStart(values["ExecStart"])
+	if err != nil {
+		return dnsUnitIdentity{}, err
+	}
+	if values["Id"] == "" || values["FragmentPath"] == "" ||
+		values["Transient"] == "" {
+		return dnsUnitIdentity{}, errors.New("systemctl returned an empty DNS unit identity field")
+	}
+	return dnsUnitIdentity{
+		ID: values["Id"], Names: names, FragmentPath: values["FragmentPath"],
+		DropInPaths: dropIns, SourcePath: values["SourcePath"],
+		Transient: values["Transient"], ExecStartPath: execPath,
+		ExecStartArgv: execArgv,
+	}, nil
+}
+
+func parseSystemdExecStart(value string) (string, string, error) {
+	if value == "" || strings.ContainsAny(value, "\x00\r\n") ||
+		strings.Count(value, "{") != 1 || strings.Count(value, "}") != 1 ||
+		!strings.HasPrefix(value, "{ ") || !strings.HasSuffix(value, " }") {
+		return "", "", errors.New("systemctl returned a non-canonical ExecStart")
+	}
+	inner := strings.TrimSuffix(strings.TrimPrefix(value, "{ "), " }")
+	parts := strings.Split(inner, " ; ")
+	fields := map[string]string{}
+	for _, part := range parts {
+		key, candidate, found := strings.Cut(part, "=")
+		if !found || key == "" || candidate == "" {
+			return "", "", errors.New("systemctl returned a malformed ExecStart")
+		}
+		switch key {
+		case "path", "argv[]", "ignore_errors":
+			if _, duplicate := fields[key]; duplicate {
+				return "", "", errors.New("systemctl returned an ambiguous ExecStart")
+			}
+			fields[key] = candidate
+		}
+	}
+	if len(fields) != 3 || fields["ignore_errors"] != "no" {
+		return "", "", errors.New("systemctl returned an unsafe ExecStart")
+	}
+	executable := fields["path"]
+	if !path.IsAbs(executable) || path.Clean(executable) != executable ||
+		(fields["argv[]"] != executable &&
+			!strings.HasPrefix(fields["argv[]"], executable+" ")) {
+		return "", "", errors.New("systemctl returned a non-canonical ExecStart command")
+	}
+	return executable, fields["argv[]"], nil
+}
+
+type dnsUnitProcesses struct {
+	MainPID    uint64
+	ControlPID uint64
+	SubState   string
+}
+
+func inspectDNSUnitProcesses(ctx context.Context, systemctl, unit string) (dnsUnitProcesses, error) {
+	return inspectDNSUnitProcessesWithRunner(ctx, systemctl, unit, runDNSSystemctl)
+}
+
+func inspectDNSUnitProcessesWithRunner(
+	ctx context.Context,
+	systemctl string,
+	unit string,
+	runner func(context.Context, string, ...string) ([]byte, error),
+) (dnsUnitProcesses, error) {
+	if ctx == nil || runner == nil {
+		return dnsUnitProcesses{}, errors.New("invalid DNS unit process inspection")
+	}
+	output, err := runner(
+		ctx, systemctl, "show", unit,
+		"--property=MainPID,ControlPID,SubState", "--no-pager",
+	)
+	if err != nil {
+		return dnsUnitProcesses{}, fmt.Errorf("inspect DNS unit processes %s: %w: %s", unit, err, firstLine(string(output)))
+	}
+	processes, err := parseDNSUnitProcesses(string(output))
+	if err != nil {
+		return dnsUnitProcesses{}, fmt.Errorf("inspect DNS unit processes %s: %w", unit, err)
+	}
+	return processes, nil
+}
+
+func parseDNSUnitProcesses(output string) (dnsUnitProcesses, error) {
+	values := map[string]string{}
+	for _, line := range strings.Split(output, "\n") {
+		if line == "" {
+			continue
+		}
+		key, candidate, found := strings.Cut(line, "=")
+		if !found || (key != "MainPID" && key != "ControlPID" && key != "SubState") {
+			return dnsUnitProcesses{},
+				errors.New("systemctl returned an unexpected DNS unit process row")
+		}
+		if _, exists := values[key]; exists || candidate == "" {
+			return dnsUnitProcesses{}, errors.New("systemctl returned an ambiguous DNS unit process")
+		}
+		values[key] = candidate
+	}
+	if len(values) != 3 {
+		return dnsUnitProcesses{}, errors.New("systemctl returned incomplete DNS unit processes")
+	}
+	if values["SubState"] == "" {
+		return dnsUnitProcesses{}, errors.New("systemctl returned an empty DNS unit substate")
+	}
+	parse := func(name string) (uint64, error) {
+		value := values[name]
+		pid, err := strconv.ParseUint(value, 10, 64)
+		if err != nil || strconv.FormatUint(pid, 10) != value {
+			return 0, fmt.Errorf("systemctl returned a non-canonical %s", name)
+		}
+		return pid, nil
+	}
+	mainPID, err := parse("MainPID")
+	if err != nil {
+		return dnsUnitProcesses{}, err
+	}
+	controlPID, err := parse("ControlPID")
+	if err != nil {
+		return dnsUnitProcesses{}, err
+	}
+	return dnsUnitProcesses{
+		MainPID: mainPID, ControlPID: controlPID, SubState: values["SubState"],
+	}, nil
+}
+
+func verifyDNSUnitProcessesStopped(processes dnsUnitProcesses) error {
+	if processes.MainPID != 0 || processes.ControlPID != 0 || processes.SubState != "dead" {
+		return errors.New("DNS unit is not exactly dead with zero main and control processes")
 	}
 	return nil
 }
 
-func verifyBINDPublicListeners(output string) error {
+func validateAPTBINDVendorNamedIdentity(
+	named dnsUnitIdentity,
+	aliasEnabled bool,
+) error {
+	expectedNames := []string{"named.service"}
+	if aliasEnabled {
+		expectedNames = []string{"bind9.service", "named.service"}
+	}
+	if named.ID != "named.service" ||
+		!reflect.DeepEqual(named.Names, expectedNames) ||
+		named.FragmentPath != "/usr/lib/systemd/system/named.service" ||
+		len(named.DropInPaths) != 0 || named.SourcePath != "" ||
+		named.Transient != "no" || named.ExecStartPath != "/usr/sbin/named" ||
+		named.ExecStartArgv != "/usr/sbin/named -f $OPTIONS" {
+		return errors.New("named.service does not resolve to the exact APT vendor BIND identity")
+	}
+	return nil
+}
+
+func validateAPTBINDVendorAliasIdentity(named, alias dnsUnitIdentity) error {
+	if err := validateAPTBINDVendorNamedIdentity(named, true); err != nil {
+		return err
+	}
+	if err := validateAPTBINDVendorNamedIdentity(alias, true); err != nil ||
+		!reflect.DeepEqual(named, alias) {
+		return errors.New("BIND service aliases do not resolve to the exact vendor named.service identity")
+	}
+	return nil
+}
+
+func validatePacmanBINDVendorIdentity(named dnsUnitIdentity) error {
+	if named.ID != "named.service" ||
+		!reflect.DeepEqual(named.Names, []string{"named.service"}) ||
+		named.FragmentPath != "/usr/lib/systemd/system/named.service" ||
+		len(named.DropInPaths) != 0 || named.SourcePath != "" ||
+		named.Transient != "no" || named.ExecStartPath != "/usr/bin/named" ||
+		named.ExecStartArgv != "/usr/bin/named -f -u named" {
+		return errors.New("named.service does not resolve to the exact vendor BIND identity")
+	}
+	return nil
+}
+
+func exactUnmaskedInactiveBINDUnit(state bindInstallUnitState) bool {
+	return state.loadState == "loaded" && state.activeState == "inactive" &&
+		!state.masked()
+}
+
+func exactAbsentInactiveBINDUnit(state bindInstallUnitState) bool {
+	return state.loadState == "not-found" && state.activeState == "inactive" &&
+		state.unitFileState == ""
+}
+
+func exactStockDisabledBINDTarget(
+	named, alias bindInstallUnitState,
+) bool {
+	return named.loadState == "loaded" &&
+		named.activeState == "inactive" &&
+		named.unitFileState == "disabled" &&
+		exactAbsentInactiveBINDUnit(alias)
+}
+
+func exactAbsentBINDTarget(
+	named, alias bindInstallUnitState,
+) bool {
+	return exactAbsentInactiveBINDUnit(named) &&
+		exactAbsentInactiveBINDUnit(alias)
+}
+
+func exactLoadedUnmaskedBINDUnit(state bindInstallUnitState) bool {
+	return state.loadState == "loaded" &&
+		(state.activeState == "active" || state.activeState == "inactive") &&
+		!state.masked()
+}
+
+type bindUnitIdentityProofOps struct {
+	inspectStates      func() (bindInstallUnitState, bindInstallUnitState, error)
+	inspectIdentity    func(string) (dnsUnitIdentity, error)
+	inspectVendorFiles func() (bindVendorFilesIdentity, error)
+	inspectProcesses   func(string) (dnsUnitProcesses, error)
+}
+
+type bindUnitIdentityProofMode struct {
+	aptAliasEnabled      bool
+	requireInactive      bool
+	requireStopped       bool
+	requireNamedDisabled bool
+	requireEnabled       bool
+}
+
+// bindPreStartIdentityOps keeps the narrow test seam readable while the same
+// exact proof is reused by runtime readiness and post-start verification.
+type bindPreStartIdentityOps = bindUnitIdentityProofOps
+
+func bindUnitIdentityProofOperations(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) (bindUnitIdentityProofOps, error) {
+	if ctx == nil || systemctl == "" {
+		return bindUnitIdentityProofOps{},
+			errors.New("invalid BIND unit identity proof")
+	}
+	return bindUnitIdentityProofOps{
+		inspectStates: func() (bindInstallUnitState, bindInstallUnitState, error) {
+			return inspectBINDTargetStates(ctx, systemctl)
+		},
+		inspectIdentity: func(unit string) (dnsUnitIdentity, error) {
+			return inspectDNSUnitIdentity(ctx, systemctl, unit)
+		},
+		inspectVendorFiles: func() (bindVendorFilesIdentity, error) {
+			return inspectHostBINDVendorFiles(ctx, profile)
+		},
+		inspectProcesses: func(unit string) (dnsUnitProcesses, error) {
+			return inspectDNSUnitProcesses(ctx, systemctl, unit)
+		},
+	}, nil
+}
+
+func verifyBINDPreEnableIdentity(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
+	if ctx == nil {
+		return errors.New("BIND pre-enable proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	ops, err := bindUnitIdentityProofOperations(proofCtx, profile, systemctl)
+	if err != nil {
+		return err
+	}
+	return verifyBINDUnitIdentityWithOps(profile, bindUnitIdentityProofMode{
+		aptAliasEnabled:      false,
+		requireInactive:      true,
+		requireStopped:       true,
+		requireNamedDisabled: true,
+	}, ops)
+}
+
+func verifyBINDPreStartIdentity(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
+	if ctx == nil {
+		return errors.New("BIND pre-start proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	ops, err := bindUnitIdentityProofOperations(proofCtx, profile, systemctl)
+	if err != nil {
+		return err
+	}
+	return verifyBINDUnitIdentityWithOps(profile, bindUnitIdentityProofMode{
+		aptAliasEnabled: true,
+		requireInactive: true,
+		requireStopped:  true,
+		requireEnabled:  true,
+	}, ops)
+}
+
+func verifyBINDPreStartIdentityWithOps(
+	profile hostplatform.Profile,
+	ops bindPreStartIdentityOps,
+) error {
+	return verifyBINDUnitIdentityWithOps(profile, bindUnitIdentityProofMode{
+		aptAliasEnabled: true,
+		requireInactive: true,
+		requireStopped:  true,
+		requireEnabled:  true,
+	}, ops)
+}
+
+type bindUnitProcessSnapshot struct {
+	named dnsUnitProcesses
+	alias dnsUnitProcesses
+}
+
+func verifyBINDUnitIdentityWithOps(
+	profile hostplatform.Profile,
+	mode bindUnitIdentityProofMode,
+	ops bindUnitIdentityProofOps,
+) error {
+	if ops.inspectStates == nil || ops.inspectIdentity == nil ||
+		ops.inspectVendorFiles == nil ||
+		(mode.requireStopped && ops.inspectProcesses == nil) {
+		return errors.New("invalid BIND unit identity operations")
+	}
+	validateStates := func(named, alias bindInstallUnitState) error {
+		if !exactLoadedUnmaskedBINDUnit(named) ||
+			(mode.requireInactive && !exactUnmaskedInactiveBINDUnit(named)) {
+			return errors.New("named.service is not an exact unmasked BIND target")
+		}
+		if mode.requireNamedDisabled && named.unitFileState != "disabled" {
+			return errors.New("named.service is not the exact disabled pre-enable target")
+		}
+		if mode.requireEnabled && named.unitFileState != "enabled" {
+			return errors.New("named.service is not exactly enabled")
+		}
+		switch profile.PackageManager {
+		case hostplatform.PackageManagerAPT:
+			if mode.aptAliasEnabled {
+				if !exactLoadedUnmaskedBINDUnit(alias) ||
+					(mode.requireInactive && !exactUnmaskedInactiveBINDUnit(alias)) {
+					return errors.New("bind9.service is not the exact enabled BIND alias")
+				}
+				if mode.requireEnabled && alias.unitFileState != "enabled" {
+					return errors.New("bind9.service is not exactly enabled")
+				}
+			} else if !exactAbsentInactiveBINDUnit(alias) {
+				return errors.New("bind9.service exists before its verified APT alias enable")
+			}
+		case hostplatform.PackageManagerPacman:
+			if !exactAbsentInactiveBINDUnit(alias) {
+				return errors.New("bind9.service unexpectedly exists on the pacman BIND target")
+			}
+		default:
+			return errors.New("BIND identity proof is unsupported on this package manager")
+		}
+		return nil
+	}
+	inspectIdentities := func() (dnsUnitIdentity, dnsUnitIdentity, error) {
+		named, err := ops.inspectIdentity("named.service")
+		if err != nil {
+			return dnsUnitIdentity{}, dnsUnitIdentity{}, err
+		}
+		switch profile.PackageManager {
+		case hostplatform.PackageManagerAPT:
+			if !mode.aptAliasEnabled {
+				if err := validateAPTBINDVendorNamedIdentity(named, false); err != nil {
+					return dnsUnitIdentity{}, dnsUnitIdentity{}, err
+				}
+				return named, dnsUnitIdentity{}, nil
+			}
+			alias, err := ops.inspectIdentity("bind9.service")
+			if err != nil {
+				return dnsUnitIdentity{}, dnsUnitIdentity{}, err
+			}
+			if err := validateAPTBINDVendorAliasIdentity(named, alias); err != nil {
+				return dnsUnitIdentity{}, dnsUnitIdentity{}, err
+			}
+			return named, alias, nil
+		case hostplatform.PackageManagerPacman:
+			if err := validatePacmanBINDVendorIdentity(named); err != nil {
+				return dnsUnitIdentity{}, dnsUnitIdentity{}, err
+			}
+			return named, dnsUnitIdentity{}, nil
+		default:
+			return dnsUnitIdentity{}, dnsUnitIdentity{},
+				errors.New("BIND identity proof is unsupported on this package manager")
+		}
+	}
+	inspectStoppedProcesses := func() (bindUnitProcessSnapshot, error) {
+		if !mode.requireStopped {
+			return bindUnitProcessSnapshot{}, nil
+		}
+		named, err := ops.inspectProcesses("named.service")
+		if err != nil {
+			return bindUnitProcessSnapshot{}, err
+		}
+		if err := verifyDNSUnitProcessesStopped(named); err != nil {
+			return bindUnitProcessSnapshot{}, fmt.Errorf("named.service is not stopped: %w", err)
+		}
+		snapshot := bindUnitProcessSnapshot{named: named}
+		if profile.PackageManager == hostplatform.PackageManagerAPT &&
+			mode.aptAliasEnabled {
+			alias, err := ops.inspectProcesses("bind9.service")
+			if err != nil {
+				return bindUnitProcessSnapshot{}, err
+			}
+			if err := verifyDNSUnitProcessesStopped(alias); err != nil {
+				return bindUnitProcessSnapshot{}, fmt.Errorf("bind9.service is not stopped: %w", err)
+			}
+			snapshot.alias = alias
+		}
+		return snapshot, nil
+	}
+
+	namedStateBefore, aliasStateBefore, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	if err := validateStates(namedStateBefore, aliasStateBefore); err != nil {
+		return err
+	}
+	namedIdentityBefore, aliasIdentityBefore, err := inspectIdentities()
+	if err != nil {
+		return err
+	}
+	vendorFilesBefore, err := ops.inspectVendorFiles()
+	if err != nil {
+		return fmt.Errorf("verify BIND vendor unit files: %w", err)
+	}
+	processesBefore, err := inspectStoppedProcesses()
+	if err != nil {
+		return err
+	}
+
+	namedStateAfter, aliasStateAfter, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	if err := validateStates(namedStateAfter, aliasStateAfter); err != nil {
+		return err
+	}
+	if namedStateAfter != namedStateBefore || aliasStateAfter != aliasStateBefore {
+		return errors.New("BIND unit state changed during exact identity verification")
+	}
+	namedIdentityAfter, aliasIdentityAfter, err := inspectIdentities()
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(namedIdentityAfter, namedIdentityBefore) ||
+		!reflect.DeepEqual(aliasIdentityAfter, aliasIdentityBefore) {
+		return errors.New("BIND systemd identity changed during exact verification")
+	}
+	vendorFilesAfter, err := ops.inspectVendorFiles()
+	if err != nil {
+		return fmt.Errorf("reverify BIND vendor unit files: %w", err)
+	}
+	if vendorFilesAfter != vendorFilesBefore {
+		return errors.New("BIND vendor unit files changed during exact verification")
+	}
+	processesAfter, err := inspectStoppedProcesses()
+	if err != nil {
+		return err
+	}
+	if processesAfter != processesBefore {
+		return errors.New("BIND unit process state changed during exact verification")
+	}
+	return nil
+}
+
+type bindActivationOps struct {
+	unmask          func(context.Context, string, bool) error
+	daemonReload    func(context.Context) error
+	verifyPreEnable func(context.Context) (bindBeforeEnableDisposition, error)
+	enable          func(context.Context, string) error
+	verifyPreStart  func(context.Context) error
+	start           func(context.Context, string) error
+	verifyStarted   func(context.Context) error
+}
+
+func activateBINDTargetWithVerifiedIdentity(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+	unit string,
+) error {
+	return activateBINDTargetWithOps(ctx, unit, bindActivationOps{
+		unmask: func(commandCtx context.Context, target string, runtime bool) error {
+			args := []string{"unmask", target}
+			if runtime {
+				args = []string{"unmask", "--runtime", target}
+			}
+			output, err := runServiceMutationCombinedOutput(commandCtx, systemctl, args...)
+			if err != nil {
+				return fmt.Errorf("systemctl %s: %w: %s", strings.Join(args, " "), err, firstLine(string(output)))
+			}
+			return nil
+		},
+		daemonReload: func(commandCtx context.Context) error {
+			reloadCtx, cancel := context.WithTimeout(commandCtx, bindDaemonReloadTimeout)
+			defer cancel()
+			output, err := runServiceMutationCombinedOutput(reloadCtx, systemctl, "daemon-reload")
+			if err != nil {
+				return fmt.Errorf("systemctl daemon-reload: %w: %s", err, firstLine(string(output)))
+			}
+			return nil
+		},
+		verifyPreEnable: func(
+			verifyCtx context.Context,
+		) (bindBeforeEnableDisposition, error) {
+			return verifyBINDBeforeEnableIdentity(verifyCtx, profile, systemctl)
+		},
+		enable: func(enableCtx context.Context, target string) error {
+			return enableServiceForMutationWithExecutable(enableCtx, systemctl, target, false)
+		},
+		verifyPreStart: func(verifyCtx context.Context) error {
+			return verifyBINDPreStartIdentity(verifyCtx, profile, systemctl)
+		},
+		start: func(startCtx context.Context, target string) error {
+			output, commandErr := runServiceMutationCombinedOutput(
+				startCtx, systemctl, "start", target,
+			)
+			verifyErr := verifyServiceMutationUnitWithExecutable(
+				startCtx, systemctl, target, true,
+			)
+			if verifyErr == nil {
+				return nil
+			}
+			if commandErr != nil {
+				return fmt.Errorf(
+					"systemctl-start-failed:%v:%s; reconciliation: %v",
+					commandErr, strings.TrimSpace(string(output)), verifyErr,
+				)
+			}
+			return verifyErr
+		},
+		verifyStarted: func(verifyCtx context.Context) error {
+			return verifyOnlyBINDActive(verifyCtx, profile, systemctl)
+		},
+	})
+}
+
+func activateBINDTargetWithOps(
+	ctx context.Context,
+	unit string,
+	ops bindActivationOps,
+) error {
+	if ctx == nil || unit != "named.service" || ops.unmask == nil ||
+		ops.daemonReload == nil || ops.verifyPreEnable == nil ||
+		ops.enable == nil || ops.verifyPreStart == nil ||
+		ops.start == nil || ops.verifyStarted == nil {
+		return errors.New("invalid BIND activation operation")
+	}
+	for _, target := range []string{"named.service", "bind9.service"} {
+		if err := ops.unmask(ctx, target, false); err != nil {
+			return err
+		}
+		if err := ops.unmask(ctx, target, true); err != nil {
+			return err
+		}
+	}
+	if err := ops.daemonReload(ctx); err != nil {
+		return err
+	}
+	disposition, err := ops.verifyPreEnable(ctx)
+	if err != nil {
+		return fmt.Errorf("verify BIND vendor identity before enabling aliases: %w", err)
+	}
+	switch disposition {
+	case bindBeforeEnableNeedsEnable:
+		if err := ops.enable(ctx, unit); err != nil {
+			return fmt.Errorf("enable BIND vendor unit without starting it: %w", err)
+		}
+	case bindBeforeEnableAlreadyEnabled:
+		// Exact enabled alias identity was proved after unmask; do not rewrite
+		// it before the second proof and separate start.
+	default:
+		return errors.New("BIND pre-enable proof returned an invalid disposition")
+	}
+	if err := ops.daemonReload(ctx); err != nil {
+		return err
+	}
+	if err := ops.verifyPreStart(ctx); err != nil {
+		return fmt.Errorf("verify BIND vendor alias identity immediately before start: %w", err)
+	}
+	if err := ops.start(ctx, unit); err != nil {
+		return fmt.Errorf("start verified BIND vendor unit: %w", err)
+	}
+	if err := ops.verifyStarted(ctx); err != nil {
+		return fmt.Errorf("verify started BIND vendor unit: %w", err)
+	}
+	return nil
+}
+
+type bindBeforeEnableDisposition uint8
+
+const (
+	bindBeforeEnableNeedsEnable bindBeforeEnableDisposition = iota + 1
+	bindBeforeEnableAlreadyEnabled
+)
+
+func verifyBINDBeforeEnableIdentity(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) (bindBeforeEnableDisposition, error) {
+	if ctx == nil {
+		return 0, errors.New("BIND before-enable proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	named, alias, err := inspectBINDTargetStates(proofCtx, systemctl)
+	if err != nil {
+		return 0, err
+	}
+	return verifyBINDBeforeEnableIdentityWithOps(
+		profile, named, alias,
+		func() error {
+			return verifyBINDPreEnableIdentity(proofCtx, profile, systemctl)
+		},
+		func() error {
+			return verifyBINDPreStartIdentity(proofCtx, profile, systemctl)
+		},
+	)
+}
+
+func verifyBINDBeforeEnableIdentityWithOps(
+	profile hostplatform.Profile,
+	named, alias bindInstallUnitState,
+	verifyDisabled, verifyEnabled func() error,
+) (bindBeforeEnableDisposition, error) {
+	if verifyDisabled == nil || verifyEnabled == nil {
+		return 0, errors.New("invalid BIND before-enable proof operations")
+	}
+	if exactStockDisabledBINDTarget(named, alias) {
+		if err := verifyDisabled(); err != nil {
+			return 0, err
+		}
+		return bindBeforeEnableNeedsEnable, nil
+	}
+	enabledNamed := named.loadState == "loaded" &&
+		named.activeState == "inactive" &&
+		named.unitFileState == "enabled"
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT:
+		enabledAlias := alias.loadState == "loaded" &&
+			alias.activeState == "inactive" &&
+			alias.unitFileState == "enabled"
+		if !enabledNamed || !enabledAlias {
+			return 0, errors.New("APT BIND is neither exact stock-disabled nor exact enabled")
+		}
+	case hostplatform.PackageManagerPacman:
+		if !enabledNamed || !exactAbsentInactiveBINDUnit(alias) {
+			return 0, errors.New("pacman BIND is neither exact stock-disabled nor exact enabled")
+		}
+	default:
+		return 0, errors.New("BIND before-enable proof is unsupported on this package manager")
+	}
+	if err := verifyEnabled(); err != nil {
+		return 0, err
+	}
+	return bindBeforeEnableAlreadyEnabled, nil
+}
+
+func exactPersistentMaskedInactiveBINDUnit(state bindInstallUnitState) bool {
+	return state.loadState == "masked" &&
+		state.activeState == "inactive" &&
+		state.unitFileState == "masked"
+}
+
+func classifyBINDTargetNotServingStates(
+	named, alias bindInstallUnitState,
+) (sealed bool, err error) {
+	if named.activeState == "failed" || alias.activeState == "failed" {
+		return false, errors.New("BIND target has a failed unit")
+	}
+	if named.masked() || alias.masked() {
+		if exactPersistentMaskedInactiveBINDUnit(named) &&
+			exactPersistentMaskedInactiveBINDUnit(alias) {
+			return true, nil
+		}
+		return false, errors.New(
+			"BIND target mask state is mixed, runtime-only, active, or otherwise unsealed",
+		)
+	}
+	if named.active() || alias.active() {
+		return false, errors.New("BIND target is already serving")
+	}
+	return false, nil
+}
+
+func inspectBINDTargetStates(
+	ctx context.Context,
+	systemctl string,
+) (bindInstallUnitState, bindInstallUnitState, error) {
+	guard := dnsSystemdStateGuard(systemctl)
+	named, err := guard.inspect(ctx, "named.service")
+	if err != nil {
+		return bindInstallUnitState{}, bindInstallUnitState{}, err
+	}
+	alias, err := guard.inspect(ctx, "bind9.service")
+	if err != nil {
+		return bindInstallUnitState{}, bindInstallUnitState{}, err
+	}
+	return named, alias, nil
+}
+
+// verifyBINDTargetNotServing is a pre-mutation target check. An exact pair of
+// persistent masks is accepted only through the stronger sealed proof below;
+// it is never treated as proof of the vendor unit identity hidden by /dev/null.
+func verifyBINDTargetNotServing(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
+	if ctx == nil {
+		return errors.New("BIND target proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyBINDTargetNotServingWithOps(
+		profile,
+		bindTargetNotServingOps{
+			inspectStates: func() (bindInstallUnitState, bindInstallUnitState, error) {
+				return inspectBINDTargetStates(proofCtx, systemctl)
+			},
+			verifySealed: func() error {
+				return verifyBINDSealedTargetNotServing(proofCtx, systemctl)
+			},
+			verifyAbsent: func() error {
+				return verifyBINDAbsentTargetNotServing(proofCtx, systemctl)
+			},
+			verifyPreEnable: func() error {
+				return verifyBINDPreEnableIdentity(proofCtx, profile, systemctl)
+			},
+			verifyPreStart: func() error {
+				return verifyBINDPreStartIdentity(proofCtx, profile, systemctl)
+			},
+		},
+	)
+}
+
+type bindTargetInstallProof struct {
+	exact bool
+}
+
+func proveBINDTargetNotServing(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) (bindTargetInstallProof, error) {
+	if err := verifyBINDTargetNotServing(ctx, profile, systemctl); err != nil {
+		return bindTargetInstallProof{}, err
+	}
+	return bindTargetInstallProof{exact: true}, nil
+}
+
+func proveBINDTargetNotServingWithOps(
+	profile hostplatform.Profile,
+	ops bindTargetNotServingOps,
+) (bindTargetInstallProof, error) {
+	if err := verifyBINDTargetNotServingWithOps(profile, ops); err != nil {
+		return bindTargetInstallProof{}, err
+	}
+	return bindTargetInstallProof{exact: true}, nil
+}
+
+func runVerifiedBINDTargetInstall(
+	proof bindTargetInstallProof,
+	install func() error,
+) error {
+	if !proof.exact || install == nil {
+		return errors.New(
+			"BIND package mutation requires an exact target-not-serving proof",
+		)
+	}
+	return install()
+}
+
+type bindPostInstallProofOps struct {
+	verifyGeneric     func() error
+	verifyNoAuthority func() error
+}
+
+func runBINDPostInstallContinuation(
+	requireNoManagedAuthority bool,
+	ops bindPostInstallProofOps,
+	continuation func() error,
+) error {
+	if ops.verifyGeneric == nil || ops.verifyNoAuthority == nil ||
+		continuation == nil {
+		return errors.New("invalid BIND post-install proof operation")
+	}
+	var err error
+	if requireNoManagedAuthority {
+		err = ops.verifyNoAuthority()
+	} else {
+		err = ops.verifyGeneric()
+	}
+	if err != nil {
+		return err
+	}
+	return continuation()
+}
+
+type bindTargetNotServingOps struct {
+	inspectStates   func() (bindInstallUnitState, bindInstallUnitState, error)
+	verifySealed    func() error
+	verifyAbsent    func() error
+	verifyPreEnable func() error
+	verifyPreStart  func() error
+}
+
+func verifyBINDTargetNotServingWithOps(
+	profile hostplatform.Profile,
+	ops bindTargetNotServingOps,
+) error {
+	if ops.inspectStates == nil {
+		return errors.New("invalid BIND target proof operations")
+	}
+	namedBefore, aliasBefore, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	sealed, err := classifyBINDTargetNotServingStates(namedBefore, aliasBefore)
+	if err != nil {
+		return err
+	}
+	if sealed {
+		if ops.verifySealed == nil {
+			return errors.New("BIND sealed-target proof is unavailable")
+		}
+		return ops.verifySealed()
+	}
+	if exactAbsentBINDTarget(namedBefore, aliasBefore) {
+		if ops.verifyAbsent == nil {
+			return errors.New("BIND absent-target proof is unavailable")
+		}
+		return ops.verifyAbsent()
+	}
+	if exactStockDisabledBINDTarget(namedBefore, aliasBefore) {
+		if ops.verifyPreEnable == nil {
+			return errors.New("BIND stock-target proof is unavailable")
+		}
+		return ops.verifyPreEnable()
+	}
+	if !exactUnmaskedInactiveBINDUnit(namedBefore) {
+		return errors.New("named.service is not an exact inactive BIND target")
+	}
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT:
+		if !exactUnmaskedInactiveBINDUnit(aliasBefore) {
+			return errors.New("APT BIND alias topology is mixed or incomplete")
+		}
+	case hostplatform.PackageManagerPacman:
+		if !exactAbsentInactiveBINDUnit(aliasBefore) {
+			return errors.New("pacman BIND unexpectedly has a bind9.service alias")
+		}
+	default:
+		return errors.New("BIND target proof is unsupported on this package manager")
+	}
+	if ops.verifyPreStart == nil {
+		return errors.New("BIND enabled-target proof is unavailable")
+	}
+	return ops.verifyPreStart()
+}
+
+type bindAbsentTargetProofOps struct {
+	inspectStates  func() (bindInstallUnitState, bindInstallUnitState, error)
+	port53Conflict func() (bool, error)
+}
+
+func verifyBINDAbsentTargetNotServing(
+	ctx context.Context,
+	systemctl string,
+) error {
+	if ctx == nil || systemctl == "" {
+		return errors.New("invalid absent BIND target proof")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyBINDAbsentTargetNotServingWithOps(bindAbsentTargetProofOps{
+		inspectStates: func() (bindInstallUnitState, bindInstallUnitState, error) {
+			return inspectBINDTargetStates(proofCtx, systemctl)
+		},
+		port53Conflict: func() (bool, error) {
+			return dnsPort53ConflictCheck(proofCtx, false, true)
+		},
+	})
+}
+
+func verifyBINDAbsentTargetNotServingWithOps(
+	ops bindAbsentTargetProofOps,
+) error {
+	if ops.inspectStates == nil || ops.port53Conflict == nil {
+		return errors.New("invalid absent BIND target proof operations")
+	}
+	namedBefore, aliasBefore, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	if !exactAbsentBINDTarget(namedBefore, aliasBefore) {
+		return errors.New("BIND target units are not exactly absent and inactive")
+	}
+	for sample := 0; sample < 2; sample++ {
+		conflict, err := ops.port53Conflict()
+		if err != nil {
+			return err
+		}
+		if conflict {
+			return errors.New("a public BIND or unknown port-53 listener exists while BIND units are absent")
+		}
+	}
+	namedAfter, aliasAfter, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	if !exactAbsentBINDTarget(namedAfter, aliasAfter) ||
+		namedAfter != namedBefore || aliasAfter != aliasBefore {
+		return errors.New("absent BIND target state changed during verification")
+	}
+	return nil
+}
+
+type bindSealedTargetProofOps struct {
+	inspectStates         func() (bindInstallUnitState, bindInstallUnitState, error)
+	verifyPersistentMasks func() error
+	inspectProcesses      func(string) (dnsUnitProcesses, error)
+	port53Conflict        func() (bool, error)
+}
+
+// verifyBINDSealedTargetNotServing proves the exact transitional state left by
+// the guarded package install. It deliberately proves only that BIND cannot be
+// serving; the vendor alias identity is verified later, after both masks are
+// removed and immediately before enable/start.
+func verifyBINDSealedTargetNotServing(ctx context.Context, systemctl string) error {
+	return verifyBINDSealedTargetNotServingWithAuthorityPolicy(
+		ctx, systemctl, true,
+	)
+}
+
+// verifyBINDSealedTargetNotServingWithoutManagedAuthority is the stricter
+// source-none recovery proof. Unlike the generic standby proof above, it
+// rejects both BIND and PowerDNS listeners. It is read-only and preserves the
+// caller's deadline; its caller must hold the shared host mutation flock while
+// binding this result to recovery evidence.
+func verifyBINDSealedTargetNotServingWithoutManagedAuthority(
+	ctx context.Context,
+	systemctl string,
+) error {
+	return verifyBINDSealedTargetNotServingWithAuthorityPolicy(
+		ctx, systemctl, false,
+	)
+}
+
+func verifyBINDSealedTargetNotServingWithAuthorityPolicy(
+	ctx context.Context,
+	systemctl string,
+	allowPowerDNS bool,
+) error {
+	if ctx == nil || systemctl == "" {
+		return errors.New("invalid BIND sealed-target proof")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyBINDSealedTargetNotServingWithOps(
+		bindSealedTargetProofOperations(
+			proofCtx, systemctl, allowPowerDNS, dnsPort53ConflictCheck,
+		),
+	)
+}
+
+func bindSealedTargetProofOperations(
+	ctx context.Context,
+	systemctl string,
+	allowPowerDNS bool,
+	port53Check func(context.Context, bool, bool) (bool, error),
+) bindSealedTargetProofOps {
+	return bindSealedTargetProofOps{
+		inspectStates: func() (bindInstallUnitState, bindInstallUnitState, error) {
+			return inspectBINDTargetStates(ctx, systemctl)
+		},
+		verifyPersistentMasks: verifyBINDPersistentMaskFiles,
+		inspectProcesses: func(unit string) (dnsUnitProcesses, error) {
+			return inspectDNSUnitProcesses(ctx, systemctl, unit)
+		},
+		port53Conflict: func() (bool, error) {
+			return port53Check(ctx, false, allowPowerDNS)
+		},
+	}
+}
+
+func verifyBINDSealedTargetNotServingWithOps(ops bindSealedTargetProofOps) error {
+	if ops.inspectStates == nil || ops.verifyPersistentMasks == nil ||
+		ops.inspectProcesses == nil || ops.port53Conflict == nil {
+		return errors.New("invalid BIND sealed-target proof operations")
+	}
+	namedBefore, aliasBefore, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	sealed, err := classifyBINDTargetNotServingStates(namedBefore, aliasBefore)
+	if err != nil || !sealed {
+		if err == nil {
+			err = errors.New("BIND target is not exactly persistently masked and inactive")
+		}
+		return err
+	}
+	if err := ops.verifyPersistentMasks(); err != nil {
+		return err
+	}
+	for _, unit := range []string{"named.service", "bind9.service"} {
+		processes, err := ops.inspectProcesses(unit)
+		if err != nil {
+			return err
+		}
+		if err := verifyDNSUnitProcessesStopped(processes); err != nil {
+			return fmt.Errorf("%s is not stopped while masked: %w", unit, err)
+		}
+	}
+	conflict, err := ops.port53Conflict()
+	if err != nil {
+		return err
+	}
+	if conflict {
+		return errors.New("a public BIND or unknown port-53 listener exists while BIND is masked")
+	}
+	namedAfter, aliasAfter, err := ops.inspectStates()
+	if err != nil {
+		return err
+	}
+	afterSealed, err := classifyBINDTargetNotServingStates(namedAfter, aliasAfter)
+	if err != nil || !afterSealed ||
+		namedAfter != namedBefore || aliasAfter != aliasBefore {
+		if err == nil {
+			err = errors.New("BIND sealed unit state changed during verification")
+		}
+		return err
+	}
+	if err := ops.verifyPersistentMasks(); err != nil {
+		return err
+	}
+	for _, unit := range []string{"named.service", "bind9.service"} {
+		processes, err := ops.inspectProcesses(unit)
+		if err != nil {
+			return err
+		}
+		if err := verifyDNSUnitProcessesStopped(processes); err != nil {
+			return fmt.Errorf("%s changed process state during masked verification: %w", unit, err)
+		}
+	}
+	conflict, err = ops.port53Conflict()
+	if err != nil {
+		return err
+	}
+	if conflict {
+		return errors.New("a public BIND or unknown port-53 listener appeared during masked verification")
+	}
+	return nil
+}
+
+func verifyBINDUnitTopology(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
+	if ctx == nil {
+		return errors.New("BIND unit topology proof requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	ops, err := bindUnitIdentityProofOperations(proofCtx, profile, systemctl)
+	if err != nil {
+		return err
+	}
+	return verifyBINDUnitIdentityWithOps(profile, bindUnitIdentityProofMode{
+		aptAliasEnabled: true,
+		requireEnabled:  true,
+	}, ops)
+}
+
+type bindRuntimeTopologySnapshot struct {
+	namedState     bindInstallUnitState
+	aliasState     bindInstallUnitState
+	namedIdentity  dnsUnitIdentity
+	aliasIdentity  dnsUnitIdentity
+	vendorFiles    bindVendorFilesIdentity
+	namedProcesses dnsUnitProcesses
+	aliasProcesses dnsUnitProcesses
+}
+
+func inspectVerifiedBINDRuntimeTopology(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) (bindRuntimeTopologySnapshot, error) {
+	if ctx == nil {
+		return bindRuntimeTopologySnapshot{},
+			errors.New("BIND runtime topology proof requires a context")
+	}
+	ops, err := bindUnitIdentityProofOperations(ctx, profile, systemctl)
+	if err != nil {
+		return bindRuntimeTopologySnapshot{}, err
+	}
+	capture := func() (bindRuntimeTopologySnapshot, error) {
+		namedState, aliasState, err := ops.inspectStates()
+		if err != nil {
+			return bindRuntimeTopologySnapshot{}, err
+		}
+		if namedState.loadState != "loaded" ||
+			namedState.unitFileState != "enabled" {
+			return bindRuntimeTopologySnapshot{},
+				errors.New("named.service does not have exact enabled runtime topology")
+		}
+		namedIdentity, err := ops.inspectIdentity("named.service")
+		if err != nil {
+			return bindRuntimeTopologySnapshot{}, err
+		}
+		aliasIdentity := dnsUnitIdentity{}
+		switch profile.PackageManager {
+		case hostplatform.PackageManagerAPT:
+			if aliasState.loadState != "loaded" ||
+				aliasState.unitFileState != "enabled" {
+				return bindRuntimeTopologySnapshot{},
+					errors.New("bind9.service does not have exact enabled alias topology")
+			}
+			aliasIdentity, err = ops.inspectIdentity("bind9.service")
+			if err != nil {
+				return bindRuntimeTopologySnapshot{}, err
+			}
+			if err := validateAPTBINDVendorAliasIdentity(
+				namedIdentity, aliasIdentity,
+			); err != nil {
+				return bindRuntimeTopologySnapshot{}, err
+			}
+		case hostplatform.PackageManagerPacman:
+			if !exactAbsentInactiveBINDUnit(aliasState) {
+				return bindRuntimeTopologySnapshot{},
+					errors.New("bind9.service unexpectedly exists in pacman runtime topology")
+			}
+			if err := validatePacmanBINDVendorIdentity(namedIdentity); err != nil {
+				return bindRuntimeTopologySnapshot{}, err
+			}
+		default:
+			return bindRuntimeTopologySnapshot{},
+				errors.New("BIND runtime topology is unsupported on this package manager")
+		}
+		vendorFiles, err := ops.inspectVendorFiles()
+		if err != nil {
+			return bindRuntimeTopologySnapshot{},
+				fmt.Errorf("verify BIND vendor unit files: %w", err)
+		}
+		namedProcesses, err := ops.inspectProcesses("named.service")
+		if err != nil {
+			return bindRuntimeTopologySnapshot{}, err
+		}
+		if namedProcesses.MainPID == 0 || namedProcesses.ControlPID != 0 ||
+			namedProcesses.SubState != "running" {
+			return bindRuntimeTopologySnapshot{},
+				errors.New("named.service lacks an exact running process identity")
+		}
+		aliasProcesses := dnsUnitProcesses{}
+		if profile.PackageManager == hostplatform.PackageManagerAPT {
+			aliasProcesses, err = ops.inspectProcesses("bind9.service")
+			if err != nil {
+				return bindRuntimeTopologySnapshot{}, err
+			}
+			if aliasProcesses != namedProcesses {
+				return bindRuntimeTopologySnapshot{},
+					errors.New("bind9.service process identity differs from named.service")
+			}
+		}
+		return bindRuntimeTopologySnapshot{
+			namedState: namedState, aliasState: aliasState,
+			namedIdentity: namedIdentity, aliasIdentity: aliasIdentity,
+			vendorFiles:    vendorFiles,
+			namedProcesses: namedProcesses, aliasProcesses: aliasProcesses,
+		}, nil
+	}
+	before, err := capture()
+	if err != nil {
+		return bindRuntimeTopologySnapshot{}, err
+	}
+	after, err := capture()
+	if err != nil {
+		return bindRuntimeTopologySnapshot{}, err
+	}
+	if !reflect.DeepEqual(after, before) {
+		return bindRuntimeTopologySnapshot{},
+			errors.New("BIND runtime topology changed during exact verification")
+	}
+	return after, nil
+}
+
+func verifyBINDPublicListeners(output string, expectedMainPID uint64) error {
+	_, err := canonicalBINDPublicListeners(output, expectedMainPID)
+	return err
+}
+
+func canonicalBINDPublicListeners(
+	output string,
+	expectedMainPID uint64,
+) ([]string, error) {
+	return canonicalDNSAuthorityPublicListeners(
+		output, "named", expectedMainPID,
+	)
+}
+
+func canonicalDNSAuthorityPublicListeners(
+	output string,
+	expectedProcess string,
+	expectedMainPID uint64,
+) ([]string, error) {
+	if expectedProcess == "" ||
+		strings.ContainsAny(expectedProcess, "\x00\r\n\t ,()\"") ||
+		expectedMainPID == 0 {
+		return nil, errors.New("invalid DNS authority process identity")
+	}
 	foundTCP, foundUDP := false, false
+	identities := make(map[string]struct{})
 	for _, line := range strings.Split(output, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
+		if line == "" {
 			continue
 		}
-		protocol := strings.ToLower(fields[0])
-		if protocol != "tcp" && protocol != "udp" {
+		row, err := parseCanonicalDNSPort53ListenerRow(line)
+		if err != nil {
+			return nil, err
+		}
+		if row.address.IsLoopback() || row.address.IsLinkLocalUnicast() {
 			continue
 		}
-		host, port, err := net.SplitHostPort(fields[4])
-		if err != nil || port != "53" {
-			continue
+		if row.process != expectedProcess {
+			return nil, errors.New("an unexpected process is holding a public DNS listener")
 		}
-		address := parseDNSListenerAddress(host)
-		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
-			continue
+		if row.pid != expectedMainPID {
+			return nil, errors.New("a DNS authority listener PID differs from its systemd MainPID")
 		}
-		lower := strings.ToLower(line)
-		if !strings.Contains(lower, "named") || strings.Contains(lower, "pdns") {
-			return errors.New("a non-BIND process is holding a public DNS listener")
-		}
-		if protocol == "tcp" {
+		identities[fmt.Sprintf(
+			"%s|%s|%d", row.protocol, row.address.String(), row.pid,
+		)] = struct{}{}
+		if row.protocol == "tcp" {
 			foundTCP = true
 		} else {
 			foundUDP = true
 		}
 	}
 	if !foundTCP || !foundUDP {
-		return errors.New("BIND does not own both public TCP and UDP port 53 listeners")
+		return nil, errors.New("the DNS authority does not own both public TCP and UDP port 53 listeners")
 	}
-	return nil
+	result := make([]string, 0, len(identities))
+	for identity := range identities {
+		result = append(result, identity)
+	}
+	sort.Strings(result)
+	return result, nil
 }

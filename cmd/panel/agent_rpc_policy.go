@@ -116,6 +116,7 @@ var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	agentRPCAuthGroup(agentRPCEffectRead, "", `
 		Agent.AppUnitLogs Agent.AppUnitStatus Agent.CheckInstalledServices Agent.CheckRBL
 		Agent.CheckSystemSQLiteDatabase Agent.DNSBackendReadiness Agent.DNSClusterReadiness
+		Agent.DNSEngineRollbackEvidenceV1
 		Agent.DNSSECStatus Agent.DovecotStats Agent.Fail2banConfig Agent.Fail2banStatus
 		Agent.FirewallStatus Agent.GetAccessLogs Agent.GetCertificateInfo Agent.GetConfig
 		Agent.GetDKIMStatus Agent.GetErrorLogs Agent.GetExtendedPHPConfig Agent.GetMailPolicy
@@ -229,6 +230,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.CheckSystemUpdate":           agentRPCNetworkReadTimeout,
 	"Agent.DNSSECStatus":                agentRPCQuickReadTimeout,
 	"Agent.DNSBackendReadiness":         agentRPCQuickReadTimeout,
+	"Agent.DNSEngineRollbackEvidenceV1": agentRPCQuickReadTimeout,
 	"Agent.DovecotStats":                agentRPCQuickReadTimeout,
 	"Agent.Fail2banConfig":              agentRPCQuickReadTimeout,
 	"Agent.Fail2banStatus":              agentRPCQuickReadTimeout,

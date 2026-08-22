@@ -1449,6 +1449,9 @@ require_sequence "$UPDATE" \
     'verify_installed_release_artifacts' \
     '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
     '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    'env -i \' \
+    '"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock' \
+    'verify_installed_release_artifacts' \
     'release_txn_mark_completion_pending \' \
     'run_panel_migrations_offline' \
     'verify_installed_release_artifacts' \
@@ -1489,6 +1492,8 @@ require_sequence "$UPDATE" \
     'transaction_phase=scheduler-removing' \
     'release_txn_remove_scheduler_restore_pending \' \
     'trap - EXIT'
+
+require_literal "$UPDATE" 'rollback intentionally retains them for alpha35 compatibility'
 
 # The general installer retains strict fresh/explicit one-shot semantics and
 # publishes the ledger as root:celikpanel 0600 before starting the agent.

@@ -196,7 +196,7 @@ func primaryCatalogEvidenceForEngine(
 		if err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}
-		publisher, _, err := newHostBINDPublisher(layout)
+		publisher, _, err := newHostBINDPublisher(ctx, layout)
 		if err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}
@@ -465,7 +465,7 @@ func verifyRestoredDNSSwitchSource(
 			return err
 		}
 	case transport.DNSEngineBIND:
-		if err := verifyOnlyBINDActive(ctx, systemctl); err != nil {
+		if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 			return err
 		}
 	case "":

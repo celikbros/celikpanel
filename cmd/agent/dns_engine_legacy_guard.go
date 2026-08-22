@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -191,34 +192,18 @@ func hasUnrelatedPublicDNSListener(
 	allowBIND, allowPowerDNS bool,
 ) bool {
 	for _, line := range strings.Split(output, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
-			if strings.Contains(line, ":53") {
-				return true
-			}
+		if line == "" {
 			continue
 		}
-		protocol := strings.ToLower(fields[0])
-		if protocol != "tcp" && protocol != "udp" {
+		row, err := parseCanonicalDNSPort53ListenerRow(line)
+		if err != nil {
+			return true
+		}
+		if row.address.IsLoopback() || row.address.IsLinkLocalUnicast() {
 			continue
 		}
-		host, port, splitErr := net.SplitHostPort(fields[4])
-		if splitErr != nil {
-			if strings.Contains(fields[4], ":53") {
-				return true
-			}
-			continue
-		}
-		if port != "53" {
-			continue
-		}
-		address := parseDNSListenerAddress(host)
-		if address != nil && (address.IsLoopback() || address.IsLinkLocalUnicast()) {
-			continue
-		}
-		lower := strings.ToLower(line)
-		bindOwner := strings.Contains(lower, `("named",`)
-		pdnsOwner := strings.Contains(lower, `("pdns_server",`)
+		bindOwner := row.process == "named"
+		pdnsOwner := row.process == "pdns_server"
 		if bindOwner == pdnsOwner ||
 			(bindOwner && !allowBIND) ||
 			(pdnsOwner && !allowPowerDNS) {
@@ -226,6 +211,84 @@ func hasUnrelatedPublicDNSListener(
 		}
 	}
 	return false
+}
+
+type canonicalDNSPort53ListenerRow struct {
+	protocol string
+	address  net.IP
+	process  string
+	pid      uint64
+}
+
+func parseCanonicalDNSPort53ListenerRow(
+	line string,
+) (canonicalDNSPort53ListenerRow, error) {
+	fields := strings.Fields(line)
+	if len(fields) != 7 {
+		return canonicalDNSPort53ListenerRow{},
+			errors.New("ss returned a malformed public DNS listener row")
+	}
+	protocol := fields[0]
+	if (protocol != "tcp" && protocol != "udp") ||
+		(protocol == "tcp" && fields[1] != "LISTEN") ||
+		(protocol == "udp" && fields[1] != "UNCONN") {
+		return canonicalDNSPort53ListenerRow{},
+			errors.New("ss returned a non-canonical DNS listener protocol or state")
+	}
+	for _, queue := range fields[2:4] {
+		value, err := strconv.ParseUint(queue, 10, 64)
+		if err != nil || strconv.FormatUint(value, 10) != queue {
+			return canonicalDNSPort53ListenerRow{},
+				errors.New("ss returned a non-canonical DNS listener queue")
+		}
+	}
+	host, port, err := net.SplitHostPort(fields[4])
+	if err != nil || port != "53" {
+		return canonicalDNSPort53ListenerRow{},
+			errors.New("ss returned a non-canonical public DNS listener endpoint")
+	}
+	address := parseDNSListenerAddress(host)
+	if address == nil {
+		return canonicalDNSPort53ListenerRow{},
+			errors.New("ss returned an ambiguous public DNS listener address")
+	}
+	peerHost, peerPort, err := net.SplitHostPort(fields[5])
+	if err != nil || peerPort != "*" || parseDNSListenerAddress(peerHost) == nil {
+		return canonicalDNSPort53ListenerRow{},
+			errors.New("ss returned a non-canonical DNS listener peer endpoint")
+	}
+	process, pid, err := parseCanonicalSSProcessField(fields[6])
+	if err != nil {
+		return canonicalDNSPort53ListenerRow{}, err
+	}
+	return canonicalDNSPort53ListenerRow{
+		protocol: protocol, address: address, process: process, pid: pid,
+	}, nil
+}
+
+func parseCanonicalSSProcessField(field string) (string, uint64, error) {
+	const prefix = `users:(("`
+	if !strings.HasPrefix(field, prefix) || !strings.HasSuffix(field, "))") ||
+		strings.Count(field, "pid=") != 1 || strings.Count(field, "fd=") != 1 {
+		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
+	}
+	body := strings.TrimSuffix(strings.TrimPrefix(field, prefix), "))")
+	process, identity, found := strings.Cut(body, `",pid=`)
+	if !found || process == "" ||
+		strings.ContainsAny(process, "\x00\r\n\t ,()\"") {
+		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
+	}
+	pidText, fdText, found := strings.Cut(identity, ",fd=")
+	if !found || pidText == "" || fdText == "" {
+		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
+	}
+	pid, pidErr := strconv.ParseUint(pidText, 10, 64)
+	fd, fdErr := strconv.ParseUint(fdText, 10, 64)
+	if pidErr != nil || pid == 0 || strconv.FormatUint(pid, 10) != pidText ||
+		fdErr != nil || strconv.FormatUint(fd, 10) != fdText {
+		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
+	}
+	return process, pid, nil
 }
 
 func parseDNSListenerAddress(host string) net.IP {

@@ -87,12 +87,16 @@ type ServiceOperationMutationJob struct {
 	Status         string
 	Phase          string
 	Attempt        int
+	StartedAt      time.Time
+	UpdatedAt      time.Time
 	LeaseExpiresAt time.Time
 	DeadlineAt     time.Time
+	FinishedAt     time.Time
 	ErrorCode      string
 	ErrorMessage   string
 	WorkerPID      int
 	WorkerStarted  string
+	WorkerCommand  string
 }
 
 type ServiceOperationMutationResponse struct {

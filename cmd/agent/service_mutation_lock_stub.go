@@ -13,6 +13,10 @@ type serviceMutationFileLock struct {
 	file *os.File
 }
 
+func acquireExistingServiceMutationFileLock(string) (*serviceMutationFileLock, error) {
+	return nil, fmt.Errorf("read-only service mutation flock proof is supported only on Linux")
+}
+
 func acquireServiceMutationFileLock(path string) (*serviceMutationFileLock, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return nil, err

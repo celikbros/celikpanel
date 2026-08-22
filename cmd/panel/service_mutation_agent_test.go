@@ -448,3 +448,372 @@ func TestStandaloneHeartbeatStopsQuietlyOnExactTerminalSuccess(t *testing.T) {
 	default:
 	}
 }
+
+func TestStandaloneAgentMutationFailureClassification(t *testing.T) {
+	backendErr := errors.New("backend exposed /secret/path and token=raw-backend-token")
+	heartbeatTransportErr := errors.New("heartbeat transport exposed /run/private.sock")
+
+	tests := []struct {
+		name         string
+		callErr      error
+		heartbeatErr error
+		wantCode     string
+		wantMessage  string
+		wantCauses   []error
+	}{
+		{
+			name:        "healthy lease backend failure",
+			callErr:     backendErr,
+			wantCode:    errCodeServiceOperationFailed,
+			wantMessage: "The privileged host operation did not complete.",
+			wantCauses:  []error{backendErr},
+		},
+		{
+			name:         "verified terminal lease loss",
+			callErr:      backendErr,
+			heartbeatErr: errAgentMutationLeaseLost,
+			wantCode:     errCodeServiceOperationLeaseLost,
+			wantMessage:  "The privileged host operation lost its agent lease.",
+			wantCauses:   []error{backendErr, errAgentMutationLeaseLost},
+		},
+		{
+			name:         "verified owner identity loss",
+			heartbeatErr: errAgentMutationIdentityMismatch,
+			wantCode:     errCodeServiceOperationLeaseLost,
+			wantMessage:  "The privileged host operation lost its agent lease.",
+			wantCauses:   []error{errAgentMutationIdentityMismatch},
+		},
+		{
+			name:         "verified terminal backend failure",
+			heartbeatErr: errAgentMutationTerminalFailed,
+			wantCode:     errCodeServiceOperationFailed,
+			wantMessage:  "The privileged host operation did not complete.",
+			wantCauses:   []error{errAgentMutationTerminalFailed},
+		},
+		{
+			name:         "heartbeat transport uncertainty",
+			callErr:      backendErr,
+			heartbeatErr: heartbeatTransportErr,
+			wantCode:     errCodeServiceOperationHeartbeatUncertain,
+			wantMessage:  "The privileged host operation's agent lease could not be verified.",
+			wantCauses:   []error{backendErr, heartbeatTransportErr},
+		},
+		{
+			name: "no failure",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			failure := standaloneAgentMutationFailure(test.callErr, test.heartbeatErr)
+			if test.wantCode == "" {
+				if failure != nil {
+					t.Fatalf("failure = %+v, want nil", failure)
+				}
+				return
+			}
+			if failure == nil {
+				t.Fatal("failure = nil")
+			}
+			if failure.Code != test.wantCode || failure.Message != test.wantMessage {
+				t.Fatalf(
+					"failure code/message = %q/%q, want %q/%q",
+					failure.Code,
+					failure.Message,
+					test.wantCode,
+					test.wantMessage,
+				)
+			}
+			for _, wantCause := range test.wantCauses {
+				if !errors.Is(failure.Cause, wantCause) {
+					t.Fatalf("failure cause = %v, want wrapped %v", failure.Cause, wantCause)
+				}
+			}
+			for _, secret := range []string{"/secret/path", "raw-backend-token", "/run/private.sock"} {
+				if strings.Contains(failure.Code, secret) || strings.Contains(failure.Message, secret) {
+					t.Fatalf("durable failure leaked %q: %+v", secret, failure)
+				}
+			}
+		})
+	}
+}
+
+type heartbeatFailureClassificationAgent struct {
+	job           *ServiceOperationMutationJob
+	responseError string
+	transportErr  error
+}
+
+func (a *heartbeatFailureClassificationAgent) PkgFamily(
+	_ *transport.Empty,
+	out *string,
+) error {
+	*out = "apt"
+	return nil
+}
+
+func (a *heartbeatFailureClassificationAgent) HeartbeatServiceMutation(
+	_ *ServiceOperationMutationHeartbeatRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	response.Job = cloneServiceOperationMutationJob(a.job)
+	response.Error = a.responseError
+	return a.transportErr
+}
+
+func TestHeartbeatAgentMutationOnlyProvesConcreteLeaseLoss(t *testing.T) {
+	requestID := strings.Repeat("1", 32)
+	ownerID := strings.Repeat("2", 32)
+	binding := agentMutationBinding{
+		MutationRequestID: requestID,
+		MutationOwnerID:   ownerID,
+	}
+	running := &ServiceOperationMutationJob{
+		RequestID: requestID,
+		OwnerID:   ownerID,
+		Status:    agentMutationRunning,
+	}
+
+	tests := []struct {
+		name          string
+		job           *ServiceOperationMutationJob
+		responseError string
+		transportErr  error
+		wantErr       bool
+		wantLeaseLost bool
+		wantFailed    bool
+	}{
+		{
+			name: "healthy exact lease",
+			job:  running,
+		},
+		{
+			name: "exact lease-expired terminal",
+			job: &ServiceOperationMutationJob{
+				RequestID: requestID,
+				OwnerID:   ownerID,
+				Status:    agentMutationFailed,
+				ErrorCode: agentMutationLeaseExpiredErrorCode,
+			},
+			responseError: "service mutation lease is not owned by this panel",
+			wantErr:       true,
+			wantLeaseLost: true,
+		},
+		{
+			name: "exact backend-failed terminal is not lease loss",
+			job: &ServiceOperationMutationJob{
+				RequestID: requestID,
+				OwnerID:   ownerID,
+				Status:    agentMutationFailed,
+				ErrorCode: "bind_stage_failed",
+			},
+			responseError: "service mutation lease is not owned by this panel",
+			wantErr:       true,
+			wantFailed:    true,
+		},
+		{
+			name: "different owner",
+			job: &ServiceOperationMutationJob{
+				RequestID: requestID,
+				OwnerID:   strings.Repeat("3", 32),
+				Status:    agentMutationRunning,
+			},
+			wantErr:       true,
+			wantLeaseLost: true,
+		},
+		{
+			name:          "running response error is uncertain",
+			job:           running,
+			responseError: "agent manager state could not be read",
+			wantErr:       true,
+		},
+		{
+			name:    "missing job is uncertain",
+			wantErr: true,
+		},
+		{
+			name:         "transport failure is uncertain",
+			transportErr: errors.New("simulated transport loss"),
+			wantErr:      true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			agent := &heartbeatFailureClassificationAgent{
+				job:           test.job,
+				responseError: test.responseError,
+				transportErr:  test.transportErr,
+			}
+			panel := newPolicyDispatchTestPanel(t, agent)
+			_, err := panel.heartbeatAgentMutation(
+				context.Background(),
+				binding,
+				"",
+			)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("heartbeat error = %v, wantErr=%v", err, test.wantErr)
+			}
+			if got := errors.Is(err, errAgentMutationLeaseLost); got != test.wantLeaseLost {
+				t.Fatalf(
+					"heartbeat lease-lost classification = %v, want %v (error=%v)",
+					got,
+					test.wantLeaseLost,
+					err,
+				)
+			}
+			if got := errors.Is(err, errAgentMutationTerminalFailed); got != test.wantFailed {
+				t.Fatalf(
+					"heartbeat terminal-failed classification = %v, want %v (error=%v)",
+					got,
+					test.wantFailed,
+					err,
+				)
+			}
+		})
+	}
+}
+
+type standaloneFailureFinishAgent struct {
+	durableMutationRPCFixture
+
+	captureMu sync.Mutex
+	finishes  []ServiceOperationMutationFinishRequest
+}
+
+func (a *standaloneFailureFinishAgent) PkgFamily(
+	_ *transport.Empty,
+	out *string,
+) error {
+	*out = "apt"
+	return nil
+}
+
+func (a *standaloneFailureFinishAgent) FinishServiceMutation(
+	request *ServiceOperationMutationFinishRequest,
+	response *ServiceOperationMutationResponse,
+) error {
+	a.captureMu.Lock()
+	a.finishes = append(a.finishes, *request)
+	a.captureMu.Unlock()
+	return a.durableMutationRPCFixture.FinishServiceMutation(request, response)
+}
+
+func (a *standaloneFailureFinishAgent) finishRequests() []ServiceOperationMutationFinishRequest {
+	a.captureMu.Lock()
+	defer a.captureMu.Unlock()
+	return append([]ServiceOperationMutationFinishRequest(nil), a.finishes...)
+}
+
+func TestStandaloneBackendFailureFinishesWithSanitizedGeneralCode(t *testing.T) {
+	agent := &standaloneFailureFinishAgent{}
+	panel := newPolicyDispatchTestPanel(t, agent)
+	backendErr := errors.New("backend exposed /etc/private.conf and token=backend-secret")
+
+	err := panel.withStandaloneAgentMutation(
+		context.Background(),
+		"service_action",
+		"nginx",
+		"",
+		func(context.Context, agentMutationBinding) error {
+			return backendErr
+		},
+	)
+	if !errors.Is(err, backendErr) {
+		t.Fatalf("standalone failure = %v, want backend cause", err)
+	}
+
+	finishes := agent.finishRequests()
+	if len(finishes) != 1 {
+		t.Fatalf("FinishServiceMutation calls = %d, want 1", len(finishes))
+	}
+	finish := finishes[0]
+	if finish.Success {
+		t.Fatal("ordinary backend failure was finished as success")
+	}
+	if finish.FailureCode != errCodeServiceOperationFailed ||
+		finish.Message != "The privileged host operation did not complete." {
+		t.Fatalf(
+			"finish code/message = %q/%q",
+			finish.FailureCode,
+			finish.Message,
+		)
+	}
+	if finish.FailureCode == errCodeServiceOperationLeaseLost {
+		t.Fatal("ordinary backend failure was mislabeled as lease loss")
+	}
+	for _, secret := range []string{"/etc/private.conf", "backend-secret"} {
+		if strings.Contains(finish.FailureCode, secret) ||
+			strings.Contains(finish.Message, secret) {
+			t.Fatalf("FinishServiceMutation leaked %q: %+v", secret, finish)
+		}
+	}
+
+	agent.mu.Lock()
+	job := cloneServiceOperationMutationJob(agent.jobs[finish.RequestID])
+	agent.mu.Unlock()
+	if job == nil || job.Status != agentMutationFailed ||
+		job.ErrorCode != errCodeServiceOperationFailed ||
+		job.ErrorMessage != "The privileged host operation did not complete." {
+		t.Fatalf("durable terminal job = %+v", job)
+	}
+}
+
+func TestHeartbeatUncertainFailureIsAcceptedAsTerminalFailed(t *testing.T) {
+	agent := &standaloneFailureFinishAgent{}
+	panel := newPolicyDispatchTestPanel(t, agent)
+	op := serviceOperation{
+		RequestID: strings.Repeat("4", 32),
+		Kind:      "service_action",
+		ServiceID: "nginx",
+	}
+	ownerID := strings.Repeat("5", 32)
+	if _, err := panel.beginAgentMutation(
+		context.Background(),
+		op,
+		ownerID,
+		false,
+	); err != nil {
+		t.Fatalf("begin mutation: %v", err)
+	}
+
+	heartbeatErr := errors.New("heartbeat transport exposed /run/private.sock")
+	failure := standaloneAgentMutationFailure(nil, heartbeatErr)
+	binding := agentMutationBinding{
+		MutationRequestID: op.RequestID,
+		MutationOwnerID:   ownerID,
+	}
+	terminal, err := panel.finishAgentMutationContext(
+		context.Background(),
+		binding,
+		false,
+		failure,
+	)
+	if err != nil {
+		t.Fatalf("finish heartbeat-uncertain mutation: %v", err)
+	}
+	if terminal == nil || terminal.Status != agentMutationFailed ||
+		terminal.ErrorCode != errCodeServiceOperationHeartbeatUncertain ||
+		terminal.ErrorMessage != "The privileged host operation's agent lease could not be verified." {
+		t.Fatalf("terminal heartbeat-uncertain job = %+v", terminal)
+	}
+	if strings.Contains(terminal.ErrorMessage, "/run/private.sock") {
+		t.Fatalf("terminal message leaked heartbeat detail: %q", terminal.ErrorMessage)
+	}
+}
+
+func TestStandaloneTerminalFailureCodesAreNotStartupResumeSignals(t *testing.T) {
+	for _, code := range []string{
+		errCodeServiceOperationFailed,
+		errCodeServiceOperationHeartbeatUncertain,
+	} {
+		t.Run(code, func(t *testing.T) {
+			if agentMutationCanResume(&agentMutationJob{
+				Status:    agentMutationFailed,
+				ErrorCode: code,
+			}) {
+				t.Fatalf("terminal code %q was treated as a restart-resume signal", code)
+			}
+		})
+	}
+}
