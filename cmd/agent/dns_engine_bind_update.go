@@ -1,0 +1,310 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/transport"
+)
+
+const bindSignedUpdatePreparationTimeout = 30 * time.Second
+
+func bindSafeAPTCommandEnvironment() []string {
+	return []string{
+		"PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+		"HOME=/root",
+		"LC_ALL=C",
+	}
+}
+
+type bindSignedUpdatePreparationOps struct {
+	checkIdle        func() error
+	detectProfile    func() (hostplatform.Profile, error)
+	readJournal      func() (dnsEngineSwitchJournal, bool, error)
+	readInstall      func() (dnsEngineInstallOwnershipReceipt, bool, error)
+	readState        func() (dnsEngineStateReceipt, bool, error)
+	readOwnership    func() (dnsEngineStateReceipt, bool, error)
+	packageInstalled func(context.Context, hostplatform.Profile, string) (bool, error)
+	parentExists     func() (bool, error)
+	prepare          func(context.Context) error
+	hardenExisting   func(context.Context) error
+	verifyExisting   func(context.Context, dnsEngineStateReceipt) error
+}
+
+func prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
+	ctx context.Context,
+	stateDir, lockPath string,
+) error {
+	return prepareBINDGenerationRootForSignedUpdateWithOps(
+		ctx,
+		bindSignedUpdatePreparationOps{
+			checkIdle: func() error {
+				return checkServiceMutationIdleUnderExternalLock(stateDir, lockPath)
+			},
+			detectProfile: verifiedHostProfileForAnyFamily,
+			readJournal:   readDNSEngineSwitchJournal,
+			readInstall: func() (dnsEngineInstallOwnershipReceipt, bool, error) {
+				return readDNSEngineInstallOwnership(transport.DNSEngineBIND)
+			},
+			readState: readDNSEngineState,
+			readOwnership: func() (dnsEngineStateReceipt, bool, error) {
+				return readDNSEngineOwnership(transport.DNSEngineBIND)
+			},
+			packageInstalled: exactBINDPackageInstalledForSignedUpdate,
+			parentExists: func() (bool, error) {
+				_, err := os.Lstat(aptBINDCacheParentPath)
+				if errors.Is(err, os.ErrNotExist) {
+					return false, nil
+				}
+				return err == nil, err
+			},
+			prepare: func(prepareCtx context.Context) error {
+				return prepareHostBINDGenerationRoot(prepareCtx, bindHostLayout{
+					GenerationRoot: aptBINDGenerationRoot,
+					Packages:       []string{"bind9"},
+				})
+			},
+			hardenExisting: func(prepareCtx context.Context) error {
+				return hardenExistingHostBINDGenerationRoot(
+					prepareCtx,
+					bindHostLayout{
+						GenerationRoot: aptBINDGenerationRoot,
+						Packages:       []string{"bind9"},
+					},
+				)
+			},
+			verifyExisting: verifyExistingManagedBINDGenerationForSignedUpdate,
+		},
+	)
+}
+
+func prepareBINDGenerationRootForSignedUpdateWithOps(
+	ctx context.Context,
+	ops bindSignedUpdatePreparationOps,
+) error {
+	if ctx == nil || ops.checkIdle == nil || ops.detectProfile == nil ||
+		ops.readJournal == nil || ops.readInstall == nil ||
+		ops.readState == nil || ops.readOwnership == nil ||
+		ops.packageInstalled == nil || ops.parentExists == nil ||
+		ops.prepare == nil || ops.hardenExisting == nil ||
+		ops.verifyExisting == nil {
+		return errors.New("invalid signed-update BIND root preparation")
+	}
+	if err := ops.checkIdle(); err != nil {
+		return fmt.Errorf("reverify external mutation lock and idle ledger: %w", err)
+	}
+	profile, err := ops.detectProfile()
+	if err != nil {
+		return err
+	}
+	if profile.PackageManager != hostplatform.PackageManagerAPT {
+		return nil
+	}
+	if _, exists, err := ops.readJournal(); err != nil {
+		return fmt.Errorf("inspect DNS engine switch journal: %w", err)
+	} else if exists {
+		return errors.New("DNS engine switch journal exists during signed update")
+	}
+
+	install, installExists, err := ops.readInstall()
+	if err != nil {
+		return fmt.Errorf("inspect BIND install ownership: %w", err)
+	}
+	if installExists {
+		if err := validateDNSEngineInstallOwnership(install); err != nil {
+			return err
+		}
+		if !exactDNSEngineInstallOwnership(
+			install, true, transport.DNSEngineBIND,
+			hostplatform.PackageManagerAPT, []string{"bind9"},
+		) {
+			return errors.New("BIND install ownership differs from the supported APT package set")
+		}
+	}
+	state, stateExists, err := ops.readState()
+	if err != nil {
+		return fmt.Errorf("inspect DNS engine state: %w", err)
+	}
+	if stateExists {
+		if err := validateDNSEngineState(state); err != nil {
+			return err
+		}
+	}
+	ownership, ownershipExists, err := ops.readOwnership()
+	if err != nil {
+		return fmt.Errorf("inspect BIND engine ownership: %w", err)
+	}
+	if ownershipExists {
+		if err := validateDNSEngineState(ownership); err != nil {
+			return err
+		}
+		if ownership.Engine != transport.DNSEngineBIND {
+			return errors.New("BIND ownership receipt names another DNS engine")
+		}
+	}
+	managedState := dnsEngineStateReceipt{}
+	managedStateExists := false
+	if stateExists && state.Engine == transport.DNSEngineBIND {
+		managedState = state
+		managedStateExists = true
+	}
+	if ownershipExists {
+		if managedStateExists && ownership != managedState {
+			return errors.New("BIND state and ownership receipts disagree")
+		}
+		managedState = ownership
+		managedStateExists = true
+	}
+	if installExists && managedStateExists {
+		return errors.New(
+			"BIND transitional install ownership coexists with managed engine state",
+		)
+	}
+	provenance := installExists ||
+		managedStateExists
+	if !provenance {
+		return nil
+	}
+	if !supportedAPTBindLegacyRootProfile(profile) {
+		return errors.New("existing managed BIND root is on an uncertified APT host profile")
+	}
+	installed, err := ops.packageInstalled(ctx, profile, "bind9")
+	if err != nil {
+		return fmt.Errorf("verify exact bind9 package status: %w", err)
+	}
+	if !installed {
+		return errors.New("managed BIND provenance exists but the exact bind9 package is absent")
+	}
+	exists, err := ops.parentExists()
+	if err != nil {
+		return fmt.Errorf("inspect legacy BIND cache parent: %w", err)
+	}
+	if !exists {
+		return errors.New("managed BIND provenance exists but /var/cache/bind is absent")
+	}
+	if installExists {
+		if err := ops.prepare(ctx); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := ops.hardenExisting(ctx); err != nil {
+		return fmt.Errorf("harden existing managed BIND root: %w", err)
+	}
+	if err := ops.verifyExisting(ctx, managedState); err != nil {
+		return fmt.Errorf("verify existing managed BIND generation: %w", err)
+	}
+	return nil
+}
+
+func exactBINDPackageInstalledForSignedUpdate(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	packageName string,
+) (bool, error) {
+	if ctx == nil || packageName != "bind9" ||
+		profile.PackageManager != hostplatform.PackageManagerAPT {
+		return false, errors.New("invalid signed-update BIND package proof")
+	}
+	dpkgQuery, err := executableForProfile(
+		profile, string(profile.PackageManager), "dpkg-query",
+	)
+	if err != nil {
+		return false, err
+	}
+	return exactBINDPackageInstalledForSignedUpdateWithRunner(
+		ctx, dpkgQuery, packageName,
+		func(commandCtx context.Context, name string, args ...string) ([]byte, error) {
+			command := serviceMutationCommand(commandCtx, name, args...)
+			command.Env = bindSafeAPTCommandEnvironment()
+			return command.CombinedOutputLimited(4 << 10)
+		},
+	)
+}
+
+type bindPackageStatusRunner func(context.Context, string, ...string) ([]byte, error)
+
+func exactBINDPackageInstalledForSignedUpdateWithRunner(
+	ctx context.Context,
+	dpkgQuery, packageName string,
+	runner bindPackageStatusRunner,
+) (bool, error) {
+	if ctx == nil || dpkgQuery == "" || packageName != "bind9" || runner == nil {
+		return false, errors.New("invalid signed-update BIND package command proof")
+	}
+	output, err := runner(
+		ctx, dpkgQuery, "-W", "-f", "${Status}", "--", packageName,
+	)
+	if err != nil {
+		return false, err
+	}
+	if string(output) != "install ok installed" {
+		return false, errors.New("dpkg-query returned a non-canonical bind9 package status")
+	}
+	return true, nil
+}
+
+func verifyExistingManagedBINDGenerationForSignedUpdate(
+	ctx context.Context,
+	state dnsEngineStateReceipt,
+) error {
+	if ctx == nil {
+		return errors.New("existing managed BIND proof requires a context")
+	}
+	if err := validateDNSEngineState(state); err != nil {
+		return err
+	}
+	if state.Engine != transport.DNSEngineBIND {
+		return errors.New("existing managed BIND proof names another engine")
+	}
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return err
+	}
+	layout, err := bindLayout(profile)
+	if err != nil {
+		return err
+	}
+	publisher, _, err := newHostBINDPublisher(ctx, layout)
+	if err != nil {
+		return err
+	}
+	tree, err := publisher.LoadCurrent()
+	if err != nil {
+		return fmt.Errorf("load existing managed BIND generation: %w", err)
+	}
+	return verifyExistingManagedBINDTreeForSignedUpdate(layout, state, tree)
+}
+
+func verifyExistingManagedBINDTreeForSignedUpdate(
+	layout bindHostLayout,
+	state dnsEngineStateReceipt,
+	tree binddns.VerifiedTree,
+) error {
+	receipt := tree.CurrentReceipt()
+	if receipt.EngineEpoch != state.EngineEpoch ||
+		receipt.Generation != state.Generation {
+		return errors.New("existing BIND current receipt differs from managed state")
+	}
+	legacyOptions, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, tree, false, true, false,
+	)
+	if err != nil {
+		return err
+	}
+	if err := verifyManagedBINDRuntimeConfigExact(
+		layout, receipt, legacyOptions,
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func supportedAPTBindLegacyRootProfile(profile hostplatform.Profile) bool {
+	return certifyAPTBINDProfile(profile) == nil
+}

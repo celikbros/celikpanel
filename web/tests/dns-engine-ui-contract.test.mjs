@@ -15,6 +15,10 @@ const settings = readFileSync(
   new URL('../src/components/DNSServerSettings.tsx', import.meta.url),
   'utf8',
 );
+const settingsPage = readFileSync(
+  new URL('../src/components/Settings.tsx', import.meta.url),
+  'utf8',
+);
 const identityPlan = readFileSync(
   new URL('../src/lib/dnsIdentityPlan.ts', import.meta.url),
   'utf8',
@@ -85,6 +89,41 @@ test('DNS engine state decoder fails closed on malformed or contradictory state'
   assert.match(contract, /return null;/);
   assert.match(card, /const decoded = decodeDNSEngineSnapshot\(payload\)/);
   assert.match(card, /if \(decoded === null\)[\s\S]*onSnapshotChange\?\.\(null\)/);
+});
+
+test('hidden and initial DNS state load is read-only; explicit Refresh reconciles before GET', () => {
+  const loadStart = card.indexOf('const refresh = useCallback');
+  const reconcileStart = card.indexOf('const reconcileAndRefresh = useCallback', loadStart);
+  const effectStart = card.indexOf('useEffect(() => {', reconcileStart);
+  assert.ok(loadStart >= 0 && reconcileStart > loadStart && effectStart > reconcileStart);
+
+  const loadBody = card.slice(loadStart, reconcileStart);
+  assert.match(loadBody, /fetch\('\/api\/v1\/dns\/engine'/);
+  assert.match(loadBody, /method: 'GET'/);
+  assert.doesNotMatch(loadBody, /engine\/reconcile/);
+
+  const reconcileBody = card.slice(reconcileStart, effectStart);
+  const post = reconcileBody.indexOf("fetch('/api/v1/dns/engine/reconcile'");
+  const get = reconcileBody.indexOf('await refresh()');
+  assert.ok(post >= 0 && get > post,
+    'Refresh must attempt reconciliation before reading a fresh snapshot');
+  assert.match(reconcileBody, /method: 'POST'/);
+  assert.match(reconcileBody, /if \(!response\.ok\)[\s\S]*await readApiError\(response\)/);
+  assert.match(reconcileBody, /catch \{[\s\S]*\}[\s\S]*await refresh\(\)/,
+    'a failed POST must still render the fail-closed GET truth');
+  assert.match(reconcileBody,
+    /setReview\(null\)[\s\S]*fetch\('\/api\/v1\/dns\/engine\/reconcile'/,
+    'Refresh must discard stale review authority before reconciliation');
+  assert.equal((reconcileBody.match(/await refresh\(\)/g) ?? []).length, 1,
+    'an explicit Refresh must perform exactly one snapshot GET after the POST');
+
+  const initialEffect = card.slice(effectStart, card.indexOf('useEffect(() => {', effectStart + 1));
+  assert.match(initialEffect, /void refresh\(\)/);
+  assert.doesNotMatch(initialEffect, /reconcileAndRefresh/);
+  assert.match(settingsPage,
+    /id="settings-dns-panel"[\s\S]*hidden=\{activeID !== 'dns'\}[\s\S]*<DNSServerSettings \/>/,
+    'the DNS card remains mounted while hidden, so its mount effect must stay GET-only');
+  assert.match(card, /onClick=\{\(\) => void reconcileAndRefresh\(\)\}/);
 });
 
 test('DNS engine decoder rejects impossible authority tuples', async () => {

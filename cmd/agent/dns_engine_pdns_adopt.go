@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -376,14 +377,36 @@ func rollbackPDNSAdoption(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	journal dnsEngineSwitchJournal,
 ) error {
-	restoreErr := restoreDNSFileSnapshot(journal.StateBefore)
+	if ctx == nil {
+		return errors.New("rollback PowerDNS adoption requires a bounded context")
+	}
+	return rollbackPDNSAdoptionWithOps(
+		ctx,
+		func() error {
+			return restoreDNSFileSnapshot(journal.StateBefore)
+		},
+		func(verifyCtx context.Context) error {
+			return verifyPDNSAdoptionEvidence(
+				verifyCtx, systemctl, manifest, journal,
+				pdnsAdoptionEvidenceRollback,
+			)
+		},
+	)
+}
+
+func rollbackPDNSAdoptionWithOps(
+	ctx context.Context,
+	restoreState func() error,
+	verifyRestored func(context.Context) error,
+) error {
+	if ctx == nil || restoreState == nil || verifyRestored == nil {
+		return errors.New("invalid PowerDNS adoption rollback operations")
+	}
+	restoreErr := restoreState()
 	if restoreErr != nil {
 		return restoreErr
 	}
-	return verifyPDNSAdoptionEvidence(
-		context.WithoutCancel(ctx), systemctl, manifest, journal,
-		pdnsAdoptionEvidenceRollback,
-	)
+	return verifyRestored(ctx)
 }
 
 func adoptPDNS(
@@ -398,6 +421,17 @@ func adoptPDNS(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	return runCertifiedPDNSTargetMutation(profile, func() (transport.SwitchDNSEngineV1Response, error) {
+		return adoptPDNSOnCertifiedProfile(ctx, manifest, binding, profile)
+	})
+}
+
+func adoptPDNSOnCertifiedProfile(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+	profile hostplatform.Profile,
+) (transport.SwitchDNSEngineV1Response, error) {
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -505,9 +539,11 @@ func adoptPDNS(
 		}
 		journal = rollingBack
 		var journalErr error
-		recoveryCtx, cancel := context.WithTimeout(
-			context.WithoutCancel(ctx), dnsEngineSwitchRecoveryLimit,
-		)
+		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+		if contextErr != nil {
+			return transport.SwitchDNSEngineV1Response{},
+				errors.Join(cause, journalErr, contextErr)
+		}
 		defer cancel()
 		rollbackErr := rollbackPDNSAdoption(recoveryCtx, systemctl, manifest, journal)
 		if rollbackErr == nil {

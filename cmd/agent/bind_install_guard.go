@@ -410,9 +410,17 @@ func (g *bindPackageInstallGuard) inspect(ctx context.Context, unit string) (bin
 	state := bindInstallUnitState{name: unit}
 	seen := map[string]bool{}
 	for _, line := range strings.Split(string(output), "\n") {
-		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
-		if !ok {
+		if line == "" {
 			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			return bindInstallUnitState{},
+				errors.New("systemctl show returned a malformed unit state row")
+		}
+		if seen[key] {
+			return bindInstallUnitState{},
+				errors.New("systemctl show returned a duplicate unit state")
 		}
 		switch key {
 		case "LoadState":
@@ -424,6 +432,9 @@ func (g *bindPackageInstallGuard) inspect(ctx context.Context, unit string) (bin
 		case "UnitFileState":
 			state.unitFileState = value
 			seen[key] = true
+		default:
+			return bindInstallUnitState{},
+				errors.New("systemctl show returned an unexpected unit state property")
 		}
 	}
 	if !seen["LoadState"] || !seen["ActiveState"] || !seen["UnitFileState"] {

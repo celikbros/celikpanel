@@ -150,6 +150,24 @@ export function DNSEngineCard({
         }
     }, [locale, onSnapshotChange]);
 
+    const reconcileAndRefresh = useCallback(async () => {
+        setReview(null);
+        setLoading(true);
+        setLoadError('');
+        try {
+            const response = await fetch('/api/v1/dns/engine/reconcile', {
+                method: 'POST',
+            });
+            if (!response.ok) {
+                await readApiError(response);
+            }
+        } catch {
+            // Reconciliation is deliberately best-effort from the browser.
+            // The following read still renders the attached fail-closed truth.
+        }
+        await refresh();
+    }, [refresh]);
+
     useEffect(() => {
         void refresh();
     }, [refresh]);
@@ -289,7 +307,7 @@ export function DNSEngineCard({
                         variant="secondary"
                         icon={RefreshCw}
                         disabled={loading || review?.committing === true}
-                        onClick={() => void refresh()}
+                        onClick={() => void reconcileAndRefresh()}
                     >
                         {et('dnsEngine.refresh')}
                     </Button>

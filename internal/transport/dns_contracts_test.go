@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/rpc"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -212,6 +213,60 @@ func TestDNSEngineSwitchWireContractPreservesManifest(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("switch round trip got=%#v want=%#v", got, want)
+	}
+}
+
+func TestDNSEngineRollbackEvidenceWireContractIsComparisonOnlyAndBounded(t *testing.T) {
+	switchRequest := SwitchDNSEngineV1Request{
+		ServiceMutationBinding: ServiceMutationBinding{
+			MutationRequestID: "request", MutationOwnerID: "owner",
+		},
+		Mode:         DNSEngineSwitchModeSwitch,
+		SourceEngine: DNSEnginePowerDNS, TargetEngine: DNSEngineBIND,
+		SourceEpoch: 2, TargetEpoch: 3, SourceRevision: 7,
+		Topology:          DNSTopologyStandalone,
+		SnapshotBytes:     2,
+		ManifestQualifier: "dns-engine-switch/v1:sha256:digest",
+	}
+	wantRequest := DNSEngineRollbackEvidenceRequest(switchRequest)
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(wantRequest); err != nil {
+		t.Fatal(err)
+	}
+	var gotRequest DNSEngineRollbackEvidenceRequest
+	if err := gob.NewDecoder(&wire).Decode(&gotRequest); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(gotRequest, wantRequest) {
+		t.Fatalf("evidence request round trip got=%#v want=%#v",
+			gotRequest, wantRequest)
+	}
+
+	responseType := reflect.TypeOf(DNSEngineRollbackEvidenceResponse{})
+	if responseType.NumField() != 2 ||
+		responseType.Field(0).Name != "Outcome" ||
+		responseType.Field(0).Tag.Get("json") != "outcome" ||
+		responseType.Field(1).Name != "ReceiptCommitment" ||
+		responseType.Field(1).Tag.Get("json") !=
+			"receipt_commitment,omitempty" {
+		t.Fatalf("rollback evidence response grew an unbounded field: %v",
+			responseType)
+	}
+	wantResponse := DNSEngineRollbackEvidenceResponse{
+		Outcome:           DNSEngineRollbackSafe,
+		ReceiptCommitment: strings.Repeat("a", 64),
+	}
+	wire.Reset()
+	if err := gob.NewEncoder(&wire).Encode(wantResponse); err != nil {
+		t.Fatal(err)
+	}
+	var gotResponse DNSEngineRollbackEvidenceResponse
+	if err := gob.NewDecoder(&wire).Decode(&gotResponse); err != nil {
+		t.Fatal(err)
+	}
+	if gotResponse != wantResponse {
+		t.Fatalf("evidence response round trip got=%#v want=%#v",
+			gotResponse, wantResponse)
 	}
 }
 

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
@@ -145,7 +146,7 @@ func verifyDNSSwitchJournalTarget(
 		if err != nil {
 			return err
 		}
-		publisher, _, err := newHostBINDPublisher(layout)
+		publisher, _, err := newHostBINDPublisher(ctx, layout)
 		if err != nil {
 			return err
 		}
@@ -317,7 +318,7 @@ func rollbackDNSSwitchJournal(
 		if err != nil {
 			return err
 		}
-		publisher, _, err := newHostBINDPublisher(layout)
+		publisher, _, err := newHostBINDPublisher(ctx, layout)
 		if err != nil {
 			return err
 		}
@@ -353,45 +354,144 @@ func verifyNoManagedDNSAuthority(
 	systemctl string,
 	journal dnsEngineSwitchJournal,
 ) error {
-	for _, unit := range []string{"named.service", "bind9.service", "pdns.service"} {
-		state, err := dnsSystemdStateGuard(systemctl).inspect(ctx, unit)
-		if err != nil {
-			return err
-		}
-		if state.active() {
-			// Legacy PDNS adoption has an empty source identity but an active
-			// target-before snapshot which rollback must restore exactly.
-			if unit == "pdns.service" && targetSnapshotWasActive(journal, unit) {
-				return verifyOnlyPDNSActive(ctx, systemctl)
-			}
-			return errors.New("DNS rollback left an unexpected managed authority active")
-		}
+	if ctx == nil {
+		return errors.New("verify restored DNS authority requires a context")
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	// Legacy PDNS adoption has an empty source identity but an active
+	// target-before snapshot which rollback must restore exactly. Prove that
+	// complete active topology instead of applying the source-none proof.
+	if journal.Mode == transport.DNSEngineSwitchModeAdopt &&
+		targetSnapshotWasActive(journal, "pdns.service") {
+		return verifyOnlyPDNSActive(proofCtx, systemctl)
 	}
 	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
 	if err != nil {
 		return err
 	}
-	output, err := serviceMutationCommand(
-		context.WithoutCancel(ctx), ss, "-H", "-lntup", "sport = :53",
-	).CombinedOutputLimited(64 << 10)
+	guard := dnsSystemdStateGuard(systemctl)
+	return verifyNoManagedDNSAuthorityWithOps(noManagedDNSAuthorityProofOps{
+		inspectUnit: func(unit string) (bindInstallUnitState, error) {
+			return guard.inspect(proofCtx, unit)
+		},
+		inspectListeners: func() (string, error) {
+			output, commandErr := serviceMutationCommand(
+				proofCtx, ss, "-H", "-lntup", "sport = :53",
+			).CombinedOutputLimited(64 << 10)
+			if commandErr != nil {
+				return "", commandErr
+			}
+			return string(output), nil
+		},
+	})
+}
+
+type noManagedDNSAuthoritySnapshot struct {
+	named     bindInstallUnitState
+	bindAlias bindInstallUnitState
+	pdns      bindInstallUnitState
+	listeners []string
+}
+
+type noManagedDNSAuthorityProofOps struct {
+	inspectUnit      func(string) (bindInstallUnitState, error)
+	inspectListeners func() (string, error)
+}
+
+func captureNoManagedDNSAuthority(
+	ops noManagedDNSAuthorityProofOps,
+) (noManagedDNSAuthoritySnapshot, error) {
+	var snapshot noManagedDNSAuthoritySnapshot
+	if ops.inspectUnit == nil || ops.inspectListeners == nil {
+		return snapshot, errors.New("invalid no-authority proof operations")
+	}
+	var err error
+	snapshot.named, err = ops.inspectUnit("named.service")
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.bindAlias, err = ops.inspectUnit("bind9.service")
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.pdns, err = ops.inspectUnit("pdns.service")
+	if err != nil {
+		return snapshot, err
+	}
+	for _, state := range []bindInstallUnitState{
+		snapshot.named, snapshot.bindAlias, snapshot.pdns,
+	} {
+		if state.activeState != "inactive" {
+			return snapshot, errors.New(
+				"DNS rollback did not prove every managed authority inactive",
+			)
+		}
+	}
+	output, err := ops.inspectListeners()
+	if err != nil {
+		return snapshot, err
+	}
+	snapshot.listeners, err = canonicalNoPublicDNSAuthorityListeners(output)
+	if err != nil {
+		return snapshot, err
+	}
+	return snapshot, nil
+}
+
+func verifyNoManagedDNSAuthorityWithOps(
+	ops noManagedDNSAuthorityProofOps,
+) error {
+	first, err := captureNoManagedDNSAuthority(ops)
 	if err != nil {
 		return err
 	}
-	for _, line := range strings.Split(string(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
-			continue
-		}
-		host, port, splitErr := net.SplitHostPort(fields[4])
-		if splitErr != nil || port != "53" {
-			continue
-		}
-		address := parseDNSListenerAddress(host)
-		if address == nil || (!address.IsLoopback() && !address.IsLinkLocalUnicast()) {
-			return errors.New("DNS rollback left a public port-53 authority active")
-		}
+	second, err := captureNoManagedDNSAuthority(ops)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(second, first) {
+		return errors.New(
+			"DNS rollback authority snapshot changed during no-authority proof",
+		)
 	}
 	return nil
+}
+
+func canonicalNoPublicDNSAuthorityListeners(
+	output string,
+) ([]string, error) {
+	identities := map[string]struct{}{}
+	for _, line := range strings.Split(output, "\n") {
+		if line == "" {
+			continue
+		}
+		row, err := parseCanonicalDNSPort53ListenerRow(line)
+		if err != nil {
+			return nil, err
+		}
+		if !row.address.IsLoopback() && !row.address.IsLinkLocalUnicast() {
+			return nil, errors.New(
+				"DNS rollback left a public port-53 authority active",
+			)
+		}
+		identity := fmt.Sprintf(
+			"%s|%s|%s|%d",
+			row.protocol, row.address.String(), row.process, row.pid,
+		)
+		if _, duplicate := identities[identity]; duplicate {
+			return nil, errors.New(
+				"DNS rollback listener snapshot contains a duplicate",
+			)
+		}
+		identities[identity] = struct{}{}
+	}
+	result := make([]string, 0, len(identities))
+	for identity := range identities {
+		result = append(result, identity)
+	}
+	sort.Strings(result)
+	return result, nil
 }
 
 func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {

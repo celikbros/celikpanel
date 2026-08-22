@@ -2668,6 +2668,20 @@ CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATIO
     CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
     "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
     || die "installed agent durable ledger is not ready under the release lock"
+
+# Harden only an exactly CelikPanel-owned legacy BIND tree while the signed
+# updater still holds the common mutation flock and both coordinators are
+# stopped. The durable statoverride and secure child are monotonic host
+# hardening; rollback intentionally retains them for alpha35 compatibility.
+env -i \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    HOME=/root LC_ALL=C \
+    CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
+    CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+    CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+    "$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock \
+    || die "installed agent could not prepare the managed BIND generation root"
+verify_installed_release_artifacts
 find "$BIN_DIR" "$WEB_DIR" -type f -exec sync -f -- {} \; \
     || die "installed release files could not be made durable"
 sync -f -- "$BIN_DIR" "$WEB_DIR" "$PANEL_DB" \

@@ -168,6 +168,28 @@ type SwitchDNSEngineV1Response struct {
 	Error        string    `json:"error,omitempty"`
 }
 
+// DNSEngineRollbackEvidenceRequest replays the frozen canonical switch
+// manifest as comparison-only input. It grants no mutation lease and accepts
+// no host path or caller-selected recovery action. The response contains only
+// a bounded outcome and a fixed-size terminal-receipt commitment.
+type DNSEngineRollbackEvidenceRequest SwitchDNSEngineV1Request
+
+type DNSEngineRollbackEvidenceResponse struct {
+	Outcome           string `json:"outcome"`
+	ReceiptCommitment string `json:"receipt_commitment,omitempty"`
+}
+
+const (
+	DNSEngineRollbackSafe                     = "rollback_safe"
+	DNSEngineRollbackActiveOperation          = "active_operation"
+	DNSEngineRollbackIdentityMismatch         = "identity_mismatch"
+	DNSEngineRollbackJournalPresent           = "journal_present"
+	DNSEngineRollbackCommittedEvidence        = "committed_evidence"
+	DNSEngineRollbackInstallOwnershipMismatch = "install_ownership_mismatch"
+	DNSEngineRollbackRuntimeUnsealed          = "runtime_unsealed"
+	DNSEngineRollbackUnverified               = "unverified"
+)
+
 // DNSBackendReadinessResponse reports only bounded runtime facts. Detailed
 // probe failures stay in agent logs and are not exposed as raw API errors.
 type DNSBackendRuntimeState struct {

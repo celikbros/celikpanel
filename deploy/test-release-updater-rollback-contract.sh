@@ -33,6 +33,13 @@ grep -Fq 'RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh' "$rollback" \
     || fail 'rollback does not pin the installed updater path'
 grep -Fq 'install_reviewed_release_updater' "$installer" \
     || fail 'installer does not publish the reviewed updater'
+grep -Fq 'rollback intentionally retains them for alpha35 compatibility' "$update" \
+    || fail 'update does not declare monotonic BIND root hardening rollback compatibility'
+grep -Fq -- '--prepare-bind-generation-root-under-external-lock' "$update" \
+    || fail 'signed updater does not prepare an exact managed legacy BIND root'
+if grep -Fq 'dpkg-statoverride --remove' "$rollback"; then
+    fail 'rollback removes monotonic BIND root hardening'
+fi
 
 capture_line=$(line_of "$update" 'printf '\''present\n'\'' > "$tmp_snap/release-updater.state"')
 apply_line=$(line_of "$update" '/bin/bash "$TRUSTED_RELEASE_ROOT/install.sh"')

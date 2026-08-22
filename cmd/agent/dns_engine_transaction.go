@@ -37,6 +37,26 @@ const (
 	dnsSwitchPhaseRolledBack     = "rolled-back"
 )
 
+func newDNSEngineRollbackContext(
+	parent context.Context,
+) (context.Context, context.CancelFunc, error) {
+	if parent == nil {
+		return nil, nil, errors.New("DNS rollback requires a parent context")
+	}
+	tracker, _ := parent.Value(
+		serviceMutationExecutionTrackerKey{},
+	).(*serviceMutationExecutionTracker)
+	if tracker != nil {
+		return serviceMutationCancellingRecoveryContext(
+			parent, dnsEngineSwitchRecoveryLimit,
+		)
+	}
+	recoveryCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(parent), dnsEngineSwitchRecoveryLimit,
+	)
+	return recoveryCtx, cancel, nil
+}
+
 type dnsFileSnapshot struct {
 	Path       string `json:"path"`
 	Exists     bool   `json:"exists"`

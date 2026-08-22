@@ -462,6 +462,19 @@ func main() {
 		log.Println("Service mutation state is idle under the external lock")
 		return
 	}
+	if len(os.Args) == 2 && os.Args[1] == "--prepare-bind-generation-root-under-external-lock" {
+		ctx, cancel := context.WithTimeout(
+			context.Background(), bindSignedUpdatePreparationTimeout,
+		)
+		defer cancel()
+		if err := prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
+			ctx, "", "",
+		); err != nil {
+			log.Fatalf("Prepare BIND generation root under external lock: %v", err)
+		}
+		log.Println("BIND generation root signed-update preparation complete")
+		return
+	}
 
 	mutationManager, err := agentServiceMutationManager()
 	if err != nil {

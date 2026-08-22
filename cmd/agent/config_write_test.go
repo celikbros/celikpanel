@@ -69,6 +69,7 @@ func TestConfigWriteRefusesDNSManagedPathsEvenWhenDiscovered(t *testing.T) {
 		"/etc/bind/named.conf.options",
 		"/etc/named.conf",
 		"/var/lib/powerdns/pdns.sqlite3",
+		"/etc/bind/celikpanel/current",
 		"/var/cache/bind/celikpanel/current",
 		"/var/named/celikpanel/current",
 	} {

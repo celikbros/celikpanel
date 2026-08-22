@@ -18,6 +18,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -1141,12 +1142,121 @@ func stopDNSSourceForPDNSTarget(
 	return nil
 }
 
-func startPDNSTarget(ctx context.Context, systemctl string) error {
+type pdnsTargetActivationOps struct {
+	verifySealed   func(context.Context) error
+	unmask         func(context.Context) error
+	daemonReload   func(context.Context) error
+	inspectStopped func(context.Context, ...string) (pdnsInactiveTargetSnapshot, error)
+	enable         func(context.Context) error
+	start          func(context.Context) error
+}
+
+func startPDNSTarget(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+) error {
 	guard := dnsSystemdStateGuard(systemctl)
-	if err := guard.ensureUnmasked(ctx, "pdns.service"); err != nil {
+	return startPDNSTargetWithOps(ctx, pdnsTargetActivationOps{
+		verifySealed: func(verifyCtx context.Context) error {
+			return verifyPDNSTargetSealedBeforeUnmask(
+				verifyCtx, profile, systemctl,
+			)
+		},
+		unmask: func(commandCtx context.Context) error {
+			return guard.ensureUnmasked(commandCtx, "pdns.service")
+		},
+		daemonReload: func(commandCtx context.Context) error {
+			reloadCtx, cancel := context.WithTimeout(
+				commandCtx, bindDaemonReloadTimeout,
+			)
+			defer cancel()
+			output, err := runServiceMutationCombinedOutput(
+				reloadCtx, systemctl, "daemon-reload",
+			)
+			if err != nil {
+				return fmt.Errorf(
+					"systemctl daemon-reload: %w: %s",
+					err, firstLine(string(output)),
+				)
+			}
+			return nil
+		},
+		inspectStopped: func(
+			verifyCtx context.Context,
+			allowed ...string,
+		) (pdnsInactiveTargetSnapshot, error) {
+			return inspectVerifiedPDNSInactiveTarget(
+				verifyCtx, profile, systemctl, allowed...,
+			)
+		},
+		enable: func(commandCtx context.Context) error {
+			return enableServiceForMutationWithExecutable(
+				commandCtx, systemctl, "pdns.service", false,
+			)
+		},
+		start: func(commandCtx context.Context) error {
+			output, commandErr := runServiceMutationCombinedOutput(
+				commandCtx, systemctl, "start", "pdns.service",
+			)
+			verifyErr := verifyServiceMutationUnitWithExecutable(
+				commandCtx, systemctl, "pdns.service", true,
+			)
+			if verifyErr == nil {
+				return nil
+			}
+			if commandErr != nil {
+				return fmt.Errorf(
+					"systemctl-start-failed:%v:%s; reconciliation: %v",
+					commandErr, strings.TrimSpace(string(output)), verifyErr,
+				)
+			}
+			return verifyErr
+		},
+	})
+}
+
+func startPDNSTargetWithOps(
+	ctx context.Context,
+	ops pdnsTargetActivationOps,
+) error {
+	if ctx == nil || ops.verifySealed == nil ||
+		ops.unmask == nil || ops.daemonReload == nil ||
+		ops.inspectStopped == nil || ops.enable == nil || ops.start == nil {
+		return errors.New("invalid PowerDNS target activation operation")
+	}
+	if err := ops.verifySealed(ctx); err != nil {
+		return fmt.Errorf(
+			"verify sealed PowerDNS vendor unit before unmask: %w", err,
+		)
+	}
+	if err := ops.unmask(ctx); err != nil {
+		return fmt.Errorf("unmask PowerDNS target without starting it: %w", err)
+	}
+	if err := ops.daemonReload(ctx); err != nil {
 		return err
 	}
-	return enableServiceForMutationWithExecutable(ctx, systemctl, "pdns.service", true)
+	beforeEnable, err := ops.inspectStopped(ctx, "disabled", "enabled")
+	if err != nil {
+		return fmt.Errorf(
+			"verify stopped PowerDNS vendor identity before enabling it: %w", err,
+		)
+	}
+	if beforeEnable.state.unitFileState == "disabled" {
+		if err := ops.enable(ctx); err != nil {
+			return fmt.Errorf("enable PowerDNS without starting it: %w", err)
+		}
+		if err := ops.daemonReload(ctx); err != nil {
+			return err
+		}
+	}
+	if _, err := ops.inspectStopped(ctx, "enabled"); err != nil {
+		return fmt.Errorf(
+			"verify stopped PowerDNS vendor identity immediately before start: %w",
+			err,
+		)
+	}
+	return ops.start(ctx)
 }
 
 func rollbackPDNSSwitch(
@@ -1155,15 +1265,62 @@ func rollbackPDNSSwitch(
 	journal dnsEngineSwitchJournal,
 	configs pdnsConfigMutation,
 ) error {
-	recoveryCtx := context.WithoutCancel(ctx)
-	_, stopErr := runDNSSystemctl(recoveryCtx, systemctl, "stop", "pdns.service")
+	if ctx == nil {
+		return errors.New("rollback PowerDNS switch requires a bounded context")
+	}
+	return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
+		stopTarget: func(commandCtx context.Context) error {
+			_, err := runDNSSystemctl(
+				commandCtx, systemctl, "stop", "pdns.service",
+			)
+			return err
+		},
+		restorePDNSDatabaseSnapshot: func() error {
+			return restorePDNSDatabase(journal)
+		},
+		restoreConfigs: configs.restore,
+		restoreState: func() error {
+			return restoreDNSFileSnapshot(journal.StateBefore)
+		},
+		restoreTarget: func(commandCtx context.Context) error {
+			return restoreDNSUnitSnapshots(
+				commandCtx, systemctl, journal.TargetUnitsBefore,
+			)
+		},
+		restoreSource: func(commandCtx context.Context) error {
+			return restoreDNSUnitSnapshots(
+				commandCtx, systemctl, journal.SourceUnitsBefore,
+			)
+		},
+	})
+}
+
+type pdnsSwitchRollbackOps struct {
+	stopTarget                  func(context.Context) error
+	restorePDNSDatabaseSnapshot func() error
+	restoreConfigs              func() error
+	restoreState                func() error
+	restoreTarget               func(context.Context) error
+	restoreSource               func(context.Context) error
+}
+
+func rollbackPDNSSwitchWithOps(
+	ctx context.Context,
+	ops pdnsSwitchRollbackOps,
+) error {
+	if ctx == nil || ops.stopTarget == nil ||
+		ops.restorePDNSDatabaseSnapshot == nil || ops.restoreConfigs == nil ||
+		ops.restoreState == nil || ops.restoreTarget == nil ||
+		ops.restoreSource == nil {
+		return errors.New("invalid PowerDNS switch rollback operations")
+	}
 	return errors.Join(
-		stopErr,
-		restorePDNSDatabase(journal),
-		configs.restore(),
-		restoreDNSFileSnapshot(journal.StateBefore),
-		restoreDNSUnitSnapshots(recoveryCtx, systemctl, journal.TargetUnitsBefore),
-		restoreDNSUnitSnapshots(recoveryCtx, systemctl, journal.SourceUnitsBefore),
+		ops.stopTarget(ctx),
+		ops.restorePDNSDatabaseSnapshot(),
+		ops.restoreConfigs(),
+		ops.restoreState(),
+		ops.restoreTarget(ctx),
+		ops.restoreSource(ctx),
 	)
 }
 
@@ -1178,11 +1335,22 @@ func switchToPDNS(
 	if manifest.Mode != transport.DNSEngineSwitchModeSwitch {
 		return transport.SwitchDNSEngineV1Response{}, errors.New("PowerDNS engine operation mode is unsupported")
 	}
-	reconfigureSecondary := isPDNSPairSecondaryReconfigureManifest(manifest)
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	return runCertifiedPDNSTargetMutation(profile, func() (transport.SwitchDNSEngineV1Response, error) {
+		return switchToPDNSOnCertifiedProfile(ctx, manifest, binding, profile)
+	})
+}
+
+func switchToPDNSOnCertifiedProfile(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	binding transport.ServiceMutationBinding,
+	profile hostplatform.Profile,
+) (transport.SwitchDNSEngineV1Response, error) {
+	reconfigureSecondary := isPDNSPairSecondaryReconfigureManifest(manifest)
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -1239,11 +1407,6 @@ func switchToPDNS(
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
-	if err := publishDNSEngineSourceOwnership(
-		manifest, state, stateExists,
-	); err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
-	}
 	if manifest.SourceEngine == "" && capturePDNSActive(ctx, systemctl) {
 		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
@@ -1259,9 +1422,20 @@ func switchToPDNS(
 	}
 	missing := make([]string, 0, len(packages))
 	for _, packageName := range packages {
-		if !packageInstalledForProfile(profile, packageName) {
+		installed, packageErr := exactDNSEnginePackageInstalled(
+			ctx, profile, packageName,
+		)
+		if packageErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, packageErr
+		}
+		if !installed {
 			missing = append(missing, packageName)
 		}
+	}
+	if err := publishDNSEngineSourceOwnership(
+		manifest, state, stateExists,
+	); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if reconfigureSecondary && len(missing) != 0 {
 		return transport.SwitchDNSEngineV1Response{}, errors.New(
@@ -1402,11 +1576,18 @@ func switchToPDNS(
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
 		journal.Phase = dnsSwitchPhaseRollingBack
 		journalErr := writeDNSEngineSwitchJournal(journal)
-		rollbackErr := rollbackPDNSSwitch(ctx, systemctl, journal, configs)
-		if rollbackErr == nil {
-			rollbackErr = verifyRestoredDNSSwitchSource(
-				context.WithoutCancel(ctx), profile, systemctl, manifest, journal,
+		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+		rollbackErr := contextErr
+		if contextErr == nil {
+			defer cancel()
+			rollbackErr = rollbackPDNSSwitch(
+				recoveryCtx, systemctl, journal, configs,
 			)
+			if rollbackErr == nil {
+				rollbackErr = verifyRestoredDNSSwitchSource(
+					recoveryCtx, profile, systemctl, manifest, journal,
+				)
+			}
 		}
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
@@ -1441,7 +1622,7 @@ func switchToPDNS(
 	if err := activatePDNSCandidate(journal); err != nil {
 		return rollback(err)
 	}
-	if err := startPDNSTarget(ctx, systemctl); err != nil {
+	if err := startPDNSTarget(ctx, profile, systemctl); err != nil {
 		return rollback(err)
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&

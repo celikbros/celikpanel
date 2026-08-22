@@ -61,7 +61,7 @@ func TestValidateLegacyPowerDNSUnitStatesAllowsRepairButClusterNeedsActive(t *te
 
 func TestRejectLegacyPublicDNSListenersAllowsOnlyLocalStub(t *testing.T) {
 	if err := rejectLegacyPublicDNSListeners(
-		"udp UNCONN 0 0 127.0.0.53:53 0.0.0.0:*\n",
+		"udp UNCONN 0 0 127.0.0.53:53 0.0.0.0:* users:((\"systemd-resolve\",pid=13,fd=4))\n",
 	); err != nil {
 		t.Fatalf("local resolver stub was rejected: %v", err)
 	}
@@ -105,6 +105,9 @@ func TestDNSPort53ConflictParserAllowsOnlyDeclaredEngineOwners(t *testing.T) {
 		{name: "foreign listener", output: foreign, allowBIND: true, wantConflict: true},
 		{name: "missing owner evidence", output: "tcp LISTEN 0 128 *:53 *:*", allowBIND: true, wantConflict: true},
 		{name: "mixed owner output", output: bindTCP + "\n" + foreign, allowBIND: true, wantConflict: true},
+		{name: "malformed filtered row", output: "garbage", wantConflict: true},
+		{name: "unknown protocol", output: `sctp LISTEN 0 0 0.0.0.0:53 0.0.0.0:* users:(("named",pid=10,fd=1))`, allowBIND: true, wantConflict: true},
+		{name: "non-53 filtered row", output: `udp UNCONN 0 0 0.0.0.0:54 0.0.0.0:* users:(("named",pid=10,fd=1))`, allowBIND: true, wantConflict: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := hasUnrelatedPublicDNSListener(

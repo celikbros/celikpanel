@@ -548,10 +548,39 @@ func TestSystemUpdateReviewedUpdaterOwnsTheSecondMutationGate(t *testing.T) {
 	for _, required := range []string{
 		`if ! flock -n -x "$MUTATION_LOCK_FD"; then`,
 		`--check-service-mutation-idle-under-external-lock`,
+		`env -i \`,
+		`CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \`,
+		`CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \`,
+		`CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \`,
+		`"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock`,
+		`rollback intentionally retains them for alpha35 compatibility`,
 	} {
 		if !strings.Contains(string(raw), required) {
 			t.Fatalf("reviewed updater is missing its pre-mutation gate %q", required)
 		}
+	}
+	script := string(raw)
+	anchor := strings.Index(script, "# Apply-only returns with both coordinators stopped.")
+	if anchor < 0 {
+		t.Fatal("reviewed updater apply-only safe window is missing")
+	}
+	window := script[anchor:]
+	order := []string{
+		`verify_installed_release_artifacts`,
+		`"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock`,
+		`env -i \`,
+		`"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock`,
+		`verify_installed_release_artifacts`,
+		`find "$BIN_DIR" "$WEB_DIR" -type f`,
+		`release_txn_mark_completion_pending \`,
+	}
+	cursor := 0
+	for _, marker := range order {
+		next := strings.Index(window[cursor:], marker)
+		if next < 0 {
+			t.Fatalf("reviewed updater safe-window order is missing %q", marker)
+		}
+		cursor += next + len(marker)
 	}
 }
 

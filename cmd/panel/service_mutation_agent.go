@@ -21,6 +21,10 @@ const (
 	agentMutationSucceeded  = "succeeded"
 	agentMutationFailed     = "failed"
 
+	errCodeServiceOperationFailed             = "service_operation_failed"
+	errCodeServiceOperationHeartbeatUncertain = "service_operation_heartbeat_uncertain"
+	agentMutationLeaseExpiredErrorCode        = "service_mutation_lease_expired"
+
 	panelMutationHeartbeatInterval = 5 * time.Second
 	panelMutationFinishTimeout     = 15 * time.Second
 	panelMutationRecoveryTimeout   = 90 * time.Second
@@ -70,6 +74,14 @@ type panelMutationContextKey struct{}
 
 var errAgentMutationIdentityMismatch = errors.New(
 	"agent service mutation response identity does not match the requested durable operation",
+)
+
+var errAgentMutationLeaseLost = errors.New(
+	"agent service mutation lease is no longer owned by the requested durable operation",
+)
+
+var errAgentMutationTerminalFailed = errors.New(
+	"agent service mutation reached a verified terminal failure",
 )
 
 var errAgentMutationPublishedReceiptMismatch = errors.New(
@@ -326,16 +338,70 @@ func (p *Panel) heartbeatAgentMutation(
 	if err != nil {
 		return response.Job, err
 	}
-	if responseErr := serviceMutationResponseError(response); responseErr != nil {
+	responseErr := serviceMutationResponseError(response)
+	if response.Job != nil &&
+		(response.Job.RequestID != binding.MutationRequestID ||
+			response.Job.OwnerID != binding.MutationOwnerID) {
+		if responseErr != nil {
+			return response.Job, errors.Join(errAgentMutationLeaseLost, responseErr)
+		}
+		return response.Job, errAgentMutationLeaseLost
+	}
+	if response.Job != nil && response.Job.Status != agentMutationRunning {
+		terminalErr := errAgentMutationLeaseLost
+		if response.Job.Status == agentMutationFailed &&
+			response.Job.ErrorCode != agentMutationLeaseExpiredErrorCode {
+			terminalErr = errAgentMutationTerminalFailed
+		}
+		if responseErr != nil {
+			return response.Job, errors.Join(terminalErr, responseErr)
+		}
+		return response.Job, terminalErr
+	}
+	if responseErr != nil {
 		return response.Job, responseErr
 	}
-	if response.Job == nil ||
-		response.Job.RequestID != binding.MutationRequestID ||
-		response.Job.OwnerID != binding.MutationOwnerID ||
-		response.Job.Status != agentMutationRunning {
-		return response.Job, errors.New("agent service mutation lease is no longer running")
+	if response.Job == nil {
+		return nil, errors.New("agent service mutation heartbeat did not return a durable lease")
 	}
 	return response.Job, nil
+}
+
+func standaloneAgentMutationFailure(
+	callErr error,
+	heartbeatErr error,
+) *serviceOperationFailure {
+	if callErr == nil && heartbeatErr == nil {
+		return nil
+	}
+	cause := errors.Join(callErr, heartbeatErr)
+	if heartbeatErr != nil {
+		if errors.Is(heartbeatErr, errAgentMutationIdentityMismatch) ||
+			errors.Is(heartbeatErr, errAgentMutationLeaseLost) {
+			return operationFailure(
+				errCodeServiceOperationLeaseLost,
+				"The privileged host operation lost its agent lease.",
+				cause,
+			)
+		}
+		if errors.Is(heartbeatErr, errAgentMutationTerminalFailed) {
+			return operationFailure(
+				errCodeServiceOperationFailed,
+				"The privileged host operation did not complete.",
+				cause,
+			)
+		}
+		return operationFailure(
+			errCodeServiceOperationHeartbeatUncertain,
+			"The privileged host operation's agent lease could not be verified.",
+			cause,
+		)
+	}
+	return operationFailure(
+		errCodeServiceOperationFailed,
+		"The privileged host operation did not complete.",
+		cause,
+	)
 }
 
 func (p *Panel) statusAgentMutation(
@@ -724,14 +790,7 @@ func (p *Panel) withStandaloneAgentMutationIdentityMode(
 	if callErr == nil && heartbeatErr != nil {
 		callErr = fmt.Errorf("agent service mutation heartbeat: %w", heartbeatErr)
 	}
-	var failure *serviceOperationFailure
-	if callErr != nil {
-		failure = operationFailure(
-			errCodeServiceOperationLeaseLost,
-			"The privileged host operation did not complete.",
-			callErr,
-		)
-	}
+	failure := standaloneAgentMutationFailure(callErr, heartbeatErr)
 	if heartbeatTerminal != nil {
 		if receiptErr := validateAgentMutationSucceededReceipt(heartbeatTerminal, identity); receiptErr != nil {
 			return receiptErr

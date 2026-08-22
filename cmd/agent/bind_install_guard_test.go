@@ -26,6 +26,35 @@ func newFakeBINDInstallSystemd(units map[string]*fakeBINDInstallUnit) *fakeBINDI
 	return &fakeBINDInstallSystemd{units: units}
 }
 
+func TestBINDSystemdStateInspectionRejectsAmbiguousOutput(t *testing.T) {
+	canonical := "LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\n"
+	for _, test := range []struct {
+		name   string
+		output string
+	}{
+		{name: "malformed", output: canonical + "warning\n"},
+		{name: "unknown", output: canonical + "Evil=value\n"},
+		{name: "duplicate", output: canonical + "LoadState=loaded\n"},
+		{name: "leading-space", output: " LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\n"},
+		{name: "trailing-space", output: "LoadState=loaded \nActiveState=inactive\nUnitFileState=disabled\n"},
+		{name: "unicode-space", output: "\u00a0LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			guard := bindPackageInstallGuard{
+				systemctl: "/usr/bin/systemctl",
+				ops: bindInstallGuardOps{
+					runSystemd: func(context.Context, string, ...string) ([]byte, error) {
+						return []byte(test.output), nil
+					},
+				},
+			}
+			if _, err := guard.inspect(context.Background(), "named.service"); err == nil {
+				t.Fatal("ambiguous systemctl state output was accepted")
+			}
+		})
+	}
+}
+
 func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args ...string) ([]byte, error) {
 	if executable != "/usr/bin/systemctl" {
 		return nil, fmt.Errorf("unexpected executable %q", executable)

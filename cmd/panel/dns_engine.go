@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -1202,6 +1205,200 @@ func (p *Panel) handleDNSEngine(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(snapshot)
 }
 
+func validDNSEngineReceiptCommitment(value string) bool {
+	if len(value) != sha256.Size*2 || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}
+
+func (p *Panel) verifyDNSEngineRollbackEvidence(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (string, error) {
+	switchRequest := dnsEngineSwitchRequestForManifest(manifest)
+	switchRequest.ServiceMutationBinding = agentMutationBinding{
+		MutationRequestID: persisted.RequestID,
+		MutationOwnerID:   persisted.OwnerID,
+	}
+	request := transport.DNSEngineRollbackEvidenceRequest(switchRequest)
+	var response transport.DNSEngineRollbackEvidenceResponse
+	if err := p.callAgentContext(
+		ctx, "Agent.DNSEngineRollbackEvidenceV1", &request, &response,
+	); err != nil {
+		return "", errors.New("DNS engine rollback evidence is unavailable")
+	}
+	if response.Outcome != transport.DNSEngineRollbackSafe ||
+		!validDNSEngineReceiptCommitment(response.ReceiptCommitment) {
+		return "", errors.New("DNS engine rollback evidence is not safe")
+	}
+	return response.ReceiptCommitment, nil
+}
+
+func validateInitialBINDInstallReconcileScope(
+	persisted persistedDNSEngineSwitch,
+) error {
+	frozenTopology := persisted.Topology == transport.DNSTopologyStandalone &&
+		persisted.PairRole == "" && persisted.LocalIP == "" &&
+		persisted.LocalNS == "" && persisted.PeerIP == "" &&
+		persisted.PeerNS == ""
+	if persisted.Topology == transport.DNSTopologyPaired {
+		frozenTopology = persisted.PairRole == transport.DNSPairRolePrimary &&
+			persisted.LocalIP != "" && persisted.LocalNS != "" &&
+			persisted.PeerIP != "" && persisted.PeerNS != ""
+	}
+	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
+		persisted.Action != "install" ||
+		persisted.SourceEngine != "" ||
+		persisted.SourceEpoch != 0 ||
+		persisted.TargetEngine != transport.DNSEngineBIND ||
+		persisted.TargetEpoch != 1 || !frozenTopology {
+		return errors.New(
+			"DNS engine reconciliation is limited to an initial failed BIND install",
+		)
+	}
+	return nil
+}
+
+// reconcileFailedDNSEngineSwitchLocked clears only an attached switch whose
+// exact agent identity is durably terminal-failed and whose pre-operation
+// runtime is independently proven. It never mutates host state or treats a
+// missing receipt as failure. The caller holds serviceMutationMu,
+// dnsTopologyMu, and dnsPublicationMu in that order.
+func (p *Panel) reconcileFailedDNSEngineSwitchLocked(
+	ctx context.Context,
+) (persistedDNSEngineSwitch, bool, error) {
+	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil {
+		return persistedDNSEngineSwitch{}, false, err
+	}
+	if state.CurrentSwitchID == "" {
+		return persistedDNSEngineSwitch{}, false, nil
+	}
+	persisted, err := readDNSEngineSwitchByID(
+		ctx, p.db.GetDB(), state.CurrentSwitchID,
+	)
+	if err != nil {
+		return persistedDNSEngineSwitch{}, false, err
+	}
+	marker, err := readDNSEngineOperationMarker(ctx, p.db.GetDB())
+	if err != nil {
+		return persisted, false, err
+	}
+	if marker == nil || marker.Phase != dnsEngineOperationAccepted ||
+		marker.SwitchID != persisted.SwitchID ||
+		marker.RequestID != persisted.RequestID {
+		return persisted, false, errors.New(
+			"active DNS engine switch has no exact accepted marker",
+		)
+	}
+	if err := attachDNSEngineOperationAction(
+		ctx, p.db.GetDB(), &persisted,
+	); err != nil {
+		return persisted, false, err
+	}
+	if err := validateInitialBINDInstallReconcileScope(persisted); err != nil {
+		return persisted, false, err
+	}
+	if persisted.Phase != "activating" ||
+		!exactInitialBINDInstallAttachedState(state, persisted) {
+		return persisted, false, errors.New(
+			"attached DNS engine switch no longer matches its source authority",
+		)
+	}
+	manifest, err := p.reconstructPersistedDNSEngineManifest(
+		ctx, persisted,
+	)
+	if err != nil {
+		return persisted, false, fmt.Errorf(
+			"verify persisted DNS engine manifest: %w", err,
+		)
+	}
+	firstCommitment, err := p.verifyDNSEngineRollbackEvidence(
+		ctx, persisted, manifest,
+	)
+	if err != nil {
+		return persisted, false, err
+	}
+	if err := p.verifyDNSEngineRollbackRuntime(ctx, persisted); err != nil {
+		return persisted, false, fmt.Errorf(
+			"verify DNS engine rollback runtime: %w", err,
+		)
+	}
+	secondCommitment, err := p.verifyDNSEngineRollbackEvidence(
+		ctx, persisted, manifest,
+	)
+	if err != nil {
+		return persisted, false, err
+	}
+	if firstCommitment != secondCommitment {
+		return persisted, false, errors.New(
+			"DNS engine mutation terminal receipt changed during reconciliation",
+		)
+	}
+	if err := p.rollbackVerifiedInitialBINDInstall(
+		ctx, persisted, manifest,
+	); err != nil {
+		return persisted, false, fmt.Errorf(
+			"finalize DNS engine rollback: %w", err,
+		)
+	}
+	return persisted, true, nil
+}
+
+func (p *Panel) handleDNSEngineReconcile(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		writeClientError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !p.serviceMutationMu.TryLock() {
+		writeDNSEngineStateUnverified(w)
+		return
+	}
+	var (
+		persisted  persistedDNSEngineSwitch
+		reconciled bool
+		err        error
+	)
+	func() {
+		defer p.serviceMutationMu.Unlock()
+		p.dnsTopologyMu.Lock()
+		defer p.dnsTopologyMu.Unlock()
+		dnsPublicationMu.Lock()
+		defer dnsPublicationMu.Unlock()
+
+		actor := dnsEngineActorFromRequest(r)
+		persisted, reconciled, err = p.reconcileFailedDNSEngineSwitchLocked(
+			r.Context(),
+		)
+		if err != nil {
+			if persisted.SwitchID != "" {
+				p.auditDNSEngineBounded(actor, "reconciled_failed_operation.uncertain", persisted)
+				log.Printf(
+					"DNS engine reconcile %s target=%s retained the attached state",
+					persisted.SwitchID, persisted.TargetEngine,
+				)
+			}
+		} else if reconciled {
+			p.auditDNSEngineBounded(actor, "reconciled_failed_operation", persisted)
+		}
+	}()
+
+	if err != nil {
+		writeDNSEngineStateUnverified(w)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(struct {
+		Reconciled bool `json:"reconciled"`
+	}{Reconciled: reconciled})
+}
+
 func (p *Panel) handleDNSEngineSwitchPreview(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -1847,6 +2044,154 @@ func (p *Panel) rollbackDNSEngineSwitch(
 	return tx.Commit()
 }
 
+func exactInitialBINDInstallAttachedState(
+	state dnsEngineDBState,
+	persisted persistedDNSEngineSwitch,
+) bool {
+	return state.ActiveEngine == "" &&
+		state.EngineEpoch == persisted.SourceEpoch &&
+		state.Revision == persisted.SourceRevision+1 &&
+		state.Topology == transport.DNSTopologyStandalone &&
+		state.PairRole == "" && state.LocalIP == "" &&
+		state.LocalNS == "" && state.PeerIP == "" &&
+		state.PeerNS == "" &&
+		state.CurrentSwitchID == persisted.SwitchID
+}
+
+// rollbackVerifiedInitialBINDInstall is deliberately narrower than the
+// ordinary rollback path. It consumes the exact snapshot and canonical zones
+// that the agent verified twice, then binds the detach to the still-attached
+// source-empty authority in the same transaction.
+func (p *Panel) rollbackVerifiedInitialBINDInstall(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+	verifiedManifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	if err := validateInitialBINDInstallReconcileScope(persisted); err != nil {
+		return err
+	}
+	tx, err := p.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	current, err := readDNSEngineSwitchByRequest(
+		ctx, tx, persisted.RequestID,
+	)
+	if err != nil {
+		return err
+	}
+	if err := attachDNSEngineOperationAction(ctx, tx, &current); err != nil {
+		return err
+	}
+	if current != persisted || current.Phase != "activating" {
+		return errors.New(
+			"verified DNS engine switch snapshot changed before reconciliation",
+		)
+	}
+	if err := validateInitialBINDInstallReconcileScope(current); err != nil {
+		return err
+	}
+	currentManifest, err := reconstructPersistedDNSEngineManifestFromQuery(
+		ctx, tx, current,
+	)
+	if err != nil {
+		return fmt.Errorf("reconstruct verified DNS engine manifest: %w", err)
+	}
+	if !reflect.DeepEqual(currentManifest, verifiedManifest) {
+		return errors.New(
+			"verified DNS engine zone snapshot changed before reconciliation",
+		)
+	}
+	var stagedZones int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT count(*) FROM dns_engine_switch_zones
+		WHERE switch_id = ? AND phase = 'staged'`,
+		current.SwitchID,
+	).Scan(&stagedZones); err != nil {
+		return err
+	}
+	if stagedZones != current.ZoneCount {
+		return errors.New(
+			"verified DNS engine zone phases changed before reconciliation",
+		)
+	}
+	state, err := readDNSEngineDBState(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if !exactInitialBINDInstallAttachedState(state, current) {
+		return errors.New(
+			"verified DNS engine source authority changed before reconciliation",
+		)
+	}
+
+	const safeFailure = "DNS engine switch did not complete"
+	rollingBack, err := tx.ExecContext(ctx, `
+		UPDATE dns_engine_switch_snapshots
+		SET phase = 'rolling_back', last_error = ?,
+		    updated_at = datetime('now')
+		WHERE switch_id = ? AND phase = 'activating'`,
+		safeFailure, current.SwitchID,
+	)
+	if err != nil {
+		return err
+	}
+	if err := requireExactRows(
+		rollingBack, 1,
+		"verified DNS engine rollback transition was not exact",
+	); err != nil {
+		return err
+	}
+	rolledBack, err := tx.ExecContext(ctx, `
+		UPDATE dns_engine_switch_snapshots
+		SET phase = 'rolled_back', updated_at = datetime('now')
+		WHERE switch_id = ? AND phase = 'rolling_back'`,
+		current.SwitchID,
+	)
+	if err != nil {
+		return err
+	}
+	if err := requireExactRows(
+		rolledBack, 1,
+		"verified DNS engine rollback completion was not exact",
+	); err != nil {
+		return err
+	}
+	detached, err := tx.ExecContext(ctx, `
+		UPDATE dns_engine_state
+		SET current_switch_id = NULL, revision = revision + 1,
+		    updated_at = datetime('now')
+		WHERE singleton_id = 1
+		  AND current_switch_id = ?
+		  AND active_engine IS NULL
+		  AND active_epoch = ?
+		  AND revision = ?
+		  AND topology = ?
+		  AND NOT EXISTS (
+		    SELECT 1 FROM dns_bind_pair_state WHERE singleton_id = 1
+		  )`,
+		current.SwitchID, current.SourceEpoch,
+		current.SourceRevision+1, transport.DNSTopologyStandalone,
+	)
+	if err != nil {
+		return err
+	}
+	if err := requireExactRows(
+		detached, 1,
+		"verified DNS engine singleton detach was not exact",
+	); err != nil {
+		return err
+	}
+	if err := clearDNSEngineOperationMarkerTx(
+		ctx, tx, current, dnsEngineOperationAccepted,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (p *Panel) verifyDNSEngineRollbackRuntime(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
@@ -1894,11 +2239,26 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 	return nil
 }
 
+type dnsEngineManifestQuery interface {
+	dnsZoneStateQuery
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
 func (p *Panel) reconstructPersistedDNSEngineManifest(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
-	rows, err := p.db.GetDB().QueryContext(ctx, `
+	return reconstructPersistedDNSEngineManifestFromQuery(
+		ctx, p.db.GetDB(), persisted,
+	)
+}
+
+func reconstructPersistedDNSEngineManifestFromQuery(
+	ctx context.Context,
+	query dnsEngineManifestQuery,
+	persisted persistedDNSEngineSwitch,
+) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
+	rows, err := query.QueryContext(ctx, `
 		SELECT ordinal, zone_name, desired_generation, desired_action,
 		       desired_zone_type, zone_qualifier, records_json, records_bytes
 		FROM dns_engine_switch_zones
