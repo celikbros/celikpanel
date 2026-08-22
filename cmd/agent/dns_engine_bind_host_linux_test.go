@@ -917,6 +917,36 @@ func signedUpdateBINDRuntimeLayout(
 	return layout
 }
 
+func modeledRootOwnedBINDConfigSnapshot(
+	path string,
+	mode os.FileMode,
+	allowAbsent bool,
+) (dnsFileSnapshot, error) {
+	path = filepath.Clean(path)
+	if !filepath.IsAbs(path) || mode.Perm() == 0 || mode.Perm() != mode {
+		return dnsFileSnapshot{}, errors.New("invalid modeled BIND snapshot path or mode")
+	}
+	data, metadata, err := readDNSFileForSnapshot(path)
+	if errors.Is(err, os.ErrNotExist) && allowAbsent {
+		return dnsFileSnapshot{Path: path}, nil
+	}
+	if err != nil {
+		return dnsFileSnapshot{}, err
+	}
+	if metadata.Mode.Perm() != mode.Perm() {
+		return dnsFileSnapshot{}, errors.New("modeled BIND snapshot mode differs from the fixture contract")
+	}
+	if !metadata.OwnerKnown || metadata.UID != uint32(os.Geteuid()) ||
+		metadata.GID != uint32(os.Getegid()) {
+		return dnsFileSnapshot{}, errors.New("modeled BIND snapshot is not owned by the test process")
+	}
+	return dnsFileSnapshot{
+		Path: path, Exists: true, Mode: uint32(metadata.Mode.Perm()),
+		OwnerKnown: true, UID: 0, GID: 0,
+		SHA256: digestDNSBytes(data), Data: append([]byte(nil), data...),
+	}, nil
+}
+
 func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *testing.T) {
 	originalOwned := dnsPairHostAddressOwned
 	t.Cleanup(func() { dnsPairHostAddressOwned = originalOwned })
@@ -954,10 +984,24 @@ func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *t
 				state.PairPeerIP = receipt.Pairing.PeerIP
 				state.PrimaryCatalogSerial = receipt.Pairing.CatalogSerial
 			}
-			if err := verifyExistingManagedBINDTreeForSignedUpdate(
-				layout, state, tree,
+			if os.Geteuid() == 0 {
+				if err := verifyExistingManagedBINDTreeForSignedUpdate(
+					layout, state, tree,
+				); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err := verifyExistingManagedBINDTreeForSignedUpdate(
+					layout, state, tree,
+				)
+				if err == nil || !strings.Contains(err.Error(), "not root-owned") {
+					t.Fatalf("production ownership proof accepted a rootless fixture: %v", err)
+				}
+			}
+			if err := verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+				layout, state, tree, modeledRootOwnedBINDConfigSnapshot,
 			); err != nil {
-				t.Fatal(err)
+				t.Fatalf("released layout was rejected by the modeled root-owned proof: %v", err)
 			}
 
 			t.Run("generation-drift", func(t *testing.T) {
@@ -966,8 +1010,8 @@ func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *t
 				if drift.Generation == state.Generation {
 					drift.Generation = strings.Repeat("b", 64)
 				}
-				if err := verifyExistingManagedBINDTreeForSignedUpdate(
-					layout, drift, tree,
+				if err := verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+					layout, drift, tree, modeledRootOwnedBINDConfigSnapshot,
 				); err == nil {
 					t.Fatal("generation drift was accepted")
 				}
@@ -993,8 +1037,8 @@ func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *t
 				); err != nil {
 					t.Fatal(err)
 				}
-				if err := verifyExistingManagedBINDTreeForSignedUpdate(
-					layout, state, tree,
+				if err := verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+					layout, state, tree, modeledRootOwnedBINDConfigSnapshot,
 				); err == nil {
 					t.Fatal("runtime config drift was accepted")
 				}
@@ -1007,8 +1051,8 @@ func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *t
 							return address == "72.62.38.15"
 						}
 					}()
-					if err := verifyExistingManagedBINDTreeForSignedUpdate(
-						layout, state, tree,
+					if err := verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+						layout, state, tree, modeledRootOwnedBINDConfigSnapshot,
 					); err == nil {
 						t.Fatal("unowned local pair address was accepted")
 					}

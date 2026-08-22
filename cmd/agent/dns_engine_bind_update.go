@@ -286,6 +286,17 @@ func verifyExistingManagedBINDTreeForSignedUpdate(
 	state dnsEngineStateReceipt,
 	tree binddns.VerifiedTree,
 ) error {
+	return verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+		layout, state, tree, captureDNSFileSnapshot,
+	)
+}
+
+func verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
+	layout bindHostLayout,
+	state dnsEngineStateReceipt,
+	tree binddns.VerifiedTree,
+	readSnapshot bindConfigSnapshotReader,
+) error {
 	receipt := tree.CurrentReceipt()
 	if receipt.EngineEpoch != state.EngineEpoch ||
 		receipt.Generation != state.Generation {
@@ -297,8 +308,8 @@ func verifyExistingManagedBINDTreeForSignedUpdate(
 	if err != nil {
 		return err
 	}
-	if err := verifyManagedBINDRuntimeConfigExact(
-		layout, receipt, legacyOptions,
+	if err := verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
+		layout, receipt, legacyOptions, readSnapshot,
 	); err != nil {
 		return err
 	}

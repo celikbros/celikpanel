@@ -104,6 +104,12 @@ type bindConfigMutation struct {
 	snapshots map[string]dnsFileSnapshot
 }
 
+type bindConfigSnapshotReader func(
+	path string,
+	mode os.FileMode,
+	allowAbsent bool,
+) (dnsFileSnapshot, error)
+
 type trackedBINDValidator struct {
 	checkZone string
 	checkConf string
@@ -1753,6 +1759,19 @@ func prepareBINDConfigMutation(
 	layout bindHostLayout,
 	transferPeer string,
 ) (bindConfigMutation, error) {
+	return prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer, captureDNSFileSnapshot,
+	)
+}
+
+func prepareBINDConfigMutationWithSnapshotReader(
+	layout bindHostLayout,
+	transferPeer string,
+	readSnapshot bindConfigSnapshotReader,
+) (bindConfigMutation, error) {
+	if readSnapshot == nil {
+		return bindConfigMutation{}, errors.New("BIND config snapshot reader is required")
+	}
 	paths := []string{layout.OptionsConfig, layout.AnchorConfig}
 	sort.Strings(paths)
 	if len(paths) == 2 && paths[0] == paths[1] {
@@ -1764,7 +1783,7 @@ func prepareBINDConfigMutation(
 		snapshots: make(map[string]dnsFileSnapshot, len(paths)),
 	}
 	for _, path := range paths {
-		snapshot, err := captureDNSFileSnapshot(path, 0o644, false)
+		snapshot, err := readSnapshot(path, 0o644, false)
 		if err != nil {
 			return bindConfigMutation{}, fmt.Errorf("read BIND configuration %s: %w", path, err)
 		}
@@ -1820,7 +1839,20 @@ func verifyManagedBINDConfigExact(
 	transferPeer string,
 	requireLegacyOptions bool,
 ) error {
-	mutation, err := prepareBINDConfigMutation(layout, transferPeer)
+	return verifyManagedBINDConfigExactWithSnapshotReader(
+		layout, transferPeer, requireLegacyOptions, captureDNSFileSnapshot,
+	)
+}
+
+func verifyManagedBINDConfigExactWithSnapshotReader(
+	layout bindHostLayout,
+	transferPeer string,
+	requireLegacyOptions bool,
+	readSnapshot bindConfigSnapshotReader,
+) error {
+	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer, readSnapshot,
+	)
 	if err != nil {
 		return err
 	}
@@ -1855,12 +1887,23 @@ func verifyManagedBINDRuntimeConfigExact(
 	receipt binddns.Receipt,
 	allowLegacyOptions bool,
 ) error {
+	return verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
+		layout, receipt, allowLegacyOptions, captureDNSFileSnapshot,
+	)
+}
+
+func verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
+	layout bindHostLayout,
+	receipt binddns.Receipt,
+	allowLegacyOptions bool,
+	readSnapshot bindConfigSnapshotReader,
+) error {
 	transferPeer := ""
 	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
 		transferPeer = receipt.Pairing.PeerIP
 	}
-	return verifyManagedBINDConfigExact(
-		layout, transferPeer, allowLegacyOptions,
+	return verifyManagedBINDConfigExactWithSnapshotReader(
+		layout, transferPeer, allowLegacyOptions, readSnapshot,
 	)
 }
 

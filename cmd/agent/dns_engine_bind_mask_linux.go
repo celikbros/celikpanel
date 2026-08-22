@@ -131,6 +131,6 @@ func inspectExactBINDMaskFD(fd int, unit string) (bindMaskIdentity, error) {
 		Mode:   stat.Mode,
 		UID:    stat.Uid,
 		GID:    stat.Gid,
-		Links:  stat.Nlink,
+		Links:  uint64(stat.Nlink),
 	}, nil
 }
