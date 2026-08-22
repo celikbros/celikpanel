@@ -375,6 +375,10 @@ export function DNSEngineCard({
                                         || engine.status === 'installed_standby'
                                         || engine.status === 'unmanaged');
                                 const reviewLabel = engine.status === 'available'
+                                    || (engine.status === 'installed_standby'
+                                        && snapshot.active_engine === null
+                                        && snapshot.state === 'unconfigured'
+                                        && id === 'bind')
                                     ? et('dnsEngine.reviewInstall')
                                     : engine.status === 'unmanaged'
                                       ? snapshot.active_engine === null
