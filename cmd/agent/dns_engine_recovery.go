@@ -168,7 +168,7 @@ func verifyDNSSwitchJournalTarget(
 			transferPeer = manifest.PeerIP
 		}
 		if err := verifyManagedBINDConfigExact(
-			layout, transferPeer, legacyPairedTarget,
+			ctx, layout, transferPeer, legacyPairedTarget,
 		); err != nil {
 			return err
 		}
@@ -280,20 +280,44 @@ func dnsUnitSnapshotsMap(snapshots []dnsUnitSnapshot) map[string]dnsUnitState {
 	return states
 }
 
-func bindConfigMutationFromJournal(journal dnsEngineSwitchJournal) bindConfigMutation {
-	mutation := bindConfigMutation{
-		paths:     make([]string, 0, len(journal.ConfigBefore)),
-		original:  make(map[string][]byte, len(journal.ConfigBefore)),
-		desired:   make(map[string][]byte),
-		snapshots: make(map[string]dnsFileSnapshot, len(journal.ConfigBefore)),
-	}
+func bindConfigMutationFromJournal(
+	layout bindHostLayout,
+	transferPeer string,
+	journal dnsEngineSwitchJournal,
+) (bindConfigMutation, error) {
+	snapshots := make(map[string]dnsFileSnapshot, len(journal.ConfigBefore))
 	for _, snapshot := range journal.ConfigBefore {
-		mutation.paths = append(mutation.paths, snapshot.Path)
-		mutation.original[snapshot.Path] = append([]byte(nil), snapshot.Data...)
 		snapshot.Data = append([]byte(nil), snapshot.Data...)
-		mutation.snapshots[snapshot.Path] = snapshot
+		snapshots[filepath.Clean(snapshot.Path)] = snapshot
 	}
-	return mutation
+	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer,
+		func(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
+			snapshot, exists := snapshots[filepath.Clean(path)]
+			if allowAbsent || !exists || !snapshot.Exists || snapshot.Mode != uint32(mode.Perm()) {
+				return dnsFileSnapshot{}, errors.New("BIND recovery journal config set is incomplete")
+			}
+			return snapshot, nil
+		},
+	)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	mutation.ownerAware = true
+	return mutation, nil
+}
+
+func restoreBINDPointerAfterConfigProof(
+	proveCurrent func() error,
+	restorePointer func() error,
+) error {
+	if proveCurrent == nil || restorePointer == nil {
+		return errors.New("BIND pointer recovery requires config proof and restore operations")
+	}
+	if err := proveCurrent(); err != nil {
+		return err
+	}
+	return restorePointer()
 }
 
 func rollbackDNSSwitchJournal(
@@ -322,13 +346,30 @@ func rollbackDNSSwitchJournal(
 		if err != nil {
 			return err
 		}
-		if err := publisher.RestorePointer(
-			journal.TargetGeneration, journal.PreviousGeneration, journal.HadPrevious,
+		transferPeer := ""
+		if manifest.Topology == transport.DNSTopologyPaired &&
+			manifest.PairRole == transport.DNSPairRoleSecondary {
+			transferPeer = manifest.PeerIP
+		}
+		configs, err := bindConfigMutationFromJournal(layout, transferPeer, journal)
+		if err != nil {
+			return err
+		}
+		if err := restoreBINDPointerAfterConfigProof(
+			func() error {
+				_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
+				return proofErr
+			},
+			func() error {
+				return publisher.RestorePointer(
+					journal.TargetGeneration, journal.PreviousGeneration, journal.HadPrevious,
+				)
+			},
 		); err != nil {
 			return err
 		}
 		if err := rollbackBINDActivation(
-			ctx, systemctl, bindConfigMutationFromJournal(journal), journal.StateBefore,
+			ctx, systemctl, configs, journal.StateBefore,
 			dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
 			dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
 		); err != nil {

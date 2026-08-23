@@ -163,15 +163,12 @@ func renderCatalogZone(pairing Pairing, serial uint32, zones []treeZone) ([]byte
 	catalog := catalogDomain(pairing.LocalIP)
 	output.WriteString(catalog)
 	output.WriteString(".\n$TTL 60\n")
-	output.WriteString("@ IN SOA ")
-	output.WriteString(catalog)
-	output.WriteString(". hostmaster.")
-	output.WriteString(catalog)
-	output.WriteString(". ")
+	// RFC 9432 uses the deliberately out-of-bailiwick invalid. name for the
+	// catalog's otherwise-unused SOA and NS targets. Keeping it out of this
+	// synthetic zone also makes an empty catalog valid to named-checkzone.
+	output.WriteString("@ IN SOA invalid. invalid. ")
 	output.WriteString(fmt.Sprintf("%d 60 30 3600 30\n", serial))
-	output.WriteString("@ IN NS ")
-	output.WriteString(catalog)
-	output.WriteString(".\nversion IN TXT \"2\"\n")
+	output.WriteString("@ IN NS invalid.\nversion IN TXT \"2\"\n")
 	for _, domain := range members {
 		digest := sha256.Sum256([]byte(domain))
 		output.WriteString(fmt.Sprintf("%x.zones IN PTR %s.\n", digest, domain))

@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const pairingTestRoot = "/var/cache/bind/celikpanel"
@@ -69,6 +71,31 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 	}
 	if _, err := VerifyTree(generation.Receipt, generation.Config, files); err != nil {
 		t.Fatalf("verify primary tree: %v", err)
+	}
+}
+
+func TestEmptyPrimaryCatalogUsesRFC9432BaseRecords(t *testing.T) {
+	generation, err := RenderManifest(pairingTestRoot, Manifest{
+		EngineEpoch: 1,
+		Pairing:     testPairing(PairRolePrimary),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if generation.Catalog == nil {
+		t.Fatal(`paired primary did not render a catalog zone`)
+	}
+	const want = `$ORIGIN catalog-c000020a.celikpanel.invalid.
+$TTL 60
+@ IN SOA invalid. invalid. 1 60 30 3600 30
+@ IN NS invalid.
+version IN TXT "2"
+`
+	if got := string(generation.Catalog.Data); got != want {
+		t.Fatalf(`empty primary catalog is not named-checkzone-safe:
+--- got ---
+%s--- want ---
+%s`, got, want)
 	}
 }
 
@@ -192,7 +219,10 @@ func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
 		t.Fatal(err)
 	}
 	if domain != "catalog-c000020a.celikpanel.invalid" || len(records) != 5 ||
-		records[0].Type != "SOA" || records[2].Content != "\"2\"" ||
+		records[0].Type != "SOA" ||
+		records[1] != (transport.ZoneRecord{
+			Name: domain, Type: "NS", Content: domain, TTL: 60,
+		}) || records[2].Content != "\"2\"" ||
 		records[3].Content != "a.example.test" ||
 		records[4].Content != "z.example.test" {
 		t.Fatalf("domain=%q records=%#v", domain, records)

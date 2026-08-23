@@ -98,10 +98,12 @@ type bindVendorFilesIdentity struct {
 }
 
 type bindConfigMutation struct {
-	paths     []string
-	original  map[string][]byte
-	desired   map[string][]byte
-	snapshots map[string]dnsFileSnapshot
+	paths      []string
+	original   map[string][]byte
+	desired    map[string][]byte
+	snapshots  map[string]dnsFileSnapshot
+	layout     bindHostLayout
+	ownerAware bool
 }
 
 type bindConfigSnapshotReader func(
@@ -109,6 +111,38 @@ type bindConfigSnapshotReader func(
 	mode os.FileMode,
 	allowAbsent bool,
 ) (dnsFileSnapshot, error)
+
+type bindSwitchRollbackJournalOps struct {
+	write    func(dnsEngineSwitchJournal) error
+	rollback func() error
+	verify   func() error
+	remove   func() error
+}
+
+func runBINDRollbackWithJournal(
+	journal *dnsEngineSwitchJournal,
+	ops bindSwitchRollbackJournalOps,
+) error {
+	if journal == nil || ops.write == nil || ops.rollback == nil ||
+		ops.verify == nil || ops.remove == nil {
+		return errors.New("invalid BIND rollback journal operations")
+	}
+	journal.Phase = dnsSwitchPhaseRollingBack
+	journalErr := ops.write(*journal)
+	rollbackErr := ops.rollback()
+	if rollbackErr == nil {
+		rollbackErr = ops.verify()
+	}
+	if rollbackErr == nil {
+		journal.Phase = dnsSwitchPhaseRolledBack
+		finalWriteErr := ops.write(*journal)
+		journalErr = errors.Join(journalErr, finalWriteErr)
+		if finalWriteErr == nil {
+			journalErr = errors.Join(journalErr, ops.remove())
+		}
+	}
+	return errors.Join(journalErr, rollbackErr)
+}
 
 type trackedBINDValidator struct {
 	checkZone string
@@ -433,7 +467,7 @@ func (hostDNSEngineBackend) Readiness(
 					receipt.Generation == state.Generation
 				legacyOptions := isLegacyDNSEngineState(state) && receipt.Pairing != nil
 				if configErr := verifyManagedBINDRuntimeConfigExact(
-					layout, receipt, legacyOptions,
+					ctx, layout, receipt, legacyOptions,
 				); configErr != nil {
 					managedEvidence = false
 					log.Printf("BIND managed configuration proof failed: %v", configErr)
@@ -782,7 +816,7 @@ func (hostDNSEngineBackend) Sync(
 		return "", err
 	}
 	if err := verifyManagedBINDRuntimeConfigExact(
-		layout, receipt, legacyBINDState,
+		ctx, layout, receipt, legacyBINDState,
 	); err != nil {
 		return "", err
 	}
@@ -802,7 +836,7 @@ func (hostDNSEngineBackend) Sync(
 	}
 	var legacyConfigMigration *bindConfigMutation
 	if legacyBINDState {
-		migration, err := prepareBINDConfigMutation(layout, "")
+		migration, err := prepareBINDConfigMutation(ctx, layout, "")
 		if err != nil {
 			return "", err
 		}
@@ -841,10 +875,10 @@ func (hostDNSEngineBackend) Sync(
 		attempt++
 		if legacyConfigMigration != nil {
 			if attempt == 1 {
-				if err := legacyConfigMigration.apply(); err != nil {
+				if err := legacyConfigMigration.apply(applyCtx); err != nil {
 					return err
 				}
-			} else if err := legacyConfigMigration.restore(); err != nil {
+			} else if err := legacyConfigMigration.restore(applyCtx); err != nil {
 				return err
 			}
 		}
@@ -884,13 +918,22 @@ func (hostDNSEngineBackend) Sync(
 	recoverEmpty := func(recoveryCtx context.Context) error {
 		var configErr error
 		if legacyConfigMigration != nil {
-			configErr = legacyConfigMigration.restore()
+			configErr = legacyConfigMigration.restore(recoveryCtx)
 		}
 		return errors.Join(
 			stopBINDUnitsFailClosed(recoveryCtx, systemctl),
 			restoreDNSFileSnapshot(stateBefore),
 			configErr,
 		)
+	}
+	if legacyConfigMigration != nil {
+		if err := verifyBINDConfigMutationPreimage(ctx, *legacyConfigMigration); err != nil {
+			return "", err
+		}
+	} else if err := verifyManagedBINDRuntimeConfigExact(
+		ctx, layout, receipt, legacyBINDState,
+	); err != nil {
+		return "", err
 	}
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
 		return "", err
@@ -979,14 +1022,14 @@ func (hostDNSEngineBackend) RecoverZone(
 		receipt.Pairing.Role == binddns.PairRolePrimary
 	if directionalTupleRepair {
 		if currentErr := verifyManagedBINDRuntimeConfigExact(
-			layout, receipt, false,
+			ctx, layout, receipt, false,
 		); currentErr != nil {
 			if legacyErr := verifyManagedBINDRuntimeConfigExact(
-				layout, receipt, true,
+				ctx, layout, receipt, true,
 			); legacyErr != nil {
 				return false, errors.Join(currentErr, legacyErr)
 			}
-			migration, migrationErr := prepareBINDConfigMutation(layout, "")
+			migration, migrationErr := prepareBINDConfigMutation(ctx, layout, "")
 			if migrationErr != nil {
 				return false, migrationErr
 			}
@@ -994,21 +1037,21 @@ func (hostDNSEngineBackend) RecoverZone(
 		}
 	} else if legacyBINDState {
 		if legacyErr := verifyManagedBINDRuntimeConfigExact(
-			layout, receipt, true,
+			ctx, layout, receipt, true,
 		); legacyErr != nil {
 			if currentErr := verifyManagedBINDRuntimeConfigExact(
-				layout, receipt, false,
+				ctx, layout, receipt, false,
 			); currentErr != nil {
 				return false, errors.Join(legacyErr, currentErr)
 			}
-			migration, migrationErr := prepareBINDLegacyConfigMutation(layout)
+			migration, migrationErr := prepareBINDLegacyConfigMutation(ctx, layout)
 			if migrationErr != nil {
 				return false, migrationErr
 			}
 			recoveryConfigMigration = &migration
 		}
 	} else if err := verifyManagedBINDRuntimeConfigExact(
-		layout, receipt, false,
+		ctx, layout, receipt, false,
 	); err != nil {
 		return false, err
 	}
@@ -1017,7 +1060,7 @@ func (hostDNSEngineBackend) RecoverZone(
 		return false, err
 	}
 	if legacyBINDState && recoveryConfigMigration != nil {
-		if err := recoveryConfigMigration.apply(); err != nil {
+		if err := recoveryConfigMigration.apply(ctx); err != nil {
 			return false, err
 		}
 		if output, commandErr := runDNSSystemctl(
@@ -1029,7 +1072,7 @@ func (hostDNSEngineBackend) RecoverZone(
 			)
 		}
 		if err := verifyManagedBINDRuntimeConfigExact(
-			layout, receipt, true,
+			ctx, layout, receipt, true,
 		); err != nil {
 			return false, err
 		}
@@ -1068,7 +1111,7 @@ func (hostDNSEngineBackend) RecoverZone(
 	}
 	if state != nextState || recoveryConfigMigration != nil {
 		if recoveryConfigMigration != nil {
-			if err := recoveryConfigMigration.apply(); err != nil {
+			if err := recoveryConfigMigration.apply(ctx); err != nil {
 				return false, err
 			}
 		}
@@ -1076,7 +1119,7 @@ func (hostDNSEngineBackend) RecoverZone(
 			return false, fmt.Errorf("recover BIND publication reload: %w: %s", commandErr, firstLine(string(output)))
 		}
 		if err := verifyManagedBINDRuntimeConfigExact(
-			layout, receipt, legacyBINDState,
+			ctx, layout, receipt, legacyBINDState,
 		); err != nil {
 			return false, err
 		}
@@ -1318,7 +1361,7 @@ func (hostDNSEngineBackend) Switch(
 		manifest.PairRole == transport.DNSPairRoleSecondary {
 		transferPeer = manifest.PeerIP
 	}
-	configs, err := prepareBINDConfigMutation(layout, transferPeer)
+	configs, err := prepareBINDConfigMutation(ctx, layout, transferPeer)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1371,25 +1414,27 @@ func (hostDNSEngineBackend) Switch(
 		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore),
 		SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
 	}
+	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
-		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeDNSEngineSwitchJournal(journal)
-		rollbackErr := rollbackBINDActivation(
-			rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
-		)
-		if rollbackErr == nil {
-			rollbackErr = verifyRestoredDNSSwitchSource(
-				rollbackCtx, profile, systemctl, manifest, journal,
-			)
-		}
-		if rollbackErr == nil {
-			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = errors.Join(journalErr, writeDNSEngineSwitchJournal(journal), removeDNSEngineSwitchJournal())
-		}
-		return errors.Join(journalErr, rollbackErr)
+		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
+			write: writeDNSEngineSwitchJournal,
+			rollback: func() error {
+				return rollbackBINDActivation(
+					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
+				)
+			},
+			verify: func() error {
+				return verifyRestoredDNSSwitchSource(
+					rollbackCtx, profile, systemctl, manifest, journal,
+				)
+			},
+			remove: removeDNSEngineSwitchJournal,
+		})
 	}
 	attempt := 0
 	apply := func(applyCtx context.Context) error {
@@ -1397,7 +1442,7 @@ func (hostDNSEngineBackend) Switch(
 		if attempt > 1 {
 			return rollbackAndJournal(applyCtx)
 		}
-		if err := configs.apply(); err != nil {
+		if err := configs.apply(applyCtx); err != nil {
 			return err
 		}
 		if _, err := runTrackedBINDValidation(
@@ -1471,6 +1516,9 @@ func (hostDNSEngineBackend) Switch(
 	}
 	recoverEmpty := func(recoveryCtx context.Context) error {
 		return rollbackAndJournal(recoveryCtx)
+	}
+	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -1585,7 +1633,7 @@ func verifyCompletedBINDEngineSwitch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyManagedBINDRuntimeConfigExact(layout, receipt, legacy); err != nil {
+	if err := verifyManagedBINDRuntimeConfigExact(ctx, layout, receipt, legacy); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
@@ -1717,7 +1765,7 @@ func verifyDNSEngineSwitchSource(
 			}
 			legacy := isLegacyDNSEngineState(state) && receipt.Pairing != nil
 			if err := verifyManagedBINDRuntimeConfigExact(
-				layout, receipt, legacy,
+				ctx, layout, receipt, legacy,
 			); err != nil {
 				return err
 			}
@@ -1756,12 +1804,41 @@ func verifyDNSEngineSwitchSource(
 }
 
 func prepareBINDConfigMutation(
+	ctx context.Context,
 	layout bindHostLayout,
 	transferPeer string,
 ) (bindConfigMutation, error) {
-	return prepareBINDConfigMutationWithSnapshotReader(
-		layout, transferPeer, captureDNSFileSnapshot,
+	policy, err := resolveBINDConfigOwnerPolicy(ctx, layout)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	captured, err := captureBINDConfigSnapshotSet(policy)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	capturedByPath := bindConfigSnapshotMap(captured)
+	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
+		layout, transferPeer,
+		func(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
+			if allowAbsent {
+				return dnsFileSnapshot{}, errors.New("BIND config snapshot cannot be absent")
+			}
+			snapshot, ok := capturedByPath[filepath.Clean(path)]
+			if !ok || snapshot.Mode != uint32(mode.Perm()) {
+				return dnsFileSnapshot{}, errors.New("BIND config snapshot set is incomplete")
+			}
+			snapshot.Data = append([]byte(nil), snapshot.Data...)
+			return snapshot, nil
+		},
 	)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	if err := policy.validateSnapshots(mutation.originalSnapshots()); err != nil {
+		return bindConfigMutation{}, err
+	}
+	mutation.ownerAware = true
+	return mutation, nil
 }
 
 func prepareBINDConfigMutationWithSnapshotReader(
@@ -1781,6 +1858,7 @@ func prepareBINDConfigMutationWithSnapshotReader(
 		paths: paths, original: make(map[string][]byte, len(paths)),
 		desired:   make(map[string][]byte, len(paths)),
 		snapshots: make(map[string]dnsFileSnapshot, len(paths)),
+		layout:    layout,
 	}
 	for _, path := range paths {
 		snapshot, err := readSnapshot(path, 0o644, false)
@@ -1811,12 +1889,33 @@ func prepareBINDConfigMutationWithSnapshotReader(
 }
 
 func prepareBINDLegacyConfigMutation(
+	ctx context.Context,
 	layout bindHostLayout,
 ) (bindConfigMutation, error) {
-	mutation, err := prepareBINDConfigMutation(layout, "")
+	mutation, err := prepareBINDConfigMutation(ctx, layout, "")
 	if err != nil {
 		return bindConfigMutation{}, err
 	}
+	return prepareBINDLegacyConfigMutationFromPrepared(layout, mutation)
+}
+
+func prepareBINDLegacyConfigMutationWithSnapshotReader(
+	layout bindHostLayout,
+	readSnapshot bindConfigSnapshotReader,
+) (bindConfigMutation, error) {
+	mutation, err := prepareBINDConfigMutationWithSnapshotReader(
+		layout, "", readSnapshot,
+	)
+	if err != nil {
+		return bindConfigMutation{}, err
+	}
+	return prepareBINDLegacyConfigMutationFromPrepared(layout, mutation)
+}
+
+func prepareBINDLegacyConfigMutationFromPrepared(
+	layout bindHostLayout,
+	mutation bindConfigMutation,
+) (bindConfigMutation, error) {
 	for _, path := range mutation.paths {
 		if path != layout.OptionsConfig {
 			continue
@@ -1835,13 +1934,16 @@ func prepareBINDLegacyConfigMutation(
 }
 
 func verifyManagedBINDConfigExact(
+	ctx context.Context,
 	layout bindHostLayout,
 	transferPeer string,
 	requireLegacyOptions bool,
 ) error {
-	return verifyManagedBINDConfigExactWithSnapshotReader(
-		layout, transferPeer, requireLegacyOptions, captureDNSFileSnapshot,
-	)
+	mutation, err := prepareBINDConfigMutation(ctx, layout, transferPeer)
+	if err != nil {
+		return err
+	}
+	return verifyPreparedManagedBINDConfigExact(mutation, layout, requireLegacyOptions)
 }
 
 func verifyManagedBINDConfigExactWithSnapshotReader(
@@ -1856,6 +1958,14 @@ func verifyManagedBINDConfigExactWithSnapshotReader(
 	if err != nil {
 		return err
 	}
+	return verifyPreparedManagedBINDConfigExact(mutation, layout, requireLegacyOptions)
+}
+
+func verifyPreparedManagedBINDConfigExact(
+	mutation bindConfigMutation,
+	layout bindHostLayout,
+	requireLegacyOptions bool,
+) error {
 	for _, path := range mutation.paths {
 		if requireLegacyOptions && path == layout.OptionsConfig {
 			if !exactLegacyManagedBINDOptions(string(mutation.original[path])) {
@@ -1883,12 +1993,17 @@ func verifyManagedBINDConfigExactWithSnapshotReader(
 }
 
 func verifyManagedBINDRuntimeConfigExact(
+	ctx context.Context,
 	layout bindHostLayout,
 	receipt binddns.Receipt,
 	allowLegacyOptions bool,
 ) error {
-	return verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
-		layout, receipt, allowLegacyOptions, captureDNSFileSnapshot,
+	transferPeer := ""
+	if receipt.Pairing != nil && receipt.Pairing.Role == binddns.PairRoleSecondary {
+		transferPeer = receipt.Pairing.PeerIP
+	}
+	return verifyManagedBINDConfigExact(
+		ctx, layout, transferPeer, allowLegacyOptions,
 	)
 }
 
@@ -1907,7 +2022,10 @@ func verifyManagedBINDRuntimeConfigExactWithSnapshotReader(
 	)
 }
 
-func (mutation bindConfigMutation) apply() error {
+func (mutation bindConfigMutation) apply(ctx context.Context) error {
+	if mutation.ownerAware {
+		return mutation.applyOwnerAware(ctx)
+	}
 	written := make([]string, 0, len(mutation.paths))
 	for _, path := range mutation.paths {
 		if bytes.Equal(mutation.original[path], mutation.desired[path]) {
@@ -1928,7 +2046,10 @@ func (mutation bindConfigMutation) apply() error {
 	return nil
 }
 
-func (mutation bindConfigMutation) restore() error {
+func (mutation bindConfigMutation) restore(ctx context.Context) error {
+	if mutation.ownerAware {
+		return mutation.restoreOwnerAware(ctx)
+	}
 	var restoreErr error
 	for index := len(mutation.paths) - 1; index >= 0; index-- {
 		path := mutation.paths[index]
@@ -2032,7 +2153,9 @@ func rollbackBINDActivation(
 				commandCtx, systemctl, targetBefore, true,
 			)
 		},
-		restoreConfigs: configs.restore,
+		restoreConfigs: func() error {
+			return configs.restore(ctx)
+		},
 		restoreState: func() error {
 			return restoreDNSFileSnapshot(stateBefore)
 		},

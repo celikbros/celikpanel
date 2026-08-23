@@ -321,7 +321,10 @@ func resolveBINDGroupGIDWithRunner(
 		return 0, errors.New("getent returned an unsafe BIND group record")
 	}
 	value, err := strconv.ParseUint(fields[2], 10, 32)
-	if err != nil || value == 0 || strconv.FormatUint(value, 10) != fields[2] {
+	// Keep the identity portable through Go int/Fchown conversions and reject
+	// MaxUint32, which is the chown(2) "leave unchanged" sentinel.
+	if err != nil || value == 0 || value > uint64(1<<31-1) ||
+		strconv.FormatUint(value, 10) != fields[2] {
 		return 0, errors.New("BIND service group has an invalid numeric identity")
 	}
 	return uint32(value), nil

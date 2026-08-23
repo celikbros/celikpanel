@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -267,20 +268,27 @@ func TestPrepareBINDLegacyConfigMutationHandlesSplitAndCombinedLayouts(t *testin
 					t.Fatal(err)
 				}
 			}
-			mutation, err := prepareBINDLegacyConfigMutation(layout)
+			readSnapshot := bindConfigSnapshotReader(captureDNSFileSnapshot)
+			mutation, err := prepareBINDLegacyConfigMutationWithSnapshotReader(
+				layout, readSnapshot,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := mutation.apply(); err != nil {
+			if err := mutation.apply(context.Background()); err != nil {
 				t.Fatal(err)
 			}
-			if err := verifyManagedBINDConfigExact(layout, "", true); err != nil {
+			if err := verifyManagedBINDConfigExactWithSnapshotReader(
+				layout, "", true, readSnapshot,
+			); err != nil {
 				t.Fatalf("exact released config rejected: %v", err)
 			}
-			if err := mutation.restore(); err != nil {
+			if err := mutation.restore(context.Background()); err != nil {
 				t.Fatal(err)
 			}
-			if err := verifyManagedBINDConfigExact(layout, "", false); err != nil {
+			if err := verifyManagedBINDConfigExactWithSnapshotReader(
+				layout, "", false, readSnapshot,
+			); err != nil {
 				t.Fatalf("exact directional config was not restored: %v", err)
 			}
 		})

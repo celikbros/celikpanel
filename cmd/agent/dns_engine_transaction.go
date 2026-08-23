@@ -132,7 +132,7 @@ func digestDNSBytes(data []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
+func validateDNSFileSnapshotIntegrity(snapshot dnsFileSnapshot) error {
 	clean := filepath.Clean(snapshot.Path)
 	posixClean := pathpkg.Clean(snapshot.Path)
 	canonicalAbsolute := filepath.IsAbs(clean) && clean == snapshot.Path
@@ -153,6 +153,19 @@ func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
 	if snapshot.Mode == 0 || len(snapshot.Data) > dnsEngineSwitchJournalLimit ||
 		snapshot.SHA256 != digestDNSBytes(snapshot.Data) {
 		return errors.New("DNS switch file snapshot digest is invalid")
+	}
+	if !snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0) {
+		return errors.New("DNS switch file snapshot has hidden ownership metadata")
+	}
+	return nil
+}
+
+func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
+	if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
+		return err
+	}
+	if !snapshot.Exists {
+		return nil
 	}
 	if dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown {
 		return errors.New("DNS switch file snapshot is missing required ownership metadata")
@@ -247,17 +260,20 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 			}
 		}
 	}
-	for _, snapshots := range [][]dnsFileSnapshot{journal.ConfigBefore} {
-		previous := ""
-		for _, snapshot := range snapshots {
-			if err := validateDNSFileSnapshot(snapshot); err != nil {
-				return err
-			}
-			if previous != "" && snapshot.Path <= previous {
-				return errors.New("DNS switch file snapshots are unsorted or duplicated")
-			}
-			previous = snapshot.Path
+	previous := ""
+	for _, snapshot := range journal.ConfigBefore {
+		validate := validateDNSFileSnapshot
+		if journal.Mode == transport.DNSEngineSwitchModeSwitch &&
+			journal.TargetEngine == transport.DNSEngineBIND {
+			validate = validateDNSFileSnapshotIntegrity
 		}
+		if err := validate(snapshot); err != nil {
+			return err
+		}
+		if previous != "" && snapshot.Path <= previous {
+			return errors.New("DNS switch file snapshots are unsorted or duplicated")
+		}
+		previous = snapshot.Path
 	}
 	for _, snapshots := range [][]dnsUnitSnapshot{journal.TargetUnitsBefore, journal.SourceUnitsBefore} {
 		previous := ""
@@ -381,18 +397,32 @@ func validatePDNSAdoptionJournal(journal dnsEngineSwitchJournal) error {
 func validBINDConfigSnapshotSet(snapshots []dnsFileSnapshot) bool {
 	apt := []string{"/etc/bind/named.conf.local", "/etc/bind/named.conf.options"}
 	pacman := []string{"/etc/named.conf"}
-	matches := func(want []string) bool {
+	matches := func(want []string, aptLayout bool) bool {
 		if len(snapshots) != len(want) {
 			return false
 		}
+		var commonGID uint32
 		for index, snapshot := range snapshots {
-			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != 0o644 {
+			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != 0o644 ||
+				(dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown) ||
+				(snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID > uint32(1<<31-1))) ||
+				(index > 0 && snapshot.OwnerKnown != snapshots[0].OwnerKnown) {
 				return false
+			}
+			if snapshot.OwnerKnown {
+				if !aptLayout && snapshot.GID != 0 {
+					return false
+				}
+				if index == 0 {
+					commonGID = snapshot.GID
+				} else if snapshot.GID != commonGID {
+					return false
+				}
 			}
 		}
 		return true
 	}
-	return matches(apt) || matches(pacman)
+	return matches(apt, true) || matches(pacman, false)
 }
 
 func dnsUnitSnapshotNamesEqual(snapshots []dnsUnitSnapshot, want []string) bool {
@@ -509,6 +539,31 @@ func removeDNSEngineSwitchJournal() error {
 }
 
 func captureDNSFileSnapshot(path string, mode os.FileMode, allowAbsent bool) (dnsFileSnapshot, error) {
+	return captureDNSFileSnapshotForOwnerContract(
+		path, mode, allowAbsent, 0, 0,
+		"DNS switch snapshot file is not root-owned",
+	)
+}
+
+func captureDNSFileSnapshotForOwner(
+	path string,
+	mode os.FileMode,
+	allowAbsent bool,
+	requiredUID, requiredGID uint32,
+) (dnsFileSnapshot, error) {
+	return captureDNSFileSnapshotForOwnerContract(
+		path, mode, allowAbsent, requiredUID, requiredGID,
+		"DNS switch snapshot file ownership differs from the managed contract",
+	)
+}
+
+func captureDNSFileSnapshotForOwnerContract(
+	path string,
+	mode os.FileMode,
+	allowAbsent bool,
+	requiredUID, requiredGID uint32,
+	ownerError string,
+) (dnsFileSnapshot, error) {
 	path = filepath.Clean(path)
 	if !filepath.IsAbs(path) || mode.Perm() == 0 || mode.Perm() != mode {
 		return dnsFileSnapshot{}, errors.New("invalid DNS switch snapshot path or mode")
@@ -523,8 +578,8 @@ func captureDNSFileSnapshot(path string, mode os.FileMode, allowAbsent bool) (dn
 	if metadata.Mode.Perm() != mode.Perm() {
 		return dnsFileSnapshot{}, errors.New("DNS switch snapshot file mode differs from the managed contract")
 	}
-	if metadata.OwnerKnown && (metadata.UID != 0 || metadata.GID != 0) {
-		return dnsFileSnapshot{}, errors.New("DNS switch snapshot file is not root-owned")
+	if metadata.OwnerKnown && (metadata.UID != requiredUID || metadata.GID != requiredGID) {
+		return dnsFileSnapshot{}, errors.New(ownerError)
 	}
 	if dnsSnapshotOwnerRequired() && !metadata.OwnerKnown {
 		return dnsFileSnapshot{}, errors.New("DNS switch snapshot ownership cannot be verified")
