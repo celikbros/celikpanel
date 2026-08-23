@@ -216,7 +216,7 @@ func primaryCatalogEvidenceForEngine(
 			return dnsPrimaryCatalogEvidence{}, err
 		}
 		if err := verifyManagedBINDRuntimeConfigExact(
-			layout, receipt, legacy,
+			ctx, layout, receipt, legacy,
 		); err != nil {
 			return dnsPrimaryCatalogEvidence{}, err
 		}

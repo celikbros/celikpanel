@@ -278,7 +278,28 @@ func verifyExistingManagedBINDGenerationForSignedUpdate(
 	if err != nil {
 		return fmt.Errorf("load existing managed BIND generation: %w", err)
 	}
-	return verifyExistingManagedBINDTreeForSignedUpdate(layout, state, tree)
+	return verifyExistingManagedBINDTreeForSignedUpdateOwnerAware(ctx, layout, state, tree)
+}
+
+func verifyExistingManagedBINDTreeForSignedUpdateOwnerAware(
+	ctx context.Context,
+	layout bindHostLayout,
+	state dnsEngineStateReceipt,
+	tree binddns.VerifiedTree,
+) error {
+	receipt := tree.CurrentReceipt()
+	if receipt.EngineEpoch != state.EngineEpoch || receipt.Generation != state.Generation {
+		return errors.New("existing BIND current receipt differs from managed state")
+	}
+	legacyOptions, err := bindStateTreePairContract(
+		layout.GenerationRoot, state, tree, false, true, false,
+	)
+	if err != nil {
+		return err
+	}
+	return verifyManagedBINDRuntimeConfigExact(
+		ctx, layout, receipt, legacyOptions,
+	)
 }
 
 func verifyExistingManagedBINDTreeForSignedUpdate(

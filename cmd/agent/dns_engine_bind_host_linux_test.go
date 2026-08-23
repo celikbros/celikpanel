@@ -41,6 +41,7 @@ func TestResolveBINDGroupGIDIsExactAndDeadlineBound(t *testing.T) {
 	for _, output := range []string{
 		"bind:x:0109:\n", "bind:x:109:root\n", "bind:*:109:\n",
 		"bind:x:109:\nextra:x:110:\n", " bind:x:109:\n",
+		"bind:x:2147483648:\n", "bind:x:4294967295:\n",
 	} {
 		if _, err := resolveBINDGroupGIDWithRunner(
 			context.Background(), "/usr/bin/getent",

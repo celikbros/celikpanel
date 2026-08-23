@@ -21,6 +21,13 @@ type dnsSnapshotMetadata struct {
 func dnsSnapshotOwnerRequired() bool { return true }
 
 func readDNSFileForSnapshot(path string) ([]byte, dnsSnapshotMetadata, error) {
+	return readDNSFileForSnapshotWithHook(path, nil)
+}
+
+func readDNSFileForSnapshotWithHook(
+	path string,
+	afterFirstStat func(),
+) ([]byte, dnsSnapshotMetadata, error) {
 	relative, err := secureConfigRelativePath(path)
 	if err != nil {
 		return nil, dnsSnapshotMetadata{}, err
@@ -50,6 +57,9 @@ func readDNSFileForSnapshot(path string) ([]byte, dnsSnapshotMetadata, error) {
 	if stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Nlink != 1 {
 		return nil, dnsSnapshotMetadata{}, errors.New("managed configuration snapshot is not a single-link regular file")
 	}
+	if afterFirstStat != nil {
+		afterFirstStat()
+	}
 	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, dnsSnapshotMetadata{}, err
@@ -59,7 +69,9 @@ func readDNSFileForSnapshot(path string) ([]byte, dnsSnapshotMetadata, error) {
 		return nil, dnsSnapshotMetadata{}, err
 	}
 	if stat.Dev != after.Dev || stat.Ino != after.Ino || stat.Size != after.Size ||
-		stat.Mtim != after.Mtim || int64(len(data)) != after.Size {
+		stat.Mode != after.Mode || stat.Uid != after.Uid || stat.Gid != after.Gid ||
+		stat.Nlink != after.Nlink || stat.Mtim != after.Mtim || stat.Ctim != after.Ctim ||
+		int64(len(data)) != after.Size {
 		return nil, dnsSnapshotMetadata{}, errors.New("managed configuration changed while it was snapshotted")
 	}
 	return data, dnsSnapshotMetadata{

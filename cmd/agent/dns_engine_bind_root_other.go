@@ -11,6 +11,10 @@ var errBINDAbandonedGenerationRoot = errors.New(
 	"the unreleased APT BIND generation root is unsupported",
 )
 
+func resolveBINDGroupGID(context.Context) (uint32, error) {
+	return 0, errors.New("BIND service group proof requires Linux")
+}
+
 func prepareHostBINDGenerationRoot(
 	ctx context.Context,
 	layout bindHostLayout,
