@@ -1535,7 +1535,17 @@ func TestCanonicalBINDPublicListenersRejectsMalformedAndSpoofedRows(t *testing.T
 		{name: "bad-queue", row: `udp UNCONN x 0 192.0.2.1:53 0.0.0.0:* users:(("named",pid=10,fd=3))`},
 		{name: "bad-endpoint", row: `udp UNCONN 0 0 bad:53 0.0.0.0:* users:(("named",pid=10,fd=3))`},
 		{name: "bad-peer", row: `udp UNCONN 0 0 192.0.2.1:53 junk users:(("named",pid=10,fd=3))`},
+		{name: "normal-zoned-peer", row: `udp UNCONN 0 0 192.0.2.1:53 [fe80::1%eth0]:* users:(("named",pid=10,fd=3))`},
+		{name: "iproute2-zoned-peer", row: `udp UNCONN 0 0 192.0.2.1:53 [fe80::1]%eth0:* users:(("named",pid=10,fd=3))`},
+		{name: "zoned-ipv4-peer", row: `udp UNCONN 0 0 192.0.2.1:53 127.0.0.1%lo:* users:(("named",pid=10,fd=3))`},
 		{name: "ambiguous-wildcard", row: `udp UNCONN 0 0 *:53 *:* users:(("named",pid=10,fd=3))`},
+		{name: "normal-scoped-ipv4", row: `udp UNCONN 0 0 192.0.2.1%eth0:53 0.0.0.0:* users:(("named",pid=10,fd=3))`},
+		{name: "scoped-ipv4", row: `udp UNCONN 0 0 [192.0.2.1]%eth0:53 0.0.0.0:* users:(("named",pid=10,fd=3))`},
+		{name: "empty-ipv6-scope", row: `udp UNCONN 0 0 [fe80::1]%:53 [::]:* users:(("named",pid=10,fd=3))`},
+		{name: "double-ipv6-scope", row: `udp UNCONN 0 0 [fe80::1]%eth0%evil:53 [::]:* users:(("named",pid=10,fd=3))`},
+		{name: "invalid-ipv6-interface", row: `udp UNCONN 0 0 [fe80::1]%eth0/evil:53 [::]:* users:(("named",pid=10,fd=3))`},
+		{name: "extra-ipv6-bracket", row: `udp UNCONN 0 0 [fe80::1]]%eth0:53 [::]:* users:(("named",pid=10,fd=3))`},
+		{name: "suffixed-ipv6-port", row: `udp UNCONN 0 0 [fe80::1]%eth0:53:evil [::]:* users:(("named",pid=10,fd=3))`},
 		{name: "leading-zero-pid", row: `udp UNCONN 0 0 192.0.2.1:53 0.0.0.0:* users:(("named",pid=010,fd=3))`},
 		{name: "multiple-pids", row: `udp UNCONN 0 0 192.0.2.1:53 0.0.0.0:* users:(("named",pid=10,fd=3),("named",pid=11,fd=4))`},
 		{name: "extra-owner-field", row: `udp UNCONN 0 0 192.0.2.1:53 0.0.0.0:* users:(("evil",pid=11,fd=3)) users:(("named",pid=10,fd=4))`},
@@ -1548,6 +1558,30 @@ func TestCanonicalBINDPublicListenersRejectsMalformedAndSpoofedRows(t *testing.T
 				t.Fatal("malformed or spoofed public listener row was accepted")
 			}
 		})
+	}
+}
+
+func TestCanonicalBINDPublicListenersAcceptsIPRoute2ScopedIPv6Rows(t *testing.T) {
+	output := strings.Join([]string{
+		`udp UNCONN 0 0 72.62.38.15:53 0.0.0.0:* users:(("named",pid=10,fd=1))`,
+		`tcp LISTEN 0 4096 72.62.38.15:53 0.0.0.0:* users:(("named",pid=10,fd=2))`,
+		`udp UNCONN 0 0 [2a02:4780:41:c2df::1]:53 [::]:* users:(("named",pid=10,fd=3))`,
+		`tcp LISTEN 0 4096 [2a02:4780:41:c2df::1]:53 [::]:* users:(("named",pid=10,fd=4))`,
+		`udp UNCONN 0 0 [fe80::62e8:d4ff:feb6:6a61]%eth0:53 [::]:* users:(("named",pid=10,fd=5))`,
+		`tcp LISTEN 0 4096 [fe80::62e8:d4ff:feb6:6a61]%eth0:53 [::]:* users:(("named",pid=10,fd=6))`,
+	}, "\n")
+	listeners, err := canonicalBINDPublicListeners(output, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"tcp|2a02:4780:41:c2df::1|10",
+		"tcp|72.62.38.15|10",
+		"udp|2a02:4780:41:c2df::1|10",
+		"udp|72.62.38.15|10",
+	}
+	if !reflect.DeepEqual(listeners, want) {
+		t.Fatalf("listeners = %#v, want %#v", listeners, want)
 	}
 }
 

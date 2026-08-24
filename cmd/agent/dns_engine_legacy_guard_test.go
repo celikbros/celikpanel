@@ -84,6 +84,46 @@ func TestDNSPort53ConflictParserAllowsScopedLocalStubs(t *testing.T) {
 	}
 }
 
+func TestParseCanonicalSSHostPortValidatesScopes(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		endpoint         string
+		allowScopedLocal bool
+		wantAddress      string
+		wantPort         string
+		wantOK           bool
+	}{
+		{name: "unscoped IPv4", endpoint: "192.0.2.1:53", wantAddress: "192.0.2.1", wantPort: "53", wantOK: true},
+		{name: "unscoped IPv6", endpoint: "[2001:db8::1]:53", wantAddress: "2001:db8::1", wantPort: "53", wantOK: true},
+		{name: "normal scoped IPv6", endpoint: "[fe80::1%eth0]:53", allowScopedLocal: true, wantAddress: "fe80::1", wantPort: "53", wantOK: true},
+		{name: "iproute2 scoped IPv6", endpoint: "[fe80::1]%eth0:53", allowScopedLocal: true, wantAddress: "fe80::1", wantPort: "53", wantOK: true},
+		{name: "live scoped loopback IPv4", endpoint: "127.0.0.53%lo:53", allowScopedLocal: true, wantAddress: "127.0.0.53", wantPort: "53", wantOK: true},
+		{name: "public scoped IPv4", endpoint: "192.0.2.1%eth0:53", allowScopedLocal: true},
+		{name: "empty IPv6 zone", endpoint: "[fe80::1%]:53", allowScopedLocal: true},
+		{name: "double IPv6 zone", endpoint: "[fe80::1%eth0%evil]:53", allowScopedLocal: true},
+		{name: "slash in IPv6 zone", endpoint: "[fe80::1%eth0/evil]:53", allowScopedLocal: true},
+		{name: "bracket in IPv6 zone", endpoint: "[fe80::1%eth0]]:53", allowScopedLocal: true},
+		{name: "whitespace in IPv6 zone", endpoint: "[fe80::1%eth 0]:53", allowScopedLocal: true},
+		{name: "normal zoned peer", endpoint: "[fe80::1%eth0]:*"},
+		{name: "iproute2 zoned peer", endpoint: "[fe80::1]%eth0:*"},
+		{name: "zoned IPv4 peer", endpoint: "127.0.0.1%lo:*"},
+		{name: "canonical IPv6 peer", endpoint: "[::]:*", wantAddress: "::", wantPort: "*", wantOK: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			address, port, ok := parseCanonicalSSHostPort(test.endpoint, test.allowScopedLocal)
+			if ok != test.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, test.wantOK)
+			}
+			if !ok {
+				return
+			}
+			if address.String() != test.wantAddress || port != test.wantPort {
+				t.Fatalf("address/port = %s/%s, want %s/%s", address, port, test.wantAddress, test.wantPort)
+			}
+		})
+	}
+}
+
 func TestDNSPort53ConflictParserAllowsOnlyDeclaredEngineOwners(t *testing.T) {
 	const (
 		bindTCP = `tcp LISTEN 0 128 192.0.2.10:53 0.0.0.0:* users:(("named",pid=10,fd=1))`

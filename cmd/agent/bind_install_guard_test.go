@@ -237,6 +237,46 @@ func TestBINDPackageInstallFailureRestoresPriorUnitState(t *testing.T) {
 	}
 }
 
+func TestBINDRestoreAbsentUnitAcceptsDisableRemovingUnitAlias(t *testing.T) {
+	showCalls := 0
+	disableCalls := 0
+	guard := bindPackageInstallGuard{
+		systemctl: "/usr/bin/systemctl",
+		ops: bindInstallGuardOps{
+			runSystemd: func(_ context.Context, executable string, args ...string) ([]byte, error) {
+				if executable != "/usr/bin/systemctl" {
+					return nil, fmt.Errorf("unexpected executable %q", executable)
+				}
+				if len(args) >= 2 && args[0] == "show" {
+					showCalls++
+					if showCalls == 1 {
+						return []byte("LoadState=loaded\nActiveState=inactive\nUnitFileState=alias\n"), nil
+					}
+					return []byte("LoadState=not-found\nActiveState=inactive\nUnitFileState=\n"), nil
+				}
+				if len(args) == 2 && args[0] == "disable" && args[1] == "bind9.service" {
+					disableCalls++
+					return []byte("Removed unit alias"), nil
+				}
+				return nil, fmt.Errorf("unexpected systemctl args %q", args)
+			},
+		},
+	}
+	before := bindInstallUnitState{
+		name:          "bind9.service",
+		loadState:     "not-found",
+		activeState:   "inactive",
+		unitFileState: "",
+	}
+
+	if err := guard.restoreUnitFileState(context.Background(), before); err != nil {
+		t.Fatalf("restore rejected exact absent readback after alias removal: %v", err)
+	}
+	if showCalls != 2 || disableCalls != 1 {
+		t.Fatalf("show calls=%d disable calls=%d, want 2 and 1", showCalls, disableCalls)
+	}
+}
+
 func TestBINDPackageInstallFailurePreservesPreexistingMask(t *testing.T) {
 	systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
 		"bind9.service": {loadState: "loaded", unitFileState: "disabled", masked: true},

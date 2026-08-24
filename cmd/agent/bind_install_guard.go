@@ -256,6 +256,11 @@ func (g *bindPackageInstallGuard) restoreUnitFileState(ctx context.Context, befo
 		args := []string{"disable", before.name}
 		output, commandErr := g.ops.runSystemd(ctx, g.systemctl, args...)
 		after, inspectErr = g.inspect(ctx, before.name)
+		// Disabling a distro alias may remove the alias entirely. That exact
+		// absent readback restores the original state without compensation.
+		if inspectErr == nil && after.loadState == "not-found" && after.unitFileState == "" {
+			return nil
+		}
 		if inspectErr == nil && after.unitFileState == "disabled" && !after.masked() {
 			return nil
 		}
