@@ -15,7 +15,23 @@ func testUbuntuBINDProfile() hostplatform.Profile {
 	return hostplatform.Profile{
 		DistroFamily:   hostplatform.DistroFamilyDebian,
 		PackageManager: hostplatform.PackageManagerAPT,
+		ServiceManager: hostplatform.ServiceManagerSystemd,
 		ID:             "ubuntu", Version: "24.04", Codename: "noble",
+	}
+}
+
+func testDebian13BINDProfile() hostplatform.Profile {
+	profile := testUbuntuBINDProfile()
+	profile.ID, profile.Version, profile.Codename = "debian", "13", "trixie"
+	return profile
+}
+
+func testPacmanBINDProfile() hostplatform.Profile {
+	return hostplatform.Profile{
+		DistroFamily:   hostplatform.DistroFamilyArch,
+		PackageManager: hostplatform.PackageManagerPacman,
+		ServiceManager: hostplatform.ServiceManagerSystemd,
+		ID:             "arch", Version: "rolling",
 	}
 }
 
@@ -58,15 +74,43 @@ func TestAPTBindLayoutPreservesReleasedGenerationRoot(t *testing.T) {
 	}
 }
 
-func TestAPTBindLayoutRejectsUncertifiedDistributionProfiles(t *testing.T) {
+func TestAPTBindLayoutUsesCapabilitiesInsteadOfDistributionIdentity(t *testing.T) {
+	for _, profile := range []hostplatform.Profile{
+		testUbuntuBINDProfile(),
+		testDebian13BINDProfile(),
+		{
+			DistroFamily:   hostplatform.DistroFamilyDebian,
+			PackageManager: hostplatform.PackageManagerAPT,
+			ServiceManager: hostplatform.ServiceManagerSystemd,
+			ID:             "operator-linux", Version: "2031.7", Codename: "custom",
+		},
+	} {
+		if _, err := bindLayout(profile); err != nil {
+			t.Fatalf("capable APT BIND profile rejected: %#v: %v", profile, err)
+		}
+	}
 	for _, profile := range []hostplatform.Profile{
 		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT},
-		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ID: "debian", Version: "13", Codename: "trixie"},
-		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ID: "ubuntu", Version: "22.04", Codename: "jammy"},
-		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ID: "ubuntu", Version: "24.04", Codename: "jammy"},
+		{DistroFamily: hostplatform.DistroFamilyRHEL, PackageManager: hostplatform.PackageManagerAPT, ServiceManager: hostplatform.ServiceManagerSystemd},
+		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ServiceManager: "openrc"},
 	} {
 		if _, err := bindLayout(profile); err == nil {
-			t.Fatalf("uncertified APT BIND profile accepted: %#v", profile)
+			t.Fatalf("incomplete APT BIND capability profile accepted: %#v", profile)
+		}
+	}
+}
+
+func TestPacmanBindLayoutRequiresCompleteCapabilities(t *testing.T) {
+	if _, err := bindLayout(testPacmanBINDProfile()); err != nil {
+		t.Fatalf("capable pacman BIND profile rejected: %v", err)
+	}
+	for _, profile := range []hostplatform.Profile{
+		{PackageManager: hostplatform.PackageManagerPacman},
+		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerPacman, ServiceManager: hostplatform.ServiceManagerSystemd},
+		{DistroFamily: hostplatform.DistroFamilyArch, PackageManager: hostplatform.PackageManagerPacman, ServiceManager: "openrc"},
+	} {
+		if _, err := bindLayout(profile); err == nil {
+			t.Fatalf("incomplete pacman BIND capability profile accepted: %#v", profile)
 		}
 	}
 }

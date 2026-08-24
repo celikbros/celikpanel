@@ -310,7 +310,9 @@ func TestManagedPDNSPrimaryCatalogEvidenceRequiresExactProducer(t *testing.T) {
 	})
 	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
-	dnsPairHostOwnedAddresses = func() []string { return []string{"192.0.2.10"} }
+	dnsPairHostOwnedAddresses = func() ([]string, error) {
+		return []string{"192.0.2.10"}, nil
+	}
 	config := dnsClusterConfig(&transport.DNSClusterRequest{
 		Role: dnsRolePaired, PeerIP: "192.0.2.20",
 	})

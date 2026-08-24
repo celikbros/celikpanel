@@ -54,6 +54,8 @@ type IncludeMailInspectResponse struct {
 }
 
 type includeMailRPCAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu          sync.Mutex
 	applyCalls  []IncludeMailApplyVhostRequest
 	issueCalls  []IncludeMailIssueRequest

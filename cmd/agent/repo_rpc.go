@@ -205,7 +205,7 @@ func (a *Agent) EnableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) err
 	_, err = verifiedHostProfile("apt")
 	if err != nil {
 		resp.ErrorCode = repoErrUnsupportedSystem
-		resp.Error = "managed repositories are only supported on apt (Debian/Ubuntu) systems yet"
+		resp.Error = "managed repositories currently require a verified APT package ecosystem"
 		return nil
 	}
 	repo := repoFromCatalogue(req.RepoID)
@@ -348,7 +348,7 @@ func (a *Agent) DisableRepo(req *EnableRepoRequest, resp *RepoStatusResponse) er
 	_, err = verifiedHostProfile("apt")
 	if err != nil {
 		resp.ErrorCode = repoErrUnsupportedSystem
-		resp.Error = "managed repositories are only supported on apt (Debian/Ubuntu) systems yet"
+		resp.Error = "managed repositories currently require a verified APT package ecosystem"
 		return nil
 	}
 	// Removal and apt refresh must be one package-manager critical section.

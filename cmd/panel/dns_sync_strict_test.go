@@ -33,6 +33,8 @@ type StrictDNSRPCPowerResponse struct {
 
 type strictDNSRPCAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
+
 	mu                  sync.Mutex
 	failZone            string
 	clusterError        string

@@ -59,11 +59,33 @@ func (a *blockingBackupSchedulerAgent) calledJobKeys() []string {
 	return append([]string(nil), a.jobKeys...)
 }
 
+type backupSchedulerRPCAgent interface {
+	CreateBackup(*backupspec.CreateRequest, *backupspec.CreateResponse) error
+	ListBackups(*backupspec.ListRequest, *backupspec.ListResponse) error
+}
+
+type verifiedAPTBackupSchedulerRPCAgent struct {
+	backupSchedulerRPCAgent
+}
+
+func (a *verifiedAPTBackupSchedulerRPCAgent) HostPlatform(
+	_ *transport.Empty,
+	response *transport.HostPlatformResponse,
+) error {
+	*response = debianPolicyTestIdentity()
+	return nil
+}
+
 func attachBackupSchedulerAgent(t *testing.T, p *Panel, agent any) {
 	t.Helper()
-	p.pkgFamilyVal = "apt"
+	scheduler, ok := agent.(backupSchedulerRPCAgent)
+	if !ok {
+		t.Fatalf("backup scheduler agent lacks its exact RPC contract: %T", agent)
+	}
 	server := rpc.NewServer()
-	if err := server.RegisterName("Agent", agent); err != nil {
+	if err := server.RegisterName("Agent", &verifiedAPTBackupSchedulerRPCAgent{
+		backupSchedulerRPCAgent: scheduler,
+	}); err != nil {
 		t.Fatalf("register scheduler agent: %v", err)
 	}
 	connector := func(ctx context.Context) (*rpc.Client, error) {

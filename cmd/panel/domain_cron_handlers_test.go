@@ -14,6 +14,8 @@ import (
 )
 
 type cronMutationTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	success bool
 	err     error
 }

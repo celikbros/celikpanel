@@ -75,24 +75,25 @@ func exactDNSZoneSerialAtWithProbe(
 }
 
 func bindLocalProofAddress() (string, error) {
-	for _, candidate := range strings.Split(publicListenAddresses(), ",") {
-		address := strings.TrimSpace(candidate)
-		ip := net.ParseIP(address)
-		if ip != nil && !ip.IsUnspecified() && !ip.IsLoopback() && !ip.IsLinkLocalUnicast() {
-			return address, nil
-		}
+	addresses, err := publicListenAddresses(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("discover BIND pair proof address: %w", err)
 	}
-	return "", errors.New("no safe public address is available for BIND pair verification")
+	return addresses[0], nil
 }
 
 var dnsPairLocalProofAddress = bindLocalProofAddress
 var dnsPairHostOwnedAddresses = hostOwnedDNSPairAddresses
 var dnsPairHostAddressOwned = hostOwnsDNSPairAddress
 
-func hostOwnedDNSPairAddresses() []string {
+func hostOwnedDNSPairAddresses() ([]string, error) {
+	listenAddresses, err := publicListenAddresses(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("discover DNS pair host addresses: %w", err)
+	}
 	var addresses []string
 	seen := map[string]struct{}{}
-	for _, candidate := range strings.Split(publicListenAddresses(), ",") {
+	for _, candidate := range listenAddresses {
 		address := strings.TrimSpace(candidate)
 		parsed := net.ParseIP(address)
 		if parsed == nil || parsed.To4() == nil ||
@@ -106,26 +107,37 @@ func hostOwnedDNSPairAddresses() []string {
 		addresses = append(addresses, address)
 	}
 	sort.Strings(addresses)
-	return addresses
+	if len(addresses) == 0 {
+		return nil, errors.New("no usable global unicast IPv4 address is available for DNS pairing")
+	}
+	return addresses, nil
 }
 
-func hostOwnsDNSPairAddress(address string) bool {
+func hostOwnsDNSPairAddress(address string) (bool, error) {
 	expected := net.ParseIP(address)
 	if expected == nil || expected.To4() == nil ||
 		expected.To4().String() != address || !expected.IsGlobalUnicast() {
-		return false
+		return false, nil
 	}
-	for _, candidate := range dnsPairHostOwnedAddresses() {
+	addresses, err := dnsPairHostOwnedAddresses()
+	if err != nil {
+		return false, err
+	}
+	for _, candidate := range addresses {
 		actual := net.ParseIP(candidate)
 		if actual != nil && actual.Equal(expected) {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func requireHostOwnedDNSPairAddress(address string) error {
-	if !dnsPairHostAddressOwned(address) {
+	owned, err := dnsPairHostAddressOwned(address)
+	if err != nil {
+		return fmt.Errorf("discover DNS pair host identity: %w", err)
+	}
+	if !owned {
 		return errors.New("DNS pair local address is not owned by this host")
 	}
 	return nil
@@ -415,9 +427,9 @@ func verifyDNSZoneAuthorities(
 	ctx context.Context,
 	expected []expectedDNSZoneAuthority,
 ) error {
-	addresses := strings.Split(publicListenAddresses(), ",")
-	if len(addresses) == 0 || strings.TrimSpace(addresses[0]) == "" {
-		return errors.New("no public address is available for authoritative DNS verification")
+	addresses, err := publicListenAddresses(ctx)
+	if err != nil {
+		return fmt.Errorf("discover authoritative DNS verification address: %w", err)
 	}
 	address := strings.TrimSpace(addresses[0])
 	if ip := net.ParseIP(address); ip == nil || ip.IsUnspecified() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {

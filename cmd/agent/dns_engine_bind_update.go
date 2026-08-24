@@ -171,7 +171,7 @@ func prepareBINDGenerationRootForSignedUpdateWithOps(
 		return nil
 	}
 	if !supportedAPTBindLegacyRootProfile(profile) {
-		return errors.New("existing managed BIND root is on an uncertified APT host profile")
+		return errors.New("existing managed BIND root lacks the required verified APT and systemd capabilities")
 	}
 	installed, err := ops.packageInstalled(ctx, profile, "bind9")
 	if err != nil {
@@ -338,5 +338,5 @@ func verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(
 }
 
 func supportedAPTBindLegacyRootProfile(profile hostplatform.Profile) bool {
-	return certifyAPTBINDProfile(profile) == nil
+	return certifyAPTBINDCapabilities(profile) == nil
 }

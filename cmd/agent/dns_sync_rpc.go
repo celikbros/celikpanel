@@ -6,10 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -60,6 +64,23 @@ type SyncDNSZoneV2Response = transport.SyncDNSZoneV2Response
 var dnsSyncCommand = func(ctx context.Context, name string, args ...string) ([]byte, error) {
 	return serviceMutationCommand(ctx, name, args...).CombinedOutput()
 }
+
+const publicListenAddressOutputLimit = 64 * 1024
+
+var (
+	publicListenAddressTimeout            = 3 * time.Second
+	publicListenAddressExecutableResolver = trustedCommandExecutablePath
+	publicListenAddressCommandRunner      = func(ctx context.Context, path string, args ...string) ([]byte, error) {
+		cmd := serviceMutationCommand(ctx, path, args...)
+		cmd.Env = []string{
+			"PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+			"LANG=C",
+			"LC_ALL=C",
+		}
+		cmd.Dir = "/"
+		return cmd.CombinedOutputLimited(publicListenAddressOutputLimit)
+	}
+)
 
 const syncDNSZoneLegacyUnsupportedError = "Agent.SyncDNSZone is unsupported; use Agent.SyncDNSZoneV2 with a payload-bound mutation lease"
 
@@ -151,6 +172,11 @@ func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncD
 		resp.Error = "PowerDNS configuration is blocked because the DNS engine state is not safe"
 		return nil
 	}
+	config, err := managedPowerDNSStandaloneConfig(ctx)
+	if err != nil {
+		resp.Error = fmt.Sprintf("discover managed PowerDNS listen addresses: %v", err)
+		return nil
+	}
 	dbPath := pdnsDBPath()
 
 	// Create the database with the pdns schema before pdns first reads it.
@@ -201,19 +227,6 @@ func (a *Agent) ConfigurePowerDNSSQLite(req *ServiceMutationRequest, resp *SyncD
 	// systemd-resolved zaten 127.0.0.53:53'ü tutar; joker bağlanma onunla
 	// çakışır ve pdns başlayamaz. Genel IP'lerde sunmak, stub çözümleyiciyi
 	// (ve sunucunun kendi ad çözümlemesini) bozmadan bırakır.
-	listen := publicListenAddresses()
-	if listen == "" {
-		listen = "0.0.0.0" // no public IP detected; fall back (dev/NAT)
-	}
-	config := fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
-launch=gsqlite3
-gsqlite3-dnssec=yes
-gsqlite3-database=%s
-local-address=%s
-zone-cache-refresh-interval=0
-webserver=no
-api=no
-`, dbPath, listen)
 	// The drop-in directory is a Debian convention; Arch ships neither the
 	// directory nor an active include-dir line in the stock pdns.conf. Create
 	// the one and switch on the other, so the same managed drop-in works on
@@ -260,7 +273,7 @@ api=no
 	}
 
 	confPath := dnsManagedConf
-	if err := os.WriteFile(confPath, []byte(config), 0o644); err != nil {
+	if err := os.WriteFile(confPath, config, 0o644); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
@@ -460,29 +473,104 @@ CREATE TABLE IF NOT EXISTS celikpanel_dns_zone_sync_receipts (
 // publicListenAddresses, makinenin genel (loopback ve link-local olmayan)
 // tekil IP'lerini virgülle ayrılmış liste olarak döndürür — yetkili bir DNS
 // sunucusunun, yerel stub çözümleyiciyle çakışmadan dinlemesi gereken yer.
-func publicListenAddresses() string {
-	out, err := serviceMutationCommand(context.Background(), "ip", "-o", "addr", "show", "scope", "global").Output()
-	if err != nil {
-		return ""
+func publicListenAddresses(ctx context.Context) ([]string, error) {
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	var addrs []string
-	seen := map[string]bool{}
-	for _, line := range strings.Split(string(out), "\n") {
-		f := strings.Fields(line)
-		for i := range f {
-			if f[i] == "inet" || f[i] == "inet6" {
-				if i+1 < len(f) {
-					ip := f[i+1]
-					if s := strings.IndexByte(ip, '/'); s >= 0 {
-						ip = ip[:s]
-					}
-					if ip != "" && !seen[ip] {
-						seen[ip] = true
-						addrs = append(addrs, ip)
-					}
+	ipPath, err := publicListenAddressExecutableResolver("ip")
+	if err != nil {
+		return nil, fmt.Errorf("resolve trusted ip executable: %w", err)
+	}
+	commandCtx, cancel := context.WithTimeout(ctx, publicListenAddressTimeout)
+	defer cancel()
+	out, err := publicListenAddressCommandRunner(
+		commandCtx, ipPath, "-o", "addr", "show", "scope", "global",
+	)
+	if commandErr := commandCtx.Err(); commandErr != nil {
+		if errors.Is(commandErr, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("trusted ip address discovery timed out: %w", commandErr)
+		}
+		return nil, fmt.Errorf("trusted ip address discovery was canceled: %w", commandErr)
+	}
+	if err != nil {
+		detail := firstLine(string(out))
+		if detail == "" {
+			return nil, fmt.Errorf("trusted ip address discovery failed: %w", err)
+		}
+		return nil, fmt.Errorf("trusted ip address discovery failed: %w: %s", err, detail)
+	}
+	addresses, err := parsePublicListenAddresses(out)
+	if err != nil {
+		return nil, fmt.Errorf("parse trusted ip address discovery: %w", err)
+	}
+	return addresses, nil
+}
+
+func parsePublicListenAddresses(out []byte) ([]string, error) {
+	if len(out) > publicListenAddressOutputLimit {
+		return nil, errors.New("ip address discovery output exceeds its limit")
+	}
+	addresses := make([]string, 0)
+	seen := make(map[string]struct{})
+	for lineNumber, rawLine := range strings.Split(string(out), "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 6 || (fields[2] != "inet" && fields[2] != "inet6") {
+			return nil, fmt.Errorf("line %d is not canonical ip -o address output", lineNumber+1)
+		}
+		scopeCount := 0
+		for index := 4; index+1 < len(fields); index++ {
+			if fields[index] == "scope" {
+				scopeCount++
+				if fields[index+1] != "global" {
+					return nil, fmt.Errorf("line %d does not have global scope", lineNumber+1)
 				}
 			}
 		}
+		if scopeCount != 1 {
+			return nil, fmt.Errorf("line %d has an ambiguous scope", lineNumber+1)
+		}
+		parsed, network, err := net.ParseCIDR(fields[3])
+		if err != nil {
+			return nil, fmt.Errorf("line %d has a malformed address prefix", lineNumber+1)
+		}
+		ones, bits := network.Mask.Size()
+		if ones < 0 {
+			return nil, fmt.Errorf("line %d has a non-canonical address mask", lineNumber+1)
+		}
+		var address string
+		switch fields[2] {
+		case "inet":
+			if bits != 32 || parsed.To4() == nil {
+				return nil, fmt.Errorf("line %d has an invalid IPv4 address", lineNumber+1)
+			}
+			address = parsed.To4().String()
+		case "inet6":
+			if bits != 128 || parsed.To4() != nil {
+				return nil, fmt.Errorf("line %d has an invalid IPv6 address", lineNumber+1)
+			}
+			address = parsed.String()
+		}
+		prefixIndex := strings.LastIndexByte(fields[3], '/')
+		if prefixIndex < 0 || fields[3][prefixIndex+1:] != strconv.Itoa(ones) {
+			return nil, fmt.Errorf("line %d has a non-canonical prefix length", lineNumber+1)
+		}
+		if !parsed.IsGlobalUnicast() || parsed.IsUnspecified() ||
+			parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
+			continue
+		}
+		if _, duplicate := seen[address]; duplicate {
+			continue
+		}
+		seen[address] = struct{}{}
+		addresses = append(addresses, address)
 	}
-	return strings.Join(addrs, ",")
+	if len(addresses) == 0 {
+		return nil, errors.New("no usable global unicast address was reported")
+	}
+	sort.Strings(addresses)
+	return addresses, nil
 }

@@ -70,6 +70,8 @@ type AliasReissueInspectResponse struct {
 }
 
 type aliasReissueAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	oldNames []string

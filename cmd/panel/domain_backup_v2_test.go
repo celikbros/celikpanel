@@ -110,9 +110,16 @@ func (a *panelBackupV2Agent) ReadBackupChunk(req *backupspec.ReadChunkRequest, r
 	return nil
 }
 
+func (a *panelBackupV2Agent) HostPlatform(
+	_ *transport.Empty,
+	response *transport.HostPlatformResponse,
+) error {
+	*response = debianPolicyTestIdentity()
+	return nil
+}
+
 func attachPanelBackupV2Agent(t *testing.T, p *Panel, agent *panelBackupV2Agent) {
 	t.Helper()
-	p.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatalf("register backup agent: %v", err)

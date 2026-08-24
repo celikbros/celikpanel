@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 )
 
 func TestValidateRepoPackageSelectionRejectsEmptyCataloguePattern(t *testing.T) {
@@ -54,6 +55,77 @@ func TestInstallAndUninstallRejectNetdataPackageOverrideBeforeMutation(t *testin
 	}
 	if !strings.Contains(uninstall.Error, "does not offer version selection") {
 		t.Fatalf("uninstall error = %q, want version-selection rejection", uninstall.Error)
+	}
+}
+
+func TestGenericDNSEngineInstallAndUninstallRejectBeforeLeaseOrHostProbe(t *testing.T) {
+	originalDetect := detectHostPlatform
+	detectCalls := 0
+	detectHostPlatform = func() (hostplatform.Profile, error) {
+		detectCalls++
+		return hostplatform.Profile{}, errors.New("host probe must not run")
+	}
+	t.Cleanup(func() { detectHostPlatform = originalDetect })
+
+	agent := &Agent{}
+	for _, serviceID := range []string{"bind", "pdns"} {
+		t.Run(serviceID, func(t *testing.T) {
+			var install InstallServiceResponse
+			if err := agent.InstallService(
+				&InstallServiceRequest{ID: serviceID}, &install,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if install.Error != genericDNSEngineWorkflowRequired {
+				t.Fatalf("install error = %q", install.Error)
+			}
+
+			var uninstall UninstallServiceResponse
+			if err := agent.UninstallService(
+				&InstallServiceRequest{ID: serviceID}, &uninstall,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if uninstall.Error != genericDNSEngineWorkflowRequired {
+				t.Fatalf("uninstall error = %q", uninstall.Error)
+			}
+		})
+	}
+	if detectCalls != 0 {
+		t.Fatalf("generic DNS refusal performed %d host probes", detectCalls)
+	}
+}
+
+func TestInjectedGenericDNSUninstallPerformsNoHostOperations(t *testing.T) {
+	operationCalls := 0
+	called := func() { operationCalls++ }
+	ops := serviceUninstallOps{
+		detectPackageFamily: func() string { called(); return "pacman" },
+		packageInstalled:    func(string) bool { called(); return true },
+		unitExists:          func(string) bool { called(); return true },
+		unitsMatching:       func(string) []string { called(); return []string{"pdns"} },
+		disableUnit:         func(string) error { called(); return nil },
+		removePackages: func(string, []string) (string, error) {
+			called()
+			return "", nil
+		},
+		installedRepoPackages: func(*core.ManagedService) ([]string, error) {
+			called()
+			return []string{"powerdns"}, nil
+		},
+	}
+
+	var response UninstallServiceResponse
+	if err := (&Agent{}).uninstallServiceWithOps(
+		&InstallServiceRequest{ID: "pdns"}, &response, ops,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != genericDNSEngineWorkflowRequired {
+		t.Fatalf("uninstall error = %q", response.Error)
+	}
+	if operationCalls != 0 {
+		t.Fatalf("generic DNS uninstall performed %d injected host operations", operationCalls)
 	}
 }
 

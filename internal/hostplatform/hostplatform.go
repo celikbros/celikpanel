@@ -1,6 +1,7 @@
-// Package hostplatform identifies the Linux distribution family and verifies
-// the host primitives the agent relies on. It treats os-release as untrusted
-// data: callers never source it as shell code.
+// Package hostplatform identifies the Linux package ecosystem and verifies the
+// host primitives the agent relies on. It treats os-release as untrusted audit
+// metadata and routing evidence: callers never source it as shell code and a
+// distro name is never authorization by itself.
 package hostplatform
 
 import (
@@ -31,6 +32,14 @@ type ServiceManager string
 
 const ServiceManagerSystemd ServiceManager = "systemd"
 
+type SecurityPolicyState string
+
+const (
+	SecurityPolicyInactive   SecurityPolicyState = "inactive"
+	SecurityPolicyPermissive SecurityPolicyState = "selinux-permissive"
+	SecurityPolicyEnforcing  SecurityPolicyState = "selinux-enforcing"
+)
+
 type Profile struct {
 	DistroFamily   DistroFamily
 	PackageManager PackageManager
@@ -54,10 +63,13 @@ type OSRelease struct {
 // these injectable makes failure modes testable without weakening production
 // detection.
 type Probe struct {
-	LookPath           func(string) (string, error)
-	ValidateExecutable func(string, string) error
-	SystemdReady       func(string) error
-	Architecture       func() (string, error)
+	ExecutablePresent   func(string) (bool, error)
+	LookPath            func(string) (string, error)
+	ValidateExecutable  func(string, string) error
+	SystemdReady        func(string) error
+	SecurityPolicyState func() (SecurityPolicyState, error)
+	DNFSecurityReady    func(string) error
+	Architecture        func() (string, error)
 }
 
 var (
@@ -158,37 +170,80 @@ func decodeOSReleaseValue(encoded string) (string, error) {
 	return out.String(), nil
 }
 
-// DetectWith identifies the family from release data first, then verifies the
-// exact executables for that family. Foreign package managers are irrelevant.
+// DetectWith treats os-release family tokens as routing hints, never as a
+// product allowlist. Unambiguous family evidence selects that family's trusted
+// toolchain. Unknown or conflicting evidence falls back to capability
+// discovery and is accepted only when exactly one supported toolchain is
+// complete. Every present candidate package-manager executable is validated
+// before routing, including safe foreign tools that are ignored for selection.
 func DetectWith(data []byte, probe Probe) (Profile, error) {
 	release, err := ParseOSRelease(data)
 	if err != nil {
 		return Profile{}, err
 	}
-	family, err := familyForRelease(release)
+	if probe.ExecutablePresent == nil || probe.LookPath == nil ||
+		probe.ValidateExecutable == nil || probe.SystemdReady == nil ||
+		probe.SecurityPolicyState == nil || probe.DNFSecurityReady == nil ||
+		probe.Architecture == nil {
+		return Profile{}, fmt.Errorf("host platform probe is incomplete")
+	}
+	systemctl, present, err := inspectExecutable("systemctl", probe)
+	if err != nil {
+		return Profile{}, fmt.Errorf("inspect systemd executable: %w", err)
+	}
+	if !present {
+		return Profile{}, fmt.Errorf("systemd requires systemctl")
+	}
+	timeout, present, err := inspectExecutable("timeout", probe)
+	if err != nil {
+		return Profile{}, fmt.Errorf("inspect bounded-command executable: %w", err)
+	}
+	if !present {
+		return Profile{}, fmt.Errorf("host platform requires timeout")
+	}
+	if err := probe.SystemdReady(systemctl); err != nil {
+		return Profile{}, fmt.Errorf("systemd is not ready: %w", err)
+	}
+	presentPackageTools, err := validatePresentPackageTools(probe)
 	if err != nil {
 		return Profile{}, err
 	}
-	if !isRecognizedDistroID(release.ID) {
-		return Profile{}, fmt.Errorf("distribution %s has compatible %s family evidence but its distro ID is unverified", release.ID, family)
+	family, hasUnambiguousEvidence := familyForRelease(release)
+	manager := PackageManager("")
+	executables := map[string]string(nil)
+	if hasUnambiguousEvidence {
+		manager, executables, err = verifyFamilyToolchain(family, presentPackageTools)
+	} else {
+		family, manager, executables, err = discoverUniqueFamilyToolchain(presentPackageTools)
 	}
-	manager, required := familyRequirements(family)
-	if probe.LookPath == nil || probe.ValidateExecutable == nil || probe.SystemdReady == nil || probe.Architecture == nil {
-		return Profile{}, fmt.Errorf("host platform probe is incomplete")
+	if err != nil {
+		return Profile{}, err
 	}
-	executables := make(map[string]string, len(required)+1)
-	for _, binary := range append(required, "systemctl") {
-		path, err := probe.LookPath(binary)
-		if err != nil {
-			return Profile{}, fmt.Errorf("%s family requires %s: %w", family, binary, err)
+	if manager == PackageManagerDNF {
+		for _, binary := range []string{"restorecon", "matchpathcon", "getenforce"} {
+			path, present, inspectErr := inspectExecutable(binary, probe)
+			if inspectErr != nil {
+				return Profile{}, fmt.Errorf("inspect DNF security-policy executable: %w", inspectErr)
+			}
+			if !present {
+				return Profile{}, fmt.Errorf("DNF preview requires %s at its fixed vendor path", binary)
+			}
+			executables[binary] = path
 		}
-		if err := probe.ValidateExecutable(binary, path); err != nil {
-			return Profile{}, fmt.Errorf("%s family has untrusted %s executable: %w", family, binary, err)
-		}
-		executables[binary] = path
 	}
-	if err := probe.SystemdReady(executables["systemctl"]); err != nil {
-		return Profile{}, fmt.Errorf("systemd is not ready: %w", err)
+	executables["systemctl"] = systemctl
+	executables["timeout"] = timeout
+	securityState, err := probe.SecurityPolicyState()
+	if err != nil {
+		return Profile{}, fmt.Errorf("inspect host security policy: %w", err)
+	}
+	if err := verifyProfileSecurityPolicy(manager, securityState); err != nil {
+		return Profile{}, err
+	}
+	if manager == PackageManagerDNF {
+		if err := probe.DNFSecurityReady(executables["getenforce"]); err != nil {
+			return Profile{}, fmt.Errorf("DNF preview security-policy proof failed: %w", err)
+		}
 	}
 	arch, err := probe.Architecture()
 	if err != nil {
@@ -206,13 +261,124 @@ func DetectWith(data []byte, probe Probe) (Profile, error) {
 	}, nil
 }
 
-func isRecognizedDistroID(id string) bool {
-	switch id {
-	case "debian", "ubuntu", "rhel", "almalinux", "rocky", "centos", "fedora", "cloudlinux", "arch":
-		return true
+func verifyProfileSecurityPolicy(manager PackageManager, state SecurityPolicyState) error {
+	switch manager {
+	case PackageManagerAPT, PackageManagerPacman:
+		if state != SecurityPolicyInactive {
+			return fmt.Errorf("%s mutations require inactive SELinux; live state is %s", manager, state)
+		}
+		return nil
+	case PackageManagerDNF:
+		if state != SecurityPolicyEnforcing {
+			return fmt.Errorf("DNF preview requires SELinux enforcing; live state is %s", state)
+		}
+		return nil
 	default:
-		return false
+		return fmt.Errorf("unsupported package manager %q for security-policy proof", manager)
 	}
+}
+
+type familyToolchainCandidate struct {
+	family      DistroFamily
+	manager     PackageManager
+	executables map[string]string
+}
+
+var candidatePackageTools = []string{
+	"apt-get",
+	"apt-cache",
+	"dpkg-query",
+	"pacman",
+	"dnf",
+	"rpm",
+}
+
+func inspectExecutable(name string, probe Probe) (string, bool, error) {
+	present, err := probe.ExecutablePresent(name)
+	if err != nil {
+		return "", false, fmt.Errorf("determine whether %s is present: %w", name, err)
+	}
+	if !present {
+		return "", false, nil
+	}
+	path, err := probe.LookPath(name)
+	if err != nil {
+		return "", false, fmt.Errorf("resolve present %s executable: %w", name, err)
+	}
+	if strings.TrimSpace(path) == "" {
+		return "", false, fmt.Errorf("resolve present %s executable: empty path", name)
+	}
+	if err := probe.ValidateExecutable(name, path); err != nil {
+		return "", false, fmt.Errorf("untrusted present %s executable: %w", name, err)
+	}
+	return path, true, nil
+}
+
+func validatePresentPackageTools(probe Probe) (map[string]string, error) {
+	executables := make(map[string]string, len(candidatePackageTools))
+	for _, binary := range candidatePackageTools {
+		path, present, err := inspectExecutable(binary, probe)
+		if err != nil {
+			return nil, fmt.Errorf("inspect package-manager candidate: %w", err)
+		}
+		if present {
+			executables[binary] = path
+		}
+	}
+	return executables, nil
+}
+
+func verifyFamilyToolchain(
+	family DistroFamily,
+	present map[string]string,
+) (PackageManager, map[string]string, error) {
+	manager, required := familyRequirements(family)
+	executables := make(map[string]string, len(required)+1)
+	for _, binary := range required {
+		path, ok := present[binary]
+		if !ok {
+			return "", nil, fmt.Errorf("%s family requires %s at its fixed vendor path", family, binary)
+		}
+		executables[binary] = path
+	}
+	return manager, executables, nil
+}
+
+func discoverUniqueFamilyToolchain(
+	present map[string]string,
+) (DistroFamily, PackageManager, map[string]string, error) {
+	var candidates []familyToolchainCandidate
+	for _, family := range []DistroFamily{
+		DistroFamilyDebian,
+		DistroFamilyRHEL,
+		DistroFamilyArch,
+	} {
+		manager, executables, err := verifyFamilyToolchain(family, present)
+		if err != nil {
+			continue
+		}
+		candidates = append(candidates, familyToolchainCandidate{
+			family: family, manager: manager, executables: executables,
+		})
+	}
+	if len(candidates) == 0 {
+		return "", "", nil, fmt.Errorf(
+			"host has no complete trusted apt, dnf, or pacman toolchain",
+		)
+	}
+	if len(candidates) > 1 {
+		managers := make([]string, 0, len(candidates))
+		for _, candidate := range candidates {
+			managers = append(managers, string(candidate.manager))
+		}
+		sort.Strings(managers)
+		return "", "", nil, fmt.Errorf(
+			"host package-manager capability is ambiguous: %s toolchains are complete",
+			strings.Join(managers, ", "),
+		)
+	}
+	candidate := candidates[0]
+	return candidate.family, candidate.manager, candidate.executables, nil
 }
 
 func canonicalArchitecture(value string) (string, error) {
@@ -222,43 +388,22 @@ func canonicalArchitecture(value string) (string, error) {
 		return "amd64", nil
 	case "arm64", "aarch64":
 		return "arm64", nil
-	case "386", "i386", "i486", "i586", "i686":
-		return "386", nil
-	case "arm", "armv7", "armv7l", "armhf":
-		return "arm", nil
 	}
-	if !idToken.MatchString(value) {
-		return "", fmt.Errorf("host architecture is invalid")
-	}
-	return value, nil
+	return "", fmt.Errorf("unsupported host architecture %q", value)
 }
 
-func familyForRelease(release OSRelease) (DistroFamily, error) {
-	if reason, rejected := rejectedDistribution(release.ID); rejected {
-		return "", fmt.Errorf("distribution %s is unsupported: %s", release.ID, reason)
-	}
+func familyForRelease(release OSRelease) (DistroFamily, bool) {
 	evidence := make(map[DistroFamily]struct{})
 	for _, token := range append([]string{release.ID}, release.IDLike...) {
-		if reason, rejected := rejectedDistribution(token); rejected {
-			return "", fmt.Errorf("distribution family evidence %s is unsupported: %s", token, reason)
-		}
 		if family := familyForToken(token); family != "" {
 			evidence[family] = struct{}{}
 		}
 	}
-	if len(evidence) == 0 {
-		return "", fmt.Errorf("distribution %s does not identify a supported family", release.ID)
-	}
-	if len(evidence) > 1 {
-		families := make([]string, 0, len(evidence))
-		for family := range evidence {
-			families = append(families, string(family))
-		}
-		sort.Strings(families)
-		return "", fmt.Errorf("os-release has conflicting family evidence: %s", strings.Join(families, ", "))
+	if len(evidence) != 1 {
+		return "", false
 	}
 	for family := range evidence {
-		return family, nil
+		return family, true
 	}
 	panic("unreachable")
 }
@@ -273,21 +418,6 @@ func familyForToken(token string) DistroFamily {
 		return DistroFamilyArch
 	default:
 		return ""
-	}
-}
-
-func rejectedDistribution(token string) (string, bool) {
-	switch token {
-	case "kali":
-		return "Kali is not a managed-server target", true
-	case "suse", "opensuse", "opensuse-leap", "opensuse-tumbleweed", "sles":
-		return "the SUSE family is not supported", true
-	case "alpine":
-		return "the Alpine family is not supported", true
-	case "nixos":
-		return "NixOS is not supported", true
-	default:
-		return "", false
 	}
 }
 

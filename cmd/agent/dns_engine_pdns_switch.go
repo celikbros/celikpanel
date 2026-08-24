@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -33,6 +34,94 @@ func isPDNSPairSecondaryReconfigureManifest(
 		manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary &&
 		len(manifest.Zones) == 0 && manifest.SnapshotBytes == 0
+}
+
+type pdnsPairSecondarySourceClass uint8
+
+const (
+	pdnsPairSecondarySourceNotApplicable pdnsPairSecondarySourceClass = iota
+	pdnsPairSecondarySourceFresh
+	pdnsPairSecondarySourceReconfigure
+)
+
+// dnsEngineSwitchSourceProof records facts established from the live source,
+// not merely inferred from the target manifest. The paired-secondary manifest
+// is shared by a fresh PowerDNS install and the narrow legacy reconfiguration.
+type dnsEngineSwitchSourceProof struct {
+	PDNSPairSecondaryReconfigure bool
+}
+
+// classifyPDNSPairSecondarySource selects which exact source proof is needed.
+// A running PDNS unit is only a reconfiguration candidate; the caller must
+// still prove the managed config, sole authority, unsigned topology and empty
+// live database before publishing a reconfiguration source proof.
+func classifyPDNSPairSecondarySource(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	stateExists bool,
+	bindActive bool,
+	bindAliasActive bool,
+	pdnsActive bool,
+) (pdnsPairSecondarySourceClass, error) {
+	if !isPDNSPairSecondaryReconfigureManifest(manifest) {
+		return pdnsPairSecondarySourceNotApplicable, nil
+	}
+	if stateExists {
+		return pdnsPairSecondarySourceNotApplicable, errors.New(
+			"initial paired-secondary PowerDNS transition requires no durable source state",
+		)
+	}
+	if bindActive || bindAliasActive {
+		return pdnsPairSecondarySourceNotApplicable, errors.New(
+			"initial paired-secondary PowerDNS transition found a running BIND authority",
+		)
+	}
+	if pdnsActive {
+		return pdnsPairSecondarySourceReconfigure, nil
+	}
+	return pdnsPairSecondarySourceFresh, nil
+}
+
+func validatePDNSSwitchPackagePolicy(
+	proof dnsEngineSwitchSourceProof,
+	missingPackages int,
+) error {
+	if missingPackages < 0 {
+		return errors.New("PowerDNS missing package count is invalid")
+	}
+	if proof.PDNSPairSecondaryReconfigure && missingPackages != 0 {
+		return errors.New(
+			"PowerDNS secondary reconfiguration cannot install missing packages",
+		)
+	}
+	return nil
+}
+
+func validatePDNSSwitchSourceProofCAS(
+	initial dnsEngineSwitchSourceProof,
+	current dnsEngineSwitchSourceProof,
+) error {
+	if initial.PDNSPairSecondaryReconfigure !=
+		current.PDNSPairSecondaryReconfigure {
+		return errors.New(
+			"DNS source classification changed before the switch journal",
+		)
+	}
+	return nil
+}
+
+func finishDNSSwitchRollbackJournal(
+	journal *dnsEngineSwitchJournal,
+	write func(dnsEngineSwitchJournal) error,
+	remove func() error,
+) error {
+	if journal == nil || write == nil || remove == nil {
+		return errors.New("invalid DNS switch rollback journal operations")
+	}
+	journal.Phase = dnsSwitchPhaseRolledBack
+	if err := write(*journal); err != nil {
+		return err
+	}
+	return remove()
 }
 
 var pdnsReconfigureDataTables = []string{
@@ -275,15 +364,29 @@ func verifyEmptyStandalonePDNSDatabase(
 	return requireNoPDNSDatabaseSidecars(path)
 }
 
-type pdnsConfigMutation struct {
-	before  []dnsFileSnapshot
-	desired map[string][]byte
+func managedPowerDNSStandaloneConfig(ctx context.Context) ([]byte, error) {
+	addresses, err := publicListenAddresses(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return managedPowerDNSStandaloneConfigForAddresses(addresses)
 }
 
-func managedPowerDNSStandaloneConfig() []byte {
-	listen := publicListenAddresses()
-	if listen == "" {
-		listen = "0.0.0.0"
+func managedPowerDNSStandaloneConfigForAddresses(addresses []string) ([]byte, error) {
+	if len(addresses) == 0 {
+		return nil, errors.New("managed PowerDNS requires at least one listen address")
+	}
+	seen := make(map[string]struct{}, len(addresses))
+	for _, address := range addresses {
+		parsed := net.ParseIP(address)
+		if parsed == nil || parsed.String() != address || !parsed.IsGlobalUnicast() ||
+			parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
+			return nil, errors.New("managed PowerDNS listen address is not canonical global unicast")
+		}
+		if _, duplicate := seen[address]; duplicate {
+			return nil, errors.New("managed PowerDNS listen addresses contain a duplicate")
+		}
+		seen[address] = struct{}{}
 	}
 	return []byte(fmt.Sprintf(`# Managed by CelikPanel; do not edit by hand.
 launch=gsqlite3
@@ -293,100 +396,15 @@ local-address=%s
 zone-cache-refresh-interval=0
 webserver=no
 api=no
-`, pdnsDBPath(), listen))
+`, pdnsDBPath(), strings.Join(addresses, ","))), nil
 }
 
 func preparePDNSConfigMutation(
+	ctx context.Context,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	managedConfig []byte,
 ) (pdnsConfigMutation, error) {
-	mainBefore, err := captureDNSFileSnapshot(dnsMainConf, 0o644, false)
-	if err != nil {
-		return pdnsConfigMutation{}, err
-	}
-	managedBefore, err := captureDNSFileSnapshot(dnsManagedConf, 0o644, true)
-	if err != nil {
-		return pdnsConfigMutation{}, err
-	}
-	clusterBefore, err := captureDNSFileSnapshot(dnsClusterConf, 0o644, true)
-	if err != nil {
-		return pdnsConfigMutation{}, err
-	}
-	managedDir := filepath.Clean(filepath.Dir(dnsManagedConf))
-	hasInclude, err := validateManagedPowerDNSMainConfig(string(mainBefore.Data), managedDir)
-	if err != nil {
-		return pdnsConfigMutation{}, err
-	}
-	mainDesired := append([]byte(nil), mainBefore.Data...)
-	if !hasInclude {
-		mainDesired = append(mainDesired, []byte("\n# Managed by CelikPanel.\ninclude-dir="+managedDir+"\n")...)
-	}
-	before := []dnsFileSnapshot{mainBefore, managedBefore, clusterBefore}
-	sort.Slice(before, func(left, right int) bool { return before[left].Path < before[right].Path })
-	desired := map[string][]byte{
-		dnsMainConf: mainDesired, dnsManagedConf: managedPowerDNSStandaloneConfig(),
-	}
-	if manifest.Topology == transport.DNSTopologyPaired {
-		clusterConfig, configErr := dnsClusterConfigForSwitchManifest(manifest)
-		if configErr != nil {
-			return pdnsConfigMutation{}, configErr
-		}
-		desired[dnsClusterConf] = []byte(clusterConfig)
-	}
-	return pdnsConfigMutation{
-		before:  before,
-		desired: desired,
-	}, nil
-}
-
-func ensurePDNSConfigDirectory() error {
-	directory := filepath.Clean(filepath.Dir(dnsManagedConf))
-	if !filepath.IsAbs(directory) || directory == string(os.PathSeparator) {
-		return errors.New("PowerDNS managed config directory is unsafe")
-	}
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		return err
-	}
-	if err := os.Chmod(directory, 0o755); err != nil {
-		return err
-	}
-	return verifyDNSRootDirectory(directory, 0o755)
-}
-
-func (mutation pdnsConfigMutation) apply() error {
-	if err := ensurePDNSConfigDirectory(); err != nil {
-		return err
-	}
-	paths := make([]string, 0, len(mutation.desired))
-	for path := range mutation.desired {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-	for _, path := range paths {
-		if err := secureWriteConfig(path, mutation.desired[path], 0o644); err != nil {
-			return err
-		}
-	}
-	if _, paired := mutation.desired[dnsClusterConf]; !paired {
-		if err := secureRemoveConfig(dnsClusterConf); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-	}
-	effective, detail, err := effectiveManagedPowerDNSConfig()
-	if err != nil {
-		return err
-	}
-	if !effective {
-		return fmt.Errorf("PowerDNS managed configuration is not effective: %s", detail)
-	}
-	return nil
-}
-
-func (mutation pdnsConfigMutation) restore() error {
-	var restoreErr error
-	for index := len(mutation.before) - 1; index >= 0; index-- {
-		restoreErr = errors.Join(restoreErr, restoreDNSFileSnapshot(mutation.before[index]))
-	}
-	return restoreErr
+	return prepareOwnerAwarePDNSConfigMutation(ctx, manifest, managedConfig)
 }
 
 func verifyStandaloneUnsignedPowerDNS(ctx context.Context) error {
@@ -1268,31 +1286,56 @@ func rollbackPDNSSwitch(
 	if ctx == nil {
 		return errors.New("rollback PowerDNS switch requires a bounded context")
 	}
-	return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
-		stopTarget: func(commandCtx context.Context) error {
-			_, err := runDNSSystemctl(
-				commandCtx, systemctl, "stop", "pdns.service",
+	return rollbackPDNSSwitchAfterConfigProof(
+		func() error {
+			_, err := configs.captureOwnerAwareCurrentWithOps(
+				ctx, false, hostPDNSConfigAccessOps(),
 			)
 			return err
 		},
-		restorePDNSDatabaseSnapshot: func() error {
-			return restorePDNSDatabase(journal)
+		func() error {
+			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
+				stopTarget: func(commandCtx context.Context) error {
+					_, err := runDNSSystemctl(
+						commandCtx, systemctl, "stop", "pdns.service",
+					)
+					return err
+				},
+				restorePDNSDatabaseSnapshot: func() error {
+					return restorePDNSDatabase(journal)
+				},
+				restoreConfigs: func() error {
+					return configs.restoreOwnerAware(ctx)
+				},
+				restoreState: func() error {
+					return restoreDNSFileSnapshot(journal.StateBefore)
+				},
+				restoreTarget: func(commandCtx context.Context) error {
+					return restoreDNSUnitSnapshots(
+						commandCtx, systemctl, journal.TargetUnitsBefore,
+					)
+				},
+				restoreSource: func(commandCtx context.Context) error {
+					return restoreDNSUnitSnapshots(
+						commandCtx, systemctl, journal.SourceUnitsBefore,
+					)
+				},
+			})
 		},
-		restoreConfigs: configs.restore,
-		restoreState: func() error {
-			return restoreDNSFileSnapshot(journal.StateBefore)
-		},
-		restoreTarget: func(commandCtx context.Context) error {
-			return restoreDNSUnitSnapshots(
-				commandCtx, systemctl, journal.TargetUnitsBefore,
-			)
-		},
-		restoreSource: func(commandCtx context.Context) error {
-			return restoreDNSUnitSnapshots(
-				commandCtx, systemctl, journal.SourceUnitsBefore,
-			)
-		},
-	})
+	)
+}
+
+func rollbackPDNSSwitchAfterConfigProof(
+	proveConfigs func() error,
+	rollback func() error,
+) error {
+	if proveConfigs == nil || rollback == nil {
+		return errors.New("PowerDNS rollback requires config proof and rollback operations")
+	}
+	if err := proveConfigs(); err != nil {
+		return err
+	}
+	return rollback()
 }
 
 type pdnsSwitchRollbackOps struct {
@@ -1350,10 +1393,14 @@ func switchToPDNSOnCertifiedProfile(
 	binding transport.ServiceMutationBinding,
 	profile hostplatform.Profile,
 ) (transport.SwitchDNSEngineV1Response, error) {
-	reconfigureSecondary := isPDNSPairSecondaryReconfigureManifest(manifest)
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	managedConfig, err := managedPowerDNSStandaloneConfig(ctx)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{},
+			fmt.Errorf("discover managed PowerDNS listen addresses: %w", err)
 	}
 	state, stateExists, err := readDNSEngineState()
 	if err != nil {
@@ -1392,9 +1439,13 @@ func switchToPDNSOnCertifiedProfile(
 		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists); err != nil {
+	sourceProof, err := proveDNSEngineSwitchSource(
+		ctx, profile, manifest, state, stateExists,
+	)
+	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	reconfigureSecondary := sourceProof.PDNSPairSecondaryReconfigure
 	primaryCatalogSerial, err := primaryCatalogSerialFromSource(
 		ctx, profile, manifest, state, stateExists,
 	)
@@ -1437,10 +1488,8 @@ func switchToPDNSOnCertifiedProfile(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if reconfigureSecondary && len(missing) != 0 {
-		return transport.SwitchDNSEngineV1Response{}, errors.New(
-			"PowerDNS secondary reconfiguration cannot install missing packages",
-		)
+	if err := validatePDNSSwitchPackagePolicy(sourceProof, len(missing)); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	if len(missing) != 0 {
 		installReceipt, receiptErr := newDNSEngineInstallOwnership(
@@ -1466,7 +1515,7 @@ func switchToPDNSOnCertifiedProfile(
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 	}
-	configs, err := preparePDNSConfigMutation(manifest)
+	configs, err := preparePDNSConfigMutation(ctx, manifest, managedConfig)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1532,8 +1581,14 @@ func switchToPDNSOnCertifiedProfile(
 		if actualExists != stateExists || (actualExists && actualState != state) {
 			return errors.New("DNS source state changed before the switch journal")
 		}
-		if err := verifyDNSEngineSwitchSource(
+		actualSourceProof, err := proveDNSEngineSwitchSource(
 			ctx, profile, manifest, actualState, actualExists,
+		)
+		if err != nil {
+			return err
+		}
+		if err := validatePDNSSwitchSourceProofCAS(
+			sourceProof, actualSourceProof,
 		); err != nil {
 			return err
 		}
@@ -1558,6 +1613,9 @@ func switchToPDNSOnCertifiedProfile(
 					"PowerDNS database changed before the reconfiguration journal",
 				)
 			}
+		}
+		if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
+			return err
 		}
 		return writeDNSEngineSwitchJournal(journal)
 	}
@@ -1590,10 +1648,19 @@ func switchToPDNSOnCertifiedProfile(
 			}
 		}
 		if rollbackErr == nil {
-			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = errors.Join(journalErr, writeDNSEngineSwitchJournal(journal), removeDNSEngineSwitchJournal())
+			journalErr = errors.Join(
+				journalErr,
+				finishDNSSwitchRollbackJournal(
+					&journal,
+					writeDNSEngineSwitchJournal,
+					removeDNSEngineSwitchJournal,
+				),
+			)
 		}
 		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
+	}
+	if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
+		return rollback(err)
 	}
 	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
 		ctx, candidate, manifest, binding, primaryCatalogSerial,
@@ -1605,8 +1672,17 @@ func switchToPDNSOnCertifiedProfile(
 	); err != nil {
 		return rollback(err)
 	}
-	if err := configs.apply(); err != nil {
+	if err := configs.applyOwnerAware(ctx); err != nil {
 		return rollback(err)
+	}
+	effective, detail, err := effectiveManagedPowerDNSConfig()
+	if err != nil {
+		return rollback(err)
+	}
+	if !effective {
+		return rollback(fmt.Errorf(
+			"PowerDNS managed configuration is not effective: %s", detail,
+		))
 	}
 	journal.Phase = dnsSwitchPhaseTargetStaged
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {

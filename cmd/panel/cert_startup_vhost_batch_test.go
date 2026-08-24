@@ -29,6 +29,8 @@ type StartupVhostBatchVersionResponse struct {
 }
 
 type startupVhostBatchAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu              sync.Mutex
 	commit          string
 	calls           [][]applyVhostRPCRequest

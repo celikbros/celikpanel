@@ -951,8 +951,8 @@ func modeledRootOwnedBINDConfigSnapshot(
 func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *testing.T) {
 	originalOwned := dnsPairHostAddressOwned
 	t.Cleanup(func() { dnsPairHostAddressOwned = originalOwned })
-	dnsPairHostAddressOwned = func(address string) bool {
-		return address == "72.62.38.15"
+	dnsPairHostAddressOwned = func(address string) (bool, error) {
+		return address == "72.62.38.15", nil
 	}
 	pair := func(role string) *binddns.Pairing {
 		return &binddns.Pairing{
@@ -1046,10 +1046,10 @@ func TestVerifyExistingManagedBINDTreeForSignedUpdateAcceptsReleasedLayouts(t *t
 			})
 			if receipt.Pairing != nil {
 				t.Run("host-identity-drift", func(t *testing.T) {
-					dnsPairHostAddressOwned = func(string) bool { return false }
+					dnsPairHostAddressOwned = func(string) (bool, error) { return false, nil }
 					defer func() {
-						dnsPairHostAddressOwned = func(address string) bool {
-							return address == "72.62.38.15"
+						dnsPairHostAddressOwned = func(address string) (bool, error) {
+							return address == "72.62.38.15", nil
 						}
 					}()
 					if err := verifyExistingManagedBINDTreeForSignedUpdateWithSnapshotReader(

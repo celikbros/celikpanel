@@ -27,6 +27,8 @@ const (
 )
 
 type domainPHPHandlerTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu              sync.Mutex
 	instances       []core.ServiceInstance
 	listErr         error

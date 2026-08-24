@@ -28,6 +28,8 @@ const (
 )
 
 type systemUpdateTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu            sync.Mutex
 	version       transport.AgentVersionResponse
 	check         transport.SystemUpdateCheckResponse
@@ -260,6 +262,8 @@ func TestPanelUpdateCheckFailsClosedBeforeDiscoveryOnDNF(t *testing.T) {
 	withSystemUpdateBuild(t)
 	fixture := newSystemUpdateTestFixture(t)
 	fixture.agent.packageFamily = "dnf"
+	response := rhelPolicyTestIdentity()
+	fixture.agent.verifiedAPTAgentRPCFixture.hostPlatformResponse = &response
 	recorder := httptest.NewRecorder()
 	fixture.panel.handlePanelUpdateCheck(recorder, systemUpdateRequest(
 		http.MethodGet, panelUpdateCheckPath, "", roleAdmin,

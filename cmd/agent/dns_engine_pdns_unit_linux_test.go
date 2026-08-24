@@ -20,6 +20,15 @@ type pdnsVendorRootFixture struct {
 }
 
 func newPDNSVendorRootFixture(t *testing.T) pdnsVendorRootFixture {
+	return newPDNSVendorRootFixtureWithUnit(
+		t, []byte(certifiedDebian13PDNSVendorUnit),
+	)
+}
+
+func newPDNSVendorRootFixtureWithUnit(
+	t *testing.T,
+	unitBytes []byte,
+) pdnsVendorRootFixture {
 	t.Helper()
 	if os.Geteuid() != 0 {
 		t.Skip("exact PowerDNS vendor file tests require root")
@@ -39,7 +48,7 @@ func newPDNSVendorRootFixture(t *testing.T) pdnsVendorRootFixture {
 		root, "usr", "lib", "systemd", "system", "pdns.service",
 	)
 	if err := os.WriteFile(
-		unitPath, []byte(certifiedDebian13PDNSVendorUnit), 0o0644,
+		unitPath, unitBytes, 0o0644,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -96,15 +105,24 @@ func TestPDNSVendorPackageOwnershipIsExactAndDeadlineBound(t *testing.T) {
 }
 
 func TestInspectPDNSVendorUnitAtRejectsMetadataAndTOCTOU(t *testing.T) {
-	t.Run("exact", func(t *testing.T) {
-		fixture := newPDNSVendorRootFixture(t)
-		identity, err := inspectPDNSVendorUnitAt(
-			fixture.rootFD, testDebian13PDNSProfile(), nil,
-		)
-		if err != nil || identity.Inode == 0 || identity.Size != 1579 {
-			t.Fatalf("identity=%+v err=%v", identity, err)
-		}
-	})
+	for _, test := range []struct {
+		name string
+		unit []byte
+		size int64
+	}{
+		{name: "debian-package", unit: []byte(certifiedDebian13PDNSVendorUnit), size: 1579},
+		{name: "ubuntu-package", unit: []byte(certifiedUbuntu2404PDNSVendorUnit), size: 1565},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newPDNSVendorRootFixtureWithUnit(t, test.unit)
+			identity, err := inspectPDNSVendorUnitAt(
+				fixture.rootFD, testUbuntu2404PDNSProfile(), nil,
+			)
+			if err != nil || identity.Inode == 0 || identity.Size != test.size {
+				t.Fatalf("identity=%+v err=%v", identity, err)
+			}
+		})
+	}
 	for _, test := range []struct {
 		name   string
 		mutate func(*testing.T, string)

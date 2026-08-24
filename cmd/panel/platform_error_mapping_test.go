@@ -10,6 +10,8 @@ import (
 	"net/rpc"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func TestWriteServerErrorClassifiesOnlyLocalPlatformSentinels(t *testing.T) {
@@ -230,7 +232,7 @@ func TestGenericOperationFailuresRetainExistingCodes(t *testing.T) {
 	}
 }
 
-func TestUpdateEmailPasswordPreservesOnlyLocalPlatformSentinels(t *testing.T) {
+func TestUpdateEmailPasswordPreservesOnlyPureLocalPlatformSentinels(t *testing.T) {
 	tests := []struct {
 		name       string
 		family     string
@@ -244,15 +246,22 @@ func TestUpdateEmailPasswordPreservesOnlyLocalPlatformSentinels(t *testing.T) {
 			wantCode:   errCodePlatformCapabilityUnavailable,
 		},
 		{
-			name:       "identity",
+			name:       "invalid identity remains generic",
 			family:     "",
-			wantStatus: http.StatusBadGateway,
-			wantCode:   errCodePlatformIdentityUnavailable,
+			wantStatus: http.StatusInternalServerError,
+			wantCode:   errCodeInternal,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			agent := &mailMutationPanelAgent{passwordApplied: true}
+			if test.family == "dnf" {
+				response := rhelPolicyTestIdentity()
+				agent.verifiedAPTAgentRPCFixture.hostPlatformResponse = &response
+			} else {
+				response := transport.HostPlatformResponse{}
+				agent.verifiedAPTAgentRPCFixture.hostPlatformResponse = &response
+			}
 			panel, domainID := newMailMutationPanel(t, agent)
 			panel.pkgFamilyMu.Lock()
 			panel.pkgFamilyVal = test.family

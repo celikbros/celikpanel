@@ -17,6 +17,8 @@ import (
 )
 
 type configHandlerRPCAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	getResponse    transport.ConfigResponse
 	getError       error
 	updateResponse transport.UpdateConfigResponse

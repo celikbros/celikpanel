@@ -211,7 +211,9 @@ func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	previousLocal := dnsPairLocalProofAddress
 	previousHostAddresses := dnsPairHostOwnedAddresses
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
-	dnsPairHostOwnedAddresses = func() []string { return []string{"192.0.2.10"} }
+	dnsPairHostOwnedAddresses = func() ([]string, error) {
+		return []string{"192.0.2.10"}, nil
+	}
 	probeDNSCatalogAXFR = func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
 		if address != "192.0.2.10" && address != "192.0.2.20" {
 			t.Fatalf("catalog address=%q", address)
@@ -309,7 +311,7 @@ func testCatalogAXFRMessage(
 	binary.BigEndian.PutUint16(message[0:2], id)
 	binary.BigEndian.PutUint16(message[2:4], dnsResponseQR|dnsResponseAA)
 	binary.BigEndian.PutUint16(message[4:6], 1)
-	binary.BigEndian.PutUint16(message[6:8], 3)
+	binary.BigEndian.PutUint16(message[6:8], 5)
 	message = append(message, query[12:]...)
 	appendRecord := func(owner string, recordType uint16, data []byte) {
 		encodedOwner, encodeErr := encodeDNSName(owner)
@@ -326,15 +328,26 @@ func testCatalogAXFRMessage(
 		message = append(message, data...)
 	}
 	soa := func(serial uint32) []byte {
-		mname, _ := encodeDNSName("ns1.example.test")
-		rname, _ := encodeDNSName("hostmaster.example.test")
+		mname, _ := encodeDNSName("invalid")
+		rname, _ := encodeDNSName("invalid")
 		data := append(append([]byte{}, mname...), rname...)
 		numbers := make([]byte, 20)
 		binary.BigEndian.PutUint32(numbers[:4], serial)
+		binary.BigEndian.PutUint32(numbers[4:8], 60)
+		binary.BigEndian.PutUint32(numbers[8:12], 30)
+		binary.BigEndian.PutUint32(numbers[12:16], 3600)
+		binary.BigEndian.PutUint32(numbers[16:20], 30)
 		return append(data, numbers...)
 	}
 	appendRecord(catalog, dnsTypeSOA, soa(9))
-	ptrOwner := "member.zones." + catalog
+	invalid, _ := encodeDNSName("invalid")
+	appendRecord(catalog, dnsTypeNS, invalid)
+	appendRecord("version."+catalog, dnsTypeTXT, []byte{1, '2'})
+	label, err := binddns.CatalogMemberLabel("example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ptrOwner := label + ".zones." + catalog
 	if foreignPTR {
 		ptrOwner = "member.other." + catalog
 	}

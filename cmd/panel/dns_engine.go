@@ -1280,6 +1280,77 @@ func validateInitialBINDInstallReconcileScope(
 	return nil
 }
 
+// This predicate cannot turn a fresh source-empty install into an
+// authority-bearing rollback. Agent evidence separately binds the exact
+// active-unit, database, and configuration preimage.
+func validateLegacyPDNSPairSecondaryReconfigureScope(
+	persisted persistedDNSEngineSwitch,
+) error {
+	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
+		persisted.Action != "reconfigure" ||
+		persisted.SourceEngine != "" || persisted.SourceEpoch != 0 ||
+		persisted.TargetEngine != transport.DNSEnginePowerDNS ||
+		persisted.TargetEpoch != 1 || persisted.SourceRevision < 1 ||
+		persisted.Topology != transport.DNSTopologyPaired ||
+		persisted.PairRole != transport.DNSPairRoleSecondary ||
+		persisted.LocalIP == "" || persisted.LocalNS == "" ||
+		persisted.PeerIP == "" || persisted.PeerNS == "" ||
+		persisted.ZoneCount != 0 || persisted.SnapshotBytes != 0 {
+		return errors.New("not an exact legacy PowerDNS paired-secondary reconfiguration")
+	}
+	return nil
+}
+
+func validateSourceEmptyDNSEngineReconcileScope(
+	persisted persistedDNSEngineSwitch,
+) error {
+	if err := validateInitialBINDInstallReconcileScope(persisted); err == nil {
+		return nil
+	}
+	if err := validateLegacyPDNSPairSecondaryReconfigureScope(persisted); err == nil {
+		return nil
+	}
+	return errors.New("DNS engine switch is outside exact source-empty rollback scopes")
+}
+
+func (p *Panel) verifyDNSEngineRollbackWithStableEvidence(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	first, err := p.verifyDNSEngineRollbackEvidence(ctx, persisted, manifest)
+	if err != nil {
+		return err
+	}
+	if err := p.verifyDNSEngineRollbackRuntime(ctx, persisted); err != nil {
+		return fmt.Errorf("verify DNS engine rollback runtime: %w", err)
+	}
+	second, err := p.verifyDNSEngineRollbackEvidence(ctx, persisted, manifest)
+	if err != nil {
+		return err
+	}
+	if first != second {
+		return errors.New("DNS engine mutation terminal receipt changed during reconciliation")
+	}
+	return nil
+}
+
+// A source-empty reconfigure may restore a running PowerDNS only while two
+// stable agent proofs bind its exact preimage around the runtime observation.
+func (p *Panel) verifyDNSEngineRollbackOutcome(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) error {
+	if err := validateLegacyPDNSPairSecondaryReconfigureScope(persisted); err != nil {
+		return p.verifyDNSEngineRollbackRuntime(ctx, persisted)
+	}
+	manifest, err := p.reconstructPersistedDNSEngineManifest(ctx, persisted)
+	if err != nil {
+		return fmt.Errorf("verify persisted DNS engine manifest: %w", err)
+	}
+	return p.verifyDNSEngineRollbackWithStableEvidence(ctx, persisted, manifest)
+}
+
 // reconcileFailedDNSEngineSwitchLocked clears only an attached switch whose
 // exact agent identity is durably terminal-failed and whose pre-operation
 // runtime is independently proven. It never mutates host state or treats a
@@ -1317,11 +1388,11 @@ func (p *Panel) reconcileFailedDNSEngineSwitchLocked(
 	); err != nil {
 		return persisted, false, err
 	}
-	if err := validateInitialBINDInstallReconcileScope(persisted); err != nil {
+	if err := validateSourceEmptyDNSEngineReconcileScope(persisted); err != nil {
 		return persisted, false, err
 	}
 	if persisted.Phase != "activating" ||
-		!exactInitialBINDInstallAttachedState(state, persisted) {
+		!exactSourceEmptyDNSEngineSwitchAttachedState(state, persisted) {
 		return persisted, false, errors.New(
 			"attached DNS engine switch no longer matches its source authority",
 		)
@@ -1334,29 +1405,12 @@ func (p *Panel) reconcileFailedDNSEngineSwitchLocked(
 			"verify persisted DNS engine manifest: %w", err,
 		)
 	}
-	firstCommitment, err := p.verifyDNSEngineRollbackEvidence(
+	if err := p.verifyDNSEngineRollbackWithStableEvidence(
 		ctx, persisted, manifest,
-	)
-	if err != nil {
+	); err != nil {
 		return persisted, false, err
 	}
-	if err := p.verifyDNSEngineRollbackRuntime(ctx, persisted); err != nil {
-		return persisted, false, fmt.Errorf(
-			"verify DNS engine rollback runtime: %w", err,
-		)
-	}
-	secondCommitment, err := p.verifyDNSEngineRollbackEvidence(
-		ctx, persisted, manifest,
-	)
-	if err != nil {
-		return persisted, false, err
-	}
-	if firstCommitment != secondCommitment {
-		return persisted, false, errors.New(
-			"DNS engine mutation terminal receipt changed during reconciliation",
-		)
-	}
-	if err := p.rollbackVerifiedInitialBINDInstall(
+	if err := p.rollbackVerifiedSourceEmptyDNSEngineSwitch(
 		ctx, persisted, manifest,
 	); err != nil {
 		return persisted, false, fmt.Errorf(
@@ -2062,7 +2116,7 @@ func (p *Panel) rollbackDNSEngineSwitch(
 	return tx.Commit()
 }
 
-func exactInitialBINDInstallAttachedState(
+func exactSourceEmptyDNSEngineSwitchAttachedState(
 	state dnsEngineDBState,
 	persisted persistedDNSEngineSwitch,
 ) bool {
@@ -2076,16 +2130,16 @@ func exactInitialBINDInstallAttachedState(
 		state.CurrentSwitchID == persisted.SwitchID
 }
 
-// rollbackVerifiedInitialBINDInstall is deliberately narrower than the
+// rollbackVerifiedSourceEmptyDNSEngineSwitch is deliberately narrower than the
 // ordinary rollback path. It consumes the exact snapshot and canonical zones
 // that the agent verified twice, then binds the detach to the still-attached
 // source-empty authority in the same transaction.
-func (p *Panel) rollbackVerifiedInitialBINDInstall(
+func (p *Panel) rollbackVerifiedSourceEmptyDNSEngineSwitch(
 	ctx context.Context,
 	persisted persistedDNSEngineSwitch,
 	verifiedManifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) error {
-	if err := validateInitialBINDInstallReconcileScope(persisted); err != nil {
+	if err := validateSourceEmptyDNSEngineReconcileScope(persisted); err != nil {
 		return err
 	}
 	tx, err := p.db.GetDB().BeginTx(ctx, nil)
@@ -2108,7 +2162,7 @@ func (p *Panel) rollbackVerifiedInitialBINDInstall(
 			"verified DNS engine switch snapshot changed before reconciliation",
 		)
 	}
-	if err := validateInitialBINDInstallReconcileScope(current); err != nil {
+	if err := validateSourceEmptyDNSEngineReconcileScope(current); err != nil {
 		return err
 	}
 	currentManifest, err := reconstructPersistedDNSEngineManifestFromQuery(
@@ -2139,7 +2193,7 @@ func (p *Panel) rollbackVerifiedInitialBINDInstall(
 	if err != nil {
 		return err
 	}
-	if !exactInitialBINDInstallAttachedState(state, current) {
+	if !exactSourceEmptyDNSEngineSwitchAttachedState(state, current) {
 		return errors.New(
 			"verified DNS engine source authority changed before reconciliation",
 		)
@@ -2236,6 +2290,18 @@ func (p *Panel) verifyDNSEngineRollbackRuntime(
 		return nil
 	}
 	if persisted.SourceEngine == "" {
+		if err := validateLegacyPDNSPairSecondaryReconfigureScope(persisted); err == nil {
+			target := runtimes[transport.DNSEnginePowerDNS]
+			if !target.Installed || !target.Running || !target.Managed {
+				return errors.New("restored legacy PowerDNS is not active and managed")
+			}
+			for engine, runtime := range runtimes {
+				if engine != transport.DNSEnginePowerDNS && runtime.Running {
+					return errors.New("another DNS engine remains active after PowerDNS rollback")
+				}
+			}
+			return nil
+		}
 		for _, runtime := range runtimes {
 			if runtime.Running {
 				return errors.New(
@@ -2705,7 +2771,7 @@ func (p *Panel) handleDNSEngineSwitch(
 		mutationApplied := errors.As(err, &appliedFollowup)
 		changeNotCommitted := false
 		if !mutationTerminalUncertain(err) && !mutationApplied {
-			proofErr := p.verifyDNSEngineRollbackRuntime(workerCtx, persisted)
+			proofErr := p.verifyDNSEngineRollbackOutcome(workerCtx, persisted)
 			if proofErr == nil {
 				proofErr = p.rollbackDNSEngineSwitch(workerCtx, persisted)
 			}
@@ -2926,7 +2992,7 @@ func (p *Panel) recoverDNSEngineSwitchLocked(
 	if job != nil && agentMutationActive(job.Status) {
 		return true, errors.New("DNS engine mutation remained active after recovery wait")
 	}
-	if err := p.verifyDNSEngineRollbackRuntime(ctx, persisted); err != nil {
+	if err := p.verifyDNSEngineRollbackOutcome(ctx, persisted); err != nil {
 		p.auditDNSEngineSystem(ctx, "recovered.uncertain", persisted)
 		return true, fmt.Errorf("verify DNS engine rollback during recovery: %w", err)
 	}

@@ -15,6 +15,8 @@ import (
 )
 
 type serviceConfigRPCAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	phpError   error
 	mysqlError error
 	phpCalls   int

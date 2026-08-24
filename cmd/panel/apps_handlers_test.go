@@ -30,6 +30,8 @@ const (
 )
 
 type wordpressInstallAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	createRequests  []transport.CreateDatabaseRequest

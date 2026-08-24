@@ -335,7 +335,8 @@ func TestSignedUpdateBINDPreparationFailsClosedBeforeMutation(t *testing.T) {
 				return hostplatform.Profile{
 					DistroFamily:   hostplatform.DistroFamilyDebian,
 					PackageManager: hostplatform.PackageManagerAPT,
-					ID:             "ubuntu", Version: "22.04", Codename: "jammy",
+					ServiceManager: "openrc",
+					ID:             "operator-linux",
 				}, nil
 			}
 		}},
@@ -375,25 +376,23 @@ func TestSignedUpdateBINDPreparationFailsClosedBeforeMutation(t *testing.T) {
 	}
 }
 
-func TestSignedUpdateBINDPreparationRejectsUncertifiedDebian13BeforeMutation(t *testing.T) {
+func TestSignedUpdateBINDPreparationAcceptsDebian13Capabilities(t *testing.T) {
 	ops, events := signedUpdateBINDPreparationOps(t)
 	ops.detectProfile = func() (hostplatform.Profile, error) {
-		return hostplatform.Profile{
-			DistroFamily:   hostplatform.DistroFamilyDebian,
-			PackageManager: hostplatform.PackageManagerAPT,
-			ID:             "debian", Version: "13", Codename: "trixie",
-		}, nil
+		*events = append(*events, "profile")
+		return testDebian13BINDProfile(), nil
 	}
 	if err := prepareBINDGenerationRootForSignedUpdateWithOps(
 		context.Background(), ops,
-	); err == nil {
-		t.Fatal("uncertified Debian BIND profile was accepted")
+	); err != nil {
+		t.Fatal(err)
 	}
-	for _, event := range *events {
-		if event == "package" || event == "parent" || event == "prepare" ||
-			event == "harden-existing" || event == "verify-existing" {
-			t.Fatalf("legacy root mutation ran on uncertified Debian: %#v", *events)
-		}
+	want := []string{
+		"idle", "profile", "journal", "install", "state", "ownership",
+		"package", "parent", "prepare",
+	}
+	if !reflect.DeepEqual(*events, want) {
+		t.Fatalf("Debian BIND preparation events = %#v, want %#v", *events, want)
 	}
 }
 
@@ -401,11 +400,7 @@ func TestSignedUpdateBINDPreparationUnmanagedDebian13IsReadOnlyNoop(t *testing.T
 	ops, events := signedUpdateBINDPreparationOps(t)
 	ops.detectProfile = func() (hostplatform.Profile, error) {
 		*events = append(*events, "profile")
-		return hostplatform.Profile{
-			DistroFamily:   hostplatform.DistroFamilyDebian,
-			PackageManager: hostplatform.PackageManagerAPT,
-			ID:             "debian", Version: "13", Codename: "trixie",
-		}, nil
+		return testDebian13BINDProfile(), nil
 	}
 	ops.readInstall = func() (dnsEngineInstallOwnershipReceipt, bool, error) {
 		*events = append(*events, "install")

@@ -18,6 +18,8 @@ type hostingAgentCall struct {
 }
 
 type hostingTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	calls []hostingAgentCall

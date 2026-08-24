@@ -177,7 +177,7 @@ func (runner trackedBINDValidator) Run(ctx context.Context, name string, args ..
 func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 	switch profile.PackageManager {
 	case hostplatform.PackageManagerAPT:
-		if err := certifyAPTBINDProfile(profile); err != nil {
+		if err := certifyAPTBINDCapabilities(profile); err != nil {
 			return bindHostLayout{}, err
 		}
 		return bindHostLayout{
@@ -189,6 +189,9 @@ func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 			Packages:       []string{"bind9"},
 		}, nil
 	case hostplatform.PackageManagerPacman:
+		if err := certifyPacmanBINDCapabilities(profile); err != nil {
+			return bindHostLayout{}, err
+		}
 		return bindHostLayout{
 			GenerationRoot: "/var/named/celikpanel",
 			MainConfig:     "/etc/named.conf",
@@ -202,13 +205,23 @@ func bindLayout(profile hostplatform.Profile) (bindHostLayout, error) {
 	}
 }
 
-func certifyAPTBINDProfile(profile hostplatform.Profile) error {
+func certifyAPTBINDCapabilities(profile hostplatform.Profile) error {
 	if profile.PackageManager != hostplatform.PackageManagerAPT ||
 		profile.DistroFamily != hostplatform.DistroFamilyDebian ||
-		profile.ID != "ubuntu" || profile.Version != "24.04" ||
-		profile.Codename != "noble" {
+		profile.ServiceManager != hostplatform.ServiceManagerSystemd {
 		return errors.New(
-			"BIND switching is certified only for Ubuntu 24.04 (noble) APT hosts",
+			"BIND switching requires a verified APT package ecosystem and systemd",
+		)
+	}
+	return nil
+}
+
+func certifyPacmanBINDCapabilities(profile hostplatform.Profile) error {
+	if profile.PackageManager != hostplatform.PackageManagerPacman ||
+		profile.DistroFamily != hostplatform.DistroFamilyArch ||
+		profile.ServiceManager != hostplatform.ServiceManagerSystemd {
+		return errors.New(
+			"BIND switching requires a verified pacman package ecosystem and systemd",
 		)
 	}
 	return nil
@@ -1674,6 +1687,38 @@ func verifyDNSEngineSwitchSource(
 	state dnsEngineStateReceipt,
 	stateExists bool,
 ) error {
+	_, err := proveDNSEngineSwitchSource(
+		ctx, profile, manifest, state, stateExists,
+	)
+	return err
+}
+
+func proveDNSEngineSwitchSource(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
+	stateExists bool,
+) (dnsEngineSwitchSourceProof, error) {
+	proof := dnsEngineSwitchSourceProof{}
+	err := verifyDNSEngineSwitchSourceRecordingProof(
+		ctx, profile, manifest, state, stateExists, &proof,
+	)
+	return proof, err
+}
+
+func verifyDNSEngineSwitchSourceRecordingProof(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	state dnsEngineStateReceipt,
+	stateExists bool,
+	proof *dnsEngineSwitchSourceProof,
+) error {
+	if proof == nil {
+		return errors.New("DNS engine source proof output is required")
+	}
+	*proof = dnsEngineSwitchSourceProof{}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
 	if err != nil {
 		return err
@@ -1704,13 +1749,14 @@ func verifyDNSEngineSwitchSource(
 	if manifest.Mode != transport.DNSEngineSwitchModeSwitch {
 		return errors.New("DNS engine operation mode is unsupported")
 	}
-	if isPDNSPairSecondaryReconfigureManifest(manifest) {
-		if stateExists || bindUnit.active() || bindAliasUnit.active() ||
-			!pdnsUnit.active() {
-			return errors.New(
-				"PowerDNS secondary reconfiguration requires the sole unreceipted running PowerDNS authority",
-			)
-		}
+	sourceClass, err := classifyPDNSPairSecondarySource(
+		manifest, stateExists, bindUnit.active(), bindAliasUnit.active(),
+		pdnsUnit.active(),
+	)
+	if err != nil {
+		return err
+	}
+	if sourceClass == pdnsPairSecondarySourceReconfigure {
 		if err := requireManagedDNSClusterReady(); err != nil {
 			return errors.New(
 				"PowerDNS secondary reconfiguration requires a managed PowerDNS authority",
@@ -1722,7 +1768,11 @@ func verifyDNSEngineSwitchSource(
 		if err := verifyStandaloneUnsignedPowerDNS(ctx); err != nil {
 			return err
 		}
-		return verifyEmptyStandalonePDNSDatabase(ctx, pdnsDBPath())
+		if err := verifyEmptyStandalonePDNSDatabase(ctx, pdnsDBPath()); err != nil {
+			return err
+		}
+		proof.PDNSPairSecondaryReconfigure = true
+		return nil
 	}
 	if stateExists {
 		if state.Engine != manifest.SourceEngine || state.EngineEpoch != manifest.SourceEpoch {
@@ -2500,7 +2550,7 @@ func verifyOnlyPDNSActive(ctx context.Context, systemctl string) error {
 	if err != nil {
 		return err
 	}
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return err
 	}
 	ss, err := firstTrustedExecutable(
@@ -2584,7 +2634,7 @@ func inspectVerifiedPDNSRuntimeTopologyWithOps(
 	profile hostplatform.Profile,
 	ops pdnsRuntimeTopologyOps,
 ) (pdnsRuntimeTopologySnapshot, error) {
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return pdnsRuntimeTopologySnapshot{}, err
 	}
 	if ops.inspectStates == nil || ops.inspectIdentity == nil ||
@@ -2685,7 +2735,7 @@ func verifyOnlyPDNSActiveWithOps(
 	profile hostplatform.Profile,
 	ops pdnsActiveProofOps,
 ) error {
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return err
 	}
 	if ops.inspectTopology == nil || ops.inspectListeners == nil {

@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -109,6 +112,39 @@ func createPDNSAdoptionDatabase(
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func newFakePDNSAdoptionConfigFS(
+	t *testing.T,
+	mainGID uint32,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) *fakePDNSConfigFS {
+	t.Helper()
+	fake := newFakePDNSConfigFS(mainGID)
+	main := testPDNSConfigSnapshot(
+		dnsMainConf,
+		"include-dir="+filepath.Clean(filepath.Dir(dnsManagedConf))+"\n",
+		0o640, 0, mainGID,
+	)
+	fake.state[filepath.Clean(dnsMainConf)] =
+		testPDNSConfigObservation(main, 90)
+	managed := testPDNSConfigSnapshot(
+		dnsManagedConf, string(testManagedPowerDNSStandaloneConfig(t)), 0o644, 0, 0,
+	)
+	fake.state[filepath.Clean(dnsManagedConf)] =
+		testPDNSConfigObservation(managed, 91)
+	if manifest.Topology == transport.DNSTopologyPaired {
+		cluster := testPDNSConfigSnapshot(
+			dnsClusterConf,
+			dnsClusterConfig(&DNSClusterRequest{
+				Role: dnsRolePaired, PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+			}),
+			0o644, 0, 0,
+		)
+		fake.state[filepath.Clean(dnsClusterConf)] =
+			testPDNSConfigObservation(cluster, 92)
+	}
+	return fake
 }
 
 func TestVerifyPDNSAdoptionPreservesSignedPairedDatabaseBytes(t *testing.T) {
@@ -245,43 +281,36 @@ func TestPDNSAdoptionUnitEvidenceRejectsAnotherRunningEngine(t *testing.T) {
 	}
 }
 
-func TestPDNSAdoptionConfigEvidenceIsByteAndModeExact(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "pdns.conf")
-	if err := os.WriteFile(path, []byte("launch=gsqlite3\n"), 0o640); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(path, 0o640); err != nil {
-		t.Fatal(err)
-	}
-	_, owner, err := readDNSFileForSnapshot(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	snapshot, err := captureDNSFileSnapshotPreserveForOwner(
-		path, false, owner.UID, owner.GID,
+func TestPDNSAdoptionConfigEvidenceAcceptsUbuntuAndLegacyOwners(t *testing.T) {
+	useTestPDNSConfigPaths(t)
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, "example.test",
+		testPDNSEngineRecords("example.test"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := verifyDNSFileSnapshotsExactForOwner(
-		[]dnsFileSnapshot{snapshot}, owner.UID, owner.GID,
-	); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("launch=bind\n"), 0o640); err != nil {
-		t.Fatal(err)
-	}
-	if err := verifyDNSFileSnapshotsExactForOwner(
-		[]dnsFileSnapshot{snapshot}, owner.UID, owner.GID,
-	); err == nil {
-		t.Fatal("adoption config evidence missed a byte change")
+	for _, mainGID := range []uint32{109, 0} {
+		t.Run(fmt.Sprintf("main-gid-%d", mainGID), func(t *testing.T) {
+			fake := newFakePDNSAdoptionConfigFS(t, mainGID, manifest)
+			evidence, err := capturePDNSAdoptionConfigsWithOps(
+				context.Background(), testUbuntu2404PDNSProfile(), manifest, fake.ops(),
+			)
+			if err != nil {
+				t.Fatalf("installed owner rejected: %v", err)
+			}
+			if err := evidence.verifyWithOps(
+				context.Background(), testUbuntu2404PDNSProfile(), manifest, fake.ops(),
+			); err != nil {
+				t.Fatalf("exact installed config rejected: %v", err)
+			}
+			main := pdnsConfigSnapshotMap(evidence.snapshots)[filepath.Clean(dnsMainConf)]
+			if main.Mode != 0o640 || main.UID != 0 || main.GID != mainGID {
+				t.Fatalf("main ownership not preserved: %#v", main)
+			}
+		})
 	}
 }
 
-func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
-	previous := dnsClusterConf
-	dnsClusterConf = filepath.Join(t.TempDir(), "celikpanel-cluster.conf")
-	t.Cleanup(func() { dnsClusterConf = previous })
+func TestPDNSAdoptionConfigEvidenceRejectsUnsafeOwnerProfileAndTopology(t *testing.T) {
+	useTestPDNSConfigPaths(t)
 	standalone := testPDNSAdoptionManifest(
 		t, transport.DNSTopologyStandalone, "example.test",
 		testPDNSEngineRecords("example.test"),
@@ -290,39 +319,190 @@ func TestVerifyPDNSAdoptionTopologyIsExact(t *testing.T) {
 		t, transport.DNSTopologyPaired, "example.test",
 		testPDNSEngineRecords("example.test"),
 	)
-	if err := verifyPDNSAdoptionTopology(standalone); err != nil {
-		t.Fatal(err)
-	}
-	if err := verifyPDNSAdoptionTopology(paired); err == nil {
-		t.Fatal("paired adoption accepted an absent cluster config")
-	}
-	expected := dnsClusterConfig(&DNSClusterRequest{
-		Role: dnsRolePaired, PeerIP: testPDNSAdoptionPeerIP,
-		PeerNS: testPDNSAdoptionPeerNS,
+
+	t.Run("foreign-main-gid", func(t *testing.T) {
+		fake := newFakePDNSAdoptionConfigFS(t, 110, standalone)
+		if _, err := capturePDNSAdoptionConfigsWithOps(
+			context.Background(), testUbuntu2404PDNSProfile(), standalone, fake.ops(),
+		); err == nil {
+			t.Fatal("foreign main group accepted")
+		}
 	})
-	if err := os.WriteFile(dnsClusterConf, []byte(expected), 0o640); err != nil {
-		t.Fatal(err)
+
+	t.Run("uncertified-profile", func(t *testing.T) {
+		fake := newFakePDNSAdoptionConfigFS(t, 109, standalone)
+		profile := testUbuntu2404PDNSProfile()
+		profile.ServiceManager = "openrc"
+		if _, err := capturePDNSAdoptionConfigsWithOps(
+			context.Background(), profile, standalone, fake.ops(),
+		); err == nil {
+			t.Fatal("uncertified service manager accepted")
+		}
+	})
+
+	t.Run("paired-config-absent", func(t *testing.T) {
+		fake := newFakePDNSAdoptionConfigFS(t, 109, standalone)
+		if _, err := capturePDNSAdoptionConfigsWithOps(
+			context.Background(), testUbuntu2404PDNSProfile(), paired, fake.ops(),
+		); err == nil {
+			t.Fatal("paired adoption accepted an absent cluster config")
+		}
+	})
+
+	t.Run("standalone-config-present", func(t *testing.T) {
+		fake := newFakePDNSAdoptionConfigFS(t, 109, paired)
+		if _, err := capturePDNSAdoptionConfigsWithOps(
+			context.Background(), testUbuntu2404PDNSProfile(), standalone, fake.ops(),
+		); err == nil {
+			t.Fatal("standalone adoption accepted a cluster config")
+		}
+	})
+
+	t.Run("paired-peer-tampered", func(t *testing.T) {
+		fake := newFakePDNSAdoptionConfigFS(t, 109, paired)
+		clusterPath := filepath.Clean(dnsClusterConf)
+		tampered := testPDNSConfigSnapshot(
+			dnsClusterConf, "role=paired\npeer_ip=192.0.2.54\n", 0o644, 0, 0,
+		)
+		fake.state[clusterPath] = testPDNSConfigObservation(tampered, 93)
+		if _, err := capturePDNSAdoptionConfigsWithOps(
+			context.Background(), testUbuntu2404PDNSProfile(), paired, fake.ops(),
+		); err == nil {
+			t.Fatal("paired adoption accepted a different peer config")
+		}
+	})
+}
+
+func TestPDNSAdoptionConfigDriftFailsBeforeJournalOrStateMutation(t *testing.T) {
+	useTestPDNSConfigPaths(t)
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, "example.test",
+		testPDNSEngineRecords("example.test"),
+	)
+	profile := testUbuntu2404PDNSProfile()
+
+	tests := []struct {
+		name   string
+		mutate func(*fakePDNSConfigFS, *pdnsConfigAccessOps)
+	}{
+		{
+			name: "bytes",
+			mutate: func(fake *fakePDNSConfigFS, _ *pdnsConfigAccessOps) {
+				path := filepath.Clean(dnsMainConf)
+				foreign := testPDNSConfigSnapshot(
+					dnsMainConf, "# operator replacement\n", 0o640, 0, 109,
+				)
+				fake.state[path] = fake.nextObservation(foreign)
+			},
+		},
+		{
+			name: "same-bytes-new-inode",
+			mutate: func(fake *fakePDNSConfigFS, _ *pdnsConfigAccessOps) {
+				path := filepath.Clean(dnsMainConf)
+				current := fake.state[path]
+				current.Identity.Inode++
+				fake.state[path] = current
+			},
+		},
+		{
+			name: "runtime-pdns-gid",
+			mutate: func(_ *fakePDNSConfigFS, ops *pdnsConfigAccessOps) {
+				ops.resolve = func(context.Context) (pdnsConfigOwnerPolicy, error) {
+					return pdnsConfigOwnerPolicy{pdnsGID: 110}, nil
+				}
+			},
+		},
+		{
+			name: "unsafe-parent-proof",
+			mutate: func(_ *fakePDNSConfigFS, ops *pdnsConfigAccessOps) {
+				ops.capture = func(pdnsConfigOwnerPolicy) ([]pdnsConfigObservation, error) {
+					return nil, errors.New("unsafe PowerDNS config parent")
+				}
+			},
+		},
 	}
-	_, owner, err := readDNSFileForSnapshot(dnsClusterConf)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fake := newFakePDNSAdoptionConfigFS(t, 109, manifest)
+			evidence, err := capturePDNSAdoptionConfigsWithOps(
+				context.Background(), profile, manifest, fake.ops(),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ops := fake.ops()
+			test.mutate(fake, &ops)
+			mutations := 0
+			for _, stage := range []string{"journal", "state"} {
+				err := mutatePDNSAdoptionAfterConfigProofWithOps(
+					context.Background(), profile, manifest, evidence, ops,
+					func() error { mutations++; return nil },
+				)
+				if err == nil {
+					t.Fatalf("%s mutation ran after unsafe config drift", stage)
+				}
+			}
+			if mutations != 0 {
+				t.Fatalf("unsafe config allowed %d mutations", mutations)
+			}
+		})
+	}
+}
+
+func TestPDNSAdoptionJournalEvidenceUsesRuntimeOwnerPolicy(t *testing.T) {
+	useTestPDNSConfigPaths(t)
+	manifest := testPDNSAdoptionManifest(
+		t, transport.DNSTopologyStandalone, "example.test",
+		testPDNSEngineRecords("example.test"),
+	)
+	profile := testUbuntu2404PDNSProfile()
+	fake := newFakePDNSAdoptionConfigFS(t, 109, manifest)
+	captured, err := capturePDNSAdoptionConfigsWithOps(
+		context.Background(), profile, manifest, fake.ops(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopologyForOwner(
-		paired, owner.UID, owner.GID,
-	); err != nil {
+	journal := dnsEngineSwitchJournal{ConfigBefore: captured.snapshots}
+	recovered, err := pdnsAdoptionConfigEvidenceFromJournalWithOps(
+		context.Background(), profile, manifest, journal, fake.ops(),
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyPDNSAdoptionTopologyForOwner(
-		standalone, owner.UID, owner.GID,
-	); err == nil {
-		t.Fatal("standalone adoption accepted an active paired config")
+	if err := recovered.verifyWithOps(
+		context.Background(), profile, manifest, fake.ops(),
+	); err != nil {
+		t.Fatalf("exact recovered config rejected: %v", err)
 	}
-	tampered := paired
-	tampered.PeerIP = "192.0.2.54"
-	if err := verifyPDNSAdoptionTopologyForOwner(
-		tampered, owner.UID, owner.GID,
+	mainPath := filepath.Clean(dnsMainConf)
+	main := fake.state[mainPath].Snapshot
+	main.GID = 0
+	fake.state[mainPath] = fake.nextObservation(main)
+	if err := recovered.verifyWithOps(
+		context.Background(), profile, manifest, fake.ops(),
 	); err == nil {
-		t.Fatal("paired adoption accepted a different managed peer")
+		t.Fatal("recovery accepted owner metadata different from its journal")
+	}
+}
+
+func TestPDNSAdoptionRollbackProvesConfigBeforeStateRestoration(t *testing.T) {
+	var order []string
+	err := rollbackPDNSAdoptionAfterConfigProof(
+		func() error { order = append(order, "proof"); return nil },
+		func() error { order = append(order, "rollback"); return nil },
+	)
+	if err != nil || !reflect.DeepEqual(order, []string{"proof", "rollback"}) {
+		t.Fatalf("rollback order=%v err=%v", order, err)
+	}
+	order = nil
+	proofErr := errors.New("unsafe config")
+	err = rollbackPDNSAdoptionAfterConfigProof(
+		func() error { order = append(order, "proof"); return proofErr },
+		func() error { order = append(order, "rollback"); return nil },
+	)
+	if !errors.Is(err, proofErr) || !reflect.DeepEqual(order, []string{"proof"}) {
+		t.Fatalf("rollback ran without config proof: order=%v err=%v", order, err)
 	}
 }
 

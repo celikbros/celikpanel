@@ -170,12 +170,28 @@ reject_literal "$PANEL_UNIT" 'Requires=celikpanel-agent.service'
 require_literal "$PANEL_UNIT" 'EnvironmentFile=-/etc/celikpanel/panel.env'
 require_literal "$PANEL_UNIT" 'ExecStart=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG'
 require_literal "$AGENT_UNIT" 'RuntimeDirectoryPreserve=yes'
+require_literal "$INSTALL" 'SETPRIV_BIN=/usr/bin/setpriv'
 require_literal "$INSTALL" 'run_panel_as_service_user_with_private_umask() {'
 require_literal "$INSTALL" '/bin/sh -c '\''umask 077; exec "$@"'\'' celikpanel-install "$PREFIX/bin/panel" "$@"'
+require_function_sequence "$INSTALL" run_panel_as_service_user_with_private_umask \
+    'validate_vendor_tool setpriv' \
+    '"$SETPRIV_BIN" --reuid="$SVC_USER_ID" --regid="$SVC_GROUP_ID" \' \
+    '--clear-groups -- \'
+require_function_sequence "$INSTALL" ensure_first_administrator \
+    'admin_count=$(run_panel_as_service_user_with_private_umask --count-users)' \
+    '[[ "$admin_count" =~ ^(0|[1-9][0-9]*)$ ]]' \
+    'if [[ "$admin_count" == 0 ]]; then' \
+    'run_panel_as_service_user_with_private_umask --create-admin'
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --count-users' 1
 require_count "$INSTALL" 'run_panel_as_service_user_with_private_umask --create-admin' 1
+reject_literal "$INSTALL" 'sudo -u'
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --count-users'
 reject_literal "$INSTALL" 'CELIKPANEL_DATA_DIR="$DATA_DIR" "$PREFIX/bin/panel" --create-admin'
+require_sequence "$INSTALL" \
+    '# 8. First administrator' \
+    'ensure_first_administrator' \
+    '# 9. Start the panel' \
+    'install -m 0600 -o root -g root /dev/null "$INSTALL_COMPLETE"'
 
 # Operator choices are durable data, not generated vendor-unit bytes. A clean
 # agent restart must not tear down the otherwise healthy web panel.
@@ -194,19 +210,31 @@ reject_literal "$INSTALL" 's|^ExecStart=/opt/celikpanel/bin/panel'
 
 # Arch package databases and the base system must advance in one transaction;
 # neither the installer nor the agent may create a partial-upgrade window.
-require_literal "$INSTALL" 'pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables'
+require_literal "$INSTALL" '"$APT_GET_BIN" install -y -qq tar xz-utils curl ca-certificates nftables iproute2'
+require_literal "$INSTALL" '"$PACMAN_BIN" -Syu --noconfirm --needed tar xz curl ca-certificates nftables iproute2'
 reject_literal "$INSTALL" 'pacman -Sy --noconfirm'
 
-# Fresh-install authorization comes from an exact distro/version/architecture
-# tuple, never from ID_LIKE or whichever package manager happens to be on PATH.
+# Fresh-install authorization comes from a complete, fixed-path vendor
+# toolchain. os-release fields are inert hints that may disambiguate a foreign
+# package manager, never a distro/version allowlist.
 platform_defs=
 for function_name in \
     validate_vendor_directory_chain \
+    vendor_tool_path \
+    vendor_tool_present \
+    validate_vendor_tool \
+    validate_systemd_runtime \
     validate_rhel_vendor_tool \
+    validate_present_platform_tools \
+    package_ecosystem_complete \
+    validate_selected_package_ecosystem \
     vendor_machine_architecture \
     parse_bootstrap_os_release_scalar \
     parse_bootstrap_os_release \
+    package_hint_for_token \
+    select_bootstrap_package_ecosystem \
     classify_bootstrap_platform \
+    verify_live_selinux_preflight \
     verify_rhel_preview_host \
     rhel_preview_prerequisite_command \
     preflight_bootstrap_platform
@@ -222,17 +250,105 @@ cleanup_platform_contract() {
 }
 trap cleanup_platform_contract EXIT
 
+capability_root=$platform_tmp/capability-root
+mkdir -p "$capability_root/usr/bin" "$capability_root/run/systemd"
+chmod 0755 "$capability_root" "$capability_root/usr" "$capability_root/usr/bin" \
+    "$capability_root/run" "$capability_root/run/systemd"
+python3 - "$capability_root/run/systemd/private" <<'PY_SYSTEMD_SOCKET'
+import socket
+import sys
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.bind(sys.argv[1])
+sock.close()
+PY_SYSTEMD_SOCKET
+chmod 0700 "$capability_root/run/systemd/private"
+for capability_tool in apt-get apt-cache dpkg-query pacman dnf rpm setpriv; do
+    printf '#!/bin/bash\nexit 0\n' > "$capability_root/usr/bin/$capability_tool"
+    chmod 0700 "$capability_root/usr/bin/$capability_tool"
+done
+cat > "$capability_root/usr/bin/systemctl" <<'FAKE_CAPABILITY_SYSTEMCTL'
+#!/bin/bash
+[[ "${1:-}" == is-system-running ]] || exit 91
+printf 'running\n'
+FAKE_CAPABILITY_SYSTEMCTL
+cat > "$capability_root/usr/bin/timeout" <<'FAKE_CAPABILITY_TIMEOUT'
+#!/bin/bash
+exec /usr/bin/timeout "$@"
+FAKE_CAPABILITY_TIMEOUT
+cat > "$capability_root/usr/bin/systemctl-degraded" <<'FAKE_SYSTEMCTL_DEGRADED'
+#!/bin/bash
+printf 'degraded\n'
+exit 1
+FAKE_SYSTEMCTL_DEGRADED
+cat > "$capability_root/usr/bin/systemctl-starting" <<'FAKE_SYSTEMCTL_STARTING'
+#!/bin/bash
+printf 'starting\n'
+exit 1
+FAKE_SYSTEMCTL_STARTING
+cat > "$capability_root/usr/bin/systemctl-hanging" <<'FAKE_SYSTEMCTL_HANGING'
+#!/bin/bash
+/usr/bin/sleep 30
+FAKE_SYSTEMCTL_HANGING
+chmod 0700 "$capability_root/usr/bin/systemctl" "$capability_root/usr/bin/timeout" \
+    "$capability_root/usr/bin/systemctl-degraded" \
+    "$capability_root/usr/bin/systemctl-starting" \
+    "$capability_root/usr/bin/systemctl-hanging"
+
+configure_platform_capabilities() {
+    local ecosystems=" $1 "
+    SYSTEMCTL_BIN=$capability_root/usr/bin/systemctl
+    TIMEOUT_BIN=$capability_root/usr/bin/timeout
+    SETPRIV_BIN=$capability_root/usr/bin/setpriv
+    SYSTEMD_RUNTIME_DIR=$capability_root/run/systemd
+    SYSTEMD_PRIVATE_SOCKET=$capability_root/run/systemd/private
+    APT_GET_BIN=$capability_root/missing/apt-get
+    APT_CACHE_BIN=$capability_root/missing/apt-cache
+    DPKG_QUERY_BIN=$capability_root/missing/dpkg-query
+    PACMAN_BIN=$capability_root/missing/pacman
+    RHEL_DNF_BIN=$capability_root/missing/dnf
+    RHEL_DNF_CANONICAL_ALT=$capability_root/usr/bin/dnf-3
+    RHEL_RPM_BIN=$capability_root/missing/rpm
+    [[ "$ecosystems" != *' apt '* ]] || {
+        APT_GET_BIN=$capability_root/usr/bin/apt-get
+        APT_CACHE_BIN=$capability_root/usr/bin/apt-cache
+        DPKG_QUERY_BIN=$capability_root/usr/bin/dpkg-query
+    }
+    [[ "$ecosystems" != *' pacman '* ]] || PACMAN_BIN=$capability_root/usr/bin/pacman
+    [[ "$ecosystems" != *' dnf '* ]] || {
+        RHEL_DNF_BIN=$capability_root/usr/bin/dnf
+        RHEL_RPM_BIN=$capability_root/usr/bin/rpm
+    }
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$capability_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+}
+
 run_platform_classifier() (
-    local release_data=$1 machine=$2 fixture=$platform_tmp/os-release
+    local release_data=$1 machine=$2 ecosystems=$3 fixture=$platform_tmp/os-release
     eval "$platform_defs"
+    configure_platform_capabilities "$ecosystems"
     printf '%s' "$release_data" > "$fixture"
     classify_bootstrap_platform "$fixture" "$machine"
     printf '%s %s\n' "$PKG_FAMILY" "$BOOTSTRAP_ARCH"
 )
 
+run_platform_classifier_with_systemctl() (
+    local systemctl_path=$1 fixture=$platform_tmp/os-release
+    eval "$platform_defs"
+    configure_platform_capabilities apt
+    SYSTEMCTL_BIN=$systemctl_path
+    printf 'ID=custom\nID_LIKE=debian\n' > "$fixture"
+    classify_bootstrap_platform "$fixture" x86_64
+    printf '%s %s\n' "$PKG_FAMILY" "$BOOTSTRAP_ARCH"
+)
+
 assert_platform_accepts() {
-    local name=$1 release_data=$2 machine=$3 expected=$4 actual
-    if ! actual=$(run_platform_classifier "$release_data" "$machine"); then
+    local name=$1 release_data=$2 machine=$3 ecosystems=$4 expected=$5 actual
+    if ! actual=$(run_platform_classifier "$release_data" "$machine" "$ecosystems"); then
         die "$name was rejected"
     fi
     [[ "$actual" == "$expected" ]] \
@@ -240,50 +356,68 @@ assert_platform_accepts() {
 }
 
 assert_platform_rejects() {
-    local name=$1 release_data=$2 machine=$3
-    if run_platform_classifier "$release_data" "$machine" >/dev/null 2>&1; then
+    local name=$1 release_data=$2 machine=$3 ecosystems=$4
+    if run_platform_classifier "$release_data" "$machine" "$ecosystems" >/dev/null 2>&1; then
         die "$name was accepted"
     fi
 }
 
+assert_platform_accepts debian-any-version \
+    $'ID=debian\nVERSION_ID="99.7"\n' x86_64 apt 'apt amd64'
 assert_platform_accepts debian-13 \
-    $'ID=debian\nVERSION_ID="13"\n' x86_64 'apt amd64'
-assert_platform_accepts ubuntu-24.04 \
-    $'ID=ubuntu\nID_LIKE=debian\nVERSION_ID="24.04"\n' aarch64 'apt arm64'
-assert_platform_accepts arch-rolling \
-    $'ID=arch\nBUILD_ID=rolling\n' x86_64 'pacman amd64'
-assert_platform_accepts almalinux-9 \
-    $'ID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.6"\n' x86_64 'dnf-preview amd64'
-assert_platform_accepts rocky-9 \
-    $'ID=rocky\nID_LIKE="rhel centos fedora"\nVERSION_ID=9.5\n' aarch64 'dnf-preview arm64'
+    $'ID=debian\nVERSION_ID="13"\nVERSION_CODENAME=trixie\n' x86_64 apt 'apt amd64'
+assert_platform_accepts ubuntu-any-version \
+    $'ID=ubuntu\nID_LIKE=debian\nVERSION_ID="30.10"\n' aarch64 apt 'apt arm64'
+assert_platform_accepts ubuntu-24.04-codename-is-metadata \
+    $'ID=ubuntu\nID_LIKE=debian\nVERSION_ID="24.04"\nVERSION_CODENAME=changed\n' x86_64 apt 'apt amd64'
+assert_platform_accepts custom-apt-derivative \
+    $'ID=celiklinux\nID_LIKE="ubuntu debian"\nVERSION_ID="2026.8"\n' x86_64 apt 'apt amd64'
+assert_platform_accepts custom-unknown-unique-apt \
+    $'ID=operatorlinux\nVERSION_ID=edge\n' x86_64 apt 'apt amd64'
+assert_platform_accepts apt-hint-ignores-foreign-pacman \
+    $'ID=ubuntu\nVERSION_ID=1\n' x86_64 'apt pacman' 'apt amd64'
+assert_platform_accepts conflicting-hints-unique-capability \
+    $'ID=ubuntu\nID_LIKE=arch\nVERSION_ID=1\n' x86_64 apt 'apt amd64'
+assert_platform_accepts arch-derivative-arm64 \
+    $'ID=manjaro\nID_LIKE=arch\nVERSION_ID=stable\n' aarch64 pacman 'pacman arm64'
+assert_platform_accepts custom-unique-pacman \
+    $'ID=operatorarch\nVERSION_ID=edge\n' x86_64 pacman 'pacman amd64'
+assert_platform_accepts custom-dnf-preview \
+    $'ID=enterprisebox\nID_LIKE="fedora rhel"\nVERSION_ID="42"\n' aarch64 dnf 'dnf-preview arm64'
+for rhel_hint in rhel fedora centos almalinux rocky rocky-linux cloudlinux; do
+    assert_platform_accepts "rhel-family-hint-$rhel_hint" \
+        "ID=$rhel_hint"$'\nVERSION_ID=edge\n' x86_64 dnf 'dnf-preview amd64'
+done
 
-assert_platform_rejects almalinux-8 $'ID=almalinux\nVERSION_ID=8.10\n' x86_64
-assert_platform_rejects rocky-10 $'ID=rocky\nVERSION_ID=10.0\n' x86_64
-assert_platform_rejects rocky-missing-version $'ID=rocky\n' x86_64
-assert_platform_rejects missing-id $'VERSION_ID=9.6\n' x86_64
-assert_platform_rejects malformed-quote $'ID="rocky\nVERSION_ID=9.6\n' x86_64
-assert_platform_rejects rocky-duplicate-version \
-    $'ID=rocky\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64
-assert_platform_rejects rhel-9 $'ID=rhel\nVERSION_ID=9.6\n' x86_64
-assert_platform_rejects centos-stream-9 $'ID=centos\nVERSION_ID=9\n' x86_64
-assert_platform_rejects fedora-42 $'ID=fedora\nVERSION_ID=42\n' x86_64
-assert_platform_rejects cloudlinux-9 $'ID=cloudlinux\nVERSION_ID=9.6\n' x86_64
-assert_platform_rejects compatible-amazon \
-    $'ID=amzn\nID_LIKE="fedora rhel centos"\nVERSION_ID=2023\n' x86_64
-assert_platform_rejects unsupported-architecture \
-    $'ID=almalinux\nVERSION_ID=9.6\n' s390x
-assert_platform_rejects arch-arm-derivative \
-    $'ID=arch\n' aarch64
+assert_platform_rejects missing-id $'VERSION_ID=9.6\n' x86_64 apt
+assert_platform_rejects malformed-quote $'ID="custom\nVERSION_ID=9.6\n' x86_64 apt
+assert_platform_rejects duplicate-version \
+    $'ID=custom\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64 apt
 assert_platform_rejects duplicate-id \
-    $'ID=rocky\nID=almalinux\nVERSION_ID=9.6\n' x86_64
+    $'ID=custom\nID=other\nVERSION_ID=9.6\n' x86_64 apt
+assert_platform_rejects duplicate-id-like \
+    $'ID=custom\nID_LIKE=debian\nID_LIKE=ubuntu\n' x86_64 apt
+assert_platform_rejects malformed-id-like \
+    $'ID=custom\nID_LIKE="debian  arch"\n' x86_64 apt
+assert_platform_rejects unsupported-architecture \
+    $'ID=custom\nID_LIKE=debian\n' s390x apt
+assert_platform_rejects hinted-toolchain-incomplete \
+    $'ID=ubuntu\nVERSION_ID=24.04\n' x86_64 pacman
+assert_platform_rejects unknown-no-toolchain \
+    $'ID=custom\nVERSION_ID=1\n' x86_64 none
+assert_platform_rejects unknown-ambiguous-toolchains \
+    $'ID=custom\nVERSION_ID=1\n' x86_64 'apt pacman'
+assert_platform_rejects conflicting-hints-ambiguous-toolchains \
+    $'ID=ubuntu\nID_LIKE=arch\n' x86_64 'apt pacman'
 injection_marker=$platform_tmp/os-release-injection
 assert_platform_rejects executable-id \
-    "ID=\"\$(touch $injection_marker)\""$'\nVERSION_ID=9.6\n' x86_64
+    "ID=\"\$(touch $injection_marker)\""$'\nVERSION_ID=9.6\n' x86_64 apt
 [[ ! -e "$injection_marker" ]] \
     || die 'os-release parser executed untrusted data'
 rm -f -- "$platform_tmp/missing-os-release"
 if (
     eval "$platform_defs"
+    configure_platform_capabilities apt
     classify_bootstrap_platform "$platform_tmp/missing-os-release" x86_64
 ) >/dev/null 2>&1; then
     die 'bootstrap accepted a missing os-release file'
@@ -291,13 +425,100 @@ fi
 printf 'ID=rocky\0\nVERSION_ID=9.6\n' > "$platform_tmp/os-release"
 if (
     eval "$platform_defs"
+    configure_platform_capabilities apt
     classify_bootstrap_platform "$platform_tmp/os-release" x86_64
 ) >/dev/null 2>&1; then
     die 'os-release parser accepted a NUL byte'
 fi
 
+printf 'ID=custom\nID_LIKE=debian\nVERSION_ID=any\n' > "$platform_tmp/os-release"
+if (
+    eval "$platform_defs"
+    configure_platform_capabilities apt
+    SYSTEMCTL_BIN=$capability_root/missing/systemctl
+    classify_bootstrap_platform "$platform_tmp/os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'bootstrap accepted missing trusted systemctl'
+fi
+
+if (
+    eval "$platform_defs"
+    configure_platform_capabilities apt
+    TIMEOUT_BIN=$capability_root/missing/timeout
+    classify_bootstrap_platform "$platform_tmp/os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'bootstrap accepted missing trusted timeout'
+fi
+
+if (
+    eval "$platform_defs"
+    configure_platform_capabilities apt
+    SETPRIV_BIN=$capability_root/missing/setpriv
+    classify_bootstrap_platform "$platform_tmp/os-release" x86_64
+) >/dev/null 2>&1; then
+    die 'bootstrap accepted missing trusted setpriv'
+fi
+
+mv -- "$capability_root/run/systemd/private" "$capability_root/run/systemd/private.saved"
+if run_platform_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a missing systemd private socket'
+fi
+mv -- "$capability_root/run/systemd/private.saved" "$capability_root/run/systemd/private"
+
+mv -- "$capability_root/run/systemd/private" "$capability_root/run/systemd/private.saved"
+printf 'not a socket\n' > "$capability_root/run/systemd/private"
+chmod 0700 "$capability_root/run/systemd/private"
+if run_platform_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a regular file as the systemd private socket'
+fi
+rm -f -- "$capability_root/run/systemd/private"
+mv -- "$capability_root/run/systemd/private.saved" "$capability_root/run/systemd/private"
+
+chmod 0770 "$capability_root/run/systemd/private"
+if run_platform_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a group-writable systemd private socket'
+fi
+chmod 0700 "$capability_root/run/systemd/private"
+
+chmod 0775 "$capability_root/run/systemd"
+if run_platform_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a writable systemd runtime directory'
+fi
+chmod 0755 "$capability_root/run/systemd"
+
+[[ "$(run_platform_classifier_with_systemctl \
+    "$capability_root/usr/bin/systemctl-degraded")" == 'apt amd64' ]] \
+    || die 'bootstrap rejected a bounded degraded systemd state'
+if run_platform_classifier_with_systemctl \
+    "$capability_root/usr/bin/systemctl-starting" >/dev/null 2>&1; then
+    die 'bootstrap accepted systemd before it reached running/degraded'
+fi
+if run_platform_classifier_with_systemctl \
+    "$capability_root/usr/bin/systemctl-hanging" >/dev/null 2>&1; then
+    die 'bootstrap accepted a systemctl readiness timeout'
+fi
+
+chmod 0770 "$capability_root/usr/bin/apt-get"
+if run_platform_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a group-writable selected package tool'
+fi
+chmod 0700 "$capability_root/usr/bin/apt-get"
+
+chmod 0770 "$capability_root/usr/bin/pacman"
+if run_platform_classifier $'ID=ubuntu\nVERSION_ID=any\n' x86_64 'apt pacman' >/dev/null 2>&1; then
+    die 'bootstrap ignored an unsafe foreign package tool'
+fi
+chmod 0700 "$capability_root/usr/bin/pacman"
+
+chmod 0770 "$capability_root/usr/bin/setpriv"
+if run_platform_classifier $'ID=ubuntu\nVERSION_ID=any\n' x86_64 apt >/dev/null 2>&1; then
+    die 'bootstrap accepted a group-writable setpriv'
+fi
+chmod 0700 "$capability_root/usr/bin/setpriv"
+
 dnf_command=$(
     eval "$platform_defs"
+    RHEL_DNF_BIN=/usr/bin/dnf
     rhel_preview_prerequisite_command
 )
 expected_dnf_command=$'/usr/bin/dnf\n--assumeyes\n--setopt=install_weak_deps=False\ninstall\ntar\nxz\ncurl\nca-certificates\nselinux-policy-targeted\npolicycoreutils\nlibselinux-utils'
@@ -306,9 +527,23 @@ expected_dnf_command=$'/usr/bin/dnf\n--assumeyes\n--setopt=install_weak_deps=Fal
 
 selinux_enforce=$platform_tmp/selinux-enforce
 vendor_root=$platform_tmp/vendor-root
-mkdir -p "$vendor_root/usr/bin" "$vendor_root/usr/sbin"
-chmod 0755 "$vendor_root" "$vendor_root/usr" "$vendor_root/usr/bin" "$vendor_root/usr/sbin"
+mkdir -p "$vendor_root/usr/bin" "$vendor_root/usr/sbin" "$vendor_root/run/systemd"
+chmod 0755 "$vendor_root" "$vendor_root/usr" "$vendor_root/usr/bin" \
+    "$vendor_root/usr/sbin" "$vendor_root/run" "$vendor_root/run/systemd"
+python3 - "$vendor_root/run/systemd/private" <<'PY_DNF_SYSTEMD_SOCKET'
+import socket
+import sys
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.bind(sys.argv[1])
+sock.close()
+PY_DNF_SYSTEMD_SOCKET
+chmod 0700 "$vendor_root/run/systemd/private"
 fake_dnf=$vendor_root/usr/bin/dnf
+fake_rpm=$vendor_root/usr/bin/rpm
+fake_systemctl=$vendor_root/usr/bin/systemctl
+fake_timeout=$vendor_root/usr/bin/timeout
+fake_setpriv=$vendor_root/usr/bin/setpriv
 fake_uname=$vendor_root/usr/bin/uname
 dnf_invoked=$platform_tmp/dnf-invoked
 fake_restorecon=$vendor_root/usr/sbin/restorecon
@@ -325,6 +560,11 @@ cat > "$fake_dnf" <<FAKE_DNF
 exit 97
 FAKE_DNF
 chmod 0700 "$fake_dnf"
+printf '#!/bin/bash\nexit 0\n' > "$fake_rpm"
+printf '#!/bin/bash\nprintf "running\\n"\n' > "$fake_systemctl"
+printf '#!/bin/bash\nexec /usr/bin/timeout "$@"\n' > "$fake_timeout"
+printf '#!/bin/bash\nexit 0\n' > "$fake_setpriv"
+chmod 0700 "$fake_rpm" "$fake_systemctl" "$fake_timeout" "$fake_setpriv"
 cat > "$fake_uname" <<'FAKE_UNAME'
 #!/bin/bash
 printf 'x86_64\n'
@@ -353,6 +593,16 @@ run_rhel_preview_preflight() (
     APPLY_ONLY=$apply_only
     SELINUX_ENFORCE_FILE=$selinux_enforce
     RHEL_DNF_BIN=$fake_dnf
+    RHEL_RPM_BIN=$fake_rpm
+    SYSTEMCTL_BIN=$fake_systemctl
+    TIMEOUT_BIN=$fake_timeout
+    SETPRIV_BIN=$fake_setpriv
+    SYSTEMD_RUNTIME_DIR=$vendor_root/run/systemd
+    SYSTEMD_PRIVATE_SOCKET=$vendor_root/run/systemd/private
+    APT_GET_BIN=$vendor_root/missing/apt-get
+    APT_CACHE_BIN=$vendor_root/missing/apt-cache
+    DPKG_QUERY_BIN=$vendor_root/missing/dpkg-query
+    PACMAN_BIN=$vendor_root/missing/pacman
     UNAME_BIN=$fake_uname
     RHEL_DNF_CANONICAL_ALT=$vendor_root/usr/bin/dnf-3
     SELINUX_RESTORECON_BIN=$fake_restorecon
@@ -367,6 +617,10 @@ run_rhel_preview_preflight() (
     case "$missing_role" in
         '') ;;
         dnf) RHEL_DNF_BIN=$vendor_root/usr/bin/missing-dnf ;;
+        rpm) RHEL_RPM_BIN=$vendor_root/usr/bin/missing-rpm ;;
+        systemctl) SYSTEMCTL_BIN=$vendor_root/usr/bin/missing-systemctl ;;
+        timeout) TIMEOUT_BIN=$vendor_root/usr/bin/missing-timeout ;;
+        setpriv) SETPRIV_BIN=$vendor_root/usr/bin/missing-setpriv ;;
         restorecon) SELINUX_RESTORECON_BIN=$vendor_root/usr/sbin/missing-restorecon ;;
         matchpathcon) SELINUX_MATCHPATHCON_BIN=$vendor_root/usr/sbin/missing-matchpathcon ;;
         getenforce) SELINUX_GETENFORCE_BIN=$vendor_root/usr/sbin/missing-getenforce ;;
@@ -391,7 +645,7 @@ fi
 [[ ! -e "$dnf_invoked" && ! -e "$selinux_mutator_invoked" && ! -e "$after_preflight" ]] \
     || die 'RHEL preview preflight reached a command after its certification blocker'
 
-for missing_vendor_role in dnf restorecon matchpathcon getenforce; do
+for missing_vendor_role in dnf rpm systemctl timeout setpriv restorecon matchpathcon getenforce; do
     if run_rhel_preview_preflight "$missing_vendor_role" >/dev/null 2>&1; then
         die "RHEL preview accepted missing vendor tool: $missing_vendor_role"
     fi
@@ -402,6 +656,10 @@ run_vendor_validator() (
     eval "$platform_defs"
     UNAME_BIN=$fake_uname
     RHEL_DNF_BIN=$fake_dnf
+    RHEL_RPM_BIN=$fake_rpm
+    SYSTEMCTL_BIN=$fake_systemctl
+    TIMEOUT_BIN=$fake_timeout
+    SETPRIV_BIN=$fake_setpriv
     RHEL_DNF_CANONICAL_ALT=$vendor_root/usr/bin/dnf-3
     SELINUX_RESTORECON_BIN=$fake_restorecon
     SELINUX_MATCHPATHCON_BIN=$fake_matchpathcon
@@ -434,7 +692,7 @@ POISONED_UNAME
 chmod 0700 "$poisoned_path/uname"
 [[ "$(PATH="$poisoned_path:$PATH" run_vendor_machine_architecture)" == x86_64 ]] \
     || die 'vendor architecture helper selected uname through PATH'
-for valid_vendor_role in uname dnf restorecon matchpathcon getenforce; do
+for valid_vendor_role in uname systemctl timeout setpriv dnf rpm restorecon matchpathcon getenforce; do
     run_vendor_validator "$valid_vendor_role" \
         || die "valid vendor fixture was rejected: $valid_vendor_role"
 done
@@ -475,6 +733,13 @@ if run_vendor_validator restorecon >/dev/null 2>&1; then
 fi
 rm -f -- "$fake_restorecon"
 mv -- "$vendor_root/usr/sbin/restorecon.real" "$fake_restorecon"
+mv -- "$fake_setpriv" "$vendor_root/usr/bin/setpriv.real"
+ln -s setpriv.real "$fake_setpriv"
+if run_vendor_validator setpriv >/dev/null 2>&1; then
+    die 'vendor validator accepted a symbolic setpriv'
+fi
+rm -f -- "$fake_setpriv"
+mv -- "$vendor_root/usr/bin/setpriv.real" "$fake_setpriv"
 mv -- "$fake_dnf" "$vendor_root/usr/bin/dnf-3"
 ln -s dnf-3 "$fake_dnf"
 run_vendor_validator dnf || die 'vendor validator rejected pinned dnf-3 symlink'
@@ -498,20 +763,119 @@ fi
     || die 'RHEL apply-only preview gate dispatched mutation, guard, systemctl or restorecon'
 
 assert_inert_apply_only_preflight() (
-    local label=$1 contents=$2 machine=$3 os_release
+    local label=$1 contents=$2 machine=$3 ecosystem=$4 os_release
     os_release=$platform_tmp/$label-os-release
     printf '%s' "$contents" > "$os_release"
     eval "$platform_defs"
+    configure_platform_capabilities "$ecosystem"
     APPLY_ONLY=1
+    SELINUX_ENFORCE_FILE=$platform_tmp/$label-selinux-inactive
     preflight_bootstrap_platform "$os_release" "$machine"
     [[ "$SELINUX_PLATFORM_MODE $PKG_FAMILY" == 'inert apply-only' ]]
 )
 assert_inert_apply_only_preflight debian-apply-only \
-    $'ID=debian\nVERSION_ID=13\n' x86_64
+    $'ID=debian\nVERSION_ID=13\n' x86_64 apt
 assert_inert_apply_only_preflight ubuntu-apply-only \
-    $'ID=ubuntu\nVERSION_ID=24.04\n' aarch64
-assert_inert_apply_only_preflight arch-apply-only \
-    $'ID=arch\n' x86_64
+    $'ID=ubuntu\nVERSION_ID=24.04\n' aarch64 apt
+assert_inert_apply_only_preflight custom-pacman-apply-only \
+    $'ID=customarch\nID_LIKE=arch\n' aarch64 pacman
+
+live_selinux_state=$platform_tmp/live-selinux-state
+live_selinux_target=$platform_tmp/live-selinux-target
+live_selinux_link=$platform_tmp/live-selinux-link
+live_selinux_mutation_marker=$platform_tmp/live-selinux-mutation
+printf '1\n' > "$live_selinux_state"
+
+run_inert_live_selinux_preflight() (
+    local label=$1 contents=$2 machine=$3 ecosystem=$4 os_release
+    os_release=$platform_tmp/$label-live-selinux-os-release
+    printf '%s' "$contents" > "$os_release"
+    eval "$platform_defs"
+    configure_platform_capabilities "$ecosystem"
+    APPLY_ONLY=0
+    SELINUX_ENFORCE_FILE=$live_selinux_state
+    preflight_bootstrap_platform "$os_release" "$machine"
+    : > "$live_selinux_mutation_marker"
+)
+assert_inert_live_selinux_rejected() {
+    local label=$1 contents=$2 machine=$3 ecosystem=$4
+    rm -f -- "$live_selinux_mutation_marker"
+    if run_inert_live_selinux_preflight \
+        "$label" "$contents" "$machine" "$ecosystem" >/dev/null 2>&1; then
+        die "$label reached mutation with live SELinux"
+    fi
+    [[ ! -e "$live_selinux_mutation_marker" ]] \
+        || die "$label mutated after a rejected live SELinux preflight"
+}
+assert_inert_live_selinux_rejected debian-live-selinux \
+    $'ID=debian\nVERSION_ID=13\n' x86_64 apt
+assert_inert_live_selinux_rejected ubuntu-live-selinux \
+    $'ID=ubuntu\nVERSION_ID=24.04\n' aarch64 apt
+assert_inert_live_selinux_rejected arch-live-selinux \
+    $'ID=arch\nVERSION_ID=rolling\n' x86_64 pacman
+
+run_live_selinux_gate_contract() (
+    local lifecycle_script=$1 mode=$2 state_path=$3
+    eval "$(extract_function_source \
+        "$lifecycle_script" verify_live_selinux_preflight)"
+    SELINUX_PLATFORM_MODE=$mode
+    SELINUX_ENFORCE_FILE=$state_path
+    VENDOR_STAT_BIN=/usr/bin/stat
+    verify_live_selinux_preflight
+)
+assert_live_selinux_gate_rejects() {
+    local lifecycle_script=$1 label=$2 state_path=$3
+    if run_live_selinux_gate_contract \
+        "$lifecycle_script" dnf-preview "$state_path" >/dev/null 2>&1; then
+        die "$(basename "$lifecycle_script") accepted $label SELinux enforcement state"
+    fi
+}
+for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
+    rm -f -- "$live_selinux_state" "$live_selinux_target" "$live_selinux_link"
+    run_live_selinux_gate_contract \
+        "$lifecycle_script" inert "$live_selinux_state" \
+        || die "$(basename "$lifecycle_script") rejected an inactive SELinux host"
+
+    printf '1\n' > "$live_selinux_state"
+    if run_live_selinux_gate_contract \
+        "$lifecycle_script" inert "$live_selinux_state" >/dev/null 2>&1; then
+        die "$(basename "$lifecycle_script") accepted enforcing SELinux without a label lifecycle"
+    fi
+    run_live_selinux_gate_contract \
+        "$lifecycle_script" dnf-preview "$live_selinux_state" \
+        || die "$(basename "$lifecycle_script") blocked its certified SELinux lifecycle"
+
+    printf '0\n' > "$live_selinux_state"
+    if run_live_selinux_gate_contract \
+        "$lifecycle_script" inert "$live_selinux_state" >/dev/null 2>&1; then
+        die "$(basename "$lifecycle_script") accepted permissive active SELinux without a label lifecycle"
+    fi
+
+    printf '1\n' > "$live_selinux_target"
+    ln -s "$live_selinux_target" "$live_selinux_link"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" symbolic "$live_selinux_link"
+    rm -f -- "$live_selinux_link"
+
+    printf '1\n' > "$live_selinux_state"
+    chmod 000 "$live_selinux_state"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" unreadable "$live_selinux_state"
+    chmod 0600 "$live_selinux_state"
+
+    printf 'Enforcing\n' > "$live_selinux_state"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" malformed "$live_selinux_state"
+    printf '1\n0\n' > "$live_selinux_state"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" multiline "$live_selinux_state"
+    printf '1' > "$live_selinux_state"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" unterminated "$live_selinux_state"
+    printf '1\0\n' > "$live_selinux_state"
+    assert_live_selinux_gate_rejects \
+        "$lifecycle_script" NUL-bearing "$live_selinux_state"
+done
 
 printf '0\n' > "$selinux_enforce"
 if run_rhel_preview_preflight >/dev/null 2>&1; then
@@ -521,22 +885,24 @@ fi
 require_sequence "$INSTALL" \
     'bootstrap_machine=$(vendor_machine_architecture)' \
     'preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"' \
-    'command -v systemctl >/dev/null' \
     'validate_apply_only_transaction' \
-    'apt-get update -qq' \
+    '"$APT_GET_BIN" update -qq' \
     'useradd --system' \
     'install -d -m 0750 -o root -g "$SVC_GROUP" "$CONF_DIR"'
 require_function_literal "$INSTALL" preflight_bootstrap_platform \
-    'die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"'
+    'die "DNF bootstrap remains preview-only: package capability is verified, but the SELinux lifecycle is not implemented; no host changes were made"'
 require_function_sequence "$INSTALL" preflight_bootstrap_platform \
+    'classify_bootstrap_platform "$os_release" "$machine"' \
+    'verify_live_selinux_preflight' \
     'verify_rhel_preview_host' \
-    'die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only:' \
+    'die "DNF bootstrap remains preview-only:' \
     'if [[ $APPLY_ONLY -eq 1 ]]; then'
 reject_function_literal "$INSTALL" preflight_bootstrap_platform 'systemctl '
 reject_function_literal "$INSTALL" preflight_bootstrap_platform 'useradd '
 reject_function_literal "$INSTALL" preflight_bootstrap_platform 'mkdir '
 require_function_sequence "$INSTALL" verify_rhel_preview_host \
     'validate_rhel_vendor_tool dnf' \
+    'validate_rhel_vendor_tool rpm' \
     'validate_rhel_vendor_tool restorecon' \
     'validate_rhel_vendor_tool matchpathcon' \
     'validate_rhel_vendor_tool getenforce' \
@@ -551,7 +917,7 @@ reject_literal "$INSTALL" 'SELINUX=disabled'
 reject_literal "$INSTALL" 'dnf-automatic'
 reject_literal "$INSTALL" 'upgrade --security'
 
-# Archive and cp -a labels are never authoritative. On Alma/Rocky only, every
+# Archive and cp -a labels are never authoritative. On DNF preview only, every
 # publication is force-restored from host policy and then checked read-only.
 for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
     require_literal "$lifecycle_script" 'UNAME_BIN=/usr/bin/uname'
@@ -559,6 +925,14 @@ for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
     require_literal "$lifecycle_script" 'VENDOR_STAT_BIN=/usr/bin/stat'
     require_literal "$lifecycle_script" 'VENDOR_DIRNAME_BIN=/usr/bin/dirname'
     require_literal "$lifecycle_script" 'SYSTEMCTL_BIN=/usr/bin/systemctl'
+    require_literal "$lifecycle_script" 'TIMEOUT_BIN=/usr/bin/timeout'
+    require_literal "$lifecycle_script" 'SYSTEMD_RUNTIME_DIR=/run/systemd'
+    require_literal "$lifecycle_script" 'SYSTEMD_PRIVATE_SOCKET=/run/systemd/private'
+    require_literal "$lifecycle_script" 'APT_GET_BIN=/usr/bin/apt-get'
+    require_literal "$lifecycle_script" 'APT_CACHE_BIN=/usr/bin/apt-cache'
+    require_literal "$lifecycle_script" 'DPKG_QUERY_BIN=/usr/bin/dpkg-query'
+    require_literal "$lifecycle_script" 'PACMAN_BIN=/usr/bin/pacman'
+    require_literal "$lifecycle_script" 'RHEL_RPM_BIN=/usr/bin/rpm'
     require_literal "$lifecycle_script" 'VENDOR_TRUST_ANCHOR=/'
     require_literal "$lifecycle_script" 'VENDOR_EXPECTED_UID=0'
     require_literal "$lifecycle_script" 'VENDOR_EXPECTED_GID=0'
@@ -567,8 +941,15 @@ for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
     require_literal "$lifecycle_script" 'SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon'
     require_literal "$lifecycle_script" 'SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce'
     require_literal "$lifecycle_script" 'readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \'
+    require_literal "$lifecycle_script" 'RHEL_DNF_CANONICAL_ALT RHEL_RPM_BIN APT_GET_BIN APT_CACHE_BIN \'
+    if [[ "$lifecycle_script" == "$INSTALL" ]]; then
+        require_literal "$lifecycle_script" 'DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SETPRIV_BIN SELINUX_RESTORECON_BIN \'
+    else
+        require_literal "$lifecycle_script" 'DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SELINUX_RESTORECON_BIN \'
+    fi
     require_literal "$lifecycle_script" 'SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \'
-    require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN VENDOR_TRUST_ANCHOR \'
+    require_literal "$lifecycle_script" 'VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \'
+    require_literal "$lifecycle_script" 'SYSTEMD_PRIVATE_SOCKET VENDOR_TRUST_ANCHOR \'
     require_literal "$lifecycle_script" 'VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID'
     require_literal "$lifecycle_script" 'RUNTIME_DIR=/run/celikpanel'
     require_literal "$lifecycle_script" 'BACKUP_ROOT=/var/backups/celikpanel'
@@ -576,15 +957,36 @@ for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
     require_literal "$lifecycle_script" 'UNIT_DIR=/etc/systemd/system'
     require_function_literal "$lifecycle_script" validate_vendor_directory_chain \
         'vendor tool ancestor is group/other writable'
-    require_function_literal "$lifecycle_script" validate_rhel_vendor_tool \
+    require_function_literal "$lifecycle_script" validate_vendor_tool \
         'vendor $role canonical target is not pinned'
-    require_function_literal "$lifecycle_script" validate_rhel_vendor_tool \
+    require_function_literal "$lifecycle_script" validate_vendor_tool \
         'vendor $role target must have exactly one hard link'
+    require_function_sequence "$lifecycle_script" validate_systemd_runtime \
+        'validate_vendor_tool systemctl' \
+        'validate_vendor_tool timeout' \
+        'validate_vendor_directory_chain "$SYSTEMD_PRIVATE_SOCKET"' \
+        '[[ -S "$SYSTEMD_PRIVATE_SOCKET" && ! -L "$SYSTEMD_PRIVATE_SOCKET" ]]' \
+        '"$TIMEOUT_BIN" --signal=KILL --kill-after=1s 3s' \
+        '"$SYSTEMCTL_BIN" is-system-running' \
+        '0:running|0:degraded|1:degraded)'
     require_function_sequence "$lifecycle_script" vendor_machine_architecture \
         'validate_rhel_vendor_tool uname' \
         'machine=$("$UNAME_BIN" -m)'
+    require_function_sequence "$lifecycle_script" verify_live_selinux_preflight \
+        '[[ -L "$SELINUX_ENFORCE_FILE" ]]' \
+        '[[ ! -e "$SELINUX_ENFORCE_FILE" ]]' \
+        '[[ -f "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]]' \
+        '"$VENDOR_STAT_BIN" -Lc '\''%a'\'' -- "$SELINUX_ENFORCE_FILE"' \
+        '(( (permissions & 0444) != 0 ))' \
+        'read -r -d '\'''\'' _ < "$SELINUX_ENFORCE_FILE"' \
+        'exec {enforce_fd}<"$SELINUX_ENFORCE_FILE"' \
+        'read -r -u "$enforce_fd" enforcing' \
+        'read -r -u "$enforce_fd" trailing' \
+        '0|1) ;;' \
+        '[[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]]' \
+        'die "SELinux is active but this package capability has no certified label lifecycle; no host changes were made"'
     require_function_sequence "$lifecycle_script" restore_celikpanel_selinux_labels \
-        'rhel9) ;;' \
+        'dnf-preview) ;;' \
         'validate_rhel_vendor_tool restorecon' \
         'validate_rhel_vendor_tool matchpathcon' \
         'validate_rhel_vendor_tool getenforce' \
@@ -628,7 +1030,7 @@ require_sequence "$INSTALL" \
     'cp -a "$SRC/web/dist/." "$installed_web_root/"' \
     'install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/' \
     'restore_celikpanel_selinux_labels' \
-    'systemctl daemon-reload'
+    '"$SYSTEMCTL_BIN" daemon-reload'
 require_sequence "$ROLLBACK" \
     'cp -a "$snap/bin" "$BIN_DIR"' \
     'cp -a "$snap/web" "$WEB_DIR"' \
@@ -669,7 +1071,8 @@ expected_guard_barrier_trace=$'publish\nrelabel\nsystemctl daemon-reload\nafter-
 # certification gate. This model proves cp -a publication is followed by
 # forced, xdev-bounded policy restore, dry-run drift proof and matchpathcon.
 selinux_lifecycle_defs=
-for lifecycle_function in validate_vendor_directory_chain validate_rhel_vendor_tool \
+for lifecycle_function in validate_vendor_directory_chain vendor_tool_path \
+    validate_vendor_tool validate_rhel_vendor_tool \
     restore_celikpanel_selinux_labels
 do
     selinux_lifecycle_defs+=$'\n'"$(extract_function_source "$INSTALL" "$lifecycle_function")"
@@ -714,7 +1117,7 @@ chmod 0700 "$selinux_lifecycle_vendor_root/usr/sbin/restorecon" \
 printf 'ID=almalinux\nVERSION_ID=9.6\n' > "$selinux_lifecycle_tmp/os-release"
 
 run_selinux_lifecycle_contract() (
-    local missing_role=${1:-} enforcement=${2:-Enforcing} mode=${3:-rhel9}
+    local missing_role=${1:-} enforcement=${2:-Enforcing} mode=${3:-dnf-preview}
     local drift=${4:-0} match_fail=${5:-0}
     eval "$selinux_lifecycle_defs"
     SELINUX_PLATFORM_MODE=$mode
@@ -792,62 +1195,99 @@ if run_selinux_lifecycle_contract '' Permissive \
     die 'SELinux lifecycle accepted a permissive AlmaLinux host'
 fi
 : > "$selinux_restore_trace"
-if run_selinux_lifecycle_contract '' Enforcing rhel9 1 >/dev/null 2>&1; then
+if run_selinux_lifecycle_contract '' Enforcing dnf-preview 1 >/dev/null 2>&1; then
     die 'SELinux lifecycle accepted recursive label drift'
 fi
 [[ "$(wc -l < "$selinux_restore_trace")" == 2 ]] \
     || die 'SELinux drift failure reached matchpathcon or skipped dry-run'
 : > "$selinux_restore_trace"
-if run_selinux_lifecycle_contract '' Enforcing rhel9 0 1 >/dev/null 2>&1; then
+if run_selinux_lifecycle_contract '' Enforcing dnf-preview 0 1 >/dev/null 2>&1; then
     die 'SELinux lifecycle accepted matchpathcon top-level mismatch'
 fi
 
 rollback_platform_defs=
-for rollback_platform_function in parse_lifecycle_os_release_scalar \
-    parse_lifecycle_os_release classify_lifecycle_platform
+for rollback_platform_function in validate_vendor_directory_chain \
+    vendor_tool_path vendor_tool_present validate_vendor_tool \
+    validate_systemd_runtime validate_rhel_vendor_tool validate_present_platform_tools \
+    package_ecosystem_complete validate_selected_package_ecosystem \
+    parse_lifecycle_os_release_scalar parse_lifecycle_os_release \
+    package_hint_for_token select_lifecycle_package_ecosystem \
+    classify_lifecycle_platform verify_live_selinux_preflight \
+    verify_rhel_preview_host preflight_rollback_platform
 do
     rollback_platform_defs+=$'\n'"$(extract_function_source \
         "$ROLLBACK" "$rollback_platform_function")"
 done
 run_rollback_classifier() (
-    local release_data=$1 machine=$2 fixture=$platform_tmp/rollback-os-release
+    local release_data=$1 machine=$2 ecosystems=$3 fixture=$platform_tmp/rollback-os-release
     eval "$rollback_platform_defs"
+    configure_platform_capabilities "$ecosystems"
     printf '%s' "$release_data" > "$fixture"
     classify_lifecycle_platform "$fixture" "$machine"
-    printf '%s\n' "$SELINUX_PLATFORM_MODE"
+    printf '%s %s\n' "$SELINUX_PLATFORM_MODE" "$PKG_FAMILY"
+)
+run_rollback_classifier_with_systemctl() (
+    local systemctl_path=$1 fixture=$platform_tmp/rollback-os-release
+    eval "$rollback_platform_defs"
+    configure_platform_capabilities apt
+    SYSTEMCTL_BIN=$systemctl_path
+    printf 'ID=custom\nID_LIKE=debian\n' > "$fixture"
+    classify_lifecycle_platform "$fixture" x86_64
+    printf '%s %s\n' "$SELINUX_PLATFORM_MODE" "$PKG_FAMILY"
 )
 assert_rollback_platform() {
-    local name=$1 release_data=$2 machine=$3 expected=$4 actual
-    actual=$(run_rollback_classifier "$release_data" "$machine") \
+    local name=$1 release_data=$2 machine=$3 ecosystems=$4 expected=$5 actual
+    actual=$(run_rollback_classifier "$release_data" "$machine" "$ecosystems") \
         || die "rollback rejected valid platform: $name"
     [[ "$actual" == "$expected" ]] \
         || die "rollback classified $name as $actual, want $expected"
 }
 reject_rollback_platform() {
-    local name=$1 release_data=$2 machine=$3
-    if run_rollback_classifier "$release_data" "$machine" >/dev/null 2>&1; then
+    local name=$1 release_data=$2 machine=$3 ecosystems=$4
+    if run_rollback_classifier "$release_data" "$machine" "$ecosystems" >/dev/null 2>&1; then
         die "rollback accepted invalid platform: $name"
     fi
 }
-assert_rollback_platform debian $'ID=debian\nVERSION_ID=13\n' x86_64 inert
-assert_rollback_platform ubuntu $'ID=ubuntu\nVERSION_ID=24.04.3\n' aarch64 inert
-assert_rollback_platform arch $'ID=arch\n' x86_64 inert
-assert_rollback_platform alma9 $'ID=almalinux\nVERSION_ID=9.6\n' x86_64 rhel9
-assert_rollback_platform rocky9 $'ID="rocky"\nVERSION_ID="9.5"\n' aarch64 rhel9
-reject_rollback_platform rocky8 $'ID=rocky\nVERSION_ID=8.10\n' x86_64
-reject_rollback_platform rocky10 $'ID=rocky\nVERSION_ID=10\n' x86_64
-reject_rollback_platform missing-version $'ID=rocky\n' x86_64
-reject_rollback_platform missing-id $'VERSION_ID=9\n' x86_64
-reject_rollback_platform duplicate-version $'ID=rocky\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64
-reject_rollback_platform unknown $'ID=amzn\nVERSION_ID=2023\n' x86_64
-reject_rollback_platform fedora $'ID=fedora\nVERSION_ID=42\n' x86_64
-reject_rollback_platform centos $'ID=centos\nVERSION_ID=9\n' x86_64
-reject_rollback_platform cloudlinux $'ID=cloudlinux\nVERSION_ID=9\n' x86_64
-reject_rollback_platform rhel $'ID=rhel\nVERSION_ID=9\n' x86_64
-reject_rollback_platform malformed $'ID="rocky\nVERSION_ID=9\n' x86_64
+assert_rollback_platform debian-any $'ID=debian\nVERSION_ID=42\n' x86_64 apt 'inert apt'
+assert_rollback_platform debian-13 \
+    $'ID=debian\nVERSION_ID=13\nVERSION_CODENAME=trixie\n' x86_64 apt 'inert apt'
+assert_rollback_platform ubuntu-any $'ID=ubuntu\nVERSION_ID=30.10\n' aarch64 apt 'inert apt'
+assert_rollback_platform ubuntu-24.04-codename-is-metadata \
+    $'ID=ubuntu\nVERSION_ID=24.04\nVERSION_CODENAME=changed\n' x86_64 apt 'inert apt'
+assert_rollback_platform custom-apt $'ID=custom\nID_LIKE=debian\n' x86_64 apt 'inert apt'
+assert_rollback_platform custom-pacman-arm64 $'ID=custom\nID_LIKE=arch\n' aarch64 pacman 'inert pacman'
+assert_rollback_platform custom-unique-pacman \
+    $'ID=operatorarch\nVERSION_ID=edge\n' x86_64 pacman 'inert pacman'
+assert_rollback_platform custom-dnf $'ID=custom\nID_LIKE=rhel\n' x86_64 dnf 'dnf-preview dnf-preview'
+for rhel_hint in rhel fedora centos almalinux rocky rocky-linux cloudlinux; do
+    assert_rollback_platform "rhel-family-hint-$rhel_hint" \
+        "ID=$rhel_hint"$'\nVERSION_ID=edge\n' x86_64 dnf 'dnf-preview dnf-preview'
+done
+assert_rollback_platform hinted-apt-with-foreign-manager \
+    $'ID=ubuntu\nVERSION_ID=1\n' x86_64 'apt pacman' 'inert apt'
+reject_rollback_platform missing-id $'VERSION_ID=9\n' x86_64 apt
+reject_rollback_platform duplicate-version \
+    $'ID=custom\nVERSION_ID=9\nVERSION_ID=9.6\n' x86_64 apt
+reject_rollback_platform malformed $'ID="custom\nVERSION_ID=9\n' x86_64 apt
+reject_rollback_platform hinted-incomplete $'ID=ubuntu\n' x86_64 pacman
+reject_rollback_platform unknown-ambiguous $'ID=custom\n' x86_64 'apt pacman'
+reject_rollback_platform unsupported-architecture $'ID=custom\nID_LIKE=debian\n' s390x apt
+[[ "$(run_rollback_classifier_with_systemctl \
+    "$capability_root/usr/bin/systemctl-degraded")" == 'inert apt' ]] \
+    || die 'rollback rejected a bounded degraded systemd state'
+if run_rollback_classifier_with_systemctl \
+    "$capability_root/usr/bin/systemctl-starting" >/dev/null 2>&1; then
+    die 'rollback accepted systemd before it reached running/degraded'
+fi
+mv -- "$capability_root/run/systemd/private" "$capability_root/run/systemd/private.saved"
+if run_rollback_classifier $'ID=custom\nID_LIKE=debian\n' x86_64 apt >/dev/null 2>&1; then
+    die 'rollback accepted a missing systemd private socket'
+fi
+mv -- "$capability_root/run/systemd/private.saved" "$capability_root/run/systemd/private"
 rm -f -- "$platform_tmp/missing-rollback-os-release"
 if (
     eval "$rollback_platform_defs"
+    configure_platform_capabilities apt
     classify_lifecycle_platform "$platform_tmp/missing-rollback-os-release" x86_64
 ) >/dev/null 2>&1; then
     die 'rollback accepted a missing os-release file'
@@ -855,10 +1295,39 @@ fi
 printf 'ID=rocky\0\nVERSION_ID=9\n' > "$platform_tmp/rollback-os-release"
 if (
     eval "$rollback_platform_defs"
+    configure_platform_capabilities apt
     classify_lifecycle_platform "$platform_tmp/rollback-os-release" x86_64
 ) >/dev/null 2>&1; then
     die 'rollback accepted NUL-bearing os-release'
 fi
+
+run_rollback_live_selinux_preflight() (
+    local release_data=$1 machine=$2 ecosystems=$3 fixture
+    fixture=$platform_tmp/rollback-live-selinux-os-release
+    eval "$rollback_platform_defs"
+    configure_platform_capabilities "$ecosystems"
+    SELINUX_ENFORCE_FILE=$live_selinux_state
+    printf '%s' "$release_data" > "$fixture"
+    preflight_rollback_platform "$fixture" "$machine"
+    : > "$live_selinux_mutation_marker"
+)
+printf '1\n' > "$live_selinux_state"
+for rollback_live_case in \
+    'debian|ID=debian|x86_64|apt' \
+    'ubuntu|ID=ubuntu|aarch64|apt' \
+    'arch|ID=arch|x86_64|pacman'
+do
+    IFS='|' read -r rollback_live_label rollback_live_id \
+        rollback_live_machine rollback_live_ecosystem <<< "$rollback_live_case"
+    rm -f -- "$live_selinux_mutation_marker"
+    if run_rollback_live_selinux_preflight \
+        "$rollback_live_id"$'\n' "$rollback_live_machine" \
+        "$rollback_live_ecosystem" >/dev/null 2>&1; then
+        die "rollback $rollback_live_label reached mutation with live SELinux"
+    fi
+    [[ ! -e "$live_selinux_mutation_marker" ]] \
+        || die "rollback $rollback_live_label mutated after rejected live SELinux preflight"
+done
 
 require_sequence "$ROLLBACK" \
     'rollback_machine=$(vendor_machine_architecture)' \
@@ -866,10 +1335,184 @@ require_sequence "$ROLLBACK" \
     'prepare_and_acquire_release_transaction_lock'
 require_function_sequence "$ROLLBACK" verify_rhel_preview_host \
     'validate_rhel_vendor_tool dnf' \
+    'validate_rhel_vendor_tool rpm' \
     'validate_rhel_vendor_tool restorecon' \
     'validate_rhel_vendor_tool matchpathcon' \
     'validate_rhel_vendor_tool getenforce' \
     'reported_state=$("$SELINUX_GETENFORCE_BIN")'
+require_function_sequence "$ROLLBACK" preflight_rollback_platform \
+    'classify_lifecycle_platform "$1" "$2"' \
+    'verify_live_selinux_preflight' \
+    'verify_rhel_preview_host' \
+    'die "DNF rollback remains preview-only: package capability is verified, but the SELinux lifecycle is not implemented; no host changes were made"'
+
+rollback_dnf_after_preflight=$platform_tmp/rollback-dnf-after-preflight
+run_rollback_dnf_preview_preflight() (
+    local fixture=$platform_tmp/rollback-dnf-preview-os-release
+    eval "$rollback_platform_defs"
+    SELINUX_ENFORCE_FILE=$selinux_enforce
+    RHEL_DNF_BIN=$fake_dnf
+    RHEL_RPM_BIN=$fake_rpm
+    SYSTEMCTL_BIN=$fake_systemctl
+    TIMEOUT_BIN=$fake_timeout
+    SYSTEMD_RUNTIME_DIR=$vendor_root/run/systemd
+    SYSTEMD_PRIVATE_SOCKET=$vendor_root/run/systemd/private
+    APT_GET_BIN=$vendor_root/missing/apt-get
+    APT_CACHE_BIN=$vendor_root/missing/apt-cache
+    DPKG_QUERY_BIN=$vendor_root/missing/dpkg-query
+    PACMAN_BIN=$vendor_root/missing/pacman
+    RHEL_DNF_CANONICAL_ALT=$vendor_root/usr/bin/dnf-3
+    SELINUX_RESTORECON_BIN=$fake_restorecon
+    SELINUX_MATCHPATHCON_BIN=$fake_matchpathcon
+    SELINUX_GETENFORCE_BIN=$fake_getenforce
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$vendor_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    printf 'ID=rocky\nVERSION_ID=any\n' > "$fixture"
+    preflight_rollback_platform "$fixture" x86_64
+    : > "$rollback_dnf_after_preflight"
+)
+printf '1\n' > "$selinux_enforce"
+rm -f -- "$rollback_dnf_after_preflight" "$dnf_invoked" "$selinux_mutator_invoked"
+if rollback_dnf_output=$(run_rollback_dnf_preview_preflight 2>&1); then
+    die 'rollback DNF preview returned to the transaction path'
+fi
+[[ "$rollback_dnf_output" == *'DNF rollback remains preview-only:'* ]] \
+    || die 'rollback DNF preview did not report its explicit certification blocker'
+[[ ! -e "$rollback_dnf_after_preflight" && ! -e "$dnf_invoked" &&
+   ! -e "$selinux_mutator_invoked" ]] \
+    || die 'rollback DNF preview reached a transaction or mutation command'
+
+first_admin_defs=
+for first_admin_function in validate_vendor_directory_chain vendor_tool_path \
+    validate_vendor_tool run_panel_as_service_user_with_private_umask \
+    ensure_first_administrator
+do
+    first_admin_defs+=$'\n'"$(extract_function_source \
+        "$INSTALL" "$first_admin_function")"
+done
+first_admin_root=$platform_tmp/first-admin
+first_admin_prefix=$first_admin_root/opt/celikpanel
+first_admin_data=$first_admin_root/data
+first_admin_setpriv=$first_admin_root/usr/bin/setpriv
+first_admin_panel=$first_admin_prefix/bin/panel
+first_admin_created=$platform_tmp/first-admin-created
+first_admin_complete=$platform_tmp/first-admin-install-complete
+first_admin_setpriv_trace=$platform_tmp/first-admin-setpriv-trace
+mkdir -p "$first_admin_root/usr/bin" "$first_admin_prefix/bin" "$first_admin_data"
+chmod 0755 "$first_admin_root" "$first_admin_root/usr" "$first_admin_root/usr/bin" \
+    "$first_admin_root/opt" "$first_admin_prefix" "$first_admin_prefix/bin" \
+    "$first_admin_data"
+cat > "$first_admin_setpriv" <<'FAKE_FIRST_ADMIN_SETPRIV'
+#!/bin/bash
+set -euo pipefail
+[[ "$1" == "--reuid=$FIRST_ADMIN_UID" ]]
+[[ "$2" == "--regid=$FIRST_ADMIN_GID" ]]
+[[ "$3" == --clear-groups ]]
+[[ "$4" == -- ]]
+printf '%s\n' "$1 $2 $3 $4" >> "$FIRST_ADMIN_SETPRIV_TRACE"
+shift 4
+exec "$@"
+FAKE_FIRST_ADMIN_SETPRIV
+cat > "$first_admin_panel" <<'FAKE_FIRST_ADMIN_PANEL'
+#!/bin/bash
+set -euo pipefail
+case "$1" in
+    --count-users)
+        case "$FIRST_ADMIN_COUNT_MODE" in
+            zero) printf '0\n' ;;
+            existing) printf '2\n' ;;
+            invalid) printf '00\n' ;;
+            failure) exit 71 ;;
+            *) exit 72 ;;
+        esac
+        ;;
+    --create-admin)
+        : > "$FIRST_ADMIN_CREATED"
+        ;;
+    *) exit 73 ;;
+esac
+FAKE_FIRST_ADMIN_PANEL
+chmod 0700 "$first_admin_setpriv" "$first_admin_panel"
+
+run_first_admin_contract() (
+    local count_mode=$1 setpriv_path=$2
+    eval "$first_admin_defs"
+    PREFIX=$first_admin_prefix
+    DATA_DIR=$first_admin_data
+    SETPRIV_BIN=$setpriv_path
+    SVC_USER_ID=21001
+    SVC_GROUP_ID=21002
+    SKIP_ADMIN=0
+    VENDOR_READLINK_BIN=/usr/bin/readlink
+    VENDOR_STAT_BIN=/usr/bin/stat
+    VENDOR_DIRNAME_BIN=/usr/bin/dirname
+    VENDOR_TRUST_ANCHOR=$first_admin_root
+    VENDOR_EXPECTED_UID=$(id -u)
+    VENDOR_EXPECTED_GID=$(id -g)
+    export FIRST_ADMIN_UID=$SVC_USER_ID
+    export FIRST_ADMIN_GID=$SVC_GROUP_ID
+    export FIRST_ADMIN_COUNT_MODE=$count_mode
+    export FIRST_ADMIN_CREATED=$first_admin_created
+    export FIRST_ADMIN_SETPRIV_TRACE=$first_admin_setpriv_trace
+    step() { :; }
+    ok() { :; }
+    ensure_first_administrator
+    : > "$first_admin_complete"
+)
+
+rm -f -- "$first_admin_created" "$first_admin_complete" "$first_admin_setpriv_trace"
+run_first_admin_contract zero "$first_admin_setpriv" \
+    || die 'safe fixed setpriv clean-admin fixture failed'
+[[ -e "$first_admin_created" && -e "$first_admin_complete" ]] \
+    || die 'clean-admin success did not create the admin and completion markers'
+[[ "$(stat -Lc '%a' -- "$first_admin_created")" == 600 ]] \
+    || die 'clean-admin panel command did not retain its private umask'
+[[ "$(wc -l < "$first_admin_setpriv_trace")" == 2 ]] \
+    || die 'clean-admin success did not use setpriv for both panel commands'
+
+rm -f -- "$first_admin_created" "$first_admin_complete" "$first_admin_setpriv_trace"
+run_first_admin_contract existing "$first_admin_setpriv" \
+    || die 'existing-admin count fixture failed'
+[[ ! -e "$first_admin_created" && -e "$first_admin_complete" ]] \
+    || die 'existing-admin count created another admin or blocked completion'
+[[ "$(wc -l < "$first_admin_setpriv_trace")" == 1 ]] \
+    || die 'existing-admin count invoked an unexpected panel command'
+
+for failed_count_mode in failure invalid; do
+    rm -f -- "$first_admin_created" "$first_admin_complete" "$first_admin_setpriv_trace"
+    if run_first_admin_contract "$failed_count_mode" "$first_admin_setpriv" >/dev/null 2>&1; then
+        die "first-admin accepted $failed_count_mode user count"
+    fi
+    [[ ! -e "$first_admin_created" && ! -e "$first_admin_complete" ]] \
+        || die "first-admin wrote admin/install.complete after $failed_count_mode user count"
+done
+
+rm -f -- "$first_admin_created" "$first_admin_complete" "$first_admin_setpriv_trace"
+if run_first_admin_contract zero "$first_admin_root/usr/bin/missing-setpriv" >/dev/null 2>&1; then
+    die 'first-admin accepted missing fixed setpriv'
+fi
+[[ ! -e "$first_admin_created" && ! -e "$first_admin_complete" ]] \
+    || die 'first-admin mutated after missing setpriv rejection'
+
+chmod 0770 "$first_admin_setpriv"
+if run_first_admin_contract zero "$first_admin_setpriv" >/dev/null 2>&1; then
+    die 'first-admin accepted group-writable setpriv'
+fi
+chmod 0700 "$first_admin_setpriv"
+rm -f -- "$first_admin_created" "$first_admin_complete" "$first_admin_setpriv_trace"
+mv -- "$first_admin_setpriv" "$first_admin_setpriv.real"
+ln -s setpriv.real "$first_admin_setpriv"
+if run_first_admin_contract zero "$first_admin_setpriv" >/dev/null 2>&1; then
+    die 'first-admin accepted symbolic setpriv'
+fi
+rm -f -- "$first_admin_setpriv"
+mv -- "$first_admin_setpriv.real" "$first_admin_setpriv"
+[[ ! -e "$first_admin_created" && ! -e "$first_admin_complete" ]] \
+    || die 'first-admin mutated after unsafe setpriv rejection'
 
 cleanup_platform_contract
 trap - EXIT
@@ -1518,11 +2161,11 @@ require_sequence "$INSTALL" \
     'SVC_GROUP_ID=$(service_group_id)' \
     '"$PREFIX/bin/agent" --initialize-service-mutation-ledger' \
     '[[ "$ledger_owner" == 0 && "$ledger_group" == "$SVC_GROUP_ID" && "$ledger_mode" == 600 ]]' \
-    'systemctl restart celikpanel-agent.service' \
-    'systemctl is-active --quiet celikpanel-agent.service' \
+    '"$SYSTEMCTL_BIN" restart celikpanel-agent.service' \
+    '"$SYSTEMCTL_BIN" is-active --quiet celikpanel-agent.service' \
     '[ -S /run/celikpanel/agent.sock ]' \
-    'systemctl restart celikpanel-panel.service' \
-    'systemctl is-active --quiet celikpanel-panel.service'
+    '"$SYSTEMCTL_BIN" restart celikpanel-panel.service' \
+    '"$SYSTEMCTL_BIN" is-active --quiet celikpanel-panel.service'
 
 # Rollback validates standalone snapshots and the cold restore postcondition
 # with the immutable checker. A controlled panel start may leave a healthy WAL,

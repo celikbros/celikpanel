@@ -263,8 +263,11 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 	previous := ""
 	for _, snapshot := range journal.ConfigBefore {
 		validate := validateDNSFileSnapshot
-		if journal.Mode == transport.DNSEngineSwitchModeSwitch &&
-			journal.TargetEngine == transport.DNSEngineBIND {
+		if (journal.Mode == transport.DNSEngineSwitchModeSwitch &&
+			(journal.TargetEngine == transport.DNSEngineBIND ||
+				journal.TargetEngine == transport.DNSEnginePowerDNS)) ||
+			(journal.Mode == transport.DNSEngineSwitchModeAdopt &&
+				journal.TargetEngine == transport.DNSEnginePowerDNS) {
 			validate = validateDNSFileSnapshotIntegrity
 		}
 		if err := validate(snapshot); err != nil {
@@ -320,17 +323,10 @@ func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
 		if journal.PDNSLiveSHA256 != "" || journal.PDNSLiveSize != 0 {
 			return errors.New("PowerDNS switch journal contains adoption-only live database state")
 		}
-		wantConfig := []string{
-			filepath.Clean(dnsMainConf), filepath.Clean(dnsManagedConf), filepath.Clean(dnsClusterConf),
-		}
-		sort.Strings(wantConfig)
-		if len(journal.ConfigBefore) != len(wantConfig) {
-			return errors.New("PowerDNS switch journal config snapshot set is incomplete")
-		}
-		for index, snapshot := range journal.ConfigBefore {
-			if snapshot.Path != wantConfig[index] || (snapshot.Exists && snapshot.Mode != 0o644) {
-				return errors.New("PowerDNS switch journal contains an unexpected config snapshot")
-			}
+		if err := validatePDNSConfigSnapshotSetStructure(
+			journal.ConfigBefore,
+		); err != nil {
+			return err
 		}
 	}
 	wantTarget := []string{"bind9.service", "named.service"}
@@ -358,18 +354,10 @@ func validatePDNSAdoptionJournal(journal dnsEngineSwitchJournal) error {
 		!validDNSGeneration(journal.PDNSLiveSHA256) || journal.PDNSLiveSize <= 0 {
 		return errors.New("PowerDNS adoption journal contains switch mutation state")
 	}
-	wantConfig := []string{
-		filepath.Clean(dnsMainConf), filepath.Clean(dnsManagedConf), filepath.Clean(dnsClusterConf),
+	if err := validatePDNSConfigSnapshotSetStructure(journal.ConfigBefore); err != nil {
+		return err
 	}
-	sort.Strings(wantConfig)
-	if len(journal.ConfigBefore) != len(wantConfig) {
-		return errors.New("PowerDNS adoption journal config evidence is incomplete")
-	}
-	for index, snapshot := range journal.ConfigBefore {
-		if snapshot.Path != wantConfig[index] ||
-			(snapshot.Exists && dnsSnapshotOwnerRequired() && snapshot.Mode&0o022 != 0) {
-			return errors.New("PowerDNS adoption journal contains unsafe config evidence")
-		}
+	for _, snapshot := range journal.ConfigBefore {
 		switch snapshot.Path {
 		case filepath.Clean(dnsMainConf), filepath.Clean(dnsManagedConf):
 			if !snapshot.Exists {

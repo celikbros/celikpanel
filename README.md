@@ -62,11 +62,15 @@ The privilege split is deliberate: the web-facing Panel never runs as root. Only
 
 Paired identity and topology are staged before the first DNS engine is
 installed. Either node may then activate BIND or PowerDNS directly; no
-PowerDNS-first bootstrap or temporary engine is required. The frozen target
-topology is Frankfurt/NS1 as a direct BIND primary and Boston/NS2 as the
-directional PowerDNS secondary. Boston's existing empty, panel-managed
-standalone PowerDNS is reviewed and reconfigured in place through a snapshotted,
-restartable and rollback-safe operation.
+PowerDNS-first bootstrap or temporary engine is required. The frozen acceptance
+topology is Frankfurt/NS1 on Debian 13 as a direct BIND primary and Boston/NS2
+on Ubuntu 24.04 as the directional PowerDNS secondary. A clean Boston host
+installs PowerDNS through that dedicated operation. Only when the pre-operation
+proof finds an exact empty, panel-managed standalone PowerDNS authority does the
+same workflow select an in-place, snapshotted and rollback-safe reconfiguration.
+Those OS names identify the tested fixture, not an authorization allowlist:
+mutation authority comes from the trusted package ecosystem, systemd and exact
+live package, unit, path, owner and runtime contracts.
 
 The primary remains pair-pending and panel-local zone writes fail closed until
 PairReady proves all four authorities: the local catalog AXFR exactly matches

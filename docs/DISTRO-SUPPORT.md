@@ -1,4 +1,4 @@
-# What is offered on which distro?
+# What is offered on which package ecosystem?
 
 <!-- THIS FILE IS GENERATED — do not edit by hand. -->
 <!-- Source: internal/core/managed_services.go · Regenerate: make distro-matrix -->
@@ -10,9 +10,14 @@ screen cannot drift apart.
 
 Rules:
 
-- **An empty cell (—) is a promise, not a gap:** when "installed means working"
-  cannot be guaranteed on a distro, the row is deliberately not offered there.
-  A half-install is broken.
+- **A populated cell is a package mapping, not an installation guarantee for
+  the whole ecosystem.** Mutation additionally requires a verified manager/systemd
+  capability, service-specific lifecycle authorization and, where applicable, an
+  exact vendor-artifact or repository-recipe proof. Those final gates inspect real
+  host bytes and capabilities, not a distribution-name allowlist.
+- **An empty cell (—) is a promise, not a gap:** when the catalogue has no safe
+  mapping for that package manager, the row is deliberately closed. A half-install
+  is broken.
 - **Seat:** components in the same seat do the same job; only one can be
   installed at a time (two web servers cannot share port 80). Choosing the
   other one is a swap, not an addition.
@@ -23,7 +28,7 @@ Rules:
 
 ### Web
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 🐘 PHP-FPM | Runtime | `php-fpm` · version choice: Sury PHP (packages.sury.org) | `php-fpm` | — | — |
 | 🔄 Nginx | Service | `nginx` | `nginx` | web server | — |
@@ -31,7 +36,7 @@ Rules:
 
 ### Database
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 🐘 PostgreSQL | Service | `postgresql` · version choice: PostgreSQL Global Development Group (PGDG) | `postgresql` | — | — |
 | 🦭 MariaDB | Service | `mariadb-server` | `mariadb` | — | — |
@@ -40,7 +45,7 @@ Rules:
 
 ### E-mail
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 📧 Postfix | Service | `postfix` | `postfix` | SMTP server | — |
 | 📮 Exim | Service | — | — | SMTP server | — |
@@ -50,7 +55,7 @@ Rules:
 
 ### Security
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 🔐 WireGuard VPN | Service | `wireguard` | `wireguard-tools` | — | — |
 | 🔐 Let's Encrypt client (certbot) | Tool | `certbot` | `certbot` | — | — |
@@ -60,20 +65,20 @@ Rules:
 
 ### DNS
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 🌐 BIND | Service | `bind9` | `bind` | DNS server | — |
-| ⚡ PowerDNS | Service | `pdns-server` `pdns-backend-sqlite3` | `powerdns` | DNS server | — |
+| ⚡ PowerDNS | Service | `pdns-server` `pdns-backend-sqlite3` | — | DNS server | — |
 
 ### FTP
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 📂 vsftpd | Service | — | — | — | — |
 
 ### Cache
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | ⚡ Redis | Service | `redis-server` | — | kv-store | — |
 | 🗝️ Valkey | Service | `valkey-server` | `valkey` | kv-store | — |
@@ -81,7 +86,7 @@ Rules:
 
 ### Monitoring
 
-| Component | Kind | Debian/Ubuntu (apt) | Arch (pacman) | Seat | Needs |
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 📈 Netdata | Service | `netdata` · version choice: Netdata (repository.netdata.cloud) | `netdata` | — | — |
 

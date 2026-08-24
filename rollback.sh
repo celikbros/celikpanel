@@ -45,6 +45,12 @@ SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
 RHEL_DNF_CANONICAL_ALT=/usr/bin/dnf-3
+RHEL_RPM_BIN=/usr/bin/rpm
+APT_GET_BIN=/usr/bin/apt-get
+APT_CACHE_BIN=/usr/bin/apt-cache
+DPKG_QUERY_BIN=/usr/bin/dpkg-query
+PACMAN_BIN=/usr/bin/pacman
+TIMEOUT_BIN=/usr/bin/timeout
 SELINUX_RESTORECON_BIN=/usr/sbin/restorecon
 SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon
 SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce
@@ -57,13 +63,17 @@ VENDOR_READLINK_BIN=/usr/bin/readlink
 VENDOR_STAT_BIN=/usr/bin/stat
 VENDOR_DIRNAME_BIN=/usr/bin/dirname
 SYSTEMCTL_BIN=/usr/bin/systemctl
+SYSTEMD_RUNTIME_DIR=/run/systemd
+SYSTEMD_PRIVATE_SOCKET=/run/systemd/private
 VENDOR_TRUST_ANCHOR=/
 VENDOR_EXPECTED_UID=0
 VENDOR_EXPECTED_GID=0
 readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \
-    RHEL_DNF_CANONICAL_ALT SELINUX_RESTORECON_BIN \
+    RHEL_DNF_CANONICAL_ALT RHEL_RPM_BIN APT_GET_BIN APT_CACHE_BIN \
+    DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SELINUX_RESTORECON_BIN \
     SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \
-    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN VENDOR_TRUST_ANCHOR \
+    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \
+    SYSTEMD_PRIVATE_SOCKET VENDOR_TRUST_ANCHOR \
     VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID
 SELINUX_PLATFORM_MODE=unverified
 PREFLIGHT_PANEL=
@@ -128,16 +138,35 @@ validate_vendor_directory_chain() {
     done
 }
 
-validate_rhel_vendor_tool() {
-    local role=$1 path canonical allowed_alt= owner group mode links permissions
+vendor_tool_path() {
+    local role=$1
     case "$role" in
-        uname) path=$UNAME_BIN ;;
-        dnf) path=$RHEL_DNF_BIN; allowed_alt=$RHEL_DNF_CANONICAL_ALT ;;
-        restorecon) path=$SELINUX_RESTORECON_BIN ;;
-        matchpathcon) path=$SELINUX_MATCHPATHCON_BIN ;;
-        getenforce) path=$SELINUX_GETENFORCE_BIN ;;
-        *) die "unknown RHEL vendor tool role: $role" ;;
+        uname) VENDOR_TOOL_PATH=$UNAME_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        systemctl) VENDOR_TOOL_PATH=$SYSTEMCTL_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        timeout) VENDOR_TOOL_PATH=$TIMEOUT_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        apt-get) VENDOR_TOOL_PATH=$APT_GET_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        apt-cache) VENDOR_TOOL_PATH=$APT_CACHE_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        dpkg-query) VENDOR_TOOL_PATH=$DPKG_QUERY_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        pacman) VENDOR_TOOL_PATH=$PACMAN_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        dnf) VENDOR_TOOL_PATH=$RHEL_DNF_BIN; VENDOR_TOOL_ALLOWED_ALT=$RHEL_DNF_CANONICAL_ALT ;;
+        rpm) VENDOR_TOOL_PATH=$RHEL_RPM_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        restorecon) VENDOR_TOOL_PATH=$SELINUX_RESTORECON_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        matchpathcon) VENDOR_TOOL_PATH=$SELINUX_MATCHPATHCON_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        getenforce) VENDOR_TOOL_PATH=$SELINUX_GETENFORCE_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        *) die "unknown vendor tool role: $role" ;;
     esac
+}
+
+vendor_tool_present() {
+    vendor_tool_path "$1"
+    [[ -e "$VENDOR_TOOL_PATH" || -L "$VENDOR_TOOL_PATH" ]]
+}
+
+validate_vendor_tool() {
+    local role=$1 path canonical allowed_alt owner group mode links permissions
+    vendor_tool_path "$role"
+    path=$VENDOR_TOOL_PATH
+    allowed_alt=$VENDOR_TOOL_ALLOWED_ALT
     [[ -e "$path" || -L "$path" ]] \
         || die "CelikPanel lifecycle requires the exact vendor $role path: $path"
     validate_vendor_directory_chain "$path"
@@ -171,6 +200,81 @@ validate_rhel_vendor_tool() {
     permissions=$((8#$mode))
     (( (permissions & 0022) == 0 )) \
         || die "vendor $role target is group/other writable: $canonical"
+}
+
+validate_systemd_runtime() {
+    local canonical owner group mode links permissions readiness readiness_status=0
+    validate_vendor_tool systemctl
+    validate_vendor_tool timeout
+    [[ "$SYSTEMD_PRIVATE_SOCKET" == "$SYSTEMD_RUNTIME_DIR/private" ]] \
+        || die "systemd private socket path does not match its fixed runtime directory"
+    [[ -d "$SYSTEMD_RUNTIME_DIR" && ! -L "$SYSTEMD_RUNTIME_DIR" ]] \
+        || die "systemd runtime directory is missing or symbolic: $SYSTEMD_RUNTIME_DIR"
+    validate_vendor_directory_chain "$SYSTEMD_PRIVATE_SOCKET"
+    [[ -S "$SYSTEMD_PRIVATE_SOCKET" && ! -L "$SYSTEMD_PRIVATE_SOCKET" ]] \
+        || die "systemd private endpoint is not a direct Unix socket: $SYSTEMD_PRIVATE_SOCKET"
+    canonical=$("$VENDOR_READLINK_BIN" -e -- "$SYSTEMD_PRIVATE_SOCKET") \
+        || die "cannot canonicalize systemd private socket: $SYSTEMD_PRIVATE_SOCKET"
+    [[ "$canonical" == "$SYSTEMD_PRIVATE_SOCKET" ]] \
+        || die "systemd private socket is not canonical: $SYSTEMD_PRIVATE_SOCKET"
+    read -r owner group mode links < <("$VENDOR_STAT_BIN" -Lc '%u %g %a %h' -- "$SYSTEMD_PRIVATE_SOCKET") \
+        || die "cannot inspect systemd private socket: $SYSTEMD_PRIVATE_SOCKET"
+    [[ "$owner" == "$VENDOR_EXPECTED_UID" && "$group" == "$VENDOR_EXPECTED_GID" ]] \
+        || die "systemd private socket is not owned by the trusted principal"
+    [[ "$links" == 1 ]] \
+        || die "systemd private socket must have exactly one hard link"
+    permissions=$((8#$mode))
+    (( (permissions & 0022) == 0 )) \
+        || die "systemd private socket is group/other writable"
+
+    readiness=$(LC_ALL=C SYSTEMD_COLORS=0 SYSTEMD_PAGER= \
+        "$TIMEOUT_BIN" --signal=KILL --kill-after=1s 3s \
+        "$SYSTEMCTL_BIN" is-system-running 2>/dev/null) || readiness_status=$?
+    case "$readiness_status:$readiness" in
+        0:running|0:degraded|1:degraded) ;;
+        *) die "systemd is not ready (state=${readiness:-unknown}, status=$readiness_status)" ;;
+    esac
+}
+
+validate_rhel_vendor_tool() {
+    validate_vendor_tool "$1"
+}
+
+validate_present_platform_tools() {
+    local role
+    validate_systemd_runtime
+    for role in apt-get apt-cache dpkg-query pacman dnf rpm; do
+        if vendor_tool_present "$role"; then
+            validate_vendor_tool "$role"
+        fi
+    done
+}
+
+package_ecosystem_complete() {
+    case "$1" in
+        apt)
+            vendor_tool_present apt-get &&
+                vendor_tool_present apt-cache &&
+                vendor_tool_present dpkg-query
+            ;;
+        pacman) vendor_tool_present pacman ;;
+        dnf) vendor_tool_present dnf && vendor_tool_present rpm ;;
+        *) return 1 ;;
+    esac
+}
+
+validate_selected_package_ecosystem() {
+    local family=$1 role
+    [[ "$family" != dnf-preview ]] || family=dnf
+    case "$family" in
+        apt) set -- apt-get apt-cache dpkg-query ;;
+        pacman) set -- pacman ;;
+        dnf) set -- dnf rpm ;;
+        *) die "unknown package ecosystem: $family" ;;
+    esac
+    for role in "$@"; do
+        validate_vendor_tool "$role"
+    done
 }
 
 vendor_machine_architecture() {
@@ -209,6 +313,7 @@ parse_lifecycle_os_release() {
     local -A seen=()
     LIFECYCLE_DISTRO_ID=
     LIFECYCLE_DISTRO_VERSION_ID=
+    LIFECYCLE_DISTRO_ID_LIKE=
     [[ -f "$file" && -r "$file" ]] \
         || die "missing operating-system identity file: $file"
     if IFS= read -r -d '' _ < "$file"; then
@@ -221,21 +326,73 @@ parse_lifecycle_os_release() {
         key=${BASH_REMATCH[1]}
         raw=${BASH_REMATCH[2]}
         case "$key" in
-            ID|VERSION_ID)
+            ID|VERSION_ID|ID_LIKE)
                 [[ -z "${seen[$key]+present}" ]] \
                     || die "duplicate $key in operating-system identity file: $file"
                 seen[$key]=1
                 parse_lifecycle_os_release_scalar "$raw" "$key"
-                if [[ "$key" == ID ]]; then
-                    LIFECYCLE_DISTRO_ID=$LIFECYCLE_OS_RELEASE_VALUE
-                else
-                    LIFECYCLE_DISTRO_VERSION_ID=$LIFECYCLE_OS_RELEASE_VALUE
-                fi
+                case "$key" in
+                    ID) LIFECYCLE_DISTRO_ID=$LIFECYCLE_OS_RELEASE_VALUE ;;
+                    VERSION_ID) LIFECYCLE_DISTRO_VERSION_ID=$LIFECYCLE_OS_RELEASE_VALUE ;;
+                    ID_LIKE) LIFECYCLE_DISTRO_ID_LIKE=$LIFECYCLE_OS_RELEASE_VALUE ;;
+                esac
                 ;;
         esac
     done < "$file"
     [[ "$LIFECYCLE_DISTRO_ID" =~ ^[a-z0-9][a-z0-9._-]*$ ]] \
         || die "missing or invalid ID in operating-system identity file: $file"
+    [[ -z "$LIFECYCLE_DISTRO_VERSION_ID" ||
+       "$LIFECYCLE_DISTRO_VERSION_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:+-]*$ ]] \
+        || die "invalid VERSION_ID in operating-system identity file: $file"
+    [[ -z "$LIFECYCLE_DISTRO_ID_LIKE" ||
+       "$LIFECYCLE_DISTRO_ID_LIKE" =~ ^[a-z0-9][a-z0-9._-]*(\ [a-z0-9][a-z0-9._-]*)*$ ]] \
+        || die "invalid ID_LIKE in operating-system identity file: $file"
+}
+
+package_hint_for_token() {
+    case "$1" in
+        debian|ubuntu) printf '%s\n' apt ;;
+        arch) printf '%s\n' pacman ;;
+        rhel|fedora|centos|almalinux|rocky|rocky-linux|cloudlinux) printf '%s\n' dnf ;;
+        *) return 1 ;;
+    esac
+}
+
+select_lifecycle_package_ecosystem() {
+    local token hint candidate selected= combined
+    local -A hints=()
+    local -a complete=()
+
+    validate_present_platform_tools
+    combined="$LIFECYCLE_DISTRO_ID $LIFECYCLE_DISTRO_ID_LIKE"
+    for token in $combined; do
+        hint=$(package_hint_for_token "$token") || continue
+        hints[$hint]=1
+    done
+    for candidate in apt pacman dnf; do
+        if package_ecosystem_complete "$candidate"; then
+            complete+=("$candidate")
+        fi
+    done
+
+    if ((${#hints[@]} == 1)); then
+        for selected in "${!hints[@]}"; do :; done
+        package_ecosystem_complete "$selected" \
+            || die "os-release expects the $selected package ecosystem, but its exact vendor toolchain is incomplete"
+    else
+        ((${#complete[@]} == 1)) \
+            || die "package ecosystem is missing or ambiguous; exactly one complete trusted toolchain is required"
+        selected=${complete[0]}
+    fi
+
+    validate_selected_package_ecosystem "$selected"
+    if [[ "$selected" == dnf ]]; then
+        PKG_FAMILY=dnf-preview
+        SELINUX_PLATFORM_MODE=dnf-preview
+    else
+        PKG_FAMILY=$selected
+        SELINUX_PLATFORM_MODE=inert
+    fi
 }
 
 classify_lifecycle_platform() {
@@ -247,69 +404,87 @@ classify_lifecycle_platform() {
         aarch64) arch=arm64 ;;
         *) die "unsupported rollback architecture: $machine" ;;
     esac
-    case "$LIFECYCLE_DISTRO_ID" in
-        debian)
-            [[ "$LIFECYCLE_DISTRO_VERSION_ID" =~ ^13([.][0-9]+)*$ ]] \
-                || die "rollback requires Debian 13"
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        ubuntu)
-            [[ "$LIFECYCLE_DISTRO_VERSION_ID" =~ ^24[.]04([.][0-9]+)*$ ]] \
-                || die "rollback requires Ubuntu 24.04 LTS"
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        arch)
-            [[ -z "$LIFECYCLE_DISTRO_VERSION_ID" || "$LIFECYCLE_DISTRO_VERSION_ID" == rolling ]] \
-                || die "rollback requires rolling Arch Linux"
-            [[ "$arch" == amd64 ]] || die "Arch rollback is certified only for x86_64"
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        almalinux|rocky)
-            [[ "$LIFECYCLE_DISTRO_VERSION_ID" =~ ^9([.][0-9]+)*$ ]] \
-                || die "RHEL-family rollback requires AlmaLinux 9 or Rocky Linux 9"
-            SELINUX_PLATFORM_MODE=rhel9
-            ;;
-        rhel|fedora|centos|cloudlinux)
-            die "rollback is not certified for distribution: $LIFECYCLE_DISTRO_ID"
-            ;;
-        *) die "unsupported rollback distribution ID: $LIFECYCLE_DISTRO_ID" ;;
+    select_lifecycle_package_ecosystem
+}
+
+verify_live_selinux_preflight() {
+    local enforcing trailing= enforce_fd mode permissions
+    if [[ -L "$SELINUX_ENFORCE_FILE" ]]; then
+        die "SELinux enforcement state path must not be symbolic"
+    fi
+    if [[ ! -e "$SELINUX_ENFORCE_FILE" ]]; then
+        return 0
+    fi
+    [[ -f "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]] ||
+        die "SELinux enforcement state is unavailable or unreadable"
+    mode=$("$VENDOR_STAT_BIN" -Lc '%a' -- "$SELINUX_ENFORCE_FILE") ||
+        die "cannot inspect SELinux enforcement state metadata"
+    [[ "$mode" =~ ^[0-7]{3,4}$ ]] ||
+        die "SELinux enforcement state metadata is malformed"
+    permissions=$((8#$mode))
+    (( (permissions & 0444) != 0 )) ||
+        die "SELinux enforcement state has no readable permission bit"
+    if IFS= read -r -d '' _ < "$SELINUX_ENFORCE_FILE"; then
+        die "SELinux enforcement state contains a NUL byte"
+    fi
+    exec {enforce_fd}<"$SELINUX_ENFORCE_FILE" ||
+        die "cannot open SELinux enforcement state"
+    if ! IFS= read -r -u "$enforce_fd" enforcing; then
+        exec {enforce_fd}<&-
+        die "SELinux enforcement state must be newline-terminated"
+    fi
+    if IFS= read -r -u "$enforce_fd" trailing || [[ -n "$trailing" ]]; then
+        exec {enforce_fd}<&-
+        die "SELinux enforcement state must contain exactly one line"
+    fi
+    exec {enforce_fd}<&-
+    case "$enforcing" in
+        0|1) ;;
+        *) die "SELinux enforcement state is malformed" ;;
     esac
+    [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]] ||
+        die "SELinux is active but this package capability has no certified label lifecycle; no host changes were made"
 }
 
 verify_rhel_preview_host() {
     local enforcing reported_state
-    [[ "$SELINUX_PLATFORM_MODE" == rhel9 ]] \
-        || die "RHEL SELinux verification requires strict AlmaLinux/Rocky Linux 9 classification"
+    [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]] \
+        || die "DNF SELinux verification requires the DNF preview capability profile"
     [[ -f "$SELINUX_ENFORCE_FILE" && ! -L "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]] \
-        || die "RHEL-family rollback requires SELinux Enforcing; state is unavailable"
+        || die "DNF rollback requires SELinux Enforcing; state is unavailable"
     IFS= read -r enforcing < "$SELINUX_ENFORCE_FILE" \
-        || die "RHEL-family rollback could not read SELinux enforcement state"
+        || die "DNF rollback could not read SELinux enforcement state"
     [[ "$enforcing" == 1 ]] \
-        || die "RHEL-family rollback requires SELinux Enforcing"
+        || die "DNF rollback requires SELinux Enforcing"
     validate_rhel_vendor_tool dnf
+    validate_rhel_vendor_tool rpm
     validate_rhel_vendor_tool restorecon
     validate_rhel_vendor_tool matchpathcon
     validate_rhel_vendor_tool getenforce
     reported_state=$("$SELINUX_GETENFORCE_BIN") \
-        || die "RHEL-family rollback could not query SELinux enforcement state"
+        || die "DNF rollback could not query SELinux enforcement state"
     [[ "$reported_state" == Enforcing ]] \
-        || die "RHEL-family rollback requires getenforce to report Enforcing"
+        || die "DNF rollback requires getenforce to report Enforcing"
 }
 
 preflight_rollback_platform() {
     classify_lifecycle_platform "$1" "$2"
-    [[ "$SELINUX_PLATFORM_MODE" != rhel9 ]] || verify_rhel_preview_host
+    verify_live_selinux_preflight
+    if [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]]; then
+        verify_rhel_preview_host
+        die "DNF rollback remains preview-only: package capability is verified, but the SELinux lifecycle is not implemented; no host changes were made"
+    fi
 }
 
-# SELinux lifecycle is inert only after strict Debian/Ubuntu/Arch preflight.
-# Alma/Rocky 9 publication revalidates pinned vendor tools immediately before
+# SELinux lifecycle is inert only for the selected APT or pacman capability.
+# DNF preview publication revalidates pinned vendor tools immediately before
 # use and labels only fixed CelikPanel-owned paths.
 restore_celikpanel_selinux_labels() {
     local state drift candidate
     local -a paths=()
     case "$SELINUX_PLATFORM_MODE" in
         inert) return 0 ;;
-        rhel9) ;;
+        dnf-preview) ;;
         *) die "SELinux lifecycle platform preflight was not completed" ;;
     esac
     validate_rhel_vendor_tool restorecon
@@ -371,6 +546,9 @@ install_release_transaction_guards_with_label_barrier() {
     }
     release_txn_install_and_verify_unit_guards "$@" || status=$?
     unset -f systemctl
+    systemctl() {
+        "$SYSTEMCTL_BIN" "$@"
+    }
     return "$status"
 }
 
@@ -418,6 +596,11 @@ prepare_and_acquire_release_transaction_lock() {
 [[ $EUID -eq 0 ]] || die "Run as root / root olarak çalıştırın: use a trusted release rollback.sh"
 rollback_machine=$(vendor_machine_architecture)
 preflight_rollback_platform "$SELINUX_OS_RELEASE" "$rollback_machine"
+# All existing lifecycle helpers call `systemctl`; bind that command name to
+# the fixed path whose ownership and permissions preflight just verified.
+systemctl() {
+    "$SYSTEMCTL_BIN" "$@"
+}
 prepare_and_acquire_release_transaction_lock
 
 # Every privileged path component must be root-owned and non-writable so a

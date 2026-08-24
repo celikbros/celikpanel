@@ -233,13 +233,43 @@ func TestAgentRPCPlatformFirewall(t *testing.T) {
 			t.Errorf("read/control blocked on dnf: %v", err)
 		}
 	}
+	for _, identity := range []agentRPCHostIdentity{
+		{
+			host: core.ManagedServiceHostProfile{
+				DistroFamily: "debian", PackageFamily: "apt", ServiceManager: "systemd",
+				DistroID: "operator-linux", VersionID: "rolling", Architecture: "amd64",
+			},
+			verified: true,
+		},
+		{
+			host: core.ManagedServiceHostProfile{
+				DistroFamily: "arch", PackageFamily: "pacman", ServiceManager: "systemd",
+				DistroID: "operator-linux", VersionID: "rolling", Architecture: "arm64",
+			},
+			verified: true,
+		},
+	} {
+		if err := authorizeAgentRPCPolicyForHost("Agent.UpdateConfig", mutation, identity); err != nil {
+			t.Errorf("mutation blocked on verified family %s: %v", identity.host.PackageFamily, err)
+		}
+	}
 	for _, family := range []string{"apt", "pacman"} {
 		identity := agentRPCHostIdentity{
 			host: core.ManagedServiceHostProfile{PackageFamily: family},
 		}
-		if err := authorizeAgentRPCPolicyForHost("Agent.UpdateConfig", mutation, identity); err != nil {
-			t.Errorf("mutation blocked on established family %s: %v", family, err)
+		if err := authorizeAgentRPCPolicyForHost("Agent.UpdateConfig", mutation, identity); !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+			t.Errorf("family-only %s mutation error = %v, want capability denial", family, err)
 		}
+	}
+	if err := authorizeAgentRPCPolicyForHost(
+		"Agent.UpdateConfig",
+		mutation,
+		agentRPCHostIdentity{
+			host:     core.ManagedServiceHostProfile{PackageFamily: "apt"},
+			verified: true,
+		},
+	); !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+		t.Errorf("incomplete verified mutation error = %v, want capability denial", err)
 	}
 	if len(rhelPreviewAgentRPCMethodGrants) != 0 {
 		t.Fatalf("RHEL preview grant count = %d, want zero", len(rhelPreviewAgentRPCMethodGrants))
@@ -272,8 +302,14 @@ func TestAgentRPCPlatformFirewall(t *testing.T) {
 			continue
 		}
 		for identityName, identity := range map[string]agentRPCHostIdentity{
-			"verified candidate": rhelIdentity,
-			"family only":        familyOnlyRHEL,
+			"verified dnf candidate": rhelIdentity,
+			"family-only dnf":        familyOnlyRHEL,
+			"family-only apt": agentRPCHostIdentity{
+				host: core.ManagedServiceHostProfile{PackageFamily: "apt"},
+			},
+			"family-only pacman": agentRPCHostIdentity{
+				host: core.ManagedServiceHostProfile{PackageFamily: "pacman"},
+			},
 		} {
 			err := authorizeAgentRPCPolicyForHost(method, policy, identity)
 			if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
@@ -341,12 +377,12 @@ func TestRHELPreviewExactMethodPrefilterRequiresCapabilityAndIdentity(t *testing
 			},
 		},
 		{
-			name:   "uncertified distro",
+			name:   "unsupported architecture",
 			method: "Agent.EnsureNginxReady", policy: policy,
 			identity: agentRPCHostIdentity{
 				host: core.ManagedServiceHostProfile{
 					DistroFamily: "rhel", PackageFamily: "dnf", ServiceManager: "systemd",
-					DistroID: "fedora", VersionID: "42", Architecture: "amd64",
+					DistroID: "fedora", VersionID: "42", Architecture: "s390x",
 				},
 				verified: true,
 			},
@@ -531,6 +567,13 @@ func debianPolicyTestIdentity() transport.HostPlatformResponse {
 	}
 }
 
+func archPolicyTestIdentity() transport.HostPlatformResponse {
+	return transport.HostPlatformResponse{
+		DistroFamily: "arch", PackageManager: "pacman", ServiceManager: "systemd",
+		DistroID: "operatorarch", VersionID: "rolling", Architecture: "arm64",
+	}
+}
+
 func TestDNFMutationIsDeniedBeforeRawDispatch(t *testing.T) {
 	agent := &policyDispatchTestAgent{hostResponse: rhelPolicyTestIdentity(), family: "dnf"}
 	panel := newPolicyDispatchTestPanel(t, agent)
@@ -592,6 +635,7 @@ func TestDNFReadAndDurableControlRemainAvailable(t *testing.T) {
 func TestVerifiedAPTMutationPreservesCurrentBehavior(t *testing.T) {
 	agent := &policyDispatchTestAgent{hostResponse: debianPolicyTestIdentity()}
 	panel := newPolicyDispatchTestPanel(t, agent)
+	panel.pkgFamilyVal = "apt"
 	var out bool
 	if err := panel.callAgentContext(context.Background(), "Agent.UpdateConfig", &transport.Empty{}, &out); err != nil {
 		t.Fatal(err)
@@ -601,33 +645,81 @@ func TestVerifiedAPTMutationPreservesCurrentBehavior(t *testing.T) {
 	}
 }
 
-func TestLegacyFamilyFallbackAllowsAPTButBlocksDNF(t *testing.T) {
+func TestCachedFamilyIsEnrichedByVerifiedHostPlatformBeforeMutation(t *testing.T) {
 	for _, test := range []struct {
-		family     string
-		wantDenied bool
+		family   string
+		response transport.HostPlatformResponse
 	}{
-		{family: "apt"},
-		{family: "dnf", wantDenied: true},
+		{family: "apt", response: debianPolicyTestIdentity()},
+		{family: "pacman", response: archPolicyTestIdentity()},
 	} {
 		t.Run(test.family, func(t *testing.T) {
-			agent := &legacyPolicyDispatchTestAgent{family: test.family}
+			agent := &policyDispatchTestAgent{hostResponse: test.response}
+			panel := newPolicyDispatchTestPanel(t, agent)
+			panel.pkgFamilyVal = test.family
+			var out bool
+			for attempt := 0; attempt < 2; attempt++ {
+				if err := panel.callAgentContext(
+					context.Background(),
+					"Agent.UpdateConfig",
+					&transport.Empty{},
+					&out,
+				); err != nil {
+					t.Fatalf("attempt %d: %v", attempt+1, err)
+				}
+			}
+			if agent.hostCalls != 1 || agent.familyCalls != 0 || agent.updateCalls != 2 {
+				t.Fatalf(
+					"calls host=%d family=%d update=%d, want 1/0/2",
+					agent.hostCalls,
+					agent.familyCalls,
+					agent.updateCalls,
+				)
+			}
+		})
+	}
+}
+
+func TestLegacyFamilyFallbackIsReadOnlyForEveryPackageFamily(t *testing.T) {
+	for _, family := range []string{"apt", "pacman", "dnf"} {
+		t.Run(family, func(t *testing.T) {
+			agent := &legacyPolicyDispatchTestAgent{family: family}
 			panel := newPolicyDispatchTestPanel(t, agent)
 			var out bool
 			err := panel.callAgentContext(context.Background(), "Agent.UpdateConfig", &transport.Empty{}, &out)
-			if test.wantDenied {
-				if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
-					t.Fatalf("error = %v, want capability denial", err)
-				}
-			} else if err != nil {
-				t.Fatal(err)
+			if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+				t.Fatalf("error = %v, want capability denial", err)
 			}
-			wantUpdates := 1
-			if test.wantDenied {
-				wantUpdates = 0
+			if agent.familyCalls != 1 || agent.updateCalls != 0 {
+				t.Fatalf("calls family=%d update=%d, want 1/0",
+					agent.familyCalls, agent.updateCalls)
 			}
-			if agent.familyCalls != 1 || agent.updateCalls != wantUpdates {
-				t.Fatalf("calls family=%d update=%d, want 1/%d",
-					agent.familyCalls, agent.updateCalls, wantUpdates)
+		})
+	}
+}
+
+func TestCachedLegacyFamilyRemainsReadOnly(t *testing.T) {
+	for _, family := range []string{"apt", "pacman"} {
+		t.Run(family, func(t *testing.T) {
+			agent := &legacyPolicyDispatchTestAgent{family: family}
+			panel := newPolicyDispatchTestPanel(t, agent)
+			panel.pkgFamilyVal = family
+			var out bool
+			err := panel.callAgentContext(
+				context.Background(),
+				"Agent.UpdateConfig",
+				&transport.Empty{},
+				&out,
+			)
+			if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) {
+				t.Fatalf("error = %v, want capability denial", err)
+			}
+			if agent.familyCalls != 0 || agent.updateCalls != 0 {
+				t.Fatalf(
+					"calls family=%d update=%d, want 0/0",
+					agent.familyCalls,
+					agent.updateCalls,
+				)
 			}
 		})
 	}

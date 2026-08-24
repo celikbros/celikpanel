@@ -13,6 +13,8 @@ import (
 )
 
 type fileMutationTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	writeSuccess bool
 	lastWrite    transport.WriteFileRequest
 }

@@ -26,6 +26,8 @@ import (
 const systemSQLiteTestSnapshotToken = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 type systemSQLitePanelAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	listResponse   systemsqlite.ListResponse

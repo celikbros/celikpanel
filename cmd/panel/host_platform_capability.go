@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -10,8 +11,8 @@ import (
 
 // managedServiceHostProfile returns the verified server identity used by the
 // catalogue. An older agent may expose only PkgFamily; that compatibility
-// fallback is sufficient for established apt/pacman mappings but deliberately
-// lacks the distro proof required by every dnf preview capability.
+// fallback is sufficient for catalogue display but deliberately lacks the
+// complete family/manager/systemd capability required by mutation policy.
 func (p *Panel) managedServiceHostProfile() core.ManagedServiceHostProfile {
 	if p == nil {
 		return core.ManagedServiceHostProfile{}
@@ -36,25 +37,7 @@ func (p *Panel) managedServiceHostProfile() core.ManagedServiceHostProfile {
 }
 
 func managedServiceHostProfileFromResponse(response transport.HostPlatformResponse) (core.ManagedServiceHostProfile, bool) {
-	validIdentity := false
-	switch {
-	case response.DistroFamily == "debian" &&
-		response.PackageManager == "apt" &&
-		response.ServiceManager == "systemd":
-		validIdentity = response.DistroID == "debian" || response.DistroID == "ubuntu"
-	case response.DistroFamily == "rhel" &&
-		response.PackageManager == "dnf" &&
-		response.ServiceManager == "systemd":
-		switch response.DistroID {
-		case "rhel", "almalinux", "rocky", "centos", "fedora", "cloudlinux":
-			validIdentity = true
-		}
-	case response.DistroFamily == "arch" &&
-		response.PackageManager == "pacman" &&
-		response.ServiceManager == "systemd":
-		validIdentity = response.DistroID == "arch"
-	}
-	if !validIdentity || response.Architecture == "" {
+	if !validHostPlatformCapability(response) {
 		return core.ManagedServiceHostProfile{}, false
 	}
 	return core.ManagedServiceHostProfile{
@@ -65,4 +48,34 @@ func managedServiceHostProfileFromResponse(response transport.HostPlatformRespon
 		VersionID:      response.VersionID,
 		Architecture:   response.Architecture,
 	}, true
+}
+
+var (
+	hostCapabilityIDToken = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
+	hostCapabilityVersion = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$`)
+)
+
+func validHostPlatformCapability(response transport.HostPlatformResponse) bool {
+	expectedManager := ""
+	switch response.DistroFamily {
+	case "debian":
+		expectedManager = "apt"
+	case "rhel":
+		expectedManager = "dnf"
+	case "arch":
+		expectedManager = "pacman"
+	default:
+		return false
+	}
+	if response.PackageManager != expectedManager || response.ServiceManager != "systemd" {
+		return false
+	}
+	if response.Architecture != "amd64" && response.Architecture != "arm64" {
+		return false
+	}
+	if !hostCapabilityIDToken.MatchString(response.DistroID) ||
+		!hostCapabilityIDToken.MatchString(response.Architecture) {
+		return false
+	}
+	return response.VersionID == "" || hostCapabilityVersion.MatchString(response.VersionID)
 }

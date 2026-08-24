@@ -19,15 +19,16 @@ import (
 )
 
 // A paired PowerDNS node can be primary and secondary at the same time because
-// those roles belong to zones, not whole machines. Locally managed zones are
-// MASTER; zones announced by the configured peer arrive as SLAVE through
-// autoprimary. Both machines therefore serve every zone without a panel-to-
-// panel account or API channel.
+// those roles belong to zones, not whole machines. The DNS-engine workflow
+// provisions an exact producer or consumer catalog row in SQLite before the
+// service starts. Catalog consumers create their member secondaries without
+// enabling PowerDNS's global autosecondary/autoprimary discovery path.
 //
 // Eşlenmiş PowerDNS düğümü aynı anda birincil ve ikincil olabilir; çünkü bu
-// roller makineye değil zone'a aittir. Yerelde yönetilen zone'lar MASTER olur,
-// yapılandırılmış eşin bildirdikleri autoprimary üzerinden SLAVE gelir. Böylece
-// panelden panele hesap ya da API kanalı olmadan iki makine de her zone'u sunar.
+// roller makineye değil zone'a aittir. DNS motoru iş akışı servis başlamadan
+// önce SQLite içinde tam üretici veya tüketici katalog satırını oluşturur.
+// Katalog tüketicileri global autosecondary/autoprimary keşfini açmadan üye
+// zone'ların ikincil kopyalarını oluşturur.
 
 const (
 	dnsRoleStandalone = "standalone"
@@ -288,6 +289,12 @@ func managedPowerDNSDirectiveKey(key string) bool {
 	}
 }
 
+func forbiddenPowerDNSAutomaticSecondaryDirective(key string) bool {
+	key = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(key)), "+")
+	return key == "autosecondary" || key == "autoprimary" ||
+		key == "supermaster" || key == "superslave"
+}
+
 // PowerDNS parses the complete main file before it loads include-dir entries,
 // so Debian's stock, active launch= line may appear on either side of the
 // include-dir without overriding CelikPanel's later managed drop-in. Keep the
@@ -500,7 +507,7 @@ func validDNSClusterPowerDNSConfig(config string) bool {
 		return false
 	}
 	want := map[string]string{
-		"primary": "yes", "secondary": "yes", "autosecondary": "yes",
+		"primary": "yes", "secondary": "yes",
 		"allow-axfr-ips": "", "also-notify": "",
 	}
 	seen := make(map[string]string, len(want))
@@ -508,6 +515,9 @@ func validDNSClusterPowerDNSConfig(config string) bool {
 		key, value, found := powerDNSConfigDirective(raw)
 		if !found {
 			continue
+		}
+		if forbiddenPowerDNSAutomaticSecondaryDirective(key) {
+			return false
 		}
 		expected, allowed := want[key]
 		if !allowed || value == "" {
@@ -546,7 +556,7 @@ func parseManagedDNSClusterPowerDNSConfig(
 		return managedDNSClusterPowerDNSConfig{}, false
 	}
 	want := map[string]string{
-		`primary`: `yes`, `secondary`: `yes`, `autosecondary`: `yes`,
+		`primary`: `yes`, `secondary`: `yes`,
 		`allow-axfr-ips`: ``,
 	}
 	seen := make(map[string]string, len(want)+1)
@@ -554,6 +564,9 @@ func parseManagedDNSClusterPowerDNSConfig(
 		key, value, found := powerDNSConfigDirective(raw)
 		if !found {
 			continue
+		}
+		if forbiddenPowerDNSAutomaticSecondaryDirective(key) {
+			return managedDNSClusterPowerDNSConfig{}, false
 		}
 		if value == `` {
 			return managedDNSClusterPowerDNSConfig{}, false
@@ -630,13 +643,14 @@ func dnsClusterConfig(req *DNSClusterRequest) string {
 # DNS cifti: bu sunucu yerel zonelarin sahibi, %s uzerinden gelenlerin ikincilidir.
 primary=yes
 secondary=yes
-autosecondary=yes
 allow-axfr-ips=%s
 also-notify=%s
 `, req.PeerIP, req.PeerIP, req.PeerIP, req.PeerIP)
 }
 
 const configureDNSClusterLegacyUnsupportedError = "legacy DNS cluster configuration is unsupported; use Agent.ConfigureDNSClusterV2"
+
+const configureDNSClusterPairedUnsupportedError = "paired PowerDNS configuration through the legacy cluster RPC is disabled; use the dedicated DNS infrastructure workflow"
 
 func dnsDirectionalClusterConfig(
 	pairRole, localIP, peerIP string,
@@ -664,7 +678,6 @@ func dnsDirectionalClusterConfig(
 # Yonlu DNS cifti: AXFR guvenilir yerel kanit ve tam es ile sinirlidir.
 primary=yes
 secondary=yes
-autosecondary=yes
 allow-axfr-ips=%s
 %s`, allowAXFR, notify), nil
 }
@@ -730,6 +743,14 @@ func (a *Agent) ConfigureDNSClusterV2(
 	)
 	if err != nil {
 		resp.Error = err.Error()
+		return nil
+	}
+	// This legacy symmetric RPC historically depended on PowerDNS global
+	// autosecondary discovery. That mode is intentionally never enabled. New
+	// paired identities are installed by SwitchDNSEngineV1, which journals and
+	// pre-provisions an exact SQLite PRODUCER or CONSUMER catalog instead.
+	if commitment.Role == dnsRolePaired {
+		resp.Error = configureDNSClusterPairedUnsupportedError
 		return nil
 	}
 	ctx, finish, err := a.requiredServiceMutationStep(
@@ -1019,7 +1040,11 @@ func resolveDNSClusterConvergenceLocalIP(ctx context.Context) (string, error) {
 		return "", err
 	}
 	hostAddresses := make(map[string]bool)
-	for _, candidate := range dnsPairHostOwnedAddresses() {
+	ownedAddresses, err := dnsPairHostOwnedAddresses()
+	if err != nil {
+		return "", fmt.Errorf("discover PowerDNS convergence host addresses: %w", err)
+	}
+	for _, candidate := range ownedAddresses {
 		parsed := net.ParseIP(candidate)
 		if parsed == nil || parsed.To4() == nil ||
 			parsed.To4().String() != candidate || !parsed.IsGlobalUnicast() {

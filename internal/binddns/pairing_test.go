@@ -59,7 +59,8 @@ func TestPrimaryPairingRendersCatalogAndTransferPolicy(t *testing.T) {
 	}
 	catalog := string(generation.Catalog.Data)
 	if !strings.Contains(catalog, "version IN TXT \"2\"") ||
-		!strings.Contains(catalog, " IN PTR example.test.") {
+		!strings.Contains(catalog,
+			"6e00c7a8685d9d2629b0f7db1dfcd122fc79ab52b41cb04de3163ffa.zones IN PTR example.test.") {
 		t.Fatalf("catalog does not contain version/member records:\n%s", catalog)
 	}
 	if strings.Contains(catalog, " IN APL ") {
@@ -218,12 +219,25 @@ func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	aLabel, err := CatalogMemberLabel("a.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zLabel, err := CatalogMemberLabel("z.example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if domain != "catalog-c000020a.celikpanel.invalid" || len(records) != 5 ||
-		records[0].Type != "SOA" ||
+		records[0] != (transport.ZoneRecord{
+			Name: domain, Type: "SOA",
+			Content: "invalid. invalid. 17 60 30 3600 30", TTL: 60,
+		}) ||
 		records[1] != (transport.ZoneRecord{
-			Name: domain, Type: "NS", Content: domain, TTL: 60,
+			Name: domain, Type: "NS", Content: "invalid.", TTL: 60,
 		}) || records[2].Content != "\"2\"" ||
+		records[3].Name != aLabel+".zones."+domain ||
 		records[3].Content != "a.example.test" ||
+		records[4].Name != zLabel+".zones."+domain ||
 		records[4].Content != "z.example.test" {
 		t.Fatalf("domain=%q records=%#v", domain, records)
 	}
@@ -236,6 +250,24 @@ func TestCatalogZoneRecordsAreEngineNeutralAndCanonical(t *testing.T) {
 		"192.0.2.10", 17, []string{"a.example.test", "a.example.test"},
 	); err == nil {
 		t.Fatal("duplicate catalog member was accepted")
+	}
+}
+
+func TestCatalogMemberLabelIsExactRFC1035SafeSHA224(t *testing.T) {
+	const want = "6e00c7a8685d9d2629b0f7db1dfcd122fc79ab52b41cb04de3163ffa"
+	got, err := CatalogMemberLabel("example.test")
+	if err != nil || got != want || len(got) != 56 || strings.ToLower(got) != got {
+		t.Fatalf("label=%q len=%d err=%v", got, len(got), err)
+	}
+	for _, value := range []byte(got) {
+		if (value < '0' || value > '9') && (value < 'a' || value > 'f') {
+			t.Fatalf("label is not lowercase hexadecimal: %q", got)
+		}
+	}
+	for _, invalid := range []string{"Example.test", "example.test.", ""} {
+		if _, err := CatalogMemberLabel(invalid); err == nil {
+			t.Fatalf("noncanonical member %q was accepted", invalid)
+		}
 	}
 }
 
