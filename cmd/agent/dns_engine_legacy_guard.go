@@ -242,18 +242,13 @@ func parseCanonicalDNSPort53ListenerRow(
 				errors.New("ss returned a non-canonical DNS listener queue")
 		}
 	}
-	host, port, err := net.SplitHostPort(fields[4])
-	if err != nil || port != "53" {
+	address, port, ok := parseCanonicalSSHostPort(fields[4], true)
+	if !ok || port != "53" {
 		return canonicalDNSPort53ListenerRow{},
 			errors.New("ss returned a non-canonical public DNS listener endpoint")
 	}
-	address := parseDNSListenerAddress(host)
-	if address == nil {
-		return canonicalDNSPort53ListenerRow{},
-			errors.New("ss returned an ambiguous public DNS listener address")
-	}
-	peerHost, peerPort, err := net.SplitHostPort(fields[5])
-	if err != nil || peerPort != "*" || parseDNSListenerAddress(peerHost) == nil {
+	_, peerPort, ok := parseCanonicalSSHostPort(fields[5], false)
+	if !ok || peerPort != "*" {
 		return canonicalDNSPort53ListenerRow{},
 			errors.New("ss returned a non-canonical DNS listener peer endpoint")
 	}
@@ -264,6 +259,68 @@ func parseCanonicalDNSPort53ListenerRow(
 	return canonicalDNSPort53ListenerRow{
 		protocol: protocol, address: address, process: process, pid: pid,
 	}, nil
+}
+
+func parseCanonicalSSHostPort(
+	endpoint string,
+	allowScopedLocal bool,
+) (net.IP, string, bool) {
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		var ok bool
+		host, port, ok = splitCanonicalSSScopedIPv6HostPort(endpoint)
+		if !ok {
+			return nil, "", false
+		}
+	}
+	if port == "" || strings.Count(host, "%") > 1 {
+		return nil, "", false
+	}
+	addressText := host
+	hasZone := false
+	if zoneAt := strings.IndexByte(host, '%'); zoneAt >= 0 {
+		hasZone = true
+		addressText = host[:zoneAt]
+		if !validLinuxInterfaceName(host[zoneAt+1:]) {
+			return nil, "", false
+		}
+	}
+	address := net.ParseIP(addressText)
+	if address == nil {
+		return nil, "", false
+	}
+	if hasZone && (!allowScopedLocal || (address.To4() != nil && !address.IsLoopback())) {
+		return nil, "", false
+	}
+	return address, port, true
+}
+
+// iproute2 brackets a numeric IPv6 address before appending an interface name,
+// so a scoped listener is rendered as "[fe80::1]%eth0:53". That is canonical
+// ss output, but it is intentionally not RFC 3986 host:port syntax and is
+// therefore rejected by net.SplitHostPort. Accept only that exact fallback
+// grammar; ordinary endpoints continue through net.SplitHostPort above.
+func splitCanonicalSSScopedIPv6HostPort(endpoint string) (string, string, bool) {
+	const scopeMarker = "]%"
+	if !strings.HasPrefix(endpoint, "[") ||
+		strings.Count(endpoint, "[") != 1 || strings.Count(endpoint, "]") != 1 {
+		return "", "", false
+	}
+	closing := strings.Index(endpoint, scopeMarker)
+	if closing <= 1 {
+		return "", "", false
+	}
+	addressText := endpoint[1:closing]
+	address := net.ParseIP(addressText)
+	if address == nil || address.To4() != nil {
+		return "", "", false
+	}
+	scopeAndPort := endpoint[closing+len(scopeMarker):]
+	scope, port, found := strings.Cut(scopeAndPort, ":")
+	if !found || !validLinuxInterfaceName(scope) || port == "" {
+		return "", "", false
+	}
+	return addressText + "%" + scope, port, true
 }
 
 func parseCanonicalSSProcessField(field string) (string, uint64, error) {
@@ -289,14 +346,6 @@ func parseCanonicalSSProcessField(field string) (string, uint64, error) {
 		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
 	}
 	return process, pid, nil
-}
-
-func parseDNSListenerAddress(host string) net.IP {
-	host = strings.Trim(host, "[]")
-	if zone := strings.LastIndexByte(host, '%'); zone >= 0 {
-		host = host[:zone]
-	}
-	return net.ParseIP(host)
 }
 
 func runDNSPort53PreMutationGuard(
