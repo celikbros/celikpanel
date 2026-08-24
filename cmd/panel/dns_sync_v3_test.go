@@ -17,6 +17,8 @@ import (
 
 type dnsZoneV3TestAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
+
 	mu                     sync.Mutex
 	requests               []transport.SyncDNSZoneV3Request
 	recoverRequests        []transport.RecoverDNSZoneV3Request

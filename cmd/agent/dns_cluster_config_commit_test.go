@@ -98,7 +98,12 @@ func TestConfigureDNSClusterV2RejectsDurableNonPDNSAuthorityBeforeMutation(t *te
 		t.Run(authority, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "standby-pdns.sqlite3")
 			t.Setenv("CELIKPANEL_PDNS_DB", path)
-			commitment := dnsClusterConfigTestCommitment(t)
+			commitment, err := mutationpayload.CanonicalDNSClusterConfig(
+				dnsRoleStandalone, "", "",
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
 			manager, _ := newMutationTestManager(t)
 			beginMutationTestJobWithIdentity(
 				t, manager, "dns_cluster_configure", "pdns",
@@ -144,6 +149,38 @@ func TestConfigureDNSClusterV2RejectsDurableNonPDNSAuthorityBeforeMutation(t *te
 				t.Fatalf("durable guard touched standby PowerDNS DB: %v", err)
 			}
 		})
+	}
+}
+
+func TestConfigureDNSClusterV2RejectsPairedLegacyPathBeforeMutation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "must-not-exist.sqlite3")
+	t.Setenv("CELIKPANEL_PDNS_DB", path)
+	authorityCalls := 0
+	oldAuthority := legacyPowerDNSMutationAuthorityCheck
+	legacyPowerDNSMutationAuthorityCheck = func(bool) error {
+		authorityCalls++
+		return nil
+	}
+	t.Cleanup(func() {
+		legacyPowerDNSMutationAuthorityCheck = oldAuthority
+	})
+	response := ConfigureDNSClusterV2Response{Applied: true, Error: "stale"}
+	request := ConfigureDNSClusterV2Request{
+		Role: dnsRolePaired, PeerIP: "203.0.113.9",
+		PeerNS: "ns2.example.test",
+	}
+	if err := (&Agent{}).ConfigureDNSClusterV2(
+		&request, &response,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if response.Applied ||
+		response.Error != configureDNSClusterPairedUnsupportedError ||
+		authorityCalls != 0 {
+		t.Fatalf("response=%+v authorityCalls=%d", response, authorityCalls)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("legacy paired rejection touched PowerDNS DB: %v", err)
 	}
 }
 

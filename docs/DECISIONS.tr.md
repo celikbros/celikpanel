@@ -8,74 +8,83 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
-## D-020 · Yönetilen sunucu desteği dağıtım adına değil Linux ailesine bağlanır
+## D-020 · Yönetilen sunucu desteği dağıtım adına değil kanıtlanmış yeteneğe bağlanır
 
 *11 Ağustos 2026*
 
 **Karar.** ÇelikPanel Agent'ın yönetilen sunucu hedefi yalnız Linux'tur. Platform
-mimarisi üç Linux aile hedefinde standartlaşır: `debian`, `rhel` ve `arch`.
-Bu, genel özellik erişilebilirliği değil adaptör sınırlarını tanımlar. Debian ile
-Ubuntu `debian`; RHEL, AlmaLinux, Rocky Linux, CentOS Stream, Fedora ve
-CloudLinux `rhel`; Arch Linux `arch` adaptörünü kullanır. Dağıtımlar ayrı
-kurulum motorları değildir; yalnız gerçekten ayrışan paket, depo, servis,
-güvenlik politikası veya yol için dar bir override ekler.
+seçimi dağıtım adı, sürümü veya kod adı izin listesine değil, kanıtlanmış sunucu
+yeteneklerine dayanır. Güncel paket adaptörleri `apt`, `dnf` ve `pacman`dır;
+yalnız paket, depo, servis, güvenlik politikası veya yol gerçekten ayrışıyorsa
+dar bir yerleşim override'ı eklenir.
 
-**Algılama ve güven sınırı.** Aile `/etc/os-release` içindeki `ID` ve `ID_LIKE`
-ile bulunur, fakat isim tek başına mutasyon yetkisi vermez. Adaptör paket
-yöneticisini, init/servis yöneticisini ve gerekli güvenlik yeteneklerini
-mutasyondan önce doğrular; uyuşmayan sistem fail-closed reddedilir. Dağıtım
-isimleri kod mimarisi değil CI uyumluluk örnekleridir: doğrulanan örnekler ürün
-matrisinde görünür; aynı ailedeki başka bir türev aynı adaptörü yalnız açık
-sertifikasyon ve önkoşul kanıtından sonra yeniden kullanabilir. `ID_LIKE`
-yalnız uyumluluk adayı belirler; tek başına asla mutasyon yetkisi vermez.
+**Algılama ve güven sınırı.** `/etc/os-release` içindeki `ID`, `ID_LIKE` ve
+`VERSION_ID` çalıştırılmadan, salt veri olarak ayrıştırılır. Tek ve çelişkisiz
+bir `ID`/`ID_LIKE` aile ipucu hangi eksiksiz araç zincirinin doğrulanacağını
+seçebilir; böylece operatörün sonradan kurduğu ilgisiz paket yöneticisi bootstrap
+yolunu değiştiremez. Kullanılabilir ipucu yoksa veya ipuçları çelişiyorsa tam
+olarak bir eksiksiz güvenilir araç zinciri bulunmalıdır. APT sabit `apt-get` +
+`apt-cache` + `dpkg-query`, pacman sabit `pacman`, DNF ise sabit `dnf` + `rpm`
+takımıdır. Sabit `systemctl` ile `timeout`; root sahipli ve yazılamaz
+`/run/systemd` zinciri; doğrudan `/run/systemd/private` Unix soketi ve zaman
+sınırlandırılmış `systemctl is-system-running` çağrısıyla `running` veya
+`degraded` kanıtı her durumda zorunludur. Var olan her aday aracın kendisi,
+hedefi ve dizin zinciri root sahipli, yazılamaz, sabit-yol sözleşmesini
+sağlamalıdır. Eksik, belirsiz, canlı olmayan, güvenli olmayan veya sabitlenmiş
+vendor alternatifi dışına çıkan sembolik yetenek mutasyondan önce reddedilir.
+Böylece ad ve sürüm sunucuyu tanımlar; adaptör yetkisini doğrulanmış yetenekler
+verir.
 
-**Sertifikasyon sınırı.** Aile üyeliği tek başına genel destek iddiası değildir.
-Arayüz yalnız paket, yol, güvenlik politikası, yaşam döngüsü ve hazırlık
-reçeteleri temsili uçtan uca matristen geçmiş yetenekleri gösterir. Doğrulanmamış
-bir türev uyumlu/doğrulanmamış kalır; desteklenmeyen yetenekler gizli veya
-engelli olur. RHEL ailesi çalışması açıkça etiketlenmiş bir önizleme olarak
-başlar; yalnız dnf algılandı diye tam aile desteğine dönüşmez.
+**Sertifikasyon sınırı.** Paket adaptörünün seçilmesi genel özellik desteği
+iddiası değildir. Arayüz yalnız paket, yol, güvenlik politikası, yaşam döngüsü ve
+hazırlık önkoşullarını kendi içinde kanıtlayan yetenekleri gösterir. Bir dağıtım
+istediği ad ve sürümle kanıtlanmış adaptörü yeniden kullanabilir; desteklenmeyen
+paket ekosistemi veya kanıtlanmamış özellik, dağıtım etiketi listede olmadığı için
+değil gerekli yetenek kanıtı bulunmadığı için engellenir.
 
-**Güncel RHEL önizleme kapısı.** Testlerle kapsanan DNF transaction, RPM envanteri,
-host kimliği ve dış paket kilidi temelleri herhangi bir RHEL yeteneği açılmadan
-önce geliştirilebilir ve sınanabilir. İlk aday hedeflerde (AlmaLinux 9 ve Rocky
-Linux 9, `amd64`/`arm64`) normal kurulum yine ilk host mutasyonundan önce durur.
-Nginx bile varsayılan-red platform-yeteneği API koruması ile SELinux Enforcing
-altındaki panel/agent yaşam döngüsü gerçek makine uçtan uca sertifikasyonundan
-geçmeden sunulmaz. Fedora, CentOS Stream, CloudLinux, abonelikli RHEL, diğer
-sürümler ve diğer mimariler bu adaylığı otomatik devralmaz.
+**Güncel DNF önizleme kapısı.** Testlerle kapsanan DNF transaction, RPM envanteri,
+sunucu kimliği ve dış paket kilidi temelleri herhangi bir DNF yeteneği açılmadan
+önce geliştirilebilir ve sınanabilir. Doğrulanmış araç zinciri DNF seçen her
+sunucuda normal kurulum yine ilk mutasyondan önce durur; çünkü SELinux Enforcing
+panel/agent yaşam döngüsü henüz uygulanmamıştır. Bu engel dağıtım adı veya
+sürümünden bağımsız olarak eksik güvenlik yeteneğini izler.
+Aynı canlı SELinux kontrolü her APT veya pacman bootstrap ve rollback
+mutasyonundan önce çalışır. Bu adaptörler yalnız SELinux etkin değilken ilerler;
+etkin permissive veya enforcing durum, etiket yaşam döngüsü uygulanana kadar
+fail-closed reddedilir. Paket yöneticisi yeteneği güvenlik politikası yeteneği
+anlamına gelmez.
 
-**Varsayılan-red kesin-yöntem ön filtresi.** Panel, her RHEL adayı için
+**Varsayılan-red kesin-yöntem ön filtresi.** Panel, her DNF önizleme sunucusu için
 doğrulanmış tam host kimliğini tek ham dispatcher'ın hemen önünde kesin Agent
 RPC yöntemiyle anahtarlanan bir ön filtreye taşır. Bu fail-closed bir temeldir;
 açıkça aktivasyon yüzeyi değildir. Kesin yöntem ile host kimliği, parametreli
 bir RPC'yi yetkilendirmeye yetmez: aynı yöntem farklı servis, paket veya hedef
-argümanları taşıyabilir. Hiçbir RHEL yetki girdisi, RPC argümanları kalıcı lease
+argümanları taşıyabilir. Hiçbir DNF yetki girdisi, RPC argümanları kalıcı lease
 kaydının kesin `Kind`, `Target` ve `PackageName` değerlerine bağlanmadan ve bu
 eksiksiz yaşam döngüsü gerçek makine uçtan uca sertifikasyonundan geçmeden
-eklenemez. DNF/RHEL yetki kümesi boş kalır; dolayısıyla RHEL üzerindeki bütün
+eklenemez. DNF yetki kümesi boş kalır; dolayısıyla DNF sunucularındaki bütün
 host mutasyonları reddedilmeye devam eder. Algılama, kimlik çözümleme, çapraz
 derleme ve smoke kapsamı destek veya yetenek iddiası değildir.
 
-**Kapsam dışı.** openSUSE/SLES, Alpine ve NixOS bugün yeni bir aile adaptörünü
-haklı çıkaran talebe sahip değildir; talep doğarsa ayrı `suse`, `alpine` veya
-`nixos` ailesi olarak eklenir, mevcut ailelerden biriymiş gibi davranılmaz.
-Kali Linux sunucu ürünü olmadığı için Debian kökenine rağmen açıkça reddedilir.
-Windows ve FreeBSD yönetilen sunucu hedefi değildir. `!linux` dosyaları yalnız
-derleme taşınabilirliği ve mutasyonsuz fail-closed sözleşmesini korur; ürün
-desteği vaat etmez.
+**Kapsam dışı.** Uygulanmış adaptörü olmayan bir paket ekosistemi APT, DNF veya
+pacman gibi davranarak destek kazanmaz; kanıtlanmış talep halinde ayrı adaptör
+eklenebilir. Linux dağıtımları yalnız adları yüzünden reddedilmez; tek ve eksiksiz
+güvenilir araç zinciri ile özelliğe özgü yerleşim/güvenlik kanıtı yoksa fail-closed
+reddedilir. Windows ve FreeBSD yönetilen sunucu hedefi değildir. `!linux`
+dosyaları yalnız derleme taşınabilirliği ve mutasyonsuz fail-closed sözleşmesini
+korur; ürün desteği vaat etmez.
 
-**Kurulum kaynağı değişmez.** Aile adaptörü D-018'i uygular: sistem servisleri
+**Kurulum kaynağı değişmez.** Paket adaptörü D-018'i uygular: sistem servisleri
 `apt`/`dnf`/`pacman` üzerinden dağıtım paketidir; taşınabilir uygulama ve
 runtime'lar doğrulanmış resmi sürümdür. Zorunlu bir kaynak derlemesi müşteri
-sunucusunda yapılmaz; merkezi CI'da üretilip imzalı aile paketi olarak
-dağıtılır. Böylece aile kapsamı büyürken güvenlik güncellemesi, dosya sahipliği,
+sunucusunda yapılmaz; merkezi CI'da üretilip ilgili ekosistemin imzalı paketi olarak
+dağıtılır. Böylece yetenek kapsamı büyürken güvenlik güncellemesi, dosya sahipliği,
 kaldırma ve geri alma paket yöneticisinde kalır.
 
 **Neden.** Dağıtım başına kopyalanmış installer sayısı kaliteyi bölerek
 büyütür; her şeyi kaynaktan derlemek ise yalnız binary üretimini ortaklaştırır,
 systemd/SELinux/AppArmor, kullanıcılar, yollar, firewall ve güncelleme
-entegrasyonunu ortaklaştırmaz. Aile adaptörü doğru tekrar-kullanım sınırıdır.
+entegrasyonunu ortaklaştırmaz. Paket-yeteneği adaptörü doğru tekrar-kullanım sınırıdır.
 
 ---
 
@@ -1174,6 +1183,12 @@ hedefidir. Bu, çalıştırılmamış bir testi geçmiş saymaz: sürüm kabul e
 önce etiketli, önceden derlenmiş ürün tam belgelenmiş operatör akışıyla temiz
 Debian 13 kurulumundan geçmelidir. Kaynak checkout'ları, geliştiriciye özel
 bundle'lar ve kurulum sonrası SSH düzeltmeleri kanıt sayılmaz.
+
+*Ek 4 (23 Ağu 2026):* D-020, bu eski karardaki dağıtım/sürüm kapısının yerini
+alır. Ubuntu 24.04 ile Debian 13 kabul örnekleri olarak kalır; yetkilendirme izin
+listesi değildir. Eksiksiz sabit-yol yetenek sözleşmesi kanıtlandığında herhangi
+bir Linux adı/sürümü APT veya pacman seçebilir. DNF yalnız SELinux yaşam döngüsü
+yeteneği eksik olduğu için önizleme olarak kalır.
 
 ---
 

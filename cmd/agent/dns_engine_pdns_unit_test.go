@@ -17,15 +17,22 @@ func testDebian13PDNSProfile() hostplatform.Profile {
 	return hostplatform.Profile{
 		DistroFamily:   hostplatform.DistroFamilyDebian,
 		PackageManager: hostplatform.PackageManagerAPT,
+		ServiceManager: hostplatform.ServiceManagerSystemd,
 		ID:             "debian", Version: "13", Codename: "trixie",
 	}
 }
 
-func TestPDNSTargetProfileCertificationPrecedesMutation(t *testing.T) {
+func testUbuntu2404PDNSProfile() hostplatform.Profile {
+	profile := testDebian13PDNSProfile()
+	profile.ID, profile.Version, profile.Codename = "ubuntu", "24.04", "noble"
+	return profile
+}
+
+func TestPDNSTargetCapabilitiesPrecedeMutation(t *testing.T) {
 	for _, profile := range []hostplatform.Profile{
-		testUbuntuBINDProfile(),
 		{DistroFamily: hostplatform.DistroFamilyArch, PackageManager: hostplatform.PackageManagerPacman, ID: "arch"},
-		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ID: "debian", Version: "12", Codename: "bookworm"},
+		{DistroFamily: hostplatform.DistroFamilyRHEL, PackageManager: hostplatform.PackageManagerAPT, ServiceManager: hostplatform.ServiceManagerSystemd},
+		{DistroFamily: hostplatform.DistroFamilyDebian, PackageManager: hostplatform.PackageManagerAPT, ServiceManager: "openrc"},
 	} {
 		mutations := 0
 		_, err := runCertifiedPDNSTargetMutation(
@@ -36,24 +43,35 @@ func TestPDNSTargetProfileCertificationPrecedesMutation(t *testing.T) {
 			},
 		)
 		if err == nil {
-			t.Fatalf("uncertified PowerDNS profile was accepted: %#v", profile)
+			t.Fatalf("incomplete PowerDNS capability profile was accepted: %#v", profile)
 		}
 		if mutations != 0 {
-			t.Fatalf("uncertified PowerDNS profile reached mutation: %#v", profile)
+			t.Fatalf("incomplete PowerDNS capability profile reached mutation: %#v", profile)
 		}
 	}
-	mutations := 0
-	if _, err := runCertifiedPDNSTargetMutation(
+	for _, profile := range []hostplatform.Profile{
 		testDebian13PDNSProfile(),
-		func() (transport.SwitchDNSEngineV1Response, error) {
-			mutations++
-			return transport.SwitchDNSEngineV1Response{}, nil
+		testUbuntu2404PDNSProfile(),
+		{
+			DistroFamily:   hostplatform.DistroFamilyDebian,
+			PackageManager: hostplatform.PackageManagerAPT,
+			ServiceManager: hostplatform.ServiceManagerSystemd,
+			ID:             "operator-linux", Version: "2031.7", Codename: "custom",
 		},
-	); err != nil {
-		t.Fatal(err)
-	}
-	if mutations != 1 {
-		t.Fatalf("certified Debian 13 mutation count = %d", mutations)
+	} {
+		mutations := 0
+		if _, err := runCertifiedPDNSTargetMutation(
+			profile,
+			func() (transport.SwitchDNSEngineV1Response, error) {
+				mutations++
+				return transport.SwitchDNSEngineV1Response{}, nil
+			},
+		); err != nil {
+			t.Fatalf("capable PowerDNS profile rejected: %#v: %v", profile, err)
+		}
+		if mutations != 1 {
+			t.Fatalf("PowerDNS mutation count = %d for %#v", mutations, profile)
+		}
 	}
 }
 
@@ -146,6 +164,26 @@ func TestCertifiedDebian13PDNSVendorFixtureMatchesLivePackage(t *testing.T) {
 	}
 	if len(bytes) != 1579 || sha256.Sum256(bytes) != wantDigest {
 		t.Fatalf("certified PowerDNS unit length/digest drifted: %d %x", len(bytes), sha256.Sum256(bytes))
+	}
+	if err := validatePDNSVendorUnitIdentity(canonicalDebian13PDNSIdentity()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCertifiedUbuntu2404PDNSVendorFixtureMatchesLivePackage(t *testing.T) {
+	bytes := []byte(certifiedUbuntu2404PDNSVendorUnit)
+	wantDigest := [32]byte{
+		0xcd, 0x60, 0xd1, 0x8e, 0x3e, 0xd5, 0xa6, 0x8c,
+		0x51, 0x66, 0x12, 0xe3, 0xc9, 0xae, 0x33, 0xa6,
+		0x32, 0xeb, 0x6b, 0x35, 0xcd, 0x35, 0x7f, 0x83,
+		0x69, 0x3d, 0x36, 0x36, 0x59, 0x33, 0x84, 0x86,
+	}
+	if len(bytes) != 1565 || sha256.Sum256(bytes) != wantDigest {
+		t.Fatalf("certified Ubuntu PowerDNS unit length/digest drifted: %d %x", len(bytes), sha256.Sum256(bytes))
+	}
+	if strings.Count(certifiedDebian13PDNSVendorUnit, certifiedDebianPDNSAfter) != 1 ||
+		strings.Contains(certifiedUbuntu2404PDNSVendorUnit, " mysql.service ") {
+		t.Fatal("Ubuntu PowerDNS unit variant is not the exact reviewed one-line dialect")
 	}
 	if err := validatePDNSVendorUnitIdentity(canonicalDebian13PDNSIdentity()); err != nil {
 		t.Fatal(err)

@@ -1,7 +1,5 @@
 package core
 
-import "strings"
-
 // FirewallPort is one inbound port a service needs open, with its protocol.
 // FirewallPort, bir servisin açık olmasını istediği bir gelen port ve protokolü.
 type FirewallPort struct {
@@ -233,6 +231,13 @@ type ManagedService struct {
 	// kesin olduğu VE paketin dağıtıma özgü init adımı istemediği yerde dolu —
 	// boş girdi, dürüst "bu dağıtımda henüz desteklenmiyor"u korur.
 	Packages map[string][]string
+	// LifecycleInstallFamilies, when non-nil, narrows the package ecosystems
+	// in which CelikPanel has a complete install/configure/activate/rollback
+	// lifecycle for this service. Packages remains the observation map: an
+	// existing package can stay visible even when automatic lifecycle mutation
+	// is not certified there. A nil map preserves the established rule that
+	// every Packages entry has a reviewed generic lifecycle.
+	LifecycleInstallFamilies map[string]bool
 	// InstallDisabledReason explicitly closes automatic installation even when
 	// distro packages exist. A package alone is not a panel integration: until
 	// CelikPanel can configure the service for hosted domains, offering Install
@@ -292,10 +297,9 @@ const (
 	ManagedServiceInstallBlockDistribution ManagedServiceInstallBlockKind = "distribution"
 )
 
-// ManagedServiceHostProfile is the small, verified host identity needed for
-// distribution-specific lifecycle certification. It intentionally contains
-// no executable paths and treats package-manager family as evidence, never as
-// authorization by itself.
+// ManagedServiceHostProfile is the small, verified host capability needed for
+// lifecycle routing. DistroID and VersionID are audit metadata, not
+// authorization inputs.
 type ManagedServiceHostProfile struct {
 	DistroFamily   string
 	PackageFamily  string
@@ -306,47 +310,23 @@ type ManagedServiceHostProfile struct {
 }
 
 const (
-	rhelPreviewOnlyNginxReason   = "the RHEL-family preview does not offer this component; only Nginx on an explicitly qualified host is being evaluated"
-	rhelPreviewNginxTargetReason = "the RHEL-family Nginx preview candidate is limited to AlmaLinux 9 and Rocky Linux 9"
+	rhelPreviewOnlyNginxReason   = "the DNF-ecosystem preview does not offer this component; only Nginx on an explicitly qualified host is being evaluated"
+	rhelPreviewNginxTargetReason = "the DNF-ecosystem Nginx preview candidate requires a verified dnf/systemd host on amd64 or arm64"
 	// RHELPreviewNginxCertificationPendingReason is deliberately user-facing:
 	// a qualified distro is still not an enabled capability until both the
 	// cross-route API boundary and SELinux enforcing-mode lifecycle are proven.
-	RHELPreviewNginxCertificationPendingReason = "the RHEL-family Nginx preview remains disabled until the central platform-capability firewall (API guard) and SELinux enforcing-mode lifecycle are certified"
+	RHELPreviewNginxCertificationPendingReason = "the DNF-ecosystem Nginx preview remains disabled until the central platform-capability firewall (API guard) and SELinux enforcing-mode lifecycle are certified"
 )
 
 // IsRHELPreviewNginxCandidate identifies the deliberately narrow first
-// certification target. Candidate does not mean supported or installable.
-// Exact distro identity and a numeric major version are required; ID_LIKE or
-// package-manager family cannot promote another distribution into this set.
+// capability target. Candidate does not mean supported or installable. Distro
+// name and version are metadata; the verified manager/service/architecture
+// tuple defines the candidate.
 func IsRHELPreviewNginxCandidate(host ManagedServiceHostProfile) bool {
 	if host.DistroFamily != "rhel" || host.PackageFamily != "dnf" || host.ServiceManager != "systemd" {
 		return false
 	}
-	if host.DistroID != "almalinux" && host.DistroID != "rocky" {
-		return false
-	}
-	if host.Architecture != "amd64" && host.Architecture != "arm64" {
-		return false
-	}
-	return numericVersionMajor(host.VersionID) == "9"
-}
-
-func numericVersionMajor(version string) string {
-	parts := strings.Split(version, ".")
-	if len(parts) == 0 {
-		return ""
-	}
-	for _, part := range parts {
-		if part == "" {
-			return ""
-		}
-		for _, r := range part {
-			if r < '0' || r > '9' {
-				return ""
-			}
-		}
-	}
-	return parts[0]
+	return host.Architecture == "amd64" || host.Architecture == "arm64"
 }
 
 // ManagedServiceInstallBlock is the single catalogue decision used
@@ -358,9 +338,9 @@ func ManagedServiceInstallBlock(svc *ManagedService, family string) (ManagedServ
 	return ManagedServiceInstallBlockForHost(svc, ManagedServiceHostProfile{PackageFamily: family})
 }
 
-// ManagedServiceInstallBlockForHost is the host-identity-aware catalogue
-// decision. In particular, dnf alone never enables a RHEL-family capability.
-// The first Alma/Rocky 9 Nginx target remains explicitly closed while its API
+// ManagedServiceInstallBlockForHost is the host-capability-aware catalogue
+// decision. In particular, dnf alone never enables a DNF-ecosystem capability.
+// The first dnf/systemd Nginx target remains explicitly closed while its API
 // and SELinux boundaries are still uncertified.
 func ManagedServiceInstallBlockForHost(svc *ManagedService, host ManagedServiceHostProfile) (ManagedServiceInstallBlockKind, string) {
 	if svc == nil {
@@ -380,6 +360,9 @@ func ManagedServiceInstallBlockForHost(svc *ManagedService, host ManagedServiceH
 	}
 	if host.PackageFamily == "" {
 		return ManagedServiceInstallBlockDistribution, "automatic installation is unavailable until the host platform is verified"
+	}
+	if svc.LifecycleInstallFamilies != nil && !svc.LifecycleInstallFamilies[host.PackageFamily] {
+		return ManagedServiceInstallBlockDistribution, "the managed service lifecycle is not supported in this package ecosystem yet"
 	}
 	if len(svc.Packages) > 0 && len(svc.Packages[host.PackageFamily]) == 0 {
 		return ManagedServiceInstallBlockDistribution, "automatic installation is not supported on this Linux distribution yet"
@@ -945,6 +928,9 @@ var ManagedServices = []ManagedService{
 		SystemNames:   []string{"bind9", "named"},
 		ConflictGroup: "dns-server",
 		Packages:      map[string][]string{"apt": {"bind9"}, "pacman": {"bind"}},
+		LifecycleInstallFamilies: map[string]bool{
+			"apt": true, "pacman": true,
+		},
 		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{
@@ -960,7 +946,10 @@ var ManagedServices = []ManagedService{
 		// no separate backend package exists there.
 		// Arch'ın powerdns'i sqlite3 arka ucunu ana pakette taşır — orada ayrı
 		// backend paketi yoktur.
-		Packages:      map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}, "pacman": {"powerdns"}},
+		Packages: map[string][]string{"apt": {"pdns-server", "pdns-backend-sqlite3"}, "pacman": {"powerdns"}},
+		LifecycleInstallFamilies: map[string]bool{
+			"apt": true,
+		},
 		FirewallPorts: []FirewallPort{{53, "tcp"}, {53, "udp"}},
 	},
 	{

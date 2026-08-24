@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostplatform"
@@ -135,47 +134,37 @@ func verifyPDNSAdoptionDatabase(
 	return tx.Commit()
 }
 
-func capturePDNSAdoptionConfigs() ([]dnsFileSnapshot, error) {
-	paths := []string{
-		filepath.Clean(dnsMainConf),
-		filepath.Clean(dnsManagedConf),
-		filepath.Clean(dnsClusterConf),
-	}
-	sort.Strings(paths)
-	snapshots := make([]dnsFileSnapshot, len(paths))
-	for index, path := range paths {
-		allowAbsent := path == filepath.Clean(dnsClusterConf)
-		snapshot, err := captureDNSFileSnapshotPreserve(path, allowAbsent)
-		if err != nil {
-			return nil, err
-		}
-		snapshots[index] = snapshot
-	}
-	return snapshots, nil
+type pdnsAdoptionConfigEvidence struct {
+	policy     pdnsConfigOwnerPolicy
+	snapshots  []dnsFileSnapshot
+	identities map[string]pdnsConfigFileIdentity
 }
 
-func verifyPDNSAdoptionTopology(
+func validatePDNSAdoptionConfigSnapshots(
+	policy pdnsConfigOwnerPolicy,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	snapshots []dnsFileSnapshot,
 ) error {
-	return verifyPDNSAdoptionTopologyForOwner(manifest, 0, 0)
-}
-
-func verifyPDNSAdoptionTopologyForOwner(
-	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
-	requiredUID, requiredGID uint32,
-) error {
+	if manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
+		manifest.SourceEngine != "" ||
+		manifest.TargetEngine != transport.DNSEnginePowerDNS {
+		return errors.New("PowerDNS adoption config proof received a non-adoption manifest")
+	}
+	if err := policy.validateSnapshots(snapshots); err != nil {
+		return err
+	}
+	byPath := pdnsConfigSnapshotMap(snapshots)
+	if !byPath[filepath.Clean(dnsMainConf)].Exists ||
+		!byPath[filepath.Clean(dnsManagedConf)].Exists {
+		return errors.New("PowerDNS adoption is missing managed config evidence")
+	}
 	peer, err := mutationpayload.CanonicalDNSClusterConfig(
 		manifest.Topology, manifest.PeerIP, manifest.PeerNS,
 	)
 	if err != nil {
 		return err
 	}
-	cluster, err := captureDNSFileSnapshotPreserveForOwner(
-		dnsClusterConf, true, requiredUID, requiredGID,
-	)
-	if err != nil {
-		return err
-	}
+	cluster := byPath[filepath.Clean(dnsClusterConf)]
 	wantCluster := manifest.Topology == transport.DNSTopologyPaired
 	if cluster.Exists != wantCluster {
 		return errors.New("PowerDNS managed topology differs from the adoption receipt")
@@ -189,6 +178,198 @@ func verifyPDNSAdoptionTopologyForOwner(
 		}
 	}
 	return nil
+}
+
+func validatePDNSAdoptionConfigOps(ops pdnsConfigAccessOps) error {
+	if ops.resolve == nil || ops.capture == nil {
+		return errors.New("PowerDNS adoption config proof operations are incomplete")
+	}
+	return nil
+}
+
+func capturePDNSAdoptionConfigsWithOps(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	ops pdnsConfigAccessOps,
+) (pdnsAdoptionConfigEvidence, error) {
+	if ctx == nil {
+		return pdnsAdoptionConfigEvidence{},
+			errors.New("PowerDNS adoption config capture requires a context")
+	}
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	if err := validatePDNSAdoptionConfigOps(ops); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	policy, err := ops.resolve(ctx)
+	if err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	observations, err := ops.capture(policy)
+	if err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	if err := validatePDNSConfigObservations(policy, observations); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	snapshots := make([]dnsFileSnapshot, len(observations))
+	identities := make(map[string]pdnsConfigFileIdentity, len(observations))
+	for index, observation := range observations {
+		snapshots[index] = observation.Snapshot
+		snapshots[index].Data = append([]byte(nil), observation.Snapshot.Data...)
+		identities[observation.Snapshot.Path] = observation.Identity
+	}
+	if err := validatePDNSAdoptionConfigSnapshots(
+		policy, manifest, snapshots,
+	); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	return pdnsAdoptionConfigEvidence{
+		policy: policy, snapshots: snapshots, identities: identities,
+	}, nil
+}
+
+func capturePDNSAdoptionConfigs(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) (pdnsAdoptionConfigEvidence, error) {
+	return capturePDNSAdoptionConfigsWithOps(
+		ctx, profile, manifest, hostPDNSConfigAccessOps(),
+	)
+}
+
+func pdnsAdoptionConfigEvidenceFromJournalWithOps(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	journal dnsEngineSwitchJournal,
+	ops pdnsConfigAccessOps,
+) (pdnsAdoptionConfigEvidence, error) {
+	if ctx == nil {
+		return pdnsAdoptionConfigEvidence{},
+			errors.New("PowerDNS adoption journal config proof requires a context")
+	}
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	if err := validatePDNSAdoptionConfigOps(ops); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	policy, err := ops.resolve(ctx)
+	if err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	snapshots := clonePDNSConfigSnapshots(journal.ConfigBefore)
+	if err := validatePDNSAdoptionConfigSnapshots(
+		policy, manifest, snapshots,
+	); err != nil {
+		return pdnsAdoptionConfigEvidence{}, err
+	}
+	return pdnsAdoptionConfigEvidence{
+		policy: policy, snapshots: snapshots,
+	}, nil
+}
+
+func (evidence pdnsAdoptionConfigEvidence) verifyWithOps(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	ops pdnsConfigAccessOps,
+) error {
+	if ctx == nil {
+		return errors.New("PowerDNS adoption config verification requires a context")
+	}
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
+		return err
+	}
+	if err := validatePDNSAdoptionConfigOps(ops); err != nil {
+		return err
+	}
+	if err := validatePDNSAdoptionConfigSnapshots(
+		evidence.policy, manifest, evidence.snapshots,
+	); err != nil {
+		return err
+	}
+	policy, err := ops.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	if policy != evidence.policy {
+		return errors.New("PowerDNS service group changed during adoption")
+	}
+	observations, err := ops.capture(policy)
+	if err != nil {
+		return err
+	}
+	if err := validatePDNSConfigObservations(policy, observations); err != nil {
+		return err
+	}
+	actual := make([]dnsFileSnapshot, len(observations))
+	for index, observation := range observations {
+		actual[index] = observation.Snapshot
+	}
+	if err := validatePDNSAdoptionConfigSnapshots(
+		policy, manifest, actual,
+	); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(actual, evidence.snapshots) {
+		return errors.New("PowerDNS adoption config bytes or metadata changed")
+	}
+	if evidence.identities != nil {
+		if len(evidence.identities) != len(observations) {
+			return errors.New("PowerDNS adoption config identity set is incomplete")
+		}
+		for _, observation := range observations {
+			expected, ok := evidence.identities[observation.Snapshot.Path]
+			if !ok || expected != observation.Identity {
+				return errors.New("PowerDNS adoption config inode identity changed")
+			}
+		}
+	}
+	return nil
+}
+
+func (evidence pdnsAdoptionConfigEvidence) verify(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	return evidence.verifyWithOps(
+		ctx, profile, manifest, hostPDNSConfigAccessOps(),
+	)
+}
+
+func mutatePDNSAdoptionAfterConfigProofWithOps(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	evidence pdnsAdoptionConfigEvidence,
+	ops pdnsConfigAccessOps,
+	mutation func() error,
+) error {
+	if mutation == nil {
+		return errors.New("PowerDNS adoption mutation callback is required")
+	}
+	if err := evidence.verifyWithOps(ctx, profile, manifest, ops); err != nil {
+		return err
+	}
+	return mutation()
+}
+
+func mutatePDNSAdoptionAfterConfigProof(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	evidence pdnsAdoptionConfigEvidence,
+	mutation func() error,
+) error {
+	return mutatePDNSAdoptionAfterConfigProofWithOps(
+		ctx, profile, manifest, evidence, hostPDNSConfigAccessOps(), mutation,
+	)
 }
 
 func validatePDNSAdoptionUnitEvidence(units []dnsUnitSnapshot) error {
@@ -325,9 +506,30 @@ func verifyPDNSAdoptionEvidence(
 	journal dnsEngineSwitchJournal,
 	stage pdnsAdoptionEvidenceStage,
 ) error {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return err
+	}
+	return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+		ctx, profile, systemctl, manifest, journal, nil, stage,
+	)
+}
+
+func verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	journal dnsEngineSwitchJournal,
+	expectedConfigs *pdnsAdoptionConfigEvidence,
+	stage pdnsAdoptionEvidenceStage,
+) error {
 	if manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
 		journal.Mode != transport.DNSEngineSwitchModeAdopt {
 		return errors.New("PowerDNS adoption evidence received a switch transaction")
+	}
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
+		return err
 	}
 	journalManifest, err := switchJournalManifest(journal)
 	if err != nil || !reflect.DeepEqual(journalManifest, manifest) {
@@ -339,13 +541,24 @@ func verifyPDNSAdoptionEvidence(
 	if err := assertPDNSAdoptionArtifactsAbsent(journal); err != nil {
 		return err
 	}
+	configs := pdnsAdoptionConfigEvidence{}
+	if expectedConfigs == nil {
+		configs, err = pdnsAdoptionConfigEvidenceFromJournalWithOps(
+			ctx, profile, manifest, journal, hostPDNSConfigAccessOps(),
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		configs = *expectedConfigs
+		if !reflect.DeepEqual(configs.snapshots, journal.ConfigBefore) {
+			return errors.New("PowerDNS adoption config evidence differs from its journal")
+		}
+	}
+	if err := configs.verify(ctx, profile, manifest); err != nil {
+		return err
+	}
 	if err := requireManagedPowerDNSArtifacts(); err != nil {
-		return err
-	}
-	if err := verifyDNSFileSnapshotsExact(journal.ConfigBefore); err != nil {
-		return err
-	}
-	if err := verifyPDNSAdoptionTopology(manifest); err != nil {
 		return err
 	}
 	if err := validatePDNSAdoptionUnitEvidence(journal.TargetUnitsBefore); err != nil {
@@ -380,18 +593,61 @@ func rollbackPDNSAdoption(
 	if ctx == nil {
 		return errors.New("rollback PowerDNS adoption requires a bounded context")
 	}
-	return rollbackPDNSAdoptionWithOps(
-		ctx,
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return err
+	}
+	configs, err := pdnsAdoptionConfigEvidenceFromJournalWithOps(
+		ctx, profile, manifest, journal, hostPDNSConfigAccessOps(),
+	)
+	if err != nil {
+		return err
+	}
+	return rollbackPDNSAdoptionOnCertifiedProfile(
+		ctx, profile, systemctl, manifest, journal, configs,
+	)
+}
+
+func rollbackPDNSAdoptionOnCertifiedProfile(
+	ctx context.Context,
+	profile hostplatform.Profile,
+	systemctl string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	journal dnsEngineSwitchJournal,
+	configs pdnsAdoptionConfigEvidence,
+) error {
+	return rollbackPDNSAdoptionAfterConfigProof(
 		func() error {
-			return restoreDNSFileSnapshot(journal.StateBefore)
+			return configs.verify(ctx, profile, manifest)
 		},
-		func(verifyCtx context.Context) error {
-			return verifyPDNSAdoptionEvidence(
-				verifyCtx, systemctl, manifest, journal,
-				pdnsAdoptionEvidenceRollback,
+		func() error {
+			return rollbackPDNSAdoptionWithOps(
+				ctx,
+				func() error {
+					return restoreDNSFileSnapshot(journal.StateBefore)
+				},
+				func(verifyCtx context.Context) error {
+					return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+						verifyCtx, profile, systemctl, manifest, journal,
+						&configs, pdnsAdoptionEvidenceRollback,
+					)
+				},
 			)
 		},
 	)
+}
+
+func rollbackPDNSAdoptionAfterConfigProof(
+	proveConfigs func() error,
+	rollback func() error,
+) error {
+	if proveConfigs == nil || rollback == nil {
+		return errors.New("PowerDNS adoption rollback requires config proof")
+	}
+	if err := proveConfigs(); err != nil {
+		return err
+	}
+	return rollback()
 }
 
 func rollbackPDNSAdoptionWithOps(
@@ -450,10 +706,11 @@ func adoptPDNSOnCertifiedProfile(
 		if state != exactState {
 			return transport.SwitchDNSEngineV1Response{}, errors.New("PowerDNS adoption conflicts with an existing DNS engine receipt")
 		}
-		if err := verifyPDNSAdoptionDatabase(ctx, pdnsDBPath(), manifest); err != nil {
+		configs, err := capturePDNSAdoptionConfigs(ctx, profile, manifest)
+		if err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		if err := verifyPDNSAdoptionTopology(manifest); err != nil {
+		if err := verifyPDNSAdoptionDatabase(ctx, pdnsDBPath(), manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		if err := requireManagedDNSClusterReady(); err != nil {
@@ -463,6 +720,9 @@ func adoptPDNSOnCertifiedProfile(
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		if err := verifyDNSZoneManifestAuthority(ctx, manifest.Zones); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		if err := configs.verify(ctx, profile, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
 		return transport.SwitchDNSEngineV1Response{
@@ -480,7 +740,7 @@ func adoptPDNSOnCertifiedProfile(
 	if err := verifyDNSEngineSwitchSource(ctx, profile, manifest, state, false); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	configs, err := capturePDNSAdoptionConfigs()
+	configs, err := capturePDNSAdoptionConfigs(ctx, profile, manifest)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -515,19 +775,23 @@ func adoptPDNSOnCertifiedProfile(
 		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
 		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
 		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
-		StateBefore: stateBefore, ConfigBefore: configs,
+		StateBefore: stateBefore, ConfigBefore: configs.snapshots,
 		TargetUnitsBefore: units, SourceUnitsBefore: []dnsUnitSnapshot{},
 		PDNSLiveSHA256: liveDigest, PDNSLiveSize: liveSize,
 	}
 	if err := validatePDNSAdoptionJournal(journal); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := verifyPDNSAdoptionEvidence(
-		ctx, systemctl, manifest, journal, pdnsAdoptionEvidencePreflight,
+	if err := verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+		ctx, profile, systemctl, manifest, journal, &configs,
+		pdnsAdoptionEvidencePreflight,
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := mutatePDNSAdoptionAfterConfigProof(
+		ctx, profile, manifest, configs,
+		func() error { return writeDNSEngineSwitchJournal(journal) },
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
@@ -545,7 +809,9 @@ func adoptPDNSOnCertifiedProfile(
 				errors.Join(cause, journalErr, contextErr)
 		}
 		defer cancel()
-		rollbackErr := rollbackPDNSAdoption(recoveryCtx, systemctl, manifest, journal)
+		rollbackErr := rollbackPDNSAdoptionOnCertifiedProfile(
+			recoveryCtx, profile, systemctl, manifest, journal, configs,
+		)
 		if rollbackErr == nil {
 			journal.Phase = dnsSwitchPhaseRolledBack
 			journalErr = writeDNSEngineSwitchJournal(journal)
@@ -555,23 +821,33 @@ func adoptPDNSOnCertifiedProfile(
 		}
 		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}
-	if err := writeDNSEngineState(exactState); err != nil {
+	if err := mutatePDNSAdoptionAfterConfigProof(
+		ctx, profile, manifest, configs,
+		func() error { return writeDNSEngineState(exactState) },
+	); err != nil {
 		actual, exists, readErr := readDNSEngineState()
 		if readErr != nil || !exists || actual != exactState {
 			return rollback(errors.Join(err, readErr))
 		}
 	}
-	if err := verifyPDNSAdoptionEvidence(
-		ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
+	if err := verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+		ctx, profile, systemctl, manifest, journal, &configs,
+		pdnsAdoptionEvidenceTarget,
 	); err != nil {
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := mutatePDNSAdoptionAfterConfigProof(
+		ctx, profile, manifest, configs,
+		func() error { return writeDNSEngineSwitchJournal(journal) },
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
+	if err := mutatePDNSAdoptionAfterConfigProof(
+		ctx, profile, manifest, configs,
+		func() error { return writeDNSEngineSwitchJournal(journal) },
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return transport.SwitchDNSEngineV1Response{

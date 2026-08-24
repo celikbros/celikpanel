@@ -79,13 +79,11 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 		{"service stop", mutationPolicyJob("service_stop", "nginx", ""), mutationPolicyClaim(serviceMutationStepServiceAction, "nginx", "", "stop")},
 		{"service restart", mutationPolicyJob("service_restart", "nginx", ""), mutationPolicyClaim(serviceMutationStepServiceAction, "nginx", "", "restart")},
 		{"service reload", mutationPolicyJob("service_reload", "nginx", ""), mutationPolicyClaim(serviceMutationStepServiceAction, "nginx", "", "reload")},
-		{"pdns install restart", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepServiceAction, "pdns", "", "restart")},
 		{"start postfix after install", mutationPolicyJob("service_install", "postfix", ""), mutationPolicyClaim(serviceMutationStepStartService, "postfix", "", "start")},
 		{"start dovecot in profile", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepStartService, "dovecot", "", "start")},
 		{"reset dovecot after install", mutationPolicyJob("service_install", "dovecot", ""), mutationPolicyClaim(serviceMutationStepResetFailedUnit, "dovecot", "", "reset-failed")},
 		{"reset postfix in profile", mutationPolicyJob("mail_profile_install", core.MailProfileCore, ""), mutationPolicyClaim(serviceMutationStepResetFailedUnit, "postfix", "", "reset-failed")},
 		{"configure pdns standalone", mutationPolicyJob("pdns_configure", "pdns", ""), mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
-		{"configure pdns after install", mutationPolicyJob("service_install", "pdns", ""), mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
 		{"sync dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "sync")},
 		{"delete dns zone", mutationPolicyJob("dns_zone_sync", "example.com", dnsQualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZone, "example.com", dnsQualifier, "delete")},
 		{"sync BIND zone V3", mutationPolicyJob("dns_zone_sync", "example.com", dnsV3Qualifier), mutationPolicyClaim(serviceMutationStepSyncDNSZoneV3, "example.com", dnsV3Qualifier, "sync")},
@@ -171,6 +169,66 @@ func TestServiceMutationStepPolicyAllowsEveryDeclaredWorkflowRow(t *testing.T) {
 	}
 	if len(seenMethods) != len(expectedMethods) {
 		t.Fatalf("positive policy methods=%d want=%d", len(seenMethods), len(expectedMethods))
+	}
+}
+
+func TestServiceMutationStepPolicyRejectsEveryGenericDNSEngineClaim(t *testing.T) {
+	targets := []string{
+		"bind",
+		"bind9",
+		"named",
+		"bind9.service",
+		"named.service",
+		"pdns",
+		"pdns.service",
+	}
+	tests := []struct {
+		name    string
+		jobKind string
+		method  serviceMutationStepMethod
+		action  string
+	}{
+		{"install", "service_install", serviceMutationStepInstallService, "install"},
+		{"uninstall", "service_uninstall", serviceMutationStepUninstallService, "uninstall"},
+		{"action start", "service_start", serviceMutationStepServiceAction, "start"},
+		{"action stop", "service_stop", serviceMutationStepServiceAction, "stop"},
+		{"action restart", "service_restart", serviceMutationStepServiceAction, "restart"},
+		{"action reload", "service_reload", serviceMutationStepServiceAction, "reload"},
+		{"start after install", "service_install", serviceMutationStepStartService, "start"},
+		{"reset after install", "service_install", serviceMutationStepResetFailedUnit, "reset-failed"},
+	}
+
+	for _, target := range targets {
+		for _, tt := range tests {
+			t.Run(target+"/"+tt.name, func(t *testing.T) {
+				err := authorizeServiceMutationStep(
+					mutationPolicyJob(tt.jobKind, target, ""),
+					mutationPolicyClaim(tt.method, target, "", tt.action),
+				)
+				if !errors.Is(err, errServiceMutationStepUnauthorized) {
+					t.Fatalf("error=%v want stable unauthorized sentinel", err)
+				}
+			})
+		}
+	}
+
+	pdnsInstallClaims := []struct {
+		name  string
+		claim serviceMutationStepClaim
+	}{
+		{"restart", mutationPolicyClaim(serviceMutationStepServiceAction, "pdns", "", "restart")},
+		{"configure", mutationPolicyClaim(serviceMutationStepConfigurePowerDNSSQLite, "pdns", "", "configure")},
+	}
+	for _, tt := range pdnsInstallClaims {
+		t.Run("pdns install cannot "+tt.name, func(t *testing.T) {
+			err := authorizeServiceMutationStep(
+				mutationPolicyJob("service_install", "pdns", ""),
+				tt.claim,
+			)
+			if !errors.Is(err, errServiceMutationStepUnauthorized) {
+				t.Fatalf("error=%v want stable unauthorized sentinel", err)
+			}
+		})
 	}
 }
 

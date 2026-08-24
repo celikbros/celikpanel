@@ -872,12 +872,13 @@ func verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary {
-		if err := verifyPDNSPairSecondaryTx(
+		catalogMembers, err := verifyPDNSPairSecondaryTx(
 			ctx, tx, manifest, peerCatalog, peerCatalogDomain,
-		); err != nil {
+		)
+		if err != nil {
 			return err
 		}
-		expectedDomains++
+		expectedDomains += 1 + catalogMembers
 	}
 	if receiptCount != len(manifest.Zones) || domainCount != expectedDomains {
 		return errors.New("PowerDNS switch database contains unreceipted zones")

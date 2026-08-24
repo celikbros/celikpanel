@@ -47,7 +47,7 @@ const certifiedPacmanBINDVendorUnit = "[Unit]\n" +
 func bindVendorContract(profile hostplatform.Profile) (bindVendorFileContract, error) {
 	switch profile.PackageManager {
 	case hostplatform.PackageManagerAPT:
-		if err := certifyAPTBINDProfile(profile); err != nil {
+		if err := certifyAPTBINDCapabilities(profile); err != nil {
 			return bindVendorFileContract{}, err
 		}
 		return bindVendorFileContract{
@@ -57,6 +57,9 @@ func bindVendorContract(profile hostplatform.Profile) (bindVendorFileContract, e
 			environmentBytes: []byte(certifiedAPTBINDVendorEnvironment),
 		}, nil
 	case hostplatform.PackageManagerPacman:
+		if err := certifyPacmanBINDCapabilities(profile); err != nil {
+			return bindVendorFileContract{}, err
+		}
 		return bindVendorFileContract{
 			unitPath:  "/usr/lib/systemd/system/named.service",
 			unitBytes: []byte(certifiedPacmanBINDVendorUnit),
@@ -82,30 +85,53 @@ func inspectHostBINDVendorFiles(
 		return bindVendorFilesIdentity{}, fmt.Errorf("open BIND vendor proof root: %w", err)
 	}
 	defer unix.Close(rootFD)
-	if profile.PackageManager != hostplatform.PackageManagerAPT {
-		return inspectBINDVendorFilesAt(rootFD, profile, nil)
-	}
-	dpkgQuery, err := firstTrustedExecutable(
-		[]string{"/usr/bin/dpkg-query", "/usr/sbin/dpkg-query"}, "dpkg-query",
-	)
-	if err != nil {
-		return bindVendorFilesIdentity{}, err
-	}
-	lookup := func(lookupCtx context.Context, filename string) ([]byte, error) {
-		command := serviceMutationCommand(
-			lookupCtx, dpkgQuery, "-S", "--", filename,
+	var verifyPackageOwnership func(context.Context) error
+	switch profile.PackageManager {
+	case hostplatform.PackageManagerAPT:
+		dpkgQuery, err := firstTrustedExecutable(
+			[]string{"/usr/bin/dpkg-query", "/usr/sbin/dpkg-query"}, "dpkg-query",
 		)
-		command.Env = aptBINDStatOverrideCommandEnvironment()
-		return command.CombinedOutputLimited(4 << 10)
+		if err != nil {
+			return bindVendorFilesIdentity{}, err
+		}
+		lookup := func(lookupCtx context.Context, filename string) ([]byte, error) {
+			command := serviceMutationCommand(
+				lookupCtx, dpkgQuery, "-S", "--", filename,
+			)
+			command.Env = aptBINDStatOverrideCommandEnvironment()
+			return command.CombinedOutputLimited(4 << 10)
+		}
+		verifyPackageOwnership = func(verifyCtx context.Context) error {
+			return verifyExactAPTBINDVendorPackageOwnership(verifyCtx, lookup)
+		}
+	case hostplatform.PackageManagerPacman:
+		pacman, err := firstTrustedExecutable(
+			[]string{"/usr/bin/pacman", "/usr/sbin/pacman"}, "pacman",
+		)
+		if err != nil {
+			return bindVendorFilesIdentity{}, err
+		}
+		lookup := func(lookupCtx context.Context, filename string) ([]byte, error) {
+			return serviceMutationCommand(
+				lookupCtx, pacman, "--query", "--quiet", "--owns", "--", filename,
+			).CombinedOutputLimited(4 << 10)
+		}
+		verifyPackageOwnership = func(verifyCtx context.Context) error {
+			return verifyExactPacmanBINDVendorPackageOwnership(verifyCtx, lookup)
+		}
+	default:
+		return bindVendorFilesIdentity{}, errors.New(
+			"BIND vendor package ownership proof is unsupported on this package manager",
+		)
 	}
-	if err := verifyExactAPTBINDVendorPackageOwnership(ctx, lookup); err != nil {
+	if err := verifyPackageOwnership(ctx); err != nil {
 		return bindVendorFilesIdentity{}, err
 	}
 	identity, err := inspectBINDVendorFilesAt(rootFD, profile, nil)
 	if err != nil {
 		return bindVendorFilesIdentity{}, err
 	}
-	if err := verifyExactAPTBINDVendorPackageOwnership(ctx, lookup); err != nil {
+	if err := verifyPackageOwnership(ctx); err != nil {
 		return bindVendorFilesIdentity{}, err
 	}
 	return identity, nil
@@ -134,6 +160,24 @@ func verifyExactAPTBINDVendorPackageOwnership(
 		if string(output) != file.want {
 			return fmt.Errorf("%s is not owned by the exact bind9 package", file.path)
 		}
+	}
+	return nil
+}
+
+func verifyExactPacmanBINDVendorPackageOwnership(
+	ctx context.Context,
+	lookup aptBINDVendorOwnerLookup,
+) error {
+	if ctx == nil || lookup == nil {
+		return errors.New("invalid pacman BIND vendor package ownership proof")
+	}
+	const unit = "/usr/lib/systemd/system/named.service"
+	output, err := lookup(ctx, unit)
+	if err != nil {
+		return fmt.Errorf("verify BIND vendor package ownership for %s: %w", unit, err)
+	}
+	if string(output) != "bind\n" {
+		return errors.New("BIND vendor unit is not owned by the exact bind package")
 	}
 	return nil
 }

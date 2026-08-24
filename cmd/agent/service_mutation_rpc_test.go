@@ -627,6 +627,15 @@ func installGlobalMutationTestManager(t *testing.T, manager *serviceMutationMana
 	})
 }
 
+func installServiceMutationSecurityPolicyProbe(t *testing.T, probe func() error) {
+	t.Helper()
+	previous := verifyServiceMutationSecurityPolicy
+	verifyServiceMutationSecurityPolicy = probe
+	t.Cleanup(func() {
+		verifyServiceMutationSecurityPolicy = previous
+	})
+}
+
 func TestAgentServiceMutationManagerRetriesTransientHostBusy(t *testing.T) {
 	root := mutationTestRoot(t)
 	stateDir := filepath.Join(root, "state")
@@ -791,6 +800,80 @@ func TestRequiredServiceMutationStepHoldsJobUntilRelease(t *testing.T) {
 	}
 	if terminal.Status != serviceMutationStatusSucceeded {
 		t.Fatalf("terminal job = %+v", terminal)
+	}
+}
+
+func TestServiceMutationAcquireChecksSecurityPolicyBeforeLeaseStep(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJob(t, manager)
+
+	policyErr := errors.New("active SELinux fixture")
+	checks := 0
+	installServiceMutationSecurityPolicyProbe(t, func() error {
+		checks++
+		return policyErr
+	})
+	ctx, release, err := manager.acquireStep(ServiceMutationBinding{
+		MutationRequestID: testMutationRequestID,
+		MutationOwnerID:   testMutationOwnerID,
+	}, nginxInstallTestStepClaim())
+	if !errors.Is(err, policyErr) || !strings.Contains(err.Error(), "security-policy preflight") {
+		t.Fatalf("security-policy error = %v, want wrapped sentinel", err)
+	}
+	if ctx != nil || release != nil {
+		t.Fatalf("rejected security policy acquired a step: ctx=%v release-set=%t", ctx, release != nil)
+	}
+	if checks != 1 {
+		t.Fatalf("security-policy checks = %d, want 1", checks)
+	}
+	manager.mu.Lock()
+	steps := manager.active.steps
+	manager.mu.Unlock()
+	if steps != 0 {
+		t.Fatalf("security-policy rejection acquired %d privileged steps", steps)
+	}
+	if _, err := manager.finish(&ServiceMutationFinishRequest{
+		RequestID: testMutationRequestID,
+		OwnerID:   testMutationOwnerID,
+		Success:   false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRequiredServiceMutationStepRechecksSecurityPolicyEveryTime(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJob(t, manager)
+
+	checks := 0
+	installServiceMutationSecurityPolicyProbe(t, func() error {
+		checks++
+		return nil
+	})
+	binding := ServiceMutationBinding{
+		MutationRequestID: testMutationRequestID,
+		MutationOwnerID:   testMutationOwnerID,
+	}
+	for step := 0; step < 2; step++ {
+		_, release, err := (&Agent{}).requiredServiceMutationStep(
+			binding, nginxInstallTestStepClaim(),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		release()
+	}
+	if checks != 2 {
+		t.Fatalf("security-policy checks = %d, want one for each acquisition", checks)
+	}
+	if _, err := manager.finish(&ServiceMutationFinishRequest{
+		RequestID: testMutationRequestID,
+		OwnerID:   testMutationOwnerID,
+		Success:   false,
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

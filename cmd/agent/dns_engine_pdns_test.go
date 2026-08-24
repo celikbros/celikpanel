@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,6 +80,126 @@ func TestPDNSPairSecondaryReconfigureManifestIsExact(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClassifyPDNSPairSecondarySourceSeparatesFreshFromReconfigure(t *testing.T) {
+	manifest := testPDNSPairSecondaryReconfigureManifest(t)
+	tests := []struct {
+		name        string
+		stateExists bool
+		bindActive  bool
+		aliasActive bool
+		pdnsActive  bool
+		want        pdnsPairSecondarySourceClass
+		wantErr     bool
+	}{
+		{name: "fresh source with no running authority", want: pdnsPairSecondarySourceFresh},
+		{name: "unreceipted running PowerDNS", pdnsActive: true, want: pdnsPairSecondarySourceReconfigure},
+		{name: "durable source state", stateExists: true, wantErr: true},
+		{name: "running named authority", bindActive: true, wantErr: true},
+		{name: "running bind alias authority", aliasActive: true, wantErr: true},
+		{name: "mixed PowerDNS and BIND authorities", bindActive: true, pdnsActive: true, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := classifyPDNSPairSecondarySource(
+				manifest, test.stateExists, test.bindActive,
+				test.aliasActive, test.pdnsActive,
+			)
+			if test.wantErr {
+				if err == nil {
+					t.Fatal("unsafe paired-secondary source was accepted")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Fatalf("source class = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
+
+func TestPDNSPairSecondaryPackagePolicyKeepsReconfigureNoInstallInvariant(
+	t *testing.T,
+) {
+	fresh := dnsEngineSwitchSourceProof{}
+	if err := validatePDNSSwitchPackagePolicy(fresh, 2); err != nil {
+		t.Fatalf("fresh install rejected missing packages: %v", err)
+	}
+	reconfigure := dnsEngineSwitchSourceProof{PDNSPairSecondaryReconfigure: true}
+	if err := validatePDNSSwitchPackagePolicy(reconfigure, 0); err != nil {
+		t.Fatalf("installed reconfiguration was rejected: %v", err)
+	}
+	if err := validatePDNSSwitchPackagePolicy(reconfigure, 1); err == nil {
+		t.Fatal("secondary reconfiguration was allowed to install a package")
+	}
+}
+
+func TestPDNSSwitchSourceProofCASRejectsFreshReconfigureChanges(t *testing.T) {
+	fresh := dnsEngineSwitchSourceProof{}
+	reconfigure := dnsEngineSwitchSourceProof{PDNSPairSecondaryReconfigure: true}
+	for _, proof := range []dnsEngineSwitchSourceProof{fresh, reconfigure} {
+		if err := validatePDNSSwitchSourceProofCAS(proof, proof); err != nil {
+			t.Fatalf("stable source proof was rejected: %v", err)
+		}
+	}
+	if err := validatePDNSSwitchSourceProofCAS(fresh, reconfigure); err == nil {
+		t.Fatal("fresh-to-reconfigure source change was accepted")
+	}
+	if err := validatePDNSSwitchSourceProofCAS(reconfigure, fresh); err == nil {
+		t.Fatal("reconfigure-to-fresh source change was accepted")
+	}
+}
+
+func TestDirectPDNSSwitchRollbackRemovesJournalOnlyAfterFinalWrite(t *testing.T) {
+	t.Run("final write failure retains journal", func(t *testing.T) {
+		writeErr := errors.New("durable final phase write failed")
+		journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseRollingBack}
+		var order []string
+		err := finishDNSSwitchRollbackJournal(
+			&journal,
+			func(current dnsEngineSwitchJournal) error {
+				order = append(order, "write:"+current.Phase)
+				return writeErr
+			},
+			func() error {
+				order = append(order, "remove")
+				return nil
+			},
+		)
+		if !errors.Is(err, writeErr) ||
+			strings.Join(order, ",") != "write:"+dnsSwitchPhaseRolledBack ||
+			journal.Phase != dnsSwitchPhaseRolledBack {
+			t.Fatalf(
+				"failed final write did not retain journal: phase=%q order=%v err=%v",
+				journal.Phase, order, err,
+			)
+		}
+	})
+
+	t.Run("successful final write precedes removal", func(t *testing.T) {
+		journal := dnsEngineSwitchJournal{Phase: dnsSwitchPhaseRollingBack}
+		var order []string
+		err := finishDNSSwitchRollbackJournal(
+			&journal,
+			func(current dnsEngineSwitchJournal) error {
+				order = append(order, "write:"+current.Phase)
+				return nil
+			},
+			func() error {
+				order = append(order, "remove")
+				return nil
+			},
+		)
+		if err != nil ||
+			strings.Join(order, ",") !=
+				"write:"+dnsSwitchPhaseRolledBack+",remove" {
+			t.Fatalf("ordered finalization order=%v err=%v", order, err)
+		}
+	})
 }
 
 func initializeEmptyPDNSReconfigureDB(t *testing.T, path string) {
@@ -1325,6 +1446,275 @@ func TestBuildPDNSPairedSecondaryStagesExactPeerCatalog(t *testing.T) {
 	}
 	if total != 1 || exact != 1 {
 		t.Fatalf("secondary total=%d exact=%d", total, exact)
+	}
+}
+
+func TestBuildPDNSPairedSecondaryRejectsNoncanonicalPeerCatalog(t *testing.T) {
+	manifest := testPairedPDNSSwitchManifest(
+		t, transport.DNSPairRoleSecondary, nil,
+	)
+	for _, test := range []struct {
+		name    string
+		catalog dnsCatalogAXFRResult
+	}{
+		{
+			name:    "zero serial",
+			catalog: dnsCatalogAXFRResult{Members: []string{"one.test"}},
+		},
+		{
+			name: "unsorted members",
+			catalog: dnsCatalogAXFRResult{
+				Serial: 7, Members: []string{"two.test", "one.test"},
+			},
+		},
+		{
+			name: "duplicate members",
+			catalog: dnsCatalogAXFRResult{
+				Serial: 7, Members: []string{"one.test", "one.test"},
+			},
+		},
+		{
+			name: "catalog self member",
+			catalog: dnsCatalogAXFRResult{
+				Serial: 7,
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog := test.catalog
+			if test.name == "catalog self member" {
+				catalog.Members = []string{catalogDomain}
+			}
+			previous := probeDNSCatalogAXFR
+			probeDNSCatalogAXFR = func(
+				context.Context, string, string,
+			) (dnsCatalogAXFRResult, error) {
+				return catalog, nil
+			}
+			t.Cleanup(func() { probeDNSCatalogAXFR = previous })
+			path := filepath.Join(t.TempDir(), "unsafe-secondary.sqlite3")
+			if err := buildPDNSSwitchCandidate(
+				context.Background(), path, manifest, testPDNSEngineBinding(),
+			); err == nil {
+				t.Fatal("noncanonical peer catalog reached a switch candidate")
+			}
+		})
+	}
+}
+
+func TestBostonPowerDNSSecondaryUsesExplicitCatalogWithoutAutoSecondary(t *testing.T) {
+	previous := probeDNSCatalogAXFR
+	peerCatalogDomain, err := binddns.CatalogDomain("192.0.2.10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	probeDNSCatalogAXFR = func(
+		_ context.Context, address, domain string,
+	) (dnsCatalogAXFRResult, error) {
+		if address != "192.0.2.10" || domain != peerCatalogDomain {
+			t.Fatalf("catalog proof tuple=%q/%q", address, domain)
+		}
+		return dnsCatalogAXFRResult{
+			Serial: 17, Members: []string{"example.test"},
+		}, nil
+	}
+	t.Cleanup(func() { probeDNSCatalogAXFR = previous })
+
+	manifest := testPDNSPairSecondaryReconfigureManifest(t)
+	config, err := dnsClusterConfigForSwitchManifest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantConfig := "# Managed by CelikPanel - do not edit by hand / elle duzenlemeyin\n" +
+		"# Directional DNS pair: AXFR is restricted to the trusted local proof and exact peer.\n" +
+		"# Yonlu DNS cifti: AXFR guvenilir yerel kanit ve tam es ile sinirlidir.\n" +
+		"primary=yes\n" +
+		"secondary=yes\n" +
+		"allow-axfr-ips=192.0.2.10\n"
+	if config != wantConfig {
+		t.Fatalf("Boston secondary config differs:\n%s", config)
+	}
+	if strings.Contains(strings.ToLower(config), "autosecondary") ||
+		strings.Contains(strings.ToLower(config), "autoprimary") {
+		t.Fatalf("Boston secondary config enables automatic discovery:\n%s", config)
+	}
+
+	path := filepath.Join(t.TempDir(), "boston-secondary.sqlite3")
+	binding := testPDNSEngineBinding()
+	if err := buildPDNSSwitchCandidate(
+		context.Background(), path, manifest, binding,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPDNSSwitchDatabase(
+		context.Background(), path, manifest, binding,
+	); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openPDNSEngineDB(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var exact int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM domains
+		WHERE name=? COLLATE BINARY AND UPPER(type)='CONSUMER'
+		  AND master='192.0.2.10' AND account=?
+		  AND last_check IS NULL AND notified_serial IS NULL
+		  AND options IS NULL AND catalog IS NULL
+	`, peerCatalogDomain, pdnsPeerCatalogAccount).Scan(&exact); err != nil {
+		t.Fatal(err)
+	}
+	if exact != 1 {
+		t.Fatal("Boston secondary lacks its exact pre-start catalog consumer")
+	}
+}
+
+func TestPDNSPairedSecondaryVerifierAcceptsOnlyCompleteCatalogProjection(t *testing.T) {
+	previous := probeDNSCatalogAXFR
+	probeDNSCatalogAXFR = func(
+		_ context.Context, _ string, _ string,
+	) (dnsCatalogAXFRResult, error) {
+		return dnsCatalogAXFRResult{
+			Serial: 17, Members: []string{"one.test", "two.test"},
+		}, nil
+	}
+	t.Cleanup(func() { probeDNSCatalogAXFR = previous })
+	manifest := testPairedPDNSSwitchManifest(
+		t, transport.DNSPairRoleSecondary, nil,
+	)
+	catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name    string
+		members []string
+		wantErr bool
+	}{
+		{name: "pre-start consumer only"},
+		{
+			name:    "complete post-retrieve projection",
+			members: []string{"one.test", "two.test"},
+		},
+		{
+			name:    "partial projection",
+			members: []string{"one.test"},
+			wantErr: true,
+		},
+		{
+			name:    "foreign projection",
+			members: []string{"foreign.test", "one.test", "two.test"},
+			wantErr: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "secondary.sqlite3")
+			binding := testPDNSEngineBinding()
+			if err := buildPDNSSwitchCandidate(
+				context.Background(), path, manifest, binding,
+			); err != nil {
+				t.Fatal(err)
+			}
+			db, err := openPDNSEngineDB(path, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, member := range test.members {
+				if _, err := db.Exec(`
+					INSERT INTO domains(name,type,master,catalog)
+					VALUES(?, 'SECONDARY', ?, ?)
+				`, member, manifest.PeerIP, catalogDomain); err != nil {
+					db.Close()
+					t.Fatal(err)
+				}
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			err = verifyPDNSSwitchDatabase(
+				context.Background(), path, manifest, binding,
+			)
+			if test.wantErr && err == nil {
+				t.Fatal("non-exact catalog projection was accepted")
+			}
+			if !test.wantErr && err != nil {
+				t.Fatalf("exact catalog projection rejected: %v", err)
+			}
+		})
+	}
+}
+
+func TestRetrievePDNSPairedSecondaryWaitsForExactSQLiteProjection(t *testing.T) {
+	previousAXFR := probeDNSCatalogAXFR
+	previousRetrieve := dnsClusterRetrieve
+	previousPurge := dnsClusterPurge
+	manifest := testPDNSPairSecondaryReconfigureManifest(t)
+	catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog := dnsCatalogAXFRResult{
+		Serial: 17, Members: []string{"one.test"},
+	}
+	probeDNSCatalogAXFR = func(
+		_ context.Context, address, domain string,
+	) (dnsCatalogAXFRResult, error) {
+		if address != manifest.PeerIP || domain != catalogDomain {
+			t.Fatalf("catalog proof tuple=%q/%q", address, domain)
+		}
+		return catalog, nil
+	}
+	path := filepath.Join(t.TempDir(), "live-secondary.sqlite3")
+	binding := testPDNSEngineBinding()
+	if err := buildPDNSSwitchCandidate(
+		context.Background(), path, manifest, binding,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CELIKPANEL_PDNS_DB", path)
+	var retrieved, purged []string
+	dnsClusterRetrieve = func(_ context.Context, zone string) ([]byte, error) {
+		retrieved = append(retrieved, zone)
+		if zone == "one.test" {
+			db, err := openPDNSEngineDB(path, false)
+			if err != nil {
+				return nil, err
+			}
+			_, err = db.Exec(`
+				INSERT OR IGNORE INTO domains(name,type,master,catalog)
+				VALUES('one.test', 'SECONDARY', ?, ?)
+			`, manifest.PeerIP, catalogDomain)
+			closeErr := db.Close()
+			if err != nil {
+				return nil, err
+			}
+			return nil, closeErr
+		}
+		return nil, nil
+	}
+	dnsClusterPurge = func(_ context.Context, zone string) ([]byte, error) {
+		purged = append(purged, zone)
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		probeDNSCatalogAXFR = previousAXFR
+		dnsClusterRetrieve = previousRetrieve
+		dnsClusterPurge = previousPurge
+	})
+	if err := retrievePDNSPairSecondaryZones(
+		context.Background(), manifest,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(retrieved, []string{catalogDomain, "one.test"}) ||
+		!slices.Equal(purged, []string{catalogDomain, "one.test"}) {
+		t.Fatalf("retrieved=%v purged=%v", retrieved, purged)
 	}
 }
 

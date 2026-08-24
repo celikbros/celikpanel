@@ -79,6 +79,18 @@ func CatalogDomain(address string) (string, error) {
 	return catalogDomain(address), nil
 }
 
+// CatalogMemberLabel returns the deterministic RFC 9432 member-node label
+// shared by the BIND and PowerDNS producers and the AXFR verifier. SHA-224's
+// 56 lowercase hexadecimal octets fit in one RFC 1035 DNS label.
+func CatalogMemberLabel(member string) (string, error) {
+	canonical, err := hostname.CanonicalFQDN(member)
+	if err != nil || canonical != member {
+		return "", errors.New("catalog member is not canonical")
+	}
+	digest := sha256.Sum224([]byte(canonical))
+	return fmt.Sprintf("%x", digest), nil
+}
+
 // CatalogZoneRecords renders the RFC 9432 catalog-zone v2 records that a
 // PowerDNS primary publishes for a BIND secondary. The catalog identity uses
 // only the primary address, so both panels derive it without a private API.
@@ -109,18 +121,21 @@ func CatalogZoneRecords(
 		{
 			Name: domain, Type: "SOA",
 			Content: fmt.Sprintf(
-				"%s hostmaster.%s %d 60 30 3600 30",
-				domain, domain, serial,
+				"invalid. invalid. %d 60 30 3600 30",
+				serial,
 			),
 			TTL: 60,
 		},
-		{Name: domain, Type: "NS", Content: domain, TTL: 60},
+		{Name: domain, Type: "NS", Content: "invalid.", TTL: 60},
 		{Name: "version." + domain, Type: "TXT", Content: "\"2\"", TTL: 60},
 	}
 	for _, member := range canonicalMembers {
-		digest := sha256.Sum256([]byte(member))
+		label, labelErr := CatalogMemberLabel(member)
+		if labelErr != nil {
+			return "", nil, labelErr
+		}
 		records = append(records, transport.ZoneRecord{
-			Name: fmt.Sprintf("%x.zones.%s", digest, domain),
+			Name: label + ".zones." + domain,
 			Type: "PTR", Content: member, TTL: 60,
 		})
 	}
@@ -170,8 +185,11 @@ func renderCatalogZone(pairing Pairing, serial uint32, zones []treeZone) ([]byte
 	output.WriteString(fmt.Sprintf("%d 60 30 3600 30\n", serial))
 	output.WriteString("@ IN NS invalid.\nversion IN TXT \"2\"\n")
 	for _, domain := range members {
-		digest := sha256.Sum256([]byte(domain))
-		output.WriteString(fmt.Sprintf("%x.zones IN PTR %s.\n", digest, domain))
+		label, err := CatalogMemberLabel(domain)
+		if err != nil {
+			return nil, err
+		}
+		output.WriteString(fmt.Sprintf("%s.zones IN PTR %s.\n", label, domain))
 	}
 	return []byte(output.String()), nil
 }

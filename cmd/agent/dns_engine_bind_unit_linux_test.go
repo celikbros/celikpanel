@@ -4,11 +4,14 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +23,31 @@ import (
 const aptBINDVendorUnitFixture = certifiedAPTBINDVendorUnit
 const aptBINDVendorEnvironmentFixture = certifiedAPTBINDVendorEnvironment
 const pacmanBINDVendorUnitFixture = certifiedPacmanBINDVendorUnit
+
+func TestCertifiedAPTBINDVendorArtifactsMatchReviewedPackages(t *testing.T) {
+	for _, artifact := range []struct {
+		name       string
+		data       string
+		size       int
+		wantSHA256 string
+	}{
+		{
+			name: "named.service", data: certifiedAPTBINDVendorUnit, size: 376,
+			wantSHA256: "ed631f7bfee5e9175e2d98511315cb877d1f91bbc118b79c74332c1008dfd4dd",
+		},
+		{
+			name: "/etc/default/named", data: certifiedAPTBINDVendorEnvironment, size: 86,
+			wantSHA256: "b825c0739a949b3dff55d2587d94df934a3a16384d5a9d0b1a2e0e969b8fca42",
+		},
+	} {
+		if len(artifact.data) != artifact.size {
+			t.Fatalf("%s size = %d, want %d", artifact.name, len(artifact.data), artifact.size)
+		}
+		if got := fmt.Sprintf("%x", sha256.Sum256([]byte(artifact.data))); got != artifact.wantSHA256 {
+			t.Fatalf("%s SHA-256 = %s, want %s", artifact.name, got, artifact.wantSHA256)
+		}
+	}
+}
 
 func TestRealSystemdAPTAliasIsMaterializedOnlyByEnable(t *testing.T) {
 	systemctl, err := exec.LookPath("systemctl")
@@ -173,7 +201,7 @@ func TestInspectBINDVendorFilesAtAcceptsCertifiedAPTAndPacmanUnits(t *testing.T)
 	} {
 		t.Run(string(manager), func(t *testing.T) {
 			fixture := newBINDVendorRootFixture(t, manager)
-			profile := hostplatform.Profile{PackageManager: manager}
+			profile := testPacmanBINDProfile()
 			if manager == hostplatform.PackageManagerAPT {
 				profile = testUbuntuBINDProfile()
 			}
@@ -191,6 +219,34 @@ func TestInspectBINDVendorFilesAtAcceptsCertifiedAPTAndPacmanUnits(t *testing.T)
 				t.Fatalf("environment identity = %#v", identity.Environment)
 			}
 		})
+	}
+}
+
+func TestVerifyExactPacmanBINDVendorPackageOwnership(t *testing.T) {
+	var paths []string
+	err := verifyExactPacmanBINDVendorPackageOwnership(
+		context.Background(),
+		func(_ context.Context, path string) ([]byte, error) {
+			paths = append(paths, path)
+			return []byte("bind\n"), nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(paths, []string{"/usr/lib/systemd/system/named.service"}) {
+		t.Fatalf("package owner paths = %#v", paths)
+	}
+	for _, output := range []string{"", "bind 9.20.9-1\n", "evil\n", "bind\r\n"} {
+		err := verifyExactPacmanBINDVendorPackageOwnership(
+			context.Background(),
+			func(context.Context, string) ([]byte, error) {
+				return []byte(output), nil
+			},
+		)
+		if err == nil {
+			t.Fatalf("noncanonical pacman ownership output %q accepted", output)
+		}
 	}
 }
 

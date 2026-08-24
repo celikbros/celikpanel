@@ -128,6 +128,15 @@ func serviceMutationSpamFilter(serviceID string) bool {
 	return service != nil && service.ConflictGroup == "spam-filter"
 }
 
+func serviceMutationDNSEngineTarget(target string) bool {
+	target = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(target)), ".service")
+	service := core.GetManagedServiceByID(target)
+	if service == nil {
+		service = core.ServiceForUnit(target)
+	}
+	return service != nil && service.ConflictGroup == "dns-server"
+}
+
 func serviceMutationCanonicalFQDN(value string) bool {
 	canonical, err := hostname.CanonicalFQDN(value)
 	return err == nil && canonical == value
@@ -138,7 +147,7 @@ func serviceMutationValidInstallJob(job *ServiceMutationJob) bool {
 		return false
 	}
 	service := core.GetManagedServiceByID(job.Target)
-	if service == nil {
+	if service == nil || service.ConflictGroup == "dns-server" {
 		return false
 	}
 	if job.PackageName == "" {
@@ -149,6 +158,18 @@ func serviceMutationValidInstallJob(job *ServiceMutationJob) bool {
 }
 
 func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationStepClaim) bool {
+	switch claim.method {
+	case serviceMutationStepInstallService,
+		serviceMutationStepUninstallService,
+		serviceMutationStepServiceAction,
+		serviceMutationStepStartService,
+		serviceMutationStepResetFailedUnit:
+		if serviceMutationDNSEngineTarget(claim.target) ||
+			(job != nil && serviceMutationDNSEngineTarget(job.Target)) {
+			return false
+		}
+	}
+
 	switch claim.method {
 	case serviceMutationStepInstallService:
 		return claim.action == "install" && claim.target != "roundcube" &&
@@ -196,9 +217,7 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 				claim.action != "restart" && claim.action != "reload") {
 			return false
 		}
-		return serviceMutationJobMatches(job, "service_"+claim.action, claim.target, "") ||
-			(claim.target == "pdns" && claim.action == "restart" &&
-				serviceMutationJobMatches(job, "service_install", "pdns", ""))
+		return serviceMutationJobMatches(job, "service_"+claim.action, claim.target, "")
 
 	case serviceMutationStepStartService, serviceMutationStepResetFailedUnit:
 		expectedAction := "start"
@@ -214,8 +233,7 @@ func serviceMutationStepAllowed(job *ServiceMutationJob, claim serviceMutationSt
 
 	case serviceMutationStepConfigurePowerDNSSQLite:
 		return claim.target == "pdns" && claim.packageName == "" && claim.action == "configure" &&
-			(serviceMutationJobMatches(job, "pdns_configure", "pdns", "") ||
-				serviceMutationJobMatches(job, "service_install", "pdns", ""))
+			serviceMutationJobMatches(job, "pdns_configure", "pdns", "")
 
 	case serviceMutationStepSyncDNSZone:
 		if !serviceMutationCanonicalFQDN(claim.target) ||

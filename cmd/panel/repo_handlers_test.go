@@ -23,6 +23,8 @@ type RepoHandlerTestRequest struct {
 
 type repoHandlerTestAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
+
 	status      RepoStatusResp
 	statusErr   error
 	packages    RepoPackagesResp

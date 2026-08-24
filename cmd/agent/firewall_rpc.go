@@ -1145,6 +1145,7 @@ var trustedSSHDExecutablePaths = []string{
 }
 
 var trustedFirewallCommandPaths = map[string][]string{
+	"ip":        {"/usr/bin/ip"},
 	"nft":       {"/usr/sbin/nft", "/usr/bin/nft"},
 	"ss":        {"/usr/sbin/ss", "/usr/bin/ss"},
 	"systemctl": {"/usr/bin/systemctl"},

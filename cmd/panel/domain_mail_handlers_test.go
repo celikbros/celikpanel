@@ -21,6 +21,8 @@ import (
 )
 
 type mailMutationPanelAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu                sync.Mutex
 	addApplied        bool
 	forwardingApplied bool

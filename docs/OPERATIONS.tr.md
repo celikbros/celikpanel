@@ -92,10 +92,11 @@ yapmaz.
 
 Güvenlik duvarı restore yolu açılış açısından kritiktir. Kurulum, systemd,
 güvenlik duvarı kalıcılığı, update, bootstrap veya rollback davranışını
-değiştiren sürüm; disposable gerçek sanal makinelerde hem **Ubuntu 24.04** hem
-güncel **Arch Linux** üzerinde de geçmelidir. Her işletim sisteminde temiz
-kurulum, ilgili update modu, rollback ve gerçek reboot için en az şu durumların
-kanıtını saklayın:
+değiştiren sürüm; disposable gerçek sanal makinelerde **Debian 13**, **Ubuntu
+24.04** ve güncel **Arch Linux** üzerinde de geçmelidir. Bunlar dağıtım adıyla
+yetkilendirme listesi değil, uygulanan paket ekosistemlerinin kabul
+fixture'larıdır. Her işletim sisteminde temiz kurulum, ilgili update modu,
+rollback ve gerçek reboot için en az şu durumların kanıtını saklayın:
 
 1. kayıtlı güvenlik duvarı snapshot'ı yokken restore unit'i kapalı kalır; reboot
    politika etkinleştirmez veya uygulamaz;
@@ -350,15 +351,18 @@ doğrudan kurabilir; eş kurmak için geçici motor kullanmayın.
 
 Sabit Frankfurt/Boston dağıtımında şu sırayı kullanın:
 
-1. Frankfurt/NS1'i Boston'un sabit eş IPv4 adresiyle birincil olarak hazırlayın;
-   ardından BIND'i inceleyip doğrudan etkinleştirin. Boston hazır olmadan kesin
-   yönetilen ve çalışır olabilir; fakat eş-bekliyor görünmeli ve panelde yerel
-   zone yazılarını henüz kabul etmemelidir.
-2. Boston/NS2'de algılanan boş, panel-yönetimli Tek-sunucu PowerDNS otoritesini
-   inceleyin. Yönlü ikincile özel doğrudan yeniden yapılandırmayı başlatın. İşlem
-   kesin PowerDNS veritabanı, config ve unit durumunun anlık görüntüsünü alır,
-   katalog tüketicisini yazar, tek sınırlı yeniden başlatma yapar ve hedefi
-   kanıtlar. Ara adım olarak Boston'a BIND kurmayın veya etkinleştirmeyin.
+1. Debian 13 Frankfurt/NS1'i Boston'un sabit eş IPv4 adresiyle birincil olarak
+   hazırlayın; ardından BIND'i inceleyip doğrudan etkinleştirin. Boston hazır
+   olmadan kesin yönetilen ve çalışır olabilir; fakat eş-bekliyor görünmeli ve
+   panelde yerel zone yazılarını henüz kabul etmemelidir.
+2. Ubuntu 24.04 Boston/NS2'de PowerDNS'i yönlü ikincil olarak inceleyip doğrudan
+   etkinleştirin. Temiz sunucuda işlem hedefi kapalı tutarken kesin paketleri
+   kurar, katalog tüketicisini oluşturur ve commit öncesi hedefi kanıtlar.
+   İşlem-öncesi kanıt bunun yerine boş ve kesin panel-yönetimli Tek-sunucu
+   PowerDNS otoritesi bulursa yeniden yapılandırma yolunu seçer: veritabanı,
+   config ve unit durumunu snapshot'lar; tüketiciyi yazar, bir sınırlı restart
+   yapar, kanıtlar ve commit eder. Ara adım olarak Boston'a BIND kurmayın veya
+   etkinleştirmeyin.
 3. Frankfurt durumunu yenileyin. Yayın ancak agent kesin eş kataloğunu ve üye
    serilerini kanıtladığında hazır olur. Zone'ları yalnız bundan sonra oluşturun
    veya değiştirin.

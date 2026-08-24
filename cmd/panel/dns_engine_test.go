@@ -78,6 +78,14 @@ func (agent *dnsEngineTestAgent) Version(
 	return nil
 }
 
+func (agent *dnsEngineTestAgent) HostPlatform(
+	_ *transport.Empty,
+	response *transport.HostPlatformResponse,
+) error {
+	*response = debianPolicyTestIdentity()
+	return nil
+}
+
 func (agent *dnsEngineTestAgent) installedServiceIDsLocked() []string {
 	var installed []string
 	for engine, runtime := range agent.runtimes {
@@ -326,7 +334,6 @@ func (agent *dnsEngineTestAgent) ServiceMutationStatus(
 
 func attachDNSEngineTestAgent(t *testing.T, panel *Panel, agent *dnsEngineTestAgent) {
 	t.Helper()
-	panel.pkgFamilyVal = "apt"
 	server := rpc.NewServer()
 	if err := server.RegisterName("Agent", agent); err != nil {
 		t.Fatal(err)

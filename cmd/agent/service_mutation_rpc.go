@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -47,6 +48,8 @@ var (
 	globalServiceMutationMu      sync.Mutex
 	globalServiceMutationManager *serviceMutationManager
 	globalServiceMutationErr     error
+
+	verifyServiceMutationSecurityPolicy = hostplatform.VerifyLiveSecurityPolicy
 )
 
 const (
@@ -1892,6 +1895,10 @@ func (m *serviceMutationManager) acquireStep(
 	m.mu.Unlock()
 
 	runtime.stepMu.Lock()
+	if err := serviceMutationSecurityPolicyPreflight(); err != nil {
+		runtime.stepMu.Unlock()
+		return nil, nil, err
+	}
 	m.mu.Lock()
 	if m.poisoned != nil || m.active != runtime ||
 		runtime.job.Status != serviceMutationStatusRunning {
@@ -2205,6 +2212,13 @@ func (a *Agent) FinishServiceMutation(
 	response.Job = job
 	if err != nil {
 		response.Error = err.Error()
+	}
+	return nil
+}
+
+func serviceMutationSecurityPolicyPreflight() error {
+	if err := verifyServiceMutationSecurityPolicy(); err != nil {
+		return fmt.Errorf("service mutation security-policy preflight: %w", err)
 	}
 	return nil
 }

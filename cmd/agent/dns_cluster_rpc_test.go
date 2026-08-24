@@ -128,8 +128,8 @@ func prepareDNSClusterRuntimeTest(t *testing.T) string {
 	}
 	dnsClusterApplyAutoprimaryTx = applyAutoprimaryTx
 	dnsClusterSetLocalZoneTypeTx = setLocalZoneTypeTx
-	dnsPairHostOwnedAddresses = func() []string {
-		return []string{"192.0.2.10"}
+	dnsPairHostOwnedAddresses = func() ([]string, error) {
+		return []string{"192.0.2.10"}, nil
 	}
 	return dnsClusterConf
 }
@@ -621,7 +621,6 @@ func TestManagedPowerDNSConfigRejectsParserAmbiguity(t *testing.T) {
 func TestManagedPowerDNSClusterConfigRejectsParserAmbiguity(t *testing.T) {
 	baseline := "primary=yes\n" +
 		"secondary=yes\n" +
-		"autosecondary=yes\n" +
 		"allow-axfr-ips=192.0.2.10\n" +
 		"also-notify=192.0.2.10\n"
 	if !validDNSClusterPowerDNSConfig(baseline) ||
@@ -632,6 +631,18 @@ func TestManagedPowerDNSClusterConfigRejectsParserAmbiguity(t *testing.T) {
 		name   string
 		config string
 	}{
+		{
+			name:   "autosecondary explicitly enabled",
+			config: baseline + "autosecondary=yes\n",
+		},
+		{
+			name:   "autosecondary explicitly disabled",
+			config: baseline + "autosecondary=no\n",
+		},
+		{
+			name:   "autoprimary explicitly enabled",
+			config: baseline + "autoprimary=yes\n",
+		},
 		{
 			name:   "comment continuation swallows required primary",
 			config: "# comment\\\n" + baseline,
@@ -696,7 +707,6 @@ func TestDNSClusterConfigUsesSymmetricPair(t *testing.T) {
 	for _, want := range []string{
 		"primary=yes",
 		"secondary=yes",
-		"autosecondary=yes",
 		"allow-axfr-ips=2.25.80.4",
 		"also-notify=2.25.80.4",
 	} {
@@ -706,6 +716,10 @@ func TestDNSClusterConfigUsesSymmetricPair(t *testing.T) {
 	}
 	if strings.Contains(got, "allow-axfr-ip=") {
 		t.Fatalf("paired config uses PowerDNS's invalid singular setting:\\n%s", got)
+	}
+	if strings.Contains(strings.ToLower(got), "autosecondary") ||
+		strings.Contains(strings.ToLower(got), "autoprimary") {
+		t.Fatalf("paired config enables automatic secondary discovery:\\n%s", got)
 	}
 }
 
@@ -1153,7 +1167,6 @@ func TestDNSClusterReadinessReportsPowerDNSAvailability(t *testing.T) {
 
 	clusterBaseline := "primary=yes\n" +
 		"secondary=yes\n" +
-		"autosecondary=yes\n" +
 		"allow-axfr-ips=192.0.2.10\n" +
 		"also-notify=192.0.2.10\n"
 	for _, test := range []struct {

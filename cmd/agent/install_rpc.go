@@ -27,6 +27,15 @@ type InstallServiceRequest = transport.InstallServiceRequest
 
 type InstallServiceResponse = transport.InstallServiceResponse
 
+const genericDNSEngineWorkflowRequired = "BIND and PowerDNS must be installed, activated, switched, removed, or controlled through the dedicated DNS infrastructure workflow"
+
+func genericDNSEngineMutationRefusal(service *core.ManagedService) string {
+	if service != nil && service.ConflictGroup == "dns-server" {
+		return genericDNSEngineWorkflowRequired
+	}
+	return ""
+}
+
 // validateRepoPackageSelection accepts a caller-selected package only when the
 // service catalogue explicitly declares a non-empty PackagePattern and that
 // pattern matches the entire package name. This validation is intentionally
@@ -74,6 +83,10 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 	svc := core.GetManagedServiceByID(serviceID)
 	if svc == nil {
 		resp.Error = "unknown service"
+		return nil
+	}
+	if refusal := genericDNSEngineMutationRefusal(svc); refusal != "" {
+		resp.Error = refusal
 		return nil
 	}
 
@@ -136,7 +149,7 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		// "target not found: php8.3-fpm" diye ölür — panele ürün sorusu soran
 		// birine gösterilen bir paket-yöneticisi hatası.
 		if family != "apt" {
-			resp.Error = "choosing a version needs a managed repository, which is only supported on apt (Debian/Ubuntu) systems yet"
+			resp.Error = "choosing a version needs a managed repository, which currently requires a verified APT package ecosystem"
 			return nil
 		}
 		if len(selectedPackageMatch) > 1 {
@@ -602,6 +615,10 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 		resp.Error = "unknown service"
 		return nil
 	}
+	if refusal := genericDNSEngineMutationRefusal(svc); refusal != "" {
+		resp.Error = refusal
+		return nil
+	}
 	// Reject an invalid catalogue/package selection before asking for a
 	// privileged lease. This is pure input validation and mirrors InstallService.
 	// Geçersiz katalog/paket seçimini ayrıcalıklı lease istemeden önce reddet.
@@ -645,6 +662,10 @@ func (a *Agent) uninstallServiceWithOps(
 	svc := core.GetManagedServiceByID(req.ID)
 	if svc == nil {
 		resp.Error = "unknown service"
+		return nil
+	}
+	if refusal := genericDNSEngineMutationRefusal(svc); refusal != "" {
+		resp.Error = refusal
 		return nil
 	}
 

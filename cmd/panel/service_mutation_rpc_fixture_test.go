@@ -3,7 +3,28 @@ package main
 import (
 	"sync"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+// verifiedAPTAgentRPCFixture gives mutation-positive RPC fakes the complete,
+// verified platform identity required by the production authorization policy.
+// Tests that exercise missing or legacy identity behavior must not embed it.
+type verifiedAPTAgentRPCFixture struct {
+	hostPlatformResponse *transport.HostPlatformResponse
+}
+
+func (f *verifiedAPTAgentRPCFixture) HostPlatform(
+	_ *transport.Empty,
+	response *transport.HostPlatformResponse,
+) error {
+	if f.hostPlatformResponse != nil {
+		*response = *f.hostPlatformResponse
+		return nil
+	}
+	*response = debianPolicyTestIdentity()
+	return nil
+}
 
 // durableMutationRPCFixture gives focused handler fakes the same begin,
 // heartbeat and finish contract required by production privileged RPCs.

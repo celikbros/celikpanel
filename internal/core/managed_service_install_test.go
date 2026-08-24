@@ -20,7 +20,8 @@ func TestManagedServiceInstallDisabledReason(t *testing.T) {
 		{"vsftpd", "pacman", ManagedServiceInstallBlockIntegration},
 		{"nginx", "apt", ManagedServiceInstallBlockNone},
 		{"nginx", "dnf", ManagedServiceInstallBlockDistribution},
-		{"pdns", "pacman", ManagedServiceInstallBlockNone},
+		{"pdns", "apt", ManagedServiceInstallBlockNone},
+		{"pdns", "pacman", ManagedServiceInstallBlockDistribution},
 		{"postfix", "apt", ManagedServiceInstallBlockNone},
 		{"spamassassin", "pacman", ManagedServiceInstallBlockDistribution},
 		{"roundcube", "pacman", ManagedServiceInstallBlockNone},
@@ -39,13 +40,39 @@ func TestManagedServiceInstallDisabledReason(t *testing.T) {
 	}
 }
 
-func TestRHELPreviewNginxCandidateRequiresExactCertifiedIdentity(t *testing.T) {
+func TestPowerDNSPacmanPackagesRemainObservableButLifecycleIsClosed(t *testing.T) {
+	service := GetManagedServiceByID("pdns")
+	if service == nil {
+		t.Fatal("PowerDNS is missing from the managed-service catalogue")
+	}
+	if got := service.Packages["pacman"]; len(got) != 1 || got[0] != "powerdns" {
+		t.Fatalf("PowerDNS pacman observation packages = %v, want [powerdns]", got)
+	}
+	if len(service.LifecycleInstallFamilies) != 1 || service.LifecycleInstallFamilies["pacman"] {
+		t.Fatal("PowerDNS pacman lifecycle was accidentally certified")
+	}
+	if !service.LifecycleInstallFamilies["apt"] {
+		t.Fatal("PowerDNS APT lifecycle certification is missing")
+	}
+
+	bind := GetManagedServiceByID("bind")
+	if bind == nil {
+		t.Fatal("BIND is missing from the managed-service catalogue")
+	}
+	if len(bind.LifecycleInstallFamilies) != 2 ||
+		!bind.LifecycleInstallFamilies["apt"] ||
+		!bind.LifecycleInstallFamilies["pacman"] {
+		t.Fatalf("BIND lifecycle families = %v, want explicit apt and pacman", bind.LifecycleInstallFamilies)
+	}
+}
+
+func TestRHELPreviewNginxCandidateUsesVerifiedCapabilityNotDistroMetadata(t *testing.T) {
 	base := ManagedServiceHostProfile{
 		DistroFamily:   "rhel",
 		PackageFamily:  "dnf",
 		ServiceManager: "systemd",
-		DistroID:       "almalinux",
-		VersionID:      "9.6",
+		DistroID:       "examplelinux",
+		VersionID:      "2026.8",
 		Architecture:   "amd64",
 	}
 	tests := []struct {
@@ -53,23 +80,14 @@ func TestRHELPreviewNginxCandidateRequiresExactCertifiedIdentity(t *testing.T) {
 		change func(*ManagedServiceHostProfile)
 		want   bool
 	}{
-		{name: "AlmaLinux 9 amd64", want: true},
-		{name: "Rocky Linux 9 arm64", change: func(h *ManagedServiceHostProfile) {
-			h.DistroID, h.Architecture = "rocky", "arm64"
+		{name: "unknown metadata on amd64", want: true},
+		{name: "different metadata on arm64", change: func(h *ManagedServiceHostProfile) {
+			h.DistroID, h.VersionID, h.Architecture = "anotherlinux", "rolling", "arm64"
 		}, want: true},
 		{name: "family only", change: func(h *ManagedServiceHostProfile) {
-			h.DistroFamily, h.DistroID, h.VersionID = "", "", ""
+			h.DistroFamily = ""
 		}},
-		{name: "RHEL", change: func(h *ManagedServiceHostProfile) { h.DistroID = "rhel" }},
-		{name: "Fedora", change: func(h *ManagedServiceHostProfile) { h.DistroID = "fedora" }},
-		{name: "CentOS Stream", change: func(h *ManagedServiceHostProfile) { h.DistroID = "centos" }},
-		{name: "CloudLinux", change: func(h *ManagedServiceHostProfile) { h.DistroID = "cloudlinux" }},
-		{name: "AlmaLinux 8", change: func(h *ManagedServiceHostProfile) { h.VersionID = "8.10" }},
-		{name: "Rocky Linux 10", change: func(h *ManagedServiceHostProfile) {
-			h.DistroID, h.VersionID = "rocky", "10.0"
-		}},
-		{name: "stream-like version", change: func(h *ManagedServiceHostProfile) { h.VersionID = "9-stream" }},
-		{name: "missing version", change: func(h *ManagedServiceHostProfile) { h.VersionID = "" }},
+		{name: "wrong family", change: func(h *ManagedServiceHostProfile) { h.DistroFamily = "debian" }},
 		{name: "unsupported 386", change: func(h *ManagedServiceHostProfile) { h.Architecture = "386" }},
 		{name: "unsupported custom arch", change: func(h *ManagedServiceHostProfile) { h.Architecture = "s390x" }},
 		{name: "wrong package manager", change: func(h *ManagedServiceHostProfile) { h.PackageFamily = "apt" }},
@@ -93,8 +111,8 @@ func TestRHELPreviewRemainsClosedEvenForQualifiedNginxCandidate(t *testing.T) {
 		DistroFamily:   "rhel",
 		PackageFamily:  "dnf",
 		ServiceManager: "systemd",
-		DistroID:       "rocky",
-		VersionID:      "9.6",
+		DistroID:       "customlinux",
+		VersionID:      "rolling",
 		Architecture:   "amd64",
 	}
 	kind, reason := ManagedServiceInstallBlockForHost(GetManagedServiceByID("nginx"), host)
@@ -116,8 +134,8 @@ func TestRHELPreviewBlocksEveryNonNginxComponentIncludingPortableInstallers(t *t
 		DistroFamily:   "rhel",
 		PackageFamily:  "dnf",
 		ServiceManager: "systemd",
-		DistroID:       "almalinux",
-		VersionID:      "9.6",
+		DistroID:       "customlinux",
+		VersionID:      "rolling",
 		Architecture:   "arm64",
 	}
 	for i := range ManagedServices {

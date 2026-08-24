@@ -891,8 +891,8 @@ func TestVPNSyncV2RejectsLegacyAgentWithoutStateCAS(t *testing.T) {
 	}
 	attachVPNTestAgent(t, fixture.panel, agent)
 	err := fixture.panel.syncVPNPeers(context.Background())
-	if err == nil ||
-		!strings.Contains(err.Error(), "rpc: can't find method Agent.SyncVPNPeersV2") {
+	if !errors.Is(err, errAgentRPCPlatformCapabilityDenied) ||
+		!strings.Contains(err.Error(), "verified HostPlatform") {
 		t.Fatalf("legacy agent error=%v", err)
 	}
 	if calls := agent.v1Calls.Load(); calls != 0 {

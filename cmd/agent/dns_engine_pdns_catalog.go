@@ -60,14 +60,59 @@ func stagePDNSPairSecondaryTx(
 	if tx == nil || catalogDomain == "" {
 		return errors.New("PowerDNS secondary staging identity is incomplete")
 	}
-	if catalog.Serial == 0 {
-		return errors.New("PowerDNS secondary catalog serial is invalid")
+	if err := validatePDNSPairSecondaryCatalogSnapshot(
+		manifest, catalog, catalogDomain,
+	); err != nil {
+		return err
 	}
-	_, err := tx.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO domains(name,type,master,account)
 		VALUES(?, 'CONSUMER', ?, ?)
-	`, catalogDomain, manifest.PeerIP, pdnsPeerCatalogAccount)
-	return err
+	`, catalogDomain, manifest.PeerIP, pdnsPeerCatalogAccount); err != nil {
+		return err
+	}
+	var name, zoneType string
+	var master, account, options, memberCatalog sql.NullString
+	var lastCheck, notifiedSerial sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `
+		SELECT name, UPPER(type), master, last_check, notified_serial,
+		       account, options, catalog
+		FROM domains WHERE name = ? COLLATE BINARY
+	`, catalogDomain).Scan(
+		&name, &zoneType, &master, &lastCheck, &notifiedSerial,
+		&account, &options, &memberCatalog,
+	); err != nil {
+		return err
+	}
+	if name != catalogDomain || zoneType != "CONSUMER" ||
+		!master.Valid || master.String != manifest.PeerIP ||
+		lastCheck.Valid || notifiedSerial.Valid ||
+		!account.Valid || account.String != pdnsPeerCatalogAccount ||
+		options.Valid || memberCatalog.Valid {
+		return errors.New("PowerDNS secondary catalog staging row is not canonical")
+	}
+	return nil
+}
+
+func validatePDNSPairSecondaryCatalogSnapshot(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	catalog dnsCatalogAXFRResult,
+	catalogDomain string,
+) error {
+	if manifest.Topology != transport.DNSTopologyPaired ||
+		manifest.PairRole != transport.DNSPairRoleSecondary ||
+		catalog.Serial == 0 ||
+		!serviceMutationCanonicalFQDN(catalogDomain) ||
+		!sort.StringsAreSorted(catalog.Members) {
+		return errors.New("PowerDNS secondary catalog snapshot is invalid")
+	}
+	for index, member := range catalog.Members {
+		if !serviceMutationCanonicalFQDN(member) || member == catalogDomain ||
+			(index > 0 && member == catalog.Members[index-1]) {
+			return errors.New("PowerDNS secondary catalog members are invalid")
+		}
+	}
+	return nil
 }
 
 func verifyPDNSPairSecondaryTx(
@@ -76,36 +121,99 @@ func verifyPDNSPairSecondaryTx(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	catalog dnsCatalogAXFRResult,
 	catalogDomain string,
-) error {
+) (int, error) {
+	if err := validatePDNSPairSecondaryCatalogSnapshot(
+		manifest, catalog, catalogDomain,
+	); err != nil {
+		return 0, err
+	}
 	rows, err := tx.QueryContext(ctx, `
 		SELECT name, UPPER(type), COALESCE(master,''), COALESCE(account,''),
-		       COALESCE(catalog,'')
+		       COALESCE(catalog,''), COALESCE(options,'')
 		FROM domains ORDER BY name COLLATE BINARY
 	`)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer rows.Close()
-	seen := 0
+	consumerSeen := 0
+	members := make([]string, 0, len(catalog.Members))
 	for rows.Next() {
-		var name, zoneType, master, account, memberCatalog string
-		if err := rows.Scan(&name, &zoneType, &master, &account, &memberCatalog); err != nil {
-			return err
+		var name, zoneType, master, account, memberCatalog, options string
+		if err := rows.Scan(
+			&name, &zoneType, &master, &account, &memberCatalog, &options,
+		); err != nil {
+			return 0, err
 		}
-		if name != catalogDomain || zoneType != "CONSUMER" ||
-			master != manifest.PeerIP || account != pdnsPeerCatalogAccount ||
-			memberCatalog != "" {
-			return errors.New("PowerDNS secondary candidate is not an exact catalog consumer")
+		if name == catalogDomain {
+			if zoneType != "CONSUMER" || master != manifest.PeerIP ||
+				account != pdnsPeerCatalogAccount || memberCatalog != "" ||
+				options != "" {
+				return 0, errors.New(
+					"PowerDNS secondary candidate is not an exact catalog consumer",
+				)
+			}
+			consumerSeen++
+			continue
 		}
-		seen++
+		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
+			master != manifest.PeerIP || memberCatalog != catalogDomain ||
+			(account != "" && account != pdnsPeerCatalogAccount) ||
+			options != "" {
+			return 0, errors.New(
+				"PowerDNS secondary candidate contains foreign catalog authority",
+			)
+		}
+		members = append(members, name)
 	}
 	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	if consumerSeen != 1 {
+		return 0, errors.New(
+			"PowerDNS secondary candidate has no exact catalog consumer",
+		)
+	}
+	// The staged database contains only the explicit consumer. Once catalog and
+	// member convergence completes, the live database must contain the complete
+	// set as SECONDARY/SLAVE rows. A partial or foreign projection is never an
+	// acceptable success state.
+	if len(members) != 0 && !slices.Equal(members, catalog.Members) {
+		return 0, errors.New(
+			"PowerDNS secondary candidate members differ from the peer catalog",
+		)
+	}
+	return len(members), nil
+}
+
+func verifyLivePDNSPairSecondaryProjection(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	catalog dnsCatalogAXFRResult,
+	catalogDomain string,
+) error {
+	db, err := openPDNSEngineDB(pdnsDBPath(), true)
+	if err != nil {
 		return err
 	}
-	if seen != 1 {
-		return errors.New("PowerDNS secondary candidate has no exact catalog consumer")
+	defer db.Close()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
 	}
-	return nil
+	defer tx.Rollback()
+	members, err := verifyPDNSPairSecondaryTx(
+		ctx, tx, manifest, catalog, catalogDomain,
+	)
+	if err != nil {
+		return err
+	}
+	if members != len(catalog.Members) {
+		return errors.New(
+			"PowerDNS secondary catalog projection is not complete",
+		)
+	}
+	return tx.Commit()
 }
 
 func retrievePDNSPairSecondaryZones(
@@ -129,6 +237,11 @@ func retrievePDNSPairSecondaryZones(
 				ready = false
 				break
 			}
+		}
+		if ready {
+			ready = verifyLivePDNSPairSecondaryProjection(
+				recoveryCtx, manifest, catalog, domain,
+			) == nil
 		}
 		if ready {
 			for _, zone := range append([]string{domain}, catalog.Members...) {
@@ -317,7 +430,12 @@ func managedPDNSLegacyCatalogIdentity(
 			errors.New("managed legacy PowerDNS producer catalog is ambiguous")
 	}
 	localIP := ""
-	for _, candidate := range dnsPairHostOwnedAddresses() {
+	ownedAddresses, err := dnsPairHostOwnedAddresses()
+	if err != nil {
+		return managedPDNSCatalog{}, false,
+			fmt.Errorf("discover managed legacy PowerDNS host addresses: %w", err)
+	}
+	for _, candidate := range ownedAddresses {
 		domain, domainErr := binddns.CatalogDomain(candidate)
 		if domainErr == nil && domain == producerDomain {
 			if localIP != "" {

@@ -62,8 +62,8 @@ func TestPanelUsesAndCachesServerDerivedHostIdentity(t *testing.T) {
 			DistroFamily:   "rhel",
 			PackageManager: "dnf",
 			ServiceManager: "systemd",
-			DistroID:       "rocky",
-			VersionID:      "9.6",
+			DistroID:       "customlinux",
+			VersionID:      "rolling",
 			Architecture:   "arm64",
 		},
 		family: "dnf",
@@ -89,8 +89,8 @@ func TestManagedCatalogAndRPCFirewallSharePublishedHostIdentity(t *testing.T) {
 			DistroFamily:   "rhel",
 			PackageManager: "dnf",
 			ServiceManager: "systemd",
-			DistroID:       "rocky",
-			VersionID:      "9.6",
+			DistroID:       "customlinux",
+			VersionID:      "rolling",
 			Architecture:   "amd64",
 		},
 	}
@@ -155,7 +155,7 @@ func TestManagedCatalogFallbackDoesNotSeedMutationIdentityCache(t *testing.T) {
 			DistroFamily:   "debian",
 			PackageManager: "apt",
 			ServiceManager: "systemd",
-			DistroID:       "rocky",
+			DistroID:       "not canonical",
 			VersionID:      "12",
 			Architecture:   "amd64",
 		},
@@ -190,8 +190,8 @@ func TestQualifiedRHELPreviewPreflightStopsBeforeAnyMutationProbe(t *testing.T) 
 			DistroFamily:   "rhel",
 			PackageManager: "dnf",
 			ServiceManager: "systemd",
-			DistroID:       "almalinux",
-			VersionID:      "9.6",
+			DistroID:       "customlinux",
+			VersionID:      "rolling",
 			Architecture:   "amd64",
 		},
 	}
@@ -213,23 +213,34 @@ func TestQualifiedRHELPreviewPreflightStopsBeforeAnyMutationProbe(t *testing.T) 
 	}
 }
 
-func TestHostPlatformResponseValidationRejectsInconsistentOrIncompleteIdentity(t *testing.T) {
+func TestHostPlatformResponseValidationUsesCapabilityTupleNotDistroName(t *testing.T) {
 	valid := transport.HostPlatformResponse{
 		DistroFamily:   "rhel",
 		PackageManager: "dnf",
 		ServiceManager: "systemd",
-		DistroID:       "almalinux",
-		VersionID:      "9.6",
+		DistroID:       "oracle",
+		VersionID:      "23.1",
 		Architecture:   "amd64",
 	}
+	host, ok := managedServiceHostProfileFromResponse(valid)
+	if !ok || host.DistroID != "oracle" || !core.IsRHELPreviewNginxCandidate(host) {
+		t.Fatalf("canonical unknown distro metadata was not accepted: host=%+v ok=%v", host, ok)
+	}
+
 	tests := []struct {
 		name   string
 		change func(*transport.HostPlatformResponse)
 	}{
-		{name: "unknown distro", change: func(r *transport.HostPlatformResponse) { r.DistroID = "oracle" }},
+		{name: "unknown family", change: func(r *transport.HostPlatformResponse) { r.DistroFamily = "other" }},
 		{name: "family manager mismatch", change: func(r *transport.HostPlatformResponse) { r.PackageManager = "apt" }},
 		{name: "service manager mismatch", change: func(r *transport.HostPlatformResponse) { r.ServiceManager = "openrc" }},
+		{name: "missing distro metadata", change: func(r *transport.HostPlatformResponse) { r.DistroID = "" }},
+		{name: "noncanonical distro metadata", change: func(r *transport.HostPlatformResponse) { r.DistroID = "Oracle" }},
+		{name: "unsafe version metadata", change: func(r *transport.HostPlatformResponse) { r.VersionID = "23;1" }},
 		{name: "missing architecture", change: func(r *transport.HostPlatformResponse) { r.Architecture = "" }},
+		{name: "noncanonical architecture", change: func(r *transport.HostPlatformResponse) { r.Architecture = "AMD64" }},
+		{name: "unsupported lowercase architecture", change: func(r *transport.HostPlatformResponse) { r.Architecture = "riscv64" }},
+		{name: "unsupported architecture alias", change: func(r *transport.HostPlatformResponse) { r.Architecture = "x86_64" }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// RenderDistroMatrix renders "what do we offer on which distro" as Markdown,
+// RenderDistroMatrix renders "what do we offer on which package ecosystem" as Markdown,
 // entirely from the catalogue in this package. The document is committed to
 // docs/ so the answer is readable without running anything, and a guard test
 // fails the build the moment the committed copy no longer matches the
@@ -53,11 +53,20 @@ func RenderDistroMatrix(lang string) string {
 	families = append(families, rest...)
 
 	famLabel := map[string]string{
-		"apt":    "Debian/Ubuntu (apt)",
-		"dnf":    "RHEL/Fedora (dnf)",
-		"pacman": "Arch (pacman)",
-		"zypper": "openSUSE (zypper)",
-		"apk":    "Alpine (apk)",
+		"apt":    "APT package mapping",
+		"dnf":    "DNF package mapping",
+		"pacman": "pacman package mapping",
+		"zypper": "zypper package mapping",
+		"apk":    "apk package mapping",
+	}
+	if tr {
+		famLabel = map[string]string{
+			"apt":    "APT paket eşlemesi",
+			"dnf":    "DNF paket eşlemesi",
+			"pacman": "pacman paket eşlemesi",
+			"zypper": "zypper paket eşlemesi",
+			"apk":    "apk paket eşlemesi",
+		}
 	}
 
 	kindLabel := map[ServiceKind]string{
@@ -138,7 +147,7 @@ func RenderDistroMatrix(lang string) string {
 	w := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
 
 	if tr {
-		w("# Hangi dağıtımda ne sunuluyor?")
+		w("# Hangi paket ekosisteminde ne sunuluyor?")
 		w("")
 		w("<!-- BU DOSYA ÜRETİLİR — elle düzenlemeyin. -->")
 		w("<!-- Kaynak: internal/core/managed_services.go · Üretmek için: make distro-matrix -->")
@@ -149,15 +158,19 @@ func RenderDistroMatrix(lang string) string {
 		w("")
 		w("Kurallar:")
 		w("")
-		w("- **Boş hücre (—) bir eksik değil, bir sözdür:** o dağıtımda \"kurulunca çalışır\"")
-		w("  garantisi verilemiyorsa satır bilerek sunulmaz. Yarım kurulum kırıktır.")
+		w("- **Dolu hücre bir paket eşlemesidir, bütün ekosistem için kurulum garantisi")
+		w("  değildir.** Mutasyon ayrıca doğrulanmış paket yöneticisi/systemd, servise özgü")
+		w("  yaşam döngüsü yetkisi ve varsa kesin vendor artifact veya depo tarifi kanıtını")
+		w("  gerektirir. Bu son kapılar dağıtım adı değil, gerçek host baytları/yetenekleridir.")
+		w("- **Boş hücre (—) bir eksik değil, bir sözdür:** katalog o paket yöneticisi")
+		w("  için güvenli bir eşleme sunmuyorsa satır bilerek kapalıdır. Yarım kurulum kırıktır.")
 		w("- **Koltuk:** aynı koltuktaki bileşenler aynı işi yapar; aynı anda yalnız biri")
 		w("  kurulabilir (ör. iki web sunucusu 80 portunu paylaşamaz). Diğerini seçmek")
 		w("  ekleme değil, değiştirmedir.")
 		w("- **Gerekenler** ürünü değil ROLÜ adlandırır: \"SMTP sunucusu\" diyen bir satırı,")
 		w("  o koltuğun kurulu herhangi bir üyesi tatmin eder.")
 	} else {
-		w("# What is offered on which distro?")
+		w("# What is offered on which package ecosystem?")
 		w("")
 		w("<!-- THIS FILE IS GENERATED — do not edit by hand. -->")
 		w("<!-- Source: internal/core/managed_services.go · Regenerate: make distro-matrix -->")
@@ -169,9 +182,14 @@ func RenderDistroMatrix(lang string) string {
 		w("")
 		w("Rules:")
 		w("")
-		w("- **An empty cell (—) is a promise, not a gap:** when \"installed means working\"")
-		w("  cannot be guaranteed on a distro, the row is deliberately not offered there.")
-		w("  A half-install is broken.")
+		w("- **A populated cell is a package mapping, not an installation guarantee for")
+		w("  the whole ecosystem.** Mutation additionally requires a verified manager/systemd")
+		w("  capability, service-specific lifecycle authorization and, where applicable, an")
+		w("  exact vendor-artifact or repository-recipe proof. Those final gates inspect real")
+		w("  host bytes and capabilities, not a distribution-name allowlist.")
+		w("- **An empty cell (—) is a promise, not a gap:** when the catalogue has no safe")
+		w("  mapping for that package manager, the row is deliberately closed. A half-install")
+		w("  is broken.")
 		w("- **Seat:** components in the same seat do the same job; only one can be")
 		w("  installed at a time (two web servers cannot share port 80). Choosing the")
 		w("  other one is a swap, not an addition.")
@@ -220,7 +238,8 @@ func RenderDistroMatrix(lang string) string {
 		for _, f := range families {
 			pkgs := svc.Packages[f]
 			cell := "—"
-			if svc.InstallDisabledReason == "" && len(pkgs) > 0 {
+			block, _ := ManagedServiceInstallBlock(svc, f)
+			if block == ManagedServiceInstallBlockNone && len(pkgs) > 0 {
 				cell = "`" + strings.Join(pkgs, "` `") + "`"
 				if svc.Repo != nil && f == "apt" {
 					// Vendor repos are an apt mechanism today (Sury, PGDG):

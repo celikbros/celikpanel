@@ -231,7 +231,8 @@ func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *
 		return fmt.Errorf("service mutation action request is required")
 	}
 	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
-	if name == "" || core.ServiceForUnit(name) == nil {
+	service := core.ServiceForUnit(name)
+	if name == "" || service == nil {
 		reply.Error = "unknown managed service"
 		return nil
 	}
@@ -240,6 +241,10 @@ func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *
 	case "start", "stop", "restart", "reload":
 	default:
 		reply.Error = "invalid service action"
+		return nil
+	}
+	if refusal := genericDNSEngineMutationRefusal(service); refusal != "" {
+		reply.Error = refusal
 		return nil
 	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
@@ -256,7 +261,8 @@ func (a *Agent) ServiceMutationAction(req *ServiceMutationActionRequest, reply *
 
 func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action string, reply *transport.ServiceActionResult) error {
 	name := strings.TrimSuffix(strings.TrimSpace(serviceName), ".service")
-	if name == "" || core.ServiceForUnit(name) == nil {
+	service := core.ServiceForUnit(name)
+	if name == "" || service == nil {
 		reply.Error = "unknown managed service"
 		return nil
 	}
@@ -264,6 +270,10 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 	case "start", "stop", "restart", "reload":
 	default:
 		reply.Error = "invalid service action"
+		return nil
+	}
+	if refusal := genericDNSEngineMutationRefusal(service); refusal != "" {
+		reply.Error = refusal
 		return nil
 	}
 	systemctl, err := serviceMutationSystemctlResolver()
@@ -289,8 +299,12 @@ func (a *Agent) StartServiceMutation(req *ServiceMutationServiceRequest, reply *
 		return fmt.Errorf("start service mutation request is required")
 	}
 	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
-	if name == "" || core.ServiceForUnit(name) == nil {
+	service := core.ServiceForUnit(name)
+	if name == "" || service == nil {
 		return errors.New("unknown managed service")
+	}
+	if refusal := genericDNSEngineMutationRefusal(service); refusal != "" {
+		return errors.New(refusal)
 	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		req.ServiceMutationBinding,
@@ -318,8 +332,12 @@ func (a *Agent) ResetFailedUnitMutation(req *ServiceMutationServiceRequest, repl
 		return fmt.Errorf("reset failed service mutation request is required")
 	}
 	name := strings.TrimSuffix(strings.TrimSpace(req.ServiceName), ".service")
-	if name == "" || core.ServiceForUnit(name) == nil {
+	service := core.ServiceForUnit(name)
+	if name == "" || service == nil {
 		return errors.New("unknown managed service")
+	}
+	if refusal := genericDNSEngineMutationRefusal(service); refusal != "" {
+		return errors.New(refusal)
 	}
 	ctx, finishStep, err := a.requiredServiceMutationStep(
 		req.ServiceMutationBinding,

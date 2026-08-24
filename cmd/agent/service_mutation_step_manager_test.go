@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -168,6 +169,64 @@ func TestServiceMutationAcquireReauthorizesAfterStepMutex(t *testing.T) {
 		t.Fatalf("authorized retry context=%v release=%v", ctx, release != nil)
 	}
 	release()
+	finishRejectedMutationTestJob(t, manager)
+}
+
+func TestServiceMutationAcquireRechecksSecurityPolicyAfterStepMutexWait(t *testing.T) {
+	manager, _ := newMutationTestManager(t)
+	beginMutationTestJob(t, manager)
+
+	var policyActive atomic.Bool
+	var checks atomic.Int32
+	policyErr := errors.New("SELinux became active while waiting")
+	installServiceMutationSecurityPolicyProbe(t, func() error {
+		checks.Add(1)
+		if policyActive.Load() {
+			return policyErr
+		}
+		return nil
+	})
+
+	manager.mu.Lock()
+	runtimeState := manager.active
+	manager.mu.Unlock()
+	runtimeState.stepMu.Lock()
+	stepLocked := true
+	defer func() {
+		if stepLocked {
+			runtimeState.stepMu.Unlock()
+		}
+	}()
+
+	resultCh := make(chan serviceMutationStepAcquireResult, 1)
+	go func() {
+		ctx, release, err := manager.acquireStep(mutationTestBinding(), nginxInstallTestStepClaim())
+		resultCh <- serviceMutationStepAcquireResult{ctx: ctx, release: release, err: err}
+	}()
+	waitForServiceMutationStepMutexBlock(t)
+	policyActive.Store(true)
+	runtimeState.stepMu.Unlock()
+	stepLocked = false
+
+	var result serviceMutationStepAcquireResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("security-policy recheck did not finish after releasing step mutex")
+	}
+	if result.release != nil {
+		result.release()
+	}
+	if !errors.Is(result.err, policyErr) {
+		t.Fatalf("error=%v want post-wait security-policy sentinel", result.err)
+	}
+	if result.ctx != nil || result.release != nil {
+		t.Fatalf("security-policy drift exposed context=%v release=%v", result.ctx, result.release != nil)
+	}
+	if checks.Load() != 1 {
+		t.Fatalf("post-wait security-policy checks=%d want=1", checks.Load())
+	}
+	assertMutationTestRuntimeHasNoSteps(t, manager)
 	finishRejectedMutationTestJob(t, manager)
 }
 

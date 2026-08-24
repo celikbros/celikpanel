@@ -97,6 +97,8 @@ type ValidationRestoreDeleteResponse struct {
 }
 
 type validationRestoreAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	domain    string

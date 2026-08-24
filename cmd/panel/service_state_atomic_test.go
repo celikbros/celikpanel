@@ -38,6 +38,8 @@ type ServiceStateAtomicInstancesResponse struct {
 
 type serviceStateAtomicAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
+
 	getServicesCalls atomic.Int32
 	uninstallCalls   atomic.Int32
 	wireFilterCalls  atomic.Int32

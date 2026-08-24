@@ -22,7 +22,7 @@ func inspectHostPDNSVendorUnit(
 		return bindSecureFileIdentity{},
 			errors.New("PowerDNS vendor proof requires a context")
 	}
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return bindSecureFileIdentity{}, err
 	}
 	dpkgQuery, err := firstTrustedExecutable(
@@ -84,7 +84,7 @@ func inspectPDNSVendorUnitAt(
 	profile hostplatform.Profile,
 	afterFirstSnapshot func(),
 ) (bindSecureFileIdentity, error) {
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return bindSecureFileIdentity{}, err
 	}
 	readUnit := func() (bindSecureFileIdentity, error) {
@@ -94,7 +94,9 @@ func inspectPDNSVendorUnitAt(
 		if err != nil {
 			return bindSecureFileIdentity{}, err
 		}
-		if !bytes.Equal(data, []byte(certifiedDebian13PDNSVendorUnit)) {
+		debian := bytes.Equal(data, []byte(certifiedDebian13PDNSVendorUnit))
+		ubuntu := bytes.Equal(data, []byte(certifiedUbuntu2404PDNSVendorUnit))
+		if !debian && !ubuntu {
 			return bindSecureFileIdentity{},
 				errors.New(
 					"PowerDNS vendor unit bytes differ from the certified package unit",

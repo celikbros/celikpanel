@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -44,13 +45,27 @@ const certifiedDebian13PDNSVendorUnit = "[Unit]\n" +
 	"# MemoryDenyWriteExecute=true\n\n" +
 	"[Install]\nWantedBy=multi-user.target\n"
 
-func certifyPDNSRuntimeProfile(profile hostplatform.Profile) error {
+const (
+	certifiedDebianPDNSAfter = "After=network-online.target mysql.service mysqld.service postgresql.service slapd.service mariadb.service time-sync.target"
+	certifiedUbuntuPDNSAfter = "After=network-online.target mysqld.service postgresql.service slapd.service mariadb.service time-sync.target"
+)
+
+// Ubuntu 24.04 and Debian 13 ship the same hardened pdns.service contract.
+// Ubuntu omits only the obsolete mysql.service ordering alias. Select between
+// these reviewed package artifacts by exact bytes, never by os-release name.
+var certifiedUbuntu2404PDNSVendorUnit = strings.Replace(
+	certifiedDebian13PDNSVendorUnit,
+	certifiedDebianPDNSAfter,
+	certifiedUbuntuPDNSAfter,
+	1,
+)
+
+func certifyAPTPDNSCapabilities(profile hostplatform.Profile) error {
 	if profile.PackageManager != hostplatform.PackageManagerAPT ||
 		profile.DistroFamily != hostplatform.DistroFamilyDebian ||
-		profile.ID != "debian" || profile.Version != "13" ||
-		profile.Codename != "trixie" {
+		profile.ServiceManager != hostplatform.ServiceManagerSystemd {
 		return errors.New(
-			"PowerDNS authority is certified only for Debian 13 (trixie) APT hosts",
+			"PowerDNS authority requires a verified APT package ecosystem and systemd",
 		)
 	}
 	return nil
@@ -64,7 +79,7 @@ func runCertifiedPDNSTargetMutation(
 		return transport.SwitchDNSEngineV1Response{},
 			errors.New("PowerDNS target mutation callback is required")
 	}
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	return mutation()
@@ -143,7 +158,7 @@ func verifyPDNSTargetSealedBeforeUnmaskWithOps(
 	profile hostplatform.Profile,
 	ops pdnsSealedTargetOps,
 ) error {
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return err
 	}
 	if ops.inspectState == nil || ops.inspectIdentity == nil ||
@@ -262,7 +277,7 @@ func inspectVerifiedPDNSInactiveTargetWithOps(
 	allowedUnitFileStates []string,
 	ops pdnsInactiveTargetOps,
 ) (pdnsInactiveTargetSnapshot, error) {
-	if err := certifyPDNSRuntimeProfile(profile); err != nil {
+	if err := certifyAPTPDNSCapabilities(profile); err != nil {
 		return pdnsInactiveTargetSnapshot{}, err
 	}
 	allowed := make(map[string]bool, len(allowedUnitFileStates))

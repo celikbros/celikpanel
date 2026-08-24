@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -379,7 +380,11 @@ func rollbackDNSSwitchJournal(
 		if journal.Mode == transport.DNSEngineSwitchModeAdopt {
 			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
 		}
-		if err := rollbackPDNSSwitch(ctx, systemctl, journal, pdnsConfigMutation{before: journal.ConfigBefore}); err != nil {
+		configs, err := pdnsConfigMutationFromJournal(ctx, manifest, journal)
+		if err != nil {
+			return err
+		}
+		if err := rollbackPDNSSwitch(ctx, systemctl, journal, configs); err != nil {
 			return err
 		}
 	default:
@@ -400,32 +405,162 @@ func verifyNoManagedDNSAuthority(
 	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
 	defer cancel()
-	// Legacy PDNS adoption has an empty source identity but an active
-	// target-before snapshot which rollback must restore exactly. Prove that
-	// complete active topology instead of applying the source-none proof.
+	return verifyRestoredEmptySourceAuthorityWithOps(
+		proofCtx, journal,
+		restoredEmptySourceAuthorityProofOps{
+			pdnsConfig: hostPDNSConfigAccessOps(),
+			verifyOnlyPDNS: func() error {
+				return verifyOnlyPDNSActive(proofCtx, systemctl)
+			},
+			verifyNoAuthority: func() error {
+				ss, err := firstTrustedExecutable(
+					[]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss",
+				)
+				if err != nil {
+					return err
+				}
+				guard := dnsSystemdStateGuard(systemctl)
+				return verifyNoManagedDNSAuthorityWithOps(
+					noManagedDNSAuthorityProofOps{
+						inspectUnit: func(unit string) (bindInstallUnitState, error) {
+							return guard.inspect(proofCtx, unit)
+						},
+						inspectListeners: func() (string, error) {
+							output, commandErr := serviceMutationCommand(
+								proofCtx, ss, "-H", "-lntup", "sport = :53",
+							).CombinedOutputLimited(64 << 10)
+							if commandErr != nil {
+								return "", commandErr
+							}
+							return string(output), nil
+						},
+					},
+				)
+			},
+		},
+	)
+}
+
+type restoredEmptySourceAuthorityProofOps struct {
+	pdnsConfig        pdnsConfigAccessOps
+	verifyOnlyPDNS    func() error
+	verifyNoAuthority func() error
+}
+
+func verifyRestoredEmptySourceAuthorityWithOps(
+	ctx context.Context,
+	journal dnsEngineSwitchJournal,
+	ops restoredEmptySourceAuthorityProofOps,
+) error {
+	if ctx == nil || ops.verifyOnlyPDNS == nil || ops.verifyNoAuthority == nil {
+		return errors.New("restored empty-source authority proof is incomplete")
+	}
+	// Legacy adoption already binds an active pdns.service preimage in its
+	// separately validated adoption journal. Preserve that recovery contract.
 	if journal.Mode == transport.DNSEngineSwitchModeAdopt &&
 		targetSnapshotWasActive(journal, "pdns.service") {
-		return verifyOnlyPDNSActive(proofCtx, systemctl)
+		return ops.verifyOnlyPDNS()
 	}
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	reconfigure, err := provePDNSPairSecondaryReconfigureRollbackWithOps(
+		ctx, journal, ops.pdnsConfig,
+	)
 	if err != nil {
 		return err
 	}
-	guard := dnsSystemdStateGuard(systemctl)
-	return verifyNoManagedDNSAuthorityWithOps(noManagedDNSAuthorityProofOps{
-		inspectUnit: func(unit string) (bindInstallUnitState, error) {
-			return guard.inspect(proofCtx, unit)
-		},
-		inspectListeners: func() (string, error) {
-			output, commandErr := serviceMutationCommand(
-				proofCtx, ss, "-H", "-lntup", "sport = :53",
-			).CombinedOutputLimited(64 << 10)
-			if commandErr != nil {
-				return "", commandErr
-			}
-			return string(output), nil
-		},
-	})
+	if reconfigure {
+		return ops.verifyOnlyPDNS()
+	}
+	return ops.verifyNoAuthority()
+}
+
+func provePDNSPairSecondaryReconfigureRollbackWithOps(
+	ctx context.Context,
+	journal dnsEngineSwitchJournal,
+	ops pdnsConfigAccessOps,
+) (bool, error) {
+	if ctx == nil {
+		return false, errors.New("PowerDNS reconfiguration rollback proof requires a context")
+	}
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		return false, err
+	}
+	if !isPDNSPairSecondaryReconfigureManifest(manifest) ||
+		!targetSnapshotWasActive(journal, "pdns.service") {
+		return false, nil
+	}
+	// An active target preimage distinguishes the narrow legacy
+	// reconfiguration from a fresh initial install sharing this manifest.
+	// From here onward incomplete evidence is a hard failure, not a fallback.
+	if err := validateDNSEngineSwitchJournal(journal); err != nil {
+		return false, err
+	}
+	if journal.Phase != dnsSwitchPhaseRollingBack {
+		return false, errors.New("PowerDNS reconfiguration rollback journal is not durably rolling back")
+	}
+	if !reflect.DeepEqual(
+		journal.StateBefore,
+		dnsFileSnapshot{Path: filepath.Clean(dnsEngineStatePath())},
+	) {
+		return false, errors.New("PowerDNS reconfiguration rollback has unexpected prior engine state")
+	}
+	wantTarget := []dnsUnitSnapshot{{
+		Name: "pdns.service", LoadState: "loaded",
+		ActiveState: "active", UnitFileState: "enabled",
+	}}
+	if !reflect.DeepEqual(journal.TargetUnitsBefore, wantTarget) ||
+		len(journal.SourceUnitsBefore) != 0 {
+		return false, errors.New("PowerDNS reconfiguration rollback lacks the exact active unit preimage")
+	}
+	if !validDNSGeneration(journal.PDNSBackupSHA256) ||
+		journal.PDNSBackupSize <= 0 ||
+		journal.PDNSCandidatePath != filepath.Clean(
+			pdnsSwitchCandidatePath(journal.MutationRequestID),
+		) || journal.PDNSBackupPath != filepath.Clean(
+		pdnsSwitchBackupPath(journal.MutationRequestID),
+	) {
+		return false, errors.New("PowerDNS reconfiguration rollback lacks the exact database preimage")
+	}
+	if ops.resolve == nil || ops.capture == nil {
+		return false, errors.New("PowerDNS reconfiguration rollback config proof is incomplete")
+	}
+	expectedManagedConfig, err := managedPowerDNSStandaloneConfig(ctx)
+	if err != nil {
+		return false, fmt.Errorf(
+			"discover managed PowerDNS rollback listen addresses: %w", err,
+		)
+	}
+	policy, err := ops.resolve(ctx)
+	if err != nil {
+		return false, err
+	}
+	if err := policy.validateSnapshots(journal.ConfigBefore); err != nil {
+		return false, err
+	}
+	configs := pdnsConfigSnapshotMap(journal.ConfigBefore)
+	main := configs[filepath.Clean(dnsMainConf)]
+	managed := configs[filepath.Clean(dnsManagedConf)]
+	cluster := configs[filepath.Clean(dnsClusterConf)]
+	hasInclude, err := validateManagedPowerDNSMainConfig(
+		string(main.Data), filepath.Clean(filepath.Dir(dnsManagedConf)),
+	)
+	if err != nil || !hasInclude {
+		if err == nil {
+			err = errors.New("PowerDNS main config did not load the managed directory")
+		}
+		return false, err
+	}
+	if !managed.Exists ||
+		!bytes.Equal(managed.Data, expectedManagedConfig) ||
+		cluster.Exists {
+		return false, errors.New("PowerDNS reconfiguration rollback config preimage is not exact standalone state")
+	}
+	if _, err := capturePDNSConfigSnapshotsExactWithOps(
+		policy, journal.ConfigBefore, ops,
+	); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 type noManagedDNSAuthoritySnapshot struct {
@@ -544,6 +679,34 @@ func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {
 	return false
 }
 
+type dnsSwitchRecoveryRollbackOps struct {
+	write    func(dnsEngineSwitchJournal) error
+	rollback func(dnsEngineSwitchJournal) error
+	remove   func() error
+}
+
+func runDNSSwitchRecoveryRollbackWithJournal(
+	journal *dnsEngineSwitchJournal,
+	ops dnsSwitchRecoveryRollbackOps,
+) error {
+	if journal == nil || ops.write == nil || ops.rollback == nil ||
+		ops.remove == nil {
+		return errors.New("invalid DNS switch recovery rollback operations")
+	}
+	journal.Phase = dnsSwitchPhaseRollingBack
+	if err := ops.write(*journal); err != nil {
+		return err
+	}
+	if err := ops.rollback(*journal); err != nil {
+		return err
+	}
+	journal.Phase = dnsSwitchPhaseRolledBack
+	if err := ops.write(*journal); err != nil {
+		return err
+	}
+	return ops.remove()
+}
+
 func (hostDNSEngineBackend) RecoverSwitch(
 	ctx context.Context,
 	target transport.DNSEngine,
@@ -567,18 +730,16 @@ func (hostDNSEngineBackend) RecoverSwitch(
 		return dnsEngineSwitchRecoveryAbsent,
 			fmt.Errorf("verified DNS engine target no longer matches its journal: %w", err)
 	}
-	journal.Phase = dnsSwitchPhaseRollingBack
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	if err := rollbackDNSSwitchJournal(ctx, journal); err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	journal.Phase = dnsSwitchPhaseRolledBack
-	if err := writeDNSEngineSwitchJournal(journal); err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	if err := removeDNSEngineSwitchJournal(); err != nil {
+	if err := runDNSSwitchRecoveryRollbackWithJournal(
+		&journal,
+		dnsSwitchRecoveryRollbackOps{
+			write: writeDNSEngineSwitchJournal,
+			rollback: func(current dnsEngineSwitchJournal) error {
+				return rollbackDNSSwitchJournal(ctx, current)
+			},
+			remove: removeDNSEngineSwitchJournal,
+		},
+	); err != nil {
 		return dnsEngineSwitchRecoveryAbsent, err
 	}
 	return dnsEngineSwitchRecoveryRolledBack, nil

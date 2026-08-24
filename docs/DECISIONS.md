@@ -8,80 +8,84 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
-## D-020 · Managed-server support follows Linux families, not distribution names
+## D-020 · Managed-server support follows proven capabilities, not distribution names
 
 *August 11, 2026*
 
-**Decision.** The CelikPanel Agent targets managed Linux servers only. Its
-platform architecture standardizes on three Linux family targets: `debian`,
-`rhel`, and `arch`. This defines adapter boundaries, not blanket feature
-availability.
-Debian and Ubuntu use `debian`; RHEL, AlmaLinux, Rocky Linux, CentOS Stream,
-Fedora, and CloudLinux use `rhel`; Arch Linux uses `arch`. Distributions are not
-separate installer engines. A narrow override exists only where a package,
-repository, service, security policy, or path genuinely differs.
+**Decision.** The CelikPanel Agent targets managed Linux servers only. Platform
+selection is based on proven host capabilities, not an allowlist of distribution
+names, versions, or codenames. The current package adapters are `apt`, `dnf`, and
+`pacman`; a narrow layout override exists only where a package, repository,
+service, security policy, or path genuinely differs.
 
-**Detection and trust boundary.** The family is derived from `ID` and
-`ID_LIKE` in `/etc/os-release`, but a name alone never authorizes a mutation.
-Before mutation the adapter verifies its package manager, init/service manager,
-and required security capabilities; a mismatch fails closed. Distribution
-names are CI compatibility fixtures rather than architecture: verified
-fixtures appear in the product matrix, while another derivative may reuse the
-same adapter only after explicit certification and precondition proof.
-`ID_LIKE` identifies a compatibility candidate; it never enables mutation by
-itself.
+**Detection and trust boundary.** `ID`, `ID_LIKE`, and `VERSION_ID` from
+`/etc/os-release` are parsed as inert metadata and never sourced. A single
+unambiguous `ID`/`ID_LIKE` family hint may choose which complete toolchain to
+verify, so an unrelated package manager installed by an operator cannot redirect
+bootstrap. With no usable hint, or with conflicting hints, exactly one complete
+trusted toolchain must exist. APT means the fixed `apt-get` + `apt-cache` +
+`dpkg-query` set, pacman means fixed `pacman`, and DNF means fixed `dnf` + `rpm`.
+Fixed `systemctl` and `timeout` are always required, together with a root-owned,
+non-writable `/run/systemd` chain, a direct `/run/systemd/private` Unix socket,
+and a bounded `systemctl is-system-running` proof of `running` or `degraded`.
+Every present candidate tool, its target, and its directory chain must satisfy
+the root-owned, non-writable fixed-path contract. Missing, incomplete, ambiguous,
+symbolic outside a pinned vendor alternative, unsafe, or non-live capabilities
+fail before mutation. Names and versions therefore describe the host; verified
+capabilities authorize the adapter.
 
-**Certification boundary.** Family membership is not a blanket support claim.
-The UI exposes only capabilities whose package, path, security-policy,
-lifecycle, and readiness recipes have passed the representative end-to-end
-matrix. An unverified derivative remains compatible/unverified and unsupported
-capabilities stay hidden or blocked. RHEL-family work begins as an explicitly
-labelled preview and does not become full family support merely because dnf
-was detected.
+**Certification boundary.** Selecting a package adapter is not a blanket feature
+claim. The UI exposes only capabilities whose package, path, security-policy,
+lifecycle, and readiness recipes prove their own preconditions. A distribution
+may use any name or version and reuse a proven adapter; an unsupported package
+ecosystem or an unproven feature remains blocked because the required capability
+proof is missing, not because the distribution label is absent from a list.
 
-**Current RHEL preview gate.** The test-covered DNF transaction, RPM inventory,
+**Current DNF preview gate.** The test-covered DNF transaction, RPM inventory,
 host-identity, and external-package-lock primitives may be developed and tested
-before any RHEL capability is exposed. Normal installation on the first
-candidate targets (AlmaLinux 9 and Rocky Linux 9 on `amd64`/`arm64`) still stops
-before its first host mutation. Nginx remains unavailable even there until a
-default-deny platform-capability API guard and a SELinux-Enforcing panel/agent
-lifecycle have passed real-machine end-to-end certification. Fedora, CentOS
-Stream, CloudLinux, subscription RHEL, other versions, and other architectures
-do not inherit this candidate status.
+before any DNF capability is exposed. Every host whose verified toolchain selects
+DNF still stops before its first bootstrap mutation because the
+SELinux-Enforcing panel/agent lifecycle is not implemented. This blocker follows
+the missing security capability, independent of distribution name or version.
+The same live SELinux probe runs before every APT or pacman bootstrap and
+rollback mutation. Those adapters proceed only when SELinux is inactive; an
+active permissive or enforcing state fails closed until its label lifecycle is
+implemented. Package-manager capability never implies a security-policy
+capability.
 
-**Default-deny exact-method prefilter.** For every RHEL candidate, the panel
+**Default-deny exact-method prefilter.** For every DNF preview host, the panel
 carries the complete verified host identity into a prefilter keyed by the exact
 Agent RPC method immediately before the sole raw dispatcher. This is a
 fail-closed foundation, explicitly not an activation surface, and exact method
 plus host identity is insufficient to authorize a parameterized RPC: the same
-method can carry different service, package, or target arguments. No RHEL grant
+method can carry different service, package, or target arguments. No DNF grant
 entry may be added until the RPC arguments are bound to the durable lease's
 exact `Kind`, `Target`, and `PackageName`, and that complete lifecycle has
-passed live-machine end-to-end certification. The DNF/RHEL grant set remains
-empty, so every RHEL host mutation remains denied. Detection, identity
+passed live-machine end-to-end certification. The DNF grant set remains empty,
+so every DNF host mutation remains denied. Detection, identity
 resolution, cross-compilation, and smoke coverage are neither a support claim
 nor a capability claim.
 
-**Out of scope.** openSUSE/SLES, Alpine, and NixOS do not currently justify a
-new family adapter. Proven demand may add distinct `suse`, `alpine`, or `nixos`
-families later; none is impersonated as an existing family. Kali Linux is
-explicitly refused despite its Debian ancestry because it is not a hosting
-server product. Windows and FreeBSD are not managed-server targets. `!linux`
-files preserve build portability and a no-mutation, fail-closed contract only;
-they do not promise product support.
+**Out of scope.** A package ecosystem without an implemented adapter does not
+become supported by imitating APT, DNF, or pacman. Proven demand may add distinct
+adapters later. Linux distributions are never rejected merely for their name;
+they fail closed when no unique complete trusted toolchain and feature-specific
+layout/security proof exists. Windows and FreeBSD are not managed-server targets.
+`!linux` files preserve build portability and a no-mutation, fail-closed contract
+only; they do not promise product support.
 
-**Install-source policy is unchanged.** A family adapter enforces D-018:
+**Install-source policy is unchanged.** A package adapter enforces D-018:
 system services are distro packages installed through `apt`/`dnf`/`pacman`,
 while portable applications and runtimes use verified official releases. A
 truly necessary source build happens in central CI, not on a customer's
-server, and is distributed as a signed family-native package. Security
+server, and is distributed as a signed native package for that ecosystem. Security
 updates, file ownership, uninstall, and rollback therefore remain integrated
-with the package manager as family coverage grows.
+with the package manager as capability coverage grows.
 
 **Why.** One installer copied per distribution multiplies code while dividing
 quality. Building everything from source only unifies binary production; it
 does not unify systemd/SELinux/AppArmor, users, paths, firewall, or update
-integration. A platform-family adapter is the correct reuse boundary.
+integration. A package-capability adapter is the correct reuse boundary.
 
 ---
 
@@ -1211,6 +1215,12 @@ acceptance target. This does not declare an unrun test successful: a tagged,
 prebuilt release must pass a clean Debian 13 installation through the exact
 documented operator workflow before the release is accepted. Source checkouts,
 developer-only bundles and post-install SSH fixes do not count as evidence.
+
+*Amendment 4 (Aug 23, 2026):* D-020 supersedes the distribution/version gate in
+this older decision. Ubuntu 24.04 and Debian 13 remain acceptance fixtures, not
+an authorization allowlist. Any Linux name/version may select APT or pacman when
+the complete fixed-path capability contract is proven; DNF remains preview-only
+because its SELinux lifecycle capability is incomplete.
 
 ---
 

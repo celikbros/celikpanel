@@ -152,6 +152,8 @@ type ServiceOperationPeerResponse struct {
 }
 
 type serviceOperationTestAgent struct {
+	verifiedAPTAgentRPCFixture
+
 	mu sync.Mutex
 
 	installStarted chan struct{}

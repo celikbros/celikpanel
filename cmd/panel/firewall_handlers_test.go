@@ -23,6 +23,7 @@ type FirewallSyncApplyRequest = transport.ApplyFirewallRequest
 
 type firewallSyncTestAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
 
 	mu sync.Mutex
 

@@ -261,7 +261,10 @@ func TestPDNSSwitchJournalRejectsUnmanagedPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	configs := []dnsFileSnapshot{
-		{Path: filepath.Clean(dnsMainConf)},
+		{
+			Path: filepath.Clean(dnsMainConf), Exists: true, Mode: 0o640,
+			OwnerKnown: true, SHA256: digestDNSBytes([]byte("main\n")), Data: []byte("main\n"),
+		},
 		{Path: filepath.Clean(dnsManagedConf)},
 		{Path: filepath.Clean(dnsClusterConf)},
 	}
@@ -333,16 +336,23 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	configs := []dnsFileSnapshot{
-		{Path: filepath.Clean(dnsMainConf), Exists: true, Mode: 0o644, SHA256: digestDNSBytes([]byte("main")), Data: []byte("main")},
-		{Path: filepath.Clean(dnsManagedConf), Exists: true, Mode: 0o640, SHA256: digestDNSBytes([]byte("managed")), Data: []byte("managed")},
-		{Path: filepath.Clean(dnsClusterConf), Exists: true, Mode: 0o600, SHA256: digestDNSBytes([]byte("paired")), Data: []byte("paired")},
+		{
+			Path: filepath.Clean(dnsMainConf), Exists: true, Mode: 0o640,
+			OwnerKnown: true, UID: 0, GID: 109,
+			SHA256: digestDNSBytes([]byte("main")), Data: []byte("main"),
+		},
+		{
+			Path: filepath.Clean(dnsManagedConf), Exists: true, Mode: 0o644,
+			OwnerKnown: true, UID: 0, GID: 0,
+			SHA256: digestDNSBytes([]byte("managed")), Data: []byte("managed"),
+		},
+		{
+			Path: filepath.Clean(dnsClusterConf), Exists: true, Mode: 0o644,
+			OwnerKnown: true, UID: 0, GID: 0,
+			SHA256: digestDNSBytes([]byte("paired")), Data: []byte("paired"),
+		},
 	}
 	sort.Slice(configs, func(left, right int) bool { return configs[left].Path < configs[right].Path })
-	if dnsSnapshotOwnerRequired() {
-		for index := range configs {
-			configs[index].OwnerKnown = true
-		}
-	}
 	journal := dnsEngineSwitchJournal{
 		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
 		Mode:              transport.DNSEngineSwitchModeAdopt,
@@ -369,6 +379,26 @@ func TestPDNSAdoptionJournalBindsReadOnlyRuntimeEvidence(t *testing.T) {
 	}
 	if _, err := decodeDNSEngineSwitchJournal(encoded); err != nil {
 		t.Fatal(err)
+	}
+	legacyRoot := journal
+	legacyRoot.ConfigBefore = clonePDNSConfigSnapshots(journal.ConfigBefore)
+	for index := range legacyRoot.ConfigBefore {
+		if legacyRoot.ConfigBefore[index].Path == filepath.Clean(dnsMainConf) {
+			legacyRoot.ConfigBefore[index].GID = 0
+		}
+	}
+	if _, err := encodeDNSEngineSwitchJournal(legacyRoot); err != nil {
+		t.Fatalf("root-owned 0640 main config rejected: %v", err)
+	}
+	unsafeManaged := journal
+	unsafeManaged.ConfigBefore = clonePDNSConfigSnapshots(journal.ConfigBefore)
+	for index := range unsafeManaged.ConfigBefore {
+		if unsafeManaged.ConfigBefore[index].Path == filepath.Clean(dnsManagedConf) {
+			unsafeManaged.ConfigBefore[index].GID = 109
+		}
+	}
+	if _, err := encodeDNSEngineSwitchJournal(unsafeManaged); err == nil {
+		t.Fatal("adoption journal accepted a non-root managed drop-in")
 	}
 	journal.PrimaryCatalogSerial = 1
 	if _, err := encodeDNSEngineSwitchJournal(journal); err == nil {

@@ -1,17 +1,17 @@
 #!/bin/bash
 #
-# CelikPanel installer — one command from a fresh Debian 13 or Ubuntu 24.04
-# acceptance target (or Arch Linux dev-test target) to a login screen. Install
+# CelikPanel installer — one command on a Linux host whose fixed-path systemd
+# and package toolchain capabilities pass fail-closed preflight. Install
 # tagged prebuilt releases; existing installations use the reviewed updater.
 #
-# CelikPanel kurulumu — temiz Debian 13 veya Ubuntu 24.04 kabul hedefinden (ya
-# da Arch Linux geliştirme-test hedefinden) giriş ekranına tek komut. Etiketli,
+# CelikPanel kurulumu — sabit-yol systemd ve paket araç zinciri yetenekleri
+# fail-closed ön kontrolden geçen Linux sunucuda giriş ekranına tek komut. Etiketli,
 # önceden derlenmiş sürümü kurun; mevcut kurulumlarda incelenmiş updater'ı kullanın.
 #
 #   sudo ./install.sh
 #
 # Environment knobs / Ortam ayarları:
-#   SKIP_DEPS=1     do not apt-install the tiny prerequisites (tar, xz, curl)
+#   SKIP_DEPS=1     do not install prerequisites (tar, xz, curl, iproute2)
 #   SKIP_ADMIN=1    do not prompt to create the first administrator
 #   LISTEN=:2083    panel bind address
 #   DEMO=1          R&D mode: quick-login accounts on the login screen
@@ -56,6 +56,13 @@ SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
 RHEL_DNF_CANONICAL_ALT=/usr/bin/dnf-3
+RHEL_RPM_BIN=/usr/bin/rpm
+APT_GET_BIN=/usr/bin/apt-get
+APT_CACHE_BIN=/usr/bin/apt-cache
+DPKG_QUERY_BIN=/usr/bin/dpkg-query
+PACMAN_BIN=/usr/bin/pacman
+TIMEOUT_BIN=/usr/bin/timeout
+SETPRIV_BIN=/usr/bin/setpriv
 SELINUX_RESTORECON_BIN=/usr/sbin/restorecon
 SELINUX_MATCHPATHCON_BIN=/usr/sbin/matchpathcon
 SELINUX_GETENFORCE_BIN=/usr/sbin/getenforce
@@ -68,13 +75,17 @@ VENDOR_READLINK_BIN=/usr/bin/readlink
 VENDOR_STAT_BIN=/usr/bin/stat
 VENDOR_DIRNAME_BIN=/usr/bin/dirname
 SYSTEMCTL_BIN=/usr/bin/systemctl
+SYSTEMD_RUNTIME_DIR=/run/systemd
+SYSTEMD_PRIVATE_SOCKET=/run/systemd/private
 VENDOR_TRUST_ANCHOR=/
 VENDOR_EXPECTED_UID=0
 VENDOR_EXPECTED_GID=0
 readonly SELINUX_OS_RELEASE SELINUX_ENFORCE_FILE RHEL_DNF_BIN \
-    RHEL_DNF_CANONICAL_ALT SELINUX_RESTORECON_BIN \
+    RHEL_DNF_CANONICAL_ALT RHEL_RPM_BIN APT_GET_BIN APT_CACHE_BIN \
+    DPKG_QUERY_BIN PACMAN_BIN TIMEOUT_BIN SETPRIV_BIN SELINUX_RESTORECON_BIN \
     SELINUX_MATCHPATHCON_BIN SELINUX_GETENFORCE_BIN UNAME_BIN VENDOR_READLINK_BIN \
-    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN VENDOR_TRUST_ANCHOR \
+    VENDOR_STAT_BIN VENDOR_DIRNAME_BIN SYSTEMCTL_BIN SYSTEMD_RUNTIME_DIR \
+    SYSTEMD_PRIVATE_SOCKET VENDOR_TRUST_ANCHOR \
     VENDOR_EXPECTED_UID VENDOR_EXPECTED_GID
 SELINUX_PLATFORM_MODE=unverified
 SVC_USER=celikpanel
@@ -360,16 +371,36 @@ validate_vendor_directory_chain() {
     done
 }
 
-validate_rhel_vendor_tool() {
-    local role=$1 path canonical allowed_alt= owner group mode links permissions
+vendor_tool_path() {
+    local role=$1
     case "$role" in
-        uname) path=$UNAME_BIN ;;
-        dnf) path=$RHEL_DNF_BIN; allowed_alt=$RHEL_DNF_CANONICAL_ALT ;;
-        restorecon) path=$SELINUX_RESTORECON_BIN ;;
-        matchpathcon) path=$SELINUX_MATCHPATHCON_BIN ;;
-        getenforce) path=$SELINUX_GETENFORCE_BIN ;;
-        *) die "unknown RHEL vendor tool role: $role" ;;
+        uname) VENDOR_TOOL_PATH=$UNAME_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        systemctl) VENDOR_TOOL_PATH=$SYSTEMCTL_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        timeout) VENDOR_TOOL_PATH=$TIMEOUT_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        setpriv) VENDOR_TOOL_PATH=$SETPRIV_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        apt-get) VENDOR_TOOL_PATH=$APT_GET_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        apt-cache) VENDOR_TOOL_PATH=$APT_CACHE_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        dpkg-query) VENDOR_TOOL_PATH=$DPKG_QUERY_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        pacman) VENDOR_TOOL_PATH=$PACMAN_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        dnf) VENDOR_TOOL_PATH=$RHEL_DNF_BIN; VENDOR_TOOL_ALLOWED_ALT=$RHEL_DNF_CANONICAL_ALT ;;
+        rpm) VENDOR_TOOL_PATH=$RHEL_RPM_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        restorecon) VENDOR_TOOL_PATH=$SELINUX_RESTORECON_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        matchpathcon) VENDOR_TOOL_PATH=$SELINUX_MATCHPATHCON_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        getenforce) VENDOR_TOOL_PATH=$SELINUX_GETENFORCE_BIN; VENDOR_TOOL_ALLOWED_ALT= ;;
+        *) die "unknown vendor tool role: $role" ;;
     esac
+}
+
+vendor_tool_present() {
+    vendor_tool_path "$1"
+    [[ -e "$VENDOR_TOOL_PATH" || -L "$VENDOR_TOOL_PATH" ]]
+}
+
+validate_vendor_tool() {
+    local role=$1 path canonical allowed_alt owner group mode links permissions
+    vendor_tool_path "$role"
+    path=$VENDOR_TOOL_PATH
+    allowed_alt=$VENDOR_TOOL_ALLOWED_ALT
     [[ -e "$path" || -L "$path" ]] \
         || die "CelikPanel lifecycle requires the exact vendor $role path: $path"
     validate_vendor_directory_chain "$path"
@@ -405,6 +436,84 @@ validate_rhel_vendor_tool() {
         || die "vendor $role target is group/other writable: $canonical"
 }
 
+validate_systemd_runtime() {
+    local canonical owner group mode links permissions readiness readiness_status=0
+    validate_vendor_tool systemctl
+    validate_vendor_tool timeout
+    [[ "$SYSTEMD_PRIVATE_SOCKET" == "$SYSTEMD_RUNTIME_DIR/private" ]] \
+        || die "systemd private socket path does not match its fixed runtime directory"
+    [[ -d "$SYSTEMD_RUNTIME_DIR" && ! -L "$SYSTEMD_RUNTIME_DIR" ]] \
+        || die "systemd runtime directory is missing or symbolic: $SYSTEMD_RUNTIME_DIR"
+    validate_vendor_directory_chain "$SYSTEMD_PRIVATE_SOCKET"
+    [[ -S "$SYSTEMD_PRIVATE_SOCKET" && ! -L "$SYSTEMD_PRIVATE_SOCKET" ]] \
+        || die "systemd private endpoint is not a direct Unix socket: $SYSTEMD_PRIVATE_SOCKET"
+    canonical=$("$VENDOR_READLINK_BIN" -e -- "$SYSTEMD_PRIVATE_SOCKET") \
+        || die "cannot canonicalize systemd private socket: $SYSTEMD_PRIVATE_SOCKET"
+    [[ "$canonical" == "$SYSTEMD_PRIVATE_SOCKET" ]] \
+        || die "systemd private socket is not canonical: $SYSTEMD_PRIVATE_SOCKET"
+    read -r owner group mode links < <("$VENDOR_STAT_BIN" -Lc '%u %g %a %h' -- "$SYSTEMD_PRIVATE_SOCKET") \
+        || die "cannot inspect systemd private socket: $SYSTEMD_PRIVATE_SOCKET"
+    [[ "$owner" == "$VENDOR_EXPECTED_UID" && "$group" == "$VENDOR_EXPECTED_GID" ]] \
+        || die "systemd private socket is not owned by the trusted principal"
+    [[ "$links" == 1 ]] \
+        || die "systemd private socket must have exactly one hard link"
+    permissions=$((8#$mode))
+    (( (permissions & 0022) == 0 )) \
+        || die "systemd private socket is group/other writable"
+
+    readiness=$(LC_ALL=C SYSTEMD_COLORS=0 SYSTEMD_PAGER= \
+        "$TIMEOUT_BIN" --signal=KILL --kill-after=1s 3s \
+        "$SYSTEMCTL_BIN" is-system-running 2>/dev/null) || readiness_status=$?
+    case "$readiness_status:$readiness" in
+        0:running|0:degraded|1:degraded) ;;
+        *) die "systemd is not ready (state=${readiness:-unknown}, status=$readiness_status)" ;;
+    esac
+}
+
+# Keep the established SELinux call sites explicit while sharing the same
+# fixed-path verifier with package and systemd capability discovery.
+validate_rhel_vendor_tool() {
+    validate_vendor_tool "$1"
+}
+
+validate_present_platform_tools() {
+    local role
+    validate_systemd_runtime
+    validate_vendor_tool setpriv
+    for role in apt-get apt-cache dpkg-query pacman dnf rpm; do
+        if vendor_tool_present "$role"; then
+            validate_vendor_tool "$role"
+        fi
+    done
+}
+
+package_ecosystem_complete() {
+    case "$1" in
+        apt)
+            vendor_tool_present apt-get &&
+                vendor_tool_present apt-cache &&
+                vendor_tool_present dpkg-query
+            ;;
+        pacman) vendor_tool_present pacman ;;
+        dnf) vendor_tool_present dnf && vendor_tool_present rpm ;;
+        *) return 1 ;;
+    esac
+}
+
+validate_selected_package_ecosystem() {
+    local family=$1 role
+    [[ "$family" != dnf-preview ]] || family=dnf
+    case "$family" in
+        apt) set -- apt-get apt-cache dpkg-query ;;
+        pacman) set -- pacman ;;
+        dnf) set -- dnf rpm ;;
+        *) die "unknown package ecosystem: $family" ;;
+    esac
+    for role in "$@"; do
+        validate_vendor_tool "$role"
+    done
+}
+
 vendor_machine_architecture() {
     local machine
     validate_rhel_vendor_tool uname
@@ -412,9 +521,9 @@ vendor_machine_architecture() {
     printf '%s\n' "$machine"
 }
 
-# Read only the authorization-bearing os-release fields without sourcing the
-# file. ID_LIKE is deliberately ignored: a compatible derivative is not a
-# certified bootstrap target.
+# Parse os-release as inert metadata without sourcing it. ID and ID_LIKE can
+# disambiguate which complete vendor toolchain is expected; neither field nor
+# VERSION_ID authorizes a mutation.
 parse_bootstrap_os_release_scalar() {
     local raw=$1 field=$2 value
     case "$raw" in
@@ -446,6 +555,7 @@ parse_bootstrap_os_release() {
     local -A seen=()
     BOOTSTRAP_DISTRO_ID=
     BOOTSTRAP_DISTRO_VERSION_ID=
+    BOOTSTRAP_DISTRO_ID_LIKE=
     [[ -f "$file" ]] \
         || die "missing operating-system identity file: $file"
     if IFS= read -r -d '' _ < "$file"; then
@@ -458,21 +568,73 @@ parse_bootstrap_os_release() {
         key=${BASH_REMATCH[1]}
         raw=${BASH_REMATCH[2]}
         case "$key" in
-            ID|VERSION_ID)
+            ID|VERSION_ID|ID_LIKE)
                 [[ -z "${seen[$key]+present}" ]] \
                     || die "duplicate $key in operating-system identity file: $file"
                 seen[$key]=1
                 parse_bootstrap_os_release_scalar "$raw" "$key"
-                if [[ "$key" == ID ]]; then
-                    BOOTSTRAP_DISTRO_ID=$BOOTSTRAP_OS_RELEASE_VALUE
-                else
-                    BOOTSTRAP_DISTRO_VERSION_ID=$BOOTSTRAP_OS_RELEASE_VALUE
-                fi
+                case "$key" in
+                    ID) BOOTSTRAP_DISTRO_ID=$BOOTSTRAP_OS_RELEASE_VALUE ;;
+                    VERSION_ID) BOOTSTRAP_DISTRO_VERSION_ID=$BOOTSTRAP_OS_RELEASE_VALUE ;;
+                    ID_LIKE) BOOTSTRAP_DISTRO_ID_LIKE=$BOOTSTRAP_OS_RELEASE_VALUE ;;
+                esac
                 ;;
         esac
     done < "$file"
     [[ "$BOOTSTRAP_DISTRO_ID" =~ ^[a-z0-9][a-z0-9._-]*$ ]] \
         || die "missing or invalid ID in operating-system identity file: $file"
+    [[ -z "$BOOTSTRAP_DISTRO_VERSION_ID" ||
+       "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:+-]*$ ]] \
+        || die "invalid VERSION_ID in operating-system identity file: $file"
+    [[ -z "$BOOTSTRAP_DISTRO_ID_LIKE" ||
+       "$BOOTSTRAP_DISTRO_ID_LIKE" =~ ^[a-z0-9][a-z0-9._-]*(\ [a-z0-9][a-z0-9._-]*)*$ ]] \
+        || die "invalid ID_LIKE in operating-system identity file: $file"
+}
+
+package_hint_for_token() {
+    case "$1" in
+        debian|ubuntu) printf '%s\n' apt ;;
+        arch) printf '%s\n' pacman ;;
+        rhel|fedora|centos|almalinux|rocky|rocky-linux|cloudlinux) printf '%s\n' dnf ;;
+        *) return 1 ;;
+    esac
+}
+
+select_bootstrap_package_ecosystem() {
+    local token hint candidate selected= combined
+    local -A hints=()
+    local -a complete=()
+
+    validate_present_platform_tools
+    combined="$BOOTSTRAP_DISTRO_ID $BOOTSTRAP_DISTRO_ID_LIKE"
+    for token in $combined; do
+        hint=$(package_hint_for_token "$token") || continue
+        hints[$hint]=1
+    done
+    for candidate in apt pacman dnf; do
+        if package_ecosystem_complete "$candidate"; then
+            complete+=("$candidate")
+        fi
+    done
+
+    if ((${#hints[@]} == 1)); then
+        for selected in "${!hints[@]}"; do :; done
+        package_ecosystem_complete "$selected" \
+            || die "os-release expects the $selected package ecosystem, but its exact vendor toolchain is incomplete"
+    else
+        ((${#complete[@]} == 1)) \
+            || die "package ecosystem is missing or ambiguous; exactly one complete trusted toolchain is required"
+        selected=${complete[0]}
+    fi
+
+    validate_selected_package_ecosystem "$selected"
+    if [[ "$selected" == dnf ]]; then
+        PKG_FAMILY=dnf-preview
+        SELINUX_PLATFORM_MODE=dnf-preview
+    else
+        PKG_FAMILY=$selected
+        SELINUX_PLATFORM_MODE=inert
+    fi
 }
 
 classify_bootstrap_platform() {
@@ -485,70 +647,74 @@ classify_bootstrap_platform() {
         *) die "unsupported bootstrap architecture: $machine" ;;
     esac
 
-    case "$BOOTSTRAP_DISTRO_ID" in
-        debian)
-            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^13([.][0-9]+)*$ ]] \
-                || die "Debian bootstrap requires Debian 13"
-            PKG_FAMILY=apt
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        ubuntu)
-            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^24[.]04([.][0-9]+)*$ ]] \
-                || die "Ubuntu bootstrap requires Ubuntu 24.04 LTS"
-            PKG_FAMILY=apt
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        arch)
-            [[ -z "$BOOTSTRAP_DISTRO_VERSION_ID" || "$BOOTSTRAP_DISTRO_VERSION_ID" == rolling ]] \
-                || die "Arch bootstrap requires the rolling Arch Linux release"
-            [[ "$BOOTSTRAP_ARCH" == amd64 ]] \
-                || die "Arch Linux bootstrap is certified only for x86_64"
-            PKG_FAMILY=pacman
-            SELINUX_PLATFORM_MODE=inert
-            ;;
-        almalinux|rocky)
-            [[ "$BOOTSTRAP_DISTRO_VERSION_ID" =~ ^9([.][0-9]+)*$ ]] \
-                || die "RHEL-family preview bootstrap requires AlmaLinux 9 or Rocky Linux 9"
-            PKG_FAMILY=dnf-preview
-            SELINUX_PLATFORM_MODE=rhel9
-            ;;
-        rhel)
-            die "subscription-based RHEL bootstrap is not certified; CelikPanel never registers subscriptions automatically"
-            ;;
-        fedora|centos|cloudlinux)
-            die "RHEL-family distribution $BOOTSTRAP_DISTRO_ID is compatible but not certified for bootstrap"
-            ;;
-        *)
-            die "unsupported bootstrap distribution ID: $BOOTSTRAP_DISTRO_ID"
-            ;;
+    select_bootstrap_package_ecosystem
+}
+
+verify_live_selinux_preflight() {
+    local enforcing trailing= enforce_fd mode permissions
+    if [[ -L "$SELINUX_ENFORCE_FILE" ]]; then
+        die "SELinux enforcement state path must not be symbolic"
+    fi
+    if [[ ! -e "$SELINUX_ENFORCE_FILE" ]]; then
+        return 0
+    fi
+    [[ -f "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]] ||
+        die "SELinux enforcement state is unavailable or unreadable"
+    mode=$("$VENDOR_STAT_BIN" -Lc '%a' -- "$SELINUX_ENFORCE_FILE") ||
+        die "cannot inspect SELinux enforcement state metadata"
+    [[ "$mode" =~ ^[0-7]{3,4}$ ]] ||
+        die "SELinux enforcement state metadata is malformed"
+    permissions=$((8#$mode))
+    (( (permissions & 0444) != 0 )) ||
+        die "SELinux enforcement state has no readable permission bit"
+    if IFS= read -r -d '' _ < "$SELINUX_ENFORCE_FILE"; then
+        die "SELinux enforcement state contains a NUL byte"
+    fi
+    exec {enforce_fd}<"$SELINUX_ENFORCE_FILE" ||
+        die "cannot open SELinux enforcement state"
+    if ! IFS= read -r -u "$enforce_fd" enforcing; then
+        exec {enforce_fd}<&-
+        die "SELinux enforcement state must be newline-terminated"
+    fi
+    if IFS= read -r -u "$enforce_fd" trailing || [[ -n "$trailing" ]]; then
+        exec {enforce_fd}<&-
+        die "SELinux enforcement state must contain exactly one line"
+    fi
+    exec {enforce_fd}<&-
+    case "$enforcing" in
+        0|1) ;;
+        *) die "SELinux enforcement state is malformed" ;;
     esac
+    [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]] ||
+        die "SELinux is active but this package capability has no certified label lifecycle; no host changes were made"
 }
 
 verify_rhel_preview_host() {
     local enforcing reported_state
-    [[ "$SELINUX_PLATFORM_MODE" == rhel9 ]] \
-        || die "RHEL SELinux verification requires a strict AlmaLinux/Rocky Linux 9 classification"
+    [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]] \
+        || die "DNF SELinux verification requires the DNF preview capability profile"
     [[ -f "$SELINUX_ENFORCE_FILE" && ! -L "$SELINUX_ENFORCE_FILE" && -r "$SELINUX_ENFORCE_FILE" ]] \
-        || die "RHEL-family preview requires SELinux Enforcing; SELinux state is unavailable"
+        || die "DNF preview requires SELinux Enforcing; SELinux state is unavailable"
     IFS= read -r enforcing < "$SELINUX_ENFORCE_FILE" \
-        || die "RHEL-family preview could not read the SELinux enforcement state"
+        || die "DNF preview could not read the SELinux enforcement state"
     [[ "$enforcing" == 1 ]] \
-        || die "RHEL-family preview requires SELinux Enforcing and will not change host policy"
+        || die "DNF preview requires SELinux Enforcing and will not change host policy"
     validate_rhel_vendor_tool dnf
+    validate_rhel_vendor_tool rpm
     validate_rhel_vendor_tool restorecon
     validate_rhel_vendor_tool matchpathcon
     validate_rhel_vendor_tool getenforce
     reported_state=$("$SELINUX_GETENFORCE_BIN") \
-        || die "RHEL-family preview could not query SELinux through $SELINUX_GETENFORCE_BIN"
+        || die "DNF preview could not query SELinux through $SELINUX_GETENFORCE_BIN"
     [[ "$reported_state" == Enforcing ]] \
-        || die "RHEL-family preview requires getenforce to report Enforcing"
+        || die "DNF preview requires getenforce to report Enforcing"
 }
 
 # Pure dry-run description of the future prerequisite transaction. The normal
 # installer does not execute this command until panel and agent activation has
-# passed an SELinux-Enforcing acceptance test on both preview distributions.
+# passed a complete SELinux-Enforcing lifecycle acceptance test.
 rhel_preview_prerequisite_command() {
-    printf '%s\n' /usr/bin/dnf --assumeyes --setopt=install_weak_deps=False \
+    printf '%s\n' "$RHEL_DNF_BIN" --assumeyes --setopt=install_weak_deps=False \
         install tar xz curl ca-certificates selinux-policy-targeted \
         policycoreutils libselinux-utils
 }
@@ -556,9 +722,10 @@ rhel_preview_prerequisite_command() {
 preflight_bootstrap_platform() {
     local os_release=$1 machine=$2
     classify_bootstrap_platform "$os_release" "$machine"
-    if [[ "$SELINUX_PLATFORM_MODE" == rhel9 ]]; then
+    verify_live_selinux_preflight
+    if [[ "$SELINUX_PLATFORM_MODE" == dnf-preview ]]; then
         verify_rhel_preview_host
-        die "AlmaLinux/Rocky Linux 9 bootstrap remains preview-only: prerequisite mapping is ready, but panel and agent activation under SELinux Enforcing is not certified; no host changes were made"
+        die "DNF bootstrap remains preview-only: package capability is verified, but the SELinux lifecycle is not implemented; no host changes were made"
     fi
     if [[ $APPLY_ONLY -eq 1 ]]; then
         PKG_FAMILY=apply-only
@@ -566,15 +733,15 @@ preflight_bootstrap_platform() {
     fi
 }
 
-# SELinux lifecycle is inert only after strict Debian/Ubuntu/Arch preflight.
-# Alma/Rocky 9 publication revalidates pinned vendor tools immediately before
+# SELinux lifecycle is inert only for the selected APT or pacman capability.
+# DNF preview publication revalidates pinned vendor tools immediately before
 # use and labels only fixed CelikPanel-owned paths.
 restore_celikpanel_selinux_labels() {
     local state drift candidate
     local -a paths=()
     case "$SELINUX_PLATFORM_MODE" in
         inert) return 0 ;;
-        rhel9) ;;
+        dnf-preview) ;;
         *) die "SELinux lifecycle platform preflight was not completed" ;;
     esac
     validate_rhel_vendor_tool restorecon
@@ -844,24 +1011,53 @@ ensure_panel_env() {
 service_group_id() {
     local group_id
     group_id=$(getent group "$SVC_GROUP" | cut -d: -f3) || return 1
-    [[ "$group_id" =~ ^[0-9]+$ ]] || return 1
+    [[ "$group_id" =~ ^(0|[1-9][0-9]*)$ ]] || return 1
     printf '%s\n' "$group_id"
 }
 
-# Set the private mask after sudo changes identity so host sudoers policy
-# cannot widen SQLite database or sidecar permissions during bootstrap.
-# Kimlik sudo ile değiştirildikten sonra özel maskeyi ayarla; böylece sunucunun
-# sudoers ilkesi bootstrap sırasında SQLite veritabanı veya yan dosya
-# izinlerini genişletemez.
+service_user_id() {
+    local user_id
+    user_id=$(getent passwd "$SVC_USER" | cut -d: -f3) || return 1
+    [[ "$user_id" =~ ^(0|[1-9][0-9]*)$ ]] || return 1
+    printf '%s\n' "$user_id"
+}
+
+# Revalidate the fixed util-linux identity switch immediately before every
+# panel bootstrap command. Numeric identities and an empty supplementary-group
+# set avoid NSS-dependent identity changes and inherited root groups.
 run_panel_as_service_user_with_private_umask() {
-    sudo -u "$SVC_USER" CELIKPANEL_DATA_DIR="$DATA_DIR" \
+    [[ "${SVC_USER_ID:-}" =~ ^[0-9]+$ && "$SVC_USER_ID" != 0 &&
+       "${SVC_GROUP_ID:-}" =~ ^[0-9]+$ && "$SVC_GROUP_ID" != 0 ]] \
+        || die "panel bootstrap service identity is invalid"
+    validate_vendor_tool setpriv
+    CELIKPANEL_DATA_DIR="$DATA_DIR" \
+        "$SETPRIV_BIN" --reuid="$SVC_USER_ID" --regid="$SVC_GROUP_ID" \
+        --clear-groups -- \
         /bin/sh -c 'umask 077; exec "$@"' celikpanel-install "$PREFIX/bin/panel" "$@"
+}
+
+ensure_first_administrator() {
+    local admin_count
+    [[ "${SKIP_ADMIN:-0}" != 1 ]] || return 0
+    if ! admin_count=$(run_panel_as_service_user_with_private_umask --count-users); then
+        die "Administrator count failed" "Yönetici sayısı alınamadı"
+    fi
+    [[ "$admin_count" =~ ^(0|[1-9][0-9]*)$ ]] \
+        || die "Administrator count returned invalid data" "Yönetici sayısı geçersiz veri döndürdü"
+    if [[ "$admin_count" == 0 ]]; then
+        step "Creating the first administrator" "İlk yönetici oluşturuluyor"
+        run_panel_as_service_user_with_private_umask --create-admin || \
+            die "Administrator creation failed" "Yönetici oluşturma başarısız"
+        ok "administrator is ready" "yönetici hazır"
+        return 0
+    fi
+    ok "An administrator already exists — skipped" \
+        "Yönetici zaten var — atlandı"
 }
 
 [ "$(/usr/bin/id -u)" -eq 0 ] || die "root olarak çalıştırın (sudo ./install.sh)"
 bootstrap_machine=$(vendor_machine_architecture)
 preflight_bootstrap_platform "$SELINUX_OS_RELEASE" "$bootstrap_machine"
-command -v systemctl >/dev/null || die "systemd gerekli"
 for installer_command in chown chmod cmp cp flock install mktemp mv stat sync; do
     command -v "$installer_command" >/dev/null \
         || die "required installer command is unavailable: $installer_command"
@@ -913,7 +1109,7 @@ validate_apply_only_transaction() {
         "${CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT:-}" \
         || die "apply-only active transaction marker proof failed"
     for unit in celikpanel-agent.service celikpanel-panel.service; do
-        state=$(systemctl show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
+        state=$("$SYSTEMCTL_BIN" show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
         [[ "$state" == inactive || "$state" == failed ]] || die "apply-only requires $unit stopped"
     done
     install_release_transaction_guards_with_label_barrier \
@@ -988,19 +1184,12 @@ elif [[ $initialize_ledger -ne 1 ]]; then
     die "servis işlem ledger eksik; yalnız temiz kurulum veya denetlenmiş bootstrap başlatabilir"
 fi
 
-# The exact distro identity selects a package family; the presence of a
-# foreign package manager never authorizes a bootstrap. RHEL preview hosts
-# have already stopped above, before any mutation.
+# Revalidate the selected fixed-path toolchain immediately before the first
+# package mutation. A foreign package manager neither authorizes nor redirects
+# bootstrap; DNF preview hosts have already stopped above.
 case "$PKG_FAMILY" in
     apply-only) ;;
-    apt)
-        command -v apt-get >/dev/null \
-            || die "Debian-family bootstrap requires apt-get"
-        ;;
-    pacman)
-        command -v pacman >/dev/null \
-            || die "Arch bootstrap requires pacman"
-        ;;
+    apt|pacman) validate_selected_package_ecosystem "$PKG_FAMILY" ;;
     *) die "internal bootstrap package-family error: $PKG_FAMILY" ;;
 esac
 
@@ -1011,8 +1200,9 @@ esac
 # runs only what they actually want (constitution: what isn't installed is
 # invisible). We ensure only the few tiny tools the agent itself uses.
 #
-# nftables belongs in this list, not in the on-demand catalog. It is the tool
-# the agent shells out to for the firewall — plumbing, exactly like curl. The
+# nftables and iproute2 belong in this list, not in the on-demand catalog. They
+# provide the firewall and exact local-address inspection used by the agent.
+# The
 # kernel packet filter (netfilter) is always present; only this userspace `nft`
 # binary can be missing on a minimal image. Installing it changes nothing:
 # it writes no rules and closes no ports until the operator hits "Turn on", and
@@ -1036,8 +1226,8 @@ esac
 # ≠ firewall'u açmak — böylece firewall temiz bir aç/kapa düğmesi kalır ve bu,
 # "firewall'u sürprizle açma" kuralına uyar.
 if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
-    step "Small prerequisites (curl, tar, xz, nftables)" \
-        "Küçük ön gereksinimler (curl, tar, xz, nftables)"
+    step "Small prerequisites (curl, tar, xz, nftables, iproute2)" \
+        "Küçük ön gereksinimler (curl, tar, xz, nftables, iproute2)"
     case "$PKG_FAMILY" in
     apt)
         export DEBIAN_FRONTEND=noninteractive
@@ -1045,18 +1235,19 @@ if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ]; then
         # need come from the base archives and may already be cached.
         # Bozuk bir üçüncü parti depo kurulumu iptal etmemeli; ihtiyacımız olan
         # paketler ana arşivlerden gelir ve zaten önbellekte olabilir.
-        apt-get update -qq || warn "apt-get update returned a warning — continuing" \
+        "$APT_GET_BIN" update -qq || warn "apt-get update returned a warning — continuing" \
             "apt-get update uyarı verdi — devam ediliyor"
-        apt-get install -y -qq tar xz-utils curl ca-certificates nftables >/dev/null
+        "$APT_GET_BIN" install -y -qq tar xz-utils curl ca-certificates nftables iproute2 >/dev/null
         ;;
     pacman)
-        # Arch does not support partial upgrades. Refresh, upgrade and install
+        # The pacman ecosystem does not support partial upgrades. Refresh,
+        # upgrade and install
         # prerequisites in one transaction so the host is never left with a
         # new package database and an old base system.
         # Arch kısmi yükseltmeleri desteklemez. Makineyi yeni paket veritabanı
         # ve eski temel sistemle bırakmamak için tazeleme, yükseltme ve ön
         # gereksinim kurulumunu tek işlemde yap.
-        pacman -Syu --noconfirm --needed tar xz curl ca-certificates nftables >/dev/null
+        "$PACMAN_BIN" -Syu --noconfirm --needed tar xz curl ca-certificates nftables iproute2 >/dev/null
         ;;
     esac
     ok "ready" "hazır"
@@ -1081,7 +1272,7 @@ if [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY
     step "Automatic security patches (unattended-upgrades)" \
         "Otomatik güvenlik yamaları (unattended-upgrades)"
     export DEBIAN_FRONTEND=noninteractive
-    if apt-get install -y -qq unattended-upgrades >/dev/null 2>&1; then
+    if "$APT_GET_BIN" install -y -qq unattended-upgrades >/dev/null 2>&1; then
         # Enable the periodic timer: update lists + apply security upgrades daily.
         # Periyodik zamanlayıcıyı aç: listeleri güncelle + günlük güvenlik yaması.
         cat > /etc/apt/apt.conf.d/20celikpanel-auto-upgrades <<'AUTOCONF'
@@ -1089,20 +1280,20 @@ APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 APT::Periodic::AutocleanInterval "7";
 AUTOCONF
-        systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
+        "$SYSTEMCTL_BIN" enable --now unattended-upgrades >/dev/null 2>&1 || true
         ok "security patches enabled" "güvenlik yamaları etkin"
     else
         warn "unattended-upgrades could not be installed — skipped (it can be installed manually)" \
             "unattended-upgrades kurulamadı — atlandı (elle kurulabilir)"
     fi
 elif [[ $APPLY_ONLY -eq 0 ]] && [ "${SKIP_DEPS:-0}" != "1" ] && [ "${SKIP_SECURITY_UPDATES:-0}" != "1" ] && [ "$PKG_FAMILY" = "pacman" ]; then
-    # Arch is rolling release: there is no security-only patch channel to
-    # subscribe to, so we say so instead of pretending.
-    # Arch yuvarlanan sürümdür: abone olunacak güvenlik-yalnız yama kanalı
-    # yoktur; öyleymiş gibi yapmak yerine bunu söyleriz.
+    # CelikPanel has no verified security-only channel for the pacman ecosystem,
+    # so we say so instead of pretending.
+    # CelikPanel'in pacman ekosistemi için doğrulanmış güvenlik-yalnız yama
+    # kanalı yoktur; öyleymiş gibi yapmak yerine bunu söyleriz.
     step "Automatic security patches" "Otomatik güvenlik yamaları"
-    warn "Arch has no security-only channel — automatic patches were not configured; keep the system current with 'pacman -Syu'" \
-        "Arch'ta güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun"
+    warn "The pacman ecosystem has no managed security-only channel — automatic patches were not configured; keep the system current with 'pacman -Syu'" \
+        "Pacman ekosisteminde yönetilen güvenlik-yalnız kanal yok — otomatik yama kurulmadı; sistemi 'pacman -Syu' ile güncel tutun"
 fi
 
 # 2. Service user & group ----------------------------------------------------
@@ -1119,6 +1310,8 @@ else
 fi
 SVC_GROUP_ID=$(service_group_id) || die "$SVC_GROUP group ID could not be resolved" \
     "$SVC_GROUP grup kimliği çözülemedi"
+SVC_USER_ID=$(service_user_id) || die "$SVC_USER user ID could not be resolved" \
+    "$SVC_USER kullanıcı kimliği çözülemedi"
 ok "$SVC_USER:$SVC_GROUP"
 
 # Validate or migrate durable operator choices before building or replacing any
@@ -1663,7 +1856,7 @@ if [[ "$VALIDATED_PANEL_HTTPS" == 0 ]]; then
         "AR-GE modu: demo hesaplar açık, çerezler düz HTTP'de çalışır — internete açmayın"
 fi
 restore_celikpanel_selinux_labels
-systemctl daemon-reload
+"$SYSTEMCTL_BIN" daemon-reload
 ok "installed" "kuruldu"
 
 # Apply-only ends after immutable layout and ledger metadata are verified. It
@@ -1724,11 +1917,11 @@ read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT
 # hiçbir etkinleştirme bağlantısı oluşturulmaz.
 /bin/bash "$SRC/deploy/systemd/enable-firewall-restore-if-saved.sh" "$CONF_DIR/firewall.nft" || \
     die "firewall restore unit could not be reconciled"
-systemctl enable celikpanel-agent.service >/dev/null 2>&1 || true
-systemctl restart celikpanel-agent.service || \
+"$SYSTEMCTL_BIN" enable celikpanel-agent.service >/dev/null 2>&1 || true
+"$SYSTEMCTL_BIN" restart celikpanel-agent.service || \
     die "The agent could not be restarted — inspect 'journalctl -u celikpanel-agent'" \
         "Agent yeniden başlatılamadı — 'journalctl -u celikpanel-agent' inceleyin"
-systemctl is-active --quiet celikpanel-agent.service || \
+"$SYSTEMCTL_BIN" is-active --quiet celikpanel-agent.service || \
     die "The agent is not active — inspect 'journalctl -u celikpanel-agent'" \
         "Agent aktif değil — 'journalctl -u celikpanel-agent' inceleyin"
 for _ in $(seq 1 20); do
@@ -1741,43 +1934,33 @@ done
 ok "agent is running" "agent çalışıyor"
 
 # 8. First administrator -----------------------------------------------------
-if [ "${SKIP_ADMIN:-0}" != "1" ]; then
-    if run_panel_as_service_user_with_private_umask --count-users 2>/dev/null | grep -q '^0$'; then
-        step "Creating the first administrator" "İlk yönetici oluşturuluyor"
-        run_panel_as_service_user_with_private_umask --create-admin || \
-            die "Administrator creation failed" "Yönetici oluşturma başarısız"
-        ok "administrator is ready" "yönetici hazır"
-    else
-        ok "An administrator already exists — skipped" \
-            "Yönetici zaten var — atlandı"
-    fi
-fi
+ensure_first_administrator
 
 # 9. Start the panel ---------------------------------------------------------
 step "Starting the panel" "Panel başlatılıyor"
-systemctl enable celikpanel-panel.service >/dev/null 2>&1 || true
-systemctl restart celikpanel-panel.service || \
+"$SYSTEMCTL_BIN" enable celikpanel-panel.service >/dev/null 2>&1 || true
+"$SYSTEMCTL_BIN" restart celikpanel-panel.service || \
     die "The panel could not be restarted — inspect 'journalctl -u celikpanel-panel'" \
         "Panel yeniden başlatılamadı — 'journalctl -u celikpanel-panel' inceleyin"
 sleep 1
-systemctl is-active --quiet celikpanel-panel.service || \
+"$SYSTEMCTL_BIN" is-active --quiet celikpanel-panel.service || \
     die "The panel did not start — inspect 'journalctl -u celikpanel-panel'" \
         "Panel başlamadı — 'journalctl -u celikpanel-panel' inceleyin"
 ok "panel is running" "panel çalışıyor"
 
 step "Protecting the initial panel certificate" "Ilk panel sertifikasi korumaya aliniyor"
-systemctl stop celikpanel-panel.service || \
+"$SYSTEMCTL_BIN" stop celikpanel-panel.service || \
     die "The panel could not be stopped for certificate protection" \
         "Sertifika korumasi icin panel durdurulamadi"
 panel_tls_normalize_legacy_self_signed \
     "$PANEL_TLS_DIR" "$(id -u "$SVC_USER")" "$(getent group "$SVC_GROUP" | cut -d: -f3)" || \
     die "The initial panel certificate metadata could not be protected" \
         "Ilk panel sertifikasi metaverisi korunamadi"
-systemctl restart celikpanel-panel.service || \
+"$SYSTEMCTL_BIN" restart celikpanel-panel.service || \
     die "The panel could not be restarted after certificate protection" \
         "Sertifika korumasindan sonra panel yeniden baslatilamadi"
 sleep 1
-systemctl is-active --quiet celikpanel-panel.service || \
+"$SYSTEMCTL_BIN" is-active --quiet celikpanel-panel.service || \
     die "The panel did not start after certificate protection" \
         "Sertifika korumasindan sonra panel baslamadi"
 ok "initial panel certificate is protected" "ilk panel sertifikasi korundu"

@@ -17,6 +17,7 @@ import (
 
 type domainDeletionRPCAgent struct {
 	durableMutationRPCFixture
+	verifiedAPTAgentRPCFixture
 
 	callsMu sync.Mutex
 	commit  string

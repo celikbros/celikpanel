@@ -466,12 +466,29 @@ type agentRPCHostIdentityResolution struct {
 // bound and the lifecycle has passed live certification.
 var rhelPreviewAgentRPCMethodGrants = map[string]agentRPCCapability{}
 
-// authorizeAgentRPCPolicyForHost is the pure platform firewall. Established
-// apt/pacman behavior remains available, including the legacy family-only
-// identity. DNF requires a verified, narrowly qualified HostPlatform identity
-// and an exact method/capability prefilter entry; family-only dnf can never
-// authorize a mutation. A prefilter entry alone is deliberately insufficient
-// for a parameterized method until its request and durable target are bound.
+func verifiedAgentRPCHostCapability(identity agentRPCHostIdentity) bool {
+	if !identity.verified {
+		return false
+	}
+	host := identity.host
+	return validHostPlatformCapability(transport.HostPlatformResponse{
+		DistroFamily:   host.DistroFamily,
+		PackageManager: host.PackageFamily,
+		ServiceManager: host.ServiceManager,
+		DistroID:       host.DistroID,
+		VersionID:      host.VersionID,
+		Architecture:   host.Architecture,
+	})
+}
+
+// authorizeAgentRPCPolicyForHost is the pure platform firewall. Host mutations
+// require the complete HostPlatform capability identity produced by the
+// agent trusted manager/systemd proof. The legacy family-only identity is
+// catalogue/read compatibility data and can never authorize a mutation. DNF
+// additionally requires a narrowly qualified candidate and an exact
+// method/capability prefilter entry. A prefilter entry alone is deliberately
+// insufficient for a parameterized method until its request and durable target
+// are bound.
 func authorizeAgentRPCPolicyForHost(method string, policy agentRPCPolicy, identity agentRPCHostIdentity) error {
 	if err := policy.validate(); err != nil {
 		return fmt.Errorf("%w: %v", errAgentRPCPolicyInvalid, err)
@@ -483,11 +500,19 @@ func authorizeAgentRPCPolicyForHost(method string, policy agentRPCPolicy, identi
 		packageFamily := strings.TrimSpace(identity.host.PackageFamily)
 		switch packageFamily {
 		case "apt", "pacman":
-			return nil
+			if verifiedAgentRPCHostCapability(identity) {
+				return nil
+			}
+			return fmt.Errorf(
+				"%w: package_family=%s requires a verified HostPlatform capability identity",
+				errAgentRPCPlatformCapabilityDenied,
+				packageFamily,
+			)
 		case "":
 			return errAgentRPCPlatformIdentityUnavailable
 		case "dnf":
-			if identity.verified && core.IsRHELPreviewNginxCandidate(identity.host) {
+			if verifiedAgentRPCHostCapability(identity) &&
+				core.IsRHELPreviewNginxCandidate(identity.host) {
 				grantedCapability, granted := rhelPreviewAgentRPCMethodGrants[method]
 				if granted && grantedCapability == policy.capability {
 					return nil
@@ -531,7 +556,7 @@ func (p *Panel) authorizeAgentRPCContext(ctx context.Context, method string) err
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return err
 		}
-		return fmt.Errorf("%w: %s: %v", errAgentRPCPlatformIdentityUnavailable, method, err)
+		return fmt.Errorf("%w: %s: %w", errAgentRPCPlatformIdentityUnavailable, method, err)
 	}
 	if err := authorizeAgentRPCPolicyForHost(method, policy, identity); err != nil {
 		return fmt.Errorf("%s: %w", method, err)
@@ -558,9 +583,11 @@ func (p *Panel) rawAgentCallContext(ctx context.Context, method string, args, re
 // policy evaluation cannot recurse. A shared flight coalesces the first
 // HostPlatform lookup without holding a mutex across the RPC: each waiter can
 // still honor its own context, while waiters that remain receive the leader's
-// exact result. A cached DNF family is intentionally enriched through
-// HostPlatform when an agent is available; otherwise it remains an unverified
-// identity that the firewall must deny.
+// exact result. Any cached family is intentionally enriched through
+// HostPlatform when an agent is available. Without an agent, a cached family
+// that is already mutation-ineligible may still produce a deterministic
+// capability denial; supported APT/pacman mutation paths require the live
+// verified identity and report the missing client instead.
 func (p *Panel) agentRPCHostIdentity(ctx context.Context) (agentRPCHostIdentity, error) {
 	if p == nil {
 		return agentRPCHostIdentity{}, errAgentRPCClientUnavailable
@@ -627,7 +654,7 @@ func (p *Panel) agentRPCHostIdentity(ctx context.Context) (agentRPCHostIdentity,
 		return agentRPCHostIdentity{host: host, verified: true}, nil
 	}
 	hasAgent := p.agentClient != nil
-	if family != "" && (family != "dnf" || !hasAgent) {
+	if family != "" && !hasAgent && family != "apt" && family != "pacman" {
 		p.pkgFamilyMu.Unlock()
 		p.hostPlatformResolutionMu.Unlock()
 		return agentRPCHostIdentity{

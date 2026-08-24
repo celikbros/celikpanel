@@ -90,9 +90,11 @@ advances Git.
 
 The firewall restore path is boot-critical. A release that changes installation,
 systemd, firewall persistence, update, bootstrap, or rollback behavior must also
-pass disposable real-VM tests on both **Ubuntu 24.04** and current **Arch
-Linux**. For each OS, preserve evidence for fresh install, the applicable update
-mode, rollback, and an actual reboot covering at least these states:
+pass disposable real-VM tests on **Debian 13**, **Ubuntu 24.04** and current
+**Arch Linux**. These are acceptance fixtures for the implemented package
+ecosystems, not distro-name authorization. For each OS, preserve evidence for
+fresh install, the applicable update mode, rollback, and an actual reboot
+covering at least these states:
 
 1. no saved firewall snapshot: the restore unit remains disabled and reboot
    does not enable or apply a policy;
@@ -333,16 +335,18 @@ PowerDNS directly; never install a temporary engine to establish the pair.
 
 For the frozen Frankfurt/Boston deployment, use this order:
 
-1. Stage Frankfurt/NS1 as the primary with Boston's fixed peer IPv4, then review
-   and activate BIND directly. It may become managed and running before Boston
-   is ready, but it must show pair-pending and must not accept panel-local zone
-   writes yet.
-2. On Boston/NS2, review the detected empty, panel-managed Standalone PowerDNS
-   authority. Start the dedicated direct reconfiguration to directional
-   secondary. The operation snapshots the exact PowerDNS database,
-   configuration and unit state, writes the catalog consumer, performs one
-   bounded restart and proves the target. Do not install or activate BIND on
-   Boston as an intermediate step.
+1. Stage Debian 13 Frankfurt/NS1 as the primary with Boston's fixed peer IPv4,
+   then review and activate BIND directly. It may become managed and running
+   before Boston is ready, but it must show pair-pending and must not accept
+   panel-local zone writes yet.
+2. On Ubuntu 24.04 Boston/NS2, review and activate PowerDNS directly as the
+   directional secondary. On a clean host the operation installs the exact
+   packages while the target remains sealed, creates the catalog consumer and
+   proves the target before commit. If pre-operation evidence instead proves an
+   exact empty, panel-managed Standalone PowerDNS authority, it selects the
+   reconfiguration path: snapshot the database, configuration and unit state,
+   write the consumer, perform one bounded restart, prove and commit. Do not
+   install or activate BIND on Boston as an intermediate step.
 3. Refresh Frankfurt. Publication becomes ready only after the agent proves the
    exact peer catalog and member serials. Only then create or change zones.
 

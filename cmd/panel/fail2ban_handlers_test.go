@@ -13,7 +13,9 @@ import (
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-type fail2banMutationTestAgent struct{}
+type fail2banMutationTestAgent struct {
+	verifiedAPTAgentRPCFixture
+}
 
 func (*fail2banMutationTestAgent) Fail2banToggleJail(_ *core.Fail2banJailRequest, reply *bool) error {
 	*reply = false
