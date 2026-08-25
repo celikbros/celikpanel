@@ -249,7 +249,7 @@ func TestPanelUpdateCheckRequiresCapabilityAndExactBuildPair(t *testing.T) {
 		mutate(fixture.agent)
 		recorder := httptest.NewRecorder()
 		fixture.panel.handlePanelUpdateCheck(recorder, systemUpdateRequest(http.MethodGet, panelUpdateCheckPath, "", roleAdmin))
-		if recorder.Code != http.StatusConflict {
+		if recorder.Code != http.StatusServiceUnavailable {
 			t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
 		}
 		if strings.Contains(recorder.Body.String(), "/var/") || strings.Contains(recorder.Body.String(), "private failure") {
@@ -268,7 +268,7 @@ func TestPanelUpdateCheckFailsClosedBeforeDiscoveryOnDNF(t *testing.T) {
 	fixture.panel.handlePanelUpdateCheck(recorder, systemUpdateRequest(
 		http.MethodGet, panelUpdateCheckPath, "", roleAdmin,
 	))
-	if recorder.Code != http.StatusConflict {
+	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 	fixture.agent.mu.Lock()

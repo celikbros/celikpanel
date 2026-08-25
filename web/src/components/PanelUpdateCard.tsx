@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, DownloadCloud, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from './ui';
 import { useI18n } from '../i18n';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -199,6 +200,14 @@ function responseHint(status: number, t: Translate): string {
     return t('panelUpdate.invalidResponse');
 }
 
+async function codedResponseHint(response: Response, t: Translate): Promise<{ code?: string; message: string }> {
+    const apiError = await readApiError(response);
+    return {
+        ...(apiError.code ? { code: apiError.code } : {}),
+        message: apiError.code ? apiErrorText(apiError, t) : responseHint(response.status, t),
+    };
+}
+
 function definitiveStartRejection(status: number): boolean {
     return status === 400 || status === 401 || status === 403 || status === 404
         || status === 405 || status === 409 || status === 413 || status === 415
@@ -352,7 +361,9 @@ export function PanelUpdateCard() {
         setCheck(null);
         try {
             const response = await fetch('/api/v1/panel/update/check', { cache: 'no-store', credentials: 'same-origin' });
-            if (!response.ok) throw new Error(responseHint(response.status, t));
+            if (!response.ok) {
+                throw new Error((await codedResponseHint(response, t)).message);
+            }
             const payload = decodeUpdateCheck(await response.json());
             if (!payload) {
                 throw new Error(t('panelUpdate.unsupported'));
@@ -406,13 +417,15 @@ export function PanelUpdateCard() {
                 }),
             });
             if (!response.ok) {
-                if (definitiveStartRejection(response.status)) {
+                const rejection = await codedResponseHint(response, t);
+                if (definitiveStartRejection(response.status)
+                    || rejection.code === 'PANEL_UPDATE_UNAVAILABLE') {
                     clearExactMarker(exactMarker);
                     setMarker(null);
-                    setMessage(startRejectionHint(response.status, t));
+                    setMessage(rejection.code ? rejection.message : startRejectionHint(response.status, t));
                     return;
                 }
-                setMessage(responseHint(response.status, t));
+                setMessage(rejection.message);
                 // No POST is retried automatically. Only ambiguous server
                 // failures retain the marker and drive exact status polling.
                 return;

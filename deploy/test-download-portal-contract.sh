@@ -29,6 +29,10 @@ bash "$builder" "$version" "$commit" "$published_at" \
 [[ -f "$tmp/site/assets/site.js" ]] || fail "home page script was not generated"
 [[ -f "$tmp/site/.well-known/security.txt" ]] || fail "security.txt was not generated"
 [[ -x "$tmp/site/get.sh" ]] || fail "bootstrap is not executable"
+[[ -f "$tmp/site/release-signing-ed25519.pem" ]] || fail "release public key was not generated"
+[[ "$(sha256sum "$tmp/site/release-signing-ed25519.pem" | awk '{print $1}')" == \
+   7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb ]] \
+  || fail "release public key digest is wrong"
 [[ -f "$tmp/site/releases/$version/$archive" ]] || fail "versioned archive is missing"
 [[ "$(cat "$tmp/site/releases/latest.txt")" == "$version" ]] || fail "latest pointer is wrong"
 cmp "$tmp/$archive" "$tmp/site/releases/$version/$archive" || fail "archive bytes changed"
@@ -104,12 +108,16 @@ if grep -Eq '<button[^>]*>(+ Yeni site|×|Devam et)' "$tmp/site/index.html"; the
   fail "illustrative product controls must not enter the keyboard tab order"
 fi
 grep -Fq -- "--proto '=https'" "$bootstrap" || fail "HTTPS protocol restriction is missing"
+grep -Fxq 'bootstrap_release_sequence=41' "$bootstrap" || fail "bootstrap sequence pin is missing"
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.41' "$bootstrap" || fail "bootstrap version pin is missing"
+grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
+  || fail "bootstrap public-key pin is missing"
 grep -Fq "sha256sum -c" "$bootstrap" || fail "archive checksum is not verified"
 grep -Fq "exact internal checksum manifest" "$bootstrap" || fail "exact internal manifest validation is missing"
 grep -Fq "release.commit release.tree" "$bootstrap" || fail "release provenance validation is missing"
 grep -Fq "Archive contains unsafe or unexpected paths" "$bootstrap" || fail "path validation is missing"
 grep -Fq "Arşiv güvensiz veya beklenmeyen yollar içeriyor" "$bootstrap" || fail "Turkish path validation is missing"
-grep -Fq 'for required_command in awk bash chmod chown cmp curl dirname env find grep id install' "$bootstrap" \
+grep -Fq 'for required_command in awk bash chmod chown cmp curl dirname env find flock grep id install' "$bootstrap" \
   || fail "complete runtime requirement gate is missing"
 grep -Fq 'bash "$installer"' "$bootstrap" || fail "installer is not executed with bash"
 grep -Fq -- '--install|--update' "$bootstrap" || fail "install/update selector is missing"

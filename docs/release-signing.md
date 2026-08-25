@@ -41,16 +41,57 @@ before publication. The portal builder also proves source/staged byte equality
 and re-hashes the staged copy before signing. Legacy unsigned generic paths and
 the six-argument portal build remain unchanged.
 
-## Operator gate and CI
+## Operator gate, CI, and portal assembly
 
-No production private or public key is generated or stored in this repository.
-Tag CI creates signed linux/amd64 assets only when the operator configures the
-`CELIKPANEL_RELEASE_SIGNING_ED25519_PEM` GitHub Actions secret. When that secret
-is present, repository variable `CELIKPANEL_RELEASE_SEQUENCE` is mandatory and
-missing or invalid configuration fails closed. When the secret is absent, the
-existing unsigned release artifacts are still produced and published.
+No production private key is generated or stored in this repository. The
+canonical Ed25519 public key is intentionally tracked at
+`deploy/release-signing-ed25519.pem` and is the public trust root pinned by
+`download-portal/get.sh`. Every tagged release requires the
+`CELIKPANEL_RELEASE_SIGNING_ED25519_PEM` GitHub Actions secret and the
+monotonic `CELIKPANEL_RELEASE_SEQUENCE` repository variable. The signer derives
+the public key from that private key and requires exact byte equality with the
+tracked PEM. A missing key, sequence, or key mismatch fails the tag job closed.
+Successful tag CI publishes exactly six assets: generic archive/checksum,
+linux/amd64 archive/checksum, and the detached signed manifest/signature.
 
-Equivalent portal staging is explicit:
+The preferred portal publisher does not receive a private key. Download the
+six immutable assets from the completed tag job, verify that there are no
+additional or missing files, verify both checksum files, and prove that the
+generic and platform archives are byte-identical:
+
+    (cd CI_ASSET_DIRECTORY && \
+      sha256sum -c celikpanel-VERSION.tar.gz.sha256 && \
+      sha256sum -c celikpanel-VERSION-linux-amd64.tar.gz.sha256 && \
+      cmp -s celikpanel-VERSION.tar.gz \
+        celikpanel-VERSION-linux-amd64.tar.gz)
+
+Then assemble a new, non-existing portal candidate from the four authoritative
+platform assets:
+
+    CELIKPANEL_RELEASE_SIGNING=pre-signed \
+    CELIKPANEL_RELEASE_SEQUENCE=41 \
+    CELIKPANEL_RELEASE_TREE=EXACT_40_HEX_TAG_TREE \
+    CELIKPANEL_RELEASE_OS=linux \
+    CELIKPANEL_RELEASE_ARCH=amd64 \
+    CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE=CI_ASSET_DIRECTORY/celikpanel-VERSION-linux-amd64.release-manifest-v2 \
+    CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE=CI_ASSET_DIRECTORY/celikpanel-VERSION-linux-amd64.release-manifest-v2.sig \
+      deploy/build-download-portal.sh VERSION COMMIT PUBLISHED_AT \
+        CI_ASSET_DIRECTORY/celikpanel-VERSION-linux-amd64.tar.gz \
+        CI_ASSET_DIRECTORY/celikpanel-VERSION-linux-amd64.tar.gz.sha256 \
+        NEW_PORTAL_CANDIDATE
+
+`pre-signed` mode rejects a private-key environment variable. It pins each
+input to an opened descriptor, requires the official filenames, an exact
+canonical checksum line, an exact ten-line manifest matching every release
+argument, and a raw 64-byte signature verified by the tracked PEM. It also
+requires exact LF-terminated `release.version`, `release.commit`, and
+`release.tree` members in the signed archive. The platform archive,
+checksum, manifest, and signature are copied byte-for-byte and reverified after
+staging. The generic compatibility archive is recreated from that exact
+platform archive; it is never update authority.
+
+The private-key `required` mode remains available for an isolated signing
+runner, not the production portal host:
 
     CELIKPANEL_RELEASE_SIGNING=required \
     CELIKPANEL_RELEASE_SIGNING_KEY_FILE=/run/secrets/release-ed25519.pem \
@@ -59,6 +100,26 @@ Equivalent portal staging is explicit:
     CELIKPANEL_RELEASE_ARCH=amd64 \
       deploy/build-download-portal.sh VERSION COMMIT PUBLISHED_AT \
         PLATFORM_ARCHIVE PLATFORM_CHECKSUM OUTPUT_DIR
+
+### Release archive bootstrap verification
+
+Before signing or publishing, verify that the reproducible `make dist` output
+contains the reviewed first-install code and trust root without transformations:
+
+    root=celikpanel-VERSION
+    tar -xOzf PLATFORM_ARCHIVE "$root/libexec/get.sh" \
+      | cmp -s - download-portal/get.sh
+    tar -xOzf PLATFORM_ARCHIVE "$root/install.sh" \
+      | cmp -s - install.sh
+    tar -xOzf PLATFORM_ARCHIVE "$root/deploy/release-signing-ed25519.pem" \
+      | cmp -s - deploy/release-signing-ed25519.pem
+
+Also require exact, single regular archive members for those three paths and
+for `release.version`, `release.commit`, and `release.tree`. The
+archive must be the exact archive whose digest and size occur in the verified
+signed manifest. Portal publication remains a separate same-filesystem atomic
+exchange; a candidate is never merged into the live tree, and every previous
+version and rollback backup is preserved.
 
 ## Installed trust material and anti-rollback floor
 
@@ -80,19 +141,36 @@ The trusted invocation is exact and never uses `latest`:
       --expected-archive-sha256 ARCHIVE_SHA256 \
       --expected-archive-size ARCHIVE_SIZE
 
-The worker never performs first trust. Before the update API is enabled, an
-operator-controlled enrollment step must provision both the pinned public key
-and a floor for the currently trusted installed release. The portal, `latest`
-metadata, and an update candidate cannot supply that initial floor. The worker
-requires the pre-existing `/var/lib/celikpanel-release-state/sequence.floor`
-and passes its sequence as `--minimum-sequence`. For a normal upgrade this
-current floor is strictly lower than the exact expected target sequence; an
-exact same-sequence/same-version retry is the only equality case.
+The in-panel worker and update API never choose initial trust. A fresh
+installation instead enters through the public, release-pinned
+`download-portal/get.sh`: it accepts only its embedded version and sequence,
+downloads the portal-root PEM, verifies its embedded SHA-256 trust-anchor
+digest, verifies the detached manifest, archive digest/size, internal
+checksums, and release commit, then passes that exact authenticated identity to
+`install.sh` while holding the persistent update lock. The installer
+preflights and enrolls the same public key and sequence floor only after the
+installed panel/agent identity is proven. `latest` never authorizes this flow.
 
-### One-time enrollment on existing and new servers
+If a first installation is interrupted after trust enrollment, retry only
+with the same release-pinned bootstrap and explicit `--install`. Once the live
+portal advances to a later release, its current `get.sh` must not be used to
+recover the older floor. Use the already installed
+`/usr/libexec/celikpanel/get.sh` when present, or extract `libexec/get.sh` from
+the exact older immutable release asset after verifying that asset. Never edit
+or lower `sequence.floor` to force recovery.
 
-First install or upgrade the reviewed panel/agent pair through the normal
-paired release procedure and verify both binaries report the intended build.
+After enrollment, the worker requires the pre-existing
+`/var/lib/celikpanel-release-state/sequence.floor` and passes its sequence as
+`--minimum-sequence`. For a normal upgrade this current floor is strictly
+lower than the exact expected target sequence; an exact
+same-sequence/same-version retry is the only equality case.
+
+### One-time enrollment on existing servers
+
+Fresh Alpha41 installations use the signed bootstrap flow above and do not
+need a separate manual enrollment. For an existing installation, first
+install or upgrade the reviewed panel/agent pair through the normal paired
+release procedure and verify both binaries report the intended build.
 An older release that does not expose the read-only
 `--inspect-build-identity` mode cannot be enrolled: deploy this feature as a
 manually approved paired release first, then enroll that installed release.

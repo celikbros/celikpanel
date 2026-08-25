@@ -104,6 +104,20 @@ test('card carries alpha backup restart disclosure and safe response handling', 
     assert.match(card, /payload\.summary \|\|/);
 });
 
+test('coded unavailable, busy and target-changed responses remain distinct', () => {
+    assert.match(card, /readApiError\(response\)/);
+    assert.match(card, /apiErrorText\(apiError, t\)/);
+    assert.match(card, /rejection\.code === 'PANEL_UPDATE_UNAVAILABLE'/);
+    assert.ok(en.includes("'err.PANEL_UPDATE_UNAVAILABLE'"));
+    assert.ok(en.includes("'err.PANEL_UPDATE_BUSY'"));
+    assert.ok(en.includes("'err.PANEL_UPDATE_TARGET_CHANGED'"));
+    assert.ok(tr.includes("'err.PANEL_UPDATE_UNAVAILABLE'"));
+    assert.ok(tr.includes("'err.PANEL_UPDATE_BUSY'"));
+    assert.ok(tr.includes("'err.PANEL_UPDATE_TARGET_CHANGED'"));
+    assert.doesNotMatch(en.match(/'panelUpdate\.busy':[^\n]+/)?.[0] ?? '', /target changed/);
+    assert.doesNotMatch(tr.match(/'panelUpdate\.busy':[^\n]+/)?.[0] ?? '', /hedefi değişti/);
+});
+
 test('update copy is localized and components contain no visible Turkish literals', () => {
     const keyPattern = /'panelUpdate\.([A-Za-z0-9]+)'\s*:/g;
     const trKeys = new Set([...tr.matchAll(keyPattern)].map((match) => match[1]));

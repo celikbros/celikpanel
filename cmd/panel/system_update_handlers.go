@@ -222,7 +222,7 @@ func writePanelUpdateUnavailable(w http.ResponseWriter, err error) {
 	if err != nil {
 		log.Printf("[panel-update] unavailable: %v", err)
 	}
-	writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_UNAVAILABLE", "secure panel updates are unavailable for this build pair", "")
+	writeCodedError(w, http.StatusServiceUnavailable, "PANEL_UPDATE_UNAVAILABLE", "secure panel updates are unavailable for this build pair", "")
 }
 
 func writePanelUpdateAgentFailure(w http.ResponseWriter, err error) {

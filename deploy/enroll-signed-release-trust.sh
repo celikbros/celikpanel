@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# One-time operator-authorized enrollment for CelikPanel's signed update trust.
-# This script is run from an authenticated reviewed checkout. It is not invoked
-# by install.sh, update.sh, the panel, or the agent.
+# One-time enrollment for CelikPanel's signed update trust. It may be invoked
+# either from an authenticated reviewed checkout or by install.sh after the
+# public bootstrap has verified the signed platform release and supplied the
+# exact release identity. It is never invoked by update.sh, the panel, or agent.
 set -euo pipefail
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -22,13 +23,17 @@ workdir=
 staged_key=
 staged_floor=
 enrollment_lock_fd=
+inherited_lock_fd=
+preflight_only=0
 PUBLIC_KEY_SOURCE_FD=
+PUBLIC_KEY_SOURCE_SHA256=
 
 usage() {
   cat >&2 <<'USAGE'
 Usage: sudo bash deploy/enroll-signed-release-trust.sh \
   --sequence N --version VERSION --commit COMMIT \
-  --public-key-file /canonical/root-owned/ed25519-public-key.pem
+  --public-key-file /canonical/root-owned/ed25519-public-key.pem \
+  [--preflight-only] [--locked-fd FD]
 USAGE
   exit 2
 }
@@ -85,9 +90,10 @@ valid_release_version() {
 }
 
 valid_release_sequence() {
-  local value=$1
+  local value=$1 LC_ALL=C
   [[ "$value" =~ ^[1-9][0-9]*$ && ${#value} -le 19 ]] || return 1
-  (( 10#$value <= 9223372036854775807 ))
+  [[ ${#value} -lt 19 || "$value" < 9223372036854775807 ||
+     "$value" == 9223372036854775807 ]]
 }
 
 path_is_beneath_anchor() {
@@ -205,7 +211,7 @@ validate_installed_binary() {
 }
 
 validate_public_key_source() {
-  local source=$1 canonical owner group mode links size permissions
+  local source=$1 canonical owner group mode links size permissions source_sha256
   validate_root_directory_chain "$(dirname -- "$source")" "$KEY_TRUST_ANCHOR"
   [[ -f "$source" && ! -L "$source" ]] \
     || die "operator public key is missing or unsafe"
@@ -235,6 +241,93 @@ validate_public_key_source() {
   openssl pkey -pubin -passin pass: -in "$PUBLIC_KEY_SOURCE_FD_PATH" -text -noout 2>/dev/null \
     | LC_ALL=C grep -Eq '^ED25519 Public-Key:' \
     || die "operator public key must be Ed25519"
+  source_sha256=$(sha256sum "$PUBLIC_KEY_SOURCE_FD_PATH") \
+    || die "cannot digest operator public key"
+  source_sha256=${source_sha256%% *}
+  [[ "$source_sha256" =~ ^[0-9a-f]{64}$ ]] \
+    || die "operator public key digest is invalid"
+  if [[ -z "$PUBLIC_KEY_SOURCE_SHA256" ]]; then
+    PUBLIC_KEY_SOURCE_SHA256=$source_sha256
+  else
+    [[ "$source_sha256" == "$PUBLIC_KEY_SOURCE_SHA256" ]] \
+      || die "operator public key bytes changed during enrollment"
+  fi
+}
+
+validate_optional_trust_targets() {
+  local expected_sequence=$1 expected_version=$2 key_directory state_parent
+  key_directory=$(dirname -- "$RELEASE_PUBLIC_KEY")
+  validate_root_directory_chain "$(dirname -- "$key_directory")" "$KEY_TRUST_ANCHOR"
+  if [[ -e "$key_directory" || -L "$key_directory" ]]; then
+    validate_key_target_directory_chain "$key_directory" "$KEY_TRUST_ANCHOR"
+    validate_safe_stages "$key_directory" \
+      '.release-signing-ed25519.pem.enroll.' 16384 '600 644'
+  elif [[ -e "$RELEASE_PUBLIC_KEY" || -L "$RELEASE_PUBLIC_KEY" ]]; then
+    die "release public key exists below a missing target directory"
+  fi
+
+  state_parent=$(dirname -- "$RELEASE_STATE_DIR")
+  validate_root_directory_chain "$state_parent" "$STATE_TRUST_ANCHOR"
+  if [[ -e "$RELEASE_STATE_DIR" || -L "$RELEASE_STATE_DIR" ]]; then
+    validate_root_directory_chain "$RELEASE_STATE_DIR" "$STATE_TRUST_ANCHOR"
+    [[ "$(stat -Lc '%u:%g:%a' -- "$RELEASE_STATE_DIR")" == 0:0:700 ]] \
+      || die "existing release state directory metadata is unsafe"
+    validate_safe_stages "$RELEASE_STATE_DIR" \
+      '.sequence.floor.enroll.' 512 '600'
+    if [[ -e "$SIGNED_UPDATE_LOCK" || -L "$SIGNED_UPDATE_LOCK" ]]; then
+      [[ -f "$SIGNED_UPDATE_LOCK" && ! -L "$SIGNED_UPDATE_LOCK" &&
+         "$(readlink -e -- "$SIGNED_UPDATE_LOCK")" == "$SIGNED_UPDATE_LOCK" &&
+         "$(stat -Lc '%u:%g:%a:%h:%s' -- "$SIGNED_UPDATE_LOCK")" == 0:0:600:1:0 ]] \
+        || die "existing signed update lock metadata is unsafe"
+    fi
+  elif [[ -e "$RELEASE_SEQUENCE_FLOOR" || -L "$RELEASE_SEQUENCE_FLOOR" ||
+          -e "$SIGNED_UPDATE_LOCK" || -L "$SIGNED_UPDATE_LOCK" ]]; then
+    die "release trust state exists below a missing state directory"
+  fi
+
+  inspect_existing_public_key
+  inspect_existing_floor "$expected_sequence" "$expected_version"
+}
+
+validate_inherited_update_lock() {
+  local fd=$1 fd_path path_identity fd_identity probe_fd probe_identity
+  [[ "$fd" =~ ^[3-9][0-9]*$ ]] \
+    || die "inherited signed update lock descriptor is invalid"
+  fd_path=/proc/self/fd/$fd
+  [[ -f "$fd_path" ]] \
+    || die "inherited signed update lock descriptor is unavailable"
+  [[ -d "$RELEASE_STATE_DIR" && ! -L "$RELEASE_STATE_DIR" &&
+     "$(readlink -e -- "$RELEASE_STATE_DIR")" == "$RELEASE_STATE_DIR" &&
+     "$(stat -Lc '%u:%g:%a' -- "$RELEASE_STATE_DIR")" == 0:0:700 ]] \
+    || die "release state directory is unsafe for inherited locking"
+  [[ -f "$SIGNED_UPDATE_LOCK" && ! -L "$SIGNED_UPDATE_LOCK" &&
+     "$(readlink -e -- "$SIGNED_UPDATE_LOCK")" == "$SIGNED_UPDATE_LOCK" ]] \
+    || die "signed update lock is unsafe for inherited locking"
+  path_identity=$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK") \
+    || die "cannot identify signed update lock path"
+  fd_identity=$(stat -Lc '%d:%i' -- "$fd_path") \
+    || die "cannot identify inherited signed update lock"
+  [[ "$path_identity" == "$fd_identity" &&
+     "$(stat -Lc '%u:%g:%a:%h:%s' -- "$fd_path")" == 0:0:600:1:0 ]] \
+    || die "inherited signed update lock identity is unsafe"
+
+  exec {probe_fd}<>"$SIGNED_UPDATE_LOCK" \
+    || die "cannot open signed update lock ownership probe"
+  probe_identity=$(stat -Lc '%d:%i' -- "/proc/self/fd/$probe_fd") \
+    || die "cannot identify signed update lock ownership probe"
+  [[ "$probe_identity" == "$fd_identity" ]] \
+    || die "signed update lock changed during ownership proof"
+  if flock -n "$probe_fd"; then
+    flock -u "$probe_fd" || true
+    exec {probe_fd}>&-
+    die "inherited signed update lock was not held before enrollment"
+  fi
+  exec {probe_fd}>&-
+  flock -n "$fd" \
+    || die "inherited descriptor does not own the signed update lock"
+  [[ "$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK")" == "$fd_identity" ]] \
+    || die "signed update lock changed after inherited ownership proof"
+  enrollment_lock_fd=$fd
 }
 
 ensure_release_state_and_lock() {
@@ -243,6 +336,10 @@ ensure_release_state_and_lock() {
   effective_gid=$(id -g) || die "cannot determine the enrollment effective group"
   parent=$(dirname -- "$RELEASE_STATE_DIR")
   validate_root_directory_chain "$parent" "$STATE_TRUST_ANCHOR"
+  if [[ -n "$inherited_lock_fd" ]]; then
+    validate_inherited_update_lock "$inherited_lock_fd"
+    return 0
+  fi
   if [[ ! -e "$RELEASE_STATE_DIR" && ! -L "$RELEASE_STATE_DIR" ]]; then
     mkdir -m 0700 -- "$RELEASE_STATE_DIR" \
       || [[ -d "$RELEASE_STATE_DIR" && ! -L "$RELEASE_STATE_DIR" ]] \
@@ -319,24 +416,41 @@ ensure_release_state_and_lock() {
   : "$created"
 }
 
-cleanup_safe_stages() {
-  local directory=$1 prefix=$2 max_size=$3 allowed_modes=$4 stage metadata removed=0
-  local creator_group
+validate_enrollment_stage() {
+  local stage=$1 max_size=$2 allowed_modes=$3 creator_group=$4 metadata
+  local stage_owner stage_group stage_mode stage_links stage_size
+  [[ -f "$stage" && ! -L "$stage" ]] \
+    || die "unsafe enrollment staging artifact: $stage"
+  metadata=$(stat -Lc '%u:%g:%a:%h:%s' -- "$stage") \
+    || die "cannot inspect enrollment staging artifact"
+  IFS=: read -r stage_owner stage_group stage_mode stage_links stage_size <<< "$metadata"
+  [[ "$stage_owner" == 0 &&
+     ( "$stage_group" == 0 ||
+       ( "$stage_group" == "$creator_group" && "$stage_mode" == 600 ) ) &&
+     "$stage_links" == 1 &&
+     " $allowed_modes " == *" $stage_mode "* &&
+     "$stage_size" -le "$max_size" ]] \
+    || die "unsafe enrollment staging artifact metadata: $stage"
+}
+
+validate_safe_stages() {
+  local directory=$1 prefix=$2 max_size=$3 allowed_modes=$4 stage creator_group
   creator_group=$(id -g) || die "cannot determine enrollment staging group"
   shopt -s nullglob
   for stage in "$directory"/"$prefix"????????; do
-    [[ -f "$stage" && ! -L "$stage" ]] \
-      || die "unsafe enrollment staging artifact: $stage"
-    metadata=$(stat -Lc '%u:%g:%a:%h:%s' -- "$stage") \
-      || die "cannot inspect enrollment staging artifact"
-    IFS=: read -r stage_owner stage_group stage_mode stage_links stage_size <<< "$metadata"
-    [[ "$stage_owner" == 0 &&
-       ( "$stage_group" == 0 ||
-         ( "$stage_group" == "$creator_group" && "$stage_mode" == 600 ) ) &&
-       "$stage_links" == 1 &&
-       " $allowed_modes " == *" $stage_mode "* &&
-       "$stage_size" -le "$max_size" ]] \
-      || die "unsafe enrollment staging artifact metadata: $stage"
+    validate_enrollment_stage "$stage" "$max_size" "$allowed_modes" "$creator_group"
+  done
+  shopt -u nullglob
+}
+
+cleanup_safe_stages() {
+  local directory=$1 prefix=$2 max_size=$3 allowed_modes=$4 stage removed=0
+  local creator_group
+  creator_group=$(id -g) || die "cannot determine enrollment staging group"
+  validate_safe_stages "$directory" "$prefix" "$max_size" "$allowed_modes"
+  shopt -s nullglob
+  for stage in "$directory"/"$prefix"????????; do
+    validate_enrollment_stage "$stage" "$max_size" "$allowed_modes" "$creator_group"
     rm -- "$stage" || die "cannot remove stale enrollment staging artifact"
     removed=1
   done
@@ -454,6 +568,12 @@ main() {
       --public-key-file)
         [[ -z "$public_key_file" && $# -ge 2 ]] || usage
         public_key_file=$2; shift 2 ;;
+      --preflight-only)
+        [[ "$preflight_only" == 0 ]] || usage
+        preflight_only=1; shift ;;
+      --locked-fd)
+        [[ -z "$inherited_lock_fd" && $# -ge 2 ]] || usage
+        inherited_lock_fd=$2; shift 2 ;;
       --help|-h) usage ;;
       *) usage ;;
     esac
@@ -464,9 +584,19 @@ main() {
   valid_release_sequence "$sequence" || die "release sequence is not canonical"
   valid_release_version "$version" || die "release version is not canonical"
   [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || die "release commit is not canonical"
-  for command in chmod chown cmp dirname flock grep id mktemp mv openssl readlink rm stat sync timeout; do
+  for command in chmod chown cmp dirname flock grep id mktemp mv openssl readlink rm sha256sum stat sync timeout; do
     command -v "$command" >/dev/null 2>&1 || die "$command is required"
   done
+  validate_public_key_source "$public_key_file"
+  if [[ "$preflight_only" == 1 ]]; then
+    if [[ -n "$inherited_lock_fd" ]]; then
+      validate_inherited_update_lock "$inherited_lock_fd"
+    fi
+    validate_optional_trust_targets "$sequence" "$version"
+    printf 'Signed release trust preflight passed for %s at sequence %s (%s).\n' \
+      "$version" "$sequence" "$commit"
+    return 0
+  fi
   workdir=$(mktemp -d /tmp/celikpanel-release-enrollment.XXXXXXXX) \
     || die "cannot create enrollment work directory"
   chown root:root -- "$workdir" && chmod 0700 -- "$workdir" \
@@ -480,7 +610,6 @@ main() {
     || die "installed panel and agent build identities differ"
   [[ "$panel_version" == "$version" && "$panel_commit" == "$commit" ]] \
     || die "installed build identity differs from the operator-approved identity"
-  validate_public_key_source "$public_key_file"
   validate_key_target_directory_chain "$(dirname -- "$RELEASE_PUBLIC_KEY")" "$KEY_TRUST_ANCHOR"
 
   ensure_release_state_and_lock

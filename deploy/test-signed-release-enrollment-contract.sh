@@ -97,6 +97,38 @@ run_enrollment() (
   main "$@"
 )
 
+run_preflight() (
+  # shellcheck disable=SC1090
+  source "$helper"
+  PANEL_BIN=$panel_bin
+  AGENT_BIN=$agent_bin
+  RELEASE_PUBLIC_KEY=$key_target
+  RELEASE_STATE_DIR=$state_dir
+  RELEASE_SEQUENCE_FLOOR=$floor
+  SIGNED_UPDATE_LOCK=$lock
+  BINARY_TRUST_ANCHOR=$test_root
+  KEY_TRUST_ANCHOR=$test_root
+  STATE_TRUST_ANCHOR=$test_root
+  main "$@" --preflight-only
+)
+
+run_preflight_external() {
+  bash -c '
+    source "$1"
+    PANEL_BIN=$2
+    AGENT_BIN=$3
+    RELEASE_PUBLIC_KEY=$4
+    RELEASE_STATE_DIR=$5
+    RELEASE_SEQUENCE_FLOOR=$6
+    SIGNED_UPDATE_LOCK=$7
+    BINARY_TRUST_ANCHOR=$8
+    KEY_TRUST_ANCHOR=$8
+    STATE_TRUST_ANCHOR=$8
+    main "${@:9}" --preflight-only
+  ' _ "$helper" "$panel_bin" "$agent_bin" "$key_target" "$state_dir" \
+    "$floor" "$lock" "$test_root" "$@"
+}
+
 run_enrollment_with_group() {
   local effective_group=$1
   shift
@@ -152,6 +184,106 @@ approved_args=(
   --public-key-file "$public_key"
 )
 
+expect_locked_preflight_rejected() {
+  local label=$1
+  exec 8<>"$lock"
+  flock -n 8 || fail "could not acquire $label preflight lock"
+  if run_preflight_external "${approved_args[@]}" --locked-fd 8 \
+      >"$test_root/rejected.out" 2>"$test_root/rejected.err"; then
+    flock -u 8
+    exec 8>&-
+    fail "$label was accepted by locked preflight"
+  fi
+  flock -u 8
+  exec 8>&-
+}
+
+# The first-install preflight is read-only and accepts only absent-or-exact
+# partial trust state. It never requires the product binaries to be replaced.
+panel_hash_before=$(sha256sum "$panel_bin" | awk '{print $1}')
+agent_hash_before=$(sha256sum "$agent_bin" | awk '{print $1}')
+run_preflight "${approved_args[@]}" >/dev/null \
+  || fail 'absent first-install trust state was rejected'
+[[ ! -e "$key_target" && ! -e "$state_dir" ]] \
+  || fail 'absent-state preflight created trust state'
+
+cp -- "$public_key" "$key_target"
+chown root:root -- "$key_target"
+chmod 0644 -- "$key_target"
+run_preflight "${approved_args[@]}" >/dev/null \
+  || fail 'exact key-only first-install state was rejected'
+rm -- "$key_target"
+
+install -d -o root -g root -m 0700 "$state_dir"
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$sequence" "version=$version" > "$floor"
+chown root:root -- "$floor"
+chmod 0600 -- "$floor"
+run_preflight "${approved_args[@]}" >/dev/null \
+  || fail 'exact floor-only first-install state was rejected'
+cp -- "$public_key" "$key_target"
+chown root:root -- "$key_target"
+chmod 0644 -- "$key_target"
+key_preflight_inode=$(stat -Lc '%d:%i' -- "$key_target")
+floor_preflight_inode=$(stat -Lc '%d:%i' -- "$floor")
+run_preflight "${approved_args[@]}" >/dev/null \
+  || fail 'exact key-and-floor first-install state was rejected'
+[[ "$(stat -Lc '%d:%i' -- "$key_target")" == "$key_preflight_inode" &&
+   "$(stat -Lc '%d:%i' -- "$floor")" == "$floor_preflight_inode" ]] \
+  || fail 'exact preflight replaced trusted state'
+
+max_sequence=9223372036854775807
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$max_sequence" "version=$version" > "$floor"
+max_args=(
+  --sequence "$max_sequence"
+  --version "$version"
+  --commit "$commit"
+  --public-key-file "$public_key"
+)
+run_preflight "${max_args[@]}" >/dev/null \
+  || fail 'INT64 maximum first-install floor was rejected'
+for invalid_sequence in 9223372036854775808 9999999999999999999; do
+  expect_rejected "out-of-range first-install sequence $invalid_sequence" \
+    run_preflight --sequence "$invalid_sequence" --version "$version" \
+      --commit "$commit" --public-key-file "$public_key"
+done
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$sequence" "version=$version" > "$floor"
+
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$((sequence - 1))" "version=$version" > "$floor"
+expect_rejected 'lower first-install floor' run_preflight "${approved_args[@]}"
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$((sequence + 1))" "version=$version" > "$floor"
+expect_rejected 'higher first-install floor' run_preflight "${approved_args[@]}"
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$sequence" 'version=v0.1.0-alpha.14' > "$floor"
+expect_rejected 'different-version first-install floor' run_preflight "${approved_args[@]}"
+printf '%s\n' format=celikpanel-release-sequence-floor-v1 \
+  "sequence=$sequence" "version=$version" > "$floor"
+cp -- "$other_public_key" "$key_target"
+chmod 0644 -- "$key_target"
+expect_rejected 'different first-install public key' run_preflight "${approved_args[@]}"
+cp -- "$public_key" "$key_target"
+chmod 0644 -- "$key_target"
+
+: > "$lock"
+chown root:root -- "$lock"
+chmod 0600 -- "$lock"
+exec 8<>"$lock"
+flock -n 8 || fail 'could not acquire inherited preflight lock'
+run_preflight_external "${approved_args[@]}" --locked-fd 8 >/dev/null \
+  || fail 'held inherited preflight lock was rejected'
+flock -u 8
+expect_rejected 'unheld inherited preflight lock' \
+  run_preflight_external "${approved_args[@]}" --locked-fd 8
+exec 8>&-
+[[ "$(sha256sum "$panel_bin" | awk '{print $1}')" == "$panel_hash_before" &&
+   "$(sha256sum "$agent_bin" | awk '{print $1}')" == "$agent_hash_before" ]] \
+  || fail 'first-install trust preflight changed installed binaries'
+rm -- "$key_target" "$floor"
+
 run_enrollment "${approved_args[@]}" > "$test_root/first.out" \
   || fail 'first enrollment failed'
 grep -Fq "Signed release trust enrolled for $version at sequence $sequence ($commit)." \
@@ -198,6 +330,15 @@ chmod 0644 -- "$conf_dir/.release-signing-ed25519.pem.enroll.ABCDEFGH"
 printf 'stale-floor-stage\n' > "$state_dir/.sequence.floor.enroll.ABCDEFGH"
 chown root:root -- "$state_dir/.sequence.floor.enroll.ABCDEFGH"
 chmod 0600 -- "$state_dir/.sequence.floor.enroll.ABCDEFGH"
+exec 8<>"$lock"
+flock -n 8 || fail 'could not acquire safe-stage preflight lock'
+run_preflight_external "${approved_args[@]}" --locked-fd 8 >/dev/null \
+  || fail 'safe staging artifacts were rejected by locked preflight'
+flock -u 8
+exec 8>&-
+[[ -e "$conf_dir/.release-signing-ed25519.pem.enroll.ABCDEFGH" &&
+   -e "$state_dir/.sequence.floor.enroll.ABCDEFGH" ]] \
+  || fail 'read-only preflight removed safe staging artifacts'
 run_enrollment "${approved_args[@]}" >/dev/null \
   || fail 'safe staging recovery failed'
 [[ ! -e "$conf_dir/.release-signing-ed25519.pem.enroll.ABCDEFGH" &&
@@ -285,8 +426,43 @@ expect_rejected 'mismatched installed build pair' run_enrollment "${approved_arg
 make_identity_binary "$agent_bin" "$version" "$commit"
 
 ln -s -- "$public_key" "$state_dir/.sequence.floor.enroll.BADSTAGE"
+printf 'safe-mixed-stage\n' > "$conf_dir/.release-signing-ed25519.pem.enroll.MIXEDOK1"
+chown root:root -- "$conf_dir/.release-signing-ed25519.pem.enroll.MIXEDOK1"
+chmod 0644 -- "$conf_dir/.release-signing-ed25519.pem.enroll.MIXEDOK1"
+expect_locked_preflight_rejected 'symbolic staging artifact'
+[[ -e "$conf_dir/.release-signing-ed25519.pem.enroll.MIXEDOK1" ]] \
+  || fail 'locked preflight removed a safe stage while rejecting an unsafe peer'
+rm -- "$conf_dir/.release-signing-ed25519.pem.enroll.MIXEDOK1"
 expect_rejected 'symbolic staging artifact' run_enrollment "${approved_args[@]}"
 rm -- "$state_dir/.sequence.floor.enroll.BADSTAGE"
+
+printf 'hardlink-stage\n' > "$state_dir/hardlink-stage-source"
+chown root:root -- "$state_dir/hardlink-stage-source"
+chmod 0600 -- "$state_dir/hardlink-stage-source"
+ln -- "$state_dir/hardlink-stage-source" \
+  "$state_dir/.sequence.floor.enroll.HARDLINK"
+expect_locked_preflight_rejected 'hard-linked staging artifact'
+rm -- "$state_dir/.sequence.floor.enroll.HARDLINK" \
+  "$state_dir/hardlink-stage-source"
+
+printf 'wrong-mode-stage\n' > "$state_dir/.sequence.floor.enroll.BADMODE1"
+chown root:root -- "$state_dir/.sequence.floor.enroll.BADMODE1"
+chmod 0660 -- "$state_dir/.sequence.floor.enroll.BADMODE1"
+expect_locked_preflight_rejected 'wrong-mode staging artifact'
+rm -- "$state_dir/.sequence.floor.enroll.BADMODE1"
+
+printf 'wrong-owner-stage\n' > "$state_dir/.sequence.floor.enroll.BADOWNER"
+chown 65534:65534 -- "$state_dir/.sequence.floor.enroll.BADOWNER"
+chmod 0600 -- "$state_dir/.sequence.floor.enroll.BADOWNER"
+expect_locked_preflight_rejected 'wrong-owner staging artifact'
+rm -- "$state_dir/.sequence.floor.enroll.BADOWNER"
+
+truncate -s 513 "$state_dir/.sequence.floor.enroll.OVERSIZE"
+chown root:root -- "$state_dir/.sequence.floor.enroll.OVERSIZE"
+chmod 0600 -- "$state_dir/.sequence.floor.enroll.OVERSIZE"
+expect_locked_preflight_rejected 'oversize staging artifact'
+rm -- "$state_dir/.sequence.floor.enroll.OVERSIZE"
+
 chmod 0660 -- "$floor"
 expect_rejected 'unsafe existing floor metadata' run_enrollment "${approved_args[@]}"
 chmod 0600 -- "$floor"

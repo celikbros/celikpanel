@@ -2,8 +2,10 @@
 set -euo pipefail
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-writer="$repo_root/deploy/write-signed-release-manifest.sh"
-builder="$repo_root/deploy/build-download-portal.sh"
+writer_source="$repo_root/deploy/write-signed-release-manifest.sh"
+builder_source="$repo_root/deploy/build-download-portal.sh"
+writer="$writer_source"
+builder="$builder_source"
 bootstrap="$repo_root/download-portal/get.sh"
 installer="$repo_root/install.sh"
 makefile="$repo_root/Makefile"
@@ -25,9 +27,10 @@ command -v openssl >/dev/null 2>&1 || fail "openssl is required"
 tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
 
-version=v1.2.3-alpha.4
-sequence=42
+version=v0.1.0-alpha.41
+sequence=41
 commit=0123456789abcdef0123456789abcdef01234567
+tree=89abcdef0123456789abcdef0123456789abcdef
 published_at=2026-08-03T08:55:11Z
 archive_name=celikpanel-$version-linux-amd64.tar.gz
 archive="$tmp/$archive_name"
@@ -41,10 +44,9 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local GOENV=off GOWORK=off \
     -o "$tmp/source/celikpanel-$version/bin/panel" "$tmp/main.go"
 cp "$tmp/source/celikpanel-$version/bin/panel" \
   "$tmp/source/celikpanel-$version/bin/agent"
-tar -czf "$archive" -C "$tmp/source" "celikpanel-$version"
-(cd "$tmp" && sha256sum "$archive_name" > "$archive_name.sha256")
-archive_sha=$(sha256sum "$archive" | awk '{print $1}')
-archive_size=$(stat -Lc '%s' -- "$archive")
+printf '1\n' > "$tmp/source/celikpanel-$version/release.version"
+printf '%s\n' "$commit" > "$tmp/source/celikpanel-$version/release.commit"
+printf '%s\n' "$tree" > "$tmp/source/celikpanel-$version/release.tree"
 
 # These keys are ephemeral test fixtures, never release credentials.
 openssl genpkey -algorithm ED25519 -out "$tmp/key.pem" >/dev/null 2>&1
@@ -54,6 +56,47 @@ openssl pkey -in "$tmp/key.pem" -passin pass: \
   -pubout -out "$tmp/public.pem" >/dev/null 2>&1
 openssl pkey -in "$tmp/wrong-key.pem" -passin pass: \
   -pubout -out "$tmp/wrong-public.pem" >/dev/null 2>&1
+
+test_repo="$tmp/test-repo"
+mkdir -p "$test_repo/deploy" "$test_repo/download-portal"
+cp -- "$writer_source" "$builder_source" "$test_repo/deploy/"
+cp -a -- "$repo_root/download-portal/." "$test_repo/download-portal/"
+cp -- "$installer" "$test_repo/install.sh"
+cp -- "$tmp/public.pem" "$test_repo/deploy/release-signing-ed25519.pem"
+test_public_key_sha256=$(sha256sum "$tmp/public.pem" | awk '{print $1}')
+sed -i "s/^bootstrap_release_public_key_sha256=.*/bootstrap_release_public_key_sha256=$test_public_key_sha256/" \
+  "$test_repo/download-portal/get.sh"
+writer="$test_repo/deploy/write-signed-release-manifest.sh"
+builder="$test_repo/deploy/build-download-portal.sh"
+
+builder_sequence_probe="$tmp/builder-sequence-probe.sh"
+{
+  printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
+  sed -n '/^valid_release_sequence() {$/,/^}$/p' "$builder"
+  printf '%s\n' 'valid_release_sequence "$1"'
+} > "$builder_sequence_probe"
+chmod 0755 "$builder_sequence_probe"
+for accepted_sequence in 1 9223372036854775807; do
+  "$builder_sequence_probe" "$accepted_sequence" \
+    || fail "portal builder rejected canonical sequence $accepted_sequence"
+done
+for rejected_sequence in 0 041 9223372036854775808 9999999999999999999; do
+  expect_rejected "portal builder sequence $rejected_sequence" \
+    "$builder_sequence_probe" "$rejected_sequence"
+done
+
+mkdir -p "$tmp/source/celikpanel-$version/libexec" \
+  "$tmp/source/celikpanel-$version/deploy"
+cp -- "$test_repo/download-portal/get.sh" \
+  "$tmp/source/celikpanel-$version/libexec/get.sh"
+cp -- "$test_repo/install.sh" \
+  "$tmp/source/celikpanel-$version/install.sh"
+cp -- "$tmp/public.pem" \
+  "$tmp/source/celikpanel-$version/deploy/release-signing-ed25519.pem"
+tar -czf "$archive" -C "$tmp/source" "celikpanel-$version"
+(cd "$tmp" && sha256sum "$archive_name" > "$archive_name.sha256")
+archive_sha=$(sha256sum "$archive" | awk '{print $1}')
+archive_size=$(stat -Lc '%s' -- "$archive")
 
 mkdir "$tmp/signed"
 CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem" \
@@ -219,6 +262,20 @@ for rejected_version in v01.2.3 v1.02.3 v1.2.03 v1.2.3-01 \
     "$version_probe" "$policy" "$rejected_version"
 done
 
+mkdir "$tmp/max-sequence" "$tmp/invalid-sequence"
+CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem" \
+  bash "$writer" "$version" 9223372036854775807 "$commit" "$published_at" \
+    linux amd64 "$archive" "$tmp/max-sequence"
+grep -Fxq 'sequence=9223372036854775807' \
+  "$tmp/max-sequence/release-manifest-v2" \
+  || fail "signer rejected or changed the INT64 maximum release sequence"
+for invalid_sequence in 0 041 9223372036854775808 9999999999999999999; do
+  expect_rejected "invalid signer sequence $invalid_sequence" env \
+    CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem" \
+    bash "$writer" "$version" "$invalid_sequence" "$commit" "$published_at" \
+      linux amd64 "$archive" "$tmp/invalid-sequence"
+done
+
 verify_shell="$tmp/verify.sh"
 cat > "$verify_shell" <<'EOF'
 #!/usr/bin/env bash
@@ -237,6 +294,10 @@ verify_args=(
 )
 "$verify_shell" "${verify_args[@]}" \
   || fail "bootstrap rejected the canonical signed manifest"
+"$verify_shell" \
+  "$policy" "$tmp/signed/release-manifest-v2" "$tmp/signed/release-manifest-v2.sig" \
+  "$tmp/public.pem" "$version" "$sequence" linux amd64 "$archive_name" "" "" "" \
+  || fail "signed first-install verification rejected manifest-authorized identity fields"
 expect_rejected "a wrong version" "$verify_shell" \
   "$policy" "$tmp/signed/release-manifest-v2" "$tmp/signed/release-manifest-v2.sig" \
   "$tmp/public.pem" v9.9.9 "$sequence" linux amd64 "$archive_name" "$commit" "$archive_sha" "$archive_size"
@@ -377,11 +438,160 @@ cmp "$archive" \
 grep -Fq "/releases/$version/$legacy_archive_name" \
   "$tmp/signed-site/releases/$version/release.json" \
   || fail "signed portal build did not preserve legacy release.json semantics"
-grep -Fq '"sequence": "42"' "$tmp/signed-site/releases/latest.json" \
+grep -Fq "\"sequence\": \"$sequence\"" "$tmp/signed-site/releases/latest.json" \
   || fail "signed portal schema does not transport sequence as a string"
 grep -Fq "/releases/$version/linux/amd64/$archive_name" \
   "$tmp/signed-site/releases/latest.json" \
   || fail "signed portal schema does not use OS/arch-separated archive paths"
+cmp "$tmp/public.pem" "$tmp/signed-site/release-signing-ed25519.pem" \
+  || fail "signed portal root public key bytes changed"
+
+official_manifest_name=celikpanel-$version-linux-amd64.release-manifest-v2
+official_signature_name=$official_manifest_name.sig
+official_manifest="$tmp/$official_manifest_name"
+official_signature="$tmp/$official_signature_name"
+cp -- "$tmp/signed/release-manifest-v2" "$official_manifest"
+cp -- "$tmp/signed/release-manifest-v2.sig" "$official_signature"
+
+# A portal publisher assembles the exact CI outputs. It must neither possess
+# nor invoke the production manifest writer/private key.
+mv -- "$writer" "$writer.unavailable"
+env -u CELIKPANEL_RELEASE_SIGNING_KEY_FILE \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE="$tree" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$official_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+    bash "$builder" "$version" "$commit" "$published_at" \
+      "$archive" "$archive.sha256" "$tmp/pre-signed-site" >/dev/null
+mv -- "$writer.unavailable" "$writer"
+
+pre_signed_release_dir="$tmp/pre-signed-site/releases/$version/linux/amd64"
+cmp "$official_manifest" "$pre_signed_release_dir/release-manifest-v2" \
+  || fail "pre-signed portal changed official manifest bytes"
+cmp "$official_signature" "$pre_signed_release_dir/release-manifest-v2.sig" \
+  || fail "pre-signed portal changed official signature bytes"
+cmp "$archive" "$pre_signed_release_dir/$archive_name" \
+  || fail "pre-signed portal changed official archive bytes"
+cmp "$archive.sha256" "$pre_signed_release_dir/$archive_name.sha256" \
+  || fail "pre-signed portal changed official checksum bytes"
+openssl pkeyutl -verify -rawin -pubin -inkey "$tmp/public.pem" \
+  -in "$pre_signed_release_dir/release-manifest-v2" \
+  -sigfile "$pre_signed_release_dir/release-manifest-v2.sig" >/dev/null 2>&1 \
+  || fail "pre-signed portal manifest does not verify"
+cmp "$tmp/public.pem" "$tmp/pre-signed-site/release-signing-ed25519.pem" \
+  || fail "pre-signed portal root public key bytes changed"
+cmp "$archive" \
+  "$tmp/pre-signed-site/releases/$version/$legacy_archive_name" \
+  || fail "pre-signed portal did not preserve the legacy generic endpoint"
+grep -Fq "\"sequence\": \"$sequence\"" \
+  "$tmp/pre-signed-site/releases/latest.json" \
+  || fail "pre-signed portal schema does not transport sequence as a string"
+
+printf '\n# local source mismatch probe\n' >> "$test_repo/install.sh"
+expect_rejected "an archive containing a different installer than the reviewed source" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE="$tree" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$official_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-installer"
+cp -- "$installer" "$test_repo/install.sh"
+
+pre_signed_env=(
+  CELIKPANEL_RELEASE_SIGNING=pre-signed
+  CELIKPANEL_RELEASE_OS=linux
+  CELIKPANEL_RELEASE_ARCH=amd64
+  CELIKPANEL_RELEASE_SEQUENCE=$sequence
+  CELIKPANEL_RELEASE_TREE=$tree
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE=$official_manifest
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE=$official_signature
+)
+expect_rejected "a private key in pre-signed portal mode" env \
+  "${pre_signed_env[@]}" CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-with-key"
+expect_rejected "a missing release tree in pre-signed portal mode" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$official_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-missing-tree"
+expect_rejected "release arguments that differ from the signed manifest" env \
+  "${pre_signed_env[@]}" \
+  bash "$builder" "$version" "$commit" 2026-08-03T08:55:12Z \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-args"
+expect_rejected "release-tree provenance that differs from the archive" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE=1111111111111111111111111111111111111111 \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$official_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-tree"
+
+mkdir "$tmp/wrong-signature-assets"
+wrong_signature="$tmp/wrong-signature-assets/$official_signature_name"
+openssl pkeyutl -sign -rawin -inkey "$tmp/wrong-key.pem" -passin pass: \
+  -in "$official_manifest" -out "$wrong_signature"
+expect_rejected "a pre-signed manifest signed by another key" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE="$tree" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$official_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$wrong_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-signature"
+
+mkdir "$tmp/wrong-manifest-assets"
+wrong_manifest="$tmp/wrong-manifest-assets/$official_manifest_name"
+cp -- "$official_manifest" "$wrong_manifest"
+printf 'x' >> "$wrong_manifest"
+expect_rejected "tampered pre-signed manifest bytes" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE="$tree" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$wrong_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-tampered-manifest"
+
+mkdir "$tmp/noncanonical-checksum-assets"
+noncanonical_checksum="$tmp/noncanonical-checksum-assets/$archive_name.sha256"
+cp -- "$archive.sha256" "$noncanonical_checksum"
+printf '\n' >> "$noncanonical_checksum"
+expect_rejected "non-canonical pre-signed checksum bytes" env \
+  "${pre_signed_env[@]}" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$noncanonical_checksum" "$tmp/pre-signed-bad-checksum"
+
+mkdir "$tmp/wrong-name-assets"
+wrong_name_manifest="$tmp/wrong-name-assets/release-manifest-v2"
+cp -- "$official_manifest" "$wrong_name_manifest"
+expect_rejected "a non-official pre-signed manifest filename" env \
+  CELIKPANEL_RELEASE_SIGNING=pre-signed \
+  CELIKPANEL_RELEASE_OS=linux \
+  CELIKPANEL_RELEASE_ARCH=amd64 \
+  CELIKPANEL_RELEASE_SEQUENCE="$sequence" \
+  CELIKPANEL_RELEASE_TREE="$tree" \
+  CELIKPANEL_RELEASE_SIGNED_MANIFEST_FILE="$wrong_name_manifest" \
+  CELIKPANEL_RELEASE_SIGNED_SIGNATURE_FILE="$official_signature" \
+  bash "$builder" "$version" "$commit" "$published_at" \
+    "$archive" "$archive.sha256" "$tmp/pre-signed-wrong-name"
 
 expect_rejected "partial portal signing configuration" env \
   CELIKPANEL_RELEASE_SIGNING=required \
@@ -444,6 +654,7 @@ line_of() {
   grep -Fn -- "$1" "$bootstrap" | head -n 1 | cut -d: -f1
 }
 manifest_fetch_line=$(line_of 'signed_fetch "$release_url/release-manifest-v2"')
+bootstrap_key_fetch_line=$(line_of 'signed_fetch "$base_url/release-signing-ed25519.pem"')
 signed_lock_line=$(line_of 'acquire_signed_update_lock || fail \')
 signature_verify_line=$(line_of 'verify_signed_release_manifest \')
 archive_fetch_line=$(line_of 'signed_fetch "$release_url/$archive"')
@@ -452,7 +663,8 @@ archive_use_line=$(line_of 'tar -tzf "$workdir/$archive"')
 signed_commit_line=$(line_of '[ "$extracted_release_commit" = "$signed_commit" ]')
 floor_persist_line=$(line_of 'persist_release_sequence_floor "$signed_release_sequence" "$version"')
 update_entry_line=$(line_of 'updater=$extracted_root/bootstrap-prebuilt-update.sh')
-[[ "$signed_lock_line" -lt "$manifest_fetch_line" &&
+[[ "$bootstrap_key_fetch_line" -lt "$manifest_fetch_line" &&
+   "$signed_lock_line" -lt "$manifest_fetch_line" &&
    "$manifest_fetch_line" -lt "$signature_verify_line" &&
    "$signature_verify_line" -lt "$archive_fetch_line" &&
    "$archive_fetch_line" -lt "$signed_digest_line" &&
@@ -465,6 +677,14 @@ grep -Fq '[ "$requested_version" != latest ]' "$bootstrap" \
   || fail "signed updates do not require an exact version"
 grep -Fq 'release_public_key=/etc/celikpanel/release-signing-ed25519.pem' "$bootstrap" \
   || fail "bootstrap does not pin the installed public-key path"
+grep -Fxq 'bootstrap_release_sequence=41' "$bootstrap" \
+  || fail "bootstrap does not pin the Alpha41 release sequence"
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.41' "$bootstrap" \
+  || fail "bootstrap does not pin the Alpha41 release version"
+grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
+  || fail "bootstrap does not pin the reviewed public-key digest"
+grep -Fq 'validate_bootstrap_release_public_key "$signed_public_key_path"' "$bootstrap" \
+  || fail "bootstrap does not validate the downloaded public-key identity"
 grep -Fq 'signed_update_lock=/var/lib/celikpanel-release-state/update.lock' "$bootstrap" \
   || fail "bootstrap does not pin the signed update lock path"
 if awk '/acquire_signed_update_lock\(\)/,/^}/' "$bootstrap" \
@@ -487,8 +707,10 @@ grep -Fq '[ "$signed_manifest_archive_sha256" = "$signed_expected_archive_sha256
   || fail "bootstrap does not bind the approved archive digest"
 grep -Fq '[ "$signed_manifest_archive_size" = "$signed_expected_archive_size" ]' "$bootstrap" \
   || fail "bootstrap does not bind the approved archive size"
-grep -Fq 'for signed_required_command in flock openssl uname; do' "$bootstrap" \
-  || fail "signed-only runtime requirements are missing"
+grep -Fq 'for signed_required_command in openssl uname; do' "$bootstrap" \
+  || fail "signed bootstrap runtime requirements are missing"
+grep -Fq 'command -v flock >/dev/null 2>&1 || fail' "$bootstrap" \
+  || fail "signed update lock runtime requirement is missing"
 if grep -Fq 'tar tr uname xargs; do' "$bootstrap"; then
   fail "unsigned bootstrap flow unexpectedly requires uname"
 fi
@@ -502,6 +724,12 @@ grep -Fq 'CELIKPANEL_RELEASE_PUBLIC_KEY_FILE' "$installer" \
   || fail "operator public-key provisioning input is missing"
 grep -Fq 'provision_signed_update_lock' "$installer" \
   || fail "installer does not provision the signed update lock"
+grep -Fq 'CELIKPANEL_FIRST_INSTALL_TRUST' "$installer" \
+  || fail "installer has no all-or-none first-install trust contract"
+grep -Fq 'enroll_first_install_signed_release_trust' "$installer" \
+  || fail "installer does not enroll verified first-install trust"
+grep -Fq 'deploy/enroll-signed-release-trust.sh' "$installer" \
+  || fail "installer does not use the reviewed trust enrollment helper"
 grep -Fq 'set -o noclobber; : > "$SIGNED_UPDATE_LOCK"' "$installer" \
   || fail "installer does not create the signed update lock atomically"
 if awk '/provision_signed_update_lock\(\)/,/^}/' "$installer" \
@@ -531,8 +759,18 @@ grep -Fq 'secrets.CELIKPANEL_RELEASE_SIGNING_ED25519_PEM' "$workflow" \
   || fail "release CI has no explicit operator signing-key gate"
 grep -Fq 'vars.CELIKPANEL_RELEASE_SEQUENCE' "$workflow" \
   || fail "release CI has no operator-controlled monotonic sequence gate"
-grep -Fq 'signed assets skipped: release signing key is not configured' "$workflow" \
-  || fail "unsigned tag-release compatibility gate is missing"
+grep -Fq 'CELIKPANEL_RELEASE_SIGNING_ED25519_PEM is required for tagged releases' "$workflow" \
+  || fail "tagged releases do not require the signing key"
+grep -Fq '[[ "$signed_count" -eq 4 ]]' "$workflow" \
+  || fail "tagged releases do not require all signed assets"
+grep -Fq 'release signing private key does not match the tracked public key' "$writer_source" \
+  || fail "manifest writer does not bind the private key to the tracked public key"
+grep -Fq 'cp -- "$tracked_public_key" "$output/release-signing-ed25519.pem"' "$builder_source" \
+  || fail "portal builder does not publish the tracked public key at its root"
+grep -Fq 'CELIKPANEL_RELEASE_SIGNING=pre-signed' "$repo_root/docs/release-signing.md" \
+  || fail "pre-signed portal assembly is not documented"
+grep -Fq 'pre-signed release mode refuses a private signing key' "$builder_source" \
+  || fail "pre-signed portal mode does not explicitly refuse private keys"
 signed_fetch_body=$(awk '
   /^signed_fetch\(\)/ { capture=1 }
   capture { print }
@@ -570,7 +808,7 @@ chmod 0755 "$redirect_probe"
 require_size_line=$(line_of '[ "$signed_manifest_archive_size" -le 2147483648 ]')
 [[ "$require_size_line" -lt "$archive_fetch_line" ]] \
   || fail "signed archive size is not bounded before download"
-[[ "$(grep -Fc -- '-passin pass:' "$writer")" -eq 3 ]] \
+[[ "$(grep -Fc -- '-passin pass:' "$writer")" -eq 5 ]] \
   || fail "private-key OpenSSL calls are not explicitly non-interactive"
 grep -Fq "go version -m" "$writer" \
   || fail "signer does not inspect actual Go GOOS/GOARCH metadata"
