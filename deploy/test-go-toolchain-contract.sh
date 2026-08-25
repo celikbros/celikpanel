@@ -133,9 +133,10 @@ reject_literal "$CI" 'windows-portability:'
 reject_literal "$CI" 'freebsd-compile:'
 reject_literal "$CI" 'darwin-compile:'
 require_count "$CI" 'go test -race -count=1 -timeout=8m ./cmd/panel' 1
-require_count "$CI" 'pattern:' 6
+require_count "$CI" 'pattern:' 7
 require_literal "$CI" "pattern: '^Test($|[A-C]|[^A-Z])'"
-require_literal "$CI" "pattern: '^Test[D-G]'"
+require_literal "$CI" "pattern: '^TestD'"
+require_literal "$CI" "pattern: '^Test[E-G]'"
 require_literal "$CI" "pattern: '^Test[H-M]'"
 require_literal "$CI" "pattern: '^Test[N-R]'"
 require_literal "$CI" "pattern: '^TestS'"
@@ -165,7 +166,8 @@ reject_literal "$PORTABILITY" 'go-version-file:'
 panel_shard_membership_count() {
     local test_name=$1 count=0
     [[ "$test_name" =~ ^Test($|[A-C]|[^A-Z]) ]] && ((count += 1))
-    [[ "$test_name" =~ ^Test[D-G] ]] && ((count += 1))
+    [[ "$test_name" =~ ^TestD ]] && ((count += 1))
+    [[ "$test_name" =~ ^Test[E-G] ]] && ((count += 1))
     [[ "$test_name" =~ ^Test[H-M] ]] && ((count += 1))
     [[ "$test_name" =~ ^Test[N-R] ]] && ((count += 1))
     [[ "$test_name" =~ ^TestS ]] && ((count += 1))
@@ -173,7 +175,7 @@ panel_shard_membership_count() {
     printf '%s\n' "$count"
 }
 
-for boundary_name in Test TestA TestC TestD TestG TestH TestM TestN TestR TestS TestT TestZ Test_ Test9 Testa; do
+for boundary_name in Test TestA TestC TestD TestE TestG TestH TestM TestN TestR TestS TestT TestZ Test_ Test9 Testa; do
     [[ "$(panel_shard_membership_count "$boundary_name")" == 1 ]] ||
         die "panel race shard boundary is not disjoint and exhaustive: $boundary_name"
 done
