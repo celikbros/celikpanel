@@ -733,7 +733,14 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
     const [connectionInterrupted, setConnectionInterrupted] = useState(false);
     const [failure, setFailure] = useState<ApiError | null>(null);
     const [catalogSnapshot, setCatalogSnapshot] = useState<ManagedServicesSnapshot | null>(null);
+    // Discovery is a fail-closed mutation gate, but it is not a user-visible
+    // operation. Keep install actions locked until the server proves absence,
+    // while allowing ordinary navigation and read-only work to continue.
+    // Keşif, değişiklikler için güvenli tarafta kalan bir kilittir; kullanıcıya
+    // gösterilecek bir işlem değildir. Sunucu yokluğu kanıtlayana kadar kurulum
+    // eylemlerini kilitli tutarken gezinme ve salt-okunur kullanımı açık bırak.
     const locked = discoveringActive || submitting || operation !== null || refreshingCatalog;
+    const interactionBlocked = submitting || operation !== null || refreshingCatalog;
     const lockedRef = useRef(locked);
     const recoveryGenerationRef = useRef(0);
     const recoveryMarkerRef = useRef<OperationRecoveryMarker | null>(initialSession.recoveryMarker);
@@ -749,14 +756,14 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
         recoveryGenerationRef.current += 1;
     }, []);
 
-    // The overlay is portalled outside #root. Making #root inert therefore
-    // blocks pointer, focus and keyboard interaction everywhere underneath
-    // while the status dialog remains accessible.
-    // Katman #root dışına taşınır. Bu yüzden #root'u inert yapmak, durum
-    // iletişim kutusu erişilebilir kalırken alttaki işaretçi, odak ve klavyeyi
-    // engeller.
+    // The overlay is portalled outside #root. Only a real or indeterminate
+    // mutation makes #root inert; background active-operation discovery never
+    // interrupts page navigation or read-only work.
+    // Katman #root dışına taşınır. Yalnız gerçek veya sonucu belirsiz bir
+    // değişiklik #root'u etkisiz yapar; arka plandaki etkin işlem keşfi sayfada
+    // gezinmeyi ya da salt-okunur kullanımı hiçbir zaman kesmez.
     useEffect(() => {
-        if (!locked) return;
+        if (!interactionBlocked) return;
         const root = document.getElementById('root');
         if (!root) return;
         const hadInert = root.hasAttribute('inert');
@@ -771,7 +778,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             focusBeforeLockRef.current = null;
             if (focusTarget?.isConnected) focusTarget.focus();
         };
-    }, [locked]);
+    }, [interactionBlocked]);
 
     const finishFailure = (error: ApiError) => {
         clearStoredOperation();
@@ -1172,9 +1179,11 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     }
                 } else {
                     // No valid "operation: null" or adoptable operation means
-                    // absence was not proved. Keep the page inert and retry.
+                    // absence was not proved. Keep mutations locked and retry in
+                    // the background without interrupting ordinary page use.
                     // Geçerli "operation: null" veya devralınabilir işlem yoksa
-                    // yokluk kanıtlanmamıştır. Sayfayı etkisiz tut ve yeniden dene.
+                    // yokluk kanıtlanmamıştır. Normal sayfa kullanımını kesmeden
+                    // değişiklikleri kilitli tut ve arka planda yeniden dene.
                     lockedRef.current = true;
                     if (!cancelled) {
                         setDiscoveringActive(true);
@@ -1603,11 +1612,10 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             }}
         >
             {children}
-            {locked && createPortal(
+            {interactionBlocked && createPortal(
                 <OperationOverlay
                     operation={operation}
                     label={label}
-                    discovering={discoveringActive}
                     submitting={submitting}
                     recovering={recoveringRequest}
                     refreshing={refreshingCatalog}
@@ -1615,7 +1623,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 />,
                 document.body,
             )}
-            {failure && !locked && createPortal(
+            {failure && !interactionBlocked && createPortal(
                 <div
                     role="alert"
                     className="fixed inset-x-4 top-4 z-[90] mx-auto max-w-2xl rounded-xl bg-surface shadow-2xl"
@@ -1642,7 +1650,6 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
 function OperationOverlay({
     operation,
     label,
-    discovering,
     submitting,
     recovering,
     refreshing,
@@ -1650,7 +1657,6 @@ function OperationOverlay({
 }: {
     operation: ComponentOperation | null;
     label: string;
-    discovering: boolean;
     submitting: boolean;
     recovering: boolean;
     refreshing: boolean;
@@ -1665,14 +1671,12 @@ function OperationOverlay({
 
     let statusText = interrupted
         ? t('services.operation.reconnecting')
-        : discovering
-            ? t('services.operation.checkingActive')
-            : t('services.operation.starting');
-    if (!interrupted && !discovering && recovering) {
+        : t('services.operation.starting');
+    if (!interrupted && recovering) {
         statusText = t('services.operation.recoveringRequest');
-    } else if (!interrupted && !discovering && refreshing) {
+    } else if (!interrupted && refreshing) {
         statusText = t('services.operation.refreshing');
-    } else if (!interrupted && !discovering && !submitting && operation) {
+    } else if (!interrupted && !submitting && operation) {
         const normalizedPhase = operation.phase.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
         const phaseKey = `services.operation.phase.${normalizedPhase}` as TranslationKey;
         const translated = t(phaseKey);
@@ -1699,17 +1703,13 @@ function OperationOverlay({
                         : <LoaderCircle className="h-7 w-7 animate-spin" />}
                 </span>
                 <h2 id="component-operation-title" className="text-xl font-semibold text-fg">
-                    {discovering
-                        ? t('services.operation.checkingTitle')
-                        : t('services.operation.title', { name: label || t('services.install') })}
+                    {t('services.operation.title', { name: label || t('services.install') })}
                 </h2>
                 <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
                     {statusText}
                 </p>
                 <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
-                    {t(discovering
-                        ? 'services.operation.activeCheckHint'
-                        : 'services.operation.backgroundHint')}
+                    {t('services.operation.backgroundHint')}
                 </p>
                 {operation?.id && (
                     <p className="mt-3 font-mono text-[11px] text-fg-subtle">
