@@ -140,17 +140,25 @@ func TestComponentOperationActiveDiscoveryUnlocksOnlyVerifiedAbsence(t *testing.
 	}
 }
 
-func TestComponentOperationInitialDiscoveryLocksFirstRender(t *testing.T) {
+func TestComponentOperationInitialDiscoveryLocksMutationsWithoutBlockingPage(t *testing.T) {
 	source := componentOperationSource(t)
 	for _, required := range []string{
 		"() => initialSession.operation === null && initialSession.recoveryMarker === null",
 		"const locked = discoveringActive || submitting || operation !== null || refreshingCatalog;",
-		"root.setAttribute('inert', '');",
+		"const interactionBlocked = submitting || operation !== null || refreshingCatalog;",
+		"if (!interactionBlocked) return;",
+		"{interactionBlocked && createPortal(",
 		"void syncActiveOperation(true);",
 	} {
 		if !strings.Contains(source, required) {
-			t.Fatalf("initial active-operation discovery is missing first-render lock step %q", required)
+			t.Fatalf("initial active-operation discovery is missing non-blocking safety step %q", required)
 		}
+	}
+	if strings.Contains(source, "{locked && createPortal(") {
+		t.Fatal("background discovery must not open the blocking operation overlay")
+	}
+	if !strings.Contains(source, "root.setAttribute('inert', '');") {
+		t.Fatal("real package operations must still make the underlying page inert")
 	}
 }
 

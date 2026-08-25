@@ -32,6 +32,21 @@ test('component mutations are gated by fail-closed host readiness', () => {
   assert.match(serviceSource, /<fieldset[\s\S]{0,120}disabled=\{mutationControlsDisabled\}/);
 });
 
+test('active-operation discovery is silent while mutations remain fail-closed', () => {
+  assert.match(
+    operationSource,
+    /const locked = discoveringActive \|\| submitting \|\| operation !== null \|\| refreshingCatalog/,
+  );
+  assert.match(
+    operationSource,
+    /const interactionBlocked = submitting \|\| operation !== null \|\| refreshingCatalog/,
+  );
+  assert.match(operationSource, /if \(!interactionBlocked\) return/);
+  assert.match(operationSource, /\{interactionBlocked && createPortal\(/);
+  assert.doesNotMatch(operationSource, /\{locked && createPortal\(/);
+  assert.match(operationSource, /activeSyncInFlightRef\.current\s*\? 'services\.operation\.activeCheckInProgress'/);
+});
+
 test('lifecycle, repair, runtime install and firewall actions require an explicit dialog confirmation', () => {
   assert.match(serviceSource, /requestComponentAction\(\{ kind: 'service'/);
   assert.match(serviceSource, /requestComponentAction\(\{ kind: 'instance'/);

@@ -3,8 +3,8 @@ set -eu
 umask 077
 
 base_url=https://celikpanel.net
-bootstrap_release_sequence=43
-bootstrap_release_version=v0.1.0-alpha.43
+bootstrap_release_sequence=44
+bootstrap_release_version=v0.1.0-alpha.44
 bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb
 requested_version=latest
 requested_action=auto
