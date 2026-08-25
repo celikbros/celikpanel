@@ -104,8 +104,10 @@ jobs:
         include:
           - shard: A through C, exact and non-uppercase
             pattern: '^Test($|[A-C]|[^A-Z])'
-          - shard: D through G
-            pattern: '^Test[D-G]'
+          - shard: D
+            pattern: '^TestD'
+          - shard: E through G
+            pattern: '^Test[E-G]'
           - shard: H through M
             pattern: '^Test[H-M]'
           - shard: N through R
@@ -122,7 +124,7 @@ jobs:
           cache: true
       - name: Verify exact Go toolchain
         run: test "$(go env GOVERSION)" = go1.26.5
-      # cmd/panel has hundreds of SQLite-backed tests. These six matrix
+      # cmd/panel has hundreds of SQLite-backed tests. These seven matrix
       # entries run concurrently, are disjoint and cover every valid Test*
       # suffix, including a future exact `Test` name or non-uppercase suffix.
       - name: Race-test panel boundaries

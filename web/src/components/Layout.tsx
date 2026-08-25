@@ -25,6 +25,41 @@ interface LayoutProps {
 }
 
 type Counts = Partial<Record<'domains' | 'databases' | 'services', number>>;
+type PanelRuntime = {
+    version: string;
+    commit: string;
+    agent_commit: string;
+    agent_matches: boolean;
+    hostname: string;
+    ipv4: string;
+};
+type ServerIdentity = Pick<PanelRuntime, 'hostname' | 'ipv4'>;
+
+function decodePanelRuntime(value: unknown): PanelRuntime | null {
+    if (!value || typeof value !== 'object') return null;
+    const raw = value as Record<string, unknown>;
+    if (typeof raw.version !== 'string' || raw.version.length > 80
+        || typeof raw.commit !== 'string' || raw.commit.length > 80
+        || typeof raw.agent_commit !== 'string' || raw.agent_commit.length > 80
+        || typeof raw.agent_matches !== 'boolean') {
+        return null;
+    }
+
+    const hostname = typeof raw.hostname === 'string' && raw.hostname.length <= 253
+        ? raw.hostname.trim()
+        : '';
+    const ipv4 = typeof raw.ipv4 === 'string' && raw.ipv4.length <= 64
+        ? raw.ipv4.trim()
+        : '';
+    return {
+        version: raw.version,
+        commit: raw.commit,
+        agent_commit: raw.agent_commit,
+        agent_matches: raw.agent_matches,
+        hostname,
+        ipv4,
+    };
+}
 
 export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
     const { role, user } = useAuth();
@@ -33,6 +68,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         teamMembers: user?.features?.team_members === true,
     };
     const [counts, setCounts] = useState<Counts>({});
+    const [panelRuntime, setPanelRuntime] = useState<PanelRuntime | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [desktopPageHeaderTarget, setDesktopPageHeaderTarget] = useState<HTMLDivElement | null>(null);
     const [desktopPageHeaderCount, setDesktopPageHeaderCount] = useState(0);
@@ -70,6 +106,32 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         }
     }, [role]);
 
+    // The existing admin-only version request now carries the bounded machine
+    // identity too. One no-store response feeds both the build stamp and every
+    // persistent shell label without sampling dashboard metrics again.
+    useEffect(() => {
+        if (role !== 'admin') {
+            setPanelRuntime(null);
+            return;
+        }
+
+        let cancelled = false;
+        fetch('/api/v1/panel/version', { cache: 'no-store', credentials: 'same-origin' })
+            .then(async (response) => (response.ok ? decodePanelRuntime(await response.json()) : null))
+            .then((runtime) => {
+                if (!cancelled) setPanelRuntime(runtime);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [role]);
+
+    const serverIdentity: ServerIdentity | null = panelRuntime
+        && (panelRuntime.hostname || panelRuntime.ipv4)
+        ? { hostname: panelRuntime.hostname, ipv4: panelRuntime.ipv4 }
+        : null;
+
     return (
         <DesktopPageHeaderTargetContext.Provider value={desktopPageHeaderSlot}>
             <div className="flex h-screen bg-bg text-fg">
@@ -85,6 +147,8 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                     mobileOpen={mobileOpen}
                     onCloseMobile={() => setMobileOpen(false)}
                     expandedHeader={hasDesktopPageHeader}
+                    serverIdentity={serverIdentity}
+                    panelRuntime={panelRuntime}
                 />
 
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -100,6 +164,9 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                         >
                             <Menu className="h-5 w-5" />
                         </button>
+                        {serverIdentity && (
+                            <ServerIdentityLabel identity={serverIdentity} placement="mobile" />
+                        )}
                         <div
                             ref={setDesktopPageHeaderTarget}
                             className="hidden min-w-0 flex-1 self-stretch xl:flex xl:items-center"
@@ -131,6 +198,8 @@ function Sidebar({
     mobileOpen,
     onCloseMobile,
     expandedHeader,
+    serverIdentity,
+    panelRuntime,
 }: {
     role: ReturnType<typeof useAuth>['role'];
     access: NavAccessContext;
@@ -140,6 +209,8 @@ function Sidebar({
     mobileOpen: boolean;
     onCloseMobile: () => void;
     expandedHeader: boolean;
+    serverIdentity: ServerIdentity | null;
+    panelRuntime: PanelRuntime | null;
 }) {
     const { t } = useI18n();
     const items = navItemsForRole(role, access);
@@ -184,7 +255,12 @@ function Sidebar({
             </nav>
 
             <div className="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted">
-                <BuildStamp />
+                {serverIdentity && (
+                    <ServerIdentityLabel identity={serverIdentity} placement="sidebar" />
+                )}
+                <div className={serverIdentity ? 'border-t border-sidebar-border pt-3' : ''}>
+                    <BuildStamp runtime={panelRuntime} />
+                </div>
             </div>
         </div>
     );
@@ -236,6 +312,66 @@ function SidebarItem({
                 </span>
             )}
         </button>
+    );
+}
+
+function ServerIdentityLabel({ identity, placement }: {
+    identity: ServerIdentity;
+    placement: 'mobile' | 'sidebar';
+}) {
+    const { t } = useI18n();
+    const title = [identity.hostname, identity.ipv4].filter(Boolean).join(' · ');
+    const accessibleLabel = [
+        t('dashboard.serverInfo'),
+        identity.hostname ? t('dashboard.hostname') + ': ' + identity.hostname : '',
+        identity.ipv4 ? t('dashboard.ipv4') + ': ' + identity.ipv4 : '',
+    ].filter(Boolean).join(', ');
+
+    if (placement === 'mobile') {
+        return (
+            <section
+                data-server-identity="mobile"
+                className="min-w-0 max-w-[10rem] md:hidden"
+                aria-label={accessibleLabel}
+                title={title}
+            >
+                {identity.hostname && (
+                    <p className="truncate text-xs font-semibold text-fg">{identity.hostname}</p>
+                )}
+                {identity.ipv4 && (
+                    <p className="truncate font-mono text-[10px] text-fg-muted" dir="ltr">
+                        {identity.ipv4}
+                    </p>
+                )}
+            </section>
+        );
+    }
+
+    return (
+        <section
+            data-server-identity="sidebar"
+            className="mb-3 min-w-0"
+            aria-label={accessibleLabel}
+            title={title}
+        >
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-heading">
+                {t('dashboard.serverInfo')}
+            </p>
+            {identity.hostname && (
+                <p className="truncate font-medium text-sidebar-fg" title={identity.hostname}>
+                    {identity.hostname}
+                </p>
+            )}
+            {identity.ipv4 && (
+                <p
+                    className="truncate font-mono text-[11px] text-sidebar-muted"
+                    title={identity.ipv4}
+                    dir="ltr"
+                >
+                    {identity.ipv4}
+                </p>
+            )}
+        </section>
     );
 }
 
@@ -346,18 +482,10 @@ function UserMenu() {
 // operatöre yeni yapının indiğini böyle göreceğini söylüyordu. Artık sürüm ve
 // panelin commit'i çalışan binary'den gelir; panel/agent uyuşmazlığı da güven
 // veren bir damganın arkasına gizlenmek yerine uyarı olarak gösterilir.
-function BuildStamp() {
+function BuildStamp({ runtime }: { runtime: PanelRuntime | null }) {
     const { t } = useI18n();
-    const [v, setV] = useState<{ version: string; commit: string; agent_commit: string; agent_matches: boolean } | null>(null);
-
-    useEffect(() => {
-        fetch('/api/v1/panel/version', { cache: 'no-store', credentials: 'same-origin' })
-            .then((r) => (r.ok ? r.json() : null))
-            .then(setV)
-            .catch(() => {});
-    }, []);
-
-    if (!v) return <>{t('app.name')}</>;
+    if (!runtime) return <>{t('app.name')}</>;
+    const v = runtime;
 
     return (
         <>

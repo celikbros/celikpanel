@@ -69,7 +69,7 @@ Then assemble a new, non-existing portal candidate from the four authoritative
 platform assets:
 
     CELIKPANEL_RELEASE_SIGNING=pre-signed \
-    CELIKPANEL_RELEASE_SEQUENCE=41 \
+    CELIKPANEL_RELEASE_SEQUENCE=42 \
     CELIKPANEL_RELEASE_TREE=EXACT_40_HEX_TAG_TREE \
     CELIKPANEL_RELEASE_OS=linux \
     CELIKPANEL_RELEASE_ARCH=amd64 \
