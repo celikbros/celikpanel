@@ -48,10 +48,25 @@ RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
 RELEASE_PUBLIC_KEY=/etc/celikpanel/release-signing-ed25519.pem
 RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
 SIGNED_UPDATE_LOCK="$RELEASE_STATE_DIR/update.lock"
+FIRST_INSTALL_TRUST_REQUESTED=${CELIKPANEL_FIRST_INSTALL_TRUST:-0}
+FIRST_INSTALL_PUBLIC_KEY_FILE=${CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE:-}
+FIRST_INSTALL_RELEASE_SEQUENCE=${CELIKPANEL_FIRST_INSTALL_SEQUENCE:-}
+FIRST_INSTALL_RELEASE_VERSION=${CELIKPANEL_FIRST_INSTALL_VERSION:-}
+FIRST_INSTALL_RELEASE_COMMIT=${CELIKPANEL_FIRST_INSTALL_COMMIT:-}
+FIRST_INSTALL_INHERITED_LOCK_FD=${CELIKPANEL_FIRST_INSTALL_LOCK_FD:-}
+FIRST_INSTALL_LOCK_FD=9
+FIRST_INSTALL_LOCK_HELD=0
+unset CELIKPANEL_FIRST_INSTALL_TRUST CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE \
+    CELIKPANEL_FIRST_INSTALL_SEQUENCE CELIKPANEL_FIRST_INSTALL_VERSION \
+    CELIKPANEL_FIRST_INSTALL_COMMIT CELIKPANEL_FIRST_INSTALL_LOCK_FD
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
     RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR \
-    RELEASE_UPDATER RELEASE_PUBLIC_KEY RELEASE_STATE_DIR SIGNED_UPDATE_LOCK
+    RELEASE_UPDATER RELEASE_PUBLIC_KEY RELEASE_STATE_DIR SIGNED_UPDATE_LOCK \
+    FIRST_INSTALL_TRUST_REQUESTED FIRST_INSTALL_PUBLIC_KEY_FILE \
+    FIRST_INSTALL_RELEASE_SEQUENCE FIRST_INSTALL_RELEASE_VERSION \
+    FIRST_INSTALL_RELEASE_COMMIT FIRST_INSTALL_INHERITED_LOCK_FD \
+    FIRST_INSTALL_LOCK_FD
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -123,6 +138,94 @@ step() { c '1;36' "==> $(bilingual "$@")"; }
 ok() { c '32' "    ✓ $(bilingual "$@")"; }
 warn() { c '33' "    $(bilingual "$@")"; }
 die() { c '1;31' "ERROR / HATA: $(bilingual "$@")" >&2; exit 1; }
+
+valid_release_version() {
+    local value=$1 prerelease identifier
+    [[ "$value" != *+* &&
+       "$value" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] \
+        || return 1
+    [[ "$value" == *-* ]] || return 0
+    prerelease=${value#*-}
+    IFS=. read -r -a identifiers <<< "$prerelease"
+    for identifier in "${identifiers[@]}"; do
+        if [[ "$identifier" =~ ^[0-9]+$ ]]; then
+            [[ "$identifier" == 0 || "$identifier" != 0* ]] || return 1
+        fi
+    done
+}
+
+valid_release_sequence() {
+    local value=$1 LC_ALL=C
+    [[ "$value" =~ ^[1-9][0-9]*$ && ${#value} -le 19 ]] || return 1
+    [[ ${#value} -lt 19 || "$value" < 9223372036854775807 ||
+       "$value" == 9223372036854775807 ]]
+}
+
+validate_first_install_trust_contract() {
+    case "$FIRST_INSTALL_TRUST_REQUESTED" in
+        0)
+            [[ -z "$FIRST_INSTALL_PUBLIC_KEY_FILE" &&
+               -z "$FIRST_INSTALL_RELEASE_SEQUENCE" &&
+               -z "$FIRST_INSTALL_RELEASE_VERSION" &&
+               -z "$FIRST_INSTALL_RELEASE_COMMIT" &&
+               -z "$FIRST_INSTALL_INHERITED_LOCK_FD" ]] \
+                || die "partial first-install signed trust configuration is refused"
+            ;;
+        1)
+            [[ $APPLY_ONLY -eq 0 ]] \
+                || die "first-install signed trust cannot run in apply-only mode"
+            [[ -z "${CELIKPANEL_RELEASE_PUBLIC_KEY_FILE:-}" ]] \
+                || die "legacy and first-install release-key enrollment cannot be combined"
+            [[ -n "$FIRST_INSTALL_PUBLIC_KEY_FILE" &&
+               "$FIRST_INSTALL_INHERITED_LOCK_FD" == "$FIRST_INSTALL_LOCK_FD" &&
+               "$FIRST_INSTALL_RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]] \
+                && valid_release_sequence "$FIRST_INSTALL_RELEASE_SEQUENCE" \
+                && valid_release_version "$FIRST_INSTALL_RELEASE_VERSION" \
+                || die "first-install signed trust identity is incomplete or invalid"
+            ;;
+        *)
+            die "CELIKPANEL_FIRST_INSTALL_TRUST must be 0 or 1"
+            ;;
+    esac
+}
+
+run_first_install_trust_helper() {
+    local mode=$1 helper="$SRC/deploy/enroll-signed-release-trust.sh"
+    local -a helper_args=(
+        --sequence "$FIRST_INSTALL_RELEASE_SEQUENCE"
+        --version "$FIRST_INSTALL_RELEASE_VERSION"
+        --commit "$FIRST_INSTALL_RELEASE_COMMIT"
+        --public-key-file "$FIRST_INSTALL_PUBLIC_KEY_FILE"
+    )
+    [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]] || return 0
+    [[ -f "$helper" && ! -L "$helper" ]] \
+        || die "signed release trust enrollment helper is missing or unsafe"
+    case "$mode" in
+        preflight) helper_args+=(--preflight-only) ;;
+        enroll) ;;
+        *) die "internal first-install trust helper mode is invalid" ;;
+    esac
+    if [[ "$FIRST_INSTALL_LOCK_HELD" == 1 ]]; then
+        helper_args+=(--locked-fd "$FIRST_INSTALL_LOCK_FD")
+    fi
+    bash "$helper" "${helper_args[@]}"
+}
+
+preflight_first_install_signed_release_trust() {
+    [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]] || return 0
+    run_first_install_trust_helper preflight \
+        || die "first-install signed release trust preflight failed"
+}
+
+enroll_first_install_signed_release_trust() {
+    [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]] || return 0
+    [[ "$FIRST_INSTALL_LOCK_HELD" == 1 ]] \
+        || die "first-install signed update lock is not held for trust enrollment"
+    run_first_install_trust_helper enroll \
+        || die "first-install signed release trust enrollment failed"
+}
+
+validate_first_install_trust_contract
 
 validate_release_key_source_directory_chain() {
     local current=$1 canonical owner group mode permissions
@@ -334,6 +437,42 @@ provision_signed_update_lock() {
     [[ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$lock_fd_path")" == 0:0:600:1:0 ]] \
         || die "signed update lock metadata could not be normalized"
     exec {lock_fd}>&-
+}
+
+acquire_first_install_signed_update_lock() {
+    [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]] || return 0
+    [[ "$FIRST_INSTALL_LOCK_HELD" == 0 ]] \
+        || die "first-install signed update lock was acquired more than once"
+    local lock_fd_path=/proc/self/fd/$FIRST_INSTALL_LOCK_FD
+    local path_identity fd_identity probe_fd probe_identity
+    [[ "$FIRST_INSTALL_INHERITED_LOCK_FD" == "$FIRST_INSTALL_LOCK_FD" &&
+       -f "$lock_fd_path" ]] \
+        || die "first-install signed update lock descriptor was not inherited"
+    path_identity=$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK") \
+        || die "cannot identify first-install signed update lock path"
+    fd_identity=$(stat -Lc '%d:%i' -- "$lock_fd_path") \
+        || die "cannot identify opened first-install signed update lock"
+    [[ "$path_identity" == "$fd_identity" &&
+       "$(stat -Lc '%u:%g:%a:%h:%s' -- "$lock_fd_path")" == 0:0:600:1:0 ]] \
+        || die "first-install signed update lock identity is unsafe"
+    exec {probe_fd}<>"$SIGNED_UPDATE_LOCK" \
+        || die "cannot open first-install signed update lock ownership probe"
+    probe_identity=$(stat -Lc '%d:%i' -- "/proc/self/fd/$probe_fd") \
+        || die "cannot identify first-install signed update lock ownership probe"
+    [[ "$probe_identity" == "$fd_identity" ]] \
+        || die "first-install signed update lock changed during ownership proof"
+    if flock -n "$probe_fd"; then
+        flock -u "$probe_fd" || true
+        exec {probe_fd}>&-
+        die "first-install signed update lock was not held by the bootstrap"
+    fi
+    exec {probe_fd}>&-
+    flock -n "$FIRST_INSTALL_LOCK_FD" \
+        || die "inherited descriptor does not own the first-install signed update lock"
+    [[ "$(stat -Lc '%d:%i' -- "$SIGNED_UPDATE_LOCK")" == "$fd_identity" &&
+       "$(stat -Lc '%u:%g:%a:%h:%s' -- "$lock_fd_path")" == 0:0:600:1:0 ]] \
+        || die "first-install signed update lock changed after acquisition"
+    FIRST_INSTALL_LOCK_HELD=1
 }
 
 validate_vendor_directory_chain() {
@@ -1062,6 +1201,13 @@ for installer_command in chown chmod cmp cp flock install mktemp mv stat sync; d
     command -v "$installer_command" >/dev/null \
         || die "required installer command is unavailable: $installer_command"
 done
+if [[ "$FIRST_INSTALL_TRUST_REQUESTED" == 1 ]]; then
+    # The authenticated bootstrap owns FD 9 before archive download. Prove the
+    # same open-file-description here, then keep it through every package,
+    # product, trust and service mutation in this installation.
+    acquire_first_install_signed_update_lock
+    preflight_first_install_signed_release_trust
+fi
 
 # Apply-only is accepted solely from a completely verified immutable release
 # while the inherited persistent lock and exact active update marker are live.
@@ -1845,8 +1991,11 @@ step "systemd services" "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
-provision_signed_update_lock
+if [[ "$FIRST_INSTALL_LOCK_HELD" != 1 ]]; then
+    provision_signed_update_lock
+fi
 install_reviewed_release_updater
+enroll_first_install_signed_release_trust
 # Operator choices live in root-only /etc/celikpanel/panel.env. Reinstall and
 # update always replace the vendor unit, never that durable configuration.
 # Operatör seçimleri root-only /etc/celikpanel/panel.env içindedir. Yeniden

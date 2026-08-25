@@ -485,8 +485,23 @@
               </div>
               <pre
                 tabindex="0"
-              ><code id="latest-command">curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
-sh /tmp/celikpanel-get.sh</code></pre>
+              ><code id="latest-command">(
+  set -eu
+  celikpanel_get=$(mktemp)
+  cleanup_celikpanel_get() {
+    rm -f -- "$celikpanel_get"
+  }
+  trap cleanup_celikpanel_get EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o "$celikpanel_get"
+  if [ "$(id -u)" -eq 0 ]; then
+    sh "$celikpanel_get"
+  else
+    sudo sh "$celikpanel_get"
+  fi
+)</code></pre>
             </article>
             <article class="command-card">
               <div class="command-head">

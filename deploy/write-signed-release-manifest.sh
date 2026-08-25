@@ -3,6 +3,8 @@
 # fail-closed updater path. The private key is operator/CI-owned and is never
 # copied into the release tree.
 set -euo pipefail
+LC_ALL=C
+export LC_ALL
 
 usage() {
   printf '%s\n' \
@@ -14,6 +16,9 @@ die() {
   printf '%s\n' "$1" >&2
   exit 1
 }
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+tracked_public_key="$script_dir/release-signing-ed25519.pem"
 
 valid_release_version() {
   local value=$1 core prerelease identifier
@@ -45,7 +50,8 @@ valid_release_version "$version" \
   || die "invalid release version: $version"
 [[ "$sequence" =~ ^[1-9][0-9]*$ && ${#sequence} -le 19 ]] \
   || die "invalid release sequence: $sequence"
-(( 10#$sequence <= 9223372036854775807 )) \
+[[ ${#sequence} -lt 19 || "$sequence" < 9223372036854775807 ||
+   "$sequence" == 9223372036854775807 ]] \
   || die "release sequence is outside the supported range"
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] \
   || die "invalid release commit: $commit"
@@ -67,6 +73,14 @@ command -v openssl >/dev/null 2>&1 \
   || die "openssl is required to sign a release manifest"
 command -v go >/dev/null 2>&1 \
   || die "go is required to verify release binary target metadata"
+[[ -f "$tracked_public_key" && ! -L "$tracked_public_key" ]] \
+  || die "tracked release-signing public key is unavailable"
+openssl pkey -pubin -passin pass: -in "$tracked_public_key" -pubout 2>/dev/null \
+  | cmp -s - "$tracked_public_key" \
+  || die "tracked release-signing public key must be canonical PEM"
+openssl pkey -pubin -passin pass: -in "$tracked_public_key" -text -noout 2>/dev/null \
+  | LC_ALL=C grep -Eq '^ED25519 Public-Key:' \
+  || die "tracked release-signing public key must be Ed25519"
 
 read -r key_owner key_mode key_links key_size \
   < <(stat -Lc '%u %a %h %s' -- "$signing_key")
@@ -175,6 +189,8 @@ openssl pkeyutl -sign -rawin -inkey "$signing_key" -passin pass: \
 # Self-check before either public file is moved into place.
 openssl pkey -in "$signing_key" -passin pass: \
   -pubout -out "$public_key_tmp" >/dev/null 2>&1
+cmp -s -- "$public_key_tmp" "$tracked_public_key" \
+  || die "release signing private key does not match the tracked public key"
 openssl pkeyutl -verify -rawin -pubin -inkey "$public_key_tmp" \
   -in "$manifest_tmp" -sigfile "$signature_tmp" >/dev/null 2>&1 \
   || die "release manifest signature self-check failed"

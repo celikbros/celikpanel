@@ -6,6 +6,50 @@ const setText = (id, value) => {
   if (node) node.textContent = value;
 };
 
+// BEGIN DOWNLOAD COMMAND POLICY
+const canonicalReleaseVersionPattern =
+  /^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
+const isCanonicalReleaseVersion = (value) => {
+  if (typeof value !== "string" || !canonicalReleaseVersionPattern.test(value))
+    return false;
+  const separator = value.indexOf("-");
+  if (separator < 0) return true;
+  return value
+    .slice(separator + 1)
+    .split(".")
+    .every(
+      (identifier) =>
+        !/^[0-9]+$/.test(identifier) ||
+        identifier === "0" ||
+        !identifier.startsWith("0"),
+    );
+};
+
+const buildInstallCommand = (version = "") => {
+  if (version !== "" && !isCanonicalReleaseVersion(version))
+    throw new Error("invalid release version");
+  const versionArgument = version === "" ? "" : ` --version "${version}"`;
+  return `(
+  set -eu
+  celikpanel_get=$(mktemp)
+  cleanup_celikpanel_get() {
+    rm -f -- "$celikpanel_get"
+  }
+  trap cleanup_celikpanel_get EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o "$celikpanel_get"
+  if [ "$(id -u)" -eq 0 ]; then
+    sh "$celikpanel_get"${versionArgument}
+  else
+    sudo sh "$celikpanel_get"${versionArgument}
+  fi
+)`;
+};
+// END DOWNLOAD COMMAND POLICY
+
 const englishText = new Map([
   ["Ana içeriğe geç", "Skip to main content"],
   ["Özellikler", "Features"],
@@ -477,6 +521,7 @@ const enableReleaseLink = (id, value) => {
   node.removeAttribute("tabindex");
 };
 
+setText("latest-command", buildInstallCommand());
 applyLanguage(initialLanguage);
 
 fetch("/releases/latest.json", { cache: "no-store", credentials: "omit" })
@@ -485,15 +530,12 @@ fetch("/releases/latest.json", { cache: "no-store", credentials: "omit" })
     return response.json();
   })
   .then((release) => {
+    if (!isCanonicalReleaseVersion(release.version))
+      throw new Error("invalid release version");
     releaseData = release;
     enableReleaseLink("archive-link", release.archive_url);
     enableReleaseLink("checksum-link", release.checksum_url);
-    setText(
-      "exact-command",
-      "curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh\n" +
-        "sh /tmp/celikpanel-get.sh --version " +
-        release.version,
-    );
+    setText("exact-command", buildInstallCommand(release.version));
     const exactCopy = getNode("exact-copy");
     if (exactCopy) exactCopy.disabled = false;
     renderReleaseState();

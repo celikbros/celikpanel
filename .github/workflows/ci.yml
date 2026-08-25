@@ -27,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26.5'
@@ -56,6 +58,12 @@ jobs:
         run: git ls-files -z '*.sh' | xargs -0 -r bash -n
       - name: Verify POSIX download bootstrap syntax
         run: dash -n download-portal/get.sh
+      - name: Verify release sequence policy
+        env:
+          CELIKPANEL_CI_REF_TYPE: ${{ github.ref_type }}
+          CELIKPANEL_CI_REF_NAME: ${{ github.ref_name }}
+          CELIKPANEL_CI_RELEASE_SEQUENCE: ${{ vars.CELIKPANEL_RELEASE_SEQUENCE }}
+        run: bash deploy/test-release-sequence-policy.sh
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
@@ -66,6 +74,7 @@ jobs:
       - run: bash deploy/test-release-publish-contract.sh
       - run: bash deploy/test-download-portal-contract.sh
       - run: sudo env PATH=$PATH GOTOOLCHAIN=local bash deploy/test-signed-release-manifest-contract.sh
+      - run: bash deploy/test-first-install-signed-trust-contract.sh
       - run: sudo bash deploy/test-release-foundation-root-contract.sh
       - run: sudo bash deploy/test-signed-release-enrollment-contract.sh
       - run: bash deploy/test-release-updater-rollback-contract.sh
@@ -152,6 +161,9 @@ jobs:
           node-version: 24.18.0
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Verify safe portal download commands
+        working-directory: ${{ github.workspace }}
+        run: bash deploy/test-download-command-contract.sh
       # npm's install-time audit sends the dependency graph to the configured
       # registry. Keep CI deterministic and non-disclosing; a networked audit
       # is a separate, explicitly authorised release-review action.
@@ -173,6 +185,8 @@ jobs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Select immutable artifact version
         id: release_version
         shell: bash
@@ -243,21 +257,27 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
         run: sha256sum -c "celikpanel-${RELEASE_VERSION}.tar.gz.sha256"
-      - name: Build optional operator-authorized signed linux/amd64 assets
+      - name: Build mandatory operator-authorized signed linux/amd64 assets
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.value }}
           RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.CELIKPANEL_RELEASE_SIGNING_ED25519_PEM }}
           RELEASE_SEQUENCE: ${{ vars.CELIKPANEL_RELEASE_SEQUENCE }}
+          CELIKPANEL_CI_REF_TYPE: ${{ github.ref_type }}
+          CELIKPANEL_CI_REF_NAME: ${{ github.ref_name }}
+          CELIKPANEL_CI_RELEASE_SEQUENCE: ${{ vars.CELIKPANEL_RELEASE_SEQUENCE }}
         run: |
-          if [[ -z "${RELEASE_SIGNING_PRIVATE_KEY}" ]]; then
-            printf '%s\n' 'signed assets skipped: release signing key is not configured'
-            exit 0
-          fi
-          [[ "${RELEASE_SEQUENCE}" =~ ^[1-9][0-9]*$ ]] || {
-            printf '%s\n' 'CELIKPANEL_RELEASE_SEQUENCE must be configured when the signing key is present' >&2
+          bash deploy/test-release-sequence-policy.sh
+          [[ -n "${RELEASE_SIGNING_PRIVATE_KEY}" ]] || {
+            printf '%s\n' 'CELIKPANEL_RELEASE_SIGNING_ED25519_PEM is required for tagged releases' >&2
             exit 1
           }
+          [[ "${RELEASE_SEQUENCE}" =~ ^[1-9][0-9]*$ ]] || {
+            printf '%s\n' 'CELIKPANEL_RELEASE_SEQUENCE is required for tagged releases' >&2
+            exit 1
+          }
+          grep -Fxq "bootstrap_release_version=${RELEASE_VERSION}" download-portal/get.sh
+          grep -Fxq "bootstrap_release_sequence=${RELEASE_SEQUENCE}" download-portal/get.sh
           source_archive="dist/celikpanel-${RELEASE_VERSION}.tar.gz"
           platform_archive="dist/celikpanel-${RELEASE_VERSION}-linux-amd64.tar.gz"
           platform_checksum="${platform_archive}.sha256"
@@ -328,14 +348,16 @@ jobs:
           for signed_asset in "$signed_archive" "$signed_checksum" "$signed_manifest" "$signed_signature"; do
             [[ ! -e "$signed_asset" ]] || signed_count=$((signed_count + 1))
           done
-          [[ "$signed_count" -eq 0 || "$signed_count" -eq 4 ]] || {
+          [[ "$signed_count" -eq 4 ]] || {
             printf '%s\n' 'signed release asset set is incomplete' >&2
             exit 1
           }
-          if [[ "$signed_count" -eq 4 ]]; then
-            sha256sum -c "$signed_checksum"
-            assets+=("$signed_archive" "$signed_checksum" "$signed_manifest" "$signed_signature")
-          fi
+          sha256sum -c "$signed_checksum"
+          assets+=("$signed_archive" "$signed_checksum" "$signed_manifest" "$signed_signature")
+          [[ "${#assets[@]}" -eq 6 ]] || {
+            printf '%s\n' 'release asset set must contain exactly six files' >&2
+            exit 1
+          }
           prerelease=()
           [[ "${GITHUB_REF_NAME}" =~ -(alpha|beta|rc) ]] && prerelease=(--prerelease)
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then

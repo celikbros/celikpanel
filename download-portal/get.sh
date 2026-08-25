@@ -3,9 +3,14 @@ set -eu
 umask 077
 
 base_url=https://celikpanel.net
+bootstrap_release_sequence=41
+bootstrap_release_version=v0.1.0-alpha.41
+bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb
 requested_version=latest
 requested_action=auto
 require_signed_manifest=0
+bootstrap_signed_install=0
+signed_release_mode=0
 expected_sequence=
 minimum_sequence=
 expected_commit=
@@ -16,6 +21,7 @@ release_sequence_floor=/var/lib/celikpanel-release-state/sequence.floor
 signed_update_lock=/var/lib/celikpanel-release-state/update.lock
 releases_root=/var/backups/celikpanel/releases
 workdir=
+signed_public_key_path=
 
 message() {
   printf '%s / %s\n' "$1" "$2"
@@ -117,18 +123,21 @@ else
     "Release identity options require signed-manifest mode."
 fi
 
-for required_command in awk bash chmod chown cmp curl dirname env find grep id install \
+for required_command in awk bash chmod chown cmp curl dirname env find flock grep id install \
   mkdir mktemp mv od readlink rm sha256sum sort stat sync tar tr xargs; do
   command -v "$required_command" >/dev/null 2>&1 || fail \
     "$required_command is required. Install it with your operating system package manager." \
     "$required_command gereklidir. İşletim sisteminizin paket yöneticisiyle kurun."
 done
+for signed_required_command in openssl uname; do
+  command -v "$signed_required_command" >/dev/null 2>&1 || fail \
+    "$signed_required_command is required for signed release verification." \
+    "İmzalı sürüm doğrulaması için $signed_required_command gereklidir."
+done
 if [ "$require_signed_manifest" -eq 1 ]; then
-  for signed_required_command in flock openssl uname; do
-    command -v "$signed_required_command" >/dev/null 2>&1 || fail \
-      "$signed_required_command is required for signed release verification." \
-      "İmzalı sürüm doğrulaması için $signed_required_command gereklidir."
-  done
+  command -v flock >/dev/null 2>&1 || fail \
+    "flock is required for signed release verification." \
+    "İmzalı sürüm doğrulaması için flock gereklidir."
 fi
 
 curl_fetch() {
@@ -268,6 +277,22 @@ validate_release_public_key() {
     | LC_ALL=C grep -Eq '^ED25519 Public-Key:'
 }
 
+validate_bootstrap_release_public_key() {
+  bootstrap_key_path=$1
+  validate_release_public_key "$bootstrap_key_path" || return 1
+  exec 8<"$bootstrap_key_path" || return 1
+  bootstrap_key_path_identity=$(stat -Lc '%d:%i' -- "$bootstrap_key_path") || return 1
+  bootstrap_key_fd_identity=$(stat -Lc '%d:%i' -- /proc/self/fd/8) || return 1
+  [ "$bootstrap_key_path_identity" = "$bootstrap_key_fd_identity" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a:%h' -- /proc/self/fd/8)" = 0:0:600:1 ] || return 1
+  bootstrap_key_fd_sha256=$(sha256sum /proc/self/fd/8 | awk '{print $1}') || return 1
+  [ "$bootstrap_key_fd_sha256" = "$bootstrap_release_public_key_sha256" ] || return 1
+  openssl pkey -pubin -passin pass: -in /proc/self/fd/8 -pubout 2>/dev/null |
+    cmp -s - /proc/self/fd/8 || return 1
+  [ "$(stat -Lc '%d:%i' -- "$bootstrap_key_path")" = "$bootstrap_key_fd_identity" ] || return 1
+  exec 8<&-
+}
+
 runtime_release_identity() {
   runtime_release_os=
   runtime_release_arch=
@@ -307,13 +332,30 @@ valid_release_version() {
   done
 }
 
+decimal_not_greater_than() {
+  decimal_left=$1
+  decimal_right=$2
+  [ "${#decimal_left}" -eq "${#decimal_right}" ] || return 1
+  while [ -n "$decimal_left" ]; do
+    decimal_left_tail=${decimal_left#?}
+    decimal_right_tail=${decimal_right#?}
+    decimal_left_digit=${decimal_left%"$decimal_left_tail"}
+    decimal_right_digit=${decimal_right%"$decimal_right_tail"}
+    [ "$decimal_left_digit" -lt "$decimal_right_digit" ] && return 0
+    [ "$decimal_left_digit" -gt "$decimal_right_digit" ] && return 1
+    decimal_left=$decimal_left_tail
+    decimal_right=$decimal_right_tail
+  done
+  return 0
+}
+
 valid_release_sequence() {
   release_sequence_value=$1
   printf '%s\n' "$release_sequence_value" | LC_ALL=C grep -Eq '^[1-9][0-9]*$' \
     || return 1
   [ "${#release_sequence_value}" -le 19 ] || return 1
   [ "${#release_sequence_value}" -lt 19 ] || \
-    [ "$release_sequence_value" -le 9223372036854775807 ]
+    decimal_not_greater_than "$release_sequence_value" 9223372036854775807
 }
 
 inspect_release_sequence_floor() {
@@ -354,6 +396,76 @@ inspect_release_sequence_floor() {
     "sequence=$floor_sequence" "version=$floor_version" \
     | cmp -s -- "$release_sequence_floor" - || return 1
   floor_present=1
+}
+
+preflight_first_install_trust_state() {
+  preflight_key_source=$1
+  preflight_sequence=$2
+  preflight_version=$3
+  preflight_key_directory=$(dirname -- "$release_public_key")
+  validate_root_directory_chain "$(dirname -- "$preflight_key_directory")"
+  if [ -e "$preflight_key_directory" ] || [ -L "$preflight_key_directory" ]; then
+    validate_release_key_directory_chain "$preflight_key_directory" || return 1
+  elif [ -e "$release_public_key" ] || [ -L "$release_public_key" ]; then
+    return 1
+  fi
+  if [ -e "$release_public_key" ] || [ -L "$release_public_key" ]; then
+    validate_release_public_key "$release_public_key" || return 1
+    [ "$(stat -Lc '%u:%g:%a:%h' -- "$release_public_key")" = 0:0:644:1 ] || return 1
+    cmp -s -- "$preflight_key_source" "$release_public_key" || return 1
+  fi
+
+  inspect_release_sequence_floor || return 1
+  if [ "$floor_present" -eq 1 ]; then
+    [ "$floor_sequence" = "$preflight_sequence" ] &&
+      [ "$floor_version" = "$preflight_version" ] || return 1
+  fi
+  preflight_state_dir=$(dirname -- "$release_sequence_floor")
+  if [ -e "$preflight_state_dir" ] || [ -L "$preflight_state_dir" ]; then
+    if [ -e "$signed_update_lock" ] || [ -L "$signed_update_lock" ]; then
+      [ -f "$signed_update_lock" ] && [ ! -L "$signed_update_lock" ] || return 1
+      [ "$(readlink -e -- "$signed_update_lock")" = "$signed_update_lock" ] || return 1
+      [ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$signed_update_lock")" = 0:0:600:1:0 ] || return 1
+    fi
+  elif [ -e "$signed_update_lock" ] || [ -L "$signed_update_lock" ]; then
+    return 1
+  fi
+}
+
+provision_first_install_signed_update_lock() {
+  first_lock_directory=$(dirname -- "$signed_update_lock")
+  first_lock_parent=$(dirname -- "$first_lock_directory")
+  first_state_created=0
+  first_lock_created=0
+  validate_root_directory_chain "$first_lock_parent"
+  if [ ! -e "$first_lock_directory" ] && [ ! -L "$first_lock_directory" ]; then
+    if mkdir -m 0700 -- "$first_lock_directory" 2>/dev/null; then
+      first_state_created=1
+    elif [ ! -d "$first_lock_directory" ] || [ -L "$first_lock_directory" ]; then
+      return 1
+    fi
+  fi
+  validate_root_directory_chain "$first_lock_directory"
+  [ "$(stat -Lc '%u:%g:%a' -- "$first_lock_directory")" = 0:0:700 ] || return 1
+  if [ "$first_state_created" -eq 1 ]; then
+    sync -f -- "$first_lock_directory" "$first_lock_parent" || return 1
+  fi
+
+  if [ ! -e "$signed_update_lock" ] && [ ! -L "$signed_update_lock" ]; then
+    if (umask 077; set -C; : > "$signed_update_lock") 2>/dev/null; then
+      first_lock_created=1
+    elif [ ! -e "$signed_update_lock" ] && [ ! -L "$signed_update_lock" ]; then
+      return 1
+    fi
+  fi
+  [ -f "$signed_update_lock" ] && [ ! -L "$signed_update_lock" ] || return 1
+  [ "$(readlink -e -- "$signed_update_lock")" = "$signed_update_lock" ] || return 1
+  if [ "$first_lock_created" -eq 1 ]; then
+    chown root:root -- "$signed_update_lock" && chmod 0600 -- "$signed_update_lock" ||
+      return 1
+    sync -f -- "$signed_update_lock" "$first_lock_directory" || return 1
+  fi
+  [ "$(stat -Lc '%u:%g:%a:%h:%s' -- "$signed_update_lock")" = 0:0:600:1:0 ]
 }
 
 enforce_release_sequence_floor() {
@@ -497,9 +609,12 @@ verify_signed_release_manifest() {
   [ "$signed_os" = "$signed_expected_os" ] || return 1
   [ "$signed_arch" = "$signed_expected_arch" ] || return 1
   [ "$signed_archive" = "$signed_expected_archive" ] || return 1
-  [ "$signed_manifest_commit" = "$signed_expected_commit" ] || return 1
-  [ "$signed_manifest_archive_sha256" = "$signed_expected_archive_sha256" ] || return 1
-  [ "$signed_manifest_archive_size" = "$signed_expected_archive_size" ] || return 1
+  [ -z "$signed_expected_commit" ] ||
+    [ "$signed_manifest_commit" = "$signed_expected_commit" ] || return 1
+  [ -z "$signed_expected_archive_sha256" ] ||
+    [ "$signed_manifest_archive_sha256" = "$signed_expected_archive_sha256" ] || return 1
+  [ -z "$signed_expected_archive_size" ] ||
+    [ "$signed_manifest_archive_size" = "$signed_expected_archive_size" ] || return 1
 
   signed_manifest_canonical=$(mktemp \
     "$(dirname -- "$signed_manifest_path")/.release-manifest-v2.canonical.XXXXXXXX") \
@@ -707,8 +822,6 @@ if [ "$operation" = install ]; then
   [ "$marker_state" = absent ] && [ "$panel_active" -eq 0 ] || fail \
     "A completed or running CelikPanel installation already exists; use --update." \
     "Tamamlanmış veya çalışan bir CelikPanel kurulumu zaten var; --update kullanın."
-  workdir=$(mktemp -d /tmp/celikpanel-install.XXXXXXXX)
-  chmod 0700 "$workdir"
 else
   [ "$full_install" -eq 1 ] || fail \
     "The installed CelikPanel layout is incomplete; refusing an update." \
@@ -721,13 +834,35 @@ else
       "The interrupted-update evidence changed; refusing automatic recovery." \
       "Kesilen güncelleme kanıtı değişti; otomatik kurtarma reddedildi."
   fi
-  prepare_release_storage
-  workdir=$(mktemp -d "$releases_root/.download.XXXXXXXX")
-  chmod 0700 "$workdir"
-  chown root:root "$workdir"
 fi
 
-if [ "$requested_version" = latest ]; then
+prepare_release_storage
+workdir=$(mktemp -d "$releases_root/.download.XXXXXXXX")
+chmod 0700 "$workdir"
+chown root:root "$workdir"
+
+if [ "$operation" = install ]; then
+  bootstrap_signed_install=1
+  signed_release_mode=1
+  expected_sequence=$bootstrap_release_sequence
+  minimum_sequence=$bootstrap_release_sequence
+  case "$requested_version" in
+    latest|"$bootstrap_release_version") ;;
+    *) fail \
+      "This installer is pinned to signed release $bootstrap_release_version." \
+      "Bu kurucu imzalı $bootstrap_release_version sürümüne sabitlenmiştir." ;;
+  esac
+elif [ "$require_signed_manifest" -eq 1 ]; then
+  signed_release_mode=1
+else
+  fail \
+    "Existing installations must be updated from the panel's signed update screen." \
+    "Mevcut kurulumlar paneldeki imzalı güncelleme ekranından güncellenmelidir."
+fi
+
+if [ "$bootstrap_signed_install" -eq 1 ]; then
+  version=$bootstrap_release_version
+elif [ "$requested_version" = latest ]; then
   curl_fetch "$base_url/releases/latest.txt" "$workdir/latest.txt"
   version=$(tr -d '\r\n\t ' < "$workdir/latest.txt")
 else
@@ -740,13 +875,24 @@ valid_release_version "$version" || fail \
 
 archive=celikpanel-$version.tar.gz
 release_url=$base_url/releases/$version
-if [ "$require_signed_manifest" -eq 1 ]; then
-  acquire_signed_update_lock || fail \
-    "Another signed update is active or the root-owned update lock is unsafe." \
-    "Başka bir imzalı güncelleme etkin veya root sahipli güncelleme kilidi güvensiz."
-  validate_release_public_key "$release_public_key" || fail \
-    "The installed release-signing public key is unsafe or invalid." \
-    "Kurulu sürüm imzalama açık anahtarı güvensiz veya geçersiz."
+if [ "$signed_release_mode" -eq 1 ]; then
+  if [ "$bootstrap_signed_install" -eq 1 ]; then
+    signed_public_key_path=$workdir/release-signing-ed25519.pem
+    signed_fetch "$base_url/release-signing-ed25519.pem" "$signed_public_key_path" 16384
+    chown root:root -- "$signed_public_key_path"
+    chmod 0600 -- "$signed_public_key_path"
+    validate_bootstrap_release_public_key "$signed_public_key_path" || fail \
+      "The release-signing public key does not match the installer trust anchor." \
+      "Sürüm imzalama açık anahtarı kurucu güven köküyle eşleşmiyor."
+  else
+    acquire_signed_update_lock || fail \
+      "Another signed update is active or the root-owned update lock is unsafe." \
+      "Başka bir imzalı güncelleme etkin veya root sahipli güncelleme kilidi güvensiz."
+    signed_public_key_path=$release_public_key
+    validate_release_public_key "$signed_public_key_path" || fail \
+      "The installed release-signing public key is unsafe or invalid." \
+      "Kurulu sürüm imzalama açık anahtarı güvensiz veya geçersiz."
+  fi
   runtime_release_identity || fail \
     "This operating system or architecture has no signed CelikPanel release channel." \
     "Bu işletim sistemi veya mimari için imzalı CelikPanel sürüm kanalı yok."
@@ -756,14 +902,31 @@ if [ "$require_signed_manifest" -eq 1 ]; then
   signed_fetch "$release_url/release-manifest-v2.sig" "$workdir/release-manifest-v2.sig" 64
   verify_signed_release_manifest \
     "$workdir/release-manifest-v2" "$workdir/release-manifest-v2.sig" \
-    "$release_public_key" "$version" "$expected_sequence" "$runtime_release_os" \
+    "$signed_public_key_path" "$version" "$expected_sequence" "$runtime_release_os" \
     "$runtime_release_arch" "$archive" "$expected_commit" \
     "$expected_archive_sha256" "$expected_archive_size" || fail \
       "The signed release manifest is invalid or targets another system." \
       "İmzalı sürüm manifesti geçersiz veya başka bir sistemi hedefliyor."
-  enforce_release_sequence_floor "$signed_release_sequence" "$version" || fail \
+  if [ "$bootstrap_signed_install" -eq 1 ]; then
+    preflight_first_install_trust_state \
+      "$signed_public_key_path" "$signed_release_sequence" "$version" || fail \
+        "Existing signed-release trust conflicts with this fresh installation." \
+        "Mevcut imzali surum guveni bu temiz kurulumla celisiyor."
+    provision_first_install_signed_update_lock || fail \
+      "The persistent first-install update lock could not be provisioned safely." \
+      "Kalici ilk-kurulum guncelleme kilidi guvenle hazirlanamadi."
+    acquire_signed_update_lock || fail \
+      "Another signed update or first installation is active." \
+      "Baska bir imzali guncelleme veya ilk kurulum etkin."
+    preflight_first_install_trust_state \
+      "$signed_public_key_path" "$signed_release_sequence" "$version" || fail \
+        "Signed-release trust changed while acquiring the first-install lock." \
+        "Ilk-kurulum kilidi alinirken imzali surum guveni degisti."
+  else
+    enforce_release_sequence_floor "$signed_release_sequence" "$version" || fail \
     "The signed release sequence is stale, unexpected, or lacks a trusted rollback floor." \
     "İmzalı sürüm sırası eski, beklenmeyen veya güvenilir geri-alma tabanından yoksun."
+  fi
   signed_fetch "$release_url/$archive" "$workdir/$archive" "$signed_archive_size"
   signed_fetch "$release_url/$archive.sha256" "$workdir/$archive.sha256" 256
 else
@@ -787,7 +950,7 @@ case "$checksum_value" in
     "Sağlama toplamı dosyası beklenmeyen biçimde." ;;
 esac
 (cd "$workdir" && sha256sum -c "$archive.sha256")
-if [ "$require_signed_manifest" -eq 1 ]; then
+if [ "$signed_release_mode" -eq 1 ]; then
   [ "$(stat -Lc '%s' -- "$workdir/$archive")" = "$signed_archive_size" ] || fail \
     "The archive size does not match the signed release manifest." \
     "Arşiv boyutu imzalı sürüm manifestiyle eşleşmiyor."
@@ -863,11 +1026,13 @@ for metadata_name in release.commit release.tree; do
     "The extracted release contains invalid provenance metadata." \
     "Çıkarılan sürüm geçersiz köken bilgisi içeriyor."
 done
-if [ "$require_signed_manifest" -eq 1 ]; then
+if [ "$signed_release_mode" -eq 1 ]; then
   extracted_release_commit=$(tr -d '\r\n\t ' < "$extracted_root/release.commit")
   [ "$extracted_release_commit" = "$signed_commit" ] || fail \
     "The extracted release commit does not match the signed release manifest." \
     "Çıkarılan sürüm commit bilgisi imzalı sürüm manifestiyle eşleşmiyor."
+fi
+if [ "$require_signed_manifest" -eq 1 ]; then
   # Consume the authenticated sequence only after the entire archive and its
   # provenance are verified, but before the updater can mutate host services.
   # A failed update can safely retry the same sequence/version; lower or same
@@ -882,11 +1047,20 @@ if [ "$operation" = install ]; then
   [ -f "$installer" ] && [ ! -L "$installer" ] || fail \
     "The verified archive does not contain a regular install.sh." \
     "Doğrulanan arşiv normal bir install.sh dosyası içermiyor."
+  validate_bootstrap_release_public_key "$signed_public_key_path" || fail \
+    "The pinned first-install release key changed before installer handoff." \
+    "Sabitlenmis ilk-kurulum surum anahtari installer aktarimindan once degisti."
   message \
     "Installing CelikPanel $version from verified archive $archive" \
     "CelikPanel $version doğrulanmış $archive arşivinden kuruluyor"
   cd "$extracted_root"
-  bash "$installer"
+  CELIKPANEL_FIRST_INSTALL_TRUST=1 \
+    CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE="$signed_public_key_path" \
+    CELIKPANEL_FIRST_INSTALL_SEQUENCE="$signed_release_sequence" \
+    CELIKPANEL_FIRST_INSTALL_VERSION="$version" \
+    CELIKPANEL_FIRST_INSTALL_COMMIT="$signed_commit" \
+    CELIKPANEL_FIRST_INSTALL_LOCK_FD=9 \
+    bash "$installer"
 else
   if [ "$operation" = recovery-update ]; then
     detect_known_interrupted_update_candidate || fail \
