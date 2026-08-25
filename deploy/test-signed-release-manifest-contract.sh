@@ -27,8 +27,8 @@ command -v openssl >/dev/null 2>&1 || fail "openssl is required"
 tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
 
-version=v0.1.0-alpha.41
-sequence=41
+version=v0.1.0-alpha.42
+sequence=42
 commit=0123456789abcdef0123456789abcdef01234567
 tree=89abcdef0123456789abcdef0123456789abcdef
 published_at=2026-08-03T08:55:11Z
@@ -677,10 +677,10 @@ grep -Fq '[ "$requested_version" != latest ]' "$bootstrap" \
   || fail "signed updates do not require an exact version"
 grep -Fq 'release_public_key=/etc/celikpanel/release-signing-ed25519.pem' "$bootstrap" \
   || fail "bootstrap does not pin the installed public-key path"
-grep -Fxq 'bootstrap_release_sequence=41' "$bootstrap" \
-  || fail "bootstrap does not pin the Alpha41 release sequence"
-grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.41' "$bootstrap" \
-  || fail "bootstrap does not pin the Alpha41 release version"
+grep -Fxq 'bootstrap_release_sequence=42' "$bootstrap" \
+  || fail "bootstrap does not pin the Alpha42 release sequence"
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.42' "$bootstrap" \
+  || fail "bootstrap does not pin the Alpha42 release version"
 grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
   || fail "bootstrap does not pin the reviewed public-key digest"
 grep -Fq 'validate_bootstrap_release_public_key "$signed_public_key_path"' "$bootstrap" \

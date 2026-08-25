@@ -360,12 +360,15 @@ func (p *Panel) handleVersion(w http.ResponseWriter, r *http.Request) {
 	if err := p.callAgent("Agent.Version", &transport.Empty{}, &av); err == nil {
 		agentCommit = av.Commit
 	}
+	advertisedIPv4, _ := canonicalIPv4(serverPrimaryIP())
 
 	json.NewEncoder(w).Encode(map[string]any{
 		"version":        buildVersion,
 		"commit":         buildCommit,
 		"schema_version": schemaVersion.Int64,
 		"agent_commit":   agentCommit,
+		"hostname":       hostnameOrEmpty(),
+		"ipv4":           advertisedIPv4,
 		// A mismatch is reported, never hidden: an agent from a different
 		// build may not enforce what this panel believes it enforces.
 		// Eşleşmezlik gizlenmez, bildirilir: farklı bir yapıdan gelen agent,
