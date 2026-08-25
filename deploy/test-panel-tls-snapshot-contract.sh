@@ -276,15 +276,41 @@ ABSENT_TLS_SNAPSHOT=$ABSENT_SNAPSHOT/panel-tls
 ABSENT_LEDGER=$ABSENT_SNAPSHOT/service-states.tsv
 rm -rf -- "$TLS_DIR"
 rm -f -- "$HOOK" "$PENDING"
+rm -rf -- "$TEST_ROOT/etc/letsencrypt"
 install -d -m 0700 "$ABSENT_SNAPSHOT" "$ABSENT_TLS_SNAPSHOT"
 cp -- "$LEDGER" "$ABSENT_LEDGER"
 chmod 0600 "$ABSENT_LEDGER"
 panel_tls_snapshot_capture "$ABSENT_TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" "$ABSENT_LEDGER" \
     || fail 'absent TLS snapshot capture failed'
+[[ ! -e "$TEST_ROOT/etc/letsencrypt" && ! -L "$TEST_ROOT/etc/letsencrypt" ]] \
+    || fail 'absent renewal-hook snapshot created its missing parent hierarchy'
 panel_tls_snapshot_scheduler_matches_service_ledger "$ABSENT_TLS_SNAPSHOT" "$ABSENT_LEDGER" \
     || fail 'absent scheduler snapshot/ledger mismatch'
 [[ "$(cat "$ABSENT_TLS_SNAPSHOT/layout.state")" == absent ]] \
     || fail 'absent TLS layout marker missing'
+panel_tls_quiesce_certbot_scheduler "$ABSENT_TLS_SNAPSHOT" \
+    || fail 'missing-parent scheduler quiesce failed'
+panel_tls_snapshot_assert_source_unchanged \
+    "$ABSENT_TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" quiesced \
+    || fail 'missing renewal-hook parent was rejected after snapshot'
+panel_tls_restore_snapshot "$ABSENT_TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" \
+    || fail 'missing-parent absent TLS snapshot restore failed'
+[[ ! -e "$TEST_ROOT/etc/letsencrypt" && ! -L "$TEST_ROOT/etc/letsencrypt" ]] \
+    || fail 'absent rollback created the missing renewal-hook parent hierarchy'
+panel_tls_restore_certbot_scheduler "$ABSENT_TLS_SNAPSHOT" \
+    || fail 'missing-parent scheduler restore failed'
+
+SYMLINK_SNAPSHOT=$TEST_ROOT/symlink-parent-snapshot
+install -d -m 0700 "$SYMLINK_SNAPSHOT" "$TEST_ROOT/redirected-letsencrypt"
+ln -s "$TEST_ROOT/redirected-letsencrypt" "$TEST_ROOT/etc/letsencrypt"
+expect_tls_failure_with_stderr 'symlinked missing renewal-hook ancestor was accepted' \
+    panel_tls_snapshot_capture "$SYMLINK_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" "$ABSENT_LEDGER"
+rm -f -- "$TEST_ROOT/etc/letsencrypt"
+rm -rf -- "$SYMLINK_SNAPSHOT" "$TEST_ROOT/redirected-letsencrypt"
+
+install -d -m 0755 "$TEST_ROOT/etc/letsencrypt" \
+    "$TEST_ROOT/etc/letsencrypt/renewal-hooks" \
+    "$TEST_ROOT/etc/letsencrypt/renewal-hooks/deploy"
 install -d -m 0750 "$TLS_DIR"
 printf 'NEW-CERT\n' > "$TLS_DIR/panel.crt"
 printf 'NEW-KEY\n' > "$TLS_DIR/panel.key"
