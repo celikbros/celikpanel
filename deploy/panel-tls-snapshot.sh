@@ -35,6 +35,29 @@ _panel_tls_safe_parent() {
     done
 }
 
+# An absent transaction-owned leaf is also valid when some of its parent
+# directories have never existed (for example before Certbot is installed).
+# Prove the nearest existing ancestor with the strict parent guard and then
+# prove every missing prefix is still absent and is not a symlink. Existing
+# paths never use this relaxation.
+_panel_tls_safe_existing_ancestor() {
+    local parent=$1 current boundary=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-/}
+    local -a missing=()
+    [[ "$parent" == /* ]] || return 1
+    [[ "$boundary" == / || "$parent" == "$boundary" || "$parent" == "$boundary/"* ]] || return 1
+    current=$parent
+    while [[ ! -e "$current" && ! -L "$current" ]]; do
+        missing+=("$current")
+        [[ "$current" != / && "$current" != "$boundary" ]] || return 1
+        current=$(dirname -- "$current") || return 1
+    done
+    [[ -d "$current" && ! -L "$current" ]] || return 1
+    _panel_tls_safe_parent "$current" || return 1
+    for current in "${missing[@]}"; do
+        [[ ! -e "$current" && ! -L "$current" ]] || return 1
+    done
+}
+
 _panel_tls_regular() {
     local path=$1 max_size=${2:-0} metadata owner group mode links size permissions
     [[ -f "$path" && ! -L "$path" ]] || _panel_tls_fail "unsafe regular file: $path" || return
@@ -567,14 +590,18 @@ panel_tls_snapshot_capture() (
     _panel_tls_validate_managed_tree "$root/managed" || exit 1
     _panel_tls_tree_manifest "$root/managed" "$root/managed.manifest" || exit 1
 
-    _panel_tls_safe_parent "${hook_file%/*}" || exit 1
     if [[ -e $hook_file || -L $hook_file ]]; then
+        _panel_tls_safe_parent "${hook_file%/*}" || exit 1
         _panel_tls_regular "$hook_file" 1048576 || exit 1
         printf 'present\n' >"$root/hook.state" || { _panel_tls_fail "cannot record hook state"; return 1; }
         cp -a -- "$hook_file" "$root/hook/celikpanel-panel-cert" || { _panel_tls_fail "cannot capture renewal hook"; return 1; }
         chown root:root -- "$root/hook/celikpanel-panel-cert" ||
             { _panel_tls_fail "cannot protect captured renewal hook"; return 1; }
     else
+        _panel_tls_safe_existing_ancestor "${hook_file%/*}" ||
+            { _panel_tls_fail "renewal hook path is not safely absent"; return 1; }
+        [[ ! -e $hook_file && ! -L $hook_file ]] ||
+            { _panel_tls_fail "renewal hook appeared during snapshot capture"; return 1; }
         printf 'absent\n' >"$root/hook.state" || { _panel_tls_fail "cannot record hook state"; return 1; }
     fi
     _panel_tls_safe_parent "${pending_file%/*}" || exit 1
@@ -839,10 +866,16 @@ panel_tls_snapshot_assert_source_unchanged() (
         fi
     fi
 
-    _panel_tls_safe_parent "${hook_file%/*}" || exit 1
     state=$(tr -d '[:space:]' <"$root/hook.state") || exit 1
-    if [[ $state == present ]]; then _panel_tls_external_file_matches "$root/hook/celikpanel-panel-cert" "$hook_file" 1048576 || exit 1
-    else [[ ! -e $hook_file && ! -L $hook_file ]] || { _panel_tls_fail "renewal hook appeared after snapshot"; return 1; }; fi
+    if [[ $state == present ]]; then
+        _panel_tls_safe_parent "${hook_file%/*}" || exit 1
+        _panel_tls_external_file_matches "$root/hook/celikpanel-panel-cert" "$hook_file" 1048576 || exit 1
+    else
+        _panel_tls_safe_existing_ancestor "${hook_file%/*}" ||
+            { _panel_tls_fail "renewal hook path is no longer safely absent"; return 1; }
+        [[ ! -e $hook_file && ! -L $hook_file ]] ||
+            { _panel_tls_fail "renewal hook appeared after snapshot"; return 1; }
+    fi
     _panel_tls_safe_parent "${pending_file%/*}" || exit 1
     state=$(tr -d '[:space:]' <"$root/pending.state") || exit 1
     if [[ $state == present ]]; then
@@ -903,6 +936,17 @@ _panel_tls_remove_file() {
         rm -f -- "$target" || { _panel_tls_fail "cannot remove transaction-owned file"; return 1; }
         _panel_tls_sync_path "$parent" || return 1
     fi
+}
+
+_panel_tls_remove_file_with_missing_parent() {
+    local target=${1:?target required} max_size=${2:?max size required}
+    local parent=${target%/*}
+    if [[ ! -e $target && ! -L $target ]]; then
+        _panel_tls_safe_existing_ancestor "$parent" ||
+            { _panel_tls_fail "absent transaction-owned file has an unsafe parent path"; return 1; }
+        [[ ! -e $target && ! -L $target ]] && return 0
+    fi
+    _panel_tls_remove_file "$target" "$max_size"
 }
 
 _panel_tls_sync_tree() (
@@ -1018,7 +1062,7 @@ panel_tls_restore_snapshot() (
 
     state=$(tr -d '[:space:]' <"$root/hook.state") || exit 1
     if [[ $state == present ]]; then _panel_tls_restore_file "$root/hook/celikpanel-panel-cert" "$hook_file" 1048576 || exit 1
-    else _panel_tls_remove_file "$hook_file" 1048576 || exit 1; fi
+    else _panel_tls_remove_file_with_missing_parent "$hook_file" 1048576 || exit 1; fi
     state=$(tr -d '[:space:]' <"$root/pending.state") || exit 1
     if [[ $state == present ]]; then _panel_tls_restore_file "$root/pending/panel-certificate-activation.json" "$pending_file" 4096 600 || exit 1
     else _panel_tls_remove_file "$pending_file" 4096 || exit 1; fi
