@@ -76,6 +76,8 @@ reject_text '--migrate-only' "rollback completion recovery contains a migration 
 reject_text '"$pending_token" update "$pending_snapshot"' "a durable marker operation is still incorrectly labelled update"
 
 require_text 'panel_tls_restore_snapshot \' "idempotent rollback TLS restoration is missing"
+require_text 'panel_tls_secure_restore_parent "$PANEL_TLS_DIR" \' "TLS data parent is not secured"
+require_text 'panel_tls_restore_service_parent "$PANEL_TLS_DIR" \' "TLS data parent ownership is not restored"
 require_text 'open_mutation_lock handoff' "same-inode nonblocking agent-start handoff is missing"
 require_text 'another mutation entered during the controlled agent-start handoff' "handoff contention is not fail-closed"
 require_text 'completion.pending was preserved and both coordinators were stopped' "failure does not preserve the durable retry marker and stop coordinators"
@@ -85,7 +87,9 @@ idle_unlocked=$(line_after "$main_start" 'run_target_agent_idle_unlocked')
 lock_immediate=$(line_after "$idle_unlocked" 'open_mutation_lock immediate')
 socket_cleanup=$(line_after "$lock_immediate" 'remove_stale_agent_socket_under_lock')
 idle_locked=$(line_after "$socket_cleanup" 'run_target_agent_idle_locked')
+tls_secure=$(line_after "$idle_locked" 'panel_tls_secure_restore_parent "$PANEL_TLS_DIR" \')
 tls_restore=$(line_after "$idle_locked" 'panel_tls_restore_snapshot \')
+tls_owner_restore=$(line_after "$tls_restore" 'panel_tls_restore_service_parent "$PANEL_TLS_DIR" \')
 authorization=$(line_after "$tls_restore" 'release_txn_create_start_authorization \')
 handoff_unlock=$(line_after "$authorization" 'release_mutation_lock \')
 agent_start=$(line_after "$handoff_unlock" 'wait_for_agent_ready')
@@ -103,8 +107,11 @@ restore_scheduler=$(line_after "$terminal_unlock" 'panel_tls_restore_certbot_sch
 assert_before "$idle_unlocked" "$lock_immediate" "unlocked idle proof must precede immediate mutation-lock ownership"
 assert_before "$lock_immediate" "$socket_cleanup" "mutation lock must protect stale socket cleanup"
 assert_before "$socket_cleanup" "$idle_locked" "locked idle proof must follow stale socket cleanup"
+assert_before "$idle_locked" "$tls_secure" "locked idle proof must precede TLS parent transition"
+assert_before "$tls_secure" "$tls_restore" "TLS data parent must be secured before TLS rollback restoration"
+assert_before "$tls_restore" "$tls_owner_restore" "TLS data parent ownership must be restored after TLS publication"
 assert_before "$idle_locked" "$tls_restore" "locked idle proof must precede TLS rollback restoration"
-assert_before "$tls_restore" "$authorization" "TLS rollback restoration must precede controlled-start authorization"
+assert_before "$tls_owner_restore" "$authorization" "TLS parent ownership must be restored before controlled-start authorization"
 assert_before "$authorization" "$handoff_unlock" "start authorization must exist before the narrow agent lock handoff"
 assert_before "$handoff_unlock" "$agent_start" "mutation lock must be released before restored agent startup"
 assert_before "$agent_start" "$handoff_relock" "same-inode lock must be reacquired after the agent publishes its socket"

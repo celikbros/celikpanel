@@ -1888,9 +1888,18 @@ panel_tls_quiesce_certbot_scheduler "$snap/panel-tls" \
 # This restore is deliberately idempotent and therefore also repairs a
 # completion-pending retry. It restores the active certificate layout, the
 # legacy/current hook contract, and exact pending activation presence/bytes.
+[[ -n "${MUTATION_LOCK_FD:-}" ]] \
+    || die "panel TLS parent transition requires the rollback mutation lock"
+for unit in celikpanel-agent.service celikpanel-panel.service; do
+    reject_extra_service_cgroup_processes "$unit" 0
+done
+panel_tls_secure_restore_parent "$PANEL_TLS_DIR" \
+    || die "panel TLS data parent could not be secured for rollback"
 panel_tls_restore_snapshot \
     "$snap/panel-tls" "$PANEL_TLS_DIR" "$PANEL_CERT_PENDING" "$PANEL_CERT_HOOK" \
     || die "panel TLS compatibility state could not be restored"
+panel_tls_restore_service_parent "$PANEL_TLS_DIR" \
+    || die "panel TLS data parent service ownership could not be restored"
 
 if [[ $rollback_pending_resume -eq 0 ]]; then
     rm -rf -- "$BIN_DIR"

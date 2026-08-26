@@ -1181,10 +1181,16 @@ run_target_panel_wal_idle
 verify_both_units_stopped
 panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \
     || die "Certbot renewal scheduler could not be quiesced for pending-rollback recovery"
+verify_mutation_lock_held
+verify_both_units_stopped
+panel_tls_secure_restore_parent "$PANEL_TLS_DIR" \
+    || die "panel TLS data parent could not be secured for pending rollback"
 panel_tls_restore_snapshot \
     "$pending_snapshot_path/panel-tls" "$PANEL_TLS_DIR" \
     "$PANEL_CERT_PENDING" "$PANEL_CERT_HOOK" \
     || die "panel TLS compatibility state could not be restored for pending rollback"
+panel_tls_restore_service_parent "$PANEL_TLS_DIR" \
+    || die "panel TLS data parent service ownership could not be restored for pending rollback"
 verify_pending_evidence
 verify_both_units_stopped
 sync -f -- "$PANEL_DB" "$PANEL_DATA_DIR" \

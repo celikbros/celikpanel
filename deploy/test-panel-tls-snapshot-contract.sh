@@ -76,30 +76,18 @@ first_install_line=$(line_of "$ROLLBACK" 'rm -rf -- "$BIN_DIR"')
 [[ "$quiesce_line" -lt "$restore_line" && "$restore_line" -lt "$first_install_line" ]] \
     || fail 'TLS restore ordering is not fail-closed before release byte restore'
 
-# Production StateDirectory is celikpanel:celikpanel 0750. Accept that metadata
-# only for the exact /var/lib/celikpanel leaf; every ancestor remains root-owned
-# and non-writable, and test-mode paths receive no production relaxation.
+# Path-based staging never accepts a service-owned parent. Production rollback
+# must temporarily secure the exact data-parent inode as root and restore the
+# normal service ownership only after TLS publication is complete.
 (
     unset CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT
     # shellcheck source=deploy/panel-tls-snapshot.sh
     source "$HELPER"
-    id() {
-        case "$1:$2" in
-            -u:celikpanel) printf '991\n' ;;
-            -g:celikpanel) printf '992\n' ;;
-            *) return 1 ;;
-        esac
-    }
-    _panel_tls_safe_parent_component_metadata /var/lib/celikpanel 1 '' 991 992 750 \
-        || fail 'production service-owned data leaf was rejected'
+    if _panel_tls_safe_parent_component_metadata /var/lib/celikpanel 1 '' 991 992 750; then
+        fail 'production service-owned data leaf was accepted for path-based staging'
+    fi
     _panel_tls_safe_parent_component_metadata /var/lib/celikpanel 1 '' 0 0 750 \
-        || fail 'recoverable root-owned production data leaf was rejected'
-    if _panel_tls_safe_parent_component_metadata /var/lib/celikpanel 1 '' 991 0 750; then
-        fail 'production data leaf accepted the wrong service group'
-    fi
-    if _panel_tls_safe_parent_component_metadata /var/lib/celikpanel 1 '' 991 992 700; then
-        fail 'production data leaf accepted the wrong service mode'
-    fi
+        || fail 'root-owned production data leaf was rejected'
     if _panel_tls_safe_parent_component_metadata /var/lib 0 '' 991 992 750; then
         fail 'service ownership escaped the exact production leaf'
     fi
@@ -109,6 +97,14 @@ first_install_line=$(line_of "$ROLLBACK" 'rm -rf -- "$BIN_DIR"')
         fail 'test-mode path received the production service-owner exception'
     fi
 )
+grep -Fq 'panel_tls_secure_restore_parent "$PANEL_TLS_DIR"' "$ROLLBACK" \
+    || fail 'rollback does not secure the TLS data parent before restore'
+grep -Fq 'panel_tls_restore_service_parent "$PANEL_TLS_DIR"' "$ROLLBACK" \
+    || fail 'rollback does not restore the TLS data parent ownership'
+secure_line=$(line_of "$ROLLBACK" 'panel_tls_secure_restore_parent "$PANEL_TLS_DIR"')
+restore_owner_line=$(line_of "$ROLLBACK" 'panel_tls_restore_service_parent "$PANEL_TLS_DIR"')
+[[ "$secure_line" -lt "$restore_line" && "$restore_line" -lt "$restore_owner_line" ]] \
+    || fail 'rollback TLS parent ownership transition does not surround publication'
 
 [[ $(id -u) -eq 0 ]] || {
     printf 'SKIP: functional TLS filesystem contract requires root\n'
