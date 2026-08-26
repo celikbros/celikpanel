@@ -975,8 +975,43 @@ wait_for_panel_ready() {
     die "restored rollback panel did not become active"
 }
 
+# EXIT cleanup must not claim a fail-closed stop from systemctl's request
+# result alone. Prove ActiveState, MainPID and every recursive cgroup.procs;
+# if graceful stop is not enough, terminate the already transaction-owned
+# coordinator cgroups and repeat the same bounded proof.
+coordinators_stopped_trap_safe() {
+    local unit state main_pid pid_output
+    for unit in celikpanel-panel.service celikpanel-agent.service; do
+        state=$(systemctl show --property=ActiveState --value "$unit" 2>/dev/null) || return 1
+        case "$state" in inactive|failed) ;; *) return 1 ;; esac
+        main_pid=$(systemctl show --property=MainPID --value "$unit" 2>/dev/null) || return 1
+        [[ "$main_pid" == 0 ]] || return 1
+        pid_output=$(service_cgroup_pids "$unit" 2>/dev/null) || return 1
+        [[ -z "$pid_output" ]] || return 1
+    done
+}
+
+stop_coordinators_trap_safe() {
+    local unit _
+    systemctl stop --no-block celikpanel-panel.service >/dev/null 2>&1 || true
+    systemctl stop --no-block celikpanel-agent.service >/dev/null 2>&1 || true
+    for _ in $(seq 1 30); do
+        coordinators_stopped_trap_safe && return 0
+        sleep 0.05
+    done
+    for unit in celikpanel-panel.service celikpanel-agent.service; do
+        systemctl kill --kill-whom=all --signal=SIGKILL "$unit" >/dev/null 2>&1 || true
+        systemctl stop --no-block "$unit" >/dev/null 2>&1 || true
+    done
+    for _ in $(seq 1 50); do
+        coordinators_stopped_trap_safe && return 0
+        sleep 0.05
+    done
+    return 1
+}
+
 finalization_exit() {
-    local status=$?
+    local status=$? stop_proved=0
     trap - EXIT
     if [[ "$status" -ne 0 && "$finalization_succeeded" -eq 0 ]]; then
         if [[ "$scheduler_restore_completed" -eq 1 &&
@@ -1016,8 +1051,9 @@ finalization_exit() {
                 return "$status"
             fi
         fi
-        systemctl stop celikpanel-panel.service >/dev/null 2>&1 || true
-        systemctl stop celikpanel-agent.service >/dev/null 2>&1 || true
+        if stop_coordinators_trap_safe; then
+            stop_proved=1
+        fi
         if [[ "$start_authorization_created" -eq 1 ]]; then
             release_txn_remove_start_authorization \
                 "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" \
@@ -1025,13 +1061,16 @@ finalization_exit() {
                 >/dev/null 2>&1 || true
         fi
         release_mutation_lock >/dev/null 2>&1 || true
-        if [[ -e "$TRANSACTION_ROOT/completion.pending" ||
-              -L "$TRANSACTION_ROOT/completion.pending" ]]; then
+        if [[ "$stop_proved" -eq 0 ]]; then
             printf '%s\n' \
-                "!! Finalization failed closed; completion.pending was preserved and both coordinators were stopped." >&2
+                "!! Finalization failed; coordinator stopped state could not be proved. The durable transaction marker was preserved for operator recovery." >&2
+        elif [[ -e "$TRANSACTION_ROOT/completion.pending" ||
+                -L "$TRANSACTION_ROOT/completion.pending" ]]; then
+            printf '%s\n' \
+                "!! Finalization failed closed; completion.pending was preserved and both coordinators were proved stopped." >&2
         else
             printf '%s\n' \
-                "!! Finalization failed closed and both coordinators were stopped, but completion.pending is unexpectedly absent." >&2
+                "!! Finalization failed closed and both coordinators were proved stopped, but completion.pending is unexpectedly absent." >&2
         fi
     fi
     return "$status"

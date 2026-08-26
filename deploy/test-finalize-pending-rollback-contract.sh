@@ -80,7 +80,11 @@ require_text 'panel_tls_secure_restore_parent "$PANEL_TLS_DIR" \' "TLS data pare
 require_text 'panel_tls_restore_service_parent "$PANEL_TLS_DIR" \' "TLS data parent ownership is not restored"
 require_text 'open_mutation_lock handoff' "same-inode nonblocking agent-start handoff is missing"
 require_text 'another mutation entered during the controlled agent-start handoff' "handoff contention is not fail-closed"
-require_text 'completion.pending was preserved and both coordinators were stopped' "failure does not preserve the durable retry marker and stop coordinators"
+require_text 'stop_coordinators_trap_safe' "failure cleanup has no bounded coordinator stop proof"
+require_text 'coordinators_stopped_trap_safe' "failure cleanup does not recursively prove stopped coordinators"
+require_text 'coordinator stopped state could not be proved' "failure cleanup can still overclaim a stopped state"
+require_text 'completion.pending was preserved and both coordinators were proved stopped' "proved fail-closed result is missing"
+require_text 'systemctl kill --kill-whom=all --signal=SIGKILL "$unit"' "failed graceful stop has no cgroup termination fallback"
 
 main_start=$(line_of_last 'prepare_runtime_mutation_lock_dir')
 idle_unlocked=$(line_after "$main_start" 'run_target_agent_idle_unlocked')
