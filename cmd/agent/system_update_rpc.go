@@ -105,17 +105,23 @@ func sanitizedSystemUpdateError(err error) string {
 	if err == nil {
 		return ""
 	}
-	value := strings.TrimSpace(err.Error())
-	if index := strings.IndexAny(value, "\r\n"); index >= 0 {
-		value = value[:index]
-	}
-	var cleaned strings.Builder
-	for _, char := range value {
-		if char >= 0x20 && char <= 0x7e {
-			cleaned.WriteRune(char)
+	raw := strings.ReplaceAll(err.Error(), "\r\n", "\n")
+	raw = strings.ReplaceAll(raw, "\r", "\n")
+	value := ""
+	lines := strings.Split(raw, "\n")
+	for index := len(lines) - 1; index >= 0; index-- {
+		var cleaned strings.Builder
+		for _, char := range strings.TrimSpace(lines[index]) {
+			if char >= 0x20 && char <= 0x7e {
+				cleaned.WriteRune(char)
+			}
+		}
+		candidate := strings.TrimSpace(cleaned.String())
+		if candidate != "" {
+			value = candidate
+			break
 		}
 	}
-	value = strings.TrimSpace(cleaned.String())
 	if value == "" {
 		value = "system update failed"
 	}

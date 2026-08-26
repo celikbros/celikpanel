@@ -123,6 +123,7 @@ validate_release_tree() {
     [[ -x "$root/install.sh" && -x "$root/update.sh" && -x "$root/rollback.sh" ]] \
         || die "release entry scripts are not executable"
     VALIDATED_RELEASE_COMMIT=$commit
+    VALIDATED_RELEASE_TREE=$tree
 }
 
 sync_release_tree_durably() {
@@ -736,12 +737,151 @@ abort_known_older_pre_mutation_update() {
         "==> Dogrulanmis mutation-oncesi alpha.4 guncellemesi kapatildi; kayitli servisler geri getirildi"
 }
 
+find_pending_rollback_transaction_release() {
+    local snapshot_name=$1 snapshot_created pending_target snapshot_nonce
+    local snapshot_path snapshot_tree
+    IFS=$'\t' read -r snapshot_created pending_target snapshot_nonce \
+        < <(release_txn_parse_update_snapshot_name "$snapshot_name") \
+        || die "pending rollback snapshot name is not canonical"
+    snapshot_path=$UPDATE_SNAPSHOT_ROOT/$snapshot_name
+    [[ -d "$snapshot_path" && ! -L "$snapshot_path" &&
+       "$(readlink -e -- "$snapshot_path")" == "$snapshot_path" ]] \
+        || die "pending rollback snapshot is missing or unsafe"
+    validate_root_trusted_dir_chain "$snapshot_path"
+    if find "$snapshot_path" -xdev -type l -print -quit | grep -q .; then
+        die "pending rollback snapshot contains a symbolic link"
+    fi
+    if find "$snapshot_path" -xdev ! -type d ! -type f -print -quit | grep -q .; then
+        die "pending rollback snapshot contains a special filesystem object"
+    fi
+    [[ -f "$snapshot_path/SHA256SUMS" && ! -L "$snapshot_path/SHA256SUMS" ]] \
+        || die "pending rollback snapshot checksum manifest is missing"
+    (
+        cd "$snapshot_path"
+        LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 \
+            | LC_ALL=C sort -z \
+            | xargs -0 sha256sum \
+            | cmp -s - SHA256SUMS
+        sha256sum -c SHA256SUMS >/dev/null
+    ) || die "pending rollback snapshot checksum verification failed"
+    [[ -f "$snapshot_path/target-release.commit" &&
+       ! -L "$snapshot_path/target-release.commit" &&
+       -f "$snapshot_path/target-release.tree" &&
+       ! -L "$snapshot_path/target-release.tree" ]] \
+        || die "pending rollback target provenance is incomplete"
+    cmp -s "$snapshot_path/target-release.commit" <(printf '%s\n' "$pending_target") \
+        || die "pending rollback snapshot target commit does not match its name"
+    snapshot_tree=$(tr -d '[:space:]' < "$snapshot_path/target-release.tree")
+    [[ "$snapshot_tree" =~ ^[0-9a-f]{40}$ || "$snapshot_tree" =~ ^[0-9a-f]{64}$ ]] \
+        || die "pending rollback snapshot target tree is invalid"
+    local transaction_release transaction_commit transaction_tree
+    local -a transaction_releases=()
+    mapfile -d '' -t transaction_releases < <(
+        find "$RELEASES_ROOT" -xdev -mindepth 1 -maxdepth 1 -type d \
+            -name "${pending_target:0:12}-*" -print0
+    )
+    (( ${#transaction_releases[@]} == 1 )) \
+        || die "pending rollback recovery requires exactly one retained immutable transaction release"
+    transaction_release=${transaction_releases[0]}
+    validate_release_tree "$transaction_release" 1
+    transaction_commit=$VALIDATED_RELEASE_COMMIT
+    transaction_tree=$VALIDATED_RELEASE_TREE
+    [[ "$transaction_commit" == "$pending_target" &&
+       "$transaction_tree" == "$snapshot_tree" ]] \
+        || die "retained transaction release does not match pending rollback provenance"
+    PENDING_ROLLBACK_TRANSACTION_RELEASE=$transaction_release
+    PENDING_ROLLBACK_TARGET=$pending_target
+    PENDING_ROLLBACK_TARGET_TREE=$snapshot_tree
+}
+
+read_pending_rollback_route() {
+    local completion_present=0 scheduler_present=0
+    local pending_token pending_operation pending_snapshot
+    local TRUSTED_RELEASE_ROOT=$FINAL_RELEASE
+
+    [[ -e "$TRANSACTION_ROOT/completion.pending" ||
+       -L "$TRANSACTION_ROOT/completion.pending" ]] && completion_present=1
+    [[ -e "$TRANSACTION_ROOT/scheduler-restore.pending" ||
+       -L "$TRANSACTION_ROOT/scheduler-restore.pending" ]] && scheduler_present=1
+    (( completion_present == 1 || scheduler_present == 1 )) || return 1
+
+    # Routing only: the finalizer takes transaction.lock and repeats all proof.
+    # shellcheck source=deploy/release-transaction-guard.sh
+    source "$FINAL_RELEASE/deploy/release-transaction-guard.sh" \
+        || die "cannot load the verified release transaction guard for rollback routing"
+    if (( completion_present == 1 )); then
+        IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
+            < <(release_txn_read_pending_fields "$TRANSACTION_ROOT") \
+            || die "cannot read completion.pending while selecting recovery"
+    else
+        IFS=$'\t' read -r pending_token pending_operation pending_snapshot \
+            < <(release_txn_read_scheduler_restore_fields "$TRANSACTION_ROOT") \
+            || die "cannot read scheduler-restore.pending while selecting recovery"
+    fi
+    [[ "$pending_operation" == rollback ]] || return 1
+    local quiesce_present=0 active_present=0 marker_count=0 marker_name
+    [[ -e "$TRANSACTION_ROOT/quiesce.pending" ||
+       -L "$TRANSACTION_ROOT/quiesce.pending" ]] && quiesce_present=1
+    [[ -e "$TRANSACTION_ROOT/active" ||
+       -L "$TRANSACTION_ROOT/active" ]] && active_present=1
+    (( quiesce_present == 0 && active_present == 0 )) \
+        || die "pending rollback recovery refuses quiesce.pending or active"
+    for marker_name in quiesce.pending active completion.pending scheduler-restore.pending; do
+        [[ -e "$TRANSACTION_ROOT/$marker_name" ||
+           -L "$TRANSACTION_ROOT/$marker_name" ]] && marker_count=$((marker_count + 1))
+    done
+    if (( completion_present == 1 )); then
+        (( marker_count == 1 || marker_count == 2 )) \
+            || die "pending rollback recovery requires only completion.pending and its optional scheduler marker"
+        release_txn_validate_pending_token \
+            "$TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+            || die "rollback completion marker failed routing validation"
+        if (( scheduler_present == 1 )); then
+            release_txn_validate_scheduler_restore_token \
+                "$TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+                || die "rollback scheduler marker does not match completion.pending"
+        fi
+    else
+        (( marker_count == 1 )) \
+            || die "scheduler-only rollback recovery marker topology is invalid"
+        release_txn_validate_scheduler_restore_token \
+            "$TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+            || die "rollback scheduler-only marker failed routing validation"
+    fi
+    PENDING_ROLLBACK_TOKEN=$pending_token
+    PENDING_ROLLBACK_SNAPSHOT=$pending_snapshot
+}
+
+finalize_pending_rollback_if_present() {
+    read_pending_rollback_route || return 1
+    find_pending_rollback_transaction_release "$PENDING_ROLLBACK_SNAPSHOT" \
+        || die "cannot bind pending rollback to its immutable transaction release"
+
+    # Historical-release validation overwrites validator output globals.
+    # Restore the already-published recovery identity before dispatch.
+    VALIDATED_RELEASE_COMMIT=$NEW_RELEASE_COMMIT
+    VALIDATED_RELEASE_TREE=$NEW_RELEASE_TREE
+    env -i PATH="$PATH" HOME=/root LC_ALL=C \
+        bash "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" \
+            "--pending-target=$PENDING_ROLLBACK_TARGET" \
+            "--recovery-commit=$NEW_RELEASE_COMMIT" \
+            "--trusted-recovery-release=$FINAL_RELEASE" \
+            "--trusted-transaction-release=$PENDING_ROLLBACK_TRANSACTION_RELEASE" \
+        || die "verified pending rollback finalization failed"
+    printf '%s\n' \
+        "==> Verified pending rollback finalized; run a fresh normal update separately."
+}
+
 validate_root_trusted_dir_chain "$RELEASES_ROOT"
 case "$SOURCE_ROOT" in
     "$RELEASES_ROOT"/.download.*/*/celikpanel-v*) ;;
     *) die "prebuilt source is outside the fixed download staging boundary: $SOURCE_ROOT" ;;
 esac
 validate_release_tree "$SOURCE_ROOT" 0
+
+[[ -f "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh" &&
+   ! -L "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh" ]] \
+    || die "pending rollback finalizer is missing from the recovery release"
 
 # Archive extraction deliberately does not preserve publisher-side ownership.
 # Normalize only the already validated, root-only, symlink-free staging tree.
@@ -752,7 +892,8 @@ chmod 0700 -- "$SOURCE_ROOT"
 chmod 0755 -- "$SOURCE_ROOT/bin/panel" "$SOURCE_ROOT/bin/agent" \
     "$SOURCE_ROOT/bin/schema17-bridge" "$SOURCE_ROOT/install.sh" \
     "$SOURCE_ROOT/update.sh" "$SOURCE_ROOT/rollback.sh" \
-    "$SOURCE_ROOT/bootstrap-prebuilt-update.sh"
+    "$SOURCE_ROOT/bootstrap-prebuilt-update.sh" \
+    "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh"
 
 validate_release_tree "$SOURCE_ROOT" 0
 sync_release_tree_durably "$SOURCE_ROOT"
@@ -766,11 +907,19 @@ FINAL_RELEASE=$RELEASES_ROOT/$release_name
 mv -T --no-clobber -- "$SOURCE_ROOT" "$FINAL_RELEASE"
 sync -f -- "$RELEASES_ROOT" || die "cannot make release publication durable"
 validate_release_tree "$FINAL_RELEASE" 1
+[[ -x "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" &&
+   -f "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" &&
+   ! -L "$FINAL_RELEASE/deploy/finalize-pending-rollback.sh" ]] \
+    || die "published pending rollback finalizer is missing or unsafe"
 
 NEW_RELEASE_COMMIT=$VALIDATED_RELEASE_COMMIT
+NEW_RELEASE_TREE=$VALIDATED_RELEASE_TREE
 abort_known_older_pre_mutation_update
 
 printf '==> Verified prebuilt release / Doğrulanmış hazır sürüm: %s\n' "$FINAL_RELEASE"
+if finalize_pending_rollback_if_present; then
+    exit 0
+fi
 env -i PATH="$PATH" HOME=/root LC_ALL=C \
     CELIKPANEL_TRUSTED_RELEASE_ROOT="$FINAL_RELEASE" \
     CELIKPANEL_PREFLIGHT_PANEL="$FINAL_RELEASE/bin/panel" \

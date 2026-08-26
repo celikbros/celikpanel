@@ -1209,6 +1209,31 @@ wait_for_fresh_active_agent() {
     die 'agent did not become active with a fresh socket'
 }
 
+wait_for_post_apply_mutation_idle() {
+    local attempt unit state
+    [[ -n "${MUTATION_LOCK_FD:-}" ]] \
+        || die "post-apply mutation proof requires the release lock"
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        state=$(systemctl show --property=ActiveState --value "$unit") \
+            || die "cannot inspect post-apply service state: $unit"
+        case "$state" in
+            inactive|failed) ;;
+            *) die "post-apply mutation wait requires $unit stopped; found $state" ;;
+        esac
+    done
+    for attempt in $(seq 1 60); do
+        if CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
+            CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+            CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
+            "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then
+            return 0
+        fi
+        [[ "$attempt" -lt 60 ]] || break
+        sleep 0.5
+    done
+    return 1
+}
+
 # Run embedded migrations with both coordinators stopped and the exact mutation
 # lock held. No HTTP process starts before this durable proof succeeds.
 # Gömülü migration'ları iki koordinatör kapalı ve tam mutation kilidi eldeyken
@@ -2664,10 +2689,8 @@ else
         "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
         || die "installed panel durable ledger is not ready before controlled start"
 fi
-CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-    CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-    "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
-    || die "installed agent durable ledger is not ready under the release lock"
+wait_for_post_apply_mutation_idle \
+    || die "installed agent durable ledger did not become ready under the release lock"
 
 # Harden only an exactly CelikPanel-owned legacy BIND tree while the signed
 # updater still holds the common mutation flock and both coordinators are

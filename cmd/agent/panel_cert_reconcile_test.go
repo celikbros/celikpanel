@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -371,6 +372,86 @@ func TestPanelCertificateActivationBusyLeaseDoesNotConsumeRetry(t *testing.T) {
 	got, found := store.snapshot()
 	if !found || !reflect.DeepEqual(got, want) {
 		t.Fatalf("busy lease changed durable state: got=%+v found=%v", got, found)
+	}
+}
+
+func TestPanelCertificateActivationCompletionPendingGateBlocksBeforeDiscovery(t *testing.T) {
+	installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	manager, root := newMutationTestManager(t)
+	transactionRoot := filepath.Join(root, "release-transaction")
+	if err := os.Mkdir(transactionRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(transactionRoot, "completion.pending")
+	if err := os.WriteFile(marker, []byte("pending\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manager.releaseTransactionPresent = func() (bool, error) {
+		return persistentReleaseTransactionPresent(transactionRoot)
+	}
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		t.Fatal("completion-pending reconciler inspected certificate drift")
+		return "", false, nil
+	}
+
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); !errors.Is(err, errPanelCertificateActivationBusy) {
+		t.Fatalf("completion-pending reconciliation error = %v", err)
+	}
+	if err := os.Remove(marker); err != nil {
+		t.Fatal(err)
+	}
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "", false, nil
+	}
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); err != nil {
+		t.Fatalf("marker-free idle reconciliation = %v", err)
+	}
+}
+
+func TestPanelCertificateActivationDriftIsNotPublishedBeforeMutationGate(t *testing.T) {
+	store := installPanelCertificateActivationMemoryStore(t)
+	installPanelCertificateReconcileTestSeams(t)
+	manager, _ := newMutationTestManager(t)
+	gateChecks := 0
+	manager.releaseTransactionPresent = func() (bool, error) {
+		gateChecks++
+		return gateChecks >= 2, nil
+	}
+	panelCertActiveIdentity = func(string) (string, bool, error) {
+		return "panel.example.test", true, nil
+	}
+	panelCertificateActivationReadSource = func(string) (
+		[]byte, []byte, []byte, time.Time, error,
+	) {
+		return []byte("certificate"), []byte("private key"),
+			[]byte("exact leaf DER"),
+			time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC),
+			nil
+	}
+	panelCertificateActivationVerifyServed = func(
+		context.Context, string, string, string,
+	) error {
+		return errors.New("listener still serves the previous leaf")
+	}
+
+	if err := reconcilePanelCertificateActivationOnce(
+		context.Background(), manager,
+	); !errors.Is(err, errPanelCertificateActivationBusy) {
+		t.Fatalf("gate-race reconciliation error = %v", err)
+	}
+	if gateChecks != 2 {
+		t.Fatalf("release gate checks = %d, want preflight plus begin", gateChecks)
+	}
+	if _, found := store.snapshot(); found || len(store.writes) != 0 {
+		t.Fatalf("drift was published before mutation lease: writes=%v", store.writes)
+	}
+	if len(manager.ledger.Jobs) != 0 || manager.ledger.ActiveRequestID != "" {
+		t.Fatalf("blocked drift changed mutation ledger: %+v", manager.ledger)
 	}
 }
 

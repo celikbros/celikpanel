@@ -18,21 +18,106 @@ _panel_tls_expected_paths() {
     fi
 }
 
+_panel_tls_safe_parent_component_metadata() {
+    local current=$1 is_leaf=$2 test_root=$3 owner=$4 group=$5 mode=$6
+    local permissions
+    [[ "$owner" =~ ^[0-9]+$ && "$group" =~ ^[0-9]+$ && "$mode" =~ ^[0-7]{3,4}$ ]] || return 1
+    permissions=$((8#$mode))
+    [[ "$owner" == 0 ]] && (( (permissions & 0022) == 0 ))
+}
+
 _panel_tls_safe_parent() {
-    local parent=$1 current metadata owner mode permissions boundary=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-/}
+    local parent=$1 current metadata owner group mode is_leaf=1
+    local test_root=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-} boundary=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-/}
     [[ "$parent" == /* && -d "$parent" && ! -L "$parent" ]] || return 1
     current=$(readlink -e -- "$parent") || return 1
     [[ "$current" == "$parent" ]] || return 1
     [[ "$boundary" == / || "$parent" == "$boundary" || "$parent" == "$boundary/"* ]] || return 1
     while true; do
-        metadata=$(stat -Lc '%u %a' -- "$current") || return 1
-        read -r owner mode <<< "$metadata" || return 1
-        [[ "$owner" =~ ^[0-9]+$ && "$mode" =~ ^[0-7]{3,4}$ ]] || return 1
-        permissions=$((8#$mode))
-        [[ "$owner" == 0 ]] && (( (permissions & 0022) == 0 )) || return 1
+        metadata=$(stat -Lc '%u %g %a' -- "$current") || return 1
+        read -r owner group mode <<< "$metadata" || return 1
+        _panel_tls_safe_parent_component_metadata \
+            "$current" "$is_leaf" "$test_root" "$owner" "$group" "$mode" || return 1
         [[ "$current" == "$boundary" || "$current" == / ]] && break
+        is_leaf=0
         current=$(dirname -- "$current") || return 1
     done
+}
+
+# Path-based TLS staging is safe only while its exact production parent is
+# root-owned. The normal StateDirectory owner is the service account, so a
+# quiesced release transaction may temporarily secure that one inode. Callers
+# must already hold the release mutation lock and prove both coordinator
+# cgroups empty; these helpers independently pin the inode and exact metadata.
+PANEL_TLS_SECURED_RESTORE_PARENT_ID=
+
+panel_tls_secure_restore_parent() {
+    local tls_dir=$1 parent parent_parent identity identity_after metadata
+    local owner group mode service_uid service_gid
+    [[ -z ${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-} ]] \
+        || { _panel_tls_fail "production parent transition is unavailable in test-root mode"; return 1; }
+    [[ "$tls_dir" == /var/lib/celikpanel/tls ]] \
+        || { _panel_tls_fail "managed TLS parent transition path mismatch"; return 1; }
+    [[ -z "${PANEL_TLS_SECURED_RESTORE_PARENT_ID:-}" ]] \
+        || { _panel_tls_fail "managed TLS parent transition is already active"; return 1; }
+    parent=${tls_dir%/*}
+    parent_parent=${parent%/*}
+    [[ -d "$parent" && ! -L "$parent" ]] \
+        || { _panel_tls_fail "managed TLS data parent is unsafe"; return 1; }
+    [[ "$(readlink -e -- "$parent")" == "$parent" ]] \
+        || { _panel_tls_fail "managed TLS data parent identity is unsafe"; return 1; }
+    _panel_tls_safe_parent "$parent_parent" \
+        || { _panel_tls_fail "managed TLS data ancestor is unsafe"; return 1; }
+    identity=$(stat -Lc '%d:%i' -- "$parent") \
+        || { _panel_tls_fail "cannot identify managed TLS data parent"; return 1; }
+    metadata=$(stat -Lc '%u %g %a' -- "$parent") \
+        || { _panel_tls_fail "cannot inspect managed TLS data parent"; return 1; }
+    read -r owner group mode <<< "$metadata" || return 1
+    service_uid=$(id -u celikpanel) || return 1
+    service_gid=$(id -g celikpanel) || return 1
+    [[ "$mode" == 750 &&
+       ( ( "$owner" == "$service_uid" && "$group" == "$service_gid" ) ||
+         ( "$owner" == 0 && "$group" == 0 ) ) ]] \
+        || { _panel_tls_fail "managed TLS data parent metadata is not recoverable"; return 1; }
+    chown root:root -- "$parent" \
+        || { _panel_tls_fail "cannot secure managed TLS data parent"; return 1; }
+    identity_after=$(stat -Lc '%d:%i' -- "$parent") || return 1
+    [[ "$identity_after" == "$identity" ]] \
+        || { _panel_tls_fail "managed TLS data parent changed during ownership transition"; return 1; }
+    [[ "$(stat -Lc '%u %g %a' -- "$parent")" == '0 0 750' ]] \
+        || { _panel_tls_fail "managed TLS data parent was not secured exactly"; return 1; }
+    _panel_tls_safe_parent "$parent" \
+        || { _panel_tls_fail "secured managed TLS data parent is not trusted"; return 1; }
+    sync -f -- "$parent" && sync -d -- "$parent_parent" \
+        || { _panel_tls_fail "managed TLS data parent transition is not durable"; return 1; }
+    PANEL_TLS_SECURED_RESTORE_PARENT_ID=$identity
+}
+
+panel_tls_restore_service_parent() {
+    local tls_dir=$1 parent parent_parent identity metadata service_uid service_gid
+    [[ "$tls_dir" == /var/lib/celikpanel/tls &&
+       -n "${PANEL_TLS_SECURED_RESTORE_PARENT_ID:-}" ]] \
+        || { _panel_tls_fail "managed TLS service-parent restoration has no active transition"; return 1; }
+    parent=${tls_dir%/*}
+    parent_parent=${parent%/*}
+    [[ -d "$parent" && ! -L "$parent" ]] \
+        || { _panel_tls_fail "secured managed TLS data parent disappeared"; return 1; }
+    identity=$(stat -Lc '%d:%i' -- "$parent") || return 1
+    [[ "$identity" == "$PANEL_TLS_SECURED_RESTORE_PARENT_ID" ]] \
+        || { _panel_tls_fail "secured managed TLS data parent identity changed"; return 1; }
+    metadata=$(stat -Lc '%u %g %a' -- "$parent") || return 1
+    [[ "$metadata" == '0 0 750' ]] \
+        || { _panel_tls_fail "secured managed TLS data parent metadata changed"; return 1; }
+    service_uid=$(id -u celikpanel) || return 1
+    service_gid=$(id -g celikpanel) || return 1
+    chown "$service_uid:$service_gid" -- "$parent" \
+        || { _panel_tls_fail "cannot restore managed TLS service parent ownership"; return 1; }
+    [[ "$(stat -Lc '%d:%i' -- "$parent")" == "$identity" &&
+       "$(stat -Lc '%u %g %a' -- "$parent")" == "$service_uid $service_gid 750" ]] \
+        || { _panel_tls_fail "managed TLS service parent restoration was not exact"; return 1; }
+    sync -f -- "$parent" && sync -d -- "$parent_parent" \
+        || { _panel_tls_fail "managed TLS service parent restoration is not durable"; return 1; }
+    PANEL_TLS_SECURED_RESTORE_PARENT_ID=
 }
 
 # An absent transaction-owned leaf is also valid when some of its parent

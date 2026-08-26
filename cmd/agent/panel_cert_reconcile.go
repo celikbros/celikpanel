@@ -108,31 +108,21 @@ func reconcilePanelCertificateActivationOnce(
 	if manager == nil {
 		return errors.New("durable service mutation manager is unavailable")
 	}
-
-	state, found, err := panelCertificateActivationReadState()
+	blocked, gateErr := manager.releaseTransactionBlocksMutations()
+	if gateErr != nil {
+		return errors.Join(
+			errPanelCertificateActivationBusy,
+			fmt.Errorf("verify panel certificate release transaction gate: %w", gateErr),
+		)
+	}
+	if blocked {
+		return errPanelCertificateActivationBusy
+	}
+	target, ready, err := inspectPanelCertificateActivationCandidate(ctx)
 	if err != nil {
-		return fmt.Errorf("read durable panel certificate activation: %w", err)
+		return err
 	}
-	if !found {
-		queued, discoverErr := discoverPanelCertificateActivationDrift(ctx)
-		if discoverErr != nil {
-			return discoverErr
-		}
-		if !queued {
-			return nil
-		}
-		state, found, err = panelCertificateActivationReadState()
-		if err != nil {
-			return fmt.Errorf("read discovered panel certificate activation: %w", err)
-		}
-		if !found {
-			return errors.New("discovered panel certificate activation was not durable")
-		}
-	}
-	if !panelCertificateActivationRetryReady(
-		state,
-		panelCertificateActivationNow().UTC(),
-	) {
+	if !ready {
 		return nil
 	}
 
@@ -148,7 +138,7 @@ func reconcilePanelCertificateActivationOnce(
 		RequestID: requestID,
 		OwnerID:   ownerID,
 		Kind:      panelCertificateActivationKind,
-		Target:    state.Domain,
+		Target:    target,
 	}
 	if _, err := manager.begin(begin); err != nil {
 		if errors.Is(err, errServiceMutationBusy) ||
@@ -166,7 +156,7 @@ func reconcilePanelCertificateActivationOnce(
 		binding,
 		newServiceMutationStepClaim(
 			serviceMutationStepActivatePanelCertificate,
-			state.Domain,
+			target,
 			"",
 			"activate",
 		),
@@ -190,6 +180,9 @@ func reconcilePanelCertificateActivationOnce(
 		heartbeatDone,
 	)
 	reconcileErr := panelCertWithPublishLock(func() error {
+		if err := preparePanelCertificateActivationLocked(stepCtx, target); err != nil {
+			return err
+		}
 		return reconcilePanelCertificateActivationLocked(stepCtx)
 	})
 	close(heartbeatDone)
@@ -579,51 +572,97 @@ func enqueueRenewedPanelCertificateActivation(
 	return queued, err
 }
 
-func discoverPanelCertificateActivationDrift(ctx context.Context) (bool, error) {
-	queued := false
+func inspectPanelCertificateActivationCandidate(
+	ctx context.Context,
+) (string, bool, error) {
+	domain := ""
+	ready := false
 	err := panelCertWithPublishLock(func() error {
-		_, found, err := panelCertificateActivationReadState()
+		state, found, err := panelCertificateActivationReadState()
 		if err != nil {
-			return err
+			return fmt.Errorf("read durable panel certificate activation: %w", err)
 		}
 		if found {
-			return nil
-		}
-		domain, active, err := panelCertActiveIdentity(managedPanelTLSDir)
-		if err != nil {
-			return err
-		}
-		if !active {
-			return nil
-		}
-		_, _, leafDER, _, err := panelCertificateActivationReadSource(domain)
-		if err != nil {
-			// Only a genuinely absent lineage means there is no drift to
-			// reconcile. Permission, ownership, chain, key, expiry and parsing
-			// failures are security/integrity errors and must stay visible.
-			if errors.Is(err, os.ErrNotExist) {
-				return nil
+			if panelCertificateActivationRetryReady(
+				state,
+				panelCertificateActivationNow().UTC(),
+			) {
+				domain = state.Domain
+				ready = true
 			}
-			return fmt.Errorf("inspect active panel certificate source: %w", err)
-		}
-		fingerprint := panelCertificateLeafSHA256(leafDER)
-		if err := panelCertificateActivationVerifyServed(
-			ctx,
-			panelCertificateLoopbackAddress,
-			domain,
-			fingerprint,
-		); err == nil {
 			return nil
 		}
-		state, err := newPanelCertificateActivationState(domain)
-		if err != nil {
-			return err
-		}
-		if err := panelCertificateActivationWriteState(state); err != nil {
-			return err
-		}
-		queued = true
-		return nil
+		domain, ready, err = inspectPanelCertificateActivationDriftLocked(ctx)
+		return err
 	})
-	return queued, err
+	return domain, ready, err
+}
+
+func inspectPanelCertificateActivationDriftLocked(
+	ctx context.Context,
+) (string, bool, error) {
+	domain, active, err := panelCertActiveIdentity(managedPanelTLSDir)
+	if err != nil {
+		return "", false, err
+	}
+	if !active {
+		return "", false, nil
+	}
+	_, _, leafDER, _, err := panelCertificateActivationReadSource(domain)
+	if err != nil {
+		// Only a genuinely absent lineage means there is no drift to
+		// reconcile. Permission, ownership, chain, key, expiry and parsing
+		// failures are security/integrity errors and must stay visible.
+		if errors.Is(err, os.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf(
+			"inspect active panel certificate source: %w",
+			err,
+		)
+	}
+	fingerprint := panelCertificateLeafSHA256(leafDER)
+	if err := panelCertificateActivationVerifyServed(
+		ctx,
+		panelCertificateLoopbackAddress,
+		domain,
+		fingerprint,
+	); err == nil {
+		return "", false, nil
+	}
+	return domain, true, nil
+}
+
+func preparePanelCertificateActivationLocked(
+	ctx context.Context,
+	expectedDomain string,
+) error {
+	state, found, err := panelCertificateActivationReadState()
+	if err != nil {
+		return fmt.Errorf("read locked panel certificate activation: %w", err)
+	}
+	if found {
+		if state.Domain != expectedDomain {
+			return errors.New("panel certificate activation candidate changed before mutation lease")
+		}
+		return nil
+	}
+	domain, drifted, err := inspectPanelCertificateActivationDriftLocked(ctx)
+	if err != nil {
+		return err
+	}
+	if !drifted {
+		return nil
+	}
+	if domain != expectedDomain {
+		return errors.New("panel certificate activation identity changed before mutation lease")
+	}
+	state, err = newPanelCertificateActivationState(domain)
+	if err != nil {
+		return err
+	}
+	if err := panelCertificateActivationWriteState(state); err != nil {
+		return err
+	}
+	return nil
 }

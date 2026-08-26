@@ -1741,8 +1741,26 @@ for script in "$UPDATE" "$ROLLBACK"; do
     require_literal "$script" 'chown root:celikpanel -- "$MUTATION_LOCK"'
     require_literal "$script" 'chmod 0600 -- "$MUTATION_LOCK"'
 done
-require_literal "$ROLLBACK" 'local lock_dir group_id owner group mode before after'
-require_literal "$ROLLBACK" '[[ "$owner" == 0 && "$group" == "$group_id" && "$mode" == 600 ]]'
+require_literal "$ROLLBACK" 'MUTATION_LOCK_FD='
+require_literal "$ROLLBACK" 'MUTATION_LOCK_IDENTITY='
+require_literal "$ROLLBACK" 'local acquire_mode=${1:-immediate}'
+require_literal "$ROLLBACK" 'local lock_dir group_id owner group mode links size path_identity fd_identity'
+require_function_sequence "$ROLLBACK" acquire_release_mutation_lock \
+    'immediate | handoff) ;;' \
+    '[[ "$acquire_mode" == immediate ]]' \
+    'read -r owner group mode links size < <(stat -Lc '\''%u %g %a %h %s'\'' -- "$MUTATION_LOCK")' \
+    'path_identity=$(stat -Lc '\''%d:%i'\'' -- "$MUTATION_LOCK")' \
+    '[[ "$path_identity" == "$MUTATION_LOCK_IDENTITY" ]]' \
+    'fd_identity=$(stat -Lc '\''%d:%i'\'' -- "/proc/$BASHPID/fd/$MUTATION_LOCK_FD")' \
+    '[[ "$fd_identity" == "$MUTATION_LOCK_IDENTITY" ]]' \
+    'if ! flock -n -x "$MUTATION_LOCK_FD"; then'
+require_literal "$ROLLBACK" 'mutation lock file must be root:celikpanel mode 0600, single-link, and empty'
+require_literal "$ROLLBACK" 'mutation lock pathname disappeared before controlled agent-start handoff reacquire'
+require_literal "$ROLLBACK" 'mutation lock was not handed back after controlled agent start; rollback refused'
+reject_literal "$ROLLBACK" 'flock -w'
+reject_literal "$ROLLBACK" 'unset MUTATION_LOCK_IDENTITY'
+require_regex_count "$ROLLBACK" '^[[:space:]]*acquire_release_mutation_lock$' 3
+require_regex_count "$ROLLBACK" '^[[:space:]]*acquire_release_mutation_lock handoff$' 1
 
 # Immediate acquisition may create the canonical lock. A controlled agent-start
 # handoff must instead reopen the exact recorded inode with exact metadata and
@@ -2028,6 +2046,20 @@ require_sequence "$UPDATE" \
     '[[ ! -L $socket ]]' \
     '[[ $state == active && -S $socket ]]'
 
+# A distro maintenance timer may briefly acquire apt/dnf/pacman after
+# daemon-reload. The updater may wait only in the stopped, externally locked
+# post-apply window and must retain an exact finite bound.
+require_sequence "$UPDATE" \
+    'wait_for_post_apply_mutation_idle() {' \
+    'post-apply mutation proof requires the release lock' \
+    'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
+    'inactive|failed) ;;' \
+    'for attempt in $(seq 1 60); do' \
+    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then' \
+    '[ "$attempt" -lt 60 ]' \
+    'sleep 0.5' \
+    'return 1'
+
 # Pending finalization keeps completion.pending until stopped-state validation,
 # offline migration, controlled starts, post-grant proofs and durable removal pass.
 # Bekleyen sonlandırma; durmuş-durum doğrulaması, offline migration, kontrollü
@@ -2091,7 +2123,7 @@ require_sequence "$UPDATE" \
     'verify_saved_enablement' \
     'verify_installed_release_artifacts' \
     '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    'wait_for_post_apply_mutation_idle' \
     'env -i \' \
     '"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock' \
     'verify_installed_release_artifacts' \
@@ -2218,6 +2250,41 @@ require_sequence "$ROLLBACK" \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
     '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \'
+
+# A restored normal-ledger agent (including Alpha44) needs the common mutation
+# lock during startup reconciliation. Rollback must release it only inside the
+# saved-active branch, wait for the fresh socket, reacquire the same inode, and
+# re-prove the ledger and durable transaction before the panel may start.
+require_sequence "$ROLLBACK" \
+    'if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; then' \
+    'prepare_fresh_agent_socket_start' \
+    'release_txn_create_start_authorization \' \
+    'if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; then' \
+    'release_release_mutation_lock \' \
+    'systemctl start celikpanel-agent.service || die "restored agent did not start"' \
+    'wait_for_fresh_active_agent' \
+    'acquire_release_mutation_lock handoff' \
+    'verify_restored_agent_idle_under_release_lock' \
+    'release_txn_validate_pending_token \' \
+    'rollback completion marker changed during the startup lock handoff' \
+    'systemctl start celikpanel-panel.service || die "restored panel did not start"'
+require_function_sequence "$ROLLBACK" prepare_fresh_agent_socket_start \
+    '[[ -n "${MUTATION_LOCK_FD:-}" ]]' \
+    'reject_extra_service_cgroup_processes celikpanel-agent.service 0' \
+    '[[ -S "$socket" && ! -L "$socket" ]]' \
+    'rm -f -- "$socket"' \
+    '[[ ! -e "$socket" && ! -L "$socket" ]]'
+require_function_sequence "$ROLLBACK" wait_for_fresh_active_agent \
+    'state=$(systemctl show -p ActiveState --value celikpanel-agent.service)' \
+    '[[ ! -L "$socket" ]]' \
+    '[[ "$state" == active && -S "$socket" ]]' \
+    '[[ "$state" != failed ]]'
+require_function_sequence "$ROLLBACK" verify_restored_agent_idle_under_release_lock \
+    '[[ -n "${MUTATION_LOCK_FD:-}" ]]' \
+    'normal)' \
+    '--check-service-mutation-idle-under-external-lock' \
+    'pre-ledger|schema17)' \
+    '--check-pre-ledger-service-mutation-idle-under-external-lock'
 
 # Rollback repeats normal/initial/pre-ledger proofs under the outer flock. The
 # legacy cleanup accepts only one strict root-owned canonical-prefix stage.

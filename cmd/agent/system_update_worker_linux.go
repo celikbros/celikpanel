@@ -131,14 +131,18 @@ func (backend *linuxSystemUpdateBackend) probeWorkerUnit(ctx context.Context, re
 type boundedSystemUpdateBuffer struct{ raw []byte }
 
 func (buffer *boundedSystemUpdateBuffer) Write(value []byte) (int, error) {
-	remaining := 4096 - len(buffer.raw)
-	if remaining > 0 {
-		if len(value) < remaining {
-			remaining = len(value)
-		}
-		buffer.raw = append(buffer.raw, value[:remaining]...)
+	const limit = 4096
+	written := len(value)
+	if len(value) >= limit {
+		buffer.raw = append(buffer.raw[:0], value[len(value)-limit:]...)
+		return written, nil
 	}
-	return len(value), nil
+	if overflow := len(buffer.raw) + len(value) - limit; overflow > 0 {
+		copy(buffer.raw, buffer.raw[overflow:])
+		buffer.raw = buffer.raw[:len(buffer.raw)-overflow]
+	}
+	buffer.raw = append(buffer.raw, value...)
+	return written, nil
 }
 
 func (buffer *boundedSystemUpdateBuffer) String() string {

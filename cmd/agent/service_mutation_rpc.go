@@ -137,6 +137,8 @@ type serviceMutationManager struct {
 	poisonLock *serviceMutationFileLock
 	writeFault func(string) error
 
+	releaseTransactionPresent func() (bool, error)
+
 	now             func() time.Time
 	leaseDuration   time.Duration
 	overallDuration time.Duration
@@ -258,7 +260,8 @@ func newServiceMutationManagerWithWriteFault(
 			Version: serviceMutationLedgerVersion,
 			Jobs:    map[string]*ServiceMutationJob{},
 		},
-		writeFault: writeFault,
+		writeFault:                writeFault,
+		releaseTransactionPresent: productionReleaseTransactionPresent,
 	}
 	if err := manager.load(); err != nil {
 		return nil, err
@@ -1083,6 +1086,14 @@ func serviceMutationDNSKind(kind string) bool {
 	}
 }
 
+func (m *serviceMutationManager) releaseTransactionBlocksMutations() (bool, error) {
+	check := m.releaseTransactionPresent
+	if check == nil {
+		check = productionReleaseTransactionPresent
+	}
+	return check()
+}
+
 func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*ServiceMutationJob, error) {
 	if request == nil || !validMutationIdentity(request.RequestID) ||
 		!validMutationIdentity(request.OwnerID) ||
@@ -1128,6 +1139,16 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		(request.Target != "pdns" ||
 			!mutationpayload.ValidDNSClusterConfigQualifier(request.PackageName)) {
 		return nil, errors.New("invalid DNS cluster mutation payload qualifier")
+	}
+	blocked, err := m.releaseTransactionBlocksMutations()
+	if err != nil {
+		return nil, errors.Join(
+			errServiceMutationHostBusy,
+			fmt.Errorf("verify persistent release transaction gate: %w", err),
+		)
+	}
+	if blocked {
+		return nil, errServiceMutationHostBusy
 	}
 	if err := m.tryResolvePersistedOrphan(); err != nil &&
 		!errors.Is(err, errServiceMutationHostBusy) {
