@@ -2481,18 +2481,37 @@ if [[ -e "$RELEASE_UPDATER" || -L "$RELEASE_UPDATER" ]]; then
 else
     printf 'absent\n' > "$tmp_snap/release-updater.state"
 fi
-mkdir "$tmp_snap/units"
-cp -a "$UNIT_DIR/celikpanel-agent.service" "$tmp_snap/units/"
-cp -a "$UNIT_DIR/celikpanel-panel.service" "$tmp_snap/units/"
+unit_root_snapshot_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR") \
+    || die "systemd unit root must be root:root mode 0755 before snapshot"
+install -d -m 0755 -o root -g root -- "$tmp_snap/units"
+for unit in celikpanel-agent.service celikpanel-panel.service; do
+    _release_txn_validate_celikpanel_unit_file \
+        "$UNIT_DIR/$unit" "installed systemd unit" \
+        || die "installed systemd unit is unsafe before snapshot: $unit"
+    install -m 0644 -o root -g root -- \
+        "$UNIT_DIR/$unit" "$tmp_snap/units/$unit"
+done
 
-if [[ -f "$UNIT_DIR/celikpanel-firewall-restore.service" ]]; then
+if [[ -e "$UNIT_DIR/celikpanel-firewall-restore.service" ||
+      -L "$UNIT_DIR/celikpanel-firewall-restore.service" ]]; then
+    _release_txn_validate_celikpanel_unit_file \
+        "$UNIT_DIR/celikpanel-firewall-restore.service" "installed systemd unit" \
+        || die "installed firewall unit is unsafe before snapshot"
     [[ "$firewall_enabled_state" != not-found ]] || die "firewall unit exists but systemd reports not-found"
-    cp -a "$UNIT_DIR/celikpanel-firewall-restore.service" "$tmp_snap/units/"
+    install -m 0644 -o root -g root -- \
+        "$UNIT_DIR/celikpanel-firewall-restore.service" \
+        "$tmp_snap/units/celikpanel-firewall-restore.service"
     printf 'present\n' > "$tmp_snap/firewall-unit.state"
 else
     [[ "$firewall_enabled_state" == not-found ]] || die "absent firewall unit has inconsistent enablement state: $firewall_enabled_state"
     printf 'absent\n' > "$tmp_snap/firewall-unit.state"
 fi
+release_txn_validate_celikpanel_unit_snapshot \
+    "$tmp_snap/units" "$(tr -d '[:space:]' < "$tmp_snap/firewall-unit.state")" \
+    || die "systemd unit snapshot is unsafe"
+release_txn_verify_systemd_unit_root_identity \
+    "$UNIT_DIR" "$unit_root_snapshot_identity" \
+    || die "systemd unit root changed while snapshotting unit files"
 
 # A verified snapshot cannot contain a symlink or special object: restore must
 # hash and copy the same privileged regular files.

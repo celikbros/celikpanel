@@ -19,9 +19,7 @@ type bindMaskIdentity struct {
 }
 
 func verifyBINDPersistentMaskFiles() error {
-	return verifyExactPersistentServiceMasks(
-		[]string{"named.service", "bind9.service"},
-	)
+	return verifyExactPersistentServiceMasks([]string{"named.service", "bind9.service"})
 }
 
 func verifyExactPersistentServiceMask(unit string) error {
@@ -29,35 +27,7 @@ func verifyExactPersistentServiceMask(unit string) error {
 }
 
 func verifyExactPersistentServiceMasks(units []string) error {
-	rootFD, err := unix.Open(
-		"/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0,
-	)
-	if err != nil {
-		return fmt.Errorf("open filesystem root for BIND mask proof: %w", err)
-	}
-	defer unix.Close(rootFD)
-	if _, err := validateExactBINDDirectoryFD(
-		rootFD, 0, 0, bindManagedRootMode, "BIND mask filesystem root",
-	); err != nil {
-		return err
-	}
-	etcFD, _, err := openExactBINDDirectoryAt(
-		rootFD, "etc", 0, 0, bindManagedRootMode, "/etc",
-	)
-	if err != nil {
-		return err
-	}
-	defer unix.Close(etcFD)
-	systemdFD, _, err := openExactBINDDirectoryAt(
-		etcFD, "systemd", 0, 0, bindManagedRootMode, "/etc/systemd",
-	)
-	if err != nil {
-		return err
-	}
-	defer unix.Close(systemdFD)
-	systemFD, _, err := openExactBINDDirectoryAt(
-		systemdFD, "system", 0, 0, bindManagedRootMode, "/etc/systemd/system",
-	)
+	systemFD, err := openExactBINDMaskParent()
 	if err != nil {
 		return err
 	}
@@ -68,6 +38,61 @@ func verifyExactPersistentServiceMasks(units []string) error {
 		}
 	}
 	return nil
+}
+
+func verifyBINDMaskParentMetadata() error {
+	systemFD, err := openExactBINDMaskParent()
+	if err == nil {
+		unix.Close(systemFD)
+	}
+	return err
+}
+
+func openExactBINDMaskParent() (int, error) {
+	rootFD, err := unix.Open(
+		"/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0,
+	)
+	if err != nil {
+		return -1, fmt.Errorf("open filesystem root for BIND mask proof: %w", err)
+	}
+	defer unix.Close(rootFD)
+	if _, err := validateExactBINDDirectoryFD(
+		rootFD, 0, 0, bindManagedRootMode, "BIND mask filesystem root",
+	); err != nil {
+		return -1, err
+	}
+	etcFD, _, err := openExactBINDDirectoryAt(
+		rootFD, "etc", 0, 0, bindManagedRootMode, "/etc",
+	)
+	if err != nil {
+		return -1, err
+	}
+	defer unix.Close(etcFD)
+	systemdFD, _, err := openExactBINDDirectoryAt(
+		etcFD, "systemd", 0, 0, bindManagedRootMode, "/etc/systemd",
+	)
+	if err != nil {
+		return -1, err
+	}
+	defer unix.Close(systemdFD)
+	systemFD, err := openBINDDirectoryAt(
+		systemdFD, "system", "/etc/systemd/system",
+	)
+	if err != nil {
+		return -1, err
+	}
+	if err := verifyBINDMaskParentMetadataAt(systemFD); err != nil {
+		unix.Close(systemFD)
+		return -1, err
+	}
+	return systemFD, nil
+}
+
+func verifyBINDMaskParentMetadataAt(systemDirectoryFD int) error {
+	_, err := validateExactBINDDirectoryFD(
+		systemDirectoryFD, 0, 0, bindManagedRootMode, "/etc/systemd/system",
+	)
+	return err
 }
 
 func verifyBINDPersistentMaskFilesAt(systemDirectoryFD int) error {

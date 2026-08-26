@@ -18,7 +18,8 @@ func installPDNSPackagesWithGuard(
 	install func() (string, error),
 ) (string, error) {
 	return installPDNSPackagesWithGuardOps(ctx, systemctl, install, bindInstallGuardOps{
-		runSystemd: runServiceMutationCombinedOutput,
+		verifyMaskParent: verifyBINDMaskParentMetadata,
+		runSystemd:       runServiceMutationCombinedOutput,
 		recoveryContext: func(parent context.Context) (context.Context, context.CancelFunc, error) {
 			return serviceMutationCancellingRecoveryContext(parent, bindInstallRollbackTimeout)
 		},
@@ -52,7 +53,8 @@ func beginDNSPackageInstallGuard(
 	ops bindInstallGuardOps,
 ) (*bindPackageInstallGuard, error) {
 	if ctx == nil || systemctl == "" || len(units) == 0 ||
-		ops.runSystemd == nil || ops.recoveryContext == nil {
+		ops.verifyMaskParent == nil || ops.runSystemd == nil ||
+		ops.recoveryContext == nil {
 		return nil, errors.New("invalid DNS package install guard")
 	}
 	guard := &bindPackageInstallGuard{
@@ -67,6 +69,9 @@ func beginDNSPackageInstallGuard(
 			return guard, fmt.Errorf("%s has no deterministic pre-install state", unit)
 		}
 		guard.before = append(guard.before, state)
+	}
+	if err := guard.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return guard, err
 	}
 	for _, state := range guard.before {
 		if state.masked() {

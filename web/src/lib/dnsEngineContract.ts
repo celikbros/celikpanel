@@ -32,6 +32,24 @@ export interface DNSEngineEntry {
     detail_code?: string;
 }
 
+export type DNSEngineOperationStatus =
+    | 'running'
+    | 'rolling_back'
+    | 'recovery_required'
+    | 'succeeded'
+    | 'rolled_back'
+    | 'failed';
+
+export interface DNSEngineOperation {
+    id: string;
+    target_engine: DNSEngineID;
+    phase: string;
+    status: DNSEngineOperationStatus;
+    started_at: string;
+    updated_at: string;
+    last_error?: string;
+}
+
 export interface DNSEngineSnapshot {
     revision: number;
     engine_epoch: number;
@@ -44,6 +62,7 @@ export interface DNSEngineSnapshot {
     zone_count: number;
     pending_zone_count: number;
     operation_id?: string;
+    operation?: DNSEngineOperation;
     engines: DNSEngineEntry[];
 }
 
@@ -76,6 +95,13 @@ const topologies = new Set<string>(['unconfigured', 'standalone', 'paired']);
 const previewActions = new Set<string>(['install', 'switch', 'adopt', 'reconfigure']);
 const codePattern = /^[a-z][a-z0-9_]{0,63}$/;
 const operationIDPattern = /^[a-f0-9]{32}$/;
+const operationPhases = new Set<string>([
+    'planned', 'staging', 'staged', 'activating', 'verifying',
+    'rolling_back', 'committed', 'rolled_back', 'failed',
+]);
+const operationStatuses = new Set<string>([
+    'running', 'rolling_back', 'recovery_required', 'succeeded', 'rolled_back', 'failed',
+]);
 const dnsEngineEstimatedDowntimeSeconds = 15;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -123,6 +149,55 @@ function decodeEngineEntry(value: unknown): DNSEngineEntry | null {
     };
 }
 
+function decodeDNSEngineOperation(value: unknown): DNSEngineOperation | null {
+    if (!isRecord(value)
+        || typeof value.id !== 'string'
+        || !operationIDPattern.test(value.id)
+        || !isEngineID(value.target_engine)
+        || typeof value.phase !== 'string'
+        || !operationPhases.has(value.phase)
+        || typeof value.status !== 'string'
+        || !operationStatuses.has(value.status)
+        || typeof value.started_at !== 'string'
+        || typeof value.updated_at !== 'string'
+        || !Number.isFinite(Date.parse(value.started_at))
+        || !Number.isFinite(Date.parse(value.updated_at))
+        || Date.parse(value.updated_at) < Date.parse(value.started_at)
+        || (value.last_error !== undefined
+            && (typeof value.last_error !== 'string'
+                || value.last_error.length < 1
+                || value.last_error.length > 2048))) {
+        return null;
+    }
+    const expectedStatus: Record<string, DNSEngineOperationStatus> = {
+        planned: 'running',
+        staging: 'running',
+        staged: 'running',
+        activating: 'running',
+        verifying: 'running',
+        rolling_back: 'rolling_back',
+        committed: 'succeeded',
+        rolled_back: 'rolled_back',
+        failed: 'failed',
+    };
+    const recoveryRequired = value.status === 'recovery_required'
+        && ['planned', 'staging', 'staged', 'activating', 'verifying', 'rolling_back'].includes(value.phase);
+    if (expectedStatus[value.phase] !== value.status && !recoveryRequired) return null;
+    if (value.status === 'recovery_required' && value.last_error === undefined) return null;
+    if ((value.status === 'running' || value.status === 'succeeded')
+        && value.last_error !== undefined) return null;
+
+    return {
+        id: value.id,
+        target_engine: value.target_engine,
+        phase: value.phase,
+        status: value.status as DNSEngineOperationStatus,
+        started_at: value.started_at,
+        updated_at: value.updated_at,
+        ...(typeof value.last_error === 'string' ? { last_error: value.last_error } : {}),
+    };
+}
+
 // This endpoint controls whether the page may expose privileged DNS actions.
 // Any malformed or internally contradictory payload therefore decodes to null:
 // the UI shows a verification error and never guesses an engine state.
@@ -145,9 +220,15 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         || !Array.isArray(value.engines)
         || value.engines.length !== DNS_ENGINE_IDS.length
         || (value.operation_id !== undefined
-            && (typeof value.operation_id !== 'string' || !operationIDPattern.test(value.operation_id)))) {
+            && (typeof value.operation_id !== 'string' || !operationIDPattern.test(value.operation_id)))
+        || (value.operation !== undefined && !isRecord(value.operation))) {
         return null;
     }
+
+    const operation = value.operation === undefined
+        ? undefined
+        : decodeDNSEngineOperation(value.operation);
+    if (value.operation !== undefined && operation === null) return null;
 
     const entries = value.engines.map(decodeEngineEntry);
     if (entries.some((entry) => entry === null)) return null;
@@ -168,8 +249,15 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
     if (activeEntries.some((entry) => entry.id !== value.active_engine)) return null;
     if ((value.active_engine === null) !== (value.engine_epoch === 0)) return null;
     if (value.state === 'ready' && value.active_engine === null) return null;
-    if (value.state === 'switching' && typeof value.operation_id !== 'string') return null;
+    if (value.state === 'switching'
+        && (typeof value.operation_id !== 'string'
+            || !operation
+            || operation.id !== value.operation_id
+            || !['running', 'rolling_back', 'recovery_required'].includes(operation.status))) return null;
     if (value.state !== 'switching' && value.operation_id !== undefined) return null;
+    if (value.state !== 'switching'
+        && operation
+        && ['running', 'rolling_back', 'recovery_required'].includes(operation.status)) return null;
     const stagedPair = value.active_engine === null && value.topology === 'paired';
     const activePair = value.active_engine !== null && value.topology === 'paired';
     if (stagedPair
@@ -197,6 +285,7 @@ export function decodeDNSEngineSnapshot(value: unknown): DNSEngineSnapshot | nul
         zone_count: value.zone_count,
         pending_zone_count: value.pending_zone_count,
         ...(typeof value.operation_id === 'string' ? { operation_id: value.operation_id } : {}),
+        ...(operation ? { operation } : {}),
         engines,
     };
 }

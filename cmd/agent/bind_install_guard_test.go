@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -138,7 +140,8 @@ func (f *fakeBINDInstallSystemd) run(_ context.Context, executable string, args 
 
 func fakeBINDInstallGuardOps(systemd *fakeBINDInstallSystemd, recoveries *int) bindInstallGuardOps {
 	return bindInstallGuardOps{
-		runSystemd: systemd.run,
+		verifyMaskParent: func() error { return nil },
+		runSystemd:       systemd.run,
 		recoveryContext: func(context.Context) (context.Context, context.CancelFunc, error) {
 			*recoveries++
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -469,6 +472,213 @@ func TestBINDPackageInstallRejectsUnrestorableUnitFileStatesBeforeMutation(t *te
 				t.Fatalf("package manager ran for unrestorable state %q", state)
 			}
 		})
+	}
+}
+
+func TestBINDPackageInstallRejectsUnsafeMaskParentBeforeMutation(t *testing.T) {
+	systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+		"bind9.service": {loadState: "not-found"},
+		"named.service": {loadState: "not-found"},
+	})
+	recoveries := 0
+	installCalled := false
+	ops := fakeBINDInstallGuardOps(systemd, &recoveries)
+	ops.verifyMaskParent = func() error {
+		return errors.New("/etc/systemd/system has mode 0700, want 0755")
+	}
+	_, err := installBINDPackagesWithGuardOps(
+		context.Background(), "/usr/bin/systemctl",
+		func() (string, error) { installCalled = true; return "", nil }, ops,
+	)
+	if err == nil || !strings.Contains(err.Error(), "mode 0700, want 0755") {
+		t.Fatalf("unsafe parent error=%v", err)
+	}
+	if installCalled || len(systemd.commands) != 0 || recoveries != 0 {
+		t.Fatalf("mutation escaped preflight: install=%v commands=%v recoveries=%d",
+			installCalled, systemd.commands, recoveries)
+	}
+}
+
+func TestBINDSystemdMutationRejectsMaskParentDriftAtEachBoundary(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		failProof int
+		want      []string
+	}{
+		{name: "before first mutation", failProof: 1},
+		{
+			name:      "before second mutation",
+			failProof: 2,
+			want:      []string{"mask named.service"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+				"named.service": {
+					loadState: "loaded", unitFileState: "masked-runtime",
+					runtimeMasked: true,
+				},
+			})
+			proofErr := errors.New("mask parent drifted")
+			proofs := 0
+			guard := bindPackageInstallGuard{
+				systemctl: "/usr/bin/systemctl",
+				ops: bindInstallGuardOps{
+					verifyMaskParent: func() error {
+						proofs++
+						if proofs == test.failProof {
+							return proofErr
+						}
+						return nil
+					},
+					runSystemd: systemd.run,
+				},
+			}
+			err := guard.ensurePersistentMasked(
+				context.Background(), "named.service",
+			)
+			if !errors.Is(err, proofErr) ||
+				!reflect.DeepEqual(systemd.commands, test.want) {
+				t.Fatalf(
+					"proofs=%d commands=%v err=%v, want commands=%v",
+					proofs, systemd.commands, err, test.want,
+				)
+			}
+		})
+	}
+}
+
+func TestBINDPackageInstallReprovesMaskParentBeforePostInstallMutations(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		installErr error
+	}{
+		{name: "successful package transaction"},
+		{name: "failed package transaction", installErr: errors.New("apt failed")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			systemd := newFakeBINDInstallSystemd(map[string]*fakeBINDInstallUnit{
+				"bind9.service": {loadState: "not-found"},
+				"named.service": {loadState: "not-found"},
+			})
+			recoveries := 0
+			proofs := 0
+			proofsAfterInstall := -1
+			installReturned := false
+			commandsAfterInstall := -1
+			proofErr := errors.New("mask parent changed during package transaction")
+			ops := fakeBINDInstallGuardOps(systemd, &recoveries)
+			ops.verifyMaskParent = func() error {
+				proofs++
+				if installReturned {
+					return proofErr
+				}
+				return nil
+			}
+			_, err := installBINDPackagesWithGuardOps(
+				context.Background(), "/usr/bin/systemctl",
+				func() (string, error) {
+					commandsAfterInstall = len(systemd.commands)
+					proofsAfterInstall = proofs
+					installReturned = true
+					return "package output", test.installErr
+				},
+				ops,
+			)
+			if !errors.Is(err, proofErr) {
+				t.Fatalf("post-package proof error=%v", err)
+			}
+			if test.installErr != nil && !errors.Is(err, test.installErr) {
+				t.Fatalf("package failure was lost: %v", err)
+			}
+			if proofsAfterInstall < 0 || proofs != proofsAfterInstall+1 {
+				t.Fatalf(
+					"mask-parent proofs before/after install=%d/%d, want one post-install reproof",
+					proofsAfterInstall, proofs,
+				)
+			}
+			if commandsAfterInstall < 0 || len(systemd.commands) != commandsAfterInstall {
+				t.Fatalf(
+					"systemd mutated after failed proof: before=%d commands=%v",
+					commandsAfterInstall, systemd.commands,
+				)
+			}
+		})
+	}
+}
+
+func TestBINDMaskParentPreflightPrecedesNewSwitchMutations(t *testing.T) {
+	raw, err := os.ReadFile("dns_engine_host.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	start := strings.Index(source, "func (hostDNSEngineBackend) Switch(")
+	if start < 0 {
+		t.Fatal("BIND host switch source boundary is missing")
+	}
+	end := strings.Index(source[start:], "func bindConfigMutationSnapshots(")
+	if end < 0 {
+		t.Fatal("BIND host switch end boundary is missing")
+	}
+	body := source[start : start+end]
+	newSwitchStart := strings.Index(body, "if err := verifyDNSEngineSwitchSource(")
+	if newSwitchStart < 0 {
+		t.Fatal("new BIND switch source boundary is missing")
+	}
+	body = body[newSwitchStart:]
+	preflight := strings.Index(body, "verifyBINDMaskParentMetadata()")
+	if preflight < 0 {
+		t.Fatal("BIND mask-parent preflight is missing")
+	}
+	for _, mutation := range []string{
+		"publishDNSEngineSourceOwnership(",
+		"handoffExistingDNSEngineInstallOwnership(",
+		"newDNSEngineInstallOwnership(",
+		"runVerifiedBINDTargetInstall(",
+		"runBINDPostInstallContinuation(",
+		"prepareBINDConfigMutation(",
+	} {
+		position := strings.Index(body, mutation)
+		if position < 0 || preflight >= position {
+			t.Errorf("preflight=%d mutation %q=%d; want preflight first",
+				preflight, mutation, position)
+		}
+	}
+}
+
+func TestBINDRecoveryMaskParentProofWrapsConfigAndSystemdMutations(t *testing.T) {
+	raw, err := os.ReadFile("dns_engine_recovery.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	start := strings.Index(source, "func rollbackDNSSwitchJournal(")
+	if start < 0 {
+		t.Fatal("BIND journal rollback source boundary is missing")
+	}
+	end := strings.Index(source[start:], "func verifyNoManagedDNSAuthority(")
+	if end < 0 {
+		t.Fatal("BIND journal rollback end boundary is missing")
+	}
+	body := source[start : start+end]
+	proof := strings.Index(body, "runDNSSwitchRollbackWithMaskParentProof(")
+	if proof < 0 || !strings.Contains(
+		body[proof:], "journal, verifyBINDMaskParentMetadata, rollback",
+	) {
+		t.Fatalf("recovery proof wrapper is not bound to the exact verifier")
+	}
+	for _, mutation := range []string{
+		"publisher.RestorePointer(",
+		"rollbackBINDActivation(",
+	} {
+		position := strings.Index(body, mutation)
+		if position < 0 {
+			t.Errorf(
+				"recovery mutation %q is missing from the proof-wrapped rollback",
+				mutation,
+			)
+		}
 	}
 }
 

@@ -59,6 +59,18 @@ function readySnapshot(overrides = {}) {
   };
 }
 
+function operationSnapshot(overrides = {}) {
+  return {
+    id: 'c'.repeat(32),
+    target_engine: 'bind',
+    phase: 'activating',
+    status: 'running',
+    started_at: '2026-08-26T09:00:00Z',
+    updated_at: '2026-08-26T09:00:05Z',
+    ...overrides,
+  };
+}
+
 function stagedPairSnapshot(overrides = {}) {
   return {
     revision: 1,
@@ -85,10 +97,10 @@ test('DNS engine state decoder fails closed on malformed or contradictory state'
   assert.match(contract, /new Set\(engines\.map\(\(entry\) => entry\.id\)\)\.size !== DNS_ENGINE_IDS\.length/);
   assert.match(contract, /value\.pending_zone_count > value\.zone_count/);
   assert.match(contract, /impacts === null \|\| impacts\.length === 0/);
-  assert.match(contract, /value\.state === 'switching' && typeof value\.operation_id !== 'string'/);
+  assert.match(contract, /value\.state === 'switching'[\s\S]*typeof value\.operation_id !== 'string'/);
   assert.match(contract, /return null;/);
   assert.match(card, /const decoded = decodeDNSEngineSnapshot\(payload\)/);
-  assert.match(card, /if \(decoded === null\)[\s\S]*onSnapshotChange\?\.\(null\)/);
+  assert.match(card, /if \(decoded === null\) \{[\s\S]*failRefresh\(et\('dnsEngine\.stateInvalid'\)\)/);
 });
 
 test('hidden and initial DNS state load is read-only; explicit Refresh reconciles before GET', () => {
@@ -104,17 +116,19 @@ test('hidden and initial DNS state load is read-only; explicit Refresh reconcile
 
   const reconcileBody = card.slice(reconcileStart, effectStart);
   const post = reconcileBody.indexOf("fetch('/api/v1/dns/engine/reconcile'");
-  const get = reconcileBody.indexOf('await refresh()');
+  const get = reconcileBody.indexOf('await refresh(automaticTracking)');
   assert.ok(post >= 0 && get > post,
     'Refresh must attempt reconciliation before reading a fresh snapshot');
+  assert.match(loadBody, /const refresh = useCallback\(async \(automaticTracking = false\)/);
+  assert.match(reconcileBody, /const reconcileAndRefresh = useCallback\(async \(automaticTracking = false\)/);
   assert.match(reconcileBody, /method: 'POST'/);
   assert.match(reconcileBody, /if \(!response\.ok\)[\s\S]*await readApiError\(response\)/);
-  assert.match(reconcileBody, /catch \{[\s\S]*\}[\s\S]*await refresh\(\)/,
+  assert.match(reconcileBody, /catch \{[\s\S]*\}[\s\S]*await refresh\(automaticTracking\)/,
     'a failed POST must still render the fail-closed GET truth');
   assert.match(reconcileBody,
     /setReview\(null\)[\s\S]*fetch\('\/api\/v1\/dns\/engine\/reconcile'/,
     'Refresh must discard stale review authority before reconciliation');
-  assert.equal((reconcileBody.match(/await refresh\(\)/g) ?? []).length, 1,
+  assert.equal((reconcileBody.match(/await refresh\(automaticTracking\)/g) ?? []).length, 1,
     'an explicit Refresh must perform exactly one snapshot GET after the POST');
 
   const initialEffect = card.slice(effectStart, card.indexOf('useEffect(() => {', effectStart + 1));
@@ -124,6 +138,128 @@ test('hidden and initial DNS state load is read-only; explicit Refresh reconcile
     /id="settings-dns-panel"[\s\S]*hidden=\{activeID !== 'dns'\}[\s\S]*<DNSServerSettings \/>/,
     'the DNS card remains mounted while hidden, so its mount effect must stay GET-only');
   assert.match(card, /onClick=\{\(\) => void reconcileAndRefresh\(\)\}/);
+});
+
+test('automatic poll read failures retain the last verified switching lock while authoritative reads fail closed', () => {
+  const loadStart = card.indexOf('const refresh = useCallback');
+  const loadEnd = card.indexOf('const reconcileAndRefresh = useCallback', loadStart);
+  assert.ok(loadStart >= 0 && loadEnd > loadStart);
+  const loadBody = card.slice(loadStart, loadEnd);
+  const helperStart = loadBody.indexOf('const failRefresh =');
+  const helperEnd = loadBody.indexOf('\n        try {', helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart);
+  const failRefresh = loadBody.slice(helperStart, helperEnd);
+
+  assert.match(failRefresh,
+    /if \(automaticTracking\) \{[\s\S]*setTrackingReadError\(et\('dnsEngine\.operation\.trackingReadFailed'\)\)[\s\S]*return;[\s\S]*\}[\s\S]*setSnapshot\(null\)[\s\S]*onSnapshotChange\?\.\(null\)[\s\S]*setLoadError\(message\)/,
+    'only an automatic poll may retain the last verified snapshot after a failed read');
+  assert.equal((loadBody.match(/failRefresh\(et\('dnsEngine\.stateUnavailable'\)\)/g) ?? []).length, 2,
+    'non-2xx/network failures must share the automatic-retention boundary');
+  assert.equal((loadBody.match(/failRefresh\(et\('dnsEngine\.stateInvalid'\)\)/g) ?? []).length, 1,
+    'malformed JSON must share the automatic-retention boundary');
+  assert.match(loadBody,
+    /if \(automaticTracking\) setTrackingReadError\(''\);[\s\S]*setSnapshot\(decoded\)[\s\S]*onSnapshotChange\?\.\(decoded\)/,
+    'a later valid poll replaces the retained snapshot and clears its read warning');
+  assert.match(loadBody, /if \(!automaticTracking\) setTrackingReadError\(''\)/,
+    'mount and manual authoritative reads start from a clean tracking-read warning');
+	assert.match(loadBody,
+		/new AbortController\(\)[\s\S]*setTimeout\([\s\S]*requestController\.abort\(\)[\s\S]*dnsEngineStatusRequestTimeoutMs[\s\S]*signal: requestController\.signal[\s\S]*finally \{[\s\S]*clearTimeout\(requestTimeout\)/,
+		'a hung snapshot request must abort and settle instead of freezing automatic tracking');
+  assert.match(copy, /dnsEngine\.operation\.trackingReadFailed/);
+});
+
+test('a loaded switching snapshot resumes continuous polling and periodic reconciliation', () => {
+  const pollingStart = card.indexOf(`if (snapshot?.state !== 'switching' || !snapshot.operation_id)`);
+  const pollingEnd = card.indexOf('\n    useEffect(() => {', pollingStart);
+  assert.ok(pollingStart >= 0 && pollingEnd > pollingStart);
+  const polling = card.slice(pollingStart, pollingEnd);
+  assert.match(polling, /let attempts = 0/);
+  assert.match(polling, /attempts \+= 1/);
+  assert.match(polling, /if \(attempts % 5 === 0\)[\s\S]*await reconcileAndRefresh\(true\)[\s\S]*else[\s\S]*await refresh\(true\)/);
+  const awaitedRead = polling.indexOf('await refresh(true)');
+  const cancellationCheck = polling.indexOf('if (cancelled) return;', awaitedRead);
+  const nextPoll = polling.indexOf('timer = setTimeout(() => void poll(), nextDelay)', cancellationCheck);
+  assert.ok(awaitedRead >= 0 && cancellationCheck > awaitedRead && nextPoll > cancellationCheck,
+    'the next automatic poll is scheduled only after the current read settles');
+	assert.match(polling,
+		/try \{[\s\S]*await reconcileAndRefresh\(true\)[\s\S]*await refresh\(true\)[\s\S]*\} finally \{[\s\S]*if \(cancelled\) return;[\s\S]*timer = setTimeout\(\(\) => void poll\(\), nextDelay\)/,
+		'tracking must schedule its next bounded request from finally');
+  assert.doesNotMatch(polling, /setInterval/);
+  assert.match(polling, /timer = setTimeout\(\(\) => void poll\(\), 3000\)/,
+    'resumed tracking starts with a three-second poll');
+  assert.match(polling,
+    /if \(attempts >= 120\) setTrackingDelayed\(true\)[\s\S]*const nextDelay = attempts >= 120 \? 15000 : 3000[\s\S]*setTimeout\(\(\) => void poll\(\), nextDelay\)/,
+    'tracking must continue at a slower cadence after warning that the operation is delayed');
+  assert.doesNotMatch(polling,
+    /if \(attempts >= 120\)[^\n]*[\s\S]{0,80}return/,
+    'the delayed warning must not end polling while the server remains switching');
+  assert.match(polling, /cancelled = true[\s\S]*clearTimeout\(timer\)/);
+  assert.match(polling, /\[reconcileAndRefresh, refresh, snapshot\?\.operation_id, snapshot\?\.state\]/);
+  assert.doesNotMatch(polling, /review\?\.committing|switchAccepted/);
+});
+
+test('reconciliation failures remain visible until reconciliation succeeds or terminal truth arrives', () => {
+  const reconcileStart = card.indexOf('const reconcileAndRefresh = useCallback');
+  const effectStart = card.indexOf('useEffect(() => {', reconcileStart);
+  assert.ok(reconcileStart >= 0 && effectStart > reconcileStart);
+  const reconcileBody = card.slice(reconcileStart, effectStart);
+  assert.match(reconcileBody,
+    /if \(!response\.ok\) \{[\s\S]*setTrackingError\([\s\S]*dnsEngine\.trackingReconcileFailed[\s\S]*\} else \{[\s\S]*setTrackingError\(''\)/);
+  assert.match(reconcileBody, /catch \{[\s\S]*setTrackingError\(et\('dnsEngine\.trackingReconcileFailed'\)\)/);
+	assert.match(reconcileBody,
+		/new AbortController\(\)[\s\S]*setTimeout\([\s\S]*requestController\.abort\(\)[\s\S]*dnsEngineStatusRequestTimeoutMs[\s\S]*signal: requestController\.signal[\s\S]*finally \{[\s\S]*clearTimeout\(requestTimeout\)/,
+		'a hung reconciliation request must abort before the authoritative GET');
+  assert.match(reconcileBody, /await refresh\(automaticTracking\)/);
+
+  const loadStart = card.indexOf('const refresh = useCallback');
+  const loadBody = card.slice(loadStart, reconcileStart);
+  assert.doesNotMatch(loadBody, /setTrackingError/,
+    'a successful snapshot read must not erase a reconciliation failure before a successful reconciliation');
+  assert.match(card, /trackingError=\{trackingError \|\| trackingReadError\}/);
+
+  const pollingStart = card.indexOf("if (snapshot?.state !== 'switching' || !snapshot.operation_id)");
+  const pollingEnd = card.indexOf('\n    useEffect(() => {', pollingStart);
+  const polling = card.slice(pollingStart, pollingEnd);
+  assert.match(polling,
+    /if \(snapshot\?\.state !== 'switching' \|\| !snapshot\.operation_id\) \{[\s\S]*setTrackingDelayed\(false\)[\s\S]*setTrackingError\(''\)[\s\S]*setTrackingReadError\(''\)[\s\S]*return;/,
+    'verified terminal state clears every active-tracking warning and cancels its timer');
+});
+
+test('operation progress card presents durable active and terminal evidence', () => {
+  assert.match(card,
+    /\{snapshot\.operation && \([\s\S]*<DNSEngineOperationProgress[\s\S]*operation=\{snapshot\.operation\}/);
+  const progressStart = card.indexOf('function DNSEngineOperationProgress');
+  const progressEnd = card.indexOf('\nfunction DNSEngineReviewDialog', progressStart);
+  assert.ok(progressStart >= 0 && progressEnd > progressStart);
+  const progress = card.slice(progressStart, progressEnd);
+
+  assert.match(progress, /data-testid=\x22dns-engine-operation-progress\x22/);
+  assert.match(progress, /role=\x22status\x22/);
+  assert.match(progress, /aria-live=\x22polite\x22/);
+  assert.match(progress, /\['running', 'rolling_back', 'recovery_required'\]\.includes\(operation\.status\)/);
+  assert.match(card,
+    /function operationElapsedSeconds[\s\S]*\['running', 'rolling_back', 'recovery_required'\]\.includes\(operation\.status\)[\s\S]*\? Date\.now\(\)[\s\S]*: Date\.parse\(operation\.updated_at\)/,
+    'elapsed time must stop at the durable terminal update');
+  assert.match(progress, /dnsEngine\.operation\.status\.\$\{operation\.status\}/);
+  assert.match(progress, /dnsEngine\.operation\.phase\.\$\{operation\.phase\}/);
+  assert.match(progress, /engineName\(operation\.target_engine\)/);
+  assert.match(progress, /operationTimestamp\(operation\.updated_at, locale\)/);
+  assert.match(progress, /\{operation\.id\}/);
+  assert.match(progress, /operation\.last_error && \([\s\S]*role=\x22alert\x22/);
+  assert.match(progress, /trackingError && active/);
+  assert.match(progress, /trackingDelayed && active/);
+
+  for (const status of ['running', 'rolling_back', 'recovery_required', 'succeeded', 'rolled_back', 'failed']) {
+    assert.match(copy, new RegExp(`dnsEngine\\.operation\\.status\\.${status}`));
+  }
+  for (const phase of [
+    'planned', 'staging', 'staged', 'activating', 'verifying',
+    'rolling_back', 'committed', 'rolled_back', 'failed',
+  ]) {
+    assert.match(copy, new RegExp(`dnsEngine\\.operation\\.phase\\.${phase}`));
+  }
+  assert.match(copy, /dnsEngine\.operation\.trackingDelayed/);
+  assert.match(copy, /dnsEngine\.trackingReconcileFailed/);
 });
 
 test('only source-free BIND installed standby is labelled as an installation retry', () => {
@@ -192,6 +328,65 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
       { id: 'bind', installed: false, running: false, managed: true, status: 'available' },
     ],
   })), null);
+});
+
+test('DNS engine operation decoder accepts exact active and terminal phase tuples only', async () => {
+  const { decodeDNSEngineSnapshot } = await loadContractRuntime();
+  const activeOperation = operationSnapshot();
+  const switching = readySnapshot({
+    state: 'switching',
+    operation_id: activeOperation.id,
+    operation: activeOperation,
+  });
+
+  assert.deepEqual(decodeDNSEngineSnapshot(switching)?.operation, activeOperation);
+  assert.equal(decodeDNSEngineSnapshot({
+    ...switching,
+    operation_id: 'd'.repeat(32),
+  }), null, 'the switching lock and presented operation must identify the same mutation');
+  assert.equal(decodeDNSEngineSnapshot({
+    ...switching,
+    operation: operationSnapshot({ phase: 'committed', status: 'running' }),
+  }), null, 'phase and status cannot contradict one another');
+  assert.equal(decodeDNSEngineSnapshot({
+    ...switching,
+    operation: operationSnapshot({ updated_at: '2026-08-26T08:59:59Z' }),
+  }), null, 'operation time cannot move backwards');
+  assert.equal(decodeDNSEngineSnapshot({
+    ...switching,
+    operation: operationSnapshot({ last_error: 'untrusted running error' }),
+  }), null, 'a forward-running phase cannot carry terminal error text');
+
+  const recoveryOperation = operationSnapshot({
+    status: 'recovery_required',
+    last_error: 'host outcome requires panel reconciliation',
+  });
+  assert.deepEqual(decodeDNSEngineSnapshot({
+    ...switching,
+    operation: recoveryOperation,
+  })?.operation, recoveryOperation,
+    'an attached interrupted phase remains locked and visible for recovery');
+  assert.equal(decodeDNSEngineSnapshot({
+    ...switching,
+    operation: operationSnapshot({ status: 'recovery_required' }),
+  }), null, 'recovery-required state must explain why verification cannot finish');
+
+  const completedOperation = operationSnapshot({
+    phase: 'committed',
+    status: 'succeeded',
+    updated_at: '2026-08-26T09:01:00Z',
+  });
+  assert.deepEqual(decodeDNSEngineSnapshot(readySnapshot({
+    operation: completedOperation,
+  }))?.operation, completedOperation,
+    'the latest terminal operation remains present after the switching lock is released');
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+    operation_id: completedOperation.id,
+    operation: completedOperation,
+  })), null, 'terminal history cannot retain the active operation lock');
+  assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+    operation: operationSnapshot(),
+  })), null, 'non-switching snapshots cannot present an active operation');
 });
 
 test('DNS engine decoder accepts only exact staged paired authority tuples', async () => {

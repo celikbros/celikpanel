@@ -4,6 +4,10 @@ package main
 
 import "errors"
 
+func verifyBINDMaskParentMetadata() error {
+	return errors.New("exact BIND mask parent proof requires Linux")
+}
+
 func verifyBINDPersistentMaskFiles() error {
 	return errors.New("exact persistent BIND mask proof requires Linux")
 }

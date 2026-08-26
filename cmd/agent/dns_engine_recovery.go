@@ -321,6 +321,58 @@ func restoreBINDPointerAfterConfigProof(
 	return restorePointer()
 }
 
+func runBINDMutationWithMaskParentProof(
+	verifyMaskParent func() error,
+	mutate func() error,
+) error {
+	if verifyMaskParent == nil || mutate == nil {
+		return errors.New("invalid BIND mutation proof operations")
+	}
+	if err := verifyMaskParent(); err != nil {
+		return fmt.Errorf(
+			"verify BIND mask parent before mutation: %w", err,
+		)
+	}
+	return mutate()
+}
+
+func runDNSMutationWithSystemdParentProof(
+	verifySystemdParent func() error,
+	mutate func() error,
+) error {
+	if verifySystemdParent == nil || mutate == nil {
+		return errors.New("invalid DNS systemd parent proof operations")
+	}
+	if err := verifySystemdParent(); err != nil {
+		return fmt.Errorf(
+			"verify DNS systemd parent before mutation: %w", err,
+		)
+	}
+	return mutate()
+}
+
+func runDNSSwitchRollbackWithMaskParentProof(
+	journal dnsEngineSwitchJournal,
+	verifyMaskParent func() error,
+	rollback func() error,
+) error {
+	if rollback == nil {
+		return errors.New("invalid DNS switch rollback operation")
+	}
+	if journal.TargetEngine == transport.DNSEngineBIND ||
+		journal.SourceEngine == transport.DNSEngineBIND {
+		return runBINDMutationWithMaskParentProof(
+			verifyMaskParent, rollback,
+		)
+	}
+	if journal.Mode == transport.DNSEngineSwitchModeSwitch {
+		return runDNSMutationWithSystemdParentProof(
+			verifyMaskParent, rollback,
+		)
+	}
+	return rollback()
+}
+
 func rollbackDNSSwitchJournal(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
@@ -337,58 +389,69 @@ func rollbackDNSSwitchJournal(
 	if err != nil {
 		return err
 	}
-	switch journal.TargetEngine {
-	case transport.DNSEngineBIND:
-		layout, err := bindLayout(profile)
-		if err != nil {
-			return err
+	rollback := func() error {
+		switch journal.TargetEngine {
+		case transport.DNSEngineBIND:
+			layout, err := bindLayout(profile)
+			if err != nil {
+				return err
+			}
+			publisher, _, err := newHostBINDPublisher(ctx, layout)
+			if err != nil {
+				return err
+			}
+			transferPeer := ""
+			if manifest.Topology == transport.DNSTopologyPaired &&
+				manifest.PairRole == transport.DNSPairRoleSecondary {
+				transferPeer = manifest.PeerIP
+			}
+			configs, err := bindConfigMutationFromJournal(
+				layout, transferPeer, journal,
+			)
+			if err != nil {
+				return err
+			}
+			if err := restoreBINDPointerAfterConfigProof(
+				func() error {
+					_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
+					return proofErr
+				},
+				func() error {
+					return runBINDMutationWithMaskParentProof(
+						verifyBINDMaskParentMetadata,
+						func() error {
+							return publisher.RestorePointer(
+								journal.TargetGeneration, journal.PreviousGeneration,
+								journal.HadPrevious,
+							)
+						},
+					)
+				},
+			); err != nil {
+				return err
+			}
+			return rollbackBINDActivation(
+				ctx, systemctl, configs, journal.StateBefore,
+				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
+				dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
+			)
+		case transport.DNSEnginePowerDNS:
+			if journal.Mode == transport.DNSEngineSwitchModeAdopt {
+				return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
+			}
+			configs, err := pdnsConfigMutationFromJournal(ctx, manifest, journal)
+			if err != nil {
+				return err
+			}
+			return rollbackPDNSSwitch(ctx, systemctl, journal, configs)
+		default:
+			return errors.New("DNS engine rollback target is unsupported")
 		}
-		publisher, _, err := newHostBINDPublisher(ctx, layout)
-		if err != nil {
-			return err
-		}
-		transferPeer := ""
-		if manifest.Topology == transport.DNSTopologyPaired &&
-			manifest.PairRole == transport.DNSPairRoleSecondary {
-			transferPeer = manifest.PeerIP
-		}
-		configs, err := bindConfigMutationFromJournal(layout, transferPeer, journal)
-		if err != nil {
-			return err
-		}
-		if err := restoreBINDPointerAfterConfigProof(
-			func() error {
-				_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
-				return proofErr
-			},
-			func() error {
-				return publisher.RestorePointer(
-					journal.TargetGeneration, journal.PreviousGeneration, journal.HadPrevious,
-				)
-			},
-		); err != nil {
-			return err
-		}
-		if err := rollbackBINDActivation(
-			ctx, systemctl, configs, journal.StateBefore,
-			dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
-			dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
-		); err != nil {
-			return err
-		}
-	case transport.DNSEnginePowerDNS:
-		if journal.Mode == transport.DNSEngineSwitchModeAdopt {
-			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
-		}
-		configs, err := pdnsConfigMutationFromJournal(ctx, manifest, journal)
-		if err != nil {
-			return err
-		}
-		if err := rollbackPDNSSwitch(ctx, systemctl, journal, configs); err != nil {
-			return err
-		}
-	default:
-		return errors.New("DNS engine rollback target is unsupported")
+	}
+	if err := runDNSSwitchRollbackWithMaskParentProof(
+		journal, verifyBINDMaskParentMetadata, rollback,
+	); err != nil {
+		return err
 	}
 	return verifyRestoredDNSSwitchSource(
 		ctx, profile, systemctl, manifest, journal,

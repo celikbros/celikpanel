@@ -86,19 +86,30 @@ type dnsEngineEntry struct {
 	DetailCode string              `json:"detail_code,omitempty"`
 }
 
+type dnsEngineOperationSnapshot struct {
+	ID           string              `json:"id"`
+	TargetEngine transport.DNSEngine `json:"target_engine"`
+	Phase        string              `json:"phase"`
+	Status       string              `json:"status"`
+	StartedAt    string              `json:"started_at"`
+	UpdatedAt    string              `json:"updated_at"`
+	LastError    string              `json:"last_error,omitempty"`
+}
+
 type dnsEngineSnapshot struct {
-	Revision         int64                `json:"revision"`
-	EngineEpoch      int64                `json:"engine_epoch"`
-	ActiveEngine     *transport.DNSEngine `json:"active_engine"`
-	State            string               `json:"state"`
-	Topology         string               `json:"topology"`
-	PairRole         string               `json:"pair_role,omitempty"`
-	PairReady        *bool                `json:"pair_ready,omitempty"`
-	DNSSECZoneCount  int                  `json:"dnssec_zone_count"`
-	ZoneCount        int                  `json:"zone_count"`
-	PendingZoneCount int                  `json:"pending_zone_count"`
-	OperationID      string               `json:"operation_id,omitempty"`
-	Engines          []dnsEngineEntry     `json:"engines"`
+	Revision         int64                       `json:"revision"`
+	EngineEpoch      int64                       `json:"engine_epoch"`
+	ActiveEngine     *transport.DNSEngine        `json:"active_engine"`
+	State            string                      `json:"state"`
+	Topology         string                      `json:"topology"`
+	PairRole         string                      `json:"pair_role,omitempty"`
+	PairReady        *bool                       `json:"pair_ready,omitempty"`
+	DNSSECZoneCount  int                         `json:"dnssec_zone_count"`
+	ZoneCount        int                         `json:"zone_count"`
+	PendingZoneCount int                         `json:"pending_zone_count"`
+	OperationID      string                      `json:"operation_id,omitempty"`
+	Operation        *dnsEngineOperationSnapshot `json:"operation,omitempty"`
+	Engines          []dnsEngineEntry            `json:"engines"`
 	runtime          map[transport.DNSEngine]transport.DNSBackendRuntimeState
 	port53Conflict   bool
 	runtimeErr       error
@@ -479,9 +490,9 @@ func deriveDNSEnginePresentation(
 // engine UI and lifecycle gates. It never infers durable authority from a
 // running process: active_engine comes only from dns_engine_state.
 func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error) {
-	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	state, operation, err := p.readDNSEngineStateAndOperation(ctx)
 	if err != nil {
-		return dnsEngineSnapshot{}, fmt.Errorf("read DNS engine identity: %w", err)
+		return dnsEngineSnapshot{}, err
 	}
 	zoneCount, pendingCount, zones, err := p.dnsEngineZoneCounts(ctx)
 	if err != nil {
@@ -517,6 +528,18 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		ready := runtimes[state.ActiveEngine].PairReady
 		pairReady = &ready
 	}
+	if operation != nil && state.CurrentSwitchID != "" {
+		p.enrichAttachedDNSEngineOperation(ctx, operation, state.CurrentSwitchID)
+	}
+	current, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil {
+		return dnsEngineSnapshot{}, fmt.Errorf("recheck DNS engine identity: %w", err)
+	}
+	if current != state {
+		return dnsEngineSnapshot{}, errors.New(
+			"DNS engine state changed while its snapshot was being prepared",
+		)
+	}
 	return dnsEngineSnapshot{
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
@@ -524,11 +547,36 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		PairReady:       pairReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
-		Engines: entries, runtime: runtimes, port53Conflict: port53Conflict,
+		Operation: operation,
+		Engines:   entries, runtime: runtimes, port53Conflict: port53Conflict,
 		runtimeErr:      runtimeErr,
 		dnssecErr:       dnssecErr,
 		pairIdentityErr: pairIdentityErr,
 	}, nil
+}
+
+func (p *Panel) readDNSEngineStateAndOperation(
+	ctx context.Context,
+) (dnsEngineDBState, *dnsEngineOperationSnapshot, error) {
+	tx, err := p.db.GetDB().BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return dnsEngineDBState{}, nil, err
+	}
+	defer tx.Rollback()
+	state, err := readDNSEngineDBState(ctx, tx)
+	if err != nil {
+		return dnsEngineDBState{}, nil, fmt.Errorf("read DNS engine identity: %w", err)
+	}
+	operation, err := readPresentedDNSEngineOperation(
+		ctx, tx, state.CurrentSwitchID,
+	)
+	if err != nil {
+		return dnsEngineDBState{}, nil, fmt.Errorf("read DNS engine operation: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return dnsEngineDBState{}, nil, err
+	}
+	return state, operation, nil
 }
 
 type dnsPublisherIdentity struct {
@@ -1420,6 +1468,139 @@ func (p *Panel) reconcileFailedDNSEngineSwitchLocked(
 	return persisted, true, nil
 }
 
+// reconcileDNSEngineSwitchLocked observes the durable agent receipt without
+// waiting for an active package operation. It finalizes a proven successful
+// mutation immediately and otherwise delegates terminal failure recovery to
+// the exact source-empty rollback proof.
+type dnsEngineReconcilePostCommitError struct {
+	Result     dnsEnginePostCommitResult
+	Unverified bool
+}
+
+func (err *dnsEngineReconcilePostCommitError) Error() string {
+	return "DNS engine reconciliation has pending post-commit follow-up"
+}
+
+func (p *Panel) reconcileDNSEngineSwitchLocked(
+	ctx context.Context,
+) (persistedDNSEngineSwitch, bool, error) {
+	state, err := readDNSEngineDBState(ctx, p.db.GetDB())
+	if err != nil {
+		return persistedDNSEngineSwitch{}, false, err
+	}
+	if state.CurrentSwitchID == "" {
+		marker, markerErr := readDNSEngineOperationMarker(ctx, p.db.GetDB())
+		if markerErr != nil {
+			return persistedDNSEngineSwitch{}, false, markerErr
+		}
+		var detached persistedDNSEngineSwitch
+		if marker != nil && marker.Phase == dnsEngineOperationPostCommit {
+			detached, markerErr = readDNSEngineSwitchByID(
+				ctx, p.db.GetDB(), marker.SwitchID,
+			)
+			if markerErr == nil {
+				markerErr = attachDNSEngineOperationAction(
+					ctx, p.db.GetDB(), &detached,
+				)
+			}
+			if markerErr != nil {
+				return detached, false, markerErr
+			}
+		}
+		recovered, recoverErr := p.recoverDNSEngineSwitchLocked(ctx, nil)
+		if recoverErr != nil {
+			return detached, recovered, recoverErr
+		}
+		if marker != nil && marker.Phase == dnsEngineOperationPostCommit {
+			remaining, markerErr := readDNSEngineOperationMarker(
+				ctx, p.db.GetDB(),
+			)
+			if markerErr != nil {
+				return detached, recovered, markerErr
+			}
+			if remaining != nil && remaining.Phase == dnsEngineOperationPostCommit &&
+				remaining.SwitchID == marker.SwitchID &&
+				remaining.RequestID == marker.RequestID {
+				return detached, recovered, &dnsEngineReconcilePostCommitError{
+					Unverified: true,
+				}
+			}
+		}
+		return detached, recovered, nil
+	}
+	persisted, err := readDNSEngineSwitchByID(
+		ctx, p.db.GetDB(), state.CurrentSwitchID,
+	)
+	if err != nil {
+		return persistedDNSEngineSwitch{}, false, err
+	}
+	marker, err := readDNSEngineOperationMarker(ctx, p.db.GetDB())
+	if err != nil {
+		return persisted, false, err
+	}
+	if marker == nil || marker.Phase != dnsEngineOperationAccepted ||
+		marker.SwitchID != persisted.SwitchID ||
+		marker.RequestID != persisted.RequestID {
+		return persisted, false, errors.New(
+			"active DNS engine switch has no exact accepted marker",
+		)
+	}
+	if err := attachDNSEngineOperationAction(
+		ctx, p.db.GetDB(), &persisted,
+	); err != nil {
+		return persisted, false, err
+	}
+	if _, err := p.reconstructPersistedDNSEngineManifest(ctx, persisted); err != nil {
+		return persisted, false, fmt.Errorf(
+			"verify persisted DNS engine manifest: %w", err,
+		)
+	}
+	identity := agentMutationIdentity{
+		RequestID: persisted.RequestID, OwnerID: persisted.OwnerID,
+		Kind: dnsEngineSwitchKind, Target: string(persisted.TargetEngine),
+		PackageName: persisted.Qualifier,
+	}
+	job, err := p.statusAgentMutation(ctx, persisted.RequestID)
+	if err != nil {
+		return persisted, false, fmt.Errorf(
+			"read DNS engine mutation during reconciliation: %w", err,
+		)
+	}
+	if job != nil && !identity.matches(job) {
+		return persisted, false, errAgentMutationIdentityMismatch
+	}
+	if job != nil && agentMutationActive(job.Status) {
+		return persisted, false, nil
+	}
+	if job != nil && job.Status == agentMutationSucceeded {
+		if err := validateAgentMutationSucceededReceipt(job, identity); err != nil {
+			return persisted, false, err
+		}
+		if err := p.verifyDNSEngineRuntimeTarget(
+			ctx, persisted.TargetEngine,
+		); err != nil {
+			return persisted, false, fmt.Errorf(
+				"verify reconciled DNS engine runtime: %w", err,
+			)
+		}
+		if err := p.finalizeDNSEngineSwitchSuccess(ctx, persisted); err != nil {
+			return persisted, false, fmt.Errorf(
+				"finalize reconciled DNS engine switch: %w", err,
+			)
+		}
+		result := p.reconcileDNSEnginePostCommitLocked(ctx, persisted)
+		if result.failed() {
+			log.Printf(
+				"reconciled DNS engine switch %s has pending follow-up: firewall=%v scan=%v",
+				persisted.SwitchID, result.FirewallErr, result.ScanErr,
+			)
+			return persisted, true, &dnsEngineReconcilePostCommitError{Result: result}
+		}
+		return persisted, true, nil
+	}
+	return p.reconcileFailedDNSEngineSwitchLocked(ctx)
+}
+
 func (p *Panel) handleDNSEngineReconcile(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -1434,9 +1615,10 @@ func (p *Panel) handleDNSEngineReconcile(
 		return
 	}
 	var (
-		persisted  persistedDNSEngineSwitch
-		reconciled bool
-		err        error
+		persisted     persistedDNSEngineSwitch
+		reconciled    bool
+		postCommitErr *dnsEngineReconcilePostCommitError
+		err           error
 	)
 	func() {
 		defer p.serviceMutationMu.Unlock()
@@ -1446,22 +1628,34 @@ func (p *Panel) handleDNSEngineReconcile(
 		defer dnsPublicationMu.Unlock()
 
 		actor := dnsEngineActorFromRequest(r)
-		persisted, reconciled, err = p.reconcileFailedDNSEngineSwitchLocked(
+		persisted, reconciled, err = p.reconcileDNSEngineSwitchLocked(
 			r.Context(),
 		)
-		if err != nil {
+		if errors.As(err, &postCommitErr) {
 			if persisted.SwitchID != "" {
-				p.auditDNSEngineBounded(actor, "reconciled_failed_operation.uncertain", persisted)
+				p.auditDNSEngineBounded(actor, "post_commit.pending", persisted)
+			}
+		} else if err != nil {
+			if persisted.SwitchID != "" {
+				p.auditDNSEngineBounded(actor, "reconciled_operation.uncertain", persisted)
 				log.Printf(
 					"DNS engine reconcile %s target=%s retained the attached state",
 					persisted.SwitchID, persisted.TargetEngine,
 				)
 			}
-		} else if reconciled {
-			p.auditDNSEngineBounded(actor, "reconciled_failed_operation", persisted)
+		} else if reconciled && persisted.SwitchID != "" {
+			p.auditDNSEngineBounded(actor, "reconciled_operation", persisted)
 		}
 	}()
 
+	if postCommitErr != nil {
+		if postCommitErr.Unverified {
+			writeDNSEngineChangeAppliedRefreshRequired(w)
+		} else {
+			writeDNSEnginePostCommitFailed(w, postCommitErr.Result)
+		}
+		return
+	}
 	if err != nil {
 		writeDNSEngineStateUnverified(w)
 		return
@@ -1524,6 +1718,9 @@ type persistedDNSEngineSwitch struct {
 	Qualifier      string
 	ZoneCount      int
 	SnapshotBytes  int64
+	LastError      string
+	CreatedAt      string
+	UpdatedAt      string
 }
 
 func readDNSEngineSwitchByRequest(
@@ -1532,7 +1729,7 @@ func readDNSEngineSwitchByRequest(
 	requestID string,
 ) (persistedDNSEngineSwitch, error) {
 	var result persistedDNSEngineSwitch
-	var source, pairRole, localIP, localNS, pairPeerIP, pairPeerNS sql.NullString
+	var source, lastError, pairRole, localIP, localNS, pairPeerIP, pairPeerNS sql.NullString
 	err := query.QueryRowContext(ctx, `
 		SELECT snapshot.switch_id, snapshot.request_id, snapshot.owner_id,
 		       snapshot.mode, snapshot.source_engine, snapshot.target_engine,
@@ -1540,6 +1737,7 @@ func readDNSEngineSwitchByRequest(
 		       snapshot.source_state_revision, snapshot.phase,
 		       snapshot.topology, snapshot.peer_ip, snapshot.peer_ns,
 		       snapshot.manifest_qualifier, snapshot.zone_count, snapshot.snapshot_bytes,
+		       snapshot.last_error, snapshot.created_at, snapshot.updated_at,
 		       pairing.pair_role, pairing.local_ip, pairing.local_ns,
 		       pairing.peer_ip, pairing.peer_ns
 		FROM dns_engine_switch_snapshots AS snapshot
@@ -1553,10 +1751,14 @@ func readDNSEngineSwitchByRequest(
 		&result.SourceRevision, &result.Phase, &result.Topology,
 		&result.PeerIP, &result.PeerNS, &result.Qualifier,
 		&result.ZoneCount, &result.SnapshotBytes,
+		&lastError, &result.CreatedAt, &result.UpdatedAt,
 		&pairRole, &localIP, &localNS, &pairPeerIP, &pairPeerNS,
 	)
 	if source.Valid {
 		result.SourceEngine = transport.DNSEngine(source.String)
+	}
+	if lastError.Valid {
+		result.LastError = lastError.String
 	}
 	if pairRole.Valid {
 		if !localIP.Valid || !localNS.Valid || !pairPeerIP.Valid || !pairPeerNS.Valid ||
@@ -1604,6 +1806,134 @@ func readDNSEngineSwitchByID(
 		return persistedDNSEngineSwitch{}, err
 	}
 	return readDNSEngineSwitchByRequest(ctx, query, requestID)
+}
+
+func normalizeDNSEngineOperationTime(raw string) (string, error) {
+	for _, layout := range []string{
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+	} {
+		if parsed, err := time.Parse(layout, raw); err == nil {
+			return parsed.UTC().Format(time.RFC3339), nil
+		}
+	}
+	return "", errors.New("DNS engine operation timestamp is invalid")
+}
+
+func dnsEngineOperationStatus(phase string) (string, error) {
+	switch phase {
+	case "planned", "staging", "staged", "activating", "verifying":
+		return "running", nil
+	case "rolling_back":
+		return "rolling_back", nil
+	case "committed":
+		return "succeeded", nil
+	case "rolled_back":
+		return "rolled_back", nil
+	case "failed":
+		return "failed", nil
+	default:
+		return "", errors.New("DNS engine operation phase is invalid")
+	}
+}
+
+func presentDNSEngineOperation(
+	persisted persistedDNSEngineSwitch,
+) (*dnsEngineOperationSnapshot, error) {
+	status, err := dnsEngineOperationStatus(persisted.Phase)
+	if err != nil {
+		return nil, err
+	}
+	startedAt, err := normalizeDNSEngineOperationTime(persisted.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	updatedAt, err := normalizeDNSEngineOperationTime(persisted.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &dnsEngineOperationSnapshot{
+		ID: persisted.SwitchID, TargetEngine: persisted.TargetEngine,
+		Phase: persisted.Phase, Status: status,
+		StartedAt: startedAt, UpdatedAt: updatedAt,
+		LastError: persisted.LastError,
+	}, nil
+}
+
+func readPresentedDNSEngineOperation(
+	ctx context.Context,
+	query dnsZoneStateQuery,
+	currentSwitchID string,
+) (*dnsEngineOperationSnapshot, error) {
+	var (
+		persisted persistedDNSEngineSwitch
+		err       error
+	)
+	if currentSwitchID != "" {
+		persisted, err = readDNSEngineSwitchByID(ctx, query, currentSwitchID)
+	} else {
+		var requestID string
+		err = query.QueryRowContext(ctx, `
+			SELECT request_id
+			FROM dns_engine_switch_snapshots
+			ORDER BY julianday(updated_at) DESC, rowid DESC
+			LIMIT 1`,
+		).Scan(&requestID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		if err == nil {
+			persisted, err = readDNSEngineSwitchByRequest(ctx, query, requestID)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return presentDNSEngineOperation(persisted)
+}
+
+// enrichAttachedDNSEngineOperation adds only a proven terminal agent receipt
+// to the durable panel phase. A failed host mutation can leave the panel saga
+// attached while exact rollback verification is still pending; presenting
+// that state as merely "running" would hide the reason operator attention is
+// required. Agent lookup failures do not erase the last durable panel truth.
+func (p *Panel) enrichAttachedDNSEngineOperation(
+	ctx context.Context,
+	operation *dnsEngineOperationSnapshot,
+	switchID string,
+) {
+	persisted, err := readDNSEngineSwitchByID(ctx, p.db.GetDB(), switchID)
+	if err != nil {
+		return
+	}
+	identity := agentMutationIdentity{
+		RequestID: persisted.RequestID, OwnerID: persisted.OwnerID,
+		Kind: dnsEngineSwitchKind, Target: string(persisted.TargetEngine),
+		PackageName: persisted.Qualifier,
+	}
+	job, err := p.statusAgentMutation(ctx, persisted.RequestID)
+	if err != nil || job == nil || !identity.matches(job) ||
+		job.Status != agentMutationFailed ||
+		(operation.Status != "running" && operation.Status != "rolling_back") {
+		return
+	}
+	operation.Status = "recovery_required"
+	operation.LastError = safeDNSEngineOperationReceiptMessage(job.ErrorMessage)
+}
+
+func safeDNSEngineOperationReceiptMessage(message string) string {
+	const fallback = "The privileged DNS operation failed before the panel could finalize it."
+	message = strings.TrimSpace(message)
+	if message == "" || len(message) > 512 {
+		return fallback
+	}
+	for _, character := range message {
+		if character < 0x20 || character == 0x7f {
+			return fallback
+		}
+	}
+	return message
 }
 
 func (p *Panel) persistDNSEngineSwitch(

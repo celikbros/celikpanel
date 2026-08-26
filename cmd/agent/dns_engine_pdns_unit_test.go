@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -296,6 +298,10 @@ func TestPDNSTargetActivationNeverStartsBeforeExactInactiveReproof(t *testing.T)
 		err := startPDNSTargetWithOps(
 			context.Background(),
 			pdnsTargetActivationOps{
+				verifyMaskParent: func() error {
+					commands = append(commands, "parent-proof")
+					return nil
+				},
 				verifySealed: func(context.Context) error {
 					commands = append(commands, "sealed")
 					return nil
@@ -343,8 +349,9 @@ func TestPDNSTargetActivationNeverStartsBeforeExactInactiveReproof(t *testing.T)
 		t.Fatal(err)
 	}
 	wantDisabled := []string{
-		"sealed", "unmask", "reload", "proof-disabled",
-		"enable", "reload", "proof-enabled", "start",
+		"sealed", "parent-proof", "unmask", "parent-proof", "reload",
+		"proof-disabled", "parent-proof", "enable", "parent-proof", "reload",
+		"proof-enabled", "parent-proof", "start",
 	}
 	if !reflect.DeepEqual(disabledCommands, wantDisabled) {
 		t.Fatalf("disabled activation order=%v want=%v", disabledCommands, wantDisabled)
@@ -354,7 +361,8 @@ func TestPDNSTargetActivationNeverStartsBeforeExactInactiveReproof(t *testing.T)
 		t.Fatal(err)
 	}
 	wantEnabled := []string{
-		"sealed", "unmask", "reload", "proof-enabled", "proof-enabled", "start",
+		"sealed", "parent-proof", "unmask", "parent-proof", "reload",
+		"proof-enabled", "proof-enabled", "parent-proof", "start",
 	}
 	if !reflect.DeepEqual(enabledCommands, wantEnabled) {
 		t.Fatalf("enabled activation order=%v want=%v", enabledCommands, wantEnabled)
@@ -366,6 +374,91 @@ func TestPDNSTargetActivationNeverStartsBeforeExactInactiveReproof(t *testing.T)
 		}
 		if containsExactString(commands, "start") {
 			t.Fatalf("PowerDNS started after failed proof: %v", commands)
+		}
+	}
+}
+
+func TestPDNSTargetActivationRejectsSystemdParentDriftAtEveryMutation(t *testing.T) {
+	for failProof := 1; failProof <= 5; failProof++ {
+		t.Run(fmt.Sprintf("proof-%d", failProof), func(t *testing.T) {
+			proofErr := errors.New("systemd parent drifted")
+			proofs := 0
+			var mutations []string
+			unitFileState := "disabled"
+			err := startPDNSTargetWithOps(
+				context.Background(),
+				pdnsTargetActivationOps{
+					verifyMaskParent: func() error {
+						proofs++
+						if proofs == failProof {
+							return proofErr
+						}
+						return nil
+					},
+					verifySealed: func(context.Context) error { return nil },
+					unmask: func(context.Context) error {
+						mutations = append(mutations, "unmask")
+						return nil
+					},
+					daemonReload: func(context.Context) error {
+						mutations = append(mutations, "reload")
+						return nil
+					},
+					inspectStopped: func(
+						context.Context, ...string,
+					) (pdnsInactiveTargetSnapshot, error) {
+						snapshot := canonicalPDNSInactiveTarget()
+						snapshot.state.unitFileState = unitFileState
+						return snapshot, nil
+					},
+					enable: func(context.Context) error {
+						mutations = append(mutations, "enable")
+						unitFileState = "enabled"
+						return nil
+					},
+					start: func(context.Context) error {
+						mutations = append(mutations, "start")
+						return nil
+					},
+				},
+			)
+			if !errors.Is(err, proofErr) || containsExactString(mutations, "start") {
+				t.Fatalf(
+					"proofs=%d mutations=%v err=%v; start must remain blocked",
+					proofs, mutations, err,
+				)
+			}
+		})
+	}
+}
+
+func TestPDNSSystemdParentPreflightPrecedesFreshSwitchMutations(t *testing.T) {
+	raw, err := os.ReadFile("dns_engine_pdns_switch.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(raw)
+	start := strings.Index(source, "func switchToPDNSOnCertifiedProfile(")
+	if start < 0 {
+		t.Fatal("PowerDNS switch source boundary is missing")
+	}
+	body := source[start:]
+	preflight := strings.Index(body, "verifyBINDMaskParentMetadata()")
+	if preflight < 0 {
+		t.Fatal("PowerDNS systemd-parent preflight is missing")
+	}
+	for _, mutation := range []string{
+		"publishDNSEngineSourceOwnership(",
+		"newDNSEngineInstallOwnership(",
+		"installPDNSPackagesWithGuard(",
+		"preparePDNSConfigMutation(",
+	} {
+		position := strings.Index(body, mutation)
+		if position < 0 || preflight >= position {
+			t.Errorf(
+				"preflight=%d mutation %q=%d; want preflight first",
+				preflight, mutation, position,
+			)
 		}
 	}
 }

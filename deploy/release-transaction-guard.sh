@@ -843,6 +843,154 @@ _release_txn_validate_secure_parent_directory() {
         || { _release_txn_fail "secure parent directory is group/other writable: $path"; return 1; }
 }
 
+# The systemd unit root is a host-owned identity, not release payload. A
+# rollback may replace only the fixed CelikPanel unit files below it; it must
+# never import snapshot-directory metadata onto this parent.
+release_txn_systemd_unit_root_identity() {
+    local systemd_root=$1
+    _release_txn_validate_root_directory "$systemd_root" 755 || return 1
+    stat -Lc '%d:%i' -- "$systemd_root" \
+        || { _release_txn_fail "cannot identify systemd unit root"; return 1; }
+}
+
+release_txn_verify_systemd_unit_root_identity() {
+    local systemd_root=$1 expected_identity=$2 actual_identity
+    [[ "$expected_identity" =~ ^[0-9]+:[0-9]+$ ]] \
+        || { _release_txn_fail "expected systemd unit root identity is invalid"; return 1; }
+    actual_identity=$(release_txn_systemd_unit_root_identity "$systemd_root") \
+        || return 1
+    [[ "$actual_identity" == "$expected_identity" ]] \
+        || { _release_txn_fail "systemd unit root identity changed during restore"; return 1; }
+}
+
+_release_txn_validate_celikpanel_unit_file() {
+    local path=$1 description=$2 owner group mode links canonical
+    _release_txn_validate_safe_path "$path" || return 1
+    [[ -f "$path" && ! -L "$path" ]] \
+        || { _release_txn_fail "$description is missing or unsafe: $path"; return 1; }
+    canonical=$(readlink -e -- "$path") \
+        || { _release_txn_fail "cannot resolve $description: $path"; return 1; }
+    [[ "$canonical" == "$path" ]] \
+        || { _release_txn_fail "$description path is not canonical: $path"; return 1; }
+    read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$path") \
+        || { _release_txn_fail "cannot inspect $description: $path"; return 1; }
+    [[ "$owner:$group:$mode:$links" == 0:0:644:1 ]] \
+        || { _release_txn_fail "$description metadata must be root:root mode 0644 and single-link: $path"; return 1; }
+}
+
+# Snapshot version 6 already exists in the field with a mode-0700 units
+# directory. Accept that secure legacy parent, but require the exact fixed
+# file set and exact unit-file metadata. New snapshots publish this directory
+# as 0755; its metadata is deliberately never restored to the host parent.
+release_txn_validate_celikpanel_unit_snapshot() {
+    local snapshot_units=$1 firewall_state=$2 index
+    local -a entries=() expected=()
+    _release_txn_validate_secure_parent_directory "$snapshot_units" || return 1
+    case "$firewall_state" in
+        present)
+            expected=(
+                celikpanel-agent.service
+                celikpanel-firewall-restore.service
+                celikpanel-panel.service
+            )
+            ;;
+        absent)
+            expected=(celikpanel-agent.service celikpanel-panel.service)
+            ;;
+        *)
+            _release_txn_fail "invalid firewall unit snapshot state"
+            return 1
+            ;;
+    esac
+    mapfile -d '' -t entries < <(
+        find "$snapshot_units" -mindepth 1 -maxdepth 1 -printf '%f\0' | LC_ALL=C sort -z
+    )
+    [[ ${#entries[@]} -eq ${#expected[@]} ]] \
+        || { _release_txn_fail "unit snapshot contains an unexpected number of entries"; return 1; }
+    for index in "${!expected[@]}"; do
+        [[ "${entries[$index]}" == "${expected[$index]}" ]] \
+            || { _release_txn_fail "unit snapshot contains unexpected entries"; return 1; }
+        _release_txn_validate_celikpanel_unit_file \
+            "$snapshot_units/${expected[$index]}" "snapshot systemd unit" || return 1
+    done
+}
+
+# Prove every source and existing destination before systemctl changes saved
+# enablement or the restore removes a fixed path. The same proof is repeated
+# immediately before byte replacement so a failed preflight never authorizes
+# a later mutation implicitly.
+release_txn_validate_celikpanel_unit_restore_inputs() {
+    local transaction_root=$1 inherited_fd=$2 snapshot_units=$3
+    local systemd_root=$4 firewall_state=$5 expected_root_identity=$6
+    local unit target
+    local -a all_units=(
+        celikpanel-agent.service
+        celikpanel-panel.service
+        celikpanel-firewall-restore.service
+    )
+
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
+    release_txn_verify_systemd_unit_root_identity \
+        "$systemd_root" "$expected_root_identity" || return 1
+    release_txn_validate_celikpanel_unit_snapshot \
+        "$snapshot_units" "$firewall_state" || return 1
+    for unit in "${all_units[@]}"; do
+        target=$systemd_root/$unit
+        if [[ -e "$target" || -L "$target" ]]; then
+            _release_txn_validate_celikpanel_unit_file \
+                "$target" "installed systemd unit" || return 1
+        fi
+    done
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
+    release_txn_verify_systemd_unit_root_identity \
+        "$systemd_root" "$expected_root_identity" || return 1
+}
+
+# Restore only the three names owned by CelikPanel. Existing targets and
+# snapshot sources are proven regular, canonical, single-link files before the
+# first removal. Unrelated unit files and the systemd parent are untouched.
+release_txn_restore_celikpanel_unit_files() {
+    local transaction_root=$1 inherited_fd=$2 snapshot_units=$3
+    local systemd_root=$4 firewall_state=$5 expected_root_identity=$6
+    local unit
+    local -a all_units=(
+        celikpanel-agent.service
+        celikpanel-panel.service
+        celikpanel-firewall-restore.service
+    )
+    local -a restore_units=(celikpanel-agent.service celikpanel-panel.service)
+
+    release_txn_validate_celikpanel_unit_restore_inputs \
+        "$transaction_root" "$inherited_fd" "$snapshot_units" \
+        "$systemd_root" "$firewall_state" "$expected_root_identity" || return 1
+    [[ "$firewall_state" != present ]] || restore_units+=(celikpanel-firewall-restore.service)
+
+    for unit in "${all_units[@]}"; do
+        rm -f -- "$systemd_root/$unit" \
+            || { _release_txn_fail "cannot remove fixed CelikPanel unit: $unit"; return 1; }
+    done
+    for unit in "${restore_units[@]}"; do
+        install -m 0644 -o root -g root -- \
+            "$snapshot_units/$unit" "$systemd_root/$unit" \
+            || { _release_txn_fail "cannot restore fixed CelikPanel unit: $unit"; return 1; }
+        _release_txn_validate_celikpanel_unit_file \
+            "$systemd_root/$unit" "restored systemd unit" || return 1
+        cmp -s -- "$snapshot_units/$unit" "$systemd_root/$unit" \
+            || { _release_txn_fail "restored systemd unit bytes differ: $unit"; return 1; }
+    done
+    if [[ "$firewall_state" == absent &&
+          ( -e "$systemd_root/celikpanel-firewall-restore.service" ||
+            -L "$systemd_root/celikpanel-firewall-restore.service" ) ]]; then
+        _release_txn_fail "firewall unit exists although snapshot marks it absent"
+        return 1
+    fi
+    sync -f -- "${restore_units[@]/#/$systemd_root/}" "$systemd_root" \
+        || { _release_txn_fail "restored systemd units could not be made durable"; return 1; }
+    release_txn_verify_systemd_unit_root_identity \
+        "$systemd_root" "$expected_root_identity" || return 1
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd"
+}
+
 # Some supported distributions do not create /usr/libexec until the first
 # package needs it. Create exactly one missing trusted level, but only below an
 # already canonical root-owned parent that is not group/other writable.
@@ -1012,22 +1160,13 @@ _release_txn_publish_dropin() {
 # yeniden yükle ve yöneticinin her tam drop-in yolunu bildirdiğini kanıtla.
 release_txn_install_and_verify_unit_guards() {
     local transaction_root=$1 runtime_root=$2 systemd_root=$3 helper_path=$4 inherited_fd=$5
-    local unit directory dropin loaded_dropins loaded found owner group mode permissions source
+    local unit directory dropin loaded_dropins loaded found source
     release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
     _release_txn_validate_safe_path "$runtime_root" || return 1
     _release_txn_validate_safe_path "$systemd_root" || return 1
     _release_txn_validate_safe_path "$helper_path" || return 1
-    [[ -d "$systemd_root" && ! -L "$systemd_root" ]] \
-        || { _release_txn_fail "unsafe systemd unit root: $systemd_root"; return 1; }
-    [[ "$(readlink -e -- "$systemd_root")" == "$systemd_root" ]] \
-        || { _release_txn_fail "systemd unit root path is not canonical"; return 1; }
-    read -r owner group mode < <(stat -Lc '%u %g %a' -- "$systemd_root") \
-        || { _release_txn_fail "cannot inspect systemd unit root"; return 1; }
-    [[ "$owner" == 0 && "$group" == 0 && "$mode" =~ ^[0-7]{3,4}$ ]] \
-        || { _release_txn_fail "systemd unit root must be owned by root:root"; return 1; }
-    permissions=$((8#$mode))
-    (( (permissions & 0022) == 0 )) \
-        || { _release_txn_fail "systemd unit root is group/other writable"; return 1; }
+    _release_txn_validate_root_directory "$systemd_root" 755 \
+        || { _release_txn_fail "systemd unit root must be root:root mode 0755"; return 1; }
 
     _release_txn_install_start_helper "$helper_path" || return 1
     for unit in celikpanel-agent.service celikpanel-panel.service; do
