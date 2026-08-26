@@ -18,19 +18,35 @@ _panel_tls_expected_paths() {
     fi
 }
 
+_panel_tls_safe_parent_component_metadata() {
+    local current=$1 is_leaf=$2 test_root=$3 owner=$4 group=$5 mode=$6
+    local permissions service_uid service_gid
+    [[ "$owner" =~ ^[0-9]+$ && "$group" =~ ^[0-9]+$ && "$mode" =~ ^[0-7]{3,4}$ ]] || return 1
+    permissions=$((8#$mode))
+    if [[ -z "$test_root" && "$is_leaf" == 1 && "$current" == /var/lib/celikpanel ]]; then
+        service_uid=$(id -u celikpanel) || return 1
+        service_gid=$(id -g celikpanel) || return 1
+        if [[ "$owner" == "$service_uid" && "$group" == "$service_gid" && "$mode" == 750 ]]; then
+            return 0
+        fi
+    fi
+    [[ "$owner" == 0 ]] && (( (permissions & 0022) == 0 ))
+}
+
 _panel_tls_safe_parent() {
-    local parent=$1 current metadata owner mode permissions boundary=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-/}
+    local parent=$1 current metadata owner group mode is_leaf=1
+    local test_root=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-} boundary=${CELIKPANEL_TLS_SNAPSHOT_TEST_ROOT:-/}
     [[ "$parent" == /* && -d "$parent" && ! -L "$parent" ]] || return 1
     current=$(readlink -e -- "$parent") || return 1
     [[ "$current" == "$parent" ]] || return 1
     [[ "$boundary" == / || "$parent" == "$boundary" || "$parent" == "$boundary/"* ]] || return 1
     while true; do
-        metadata=$(stat -Lc '%u %a' -- "$current") || return 1
-        read -r owner mode <<< "$metadata" || return 1
-        [[ "$owner" =~ ^[0-9]+$ && "$mode" =~ ^[0-7]{3,4}$ ]] || return 1
-        permissions=$((8#$mode))
-        [[ "$owner" == 0 ]] && (( (permissions & 0022) == 0 )) || return 1
+        metadata=$(stat -Lc '%u %g %a' -- "$current") || return 1
+        read -r owner group mode <<< "$metadata" || return 1
+        _panel_tls_safe_parent_component_metadata \
+            "$current" "$is_leaf" "$test_root" "$owner" "$group" "$mode" || return 1
         [[ "$current" == "$boundary" || "$current" == / ]] && break
+        is_leaf=0
         current=$(dirname -- "$current") || return 1
     done
 }
