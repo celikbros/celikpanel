@@ -1161,12 +1161,13 @@ func stopDNSSourceForPDNSTarget(
 }
 
 type pdnsTargetActivationOps struct {
-	verifySealed   func(context.Context) error
-	unmask         func(context.Context) error
-	daemonReload   func(context.Context) error
-	inspectStopped func(context.Context, ...string) (pdnsInactiveTargetSnapshot, error)
-	enable         func(context.Context) error
-	start          func(context.Context) error
+	verifyMaskParent func() error
+	verifySealed     func(context.Context) error
+	unmask           func(context.Context) error
+	daemonReload     func(context.Context) error
+	inspectStopped   func(context.Context, ...string) (pdnsInactiveTargetSnapshot, error)
+	enable           func(context.Context) error
+	start            func(context.Context) error
 }
 
 func startPDNSTarget(
@@ -1176,6 +1177,7 @@ func startPDNSTarget(
 ) error {
 	guard := dnsSystemdStateGuard(systemctl)
 	return startPDNSTargetWithOps(ctx, pdnsTargetActivationOps{
+		verifyMaskParent: verifyBINDMaskParentMetadata,
 		verifySealed: func(verifyCtx context.Context) error {
 			return verifyPDNSTargetSealedBeforeUnmask(
 				verifyCtx, profile, systemctl,
@@ -1238,20 +1240,32 @@ func startPDNSTargetWithOps(
 	ctx context.Context,
 	ops pdnsTargetActivationOps,
 ) error {
-	if ctx == nil || ops.verifySealed == nil ||
+	if ctx == nil || ops.verifyMaskParent == nil || ops.verifySealed == nil ||
 		ops.unmask == nil || ops.daemonReload == nil ||
 		ops.inspectStopped == nil || ops.enable == nil || ops.start == nil {
 		return errors.New("invalid PowerDNS target activation operation")
+	}
+	runMutation := func(action string, mutate func() error) error {
+		if err := ops.verifyMaskParent(); err != nil {
+			return fmt.Errorf(
+				"verify DNS systemd parent before %s: %w", action, err,
+			)
+		}
+		return mutate()
 	}
 	if err := ops.verifySealed(ctx); err != nil {
 		return fmt.Errorf(
 			"verify sealed PowerDNS vendor unit before unmask: %w", err,
 		)
 	}
-	if err := ops.unmask(ctx); err != nil {
+	if err := runMutation("unmasking PowerDNS", func() error {
+		return ops.unmask(ctx)
+	}); err != nil {
 		return fmt.Errorf("unmask PowerDNS target without starting it: %w", err)
 	}
-	if err := ops.daemonReload(ctx); err != nil {
+	if err := runMutation("reloading systemd", func() error {
+		return ops.daemonReload(ctx)
+	}); err != nil {
 		return err
 	}
 	beforeEnable, err := ops.inspectStopped(ctx, "disabled", "enabled")
@@ -1261,10 +1275,14 @@ func startPDNSTargetWithOps(
 		)
 	}
 	if beforeEnable.state.unitFileState == "disabled" {
-		if err := ops.enable(ctx); err != nil {
+		if err := runMutation("enabling PowerDNS", func() error {
+			return ops.enable(ctx)
+		}); err != nil {
 			return fmt.Errorf("enable PowerDNS without starting it: %w", err)
 		}
-		if err := ops.daemonReload(ctx); err != nil {
+		if err := runMutation("reloading systemd after enable", func() error {
+			return ops.daemonReload(ctx)
+		}); err != nil {
 			return err
 		}
 	}
@@ -1274,7 +1292,9 @@ func startPDNSTargetWithOps(
 			err,
 		)
 	}
-	return ops.start(ctx)
+	return runMutation("starting PowerDNS", func() error {
+		return ops.start(ctx)
+	})
 }
 
 func rollbackPDNSSwitch(
@@ -1296,10 +1316,15 @@ func rollbackPDNSSwitch(
 		func() error {
 			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
 				stopTarget: func(commandCtx context.Context) error {
-					_, err := runDNSSystemctl(
-						commandCtx, systemctl, "stop", "pdns.service",
+					return runDNSMutationWithSystemdParentProof(
+						verifyBINDMaskParentMetadata,
+						func() error {
+							_, err := runDNSSystemctl(
+								commandCtx, systemctl, "stop", "pdns.service",
+							)
+							return err
+						},
 					)
-					return err
 				},
 				restorePDNSDatabaseSnapshot: func() error {
 					return restorePDNSDatabase(journal)
@@ -1483,6 +1508,10 @@ func switchToPDNSOnCertifiedProfile(
 			missing = append(missing, packageName)
 		}
 	}
+	if err := verifyBINDMaskParentMetadata(); err != nil {
+		return transport.SwitchDNSEngineV1Response{},
+			fmt.Errorf("preflight DNS systemd parent: %w", err)
+	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
 	); err != nil {
@@ -1514,6 +1543,10 @@ func switchToPDNSOnCertifiedProfile(
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
+	}
+	if err := verifyBINDMaskParentMetadata(); err != nil {
+		return transport.SwitchDNSEngineV1Response{},
+			fmt.Errorf("verify DNS systemd parent after package preparation: %w", err)
 	}
 	configs, err := preparePDNSConfigMutation(ctx, manifest, managedConfig)
 	if err != nil {
@@ -1638,8 +1671,13 @@ func switchToPDNSOnCertifiedProfile(
 		rollbackErr := contextErr
 		if contextErr == nil {
 			defer cancel()
-			rollbackErr = rollbackPDNSSwitch(
-				recoveryCtx, systemctl, journal, configs,
+			rollbackErr = runDNSMutationWithSystemdParentProof(
+				verifyBINDMaskParentMetadata,
+				func() error {
+					return rollbackPDNSSwitch(
+						recoveryCtx, systemctl, journal, configs,
+					)
+				},
 			)
 			if rollbackErr == nil {
 				rollbackErr = verifyRestoredDNSSwitchSource(
@@ -1662,8 +1700,13 @@ func switchToPDNSOnCertifiedProfile(
 	if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
 		return rollback(err)
 	}
-	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
-		ctx, candidate, manifest, binding, primaryCatalogSerial,
+	if err := runDNSMutationWithSystemdParentProof(
+		verifyBINDMaskParentMetadata,
+		func() error {
+			return buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
+				ctx, candidate, manifest, binding, primaryCatalogSerial,
+			)
+		},
 	); err != nil {
 		return rollback(err)
 	}
@@ -1672,7 +1715,10 @@ func switchToPDNSOnCertifiedProfile(
 	); err != nil {
 		return rollback(err)
 	}
-	if err := configs.applyOwnerAware(ctx); err != nil {
+	if err := runDNSMutationWithSystemdParentProof(
+		verifyBINDMaskParentMetadata,
+		func() error { return configs.applyOwnerAware(ctx) },
+	); err != nil {
 		return rollback(err)
 	}
 	effective, detail, err := effectiveManagedPowerDNSConfig()
@@ -1688,14 +1734,22 @@ func switchToPDNSOnCertifiedProfile(
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return rollback(err)
 	}
-	if err := stopDNSSourceForPDNSTarget(ctx, systemctl, manifest); err != nil {
+	if err := runDNSMutationWithSystemdParentProof(
+		verifyBINDMaskParentMetadata,
+		func() error {
+			return stopDNSSourceForPDNSTarget(ctx, systemctl, manifest)
+		},
+	); err != nil {
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseSourceStopped
 	if err := writeDNSEngineSwitchJournal(journal); err != nil {
 		return rollback(err)
 	}
-	if err := activatePDNSCandidate(journal); err != nil {
+	if err := runDNSMutationWithSystemdParentProof(
+		verifyBINDMaskParentMetadata,
+		func() error { return activatePDNSCandidate(journal) },
+	); err != nil {
 		return rollback(err)
 	}
 	if err := startPDNSTarget(ctx, profile, systemctl); err != nil {

@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func testPDNSReconfigureRecoveryJournal(
@@ -283,6 +285,137 @@ func TestPDNSReconfigureRollbackRejectsIncompleteJournalEvidence(t *testing.T) {
 				t.Fatalf("incomplete evidence proof=%v err=%v", proved, err)
 			}
 		})
+	}
+}
+
+func TestBINDRecoveryMutationRejectsUnsafeMaskParentBeforeMutation(t *testing.T) {
+	proofErr := errors.New("unsafe BIND mask parent")
+	mutated := false
+	err := runBINDMutationWithMaskParentProof(
+		func() error { return proofErr },
+		func() error {
+			mutated = true
+			return nil
+		},
+	)
+	if !errors.Is(err, proofErr) || mutated {
+		t.Fatalf("recovery proof error=%v mutated=%v", err, mutated)
+	}
+}
+
+func TestBINDRecoveryMutationRunsOnlyAfterExactMaskParentProof(t *testing.T) {
+	var order []string
+	err := runBINDMutationWithMaskParentProof(
+		func() error {
+			order = append(order, "proof")
+			return nil
+		},
+		func() error {
+			order = append(order, "mutation")
+			return nil
+		},
+	)
+	if err != nil || !reflect.DeepEqual(order, []string{"proof", "mutation"}) {
+		t.Fatalf("recovery order=%v err=%v", order, err)
+	}
+}
+
+func TestDNSSwitchRollbackRequiresMaskParentProofForEitherBINDSide(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		journal dnsEngineSwitchJournal
+		proofs  int
+	}{
+		{
+			name: "BIND target",
+			journal: dnsEngineSwitchJournal{
+				TargetEngine: transport.DNSEngineBIND,
+			},
+			proofs: 1,
+		},
+		{
+			name: "BIND source",
+			journal: dnsEngineSwitchJournal{
+				SourceEngine: transport.DNSEngineBIND,
+				TargetEngine: transport.DNSEnginePowerDNS,
+			},
+			proofs: 1,
+		},
+		{
+			name: "standalone to PowerDNS switch",
+			journal: dnsEngineSwitchJournal{
+				Mode:         transport.DNSEngineSwitchModeSwitch,
+				TargetEngine: transport.DNSEnginePowerDNS,
+			},
+			proofs: 1,
+		},
+		{
+			name: "PowerDNS adoption",
+			journal: dnsEngineSwitchJournal{
+				Mode:         transport.DNSEngineSwitchModeAdopt,
+				TargetEngine: transport.DNSEnginePowerDNS,
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			proofs := 0
+			rollbacks := 0
+			err := runDNSSwitchRollbackWithMaskParentProof(
+				test.journal,
+				func() error {
+					proofs++
+					return nil
+				},
+				func() error {
+					rollbacks++
+					return nil
+				},
+			)
+			if err != nil || proofs != test.proofs || rollbacks != 1 {
+				t.Fatalf(
+					"proofs=%d rollbacks=%d err=%v, want proofs=%d rollback=1",
+					proofs, rollbacks, err, test.proofs,
+				)
+			}
+		})
+	}
+}
+
+func TestDNSSwitchRollbackRejectsUnsafeSystemdParentForStandalonePDNSSwitch(t *testing.T) {
+	proofErr := errors.New("unsafe systemd parent")
+	rolledBack := false
+	err := runDNSSwitchRollbackWithMaskParentProof(
+		dnsEngineSwitchJournal{
+			Mode:         transport.DNSEngineSwitchModeSwitch,
+			TargetEngine: transport.DNSEnginePowerDNS,
+		},
+		func() error { return proofErr },
+		func() error {
+			rolledBack = true
+			return nil
+		},
+	)
+	if !errors.Is(err, proofErr) || rolledBack {
+		t.Fatalf("error=%v rolledBack=%v", err, rolledBack)
+	}
+}
+
+func TestDNSSwitchRollbackRejectsUnsafeMaskParentForBINDSource(t *testing.T) {
+	proofErr := errors.New("unsafe mask parent")
+	rolledBack := false
+	err := runDNSSwitchRollbackWithMaskParentProof(
+		dnsEngineSwitchJournal{
+			SourceEngine: transport.DNSEngineBIND,
+			TargetEngine: transport.DNSEnginePowerDNS,
+		},
+		func() error { return proofErr },
+		func() error {
+			rolledBack = true
+			return nil
+		},
+	)
+	if !errors.Is(err, proofErr) || rolledBack {
+		t.Fatalf("error=%v rolledBack=%v", err, rolledBack)
 	}
 }
 

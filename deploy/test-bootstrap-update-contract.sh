@@ -1034,10 +1034,36 @@ require_sequence "$INSTALL" \
 require_sequence "$ROLLBACK" \
     'cp -a "$snap/bin" "$BIN_DIR"' \
     'cp -a "$snap/web" "$WEB_DIR"' \
-    'cp -a "$snap/units/." "$UNIT_DIR/"' \
+    'release_txn_restore_celikpanel_unit_files \' \
+    'release_txn_verify_systemd_unit_root_identity \' \
     'restore_celikpanel_selinux_labels' \
     'systemctl daemon-reload' \
     'install_release_transaction_guards_with_label_barrier'
+reject_literal "$ROLLBACK" 'cp -a "$snap/units/." "$UNIT_DIR/"'
+require_sequence "$UPDATE" \
+    'unit_root_snapshot_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR")' \
+    'install -d -m 0755 -o root -g root -- "$tmp_snap/units"' \
+    'install -m 0644 -o root -g root -- \' \
+    'release_txn_validate_celikpanel_unit_snapshot \' \
+    'release_txn_verify_systemd_unit_root_identity \'
+require_function_literal "$RELEASE_GUARD" release_txn_install_and_verify_unit_guards \
+    '_release_txn_validate_root_directory "$systemd_root" 755'
+require_function_sequence "$RELEASE_GUARD" release_txn_validate_celikpanel_unit_restore_inputs \
+    'release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd"' \
+    'release_txn_verify_systemd_unit_root_identity \' \
+    'release_txn_validate_celikpanel_unit_snapshot \' \
+    'for unit in "${all_units[@]}"; do' \
+    '"$target" "installed systemd unit"' \
+    'release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd"' \
+    'release_txn_verify_systemd_unit_root_identity \'
+require_function_sequence "$RELEASE_GUARD" release_txn_restore_celikpanel_unit_files \
+    'release_txn_validate_celikpanel_unit_restore_inputs \' \
+    'for unit in "${all_units[@]}"; do' \
+    'rm -f -- "$systemd_root/$unit"' \
+    'install -m 0644 -o root -g root -- \' \
+    'release_txn_verify_systemd_unit_root_identity \'
+reject_function_literal "$RELEASE_GUARD" release_txn_restore_celikpanel_unit_files \
+    'rm -rf'
 
 guard_barrier_tmp=$platform_tmp/guard-barrier
 mkdir -p "$guard_barrier_tmp"

@@ -205,6 +205,15 @@ expect_failure "helper parent with a missing grandparent was accepted" \
 [[ ! -e "$tmp/missing-grandparent" ]] \
     || fail "missing grandparent path was mutated"
 
+# The host systemd root has one exact supported identity. A private 0700 mode
+# is not merely unusual: it previously made package subprocesses unable to
+# traverse the unit hierarchy and must now fail closed.
+chmod 0700 -- "$systemd_root"
+expect_failure "mode-0700 systemd unit root was accepted" \
+    release_txn_install_and_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+chmod 0755 -- "$systemd_root"
+
 release_txn_install_and_verify_unit_guards \
     "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
 [[ "$(stat -Lc '%u %g %a' -- "$helper_parent")" == "0 0 755" ]] \
@@ -224,6 +233,70 @@ for unit in celikpanel-agent.service celikpanel-panel.service; do
 done
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "start guard blocked an ordinary start without a release marker"
+
+# A legacy v6 snapshot may have a secure 0700 units parent. Restore its exact
+# fixed files without importing that parent metadata, without replacing the
+# host directory inode, and without touching unrelated units.
+snapshot_units=$tmp/snapshot-units
+install -d -m 0700 -o root -g root -- "$snapshot_units"
+printf 'snapshot agent\n' | install -m 0644 -o root -g root /dev/stdin \
+    "$snapshot_units/celikpanel-agent.service"
+printf 'snapshot panel\n' | install -m 0644 -o root -g root /dev/stdin \
+    "$snapshot_units/celikpanel-panel.service"
+printf 'snapshot firewall\n' | install -m 0644 -o root -g root /dev/stdin \
+    "$snapshot_units/celikpanel-firewall-restore.service"
+for unit in celikpanel-agent.service celikpanel-panel.service \
+    celikpanel-firewall-restore.service
+do
+    printf 'old %s\n' "$unit" | install -m 0644 -o root -g root /dev/stdin \
+        "$systemd_root/$unit"
+done
+printf 'unrelated unit\n' | install -m 0644 -o root -g root /dev/stdin \
+    "$systemd_root/unrelated.service"
+unit_root_identity=$(release_txn_systemd_unit_root_identity "$systemd_root")
+release_txn_restore_celikpanel_unit_files \
+    "$transaction_root" "$lock_fd" "$snapshot_units" "$systemd_root" present \
+    "$unit_root_identity"
+release_txn_verify_systemd_unit_root_identity "$systemd_root" "$unit_root_identity"
+[[ "$(stat -Lc '%u %g %a' -- "$systemd_root")" == "0 0 755" ]] \
+    || fail "fixed-file restore changed systemd unit root metadata"
+for unit in celikpanel-agent.service celikpanel-panel.service \
+    celikpanel-firewall-restore.service
+do
+    cmp -s -- "$snapshot_units/$unit" "$systemd_root/$unit" \
+        || fail "fixed-file restore changed bytes for $unit"
+    [[ "$(stat -Lc '%u %g %a %h' -- "$systemd_root/$unit")" == "0 0 644 1" ]] \
+        || fail "fixed-file restore metadata mismatch for $unit"
+done
+cmp -s -- "$systemd_root/unrelated.service" <(printf 'unrelated unit\n') \
+    || fail "fixed-file restore touched an unrelated systemd unit"
+
+printf 'unexpected\n' | install -m 0644 -o root -g root /dev/stdin \
+    "$snapshot_units/unexpected.service"
+expect_failure "unit snapshot with an unexpected entry was accepted" \
+    release_txn_restore_celikpanel_unit_files \
+        "$transaction_root" "$lock_fd" "$snapshot_units" "$systemd_root" present \
+        "$unit_root_identity"
+rm -f -- "$snapshot_units/unexpected.service"
+rm -f -- "$snapshot_units/celikpanel-firewall-restore.service"
+release_txn_restore_celikpanel_unit_files \
+    "$transaction_root" "$lock_fd" "$snapshot_units" "$systemd_root" absent \
+    "$unit_root_identity"
+[[ ! -e "$systemd_root/celikpanel-firewall-restore.service" &&
+   ! -L "$systemd_root/celikpanel-firewall-restore.service" ]] \
+    || fail "absent firewall snapshot left the fixed firewall unit installed"
+cmp -s -- "$systemd_root/unrelated.service" <(printf 'unrelated unit\n') \
+    || fail "absent-firewall restore touched an unrelated systemd unit"
+
+mv -- "$snapshot_units/celikpanel-panel.service" "$tmp/panel.service.regular"
+ln -s -- "$tmp/panel.service.regular" \
+    "$snapshot_units/celikpanel-panel.service"
+expect_failure "symbolic-link snapshot unit was accepted" \
+    release_txn_restore_celikpanel_unit_files \
+        "$transaction_root" "$lock_fd" "$snapshot_units" "$systemd_root" absent \
+        "$unit_root_identity"
+rm -f -- "$snapshot_units/celikpanel-panel.service"
+mv -- "$tmp/panel.service.regular" "$snapshot_units/celikpanel-panel.service"
 
 # Root-trusted helper and drop-ins reject hard-linked existing identities.
 # Root-trusted yardımcı ve drop-in'ler hard-linkli mevcut kimlikleri reddeder.

@@ -1452,6 +1452,8 @@ case "$firewall_state" in
         die "invalid firewall unit state: $firewall_state"
         ;;
 esac
+release_txn_validate_celikpanel_unit_snapshot "$snap/units" "$firewall_state" \
+    || die "snapshot systemd unit set or metadata is unsafe"
 
 agent_state_root=$(tr -d '[:space:]' < "$snap/agent-state-root")
 [[ "$agent_state_root" == "$AGENT_STATE_DIR" ]] \
@@ -1967,13 +1969,27 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
         die "private agent state path became unsafe during rollback"
     fi
 
+    unit_root_restore_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR") \
+        || die "systemd unit root must be root:root mode 0755 before rollback restore"
+    release_txn_validate_celikpanel_unit_restore_inputs \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        "$snap/units" "$UNIT_DIR" "$firewall_state" "$unit_root_restore_identity" \
+        || die "fixed CelikPanel systemd unit restore inputs are unsafe"
     for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
         systemctl disable "$unit" >/dev/null 2>&1 || true
-        rm -f -- "$UNIT_DIR/$unit"
     done
     rm -f -- "$UNIT_DIR/multi-user.target.wants/celikpanel-firewall-restore.service"
     rm -f -- "$UNIT_DIR/network-pre.target.requires/celikpanel-firewall-restore.service"
-    cp -a "$snap/units/." "$UNIT_DIR/"
+    release_txn_verify_systemd_unit_root_identity \
+        "$UNIT_DIR" "$unit_root_restore_identity" \
+        || die "systemd unit root changed while disabling fixed unit files"
+    release_txn_restore_celikpanel_unit_files \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
+        "$snap/units" "$UNIT_DIR" "$firewall_state" "$unit_root_restore_identity" \
+        || die "fixed CelikPanel systemd units could not be restored safely"
+    release_txn_verify_systemd_unit_root_identity \
+        "$UNIT_DIR" "$unit_root_restore_identity" \
+        || die "systemd unit root changed while restoring fixed unit files"
 else
     echo "==> Resuming verified pending rollback / Doğrulanmış bekleyen geri alma sürdürülüyor"
 fi
@@ -2045,10 +2061,16 @@ cmp -s \
     <(cd "$WEB_DIR" && LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
     || die "restored web tree differs from snapshot"
 for unit in celikpanel-agent.service celikpanel-panel.service; do
+    _release_txn_validate_celikpanel_unit_file \
+        "$UNIT_DIR/$unit" "restored systemd unit" \
+        || die "restored unit metadata is unsafe: $unit"
     cmp -s "$snap/units/$unit" "$UNIT_DIR/$unit" \
         || die "restored unit differs from snapshot: $unit"
 done
 if [[ "$firewall_state" == present ]]; then
+    _release_txn_validate_celikpanel_unit_file \
+        "$UNIT_DIR/celikpanel-firewall-restore.service" "restored systemd unit" \
+        || die "restored firewall unit metadata is unsafe"
     cmp -s "$snap/units/celikpanel-firewall-restore.service" "$UNIT_DIR/celikpanel-firewall-restore.service" \
         || die "restored firewall unit differs from snapshot"
 elif [[ -e "$UNIT_DIR/celikpanel-firewall-restore.service" || -L "$UNIT_DIR/celikpanel-firewall-restore.service" ]]; then

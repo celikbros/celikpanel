@@ -20,6 +20,7 @@ import {
     decodeDNSEngineSwitchPreview,
     type DNSEngineEntry,
     type DNSEngineID,
+    type DNSEngineOperation,
     type DNSEngineSnapshot,
     type DNSEngineSwitchPreview,
 } from '../lib/dnsEngineContract';
@@ -72,6 +73,8 @@ const knownImpactKeys = {
     configure_secondary: 'dnsEngine.impact.configureSecondary',
 } as const;
 
+const dnsEngineStatusRequestTimeoutMs = 10_000;
+
 function createRequestID(): string | null {
     try {
         const bytes = new Uint8Array(16);
@@ -88,6 +91,18 @@ function engineName(id: DNSEngineID): string {
 
 function engineIcon(id: DNSEngineID) {
     return id === 'pdns' ? Database : Network;
+}
+
+function operationElapsedSeconds(operation: DNSEngineOperation): number {
+    const started = Date.parse(operation.started_at);
+    const finished = ['running', 'rolling_back', 'recovery_required'].includes(operation.status)
+        ? Date.now()
+        : Date.parse(operation.updated_at);
+    return Math.max(0, Math.floor((finished - started) / 1000));
+}
+
+function operationTimestamp(value: string, locale: 'en' | 'tr'): string {
+    return new Date(value).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US');
 }
 
 function statusStyle(status: DNSEngineEntry['status']): string {
@@ -108,22 +123,39 @@ export function DNSEngineCard({
     const [snapshot, setSnapshot] = useState<DNSEngineSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
+    const [trackingError, setTrackingError] = useState('');
+    const [trackingReadError, setTrackingReadError] = useState('');
+    const [trackingDelayed, setTrackingDelayed] = useState(false);
     const [review, setReview] = useState<ReviewState | null>(null);
     const identityReviewLocked = dnsEngineIdentityReviewLocked(identityPlanCurrent, snapshot);
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async (automaticTracking = false) => {
         setLoading(true);
         setLoadError('');
+        if (!automaticTracking) setTrackingReadError('');
+		const requestController = new AbortController();
+		const requestTimeout = setTimeout(
+			() => requestController.abort(),
+			dnsEngineStatusRequestTimeoutMs,
+		);
+        const failRefresh = (message: string) => {
+            if (automaticTracking) {
+                setTrackingReadError(et('dnsEngine.operation.trackingReadFailed'));
+                return;
+            }
+            setSnapshot(null);
+            onSnapshotChange?.(null);
+            setLoadError(message);
+        };
         try {
             const response = await fetch('/api/v1/dns/engine', {
                 method: 'GET',
                 cache: 'no-store',
+				signal: requestController.signal,
             });
             if (!response.ok) {
                 await readApiError(response);
-                setSnapshot(null);
-                onSnapshotChange?.(null);
-                setLoadError(et('dnsEngine.stateUnavailable'));
+                failRefresh(et('dnsEngine.stateUnavailable'));
                 return;
             }
             let payload: unknown;
@@ -134,43 +166,87 @@ export function DNSEngineCard({
             }
             const decoded = decodeDNSEngineSnapshot(payload);
             if (decoded === null) {
-                setSnapshot(null);
-                onSnapshotChange?.(null);
-                setLoadError(et('dnsEngine.stateInvalid'));
+                failRefresh(et('dnsEngine.stateInvalid'));
                 return;
             }
+            if (automaticTracking) setTrackingReadError('');
             setSnapshot(decoded);
             onSnapshotChange?.(decoded);
         } catch {
-            setSnapshot(null);
-            onSnapshotChange?.(null);
-            setLoadError(et('dnsEngine.stateUnavailable'));
+            failRefresh(et('dnsEngine.stateUnavailable'));
         } finally {
+			clearTimeout(requestTimeout);
             setLoading(false);
         }
     }, [locale, onSnapshotChange]);
 
-    const reconcileAndRefresh = useCallback(async () => {
+    const reconcileAndRefresh = useCallback(async (automaticTracking = false) => {
         setReview(null);
         setLoading(true);
         setLoadError('');
+		const requestController = new AbortController();
+		const requestTimeout = setTimeout(
+			() => requestController.abort(),
+			dnsEngineStatusRequestTimeoutMs,
+		);
         try {
             const response = await fetch('/api/v1/dns/engine/reconcile', {
                 method: 'POST',
+				signal: requestController.signal,
             });
             if (!response.ok) {
-                await readApiError(response);
+                const apiError = await readApiError(response);
+                setTrackingError(apiError.code
+                    ? apiErrorText(apiError, t)
+                    : et('dnsEngine.trackingReconcileFailed'));
+            } else {
+                setTrackingError('');
             }
         } catch {
-            // Reconciliation is deliberately best-effort from the browser.
-            // The following read still renders the attached fail-closed truth.
+            setTrackingError(et('dnsEngine.trackingReconcileFailed'));
+		} finally {
+			clearTimeout(requestTimeout);
         }
-        await refresh();
-    }, [refresh]);
+        await refresh(automaticTracking);
+    }, [locale, refresh, t]);
 
     useEffect(() => {
         void refresh();
     }, [refresh]);
+
+    useEffect(() => {
+        if (snapshot?.state !== 'switching' || !snapshot.operation_id) {
+            setTrackingDelayed(false);
+            setTrackingError('');
+            setTrackingReadError('');
+            return;
+        }
+        let cancelled = false;
+        let attempts = 0;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        setTrackingDelayed(false);
+
+        const poll = async () => {
+            attempts += 1;
+			try {
+				if (attempts % 5 === 0) {
+					await reconcileAndRefresh(true);
+				} else {
+					await refresh(true);
+				}
+			} finally {
+				if (cancelled) return;
+				if (attempts >= 120) setTrackingDelayed(true);
+				const nextDelay = attempts >= 120 ? 15000 : 3000;
+				timer = setTimeout(() => void poll(), nextDelay);
+            }
+        };
+        timer = setTimeout(() => void poll(), 3000);
+        return () => {
+            cancelled = true;
+            if (timer !== undefined) clearTimeout(timer);
+        };
+    }, [reconcileAndRefresh, refresh, snapshot?.operation_id, snapshot?.state]);
 
     useEffect(() => {
         if (actionsLocked) setReview(null);
@@ -364,6 +440,14 @@ export function DNSEngineCard({
                             )}
                         </div>
 
+                        {snapshot.operation && (
+                            <DNSEngineOperationProgress
+                                operation={snapshot.operation}
+                                trackingError={trackingError || trackingReadError}
+                                trackingDelayed={trackingDelayed}
+                            />
+                        )}
+
                         <div className="mt-4 grid gap-3 md:grid-cols-2">
                             {DNS_ENGINE_IDS.map((id) => {
                                 const engine = snapshot.engines.find((candidate) => candidate.id === id)!;
@@ -462,6 +546,112 @@ export function DNSEngineCard({
                 />
             )}
         </>
+    );
+}
+
+function DNSEngineOperationProgress({
+    operation,
+    trackingError,
+    trackingDelayed,
+}: {
+    operation: DNSEngineOperation;
+    trackingError: string;
+    trackingDelayed: boolean;
+}) {
+    const { locale } = useI18n();
+    const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
+        dnsEngineText(locale, key, vars);
+    const active = ['running', 'rolling_back', 'recovery_required'].includes(operation.status);
+    const spinning = operation.status === 'running' || operation.status === 'rolling_back';
+    const elapsedSeconds = operationElapsedSeconds(operation);
+    const elapsed = elapsedSeconds < 60
+        ? et('dnsEngine.operation.elapsedSeconds', { seconds: elapsedSeconds })
+        : elapsedSeconds < 3600
+          ? et('dnsEngine.operation.elapsedMinutes', { minutes: Math.floor(elapsedSeconds / 60) })
+          : et('dnsEngine.operation.elapsedHours', {
+              hours: Math.floor(elapsedSeconds / 3600),
+              minutes: Math.floor((elapsedSeconds % 3600) / 60),
+          });
+    const StatusIcon = spinning
+        ? Loader2
+        : operation.status === 'succeeded'
+          ? CheckCircle2
+          : AlertTriangle;
+
+    return (
+        <div
+            className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+            data-testid="dns-engine-operation-progress"
+            role="status"
+            aria-live="polite"
+        >
+            <div className="flex items-start gap-3">
+                <StatusIcon className={`mt-0.5 h-5 w-5 shrink-0 ${
+                    spinning ? 'animate-spin text-primary' : operation.status === 'succeeded' ? 'text-success' : 'text-warning'
+                }`} />
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 className="text-sm font-semibold text-fg">
+                                {et('dnsEngine.operation.title')}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-fg-muted">
+                                {et(`dnsEngine.operation.status.${operation.status}` as DNSEngineCopyKey)}
+                            </p>
+                        </div>
+                        {active && (
+                            <span className="rounded-full border border-primary/25 bg-surface px-2.5 py-1 text-xs font-semibold text-primary">
+                                {et('dnsEngine.operation.autoTracking')}
+                            </span>
+                        )}
+                    </div>
+                    <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <dt className="text-fg-muted">{et('dnsEngine.operation.target')}</dt>
+                            <dd className="mt-1 font-semibold text-fg">{engineName(operation.target_engine)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-fg-muted">{et('dnsEngine.operation.phase')}</dt>
+                            <dd className="mt-1 font-semibold text-fg">
+                                {et(`dnsEngine.operation.phase.${operation.phase}` as DNSEngineCopyKey)}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-fg-muted">{et('dnsEngine.operation.elapsed')}</dt>
+                            <dd className="mt-1 font-semibold text-fg">{elapsed}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-fg-muted">{et('dnsEngine.operation.updated')}</dt>
+                            <dd className="mt-1 font-semibold text-fg">
+                                {operationTimestamp(operation.updated_at, locale)}
+                            </dd>
+                        </div>
+                    </dl>
+                    <div className="mt-3">
+                        <span className="text-xs text-fg-muted">{et('dnsEngine.operation.id')}</span>
+                        <code className="mt-1 block break-all rounded bg-surface px-2 py-1.5 text-xs text-fg">
+                            {operation.id}
+                        </code>
+                    </div>
+                    {operation.last_error && (
+                        <div className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-danger" role="alert">
+                            <strong>{et('dnsEngine.operation.lastError')}</strong>
+                            <span className="ml-1 break-words">{operation.last_error}</span>
+                        </div>
+                    )}
+                    {trackingError && active && (
+                        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
+                            {trackingError}
+                        </div>
+                    )}
+                    {trackingDelayed && active && (
+                        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning" role="alert">
+                            {et('dnsEngine.operation.trackingDelayed')}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
 

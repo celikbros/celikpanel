@@ -1288,6 +1288,15 @@ func (hostDNSEngineBackend) Switch(
 			missing = append(missing, packageName)
 		}
 	}
+	// systemctl mask creates persistent links below /etc/systemd/system. Prove
+	// that exact root-owned 0755 parent before publishing install ownership or
+	// allowing any package/config mutation. This is deliberately read-only:
+	// unexpected host metadata requires operator reconciliation, not chmod.
+	if err := verifyBINDMaskParentMetadata(); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf(
+			"preflight BIND mask parent: %w", err,
+		)
+	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
 	); err != nil {
@@ -1355,16 +1364,21 @@ func (hostDNSEngineBackend) Switch(
 			},
 		},
 		func() error {
-			if err := prepareHostBINDGenerationRoot(ctx, layout); err != nil {
-				return err
-			}
-			var err error
-			publisher, validator, err = newHostBINDPublisher(ctx, layout)
-			if err != nil {
-				return err
-			}
-			generation, err = publisher.StagePlan(ctx, plan)
-			return err
+			return runBINDMutationWithMaskParentProof(
+				verifyBINDMaskParentMetadata,
+				func() error {
+					if err := prepareHostBINDGenerationRoot(ctx, layout); err != nil {
+						return err
+					}
+					var err error
+					publisher, validator, err = newHostBINDPublisher(ctx, layout)
+					if err != nil {
+						return err
+					}
+					generation, err = publisher.StagePlan(ctx, plan)
+					return err
+				},
+			)
 		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
@@ -1455,7 +1469,10 @@ func (hostDNSEngineBackend) Switch(
 		if attempt > 1 {
 			return rollbackAndJournal(applyCtx)
 		}
-		if err := configs.apply(applyCtx); err != nil {
+		if err := runBINDMutationWithMaskParentProof(
+			verifyBINDMaskParentMetadata,
+			func() error { return configs.apply(applyCtx) },
+		); err != nil {
 			return err
 		}
 		if _, err := runTrackedBINDValidation(
@@ -1469,7 +1486,17 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
-			if output, err := runDNSSystemctl(applyCtx, systemctl, "disable", "--now", "pdns.service"); err != nil {
+			var output []byte
+			if err := runBINDMutationWithMaskParentProof(
+				verifyBINDMaskParentMetadata,
+				func() error {
+					var commandErr error
+					output, commandErr = runDNSSystemctl(
+						applyCtx, systemctl, "disable", "--now", "pdns.service",
+					)
+					return commandErr
+				},
+			); err != nil {
 				return fmt.Errorf("stop source PowerDNS: %w: %s", err, firstLine(string(output)))
 			}
 		}
@@ -1533,7 +1560,12 @@ func (hostDNSEngineBackend) Switch(
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := publisher.Switch(ctx, generation.ID, apply, recoverEmpty); err != nil {
+	if err := runBINDMutationWithMaskParentProof(
+		verifyBINDMaskParentMetadata,
+		func() error {
+			return publisher.Switch(ctx, generation.ID, apply, recoverEmpty)
+		},
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	completed, exists, err := readDNSEngineState()
@@ -2204,7 +2236,10 @@ func rollbackBINDActivation(
 			)
 		},
 		restoreConfigs: func() error {
-			return configs.restore(ctx)
+			return runBINDMutationWithMaskParentProof(
+				verifyBINDMaskParentMetadata,
+				func() error { return configs.restore(ctx) },
+			)
 		},
 		restoreState: func() error {
 			return restoreDNSFileSnapshot(stateBefore)
@@ -3332,13 +3367,14 @@ func verifyBINDUnitIdentityWithOps(
 }
 
 type bindActivationOps struct {
-	unmask          func(context.Context, string, bool) error
-	daemonReload    func(context.Context) error
-	verifyPreEnable func(context.Context) (bindBeforeEnableDisposition, error)
-	enable          func(context.Context, string) error
-	verifyPreStart  func(context.Context) error
-	start           func(context.Context, string) error
-	verifyStarted   func(context.Context) error
+	verifyMaskParent func() error
+	unmask           func(context.Context, string, bool) error
+	daemonReload     func(context.Context) error
+	verifyPreEnable  func(context.Context) (bindBeforeEnableDisposition, error)
+	enable           func(context.Context, string) error
+	verifyPreStart   func(context.Context) error
+	start            func(context.Context, string) error
+	verifyStarted    func(context.Context) error
 }
 
 func activateBINDTargetWithVerifiedIdentity(
@@ -3348,6 +3384,7 @@ func activateBINDTargetWithVerifiedIdentity(
 	unit string,
 ) error {
 	return activateBINDTargetWithOps(ctx, unit, bindActivationOps{
+		verifyMaskParent: verifyBINDMaskParentMetadata,
 		unmask: func(commandCtx context.Context, target string, runtime bool) error {
 			args := []string{"unmask", target}
 			if runtime {
@@ -3408,19 +3445,35 @@ func activateBINDTargetWithOps(
 	unit string,
 	ops bindActivationOps,
 ) error {
-	if ctx == nil || unit != "named.service" || ops.unmask == nil ||
+	if ctx == nil || unit != "named.service" || ops.verifyMaskParent == nil ||
+		ops.unmask == nil ||
 		ops.daemonReload == nil || ops.verifyPreEnable == nil ||
 		ops.enable == nil || ops.verifyPreStart == nil ||
 		ops.start == nil || ops.verifyStarted == nil {
 		return errors.New("invalid BIND activation operation")
 	}
+	verifyBeforeMutation := func(action string) error {
+		if err := ops.verifyMaskParent(); err != nil {
+			return fmt.Errorf("verify BIND mask parent before %s: %w", action, err)
+		}
+		return nil
+	}
 	for _, target := range []string{"named.service", "bind9.service"} {
+		if err := verifyBeforeMutation("persistent unmask"); err != nil {
+			return err
+		}
 		if err := ops.unmask(ctx, target, false); err != nil {
+			return err
+		}
+		if err := verifyBeforeMutation("runtime unmask"); err != nil {
 			return err
 		}
 		if err := ops.unmask(ctx, target, true); err != nil {
 			return err
 		}
+	}
+	if err := verifyBeforeMutation("daemon reload"); err != nil {
+		return err
 	}
 	if err := ops.daemonReload(ctx); err != nil {
 		return err
@@ -3431,6 +3484,9 @@ func activateBINDTargetWithOps(
 	}
 	switch disposition {
 	case bindBeforeEnableNeedsEnable:
+		if err := verifyBeforeMutation("enable"); err != nil {
+			return err
+		}
 		if err := ops.enable(ctx, unit); err != nil {
 			return fmt.Errorf("enable BIND vendor unit without starting it: %w", err)
 		}
@@ -3440,11 +3496,17 @@ func activateBINDTargetWithOps(
 	default:
 		return errors.New("BIND pre-enable proof returned an invalid disposition")
 	}
+	if err := verifyBeforeMutation("daemon reload"); err != nil {
+		return err
+	}
 	if err := ops.daemonReload(ctx); err != nil {
 		return err
 	}
 	if err := ops.verifyPreStart(ctx); err != nil {
 		return fmt.Errorf("verify BIND vendor alias identity immediately before start: %w", err)
+	}
+	if err := verifyBeforeMutation("start"); err != nil {
+		return err
 	}
 	if err := ops.start(ctx, unit); err != nil {
 		return fmt.Errorf("start verified BIND vendor unit: %w", err)

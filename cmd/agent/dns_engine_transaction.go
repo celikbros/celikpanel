@@ -719,6 +719,7 @@ func dnsSystemdStateGuard(systemctl string) *bindPackageInstallGuard {
 	return &bindPackageInstallGuard{
 		systemctl: systemctl,
 		ops: bindInstallGuardOps{
+			verifyMaskParent: verifyBINDMaskParentMetadata,
 			runSystemd: func(ctx context.Context, executable string, args ...string) ([]byte, error) {
 				if executable != systemctl {
 					return nil, errors.New("DNS switch systemctl executable changed")

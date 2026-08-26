@@ -17,8 +17,9 @@ type bindInstallSystemdRunner func(context.Context, string, ...string) ([]byte, 
 type bindInstallRecoveryContextFactory func(context.Context) (context.Context, context.CancelFunc, error)
 
 type bindInstallGuardOps struct {
-	runSystemd      bindInstallSystemdRunner
-	recoveryContext bindInstallRecoveryContextFactory
+	verifyMaskParent func() error
+	runSystemd       bindInstallSystemdRunner
+	recoveryContext  bindInstallRecoveryContextFactory
 }
 
 type bindInstallUnitState struct {
@@ -57,7 +58,8 @@ func installBINDPackagesWithGuard(
 	install func() (string, error),
 ) (string, error) {
 	return installBINDPackagesWithGuardOps(ctx, systemctl, install, bindInstallGuardOps{
-		runSystemd: runServiceMutationCombinedOutput,
+		verifyMaskParent: verifyBINDMaskParentMetadata,
+		runSystemd:       runServiceMutationCombinedOutput,
 		recoveryContext: func(parent context.Context) (context.Context, context.CancelFunc, error) {
 			return serviceMutationCancellingRecoveryContext(parent, bindInstallRollbackTimeout)
 		},
@@ -71,8 +73,12 @@ func installBINDPackagesWithGuardOps(
 	ops bindInstallGuardOps,
 ) (string, error) {
 	if ctx == nil || strings.TrimSpace(systemctl) == "" || install == nil ||
-		ops.runSystemd == nil || ops.recoveryContext == nil {
+		ops.verifyMaskParent == nil || ops.runSystemd == nil ||
+		ops.recoveryContext == nil {
 		return "", errors.New("invalid BIND package install guard")
+	}
+	if err := ops.verifyMaskParent(); err != nil {
+		return "", fmt.Errorf("verify BIND mask parent before install: %w", err)
 	}
 	guard, beginErr := beginBINDPackageInstallGuard(ctx, systemctl, ops)
 	if beginErr != nil {
@@ -120,6 +126,9 @@ func beginBINDPackageInstallGuard(
 		}
 		guard.before = append(guard.before, state)
 	}
+	if err := guard.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return guard, err
+	}
 	for _, state := range guard.before {
 		if state.masked() {
 			continue
@@ -162,6 +171,9 @@ func sealSuccessfulBINDPackageInstall(ctx context.Context, guard *bindPackageIns
 }
 
 func (g *bindPackageInstallGuard) restore(ctx context.Context) error {
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	var restoreErrors []error
 	// A failed package transaction may still have unpacked and started a unit.
 	// Quiesce units which were not running before removing our masks.
@@ -215,6 +227,9 @@ func (g *bindPackageInstallGuard) restore(ctx context.Context) error {
 }
 
 func (g *bindPackageInstallGuard) sealSuccessfulInstall(ctx context.Context) error {
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	var sealErrors []error
 	// Package hooks are untrusted to preserve the pre-install mask. Re-assert it
 	// before stopping, so no dependency or preset can race a restart afterward.
@@ -244,6 +259,16 @@ func (g *bindPackageInstallGuard) sealSuccessfulInstall(ctx context.Context) err
 	return errors.Join(sealErrors...)
 }
 
+func (g *bindPackageInstallGuard) verifyMaskParentBeforeSystemdMutation() error {
+	if g.ops.verifyMaskParent == nil {
+		return errors.New("BIND mask parent proof is required before systemd mutation")
+	}
+	if err := g.ops.verifyMaskParent(); err != nil {
+		return fmt.Errorf("verify BIND mask parent before systemd mutation: %w", err)
+	}
+	return nil
+}
+
 func (g *bindPackageInstallGuard) restoreUnitFileState(ctx context.Context, before bindInstallUnitState) error {
 	if before.loadState == "not-found" && before.unitFileState == "" {
 		after, inspectErr := g.inspect(ctx, before.name)
@@ -254,6 +279,9 @@ func (g *bindPackageInstallGuard) restoreUnitFileState(ctx context.Context, befo
 		// Package absence cannot be reconstructed here; the explicit safe
 		// compensation is exact stopped+disabled+unmasked state.
 		args := []string{"disable", before.name}
+		if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+			return err
+		}
 		output, commandErr := g.ops.runSystemd(ctx, g.systemctl, args...)
 		after, inspectErr = g.inspect(ctx, before.name)
 		// Disabling a distro alias may remove the alias entirely. That exact
@@ -277,6 +305,9 @@ func (g *bindPackageInstallGuard) restoreUnitFileState(ctx context.Context, befo
 	default:
 		return fmt.Errorf("restore %s: unit-file state %q has no exact inverse", before.name, before.unitFileState)
 	}
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, args...)
 	after, inspectErr := g.inspect(ctx, before.name)
 	if inspectErr == nil && after.unitFileState == before.unitFileState && !after.masked() {
@@ -292,8 +323,18 @@ func (g *bindPackageInstallGuard) restoreExactMaskState(ctx context.Context, bef
 	case "masked-runtime":
 		// Establish the runtime mask before removing any persistent mask so the
 		// unit is never exposed between commands.
-		firstOutput, firstErr := g.ops.runSystemd(ctx, g.systemctl, "mask", "--runtime", before.name)
-		secondOutput, secondErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", before.name)
+		if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+			return err
+		}
+		firstOutput, firstErr := g.ops.runSystemd(
+			ctx, g.systemctl, "mask", "--runtime", before.name,
+		)
+		if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+			return errors.Join(firstErr, err)
+		}
+		secondOutput, secondErr := g.ops.runSystemd(
+			ctx, g.systemctl, "unmask", before.name,
+		)
 		after, inspectErr := g.inspect(ctx, before.name)
 		if inspectErr == nil && after.loadState == "masked" && after.unitFileState == "masked-runtime" {
 			return nil
@@ -331,7 +372,12 @@ func (g *bindPackageInstallGuard) verifyRestoredState(ctx context.Context, befor
 
 func (g *bindPackageInstallGuard) restoreActiveState(ctx context.Context, before bindInstallUnitState) error {
 	if before.active() {
-		output, commandErr := g.ops.runSystemd(ctx, g.systemctl, "start", before.name)
+		if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+			return err
+		}
+		output, commandErr := g.ops.runSystemd(
+			ctx, g.systemctl, "start", before.name,
+		)
 		after, inspectErr := g.inspect(ctx, before.name)
 		if inspectErr == nil && after.active() {
 			return nil
@@ -345,6 +391,9 @@ func (g *bindPackageInstallGuard) restoreActiveState(ctx context.Context, before
 }
 
 func (g *bindPackageInstallGuard) ensureMasked(ctx context.Context, unit string) error {
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, "mask", unit)
 	after, inspectErr := g.inspect(ctx, unit)
 	if inspectErr == nil && after.masked() {
@@ -356,8 +405,16 @@ func (g *bindPackageInstallGuard) ensureMasked(ctx context.Context, unit string)
 func (g *bindPackageInstallGuard) ensurePersistentMasked(ctx context.Context, unit string) error {
 	// Create the persistent mask first, then remove a possible runtime mask.
 	// At least one mask therefore exists throughout the normalization.
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	firstOutput, firstErr := g.ops.runSystemd(ctx, g.systemctl, "mask", unit)
-	secondOutput, secondErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", "--runtime", unit)
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return errors.Join(firstErr, err)
+	}
+	secondOutput, secondErr := g.ops.runSystemd(
+		ctx, g.systemctl, "unmask", "--runtime", unit,
+	)
 	after, inspectErr := g.inspect(ctx, unit)
 	if inspectErr == nil && after.loadState == "masked" && after.unitFileState == "masked" {
 		return nil
@@ -369,8 +426,16 @@ func (g *bindPackageInstallGuard) ensurePersistentMasked(ctx context.Context, un
 }
 
 func (g *bindPackageInstallGuard) ensureUnmasked(ctx context.Context, unit string) error {
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
+	}
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", unit)
-	runtimeOutput, runtimeErr := g.ops.runSystemd(ctx, g.systemctl, "unmask", "--runtime", unit)
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return errors.Join(commandErr, err)
+	}
+	runtimeOutput, runtimeErr := g.ops.runSystemd(
+		ctx, g.systemctl, "unmask", "--runtime", unit,
+	)
 	after, inspectErr := g.inspect(ctx, unit)
 	if inspectErr == nil && !after.masked() {
 		return nil
@@ -392,6 +457,9 @@ func (g *bindPackageInstallGuard) ensureStopped(ctx context.Context, unit string
 	action := "stop"
 	if before.activeState == "failed" {
 		action = "reset-failed"
+	}
+	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
+		return err
 	}
 	output, commandErr := g.ops.runSystemd(ctx, g.systemctl, action, unit)
 	after, inspectErr := g.inspect(ctx, unit)

@@ -50,6 +50,260 @@ type dnsEngineTestAgent struct {
 	mutationStatusCalls        int
 }
 
+func TestPresentDNSEngineOperationSnapshotFieldsAndTimestamps(t *testing.T) {
+	op, err := presentDNSEngineOperation(persistedDNSEngineSwitch{
+		SwitchID: "operation-id", TargetEngine: transport.DNSEngineBIND,
+		Phase: "rolling_back", LastError: "bounded failure detail",
+		CreatedAt: "2026-08-26 14:30:45",
+		UpdatedAt: "2026-08-26T17:31:46+03:00",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.ID != "operation-id" || op.TargetEngine != transport.DNSEngineBIND ||
+		op.Phase != "rolling_back" || op.Status != "rolling_back" ||
+		op.StartedAt != "2026-08-26T14:30:45Z" ||
+		op.UpdatedAt != "2026-08-26T14:31:46Z" ||
+		op.LastError != "bounded failure detail" {
+		t.Fatalf("operation snapshot=%+v", op)
+	}
+}
+
+func TestDNSEngineOperationStatusByPhase(t *testing.T) {
+	tests := map[string]string{
+		"planned": "running", "staging": "running", "staged": "running",
+		"activating": "running", "verifying": "running",
+		"rolling_back": "rolling_back", "committed": "succeeded",
+		"rolled_back": "rolled_back", "failed": "failed",
+	}
+	for phase, want := range tests {
+		if got, err := dnsEngineOperationStatus(phase); err != nil || got != want {
+			t.Errorf("phase=%q status=%q want=%q err=%v", phase, got, want, err)
+		}
+	}
+	if got, err := dnsEngineOperationStatus("unknown"); err == nil || got != "" {
+		t.Fatalf("unknown phase status=%q err=%v", got, err)
+	}
+}
+
+func TestReadPresentedDNSEngineOperationUsesAttachedSwitch(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("9", 32),
+	)
+	operation, err := readPresentedDNSEngineOperation(
+		context.Background(), panel.db.GetDB(), persisted.SwitchID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if operation == nil || operation.ID != persisted.SwitchID ||
+		operation.TargetEngine != transport.DNSEngineBIND ||
+		operation.Phase != "activating" || operation.Status != "running" ||
+		operation.StartedAt == "" || operation.UpdatedAt == "" {
+		t.Fatalf("attached operation snapshot=%+v", operation)
+	}
+	if _, err := time.Parse(time.RFC3339, operation.StartedAt); err != nil {
+		t.Fatalf("started_at=%q: %v", operation.StartedAt, err)
+	}
+	if _, err := time.Parse(time.RFC3339, operation.UpdatedAt); err != nil {
+		t.Fatalf("updated_at=%q: %v", operation.UpdatedAt, err)
+	}
+}
+
+func TestEnrichAttachedDNSEngineOperationShowsFailedReceipt(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("8", 32),
+	)
+	job := terminalDNSEngineJob(persisted, agentMutationFailed)
+	job.ErrorMessage = "  host mutation failed safely  "
+	setDNSEngineMutationJobForTest(t, agent, job, false)
+	operation, err := readPresentedDNSEngineOperation(
+		context.Background(), panel.db.GetDB(), persisted.SwitchID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	panel.enrichAttachedDNSEngineOperation(
+		context.Background(), operation, persisted.SwitchID,
+	)
+	if operation.Status != "recovery_required" ||
+		operation.LastError != "host mutation failed safely" {
+		t.Fatalf("enriched operation=%+v", operation)
+	}
+	for name, unsafe := range map[string]string{
+		"multiline": "internal path\nsecret detail",
+		"oversized": strings.Repeat("x", 513),
+	} {
+		t.Run(name, func(t *testing.T) {
+			job.ErrorMessage = unsafe
+			setDNSEngineMutationJobForTest(t, agent, job, false)
+			candidate, err := readPresentedDNSEngineOperation(
+				context.Background(), panel.db.GetDB(), persisted.SwitchID,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			panel.enrichAttachedDNSEngineOperation(
+				context.Background(), candidate, persisted.SwitchID,
+			)
+			if candidate.LastError !=
+				"The privileged DNS operation failed before the panel could finalize it." {
+				t.Fatalf("unsafe receipt was exposed: %+v", candidate)
+			}
+		})
+	}
+}
+
+func TestDNSEngineGenericReconcileFinalizesSucceededReceipt(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("b", 32),
+	)
+	agent.mu.Lock()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	target.Installed, target.Running, target.Managed = true, true, true
+	agent.runtimes[transport.DNSEngineBIND] = target
+	agent.mu.Unlock()
+	setDNSEngineMutationJobForTest(
+		t, agent, terminalDNSEngineJob(persisted, agentMutationSucceeded), false,
+	)
+
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if response.Code != http.StatusOK {
+		t.Fatalf("reconcile status=%d body=%s", response.Code, response.Body.String())
+	}
+	var outcome map[string]bool
+	if err := json.Unmarshal(response.Body.Bytes(), &outcome); err != nil {
+		t.Fatal(err)
+	}
+	if len(outcome) != 1 || !outcome["reconciled"] {
+		t.Fatalf("reconcile outcome=%v body=%s", outcome, response.Body.String())
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveEngine != transport.DNSEngineBIND || state.EngineEpoch != 1 ||
+		state.CurrentSwitchID != "" || state.Revision != 2 {
+		t.Fatalf("reconciled state=%+v", state)
+	}
+	var phase string
+	if err := panel.db.GetDB().QueryRow(`
+		SELECT phase FROM dns_engine_switch_snapshots WHERE switch_id = ?`,
+		persisted.SwitchID,
+	).Scan(&phase); err != nil {
+		t.Fatal(err)
+	}
+	if phase != "committed" {
+		t.Fatalf("reconciled phase=%q", phase)
+	}
+	agent.mu.Lock()
+	statusCalls := agent.mutationStatusCalls
+	agent.mu.Unlock()
+	if statusCalls != 1 {
+		t.Fatalf("generic reconcile mutation status calls=%d", statusCalls)
+	}
+	if !panel.serviceMutationMu.TryLock() {
+		t.Fatal("generic reconciliation retained the service mutation lock")
+	}
+	panel.serviceMutationMu.Unlock()
+}
+
+func TestDNSEngineGenericReconcileReportsPendingPostCommit(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	agent.firewallEnabled = true
+	agent.firewallError = "secret nftables stderr /etc/nftables.conf"
+	attachDNSEngineTestAgent(t, panel, agent)
+	persisted := persistEmptyDNSEngineSwitchForTest(
+		t, panel, transport.DNSEngineBIND, strings.Repeat("c", 32),
+	)
+	agent.mu.Lock()
+	target := agent.runtimes[transport.DNSEngineBIND]
+	target.Installed, target.Running, target.Managed = true, true, true
+	agent.runtimes[transport.DNSEngineBIND] = target
+	agent.mu.Unlock()
+	setDNSEngineMutationJobForTest(
+		t, agent, terminalDNSEngineJob(persisted, agentMutationSucceeded), false,
+	)
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+		var body apiErrorBody
+		if response.Code != http.StatusBadGateway ||
+			json.Unmarshal(response.Body.Bytes(), &body) != nil ||
+			!body.PartialSuccess || !body.MutationApplied ||
+			strings.Contains(response.Body.String(), "nftables.conf") {
+			t.Fatalf("attempt %d pending status=%d body=%s",
+				attempt, response.Code, response.Body.String())
+		}
+		state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if state.ActiveEngine != transport.DNSEngineBIND ||
+			state.CurrentSwitchID != "" {
+			t.Fatalf("attempt %d changed committed state=%+v", attempt, state)
+		}
+		marker, err := readDNSEngineOperationMarker(
+			context.Background(), panel.db.GetDB(),
+		)
+		if err != nil || marker == nil ||
+			marker.Phase != dnsEngineOperationPostCommit {
+			t.Fatalf("attempt %d marker=%+v err=%v", attempt, marker, err)
+		}
+	}
+	agent.mu.Lock()
+	agent.firewallError = ""
+	agent.mu.Unlock()
+	response := reconcileDNSEngineForTest(t, panel, http.MethodPost)
+	if response.Code != http.StatusOK {
+		t.Fatalf("completed retry status=%d body=%s",
+			response.Code, response.Body.String())
+	}
+	marker, err := readDNSEngineOperationMarker(
+		context.Background(), panel.db.GetDB(),
+	)
+	if err != nil || marker != nil {
+		t.Fatalf("completed retry marker=%+v err=%v", marker, err)
+	}
+}
+
+func TestDNSEngineSnapshotRejectsConcurrentOperationAttach(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+	var persisted persistedDNSEngineSwitch
+	agent.onReadiness = func(call int) {
+		if call == 1 {
+			persisted = persistEmptyDNSEngineSwitchForTest(
+				t, panel, transport.DNSEngineBIND, strings.Repeat("d", 32),
+			)
+		}
+	}
+	if snapshot, err := panel.dnsEngineSnapshot(context.Background()); err == nil || !strings.Contains(err.Error(), "state changed") {
+		t.Fatalf("torn snapshot=%+v err=%v", snapshot, err)
+	}
+	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persisted.SwitchID == "" || state.CurrentSwitchID != persisted.SwitchID {
+		t.Fatalf("concurrent operation was not attached: %+v", state)
+	}
+}
+
 func newDNSEngineTestAgent() *dnsEngineTestAgent {
 	return &dnsEngineTestAgent{runtimes: map[transport.DNSEngine]transport.DNSBackendRuntimeState{
 		transport.DNSEnginePowerDNS: {
@@ -2820,7 +3074,7 @@ func TestDNSEngineReconcileClearsExactFrankfurtFailedInstallOnly(t *testing.T) {
 	if !target.Installed || target.Running || !target.Managed {
 		t.Fatalf("transitional installed BIND artifact was not preserved: %+v", target)
 	}
-	if switchCalls != 0 || statusCalls != 0 ||
+	if switchCalls != 0 || statusCalls != 1 ||
 		evidenceCalls != 2 || len(evidenceRequests) != 2 {
 		t.Fatalf("switch calls=%d status calls=%d evidence calls=%d requests=%d",
 			switchCalls, statusCalls, evidenceCalls, len(evidenceRequests))
@@ -2840,7 +3094,7 @@ func TestDNSEngineReconcileClearsExactFrankfurtFailedInstallOnly(t *testing.T) {
 	if err := panel.db.GetDB().QueryRow(`
 		SELECT user_id, ip_address, user_agent
 		FROM audit_logs
-		WHERE action LIKE 'dns.engine.switch.reconciled_failed_operation %'
+		WHERE action LIKE 'dns.engine.switch.reconciled_operation %'
 	`).Scan(&auditUser, &auditIP, &auditAgent); err != nil {
 		t.Fatal(err)
 	}
@@ -3127,7 +3381,7 @@ func TestDNSEngineReconcileDoubleReadAndConcurrentLockFailClosed(t *testing.T) {
 		evidenceCalls := agent.rollbackEvidenceCalls
 		statusCalls := agent.mutationStatusCalls
 		agent.mu.Unlock()
-		if evidenceCalls != 2 || statusCalls != 0 {
+		if evidenceCalls != 2 || statusCalls != 1 {
 			t.Fatalf(
 				"malformed listener evidence calls=%d status calls=%d",
 				evidenceCalls, statusCalls,
@@ -3459,7 +3713,7 @@ func TestDNSEngineReconcilePOSTDoesNotRenderSnapshot(t *testing.T) {
 	evidenceCalls := agent.rollbackEvidenceCalls
 	statusCalls := agent.mutationStatusCalls
 	agent.mu.Unlock()
-	if readinessCalls != 1 || evidenceCalls != 2 || statusCalls != 0 {
+	if readinessCalls != 1 || evidenceCalls != 2 || statusCalls != 1 {
 		t.Fatalf("POST calls readiness=%d evidence=%d status=%d",
 			readinessCalls, evidenceCalls, statusCalls)
 	}

@@ -794,6 +794,24 @@ func TestVerifyBINDPersistentMaskFilesAtAcceptsExactPair(t *testing.T) {
 	}
 }
 
+func TestVerifyBINDMaskParentMetadataAtRejects0700WithoutChmod(t *testing.T) {
+	directory, fd := newBINDMaskFixture(t)
+	if err := os.Chmod(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	err := verifyBINDMaskParentMetadataAt(fd)
+	if err == nil || !strings.Contains(err.Error(), "mode 0700, want 0755") {
+		t.Fatalf("mode 0700 error=%v", err)
+	}
+	info, statErr := os.Stat(directory)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if info.Mode().Perm() != 0o700 {
+		t.Fatalf("preflight changed parent mode to %04o", info.Mode().Perm())
+	}
+}
+
 func TestVerifyBINDPersistentMaskFilesAtRejectsUnsafeEntries(t *testing.T) {
 	for _, test := range []struct {
 		name   string

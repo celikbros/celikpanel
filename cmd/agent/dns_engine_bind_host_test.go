@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -1588,6 +1589,7 @@ func TestCanonicalBINDPublicListenersAcceptsIPRoute2ScopedIPv6Rows(t *testing.T)
 func TestActivateBINDTargetEnablesAliasBeforeVerifiedStart(t *testing.T) {
 	var events []string
 	ops := bindActivationOps{
+		verifyMaskParent: func() error { return nil },
 		unmask: func(_ context.Context, unit string, runtime bool) error {
 			kind := "persistent"
 			if runtime {
@@ -1646,6 +1648,7 @@ func TestActivateBINDTargetPreservesAlreadyEnabledVerifiedAlias(t *testing.T) {
 	var events []string
 	enables := 0
 	ops := bindActivationOps{
+		verifyMaskParent: func() error { return nil },
 		unmask: func(_ context.Context, unit string, runtime bool) error {
 			kind := "persistent"
 			if runtime {
@@ -1780,8 +1783,9 @@ func TestVerifyBINDBeforeEnableIdentitySelectsOnlyExactDisposition(t *testing.T)
 func TestActivateBINDTargetNeverEnablesOrStartsAfterPreEnableIdentityFailure(t *testing.T) {
 	enables, starts := 0, 0
 	err := activateBINDTargetWithOps(context.Background(), "named.service", bindActivationOps{
-		unmask:       func(context.Context, string, bool) error { return nil },
-		daemonReload: func(context.Context) error { return nil },
+		verifyMaskParent: func() error { return nil },
+		unmask:           func(context.Context, string, bool) error { return nil },
+		daemonReload:     func(context.Context) error { return nil },
 		verifyPreEnable: func(context.Context) (bindBeforeEnableDisposition, error) {
 			return 0, errors.New("identity spoof")
 		},
@@ -1807,8 +1811,9 @@ func TestActivateBINDTargetNeverEnablesOrStartsAfterPreEnableIdentityFailure(t *
 func TestActivateBINDTargetNeverStartsBeforePostEnableAliasProof(t *testing.T) {
 	starts := 0
 	err := activateBINDTargetWithOps(context.Background(), "named.service", bindActivationOps{
-		unmask:       func(context.Context, string, bool) error { return nil },
-		daemonReload: func(context.Context) error { return nil },
+		verifyMaskParent: func() error { return nil },
+		unmask:           func(context.Context, string, bool) error { return nil },
+		daemonReload:     func(context.Context) error { return nil },
 		verifyPreEnable: func(context.Context) (bindBeforeEnableDisposition, error) {
 			return bindBeforeEnableNeedsEnable, nil
 		},
@@ -1831,8 +1836,9 @@ func TestActivateBINDTargetNeverStartsBeforePostEnableAliasProof(t *testing.T) {
 func TestActivateBINDTargetNeverContinuesAfterDaemonReloadFailure(t *testing.T) {
 	verifies, enables, starts := 0, 0, 0
 	err := activateBINDTargetWithOps(context.Background(), "named.service", bindActivationOps{
-		unmask:       func(context.Context, string, bool) error { return nil },
-		daemonReload: func(context.Context) error { return errors.New("reload failed") },
+		verifyMaskParent: func() error { return nil },
+		unmask:           func(context.Context, string, bool) error { return nil },
+		daemonReload:     func(context.Context) error { return errors.New("reload failed") },
 		verifyPreEnable: func(context.Context) (bindBeforeEnableDisposition, error) {
 			verifies++
 			return bindBeforeEnableNeedsEnable, nil
@@ -1861,6 +1867,56 @@ func TestActivateBINDTargetNeverContinuesAfterDaemonReloadFailure(t *testing.T) 
 		t.Fatalf(
 			"continued after daemon-reload failure: verifies=%d enables=%d starts=%d",
 			verifies, enables, starts,
+		)
+	}
+}
+
+func TestActivateBINDTargetReprovesMaskParentBeforeEachMutation(t *testing.T) {
+	proofErr := errors.New("mask parent drifted")
+	proofs := 0
+	var mutations []string
+	err := activateBINDTargetWithOps(
+		context.Background(), "named.service",
+		bindActivationOps{
+			verifyMaskParent: func() error {
+				proofs++
+				if proofs == 2 {
+					return proofErr
+				}
+				return nil
+			},
+			unmask: func(_ context.Context, unit string, runtime bool) error {
+				mutations = append(
+					mutations, fmt.Sprintf("unmask:%s:%t", unit, runtime),
+				)
+				return nil
+			},
+			daemonReload: func(context.Context) error {
+				mutations = append(mutations, "daemon-reload")
+				return nil
+			},
+			verifyPreEnable: func(
+				context.Context,
+			) (bindBeforeEnableDisposition, error) {
+				return bindBeforeEnableNeedsEnable, nil
+			},
+			enable: func(context.Context, string) error {
+				mutations = append(mutations, "enable")
+				return nil
+			},
+			verifyPreStart: func(context.Context) error { return nil },
+			start: func(context.Context, string) error {
+				mutations = append(mutations, "start")
+				return nil
+			},
+			verifyStarted: func(context.Context) error { return nil },
+		},
+	)
+	if !errors.Is(err, proofErr) || proofs != 2 ||
+		!reflect.DeepEqual(mutations, []string{"unmask:named.service:false"}) {
+		t.Fatalf(
+			"proofs=%d mutations=%v err=%v; want one mutation before proof drift",
+			proofs, mutations, err,
 		)
 	}
 }
