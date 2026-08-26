@@ -2046,6 +2046,20 @@ require_sequence "$UPDATE" \
     '[[ ! -L $socket ]]' \
     '[[ $state == active && -S $socket ]]'
 
+# A distro maintenance timer may briefly acquire apt/dnf/pacman after
+# daemon-reload. The updater may wait only in the stopped, externally locked
+# post-apply window and must retain an exact finite bound.
+require_sequence "$UPDATE" \
+    'wait_for_post_apply_mutation_idle() {' \
+    'post-apply mutation proof requires the release lock' \
+    'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
+    'inactive|failed) ;;' \
+    'for attempt in $(seq 1 60); do' \
+    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then' \
+    '[ "$attempt" -lt 60 ]' \
+    'sleep 0.5' \
+    'return 1'
+
 # Pending finalization keeps completion.pending until stopped-state validation,
 # offline migration, controlled starts, post-grant proofs and durable removal pass.
 # Bekleyen sonlandırma; durmuş-durum doğrulaması, offline migration, kontrollü
@@ -2109,7 +2123,7 @@ require_sequence "$UPDATE" \
     'verify_saved_enablement' \
     'verify_installed_release_artifacts' \
     '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    'wait_for_post_apply_mutation_idle' \
     'env -i \' \
     '"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock' \
     'verify_installed_release_artifacts' \

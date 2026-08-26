@@ -547,6 +547,9 @@ func TestSystemUpdateReviewedUpdaterOwnsTheSecondMutationGate(t *testing.T) {
 	}
 	for _, required := range []string{
 		`if ! flock -n -x "$MUTATION_LOCK_FD"; then`,
+		`wait_for_post_apply_mutation_idle() {`,
+		`for attempt in $(seq 1 60); do`,
+		`sleep 0.5`,
 		`--check-service-mutation-idle-under-external-lock`,
 		`env -i \`,
 		`CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \`,
@@ -567,7 +570,7 @@ func TestSystemUpdateReviewedUpdaterOwnsTheSecondMutationGate(t *testing.T) {
 	window := script[anchor:]
 	order := []string{
 		`verify_installed_release_artifacts`,
-		`"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock`,
+		`wait_for_post_apply_mutation_idle`,
 		`env -i \`,
 		`"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock`,
 		`verify_installed_release_artifacts`,
