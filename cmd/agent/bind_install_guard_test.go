@@ -246,6 +246,7 @@ func TestBINDRestoreAbsentUnitAcceptsDisableRemovingUnitAlias(t *testing.T) {
 	guard := bindPackageInstallGuard{
 		systemctl: "/usr/bin/systemctl",
 		ops: bindInstallGuardOps{
+			verifyMaskParent: func() error { return nil },
 			runSystemd: func(_ context.Context, executable string, args ...string) ([]byte, error) {
 				if executable != "/usr/bin/systemctl" {
 					return nil, fmt.Errorf("unexpected executable %q", executable)
