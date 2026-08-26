@@ -121,6 +121,24 @@ signed manifest. Portal publication remains a separate same-filesystem atomic
 exchange; a candidate is never merged into the live tree, and every previous
 version and rollback backup is preserved.
 
+### Production portal publication
+
+`deploy/publish-download-portal.ps1` is the only supported production portal
+entry point. Version-specific promoters and scripts assembled below `.tmp/`
+are not release mechanisms. The tracked publisher snapshots the exact generic
+promoter bytes, uploads and pins the bounded public verifier and candidate
+package, then streams that promoter exactly once for the atomic transaction.
+
+The transaction runs one public verification pass after the live exchange and
+none after publishing the rollback backup. That pass never requests a path
+under an older release: it performs at most 15 GET requests, fetches the new
+authoritative platform archive exactly once, and permits at most that archive's
+signed size plus 1 MiB of response data. Previous releases and the rollback
+backup are instead proved locally from their pinned inode and inventory while
+the publication lock is held. Redirects, encoded responses, missing or
+inexact `Content-Length`, changed local bytes, and either request or byte budget
+overruns fail the transaction closed.
+
 ## Installed trust material and anti-rollback floor
 
 Every release packages the reviewed updater as `libexec/get.sh`; installation
