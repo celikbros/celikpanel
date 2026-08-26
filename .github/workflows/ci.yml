@@ -73,6 +73,13 @@ jobs:
       - run: bash deploy/test-install-toolchain-contract.sh
       - run: bash deploy/test-release-publish-contract.sh
       - run: bash deploy/test-download-portal-contract.sh
+      - run: python3 deploy/test-download-portal-public-verifier.py
+      - run: python3 deploy/test-download-portal-promotion.py
+      - name: Verify production portal publisher syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [void][scriptblock]::Create((Get-Content -LiteralPath deploy/publish-download-portal.ps1 -Raw))
       - run: sudo env PATH=$PATH GOTOOLCHAIN=local bash deploy/test-signed-release-manifest-contract.sh
       - run: bash deploy/test-first-install-signed-trust-contract.sh
       - run: sudo bash deploy/test-release-foundation-root-contract.sh
