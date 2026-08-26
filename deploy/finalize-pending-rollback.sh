@@ -980,8 +980,10 @@ wait_for_panel_ready() {
 # if graceful stop is not enough, terminate the already transaction-owned
 # coordinator cgroups and repeat the same bounded proof.
 coordinators_stopped_trap_safe() {
-    local unit state main_pid pid_output
+    local unit state job main_pid pid_output
     for unit in celikpanel-panel.service celikpanel-agent.service; do
+        job=$(systemctl show --property=Job --value "$unit" 2>/dev/null) || return 1
+        [[ -z "$job" ]] || return 1
         state=$(systemctl show --property=ActiveState --value "$unit" 2>/dev/null) || return 1
         case "$state" in inactive|failed) ;; *) return 1 ;; esac
         main_pid=$(systemctl show --property=MainPID --value "$unit" 2>/dev/null) || return 1
@@ -1011,7 +1013,7 @@ stop_coordinators_trap_safe() {
 }
 
 finalization_exit() {
-    local status=$? stop_proved=0
+    local status=$? stop_proved=0 authorization_closed=1 retry_marker_proved=0
     trap - EXIT
     if [[ "$status" -ne 0 && "$finalization_succeeded" -eq 0 ]]; then
         if [[ "$scheduler_restore_completed" -eq 1 &&
@@ -1051,19 +1053,41 @@ finalization_exit() {
                 return "$status"
             fi
         fi
-        if stop_coordinators_trap_safe; then
-            stop_proved=1
-        fi
         if [[ "$start_authorization_created" -eq 1 ]]; then
-            release_txn_remove_start_authorization \
+            if release_txn_remove_start_authorization \
                 "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" \
                 "$RELEASE_TRANSACTION_FD" "$pending_token" rollback "$pending_snapshot" \
-                >/dev/null 2>&1 || true
+                >/dev/null 2>&1; then
+                start_authorization_created=0
+            else
+                authorization_closed=0
+            fi
+        fi
+        if stop_coordinators_trap_safe && [[ "$authorization_closed" -eq 1 ]]; then
+            stop_proved=1
+        fi
+        if [[ ( -e "$TRANSACTION_ROOT/completion.pending" ||
+                -L "$TRANSACTION_ROOT/completion.pending" ) ]] &&
+           release_txn_validate_pending_token \
+               "$TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+               >/dev/null 2>&1; then
+            retry_marker_proved=1
+        elif [[ ( -e "$TRANSACTION_ROOT/scheduler-restore.pending" ||
+                  -L "$TRANSACTION_ROOT/scheduler-restore.pending" ) ]] &&
+             release_txn_validate_scheduler_restore_token \
+                 "$TRANSACTION_ROOT" "$pending_token" rollback "$pending_snapshot" \
+                 >/dev/null 2>&1; then
+            retry_marker_proved=1
         fi
         release_mutation_lock >/dev/null 2>&1 || true
         if [[ "$stop_proved" -eq 0 ]]; then
-            printf '%s\n' \
-                "!! Finalization failed; coordinator stopped state could not be proved. The durable transaction marker was preserved for operator recovery." >&2
+            if [[ "$retry_marker_proved" -eq 1 ]]; then
+                printf '%s\n' \
+                    "!! Finalization failed; coordinator stopped state could not be proved. The exact durable transaction marker remains for operator recovery." >&2
+            else
+                printf '%s\n' \
+                    "!! Finalization failed; coordinator stopped state could not be proved and durable marker state requires operator verification." >&2
+            fi
         elif [[ -e "$TRANSACTION_ROOT/completion.pending" ||
                 -L "$TRANSACTION_ROOT/completion.pending" ]]; then
             printf '%s\n' \

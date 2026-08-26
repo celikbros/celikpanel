@@ -83,8 +83,11 @@ require_text 'another mutation entered during the controlled agent-start handoff
 require_text 'stop_coordinators_trap_safe' "failure cleanup has no bounded coordinator stop proof"
 require_text 'coordinators_stopped_trap_safe' "failure cleanup does not recursively prove stopped coordinators"
 require_text 'coordinator stopped state could not be proved' "failure cleanup can still overclaim a stopped state"
+require_text 'durable marker state requires operator verification' "unproved marker state is still overclaimed"
 require_text 'completion.pending was preserved and both coordinators were proved stopped' "proved fail-closed result is missing"
 require_text 'systemctl kill --kill-whom=all --signal=SIGKILL "$unit"' "failed graceful stop has no cgroup termination fallback"
+require_text 'job=$(systemctl show --property=Job --value "$unit"' "stopped proof ignores queued restart jobs"
+require_text 'authorization_closed=0' "failure cleanup does not fail closed when start authorization removal fails"
 
 main_start=$(line_of_last 'prepare_runtime_mutation_lock_dir')
 idle_unlocked=$(line_after "$main_start" 'run_target_agent_idle_unlocked')
