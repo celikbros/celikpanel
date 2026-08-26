@@ -168,12 +168,12 @@ policy_previous=$POLICY_PREVIOUS
 policy_previous_version=$POLICY_PREVIOUS_VERSION
 policy_previous_commit=$POLICY_PREVIOUS_COMMIT
 
-[[ "$policy_version" == v0.1.0-alpha.45 ]] || die 'tracked version must be v0.1.0-alpha.45'
-[[ "$policy_current" == 45 ]] || die 'tracked current sequence must be 45'
-[[ "$policy_previous" == 44 ]] || die 'tracked previous sequence must be 44'
-[[ "$policy_previous_version" == v0.1.0-alpha.44 ]] || die 'tracked previous version must be v0.1.0-alpha.44'
-[[ "$policy_previous_commit" == 2d88d349944526d861251b848015eeddf71d8148 ]] \
-  || die 'tracked previous commit must be the immutable Alpha44 release commit'
+[[ "$policy_version" == v0.1.0-alpha.46 ]] || die 'tracked version must be v0.1.0-alpha.46'
+[[ "$policy_current" == 46 ]] || die 'tracked current sequence must be 46'
+[[ "$policy_previous" == 45 ]] || die 'tracked previous sequence must be 45'
+[[ "$policy_previous_version" == v0.1.0-alpha.45 ]] || die 'tracked previous version must be v0.1.0-alpha.45'
+[[ "$policy_previous_commit" == 95d976a1fbefce087dafabe017a7e304c9b398ab ]] \
+  || die 'tracked previous commit must be the immutable Alpha45 release commit'
 
 fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/celikpanel-release-policy.XXXXXXXX")
 cleanup() {
@@ -181,11 +181,11 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-sed 's/^current=45$/current=045/' "$policy_file" > "$fixture_dir/noncanonical"
+sed 's/^current=46$/current=046/' "$policy_file" > "$fixture_dir/noncanonical"
 expect_rejected validate_policy_file "$fixture_dir/noncanonical"
-sed 's/^current=45$/current=44/' "$policy_file" > "$fixture_dir/not-increasing"
+sed 's/^current=46$/current=45/' "$policy_file" > "$fixture_dir/not-increasing"
 expect_rejected validate_policy_file "$fixture_dir/not-increasing"
-sed 's/^current=45$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
+sed 's/^current=46$/current=9223372036854775808/' "$policy_file" > "$fixture_dir/overflow"
 expect_rejected validate_policy_file "$fixture_dir/overflow"
 cp -- "$policy_file" "$fixture_dir/extra-field"
 printf '%s\n' 'unexpected=true' >> "$fixture_dir/extra-field"
