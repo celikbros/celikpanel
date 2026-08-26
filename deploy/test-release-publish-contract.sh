@@ -34,7 +34,7 @@ test -f "$WORKFLOW"
 # A tag is built only after the same commit passed every supported Linux and
 # web gate. Unsupported platform checks are operator-invoked and non-gating.
 require_literal "tags: ['v*']"
-require_literal 'needs: [go, panel-race, web, linux-arm64-compile]'
+require_literal 'needs: [go, panel-race, web, linux-arm64-compile, publisher-windows]'
 require_literal 'release_version: ${{ steps.release_version.outputs.value }}'
 require_literal '[[ "$version" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$ ]]'
 require_literal 'release tag has a non-canonical numeric prerelease identifier'

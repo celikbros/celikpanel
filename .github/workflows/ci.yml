@@ -102,6 +102,15 @@ jobs:
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
 
+  publisher-windows:
+    name: Download portal publisher - Windows PowerShell 5.1
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify bounded stdin and LF-only SSH wire input
+        shell: powershell
+        run: .\deploy\test-download-portal-publisher.ps1
+
   panel-race:
     name: Panel race — ${{ matrix.shard }}
     runs-on: ubuntu-latest
@@ -189,7 +198,7 @@ jobs:
   package:
     name: Release — reproducible archive and checksum
     runs-on: ubuntu-latest
-    needs: [go, panel-race, web, linux-arm64-compile]
+    needs: [go, panel-race, web, linux-arm64-compile, publisher-windows]
     outputs:
       release_version: ${{ steps.release_version.outputs.value }}
     steps:

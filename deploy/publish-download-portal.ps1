@@ -75,6 +75,18 @@ function ConvertTo-NativeArgument([string]$Value) {
     return $Builder.ToString()
 }
 
+function ConvertTo-LfUtf8Bytes([byte[]]$Bytes) {
+    $Utf8 = [Text.UTF8Encoding]::new($false, $true)
+    $Text = $Utf8.GetString($Bytes)
+    if ($Text.Length -gt 0 -and [int]$Text[0] -eq 0xFEFF) {
+        $Text = $Text.Substring(1)
+    }
+    $Cr = [string][char]13
+    $Lf = [string][char]10
+    $Text = $Text.Replace($Cr + $Lf, $Lf).Replace($Cr, $Lf)
+    return $Utf8.GetBytes($Text)
+}
+
 function Get-BytesSha256([byte[]]$Bytes) {
     $Hasher = [Security.Cryptography.SHA256]::Create()
     try { return [BitConverter]::ToString($Hasher.ComputeHash($Bytes)).Replace('-', '').ToLowerInvariant() }
@@ -106,7 +118,14 @@ function Invoke-BoundedChild {
     $Start.RedirectStandardError = $true
     $Process = [Diagnostics.Process]::new()
     $Process.StartInfo = $Start
-    if (-not $Process.Start()) { throw "Could not start child process: $FilePath" }
+    $SavedInputEncoding = [Console]::InputEncoding
+    try {
+        [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+        if (-not $Process.Start()) { throw "Could not start child process: $FilePath" }
+    }
+    finally {
+        [Console]::InputEncoding = $SavedInputEncoding
+    }
     $Clock = [Diagnostics.Stopwatch]::StartNew()
     $StdoutTask = $Process.StandardOutput.ReadToEndAsync()
     $StderrTask = $Process.StandardError.ReadToEndAsync()
@@ -120,7 +139,7 @@ function Invoke-BoundedChild {
             if ($Remaining -le 0 -or -not $WriteTask.Wait($Remaining)) {
                 $TimedOut = $true
             } else {
-                $WriteTask.GetAwaiter().GetResult()
+                [void]$WriteTask.GetAwaiter().GetResult()
             }
         }
         if (-not $TimedOut) {
@@ -234,7 +253,7 @@ if ($PackageItem.Length -ne $PackageSize -or
     (Get-FileHash -LiteralPath $Package -Algorithm SHA256).Hash.ToLowerInvariant() -ne $PackageSha256) {
     throw 'Local portal package differs from the approved size/SHA-256 pin.'
 }
-[byte[]]$PromoterBytes = [IO.File]::ReadAllBytes($Promoter)
+[byte[]]$PromoterBytes = ConvertTo-LfUtf8Bytes ([IO.File]::ReadAllBytes($Promoter))
 [byte[]]$VerifierBytes = [IO.File]::ReadAllBytes($PublicVerifier)
 $VerifierSize = $VerifierBytes.LongLength
 $VerifierSha256 = Get-BytesSha256 $VerifierBytes
@@ -309,7 +328,8 @@ $Preflight = $PreflightTemplate.
     Replace('__UPLOAD__', (ConvertTo-BashLiteral $RemoteUpload)).
     Replace('__PREVIOUS__', (ConvertTo-BashLiteral $PreviousVersion)).
     Replace('__TARGET__', (ConvertTo-BashLiteral $TargetVersion))
-$PreflightResult = Invoke-BoundedChild -FilePath $SshExecutable -Arguments ($SshCommon + @('bash -s --')) -TimeoutSeconds $ControlTimeoutSeconds -InputBytes $Utf8NoBom.GetBytes($Preflight)
+[byte[]]$PreflightBytes = ConvertTo-LfUtf8Bytes ($Utf8NoBom.GetBytes($Preflight))
+$PreflightResult = Invoke-BoundedChild -FilePath $SshExecutable -Arguments ($SshCommon + @('bash -s --')) -TimeoutSeconds $ControlTimeoutSeconds -InputBytes $PreflightBytes
 Show-ChildOutput $PreflightResult
 if ($PreflightResult.TimedOut -or $PreflightResult.ExitCode -ne 0 -or
     $PreflightResult.Stdout -notmatch '(?m)^CELIKPANEL_PORTAL_UPLOAD_READY$') {
@@ -359,7 +379,8 @@ $RemoteVerify = $RemoteVerifyTemplate.
     Replace('__VERIFIER_SIZE__', (ConvertTo-BashLiteral $VerifierSize.ToString())).
     Replace('__PACKAGE_SHA__', (ConvertTo-BashLiteral $PackageSha256)).
     Replace('__VERIFIER_SHA__', (ConvertTo-BashLiteral $VerifierSha256))
-$VerifyResult = Invoke-BoundedChild -FilePath $SshExecutable -Arguments ($SshCommon + @('bash -s --')) -TimeoutSeconds $ControlTimeoutSeconds -InputBytes $Utf8NoBom.GetBytes($RemoteVerify)
+[byte[]]$RemoteVerifyBytes = ConvertTo-LfUtf8Bytes ($Utf8NoBom.GetBytes($RemoteVerify))
+$VerifyResult = Invoke-BoundedChild -FilePath $SshExecutable -Arguments ($SshCommon + @('bash -s --')) -TimeoutSeconds $ControlTimeoutSeconds -InputBytes $RemoteVerifyBytes
 Show-ChildOutput $VerifyResult
 if ($VerifyResult.TimedOut -or $VerifyResult.ExitCode -ne 0 -or
     $VerifyResult.Stdout -notmatch '(?m)^CELIKPANEL_PORTAL_UPLOAD_PINNED$') {
@@ -393,5 +414,3 @@ $MarkerCount = @($PromotionResult.Stdout -split "\r?\n" | Where-Object { $_ -eq 
 if ($PromotionResult.TimedOut -or $PromotionResult.ExitCode -ne 0 -or $MarkerCount -ne 1) {
     throw "Portal promotion outcome is UNKNOWN. DO NOT RETRY. Run read-only live/backup/stage/failed/lock inspection first. Retained upload: $RemoteUpload"
 }
-
-Write-Host $SuccessMarker
