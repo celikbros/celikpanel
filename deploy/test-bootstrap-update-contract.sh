@@ -2256,16 +2256,29 @@ require_sequence "$ROLLBACK" \
 # saved-active branch, wait for the fresh socket, reacquire the same inode, and
 # re-prove the ledger and durable transaction before the panel may start.
 require_sequence "$ROLLBACK" \
+    'if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; then' \
+    'prepare_fresh_agent_socket_start' \
     'release_txn_create_start_authorization \' \
     'if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; then' \
     'release_release_mutation_lock \' \
     'systemctl start celikpanel-agent.service || die "restored agent did not start"' \
-    '[[ -S /run/celikpanel/agent.sock ]] || die "restored agent socket did not appear"' \
+    'wait_for_fresh_active_agent' \
     'acquire_release_mutation_lock handoff' \
     'verify_restored_agent_idle_under_release_lock' \
     'release_txn_validate_pending_token \' \
     'rollback completion marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"'
+require_function_sequence "$ROLLBACK" prepare_fresh_agent_socket_start \
+    '[[ -n "${MUTATION_LOCK_FD:-}" ]]' \
+    'reject_extra_service_cgroup_processes celikpanel-agent.service 0' \
+    '[[ -S "$socket" && ! -L "$socket" ]]' \
+    'rm -f -- "$socket"' \
+    '[[ ! -e "$socket" && ! -L "$socket" ]]'
+require_function_sequence "$ROLLBACK" wait_for_fresh_active_agent \
+    'state=$(systemctl show -p ActiveState --value celikpanel-agent.service)' \
+    '[[ ! -L "$socket" ]]' \
+    '[[ "$state" == active && -S "$socket" ]]' \
+    '[[ "$state" != failed ]]'
 require_function_sequence "$ROLLBACK" verify_restored_agent_idle_under_release_lock \
     '[[ -n "${MUTATION_LOCK_FD:-}" ]]' \
     'normal)' \

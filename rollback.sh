@@ -962,6 +962,45 @@ release_release_mutation_lock() {
     MUTATION_LOCK_FD=
 }
 
+prepare_fresh_agent_socket_start() {
+    local socket=/run/celikpanel/agent.sock state
+    [[ -n "${MUTATION_LOCK_FD:-}" ]] \
+        || die "fresh socket preparation requires the rollback mutation lock"
+    state=$(systemctl show -p ActiveState --value celikpanel-agent.service) \
+        || die "cannot inspect restored agent before fresh socket preparation"
+    case "$state" in
+        inactive|failed) ;;
+        *) die "fresh socket preparation requires the restored agent stopped" ;;
+    esac
+    reject_extra_service_cgroup_processes celikpanel-agent.service 0
+    if [[ -e "$socket" || -L "$socket" ]]; then
+        [[ -S "$socket" && ! -L "$socket" ]] \
+            || die "unsafe stale restored-agent socket refused"
+        rm -f -- "$socket" || die "cannot remove verified stale restored-agent socket"
+    fi
+    [[ ! -e "$socket" && ! -L "$socket" ]] \
+        || die "restored-agent socket path is not absent before controlled start"
+}
+
+wait_for_fresh_active_agent() {
+    local socket=/run/celikpanel/agent.sock state _
+    for _ in $(seq 1 40); do
+        state=$(systemctl show -p ActiveState --value celikpanel-agent.service) \
+            || die "cannot inspect restored agent during controlled start"
+        [[ ! -L "$socket" ]] \
+            || die "restored-agent socket became a symbolic link during controlled start"
+        if [[ -e "$socket" && ! -S "$socket" ]]; then
+            die "restored-agent socket path became unsafe during controlled start"
+        fi
+        if [[ "$state" == active && -S "$socket" ]]; then
+            return 0
+        fi
+        [[ "$state" != failed ]] || die "restored agent failed during controlled start"
+        sleep 0.3
+    done
+    die "restored agent did not become active with a fresh socket"
+}
+
 verify_restored_agent_idle_under_release_lock() {
     [[ -n "${MUTATION_LOCK_FD:-}" ]] \
         || die "restored agent idle proof requires the release mutation lock"
@@ -2064,6 +2103,9 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
         "$rollback_transaction_token" rollback "$snapshot_name" \
         || die "cannot mark rollback completion pending"
 fi
+if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; then
+    prepare_fresh_agent_socket_start
+fi
 release_txn_create_start_authorization \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
     "$RELEASE_TRANSACTION_FD" "$rollback_transaction_token" rollback "$snapshot_name" \
@@ -2075,11 +2117,7 @@ if service_state_is_active_like "${active_states[celikpanel-agent.service]}"; th
     release_release_mutation_lock \
         || die "cannot hand the mutation lock to the restored agent"
     systemctl start celikpanel-agent.service || die "restored agent did not start"
-    for _ in $(seq 1 20); do
-        [[ -S /run/celikpanel/agent.sock ]] && break
-        sleep 0.3
-    done
-    [[ -S /run/celikpanel/agent.sock ]] || die "restored agent socket did not appear"
+    wait_for_fresh_active_agent
     acquire_release_mutation_lock handoff
     verify_restored_agent_idle_under_release_lock
     release_txn_validate_pending_token \
