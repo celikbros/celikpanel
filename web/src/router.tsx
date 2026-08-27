@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type AnchorHTMLAttributes,
   type MouseEvent,
@@ -37,13 +38,34 @@ interface RouterContextValue {
 
 const RouterContext = createContext<RouterContextValue | null>(null);
 const ParamsContext = createContext<RouteParams>({});
+const ROUTER_STATE_KEY = '__celikpanel_router_v1';
+let navigationBlocker: { readonly current: boolean } | null = null;
+
+interface ManagedHistoryState {
+  index: number;
+  value: unknown;
+}
+
+function managedHistoryState(value: unknown): ManagedHistoryState | null {
+  const managed = (value as Record<string, ManagedHistoryState> | null)?.[ROUTER_STATE_KEY];
+  return managed && Number.isSafeInteger(managed.index) ? managed : null;
+}
+
+function wrappedHistoryState(index: number, value: unknown) {
+  return { [ROUTER_STATE_KEY]: { index, value } };
+}
+
+function currentBrowserURL() {
+  return `${window.location.pathname || '/'}${window.location.search}${window.location.hash}`;
+}
 
 function browserLocation(): LocationState {
+  const managed = managedHistoryState(window.history.state);
   return {
     pathname: window.location.pathname || '/',
     search: window.location.search,
     hash: window.location.hash,
-    state: window.history.state,
+    state: managed ? managed.value : window.history.state,
   };
 }
 
@@ -54,22 +76,59 @@ function requireRouter(): RouterContextValue {
 }
 
 export function BrowserRouter({ children }: { children: ReactNode }) {
-  const [location, setLocation] = useState<LocationState>(browserLocation);
-
+  const historyIndexRef = useRef(0);
+  const acceptedEntryRef = useRef({
+    state: window.history.state,
+    url: currentBrowserURL(),
+  });
+  const [location, setLocation] = useState<LocationState>(() => {
+    const managed = managedHistoryState(window.history.state);
+    historyIndexRef.current = managed?.index ?? 0;
+    if (!managed) {
+      window.history.replaceState(
+        wrappedHistoryState(historyIndexRef.current, window.history.state),
+        '',
+      );
+    }
+    acceptedEntryRef.current.state = window.history.state;
+    return browserLocation();
+  });
   useEffect(() => {
-    const onPopState = () => setLocation(browserLocation());
+    const onPopState = () => {
+      const target = managedHistoryState(window.history.state);
+      if (navigationBlocker?.current) {
+        if (target && target.index !== historyIndexRef.current) {
+          window.history.go(historyIndexRef.current - target.index);
+        } else {
+          const accepted = acceptedEntryRef.current;
+          window.history.replaceState(accepted.state, '', accepted.url);
+        }
+        return;
+      }
+      if (target) historyIndexRef.current = target.index;
+      acceptedEntryRef.current = {
+        state: window.history.state,
+        url: currentBrowserURL(),
+      };
+      setLocation(browserLocation());
+    };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   const navigate = useCallback<NavigateFunction>((to, options = {}) => {
+    if (navigationBlocker?.current) return;
     const target = new URL(to, window.location.href);
     if (target.origin !== window.location.origin) {
       throw new Error('cross-origin navigation is not allowed');
     }
     const next = `${target.pathname}${target.search}${target.hash}`;
-    if (options.replace) window.history.replaceState(options.state ?? null, '', next);
-    else window.history.pushState(options.state ?? null, '', next);
+    const index = options.replace ? historyIndexRef.current : historyIndexRef.current + 1;
+    const state = wrappedHistoryState(index, options.state ?? null);
+    if (options.replace) window.history.replaceState(state, '', next);
+    else window.history.pushState(state, '', next);
+    historyIndexRef.current = index;
+    acceptedEntryRef.current = { state, url: next };
     setLocation(browserLocation());
   }, []);
 
@@ -83,6 +142,15 @@ export function useNavigate(): NavigateFunction {
 
 export function useLocation(): LocationState {
   return requireRouter().location;
+}
+
+export function useNavigationBlocker(blocked: { readonly current: boolean }): void {
+  useEffect(() => {
+    navigationBlocker = blocked;
+    return () => {
+      if (navigationBlocker === blocked) navigationBlocker = null;
+    };
+  }, [blocked]);
 }
 
 export function useParams(): RouteParams {

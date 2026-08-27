@@ -7,6 +7,10 @@ const operationSource = readFileSync(
   new URL('../src/components/ComponentOperation.tsx', import.meta.url),
   'utf8',
 );
+const operationOverlaySource = readFileSync(
+  new URL('../src/components/OperationOverlay.tsx', import.meta.url),
+  'utf8',
+);
 const serviceSource = readFileSync(
   new URL('../src/components/ServiceList.tsx', import.meta.url),
   'utf8',
@@ -194,5 +198,6 @@ test('mail profile terminal errors preserve the safe code for the shared localiz
   const transport = operationSource.slice(start, end);
   assert.match(transport, /code: typeof raw\.code === 'string' \? raw\.code : undefined/);
   assert.match(operationSource, /finishFailure\(terminalFailure\)/);
-  assert.match(operationSource, /<ErrorBanner error=\{failure\}/);
+  assert.match(operationSource, /<OperationOverlay\s+failure=\{failure\}/);
+  assert.match(operationOverlaySource, /<ErrorBanner error=\{props\.failure\}/);
 });

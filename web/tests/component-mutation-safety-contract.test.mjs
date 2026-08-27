@@ -35,12 +35,9 @@ test('component mutations are gated by fail-closed host readiness', () => {
 test('active-operation discovery is silent while mutations remain fail-closed', () => {
   assert.match(
     operationSource,
-    /const locked = discoveringActive \|\| submitting \|\| operation !== null \|\| refreshingCatalog/,
+    /const interactionBlocked = \([\s\S]{0,240}submitting[\s\S]{0,240}operation !== null[\s\S]{0,240}refreshingCatalog[\s\S]{0,240}interactionBlocksRef\.current\.size > 0/,
   );
-  assert.match(
-    operationSource,
-    /const interactionBlocked = submitting \|\| operation !== null \|\| refreshingCatalog/,
-  );
+  assert.match(operationSource, /const locked = discoveringActive \|\| interactionBlocked/);
   assert.match(operationSource, /if \(!interactionBlocked\) return/);
   assert.match(operationSource, /\{interactionBlocked && createPortal\(/);
   assert.doesNotMatch(operationSource, /\{locked && createPortal\(/);

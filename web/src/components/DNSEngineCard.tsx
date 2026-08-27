@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
     AlertTriangle,
     ArrowRightLeft,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { dnsEngineText, type DNSEngineCopyKey } from '../i18n/dnsEngine';
-import { apiErrorText, readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { dnsEngineIdentityReviewLocked } from '../lib/dnsIdentityPlan';
 import {
     DNS_ENGINE_IDS,
@@ -26,6 +26,10 @@ import {
 } from '../lib/dnsEngineContract';
 import { Button } from './ui';
 import { showToast } from './Toast';
+import {
+    useComponentOperation,
+    type InteractionBlockLease,
+} from './ComponentOperation';
 
 interface DNSEngineCardProps {
     onSnapshotChange?: (snapshot: DNSEngineSnapshot | null) => void;
@@ -42,6 +46,96 @@ interface ReviewState {
     acknowledged: boolean;
     preview: DNSEngineSwitchPreview | null;
     error: string;
+}
+
+interface DNSEngineSwitchRequestBody {
+    request_id: string;
+    target_engine: DNSEngineID;
+    expected_source: DNSEngineID | null;
+    expected_revision: number;
+    preview_token: string;
+    downtime_acknowledged: boolean;
+}
+
+type DNSEngineSwitchHTTPResult =
+    | { ok: true; payload: unknown }
+    | { ok: false; status: number; error: ApiError };
+
+interface OperationGuardState {
+    requestID: string;
+    target: DNSEngineID;
+    mode: 'submitting' | 'verifying';
+    replayRequest: DNSEngineSwitchRequestBody | null;
+    completionToast?: {
+        type: 'error' | 'warning';
+        message: string;
+    };
+}
+
+interface DNSOperationRecoveryMarker {
+    version: 1;
+    requestID: string;
+    target: DNSEngineID;
+    request: DNSEngineSwitchRequestBody;
+}
+
+const DNS_OPERATION_RECOVERY_KEY = 'celikpanel.dns-engine.operation-recovery';
+const dnsOperationIDPattern = /^[a-f0-9]{32}$/;
+
+function validSwitchRequest(value: unknown): value is DNSEngineSwitchRequestBody {
+    if (!value || typeof value !== 'object') return false;
+    const request = value as Record<string, unknown>;
+    return typeof request.request_id === 'string'
+        && dnsOperationIDPattern.test(request.request_id)
+        && (request.target_engine === 'pdns' || request.target_engine === 'bind')
+        && (request.expected_source === null
+            || request.expected_source === 'pdns'
+            || request.expected_source === 'bind')
+        && typeof request.expected_revision === 'number'
+        && Number.isSafeInteger(request.expected_revision)
+        && request.expected_revision >= 0
+        && typeof request.preview_token === 'string'
+        && dnsOperationIDPattern.test(request.preview_token)
+        && typeof request.downtime_acknowledged === 'boolean';
+}
+
+function readDNSOperationMarker(): DNSOperationRecoveryMarker | null {
+    try {
+        const parsed = JSON.parse(sessionStorage.getItem(DNS_OPERATION_RECOVERY_KEY) ?? 'null');
+        if (!parsed || typeof parsed !== 'object') return null;
+        const marker = parsed as Record<string, unknown>;
+        if (marker.version !== 1 || !validSwitchRequest(marker.request)
+            || marker.requestID !== marker.request.request_id
+            || marker.target !== marker.request.target_engine) return null;
+        return marker as unknown as DNSOperationRecoveryMarker;
+    } catch {
+        return null;
+    }
+}
+
+function storeDNSOperationMarker(request: DNSEngineSwitchRequestBody): boolean {
+    const marker: DNSOperationRecoveryMarker = {
+        version: 1,
+        requestID: request.request_id,
+        target: request.target_engine,
+        request,
+    };
+    try {
+        sessionStorage.setItem(DNS_OPERATION_RECOVERY_KEY, JSON.stringify(marker));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function clearDNSOperationMarker(requestID: string): void {
+    try {
+        if (readDNSOperationMarker()?.requestID === requestID) {
+            sessionStorage.removeItem(DNS_OPERATION_RECOVERY_KEY);
+        }
+    } catch {
+        // Keep the marker when its exact ownership cannot be proven.
+    }
 }
 
 const knownBlockerKeys = {
@@ -73,7 +167,9 @@ const knownImpactKeys = {
     configure_secondary: 'dnsEngine.impact.configureSecondary',
 } as const;
 
-const dnsEngineStatusRequestTimeoutMs = 10_000;
+// A paired-primary snapshot can spend up to 15 seconds proving the peer
+// catalog. The browser deadline must be longer than that backend proof.
+const dnsEngineStatusRequestTimeoutMs = 30_000;
 
 function createRequestID(): string | null {
     try {
@@ -82,6 +178,44 @@ function createRequestID(): string | null {
         return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
     } catch {
         return null;
+    }
+}
+
+async function submitDNSEngineSwitch(
+    request: DNSEngineSwitchRequestBody,
+): Promise<DNSEngineSwitchHTTPResult> {
+    const requestController = new AbortController();
+    const requestTimeout = setTimeout(
+        () => requestController.abort(),
+        dnsEngineStatusRequestTimeoutMs,
+    );
+    try {
+        const response = await fetch('/api/v1/dns/engine/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+            signal: requestController.signal,
+        });
+        // Keep the deadline active until the complete body is consumed. If
+        // body reading is interrupted, no partial error envelope may be used
+        // as proof that a mutation never persisted.
+        const bodyText = await response.text();
+        if (!response.ok) {
+            return {
+                ok: false,
+                status: response.status,
+                error: await readApiError(new Response(bodyText)),
+            };
+        }
+        let payload: unknown;
+        try {
+            payload = JSON.parse(bodyText);
+        } catch {
+            payload = null;
+        }
+        return { ok: true, payload };
+    } finally {
+        clearTimeout(requestTimeout);
     }
 }
 
@@ -118,6 +252,7 @@ export function DNSEngineCard({
     actionsLocked = false,
 }: DNSEngineCardProps) {
     const { t, locale } = useI18n();
+    const { acquireInteractionBlock } = useComponentOperation();
     const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
         dnsEngineText(locale, key, vars);
     const [snapshot, setSnapshot] = useState<DNSEngineSnapshot | null>(null);
@@ -127,36 +262,77 @@ export function DNSEngineCard({
     const [trackingReadError, setTrackingReadError] = useState('');
     const [trackingDelayed, setTrackingDelayed] = useState(false);
     const [review, setReview] = useState<ReviewState | null>(null);
+    const [initialMarker] = useState(readDNSOperationMarker);
+    const [operationGuard, setOperationGuard] = useState<OperationGuardState | null>(() => (
+        initialMarker
+            ? {
+                requestID: initialMarker.requestID,
+                target: initialMarker.target,
+                mode: 'verifying',
+                replayRequest: initialMarker.request,
+            }
+            : null
+    ));
+    const operationGuardRef = useRef<OperationGuardState | null>(operationGuard);
+    const operationLeaseRef = useRef<InteractionBlockLease | null>(null);
+    operationGuardRef.current = operationGuard;
     const identityReviewLocked = dnsEngineIdentityReviewLocked(identityPlanCurrent, snapshot);
 
-    const refresh = useCallback(async (automaticTracking = false) => {
+    const guardView = useCallback((guard: OperationGuardState) => ({
+        title: et('dnsEngine.guard.title', { engine: engineName(guard.target) }),
+        status: et(guard.mode === 'submitting'
+            ? 'dnsEngine.guard.submitting'
+            : 'dnsEngine.guard.verifying'),
+        hint: et('dnsEngine.guard.navigationLocked'),
+        operationID: guard.requestID,
+    }), [locale]);
+
+    const holdOperationGuard = useCallback((guard: OperationGuardState) => {
+        operationGuardRef.current = guard;
+        setOperationGuard(guard);
+        if (operationLeaseRef.current) operationLeaseRef.current.update(guardView(guard));
+        else operationLeaseRef.current = acquireInteractionBlock(guardView(guard));
+    }, [acquireInteractionBlock, guardView]);
+
+    useLayoutEffect(() => {
+        if (!operationGuard) return;
+        if (operationLeaseRef.current) operationLeaseRef.current.update(guardView(operationGuard));
+        else operationLeaseRef.current = acquireInteractionBlock(guardView(operationGuard));
+    }, [acquireInteractionBlock, guardView, operationGuard]);
+
+    useEffect(() => () => {
+        operationLeaseRef.current?.release();
+        operationLeaseRef.current = null;
+    }, []);
+
+    const refresh = useCallback(async (automaticTracking = false): Promise<DNSEngineSnapshot | null> => {
         setLoading(true);
         setLoadError('');
         if (!automaticTracking) setTrackingReadError('');
-		const requestController = new AbortController();
-		const requestTimeout = setTimeout(
-			() => requestController.abort(),
-			dnsEngineStatusRequestTimeoutMs,
-		);
+        const requestController = new AbortController();
+        const requestTimeout = setTimeout(
+            () => requestController.abort(),
+            dnsEngineStatusRequestTimeoutMs,
+        );
         const failRefresh = (message: string) => {
             if (automaticTracking) {
                 setTrackingReadError(et('dnsEngine.operation.trackingReadFailed'));
                 return;
             }
-            setSnapshot(null);
-            onSnapshotChange?.(null);
+            // Keep the last verified state visible as evidence, but fail-close
+            // every mutation action until a fresh authoritative read succeeds.
             setLoadError(message);
         };
         try {
             const response = await fetch('/api/v1/dns/engine', {
                 method: 'GET',
                 cache: 'no-store',
-				signal: requestController.signal,
+                signal: requestController.signal,
             });
             if (!response.ok) {
                 await readApiError(response);
                 failRefresh(et('dnsEngine.stateUnavailable'));
-                return;
+                return null;
             }
             let payload: unknown;
             try {
@@ -167,32 +343,45 @@ export function DNSEngineCard({
             const decoded = decodeDNSEngineSnapshot(payload);
             if (decoded === null) {
                 failRefresh(et('dnsEngine.stateInvalid'));
-                return;
+                return null;
             }
             if (automaticTracking) setTrackingReadError('');
+            setLoadError('');
             setSnapshot(decoded);
             onSnapshotChange?.(decoded);
+            if (decoded.state === 'switching' && decoded.operation) {
+                if (operationGuardRef.current === null) {
+                    holdOperationGuard({
+                        requestID: decoded.operation.request_id,
+                        target: decoded.operation.target_engine,
+                        mode: 'verifying',
+                        replayRequest: null,
+                    });
+                }
+            }
+            return decoded;
         } catch {
             failRefresh(et('dnsEngine.stateUnavailable'));
+            return null;
         } finally {
-			clearTimeout(requestTimeout);
+            clearTimeout(requestTimeout);
             setLoading(false);
         }
-    }, [locale, onSnapshotChange]);
+    }, [holdOperationGuard, locale, onSnapshotChange]);
 
-    const reconcileAndRefresh = useCallback(async (automaticTracking = false) => {
+    const reconcileAndRefresh = useCallback(async (automaticTracking = false): Promise<DNSEngineSnapshot | null> => {
         setReview(null);
         setLoading(true);
         setLoadError('');
-		const requestController = new AbortController();
-		const requestTimeout = setTimeout(
-			() => requestController.abort(),
-			dnsEngineStatusRequestTimeoutMs,
-		);
+        const requestController = new AbortController();
+        const requestTimeout = setTimeout(
+            () => requestController.abort(),
+            dnsEngineStatusRequestTimeoutMs,
+        );
         try {
             const response = await fetch('/api/v1/dns/engine/reconcile', {
                 method: 'POST',
-				signal: requestController.signal,
+                signal: requestController.signal,
             });
             if (!response.ok) {
                 const apiError = await readApiError(response);
@@ -204,17 +393,119 @@ export function DNSEngineCard({
             }
         } catch {
             setTrackingError(et('dnsEngine.trackingReconcileFailed'));
-		} finally {
-			clearTimeout(requestTimeout);
+        } finally {
+            clearTimeout(requestTimeout);
         }
-        await refresh(automaticTracking);
+        return await refresh(automaticTracking);
     }, [locale, refresh, t]);
 
     useEffect(() => {
         void refresh();
     }, [refresh]);
 
+    const completeGuardedVerification = useCallback((
+        decoded: DNSEngineSnapshot,
+        guard: OperationGuardState,
+    ): boolean => {
+        const operationSucceeded = decoded.operation?.request_id === guard.requestID
+            && decoded.operation.target_engine === guard.target
+            && decoded.operation.status === 'succeeded';
+        const operationTerminated = operationSucceeded || (
+            decoded.operation?.request_id === guard.requestID
+            && decoded.operation.target_engine === guard.target
+            && (decoded.operation.status === 'rolled_back' || decoded.operation.status === 'failed')
+        );
+        if (!operationTerminated) return false;
+        setSnapshot(decoded);
+        onSnapshotChange?.(decoded);
+        setLoadError('');
+        setTrackingReadError('');
+        clearDNSOperationMarker(guard.requestID);
+        operationGuardRef.current = null;
+        setOperationGuard((current) => current?.requestID === guard.requestID ? null : current);
+        operationLeaseRef.current?.release();
+        operationLeaseRef.current = null;
+        if (operationSucceeded) {
+            showToast('success', et('dnsEngine.switchCompleted'));
+        } else if (guard.completionToast) {
+            showToast(guard.completionToast.type, guard.completionToast.message);
+        } else {
+            showToast('error', decoded.operation?.last_error || et('dnsEngine.switchFailed'));
+        }
+        return true;
+    }, [locale, onSnapshotChange]);
+
     useEffect(() => {
+        if (!operationGuard || operationGuard.mode !== 'verifying') return;
+        const guard = operationGuard;
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+
+        const schedule = () => {
+            if (!cancelled) timer = setTimeout(() => void verify(), 3000);
+        };
+        const verify = async () => {
+            let decoded: DNSEngineSnapshot | null = null;
+            if (guard.replayRequest) {
+                try {
+                    const result = await submitDNSEngineSwitch(guard.replayRequest);
+                    if (result.ok) {
+                        decoded = decodeDNSEngineSnapshot(result.payload);
+                        if (decoded !== null && decoded.state !== 'switching') {
+                            if (!cancelled && completeGuardedVerification(decoded, guard)) return;
+                        }
+                        if (decoded !== null) {
+                            setSnapshot(decoded);
+                            onSnapshotChange?.(decoded);
+                        }
+                    } else {
+                        const apiError = result.error;
+                        const prePersistRefusal = !apiError.code
+                            && apiError.mutationApplied !== true
+                            && apiError.partialSuccess !== true
+                            && (result.status === 400 || result.status === 409);
+                        if (prePersistRefusal) {
+                            if (cancelled
+                                || operationGuardRef.current?.requestID !== guard.requestID) return;
+                            clearDNSOperationMarker(guard.requestID);
+                            operationGuardRef.current = null;
+                            setOperationGuard((current) => (
+                                current?.requestID === guard.requestID ? null : current
+                            ));
+                            operationLeaseRef.current?.release();
+                            operationLeaseRef.current = null;
+                            showToast('error', apiError.message || et('dnsEngine.switchFailed'));
+                            void refresh();
+                            return;
+                        }
+                        setTrackingError(apiError.code
+                            ? apiErrorText(apiError, t)
+                            : et('dnsEngine.switchFailed'));
+                    }
+                } catch {
+                    schedule();
+                    return;
+                }
+            } else {
+                decoded = await reconcileAndRefresh(true);
+            }
+
+            if (cancelled) return;
+            if (decoded !== null && decoded.state !== 'switching') {
+                if (completeGuardedVerification(decoded, guard)) return;
+            }
+            schedule();
+        };
+
+        timer = setTimeout(() => void verify(), 500);
+        return () => {
+            cancelled = true;
+            if (timer !== undefined) clearTimeout(timer);
+        };
+    }, [completeGuardedVerification, locale, onSnapshotChange, operationGuard, reconcileAndRefresh, t]);
+
+    useEffect(() => {
+        if (operationGuardRef.current !== null) return;
         if (snapshot?.state !== 'switching' || !snapshot.operation_id) {
             setTrackingDelayed(false);
             setTrackingError('');
@@ -253,6 +544,7 @@ export function DNSEngineCard({
     }, [actionsLocked]);
 
     const requestPreview = async (target: DNSEngineID) => {
+        if (actionsLocked || loading || operationGuardRef.current !== null) return;
         if (actionsLocked || !snapshot || snapshot.state === 'switching' || identityReviewLocked) return;
         const base = snapshot;
         const requestID = createRequestID();
@@ -312,27 +604,36 @@ export function DNSEngineCard({
     const commitSwitch = async () => {
         const current = review;
         const preview = current?.preview;
-        if (actionsLocked || !current || !preview || current.loading || current.committing || preview.blockers.length > 0) return;
+        if (actionsLocked || loading || operationGuardRef.current !== null) return;
+        if (actionsLocked || !current || !preview || current.loading
+            || current.committing || preview.blockers.length > 0) return;
         if (preview.requires_downtime_acknowledgement && !current.acknowledged) return;
         const requestID = current.requestID;
         if (requestID === null) return;
 
+        const requestBody: DNSEngineSwitchRequestBody = {
+            request_id: requestID,
+            target_engine: current.target,
+            expected_source: current.base.active_engine,
+            expected_revision: current.base.revision,
+            preview_token: preview.preview_token,
+            downtime_acknowledged: current.acknowledged,
+        };
+        if (!storeDNSOperationMarker(requestBody)) {
+            setReview({ ...current, error: et('dnsEngine.recoveryUnavailable') });
+            return;
+        }
+        holdOperationGuard({
+            requestID,
+            target: current.target,
+            mode: 'submitting',
+            replayRequest: requestBody,
+        });
         setReview({ ...current, committing: true, error: '' });
         try {
-            const response = await fetch('/api/v1/dns/engine/switch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    request_id: requestID,
-                    target_engine: current.target,
-                    expected_source: current.base.active_engine,
-                    expected_revision: current.base.revision,
-                    preview_token: preview.preview_token,
-                    downtime_acknowledged: current.acknowledged,
-                }),
-            });
-            if (!response.ok) {
-                const apiError = await readApiError(response);
+            const result = await submitDNSEngineSwitch(requestBody);
+            if (!result.ok) {
+                const apiError = result.error;
                 const mutationApplied = apiError.mutationApplied === true;
                 const partialSuccess = apiError.partialSuccess === true;
                 // The commit endpoint consumes the preview authority before it
@@ -340,31 +641,113 @@ export function DNSEngineCard({
                 // HTTP response; a retry must begin with a fresh state and
                 // preview instead of reusing the old token.
                 setReview(null);
+                let completionToast: OperationGuardState['completionToast'];
                 if (mutationApplied) {
-                    showToast('warning', et('dnsEngine.switchAppliedNeedsRefresh'));
+                    completionToast = {
+                        type: 'warning',
+                        message: et('dnsEngine.switchAppliedNeedsRefresh'),
+                    };
                 } else if (partialSuccess) {
-                    showToast('warning', et('dnsEngine.switchPartialUnverified'));
+                    completionToast = {
+                        type: 'warning',
+                        message: et('dnsEngine.switchPartialUnverified'),
+                    };
                 } else {
-                    showToast(
-                        'error',
-                        apiError.code
+                    completionToast = {
+                        type: 'error',
+                        message: apiError.code
                             ? apiErrorText(apiError, t)
                             : et('dnsEngine.switchFailed'),
-                    );
+                    };
                 }
-                await refresh();
+                const prePersistRefusal = !apiError.code
+                    && !mutationApplied
+                    && !partialSuccess
+                    && (result.status === 400 || result.status === 409);
+                if (prePersistRefusal) {
+                    clearDNSOperationMarker(requestID);
+                    operationGuardRef.current = null;
+                    setOperationGuard(null);
+                    operationLeaseRef.current?.release();
+                    operationLeaseRef.current = null;
+                    showToast('error', completionToast.message);
+                    void refresh();
+                    return;
+                }
+                holdOperationGuard({
+                    requestID,
+                    target: current.target,
+                    mode: 'verifying',
+                    replayRequest: requestBody,
+                    completionToast,
+                });
                 return;
             }
+
+            const decoded = decodeDNSEngineSnapshot(result.payload);
+            if (decoded === null) {
+                setReview(null);
+                holdOperationGuard({
+                    requestID,
+                    target: current.target,
+                    mode: 'verifying',
+                    replayRequest: requestBody,
+                    completionToast: {
+                        type: 'warning',
+                        message: et('dnsEngine.switchAmbiguous'),
+                    },
+                });
+                return;
+            }
+            if (decoded.state === 'switching') {
+                setSnapshot(decoded);
+                onSnapshotChange?.(decoded);
+                setReview(null);
+                holdOperationGuard({
+                    requestID,
+                    target: current.target,
+                    mode: 'verifying',
+                    replayRequest: requestBody,
+                });
+                return;
+            }
+
+            // The successful POST already carries the verified terminal
+            // snapshot. Adopt it before unlocking; a redundant GET can only
+            // reintroduce a timeout and stale-state race.
             setReview(null);
-            showToast('success', et('dnsEngine.switchAccepted'));
-            await refresh();
+            if (!completeGuardedVerification(decoded, {
+                requestID,
+                target: current.target,
+                mode: 'verifying',
+                replayRequest: requestBody,
+            })) {
+                holdOperationGuard({
+                    requestID,
+                    target: current.target,
+                    mode: 'verifying',
+                    replayRequest: requestBody,
+                    completionToast: {
+                        type: 'warning',
+                        message: et('dnsEngine.switchAmbiguous'),
+                    },
+                });
+            }
         } catch {
             // A lost response can hide an accepted mutation and the preview
-            // token may already be consumed. Never leave a retryable confirm
-            // button on screen; refresh is the only truthful next step.
+            // token may already be consumed. Keep the page blocked and replay
+            // the exact idempotent request until terminal truth is proven.
             setReview(null);
-            showToast('warning', et('dnsEngine.switchAmbiguous'));
-            await refresh();
+            holdOperationGuard({
+                requestID,
+                target: current.target,
+                mode: 'verifying',
+                replayRequest: requestBody,
+                completionToast: {
+                    type: 'warning',
+                    message: et('dnsEngine.switchAmbiguous'),
+                },
+            });
         }
     };
 
@@ -382,7 +765,7 @@ export function DNSEngineCard({
                     <Button
                         variant="secondary"
                         icon={RefreshCw}
-                        disabled={loading || review?.committing === true}
+                        disabled={loading || review?.committing === true || operationGuard !== null}
                         onClick={() => void reconcileAndRefresh()}
                     >
                         {et('dnsEngine.refresh')}
@@ -392,6 +775,12 @@ export function DNSEngineCard({
                 {loading && !snapshot && !loadError && (
                     <div className="mt-5 flex min-h-24 items-center justify-center text-fg-muted" role="status" aria-label={t('common.loading')}>
                         <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                )}
+                {loading && snapshot && (
+                    <div className={'mt-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary'} role={'status'} aria-live={'polite'}>
+                        <Loader2 className={'h-4 w-4 animate-spin'} />
+                        <span>{et('dnsEngine.refreshing')}</span>
                     </div>
                 )}
                 {loadError && (
@@ -453,6 +842,9 @@ export function DNSEngineCard({
                                 const engine = snapshot.engines.find((candidate) => candidate.id === id)!;
                                 const Icon = engineIcon(id);
                                 const canReview = !actionsLocked
+                                    && !loading
+                                    && !loadError
+                                    && operationGuard === null
                                     && !identityReviewLocked
                                     && snapshot.state !== 'switching'
                                     && (engine.status === 'available'

@@ -1,5 +1,8 @@
 import {
     createContext,
+    lazy,
+    Suspense,
+    useCallback,
     useContext,
     useEffect,
     useRef,
@@ -7,12 +10,14 @@ import {
     type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2 as LoaderCircle, WifiOff, X } from 'lucide-react';
 import { useI18n } from '../i18n';
-import type { TranslationKey } from '../i18n/en';
 import { readApiError, type ApiError } from '../lib/apiError';
+import { useNavigationBlocker } from '../router';
 import { showToast } from './Toast';
-import { ErrorBanner } from './ui';
+
+const OperationOverlay = lazy(() => import('./OperationOverlay').catch(
+    () => new Promise<never>(() => {}),
+));
 
 const OPERATION_ID_KEY = 'celikpanel.components.operation-id';
 const OPERATION_LABEL_KEY = 'celikpanel.components.operation-label';
@@ -96,12 +101,26 @@ export interface OperationRecoveryMarker {
     created_at: number;
 }
 
+export interface InteractionBlockView {
+    title: string;
+    status: string;
+    hint?: string;
+    operationID?: string;
+    interrupted?: boolean;
+}
+
+export interface InteractionBlockLease {
+    update: (view: InteractionBlockView) => void;
+    release: () => void;
+}
+
 interface ComponentOperationContextValue {
     operation: ComponentOperation | null;
     locked: boolean;
     failure: ApiError | null;
     catalogSnapshot: ManagedServicesSnapshot | null;
     startInstall: (request: InstallOperationRequest) => Promise<boolean>;
+    acquireInteractionBlock: (view: InteractionBlockView) => InteractionBlockLease;
     clearFailure: () => void;
 }
 
@@ -733,20 +752,56 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
     const [connectionInterrupted, setConnectionInterrupted] = useState(false);
     const [failure, setFailure] = useState<ApiError | null>(null);
     const [catalogSnapshot, setCatalogSnapshot] = useState<ManagedServicesSnapshot | null>(null);
+    const interactionBlocksRef = useRef(new Map<object, InteractionBlockView>());
+    const interactionBlockedRef = useRef(false);
+    const lockedRef = useRef(false);
+    const focusBeforeLockRef = useRef<HTMLElement | null>(null);
+    const [, setInteractionBlockVersion] = useState(0);
+    const acquireInteractionBlock = useCallback((view: InteractionBlockView): InteractionBlockLease => {
+        const refreshInteractionBlocks = () => setInteractionBlockVersion((version) => version + 1);
+        if (
+            interactionBlocksRef.current.size === 0
+            && !interactionBlockedRef.current
+            && document.activeElement instanceof HTMLElement
+        ) {
+            focusBeforeLockRef.current = document.activeElement;
+        }
+        const id = {};
+        interactionBlocksRef.current.set(id, view);
+        interactionBlockedRef.current = true;
+        lockedRef.current = true;
+        refreshInteractionBlocks();
+        return {
+            update: (next) => {
+                if (!interactionBlocksRef.current.has(id)) return;
+                interactionBlocksRef.current.set(id, next);
+                refreshInteractionBlocks();
+            },
+            release: () => {
+                if (interactionBlocksRef.current.delete(id)) refreshInteractionBlocks();
+            },
+        };
+    }, []);
     // Discovery is a fail-closed mutation gate, but it is not a user-visible
     // operation. Keep install actions locked until the server proves absence,
     // while allowing ordinary navigation and read-only work to continue.
     // Keşif, değişiklikler için güvenli tarafta kalan bir kilittir; kullanıcıya
     // gösterilecek bir işlem değildir. Sunucu yokluğu kanıtlayana kadar kurulum
     // eylemlerini kilitli tutarken gezinme ve salt-okunur kullanımı açık bırak.
-    const locked = discoveringActive || submitting || operation !== null || refreshingCatalog;
-    const interactionBlocked = submitting || operation !== null || refreshingCatalog;
-    const lockedRef = useRef(locked);
+    const interactionBlocked = (
+        submitting
+        || operation !== null
+        || refreshingCatalog
+        || interactionBlocksRef.current.size > 0
+    );
+    const locked = discoveringActive || interactionBlocked;
+    interactionBlockedRef.current = interactionBlocked;
+    const externalInteraction = interactionBlocksRef.current.values().next().value ?? null;
     const recoveryGenerationRef = useRef(0);
     const recoveryMarkerRef = useRef<OperationRecoveryMarker | null>(initialSession.recoveryMarker);
     const adoptedOperationIDRef = useRef(initialSession.operation?.id || '');
     const activeSyncInFlightRef = useRef(false);
-    const focusBeforeLockRef = useRef<HTMLElement | null>(null);
+    useNavigationBlocker(interactionBlockedRef);
 
     useEffect(() => {
         lockedRef.current = locked;
@@ -765,15 +820,20 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
     useEffect(() => {
         if (!interactionBlocked) return;
         const root = document.getElementById('root');
-        if (!root) return;
-        const hadInert = root.hasAttribute('inert');
-        const previousBusy = root.getAttribute('aria-busy');
-        root.setAttribute('inert', '');
-        root.setAttribute('aria-busy', 'true');
+        const onBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        const hadInert = root?.hasAttribute('inert') ?? false;
+        const previousBusy = root?.getAttribute('aria-busy') ?? null;
+        root?.setAttribute('inert', '');
+        root?.setAttribute('aria-busy', 'true');
         return () => {
-            if (!hadInert) root.removeAttribute('inert');
-            if (previousBusy === null) root.removeAttribute('aria-busy');
-            else root.setAttribute('aria-busy', previousBusy);
+            window.removeEventListener('beforeunload', onBeforeUnload);
+            if (!hadInert) root?.removeAttribute('inert');
+            if (previousBusy === null) root?.removeAttribute('aria-busy');
+            else root?.setAttribute('aria-busy', previousBusy);
             const focusTarget = focusBeforeLockRef.current;
             focusBeforeLockRef.current = null;
             if (focusTarget?.isConnected) focusTarget.focus();
@@ -1608,116 +1668,45 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 failure,
                 catalogSnapshot,
                 startInstall,
+                acquireInteractionBlock,
                 clearFailure: () => setFailure(null),
             }}
         >
             {children}
             {interactionBlocked && createPortal(
-                <OperationOverlay
-                    operation={operation}
-                    label={label}
-                    submitting={submitting}
-                    recovering={recoveringRequest}
-                    refreshing={refreshingCatalog}
-                    interrupted={connectionInterrupted}
-                />,
+                <Suspense fallback={(
+                    <div
+                        role="status"
+                        tabIndex={-1}
+                        autoFocus
+                        className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/75 p-4 text-white"
+                    >
+                        {t('services.operation.starting')}
+                    </div>
+                )}>
+                    <OperationOverlay
+                        view={externalInteraction}
+                        operation={operation}
+                        label={label}
+                        submitting={submitting}
+                        recovering={recoveringRequest}
+                        refreshing={refreshingCatalog}
+                        interrupted={connectionInterrupted}
+                    />
+                </Suspense>,
                 document.body,
             )}
             {failure && !interactionBlocked && createPortal(
-                <div
-                    role="alert"
-                    className="fixed inset-x-4 top-4 z-[90] mx-auto max-w-2xl rounded-xl bg-surface shadow-2xl"
-                >
-                    <div className="relative">
-                        <ErrorBanner error={failure} className="pr-12" />
-                        <button
-                            type="button"
-                            onClick={() => setFailure(null)}
-                            aria-label={t('services.operation.dismiss')}
-                            title={t('services.operation.dismiss')}
-                            className="absolute right-2 top-2 rounded-md p-1.5 text-danger transition-colors hover:bg-danger/10"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>,
+                <Suspense fallback={null}>
+                    <OperationOverlay
+                        failure={failure}
+                        dismissLabel={t('services.operation.dismiss')}
+                        onDismiss={() => setFailure(null)}
+                    />
+                </Suspense>,
                 document.body,
             )}
         </ComponentOperationContext.Provider>
-    );
-}
-
-function OperationOverlay({
-    operation,
-    label,
-    submitting,
-    recovering,
-    refreshing,
-    interrupted,
-}: {
-    operation: ComponentOperation | null;
-    label: string;
-    submitting: boolean;
-    recovering: boolean;
-    refreshing: boolean;
-    interrupted: boolean;
-}) {
-    const { t } = useI18n();
-    const dialogRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        dialogRef.current?.focus();
-    }, []);
-
-    let statusText = interrupted
-        ? t('services.operation.reconnecting')
-        : t('services.operation.starting');
-    if (!interrupted && recovering) {
-        statusText = t('services.operation.recoveringRequest');
-    } else if (!interrupted && refreshing) {
-        statusText = t('services.operation.refreshing');
-    } else if (!interrupted && !submitting && operation) {
-        const normalizedPhase = operation.phase.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
-        const phaseKey = `services.operation.phase.${normalizedPhase}` as TranslationKey;
-        const translated = t(phaseKey);
-        statusText = translated === phaseKey
-            ? operation.phase || t('services.operation.running')
-            : translated;
-    }
-
-    return (
-        <div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="component-operation-title"
-            tabIndex={-1}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm outline-none"
-        >
-            <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
-                <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
-                    interrupted ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
-                }`}>
-                    {interrupted
-                        ? <WifiOff className="h-7 w-7" />
-                        : <LoaderCircle className="h-7 w-7 animate-spin" />}
-                </span>
-                <h2 id="component-operation-title" className="text-xl font-semibold text-fg">
-                    {t('services.operation.title', { name: label || t('services.install') })}
-                </h2>
-                <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
-                    {statusText}
-                </p>
-                <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
-                    {t('services.operation.backgroundHint')}
-                </p>
-                {operation?.id && (
-                    <p className="mt-3 font-mono text-[11px] text-fg-subtle">
-                        {t('services.operation.id', { id: operation.id })}
-                    </p>
-                )}
-            </div>
-        </div>
     );
 }
 

@@ -62,6 +62,7 @@ function readySnapshot(overrides = {}) {
 function operationSnapshot(overrides = {}) {
   return {
     id: 'c'.repeat(32),
+    request_id: 'd'.repeat(32),
     target_engine: 'bind',
     phase: 'activating',
     status: 'running',
@@ -140,7 +141,7 @@ test('hidden and initial DNS state load is read-only; explicit Refresh reconcile
   assert.match(card, /onClick=\{\(\) => void reconcileAndRefresh\(\)\}/);
 });
 
-test('automatic poll read failures retain the last verified switching lock while authoritative reads fail closed', () => {
+test('refresh failures retain the last verified snapshot while authoritative reads fail closed', () => {
   const loadStart = card.indexOf('const refresh = useCallback');
   const loadEnd = card.indexOf('const reconcileAndRefresh = useCallback', loadStart);
   assert.ok(loadStart >= 0 && loadEnd > loadStart);
@@ -151,8 +152,10 @@ test('automatic poll read failures retain the last verified switching lock while
   const failRefresh = loadBody.slice(helperStart, helperEnd);
 
   assert.match(failRefresh,
-    /if \(automaticTracking\) \{[\s\S]*setTrackingReadError\(et\('dnsEngine\.operation\.trackingReadFailed'\)\)[\s\S]*return;[\s\S]*\}[\s\S]*setSnapshot\(null\)[\s\S]*onSnapshotChange\?\.\(null\)[\s\S]*setLoadError\(message\)/,
-    'only an automatic poll may retain the last verified snapshot after a failed read');
+    /if \(automaticTracking\) \{[\s\S]*setTrackingReadError\(et\('dnsEngine\.operation\.trackingReadFailed'\)\)[\s\S]*return;[\s\S]*\}[\s\S]*setLoadError\(message\)/,
+    'an automatic poll reports a tracking warning while an explicit read reports its load error');
+  assert.doesNotMatch(failRefresh, /setSnapshot\(null\)|onSnapshotChange\?\.\(null\)/,
+    'a transient read failure must not erase the last verified DNS authority or operation evidence');
   assert.equal((loadBody.match(/failRefresh\(et\('dnsEngine\.stateUnavailable'\)\)/g) ?? []).length, 2,
     'non-2xx/network failures must share the automatic-retention boundary');
   assert.equal((loadBody.match(/failRefresh\(et\('dnsEngine\.stateInvalid'\)\)/g) ?? []).length, 1,
@@ -165,6 +168,9 @@ test('automatic poll read failures retain the last verified switching lock while
 	assert.match(loadBody,
 		/new AbortController\(\)[\s\S]*setTimeout\([\s\S]*requestController\.abort\(\)[\s\S]*dnsEngineStatusRequestTimeoutMs[\s\S]*signal: requestController\.signal[\s\S]*finally \{[\s\S]*clearTimeout\(requestTimeout\)/,
 		'a hung snapshot request must abort and settle instead of freezing automatic tracking');
+  assert.match(card,
+    /const canReview = !actionsLocked[\s\S]*&& !loading[\s\S]*&& !loadError/,
+    'retained evidence must remain non-actionable until a fresh authoritative read succeeds');
   assert.match(copy, /dnsEngine\.operation\.trackingReadFailed/);
 });
 
@@ -639,7 +645,7 @@ test('authoritative switch is isolated behind verified preview and explicit conf
   const commitBody = card.slice(commitStart, commitEnd);
   assert.match(commitBody, /preview\.blockers\.length > 0/);
   assert.match(commitBody, /preview\.requires_downtime_acknowledgement && !current\.acknowledged/);
-  assert.match(commitBody, /fetch\('\/api\/v1\/dns\/engine\/switch'/);
+  assert.match(commitBody, /submitDNSEngineSwitch\(requestBody\)/);
   assert.match(commitBody, /request_id: requestID/);
   assert.match(commitBody, /const requestID = current\.requestID/);
   assert.doesNotMatch(commitBody, /createRequestID\(\)/);
@@ -650,12 +656,42 @@ test('authoritative switch is isolated behind verified preview and explicit conf
   assert.match(commitBody, /downtime_acknowledged: current\.acknowledged/);
 });
 
-test('failed DNS commits discard consumed authority, distinguish proof flags, and refresh', () => {
+test('successful DNS commit adopts its verified terminal snapshot before unlocking without a redundant GET', () => {
+  const commitStart = card.indexOf('const commitSwitch = async');
+  const commitEnd = card.indexOf('\n    return (', commitStart);
+  const commitBody = card.slice(commitStart, commitEnd);
+  const successDecode = commitBody.indexOf('decodeDNSEngineSnapshot(', commitBody.indexOf('if (!result.ok)'));
+  const catchStart = commitBody.indexOf('} catch {', successDecode);
+  assert.ok(successDecode >= 0 && catchStart > successDecode,
+    'a successful switch response must be decoded before the commit handler can finish');
+  const successBody = commitBody.slice(successDecode, catchStart);
+
+  assert.match(successBody, /decodeDNSEngineSnapshot\(result\.payload\)/);
+  assert.match(successBody, /if \(decoded === null\)/,
+    'a malformed success body must never unlock the page as a completed operation');
+  assert.match(successBody, /completeGuardedVerification\(decoded,/,
+    'the direct success response must use the same exact terminal verifier as recovery polling');
+  assert.doesNotMatch(successBody, /await (?:refresh|reconcileAndRefresh)\(/,
+    'the switch response already contains terminal truth; a second GET creates an avoidable unlock race');
+
+  const completionStart = card.indexOf('const completeGuardedVerification =');
+  const completionEnd = card.indexOf('\n    useEffect(() => {', completionStart);
+  const completionBody = card.slice(completionStart, completionEnd);
+  const adoptSnapshot = completionBody.indexOf('setSnapshot(decoded)');
+  const notifyParent = completionBody.indexOf('onSnapshotChange?.(decoded)', adoptSnapshot);
+  const closeReview = completionBody.indexOf('setOperationGuard(', notifyParent);
+  const releaseGuard = completionBody.indexOf('operationLeaseRef.current?.release()', closeReview);
+  assert.ok(adoptSnapshot >= 0 && notifyParent > adoptSnapshot && closeReview > notifyParent && releaseGuard > closeReview,
+    'the verified terminal snapshot must be visible before the exact central lease unlocks');
+  assert.match(completionBody, /showToast\('success'/);
+});
+
+test('failed or ambiguous DNS commits retain the guard unless a pre-persist refusal is proven', () => {
   const commitStart = card.indexOf('const commitSwitch = async');
   const commitEnd = card.indexOf('\n    return (', commitStart);
   const commitBody = card.slice(commitStart, commitEnd);
 
-  assert.match(commitBody, /const apiError = await readApiError\(response\)/);
+  assert.match(commitBody, /const apiError = result\.error/);
   assert.match(commitBody, /const mutationApplied = apiError\.mutationApplied === true/);
   assert.match(commitBody, /const partialSuccess = apiError\.partialSuccess === true/);
   assert.doesNotMatch(
@@ -667,15 +703,27 @@ test('failed DNS commits discard consumed authority, distinguish proof flags, an
   assert.match(commitBody, /else if \(partialSuccess\)[\s\S]*dnsEngine\.switchPartialUnverified/);
   assert.match(commitBody, /apiError\.code[\s\S]*apiErrorText\(apiError, t\)/);
 
-  const failedResponse = commitBody.indexOf('if (!response.ok)');
-  const failedClose = commitBody.indexOf('setReview(null)', failedResponse);
-  const failedRefresh = commitBody.indexOf('await refresh()', failedClose);
-  assert.ok(failedResponse >= 0 && failedClose > failedResponse && failedRefresh > failedClose);
+  const failedResponse = commitBody.indexOf('if (!result.ok)');
+  const successDecode = commitBody.indexOf('decodeDNSEngineSnapshot(', failedResponse);
+  const failedBody = commitBody.slice(failedResponse, successDecode);
+  const failedClose = failedBody.indexOf('setReview(null)');
+  assert.ok(failedResponse >= 0 && successDecode > failedResponse && failedClose >= 0,
+    'a consumed failed preview must not remain confirmable');
+  assert.match(failedBody,
+    /const prePersistRefusal = !apiError\.code[\s\S]*result\.status === 400 \|\| result\.status === 409/,
+    'only an uncoded client refusal before persistence may unlock without a terminal operation');
+  assert.match(failedBody, /if \(prePersistRefusal\)[\s\S]*clearDNSOperationMarker\(requestID\)/);
+  assert.match(failedBody, /holdOperationGuard\([\s\S]*replayRequest: requestBody/,
+    'coded rollback and ambiguous server outcomes must retain the exact replayable guard');
 
-  const catchStart = commitBody.indexOf('} catch {', failedRefresh);
-  const ambiguousClose = commitBody.indexOf('setReview(null)', catchStart);
-  const ambiguousRefresh = commitBody.indexOf('await refresh()', ambiguousClose);
-  assert.ok(catchStart > failedRefresh && ambiguousClose > catchStart && ambiguousRefresh > ambiguousClose);
+  const catchStart = commitBody.indexOf('} catch {', successDecode);
+  const ambiguousBody = commitBody.slice(catchStart);
+  assert.ok(catchStart > successDecode && ambiguousBody.includes('setReview(null)'),
+    'an ambiguous response must consume the old review authority');
+  assert.doesNotMatch(ambiguousBody, /setOperationGuard\(null\)/,
+    'a lost response cannot unlock the panel while the host outcome is unknown');
+  assert.match(commitBody, /setOperationGuard\([\s\S]*requestID[\s\S]*target/,
+    'the durable request identity must be captured independently before the mutation begins');
   assert.doesNotMatch(
     commitBody,
     /committing:\s*false,\s*error:\s*et\('dnsEngine\.switch/,
@@ -687,6 +735,33 @@ test('failed DNS commits discard consumed authority, distinguish proof flags, an
   assert.match(copy, /Devam etmeden önce güncel DNS durumunu doğrulayın/);
   assert.doesNotMatch(copy, /State was refreshed|Durum yenilendi/,
     'a refresh attempt must not be described as a completed refresh');
+});
+
+test('DNS actions lock while state is loading and an independent full-page guard survives submission', () => {
+  const previewStart = card.indexOf('const requestPreview = async');
+  const previewEnd = card.indexOf('\n    const commitSwitch = async', previewStart);
+  const previewBody = card.slice(previewStart, previewEnd);
+  const cardsStart = card.indexOf('const canReview =');
+  const cardsEnd = card.indexOf('const reviewLabel =', cardsStart);
+  const canReview = card.slice(cardsStart, cardsEnd);
+
+  assert.match(card, /const \[operationGuard, setOperationGuard\] = useState/,
+    'submission/outcome ownership must not depend on the disposable preview dialog');
+  assert.match(previewBody, /actionsLocked \|\| loading \|\| operationGuardRef\.current !== null/,
+    'preview creation must be impossible during a state read or guarded mutation');
+  assert.match(canReview, /!loading/);
+  assert.match(canReview, /operationGuard === null/);
+  assert.match(card, /disabled=\{loading \|\| review\?\.committing === true \|\| operationGuard !== null\}/,
+    'Refresh cannot race a state read, submission, or unresolved mutation outcome');
+
+  assert.match(card, /const \{ acquireInteractionBlock \} = useComponentOperation\(\)/);
+  assert.match(card, /operationLeaseRef\.current = acquireInteractionBlock\(guardView\(guard\)\)/,
+    'the exact DNS request must acquire the shared full-page interaction lease');
+  assert.doesNotMatch(card, /function DNSEngineOperationGuard|createPortal\(/,
+    'DNS must not own a second portal, inert root, or history blocker');
+  assert.doesNotMatch(card,
+    /review && !actionsLocked && operationGuard/,
+    'parent fail-closed state must not accidentally unmount an in-flight outcome guard');
 });
 
 test('review dialog is accessible and uses a meaningful acknowledgement, not a typed phrase', () => {
