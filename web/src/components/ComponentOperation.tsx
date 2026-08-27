@@ -1143,6 +1143,14 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             let adopted = false;
             let verifiedNoActive = false;
             let shouldRetry = false;
+            const keepDiscoveryFailClosed = () => {
+                if (cancelled) return;
+                // Discovery uncertainty is not an operation failure. Keep
+                // mutation controls locked and retry without publishing a
+                // competing user-visible error over a tracked self-update.
+                setConnectionInterrupted(true);
+                shouldRetry = true;
+            };
             const controller = new AbortController();
             activeDiscoveryController = controller;
             const timeout = window.setTimeout(
@@ -1157,11 +1165,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                         { cache: 'no-store', signal: controller.signal },
                     );
                 } catch {
-                    if (!cancelled) {
-                        setFailure({ message: t('services.operation.activeCheckFailed') });
-                        setConnectionInterrupted(true);
-                        shouldRetry = true;
-                    }
+                    keepDiscoveryFailClosed();
                     return;
                 }
                 if (cancelled) return;
@@ -1170,9 +1174,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     return;
                 }
                 if (!response.ok) {
-                    setFailure({ message: t('services.operation.activeCheckFailed') });
-                    setConnectionInterrupted(true);
-                    shouldRetry = true;
+                    keepDiscoveryFailClosed();
                     return;
                 }
 
@@ -1180,11 +1182,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 try {
                     payload = await response.json();
                 } catch {
-                    if (!cancelled) {
-                        setFailure({ message: t('services.operation.invalidResponse') });
-                        setConnectionInterrupted(true);
-                        shouldRetry = true;
-                    }
+                    keepDiscoveryFailClosed();
                     return;
                 }
                 const envelope = payload && typeof payload === 'object'
@@ -1200,20 +1198,12 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     next === null
                     || (next.status !== 'queued' && next.status !== 'running')
                 ) {
-                    if (!cancelled) {
-                        setFailure({ message: t('services.operation.invalidResponse') });
-                        setConnectionInterrupted(true);
-                        shouldRetry = true;
-                    }
+                    keepDiscoveryFailClosed();
                     return;
                 }
                 const marker = recoveryMarkerForOperation(next);
                 if (marker === null) {
-                    if (!cancelled) {
-                        setFailure({ message: t('services.operation.recoveryStorageUnavailable') });
-                        setConnectionInterrupted(true);
-                        shouldRetry = true;
-                    }
+                    keepDiscoveryFailClosed();
                     return;
                 }
                 if (cancelled) return;
@@ -1235,7 +1225,6 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     if (!cancelled) {
                         setDiscoveringActive(false);
                         setConnectionInterrupted(false);
-                        setFailure(null);
                     }
                 } else {
                     // No valid "operation: null" or adoptable operation means

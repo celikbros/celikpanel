@@ -36,6 +36,13 @@ test('polling survives restart and accepts only the exact request and target', (
     assert.match(card, /payload\.status === 'succeeded' \|\| payload\.status === 'failed'/);
 });
 
+test('self-update owns its exact tracker without joining the service-operation discovery channel', () => {
+    assert.match(card, /const UPDATE_MARKER_KEY = 'celikpanel\.system-update-operation\.v1'/);
+    assert.match(card, /status\?request_id=\$\{encodeURIComponent\(exactMarker\.request_id\)\}/);
+    assert.match(card, /role=.{0,2}status.{0,2} aria-live=.{0,2}polite/);
+    assert.doesNotMatch(card, /useComponentOperation|service\/operation\?active=1/);
+});
+
 test('an exact successful update politely reloads once with a cache-busting identity', () => {
     const terminal = card.slice(card.indexOf(`payload.status === 'succeeded' || payload.status === 'failed'`));
     const successStart = terminal.indexOf(`if (payload.status === 'succeeded')`);
