@@ -42,6 +42,7 @@ export type DNSEngineOperationStatus =
 
 export interface DNSEngineOperation {
     id: string;
+    request_id: string;
     target_engine: DNSEngineID;
     phase: string;
     status: DNSEngineOperationStatus;
@@ -153,6 +154,8 @@ function decodeDNSEngineOperation(value: unknown): DNSEngineOperation | null {
     if (!isRecord(value)
         || typeof value.id !== 'string'
         || !operationIDPattern.test(value.id)
+        || typeof value.request_id !== 'string'
+        || !operationIDPattern.test(value.request_id)
         || !isEngineID(value.target_engine)
         || typeof value.phase !== 'string'
         || !operationPhases.has(value.phase)
@@ -189,6 +192,7 @@ function decodeDNSEngineOperation(value: unknown): DNSEngineOperation | null {
 
     return {
         id: value.id,
+        request_id: value.request_id,
         target_engine: value.target_engine,
         phase: value.phase,
         status: value.status as DNSEngineOperationStatus,

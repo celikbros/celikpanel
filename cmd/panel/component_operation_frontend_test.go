@@ -144,8 +144,12 @@ func TestComponentOperationInitialDiscoveryLocksMutationsWithoutBlockingPage(t *
 	source := componentOperationSource(t)
 	for _, required := range []string{
 		"() => initialSession.operation === null && initialSession.recoveryMarker === null",
-		"const locked = discoveringActive || submitting || operation !== null || refreshingCatalog;",
-		"const interactionBlocked = submitting || operation !== null || refreshingCatalog;",
+		"const interactionBlocksRef = useRef(new Map<object, InteractionBlockView>());",
+		"const acquireInteractionBlock = useCallback((view: InteractionBlockView): InteractionBlockLease => {",
+		"interactionBlocksRef.current.set(id, view);",
+		"interactionBlocksRef.current.delete(id)",
+		"|| interactionBlocksRef.current.size > 0",
+		"const locked = discoveringActive || interactionBlocked;",
 		"if (!interactionBlocked) return;",
 		"{interactionBlocked && createPortal(",
 		"void syncActiveOperation(true);",
@@ -157,7 +161,7 @@ func TestComponentOperationInitialDiscoveryLocksMutationsWithoutBlockingPage(t *
 	if strings.Contains(source, "{locked && createPortal(") {
 		t.Fatal("background discovery must not open the blocking operation overlay")
 	}
-	if !strings.Contains(source, "root.setAttribute('inert', '');") {
+	if !strings.Contains(source, "root?.setAttribute('inert', '');") {
 		t.Fatal("real package operations must still make the underlying page inert")
 	}
 }

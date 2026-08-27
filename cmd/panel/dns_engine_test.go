@@ -1221,6 +1221,78 @@ func TestDNSEngineFirstInstallAndRequestReplay(t *testing.T) {
 	}
 }
 
+func TestDNSEngineRequestReplayReturnsExactOlderOperation(t *testing.T) {
+	panel := newDNSPanelForTest(t)
+	setDNSIdentityForTest(t, panel, "standalone")
+	agent := newDNSEngineTestAgent()
+	attachDNSEngineTestAgent(t, panel, agent)
+
+	firstRequestID := strings.Repeat("1", 32)
+	firstPreview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEngineBIND, nil, 0,
+	)
+	if recorder.Code != http.StatusOK || len(firstPreview.Blockers) != 0 {
+		t.Fatalf("first preview status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	firstCommit := commitDNSEngineSwitch(
+		t, panel, firstRequestID, transport.DNSEngineBIND,
+		nil, 0, firstPreview.PreviewToken, false,
+	)
+	if firstCommit.Code != http.StatusOK {
+		t.Fatalf("first commit status=%d body=%s", firstCommit.Code, firstCommit.Body.String())
+	}
+	var firstSnapshot dnsEngineSnapshot
+	if err := json.Unmarshal(firstCommit.Body.Bytes(), &firstSnapshot); err != nil ||
+		firstSnapshot.Operation == nil {
+		t.Fatalf("decode first snapshot: %v body=%s", err, firstCommit.Body.String())
+	}
+	firstSwitchID := firstSnapshot.Operation.ID
+
+	current, err := panel.dnsEngineSnapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondRequestID := strings.Repeat("2", 32)
+	secondPreview, recorder := requestDNSEnginePreview(
+		t, panel, transport.DNSEnginePowerDNS, transport.DNSEngineBIND,
+		current.Revision,
+	)
+	if recorder.Code != http.StatusOK || len(secondPreview.Blockers) != 0 {
+		t.Fatalf("second preview status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	secondCommit := commitDNSEngineSwitch(
+		t, panel, secondRequestID, transport.DNSEnginePowerDNS,
+		transport.DNSEngineBIND, current.Revision,
+		secondPreview.PreviewToken, true,
+	)
+	if secondCommit.Code != http.StatusOK {
+		t.Fatalf("second commit status=%d body=%s", secondCommit.Code, secondCommit.Body.String())
+	}
+
+	replay := commitDNSEngineSwitch(
+		t, panel, firstRequestID, transport.DNSEngineBIND,
+		nil, 0, firstPreview.PreviewToken, false,
+	)
+	if replay.Code != http.StatusOK {
+		t.Fatalf("older replay status=%d body=%s", replay.Code, replay.Body.String())
+	}
+	var replaySnapshot dnsEngineSnapshot
+	if err := json.Unmarshal(replay.Body.Bytes(), &replaySnapshot); err != nil {
+		t.Fatalf("decode older replay: %v body=%s", err, replay.Body.String())
+	}
+	if replaySnapshot.Operation == nil ||
+		replaySnapshot.Operation.RequestID != firstRequestID ||
+		replaySnapshot.Operation.ID != firstSwitchID ||
+		replaySnapshot.Operation.Status != "succeeded" {
+		t.Fatalf("older replay operation=%+v, want exact request %s/%s",
+			replaySnapshot.Operation, firstRequestID, firstSwitchID)
+	}
+	if replaySnapshot.ActiveEngine == nil ||
+		*replaySnapshot.ActiveEngine != transport.DNSEnginePowerDNS {
+		t.Fatalf("older replay current authority=%+v, want PowerDNS", replaySnapshot.ActiveEngine)
+	}
+}
+
 func TestDNSEngineInitialPairedBINDInstalledStandbyRetriesAsInstall(t *testing.T) {
 	t.Setenv(`CELIKPANEL_SERVER_IP`, `72.62.38.15`)
 	panel := newDNSPanelForTest(t)

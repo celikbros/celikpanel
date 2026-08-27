@@ -87,6 +87,7 @@ type dnsEngineEntry struct {
 }
 
 type dnsEngineOperationSnapshot struct {
+	RequestID    string              `json:"request_id"`
 	ID           string              `json:"id"`
 	TargetEngine transport.DNSEngine `json:"target_engine"`
 	Phase        string              `json:"phase"`
@@ -1854,11 +1855,41 @@ func presentDNSEngineOperation(
 		return nil, err
 	}
 	return &dnsEngineOperationSnapshot{
-		ID: persisted.SwitchID, TargetEngine: persisted.TargetEngine,
-		Phase: persisted.Phase, Status: status,
+		ID: persisted.SwitchID, RequestID: persisted.RequestID,
+		TargetEngine: persisted.TargetEngine,
+		Phase:        persisted.Phase, Status: status,
 		StartedAt: startedAt, UpdatedAt: updatedAt,
 		LastError: persisted.LastError,
 	}, nil
+}
+
+func (p *Panel) dnsEngineReplaySnapshot(
+	ctx context.Context,
+	persisted persistedDNSEngineSwitch,
+) (dnsEngineSnapshot, error) {
+	snapshot, err := p.dnsEngineSnapshot(ctx)
+	if err != nil {
+		return dnsEngineSnapshot{}, err
+	}
+	exactOperation, err := presentDNSEngineOperation(persisted)
+	if err != nil {
+		return dnsEngineSnapshot{}, err
+	}
+	if snapshot.State == dnsEngineStateSwitching {
+		if snapshot.OperationID != persisted.SwitchID ||
+			snapshot.Operation == nil ||
+			snapshot.Operation.RequestID != persisted.RequestID {
+			return dnsEngineSnapshot{}, errors.New(
+				"DNS engine replay is not the active operation",
+			)
+		}
+		return snapshot, nil
+	}
+	// A later completed DNS change may now be the globally latest operation.
+	// Idempotent replay still answers for the request that was replayed; the
+	// remaining snapshot fields continue to describe current DNS authority.
+	snapshot.Operation = exactOperation
+	return snapshot, nil
 }
 
 func readPresentedDNSEngineOperation(
@@ -2992,7 +3023,7 @@ func (p *Panel) handleDNSEngineSwitch(
 			}
 			p.auditDNSEngineBounded(actor, "post_commit.recovered", persisted)
 		}
-		snapshot, err := p.dnsEngineSnapshot(r.Context())
+		snapshot, err := p.dnsEngineReplaySnapshot(r.Context(), persisted)
 		if err != nil {
 			writeServerError(w, err)
 			return
