@@ -848,6 +848,9 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	if err := verifyDNSSwitchJournalTarget(ctx, journal); err != nil {
 		return err
 	}
+	if err := publishCommittedDNSEngineTargetOwnership(journal); err != nil {
+		return err
+	}
 	if journal.TargetEngine == transport.DNSEnginePowerDNS &&
 		journal.Mode == transport.DNSEngineSwitchModeSwitch {
 		for _, path := range []string{journal.PDNSCandidatePath, journal.PDNSBackupPath} {

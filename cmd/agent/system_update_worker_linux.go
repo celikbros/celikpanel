@@ -149,6 +149,40 @@ func (buffer *boundedSystemUpdateBuffer) String() string {
 	return sanitizedSystemUpdateError(errors.New(string(bytes.TrimSpace(buffer.raw))))
 }
 
+func reviewedUpdaterFailure(output []byte) string {
+	last := sanitizedSystemUpdateError(errors.New(string(output)))
+	const (
+		wrapper = "installed agent could not prepare the managed BIND generation root"
+		inner   = "Prepare BIND generation root under external lock:"
+	)
+	normalized := strings.ReplaceAll(string(output), "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	lines := strings.Split(normalized, "\n")
+	wrapperIndex := -1
+	wrapperLine := ""
+	for index := len(lines) - 1; index >= 0; index-- {
+		cleaned := sanitizedSystemUpdateError(errors.New(lines[index]))
+		if strings.Contains(cleaned, wrapper) {
+			wrapperIndex, wrapperLine = index, cleaned
+			break
+		}
+	}
+	if wrapperIndex < 0 {
+		return last
+	}
+	for index := wrapperIndex - 1; index >= 0; index-- {
+		cleaned := sanitizedSystemUpdateError(errors.New(lines[index]))
+		marker := strings.Index(cleaned, inner)
+		if marker < 0 {
+			continue
+		}
+		return sanitizedSystemUpdateError(errors.New(
+			wrapperLine + ": " + cleaned[marker:],
+		))
+	}
+	return wrapperLine
+}
+
 func runSystemUpdateInstaller(ctx context.Context, state *systemUpdateState, trustedMinimum string) error {
 	if _, err := parseCanonicalPositiveDecimal(trustedMinimum, math.MaxInt64); err != nil {
 		return errors.New("trusted minimum release sequence is invalid")
@@ -169,7 +203,7 @@ func runSystemUpdateInstaller(ctx context.Context, state *systemUpdateState, tru
 	}
 	output, err := systemUpdateCommandRunner(ctx, installer, args)
 	if err != nil {
-		return fmt.Errorf("reviewed updater failed: %w: %s", err, sanitizedSystemUpdateError(errors.New(string(output))))
+		return fmt.Errorf("reviewed updater failed: %w: %s", err, reviewedUpdaterFailure(output))
 	}
 	return nil
 }
