@@ -1677,9 +1677,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 <Suspense fallback={(
                     <div
                         role="status"
-                        tabIndex={-1}
-                        autoFocus
-                        className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/75 p-4 text-white"
+                        className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/75 text-white"
                     >
                         {t('services.operation.starting')}
                     </div>

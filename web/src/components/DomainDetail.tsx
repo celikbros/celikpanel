@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useState, useEffect, type ReactNode } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useState, useEffect, type ReactNode } from 'react';
 import { useSearchParams } from '../router';
 import {
     ArrowLeft, Globe, Lock, ExternalLink,
@@ -17,7 +17,6 @@ import { DomainCronManager } from './DomainCronManager';
 import { DomainMailManager } from './DomainMailManager';
 import { DomainDNSManager } from './DomainDNSManager';
 import { HostingTypePanel } from './HostingTypePanel';
-import { DomainAppsPanel } from './DomainAppsPanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { StatusDot } from './ui';
@@ -30,6 +29,10 @@ import {
     type DomainAccessMode,
     type DomainCapability,
 } from '../auth/domainAccess';
+
+const DomainAppsPanel = lazy(() => import('./DomainAppsPanel').then((module) => ({
+    default: module.DomainAppsPanel,
+})));
 
 interface Domain {
     id: number;
@@ -432,26 +435,28 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     )}
 
                     <div className="rounded-xl border border-border bg-surface p-5 shadow-card">
-                        {current.id === 'overview' ? (
-                            <Overview
-                                domainId={domain.id}
-                                tabs={tabs}
-                                onCertificateChange={handleCertificateChange}
-                                onGo={(tabId, subId) => {
-                                    if (subId) {
-                                        setActiveSub((currentSubs) => ({
-                                            ...currentSubs,
-                                            [tabId]: subId,
-                                        }));
-                                    }
-                                    setActiveTab(tabId);
-                                }}
-                            />
-                        ) : currentSub ? (
-                            currentSub.render(readOnly)
-                        ) : (
-                            current.render!(readOnly)
-                        )}
+                        <Suspense fallback={<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />}>
+                            {current.id === 'overview' ? (
+                                <Overview
+                                    domainId={domain.id}
+                                    tabs={tabs}
+                                    onCertificateChange={handleCertificateChange}
+                                    onGo={(tabId, subId) => {
+                                        if (subId) {
+                                            setActiveSub((currentSubs) => ({
+                                                ...currentSubs,
+                                                [tabId]: subId,
+                                            }));
+                                        }
+                                        setActiveTab(tabId);
+                                    }}
+                                />
+                            ) : currentSub ? (
+                                currentSub.render(readOnly)
+                            ) : (
+                                current.render!(readOnly)
+                            )}
+                        </Suspense>
                     </div>
             </div>
         </div>
