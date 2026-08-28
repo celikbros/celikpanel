@@ -32,6 +32,15 @@ RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
+RELEASE_RECOVERY_RUNNER=/usr/libexec/celikpanel/release-recovery
+RELEASE_RECOVERY_UNIT=/etc/systemd/system/celikpanel-release-recovery.service
+RELEASE_RECOVERY_TIMER=/etc/systemd/system/celikpanel-release-recovery.timer
+RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
+RELEASE_RECOVERY_MANIFEST="$RELEASE_STATE_DIR/recovery-foundation.v1"
+RELEASE_RECOVERY_AGENT_DROPIN="$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf"
+RELEASE_RECOVERY_PANEL_DROPIN="$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
+SYSTEMCTL_BIN=/usr/bin/systemctl
+TIMEOUT_BIN=/usr/bin/timeout
 PREFLIGHT_PANEL="${CELIKPANEL_PREFLIGHT_PANEL:-$BIN_DIR/panel}"
 PREFLIGHT_AGENT="${CELIKPANEL_PREFLIGHT_AGENT:-$BIN_DIR/agent}"
 SCHEMA17_BRIDGE="${CELIKPANEL_SCHEMA17_BRIDGE:-}"
@@ -40,6 +49,18 @@ KEEP_SNAPSHOTS=5
 BOOTSTRAP_PRE_LEDGER=0
 BOOTSTRAP_SCHEMA17=0
 TRUSTED_RELEASE_ROOT="${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}"
+RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
+RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
+RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
+RECOVERY_EXPECTED_SNAPSHOT="${CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT:-}"
+RECOVERY_EXPECTED_PHASE="${CELIKPANEL_RECOVERY_EXPECTED_PHASE:-}"
+RECOVERY_LOCK_FD="${CELIKPANEL_RELEASE_TRANSACTION_FD:-}"
+RECOVERY_LOCK_IDENTITY="${CELIKPANEL_RECOVERY_LOCK_IDENTITY:-}"
+unset CELIKPANEL_RECOVER_EXISTING_TRANSACTION \
+    CELIKPANEL_RECOVERY_EXPECTED_TOKEN CELIKPANEL_RECOVERY_EXPECTED_OPERATION \
+    CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT CELIKPANEL_RECOVERY_EXPECTED_PHASE \
+    CELIKPANEL_RELEASE_TRANSACTION_FD \
+    CELIKPANEL_RECOVERY_LOCK_IDENTITY
 panel_frozen=0
 agent_frozen=0
 mutation_started=0
@@ -56,13 +77,111 @@ die() {
     exit 1
 }
 
+validate_exact_systemctl() {
+    local owner group mode links
+    [[ $SYSTEMCTL_BIN == /* && -f $SYSTEMCTL_BIN && ! -L $SYSTEMCTL_BIN && -x $SYSTEMCTL_BIN ]] ||
+        die "exact systemctl binary is unavailable or unsafe"
+    read -r owner group mode links < <(/usr/bin/stat -Lc '%u %g %a %h' -- "$SYSTEMCTL_BIN") ||
+        die "cannot inspect exact systemctl binary"
+    [[ $owner == 0 && $group == 0 && $links == 1 ]] ||
+        die "exact systemctl binary identity is unsafe"
+    (( (8#$mode & 0022) == 0 )) ||
+        die "exact systemctl binary is group/other writable"
+}
+
+systemctl() {
+    "$SYSTEMCTL_BIN" "$@"
+}
+
+validate_exact_systemctl
+
+case "$RECOVER_EXISTING_TRANSACTION" in
+    0|1) ;;
+    *) die 'invalid recovery-only transaction mode' ;;
+esac
+if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+    [[ $RECOVERY_EXPECTED_TOKEN =~ ^[0-9a-f]{64}$ &&
+       ( $RECOVERY_EXPECTED_OPERATION == update || $RECOVERY_EXPECTED_OPERATION == rollback ) &&
+       $RECOVERY_EXPECTED_SNAPSHOT =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ &&
+       ( $RECOVERY_EXPECTED_PHASE == quiesce || $RECOVERY_EXPECTED_PHASE == active ||
+         $RECOVERY_EXPECTED_PHASE == completion ||
+         $RECOVERY_EXPECTED_PHASE == completion-scheduler ||
+         $RECOVERY_EXPECTED_PHASE == scheduler ) &&
+       $RECOVERY_LOCK_FD == 9 && $RECOVERY_LOCK_IDENTITY =~ ^[0-9]+:[0-9]+$ ]] \
+        || die 'recovery-only update expected transaction tuple is malformed'
+fi
+readonly RECOVER_EXISTING_TRANSACTION RECOVERY_EXPECTED_TOKEN \
+    RECOVERY_EXPECTED_OPERATION RECOVERY_EXPECTED_SNAPSHOT RECOVERY_LOCK_FD \
+    RECOVERY_LOCK_IDENTITY RECOVERY_EXPECTED_PHASE
+
+verify_recovery_expected_tuple() {
+    local entry name primary= phase= marker_count=0 owner group mode links size
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        case "$name" in
+            transaction.lock) ;;
+            quiesce.pending|active|completion.pending|scheduler-restore.pending)
+                marker_count=$((marker_count + 1))
+                case "$name" in
+                    completion.pending) primary=$name ;;
+                    scheduler-restore.pending) [[ -n $primary ]] || primary=$name ;;
+                    *)
+                        [[ -z $primary ]] \
+                            || die 'recovery-only update found ambiguous transaction state'
+                        primary=$name
+                        ;;
+                esac
+                ;;
+            *) die "recovery-only update found unexpected transaction entry: $name" ;;
+        esac
+    done < <(find "$RELEASE_TRANSACTION_ROOT" -xdev -mindepth 1 -maxdepth 1 -print0)
+    [[ $marker_count -gt 0 ]] \
+        || die 'recovery-only update durable phase disappeared before dispatch'
+    if [[ $marker_count -eq 2 ]]; then
+        [[ -f $RELEASE_TRANSACTION_ROOT/completion.pending &&
+           -f $RELEASE_TRANSACTION_ROOT/scheduler-restore.pending &&
+           ! -L $RELEASE_TRANSACTION_ROOT/completion.pending &&
+           ! -L $RELEASE_TRANSACTION_ROOT/scheduler-restore.pending ]] \
+            || die 'recovery-only update found ambiguous transaction state'
+        cmp -s -- "$RELEASE_TRANSACTION_ROOT/completion.pending" \
+            "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" \
+            || die 'recovery-only update scheduler tuple differs from completion'
+        primary=completion.pending
+        phase=completion-scheduler
+    elif [[ $marker_count -ne 1 ]]; then
+        die 'recovery-only update found ambiguous transaction state'
+    fi
+    if [[ -z $phase ]]; then
+        case "$primary" in
+            quiesce.pending) phase=quiesce ;;
+            active) phase=active ;;
+            completion.pending) phase=completion ;;
+            scheduler-restore.pending) phase=scheduler ;;
+            *) die 'recovery-only update durable phase is unsupported' ;;
+        esac
+    fi
+    [[ $phase == "$RECOVERY_EXPECTED_PHASE" ]] \
+        || die 'recovery-only update durable phase changed before lock handoff'
+    entry=$RELEASE_TRANSACTION_ROOT/$primary
+    [[ -f $entry && ! -L $entry ]] || die 'recovery-only update marker is unsafe'
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$entry") \
+        || die 'recovery-only update cannot inspect its marker'
+    [[ $owner == 0 && $group == 0 && $mode == 600 && $links == 1 &&
+       $size -gt 0 && $size -le 512 ]] \
+        || die 'recovery-only update marker metadata is unsafe'
+    cmp -s -- "$entry" <(printf 'version=1\ntoken=%s\noperation=%s\nsnapshot=%s\n' \
+        "$RECOVERY_EXPECTED_TOKEN" "$RECOVERY_EXPECTED_OPERATION" \
+        "$RECOVERY_EXPECTED_SNAPSHOT") \
+        || die 'recovery-only update transaction tuple changed before lock handoff'
+}
+
 # Take the fixed persistent release lock before parsing mode, reading state, or
 # trusting release-controlled code. The descriptor remains open for this process.
 # Modu ayrıştırmadan, state okumadan veya sürüm denetimli koda güvenmeden önce
 # sabit kalıcı sürüm kilidini al. Descriptor bu süreç boyunca açık kalır.
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
-    local path_identity fd_identity
+    local path_identity fd_identity probe_fd probe_rc lock_count=0 line
     parent=$(dirname -- "$root")
     [[ "$parent" == /var/lib && -d "$parent" && ! -L "$parent" ]] || die "unsafe release transaction parent: $parent"
     [[ "$(readlink -e -- "$parent")" == "$parent" ]] || die "release transaction parent is not canonical"
@@ -71,6 +190,8 @@ prepare_and_acquire_release_transaction_lock() {
     (( (8#$mode & 0022) == 0 )) || die "release transaction parent must not be group/other writable"
     if [[ -e "$root" || -L "$root" ]]; then
         [[ -d "$root" && ! -L "$root" ]] || die "unsafe release transaction root"
+    elif [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        die "recovery-only update requires the existing transaction root"
     else
         install -d -m 0700 -o root -g root -- "$root" || die "cannot create release transaction root"
         sync -f -- "$parent" || die "cannot make release transaction root durable"
@@ -81,6 +202,8 @@ prepare_and_acquire_release_transaction_lock() {
     lock=$root/transaction.lock
     if [[ -e "$lock" || -L "$lock" ]]; then
         [[ -f "$lock" && ! -L "$lock" ]] || die "unsafe release transaction lock"
+    elif [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        die "recovery-only update requires the existing transaction lock"
     else
         (umask 077; set -o noclobber; : > "$lock") || die "cannot exclusively create release transaction lock"
         chown root:root -- "$lock" || die "cannot own release transaction lock"
@@ -91,6 +214,39 @@ prepare_and_acquire_release_transaction_lock() {
     read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$lock") || die "cannot inspect release transaction lock"
     [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 && "$links" == 1 && "$size" == 0 ]] || die "release transaction lock must be empty root:root mode 0600 with one link"
     path_identity=$(stat -Lc '%d:%i' -- "$lock") || die "cannot identify release transaction lock"
+    if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        [[ -e "/proc/$BASHPID/fd/$RECOVERY_LOCK_FD" ]] \
+            || die "recovery transaction descriptor is closed"
+        fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$RECOVERY_LOCK_FD") \
+            || die "cannot identify recovery transaction descriptor"
+        [[ "$fd_identity" == "$path_identity" &&
+           "$fd_identity" == "$RECOVERY_LOCK_IDENTITY" ]] \
+            || die "recovery transaction descriptor identity mismatch"
+        while IFS= read -r line; do
+            case "$line" in
+                lock:*)
+                    lock_count=$((lock_count + 1))
+                    [[ "$line" == *" FLOCK ADVISORY WRITE "* ]] \
+                        || die "recovery transaction descriptor owns an unexpected lock"
+                    ;;
+            esac
+        done < "/proc/$BASHPID/fdinfo/$RECOVERY_LOCK_FD"
+        [[ "$lock_count" -eq 1 ]] \
+            || die "recovery transaction descriptor must own exactly one exclusive flock"
+        exec {probe_fd}<>"$lock" || die "cannot open independent recovery lock probe"
+        if flock -n -E 75 "$probe_fd" 2>/dev/null; then
+            flock -u "$probe_fd" >/dev/null 2>&1 || true
+            exec {probe_fd}>&-
+            die "recovery transaction descriptor does not exclude another opener"
+        else
+            probe_rc=$?
+        fi
+        exec {probe_fd}>&-
+        [[ "$probe_rc" -eq 75 ]] \
+            || die "independent recovery lock probe failed unexpectedly"
+        RELEASE_TRANSACTION_FD=$RECOVERY_LOCK_FD
+        return 0
+    fi
     exec {RELEASE_TRANSACTION_FD}<>"$lock"
     fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$RELEASE_TRANSACTION_FD") || die "cannot identify inherited release transaction lock"
     [[ "$fd_identity" == "$path_identity" ]] || die "release transaction lock changed while opening"
@@ -99,6 +255,12 @@ prepare_and_acquire_release_transaction_lock() {
 
 [[ $EUID -eq 0 ]] || die "Run as root / root olarak çalıştırın: use bootstrap-update.sh"
 prepare_and_acquire_release_transaction_lock
+
+if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+    if ! verify_recovery_expected_tuple; then
+        exit 0
+    fi
+fi
 
 [[ $# -eq 1 ]] || die "usage: update.sh --normal|--bootstrap-pre-ledger|--bootstrap-schema17"
 case "$1" in
@@ -282,7 +444,7 @@ preflight_staged_installer_runtime() {
     local -a required_commands=(
         awk basename bash chmod chown cmp cp cut dirname find flock getent
         grep id install ln mkdir mv od readlink rm rmdir sed seq
-        env sha256sum sleep sort stat sudo sync systemctl tr uname xargs
+        env sha256sum sleep sort stat sudo sync systemctl timeout tr uname xargs
     )
     for required_command in "${required_commands[@]}"; do
         command -v "$required_command" >/dev/null 2>&1 \
@@ -358,6 +520,18 @@ validate_trusted_release() {
     [[ -f "$root/deploy/panel-tls-snapshot.sh" &&
        ! -L "$root/deploy/panel-tls-snapshot.sh" ]] \
         || die "trusted release panel TLS snapshot helper is missing"
+    [[ -f "$root/deploy/release-recovery.protocol" &&
+       ! -L "$root/deploy/release-recovery.protocol" ]] \
+        || die "trusted release recovery protocol is missing"
+    [[ -f "$root/deploy/release-recovery-foundation.sh" &&
+       ! -L "$root/deploy/release-recovery-foundation.sh" ]] \
+        || die "trusted release recovery foundation helper is missing"
+    [[ -f "$root/deploy/release-sequence-policy" &&
+       ! -L "$root/deploy/release-sequence-policy" ]] \
+        || die "trusted release sequence policy is missing"
+    cmp -s -- "$root/deploy/release-recovery.protocol" \
+        <(printf '%s\n' format=celikpanel-release-recovery-protocol-v1 protocol=1) \
+        || die "trusted release recovery protocol is unsupported or noncanonical"
     [[ -f "$root/web/dist/index.html" ]] || die "trusted release web artifact is missing"
     updater=$(readlink -e -- "$0") || die "cannot resolve running updater"
     [[ "$updater" == "$root/update.sh" ]] || die "updater must execute from the trusted release"
@@ -1065,6 +1239,160 @@ verify_installed_release_artifacts() {
         || die "installed reviewed release updater metadata is unsafe"
     cmp -s "$TRUSTED_RELEASE_ROOT/libexec/get.sh" "$RELEASE_UPDATER" \
         || die "installed reviewed release updater does not match the trusted release"
+    [[ -f "$RELEASE_RECOVERY_RUNNER" && ! -L "$RELEASE_RECOVERY_RUNNER" ]] \
+        || die "installed release recovery runner is missing or unsafe"
+    [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_RECOVERY_RUNNER")" == 0:0:755:1 ]] \
+        || die "installed release recovery runner metadata is unsafe"
+    cmp -s "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-runner.sh" \
+        "$RELEASE_RECOVERY_RUNNER" \
+        || die "installed release recovery runner does not match the trusted release"
+    [[ -f "$RELEASE_RECOVERY_UNIT" && ! -L "$RELEASE_RECOVERY_UNIT" ]] \
+        || die "installed release recovery unit is missing or unsafe"
+    [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_RECOVERY_UNIT")" == 0:0:644:1 ]] \
+        || die "installed release recovery unit metadata is unsafe"
+    cmp -s "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-release-recovery.service" \
+        "$RELEASE_RECOVERY_UNIT" \
+        || die "installed release recovery unit does not match the trusted release"
+    [[ -f "$RELEASE_RECOVERY_TIMER" && ! -L "$RELEASE_RECOVERY_TIMER" ]] \
+        || die "installed release recovery watchdog is missing or unsafe"
+    [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_RECOVERY_TIMER")" == 0:0:644:1 ]] \
+        || die "installed release recovery watchdog metadata is unsafe"
+    cmp -s "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-release-recovery.timer" \
+        "$RELEASE_RECOVERY_TIMER" \
+        || die "installed release recovery watchdog does not match the trusted release"
+    [[ "$(systemctl is-enabled celikpanel-release-recovery.service 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery service is not durably enabled"
+    [[ "$(systemctl is-enabled celikpanel-release-recovery.timer 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery watchdog is not durably enabled"
+    systemctl is-active --quiet celikpanel-release-recovery.timer \
+        || die "release recovery watchdog is not active"
+    verify_release_recovery_foundation
+}
+
+# Recovery is a monotonic safety foundation rather than rollback payload.
+# Publish it before any transaction marker or application byte changes. The
+# watchdog probes this updater's exact flock without waiting; normal completion
+# remains unblocked, while a later timer tick observes a SIGKILL-released lock
+# and exposes the durable marker to the reviewed runner without customer SSH.
+publish_release_recovery_foundation() {
+    local source target mode tmp owner group actual_mode links publication
+    preflight_release_recovery_foundation
+    local -a publications=(
+        "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-runner.sh|$RELEASE_RECOVERY_RUNNER|0755"
+        "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-release-recovery.service|$RELEASE_RECOVERY_UNIT|0644"
+        "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-release-recovery.timer|$RELEASE_RECOVERY_TIMER|0644"
+    )
+    for publication in "${publications[@]}"; do
+        IFS='|' read -r source target mode <<< "$publication"
+        [[ -f "$source" && ! -L "$source" ]] \
+            || die "trusted release recovery foundation source is missing: $source"
+        validate_root_trusted_dir_chain "$(dirname -- "$target")"
+        if [[ -e "$target" || -L "$target" ]]; then
+            [[ -f "$target" && ! -L "$target" ]] \
+                || die "installed release recovery foundation target is unsafe: $target"
+            read -r owner group actual_mode links < <(stat -Lc '%u %g %a %h' -- "$target") \
+                || die "cannot inspect installed release recovery foundation: $target"
+            [[ "$owner:$group:$actual_mode:$links" == "0:0:${mode#0}:1" ]] \
+                || die "installed release recovery foundation metadata is unsafe: $target"
+        fi
+        tmp=$(mktemp "$(dirname -- "$target")/.celikpanel-release-recovery.XXXXXXXX") \
+            || die "cannot stage release recovery foundation: $target"
+        if ! cp --no-preserve=mode,ownership,timestamps -- "$source" "$tmp" ||
+           ! chown root:root -- "$tmp" || ! chmod "$mode" -- "$tmp" ||
+           ! cmp -s -- "$source" "$tmp" || ! sync -f -- "$tmp" ||
+           ! mv -T -- "$tmp" "$target" || ! sync -f -- "$(dirname -- "$target")"; then
+            [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+            die "release recovery foundation could not be published: $target"
+        fi
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$target")" == "0:0:${mode#0}:1" ]] \
+            || die "published release recovery foundation metadata is unsafe: $target"
+        cmp -s -- "$source" "$target" \
+            || die "published release recovery foundation bytes changed: $target"
+    done
+    label_release_recovery_foundation
+    "$SYSTEMCTL_BIN" daemon-reload || die "release recovery units could not be loaded"
+    release_recovery_verify_systemd_definition \
+        "$SYSTEMCTL_BIN" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" ||
+        die "release recovery systemd definitions are not exact"
+    "$SYSTEMCTL_BIN" enable celikpanel-release-recovery.service >/dev/null \
+        || die "release recovery service could not be enabled"
+    "$SYSTEMCTL_BIN" enable --now celikpanel-release-recovery.timer >/dev/null \
+        || die "release recovery watchdog could not be enabled and started"
+    # Execute the installed runner under the live SELinux/systemd policy while
+    # this updater still owns L1.  The runner must observe busy and return
+    # immediately; a five-second bound proves the watchdog cannot deadlock the
+    # updater's later controlled service starts.
+    "$TIMEOUT_BIN" --signal=KILL 5s \
+        "$SYSTEMCTL_BIN" start celikpanel-release-recovery.service \
+        || die "release recovery execution proof failed or blocked behind the live updater"
+    [[ "$("$SYSTEMCTL_BIN" is-enabled celikpanel-release-recovery.service 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery service enablement was not verified"
+    [[ "$("$SYSTEMCTL_BIN" is-enabled celikpanel-release-recovery.timer 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery watchdog enablement was not verified"
+    "$SYSTEMCTL_BIN" is-active --quiet celikpanel-release-recovery.timer \
+        || die "release recovery watchdog is not active"
+    for target in "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants" \
+        "$UNIT_DIR/timers.target.wants"; do
+        validate_root_trusted_dir_chain "$target"
+        sync -f -- "$target" ||
+            die "release recovery enablement could not be made durable: $target"
+    done
+    release_recovery_publish_manifest \
+        "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" \
+        "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" \
+        "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" \
+        "$SYSTEMCTL_BIN" ||
+        die "release recovery foundation manifest could not be committed"
+    label_release_recovery_foundation
+    verify_release_recovery_foundation
+}
+
+label_release_recovery_foundation() {
+    local enforcing tool owner group mode links permissions drift candidate
+    local -a paths=(
+        "$RELEASE_RECOVERY_RUNNER"
+        "$RELEASE_RECOVERY_UNIT"
+        "$RELEASE_RECOVERY_TIMER"
+    )
+    if [[ -e $RELEASE_RECOVERY_MANIFEST || -L $RELEASE_RECOVERY_MANIFEST ]]; then
+        [[ -f $RELEASE_RECOVERY_MANIFEST && ! -L $RELEASE_RECOVERY_MANIFEST ]] ||
+            die "release recovery foundation manifest is unsafe"
+        paths+=("$RELEASE_RECOVERY_MANIFEST")
+    fi
+    [[ ! -L /sys/fs/selinux/enforce ]] \
+        || die "SELinux enforcement state is symbolic"
+    [[ -e /sys/fs/selinux/enforce ]] || return 0
+    [[ -f /sys/fs/selinux/enforce && -r /sys/fs/selinux/enforce ]] \
+        || die "SELinux enforcement state is unreadable"
+    IFS= read -r enforcing < /sys/fs/selinux/enforce \
+        || die "SELinux enforcement state could not be read"
+    case "$enforcing" in
+        0) return 0 ;;
+        1) ;;
+        *) die "SELinux enforcement state is not canonical" ;;
+    esac
+    for tool in /usr/sbin/restorecon /usr/sbin/matchpathcon; do
+        validate_root_trusted_dir_chain "$(dirname -- "$tool")"
+        [[ -f "$tool" && ! -L "$tool" && -x "$tool" ]] \
+            || die "required SELinux label tool is missing or unsafe: $tool"
+        read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$tool") \
+            || die "cannot inspect SELinux label tool: $tool"
+        permissions=$((8#$mode))
+        [[ $owner == 0 && $group == 0 && $links == 1 ]] &&
+            (( (permissions & 0022) == 0 )) \
+            || die "SELinux label tool metadata is unsafe: $tool"
+    done
+    /usr/sbin/restorecon -xRF -- "${paths[@]}" \
+        || die "release recovery foundation SELinux labels could not be restored"
+    drift=$(/usr/sbin/restorecon -nxRFv -- "${paths[@]}") \
+        || die "release recovery foundation SELinux labels could not be verified"
+    [[ -z $drift ]] \
+        || die "release recovery foundation SELinux labels still differ: $drift"
+    for candidate in "${paths[@]}"; do
+        /usr/sbin/matchpathcon -V -- "$candidate" >/dev/null \
+            || die "release recovery foundation context differs from policy: $candidate"
+    done
 }
 # Retention may delete only a complete direct-child snapshot whose payload
 # still matches the versioned checksum contract.
@@ -1286,8 +1614,107 @@ cd "$update_root"
 source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/panel-tls-snapshot.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
+# shellcheck source=deploy/release-recovery-foundation.sh
+source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
+
+classify_release_transaction_entries() {
+    local entry name
+    release_marker_count=0
+    release_quiesce_present=0
+    release_active_present=0
+    release_completion_present=0
+    release_scheduler_present=0
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        case "$name" in
+            transaction.lock) ;;
+            quiesce.pending)
+                release_quiesce_present=1
+                release_marker_count=$((release_marker_count + 1))
+                ;;
+            active)
+                release_active_present=1
+                release_marker_count=$((release_marker_count + 1))
+                ;;
+            completion.pending)
+                release_completion_present=1
+                release_marker_count=$((release_marker_count + 1))
+                ;;
+            scheduler-restore.pending)
+                release_scheduler_present=1
+                release_marker_count=$((release_marker_count + 1))
+                ;;
+            *) die "unexpected release transaction entry: $name" ;;
+        esac
+    done < <(find "$RELEASE_TRANSACTION_ROOT" -xdev -mindepth 1 -maxdepth 1 -print0)
+
+    if [[ $release_quiesce_present -eq 1 ]]; then
+        [[ $release_marker_count -eq 1 ]] ||
+            die "quiesce.pending cannot coexist with another durable release marker"
+    elif [[ $release_active_present -eq 1 ]]; then
+        [[ $release_marker_count -eq 1 ]] ||
+            die "active cannot coexist with another durable release marker"
+    elif [[ $release_completion_present -eq 1 ]]; then
+        [[ $release_marker_count -eq 1 ||
+           ( $release_marker_count -eq 2 && $release_scheduler_present -eq 1 ) ]] ||
+            die "completion.pending may coexist only with its scheduler restoration marker"
+        if [[ $release_scheduler_present -eq 1 ]]; then
+            cmp -s -- "$RELEASE_TRANSACTION_ROOT/completion.pending" \
+                "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ||
+                die "completion and scheduler restoration markers differ"
+        fi
+    elif [[ $release_scheduler_present -eq 1 ]]; then
+        [[ $release_marker_count -eq 1 ]] ||
+            die "scheduler-only recovery topology is ambiguous"
+    else
+        [[ $release_marker_count -eq 0 ]] ||
+            die "durable release transaction topology is ambiguous"
+    fi
+}
+
+verify_release_recovery_foundation() {
+    release_recovery_verify_foundation \
+        "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" \
+        "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" \
+        "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" \
+        "$SYSTEMCTL_BIN" ||
+        die "release recovery foundation verification failed"
+}
+
+preflight_release_recovery_foundation() {
+    release_recovery_preflight_publish \
+        "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" \
+        "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" \
+        "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" \
+        "$SYSTEMCTL_BIN" ||
+        die "release recovery foundation monotonic preflight failed"
+}
+
+publish_release_recovery_intent() {
+    release_recovery_publish_intent \
+        "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" \
+        "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" \
+        "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" \
+        "$SYSTEMCTL_BIN" ||
+        die "release recovery foundation intent could not be published"
+}
+
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
-release_txn_install_and_verify_unit_guards "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" || die "release transaction service guards could not be installed"
+classify_release_transaction_entries
+if [[ $release_marker_count -eq 0 ]]; then
+    # The candidate sequence/commit and every already-bound foundation byte
+    # are proven before guard/drop-in publication can change the host.
+    preflight_release_recovery_foundation
+    publish_release_recovery_intent
+    release_txn_install_and_verify_unit_guards "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" || die "release transaction service guards could not be installed"
+    publish_release_recovery_foundation
+else
+    release_txn_verify_unit_guards "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" || die "release transaction service guards changed after durable marker publication"
+    verify_release_recovery_foundation
+fi
 release_txn_clear_stale_start_authorization "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" || die "stale release start authorization could not be cleared"
 
 source_commit=unknown
@@ -1302,41 +1729,7 @@ validate_preflight_binary "$PREFLIGHT_AGENT" agent
 # exact completion.pending plus scheduler-restore.pending pair.
 # Tam olarak bir kalıcı aşama olabilir; bu kanıttan önce dal seçmek, çakışan bir
 # markerın update finalizer tarafından yok sayılmasına yol açabilir.
-release_marker_count=0
-release_quiesce_present=0
-release_active_present=0
-release_completion_present=0
-release_scheduler_present=0
-[[ -e "$RELEASE_TRANSACTION_ROOT/quiesce.pending" ||
-   -L "$RELEASE_TRANSACTION_ROOT/quiesce.pending" ]] && release_quiesce_present=1
-[[ -e "$RELEASE_TRANSACTION_ROOT/active" ||
-   -L "$RELEASE_TRANSACTION_ROOT/active" ]] && release_active_present=1
-[[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" ||
-   -L "$RELEASE_TRANSACTION_ROOT/completion.pending" ]] && release_completion_present=1
-[[ -e "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ||
-   -L "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" ]] && release_scheduler_present=1
-for release_marker_name in quiesce.pending active completion.pending scheduler-restore.pending; do
-    [[ -e "$RELEASE_TRANSACTION_ROOT/$release_marker_name" ||
-       -L "$RELEASE_TRANSACTION_ROOT/$release_marker_name" ]] &&
-        release_marker_count=$((release_marker_count + 1))
-done
-if [[ "$release_quiesce_present" -eq 1 ]]; then
-    [[ "$release_marker_count" -eq 1 ]] \
-        || die "quiesce.pending cannot coexist with another durable release marker"
-elif [[ "$release_active_present" -eq 1 ]]; then
-    [[ "$release_marker_count" -eq 1 ]] \
-        || die "active cannot coexist with another durable release marker"
-elif [[ "$release_completion_present" -eq 1 ]]; then
-    [[ "$release_marker_count" -eq 1 ||
-       ( "$release_marker_count" -eq 2 && "$release_scheduler_present" -eq 1 ) ]] \
-        || die "completion.pending may coexist only with its scheduler restoration marker"
-elif [[ "$release_scheduler_present" -eq 1 ]]; then
-    [[ "$release_marker_count" -eq 1 ]] \
-        || die "scheduler-only recovery topology is ambiguous"
-else
-    [[ "$release_marker_count" -eq 0 ]] \
-        || die "durable release transaction topology is ambiguous"
-fi
+classify_release_transaction_entries
 
 # The requested transition mode is durable snapshot identity, not a property
 # inferred later from the target release.

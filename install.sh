@@ -45,8 +45,14 @@ RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 LIBEXEC_DIR=/usr/libexec/celikpanel
 RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
+RELEASE_RECOVERY_RUNNER=/usr/libexec/celikpanel/release-recovery
+RELEASE_RECOVERY_UNIT=/etc/systemd/system/celikpanel-release-recovery.service
+RELEASE_RECOVERY_TIMER=/etc/systemd/system/celikpanel-release-recovery.timer
 RELEASE_PUBLIC_KEY=/etc/celikpanel/release-signing-ed25519.pem
 RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
+RELEASE_RECOVERY_MANIFEST="$RELEASE_STATE_DIR/recovery-foundation.v1"
+RELEASE_RECOVERY_AGENT_DROPIN="$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf"
+RELEASE_RECOVERY_PANEL_DROPIN="$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
 SIGNED_UPDATE_LOCK="$RELEASE_STATE_DIR/update.lock"
 FIRST_INSTALL_TRUST_REQUESTED=${CELIKPANEL_FIRST_INSTALL_TRUST:-0}
 FIRST_INSTALL_PUBLIC_KEY_FILE=${CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE:-}
@@ -62,7 +68,10 @@ unset CELIKPANEL_FIRST_INSTALL_TRUST CELIKPANEL_FIRST_INSTALL_PUBLIC_KEY_FILE \
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
     RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR \
-    RELEASE_UPDATER RELEASE_PUBLIC_KEY RELEASE_STATE_DIR SIGNED_UPDATE_LOCK \
+    RELEASE_UPDATER RELEASE_RECOVERY_RUNNER \
+    RELEASE_RECOVERY_UNIT RELEASE_RECOVERY_TIMER RELEASE_PUBLIC_KEY RELEASE_STATE_DIR \
+    RELEASE_RECOVERY_MANIFEST RELEASE_RECOVERY_AGENT_DROPIN \
+    RELEASE_RECOVERY_PANEL_DROPIN SIGNED_UPDATE_LOCK \
     FIRST_INSTALL_TRUST_REQUESTED FIRST_INSTALL_PUBLIC_KEY_FILE \
     FIRST_INSTALL_RELEASE_SEQUENCE FIRST_INSTALL_RELEASE_VERSION \
     FIRST_INSTALL_RELEASE_COMMIT FIRST_INSTALL_INHERITED_LOCK_FD \
@@ -118,6 +127,11 @@ esac
 
 SRC="$(cd "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")" && pwd -P)"
 PANEL_TLS_DIR="$DATA_DIR/tls"
+# shellcheck source=deploy/release-transaction-guard.sh
+source "$SRC/deploy/release-transaction-guard.sh"
+# shellcheck source=deploy/release-recovery-foundation.sh
+source "$SRC/deploy/release-recovery-foundation.sh"
+INSTALL_RELEASE_TRANSACTION_FD=
 
 # Fresh self-signed certificates are created by the unprivileged panel process.
 # Normalize their metadata once, after the service is stopped, so the public
@@ -341,6 +355,218 @@ install_reviewed_release_updater() {
         die "operator-provided release public key could not be published exactly"
     fi
     exec {key_source_fd}<&-
+}
+
+publish_reviewed_release_recovery_file() {
+    local source=$1 target=$2 wanted_mode=$3 tmp owner group mode links
+    [[ -f "$source" && ! -L "$source" ]] \
+        || die "verified release recovery source is missing: $source"
+    [[ -d "$(dirname -- "$target")" && ! -L "$(dirname -- "$target")" ]] \
+        || die "release recovery target directory is unsafe: $target"
+    if [[ -e "$target" || -L "$target" ]]; then
+        [[ -f "$target" && ! -L "$target" ]] \
+            || die "release recovery target is unsafe: $target"
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$target")" == "0:0:${wanted_mode#0}:1" ]] \
+            || die "existing release recovery target metadata is unsafe: $target"
+    fi
+    tmp=$(mktemp "$(dirname -- "$target")/.release-recovery.XXXXXXXX") \
+        || die "cannot stage release recovery file: $target"
+    if ! cp --no-preserve=mode,ownership,timestamps -- "$source" "$tmp" ||
+       ! chown root:root -- "$tmp" || ! chmod "$wanted_mode" -- "$tmp" ||
+       ! cmp -s -- "$source" "$tmp" || ! sync -f -- "$tmp" ||
+       ! mv -T -- "$tmp" "$target" ||
+       ! sync -f -- "$(dirname -- "$target")" || ! cmp -s -- "$source" "$target"; then
+        [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+        die "release recovery publication failed: $target"
+    fi
+    read -r owner group mode links < <(stat -Lc '%u %g %a %h' -- "$target") \
+        || die "cannot inspect release recovery target: $target"
+    [[ "$owner:$group:$mode:$links" == "0:0:${wanted_mode#0}:1" ]] \
+        || die "release recovery target metadata is unsafe: $target"
+}
+
+publish_reviewed_release_recovery_foundation() {
+    preflight_reviewed_release_recovery_foundation
+    publish_reviewed_release_recovery_file \
+        "$SRC/deploy/release-recovery-runner.sh" "$RELEASE_RECOVERY_RUNNER" 0755
+    publish_reviewed_release_recovery_file \
+        "$SRC/deploy/systemd/celikpanel-release-recovery.service" "$RELEASE_RECOVERY_UNIT" 0644
+    publish_reviewed_release_recovery_file \
+        "$SRC/deploy/systemd/celikpanel-release-recovery.timer" "$RELEASE_RECOVERY_TIMER" 0644
+}
+
+preflight_reviewed_release_recovery_foundation() {
+    release_recovery_preflight_publish \
+        "$SRC" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" \
+        "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+        || die "release recovery foundation monotonic preflight failed"
+}
+
+publish_reviewed_release_recovery_intent() {
+    release_recovery_publish_intent \
+        "$SRC" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" \
+        "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+        || die "release recovery foundation intent could not be published"
+}
+
+verify_reviewed_release_recovery_foundation() {
+    local source target wanted_mode publication
+    local -a publications=(
+        "$SRC/deploy/release-recovery-runner.sh|$RELEASE_RECOVERY_RUNNER|0755"
+        "$SRC/deploy/systemd/celikpanel-release-recovery.service|$RELEASE_RECOVERY_UNIT|0644"
+        "$SRC/deploy/systemd/celikpanel-release-recovery.timer|$RELEASE_RECOVERY_TIMER|0644"
+    )
+    for publication in "${publications[@]}"; do
+        IFS='|' read -r source target wanted_mode <<< "$publication"
+        [[ -f "$target" && ! -L "$target" ]] \
+            || die "release recovery foundation is missing or unsafe: $target"
+        [[ "$(stat -Lc '%u:%g:%a:%h' -- "$target")" == "0:0:${wanted_mode#0}:1" ]] \
+            || die "release recovery foundation metadata is unsafe: $target"
+        cmp -s -- "$source" "$target" \
+            || die "release recovery foundation bytes differ from the reviewed release: $target"
+    done
+    [[ "$("$SYSTEMCTL_BIN" is-enabled celikpanel-release-recovery.service 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery service is not durably enabled"
+    [[ "$("$SYSTEMCTL_BIN" is-enabled celikpanel-release-recovery.timer 2>/dev/null || true)" == enabled ]] \
+        || die "release recovery watchdog is not durably enabled"
+    "$SYSTEMCTL_BIN" is-active --quiet celikpanel-release-recovery.timer \
+        || die "release recovery watchdog is not active"
+    release_recovery_verify_foundation \
+        "$SRC" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" \
+        "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+        || die "release recovery foundation manifest proof failed"
+}
+
+prepare_fresh_release_transaction_foundation() {
+    local lock="$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    local entry name owner group mode links size path_identity fd_identity
+    local lock_staging staged_lock
+    [[ $APPLY_ONLY -eq 0 ]] || die "fresh recovery foundation cannot run in apply-only mode"
+    [[ -z $INSTALL_RELEASE_TRANSACTION_FD ]] \
+        || die "fresh recovery transaction lock was already acquired"
+    if [[ -e $RELEASE_TRANSACTION_ROOT || -L $RELEASE_TRANSACTION_ROOT ]]; then
+        [[ -d $RELEASE_TRANSACTION_ROOT && ! -L $RELEASE_TRANSACTION_ROOT &&
+           $(readlink -e -- "$RELEASE_TRANSACTION_ROOT") == "$RELEASE_TRANSACTION_ROOT" &&
+           $(stat -Lc '%u:%g:%a' -- "$RELEASE_TRANSACTION_ROOT") == 0:0:700 ]] \
+            || die "fresh release transaction root is unsafe"
+    else
+        install -d -m 0700 -o root -g root -- "$RELEASE_TRANSACTION_ROOT" \
+            || die "fresh release transaction root could not be created"
+        sync -f -- "$(dirname -- "$RELEASE_TRANSACTION_ROOT")" \
+            || die "fresh release transaction root publication is not durable"
+    fi
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        [[ $name == transaction.lock ]] \
+            || die "fresh release transaction root contains an unexpected entry: $name"
+    done < <(find "$RELEASE_TRANSACTION_ROOT" -xdev -mindepth 1 -maxdepth 1 -print0)
+    lock_staging=${RELEASE_TRANSACTION_ROOT}.lock-staging
+    if [[ ! -e $lock_staging && ! -L $lock_staging ]]; then
+        install -d -m 0700 -o root -g root -- "$lock_staging" ||
+            die "fresh transaction lock staging could not be created"
+        sync -f -- "$(dirname -- "$lock_staging")" ||
+            die "fresh transaction lock staging publication is not durable"
+    fi
+    [[ -d $lock_staging && ! -L $lock_staging &&
+       $(readlink -e -- "$lock_staging") == "$lock_staging" &&
+       $(stat -Lc '%u:%g:%a' -- "$lock_staging") == 0:0:700 &&
+       $(stat -Lc '%d' -- "$lock_staging") == $(stat -Lc '%d' -- "$RELEASE_TRANSACTION_ROOT") ]] ||
+        die "fresh transaction lock staging is unsafe"
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        [[ "$name" =~ ^\.transaction\.lock\.[A-Za-z0-9]{8}$ &&
+           -f $entry && ! -L $entry &&
+           $(stat -Lc '%u:%g:%a:%h:%s' -- "$entry") == 0:0:600:1:0 ]] ||
+            die "fresh transaction lock staging contains an unsafe entry: $name"
+        rm -f -- "$entry" || die "stale transaction lock staging could not be removed"
+    done < <(find "$lock_staging" -xdev -mindepth 1 -maxdepth 1 -print0)
+    sync -f -- "$lock_staging" || die "transaction lock staging cleanup is not durable"
+    if [[ -e $lock || -L $lock ]]; then
+        [[ -f $lock && ! -L $lock ]] || die "fresh release transaction lock is unsafe"
+        read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$lock") \
+            || die "fresh release transaction lock cannot be inspected"
+        [[ $owner == 0 && $group == 0 && $mode == 600 && $links == 1 && $size == 0 ]] \
+            || die "fresh release transaction lock metadata is unsafe"
+    else
+        staged_lock=$(mktemp "$lock_staging/.transaction.lock.XXXXXXXX") \
+            || die "fresh release transaction lock cannot be staged"
+        if ! chown root:root -- "$staged_lock" || ! chmod 0600 -- "$staged_lock" ||
+           ! sync -f -- "$staged_lock" || ! mv -T -- "$staged_lock" "$lock" ||
+           ! sync -f -- "$lock_staging" "$RELEASE_TRANSACTION_ROOT"; then
+            [[ ! -e $staged_lock && ! -L $staged_lock ]] || rm -f -- "$staged_lock"
+            die "fresh release transaction lock cannot be published"
+        fi
+    fi
+    exec {INSTALL_RELEASE_TRANSACTION_FD}<>"$lock" \
+        || die "fresh release transaction lock cannot be opened"
+    path_identity=$(stat -Lc '%d:%i' -- "$lock") \
+        || die "fresh release transaction lock path cannot be identified"
+    fd_identity=$(stat -Lc '%d:%i' -- "/proc/self/fd/$INSTALL_RELEASE_TRANSACTION_FD") \
+        || die "fresh release transaction lock descriptor cannot be identified"
+    [[ $path_identity == "$fd_identity" ]] \
+        || die "fresh release transaction lock changed while opening"
+    flock -n "$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "another release transaction is already active"
+    release_txn_verify_inherited_lock \
+        "$RELEASE_TRANSACTION_ROOT" "$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh release transaction lock ownership proof failed"
+    TRUSTED_RELEASE_ROOT=$SRC
+    preflight_reviewed_release_recovery_foundation
+    publish_reviewed_release_recovery_intent
+    install_release_transaction_guards_with_label_barrier \
+        "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
+        "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" \
+        "$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh release transaction service guards could not be installed"
+}
+
+commit_fresh_release_recovery_foundation() {
+    [[ $APPLY_ONLY -eq 0 && -n $INSTALL_RELEASE_TRANSACTION_FD ]] \
+        || die "fresh recovery foundation commit does not own the transaction lock"
+    release_txn_verify_inherited_lock \
+        "$RELEASE_TRANSACTION_ROOT" "$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh recovery foundation lost its transaction lock"
+    release_recovery_source_identity "$SRC" \
+        || die "fresh recovery foundation release identity is invalid"
+    if [[ $FIRST_INSTALL_TRUST_REQUESTED == 1 ]]; then
+        [[ $RELEASE_RECOVERY_SOURCE_SEQUENCE == "$FIRST_INSTALL_RELEASE_SEQUENCE" &&
+           $RELEASE_RECOVERY_SOURCE_VERSION == "$FIRST_INSTALL_RELEASE_VERSION" &&
+           $RELEASE_RECOVERY_SOURCE_COMMIT == "$FIRST_INSTALL_RELEASE_COMMIT" ]] \
+            || die "fresh recovery foundation differs from authenticated release identity"
+    fi
+    "$SYSTEMCTL_BIN" daemon-reload \
+        || die "release recovery units could not be loaded"
+    release_recovery_verify_systemd_definition \
+        "$SYSTEMCTL_BIN" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" \
+        || die "release recovery systemd definitions are not exact"
+    "$SYSTEMCTL_BIN" enable celikpanel-release-recovery.service >/dev/null 2>&1 \
+        || die "verified release recovery service could not be enabled"
+    "$SYSTEMCTL_BIN" enable --now celikpanel-release-recovery.timer >/dev/null 2>&1 \
+        || die "verified release recovery watchdog could not be enabled and started"
+    "$TIMEOUT_BIN" --signal=KILL --kill-after=1s 5s \
+        "$SYSTEMCTL_BIN" start celikpanel-release-recovery.service \
+        || die "release recovery executable/label proof failed"
+    sync -f -- "$UNIT_DIR" "$UNIT_DIR/multi-user.target.wants" \
+        "$UNIT_DIR/timers.target.wants" \
+        || die "release recovery enablement could not be made durable"
+    release_recovery_publish_manifest \
+        "$SRC" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" \
+        "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+        || die "release recovery foundation manifest could not be committed"
+    restore_celikpanel_selinux_labels
+    verify_reviewed_release_recovery_foundation
+    flock -u "$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh release transaction lock could not be released"
+    exec {INSTALL_RELEASE_TRANSACTION_FD}>&-
+    INSTALL_RELEASE_TRANSACTION_FD=
 }
 
 validate_release_state_parent_chain() {
@@ -904,11 +1130,16 @@ restore_celikpanel_selinux_labels() {
         "$LIBEXEC_DIR" \
         "$RELEASE_TRANSACTION_HELPER" \
         "$RELEASE_UPDATER" \
+        "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_STATE_DIR" \
+        "$RELEASE_RECOVERY_MANIFEST" \
         "$RELEASE_PUBLIC_KEY" \
         "$PANEL_CERT_HOOK" \
         "$UNIT_DIR/celikpanel-agent.service" \
         "$UNIT_DIR/celikpanel-firewall-restore.service" \
         "$UNIT_DIR/celikpanel-panel.service" \
+        "$UNIT_DIR/celikpanel-release-recovery.service" \
+        "$UNIT_DIR/celikpanel-release-recovery.timer" \
         "$UNIT_DIR/celikpanel-agent.service.d" \
         "$UNIT_DIR/celikpanel-panel.service.d" \
         "$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf" \
@@ -937,16 +1168,8 @@ restore_celikpanel_selinux_labels() {
 # systemctl daemon-reload internally. Interpose only that bounded call so RHEL
 # labels are restored after publication but before systemd reads the bytes.
 install_release_transaction_guards_with_label_barrier() {
-    local status=0
-    systemctl() {
-        if [[ $# -eq 1 && "$1" == daemon-reload ]]; then
-            restore_celikpanel_selinux_labels
-        fi
-        "$SYSTEMCTL_BIN" "$@"
-    }
-    release_txn_install_and_verify_unit_guards "$@" || status=$?
-    unset -f systemctl
-    return "$status"
+    release_txn_install_and_verify_unit_guards \
+        "$@" "$SYSTEMCTL_BIN" restore_celikpanel_selinux_labels
 }
 
 valid_panel_listen() {
@@ -1258,11 +1481,17 @@ validate_apply_only_transaction() {
         state=$("$SYSTEMCTL_BIN" show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
         [[ "$state" == inactive || "$state" == failed ]] || die "apply-only requires $unit stopped"
     done
-    install_release_transaction_guards_with_label_barrier \
+    release_txn_verify_unit_guards \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
         /etc/systemd/system "$RELEASE_TRANSACTION_HELPER" \
-        "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        "$CELIKPANEL_RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
         || die "apply-only transaction service guard proof failed"
+    release_recovery_verify_foundation \
+        "$root" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" \
+        "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" \
+        "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+        || die "apply-only recovery foundation proof failed"
 }
 validate_apply_only_transaction
 
@@ -1991,10 +2220,22 @@ step "systemd services" "systemd servisleri"
 install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
 install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
+if [[ $APPLY_ONLY -eq 0 ]]; then
+    # Publish the monotonic recovery/start-guard foundation before any durable
+    # transaction marker can exist. Apply-only must remain verify-only.
+    prepare_fresh_release_transaction_foundation
+fi
 if [[ "$FIRST_INSTALL_LOCK_HELD" != 1 ]]; then
     provision_signed_update_lock
 fi
 install_reviewed_release_updater
+if [[ $APPLY_ONLY -eq 1 ]]; then
+    # update.sh already atomically published and activated the monotonic
+    # foundation before its first marker. Never overwrite it after a marker.
+    verify_reviewed_release_recovery_foundation
+else
+    publish_reviewed_release_recovery_foundation
+fi
 enroll_first_install_signed_release_trust
 # Operator choices live in root-only /etc/celikpanel/panel.env. Reinstall and
 # update always replace the vendor unit, never that durable configuration.
@@ -2006,6 +2247,10 @@ if [[ "$VALIDATED_PANEL_HTTPS" == 0 ]]; then
 fi
 restore_celikpanel_selinux_labels
 "$SYSTEMCTL_BIN" daemon-reload
+if [[ $APPLY_ONLY -eq 0 ]]; then
+    commit_fresh_release_recovery_foundation
+fi
+verify_reviewed_release_recovery_foundation
 ok "installed" "kuruldu"
 
 # Apply-only ends after immutable layout and ledger metadata are verified. It

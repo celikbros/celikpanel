@@ -309,6 +309,7 @@ export const en = {
     'panelUpdate.markerFailed': 'The request identity could not be stored in the browser; the update was not started.',
     'panelUpdate.sending': 'Sending the update requestâ€¦',
     'panelUpdate.accepted': 'The request was accepted; secure status tracking started.',
+    'panelUpdate.watch': 'Navigate; updates locked.',
     'panelUpdate.canonicalChecking': 'Checking unfinished updates...',
     'panelUpdate.interactionLocked': 'Navigation is locked until this update is verified.',
     'panelUpdate.ambiguous': 'The start response is uncertain. This request will not be repeated; its exact server status will be tracked.',

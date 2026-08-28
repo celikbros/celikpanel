@@ -831,6 +831,24 @@ func reconcileExistingDNSEngineSwitchJournal(ctx context.Context) error {
 	return nil
 }
 
+var (
+	finalizeDNSEngineVerifiedHostProfile = verifiedHostProfileForAnyFamily
+	finalizeDNSEngineVerifyTarget        = verifyDNSSwitchJournalTarget
+)
+
+func finalizeCommittedDNSEngineSwitchArtifacts(journal dnsEngineSwitchJournal) error {
+	if journal.TargetEngine != transport.DNSEnginePowerDNS ||
+		journal.Mode != transport.DNSEngineSwitchModeSwitch {
+		return nil
+	}
+	for _, path := range []string{journal.PDNSCandidatePath, journal.PDNSBackupPath} {
+		if err := removePDNSSwitchArtifact(path); err != nil {
+			return err
+		}
+	}
+	return syncAtomicParentDirectory(filepath.Dir(pdnsDBPath()))
+}
+
 func (hostDNSEngineBackend) FinalizeSwitch(
 	ctx context.Context,
 	target transport.DNSEngine,
@@ -845,39 +863,40 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 		journal.Phase != dnsSwitchPhaseCommitted {
 		return errors.New("DNS engine switch journal is not the exact committed transaction")
 	}
-	if err := verifyDNSSwitchJournalTarget(ctx, journal); err != nil {
+	profile, err := finalizeDNSEngineVerifiedHostProfile()
+	if err != nil {
+		return err
+	}
+	if _, _, _, err := exactCommittedDNSEngineProvenanceOnHost(
+		journal, profile,
+	); err != nil {
+		return err
+	}
+	if err := finalizeDNSEngineVerifyTarget(ctx, journal); err != nil {
 		return err
 	}
 	if err := publishCommittedDNSEngineTargetOwnership(journal); err != nil {
 		return err
 	}
-	if journal.TargetEngine == transport.DNSEnginePowerDNS &&
-		journal.Mode == transport.DNSEngineSwitchModeSwitch {
-		for _, path := range []string{journal.PDNSCandidatePath, journal.PDNSBackupPath} {
-			if err := removePDNSSwitchArtifact(path); err != nil {
-				return err
-			}
-		}
-		if err := syncAtomicParentDirectory(filepath.Dir(pdnsDBPath())); err != nil {
-			return err
-		}
+	if _, _, ownershipExists, err := exactCommittedDNSEngineProvenanceOnHost(
+		journal, profile,
+	); err != nil {
+		return err
+	} else if !ownershipExists {
+		return errors.New("committed DNS engine ownership is absent after publication")
+	}
+	if err := finalizeCommittedDNSEngineSwitchArtifacts(journal); err != nil {
+		return err
 	}
 	if err := retireDNSEngineInstallOwnership(journal); err != nil {
 		return err
 	}
-	return removeDNSEngineSwitchJournal()
-}
-
-func removePDNSSwitchArtifact(path string) error {
-	info, err := os.Lstat(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
+	if _, installExists, ownershipExists, err := exactCommittedDNSEngineProvenanceOnHost(
+		journal, profile,
+	); err != nil {
 		return err
+	} else if installExists || !ownershipExists {
+		return errors.New("committed DNS engine ownership handoff is incomplete")
 	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("PowerDNS switch artifact is not a safe regular file")
-	}
-	return os.Remove(path)
+	return removeDNSEngineSwitchJournal()
 }

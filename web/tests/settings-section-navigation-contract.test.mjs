@@ -51,6 +51,20 @@ test('panel access owns only the panel certificate while updates own PanelUpdate
   assert.doesNotMatch(updates, /<PanelCertificatePanel\s*\/>/);
 });
 
+test('operational Settings components mount only while their URL section is active', () => {
+  const updates = tabPanelSource('updates');
+  const dns = tabPanelSource('dns');
+
+  assert.match(
+    updates,
+    /hidden=\{activeID !== 'updates'\}[\s\S]*\{activeID === 'updates' && <PanelUpdateCard \/>\}/,
+  );
+  assert.match(
+    dns,
+    /hidden=\{activeID !== 'dns'\}[\s\S]*\{activeID === 'dns' && <DNSServerSettings \/>\}/,
+  );
+});
+
 test('user section changes add history while invalid section canonicalization replaces it', () => {
   const canonicalization = sourceBetween('const requestedSection', 'const selectSection');
   assert.match(canonicalization, /if \(requestedSection === activeSection\.id\) return/);

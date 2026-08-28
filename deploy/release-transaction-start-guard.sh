@@ -81,6 +81,13 @@ quiesce_present=0
 active_present=0
 pending_present=0
 scheduler_present=0
+while IFS= read -r -d '' transaction_entry; do
+    transaction_entry_name=$(basename -- "$transaction_entry")
+    case "$transaction_entry_name" in
+        transaction.lock|quiesce.pending|active|completion.pending|scheduler-restore.pending) ;;
+        *) deny "unexpected release transaction entry: $transaction_entry_name" ;;
+    esac
+done < <(find "$transaction_root" -xdev -mindepth 1 -maxdepth 1 -print0)
 [[ -e "$transaction_root/quiesce.pending" || -L "$transaction_root/quiesce.pending" ]] && quiesce_present=1
 [[ -e "$transaction_root/active" || -L "$transaction_root/active" ]] && active_present=1
 [[ -e "$transaction_root/completion.pending" || -L "$transaction_root/completion.pending" ]] && pending_present=1

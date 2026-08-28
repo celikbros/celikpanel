@@ -105,10 +105,7 @@ validate_release_tree() {
         sha256sum -c SHA256SUMS >/dev/null
     ) || die "release checksum verification failed"
 
-    for expected in release.version release.commit release.tree bin/panel bin/agent \
-        bin/schema17-bridge install.sh update.sh rollback.sh \
-        deploy/panel-tls-snapshot.sh deploy/release-transaction-guard.sh \
-        web/dist/index.html; do
+    for expected in release.version release.commit release.tree bin/panel bin/agent bin/schema17-bridge install.sh update.sh rollback.sh deploy/panel-tls-snapshot.sh deploy/release-transaction-guard.sh deploy/release-transaction-start-guard.sh deploy/release-recovery-runner.sh deploy/release-recovery-foundation.sh deploy/release-recovery.protocol deploy/release-sequence-policy deploy/systemd/celikpanel-release-recovery.service deploy/systemd/celikpanel-release-recovery.timer web/dist/index.html; do
         [[ -f "$root/$expected" && ! -L "$root/$expected" ]] \
             || die "required release file is missing: $expected"
     done
@@ -120,7 +117,7 @@ validate_release_tree() {
     [[ "$tree" =~ ^[0-9a-f]{40,64}$ ]] || die "invalid release tree"
     [[ -x "$root/bin/panel" && -x "$root/bin/agent" && -x "$root/bin/schema17-bridge" ]] \
         || die "release binaries are not executable"
-    [[ -x "$root/install.sh" && -x "$root/update.sh" && -x "$root/rollback.sh" ]] \
+    [[ -x "$root/install.sh" && -x "$root/update.sh" && -x "$root/rollback.sh" && -x "$root/deploy/release-recovery-runner.sh" ]] \
         || die "release entry scripts are not executable"
     VALIDATED_RELEASE_COMMIT=$commit
     VALIDATED_RELEASE_TREE=$tree
@@ -893,6 +890,7 @@ chmod 0755 -- "$SOURCE_ROOT/bin/panel" "$SOURCE_ROOT/bin/agent" \
     "$SOURCE_ROOT/bin/schema17-bridge" "$SOURCE_ROOT/install.sh" \
     "$SOURCE_ROOT/update.sh" "$SOURCE_ROOT/rollback.sh" \
     "$SOURCE_ROOT/bootstrap-prebuilt-update.sh" \
+    "$SOURCE_ROOT/deploy/release-recovery-runner.sh" \
     "$SOURCE_ROOT/deploy/finalize-pending-rollback.sh"
 
 validate_release_tree "$SOURCE_ROOT" 0

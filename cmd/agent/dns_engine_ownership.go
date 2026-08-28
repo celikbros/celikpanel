@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -470,4 +471,115 @@ func exactDNSEngineInstallOwnership(
 	want := append([]string(nil), packages...)
 	sort.Strings(want)
 	return reflect.DeepEqual(receipt.Packages, want)
+}
+
+func managedDNSEnginePackagesForProfile(
+	profile hostplatform.Profile,
+	engine transport.DNSEngine,
+) ([]string, error) {
+	var packages []string
+	switch engine {
+	case transport.DNSEngineBIND:
+		layout, err := bindLayout(profile)
+		if err != nil {
+			return nil, err
+		}
+		packages = append(packages, layout.Packages...)
+	case transport.DNSEnginePowerDNS:
+		service := core.GetManagedServiceByID("pdns")
+		if service == nil {
+			return nil, errors.New("PowerDNS service definition is unavailable")
+		}
+		family := string(profile.PackageManager)
+		if service.LifecycleInstallFamilies == nil {
+			return nil, errors.New("PowerDNS lifecycle policy is unavailable")
+		}
+		if !service.LifecycleInstallFamilies[family] {
+			return nil, errors.New("PowerDNS lifecycle is unavailable for this host")
+		}
+		packages = append(
+			packages,
+			service.Packages[family]...,
+		)
+	default:
+		return nil, errors.New("DNS engine package provenance target is unsupported")
+	}
+	if len(packages) == 0 {
+		return nil, errors.New("DNS engine packages are unavailable for this host")
+	}
+	sort.Strings(packages)
+	for index, packageName := range packages {
+		if !validPackageName(packageName) ||
+			(index > 0 && packages[index-1] == packageName) {
+			return nil, errors.New("DNS engine package set is not canonical")
+		}
+	}
+	return packages, nil
+}
+
+func exactCommittedDNSEngineProvenanceOnHost(
+	journal dnsEngineSwitchJournal,
+	profile hostplatform.Profile,
+) (dnsEngineStateReceipt, bool, bool, error) {
+	if err := validateDNSEngineSwitchJournal(journal); err != nil ||
+		journal.Phase != dnsSwitchPhaseCommitted {
+		if err == nil {
+			err = errors.New("DNS engine provenance requires a committed journal")
+		}
+		return dnsEngineStateReceipt{}, false, false, err
+	}
+	state, stateExists, err := readDNSEngineState()
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, false,
+			fmt.Errorf("read committed DNS engine state receipt: %w", err)
+	}
+	if !stateExists || validateDNSEngineState(state) != nil ||
+		!exactDNSEngineStateForJournal(state, journal) {
+		return dnsEngineStateReceipt{}, false, false,
+			errors.New("committed DNS engine state receipt is absent or differs from its journal")
+	}
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, false, err
+	}
+	request := signedUpdateRollbackEvidenceRequest(journal, manifest)
+	install, installExists, err := readDNSEngineInstallOwnership(journal.TargetEngine)
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, false,
+			fmt.Errorf("read committed DNS engine install ownership: %w", err)
+	}
+	if installExists {
+		packages, err := managedDNSEnginePackagesForProfile(profile, journal.TargetEngine)
+		if err != nil {
+			return dnsEngineStateReceipt{}, false, false, err
+		}
+		if validateDNSEngineInstallOwnership(install) != nil ||
+			!exactDNSEngineInstallEvidence(install, request, manifest) ||
+			!exactDNSEngineInstallOwnership(
+				install, true, journal.TargetEngine,
+				profile.PackageManager, packages,
+			) {
+			return dnsEngineStateReceipt{}, false, false,
+				errors.New("committed DNS engine install ownership differs from its journal")
+		}
+	}
+	ownership, ownershipExists, err := readDNSEngineOwnership(journal.TargetEngine)
+	if err != nil {
+		return dnsEngineStateReceipt{}, false, false,
+			fmt.Errorf("read committed DNS engine ownership: %w", err)
+	}
+	if ownershipExists &&
+		(validateDNSEngineState(ownership) != nil || ownership != state) {
+		return dnsEngineStateReceipt{}, false, false,
+			errors.New("committed DNS engine ownership differs from its exact active state")
+	}
+	if journal.Mode != transport.DNSEngineSwitchModeAdopt {
+		if !installExists {
+			if !ownershipExists {
+				return dnsEngineStateReceipt{}, false, false,
+					errors.New("committed DNS engine switch has no exact install or active ownership provenance")
+			}
+		}
+	}
+	return state, installExists, ownershipExists, nil
 }

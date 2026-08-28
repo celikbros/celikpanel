@@ -12,6 +12,7 @@ ROLLBACK="$ROOT/rollback.sh"
 INSTALL="$ROOT/install.sh"
 MAKEFILE="$ROOT/Makefile"
 RELEASE_GUARD="$ROOT/deploy/release-transaction-guard.sh"
+RELEASE_RECOVERY_FOUNDATION="$ROOT/deploy/release-recovery-foundation.sh"
 PANEL_UNIT="$ROOT/deploy/systemd/celikpanel-panel.service"
 AGENT_UNIT="$ROOT/deploy/systemd/celikpanel-agent.service"
 
@@ -114,6 +115,27 @@ require_function_sequence() {
     done
 }
 
+require_function_sequence "$RELEASE_RECOVERY_FOUNDATION" \
+    release_recovery_verify_systemd_definition \
+    '--property=LoadState' \
+    '--property=FragmentPath' \
+    '--property=NeedDaemonReload' \
+    '--property=DropInPaths'
+require_function_sequence "$UPDATE" publish_release_recovery_foundation \
+    '"$SYSTEMCTL_BIN" daemon-reload' \
+    'release_recovery_verify_systemd_definition \' \
+    '"$SYSTEMCTL_BIN" enable celikpanel-release-recovery.service' \
+    '"$SYSTEMCTL_BIN" enable --now celikpanel-release-recovery.timer' \
+    '"$SYSTEMCTL_BIN" start celikpanel-release-recovery.service' \
+    'release_recovery_publish_manifest \'
+require_function_sequence "$INSTALL" commit_fresh_release_recovery_foundation \
+    '"$SYSTEMCTL_BIN" daemon-reload \' \
+    'release_recovery_verify_systemd_definition \' \
+    '"$SYSTEMCTL_BIN" enable celikpanel-release-recovery.service' \
+    '"$SYSTEMCTL_BIN" enable --now celikpanel-release-recovery.timer' \
+    '"$SYSTEMCTL_BIN" start celikpanel-release-recovery.service' \
+    'release_recovery_publish_manifest \'
+
 require_exact_sequence() {
     local file=$1 cursor=0 literal line
     shift
@@ -125,6 +147,23 @@ require_exact_sequence() {
         cursor=$line
     done
 }
+
+require_regex_count "$UPDATE" '^validate_exact_systemctl\(\) \{$' 1
+require_regex_count "$UPDATE" '^systemctl\(\) \{$' 1
+require_regex_count "$UPDATE" '^validate_exact_systemctl$' 1
+require_function_sequence "$UPDATE" validate_exact_systemctl \
+    '[[ $SYSTEMCTL_BIN == /* && -f $SYSTEMCTL_BIN && ! -L $SYSTEMCTL_BIN && -x $SYSTEMCTL_BIN ]]' \
+    "/usr/bin/stat -Lc '%u %g %a %h'" \
+    '[[ $owner == 0 && $group == 0 && $links == 1 ]]' \
+    '(( (8#$mode & 0022) == 0 ))'
+require_function_sequence "$UPDATE" systemctl \
+    '"$SYSTEMCTL_BIN" "$@"'
+require_exact_sequence "$UPDATE" \
+    'die() {' \
+    'validate_exact_systemctl() {' \
+    'systemctl() {' \
+    'validate_exact_systemctl' \
+    'case "$RECOVER_EXISTING_TRANSACTION" in'
 
 # Count only saved-active agent branches that perform the complete controlled
 # lock handoff. Because every handoff call is counted separately below, this
@@ -249,6 +288,32 @@ cleanup_platform_contract() {
     rm -rf -- "$platform_tmp"
 }
 trap cleanup_platform_contract EXIT
+
+# The updater must never resolve a caller-controlled systemctl from PATH. Use
+# a harmless, root-owned exact binary as the fixture target and make any PATH
+# lookup leave a durable sentinel.
+update_systemctl_poison_dir=$platform_tmp/update-systemctl-poison
+update_systemctl_poison_sentinel=$platform_tmp/update-systemctl-poison-called
+mkdir -p "$update_systemctl_poison_dir"
+cat > "$update_systemctl_poison_dir/systemctl" <<'POISONED_UPDATE_SYSTEMCTL'
+#!/bin/bash
+: > "${UPDATE_SYSTEMCTL_POISON_SENTINEL:?}"
+exit 97
+POISONED_UPDATE_SYSTEMCTL
+chmod 0700 "$update_systemctl_poison_dir/systemctl"
+(
+    eval "$(extract_function_source "$UPDATE" validate_exact_systemctl)"
+    eval "$(extract_function_source "$UPDATE" systemctl)"
+    SYSTEMCTL_BIN=/usr/bin/true
+    UPDATE_SYSTEMCTL_POISON_SENTINEL=$update_systemctl_poison_sentinel
+    export UPDATE_SYSTEMCTL_POISON_SENTINEL
+    PATH="$update_systemctl_poison_dir:$PATH"
+    export PATH
+    validate_exact_systemctl
+    systemctl show celikpanel-update-systemctl-binding.fixture
+)
+[[ ! -e $update_systemctl_poison_sentinel ]] \
+    || die 'update.sh resolved systemctl from poisoned PATH'
 
 capability_root=$platform_tmp/capability-root
 mkdir -p "$capability_root/usr/bin" "$capability_root/run/systemd"
@@ -635,7 +700,8 @@ run_rhel_preview_preflight() (
     }
     : > "$after_preflight"
     systemctl daemon-reload
-    install_release_transaction_guards_with_label_barrier fixture
+    install_release_transaction_guards_with_label_barrier \
+        fixture-root fixture-runtime fixture-systemd fixture-helper fixture-fd
     "$SELINUX_RESTORECON_BIN" -xRF -- "$platform_tmp"
 )
 
@@ -1018,10 +1084,8 @@ for lifecycle_script in "$INSTALL" "$ROLLBACK"; do
     done
     require_function_sequence "$lifecycle_script" \
         install_release_transaction_guards_with_label_barrier \
-        'if [[ $# -eq 1 && "$1" == daemon-reload ]]; then' \
-        'restore_celikpanel_selinux_labels' \
-        '"$SYSTEMCTL_BIN" "$@"' \
-        'release_txn_install_and_verify_unit_guards "$@"'
+        'release_txn_install_and_verify_unit_guards \' \
+        '"$@" "$SYSTEMCTL_BIN" restore_celikpanel_selinux_labels'
     reject_literal "$lifecycle_script" 'release_txn_install_and_verify_unit_guards "$RELEASE_TRANSACTION_ROOT"'
     reject_literal "$lifecycle_script" '$(uname -m)'
 done
@@ -1038,7 +1102,15 @@ require_sequence "$ROLLBACK" \
     'release_txn_verify_systemd_unit_root_identity \' \
     'restore_celikpanel_selinux_labels' \
     'systemctl daemon-reload' \
-    'install_release_transaction_guards_with_label_barrier'
+    'release_txn_verify_unit_guards \' \
+    'restored release transaction service guards differ from the monotonic foundation' \
+    'release_recovery_verify_foundation "$TRUSTED_RELEASE_ROOT"' \
+    'rollback recovery foundation changed before service enablement' \
+    'for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do' \
+    'release transaction service guards changed before controlled starts' \
+    'rollback recovery foundation changed before controlled starts' \
+    'systemctl start celikpanel-agent.service || die "restored agent did not start"' \
+    'systemctl start celikpanel-panel.service || die "restored panel did not start"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/units/." "$UNIT_DIR/"'
 require_sequence "$UPDATE" \
     'unit_root_snapshot_identity=$(release_txn_systemd_unit_root_identity "$UNIT_DIR")' \
@@ -1083,11 +1155,15 @@ chmod 0700 "$guard_barrier_tmp/systemctl"
     }
     release_txn_install_and_verify_unit_guards() {
         printf 'publish\n' >> "$GUARD_BARRIER_TRACE"
-        systemctl daemon-reload
+        [[ $6 == "$SYSTEMCTL_BIN" && $7 == restore_celikpanel_selinux_labels ]] \
+            || return 90
+        "$7"
+        "$6" daemon-reload
         printf 'after-reload\n' >> "$GUARD_BARRIER_TRACE"
-        systemctl show celikpanel-panel.service
+        "$6" show celikpanel-panel.service
     }
-    install_release_transaction_guards_with_label_barrier fixture
+    install_release_transaction_guards_with_label_barrier \
+        fixture-root fixture-runtime fixture-systemd fixture-helper fixture-fd
 )
 expected_guard_barrier_trace=$'publish\nrelabel\nsystemctl daemon-reload\nafter-reload\nsystemctl show celikpanel-panel.service'
 [[ "$(cat "$guard_barrier_trace")" == "$expected_guard_barrier_trace" ]] \
@@ -1175,6 +1251,9 @@ run_selinux_lifecycle_contract() (
     RELEASE_TRANSACTION_HELPER=$selinux_lifecycle_tmp/absent-helper
     LIBEXEC_DIR=$selinux_lifecycle_tmp/absent-libexec
     RELEASE_UPDATER=$selinux_lifecycle_tmp/absent-libexec/get.sh
+    RELEASE_RECOVERY_RUNNER=$selinux_lifecycle_tmp/absent-libexec/release-recovery
+    RELEASE_STATE_DIR=$selinux_lifecycle_tmp/absent-release-state
+    RELEASE_RECOVERY_MANIFEST=$selinux_lifecycle_tmp/absent-release-state/recovery-foundation.v1
     RELEASE_PUBLIC_KEY=$selinux_lifecycle_tmp/absent-conf/release-signing-ed25519.pem
     RUNTIME_DIR=$selinux_lifecycle_tmp/absent-celikpanel-runtime
     BACKUP_ROOT=$selinux_lifecycle_tmp/absent-celikpanel-backups

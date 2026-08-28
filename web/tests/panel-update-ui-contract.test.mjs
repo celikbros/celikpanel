@@ -5,6 +5,7 @@ import test from 'node:test';
 const card = readFileSync(new URL('../src/components/PanelUpdateCard.tsx', import.meta.url), 'utf8');
 const tracker = readFileSync(new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url), 'utf8');
 const lease = readFileSync(new URL('../src/lib/systemUpdateLease.ts', import.meta.url), 'utf8');
+const watchdog = readFileSync(new URL('../src/lib/systemUpdateWatchdog.ts', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
 const settings = readFileSync(new URL('../src/components/Settings.tsx', import.meta.url), 'utf8');
@@ -15,7 +16,7 @@ const updateSources = card + tracker;
 test('update card is reachable only through the admin settings panel', () => {
     assert.match(settings, /role === 'admin'/);
     const adminBlock = settings.slice(settings.indexOf("{role === 'admin'"));
-    assert.match(adminBlock, /<PanelUpdateCard\s*\/>/);
+    assert.match(adminBlock, /\{activeID === 'updates' && <PanelUpdateCard \/>\}/);
     assert.ok(adminBlock.indexOf('<PanelUpdateCard />') < adminBlock.indexOf('id="settings-dns-panel"'));
 });
 
@@ -54,7 +55,7 @@ test('the provider persists and revalidates exact ownership before the only upda
 
 test('root polling survives restart, focus and route changes while accepting only the exact identity', () => {
     assert.match(tracker, /decodeUpdateStatus\(await response\.json\(\)\)/);
-    assert.match(tracker, /status\?request_id=\$\{encodeURIComponent\(marker\.request_id\)\}/);
+    assert.match(tracker, /fetch\(systemUpdateExactStatusPath\(marker\.request_id\)/);
     assert.match(tracker, /payload\.request_id !== marker\.request_id/);
     assert.match(tracker, /!sameUpdateTarget\(payload\.target, marker\.target\)/);
     assert.match(tracker, /Math\.min\(POLL_MAX_MS, Math\.round\(delay \* 1\.6\)\)/);
@@ -64,12 +65,13 @@ test('root polling survives restart, focus and route changes while accepting onl
     assert.match(tracker, /document\.addEventListener\('visibilitychange', onVisibility\)/);
     assert.match(tracker, /payload\.status === 'succeeded'/);
     assert.match(tracker, /payload\.status === 'failed'/);
-    assert.equal(updateSources.match(/fetch\(\x60\/api\/v1\/panel\/update\/status/g)?.length, 1);
+    assert.equal(tracker.match(/fetch\(systemUpdateExactStatusPath\(marker\.request_id\)/g)?.length, 1);
+    assert.equal(watchdog.match(/\/api\/v1\/panel\/update\/status\?request_id=/g)?.length, 1);
 });
 
 test('self-update owns its exact root tracker without joining the service-operation discovery channel', () => {
     assert.match(tracker, /const SYSTEM_UPDATE_MARKER_KEY = 'celikpanel\.system-update-operation\.v1'/);
-    assert.match(tracker, /status\?request_id=\$\{encodeURIComponent\(marker\.request_id\)\}/);
+    assert.match(tracker, /fetch\(systemUpdateExactStatusPath\(marker\.request_id\)/);
     assert.doesNotMatch(updateSources, /useComponentOperation|service\/operation\?active=1/);
 });
 
@@ -91,8 +93,9 @@ test('the tracker is mounted above routes and remains a single modal interaction
     assert.match(tracker, /role="dialog"/);
     assert.match(tracker, /aria-modal="true"/);
     assert.match(tracker, /className="fixed inset-0 z-\[110\]/);
-    assert.match(tracker, /application\.inert = true/);
-    assert.match(tracker, /document\.body\.style\.overflow = 'hidden'/);
+    assert.match(tracker, /acquireSystemUpdatePageLock/);
+    assert.match(watchdog, /application\.inert = true/);
+    assert.match(watchdog, /targetDocument\.body\.style\.overflow = 'hidden'/);
     assert.match(tracker, /document\.addEventListener\('focusin', keepFocusInDialog\)/);
     assert.match(tracker, /marker \|\| pendingReload \|\| requiredReloadMarker/);
 });
@@ -273,7 +276,8 @@ test('multi-tab ownership and browser lifecycle remain fail closed', () => {
     assert.match(lease, /mirrorCanonicalSnapshot\([\s\S]*committedSnapshot/);
     assert.doesNotMatch(lease, /electionSettleMS|commitSettleMS|expiresAt/);
     assert.doesNotMatch(tracker, /claimFallbackSystemUpdateLease/);
-    assert.ok(tracker.includes('window.addEventListener(' + String.fromCharCode(39) + 'beforeunload'));
+    assert.match(tracker, /acquireSystemUpdatePageLock/);
+    assert.match(watchdog, /targetWindow\.addEventListener\('beforeunload', onBeforeUnload\)/);
     assert.ok(tracker.includes('useNavigationBlocker(navigationBlockedRef)'));
     assert.ok(tracker.includes('focusTarget?.isConnected'));
     assert.ok(tracker.includes('focusTarget !== document.body'));
@@ -294,9 +298,11 @@ test('the provisional guard commits DOM inertness and beforeunload before any as
     assert.match(provisional, /setProvisional\(exactMarker\)/);
 
     const layoutEffect = tracker.slice(tracker.indexOf('useLayoutEffect(() =>'), tracker.indexOf('}, [blocking, settlePendingCommit]'));
-    assert.ok(layoutEffect.indexOf("window.addEventListener('beforeunload', onBeforeUnload)")
+    assert.ok(layoutEffect.indexOf('acquireSystemUpdatePageLock(')
         < layoutEffect.indexOf('settlePendingCommit(pendingGuard.marker, true)'));
-    assert.match(layoutEffect, /application\.inert = true/);
+    assert.match(layoutEffect, /acquireSystemUpdatePageLock/);
+    assert.match(watchdog, /application\.inert = true/);
+    assert.match(watchdog, /targetWindow\.addEventListener\('beforeunload', onBeforeUnload\)/);
 
     const adopt = tracker.slice(tracker.indexOf('const adoptStoredRecord'), tracker.indexOf('const schedulePostUpdateReload'));
     assert.match(adopt, /flushSync\(\(\) =>/);
@@ -309,7 +315,7 @@ test('authentication loss pauses only the global guard and resumes exact trackin
     assert.match(poll, /response\.status === 401[\s\S]*kind: 'auth'/);
     assert.match(poll, /response\.status === 403[\s\S]*kind: 'retry'/);
     assert.match(tracker, /const operationBlocks = pendingReload !== null/);
-    assert.match(tracker, /const blocking = systemUpdateInteractionBlocked\(canonicalReady, operationBlocks\)/);
+    assert.match(tracker, /const blocking = systemUpdateGlobalNavigationBlocked\([\s\n]*operationBlocks,[\s\n]*navigationLease\.blocked/);
     assert.match(tracker, /\|\| \(!authPaused &&/);
     assert.match(tracker, /authPausedRef\.current = true/);
     assert.match(tracker, /setAuthPaused\(true\)/);
@@ -394,14 +400,14 @@ test('focus restoration rejects body and html and captures focus before cross-ta
     assert.match(cleanup, /startButton[\s\S]*mainContent/);
 });
 
-test('modal focus follows canonical-to-exact dialog replacement while the barrier stays active', () => {
-    assert.match(tracker, /const modalIdentity = exactMarker \? exactMarkerFingerprint\(exactMarker\) : 'canonical-reconciliation'/);
+test('modal focus follows exact operation identity changes while its bounded lease stays active', () => {
+    assert.match(tracker, /const modalIdentity = exactMarker \? exactMarkerFingerprint\(exactMarker\) : null/);
     assert.match(tracker, /useLayoutEffect\(\(\) => \{[\s\S]*focusSystemUpdateDialog\(dialogRef\.current, applicationRef\.current\)[\s\S]*\}, \[blocking, modalIdentity, settlePendingCommit\]\)/);
 });
 
-test('canonical startup and cross-tab changes synchronously re-establish the global barrier', () => {
+test('canonical startup and cross-tab changes keep update mutations fail closed without renewing navigation', () => {
     assert.match(tracker, /const \[canonicalReady, setCanonicalReady\] = useState\(false\)/);
-    assert.match(tracker, /const occupied = !canonicalReady/);
+    assert.match(tracker, /const occupied = systemUpdateMutationLocked\([\s\n]*canonicalReady/);
     assert.match(tracker, /if \(!canonicalReadyRef\.current\)[\s\S]*panelUpdate\.markerFailed/);
     const storage = tracker.slice(tracker.indexOf('const onStorage'), tracker.indexOf("window.addEventListener('storage', onStorage)"));
     assert.ok(storage.indexOf('markCanonicalPending()') < storage.indexOf('reconcileCanonicalRecord()'));

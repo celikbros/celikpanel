@@ -1,0 +1,21 @@
+[Unit]
+Description=CelikPanel verified release transaction recovery
+Documentation=https://celikpanel.net/
+After=local-fs.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/celikpanel/release-recovery
+TimeoutStartSec=15min
+TimeoutStopSec=30s
+KillMode=mixed
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=no
+Environment=CELIKPANEL_RELEASE_RECOVERY_TESTING=0
+Environment=CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT=
+
+[Install]
+WantedBy=multi-user.target

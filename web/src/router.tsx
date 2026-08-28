@@ -54,6 +54,10 @@ const navigationBlocker = {
   },
 };
 
+export function isNavigationBlocked(): boolean {
+  return navigationBlocker.current;
+}
+
 interface ManagedHistoryState {
   index: number;
   value: unknown;
