@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -735,6 +736,185 @@ func (m *serviceMutationManager) finishPersistedDNSZoneSyncV3PendingLocked(
 	return closeErr
 }
 
+func (m *serviceMutationManager) recoverPersistedCommittedDNSEngineSwitchLocked(
+	lock *serviceMutationFileLock,
+) (bool, error) {
+	journal, manifest, exists, err :=
+		m.exactIdleCommittedDNSEngineSwitchLocked(nil)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if !exists {
+		return false, nil
+	}
+	binding := switchJournalBinding(journal)
+	recoveryCtx, cancel := context.WithTimeout(
+		context.Background(), dnsEngineSwitchRecoveryLimit,
+	)
+	m.mu.Unlock()
+	outcome, recoveryErr := agentDNSEngineBackend.RecoverSwitch(
+		recoveryCtx, journal.TargetEngine,
+		journal.ManifestQualifier, binding,
+	)
+	cancel()
+	m.mu.Lock()
+	if recoveryErr != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"recover exact committed DNS engine switch during startup: %w",
+			recoveryErr,
+		))
+	}
+	if outcome != dnsEngineSwitchRecoveryCommitted {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"exact committed DNS engine switch did not remain committed during startup",
+		))
+	}
+	_, verifiedManifest, stillExists, err :=
+		m.exactIdleCommittedDNSEngineSwitchLocked(&journal)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if !stillExists {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine journal disappeared before startup finalization",
+		))
+	}
+	if !reflect.DeepEqual(manifest, verifiedManifest) {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine manifest changed before startup finalization",
+		))
+	}
+	finalizeCtx, finalizeCancel := context.WithTimeout(
+		context.Background(), dnsEngineSwitchRecoveryLimit,
+	)
+	m.mu.Unlock()
+	finalizeErr := agentDNSEngineBackend.FinalizeSwitch(
+		finalizeCtx, journal.TargetEngine,
+		journal.ManifestQualifier, binding,
+	)
+	finalizeCancel()
+	m.mu.Lock()
+	if finalizeErr != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"finalize exact committed DNS engine switch during startup: %w",
+			finalizeErr,
+		))
+	}
+	if err := m.reproveFinalizedCommittedDNSEngineSwitchLocked(
+		journal, manifest,
+	); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if err := lock.Close(); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"release committed DNS recovery host lock: %w", err,
+		))
+	}
+	return true, nil
+}
+
+func (m *serviceMutationManager) exactIdleCommittedDNSEngineSwitchLocked(
+	expected *dnsEngineSwitchJournal,
+) (
+	dnsEngineSwitchJournal,
+	mutationpayload.DNSEngineSwitchManifestCommitment,
+	bool,
+	error,
+) {
+	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			false, fmt.Errorf("reload service mutation ledger before committed DNS recovery: %w", err)
+	}
+	journalPath := filepath.Join(
+		filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile,
+	)
+	journal, exists, err := readDNSEngineSwitchJournalAt(journalPath)
+	if err != nil {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			false, fmt.Errorf("read committed DNS engine journal during startup: %w", err)
+	}
+	if !exists {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			false, nil
+	}
+	if expected != nil {
+		if !reflect.DeepEqual(*expected, journal) {
+			return dnsEngineSwitchJournal{},
+				mutationpayload.DNSEngineSwitchManifestCommitment{},
+				true, errors.New("committed DNS engine journal changed during startup recovery")
+		}
+	}
+	if err := validateDNSEngineSwitchJournal(journal); err != nil {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			true, err
+	}
+	if journal.Phase != dnsSwitchPhaseCommitted {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			true, errors.New("idle service ledger has a non-committed DNS engine journal")
+	}
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			true, err
+	}
+	if err := exactSucceededSignedUpdateDNSEngineLedger(
+		m.ledger, journal, manifest,
+	); err != nil {
+		return dnsEngineSwitchJournal{},
+			mutationpayload.DNSEngineSwitchManifestCommitment{},
+			true, err
+	}
+	return journal, manifest, true, nil
+}
+
+func (m *serviceMutationManager) reproveFinalizedCommittedDNSEngineSwitchLocked(
+	journal dnsEngineSwitchJournal,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
+		return fmt.Errorf(
+			"reload service mutation ledger after committed DNS recovery: %w",
+			err,
+		)
+	}
+	if err := exactSucceededSignedUpdateDNSEngineLedger(
+		m.ledger, journal, manifest,
+	); err != nil {
+		return err
+	}
+	journalPath := filepath.Join(
+		filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile,
+	)
+	_, journalExists, err := readDNSEngineSwitchJournalAt(journalPath)
+	if err != nil {
+		return fmt.Errorf(
+			"verify committed DNS journal removal during startup: %w",
+			err,
+		)
+	}
+	if journalExists {
+		return errors.New(
+			"committed DNS engine journal remains after startup finalization",
+		)
+	}
+	return nil
+}
+
 // recoverPersistedDNSEngineSwitchLocked reconciles the durable host switch
 // journal before the common orphan path is allowed to discard the mutation.
 // The caller owns m.mu and the common host mutation lock. An ambiguous host
@@ -799,6 +979,42 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 		return true, errors.Join(writeErr, lock.Close())
 	}
 
+	journalPath := filepath.Join(
+		filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile,
+	)
+	journal, exists, err := readDNSEngineSwitchJournalAt(journalPath)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"read committed DNS engine journal after startup recovery: %w",
+			err,
+		))
+	}
+	if !exists {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine recovery has no durable journal",
+		))
+	}
+	if err := validateDNSEngineSwitchJournal(journal); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if journal.Phase != dnsSwitchPhaseCommitted ||
+		!exactSwitchJournalIdentity(
+			journal, target, job.PackageName, binding,
+		) {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine recovery journal lost its exact active mutation identity",
+		))
+	}
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+
 	phase, err := formatDNSEngineSwitchPublishedPhase(job.RequestID, job.PackageName)
 	if err != nil {
 		m.poisonLock = lock
@@ -818,18 +1034,38 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 	job.WorkerCommand = ""
 	m.ledger.ActiveRequestID = ""
 	writeErr := m.persistLedgerMutationLocked(before)
+	if writeErr != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"persist recovered terminal DNS engine receipt: %w", writeErr,
+		))
+	}
 	if m.poisoned != nil {
 		m.poisonLock = lock
-		return true, writeErr
+		return true, m.healthErrorLocked()
 	}
-	closeErr := lock.Close()
-	if writeErr != nil || closeErr != nil {
-		return true, errors.Join(writeErr, closeErr)
+	_, verifiedManifest, stillExists, err :=
+		m.exactIdleCommittedDNSEngineSwitchLocked(&journal)
+	if err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if !stillExists {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine journal disappeared before recovered finalization",
+		))
+	}
+	if !reflect.DeepEqual(manifest, verifiedManifest) {
+		m.poisonLock = lock
+		return true, m.poisonLocked(errors.New(
+			"committed DNS engine manifest changed before recovered finalization",
+		))
 	}
 
-	// Cleanup follows terminal ledger publication. A failure leaves the exact
-	// committed journal for the next bounded reconciliation; it must not turn a
-	// verified and durably published switch into a false client-side failure.
+	// Finalization changes ownership and removes the committed journal. Keep the
+	// same host-lock OFD through that handoff and its durable reproof so no
+	// concurrent mutation can observe or replace the intermediate state.
 	finalizeCtx, finalizeCancel := context.WithTimeout(context.Background(), dnsEngineSwitchRecoveryLimit)
 	m.mu.Unlock()
 	finalizeErr := agentDNSEngineBackend.FinalizeSwitch(
@@ -838,7 +1074,23 @@ func (m *serviceMutationManager) recoverPersistedDNSEngineSwitchLocked(
 	finalizeCancel()
 	m.mu.Lock()
 	if finalizeErr != nil {
-		log.Printf("DNS engine switch recovery journal cleanup deferred: %v", finalizeErr)
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"finalize recovered committed DNS engine switch: %w",
+			finalizeErr,
+		))
+	}
+	if err := m.reproveFinalizedCommittedDNSEngineSwitchLocked(
+		journal, manifest,
+	); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(err)
+	}
+	if err := lock.Close(); err != nil {
+		m.poisonLock = lock
+		return true, m.poisonLocked(fmt.Errorf(
+			"release recovered DNS engine host lock: %w", err,
+		))
 	}
 	return true, nil
 }
@@ -911,6 +1163,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 	}
 	if err := publishDNSEngineSwitchTerminal(
 		ctx, commitment.TargetEngine, commitment.Qualifier,
+		request.ServiceMutationBinding,
 	); err != nil {
 		log.Printf("DNS engine switch terminal receipt publication failed: %v", err)
 		response.Error = "DNS engine switch finished but its durable receipt could not be verified"
@@ -925,7 +1178,24 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 	)
 	finalizeCancel()
 	if finalizeErr != nil {
-		log.Printf("DNS engine switch journal cleanup deferred: %v", finalizeErr)
+		poisonErr := poisonPublishedDNSEngineSwitchTerminal(
+			ctx, commitment.TargetEngine, commitment.Qualifier,
+			request.ServiceMutationBinding, finalizeErr,
+		)
+		log.Printf(
+			"DNS engine switch finalization failed closed: %v",
+			errors.Join(finalizeErr, poisonErr),
+		)
+		response.Error = "DNS engine switch reached its verified target but finalization did not complete"
+		return nil
+	}
+	if err := releasePublishedDNSEngineSwitchTerminal(
+		ctx, commitment.TargetEngine, commitment.Qualifier,
+		request.ServiceMutationBinding,
+	); err != nil {
+		log.Printf("DNS engine switch terminal receipt release failed: %v", err)
+		response.Error = "DNS engine switch finished but its durable receipt could not be reverified"
+		return nil
 	}
 	*response = result
 	return nil
@@ -956,6 +1226,7 @@ func publishDNSEngineSwitchTerminal(
 	ctx context.Context,
 	target transport.DNSEngine,
 	qualifier string,
+	binding transport.ServiceMutationBinding,
 ) error {
 	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
 	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
@@ -970,6 +1241,8 @@ func publishDNSEngineSwitchTerminal(
 	job := runtime.job
 	if m.active != runtime || runtime.steps != 1 || job == nil ||
 		job.Status != serviceMutationStatusRunning || job.WorkerPID != 0 ||
+		job.RequestID != binding.MutationRequestID ||
+		job.OwnerID != binding.MutationOwnerID ||
 		job.Kind != "dns_engine_switch" || job.Target != string(target) ||
 		job.PackageName != qualifier {
 		return errors.New("DNS engine switch terminal publication lost its exact mutation identity")
@@ -978,11 +1251,132 @@ func publishDNSEngineSwitchTerminal(
 	if err != nil {
 		return err
 	}
-	if err := m.finishRuntimeTerminalLocked(runtime, true, phase, "", ""); err != nil {
-		if m.active == runtime {
-			return m.poisonLocked(fmt.Errorf("persist terminal DNS engine switch receipt: %w", err))
-		}
+	before := cloneServiceMutationLedger(m.ledger)
+	now := m.now()
+	job.Status = serviceMutationStatusSucceeded
+	job.Phase = phase
+	job.ErrorCode = ""
+	job.ErrorMessage = ""
+	job.UpdatedAt = now
+	job.FinishedAt = now
+	job.LeaseExpiresAt = time.Time{}
+	job.WorkerPID = 0
+	job.WorkerStarted = ""
+	job.WorkerCommand = ""
+	m.ledger.ActiveRequestID = ""
+	if err := m.persistLedgerMutationProtectedLocked(before, job.RequestID); err != nil {
+		return m.poisonLocked(fmt.Errorf("persist terminal DNS engine switch receipt: %w", err))
+	}
+	return exactPublishedDNSEngineSwitchRuntimeLocked(
+		m, runtime, target, qualifier, binding,
+	)
+}
+
+func exactPublishedDNSEngineSwitchRuntimeLocked(
+	m *serviceMutationManager,
+	runtime *serviceMutationRuntime,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+) error {
+	if m.active != runtime || runtime.steps != 1 || runtime.lock == nil || runtime.job == nil {
+		return errors.New("published DNS engine switch lost its exact runtime ownership")
+	}
+	job := runtime.job
+	phase, err := formatDNSEngineSwitchPublishedPhase(job.RequestID, qualifier)
+	if err != nil {
 		return err
 	}
+	if job.Status != serviceMutationStatusSucceeded || job.Phase != phase ||
+		job.RequestID != binding.MutationRequestID ||
+		job.OwnerID != binding.MutationOwnerID ||
+		job.Kind != "dns_engine_switch" || job.Target != string(target) ||
+		job.PackageName != qualifier || job.ErrorCode != "" || job.ErrorMessage != "" ||
+		job.FinishedAt.IsZero() || !job.LeaseExpiresAt.IsZero() || job.WorkerPID != 0 ||
+		job.WorkerStarted != "" || job.WorkerCommand != "" ||
+		m.ledger.ActiveRequestID != "" || m.ledger.Jobs[job.RequestID] != job {
+		return errors.New("published DNS engine switch lost its exact terminal ledger identity")
+	}
+	durable, err := m.loadLedgerFromDisk()
+	if err != nil {
+		return fmt.Errorf("reread published DNS engine switch ledger: %w", err)
+	}
+	if !reflect.DeepEqual(durable, m.ledger) {
+		return errors.New("published DNS engine switch ledger changed during finalization")
+	}
+	return nil
+}
+
+func poisonPublishedDNSEngineSwitchTerminal(
+	ctx context.Context,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+	cause error,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("DNS engine switch poison requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	if err := exactPublishedDNSEngineSwitchRuntimeLocked(
+		m, runtime, target, qualifier, binding,
+	); err != nil {
+		cause = errors.Join(cause, fmt.Errorf(
+			"reverify terminal DNS engine switch receipt before poison: %w",
+			err,
+		))
+	}
+	return m.poisonLocked(fmt.Errorf(
+		"finalize published DNS engine switch: %w", cause,
+	))
+}
+
+func releasePublishedDNSEngineSwitchTerminal(
+	ctx context.Context,
+	target transport.DNSEngine,
+	qualifier string,
+	binding transport.ServiceMutationBinding,
+) error {
+	tracker, _ := ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	if tracker == nil || tracker.manager == nil || tracker.runtime == nil {
+		return errors.New("DNS engine switch release requires a durable execution tracker")
+	}
+	m, runtime := tracker.manager, tracker.runtime
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.healthErrorLocked(); err != nil {
+		return err
+	}
+	if err := exactPublishedDNSEngineSwitchRuntimeLocked(
+		m, runtime, target, qualifier, binding,
+	); err != nil {
+		return m.poisonLocked(fmt.Errorf("reverify terminal DNS engine switch receipt: %w", err))
+	}
+	journalPath := filepath.Join(
+		filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile,
+	)
+	_, journalExists, err := readDNSEngineSwitchJournalAt(journalPath)
+	if err != nil {
+		return m.poisonLocked(fmt.Errorf(
+			"verify finalized DNS engine journal removal: %w", err,
+		))
+	}
+	if journalExists {
+		return m.poisonLocked(errors.New(
+			"finalized DNS engine journal remains before host lock release",
+		))
+	}
+	runtime.cancel()
+	if err := runtime.lock.Close(); err != nil {
+		return m.poisonLocked(fmt.Errorf("release DNS engine switch host lock: %w", err))
+	}
+	m.active = nil
+	m.trimHistoryLocked(runtime.job.RequestID)
 	return nil
 }

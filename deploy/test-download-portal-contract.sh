@@ -108,8 +108,8 @@ if grep -Eq '<button[^>]*>(+ Yeni site|×|Devam et)' "$tmp/site/index.html"; the
   fail "illustrative product controls must not enter the keyboard tab order"
 fi
 grep -Fq -- "--proto '=https'" "$bootstrap" || fail "HTTPS protocol restriction is missing"
-grep -Fxq 'bootstrap_release_sequence=50' "$bootstrap" || fail "bootstrap sequence pin is missing"
-grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.50' "$bootstrap" || fail "bootstrap version pin is missing"
+grep -Fxq 'bootstrap_release_sequence=51' "$bootstrap" || fail "bootstrap sequence pin is missing"
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.51' "$bootstrap" || fail "bootstrap version pin is missing"
 grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
   || fail "bootstrap public-key pin is missing"
 grep -Fq "sha256sum -c" "$bootstrap" || fail "archive checksum is not verified"

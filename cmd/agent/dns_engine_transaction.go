@@ -476,7 +476,11 @@ func decodeDNSEngineSwitchJournal(data []byte) (dnsEngineSwitchJournal, error) {
 }
 
 func readDNSEngineSwitchJournal() (dnsEngineSwitchJournal, bool, error) {
-	data, err := secureReadConfig(dnsEngineSwitchJournalPath())
+	return readDNSEngineSwitchJournalAt(dnsEngineSwitchJournalPath())
+}
+
+func readDNSEngineSwitchJournalAt(path string) (dnsEngineSwitchJournal, bool, error) {
+	data, err := secureReadConfig(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return dnsEngineSwitchJournal{}, false, nil
 	}

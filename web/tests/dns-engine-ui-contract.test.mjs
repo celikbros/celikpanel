@@ -104,7 +104,7 @@ test('DNS engine state decoder fails closed on malformed or contradictory state'
   assert.match(card, /if \(decoded === null\) \{[\s\S]*failRefresh\(et\('dnsEngine\.stateInvalid'\)\)/);
 });
 
-test('hidden and initial DNS state load is read-only; explicit Refresh reconciles before GET', () => {
+test('initial DNS state load is read-only; explicit Refresh reconciles before GET', () => {
   const loadStart = card.indexOf('const refresh = useCallback');
   const reconcileStart = card.indexOf('const reconcileAndRefresh = useCallback', loadStart);
   const effectStart = card.indexOf('useEffect(() => {', reconcileStart);
@@ -136,8 +136,8 @@ test('hidden and initial DNS state load is read-only; explicit Refresh reconcile
   assert.match(initialEffect, /void refresh\(\)/);
   assert.doesNotMatch(initialEffect, /reconcileAndRefresh/);
   assert.match(settingsPage,
-    /id="settings-dns-panel"[\s\S]*hidden=\{activeID !== 'dns'\}[\s\S]*<DNSServerSettings \/>/,
-    'the DNS card remains mounted while hidden, so its mount effect must stay GET-only');
+    /id="settings-dns-panel"[\s\S]*hidden=\{activeID !== 'dns'\}[\s\S]*\{activeID === 'dns' && <DNSServerSettings \/>\}/,
+    'the DNS card must mount only on the DNS section, so unrelated Settings routes cannot start its polling or overlay');
   assert.match(card, /onClick=\{\(\) => void reconcileAndRefresh\(\)\}/);
 });
 

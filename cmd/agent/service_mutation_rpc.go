@@ -820,6 +820,10 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 		))
 	}
 	if m.ledger.ActiveRequestID == "" {
+		if handled, recoveryErr :=
+			m.recoverPersistedCommittedDNSEngineSwitchLocked(lock); handled {
+			return recoveryErr
+		}
 		return lock.Close()
 	}
 	job := m.ledger.Jobs[m.ledger.ActiveRequestID]

@@ -18,7 +18,6 @@ import {
     systemUpdateDispatchAllowed,
     systemUpdateCanonicalReloadAuthorized,
     focusSystemUpdateDialog,
-    systemUpdateInteractionBlocked,
     systemUpdateNotFoundAction,
     runWithSystemUpdateLock,
     transactCanonicalRecord,
@@ -27,6 +26,14 @@ import {
     type SystemUpdateLockManager,
 } from '../lib/systemUpdateLease';
 import { subscribeSystemUpdateAuthentication } from '../lib/systemUpdateAuthSignal';
+import {
+    acquireSystemUpdatePageLock,
+    systemUpdateExactStatusPath,
+    systemUpdateExactTrackingAllowed,
+    systemUpdateGlobalNavigationBlocked,
+    systemUpdateMutationLocked,
+} from '../lib/systemUpdateWatchdog';
+import { useSystemUpdateNavigationLease } from '../lib/useSystemUpdateNavigationLease';
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -488,7 +495,7 @@ async function pollExact(marker: UpdateMarker, t: Translate): Promise<PollOutcom
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), POLL_REQUEST_TIMEOUT_MS);
     try {
-        const response = await fetch(`/api/v1/panel/update/status?request_id=${encodeURIComponent(marker.request_id)}`, {
+        const response = await fetch(systemUpdateExactStatusPath(marker.request_id), {
             cache: 'no-store',
             credentials: 'same-origin',
             signal: controller.signal,
@@ -613,11 +620,34 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         || !tabHasReloadedMarker(terminal.marker)
     );
     const reloadRequired = requiredReload !== null && !tabHasReloadedMarker(requiredReload);
+    const requiredReloadMarker = reloadRequired ? requiredReload : null;
+    const exactMarker = pendingReload ?? requiredReloadMarker ?? provisional ?? marker ?? terminal?.marker ?? null;
+    const modalIdentity = exactMarker ? exactMarkerFingerprint(exactMarker) : null;
     const operationBlocks = pendingReload !== null || reloadRequired
-        || (!authPaused && (provisional !== null || marker !== null || terminalBlocks));
-    const blocking = systemUpdateInteractionBlocked(canonicalReady, operationBlocks);
-    const occupied = !canonicalReady || provisional !== null || marker !== null || terminalBlocks
-        || pendingReload !== null || reloadRequired;
+        || (!authPaused && (
+            provisional !== null
+            || marker !== null
+            || terminalBlocks
+        ));
+    const navigationLease = useSystemUpdateNavigationLease(
+        modalIdentity,
+        exactMarker?.created_at ?? null,
+        operationBlocks,
+    );
+    const navigationLeaseReleasedRef = useRef(navigationLease.released);
+    navigationLeaseReleasedRef.current = navigationLease.released;
+    const navigationLeaseIdentityRef = useRef(modalIdentity);
+    navigationLeaseIdentityRef.current = modalIdentity;
+    const backgroundTracking = marker !== null && navigationLease.released;
+    const blocking = systemUpdateGlobalNavigationBlocked(
+        operationBlocks,
+        navigationLease.blocked,
+    );
+    const occupied = systemUpdateMutationLocked(
+        canonicalReady,
+        provisional !== null || marker !== null || terminalBlocks
+            || pendingReload !== null || reloadRequired,
+    );
     const navigationBlockedRef = useRef(blocking);
     navigationBlockedRef.current = blocking;
     useNavigationBlocker(navigationBlockedRef);
@@ -693,6 +723,17 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     }, [captureMeaningfulFocus, settlePendingCommit, t]);
 
     const resumeTrackingGuard = useCallback((exactMarker: UpdateMarker): Promise<boolean> => {
+        if (navigationLeaseIdentityRef.current === exactMarkerFingerprint(exactMarker)
+            && navigationLeaseReleasedRef.current) {
+            // The exact request remains mutation-locked, but its monotonic
+            // navigation lease has expired. Resume read-only tracking without
+            // waiting for a modal guard that must never be reacquired.
+            guardReadyRef.current = false;
+            authPausedRef.current = false;
+            settlePendingCommit(exactMarker, true);
+            flushSync(() => setAuthPaused(false));
+            return Promise.resolve(true);
+        }
         if (!authPausedRef.current && guardReadyRef.current) return Promise.resolve(true);
         const pending = pendingCommitRef.current;
         if (pending && markerMatches(pending.marker, exactMarker)) return pending.promise;
@@ -834,7 +875,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
 
     const markCanonicalPending = useCallback(() => {
         const wasReady = canonicalReadyRef.current;
-        if (wasReady) captureMeaningfulFocus();
+        if (wasReady && navigationBlockedRef.current) captureMeaningfulFocus();
         const cancelledReload = cancelPostUpdateReload();
         if (!wasReady && !cancelledReload) return;
         canonicalReadyRef.current = false;
@@ -1362,8 +1403,11 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     }), [reconcileCanonicalRecord, resumeTrackingGuard]);
 
     useEffect(() => {
-        if (!canonicalReady || !marker) return undefined;
+        if (!systemUpdateExactTrackingAllowed(marker !== null, canonicalReady, backgroundTracking)) {
+            return undefined;
+        }
         const exactMarker = marker;
+        if (!exactMarker) return undefined;
         let cancelled = false;
         let timer: number | null = null;
         let delay = POLL_MIN_MS;
@@ -1383,12 +1427,17 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             }
             inFlight = true;
             const canonical = await reconcileCanonicalRecord();
-            if (cancelled || canonical === undefined) {
+            if (cancelled) {
                 inFlight = false;
-                if (!cancelled) schedule(POLL_MIN_MS);
                 return;
             }
-            if (canonical?.phase !== 'active' || !markerMatches(canonical.marker, exactMarker)) {
+            if (canonical === undefined && !backgroundTracking) {
+                inFlight = false;
+                schedule(POLL_MIN_MS);
+                return;
+            }
+            if (canonical !== undefined
+                && (canonical?.phase !== 'active' || !markerMatches(canonical.marker, exactMarker))) {
                 inFlight = false;
                 return;
             }
@@ -1485,21 +1534,15 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             if (pollWakeRef.current === wake) pollWakeRef.current = null;
             if (timer !== null) window.clearTimeout(timer);
         };
-    }, [canonicalReady, commitTerminal, marker, reconcileCanonicalRecord, recoverNotFound, resumeTrackingGuard, t]);
+    }, [backgroundTracking, canonicalReady, commitTerminal, marker, reconcileCanonicalRecord, recoverNotFound, resumeTrackingGuard, t]);
 
     useLayoutEffect(() => {
         if (!blocking) return undefined;
         const application = applicationRef.current;
-        const previousOverflow = document.body.style.overflow;
-        const onBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (programmaticReloadRef.current) return;
-            event.preventDefault();
-            event.returnValue = '';
-        };
-        if (application) application.inert = true;
-        if (application) application.setAttribute('aria-busy', 'true');
-        document.body.style.overflow = 'hidden';
-        window.addEventListener('beforeunload', onBeforeUnload);
+        const releasePageLock = acquireSystemUpdatePageLock(
+            application,
+            () => programmaticReloadRef.current,
+        );
         const pendingGuard = pendingCommitRef.current;
         guardReadyRef.current = focusSystemUpdateDialog(dialogRef.current, application);
         if (pendingGuard
@@ -1516,10 +1559,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         return () => {
             guardReadyRef.current = false;
             document.removeEventListener('focusin', keepFocusInDialog);
-            window.removeEventListener('beforeunload', onBeforeUnload);
-            if (application) application.inert = false;
-            if (application) application.removeAttribute('aria-busy');
-            document.body.style.overflow = previousOverflow;
+            releasePageLock();
             const focusTarget = focusBeforeLockRef.current;
             focusBeforeLockRef.current = null;
             const meaningfulTarget = focusTarget?.isConnected
@@ -1545,11 +1585,11 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     }, [blocking, settlePendingCommit]);
 
     useEffect(() => {
-        if (!blocking) return undefined;
+        if (!blocking && marker === null) return undefined;
         setNow(Date.now());
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
         return () => window.clearInterval(timer);
-    }, [blocking]);
+    }, [blocking, marker]);
 
     const abandonProvisional = useCallback((exactMarker: UpdateMarker) => {
         if (!markerMatches(provisionalRef.current, exactMarker)) return;
@@ -1705,9 +1745,6 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         if (!stored) return;
         await acknowledgeTerminal(stored);
     };
-    const requiredReloadMarker = reloadRequired ? requiredReload : null;
-    const exactMarker = pendingReload ?? requiredReloadMarker ?? provisional ?? marker ?? terminal?.marker ?? null;
-    const modalIdentity = exactMarker ? exactMarkerFingerprint(exactMarker) : 'canonical-reconciliation';
     useLayoutEffect(() => {
         if (!blocking) return;
         const ready = focusSystemUpdateDialog(dialogRef.current, applicationRef.current);
@@ -1726,6 +1763,9 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     const message = pendingReload || requiredReloadMarker
         ? t('panelUpdate.reloading', { version: (pendingReload ?? requiredReloadMarker)!.target.version })
         : displayedTerminal?.message ?? view.message;
+    const backgroundVisible = navigationLease.released && !authPaused && !blocking && exactMarker !== null
+        && (provisional !== null || marker !== null || pendingReload !== null
+            || requiredReloadMarker !== null || terminalBlocks);
 
     return (
         <SystemUpdateOperationContext.Provider value={{
@@ -1735,6 +1775,33 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             <div ref={applicationRef} className="contents" aria-hidden={blocking ? true : undefined}>
                 {children}
             </div>
+            {backgroundVisible && exactMarker && (
+                <aside
+                    aria-labelledby={'system-update-background-title'}
+                    className={'fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border bg-surface p-4 shadow-lg'}
+                >
+                    <p id={'system-update-background-title'} className={'font-semibold'}>{title}</p>
+                    <p
+                        role={terminalKind === 'failed' ? 'alert' : 'status'}
+                        aria-live={terminalKind === 'failed' ? 'assertive' : 'polite'}
+                        className={'mt-1 text-sm text-fg-muted'}
+                    >
+                        {message}
+                    </p>
+                    <p className={'mt-2 text-xs text-fg-subtle'}>{t('panelUpdate.watch')}</p>
+                    <p className={'mt-3 font-mono text-xs text-fg'}>
+                        {exactMarker.target.version} · T+{formatElapsed(exactMarker.created_at, now)}
+                    </p>
+                    <p className={'mt-1 break-all text-xs text-fg-subtle'}>ID {exactMarker.request_id}</p>
+                    {displayedTerminal?.kind === 'failed' && (
+                        <div className={'mt-3 flex justify-end'}>
+                            <Button type={'button'} onClick={() => void dismissTerminal()}>
+                                {t('dnssrv.continue')}
+                            </Button>
+                        </div>
+                    )}
+                </aside>
+            )}
             {blocking && !exactMarker && (
                 <div ref={dialogRef} role="dialog" aria-modal="true" tabIndex={-1}
                     className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 p-4">

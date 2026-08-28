@@ -152,13 +152,13 @@ function SettingsWorkspace({
                             <PanelCertificatePanel />
                         </div>
                         <div id="settings-updates-panel" role="tabpanel" aria-labelledby="settings-updates-tab" hidden={activeID !== 'updates'}>
-                            <PanelUpdateCard />
+                            {activeID === 'updates' && <PanelUpdateCard />}
                         </div>
                         <div id="settings-security-panel" role="tabpanel" aria-labelledby="settings-security-tab" hidden={activeID !== 'security'}>
                             {activeID === 'security' && <SecurityAuditCard />}
                         </div>
                         <div id="settings-dns-panel" role="tabpanel" aria-labelledby="settings-dns-tab" hidden={activeID !== 'dns'}>
-                            <DNSServerSettings />
+                            {activeID === 'dns' && <DNSServerSettings />}
                         </div>
                     </>
                 )}

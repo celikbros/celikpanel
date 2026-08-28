@@ -28,25 +28,28 @@ func bindSafeAPTCommandEnvironment() []string {
 }
 
 type bindSignedUpdatePreparationOps struct {
-	checkIdle        func() error
-	detectProfile    func() (hostplatform.Profile, error)
-	readJournal      func() (dnsEngineSwitchJournal, bool, error)
-	readLedger       func() (serviceMutationLedger, error)
-	rollbackJournal  func(context.Context, dnsEngineSwitchJournal) error
-	verifyRestored   func(context.Context, dnsEngineSwitchJournal) error
-	verifyTarget     func(context.Context, dnsEngineSwitchJournal) error
-	writeJournal     func(dnsEngineSwitchJournal) error
-	removeJournal    func() error
-	readInstall      func() (dnsEngineInstallOwnershipReceipt, bool, error)
-	readState        func() (dnsEngineStateReceipt, bool, error)
-	readOwnership    func() (dnsEngineStateReceipt, bool, error)
-	writeOwnership   func(dnsEngineStateReceipt) error
-	retireInstall    func(dnsEngineSwitchJournal) error
-	packageInstalled func(context.Context, hostplatform.Profile, string) (bool, error)
-	parentExists     func() (bool, error)
-	prepare          func(context.Context) error
-	hardenExisting   func(context.Context) error
-	verifyExisting   func(context.Context, dnsEngineStateReceipt) error
+	checkIdle           func() error
+	detectProfile       func() (hostplatform.Profile, error)
+	readJournal         func() (dnsEngineSwitchJournal, bool, error)
+	readLedger          func() (serviceMutationLedger, error)
+	rollbackJournal     func(context.Context, dnsEngineSwitchJournal) error
+	verifyRestored      func(context.Context, dnsEngineSwitchJournal) error
+	verifyTarget        func(context.Context, dnsEngineSwitchJournal) error
+	writeJournal        func(dnsEngineSwitchJournal) error
+	removeJournal       func() error
+	readInstall         func() (dnsEngineInstallOwnershipReceipt, bool, error)
+	readEngineInstall   func(transport.DNSEngine) (dnsEngineInstallOwnershipReceipt, bool, error)
+	readState           func() (dnsEngineStateReceipt, bool, error)
+	readOwnership       func() (dnsEngineStateReceipt, bool, error)
+	readEngineOwnership func(transport.DNSEngine) (dnsEngineStateReceipt, bool, error)
+	writeOwnership      func(dnsEngineStateReceipt) error
+	finalizeArtifacts   func(dnsEngineSwitchJournal) error
+	retireInstall       func(dnsEngineSwitchJournal) error
+	packageInstalled    func(context.Context, hostplatform.Profile, string) (bool, error)
+	parentExists        func() (bool, error)
+	prepare             func(context.Context) error
+	hardenExisting      func(context.Context) error
+	verifyExisting      func(context.Context, dnsEngineStateReceipt) error
 }
 
 func prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
@@ -72,13 +75,16 @@ func prepareBINDGenerationRootForSignedUpdateUnderExternalLock(
 			readInstall: func() (dnsEngineInstallOwnershipReceipt, bool, error) {
 				return readDNSEngineInstallOwnership(transport.DNSEngineBIND)
 			},
-			readState: readDNSEngineState,
+			readEngineInstall: readDNSEngineInstallOwnership,
+			readState:         readDNSEngineState,
 			readOwnership: func() (dnsEngineStateReceipt, bool, error) {
 				return readDNSEngineOwnership(transport.DNSEngineBIND)
 			},
-			writeOwnership:   writeDNSEngineOwnership,
-			retireInstall:    retireDNSEngineInstallOwnership,
-			packageInstalled: exactBINDPackageInstalledForSignedUpdate,
+			readEngineOwnership: readDNSEngineOwnership,
+			writeOwnership:      writeDNSEngineOwnership,
+			finalizeArtifacts:   finalizeCommittedDNSEngineSwitchArtifacts,
+			retireInstall:       retireDNSEngineInstallOwnership,
+			packageInstalled:    exactBINDPackageInstalledForSignedUpdate,
 			parentExists: func() (bool, error) {
 				_, err := os.Lstat(aptBINDCacheParentPath)
 				if errors.Is(err, os.ErrNotExist) {
@@ -370,57 +376,102 @@ func verifyInitialBINDRollbackForSignedUpdate(
 	return verifyPreimage()
 }
 
-func exactCommittedBINDSignedUpdateProvenance(
+func signedUpdateDNSEngineInstallOwnership(
+	ops bindSignedUpdatePreparationOps,
+	engine transport.DNSEngine,
+) (dnsEngineInstallOwnershipReceipt, bool, error) {
+	if ops.readEngineInstall != nil {
+		return ops.readEngineInstall(engine)
+	}
+	if engine == transport.DNSEngineBIND && ops.readInstall != nil {
+		return ops.readInstall()
+	}
+	return dnsEngineInstallOwnershipReceipt{}, false,
+		errors.New("signed-update target install ownership reader is unavailable")
+}
+
+func signedUpdateDNSEngineOwnership(
+	ops bindSignedUpdatePreparationOps,
+	engine transport.DNSEngine,
+) (dnsEngineStateReceipt, bool, error) {
+	if ops.readEngineOwnership != nil {
+		return ops.readEngineOwnership(engine)
+	}
+	if engine == transport.DNSEngineBIND && ops.readOwnership != nil {
+		return ops.readOwnership()
+	}
+	return dnsEngineStateReceipt{}, false,
+		errors.New("signed-update target ownership reader is unavailable")
+}
+
+func exactCommittedDNSEngineSignedUpdateProvenance(
 	journal dnsEngineSwitchJournal,
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	profile hostplatform.Profile,
 	ops bindSignedUpdatePreparationOps,
 ) (dnsEngineStateReceipt, bool, bool, error) {
 	if journal.Phase != dnsSwitchPhaseCommitted ||
-		journal.TargetEngine != transport.DNSEngineBIND {
+		!transport.ValidDNSEngine(journal.TargetEngine) {
 		return dnsEngineStateReceipt{}, false, false,
-			errors.New("signed-update committed recovery requires an exact BIND target")
+			errors.New("signed-update committed recovery requires an exact DNS engine target")
 	}
 	state, stateExists, err := ops.readState()
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, false,
-			fmt.Errorf("read committed BIND state receipt: %w", err)
+			fmt.Errorf("read committed DNS engine state receipt: %w", err)
 	}
 	if !stateExists || validateDNSEngineState(state) != nil ||
 		!exactDNSEngineStateForJournal(state, journal) {
 		return dnsEngineStateReceipt{}, false, false,
-			errors.New("committed BIND state receipt is absent or differs from its journal")
+			errors.New("committed DNS engine state receipt is absent or differs from its journal")
 	}
-	install, installExists, err := ops.readInstall()
+	install, installExists, err := signedUpdateDNSEngineInstallOwnership(
+		ops, journal.TargetEngine,
+	)
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, false,
-			fmt.Errorf("read committed BIND install ownership: %w", err)
+			fmt.Errorf("read committed DNS engine install ownership: %w", err)
 	}
 	if installExists {
+		packages, err := managedDNSEnginePackagesForProfile(profile, journal.TargetEngine)
+		if err != nil {
+			return dnsEngineStateReceipt{}, false, false, err
+		}
 		request := signedUpdateRollbackEvidenceRequest(journal, manifest)
 		if validateDNSEngineInstallOwnership(install) != nil ||
 			!exactDNSEngineInstallEvidence(install, request, manifest) ||
 			!exactDNSEngineInstallOwnership(
-				install, true, transport.DNSEngineBIND,
-				hostplatform.PackageManagerAPT, []string{"bind9"},
+				install, true, journal.TargetEngine,
+				profile.PackageManager, packages,
 			) {
 			return dnsEngineStateReceipt{}, false, false,
-				errors.New("committed BIND install ownership differs from its journal")
+				errors.New("committed DNS engine install ownership differs from its journal")
 		}
 	}
-	ownership, ownershipExists, err := ops.readOwnership()
+	ownership, ownershipExists, err := signedUpdateDNSEngineOwnership(
+		ops, journal.TargetEngine,
+	)
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, false,
-			fmt.Errorf("read committed BIND ownership: %w", err)
+			fmt.Errorf("read committed DNS engine ownership: %w", err)
 	}
 	if ownershipExists &&
 		(validateDNSEngineState(ownership) != nil || ownership != state) {
 		return dnsEngineStateReceipt{}, false, false,
-			errors.New("committed BIND ownership differs from its exact active state")
+			errors.New("committed DNS engine ownership differs from its exact active state")
+	}
+	if journal.Mode != transport.DNSEngineSwitchModeAdopt {
+		if !installExists {
+			if !ownershipExists {
+				return dnsEngineStateReceipt{}, false, false,
+					errors.New("committed DNS engine switch has no exact install or active ownership provenance")
+			}
+		}
 	}
 	return state, installExists, ownershipExists, nil
 }
 
-func recoverCommittedBINDSwitchJournalForSignedUpdate(
+func recoverCommittedDNSEngineSwitchJournalForSignedUpdate(
 	ctx context.Context,
 	firstJournal dnsEngineSwitchJournal,
 	ops bindSignedUpdatePreparationOps,
@@ -429,12 +480,16 @@ func recoverCommittedBINDSwitchJournalForSignedUpdate(
 	if err != nil {
 		return false, err
 	}
-	if firstJournal.TargetEngine != transport.DNSEngineBIND {
-		return false, errors.New("signed-update committed recovery accepts only a BIND target")
+	if ops.detectProfile == nil {
+		return false, errors.New("signed-update committed recovery host profile detector is unavailable")
+	}
+	profile, err := ops.detectProfile()
+	if err != nil {
+		return false, err
 	}
 	firstLedger, err := ops.readLedger()
 	if err != nil {
-		return false, fmt.Errorf("read service mutation ledger before committed BIND recovery: %w", err)
+		return false, fmt.Errorf("read service mutation ledger before committed DNS engine recovery: %w", err)
 	}
 	if err := exactSucceededSignedUpdateDNSEngineLedger(
 		firstLedger, firstJournal, manifest,
@@ -443,50 +498,52 @@ func recoverCommittedBINDSwitchJournalForSignedUpdate(
 	}
 	secondJournal, exists, err := ops.readJournal()
 	if err != nil {
-		return false, fmt.Errorf("reinspect committed BIND journal before target proof: %w", err)
+		return false, fmt.Errorf("reinspect committed DNS engine journal before target proof: %w", err)
 	}
 	if !exists || !reflect.DeepEqual(firstJournal, secondJournal) {
-		return false, errors.New("committed BIND journal changed before signed-update target proof")
+		return false, errors.New("committed DNS engine journal changed before signed-update target proof")
 	}
 	if err := ops.verifyTarget(ctx, secondJournal); err != nil {
-		return false, fmt.Errorf("verify committed BIND target before provenance finalization: %w", err)
+		return false, fmt.Errorf("verify committed DNS engine target before provenance finalization: %w", err)
 	}
-	state, _, _, err := exactCommittedBINDSignedUpdateProvenance(
-		secondJournal, manifest, ops,
+	state, _, _, err := exactCommittedDNSEngineSignedUpdateProvenance(
+		secondJournal, manifest, profile, ops,
 	)
 	if err != nil {
 		return false, err
 	}
-	ownership, ownershipExists, err := ops.readOwnership()
+	ownership, ownershipExists, err := signedUpdateDNSEngineOwnership(
+		ops, secondJournal.TargetEngine,
+	)
 	if err != nil {
-		return false, fmt.Errorf("reinspect committed BIND ownership: %w", err)
+		return false, fmt.Errorf("reinspect committed DNS engine ownership: %w", err)
 	}
 	if !ownershipExists {
 		if err := ops.writeOwnership(state); err != nil {
-			return false, fmt.Errorf("publish committed BIND ownership: %w", err)
+			return false, fmt.Errorf("publish committed DNS engine ownership: %w", err)
 		}
 	} else if ownership != state {
-		return false, errors.New("committed BIND ownership changed before finalization")
+		return false, errors.New("committed DNS engine ownership changed before finalization")
 	}
-	_, _, ownershipExists, err = exactCommittedBINDSignedUpdateProvenance(
-		secondJournal, manifest, ops,
+	_, _, ownershipExists, err = exactCommittedDNSEngineSignedUpdateProvenance(
+		secondJournal, manifest, profile, ops,
 	)
 	if err != nil {
-		return false, fmt.Errorf("verify committed BIND ownership publication: %w", err)
+		return false, fmt.Errorf("verify committed DNS engine ownership publication: %w", err)
 	}
 	if !ownershipExists {
-		return false, errors.New("committed BIND ownership is absent after publication")
+		return false, errors.New("committed DNS engine ownership is absent after publication")
 	}
 	thirdJournal, exists, err := ops.readJournal()
 	if err != nil {
-		return false, fmt.Errorf("reinspect committed BIND journal before install retirement: %w", err)
+		return false, fmt.Errorf("reinspect committed DNS engine journal before install retirement: %w", err)
 	}
 	if !exists || !reflect.DeepEqual(secondJournal, thirdJournal) {
-		return false, errors.New("committed BIND journal changed before install retirement")
+		return false, errors.New("committed DNS engine journal changed before install retirement")
 	}
 	secondLedger, err := ops.readLedger()
 	if err != nil {
-		return false, fmt.Errorf("reread service mutation ledger before committed BIND finalization: %w", err)
+		return false, fmt.Errorf("reread service mutation ledger before committed DNS engine finalization: %w", err)
 	}
 	if err := exactSucceededSignedUpdateDNSEngineLedger(
 		secondLedger, thirdJournal, manifest,
@@ -494,36 +551,70 @@ func recoverCommittedBINDSwitchJournalForSignedUpdate(
 		return false, err
 	}
 	if !reflect.DeepEqual(firstLedger, secondLedger) {
-		return false, errors.New("service mutation ledger changed during committed BIND recovery")
+		return false, errors.New("service mutation ledger changed during committed DNS engine recovery")
 	}
 	if err := ops.checkIdle(); err != nil {
-		return false, fmt.Errorf("reverify external mutation lock before BIND install retirement: %w", err)
+		return false, fmt.Errorf("reverify external mutation lock before DNS engine install retirement: %w", err)
 	}
-	if err := ops.retireInstall(thirdJournal); err != nil {
-		return false, fmt.Errorf("retire committed BIND install ownership: %w", err)
+	if err := ops.finalizeArtifacts(thirdJournal); err != nil {
+		return false, fmt.Errorf(`finalize committed DNS engine switch artifacts: %w`, err)
 	}
-	_, installExists, ownershipExists, err := exactCommittedBINDSignedUpdateProvenance(
-		thirdJournal, manifest, ops,
+	artifactJournal, exists, err := ops.readJournal()
+	if err != nil {
+		return false, fmt.Errorf(`reinspect committed DNS engine journal after artifact finalization: %w`, err)
+	}
+	if !exists || !reflect.DeepEqual(thirdJournal, artifactJournal) {
+		return false, errors.New(`committed DNS engine journal changed during artifact finalization`)
+	}
+	artifactLedger, err := ops.readLedger()
+	if err != nil {
+		return false, fmt.Errorf(`reread service mutation ledger after committed DNS artifact finalization: %w`, err)
+	}
+	if err := exactSucceededSignedUpdateDNSEngineLedger(
+		artifactLedger, artifactJournal, manifest,
+	); err != nil {
+		return false, err
+	}
+	if !reflect.DeepEqual(firstLedger, artifactLedger) {
+		return false, errors.New(`service mutation ledger changed during committed DNS artifact finalization`)
+	}
+	_, _, ownershipExists, err = exactCommittedDNSEngineSignedUpdateProvenance(
+		artifactJournal, manifest, profile, ops,
 	)
 	if err != nil {
-		return false, fmt.Errorf("verify committed BIND provenance after install retirement: %w", err)
-	}
-	if installExists {
-		return false, errors.New("committed BIND install ownership still exists after retirement")
+		return false, fmt.Errorf(`verify committed DNS engine provenance after artifact finalization: %w`, err)
 	}
 	if !ownershipExists {
-		return false, errors.New("committed BIND ownership is absent after install retirement")
+		return false, errors.New(`committed DNS engine ownership is absent after artifact finalization`)
+	}
+	if err := ops.checkIdle(); err != nil {
+		return false, fmt.Errorf(`reverify external mutation lock after DNS artifact finalization: %w`, err)
+	}
+	if err := ops.retireInstall(artifactJournal); err != nil {
+		return false, fmt.Errorf("retire committed DNS engine install ownership: %w", err)
+	}
+	_, installExists, ownershipExists, err := exactCommittedDNSEngineSignedUpdateProvenance(
+		artifactJournal, manifest, profile, ops,
+	)
+	if err != nil {
+		return false, fmt.Errorf("verify committed DNS engine provenance after install retirement: %w", err)
+	}
+	if installExists {
+		return false, errors.New("committed DNS engine install ownership still exists after retirement")
+	}
+	if !ownershipExists {
+		return false, errors.New("committed DNS engine ownership is absent after install retirement")
 	}
 	finalJournal, exists, err := ops.readJournal()
 	if err != nil {
-		return false, fmt.Errorf("reinspect committed BIND journal before removal: %w", err)
+		return false, fmt.Errorf("reinspect committed DNS engine journal before removal: %w", err)
 	}
-	if !exists || !reflect.DeepEqual(thirdJournal, finalJournal) {
-		return false, errors.New("committed BIND journal changed before signed-update removal")
+	if !exists || !reflect.DeepEqual(artifactJournal, finalJournal) {
+		return false, errors.New("committed DNS engine journal changed before signed-update removal")
 	}
 	finalLedger, err := ops.readLedger()
 	if err != nil {
-		return false, fmt.Errorf("reread service mutation ledger before committed BIND removal: %w", err)
+		return false, fmt.Errorf("reread service mutation ledger before committed DNS engine removal: %w", err)
 	}
 	if err := exactSucceededSignedUpdateDNSEngineLedger(
 		finalLedger, finalJournal, manifest,
@@ -531,13 +622,13 @@ func recoverCommittedBINDSwitchJournalForSignedUpdate(
 		return false, err
 	}
 	if !reflect.DeepEqual(firstLedger, finalLedger) {
-		return false, errors.New("service mutation ledger changed before committed BIND removal")
+		return false, errors.New("service mutation ledger changed before committed DNS engine removal")
 	}
 	if err := ops.checkIdle(); err != nil {
-		return false, fmt.Errorf("reverify external mutation lock before committed BIND removal: %w", err)
+		return false, fmt.Errorf("reverify external mutation lock before committed DNS engine removal: %w", err)
 	}
 	if err := ops.removeJournal(); err != nil {
-		return false, fmt.Errorf("remove finalized committed BIND journal: %w", err)
+		return false, fmt.Errorf("remove finalized committed DNS engine journal: %w", err)
 	}
 	return true, nil
 }
@@ -557,7 +648,7 @@ func recoverDNSEngineSwitchJournalForSignedUpdate(
 		return false, fmt.Errorf("validate signed-update DNS engine switch journal: %w", err)
 	}
 	if firstJournal.Phase == dnsSwitchPhaseCommitted {
-		return recoverCommittedBINDSwitchJournalForSignedUpdate(
+		return recoverCommittedDNSEngineSwitchJournalForSignedUpdate(
 			ctx, firstJournal, ops,
 		)
 	}
@@ -660,7 +751,8 @@ func prepareBINDGenerationRootForSignedUpdateWithOps(
 		ops.writeJournal == nil || ops.removeJournal == nil ||
 		ops.readInstall == nil ||
 		ops.readState == nil || ops.readOwnership == nil ||
-		ops.writeOwnership == nil || ops.retireInstall == nil ||
+		ops.writeOwnership == nil || ops.finalizeArtifacts == nil ||
+		ops.retireInstall == nil ||
 		ops.packageInstalled == nil || ops.parentExists == nil ||
 		ops.prepare == nil || ops.hardenExisting == nil ||
 		ops.verifyExisting == nil {
@@ -673,11 +765,11 @@ func prepareBINDGenerationRootForSignedUpdateWithOps(
 	if err != nil {
 		return err
 	}
-	if profile.PackageManager != hostplatform.PackageManagerAPT {
-		return nil
-	}
 	if _, err := recoverDNSEngineSwitchJournalForSignedUpdate(ctx, ops); err != nil {
 		return err
+	}
+	if profile.PackageManager != hostplatform.PackageManagerAPT {
+		return nil
 	}
 	install, installExists, err := ops.readInstall()
 	if err != nil {
