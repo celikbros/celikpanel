@@ -10,29 +10,40 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type fakeDNSEngineBackend struct {
-	readiness      []transport.DNSBackendRuntimeState
-	port53Conflict bool
-	readyErr       error
-	syncErr        error
-	switchErr      error
-	result         transport.SwitchDNSEngineV1Response
-	switchCalls    int
-	switchManifest mutationpayload.DNSEngineSwitchManifestCommitment
-	recovery       dnsEngineSwitchRecoveryOutcome
-	recoverErr     error
-	recoverCalls   int
-	finalizeCalls  int
+	readiness          []transport.DNSBackendRuntimeState
+	readinessBounded   bool
+	readinessRemaining time.Duration
+	port53Conflict     bool
+	readyErr           error
+	syncErr            error
+	switchErr          error
+	result             transport.SwitchDNSEngineV1Response
+	switchCalls        int
+	switchManifest     mutationpayload.DNSEngineSwitchManifestCommitment
+	recovery           dnsEngineSwitchRecoveryOutcome
+	recoverErr         error
+	recoverCalls       int
+	finalizeCalls      int
+	finalizeTracked    bool
+	finalizeBounded    bool
+	finalizeRemaining  time.Duration
 }
 
 func (backend *fakeDNSEngineBackend) Readiness(
-	context.Context,
+	ctx context.Context,
 ) (transport.DNSBackendReadinessResponse, error) {
+	deadline, bounded := ctx.Deadline()
+	backend.readinessBounded = bounded
+	if bounded {
+		backend.readinessRemaining = time.Until(deadline)
+	}
 	return transport.DNSBackendReadinessResponse{
 		Engines: backend.readiness, Port53Conflict: backend.port53Conflict,
 	}, backend.readyErr
@@ -76,12 +87,18 @@ func (backend *fakeDNSEngineBackend) RecoverSwitch(
 }
 
 func (backend *fakeDNSEngineBackend) FinalizeSwitch(
-	context.Context,
-	transport.DNSEngine,
-	string,
-	transport.ServiceMutationBinding,
+	ctx context.Context,
+	_ transport.DNSEngine,
+	_ string,
+	_ transport.ServiceMutationBinding,
 ) error {
 	backend.finalizeCalls++
+	_, backend.finalizeTracked = ctx.Value(serviceMutationExecutionTrackerKey{}).(*serviceMutationExecutionTracker)
+	deadline, bounded := ctx.Deadline()
+	backend.finalizeBounded = bounded
+	if bounded {
+		backend.finalizeRemaining = time.Until(deadline)
+	}
 	return nil
 }
 
@@ -172,6 +189,19 @@ func TestSwitchDNSEnginePublishesExactTerminalReceipt(t *testing.T) {
 	wantPhase := dnsEngineSwitchPublishedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
 	if job == nil || job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
 		t.Fatalf("terminal job=%+v want phase %q", job, wantPhase)
+	}
+	if backend.finalizeCalls != 1 ||
+		backend.finalizeTracked ||
+		!backend.finalizeBounded ||
+		backend.finalizeRemaining <= 0 ||
+		backend.finalizeRemaining > dnsEngineSwitchRecoveryLimit {
+		t.Fatalf(
+			"finalize calls=%d tracked=%v bounded=%v remaining=%s",
+			backend.finalizeCalls,
+			backend.finalizeTracked,
+			backend.finalizeBounded,
+			backend.finalizeRemaining,
+		)
 	}
 }
 
@@ -296,19 +326,31 @@ func TestDNSBackendReadinessHidesProbeDetail(t *testing.T) {
 }
 
 func TestDNSBackendReadinessReportsOnlyBoundedPort53Conflict(t *testing.T) {
-	useFakeDNSEngineBackend(t, &fakeDNSEngineBackend{
+	backend := &fakeDNSEngineBackend{
 		readiness: []transport.DNSBackendRuntimeState{
 			{Engine: transport.DNSEngineBIND, Unit: "named.service"},
 			{Engine: transport.DNSEnginePowerDNS, Unit: "pdns.service"},
 		},
 		port53Conflict: true,
-	})
+	}
+	useFakeDNSEngineBackend(t, backend)
 	var response DNSBackendReadinessResponse
 	if err := (&Agent{}).DNSBackendReadiness(&transport.Empty{}, &response); err != nil {
 		t.Fatal(err)
 	}
 	if !response.Port53Conflict || response.Error != "" || len(response.Engines) != 2 {
 		t.Fatalf("unexpected readiness response: %+v", response)
+	}
+	if dnsBackendReadinessTimeout != 10*time.Second ||
+		!backend.readinessBounded ||
+		backend.readinessRemaining <= 0 ||
+		backend.readinessRemaining > dnsBackendReadinessTimeout {
+		t.Fatalf(
+			"readiness timeout=%s bounded=%v remaining=%s",
+			dnsBackendReadinessTimeout,
+			backend.readinessBounded,
+			backend.readinessRemaining,
+		)
 	}
 }
 

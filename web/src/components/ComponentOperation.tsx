@@ -107,6 +107,13 @@ export interface InteractionBlockView {
     hint?: string;
     operationID?: string;
     interrupted?: boolean;
+    busy?: boolean;
+    severity?: 'warning' | 'error';
+    message?: string;
+    details?: Array<{
+        label: string;
+        value: string;
+    }>;
 }
 
 export interface InteractionBlockLease {

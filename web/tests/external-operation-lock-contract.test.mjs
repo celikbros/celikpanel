@@ -11,6 +11,10 @@ const dnsSource = readFileSync(
   new URL('../src/components/DNSEngineCard.tsx', import.meta.url),
   'utf8',
 );
+const overlaySource = readFileSync(
+  new URL('../src/components/OperationOverlay.tsx', import.meta.url),
+  'utf8',
+);
 
 function section(source, startText, endText) {
   const start = source.indexOf(startText);
@@ -118,7 +122,7 @@ test('DNS unlock is owned by the exact request and happens only after terminal t
   );
   assert.match(completion, /decoded\.operation\?\.request_id === guard\.requestID/,
     'a terminal snapshot for another operation must not release this guard');
-  assert.match(completion, /decoded\.operation\.status === 'succeeded'/);
+  assert.match(completion, /exactOperation\?\.status === 'succeeded'/);
   assert.match(completion, /decoded\.operation\.target_engine === guard\.target/);
 
   const adopt = completion.indexOf('setSnapshot(decoded)');
@@ -152,33 +156,7 @@ test('failed and rolled-back DNS terminals never take a success path', () => {
     'the direct POST result and recovery polling must share the same exact terminal predicate');
 });
 
-test('reload replay releases only an exact definitive pre-persist refusal', () => {
-  const verification = section(
-    dnsSource,
-    "if (guard.replayRequest) {",
-    "} else {\n                decoded = await reconcileAndRefresh(true);",
-  );
-
-  assert.match(verification, /!apiError\.code/,
-    'coded outcomes may represent rollback or recovery and must remain guarded');
-  assert.match(verification, /apiError\.mutationApplied !== true/);
-  assert.match(verification, /apiError\.partialSuccess !== true/);
-  assert.match(verification, /result\.status === 400 \|\| result\.status === 409/,
-    'only the endpoint\'s definitive client refusal statuses may release recovery');
-  assert.match(verification,
-    /operationGuardRef\.current\?\.requestID !== guard\.requestID/,
-    'a stale replay must never release a newer operation guard');
-
-  const exactProof = verification.indexOf(
-    'operationGuardRef.current?.requestID !== guard.requestID',
-  );
-  const clear = verification.indexOf('clearDNSOperationMarker(guard.requestID)', exactProof);
-  const release = verification.indexOf('operationLeaseRef.current?.release()', clear);
-  assert.ok(exactProof >= 0 && clear > exactProof && release > clear,
-    'marker and interaction lease cleanup require exact live request ownership first');
-});
-
-test('initial commit and recovery replay share a bounded switch request without unlocking on timeout', () => {
+test('the switch mutation POST is single-shot and ambiguous outcomes use exact read-only status', () => {
   const boundedRequest = section(
     dnsSource,
     'async function submitDNSEngineSwitch',
@@ -198,20 +176,65 @@ test('initial commit and recovery replay share a bounded switch request without 
   assert.match(boundedRequest, /finally \{[\s\S]*clearTimeout\(requestTimeout\)/);
 
   const calls = dnsSource.match(/submitDNSEngineSwitch\(/g) ?? [];
-  assert.equal(calls.length, 3,
-    'the helper definition, initial commit, and exact recovery replay must be the only call sites');
-
-  const verification = section(
-    dnsSource,
-    "if (guard.replayRequest) {",
-    "} else {\n                decoded = await reconcileAndRefresh(true);",
-  );
-  assert.match(verification,
-    /catch \{[\s\S]*schedule\(\);[\s\S]*return;/,
-    'a replay timeout remains guarded and schedules another exact attempt');
+  assert.equal(calls.length, 2,
+    'the helper definition and initial commit must be the only switch mutation call sites');
+  assert.doesNotMatch(dnsSource, /replayRequest/,
+    'a lost response must never replay the DNS switch POST');
 
   const commit = section(dnsSource, 'const commitSwitch = async', '\n    return (');
   assert.match(commit,
-    /catch \{[\s\S]*holdOperationGuard\(\{[\s\S]*requestID,[\s\S]*mode: 'verifying'[\s\S]*replayRequest: requestBody/,
-    'an initial timeout must retain the exact marker and transition to guarded replay');
+    /catch \{[\s\S]*returnedGuard\?\.requestID !== requestID[\s\S]*mode: 'verifying'/,
+    'an initial timeout retains the exact local guard without recreating a stale guard');
+
+  const polling = section(dnsSource, 'const stopAtDeadline =', '\n    useEffect(() => {\n        if (actionsLocked)');
+  assert.match(polling, /let decoded = await refresh\(true\)/,
+    'recovery uses the read-only authoritative snapshot');
+  assert.match(polling,
+    /decoded\?\.operation\?\.request_id === requestID[\s\S]*decoded\.operation\.target_engine === target/,
+    'only the exact request and target are adopted');
+  assert.doesNotMatch(polling, /submitDNSEngineSwitch|\/dns\/engine\/switch/,
+    'the verification loop cannot issue the mutation POST');
+});
+
+test('DNS verification is bounded, stalls visibly, and releases only the appropriate global lease', () => {
+  assert.match(dnsSource, /const dnsEngineGuardStalledAfterMs = 2 \* 60_000/);
+  assert.match(dnsSource, /const dnsEngineGuardMaxElapsedMs = 31 \* 60_000/);
+  assert.match(dnsSource, /const dnsEngineGuardMaxAttempts = 180/);
+  assert.match(dnsSource, /const dnsEngineGuardMaxReconcileAttempts = 3/);
+  assert.match(dnsSource, /const dnsEngineGuardReconcileDelayMs = 60_000/);
+
+  const polling = section(dnsSource, 'const stopAtDeadline =', '\n    useEffect(() => {\n        if (actionsLocked)');
+  assert.match(polling,
+    /durableStalled[\s\S]*exactOperation !== null[\s\S]*reconcileAttempts < dnsEngineGuardMaxReconcileAttempts[\s\S]*Date\.now\(\) - lastReconcileAt >= dnsEngineGuardReconcileDelayMs[\s\S]*await reconcileAndRefresh\(true\)/,
+    'reconcile is bounded and only runs after an exact durable operation stalls');
+  assert.match(polling, /mode: durableStalled \? 'stalled' : 'verifying'/);
+  assert.match(polling,
+    /schedule\(durableStalled \? dnsEngineGuardSlowPollDelayMs : dnsEngineGuardPollDelayMs\)/);
+  assert.match(polling, /attempts > 0 && \(/,
+    'a reloaded deadline marker receives one fresh authoritative read first');
+  assert.match(polling,
+    /let decoded = await refresh\(true\)[\s\S]*completeGuardedVerification[\s\S]*Date\.now\(\) - guard\.startedAt >= dnsEngineGuardMaxElapsedMs[\s\S]*stopAtDeadline/,
+    'after that fresh authoritative read, an overdue non-terminal marker must immediately stop and release navigation');
+
+  const guardView = section(dnsSource, 'const guardView =', 'const holdOperationGuard =');
+  assert.match(guardView,
+    /busy: !\['stalled', 'deadline', 'recovery_required'\]\.includes\(guard\.mode\)/);
+  assert.match(guardView, /details: \[/);
+  assert.match(guardView, /message: guard\.trackingMessage/);
+
+  const hold = section(dnsSource, 'const holdOperationGuard =', 'useLayoutEffect(() => {');
+  assert.match(hold, /guard\.mode !== 'deadline' && guard\.mode !== 'recovery_required'/);
+  assert.match(hold, /operationLeaseRef\.current\?\.release\(\)/,
+    'hard terminal/action-required states must not trap navigation');
+
+  const completion = section(dnsSource, 'const completeGuardedVerification =', 'useEffect(() => {');
+  const recovery = section(completion, "exactOperation?.status === 'recovery_required'", 'const operationSucceeded');
+  assert.match(recovery, /clearDNSOperationMarker\(guard\.requestID\)/);
+  assert.match(recovery, /mode: 'recovery_required'/);
+  assert.doesNotMatch(recovery, /setOperationGuard\(null\)/);
+
+  assert.match(overlaySource, /const busy = view\?\.busy/);
+  assert.match(overlaySource, /busy[\s\S]*LoaderCircle[\s\S]*AlertTriangle/);
+  assert.match(overlaySource, /view\?\.details && view\.details\.length > 0/);
+  assert.match(overlaySource, /view\?\.message/);
 });

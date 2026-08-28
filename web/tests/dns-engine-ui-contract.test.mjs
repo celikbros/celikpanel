@@ -174,34 +174,24 @@ test('refresh failures retain the last verified snapshot while authoritative rea
   assert.match(copy, /dnsEngine\.operation\.trackingReadFailed/);
 });
 
-test('a loaded switching snapshot resumes continuous polling and periodic reconciliation', () => {
-  const pollingStart = card.indexOf(`if (snapshot?.state !== 'switching' || !snapshot.operation_id)`);
-  const pollingEnd = card.indexOf('\n    useEffect(() => {', pollingStart);
+test('an exact loaded switching snapshot enters the bounded global guard', () => {
+  const loadStart = card.indexOf('const refresh = useCallback');
+  const loadEnd = card.indexOf('const reconcileAndRefresh = useCallback', loadStart);
+  const loadBody = card.slice(loadStart, loadEnd);
+  assert.match(loadBody,
+    /decoded\.operation && operationGuardRef\.current === null[\s\S]*decoded\.state === 'switching'[\s\S]*decoded\.operation\.status === 'recovery_required'[\s\S]*requestID: decoded\.operation\.request_id[\s\S]*target: decoded\.operation\.target_engine/);
+  assert.match(loadBody, /mode: recoveryRequired \? 'recovery_required' : 'verifying'/);
+  assert.match(loadBody, /operation: decoded\.operation/);
+
+  const pollingStart = card.indexOf('const stopAtDeadline =');
+  const pollingEnd = card.indexOf('\n    useEffect(() => {\n        if (actionsLocked)', pollingStart);
   assert.ok(pollingStart >= 0 && pollingEnd > pollingStart);
   const polling = card.slice(pollingStart, pollingEnd);
-  assert.match(polling, /let attempts = 0/);
-  assert.match(polling, /attempts \+= 1/);
-  assert.match(polling, /if \(attempts % 5 === 0\)[\s\S]*await reconcileAndRefresh\(true\)[\s\S]*else[\s\S]*await refresh\(true\)/);
-  const awaitedRead = polling.indexOf('await refresh(true)');
-  const cancellationCheck = polling.indexOf('if (cancelled) return;', awaitedRead);
-  const nextPoll = polling.indexOf('timer = setTimeout(() => void poll(), nextDelay)', cancellationCheck);
-  assert.ok(awaitedRead >= 0 && cancellationCheck > awaitedRead && nextPoll > cancellationCheck,
-    'the next automatic poll is scheduled only after the current read settles');
-	assert.match(polling,
-		/try \{[\s\S]*await reconcileAndRefresh\(true\)[\s\S]*await refresh\(true\)[\s\S]*\} finally \{[\s\S]*if \(cancelled\) return;[\s\S]*timer = setTimeout\(\(\) => void poll\(\), nextDelay\)/,
-		'tracking must schedule its next bounded request from finally');
-  assert.doesNotMatch(polling, /setInterval/);
-  assert.match(polling, /timer = setTimeout\(\(\) => void poll\(\), 3000\)/,
-    'resumed tracking starts with a three-second poll');
-  assert.match(polling,
-    /if \(attempts >= 120\) setTrackingDelayed\(true\)[\s\S]*const nextDelay = attempts >= 120 \? 15000 : 3000[\s\S]*setTimeout\(\(\) => void poll\(\), nextDelay\)/,
-    'tracking must continue at a slower cadence after warning that the operation is delayed');
-  assert.doesNotMatch(polling,
-    /if \(attempts >= 120\)[^\n]*[\s\S]{0,80}return/,
-    'the delayed warning must not end polling while the server remains switching');
+  assert.match(polling, /attempts \+= 1[\s\S]*await refresh\(true\)/);
+  assert.match(polling, /if \(cancelled\) return/);
+  assert.match(polling, /schedule\(durableStalled \? dnsEngineGuardSlowPollDelayMs : dnsEngineGuardPollDelayMs\)/);
+  assert.doesNotMatch(polling, /setInterval|submitDNSEngineSwitch/);
   assert.match(polling, /cancelled = true[\s\S]*clearTimeout\(timer\)/);
-  assert.match(polling, /\[reconcileAndRefresh, refresh, snapshot\?\.operation_id, snapshot\?\.state\]/);
-  assert.doesNotMatch(polling, /review\?\.committing|switchAccepted/);
 });
 
 test('reconciliation failures remain visible until reconciliation succeeds or terminal truth arrives', () => {
@@ -223,12 +213,12 @@ test('reconciliation failures remain visible until reconciliation succeeds or te
     'a successful snapshot read must not erase a reconciliation failure before a successful reconciliation');
   assert.match(card, /trackingError=\{trackingError \|\| trackingReadError\}/);
 
-  const pollingStart = card.indexOf("if (snapshot?.state !== 'switching' || !snapshot.operation_id)");
-  const pollingEnd = card.indexOf('\n    useEffect(() => {', pollingStart);
-  const polling = card.slice(pollingStart, pollingEnd);
-  assert.match(polling,
-    /if \(snapshot\?\.state !== 'switching' \|\| !snapshot\.operation_id\) \{[\s\S]*setTrackingDelayed\(false\)[\s\S]*setTrackingError\(''\)[\s\S]*setTrackingReadError\(''\)[\s\S]*return;/,
-    'verified terminal state clears every active-tracking warning and cancels its timer');
+  const completionStart = card.indexOf('const completeGuardedVerification =');
+  const completionEnd = card.indexOf('\n    useEffect(() => {', completionStart);
+  const completion = card.slice(completionStart, completionEnd);
+  assert.match(completion,
+    /setTrackingDelayed\(false\)[\s\S]*setTrackingError\(''\)[\s\S]*setTrackingReadError\(''\)[\s\S]*clearDNSOperationMarker\(guard\.requestID\)/,
+    'verified exact terminal state clears tracking warnings and its exact marker');
 });
 
 test('operation progress card presents durable active and terminal evidence', () => {
@@ -242,9 +232,9 @@ test('operation progress card presents durable active and terminal evidence', ()
   assert.match(progress, /data-testid=\x22dns-engine-operation-progress\x22/);
   assert.match(progress, /role=\x22status\x22/);
   assert.match(progress, /aria-live=\x22polite\x22/);
-  assert.match(progress, /\['running', 'rolling_back', 'recovery_required'\]\.includes\(operation\.status\)/);
+  assert.match(progress, /\['running', 'rolling_back'\]\.includes\(operation\.status\)/);
   assert.match(card,
-    /function operationElapsedSeconds[\s\S]*\['running', 'rolling_back', 'recovery_required'\]\.includes\(operation\.status\)[\s\S]*\? Date\.now\(\)[\s\S]*: Date\.parse\(operation\.updated_at\)/,
+    /function operationElapsedSeconds[\s\S]*\['running', 'rolling_back'\]\.includes\(operation\.status\)[\s\S]*\? Date\.now\(\)[\s\S]*: Date\.parse\(operation\.updated_at\)/,
     'elapsed time must stop at the durable terminal update');
   assert.match(progress, /dnsEngine\.operation\.status\.\$\{operation\.status\}/);
   assert.match(progress, /dnsEngine\.operation\.phase\.\$\{operation\.phase\}/);
@@ -266,6 +256,8 @@ test('operation progress card presents durable active and terminal evidence', ()
   }
   assert.match(copy, /dnsEngine\.operation\.trackingDelayed/);
   assert.match(copy, /dnsEngine\.trackingReconcileFailed/);
+  assert.match(copy, /dnsEngine\.guard\.stalled/);
+  assert.match(copy, /dnsEngine\.guard\.deadline/);
 });
 
 test('only source-free BIND installed standby is labelled as an installation retry', () => {
@@ -713,8 +705,11 @@ test('failed or ambiguous DNS commits retain the guard unless a pre-persist refu
     /const prePersistRefusal = !apiError\.code[\s\S]*result\.status === 400 \|\| result\.status === 409/,
     'only an uncoded client refusal before persistence may unlock without a terminal operation');
   assert.match(failedBody, /if \(prePersistRefusal\)[\s\S]*clearDNSOperationMarker\(requestID\)/);
-  assert.match(failedBody, /holdOperationGuard\([\s\S]*replayRequest: requestBody/,
-    'coded rollback and ambiguous server outcomes must retain the exact replayable guard');
+  assert.match(failedBody,
+    /holdOperationGuard\(\{[\s\S]*\.\.\.returnedGuard,[\s\S]*mode: 'verifying'/,
+    'coded rollback and ambiguous server outcomes must retain the exact local guard');
+  assert.doesNotMatch(failedBody, /submitDNSEngineSwitch\(/,
+    'a failed switch response must never replay the mutation request');
 
   const catchStart = commitBody.indexOf('} catch {', successDecode);
   const ambiguousBody = commitBody.slice(catchStart);
@@ -722,7 +717,7 @@ test('failed or ambiguous DNS commits retain the guard unless a pre-persist refu
     'an ambiguous response must consume the old review authority');
   assert.doesNotMatch(ambiguousBody, /setOperationGuard\(null\)/,
     'a lost response cannot unlock the panel while the host outcome is unknown');
-  assert.match(commitBody, /setOperationGuard\([\s\S]*requestID[\s\S]*target/,
+  assert.match(commitBody, /holdOperationGuard\(\{[\s\S]*requestID[\s\S]*target/,
     'the durable request identity must be captured independently before the mutation begins');
   assert.doesNotMatch(
     commitBody,
