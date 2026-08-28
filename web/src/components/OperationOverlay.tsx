@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Loader2 as LoaderCircle, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, Loader2 as LoaderCircle, WifiOff, X } from 'lucide-react';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import type { ApiError } from '../lib/apiError';
@@ -70,6 +70,9 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
     }
     const hint = view?.hint ?? t('services.operation.backgroundHint');
     const operationID = view?.operationID || operation?.id;
+    const busy = view?.busy ?? !disconnected;
+    const severity = view?.severity ?? 'warning';
+    const statusRole = !busy && severity === 'error' ? 'alert' : 'status';
 
     return (
         <div
@@ -82,18 +85,46 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
         >
             <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
                 <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
-                    disconnected ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
+                    disconnected || !busy
+                        ? severity === 'error'
+                            ? 'bg-danger/10 text-danger'
+                            : 'bg-warning/10 text-warning'
+                        : 'bg-primary/10 text-primary'
                 }`}>
                     {disconnected
                         ? <WifiOff className="h-7 w-7" />
-                        : <LoaderCircle className="h-7 w-7 animate-spin" />}
+                        : busy
+                            ? <LoaderCircle className="h-7 w-7 animate-spin" />
+                            : <AlertTriangle className="h-7 w-7" />}
                 </span>
                 <h2 id="component-operation-title" className="text-xl font-semibold text-fg">
                     {view?.title ?? t('services.operation.title', { name: label || t('services.install') })}
                 </h2>
-                <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
+                <p role={statusRole} aria-live="polite" className="mt-2 text-sm font-medium text-fg-muted">
                     {statusText}
                 </p>
+                {view?.details && view.details.length > 0 && (
+                    <dl className="mt-4 grid grid-cols-1 gap-2 text-left text-xs sm:grid-cols-3">
+                        {view.details.map((detail) => (
+                            <div key={detail.label} className="rounded-lg border border-border bg-surface-2 px-3 py-2">
+                                <dt className="text-fg-subtle">{detail.label}</dt>
+                                <dd className="mt-1 break-words font-semibold text-fg">{detail.value}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                )}
+                {view?.message && (
+                    <p
+                        role={severity === 'error' ? 'alert' : 'status'}
+                        className={`mt-4 rounded-lg border px-4 py-3 text-left text-xs leading-5 ${
+                            severity === 'error'
+                                ? 'border-danger/30 bg-danger/5 text-danger'
+                                : 'border-warning/30 bg-warning/5 text-warning'
+                        }`}
+                    >
+                        {view.message}
+                    </p>
+                )}
                 {hint && (
                     <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
                         {hint}

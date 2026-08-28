@@ -64,8 +64,12 @@ type DNSEngineSwitchHTTPResult =
 interface OperationGuardState {
     requestID: string;
     target: DNSEngineID;
-    mode: 'submitting' | 'verifying';
-    replayRequest: DNSEngineSwitchRequestBody | null;
+    mode: 'submitting' | 'verifying' | 'stalled' | 'deadline' | 'recovery_required';
+    startedAt: number;
+    attempts: number;
+    reconcileAttempts: number;
+    operation: DNSEngineOperation | null;
+    trackingMessage?: string;
     completionToast?: {
         type: 'error' | 'warning';
         message: string;
@@ -77,6 +81,7 @@ interface DNSOperationRecoveryMarker {
     requestID: string;
     target: DNSEngineID;
     request: DNSEngineSwitchRequestBody;
+    createdAt: number;
 }
 
 const DNS_OPERATION_RECOVERY_KEY = 'celikpanel.dns-engine.operation-recovery';
@@ -107,18 +112,31 @@ function readDNSOperationMarker(): DNSOperationRecoveryMarker | null {
         if (marker.version !== 1 || !validSwitchRequest(marker.request)
             || marker.requestID !== marker.request.request_id
             || marker.target !== marker.request.target_engine) return null;
-        return marker as unknown as DNSOperationRecoveryMarker;
+        const createdAt = typeof marker.createdAt === 'number'
+            && Number.isSafeInteger(marker.createdAt)
+            && marker.createdAt > 0
+            && marker.createdAt <= Date.now()
+            ? marker.createdAt
+            : Date.now();
+        return {
+            version: 1,
+            requestID: marker.requestID,
+            target: marker.target,
+            request: marker.request,
+            createdAt,
+        } as DNSOperationRecoveryMarker;
     } catch {
         return null;
     }
 }
 
-function storeDNSOperationMarker(request: DNSEngineSwitchRequestBody): boolean {
+function storeDNSOperationMarker(request: DNSEngineSwitchRequestBody, createdAt: number): boolean {
     const marker: DNSOperationRecoveryMarker = {
         version: 1,
         requestID: request.request_id,
         target: request.target_engine,
         request,
+        createdAt,
     };
     try {
         sessionStorage.setItem(DNS_OPERATION_RECOVERY_KEY, JSON.stringify(marker));
@@ -170,6 +188,13 @@ const knownImpactKeys = {
 // A paired-primary snapshot can spend up to 15 seconds proving the peer
 // catalog. The browser deadline must be longer than that backend proof.
 const dnsEngineStatusRequestTimeoutMs = 30_000;
+const dnsEngineGuardPollDelayMs = 3_000;
+const dnsEngineGuardSlowPollDelayMs = 15_000;
+const dnsEngineGuardStalledAfterMs = 2 * 60_000;
+const dnsEngineGuardMaxElapsedMs = 31 * 60_000;
+const dnsEngineGuardMaxAttempts = 180;
+const dnsEngineGuardMaxReconcileAttempts = 3;
+const dnsEngineGuardReconcileDelayMs = 60_000;
 
 function createRequestID(): string | null {
     try {
@@ -229,10 +254,24 @@ function engineIcon(id: DNSEngineID) {
 
 function operationElapsedSeconds(operation: DNSEngineOperation): number {
     const started = Date.parse(operation.started_at);
-    const finished = ['running', 'rolling_back', 'recovery_required'].includes(operation.status)
+    const finished = ['running', 'rolling_back'].includes(operation.status)
         ? Date.now()
         : Date.parse(operation.updated_at);
     return Math.max(0, Math.floor((finished - started) / 1000));
+}
+
+function elapsedText(
+    seconds: number,
+    text: (key: DNSEngineCopyKey, vars?: Record<string, string | number>) => string,
+): string {
+    if (seconds < 60) return text('dnsEngine.operation.elapsedSeconds', { seconds });
+    if (seconds < 3600) {
+        return text('dnsEngine.operation.elapsedMinutes', { minutes: Math.floor(seconds / 60) });
+    }
+    return text('dnsEngine.operation.elapsedHours', {
+        hours: Math.floor(seconds / 3600),
+        minutes: Math.floor((seconds % 3600) / 60),
+    });
 }
 
 function operationTimestamp(value: string, locale: 'en' | 'tr'): string {
@@ -269,7 +308,10 @@ export function DNSEngineCard({
                 requestID: initialMarker.requestID,
                 target: initialMarker.target,
                 mode: 'verifying',
-                replayRequest: initialMarker.request,
+                startedAt: initialMarker.createdAt,
+                attempts: 0,
+                reconcileAttempts: 0,
+                operation: null,
             }
             : null
     ));
@@ -278,24 +320,71 @@ export function DNSEngineCard({
     operationGuardRef.current = operationGuard;
     const identityReviewLocked = dnsEngineIdentityReviewLocked(identityPlanCurrent, snapshot);
 
-    const guardView = useCallback((guard: OperationGuardState) => ({
-        title: et('dnsEngine.guard.title', { engine: engineName(guard.target) }),
-        status: et(guard.mode === 'submitting'
-            ? 'dnsEngine.guard.submitting'
-            : 'dnsEngine.guard.verifying'),
-        hint: et('dnsEngine.guard.navigationLocked'),
-        operationID: guard.requestID,
-    }), [locale]);
+    const guardView = useCallback((guard: OperationGuardState) => {
+        const operation = guard.operation;
+        const elapsedSeconds = operation
+            ? operationElapsedSeconds(operation)
+            : Math.max(0, Math.floor((Date.now() - guard.startedAt) / 1000));
+        const phase = operation
+            ? et(`dnsEngine.operation.phase.${operation.phase}` as DNSEngineCopyKey)
+            : et('dnsEngine.guard.awaitingPhase');
+        const status = guard.mode === 'stalled'
+            ? et('dnsEngine.guard.stalledStatus')
+            : guard.mode === 'deadline'
+              ? et('dnsEngine.guard.deadlineStatus')
+            : guard.mode === 'recovery_required'
+              ? et('dnsEngine.guard.recoveryStatus')
+              : guard.mode === 'submitting' && operation === null
+                ? et('dnsEngine.guard.submitting')
+                : operation
+                  ? phase
+                  : et('dnsEngine.guard.verifying');
+        return {
+            title: et('dnsEngine.guard.title', { engine: engineName(guard.target) }),
+            status,
+            hint: et('dnsEngine.guard.navigationLocked'),
+            operationID: guard.requestID,
+            busy: !['stalled', 'deadline', 'recovery_required'].includes(guard.mode),
+            severity: ['deadline', 'recovery_required'].includes(guard.mode)
+                ? 'error' as const
+                : guard.mode === 'stalled' || guard.trackingMessage
+                  ? 'warning' as const
+                  : undefined,
+            message: guard.trackingMessage,
+            details: [
+                { label: et('dnsEngine.operation.phase'), value: phase },
+                { label: et('dnsEngine.operation.elapsed'), value: elapsedText(elapsedSeconds, et) },
+                {
+                    label: et('dnsEngine.operation.updated'),
+                    value: operation
+                        ? operationTimestamp(operation.updated_at, locale)
+                        : et('dnsEngine.guard.awaitingUpdate'),
+                },
+            ],
+        };
+    }, [locale]);
 
     const holdOperationGuard = useCallback((guard: OperationGuardState) => {
         operationGuardRef.current = guard;
         setOperationGuard(guard);
-        if (operationLeaseRef.current) operationLeaseRef.current.update(guardView(guard));
-        else operationLeaseRef.current = acquireInteractionBlock(guardView(guard));
+        const globallyBlocking = guard.mode !== 'deadline' && guard.mode !== 'recovery_required';
+        if (!globallyBlocking) {
+            operationLeaseRef.current?.release();
+            operationLeaseRef.current = null;
+        } else if (operationLeaseRef.current) {
+            operationLeaseRef.current.update(guardView(guard));
+        } else {
+            operationLeaseRef.current = acquireInteractionBlock(guardView(guard));
+        }
     }, [acquireInteractionBlock, guardView]);
 
     useLayoutEffect(() => {
         if (!operationGuard) return;
+        if (operationGuard.mode === 'deadline' || operationGuard.mode === 'recovery_required') {
+            operationLeaseRef.current?.release();
+            operationLeaseRef.current = null;
+            return;
+        }
         if (operationLeaseRef.current) operationLeaseRef.current.update(guardView(operationGuard));
         else operationLeaseRef.current = acquireInteractionBlock(guardView(operationGuard));
     }, [acquireInteractionBlock, guardView, operationGuard]);
@@ -349,13 +438,26 @@ export function DNSEngineCard({
             setLoadError('');
             setSnapshot(decoded);
             onSnapshotChange?.(decoded);
-            if (decoded.state === 'switching' && decoded.operation) {
+            if (decoded.operation && operationGuardRef.current === null
+                && (
+                    decoded.state === 'switching'
+                    || decoded.operation.status === 'recovery_required'
+                )) {
+                const recoveryRequired = decoded.operation.status === 'recovery_required';
+                if (recoveryRequired) clearDNSOperationMarker(decoded.operation.request_id);
                 if (operationGuardRef.current === null) {
                     holdOperationGuard({
                         requestID: decoded.operation.request_id,
                         target: decoded.operation.target_engine,
-                        mode: 'verifying',
-                        replayRequest: null,
+                        mode: recoveryRequired ? 'recovery_required' : 'verifying',
+                        startedAt: Date.parse(decoded.operation.started_at),
+                        attempts: 0,
+                        reconcileAttempts: 0,
+                        operation: decoded.operation,
+                        trackingMessage: recoveryRequired
+                            ? decoded.operation.last_error
+                                || et('dnsEngine.operation.status.recovery_required')
+                            : undefined,
                     });
                 }
             }
@@ -407,18 +509,37 @@ export function DNSEngineCard({
         decoded: DNSEngineSnapshot,
         guard: OperationGuardState,
     ): boolean => {
-        const operationSucceeded = decoded.operation?.request_id === guard.requestID
+        const exactOperation = decoded.operation?.request_id === guard.requestID
             && decoded.operation.target_engine === guard.target
-            && decoded.operation.status === 'succeeded';
-        const operationTerminated = operationSucceeded || (
-            decoded.operation?.request_id === guard.requestID
-            && decoded.operation.target_engine === guard.target
-            && (decoded.operation.status === 'rolled_back' || decoded.operation.status === 'failed')
-        );
+            ? decoded.operation
+            : null;
+        if (exactOperation?.status === 'recovery_required') {
+            setSnapshot(decoded);
+            onSnapshotChange?.(decoded);
+            setTrackingDelayed(false);
+            setTrackingError('');
+            setTrackingReadError('');
+            clearDNSOperationMarker(guard.requestID);
+            holdOperationGuard({
+                ...guard,
+                mode: 'recovery_required',
+                operation: exactOperation,
+                trackingMessage: exactOperation.last_error
+                    || et('dnsEngine.operation.status.recovery_required'),
+            });
+            return true;
+        }
+        const operationSucceeded = exactOperation?.status === 'succeeded';
+        const operationTerminated = operationSucceeded
+            || exactOperation?.status === 'rolled_back'
+            || exactOperation?.status === 'failed';
         if (!operationTerminated) return false;
+        if (operationGuardRef.current?.requestID !== guard.requestID) return true;
         setSnapshot(decoded);
         onSnapshotChange?.(decoded);
         setLoadError('');
+        setTrackingDelayed(false);
+        setTrackingError('');
         setTrackingReadError('');
         clearDNSOperationMarker(guard.requestID);
         operationGuardRef.current = null;
@@ -433,68 +554,107 @@ export function DNSEngineCard({
             showToast('error', decoded.operation?.last_error || et('dnsEngine.switchFailed'));
         }
         return true;
-    }, [locale, onSnapshotChange]);
+    }, [holdOperationGuard, locale, onSnapshotChange]);
 
     useEffect(() => {
-        if (!operationGuard || operationGuard.mode !== 'verifying') return;
-        const guard = operationGuard;
+        if (!operationGuard
+            || operationGuard.mode === 'deadline'
+            || operationGuard.mode === 'recovery_required') return;
+        const requestID = operationGuard.requestID;
+        const target = operationGuard.target;
+        let attempts = operationGuard.attempts;
+        let reconcileAttempts = operationGuard.reconcileAttempts;
+        let lastReconcileAt = 0;
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
 
-        const schedule = () => {
-            if (!cancelled) timer = setTimeout(() => void verify(), 3000);
+        const schedule = (delay: number) => {
+            if (!cancelled) timer = setTimeout(() => void verify(), delay);
+        };
+        const currentGuard = (): OperationGuardState | null => {
+            const current = operationGuardRef.current;
+            return current?.requestID === requestID && current.target === target ? current : null;
+        };
+        const stopAtDeadline = (guard: OperationGuardState) => {
+            setTrackingDelayed(true);
+            holdOperationGuard({
+                ...guard,
+                mode: 'deadline',
+                attempts,
+                reconcileAttempts,
+                trackingMessage: et('dnsEngine.guard.deadline'),
+            });
         };
         const verify = async () => {
-            let decoded: DNSEngineSnapshot | null = null;
-            if (guard.replayRequest) {
-                try {
-                    const result = await submitDNSEngineSwitch(guard.replayRequest);
-                    if (result.ok) {
-                        decoded = decodeDNSEngineSnapshot(result.payload);
-                        if (decoded !== null && decoded.state !== 'switching') {
-                            if (!cancelled && completeGuardedVerification(decoded, guard)) return;
-                        }
-                        if (decoded !== null) {
-                            setSnapshot(decoded);
-                            onSnapshotChange?.(decoded);
-                        }
-                    } else {
-                        const apiError = result.error;
-                        const prePersistRefusal = !apiError.code
-                            && apiError.mutationApplied !== true
-                            && apiError.partialSuccess !== true
-                            && (result.status === 400 || result.status === 409);
-                        if (prePersistRefusal) {
-                            if (cancelled
-                                || operationGuardRef.current?.requestID !== guard.requestID) return;
-                            clearDNSOperationMarker(guard.requestID);
-                            operationGuardRef.current = null;
-                            setOperationGuard((current) => (
-                                current?.requestID === guard.requestID ? null : current
-                            ));
-                            operationLeaseRef.current?.release();
-                            operationLeaseRef.current = null;
-                            showToast('error', apiError.message || et('dnsEngine.switchFailed'));
-                            void refresh();
-                            return;
-                        }
-                        setTrackingError(apiError.code
-                            ? apiErrorText(apiError, t)
-                            : et('dnsEngine.switchFailed'));
-                    }
-                } catch {
-                    schedule();
-                    return;
-                }
-            } else {
-                decoded = await reconcileAndRefresh(true);
+            let guard = currentGuard();
+            if (!guard) return;
+            const elapsedMs = Date.now() - guard.startedAt;
+            // A persisted deadline marker must get one fresh authoritative
+            // read after reload before the local guard returns to deadline.
+            if (attempts > 0 && (
+                attempts >= dnsEngineGuardMaxAttempts
+                || elapsedMs >= dnsEngineGuardMaxElapsedMs
+            )) {
+                stopAtDeadline(guard);
+                return;
+            }
+            attempts += 1;
+            let decoded = await refresh(true);
+            if (cancelled) return;
+            guard = currentGuard();
+            if (!guard) return;
+            let exactOperation = decoded?.operation?.request_id === requestID
+                && decoded.operation.target_engine === target
+                ? decoded.operation
+                : null;
+            if (decoded !== null && completeGuardedVerification(decoded, guard)) return;
+            if (Date.now() - guard.startedAt >= dnsEngineGuardMaxElapsedMs
+                || attempts >= dnsEngineGuardMaxAttempts) {
+                stopAtDeadline({
+                    ...guard,
+                    operation: exactOperation ?? guard.operation,
+                });
+                return;
             }
 
-            if (cancelled) return;
-            if (decoded !== null && decoded.state !== 'switching') {
-                if (completeGuardedVerification(decoded, guard)) return;
+            let durableStalled = exactOperation !== null
+                ? Date.now() - Date.parse(exactOperation.updated_at) >= dnsEngineGuardStalledAfterMs
+                : Date.now() - guard.startedAt >= dnsEngineGuardStalledAfterMs;
+            if (durableStalled
+                && exactOperation !== null
+                && reconcileAttempts < dnsEngineGuardMaxReconcileAttempts
+                && Date.now() - lastReconcileAt >= dnsEngineGuardReconcileDelayMs) {
+                reconcileAttempts += 1;
+                lastReconcileAt = Date.now();
+                decoded = await reconcileAndRefresh(true);
+                if (cancelled) return;
+                guard = currentGuard();
+                if (!guard) return;
+                exactOperation = decoded?.operation?.request_id === requestID
+                    && decoded.operation.target_engine === target
+                    ? decoded.operation
+                    : exactOperation;
+                if (decoded !== null && completeGuardedVerification(decoded, guard)) return;
+                durableStalled = exactOperation !== null
+                    ? Date.now() - Date.parse(exactOperation.updated_at) >= dnsEngineGuardStalledAfterMs
+                    : Date.now() - guard.startedAt >= dnsEngineGuardStalledAfterMs;
             }
-            schedule();
+
+            const trackingMessage = durableStalled
+                ? et(exactOperation
+                    ? 'dnsEngine.guard.stalled'
+                    : 'dnsEngine.guard.awaitingStalled')
+                : undefined;
+            setTrackingDelayed(durableStalled);
+            holdOperationGuard({
+                ...guard,
+                mode: durableStalled ? 'stalled' : 'verifying',
+                attempts,
+                reconcileAttempts,
+                operation: exactOperation ?? guard.operation,
+                trackingMessage,
+            });
+            schedule(durableStalled ? dnsEngineGuardSlowPollDelayMs : dnsEngineGuardPollDelayMs);
         };
 
         timer = setTimeout(() => void verify(), 500);
@@ -502,42 +662,10 @@ export function DNSEngineCard({
             cancelled = true;
             if (timer !== undefined) clearTimeout(timer);
         };
-    }, [completeGuardedVerification, locale, onSnapshotChange, operationGuard, reconcileAndRefresh, t]);
-
-    useEffect(() => {
-        if (operationGuardRef.current !== null) return;
-        if (snapshot?.state !== 'switching' || !snapshot.operation_id) {
-            setTrackingDelayed(false);
-            setTrackingError('');
-            setTrackingReadError('');
-            return;
-        }
-        let cancelled = false;
-        let attempts = 0;
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        setTrackingDelayed(false);
-
-        const poll = async () => {
-            attempts += 1;
-			try {
-				if (attempts % 5 === 0) {
-					await reconcileAndRefresh(true);
-				} else {
-					await refresh(true);
-				}
-			} finally {
-				if (cancelled) return;
-				if (attempts >= 120) setTrackingDelayed(true);
-				const nextDelay = attempts >= 120 ? 15000 : 3000;
-				timer = setTimeout(() => void poll(), nextDelay);
-            }
-        };
-        timer = setTimeout(() => void poll(), 3000);
-        return () => {
-            cancelled = true;
-            if (timer !== undefined) clearTimeout(timer);
-        };
-    }, [reconcileAndRefresh, refresh, snapshot?.operation_id, snapshot?.state]);
+        // The exact request owns one polling loop. Progress updates must not
+        // recreate it and must never replay the mutation POST.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [operationGuard?.requestID]);
 
     useEffect(() => {
         if (actionsLocked) setReview(null);
@@ -619,7 +747,8 @@ export function DNSEngineCard({
             preview_token: preview.preview_token,
             downtime_acknowledged: current.acknowledged,
         };
-        if (!storeDNSOperationMarker(requestBody)) {
+        const startedAt = Date.now();
+        if (!storeDNSOperationMarker(requestBody, startedAt)) {
             setReview({ ...current, error: et('dnsEngine.recoveryUnavailable') });
             return;
         }
@@ -627,11 +756,19 @@ export function DNSEngineCard({
             requestID,
             target: current.target,
             mode: 'submitting',
-            replayRequest: requestBody,
+            startedAt,
+            attempts: 0,
+            reconcileAttempts: 0,
+            operation: null,
         });
         setReview({ ...current, committing: true, error: '' });
         try {
             const result = await submitDNSEngineSwitch(requestBody);
+            // The read-only status loop can prove a terminal result while the
+            // original POST response is still in flight. Never recreate a
+            // released guard from a late response.
+            const returnedGuard = operationGuardRef.current as OperationGuardState | null;
+            if (returnedGuard?.requestID !== requestID) return;
             if (!result.ok) {
                 const apiError = result.error;
                 const mutationApplied = apiError.mutationApplied === true;
@@ -675,10 +812,8 @@ export function DNSEngineCard({
                     return;
                 }
                 holdOperationGuard({
-                    requestID,
-                    target: current.target,
+                    ...returnedGuard,
                     mode: 'verifying',
-                    replayRequest: requestBody,
                     completionToast,
                 });
                 return;
@@ -688,10 +823,8 @@ export function DNSEngineCard({
             if (decoded === null) {
                 setReview(null);
                 holdOperationGuard({
-                    requestID,
-                    target: current.target,
+                    ...returnedGuard,
                     mode: 'verifying',
-                    replayRequest: requestBody,
                     completionToast: {
                         type: 'warning',
                         message: et('dnsEngine.switchAmbiguous'),
@@ -703,11 +836,14 @@ export function DNSEngineCard({
                 setSnapshot(decoded);
                 onSnapshotChange?.(decoded);
                 setReview(null);
+                const returnedOperation = decoded.operation;
                 holdOperationGuard({
-                    requestID,
-                    target: current.target,
+                    ...returnedGuard,
                     mode: 'verifying',
-                    replayRequest: requestBody,
+                    operation: returnedOperation?.request_id === requestID
+                        && returnedOperation.target_engine === current.target
+                        ? returnedOperation
+                        : returnedGuard.operation,
                 });
                 return;
             }
@@ -717,16 +853,12 @@ export function DNSEngineCard({
             // reintroduce a timeout and stale-state race.
             setReview(null);
             if (!completeGuardedVerification(decoded, {
-                requestID,
-                target: current.target,
+                ...returnedGuard,
                 mode: 'verifying',
-                replayRequest: requestBody,
             })) {
                 holdOperationGuard({
-                    requestID,
-                    target: current.target,
+                    ...returnedGuard,
                     mode: 'verifying',
-                    replayRequest: requestBody,
                     completionToast: {
                         type: 'warning',
                         message: et('dnsEngine.switchAmbiguous'),
@@ -735,14 +867,14 @@ export function DNSEngineCard({
             }
         } catch {
             // A lost response can hide an accepted mutation and the preview
-            // token may already be consumed. Keep the page blocked and replay
-            // the exact idempotent request until terminal truth is proven.
+            // token may already be consumed. Keep the page blocked and use
+            // only the read-only status loop; never replay the switch POST.
+            const returnedGuard = operationGuardRef.current as OperationGuardState | null;
+            if (returnedGuard?.requestID !== requestID) return;
             setReview(null);
             holdOperationGuard({
-                requestID,
-                target: current.target,
+                ...returnedGuard,
                 mode: 'verifying',
-                replayRequest: requestBody,
                 completionToast: {
                     type: 'warning',
                     message: et('dnsEngine.switchAmbiguous'),
@@ -953,17 +1085,10 @@ function DNSEngineOperationProgress({
     const { locale } = useI18n();
     const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
         dnsEngineText(locale, key, vars);
-    const active = ['running', 'rolling_back', 'recovery_required'].includes(operation.status);
+    const active = ['running', 'rolling_back'].includes(operation.status);
     const spinning = operation.status === 'running' || operation.status === 'rolling_back';
     const elapsedSeconds = operationElapsedSeconds(operation);
-    const elapsed = elapsedSeconds < 60
-        ? et('dnsEngine.operation.elapsedSeconds', { seconds: elapsedSeconds })
-        : elapsedSeconds < 3600
-          ? et('dnsEngine.operation.elapsedMinutes', { minutes: Math.floor(elapsedSeconds / 60) })
-          : et('dnsEngine.operation.elapsedHours', {
-              hours: Math.floor(elapsedSeconds / 3600),
-              minutes: Math.floor((elapsedSeconds % 3600) / 60),
-          });
+    const elapsed = elapsedText(elapsedSeconds, et);
     const StatusIcon = spinning
         ? Loader2
         : operation.status === 'succeeded'

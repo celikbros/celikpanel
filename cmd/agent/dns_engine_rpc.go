@@ -31,6 +31,8 @@ const (
 
 const dnsEngineSwitchPublishedPhasePrefix = "commit/dns-engine-switch/v1/published/"
 
+const dnsBackendReadinessTimeout = 10 * time.Second
+
 const (
 	dnsZoneSyncV3CommitPhasePrefix    = "commit/dns-zone-sync/v3/"
 	dnsZoneSyncV3Applied              = "applied"
@@ -110,7 +112,11 @@ func (a *Agent) DNSBackendReadiness(_ *transport.Empty, response *DNSBackendRead
 		return errors.New("DNS backend readiness response is required")
 	}
 	*response = DNSBackendReadinessResponse{}
-	readiness, err := agentDNSEngineBackend.Readiness(context.Background())
+	readinessCtx, readinessCancel := context.WithTimeout(
+		context.Background(), dnsBackendReadinessTimeout,
+	)
+	readiness, err := agentDNSEngineBackend.Readiness(readinessCtx)
+	readinessCancel()
 	if err != nil {
 		log.Printf("DNS backend readiness probe failed: %v", err)
 		response.Error = "DNS backend readiness could not be verified"
@@ -910,11 +916,16 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		response.Error = "DNS engine switch finished but its durable receipt could not be verified"
 		return nil
 	}
-	if err := agentDNSEngineBackend.FinalizeSwitch(
-		context.WithoutCancel(ctx), commitment.TargetEngine,
+	finalizeCtx, finalizeCancel := context.WithTimeout(
+		context.Background(), dnsEngineSwitchRecoveryLimit,
+	)
+	finalizeErr := agentDNSEngineBackend.FinalizeSwitch(
+		finalizeCtx, commitment.TargetEngine,
 		commitment.Qualifier, request.ServiceMutationBinding,
-	); err != nil {
-		log.Printf("DNS engine switch journal cleanup deferred: %v", err)
+	)
+	finalizeCancel()
+	if finalizeErr != nil {
+		log.Printf("DNS engine switch journal cleanup deferred: %v", finalizeErr)
 	}
 	*response = result
 	return nil
