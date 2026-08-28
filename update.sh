@@ -76,6 +76,25 @@ die() {
     echo "!! $*" >&2
     exit 1
 }
+
+validate_exact_systemctl() {
+    local owner group mode links
+    [[ $SYSTEMCTL_BIN == /* && -f $SYSTEMCTL_BIN && ! -L $SYSTEMCTL_BIN && -x $SYSTEMCTL_BIN ]] ||
+        die "exact systemctl binary is unavailable or unsafe"
+    read -r owner group mode links < <(/usr/bin/stat -Lc '%u %g %a %h' -- "$SYSTEMCTL_BIN") ||
+        die "cannot inspect exact systemctl binary"
+    [[ $owner == 0 && $group == 0 && $links == 1 ]] ||
+        die "exact systemctl binary identity is unsafe"
+    (( (8#$mode & 0022) == 0 )) ||
+        die "exact systemctl binary is group/other writable"
+}
+
+systemctl() {
+    "$SYSTEMCTL_BIN" "$@"
+}
+
+validate_exact_systemctl
+
 case "$RECOVER_EXISTING_TRANSACTION" in
     0|1) ;;
     *) die 'invalid recovery-only transaction mode' ;;

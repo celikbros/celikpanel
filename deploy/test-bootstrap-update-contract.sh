@@ -148,6 +148,23 @@ require_exact_sequence() {
     done
 }
 
+require_regex_count "$UPDATE" '^validate_exact_systemctl\(\) \{$' 1
+require_regex_count "$UPDATE" '^systemctl\(\) \{$' 1
+require_regex_count "$UPDATE" '^validate_exact_systemctl$' 1
+require_function_sequence "$UPDATE" validate_exact_systemctl \
+    '[[ $SYSTEMCTL_BIN == /* && -f $SYSTEMCTL_BIN && ! -L $SYSTEMCTL_BIN && -x $SYSTEMCTL_BIN ]]' \
+    "/usr/bin/stat -Lc '%u %g %a %h'" \
+    '[[ $owner == 0 && $group == 0 && $links == 1 ]]' \
+    '(( (8#$mode & 0022) == 0 ))'
+require_function_sequence "$UPDATE" systemctl \
+    '"$SYSTEMCTL_BIN" "$@"'
+require_exact_sequence "$UPDATE" \
+    'die() {' \
+    'validate_exact_systemctl() {' \
+    'systemctl() {' \
+    'validate_exact_systemctl' \
+    'case "$RECOVER_EXISTING_TRANSACTION" in'
+
 # Count only saved-active agent branches that perform the complete controlled
 # lock handoff. Because every handoff call is counted separately below, this
 # also proves that no handoff can run on the saved-inactive path.
@@ -271,6 +288,32 @@ cleanup_platform_contract() {
     rm -rf -- "$platform_tmp"
 }
 trap cleanup_platform_contract EXIT
+
+# The updater must never resolve a caller-controlled systemctl from PATH. Use
+# a harmless, root-owned exact binary as the fixture target and make any PATH
+# lookup leave a durable sentinel.
+update_systemctl_poison_dir=$platform_tmp/update-systemctl-poison
+update_systemctl_poison_sentinel=$platform_tmp/update-systemctl-poison-called
+mkdir -p "$update_systemctl_poison_dir"
+cat > "$update_systemctl_poison_dir/systemctl" <<'POISONED_UPDATE_SYSTEMCTL'
+#!/bin/bash
+: > "${UPDATE_SYSTEMCTL_POISON_SENTINEL:?}"
+exit 97
+POISONED_UPDATE_SYSTEMCTL
+chmod 0700 "$update_systemctl_poison_dir/systemctl"
+(
+    eval "$(extract_function_source "$UPDATE" validate_exact_systemctl)"
+    eval "$(extract_function_source "$UPDATE" systemctl)"
+    SYSTEMCTL_BIN=/usr/bin/true
+    UPDATE_SYSTEMCTL_POISON_SENTINEL=$update_systemctl_poison_sentinel
+    export UPDATE_SYSTEMCTL_POISON_SENTINEL
+    PATH="$update_systemctl_poison_dir:$PATH"
+    export PATH
+    validate_exact_systemctl
+    systemctl show celikpanel-update-systemctl-binding.fixture
+)
+[[ ! -e $update_systemctl_poison_sentinel ]] \
+    || die 'update.sh resolved systemctl from poisoned PATH'
 
 capability_root=$platform_tmp/capability-root
 mkdir -p "$capability_root/usr/bin" "$capability_root/run/systemd"
