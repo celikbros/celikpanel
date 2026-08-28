@@ -52,6 +52,12 @@ assert_before() {
 require_text 'set -euo pipefail' "strict shell mode is missing"
 require_text 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
     "fixed privileged PATH is missing"
+require_text 'SYSTEMCTL_BIN=/usr/bin/systemctl' \
+    "exact systemctl path is not fixed"
+require_text 'validate_exact_systemctl() {' \
+    "exact systemctl validator is missing"
+require_count 'validate_exact_systemctl' 2 \
+    "exact systemctl validator must have one definition and one invocation"
 require_text 'umask 077' "private recovery umask is missing"
 require_text '[[ $EUID -eq 0 ]]' "root-only guard is missing"
 require_text '--active-target=<40-lowercase-hex>' "active-target is not explicit"
@@ -279,9 +285,11 @@ require_text 'installed runtime-directory preserve drop-in metadata is unsafe' \
     "published runtime-directory preservation metadata is not revalidated"
 require_text 'cmp -s "$target" <(printf '\''[Service]\nRuntimeDirectoryPreserve=yes\n'\'')' \
     "published runtime-directory preservation bytes are not revalidated"
-require_text 'systemctl show --property=DropInPaths --value celikpanel-agent.service' \
+require_text '"$SYSTEMCTL_BIN" daemon-reload' \
+    "runtime-directory preservation reload is not bound to the exact systemctl binary"
+require_text '"$SYSTEMCTL_BIN" show --property=DropInPaths --value celikpanel-agent.service' \
     "loaded runtime-directory preservation path is not proven"
-require_text 'systemctl show --property=RuntimeDirectoryPreserve --value celikpanel-agent.service' \
+require_text '"$SYSTEMCTL_BIN" show --property=RuntimeDirectoryPreserve --value celikpanel-agent.service' \
     "systemd manager runtime-directory preservation value is not proven"
 require_text '[[ "$manager_value" == yes ]]' \
     "systemd manager must report RuntimeDirectoryPreserve=yes"
@@ -409,7 +417,19 @@ fi
 if grep -Eq '^[[:space:]]*(rm|rmdir|unlink|mv|cp)[[:space:]]' "$candidate"; then
     fail "recovery helper contains a destructive or untrusted snapshot-copy command"
 fi
-if grep -Eq '^[[:space:]]*systemctl[[:space:]]+(start|stop|restart|try-restart|reload|enable|disable|mask|unmask)' "$candidate"; then
+forbidden_systemctl_mutation='^[[:space:]]*(systemctl|"\$SYSTEMCTL_BIN")[[:space:]]+(start|stop|restart|try-restart|reload|enable|disable|mask|unmask)([[:space:]]|$)'
+for command_prefix in systemctl '"$SYSTEMCTL_BIN"'; do
+    for action in start stop restart try-restart reload enable disable mask unmask; do
+        printf '%s %s celikpanel-agent.service\n' "$command_prefix" "$action" \
+            | grep -Eq "$forbidden_systemctl_mutation" \
+            || fail "systemctl mutation guard misses $command_prefix $action"
+    done
+    if printf '%s daemon-reload\n' "$command_prefix" \
+        | grep -Eq "$forbidden_systemctl_mutation"; then
+        fail "systemctl mutation guard rejects permitted $command_prefix daemon-reload"
+    fi
+done
+if grep -Eq "$forbidden_systemctl_mutation" "$candidate"; then
     fail "recovery helper can mutate service state or authorization"
 fi
 if grep -Eq '^[[:space:]]*(kill|pkill|killall)[[:space:]]' "$candidate"; then
