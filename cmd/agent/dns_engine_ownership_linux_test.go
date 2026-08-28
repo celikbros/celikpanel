@@ -202,6 +202,40 @@ func TestDNSEngineInstallOwnershipRetiresOnlyAfterCommittedFinalize(t *testing.T
 	}
 }
 
+func TestCommittedDNSEngineTargetOwnershipPublishesExactState(t *testing.T) {
+	prepareDNSEngineOwnershipTest(t)
+	journal := testBINDSwitchJournal(t)
+	journal.Phase = dnsSwitchPhaseCommitted
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: journal.Mode,
+		Engine: journal.TargetEngine, EngineEpoch: journal.TargetEpoch,
+		Generation:        journal.TargetGeneration,
+		SourceRevision:    journal.SourceRevision,
+		ManifestQualifier: journal.ManifestQualifier,
+		MutationRequestID: journal.MutationRequestID,
+		MutationOwnerID:   journal.MutationOwnerID,
+	}
+	if err := writeDNSEngineState(state); err != nil {
+		t.Fatal(err)
+	}
+	stale := state
+	stale.Generation = strings.Repeat("9", 64)
+	if err := writeDNSEngineOwnership(stale); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishCommittedDNSEngineTargetOwnership(journal); err != nil {
+		t.Fatal(err)
+	}
+	actual, exists, err := readDNSEngineOwnership(transport.DNSEngineBIND)
+	if err != nil || !exists || actual != state {
+		t.Fatalf("published ownership exists=%v state=%+v err=%v", exists, actual, err)
+	}
+	journal.Phase = dnsSwitchPhaseRolledBack
+	if err := publishCommittedDNSEngineTargetOwnership(journal); err == nil {
+		t.Fatal("non-committed journal published target ownership")
+	}
+}
+
 func TestDNSEngineInstallOwnershipHandoffRebindsExactRetry(t *testing.T) {
 	prepareDNSEngineOwnershipTest(t)
 	state := legacyDurableDNSState(transport.DNSEnginePowerDNS)

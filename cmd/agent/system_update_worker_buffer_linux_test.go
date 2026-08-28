@@ -44,9 +44,14 @@ func TestRunSystemUpdateInstallerReportsTerminalFailureFromBoundedTail(t *testin
 	}
 
 	var output boundedSystemUpdateBuffer
+	const inner = "Prepare BIND generation root under external lock: committed BIND ownership differs from its exact active state"
+	const wrapper = "!! installed agent could not prepare the managed BIND generation root"
 	stream := strings.Repeat("historical updater progress\n", 300) +
 		"celikpanel archive: OK\r\n" +
-		"terminal updater failure\r\n\r\n"
+		"2026/08/28 10:11:12 " + inner + "\r\n" +
+		wrapper + "\r\n" +
+		"!! Update transaction remains active; both services were left stopped for exact recovery.\r\n" +
+		"!! Verified snapshot: /var/backups/celikpanel/update-snapshots/example\r\n\r\n"
 	if len(stream) <= 4096 {
 		t.Fatal("test stream does not exercise bounded tail retention")
 	}
@@ -64,11 +69,13 @@ func TestRunSystemUpdateInstallerReportsTerminalFailureFromBoundedTail(t *testin
 		linuxSystemUpdateTestState(strings.Repeat("9", 32)),
 		"41",
 	)
-	if err == nil || !strings.Contains(err.Error(), "terminal updater failure") {
-		t.Fatalf("installer error lost terminal failure: %v", err)
+	if err == nil || !strings.Contains(err.Error(), wrapper) ||
+		!strings.Contains(err.Error(), inner) {
+		t.Fatalf("installer error lost wrapper or exact inner failure: %v", err)
 	}
 	if strings.Contains(err.Error(), "archive: OK") ||
-		strings.Contains(err.Error(), "historical updater progress") {
+		strings.Contains(err.Error(), "historical updater progress") ||
+		strings.Contains(err.Error(), "Verified snapshot") {
 		t.Fatalf("installer reported a stale output line: %v", err)
 	}
 }

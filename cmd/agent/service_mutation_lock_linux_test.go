@@ -44,6 +44,10 @@ func TestLinuxPackageProcessBusyIgnoresBenignAndVanishedProcesses(t *testing.T) 
 	for pid, process := range map[string]string{
 		"101": "systemd",
 		"102": "nginx",
+		// Linux truncates the long-lived unattended-upgrade-shutdown helper's
+		// comm value. The idle shutdown listener is not an APT transaction;
+		// only an exact package process name or an actual fcntl lock is busy.
+		"104": "unattended-upgr",
 	} {
 		pidDir := filepath.Join(root, pid)
 		if err := os.Mkdir(pidDir, 0o755); err != nil {

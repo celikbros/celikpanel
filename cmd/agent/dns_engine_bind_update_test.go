@@ -114,6 +114,10 @@ func signedUpdateBINDPreparationOps(
 			events = append(events, "restored")
 			return nil
 		},
+		verifyTarget: func(context.Context, dnsEngineSwitchJournal) error {
+			events = append(events, "target")
+			return nil
+		},
 		writeJournal: func(dnsEngineSwitchJournal) error {
 			events = append(events, "write")
 			return nil
@@ -133,6 +137,14 @@ func signedUpdateBINDPreparationOps(
 		readOwnership: func() (dnsEngineStateReceipt, bool, error) {
 			events = append(events, "ownership")
 			return dnsEngineStateReceipt{}, false, nil
+		},
+		writeOwnership: func(dnsEngineStateReceipt) error {
+			events = append(events, "write-ownership")
+			return nil
+		},
+		retireInstall: func(dnsEngineSwitchJournal) error {
+			events = append(events, "retire-install")
+			return nil
 		},
 		packageInstalled: func(context.Context, hostplatform.Profile, string) (bool, error) {
 			events = append(events, "package")
@@ -231,6 +243,56 @@ func signedUpdateBINDRecoveryFixture(
 		t.Fatalf("invalid signed-update recovery fixture: %v", err)
 	}
 	return journal, ledger
+}
+
+func signedUpdateBINDCommittedRecoveryFixture(
+	t *testing.T,
+) (dnsEngineSwitchJournal, serviceMutationLedger, dnsEngineStateReceipt, dnsEngineInstallOwnershipReceipt) {
+	t.Helper()
+	journal, ledger := signedUpdateBINDRecoveryFixture(t)
+	journal.Phase = dnsSwitchPhaseCommitted
+	manifest, err := switchJournalManifest(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := ledger.Jobs[journal.MutationRequestID]
+	job.Status = serviceMutationStatusSucceeded
+	job.Phase, err = formatDNSEngineSwitchPublishedPhase(
+		journal.MutationRequestID, journal.ManifestQualifier,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.ErrorCode = ""
+	job.ErrorMessage = ""
+	if err := validateServiceMutationLedger(&ledger); err != nil {
+		t.Fatalf("invalid committed recovery ledger: %v", err)
+	}
+	state := dnsEngineStateReceipt{
+		Schema: dnsEngineStateSchema, Mode: journal.Mode,
+		Engine: journal.TargetEngine, EngineEpoch: journal.TargetEpoch,
+		Generation: journal.TargetGeneration,
+		PairRole:   journal.PairRole, PairLocalIP: journal.LocalIP,
+		PairPeerIP:           journal.PeerIP,
+		PrimaryCatalogSerial: journal.PrimaryCatalogSerial,
+		SourceRevision:       journal.SourceRevision,
+		ManifestQualifier:    journal.ManifestQualifier,
+		MutationRequestID:    journal.MutationRequestID,
+		MutationOwnerID:      journal.MutationOwnerID,
+	}
+	if err := validateDNSEngineState(state); err != nil ||
+		!exactDNSEngineStateForJournal(state, journal) {
+		t.Fatalf("invalid committed recovery state: %+v err=%v", state, err)
+	}
+	install, err := newDNSEngineInstallOwnership(
+		transport.DNSEngineBIND, hostplatform.PackageManagerAPT,
+		[]string{"bind9"}, []string{"bind9"}, manifest,
+		switchJournalBinding(journal),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return journal, ledger, state, install
 }
 
 func cloneSignedUpdateLedger(ledger serviceMutationLedger) serviceMutationLedger {
@@ -366,6 +428,143 @@ func TestSignedUpdateBINDPreparationRecoversRollbackPhasesRemoveLast(t *testing.
 				t.Fatal("recovered journal was not removed last")
 			}
 		})
+	}
+}
+
+func TestSignedUpdateBINDCommittedRecoveryFinalizesEveryCrashBoundary(t *testing.T) {
+	tests := []struct {
+		name            string
+		installExists   bool
+		ownershipExists bool
+	}{
+		{name: "published-before-cleanup", installExists: true},
+		{name: "ownership-published", installExists: true, ownershipExists: true},
+		{name: "install-retired", ownershipExists: true},
+		{name: "legacy-finalize-gap"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ops, events := signedUpdateBINDPreparationOps(t)
+			journal, ledger, state, install := signedUpdateBINDCommittedRecoveryFixture(t)
+			journalExists := true
+			installExists := test.installExists
+			ownershipExists := test.ownershipExists
+			ownership := dnsEngineStateReceipt{}
+			if ownershipExists {
+				ownership = state
+			}
+			ops.readJournal = func() (dnsEngineSwitchJournal, bool, error) {
+				*events = append(*events, "journal")
+				return journal, journalExists, nil
+			}
+			ops.readLedger = func() (serviceMutationLedger, error) {
+				*events = append(*events, "ledger")
+				return cloneSignedUpdateLedger(ledger), nil
+			}
+			ops.readState = func() (dnsEngineStateReceipt, bool, error) {
+				*events = append(*events, "state")
+				return state, true, nil
+			}
+			ops.readInstall = func() (dnsEngineInstallOwnershipReceipt, bool, error) {
+				*events = append(*events, "install")
+				return install, installExists, nil
+			}
+			ops.readOwnership = func() (dnsEngineStateReceipt, bool, error) {
+				*events = append(*events, "ownership")
+				return ownership, ownershipExists, nil
+			}
+			ops.writeOwnership = func(candidate dnsEngineStateReceipt) error {
+				*events = append(*events, "write-ownership")
+				if candidate != state {
+					return errors.New("ownership publication changed active state")
+				}
+				ownership, ownershipExists = candidate, true
+				return nil
+			}
+			ops.retireInstall = func(candidate dnsEngineSwitchJournal) error {
+				*events = append(*events, "retire-install")
+				if !ownershipExists || ownership != state ||
+					!reflect.DeepEqual(candidate, journal) {
+					return errors.New("install retirement preceded exact ownership")
+				}
+				installExists = false
+				return nil
+			}
+			ops.removeJournal = func() error {
+				*events = append(*events, "remove")
+				if installExists || !ownershipExists || ownership != state {
+					return errors.New("journal removal preceded exact provenance finalization")
+				}
+				journalExists = false
+				return nil
+			}
+
+			recovered, err := recoverDNSEngineSwitchJournalForSignedUpdate(
+				context.Background(), ops,
+			)
+			if err != nil || !recovered {
+				t.Fatalf("recovered=%v err=%v events=%#v", recovered, err, *events)
+			}
+			if journalExists || installExists || !ownershipExists || ownership != state {
+				t.Fatalf(
+					"incomplete final state journal=%v install=%v ownership=%v state=%+v",
+					journalExists, installExists, ownershipExists, ownership,
+				)
+			}
+			index := func(event string) int {
+				for i, candidate := range *events {
+					if candidate == event {
+						return i
+					}
+				}
+				return -1
+			}
+			writeIndex := index("write-ownership")
+			retireIndex := index("retire-install")
+			removeIndex := index("remove")
+			if (!test.ownershipExists && writeIndex < 0) ||
+				(test.ownershipExists && writeIndex >= 0) ||
+				retireIndex < 0 || removeIndex <= retireIndex ||
+				(writeIndex >= 0 && retireIndex <= writeIndex) ||
+				removeIndex != len(*events)-1 {
+				t.Fatalf("unsafe finalization order: %#v", *events)
+			}
+		})
+	}
+}
+
+func TestSignedUpdateBINDCommittedRecoveryFailsClosedBeforeProvenanceMutation(t *testing.T) {
+	ops, events := signedUpdateBINDPreparationOps(t)
+	journal, ledger, state, install := signedUpdateBINDCommittedRecoveryFixture(t)
+	ops.readJournal = func() (dnsEngineSwitchJournal, bool, error) {
+		*events = append(*events, "journal")
+		return journal, true, nil
+	}
+	ops.readLedger = func() (serviceMutationLedger, error) {
+		*events = append(*events, "ledger")
+		return cloneSignedUpdateLedger(ledger), nil
+	}
+	ops.readState = func() (dnsEngineStateReceipt, bool, error) {
+		*events = append(*events, "state")
+		return state, true, nil
+	}
+	ops.readInstall = func() (dnsEngineInstallOwnershipReceipt, bool, error) {
+		*events = append(*events, "install")
+		return install, true, nil
+	}
+	ops.verifyTarget = func(context.Context, dnsEngineSwitchJournal) error {
+		*events = append(*events, "target")
+		return errors.New("named no longer serves the committed generation")
+	}
+	if recovered, err := recoverDNSEngineSwitchJournalForSignedUpdate(
+		context.Background(), ops,
+	); recovered || err == nil || !strings.Contains(err.Error(), "named no longer") {
+		t.Fatalf("recovered=%v err=%v", recovered, err)
+	}
+	for _, forbidden := range []string{"write-ownership", "retire-install", "remove"} {
+		if containsString(*events, forbidden) {
+			t.Fatalf("target proof failure reached %s: %#v", forbidden, *events)
+		}
 	}
 }
 
@@ -591,7 +790,7 @@ func TestSignedUpdateBINDPreparationJournalRecoveryFailuresStopBeforeProvenance(
 	}{
 		{"target-staged", []string{"idle", "profile", "journal"}, "rollback phase"},
 		{"target-verified", []string{"idle", "profile", "journal"}, "rollback phase"},
-		{"committed", []string{"idle", "profile", "journal"}, "rollback phase"},
+		{"committed", []string{"idle", "profile", "journal", "ledger"}, "exact published success ledger job"},
 		{"active-ledger", []string{"idle", "profile", "journal", "ledger"}, "ledger"},
 		{"failed-job-phase-mismatch", []string{"idle", "profile", "journal", "ledger"}, "exact terminal failed ledger job"},
 		{"failed-job-binding-mismatch", []string{"idle", "profile", "journal", "ledger"}, "exact terminal failed ledger job"},

@@ -1,5 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from './router';
-import { Component, lazy, Suspense, useState, useEffect, useRef, type ErrorInfo, type ReactNode } from 'react';
+import {
+  Component,
+  lazy,
+  Suspense,
+  useCallback,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ComponentType,
+  type ErrorInfo,
+  type LazyExoticComponent,
+  type ReactNode,
+} from 'react';
 import { Login } from './components/Login';
 import { api, type CurrentUser } from './lib/api';
 import { AuthProvider, useAuth } from './auth/AuthContext';
@@ -7,30 +20,44 @@ import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
+import {
+  publishSystemUpdateAuthentication,
+  shouldApplyUnauthorizedResponse,
+} from './lib/systemUpdateAuthSignal';
 
-const Dashboard = lazy(() => import('./components/Dashboard').then((module) => ({ default: module.Dashboard })));
-const Domains = lazy(() => import('./components/Domains').then((module) => ({ default: module.Domains })));
-const DomainDetail = lazy(() => import('./components/DomainDetail').then((module) => ({ default: module.DomainDetail })));
-const DatabaseManagementV2 = lazy(() => import('./components/DatabaseManagementV2').then((module) => ({ default: module.DatabaseManagementV2 })));
-const ServiceList = lazy(() => import('./components/ServiceList').then((module) => ({ default: module.ServiceList })));
-const MonitoringPage = lazy(() => import('./components/MonitoringPage').then((module) => ({ default: module.MonitoringPage })));
-const ConfigEditor = lazy(() => import('./components/ConfigEditor').then((module) => ({ default: module.ConfigEditor })));
-const Settings = lazy(() => import('./components/Settings').then((module) => ({ default: module.Settings })));
-const UsersPage = lazy(() => import('./components/UsersPage').then((module) => ({ default: module.UsersPage })));
-const ImportPage = lazy(() => import('./components/ImportPage').then((module) => ({ default: module.ImportPage })));
-const AuditLogPage = lazy(() => import('./components/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
-const AddonsPage = lazy(() => import('./components/AddonsPage').then((module) => ({ default: module.AddonsPage })));
-const VPNPage = lazy(() => import('./components/VPNPage').then((module) => ({ default: module.VPNPage })));
-const PHPManagement = lazy(() => import('./components/PHPManagement').then((module) => ({ default: module.PHPManagement })));
-const NginxManagement = lazy(() => import('./components/NginxManagement').then((module) => ({ default: module.NginxManagement })));
-const Fail2banManagement = lazy(() => import('./components/Fail2banManagement').then((module) => ({ default: module.Fail2banManagement })));
-const PostfixManagement = lazy(() => import('./components/PostfixManagement').then((module) => ({ default: module.PostfixManagement })));
-const DovecotManagement = lazy(() => import('./components/DovecotManagement').then((module) => ({ default: module.DovecotManagement })));
-const PowerDNSManagement = lazy(() => import('./components/PowerDNSManagement').then((module) => ({ default: module.PowerDNSManagement })));
-const VsftpdManagement = lazy(() => import('./components/VsftpdManagement').then((module) => ({ default: module.VsftpdManagement })));
-const PostgreSQLManagement = lazy(() => import('./components/PostgreSQLManagement').then((module) => ({ default: module.PostgreSQLManagement })));
-const MariaDBManagement = lazy(() => import('./components/MariaDBManagement').then((module) => ({ default: module.MariaDBManagement })));
-const ComponentDetail = lazy(() => import('./components/ComponentDetail').then((module) => ({ default: module.ComponentDetail })));
+function lazyNamed<TModule, TKey extends keyof TModule>(
+  loader: () => Promise<TModule>,
+  name: TKey,
+): LazyExoticComponent<Extract<TModule[TKey], ComponentType<any>>> {
+  return lazy(async () => ({
+    default: (await loader())[name] as Extract<TModule[TKey], ComponentType<any>>,
+  }));
+}
+
+const SystemUpdateOperationProvider = lazyNamed(() => import('./components/SystemUpdateOperation'), 'SystemUpdateOperationProvider');
+const Dashboard = lazyNamed(() => import('./components/Dashboard'), 'Dashboard');
+const Domains = lazyNamed(() => import('./components/Domains'), 'Domains');
+const DomainDetail = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetail');
+const DatabaseManagementV2 = lazyNamed(() => import('./components/DatabaseManagementV2'), 'DatabaseManagementV2');
+const ServiceList = lazyNamed(() => import('./components/ServiceList'), 'ServiceList');
+const MonitoringPage = lazyNamed(() => import('./components/MonitoringPage'), 'MonitoringPage');
+const ConfigEditor = lazyNamed(() => import('./components/ConfigEditor'), 'ConfigEditor');
+const Settings = lazyNamed(() => import('./components/Settings'), 'Settings');
+const UsersPage = lazyNamed(() => import('./components/UsersPage'), 'UsersPage');
+const ImportPage = lazyNamed(() => import('./components/ImportPage'), 'ImportPage');
+const AuditLogPage = lazyNamed(() => import('./components/AuditLogPage'), 'AuditLogPage');
+const AddonsPage = lazyNamed(() => import('./components/AddonsPage'), 'AddonsPage');
+const VPNPage = lazyNamed(() => import('./components/VPNPage'), 'VPNPage');
+const PHPManagement = lazyNamed(() => import('./components/PHPManagement'), 'PHPManagement');
+const NginxManagement = lazyNamed(() => import('./components/NginxManagement'), 'NginxManagement');
+const Fail2banManagement = lazyNamed(() => import('./components/Fail2banManagement'), 'Fail2banManagement');
+const PostfixManagement = lazyNamed(() => import('./components/PostfixManagement'), 'PostfixManagement');
+const DovecotManagement = lazyNamed(() => import('./components/DovecotManagement'), 'DovecotManagement');
+const PowerDNSManagement = lazyNamed(() => import('./components/PowerDNSManagement'), 'PowerDNSManagement');
+const VsftpdManagement = lazyNamed(() => import('./components/VsftpdManagement'), 'VsftpdManagement');
+const PostgreSQLManagement = lazyNamed(() => import('./components/PostgreSQLManagement'), 'PostgreSQLManagement');
+const MariaDBManagement = lazyNamed(() => import('./components/MariaDBManagement'), 'MariaDBManagement');
+const ComponentDetail = lazyNamed(() => import('./components/ComponentDetail'), 'ComponentDetail');
 
 // Domain Detail Wrapper - fetches domain ID from domain name
 function DomainDetailPage() {
@@ -409,10 +436,24 @@ function AppRoutes() {
 function AuthGate() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const authGenerationRef = useRef(0);
+  const transitionAuthentication = useCallback((nextUser: CurrentUser | null) => {
+    authGenerationRef.current += 1;
+    setUser(nextUser);
+  }, []);
+
+  useLayoutEffect(() => {
+    publishSystemUpdateAuthentication(!loading && user !== null);
+  }, [loading, user]);
+
+  useEffect(() => () => publishSystemUpdateAuthentication(false), []);
 
   useEffect(() => {
-    api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
-  }, []);
+    api.me()
+      .then(transitionAuthentication)
+      .catch(() => transitionAuthentication(null))
+      .finally(() => setLoading(false));
+  }, [transitionAuthentication]);
 
   // Watch every API response; a 401 means the session is gone, so return
   // to the login screen instead of showing broken pages.
@@ -421,15 +462,19 @@ function AuthGate() {
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
+      const requestGeneration = authGenerationRef.current;
       const res = await originalFetch(...args);
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
-      if (res.status === 401 && url.includes('/api/') && !url.includes('/auth/login')) {
-        setUser(null);
+      if (res.status === 401
+        && url.includes('/api/')
+        && !url.includes('/auth/login')
+        && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
+        transitionAuthentication(null);
       }
       return res;
     };
     return () => { window.fetch = originalFetch; };
-  }, []);
+  }, [transitionAuthentication]);
 
   if (loading) {
     return (
@@ -440,22 +485,32 @@ function AuthGate() {
   }
 
   if (!user) {
-    return <Login onSuccess={setUser} />;
+    return <Login onSuccess={transitionAuthentication} />;
   }
 
   return (
-    <AuthProvider user={user} onLogout={() => setUser(null)}>
-      <BrowserRouter>
-        <ComponentOperationProvider>
-          <AppRoutes />
-        </ComponentOperationProvider>
-      </BrowserRouter>
+    <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
+      <RouteLoadBoundary>
+        <Suspense fallback={<PageLoading />}>
+          <ComponentOperationProvider>
+            <AppRoutes />
+          </ComponentOperationProvider>
+        </Suspense>
+      </RouteLoadBoundary>
     </AuthProvider>
   );
 }
 
 function App() {
-  return <AuthGate />;
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <SystemUpdateOperationProvider>
+        <BrowserRouter>
+          <AuthGate />
+        </BrowserRouter>
+      </SystemUpdateOperationProvider>
+    </Suspense>
+  );
 }
 
 export default App;

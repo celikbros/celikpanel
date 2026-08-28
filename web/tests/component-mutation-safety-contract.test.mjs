@@ -13,6 +13,14 @@ const operationSource = readFileSync(
 const enSource = readFileSync(new URL('../src/i18n/en.ts', import.meta.url), 'utf8');
 const trSource = readFileSync(new URL('../src/i18n/tr.ts', import.meta.url), 'utf8');
 
+function sourceSection(source, start, end) {
+  const startIndex = source.indexOf(start);
+  assert.ok(startIndex >= 0, `missing section start: ${start}`);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert.ok(endIndex > startIndex, `missing section end: ${end}`);
+  return source.slice(startIndex, endIndex);
+}
+
 test('fresh Components visits open the full catalog and remember only an explicit installed choice', () => {
   assert.match(
     serviceSource,
@@ -42,6 +50,34 @@ test('active-operation discovery is silent while mutations remain fail-closed', 
   assert.match(operationSource, /\{interactionBlocked && createPortal\(/);
   assert.doesNotMatch(operationSource, /\{locked && createPortal\(/);
   assert.match(operationSource, /activeSyncInFlightRef\.current\s*\? 'services\.operation\.activeCheckInProgress'/);
+});
+
+test('background discovery uncertainty cannot publish or clear a real operation failure', () => {
+  const discovery = sourceSection(
+    operationSource,
+    'const syncActiveOperation = async',
+    'const onFocus = () =>',
+  );
+  const verifiedAbsence = sourceSection(
+    discovery,
+    '} else if (verifiedNoActive) {',
+    '} else {',
+  );
+  const realFailure = sourceSection(
+    operationSource,
+    'const finishFailure = (error: ApiError) =>',
+    'const adoptOperation =',
+  );
+
+  assert.doesNotMatch(discovery, /setFailure\(/, 'discovery must not use the operation failure channel');
+  assert.match(discovery, /const keepDiscoveryFailClosed = \(\) =>/);
+  assert.match(discovery, /lockedRef\.current = true;[\s\S]*setDiscoveringActive\(true\)/);
+  assert.match(discovery, /activeDiscoveryRetryTimer = window\.setTimeout\([\s\S]*RETRY_DELAY_MS/);
+  assert.match(verifiedAbsence, /lockedRef\.current = false/);
+  assert.match(verifiedAbsence, /setDiscoveringActive\(false\)/);
+  assert.match(verifiedAbsence, /setConnectionInterrupted\(false\)/);
+  assert.doesNotMatch(verifiedAbsence, /setFailure\(null\)/);
+  assert.match(realFailure, /setFailure\(error\)/, 'real operation failures must remain user-visible');
 });
 
 test('lifecycle, repair, runtime install and firewall actions require an explicit dialog confirmation', () => {

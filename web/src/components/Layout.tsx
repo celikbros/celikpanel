@@ -182,7 +182,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                         </div>
                     </header>
 
-                    <main className="flex-1 overflow-auto">{children}</main>
+                    <main id="celikpanel-main-content" tabIndex={-1} className="flex-1 overflow-auto">{children}</main>
                 </div>
             </div>
         </DesktopPageHeaderTargetContext.Provider>
@@ -403,7 +403,7 @@ function ImpersonationBanner() {
 // UserMenu shows the current user and role with a dropdown to sign out.
 // UserMenu, mevcut kullanıcıyı ve rolü, çıkış için bir açılır menüyle gösterir.
 function UserMenu() {
-    const { user, role } = useAuth();
+    const { user, role, logout } = useAuth();
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -454,6 +454,7 @@ function UserMenu() {
                     <button
                         onClick={async () => {
                             await api.logout();
+                            logout();
                             window.location.reload();
                         }}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-fg-muted transition-colors hover:bg-surface-2 hover:text-danger"

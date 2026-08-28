@@ -338,6 +338,23 @@ func retireDNSEngineInstallOwnership(journal dnsEngineSwitchJournal) error {
 	return removeDNSEngineInstallOwnership(journal.TargetEngine)
 }
 
+func publishCommittedDNSEngineTargetOwnership(
+	journal dnsEngineSwitchJournal,
+) error {
+	if journal.Phase != dnsSwitchPhaseCommitted ||
+		!transport.ValidDNSEngine(journal.TargetEngine) {
+		return errors.New("DNS engine target ownership requires a committed journal")
+	}
+	state, exists, err := readDNSEngineState()
+	if err != nil {
+		return err
+	}
+	if !exists || !exactDNSEngineStateForJournal(state, journal) {
+		return errors.New("DNS engine target state differs from its committed journal")
+	}
+	return writeDNSEngineOwnership(state)
+}
+
 func newDNSEngineInstallOwnership(
 	engine transport.DNSEngine,
 	manager hostplatform.PackageManager,

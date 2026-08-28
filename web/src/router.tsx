@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -14,6 +15,7 @@ import {
   type ReactNode,
 } from 'react';
 import { matchRoute, type RouteParams } from './router-core';
+import { replaceRouterHistoryURL } from './router-history';
 
 export { matchRoute } from './router-core';
 
@@ -29,7 +31,7 @@ interface NavigateOptions {
   state?: unknown;
 }
 
-type NavigateFunction = (to: string, options?: NavigateOptions) => void;
+type NavigateFunction = (to: string, options?: NavigateOptions) => boolean;
 
 interface RouterContextValue {
   location: LocationState;
@@ -39,7 +41,18 @@ interface RouterContextValue {
 const RouterContext = createContext<RouterContextValue | null>(null);
 const ParamsContext = createContext<RouteParams>({});
 const ROUTER_STATE_KEY = '__celikpanel_router_v1';
-let navigationBlocker: { readonly current: boolean } | null = null;
+const navigationBlockers = new Set<{ readonly current: boolean }>();
+const navigationBlockerListeners = new Set<() => void>();
+type CurrentURLReplacer = (to: string) => boolean;
+let currentURLReplacer: CurrentURLReplacer | null = null;
+const navigationBlocker = {
+  get current(): boolean {
+    for (const blocker of navigationBlockers) {
+      if (blocker.current) return true;
+    }
+    return false;
+  },
+};
 
 interface ManagedHistoryState {
   index: number;
@@ -73,6 +86,10 @@ function requireRouter(): RouterContextValue {
   const router = useContext(RouterContext);
   if (!router) throw new Error('router hook used outside BrowserRouter');
   return router;
+}
+
+export function replaceCurrentRouterURL(to: string): boolean {
+  return currentURLReplacer?.(to) ?? false;
 }
 
 export function BrowserRouter({ children }: { children: ReactNode }) {
@@ -117,7 +134,7 @@ export function BrowserRouter({ children }: { children: ReactNode }) {
   }, []);
 
   const navigate = useCallback<NavigateFunction>((to, options = {}) => {
-    if (navigationBlocker?.current) return;
+    if (navigationBlocker?.current) return false;
     const target = new URL(to, window.location.href);
     if (target.origin !== window.location.origin) {
       throw new Error('cross-origin navigation is not allowed');
@@ -130,7 +147,28 @@ export function BrowserRouter({ children }: { children: ReactNode }) {
     historyIndexRef.current = index;
     acceptedEntryRef.current = { state, url: next };
     setLocation(browserLocation());
+    return true;
   }, []);
+
+  const replaceCurrentURL = useCallback<CurrentURLReplacer>((to) => {
+    const replaced = replaceRouterHistoryURL({
+      href: window.location.href,
+      origin: window.location.origin,
+      state: window.history.state,
+      replaceState: (state, title, url) => window.history.replaceState(state, title, url),
+    }, to);
+    if (!replaced) return false;
+    acceptedEntryRef.current = { state: replaced.state, url: replaced.url };
+    setLocation(browserLocation());
+    return true;
+  }, []);
+
+  useLayoutEffect(() => {
+    currentURLReplacer = replaceCurrentURL;
+    return () => {
+      if (currentURLReplacer === replaceCurrentURL) currentURLReplacer = null;
+    };
+  }, [replaceCurrentURL]);
 
   const value = useMemo(() => ({ location, navigate }), [location, navigate]);
   return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>;
@@ -145,12 +183,15 @@ export function useLocation(): LocationState {
 }
 
 export function useNavigationBlocker(blocked: { readonly current: boolean }): void {
-  useEffect(() => {
-    navigationBlocker = blocked;
+  useLayoutEffect(() => {
+    navigationBlockers.add(blocked);
     return () => {
-      if (navigationBlocker === blocked) navigationBlocker = null;
+      navigationBlockers.delete(blocked);
     };
   }, [blocked]);
+  useLayoutEffect(() => {
+    for (const listener of navigationBlockerListeners) listener();
+  }, [blocked.current]);
 }
 
 export function useParams(): RouteParams {
@@ -175,7 +216,17 @@ export function useSearchParams(): [
 
 export function Navigate({ to, replace = false }: { to: string; replace?: boolean }) {
   const navigate = useNavigate();
-  useEffect(() => navigate(to, { replace }), [navigate, replace, to]);
+  useEffect(() => {
+    let completed = false;
+    const attempt = () => {
+      if (!completed && navigate(to, { replace })) completed = true;
+    };
+    navigationBlockerListeners.add(attempt);
+    attempt();
+    return () => {
+      navigationBlockerListeners.delete(attempt);
+    };
+  }, [navigate, replace, to]);
   return null;
 }
 
