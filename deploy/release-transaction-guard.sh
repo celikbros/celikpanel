@@ -40,6 +40,60 @@ _release_txn_fail() {
     return 1
 }
 
+# Stage marker bytes outside the strict transaction root so a pre-rename
+# crash cannot leave an unknown entry that wedges every future classifier.
+_release_txn_prepare_marker_staging() {
+    local root=$1 inherited_fd=$2 staging parent entry name
+    local owner group mode links size
+    release_txn_verify_inherited_lock "$root" "$inherited_fd" || return 1
+    _release_txn_validate_root_directory "$root" 700 || return 1
+    parent=$(dirname -- "$root")
+    _release_txn_validate_secure_parent_directory "$parent" || return 1
+    staging=${root}.marker-staging
+    if [[ ! -e "$staging" && ! -L "$staging" ]]; then
+        install -d -m 0700 -o root -g root -- "$staging" || return 1
+        sync -f -- "$parent" || return 1
+    fi
+    _release_txn_validate_root_directory "$staging" 700 || return 1
+    [[ $(stat -Lc '%d' -- "$staging") == $(stat -Lc '%d' -- "$root") ]] ||
+        { _release_txn_fail "marker staging is on another filesystem"; return 1; }
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        [[ "$name" =~ ^\.(rollback-takeover|quiesce|active|scheduler-restore)\.tmp\.[A-Za-z0-9]{10}$ &&
+           -f "$entry" && ! -L "$entry" ]] || {
+            _release_txn_fail "unsafe marker staging artifact: $name"; return 1;
+        }
+        read -r owner group mode links size < <(
+            stat -Lc '%u %g %a %h %s' -- "$entry"
+        ) || return 1
+        [[ "$owner:$group:$mode:$links" == 0:0:600:1 && "$size" -le 512 ]] || {
+            _release_txn_fail "marker staging metadata mismatch: $name"; return 1;
+        }
+        rm -f -- "$entry" || return 1
+    done < <(find "$staging" -xdev -mindepth 1 -maxdepth 1 -print0)
+    sync -f -- "$staging" || return 1
+    RELEASE_TXN_MARKER_STAGING=$staging
+}
+
+_release_txn_stage_marker() {
+    local root=$1 inherited_fd=$2 kind=$3 token=$4 operation=$5 snapshot=$6 tmp
+    _release_txn_prepare_marker_staging "$root" "$inherited_fd" || return 1
+    case "$kind" in
+        rollback-takeover|quiesce|active|scheduler-restore) ;;
+        *) _release_txn_fail "unsupported marker staging kind"; return 1 ;;
+    esac
+    tmp=$(mktemp -p "$RELEASE_TXN_MARKER_STAGING" ".$kind.tmp.XXXXXXXXXX") ||
+        { _release_txn_fail "cannot create marker staging file"; return 1; }
+    if ! _release_txn_print_marker "$token" "$operation" "$snapshot" > "$tmp" ||
+       ! chown root:root -- "$tmp" || ! chmod 0600 -- "$tmp" ||
+       ! sync -f -- "$tmp"; then
+        [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
+        _release_txn_fail "cannot durably stage transaction marker"
+        return 1
+    fi
+    RELEASE_TXN_STAGED_MARKER=$tmp
+}
+
 release_txn_validate_token() {
     local token=${1:-}
     [[ "$token" =~ ^[0-9a-f]{64}$ ]] \
@@ -386,6 +440,8 @@ release_txn_validate_lock_file() {
 # EWOULDBLOCK alır, ardından bu tam OFD üzerinde yeniden kilitleme başarılı olur.
 release_txn_verify_inherited_lock() {
     local root=$1 inherited_fd=$2 lock path_identity fd_identity probe_fd probe_rc
+    local label sequence kind advisory access remainder
+    local -a lock_rows=()
     [[ "$inherited_fd" =~ ^[0-9]+$ && "$inherited_fd" -ge 3 ]] \
         || { _release_txn_fail "invalid inherited transaction lock descriptor"; return 1; }
     release_txn_validate_lock_file "$root" || return 1
@@ -398,6 +454,16 @@ release_txn_verify_inherited_lock() {
         || { _release_txn_fail "cannot identify inherited transaction lock descriptor"; return 1; }
     [[ "$fd_identity" == "$path_identity" ]] \
         || { _release_txn_fail "inherited descriptor does not name the fixed transaction lock"; return 1; }
+    mapfile -t lock_rows < <(
+        grep '^lock:' "/proc/$BASHPID/fdinfo/$inherited_fd" 2>/dev/null || true
+    )
+    [[ ${#lock_rows[@]} -eq 1 ]] ||
+        { _release_txn_fail "inherited descriptor has no exact single flock record"; return 1; }
+    read -r label sequence kind advisory access remainder <<< "${lock_rows[0]}"
+    [[ "$label" == lock: && "$sequence" =~ ^[0-9]+:$ &&
+       "$kind" == FLOCK && "$advisory" == ADVISORY && "$access" == WRITE &&
+       -n "$remainder" ]] ||
+        { _release_txn_fail "inherited descriptor flock record is not exclusive"; return 1; }
 
     exec {probe_fd}<>"$lock" \
         || { _release_txn_fail "cannot open an independent transaction lock probe"; return 1; }
@@ -564,14 +630,12 @@ release_txn_takeover_active_for_rollback() {
     esac
 
     marker=$root/active
-    tmp=$(mktemp -p "$root" '.rollback-takeover.tmp.XXXXXXXXXX') \
-        || { _release_txn_fail "cannot stage rollback takeover marker"; return 1; }
-    if ! _release_txn_print_marker "$token" rollback "$snapshot" > "$tmp" ||
-       ! chown root:root -- "$tmp" ||
-       ! chmod 0600 -- "$tmp" ||
-       ! sync -f -- "$tmp" ||
+    _release_txn_stage_marker "$root" "$inherited_fd" rollback-takeover \
+        "$token" rollback "$snapshot" || return 1
+    tmp=$RELEASE_TXN_STAGED_MARKER
+    if
        ! mv -T -- "$tmp" "$marker" ||
-       ! sync -f -- "$root"; then
+       ! sync -f -- "$RELEASE_TXN_MARKER_STAGING" "$root"; then
         [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
         _release_txn_fail "cannot durably publish rollback takeover marker"
         return 1
@@ -597,14 +661,12 @@ release_txn_create_quiesce_marker() {
         || { _release_txn_fail "active transaction marker already exists"; return 1; }
     [[ ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
         || { _release_txn_fail "completion-pending transaction marker already exists"; return 1; }
-    tmp=$(mktemp -p "$root" '.quiesce.tmp.XXXXXXXXXX') \
-        || { _release_txn_fail "cannot create quiesce transaction marker staging file"; return 1; }
-    if ! _release_txn_print_marker "$token" "$operation" "$snapshot" > "$tmp" ||
-       ! chown root:root -- "$tmp" ||
-       ! chmod 0600 -- "$tmp" ||
-       ! sync -f -- "$tmp" ||
+    _release_txn_stage_marker "$root" "$inherited_fd" quiesce \
+        "$token" "$operation" "$snapshot" || return 1
+    tmp=$RELEASE_TXN_STAGED_MARKER
+    if
        ! mv -T --no-clobber -- "$tmp" "$marker" ||
-       ! sync -f -- "$root"; then
+       ! sync -f -- "$RELEASE_TXN_MARKER_STAGING" "$root"; then
         [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
         _release_txn_fail "cannot durably publish quiesce transaction marker"
         return 1
@@ -711,14 +773,12 @@ release_txn_create_active_marker() {
         || { _release_txn_fail "active transaction marker already exists"; return 1; }
     [[ ! -e "$root/completion.pending" && ! -L "$root/completion.pending" ]] \
         || { _release_txn_fail "completion-pending transaction marker already exists"; return 1; }
-    tmp=$(mktemp -p "$root" '.active.tmp.XXXXXXXXXX') \
-        || { _release_txn_fail "cannot create active transaction marker staging file"; return 1; }
-    if ! _release_txn_print_marker "$token" "$operation" "$snapshot" > "$tmp" ||
-       ! chown root:root -- "$tmp" ||
-       ! chmod 0600 -- "$tmp" ||
-       ! sync -f -- "$tmp" ||
+    _release_txn_stage_marker "$root" "$inherited_fd" active \
+        "$token" "$operation" "$snapshot" || return 1
+    tmp=$RELEASE_TXN_STAGED_MARKER
+    if
        ! mv -T --no-clobber -- "$tmp" "$marker" ||
-       ! sync -f -- "$root"; then
+       ! sync -f -- "$RELEASE_TXN_MARKER_STAGING" "$root"; then
         [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
         _release_txn_fail "cannot durably publish active transaction marker"
         return 1
@@ -757,14 +817,12 @@ release_txn_mark_scheduler_restore_pending() {
         release_txn_validate_scheduler_restore_token "$root" "$token" "$operation" "$snapshot"
         return
     fi
-    tmp=$(mktemp -p "$root" '.scheduler-restore.tmp.XXXXXXXXXX') \
-        || { _release_txn_fail "cannot stage scheduler-restore marker"; return 1; }
-    if ! _release_txn_print_marker "$token" "$operation" "$snapshot" > "$tmp" ||
-       ! chown root:root -- "$tmp" ||
-       ! chmod 0600 -- "$tmp" ||
-       ! sync -f -- "$tmp" ||
+    _release_txn_stage_marker "$root" "$inherited_fd" scheduler-restore \
+        "$token" "$operation" "$snapshot" || return 1
+    tmp=$RELEASE_TXN_STAGED_MARKER
+    if
        ! mv -T --no-clobber -- "$tmp" "$marker" ||
-       ! sync -f -- "$root"; then
+       ! sync -f -- "$RELEASE_TXN_MARKER_STAGING" "$root"; then
         [[ ! -e "$tmp" && ! -L "$tmp" ]] || rm -f -- "$tmp"
         _release_txn_fail "cannot durably publish scheduler-restore marker"
         return 1
@@ -1125,6 +1183,20 @@ _release_txn_validate_dropin_file() {
         || { _release_txn_fail "release transaction systemd drop-in content is invalid: $path"; return 1; }
 }
 
+_release_txn_validate_runtime_preserve_dropin() {
+    local path=$1 systemd_root=$2
+    local expected owner group mode links size
+    expected=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+    [[ $path == "$expected" && -f $path && ! -L $path ]] \
+        || { _release_txn_fail "runtime-directory preserve drop-in identity is invalid"; return 1; }
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$path") \
+        || { _release_txn_fail "cannot inspect runtime-directory preserve drop-in"; return 1; }
+    [[ $owner == 0 && $group == 0 && $mode == 644 && $links == 1 && $size -gt 0 ]] \
+        || { _release_txn_fail "runtime-directory preserve drop-in metadata is invalid"; return 1; }
+    cmp -s -- "$path" <(printf '[Service]\nRuntimeDirectoryPreserve=yes\n') \
+        || { _release_txn_fail "runtime-directory preserve drop-in content is invalid"; return 1; }
+}
+
 _release_txn_publish_dropin() {
     local directory=$1 transaction_root=$2 runtime_root=$3 helper_path=$4
     local target tmp owner group mode links
@@ -1160,11 +1232,25 @@ _release_txn_publish_dropin() {
 # yeniden yükle ve yöneticinin her tam drop-in yolunu bildirdiğini kanıtla.
 release_txn_install_and_verify_unit_guards() {
     local transaction_root=$1 runtime_root=$2 systemd_root=$3 helper_path=$4 inherited_fd=$5
-    local unit directory dropin loaded_dropins loaded found source
+    local systemctl_bin=$6 before_reload_hook=${7:-} additional_agent_dropin=${8:-}
+    local unit directory dropin loaded_dropins expected_dropins source reload
+    local -a loaded_dropin_paths=() expected_dropin_paths=()
     release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
     _release_txn_validate_safe_path "$runtime_root" || return 1
     _release_txn_validate_safe_path "$systemd_root" || return 1
     _release_txn_validate_safe_path "$helper_path" || return 1
+    local installed_runtime_preserve
+    installed_runtime_preserve=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+    if [[ -e $installed_runtime_preserve || -L $installed_runtime_preserve ]]; then
+        _release_txn_validate_runtime_preserve_dropin "$installed_runtime_preserve" "$systemd_root" ||
+            return 1
+        [[ -z $additional_agent_dropin || $additional_agent_dropin == "$installed_runtime_preserve" ]] ||
+            { _release_txn_fail "runtime-directory preserve drop-in argument differs from installed identity"; return 1; }
+        additional_agent_dropin=$installed_runtime_preserve
+    elif [[ -n $additional_agent_dropin ]]; then
+        _release_txn_fail "requested runtime-directory preserve drop-in is absent"
+        return 1
+    fi
     _release_txn_validate_root_directory "$systemd_root" 755 \
         || { _release_txn_fail "systemd unit root must be root:root mode 0755"; return 1; }
 
@@ -1186,26 +1272,97 @@ release_txn_install_and_verify_unit_guards() {
             "$directory" "$transaction_root" "$runtime_root" "$helper_path" || return 1
     done
 
-    systemctl daemon-reload \
+    [[ $systemctl_bin == /* && -f $systemctl_bin && ! -L $systemctl_bin && -x $systemctl_bin ]] \
+        || { _release_txn_fail "systemctl must be an exact executable regular file"; return 1; }
+    if [[ -n $before_reload_hook ]]; then
+        [[ $before_reload_hook =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && declare -F "$before_reload_hook" >/dev/null \
+            || { _release_txn_fail "systemd reload barrier is not a declared function"; return 1; }
+        "$before_reload_hook" \
+            || { _release_txn_fail "systemd reload barrier failed"; return 1; }
+    fi
+    "$systemctl_bin" daemon-reload \
         || { _release_txn_fail "systemd daemon-reload failed after installing transaction guards"; return 1; }
     for unit in celikpanel-agent.service celikpanel-panel.service; do
         dropin=$systemd_root/$unit.d/10-release-transaction-guard.conf
         _release_txn_validate_dropin_file \
             "$dropin" "$transaction_root" "$runtime_root" "$helper_path" || return 1
-        loaded_dropins=$(systemctl show --property=DropInPaths --value "$unit") \
+        loaded_dropins=$("$systemctl_bin" show --property=DropInPaths --value "$unit") \
             || { _release_txn_fail "cannot inspect loaded systemd drop-ins for $unit"; return 1; }
-        found=0
-        for loaded in $loaded_dropins; do
-            if [[ "$loaded" == "$dropin" ]]; then
-                found=1
-                break
-            fi
+        expected_dropin_paths=()
+        [[ $unit != celikpanel-agent.service || -z $additional_agent_dropin ]] ||
+            expected_dropin_paths+=("$additional_agent_dropin")
+        expected_dropin_paths+=("$dropin")
+        loaded_dropins=${loaded_dropins//$'\n'/ }
+        read -r -a loaded_dropin_paths <<<"$loaded_dropins"
+        [[ ${#loaded_dropin_paths[@]} -eq ${#expected_dropin_paths[@]} ]] \
+            || { _release_txn_fail "systemd did not load only the exact transaction guard for $unit"; return 1; }
+        for ((expected_dropins = 0; expected_dropins < ${#expected_dropin_paths[@]}; expected_dropins++)); do
+            [[ ${loaded_dropin_paths[$expected_dropins]} == "${expected_dropin_paths[$expected_dropins]}" ]] \
+                || { _release_txn_fail "systemd did not load only the exact transaction guard set for $unit"; return 1; }
         done
-        [[ "$found" -eq 1 ]] \
-            || { _release_txn_fail "systemd did not load the exact transaction guard for $unit"; return 1; }
+        reload=$("$systemctl_bin" show --property=NeedDaemonReload --value "$unit") \
+            || { _release_txn_fail "cannot inspect reload state for $unit"; return 1; }
+        [[ $reload == no ]] \
+            || { _release_txn_fail "$unit has unconsumed guard changes"; return 1; }
     done
     source=$TRUSTED_RELEASE_ROOT/deploy/release-transaction-start-guard.sh
     _release_txn_validate_start_helper "$source" "$helper_path"
+}
+
+# Verify an already-committed guard foundation without changing a byte,
+# directory, symlink, enablement state, or manager state.  Recovery paths use
+# this after a durable transaction marker exists.
+release_txn_verify_unit_guards() {
+    local transaction_root=$1 runtime_root=$2 systemd_root=$3 helper_path=$4 inherited_fd=$5
+    local systemctl_bin=$6 additional_agent_dropin=${7:-}
+    local unit directory dropin loaded_dropins expected_dropins source reload
+    local -a loaded_dropin_paths=() expected_dropin_paths=()
+    release_txn_verify_inherited_lock "$transaction_root" "$inherited_fd" || return 1
+    _release_txn_validate_safe_path "$runtime_root" || return 1
+    _release_txn_validate_safe_path "$systemd_root" || return 1
+    _release_txn_validate_safe_path "$helper_path" || return 1
+    local installed_runtime_preserve
+    installed_runtime_preserve=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+    if [[ -e $installed_runtime_preserve || -L $installed_runtime_preserve ]]; then
+        _release_txn_validate_runtime_preserve_dropin "$installed_runtime_preserve" "$systemd_root" ||
+            return 1
+        [[ -z $additional_agent_dropin || $additional_agent_dropin == "$installed_runtime_preserve" ]] ||
+            { _release_txn_fail "runtime-directory preserve drop-in argument differs from installed identity"; return 1; }
+        additional_agent_dropin=$installed_runtime_preserve
+    elif [[ -n $additional_agent_dropin ]]; then
+        _release_txn_fail "requested runtime-directory preserve drop-in is absent"
+        return 1
+    fi
+    _release_txn_validate_root_directory "$systemd_root" 755 || return 1
+    [[ $systemctl_bin == /* && -f $systemctl_bin && ! -L $systemctl_bin && -x $systemctl_bin ]] \
+        || { _release_txn_fail "systemctl must be an exact executable regular file"; return 1; }
+    source=$TRUSTED_RELEASE_ROOT/deploy/release-transaction-start-guard.sh
+    _release_txn_validate_start_helper "$source" "$helper_path" || return 1
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        directory=$systemd_root/$unit.d
+        _release_txn_validate_dropin_dir "$directory" || return 1
+        dropin=$directory/10-release-transaction-guard.conf
+        _release_txn_validate_dropin_file \
+            "$dropin" "$transaction_root" "$runtime_root" "$helper_path" || return 1
+        loaded_dropins=$("$systemctl_bin" show --property=DropInPaths --value "$unit") ||
+            { _release_txn_fail "cannot inspect loaded systemd drop-ins for $unit"; return 1; }
+        expected_dropin_paths=()
+        [[ $unit != celikpanel-agent.service || -z $additional_agent_dropin ]] ||
+            expected_dropin_paths+=("$additional_agent_dropin")
+        expected_dropin_paths+=("$dropin")
+        loaded_dropins=${loaded_dropins//$'\n'/ }
+        read -r -a loaded_dropin_paths <<<"$loaded_dropins"
+        [[ ${#loaded_dropin_paths[@]} -eq ${#expected_dropin_paths[@]} ]] ||
+            { _release_txn_fail "systemd did not load only the exact transaction guard for $unit"; return 1; }
+        for ((expected_dropins = 0; expected_dropins < ${#expected_dropin_paths[@]}; expected_dropins++)); do
+            [[ ${loaded_dropin_paths[$expected_dropins]} == "${expected_dropin_paths[$expected_dropins]}" ]] ||
+                { _release_txn_fail "systemd did not load only the exact transaction guard set for $unit"; return 1; }
+        done
+        reload=$("$systemctl_bin" show --property=NeedDaemonReload --value "$unit") ||
+            { _release_txn_fail "cannot inspect reload state for $unit"; return 1; }
+        [[ $reload == no ]] ||
+            { _release_txn_fail "$unit has unconsumed guard changes"; return 1; }
+    done
 }
 
 _release_txn_prepare_runtime_root() {
@@ -1302,18 +1459,67 @@ _release_txn_cleanup_staging_authorization() {
     rmdir -- "$staging" >/dev/null 2>&1 || true
 }
 
+_release_txn_prepare_authorization_discard() {
+    local runtime_root=$1 discard parent entry name owner group mode links size
+    parent=$(dirname -- "$runtime_root")
+    _release_txn_validate_secure_parent_directory "$parent" || return 1
+    discard=${runtime_root}.authorization-discard
+    if [[ ! -e "$discard" && ! -L "$discard" ]]; then
+        install -d -m 0700 -o root -g root -- "$discard" || return 1
+        sync -f -- "$parent" || return 1
+    fi
+    _release_txn_validate_root_directory "$discard" 700 || return 1
+    [[ $(stat -Lc '%d' -- "$discard") == $(stat -Lc '%d' -- "$runtime_root") ]] ||
+        { _release_txn_fail "authorization discard is on another filesystem"; return 1; }
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        [[ "$name" =~ ^\.start\.authorization\.discard\.[A-Za-z0-9]{10}$ &&
+           -d "$entry" && ! -L "$entry" ]] || {
+            _release_txn_fail "unsafe authorization discard entry: $name"; return 1;
+        }
+        read -r owner group mode < <(stat -Lc '%u %g %a' -- "$entry") || return 1
+        [[ "$owner:$group:$mode" == 0:0:700 ]] || return 1
+        for name in holder marker; do
+            [[ ! -e "$entry/$name" && ! -L "$entry/$name" ]] && continue
+            [[ -f "$entry/$name" && ! -L "$entry/$name" ]] || return 1
+            read -r owner group mode links size < <(
+                stat -Lc '%u %g %a %h %s' -- "$entry/$name"
+            ) || return 1
+            [[ "$owner:$group:$mode:$links" == 0:0:600:1 && "$size" -le 512 ]] || return 1
+        done
+        if find "$entry" -mindepth 1 -maxdepth 1 \
+            ! -name holder ! -name marker -print -quit | grep -q .; then
+            _release_txn_fail "authorization discard contains unexpected entries"
+            return 1
+        fi
+        rm -f -- "$entry/holder" "$entry/marker" || return 1
+        rmdir -- "$entry" || return 1
+    done < <(find "$discard" -xdev -mindepth 1 -maxdepth 1 -print0)
+    sync -f -- "$discard" || return 1
+    RELEASE_TXN_AUTHORIZATION_DISCARD=$discard
+}
+
 _release_txn_remove_authorization_tree() {
-    local runtime_root=$1 authorization
+    local runtime_root=$1 authorization discard slot
     _release_txn_validate_authorization_tree "$runtime_root" || return 1
     authorization=$runtime_root/start.authorization
-    rm -f -- "$authorization/holder" "$authorization/marker" \
-        || { _release_txn_fail "cannot remove start authorization files"; return 1; }
-    rmdir -- "$authorization" \
-        || { _release_txn_fail "cannot remove start authorization directory"; return 1; }
-    sync -f -- "$runtime_root" \
-        || { _release_txn_fail "cannot make start authorization removal durable"; return 1; }
+    _release_txn_prepare_authorization_discard "$runtime_root" || return 1
+    discard=$RELEASE_TXN_AUTHORIZATION_DISCARD
+    slot=$(mktemp -d -p "$discard" '.start.authorization.discard.XXXXXXXXXX') ||
+        { _release_txn_fail "cannot reserve authorization discard name"; return 1; }
+    chown root:root -- "$slot" && chmod 0700 -- "$slot" && rmdir -- "$slot" || {
+        _release_txn_fail "cannot prepare authorization discard name"; return 1;
+    }
+    mv -T --no-clobber -- "$authorization" "$slot" ||
+        { _release_txn_fail "cannot quarantine start authorization"; return 1; }
+    sync -f -- "$runtime_root" "$discard" ||
+        { _release_txn_fail "cannot make authorization quarantine durable"; return 1; }
     [[ ! -e "$authorization" && ! -L "$authorization" ]] \
         || { _release_txn_fail "start authorization directory still exists"; return 1; }
+    # From this point a crash leaves only ignored, root-only quarantine data.
+    rm -f -- "$slot/holder" "$slot/marker" >/dev/null 2>&1 || true
+    rmdir -- "$slot" >/dev/null 2>&1 || true
+    sync -f -- "$discard" >/dev/null 2>&1 || true
 }
 
 # A new lock owner may clear only a structurally exact stale runtime grant.

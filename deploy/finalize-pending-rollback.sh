@@ -17,6 +17,7 @@ TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 TRANSACTION_START_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 UNIT_DIR=/etc/systemd/system
+SYSTEMCTL_BIN=/usr/bin/systemctl
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
 AGENT_SOCKET=/run/celikpanel/agent.sock
 AGENT_STATE_DIR=/var/lib/celikpanel-agent-private
@@ -63,6 +64,24 @@ die() {
     printf '!! %s\n' "$*" >&2
     exit 1
 }
+
+validate_exact_systemctl() {
+    local owner group mode links
+    [[ $SYSTEMCTL_BIN == /* && -f $SYSTEMCTL_BIN && ! -L $SYSTEMCTL_BIN && -x $SYSTEMCTL_BIN ]] ||
+        die "exact systemctl binary is unavailable or unsafe"
+    read -r owner group mode links < <(/usr/bin/stat -Lc '%u %g %a %h' -- "$SYSTEMCTL_BIN") ||
+        die "cannot inspect exact systemctl binary"
+    [[ $owner == 0 && $group == 0 && $links == 1 ]] ||
+        die "exact systemctl binary identity is unsafe"
+    (( (8#$mode & 0022) == 0 )) ||
+        die "exact systemctl binary is group/other writable"
+}
+
+systemctl() {
+    "$SYSTEMCTL_BIN" "$@"
+}
+
+validate_exact_systemctl
 
 usage() {
     printf '%s\n' \
@@ -747,9 +766,9 @@ install_and_verify_runtime_directory_preserve() {
         || die "installed runtime-directory preserve drop-in metadata is unsafe"
     cmp -s "$target" <(printf '[Service]\nRuntimeDirectoryPreserve=yes\n') \
         || die "installed runtime-directory preserve drop-in content is invalid"
-    systemctl daemon-reload \
+    "$SYSTEMCTL_BIN" daemon-reload \
         || die "systemd daemon-reload failed after runtime-directory preservation"
-    loaded_dropins=$(systemctl show --property=DropInPaths --value celikpanel-agent.service) \
+    loaded_dropins=$("$SYSTEMCTL_BIN" show --property=DropInPaths --value celikpanel-agent.service) \
         || die "cannot inspect loaded agent systemd drop-ins"
     found=0
     for loaded in $loaded_dropins; do
@@ -757,7 +776,7 @@ install_and_verify_runtime_directory_preserve() {
     done
     [[ "$found" == 1 ]] \
         || die "systemd did not load the exact runtime-directory preserve drop-in"
-    manager_value=$(systemctl show --property=RuntimeDirectoryPreserve --value celikpanel-agent.service) \
+    manager_value=$("$SYSTEMCTL_BIN" show --property=RuntimeDirectoryPreserve --value celikpanel-agent.service) \
         || die "cannot inspect loaded RuntimeDirectoryPreserve value"
     [[ "$manager_value" == yes ]] \
         || die "systemd did not load RuntimeDirectoryPreserve=yes for the agent"
@@ -1215,7 +1234,8 @@ trap finalization_exit EXIT
 install_and_verify_runtime_directory_preserve
 release_txn_install_and_verify_unit_guards \
     "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" \
-    "$UNIT_DIR" "$TRANSACTION_START_HELPER" "$RELEASE_TRANSACTION_FD" \
+    "$UNIT_DIR" "$TRANSACTION_START_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+    "" "$UNIT_DIR/celikpanel-agent.service.d/09-runtime-directory-preserve.conf" \
     || die "recovery release transaction guards could not be installed"
 release_txn_clear_stale_start_authorization \
     "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -1227,7 +1247,8 @@ prepare_runtime_mutation_lock_dir
 install_and_verify_runtime_directory_preserve
 release_txn_install_and_verify_unit_guards \
     "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" \
-    "$UNIT_DIR" "$TRANSACTION_START_HELPER" "$RELEASE_TRANSACTION_FD" \
+    "$UNIT_DIR" "$TRANSACTION_START_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+    "" "$UNIT_DIR/celikpanel-agent.service.d/09-runtime-directory-preserve.conf" \
     || die "transaction guards changed during runtime-lock preparation"
 release_txn_clear_stale_start_authorization \
     "$TRANSACTION_ROOT" "$TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" \

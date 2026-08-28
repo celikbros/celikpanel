@@ -206,6 +206,13 @@ validate_release_tree() {
     [[ -x "$root/install.sh" && -f "$root/install.sh" ]] || die "staged installer is missing"
     [[ -x "$root/update.sh" && -f "$root/update.sh" ]] || die "staged updater is missing"
     [[ -x "$root/rollback.sh" && -f "$root/rollback.sh" ]] || die "staged rollback is missing"
+    [[ -x "$root/deploy/release-recovery-runner.sh" && -f "$root/deploy/release-recovery-runner.sh" ]] || die "staged recovery runner is missing"
+    [[ -f "$root/deploy/release-recovery-foundation.sh" ]] || die "staged recovery foundation helper is missing"
+    [[ -f "$root/deploy/release-recovery.protocol" ]] || die "staged recovery protocol is missing"
+    [[ -f "$root/deploy/release-sequence-policy" ]] || die "staged release sequence policy is missing"
+    [[ -f "$root/deploy/release-transaction-start-guard.sh" ]] || die "staged release start guard is missing"
+    [[ -f "$root/deploy/systemd/celikpanel-release-recovery.service" ]] || die "staged recovery service is missing"
+    [[ -f "$root/deploy/systemd/celikpanel-release-recovery.timer" ]] || die "staged recovery timer is missing"
     [[ -f "$root/web/dist/index.html" ]] || die "staged web build is missing"
     [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] || die "release checksum manifest is missing"
     (
@@ -349,6 +356,7 @@ chmod 0755 \
     "$incomplete_root/install.sh" \
     "$incomplete_root/update.sh" \
     "$incomplete_root/rollback.sh" \
+    "$incomplete_root/deploy/release-recovery-runner.sh" \
     "$incomplete_root/bootstrap-update.sh"
 (
     cd "$incomplete_root"

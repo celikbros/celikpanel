@@ -18,7 +18,7 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge distro-matrix freebsd-cross web clean dist dist-sign
+.PHONY: all build check-go test vet panel agent schema17-bridge distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
@@ -60,6 +60,9 @@ web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) ci --no-audit --no-fund
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
+release-recovery-contract: ## Exercise persistent release recovery and crash boundaries
+	sudo bash deploy/test-release-recovery-contract.sh
+
 dist: build ## Assemble an offline initial-install tarball with verified provenance
 	@printf '%s\n' "$(COMMIT)" | grep -Eq '^[0-9a-f]{40,64}$$'
 	@printf '%s\n' "$(TREE)" | grep -Eq '^[0-9a-f]{40,64}$$'
@@ -85,6 +88,11 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
+	chmod 0755 dist/$(DIST)/deploy/release-recovery-runner.sh
+	chmod 0644 dist/$(DIST)/deploy/release-recovery-foundation.sh
+	chmod 0644 dist/$(DIST)/deploy/release-recovery.protocol
+	chmod 0644 dist/$(DIST)/deploy/systemd/celikpanel-release-recovery.service
+	chmod 0644 dist/$(DIST)/deploy/systemd/celikpanel-release-recovery.timer
 	bash dist/$(DIST)/deploy/write-release-manifest.sh dist/$(DIST)
 	# Normalize archive modes as well as time/order/ownership. Plain cp applies
 	# the caller's umask, so the same source must not package differently on

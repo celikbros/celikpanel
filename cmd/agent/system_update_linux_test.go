@@ -359,7 +359,7 @@ func TestSystemUpdateLaunchAndInstallerUseExactFixedArguments(t *testing.T) {
 	if err := backend.launchWorker(context.Background(), requestID); err != nil {
 		t.Fatal(err)
 	}
-	wantLaunch := []string{"--unit=celikpanel-self-update-" + requestID + ".service", "--property=Type=exec", "--property=KillMode=mixed", "--property=TimeoutStartSec=50min", "--no-block", systemUpdateAgentPath, "--self-update-worker", requestID}
+	wantLaunch := []string{"--unit=celikpanel-self-update-" + requestID + ".service", "--property=Type=exec", "--property=KillMode=mixed", "--property=TimeoutStartSec=30s", "--property=RuntimeMaxSec=15min", "--property=TimeoutStopSec=15s", "--property=OnFailure=celikpanel-release-recovery.service", "--property=OnFailureJobMode=replace", "--no-block", systemUpdateAgentPath, "--self-update-worker", requestID}
 	if len(calls) != 1 || calls[0].name != "/usr/bin/systemd-run" || !reflect.DeepEqual(calls[0].args, wantLaunch) {
 		t.Fatalf("launch calls = %#v", calls)
 	}
@@ -376,6 +376,18 @@ func TestSystemUpdateLaunchAndInstallerUseExactFixedArguments(t *testing.T) {
 	}
 	if len(calls) != 2 || calls[1].name != systemUpdateInstallerPath || !reflect.DeepEqual(calls[1].args, wantInstaller) {
 		t.Fatalf("installer calls = %#v", calls)
+	}
+	if err := proveSystemUpdateRecoveryFinalState(context.Background(), state); err != nil {
+		t.Fatal(err)
+	}
+	wantProof := []string{
+		"--verify-final-state",
+		"--expected-version", state.TargetVersion,
+		"--expected-commit", state.TargetCommit,
+		"--expected-sequence", state.TargetSequence,
+	}
+	if len(calls) != 3 || calls[2].name != systemUpdateRecoveryRunnerPath || !reflect.DeepEqual(calls[2].args, wantProof) {
+		t.Fatalf("final-proof calls = %#v", calls)
 	}
 }
 
@@ -525,6 +537,14 @@ func TestSystemUpdateWorkerRevalidatesAndProvesSuccess(t *testing.T) {
 		return os.WriteFile(backend.floorPath, canonicalSystemUpdateFloor(systemUpdateFloor{Sequence: state.TargetSequence, Version: state.TargetVersion}), 0o600)
 	}
 	backend.installedBuild = func(context.Context) (string, string, error) { return state.TargetVersion, state.TargetCommit, nil }
+	proofCalls := 0
+	backend.finalProof = func(_ context.Context, proofState *systemUpdateState) error {
+		proofCalls++
+		if !stateIdentityMatches(proofState, state) {
+			return errors.New("final proof received another request identity")
+		}
+		return nil
+	}
 	if err := backend.RunWorker(context.Background(), state.RequestID, fetcher); err != nil {
 		t.Fatal(err)
 	}
@@ -538,6 +558,264 @@ func TestSystemUpdateWorkerRevalidatesAndProvesSuccess(t *testing.T) {
 	if fetcher.fetchCalls != 1 {
 		t.Fatalf("worker fetch calls = %d", fetcher.fetchCalls)
 	}
+	if proofCalls != 1 {
+		t.Fatalf("worker final-proof calls = %d", proofCalls)
+	}
+}
+
+func TestSystemUpdateWorkerRefusesSuccessWithoutFinalProof(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		requestID  string
+		finalProof func(context.Context, *systemUpdateState) error
+		wantError  string
+	}{
+		{name: "missing", requestID: strings.Repeat("c", 32), finalProof: nil, wantError: "final proof is unavailable"},
+		{name: "rejected", requestID: strings.Repeat("d", 32), finalProof: func(context.Context, *systemUpdateState) error {
+			return errors.New("final proof rejected")
+		}, wantError: "final proof rejected"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := linuxSystemUpdateTestRoot(t)
+			state := linuxSystemUpdateTestState(test.requestID)
+			if err := writeSystemUpdateState(root, state, nil); err != nil {
+				t.Fatal(err)
+			}
+			manifest := systemUpdateManifest{
+				Sequence: state.TargetSequence, Version: state.TargetVersion, Commit: state.TargetCommit,
+				PublishedAt: "2026-08-12T12:00:00Z", OS: state.TargetOS, Arch: state.TargetArch,
+				Archive:       "celikpanel-" + state.TargetVersion + "-linux-amd64.tar.gz",
+				ArchiveSHA256: state.TargetArchiveSHA256, ArchiveSize: state.TargetArchiveSize,
+			}
+			backend := newLinuxSystemUpdateBackend()
+			backend.stateRoot = root
+			backend.floorPath = filepath.Join(root, "sequence.floor")
+			if err := os.WriteFile(backend.floorPath, canonicalSystemUpdateFloor(systemUpdateFloor{Sequence: "41", Version: "v1.2.2"}), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			backend.now = func() time.Time { return time.Date(2026, 8, 12, 12, 2, 0, 0, time.UTC) }
+			backend.runInstaller = func(context.Context, *systemUpdateState, string) error {
+				return os.WriteFile(backend.floorPath, canonicalSystemUpdateFloor(systemUpdateFloor{Sequence: state.TargetSequence, Version: state.TargetVersion}), 0o600)
+			}
+			backend.installedBuild = func(context.Context) (string, string, error) {
+				return state.TargetVersion, state.TargetCommit, nil
+			}
+			backend.finalProof = test.finalProof
+			err := backend.RunWorker(context.Background(), state.RequestID, &fakeSystemUpdateFetcher{manifest: manifest})
+			if err == nil || !strings.Contains(err.Error(), test.wantError) {
+				t.Fatalf("RunWorker error = %v, want %q", err, test.wantError)
+			}
+			loaded, readErr := readSystemUpdateState(root, state.RequestID)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if loaded.Status != systemUpdateFailed || !strings.Contains(loaded.Error, test.wantError) {
+				t.Fatalf("worker terminal state = %#v", loaded)
+			}
+		})
+	}
+}
+
+func TestSystemUpdateReconcileRequiresFinalProofAndPromotesRecoveredFailure(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		requestID  string
+		status     string
+		proofError error
+		recent     bool
+		promote    bool
+		wantStatus string
+		wantError  string
+	}{
+		{name: "active-proof-retrying", requestID: strings.Repeat("3", 32), status: systemUpdateRunning, proofError: errors.New("marker remains"), recent: true, wantStatus: systemUpdateRunning},
+		{name: "active-proof-expired", requestID: strings.Repeat("7", 32), status: systemUpdateRunning, proofError: errors.New("marker remains"), promote: true, wantStatus: systemUpdateFailed, wantError: "system update recovery final proof failed: marker remains"},
+		{name: "active-proof-complete", requestID: strings.Repeat("4", 32), status: systemUpdateRunning, wantStatus: systemUpdateSucceeded},
+		{name: "failed-proof-pending", requestID: strings.Repeat("5", 32), status: systemUpdateFailed, proofError: errors.New("timer inactive"), wantStatus: systemUpdateFailed, wantError: "installer stopped"},
+		{name: "failed-proof-complete", requestID: strings.Repeat("6", 32), status: systemUpdateFailed, wantStatus: systemUpdateSucceeded},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := linuxSystemUpdateTestRoot(t)
+			state := linuxSystemUpdateTestState(test.requestID)
+			state.Status = test.status
+			now := time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)
+			if test.recent {
+				state.CreatedAt = now.Add(-time.Minute).Format(time.RFC3339Nano)
+				state.UpdatedAt = state.CreatedAt
+			}
+			if state.Status == systemUpdateFailed {
+				state.Error = "installer stopped"
+			}
+			if err := writeSystemUpdateState(root, state, nil); err != nil {
+				t.Fatal(err)
+			}
+			backend := newLinuxSystemUpdateBackend()
+			backend.now = func() time.Time { return now }
+			backend.stateRoot = root
+			backend.floorPath = filepath.Join(filepath.Dir(root), "sequence-"+test.requestID+".floor")
+			if err := os.WriteFile(backend.floorPath, canonicalSystemUpdateFloor(systemUpdateFloor{Sequence: state.TargetSequence, Version: state.TargetVersion}), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			backend.unitState = func(context.Context, string) (systemUpdateUnitState, error) {
+				return systemUpdateUnitInactive, nil
+			}
+			backend.installedBuild = func(context.Context) (string, string, error) {
+				return state.TargetVersion, state.TargetCommit, nil
+			}
+			proofCalls := 0
+			currentProofError := test.proofError
+			backend.finalProof = func(_ context.Context, proofState *systemUpdateState) error {
+				proofCalls++
+				if !stateIdentityMatches(proofState, state) {
+					return errors.New("wrong proof target")
+				}
+				return currentProofError
+			}
+			got, err := backend.Status(context.Background(), state.RequestID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Status != test.wantStatus || (test.wantError != "" && got.Error != test.wantError) {
+				t.Fatalf("reconciled state = %#v", got)
+			}
+			if proofCalls != 1 {
+				t.Fatalf("final-proof calls = %d", proofCalls)
+			}
+			if test.promote {
+				currentProofError = nil
+				got, err = backend.Status(context.Background(), state.RequestID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Status != systemUpdateSucceeded || got.Error != "" {
+					t.Fatalf("recovered state = %#v", got)
+				}
+				if proofCalls != 2 {
+					t.Fatalf("final-proof calls after recovery = %d", proofCalls)
+				}
+			}
+		})
+	}
+}
+
+func TestSystemUpdateReconcileAmbiguousWorkerBoundary(t *testing.T) {
+	now := time.Date(2026, 8, 28, 12, 0, 0, 0, time.UTC)
+	run := func(t *testing.T, requestByte, status string, age time.Duration,
+		unit systemUpdateUnitState, unitErr error, exact bool, proofErr error,
+		wantStatus, wantError string, wantProof int) {
+		t.Helper()
+		root := linuxSystemUpdateTestRoot(t)
+		state := linuxSystemUpdateTestState(strings.Repeat(requestByte, 32))
+		state.Status = status
+		state.CreatedAt = now.Add(-age).Format(time.RFC3339Nano)
+		state.UpdatedAt = state.CreatedAt
+		if status == systemUpdateFailed {
+			state.Error = "installer stopped"
+		}
+		if err := writeSystemUpdateState(root, state, nil); err != nil {
+			t.Fatal(err)
+		}
+		backend := newLinuxSystemUpdateBackend()
+		backend.now = func() time.Time { return now }
+		backend.stateRoot = root
+		backend.floorPath = filepath.Join(filepath.Dir(root), "sequence-"+requestByte+".floor")
+		if err := os.WriteFile(backend.floorPath, canonicalSystemUpdateFloor(systemUpdateFloor{
+			Sequence: state.TargetSequence, Version: state.TargetVersion,
+		}), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		backend.unitState = func(context.Context, string) (systemUpdateUnitState, error) {
+			return unit, unitErr
+		}
+		backend.installedBuild = func(context.Context) (string, string, error) {
+			if exact {
+				return state.TargetVersion, state.TargetCommit, nil
+			}
+			return state.ExpectedCurrentVersion, state.ExpectedCurrentCommit, nil
+		}
+		proofCalls := 0
+		backend.finalProof = func(context.Context, *systemUpdateState) error {
+			proofCalls++
+			return proofErr
+		}
+		got, err := backend.Status(context.Background(), state.RequestID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Status != wantStatus || got.Error != wantError || proofCalls != wantProof {
+			t.Fatalf("state=%#v proof_calls=%d", got, proofCalls)
+		}
+	}
+
+	t.Run("real active stays active", func(t *testing.T) {
+		run(t, "0", systemUpdateRunning, time.Hour, systemUpdateUnitActive, nil, true, nil, systemUpdateRunning, "", 0)
+	})
+	t.Run("probe error recent exact at grace minus one nanosecond", func(t *testing.T) {
+		run(t, "1", systemUpdateRunning, systemUpdateRecoveryGrace-time.Nanosecond,
+			systemUpdateUnitAmbiguous, errors.New("dbus unavailable"), true, nil, systemUpdateRunning, "", 0)
+	})
+	t.Run("ambiguous recent nonexact at grace minus one nanosecond", func(t *testing.T) {
+		run(t, "2", systemUpdateRunning, systemUpdateRecoveryGrace-time.Nanosecond,
+			systemUpdateUnitAmbiguous, nil, false, nil, systemUpdateRunning, "", 0)
+	})
+	t.Run("probe error exact at grace proves success", func(t *testing.T) {
+		run(t, "3", systemUpdateRunning, systemUpdateRecoveryGrace,
+			systemUpdateUnitAmbiguous, errors.New("dbus unavailable"), true, nil, systemUpdateSucceeded, "", 1)
+	})
+	t.Run("ambiguous exact at grace fails proof", func(t *testing.T) {
+		run(t, "4", systemUpdateRunning, systemUpdateRecoveryGrace,
+			systemUpdateUnitAmbiguous, nil, true, errors.New("marker remains"), systemUpdateFailed,
+			"system update recovery final proof failed: marker remains", 1)
+	})
+	t.Run("probe error nonexact at grace fails", func(t *testing.T) {
+		run(t, "5", systemUpdateRunning, systemUpdateRecoveryGrace,
+			systemUpdateUnitAmbiguous, errors.New("dbus unavailable"), false, nil, systemUpdateFailed,
+			"system update worker stopped before proving the target build", 0)
+	})
+	t.Run("ambiguous nonexact at grace fails", func(t *testing.T) {
+		run(t, "6", systemUpdateRunning, systemUpdateRecoveryGrace,
+			systemUpdateUnitAmbiguous, nil, false, nil, systemUpdateFailed,
+			"system update worker stopped before proving the target build", 0)
+	})
+	t.Run("future timestamp cannot extend ambiguity", func(t *testing.T) {
+		run(t, "7", systemUpdateRunning, -time.Minute,
+			systemUpdateUnitAmbiguous, errors.New("clock moved backwards"), true, nil, systemUpdateSucceeded, "", 1)
+	})
+	t.Run("queued launch grace minus one nanosecond remains queued", func(t *testing.T) {
+		run(t, "a", systemUpdateQueued, systemUpdateLaunchGrace-time.Nanosecond,
+			systemUpdateUnitInactive, nil, false, nil, systemUpdateQueued, "", 0)
+	})
+	t.Run("queued exact launch grace proves success", func(t *testing.T) {
+		run(t, "b", systemUpdateQueued, systemUpdateLaunchGrace,
+			systemUpdateUnitInactive, nil, true, nil, systemUpdateSucceeded, "", 1)
+	})
+	t.Run("future queued inactive exact proves success", func(t *testing.T) {
+		run(t, "c", systemUpdateQueued, -time.Minute,
+			systemUpdateUnitInactive, nil, true, nil, systemUpdateSucceeded, "", 1)
+	})
+	t.Run("future queued inactive nonexact fails", func(t *testing.T) {
+		run(t, "d", systemUpdateQueued, -time.Minute,
+			systemUpdateUnitInactive, nil, false, nil, systemUpdateFailed,
+			"system update worker stopped before proving the target build", 0)
+	})
+	t.Run("future queued ambiguous exact fails final proof", func(t *testing.T) {
+		run(t, "e", systemUpdateQueued, -time.Minute,
+			systemUpdateUnitAmbiguous, errors.New("clock moved backwards"), true, errors.New("marker remains"),
+			systemUpdateFailed, "system update recovery final proof failed: marker remains", 1)
+	})
+	t.Run("future queued ambiguous nonexact fails", func(t *testing.T) {
+		run(t, "f", systemUpdateQueued, -time.Minute,
+			systemUpdateUnitAmbiguous, errors.New("clock moved backwards"), false, nil, systemUpdateFailed,
+			"system update worker stopped before proving the target build", 0)
+	})
+	t.Run("failed proof pending preserves original error", func(t *testing.T) {
+		run(t, "8", systemUpdateFailed, time.Minute,
+			systemUpdateUnitAmbiguous, errors.New("dbus unavailable"), true, errors.New("timer inactive"),
+			systemUpdateFailed, "installer stopped", 1)
+	})
+	t.Run("failed proof complete promotes", func(t *testing.T) {
+		run(t, "9", systemUpdateFailed, time.Minute,
+			systemUpdateUnitAmbiguous, errors.New("dbus unavailable"), true, nil, systemUpdateSucceeded, "", 1)
+	})
 }
 
 func TestSystemUpdateReviewedUpdaterOwnsTheSecondMutationGate(t *testing.T) {

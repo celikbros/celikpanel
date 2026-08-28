@@ -20,6 +20,8 @@ import (
 
 const systemUpdateWorkerLimit = 45 * time.Minute
 
+const systemUpdateRecoveryRunnerPath = "/usr/libexec/celikpanel/release-recovery"
+
 var (
 	systemUpdateExecutableResolver = resolveFixedRootExecutable
 	systemUpdateCommandRunner      = runFixedSystemUpdateCommand
@@ -82,7 +84,11 @@ func (backend *linuxSystemUpdateBackend) launchWorker(ctx context.Context, reque
 		"--unit=" + unit,
 		"--property=Type=exec",
 		"--property=KillMode=mixed",
-		"--property=TimeoutStartSec=50min",
+		"--property=TimeoutStartSec=30s",
+		"--property=RuntimeMaxSec=15min",
+		"--property=TimeoutStopSec=15s",
+		"--property=OnFailure=celikpanel-release-recovery.service",
+		"--property=OnFailureJobMode=replace",
 		"--no-block",
 		agent, "--self-update-worker", requestID,
 	}
@@ -126,6 +132,33 @@ func (backend *linuxSystemUpdateBackend) probeWorkerUnit(ctx context.Context, re
 		return systemUpdateUnitInactive, nil
 	}
 	return systemUpdateUnitAmbiguous, nil
+}
+
+func proveSystemUpdateRecoveryFinalState(ctx context.Context, state *systemUpdateState) error {
+	if state == nil || !systemUpdateVersionRE.MatchString(state.TargetVersion) ||
+		!systemUpdateCommitRE.MatchString(state.TargetCommit) {
+		return errors.New("system update recovery final-proof target is invalid")
+	}
+	if _, err := parseCanonicalPositiveDecimal(state.TargetSequence, math.MaxInt64); err != nil {
+		return errors.New("system update recovery final-proof sequence is invalid")
+	}
+	runner, err := systemUpdateExecutableResolver(systemUpdateRecoveryRunnerPath)
+	if err != nil {
+		return err
+	}
+	proofCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	args := []string{
+		"--verify-final-state",
+		"--expected-version", state.TargetVersion,
+		"--expected-commit", state.TargetCommit,
+		"--expected-sequence", state.TargetSequence,
+	}
+	output, err := systemUpdateCommandRunner(proofCtx, runner, args)
+	if err != nil {
+		return fmt.Errorf("release recovery final proof failed: %w: %s", err, sanitizedSystemUpdateError(errors.New(string(output))))
+	}
+	return nil
 }
 
 type boundedSystemUpdateBuffer struct{ raw []byte }
@@ -327,6 +360,12 @@ func (backend *linuxSystemUpdateBackend) RunWorker(ctx context.Context, requestI
 		if err == nil {
 			err = errors.New("installed agent identity does not match the signed target")
 		}
+		return backend.failStateLocked(state, err)
+	}
+	if backend.finalProof == nil {
+		return backend.failStateLocked(state, errors.New("release recovery final proof is unavailable"))
+	}
+	if err := backend.finalProof(ctx, state); err != nil {
 		return backend.failStateLocked(state, err)
 	}
 	succeeded := *state

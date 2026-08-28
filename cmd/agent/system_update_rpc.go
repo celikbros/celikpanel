@@ -19,6 +19,10 @@ const (
 	systemUpdateSucceeded    = "succeeded"
 	systemUpdateFailed       = "failed"
 	systemUpdateLaunchGrace  = 30 * time.Second
+	// The transient worker and its OnFailure recovery service are independently
+	// bounded to 15 minutes. Keep the reviewed request active across both
+	// windows, then fail it instead of leaving an unbounded running record.
+	systemUpdateRecoveryGrace = 31 * time.Minute
 )
 
 var errSystemUpdateNotFound = errors.New("system update request was not found")

@@ -44,6 +44,7 @@ type linuxSystemUpdateBackend struct {
 	launch         func(context.Context, string) error
 	unitState      func(context.Context, string) (systemUpdateUnitState, error)
 	installedBuild func(context.Context) (string, string, error)
+	finalProof     func(context.Context, *systemUpdateState) error
 	runInstaller   func(context.Context, *systemUpdateState, string) error
 	now            func() time.Time
 	writeFault     func(string) error
@@ -171,6 +172,7 @@ func newLinuxSystemUpdateBackend() *linuxSystemUpdateBackend {
 	backend.launch = backend.launchWorker
 	backend.unitState = backend.probeWorkerUnit
 	backend.installedBuild = inspectInstalledSystemUpdateBuild
+	backend.finalProof = proveSystemUpdateRecoveryFinalState
 	backend.runInstaller = runSystemUpdateInstaller
 	return backend
 }
@@ -784,7 +786,7 @@ func (backend *linuxSystemUpdateBackend) Status(ctx context.Context, requestID s
 	if err != nil {
 		return nil, err
 	}
-	if state.active() {
+	if state.active() || state.Status == systemUpdateFailed {
 		state, err = backend.reconcileStateLocked(ctx, state)
 	}
 	return state, err
@@ -809,7 +811,7 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var active []*systemUpdateState
+	var active, failed []*systemUpdateState
 	for _, entry := range entries {
 		if entry.Name() == ".lock" || entry.Name() == ".worker.lock" {
 			continue
@@ -823,6 +825,8 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 		}
 		if state.active() {
 			active = append(active, state)
+		} else if state.Status == systemUpdateFailed {
+			failed = append(failed, state)
 		}
 	}
 	if len(active) > 1 {
@@ -831,6 +835,11 @@ func (backend *linuxSystemUpdateBackend) Reconcile(ctx context.Context) error {
 	if len(active) == 1 {
 		_, err := backend.reconcileStateLocked(ctx, active[0])
 		return err
+	}
+	for _, state := range failed {
+		if _, err := backend.reconcileStateLocked(ctx, state); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -878,33 +887,81 @@ func (backend *linuxSystemUpdateBackend) reconcileStateLocked(ctx context.Contex
 	if backend.unitState == nil {
 		return state, nil
 	}
-	unit, err := backend.unitState(ctx, state.RequestID)
-	if err != nil || unit == systemUpdateUnitAmbiguous {
-		return state, nil
+	created, _ := time.Parse(time.RFC3339Nano, state.CreatedAt)
+	now := backend.now().UTC()
+	age := now.Sub(created)
+	reconciledAt := now
+	if reconciledAt.Before(created) {
+		// A backward wall-clock adjustment must not make a terminal state
+		// non-canonical or extend an ambiguous worker forever.
+		reconciledAt = created
 	}
+	unit, err := backend.unitState(ctx, state.RequestID)
 	if unit == systemUpdateUnitActive {
 		return state, nil
 	}
-	created, _ := time.Parse(time.RFC3339Nano, state.CreatedAt)
-	if state.Status == systemUpdateQueued && backend.now().UTC().Sub(created) < systemUpdateLaunchGrace {
+	withinRecoveryGrace := age >= 0 && age < systemUpdateRecoveryGrace
+	if (err != nil || unit == systemUpdateUnitAmbiguous) && state.active() && withinRecoveryGrace {
+		// A transient D-Bus/probe failure is not evidence that the worker died.
+		// Keep a recent reviewed request active across both the worker and its
+		// OnFailure recovery window, but never allow ambiguity to persist forever.
+		return state, nil
+	}
+	if state.Status == systemUpdateQueued && age >= 0 && age < systemUpdateLaunchGrace {
 		return state, nil
 	}
 	version, commit, identityErr := backend.installedBuild(ctx)
 	floor, floorErr := backend.ReadFloor()
-	if identityErr == nil && floorErr == nil && version == state.TargetVersion && commit == state.TargetCommit && floor != nil && floor.Sequence == state.TargetSequence && floor.Version == state.TargetVersion {
+	exactTarget := identityErr == nil && floorErr == nil &&
+		version == state.TargetVersion && commit == state.TargetCommit &&
+		floor != nil && floor.Sequence == state.TargetSequence && floor.Version == state.TargetVersion
+	if exactTarget {
+		// Target bytes and the monotonic floor are visible before the updater has
+		// removed its durable marker and proved the recovery foundation and both
+		// coordinators. Never terminalize success in that intermediate window.
+		proofErr := errors.New("release recovery final proof is unavailable")
+		if backend.finalProof != nil {
+			proofErr = backend.finalProof(ctx, state)
+		}
+		if proofErr != nil {
+			if state.Status == systemUpdateFailed {
+				// OnFailure recovery may still complete and promote this exact
+				// reviewed target on a later reconciliation.
+				return state, nil
+			}
+			if withinRecoveryGrace {
+				// The bounded recovery timer may still own this exact target.
+				return state, nil
+			}
+			failed := *state
+			failed.Status = systemUpdateFailed
+			failed.Error = "system update recovery final proof failed: " +
+				sanitizedSystemUpdateError(proofErr)
+			failed.UpdatedAt = reconciledAt.Format(time.RFC3339Nano)
+			if err := writeSystemUpdateState(backend.stateRoot, &failed, backend.writeFault); err != nil {
+				return nil, err
+			}
+			return &failed, nil
+		}
 		reconciled := *state
 		reconciled.Status = systemUpdateSucceeded
 		reconciled.Error = ""
-		reconciled.UpdatedAt = backend.now().UTC().Format(time.RFC3339Nano)
+		reconciled.UpdatedAt = reconciledAt.Format(time.RFC3339Nano)
 		if err := writeSystemUpdateState(backend.stateRoot, &reconciled, backend.writeFault); err != nil {
 			return nil, err
 		}
 		return &reconciled, nil
 	}
+	if state.Status == systemUpdateFailed {
+		// OnFailure recovery may later prove this exact target and promote it.
+		// Until then preserve the original reviewed failure instead of replacing
+		// it with a weaker reconciliation message.
+		return state, nil
+	}
 	failed := *state
 	failed.Status = systemUpdateFailed
 	failed.Error = "system update worker stopped before proving the target build"
-	failed.UpdatedAt = backend.now().UTC().Format(time.RFC3339Nano)
+	failed.UpdatedAt = reconciledAt.Format(time.RFC3339Nano)
 	if err := writeSystemUpdateState(backend.stateRoot, &failed, backend.writeFault); err != nil {
 		return nil, err
 	}

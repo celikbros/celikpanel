@@ -40,9 +40,31 @@ RELEASE_TRANSACTION_RUNTIME_ROOT=/run/celikpanel-release-transaction
 RELEASE_TRANSACTION_HELPER=/usr/libexec/celikpanel/release-transaction-start-guard
 LIBEXEC_DIR=/usr/libexec/celikpanel
 RELEASE_UPDATER=/usr/libexec/celikpanel/get.sh
+RELEASE_RECOVERY_RUNNER=/usr/libexec/celikpanel/release-recovery
+RELEASE_RECOVERY_UNIT=/etc/systemd/system/celikpanel-release-recovery.service
+RELEASE_RECOVERY_TIMER=/etc/systemd/system/celikpanel-release-recovery.timer
+RELEASE_STATE_DIR=/var/lib/celikpanel-release-state
+RELEASE_RECOVERY_MANIFEST="$RELEASE_STATE_DIR/recovery-foundation.v1"
+RELEASE_RECOVERY_AGENT_DROPIN="$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf"
+RELEASE_RECOVERY_PANEL_DROPIN="$UNIT_DIR/celikpanel-panel.service.d/10-release-transaction-guard.conf"
+RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
+RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
+RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
+RECOVERY_EXPECTED_SNAPSHOT="${CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT:-}"
+RECOVERY_EXPECTED_PHASE="${CELIKPANEL_RECOVERY_EXPECTED_PHASE:-}"
+RECOVERY_LOCK_FD="${CELIKPANEL_RELEASE_TRANSACTION_FD:-}"
+RECOVERY_LOCK_IDENTITY="${CELIKPANEL_RECOVERY_LOCK_IDENTITY:-}"
+unset CELIKPANEL_RECOVER_EXISTING_TRANSACTION \
+    CELIKPANEL_RECOVERY_EXPECTED_TOKEN CELIKPANEL_RECOVERY_EXPECTED_OPERATION \
+    CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT CELIKPANEL_RECOVERY_EXPECTED_PHASE \
+    CELIKPANEL_RELEASE_TRANSACTION_FD \
+    CELIKPANEL_RECOVERY_LOCK_IDENTITY
 readonly PREFIX DATA_DIR IMPORT_DIR CONF_DIR UNIT_DIR PANEL_CERT_HOOK \
     AGENT_STATE_DIR RUNTIME_DIR BACKUP_ROOT RELEASE_TRANSACTION_ROOT \
-    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR RELEASE_UPDATER
+    RELEASE_TRANSACTION_RUNTIME_ROOT RELEASE_TRANSACTION_HELPER LIBEXEC_DIR RELEASE_UPDATER \
+    RELEASE_RECOVERY_RUNNER RELEASE_RECOVERY_UNIT RELEASE_RECOVERY_TIMER \
+    RELEASE_STATE_DIR RELEASE_RECOVERY_MANIFEST RELEASE_RECOVERY_AGENT_DROPIN \
+    RELEASE_RECOVERY_PANEL_DROPIN RECOVER_EXISTING_TRANSACTION
 SELINUX_OS_RELEASE=/etc/os-release
 SELINUX_ENFORCE_FILE=/sys/fs/selinux/enforce
 RHEL_DNF_BIN=/usr/bin/dnf
@@ -103,6 +125,83 @@ TRUSTED_RELEASE_ROOT=
 die() {
     echo "!! $*" >&2
     exit 1
+}
+case "$RECOVER_EXISTING_TRANSACTION" in
+    0|1) ;;
+    *) die 'invalid recovery-only transaction mode' ;;
+esac
+if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+    [[ $RECOVERY_EXPECTED_TOKEN =~ ^[0-9a-f]{64}$ &&
+       ( $RECOVERY_EXPECTED_OPERATION == update || $RECOVERY_EXPECTED_OPERATION == rollback ) &&
+       $RECOVERY_EXPECTED_SNAPSHOT =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ &&
+       ( $RECOVERY_EXPECTED_PHASE == active || $RECOVERY_EXPECTED_PHASE == completion ||
+         $RECOVERY_EXPECTED_PHASE == completion-scheduler ||
+         $RECOVERY_EXPECTED_PHASE == scheduler ) &&
+       $RECOVERY_LOCK_FD == 9 && $RECOVERY_LOCK_IDENTITY =~ ^[0-9]+:[0-9]+$ ]] \
+        || die 'recovery-only rollback expected transaction tuple is malformed'
+fi
+readonly RECOVERY_EXPECTED_TOKEN RECOVERY_EXPECTED_OPERATION \
+    RECOVERY_EXPECTED_SNAPSHOT RECOVERY_LOCK_FD RECOVERY_LOCK_IDENTITY \
+    RECOVERY_EXPECTED_PHASE
+
+verify_recovery_expected_tuple() {
+    local entry name primary= phase= marker_count=0 owner group mode links size
+    while IFS= read -r -d '' entry; do
+        name=$(basename -- "$entry")
+        case "$name" in
+            transaction.lock) ;;
+            quiesce.pending|active|completion.pending|scheduler-restore.pending)
+                marker_count=$((marker_count + 1))
+                case "$name" in
+                    completion.pending) primary=$name ;;
+                    scheduler-restore.pending) [[ -n $primary ]] || primary=$name ;;
+                    *)
+                        [[ -z $primary ]] \
+                            || die 'recovery-only rollback found ambiguous transaction state'
+                        primary=$name
+                        ;;
+                esac
+                ;;
+            *) die "recovery-only rollback found unexpected transaction entry: $name" ;;
+        esac
+    done < <(find "$RELEASE_TRANSACTION_ROOT" -xdev -mindepth 1 -maxdepth 1 -print0)
+    [[ $marker_count -gt 0 ]] \
+        || die 'recovery-only rollback durable phase disappeared before dispatch'
+    if [[ $marker_count -eq 2 ]]; then
+        [[ -f $RELEASE_TRANSACTION_ROOT/completion.pending &&
+           -f $RELEASE_TRANSACTION_ROOT/scheduler-restore.pending &&
+           ! -L $RELEASE_TRANSACTION_ROOT/completion.pending &&
+           ! -L $RELEASE_TRANSACTION_ROOT/scheduler-restore.pending ]] \
+            || die 'recovery-only rollback found ambiguous transaction state'
+        cmp -s -- "$RELEASE_TRANSACTION_ROOT/completion.pending" \
+            "$RELEASE_TRANSACTION_ROOT/scheduler-restore.pending" \
+            || die 'recovery-only rollback scheduler tuple differs from completion'
+        primary=completion.pending
+        phase=completion-scheduler
+    elif [[ $marker_count -ne 1 ]]; then
+        die 'recovery-only rollback found ambiguous transaction state'
+    fi
+    if [[ -z $phase ]]; then
+        case "$primary" in
+            active) phase=active ;;
+            completion.pending) phase=completion ;;
+            scheduler-restore.pending) phase=scheduler ;;
+            *) die 'recovery-only rollback durable phase is unsupported' ;;
+        esac
+    fi
+    [[ $phase == "$RECOVERY_EXPECTED_PHASE" ]] \
+        || die 'recovery-only rollback durable phase changed before lock handoff'
+    entry=$RELEASE_TRANSACTION_ROOT/$primary
+    [[ -f $entry && ! -L $entry ]] || die 'recovery-only rollback marker is unsafe'
+    read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$entry") \
+        || die 'recovery-only rollback cannot inspect its marker'
+    [[ $owner == 0 && $group == 0 && $mode == 600 && $links == 1 &&
+       $size -gt 0 && $size -le 512 ]] \
+        || die 'recovery-only rollback marker metadata is unsafe'
+    cmp -s -- "$entry" <(printf 'version=1\ntoken=%s\noperation=%s\nsnapshot=%s\n' \
+        "$RECOVERY_EXPECTED_TOKEN" "$RECOVERY_EXPECTED_OPERATION" \
+        "$RECOVERY_EXPECTED_SNAPSHOT") \
+        || die 'recovery-only rollback transaction tuple changed before lock handoff'
 }
 
 validate_vendor_directory_chain() {
@@ -510,10 +609,15 @@ restore_celikpanel_selinux_labels() {
         "$LIBEXEC_DIR" \
         "$RELEASE_TRANSACTION_HELPER" \
         "$RELEASE_UPDATER" \
+        "$RELEASE_RECOVERY_RUNNER" \
+        "$RELEASE_STATE_DIR" \
+        "$RELEASE_RECOVERY_MANIFEST" \
         "$PANEL_CERT_HOOK" \
         "$UNIT_DIR/celikpanel-agent.service" \
         "$UNIT_DIR/celikpanel-firewall-restore.service" \
         "$UNIT_DIR/celikpanel-panel.service" \
+        "$RELEASE_RECOVERY_UNIT" \
+        "$RELEASE_RECOVERY_TIMER" \
         "$UNIT_DIR/celikpanel-agent.service.d" \
         "$UNIT_DIR/celikpanel-panel.service.d" \
         "$UNIT_DIR/celikpanel-agent.service.d/10-release-transaction-guard.conf" \
@@ -540,14 +644,8 @@ restore_celikpanel_selinux_labels() {
 
 install_release_transaction_guards_with_label_barrier() {
     local status=0
-    systemctl() {
-        if [[ $# -eq 1 && "$1" == daemon-reload ]]; then
-            restore_celikpanel_selinux_labels
-        fi
-        "$SYSTEMCTL_BIN" "$@"
-    }
-    release_txn_install_and_verify_unit_guards "$@" || status=$?
-    unset -f systemctl
+    release_txn_install_and_verify_unit_guards \
+        "$@" "$SYSTEMCTL_BIN" restore_celikpanel_selinux_labels || status=$?
     systemctl() {
         "$SYSTEMCTL_BIN" "$@"
     }
@@ -560,7 +658,7 @@ install_release_transaction_guards_with_label_barrier() {
 # önce sabit kalıcı sürüm kilidini al; descriptor'ını süreç boyunca koru.
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
-    local path_identity fd_identity
+    local path_identity fd_identity probe_fd probe_rc lock_count=0 line
     parent=$(dirname -- "$root")
     [[ "$parent" == /var/lib && -d "$parent" && ! -L "$parent" ]] || die "unsafe release transaction parent: $parent"
     [[ "$(readlink -e -- "$parent")" == "$parent" ]] || die "release transaction parent is not canonical"
@@ -569,6 +667,8 @@ prepare_and_acquire_release_transaction_lock() {
     (( (8#$mode & 0022) == 0 )) || die "release transaction parent must not be group/other writable"
     if [[ -e "$root" || -L "$root" ]]; then
         [[ -d "$root" && ! -L "$root" ]] || die "unsafe release transaction root"
+    elif [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        die "recovery-only rollback requires the existing transaction root"
     else
         install -d -m 0700 -o root -g root -- "$root" || die "cannot create release transaction root"
         sync -f -- "$parent" || die "cannot make release transaction root durable"
@@ -579,6 +679,8 @@ prepare_and_acquire_release_transaction_lock() {
     lock=$root/transaction.lock
     if [[ -e "$lock" || -L "$lock" ]]; then
         [[ -f "$lock" && ! -L "$lock" ]] || die "unsafe release transaction lock"
+    elif [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        die "recovery-only rollback requires the existing transaction lock"
     else
         (umask 077; set -o noclobber; : > "$lock") || die "cannot exclusively create release transaction lock"
         chown root:root -- "$lock" || die "cannot own release transaction lock"
@@ -589,6 +691,39 @@ prepare_and_acquire_release_transaction_lock() {
     read -r owner group mode links size < <(stat -Lc '%u %g %a %h %s' -- "$lock") || die "cannot inspect release transaction lock"
     [[ "$owner" == 0 && "$group" == 0 && "$mode" == 600 && "$links" == 1 && "$size" == 0 ]] || die "release transaction lock must be empty root:root mode 0600 with one link"
     path_identity=$(stat -Lc '%d:%i' -- "$lock") || die "cannot identify release transaction lock"
+    if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+        [[ -e "/proc/$BASHPID/fd/$RECOVERY_LOCK_FD" ]] \
+            || die "recovery transaction descriptor is closed"
+        fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$RECOVERY_LOCK_FD") \
+            || die "cannot identify recovery transaction descriptor"
+        [[ "$fd_identity" == "$path_identity" &&
+           "$fd_identity" == "$RECOVERY_LOCK_IDENTITY" ]] \
+            || die "recovery transaction descriptor identity mismatch"
+        while IFS= read -r line; do
+            case "$line" in
+                lock:*)
+                    lock_count=$((lock_count + 1))
+                    [[ "$line" == *" FLOCK ADVISORY WRITE "* ]] \
+                        || die "recovery transaction descriptor owns an unexpected lock"
+                    ;;
+            esac
+        done < "/proc/$BASHPID/fdinfo/$RECOVERY_LOCK_FD"
+        [[ "$lock_count" -eq 1 ]] \
+            || die "recovery transaction descriptor must own exactly one exclusive flock"
+        exec {probe_fd}<>"$lock" || die "cannot open independent recovery lock probe"
+        if flock -n -E 75 "$probe_fd" 2>/dev/null; then
+            flock -u "$probe_fd" >/dev/null 2>&1 || true
+            exec {probe_fd}>&-
+            die "recovery transaction descriptor does not exclude another opener"
+        else
+            probe_rc=$?
+        fi
+        exec {probe_fd}>&-
+        [[ "$probe_rc" -eq 75 ]] \
+            || die "independent recovery lock probe failed unexpectedly"
+        RELEASE_TRANSACTION_FD=$RECOVERY_LOCK_FD
+        return 0
+    fi
     exec {RELEASE_TRANSACTION_FD}<>"$lock"
     fd_identity=$(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$RELEASE_TRANSACTION_FD") || die "cannot identify inherited release transaction lock"
     [[ "$fd_identity" == "$path_identity" ]] || die "release transaction lock changed while opening"
@@ -604,6 +739,12 @@ systemctl() {
     "$SYSTEMCTL_BIN" "$@"
 }
 prepare_and_acquire_release_transaction_lock
+
+if [[ $RECOVER_EXISTING_TRANSACTION == 1 ]]; then
+    if ! verify_recovery_expected_tuple; then
+        exit 0
+    fi
+fi
 
 # Every privileged path component must be root-owned and non-writable so a
 # pathname cannot be redirected between verification and restore.
@@ -687,6 +828,11 @@ validate_running_release() {
     [[ -f "$root/deploy/panel-tls-snapshot.sh" &&
        ! -L "$root/deploy/panel-tls-snapshot.sh" ]] \
         || die "rollback release panel TLS snapshot helper is missing"
+    local required
+    for required in deploy/release-recovery-foundation.sh deploy/release-recovery.protocol deploy/release-sequence-policy; do
+        [[ -f "$root/$required" && ! -L "$root/$required" ]] \
+            || die "rollback release recovery contract is missing: $required"
+    done
 }
 
 # Rollback preflights run as root. Accept only an absolute, root-owned,
@@ -1247,13 +1393,17 @@ rollback_on_exit() {
 validate_running_release
 # shellcheck source=deploy/release-transaction-guard.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
+# shellcheck source=deploy/release-recovery-foundation.sh
+source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
 # shellcheck source=deploy/panel-tls-snapshot.sh
 source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
-install_release_transaction_guards_with_label_barrier \
+release_txn_verify_unit_guards \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
-    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" \
-    || die "release transaction service guards could not be installed"
+    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+    || die "release transaction service guards differ from the monotonic foundation"
+release_recovery_verify_foundation "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+    || die "rollback recovery foundation proof failed"
 release_txn_clear_stale_start_authorization "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$RELEASE_TRANSACTION_FD" || die "stale release start authorization could not be cleared"
 rollback_quiesce_present=0
 rollback_active_present=0
@@ -2001,12 +2151,15 @@ if [[ $rollback_pending_resume -eq 0 ]]; then
     systemctl daemon-reload
 fi
 
-# Restored unit bytes are guarded before enablement or any controlled start.
-# Geri yüklenen unit baytları etkinleştirme veya kontrollü başlangıçtan önce korunur.
-install_release_transaction_guards_with_label_barrier \
+# Recovery files, guards, and their monotonic manifest are deliberately never
+# restored from the snapshot. Prove the still-installed foundation exactly
+# before enablement or any controlled service start.
+release_txn_verify_unit_guards \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" \
-    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" \
-    || die "restored release transaction service guards could not be verified"
+    "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+    || die "restored release transaction service guards differ from the monotonic foundation"
+release_recovery_verify_foundation "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+    || die "rollback recovery foundation changed before service enablement"
 
 for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
     case "${enabled_states[$unit]}" in
@@ -2027,6 +2180,11 @@ for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewal
     [[ "${actual_enabled_state:-unknown}" == "${enabled_states[$unit]}" ]] \
         || die "restored enablement mismatch for $unit: got ${actual_enabled_state:-unknown}, want ${enabled_states[$unit]}"
 done
+
+release_txn_verify_unit_guards "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_RUNTIME_ROOT" "$UNIT_DIR" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_TRANSACTION_FD" "$SYSTEMCTL_BIN" \
+    || die "release transaction service guards changed before controlled starts"
+release_recovery_verify_foundation "$TRUSTED_RELEASE_ROOT" "$RELEASE_RECOVERY_RUNNER" "$RELEASE_RECOVERY_UNIT" "$RELEASE_RECOVERY_TIMER" "$RELEASE_TRANSACTION_HELPER" "$RELEASE_RECOVERY_AGENT_DROPIN" "$RELEASE_RECOVERY_PANEL_DROPIN" "$RELEASE_RECOVERY_MANIFEST" "$SYSTEMCTL_BIN" \
+    || die "rollback recovery foundation changed before controlled starts"
 
 # Prove exact restored bytes and both durable coordinators while all starts are
 # still blocked. A pending resume must satisfy the same proof without restoring again.

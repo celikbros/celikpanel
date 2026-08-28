@@ -18,6 +18,11 @@ expect_failure() {
     fi
 }
 
+extract_shell_function() {
+    local file=$1 function_name=$2
+    sed -n "/^${function_name}() {$/,/^}$/p" "$file"
+}
+
 write_quiesce_coordinator_ledger() {
     local child=$1
     printf '%s\t%s\t%s\t%s\n' \
@@ -170,16 +175,55 @@ if [[ "$1" == show && "$2" == --property=DropInPaths && "$3" == --value && $# -e
     if [[ ${FIXTURE_WRONG_DROPIN:-0} == 1 ]]; then
         printf '/wrong/drop-in.conf\n'
     else
+        [[ ${FIXTURE_RUNTIME_PRESERVE:-0} != 1 || $4 != celikpanel-agent.service ]] ||
+            printf '%s/%s.d/09-runtime-directory-preserve.conf\n' "$FIXTURE_SYSTEMD_ROOT" "$4"
         printf '%s/%s.d/10-release-transaction-guard.conf\n' "$FIXTURE_SYSTEMD_ROOT" "$4"
+        [[ ${FIXTURE_EXTRA_DROPIN:-0} != 1 ]] ||
+            printf '%s/%s.d/99-reset.conf\n' "$FIXTURE_SYSTEMD_ROOT" "$4"
     fi
+    exit 0
+fi
+if [[ "$1" == show && "$2" == --property=NeedDaemonReload && "$3" == --value && $# -eq 4 ]]; then
+    printf '%s\n' "${FIXTURE_NEEDS_RELOAD:-no}"
     exit 0
 fi
 exit 64
 SYSTEMCTL
 chmod 0755 "$tmp/bin/systemctl"
 export FIXTURE_SYSTEMD_ROOT=$systemd_root
-PATH=$tmp/bin:$PATH
+mkdir -m 0755 -- "$tmp/poison"
+cat > "$tmp/poison/systemctl" <<'POISON_SYSTEMCTL'
+#!/usr/bin/env bash
+set -euo pipefail
+: > "$POISON_SYSTEMCTL_SENTINEL"
+exit 99
+POISON_SYSTEMCTL
+chmod 0755 -- "$tmp/poison/systemctl"
+export POISON_SYSTEMCTL_SENTINEL=$tmp/poison-systemctl-called
+PATH=$tmp/poison:$PATH
 export PATH
+
+# Every operator recovery entrypoint binds all legacy bare systemctl callsites
+# through the same exact wrapper. A PATH shadow must never observe execution.
+for entrypoint in \
+    "$ROOT/deploy/abort-pre-mutation-active-update.sh" \
+    "$ROOT/deploy/finalize-pending-update.sh" \
+    "$ROOT/deploy/finalize-pending-rollback.sh" \
+    "$ROOT/deploy/recover-active-update-database.sh"
+do
+    grep -Fqx 'SYSTEMCTL_BIN=/usr/bin/systemctl' "$entrypoint" ||
+        fail "recovery entrypoint lacks exact systemctl identity: $entrypoint"
+    (
+        die() { fail "$1"; }
+        eval "$(extract_shell_function "$entrypoint" validate_exact_systemctl)"
+        eval "$(extract_shell_function "$entrypoint" systemctl)"
+        SYSTEMCTL_BIN=$tmp/bin/systemctl
+        validate_exact_systemctl
+        systemctl daemon-reload
+    )
+done
+[[ ! -e $POISON_SYSTEMCTL_SENTINEL ]] ||
+    fail "a recovery entrypoint invoked PATH-shadow systemctl"
 
 # Missing helper parents are created only below one already-trusted level;
 # aliases, writable/non-root identities and missing grandparents fail closed.
@@ -211,11 +255,11 @@ expect_failure "helper parent with a missing grandparent was accepted" \
 chmod 0700 -- "$systemd_root"
 expect_failure "mode-0700 systemd unit root was accepted" \
     release_txn_install_and_verify_unit_guards \
-        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 chmod 0755 -- "$systemd_root"
 
 release_txn_install_and_verify_unit_guards \
-    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 [[ "$(stat -Lc '%u %g %a' -- "$helper_parent")" == "0 0 755" ]] \
     || fail "missing secure helper parent was not created safely"
 [[ "$(stat -Lc '%u %g %a %h' -- "$helper_path")" == "0 0 755 1" ]] \
@@ -231,6 +275,67 @@ for unit in celikpanel-agent.service celikpanel-panel.service; do
         "$helper_path" "$transaction_root" "$runtime_root") \
         || fail "drop-in content mismatch for $unit"
 done
+release_txn_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+[[ ! -e $POISON_SYSTEMCTL_SENTINEL ]] ||
+    fail "PATH-shadow systemctl was invoked instead of the exact fixture"
+
+# Recovery paths deliberately load the trusted runtime-directory preserve
+# drop-in before the transaction guard. Only the exact ordered 09+10 set is
+# accepted; any third drop-in still fails closed.
+printf '[Service]\nRuntimeDirectoryPreserve=yes\n' \
+    > "$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf"
+chmod 0644 -- "$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf"
+runtime_preserve_dropin=$systemd_root/celikpanel-agent.service.d/09-runtime-directory-preserve.conf
+export FIXTURE_RUNTIME_PRESERVE=1
+release_txn_install_and_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+    "$tmp/bin/systemctl" "" "$runtime_preserve_dropin"
+release_txn_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+    "$tmp/bin/systemctl" "$runtime_preserve_dropin"
+# A normal next update does not carry recovery-only arguments. It must
+# auto-detect and prove the persistent exact agent 09 drop-in.
+release_txn_install_and_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+    "$tmp/bin/systemctl"
+release_txn_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+    "$tmp/bin/systemctl"
+export FIXTURE_EXTRA_DROPIN=1
+expect_failure "unexpected third drop-in joined the trusted 09+10 set" \
+    release_txn_install_and_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+        "$tmp/bin/systemctl" "" "$runtime_preserve_dropin"
+unset FIXTURE_EXTRA_DROPIN FIXTURE_RUNTIME_PRESERVE
+rm -f -- "$runtime_preserve_dropin"
+
+# A later drop-in can clear ExecCondition while leaving the expected guard path
+# visible. Exact-only DropInPaths makes that effective reset fail closed.
+for unit in celikpanel-agent.service celikpanel-panel.service; do
+    printf '[Service]\nExecCondition=\n' \
+        >"$systemd_root/$unit.d/99-reset.conf"
+    chmod 0644 "$systemd_root/$unit.d/99-reset.conf"
+done
+export FIXTURE_EXTRA_DROPIN=1
+expect_failure "later reset drop-in bypassed guard installation proof" \
+    release_txn_install_and_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+expect_failure "later reset drop-in bypassed guard recovery proof" \
+    release_txn_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+unset FIXTURE_EXTRA_DROPIN
+rm -f -- "$systemd_root"/*.service.d/99-reset.conf
+release_txn_verify_unit_guards \
+    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+export FIXTURE_NEEDS_RELOAD=yes
+expect_failure "pending manager reload bypassed guard installation proof" \
+    release_txn_install_and_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+expect_failure "pending manager reload bypassed guard recovery proof" \
+    release_txn_verify_unit_guards \
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
+unset FIXTURE_NEEDS_RELOAD
 "$helper_path" "$transaction_root" "$runtime_root" \
     || fail "start guard blocked an ordinary start without a release marker"
 
@@ -303,13 +408,13 @@ mv -- "$tmp/panel.service.regular" "$snapshot_units/celikpanel-panel.service"
 ln -- "$helper_path" "$helper_path.alias"
 expect_failure "hard-linked existing start guard was accepted" \
     release_txn_install_and_verify_unit_guards \
-        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 rm -f -- "$helper_path.alias"
 agent_dropin=$systemd_root/celikpanel-agent.service.d/10-release-transaction-guard.conf
 ln -- "$agent_dropin" "$agent_dropin.alias"
 expect_failure "hard-linked existing systemd drop-in was accepted" \
     release_txn_install_and_verify_unit_guards \
-        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 rm -f -- "$agent_dropin.alias"
 
 # daemon-reload is not enough: the manager must report each exact loaded path.
@@ -317,7 +422,7 @@ rm -f -- "$agent_dropin.alias"
 export FIXTURE_WRONG_DROPIN=1
 expect_failure "systemd loaded-path mismatch was accepted" \
     release_txn_install_and_verify_unit_guards \
-        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd"
+        "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" "$tmp/bin/systemctl"
 unset FIXTURE_WRONG_DROPIN
 
 token=$(release_txn_generate_token)

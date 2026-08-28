@@ -1,0 +1,12 @@
+[Unit]
+Description=CelikPanel release transaction recovery watchdog
+Documentation=https://celikpanel.net/
+
+[Timer]
+OnBootSec=5s
+OnUnitInactiveSec=30s
+AccuracySec=1s
+Unit=celikpanel-release-recovery.service
+
+[Install]
+WantedBy=timers.target
