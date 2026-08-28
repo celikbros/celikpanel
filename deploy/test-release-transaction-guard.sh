@@ -165,9 +165,13 @@ expect_failure "unlocked descriptor was accepted while a foreign process held th
 stop_foreign_lock_holder
 flock -n "$lock_fd" || fail "fixture could not reacquire global transaction lock"
 
+systemctl_trace=$tmp/systemctl.trace
+: > "$systemctl_trace"
+export FIXTURE_SYSTEMCTL_TRACE=$systemctl_trace
 cat > "$tmp/bin/systemctl" <<'SYSTEMCTL'
 #!/usr/bin/env bash
 set -euo pipefail
+printf '%s\n' "$*" >> "${FIXTURE_SYSTEMCTL_TRACE:?}"
 if [[ "$1" == daemon-reload && $# -eq 1 ]]; then
     exit 0
 fi
@@ -291,17 +295,65 @@ export FIXTURE_RUNTIME_PRESERVE=1
 release_txn_install_and_verify_unit_guards \
     "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
     "$tmp/bin/systemctl" "" "$runtime_preserve_dropin"
-release_txn_verify_unit_guards \
-    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
-    "$tmp/bin/systemctl" "$runtime_preserve_dropin"
 # A normal next update does not carry recovery-only arguments. It must
 # auto-detect and prove the persistent exact agent 09 drop-in.
 release_txn_install_and_verify_unit_guards \
     "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
     "$tmp/bin/systemctl"
-release_txn_verify_unit_guards \
-    "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
-    "$tmp/bin/systemctl"
+
+# Verification is strictly read-only. Prove both the explicit recovery call
+# and the normal auto-detect call preserve the helper plus exact 09/10 files,
+# including inode, nanosecond mtime and content hash, while systemd receives
+# only the four required show queries.
+guard_verify_artifacts=(
+    "$helper_path"
+    "$runtime_preserve_dropin"
+    "$systemd_root/celikpanel-agent.service.d/10-release-transaction-guard.conf"
+    "$systemd_root/celikpanel-panel.service.d/10-release-transaction-guard.conf"
+)
+guard_artifact_state() {
+    local artifact=$1 hash
+    hash=$(/usr/bin/sha256sum -- "$artifact")
+    printf '%s\t%s\t%s\n' \
+        "$(/usr/bin/stat -Lc '%d:%i' -- "$artifact")" \
+        "$(/usr/bin/stat -Lc '%y' -- "$artifact")" \
+        "${hash%% *}"
+}
+declare -A guard_verify_before=()
+for artifact in "${guard_verify_artifacts[@]}"; do
+    guard_verify_before["$artifact"]=$(guard_artifact_state "$artifact")
+done
+guard_verify_expected_trace=$tmp/guard-verify.expected
+cat > "$guard_verify_expected_trace" <<'GUARD_VERIFY_TRACE'
+show --property=DropInPaths --value celikpanel-agent.service
+show --property=NeedDaemonReload --value celikpanel-agent.service
+show --property=DropInPaths --value celikpanel-panel.service
+show --property=NeedDaemonReload --value celikpanel-panel.service
+GUARD_VERIFY_TRACE
+assert_guard_verify_read_only() {
+    local additional_dropin=${1:-} artifact after
+    : > "$systemctl_trace"
+    if [[ -n $additional_dropin ]]; then
+        release_txn_verify_unit_guards \
+            "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+            "$tmp/bin/systemctl" "$additional_dropin"
+    else
+        release_txn_verify_unit_guards \
+            "$transaction_root" "$runtime_root" "$systemd_root" "$helper_path" "$lock_fd" \
+            "$tmp/bin/systemctl"
+    fi
+    ! grep -Eq '^(daemon-reload|enable|start)( |$)' "$systemctl_trace" \
+        || fail "verify-only guard call performed a systemd mutation"
+    cmp -s -- "$guard_verify_expected_trace" "$systemctl_trace" \
+        || fail "verify-only guard call issued commands other than exact show queries"
+    for artifact in "${guard_verify_artifacts[@]}"; do
+        after=$(guard_artifact_state "$artifact")
+        [[ $after == "${guard_verify_before[$artifact]}" ]] \
+            || fail "verify-only guard call mutated $artifact"
+    done
+}
+assert_guard_verify_read_only "$runtime_preserve_dropin"
+assert_guard_verify_read_only
 export FIXTURE_EXTRA_DROPIN=1
 expect_failure "unexpected third drop-in joined the trusted 09+10 set" \
     release_txn_install_and_verify_unit_guards \
