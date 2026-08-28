@@ -14,7 +14,6 @@ import {
 } from './SystemUpdateOperation';
 
 type Translate = ReturnType<typeof useI18n>['t'];
-const START_REQUEST_TIMEOUT_MS = 15000;
 
 type UpdateCheck = {
     supported: boolean;
@@ -58,18 +57,6 @@ async function codedResponseHint(response: Response, t: Translate): Promise<{ co
         ...(apiError.code ? { code: apiError.code } : {}),
         message: apiError.code ? apiErrorText(apiError, t) : systemUpdateResponseHint(response.status, t),
     };
-}
-
-function definitiveStartRejection(status: number): boolean {
-    return status === 400 || status === 401 || status === 403 || status === 404
-        || status === 405 || status === 409 || status === 413 || status === 415
-        || status === 422 || status === 429;
-}
-
-function startRejectionHint(status: number, t: Translate): string {
-    if (status === 401) return t('panelUpdate.sessionExpiredBeforeStart');
-    if (status === 429) return t('panelUpdate.rateLimitedBeforeStart');
-    return systemUpdateResponseHint(status, t);
 }
 
 export function PanelUpdateCard() {
@@ -142,48 +129,13 @@ export function PanelUpdateCard() {
         // The provider durably stores the exact request before this component
         // is allowed to send the only start POST. Its overlay is mounted above
         // routing, so navigation cannot unmount the tracker.
-        if (!systemUpdate.begin(exactMarker)) {
-            setMessage(t('panelUpdate.markerFailed'));
-            return;
-        }
         actionInFlight.current = true;
         setStarting(true);
         setMessage('');
-        const controller = new AbortController();
-        const startTimeout = window.setTimeout(() => controller.abort(), START_REQUEST_TIMEOUT_MS);
         try {
-            const response = await fetch('/api/v1/panel/update/start', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                signal: controller.signal,
-                body: JSON.stringify({
-                    request_id: exactMarker.request_id,
-                    confirmed: true,
-                    current_version: exactMarker.current_version,
-                    current_commit: exactMarker.current_commit,
-                    ...exactMarker.target,
-                }),
-            });
-            if (!response.ok) {
-                const rejection = await codedResponseHint(response, t);
-                if (definitiveStartRejection(response.status)
-                    || rejection.code === 'PANEL_UPDATE_UNAVAILABLE') {
-                    const failure = rejection.code ? rejection.message : startRejectionHint(response.status, t);
-                    systemUpdate.rejectStart(exactMarker, failure);
-                    setMessage(failure);
-                    return;
-                }
-                systemUpdate.noteUncertain(exactMarker, rejection.message, response.status >= 500);
-                // No POST is retried automatically. Only ambiguous server
-                // failures retain the marker and drive exact status polling.
-                return;
-            }
-            systemUpdate.noteAccepted(exactMarker);
-        } catch {
-            systemUpdate.noteUncertain(exactMarker, t('panelUpdate.ambiguous'), true);
+            const result = await systemUpdate.start(exactMarker);
+            if (result.kind === 'failed') setMessage(result.message);
         } finally {
-            window.clearTimeout(startTimeout);
             setStarting(false);
             actionInFlight.current = false;
         }
@@ -233,7 +185,7 @@ export function PanelUpdateCard() {
 
             {target && check?.available && !active && (
                 <div className="mt-4">
-                    <Button type="button" onClick={() => void startUpdate()} disabled={starting}>
+                    <Button id="panel-update-start-button" type="button" onClick={() => void startUpdate()} disabled={starting}>
                         {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
                         {starting ? t('panelUpdate.starting') : t('panelUpdate.start', { version: target.version })}
                     </Button>

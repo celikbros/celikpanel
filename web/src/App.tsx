@@ -3,8 +3,10 @@ import {
   Component,
   lazy,
   Suspense,
+  useCallback,
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   type ComponentType,
   type ErrorInfo,
@@ -18,6 +20,10 @@ import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
+import {
+  publishSystemUpdateAuthentication,
+  shouldApplyUnauthorizedResponse,
+} from './lib/systemUpdateAuthSignal';
 
 function lazyNamed<TModule, TKey extends keyof TModule>(
   loader: () => Promise<TModule>,
@@ -430,10 +436,24 @@ function AppRoutes() {
 function AuthGate() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const authGenerationRef = useRef(0);
+  const transitionAuthentication = useCallback((nextUser: CurrentUser | null) => {
+    authGenerationRef.current += 1;
+    setUser(nextUser);
+  }, []);
+
+  useLayoutEffect(() => {
+    publishSystemUpdateAuthentication(!loading && user !== null);
+  }, [loading, user]);
+
+  useEffect(() => () => publishSystemUpdateAuthentication(false), []);
 
   useEffect(() => {
-    api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
-  }, []);
+    api.me()
+      .then(transitionAuthentication)
+      .catch(() => transitionAuthentication(null))
+      .finally(() => setLoading(false));
+  }, [transitionAuthentication]);
 
   // Watch every API response; a 401 means the session is gone, so return
   // to the login screen instead of showing broken pages.
@@ -442,15 +462,19 @@ function AuthGate() {
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
+      const requestGeneration = authGenerationRef.current;
       const res = await originalFetch(...args);
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
-      if (res.status === 401 && url.includes('/api/') && !url.includes('/auth/login')) {
-        setUser(null);
+      if (res.status === 401
+        && url.includes('/api/')
+        && !url.includes('/auth/login')
+        && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
+        transitionAuthentication(null);
       }
       return res;
     };
     return () => { window.fetch = originalFetch; };
-  }, []);
+  }, [transitionAuthentication]);
 
   if (loading) {
     return (
@@ -461,28 +485,32 @@ function AuthGate() {
   }
 
   if (!user) {
-    return <Login onSuccess={setUser} />;
+    return <Login onSuccess={transitionAuthentication} />;
   }
 
   return (
-    <AuthProvider user={user} onLogout={() => setUser(null)}>
-      <BrowserRouter>
-        <RouteLoadBoundary>
-          <Suspense fallback={<PageLoading />}>
-            <SystemUpdateOperationProvider>
-              <ComponentOperationProvider>
-                <AppRoutes />
-              </ComponentOperationProvider>
-            </SystemUpdateOperationProvider>
-          </Suspense>
-        </RouteLoadBoundary>
-      </BrowserRouter>
+    <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
+      <RouteLoadBoundary>
+        <Suspense fallback={<PageLoading />}>
+          <ComponentOperationProvider>
+            <AppRoutes />
+          </ComponentOperationProvider>
+        </Suspense>
+      </RouteLoadBoundary>
     </AuthProvider>
   );
 }
 
 function App() {
-  return <AuthGate />;
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <SystemUpdateOperationProvider>
+        <BrowserRouter>
+          <AuthGate />
+        </BrowserRouter>
+      </SystemUpdateOperationProvider>
+    </Suspense>
+  );
 }
 
 export default App;

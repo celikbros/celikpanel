@@ -2100,5 +2100,7 @@ export const tr: Record<TranslationKey, string> = {
     'panelUpdate.markerFailed': 'İstek kimliği tarayıcıda kalıcılaştırılamadı; güncelleme başlatılmadı.',
     'panelUpdate.sending': 'Güncelleme isteği gönderiliyor…',
     'panelUpdate.accepted': 'İstek kabul edildi; güvenli durum takibi başladı.',
-    'panelUpdate.ambiguous': 'POST yanıtı belirsiz. İstek tekrarlanmayacak; aynı kimlik durum üzerinden izlenecek.',
+    'panelUpdate.canonicalChecking': 'Tamamlanmamış güncelleme denetleniyor...',
+    'panelUpdate.interactionLocked': 'Bu işlem doğrulanana kadar sayfadan ayrılamazsınız.',
+    'panelUpdate.ambiguous': 'Başlatma yanıtı belirsiz. İstek tekrarlanmayacak; aynı sunucu durumu izlenecek.',
 };

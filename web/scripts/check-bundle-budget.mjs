@@ -17,7 +17,9 @@ const entryName = basename(entryMatch[1])
 const budgets = {
   entry: { raw: 300 * 1024, gzip: 90 * 1024 },
   async: { raw: 160 * 1024, gzip: 45 * 1024 },
-  boot: { raw: 360 * 1024, gzip: 110 * 1024 },
+  // The global, fail-closed update tracker is boot-critical by design. Its
+  // canonical cross-tab fence adds less than 1 KiB and must not be lazy-loaded.
+  boot: { raw: 361 * 1024, gzip: 110 * 1024 },
   route: { raw: 280 * 1024, gzip: 80 * 1024 },
 }
 
