@@ -185,7 +185,7 @@ same-sequence/same-version retry is the only equality case.
 
 ### One-time enrollment on existing servers
 
-Fresh Alpha41 installations use the signed bootstrap flow above and do not
+Fresh Alpha41 and later installations use the signed bootstrap flow above and do not
 need a separate manual enrollment. For an existing installation, first
 install or upgrade the reviewed panel/agent pair through the normal paired
 release procedure and verify both binaries report the intended build.

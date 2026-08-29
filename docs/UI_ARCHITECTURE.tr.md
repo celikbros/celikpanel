@@ -80,4 +80,8 @@ Panel **hem açık hem koyu temayı** destekler; kullanıcı bir tema değiştir
 
 Bu belge **yapı** (iskelet) hakkındadır: tek kabuk, yetkiye göre render. Yukarıdaki tema kararının ötesinde, daha ince **görsel tasarım** (tipografi ölçeği, boşluk ritmi, bileşen stili) konusunda sessiz kalır. Bunlar yeniden tasarım işi başladığında seçilir ve bu mimariyi değiştirmeden üzerine giydirilir — bir yeniden tasarım kabuğu yeniden boyar, yeniden mimarileştirmez.
 
-Mevcut kod bunu **henüz** izlemiyor: navigasyon `Layout.tsx` içinde sabit kodlanmış ve herkes için aynı. Bu mimariyi benimsemek, [ROLES.tr.md](ROLES.tr.md)'yi hayata geçirmenin frontend yarısıdır ve yetkilendirme/sahiplik işiyle birlikte planlanmıştır.
+Mevcut kod bu yapıyı izler. `web/src/nav.ts`, role duyarlı tek navigasyon
+registry'sidir; sidebar ve rota erişim kontrolleri aynı girdilerden türetilirken
+`Layout.tsx` ortak kabuk olarak kalır. Bu registry bir arayüz sınırıdır,
+güvenlik otoritesi değildir: backend kimlik doğrulama, sahiplik ve yetkilendirme
+kontrolleri her endpoint için zorunlu kalır.
