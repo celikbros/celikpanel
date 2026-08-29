@@ -182,6 +182,9 @@ yayımlamadan açık veya ticari bir sürüm, imzalı kaynak iddiasında bulunma
 
 ## Belgeler
 
+- [Mühendislik Devri](docs/HANDOFF.tr.md) — dondurulmuş kaynak referansı, otorite sırası ve yeni ekip kontrol listesi
+- [Tarihli Canlı Durum](docs/LIVE-STATE-2026-08-29.tr.md) — doğrulanmış, beyan edilmiş ve bilinmeyen sunucu bilgilerini ayrı tutan kayıt
+- [Risk Sicili](docs/RISK-REGISTER.tr.md) — çıkış ölçütleriyle açık mühendislik ve operasyon riskleri
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.tr.md) — yalnız panel kapsamı, onay, denetim ve abonelik kapısı planı
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.tr.md) — imzalı SQLite/JSON tarifleri ve platform adaptörü sınırı
 - [Mağaza](docs/STORE.tr.md) — teklif kataloğu, hak sınırı ve operatör iş akışı

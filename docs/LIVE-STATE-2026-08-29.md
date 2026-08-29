@@ -32,7 +32,7 @@ report and prove that exact identity.
 | Official release authority | Ed25519 signed manifest v2 and detached signature verified | VERIFIED |
 | Manifest-authorized archive | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22,644,115 bytes | VERIFIED |
 | Git tag signature | Unsigned | VERIFIED; the tag signature is not update authority |
-| Handoff branch | `docs/alpha51-engineering-handoff` | Documentation-only; not part of the Alpha51 binary baseline |
+| Handoff documentation on `main` | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | VERIFIED; documentation-only, not part of the Alpha51 binary baseline |
 | GitHub open pull requests | 5 drafts: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | VERIFIED as of 2026-08-29; none is part of Alpha51 |
 | Download portal serves the exact signed Alpha51 asset set | Not proven here | UNKNOWN / REVERIFY |
 | Handoff cleanup result | Duplicate worktrees/branches and listed debris removed; only the primary registered worktree remained | VERIFIED handoff observation |
@@ -46,9 +46,9 @@ not be merged as-is. Draft PR #73, head `archive/alpha35-portal-tooling` at
 commit `0ef899f3cb96390c4ef3822f199eddc67bb0ee1f`, archives five unique Alpha35
 portal scripts and an unpublished PR72-follow-up patch. It is archival and must
 not be merged or executed as-is. No all-checks-green claim is made for any
-draft. Merging the handoff branch may put `main` ahead of the Alpha51 tag with
-documentation-only changes; the published binary remains Alpha51 until a
-separate release is produced.
+draft. PR #74 merged the documentation-only handoff into `main`, so `main` is
+ahead of the Alpha51 source tag while the published binary remains Alpha51
+until a separate release is produced.
 
 After unique work was preserved in PR #72 and PR #73, repository cleanup
 removed 109 registered duplicate worktrees, 105 stale local branches, 56 stale

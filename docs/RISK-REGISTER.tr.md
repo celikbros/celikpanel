@@ -2,8 +2,8 @@
 
 *Referans: 29 Ağustos 2026 · [English](RISK-REGISTER.md)*
 
-Bu sicil, bilinen devir boşluklarını ve `docs/alpha51-engineering-handoff`
-dalında tamamlanan azaltımları izler. Sır değeri veya gerçek custodian adı
+Bu sicil, bilinen devir boşluklarını ve [PR #74](https://github.com/celikbros/celikpanel/pull/74)
+ile `main` dalına merge edilen azaltımları izler. Sır değeri veya gerçek custodian adı
 içermez. Her sorumlu, hedef tarih, kabul ve harici kanıt referansı onaylı repo
 dışı devir sisteminde atanmalıdır.
 
@@ -25,8 +25,8 @@ edilmez.
 - AÇIK: Azaltma tamamlanmadı.
 - YENİDEN DOĞRULA: Koşul değişmiş olabilir; güncel kanıt yoktur.
 - ENGELLEYİCİ: Çıkış ölçütleri geçmeden ilgili işlemi yapmayın.
-- DEVİR DALINDA KAPALI: Yalnız repo içi çıkış ölçütleri bu dalda karşılandı;
-  kapanışı `main` üzerinde geçerli saymadan önce inceleme ve merge'i doğrulayın.
+- MAIN ÜZERİNDE KAPALI: Yalnız repo içi çıkış ölçütleri `main` üzerinde
+  karşılandı; bu durum canlı sunucu kanıtı değildir.
 - KISMEN AZALTILDI / YENİDEN DOĞRULA: Sınırlı bir bileşen düzeltildi; kalan
   koşul için kabul kanıtı gerekir.
 - Kritik: Geri döndürülemez duruma, güvensiz yetkili işleme veya
@@ -39,8 +39,8 @@ edilmez.
 
 | ID | Önem | Durum | Risk |
 |---|---|---|---|
-| R-001 | Kritik | DEVİR DALINDA KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
-| R-002 | Yüksek | DEVİR DALINDA KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
+| R-001 | Kritik | MAIN ÜZERİNDE KAPALI | Operations artık snapshot v6'yı, güncel v4/v5 reddini ve tarihsel sürüm sınırını anlatıyor |
+| R-002 | Yüksek | MAIN ÜZERİNDE KAPALI | README artık isteğe bağlı yerel GPG kullanımını canonical Ed25519 update otoritesinden ayırıyor |
 | R-003 | Kritik | AÇIK / GERÇEK TENANT İÇİN ENGELLEYİCİ | Tam kontrol düzlemi disaster backup ve restore tatbikatı kanıtlanmadı |
 | R-004 | Yüksek | YENİDEN DOĞRULA | Frankfurt canlı kimliği bilinmiyor; Boston kanıtı yalnız kısmi |
 | R-005 | Yüksek | AÇIK | Boston/Frankfurt ortam sınıfı üretime-hazır-değil politikasıyla çelişkili |
@@ -48,9 +48,9 @@ edilmez.
 | R-007 | Yüksek | AÇIK | Zorunlu gerçek VM install/update/rollback/reboot kanıtı devirde yok |
 | R-008 | Yüksek | YENİDEN DOĞRULA | Alpha51 GitHub sürüm zinciri doğrulandı; portal eşitliği ve kurulu release floor'lar kanıtlanmadı |
 | R-009 | Orta | AÇIK | Harici paket/repo/CA endpoint'leri canlı doğrulama kapısı olmadan bayatlayabilir |
-| R-010 | Orta | DEVİR DALINDA KAPALI | Mimari, onboarding ve uygulama-durumu belgeleri Alpha51 ile uzlaştırıldı |
+| R-010 | Orta | MAIN ÜZERİNDE KAPALI | Mimari, onboarding ve uygulama-durumu belgeleri Alpha51 ile uzlaştırıldı |
 | R-011 | Yüksek | AÇIK | Erişim, signing key, provider ve olay custodian'ları devirde atanmadı |
-| R-012 | Orta | DEVİR DALINDA KAPALI/AZALTILMIŞ / TEMİZ MAIN YENİDEN DOĞRULA | Root scaffold, kopya worktree/dallar ve listelenen kalıntılar kaldırıldı; yeni ekip temiz bir `main` checkout'unu doğrulamalıdır |
+| R-012 | Orta | MAIN ÜZERİNDE KAPALI/AZALTILMIŞ / YENİ EKİP TEMİZ CHECKOUT YENİDEN DOĞRULA | Root scaffold, kopya worktree/dallar ve listelenen kalıntılar kaldırıldı; yeni ekip temiz bir `main` checkout'unu doğrulamalıdır |
 | R-013 | Orta | AÇIK | Tarayıcı golden-path, kritik endpoint ve latency kanıtı eksik |
 | R-014 | Orta | AÇIK | Olay müdahalesi, escalation ve postmortem sahipliği tanımlı değil |
 
@@ -58,21 +58,21 @@ edilmez.
 
 ### R-001 — Snapshot sözleşmesi belge uyumsuzluğu
 
-- Kanıt: Bu dal docs/OPERATIONS.md ve Türkçe eşini snapshot v6'ya günceller,
+- Kanıt: `main` docs/OPERATIONS.md ve Türkçe eşini snapshot v6'ya günceller,
   güncel updater/rollback yolunun v4/v5'i reddettiğini belirtir ve eski
   snapshot'ı eşleşen değişmez tarihsel recovery sürümü ile rollback yardımcısıyla
   sınırlar.
 - Etki: Yeni operatör uyumsuz rollback seçebilir veya restore edilemeyen
   snapshot'ın kabul edildiğini sanabilir.
 - Kapanış dayanağı: İngilizce/Türkçe runbook'lar artık kaynak sözleşmesiyle
-  uyumludur. Merge edilene kadar değişmez Alpha51 scriptleri ve sözleşme testleri
-  otorite olarak kalır.
-- Durum: DEVİR DALINDA KAPALI. Bu yalnız belge kapanışıdır; canlı veya disposable
+  uyumludur. Değişmez Alpha51 scriptleri ve sözleşme testleri binary otoritesi
+  olarak kalır.
+- Durum: MAIN ÜZERİNDE KAPALI. Bu yalnız belge kapanışıdır; canlı veya disposable
   restore kanıtı R-003 ve R-007 tarafından izlenmeye devam eder.
 
 ### R-002 — Release-signing otoritesi belirsizliği
 
-- Kanıt: Bu dal README'yi; Ed25519 imzalı manifest v2, release sequence,
+- Kanıt: `main` README'yi; Ed25519 imzalı manifest v2, release sequence,
   sabitlenmiş public key ve tam altı ürünü etiketli sürüm update otoritesi olarak
   tanımlayacak şekilde günceller. İsteğe bağlı yerel GPG imzalama açıkça update
   otoritesi değildir.
@@ -80,7 +80,7 @@ edilmez.
   yetkili update otoritesinin oluştuğunu sanabilir.
 - Kapanış dayanağı: README ve release-signing rehberi artık otorite sınırını
   açıklar; Alpha51 resmi manifest/imzası ile altı ürün kümesi doğrulanmıştır.
-- Durum: DEVİR DALINDA KAPALI. Portal/canlı eşitliği R-008'de izlenir ve bu belge
+- Durum: MAIN ÜZERİNDE KAPALI. Portal/canlı eşitliği R-008'de izlenir ve bu belge
   kapanışından türetilemez.
 
 ### R-003 — Kontrol düzlemi disaster recovery kanıtsız
@@ -183,7 +183,7 @@ edilmez.
 
 ### R-010 — Belge ve onboarding drift'i
 
-- Kanıt: Bu dal README'yi Alpha51 ve imzalı update yoluyla uyumlu yapar, Roadmap
+- Kanıt: `main` README'yi Alpha51 ve imzalı update yoluyla uyumlu yapar, Roadmap
   metriklerini elle tutmak yerine generated yapar, iki UI mimarisi belgesinde
   role-aware web/src/nav.ts registry'sini açıklar ve genel web/README.md şablonunu
   ürüne özel onboarding ile değiştirir.
@@ -191,7 +191,7 @@ edilmez.
   anlayabilir veya ürün yerine scaffolding'i yeniden kurabilir.
 - Kapanış dayanağı: README, Roadmap durumu, mimari ve web onboarding Alpha51 ile
   uzlaştırılmıştır; eskiyebilecek fact snapshot'ları tarihlidir veya generated'dır.
-- Durum: DEVİR DALINDA KAPALI. Gelecekte kaynak değiştiğinde ilgili bilgiler yine
+- Durum: MAIN ÜZERİNDE KAPALI. Gelecekte kaynak değiştiğinde ilgili bilgiler yine
   güncellenmeli veya üretilmelidir.
 
 ### R-011 — Custodian ve erişim sürekliliği
@@ -209,7 +209,7 @@ edilmez.
 
 ### R-012 — Yanlış ağaç ve repo çöpü riski
 
-- Kanıt: Bu dal gereksiz root package.json/package-lock.json create-vite
+- Kanıt: `main` gereksiz root package.json/package-lock.json create-vite
   scaffold'unu kaldırır. Benzersiz ürünler PR #72 ve PR #73'te korunduktan sonra
   temizlik; 109 kayıtlı kopya worktree'yi, 105 eski yerel dalı, 56 eski remote
   dalı, `.attic`, `.worktrees`, `.claude/worktrees`, root `__pycache__` ve geçici
@@ -219,10 +219,10 @@ edilmez.
   yanlışlıkla commit edilip incelenebilir.
 - Acil kontrol: Yeni ekip çalışmaya başlamadan önce taze bir `main` checkout'u
   kullanmalı, git status'u ve worktree listesini doğrulamalıdır.
-- Çıkış ölçütü: Temizlik bu dalda kapanmış/azaltılmıştır; yeni ekip kanıtı temiz
+- Çıkış ölçütü: Temizlik `main` üzerinde kapanmış/azaltılmıştır; yeni ekip kanıtı temiz
   bir `main` checkout'unda yalnız kasıtlı kayıtlı worktree'ler gösterir. Tracked
   `.design-sync` kalıntı değildir ve bilinçli olarak tutulur.
-- Durum: DEVİR DALINDA KAPALI/AZALTILMIŞ / TEMİZ MAIN YENİDEN DOĞRULA. Bu
+- Durum: MAIN ÜZERİNDE KAPALI/AZALTILMIŞ / YENİ EKİP TEMİZ CHECKOUT YENİDEN DOĞRULA. Bu
   temizlik canlı sunucuda değişiklik yapmamış ve canlı runtime kanıtı
   sağlamamıştır.
 - Sorumlu / hedef / kanıt: REPO DIŞI / ATA.

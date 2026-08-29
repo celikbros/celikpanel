@@ -32,7 +32,7 @@ commit'ini sunucu satırına kopyalamayın.
 | Resmi sürüm otoritesi | Ed25519 imzalı manifest v2 ve ayrık imza doğrulandı | DOĞRULANMIŞ |
 | Manifest'in yetkilendirdiği arşiv | SHA256 `57d0321a13388392872bc3aef9af62646e2d700c23a4e0305d479df1e80ff365`; 22.644.115 bayt | DOĞRULANMIŞ |
 | Git etiketi imzası | İmzasız | DOĞRULANMIŞ; etiket imzası update otoritesi değildir |
-| Devir dalı | `docs/alpha51-engineering-handoff` | Yalnız belge; Alpha51 binary referansının parçası değildir |
+| `main` üzerindeki devir belgeleri | [PR #74](https://github.com/celikbros/celikpanel/pull/74), merge commit `e29df589594b2b5929d067a0174ab98d8182e4b5` | DOĞRULANMIŞ; yalnız belgedir, Alpha51 binary referansının parçası değildir |
 | GitHub açık pull request'leri | 5 taslak: [#69](https://github.com/celikbros/celikpanel/pull/69), [#70](https://github.com/celikbros/celikpanel/pull/70), [#71](https://github.com/celikbros/celikpanel/pull/71), [#72](https://github.com/celikbros/celikpanel/pull/72), [#73](https://github.com/celikbros/celikpanel/pull/73) | 29.08.2026 itibarıyla DOĞRULANMIŞ; hiçbiri Alpha51'in parçası değildir |
 | İndirme portalı tam imzalı Alpha51 ürün kümesini sunuyor | Burada kanıtlanmadı | BİLİNMİYOR / YENİDEN DOĞRULA |
 | Devir temizliği sonucu | Kopya worktree/dallar ve listelenen kalıntılar kaldırıldı; yalnız primary kayıtlı worktree kaldı | DOĞRULANMIŞ devir gözlemi |
@@ -47,10 +47,10 @@ arşivliktir ve olduğu hâliyle merge edilmemelidir. Taslak PR #73,
 `0ef899f3cb96390c4ef3822f199eddc67bb0ee1f` commit'iyle beş benzersiz Alpha35
 portal scriptini ve yayımlanmamış bir PR72-follow-up patch'ini arşivler.
 Arşivliktir; olduğu hâliyle merge edilmemeli veya çalıştırılmamalıdır. Hiçbir
-taslak için bütün kontrollerin yeşil olduğu iddia edilmez. Devir dalının merge
-edilmesi `main` dalını yalnız belge değişiklikleriyle Alpha51 etiketinin önüne
-taşıyabilir; ayrı bir sürüm üretilene kadar yayımlanmış binary Alpha51 olarak
-kalır.
+taslak için bütün kontrollerin yeşil olduğu iddia edilmez. PR #74 yalnız belge
+içeren devir paketini `main` dalına merge etmiştir; `main` Alpha51 kaynak
+etiketinin önündedir, ayrı bir sürüm üretilene kadar yayımlanmış binary Alpha51
+olarak kalır.
 
 Benzersiz işler PR #72 ve PR #73'te korunduktan sonra repo temizliği; 109
 kayıtlı kopya worktree'yi, 105 eski yerel dalı, 56 eski remote dalı, `.attic`,
