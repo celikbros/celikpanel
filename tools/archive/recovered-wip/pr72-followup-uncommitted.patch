@@ -1,0 +1,444 @@
+diff --git a/.gitignore b/.gitignore
+index 6dfdeea..0a74db6 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -44,3 +44,6 @@ ds-bundle/
+ .design-sync/.cache/
+ .design-sync/learnings/
+ .design-sync/node_modules
++
++# Yerel arsiv: taranmis gecici dosyalar / local attic for swept scratch files
++.attic/
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index 6818f05..31be32a 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -44,6 +44,10 @@ type Panel struct {
+ 	// sorulur — tarama verisi bayatlar, bellekteki makine gerçeği bayatlayamaz.
+ 	pkgFamilyMu  sync.Mutex
+ 	pkgFamilyVal string
++	// serviceScanMu serializes host-wide probes. The Components page may be
++	// opened in several tabs and its automatic stale-cache refresh must not
++	// make the agent run the same expensive scan concurrently.
++	serviceScanMu sync.Mutex
+ }
+ 
+ func main() {
+diff --git a/cmd/panel/managed_service_cache_test.go b/cmd/panel/managed_service_cache_test.go
+index a76b66b..bbe34d6 100644
+--- a/cmd/panel/managed_service_cache_test.go
++++ b/cmd/panel/managed_service_cache_test.go
+@@ -2,11 +2,89 @@ package main
+ 
+ import (
+ 	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"path/filepath"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/alicelik/celikpanel/internal/core"
++	"github.com/alicelik/celikpanel/internal/db"
+ )
+ 
++func newManagedServiceTestPanel(t *testing.T) *Panel {
++	t.Helper()
++	database, err := db.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(database.Close)
++	return &Panel{db: database, pkgFamilyVal: "apt"}
++}
++
++func TestManagedServicesFreshDatabaseReturnsCatalogue(t *testing.T) {
++	panel := newManagedServiceTestPanel(t)
++	req := httptest.NewRequest(http.MethodGet, "/api/v1/managed-services", nil)
++	rec := httptest.NewRecorder()
++
++	panel.handleManagedServices(rec, req)
++	if rec.Code != http.StatusOK {
++		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
++	}
++
++	var payload managedServicesPayload
++	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
++		t.Fatal(err)
++	}
++	if payload.ScannedAt != nil {
++		t.Fatalf("fresh database has scan timestamp %v", payload.ScannedAt)
++	}
++	if len(payload.Services) != len(core.ManagedServices) {
++		t.Fatalf("fresh database returned %d services, want catalogue size %d", len(payload.Services), len(core.ManagedServices))
++	}
++}
++
++func TestManagedServicesConditionalScanReusesFreshCache(t *testing.T) {
++	panel := newManagedServiceTestPanel(t)
++	data, err := json.Marshal(scanCacheDoc{Observations: []serviceObservation{{
++		ID: "nftables", IsInstalled: true, Status: "installed",
++	}}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	scannedAt := time.Now().UTC().Truncate(time.Second)
++	if _, err := panel.db.GetDB().Exec(
++		"INSERT INTO service_scan_cache (id, data, scanned_at) VALUES (1, ?, ?)",
++		string(data), scannedAt.Format(time.RFC3339),
++	); err != nil {
++		t.Fatal(err)
++	}
++
++	// agentClient is deliberately nil: a fresh-cache response must return
++	// without probing the agent.
++	req := httptest.NewRequest(http.MethodPost, "/api/v1/managed-services/scan?max_age_seconds=300", nil)
++	rec := httptest.NewRecorder()
++	panel.handleManagedServicesScan(rec, req)
++	if rec.Code != http.StatusOK {
++		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
++	}
++
++	var payload managedServicesPayload
++	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
++		t.Fatal(err)
++	}
++	if payload.ScannedAt == nil || !payload.ScannedAt.Equal(scannedAt) {
++		t.Fatalf("scanned_at = %v, want cached %v", payload.ScannedAt, scannedAt)
++	}
++}
++
++func TestManagedServiceScanMaxAgeRejectsInvalidValue(t *testing.T) {
++	req := httptest.NewRequest(http.MethodPost, "/api/v1/managed-services/scan?max_age_seconds=0", nil)
++	if _, _, err := managedServiceScanMaxAge(req); err == nil {
++		t.Fatal("zero max_age_seconds was accepted")
++	}
++}
++
+ // A cached scan must never be able to answer a catalogue question. The bug
+ // this guards against shipped to both live servers: the cache held whole API
+ // responses, so after the Kind field was added every service came back with
+diff --git a/cmd/panel/managed_service_handlers.go b/cmd/panel/managed_service_handlers.go
+index 7593233..f5bc7a7 100644
+--- a/cmd/panel/managed_service_handlers.go
++++ b/cmd/panel/managed_service_handlers.go
+@@ -2,9 +2,12 @@ package main
+ 
+ import (
+ 	"context"
++	"database/sql"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"net/http"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -14,15 +17,15 @@ import (
+ 
+ // ManagedServiceResponse represents a managed service with runtime status
+ type ManagedServiceResponse struct {
+-	ID           string            `json:"id"`
+-	Name         string            `json:"name"`
+-	Description  string            `json:"description"`
+-	Icon         string            `json:"icon"`
+-	Category     string            `json:"category"`
+-	Versions     []string          `json:"versions"` // Detected versions
+-	Status       string            `json:"status"`   // Overall status
+-	IsInstalled  bool              `json:"is_installed"`
+-	ConflictWith string            `json:"conflict_with,omitempty"` // installed member of the same conflict group
++	ID           string   `json:"id"`
++	Name         string   `json:"name"`
++	Description  string   `json:"description"`
++	Icon         string   `json:"icon"`
++	Category     string   `json:"category"`
++	Versions     []string `json:"versions"` // Detected versions
++	Status       string   `json:"status"`   // Overall status
++	IsInstalled  bool     `json:"is_installed"`
++	ConflictWith string   `json:"conflict_with,omitempty"` // installed member of the same conflict group
+ 	// RequiresMissing: unmet requirements blocking install (service ids or
+ 	// group names) — the UI disables Install and says what to install first.
+ 	// RequiresMissing: kurulumu engelleyen karşılanmamış gereksinimler (servis
+@@ -325,12 +328,16 @@ func catalogView(obs []serviceObservation, pkgFamily string) []ManagedServiceRes
+ func (p *Panel) handleManagedServices(w http.ResponseWriter, r *http.Request) {
+ 	w.Header().Set("Content-Type", "application/json")
+ 
+-	payload := managedServicesPayload{Services: []ManagedServiceResponse{}}
++	payload := managedServicesPayload{Services: catalogView(nil, p.packageFamily())}
+ 
+ 	var data string
+ 	var scannedAt string
+ 	err := p.db.GetDB().QueryRowContext(r.Context(),
+ 		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
++	if err != nil && !errors.Is(err, sql.ErrNoRows) {
++		writeServerError(w, err)
++		return
++	}
+ 	if err == nil {
+ 		if t, terr := time.Parse(time.RFC3339, scannedAt); terr == nil {
+ 			payload.ScannedAt = &t
+@@ -384,6 +391,35 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
+ 		return
+ 	}
+ 
++	maxAge, conditional, err := managedServiceScanMaxAge(r)
++	if err != nil {
++		http.Error(w, err.Error(), http.StatusBadRequest)
++		return
++	}
++	if conditional {
++		p.serviceScanMu.Lock()
++		defer p.serviceScanMu.Unlock()
++
++		cached, fresh, err := p.managedServicesCacheWithin(r.Context(), maxAge)
++		if err != nil {
++			writeServerError(w, err)
++			return
++		}
++		if fresh {
++			json.NewEncoder(w).Encode(cached)
++			return
++		}
++
++		services, err := p.scanManagedServicesUnlocked(r.Context())
++		if err != nil {
++			writeServerError(w, err)
++			return
++		}
++		now := time.Now().UTC()
++		json.NewEncoder(w).Encode(managedServicesPayload{ScannedAt: &now, Services: services})
++		return
++	}
++
+ 	services, err := p.scanManagedServices(r.Context())
+ 	if err != nil {
+ 		writeServerError(w, err)
+@@ -394,11 +430,61 @@ func (p *Panel) handleManagedServicesScan(w http.ResponseWriter, r *http.Request
+ 	json.NewEncoder(w).Encode(managedServicesPayload{ScannedAt: &now, Services: services})
+ }
+ 
++// managedServiceScanMaxAge marks an automatic conditional refresh. Manual
++// rescans omit the parameter and always probe the host.
++func managedServiceScanMaxAge(r *http.Request) (time.Duration, bool, error) {
++	raw := r.URL.Query().Get("max_age_seconds")
++	if raw == "" {
++		return 0, false, nil
++	}
++	seconds, err := strconv.Atoi(raw)
++	if err != nil || seconds < 1 || seconds > 86400 {
++		return 0, false, fmt.Errorf("max_age_seconds must be between 1 and 86400")
++	}
++	return time.Duration(seconds) * time.Second, true, nil
++}
++
++func (p *Panel) managedServicesCacheWithin(ctx context.Context, maxAge time.Duration) (managedServicesPayload, bool, error) {
++	var data string
++	var scannedAt string
++	err := p.db.GetDB().QueryRowContext(ctx,
++		`SELECT data, scanned_at FROM service_scan_cache WHERE id = 1`).Scan(&data, &scannedAt)
++	if errors.Is(err, sql.ErrNoRows) {
++		return managedServicesPayload{}, false, nil
++	}
++	if err != nil {
++		return managedServicesPayload{}, false, err
++	}
++
++	scanned, err := time.Parse(time.RFC3339, scannedAt)
++	if err != nil {
++		return managedServicesPayload{}, false, nil
++	}
++	age := time.Since(scanned)
++	if age < 0 {
++		age = 0
++	}
++	if age > maxAge {
++		return managedServicesPayload{}, false, nil
++	}
++
++	return managedServicesPayload{
++		ScannedAt: &scanned,
++		Services:  catalogView(decodeScanCache(data), p.packageFamily()),
++	}, true, nil
++}
++
+ // scanManagedServices asks the agent for the real system state, folds it
+ // into the curated catalogue and persists the result.
+ // scanManagedServices, agent'tan gerçek sistem durumunu ister, seçili
+ // kataloğa işler ve sonucu kalıcılaştırır.
+ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceResponse, error) {
++	p.serviceScanMu.Lock()
++	defer p.serviceScanMu.Unlock()
++	return p.scanManagedServicesUnlocked(ctx)
++}
++
++func (p *Panel) scanManagedServicesUnlocked(ctx context.Context) ([]ManagedServiceResponse, error) {
+ 	var allServices []core.Service
+ 	if err := p.agentClient.Call("Agent.GetServices", &transport.Empty{}, &allServices); err != nil {
+ 		return nil, err
+diff --git a/web/src/components/ServiceList.tsx b/web/src/components/ServiceList.tsx
+index e655387..8b38b26 100644
+--- a/web/src/components/ServiceList.tsx
++++ b/web/src/components/ServiceList.tsx
+@@ -89,6 +89,11 @@ interface ServiceListProps {
+     onManageService?: (serviceId: string, versions: string[]) => void;
+ }
+ 
++// Page entry refreshes old observations without making navigation wait on a
++// host-wide probe every time. The backend coalesces concurrent tabs using the
++// same maximum age.
++const AUTO_SCAN_MAX_AGE_SECONDS = 300;
++
+ // A service's optional managed vendor repository (e.g. PGDG for PostgreSQL).
+ // When available+enabled, the install dialog offers a specific major version.
+ // Bir servisin isteğe bağlı yönetilen vendor deposu (örn. PostgreSQL için PGDG).
+@@ -137,6 +142,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
+     const [scannedAt, setScannedAt] = useState<string | null>(null);
+     const [loading, setLoading] = useState(true);
+     const [scanning, setScanning] = useState(false);
++    const [scanError, setScanError] = useState(false);
+     const [busy, setBusy] = useState<string | null>(null);
+     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
+     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
+@@ -213,24 +219,57 @@ export function ServiceList({ onManageService }: ServiceListProps) {
+     const collapseAll = () => setCollapsed(new Set(visibleCats().map((c) => c.id)));
+     const expandAll = () => setCollapsed(new Set());
+ 
+-    // Reads the CACHED scan — instant, never probes the system. A fresh
+-    // probe is the explicit user action below (scan).
+-    // ÖNBELLEKTEKİ taramayı okur — anlık, sistemi asla yoklamaz. Taze
+-    // yoklama aşağıdaki açık kullanıcı eylemidir (scan).
+-    const loadServices = () => {
++    // Render the cached catalogue immediately, then conditionally refresh a
++    // missing/stale observation. The conditional endpoint prevents duplicate
++    // probes from React StrictMode, multiple tabs, or quick navigation.
++    const loadServices = async () => {
+         setLoading(true);
+-        fetch('/api/v1/managed-services')
+-            .then((res) => res.json())
+-            .then((data) => {
+-                setServices(data?.services || []);
+-                setScannedAt(data?.scanned_at ?? null);
+-            })
+-            .catch(() => showToast('error', t('common.error')))
+-            .finally(() => setLoading(false));
++        setScanError(false);
++        try {
++            const cachedRes = await fetch('/api/v1/managed-services');
++            if (!cachedRes.ok) throw new Error();
++            const cached = await cachedRes.json();
++            const cachedServices = cached?.services || [];
++            const cachedAt: string | null = cached?.scanned_at ?? null;
++            setServices(cachedServices);
++            setScannedAt(cachedAt);
++            // A stale result is still useful while its background refresh is
++            // running. Only a never-scanned server keeps the initial loader.
++            if (cachedAt) setLoading(false);
++
++            const scannedTime = cachedAt ? new Date(cachedAt).getTime() : Number.NaN;
++            const stale =
++                !Number.isFinite(scannedTime) ||
++                Date.now() - scannedTime > AUTO_SCAN_MAX_AGE_SECONDS * 1000;
++            if (stale) {
++                setScanning(true);
++                try {
++                    const scanRes = await fetch(
++                        '/api/v1/managed-services/scan?max_age_seconds=' + AUTO_SCAN_MAX_AGE_SECONDS,
++                        { method: 'POST' },
++                    );
++                    if (!scanRes.ok) throw new Error();
++                    const fresh = await scanRes.json();
++                    setServices(fresh?.services || cachedServices);
++                    setScannedAt(fresh?.scanned_at ?? cachedAt);
++                } catch {
++                    setScanError(!cachedAt);
++                    showToast('error', t('services.scanFailed'));
++                } finally {
++                    setScanning(false);
++                }
++            }
++        } catch {
++            setScanError(true);
++            showToast('error', t('common.error'));
++        } finally {
++            setLoading(false);
++        }
+     };
+ 
+     const scan = async () => {
+         setScanning(true);
++        setScanError(false);
+         try {
+             const res = await fetch('/api/v1/managed-services/scan', { method: 'POST' });
+             if (!res.ok) throw new Error();
+@@ -238,6 +277,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
+             setServices(data?.services || []);
+             setScannedAt(data?.scanned_at ?? null);
+         } catch {
++            setScanError(!scannedAt);
+             showToast('error', t('services.scanFailed'));
+         } finally {
+             setScanning(false);
+@@ -472,14 +512,20 @@ export function ServiceList({ onManageService }: ServiceListProps) {
+             </div>
+ 
+             {loading ? (
+-                <div className="flex items-center justify-center py-16">
++                <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-fg-muted">
+                     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
++                    <span>{scanning ? t('services.autoScanning') : t('common.loading')}</span>
+                 </div>
+-            ) : !scannedAt && services.length === 0 ? (
++            ) : !scannedAt && scanError ? (
+                 <EmptyState
+                     icon={ScanSearch}
+-                    title={t('services.neverScanned')}
+-                    hint={t('services.neverScannedHint')}
++                    title={t('services.scanFailed')}
++                    hint={t('services.scanFailedHint')}
++                    action={
++                        <Button variant="primary" icon={RefreshCw} onClick={scan} disabled={scanning}>
++                            {scanning ? t('services.scanning') : t('services.scanNow')}
++                        </Button>
++                    }
+                 />
+             ) : (
+                 <>
+diff --git a/web/src/i18n/en.ts b/web/src/i18n/en.ts
+index 723ab83..c216617 100644
+--- a/web/src/i18n/en.ts
++++ b/web/src/i18n/en.ts
+@@ -299,11 +299,13 @@ export const en = {
+     'services.scanNow': 'Scan services',
+     'services.rescan': 'Rescan',
+     'services.scanning': 'Scanning\u2026',
++    'services.autoScanning': 'Detecting installed components\u2026',
+     'services.lastScan': 'Last scan: {time}',
+     'services.scanFailed': 'Service scan failed.',
++    'services.scanFailedHint': 'The panel could not read the component state on this server. Check the agent, then try again.',
+     'services.neverScanned': 'Services have not been scanned yet',
+     'services.neverScannedShort': 'Not scanned yet',
+-    'services.neverScannedHint': 'Scanning checks which services are installed and running on this server. It runs only when you ask, so the panel stays fast.',
++    'services.neverScannedHint': 'The first visit detects installed services automatically. Cached results load immediately and refresh periodically.',
+ 
+     'databases.subtitle': 'Databases and users on your detected servers',
+     'databases.noServers': 'No database engine installed',
+diff --git a/web/src/i18n/tr.ts b/web/src/i18n/tr.ts
+index fa8e89f..ead0324 100644
+--- a/web/src/i18n/tr.ts
++++ b/web/src/i18n/tr.ts
+@@ -289,11 +289,13 @@ export const tr: Record<TranslationKey, string> = {
+     'services.scanNow': 'Servisleri tara',
+     'services.rescan': 'Yeniden tara',
+     'services.scanning': 'Taranıyor\u2026',
++    'services.autoScanning': 'Kurulu bileşenler algılanıyor\u2026',
+     'services.lastScan': 'Son tarama: {time}',
+     'services.scanFailed': 'Servis taraması başarısız oldu.',
++    'services.scanFailedHint': 'Panel bu sunucunun bileşen durumunu okuyamadı. Agent durumunu denetleyip yeniden deneyin.',
+     'services.neverScanned': 'Servisler henüz taranmadı',
+     'services.neverScannedShort': 'Henüz taranmadı',
+-    'services.neverScannedHint': 'Tarama, bu sunucuda hangi servislerin kurulu ve çalışır olduğunu denetler. Yalnız siz isteyince çalışır; panel böylece hızlı kalır.',
++    'services.neverScannedHint': 'İlk ziyarette kurulu servisler otomatik algılanır. Önbellekteki sonuçlar hemen açılır ve belirli aralıklarla yenilenir.',
+ 
+     'databases.subtitle': 'Tespit edilen sunucularınızdaki veritabanları ve kullanıcılar',
+     'databases.noServers': 'Kurulu veritabanı motoru yok',
