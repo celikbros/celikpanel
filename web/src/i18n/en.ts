@@ -277,6 +277,7 @@ export const en = {
     'panelUpdate.archiveSize': 'Package size',
     'panelUpdate.bytes': '{size} bytes',
     'panelUpdate.sha256': 'SHA-256',
+    'panelUpdate.restartAcknowledgement': 'I understand that the panel and agent will restart briefly during this signed update.',
     'panelUpdate.start': 'Start signed update to {version}',
     'panelUpdate.starting': 'Startingâ€¦',
     'panelUpdate.sessionExpired': 'The session ended. After you sign in again, the same operation will continue to be tracked.',

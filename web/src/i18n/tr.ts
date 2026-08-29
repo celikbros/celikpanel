@@ -2068,6 +2068,7 @@ export const tr: Record<TranslationKey, string> = {
     'panelUpdate.archiveSize': 'Paket boyutu',
     'panelUpdate.bytes': '{size} bayt',
     'panelUpdate.sha256': 'SHA-256',
+    'panelUpdate.restartAcknowledgement': 'Bu imzalı güncelleme sırasında panel ve agent’ın kısa süreli yeniden başlayacağını anlıyorum.',
     'panelUpdate.start': '{version} imzalı güncellemesini başlat',
     'panelUpdate.starting': 'Başlatılıyor…',
     'panelUpdate.sessionExpired': 'Oturum sona erdi. Yeniden giriş yaptıktan sonra aynı işlem izlenecek.',

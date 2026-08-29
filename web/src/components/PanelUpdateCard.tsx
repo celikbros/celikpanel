@@ -66,6 +66,7 @@ export function PanelUpdateCard() {
     const [check, setCheck] = useState<UpdateCheck | null>(null);
     const [checking, setChecking] = useState(false);
     const [starting, setStarting] = useState(false);
+    const [restartAcknowledged, setRestartAcknowledged] = useState(false);
     const [message, setMessage] = useState('');
     const actionInFlight = useRef(false);
 
@@ -88,6 +89,7 @@ export function PanelUpdateCard() {
         if (actionInFlight.current || systemUpdate.active) return;
         actionInFlight.current = true;
         setChecking(true);
+        setRestartAcknowledged(false);
         setMessage('');
         setCheck(null);
         try {
@@ -112,7 +114,7 @@ export function PanelUpdateCard() {
 
     async function startUpdate() {
         const target = check?.target;
-        if (actionInFlight.current || systemUpdate.active || !check?.available || !target) return;
+        if (actionInFlight.current || systemUpdate.active || !check?.available || !target || !restartAcknowledged) return;
         const requestID = createSystemUpdateRequestID();
         if (!requestID) {
             setMessage(t('panelUpdate.randomFailed'));
@@ -184,8 +186,18 @@ export function PanelUpdateCard() {
             )}
 
             {target && check?.available && !active && (
-                <div className="mt-4">
-                    <Button id="panel-update-start-button" type="button" onClick={() => void startUpdate()} disabled={starting}>
+                <div className="mt-4 space-y-3">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-subtle px-3 py-3">
+                        <input
+                            type="checkbox"
+                            checked={restartAcknowledged}
+                            onChange={(event) => setRestartAcknowledged(event.target.checked)}
+                            disabled={starting}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                        />
+                        <span className="text-sm text-fg">{t('panelUpdate.restartAcknowledgement')}</span>
+                    </label>
+                    <Button id="panel-update-start-button" type="button" onClick={() => void startUpdate()} disabled={starting || !restartAcknowledged}>
                         {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
                         {starting ? t('panelUpdate.starting') : t('panelUpdate.start', { version: target.version })}
                     </Button>

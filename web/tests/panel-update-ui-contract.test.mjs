@@ -203,11 +203,16 @@ test('server payloads, stored markers and bounded summaries fail closed at the b
 
 test('the exact discovered target is visible and rapid clicks are blocked', () => {
     assert.match(card, /actionInFlight\.current \|\| systemUpdate\.active/);
-    assert.match(card, /disabled=\{starting\}/);
+    assert.match(card, /type="checkbox"/);
+    assert.match(card, /checked=\{restartAcknowledged\}/);
+    assert.match(card, /!target \|\| !restartAcknowledged/);
+    assert.match(card, /disabled=\{starting \|\| !restartAcknowledged\}/);
+    assert.match(card, /panelUpdate\.restartAcknowledgement/);
+    assert.match(card, /createSystemUpdateRequestID\(\)/);
     assert.match(card, /t\('panelUpdate\.start', \{ version: target\.version \}\)/);
     assert.match(card, /\{t\('panelUpdate\.targetVersion'\)\}.*\{target\.version\}/s);
     assert.match(card, /\{t\('panelUpdate\.sequence'\)\}.*\{target\.sequence\}/s);
-    assert.doesNotMatch(card, /confirmation|panel-update-confirmation|panelUpdate\.confirm/);
+    assert.doesNotMatch(card, /type="text"|panel-update-confirmation|panelUpdate\.confirm/);
     assert.equal(card.match(/\bstartUpdate\(\)/g)?.length, 2, 'startUpdate may only be declared and invoked by the final button');
     assert.match(card, /id="panel-update-start-button"/);
     assert.match(tracker, /const START_REQUEST_TIMEOUT_MS = 15000/);
