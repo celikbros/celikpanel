@@ -220,8 +220,8 @@ etiketinin önündedir; güncel yayımlanmış binary yine Alpha51'dir.
 
 Sonraki sürümden önce:
 
-1. Devir/belge uzlaştırmasını binary sürüm kimliğinden bağımsız inceleyip merge
-   edin.
+1. Bundan sonraki devir/belge değişikliklerini binary sürüm kimliğinden bağımsız
+   inceleyin; Alpha51 uzlaştırması zaten merge edilmiştir.
 2. Yeni etiketin incelenmiş main commit'ini gösterdiğini ve CI'ın yeşil olduğunu
    kanıtlayın.
 3. Altı GitHub release ürününü ve checksum/imzalarını doğrulayın.

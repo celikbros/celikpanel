@@ -216,8 +216,8 @@ the source tag, while the current published binary remains Alpha51.
 
 Before the next release:
 
-1. Review and merge the handoff/documentation reconciliation independently of
-   binary-release identity.
+1. Review any subsequent handoff/documentation changes independently of
+   binary-release identity; the Alpha51 reconciliation is already merged.
 2. Prove that the new tag points to the reviewed main commit and CI is green.
 3. Verify the exact six GitHub release assets and their checksums/signature.
 4. Assemble and publish the portal candidate using the tracked publisher only.
