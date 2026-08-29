@@ -245,7 +245,7 @@ sudo /bin/bash ./bootstrap-update.sh --bootstrap-schema17
 
 The updater proves exact schema 17 before quiesce, while both coordinators are
 frozen, and again after they are stopped. It then creates and durably publishes
-a complete v4 exact-17 snapshot. Only after that publication may the dedicated
+a complete v6 exact-17 snapshot. Only after that publication may the dedicated
 helper apply the allowlisted migrations 18, 19 and 20. The ordinary pre-ledger
 bootstrap then creates the agent ledger, installs the verified release and runs
 the remaining migrations offline. After a successful bridge, every later
@@ -260,12 +260,17 @@ the snapshot-carried `schema17-bridge` to atomically restore exact schema 17.
 
 ### 4.4 Snapshot contract
 
-The pre-ledger and exact-schema17 releases require **snapshot contract v4** so
+The pre-ledger and exact-schema17 releases require **snapshot contract v6** so
 rollback preserves the private agent state, whether the legacy ledger was
-absent, and the exact transition-specific checker set.
-`update.sh` and `rollback.sh` must both declare support for v4 before this
-release is deployable. Do not mix snapshot contract versions, copy snapshot
-internals by hand, or use a rollback script from a different release.
+absent, the exact transition-specific checker set, the exact installed updater,
+and the complete panel TLS/hook/pending-activation boundary. `update.sh` and
+`rollback.sh` must both declare support for v6 before this release is
+deployable. The current v6 rollback rejects v4 and v5 snapshots: v5 predates the
+exact installed updater rollback state, while v4 also predates the exact panel
+TLS/hook/pending-activation boundary. An older snapshot may be used only with
+its matching immutable historical recovery release and rollback helper. Do not
+mix snapshot contract versions, copy snapshot internals by hand, or use a
+rollback script from a different release.
 The scripts own root trust-chain validation, checksums, unit state, paired
 panel/agent/web/database state, retention, and restore ordering.
 

@@ -1,6 +1,6 @@
 # CelikPanel Roadmap
 
-*Last updated: August 2, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: August 29, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
@@ -719,11 +719,14 @@ product itself:
 
 ---
 
-## Where We Are — August 2, 2026
+## Where We Are — August 29, 2026
 
 **Version:** now single-sourced — version and commit are linked into BOTH binaries, served from
 `/api/v1/panel/version`, read back by the panel footer, and a panel/agent build mismatch raises a
 warning. The hand-typed "v0.1.0" literal is gone. Both test servers verified on the same commit.
+**Current live identity:** the earlier two-server matching-commit observation is
+historical evidence, not proof of either server's current state. Reverify live
+values in [the dated live-state record](docs/LIVE-STATE-2026-08-29.md).
 **Position on the ladder:** v0.2 in progress; many v0.2.5 items closed along the way; **a new v0.2.6
 step now sits in front of v0.3** because of the three data-loss defects above.
 
@@ -749,10 +752,12 @@ rows still use plain legacy IDs; adoption requires an explicit data/API compatib
 longer compile-only: it covers Go formatting/build/vet/test/race, shell and repository contracts, the
 locked web build and dependency gate, and reproducible release artifacts.
 
-**Repository snapshot:** `bash tools/repo-metrics.sh` reports 79,783 product-Go lines / 310 source files,
-178 Go test files, 35,388 panel lines / 113 files, 85 API route-prefix registrations, 27 migrations and
-93 agent command sites. Web has 27,629 TypeScript lines / 76 files and 208 raw `fetch(` sites. These are
-reproducible source-tree measurements, not claims about either test server's deployed build.
+**Repository snapshot:** run `bash tools/repo-metrics.sh` against the exact
+commit whenever a measurement is needed. The output is generated source-tree
+evidence and is intentionally not copied into this roadmap as hand-maintained
+line, file, route, migration or command-site counts. Record the command output
+with its full commit in review or release evidence. It never proves either
+server's deployed build.
 
 
 ---

@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 2 Ağustos 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 29 Ağustos 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -681,11 +681,14 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 2 Ağustos 2026
+## Neredeyiz — 29 Ağustos 2026
 
 **Sürüm:** artık tek kaynaklı — sürüm ve commit bağlama anında HER İKİ binary'ye gömülüyor,
 `/api/v1/panel/version` sunuyor, panelin alt bilgisi oradan okuyor ve panel ile agent farklı yapıdaysa
 uyarı gösteriyor. Elle yazılmış "v0.1.0" metni silindi. İki test sunucusu aynı commit'te doğrulandı.
+**Güncel canlı kimlik:** Önceki iki sunuculu eşleşen-commit gözlemi tarihsel
+kanıttır; iki sunucunun güncel durumunu kanıtlamaz. Canlı değerleri
+[tarihli canlı durum kaydında](docs/LIVE-STATE-2026-08-29.tr.md) yeniden doğrulayın.
 **Merdivendeki yer:** v0.2 sürüyor; v0.2.5'in birçok kalemi yolda kapandı; **yeni v0.2.6 basamağı
 v0.3'ün önüne girdi** (yukarıdaki üç veri-kaybı kusuru sebebiyle).
 
@@ -710,10 +713,12 @@ ise hâlâ düz eski kimlikleri kullanıyor ve geçiş açık bir veri/API uyuml
 CI artık yalnız derlemiyor: Go biçim/derleme/vet/test/race, shell ve depo sözleşmeleri, kilitli web
 derlemesi ve bağımlılık kapısı ile yeniden üretilebilir sürüm ürünlerini denetliyor.
 
-**Depo anlık görüntüsü:** `bash tools/repo-metrics.sh`, 79.783 ürün-Go satırı / 310 kaynak dosyası,
-178 Go test dosyası, 35.388 panel satırı / 113 dosya, 85 API rota-önek kaydı, 27 migration ve agent'ta
-93 komut çalıştırma yeri raporluyor. Web'de 27.629 TypeScript satırı / 76 dosya ve 208 ham `fetch(`
-yeri var. Bunlar kaynak-ağaç ölçümleridir; test sunucularındaki dağıtılmış yapı iddiası değildir.
+**Depo anlık görüntüsü:** Ölçüm gerektiğinde tam commit üzerinde
+`bash tools/repo-metrics.sh` çalıştırılır. Çıktı, üretilen kaynak-ağaç
+kanıtıdır; satır, dosya, rota, migration veya komut-yeri sayıları bu yol
+haritasına elle kopyalanıp tutulmaz. Komut çıktısını tam commit'iyle birlikte
+inceleme veya release kanıtına kaydedin. Bu ölçüm iki sunucunun dağıtılmış
+build'ini kanıtlamaz.
 
 
 ---

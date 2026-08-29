@@ -80,4 +80,8 @@ The panel supports **both light and dark themes**, user-switchable via a theme t
 
 This document is about **structure** (the bones): one shell, capability-driven rendering. Beyond the theming decision above, it stays silent on the finer **visual design** (typography scale, spacing rhythm, component styling). Those are chosen when the redesign work begins and layer on top of this architecture without changing it — a redesign repaints the shell, it does not re-architect it.
 
-The current code does **not** yet follow this: navigation is hardcoded in `Layout.tsx` and is identical for everyone. Adopting this architecture is the frontend half of realizing [ROLES.md](ROLES.md), and is scheduled alongside the authorization/ownership work.
+The current code follows this structure. `web/src/nav.ts` is the single
+role-aware navigation registry; the sidebar and route-access checks derive from
+the same entries, while `Layout.tsx` remains the shared shell. This registry is
+an interface boundary, not a security authority: backend authentication,
+ownership and authorization checks remain mandatory for every endpoint.

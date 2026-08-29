@@ -109,7 +109,7 @@ claim.
 
 **What's next:** see the [Roadmap](ROADMAP.md) — Phase 0 security sprint → Phase 1 golden path hardening → Phase 2 60-second installer → Phase 3 WordPress toolkit + cPanel importer.
 
-## Installing or updating a tagged release
+## Installing a tagged release
 
 The supported fresh-install input is the prebuilt release archive, not a Git
 checkout and not an operator-specific bundle. It contains the matching panel,
@@ -117,43 +117,51 @@ agent and web application, so the target server needs no Go, Node or Git.
 The current alpha archive targets Linux x86_64/amd64.
 
 Published releases are distributed from the public CelikPanel download channel
-at `https://celikpanel.net`. Run the bootstrap as root on a clean supported
-server. The same command is also the supported normal update path for an
-existing, completed installation. The bootstrap detects clean install versus
-update, downloads the selected immutable archive and its checksum over HTTPS,
-validates the SHA-256 digest, archive paths and packaged release manifest, and
-only then enters the installer or transaction-safe updater.
+at `https://celikpanel.net`. The public `get.sh` bootstrap is supported only
+for a clean first installation. Run it as root on a clean supported server. It
+is pinned to one signed release, verifies the portal trust anchor, Ed25519
+manifest and signature, exact archive size and SHA-256 digest, internal
+checksums, platform, commit and archive paths, and only then enters the
+installer.
 
 ```bash
 # Latest published version
-curl --fail --show-error --location --proto '=https' --tlsv1.2 \
-  https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
+curl --fail --show-error --location --proto '=https' --tlsv1.2 https://celikpanel.net/get.sh -o /tmp/celikpanel-get.sh
 sh /tmp/celikpanel-get.sh
 
-# Or pin an exact immutable version
-sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.1
+# Or require the exact version pinned by the downloaded bootstrap
+sh /tmp/celikpanel-get.sh --version v0.1.0-alpha.51
 ```
 
-Use `--install` or `--update` only when explicitly selecting a mode for
-diagnostics. Automatic mode refuses partial or ambiguous installations instead
-of guessing. A failed first-administrator attempt may be retried with
-`--install`; a completed installation is marked only after both services and
-the administrator path succeed. Normal updates use the prebuilt binaries and
-web application and do not install Go, Node or Git on the server.
+Do not download and run the public bootstrap on an existing installation.
+Existing installations update from the authenticated **Signed update** screen
+in the panel. That screen obtains one exact signed release identity from the
+trusted check path and the product launches its already installed
+`/usr/libexec/celikpanel/get.sh` internally.
+
+The product-controlled worker is the only normal exception: it invokes the
+installed updater with `--update --version <exact-version>`,
+`--require-signed-manifest`, and the exact expected sequence, current floor,
+commit, archive digest and size. Those flags are an internal trust contract,
+not an operator recipe or a way to choose an arbitrary URL, path or release.
+Partial, ambiguous or interrupted installations follow the explicit recovery
+procedure in the [operations runbook](docs/OPERATIONS.md); the public bootstrap
+is not a repair switch.
 
 The installer interactively creates the first administrator. Do not place the
 administrator password in shell history, deployment scripts or release files.
 Release archives and machine-readable manifests remain available under
 `https://celikpanel.net/releases/`. Each archive also carries an exact internal
-`SHA256SUMS` manifest and commit/tree provenance. The HTTPS channel and checksum
-detect changed bytes but do not independently prove publisher identity; see the
-signing boundary below.
+`SHA256SUMS` manifest and commit/tree provenance. Publisher identity and
+anti-rollback authority come from the signed-manifest contract below, not from
+HTTPS or an adjacent checksum alone.
 
 ## Building from source
 
-Requirements: exactly Go 1.26.5, Node ≥ 20. The Make gate verifies the exact
-compiler, uses a clean `GOTOOLCHAIN=local` environment and never silently
-downloads another Go toolchain.
+Requirements: exactly Go 1.26.5 and the reviewed CI/release Node version
+24.18.0. The Make gate verifies the exact Go compiler, uses a clean
+`GOTOOLCHAIN=local` environment and never silently downloads another Go
+toolchain.
 
 Existing installations whose sealed build cache predates Go 1.26.5 must first
 follow the reviewed-checkout proof and one-time migrator sequence in the
@@ -182,20 +190,36 @@ make dist VERSION=v0.3.0
 sha256sum -c dist/celikpanel-v0.3.0.tar.gz.sha256
 ```
 
-When the release operator has provisioned a protected GPG signing key, create
-and verify a detached signature with:
+The canonical public tagged-release path is the Ed25519 signed-manifest v2
+contract in [docs/release-signing.md](docs/release-signing.md). Tagged CI must
+publish exactly six immutable assets:
+
+1. the generic archive and checksum;
+2. the Linux/amd64 archive and checksum; and
+3. the canonical manifest and its raw detached Ed25519 signature.
+
+The release sequence, release-pinned bootstrap and signed manifest must agree.
+The protected Ed25519 private key belongs only to the authorized signing
+environment; the public verification key is tracked and pinned by the product.
+
+`make dist-sign` remains available only for an optional local GPG artifact
+workflow:
 
 ```bash
-make dist-sign VERSION=v0.3.0 SIGNING_KEY=<full-key-fingerprint>
-gpg --verify dist/celikpanel-v0.3.0.tar.gz.asc dist/celikpanel-v0.3.0.tar.gz
+make dist-sign VERSION=v0.1.0-alpha.51 SIGNING_KEY=<full-key-fingerprint>
+gpg --verify dist/celikpanel-v0.1.0-alpha.51.tar.gz.asc dist/celikpanel-v0.1.0-alpha.51.tar.gz
 ```
 
-The checksum proves byte integrity, not publisher identity. A public or
-commercial release must not claim signed provenance until the release owner
-has provisioned the CI signing identity and published its verification key.
+That optional `.asc` file is not one of the six canonical public assets, does
+not authorize an update, does not advance the release floor, and is not a
+substitute for the Ed25519 manifest/signature. A checksum likewise proves byte
+integrity, not publisher identity.
 
 ## Documentation
 
+- [Engineering Handoff](docs/HANDOFF.md) — frozen source baseline, authority order and incoming-team checklist
+- [Dated Live State](docs/LIVE-STATE-2026-08-29.md) — verified, declared and unknown server facts kept separate
+- [Risk Register](docs/RISK-REGISTER.md) — explicit engineering and operations risks with exit criteria
 - [CelikPanel AI Agent](docs/CELIKPANEL-AI-AGENT.md) — panel-only scope, confirmation, audit and subscription-gating plan
 - [Component Manifest V2](docs/COMPONENT-MANIFEST-V2.md) — signed SQLite/JSON recipes and platform-adapter boundary
 - [Store](docs/STORE.md) — offering catalogue, entitlement boundary and operator workflow

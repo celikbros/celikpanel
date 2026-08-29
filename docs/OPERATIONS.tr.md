@@ -253,7 +253,7 @@ sudo /bin/bash ./bootstrap-update.sh --bootstrap-schema17
 ```
 
 Updater exact şema 17'yi quiesce öncesinde, iki coordinator frozen iken ve
-ikisi de durdurulduktan sonra yeniden kanıtlar. Ardından tam bir v4 exact-17
+ikisi de durdurulduktan sonra yeniden kanıtlar. Ardından tam bir v6 exact-17
 snapshot'ı oluşturup dayanıklı biçimde yayımlar. Özel yardımcı yalnız bu
 yayımdan sonra allowlist içindeki 18, 19 ve 20 migration'larını uygulayabilir.
 Sonra normal pre-ledger bootstrap agent ledger'ını oluşturur, doğrulanmış
@@ -270,12 +270,18 @@ snapshot içindeki `schema17-bridge` ile exact şema 17'yi atomik olarak geri y�
 
 ### 4.4 Snapshot sözleşmesi
 
-Pre-ledger ve exact-schema17 sürümleri; özel agent durumunu, eski sistemde
-ledger'ın bulunmadığı bilgisini ve geçişe özel checker kümesini rollback
-sırasında korumak için **snapshot sözleşmesi v4** gerektirir.
-Bu sürüm dağıtılmadan önce `update.sh` ve `rollback.sh` birlikte v4 desteğini
-bildirmelidir. Snapshot sözleşmesi sürümlerini karıştırmayın, snapshot içeriğini
-elle kopyalamayın ve başka sürüme ait rollback scriptini kullanmayın. Root güven
+Pre-ledger ve exact-schema17 sürümleri; rollback sırasında özel agent durumunu,
+eski sistemde ledger'ın bulunmadığı bilgisini, geçişe özel checker kümesini,
+kurulu updater'ın tam halini ve eksiksiz panel TLS/hook/bekleyen-aktivasyon
+sınırını korumak için **snapshot sözleşmesi v6** gerektirir. Bu sürüm
+dağıtılmadan önce `update.sh` ve `rollback.sh` birlikte v6 desteğini
+bildirmelidir. Güncel v6 rollback, v4 ve v5 snapshot'larını reddeder: v5, kurulu
+updater'ın tam rollback durumundan; v4 ise ayrıca tam panel
+TLS/hook/bekleyen-aktivasyon sınırından önceki biçimdir. Eski bir snapshot yalnız
+eşleşen değişmez tarihsel kurtarma sürümü ve onun rollback yardımcısıyla
+kullanılabilir. Snapshot sözleşmesi sürümlerini karıştırmayın, snapshot
+içeriğini elle kopyalamayın ve başka sürüme ait rollback scriptini kullanmayın.
+Root güven
 zinciri doğrulaması, checksum'lar, unit durumu, eş
 panel/agent/web/veritabanı durumu, saklama ve geri yükleme sırası scriptlerin
 sorumluluğundadır.
